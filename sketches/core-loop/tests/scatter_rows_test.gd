@@ -25,10 +25,16 @@ const ParkDefs := preload("res://src/core/park_defs.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
 # SHA-256 of every old-map scatter transform (kind, seed, instance buffer, maps sorted). A change
-# here moves an old map's scatter. Re-pinned 2026-10-18 (coordinator call 2026-10-18) to a57519e6,
-# the value reported stable in this repo back to 0eeb995e; was 5bdc8fba, recorded 2026-10-11 on
-# the base d204cea (KB5), which is not in this repo.
-const OLD_MAPS_HASH := "a57519e6d2f7ff97671b7cb051b49fb168b2c550919fad2fe7e0ac2ec7610dd2"
+# here moves an old map's scatter. Two builds of the same Godot 4.7.2 give two stable values:
+#   5bdc8fba  Andrew's PC (Arch, local import), recorded 2026-10-11 on the base d204cea (KB5) and
+#             unchanged on every commit since (bisected 2026-10-19: 36ae3f38 and its 268 successors);
+#   a57519e6  the cloud lanes, re-pinned 2026-10-18 (coordinator call, 36ae3f38).
+# 36ae3f38 swapped one for the other, which turned the local run red without any scatter change.
+# Either value passes; any third value is a real move of an old map's scatter.
+const OLD_MAPS_HASHES := [
+	"a57519e6d2f7ff97671b7cb051b49fb168b2c550919fad2fe7e0ac2ec7610dd2",
+	"5bdc8fbaa2b82655daf9425a055b042a7b8ce55de12e01ce71e643a2a5ce7666",
+]
 # The rows that hash covers: Dig 4, Dig Deep 4, Spillway 4 (a missing batch must not pass).
 const OLD_MAPS_ROWS := 12
 const PARK_TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}]}
@@ -166,7 +172,7 @@ func _run() -> void:
 
 	var old_hash := _old_maps_hash()
 	print("scatter_rows_test: old-map scatter hash ", old_hash)
-	t.eq("the old maps' scatter transforms are byte-identical to the pin", old_hash, OLD_MAPS_HASH)
+	t.check("the old maps' scatter transforms are byte-identical to a pin", old_hash in OLD_MAPS_HASHES, "got %s, want one of %s" % [old_hash, str(OLD_MAPS_HASHES)])
 
 	quit(t.verdict())
 
@@ -179,6 +185,11 @@ func _old_maps_hash() -> String:
 	var ids: Array = Terrain.MAPS.keys()
 	ids.sort()
 	var hashed := 0
+	# SCATTER_DUMP=<file> writes every row's output as text (map, row seed, mesh aabb, instance count,
+	# then one line per instance: 12 buffer floats at full precision, in buffer order) so two machines'
+	# runs can be diffed with tools/scatter_dump_diff.py.
+	var dump_path := OS.get_environment("SCATTER_DUMP")
+	var dump := PackedStringArray()
 	for map_id: String in ids:
 		var rows: Array = Terrain.MAPS[map_id].new().scatter["kit"]
 		if rows.is_empty():
@@ -193,10 +204,25 @@ func _old_maps_hash() -> String:
 			var batch: Node = scatter.get_node_or_null("Scatter_%s" % row["seed"]) if scatter != null else null
 			ctx.update(("%s|%s|" % [row["kind"], row["seed"]]).to_utf8_buffer())
 			if batch != null:
-				ctx.update((batch.get_meta("instance_buffer") as PackedFloat32Array).to_byte_array())
+				var buffer: PackedFloat32Array = batch.get_meta("instance_buffer")
+				ctx.update(buffer.to_byte_array())
 				hashed += 1
+				if dump_path != "":
+					var aabb: AABB = Scatter._source(row["mesh"]).get("aabb", AABB())
+					dump.append("row %s %s mesh=%s aabb=%.9f,%.9f,%.9f,%.9f,%.9f,%.9f count=%d" % [map_id, row["seed"], row["mesh"],
+						aabb.position.x, aabb.position.y, aabb.position.z, aabb.size.x, aabb.size.y, aabb.size.z, buffer.size() / 12])
+					for i in buffer.size() / 12:
+						var cells := PackedStringArray()
+						for k in 12:
+							cells.append("%.9f" % buffer[i * 12 + k])
+						dump.append(" ".join(cells))
 		holder.free()
 	t.eq("the old-map hash covers every old scatter row", hashed, OLD_MAPS_ROWS)
+	if dump_path != "":
+		var out := FileAccess.open(dump_path, FileAccess.WRITE)
+		out.store_string("\n".join(dump) + "\n")
+		out.close()
+		print("scatter_rows_test: dumped ", dump.size(), " lines to ", dump_path)
 	return ctx.finish().hex_encode()
 
 

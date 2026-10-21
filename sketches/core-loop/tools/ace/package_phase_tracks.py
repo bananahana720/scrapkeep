@@ -201,6 +201,7 @@ def pack(args):
     sys.path.insert(0, str(SOUND))
     import cut_loops
     base = json.loads((SKETCH / 'assets/music_ace/brindle/manifest.json').read_text())
+    drum_trim = json.loads(args.drum_db.read_text()) if args.drum_db else {}
     for track_id, row in report.items():
         bpm, key, key_offset = row['bpm_target'], row.get('key'), row.get('key_offset')
         if key is None:
@@ -209,6 +210,9 @@ def pack(args):
         stem_dir = work / 'stems' / 'htdemucs' / theme
         stems = {s: read_stem(stem_dir / f'{s}.wav') for s in ('drums', 'bass', 'other')}
         stems['other'] = stems['other'] + read_stem(stem_dir / 'vocals.wav')
+        drum_db = drum_trim.get(track_id, 0.0)
+        if drum_db:
+            stems['drums'] = stems['drums'] * 10 ** (drum_db / 20)
         mix = sum(stems.values())
         flux, rate = cut_loops.onset_envelope(mix.mean(axis=1), RATE)
         beat = round(RATE * 60 / bpm)
@@ -273,6 +277,8 @@ def pack(args):
             set_piece=[], profiles=PROFILES, breath=base['breath'], breath_default='hard',
             cuts='measured-beat-phase', whole=bool(args.whole), timing_verified=False, gain_db=round(gain_db, 2),
             measured=dict(lufs=i, true_peak=p, note='summed stems before Ogg encode'))
+        if drum_db:
+            manifest['drum_trim_db'] = drum_db
         (folder / 'manifest.json').write_text(json.dumps(manifest, indent=1) + '\n')
         print(f'{track_id}: {bars} bars from bar {start_bar} at {bpm}, gain {gain_db:+.2f} dB, {i:.2f} LUFS, {p:.2f} dBFS', flush=True)
 
@@ -288,6 +294,7 @@ def main():
     p = sub.add_parser('pack')
     p.add_argument('work', type=Path)
     p.add_argument('--whole', action='store_true', help='one clip spanning the whole take (radio songs), not a 16-bar loop')
+    p.add_argument('--drum-db', type=Path, help='JSON {track id: dB} trimming the drum stem before the level is set (percussion serves the song)')
     p.add_argument('--ceiling', type=float, default=-1.5,
                    help='limiter ceiling in dBFS; the tunes use -2.2 so the Ogg encode stays under -1 dBTP')
     args = ap.parse_args()
