@@ -164,6 +164,8 @@ Last updated 2026-10-21 21:10Z by the local coordinator (coordinator back on the
 | Three-level parts on three neutral parts only. | 16 Oct 23:40 | tap "Keep three" | |
 | New item layer before the sitting: all six actives (Scrap Rocket Rack first) and maker sets on the existing 61 items; weapon overrides and evolved forms after. Page: [Makers and Actives](https://claude.ai/artifact/38Drb12GsPgDxmgDUt6TWW). | 17 Oct 22:04 | tap "Core now" | |
 | Whether a cast keeps the ball rolling depends on the pilot. | 17 Oct 22:12 | typed, design questions | cast on the move for every pilot (default) |
+| "Overpowered pays" (#222): a build is a monster at a Warden only when its heft is above the top of what library builds bring to that Warden, measured at Warden arrival; thresholds are generated from library data and pinned by a test. Stage 6's park Warden and any Warden without a threshold fail closed (no lift). Acceptance: Warden fights in band, monster builds break faster, ordinary pilots at the first two Wardens no faster. | 21 Oct | coordinator, creative charge (veto list) | "above class V" (21 Oct, earlier same evening; V is the top class) |
+| Dead offers go even for a full kit: once kit parts are stacked to the cap, the shop offers off-kit parts. The offer bars move to match: greedy-bot kit share floor 0.55 (was the 0.60 band), alpha overlap at most 0.50 (was 0.40). A "17 Oct 22:54Z" ruling cited in #222's code was not found in any record or session, so this row is the ruling the code cites. | 21 Oct | coordinator, creative charge (veto list) | |
 
 ## 7. Bosses
 
@@ -325,4 +327,4 @@ Watch-outs for live design work: the new "electrical field that interrupts" moti
 
 - Nothing on the design questions page: Andrew answered rounds 1 and 2 at 22:12 on 17 Oct (design-questions/OPEN.md).
 - Old veto lists and deferred feel checks are now "Check while you play" prompts on the Sitting Kit (RECONCILE.md section 4).
-- Taste defaults taken under creative charge, on the veto list for the wave 21 playtest: HIVE-GRIND bar fill option A; radio stays off the pad (D-pad down keeps the active); the old `lore.reach.*` set is replaced. Added 21 Oct: first-meet tips (#240) show one tip after the drop and hold the rest until the first Warden fight ends; whole-rect stamped rows count as ground (section 8).
+- Taste defaults taken under creative charge, on the veto list for the wave 21 playtest: HIVE-GRIND bar fill option A; radio stays off the pad (D-pad down keeps the active); the old `lore.reach.*` set is replaced. Added 21 Oct: first-meet tips (#240) show one tip after the drop and hold the rest until the first Warden fight ends; whole-rect stamped rows count as ground (section 8); #222 monster thresholds at Warden arrival and dead offers for a full kit (section 6).
