@@ -4,6 +4,7 @@ extends SceneTree
 const BotDriver := preload("res://tools/bot_driver.gd")
 const Game := preload("res://src/game.gd")
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
+const RunState := preload("res://src/core/run_state.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -18,13 +19,25 @@ const T := preload("res://tests/support/t.gd")
 #           kicker's lip and ends within LEVEL_BAND of the gate's height;
 #   exit    from each of STARTS, the bot's own climb steering (_fight_way_up, then _act) puts the
 #           ball on the ground east of the drum wall, within LEVEL_BAND of the gate's height,
-#           inside EXIT_S. Before the jump at the lip (_kicker_jump), runner_gunner seed 1's full run
+#           inside EXIT_S;
+#   heavy   a ball of heft HEAVY_HEFT, started on the drum floor where the Warden breaks, driven by
+#           _to_gate itself, gets out the same way. A heavy ball leaves the lip slow and drops short of
+#           the gate lip with its air jump unspent (seed 1 demolitions_caster stalled 12 times in a stage).
+#           Before the jump at the lip (_kicker_jump), runner_gunner seed 1's full run
 #           reached the top four times and dropped into the gap each time.
 
 const STALL := Vector3(269.0, -12.0, 462.0)
 # The exit leg starts from the stall point and from the kicker's south side, where the first head
 # of this card wedged runner_gunner seed 1 against the ramp's side face (248 to 258, -13, 462).
 const STARTS := [STALL, Vector3(250.0, -12.0, 462.0)]
+# Each is [position, velocity]: the floor where the Warden breaks, then a point on the kicker's
+# climb (from a demolitions_caster run at heft 2.36) with the speed that run had there; before the
+# air jump, this start left the lip short and fell back until the limit.
+const HEAVY_STARTS := [
+	[Vector3(240.0, -12.0, 472.0), Vector3.ZERO],
+	[Vector3(252.05, -9.86, 485.64), Vector3(9.1, 4.3, -6.2)],
+]
+const HEAVY_HEFT := 2.3
 const WALL_X := 270.0
 const LIP_NEAR := 3.0
 const EXIT_S := 40.0
@@ -41,6 +54,8 @@ var _gate_y := 0.0
 var _peak := -INF
 var _out_at := -1.0
 var _leg := 0
+var _gate_facing := Vector3.ZERO
+var _gate_at := Vector3.ZERO
 var _done := false
 
 
@@ -84,6 +99,8 @@ func _physics_process(delta: float) -> bool:
 		var gate := Vector3(slot["at"].x, 0.0, slot["at"].y)
 		_gate_y = _game.ctx.terrain.height(gate.x, gate.z)
 		_target = Vector3(gate.x, _gate_y, gate.z) - (slot["facing"] as Vector3) * 9.0
+		_gate_at = Vector3(gate.x, _gate_y, gate.z)
+		_gate_facing = slot["facing"]
 		# The lip from the placed node and its park row: the top of the wedge's facing end.
 		var lip := Vector3.INF
 		var node = _game.ctx.terrain.geometry_root(_game.ctx.terrain.stage).find_child("Park_" + KICKER, true, false)
@@ -112,18 +129,23 @@ func _physics_process(delta: float) -> bool:
 	# The tick count and boost clock tick() runs before it acts, so the boost comes back as in a run.
 	_driver.ticks += 1
 	_driver._boost_clock -= delta
-	var steer: Vector3 = _driver._fight_way_up(ball, _target, delta) if _driver._climbing(ball, _target) else _target
-	_driver._act(steer, null, delta, null, false)
+	var steer := _target
+	if _leg >= STARTS.size():
+		_driver._to_gate(delta)
+	else:
+		steer = _driver._fight_way_up(ball, _target, delta) if _driver._climbing(ball, _target) else _target
+		_driver._act(steer, null, delta, null, false)
 	if OS.get_cmdline_user_args().has("--trace") and _driver.ticks % 30 == 0:
 		print("  t=%.2f ball=(%.1f, %.1f, %.1f) speed=%.1f grounded=%s steer=(%.1f, %.1f, %.1f)" % [_seconds, ball.x, ball.y, ball.z,
 			_game.player.planar_velocity().length(), _game.player.state.grounded, steer.x, steer.y, steer.z])
 	if _out_at >= 0.0 or _seconds >= EXIT_S:
-		var start: Vector3 = STARTS[_leg]
+		var start: Vector3 = _start_of(_leg)
+		var who := "the heavy bot (heft %.1f) rolls" % _game.run.heft() if _leg >= STARTS.size() else "the bot rolls"
 		print("exit leg from %s: out of the drum at %.1f s, peak height %.1f, ball %s" % [start, _out_at, _peak, ball])
-		_t.check("from %s the bot rolls out of the drum to the gates' level inside %.0f s" % [start, EXIT_S], _out_at >= 0.0,
+		_t.check("from %s %s out of the drum to the gates' level inside %.0f s" % [start, who, EXIT_S], _out_at >= 0.0,
 			"ball %s after %.1f s, peak %.1f" % [ball, _seconds, _peak])
 		_leg += 1
-		if _leg < STARTS.size():
+		if _leg < STARTS.size() + HEAVY_STARTS.size():
 			_start_leg()
 			return false
 		_done = true
@@ -138,4 +160,17 @@ func _start_leg() -> void:
 	_out_at = -1.0
 	_driver._fight_climb.clear()
 	_driver._fight_climb_clock = 0.0
+	if _leg >= STARTS.size():
+		_game.run.mass = (HEAVY_HEFT - 1.0) / RunState.HEFT_PER_MASS
+		_driver._offers = [{"at": _gate_at, "facing": _gate_facing}]
+		_driver._gate_pick = 0
+		_driver._gate_time = 0.0
+		_driver._gate_hop = 0.0
+		_driver._gate_run = ""
+		_game.player.reset_to(_start_of(_leg), HEAVY_STARTS[_leg - STARTS.size()][1])
+		return
 	_game.player.reset_to(STARTS[_leg])
+
+
+func _start_of(leg: int) -> Vector3:
+	return STARTS[leg] if leg < STARTS.size() else HEAVY_STARTS[leg - STARTS.size()][0]

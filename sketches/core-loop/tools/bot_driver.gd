@@ -2896,6 +2896,13 @@ func _to_gate(delta: float) -> void:
 	if _gate_time > GATE_HOP_SECONDS and _gate_hop <= 0.0 and game.player.state.grounded and along < 0.0 and along > -14.0:
 		_gate_hop = GATE_HOP_EVERY
 		source.press["jump_pressed"] = true
+	# Past a kicker's lip and falling short of the next floor, spend the air jump (the Flume's drum lip).
+	if not game.player.state.grounded and game.player.state.air_actions > 0 and game.player.state.velocity.y < 0.0:
+		for lip in _route_lips:
+			if _flat(ball_at, lip) < 12.0 and ball_at.y < lip.y + 2.5 and ball_at.y > lip.y - 2.0:
+				source.press["jump_pressed"] = true
+				_count("gate_air_jumps")
+				break
 	if trace and ticks % (Engine.physics_ticks_per_second * 2) == 0:
 		var ball: Vector3 = game.player.ball_position()
 		print("    gate %d at=(%.1f, %.1f, %.1f) facing=(%.2f, %.2f, %.2f) ball=(%.1f, %.1f, %.1f) along=%.1f side=%.1f dy=%.1f ground=%.1f target=(%.1f, %.1f, %.1f)"
