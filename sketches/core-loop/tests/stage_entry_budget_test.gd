@@ -47,6 +47,8 @@ const RETRY_MS := 20.0
 const FIRST_MS := 50.0
 const DRESSING_MS := 4.0
 const NEW_DRESSING_MS := 15.0
+# DRESS-ENTRY: a plan still drawing at the entry is built by _process when its worker is done.
+const DRESSING_FRAMES_MAX := 240
 const SETTLE_TICKS := 30
 const WAIT_TICKS_MAX := 3600
 const TIMED := ["activities", "set_dressing"]
@@ -124,7 +126,12 @@ func _run() -> void:
 	_report("exit into stage 2", exit_1)
 	_t.check("the exit entered park stage 2", _game.flow.stage() == 2 and _park_id() != "", "stage %d map %s" % [_game.flow.stage(), _park_id()])
 	_t.check("exit into stage 2: activities within %.0f ms" % FIRST_MS, exit_1.get("activities", INF) <= FIRST_MS, _ms(exit_1, "activities"))
-	_t.check("exit into stage 2: set dressing builds the new stage within %.0f ms" % NEW_DRESSING_MS, exit_1.get("set_dressing", INF) <= NEW_DRESSING_MS, _ms(exit_1, "set_dressing"))
+	_t.check("exit into stage 2: set dressing's entry frame within %.0f ms" % NEW_DRESSING_MS, exit_1.get("set_dressing", INF) <= NEW_DRESSING_MS, _ms(exit_1, "set_dressing"))
+	var entry_deferred: bool = _game.presentation.set_dressing.entry_deferred
+	var complete := await _await_dressing()
+	print("stage_entry_budget_test: exit into stage 2: dressing deferred %s, complete after %d frames" % [entry_deferred, complete.frames])
+	_t.check("exit into stage 2: the dressing is complete within %d frames" % DRESSING_FRAMES_MAX, complete.done and complete.frames <= DRESSING_FRAMES_MAX,
+		"%d frames, deferred %s" % [complete.frames, entry_deferred])
 	_check_prepared()
 	_check_stage_two_workers()
 	_check_natural_fresh("exit into stage 2")
@@ -148,9 +155,52 @@ func _run() -> void:
 	var graph = _game.world.activities._graph
 	_t.check("audio and activities share one graph per map", graph != null and audio._parameter_graph == graph,
 		"activities %s, audio %s" % [str(graph), str(audio._parameter_graph)])
+	await _check_slow_plan_control()
 	_game.queue_free()
 	await physics_frame
 	quit(_t.verdict())
+
+
+# Frames until the set dressing has built the batches its plan gives (no wall clock, DRESS-ENTRY).
+func _await_dressing() -> Dictionary:
+	var dressing = _game.presentation.set_dressing
+	var frames := 0
+	while dressing.batches.is_empty() and frames <= DRESSING_FRAMES_MAX:
+		await process_frame
+		frames += 1
+	return {"done": not dressing.batches.is_empty(), "frames": frames}
+
+
+# The planted control (lesson 34): the stage entered the moment its plan starts on a worker (the
+# plan takes about 360 ms there). A handler that waits on the worker spends that in the entry and
+# fails the budget; one that defers leaves the stage bare for the entry, then builds the same
+# buffers in a later frame.
+func _check_slow_plan_control() -> void:
+	var dressing = _game.presentation.set_dressing
+	var terrain = _game.ctx.terrain
+	var map = terrain.map_for(2)
+	var rows: Dictionary = dressing.map_rows(map)
+	var keep: Array = dressing.keepouts(map, 2)
+	var ground: Callable = terrain.ground_callable(2)
+	var seed_two: int = String(_game.ctx.stages.of(2).map).hash()
+	var flags: Dictionary = dressing._flags()
+	var out := {}
+	# The built stage 2 stays up, so "bare" below is the deferral's own clear; a plan already in
+	# flight (the next stage's) is collected first, not dropped.
+	dressing._built_for = []
+	if not dressing._prep.is_empty():
+		WorkerThreadPool.wait_for_task_completion(dressing._prep.task)
+	dressing._prep = {"key": dressing._key(2, terrain.geometry_root(2)), "out": out,
+		"task": WorkerThreadPool.add_task(func():
+			out.merge(dressing.plan(rows, keep, ground, seed_two, flags)), false, "planted slow plan")}
+	dressing._stage_entered(2, false)
+	var entry_ms: float = dressing.last_entry_usec / 1000.0
+	var bare: bool = dressing.get_child_count() == 0
+	_t.check("planted slow plan: the entry stays within %.0f ms and leaves the stage bare" % NEW_DRESSING_MS,
+		entry_ms <= NEW_DRESSING_MS and bare and dressing.entry_deferred, "%.1f ms, %d children, deferred %s" % [entry_ms, dressing.get_child_count(), dressing.entry_deferred])
+	var complete := await _await_dressing()
+	_t.check("planted slow plan: the dressing completes in a later frame, after the worker", complete.done and complete.frames >= 1, "%d frames" % complete.frames)
+	_check_dressing_fresh("planted slow plan")
 
 
 # Each handler's recorded time of the last stage entry, in ms; a handler that records none is absent.

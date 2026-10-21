@@ -208,6 +208,17 @@ signal ultimate_peak(ultimate_id: String, at: Vector3)
 signal ultimate_landed(ultimate_id: String, at: Vector3, hits: int, damage: float)
 signal ultimate_cancelled(ultimate_id: String, reason: String, refunded: bool)
 
+# Achievements refresh (w20): facts the player sees that had no bus signal. special_broken: a
+# kill-first special (Roster.SPECIALS) fell. radio_take_found: a take was filed; source is its
+# found rule's "on" ("cache" for a Signal cache). relay_stake_paid: a relay won with a stake of
+# `stakes` stacks. maker_set_completed: a set turned on for the run. overflow_cashed: an active
+# fired carrying `pieces` banked overflow pieces.
+signal special_broken(kind: String)
+signal radio_take_found(take_id: String, tier: String, source: String)
+signal relay_stake_paid(stakes: int)
+signal maker_set_completed(maker: String, bonus: String)
+signal overflow_cashed(active_id: String, pieces: int)
+
 
 static func signal_names() -> PackedStringArray:
 	var names := PackedStringArray()
