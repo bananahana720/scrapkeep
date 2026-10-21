@@ -18,16 +18,15 @@ const Terrain := preload("res://src/world/terrain.gd")
 
 const MAP := "park_islands"
 const PIECES := {"ore_adit": "isle_adit_portal", "tram_head": "isle_tram_head", "keel_rib_w": "isle_keel_rib",
-	"keel_rib_e": "isle_keel_rib", "slickrock_run": "isle_ride_slickrock", "fan_band": "isle_ride_fan",
-	"net_carve": "isle_ride_net_carve", "isle_apron": "isle_ride_apron", "cloud_wash_west": "isle_ride_wash_west"}
+	"keel_rib_e": "isle_keel_rib", "cloud_wash_west": "isle_ride_wash_west"}
 # The stamped rows carry no collider of their own today: the stamped ground is their shape (place_row).
-const STAMPED := ["ore_adit", "tram_head", "slickrock_run", "fan_band", "net_carve", "isle_apron", "cloud_wash_west"]
-# The ride-surface sheets (tools/blender/park/isle_ride_pieces.py): the stamped ground is their whole collider, and every
-# vertex of the drawn sheet must lie within FLUSH over it and SINK under it (ghost solid, #183), measured against the
-# game's own ground, Terrain._park_floor_at. fin_chute stays greybox (twin_fins' collapse drops its ground 8 m).
-const SHEETS := ["slickrock_run", "fan_band", "net_carve", "isle_apron", "cloud_wash_west"]
+const STAMPED := ["ore_adit", "tram_head", "cloud_wash_west"]
+# The ride-surface sheet (tools/blender/park/isle_ride_pieces.py): the stamped ground is its whole collider, and every
+# vertex of the drawn sheet must lie between MIN_LIFT and FLUSH over it (ghost solid, #183; no z-fight), measured against
+# the game's own ground, Terrain._park_floor_at. fin_chute stays greybox (twin_fins' collapse drops its ground 8 m).
+const SHEETS := ["cloud_wash_west"]
 const FLUSH := 0.12
-const SINK := 0.03
+const MIN_LIFT := 0.03
 # The piece whose GLB carries its own uprights' collider, and the least |x| any of its faces may reach in the row frame:
 # the inner face of the portal posts (isle_pieces.py ADIT_POST_X - ADIT_POST / 2), outside the 7 m half width.
 const PIECE_COLLIDER := {"ore_adit": 9.225}
@@ -114,8 +113,8 @@ func _run() -> void:
 						lo = minf(lo, off)
 						hi = maxf(hi, off)
 						verts += 1
-			t.check("%s's sheet stands within %.2f over and %.2f under the ground (%.3f .. %.3f over %d vertices)" % [id, FLUSH, SINK, lo, hi, verts],
-				verts > 0 and hi <= FLUSH and lo >= -SINK)
+			t.check("%s's sheet stands between +%.2f and +%.2f over the ground (%.3f .. %.3f over %d vertices)" % [id, MIN_LIFT, FLUSH, lo, hi, verts],
+				verts > 0 and hi <= FLUSH and lo >= MIN_LIFT - 0.00001)
 		t.check("%s's base view casts shadows" % id, views.any(func(v): return v.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF))
 	parent.free()
 	quit(t.verdict())

@@ -1,25 +1,25 @@
-"""The Highdraft islands' ride-surface pieces (park_islands placeholder burn-down): five GLBs drawn over rows whose
-stamped ground is the whole collider, so park_recipes.gd places them as OVER_GREYBOX recipes (the row's greybox node, seat
-and ride sensor, no box collider because the stamp replaces it) and only the view is new. Nothing here has a -col mesh;
-the baked ground (assets/park/park_islands/ground.bin) stays the only thing the ball rolls on.
+"""The Highdraft islands' ride-surface piece (park_islands placeholder burn-down): one GLB drawn over a row whose stamped
+ground is the whole collider, so park_recipes.gd places it as an OVER_GREYBOX recipe (the row's greybox node, seat and
+ride sensor, no box collider because the stamp replaces it) and only the view is new. It has no -col mesh; the baked
+ground (assets/park/park_islands/ground.bin) stays the only thing the ball rolls on.
 
-  isle_ride_slickrock   slickrock_run  (flow_line, ramp 170 x 36 x 1600): the central lane, |x| <= 20, z -598..-432.
-  isle_ride_fan         fan_band       (flow_line, ramp 250 x 48 x 1600): the east shoulder, x 80..140, z -348..-102,
-                        clear of twin_fins, whose fin_rim_collapse swaps the ground inside x +-70, z -340..-100.
-  isle_ride_net_carve   net_carve      (half_pipe, ramp 282 x 24 x 1600): the lane below the net posts (|x| <= 40, z
-                        286..398) and the east shoulder (x 66..100, z 124..284), clear of liner_net_post_run and net_bowl.
-  isle_ride_apron       isle_apron     (terrace 354 x 6 x 1600): the east and west verges, |x| 165..193, z 416..654 and
-                        746..758, clear of the bowl scatter, the knuckles, the keel net decks and liner_cloud_wash_east.
-  isle_ride_wash_west   cloud_wash_west (half_pipe, plateau 300 x 0.01 x 30): the wash floor, x -224..-196, z 112..232
-                        and 288..376, with a gap round isle_shed's 20 m crater (the impact swaps the ground there) and
-                        cloud_cannon_west's mouth.
+  isle_ride_wash_west   cloud_wash_west (half_pipe, plateau 300 x 0.01 x 30): the whole wash footprint, x -226..-194, z
+                        110..410, less a hole round cloud_cannon_west's mouth. The sheet lies inside isle_shed's impact
+                        overlay (west_wing, x -270..-150, z 100..420: the game builds it over the whole site footprint,
+                        natural.gd:146-150, event_ground.gd:477-491), which only raises ground (event_ground.gd:236), so
+                        where the crater rim rises the sheet is buried under the raised ground and never floats.
 
-fin_chute stays greybox: it lies wholly inside twin_fins' footprint, where fin_rim_collapse drops the ground 8 m and
-hides only Park_twin_fins, so a drawn sheet there would hang in the air after the collapse (ghost solid, #183).
+Not dressed, and why:
+  fin_chute    lies wholly inside twin_fins' footprint, where fin_rim_collapse drops the ground 8 m and hides only
+               Park_twin_fins, so a sheet on it would hang in the air after the collapse (ghost solid, #183).
+  slickrock_run, fan_band, net_carve, isle_apron   full-rect stamped bands, 1,600 m across the whole play rect. At the
+               bake's 2 m cells a full sheet is 136k to 283k triangles against the landform class's 8,000, so no
+               OVER_GREYBOX piece can honestly dress them (a 2 to 4 % window would only clear the placeholder gate). They
+               stay greybox pending a coordinator ruling (extending the "Edges are ground" ruling to full-rect bands).
 
 Each piece is a sheet of the baked ground: one vertex per 2 m ground node, triangulated on the b-c diagonal the game's
 Terrain._grid_height uses, so every vertex sits OFF above the surface the ball rolls on and the sheet is exact between
-vertices. y offset per vertex 0.04 to 0.08 m (a soft hand-laid relief, never over FLUSH 0.12, never below the ground);
+vertices. y offset per vertex 0.04 to 0.08 m (a soft hand-laid relief: at least MIN_LIFT 0.03 so it never z-fights, at most FLUSH 0.12);
 colours by cell: pale slickrock or ochre on the flats, a darker varnished band on the cliff cells, a few bone guide strokes.
 No texture, no light, no mesh from any other source. One "enamel" slot, one draw, landform class.
 
@@ -50,7 +50,7 @@ GROUND_BIN = os.path.join(SKETCH, "assets", "park", "park_islands", "ground.bin"
 SLOT = "enamel"
 N, STEP, HALF = 801, 2.0, 800.0
 FLUSH = 0.12                # the most any part may stand over the ground (landmarks.py; ghost solid, #183)
-SINK = 0.03                 # and the most it may sink under it
+MIN_LIFT = 0.03             # and the least it may stand over it (no sink, no z-fight)
 OFF_LO, OFF_HI = 0.04, 0.08
 
 SAND = "d8b484"
@@ -68,16 +68,7 @@ SAGE = "9aa273"
 
 # id: row, world windows (x0, x1, z0, z1) on the 2 m ground nodes, palette (flat tones, cliff tones, stroke), seed
 PIECES = {
-    "isle_ride_slickrock": {"row": "slickrock_run", "raise": "half", "windows": [(-20, 20, -598, -432)],
-                            "flat": (SAND, SAND_LT, SAND_DK), "cliff": (VARNISH, VARNISH_LT), "stroke": BONE, "seed": 4101},
-    "isle_ride_fan": {"row": "fan_band", "raise": "half", "windows": [(80, 140, -348, -102)],
-                      "flat": (OCHRE, SAND, OCHRE_DK), "cliff": (VARNISH, OCHRE_DK), "stroke": BONE, "seed": 4111},
-    "isle_ride_net_carve": {"row": "net_carve", "raise": "half", "windows": [(-40, 40, 286, 398), (66, 100, 124, 284)],
-                            "flat": (STONE, SILT, STONE_DK), "cliff": (VARNISH, STONE_DK), "stroke": BONE, "seed": 4121},
-    "isle_ride_apron": {"row": "isle_apron", "raise": "none",
-                        "windows": [(165, 193, 416, 654), (165, 193, 746, 758), (-193, -165, 416, 654), (-193, -165, 746, 758)],
-                        "flat": (STONE, SILT, SAGE), "cliff": (STONE_DK, VARNISH), "stroke": BONE, "seed": 4131},
-    "isle_ride_wash_west": {"row": "cloud_wash_west", "raise": "full", "windows": [(-224, -196, 112, 232), (-224, -196, 288, 376)],
+    "isle_ride_wash_west": {"row": "cloud_wash_west", "raise": "full", "windows": [(-226, -194, 110, 410)],
                             "flat": (SILT, SAND, STONE), "cliff": (STONE_DK, VARNISH), "stroke": BONE, "seed": 4141},
 }
 BUDGET_CLASS = "landform"
@@ -151,29 +142,50 @@ def tone(hex_color, other, t):
 
 
 # ------------------------------------------------------------------------------------------------------ events
+def footprint(site):
+    """The box the game treats as a site: ParkMap.footprint_half_extents (x: size[2] / 2, z: size[0] / 2) at `at`."""
+    x, z = float(site["at"][0]), float(site["at"][1])
+    hx, hz = site["size"][2] / 2.0, site["size"][0] / 2.0
+    return (x - hx, x + hx, z - hz, z + hz)
+
+
 def keep_out():
-    """The ground the islands' events change, as (x0, x1, z0, z1, why): a collapse or ground swap's whole site footprint,
-    an impact's strike box, and a margin of MARGIN round each. Nothing of any piece may stand inside them."""
+    """The ground the islands' events lower, swap or open, as (x0, x1, z0, z1, why), a margin of 8 m round each. No vertex of
+    any piece may stand inside them. A collapse or other ground swap uses its whole site footprint (as natural.gd and
+    event_ground.gd do) and cloud_cannon_west's mouth uses its radius. An impact is NOT here: its overlay only raises ground
+    (event_ground.gd:236, `y += maxf(0.0, offset)`; the crater profile is clamped at zero), so a sheet inside it is buried
+    where the rim rises, never left floating. raise_only() names the one such overlap the sheet may have."""
     margin = 8.0
     sites = {r["id"]: r for r in PARK["park_rows"]}
     out = []
     for ev in PARK["event_rows"]:
-        site = sites[ev["site"]]
-        eff = ev["effect"]
-        if "strike_m" in eff:
-            hx = hz = float(eff["strike_m"])
-        elif ev["kind"] == "collapse" or eff.get("swap"):
-            hx, hz = site["size"][2] / 2.0, site["size"][0] / 2.0
-        else:
+        if ev["kind"] == "impact" or not (ev["kind"] == "collapse" or ev["effect"].get("swap")):
             continue
-        x, z = float(site["at"][0]), float(site["at"][1])
-        out.append((x - hx - margin, x + hx + margin, z - hz - margin, z + hz + margin, ev["id"]))
-    # cloud_cannon_west's mouth (a launcher on cloud_wash_west's far end, radius 4)
+        x0, x1, z0, z1 = footprint(sites[ev["site"]])
+        out.append((x0 - margin, x1 + margin, z0 - margin, z1 + margin, ev["id"]))
     for row in PARK.get("contraption_rows", []):
         if row.get("site") == "cloud_wash_west" and "at" in row:
             x, z, r = float(row["at"][0]), float(row["at"][1]), float(row.get("radius", 4.0)) + 4.0
             out.append((x - r, x + r, z - r, z + r, row["id"]))
     return out
+
+
+def raise_only(window_boxes):
+    """Assert the only event whose real footprint overlaps the sheet is a raise-only impact overlay (isle_shed on west_wing,
+    event_ground.gd:236) and return its id. Any other overlapping event, one that lowers or swaps ground, fails the build."""
+    sites = {r["id"]: r for r in PARK["park_rows"]}
+    hits = []
+    for ev in PARK["event_rows"]:
+        if ev["site"] not in sites:
+            continue
+        x0, x1, z0, z1 = footprint(sites[ev["site"]])
+        for (a0, a1, b0, b1) in window_boxes:
+            if x0 < a1 and a0 < x1 and z0 < b1 and b0 < z1:
+                hits.append(ev)
+                break
+    ids = [e["id"] for e in hits]
+    assert ids == ["isle_shed"] and hits[0]["kind"] == "impact", ("the sheet overlaps events that are not a raise-only impact", ids)
+    return ids[0]
 
 
 def inside(x, z, box):
@@ -196,6 +208,7 @@ def build_mesh(rid, spec):
     ny = node_y(spec)
     ax, az = row_of(spec["row"])["at"]
     ev = keep_out()
+    raise_only(spec["windows"])
     verts, tris, cols, index = [], [], [], {}
 
     def vert(ix, iz):
@@ -213,7 +226,7 @@ def build_mesh(rid, spec):
             for ix in range(int((x0 + HALF) / STEP), int((x1 + HALF) / STEP)):
                 wx0, wz0 = ix * STEP - HALF, iz * STEP - HALF
                 if any(inside(wx0 + dx, wz0 + dz, b) for b in ev for dx in (0.0, STEP) for dz in (0.0, STEP)):
-                    raise SystemExit("%s: cell (%g, %g) stands in %s's ground" % (rid, wx0, wz0, [b[4] for b in ev if inside(wx0, wz0, b)]))
+                    continue        # a hole round the cannon's mouth, or any ground an event lowers or swaps
                 hs = [g[iz, ix], g[iz, ix + 1], g[iz + 1, ix], g[iz + 1, ix + 1]]
                 steep = max(hs) - min(hs) > 1.2
                 colour = cell_colour(spec, wx0, wz0, steep, ix, iz)
@@ -254,7 +267,7 @@ def build(rid, out_dir, count_only):
     print("ISLE_RIDE_COUNT", rid, json.dumps({"tris": len(tris), "verts": len(verts), "class": BUDGET_CLASS, "cap": cap["tris"]}))
     assert len(tris) <= cap["tris"] and len(verts) <= cap["verts"], (rid, len(tris), len(verts), cap)
     off = [v[1] + node_y(spec) - ground_db(v[0] + row_of(spec["row"])["at"][0], v[2] + row_of(spec["row"])["at"][1]) for v in verts]
-    assert max(off) <= FLUSH and min(off) >= -SINK, (rid, min(off), max(off))
+    assert max(off) <= FLUSH and min(off) >= MIN_LIFT, (rid, min(off), max(off))
     if count_only:
         return
     root = common.empty(rid + "_root")
@@ -299,6 +312,7 @@ def check(rid, out_dir):
     fmt = {5121: "<B", 5123: "<H", 5125: "<I"}[idx_acc["componentType"]]
     ids = [t[0] for t in accessor(doc, binary, prim["indices"], fmt, 1)]
     ev = keep_out()
+    raise_only(spec["windows"])
     lo, hi = math.inf, -math.inf
     worst_down = 0.0
 
@@ -322,11 +336,11 @@ def check(rid, out_dir):
             measure(*[sum(w[m] * p[m][c] for m in range(3)) for c in range(3)])
     if worst_down < -1e-6:
         fails.append("%s: a triangle faces down" % rid)
-    ok = hi <= FLUSH + 1e-4 and lo >= -SINK - 1e-4
+    ok = hi <= FLUSH + 1e-4 and lo >= MIN_LIFT - 1e-4
     report = {"verts": len(pos), "tris": len(ids) // 3, "max_off": round(hi, 4), "min_off": round(lo, 4)}
     print("ISLE_RIDE_CHECK", rid, json.dumps(report), "PASS" if ok and not fails else "FAIL")
     if not ok:
-        fails.append("%s: offset %.4f .. %.4f outside %.2f .. %.2f" % (rid, lo, hi, -SINK, FLUSH))
+        fails.append("%s: offset %.4f .. %.4f outside %.2f .. %.2f" % (rid, lo, hi, MIN_LIFT, FLUSH))
     return fails, report
 
 
@@ -337,7 +351,7 @@ def registry():
             "id": rid, "path": "res://assets/models/park/%s.glb" % rid, "class": BUDGET_CLASS, "origin": "centre", "ships": True,
             "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's stamped ground, which stays the only collider; no -col mesh)",
             "provenance": {"recipe": "tools/blender/park/isle_ride_pieces.py",
-                           "notes": "%s's flush ground sheet, conformed to the park_islands bake (park_islands placeholder burn-down); every vertex 0.04 to 0.08 m over ground.bin, none inside an event's footprint; built by this script, no external mesh" % spec["row"]},
+                           "notes": "%s's flush ground sheet, conformed to the park_islands bake (park_islands placeholder burn-down); every vertex 0.04 to 0.08 m over ground.bin; none inside a collapse or swap footprint or the cannon mouth; the sheet lies inside isle_shed's impact overlay, which only raises ground; built by this script, no external mesh" % spec["row"]},
         })
     return {"assets": out}
 

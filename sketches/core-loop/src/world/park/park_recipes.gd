@@ -199,7 +199,7 @@ const ANCHOR_VARIANTS := ["a", "b", "c"]
 # collider, or none where its stamp replaces the box) and draws its GLB's views in place of the grey box. The row's
 # Collider stays the greybox's own; a GLB's -col (the adit portal's posts) is a separate PieceCollider
 # (tests/park_over_greybox_test.gd).
-const OVER_GREYBOX := ["isle_adit_portal", "isle_tram_head", "isle_keel_rib", "isle_ride_slickrock", "isle_ride_fan", "isle_ride_net_carve", "isle_ride_apron", "isle_ride_wash_west"]
+const OVER_GREYBOX := ["isle_adit_portal", "isle_tram_head", "isle_keel_rib", "isle_ride_wash_west"]
 const ANCHOR_AUTHORED_M := 10.0
 # The waymark names that are no row: the spawn and the landmark (park_schema.gd DROP_IN and LANDMARK).
 const DROP_IN := "drop_in"
