@@ -139,7 +139,19 @@ const ROWS := {
 	"secret-chip-keepers": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/secret_chip_keepers/manifest.json"},
 	"secret-highdraft-rain": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/secret_highdraft_rain/manifest.json"},
 	"secret-dig-dub": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/secret_dig_dub/manifest.json"},
+	# The sound bible's picks (SOUND-INT, tools/ace/package_picked_takes.py): each boss fight's
+	# opening take (phase_music.gd PICKED) and the camp page. The roaming picks are cut into the
+	# zone packs' own shelves (RENDERS.md, core packs). A pick not on disk falls back to the older pack.
+	"boss-brindle": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/boss_brindle/manifest.json"},
+	"boss-waking": {"synth_theme": 1, "ace_manifest": "res://assets/music_ace/boss_waking/manifest.json"},
+	"boss-mind": {"synth_theme": 2, "ace_manifest": "res://assets/music_ace/boss_mind/manifest.json"},
+	"camp": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/camp/manifest.json"},
 	"title": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title/manifest.json"},
+	# The opening's theme picks the title take (title_intros.gd: "A" sax lead, "B" machine lead);
+	# C is the show-opening take.
+	"title-a": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title_a/manifest.json"},
+	"title-b": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title_b/manifest.json"},
+	"title-c": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/title_c/manifest.json"},
 	"summary": {"synth_theme": 0, "ace_manifest": "res://assets/music_ace/summary/manifest.json"},
 }
 
@@ -218,8 +230,8 @@ static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String
 
 # A pack is playable only when its manifest resolves and every stem file it names is on disk:
 # the Oggs are gitignored, so a checkout can hold manifests with no audio.
-static func pack_on_disk(manifest_path: String) -> bool:
-	var path := resolve_manifest(manifest_path)
+static func pack_on_disk(manifest_path: String, sidecar_dir := "") -> bool:
+	var path := resolve_manifest(manifest_path, sidecar_dir)
 	if path == "":
 		return false
 	var m = JSON.parse_string(FileAccess.get_file_as_string(path))

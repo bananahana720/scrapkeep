@@ -9,9 +9,9 @@ const Palette := preload("res://src/core/palette.gd")
 # bulb), opaque, the cart inside the 2.4 x 4 x 2.4 m collider box, the mortar tube inside the base
 # tube's reach (top at most 5.0 m), the bulb the base 0.9 m sphere at y 2.6. The base contract: the
 # lobber's collider, hitbox, aim, timing and damage are the values lobber.gd had before the dressing swap.
-const CEILING_T := 1200
+const CEILING_T := 7100  # polished 2026-10-18 (tools/blender/POLISH.md); was 1200
 const CEILING_D := 5
-const BASE_TRIANGLES := 840
+const BASE_TRIANGLES := 6720  # polished; was 840
 const HALF_XZ := 1.2
 const Y_BOTTOM := -2.0
 const Y_TOP := 5.0
@@ -97,7 +97,7 @@ func _run() -> void:
 	_check(m["tris"] <= CEILING_T and m["tris"] > 0, "asset triangles %d <= %d" % [m["tris"], CEILING_T])
 	_check(m["draws"] <= CEILING_D, "asset draws %d <= %d" % [m["draws"], CEILING_D])
 	_check(not m["alpha"], "asset has no alpha surface")
-	_check(absf(float(m["tris"]) / BASE_TRIANGLES - 1.0) <= 0.1, "WL-8 triangle count within 10 percent of 840")
+	_check(absf(float(m["tris"]) / BASE_TRIANGLES - 1.0) <= 0.1, "WL-8 triangle count within 10 percent of %d" % BASE_TRIANGLES)
 	_check_parts(scene)
 	_check_envelope(scene, "asset")
 	scene.free()
@@ -130,7 +130,7 @@ func _run() -> void:
 	print("live assembly: %d T, %d D" % [live["tris"], live["draws"]])
 	_check(lobber.find_child("LobberBody", true, false) != null, "the live Lobber carries its LobberBody dressing")
 	_check(live["draws"] > 0 and live["tris"] > 0, "the live measure saw meshes (%d T, %d D)" % [live["tris"], live["draws"]])
-	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 5" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within %d / 5" % [live["tris"], live["draws"], CEILING_T])
 	_check(not live["alpha"], "live assembly has no alpha")
 	_check_envelope(lobber, "live assembly")
 	_check_paint(lobber)

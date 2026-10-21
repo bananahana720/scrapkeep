@@ -20,6 +20,17 @@ test("a wave's runs cover every persona and new cells each wave", () => {
   assert.equal(sweep[0].seed, 35000);
 });
 
+test("a head pass plays one persona on every pilot, on seeds every head of the wave shares", () => {
+  const jobs = planWave({ wave: 16, persona: "greedy", carry: [{ persona: "first-timer", pilot: "tally", seed: 36416, title: "x" }] });
+  assert.equal(jobs.length, 7);
+  assert.deepEqual(jobs.slice(0, 6).map((j) => j.pilot), PILOTS);
+  assert.ok(jobs.slice(0, 6).every((j) => j.persona === "greedy" && j.args.includes("--late-offer=take")));
+  assert.deepEqual(planWave({ wave: 16, persona: "greedy" }).map((j) => j.seed), jobs.slice(0, 6).map((j) => j.seed));
+  const regular = new Set(planWave({ wave: 16, count: 30 }).map((j) => j.seed));
+  assert.ok(jobs.every((j) => !regular.has(j.seed)));
+  assert.throws(() => planWave({ wave: 16, persona: "nobody" }));
+});
+
 test("quick runs stop after stage 1 and carried runs replay their seed", () => {
   const jobs = planWave({ wave: 3, count: 2, quick: true, carry: [{ persona: "greedy", pilot: "tally", seed: 1311, title: "x" }, { persona: "nobody", pilot: "tally", seed: 1 }] });
   assert.equal(jobs.length, 3);

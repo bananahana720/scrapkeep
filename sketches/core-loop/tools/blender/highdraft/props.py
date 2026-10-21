@@ -21,6 +21,7 @@ from mathutils import Matrix, Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import common
+import polish
 
 PETROL = "53686d"
 CHALK = "c8bda5"
@@ -29,26 +30,40 @@ DARK = "242a28"
 OXIDE = "9b513a"
 
 
+# (bevel, subsurf) per look. Hard machinery takes a small bevel; round bodies subdivide;
+# thin sheets stay as drawn. Nothing that sets a floor or extreme extent is subdivided: the
+# tests pin bottoms at Y=0 and fan top at 0 to a millimetre.
+# polish: was 270 / 610; class cap prop 2,000 / 4,600. dress_mhp_assets_test pins the same 1100 / 900.
+TRI_CAP, VERT_CAP = 1100, 900
+STYLES = {"hard": (0.03, 0), "round": (0, 1), "flat": (0, 0)}
+
+
 class Prop:
     def __init__(self, name):
         common.reset()
         self.name = name
         self.root = common.empty(name)
-        self.part = common.Part("Surface")
-        self.moving = self.part.bm.verts.layers.int.new("moving")
+        self.parts = {}
         self.markers = set()
+
+    def get(self, style="hard", moving=False):
+        # Polish settings are per Part, so each look gets its own Part; finish() joins them
+        # back into the one "Surface" mesh. Moving parts stay separate so the rig can weight
+        # them (bevel and subdivision renumber vertices, so indices cannot be tracked).
+        key = (style, moving)
+        if key not in self.parts:
+            part = common.Part("Surface." + style + ("m" if moving else ""))
+            part.bevel, part.subsurf = STYLES[style]
+            self.parts[key] = part
+        return self.parts[key]
 
     def marker(self, name, loc=(0, 0, 0)):
         if name not in self.markers:
             common.empty(name, loc, self.root)
             self.markers.add(name)
 
-    def add(self, name, method, *args, moving=False, **kwargs):
-        before = set(self.part.bm.verts)
-        faces = getattr(self.part, method)("paint", *args, **kwargs)
-        new = set(self.part.bm.verts) - before
-        for v in new:
-            v[self.moving] = int(moving)
+    def add(self, name, method, *args, moving=False, style="hard", **kwargs):
+        faces = getattr(self.get(style, moving), method)("paint", *args, **kwargs)
         self.marker(name)
         return faces
 
@@ -67,31 +82,44 @@ class Prop:
     def beam(self, name, a, b, width, color=PETROL, **kwargs):
         return self.add(name, "beam", a, b, width, color=color, **kwargs)
 
-    def wear(self, stone=False):
+    def wear(self, part, stone=False):
         # Broad wear belongs on exposed edges; grease belongs on inward faces.
         # Vertex tint reuses the existing paint surface without another atlas or draw.
-        self.part.bm.normal_update()
-        for i, face in enumerate(self.part.bm.faces):
+        part.bm.normal_update()
+        for i, face in enumerate(part.bm.faces):
             if i % 13 == 2 and face.normal.z > 0.35:
                 for loop in face.loops:
-                    old = loop[self.part.col]
+                    old = loop[part.col]
                     rubbed = common.rgba(CHALK if stone else BONE)
-                    loop[self.part.col] = tuple(old[k] * 0.72 + rubbed[k] * 0.28 for k in range(4))
+                    loop[part.col] = tuple(old[k] * 0.72 + rubbed[k] * 0.28 for k in range(4))
             elif i % 19 == 4 and abs(face.normal.z) < 0.7:
                 for loop in face.loops:
-                    old = loop[self.part.col]
+                    old = loop[part.col]
                     rust = common.rgba(DARK if stone else OXIDE)
-                    loop[self.part.col] = tuple(old[k] * 0.70 + rust[k] * 0.30 for k in range(4))
+                    loop[part.col] = tuple(old[k] * 0.70 + rust[k] * 0.30 for k in range(4))
 
     def finish(self, motion=None, stone=False):
-        self.wear(stone)
-        self.part.bm.verts.index_update()
-        moving = [v.index for v in self.part.bm.verts if v[self.moving]]
-        obj = self.part.to_object(parent=self.root)
+        objs = []
+        for key in sorted(self.parts):
+            part = self.parts[key]
+            self.wear(part, stone)
+            obj = part.to_object(parent=self.root)
+            if motion is not None:
+                group = obj.vertex_groups.new(name="Motion" if key[1] else "Static")
+                group.add(list(range(len(obj.data.vertices))), 1, "REPLACE")
+            objs.append(obj)
+        obj = objs[0]
+        if len(objs) > 1:
+            bpy.ops.object.select_all(action="DESELECT")
+            for o in objs:
+                o.select_set(True)
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.join()
+        obj.name = obj.data.name = "Surface"
         if stone:
             common.material("paint").node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.95
         if motion is not None:
-            make_rig(self.root, obj, moving, motion)
+            make_rig(self.root, obj, motion)
         return self.root
 
 
@@ -107,15 +135,15 @@ def spool():
     # The winding profile is continuous, with two broad ridges and a recessed bite.
     rows = []
     for x, radius in ((-0.9, 0.76), (-0.45, 0.8), (0, 0.73), (0.45, 0.8), (0.9, 0.76)):
-        rows.append([p.part.bm.verts.new((x, radius * math.cos(k * math.tau / 10),
+        rows.append([p.get("round").bm.verts.new((x, radius * math.cos(k * math.tau / 10),
                                          1.4 + radius * math.sin(k * math.tau / 10))) for k in range(10)])
     for i in range(4):
         for k in range(10):
-            f = p.part.bm.faces.new((rows[i][k], rows[i][(k + 1) % 10],
+            f = p.get("round").bm.faces.new((rows[i][k], rows[i][(k + 1) % 10],
                                      rows[i + 1][(k + 1) % 10], rows[i + 1][k]))
-            p.part.paint([f], "paint", common.mix(DARK, BONE, 0.12 if (k + i) % 4 == 0 else 0.035))
+            p.get("round").paint([f], "paint", common.mix(DARK, BONE, 0.12 if (k + i) % 4 == 0 else 0.035))
     for row, reverse in ((rows[0], True), (rows[-1], False)):
-        p.part.paint([p.part.bm.faces.new(list(reversed(row)) if reverse else row)], "paint", DARK)
+        p.get("round").paint([p.get("round").bm.faces.new(list(reversed(row)) if reverse else row)], "paint", DARK)
     p.marker("Barrel")
     p.marker("axle", (0, 0, 1.4))
     p.marker("line_out", (0, 1.1, 1.4))
@@ -144,14 +172,14 @@ def fan():
         p.beam("Bracket", (0, s * 0.81, -0.18), (0, s * 0.5, -1.2), 0.18)
     # Four broad guards rather than the sheet's dense mesh grille.
     for x in (-0.55, 0.55):
-        p.beam("Guards", (x, 0.66, -3.05), (x, 0.66, -0.55), 0.12, DARK)
+        p.beam("Guards", (x, 0.66, -3.05), (x, 0.66, -0.55), 0.12, DARK, style="flat")
     for z in (-2.35, -1.25):
-        p.beam("Guards", (-1.25, 0.66, z), (1.25, 0.66, z), 0.12, DARK)
+        p.beam("Guards", (-1.25, 0.66, z), (1.25, 0.66, z), 0.12, DARK, style="flat")
     for k in range(3):
         angle = k * math.tau / 3
         m = common.mtx((0, 0, -1.8), (math.pi / 2, 0, 0)) @ Matrix.Rotation(angle, 4, "Z")
         p.add("Blades", "prism", [(0.12, -0.10), (1.1, -0.24), (1.22, 0.14), (0.18, 0.19)],
-              0.065, matrix=m, color=PETROL, moving=True)
+              0.065, matrix=m, color=PETROL, moving=True, style="flat")
     p.cyl("Blades", 0.23, 0.18, (0, 0, -1.8), BONE, 8,
           rot=(math.pi / 2, 0, 0), moving=True)
     p.marker("hang")
@@ -173,9 +201,9 @@ def crate():
         p.box("Box", (1.56, 0.10, 0.14), (0, 0.70, z), BONE)
     for x in (-0.66, 0.66):
         for z in (0.13, 1.16):
-            p.box("Straps", (0.12, 1.52, 0.08), (x, 0, z), DARK)
-        p.box("Straps", (0.12, 0.13, 1.04), (x, 0.72, 0.64), DARK)
-        p.box("Straps", (0.12, 0.13, 1.04), (x, -0.72, 0.64), DARK)
+            p.box("Straps", (0.12, 1.52, 0.08), (x, 0, z), DARK, style="flat")
+        p.box("Straps", (0.12, 0.13, 1.04), (x, 0.72, 0.64), DARK, style="flat")
+        p.box("Straps", (0.12, 0.13, 1.04), (x, -0.72, 0.64), DARK, style="flat")
     p.marker("carry_l", (-1, 0, 0.8))
     p.marker("carry_r", (1, 0, 0.8))
     return p.finish()
@@ -187,21 +215,21 @@ def pot():
     rings = []
     for radius, z, shift in ((0.49, 0.2, 0), (0.7, 0.43, 0), (0.7, 1.40, -0.04),
                               (0.48, 1.72, 0.03), (0.21, 2.0, 0)):
-        rings.append([p.part.bm.verts.new((radius * math.cos(k * math.tau / 10) + shift,
+        rings.append([p.get("round").bm.verts.new((radius * math.cos(k * math.tau / 10) + shift,
                                          radius * math.sin(k * math.tau / 10), z)) for k in range(10)])
     for i in range(4):
         for k in range(10):
-            f = p.part.bm.faces.new((rings[i][k], rings[i][(k + 1) % 10],
+            f = p.get("round").bm.faces.new((rings[i][k], rings[i][(k + 1) % 10],
                                      rings[i + 1][(k + 1) % 10], rings[i + 1][k]))
-            p.part.paint([f], "paint", PETROL if i == 1 else BONE)
+            p.get("round").paint([f], "paint", PETROL if i == 1 else BONE)
     for row, reverse in ((rings[0], True), (rings[-1], False)):
-        p.part.paint([p.part.bm.faces.new(list(reversed(row)) if reverse else row)], "paint", DARK)
+        p.get("round").paint([p.get("round").bm.faces.new(list(reversed(row)) if reverse else row)], "paint", DARK)
     p.marker("Tank")
     for s in (-1, 1):
         p.box("Feet", (0.25, 1.5, 0.2), (s * 0.625, 0, 0.1))
     points = [(0.7, 0, 1.6), (0.96, 0, 1.38), (1.12, 0, 0.76), (1.06, 0, 0.18)]
     for a, b in zip(points, points[1:]):
-        p.add("Hose", "rod", a, b, 0.08, segs=6, color=DARK)
+        p.add("Hose", "rod", a, b, 0.08, segs=6, color=DARK, style="flat")
     p.cyl("Tank", 0.25, 0.08, (0, 0, 2.02), PETROL, 6)
     p.marker("hose_out", (0.7, 0, 1.6))
     return p.finish()
@@ -214,9 +242,9 @@ def clamp():
         # Open socket mouths, with bone lips on petrol sleeves.
         rot = (0, s * math.radians(35), 0)
         phase = (math.pi / 8, math.pi / 8 + math.tau)
-        p.ring("Sockets", 0.20, 0.325, 0.8, (s * 0.32057, 0, 0.97234), PETROL, 8,
+        p.ring("Sockets", 0.20, 0.325, 0.8, (s * 0.32057, 0, 0.97234), PETROL, 4,  # 8 sides at detail 2: the 0.6 m envelope is pinned
                rot=rot, arc=phase)
-        p.ring("Sockets", 0.20, 0.325, 0.13, (s * 0.51272, 0, 1.24675), BONE, 8,
+        p.ring("Sockets", 0.20, 0.325, 0.13, (s * 0.51272, 0, 1.24675), BONE, 4,
                rot=rot, arc=phase)
     p.marker("line_l", (-0.55, 0, 1.3))
     p.marker("line_r", (0.55, 0, 1.3))
@@ -229,16 +257,16 @@ def ballast():
     rows = []
     for z, inset in ((0, 0), (0.37, 0.045), (0.42, 0), (0.76, 0.035), (0.81, 0), (1.2, 0)):
         xmax = 1 - z * 1.05
-        rows.append([p.part.bm.verts.new(v) for v in
+        rows.append([p.get("hard").bm.verts.new(v) for v in
                      [(-1 + inset, -0.7 + inset, z), (xmax - inset, -0.7 + inset, z),
                       (xmax - inset, 0.7 - inset, z), (-1 + inset, 0.7 - inset, z)]])
     for i in range(len(rows) - 1):
         for k in range(4):
-            f = p.part.bm.faces.new((rows[i][k], rows[i][(k + 1) % 4],
+            f = p.get("hard").bm.faces.new((rows[i][k], rows[i][(k + 1) % 4],
                                      rows[i + 1][(k + 1) % 4], rows[i + 1][k]))
-            p.part.paint([f], "paint", common.mix(CHALK, DARK, 0.18) if i in (1, 3) else CHALK)
+            p.get("hard").paint([f], "paint", common.mix(CHALK, DARK, 0.18) if i in (1, 3) else CHALK)
     for row, reverse in ((rows[0], True), (rows[-1], False)):
-        p.part.paint([p.part.bm.faces.new(list(reversed(row)) if reverse else row)], "paint", CHALK)
+        p.get("hard").paint([p.get("hard").bm.faces.new(list(reversed(row)) if reverse else row)], "paint", CHALK)
     p.marker("BeddedWedge")
     p.marker("strap_a", (-0.6, 0, 0.6))
     p.marker("strap_b", (0.6, 0, 0.6))
@@ -249,9 +277,9 @@ def lamp_body():
     p = Prop("prop_lamp_body")
     p.ring("Cage", 0.35, 0.45, 0.5, (0, 0, 0.75), PETROL, 12)
     for x in (-0.17, 0.17):
-        p.beam("Cage", (x, 0.28, 0.35), (x, 0.28, 1.15), 0.04, BONE)
+        p.beam("Cage", (x, 0.28, 0.35), (x, 0.28, 1.15), 0.04, BONE, style="flat")
     for z in (0.56, 0.94):
-        p.beam("Cage", (-0.40, 0.28, z), (0.40, 0.28, z), 0.04, BONE)
+        p.beam("Cage", (-0.40, 0.28, z), (0.40, 0.28, z), 0.04, BONE, style="flat")
     p.box("Bracket", (0.3, 0.13, 0.6), (0, -0.285, 0.3))
     p.box("Bracket", (0.3, 0.7, 0.12), (0, 0, 0.06))
     p.marker("wall_mount", (0, -0.3, 0.3))
@@ -281,10 +309,10 @@ def sail():
     # The whole cloth read is an existing matte bone paint sample.
     m = common.mtx((0, 0, 1.5), (math.pi / 2, 0, 0))
     p.add("Triangle", "prism", [(0, -0.65), (1.8, 0), (0, 0.65)], 0.05,
-          matrix=m, color=BONE, moving=True)
+          matrix=m, color=BONE, moving=True, style="flat")
     for z in (0.85, 2.15):
         p.add("BraceRods", "rod", (0, 0, z), (1.8, 0, 1.5), 0.03,
-              segs=6, color=PETROL, moving=True)
+              segs=6, color=PETROL, moving=True, style="flat")
     p.cyl("Mast", 0.13, 0.2, (0, 0, 1.5), DARK, 8)
     p.marker("hinge", (0, 0, 1.5))
     return p.finish(("sail", (0, 0, 1.5)))
@@ -305,7 +333,7 @@ def bench():
 BUILDERS = [spool, bearing, fan, crate, pot, clamp, ballast, lamp_body, lamp_glass, sail, bench]
 
 
-def make_rig(root, obj, moving, motion):
+def make_rig(root, obj, motion):
     kind, pivot = motion
     data = bpy.data.armatures.new("PropRig")
     arm = bpy.data.objects.new("PropRig", data)
@@ -323,9 +351,6 @@ def make_rig(root, obj, moving, motion):
     bone.parent = base
     bpy.ops.object.mode_set(mode="OBJECT")
     obj.parent = arm
-    moving_set = set(moving)
-    obj.vertex_groups.new(name="Static").add([v.index for v in obj.data.vertices if v.index not in moving_set], 1, "REPLACE")
-    obj.vertex_groups.new(name="Motion").add(moving, 1, "REPLACE")
     obj.modifiers.new("Rigid prop motion", "ARMATURE").object = arm
     scene = bpy.context.scene
     scene.render.fps = 30
@@ -366,6 +391,7 @@ def make_rig(root, obj, moving, motion):
 
 def export(root, path):
     bpy.context.view_layer.update()
+    polish.bake(root, common.POLISH)
     bpy.ops.object.select_all(action="DESELECT")
     for obj in common.tree(root):
         obj.select_set(True)
@@ -377,7 +403,7 @@ def export(root, path):
                              export_anim_slide_to_zero=True, export_force_sampling=True,
                              export_frame_range=False, export_def_bones=False,
                              export_cameras=False, export_lights=False)
-    common.canonical_indices(str(path))
+    common.canonical_indices(str(path), vertices=True)
     raw = path.read_bytes()
     gltf = json.loads(raw[20:20 + int.from_bytes(raw[12:16], "little")])
     tri, vert, draws = 0, 0, 0
@@ -386,7 +412,7 @@ def export(root, path):
             tri += gltf["accessors"][primitive["indices"]]["count"] // 3
             vert += gltf["accessors"][primitive["attributes"]["POSITION"]]["count"]
             draws += 1
-    assert 0 < tri <= 270 and 0 < vert <= 610 and draws == 1, (path.name, tri, vert, draws)
+    assert 0 < tri <= TRI_CAP and 0 < vert <= VERT_CAP and draws == 1, (path.name, tri, vert, draws)
     assert len(gltf["materials"]) == 1 and not gltf.get("images"), path.name
     print("MHP_ASSET", path.name, "triangles", tri, "vertices", vert, "surfaces", draws,
           "bytes", len(raw), "sha256", hashlib.sha256(raw).hexdigest(), flush=True)
@@ -492,6 +518,7 @@ def main():
                       ("spool", "bearing", "fan", "crate", "pot", "clamp", "ballast", "lamp", "sail", "bench")])
     opts = args.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
     opts.out_dir.mkdir(parents=True, exist_ok=True)
+    polish.enable(detail=2, bevel=0.03, bevel_min=0.1)
     paths = [opts.out_dir / ("prop_" + name + ".glb") for name in
              ("spool", "bearing", "fan", "crate", "pot", "clamp", "ballast", "lamp_body", "lamp_glass", "sail", "bench")]
     if not opts.preview_only:

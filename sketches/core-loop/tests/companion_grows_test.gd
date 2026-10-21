@@ -264,7 +264,9 @@ func _check_body() -> void:
 	_t.eq("grown body is mark 5", body.mark(), 5)
 	_t.near("grown body scale", body.grown(), 1.4)
 	var kit: Array = body.kit_parts()
-	_t.check("mk V shows every add-on", kit.size() == 7 or kit == ["Mk2Fins", "Mk3Halo", "Mk4Exhaust", "Mk5CoreCrest"], str(kit))
+	# The shipped spil9_marks GLB must seat on the Hull bone in a real run; the seven greybox
+	# stand-ins are only the fallback for a missing GLB (spil9_marks is now in the registry as shipped).
+	_t.check("mk V seats the real marks", kit == ["Mk2Fins", "Mk3Halo", "Mk4Exhaust", "Mk5CoreCrest"], str(kit))
 	_t.check("key of bare", body.key_of([]) == "bare" and body.key_of([], false) == "")
 	_t.eq("key of one", body.key_of(["ram_prow"]), "ram_prow")
 

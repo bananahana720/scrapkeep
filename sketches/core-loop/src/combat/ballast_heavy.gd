@@ -134,10 +134,15 @@ func _ring_out() -> void:
 		_knock = Vector3.ZERO
 		return
 	ring_outs += 1
-	last_damage_source = "ring_out"
 	if fleet != null:
 		fleet.discover("ring_out", global_position)
-	_die()
+	ring_out()
+
+
+# It keeps its own ring-out above (the stake reels it back), so enemy.gd's general rule
+# stays off for it; ring_out() still gives it the shared tell, sound and kill credit.
+func _rings_out(_grounded: bool) -> bool:
+	return false
 
 
 func _read_rim() -> void:

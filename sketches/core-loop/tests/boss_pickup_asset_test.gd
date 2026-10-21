@@ -9,7 +9,9 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # still holds when phase 1 ends, which only phase 1 used to pay back; pickup meshes unchanged.
 # Re-pinned 2026-10-17 (boss phase moments): phase 3 entry passes enter_scuttle to cockpit_open,
 # so the model's shield flips with the clip before it hides; pickup meshes unchanged.
-const BASE_LOGIC_SHA := "5f85f822f5a4d59a31f9d4d10b8568ff9dc8889c11ba1a37f010a421aa4967a4"
+# Re-pinned 2026-10-18 (#94 reduce flashes): the crane warning glow pulses at FlashGuard.rate,
+# so the Reduce flashes toggle slows it; pickup meshes unchanged. Was 5f85f822.
+const BASE_LOGIC_SHA := "8ec6e239d4b20098cab8f052f04d15e05473d6283963f2f1f1fdf37cf6a92977"
 
 var failures := 0
 var game

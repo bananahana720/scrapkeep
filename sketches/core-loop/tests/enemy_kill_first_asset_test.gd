@@ -1,7 +1,7 @@
 extends SceneTree
-# Kill-first bodies (ENEMY-PRIORITY.md 4a): Splitter, its loose piece and Linker. Asset only:
-# no combat script loads these yet (Splitter wave 18, Linker wave 19), so this checks the
-# imported files the wiring will read. Enemy budget, opaque vertex-colour surfaces with no
+# Kill-first bodies (ENEMY-PRIORITY.md 4a): Splitter, its loose piece and Linker. Combat loads
+# them: src/combat/splitter.gd (BODY_GLB, PIECE_GLB), src/combat/splitter_pod.gd (BODY) and
+# src/combat/linker.gd (MODEL). This checks the imported files those scripts read. Enemy budget, opaque vertex-colour surfaces with no
 # baked glow, the named meshes and sockets the behaviour is promised, and the floor and core
 # each recipe documents.
 
@@ -36,7 +36,7 @@ func _points(scene: Node3D, name: String) -> PackedVector3Array:
 	return out
 
 
-func _budget(label: String, scene: Node3D, draws: int, slots: Array) -> void:
+func _budget(label: String, scene: Node3D, draws: int, slots: Array, recipe_tris: int, recipe_verts: int = -1) -> void:
 	var tris := 0
 	var verts := 0
 	var surfaces := 0
@@ -54,9 +54,33 @@ func _budget(label: String, scene: Node3D, draws: int, slots: Array) -> void:
 			if mat != null:
 				seen.append(mat.resource_name)
 	print("%s: %d V / %d T / %d D" % [label, verts, tris, surfaces])
-	t.check(label + " enemy budget", verts <= 2100 and tris <= 1100 and surfaces == draws)
+	# The enemy class cap (assets/asset_budgets.json); each body recipe asserts its own.
+	t.check(label + " enemy budget", verts <= 19100 and tris <= 10000 and surfaces == draws)
+	# The tighter caps each recipe asserts on its own export.
+	t.check(label + " recipe tri cap " + str(recipe_tris), tris <= recipe_tris, str(tris))
+	if recipe_verts >= 0:
+		t.check(label + " recipe vert cap " + str(recipe_verts), verts <= recipe_verts, str(verts))
 	for slot in slots:
 		t.check(label + " slot " + slot, slot in seen)
+
+
+# The exact clip set the recipe (kill_first_motion.py) exports, each with a real length.
+func _clips(label: String, scene: Node3D, expected: Array) -> void:
+	var player := scene.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	t.check(label + " has an AnimationPlayer", player != null)
+	if player == null:
+		return
+	var found := []
+	for clip in player.get_animation_list():
+		if clip != "RESET":
+			found.append(String(clip))
+	found.sort()
+	var want := expected.duplicate()
+	want.sort()
+	print("%s clips: %s" % [label, found])
+	t.check(label + " clip set is exactly " + str(want), found == want, str(found))
+	for clip in expected:
+		t.check(label + " clip " + clip + " has length", player.has_animation(clip) and player.get_animation(clip).length > 0.0)
 
 
 func _named(label: String, scene: Node3D, names: Array) -> void:
@@ -78,7 +102,8 @@ func _splitter() -> void:
 	if scene == null:
 		return
 	root.add_child(scene)
-	_budget("splitter", scene, 2, ["fleet_paint", "requisition_tag"])
+	_budget("splitter", scene, 2, ["fleet_paint", "requisition_tag"], 8000)
+	_clips("splitter", scene, ["crawl", "tell", "break_split", "break_clean"])
 	_named("splitter", scene, ["SplitterBody", "SplitterSeams", "FuseLamp", "pod_a", "pod_b", "pod_c",
 		"snout_a", "snout_b", "snout_c"])
 	var all := _points(scene, "SplitterBody")
@@ -120,7 +145,8 @@ func _piece() -> void:
 	if scene == null:
 		return
 	root.add_child(scene)
-	_budget("piece", scene, 2, ["fleet_paint", "requisition_tag"])
+	_budget("piece", scene, 2, ["fleet_paint", "requisition_tag"], 3100, 1900)
+	_clips("piece", scene, ["scurry", "pop_in"])
 	_named("piece", scene, ["SplitterPieceBody", "SplitterPieceGlow", "snout"])
 	var all := _points(scene, "SplitterPieceBody")
 	all.append_array(_points(scene, "SplitterPieceGlow"))
@@ -142,7 +168,8 @@ func _linker() -> void:
 	if scene == null:
 		return
 	root.add_child(scene)
-	_budget("linker", scene, 3, ["fleet_paint", "working_tool", "requisition_tag"])
+	_budget("linker", scene, 3, ["fleet_paint", "working_tool", "requisition_tag"], 7400)
+	_clips("linker", scene, ["idle", "brace", "braced", "slack", "cut"])
 	_named("linker", scene, ["LinkerBody", "LinkerDish", "LinkerCable", "LinkerHinge", "boom_tip",
 		"cable_base", "cable_dish", "cable_cut", "partner_spot", "LinkerCab"])
 	var body := _points(scene, "LinkerBody")

@@ -1,5 +1,21 @@
 # park_pit traversal measurements
 
+## Liners vs greybox slabs, 2026-10-19 (wave 18 dress unit)
+
+The six last greybox rows became decoration-only liners. The three unstamped ones (`haul_road_west_5`, `bench2_camp_lane`, `bench2_east_bank`) lost their 0.1 m box colliders, so the lines that cross them were re-measured. This section is added beside the 2026-10-12 table below, which stays as history.
+
+Method: `tools/traversal_line.gd --table=park --stage=3 --seeds=1,2,3,4,5,6,7,8`, one pilot at a time, headless, `--fixed-fps 90`. Head: `4173bdde` (liners; the liner commit is `1ca747f2`). Base: `1a7a7299` (greybox slabs). Base `1a7a7299`'s park_pit.json and assets/park/park_pit are identical to those of stage head `b95e1799` (empty diff); the only src or tools change between them is `special_audio.gd`. The first base Cannon run had seeds 3 to 8 killed (exit 137, environmental, INCONCLUSIVE); seeds 3 to 8 were rerun alone and completed, and the table uses seeds 1 to 2 from the first run plus that rerun. Receipts: `artifacts/local/dress-trav8/` (not committed).
+
+| Pilot | Head reached | Head dead stops | Head time_to_warden median (range) | Base reached | Base dead stops | Base time_to_warden median (range) |
+| --- | --- | --- | --- | --- | --- | --- |
+| sable | 8 of 8 | 2 (seeds 1, 4) | 59.47 s (58.1 to 63.0) | 8 of 8 | 1 (seed 8) | 60.58 s (60.5 to 60.6) |
+| rivet | 8 of 8 | 0 | 96.81 s (96.8 to 97.7) | 8 of 8 | 0 | 98.42 s (98.4 to 99.4) |
+| cannon | 8 of 8 | 0 | 95.57 s (94.7 to 96.0) | 8 of 8 | 0 | about 95.6 s (95.1 to 96.3) |
+
+Against the bands: Rivet and Cannon are inside every band checked on both sides. Sable's dead_stops band (0 on every seed) is missed on both head and base. All three Sable stops are at (-412.3, -536.4), 10.99 s, the dump_wash_2 and canal junction, where the liners add no collider; recorded as a pre-existing intermittent (2 of 11 seeds on head and 2 of 11 on base across the two runs), not a liner regression. Sable's head time_to_warden median, 59.47 s, is 0.5 s under the 60 s floor (base 60.58 s is inside): a fast-side band miss, plausibly the removed slab edges (unverified).
+
+Limits: automated bot lines only, no feel and no human play; the skill line and the other three pilots were not re-run; seeds on this tool repeat closely, so eight seeds are fewer independent traces than eight. The stage is not traversal-qualified as dressed.
+
 ## Greybox, 2026-10-12, merged candidate
 
 Runtime input head `078320e470795ac8089cc5fec8aacf4e53db34d6`. Later page-only edits do not change the measured park, lines or code. Eight seeds per completed line. Floor flow share is reported only under kd-common-r.md item 4.

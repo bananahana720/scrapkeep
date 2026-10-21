@@ -1514,7 +1514,7 @@
         "RimSector"
       ],
       "root": "breach_rim_sector",
-      "sha256": "2ed2f034393688e5484aa65d305c84bc09d37d4c2ea5d18f2cf1f4c8844dd664",
+      "sha256": "4de098ba68a59ae57a0646239e929a8bbfab1a8d27d86a09dee558542c271e1d",
       "sockets": {
         "socket_join_a": [
           0,
@@ -1572,7 +1572,7 @@
         "StateTab"
       ],
       "root": "breach_tab",
-      "sha256": "0454f6e4415228739b78cf1ed37ccb7daa4289c5107cb29108b157daaa7cab92",
+      "sha256": "e4e51b9e8cd4fb796f737dc2647f8eca8c7c592dba467a6e0553ea87d8798d85",
       "sockets": {
         "socket_mount": [
           0,
@@ -1625,7 +1625,7 @@
         "WedgeA"
       ],
       "root": "breach_wedge_a",
-      "sha256": "95a206997eeaf0a70d8faa9d2084e17628c5c170c540061079a0aa2ba0d17e05",
+      "sha256": "c07e21c56a388b86f02d513fbc1b6e510e00a081ba4575f9fdc2986f169c577a",
       "sockets": {
         "socket_membrane": [
           0,
@@ -1678,7 +1678,7 @@
         "WedgeA"
       ],
       "root": "breach_wedge_a_12x12",
-      "sha256": "f49ad144e112524b52bc654aee06e019d9bab1f8cd99adb1c628acb46b4d9020",
+      "sha256": "f0105caf757d73aaddbfdef9d597eaed64bf8b822788aa7ac9f836217464602d",
       "sockets": {
         "socket_membrane": [
           0,
@@ -1731,7 +1731,7 @@
         "WedgeA"
       ],
       "root": "breach_wedge_a_14x10",
-      "sha256": "3ce176c18771bc731804dd736bb85ad594402f96d5a23e351a5f6b1be22e6fcd",
+      "sha256": "d251ace5157c28157e3df1bbb25399206c26e818f6bf2eb9dd2f90c6c10f1a1a",
       "sockets": {
         "socket_membrane": [
           0,
@@ -1784,7 +1784,7 @@
         "WedgeB"
       ],
       "root": "breach_wedge_b",
-      "sha256": "040e9eac0dd416af80069349af634fc9be8a9782da3cc8ead01b735a8f9a1c1d",
+      "sha256": "a70fa0a2ea010c91fc84fd12d2b16a3faa407cd5b4bf839f8c5928ea69c73379",
       "sockets": {
         "socket_membrane": [
           -3.0,
@@ -1793,7 +1793,7 @@
         ]
       },
       "triangles": 12,
-      "vertices": 28
+      "vertices": 22
     },
     "breach_wedge_b_12x12": {
       "bounds": {
@@ -1837,7 +1837,7 @@
         "WedgeB"
       ],
       "root": "breach_wedge_b_12x12",
-      "sha256": "26ad9d3ed2970d08d7f0400b2130d5dca945942bb2fd56e42043835cfeaa0442",
+      "sha256": "ae42c799a4dda13cac411e0cfa8d13b1997f55866b22185a890d5b7dd277851d",
       "sockets": {
         "socket_membrane": [
           -6.0,
@@ -1846,7 +1846,7 @@
         ]
       },
       "triangles": 12,
-      "vertices": 28
+      "vertices": 22
     },
     "breach_wedge_b_14x10": {
       "bounds": {
@@ -1890,7 +1890,7 @@
         "WedgeB"
       ],
       "root": "breach_wedge_b_14x10",
-      "sha256": "1ca2fd199ec1eb47a3083e4d6c2b7a7ee03198a6d1484972a160bef9df1a6ff0",
+      "sha256": "e3e5bc79f526114b9f1d5ba756835182ff07d37dd1811478322476277eed7417",
       "sockets": {
         "socket_membrane": [
           -7.0,
@@ -1899,7 +1899,7 @@
         ]
       },
       "triangles": 12,
-      "vertices": 28
+      "vertices": 24
     },
     "breach_wedge_c": {
       "bounds": {
@@ -1943,7 +1943,7 @@
         "WedgeC"
       ],
       "root": "breach_wedge_c",
-      "sha256": "08348e930cd42a063ab1e010db548e7a1f9a761529a42e6cff59946898011e97",
+      "sha256": "2101d20caac01396356ab5094d31d9eb63fc614c9ce995c06e867432fcdb02b4",
       "sockets": {
         "socket_membrane": [
           3.0,
@@ -1952,7 +1952,7 @@
         ]
       },
       "triangles": 12,
-      "vertices": 28
+      "vertices": 22
     },
     "breach_wedge_c_12x12": {
       "bounds": {
@@ -1996,7 +1996,7 @@
         "WedgeC"
       ],
       "root": "breach_wedge_c_12x12",
-      "sha256": "39d18f274765eed9a233b52989dc8ce992a99f41535e7276c101a73508cccd71",
+      "sha256": "28c303e18b50d38a76302ca986a35ed15bde6eac122c490ae27e5037691d6599",
       "sockets": {
         "socket_membrane": [
           6.0,
@@ -2005,7 +2005,7 @@
         ]
       },
       "triangles": 12,
-      "vertices": 28
+      "vertices": 22
     },
     "breach_wedge_c_14x10": {
       "bounds": {
@@ -2049,7 +2049,7 @@
         "WedgeC"
       ],
       "root": "breach_wedge_c_14x10",
-      "sha256": "3c1b5d8bcfba4d6f231ca0e752a08d4d0915773326849098dc9b82693c710107",
+      "sha256": "c8b8b3dc71fccf8c0a98719955631b49092d83534bce2944b10d508479c7cafb",
       "sockets": {
         "socket_membrane": [
           7.0,
@@ -2058,7 +2058,7 @@
         ]
       },
       "triangles": 12,
-      "vertices": 28
+      "vertices": 24
     },
     "cart_body": {
       "bounds": {
@@ -2121,7 +2121,7 @@
         "Chassis"
       ],
       "root": "cart_body",
-      "sha256": "3783ade360759f5232fd38285a5bb0ea3d254a7950d149de1812f78706b3a57d",
+      "sha256": "cab95a85a8bb474b45c4571d8dc4b34ac8883c498d4a4b0b59c5551c4c0154d7",
       "sockets": {
         "socket_tow": [
           0,
@@ -2150,7 +2150,7 @@
         ]
       },
       "triangles": 88,
-      "vertices": 200
+      "vertices": 168
     },
     "cart_wheel": {
       "bounds": {
@@ -2193,10 +2193,10 @@
         "Tyre"
       ],
       "root": "cart_wheel",
-      "sha256": "d8b8a0d55b69a031a1fb5bcc1c3d42256ddd2ddfaf52f58b4c407bf014435fe8",
+      "sha256": "f9f7c5296f48dbe68d6800716776d9abe7bf4f831b815ce2df2e62337d492fb2",
       "sockets": {},
       "triangles": 188,
-      "vertices": 96
+      "vertices": 128
     },
     "impeller_hub": {
       "bounds": {
@@ -2244,7 +2244,7 @@
         "Hub"
       ],
       "root": "impeller_hub",
-      "sha256": "b9aa54fa18874854b1c82725af6d22ed19955604a1914edb1be8778c93745d71",
+      "sha256": "0d894634649ddf2f54834a630a944b644747b20a353fdb699dba024539caf592",
       "sockets": {
         "socket_vane_0": [
           0.0,
@@ -2273,7 +2273,7 @@
         ]
       },
       "triangles": 200,
-      "vertices": 280
+      "vertices": 200
     },
     "impeller_rim_sector": {
       "bounds": {
@@ -2318,7 +2318,7 @@
         "RimSector"
       ],
       "root": "impeller_rim_sector",
-      "sha256": "455d2c3f6e9fcaf8a520cfaf5abb2cd96d121151abe9b64b470e811eb815396a",
+      "sha256": "7ba17e8ac8ef6d2adc81b8dbde42ecceb077b57d77a1bca3d868b1d1b9607a73",
       "sockets": {
         "socket_join_a": [
           0,
@@ -2332,7 +2332,7 @@
         ]
       },
       "triangles": 64,
-      "vertices": 98
+      "vertices": 78
     },
     "impeller_vane": {
       "bounds": {
@@ -2376,7 +2376,7 @@
         "Vane"
       ],
       "root": "impeller_vane",
-      "sha256": "0dac50b6d1bf75b8f5967e1c6ac4466c4fed0b1d4b8230e5e80ecb31edfe9f91",
+      "sha256": "89cdc142438b609a4f0b3a1d8a472484dd5c7f33d7d1a75895c43b33499e0441",
       "sockets": {
         "socket_hub": [
           0,
@@ -2385,7 +2385,7 @@
         ]
       },
       "triangles": 60,
-      "vertices": 148
+      "vertices": 68
     },
     "impeller_vane_chipped": {
       "bounds": {
@@ -2429,7 +2429,7 @@
         "VaneChipped"
       ],
       "root": "impeller_vane_chipped",
-      "sha256": "422fba0aa0763335b47cd52f7dc7d099416c1b939e0f68c7b8749362843113b8",
+      "sha256": "69e2014c5549dfba7edf8053c761b9cb058b4f4352817a5da12567f0863b1934",
       "sockets": {
         "socket_hub": [
           0,
@@ -2438,7 +2438,7 @@
         ]
       },
       "triangles": 60,
-      "vertices": 150
+      "vertices": 72
     },
     "intake_petal": {
       "bounds": {
@@ -2482,7 +2482,7 @@
         "Petal"
       ],
       "root": "intake_petal",
-      "sha256": "754608ad6973f7bb8b83083f7d477b4cd0dc5aeac8b3b127b62b73d06004422c",
+      "sha256": "dbbeb26327c2a4edde2cfbd03f230c1de7d30245c6228cea00692ff34f4eba4b",
       "sockets": {
         "socket_throat": [
           0,
@@ -2491,7 +2491,7 @@
         ]
       },
       "triangles": 146,
-      "vertices": 89
+      "vertices": 132
     },
     "intake_spine_segment": {
       "bounds": {
@@ -2535,7 +2535,7 @@
         "Spine"
       ],
       "root": "intake_spine_segment",
-      "sha256": "68fcc18c7220312307a349028bd97273502d39e2815e4dd9d85df650f392958f",
+      "sha256": "aed26f97700de2fb6d703f10d939dc529dd12b27e4a4f5afe05c42d3e408e7e5",
       "sockets": {
         "socket_next": [
           0,
@@ -2544,7 +2544,7 @@
         ]
       },
       "triangles": 140,
-      "vertices": 72
+      "vertices": 144
     },
     "intake_throat": {
       "bounds": {
@@ -2589,7 +2589,7 @@
         "Throat"
       ],
       "root": "intake_throat",
-      "sha256": "adfe7f648b70e0b20d10d481159555ccc79ae0d3566599b02e266bd0d6bd1abd",
+      "sha256": "8f1bb5670500cd3b83b02f03186d0d75389f1f04fa07d506a59f636178534f8d",
       "sockets": {
         "socket_bell": [
           0,
@@ -2603,7 +2603,7 @@
         ]
       },
       "triangles": 192,
-      "vertices": 108
+      "vertices": 144
     },
     "lamp_curve_module": {
       "bounds": {
@@ -2831,7 +2831,7 @@
         "Crescent"
       ],
       "root": "shell_crescent",
-      "sha256": "51cc14b41780552c6ed146fc65e3b61e8c61d94a48d15c934cca1fd6a281bc3d",
+      "sha256": "2af8ecdf0c067b25c9dfdaabf5070b8a5de5b5e656af2a6bf996f67a39964e40",
       "sockets": {
         "socket_ground": [
           0,
@@ -2840,7 +2840,7 @@
         ]
       },
       "triangles": 228,
-      "vertices": 143
+      "vertices": 198
     },
     "shell_saddle": {
       "bounds": {
@@ -2884,7 +2884,7 @@
         "Saddle"
       ],
       "root": "shell_saddle",
-      "sha256": "d173111e82c69fc2d33b2541f24604408feaf07e901c31a0a026db9ec1f60a6a",
+      "sha256": "ca1cec2d9d576b23ddc9ad610e0b8d72acd2818f0b908751bc3943e9b1be8db1",
       "sockets": {
         "socket_ground": [
           0,
@@ -2893,7 +2893,7 @@
         ]
       },
       "triangles": 84,
-      "vertices": 50
+      "vertices": 86
     },
     "strut_bent": {
       "bounds": {
@@ -2938,7 +2938,7 @@
         "StrutBent"
       ],
       "root": "strut_bent",
-      "sha256": "1fa2c0e425cf274013fec2eb84b6f01fc75ce069496dbd70f9182d9e66ab955d",
+      "sha256": "481c9dc534ec965d8e67d84109a04224a1c0eebc3238e9d58aa467392aad768b",
       "sockets": {
         "socket_foot": [
           0,
@@ -2951,8 +2951,8 @@
           0.3
         ]
       },
-      "triangles": 92,
-      "vertices": 186
+      "triangles": 184,
+      "vertices": 226
     },
     "strut_tall": {
       "bounds": {
@@ -2998,7 +2998,7 @@
         "Strut"
       ],
       "root": "strut_tall",
-      "sha256": "3abbde0a42ee614c17c2413bedd901663cb9b2b2c3a37330e4196ee89f0c8cf9",
+      "sha256": "86da5d5223f68764946928b3fad8eb10f54af5e7c79d2739a2435722412d8b9f",
       "sockets": {
         "socket_foot_l": [
           -0.9,
@@ -3016,8 +3016,8 @@
           0.3
         ]
       },
-      "triangles": 132,
-      "vertices": 264
+      "triangles": 212,
+      "vertices": 288
     }
   },
   "integration_notes": [

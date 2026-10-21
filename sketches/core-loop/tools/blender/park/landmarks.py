@@ -27,6 +27,10 @@ machinery (never brass), basalt and limestone, red and cream slickrock, desert v
 Real-culture guardrail (PARK.md section 4): every landmark is dam-era, mining, natural, ancient or Fleet work; nothing
 here names or imitates a living people's work.
 
+Soft toy (Andrew, 18 Oct): the base GLB and the detail shells run through the polish toolkit's bevel, smooth shading and AO/edge-wear
+bake (the SOFT adapter below; tools/blender/POLISH.md). Those meshes carry a zeroed first UV map (UVMap) and the toolkit's second
+map (Bake: x unoccluded fraction, y wear); the -col meshes, the mid and far views and the isle tip stay unpolished and map-free.
+
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/park/landmarks.py -- \
       [--out-dir DIR] [--only landmark_dam,...] [--count-only]
 """
@@ -37,12 +41,14 @@ import math
 from pathlib import Path
 import sys
 
+import bmesh
 import bpy
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE))
 import common
+import polish
 import skyislands as sky
 
 SKETCH = HERE.parents[2]
@@ -889,6 +895,82 @@ PIT_ROPE = (0.882, 0.0, 0.470)          # toward the hoist house, unit
 PIT_PERP = (-0.470, 0.0, 0.882)
 PIT_WHEEL_Y, PIT_WHEEL_R = 113.0, 7.0
 PIT_WELL = (6.0, 0.0, 38.0)             # half width, bottom, top
+# The tipple_deck row (park_pit: at [0, 240], y -60, size [24, 2, 16], yaw 180) in this frame: Frame.local(0, -60, 240)
+# = (0, 40, 15); the row's yaw less the landmark's is 0, so its length (24) runs along local z and its width (16) along
+# x; place_greybox stands the box on the row's y: local x -8..8, y 40..42, z 3..27. The deck plate's top is the row's
+# top, 42; its edge stringers sit on the girders (top 39.7) through bearing shims out to x +-8.7.
+PIT_DECK_BOX = ((-8.0, 40.0, 3.0), (8.0, 42.0, 27.0))
+# The hoist_house row (at [-75, 215], ground y -100, size [44, 16, 26], yaw -63): Frame.local(-75, -100, 215) = (75, 0,
+# 40); local yaw = -63 - 180 = -243 = 117 degrees, so its length axis is local (sin 117, 0, cos 117) = (0.891, 0, -0.454)
+# (Frame.dir_local of the row's world +Z) and its width axis (cos 117, 0, -sin 117) = (-0.454, 0, -0.891). Half 22 by 13,
+# roof 16. The rope ends (hoist, below) lie 12 m from the centre toward the headframe on the plane square to PIT_ROPE;
+# the house meets them with a rope slot cut in the roof: the drum wall on that plane (d 12, d along -PIT_ROPE from the
+# centre), the slot 2 m deep to d 14, |q| < 5.5 along PIT_PERP, floor at 12. A rope rises 1.49 m per metre of plan back
+# toward the wheels, so it clears the slot's far lip (y 17 at d 14) and the roof beyond.
+PIT_HOUSE_ROW = ((-75.0, 215.0), -63.0, (44.0, 16.0, 26.0))
+PIT_ROPE_END_D = 12.0
+# d from, d to, half q, floor y; d is -PIT_ROPE . (p - centre), and PIT_ROPE is unit to 3 places, so the rope ends sit
+# at d = 12 |PIT_ROPE|^2 (11.986), where the drum wall stands
+PIT_SLOT = (PIT_ROPE_END_D * (PIT_ROPE[0] ** 2 + PIT_ROPE[2] ** 2), 14.0, 5.5, 12.0)
+
+
+def pit_house():
+    """(centre, length axis, width axis, half length, half width, roof) of the hoist house in the landmark frame."""
+    F = FRAMES["landmark_headframe"]
+    (wx, wz), yaw, size = PIT_HOUSE_ROW
+    c = F.local(wx, F.y, wz)
+    a = math.radians(yaw)
+    ax = F.dir_local(math.sin(a), math.cos(a))
+    aw = F.dir_local(math.cos(a), -math.sin(a))
+    return c, ax, aw, size[0] / 2, size[2] / 2, size[1]
+
+
+def clip(poly, n, k):
+    """The part of a convex outline [(x, z)] with n . p <= k (Sutherland-Hodgman, one plane)."""
+    out = []
+    for i, p in enumerate(poly):
+        q = poly[(i + 1) % len(poly)]
+        dp, dq = n[0] * p[0] + n[1] * p[1] - k, n[0] * q[0] + n[1] * q[1] - k
+        if dp <= 0:
+            out.append(p)
+        if dp * dq < 0:
+            t = dp / (dp - dq)
+            out.append((p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t))
+    return out
+
+
+def pit_house_pieces():
+    """[(outline, y0, y1)]: the house up to the slot floor, then the roof block round the rope slot (each convex)."""
+    c, ax, aw, hl, hw, roof = pit_house()
+    rect = [(c[0] + ax[0] * sl * hl + aw[0] * sw * hw, c[2] + ax[2] * sl * hl + aw[2] * sw * hw)
+            for sl, sw in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    d0, d1, hq, floor = PIT_SLOT
+    u, p = (-PIT_ROPE[0], -PIT_ROPE[2]), (PIT_PERP[0], PIT_PERP[2])
+    du = u[0] * c[0] + u[1] * c[2]
+    dp = p[0] * c[0] + p[1] * c[2]
+    neg = lambda n: (-n[0], -n[1])
+    parts = [(rect, 0.0, floor), (clip(rect, u, du + d0), floor, roof), (clip(rect, neg(u), -du - d1), floor, roof)]
+    band = clip(clip(rect, neg(u), -du - d0), u, du + d1)
+    parts += [(clip(band, neg(p), -dp - hq), floor, roof), (clip(band, p, dp - hq), floor, roof)]
+    return [(o, y0, y1) for o, y0, y1 in parts if len(o) >= 3]
+
+
+def pit_rope_ends():
+    return [vadd(vadd((75.0, 14.0, 40.0), PIT_ROPE, -PIT_ROPE_END_D), PIT_PERP, s * 3.5) for s in (-1, 1)]
+
+
+def pit_house_solid(s, roof_col, wall_col, slot=True):
+    if not slot:
+        c, ax, aw, hl, hw, roof = pit_house()
+        obox(s, vadd(c, UP, roof / 2), (hw, roof / 2, hl), (aw, UP, ax), wall_col)
+        return
+    for outline, y0, y1 in pit_house_pieces():
+        slab(s, outline, y0, y1, wall_col, roof_col if y1 > PIT_SLOT[3] + 1 else wall_col)
+
+
+def pit_stack():
+    c, ax, aw, hl, hw, roof = pit_house()
+    return vadd(vadd(c, ax, 14.0), aw, -6.0)
 
 
 def pit_leg(i, y):
@@ -967,6 +1049,35 @@ def build_headframe():
         beam(st, pit_leg(0 if sx > 0 else 1, 18.0), (sx * 8.4, 38.7, 22.0), 0.5, 0.5, col("iron_hi"))
     for z in (12.0, 20.0, 27.0):
         beam(st, (-8.4, 38.9, z), (8.4, 38.9, z), 0.4, 0.5, col("iron_hi"), caps=False)
+    # tipple deck (PIT_DECK_BOX): plate, edge stringers on bearing shims over the girders, floor beams, end channels
+    (dx0, dyb, dz0), (dx1, dyt, dz1) = PIT_DECK_BOX
+    box(st, (dx0, dyt - 0.4, dz0), (dx1, dyt, dz1), col("steel"))
+    for sx in (-1, 1):
+        box(st, (min(sx * 7.7, sx * 8.0), 39.7, dz0), (max(sx * 7.7, sx * 8.0), dyt - 0.4, dz1), iron)
+        for z in (4.0, 9.0, 15.0, 21.0, 26.0):
+            box(st, (min(sx * 7.7, sx * 8.7), 39.7, z - 0.3), (max(sx * 7.7, sx * 8.7), 40.0, z + 0.3), col("iron_hi"))
+    for z in (dz0 + 0.2, 7.0, 11.0, 15.0, 19.0, 23.0, dz1 - 0.2):
+        box(st, (-7.7, dyb + 0.2, z - 0.2), (7.7, dyt - 0.4, z + 0.2), col("iron_hi"))
+    box(colm, (dx0, dyb, dz0), (dx1, dyt, dz1), iron)
+    # hoist house (pit_house): corrugated walls, rust roof round the rope slot, the drum window on the slot's back wall
+    # facing the headframe, a boiler stack with two bands and a cap
+    hc, hax, haw, hhl, hhw, hroof = pit_house()
+    pit_house_solid(st, col("rust"), col("steel"))
+    pit_house_solid(colm, iron, iron, slot=False)
+    d0, d1, hq, floor = PIT_SLOT
+    wall = vadd(hc, PIT_ROPE, -(d0 + 0.03))
+    win = lambda q, y: vadd(vadd((wall[0], y, wall[2]), PIT_PERP, q), UP, 0.0)
+    card(st, [win(-4.6, floor + 0.4), win(4.6, floor + 0.4), win(4.6, hroof - 0.5), win(-4.6, hroof - 0.5)], col("iron"), vscale(PIT_ROPE, -1.0))
+    for q in (-4.6, -1.55, 1.55, 4.6):
+        beam(st, win(q, floor + 0.4), win(q, hroof - 0.5), 0.22, 0.22, col("copper"))
+    for y in (floor + 0.4, hroof - 0.5):
+        beam(st, win(-4.6, y), win(4.6, y), 0.22, 0.22, col("copper"))
+    sc = pit_stack()
+    frustum(st, (sc[0], sc[2]), 1.0, 0.85, hroof - 0.2, 34.0, 10, col("iron"))
+    for y in (22.0, 29.0):
+        frustum(st, (sc[0], sc[2]), 1.0, 1.0, y, y + 0.5, 10, col("rust"))
+    frustum(st, (sc[0], sc[2]), 1.15, 1.15, 33.4, 34.4, 10, col("iron_hi"))
+    frustum(colm, (sc[0], sc[2]), 1.0, 0.85, hroof - 0.2, 34.0, 8, iron)
 
     # ---- mid: box legs with cross braces, the deck, 16-segment wheel discs, ropes
     ms = mid["steel"]
@@ -987,6 +1098,9 @@ def build_headframe():
         ms.ring_solid([vadd(p, PIT_PERP, -0.3) for p in ring], [vadd(p, PIT_PERP, 0.3) for p in ring], iron)
         hoist = vadd(vadd((75.0, 14.0, 40.0), PIT_ROPE, -12.0), PIT_PERP, s * 3.5)
         tube(ms, vadd(c, PIT_ROPE, PIT_WHEEL_R - 0.3), hoist, 0.3, 3, col("cable"))
+    box(ms, PIT_DECK_BOX[0], PIT_DECK_BOX[1], col("steel"))
+    pit_house_solid(ms, col("rust"), col("steel"))
+    frustum(ms, (sc[0], sc[2]), 1.0, 0.85, hroof - 0.2, 34.0, 8, col("iron"))
 
     # ---- far: four box legs, the back legs, the deck and both wheel discs (the A-and-wheels read)
     fs = far["steel"]
@@ -1003,6 +1117,7 @@ def build_headframe():
         u, v = frame(PIT_PERP)
         ring = [vadd(vadd(c, u, PIT_WHEEL_R * math.cos(TAU * k / 12)), v, PIT_WHEEL_R * math.sin(TAU * k / 12)) for k in range(12)]
         fs.ring_solid([vadd(p, PIT_PERP, -0.3) for p in ring], [vadd(p, PIT_PERP, 0.3) for p in ring], iron)
+    pit_house_solid(fs, None, col("steel"), slot=False)
 
     # ---- shells: ladder and gusset plates (1); rivet rows (2)
     s1, s2 = sky.Surf("landmark_headframe_detail1"), sky.Surf("landmark_headframe_detail2")
@@ -1023,12 +1138,23 @@ def build_headframe():
         for k in range(9):
             x = x0 + 2.0 * k
             beam(s1, (x, dy1, z), (x, dy1 + 1.1, z), 0.06, 0.06, col("iron_hi"), caps=False)
+    # corrugation ribs every 2 m on the two house walls facing the headframe (+width and -length), under the slot floor
+    for axis, half, along, span in ((haw, hhw, hax, hhl), (hax, -hhl, haw, hhw)):
+        n = int(span)
+        for k in range(-n + 1, n, 2):
+            foot = vadd(vadd(hc, axis, half + (0.04 if half > 0 else -0.04)), along, float(k))
+            beam(s1, vadd(foot, UP, 0.3), vadd(foot, UP, floor - 0.3), 0.12, 0.08, col("iron_hi"), caps=False)
     for k in range(len(levels)):
         for i in range(4):
             p = pit_leg(i, levels[k])
             for m in range(3):
                 q = vadd(p, (-1.0 + m, 0.95, 2.0 if p[2] > 0 else -2.0))
                 box(s2, vsub(q, (0.09, 0.09, 0.09)), vadd(q, (0.09, 0.09, 0.09)), col("copper_dk"))
+    # rivet rows on the tipple deck's edge stringers
+    for sx in (-1, 1):
+        for k in range(12):
+            q = (sx * 8.05, 40.8, 4.0 + 2.0 * k)
+            box(s2, vsub(q, (0.07, 0.07, 0.07)), vadd(q, (0.07, 0.07, 0.07)), col("copper_dk"))
     empties = {"sight_top": (0.0, PIT_WHEEL_Y + PIT_WHEEL_R, 0.0), "warden_anchor": (0.0, 4.0, 0.0),
                "hoist_high": (0.0, 34.0, 0.0), "sheave_rope": (0.0, 110.0, 0.0)}
     return {"base": base, "exempt": exempt, "col": colm, "nodes": [], "empties": empties, "mid": mid, "far": far,
@@ -1148,6 +1274,69 @@ def sink_alcove_rim(s, step, color_fn):
         slab(s, [(xa, za), (xb, zb), (xb - n[0] * w, zb - n[2] * w), (xa - n[0] * w, za - n[2] * w)], -0.6, 0.08, color_fn(k))
 
 
+# The trestle: a timber span over the wash trough, closing the ring (Andrew 16 Oct: "sinkhole a full ring"). It follows the
+# deck's arc from bearing 142 to 183, planked flush with the deck (top SINK_FLOOR + 0.1) and slung on four fish-belly
+# stringers whose soffit sags 0.9 m at mid-span, so the span's lowest timber is y -101.44, 6.3 m over the trough floor at
+# -107.8. Two bents (three legs, a cap beam, knee braces) stand on the trough's flanks, 0.6 degrees (0.5 to 0.6 m) inside the
+# sampled bearings 142 and 183, and their legs run down to the floor at -107.8; the span between them carries no support, so
+# the ball's line down the trough stays open. Visual only: nothing here enters the -col mesh.
+TRESTLE_N = 30
+TRESTLE_PLANK = 0.14
+TRESTLE_STRINGERS = (47.2, 51.4, 55.6, 59.8)
+TRESTLE_SAG = 0.9
+TRESTLE_DEPTH = 0.5
+TRESTLE_BENT_INSET = math.radians(0.6)
+TRESTLE_LEG_FOOT = -107.8
+
+
+def sink_pt(r, t, y):
+    return (r * math.sin(t), y, r * math.cos(t))
+
+
+def sink_trestle(e, ex, mid):
+    """e: the base enamel surface (substructure), ex: the flush deck's, mid: the mid view's enamel."""
+    a0, a1 = SINK_WASH
+    top = SINK_FLOOR + 0.1
+    seat = top - TRESTLE_PLANK
+    r0, r1 = SINK_RING
+    at = lambda u: a0 + (a1 - a0) * u
+    for i in range(TRESTLE_N):
+        ta, tb = at(i / TRESTLE_N), at((i + 1) / TRESTLE_N)
+        c = shade("timber" if i % 3 else "timber_dk", 1.0, (i, 42), 0.08)
+        lo = [sink_pt(r0, ta, seat), sink_pt(r1, ta, seat), sink_pt(r1, tb, seat), sink_pt(r0, tb, seat)]
+        hi = [sink_pt(r0, ta, top), sink_pt(r1, ta, top), sink_pt(r1, tb, top), sink_pt(r0, tb, top)]
+        ex.ring_solid(lo, hi, c)
+    segs = 10
+    for r in TRESTLE_STRINGERS:
+        for k in range(segs):
+            rings = []
+            for u in (k / segs, (k + 1) / segs):
+                t, bot = at(u), seat - TRESTLE_DEPTH - TRESTLE_SAG * math.sin(math.pi * u)
+                rings.append([sink_pt(r - 0.25, t, bot), sink_pt(r + 0.25, t, bot), sink_pt(r + 0.25, t, seat),
+                              sink_pt(r - 0.25, t, seat)])
+            e.ring_solid(rings[0], rings[1], col("timber_dk"), (k == 0, k == segs - 1))
+    for k in range(7):
+        t = at((k + 0.5) / 7)
+        beam(e, sink_pt(r0 + 0.3, t, seat - 0.2), sink_pt(r1 - 0.3, t, seat - 0.2), 0.3, 0.36, col("timber_lt"), caps=True)
+    legs = (47.5, 53.5, 59.5)
+    for tb, inward in ((a0 + TRESTLE_BENT_INSET, 1.0), (a1 - TRESTLE_BENT_INSET, -1.0)):
+        cap = seat - TRESTLE_DEPTH
+        beam(e, sink_pt(r0 + 0.3, tb, cap - 0.28), sink_pt(r1 - 0.3, tb, cap - 0.28), 0.7, 0.56, col("timber"))
+        for r in legs:
+            beam(e, sink_pt(r, tb, TRESTLE_LEG_FOOT), sink_pt(r, tb, cap), 0.6, 0.6, col("timber"))
+            tk = tb + inward * math.radians(3.0)
+            beam(e, sink_pt(r, tb, cap - 2.6), sink_pt(r, tk, seat - TRESTLE_DEPTH - 0.2), 0.3, 0.3, col("timber_lt"))
+    # mid view: the planks and the four stringers as single runs
+    annulus(mid, (0.0, 0.0), r0, r1, seat, top, 10, lambda i: col("timber"), arc=SINK_WASH, sides=False)
+    bot = lambda u: seat - TRESTLE_DEPTH - TRESTLE_SAG * math.sin(math.pi * u)
+    for r in TRESTLE_STRINGERS:
+        for k in range(4):
+            ta, tb = at(k / 4), at((k + 1) / 4)
+            mid.ring_solid([sink_pt(r - 0.3, ta, bot(k / 4)), sink_pt(r + 0.3, ta, bot(k / 4)), sink_pt(r + 0.3, ta, seat), sink_pt(r - 0.3, ta, seat)],
+                           [sink_pt(r - 0.3, tb, bot((k + 1) / 4)), sink_pt(r + 0.3, tb, bot((k + 1) / 4)), sink_pt(r + 0.3, tb, seat), sink_pt(r - 0.3, tb, seat)],
+                           col("timber_dk"), (False, False))
+
+
 def build_sinkhole():
     base, exempt, mid, far = View("landmark_sinkhole"), View("flush"), View("landmark_sinkhole_mid"), View("landmark_sinkhole_far")
     colm = sky.Surf("landmark_sinkhole-col-col")
@@ -1197,6 +1386,7 @@ def build_sinkhole():
     deck_arc = (SINK_WASH[1], SINK_WASH[0] + TAU)
     annulus(fe, (0.0, 0.0), SINK_RING[0], SINK_RING[1], SINK_FLOOR, SINK_FLOOR + 0.1, 106, arc=deck_arc, color_fn=
             lambda i: shade("timber" if i % 3 else "timber_dk", 1.0, (i, 41), 0.08))
+    sink_trestle(e, fe, mid["enamel"])
     # the caisson lip: a riveted steel band set flush just outside the pool
     annulus(exempt["steel"], (0.0, 0.0), SINK_POOL[0] + 0.15, SINK_POOL[0] + 1.1, SINK_FLOOR, SINK_FLOOR + 0.08, 64,
             lambda i: shade("steel", 1.0, (i, 51), 0.06))
@@ -1303,6 +1493,11 @@ def build_sinkhole():
         p1 = (SINK_RING[1] * math.sin(a), SINK_FLOOR + 0.105, SINK_RING[1] * math.cos(a))
         t = (math.cos(a), 0.0, -math.sin(a))
         card(s1, [vadd(p0, t, -0.06), vadd(p1, t, -0.06), vadd(p1, t, 0.06), vadd(p0, t, 0.06)], col("timber_dk"), UP)
+    for k in range(TRESTLE_N // 2):
+        t = SINK_WASH[0] + (SINK_WASH[1] - SINK_WASH[0]) * (k + 0.5) / (TRESTLE_N // 2)
+        tg = (math.cos(t), 0.0, -math.sin(t))
+        p0, p1 = sink_pt(SINK_RING[0], t, SINK_FLOOR + 0.105), sink_pt(SINK_RING[1], t, SINK_FLOOR + 0.105)
+        card(s1, [vadd(p0, tg, -0.06), vadd(p1, tg, -0.06), vadd(p1, tg, 0.06), vadd(p0, tg, 0.06)], col("timber_dk"), UP)
     for k in range(48):
         wall = k % 3
         sz = 0.2 + 0.25 * rnd(k, 71)
@@ -1770,6 +1965,21 @@ def check_card(rid, spec):
         inside = [v for v in every if abs(v[0]) < hw and abs(v[2]) < hw and y0 < v[1] < y1]
         assert not inside, (rid, "geometry in the hive well", inside[:3])
         assert min(v[1] for v in spec["col"].v) <= -2.0, (rid, "legs do not reach the ground")
+        # each rope end lies on the drum wall inside the slot; back along the rope toward its wheel, every point over the
+        # house's footprint outside the slot is above the roof
+        c, ax, aw, hl, hw, roof = pit_house()
+        d0, d1, hq, floor = PIT_SLOT
+        for s, end in zip((-1, 1), pit_rope_ends()):
+            rel = vsub(end, c)
+            d, q = -sky.dot(rel, PIT_ROPE), sky.dot(rel, PIT_PERP)
+            assert abs(d - d0) < 1e-6 and abs(q) < hq and floor < end[1] < roof, (rid, "rope end off the drum wall", d, q, end)
+            top = vadd(vadd((0.0, PIT_WHEEL_Y, 0.0), PIT_PERP, s * 3.5), PIT_ROPE, PIT_WHEEL_R - 0.3)
+            for k in range(1, 401):
+                p = vlerp(end, top, k / 400)
+                r = vsub(p, c)
+                over = abs(sky.dot(r, ax)) <= hl and abs(sky.dot(r, aw)) <= hw
+                in_slot = d0 <= -sky.dot(r, PIT_ROPE) <= d1 and abs(sky.dot(r, PIT_PERP)) < hq
+                assert not over or in_slot or p[1] >= roof, (rid, "rope through the hoist house roof", p)
     if rid == "landmark_sinkhole":
         r, ya, yb = SINK_POOL
         inside = [v for v in every if math.hypot(v[0], v[2]) < r and ya < v[1] < yb]
@@ -1845,8 +2055,203 @@ def material(slot):
     return mat
 
 
-def make_mesh(name, parts, parent, origin=(0.0, 0.0, 0.0)):
+# ---------------------------------------------------------------- soft toy pass (tools/blender/POLISH.md)
+# Soft toy (Andrew, 18 Oct): the drawn meshes run through the polish toolkit at export. This file writes its own meshes
+# (sky.Surf, one flat shaded fan per polygon) and never builds a common.Part, so the pass is an adapter: it recovers each
+# polygon from its fan, welds each convex piece (a run of polygons that share edges: a box, a beam, a ring of planks) into
+# a closed bmesh, bevels the hard edges of each piece to a quarter of its own thickness (thin timbers get no bevel, so
+# nothing folds shut), smooths the rest and triangulates as Part does. The AO and edge-wear bake runs over the drawn
+# meshes alone, before any -col mesh joins the scene, so a collider neither occludes it nor changes. polish.enable is not
+# called: common.export is not used, so the colliders keep their old export path byte for byte.
+SOFT = {
+    "bevel": 0.06,           # the widest bevel, metres; each piece takes at most a quarter of its thinnest side
+    "bevel_angle": 40.0,     # only edges sharper than this bevel (silhouette corners, not the facets of a round)
+    "bevel_min": 0.45,       # shorter edges keep hard: rivets, cell rims and plank ends stay cheap
+    "sharp_angle": 50.0,
+    "ao_rays": 16,
+    "ao_reach_m": 3.0,       # occlusion reach in metres (the toolkit's ao_reach is a fraction of the bounds)
+    "ao_strength": 0.45,
+    "edge": 0.12,
+    "bake_slots": ("enamel", "steel", "stone", "elastomer", "glass"),
+}
+
+
+def fan_polys(surf):
+    """The polygons of a Surf as vertex index runs: Surf.poly writes each as a fan (b, b+i, b+i+1)."""
+    polys, t, i = [], surf.t, 0
+    while i < len(t):
+        b, last = t[i][0], t[i][2]
+        assert t[i][1] == b + 1, (surf.name, "not a fan", t[i])
+        j = i + 1
+        while j < len(t) and t[j][0] == b and t[j][1] == last:
+            last = t[j][2]
+            j += 1
+        polys.append(list(range(b, last + 1)))
+        i = j
+    return polys
+
+
+def surf_pieces(surf):
+    """Polygons grouped into pieces: a polygon joins the running piece when it shares an edge with it and no edge of the
+    piece would then carry a third face."""
+    key = lambda v: (round(v[0], 4) + 0.0, round(v[1], 4) + 0.0, round(v[2], 4) + 0.0)
+    pieces, cur = [], None
+    for vs in fan_polys(surf):
+        keys = [key(surf.v[k]) for k in vs]
+        edges = [frozenset((keys[k], keys[(k + 1) % len(keys)])) for k in range(len(keys))]
+        same = frozenset(keys)
+        # a polygon on the same points as one already in the piece is a two-sided card's back: its own piece keeps both windings
+        if cur is not None and same not in cur[2] and any(cur[1].get(e, 0) == 1 for e in edges) and all(cur[1].get(e, 0) < 2 for e in edges):
+            cur[0].append(vs)
+        else:
+            cur = ([vs], {}, set())
+            pieces.append(cur)
+        cur[2].add(same)
+        for e in edges:
+            cur[1][e] = cur[1].get(e, 0) + 1
+    return [p[0] for p in pieces]
+
+
+def piece_thickness(surf, polys):
+    """The least width of a piece across any of its face normals (its true thickness, whatever its yaw)."""
+    pts = sorted({surf.v[k] for vs in polys for k in vs})
+    normals = set()
+    for vs in polys:
+        n = (0.0, 0.0, 0.0)
+        for a in range(len(vs)):
+            n = vadd(n, sky.cross(surf.v[vs[a]], surf.v[vs[(a + 1) % len(vs)]]))
+        ln = vlen(n)
+        if ln > 1e-9:
+            n = vscale(n, 1.0 / ln)
+            if (n[0], n[1], n[2]) < (0.0, 0.0, 0.0):
+                n = vscale(n, -1.0)
+            normals.add((round(n[0], 3) + 0.0, round(n[1], 3) + 0.0, round(n[2], 3) + 0.0))
+    normals = sorted(normals)
+    if len(normals) > 48:
+        normals = normals[::len(normals) // 48 + 1]
+    if not normals:
+        return 0.0
+    thin = 1e9
+    for n in normals:
+        d = [n[0] * p[0] + n[1] * p[1] + n[2] * p[2] for p in pts]
+        thin = min(thin, max(d) - min(d))
+    return thin
+
+
+def soft_bmesh(surf, slot_index, origin, o):
+    """One Surf as a polished, triangulated bmesh: faces carry slot_index and a loop colour."""
+    key = lambda v: (round(v[0], 4) + 0.0, round(v[1], 4) + 0.0, round(v[2], 4) + 0.0)
+    groups = {}
+    for polys in surf_pieces(surf):
+        w = min(o["bevel"], 0.25 * piece_thickness(surf, polys))
+        w = 0.0 if w < 0.005 else round(w * 200.0) / 200.0
+        groups.setdefault(w, []).append(polys)
+    out = bmesh.new()
+    out.loops.layers.float_color.new("Color")
+    for w in sorted(groups):
+        bm = bmesh.new()
+        layer = bm.loops.layers.float_color.new("Color")
+        for polys in groups[w]:
+            weld = {}
+            for vs in polys:
+                ring = []
+                for k in vs:
+                    kk = key(surf.v[k])
+                    if not ring or ring[-1][0] != kk:
+                        ring.append((kk, k))
+                if len(ring) > 1 and ring[0][0] == ring[-1][0]:
+                    ring.pop()
+                if len({r[0] for r in ring}) < 3 or len({r[0] for r in ring}) != len(ring):
+                    continue
+                bverts = []
+                for kk, k in ring:
+                    if kk not in weld:
+                        weld[kk] = bm.verts.new(sky.xyz(vsub(surf.v[k], origin)))
+                    bverts.append(weld[kk])
+                try:
+                    face = bm.faces.new(bverts)
+                except ValueError:
+                    raise AssertionError((surf.name, "soft pass would drop a face on existing points", [tuple(v.co) for v in bverts]))
+                for loop, (kk, k) in zip(face.loops, ring):
+                    loop[layer] = common.rgba(surf.c[k])
+        bm.normal_update()
+        bm = polish.finish(bm, dict(o, bevel_segments=1), w, 0)
+        col_layer = bm.loops.layers.float_color["Color"]
+        bm.normal_update()
+        for f in list(bm.faces):
+            if len(f.verts) > 4 and common._convex(f):
+                vs = [loop.vert for loop in f.loops]
+                color = tuple(f.loops[0][col_layer])
+
+                def flat(k):
+                    q = vs[k:] + vs[:k]
+                    return any((q[i].co - q[0].co).cross(q[i + 1].co - q[0].co).length < 1e-9 for i in range(1, len(q) - 1))
+                k = next((k for k in range(len(vs)) if not flat(k)), 0)
+                vs = vs[k:] + vs[:k]
+                bm.faces.remove(f)
+                for i in range(1, len(vs) - 1):
+                    nf = bm.faces.new((vs[0], vs[i], vs[i + 1]))
+                    for loop in nf.loops:
+                        loop[col_layer] = color
+        fixed, alternate = [], []
+        for f in bm.faces:
+            if len(f.verts) != 4:
+                fixed.append(f)
+                continue
+            c = [tuple(v.co) for v in f.verts]
+            d02, d13 = math.dist(c[0], c[2]), math.dist(c[1], c[3])
+            first = d02 < d13 if abs(d02 - d13) > 1e-9 * max(d02, d13) else min(c[0], c[2]) < min(c[1], c[3])
+            (fixed if first else alternate).append(f)
+        bmesh.ops.triangulate(bm, faces=fixed, quad_method="FIXED", ngon_method="EAR_CLIP")
+        bmesh.ops.triangulate(bm, faces=alternate, quad_method="ALTERNATE", ngon_method="EAR_CLIP")
+        for f in bm.faces:
+            f.material_index = slot_index
+        polish._append(out, bm)
+        bm.free()
+    return polish._canonical(out)
+
+
+def soft_options(nodes):
+    lo = [1e9] * 3
+    hi = [-1e9] * 3
+    for _, parts, _ in nodes:
+        for surf, slot in parts:
+            for v in surf.v:
+                for k in range(3):
+                    lo[k], hi[k] = min(lo[k], v[k]), max(hi[k], v[k])
+    half = max(vlen(vsub(tuple(hi), tuple(lo))) * 0.5, 1.0)
+    keys = ("bevel", "bevel_angle", "bevel_min", "sharp_angle", "ao_rays", "ao_strength", "edge", "bake_slots")
+    o = dict(polish.DEFAULTS, **{k: SOFT[k] for k in keys})
+    o["ao_reach"] = SOFT["ao_reach_m"] / half
+    return o
+
+
+def make_mesh(name, parts, parent, origin=(0.0, 0.0, 0.0), soft=None):
     """parts: [(Surf, slot or None)] merged into one mesh, one material per slot; vertices relative to origin."""
+    if soft is not None:
+        slots = []
+        acc = bmesh.new()
+        for surf, slot in parts:
+            if not surf.t:
+                continue
+            if slot not in slots:
+                slots.append(slot)
+            bm = soft_bmesh(surf, slots.index(slot), origin, soft)
+            polish._append(acc, bm)
+            bm.free()
+        acc = polish._canonical(acc)
+        mesh = bpy.data.meshes.new(name)
+        acc.to_mesh(mesh)
+        acc.free()
+        mesh.color_attributes.active_color = mesh.color_attributes["Color"]
+        mesh.color_attributes.render_color_index = mesh.color_attributes.active_color_index
+        for slot in slots:
+            mesh.materials.append(material(slot))
+        obj = bpy.data.objects.new(name, mesh)
+        bpy.context.scene.collection.objects.link(obj)
+        obj.parent = parent
+        obj.location = sky.xyz(origin)
+        return obj
     verts, tris, cols, mats, slots = [], [], [], [], []
     for surf, slot in parts:
         if not surf.t:
@@ -1878,12 +2283,21 @@ def make_mesh(name, parts, parent, origin=(0.0, 0.0, 0.0)):
     return obj
 
 
-def export_glb(path, nodes, empties):
+def export_glb(path, nodes, empties, soft=False):
     """nodes: [(name, parts, origin)]; empties: {name: local point}. Returns the measured row read back from the file."""
     common.reset()
     root = common.empty(Path(path).stem + "_root")
+    drawn_nodes = [n for n in nodes if soft and n[1] and all(slot is not None for _, slot in n[1])]
+    o = soft_options(drawn_nodes) if drawn_nodes else None
     for name, parts, origin in nodes:
-        make_mesh(name, parts, root, origin)
+        if soft and parts and all(slot is not None for _, slot in parts):
+            make_mesh(name, parts, root, origin, soft=o)
+    if o is not None:
+        bpy.context.view_layer.update()
+        polish.bake(root, o)        # before any collider joins the scene: it must not occlude the bake or take its UVs
+    for name, parts, origin in nodes:
+        if not (soft and parts and all(slot is not None for _, slot in parts)):
+            make_mesh(name, parts, root, origin)
     for name, loc in empties.items():
         common.empty(name, sky.xyz(loc), root)
     common.export(root, str(path))
@@ -1910,10 +2324,10 @@ def build(rid, out_dir, count_only=False):
         nodes.append((view.name, view.surfs(), origin))
     nodes.append((rid + "-col-col", [(spec["col"], None)], (0.0, 0.0, 0.0)))
     glb = {}
-    glb[rid] = export_glb(out / (rid + ".glb"), nodes, spec["empties"])
+    glb[rid] = export_glb(out / (rid + ".glb"), nodes, spec["empties"], soft=True)
     for k, sh in enumerate(spec["shells"], start=1):
         name = "%s_detail%d" % (rid, k)
-        glb[name] = export_glb(out / (name + ".glb"), [(name, [(sh, spec["shell_slot"])], (0.0, 0.0, 0.0))], {})
+        glb[name] = export_glb(out / (name + ".glb"), [(name, [(sh, spec["shell_slot"])], (0.0, 0.0, 0.0))], {}, soft=True)
     for view_name in ("mid", "far"):
         name = "%s_%s" % (rid, view_name)
         glb[name] = export_glb(out / (name + ".glb"), [(name, spec[view_name].surfs(), (0.0, 0.0, 0.0))], {})

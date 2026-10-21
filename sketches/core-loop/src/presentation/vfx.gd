@@ -43,6 +43,7 @@ const BURSTS := {
 	"dust": {"pool": 4, "max": 14, "life": 0.5, "speed": [2.0, 5.0], "spread": 85.0, "gravity": 1.5, "size": Vector3.ONE * 0.4, "soft": true},
 	"fountain": {"pool": 3, "max": 24, "life": 0.9, "speed": [6.0, 10.0], "spread": 22.0, "gravity": -18.0, "size": Vector3.ONE * 0.18},
 }
+const BURST_LOOKS := {"pop": "puff", "debris": "chunk", "dust": "puff", "fountain": "bead"}
 # The kill chain: a pip per kill in the run over the ball, from 2 up.
 const PIPS := 8
 const PIP_RADIUS := 0.9
@@ -773,24 +774,14 @@ func _draw_lines(tier: int, delta: float) -> void:
 func _build_bursts() -> void:
 	for kind in BURSTS:
 		var spec: Dictionary = BURSTS[kind]
-		var mesh: PrimitiveMesh
-		if spec.get("soft", false):
-			var ball := SphereMesh.new()
-			ball.radius = spec["size"].x * 0.5
-			ball.height = spec["size"].x
-			ball.radial_segments = 6
-			ball.rings = 3
-			mesh = ball
+		# The same looks as the GPU effects (FxLibrary._LOOKS): kill pops and dust are cel puffs,
+		# debris is chipped lit shards, and a drop's fountain is keylined beads.
+		var look: String = BURST_LOOKS[kind]
+		var mesh := FxLibrary.look_mesh(look, spec["size"])
+		if mesh is PrimitiveMesh:
+			mesh.material = FxLibrary.look_material(look)
 		else:
-			var box := BoxMesh.new()
-			box.size = spec["size"]
-			mesh = box
-		var mat := StandardMaterial3D.new()
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.vertex_color_use_as_albedo = true
-		if spec.get("soft", false):
-			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mesh.material = mat
+			mesh.surface_set_material(0, FxLibrary.look_material(look))
 		var curve := Curve.new()
 		curve.add_point(Vector2(0.0, 1.0))
 		curve.add_point(Vector2(1.0, 0.0 if not spec.get("soft", false) else 0.3))
@@ -811,6 +802,18 @@ func _build_bursts() -> void:
 			p.scale_amount_max = 1.2
 			p.scale_amount_curve = curve
 			p.particle_flag_align_y = spec.get("align", false)
+			if look == "puff":
+				p.damping_min = 2.0
+				p.damping_max = 4.0
+			if look != "chunk":
+				p.angle_min = 0.0
+				p.angle_max = 360.0
+			else:
+				p.angular_velocity_min = -540.0
+				p.angular_velocity_max = 540.0
+			p.set_meta("fx_look", look)
+			if look == "puff" or look == "bead":
+				p.draw_order = CPUParticles3D.DRAW_ORDER_VIEW_DEPTH
 			p.mesh = mesh
 			p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			p.name = "Burst_%s_%d" % [kind, i]
@@ -832,6 +835,7 @@ func burst(kind: String, at: Vector3, color: Color, count: int) -> void:
 		p.amount = amount
 	p.global_position = at
 	p.color = color
+	FxLibrary.set_heat(p)
 	p.restart()
 	p.emitting = true
 	spawned["burst_" + kind] = spawned.get("burst_" + kind, 0) + 1

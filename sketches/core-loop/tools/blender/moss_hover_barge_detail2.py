@@ -85,6 +85,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(base.MODELS))
     args = parser.parse_args(argv)
+    base.polish_on()
     export("moss_hover_barge_detail2", "Detail2", "steel", build, SIZE["moss_hover_barge_detail2"], args.out_dir)
 
 

@@ -73,7 +73,7 @@ def main():
     rail(mount)
     opts = mwa.common.args()
     path = opts["out"] or mwa.common.default_out("warden_mantle_brood")
-    mwa.export_checked(root, path, (700, 1300, 5))
+    mwa.export_checked(root, path, (1300, 1400, 5))  # polished caps (POLISH.md, 18 Oct)
     if opts["render"]:
         mwa.preview(path, opts["render"], "hive", "brood")
 

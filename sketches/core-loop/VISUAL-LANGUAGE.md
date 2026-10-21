@@ -48,6 +48,7 @@ The eight AD-02 colours carry every role. Three extensions already live in code 
 | BRASS (extension) | `#d9b44a` | Admiral Brindle and the Fleet's requisition tags | Player effects |
 | ICE (extension) | `#c8f0ff` | The frost element | Anything that is not frost |
 | ANCIENT | `#9dff3c` (candidate B, chosen by Andrew 2026-10-09; seams carry the pattern cue) | Light seams on awakened ancient machines, the focal landmark's beacon | The Fleet, the player, rewards, danger areas |
+| Life lilac (extension, proposed 2026-10-19) | hue 250°–300°, saturation 0.15–0.55, for example `#8f84b3` | Ambient critters and locals: harmless and alive. Measured: no enemy, Warden or boss GLB has a saturated colour in 240°–330° (`tests/ambient_palette_test.gd` re-measures every run). See [AMBIENT-LIFE.md](AMBIENT-LIFE.md) | Enemy parts, telegraphs, rewards, pickups, targets, any emissive light |
 
 **ANCIENT candidates.** Ancient machines need a light no other fact uses. Andrew rejected violet on 2026-09-27 as overused. Three alternatives were measured with the same method as above: WCAG contrast, and the smallest Machado CIELAB ΔE against all eleven palette colours (the AD-02 eight plus HAZARD, BRASS and ICE) under each vision type.
 
@@ -379,7 +380,7 @@ This section makes "legible workshop instrumentation" concrete (AD-08, AC-15).
 
 ## 9. Hero asset briefs (V3)
 
-These briefs are for headless Blender work. The style is low-poly, chunky and stylised, with flat colour per material slot and no texture detail below what reads at gameplay distance. The Qwen renders on the primer board drift photoreal, so V3 models to this chunky low-poly brief and never to the board images. Poly counts are sketch targets, not production budgets (TH-16 RQ-10, RP-22 unset).
+These briefs are for headless Blender work. The style is chunky, bevelled and smooth (Andrew, 18 Oct 2026: "Soft toy, chunky shapes"): crews and round bodies read as soft toys, machines keep crisp edges with rounded bevels, and silhouettes stay comic and bold. Colour stays flat per material slot, shaded by baked ambient occlusion and edge wear (tools/blender/POLISH.md), with no texture detail below what reads at gameplay distance. The Qwen renders on the primer board drift photoreal, so V3 models to this chunky soft brief and never to the board images. Poly counts are sketch targets, not production budgets (TH-16 RQ-10, RP-22 unset).
 
 **Material slots.** Every asset uses these names so code can map them to palette roles.
 

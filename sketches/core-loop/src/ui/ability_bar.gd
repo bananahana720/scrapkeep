@@ -5,6 +5,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # The bottom-centre skill bar (design-v3/SKILL-BAR.md section 5): the numbered slots 1, 2 and 3
 # (weapon, special, line skill), then CHIP_GAP to the right the two chips (Shift and Ctrl) at
@@ -48,6 +49,8 @@ const SHAKE_HZ := 40.0
 const BADGE := 18.0
 const SET_PIECE_ALPHA := 0.4
 
+# Reduced motion (Game.set_reduced_motion keeps it current): a refused pick no longer shakes.
+static var reduced_motion := false
 var slots: Array = []
 var tint := Color.WHITE
 # The class row's shape (ring, chevron, burst): the ready swell and the charge pips wear
@@ -229,13 +232,13 @@ func refuse(slot: String) -> void:
 
 
 func shake_offset(slot: String) -> Vector2:
-	if _refusals.get(slot, 0.0) <= 0.0:
+	if reduced_motion or _refusals.get(slot, 0.0) <= 0.0:
 		return Vector2.ZERO
 	return Vector2(sin(_clock * TAU * SHAKE_HZ) * SHAKE, 0.0)
 
 
 func flash_color(slot: String) -> Color:
-	return Color(Palette.SLATE, clampf(_refusals.get(slot, 0.0) / SHAKE_TIME, 0.0, 1.0))
+	return Color(Palette.SLATE, FlashGuard.info(clampf(_refusals.get(slot, 0.0) / SHAKE_TIME, 0.0, 1.0)))
 
 
 func badge_shown() -> bool:

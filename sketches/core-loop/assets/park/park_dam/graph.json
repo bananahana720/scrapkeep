@@ -1,8 +1,8 @@
 {
-  "bake_sha256": "6828bb6a6c1ef03d4328e1a672795925c284753b2ccfdba91b690c9f1ace1425",
+  "bake_sha256": "232a46cff71965c3dddbd264b7ceee07adeab559fa48e06871e65d284b3ada3b",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1312204,
+  "bytes": 1312253,
   "edges": 314074,
   "first_failed": "",
   "flags": {
@@ -13,15 +13,15 @@
     "sight_ok": 8462,
     "under": 0
   },
-  "full_visit_m": 2374,
-  "full_visit_ratio": "1.756",
-  "graph_sha256": "e6104e2ae9b63fab64cbcfdb95e24bc08ac4cb9a813260a3c8b115d47ac5d028",
+  "full_visit_m": 2439,
+  "full_visit_ratio": "1.805",
+  "graph_sha256": "dc1882e78f465c8310492d5fd13b8587c6db68db053c9846a81aa6ae0c9e560e",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 2375,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "948f935e9be5a1a7c7061a4f71496163f441d4ad52fd7447bf80402f51cabe23",
+  "park_sha256": "115eef107f940ce05c2403e1d69672f513500c72cd47258ef085f392821e85f1",
   "pockets": [
     {
       "clear_ring": [],
@@ -52,14 +52,14 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 410,
-      "d_spawn": 1065,
-      "detour_m": 307,
+      "d_landmark": 367,
+      "d_spawn": 1161,
+      "detour_m": 403,
       "door_at": [
         -208,
-        304
+        400
       ],
-      "door_m": 307,
+      "door_m": 403,
       "flags": [
         "open",
         "door_ok",
@@ -67,7 +67,7 @@
       ],
       "id": "rim_cache",
       "kind": "cracked_cache",
-      "nearest_door": 394,
+      "nearest_door": 363,
       "nearest_door_id": "gallery_valve",
       "pay_named": "",
       "pay_rarities": [
@@ -94,8 +94,8 @@
       ],
       "id": "bench_altar",
       "kind": "ambush_altar",
-      "nearest_door": 560,
-      "nearest_door_id": "rim_cache",
+      "nearest_door": 615,
+      "nearest_door_id": "gallery_valve",
       "pay_named": "",
       "pay_rarities": [
         "common",
@@ -150,7 +150,7 @@
       ],
       "id": "gallery_valve",
       "kind": "valve",
-      "nearest_door": 394,
+      "nearest_door": 363,
       "nearest_door_id": "rim_cache",
       "pay_named": "",
       "pay_rarities": [],
@@ -159,7 +159,7 @@
       "site": "service_ledge"
     }
   ],
-  "reward_ratio": "0.841",
+  "reward_ratio": "0.859",
   "ride_edges": 16,
   "routes": {
     "bucket_flight": [],
@@ -197,16 +197,16 @@
       "name": "reward_ratio",
       "ok": false,
       "target": "at least 1.5",
-      "value": 0.841
+      "value": 0.859
     },
     {
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.756
+      "value": 1.805
     }
   ],
-  "tool_sha256": "e056e2d0e353848614f7ccc875c31d5fe46fc569d2a5b3e53fbe86c83b57c5cb",
+  "tool_sha256": "08e6eb9c62c59217f08bab6ce13d58e49e39f264d8b6a23707afd674eca1d850",
   "zones": {
     "anchors": [
       {
@@ -562,11 +562,11 @@
         "viable": true
       }
     ],
-    "count": 99,
+    "count": 100,
     "crossings": {
       "drop": 24,
       "ride": 11,
-      "walk": 143
+      "walk": 145
     },
     "hidden": [
       {

@@ -3008,6 +3008,13 @@ The engine's `ui_accept` held Enter, Kp Enter and Space and `ui_cancel` held Esc
 
 - **Call.** Four saved look settings are applied at boot and again after Reset keys; invert affects stick pitch only.
 
+## The victory lap at Meteor Crater (design answer Q16, 2026-10-17)
+
+- **Call.** After the Mind, the crew's fly-over plays, then the ball drops over Meteor Crater's rim for a 60 s free roll, then the credits roll over the bowl; any key skips the credits. The win is recorded when the ending begins, so quitting mid-ending keeps it.
+- **Call.** The lap has no enemies, hazards or fail state: the arena and every fight group are cleared first, and flow ignores a death in the lap.
+- **Call.** The bowl's middle is a vent that throws the ball up harder the faster it arrives, and new records (top speed, best air, wall laps) get a drawn word and a flare. Principle 5, overpowered pays: a strong build gets bigger numbers, and they appear in the credits.
+- **Call.** If the bowl cannot be placed, the run ends with the old fly-over and credits.
+
 ## Reduce flashes toggle (design question 7, 17 Oct 2026)
 
 - **Call.** Andrew picked "Reduce flashes toggle" as the alpha's comfort setting. It is a Display-page row beside reduced motion, saved as `reduce_flashes` in settings.json, and every bright flash, white pop and strobe reads `FlashGuard` when it fires (rules in VISUAL-LANGUAGE.md section 8). With both toggles on, the hit edge flash takes the lower share, so the hit still reads. The boss finales' Eurodance sections and comic words drive no visuals today, so they need no guard yet; a visual added to either must read FlashGuard. `tools/flash_capture.gd` renders each site off and on, and `still_compare.gd --peak` measures the brightness it adds.

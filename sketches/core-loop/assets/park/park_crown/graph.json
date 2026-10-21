@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "1d2f5c01c708c4d0d8780c9ae17341770a2b122678fb524c50a97aca1f5e7aab",
+  "bake_sha256": "ef11063560250852853c720019efdfa62418f5b8d45d5b098ee6a8d65325c89e",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1007665,
-  "edges": 328559,
+  "bytes": 1006282,
+  "edges": 328316,
   "first_failed": "",
   "flags": {
-    "deck": 1427,
-    "door_ok": 39657,
+    "deck": 1370,
+    "door_ok": 39680,
     "line": 387,
-    "open": 40806,
-    "sight_ok": 9111,
+    "open": 40828,
+    "sight_ok": 9108,
     "under": 0
   },
   "full_visit_m": 1779,
   "full_visit_ratio": "1.440",
-  "graph_sha256": "09615be059414110c975c9a9623d956cc4ac07f9196d953ff0ad5a6a1006b1ca",
+  "graph_sha256": "2b16d0bd339b163395a2ff76cea02b59781c9db0bf90c8c1532fca761f429fff",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
-  "nodes": 41828,
-  "park_sha256": "3e1b48de8a9cbbf7cf4729b38f7a92a0b49a34434b75470986f817160e634b3c",
+  "nodes": 41771,
+  "park_sha256": "d81a45cb22fcba2768a36ab84841305c6924bd4e3b12ea7108e02d8782f776cf",
   "pockets": [
     {
       "clear_ring": [],
@@ -132,7 +132,7 @@
     }
   ],
   "reward_ratio": "0.506",
-  "ride_edges": 16,
+  "ride_edges": 17,
   "routes": {
     "east": [],
     "gauntlet": [],
@@ -179,7 +179,7 @@
       "value": 1.44
     }
   ],
-  "tool_sha256": "e056e2d0e353848614f7ccc875c31d5fe46fc569d2a5b3e53fbe86c83b57c5cb",
+  "tool_sha256": "08e6eb9c62c59217f08bab6ce13d58e49e39f264d8b6a23707afd674eca1d850",
   "zones": {
     "anchors": [
       {
@@ -199,7 +199,7 @@
         "viable": true
       },
       {
-        "cost": 1299.9,
+        "cost": 1305.0,
         "d_landmark": 251.3,
         "name": "gauntlet_shelf",
         "on_route": false,
@@ -245,6 +245,14 @@
         "on_route": false,
         "rank": 0,
         "viable": false
+      },
+      {
+        "cost": 1136.9,
+        "d_landmark": 431.1,
+        "name": "gauntlet_net_2",
+        "on_route": false,
+        "rank": 4,
+        "viable": true
       },
       {
         "cost": 1131.9,
@@ -347,7 +355,7 @@
         "d_landmark": 607.9,
         "name": "east_ribs",
         "on_route": false,
-        "rank": 4,
+        "rank": 5,
         "viable": true
       },
       {
@@ -387,7 +395,7 @@
         "d_landmark": 422.6,
         "name": "meander_bend",
         "on_route": false,
-        "rank": 5,
+        "rank": 6,
         "viable": true
       },
       {
@@ -416,7 +424,7 @@
       },
       {
         "cost": 529.1,
-        "d_landmark": 1010.4,
+        "d_landmark": 1012.4,
         "name": "bajada_rim_lip_w",
         "on_route": false,
         "rank": 0,
@@ -471,11 +479,11 @@
         "viable": true
       }
     ],
-    "count": 71,
+    "count": 72,
     "crossings": {
-      "drop": 27,
+      "drop": 30,
       "ride": 9,
-      "walk": 77
+      "walk": 76
     },
     "hidden": [
       {

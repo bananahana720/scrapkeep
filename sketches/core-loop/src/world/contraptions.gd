@@ -20,6 +20,8 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 #   {"kind": "codex", "id": String, "at": Vector3}
 #   {"kind": "accel", "accel": Vector3}           a push to add this tick (a thermal)
 #   {"kind": "carry", "accel": Vector3}           the barge under the ball accelerating
+#   {"kind": "drag", "accel": Vector3}            a cinder floor slowing a ball that rolls on it
+#   {"kind": "carry", "accel": Vector3}           also a glazed wall band speeding a ball that carves it
 
 const GAUGE_REACH := 60.0
 const RAM_REACH := 2.8
@@ -36,6 +38,19 @@ const PUFF_SECONDS := 0.7
 # relative speed: the ball's own rolling resistance and drag act against the world,
 # not the deck, and would otherwise let it creep aft (measured: 6.6 m per crossing).
 const KEEP_STATION := 4.0
+# A cinder floor (the sinkhole's "Wall pays", 2026-10-17): strips of loose cinder down the middle of a tube's floor take
+# drag (share of planar speed per second) from a ball rolling on them. Only a ball within CINDER_REACH of the ground
+# counts, so a ball carving the wall above the strip, or in the air, is never slowed.
+const CINDER_REACH := 1.4
+# A glazed wall (the same pass): the polish band up a tube's walls, ancient lava glass, pushes a ball carving it `push`
+# m/s/s along its planar travel, from 4 m/s up to the spec's `cap`. With #61's wall grip, carving lost speed against the
+# floor and every pilot's floor line beat its wall line by 3 to 18 s; the glaze is what makes the wall the fast line.
+const GLAZE_FROM := 4.0
+# The glaze's tell while it pushes: a glaze_skim fact (WORLD_ROWS: a pale wave and a skimming zip) on the first tick
+# and every GLAZE_GAP seconds after, so the band reads and sounds like a slick surface, not an invisible hand.
+const GLAZE_GAP := 1.2
+const CINDER_SHADER := preload("res://assets/materials/dig_stone/cinder.gdshader")
+const CINDER_GRAIN := preload("res://assets/textures/packed-sand-floor.webp")
 
 # The park's contraption skins (design-v3/PARK.md section 4, KC9): a spec with a `recipe` key draws that recipe's GLBs in
 # place of the code primitive; a spec without one, or whose GLBs are missing, draws the primitive it always drew. The
@@ -71,6 +86,11 @@ var cables: Array[Dictionary] = []
 var valves: Array[Dictionary] = []
 var walls: Array[Dictionary] = []
 var thermals: Array[Dictionary] = []
+var cinders: Array[Dictionary] = []
+var glazes: Array[Dictionary] = []
+# One material for every cinder band, so the glow lights the whole floor at once.
+var _cinder_mat: ShaderMaterial = null
+var _cinder_glow := 0.0
 # False while a map's contraptions wait for a loop mode (the Spillway's return lift in
 # v2): world neither steps nor shows them.
 var live := true
@@ -78,6 +98,7 @@ var live := true
 var _puffs: Array[Dictionary] = []
 var _slams: Array[Vector3] = []
 var _thermal_quiet := 0.0
+var _glaze_quiet := 0.0
 var _gauge_mat: Material
 var _needle_mat: Material
 var _rust_mat: Material
@@ -122,6 +143,10 @@ func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void
 				walls.append(_build_wall(spec))
 			"thermal":
 				thermals.append(_build_thermal(spec))
+			"cinder":
+				cinders.append(_build_cinder(spec))
+			"glaze":
+				glazes.append(_build_glaze(spec))
 	_setup_caches()
 	reset()
 
@@ -188,6 +213,7 @@ func reset() -> void:
 		w["body"].visible = true
 	_slams.clear()
 	_thermal_quiet = 0.0
+	_glaze_quiet = 0.0
 	# Cache side walls are rebuilt by reset; finish them along with this zone's devices.
 	if map.get_script().resource_path == "res://src/world/map_reach.gd":
 		load("res://src/presentation/spillway_scenery.gd").dress_props(self)
@@ -259,8 +285,107 @@ func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, ste
 			_thermal_quiet = THERMAL_GAP
 			facts.append({"kind": "fact", "fact": "thermal_ride", "at": ball})
 			facts.append({"kind": "codex", "id": "steam_thermal", "at": ball})
+	if not riding:
+		var glazed := false
+		for g in glazes:
+			if _on_glaze(g, ball, velocity):
+				facts.append({"kind": "carry", "accel": Vector3(velocity.x, 0.0, velocity.z).normalized() * float(g["spec"]["push"])})
+				glazed = true
+				break
+		if not glazed:
+			_glaze_quiet = 0.0
+		else:
+			_glaze_quiet -= delta
+			if _glaze_quiet <= 0.0:
+				_glaze_quiet = GLAZE_GAP
+				facts.append({"kind": "fact", "fact": "glaze_skim", "at": ball})
+		for c in cinders:
+			if _on_cinder(c, ball):
+				facts.append({"kind": "drag", "accel": -Vector3(velocity.x, 0.0, velocity.z) * float(c["spec"]["drag"])})
+				break
 	_slams.clear()
 	return facts
+
+
+# The cinders' telegraph (world.gd _step_cinder, cinder_heat.gd): 0 cold, 1 at the end of the grace, an ember glow.
+func set_cinder_glow(glow: float) -> void:
+	if _cinder_mat == null or is_equal_approx(glow, _cinder_glow):
+		return
+	_cinder_glow = glow
+	_cinder_mat.set_shader_parameter("glow", glow)
+
+
+# A puff of steam where a hot ball leaves the cinders.
+func steam(at: Vector3) -> void:
+	_puff(at + Vector3.UP * 0.5, 2.5)
+
+
+# A cinder spec's strips are [x, z, yaw_deg, length, half_width] on the ground; each draws as a dark grit band.
+func _build_cinder(spec: Dictionary) -> Dictionary:
+	if _cinder_mat == null:
+		_cinder_mat = ShaderMaterial.new()
+		_cinder_mat.shader = CINDER_SHADER
+		_cinder_mat.set_shader_parameter("tex_grain", CINDER_GRAIN)
+		_cinder_mat.set_shader_parameter("ember", Vector3(Palette.HAZARD.r, Palette.HAZARD.g, Palette.HAZARD.b))
+	var mat := _cinder_mat
+	var strips := []
+	for s: Array in spec["strips"]:
+		var yaw := deg_to_rad(float(s[2]))
+		var along := Vector3(sin(yaw), 0.0, cos(yaw))
+		var half := float(s[3]) * 0.5
+		var a: Vector3 = ground.call(float(s[0]) - along.x * half, float(s[1]) - along.z * half, 0.0)
+		var b: Vector3 = ground.call(float(s[0]) + along.x * half, float(s[1]) + along.z * half, 0.0)
+		var band := MeshInstance3D.new()
+		var plane := PlaneMesh.new()
+		plane.size = Vector2(float(s[4]) * 2.0, a.distance_to(b))
+		band.mesh = plane
+		band.material_override = mat
+		var mid := (a + b) * 0.5 + Vector3.UP * 0.04
+		var fwd := (b - a).normalized()
+		var up := (Vector3.UP - fwd * fwd.dot(Vector3.UP)).normalized()
+		band.transform = Transform3D(Basis(up.cross(fwd).normalized(), up, fwd), mid)
+		add_child(band)
+		strips.append({"centre": Vector2(float(s[0]), float(s[1])), "along": Vector2(along.x, along.z), "half": half, "side": float(s[4])})
+	return {"spec": spec, "strips": strips}
+
+
+# A glaze spec's strips are [x, z, yaw_deg, length, inner, outer]: the band between inner and outer metres off the
+# tube's centre line, both walls. The wash models draw it (tools/blender/park/sinkhole_tubes.py's polished band).
+func _build_glaze(spec: Dictionary) -> Dictionary:
+	var strips := []
+	for s: Array in spec["strips"]:
+		var yaw := deg_to_rad(float(s[2]))
+		strips.append({"centre": Vector2(float(s[0]), float(s[1])), "along": Vector2(sin(yaw), cos(yaw)), "half": float(s[3]) * 0.5, "inner": float(s[4]), "outer": float(s[5])})
+	return {"spec": spec, "strips": strips}
+
+
+func _on_glaze(g: Dictionary, ball: Vector3, velocity: Vector3) -> bool:
+	var speed := Vector2(velocity.x, velocity.z).length()
+	if speed < GLAZE_FROM or speed > float(g["spec"]["cap"]):
+		return false
+	if ball.y - ground.call(ball.x, ball.z, 0.0).y > CINDER_REACH:
+		return false
+	var p := Vector2(ball.x, ball.z)
+	for s: Dictionary in g["strips"]:
+		var rel: Vector2 = p - s["centre"]
+		var v := absf(rel.dot(Vector2(s["along"].y, -s["along"].x)))
+		if absf(rel.dot(s["along"])) <= s["half"] and v >= s["inner"] and v <= s["outer"]:
+			return true
+	return false
+
+
+func _on_cinder(c: Dictionary, ball: Vector3) -> bool:
+	var floor_y: float = ground.call(ball.x, ball.z, 0.0).y
+	if ball.y - floor_y > CINDER_REACH:
+		return false
+	var p := Vector2(ball.x, ball.z)
+	for s: Dictionary in c["strips"]:
+		var rel: Vector2 = p - s["centre"]
+		var u: float = rel.dot(s["along"])
+		var v: float = rel.dot(Vector2(s["along"].y, -s["along"].x))
+		if absf(u) <= s["half"] and absf(v) <= s["side"]:
+			return true
+	return false
 
 
 func _process(delta: float) -> void:

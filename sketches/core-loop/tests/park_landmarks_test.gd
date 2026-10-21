@@ -144,5 +144,8 @@ func _placer(parent: Node3D) -> void:
 		for row: Dictionary in ParkRecipes.placed_rows(park):
 			if rows.get_node_or_null("Park_" + String(row["id"])) != null:
 				placed += 1
+			# A row's rider (the dam's crest crane) stands beside it.
+			if row.has("rider") and rows.get_node_or_null("Park_%s_rider" % row["id"]) != null:
+				placed += 1
 		t.eq("%s rows place as before" % map_id, rows.get_child_count(), placed + 1)
 		rows.free()

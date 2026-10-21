@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Target := preload("res://src/boss/boss_target.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 # The Requisition: a rolling furnace-fortress several times the ball's height, with
 # Brindle's glass cockpit on its stern. This node is its body and its pieces, and it
@@ -252,6 +253,7 @@ func _dress() -> void:
 		BossModel.loop_clip(_anim, "idle_roll")
 		_anim.animation_finished.connect(_flush_hides.bind(true))
 		_anim.animation_started.connect(_flush_hides.bind(false))
+		_anim.animation_finished.connect(_resume_idle)
 		# Cap lift is the enter_furnace beat; the dip a later clip would reset it to is not.
 		BossModel.strip_tracks(_anim, "Cap0", ["drone_deploy"])
 		BossModel.strip_tracks(_anim, "Cap1", ["drone_deploy"])
@@ -289,6 +291,16 @@ func _cue(clip: String, token: int) -> void:
 		return
 	_cue_key = key
 	BossModel.play(_anim, clip)
+
+
+# A one-shot cue that ran out with nothing queued behind it hands the drums back to the idle
+# roll, so they stop freezing after the first crane. Reduced motion adds no idle, as for the
+# enemies; the cue key is left alone, so no cue replays.
+func _resume_idle(clip: StringName) -> void:
+	# The hull the pilot has ejected from lies empty, so its drums stay still.
+	if EnemyMotion.motion_scale <= 0.0 or clip in [&"idle_roll", &"eject"] or _anim.assigned_animation != clip:
+		return
+	BossModel.play(_anim, "idle_roll")
 
 
 # The phase's entry clip: the idle roll, the furnace's open caps, the scuttle's shed armour.

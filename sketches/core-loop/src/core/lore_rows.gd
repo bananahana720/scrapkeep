@@ -93,6 +93,18 @@ const ROWS := [
 		"text": "Stores ledger: spare bearings requisitioned. Pump still expected to run. Filed request for spare expectations.",
 	},
 	{
+		"id": "lore.spillway.note.shift_board", "kind": "field_note", "zone": "1-1",
+		"text": "Shift board, pump house: FOREMAN column reads MIND. HANDS column wiped clean. Chalk dust under it is fresh every morning.",
+	},
+	{
+		"id": "lore.spillway.note.gloves", "kind": "field_note", "zone": "1-1",
+		"text": "Locker row: one pair of work gloves set out per shift. Nobody on the roster draws them. A fresh pair is laid out anyway.",
+	},
+	{
+		"id": "lore.park_dam.note.crane", "kind": "field_note", "zone": "1-1",
+		"text": "Crane log: cab empty, keys on the hook. Jib swung once during the noon tune. Lift signed for in a hand nobody on shift writes.",
+	},
+	{
 		"id": "lore.park_dam.intro.warden", "kind": "intro", "zone": "1-1", "subject": "warden",
 		"text": "Dam Warden. Gates open on its count, not ours.",
 	},
@@ -303,6 +315,10 @@ const ROWS := [
 		"text": "Survey sheet: cliff height unchanged. Chalk marks below the plates sit one boot higher each morning.",
 	},
 	{
+		"id": "lore.dig_entry.note.hoist_bell", "kind": "field_note", "zone": "2-1",
+		"text": "Hoist bell log: rung for crew up, rung for crew down. Nobody rode. Bell rope worn smooth at a height no crew could reach.",
+	},
+	{
 		"id": "lore.dig_entry.intro.warden", "kind": "intro", "zone": "2-1",
 		"subject": "warden",
 		"text": "Crew notice: borrowed lights go back on the rack. Even found ones.",
@@ -480,6 +496,10 @@ const ROWS := [
 		"text": "Beacon watch: lens steady across both bridges. Shadow on the middle island keeps arriving before the light.",
 	},
 	{
+		"id": "lore.highdraft_deck.note.work_order", "kind": "field_note", "zone": "3-1",
+		"text": "Work order, issued by MIND: hold the island up, keep supper warm, count the crew. Signed in the HANDS box. Ink still wet.",
+	},
+	{
 		"id": "lore.highdraft_deck.intro.warden", "kind": "intro", "zone": "3-1",
 		"subject": "warden",
 		"text": "Tool locker: spoon filed as wrench. Wrench filed as weather loss.",
@@ -592,6 +612,10 @@ const ROWS := [
 	{
 		"id": "lore.highdraft_core.note.5", "kind": "field_note", "zone": "3-2",
 		"text": "West cable inspection: knots hold. Voice in the line asks which knot belongs to which worker.",
+	},
+	{
+		"id": "lore.park_crown.note.glove_numbers", "kind": "field_note", "zone": "3-2",
+		"text": "Crown watch: four fingers of the big glove stencilled 01 to 04, numbers off the old roster. Thumb reads FOREMAN. All five still clock in.",
 	},
 	{
 		"id": "lore.park_crown.intro.warden", "kind": "intro", "zone": "3-2", "subject": "warden",

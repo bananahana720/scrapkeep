@@ -94,6 +94,8 @@ signal boss_defeated
 # and rocket jumps. ability_id is the slot's ability id, or "slingshot".
 signal enemy_rebounded(enemy: Node3D, speed: float)
 signal enemy_pinned(enemy: Node3D, damage: float)
+# A Highdraft enemy knocked off an island edge (enemy.gd ring_out); enemy_killed follows.
+signal enemy_ringed_out(kind: String, at: Vector3)
 signal vault_kicked(at: Vector3, speed: float)
 signal gauge_charging(ability_id: String)
 signal gauge_released(ability_id: String, fraction: float)
@@ -124,7 +126,7 @@ signal world_fact(kind: String, at: Vector3)
 # v2 W7 enemies: the counters' holds and tenacity, pack arrivals, and the ancients'
 # facts. Combat emits every one (src/combat/holds.gd, fleet.gd and the units). kind is
 # the holding unit's mechanic (roster.gd); method is the player's own action that broke
-# it ("jump", "boost", "smash", "glide", "speed"); faction is "fleet", "reactor",
+# it ("jump", "boost", "smash", "glide", "speed", "ultimate", "hook"); faction is "fleet", "reactor",
 # "swarm" or "mind"; point_id names a family Warden's weak point.
 signal hold_started(kind: String, at: Vector3)
 signal hold_broken(kind: String, method: String)
@@ -205,6 +207,17 @@ signal ultimate_started(ultimate_id: String, path: String, from: Vector3, to: Ve
 signal ultimate_peak(ultimate_id: String, at: Vector3)
 signal ultimate_landed(ultimate_id: String, at: Vector3, hits: int, damage: float)
 signal ultimate_cancelled(ultimate_id: String, reason: String, refunded: bool)
+
+# Achievements refresh (w20): facts the player sees that had no bus signal. special_broken: a
+# kill-first special (Roster.SPECIALS) fell. radio_take_found: a take was filed; source is its
+# found rule's "on" ("cache" for a Signal cache). relay_stake_paid: a relay won with a stake of
+# `stakes` stacks. maker_set_completed: a set turned on for the run. overflow_cashed: an active
+# fired carrying `pieces` banked overflow pieces.
+signal special_broken(kind: String)
+signal radio_take_found(take_id: String, tier: String, source: String)
+signal relay_stake_paid(stakes: int)
+signal maker_set_completed(maker: String, bonus: String)
+signal overflow_cashed(active_id: String, pieces: int)
 
 
 static func signal_names() -> PackedStringArray:

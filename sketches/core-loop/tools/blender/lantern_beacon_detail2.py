@@ -109,6 +109,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(lb.MODELS))
     args = parser.parse_args(argv)
+    lb.polish_on()
     d1.export(NAME, SLOT, build, SIZE, BUDGET, args.out_dir)
 
 

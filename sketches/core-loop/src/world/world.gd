@@ -4,6 +4,8 @@ const Terrain := preload("res://src/world/terrain.gd")
 const Flood := preload("res://src/world/flood.gd")
 const Director := preload("res://src/world/director.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
+const CinderHeat := preload("res://src/world/cinder_heat.gd")
+const FloorRule := preload("res://src/combat/floor_rule.gd")
 const EventView := preload("res://src/world/event_view.gd")
 const Launch := preload("res://src/world/launch.gd")
 const CodexWorld := preload("res://src/world/codex_world.gd")
@@ -85,10 +87,18 @@ var _picks_waiting: Array[int] = []
 # Upgrade picks owed for new heft classes (the slice table), held until the ball is calm.
 var _class_picks_owed := 0
 var _pressure := -1.0
+# Seconds since the director last took combat's build_read(); it walks habits and the tree, so
+# it refreshes about once a second, not every tick. Starts due so the first step reads it.
+const BUILD_REFRESH := 1.0
+var _build_clock := BUILD_REFRESH
 var _vault_pending := false
 var _was_grounded := true
 # A barge carried the ball this tick (contraptions.gd's "carry" fact), for the net deck's footing note.
 var _on_barge := false
+# The sinkhole's floor is lava (cinder_heat.gd): the dwell on the cinder floor, and whether the ball touched it this tick
+# (contraptions.gd's "drag" fact).
+var cinder_heat := CinderHeat.new()
+var _on_cinder := false
 
 
 func setup(ctx_ref) -> void:
@@ -97,7 +107,9 @@ func setup(ctx_ref) -> void:
 	terrain = Terrain.new(ctx.stages)
 	# A park row's ride sensor publishes on the game bus (KB9; park_recipes.gd _sensor).
 	terrain.publish = ctx.events.world_fact.emit
-	terrain.build(ctx.root)
+	# MENU-READY (measured 2026-10-18, exported build, cloud headless): building stage 1's park
+	# ground in setup held the menu for about 2 of its 6 s. A played game builds it behind the menu.
+	terrain.build(ctx.root, ctx.root.get("ground_behind_menu") == true)
 	ctx.terrain = terrain
 	_wire_terrain()
 	flood = Flood.new()
@@ -128,6 +140,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
+	ctx.events.enemy_struck.connect(func(_enemy, _kind, _force): cinder_heat.struck())
 	ctx.events.slammed.connect(_on_slammed)
 	ctx.events.jumped.connect(_on_jumped)
 	ctx.events.element_resolved.connect(_on_element_resolved)
@@ -207,6 +220,7 @@ func _add_contraptions() -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	cinder_heat.reset()
 	if retry:
 		_class_picks_owed = 0
 	Threat.follow_row(ctx.tuning)
@@ -349,8 +363,10 @@ func _physics_process(delta: float) -> void:
 			if ctx.root.get("presentation") != null else {})))
 	if contraptions.has(ctx.flow.stage()) and contraptions[ctx.flow.stage()].live:
 		var steering: bool = player.intent.move.length() > 0.1 or player.intent.jump_pressed
+		_on_cinder = false
 		for fact in contraptions[ctx.flow.stage()].step(delta, ball, velocity, player.kit, ride != null or launch.flying(), steering):
 			_contraption_fact(fact)
+		_step_cinder(delta, ball)
 	if bay.in_yard(ball):
 		_free_cooldowns()
 	_watch_ground(delta, ball)
@@ -448,6 +464,18 @@ func _watch_ground(delta: float, ball: Vector3) -> void:
 	_was_grounded = grounded
 
 
+# The floor is lava: dwell on the cinder floor glows, then burns in pulses (cinder_heat.gd), never in calm.
+func _step_cinder(delta: float, ball: Vector3) -> void:
+	var heat := cinder_heat.step(delta, _on_cinder and not ctx.calm, ctx.run.hp)
+	contraptions[ctx.flow.stage()].set_cinder_glow(float(heat["glow"]))
+	if String(heat["fact"]) != "":
+		ctx.events.world_fact.emit(String(heat["fact"]), ball)
+		if heat["fact"] == CinderHeat.COOL_FACT:
+			contraptions[ctx.flow.stage()].steam(ball)
+	if float(heat["damage"]) > 0.0:
+		ctx.run.damage(float(heat["damage"]), CinderHeat.SOURCE)
+
+
 func _on_enemy_killed(_kind: String, at: Vector3, _scrap: int) -> void:
 	if ctx.flow.in_stage():
 		_discover(codex_world.note("kill", {"at": at, "in_water": flood.submersion(at) > 0.0}))
@@ -535,6 +563,10 @@ func director_alive() -> int:
 func _step_director(delta: float) -> void:
 	director.spike = ctx.flow.state_name() == "beacon" or events.spike()
 	director.heft_class = ctx.run.heft_class()
+	_build_clock += delta
+	if _build_clock >= BUILD_REFRESH and ctx.spawner != null and ctx.spawner.has_method("build_read"):
+		_build_clock = 0.0
+		director.build = ctx.spawner.build_read()
 	var alive := director_alive()
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.state.velocity
@@ -600,6 +632,10 @@ func _contraption_fact(fact: Dictionary) -> void:
 			if not ctx.calm:
 				ctx.player.add_external_accel(fact["accel"])
 			_discover(codex_world.note("thermal", {"at": ctx.player.ball_position()}))
+		"drag":
+			# A cinder floor slowing a rolling ball (contraptions.gd _build_cinder); a push of the world, so it holds in calm too.
+			ctx.player.add_external_accel(fact["accel"])
+			_on_cinder = FloorRule.on_floor(ctx.player.state)
 		"carry":
 			# The deck's own frame, not a world push, so it holds in calm too.
 			ctx.player.add_external_accel(fact["accel"])

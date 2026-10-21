@@ -20,9 +20,12 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Swatter")
 PIVOT = -0.6
 CHAR = "charcoal"
@@ -53,6 +56,8 @@ bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)
 
 p = Part("SwatterPaddle")
+p.bevel = 0
+p.subsurf = 0
 # The unbroken 5.5 m square rail and its inset oxide spine.
 p.box("paint", (0.2, 5.5, 0.2), loc=g(0, PIVOT, 2.9), color=CHAR)
 p.box("paint", (0.09, 3.8, 0.018), loc=g(0, PIVOT + 0.090, 2.70), color=PLATE)
@@ -90,7 +95,7 @@ tris = common.tri_total(root)
 surfaces = len(body.data.materials) + len(paddle.data.materials)
 print("TRIS", tris, "SURFACES", surfaces, "BODY", common.tris(body), "PADDLE", common.tris(paddle),
       "SHAFT_LENGTH", 5.5, "PADDLE_LENGTH", 1.6, "PIVOT_GODOT", (0, PIVOT, 0))
-if tris > 1200 or surfaces > 3:
+if tris > 3300 or surfaces > 3:
     raise SystemExit("C20 assembly ceiling exceeded")
 opts = common.args()
 common.export(root, opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_swatter.glb"))

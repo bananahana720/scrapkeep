@@ -10,6 +10,7 @@ const Relics := preload("res://src/build/relics.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const Profile := preload("res://src/core/profile.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
+const Roster := preload("res://src/combat/roster.gd")
 const MAX_HP := 100.0
 const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
@@ -668,6 +669,7 @@ func record_kill(kind: String, at: Vector3, scrap_value: int, source := "") -> v
 	kills += 1
 	last_kill_from_spark = source == "spark"
 	events.enemy_killed.emit(kind, at, scrap_value)
+	if kind in Roster.SPECIALS: events.special_broken.emit(kind)
 	last_kill_from_spark = false
 
 
@@ -681,6 +683,15 @@ func record_milestone(event_id: String) -> void:
 
 
 # Flow calls this as a stage begins (not on a retry): cores are stage-scoped.
+# A run is cursed once a curse pocket's deal was taken (a "risk" decision on a curse offer).
+# Read from trade_memory, so it follows saves, Continue and a retry's rewind with no field of its own.
+func cursed() -> bool:
+	for offer in trade_memory.seen:
+		if offer.get("curse", false) and bool(trade_memory.decisions.get(str(offer.stage), false)):
+			return true
+	return false
+
+
 func enter_stage(index: int) -> void:
 	if index != stage:
 		for offer in trade_memory.seen:

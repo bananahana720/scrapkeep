@@ -18,6 +18,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
+const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
 
 # The set stands far enough off the deck that no deck shot sees it, and the reverse.
 const SET_AT := Vector3(600.0, 0.0, 0.0)
@@ -80,6 +81,7 @@ var _tweens: Array[Tween] = []
 # a fresh copy per opening tripped the headless renderer when its set was freed.
 static var _finishes := {}
 var _catcher: Node
+var _antics
 
 
 func setup(stage_host: Node) -> void:
@@ -190,6 +192,7 @@ func _finish(skipped: bool) -> void:
 	_set = null
 	_subject = null
 	_props.clear()
+	_antics = null
 	if is_instance_valid(_layer):
 		_layer.queue_free()
 	_layer = null
@@ -202,6 +205,7 @@ func _finish(skipped: bool) -> void:
 # --- the set -------------------------------------------------------------------------------
 
 func _build_set() -> void:
+	_antics = null
 	_set = Node3D.new()
 	_set.name = "IntroSet"
 	_set.position = SET_AT
@@ -277,8 +281,9 @@ func _shell(class_id: String, label: String) -> Node3D:
 	var pod := shell.find_child("Pod", true, false) as Node3D
 	var painter := HeroAssets.new()
 	painter.paint(shell, {"class": color})
+	var fitted := {}
 	if pod != null:
-		var fitted := painter.fit_pilot_into(pod, class_id, color)
+		fitted = painter.fit_pilot_into(pod, class_id, color)
 		if not fitted.is_empty() and fitted.animator != null:
 			fitted.animator.stop()
 	painter.free()
@@ -289,6 +294,9 @@ func _shell(class_id: String, label: String) -> Node3D:
 	holder.add_child(shell)
 	host._freeze_visual(shell)
 	_props[label] = holder
+	if label == "Subject" and not fitted.is_empty():
+		_antics = PilotAntics.new({"holder": holder, "core": shell.find_child("Core", true, false), "pod": pod,
+			"pilot": fitted.pilot, "animator": fitted.animator}, class_id)
 	return holder
 
 
@@ -401,6 +409,8 @@ func _flat(color: Color) -> StandardMaterial3D:
 func _enter_shot(shot: Dictionary) -> void:
 	var kind := String(shot.kind)
 	var world: int = int(_row.world)
+	if _antics != null and kind != "antics":
+		_antics.seat()
 	_clear_overlay()
 	environment.adjustment_enabled = false
 	environment.background_energy_multiplier = SKY_ENERGY
@@ -426,6 +436,11 @@ func _enter_shot(shot: Dictionary) -> void:
 		"card":
 			camera.fov = 38.0 if reduced_motion else 34.0
 			_name_card(card, _row.kind == "boss", Vector2(0.56, 0.12), 3.0)
+		"antics":
+			camera.fov = 44.0
+			var pilot := String(_row.get("pilot", ""))
+			_sfx(PilotAntics.word(pilot), Vector2(0.6, 0.1), 6.0, 0.9)
+			_caption(PilotAntics.line(pilot), Vector2(0.04, 0.82))
 		"action":
 			camera.fov = 70.0
 			_sfx(String(sfx[1]), Vector2(0.62, 0.08), 8.0, 1.0)
@@ -490,6 +505,20 @@ func _frame_shot(kind: String, t: float) -> void:
 			at = Vector3(1.0, 1.0, 3.1) * s
 			look = Vector3(0.0, 0.85, 0.0) * s
 			roll = 5.0
+			if _row.kind == "boss":
+				# Bosses get no hop-out; their card moves in close on the face instead.
+				at = Vector3(0.7, 1.3, 1.9) * s
+				look = Vector3(0.0, 1.15, 0.0) * s
+				roll = -4.0
+		"antics":
+			# The pilot climbs out and does their bit (pilot_antics.gd); the camera holds wide
+			# enough for Kest's hover and Rivet's and Tally's step to the side.
+			at = Vector3(0.9, 1.5, 6.4) * s
+			look = Vector3(0.0, 0.9, 0.0) * s
+			at = at.lerp(look, 0.06 * push)
+			if _antics != null:
+				_antics.calm = reduced_motion
+				_antics.apply(t)
 		"action":
 			at = Vector3(-4.0, 2.4, 9.0) * s
 			look = Vector3(0.4, 1.8, 0.0) * s

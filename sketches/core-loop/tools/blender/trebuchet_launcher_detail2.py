@@ -80,6 +80,7 @@ def build(s):
 
 
 def main():
+    tl.polish_on()
     tl.export(NAME, [("Detail2", "steel", False, build)], {}, tl.out_dir(), budget=DETAIL, tag="TREBUCHET_D2", size=SIZE)
 
 

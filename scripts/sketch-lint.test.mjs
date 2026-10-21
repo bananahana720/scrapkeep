@@ -20,6 +20,16 @@ test("L7 flags a game file that loads from tools/, and passes src paths and comm
   assert.deepEqual(lintL7("a.gd", 'const P := preload("res://src/world/park/park_placement.gd")\n# was res://tools/park_graph.gd\n'), []);
 });
 
+test("L7 allows only the guarded --self-play load in src/game.gd", () => {
+  const line = 'const SELF_PLAY := "res://tools/self_play.gd"\n';
+  const guard = "if not ResourceLoader.exists(script_path):\n";
+  assert.deepEqual(lintL7("sketches/core-loop/src/game.gd", line + guard), []);
+  assert.equal(lintL7("sketches/core-loop/src/game.gd", line).length, 1);
+  assert.equal(lintL7("sketches/core-loop/src/other.gd", line + guard).length, 1);
+  assert.equal(lintL7("sketches/core-loop/src/game.gd", line + guard + 'var x = load("res://tools/bot_driver.gd")\n').length, 1);
+  assert.equal(lintL7("sketches/core-loop/src/game.gd", 'const SELF_PLAY := "res://tools/other.gd"\n' + guard).length, 1);
+});
+
 const tuningText = `
 const ROWS := [
 	{"key": "scrap_mode", "label": "Scrap"},

@@ -19,6 +19,7 @@ from mathutils import Matrix, Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import common
+import polish
 
 SKETCH = HERE.parents[2]
 MODELS = SKETCH / "assets/models/dig_mechanical"
@@ -48,10 +49,42 @@ def material(slot):
     return mat
 
 
+# Per-surface polish finish by Surface name: {"Hull": {"bevel": 0.06, "subsurf": 1}}. Read only
+# under polish.enable(); a name not listed takes the enable() defaults (POLISH.md).
+FINISH = {}
+# polish.enable(**BAKE) for kit recipes: every vertex-coloured kit slot takes the AO and wear bake
+# (glass has no vertex colour), and the mint state key that steel.gdshader matches within 0.02 stays exact.
+BAKE = {"bake_slots": ("elastomer", "enamel", "steel"), "bake_keep": (common.rgba("mint"),)}
+
+
+# Polish for the dig_mechanical assets only (tools/blender/POLISH.md). The manifest budgets stay
+# 270 T / 610 V, and dress_mdm_assets_test pins exact bounds to 5 mm, so these take smooth shading
+# and the AO and wear bake, plus a small bevel (planar faces keep the extents) where the shape is
+# boxes. Lamps are scenery and stay as they were. Recipes outside dig_mechanical never reach here.
+DIG_POLISH = {n: dict(bevel=0) for n in (
+    "impeller_rim_sector", "impeller_hub", "impeller_vane", "impeller_vane_chipped", "intake_petal",
+    "intake_throat", "intake_spine_segment", "cart_wheel", "shell_crescent", "shell_saddle",
+    "breach_rim_sector", "breach_tab")}
+DIG_POLISH.update({"cart_body": dict(bevel=0),  # its 1.7 x 3.0 m extents shrink under a bevel (5 mm pin)
+                   "strut_tall": dict(bevel=.03, bevel_min=.6), "strut_bent": dict(bevel=.03, bevel_min=.6)})
+
+
+def use_polish(name):
+    base = name.rsplit("_", 1)[0] if "x" in name.rsplit("_", 1)[-1] and name.startswith("breach_wedge_") else name
+    cfg = DIG_POLISH.get(base, dict(bevel=0) if base.startswith("breach_wedge_") else None)
+    if cfg is None:
+        polish._opts = common.POLISH = None
+        common.DETAIL = 1
+    else:
+        polish.enable(detail=1, **cfg, **BAKE)
+
+
 class Surface:
     def __init__(self, name, slot, smooth=False):
         self.name, self.slot, self.smooth = name, slot, smooth
         self.verts, self.faces, self.colors = [], [], []
+        finish = FINISH.get(name, {})
+        self.bevel, self.subsurf = finish.get("bevel"), finish.get("subsurf")
 
     def add(self, verts, faces, color="petrol", colors=None):
         off = len(self.verts)
@@ -111,7 +144,18 @@ class Surface:
                           tuple(r*n+n-1 for r in range(count))]
         self.add(verts,faces,colors=colors)
 
+    def tone(self, vi):
+        tone=self.colors[vi]
+        # Broad, repeatable paint/dust wear is baked into this same slot.
+        # No face-by-face material proliferation or image textures.
+        if tone in ["bone","petrol"]:
+            gain=[0,.025,.06,.11,.035,.015][(vi*7+len(self.name))%6]
+            tone=common.mix(tone,"charcoal" if tone=="bone" else "bone",gain)
+        return common.rgba(tone)
+
     def finish(self, root):
+        if common.POLISH is not None:
+            return self._finish_polished(root)
         mesh=bpy.data.meshes.new(self.name)
         mesh.from_pydata([xyz(v) for v in self.verts],[],self.faces)
         mesh.update()
@@ -125,14 +169,7 @@ class Surface:
         for poly in mesh.polygons:
             poly.use_smooth=self.smooth
             for li in poly.loop_indices:
-                vi=mesh.loops[li].vertex_index
-                tone=self.colors[vi]
-                # Broad, repeatable paint/dust wear is baked into this same slot.
-                # No face-by-face material proliferation or image textures.
-                if tone in ["bone","petrol"]:
-                    gain=[0,.025,.06,.11,.035,.015][(vi*7+len(self.name))%6]
-                    tone=common.mix(tone,"charcoal" if tone=="bone" else "bone",gain)
-                attr.data[li].color=common.rgba(tone)
+                attr.data[li].color=self.tone(mesh.loops[li].vertex_index)
         mesh.color_attributes.active_color=attr
         mesh.materials.append(material(self.slot))
         obj=bpy.data.objects.new(self.name,mesh)
@@ -143,6 +180,33 @@ class Surface:
         tri.quad_method="FIXED"
         bpy.context.view_layer.objects.active=obj
         bpy.ops.object.modifier_apply(modifier=tri.name)
+        return obj
+
+
+    def _finish_polished(self, root):
+        # Polish route (POLISH.md): colours go on the loops first so bevels and subdivision
+        # carry them, then common.Part's deterministic triangulation.
+        mesh=bpy.data.meshes.new(self.name)
+        mesh.from_pydata([xyz(v) for v in self.verts],[],self.faces)
+        mesh.update()
+        bm=bmesh.new()
+        bm.from_mesh(mesh)
+        bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces))
+        col=bm.loops.layers.float_color.new("Color")
+        bm.verts.index_update()
+        for f in bm.faces:
+            for loop in f.loops:
+                loop[col]=self.tone(loop.vert.index)
+        part=common.Part(self.name)
+        part.bm.free()
+        part.bm,part.col=bm,col
+        part.slots=[self.slot]
+        part.bevel,part.subsurf=self.bevel,self.subsurf
+        bpy.data.meshes.remove(mesh)
+        bpy.data.materials.get(self.slot) or material(self.slot)
+        obj=part.to_object()
+        obj.parent=root
+        obj.location=(0,0,0)
         return obj
 
 
@@ -237,6 +301,7 @@ def rescale(s,size,bottom=True):
 
 def build(name,out=None):
     common.reset()
+    use_polish(name)
     PARTS.clear()
     root=common.empty(name)
     spec=ASSETS[name]
@@ -509,6 +574,7 @@ def baked_wedge(base,width,depth,out=None):
     pivot=wedge_pivot(c,width,depth)
     name=f"{base}_{width}x{depth}"
     common.reset()
+    use_polish(name)
     root=common.empty(name)
     s=Surface(ASSETS[base]["parts"][0],"steel")
     s.prism(outline,.12,"bone",axis="y")

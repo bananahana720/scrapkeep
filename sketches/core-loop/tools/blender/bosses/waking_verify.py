@@ -74,7 +74,7 @@ def main():
                 counts[0]+=gltf["accessors"][p["indices"]]["count"]//3
                 counts[1]+=gltf["accessors"][p["attributes"]["POSITION"]]["count"]
                 counts[2]+=1
-        caps=(5000,9600,32) if index==0 else (1500,2800,18)
+        caps=(10000,9600,32) if index==0 else (4000,4000,18)
         assert all(0<n<=cap for n,cap in zip(counts,caps))
         print("WAK_VERIFY",name,"bytes="+str(len(blob)),"T/V/D="+str(counts),"sha256="+hashlib.sha256(blob).hexdigest())
         if args.rebuild:

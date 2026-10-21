@@ -115,7 +115,7 @@ func _run() -> void:
 	_base(enemy)
 	var live := _measure(enemy)
 	print("LIVE: %d T / %d D" % [live.tris,live.draws])
-	_check(live.tris > 0 and live.tris <= 1200, "full live assembly triangle ceiling 1200")
+	_check(live.tris > 0 and live.tris <= 5100, "full live assembly triangle ceiling 5100 (polished; was 1200)")
 	_check(live.draws > 0 and live.draws <= 3, "full live assembly draw ceiling 3")
 	_check(live.opaque, "full live assembly opaque including shader surfaces")
 	_check(enemy.find_children("*", "Light3D", true, false).is_empty(), "zero added lights")
@@ -251,8 +251,11 @@ func _forms(body: MeshInstance3D, vents: MultiMeshInstance3D) -> void:
 			var area := (vs[idx[i+1]]-vs[idx[i]]).cross(vs[idx[i+2]]-vs[idx[i]]).length()/2
 			if c.b > c.r*1.8 and c.b > c.g*1.4:
 				blue_area += area
-				blue_lo = minf(blue_lo,vs[idx[i]].y)
-				blue_hi = maxf(blue_hi,vs[idx[i]].y)
+				# All three corners: polished GLBs sort their vertices, so a triangle's first
+				# corner no longer spans the band.
+				for k in 3:
+					blue_lo = minf(blue_lo,vs[idx[i+k]].y)
+					blue_hi = maxf(blue_hi,vs[idx[i+k]].y)
 			else:
 				colors_ok = colors_ok and c.v <= 0.451 and c.s <= 0.451 and c.a == 1.0
 				if c.v < 0.18: dark_area += area

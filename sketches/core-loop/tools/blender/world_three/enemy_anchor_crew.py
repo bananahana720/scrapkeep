@@ -12,9 +12,11 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+polish.enable(detail=2, bevel=0.03, fit=True)
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
 common.SLOTS["working_tool"] = {"vc": True, "rough": 0.5, "metal": 0.35}
 root = common.empty("AnchorCrew")
@@ -52,32 +54,38 @@ def binder(part):
 b = Part("AnchorCrewBody")
 bind = binder(b)
 # Rounded core at the collider centre, exact 1.6 diameter / 2.2 height envelope.
-rows = []
-for y, radius in [(-1.1, 0.38), (-0.9, 0.62), (-0.45, 0.8),
-                  (0.5, 0.8), (0.9, 0.60), (1.1, 0.36)]:
-    rows.append([b.bm.verts.new(Vector(g(radius * math.cos(k * math.tau / 12), y,
-                                           radius * math.sin(k * math.tau / 12)))) for k in range(12)])
-for i in range(len(rows) - 1):
-    for k in range(12):
-        face = b.bm.faces.new((rows[i][k], rows[i][(k + 1) % 12],
-                               rows[i + 1][(k + 1) % 12], rows[i + 1][k]))
-        b.paint([face], "fleet_paint", "bone" if k in (2, 3) and i in (2, 3) else PAINT)
-b.paint([b.bm.faces.new(list(reversed(rows[0]))), b.bm.faces.new(rows[-1])], "fleet_paint", PAINT)
+# Under polish the core subdivides once; the crew is the shared soft critter.
+with b.region(bevel=0, subsurf=1):
+    rows = []
+    for y, radius in [(-1.1, 0.38), (-0.9, 0.62), (-0.45, 0.8),
+                      (0.5, 0.8), (0.9, 0.60), (1.1, 0.36)]:
+        rows.append([b.bm.verts.new(Vector(g(radius * math.cos(k * math.tau / 12), y,
+                                               radius * math.sin(k * math.tau / 12)))) for k in range(12)])
+    for i in range(len(rows) - 1):
+        for k in range(12):
+            face = b.bm.faces.new((rows[i][k], rows[i][(k + 1) % 12],
+                                   rows[i + 1][(k + 1) % 12], rows[i + 1][k]))
+            b.paint([face], "fleet_paint", "bone" if k in (2, 3) and i in (2, 3) else PAINT)
+    b.paint([b.bm.faces.new(list(reversed(rows[0]))), b.bm.faces.new(rows[-1])], "fleet_paint", PAINT)
 core = list(b.bm.verts)
 bind("CrewBrace")
 for side in (-1, 1):
     b.box("fleet_paint", (0.32, 0.44, 0.15), loc=g(side * 0.38, -1.025, 0.22), color="charcoal")
     b.cyl("fleet_paint", 0.17, 0.21, 0.3, segs=6, loc=g(side * 0.38, -0.85, 0.15), color="bone")
 bind("AnchorFeet")
-b.uv("fleet_paint", 0.38, u=8, v=5, loc=g(0, 1.3, 0), color="oxide")
-b.uv("fleet_paint", 0.18, u=6, v=4, loc=g(0, 1.25, 0.31), scale=(1.1, 0.7, 0.65), color="bone")
+with b.region(bevel=0, subsurf=2, detail=1):
+    b.uv("fleet_paint", 0.38, u=8, v=5, loc=g(0, 1.3, 0), color="oxide")
+    b.uv("fleet_paint", 0.18, u=6, v=4, loc=g(0, 1.25, 0.31), scale=(1.1, 0.7, 0.65), color="bone")
 for side in (-1, 1):
-    b.cyl("fleet_paint", 0.13, 0.0, 0.34, segs=6, loc=g(side * 0.2, 1.65, 0), color="oxide")
-    b.uv("fleet_paint", 0.075, u=6, v=4, loc=g(side * 0.17, 1.42, 0.315), color="charcoal")
+    with b.region(bevel=0, subsurf=1, detail=1):
+        b.cyl("fleet_paint", 0.13, 0.0, 0.34, segs=6, loc=g(side * 0.2, 1.65, 0), color="oxide")
+    with b.region(bevel=0, detail=1):
+        b.uv("fleet_paint", 0.075, u=6, v=4, loc=g(side * 0.17, 1.42, 0.315), color="charcoal")
 bind("AnchorHead")
-for side in (-1, 1):
-    b.rod("fleet_paint", g(side * 0.45, 0.72, 0.32), g(side * 0.32, 0.9, 0.58), 0.095, segs=6, color="oxide")
-    b.uv("fleet_paint", 0.12, u=6, v=4, loc=g(side * 0.32, 0.9, 0.58), color="charcoal")
+with b.region(bevel=0, subsurf=1, detail=1):
+    for side in (-1, 1):
+        b.rod("fleet_paint", g(side * 0.45, 0.72, 0.32), g(side * 0.32, 0.9, 0.58), 0.095, segs=6, color="oxide")
+        b.uv("fleet_paint", 0.12, u=6, v=4, loc=g(side * 0.32, 0.9, 0.58), color="charcoal")
 bind("CrewBrace")
 b.box("fleet_paint", (0.7, 0.16, 0.12), loc=g(0, 0.9, 0.58), color=WORN)
 bind("CrewBrace")
@@ -99,17 +107,21 @@ r = Part("DeckReel")
 axis = (0, math.pi / 2, 0)
 for x in (-0.39, 0.39):
     r.cyl("fleet_paint", 0.55, 0.55, 0.108, segs=12, loc=g(x, 0.9, -1.3), rot=axis, color=PAINT)
-    r.ring("fleet_paint", 0.39, 0.52, 0.012, segs=8,
-           loc=g(x + (-0.054 if x < 0 else 0.054), 0.9, -1.3), rot=axis, color="bone")
+    with r.region(bevel=0):
+        r.ring("fleet_paint", 0.39, 0.52, 0.012, segs=8,
+               loc=g(x + (-0.054 if x < 0 else 0.054), 0.9, -1.3), rot=axis, color="bone")
 r.cyl("fleet_paint", 0.37, 0.37, 0.66, segs=12, loc=g(0, 0.9, -1.3), rot=axis, color="charcoal")
 for x in (0,):
     r.ring("fleet_paint", 0.36, 0.385, 0.045, segs=8, loc=g(x, 0.9, -1.3), rot=axis, color="charcoal")
 # Asymmetric rubbed spoke makes reel-in rotation visible.
-r.box("fleet_paint", (0.002, 0.075, 0.40), loc=g(-0.449, 1.13, -1.3), color=WORN)
+with r.region(bevel=0):
+    r.box("fleet_paint", (0.002, 0.075, 0.40), loc=g(-0.449, 1.13, -1.3), color=WORN)
 bmesh.ops.recalc_face_normals(r.bm, faces=r.bm.faces[:])
 reel = r.to_object(origin=g(0, 0.9, -1.3), parent=root)
 
 w = Part("AnchorWorkingTools")
+# Clutch tabs and the hook are a few centimetres across, so the bevel stays narrow.
+w.bevel = 0.012
 bind_tool = binder(w)
 w.cyl("working_tool", 0.15, 0.15, 0.10, segs=9, loc=g(0.45, 0.9, -1.3), rot=axis, color=WORN)
 bind_tool("WinchClutch")
@@ -150,7 +162,7 @@ bpy.context.view_layer.update()
 triangles = common.tri_total(root)
 surfaces = sum(len(o.data.materials) for o in (body, reel, tools))
 print("EAC geometry:", triangles, "triangles;", surfaces, "surfaces; core radius 0.8; y -1.1..1.1")
-assert triangles <= 1100 and surfaces == 3
+assert triangles <= 6000 and surfaces == 3
 opts = common.args()
 common.export(root, opts["out"] or os.path.join(common.MODELS, "world_three", "enemy_anchor_crew.glb"))
 

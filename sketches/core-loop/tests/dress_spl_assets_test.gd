@@ -358,7 +358,8 @@ func _run() -> void:
 		quit(1)
 		return
 	var enemy: Dictionary = budgets["classes"]["enemy"]
-	_check(enemy["tris"] == 1100 and enemy["verts"] == 2100 and enemy["draws"] == 3, "P-R7 enemy row 1100/2100/3")
+	# P-R7 set 1100/2100/3; the 2026-10-18 model polish raised the row (tools/blender/POLISH.md).
+	_check(enemy["tris"] == 10000 and enemy["verts"] == 19100 and enemy["draws"] == 3, "enemy row 10000/19100/3")
 	_asset("spil9", [], false, enemy)
 	for p in PIECES:
 		_asset(p, [p], false, enemy)

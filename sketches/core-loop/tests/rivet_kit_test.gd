@@ -7,13 +7,14 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Kit := preload("res://src/combat/rivet_kit.gd")
+const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const T := preload("res://tests/support/t.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const AudioRows := preload("res://src/presentation/rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
-# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 2.3, 9 and 10). Expected: 51 checks,
+# PC-RIVET, 2026-10-11 (design-v3/pilots/rivet.md sections 2.3, 9 and 10). Expected: 54 checks,
 # 2026-10-12 (PC-RIVET round 3): arrival preview, early cues, shared guard feedback and cue gain/key.
 # 2026-10-12 (PC-RIVET r4): 45 -> 50, inspect actual PCM cue offsets and duration at key 3.
 # 2026-10-12 (coordinator, KE9 r1 gate): 50 -> 51, a freed target drops its pulse without an error.
@@ -65,7 +66,7 @@ func _cue_timing() -> void:
 
 
 var _t := T.new("rivet_kit_test")
-var _expected_checks := 51
+var _expected_checks := 57
 var _game
 var _player
 var _combat
@@ -216,6 +217,39 @@ func _punch_of(row: Array) -> float:
 	return float(_combat.punch_of(String(row[1]), float(row[2])))
 
 
+# Parks share one Shape3D across many colliders: each placement keeps its own build, so the
+# terrain warm-up does not rebuild every one of them each time (a 100-175 ms tick in a park).
+func _shared_shape_cache() -> void:
+	var cache := TerrainFaces.new()
+	var box := BoxShape3D.new()
+	var here := Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, 0.0))
+	var there := Transform3D(Basis.IDENTITY, Vector3(100.0, 0.0, 0.0))
+	var faces := [[Vector3(-1, 0, -1), Vector3(1, 0, -1), Vector3(0, 0, 1)]]
+	var first := cache.request(box, here, faces)
+	cache.request(box, there, faces)
+	_t.check("both placements of a shared shape stay cached", not cache.cached(box, here).is_empty() and not cache.cached(box, there).is_empty(), "")
+	_t.check("a repeat request reuses its placement's build", cache.request(box, here, faces) == first, "")
+	var near := cache.faces_near(cache.cached(box, there), AABB(Vector3(98.0, -1.0, -2.0), Vector3(4.0, 2.0, 4.0)))
+	_t.eq("each placement reads its own faces", near.size() == 1 and (near[0][0] as Vector3).is_equal_approx(Vector3(99, 0, -1)), true)
+	cache.finish()
+	_level_ground_budget()
+
+
+# Andrew's 18 Oct ruling (option B): a Breach on level park ground hits on the landing tick. The
+# kit's landing budget is bigger on level ground, smaller than the shares of a heavy carve, and a
+# lowered late_work lowers both; the threshold is the one the ruling names.
+func _level_ground_budget() -> void:
+	_t.check("level ground: the landing budget is bigger on level ground, a lowered late_work lowers both",
+		_kit.landing_work(true) > _kit.landing_work(false) and _kit.landing_work(false) == Kit.LANDING_WORK and _kit.landing_work(true) == Kit.LATE_WORK * Kit.LEVEL_LANDING_SCALE
+		and _kit.late_work == Kit.LATE_WORK, "")
+	_kit.late_work = 3
+	var lowered := [_kit.landing_work(true), _kit.landing_work(false)]
+	_kit.late_work = Kit.LATE_WORK
+	_t.eq("level ground: late_work 3 gives a 6 and a 3 part landing", lowered, [3 * Kit.LEVEL_LANDING_SCALE, 3])
+	var flat := [[Vector3(-2, 0, -2), Vector3(-2, 0, 2), Vector3(2, 0, -2)], [Vector3(2, 0, -2), Vector3(-2, 0, 2), Vector3(2, 0, 2)]]
+	_t.check("level ground: a flat face under the landing is level, and the line is 5 degrees (Andrew's stand is 3.43)", _kit.level_ground(flat, Vector3(0.0, 0.5, 0.0)) and Kit.LEVEL_GROUND_DEG == 5.0 and 3.43 < Kit.LEVEL_GROUND_DEG, "")
+
+
 func _finish() -> void:
 	_t.eq("expected check count", _t.checks + 1, _expected_checks)
 	_game.free()
@@ -224,6 +258,7 @@ func _finish() -> void:
 
 func _run() -> void:
 	await _boot()
+	_shared_shape_cache()
 	var audio = _game.presentation.audio
 	audio.bake_now()
 	audio.engine.key = 3

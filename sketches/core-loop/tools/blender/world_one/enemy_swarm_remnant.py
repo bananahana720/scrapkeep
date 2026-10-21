@@ -11,6 +11,7 @@ import bmesh
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 
@@ -18,6 +19,10 @@ def build():
     common.reset()
     # The runtime's instance flash material supplies the enamel colour.
     common.SLOTS["ancient_enamel"] = {"color": "petrol", "rough": 0.55}
+    # Polish (POLISH.md): remnants stay flat, identical triangles. The slab keeps its bevel; sharp_angle 30
+    # splits the 45 degree bevel facets from the faces, so the faces toward the heading keep
+    # flat normals (the runtime's threat stripe surface needs z > 0 on all of them).
+    polish.enable(detail=1, subsurf=0, sharp_angle=30.0)
     root = common.empty("SwarmRemnant")
     body = Part("RemnantBody")
     corners = [(0, -0.75), (math.sqrt(3) * 0.375, 0.375), (-math.sqrt(3) * 0.375, 0.375)]

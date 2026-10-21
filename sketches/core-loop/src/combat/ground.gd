@@ -26,3 +26,11 @@ func height(x: float, z: float) -> float:
 
 func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
+
+
+# The stage's world, for the Highdraft's ring-outs (enemy.gd). An arena reads 0: its floor
+# is the boss module's, so nothing there rings out.
+func world() -> int:
+	if ctx.flow != null and ctx.flow.in_arena:
+		return 0
+	return ctx.terrain.world()

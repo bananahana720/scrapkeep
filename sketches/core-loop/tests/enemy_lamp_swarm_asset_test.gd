@@ -45,7 +45,7 @@ func _measure(node: Node) -> Dictionary:
 
 func _budget(node: Node, label: String) -> void:
 	var count := _measure(node)
-	t.check(label + " budget", count.tris > 0 and count.tris <= 1100 and count.vertices <= 2100
+	t.check(label + " budget", count.tris > 0 and count.tris <= 10000 and count.vertices <= 19100
 		and count.draws > 0 and count.draws <= 3 and count.opaque, str(count))
 	t.eq(label + " no capsule mesh", count.capsules, 0)
 
@@ -136,6 +136,7 @@ func _check_core(mi: MeshInstance3D) -> void:
 			edges[right][left] = true
 	var seen := {}
 	var hull: Array[Vector3] = []
+	var hull_span := -1.0
 	for start in points.size():
 		if seen.has(start):
 			continue
@@ -149,8 +150,15 @@ func _check_core(mi: MeshInstance3D) -> void:
 				if not seen.has(next):
 					seen[next] = true
 					pending.append(next)
-		if group.size() > hull.size():
+		# The core is the tallest piece; polished heads can carry more vertices than it.
+		var low := INF
+		var high := -INF
+		for p in group:
+			low = minf(low, p.y)
+			high = maxf(high, p.y)
+		if high - low > hull_span:
 			hull = group
+			hull_span = high - low
 	var bounds := AABB(hull[0], Vector3.ZERO)
 	var radial := 0.0
 	for p in hull:
