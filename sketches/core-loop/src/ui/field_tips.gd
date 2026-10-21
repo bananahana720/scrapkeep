@@ -142,7 +142,6 @@ func meet(id: String, later := false) -> void:
 func _on_run_started(_class_id: String) -> void:
 	pending.clear()
 	_later.clear()
-	_jams = 0
 	if showing != "":
 		hud.drop_toast(TIPS[showing])
 	showing = ""

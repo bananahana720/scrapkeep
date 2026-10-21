@@ -182,6 +182,18 @@ func _run() -> void:
 	_advance(3.0)
 	_report("the dropped tip is told again later", tips.seen("grip") and tips.pending.is_empty() and _prompts.count("tip_grip") == 1,
 		"prompts %s, pending %s" % [_prompts, tips.pending])
+	# A jam met in a fight and still untold when a new run starts stays dropped: the jam count
+	# only grows and lives across runs, so the new run's frames must not read it as a fresh jam.
+	_fight(true)
+	_game.player.abilities.jam(0.5)
+	_advance(0.2)
+	var jam_held: bool = tips.pending.has("jam") and not tips.seen("jam")
+	_game.events.run_started.emit("pylon_engineer")
+	_fight(false)
+	var jam_after := _advance(3.0)
+	_report("an old run's untold jam does not show in the new run", jam_held and jam_after.count("jam") == 0
+		and not tips.pending.has("jam") and not tips.seen("jam") and _prompts.count("tip_jam") == 0,
+		"held %s, frames %d, pending %s, prompts %s" % [jam_held, jam_after.count("jam"), tips.pending, _prompts])
 	# Another toast replacing a tip before MIN_SHOWN sends it back to wait, and it is told after.
 	_game.player.abilities.jam(0.5)
 	_advance(0.1)
