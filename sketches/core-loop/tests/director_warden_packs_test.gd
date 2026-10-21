@@ -24,6 +24,7 @@ func _initialize() -> void:
 	_flip_resets_cache()
 	_unchanged_without_warden()
 	_stage_one_unkeyed()
+	_swarm_keeps_out()
 	quit(_t.verdict())
 
 
@@ -113,3 +114,19 @@ func _unchanged_without_warden() -> void:
 func _stage_one_unkeyed() -> void:
 	_t.check("alpha stage 1 has no warden_packs", not AlphaDefs.of(1).has("warden_packs"))
 	_t.check("park stage 1 has no warden_packs", not ParkDefs.of(1).has("warden_packs"))
+
+
+# A swarm Warden is its own hive: no ring, no warden_packs (the camper never breaks the hive).
+func _swarm_keeps_out() -> void:
+	var at := Vector2(10.0, 20.0)
+	_t.check("reactor Warden live: core follows", Director.contact_core(true, 3, "reactor", at) == at)
+	_t.check("mind Warden live: core follows", Director.contact_core(true, 5, "mind", at) == at)
+	_t.check("swarm Warden live: no core", Director.contact_core(true, 3, "swarm", at) == Vector2.INF)
+	_t.check("no fight: no core", Director.contact_core(false, 3, "reactor", at) == Vector2.INF)
+	_t.check("stage 1: no core", Director.contact_core(true, 1, "reactor", at) == Vector2.INF)
+	var row: Dictionary = AlphaDefs.of(3)
+	var d = _director(row, 9)
+	d.warden_core = Director.contact_core(true, 3, "swarm", at)
+	var ids := _draw_ids(d, DRAWS)
+	_t.check("swarm Warden: draws only the stage packs", ids.all(func(i: String) -> bool: return not i in _ids(row["warden_packs"])))
+	_t.check("swarm Warden: spawn spot is not on the ring", not d.warden_core.is_finite())

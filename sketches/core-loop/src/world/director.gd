@@ -926,6 +926,15 @@ func compose() -> Array:
 	return kinds
 
 
+# The core the ring and warden_packs follow: INF unless a Warden fight is live from WARDEN_RING_FROM_STAGE.
+# A swarm Warden is its own hive (attack_budget HIVE_FAMILY), so it keeps INF: ring spawns inside the
+# hive's defend radius would become unbudgeted defenders, and the authored packs stay as before.
+static func contact_core(live: bool, stage: int, family: String, at: Vector2) -> Vector2:
+	if not live or stage < WARDEN_RING_FROM_STAGE or family == Roster.SWARM:
+		return Vector2.INF
+	return at
+
+
 func spawn_spot(ball: Vector2, velocity: Vector2, forward: Vector2) -> Vector2:
 	if warden_core.is_finite():
 		# Home spots lie ahead of the ball; at the Warden none does, so _place_pack spreads the pack from the ring spot.
