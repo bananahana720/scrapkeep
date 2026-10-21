@@ -1085,6 +1085,14 @@ func _physics_process(delta: float) -> void:
 	part_name.step(delta)
 
 
+# The words the toast row draws now: "" with no toast, or while the stage card covers it
+# (field_tips.gd counts a tip as told only once its words have stayed here long enough).
+func toast_on_screen() -> String:
+	if _toast.is_empty() or launch_card.showing():
+		return ""
+	return _toast["text"]
+
+
 # Takes one toast's words down at once (field_tips.gd, when a fight starts), whether showing or held.
 func drop_toast(text: String) -> void:
 	if not _toast.is_empty() and _toast["text"] == text:

@@ -11,16 +11,20 @@ const Palette := preload("res://src/core/palette.gd")
 #   radio      the pilot radio's dial first draws in play
 #   stake      the ball comes within STAKE_REACH of a relay's stake post
 #   companion  SPIL-9's halo gauge fills (combat.companion_assist_full)
-#   active     the F slot first racks an active (behind --actives)
-# A fight keeps its word budget (ui_word_budget_test): a tip met while a Warden is engaged waits
-# in `pending` and is told when the fight lets go, and one still on screen when a fight starts is
-# taken down.
-# Each emits events.prompt_shown("tip_<id>") as the toast shows, so scripts/first-timer.mjs reads
-# it as a teach, and files itself in the profile's seen list so it never repeats. Words come
-# from the game's own: the Warden's slots are numbers, the dial's keys are . , /.
+#   active     the F slot first racks an active (actives are off unless the tuning turns them on)
+# The HUD shows one toast at a time and a newer one replaces it, so a met tip joins `pending`
+# and goes up only when the toast slot is empty and no other tip is up: one tip per toast
+# lifetime. A tip met now goes ahead of the cast tip a slot only promises (has_cast_slot).
+# A tip counts as told only after its toast has been on screen for MIN_SHOWN: then it emits
+# events.prompt_shown("tip_<id>"), which scripts/first-timer.mjs reads as a teach, and files
+# itself in the profile's seen list so it never repeats. A tip whose toast leaves sooner (another
+# toast replaced it, or a fight took it down) goes back to the front of `pending`.
+# A fight keeps its word budget (ui_word_budget_test): while fight_live() no tip goes up and a
+# tip still on screen is taken down. Words come from the game's own: the Warden's slots are
+# numbers, the dial's keys are . , /.
 
 const TIPS := {
-	"grip": "Wall grip: stay at top speed and walls hold you.",
+	"grip": "Wall grip: stay fast and walls hold you.",
 	"jam": "Jammed: slots 2 and 3 shut. A fast ball slips the pulse.",
 	"cast": "Cast time: a hit or a second press drops it unspent.",
 	"radio": "Radio: . next station, , back, / skip the track.",
@@ -30,11 +34,19 @@ const TIPS := {
 }
 const STAKE_REACH := 30.0
 const SEEN_PREFIX := "tip_"
+# Seconds a tip's toast must stay on screen before it counts as told (the fade in is 0.12 s).
+const MIN_SHOWN := 0.4
 
 var game
 var profile
 var hud
-var pending := {}
+# Met tips waiting for the toast slot, in the order they go up.
+var pending: Array[String] = []
+# The tip whose toast is up (or held behind the stage card); "" when none.
+var showing := ""
+var _later := {}
+var _shown_for := 0.0
+var _told := false
 var _jams := 0
 var _wired := false
 
@@ -50,17 +62,7 @@ func seen(id: String) -> bool:
 	return profile.seen(SEEN_PREFIX + id)
 
 
-# Shows the tip for `id` once on this profile: a toast, then prompt_shown for the audit.
-func tell(id: String) -> bool:
-	if seen(id) or not TIPS.has(id):
-		return false
-	profile.mark_seen(SEEN_PREFIX + id)
-	hud.toast(TIPS[id], Palette.SAND, "diamond", 3)
-	game.events.prompt_shown.emit("tip_" + id)
-	return true
-
-
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if game == null or game.flow == null or not game.flow.in_play():
 		return
 	_wire()
@@ -72,8 +74,6 @@ func _physics_process(_delta: float) -> void:
 	if abilities.jams > _jams:
 		meet("jam")
 	_jams = abilities.jams
-	if abilities.casting != AbilityState.UNSTARTED or has_cast_slot(abilities):
-		meet("cast")
 	if not seen("radio"):
 		var deck = game.get("radio_deck")
 		if deck != null and deck.dial != null and deck.dial.is_visible_in_tree():
@@ -83,13 +83,22 @@ func _physics_process(_delta: float) -> void:
 	var combat = game.get("combat")
 	if combat != null and not seen("active") and combat.get("actives") != null and combat.actives.active_id != "":
 		meet("active")
-	if game.flow.engaged():
-		for id in TIPS:
-			hud.drop_toast(TIPS[id])
-	else:
-		for id in pending.keys():
-			tell(id)
-		pending.clear()
+	if abilities.casting != AbilityState.UNSTARTED:
+		meet("cast")
+	elif has_cast_slot(abilities):
+		meet("cast", true)
+	if fight_live(game.flow):
+		_withdraw()
+		return
+	_step_showing(delta)
+	if showing == "" and not pending.is_empty() and hud.toast_texts().is_empty():
+		_put_up(pending.pop_front())
+
+
+# A fight holds the screen while this stage's Warden is engaged and not yet broken (flow
+# unseals on the break) or while flow is in Brindle's arena (BOSS until the boss falls).
+static func fight_live(flow) -> bool:
+	return (flow.engaged() and flow.sealed) or flow.state_name() == "boss"
 
 
 # A pilot whose bar holds a slot with a cast time hears of it from the drop, before the first
@@ -101,14 +110,70 @@ static func has_cast_slot(abilities) -> bool:
 	return false
 
 
-# A verb met now: told at once, or held until the fight is over.
-func meet(id: String) -> void:
+# A verb met now joins the queue ahead of any tip only promised (`later`, the cast slot on the
+# bar); a promised tip whose verb is then met moves up.
+func meet(id: String, later := false) -> void:
+	if seen(id) or id == showing or not TIPS.has(id):
+		return
+	if pending.has(id):
+		if later or not _later.has(id):
+			return
+		pending.erase(id)
+	_later.erase(id)
+	if later:
+		_later[id] = true
+		pending.append(id)
+		return
+	var at := pending.size()
+	for i in pending.size():
+		if _later.has(pending[i]):
+			at = i
+			break
+	pending.insert(at, id)
+
+
+func _put_up(id: String) -> void:
+	_later.erase(id)
 	if seen(id):
 		return
-	if game.flow.engaged():
-		pending[id] = true
+	showing = id
+	_shown_for = 0.0
+	_told = false
+	hud.toast(TIPS[id], Palette.SAND, "diamond", 3)
+
+
+# Counts the showing tip's time on screen; past MIN_SHOWN it is told. Once its toast is gone the
+# slot frees, and a tip gone before it was told waits again at the front of the queue.
+func _step_showing(delta: float) -> void:
+	if showing == "":
 		return
-	tell(id)
+	var words: String = TIPS[showing]
+	if hud.toast_on_screen() == words:
+		_shown_for += delta
+		if not _told and _shown_for >= MIN_SHOWN:
+			_told = true
+			profile.mark_seen(SEEN_PREFIX + showing)
+			game.events.prompt_shown.emit("tip_" + showing)
+		return
+	if hud.toast_texts().has(words):
+		return
+	_release()
+
+
+# A fight starts: the showing tip comes down, and waits again unless it was already told.
+func _withdraw() -> void:
+	if showing == "":
+		return
+	hud.drop_toast(TIPS[showing])
+	_release()
+
+
+func _release() -> void:
+	if not _told:
+		pending.push_front(showing)
+	showing = ""
+	_told = false
+	_shown_for = 0.0
 
 
 # The companion's signal lives on combat, which can come up after the HUD: join it once.

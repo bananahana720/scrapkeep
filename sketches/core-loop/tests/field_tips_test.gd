@@ -5,14 +5,18 @@ const Intent := preload("res://src/movement/intent.gd")
 const FieldTips := preload("res://src/ui/field_tips.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # The first-meet tips (ui/field_tips.gd, HELP-REFRESH): each of grip, jam, cast, radio, stake,
-# companion and active toasts its words once on a fresh profile the moment it is first met,
-# says so on the bus as prompt_shown("tip_<id>"), and never repeats, across a new run too. The
-# help page's rule lines name the same seven (field_notes.gd FIELD_RULES covers six; SPIL-9 is the
-# Pictures caption). The first-timer audit reaches grip, radio and cast; the rest it cannot (a
-# jammer, a relay, a seated companion and --actives are not on the bot's path), so this is
-# their check.
+# companion and active toasts its words once on a fresh profile when first met, one tip per toast
+# lifetime, and counts as told (prompt_shown("tip_<id>") and the profile's seen list) only after
+# its toast has been on screen for MIN_SHOWN; a tip taken down sooner is told again later. A fight
+# (an engaged, unbroken Warden, or the boss arena) holds tips back. The pilot is Tally, whose bar
+# carries Gather Plate's cast time, so the cast tip and the radio dial's tip are both owed on the
+# drop and must reach the screen one after the other. The help page's rule lines name six of the
+# seven (field_notes.gd FIELD_RULES; SPIL-9 is the Pictures caption). The first-timer audit
+# reaches grip, radio and cast; the rest it cannot (a jammer, a relay, a seated companion and
+# actives are not on the bot's path), so this is their check.
 
 # A relay's stake post stand-in: the tip reads terms(), relay and reach_point().
 class Post:
@@ -60,7 +64,11 @@ func _physics_process(_delta: float) -> bool:
 		_game.player.source = Intent.Scripted.new()
 		_game.events.prompt_shown.connect(func(verb: String): _prompts.append(verb))
 		_game.flow.press_start()
-		_game.flow.choose_class(0)
+		var tally := -1
+		for i in _game.flow.classes.size():
+			if _game.flow.classes[i].id == "tally":
+				tally = i
+		_game.flow.choose_class(tally)
 		return false
 	_wait += 1
 	if _wait < 4:
@@ -71,54 +79,125 @@ func _physics_process(_delta: float) -> bool:
 	return false
 
 
+# Steps the tips, the stage card and the HUD's toast clock together, `seconds` at 60 Hz; returns,
+# per step, the tip id whose words the toast row drew ("" for none or other words).
+func _advance(seconds: float) -> Array[String]:
+	var tips = _game.hud.field_tips
+	var drawn: Array[String] = []
+	var dt := 1.0 / 60.0
+	var card = _game.hud.launch_card
+	for i in int(ceil(seconds / dt)):
+		tips._physics_process(dt)
+		# The stage card fades on its own tween, which no frame steps while this runs.
+		if card._tween != null and card._tween.is_valid():
+			card._tween.custom_step(dt)
+		_game.hud._step_toast(dt)
+		var on: String = _game.hud.toast_on_screen()
+		drawn.append(FieldTips.TIPS.find_key(on) if FieldTips.TIPS.values().has(on) else "")
+	return drawn
+
+
+func _fight(on: bool) -> void:
+	_game.flow._engaged = on
+	_game.flow.sealed = on
+
+
 func _tip(id: String, trigger: Callable) -> void:
 	var tips = _game.hud.field_tips
+	_advance(3.0)
 	var before := _prompts.count("tip_" + id)
 	var was_seen: bool = tips.seen(id)
 	trigger.call()
-	tips._physics_process(0.016)
+	_advance(3.0)
 	var first := _prompts.count("tip_" + id) - before
 	trigger.call()
-	tips._physics_process(0.016)
+	_advance(3.0)
 	var again := _prompts.count("tip_" + id) - before
 	_report("tip " + id, not was_seen and first == 1 and again == 1 and tips.seen(id),
 		"unseen before %s, emitted %d then %d, seen after %s, prompts %s" % [not was_seen, first, again, tips.seen(id), _prompts])
 
 
+# Frames on which `id` was drawn: [first index, last index, count].
+static func _span(drawn: Array[String], id: String) -> Array:
+	var first := drawn.find(id)
+	return [first, drawn.rfind(id), drawn.count(id)]
+
+
 func _run() -> void:
 	var tips = _game.hud.field_tips
+	var dt := 1.0 / 60.0
+	var min_frames := int(ceil(FieldTips.MIN_SHOWN / dt))
 	_report("in play", _game.flow.in_play(), "state %s" % _game.flow.state_name())
-	# Only the radio's tip is already owed on the drop: the dial is on screen.
-	tips._physics_process(0.016)
-	_report("radio dial tip on the drop", tips.seen("radio") and _prompts.count("tip_radio") == 1, "prompts %s" % [_prompts])
+	_report("pilot carries a cast slot", _game.run.class_def.id == "tally" and FieldTips.has_cast_slot(_game.player.abilities),
+		"class %s" % _game.run.class_def.id)
+	# The drop owes two tips on one tick, the radio dial's and the cast slot's. Neither counts as
+	# told on that tick: the toast has not been on screen yet.
+	tips._physics_process(dt)
+	_report("nothing is told before it is seen", _prompts.filter(func(p): return p.begins_with("tip_")).is_empty() and not tips.seen("radio") and not tips.seen("cast"),
+		"prompts %s, showing %s, pending %s" % [_prompts, tips.showing, tips.pending])
+	var drawn := _advance(8.0)
+	var radio := _span(drawn, "radio")
+	var cast := _span(drawn, "cast")
+	_report("radio tip on screen, then told", radio[2] >= min_frames and tips.seen("radio") and _prompts.count("tip_radio") == 1,
+		"radio frames %s, prompts %s" % [radio, _prompts])
+	_report("cast tip on screen, then told", cast[2] >= min_frames and tips.seen("cast") and _prompts.count("tip_cast") == 1,
+		"cast frames %s, prompts %s" % [cast, _prompts])
+	_report("drop tips show one after the other", radio[0] >= 0 and cast[0] > radio[1] and _prompts.find("tip_radio") < _prompts.find("tip_cast"),
+		"radio frames %s, cast frames %s, prompts %s" % [radio, cast, _prompts])
+	_game.player.abilities.casting = "special"
+	_advance(3.0)
+	_game.player.abilities.casting = ""
+	_report("cast tip does not repeat when a cast starts", _prompts.count("tip_cast") == 1, "prompts %s" % [_prompts])
 	# A tip met in a fight waits, and is told when the fight lets go (the fight's word budget).
-	_game.flow._engaged = true
+	_fight(true)
 	_game.player.state.carving = true
-	tips._physics_process(0.016)
+	_advance(1.0)
+	_game.player.state.carving = false
 	_report("a fight holds the grip tip", not tips.seen("grip") and tips.pending.has("grip") and _prompts.count("tip_grip") == 0
 		and not _game.hud.toast_texts().has(FieldTips.TIPS["grip"]), "pending %s, prompts %s" % [tips.pending, _prompts])
-	_game.flow._engaged = false
-	tips._physics_process(0.016)
-	_report("the held tip comes after the fight", tips.seen("grip") and tips.pending.is_empty() and _prompts.count("tip_grip") == 1
-		and _game.hud.toast_texts().has(FieldTips.TIPS["grip"]), "prompts %s, toasts %s" % [_prompts, _game.hud.toast_texts()])
-	_game.flow._engaged = true
-	tips._physics_process(0.016)
-	_report("a fight takes a showing tip down", not _game.hud.toast_texts().has(FieldTips.TIPS["grip"]), "toasts %s" % [_game.hud.toast_texts()])
-	_game.flow._engaged = false
-	_game.player.state.carving = false
+	# A Warden broken: flow unseals, the engaged flag stays up until the next beacon, and the
+	# fight is over all the same.
+	_game.flow.sealed = false
+	_advance(0.1)
+	_report("a broken Warden lets the tip up", tips.showing == "grip" and _game.hud.toast_on_screen() == FieldTips.TIPS["grip"]
+		and not tips.seen("grip"), "showing %s, toasts %s" % [tips.showing, _game.hud.toast_texts()])
+	# The Warden's fight comes back before the tip has been up MIN_SHOWN: it comes down unseen.
+	_fight(true)
+	_advance(0.1)
+	_report("a fight takes a showing tip down, untold", not _game.hud.toast_texts().has(FieldTips.TIPS["grip"])
+		and not tips.seen("grip") and _prompts.count("tip_grip") == 0 and tips.pending.has("grip"),
+		"toasts %s, pending %s, prompts %s" % [_game.hud.toast_texts(), tips.pending, _prompts])
+	_fight(false)
+	# The boss arena holds it too, whatever the Warden flag says.
+	var stage_state: int = _game.flow.state
+	_game.flow.state = _game.flow.BOSS
+	var in_arena := _advance(3.0)
+	_report("no tip toasts in the boss arena", in_arena.count("grip") == 0 and _prompts.count("tip_grip") == 0 and tips.pending.has("grip"),
+		"flow %s, frames %d, pending %s, prompts %s" % [_game.flow.state_name(), in_arena.count("grip"), tips.pending, _prompts])
+	_game.flow.state = stage_state
+	_advance(3.0)
+	_report("the dropped tip is told again later", tips.seen("grip") and tips.pending.is_empty() and _prompts.count("tip_grip") == 1,
+		"prompts %s, pending %s" % [_prompts, tips.pending])
+	# Another toast replacing a tip before MIN_SHOWN sends it back to wait, and it is told after.
+	_game.player.abilities.jam(0.5)
+	_advance(0.1)
+	var jam_up: bool = tips.showing == "jam"
+	_game.hud.toast("Some other words", Palette.SAND, "diamond", 3)
+	_advance(0.1)
+	_report("a replaced tip is not told", jam_up and not tips.seen("jam") and tips.pending.has("jam") and _prompts.count("tip_jam") == 0,
+		"was up %s, pending %s, prompts %s" % [jam_up, tips.pending, _prompts])
+	_advance(6.0)
+	_report("the replaced tip is told after", tips.seen("jam") and _prompts.count("tip_jam") == 1, "prompts %s" % [_prompts])
 	_game.player.state.carving = true
-	tips._physics_process(0.016)
-	_report("grip tip does not repeat", _prompts.count("tip_grip") == 1, "prompts %s" % [_prompts])
+	_advance(3.0)
 	_game.player.state.carving = false
-	_tip("jam", func(): _game.player.abilities.jam(0.5))
-	_tip("cast", func(): _game.player.abilities.casting = "special")
-	_game.player.abilities.casting = ""
+	_report("grip tip does not repeat", _prompts.count("tip_grip") == 1, "prompts %s" % [_prompts])
 	var post := Post.new()
 	_game.add_child(post)
 	post.global_position = _game.player.ball_position() + Vector3(FieldTips.STAKE_REACH + 5.0, 0.0, 0.0)
 	var interact = _game.ctx.root.get_node("Interact")
 	interact.devices.append(post)
-	tips._physics_process(0.016)
+	_advance(3.0)
 	_report("a stake post out of reach tells nothing", not tips.seen("stake") and _prompts.count("tip_stake") == 0, "prompts %s" % [_prompts])
 	_tip("stake", func(): post.global_position = _game.player.ball_position() + Vector3(FieldTips.STAKE_REACH - 5.0, 0.0, 0.0))
 	interact.devices.erase(post)
@@ -127,7 +206,7 @@ func _run() -> void:
 	var real_rack = _game.combat.actives
 	var rack := Rack.new()
 	_game.combat.actives = rack
-	tips._physics_process(0.016)
+	_advance(3.0)
 	_report("an empty rack tells nothing", not tips.seen("active"), "prompts %s" % [_prompts])
 	_tip("active", func(): rack.active_id = "torch")
 	_game.combat.actives = real_rack
@@ -135,7 +214,7 @@ func _run() -> void:
 	var count := _prompts.size()
 	_game.events.run_started.emit("pylon_engineer")
 	_game.player.state.carving = true
-	tips._physics_process(0.016)
+	_advance(3.0)
 	_game.player.state.carving = false
 	_report("no tip repeats in a new run", _prompts.size() == count, "prompts %d then %d" % [count, _prompts.size()])
 	var reread := UiProfile.new(_game.storage_dir)

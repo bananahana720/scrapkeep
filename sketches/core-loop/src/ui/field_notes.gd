@@ -65,7 +65,7 @@ const VERB_ROWS := [
 const MENU_ROWS := [
 	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "caps": ["key_tab"], "short": "notes"},
 	{"keys": ". , / ;", "does": "radio: . next station, , back, / skip the track, ; keep the track on through a boss"},
-	{"keys": "F", "does": "fire the racked active, when --actives is on (the D-pad down on a pad); nothing is racked without it"},
+	{"keys": "F", "does": "fire the racked active, when actives are on (the D-pad down on a pad); nothing is racked otherwise"},
 	{"keys": "- / =", "does": "music volume down / up (also in the pause menu)"},
 	{"keys": "[ / ]", "does": "effects volume down / up (also in the pause menu)"},
 	{"keys": "M", "does": "mute or unmute"},
@@ -80,16 +80,18 @@ static var CONTROLS := controls()
 
 # The field rules page of the title's Help (help_page.gd), one line per rule, each short enough
 # for its calm-screen budget of 40 words with the title and buttons. A line is {id, words}; the
-# words open with the rule's own name. They go with the key list above: the keys read F (the active, off unless launched with --actives; the key list cannot
-# tell the flag, so the line names it) and . , / (the radio). Wall grip, jam fields, cast times
-# and relay stakes have no key; each is also said once, in play, when first met (field_tips.gd).
+# words open with the rule's own name. They go with the key list above: the keys read F (the
+# active; the help page shows its line only while the actives option is on) and . , / (the
+# radio). Wall grip, jam fields, cast times and relay stakes have no key; each is also said once,
+# in play, when first met (field_tips.gd). A cast is a slot with a cast time: the Q variants and
+# Gather Plate (ability_state.gd VARIANT_CAST).
 const FIELD_RULES := [
 	{"id": "grip", "words": "Wall grip: stay fast, climb walls"},
 	{"id": "jam", "words": "Jam: mats lock slots 2, 3"},
-	{"id": "cast", "words": "Cast time: hits drop big slots"},
+	{"id": "cast", "words": "Cast time: hits drop casts"},
 	{"id": "radio", "words": "Radio: . next , back / skip"},
 	{"id": "stake", "words": "Stake: hold E at relay mast"},
-	{"id": "active", "words": "F: active (--actives)"},
+	{"id": "active", "words": "F: fire your active"},
 ]
 
 const SCREEN_KEYS := [

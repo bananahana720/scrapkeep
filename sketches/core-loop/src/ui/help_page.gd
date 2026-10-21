@@ -29,6 +29,9 @@ var diagram
 var pictures := {}
 var page_button: Button
 var rules := {}
+# The run's tuning (screens.gd sets it): the F active's rule line shows only while the actives
+# option is on, as active_rack.gd racks one only then.
+var tuning
 var _mechanics: HBoxContainer
 var _rules: VBoxContainer
 var _goal: HBoxContainer
@@ -71,9 +74,15 @@ func _show(page: String) -> void:
 	diagram.visible = page == "controls"
 	_mechanics.visible = page == "pictures"
 	_rules.visible = page == "rules"
-	# The rules page drops the goal row so its seven lines fit the calm-screen budget.
+	rules["active"].visible = actives_on()
+	# The rules page drops the goal row so its lines (six, five with actives off) fit the
+	# calm-screen budget.
 	_goal.visible = page != "rules"
 	page_button.text = PAGE_BUTTON[page]
+
+
+func actives_on() -> bool:
+	return tuning != null and tuning.option("actives") == "on"
 
 
 func _reset_page() -> void:
@@ -104,7 +113,7 @@ func _mechanics_row() -> HBoxContainer:
 
 
 # One label per FieldNotes.FIELD_RULES line: wall grip, jam fields, cast times, the radio dial,
-# relay stakes and the F active.
+# relay stakes and the F active (hidden while actives are off; see _show).
 func _rules_column() -> VBoxContainer:
 	var column := VBoxContainer.new()
 	column.name = "FieldRules"
