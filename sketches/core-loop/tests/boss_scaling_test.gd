@@ -31,6 +31,10 @@ var _telegraphs: Array = []
 
 
 func _initialize() -> void:
+	# This pins crane mechanics, not cadence: at the tuned 0.6x crane period the other crane's
+	# sweep comes round while the undodging test ball rolls the trail. The band table measures
+	# the tuned fight; here Brindle's period and damage lists sit at identity.
+	ChallengeDials.set_overrides({"brindle.period_by_phase": [1.0, 1.0, 1.0, 1.0], "brindle.damage_by_phase": [1.0, 1.0, 1.0, 1.0]})
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)

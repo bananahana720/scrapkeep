@@ -4,8 +4,10 @@ const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const BotProfile := preload("res://tools/bot_profile.gd")
 const BotAudit := preload("res://tools/bot_audit.gd")
+const SkillBand := preload("res://tools/skill_band.gd")
 const BotOptions := preload("res://tools/bot_options.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
+const Terrain := preload("res://src/world/terrain.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
 const SignalTimer := preload("res://tools/signal_timer.gd")
 const PhysicsProbe := preload("res://tools/physics_probe.gd")
@@ -18,10 +20,14 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd \
 #     -- --out=<dir> --policy=skipper|completionist|random [--seeds=1,2,3,4] [--trace=1]
-#     [--pilot=<class id>]
+#     [--pilot=<class id>] [--band=novice|learner|expert] [--attempt=N]
 #
 # --pilot plays that ClassDef id (pylon_engineer, runner_gunner, demolitions_caster, tarn,
 # tally, remembered_cannon) whatever the seed; without it the seed picks seed % roster size.
+#
+# --band plays the driver at a skill band (tools/skill_band.gd: slower reactions, missed tells and
+# a smaller kit below Expert); --attempt=N (default 1) is the attempt number a Learner has reached.
+# Without --band the driver is unchanged. Multi-seed children are forwarded every flag.
 #
 # --trace prints the bot's goal and the ball every two game seconds. --trace-ticks=1
 # writes full-precision pre-driver snapshots to trace-<seed>.ndjson. --ticks=N caps a
@@ -48,6 +54,9 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 # passes --table=park, which a launched game plays):
 # --wall-clock=1 leaves SimClock on the wall clock, as in a played game: park stages build on
 # worker threads and hit-stop reads real time, so the seed no longer replays exactly.
+# --threaded-stages=1 builds park stages on worker threads as --wall-clock=1 does, but keeps the
+# hit-stop clock on physics ticks: for frame captures, where the next stage's one-frame build on
+# the engage frame is a bot artifact. The seed no longer replays exactly.
 # --frame-log=1 writes frames-<seed>.ndjson: each frame's wall ms, stage, flow state and the
 # Performance process, physics, node, resource and object counts.
 # --entry-profile=1 writes entry-<seed>.ndjson: every GameEvents handler's main-thread ms by
@@ -99,6 +108,7 @@ var _physics_probe
 func _initialize() -> void:
 	_settings = _parse(OS.get_cmdline_user_args())
 	SimClock.ticks = _settings.get("wall-clock", "0") != "1"
+	Terrain.threaded_in_bot_runs = _settings.get("threaded-stages", "0") == "1"
 	_bot_options = BotOptions.new(_settings, self)
 	BotProfile.enabled = _settings.get("bot-profile", "0") == "1"
 	if BotProfile.enabled:
@@ -113,6 +123,14 @@ func _initialize() -> void:
 		return
 	if _settings.has("pilot") and (String(_settings["pilot"]) == "" or BotDriver.class_index_for(0, String(_settings["pilot"])) < 0):
 		printerr("bot_run: unknown --pilot=%s; use pylon_engineer, runner_gunner, demolitions_caster, tarn, tally or remembered_cannon" % _settings["pilot"])
+		quit(2)
+		return
+	if _settings.has("band") and String(_settings["band"]) not in SkillBand.BANDS:
+		printerr("bot_run: unknown --band=%s; use novice, learner or expert" % _settings["band"])
+		quit(2)
+		return
+	if _settings.has("attempt") and int(_settings["attempt"]) < 1:
+		printerr("bot_run: --attempt must be 1 or more")
 		quit(2)
 		return
 	_out = _absolute(_settings["out"])
@@ -234,6 +252,8 @@ func _physics_process(delta: float) -> bool:
 		_driver = BotDriver.new(_game, String(_settings.get("policy", "skipper")), _seeds[_index])
 		if _settings.has("pilot"):
 			_driver.class_index = BotDriver.class_index_for(_seeds[_index], String(_settings["pilot"]))
+		if _settings.has("band"):
+			_driver.band = SkillBand.make(String(_settings["band"]), int(_settings.get("attempt", "1")), _seeds[_index])
 		_driver.trace = _settings.has("trace")
 		if _driver.trace:
 			_game.events.world_entered.connect(func(world: int): print("  trace world %d entered" % world))
