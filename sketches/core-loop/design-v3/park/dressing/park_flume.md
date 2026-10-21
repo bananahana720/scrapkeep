@@ -31,3 +31,22 @@ Pixel change (share of pixels with a channel difference over 12): 101,-204 3.75 
 The poses are the barest places, mostly in keepouts, so props rarely fill the frame there. Replay draws: after max 427, median 293.5; before max 441, median 288; replay props-only delta max 50, median 14.
 
 Stills: `artifacts/local/dressing/flume/w18/{before,after}/park_flume/` (replays), `after-full/` (default run), sheet `before_after.png` (local, not committed).
+
+## 30 m brief kinds
+
+Kind `washline`. Brief line (lane KITS.md, flume): "At least 30 m from lines". Measure: edge-to-line, `Context.line_distance(centre)` minus the instance radius, as `check_one` uses for `line_clear`. Target 30.5 m or more. The spot schema has no per-spot override, so offenders were moved, not stripped.
+
+| spot | edge_m before | edge_m after | old `at` | new `at` |
+|---|---|---|---|---|
+| flume_v10 | 21.82 | 53.53 | -340.0, -570.0 | -348.3, -539.1 |
+| flume_v42 | 27.57 | 31.14 | -130.0, -440.0 | -126.0, -440.0 |
+| flume_v65 | 28.49 | 31.50 | 10.0, -120.0 | 9.0, -123.9 |
+| flume_v69 | 26.52 | 31.70 | 50.0, -30.0 | 50.0, -24.0 |
+| flume_v96 | 29.42 | 30.86 | -50.0, 340.0 | -48.1, 339.5 |
+| flume_v99 | 22.43 | 32.13 | -120.0, 360.0 | -130.0, 360.0 |
+| flume_v105 | 17.90 | 38.87 | 120.0, 300.0 | 164.5, 255.5 |
+| flume_v47_r8_4 | 28.58 | 32.24 | -244.0, -103.1 | -248.0, -103.1 |
+
+The other 9 instances already passed and are unchanged. flume_v10 (32 m move) and flume_v105 (63 m move; nothing legal within 45 m) changed `near` to the nearest park row by centre: weir_trestles and bluff_ride_pier_9. Pin 1477437796 to 2392297130. Plan check: 0 violations. Probe: under30_edge=0.
+
+Audit pending the line_clear_m foundation merge.

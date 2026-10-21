@@ -1388,12 +1388,9 @@
   {
    "id": "flume_v10",
    "template": "washday",
-   "at": [
-    -340.0,
-    -570.0
-   ],
+   "at": [-348.3, -539.1],
    "yaw_deg": -7.4,
-   "near": "flume_ride_pier_6: Laundry day by the trestles"
+   "near": "weir_trestles: Laundry day by the trestles"
   },
   {
    "id": "flume_v12",
@@ -1498,10 +1495,7 @@
   {
    "id": "flume_v42",
    "template": "skiff_shore",
-   "at": [
-    -130.0,
-    -440.0
-   ],
+   "at": [-126.0, -440.0],
    "yaw_deg": 63.0,
    "near": "flume_ride_pier_22: A rowboat left on blocks when the canal "
   },
@@ -1578,20 +1572,14 @@
   {
    "id": "flume_v65",
    "template": "skiff_shore",
-   "at": [
-    10.0,
-    -120.0
-   ],
+   "at": [9.0, -123.9],
    "yaw_deg": 152.9,
    "near": "bend_zip_pier_11: A rowboat left on blocks when the canal "
   },
   {
    "id": "flume_v69",
    "template": "washday",
-   "at": [
-    50.0,
-    -30.0
-   ],
+   "at": [50.0, -24.0],
    "yaw_deg": -30.3,
    "near": "bend_turn_pier: Laundry day by the trestles"
   },
@@ -1758,10 +1746,7 @@
   {
    "id": "flume_v96",
    "template": "camp_corner",
-   "at": [
-    -50.0,
-    340.0
-   ],
+   "at": [-48.1, 339.5],
    "yaw_deg": 61.9,
    "near": "bench_exit_grade: A crew camp corner"
   },
@@ -1778,10 +1763,7 @@
   {
    "id": "flume_v99",
    "template": "washday",
-   "at": [
-    -120.0,
-    360.0
-   ],
+   "at": [-130.0, 360.0],
    "yaw_deg": -104.0,
    "near": "bench_exit_grade: Laundry day by the trestles"
   },
@@ -1818,12 +1800,9 @@
   {
    "id": "flume_v105",
    "template": "camp_corner",
-   "at": [
-    120.0,
-    300.0
-   ],
+   "at": [164.5, 255.5],
    "yaw_deg": 121.0,
-   "near": "bluff_ride_pier_11: A crew camp corner"
+   "near": "bluff_ride_pier_9: A crew camp corner"
   },
   {
    "id": "flume_v106",
@@ -2298,10 +2277,7 @@
   {
    "id": "flume_v47_r8_4",
    "template": "washday",
-   "at": [
-    -244.0,
-    -103.1
-   ],
+   "at": [-248.0, -103.1],
    "yaw_deg": -66.0,
    "near": "hollow_intake: Laundry day by the trestles"
   }
@@ -2332,5 +2308,5 @@
   ],
   "seed": 1021
  },
- "pin": 1477437796
+ "pin": 2392297130
 }
