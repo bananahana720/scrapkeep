@@ -268,8 +268,10 @@ func advance(delta: float) -> void:
 	stage_time += delta
 	escape_window_left = maxf(0.0, escape_window_left - maxf(0.0, delta))
 	since_damage += delta
-	if since_damage > REGEN_DELAY and hp < max_hp:
-		hp = minf(max_hp, hp + REGEN_RATE * delta)
+	# pilot.regen_* dials are plumbed but NOT allowed levers yet: a ruling is needed before any
+	# non-default value ships.
+	if since_damage > REGEN_DELAY * ChallengeDials.f("pilot.regen_delay_mult") and hp < max_hp:
+		hp = minf(max_hp, hp + REGEN_RATE * ChallengeDials.f("pilot.regen_rate_mult") * delta)
 
 
 func add_scrap(amount: int, at: Vector3) -> void:

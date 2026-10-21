@@ -362,7 +362,7 @@ func _step_slag(delta: float) -> void:
 	_slag_burn += SLAG_DAMAGE * delta
 	if _slag_burn >= SLAG_DAMAGE:
 		_slag_burn -= SLAG_DAMAGE
-		hit_player.emit(SLAG_DAMAGE, Vector3.ZERO)
+		hit_player.emit(SLAG_DAMAGE * ChallengeDials.f("warden.slag_damage_mult"), Vector3.ZERO)
 
 
 # True where a lane's footprint lies, by the lane node's own hit test, whether or not it
@@ -664,10 +664,10 @@ func _step_pulse(delta: float, inside: bool) -> void:
 	if not inside:
 		return
 	_pulse_clock += delta
-	if _pulse_clock >= PULSE_CYCLE - PULSE_TELEGRAPH and _charge_allowed():
+	if _pulse_clock >= pulse_cycle() - pulse_telegraph() and _charge_allowed():
 		_charging = true
 		_charge_time = 0.0
-		_charge_len = PULSE_TELEGRAPH
+		_charge_len = pulse_telegraph()
 		_flaring = lined_hardpoint()
 		_flare_picked = _flaring >= 0
 		_commit_ring(Threat.Type.INSTANT, global_position, pulse_radius, LIFT_REACH_UP, Palette.SAND)
@@ -678,6 +678,16 @@ func _step_pulse(delta: float, inside: bool) -> void:
 		_hook("on_charge", [self, _charge_len])
 
 
+# Challenge dial warden.pulse_cycle_mult: the pulse cycle never drops under the boss tell floor,
+# and the telegraph is PULSE_TELEGRAPH, never longer than the cycle.
+static func pulse_cycle() -> float:
+	return ChallengeDials.floored(PULSE_CYCLE, ChallengeDials.f("warden.pulse_cycle_mult"))
+
+
+static func pulse_telegraph() -> float:
+	return minf(PULSE_TELEGRAPH, pulse_cycle())
+
+
 func _pulse() -> void:
 	var ball := _ball()
 	var ring := telegraph()
@@ -685,7 +695,7 @@ func _pulse() -> void:
 	if last_pulse_lifted:
 		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
-		hit_player.emit(PULSE_DAMAGE, Vector3.ZERO)
+		hit_player.emit(PULSE_DAMAGE * ChallengeDials.f("warden.pulse_damage_mult"), Vector3.ZERO)
 	if _flaring >= 0:
 		_shrug_left = shrug_delay
 		if shrug_delay <= 0.0:

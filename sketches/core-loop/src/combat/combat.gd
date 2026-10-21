@@ -3903,6 +3903,9 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 		return
 	if source not in ["warden", "vault"]:
 		amount *= ctx.root.get_node("World").director.damage_scale()
+		# The Mind's hand is a boss part: it takes the mind.* dials in mind_hand.gd, not the mobs dial.
+		if source != "mind_hand":
+			amount *= ChallengeDials.f("mobs.damage_mult")
 	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames()}
 	# The set piece's defence: no knockback here; damage x0.2 and the health floor of 1 run
 	# inside ctx.run.damage through its defend_hook (SKILL-BAR section 4).
