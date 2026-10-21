@@ -20,7 +20,7 @@ const COIL_SEGMENTS := 5
 const SLOPE_PROBE := 1.0
 const FLOATS := 12
 # The ghost-solid lane band (#183): a thing the ride line can touch that stands more than this above the ground
-# is solid to the rider, and the kit has no collider, so a tall row's pieces in a lane are sunk to the band (ruling 5, 2026-10-19).
+# is solid to the rider, and the kit has no collider, so a tall row's pieces on the line are sunk to the band (ruling 5, 2026-10-19; the lane is the graph's LINE mask).
 const LANE_BAND_M := 0.12
 
 
@@ -196,7 +196,7 @@ static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB,
 	var keeps := [[map.spawn, float(clear["spawn"])], [map.beacon, float(clear["beacon"])], [map.vault, float(clear["vault"])]]
 	var keep_out: Array = map.scatter.get("keep_out", [])
 	var tall := is_tall(row, aabb)
-	var lane_out: Array = map.scatter.get("lane_out", []) if tall else []
+	var lane_mask: Dictionary = map.scatter.get("lane_mask", {}) if tall else {}
 	var rng := RandomNumberGenerator.new()
 	rng.seed = ("%s/%d_%d" % [row["seed"], ci, cj]).hash()
 	var count := int(float(row["density"]) * rect.get_area() / 100.0)
@@ -214,10 +214,22 @@ static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB,
 			continue
 		var placed := out.size()
 		_stand(row, ground, aabb, x, z, yaw, s, tilt, out, grounds)
-		# A tall piece in a lane row stays, sunk to the band (ruling 5, revised): same draws, same count.
-		if tall and out.size() > placed and _kept_out(lane_out, Vector2(x, z)):
+		# A tall piece on the line stays, sunk to the band (ruling 5, revised): same draws, same count.
+		if tall and out.size() > placed and _in_lane(lane_mask, x, z):
 			out[placed] = _sunk_to_band(out[placed], ground, aabb)
 	return out
+
+
+# Whether (x, z) falls in the cell of a LINE node of park_map.gd's lane mask (its nearest lattice node).
+static func _in_lane(mask: Dictionary, x: float, z: float) -> bool:
+	if mask.is_empty():
+		return false
+	var side: int = mask["side"]
+	var step: float = mask["step"]
+	var half: float = mask["half"]
+	var i := clampi(roundi((x + half) / step), 0, side - 1)
+	var j := clampi(roundi((z + half) / step), 0, side - 1)
+	return (mask["cells"] as PackedByteArray)[j * side + i] != 0
 
 
 # xf sunk straight down until its highest box corner stands at most LANE_BAND_M above the ground under that corner.

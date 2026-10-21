@@ -8,6 +8,7 @@ extends "res://src/world/stage_map.gd"
 
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const ParkGraph := preload("res://src/world/park/park_graph.gd")
 
 const FIXTURE := "res://src/world/park/park_test.json"
 # Andrew's "Ride lips only" ruling (2026-10-17 06:16Z): a plain bank, drop, ground shelf or sky island whose height
@@ -105,23 +106,40 @@ func _fill() -> void:
 		keep_out.append(_footprint(row))
 	keep_out.append(_footprint(mark))
 	scatter["keep_out"] = keep_out
-	# Coordinator ruling 5, 2026-10-19 (issue #149): a scatter-dressed row (open_to_scatter "scatter") that a route names
-	# in from, to or via is ridden, so the kit pieces taller than the ghost-solid band (#183) are sunk to the band there
-	# (scatter.gd, LANE_BAND_M); the flat ones keep landing there unchanged, as does everything off the routes. Ground,
-	# plain_slope and mesa_edge rows are not lanes here, pending the coordinator's ruling on the wider scope.
-	var routed := {}
-	for route: Dictionary in park.get("routes", []):
-		for id in [route.get("from", "")] + Array(route.get("via", [])) + [route.get("to", "")]:
-			routed[String(id)] = true
-	var lane_out := []
-	for row in park["park_rows"]:
-		if open_to_scatter(row, play_rect) == "scatter" and routed.has(String(row["id"])):
-			lane_out.append(_footprint(row))
-	scatter["lane_out"] = lane_out
+	# Coordinator ruling 5, 2026-10-19 (issue #149) and the #241 ruling, option (c): the kit pieces taller than the
+	# ghost-solid band (#183) are sunk to the band along the park's line (scatter.gd, LANE_BAND_M), not across whole
+	# row footprints. The mask is built here, on the main thread, and only read by the chunk workers.
+	scatter["lane_mask"] = lane_mask(path)
+
+
+# The lane mask for the park at park_json: {"cells": PackedByteArray SIDE x SIDE, row-major (z, then x), 1 where the
+# ground lattice node is a LINE node; "side", "step", "half"} of park_graph.gd's lattice, {} when the park has no baked
+# graph. LINE (tools/park_graph.gd) is every node within LINE_M (8 m, the graph's own half-width of the line, 3D so a
+# deck's line leaves the ground under it alone) of the shortest path spawn -> waymarks -> beacon. The reach is that
+# 8 m and nothing more: the mask adds no margin of its own, and a piece belongs to its nearest node's cell (at most
+# half a step, 4 m, further out). The rider's ball is Tuning.RADIUS 1.0, well inside that band. One read a path a process.
+static var _lane_masks := {}
+
+static func lane_mask(park_json: String) -> Dictionary:
+	var graph_path := "res://assets/park/%s/graph.bin" % park_json.get_file().get_basename()
+	if _lane_masks.has(graph_path):
+		return _lane_masks[graph_path]
+	var mask := {}
+	if FileAccess.file_exists(graph_path):
+		var graph = ParkGraph.read(graph_path)
+		if graph != null:
+			var cells := PackedByteArray()
+			cells.resize(ParkGraph.SIDE * ParkGraph.SIDE)
+			for n in cells.size():
+				if graph.node_flags[n] & ParkGraph.LINE != 0:
+					cells[n] = 1
+			mask = {"cells": cells, "side": ParkGraph.SIDE, "step": ParkGraph.STEP_M, "half": ParkGraph.HALF_M}
+	_lane_masks[graph_path] = mask
+	return mask
 
 
 # Why keep_out leaves a row to the scatter: "ground", "scatter" (a row the scatter itself dresses), "plain_slope" or
-# "mesa_edge"; "" for a built row, which the scatter keeps out of. keep_out and lane_out both read this.
+# "mesa_edge"; "" for a built row, which the scatter keeps out of. keep_out reads this.
 static func open_to_scatter(row: Dictionary, rect: Rect2) -> String:
 	if row["element"] == "ground":
 		return "ground"
