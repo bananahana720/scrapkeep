@@ -1,6 +1,7 @@
 extends RefCounted
 
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
@@ -216,7 +217,7 @@ static func _inside(p: Vector3, center: Vector3, limit: float) -> Vector3:
 
 
 static func _warn(base: float, phase: int) -> float:
-	return base - PHASE_TIGHTEN * (clampi(phase, 1, TIGHTEN_PHASES) - 1)
+	return ChallengeDials.tell("waking", base - PHASE_TIGHTEN * (clampi(phase, 1, TIGHTEN_PHASES) - 1), Hazard.MIN_WARN)
 
 
 static func _bearing(rng: RandomNumberGenerator, ball: Vector3, center: Vector3) -> float:

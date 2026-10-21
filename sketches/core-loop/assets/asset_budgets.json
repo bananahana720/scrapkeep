@@ -89,6 +89,18 @@
       "draws": 2,
       "set_by": "2026-10-18 model polish (tools/blender/POLISH.md; Andrew 00:04Z asked for denser, baked models while frames hold): tris 270 to 2000 and verts 610 to 4600 at the old ratio, pending one 4080 frame check on the densest fight; draws 1 to 2 (coordinator call 2026-10-18: a bevelled detail shell on the polished kits is a second draw by design), pending the 4080 densest-fight frame check; if red, merge draws instead; earlier basis: moss_shelter (266 / 608 / 1); old ceilings 1,600 T / 2,400 V; moss_workshop carries an exception under its recipe's 6,500 T assert"
     },
+    "dress_hero": {
+      "tris": 20000,
+      "verts": 46000,
+      "draws": 1,
+      "set_by": "Andrew 2026-10-19 01:40Z (project-guide/handoff/DECISIONS.md section 8: the parks feel empty; hero assets up to about 20,000 triangles at LOD0, with LOD1 and LOD2) and the Dressing lane contract (design-v3/park/DRESSING-KITS.md): 6,000 to 20,000 triangles at LOD0; LOD1 about 50% and LOD2 about 15% sit under the same cap; one surface per file; verts at the polished-prop ratio of 2.3 per triangle (the first members measure 0.7)"
+    },
+    "dress_prop": {
+      "tris": 3000,
+      "verts": 6900,
+      "draws": 1,
+      "set_by": "Andrew 2026-10-19 01:40Z (project-guide/handoff/DECISIONS.md section 8: no stretch of ground should look bare) and the Dressing lane contract (design-v3/park/DRESSING-KITS.md): 300 to 3,000 triangles at LOD0; LOD1 about 50% and LOD2 about 15% (at least 40) sit under the same cap; one surface per file; verts at the polished-prop ratio of 2.3 per triangle (the first members measure 0.7)"
+    },
     "landmark": {
       "tris": 4000,
       "verts": 8900,

@@ -48,7 +48,19 @@ Blender's own evaluation):
   at the pose, with the gap also given as a fraction of that diagonal.
   STRESS-CLIP and STRESS-GAP when only a stress pose does it. Clips listed in DELIBERATE are
   designed detachments or impacts: their GAP and CLIP become DELIBERATE-GAP and DELIBERATE-CLIP
-  and leave the defect counts; COLLAPSE is never excused and is reported separately.
+  and leave the defect counts; COLLAPSE is never excused and is reported separately. Listing a
+  clip there takes it out of the range of motion (it adds only extremes beyond the others, no stress
+  pose), so it is for designed clips only. A motion a rig designs in every clip goes in
+  DESIGNED_PAIRS instead: those pairs are excused in every pose and every clip still sets the
+  ranges. Tool limit: the extremes are per Godot axis, so a hinge turned about an oblique axis is
+  split into per-axis poses (a plate "rY +22 deg" is rotated about the wrong axis); such a pose is
+  not one the game reaches, and only a render settles whether it is a defect.
+  Kit against its body (HOSTS below): a kit rig whose parts never touch one another is measured
+  against the body it rides. The body is skinned at the same clip time, every 1/15 s of every clip
+  both share except the exempt ones, and each kit vertex is tested against the whole body mesh
+  (nearest face, behind its normal and the ray straight out from the axis meets the body = inside),
+  and each body vertex inside a kit part's bounding box is tested against the kit's closed prisms.
+  A part deeper than max(30 mm, 5% of its own bounding box diagonal) is a CLIP defect, reported as host_clip in the JSON and on the rig's sheet row.
   Loop seam (clips the game loops, LOOPS below): per bone the pose delta between the first and
   last key, the velocity change between the first and last 1/30 s steps. SEAM: location > 1 mm,
   rotation > 0.5 degrees, scale > 0.001, or a velocity change at the seam above 1.5 x the clip's
@@ -105,10 +117,20 @@ LOOPS = {
     "bosses/mind_hand": ["still_track"],
 }
 
+# Kit rigs measured against the body they ride: key -> body GLB and the clips that are excused
+# (designed fly-out and walk-off, warden_swarm.py:42-43 'Not held to it: ... their snip walk along
+# the rope' and ws:721-730 the break drop).
+HOSTS = {"warden_swarm_kit_drones": {"host": "warden_swarm", "skip": ("break", "snip")}}
+HOST_STEP = 1.0 / 15
+
+# The shed rings' cells, Cell7 to Cell51 (fnmatch patterns).
+_SHED_CELLS = ("Cell[7-9]", "Cell[1-4][0-9]", "Cell5[01]")
+
 # Designed detachments and impacts, per GLB and clip: only the listed part pairs (bone names,
 # fnmatch patterns, either order) are excused in that clip; every other pair stays a defect.
 # Each entry cites the source that says the motion is designed. COLLAPSE is never excused.
 # kfm = world_one/kill_first_motion.py; ws = warden_swarm.py; wm = warden_mind.py (tools/blender/).
+LAND_PAIRS = [("Palm", "Finger?_0"), ("Finger?_0", "Finger?_1"), ("Finger?_1", "Finger?_2"), ("Finger?_0", "Knuckle?")]
 DELIBERATE = {
     "world_one/enemy_foreman": {
         "break": {"pairs": [("Cabinet", "Hat"), ("Cabinet", "Hand"), ("Chassis", "Mast"), ("Mast", "Horn*")],
@@ -131,6 +153,18 @@ DELIBERATE = {
                 "cite": "kfm:565-568 'The dish drops onto its partner, slides off and lands on its back... The boom, freed of its load, springs up; the crew ducks, then peeks over the cab roof'"},
     },
     # Procedural rigs: key "proc:<bone>:<axis><sign>" for the in-game extreme of that bone and axis.
+    # lamp_swarm.gd:191-193 _pose_lamps: LampLens scale lerpf(0.001, 1, open) (a point inside the bulb until the
+    # warn opens it) and LampShutter yaw -100 (side 0) or +100 (side 1, B) deg about Y with the same clock.
+    "world_two/enemy_lamp_swarm": {
+        **{"proc:LampShutter%d%s:rY%s" % (i, b, sign): {
+            "pairs": [("LampShutter%d" % i, "LampShutter%dB" % i)],
+            "cite": "lamp_swarm.gd:193 the barn doors swing apart to +-100 deg on the warn (enemy_lamp_swarm.py:221-227 previews it)"}
+           for i in range(3) for b, sign in (("", "-"), ("B", "+"))},
+        **{"proc:LampLens%d:sU+" % i: {
+            "pairs": [("LampBulb%d" % i, "LampLens%d" % i)],
+            "cite": "lamp_swarm.gd:191 the lens shrinks to 0.001 at the bone head, inside its bulb, until open"}
+           for i in range(3)},
+    },
     "world_one/enemy_plated_brute": {
         "proc:SlamPadLeft:tY+": {"pairs": [("BruteFeet", "SlamPad*"), ("BruteRear", "SlamPad*")],
                                  "cite": "plated_brute.gd:288-309 e09_pads_raise: the pads rise PAD_RISE 2.5 m (:45) off the body on the warn"},
@@ -141,35 +175,163 @@ DELIBERATE = {
         "proc:SlamPadRight:tY+": {"pairs": [("BruteFeet", "SlamPad*"), ("BruteRear", "SlamPad*")],
                                   "cite": "plated_brute.gd:288-309 e09_pads_raise: the pads rise PAD_RISE 2.5 m (:45) off the body on the warn"},
     },
+    "world_three/enemy_anchor_crew": {
+        "proc:CrewBrace:tY-": {"pairs": [("AnchorFeet", "CrewBrace")],
+                               "cite": "anchor_crew.gd:122 the body sinks 0.08 m with the wind-up and holds it; enemy_anchor_crew.py:72-75 the feet boxes sit inside the hull at rest"},
+    },
+    "world_three/enemy_kite_drone": {
+        **{"proc:KitePaw%s:t%s" % (side, axis): {"pairs": [("KitePaw*", "PodRoot")],
+                                                 "cite": "kite_drone.gd:177-180 the paws tuck 0.08 m back (and 0.08 up) into the pod with the wind-up tension"}
+           for side in ("Left", "Right") for axis in ("Z-", "Y+")},
+    },
     "warden_swarm": {
-        "break": {"pairs": [("*", "*")], "cite": "ws:42 'chunk_shed and break (falling cells)'; cells split off and fall ws:488-492, hull falls ws:525-527"},
-        "chunk_shed": {"pairs": [("*", "Ring*"), ("Ring*", "*")], "cite": "ws:26-29, :42, :480-482, :544-545 shed rings fall (drop, drift, spin)"},
-        "stagger_open": {"pairs": [("Cell*", "Shutter*"), ("*", "QueenCore")],
-                         "cite": "ws:510-514 shutters open to 125 deg; ws:533-535 'the lit core rises out of the open queen'"},
+        "break": {"pairs": [("*", "*")], "cite": "ws:42 'chunk_shed and break (falling cells)'; cells split off and fall ws:491-498, hull falls ws:528-531"},
+        # Ring bones own no island, so the pairs name the cells: Ring1 is Cell1-6, Ring2 Cell7-18, Ring3 Cell19-30,
+        # Ring4 Cell31-42, Ring5 Cell43-51; the shed rings are Cell7 to Cell51. Pinpricks of the same cell are in DESIGNED_PAIRS.
+        "chunk_shed": {"pairs": [("Cell[7-9]", "Yoke"), ("Cell1[0-8]", "Yoke"), ("Cell[7-9]", "Cell[1-6]"), ("Cell1[0-8]", "Cell[1-6]"),
+                                 *[(c, "Seam" + n[4:]) for c in _SHED_CELLS for n in _SHED_CELLS]],
+                       "cite": "ws:26-29, :42, :110, :483-487, :547-548, :552-563 the shed rings' cells (Cell7 to Cell51) fall away from the Yoke, Ring1 and each other (a shed ring's cells against another shed ring's pinpricks); hero_assets.gd:2310-2318 enables one ring's track"},
     },
     "warden_swarm_kit_drones": {
-        "break": {"pairs": [("*", "*")], "cite": "ws:673-681 drones drop, spin and fly out"},
-        "snip": {"pairs": [("*", "*")], "cite": "ws:656-663 the file of three walks off along the rope (:43)"},
+        "break": {"pairs": [("*", "*")], "cite": "ws:721-730 drones drop, spin and fly out"},
+        "snip": {"pairs": [("*", "*")], "cite": "ws:704-718 the file of three walks off along the rope (:42-43)"},
     },
     "warden_mind": {
         **{c: {"pairs": [("Finger*", "Finger*")],
-               "cite": "wm:45-48 'A lost finger folds shut under its neighbours: the last two segments drop about a metre'; fold wm:636, :709-711"}
+               "cite": "wm:45-48 'A lost finger folds shut under its neighbours: the last two segments drop about a metre'; fold wm:639-647, :712-717"}
            for c in ("chunk_lost", "chunk_lost_ring", "chunk_lost_middle", "chunk_lost_index")},
         "grip_falter": {"pairs": [("Stalk*", "*"), ("LensMount", "*"), ("Lens", "*")],
-                        "cite": "wm:737-743 Stalk1, Stalk2 and LensMount drop DROP/3, the lens swells"},
-        "knocked_down": {"pairs": [("Hand", "*"), ("Palm", "*"), ("Finger*", "*")],
-                         "cite": "wm:766-772 the hand tumbles over and the fingers splay; wm:913 'tumble the hand (knocked_down)'"},
+                        "cite": "wm:740-746 Stalk1, Stalk2 and LensMount drop DROP/3, the lens swells"},
+        **{c: {"pairs": [("Knuckle*", "*")],
+               "cite": "wm:728-734 the knuckle flicks out along its dome normal and swells 25%; design-v3/wardens/mind.md:127 'shrug: the flared knuckle flicks outward'"}
+           for c in ("shrug", "shrug_1", "shrug_2")},
+        "knocked_down": {"pairs": [("Hand", "*"), ("Palm", "*"), ("Finger*", "*"), ("Stalk*", "Lens"), ("LensMount", "Lens")],
+                         "cite": "wm:769-775 the hand tumbles over and the fingers splay; wm:979 'tumble the hand (knocked_down)'; wm:773 the lens swells 1.3x over the last sleeve end"},
+        "active": {"pairs": [("Stalk*", "Lens"), ("LensMount", "Lens")],
+                   "cite": "wm:705-710 Lens scales 1.3 about its centre; the shell grows over Stalk2's sleeve end and the neck core, which sit inside the cap at rest (renders: nothing shows through)"},
+        "glide": {"pairs": [("LensMount", "Lens"), ("Stalk*", "Lens")],
+                  "cite": "wm:760 Lens pitches 0.25 +- 0.05 rad; the neck core rides inside the centred seat, wm:512-515, and the sleeve end sinks into the cap (renders clean)"},
+        **{c: {"pairs": LAND_PAIRS + extra,
+               "cite": cite}
+           for c, extra, cite in (
+               ("land", [], "wm:762-768 the clamp curls every finger to 0.75/0.9/0.7 rad (clamp :764, curl :767) and the thumb 0.35 rad; ROOT_Y wm:197 seats each root one JOINT_R (wm:194, :457) inside the palm edge, so the root drum meets the palm and the joint drums meet their neighbours (renders: nothing shows through)"),
+               ("takeoff", [("Palm", "Thumb_0"), ("Thumb_?", "Thumb_?")],
+                "wm:747-754 the fist: every finger curls to CURL_SHUT (wm:638), thumbs turn 0.5/0.6/0.5 rad; the land contacts (wm:762-768, ROOT_Y :197, JOINT_R :194) plus the thumb drums"))},
         "final_quiet": {"pairs": [("Thumb_*", "*"), ("Lens*", "*"), ("SmallLens*", "*")],
-                        "cite": "wm:773-783 thumbs fold shut and the iris closes"},
+                        "cite": "wm:776-785 thumbs fold shut and the iris closes"},
+        "perch": {"pairs": [("Stalk*", "Stalk*"), ("Stalk*", "LensMount"), ("Stalk*", "Lens"), ("Finger?_1", "Finger?_2"),
+                            ("Thumb_?", "Thumb_?")],
+                  "cite": "wm:720-724 the thumb turns 0.45 and 0.6 rad and its wedge sits inside the 0.22 m joint drum (wm:483); wm:491-492 each stalk core 'hides in the sleeve above it at rest'; wm:648-649, :725-727 the perch "
+                          "lift slides Stalk1, Stalk2 and LensMount up into their sleeves; wm:720-722 the hook folds segment 2 "
+                          "back under segment 1 (pi + 0.1 - c1), touching only at the knuckle cap; the same lift telescopes the lens up "
+                          "into the stalk's last sleeve (renders: the lens cap rides under the sleeve ring, nothing shows through)"},
     },
     "bosses/mind_hand": {
+        **{c: {"pairs": [("LensRoot", "MainLens"), ("Iris?", "MainLens"), ("MainLens", "*Target"), ("MintTarget", "SlateTarget")],
+               "cite": "bosses/mind_hand.py:309-316 MainLens scales to 1.5 (lens_scale), the six irises open to 0.24 m on the lens face (aperture) and the mint and slate targets swap by scale on the same lens face; keys :335-340 for exact_strike, brace and recover"}
+           for c in ("brace", "recover")},
+        "exact_strike": {"pairs": [("LensRoot", "MainLens"), ("Iris?", "MainLens"), ("MainLens", "*Target"), ("MintTarget", "SlateTarget"),
+                                   ("Segment1", "Segment2")],
+                         "cite": "bosses/mind_hand.py:309-316 MainLens 1.5, irises and targets as brace/recover; :335-340 key; the Segment1 bend and Segment2 re-aim :302-308"},
+        "quote_warn": {"pairs": [("LensRoot", "MainLens"), ("Iris?", "MainLens"), ("MainLens", "*Target"), ("Segment1", "Segment2")],
+                       "cite": "bosses/mind_hand.py:334 key lens_scale 1.3 and bend -0.5; the lens swell and the Segment1 bend :302-308; MintTarget hidden at scale 0.001 (:311) collapses to a point inside the lens"},
+        "still_track": {"pairs": [("MainLens", "MintTarget")],
+                        "cite": "bosses/mind_hand.py:296 reset_pose hides MintTarget at scale 0.001, a point inside the r 0.7 lens (:282)"},
         "lens_break": {"pairs": [("LensRoot", "*"), ("*", "MainLens")],
                        "cite": "bosses/mind_hand.py:317-320 LensRoot drops 0.55 m and tips, MainLens shrinks to 0.05; key :341"},
     },
 }
 
 
+def pose_arrays(rig, clip, t):
+    """The rig's skinned vertices at time t seconds into the clip."""
+    vals = {b: v for b, v in clip.sample(clip.start + t * clip.fps).items() if b in rig.index}
+    basis = {rig.index[b]: m for b, m in basis_of_named(rig, vals).items()}
+    return rig.skin(rig.chain(basis))
+
+
+def host_frames(spec):
+    """{clip: [(t, vertices)]} of the body the kit rides, every HOST_STEP, plus its triangles."""
+    host = Rig(spec["host"])
+    out = {}
+    for clip in host.clips.values():
+        if clip.name in spec["skip"]:
+            continue
+        n = int(clip.seconds / HOST_STEP + 1e-6)
+        ts = [i * HOST_STEP for i in range(n + 1)] + ([clip.seconds] if clip.seconds - n * HOST_STEP > 1e-6 else [])
+        out[clip.name] = [(t, pose_arrays(host, clip, t)) for t in ts]
+    return out, host.T.copy()
+
+
+def host_clip(rig, frames, tris):
+    """Per shared clip: the deepest a kit vertex sits inside the body and the deepest a body vertex
+    sits inside a kit part (depth_mm is the larger), where, and the threshold."""
+    owner = [row[0][0] if row else -1 for row in rig.groups]
+    pts = {}
+    for v, b in enumerate(owner):
+        pts.setdefault(b, []).append(v)
+    thr = {b: max(MIN_DEPTH, MIN_FRAC * float(np.linalg.norm(np.ptp(rig.V0[vs], axis=0)))) for b, vs in pts.items()}
+    res = {}
+    for name, rows in frames.items():
+        clip = rig.clips.get(name)
+        if clip is None:
+            continue
+        worst = {"depth_mm": 0.0, "t": None, "part": None, "thr_mm": None, "over": False, "kit_in_body_mm": 0.0, "body_in_kit_mm": 0.0}
+
+        def note(kind, depth, t, b):
+            worst[kind] = max(worst[kind], round(depth * 1000, 2))
+            if depth * 1000 > worst["depth_mm"]:
+                worst.update({"depth_mm": round(depth * 1000, 2), "t": round(t, 4), "part": rig.names[b], "thr_mm": round(thr[b] * 1000, 1),
+                              "over": depth > thr[b]})
+        for t, Vh in rows:
+            Vk = pose_arrays(rig, clip, t)
+            tree = BVHTree.FromPolygons(Vh.tolist(), tris.tolist(), all_triangles=True)
+            for v in range(len(Vk)):
+                r = tree.find_nearest(tuple(Vk[v]))
+                if r is None or (Vector(Vk[v]) - r[0]).dot(r[1]) >= 0:
+                    continue
+                # Behind the nearest face is not enough: a spike (a pinprick) far away has a normal
+                # too. The vertex is inside only if the ray straight out from the axis meets the body.
+                out = Vector((Vk[v][0], Vk[v][1], 0.0))
+                if out.length < 1e-6 or tree.ray_cast(Vector(Vk[v]), out.normalized())[0] is None:
+                    continue
+                note("kit_in_body_mm", r[3], t, owner[v])
+            # The other way: body vertices inside a kit part (its prisms are closed, so behind the nearest face is exact).
+            ktree = BVHTree.FromPolygons(Vk.tolist(), rig.T.tolist(), all_triangles=True)
+            for b, vs in pts.items():
+                lo, hi = Vk[vs].min(0) - 0.01, Vk[vs].max(0) + 0.01
+                for w in np.nonzero(((Vh >= lo) & (Vh <= hi)).all(1))[0]:
+                    r = ktree.find_nearest(tuple(Vh[w]))
+                    if r is not None and (Vector(Vh[w]) - r[0]).dot(r[1]) < 0:
+                        note("body_in_kit_mm", r[3], t, b)
+        res[name] = worst
+    return res
+
+
+# Pairs a rig designs in every pose, whatever the clip: key -> [(regex over "a/b", cite)], either order.
+# Unlike DELIBERATE they do not take a clip out of the range of motion, so every clip still sets the
+# extremes and stress poses. A backreference keeps a pair to one index (Cell3/Seam3, not Cell26/Seam38).
+DESIGNED_PAIRS = {
+    "warden_swarm": [
+        (r"Cell(\d+)/Seam\1", "ws:35, :113-114, :451-498 the Seam bone sinks a cell's own pinpricks into its lip (SEAM_DIM -0.05, SEAM_OFF -0.13) and "
+                              "lifts them proud (SEAM_BRIGHT): a buried pinprick reads as CLIP and GAP"),
+        (r"Seam7/Cell18|Cell14/Seam15|Cell16/Seam17|Cell26/Seam38|Cell30/Seam42",
+         "ws:35, :113-114 the pinprick at a cell's lip corner also sits on the lip of the neighbouring cell at rest (the five contacts the audit finds); "
+         "sunk or lifted by its own Seam bone it passes through that lip, hidden, and nothing else of cell i touches cell j (renders, 4x, every pose)"),
+        (r"Cell(\d+)/Shutter\1_\d", "ws:507-516 each cell's plates sit in its opening and turn about the hinge (pulse 50, active 28, stagger_open 50 to 125 deg): a hinge turn "
+                                    "split per Godot axis is not a pose the game reaches"),
+        (r"Cell0/QueenCore", "ws:536-539 the lit core sits inside the queen cell, swells and rises 0.6 m out of it in stagger_open"),
+    ],
+}
+
+
+def designed(key, a, b):
+    return any(re.fullmatch(rx, a + "/" + b) or re.fullmatch(rx, b + "/" + a) for rx, _ in DESIGNED_PAIRS.get(key, ()))
+
+
 def excused(key, clip, a, b):
+    if designed(key, a, b):
+        return True
     row = DELIBERATE.get(key, {}).get(clip)
     if not row:
         return False
@@ -1117,9 +1279,9 @@ def pose_flags(m, kind):
 
 
 def split_hits(m, key, clip):
-    """Move the hits the DELIBERATE table excuses for this clip out of the defect fields."""
-    x_clip = [h for h in m["clip_hits"] if clip and excused(key, clip, *h["pair"].split("/"))]
-    x_gap = [h for h in m["gap_hits"] if clip and excused(key, clip, *h["pair"].split("/"))]
+    """Move the hits DESIGNED_PAIRS (any pose) and the DELIBERATE table (this clip) excuse out of the defect fields."""
+    x_clip = [h for h in m["clip_hits"] if excused(key, clip, *h["pair"].split("/"))]
+    x_gap = [h for h in m["gap_hits"] if excused(key, clip, *h["pair"].split("/"))]
     d_clip = [h for h in m["clip_hits"] if h not in x_clip]
     d_gap = [h for h in m["gap_hits"] if h not in x_gap]
     out = dict(m)
@@ -1369,6 +1531,8 @@ def fmt_spec(spec):
 
 def audit_rig(key, a, sheet_rows, loop_rows):
     t0 = time.time()
+    hspec = HOSTS.get(key)
+    frames, tris = host_frames(hspec) if hspec else ({}, None)  # first: Rig() resets the scene
     rig = Rig(key)
     audit, deforming = weight_audit(rig)
     names = set(audit["deforming_bones"])
@@ -1480,6 +1644,16 @@ def audit_rig(key, a, sheet_rows, loop_rows):
     deliberate_collapse = [{"pose": fmt_spec(p) if p["bone"] != "*" else p["axis"], "bone": p["bone"],
                             "area_min": p["area_min"], "edge_min": p["edge_min"], "flags": p["flags"]}
                            for p in poses if p["deliberate"] and any(f.endswith("COLLAPSE") for f in p["flags"])]
+    # Kit against its body: any part past its threshold in a shared game clip is a CLIP defect.
+    hostc = host_clip(rig, frames, tris) if hspec else {}
+    over = {c: h for c, h in hostc.items() if h["over"]}
+    if over:
+        c, h = max(over.items(), key=lambda kv: kv[1]["depth_mm"] / kv[1]["thr_mm"])
+        slot = flags.setdefault("CLIP", {"count": 0, "bones": [], "worst": None})
+        slot["count"] += len(over)
+        slot["bones"] = sorted(set(slot["bones"]) | {x["part"] for x in over.values()})
+        slot["worst"] = {"pose": "clip:%s t=%.3f" % (c, h["t"]), "bone": h["part"], "src": hspec["host"], "clip_depth_mm": h["depth_mm"],
+                         "clip_thr_mm": h["thr_mm"], "clip_pair": "%s/%s" % (h["part"], hspec["host"]), "clip_open": True}
     # Loop seams.
     seams = {}
     for cname in LOOPS.get(key, []):
@@ -1497,8 +1671,10 @@ def audit_rig(key, a, sheet_rows, loop_rows):
                        "scale": {k: [round(x, 4) for x in v] for k, v in r["scale"].items()}}
                    for b, r in ranges.items()},
         "git_head": GIT_HEAD, "pairs_untested": not metrics.pairs,
-        "pair_note": ("no parent/child or touching-at-rest island pairs: CLIP and GAP are untested, not clean"
+        "pair_note": ("no parent/child or touching-at-rest island pairs: CLIP and GAP between its own parts are untested, not clean"
+                      + ("; measured against %s instead (host_clip)" % hspec["host"] if hspec else "")
                       if not metrics.pairs else None),
+        "host_clip": hostc,
         "sibling_pairs": metrics.sibling_pairs, "sibling_capped": metrics.sibling_capped,
         "pose_count": len(poses), "contact_pairs": len(metrics.pairs),
         "rigid_islands": len(metrics.rigid), "blended_triangles": int(len(metrics.bt) - metrics.cross_bone_tris),
@@ -1508,7 +1684,7 @@ def audit_rig(key, a, sheet_rows, loop_rows):
         "seconds": round(time.time() - t0, 1),
     }
     if not a["no-render"]:
-        render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, not metrics.pairs,
+        render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, not metrics.pairs, hostc,
                    audit["unweighted_vertices"])
     summary = {
         "joints": audit["joints"], "deforming": audit["deforming_bone_count"], "verts": audit["vertices"],
@@ -1520,6 +1696,7 @@ def audit_rig(key, a, sheet_rows, loop_rows):
         "deliberate_collapse": deliberate_collapse,
         "seam": {c: ("UNTESTED" if s.get("seam_untested") else s.get("failing_bones", s.get("error"))) for c, s in seams.items()},
         "pairs_untested": not metrics.pairs, "testable_pairs": len(metrics.pairs), "sibling_pairs": metrics.sibling_pairs,
+        "host_clip": {c: (h["depth_mm"], h["t"], h["part"], h["over"], h["kit_in_body_mm"], h["body_in_kit_mm"]) for c, h in hostc.items()},
         "seam_worst": {c: max(((r["vel_jump"][k] / max(r["vel_limit"][k], 1e-9), b, k) for b, r in s["bones_detail"].items()
                                for k in range(3)), default=None) for c, s in seams.items() if "bones_detail" in s},
     }
@@ -1549,7 +1726,8 @@ def skin_check(rig, values, Vp):
     return {"max_err_m": round(err, 6)}
 
 
-def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, pairs_untested=False, unweighted=0):
+def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, pairs_untested=False, hostc=None,
+               unweighted=0):
     stage = Stage(rig, a["size"], a["samples"])
     w, h = a["size"], int(a["size"] * 0.75)
     # In-game poses (clip frames and extremes) first: the top 5, then the top 3 stress poses, each
@@ -1567,13 +1745,16 @@ def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, pai
                 break
         return out
     chosen = pick(KINDS_GAME, 5) + pick(("stress",), 3)
+    hw = max(hostc.values(), key=lambda h: h["depth_mm"]) if hostc else None
+    bad = bool(hw) and any(h["over"] for h in hostc.values())
+    note = ("OWN PAIRS UNTESTED" if pairs_untested else "RANKED BY DEFECT SEVERITY") if not hw else \
+        "VS BODY %d CLIPS WORST %.0fMM %s" % (len(hostc), hw["depth_mm"], "OVER" if bad else "OK")
     tiles = [tile(stage.render({}), [key.split("/")[-1], "REST POSE" if not unweighted else "UNWEIGHTED %d VERTS" % unweighted,
-                                                 "PAIRS UNTESTED" if pairs_untested else "RANKED BY DEFECT SEVERITY"],
-                   bool(unweighted))]
+                                     note], bad or bool(unweighted))]
     for i in chosen:
         p = poses[i]
         label = fmt_spec(p) if p["bone"] != "*" else "%s %.2fS" % (p["axis"], p["value"])
-        flagtxt = " ".join(p["flags"]) if p["flags"] else ("PAIRS UNTESTED" if pairs_untested else "NO FLAG")
+        flagtxt = " ".join(p["flags"]) if p["flags"] else ("OWN PAIRS UNTESTED" if pairs_untested else "NO FLAG")
         collapsed = any(f.endswith("COLLAPSE") for f in p["flags"])
         tiles.append(tile(stage.render(values_for[i]),
                           [label, "%s [%s%s]" % (p["worst_metric"], p["kind"], " DELIB" if p["deliberate"] else ""), flagtxt],

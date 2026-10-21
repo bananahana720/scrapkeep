@@ -9,7 +9,7 @@ const Bindings := preload("res://src/core/bindings.gd")
 const CAPTIONS := {
 	"breach": "Breach · Slam the Dig's cracked plates.",
 	"lift": "Lift · Glide through Highdraft thermals.",
-	"companion": "SPIL-9 · Mix two module families.",
+	"companion": "SPIL-9 · Next ram calls it in.",
 }
 const PICTURE_SIZE := Vector2(410.0, 158.0)
 

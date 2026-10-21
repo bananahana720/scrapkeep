@@ -1,0 +1,340 @@
+{
+ "assets": [
+  {
+   "id": "dprop_dam_gate_wheelhouse_a",
+   "path": "res://assets/models/park/props/dam/gate_wheelhouse_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "gate_wheelhouse variant a LOD0 (16880 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.1048,
+     0,
+     -2.2587
+    ],
+    "max": [
+     2.1048,
+     3.1729,
+     2.2587
+    ],
+    "size": [
+     4.2096,
+     3.1729,
+     4.5174
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_gate_wheelhouse_a_lod1",
+   "path": "res://assets/models/park/props/dam/gate_wheelhouse_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "gate_wheelhouse variant a LOD1 (8440 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.1048,
+     0,
+     -2.2587
+    ],
+    "max": [
+     2.1071,
+     3.1732,
+     2.2561
+    ],
+    "size": [
+     4.2119,
+     3.1732,
+     4.5148
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_gate_wheelhouse_a_lod2",
+   "path": "res://assets/models/park/props/dam/gate_wheelhouse_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "gate_wheelhouse variant a LOD2 (2532 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.1016,
+     0,
+     -2.259
+    ],
+    "max": [
+     2.1038,
+     3.1779,
+     2.2714
+    ],
+    "size": [
+     4.2054,
+     3.1779,
+     4.5304
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_gate_wheelhouse_b",
+   "path": "res://assets/models/park/props/dam/gate_wheelhouse_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "gate_wheelhouse variant b LOD0 (17864 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.0984,
+     0,
+     -2.2576
+    ],
+    "max": [
+     2.0984,
+     3.1497,
+     2.2576
+    ],
+    "size": [
+     4.1968,
+     3.1497,
+     4.5152
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_gate_wheelhouse_b_lod1",
+   "path": "res://assets/models/park/props/dam/gate_wheelhouse_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "gate_wheelhouse variant b LOD1 (8932 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.0984,
+     0,
+     -2.2576
+    ],
+    "max": [
+     2.0984,
+     3.15,
+     2.255
+    ],
+    "size": [
+     4.1968,
+     3.15,
+     4.5126
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_gate_wheelhouse_b_lod2",
+   "path": "res://assets/models/park/props/dam/gate_wheelhouse_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "gate_wheelhouse variant b LOD2 (2680 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.1097,
+     0,
+     -2.2588
+    ],
+    "max": [
+     2.0925,
+     3.1341,
+     2.2703
+    ],
+    "size": [
+     4.2022,
+     3.1341,
+     4.5291
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_survey_tripod_a",
+   "path": "res://assets/models/park/props/dam/survey_tripod_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "survey_tripod variant a LOD0 (2952 tris): A survey tripod knocked flat when the line broke, its plumb bob still on its cord. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.2442,
+     0,
+     -0.8449
+    ],
+    "max": [
+     1.2442,
+     0.9237,
+     0.8449
+    ],
+    "size": [
+     2.4884,
+     0.9237,
+     1.6898
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_survey_tripod_a_lod1",
+   "path": "res://assets/models/park/props/dam/survey_tripod_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "survey_tripod variant a LOD1 (1476 tris): A survey tripod knocked flat when the line broke, its plumb bob still on its cord. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.2442,
+     0,
+     -0.845
+    ],
+    "max": [
+     1.2442,
+     0.9225,
+     0.8447
+    ],
+    "size": [
+     2.4884,
+     0.9225,
+     1.6897
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_survey_tripod_a_lod2",
+   "path": "res://assets/models/park/props/dam/survey_tripod_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "survey_tripod variant a LOD2 (442 tris): A survey tripod knocked flat when the line broke, its plumb bob still on its cord. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.2466,
+     0,
+     -0.8459
+    ],
+    "max": [
+     1.2443,
+     0.923,
+     0.8447
+    ],
+    "size": [
+     2.4909,
+     0.923,
+     1.6906
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_survey_tripod_b",
+   "path": "res://assets/models/park/props/dam/survey_tripod_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "survey_tripod variant b LOD0 (2952 tris): A survey tripod knocked flat when the line broke, its plumb bob still on its cord. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.8623,
+     0,
+     -1.0767
+    ],
+    "max": [
+     0.8623,
+     0.4202,
+     1.0767
+    ],
+    "size": [
+     1.7246,
+     0.4202,
+     2.1534
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_survey_tripod_b_lod1",
+   "path": "res://assets/models/park/props/dam/survey_tripod_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "survey_tripod variant b LOD1 (1476 tris): A survey tripod knocked flat when the line broke, its plumb bob still on its cord. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.8627,
+     0,
+     -1.0769
+    ],
+    "max": [
+     0.8623,
+     0.4193,
+     1.0767
+    ],
+    "size": [
+     1.725,
+     0.4193,
+     2.1536
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_survey_tripod_b_lod2",
+   "path": "res://assets/models/park/props/dam/survey_tripod_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "survey_tripod variant b LOD2 (442 tris): A survey tripod knocked flat when the line broke, its plumb bob still on its cord. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.8628,
+     0,
+     -1.0767
+    ],
+    "max": [
+     0.8626,
+     0.4285,
+     1.0766
+    ],
+    "size": [
+     1.7254,
+     0.4285,
+     2.1533
+    ]
+   }
+  }
+ ]
+}
