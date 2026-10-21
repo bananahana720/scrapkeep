@@ -1407,8 +1407,8 @@
    "id": "s009_gallery_fall",
    "template": "gallery_fall",
    "at": [
-    -606.19,
-    -628.51
+    -600.23,
+    -629.78
    ],
    "yaw_deg": -59.8,
    "near": "lava_channel_4: timbers down, water mark"
@@ -1424,16 +1424,6 @@
    "near": "lava_channel_4: basalt stubs, lichen caps"
   },
   {
-   "id": "s011_low_ferns",
-   "template": "low_ferns",
-   "at": [
-    -526.6,
-    -554.6
-   ],
-   "yaw_deg": -21.8,
-   "near": "lava_channel_6: ferns in the cracks"
-  },
-  {
    "id": "s012_mid_skylight_garden",
    "template": "mid_skylight_garden",
    "at": [
@@ -1442,16 +1432,6 @@
    ],
    "yaw_deg": -44.6,
    "near": "lava_channel_5: ferns under the skylight"
-  },
-  {
-   "id": "s013_low_gear",
-   "template": "low_gear",
-   "at": [
-    -492.6,
-    -594.8
-   ],
-   "yaw_deg": 159.6,
-   "near": "lava_channel_6: dropped gear in the dust"
   },
   {
    "id": "s014_low_stones",
@@ -1492,16 +1472,6 @@
    ],
    "yaw_deg": -21.7,
    "near": "lava_channel_6: basalt stubs, lichen caps"
-  },
-  {
-   "id": "s019_low_stones",
-   "template": "low_stones",
-   "at": [
-    -419.7,
-    -598.8
-   ],
-   "yaw_deg": -162.0,
-   "near": "lava_channel_7: rimstone and lichen"
   },
   {
    "id": "s020_mid_tailings_cart",
@@ -1557,10 +1527,10 @@
    "id": "s027_lamp_wall",
    "template": "lamp_wall",
    "at": [
-    -283.05,
-    -574.5
+    -303.29,
+    -645.04
    ],
-   "yaw_deg": 4.1,
+   "yaw_deg": -178.5,
    "near": "lava_channel_11: lamps facing the wrong way"
   },
   {
@@ -2824,96 +2794,6 @@
    "near": "trench_granaries: seed jars, nobody home"
   },
   {
-   "id": "m02_mid_horn_stubs",
-   "template": "mid_horn_stubs",
-   "at": [
-    -611.22,
-    -664.02
-   ],
-   "yaw_deg": -59.8,
-   "near": "lava_channel_2: signal horn on a cradle, stub and hose at the bank"
-  },
-  {
-   "id": "m03_mid_cart_stub",
-   "template": "mid_cart_stub",
-   "at": [
-    -565.0,
-    -680.66
-   ],
-   "yaw_deg": 120.3,
-   "near": "lava_channel_3: ore cart and a stub at the bank"
-  },
-  {
-   "id": "m04_mid_horn_stubs",
-   "template": "mid_horn_stubs",
-   "at": [
-    -565.89,
-    -593.93
-   ],
-   "yaw_deg": -54.4,
-   "near": "lava_channel_4: signal horn on a cradle, stub and hose at the bank"
-  },
-  {
-   "id": "m05_mid_horn_stubs",
-   "template": "mid_horn_stubs",
-   "at": [
-    -518.58,
-    -617.25
-   ],
-   "yaw_deg": 135.6,
-   "near": "lava_channel_5: signal horn on a cradle, stub and hose at the bank"
-  },
-  {
-   "id": "m06_mid_cart_stub",
-   "template": "mid_cart_stub",
-   "at": [
-    -503.45,
-    -546.83
-   ],
-   "yaw_deg": -21.7,
-   "near": "lava_channel_6: ore cart and a stub at the bank"
-  },
-  {
-   "id": "m07_mid_cart_horn",
-   "template": "mid_cart_horn",
-   "at": [
-    -430.51,
-    -538.66
-   ],
-   "yaw_deg": 2.3,
-   "near": "lava_channel_7: cart and fallen horn at the bank"
-  },
-  {
-   "id": "m08_mid_horn_stubs",
-   "template": "mid_horn_stubs",
-   "at": [
-    -400.44,
-    -546.89
-   ],
-   "yaw_deg": 18.2,
-   "near": "lava_channel_8: signal horn on a cradle, stub and hose at the bank"
-  },
-  {
-   "id": "m11_mid_cart_stub",
-   "template": "mid_cart_stub",
-   "at": [
-    -270.75,
-    -635.18
-   ],
-   "yaw_deg": -178.5,
-   "near": "lava_channel_11: ore cart and a stub at the bank"
-  },
-  {
-   "id": "m12_mid_cart_horn",
-   "template": "mid_cart_horn",
-   "at": [
-    -247.32,
-    -582.74
-   ],
-   "yaw_deg": -21.3,
-   "near": "lava_channel_12: cart and fallen horn at the bank"
-  },
-  {
    "id": "m13_mid_horn_stubs",
    "template": "mid_horn_stubs",
    "at": [
@@ -3042,6 +2922,106 @@
    ],
    "yaw_deg": 41.9,
    "near": "great_room: ferns at the foot of the rim"
+  },
+  {
+   "id": "m02_mid_horn_stubs",
+   "template": "mid_horn_stubs",
+   "at": [
+    -610.48,
+    -663.35
+   ],
+   "yaw_deg": -59.8,
+   "near": "lava_channel_2: signal horn on a cradle, stub and hose at the bank"
+  },
+  {
+   "id": "m03_mid_cart_stub",
+   "template": "mid_cart_stub",
+   "at": [
+    -614.78,
+    -646.94
+   ],
+   "yaw_deg": -59.8,
+   "near": "lava_channel_3: ore cart and a stub at the bank"
+  },
+  {
+   "id": "m04_mid_horn_stubs",
+   "template": "mid_horn_stubs",
+   "at": [
+    -566.97,
+    -591.97
+   ],
+   "yaw_deg": -50.6,
+   "near": "lava_channel_4: signal horn on a cradle, stub and hose at the bank"
+  },
+  {
+   "id": "m05_mid_horn_stubs",
+   "template": "mid_horn_stubs",
+   "at": [
+    -525.47,
+    -556.02
+   ],
+   "yaw_deg": -21.7,
+   "near": "lava_channel_5: signal horn on a cradle, stub and hose at the bank"
+  },
+  {
+   "id": "m06_mid_cart_stub",
+   "template": "mid_cart_stub",
+   "at": [
+    -485.55,
+    -591.37
+   ],
+   "yaw_deg": 159.6,
+   "near": "lava_channel_6: ore cart and a stub at the bank"
+  },
+  {
+   "id": "m07_mid_cart_horn",
+   "template": "mid_cart_horn",
+   "at": [
+    -452.76,
+    -591.77
+   ],
+   "yaw_deg": -176.6,
+   "near": "lava_channel_7: cart and fallen horn at the bank"
+  },
+  {
+   "id": "m08_mid_horn_stubs",
+   "template": "mid_horn_stubs",
+   "at": [
+    -417.22,
+    -598.22
+   ],
+   "yaw_deg": -162.0,
+   "near": "lava_channel_8: signal horn on a cradle, stub and hose at the bank"
+  },
+  {
+   "id": "m09_mid_horn_stubs",
+   "template": "mid_horn_stubs",
+   "at": [
+    -397.04,
+    -604.94
+   ],
+   "yaw_deg": -155.3,
+   "near": "lava_channel_9: signal horn on a cradle, stub and hose at the bank"
+  },
+  {
+   "id": "m11_mid_cart_stub",
+   "template": "mid_cart_stub",
+   "at": [
+    -267.76,
+    -635.33
+   ],
+   "yaw_deg": -178.5,
+   "near": "lava_channel_11: ore cart and a stub at the bank"
+  },
+  {
+   "id": "m12_mid_cart_horn",
+   "template": "mid_cart_horn",
+   "at": [
+    -247.32,
+    -582.74
+   ],
+   "yaw_deg": -21.3,
+   "near": "lava_channel_12: cart and fallen horn at the bank"
   }
  ],
  "litter": {
@@ -3077,5 +3057,5 @@
  "low_ground_rows": [
   "great_room"
  ],
- "pin": 1008497275
+ "pin": 215440848
 }
