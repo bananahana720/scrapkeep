@@ -46,12 +46,9 @@ const LOOPS := [
 	[M + "bosses/boss_mind_kit.glb", "attention"],
 ]
 
-# label -> measured cause (2026-10-21, base 20da407). Owner of both rows: A5 Brindle drum loops,
-# which deletes them. Both are a rolling drum keyed as one straight spin that is not a whole
-# number of turns.
+# label -> measured cause for a seam that is known and not yet fixed. Empty: the Brindle drum
+# loops were the last two (fixed in brindle_animation.py as whole numbers of turns).
 const KNOWN := {
-	"boss_brindle idle_roll": "A5 Brindle drum loops: Drum{L,R}{0..3} pitch -4/.75*1.2 = -6.4 rad = 366.69 deg, 6.69 deg past a full turn (brindle_animation.py:113-114)",
-	"boss_brindle_scooter chase": "A5 Brindle drum loops: Drums pitch -11/.22 = -50 rad = 7.96 turns, 15.21 deg short of 8 (brindle_animation.py:211-213)",
 }
 
 var t := T.new("rig_loop_seam_test")

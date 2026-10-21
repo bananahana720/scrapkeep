@@ -134,13 +134,10 @@ LOOPS = {
     "bosses/boss_mind_kit": ["attention"],
 }
 
-# Seam failures that --strict does not count (owner of both rows: A5 Brindle drum loops, which deletes them): (key, clip) -> reason. Same two the Godot
-# tests/rig_loop_seam_test.gd lists as KNOWN (a rolling drum keyed as one straight spin that is
-# not a whole number of turns, brindle_animation.py:113-114 and :211-213). Remove a row once the
-# clip is fixed; --strict then also fails a row whose seam is now clean.
+# Seam failures that --strict does not count: (key, clip) -> reason. Empty: the Brindle drum
+# loops were the last two and are now whole turns. Remove a row once its clip is fixed; --strict
+# then also fails a row whose seam is now clean.
 STRICT_EXCUSED = {
-    ("bosses/boss_brindle", "idle_roll"): "drums 366.69 deg per loop, 6.69 deg past a full turn",
-    ("bosses/boss_brindle_scooter", "chase"): "drum 7.96 turns per loop, 15.21 deg short of 8",
 }
 
 # Kit rigs measured against the body they ride: key -> body GLB and the clips that are excused
