@@ -4,10 +4,10 @@ Written 20 Oct 2026 after the [baseline](BASELINE-2026-10-20.md). It is linked f
 
 ## Budget
 
-- **Two sources.** The account's weekly limit resets on 22 Oct and then weekly. About $100 of cloud credits remain after the baseline. The weekly limit is the main fuel. Credits cover overflow and urgent fixes only.
+- **Two sources (corrected 21 Oct).** The weekly limit reset on 21 Oct at 19:00Z, earlier than this plan assumed, and resets weekly after that (next 28 Oct 19:00Z). It is the main fuel. Extra usage (credits) stood at $38.37 of the $50 monthly cap, so about $11.60 is left this month for urgent fixes only. The app shows no balance that matches the earlier "about $100", so plan on $11.60. Pacing: weekly % used stays at or below the share of the week gone plus 10 points. Above that, no new lanes start.
 - **Calibration.** Wave 17's five Opus lane threads cost about $115 in one night (Perf $28, Systems B $36, Challenge $23, World-2 $13, parent $15).
 - **Model mix (Andrew, 20 Oct).** Use Sonnet 5.5 everywhere it can go. Opus 5.5 medium is only for the stage promotion gate. A Sonnet lane costs an estimated one third of an Opus lane, so a five-lane wave runs about $35 to $45. ASSERTED (unverified). Measure it with `get_session` usage at the end of wave 18 and correct this line.
-- **Rule.** Any wave that would draw more than $50 of credits stops and asks before its third lane starts.
+- **Rule.** A wave that would spend extra usage stops and asks before it starts a lane on credits.
 
 ## Carry-over into wave 18 (from the baseline)
 
@@ -50,5 +50,5 @@ The following do not cut, because the acceptance gate needs them: zero placehold
 
 ## Fixed dates
 
-- 22 Oct, 10 pm Phoenix time. The weekly limit resets, and wave 18 lanes start.
+- 21 Oct, 19:00Z. The weekly limit reset; wave 18 lanes started about 21:00Z. Next reset 28 Oct 19:00Z.
 - End of wave 21. Andrew's one sitting.

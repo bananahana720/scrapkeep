@@ -42,7 +42,7 @@ func _run() -> void:
 		_t.check("controls keep action on " + key, help.diagram.label_of(key) != "" or ControlsDiagram.ARROWS.has(key))
 	help.page_button.pressed.emit()
 	await process_frame
-	_t.check("pictures replace controls", not help.diagram.visible and help._mechanics.visible and help.page_button.text == "Controls")
+	_t.check("pictures replace controls", not help.diagram.visible and help._mechanics.visible and help.page_button.text == "Rules")
 	game.screens._content.modulate.a = 1.0
 	_t.check("pictures page fits 40 words including drawn labels", WordBudget.count(game.screens).hud <= 40)
 	_t.eq("three pictures", help.pictures.size(), 3)
@@ -59,8 +59,54 @@ func _run() -> void:
 		_t.check(id + " fits screen", root.get_visible_rect().encloses(picture.get_global_rect()) and root.get_visible_rect().encloses(caption.get_global_rect()))
 		_t.eq(id + " leaves mouse to menu", picture.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 	_t.check("Back fits screen", root.get_visible_rect().encloses(help.back.get_global_rect()))
+	_t.check("SPIL-9 caption says the next ram calls it in", MechanicsDiagram.CAPTIONS["companion"].contains("Next ram calls it in"))
 	help.page_button.pressed.emit()
-	_t.check("Controls returns to the keyboard", help.diagram.visible and not help._mechanics.visible)
+	await process_frame
+	game.screens._content.modulate.a = 1.0
+	_t.check("rules replace pictures", help._rules.visible and not help._mechanics.visible and not help.diagram.visible and help.page_button.text == "Controls")
+	var rules_words: Dictionary = WordBudget.count(game.screens)
+	_t.check("rules page fits 40 words", rules_words.hud <= 40, "%d words: %s" % [rules_words.hud, rules_words.items])
+	# The verbs of HELP-REFRESH, each by a word the rendered page shows (SPIL-9 is the Pictures caption).
+	var drawn := PackedStringArray()
+	for item in rules_words.items:
+		drawn.append(String(item.text).to_lower())
+	var shown := " ".join(drawn)
+	var rules_in_order := []
+	for rule in FieldNotes.FIELD_RULES:
+		rules_in_order.append(rule.id)
+	_t.eq("rules cover grip, jam, cast, radio, stake and active", rules_in_order, ["grip", "jam", "cast", "radio", "stake", "active"])
+	for want in ["wall grip", "jam", "cast time", "radio", "stake", "slots 2, 3", "hold e"]:
+		_t.check("rules page shows \"" + want + "\"", shown.contains(want))
+	# Actives are off by default: no F line, and never the dev flag's name.
+	_t.check("actives off by default", game.tuning.option("actives") != "on")
+	_t.check("actives off: no F line", not help.rules["active"].is_visible_in_tree() and not shown.contains("f:"), shown)
+	_t.check("rules page never names --actives", not shown.contains("--actives"), shown)
+	for id in help.rules:
+		if id == "active":
+			continue
+		var line: Label = help.rules[id]
+		_t.check(id + " rule is a visible single line on screen", line.is_visible_in_tree() and not line.text.contains("\n")
+			and root.get_visible_rect().encloses(line.get_global_rect()))
+	# With actives on, the F line shows, inside the same budget, still without the flag's name.
+	game.tuning.set_option("actives", "on")
+	help._show("rules")
+	await process_frame
+	game.screens._content.modulate.a = 1.0
+	var on_words: Dictionary = WordBudget.count(game.screens)
+	var on_drawn := PackedStringArray()
+	for item in on_words.items:
+		on_drawn.append(String(item.text).to_lower())
+	var on_shown := " ".join(on_drawn)
+	_t.check("actives on: rules page fits 40 words", on_words.hud <= 40, "%d words: %s" % [on_words.hud, on_words.items])
+	_t.check("actives on: F line shows", on_shown.contains("f: fire your active") and not on_shown.contains("--actives"), on_shown)
+	for id in help.rules:
+		var line: Label = help.rules[id]
+		_t.check(id + " rule (actives on) is a visible single line on screen", line.is_visible_in_tree() and not line.text.contains("\n")
+			and root.get_visible_rect().encloses(line.get_global_rect()))
+	game.tuning.set_option("actives", "off")
+	_t.check("Rules page keeps Back on screen", root.get_visible_rect().encloses(help.back.get_global_rect()))
+	help.page_button.pressed.emit()
+	_t.check("Controls returns to the keyboard", help.diagram.visible and not help._mechanics.visible and not help._rules.visible and help.page_button.text == "Pictures")
 	help.page_button.pressed.emit()
 	help.back.pressed.emit()
 	_t.check("Back closes help", not game.screens.help_open())

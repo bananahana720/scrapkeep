@@ -96,8 +96,13 @@ for y in (0.12, 1.9, 2.3):
 bind("WinchPost")
 for side in (-1, 1):
     b.beam("fleet_paint", g(side * 0.45, -0.2, -0.5), g(0, 0.45, -1.3), 0.10, color="charcoal")
-b.box("fleet_paint", (0.32, 0.28, 0.25), loc=g(0, 1.2, 0.48), color=PAINT)
 bind("WinchFrame")
+# The hook housing rides the head: anchor_crew.gd:118-122 leans CrewBrace 8 deg for the whole hold and
+# AnchorHead is its child, so a housing left on WinchFrame was swallowed by the head sphere (209 mm).
+# Bound to AnchorHead it leans with the head and (unlike CrewBrace) stays out of the measured core.
+# Rest position is unchanged; the hook and its HostileHook hardpoint stay where they were.
+b.box("fleet_paint", (0.32, 0.28, 0.25), loc=g(0, 1.2, 0.48), color=PAINT)
+bind("AnchorHead")
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 assert max(math.hypot(v.co.x, v.co.y) for v in core) <= 0.800001
 assert abs(min(v.co.z for v in core) + 1.1) < 0.000001 and abs(max(v.co.z for v in core) - 1.1) < 0.000001
