@@ -221,9 +221,12 @@ export function plan({ picked, timings, budgetMs, width, solo = () => false, bot
 // not blamed); one that also fails on the base is base-red (listed, not blamed).
 // A test red on both sides is base-red only when the head fails no check the base passes:
 // #104 took unit_suite from 6 to 11 failing checks with the same test red on the base.
-export function classifyFailure({ rerunOk, baseOk, headChecks = [], baseChecks = [] }) {
+// A cached base red is weaker evidence than a fresh one, so a head red that shows no checks
+// (a crash) is never base-red on a cached verdict; it takes a fresh base run to say so.
+export function classifyFailure({ rerunOk, baseOk, headChecks = [], baseChecks = [], baseCached = false }) {
   if (rerunOk) return { kind: "flaky", newChecks: [] };
   if (baseOk === false) {
+    if (baseCached && headChecks.length === 0) return { kind: "pr-red", newChecks: [] };
     const base = new Set(baseChecks);
     const newChecks = headChecks.filter((check) => !base.has(check));
     return newChecks.length > 0 ? { kind: "pr-red", newChecks } : { kind: "base-red", newChecks: [] };
@@ -396,6 +399,19 @@ export function lanePool(width) {
 // cached one would read every later real red on that test as base-red.
 export function cacheableBaseRun(run) {
   return run.exit !== null && !run.killed && !run.timedOut;
+}
+
+// A base red is trusted from the cache only once two base runs agreed on the same failing
+// checks (a flaky base red then lasts for the run that saw it). A fresh pass replaces the entry.
+export function settleBaseEntry(prior, run) {
+  if (run.ok) return { ok: true, checks: [] };
+  const same = prior && prior.ok === false && prior.checks.length > 0
+    && prior.checks.length === run.checks.length && prior.checks.every((check, i) => check === run.checks[i]);
+  return { ok: false, checks: run.checks, confirmed: Boolean(same) };
+}
+
+export function trustedBaseEntry(entry) {
+  return Boolean(entry) && (entry.ok === true || entry.confirmed === true);
 }
 
 // The base run that may judge this run's verdict. A lane stop says nothing; a base timeout or
@@ -627,9 +643,9 @@ async function main() {
   let baseImport = null;
   async function onBase(test, timeoutMs, cancel = { cancelled: false }) {
     if (!options.baseCheck) return null;
-    if (baseCache[test]) {
+    if (trustedBaseEntry(baseCache[test])) {
       log(`  ${test} on the merge base: cached (${baseCache[test].ok ? "green" : "red"})`);
-      return baseCache[test];
+      return { ...baseCache[test], cached: true };
     }
     const baseSketch = path.join(baseDir(), SKETCH);
     if (!existsSync(path.join(baseSketch, test))) return null;
@@ -658,9 +674,10 @@ async function main() {
       () => cancel.cancelled,
     );
     if (cacheableBaseRun(run)) {
-      baseCache[test] = { ok: run.ok, checks: run.checks };
       // Another lane on this base tree may have written since; keep its entries, replace atomically.
-      const merged = { ...readBaseCache(), ...baseCache };
+      const disk = readBaseCache();
+      baseCache[test] = settleBaseEntry(disk[test] ?? baseCache[test], run);
+      const merged = { ...disk, ...baseCache };
       try {
         mkdirSync(path.dirname(baseCacheFile), { recursive: true });
         const temp = `${baseCacheFile}.${process.pid}.tmp`;
@@ -700,7 +717,7 @@ async function main() {
     baseRun = usableBaseRun(rerun, baseRun);
     const baseOk = rerun.ok || !baseRun ? null : baseRun.ok;
     const baseChecks = rerun.ok || !baseRun ? [] : baseRun.checks;
-    return { ...classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks }), rerun };
+    return { ...classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks, baseCached: Boolean(baseRun?.cached) }), rerun };
   }
 
   async function handle(result) {

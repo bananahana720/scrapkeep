@@ -8,6 +8,8 @@ import {
   canaries,
   classify,
   cacheableBaseRun,
+  settleBaseEntry,
+  trustedBaseEntry,
   classifyFailure,
   indexFromFiles,
   lanePool,
@@ -297,4 +299,32 @@ test("a base timeout counts only against a head that also timed out; a lane stop
   const outsideKill = { ok: false, exit: null, killed: false, timedOut: false };
   assert.equal(usableBaseRun(red, outsideKill), null);
   assert.equal(usableBaseRun(slow, outsideKill), outsideKill);
+});
+
+test("a single base red is not trusted from the cache; a second agreeing run confirms it", () => {
+  const first = settleBaseEntry(undefined, { ok: false, checks: ["a", "b"] });
+  assert.equal(trustedBaseEntry(first), false);
+  assert.equal(trustedBaseEntry(settleBaseEntry(first, { ok: false, checks: ["a", "b"] })), true);
+  assert.equal(trustedBaseEntry(settleBaseEntry(first, { ok: false, checks: ["a"] })), false);
+  assert.equal(trustedBaseEntry(settleBaseEntry(settleBaseEntry(undefined, { ok: false, checks: [] }), { ok: false, checks: [] })), false);
+  assert.equal(trustedBaseEntry({ ok: true, checks: [] }), true);
+});
+
+test("a cached base red expires when a fresh base run passes", () => {
+  const flaky = settleBaseEntry(undefined, { ok: false, checks: ["a"] });
+  const after = settleBaseEntry(flaky, { ok: true, checks: [] });
+  assert.deepEqual(after, { ok: true, checks: [] });
+  const confirmed = settleBaseEntry(flaky, { ok: false, checks: ["a"] });
+  assert.equal(trustedBaseEntry(settleBaseEntry(confirmed, { ok: true, checks: [] })) && settleBaseEntry(confirmed, { ok: true, checks: [] }).ok, true);
+});
+
+test("planted head red: a cached base red never hides a head-only red", () => {
+  const cached = settleBaseEntry(undefined, { ok: false, checks: ["a"] });
+  assert.equal(trustedBaseEntry(cached), false, "single-run red is rerun, not reused");
+  const confirmed = settleBaseEntry(cached, { ok: false, checks: ["a"] });
+  const grew = classifyFailure({ rerunOk: false, baseOk: false, headChecks: ["a", "x"], baseChecks: confirmed.checks, baseCached: true });
+  assert.equal(grew.kind, "pr-red");
+  assert.deepEqual(grew.newChecks, ["x"]);
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: false, headChecks: [], baseChecks: confirmed.checks, baseCached: true }).kind, "pr-red");
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: false, headChecks: [], baseChecks: [], baseCached: false }).kind, "base-red");
 });
