@@ -28,6 +28,11 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 #   anomalies.md   one line per anomaly, in HAPPY-ACCIDENTS.md's shape.
 # and prints "item_fuzz: <seeds> seeds, <n> anomalies" last.
 #
+# Every seed, a solo run included, runs in a fresh child Godot under
+# <out>/children/<position>-seed-<seed>, so a seed reads the same alone or in a batch.
+# --child-timeout=S bounds each child in wall seconds (default 600); a killed or failed
+# child is INCONCLUSIVE, left out of the results, and makes the tool exit 3.
+#
 # Per tick: no non-finite ball position, velocity or health; no non-finite enemy
 # position; live bolts within Bolts.MAX_LIVE; every slot within the charge ceiling and
 # every cooldown at or over the 0.4 s floor; damage reduction within its hyperbolic
@@ -87,12 +92,85 @@ func _initialize() -> void:
 	_out = _settings.get("out", "user://item-fuzz")
 	_seconds = float(_settings.get("seconds", "90"))
 	_seeds = _seed_list(String(_settings.get("seeds", "1-200")))
+	# --path moves the working directory to the project, so a relative --out is read from
+	# the shell's directory, as traversal_line reads it; parent, children and outliers share it.
+	_out = ProjectSettings.globalize_path(_out)
+	if not _out.is_absolute_path():
+		_out = OS.get_environment("PWD").path_join(_out)
+	if _settings.has("child") and _seeds.size() != 1:
+		printerr("item_fuzz: a child must run exactly one seed")
+		quit(2)
+		return
 	DirAccess.make_dir_recursive_absolute(_out)
 	for name in ["fuzz.ndjson", "anomalies.md"]:
 		var f := FileAccess.open(_out.path_join(name), FileAccess.WRITE)
 		if f != null:
 			f.close()
-	_next()
+	if _settings.has("child"):
+		_next()
+	else:
+		_run_children()
+
+
+# One fresh child Godot per seed, with its own user data, as traversal_line runs them: a seed
+# run after another in one process inherits its physics space and statics, and seed 2751
+# after 2750 drifted from tick 568 on (19 Oct speedrunner persona). GNU timeout owns the
+# child's process group, so a deadline kills descendants too.
+func _run_children() -> void:
+	var out := _out
+	var inconclusive := 0
+	for i in _seeds.size():
+		var child_out := out.path_join("children/%d-seed-%d" % [i + 1, _seeds[i]])
+		DirAccess.make_dir_recursive_absolute(child_out)
+		var previous := {}
+		for kind in ["DATA", "CONFIG", "CACHE"]:
+			var key: String = "XDG_%s_HOME" % kind
+			previous[key] = {"present": OS.has_environment(key), "value": OS.get_environment(key)}
+			OS.set_environment(key, child_out.path_join("state/" + kind.to_lower()))
+		var args := PackedStringArray(["--signal=KILL", "%ss" % _settings.get("child-timeout", "600"),
+			OS.get_executable_path(), "--headless", "--fixed-fps", "90", "--path",
+			ProjectSettings.globalize_path("res://"), "--script", "res://tools/item_fuzz.gd", "--",
+			"--child=1", "--seeds=%d" % _seeds[i], "--seconds=%s" % _seconds, "--out=" + child_out])
+		var output := []
+		var code := OS.execute("timeout", args, output, true)
+		for key in previous:
+			if previous[key]["present"]:
+				OS.set_environment(key, previous[key]["value"])
+			else:
+				OS.unset_environment(key)
+		var log := "".join(output)
+		var file := FileAccess.open(child_out.path_join("child.log"), FileAccess.WRITE)
+		if file != null:
+			file.store_string(log)
+		var records: Array = []
+		var lines := FileAccess.open(child_out.path_join("fuzz.ndjson"), FileAccess.READ)
+		while lines != null and not lines.eof_reached():
+			var line := lines.get_line().strip_edges()
+			var parsed = JSON.parse_string(line) if line != "" else null
+			if parsed is Dictionary:
+				records.append(parsed)
+		if code != 0 or records.size() != 1 or int(records[0].get("seed", -1)) != _seeds[i] or log.contains("SCRIPT ERROR"):
+			inconclusive += 1
+			printerr("item_fuzz: seed %d INCONCLUSIVE (child exit %d, %d records); see %s" % [_seeds[i], code, records.size(), child_out])
+			continue
+		var record: Dictionary = records[0]
+		# JSON parses every number as float; keep the integer fields integers.
+		for key in ["seed", "size", "generated", "ticks", "kills"]:
+			record[key] = int(record[key])
+		for a in record["anomalies"]:
+			a["seed"] = int(a["seed"])
+			a["tick"] = int(a["tick"])
+		_results.append(record)
+		_anomalies.append_array(record["anomalies"])
+		var ndjson := FileAccess.open(out.path_join("fuzz.ndjson"), FileAccess.READ_WRITE)
+		if ndjson != null:
+			ndjson.seek_end()
+			ndjson.store_line(JSON.stringify(record))
+			ndjson.close()
+		for line in log.split("\n", false):
+			if line.begins_with("item_fuzz: seed "):
+				print(line)
+	_finish(3 if inconclusive > 0 else 0)
 
 
 static func _parse(args: PackedStringArray) -> Dictionary:
@@ -333,7 +411,7 @@ func _outliers() -> void:
 						"description": "This build's %s ran far past its peers'." % ("speed" if stat == "peak_speed" else "kill count")})
 
 
-func _finish() -> void:
+func _finish(code := 0) -> void:
 	_outliers()
 	var file := FileAccess.open(_out.path_join("anomalies.md"), FileAccess.WRITE)
 	if file != null:
@@ -347,4 +425,4 @@ func _finish() -> void:
 			natural_all[k] = true
 	print("item_fuzz: %d seeds, %d anomalies, %d of 12 trigger kinds fired naturally somewhere, written to %s"
 		% [_results.size(), _anomalies.size(), natural_all.size(), ProjectSettings.globalize_path(_out)])
-	quit(0)
+	quit(code)
