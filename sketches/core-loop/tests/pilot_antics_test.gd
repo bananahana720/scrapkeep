@@ -124,6 +124,7 @@ const REST_TOLERANCE := 0.02
 const BONE_FLOOR := 0.02
 const SLACK := 1.1
 const FRAME := 1.0 / 60.0
+const POP := 0.436  # 25 degrees
 
 
 func _stream(antic, animator: AnimationPlayer, pilot: Node3D, id: String) -> void:
@@ -135,71 +136,132 @@ func _stream(antic, animator: AnimationPlayer, pilot: Node3D, id: String) -> voi
 	limits.resize(rest.size())
 	limits.fill(BONE_FLOOR)
 	var past_end := ""
+	var peak := 0.0
+	var peak_clip := ""
 	for row in rows:
 		if row.clip == "":
 			continue
 		var moved := _clip_motion(animator, skeleton, row.clip, row.speed, row.length)
 		for i in moved.size():
 			limits[i] = maxf(limits[i], moved[i])
+			if moved[i] > peak:
+				peak = moved[i]
+				peak_clip = "%s at %.3f" % [row.clip, row.speed]
 		var asks: float = (float(row.end) - float(row.start)) * PilotAntics.LENGTH * float(row.speed)
 		if asks > float(row.length) + 0.001:
 			past_end += " %s asks %.2f of %.2f s;" % [row.clip, asks, row.length]
 	animator.stop()
 	skeleton.reset_bone_poses()
 	_t.check("%s never holds a clip past its end:%s" % [id, past_end], past_end == "")
-	var before := rest
-	var worst := 0.0
-	var worst_at := 0.0
-	var worst_bone := ""
-	var worst_limit := 0.0
-	var over := 0.0
-	var last := rest
-	for k in int(floor(PilotAntics.LENGTH / FRAME)) + 1:
-		var t := float(k) * FRAME / PilotAntics.LENGTH
-		antic.apply(t)
-		last = _rotations(skeleton)
-		for i in last.size():
-			var step: float = (before[i] as Quaternion).angle_to(last[i])
-			if step / (limits[i] * SLACK) > over:
-				over = step / (limits[i] * SLACK)
-				worst = step
-				worst_at = t
-				worst_bone = skeleton.get_bone_name(i)
-				worst_limit = limits[i]
-		before = last
-	_t.check("%s ends the bit at rest (%.3f rad off)" % [id, _step(rest, last)], _step(rest, last) <= REST_TOLERANCE)
+	# _lift tells a flipped sign from a real turn by the dot product between frames, which is
+	# only sound under a quarter turn of quaternion angle, i.e. PI/2 of rotation, per frame.
+	_t.check("%s clips turn no bone PI/2 in a frame (%.3f rad, %s)" % [id, peak, peak_clip], peak < PI / 2.0)
+	var run := _scan(antic, skeleton, limits, rest)
+	_t.check("%s ends the bit at rest (%.3f rad off)" % [id, _step(rest, run.last)], _step(rest, run.last) <= REST_TOLERANCE)
 	antic.apply(1.0)
 	var after := _rotations(skeleton)
 	var seat_over := 0.0
 	for i in after.size():
-		seat_over = maxf(seat_over, (last[i] as Quaternion).angle_to(after[i]) / (limits[i] * SLACK))
+		seat_over = maxf(seat_over, (run.last[i] as Quaternion).angle_to(after[i]) / (limits[i] * SLACK))
 	_t.check("%s seat() snaps nothing (%.2f of the per-bone limit)" % [id, seat_over], seat_over <= 1.0)
 	_t.check("%s moves no bone faster than its own clips: %s %.3f rad/frame at t %.3f against %.3f (%.2f of limit)" \
-		% [id, worst_bone, worst, worst_at, worst_limit, over], over <= 1.0)
+		% [id, run.bone, run.step, run.at, run.limit, run.over], run.over <= 1.0)
+	# Positive control: the same scan must fire on a 25 degree pop planted on one bone for one
+	# frame (Sable's spine mid-bit, Tally's left hand inside the first stamp's fade-in).
+	var plant := {}
+	if id == "pylon_engineer":
+		plant = {"bone": _bone_like(skeleton, "spine"), "frame": int(0.5 * PilotAntics.LENGTH / FRAME)}
+	elif id == "tally":
+		plant = {"bone": skeleton.find_bone("hand.L"), "frame": int((0.2 * PilotAntics.LENGTH + 0.1) / FRAME)}
+	if not plant.is_empty():
+		skeleton.reset_bone_poses()
+		var pop := _scan(antic, skeleton, limits, rest, plant)
+		_t.check("%s pop check fires on a planted 25 degree pop on %s (%.2f of limit %.3f)" \
+			% [id, skeleton.get_bone_name(plant.bone), pop.over, limits[plant.bone]], pop.over > 1.0)
+		antic.apply(1.0)
+	_cost(antic, id)
 	animator.stop()
 	skeleton.reset_bone_poses()
 
 
+# Walks the bit at 1/60 s. plant: {bone, frame} twists that bone by POP for that one frame after
+# apply(). Returns the worst step as a share of its bone's limit, with where it was.
+func _scan(antic, skeleton: Skeleton3D, limits: Array, rest: Array, plant: Dictionary = {}) -> Dictionary:
+	var run := {"over": 0.0, "step": 0.0, "at": 0.0, "bone": "", "limit": 0.0, "last": rest}
+	var before := rest
+	for k in int(floor(PilotAntics.LENGTH / FRAME)) + 1:
+		var t := float(k) * FRAME / PilotAntics.LENGTH
+		antic.apply(t)
+		if not plant.is_empty() and k == plant.frame:
+			var b: int = plant.bone
+			skeleton.set_bone_pose_rotation(b, skeleton.get_bone_pose_rotation(b) * Quaternion(Vector3.RIGHT, POP))
+		var now := _rotations(skeleton)
+		for i in now.size():
+			var step: float = (before[i] as Quaternion).angle_to(now[i])
+			if step / (limits[i] * SLACK) > run.over:
+				run.over = step / (limits[i] * SLACK)
+				run.step = step
+				run.at = t
+				run.bone = skeleton.get_bone_name(i)
+				run.limit = limits[i]
+		before = now
+		run.last = now
+	return run
+
+
+func _bone_like(skeleton: Skeleton3D, part: String) -> int:
+	for i in skeleton.get_bone_count():
+		if String(skeleton.get_bone_name(i)).contains(part):
+			return i
+	return 0
+
+
+# Wall time of apply() at every 1/60 s frame of the bit, headless. Relative numbers only: this
+# box is not a player's machine and there is no renderer here.
+func _cost(antic, id: String) -> void:
+	var times: Array = []
+	var at: Array = []
+	for k in int(floor(PilotAntics.LENGTH / FRAME)) + 1:
+		var t := float(k) * FRAME / PilotAntics.LENGTH
+		var begun := Time.get_ticks_usec()
+		antic.apply(t)
+		times.append(Time.get_ticks_usec() - begun)
+		at.append(t)
+	var sorted := times.duplicate()
+	sorted.sort()
+	var worst: int = sorted[sorted.size() - 1]
+	print("COST %s apply() max %d us at t %.3f, p95 %d us, median %d us (%d frames)" % [id, worst,
+		at[times.find(worst)], sorted[int(sorted.size() * 0.95)], sorted[sorted.size() / 2], sorted.size()])
+	antic.apply(1.0)
+
+
 # Real process frames: the bit's pose must survive the engine running the animator and the scene
 # between apply() calls, and survive another clip being played on the animator mid-bit (a card's
-# unlock clip ending into its idle loop).
+# unlock clip ending into its idle loop). Three frames cover both write paths: a plain clip
+# drive (0.45), a fade-out to rest (0.1 s before the end) and, where the second segment fades
+# in, that fade-in.
 func _in_engine(antic, animator: AnimationPlayer, pilot: Node3D, id: String) -> void:
 	var skeleton := pilot.find_children("*", "Skeleton3D", true, false)[0] as Skeleton3D
-	var t := 0.45
-	antic.apply(t)
-	var posed := _rotations(skeleton)
-	await process_frame
-	await process_frame
-	var kept := _step(posed, _rotations(skeleton))
-	_t.check("%s keeps its pose through engine frames (%.4f rad)" % [id, kept], kept < 0.001)
-	var other := "brace" if animator.has_animation("brace") else String(animator.get_animation_list()[0])
-	animator.play(other, 0.0)
-	await process_frame
-	antic.apply(t)
-	await process_frame
-	var again := _step(posed, _rotations(skeleton))
-	_t.check("%s retakes the animator after another clip played (%.4f rad)" % [id, again],
-		again < 0.001 and not animator.is_playing())
+	var rows: Array = antic.segments()
+	var times := {"drive": 0.45, "fade-out": 1.0 - 0.1 / PilotAntics.LENGTH}
+	if PilotAntics._window(id, 1) > 0.05:
+		times["fade-in"] = float(rows[1].start) + 0.05 / PilotAntics.LENGTH
+	for label in times:
+		var t: float = times[label]
+		antic.apply(t)
+		var posed := _rotations(skeleton)
+		await process_frame
+		await process_frame
+		var kept := _step(posed, _rotations(skeleton))
+		_t.check("%s keeps its %s pose through engine frames (%.4f rad)" % [id, label, kept], kept < 0.001)
+		var other := "brace" if animator.has_animation("brace") else String(animator.get_animation_list()[0])
+		animator.play(other, 0.0)
+		await process_frame
+		antic.apply(t)
+		await process_frame
+		var again := _step(posed, _rotations(skeleton))
+		_t.check("%s retakes the animator at %s after another clip played (%.4f rad)" % [id, label, again],
+			again < 0.001 and not animator.is_playing())
 	antic.apply(1.0)
 
 

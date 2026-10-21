@@ -63,6 +63,9 @@ var _clip := ""
 # The move's segments and the pilot's skeletons, found once per bit rather than per frame.
 var _rows: Array = []
 var _skeleton_list: Array = []
+# Poses already worked out this bit, by clip and time (_grab) and by t (_compose).
+var _memo := {}
+var _composed := {}
 
 
 # rec: the shell's holder (stays put), core (the cage that rolls), pod (the upright cradle the
@@ -134,12 +137,16 @@ func seat() -> void:
 	_clip = ""
 	_rows = []
 	_skeleton_list = []
+	_memo = {}
+	_composed = {}
 
 
 func _climb_out() -> void:
 	out = true
 	_rows = []
 	_skeleton_list = []
+	_memo = {}
+	_composed = {}
 	_seat = pilot.transform
 	_core_rest = core.transform if core != null else Transform3D.IDENTITY
 	var relative := holder.global_transform.affine_inverse() * pilot.global_transform if holder.is_inside_tree() \
@@ -168,6 +175,10 @@ func _path_to(root: Node, node: Node3D) -> Transform3D:
 func _play(t: float) -> void:
 	if animator == null or not is_instance_valid(animator):
 		return
+	# Anything else that played the animator (a card's unlock clip ending into its idle loop)
+	# would repose the bones on its next frame, over a pose written from the memo below.
+	if animator.is_playing():
+		animator.pause()
 	if _rows.is_empty():
 		_rows = segments()
 		_skeleton_list = _skeletons()
@@ -202,6 +213,14 @@ func _fades_in(row: Dictionary, index: int, t: float) -> bool:
 
 # The pose at t with the segment's fade-in applied (no fade-out).
 func _compose(rows: Array, t: float, skeletons: Array) -> Array:
+	if _composed.has(t):
+		return _composed[t]
+	var pose := _compose_fresh(rows, t, skeletons)
+	_composed[t] = pose
+	return pose
+
+
+func _compose_fresh(rows: Array, t: float, skeletons: Array) -> Array:
 	var at := 0
 	for i in rows.size():
 		if float(rows[i].start) <= t:
@@ -224,9 +243,16 @@ func _compose(rows: Array, t: float, skeletons: Array) -> Array:
 func _lift(sample: Callable, t0: float, t: float, from: Array) -> Dictionary:
 	var prev: Array = sample.call(t0)
 	var signs := _signs(from, prev)
-	var steps := maxi(1, ceili((t - t0) * LENGTH * FRAME_RATE))
-	for k in range(1, steps + 1):
-		var cur: Array = sample.call(t0 + (t - t0) * float(k) / float(steps))
+	# A fixed grid from t0, so the samples of one frame are the samples of the next (they are
+	# kept in _memo and _composed) and a frame costs only its own new points.
+	var grid := 1.0 / (LENGTH * FRAME_RATE)
+	var points: Array = []
+	for k in range(1, int((t - t0) / grid) + 1):
+		points.append(t0 + float(k) * grid)
+	if points.is_empty() or t - float(points[-1]) > 0.000001:
+		points.append(t)
+	for when in points:
+		var cur: Array = sample.call(when)
 		for s in cur.size():
 			for i in (cur[s] as Array).size():
 				if (prev[s][i][1] as Quaternion).dot(cur[s][i][1]) < 0.0:
@@ -264,6 +290,9 @@ func _drive(row: Dictionary, t: float, skeletons: Array) -> void:
 
 # The bone poses of the row's clip at t: per skeleton, per bone [position, rotation, scale].
 func _grab(row: Dictionary, t: float, skeletons: Array) -> Array:
+	var key := Vector3(float(row.start), t, float(String(row.clip).hash() % 100000))
+	if _memo.has(key):
+		return _memo[key]
 	_drive(row, t, skeletons)
 	var pose: Array = []
 	for skeleton in skeletons:
@@ -271,6 +300,7 @@ func _grab(row: Dictionary, t: float, skeletons: Array) -> Array:
 		for i in skeleton.get_bone_count():
 			bones.append([skeleton.get_bone_pose_position(i), skeleton.get_bone_pose_rotation(i), skeleton.get_bone_pose_scale(i)])
 		pose.append(bones)
+	_memo[key] = pose
 	return pose
 
 
