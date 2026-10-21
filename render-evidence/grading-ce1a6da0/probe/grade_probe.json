@@ -1,0 +1,444 @@
+{
+	"adapter": "NVIDIA GeForce RTX 3060",
+	"gap": 20.0,
+	"places": [
+		{
+			"agx_contrast": 1.25,
+			"camera_reach": 10.2478275299072,
+			"exposure": 1.10000002384186,
+			"gaps": {
+				"edge:amber~arc": 56.1769332885742,
+				"edge:hazard~amber": 36.0953330993652,
+				"edge:hazard~brass": 46.5755805969238,
+				"edge:slate~arc": 31.036262512207,
+				"edge:slate~hazard": 75.0836868286133,
+				"fill:hazard~charcoal": 52.4300842285156,
+				"fill:hazard~ledger": 10.0060710906982,
+				"fill:hazard~sand": 12.0456876754761,
+				"fill:hazard~sandstone": 14.1283645629883,
+				"fill:hazard~verdigris": 45.0690078735352
+			},
+			"id": "stage1-dawn",
+			"saturation": 1.20000004768372,
+			"seen": {
+				"charcoal": "1f1c1d",
+				"edge_amber": "d19d4d",
+				"edge_arc": "99cabc",
+				"edge_brass": "c8aa55",
+				"edge_hazard": "ea6c42",
+				"edge_slate": "718392",
+				"fill_charcoal": "862a1b",
+				"fill_ledger": "b68f80",
+				"fill_sand": "af8473",
+				"fill_sandstone": "b16f4e",
+				"fill_verdigris": "864038",
+				"ledger": "a69689",
+				"sand": "99897b",
+				"sandstone": "967152",
+				"verdigris": "273c3e"
+			}
+		},
+		{
+			"agx_contrast": 1.25,
+			"camera_reach": 10.421745300293,
+			"exposure": 1.10000002384186,
+			"gaps": {
+				"edge:amber~arc": 55.5892181396484,
+				"edge:hazard~amber": 35.5383644104004,
+				"edge:hazard~brass": 46.0137519836426,
+				"edge:slate~arc": 30.3523483276367,
+				"edge:slate~hazard": 74.2947540283203,
+				"fill:hazard~charcoal": 41.4492225646973,
+				"fill:hazard~ledger": 4.50896596908569,
+				"fill:hazard~sand": 4.9918384552002,
+				"fill:hazard~sandstone": 5.62380599975586,
+				"fill:hazard~verdigris": 32.802001953125
+			},
+			"id": "stage2-morning",
+			"saturation": 1.20000004768372,
+			"seen": {
+				"charcoal": "39362f",
+				"edge_amber": "d19d4e",
+				"edge_arc": "9acabc",
+				"edge_brass": "c8aa56",
+				"edge_hazard": "ea6d43",
+				"edge_slate": "728492",
+				"fill_charcoal": "8c3d2b",
+				"fill_ledger": "d4b89c",
+				"fill_sand": "ceaf90",
+				"fill_sandstone": "cf9b6d",
+				"fill_verdigris": "8e5f4d",
+				"ledger": "d2bfa5",
+				"sand": "cab698",
+				"sandstone": "caa273",
+				"verdigris": "496255"
+			}
+		},
+		{
+			"agx_contrast": 1.25,
+			"camera_reach": 10.7420387268066,
+			"exposure": 1.10000002384186,
+			"gaps": {
+				"edge:amber~arc": 55.5892181396484,
+				"edge:hazard~amber": 35.5383644104004,
+				"edge:hazard~brass": 46.0137519836426,
+				"edge:slate~arc": 30.3523483276367,
+				"edge:slate~hazard": 74.2947540283203,
+				"fill:hazard~charcoal": 41.3093719482422,
+				"fill:hazard~ledger": 4.35823535919189,
+				"fill:hazard~sand": 4.9918384552002,
+				"fill:hazard~sandstone": 5.62380599975586,
+				"fill:hazard~verdigris": 32.802001953125
+			},
+			"id": "arena-w1",
+			"saturation": 1.20000004768372,
+			"seen": {
+				"charcoal": "3a372f",
+				"edge_amber": "d19d4e",
+				"edge_arc": "9acabc",
+				"edge_brass": "c8aa56",
+				"edge_hazard": "ea6d43",
+				"edge_slate": "728492",
+				"fill_charcoal": "8c3d2b",
+				"fill_ledger": "d4b89c",
+				"fill_sand": "ceaf90",
+				"fill_sandstone": "cf9b6d",
+				"fill_verdigris": "8e5f4d",
+				"ledger": "d2bfa5",
+				"sand": "cab698",
+				"sandstone": "caa273",
+				"verdigris": "496255"
+			}
+		},
+		{
+			"agx_contrast": 1.25,
+			"camera_reach": 10.4234476089478,
+			"exposure": 1.10000002384186,
+			"gaps": {
+				"edge:amber~arc": 50.7153701782227,
+				"edge:hazard~amber": 33.3621788024902,
+				"edge:hazard~brass": 43.2343139648438,
+				"edge:slate~arc": 30.4335460662842,
+				"edge:slate~hazard": 65.8273391723633,
+				"fill:hazard~charcoal": 34.1637268066406,
+				"fill:hazard~ledger": 6.15151977539062,
+				"fill:hazard~sand": 7.42974853515625,
+				"fill:hazard~sandstone": 8.34301662445068,
+				"fill:hazard~verdigris": 29.2998371124268
+			},
+			"id": "stage3-noon",
+			"saturation": 1.10000002384186,
+			"seen": {
+				"charcoal": "292f30",
+				"edge_amber": "bb8c4a",
+				"edge_arc": "8abaad",
+				"edge_brass": "b3984f",
+				"edge_hazard": "d05f43",
+				"edge_slate": "647583",
+				"fill_charcoal": "703630",
+				"fill_ledger": "b19881",
+				"fill_sand": "aa8d76",
+				"fill_sandstone": "a87957",
+				"fill_verdigris": "734b44",
+				"ledger": "aa9f89",
+				"sand": "a0947d",
+				"sandstone": "9b7e5b",
+				"verdigris": "324947"
+			}
+		},
+		{
+			"agx_contrast": 1.25,
+			"camera_reach": 10.6610746383667,
+			"exposure": 1.10000002384186,
+			"gaps": {
+				"edge:amber~arc": 51.4807624816895,
+				"edge:hazard~amber": 33.3043899536133,
+				"edge:hazard~brass": 43.694637298584,
+				"edge:slate~arc": 30.4733829498291,
+				"edge:slate~hazard": 66.7184448242188,
+				"fill:hazard~charcoal": 34.9398040771484,
+				"fill:hazard~ledger": 7.75096988677979,
+				"fill:hazard~sand": 8.78408622741699,
+				"fill:hazard~sandstone": 10.0474338531494,
+				"fill:hazard~verdigris": 31.4595203399658
+			},
+			"id": "stage4-afternoon",
+			"saturation": 1.10000002384186,
+			"seen": {
+				"charcoal": "272928",
+				"edge_amber": "bb8b48",
+				"edge_arc": "89b9ac",
+				"edge_brass": "b3984e",
+				"edge_hazard": "d05e41",
+				"edge_slate": "637482",
+				"fill_charcoal": "6f322a",
+				"fill_ledger": "ac8361",
+				"fill_sand": "a57957",
+				"fill_sandstone": "a36640",
+				"fill_verdigris": "714135",
+				"ledger": "a18966",
+				"sand": "977e5b",
+				"sandstone": "916941",
+				"verdigris": "2f3d36"
+			}
+		},
+		{
+			"agx_contrast": 1.25,
+			"camera_reach": 10.4866809844971,
+			"exposure": 1.10000002384186,
+			"gaps": {
+				"edge:amber~arc": 61.0771179199219,
+				"edge:hazard~amber": 38.0820007324219,
+				"edge:hazard~brass": 49.8989791870117,
+				"edge:slate~arc": 33.4484100341797,
+				"edge:slate~hazard": 80.4164428710938,
+				"fill:hazard~charcoal": 54.1299247741699,
+				"fill:hazard~ledger": 29.5830726623535,
+				"fill:hazard~sand": 31.9804782867432,
+				"fill:hazard~sandstone": 33.596076965332,
+				"fill:hazard~verdigris": 51.9767265319824
+			},
+			"id": "arena-w2",
+			"saturation": 1.20000004768372,
+			"seen": {
+				"charcoal": "060909",
+				"edge_amber": "c28b36",
+				"edge_arc": "86bcad",
+				"edge_brass": "b8993e",
+				"edge_hazard": "db562d",
+				"edge_slate": "5e7180",
+				"fill_charcoal": "6f1a07",
+				"fill_ledger": "804531",
+				"fill_sand": "7c3f2b",
+				"fill_sandstone": "7c331a",
+				"fill_verdigris": "6f2111",
+				"ledger": "494738",
+				"sand": "403f32",
+				"sandstone": "3d301d",
+				"verdigris": "0a1615"
+			}
+		},
+		{
+			"agx_contrast": 1.25,
+			"camera_reach": 10.5377445220947,
+			"exposure": 1.04999995231628,
+			"gaps": {
+				"edge:amber~arc": 54.8733863830566,
+				"edge:hazard~amber": 34.9861145019531,
+				"edge:hazard~brass": 44.9846572875977,
+				"edge:slate~arc": 30.2788772583008,
+				"edge:slate~hazard": 72.1714324951172,
+				"fill:hazard~charcoal": 41.7348937988281,
+				"fill:hazard~ledger": 5.66596937179565,
+				"fill:hazard~sand": 6.09419441223145,
+				"fill:hazard~sandstone": 5.5137996673584,
+				"fill:hazard~verdigris": 36.5178680419922
+			},
+			"id": "stage5-golden",
+			"saturation": 1.14999997615814,
+			"seen": {
+				"charcoal": "312116",
+				"edge_amber": "cd9a4c",
+				"edge_arc": "98c6b9",
+				"edge_brass": "c4a653",
+				"edge_hazard": "e46a41",
+				"edge_slate": "71808e",
+				"fill_charcoal": "852e17",
+				"fill_ledger": "ce946a",
+				"fill_sand": "c88a5e",
+				"fill_sandstone": "c77740",
+				"fill_verdigris": "88442a",
+				"ledger": "c99b70",
+				"sand": "c19063",
+				"sandstone": "be7a40",
+				"verdigris": "3f3f2c"
+			}
+		},
+		{
+			"agx_contrast": 1.25,
+			"camera_reach": 10.4732761383057,
+			"exposure": 1.04999995231628,
+			"gaps": {
+				"edge:amber~arc": 55.2246398925781,
+				"edge:hazard~amber": 35.345157623291,
+				"edge:hazard~brass": 45.8630599975586,
+				"edge:slate~arc": 30.8920764923096,
+				"edge:slate~hazard": 73.1039505004883,
+				"fill:hazard~charcoal": 55.5926856994629,
+				"fill:hazard~ledger": 17.0693740844727,
+				"fill:hazard~sand": 19.439416885376,
+				"fill:hazard~sandstone": 21.0061187744141,
+				"fill:hazard~verdigris": 50.0144691467285
+			},
+			"id": "stage6-dusk",
+			"saturation": 1.14999997615814,
+			"seen": {
+				"charcoal": "120d0e",
+				"edge_amber": "cc994b",
+				"edge_arc": "97c6b9",
+				"edge_brass": "c3a653",
+				"edge_hazard": "e46940",
+				"edge_slate": "6f7f8e",
+				"fill_charcoal": "7e220f",
+				"fill_ledger": "a36653",
+				"fill_sand": "9f5d49",
+				"fill_sandstone": "9d4c2f",
+				"fill_verdigris": "7f2e21",
+				"ledger": "826859",
+				"sand": "795e4e",
+				"sandstone": "724930",
+				"verdigris": "1b2223"
+			}
+		},
+		{
+			"agx_contrast": 1.25,
+			"camera_reach": 10.4609956741333,
+			"exposure": 1.14999997615814,
+			"gaps": {
+				"edge:amber~arc": 44.5334320068359,
+				"edge:hazard~amber": 29.4284000396729,
+				"edge:hazard~brass": 37.8255500793457,
+				"edge:slate~arc": 26.7299098968506,
+				"edge:slate~hazard": 58.2780876159668,
+				"fill:hazard~charcoal": 41.8835029602051,
+				"fill:hazard~ledger": 5.21454286575317,
+				"fill:hazard~sand": 6.39863586425781,
+				"fill:hazard~sandstone": 7.37525081634521,
+				"fill:hazard~verdigris": 33.5827331542969
+			},
+			"id": "arena-w3",
+			"saturation": 0.949999988079071,
+			"seen": {
+				"charcoal": "242224",
+				"edge_amber": "c79e5f",
+				"edge_arc": "a2c7bd",
+				"edge_brass": "c0a966",
+				"edge_hazard": "d87554",
+				"edge_slate": "778692",
+				"fill_charcoal": "7d3429",
+				"fill_ledger": "bd9e95",
+				"fill_sand": "b8958a",
+				"fill_sandstone": "b58067",
+				"fill_verdigris": "814c48",
+				"ledger": "b7a49c",
+				"sand": "ae9a91",
+				"sandstone": "a8836b",
+				"verdigris": "344448"
+			}
+		},
+		{
+			"agx_contrast": 1.25,
+			"camera_reach": 10.3029127120972,
+			"exposure": 1.08000004291534,
+			"gaps": {
+				"edge:amber~arc": 54.1572761535645,
+				"edge:hazard~amber": 34.4149475097656,
+				"edge:hazard~brass": 44.8751106262207,
+				"edge:slate~arc": 29.6831665039062,
+				"edge:slate~hazard": 72.0277099609375,
+				"fill:hazard~charcoal": 39.9346466064453,
+				"fill:hazard~ledger": 4.01876449584961,
+				"fill:hazard~sand": 4.47319030761719,
+				"fill:hazard~sandstone": 4.38757562637329,
+				"fill:hazard~verdigris": 32.1743774414062
+			},
+			"id": "camp",
+			"saturation": 1.14999997615814,
+			"seen": {
+				"charcoal": "3a2f1d",
+				"edge_amber": "cf9c4f",
+				"edge_arc": "9bc8bb",
+				"edge_brass": "c6a957",
+				"edge_hazard": "e66d44",
+				"edge_slate": "728391",
+				"fill_charcoal": "8a381d",
+				"fill_ledger": "dab68f",
+				"fill_sand": "d5ad82",
+				"fill_sandstone": "d59962",
+				"fill_verdigris": "8e5b3c",
+				"ledger": "d9bd97",
+				"sand": "d2b38a",
+				"sandstone": "d29f67",
+				"verdigris": "4d5c40"
+			}
+		}
+	],
+	"raw": {
+		"edge:amber~arc": 72.9565505981445,
+		"edge:hazard~amber": 43.7862434387207,
+		"edge:hazard~brass": 58.9232864379883,
+		"edge:slate~arc": 49.4667587280273,
+		"edge:slate~hazard": 84.3749618530273,
+		"fill:hazard~charcoal": 16.9380989074707,
+		"fill:hazard~ledger": 12.2609767913818,
+		"fill:hazard~sand": 11.9701156616211,
+		"fill:hazard~sandstone": 10.489312171936,
+		"fill:hazard~verdigris": 13.9715509414673
+	},
+	"red": [],
+	"stills": [
+		{
+			"channel_at_0": 0.0,
+			"channel_at_255": 0.0,
+			"mean_l": 51.9470534489055,
+			"still": "1-stage1-dawn.png"
+		},
+		{
+			"channel_at_0": 0.0,
+			"channel_at_255": 0.000104166666666667,
+			"mean_l": 45.9396091879583,
+			"still": "10-mind-fight-hud-2.png"
+		},
+		{
+			"channel_at_0": 0.0,
+			"channel_at_255": 0.0,
+			"mean_l": 68.6578266352415,
+			"still": "2-stage2-morning.png"
+		},
+		{
+			"channel_at_0": 0.428628472222222,
+			"channel_at_255": 0.0,
+			"mean_l": 14.6597300894558,
+			"still": "3-stage3-noon.png"
+		},
+		{
+			"channel_at_0": 0.43375,
+			"channel_at_255": 0.0,
+			"mean_l": 13.5651365729126,
+			"still": "4-stage4-afternoon.png"
+		},
+		{
+			"channel_at_0": 0.0,
+			"channel_at_255": 0.0,
+			"mean_l": 60.1853284697731,
+			"still": "5-stage5-golden.png"
+		},
+		{
+			"channel_at_0": 0.0000347222222222222,
+			"channel_at_255": 0.0,
+			"mean_l": 43.3272729249133,
+			"still": "6-stage6-dusk.png"
+		},
+		{
+			"channel_at_0": 0.0,
+			"channel_at_255": 0.0,
+			"mean_l": 55.8302546560019,
+			"still": "7-mind-crown-dusk.png"
+		},
+		{
+			"channel_at_0": 0.0,
+			"channel_at_255": 0.0,
+			"mean_l": 49.1928124621169,
+			"still": "8-mind-fight-hud-0.png"
+		},
+		{
+			"channel_at_0": 0.0,
+			"channel_at_255": 0.0,
+			"mean_l": 44.4043796775961,
+			"still": "9-mind-fight-hud-1.png"
+		}
+	],
+	"table": "park",
+	"telegraph": "haze",
+	"tool": "grade_probe.gd"
+}
