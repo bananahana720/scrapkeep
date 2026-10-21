@@ -98,8 +98,99 @@ func _shells() -> void:
 		antic.apply(1.0)
 		_t.check(id + " is back in the pod as it sat", not antic.out and pilot.get_parent() == pod
 			and pilot.transform.is_equal_approx(seated) and core.transform.is_equal_approx(core_rest))
+		_stream(antic, fitted.animator, pilot, id)
 	painter.free()
 	stage.free()
+
+
+# The whole bit sampled at 1/60 s, the way a 60 fps display would see it. One continuous
+# performance means: (a) no frame-to-frame bone rotation jump above what the pilot's own clips
+# move in one frame, (b) no segment asks a clip for time past its end (a hold), (c) the last
+# frame before the pod takes the pilot back is at rest, so seat() snaps nothing.
+#
+# (a) The threshold is the largest one-frame bone rotation (angle between frames, any bone) of
+# the pilot's own clips as this move plays them (clip time stepped by speed/60), measured by
+# _clip_motion at run time. Measured on 21 Oct 2026 at clip speed 1.0 (Godot 4.7.2): drop_land
+# 0.90 (Sable), 0.48 (Rivet), 0.84 (Kest), 0.06 (Tarn), 0.03 (Tally), 0.05 (Cannon); big_cheer
+# 0.17 to 0.18 (Sable, Rivet, Kest), 0.06 (Tarn), 0.11 (Tally, Cannon); cast_line 1.50 (Tally).
+# (c) REST_TOLERANCE is 0.02 rad: an authored clip's rest key sits 0.0007 rad off the skeleton's
+# bind rest (measured, every pilot), so 0.02 is 28 times that floor and still under a degree.
+const REST_TOLERANCE := 0.02
+# The move is sampled at 1/60 s from t 0, a clip's own motion at 1/60 s from clip time 0, so the
+# frames land in different phases; SLACK 1.1 covers that (Cannon's base run: 0.066 against 0.066).
+const SLACK := 1.1
+const FRAME := 1.0 / 60.0
+
+
+func _stream(antic, animator: AnimationPlayer, pilot: Node3D, id: String) -> void:
+	var skeleton := pilot.find_children("*", "Skeleton3D", true, false)[0] as Skeleton3D
+	skeleton.reset_bone_poses()
+	var rest := _rotations(skeleton)
+	var rows: Array = antic.segments()
+	var limit := 0.0
+	var past_end := ""
+	for row in rows:
+		if row.clip == "":
+			continue
+		limit = maxf(limit, _clip_motion(animator, skeleton, row.clip, row.speed, row.length))
+		var asks: float = (float(row.end) - float(row.start)) * PilotAntics.LENGTH * float(row.speed)
+		if asks > float(row.length) + 0.001:
+			past_end += " %s asks %.2f of %.2f s;" % [row.clip, asks, row.length]
+	animator.stop()
+	skeleton.reset_bone_poses()
+	_t.check("%s never holds a clip past its end:%s" % [id, past_end], past_end == "")
+	var before := rest
+	var worst := 0.0
+	var worst_at := 0.0
+	var last := rest
+	for k in int(floor(PilotAntics.LENGTH / FRAME)) + 1:
+		var t := float(k) * FRAME / PilotAntics.LENGTH
+		antic.apply(t)
+		last = _rotations(skeleton)
+		var step := _step(before, last)
+		if step > worst:
+			worst = step
+			worst_at = t
+		before = last
+	_t.check("%s ends the bit at rest (%.3f rad off)" % [id, _step(rest, last)], _step(rest, last) <= REST_TOLERANCE)
+	antic.apply(1.0)
+	var seat_step := _step(last, _rotations(skeleton))
+	_t.check("%s seat() snaps nothing (%.3f rad)" % [id, seat_step], seat_step <= limit * SLACK)
+	_t.check("%s moves no faster than its own clips: worst %.3f rad/frame at t %.3f, limit %.3f" % [id, worst, worst_at, limit], worst <= limit * SLACK)
+	animator.stop()
+	skeleton.reset_bone_poses()
+
+
+func _clip_motion(animator: AnimationPlayer, skeleton: Skeleton3D, clip: String, speed: float, length: float) -> float:
+	animator.play(clip, 0.0)
+	animator.pause()
+	var before: Array = []
+	var worst := 0.0
+	var at := 0.0
+	while true:
+		animator.seek(minf(at, length), true)
+		var now := _rotations(skeleton)
+		if not before.is_empty():
+			worst = maxf(worst, _step(before, now))
+		before = now
+		if at >= length:
+			break
+		at += FRAME * speed
+	return worst
+
+
+func _rotations(skeleton: Skeleton3D) -> Array:
+	var rows: Array = []
+	for i in skeleton.get_bone_count():
+		rows.append(skeleton.get_bone_pose_rotation(i))
+	return rows
+
+
+func _step(a: Array, b: Array) -> float:
+	var worst := 0.0
+	for i in a.size():
+		worst = maxf(worst, (a[i] as Quaternion).angle_to(b[i]))
+	return worst
 
 
 func _openings(display) -> void:

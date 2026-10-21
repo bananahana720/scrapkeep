@@ -18,22 +18,32 @@ const GROUND := -0.98
 const FEET := 0.54
 const SEAT := Vector3.ZERO
 const FALLBACK := "big_cheer"
+# Seconds one clip segment cross-fades into the next; the last fades out to rest in OUT_BLEND (a
+# move's "out" overrides it). 0.25 s is 15 frames at 60 fps: Sable, Rivet and Kest stay under their
+# clips' own largest one-frame motion at it. Tarn, Tally and the Cannon move less per frame than
+# a 0.25 s fade of their pose gaps, so their entries carry blends found by sweeping against
+# pilot_antics_test's limit (a fade of gap D rad peaks near 1.5 * D / frames per frame).
+const BLEND := 0.25
+const OUT_BLEND := 0.25
 
 # word: the drawn sound word a title opening stamps over the move.
-# clips: [start t, clip, speed]; the last entry at or before t plays.
+# clips: [start t, clip, speed, blend?]; the last entry at or before t plays. A speed of 0 fits the
+# whole clip to its segment (it plays to its end exactly as the next segment starts, with no
+# hold). blend: seconds to cross-fade in from the segment before; BLEND when left out, 0 where the
+# clip before ends at rest and this one starts there.
 const MOVES := {
 	"pylon_engineer": {"word": "TA-DA!", "line": "Balances on it. Mostly.",
 		"clips": [[0.0, "drop_land", 1.0], [0.3, "big_cheer", 0.8], [0.86, "drop_land", 1.0]]},
 	"runner_gunner": {"word": "...HUH?", "line": "Leans on the ball. Faces the wrong way.",
-		"clips": [[0.0, "drop_land", 1.0], [0.22, "brace", 0.5], [0.6, "wince", 0.9], [0.86, "drop_land", 1.0]]},
+		"clips": [[0.0, "drop_land", 1.0], [0.22, "brace", 0.0], [0.6, "wince", 0.0], [0.86, "drop_land", 1.0]]},
 	"demolitions_caster": {"word": "BOOM!", "line": "Hovers. Hovers. Commits.",
-		"clips": [[0.0, "heave", 1.0], [0.16, "phew", 0.35], [0.74, "smash", 1.4], [0.9, "drop_land", 1.0]]},
-	"tarn": {"word": "grrr", "line": "Sits on top. The machine growls for both of them.",
-		"clips": [[0.0, "drop_land", 1.0], [0.2, "slump", 0.6], [0.58, "big_cheer", 0.5], [0.88, "drop_land", 1.0]]},
+		"clips": [[0.0, "heave", 1.0], [0.16, "phew", 0.35], [0.74, "smash", 0.0], [0.9, "drop_land", 1.0]]},
+	"tarn": {"word": "grrr", "line": "Sits on top. The machine growls for both of them.", "out": 0.15,
+		"clips": [[0.0, "drop_land", 1.0], [0.2, "slump", 0.6], [0.58, "big_cheer", 0.5, 0.5], [0.88, "drop_land", 1.0, 0.4]]},
 	"tally": {"word": "PAID!", "line": "Stamps the ball. Itemises it.",
-		"clips": [[0.0, "drop_land", 1.0], [0.2, "cast_line", 1.6], [0.42, "cast_line", 1.6], [0.64, "cast_line", 1.6], [0.88, "drop_land", 1.0]]},
+		"clips": [[0.0, "drop_land", 1.0], [0.2, "cast_line", 0.0, 0.1], [0.42, "cast_line", 0.0, 0.0], [0.64, "cast_line", 0.0, 0.0], [0.88, "drop_land", 1.0]]},
 	"remembered_cannon": {"word": "...hello.", "line": "Rises out very slowly. Waves once.",
-		"clips": [[0.0, "heave", 0.3], [0.78, "big_cheer", 0.6]]},
+		"out": 0.5, "clips": [[0.0, "heave", 0.0], [0.78, "big_cheer", 0.6, 0.0]]},
 }
 
 var holder: Node3D
@@ -142,24 +152,168 @@ func _path_to(root: Node, node: Node3D) -> Transform3D:
 	return xf
 
 
+# One continuous performance: each segment's clip is cross-faded in from the pose the segment
+# before it ended on (held still for the fade: a clip carried on can spin a bone through the far
+# side of its turn mid-fade), the first from the seated rest pose, and
+# the last fades out to rest so seat() snaps nothing. The clip time is still a pure function of
+# t. The animator is paused and the mixed pose written to the bones, since a running player would
+# overwrite a mix on its next frame.
 func _play(t: float) -> void:
 	if animator == null or not is_instance_valid(animator):
 		return
-	var pick: Array = []
-	for entry in MOVES[class_id].clips:
-		if float(entry[0]) <= t:
-			pick = entry
-	if pick.is_empty():
+	var rows := segments()
+	var at := -1
+	for i in rows.size():
+		if float(rows[i].start) <= t:
+			at = i
+	if at < 0:
 		return
-	var clip := clip_for(animator, String(pick[1]))
+	var row: Dictionary = rows[at]
+	var fade_in := _fades_in(row, at, t)
+	var out_blend := float(MOVES[class_id].get("out", OUT_BLEND))
+	var fade_out := (1.0 - t) * LENGTH < out_blend
+	var skeletons := _skeletons()
+	if not fade_in and not fade_out:
+		_drive(row, t, skeletons)
+		return
+	var pose := _compose(rows, t, skeletons)
+	if fade_out:
+		var rest := _rest_pose(skeletons)
+		var begun := _compose(rows, 1.0 - out_blend / LENGTH, skeletons)
+		pose = _mix(rest, pose, smoothstep(0.0, 1.0, (1.0 - t) * LENGTH / out_blend), _signs(rest, begun))
+	_write(pose, skeletons)
+
+
+func _fades_in(row: Dictionary, index: int, t: float) -> bool:
+	var window := _window(class_id, index)
+	return window > 0.0 and (t - float(row.start)) * LENGTH < window
+
+
+# The pose at t with the segment's fade-in applied (no fade-out).
+func _compose(rows: Array, t: float, skeletons: Array) -> Array:
+	var at := 0
+	for i in rows.size():
+		if float(rows[i].start) <= t:
+			at = i
+	var row: Dictionary = rows[at]
+	var pose := _grab(row, t, skeletons)
+	if _fades_in(row, at, t):
+		var from := _rest_pose(skeletons) if at == 0 else _grab(rows[at - 1], float(row.start), skeletons)
+		var f := smoothstep(0.0, 1.0, (t - float(row.start)) * LENGTH / _window(class_id, at))
+		pose = _mix(from, pose, f, _signs(from, _grab(row, float(row.start), skeletons)))
+	return pose
+
+
+# Seconds a segment takes to blend in from the one before; entry[3] overrides BLEND.
+static func _window(id: String, index: int) -> float:
+	var entry: Array = MOVES[id].clips[index]
+	return float(entry[3]) if entry.size() > 3 else BLEND
+
+
+func _skeletons() -> Array:
+	return pilot.find_children("*", "Skeleton3D", true, false)
+
+
+# Poses the skeletons from the row's clip at t and leaves them there.
+func _drive(row: Dictionary, t: float, skeletons: Array) -> void:
+	for skeleton in skeletons:
+		skeleton.reset_bone_poses()
+	var clip: String = row.clip
 	if clip == "":
 		return
-	if _clip != clip or animator.current_animation != clip:
+	if _clip != clip:
 		animator.play(clip, 0.0)
+		animator.pause()
 		_clip = clip
-	var length := animator.get_animation(clip).length
-	var at := (t - float(pick[0])) * LENGTH * float(pick[2])
-	animator.seek(minf(at, length), true)
+	var at := (t - float(row.start)) * LENGTH * float(row.speed)
+	animator.seek(clampf(at, 0.0, float(row.length)), true)
+
+
+# The bone poses of the row's clip at t: per skeleton, per bone [position, rotation, scale].
+func _grab(row: Dictionary, t: float, skeletons: Array) -> Array:
+	_drive(row, t, skeletons)
+	var pose: Array = []
+	for skeleton in skeletons:
+		var bones: Array = []
+		for i in skeleton.get_bone_count():
+			bones.append([skeleton.get_bone_pose_position(i), skeleton.get_bone_pose_rotation(i), skeleton.get_bone_pose_scale(i)])
+		pose.append(bones)
+	return pose
+
+
+static func _rest_pose(skeletons: Array) -> Array:
+	var pose: Array = []
+	for skeleton in skeletons:
+		var bones: Array = []
+		for i in skeleton.get_bone_count():
+			var rest: Transform3D = skeleton.get_bone_rest(i)
+			bones.append([rest.origin, rest.basis.get_rotation_quaternion(), rest.basis.get_scale()])
+		pose.append(bones)
+	return pose
+
+
+# Per bone, +1 or -1: which of the target's two equal rotations (q and -q) lies on the near side
+# of the start, judged once at the start of the fade so the way round cannot change partway.
+static func _signs(from: Array, anchor: Array) -> Array:
+	var signs: Array = []
+	for s in anchor.size():
+		var bones: Array = []
+		for i in (anchor[s] as Array).size():
+			bones.append(-1.0 if (from[s][i][1] as Quaternion).dot(anchor[s][i][1]) < 0.0 else 1.0)
+		signs.append(bones)
+	return signs
+
+
+static func _mix(from: Array, to: Array, f: float, signs: Array) -> Array:
+	var pose: Array = []
+	for s in to.size():
+		var bones: Array = []
+		for i in (to[s] as Array).size():
+			var a: Array = from[s][i]
+			var b: Array = to[s][i]
+			bones.append([(a[0] as Vector3).lerp(b[0], f), _slerp(a[1], (b[1] as Quaternion) * float(signs[s][i]), f),
+				(a[2] as Vector3).lerp(b[2], f)])
+		pose.append(bones)
+	return pose
+
+
+# Slerp that keeps the way round it is given (Quaternion.slerp re-picks the short way each call).
+static func _slerp(a: Quaternion, b: Quaternion, f: float) -> Quaternion:
+	var cosine := clampf(a.dot(b), -1.0, 1.0)
+	var angle := acos(cosine)
+	var sine := sin(angle)
+	if sine < 0.001:
+		return (a * (1.0 - f) + b * f).normalized()
+	return (a * (sin((1.0 - f) * angle) / sine) + b * (sin(f * angle) / sine)).normalized()
+
+
+static func _write(pose: Array, skeletons: Array) -> void:
+	for s in skeletons.size():
+		for i in (pose[s] as Array).size():
+			var bone: Array = pose[s][i]
+			skeletons[s].set_bone_pose_position(i, bone[0])
+			skeletons[s].set_bone_pose_rotation(i, bone[1])
+			skeletons[s].set_bone_pose_scale(i, bone[2])
+
+
+# The move's clip segments for this pilot's real clips: {start, end, clip, speed, length}. A
+# clip's own length bounds it; a speed of 0 in MOVES fits the whole clip to its segment.
+func segments() -> Array:
+	var rows: Array = []
+	if animator == null or not MOVES.has(class_id):
+		return rows
+	var clips: Array = MOVES[class_id].clips
+	for i in clips.size():
+		var entry: Array = clips[i]
+		var start := float(entry[0])
+		var finish := float(clips[i + 1][0]) if i + 1 < clips.size() else 1.0
+		var clip := clip_for(animator, String(entry[1]))
+		var length := animator.get_animation(clip).length if clip != "" else 0.0
+		var speed := float(entry[2])
+		if speed <= 0.0 and length > 0.0:
+			speed = length / ((finish - start) * LENGTH)
+		rows.append({"start": start, "end": finish, "clip": clip, "speed": speed, "length": length})
+	return rows
 
 
 static func clip_for(player: AnimationPlayer, wanted: String) -> String:
