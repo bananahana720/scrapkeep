@@ -50,6 +50,7 @@ func _run() -> void:
 	# The park section runs first, so the process's resource cache holds none of what the build reads.
 	await _park_chunks()
 	_plain_slopes()
+	_lane_scatter()
 	var seeds := {}
 	var row_errors := []
 	var relief_errors := []
@@ -460,6 +461,103 @@ func _plain_slopes() -> void:
 	var lip: Array = fixture.park["park_rows"].filter(func(r: Dictionary) -> bool: return r["element"] == "kicker")
 	t.check("the Highdraft carries mesa edges and an ordinary kicker is not one", edges > 0 and not lip.is_empty()
 		and not lip.any(func(r: Dictionary) -> bool: return ParkMap.mesa_edge(r, fixture.play_rect)), "%d edges" % edges)
+
+
+# Ruling 5, 2026-10-19 (issue #149): a kit row that can stand more than Scatter.LANE_BAND_M above the ground places
+# nothing inside a scatter-dressed park row a route names; the flat rows, the off-route scatter rows and open ground
+# are unchanged. Placed on flat ground over the chunks that cover each footprint, with and without map.scatter["lane_out"].
+func _lane_scatter() -> void:
+	# The park kit has no flat kind (every kind can pass the band), so a pebble row at a tenth of a metre stands in.
+	var flat_row := {"kind": "pebble", "density": 3.0, "scale": Vector2(0.04, 0.1), "slope": 0.8, "bury": 0.3, "seed": "scatter_lane_flat", "mesh": "kit:pebble", "slot": "stone"}
+	var rows: Array = ScatterRows.PARK_KIT.duplicate()
+	rows.append(flat_row)
+	var flat := func(x: float, z: float, _r: float) -> Vector3: return Vector3(x, 0.0, z)
+	var problems := []
+	var tall_kinds := []
+	var flat_kept := 0
+	for row: Dictionary in rows:
+		var source := Scatter._source(row["mesh"])
+		var aabb: AABB = source["aabb"]
+		var tall := Scatter.is_tall(row, aabb)
+		if tall:
+			tall_kinds.append(row["kind"])
+		# The measured top: the highest corner of the source box over a sweep of scale, tilt and the steepest lean.
+		var top := 0.0
+		for k in 3:
+			var scale: float = lerpf((row["scale"] as Vector2).x, (row["scale"] as Vector2).y, k / 2.0)
+			for tilt in [0.0, 0.25]:
+				for lean in [0.0, acos(float(row["slope"]))]:
+					var basis := Basis(Vector3.RIGHT, lean + tilt).scaled(Vector3.ONE * scale)
+					var sink := (aabb.position.y + aabb.size.y * float(row["bury"])) * scale
+					for i in 8:
+						top = maxf(top, (basis * aabb.get_endpoint(i)).y - sink * cos(lean))
+		print("scatter_rows_test: lane band, %s top bound %.3f m, swept %.3f m, %s" % [row["kind"], Scatter.top_bound(row, aabb), top, "tall" if tall else "not tall"])
+	t.check("the fixture pebble row is under the band", not Scatter.is_tall(flat_row, Scatter._source("kit:pebble")["aabb"]))
+	t.check("the lane band tells tall kit kinds from flat ones, and some are tall", not tall_kinds.is_empty(), str(tall_kinds))
+	var on_route_total := 0
+	var off_route_tall := 0
+	for map_id: String in ["park_islands", "park_flume", "park_pit", "park_sinkhole"]:
+		var map = ParkMap.new("res://src/world/park/%s.json" % map_id)
+		if not map.ok:
+			problems.append("%s fails its schema" % map_id)
+			continue
+		var lane: Array = map.scatter["lane_out"]
+		var ids := []
+		for f: Dictionary in lane:
+			ids.append(f["id"])
+		var off := []
+		for prow: Dictionary in map.park["park_rows"]:
+			if prow["recipe"] == ParkRecipes.SCATTER_DRESSED and not ids.has(prow["id"]):
+				off.append(ParkMap._footprint(prow))
+		on_route_total += lane.size()
+		var cells := {}
+		for f: Dictionary in lane + off:
+			var reach := (f["size"] as Vector2).length() * 0.5
+			var at: Vector2 = f["at"]
+			for x in [at.x - reach, at.x + reach]:
+				for z in [at.y - reach, at.y + reach]:
+					cells[Vector2i(clampi(floori((x + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9), clampi(floori((z + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9))] = true
+		var report := []
+		for row: Dictionary in rows:
+			var aabb: AABB = Scatter._source(row["mesh"])["aabb"]
+			var tall := Scatter.is_tall(row, aabb)
+			var before := 0
+			var after := 0
+			var off_in := 0
+			var changed := 0
+			for cell: Vector2i in cells:
+				map.scatter["lane_out"] = []
+				var free: Array[Transform3D] = Scatter.chunk_transforms(row, map, flat, aabb, cell.x, cell.y, [])
+				map.scatter["lane_out"] = lane
+				var kept: Array[Transform3D] = Scatter.chunk_transforms(row, map, flat, aabb, cell.x, cell.y, [])
+				for xf: Transform3D in free:
+					if Scatter._kept_out(lane, Vector2(xf.origin.x, xf.origin.z)):
+						before += 1
+					if Scatter._kept_out(off, Vector2(xf.origin.x, xf.origin.z)):
+						off_in += 1
+				for xf: Transform3D in kept:
+					if Scatter._kept_out(lane, Vector2(xf.origin.x, xf.origin.z)):
+						after += 1
+				if not tall and free != kept:
+					changed += 1
+				if tall and free.size() - kept.size() != free.filter(func(xf: Transform3D) -> bool: return Scatter._kept_out(lane, Vector2(xf.origin.x, xf.origin.z))).size():
+					changed += 1
+			if tall:
+				off_route_tall += off_in
+			if not tall:
+				flat_kept += after
+				if after != before:
+					problems.append("%s flat %s lost %d pieces in a lane row" % [map_id, row["kind"], before - after])
+			if tall and after > 0:
+				problems.append("%s %s has %d pieces in a lane row" % [map_id, row["kind"], after])
+			if changed > 0:
+				problems.append("%s %s changed outside the lane rows in %d chunks" % [map_id, row["kind"], changed])
+			report.append("%s %s %d -> %d (off-route %d)" % [row["kind"], "tall" if tall else "flat", before, after, off_in])
+		print("scatter_rows_test: %s on-route scatter rows %s; in-lane pieces %s" % [map_id, ids, "; ".join(report)])
+	t.check("no tall kit piece stands in an on-route scatter-dressed row, every other piece is where it was", problems.is_empty(), ", ".join(problems.slice(0, 8)))
+	t.check("the parks carry on-route scatter-dressed rows to test", on_route_total > 0, str(on_route_total))
+	t.check("a flat row still lands in the lane rows", flat_kept > 0, str(flat_kept))
+	t.check("an off-route scatter-dressed row still gets tall pieces", off_route_tall > 0, str(off_route_tall))
 
 
 static func _key(v: Vector3) -> String:
