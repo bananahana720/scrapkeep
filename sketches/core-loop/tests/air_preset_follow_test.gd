@@ -39,6 +39,12 @@ func _run() -> void:
 	_air(env, "stage 1 high to low", false, density)
 	Preset.apply("high")
 	_air(env, "stage 1 low to high", true, density)
+	# An explicit live edit outside the air keys survives a preset change (captured, not reset).
+	env.fog_density = 0.0123
+	Preset.apply("low")
+	_t.check("an explicit fog edit survives a preset change", is_equal_approx(env.fog_density, 0.0123),
+		"fog_density=%s" % env.fog_density)
+	Preset.apply("high")
 	Preset.apply("low")
 	game.flow.enter_stage(2, Vector3.ZERO, false)
 	await physics_frame
@@ -46,6 +52,20 @@ func _run() -> void:
 	Preset.apply("high")
 	var dig: float = WorldLook.row(game.ctx.stages.world_of(2)).air.get("volumetric_fog_density", 0.0)
 	_air(env, "stage 2 low to high", true, dig)
+	# The Waking has air: its arena row follows too, then leaving it uncovers the stage's row.
+	Harness.enter_world(game, 2)
+	await physics_frame
+	var waking: float = WorldLook.ARENAS.waking.air.volumetric_fog_density
+	_air(env, "Waking arena on high", true, waking)
+	Preset.apply("low")
+	_air(env, "Waking arena high to low", false, waking)
+	Preset.apply("high")
+	_air(env, "Waking arena low to high", true, waking)
+	Harness.module(game, 2).exit_arena()
+	game.flow.in_arena = false
+	await physics_frame
+	var stage_row: float = WorldLook.row(game.ctx.stages.world_of(game.ctx.stages.last_of(2))).air.get("volumetric_fog_density", 0.0)
+	_air(env, "after the Waking, the stage row's air", true, stage_row)
 	Harness.enter_world(game, 3)
 	await physics_frame
 	var mod = Harness.module(game, 3)
