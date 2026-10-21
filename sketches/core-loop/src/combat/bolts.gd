@@ -117,7 +117,13 @@ static func child(parent: Dictionary, overrides: Dictionary) -> Dictionary:
 
 func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells: Array = []) -> void:
 	var survivors: Array = []
+	# The enemies' reach, built once and rebuilt after any hit callback (which can kill or move one).
+	var snapshot: Array = []
+	var fresh := false
 	for bolt in _bolts:
+		if not fresh:
+			snapshot = _snapshot(enemies)
+			fresh = true
 		var from: Vector3 = bolt["shown"]
 		bolt["age"] += delta
 		bolt["travelled"] = minf(bolt["travelled"] + bolt["speed"] * delta, bolt["max_dist"])
@@ -129,16 +135,19 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 			if not wall.is_empty():
 				end = wall["position"]
 				blocked = true
-		var target := _first_enemy(from, end, bolt["radius"], enemies)
+		var target := _first_enemy(from, end, bolt["radius"], snapshot)
 		var shell := _first_shell(from, end, bolt["radius"], shells)
 		if not shell.is_empty() and (target.is_empty() or shell["along"] < target["along"]):
+			fresh = false
 			if on_shell.is_valid() and on_shell.call(bolt, shell["shell"]):
 				continue
 		if not target.is_empty():
+			fresh = false
 			if on_hit.is_valid():
 				on_hit.call(bolt, target["enemy"], target["point"], target["part"])
 			continue
 		if blocked:
+			fresh = false
 			if on_stop.is_valid():
 				on_stop.call(end, bolt["color"])
 			continue
@@ -164,14 +173,13 @@ func _position(bolt: Dictionary) -> Vector3:
 # The first enemy the segment passes within reach of, measured against each enemy's
 # weak-point spheres first and then its upright capsule (its axis, widened by its
 # radius and the bolt's). A weak point wins a tie with the body it sits on.
-func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, enemies: Array) -> Dictionary:
+func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, snapshot: Array) -> Dictionary:
 	var best := {}
 	var best_along := INF
 	var span := from.distance_to(to)
-	for enemy in enemies:
-		if not is_instance_valid(enemy) or enemy.is_dead():
-			continue
-		for weak in enemy.weak_points():
+	for entry in snapshot:
+		var enemy = entry["enemy"]
+		for weak in entry["weak"]:
 			var at: Vector3 = weak["at"]
 			var near := Geometry3D.get_closest_point_to_segment(at, from, to)
 			if near.distance_to(at) <= weak["radius"] + bolt_radius:
@@ -179,9 +187,9 @@ func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, enemies: Array
 				if weak_along < best_along:
 					best_along = weak_along
 					best = {"enemy": enemy, "point": near, "part": weak["id"], "along": weak_along}
-		var centre: Vector3 = enemy.global_position
-		var inner: float = maxf(0.0, enemy.half_height - enemy.radius)
-		var reach: float = enemy.radius + bolt_radius
+		var centre: Vector3 = entry["centre"]
+		var inner: float = entry["inner"]
+		var reach: float = entry["radius"] + bolt_radius
 		if centre.distance_to(from) > span + reach + inner + 0.5:
 			continue
 		var points := Geometry3D.get_closest_points_between_segments(from, to,
@@ -193,6 +201,17 @@ func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, enemies: Array
 			best_along = along
 			best = {"enemy": enemy, "point": points[0], "part": "", "along": along}
 	return best
+
+
+# What _first_enemy reads of each live enemy, read once for a run of bolts.
+func _snapshot(enemies: Array) -> Array:
+	var out: Array = []
+	for enemy in enemies:
+		if not is_instance_valid(enemy) or enemy.is_dead():
+			continue
+		out.append({"enemy": enemy, "weak": enemy.weak_points(), "centre": enemy.global_position,
+			"inner": maxf(0.0, enemy.half_height - enemy.radius), "radius": enemy.radius})
+	return out
 
 
 func _first_shell(from: Vector3, to: Vector3, bolt_radius: float, shells: Array) -> Dictionary:

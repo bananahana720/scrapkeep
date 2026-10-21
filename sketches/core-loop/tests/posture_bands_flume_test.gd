@@ -40,8 +40,18 @@ const WALL_S := 1100.0
 # direct run: small [78.76, 76.32, 85.75, 63.0, 49.01] median 76.3, grown [25.83, 28.29, 28.36, 28.88, 19.39]
 # median 28.3, ratio 2.70, campers never broke (pilots pylon_engineer, runner_gunner, demolitions_caster, tarn,
 # tally). Every design band holds; the grown pin moved 25.6 -> 28.3 and the small pin 72.2 -> 76.3.
-const EXPECT_SMALL_S := 76.3
-const EXPECT_GROWN_S := 28.3
+# 2026-10-20 (P4 hardpoint offsets, ruling 17 on #149 6274605849, Challenge verdict): re-pinned on
+# claude/happy-mayer-rtqcu5-p4 c548c9e9, where the flume Warden's line bites the channel cheeks the
+# landmark GLB draws (card 2 hp_1, hp_2) instead of the body offsets. One run of this test: small
+# [55.53, 61.19, 59.99, 59.99, 52.02] median 60.0, grown [29.16, 26.28, 20.51, 26.47, 14.12] median 26.3,
+# ratio 2.28, campers never broke. Small-arm reruns of both trees with records kept: the stage
+# reproduced the old small fights exactly, every P4 run engages on the stage's tick (within 0.04 s) and
+# still breaks the line through 3 or 4 chunks and hauls. The cheeks hold the line, so the small skipper
+# re-bites less (pylon_engineer 31 to 18 bites, 70.9 to 47.7 s on the line) and the bar drains less;
+# tarn and tally move under 4 s. The faster line is the card's intended change, not skipped content.
+# Every design band holds; grown sits 1.3 s over its 25 s floor.
+const EXPECT_SMALL_S := 60.0
+const EXPECT_GROWN_S := 26.3
 const TOLERANCE := 0.10
 
 

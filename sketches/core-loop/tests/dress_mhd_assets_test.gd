@@ -135,8 +135,9 @@ func _run() -> void:
 				"only shared material families")
 			if mat != null and mat.albedo_texture != null:
 				check(mat.albedo_texture.get_width() <= 2048 and mat.albedo_texture.get_height() <= 2048, "texture cap 2048")
-	print("MHD_BUDGET tris=%d/1100 verts=%d/2100 draws=%d/3" % [triangles, vertices, draws])
-	check(triangles > 0 and triangles <= 1100 and vertices > 0 and vertices <= 2100 and draws == 3, "enemy budget caps")
+	# Caps raised for the 2026-10-18 model polish (tools/blender/POLISH.md); draws unchanged.
+	print("MHD_BUDGET tris=%d/4000 verts=%d/7600 draws=%d/3" % [triangles, vertices, draws])
+	check(triangles > 0 and triangles <= 4000 and vertices > 0 and vertices <= 7600 and draws == 3, "enemy budget caps")
 	# Actual weighted POSITION data checks the foot and lens envelopes, rather
 	# than trusting labels or an author-written metadata budget.
 	var bounds := {}
@@ -164,8 +165,9 @@ func _run() -> void:
 			raw_triangles += int(doc.accessors[int(primitive.indices)].count) / 3
 			raw_vertices += int(doc.accessors[int(primitive.attributes.POSITION)].count)
 			raw_draws += 1
-	print("MHD_GLB_BUDGET tris=%d/1100 verts=%d/2100 draws=%d/3" % [raw_triangles, raw_vertices, raw_draws])
-	check(raw_triangles > 0 and raw_triangles <= 1100 and raw_vertices > 0 and raw_vertices <= 2100 and raw_draws == 3,
+	# Caps raised for the 2026-10-18 model polish (tools/blender/POLISH.md); draws unchanged.
+	print("MHD_GLB_BUDGET tris=%d/4000 verts=%d/7600 draws=%d/3" % [raw_triangles, raw_vertices, raw_draws])
+	check(raw_triangles > 0 and raw_triangles <= 4000 and raw_vertices > 0 and raw_vertices <= 7600 and raw_draws == 3,
 		"exported GLB budget caps")
 	if bounds.has("Foot"):
 		var lo: Vector3 = bounds.Foot[0]
