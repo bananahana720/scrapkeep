@@ -1331,7 +1331,7 @@ func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pin
 # timed, so a replay is the same on any machine. The cells' parts join in cell order, as _shade
 # joins them, so the shape is the same as a carve made at once. LATE_WORK is the 4080's ceiling:
 # its largest share at 200 was 7.5 ms, and 1.5 shares a frame must stay under 16.7 ms; a steep
-# slope then hits about 0.11 s after landing (Andrew's "Smooth, 0.11 s", 2026-10-18).
+# slope then hits about 0.12 s (11 ticks) after landing, near Andrew's "Smooth, 0.11 s" (2026-10-18).
 const LATE_TICKS := 5
 const LATE_WORK := 290
 # The landing tick also gathers the faces and cuts, about as much again as a share, so its
