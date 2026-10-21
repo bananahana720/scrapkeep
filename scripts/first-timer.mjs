@@ -98,7 +98,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "grip_used",
     teach: ["prompt:tip_grip"],
-    note: "Optional because it is a bonus, not a gate: the run goes on without carving. Taught by the first-meet tip (ui/field_tips.gd) the tick the ball first carves a wall.",
+    note: "Optional because it is a bonus, not a gate: the run goes on without carving. Taught by the first-meet tip (ui/field_tips.gd), queued when the ball first carves a wall and counted once its toast has been on screen 0.4 s; another tip or toast up at the time delays it.",
   },
   {
     id: "jam",
@@ -106,7 +106,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "jam_hit",
     teach: ["prompt:tip_jam"],
-    note: "Optional: the jammer's mat sits in a Dig stage the two-stage bot run may not enter, and a fast ball slips its pulse. Taught by the first-meet tip the tick a pulse first jams the ball.",
+    note: "Optional: the jammer's mat sits in a Dig stage the two-stage bot run may not enter, and a fast ball slips its pulse. Taught by the first-meet tip, queued when a pulse first jams the ball.",
   },
   {
     id: "cast",
@@ -114,14 +114,15 @@ export const MECHANICS = [
     needed: "optional",
     need: "cast_started",
     teach: ["prompt:tip_cast"],
-    note: "Optional: only some slot abilities carry a cast time and the bot seldom picks them. Taught by the first-meet tip the tick a cast first starts.",
+    note: "Optional: only some slot abilities carry a cast time and the bot seldom picks them. Taught by the first-meet tip from the drop when the bar already holds a slot with a cast time (Tally's Gather Plate), else when a cast first starts. It waits behind any tip met now (the radio's, the grip's) and behind a Warden fight, so a cast-slot pilot can cast before the tip shows and the audit reads it late.",
   },
   {
     id: "radio",
     name: "Radio dial: . next, , back, / skip",
-    needed: "required",
+    needed: "optional",
     need: "radio_live",
     teach: ["prompt:tip_radio"],
+    note: "Optional: the run goes on without touching the radio; the dial only changes the music. Taught by the first-meet tip, which waits for the drop's stage card to clear and then counts once its toast has been on screen 0.4 s, so it comes a few seconds after the dial's first frame and the audit reads it late.",
   },
   {
     id: "stake",
@@ -129,7 +130,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "relay_met",
     teach: ["prompt:tip_stake"],
-    note: "Optional: a relay is a park site the bot does not seek out. Taught by the first-meet tip within 30 m of a stake post, before the 12 m the probe counts as met.",
+    note: "Optional: a relay is a park site the bot does not seek out. Taught by the first-meet tip from 30 m of a stake post; the probe counts the post met at E's 18 m lock reach, which a fast ball can reach before the tip has been up 0.4 s.",
   },
   {
     id: "companion",
@@ -137,7 +138,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "companion_full",
     teach: ["prompt:tip_companion"],
-    note: "Optional: the halo only charges with a companion seated, and a run starts without one. Taught by the first-meet tip the tick the halo fills.",
+    note: "Optional: the halo only charges with a companion seated, and a run starts without one. Taught by the first-meet tip, queued when the halo fills.",
   },
   {
     id: "active",
@@ -145,7 +146,7 @@ export const MECHANICS = [
     needed: "optional",
     need: "active_racked",
     teach: ["prompt:tip_active"],
-    note: "Optional by design: actives are off by default (--actives), so a default run never racks one. Taught by the first-meet tip the tick one is first racked.",
+    note: "Optional by design: actives are off by default (--actives), so a default run never racks one. Taught by the first-meet tip, queued when one is first racked.",
   },
   {
     id: "scrap",

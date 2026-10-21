@@ -5,6 +5,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
+const Interactables := preload("res://src/world/interactables.gd")
 
 # The FIRST-TIMER probe (alpha-status ambition map, unit 8). One headless bot run on a fresh
 # profile records the first tick each teaching surface is on screen and the first tick each
@@ -20,8 +21,9 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 # Teach ids, with the tick they first show (tick -1 is before play):
 #   prompt:<verb>     a key prompt drew (events.prompt_shown: ui/key_glyphs.gd, ui/first_steps.gd)
 #   objective:<id>    the objective plate's row (hud.objective_reading, core/objectives.gd)
-#   prompt:tip_<id>   a first-meet field tip toasted (ui/field_tips.gd: grip, jam, cast, radio, stake,
-#                     companion, active), emitted as prompt_shown
+#   prompt:tip_<id>   a first-meet field tip told (ui/field_tips.gd: grip, jam, cast, radio, stake,
+#                     companion, active), emitted as prompt_shown once its toast has been on
+#                     screen MIN_SHOWN
 #   screen:dead       the SCRAPPED screen and its Retry key
 #   card:<slot>       a key on the chosen pilot's class card (ui/class_kit.gd card_keys)
 # Need ids: the first tick of the bus fact or flow state that names them (NEEDS below).
@@ -47,9 +49,10 @@ const NEEDS := {
 	"companion_full": "SPIL-9's halo gauge first full",
 	"active_racked": "first active racked on F",
 }
-# How near a relay's stake post counts as met: inside E's 18 m reach, so the post's tip (field_tips.gd,
-# 30 m) is owed first.
-const RELAY_MET := 12.0
+# How near a relay's stake post counts as met: E's lock reach, the first place E can take the stake.
+# The post's tip (field_tips.gd) goes up from 30 m and counts once on screen MIN_SHOWN, so a slow
+# approach is taught first and a fast one may reach the post first (the audit says late).
+const RELAY_MET := Interactables.LOCK_REACH
 
 var _settings := {}
 var _game

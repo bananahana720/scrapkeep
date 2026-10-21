@@ -99,7 +99,12 @@ test("a tip on the same tick as the verb's first need passes, one long after fai
   }
 });
 
-test("an untaught radio dial fails the audit", () => {
+test("the radio dial is optional, with a reason: an untaught dial is listed but fails nothing", () => {
+  const row = mechanic("radio");
+  assert.equal(row.needed, "optional");
+  assert.ok(row.note && row.note.length > 20, "radio states why it is optional");
   const p = probe({}, { radio_live: { tick: 10, stage: 1 } });
-  assert.equal(audit([p]).rows.find((r) => r.id === "radio").failed, true);
+  const radio = audit([p]).rows.find((r) => r.id === "radio");
+  assert.equal(radio.failed, false);
+  assert.equal(judge(row, p).verdict, "never");
 });
