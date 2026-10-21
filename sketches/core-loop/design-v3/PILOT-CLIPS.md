@@ -272,6 +272,8 @@ The pose JSON tables exist only for `drop_land` (`tools/blender/{rivet,sable,kes
 }
 ```
 
+**Partial tables (2026-10-18).** A table sets `"partial": true` to ship only the roles listed under `clips`; the verifier and `tests/support/pilot_clip_trigger.gd required_for` then require the seven kept clips plus those roles, not all eleven. Tarn's table lists `idle_loop` only. Sable and Cannon's idle tables wait in `src/presentation/clips/pending/` (a file there is inert: the game, verifier and tests read only `clips/<pilot>.json`) until their GLBs are exported; moving the file up is part of that export.
+
 **The pose vocabulary.** A field left out of a key means its rest value. Angles in degrees, distances in metres, in Pod space with Blender axes (+Z up, +Y forward, +X anatomical right, `PILOT-RIG.md:11`).
 
 | Field | Drives | Precedent |
@@ -290,7 +292,7 @@ The pose JSON tables exist only for `drop_land` (`tools/blender/{rivet,sable,kes
 | `root` | `[x, y, z]` location; `unlock` only | `PILOTS.md:67` |
 | `note` | one concrete observation per key, as every route records | `anim_pilot_reactions.py:30-82` |
 
-Clip keys: `end` (end frame), `loop`, `from` and `to` (anchors), `ease` (`smooth` or `linear`; `linear` for impact clips, as `wince` and `brace` are), `planted` (hands held at their grip every frame), `contact` (cast and smash clips; frame, hand and control), `preen_frames` (Kest only: the frames where the feather tip meets the beak, measured by check 17), `source`.
+Clip keys: `end` (end frame), `loop`, `from` and `to` (anchors), `ease` (`smooth` or `linear`; `linear` for impact clips, as `wince` and `brace` are; `spline` for loops that should never dead-stop: a cardinal spline through the keys, tangents from the neighbouring keys, wrapping at a loop's seam, added 2026-10-18 for the Sable, Tarn and Cannon idles), `planted` (hands held at their grip every frame), `contact` (cast and smash clips; frame, hand and control), `preen_frames` (Kest only: the frames where the feather tip meets the beak, measured by check 17), `source`.
 
 `controls` names the shell recipe's `CONTROLS` table: control name to Pod-space position. P-D's shell units write it; PE-0 defines the format. Since PE-0b (2026-10-11) the builder and check 14 read each control from one source, the pilot's shipped shell GLB (`roster.json` `shell`), by walking its `Control.*` and `LapBar.*` nodes up to `Pod` (`tools/blender/pilot_arm.py`). A table's hand-copied `control_points` block is ignored, never trusted. A control the shell lacks resolves to the grips `(±0.32, 0.40, 0.05)` (`anim_tarn.py:19`) and prints `PILOT_CLIPS_STANDIN <pilot> <control>`; the cast clip is re-targeted when P-D ships that control.
 
@@ -378,7 +380,7 @@ The pilot hangs directly under Pod (`hero_assets.gd:526`), so hand and control s
 4. One skin, 25 joints, and the `pilot-v1` hierarchy (`PILOT-RIG.md:23-40`).
 5. Tracks target joints only, matching `tests/pilot_reactions_test.gd:53-58`.
 6. Mesh primitives keep the baseline's attribute sets (`JOINTS_0`, `WEIGHTS_0`, colour), triangle count and draw count.
-7. Size: GLB at most 640 KB; animation data at most 300 KB.
+7. Size: GLB at most 1,024 KB; animation data at most 300 KB. (Raised from 640 KB on 18 Oct 2026 for the model polish, tools/blender/POLISH.md: a soft-toy pilot body carries about 6,000 to 7,000 vertices, about 470 KB of mesh.)
 
 **Pose and geometry, sampled every half frame after reimport:**
 
@@ -504,7 +506,7 @@ The queue holds card 1's lock for the run and exports `CUDA_VISIBLE_DEVICES` (`t
 | Clips per GLB | 7 | 18 | exactly 18 |
 | Seconds of animation per GLB | 9.17 | 20.9 to 23.4 | none |
 | Animation data per GLB | 46 to 97 KB | about 106 KB (Cannon) to 248 KB (Tarn) | 300 KB |
-| GLB size | 310 to 366 KB | about 370 KB (Cannon) to 503 KB (Tarn) | 640 KB |
+| GLB size | 310 to 366 KB | about 370 KB (Cannon) to 503 KB (Tarn) | 1,024 KB (640 KB before the model polish) |
 | Pilot mesh | 4,600 tris, 3,100 verts, 5 draws (`assets/asset_budgets.json:45-49`) | unchanged | unchanged |
 
 The projection scales each pilot's measured rate (Tarn 10.6 KB per second of animation, the Cannon 5.1, likely because its rigid cast keeps every scale constant) by the new seconds in 1.2. Godot's import keeps `animation/remove_immutable_tracks=true` and `animation/fps=30` (`assets/models/pilot_tarn_anim.glb.import`), which drops constant tracks.

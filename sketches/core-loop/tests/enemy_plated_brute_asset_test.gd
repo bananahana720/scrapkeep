@@ -10,11 +10,11 @@ const Palette := preload("res://src/core/palette.gd")
 # points, slam and timing constants are the values plated_brute.gd had before the dressing swap.
 # The three crack strokes (PlateCrack, 12 T each, drawn only in amber) are base gameplay read,
 # not counted, and hide with the plate group.
-const CEILING_T := 1200
+const CEILING_T := 5500  # polished 2026-10-18 (tools/blender/POLISH.md); was 1200
 const CEILING_D := 3
 const LIVE_CEILING_D := 3
 # Plate group share of the 1,200 T ceiling: 416 T with the six trim strips (12 T each) that carry the amber cue.
-const PLATE_T := 450
+const PLATE_T := 1300  # polished plates (bevelled, unsmoothed); was 450
 const CREW_R := 0.8
 const PLATE_REACH := 1.8
 const Y_BOTTOM := -1.1
@@ -135,7 +135,7 @@ func _run() -> void:
 	print("LN live assembly before: 1044 T, 4 D; after: %d T, %d D" % [live["tris"], live["draws"]])
 	print("live assembly intact: %d T, %d D" % [live["tris"], live["draws"]])
 	_check(live["draws"] > 0 and live["tris"] > 0, "the live measure saw meshes (%d T, %d D)" % [live["tris"], live["draws"]])
-	_check(live["tris"] <= CEILING_T and live["draws"] <= LIVE_CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= LIVE_CEILING_D, "live assembly %d T / %d D within %d / 3" % [live["tris"], live["draws"], CEILING_T])
 	_check(brute.find_child("BruteArmLinks", true, false) == null, "the live body needs no separate arm link mesh")
 	_check(not live["alpha"], "live assembly has no alpha")
 	_check_shape(brute)
@@ -260,4 +260,4 @@ func _check_rig(scene: Node) -> void:
 			normalized = normalized and absf(total - 1.0) < 0.0001
 	_check(normalized and not weighted.has(0) and blended[0] > 0 and blended[1] > 0,
 		"each part has normalized skin weights, both arms blend torso to pad: weighted %s; blended %s" % [weighted, blended])
-	_check(is_equal_approx(float(_measure(scene)["tris"]), 1044.0), "1044 triangles (48 arm triangles added to the 996 base)")
+	_check(is_equal_approx(float(_measure(scene)["tris"]), 4888.0), "4888 polished triangles (arms and sleeves stay unsubdivided so the pad and shoulder rings are exact at rest; 5232 when they were polished)")

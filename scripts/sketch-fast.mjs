@@ -345,13 +345,20 @@ function runGodot(sketchDir, test, timeoutMs) {
     let output = "";
     child.stdout.on("data", (chunk) => (output += chunk));
     child.stderr.on("data", (chunk) => (output += chunk));
-    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, timeoutMs);
     child.on("close", (code) => {
       clearTimeout(timer);
       running.delete(child);
       rmSync(dataHome, { recursive: true, force: true });
       const verdict = judge({ test: "res://" + test, status: code, output });
-      resolve({ test, ok: verdict.ok, exit: code, ms: Date.now() - started, reason: verdict.reason, checks: failingChecks(output), tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true });
+      // A kill before the time limit that the lane did not send is usually the container's
+      // memory limit (dmesg "Memory cgroup out of memory"), not the test.
+      const reason = code === null && !timedOut && child.killedByLane !== true ? "killed by a signal before its time limit (often the container's memory limit; see dmesg)" : verdict.reason;
+      resolve({ test, ok: verdict.ok, exit: code, ms: Date.now() - started, reason, checks: failingChecks(output), tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true });
     });
   });
 }

@@ -3,12 +3,12 @@ extends SceneTree
 # Raw export counts guard the direction-sheet ceilings; Godot imports every GLB.
 # MWA_ASSET_DIR permits a scratch-copy mutation without changing delivered assets.
 const ASSETS := [
-	{"file": "warden_mantle_meltdown.glb", "root": "MantleMeltdown", "cap": [600, 1100, 12],
+	{"file": "warden_mantle_meltdown.glb", "root": "MantleMeltdown", "cap": [1000, 1600, 12],
 		"parts": {"MountBody/MeltRearShell": ["ancient_enamel", "rubber", "ancient_light"],
 			"MountVent0/MeltVentBell0": ["ancient_enamel", "rubber", "mantle_tool"],
 			"MountVent1/MeltVentBell1": ["ancient_enamel", "rubber", "mantle_tool"],
 			"MountVent2/MeltVentBell2": ["ancient_enamel", "rubber", "mantle_tool"]}},
-	{"file": "warden_mantle_brood.glb", "root": "MantleBrood", "cap": [700, 1300, 5],
+	{"file": "warden_mantle_brood.glb", "root": "MantleBrood", "cap": [1300, 1400, 5],
 		"parts": {"MountBody/BroodRibs": ["ancient_enamel", "rubber", "ancient_light"],
 			"MountBody/BroodLaunchRail": ["ancient_enamel", "mantle_tool"]}},
 ]

@@ -52,15 +52,17 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # clearance, carves the same points as a plain subtraction pass.
 # 2026-10-18 (RIVET-CURVE, "Beat later" and "Spread every Breach"): 238 -> 243. A heavy Breach
 # carve takes a share per tick and hits once done, never before LATE_TICKS; a light one hits on
-# the landing tick. The carve is byte for byte the one made at once.
+# the landing tick. The carve is byte for byte the one made at once. Frame headroom (same day):
+# a heavy carve hits the tick after its last share, so selection never shares a tick with one.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
 	# 2026-10-16 (pilot paint): Calibrated is live, one check added.
 	# 2026-10-18 (stage/alpha-w17): 238 -> 239, RIVET-CURVE on top of EARNED-COSMETICS' one check;
-	# 239 -> 244 with "Beat later" and "Spread every Breach" (header).
-	_expected_checks = 244
+	# 239 -> 244 with "Beat later" and "Spread every Breach" (header); 244 -> 255 with the level-ground
+	# Breach (Andrew's 18 Oct ruling, option B).
+	_expected_checks = 255
 	super._initialize()
 
 
@@ -404,6 +406,123 @@ func _alpha_terrain_cost_fixture() -> void:
 	await _fresh()
 
 
+# Andrew's ruling (18 Oct 2026, option B): a Breach on level park ground hits on its landing tick.
+# A heightfield sheet of 2 m cells with a millimetre of noise is never coplanar, so only merge_level joins
+# it; the same sheet tilted past LEVEL_GROUND_DEG keeps the plain merge and the late path. The
+# carve is byte for byte the same however its work splits, and no merged corner leaves the
+# sheet by more than LEVEL_DEVIATION.
+func _plate(centre: Vector3, tilt_deg: float, noise: float, seed_value: int) -> StaticBody3D:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var cells := 20
+	var heights := {}
+	for x in range(0, cells + 1):
+		for z in range(0, cells + 1):
+			heights[Vector2i(x, z)] = tan(deg_to_rad(tilt_deg)) * float(x) * 2.0 + rng.randf_range(-noise, noise)
+	var triangles := PackedVector3Array()
+	for x in cells:
+		for z in cells:
+			var p := func(dx: int, dz: int) -> Vector3: return Vector3((x + dx - cells / 2) * 2.0, heights[Vector2i(x + dx, z + dz)], (z + dz - cells / 2) * 2.0)
+			triangles.append_array([p.call(0, 0), p.call(0, 1), p.call(1, 0), p.call(1, 0), p.call(0, 1), p.call(1, 1)])
+	var shape := ConcavePolygonShape3D.new()
+	shape.set_faces(triangles)
+	var holder := CollisionShape3D.new()
+	holder.shape = shape
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	body.add_child(holder)
+	_game.add_child(body)
+	body.global_position = centre
+	return body
+
+
+# One landing's carve on the plate: [late carve, shares the landing took, the plate's level flag].
+func _plate_landing(plate: StaticBody3D, work: int) -> Array:
+	var at := plate.global_position + Vector3.UP * 1.0
+	var late: Dictionary = _kit._carve_late("foundry_cutter", at, Vector3.FORWARD, _kit.breach_reach(), 1.0, 0.0)
+	_kit._shade_work = 0
+	var done: bool = _kit._shade_late(late, work)
+	return [late, done]
+
+
+func _level_ground_fixture() -> void:
+	await _fresh()
+	var level_deg: float = _kit.LEVEL_GROUND_DEG
+	# The boundary, on two triangles of a known tilt (the face under the landing decides).
+	var tilted := func(deg: float) -> Array:
+		var rise := tan(deg_to_rad(deg)) * 2.0
+		return [[Vector3(-2, 0, -2), Vector3(-2, 0, 2), Vector3(2, rise * 2.0, -2)], [Vector3(2, rise * 2.0, -2), Vector3(-2, 0, 2), Vector3(2, rise * 2.0, 2)]]
+	_t.check("level ground: a face 0.2 degrees under the line is level, 0.2 over is not", _kit.level_ground(tilted.call(level_deg - 0.2), Vector3(0.0, 1.0, 0.0)) and not _kit.level_ground(tilted.call(level_deg + 0.2), Vector3(0.0, 1.0, 0.0)))
+	_t.check("level ground: a landing with no face under it is not level", not _kit.level_ground(tilted.call(1.0), Vector3(30.0, 1.0, 0.0)) and not _kit.level_ground([], Vector3.ZERO))
+	_t.near("level ground: the line is 5 degrees and Andrew's 3.43 stand is under it", level_deg, 5.0)
+	# Level plate, 3.4 degrees like Andrew's stand, 1 mm noise.
+	var flat := _plate(Vector3(0.0, 400.0, 0.0), 3.4, 0.001, 7301)
+	await physics_frame
+	await physics_frame
+	var landing: Array = _plate_landing(flat, _kit.landing_work(true))
+	var late: Dictionary = landing[0]
+	_t.check("level ground: a Breach on a 3.4 degree sheet is level, carves in its landing share and has parts", bool(late["level"]) and landing[1] and int(late["shares"]) == 1 and not (late["result"] as Array).is_empty(), "%d shares, %d parts of work" % [int(late["shares"]), int(late["work"])])
+	var found: Dictionary = _kit._terrain_near(flat.global_position + Vector3.UP * 1.0, late["sector"]["cells"])
+	var plain: Array = TerrainFaces.merge(found["faces"])
+	var joined: Array = TerrainFaces.merge_level(found["faces"], _kit.LEVEL_GROUND_DEG, _kit.LEVEL_TOLERANCE_DEG, _kit.LEVEL_DEVIATION)
+	_t.check("level ground: the merge joins the sheet's faces into far fewer polygons than the plain merge", joined.size() * 3 <= plain.size() and joined.size() > 0, "%d vs %d polygons" % [joined.size(), plain.size()])
+	var worst := 0.0
+	for poly: Array in joined:
+		var n := Vector3.ZERO
+		for k in range(1, poly.size() - 1):
+			n += ((poly[k] as Vector3) - (poly[0] as Vector3)).cross((poly[k + 1] as Vector3) - (poly[0] as Vector3))
+		n = n.normalized()
+		for face: Array in found["faces"]:
+			for v: Vector3 in face:
+				if Geometry2D.is_point_in_polygon(Vector2(v.x, v.z), PackedVector2Array(poly.map(func(c): return Vector2(c.x, c.z)))):
+					worst = maxf(worst, absf(n.dot(v - (poly[0] as Vector3))))
+	_t.check("level ground: no face corner under a merged polygon is more than LEVEL_DEVIATION from it", worst <= _kit.LEVEL_DEVIATION + 0.002, "%.4f m" % worst)
+	# However the work splits, the carve is the same bytes.
+	var once: Array = _plate_landing(flat, 1 << 30)
+	var split: Dictionary = _plate_landing(flat, 1)[0]
+	var tick := 0
+	while not split.has("result") and tick < 1000:
+		_kit._shade_late(split, 7)
+		tick += 1
+	_t.check("level ground: a level carve is the same bytes made at once or in shares", var_to_bytes([once[0]["result"], once[0]["shadows"]]) == var_to_bytes([split["result"], split["shadows"]]) and tick > 1, "%d shares" % tick)
+	# The Breach itself: landing() hits inside the call on the level sheet.
+	var hits_before: int = _kit.carve_stats["breach_hits"]
+	_player.reset_to(flat.global_position + Vector3.UP * 1.0)
+	await physics_frame
+	await physics_frame
+	_piece("foundry_cutter", Vector3.FORWARD)
+	var queued: int = _kit._late.size()
+	_kit.landing("foundry_cutter", _player.ball_position(), 1.0, 1.0)
+	_t.check("level ground: landing() on the sheet hits in the call and queues nothing", int(_kit.carve_stats["breach_hits"]) == hits_before + 1 and _kit._late.size() == queued and bool(_kit.last_landing["level"]))
+	flat.queue_free()
+	# Slope plate, 12 degrees with 15 cm of noise: the plain merge, the old landing budget, the late path.
+	await _fresh()
+	var slope := _plate(Vector3(0.0, 400.0, 0.0), 12.0, 0.15, 7302)
+	await physics_frame
+	await physics_frame
+	var slope_landing: Array = _plate_landing(slope, _kit.landing_work(false))
+	var steep: Dictionary = slope_landing[0]
+	_t.check("level ground: a Breach on a 12 degree sheet is not level and cannot finish in its landing share", not bool(steep["level"]) and not slope_landing[1], "%d parts of work" % int(steep["work"]))
+	var ticks_before: int = _kit.carve_stats["breach_hits"]
+	_player.reset_to(slope.global_position + Vector3.UP * 1.0)
+	await physics_frame
+	await physics_frame
+	_piece("foundry_cutter", Vector3.FORWARD)
+	var now := Engine.get_physics_frames()
+	var waiting: int = _kit._late.size()
+	_kit.landing("foundry_cutter", _player.ball_position(), 1.0, 1.0)
+	var hit_at := -1
+	for t in range(now + 1, now + 400):
+		_kit._step_late(t)
+		if _kit._late.size() == waiting:
+			hit_at = t
+			break
+	_t.check("level ground: the slope landing queues, keeps one share a tick and hits no earlier than LATE_TICKS", _kit._late.size() == waiting and hit_at - now >= _kit.LATE_TICKS and int(_kit.carve_stats["breach_hits"]) == ticks_before + 1 and not bool(_kit.last_landing["level"]) and int(_kit.last_landing["shares"]) > 1, "hit at +%d, %d shares" % [hit_at - now, int(_kit.last_landing["shares"])])
+	slope.queue_free()
+	_t.eq("level ground: lowering late_work lowers the level landing budget too", [_kit.landing_work(true) > _kit.landing_work(false)], [true])
+	await _fresh()
+
+
 # RIVET-FREEZE: the terrain commit skips clips a margin proves cannot change a part. Its parts
 # and shadows must match one plain _subtract_shadow pass per face, byte for byte, across a flat
 # floor grid cutting the slab, a wall, a sliver, faces behind the origin and seeded strays.
@@ -511,8 +630,8 @@ func _merge_fixture() -> void:
 
 
 # RIVET-CURVE ("Beat later", "Spread every Breach"): the captured bowl landing. A light carve
-# finishes on the landing tick; a heavy one carves a share per tick and hits once done, never
-# before LATE_TICKS. Either way the carve is byte for byte the one made at once.
+# finishes on the landing tick; a heavy one carves a share per tick and hits the tick after,
+# never before LATE_TICKS. Either way the carve is byte for byte the one made at once.
 func _late_landing_fixture(at: Vector3, dir: Vector3) -> void:
 	var reach: float = _kit.breach_reach()
 	var spot: Dictionary = _kit._commit_sector(at, dir, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)
@@ -548,7 +667,7 @@ func _late_landing_fixture(at: Vector3, dir: Vector3) -> void:
 			hit_at = tick
 			break
 	var drawn: Dictionary = _kit.volume_indicator.shapes.get("rivet_breach", {})
-	_t.check("late landing: a heavy carve takes one share per tick and hits once carved", twice and shares > _kit.LATE_TICKS and carved_at == now + shares - 1 and hit_at == carved_at and not drawn.is_empty(), "%d shares, carved at +%d, hit at +%d" % [shares, carved_at - now, hit_at - now])
+	_t.check("late landing: a heavy carve takes one share per tick and hits the tick after its last", twice and shares > _kit.LATE_TICKS and carved_at == now + shares - 1 and hit_at == carved_at + 1 and not drawn.is_empty(), "%d shares, carved at +%d, hit at +%d" % [shares, carved_at - now, hit_at - now])
 	# A carve done in two shares still waits for LATE_TICKS.
 	_kit.late_work = work / 2 + 1
 	var quick: Dictionary = _kit._carve_late("foundry_cutter", at, dir, reach, 1.0, 0.0)
@@ -721,6 +840,7 @@ func _run() -> void:
 	_merge_fixture()
 	_grazing_fixture()
 	await _alpha_terrain_cost_fixture()
+	await _level_ground_fixture()
 	await _cylinder_terrain_fixture()
 	await _shape_dispatch_fixture()
 	await _terrain_shadow_fixture()

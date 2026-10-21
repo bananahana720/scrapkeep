@@ -1,8 +1,8 @@
 extends SceneTree
 
 const ROOT := "res://assets/models/highdraft"
-const PROP := Vector3i(270, 610, 1)
-const SCENERY := Vector3i(120, 110, 2)
+const PROP := Vector3i(1100, 800, 1)  # 2026-10-18 polish: was (270, 610, 1); prop class cap 2000 / 4600
+const SCENERY := Vector3i(800, 500, 2)  # 2026-10-18 soft-toy polish: was (120, 110, 2); matches lift.py thermal_air cap
 const ASSETS := {
 	"thermal_vent": {"parts": ["MouthRim", "Grate", "DuctFoot"], "clips": {"idle": 0.1, "occupied": 0.1},
 		"sockets": {"air_base": Vector3.ZERO, "entry": Vector3(0, 0, -3), "return_join": Vector3(0, 0, -4)},

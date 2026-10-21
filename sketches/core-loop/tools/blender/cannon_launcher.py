@@ -33,9 +33,10 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from lantern_beacon import kit, common, frustum, around
 from ore_cart import strut
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [900, 2000, 2]
+LANDMARK = [3200, 2400, 2]  # polish: was [900, 2000, 2]; class cap 4,000 T / 8,900 V
 NAME = "cannon_launcher"
 
 # One row per painted part, palette names or palette hex only (common.HEX mirrors src/core/palette.gd; CABLE 2a3231 and
@@ -55,8 +56,8 @@ GROUND = -1.0
 CENTRE = (0.0, 2.0, -5.0)                      # mouth - aim*5 + UP*2 (contraptions.gd:447)
 AXIS = (0.0, .9, 1.0)                          # aim + UP*0.9 (contraptions.gd:448)
 CLEAR = (3.4, 1.0)                             # ring inner radius (radius 4.0 - 0.6, contraptions.gd:430) and ball top
-N = 10
-NF = 14                                         # the flywheel keeps 16 sides: it is the read at range
+N = 20                                         # polish: was 10
+NF = 28                                         # the flywheel keeps 16 sides: it is the read at range
 # Lathe rows along the barrel axis: (radius, t) with t in metres from CENTRE, -4 the breech end, +4 the muzzle face.
 BOILER = [(.02, -4.0), (2.0, -4.0), (2.75, -3.4), (2.9, -2.9), (2.9, -1.6)]
 COLLAR = (3.2, -1.6, -.8)                      # the dark breech band, where today's copper band sits (:451-459)
@@ -178,12 +179,12 @@ def enamel(s):
     slab(b, (r + .03, t, 0.0), (.07, along / 2, around_ / 2), tone("patch"))
     for x, z, riser, _, _, _ in PIPES:
         rr, y0, y1 = riser
-        frustum(s, rr, rr, y0, y1, 6, tone("body"), caps=(False, False), at=(x, z))
+        frustum(s, rr, rr, y0, y1, 10, tone("body"), caps=(False, False), at=(x, z))
     f = flywheel_frame(s)
     _, ro, ri, hw = FLY
     ring(f, [(ri, -hw), (ro, -hw), (ro, hw), (ri, hw), (ri, -hw)], NF, tone("tyre"))
     wr, wh = FLY_WEB
-    frustum(f, wr, wr, -wh, wh, 6, tone("body"), caps=(False, True))
+    frustum(f, wr, wr, -wh, wh, 10, tone("body"), caps=(False, True))
     count, width, depth = FLY_SPOKES
     for a in around(count):
         p0 = (wr * .8 * math.sin(a), 0.0, wr * .8 * math.cos(a))
@@ -198,22 +199,22 @@ def steel(s):
     ring(b, [(BOILER[-1][0], t0), (r, t0), (r, t1), (FLANGE[0], t1)], N, tone("iron"))
     zc, pr, (y0, y1), dr, (d0, d1) = PLATE
     # The deck's centre stays open: the boiler sits over it (PLATE_OPEN is inside the boiler's footprint on the deck).
-    ring(s, [(pr, y0), (pr, y1), (dr, d0), (dr, d1), (PLATE_OPEN, d1)], 14, tone("iron"), at=(0.0, zc),
+    ring(s, [(pr, y0), (pr, y1), (dr, d0), (dr, d1), (PLATE_OPEN, d1)], 28, tone("iron"), at=(0.0, zc),
          tones=[tone("iron")] * 2 + [tone("deck")] * 3)
     for x, z, _, sleeve, pipe, cap in PIPES:
         for row, name, caps in ((sleeve, "iron", (False, True)), (pipe, "copper", (False, False)), (cap, "copper", (False, True))):
             rr, y0, y1 = row
-            frustum(s, rr, rr, y0, y1, 6, tone(name), caps=caps, at=(x, z))
+            frustum(s, rr, rr, y0, y1, 10, tone(name), caps=caps, at=(x, z))
     g = gauge_frame(s)
     _, _, br, fr = GAUGE
-    ring(g, [(.02, -.2), (br, -.2), (br, 0.0), (fr, 0.0), (fr, -.04), (.02, -.04)], 8, tone("copper"))
+    ring(g, [(.02, -.2), (br, -.2), (br, 0.0), (fr, 0.0), (fr, -.04), (.02, -.04)], 16, tone("copper"))
     strut(s, GAUGE_ARM[0], GAUGE_ARM[1], .14, .14, tone("copper"))
     f = flywheel_frame(s)
     hr, hh = FLY_HUB
-    frustum(f, hr, hr, -hh, hh, 6, tone("copper"))
+    frustum(f, hr, hr, -hh, hh, 10, tone("copper"))
     ar, x0, x1 = AXLE
     a = Frame(s, (0.0, FLY[0][1], FLY[0][2]), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0))
-    frustum(a, ar, ar, x0, x1, 6, tone("iron"), caps=(False, True))
+    frustum(a, ar, ar, x0, x1, 10, tone("iron"), caps=(False, True))
     kit.PARTS["Collar"] = {"reference_position": list(b.at((0.0, (COLLAR[1] + COLLAR[2]) / 2, 0.0)))}
 
 
@@ -268,6 +269,8 @@ def out_dir():
 
 def main():
     d = out_dir()
+    polish.enable(bevel=.03, **kit.BAKE)
+    kit.FINISH.update({"Body": {"bevel": .03}, "Fittings": {"bevel": .03}, "Face": {"bevel": 0}})
     b = Frame(None, CENTRE, AXIS, (1.0, 0.0, 0.0))
     export(NAME + "_body", [("Body", "enamel", False, enamel), ("Fittings", "steel", False, steel)],
            {"socket_muzzle": list(b.at((0.0, LIP[2], 0.0))), "socket_gauge": list(GAUGE[0])}, d)

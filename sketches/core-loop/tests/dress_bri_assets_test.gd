@@ -239,11 +239,11 @@ func _run() -> void:
 	_check(scooter_counts.kit.x == raw_scooter.kit.x and scooter_counts.kit.z == raw_scooter.kit.z and scooter_counts.kit.y <= raw_scooter.kit.y, "scooter import preserves triangles/draws and may weld vertices")
 	var body: Vector3i = counts.body
 	var kit: Vector3i = counts.kit + scooter_counts.kit
-	_check(body.x <= 5000 and body.y <= 9600 and body.z <= 32, "warden_base cap 5000/9600/32")
-	_check(kit.x <= 1500 and kit.y <= 2800 and kit.z <= 18, "combined warden_kit cap 1500/2800/18")
-	_check(raw.body.x <= 5000 and raw.body.y <= 9600 and raw.body.z <= 32, "exported warden_base cap")
+	_check(body.x <= 14500 and body.y <= 11500 and body.z <= 32, "polished warden_base cap 14500/11500/32")
+	_check(kit.x <= 5000 and kit.y <= 5000 and kit.z <= 18, "polished combined warden_kit cap 5000/5000/18")
+	_check(raw.body.x <= 14500 and raw.body.y <= 11500 and raw.body.z <= 32, "exported warden_base cap")
 	var raw_kit: Vector3i = raw.kit + raw_scooter.kit
-	_check(raw_kit.x <= 1500 and raw_kit.y <= 2800 and raw_kit.z <= 18, "exported combined warden_kit cap")
+	_check(raw_kit.x <= 5000 and raw_kit.y <= 5000 and raw_kit.z <= 18, "exported combined warden_kit cap")
 	print("BRI budget: body %s; ship kit %s; scooter %s; combined kit %s (tris, verts, draws)" % [body, counts.kit, scooter_counts.kit, kit])
 	var hull := _find(ship, "Hull") as MeshInstance3D
 	if hull != null:

@@ -61,6 +61,11 @@ import bpy  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
 import common  # noqa: E402
+import polish  # noqa: E402
+
+# Cast relic: 4 cm chamfers on real corners, doubled curves, baked AO (POLISH.md). No edge
+# lightening and softer AO keep the ancient enamel under the section 11 cap.
+polish.enable(detail=1, bevel=0.04, bevel_angle=46.0, edge=0.0, ao_strength=0.35)
 from common import Part  # noqa: E402
 
 FPS = 30
@@ -72,7 +77,8 @@ CLIPS = {
     "chunk_lost_1": (1.0, 0.8), "chunk_lost_2": (1.0, 0.8), "chunk_lost_3": (1.0, 0.8),
 }
 REQUIRED = ("idle", "pulse_warn", "pulse", "active", "chunk_lost", "shrug", "gates_open", "pour", "final_quiet")
-BUDGET = {"tris": 5000, "verts": 9600, "draws": 32}
+# Polished caps (POLISH.md, 18 Oct): 60% of the warden_base class cap.
+BUDGET = {"tris": 12000, "verts": 9600, "draws": 32}
 RADIUS = 2.8
 HALF_HEIGHT = 1.6
 LOW = 2.0
@@ -1230,6 +1236,10 @@ def freeze_rest_export(path, snapshot):
 
 
 def export(root, path, snapshot):
+    reset_pose(root, snapshot)
+    bpy.context.view_layer.update()
+    if common.POLISH is not None:
+        polish.bake(root, common.POLISH)
     bpy.ops.object.select_all(action="DESELECT")
     for obj in common.tree(root):
         obj.select_set(True)
@@ -1251,7 +1261,7 @@ def export(root, path, snapshot):
             for track in obj.animation_data.nla_tracks:
                 track.mute = True
     freeze_rest_export(path, snapshot)
-    common.canonical_indices(path)
+    common.canonical_indices(path, vertices=common.POLISH is not None)
     reset_pose(root, snapshot)
     print("EXPORTED", path)
 

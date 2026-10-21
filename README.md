@@ -1,5 +1,7 @@
 # SCRAPKEEP
 
+> Moving to a new project? Start at [project-guide/handoff/START-HERE.md](project-guide/handoff/START-HERE.md).
+
 A greasy junkyard adventure in a steam-cyberpunk universe. Pilots drive electromagnetic mechs that collect metal, grow, and recycle scrap into evolving weapons and skills across Southwest-inspired landscapes.
 
 ## Start here

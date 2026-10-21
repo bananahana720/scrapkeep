@@ -9,6 +9,9 @@ A tell ends on the frame its visual lands, so the game starts it its own length 
   ballast_brace_slam.wav    1.3 s: the slam, a piston hit, the ring's shock and a steam release
   gap_net_charge_tell.wav   1.0 s tell: gap_net.gd warn_seconds, the net's charge whining up, ends on live
   gap_net_charge_live.wav   0.7 s: the net goes live, a zap and a crackle that settles into its hum
+  ring_out_fall.wav         1.6 s: enemy_ringed_out (an enemy knocked off a rim, 6 m down): a slide
+                            whistle falling G6 to G4 as it recedes, then a far-off poof and a
+                            twinkle on G6, the cartoon "and they're gone"
 
 44.1 kHz, mono, 16-bit, peaks at -1 dBFS, like arrival_sfx.py and the jolt layer.
 """
@@ -83,9 +86,36 @@ def gap_net_charge_live():
     return zap + tone + crackle + hum
 
 
+def ring_out_fall():
+    n = int(1.6 * SR)
+    t = t_of(1.6)
+    fall = 1.05
+    # The whistle: G6 down two octaves, the fall speeding up like a drop, a wobble on it, quieter
+    # and duller as it goes (a lowpass by mixing in less of the bright partial).
+    ft = t_of(fall)
+    curve = (ft / fall) ** 1.6
+    pitch = 1567.98 * 2 ** (-2 * curve) * (1 + 0.012 * np.sin(2 * np.pi * 6.5 * ft))
+    phase = np.cumsum(2 * np.pi * pitch / SR)
+    recede = (1 - 0.85 * ft / fall) * np.minimum(ft / 0.02, 1.0)
+    whistle = (np.sin(phase) + 0.25 * (1 - ft / fall) * np.sin(2 * phase)) * recede
+    breath = bandpass_noise(len(ft), 1500, 5000) * recede * 0.06
+    out = place(n, 0.0, whistle * 0.8 + breath)
+    # The far-off poof: a soft low thump and a puff, small because it is far below.
+    pt = t_of(0.35)
+    poof = np.sin(2 * np.pi * G2 * pt) * np.exp(-pt / 0.06) * 0.35 + bandpass_noise(len(pt), 300, 2500) * np.exp(-pt / 0.08) * 0.2
+    out += place(n, fall, poof)
+    # The twinkle: two bell pings on G6 and D7, the "gone" wink.
+    for at, f, g in ((fall + 0.14, 1567.98, 0.45), (fall + 0.24, 2349.32, 0.32)):
+        bt = t_of(0.45)
+        ping = (np.sin(2 * np.pi * f * bt) + 0.3 * np.sin(2 * np.pi * f * 2.76 * bt) * np.exp(-bt / 0.05)) * np.exp(-bt / 0.18)
+        out += place(n, at, ping * g)
+    return out
+
+
 SOUNDS = {
     "ballast_brace_tell": ballast_brace_tell, "ballast_brace_slam": ballast_brace_slam,
     "gap_net_charge_tell": gap_net_charge_tell, "gap_net_charge_live": gap_net_charge_live,
+    "ring_out_fall": ring_out_fall,
 }
 
 

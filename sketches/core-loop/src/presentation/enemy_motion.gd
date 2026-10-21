@@ -2,6 +2,7 @@ extends Node3D
 
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const BakeLook := preload("res://src/presentation/bake_look.gd")
 
 # An enemy's life between attacks and its break-up on death, read from its WindupRows row
 # (idle, death, and the swarm remnant's wind-up pose). The idle moves the model's pivot
@@ -58,7 +59,7 @@ static func _number(row: Dictionary, field: String) -> bool:
 # The kind's own attack clock: its first attack's lead, read from the enemy's real timing.
 static func attack_clock(kind: String, enemy: Object) -> float:
 	var spec: Dictionary = WindupRows.ROWS.get(kind, {})
-	if spec.is_empty():
+	if spec.is_empty() or spec.attacks.is_empty():
 		return REST_CLOCK
 	var lead := float(WindupRows.row(kind, enemy, String(spec.attacks.keys()[0])).get("lead_seconds", 0.0))
 	return lead if lead > 0.0 else REST_CLOCK
@@ -141,7 +142,7 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 			var box := BoxMesh.new()
 			box.size = Vector3.ONE * (0.45 - 0.03 * float(i % 4))
 			piece.mesh = box
-			piece.material_override = material
+			piece.material_override = BakeLook.unbaked(material)
 			piece.position = out * 0.4 + Vector3.UP * 0.6
 		node._pieces.append({"node": piece, "velocity": _throw(node.style, out, throw), "spin": out.cross(Vector3.UP) * 6.0})
 	return node

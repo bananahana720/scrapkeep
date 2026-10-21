@@ -31,9 +31,19 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from lantern_beacon import kit, common, frustum
 from ore_cart import strut
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [900, 2000, 2]
+LANDMARK = [2700, 2000, 2]  # polish: was [900, 2000, 2]
+# Polish (tools/blender/POLISH.md): hard hull with small bevels; tyres are round elastomer.
+FINISH = {"Hull": {"bevel": .04}, "Fittings": {"bevel": .03}, "Wheels": {"bevel": 0, "subsurf": 1}, "Jets": {"bevel": .03}, "Detail1": {"bevel": 0}, "Detail2": {"bevel": 0}}
+
+
+def polish_on():
+    polish.enable(bevel=.03, bevel_min=.15, **kit.BAKE)
+    kit.FINISH.update(FINISH)
+
+
 
 # One row per painted part, palette constants only (src/core/palette.gd). The picture's lighter teal is VERDIGRIS
 # (gap: no lighter teal tone); its orange wheels are COPPER (lore: coils and plumbing) and its orange sign is AMBER
@@ -200,6 +210,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))
     args = parser.parse_args(argv)
+    polish_on()
     export("moss_hover_barge", [("Hull", "enamel", False, enamel), ("Fittings", "steel", False, steel)], args.out_dir)
     export("moss_hover_barge_thrusters", [("Wheels", "elastomer", False, wheels), ("Jets", "steel", False, housings)],
            args.out_dir)

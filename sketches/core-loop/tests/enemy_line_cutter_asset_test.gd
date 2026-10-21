@@ -6,7 +6,10 @@ const Game := preload("res://src/game.gd")
 const Cutter := preload("res://src/combat/line_cutter.gd")
 const T := preload("res://tests/support/t.gd")
 const GLB := "res://assets/models/world_three/enemy_line_cutter.glb"
-const GAMEPLAY_HASHES := {"_configure": "795bc13a5e8b56c01f956ee245b69e9e37b7cb387e815941481c669d844119c7", "_wants_attack": "29039745fb49a90fc0340df97791bbce8a39457ebf26045d4a2ee895c4dd8964", "_commit": "9c7b7d6b30f8ec64ae9ff395bed22cb4f7199b2a5053bd5f132761536ab9e7c2", "_warn_progress": "a2b5cadd237634ac87eece61d02998ec5d88646599c2157fa0bbd1b6b1876061", "_go_live": "a887f9155c41b358c2e87592d5186c8baea4f41c37529f59bf2fbb0e26e7aeb1", "_live": "f50d2057b9857b3c7fb428d5c454ee3294a84f1032f410d8bea6f60fb34d0ffd", "_on_end": "501af355811ac1887dc2dca6735c23df7c343b1eecb3044ae5ea798451b7473c", "_rest_disc": "be6103f0498890eba09f9880718efd36de6f401ec2504b715e47a4ff92502d32"}
+# 2026-10-18 (w17 fix): re-pin for 3059e90 (Highdraft line cutter: gap-only cut, re-bite, grown landing
+# throw, RING_REACH 40.0). _commit was 9c7b7d6b, _live was f50d2057, RING_REACH was 6.0; the disc now
+# flies to _target (the predicted point) instead of the ring centre.
+const GAMEPLAY_HASHES := {"_configure": "795bc13a5e8b56c01f956ee245b69e9e37b7cb387e815941481c669d844119c7", "_wants_attack": "29039745fb49a90fc0340df97791bbce8a39457ebf26045d4a2ee895c4dd8964", "_commit": "30d702469086c3951b6385f7004fd94986b27172fc36be67e5572b28e93dec0a", "_warn_progress": "a2b5cadd237634ac87eece61d02998ec5d88646599c2157fa0bbd1b6b1876061", "_go_live": "a887f9155c41b358c2e87592d5186c8baea4f41c37529f59bf2fbb0e26e7aeb1", "_live": "aba1931940af96c8d6837438e5e26012d89e0036a3519c370920ad2eea093743", "_on_end": "501af355811ac1887dc2dca6735c23df7c343b1eecb3044ae5ea798451b7473c", "_rest_disc": "be6103f0498890eba09f9880718efd36de6f401ec2504b715e47a4ff92502d32"}
 
 var t := T.new("enemy_line_cutter_asset_test")
 var game
@@ -36,7 +39,7 @@ func _measure(node: Node) -> Dictionary:
 					opaque = opaque and c.a > 0.999
 				t.check("opaque vertex colours", opaque)
 	print("assembly: %d V / %d T / %d D" % [totals.vertices, totals.triangles, totals.draws])
-	t.check("enemy budget", totals.vertices > 0 and totals.vertices <= 2100 and totals.triangles > 0 and totals.triangles <= 1100 and totals.draws == 3)
+	t.check("enemy budget", totals.vertices > 0 and totals.vertices <= 19100 and totals.triangles > 0 and totals.triangles <= 10000 and totals.draws == 3)
 	return totals
 
 
@@ -105,7 +108,7 @@ func _run() -> void:
 	for name in GAMEPLAY_HASHES:
 		t.check("unchanged gameplay " + name, _source_function(source, name).sha256_text() == GAMEPLAY_HASHES[name])
 	# Shared combat files are not pinned here; the merge-time fence owns shared-file changes (2026-10-13, ENEMY-PINS).
-	t.check("unchanged constants", source.contains("const FLIGHT := 1.1") and source.contains("const HP := 38.0") and source.contains("const STING := 4.0") and source.contains("const HEIGHT := 2.2") and source.contains("const SPIN_RATE := 0.9") and source.contains("const RING_RADIUS := 2.6") and source.contains("const RING_REACH := 6.0"))
+	t.check("unchanged constants", source.contains("const FLIGHT := 1.1") and source.contains("const HP := 38.0") and source.contains("const STING := 4.0") and source.contains("const HEIGHT := 2.2") and source.contains("const SPIN_RATE := 0.9") and source.contains("const RING_RADIUS := 2.6") and source.contains("const RING_REACH := 40.0"))
 	game = Game.new()
 	game.test_mode = true
 	root.add_child(game)
@@ -171,7 +174,7 @@ func _pose_and_flight(unit) -> void:
 	unit._go_live()
 	unit._t = 0.55
 	unit._live(0.0)
-	var expected: Vector3 = unit.Threat.flight_point(unit._launch, ring.center, unit._bump, 0.5)
+	var expected: Vector3 = unit.Threat.flight_point(unit._launch, unit._target, unit._bump, 0.5)
 	t.check("script-owned flight", unit._disc.top_level and unit._disc.global_position.is_equal_approx(expected))
 	var flight: Transform3D = unit._disc.global_transform
 	unit._pose()

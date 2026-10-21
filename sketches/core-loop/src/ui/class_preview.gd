@@ -100,7 +100,7 @@ var sitting := false
 const IDLE_CLIP := "idle_loop"
 const UNLOCK_CLIP := "unlock"
 const UNLOCK_SEEN := "unlock_clip_"
-const BASE_BLEND := 0.1
+const BASE_BLEND: float = preload("res://src/presentation/pilot_reactions.gd").BASE_BLEND
 # At rest the pilot climbs out and does their bit (pilot_antics.gd) every ANTIC_PERIOD seconds,
 # each card on its own phase so a row of cards never moves in step; never in the first period,
 # so a card you just opened on shows its still first.
@@ -293,7 +293,7 @@ func seat_pilot() -> String:
 func focus_clip() -> String:
 	if _animator == null or _pilot == null or def == null or not _animator.has_animation(UNLOCK_CLIP) or not _unlock_due():
 		return ""
-	_animator.play(UNLOCK_CLIP, 0.0)
+	_animator.play(UNLOCK_CLIP, BASE_BLEND if _animator.is_playing() else 0.0)
 	_animator.advance(0.0)
 	if not _animator.animation_finished.is_connected(_on_clip_finished):
 		_animator.animation_finished.connect(_on_clip_finished)

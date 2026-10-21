@@ -252,7 +252,7 @@ func _process(_delta: float) -> bool:
 	_t.check("a champion on a chiptune run plays the chiptune", not a.named.is_empty() and a.named[-1][0] == "secret-chip-keepers", str(a.named))
 	elite.free()
 	a._remixes = {}
-	_t.eq("an unrolled run opens on phase 1", a._boss_entry("brindle"), "brindle-p1-requisition")
+	_t.eq("an unrolled run opens on the picked theme", a._boss_entry("brindle"), "boss-brindle")
 
 	var p := _rig(func(_id): return true)
 	p.ctx.build = FakeBuild.new()
@@ -277,7 +277,7 @@ func _process(_delta: float) -> bool:
 	mb.free()
 	_t.check("missing packs never change the music", none.staged.is_empty() and none.named.is_empty(), str(none.staged))
 	none._remixes = {"3-1": "secret-highdraft-rain", "brindle": "secret-brindle-swing"}
-	_t.check("a missing remix keeps the parent", none.level_tune(zone31) == "" and none._boss_entry("brindle") == "brindle-p1-requisition")
+	_t.check("a missing remix keeps the parent", none.level_tune(zone31) == "" and none._boss_entry("brindle") == "boss-brindle")
 
 	for node in _nodes:
 		if is_instance_valid(node):

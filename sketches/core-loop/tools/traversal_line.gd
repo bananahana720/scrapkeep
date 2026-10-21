@@ -8,6 +8,10 @@ const Augments := preload("res://src/movement/augments.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
+const FloorRule := preload("res://src/combat/floor_rule.gd")
+const CinderHeat := preload("res://src/world/cinder_heat.gd")
+const CINDER_SOURCE := CinderHeat.SOURCE
+const CINDER_BURN := CinderHeat.BURN_FACT
 
 # The traversal measure (design-v3/TRAVERSAL.md): one pilot's traversal bot crosses the slice
 # table's stage once per seed, from the spawn to the Warden's engagement, and one JSON file
@@ -26,6 +30,13 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 # As in bot_run, the audio bake completes before play and actor side choices use
 # seed/spawn order instead of allocator-dependent object IDs. Trace allocation
 # can then only change the diagnostic buffer, not the world it observes.
+#
+# --hands=harpoon,glide gives the traversal bot its optional hands (bot_driver.gd HAND_NAMES): the
+# harpoon hand swings from an anchor ahead on the way to the next waypoint, the glide hand holds
+# glide over a thermal column and down a long drop. Both are off by default, so every pin, band
+# and bot baseline is the bare pilot's; the flag reaches every child. A hands run writes
+# <pilot>.hands.json with a "hands" field and prints hands= on its summary line, never <pilot>.json;
+# --floor refuses --hands.
 #
 # The default out is artifacts/local/traversal at the repository root. The pilot's route and
 # bar come from tools/traversal_lines.json. The number judges a bot, not the feel of the map.
@@ -61,7 +72,9 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 # PARK_RIDE_FACTS, the count the distinct-verbs band judges), blazing_mps (the blazing tier's speed, 1.9 times the tuned
 # cruise, the peak band's threshold), length_ratio (path over the straight distance from the drop to the engage centre),
 # dead_stop_at (stage second and place of each dead stop) and progress_m (the drop in the stage
-# graph's d_landmark per second; null without assets/park/<map_id>/graph.bin, said once). The
+# graph's d_landmark per second; null without assets/park/<map_id>/graph.bin, said once), floor_share
+# (ticks on the Dig floor rule's floor, FloorRule.on_floor, over all counted ticks) and carve_share (grounded ticks
+# off that floor, on a bank, a wall or a lip, over all grounded ticks; the sinkhole's carving test reads it). The
 # summary holds each measure's median and names every band with whether its median is inside.
 
 const TABLE := "slice"
@@ -153,6 +166,9 @@ class Sampler:
 	var _uphill := 0.0
 	var tracing := false
 	var trace: Array = []
+	# Records "glide" among the verbs when the glide hand is on: a thermal column or drop the hand
+	# opens the glide over leaves no fact of its own, and a bare run's verbs stay as they were.
+	var record_glide := false
 	# The park's measures (PARK.md section 8).
 	var park := false
 	var waymarks: Array = []
@@ -169,6 +185,11 @@ class Sampler:
 	var _straight := 0.0
 	var _graph_start = null
 	var cruise := 0.0
+	var _floor_ticks := 0
+	var _grounded_ticks := 0
+	# The sinkhole's lava floor (src/world/cinder_heat.gd): burns started and hull lost to it.
+	var _cinder_burns := 0
+	var _cinder_hp := 0.0
 
 	func _init(game_ref) -> void:
 		game = game_ref
@@ -177,6 +198,9 @@ class Sampler:
 		game.events.warden_engaged.connect(_on_engaged)
 		game.events.world_fact.connect(_on_fact)
 		game.events.line_state_changed.connect(_on_line)
+		game.events.player_hit.connect(func(amount: float, source: String):
+			if source == CINDER_SOURCE and _counting():
+				_cinder_hp += amount)
 		for signal_name in VERB_SIGNALS:
 			if game.events.has_signal(signal_name):
 				var verb: String = VERB_SIGNALS[signal_name]
@@ -199,6 +223,8 @@ class Sampler:
 	func _on_fact(kind: String, _at: Vector3) -> void:
 		if not _counting():
 			return
+		if kind == CINDER_BURN:
+			_cinder_burns += 1
 		if kind in RIDE_FACTS and not kind in _rides:
 			_rides.append(kind)
 		if park:
@@ -264,12 +290,18 @@ class Sampler:
 		_furthest_z = maxf(_furthest_z, ball.z)
 		_uphill = maxf(_uphill, _furthest_z - ball.z)
 		var grounded: bool = player.state.grounded
+		if grounded:
+			_grounded_ticks += 1
+			if FloorRule.on_floor(player.state):
+				_floor_ticks += 1
 		if _was_grounded and not grounded and game.ctx.terrain.map().near_kicker_lip(Vector2(ball.x, ball.z)):
 			if not KICKER_LAUNCH in _rides:
 				_rides.append(KICKER_LAUNCH)
 			_event()
 			_verb(KICKER_LAUNCH)
 		_was_grounded = grounded
+		if record_glide and player.kit.gliding:
+			_verb("glide")
 		if _anchored(ball):
 			max_anchor_gap = maxf(max_anchor_gap, _path - _last_anchor)
 			_last_anchor = _path
@@ -425,6 +457,10 @@ class Sampler:
 			"length_ratio": snappedf(_path / _straight, 0.01) if _straight > 0.0 else null,
 			"dead_stop_at": dead_stop_at.duplicate(true),
 			"progress_m": _progress(),
+			"floor_share": snappedf(float(_floor_ticks) / float(traversal.ticks), 0.0001) if traversal.ticks > 0 else 0.0,
+			"carve_share": snappedf(1.0 - float(_floor_ticks) / float(_grounded_ticks), 0.0001) if _grounded_ticks > 0 else 0.0,
+			"cinder_burns": _cinder_burns,
+			"cinder_hp": snappedf(_cinder_hp, 0.01),
 		}
 
 
@@ -476,7 +512,8 @@ static func park_document(pilot: String, map_id: String, stage: int, commit: Str
 	doc["stage"] = stage
 	var medians := {}
 	for key in ["time_to_warden_s", "flow_share", "airborne_share", "peak_speed_mps", "tier3_s", "segment_s", "quiet_max_s",
-			"distinct_verbs", "distinct_ride_facts", "max_anchor_gap_m", "length_ratio", "progress_m", "path_length_m", "dead_stops", "blazing_mps"]:
+			"distinct_verbs", "distinct_ride_facts", "max_anchor_gap_m", "length_ratio", "progress_m", "path_length_m", "dead_stops", "blazing_mps",
+			"floor_share", "carve_share", "cinder_burns", "cinder_hp"]:
 		var values := _values(runs, key)
 		medians[key] = snappedf(median(values), 0.0001) if not values.is_empty() else null
 	var segment_medians: Array = []
@@ -791,6 +828,15 @@ func _initialize() -> void:
 		printerr("traversal_line: seeds must be nonempty and ticks and child-timeout positive")
 		quit(2)
 		return
+	for hand in hands_of(_settings):
+		if not hand in BotDriver.HAND_NAMES:
+			printerr("traversal_line: --hands=%s names no hand (%s)" % [hand, ",".join(BotDriver.HAND_NAMES)])
+			quit(2)
+			return
+	if _settings.has("floor") and not hands_of(_settings).is_empty():
+		printerr("traversal_line: --floor cannot take --hands (the floor line strips the hands' presses)")
+		quit(2)
+		return
 	_routes = load_routes()
 	if _settings.has("child"):
 		if _seeds.size() != 1:
@@ -815,8 +861,8 @@ func _run_children() -> void:
 	for i in _seeds.size():
 		var child_out := out.path_join("children/%d-seed-%d" % [i + 1, _seeds[i]])
 		DirAccess.make_dir_recursive_absolute(child_out)
-		var path := child_out.path_join("%s.json" % _pilot)
-		var name := "%s-seed-%d-trace.json" % [_pilot, _seeds[i]]
+		var path := child_out.path_join(summary_name(_pilot, hands_of(_settings)))
+		var name := "%s-seed-%d-trace.json" % [trace_stem(_pilot, hands_of(_settings)), _seeds[i]]
 		var child_trace := child_out.path_join(name)
 		var trace_path := out.path_join(name)
 		# Invalidate both trace consumers before replacing this seed's evidence.
@@ -910,6 +956,25 @@ static func _parse(args: PackedStringArray) -> Dictionary:
 	return out
 
 
+# A hands run's summary is <pilot>.hands.json, so it is never the bare baseline that bands, the
+# floor's --ref and other readers take from <pilot>.json.
+static func summary_name(pilot: String, hands: Array) -> String:
+	return "%s.json" % pilot if hands.is_empty() else "%s.hands.json" % pilot
+
+
+# The trace files' stem: a hands run's traces never collide with a bare run's.
+static func trace_stem(pilot: String, hands: Array) -> String:
+	return pilot if hands.is_empty() else "%s.hands" % pilot
+
+
+# The hands --hands= names, in the order given.
+static func hands_of(settings: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for part in String(settings.get("hands", "")).split(",", false):
+		out.append(part)
+	return out
+
+
 func _start_seed() -> void:
 	_index = 0
 	seed(_seeds[_index])
@@ -927,6 +992,7 @@ func _physics_process(delta: float) -> bool:
 	if _driver == null:
 		_game.presentation.audio.bake_now()
 		_driver = BotDriver.new(_game, "traversal", _seeds[_index])
+		_driver.hands = hands_of(_settings)
 		if _park:
 			if not _start_park_driver():
 				return false
@@ -936,6 +1002,7 @@ func _physics_process(delta: float) -> bool:
 			_driver.start()
 			_sampler = Sampler.new(_game)
 		_sampler.tracing = _settings.has("trace")
+		_sampler.record_glide = "glide" in _driver.hands
 		return false
 	var over: bool = _driver.tick(delta)
 	if not over and _settings.has("ticks") and _driver.ticks >= int(_settings["ticks"]):
@@ -951,15 +1018,15 @@ func _physics_process(delta: float) -> bool:
 	var run := _sampler.result(_seeds[_index], "engaged" if _sampler.engaged else _driver.outcome)
 	_runs.append(run)
 	if _sampler.tracing:
-		var trace_path := _out_dir().path_join("%s-seed-%d-trace.json" % [_pilot, _seeds[_index]])
+		var trace_path := _out_dir().path_join("%s-seed-%d-trace.json" % [trace_stem(_pilot, hands_of(_settings)), _seeds[_index]])
 		write_document(trace_path, {"pilot": _pilot, "seed": _seeds[_index], "ticks": _sampler.trace})
 	print("traversal_line: %s seed %d -> %s, flow share %.3f, dead stops %d, anchor gap %.1f m, to Warden %s s, path %.1f m, rides %s, uphill %.1f m"
 		% [_pilot, run["seed"], run["outcome"], run["flow_share"], run["dead_stops"], run["max_anchor_gap_m"], run["time_to_warden_s"],
 			run["path_length_m"], run["rides"], run["uphill_m"]])
 	if _park:
-		print("traversal_line: %s seed %d park: airborne %.3f, peak %.1f m/s (blazing %s), tier 3 %.1f s, segments %s s (longest %s), quiet max %.1f s, verbs %d %s (ride facts %d), length ratio %s, progress %s, dead stops at %s"
+		print("traversal_line: %s seed %d park: airborne %.3f, peak %.1f m/s (blazing %s), tier 3 %.1f s, segments %s s (longest %s), quiet max %.1f s, verbs %d %s (ride facts %d), length ratio %s, progress %s, floor %.3f, carve %.3f, cinder burns %d (%.1f hp), dead stops at %s"
 			% [_pilot, run["seed"], run["airborne_share"], run["peak_speed_mps"], run["blazing_mps"], run["tier3_s"], run["segments_s"], run["segment_s"],
-				run["quiet_max_s"], run["distinct_verbs"], run["verbs"], run["distinct_ride_facts"], run["length_ratio"], run["progress_m"], run["dead_stop_at"]])
+				run["quiet_max_s"], run["distinct_verbs"], run["verbs"], run["distinct_ride_facts"], run["length_ratio"], run["progress_m"], run["floor_share"], run["carve_share"], run["cinder_burns"], run["cinder_hp"], run["dead_stop_at"]])
 	_game.free()
 	_game = null
 	_finish()
@@ -1014,7 +1081,7 @@ func _out_dir() -> String:
 
 func _finish() -> void:
 	var out := _out_dir()
-	var path := out.path_join("%s.json" % _pilot)
+	var path := out.path_join(summary_name(_pilot, hands_of(_settings)))
 	var doc := {}
 	if _park:
 		doc = park_document(_pilot, _map_id, _stage, _commit(), _runs, _line.get("bar", {}), _floor_ref(out))
@@ -1023,6 +1090,8 @@ func _finish() -> void:
 	else:
 		var bar: Dictionary = _routes.get("pilots", {}).get(_pilot, {}).get("bar", {})
 		doc = document(_pilot, TABLE, _commit(), _runs, bar)
+	if not hands_of(_settings).is_empty():
+		doc["hands"] = hands_of(_settings)
 	if not _inconclusive.is_empty():
 		doc["status"] = "INCONCLUSIVE"
 		doc["inconclusive"] = _inconclusive
@@ -1033,8 +1102,9 @@ func _finish() -> void:
 		for band in doc["bands"]:
 			var verdict := "no data" if band["inside"] == null else ("inside" if band["inside"] else "OUTSIDE")
 			print("traversal_line: %s band %s (%s): median %s, worst %s -> %s" % [_pilot, band["measure"], band["band"], band["median"], band["worst"], verdict])
-	print("traversal_line: %s median flow share %.3f, worst seed %s, written %s to %s"
-		% [_pilot, doc["median_flow_share"], doc["worst_seed"], written, path])
+	var hands_note := "" if hands_of(_settings).is_empty() else " hands=" + ",".join(hands_of(_settings))
+	print("traversal_line: %s%s median flow share %.3f, worst seed %s, written %s to %s"
+		% [_pilot, hands_note, doc["median_flow_share"], doc["worst_seed"], written, path])
 	if _park and _stage == FIXTURE_STAGE:
 		restore_park_defs()
 	quit((0 if _inconclusive.is_empty() else 3) if written else 1)

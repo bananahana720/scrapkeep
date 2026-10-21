@@ -79,7 +79,7 @@ const RIG_BONES := [
 	"shoulder.R", "upper_arm.R", "lower_arm.R", "hand.R", "curl.R", "tool.R", "tail.01", "tail.02",
 ]
 # The triangle range allows one percent of export variation.
-const RIG_TRIS := Vector2i(4205, 4291)
+const RIG_TRIS := Vector2i(10351, 10561)
 const RIG_MESHES := {"Claws_L": ["pilot"], "Claws_R": ["pilot"], "Pilot": ["pilot"]}
 
 var _t := T.new("world_one_shell_rivet_test")

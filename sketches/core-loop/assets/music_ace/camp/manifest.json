@@ -18,93 +18,99 @@
  "silent_db": -80.0,
  "sources": {
   "calm": {
-   "take": "camp",
-   "render": "sound-bible:renders/lab-round5-1/grid129/camp-s2502-129bpm.wav",
-   "pick": "camp (s2502)",
-   "trim_samples": 348704,
-   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
-   "stems": {
-    "drums": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/camp/drums.wav",
-     "sha256": "1dc4316c8281b57007d6f6c4853023ffd3b39a64260cb647ad2261bf97f1663c"
-    },
-    "bass": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/camp/bass.wav",
-     "sha256": "8ba2f4ea8104ac587985c3514280e66e8d867da1f2831a97fd85578b36b1efe8"
-    },
-    "other": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/camp/other.wav",
-     "sha256": "66177ab27e8fda6cb6a8657db7753e2859360272b910c464cd1fb6852c1074b6"
-    },
-    "vocals": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/camp/vocals.wav",
-     "sha256": "2aeb0089d1c99e102bab8b2fb47098d539586e2e3a866f197984aa5daa860809"
+   "take": "camp-light",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/camp-light.wav",
+   "render_sha256": "e0e4b9cba9f9dc5b40b2606979278c838bdd3286b90a3cdddd491b7246a44246",
+   "tempo_read": 129.03,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/camp-light/drums.wav",
+      "sha256": "6a3e8020c232d1839624c1a841a1b167a968281ddd487656052f16ee966300f3"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/camp-light/bass.wav",
+      "sha256": "789657ffc8301863fcd63eeefe0b5d5a96cd6fa8a44a16b2b7038183b286cd79"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/camp-light/other.wav",
+      "sha256": "e7f45f294e9402630d18a60c0e57a767115022fc7c15bb86dc07b0b6cc9a9cbb"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/camp-light/vocals.wav",
+      "sha256": "bbd2c4b7ee97e613a23dd270c58a6cd21ab63a214c065ab6fe2afe841fa7b8ad"
+     }
     }
-   },
-   "other_stem": "other plus vocals, scaled to peak 1 if over"
+   }
   },
   "travel": {
-   "take": "camp",
-   "render": "sound-bible:renders/lab-round5-1/grid129/camp-s2502-129bpm.wav",
-   "pick": "camp (s2502)",
-   "trim_samples": 1661472,
-   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
-   "stems": {
-    "drums": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/camp/drums.wav",
-     "sha256": "1dc4316c8281b57007d6f6c4853023ffd3b39a64260cb647ad2261bf97f1663c"
-    },
-    "bass": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/camp/bass.wav",
-     "sha256": "8ba2f4ea8104ac587985c3514280e66e8d867da1f2831a97fd85578b36b1efe8"
-    },
-    "other": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/camp/other.wav",
-     "sha256": "66177ab27e8fda6cb6a8657db7753e2859360272b910c464cd1fb6852c1074b6"
-    },
-    "vocals": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/camp/vocals.wav",
-     "sha256": "2aeb0089d1c99e102bab8b2fb47098d539586e2e3a866f197984aa5daa860809"
+   "take": "camp-light",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/camp-light.wav",
+   "render_sha256": "e0e4b9cba9f9dc5b40b2606979278c838bdd3286b90a3cdddd491b7246a44246",
+   "tempo_read": 129.03,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/camp-light/drums.wav",
+      "sha256": "6a3e8020c232d1839624c1a841a1b167a968281ddd487656052f16ee966300f3"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/camp-light/bass.wav",
+      "sha256": "789657ffc8301863fcd63eeefe0b5d5a96cd6fa8a44a16b2b7038183b286cd79"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/camp-light/other.wav",
+      "sha256": "e7f45f294e9402630d18a60c0e57a767115022fc7c15bb86dc07b0b6cc9a9cbb"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/camp-light/vocals.wav",
+      "sha256": "bbd2c4b7ee97e613a23dd270c58a6cd21ab63a214c065ab6fe2afe841fa7b8ad"
+     }
     }
-   },
-   "other_stem": "other plus vocals, scaled to peak 1 if over"
+   }
   },
   "cadence": {
-   "take": "camp",
-   "render": "sound-bible:renders/lab-round5-1/grid129/camp-s2502-129bpm.wav",
-   "pick": "camp (s2502)",
-   "trim_samples": 3302432,
-   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
-   "stems": {
-    "drums": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/camp/drums.wav",
-     "sha256": "1dc4316c8281b57007d6f6c4853023ffd3b39a64260cb647ad2261bf97f1663c"
-    },
-    "bass": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/camp/bass.wav",
-     "sha256": "8ba2f4ea8104ac587985c3514280e66e8d867da1f2831a97fd85578b36b1efe8"
-    },
-    "other": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/camp/other.wav",
-     "sha256": "66177ab27e8fda6cb6a8657db7753e2859360272b910c464cd1fb6852c1074b6"
-    },
-    "vocals": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/camp/vocals.wav",
-     "sha256": "2aeb0089d1c99e102bab8b2fb47098d539586e2e3a866f197984aa5daa860809"
+   "take": "camp-light",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/camp-light.wav",
+   "render_sha256": "e0e4b9cba9f9dc5b40b2606979278c838bdd3286b90a3cdddd491b7246a44246",
+   "tempo_read": 129.03,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/camp-light/drums.wav",
+      "sha256": "6a3e8020c232d1839624c1a841a1b167a968281ddd487656052f16ee966300f3"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/camp-light/bass.wav",
+      "sha256": "789657ffc8301863fcd63eeefe0b5d5a96cd6fa8a44a16b2b7038183b286cd79"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/camp-light/other.wav",
+      "sha256": "e7f45f294e9402630d18a60c0e57a767115022fc7c15bb86dc07b0b6cc9a9cbb"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/camp-light/vocals.wav",
+      "sha256": "bbd2c4b7ee97e613a23dd270c58a6cd21ab63a214c065ab6fe2afe841fa7b8ad"
+     }
     }
-   },
-   "other_stem": "other plus vocals, scaled to peak 1 if over"
+   }
   }
  },
  "clips": {
   "calm": {
-   "parent": "picked",
-   "take": "camp",
-   "source_state": "calm",
+   "parent": "menu",
+   "take": "camp-light",
+   "source_state": "camp-light bars 4-19",
    "source_bars": "5-20",
-   "source_start": 348704,
-   "take_start": 348704,
-   "bpm": 129,
+   "source_start": 348666,
+   "take_start": 348666,
+   "bpm": 129.0,
    "beat": 20512,
    "bar": 82048,
    "beats_per_bar": 4,
@@ -121,16 +127,24 @@
     "drums": "calm.drums.ogg",
     "bass": "calm.bass.ogg",
     "other": "calm.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": 1.45,
+   "gain_db": 0.2,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.7,
+    "note": "summed stems before Ogg encode"
    }
   },
   "travel": {
-   "parent": "picked",
-   "take": "camp",
-   "source_state": "travel",
+   "parent": "menu",
+   "take": "camp-light",
+   "source_state": "camp-light bars 20-35",
    "source_bars": "21-36",
-   "source_start": 1661472,
-   "take_start": 1661472,
-   "bpm": 129,
+   "source_start": 1661346,
+   "take_start": 1661346,
+   "bpm": 129.0,
    "beat": 20512,
    "bar": 82048,
    "beats_per_bar": 4,
@@ -147,16 +161,24 @@
     "drums": "travel.drums.ogg",
     "bass": "travel.bass.ogg",
     "other": "travel.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": 0.0,
+   "gain_db": -0.6,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.8,
+    "note": "summed stems before Ogg encode"
    }
   },
   "cadence": {
-   "parent": "picked",
-   "take": "camp",
-   "source_state": "cadence",
-   "source_bars": "41-42",
-   "source_start": 3302432,
-   "take_start": 3302432,
-   "bpm": 129,
+   "parent": "menu",
+   "take": "camp-light",
+   "source_state": "camp-light bars 39-40",
+   "source_bars": "40-41",
+   "source_start": 3219302,
+   "take_start": 3219302,
+   "bpm": 129.0,
    "beat": 20512,
    "bar": 82048,
    "beats_per_bar": 4,
@@ -173,6 +195,14 @@
     "drums": "cadence.drums.ogg",
     "bass": "cadence.bass.ogg",
     "other": "cadence.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": -21.03,
+   "gain_db": -0.2,
+   "measured": {
+    "lufs": -17.0,
+    "true_peak": -2.9,
+    "note": "summed stems before Ogg encode"
    }
   }
  },
@@ -365,6 +395,7 @@
   }
  },
  "breath_default": "hard",
- "cuts": "nominal-unverified",
- "timing_verified": false
+ "cuts": "measured-beat-phase",
+ "timing_verified": false,
+ "pick": "sound-bible-2026-10-16/spice"
 }

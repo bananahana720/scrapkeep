@@ -109,7 +109,7 @@ func _initialize() -> void:
 				if intros[zone].has(subject) and not row.has("pilot"):
 					intros[zone][subject] += 1
 	var live_digest := "\n".join(rewritten_texts).sha256_text()
-	_report("rewritten text count", rewritten_texts.size() == 89, "%d texts; need 89" % rewritten_texts.size())
+	_report("rewritten text count", rewritten_texts.size() == 92, "%d texts; need 92" % rewritten_texts.size())
 	_report("world 2/3 rewritten", live_digest != OLD_DIGEST, "old %s; live %s" % [OLD_DIGEST, live_digest])
 	for zone in ZONES:
 		_report(zone + " notes", notes[zone] >= 14, "%d notes; need at least 14" % notes[zone])

@@ -10,7 +10,7 @@ const Palette := preload("res://src/core/palette.gd")
 # values netcaster.gd had before the dressing swap. The net window (the hostile plane, 2.4 x 1.6 m
 # at y 0.8..2.4, z -0.3) stays clear of decorative mesh: masts stand at x +-1.2 with radius
 # <= 0.1, so the clear span is |x| < 1.09 (1.1 less a rounding margin), and the slab is z -0.4..-0.2.
-const CEILING_T := 1200
+const CEILING_T := 7600  # polished 2026-10-18 (tools/blender/POLISH.md); was 1200
 const CEILING_D := 3
 const X_MIN := -1.7
 const X_MAX := 1.7
@@ -162,7 +162,7 @@ func _run() -> void:
 	print("live assembly: %d T, %d D" % [live["tris"], live["draws"]])
 	_check(caster.find_child("NetcasterBody", true, false) != null, "the live Netcaster carries its NetcasterBody dressing")
 	_check(live["draws"] > 0 and live["tris"] > 0, "the live measure saw meshes (%d T, %d D)" % [live["tris"], live["draws"]])
-	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within %d / 3" % [live["tris"], live["draws"], CEILING_T])
 	_check(not live["alpha"], "live assembly has no alpha outside the net plane")
 	var hits := _window_hits(caster, net)
 	_check(hits == 0, "no decorative triangle enters the net window (%d)" % hits)

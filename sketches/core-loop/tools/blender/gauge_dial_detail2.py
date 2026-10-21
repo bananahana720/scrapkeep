@@ -14,6 +14,7 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import gauge_dial as gd
+import polish
 from gauge_dial import cyl, tick, around, TONES
 from gauge_dial_detail1 import export
 
@@ -57,6 +58,7 @@ def build(s):
 
 
 def main():
+    polish.enable(bevel=.02, bevel_min=.25, **gd.kit.BAKE)  # light shell polish: smooth shading, bake
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(gd.MODELS))

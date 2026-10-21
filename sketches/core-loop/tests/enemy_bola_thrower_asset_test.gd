@@ -8,7 +8,7 @@ const Palette := preload("res://src/core/palette.gd")
 # hoop centred 2.2 m over the origin (the base torus seat) within 1.12 m of its centre. The base
 # contract: the thrower's collider, hitbox, throw timing, damage and projectile constants are the
 # values bola_thrower.gd had before the dressing swap.
-const CEILING_T := 1200
+const CEILING_T := 4200  # polished 2026-10-18 (tools/blender/POLISH.md); was 1200
 const CEILING_D := 3
 const CREW_R := 0.8
 const Y_BOTTOM := -1.1
@@ -116,7 +116,7 @@ func _run() -> void:
 	var live := _measure(bola)
 	print("live assembly: %d T, %d D" % [live["tris"], live["draws"]])
 	_check(live["draws"] > 0 and live["tris"] > 0, "the live measure saw meshes (%d T, %d D)" % [live["tris"], live["draws"]])
-	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 3" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within %d / 3" % [live["tris"], live["draws"], CEILING_T])
 	_check(not live["alpha"], "live assembly has no alpha")
 	_check_shape(bola)
 	_check_paint(bola)

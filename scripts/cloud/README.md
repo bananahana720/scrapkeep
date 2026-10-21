@@ -1,6 +1,6 @@
 # Cloud sessions
 
-`.claude/hooks/session-start.sh` runs at the start of every Claude Code cloud session (it exits at once anywhere else). It installs:
+`.claude/hooks/session-start.sh` runs at the start of every Claude Code cloud session (it exits at once anywhere else). It runs [`tools/cloud/setup.sh`](../../tools/cloud/setup.sh), which the cloud environment's setup script can also run so the toolchain is cached; [CLOUD-SETUP.md](../../tools/cloud/CLOUD-SETUP.md) lists the environment settings. It installs:
 
 - Godot 4.7.2 editor at `/opt/scrapkeep-toolchain/`, checked against the hashes in `.github/workflows/native-smoke.yml`, and exported as `GODOT_BIN`.
 - The Linux export templates under `~/.local/share/godot/export_templates/4.7.2.stable/`.

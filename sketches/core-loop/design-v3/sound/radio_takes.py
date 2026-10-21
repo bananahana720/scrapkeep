@@ -1,7 +1,7 @@
 """Render the radio's collectible takes: wild covers of the current picks, one station at a time.
 
     python radio_takes.py <render folder> [take id ...] [--seeds a,b] [--tier legend] [--station furnace]
-                          [--first] [--wordless]
+                          [--first] [--limit n] [--again] [--no-wordless]
     python radio_takes.py --list [same filters]
 
 Andrew (2026-10-17): the radio is a core reason the game is special. Every take is an ACE-Step cover of
@@ -13,8 +13,11 @@ split each take with htdemucs_6s and master it through evolve.py (--light for b-
 otherwise). Takes run their own length ("seconds" in the catalogue), not gapfill's 64 s.
 
 --first renders one take per content station (the first row of each), so every station plays before
-the rest. Rows marked "wordless-vocal-texture" are skipped unless --wordless: the sound bible still
-says no vocals, and that is Andrew's call.
+the rest. A take already in radio_renders.json is skipped unless it is named or --again is given, so
+passes never render a take twice and a stopped batch resumes where it left off. --limit n renders at
+most n takes, a batch short enough to fit between machine-gate GPU runs. Rows marked
+"wordless-vocal-texture" render too (Andrew, card 20:52:33Z 17 Oct: wordless vocals on the radio
+only, never words); --no-wordless leaves them out.
 
 Writes <render folder>/radio/<take id>-s<seed>.wav, the stems under <render folder>/radio/stems/, and
 radio_renders.json beside this file: one row per take with its id, station, tier, parent pick and takes.
@@ -39,7 +42,7 @@ def option(argv, name, default=None):
 
 def plan(argv):
     takes = json.loads(CATALOGUE.read_text())["takes"]
-    flags = {"--seeds", "--tier", "--station"}
+    flags = {"--seeds", "--tier", "--station", "--limit"}
     values = {argv[i + 1] for i, a in enumerate(argv[:-1]) if a in flags}
     wanted = {a for a in argv if a.startswith("take-") and a not in values}
     tier = option(argv, "--tier")
@@ -47,7 +50,10 @@ def plan(argv):
     rows = [t for t in takes if (not wanted or t["id"] in wanted)
             and (tier is None or t["tier"] == tier)
             and (station is None or t["station"] == station)
-            and ("--wordless" in argv or WORDLESS not in t["references"])]
+            and ("--no-wordless" not in argv or WORDLESS not in t["references"])]
+    if not wanted and "--again" not in argv and REGISTRY.exists():
+        done = {r["id"] for r in json.loads(REGISTRY.read_text()) if r.get("takes")}
+        rows = [t for t in rows if t["id"] not in done]
     if "--first" in argv:
         seen, first = set(), []
         for t in rows:
@@ -55,7 +61,8 @@ def plan(argv):
                 seen.add(t["station"])
                 first.append(t)
         rows = first
-    return rows
+    limit = option(argv, "--limit")
+    return rows[:int(limit)] if limit else rows
 
 
 def parents():

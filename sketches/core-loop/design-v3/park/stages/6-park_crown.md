@@ -253,7 +253,7 @@ The round-5 source moves signal_masts west to [-282,272], retaining mast_cutters
 | crown_updraft | thermal | crown_bowl | (primitive) | {"at":[-80,500],"radius":6.0,"height":120.0} |
 | gauntlet_updraft | thermal | gauntlet_west | (primitive) | {"at":[200,110],"radius":6.0,"height":160.0} |
 | turnstone_wire | cable | turnstone | (primitive) | {"from":[-30,67.3,-275],"to":[-95,62.6,-150],"radius":4.5,"floor":18.0} |
-| signal_wire | cable | signal_masts | (primitive) | {"from":[-245,12.0,285],"to":[-140,5.0,455],"radius":4.5,"floor":18.0} |
+| signal_wire | cable | signal_masts | (primitive) | {"from":[-243,43.0,284],"to":[-140,5.0,455],"radius":6.0,"floor":18.0} |
 | east_wire | cable | east_wash | (primitive) | {"from":[170,56.9,-290],"to":[230,52.2,-110],"radius":4.5,"floor":18.0} |
 | gauntlet_tether | cable | gauntlet_west | (primitive) | {"from":[75,26.8,95],"to":[270,27.7,150],"radius":4.5,"floor":18.0} |
 | shelf_wire | cable | gauntlet_shelf | (primitive) | {"from":[80,24.0,120],"to":[165,7.3,300],"radius":4.5,"floor":18.0} |
@@ -576,6 +576,29 @@ Why: the w16 intent check found the crown the thinnest park (42 authored rows ag
 
 **Society rows.** The net-weavers own the gust lips, the hoodoo knots, the needle hammock and the Gauntlet net. The Fleet's mooring crew owns the Signal Butte, the mooring deck, the Gauntlet's west butte and shelf, and the toe lip. Their lines are in section 12. Built works got their builders too: the weavers cut the thirteen line kickers (`kick_*`), the bajada lip and the meander cross lip; the Fleet poured the crown ramp and the toe yard and holds the east Gauntlet butte. Natural landforms (washes, buttes, the bowl) stay `none`. That takes the crown's society share over hand-built rows from 5% to 65%.
 
+**Greybox burn-down (18 October, content lane).** The crown's last ten greybox rows leave the placeholder gate (`npm run sketch:placeholders`: park rows 59 to 49, the crown's rows 10 to 0). Rows with stamped `ground`, `bank` or `sky_island` greybox recipes stay terrain by the gate's own rule.
+
+| Row | Was | Now | Fit and why |
+| --- | --- | --- | --- |
+| `west_wash`, `east_wash`, `meander`, `meander_bend` | `greybox:half_pipe` | `scatter` | The wash stamp is the whole shape and the ground scatter dresses its footprint (the sinkhole's trough and the flume's gorges do the same). Node and ride sensor stand where they stood: a cut keeps its floor. `slot_canyon_flow` (15 m crest to crest, 13 m walls) does not fit 30 to 60 m wide, 10 to 12 m deep cuts, and a stamp-conforming sandstone liner is a new kit (follow-up). |
+| `watch_butte_crest`, `drop_ramp` | `greybox:flow_line` | `scatter` | Stamped `ramp` rows on slickrock: the stamp is the ground. `scatter` has no stamp seat, so `drop_ramp`'s ride sensor now starts on the raised ground at the ramp's centre (y 135, was 80 on the stamp's base) and still spans the ramp's top 55 m; a ball entering at the nose fires `ride_chute` as before. `watch_butte_crest` has no ride fact, so no sensor moves. |
+| `kick_wlast_11` | `greybox:kicker` | `mesa_lip_kicker_24x6x36`, seat | Its 22 x 6 x 36 footprint seats the size-named piece like the other eleven crown kickers (stretch 0.92). No dead stop in the skill-line runs on this stage lies within 150 m of it. |
+| `crown_collector` | `greybox:ledge` | `viga_pivot`, seat | 30 m row over a 36 m piece (stretch 0.83): the only piece of the ledges family in the 0.75 to 1.5 band for a 30 m row (`mesa_rim_ledge` is 60 m). A masonry wall and four log beams, 5.8 m over the 8 m lane, read as the Fleet's mooring rig; `y` stays 64 and the shelf top is 66.5 (was 67). |
+| `alcove_ledge` | `greybox:elevated_line` | `cliff_dwelling_row`, tile | Three copies of the 60 m piece at 66.7 m each (stretch 1.11), rooms on the butte side. The piece's shelf is 2.5 m over its origin, so `y` goes 57 to 60.5 and the ride top stays 63 m. Masonry reference only, no depiction of living people. |
+| `gauntlet_net` | `greybox:half_pipe`, 180 x 100 | `net_deck` x 2 | `net_deck` is not tileable (16 m posts at its entry, 3 m at its exit) and its seat stretch would be 2.2, so the net is two 80 m cells, `gauntlet_net` and `gauntlet_net_2`, centred on the old row, `y` 114 (the old slab's top; the cell border is flush, the middle sags 3.5 m). The footprint shrinks from 180 x 100 to 160 x 80. Routes `gauntlet` and `last_net` name both cells. |
+
+Evidence: crown rebaked (ground unchanged, `bake.json` hash only) and regraphed, no breaches. No bot line rides the net, the collector or the alcove ledge, so those three are checked by stills and the sensor probe only. Stage 6 traversal, seeds 1 and 2, all six pilots reach the Warden on both builds; dead-stop counts move between identical builds (rivet seed 1: 0, then 2 on the untouched stage), so single-run stop counts here are noise, not evidence.
+
+**One skill per park: everything at once** (Andrew's Q4 answer, 22:12Z 17 October: "the crown tests everything at once"). The landforms stay; the line and enemies change to read as everything. The skill line (`assets/park/park_crown/skill_line.json`, Sable) chains the Highdraft's launch, cable, chute, bowl and drop in one run, past its kites and mast cutters. It does not yet test a harpoon swing, a slam, a ledge or a thermal: the bot glides and bites only in fights (`tools/bot_driver.gd`), and a thermal lifts a gliding ball only (`src/world/contraptions.gd`). The line:
+- the bajada lip (launch);
+- the Turnstone wire (grapple), with the new `alcove_anchor_crew` (ballast heavies on the alcove butte, a ring-out) about 30 m off the line;
+- the west wash (chute) and the split spire;
+- the new `needle_wire` ([-40, 110] to [-176, 193], 6 m hook, 45 m off every other line) through the needle kites;
+- the signal wire past the mast cutters;
+- the bowl drop. The spire hands hold `lens_spire`, about 155 m off the line: scenery here, not a test.
+
+Ridden with `tools/traversal_line.gd --table=park --stage=6 --pilot=sable --lines=res://assets/park/park_crown/skill_line.json` on seeds 1 to 4 (with the ride pieces of PR #95): all four engage in 50 to 64 s with 5 distinct ride facts (chute, launch, grapple, bowl, drop) and `ride_grapple_line` firing, and two of the four have one short stop at the bowl's west rim ([-122, 479]); PARK.md section 8 asks for none, so the line is not yet at its bar. The signal wire's hook sits at the top of `kick_wlast_10`'s arc ([-243, 43, 284], 6 m): at its old place, 7 m over the ground, the 26 m kicker threw every ball about 30 m over it, so nobody hooked it and the line rolled into `signal_runout_anchor` and `sentinel_50` instead. All six pilots' own lines still engage on seeds 1 and 2. `kick_wlast_11` was held back as greybox on 17 October after its piece stalled Sable's own line three times; it took its piece again on 18 October (section 17, "Greybox burn-down").
+
 **Signal caches** (design-v3/sound/RADIO.md on PR #66; rows in the format of PR #68's `tools/radio_cache_spots.gd` SPOTS, which casts the heights onto live colliders):
 
 | Take | Spot here | Row | The reach |
@@ -882,7 +905,7 @@ Why: the w16 intent check found the crown the thinnest park (42 authored rows ag
   {"id": "crown_updraft", "kind": "thermal", "site": "crown_bowl", "recipe": "", "at": [-80, 500], "radius": 6.0, "height": 120.0},
   {"id": "gauntlet_updraft", "kind": "thermal", "site": "gauntlet_west", "recipe": "", "at": [200, 110], "radius": 6.0, "height": 160.0},
   {"id": "turnstone_wire", "kind": "cable", "site": "turnstone", "recipe": "", "from": [-30, 67.3, -275], "to": [-95, 62.6, -150], "radius": 4.5, "floor": 18.0},
-  {"id": "signal_wire", "kind": "cable", "site": "signal_masts", "recipe": "", "from": [-245, 12.0, 285], "to": [-140, 5.0, 455], "radius": 4.5, "floor": 18.0},
+  {"id": "signal_wire", "kind": "cable", "site": "signal_masts", "recipe": "", "from": [-243, 43.0, 284], "to": [-140, 5.0, 455], "radius": 6.0, "floor": 18.0},
   {"id": "east_wire", "kind": "cable", "site": "east_wash", "recipe": "", "from": [170, 56.9, -290], "to": [230, 52.2, -110], "radius": 4.5, "floor": 18.0},
   {"id": "gauntlet_tether", "kind": "cable", "site": "gauntlet_west", "recipe": "", "from": [75, 26.8, 95], "to": [270, 27.7, 150], "radius": 4.5, "floor": 18.0},
   {"id": "shelf_wire", "kind": "cable", "site": "gauntlet_shelf", "recipe": "", "from": [80, 24.0, 120], "to": [165, 7.3, 300], "radius": 4.5, "floor": 18.0},
@@ -1199,7 +1222,7 @@ The appendix above is the original storyboard draft. This snapshot is the shippe
   {"id": "crown_updraft", "kind": "thermal", "site": "crown_bowl", "recipe": "", "at": [-80, 500], "radius": 6.0, "height": 120.0},
   {"id": "gauntlet_updraft", "kind": "thermal", "site": "gauntlet_west", "recipe": "", "at": [200, 110], "radius": 6.0, "height": 160.0},
   {"id": "turnstone_wire", "kind": "cable", "site": "turnstone", "recipe": "", "from": [-30, 67.3, -275], "to": [-95, 62.6, -150], "radius": 4.5, "floor": 18.0},
-  {"id": "signal_wire", "kind": "cable", "site": "signal_masts", "recipe": "", "from": [-245, 12.0, 285], "to": [-140, 5.0, 455], "radius": 4.5, "floor": 18.0},
+  {"id": "signal_wire", "kind": "cable", "site": "signal_masts", "recipe": "", "from": [-243, 43.0, 284], "to": [-140, 5.0, 455], "radius": 6.0, "floor": 18.0},
   {"id": "east_wire", "kind": "cable", "site": "east_wash", "recipe": "", "from": [170, 56.9, -290], "to": [230, 52.2, -110], "radius": 4.5, "floor": 18.0},
   {"id": "gauntlet_tether", "kind": "cable", "site": "gauntlet_west", "recipe": "", "from": [75, 26.8, 95], "to": [270, 27.7, 150], "radius": 4.5, "floor": 18.0},
   {"id": "shelf_wire", "kind": "cable", "site": "gauntlet_shelf", "recipe": "", "from": [80, 24.0, 120], "to": [165, 7.3, 300], "radius": 4.5, "floor": 18.0},

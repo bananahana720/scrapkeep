@@ -111,7 +111,7 @@ func _commit(_to_ball: Vector3) -> Node3D:
 func _go_live() -> void:
 	var ring := telegraph()
 	var player = _player()
-	if ring == null or not ring.contains(_real_ball()) or not player.state.grounded:
+	if ring == null or not ring.contains(_real_ball()) or not player.state.on_floor():
 		broken_by = "missed"
 		return
 	if _catch(TILT):

@@ -4,6 +4,8 @@
 #
 #   blender -b --factory-startup -P polish_compare.py -- <recipe.py> <out.jpg> [option=value ...]
 #
+# A recipe that writes several GLBs shows its last one; glb=<name> picks another by file name.
+#
 # Options go to polish.enable() for recipes that do not call it themselves; the before
 # build turns a recipe's own enable() off. A recipe whose
 # old triangle assert stops the polished build is exported anyway, for the still only.
@@ -18,10 +20,12 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VC = ("paint", "pilot", "ancient_enamel", "hydraulic")
+# Slots whose runtime material shows vertex colour: common.SLOTS vc slots and the kit slots
+# (dig_mechanical enamel, elastomer and steel).
+VC = ("paint", "pilot", "ancient_enamel", "hydraulic", "enamel", "elastomer", "steel")
 
 BUILD = """
-import os, runpy, sys
+import os, runpy, shutil, sys
 sys.path.insert(0, {here!r})
 import bpy, common, polish
 opts = {opts!r}
@@ -32,10 +36,20 @@ elif not polish.options():
 real = common.export
 done = []
 def export(root, path):
+    if {glb!r}:
+        # Multi-GLB recipes write under --out-dir and may read their files back.
+        real(root, path)
+        if os.path.splitext(os.path.basename(path))[0] == {glb!r}:
+            done.append(path)
+            shutil.copyfile(path, {out!r})
+        return
     done.append(path)
     real(root, {out!r})
 common.export = export
-sys.argv = [{recipe!r}, "--", "--out", {out!r}]
+if {glb!r}:
+    sys.argv = [{recipe!r}, "--", "--out-dir", {out!r} + ".d"]
+else:
+    sys.argv = [{recipe!r}, "--", "--out", {out!r}]
 try:
     runpy.run_path({recipe!r}, run_name="__main__")
 except (SystemExit, AssertionError) as e:
@@ -55,10 +69,10 @@ def value(text):
         return float(text)
 
 
-def build(recipe, out, opts, tmp, tag):
+def build(recipe, out, opts, tmp, tag, glb=None):
     script = os.path.join(tmp, tag + ".py")
     with open(script, "w") as f:
-        f.write(BUILD.format(here=HERE, opts=opts, out=out, recipe=recipe))
+        f.write(BUILD.format(here=HERE, opts=opts, out=out, recipe=recipe, glb=glb))
     subprocess.run([os.environ.get("BLENDER", "blender"), "-b", "--factory-startup", "-P", script],
                    check=True, stdout=subprocess.DEVNULL)
 
@@ -142,12 +156,14 @@ def render(glb, base, size):
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:]
     recipe, out = os.path.abspath(os.path.join(HERE, argv[0])), os.path.abspath(argv[1])
-    opts = {k: value(v) for k, v in (a.split("=", 1) for a in argv[2:])}
+    pairs = dict(a.split("=", 1) for a in argv[2:])
+    glb = pairs.pop("glb", None)
+    opts = {k: value(v) for k, v in pairs.items()}
     size = int(opts.pop("size", 480))
     with tempfile.TemporaryDirectory() as tmp:
         before, after = os.path.join(tmp, "before.glb"), os.path.join(tmp, "after.glb")
-        build(recipe, before, None, tmp, "before")
-        build(recipe, after, opts, tmp, "after")
+        build(recipe, before, None, tmp, "before", glb)
+        build(recipe, after, opts, tmp, "after", glb)
         shots = render(before, os.path.join(tmp, "before"), size) + render(after, os.path.join(tmp, "after"), size)
         subprocess.run(["montage", *shots, "-tile", "2x2", "-geometry", "+0+0", "-quality", "82", out], check=True)
     print("POLISH_COMPARE", out)

@@ -7,6 +7,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 var t := T.new("fx_library_test")
 
@@ -30,7 +31,7 @@ func _run() -> void:
 		t.check("%s fixed seed, no light" % id, e.use_fixed_seed and e.seed == FxLibrary.SEED
 			and e.find_children("*", "Light3D", true, false).is_empty())
 		t.check("%s one-shot unless it follows the ball or persists" % id, e.one_shot == (s["attach"] == "world"))
-		t.check("%s shares its blend material" % id, e.draw_pass_1.material == FxLibrary._material(s["blend"]))
+		t.check("%s shares its look material" % id, FxLibrary.material_of(e) == FxLibrary._material(id))
 		FxLibrary.fire(e, id, "enemy_struck", 4, Vector3(1, 2, 3))
 		t.check("%s emitting right after restart" % id, e.emitting and e.global_position.is_equal_approx(Vector3(1, 2, 3)))
 		e.free()
@@ -61,4 +62,31 @@ func _run() -> void:
 	t.check("ember has a charcoal smoke wisp (sandstone vanishes on the sand)", FxLibrary.effects("cache_spent").has("cache_wisp") and FxLibrary.spec("cache_wisp")["colour"] == "CHARCOAL")
 	# FX-FIX: the net catch puff is reachable from the row highdraft_fx reads.
 	t.check("net_dust is reachable from the net_caught row", FxLibrary.effects("net_caught").has("net_dust") and FxLibrary.spec("net_dust")["owner"] == "highdraft")
+	# FX look pass: matter and light draw as their own shapes, never a flat ball or box.
+	var looks := {}
+	for id in FxLibrary.SPECS:
+		looks[FxLibrary.look(id)] = looks.get(FxLibrary.look(id), []) + [id]
+		var e := FxLibrary.build(id)
+		t.check("%s draws on its look's mesh, not a primitive ball or box" % id,
+			not (e.draw_pass_1 is SphereMesh) and not (e.draw_pass_1 is BoxMesh))
+		e.free()
+	t.check("every look in use: puff, glow, streak, chunk, bead", looks.size() == 5, str(looks.keys()))
+	t.check("dust and steam are puffs", "slam_dust" in looks["puff"] and "steam_puff" in looks["puff"])
+	t.check("debris is lit chunks", "crack_debris" in looks["chunk"] and not FxLibrary.look_material("chunk").shader.code.contains("unshaded"))
+	var spark := FxLibrary.build("spark_halo")
+	root.add_child(spark)
+	FlashGuard.on = false
+	FxLibrary.fire(spark, "spark_halo", "enemy_struck", 4, Vector3.ZERO)
+	var hot_off: float = spark.get_instance_shader_parameter("heat")
+	FlashGuard.on = true
+	FxLibrary.fire(spark, "spark_halo", "enemy_struck", 4, Vector3.ZERO)
+	var hot_on: float = spark.get_instance_shader_parameter("heat")
+	FlashGuard.on = false
+	t.check("a spark starts hot, and reduce flashes cuts its push toward white", hot_off > 0.0 and hot_on < hot_off * 0.5, "%s %s" % [hot_off, hot_on])
+	t.check("a fired emitter joins the heat group, so the toggle reaches it while it runs", spark.is_in_group(FxLibrary.HEAT_GROUP))
+	FlashGuard.on = true
+	FxLibrary.set_heat(spark)
+	t.check("re-reading heat from the emitter's own look follows the toggle", is_equal_approx(spark.get_instance_shader_parameter("heat"), hot_on))
+	FlashGuard.on = false
+	spark.free()
 	quit(t.verdict())

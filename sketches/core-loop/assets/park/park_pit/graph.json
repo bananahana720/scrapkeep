@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "186532c01beb9932f1ed1e26b09d31a0d2148812aa002d08e972c56c2112d7c1",
-  "beacon_ok": false,
+  "bake_sha256": "f25137fc13c5a20d3425403e29f48767c86e3115b614be67facdea89946423d1",
+  "beacon_ok": true,
   "breaches": [],
-  "bytes": 1106280,
-  "edges": 314056,
-  "first_failed": "beacon_ok",
+  "bytes": 1107412,
+  "edges": 314105,
+  "first_failed": "",
   "flags": {
     "deck": 12,
     "door_ok": 39924,
     "line": 341,
     "open": 40404,
-    "sight_ok": 10165,
+    "sight_ok": 10201,
     "under": 0
   },
   "full_visit_m": 2041,
   "full_visit_ratio": "1.588",
-  "graph_sha256": "70d26ec50a47164b73e43a52c4bfe99d6d21b2d821377dee190a58562c3c6be6",
+  "graph_sha256": "f3980f6d60150259a989844d492bf6d6031cd23f6fececea0b5450926dd723cc",
   "line_errors": [],
   "line_path_nodes": 112,
-  "longest_est_m": 2651,
+  "longest_est_m": 3256,
   "map": "park_pit",
   "nodes": 40413,
-  "park_sha256": "0e91ed7f6e113a994d4ac7c68ab8084cc44f3fe8435caf0d2cb7a4b1e16a455b",
+  "park_sha256": "f2687ee262c6731638b6b724ceb98b5874e74919e1d1dd1b1f6599b3e2aea0d1",
   "pockets": [
     {
       "clear_ring": [],
@@ -132,7 +132,7 @@
     }
   ],
   "reward_ratio": "0.702",
-  "ride_edges": 17,
+  "ride_edges": 21,
   "routes": {
     "barge_ramp": [],
     "bench_dive": [],
@@ -158,15 +158,16 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": -1,
-    "farther_share": "0.000",
-    "ok": false,
-    "run": false
+    "d_landmark": 1286,
+    "farther_share": "0.017",
+    "ok": true,
+    "run": true
   },
   "spawn_beacon_m": 1286,
-  "spawn_beacon_share": "0.485",
+  "spawn_beacon_share": "0.395",
   "stage_checked": [
-    "beacon_ok"
+    "beacon_ok",
+    "spawn"
   ],
   "targets": [
     {
@@ -182,7 +183,7 @@
       "value": 1.588
     }
   ],
-  "tool_sha256": "e056e2d0e353848614f7ccc875c31d5fe46fc569d2a5b3e53fbe86c83b57c5cb",
+  "tool_sha256": "08e6eb9c62c59217f08bab6ce13d58e49e39f264d8b6a23707afd674eca1d850",
   "zones": {
     "anchors": [
       {
@@ -314,14 +315,6 @@
         "viable": false
       },
       {
-        "cost": 1146.5,
-        "d_landmark": 194.8,
-        "name": "haul_road_west_4",
-        "on_route": false,
-        "rank": 6,
-        "viable": true
-      },
-      {
         "cost": 1136.6,
         "d_landmark": 253.2,
         "name": "floor_dive_windrow_1",
@@ -338,28 +331,20 @@
         "viable": false
       },
       {
-        "cost": 1106.4,
-        "d_landmark": 392.8,
-        "name": "barge_apron",
-        "on_route": false,
-        "rank": 7,
-        "viable": true
-      },
-      {
-        "cost": 1099.8,
-        "d_landmark": 312.5,
-        "name": "haul_road_west_3",
-        "on_route": false,
-        "rank": 8,
-        "viable": true
-      },
-      {
         "cost": 1099.1,
         "d_landmark": 477.8,
         "name": "bench3_dive_windrow_1",
         "on_route": false,
         "rank": 0,
         "viable": false
+      },
+      {
+        "cost": 1096.2,
+        "d_landmark": 373.6,
+        "name": "barge_apron",
+        "on_route": false,
+        "rank": 6,
+        "viable": true
       },
       {
         "cost": 1093.5,
@@ -382,7 +367,7 @@
         "d_landmark": 483.9,
         "name": "bench2_camp_lane",
         "on_route": false,
-        "rank": 9,
+        "rank": 7,
         "viable": true
       },
       {
@@ -434,6 +419,14 @@
         "viable": false
       },
       {
+        "cost": 970.4,
+        "d_landmark": 335.9,
+        "name": "conveyor_gallery_2",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 964.8,
         "d_landmark": 512.3,
         "name": "camp_dive",
@@ -446,15 +439,7 @@
         "d_landmark": 670.5,
         "name": "spoil_heap_14",
         "on_route": false,
-        "rank": 10,
-        "viable": true
-      },
-      {
-        "cost": 898.4,
-        "d_landmark": 449.6,
-        "name": "haul_road_west_2",
-        "on_route": false,
-        "rank": 11,
+        "rank": 8,
         "viable": true
       },
       {
@@ -467,11 +452,11 @@
       },
       {
         "cost": 874.4,
-        "d_landmark": 338.4,
+        "d_landmark": 381.5,
         "name": "conveyor_gallery",
         "on_route": false,
-        "rank": 12,
-        "viable": true
+        "rank": 0,
+        "viable": false
       },
       {
         "cost": 864.9,
@@ -502,7 +487,7 @@
         "d_landmark": 462.4,
         "name": "bench2_north_lane",
         "on_route": false,
-        "rank": 13,
+        "rank": 9,
         "viable": true
       },
       {
@@ -526,7 +511,7 @@
         "d_landmark": 548.0,
         "name": "bench1_haul_lane",
         "on_route": false,
-        "rank": 14,
+        "rank": 10,
         "viable": true
       },
       {
@@ -542,7 +527,7 @@
         "d_landmark": 625.5,
         "name": "rim_road_lane_2",
         "on_route": false,
-        "rank": 15,
+        "rank": 11,
         "viable": true
       },
       {
@@ -554,19 +539,11 @@
         "viable": false
       },
       {
-        "cost": 693.6,
-        "d_landmark": 607.5,
-        "name": "haul_road_west_1",
-        "on_route": false,
-        "rank": 16,
-        "viable": true
-      },
-      {
         "cost": 670.4,
-        "d_landmark": 755.2,
+        "d_landmark": 746.6,
         "name": "slickrock_2",
         "on_route": false,
-        "rank": 17,
+        "rank": 12,
         "viable": true
       },
       {
@@ -582,7 +559,7 @@
         "d_landmark": 659.2,
         "name": "rim_road_lane_1",
         "on_route": false,
-        "rank": 18,
+        "rank": 13,
         "viable": true
       },
       {
@@ -590,7 +567,7 @@
         "d_landmark": 839.6,
         "name": "leach_pads",
         "on_route": false,
-        "rank": 19,
+        "rank": 14,
         "viable": true
       },
       {
@@ -598,15 +575,15 @@
         "d_landmark": 832.4,
         "name": "slickrock_8",
         "on_route": false,
-        "rank": 20,
+        "rank": 15,
         "viable": true
       },
       {
         "cost": 446.4,
-        "d_landmark": 848.0,
+        "d_landmark": 839.0,
         "name": "slickrock_11",
         "on_route": false,
-        "rank": 21,
+        "rank": 16,
         "viable": true
       },
       {
@@ -614,7 +591,7 @@
         "d_landmark": 760.9,
         "name": "slickrock_15",
         "on_route": false,
-        "rank": 22,
+        "rank": 17,
         "viable": true
       },
       {
@@ -622,7 +599,7 @@
         "d_landmark": 978.4,
         "name": "slickrock_21",
         "on_route": false,
-        "rank": 23,
+        "rank": 18,
         "viable": true
       },
       {
@@ -638,7 +615,7 @@
         "d_landmark": 1021.6,
         "name": "slickrock_4",
         "on_route": false,
-        "rank": 24,
+        "rank": 19,
         "viable": true
       },
       {
@@ -646,7 +623,7 @@
         "d_landmark": 987.7,
         "name": "slickrock_12",
         "on_route": false,
-        "rank": 25,
+        "rank": 20,
         "viable": true
       },
       {
@@ -654,7 +631,7 @@
         "d_landmark": 1189.5,
         "name": "slickrock_20",
         "on_route": false,
-        "rank": 26,
+        "rank": 21,
         "viable": true
       },
       {
@@ -662,7 +639,7 @@
         "d_landmark": 1155.8,
         "name": "slickrock_5",
         "on_route": false,
-        "rank": 27,
+        "rank": 22,
         "viable": true
       },
       {
@@ -682,11 +659,11 @@
         "viable": false
       }
     ],
-    "count": 103,
+    "count": 113,
     "crossings": {
-      "drop": 32,
-      "ride": 16,
-      "walk": 111
+      "drop": 39,
+      "ride": 18,
+      "walk": 126
     },
     "hidden": [
       {

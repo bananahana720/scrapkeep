@@ -43,6 +43,120 @@ static func merge(faces: Array) -> Array:
 	return merged
 
 
+# --- Level ground ---------------------------------------------------------------------------
+# A park's ground is a heightfield of 2 m cells, never exactly coplanar, so merge() leaves a
+# stand's 214 faces nearly as they are and a Breach there carves for five ticks. merge_level()
+# is merge() and then flattens the near-level polygons: those within level_deg of straight up.
+# A region grows from its first polygon across shared corners while each polygon's normal is
+# within tolerance_deg of the first's and every corner is within deviation of the first
+# polygon's plane. The region's corners then slide along the plane normal onto that plane (at
+# most `deviation`), which makes its polygons exactly coplanar, and they merge as merge() does
+# a coplanar group: their hull when they tile it, else convex pieces. Everything steeper, and a
+# region of one polygon, is returned as it was, so a slope's faces, shadows and carve stay as
+# merge() made them.
+static func merge_level(faces: Array, level_deg: float, tolerance_deg: float, deviation: float) -> Array:
+	var polys := merge(faces)
+	var up_cos := cos(deg_to_rad(level_deg))
+	var tol_cos := cos(deg_to_rad(tolerance_deg))
+	var normals: Array = []
+	var candidates: Array = []
+	var by_vertex := {}
+	for index in polys.size():
+		var poly: Array = polys[index]
+		var normal := Vector3.ZERO
+		for k in range(1, poly.size() - 1):
+			normal += ((poly[k] as Vector3) - poly[0]).cross((poly[k + 1] as Vector3) - poly[0])
+		normal = normal.normalized() if normal.length_squared() > 1e-12 else Vector3.ZERO
+		normals.append(normal)
+		# Either winding is ground; a region keeps its first polygon's.
+		if absf(normal.y) < up_cos:
+			continue
+		candidates.append(index)
+		for v: Vector3 in poly:
+			if not by_vertex.has(v):
+				by_vertex[v] = []
+			(by_vertex[v] as Array).append(index)
+	var taken := {}
+	var replaced := {}
+	for seed: int in candidates:
+		if taken.has(seed):
+			continue
+		taken[seed] = true
+		var normal: Vector3 = normals[seed]
+		var offset := normal.dot((polys[seed] as Array)[0])
+		var members: Array = [seed]
+		var next := 0
+		while next < members.size():
+			for v: Vector3 in polys[members[next]]:
+				for q: int in by_vertex[v]:
+					if not taken.has(q) and (normals[q] as Vector3).dot(normal) >= tol_cos and _within(polys[q], normal, offset, deviation):
+						taken[q] = true
+						members.append(q)
+			next += 1
+		if members.size() < 2:
+			continue
+		members.sort()
+		var flat: Array = []
+		for m: int in members:
+			var snapped: Array = []
+			for v: Vector3 in polys[m]:
+				snapped.append(v - normal * (normal.dot(v) - offset))
+			flat.append(snapped)
+		var joined: Array = []
+		var hull := _hull_union(flat, normal)
+		if hull.is_empty():
+			joined = _merge_plane(flat, normal)
+		else:
+			joined = [hull]
+		replaced[members[0]] = joined
+		for m: int in members.slice(1):
+			replaced[m] = []
+	var out: Array = []
+	for index in polys.size():
+		if not replaced.has(index):
+			out.append(polys[index])
+		else:
+			out.append_array(replaced[index])
+	return out
+
+
+static func _within(poly: Array, normal: Vector3, offset: float, deviation: float) -> bool:
+	for v: Vector3 in poly:
+		if absf(normal.dot(v) - offset) > deviation:
+			return false
+	return true
+
+
+
+
+# The upward normal of the highest face under a point (at most `above` over its surface), or
+# Vector3.ZERO when there is none: the ground a Breach lands on.
+static func ground_normal(faces: Array, at: Vector3, above := 0.6) -> Vector3:
+	var best := -INF
+	var normal := Vector3.ZERO
+	for face in faces:
+		var a: Vector3 = face[0]
+		var b: Vector3 = face[1]
+		var c: Vector3 = face[2]
+		var det := (b.z - c.z) * (a.x - c.x) + (c.x - b.x) * (a.z - c.z)
+		if absf(det) < 1e-9:
+			continue
+		var l1 := ((b.z - c.z) * (at.x - c.x) + (c.x - b.x) * (at.z - c.z)) / det
+		var l2 := ((c.z - a.z) * (at.x - c.x) + (a.x - c.x) * (at.z - c.z)) / det
+		var l3 := 1.0 - l1 - l2
+		if l1 < -1e-6 or l2 < -1e-6 or l3 < -1e-6:
+			continue
+		var y := l1 * a.y + l2 * b.y + l3 * c.y
+		if y > at.y + above or y <= best:
+			continue
+		var n := (b - a).cross(c - a)
+		if n.length_squared() < 1e-12:
+			continue
+		best = y
+		normal = n.normalized() * signf(n.y)
+	return normal
+
+
 # A mesh's faces never overlap, so when their areas add up to their convex hull's they tile it
 # and the hull is their union: one polygon, found without walking edges. [] otherwise.
 const AREA_TOLERANCE := 0.001
@@ -196,6 +310,12 @@ const STALE_TICKS := 450
 # instance id -> {transform -> {shape (WeakRef), task, result: {faces, boxes, grid}, used}}
 var _entries := {}
 var _watched := {}
+# Counters for a hitch guard: builds started (a cache miss) and cached() reads that found one.
+var builds := 0
+var hits := 0
+# A planted control: the old keying, one build per shape, replaced when the shape is placed
+# anywhere else. A park's shared shapes then rebuild every warm-up cycle (the 100-175 ms tick).
+var keep_one_placement := false
 
 
 # local_faces: the shape's faces in its own space, an Array of vertex Arrays, or a
@@ -213,9 +333,12 @@ func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
 		world = transform * (local_faces as PackedVector3Array)
 	else:
 		world = (local_faces as Array).map(func(face): return (face as Array).map(func(v): return transform * v))
+	builds += 1
 	entry = {"shape": weakref(shape), "result": {}, "used": Engine.get_physics_frames()}
 	var result: Dictionary = entry["result"]
 	entry["task"] = WorkerThreadPool.add_task(func(): _build(world, result), false, "rivet terrain faces")
+	if keep_one_placement:
+		_forget(id)
 	if not _entries.has(id):
 		_entries[id] = {}
 	_entries[id][transform] = entry
@@ -228,6 +351,7 @@ func cached(shape: Shape3D, transform: Transform3D) -> Dictionary:
 	if entry.is_empty() or entry["shape"].get_ref() != shape:
 		return {}
 	entry["used"] = Engine.get_physics_frames()
+	hits += 1
 	return entry
 
 

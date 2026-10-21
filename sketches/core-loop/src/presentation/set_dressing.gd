@@ -29,6 +29,10 @@ var map_id := ""
 var seed_value := 0
 var batches: Array[MultiMeshInstance3D] = []
 var _materials: Array[ShaderMaterial] = []
+# The protection mask last uploaded to _protected_for (_update_protection).
+var _protected_count := -1
+var _protected_rects: Array[Vector4] = []
+var _protected_for: Array[ShaderMaterial] = []
 var _dust: MultiMeshInstance3D
 var _clock := 0.0
 var _active := true
@@ -39,8 +43,14 @@ var _built_for := []
 var last_entry_usec := 0
 # The next stage's plan (plan()) while a worker draws it: {"key", "task", "out"}, else empty.
 var _prep := {}
+# A first stage still building behind the menu (world.gd MENU-READY): a worker draws its plan once
+# its ground is built and the menu builds it, so neither setup nor the first entry waits on it.
+var _dress_when_planned := false
 # Whether the current children were built from a worker's plan, for stage_entry_budget_test.
 var built_from_worker := false
+# Whether the last stage entry found its plan still drawing and left the build to _process, for
+# stage_entry_budget_test.
+var entry_deferred := false
 # The clutter kit's meshes and their target materials, read once (_kit_meshes).
 var _kit := {}
 var _kit_materials: Array[ShaderMaterial] = []
@@ -58,11 +68,15 @@ func setup(context) -> void:
 	name = "TargetSetDressing"
 	ctx.events.stage_entered.connect(_stage_entered)
 	ctx.events.stage_content_cleared.connect(_clear_stage)
-	_build_stage()
+	if ctx.terrain.is_ready(ctx.terrain.stage):
+		_build_stage()
+	else:
+		_dress_when_planned = true
 
 func _stage_entered(_stage: int, _retry: bool) -> void:
 	var started := Time.get_ticks_usec()
 	_active = true
+	entry_deferred = false
 	_build_stage()
 	last_entry_usec = Time.get_ticks_usec() - started
 
@@ -71,6 +85,7 @@ func _clear_stage(_reason: String) -> void:
 	visible = false
 
 func _build_stage() -> void:
+	_dress_when_planned = false
 	var stage: int = ctx.terrain.stage
 	var root: Node3D = ctx.terrain.geometry_root(stage)
 	_active = root.visible
@@ -81,12 +96,17 @@ func _build_stage() -> void:
 	if key == _built_for and get_child_count() > 0:
 		_update_protection()
 		return
+	# A plan still drawing is never waited on here (DRESS-ENTRY: the wait was 140 to 380 ms of a
+	# stage entry on a quick exit, the plan taking ~360 ms on a worker, the build ~2 ms). The old
+	# stage's dressing goes, and _process builds this one the frame the worker is done.
+	if not _prep.is_empty() and _prep.key == key and not WorkerThreadPool.is_task_completed(_prep.task):
+		_clear_children()
+		_built_for = []
+		_dress_when_planned = true
+		entry_deferred = true
+		return
 	_built_for = key
-	for child in get_children():
-		child.free()
-	batches.clear()
-	_materials.clear()
-	_dust = null
+	_clear_children()
 	map_id = ctx.stages.of(stage).map
 	seed_value = map_id.hash()
 	_ground = ctx.terrain.ground_callable(stage)
@@ -105,6 +125,13 @@ func _build_stage() -> void:
 		streaks.material_override.set_shader_parameter("ground_streak", true)
 		streaks.material_override.set_shader_parameter("opacity", 0.018)
 	_update_protection()
+
+func _clear_children() -> void:
+	for child in get_children():
+		child.free()
+	batches.clear()
+	_materials.clear()
+	_dust = null
 
 func _key(stage: int, root: Node3D) -> Array:
 	return [stage, ctx.stages.of(stage).map, Preset.current, root.get_instance_id()]
@@ -134,7 +161,7 @@ func _prepare_next() -> void:
 	var terrain = ctx.terrain
 	if not "maps" in terrain or not terrain.has_method("is_ready") or not "stage" in terrain:
 		return
-	var next: int = terrain.stage + 1
+	var next: int = terrain.stage + (0 if _dress_when_planned else 1)
 	var key := _key(next, terrain.geometry_root(next)) if next <= terrain.maps.size() and terrain.is_ready(next) else []
 	# A plan no stage can take any more (a new run, a preset change) is dropped once its worker is
 	# done, so no frame waits on it.
@@ -535,6 +562,8 @@ func _clutter_batch(label: String, mesh: Mesh, buffer: PackedFloat32Array) -> Mu
 
 func _process(delta: float) -> void:
 	_prepare_next()
+	if _dress_when_planned and not _prep.is_empty() and WorkerThreadPool.is_task_completed(_prep.task):
+		_build_stage()
 	visible = _active and ctx.flow.in_play()
 	if not visible:
 		return
@@ -574,16 +603,42 @@ func _update_protection(camera: Camera3D = null) -> void:
 		visible = false
 		return
 	# Scrap fills the remaining slots nearest the camera first, so a long scrap line
-	# cannot hide the whole ground dressing.
-	scrap = scrap.filter(func(piece): return piece is Node3D and piece.is_visible_in_tree())
-	scrap.sort_custom(func(a, b): return a.global_position.distance_squared_to(camera.global_position) < b.global_position.distance_squared_to(camera.global_position))
+	# cannot hide the whole ground dressing. The mask is a set of rectangles, so only which
+	# pieces get a slot matters: when they all fit, no ranking is needed.
+	var eye := camera.global_position
+	var pieces: Array[Node3D] = []
+	var distances := PackedFloat64Array()
 	for piece in scrap:
-		if rects.size() >= 64:
-			break
-		_add_rect(rects, camera, piece)
+		if piece is Node3D and piece.is_visible_in_tree():
+			pieces.append(piece)
+			distances.append(piece.global_position.distance_squared_to(eye))
+	# Nearest first, a band of as many pieces as there are free slots at a time; a piece off
+	# the screen takes no slot, so the next band fills the slots it left.
+	var ranked := distances.duplicate()
+	if pieces.size() > 64 - rects.size():
+		ranked.sort()
+	else:
+		ranked = PackedFloat64Array([INF])
+	var taken_upto := -INF
+	var r := 0
+	while rects.size() < 64 and r < ranked.size():
+		var upto := ranked[mini(r + 64 - rects.size(), ranked.size()) - 1]
+		for k in pieces.size():
+			if rects.size() >= 64:
+				break
+			if distances[k] > taken_upto and distances[k] <= upto:
+				_add_rect(rects, camera, pieces[k])
+		taken_upto = upto
+		r = ranked.bsearch(upto, false)
 	var count := rects.size()
 	while rects.size() < 64:
 		rects.append(Vector4(-1.0, -1.0, -1.0, -1.0))
+	# The same mask for the same materials needs no upload.
+	if count == _protected_count and rects == _protected_rects and _materials == _protected_for:
+		return
+	_protected_count = count
+	_protected_rects = rects
+	_protected_for = _materials.duplicate()
 	for material in _materials:
 		material.set_shader_parameter("protected_count", count)
 		material.set_shader_parameter("protected_rects", rects)

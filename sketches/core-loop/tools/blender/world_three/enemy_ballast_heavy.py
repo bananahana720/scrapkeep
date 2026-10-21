@@ -33,10 +33,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, os.path.join(HERE, "..", "world_two"))
 import common
+import polish
 from common import Part
 import fleet_crew
 
 common.reset()
+polish.enable(detail=2, bevel=0.03, fit=True)
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.85}
 common.SLOTS["working_tool"] = {"vc": True, "rough": 0.55, "metal": 0.5}
 root = common.empty("BallastHeavy")
@@ -79,14 +81,16 @@ STACK = [(-0.78, -0.18, (2.7, 2.1), (2.45, 1.9)), (-0.18, 0.32, (2.3, 1.8), (2.1
 for (y0, y1, bottom, top) in STACK:
     ingot(body, "working_tool", y0, y1, bottom, top, IRON, IRON_HI)
     # A fleet_paint band round each ingot's foot, oxide, the Fleet's claim on it.
-    ingot(body, "fleet_paint", y0 - 0.005, y0 + 0.1, (bottom[0] + 0.04, bottom[1] + 0.04),
-          (bottom[0] + 0.02, bottom[1] + 0.02), OXIDE)
+    with body.region(bevel=0.01):
+        ingot(body, "fleet_paint", y0 - 0.005, y0 + 0.1, (bottom[0] + 0.04, bottom[1] + 0.04),
+              (bottom[0] + 0.02, bottom[1] + 0.02), OXIDE)
 # Stencils on the front face: three bone tally bars per ingot (one, two, three tons, give or take).
 for k, (y0, y1, bottom, top) in enumerate(STACK):
     zf = (bottom[1] + top[1]) / 4 + 0.03
     ym = (y0 + y1) / 2 + 0.04
-    for i in range(k + 1):
-        body.box("fleet_paint", (0.1, 0.04, 0.26), loc=g((i - k / 2) * 0.22, ym, zf), color="bone")
+    with body.region(bevel=0.01):
+        for i in range(k + 1):
+            body.box("fleet_paint", (0.1, 0.04, 0.26), loc=g((i - k / 2) * 0.22, ym, zf), color="bone")
 # Hazard corner tabs on the bottom ingot: the edges you push from.
 for sx in (-1, 1):
     for sz in (-1, 1):
@@ -107,23 +111,29 @@ SEAT = Vector((0.0, 0.72, -0.15))
 body.box("fleet_paint", (0.62, 0.5, 0.12), loc=g(SEAT.x, SEAT.y + 0.2, SEAT.z), color=CHAR)
 body.cyl("fleet_paint", 0.08, 0.08, 0.2, segs=6, loc=g(SEAT.x, SEAT.y + 0.1, SEAT.z), color=CHAR)
 CREW = Vector((0.0, 1.62, -0.12))
-body.cyl("fleet_paint", 0.3, 0.26, 0.62, segs=8, loc=g(CREW.x, SEAT.y + 0.55, CREW.z), color=OXIDE)
+# Under polish the crew is the shared soft critter: body twice, arms once.
+with body.region(bevel=0, subsurf=2, detail=1):
+    body.cyl("fleet_paint", 0.3, 0.26, 0.62, segs=8, loc=g(CREW.x, SEAT.y + 0.55, CREW.z), color=OXIDE)
 body.box("fleet_paint", (0.52, 0.36, 0.12), loc=g(CREW.x, SEAT.y + 0.68, CREW.z), color="petrol")
 fleet_crew.head(body, CREW, r=0.27, facing=(0.0, 1.0), hat="goggles")
 LEVER = Vector((0.42, 1.3, 0.3))
-body.rod("fleet_paint", G(0.3, 0.74, 0.2), G(*LEVER), 0.035, segs=5, color=CHAR)
+with body.region(bevel=0.01):
+    body.rod("fleet_paint", G(0.3, 0.74, 0.2), G(*LEVER), 0.035, segs=5, color=CHAR)
 body.ico("fleet_paint", 0.08, loc=g(*LEVER), color="hazard")
-body.rod("fleet_paint", G(CREW.x + 0.26, CREW.y - 0.42, CREW.z + 0.08), G(LEVER.x - 0.04, LEVER.y, LEVER.z - 0.04),
-         0.06, segs=5, color=OXIDE)
-body.rod("fleet_paint", G(CREW.x - 0.26, CREW.y - 0.42, CREW.z + 0.08), G(-0.42, 1.05, 0.25), 0.06, segs=5,
-         color=OXIDE)
+with body.region(bevel=0, subsurf=1, detail=1):
+    body.rod("fleet_paint", G(CREW.x + 0.26, CREW.y - 0.42, CREW.z + 0.08),
+             G(LEVER.x - 0.04, LEVER.y, LEVER.z - 0.04), 0.06, segs=5, color=OXIDE)
+    body.rod("fleet_paint", G(CREW.x - 0.26, CREW.y - 0.42, CREW.z + 0.08), G(-0.42, 1.05, 0.25), 0.06, segs=5,
+             color=OXIDE)
 POLE = (-0.62, 0.72, -0.5)
-body.rod("fleet_paint", G(*POLE), G(POLE[0], 3.1, POLE[2]), 0.04, segs=5, color=CHAR)
-# A long two-tailed pennant streaming downwind (+X), oxide and bone.
-for k, (y, color) in enumerate(((2.95, OXIDE), (2.72, "bone"))):
-    tip = 1.05 - 0.2 * k
-    body.prism("fleet_paint", [(0.0, 0.11), (tip, 0.02), (tip - 0.18, -0.07), (0.0, -0.11)], 0.03,
-               matrix=common.mtx(g(POLE[0] + 0.03, y, POLE[2]), (math.pi / 2, 0, 0)), color=color)
+with body.region(bevel=0.01):
+    body.rod("fleet_paint", G(*POLE), G(POLE[0], 3.1, POLE[2]), 0.04, segs=5, color=CHAR)
+# A long two-tailed pennant streaming downwind (+X), oxide and bone. Thin cloth: no bevel.
+with body.region(bevel=0, subsurf=0):
+    for k, (y, color) in enumerate(((2.95, OXIDE), (2.72, "bone"))):
+        tip = 1.05 - 0.2 * k
+        body.prism("fleet_paint", [(0.0, 0.11), (tip, 0.02), (tip - 0.18, -0.07), (0.0, -0.11)], 0.03,
+                   matrix=common.mtx(g(POLE[0] + 0.03, y, POLE[2]), (math.pi / 2, 0, 0)), color=color)
 bmesh.ops.recalc_face_normals(body.bm, faces=body.bm.faces[:])
 body_obj = body.to_object(parent=root)
 
@@ -136,9 +146,11 @@ for sx in (-1, 1):
         brakes.box("working_tool", (0.26, 0.26, 0.5), loc=g(sx * 1.3, -0.45, sz * 0.98), color=IRON_HI)
         brakes.rod("working_tool", G(sx * 1.32, -0.5, sz * 1.0), G(x, FOOT_Y + 0.12, z), 0.08, segs=6, color=WORN)
         brakes.box("working_tool", (0.46, 0.46, 0.1), loc=g(x, FOOT_Y + 0.09, z), color="hazard")
-        for t in range(3):
-            brakes.cyl("working_tool", 0.07, 0.0, 0.14, segs=4, loc=g(x + (t - 1) * 0.14 * sx, FOOT_Y - 0.0, z),
-                       rot=(math.pi, 0, 0), color=CHAR)
+        # Teeth keep their four sharp sides and points: a bevel would blunt the tips.
+        with brakes.region(bevel=0, detail=1):
+            for t in range(3):
+                brakes.cyl("working_tool", 0.07, 0.0, 0.14, segs=4, loc=g(x + (t - 1) * 0.14 * sx, FOOT_Y - 0.0, z),
+                           rot=(math.pi, 0, 0), color=CHAR)
 bmesh.ops.recalc_face_normals(brakes.bm, faces=brakes.bm.faces[:])
 brakes_obj = brakes.to_object(origin=g(0, FOOT_Y, 0), parent=root)
 
@@ -155,13 +167,13 @@ brake_low = min((brakes_obj.matrix_world @ v.co).z for v in brakes_obj.data.vert
 print("BALLAST floor %.3f top %.3f brake feet %.3f tris %d" % (low, high, brake_low, common.tri_total(root)),
       [(o.name, common.tris(o)) for o in objs])
 assert low >= FLOOR - 1e-4 and abs(brake_low - (FLOOR + BRACE_DROP - 0.07)) < 0.08 and high <= 3.2
-assert common.tri_total(root) <= 1100
+assert common.tri_total(root) <= 6000
 
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_three", "enemy_ballast_heavy.glb")
 common.export(root, path)
 import world_preview
-world_preview.budget(path, 3)
+world_preview.budget(path, 3, tris=6000, verts=9000)
 
 if opts["render"]:
     rest_z = brakes_obj.location.z

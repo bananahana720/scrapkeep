@@ -301,9 +301,13 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 			if _movable(enemy):
 				if id == "redjaw_rend" and tow.size() < 2 + _class():
 					tow.append(enemy)
+					if enemy.has_method("open_ring_out"):
+						enemy.open_ring_out()
 				elif id == "vice_leap":
 					var ult = combat.ultimate
 					var left := maxf(0.05, float(ult._plan["legs"][ult._leg]["seconds"]) - float(ult._leg_time))
+					if enemy.has_method("open_ring_out"):
+						enemy.open_ring_out()
 					hurls.append({"enemy": enemy, "from": enemy.global_position, "to": ult._plan["legs"][ult._leg]["to"], "time": 0.0, "seconds": left})
 		for enemy in tow.duplicate():
 			if _alive(enemy):

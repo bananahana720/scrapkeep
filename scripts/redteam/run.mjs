@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// node scripts/redteam/run.mjs --wave=<n> [--quick] [--slots=4] [--carry=<findings.json>] [--no-export]
+// node scripts/redteam/run.mjs --wave=<n> [--persona=<id>] [--quick] [--slots=4] [--carry=<findings.json>] [--no-export]
 //
 // The per-wave red team (scripts/redteam/README.md). It plays the checked-out build with rotating
 // personas, pilots and seeds, runs the attack tools, and writes one ranked findings page graded on
@@ -15,7 +15,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const sketch = path.join(root, "sketches/core-loop");
 const godot = process.env.GODOT_BIN;
 
-const opts = { wave: null, quick: false, slots: 4, carry: null, export: true, count: null, sweep: false, block: 0 };
+const opts = { wave: null, quick: false, slots: 4, carry: null, export: true, count: null, sweep: false, block: 0, persona: null };
 for (const arg of process.argv.slice(2)) {
   const [k, v] = arg.replace(/^--/, "").split("=");
   if (k === "wave") opts.wave = Number(v);
@@ -26,6 +26,7 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "no-export") opts.export = false;
   else if (k === "sweep") opts.sweep = true;
   else if (k === "block") opts.block = Number(v);
+  else if (k === "persona") opts.persona = v;
   else die("unknown option " + arg);
 }
 if (!godot || !existsSync(godot)) die("set GODOT_BIN to the Godot 4.7.2 editor (the cloud SessionStart hook does)");
@@ -43,10 +44,11 @@ const seedOf = opts.sweep ? (w, i) => sweepSeed(w, i + 100 * opts.block) : waveS
 const fuzzAt = opts.sweep ? 500 + 50 * opts.block - 100 * opts.block : 50;
 const count = opts.count ?? (opts.quick ? 5 : opts.sweep ? 60 : 10);
 const carry = opts.carry ? JSON.parse(readFileSync(opts.carry, "utf8")).carry ?? [] : [];
-const jobs = planWave({ wave: opts.wave, count, quick: opts.quick, carry, seed: seedOf });
+if (opts.persona && opts.sweep) die("--persona is a head pass and cannot be a sweep");
+const jobs = planWave({ wave: opts.wave, count, quick: opts.quick, carry, seed: seedOf, persona: opts.persona });
 const started = new Date();
 const stamp = started.toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
-const outDir = path.join(root, "artifacts/local/redteam", `w${opts.wave}${opts.sweep ? "-sweep" + opts.block : ""}-${stamp}`);
+const outDir = path.join(root, "artifacts/local/redteam", `w${opts.wave}${opts.sweep ? "-sweep" + opts.block : ""}${opts.persona ? "-" + opts.persona : ""}-${stamp}`);
 const jobsDir = path.join(outDir, "jobs");
 mkdirSync(jobsDir, { recursive: true });
 const commit = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
@@ -118,7 +120,7 @@ const extras = { fuzzSeconds: opts.quick ? 30 : 60 };
 function fuzzTask() {
   return async () => {
     const first = seedOf(opts.wave, fuzzAt);
-    const n = opts.quick ? 6 : opts.sweep ? 40 : 20;
+    const n = opts.quick || opts.persona ? 6 : opts.sweep ? 40 : 20;
     const seeds = `${first}-${first + n - 1}`;
     const dir = path.join(jobsDir, "item-fuzz");
     mkdirSync(dir, { recursive: true });

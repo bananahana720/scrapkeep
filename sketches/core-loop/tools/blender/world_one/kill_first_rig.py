@@ -207,6 +207,9 @@ class Rig:
         """Writes the GLB with skin and clips, canonicalised so reruns are byte-identical.
         Returns the stats the recipe asserts on."""
         self.stop()
+        if common.POLISH is not None:
+            import polish
+            polish.bake(self.root, common.POLISH)
         scene = bpy.context.scene
         scene.render.fps = FPS
         scene.frame_start, scene.frame_end = 1, frame(max(self.clips.values()))
@@ -225,7 +228,7 @@ class Rig:
                 export_skins=True, export_yup=True, export_materials="EXPORT",
                 export_vertex_color="ACTIVE", export_extras=False, export_cameras=False,
                 export_lights=False)
-            common.canonical_indices(packed)
+            common.canonical_indices(packed, vertices=common.POLISH is not None)
             data = open(packed, "rb").read()
         with open(path, "wb") as fh:
             fh.write(data)
@@ -239,7 +242,8 @@ class Rig:
             "joints": len(doc["skins"][0]["joints"]) if doc.get("skins") else 0,
             "clips": sorted(a["name"] for a in doc.get("animations", [])),
         }
-        assert stats["draws"] == draws and stats["verts"] <= 2100 and stats["tris"] <= 1100, stats
+        # The enemy class caps in assets/asset_budgets.json; each body recipe asserts its own.
+        assert stats["draws"] == draws and stats["verts"] <= 19100 and stats["tris"] <= 10000, stats
         assert stats["clips"] == sorted(self.clips), (stats["clips"], sorted(self.clips))
         assert all("JOINTS_0" in p["attributes"] for p in prims), "every mesh is skinned"
         print("RIG EXPORTED", os.path.basename(path), json.dumps(stats, sort_keys=True))

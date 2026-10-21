@@ -21,7 +21,11 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))
 import common
+import polish
 from common import Part
+
+# A nine-metre ship: wider chamfers than the 3 cm default so they read at fight distance.
+polish.enable(detail=2, bevel=0.06, bevel_angle=46.0)
 
 ROOT = HERE.parents[4]
 MODELS = HERE.parents[2] / "assets/models/bosses"
@@ -182,19 +186,23 @@ def hull(root):
 
 
 def drums(parent):
+    # Eight drums sit mostly under the hull: they keep today's segment counts under polish
+    # (bevels and smoothing only), which leaves the triangles for the parts you see.
+    def keep(segs):
+        return max(2, segs // common.DETAIL)
     for side, letter in ((-1, "L"), (1, "R")):
         for k, z in enumerate((-4.8, -1.6, 1.6, 4.8)):
             at = (side * 4.05, .8, z)
             p = Part("Drum%s%d" % (letter, k))
-            cyl(p, .75, .8, at, "charcoal", JOINT, 16, True)
-            cyl(p, .57, .04, (side * 4.43, .8, z), common.mix("charcoal", "bone", .25), JOINT, 12, True)
-            cyl(p, .22, .045, (side * 4.4275, .8, z), "copper", JOINT, 8, True)
+            cyl(p, .75, .8, at, "charcoal", JOINT, keep(16), True)
+            cyl(p, .57, .04, (side * 4.43, .8, z), common.mix("charcoal", "bone", .25), JOINT, keep(12), True)
+            cyl(p, .22, .045, (side * 4.4275, .8, z), "copper", JOINT, keep(8), True)
             # Raised axial tread ribs remain inside the exact D1.5 envelope.
             for j in range(8):
                 a = j * math.tau / 8
                 rod(p, (side * 3.68, .8 + .69 * math.cos(a), z + .69 * math.sin(a)),
                     (side * 4.42, .8 + .69 * math.cos(a), z + .69 * math.sin(a)), .05,
-                    common.mix("charcoal", "bone", .12), JOINT, 4)
+                    common.mix("charcoal", "bone", .12), JOINT, keep(4))
             finish(p, at, parent)
 
 
@@ -312,6 +320,8 @@ def cranes(root):
     for k, at in enumerate(CAPS):
         socket = node("CapSocket%d" % k, at, root)
         p = Part("Cap%d" % k)
+        # Caps keep their exact 2.2 m magnet-target envelope, so no chamfer pulls the rim in.
+        p.bevel = 0
         p.cyl(STEEL, 1.1, .95, .8, 12, loc=xyz(at), color="bone")
         striped_disc(p, 1.05, (at[0], at[1] - .401, at[2]), True)
         worn(p)
@@ -356,6 +366,8 @@ def build_ship():
     seat = node("AdmiralSeat", (0, 6, 4.8), root)
     launch = node("ScooterSeat", (0, 6, 4.8), seat)
     p = Part("Admiral")
+    # The badger is one soft surface: no chamfers, one rounding pass.
+    p.bevel, p.subsurf = 0, 1
     pilot(p, (0, 6, 4.8))
     box(p, (1.2, .13, 1), (0, 5.565, 4.8), "petrol")
     finish(p, (0, 6, 4.8), launch)
@@ -385,14 +397,16 @@ def build_scooter():
     # One common axle rotates two small scooter wheels at their actual centres.
     p = Part("Drums")
     for side in (-1, 1):
-        cyl(p, .22, .24, (side * .84, -.28, 0), "charcoal", JOINT, 12, True)
-        cyl(p, .13, .02, (side * .965, -.28, 0), "copper", JOINT, 8, True)
+        cyl(p, .22, .24, (side * .84, -.28, 0), "charcoal", JOINT, max(2, 12 // common.DETAIL), True)
+        cyl(p, .13, .02, (side * .965, -.28, 0), "copper", JOINT, max(2, 8 // common.DETAIL), True)
     finish(p, (0, -.28, 0), root)
     return root
 
 
 def export(root, path):
     bpy.context.view_layer.update()
+    if common.POLISH is not None:
+        polish.bake(root, common.POLISH)
     bpy.ops.object.select_all(action="DESELECT")
     for obj in common.tree(root):
         obj.select_set(True)
@@ -404,7 +418,7 @@ def export(root, path):
         export_optimize_animation_keep_anim_object=True,
         export_force_sampling=True, export_frame_range=False, export_skins=False,
         export_cameras=False, export_lights=False, export_extras=False)
-    common.canonical_indices(str(path))
+    common.canonical_indices(str(path), vertices=common.POLISH is not None)
     print("EXPORTED", path)
 
 
@@ -451,8 +465,10 @@ def main():
     export(scooter, a.out_dir / "boss_brindle_scooter.glb")
     scooter_budget = measure(a.out_dir / "boss_brindle_scooter.glb")
     combined = [budget["kit"][i] + scooter_budget["kit"][i] for i in range(3)]
-    assert all(n <= cap for n, cap in zip(budget["body"], (5000, 9600, 32))), budget
-    assert all(n <= cap for n, cap in zip(combined, (1500, 2800, 18))), combined
+    # Polished caps (POLISH.md, 18 Oct): about 70% of the warden_base and 85% of the
+    # warden_kit class caps, pending the 4080 frame check.
+    assert all(n <= cap for n, cap in zip(budget["body"], (14500, 11500, 32))), budget
+    assert all(n <= cap for n, cap in zip(combined, (5000, 5000, 18))), combined
     print("BRI budget: PASS body=%s combined_kit=%s" % (budget["body"], combined))
     if a.render:
         import brindle_preview

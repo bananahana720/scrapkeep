@@ -20,9 +20,12 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Chaser")
 p = Part("ChaserBody")
 bm = p.bm
@@ -94,7 +97,7 @@ zmax = max(abs(v.z) for v in points)
 surfaces = sum(len(obj.data.materials) for obj in (body, fin, claws))
 print("TRIS", tri_count, "RADIUS", round(radius, 4), "ZMAX", round(zmax, 4),
       "SURFACES", surfaces)
-if tri_count > 1200 or radius > R_MAX or zmax > Z_MAX or surfaces > 5:
+if tri_count > 3400 or radius > R_MAX or zmax > Z_MAX or surfaces > 5:
     raise SystemExit("C10 limits exceeded")
 
 opts = common.args()

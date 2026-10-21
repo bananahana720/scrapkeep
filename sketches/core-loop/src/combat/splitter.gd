@@ -17,12 +17,14 @@ extends "res://src/combat/counter.gd"
 # fusing together as one volley.
 #
 # The effects contract (design-v3/MACHINE-VFX.md, PR #51, and the special cues): each bud's
-# seam flare fires special_tell("tell") and SpecialCues.tell(self) on its first frame, and
+# seam flare fires SpecialCues.tell(self) (which emits special_tell("tell")) on its first frame, and
 # meta "split" is set before died goes out.
 
 # The specials' cue hub (CONTRACTS.md "Special cues"); loaded only once that file lands.
 const CUES := "res://src/combat/special_cues.gd"
 const POD := "splitter_pod"
+const SpecialRig := preload("res://src/presentation/special_rig.gd")
+const BODY_GLB := "res://assets/models/world_one/enemy_splitter.glb"
 const PIECE_GLB := "res://assets/models/world_one/enemy_splitter_piece.glb"
 
 signal special_tell(moment: String)
@@ -97,9 +99,10 @@ func _physics_process(delta: float) -> void:
 		_bud_clock -= delta
 		if _bud_clock <= 0.0 and _pods.size() < POD_CAP:
 			_flare_left = POP_DELAY
-			special_tell.emit("tell")
 			if ResourceLoader.exists(CUES):
 				load(CUES).tell(self)
+			else:
+				special_tell.emit("tell")
 
 
 # One pod comes off the side facing the ball and runs at it.
@@ -141,14 +144,19 @@ func _build_crew() -> void:
 	_add_capsule(BODY_RADIUS, BODY_HALF * 2.0, Palette.RUST).free()
 	_seam_material = Palette.solid(SEAM_BRASS, SEAM_IDLE)
 	var parts := body_parts()
+	# On screen the glb's own scene stands in, so its crawl, tell and break clips play; the
+	# collider, sockets and signals are as before (a headless run copies meshes).
+	var model := SpecialRig.seat(self, _visual_parent(), BODY_GLB, "splitter")
 	for part in parts["meshes"]:
-		var mi := MeshInstance3D.new()
-		mi.name = part.name
-		mi.mesh = part.mesh
-		mi.transform = part.xform
+		var mi: MeshInstance3D = model.find_child(part.name, true, false) as MeshInstance3D if model != null else null
+		if mi == null:
+			mi = MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			_visual_parent().add_child(mi)
 		for i in mi.mesh.get_surface_count():
 			mi.set_surface_override_material(i, _material if part.paint else _seam_material)
-		_visual_parent().add_child(mi)
 		if part.paint:
 			_crew = mi
 	_base_color = Color.WHITE
@@ -187,7 +195,7 @@ static func _read(path: String) -> Dictionary:
 
 
 static func body_parts() -> Dictionary:
-	return parts("res://assets/models/world_one/enemy_splitter.glb")
+	return parts(BODY_GLB)
 
 
 static func piece_parts() -> Dictionary:
@@ -216,9 +224,9 @@ func _pose() -> void:
 	if _seam_material == null:
 		return
 	var flare := 1.0 - clampf(_flare_left / POP_DELAY, 0.0, 1.0) if _flare_left > 0.0 else 0.0
-	_seam_material.albedo_color = SEAM_BRASS.lerp(SEAM_WHITE, flare)
+	_seam_material.albedo_color = SEAM_BRASS.lerp(SEAM_WHITE, FlashGuard.whiten(flare))
 	_seam_material.emission = _seam_material.albedo_color
-	_seam_material.emission_energy_multiplier = lerpf(SEAM_IDLE, SEAM_FLARE, flare)
+	_seam_material.emission_energy_multiplier = FlashGuard.spike(SEAM_IDLE, lerpf(SEAM_IDLE, SEAM_FLARE, flare))
 
 
 # Every door hit lands here on the frame of its damage, so a kill on this frame is the last one seen.

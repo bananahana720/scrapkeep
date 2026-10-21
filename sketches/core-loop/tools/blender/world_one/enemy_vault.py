@@ -10,6 +10,7 @@ import bmesh
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 
@@ -22,6 +23,8 @@ def build():
     common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
     common.SLOTS["part_state"] = {"color": "petrol", "metal": 0.6, "rough": 0.4}
     common.SLOTS["working_tool"] = {"color": "bone", "rough": 0.4}
+    # Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+    polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
     root = common.empty("Vault")
     body = Part("VaultBody")
     footprint = [(-1.25, -1.44), (1.25, -1.44), (1.44, -1.25), (1.44, 1.25),
@@ -44,6 +47,8 @@ def build():
     bmesh.ops.recalc_face_normals(body.bm, faces=body.bm.faces[:])
     body.to_object(parent=root)
     plate = Part("VaultPlating")
+    plate.bevel = 0
+    plate.subsurf = 0
     for y in (-0.6, 0.6):
         for z in (-1.51, 1.51):
             plate.box("part_state", (3.2, 0.18, 0.35), loc=g(0, y, z))
@@ -61,7 +66,7 @@ def build():
     lamp.uv("working_tool", 0.6, u=10, v=6, loc=g(0, 3.3, 0))
     bmesh.ops.recalc_face_normals(lamp.bm, faces=lamp.bm.faces[:])
     lamp.to_object(parent=root)
-    if common.tri_total(root) > 1100:
+    if common.tri_total(root) > 3600:
         raise SystemExit("vault exceeds enemy triangle budget")
     return root
 
