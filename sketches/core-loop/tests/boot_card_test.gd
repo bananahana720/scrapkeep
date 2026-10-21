@@ -140,6 +140,8 @@ func _run() -> void:
 	early_stage.intro_autoplay = true
 	var seen_before: bool = early_game.ctx.profile.is_seen(TitleIntros.SEEN_PREFIX + "sable")
 	var gen_before: int = early_game.ctx.profile.generation()
+	await process_frame
+	await process_frame
 	early_boot.free()
 	for i in 4:
 		await process_frame
