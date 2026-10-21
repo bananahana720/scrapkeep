@@ -9,6 +9,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const SkillBand := preload("res://tools/skill_band.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -446,6 +447,12 @@ var _plate_hand := {}
 var _ignore_walls := false
 # Telegraph reading: instance id -> tick first seen; the ids evaded this stage.
 var _seen := {}
+# A skill band (tools/skill_band.gd) or null. Null is the driver as it always was: REACTION,
+# every tell read, every hand on. A band slows the reaction, drops unread tells and refuses
+# the kit hands it does not have (see _kit).
+var band = null
+# The lowest hull the run reached, for the record; it steers nothing.
+var _min_hp := INF
 var _evaded := {}
 # The pulse ring the caps loop takes on purpose, by its centre.
 var _welcome_ring_at := Vector3.INF
@@ -456,6 +463,8 @@ var _plant_cool := 0.0
 var _plant_face := Vector3.ZERO
 var _plant_target: Node3D = null
 var _boss_clock := 0.0
+# Seconds the dam's spillway sheet has been open in this cycle, for a band that launches by sight; -1 shut.
+var _sheet_live_s := -1.0
 var _punch_seen := 0.0
 var _warden_hp_at := -1.0
 var _warden_kinds := {}
@@ -518,7 +527,7 @@ var _play_clock := 0.0
 var _fill_from := 0.0
 var _fills: Array[float] = []
 var _fill_open := true
-var _totals := {"slot_casts_special": 0, "slot_casts_line": 0, "ultimates": 0, "ult_presses": 0}
+var _totals := {"slot_casts_special": 0, "slot_casts_line": 0, "ultimates": 0, "ult_presses": 0, "shots": 0}
 # The meter's points by source at the first full meter, for the record only.
 var _first_fill_sources := {}
 
@@ -589,6 +598,7 @@ func start(resume := false) -> void:
 	events.enemy_struck.connect(_on_enemy_struck)
 	events.special_used.connect(func(_id: String, _at: Vector3): _count("specials"))
 	events.shot_fired.connect(func(_weapon: String, _from: Vector3, _to: Vector3):
+		_totals["shots"] = int(_totals["shots"]) + 1
 		var kit = game.player.kit
 		if kit.hooked and kit.on_body and _anchor_warden(kit.anchor_body):
 			_count("latch_shots"))
@@ -709,6 +719,7 @@ func tick(delta: float) -> bool:
 		return true
 	_boost_clock -= delta
 	_play_clock += delta
+	_min_hp = minf(_min_hp, float(game.run.hp))
 	_ult_wait -= delta
 	_harpoon_held = false
 	_harpoon_commit = false
@@ -814,6 +825,8 @@ func _end(why: String) -> void:
 	outcome = why
 	_close_note()
 	if not boss_note.is_empty():
+		if why == "died" and not boss_note.has("outcome"):
+			boss_note["died_s"] = snappedf(_boss_clock, 0.01)
 		boss_note["outcome"] = why
 		boss_note["seconds"] = snappedf(_boss_clock, 0.01)
 		var boss = _boss()
@@ -1743,7 +1756,7 @@ func _fight(target: Node3D, delta: float) -> void:
 	if short:
 		_count("punch_short_s", delta)
 	_note_shred(target, delta)
-	if _anchor_warden(target):
+	if _anchor_warden(target) and (_kit("harpoon") or _sheet_warden(target)):
 		_anchor_fight(target, short, delta)
 		return
 	_ground_fight(target, short, delta)
@@ -1752,7 +1765,7 @@ func _fight(target: Node3D, delta: float) -> void:
 # The fight on the ground: the caps loop when punch is short of a caps Warden, else ram laps.
 func _ground_fight(target: Node3D, short: bool, delta: float) -> void:
 	var caps: bool = target.has_method("cap_points") and not (target.cap_points() as Array).is_empty()
-	if caps and short:
+	if caps and short and _kit("weak_points"):
 		_goal = "caps %s" % target.get("kind")
 		_cap_loop(target, delta)
 		return
@@ -1782,6 +1795,14 @@ func _anchor_warden(target) -> bool:
 	return target != null and is_instance_valid(target) and target.get("harpoon_anchor") == true
 
 
+# The dam reactor's spillway sheet: its hand releases the hook and breaks the Warden by ram, so
+# a band without the harpoon still runs it.
+func _sheet_warden(target: Node3D) -> bool:
+	return target.get("family") == "reactor" and target.get("mounting") == "dam_face" \
+			and target.spec.get("park_landmark", false) and target.mount_driver != null \
+			and target.mount_driver.has_method("sheet_live")
+
+
 func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 	var kit = game.player.kit
 	var ball: Vector3 = game.player.ball_position()
@@ -1806,9 +1827,7 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		if not game.player.state.grounded:
 			_count("latch_bites_air")
 	_anchor_lined = lined
-	if target.get("family") == "reactor" and target.get("mounting") == "dam_face" \
-			and target.spec.get("park_landmark", false) and target.mount_driver != null \
-			and target.mount_driver.has_method("sheet_live"):
+	if _sheet_warden(target):
 		var sheet = target.mount_driver
 		var dir: Vector3 = sheet.sheet_dir if sheet.sheet_dir != Vector3.ZERO else sheet._face_heading(target)
 		var runup: float = minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
@@ -1822,6 +1841,19 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		var rammed: bool = _fight_phase == "sheet return %d" % sheet.gates_opened
 		# In a stagger a second ram in the same live sheet is the break, so the ball goes again.
 		var launching: bool = (live and (not rammed or staggered)) or (not live and target._charging and until_pulse <= DROP_WAIT)
+		var timed := _sheet_timed()
+		if not timed:
+			# Below the full kit the hand plays by sight (skill_band.gd): an open sheet seen for the
+			# band's reaction and read this cycle, and the stagger re-ram only with the base kit.
+			if not live:
+				_sheet_live_s = -1.0
+			elif _sheet_live_s < 0.0:
+				_sheet_live_s = 0.0
+			else:
+				_sheet_live_s += delta
+			var seen: bool = live and _sheet_live_s >= _reaction() \
+					and band.reads(target.get_instance_id() * 1000 + int(sheet.gates_opened))
+			launching = seen and (not rammed or (staggered and _kit("weak_points")))
 		var steer: Vector3 = target.family_point_at() if launching else _ground_point(foot.x, foot.z)
 		_harpoon_held = false
 		_harpoon_commit = false
@@ -1844,10 +1876,10 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		_ignore_walls = launching
 		_slow_time = 0.0
 		_detour_time = 0.0
-		_act(steer, target, delta, target, false)
+		_act(steer, target, delta, target, not timed)
 		_ignore_walls = ignore_walls
 		_boost_clock = boost_clock
-		if staggered or float(target.posture()) >= SHEET_HOLD_FIRE:
+		if timed and (staggered or float(target.posture()) >= SHEET_HOLD_FIRE):
 			# Near a full bar, and in a stagger, any hit but the sheet ram only opens or spends a
 			# stagger that resets the bar (Tarn's claw, seed 3): the weapon, casts and ultimate wait.
 			source.hold.erase("fire_held")
@@ -2058,6 +2090,8 @@ func _note_shred(target: Node3D, delta: float) -> void:
 # The press is withheld where the player discards it (a charging special or slingshot, a
 # frozen ball), so a bite counts only when it can land.
 func _harpoon_hand(target: Node3D, delta: float) -> void:
+	if not _kit("harpoon"):
+		return
 	var kit = game.player.kit
 	var bank_shot: bool = game.player.abilities.id_of(AbilityState.LINE) == "bank_shot"
 	if _cast_phase == "await_smash":
@@ -2103,7 +2137,7 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			_cast(3)
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
-		if chain_hand_enabled and policy == "completionist" and not _in_boss() \
+		if chain_hand_enabled and _kit("chain") and policy == "completionist" and not _in_boss() \
 				and target != game.flow.warden and target.is_in_group("enemy") and game.player.verb_ready("jump"):
 			var second := _chain_partner(target)
 			if second != null:
@@ -2468,7 +2502,7 @@ func _cap_loop(target: Node3D, delta: float) -> void:
 # What to point the gun at: the weak point when punch is short and one shows (the
 # magnet while it tugs), else the body.
 func _aim_node(target: Node3D, short: bool):
-	if short and target.has_method("weak_points") and not (target.weak_points() as Array).is_empty():
+	if short and _kit("weak_points") and target.has_method("weak_points") and not (target.weak_points() as Array).is_empty():
 		return {"at": target.weak_points()[0]["at"]}
 	return target
 
@@ -2548,18 +2582,18 @@ func _fight_boss(delta: float) -> void:
 		return
 	match phase:
 		1:
-			var magnet := _live_part(boss, ship.magnets, ball)
+			var magnet: Node3D = _live_part(boss, ship.magnets, ball) if _kit("weak_points") else null
 			if pickup != Vector3.INF:
 				_goal = "boss pickup"
 				_act(pickup, magnet if magnet != null else hull, delta)
-			elif punch >= _plating(hull):
+			elif punch >= _plating(hull) or not _kit("weak_points"):
 				_goal = "boss ram"
 				_ram_laps(hull, magnet if magnet != null else hull, delta)
 			else:
 				_goal = "boss magnets"
 				_act(_orbit_point(arena, ball, BOSS_ORBIT), magnet if magnet != null else hull, delta)
 		2:
-			if punch >= _plating(hull):
+			if punch >= _plating(hull) or not _kit("weak_points"):
 				_goal = "boss ram"
 				_ram_laps(hull, hull, delta)
 			else:
@@ -2915,7 +2949,7 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 	# A plant face does not replace a fight climb's waypoint: the face beside the crown's beacon
 	# ramp slingshots the engineer back to the deck before she reaches the Warden's floor.
 	# A seek dropped for the climb is not resumed afterwards: its face may lie back down the ramp.
-	if _engineer() and fight != null and is_instance_valid(fight):
+	if _engineer() and _kit("plant") and fight != null and is_instance_valid(fight):
 		if _climbing(player.ball_position(), fight.global_position):
 			_plant_state = "idle" if _plant_state == "seek" else _plant_state
 		else:
@@ -2939,7 +2973,9 @@ func _threats() -> Array:
 		if not _seen.has(id):
 			_seen[id] = ticks
 			continue
-		if float(ticks - int(_seen[id])) / float(Engine.physics_ticks_per_second) < REACTION:
+		if float(ticks - int(_seen[id])) / float(Engine.physics_ticks_per_second) < _reaction():
+			continue
+		if band != null and not band.reads(id):
 			continue
 		if _welcome_ring_at != Vector3.INF and h.get("center") != null and _flat(h.center, _welcome_ring_at) < 1.0:
 			continue
@@ -2949,7 +2985,24 @@ func _threats() -> Array:
 		for id in _seen.keys():
 			if not live.has(id):
 				_seen.erase(id)
+	if band != null:
+		band.forget(live)
 	return out
+
+
+# Whether the dam sheet hand reads the Warden's clock and holds fire (the Expert, and no band).
+func _sheet_timed() -> bool:
+	return band == null or band.timed_sheet()
+
+
+# Seconds from a telegraph appearing to the bot seeing it.
+func _reaction() -> float:
+	return REACTION if band == null else band.reaction_s
+
+
+# Whether the band has this verb's hand. No band has them all.
+func _kit(verb: String) -> bool:
+	return band == null or band.allows(verb)
 
 
 # The telegraphs a player can see: combat's rings and lanes under the game root (not
@@ -3120,6 +3173,8 @@ func _find_face(fight: Node3D) -> Vector3:
 
 
 func _specials(fight: Node3D, pressed_by_threat: bool) -> void:
+	if not _kit("special"):
+		return
 	var ball: Vector3 = game.player.ball_position()
 	var near := 0
 	for node in game.get_tree().get_nodes_in_group("enemy"):
@@ -3195,6 +3250,8 @@ func _cast_hands() -> void:
 # Slot 3 while a body line stands on an enemy within LINE_CAST_REACH. The load before a planned
 # bite is cast from _harpoon_hand, on the bite's own tick.
 func _line_hands() -> void:
+	if not _kit("line_cast"):
+		return
 	var kit = game.player.kit
 	if not kit.hooked or not kit.on_body or not is_instance_valid(kit.anchor_body):
 		return
@@ -3222,6 +3279,8 @@ func _set_piece_up() -> bool:
 # every policy is already looking at its target or along its way.
 func _ultimate_hands(fight: Node3D) -> void:
 	if _cast_phase == "await_smash": _await_smash_holds()
+	if not _kit("ultimate"):
+		return
 	if _ult_wait > 0.0 or _set_piece_up() or _cast_phase != "":
 		return
 	if String(game.player.abilities.ultimate().get("state", "")) != AbilityState.READY:
@@ -3232,6 +3291,10 @@ func _ultimate_hands(fight: Node3D) -> void:
 		if _traverse_point != Vector3.INF:
 			var ahead := _flat(ball, _traverse_point)
 			want = not _hand_aim and ahead >= ULT_TRAVERSE_NEAR and ahead <= ULT_TRAVERSE_FAR and _way_clear(ball, _traverse_point)
+	elif band != null and not band.timed_ultimate():
+		# Below the Expert the press is untimed: the meter is ready and a fight is on.
+		var near_lock: bool = fight != null and is_instance_valid(fight) and ball.distance_to(fight.global_position) <= ULT_CROWD_RADIUS
+		want = near_lock or _enemies_within(ball, ULT_CROWD_RADIUS) >= 1
 	else:
 		want = _core_open(fight, ball) or _enemies_within(ball, ULT_CROWD_RADIUS) >= ULT_CROWD
 	if not want:
@@ -3430,8 +3493,13 @@ const TALLY_GATHER_RADIUS := 12.0
 func _card_hands() -> void:
 	if game.player.abilities.cap(AbilityState.WEAPON, "cards", null) == null:
 		return
-	_tally_gather_hands()
-	_tally_plate_hands()
+	# The press conversion below is the weapon and always runs. The gather plate is a slot 2 cast
+	# and the plate burst is Q, so each follows its verb. At base the plate burst stays as it is:
+	# it is a crowd read near an untimed press.
+	if _kit("special"):
+		_tally_gather_hands()
+	if _kit("ultimate"):
+		_tally_plate_hands()
 	if not source.hold.get("fire_held", false):
 		return
 	source.hold.erase("fire_held")
@@ -3566,12 +3634,14 @@ func record(wall_seconds: float) -> Dictionary:
 		"game_seconds": snappedf(float(ticks) / float(Engine.physics_ticks_per_second), 0.01),
 		"wall_seconds": snappedf(wall_seconds, 0.01), "stages": stage_notes,
 		"boss": boss_note if not boss_note.is_empty() else null,
-		"reaction_s": REACTION,
+		"reaction_s": _reaction(),
+		"band": band.describe() if band else null,
+		"min_hp": snappedf(_min_hp, 0.1) if _min_hp != INF else null, "max_hp": game.run.max_hp,
 		# The skill bar (SKILL-BAR section 8): casts of slots 2 and 3, set pieces started, Q presses,
 		# the in-play seconds each fill took (run start or the last set piece to a full meter), and
 		# the in-play seconds played, which bounds a meter that never filled.
 		"slot_casts": {"special": _totals["slot_casts_special"], "line": _totals["slot_casts_line"]},
-		"ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
+		"shots": _totals["shots"], "ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
 		"ult_fill_s": _fills, "play_s": snappedf(_play_clock, 0.01),
 		# The meter's points by source: over the run, and at the first full meter. A record for
 		# reading why a fill band is red; no hand reads either.
