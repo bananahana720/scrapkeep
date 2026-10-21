@@ -26,6 +26,12 @@ const FADE_S := 0.7
 # The fade waits for stage 1's ground behind the menu, at most this long, so the 3D park title is
 # what the card fades onto.
 const GROUND_WAIT_S := 1.5
+# A loader-thread call into the RenderingServer that returns a value waits for the main thread's
+# next frame, and at vsync a frame waits for the display (up to 16.7 ms a call). The card is one
+# flat panel, so while the game loads it draws without vsync, capped at LOAD_FPS, and the project's
+# vsync and frame cap come back at the hand-off, before the game's own setup runs. The 4080 read
+# cold menu-ready at 7.8 to 8.3 s before the card and 9.6 to 10.2 s with it (scrapkeep#241).
+const LOAD_FPS := 480
 
 signal title_interactive(ms: int)
 signal handed_off(game: Node)
@@ -44,6 +50,8 @@ var _closing := false
 var _fading := false
 var _ground_wait := 0.0
 var _fade_started := false
+# The window's vsync mode and Engine.max_fps from before the load, put back at the hand-off.
+var _paced := {}
 
 
 func _ready() -> void:
@@ -53,6 +61,7 @@ func _ready() -> void:
 		get_tree().auto_accept_quit = false
 		_build_card()
 		_boot("boot_card")
+		_unpace()
 		ResourceLoader.load_threaded_request(GAME_SCENE, "", false)
 		_loading = true
 		_announce_interactive.call_deferred()
@@ -104,7 +113,22 @@ func _poll() -> void:
 				_quit()
 
 
+func _unpace() -> void:
+	_paced = {"vsync": DisplayServer.window_get_vsync_mode(), "max_fps": Engine.max_fps}
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = LOAD_FPS
+
+
+func _repace() -> void:
+	if _paced.is_empty():
+		return
+	DisplayServer.window_set_vsync_mode(_paced["vsync"])
+	Engine.max_fps = _paced["max_fps"]
+	_paced = {}
+
+
 func _add_game(scene: PackedScene) -> void:
+	_repace()
 	if scene == null:
 		push_error("boot: %s did not load" % GAME_SCENE)
 		# A broken build quits instead of leaving the card up for good.
