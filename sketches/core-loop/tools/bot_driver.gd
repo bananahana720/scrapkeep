@@ -463,6 +463,8 @@ var _plant_cool := 0.0
 var _plant_face := Vector3.ZERO
 var _plant_target: Node3D = null
 var _boss_clock := 0.0
+# The opening the 19 Oct ruling protects: no boss kills a Learner in its first 45 s.
+const FIRST_45_S := 45.0
 # Seconds the dam's spillway sheet has been open in this cycle, for a band that launches by sight; -1 shut.
 var _sheet_live_s := -1.0
 var _punch_seen := 0.0
@@ -956,11 +958,25 @@ func _in_boss() -> bool:
 func _on_player_hit(amount: float, source_id: String) -> void:
 	_count("hp_lost", amount)
 	_count("hits")
-	var into: Dictionary = boss_note if _in_boss() else _note
+	var in_boss := _in_boss()
+	var into: Dictionary = boss_note if in_boss else _note
 	if not into.is_empty():
 		if not into.has("hit_sources"):
 			into["hit_sources"] = {}
 		into["hit_sources"][source_id] = snappedf(float(into["hit_sources"].get(source_id, 0.0)) + amount, 0.1)
+		# The comps study's per-fight report (research/comps/difficulty/SUMMARY.md, Lab measure): the largest
+		# single hit as a share of pilot health, and the damage taken in the fight's first 45 s. A stage note
+		# counts only from its Warden fight's start to the break, so mob hits on the way in or out stay out of
+		# the Warden's row. The study file arrives with #167.
+		var fight_start = null if in_boss else fight_start_of(_note)
+		if in_boss or (fight_start != null and _note.get("warden_broken_s") == null):
+			var fight_s: float = _boss_clock if in_boss else game.run.stage_time - float(fight_start)
+			if amount > float(into.get("largest_hit", 0.0)):
+				into["largest_hit"] = snappedf(amount, 0.1)
+				into["largest_hit_source"] = source_id
+				into["largest_hit_share"] = snappedf(amount / maxf(float(game.run.max_hp), 1.0), 0.001)
+			if fight_s <= FIRST_45_S:
+				into["hp_lost_45s"] = snappedf(float(into.get("hp_lost_45s", 0.0)) + amount, 0.1)
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
