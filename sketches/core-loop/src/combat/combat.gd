@@ -543,8 +543,12 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 			push_warning("spawn_enemy: unknown kind '%s', spawning a chaser" % kind)
 			kind = "chaser"
 			enemy = Chaser.new()
+	# Placed before it joins the tree, so its body enters the physics space where it stands.
+	# Jolt reads a kinematic body moved after that as a velocity over the next step: one moved
+	# from the world origin to `at` shoved a ball rolling at the origin out at 500 m/s
+	# (item_fuzz seed 2751, 243.9 m/s against the 60 m/s ceiling).
+	enemy.position = ctx.root.global_transform.affine_inverse() * at
 	ctx.root.add_child(enemy)
-	enemy.global_position = at
 	# M0 (review fix round 1, finding 2): the only spawner call reachable while the boss
 	# arena is up is boss.gd's own drone drop, so a spawn landing here is a boss add, not
 	# an ordinary field enemy, whatever kind string it uses (currently always "lobber").
@@ -571,10 +575,15 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 				enemy_spec["affix"] = affix_id
 				enemy_spec["affix_world"] = director.world
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
+	# The vault and the Warden settle onto the ground or their landmark anchor in setup.
+	if enemy is CollisionObject3D and not enemy.global_position.is_equal_approx(at):
+		_reenter_space(enemy)
 	# Poles and flails weigh a body by its stage threat, as the trap ratings do (movement/grip.gd).
 	if "threat_level" in enemy:
 		enemy.threat_level = _threat()
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
+	if enemy.has_signal("counter_hit"):
+		enemy.counter_hit.connect(_on_player_hit.bind("warden_counter"))
 	enemy.died.connect(func(where: Vector3, scrap: int):
 		var source: String = enemy.last_damage_source if "last_damage_source" in enemy else ""
 		# A fuse death is an enemy spent by its own blast (splitter_pod.gd): nobody killed it.
@@ -595,6 +604,16 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 	ctx.events.enemy_spawned.emit(enemy, kind)
 	fleet.on_spawned(enemy, kind)
 	return enemy
+
+
+# A body moved after it entered the space would push what stands at its old spot along the
+# move; leaving the space and entering it again at the new transform places it with no push.
+static func _reenter_space(body: CollisionObject3D) -> void:
+	var rid := body.get_rid()
+	var space := PhysicsServer3D.body_get_space(rid)
+	PhysicsServer3D.body_set_space(rid, RID())
+	PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_TRANSFORM, body.global_transform)
+	PhysicsServer3D.body_set_space(rid, space)
 
 
 # What the director weights reinforcement packs against (fleet.gd build_read).
@@ -3887,8 +3906,11 @@ static func _pinnable(enemy) -> bool:
 func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	if not ctx.flow.in_play():
 		return
-	if source not in ["warden", "vault"]:
+	if source not in ["warden", "warden_counter", "vault"]:
 		amount *= ctx.root.get_node("World").director.damage_scale()
+		# The Mind's hand is a boss part: it takes the mind.* dials in mind_hand.gd, not the mobs dial.
+		if source != "mind_hand":
+			amount *= ChallengeDials.stage_mult("mobs.damage", ctx.run.stage)
 	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames()}
 	# The set piece's defence: no knockback here; damage x0.2 and the health floor of 1 run
 	# inside ctx.run.damage through its defend_hook (SKILL-BAR section 4).

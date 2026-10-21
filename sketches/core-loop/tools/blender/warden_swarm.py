@@ -41,6 +41,9 @@ from the axis, above it nothing passes 3.8 m, at rest and in every second frame 
 hoist_ride, snip, pulse, stagger_open and brood_dark (the body), and of idle, active, hoist_ride,
 stagger_open and brood_dark (the drones). Not held to it: chunk_shed and break (falling cells),
 the drones' 0.4 s pulse burst (3 m out, section 5) and their snip walk along the rope.
+The drones never sink into the hive: rig_pose_audit.py skins the body at the same clip time and
+holds the kit to it in every shared clip but break and snip. They cling to the lower dome,
+and in chunk_shed lift out of the way of the shed rings.
 In stagger_open the queen's lit core (bone QueenCore) rises 0.6 m out of the open cell and swells.
 Provenance: authored procedurally here from bmesh primitives; no external meshes or textures.
 """
@@ -573,10 +576,17 @@ def local_vector(rest3, world):
 
 
 DRONES = [  # (height z, azimuth deg, wander phase)
-    (5.75, -95.0, 0.0), (4.6, -40.0, 0.3), (3.55, 25.0, 0.55), (3.35, 95.0, 0.15),
-    (5.0, 150.0, 0.7), (4.15, 205.0, 0.4), (3.2, 255.0, 0.85), (6.15, 300.0, 0.25),
+    (3.75, 0.0, 0.0), (3.7, 270.0, 0.3), (3.5, 90.0, 0.55), (3.3, 180.0, 0.15),
+    (3.6, 225.0, 0.7), (3.65, 135.0, 0.4), (3.15, 45.0, 0.85), (3.4, 315.0, 0.25),
 ]
-DRONE_CLEAR = 0.44
+# A drone clings flat to the comb, DRONE_CLEAR off the hull along its normal: the lips and caps
+# stand up to 0.45 m proud and the pinpricks sink below the lip, so the underside (0.05 m below the
+# frame) clears them. They crawl the lower dome, below the shuttered rings, where the plates open
+# and the yoke arms stand clear of the comb. In chunk_shed they start up by SHED_LIFT as the rings
+# break away (the falling cells spread 12 percent, drift and tumble past them) and hold it to the
+# clip's end: the next clip blends them back down once the ring is gone.
+DRONE_CLEAR = 0.53
+SHED_LIFT = 1.2
 SNIP_FILE = (0, 1, 7)
 
 
@@ -620,7 +630,7 @@ def build_drone(m, i, frame):
     tri_prism([(0, 0.3), (-0.2, -0.16), (0.2, -0.16)], 0.05, 0.12, "ancient_enamel", PLATE, IRON)
     tip = at(0, 0.3, 0.13)
     a, b, d = m.v(tip + f * 0.06), m.v(tip - f * 0.04 + x * 0.06), m.v(tip - f * 0.04 - x * 0.06)
-    apex = m.v(tip + n * 0.07)
+    apex = m.v(tip + n * 0.05)
     m.face([a, b, d], "ancient_light", None, -n)
     for p, q in ((a, b), (b, d), (d, a)):
         m.face([p, q, apex], "ancient_light", None, (p.co + q.co) / 2 - tip)
@@ -631,9 +641,12 @@ def drone_target(clip, i, t):
     z0, az0, ph = DRONES[i]
     wander = lambda: (az0 + 14 * math.sin(math.tau * (t / 4.0 + ph)), z0 + 0.25 * math.sin(math.tau * (t / 2.0 + ph)),
                       math.radians(25) * math.cos(math.tau * (t / 4.0 + ph)))
-    if clip == "idle" or clip == "chunk_shed":
+    if clip == "idle":
         az, z, hd = wander()
         return surface_frame(z, az, hd)
+    if clip == "chunk_shed":
+        az, z, hd = wander()
+        return surface_frame(z, az, hd, DRONE_CLEAR + SHED_LIFT * smooth(t / 0.2))
     if clip == "pulse":
         az, z, hd = wander()
         mtx = surface_frame(z, az, hd)
@@ -643,13 +656,13 @@ def drone_target(clip, i, t):
             mtx = Matrix.Translation(mtx.col[1].to_3d() * burst) @ mtx
         return mtx
     if clip == "active":
-        return surface_frame(z0, az0 + 360.0 * t / 4.0, 0.0, DRONE_CLEAR - 0.06)
+        return surface_frame(z0, az0 + 360.0 * t / 4.0, 0.0)
     if clip == "stagger_open":
-        az, z, hd = (az0 + 30 * math.sin(math.tau * (t / 1.0 + ph)), z0 + 0.22 * math.sin(math.tau * (t / 0.5 + ph)),
+        az, z, hd = (az0 + 18 * math.sin(math.tau * (t / 1.0 + ph)), z0 + 0.22 * math.sin(math.tau * (t / 0.5 + ph)),
                      math.radians(60) * math.cos(math.tau * (t / 1.0 + ph)))
         return surface_frame(z, az, hd)
     if clip == "hoist_ride":
-        return surface_frame(z0, az0, 0.0, DRONE_CLEAR - 0.1)
+        return surface_frame(z0, az0, 0.0)
     if clip == "brood_dark":
         az, z, hd = (az0 + 14 * math.sin(math.tau * ph), z0 + 0.25 * math.sin(math.tau * ph), math.radians(25) * math.cos(math.tau * ph))
         return surface_frame(z, az, hd)

@@ -399,6 +399,23 @@ static func row_label(kind: String) -> String:
 	return text.substr(0, 9)
 
 
+# Heatmap labels for `kinds`: row_label, with a numeric suffix on any label two rows share
+# (`+plate_pr` twice reads `+plate_pr` and `+plate_p2`).
+static func row_labels(kinds: Array) -> Dictionary:
+	var used := {}
+	var out := {}
+	for kind in kinds:
+		var label := row_label(String(kind))
+		var n := 1
+		while used.has(label):
+			n += 1
+			var tail := str(n)
+			label = row_label(String(kind)).substr(0, 9 - tail.length()) + tail
+		used[label] = true
+		out[kind] = label
+	return out
+
+
 # ---- Perched duel ------------------------------------------------------------------------
 
 # The row key of a perched duel: `dispatcher@park` or `dispatcher@mast`.
@@ -668,7 +685,24 @@ static func build_table(results: Array, pilots: Array, kinds: Array, cap: float)
 			cell["hard"] = cell["runs"] > 0 and cell["median_ttk"] > HARD_RATIO * row_median[kind]
 			if cell["hard"]:
 				hard.append(cell)
-	return {"cells": cells, "pilots": pilots, "kinds": kinds, "row_median": row_median, "hard": hard, "cap": cap}
+	return {"cells": cells, "pilots": pilots, "kinds": kinds, "row_median": row_median, "hard": hard, "cap": cap, "wall": wall_rows(cells, pilots, kinds)}
+
+
+# WALL rows: at least one pilot ran the row and none of the pilots that ran it ever killed. Such a
+# row's median is the cap, so the HARD rule (over 2.0 x the row median) can never flag it.
+static func wall_rows(cells: Dictionary, pilots: Array, kinds: Array) -> Array:
+	var out := []
+	for kind in kinds:
+		var ran := 0
+		var killed := 0
+		for pilot in pilots:
+			var cell: Dictionary = cells[cell_key(pilot, kind)]
+			if cell["runs"] > 0:
+				ran += 1
+			killed += int(cell["kills"])
+		if ran > 0 and killed == 0:
+			out.append(kind)
+	return out
 
 
 # Hard cells per pilot, in kind order.
@@ -723,7 +757,7 @@ static func grade_answers(table: Dictionary, answer_results: Array, plan: Dictio
 # Overall verdict: PASS needs every pilot hard-celled and every hard cell won; any pending
 # answer makes the second half INCONCLUSIVE rather than a pass.
 static func gate_verdict(table: Dictionary, answers: Dictionary) -> String:
-	if not gate_hard(table)["ok"]:
+	if not gate_hard(table)["ok"] or not (table.get("wall", []) as Array).is_empty():
 		return "FAIL"
 	var pending := false
 	for key in answers:
@@ -743,14 +777,17 @@ static func heatmap(table: Dictionary) -> Array:
 		head += " %9s" % String(pilot).substr(0, 9)
 	lines.append("matchup_lab: heatmap, median seconds to kill (cap %.0fs); * = HARD (over %.1fx row median); med hull lost in brackets" % [table["cap"], HARD_RATIO])
 	lines.append(head)
+	var labels := row_labels(table["kinds"])
 	for kind in table["kinds"]:
-		var line := "%-9s%5.1f" % [row_label(String(kind)), table["row_median"][kind]]
+		var line := "%-9s%5.1f" % [labels[kind], table["row_median"][kind]]
 		for pilot in pilots:
 			var cell: Dictionary = table["cells"][cell_key(pilot, kind)]
 			if cell["runs"] == 0:
 				line += " %9s" % "-"
 			else:
 				line += " %9s" % ("%.1f%s[%d]" % [cell["median_ttk"], "*" if cell["hard"] else "", int(round(cell["median_hull"]))])
+		if kind in table.get("wall", []):
+			line += "  WALL"
 		lines.append(line)
 	return lines
 
@@ -766,6 +803,8 @@ static func gate_lines(table: Dictionary, answers: Dictionary) -> Array:
 		lines.append("matchup_lab: hard cells %s: %s" % [pilot, ", ".join(cells) if not cells.is_empty() else "none"])
 	var g := gate_hard(table)
 	lines.append("matchup_lab: gate every pilot has a hard cell: %s%s" % ["PASS" if g["ok"] else "FAIL", "" if g["ok"] else " (missing: %s)" % ", ".join(g["missing"])])
+	var wall: Array = table.get("wall", [])
+	lines.append("matchup_lab: gate no wall row (every pilot capped, no kill): %s" % ("PASS" if wall.is_empty() else "FAIL (wall rows: %s)" % ", ".join(wall)))
 	lines.append("matchup_lab: gate brawler wins each hard cell with its answer item: %s" % _answer_gate_word(answers))
 	lines.append("matchup_lab: gate verdict %s" % gate_verdict(table, answers))
 	return lines

@@ -19,6 +19,7 @@ func _initialize() -> void:
 	_real_run()
 	_damage_control()
 	_packs_pure()
+	_wall_rows()
 	_pack_duel()
 	_perched_pure()
 	_perched_duel()
@@ -283,6 +284,46 @@ func _merge_from() -> void:
 	var run_down := text.find("+run_down")
 	_check("--from lists kind rows first (default order), then pack rows in first-seen order",
 		chaser >= 0 and lobber >= 0 and grounded > lobber and grounded > chaser and run_down > grounded)
+
+
+# WALL guard: a row every pilot capped with no kill is marked WALL, fails the gate line and names
+# its id; a row one pilot killed is not. Synthetic saved rows through --from, no duels.
+func _wall_rows() -> void:
+	var dir := OS.get_user_data_dir().path_join("matchup_lab_test")
+	DirAccess.make_dir_recursive_absolute(dir)
+	var path := dir.path_join("from_wall.ndjson")
+	var out_path := dir.path_join("from_wall.txt")
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	for s in [1, 2]:
+		for pilot in ["tarn", "tally"]:
+			f.store_line(JSON.stringify(_row(pilot, "chaser", s, 2.0)))
+			f.store_line(JSON.stringify(_row(pilot, "pack:plate_press_draft", s, -1.0)))
+			f.store_line(JSON.stringify(_row(pilot, "pack:plate_press_crown", s, -1.0)))
+		f.store_line(JSON.stringify(_row("tarn", "pack:half_wall", s, -1.0)))
+		f.store_line(JSON.stringify(_row("tally", "pack:half_wall", s, 9.0)))
+	f.close()
+	var output := []
+	var args := ["--headless", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--from=" + path, "--out=" + out_path]
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	var text := "\n".join(output)
+	_check("--from with wall rows exits 0", code == 0)
+	_check("the gate line fails and names both wall rows", "wall rows: pack:plate_press_draft, pack:plate_press_crown" in text)
+	_check("the verdict is FAIL with a wall row", "gate verdict FAIL" in text)
+	_check("wall rows carry WALL in the heatmap, the chaser and half-killed rows do not",
+		_row_text(text, "+plate_pr").ends_with("WALL") and _row_text(text, "+plate_p2").ends_with("WALL")
+		and not "WALL" in _row_text(text, "chaser") and not "WALL" in _row_text(text, "+half_wal"))
+	var labels := Lab.row_labels(["pack:plate_press_draft", "pack:plate_press_crown", "chaser"])
+	_check("colliding row labels are made unique", labels["pack:plate_press_draft"] != labels["pack:plate_press_crown"] and labels["chaser"] == "chaser")
+	var live := _table({"a|k": 2.0, "b|k": 3.0}, ["a", "b"], ["k"])
+	_check("a table with kills has no wall row", (live["wall"] as Array).is_empty())
+
+
+func _row_text(text: String, label: String) -> String:
+	for line in text.split("\n"):
+		if line.begins_with(label):
+			return line.strip_edges()
+	return ""
 
 
 # One small real pack duel: run_down (3 chasers + a lobber), one pilot, one seed, a low cap.

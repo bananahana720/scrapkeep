@@ -2,6 +2,8 @@
 
 **21 Oct.** Wave 17 was promoted. `main` is 16df22d0, the merge of #116 at stage head f405e612, and `stage/alpha-w18` was cut from it. The heads, drops and carry-over are in [BASELINE-2026-10-20.md](../coord/BASELINE-2026-10-20.md). The sections below are the 18 Oct snapshot.
 
+**21 Oct, 21:15Z. Wave 18 is open.** #239 merged, so `main` = `stage/alpha-w18` = 9cd6805e. The coordinator is back on the PC. Board: issue #241 (#149 is closed). Every PR on w17 now targets w18. Six PRs conflict with w18: #137, #191, #208, #209, #225 and #237. GPU queue rows 18 to 22 are stale and were re-requested as rows 23 to 27. Live units are in GRAPH.md "Wave 18".
+
 Coordination moved to a local Claude Code session on Andrew's PC on 18 Oct (DECISIONS.md section 2). The live board is [project-guide/coord/GRAPH.md](../coord/GRAPH.md); this file keeps the heads and base reds behind it. The 05:55Z version is in git history. Re-check every SHA with `git ls-remote origin` before relying on it.
 
 ## Where the waves stand
