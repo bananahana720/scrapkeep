@@ -1909,8 +1909,8 @@
    "id": "bunk_collapse_30",
    "template": "bunk_collapse",
    "at": [
-    -15,
-    -503
+    -12,
+    -504
    ],
    "yaw_deg": 72,
    "near": "dome_19: A collapsed canvas tent with a washing l"
@@ -2579,7 +2579,7 @@
    "id": "mid_laundry_142",
    "template": "mid_laundry",
    "at": [
-    -4,
+    -2,
     300
    ],
    "yaw_deg": 79,
@@ -3092,5 +3092,5 @@
   ],
   "seed": 11
  },
- "pin": 617986039
+ "pin": 47128334
 }

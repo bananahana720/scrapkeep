@@ -29,9 +29,17 @@ Stills: `artifacts/local/dressing/dam/w18/{before,after}/park_dam/`, sheet `arti
 
 ## Kit heights to brief
 
-The Fable kit review found two kinds built off the dam brief (KITS.md, dam section, lines 5 to 20). Both are rescaled in `tools/blender/park/props/dam.py`, with no change to geometry, tri budgets or colours.
+The Fable kit review found two kinds built off the dam brief (`sketches/core-loop/design-v3/park/dressing/KITS.md`, dam section; the lead is adding that file in a separate docs PR, so the citation will resolve). Both are rescaled in `tools/blender/park/props/dam.py`, with no change to geometry, tri budgets or colours.
 
 - `flood_staff` (brief: "water-level staff, 2.6 m"): a 4.579 to 2.604 m, b 4.67 to 2.600 m, c unchanged at 1.732 m (fallen). LOD0 tris a 1000 to 728, b 1072 to 800, c 2240. The two upright variants are no longer auto-tagged tall.
 - `laundry_line` (brief: "two posts under 2 m"; "keep at least 30 m from lines"): a and b 2.423 to 1.857 m, c 2.85 to 1.900 m. LOD0 tris unchanged (2128, 1340, 2016).
 - Distance of every placed laundry_line to the nearest ride line (ParkProps `line_distance`): 14 instances, 31.0 to 115.0 m. Four were under 30 m (mid_laundry_5 24.5, _113 29.8, _125 24.9, _147 25.6) and their spots moved: _5 to (-310, -598) 33.5 m, _113 to (9, 283) 33.4 m, _125 to (-197, -451) 33.3 m (62 m move; no site within 40 m cleared 30 m), _147 to (-33, -297) 34.1 m. Unmoved: crew_camp_20 33.6, bunk_collapse_30 31.0, crew_camp_81 40.6, bunk_collapse_86 47.5, crew_camp_124 35.6, bunk_collapse_135 49.2, mid_laundry_142 31.4, canyon_15 73.4, crew_camp_rim_24 101.3, bunk_collapse_rim_25 115.0.
 - The plan pin moved 1759471770 to 617986039 (new kit heights and the four spot moves). Plan check: 834 instances, 0 violations.
+
+## 30 m brief kinds
+
+- Kind `laundry_line`. Brief line: "keep at least 30 m from lines", because a washing line reads as a grind or grapple line. Measure: edge-to-line, ParkProps `line_distance(centre)` minus the instance radius, as `check_one` uses for `line_clear`. Target 30.5 m or more.
+- Two of 14 instances were under: bunk_collapse_30 (v=c) edge 28.41 to 30.94; mid_laundry_142 (v=a) edge 29.14 to 31.10. The other 12 are 31.04 or more, unchanged.
+- Spots moved: bunk_collapse_30 from (-15, -503) to (-12, -504), about 3.2 m; mid_laundry_142 from (-4, 300) to (-2, 300), 2 m. Neither move is near 20 m, so the `near` labels stay.
+- Pin 617986039 to 47128334. Plan check: 834 instances, 0 violations. Probe: under30_edge=0.
+- Audit pending the line_clear_m foundation merge.
