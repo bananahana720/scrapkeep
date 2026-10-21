@@ -23,7 +23,9 @@ const AUDIT := {
 	"res://src/combat/enemy.gd": ["threat_type", "threat_type"],
 	"res://src/combat/chaser.gd": ["LANE"],
 	"res://src/combat/miniboss.gd": ["PROJECTILE", "LANE"],
-	"res://src/combat/warden.gd": ["LANE", "INSTANT", "INSTANT"],  # 2026-10-04 (wave 9): the scanner now finds a third (LANE) site.
+	# 2026-10-04 (wave 9): the scanner now finds a third (LANE) site. 2026-10-19 (Challenge): the
+	# counter-pulse ring is a fourth, INSTANT like the core ring it shares.
+	"res://src/combat/warden.gd": ["LANE", "INSTANT", "INSTANT", "INSTANT"],
 	"res://src/combat/projectile.gd": ["PROJECTILE", "PROJECTILE"],
 	"res://src/boss/boss.gd": ["WAVE", "INSTANT", "INSTANT", "LANE"],
 	# v2 W7 counter units and ancients: one telegraph each, in its threat type.
