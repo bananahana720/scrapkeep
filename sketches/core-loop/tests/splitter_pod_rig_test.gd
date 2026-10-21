@@ -85,6 +85,9 @@ func _run() -> void:
 		return
 	t.check("it skins its meshes on the glb's skeleton", pod.find_children("*", "Skeleton3D", true, false).size() == 1
 		and pod.find_children("*", "Skeleton3D", true, false)[0].find_children("*", "MeshInstance3D", true, false).all(func(m): return (m as MeshInstance3D).skin != null))
+	var body_node: Node3D = pod.get_node("ReactionPivot/PodBody")
+	t.check("the seated path adds no copied mesh beside the glb's", body_node.find_children("*", "MeshInstance3D", true, false).all(
+		func(m): return (m as MeshInstance3D).skin != null) and body_node.get_child_count() == 1)
 	t.eq("born plays pop_in", String(rig.player.current_animation), "pop_in")
 	t.near("pop_in starts at age 0", rig.player.current_animation_position, 0.0, 0.0001)
 	rig.player.advance(rig.player.get_animation("pop_in").length + 0.02)
@@ -115,6 +118,8 @@ func _run() -> void:
 	var worst := 0.0
 	var scale_ok := true
 	var shapes_ok := true
+	var feet_ok := true
+	var squashed := false
 	for frame in 400:
 		game.player.reset_to(ball)
 		await physics_frame
@@ -123,22 +128,39 @@ func _run() -> void:
 		var tele = pod.telegraph()
 		if pod.phase != Pod.Phase.WARN or tele == null:
 			continue
-		var want: Basis = WindupPoses.windup(Pod.WIND_POSE, tele.progress, pod._t, EnemyMotion.motion_scale)
+		var want: Basis = WindupPoses.windup(Pod.WIND_POSE, tele.progress, tele.age, EnemyMotion.motion_scale)
 		var body: Node3D = pod.get_node("ReactionPivot/PodBody")
 		worst = maxf(worst, maxf((body.basis.x - want.x).length(), maxf((body.basis.y - want.y).length(), (body.basis.z - want.z).length())))
 		scale_ok = scale_ok and is_equal_approx(rig_speed(pod), 1.0 - tele.progress)
 		matched += 1
+		var feet := body.position.y - Pod.BODY_HALF * body.basis.y.length()
+		feet_ok = feet_ok and absf(feet + Pod.BODY_HALF) < 0.000001
+		squashed = squashed or body.basis.y.length() < 0.9
 		shapes_ok = shapes_ok and _shapes(pod) == shapes
 		for mark in samples:
 			if tele.progress >= mark and not samples[mark]:
 				samples[mark] = true
 				t.near("wind-up progress at %.2f of the fuse is the telegraph's" % mark, pod.fuse_progress(), tele.progress, 0.000001)
 				t.check("body basis at %.2f is the pose at that progress" % mark, (body.basis.y - want.y).length() < 0.000001, str(body.basis))
+	t.check("PodBody feet stay at the floor across the fuse, which did squash", feet_ok and squashed)
 	t.check("sampled a whole fuse", matched >= 60 and samples.values().all(func(v): return v), "%d frames" % matched)
 	t.check("body basis matches the pose on every WARN frame", worst < 0.000001, str(worst))
 	t.check("scurry slows to a stop as the fuse fills", scale_ok)
 	t.check("the wind-up tells before the blast (warn >= 0.6 s)", Pod.FUSE >= 0.6)
 	t.check("the collider is unmoved on every WARN frame", shapes_ok and not shapes.is_empty())
+	_clear()
+
+	# The husk after the blast snaps through the release and settles, not straight to rest.
+	var husk = _pod(30.0)
+	husk.set_physics_process(false)
+	husk.spent = true
+	husk._husk_age = 0.0
+	husk._pose()
+	t.check("a spent husk starts its release pose", husk._body.basis != Basis.IDENTITY)
+	husk._husk_age = WindupPoses.RELEASE_SECONDS + 0.01
+	husk._pose()
+	t.check("the release settles to rest", husk._body.basis == Basis.IDENTITY)
+	husk.free()
 	_clear()
 
 	# Reduced motion: no wind-up pose (as windup_poses.gd), the scurry loop stilled.

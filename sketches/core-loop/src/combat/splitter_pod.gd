@@ -43,6 +43,8 @@ var _glow: StandardMaterial3D
 # The visual pivot's child that holds the body and takes the fuse wind-up; never a collider.
 var _body: Node3D
 var _rig: Node
+# Seconds since the blast went live; -1 before it.
+var _husk_age := -1.0
 
 
 func _configure(threat: float) -> void:
@@ -120,6 +122,7 @@ func _go_live() -> void:
 		fleet.discover("fuse_pod", ball)
 	# Spent: from here a kill pays nothing, and it never fuses again.
 	spent = true
+	_husk_age = 0.0
 	scrap_value = 0
 
 
@@ -157,13 +160,26 @@ func fuse_progress() -> float:
 	return clampf(_warn_progress(), 0.0, 1.0) if phase == Phase.WARN and not spent else 0.0
 
 
+# The shiver phase is the committed telegraph's age, as enemy.gd feeds WindupPoses.
 func wind_basis() -> Basis:
-	return WindupPoses.windup(WIND_POSE, fuse_progress(), _t, EnemyMotion.motion_scale)
+	var tele := telegraph()
+	var age: float = tele.age if tele != null and is_instance_valid(tele) else _t
+	return WindupPoses.windup(WIND_POSE, fuse_progress(), age, EnemyMotion.motion_scale)
+
+
+# The husk stays standing through the shared recovery and CRUMBLE after the blast (_physics_process
+# frees it only then), so the pose snaps through the release and settles, as enemy.gd does.
+func release_basis() -> Basis:
+	return WindupPoses.release(WIND_POSE, _husk_age, EnemyMotion.motion_scale)
 
 
 func _wind_up() -> void:
 	if _body != null:
-		_body.basis = wind_basis()
+		if spent:
+			_body.basis = release_basis()
+			_husk_age += get_physics_process_delta_time()
+		else:
+			_body.basis = wind_basis()
 		# Squash about the feet (the capsule's floor is -BODY_HALF), so the pod crouches, not floats.
 		_body.position = Vector3(0.0, -BODY_HALF * (1.0 - _body.basis.y.length()), 0.0)
 	if _rig != null:
