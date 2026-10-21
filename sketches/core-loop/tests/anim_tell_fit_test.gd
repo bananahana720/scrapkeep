@@ -11,7 +11,7 @@ extends SceneTree
 #   fits   : clip length <= window, for tells authored to end exactly on the strike
 #            (brindle_animation.py:18-21 gives crane_warn and charge_warn (1.4, 1.4): duration and
 #            key-pose second are the same). The Warden and Waking pulse_warn are 2.0 s = the
-#            telegraph. Not asserted for the swarm `pulse` (charge then slam, hero_assets.gd:46)
+#            telegraph. Not asserted for the swarm `pulse` (charge then slam, hero_assets.gd:46-47)
 #            or the kill-first tells (authored to their SOUND, kill_first_motion.py header).
 #   peak   : blend <= window - TELL_FLOOR, for the boss tables only (BossModel.BLENDS; not the
 #            Wardens, see _wardens). A clip eases in over its blend (BossModel.play,
@@ -53,8 +53,8 @@ const EPS := 0.001
 const KNOWN := {
 	# Dispatcher: the sim commits the drop WARN = SUCK + FLIGHT = 1.2 s (dispatcher.gd:49-53) but
 	# the `tell` clip is 1.0 s (kill_first_motion.py:11-13 "tell 1.0": authored to the sound).
-	# Not one of A1-A3; left to the unit that retimes kill-first tells to the sim.
-	"enemy_dispatcher tell covers": "unowned: clip 1.0 s < WARN 1.2 s; kill_first_motion.py header",
+	# Owner: A6 Dispatcher tell retime (wave 19, proposed on #241).
+	"enemy_dispatcher tell covers": "A6 Dispatcher tell retime: clip 1.0 s < WARN 1.2 s; kill_first_motion.py header",
 	# A1 (pilot antics): the segment asks for more clip than exists, so seek() clamps
 	# (pilot_antics.gd:162) and the pose freezes on the last frame. need = (end - start) * LENGTH
 	# (3.721 s, :17) * speed, MOVES at :31-46.
@@ -208,7 +208,7 @@ func _brindle() -> void:
 	_peak("boss_brindle", "drone_deploy", BossModel.blend_for("drone_deploy"), Rules.DRONE_WARN, "boss_model.gd:158 BLENDS")
 
 
-# Wardens: the charge clip hero_assets.gd:47 WARDEN_BODY_CHARGE plays against PULSE_TELEGRAPH.
+# Wardens: the charge clip hero_assets.gd:48 WARDEN_BODY_CHARGE plays against PULSE_TELEGRAPH.
 func _wardens() -> void:
 	var window: float = WardenCls.PULSE_TELEGRAPH
 	for kind in HeroAssets.WARDEN_BODY_CHARGE:
@@ -216,7 +216,7 @@ func _wardens() -> void:
 		var glb: String = HeroAssets.WARDEN_BODIES[kind]["body"] if HeroAssets.WARDEN_BODIES.has(kind) else ""
 		if not t.check("%s has a body GLB in WARDEN_BODIES" % kind, glb != "", kind):
 			continue
-		# The swarm's `pulse` is the 2.0 s charge then the 0.4 s slam (hero_assets.gd:45-46), so
+		# The swarm's `pulse` is the 2.0 s charge then the 0.4 s slam (hero_assets.gd:46-47), so
 		# it covers the telegraph but is longer than it.
 		_tell(glb, clip, window, "warden.gd:71 PULSE_TELEGRAPH", ["covers"] if kind == "swarm" else ["covers", "fits"])
 		# No blend rule for the Wardens (coordinator ruling): a blend as long as the telegraph

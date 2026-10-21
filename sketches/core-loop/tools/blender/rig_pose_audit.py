@@ -134,7 +134,7 @@ LOOPS = {
     "bosses/boss_mind_kit": ["attention"],
 }
 
-# Seam failures that --strict does not count: (key, clip) -> reason. Same two the Godot
+# Seam failures that --strict does not count (owner of both rows: A5 Brindle drum loops, which deletes them): (key, clip) -> reason. Same two the Godot
 # tests/rig_loop_seam_test.gd lists as KNOWN (a rolling drum keyed as one straight spin that is
 # not a whole number of turns, brindle_animation.py:113-114 and :211-213). Remove a row once the
 # clip is fixed; --strict then also fails a row whose seam is now clean.
@@ -1792,6 +1792,9 @@ def audit_node_rig(key):
                "seam": {c: ("UNTESTED" if s.get("seam_untested") else s.get("failing_bones", s.get("error")))
                         for c, s in seams.items()}}
     print("RIG_AUDIT %s %s" % (key + ".glb", json.dumps(summary)))
+    for c, sm in seams.items():
+        print("SEAM_COVERAGE %s %s %s" % (key, c, "UNTESTED" if sm.get("seam_untested") or "error" in sm
+                                          else "measured %d nodes, %s" % (sm["bones"], "FAIL" if sm["seam"] else "clean")))
     sys.stdout.flush()
     return result
 
@@ -1803,6 +1806,10 @@ def strict_failures(key, result):
         if not f.startswith("DELIBERATE") and f.split("-")[-1] in ("COLLAPSE", "CLIP", "GAP"):
             out.append("%s %s x%s" % (key, f, slot.get("count")))
     for cname, seam in result.get("seams", {}).items():
+        if seam.get("seam_untested"):
+            # No tracks measured: an unmeasured clip must not go green.
+            out.append("%s seam %s UNTESTED: %s" % (key, cname, seam["seam_untested"]))
+            continue
         failing = bool(seam.get("failing_bones")) or "error" in seam
         excuse = STRICT_EXCUSED.get((key, cname))
         if failing and not excuse:
