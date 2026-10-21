@@ -2,11 +2,14 @@ extends SceneTree
 # The post grade's contract (Grading lane, wave 18). The grade probe (tools/grade_probe.gd) measures
 # what each look does to the meaning colours on the render bench; this test pins what holds
 # without a display:
-#   WG-1 the probe covers every stage at its time of day, every arena row and the camp.
-#   WG-2 its gaps are DefenceBars' CIE76, HAZARD against AMBER, BRASS and every Bible ground,
-#        and its floor is beacon_colour_test's 20.
-#   WG-3 telegraphs never bloom: threat_grammar paints unshaded colours at most 1.0, so every
-#        preset with glow keeps its HDR threshold above 1.0 (VISUAL-LANGUAGE checklist item 14).
+#   WG-1 the probe covers every launch-table stage at its time of day, each world's arena and the camp.
+#   WG-2 its gaps are DefenceBars' CIE76 at threat_grammar's alphas: edge pairs (beacon_colour_test's
+#        pairs plus HAZARD against AMBER and BRASS) gated at that test's 20, fills over the Bible
+#        grounds reported.
+#   WG-3 threat_grammar's marks never bloom: they are unshaded and at most bright() of their tone,
+#        so every preset with glow keeps its HDR threshold above 1.0 and no bloom term
+#        (VISUAL-LANGUAGE checklist item 14, for threat_grammar marks only; emissive wind-up bodies
+#        are not covered here).
 #   WG-4 reduce flashes (DECISIONS section 10) leaves the grade alone: turning it on and off
 #        changes no tonemap, adjustment or glow field on the run's environment.
 const Game := preload("res://src/game.gd")
@@ -15,11 +18,14 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const Palette := preload("res://src/core/palette.gd")
 const DefenceBars := preload("res://src/core/defence_bars.gd")
+const ThreatGrammar := preload("res://src/combat/threat_grammar.gd")
 const T := preload("res://tests/support/t.gd")
 const GRADE_KEYS := ["tonemap_mode", "tonemap_exposure", "tonemap_white", "tonemap_agx_white", "tonemap_agx_contrast",
 	"adjustment_enabled", "adjustment_brightness", "adjustment_contrast", "adjustment_saturation",
 	"adjustment_color_correction", "glow_enabled", "glow_intensity", "glow_strength", "glow_bloom",
-	"glow_hdr_threshold", "glow_blend_mode"]
+	"glow_hdr_threshold", "glow_hdr_scale", "glow_hdr_luminance_cap", "glow_blend_mode", "glow_mix", "glow_normalized",
+	"glow_map", "glow_map_strength", "glow_levels/1", "glow_levels/2", "glow_levels/3", "glow_levels/4", "glow_levels/5",
+	"glow_levels/6", "glow_levels/7"]
 
 var _t := T.new("world_grade_test")
 var _game
@@ -34,32 +40,37 @@ func _initialize() -> void:
 
 
 func _contract() -> void:
-	var ids := Probe.looks(Game.TABLES[Game.LAUNCH_TABLE]).map(func(entry): return entry.id)
-	for stage in range(1, Game.TABLES[Game.LAUNCH_TABLE].COUNT + 1):
+	var stages = Game.TABLES[Game.LAUNCH_TABLE]
+	var ids := Probe.places(stages).map(func(entry): return entry.id)
+	for stage in range(1, stages.COUNT + 1):
 		_t.check("WG-1 stage %d is probed at its time" % stage, ids.has("stage%d-%s" % [stage, WorldLook.time_id(stage)]), str(ids))
-	for arena in WorldLook.ARENAS:
-		_t.check("WG-1 arena %s is probed" % arena, ids.has("arena-" + arena), str(ids))
+		var world: int = stages.world_of(stage)
+		_t.check("WG-1 world %d's arena is probed" % world, ids.has("arena-w%d" % world), str(ids))
 	_t.check("WG-1 the camp is probed", ids.has("camp"), str(ids))
-	var raw: Dictionary = Probe._raw()
-	_t.near("WG-2 hazard~amber is CIE76", raw["hazard~amber"], DefenceBars.cie76(Palette.HAZARD, Palette.AMBER))
-	_t.near("WG-2 hazard~brass is CIE76", raw["hazard~brass"], DefenceBars.cie76(Palette.HAZARD, Palette.BRASS))
+	var raw: Dictionary = Probe.raw()
+	var edge := func(c: Color) -> Color: return Palette.CHARCOAL.lerp(c, ThreatGrammar.EDGE_ALPHA)
+	_t.near("WG-2 an edge pair is CIE76 at EDGE_ALPHA on charcoal", raw["edge:hazard~amber"], DefenceBars.cie76(edge.call(Palette.HAZARD), edge.call(Palette.AMBER)))
+	_t.near("WG-2 a fill pair is CIE76 at FILL_ALPHA over its ground", raw["fill:hazard~sandstone"],
+		DefenceBars.cie76(Palette.SANDSTONE.lerp(Palette.HAZARD, ThreatGrammar.FILL_ALPHA), Palette.SANDSTONE))
+	for pair in Probe.PAIRS:
+		var id := "edge:%s~%s" % pair
+		_t.check("WG-2 %s is gated" % id, raw.has(id) and Probe.gated(id), str(raw.keys()))
+		_t.check("WG-2 the authored palette clears the floor on " + id, raw[id] >= Probe.GAP, "%.1f" % raw[id])
 	for ground in Probe.GROUND:
-		_t.check("WG-2 hazard is gated against " + ground, raw.has("hazard~" + ground) and Probe.gated("hazard~" + ground), ground)
-	_t.check("WG-2 arc is reported, not gated", raw.has("arc~sand") and not Probe.gated("arc~sand"), "arc")
+		_t.check("WG-2 the fill over %s is reported, not gated" % ground, raw.has("fill:hazard~" + ground) and not Probe.gated("fill:hazard~" + ground), ground)
 	_t.near("WG-2 the floor is beacon_colour_test's", Probe.GAP, 20.0)
-	for id in Probe.MEANING:
-		_t.check("WG-2 the ungraded palette clears the floor: hazard~" + id, id == "hazard" or id == "arc" or id == "slate" or raw["hazard~" + id] >= Probe.GAP, str(raw))
 
 	var env := Environment.new()
 	var sun := DirectionalLight3D.new()
 	root.add_child(sun)
 	GraphicsPreset.bind(env, sun, root)
-	for id in Probe.MEANING:
-		var c: Color = Probe.MEANING[id]
-		_t.check("WG-3 %s is an LDR fill" % id, maxf(c.r, maxf(c.g, c.b)) <= 1.0, c.to_html(false))
+	for tone in [Palette.HAZARD, Palette.AMBER]:
+		var lit: Color = ThreatGrammar.bright(tone)
+		_t.check("WG-3 threat_grammar's brightest %s stays LDR" % tone.to_html(false), maxf(lit.r, maxf(lit.g, lit.b)) <= 1.0, lit.to_html(false))
 	for preset in GraphicsPreset.PRESETS:
 		GraphicsPreset.apply(preset)
-		_t.check("WG-3 %s: glow threshold sits above unshaded telegraphs" % preset,
+		_t.check("WG-3 %s: no bloom term lifts LDR marks" % preset, not env.glow_enabled or env.glow_bloom == 0.0, "bloom %.2f" % env.glow_bloom)
+		_t.check("WG-3 %s: glow threshold sits above threat_grammar's unshaded marks" % preset,
 			not env.glow_enabled or env.glow_hdr_threshold > 1.0, "threshold %.2f" % env.glow_hdr_threshold)
 	GraphicsPreset.apply("high")
 	sun.free()
@@ -83,6 +94,8 @@ func _process(_delta: float) -> bool:
 	elif _step == 6:
 		var env: Environment = _game.ctx.terrain.environment
 		_game.set_reduce_flashes(false)
+		for key in GRADE_KEYS:
+			_t.check("WG-4 %s is an Environment field" % key, key in env, key)
 		var before := _grade(env)
 		_game.set_reduce_flashes(true)
 		var on := _grade(env)
@@ -90,6 +103,5 @@ func _process(_delta: float) -> bool:
 		var after := _grade(env)
 		for key in GRADE_KEYS:
 			_t.check("WG-4 reduce flashes leaves %s alone" % key, before[key] == on[key] and on[key] == after[key], "%s / %s / %s" % [before[key], on[key], after[key]])
-		_game.set_reduce_flashes(false)
 		quit(_t.verdict())
 	return false
