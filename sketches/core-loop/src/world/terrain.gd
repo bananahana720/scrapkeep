@@ -198,7 +198,13 @@ func prepare(index: int) -> void:
 # frame a threaded build finishes on depends on CPU load, and the static bodies it adds to
 # the shared physics world move the solver's results, so a seed stops replaying.
 static func _worker_builds() -> bool:
-	return not SimClock.ticks
+	return threaded_in_bot_runs or not SimClock.ticks
+
+
+# Frame-capture bot runs (tools/bot_run.gd --threaded-stages=1) build park stages threaded
+# as a played game does, so the next stage's one-frame build is not in the capture. Only
+# that build moves; the hit-stop clock stays on ticks. The seed no longer replays exactly.
+static var threaded_in_bot_runs := false
 
 
 func _build_stage(i: int) -> void:
