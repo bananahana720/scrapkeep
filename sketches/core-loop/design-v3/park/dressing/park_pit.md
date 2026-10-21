@@ -26,3 +26,12 @@ The default run wrote 11 stills (12 requested, one pose de-duplicated). Pixel ch
 The poses are the barest places, mostly inside keepouts and over greybox rows. Props-off replay draws: max 354, median 280.
 
 Stills: `artifacts/local/dressing/pit/w18/{before,after}/park_pit/`, sheet `artifacts/local/dressing/pit/w18/before_after.png` (local, not committed).
+
+## 30 m brief kinds
+
+- Kind: `windsock`. Brief line: "Tag it tall; keep 30 m from lines", because a mast reads as a harpoon anchor.
+- Measure: edge-to-line, ParkProps `Context.line_distance(centre)` minus the instance radius (1.90 m), as `check_one` uses for `line_clear`. Target 30.5 m or more.
+- Instance `edge_m`, before to after: pit_1109 23.30 to 31.25; pit_125 25.43 to 31.39; pit_271 26.90 to 31.40; pit_329 23.10 to 30.55; pit_526 24.80 to 31.30. pit_109 (51.57) and pit_396 (31.59) already passed and are unchanged.
+- Spots moved (old `at` to new `at`): pit_1109 (-265, -314) to (-272.9, -313.1); pit_125 (337, -155) to (339.9, -160.2); pit_271 (98, -287) to (101.6, -289.7); pit_526 (-130, -37) to (-123.6, -38.1); pit_329 (357, -32) to (364.5, -45). pit_329 moved about 15.9 m, because straight away from the line lands on a slope over 25 degrees; its `near` label is unchanged (under 20 m).
+- Pin: 2710067272 to 3170188153. Plan check: 1168 instances, 0 violations.
+- Audit pending the line_clear_m foundation merge.

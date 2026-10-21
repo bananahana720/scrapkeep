@@ -1950,8 +1950,8 @@
    "id": "pit_1109",
    "template": "shift_corner",
    "at": [
-    -265,
-    -314
+    -272.9,
+    -313.1
    ],
    "yaw_deg": -83.3,
    "near": "rim_haul_ramp, shift corner"
@@ -2060,8 +2060,8 @@
    "id": "pit_125",
    "template": "bench_survey",
    "at": [
-    337,
-    -155
+    339.9,
+    -160.2
    ],
    "yaw_deg": 150.9,
    "near": "camp_dive_windrow_1, bench survey station"
@@ -2230,8 +2230,8 @@
    "id": "pit_271",
    "template": "bench_survey",
    "at": [
-    98,
-    -287
+    101.6,
+    -289.7
    ],
    "yaw_deg": 126.9,
    "near": "back_door_portal, bench survey station"
@@ -2250,8 +2250,8 @@
    "id": "pit_329",
    "template": "bench_survey",
    "at": [
-    357,
-    -32
+    364.5,
+    -45
    ],
    "yaw_deg": 90.0,
    "near": "bench2_east_bank, bench survey station"
@@ -2380,8 +2380,8 @@
    "id": "pit_526",
    "template": "bench_survey",
    "at": [
-    -130,
-    -37
+    -123.6,
+    -38.1
    ],
    "yaw_deg": 99.5,
    "near": "bench3_west_berm, bench survey station"
@@ -2737,5 +2737,5 @@
   ],
   "seed": 3
  },
- "pin": 2710067272
+ "pin": 3170188153
 }
