@@ -72,29 +72,32 @@ for s in (-1, 1):
     bind_new(1)  # The fixed shoulder remains with the torso.
     shoulder = Vector((s * 0.48, -0.02, 0.6))
     fist = Vector((s * 0.5, -0.12, -0.4))
-    faces = b.rod("fleet_paint", shoulder, fist, 0.14, segs=6)  # rigid pad arm
-    pad_bone = 2 if s < 0 else 3
-    bind_new(pad_bone)
-    # Share the pad's actual top ring, rather than approximating its tilted plane.
-    axis = (fist - shoulder).normalized()
-    top = {v for face in faces for v in face.verts
-           if abs((v.co - shoulder).dot(axis)) < 0.00001}
-    top = sorted(top, key=lambda v: math.atan2(v.co.y - shoulder.y, v.co.x - shoulder.x))
-    rings = []
-    for offset, pad_weight in ((-0.15, 0.0), (-0.075, 0.5)):
-        ring = []
-        for vertex in top:
-            lower = b.bm.verts.new(vertex.co + Vector((0, 0, offset)))
-            lower[weights][1] = 1.0 - pad_weight
-            if pad_weight > 0.0:
-                lower[weights][pad_bone] = pad_weight
-            ring.append(lower)
-        rings.append(ring)
-    rings.append(top)
-    for lower, upper in zip(rings, rings[1:]):
-        sleeve = [b.bm.faces.new((lower[i], lower[(i + 1) % 6],
-                                upper[(i + 1) % 6], upper[i])) for i in range(6)]
-        b.paint(sleeve, "fleet_paint")
+    # The arm and its blend sleeve stay unbevelled and unsubdivided: the windup test and the
+    # skin pin the shared pad and shoulder rings to their exact rest positions.
+    with b.region(bevel=0.0, subsurf=0):
+        faces = b.rod("fleet_paint", shoulder, fist, 0.14, segs=6)  # rigid pad arm
+        pad_bone = 2 if s < 0 else 3
+        bind_new(pad_bone)
+        # Share the pad's actual top ring, rather than approximating its tilted plane.
+        axis = (fist - shoulder).normalized()
+        top = {v for face in faces for v in face.verts
+               if abs((v.co - shoulder).dot(axis)) < 0.00001}
+        top = sorted(top, key=lambda v: math.atan2(v.co.y - shoulder.y, v.co.x - shoulder.x))
+        rings = []
+        for offset, pad_weight in ((-0.15, 0.0), (-0.075, 0.5)):
+            ring = []
+            for vertex in top:
+                lower = b.bm.verts.new(vertex.co + Vector((0, 0, offset)))
+                lower[weights][1] = 1.0 - pad_weight
+                if pad_weight > 0.0:
+                    lower[weights][pad_bone] = pad_weight
+                ring.append(lower)
+            rings.append(ring)
+        rings.append(top)
+        for lower, upper in zip(rings, rings[1:]):
+            sleeve = [b.bm.faces.new((lower[i], lower[(i + 1) % 6],
+                                    upper[(i + 1) % 6], upper[i])) for i in range(6)]
+            b.paint(sleeve, "fleet_paint")
     b.uv("paint", 0.19, u=6, v=4, loc=(s * 0.5, -0.12, -0.44), color=CHAR)  # fist
     bind_new(2 if s < 0 else 3)
 b.uv("fleet_paint", 0.38, u=8, v=5, loc=(0, -0.12, 1.0))  # head
