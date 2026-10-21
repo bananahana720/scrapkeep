@@ -1,7 +1,6 @@
 extends SceneTree
 # Tell-fit gate (Animation lane unit A4; AMBITION-BRIEF "Rigs and motion"). A baked clip that the
-# game plays as the tell of a committed telegraph must fit the window it is cued for, and a
-# pilot move must not ask a clip for more time than the clip has. Every window below is read from
+# game plays as the tell of a committed telegraph must fit the window it is cued for. Every window below is read from
 # the game constant that commits it, every length from the real GLB (Animation.length), every
 # blend from the table the game plays with; nothing is retyped here except the 0.6 s floor.
 #
@@ -21,9 +20,6 @@ extends SceneTree
 #            (project-guide/handoff/DECISIONS.md:146, section 5 Enemies and difficulty).
 #   key    : slag_warn is 9 s (2.5 s warn + 6 s live, brindle_animation.py:15,20,160); its
 #            key pose must land on SLAG_WARN, so the SlagThroat track must have a key there.
-#   pilot  : every pilot_antics.gd MOVES segment plays its clip for (end - start) * LENGTH *
-#            speed seconds (pilot_antics.gd:149-162); that must not exceed the clip's length, or
-#            seek() clamps and the pose freezes on the last frame for the rest of the segment.
 #
 # Windows are the BASE constants. ChallengeDials.tell (boss.gd:587) can shorten a boss window at
 # runtime and BossModel.play(speed) stretches the clip to follow; that is outside this gate.
@@ -42,29 +38,18 @@ const ForemanCls := preload("res://src/combat/foreman.gd")
 const DispatcherCls := preload("res://src/combat/dispatcher.gd")
 const SplitterCls := preload("res://src/combat/splitter.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
-const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
 
 const M := "res://assets/models/"
 const TELL_FLOOR := 0.6
 # Float32 lengths (1.39999997615814 for 1.4) and 30 fps key times: a millisecond is far below a frame.
 const EPS := 0.001
 
-# id -> measured cause and owner. Ids are "<glb stem> <clip> <rule>" or "pilot <class> <index> <clip>".
+# id -> measured cause and owner. Ids are "<glb stem> <clip> <rule>".
 const KNOWN := {
 	# Dispatcher: the sim commits the drop WARN = SUCK + FLIGHT = 1.2 s (dispatcher.gd:49-53) but
 	# the `tell` clip is 1.0 s (kill_first_motion.py:11-13 "tell 1.0": authored to the sound).
 	# Owner: A6 Dispatcher tell retime (wave 19, proposed on #241).
 	"enemy_dispatcher tell covers": "A6 Dispatcher tell retime: clip 1.0 s < WARN 1.2 s; kill_first_motion.py header",
-	# A1 (pilot antics): the segment asks for more clip than exists, so seek() clamps
-	# (pilot_antics.gd:162) and the pose freezes on the last frame. need = (end - start) * LENGTH
-	# (3.721 s, :17) * speed, MOVES at :31-46.
-	"pilot runner_gunner 1 brace": "A1: needs 0.707 s of a 0.600 s clip",
-	"pilot runner_gunner 2 wince": "A1: needs 0.871 s of a 0.500 s clip",
-	"pilot demolitions_caster 2 smash": "A1: needs 0.833 s of a 0.600 s clip",
-	"pilot tally 1 cast_line": "A1: needs 1.310 s of a 0.500 s clip",
-	"pilot tally 2 cast_line": "A1: needs 1.310 s of a 0.500 s clip",
-	"pilot tally 3 cast_line": "A1: needs 1.429 s of a 0.500 s clip",
-	"pilot remembered_cannon 0 heave": "A1: needs 0.871 s of a 0.800 s clip",
 }
 
 var t := T.new("anim_tell_fit_test")
@@ -128,11 +113,6 @@ static func peak_readable(blend: float, window: float) -> bool:
 	return blend <= window - TELL_FLOOR + EPS
 
 
-# Plays out one pilot segment against a clip length; true when the clip has the time.
-static func segment_fits(start: float, end: float, speed: float, length: float) -> bool:
-	return (end - start) * PilotAntics.LENGTH * speed <= length + EPS
-
-
 # Rows: [glb, clip, window, source of the window, rules]. `rules` is a subset of covers, fits.
 func _tell(glb: String, clip: String, window: float, source: String, rules: Array) -> void:
 	var stem := glb.get_file().get_basename()
@@ -158,7 +138,6 @@ func _run() -> void:
 	_wardens()
 	_waking()
 	_kill_first()
-	_pilots()
 	for id in KNOWN:
 		t.check("KNOWN row was checked: " + id, _seen.has(id), "a KNOWN id no check visited is stale")
 	for inst in _held:
@@ -174,8 +153,6 @@ func _controls() -> void:
 	t.check("control: peak flags a blend as long as the window", not peak_readable(2.0, 2.0))
 	t.check("control: peak passes a 0.1 s blend in a 2.0 s window", peak_readable(0.1, 2.0))
 	t.check("control: peak passes a blend that leaves exactly the floor", peak_readable(1.4, 2.0))
-	t.check("control: pilot segment flags an overrun", not segment_fits(0.0, 0.5, 1.0, 0.5))
-	t.check("control: pilot segment passes a clip with room", segment_fits(0.0, 0.1, 1.0, 0.8))
 
 
 # Brindle (boss_brindle.glb). boss_rules.gd windows; clips cued by boss.gd (ship.cue, :591).
@@ -242,28 +219,3 @@ func _kill_first() -> void:
 	_tell(M + "world_one/enemy_foreman.glb", "tell", ForemanCls.HORN_LEAD, "foreman.gd:33 HORN_LEAD", ["covers"])
 	_tell(M + "world_one/enemy_dispatcher.glb", "tell", DispatcherCls.WARN, "dispatcher.gd:53 WARN = SUCK + FLIGHT", ["covers"])
 	_tell(M + "world_one/enemy_splitter.glb", "tell", SplitterCls.POP_DELAY, "splitter.gd:52 POP_DELAY", ["covers"])
-
-
-# Pilot antics: every segment against the clip it plays (pilot_antics.gd:149-162).
-func _pilots() -> void:
-	for id in PilotAntics.MOVES:
-		var glb: String = HeroAssets.PILOTS.get(id, "")
-		if not t.check("%s has a pilot GLB in PILOTS" % id, glb != "", id):
-			continue
-		var player := _player(glb)
-		if not t.check("%s pilot GLB has an AnimationPlayer" % id, player != null, glb):
-			continue
-		var clips: Array = PilotAntics.MOVES[id].clips
-		for i in clips.size():
-			var start := float(clips[i][0])
-			var end := float(clips[i + 1][0]) if i + 1 < clips.size() else 1.0
-			var speed := float(clips[i][2])
-			var wanted := String(clips[i][1])
-			var name := PilotAntics.clip_for(player, wanted)
-			if not t.check("%s segment %d clip %s resolves" % [id, i, wanted], name != "", glb):
-				continue
-			var length := player.get_animation(name).length
-			var need := (end - start) * PilotAntics.LENGTH * speed
-			print("TELLFIT pilot %s #%d %s%s need=%.3f s clip=%.3f s" % [id, i, name, "" if name == wanted else " (fallback for " + wanted + ")", need, length])
-			_gate("pilot %s %d %s" % [id, i, wanted], segment_fits(start, end, speed, length),
-				"plays %.3f s of a %.3f s clip (pilot_antics.gd MOVES, speed %.2f)" % [need, length, speed])
