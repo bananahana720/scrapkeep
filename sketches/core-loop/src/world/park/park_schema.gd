@@ -156,6 +156,8 @@ const FITS := ["seat", "tile", "drape"]
 # Optional on a park row: "music_layer" names a layer_* WORLD_ROWS kind its ride sensor publishes on entry, beside its
 # ride fact; a row with recipe "" gets a listening sensor of its footprint and nothing else (park_recipes.gd
 # place_layer). The music bakes each layer's sound_next; until then its stand-in sound plays.
+# Optional on a park row: "hide_on" names an event row whose effect.swap is applied; event_ground.gd hides the row's
+# placed node (and so its collider) while that swap is live and shows it again on revert.
 const MUSIC_LAYER_PREFIX := "layer_"
 # Optional at the top: "rescue_rows", the stage's caged pilots (rescue_site.gd). pilot is the ClassDef id sitting in
 # the cage, so who is rescued is data; quest is what rescue_completed carries (the achievement rows key on it).
@@ -285,7 +287,7 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 				_add(out, id, "reference", "route via %s is no park row" % via)
 
 	for id in rows:
-		_park_row(out, id, rows[id], homes, routes)
+		_park_row(out, id, rows[id], homes, routes, events)
 	for id in events:
 		_event_row(out, id, events[id], rows, homes, routes)
 	for id in homes:
@@ -390,7 +392,7 @@ static func _waymarks(out: Array, waymarks: Array, places: Dictionary) -> void:
 		seen[w] = true
 
 
-static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary, routes: Dictionary) -> void:
+static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary, routes: Dictionary, events := {}) -> void:
 	if row["home"] != "" and not homes.has(row["home"]):
 		_add(out, id, "reference", "home %s is no home row" % row["home"])
 	for route in row["routes"]:
@@ -409,6 +411,12 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 		var layer = row["music_layer"]
 		if not layer is String or not String(layer).begins_with(MUSIC_LAYER_PREFIX) or not EventKinds.WORLD_ROWS.has(layer):
 			_add(out, id, "music_layer", "music_layer %s is no %s* WORLD_ROWS kind" % [str(layer), MUSIC_LAYER_PREFIX])
+	if row.has("hide_on"):
+		var event_id = row["hide_on"]
+		if not event_id is String or not events.has(event_id):
+			_add(out, id, "reference", "hide_on %s is no event row" % str(event_id))
+		elif String(events[event_id].get("effect", {}).get("swap", "")) == "":
+			_add(out, id, "hide_on", "hide_on %s has no effect.swap to hide on" % event_id)
 	if row.has("rider"):
 		var rider = row["rider"]
 		if not rider is Dictionary or not rider.get("at") is Array or (rider["at"] as Array).size() != 2 \

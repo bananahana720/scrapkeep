@@ -122,6 +122,12 @@ func _planted_rows() -> void:
 	# A row's music_layer is a layer_* WORLD_ROWS kind (2026-10-17, crown authored pass).
 	_plant("music layer of no kind", "lip", "music_layer", func(p): _row(p, "park_rows", "lip")["music_layer"] = "layer_nowhere")
 	_plant("music layer not a layer", "lip", "music_layer", func(p): _row(p, "park_rows", "lip")["music_layer"] = "ride_bowl")
+	# hide_on names an event row that carries an effect.swap (the row hides while that swap is applied).
+	_plant("hide_on of no event", "lip", "reference", func(p): _row(p, "park_rows", "lip")["hide_on"] = "nowhere")
+	_plant("hide_on of an event with no swap", "lip", "hide_on", func(p): _row(p, "park_rows", "lip")["hide_on"] = "pool_flood")
+	var hidden: Dictionary = _fixture.duplicate(true)
+	_row(hidden, "park_rows", "lip")["hide_on"] = "tube_wakes"
+	_report("a hide_on naming a swap event loads", ParkSchema.validate(hidden).is_empty(), ParkSchema.describe(ParkSchema.validate(hidden)))
 	# The optional rescue_rows: the site resolves and the pilot is a class id.
 	var cage := {"id": "test_cage", "site": "deck", "at": [0, 0], "face": [0, 1], "quest": "test", "pilot": "tally", "prompt": "free the test"}
 	_plant("rescue at no site", "test_cage", "reference", func(p):

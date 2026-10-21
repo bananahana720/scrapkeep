@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Schema := preload("res://src/world/park/park_schema.gd")
 const T := preload("res://tests/support/t.gd")
+const EventGround := preload("res://src/world/events/event_ground.gd")
 var t := T.new("park_natural_projection_test")
 var game
 var phases := {}
@@ -132,6 +133,46 @@ func _check_surface(label: String, node: Node3D, site: Dictionary, kind := "mark
 		var ys := _heights(stats.bins, point)
 		t.check(label + " reported long-edge point stays above terrain", not ys.is_empty() and ys.all(func(y): return y >= _ground(point.x, point.y) + 0.1499), str(ys))
 
+# A row naming an event in hide_on is found once, by prepare_overlay, and hides with the swap and comes back on revert.
+func _hide_on_controls(handler) -> void:
+	var live = game.world.terrain.map()
+	var park_row: Dictionary = {}
+	for candidate in live.park.park_rows:
+		if String(candidate.get("recipe", "")) != "" and not String(candidate.recipe).begins_with("greybox:") \
+				and game.world.terrain.geometry_root(game.world.terrain.stage).find_child("Park_" + String(candidate.id), true, false) != null:
+			park_row = candidate
+			break
+	if not t.check("a placed GLB row exists to hide", not park_row.is_empty()):
+		return
+	park_row["hide_on"] = "hide_probe_event"
+	var base: Dictionary = handler._prepared.projection_slump
+	var row: Dictionary = {}
+	for event in handler._original_map.park.event_rows:
+		if event.id == "projection_slump":
+			row = event.duplicate(true)
+	row["id"] = "hide_probe_event"
+	row["effect"]["swap"] = "hide_probe_ramp"
+	var record: Dictionary = {"site": base.site, "at": base.at, "geometry": base.geometry.duplicate(), "overlay": null}
+	var overlay_map = EventGround.prepare_overlay(game.world, handler, row, record, Callable(handler, "_collapse_target"))
+	park_row.erase("hide_on")
+	var hidden: Array = overlay_map.swaps.hide_probe_ramp.get("hidden", [])
+	t.check("hide_on resolves the named row's node once, on the swap entry", hidden.size() == 1 and hidden[0].node.name == "Park_" + String(park_row.id), str(hidden))
+	if hidden.size() != 1:
+		return
+	var node: Node3D = hidden[0].node
+	var home: Vector3 = node.position
+	var shown := node.visible
+	var bodies := node.find_children("*", "StaticBody3D", true, false)
+	overlay_map.apply_swap("hide_probe_ramp", true)
+	t.check("the swap hides the hide_on row and parks it down", not node.visible and node.position.y < home.y - 300.0, "%s -> %s" % [home, node.position])
+	t.check("its collider body rides the parked node", not bodies.is_empty() and (bodies[0] as Node3D).global_position.y < home.y - 300.0, str(bodies))
+	overlay_map.apply_swap("hide_probe_ramp", false)
+	t.check("revert restores the hide_on row", node.visible == shown and node.position.is_equal_approx(home), "%s visible %s" % [node.position, node.visible])
+	overlay_map.swaps.erase("hide_probe_ramp")
+	overlay_map.profiles.erase("hide_probe_ramp_after")
+	record.overlay.free()
+
+
 func _overlay_controls(handler) -> void:
 	var record: Dictionary = handler._prepared.projection_slump
 	var entry: Dictionary = handler._overlay_map.swaps[record.swap]
@@ -208,6 +249,7 @@ func _run() -> void:
 			_check_surface(row.id + " overlay", prepared.overlay, prepared.site, "overlay")
 			prepared.overlay.position = home
 			prepared.overlay.visible = false
+	_hide_on_controls(handler)
 	_overlay_controls(handler)
 	var source := FileAccess.get_file_as_string("res://src/world/events/natural.gd")
 	var pattern := RegEx.new()
