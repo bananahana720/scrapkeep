@@ -8,6 +8,7 @@ extends SceneTree
 # quit on the main scene's 300-frame boot.
 
 const T := preload("res://tests/support/t.gd")
+const TitleIntros := preload("res://src/presentation/title_intros.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const BOOT_SCENE := "res://src/boot/boot.tscn"
 const FRAMES_MAX := 4000
@@ -122,7 +123,29 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	_t.check("the opening plays after the fade", stage.intro_playing())
+	var shown_after: bool = hold_game.ctx.profile.is_seen(TitleIntros.SEEN_PREFIX + "sable") or stage._intro_tried
+	stage.intro.skip()
+	await process_frame
+	stage.show_flow("title")
+	await process_frame
+	await process_frame
+	_t.check("a second return to the title does not replay the opening", shown_after and not stage.intro_playing())
 	hold_game.free()
+	await process_frame
+
+	# 5d. A card freed before its fade ends leaves the opening untried and nothing marked shown.
+	var early_boot = _card()
+	var early_game = await _wait_for_game()
+	var early_stage = early_game.presentation.title_stage
+	early_stage.intro_autoplay = true
+	var seen_before: bool = early_game.ctx.profile.is_seen(TitleIntros.SEEN_PREFIX + "sable")
+	var gen_before: int = early_game.ctx.profile.generation()
+	early_boot.free()
+	for i in 4:
+		await process_frame
+	_t.check("an early-freed card clears the hold without starting the opening", not early_stage.intro_hold and not early_stage.intro_playing() and not early_stage._intro_tried)
+	_t.check("and marks nothing shown nor writes the profile", early_game.ctx.profile.is_seen(TitleIntros.SEEN_PREFIX + "sable") == seen_before and early_game.ctx.profile.generation() == gen_before)
+	early_game.free()
 	await process_frame
 
 	# 5a. The ordering trap: a hold set after the autoplay was queued still stops it until released.

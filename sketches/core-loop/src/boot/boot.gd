@@ -170,18 +170,24 @@ func _fade_done() -> void:
 	queue_free()
 
 
-# Also run from _exit_tree, so a card freed any other way never leaves the hold stuck. Idempotent.
-func _release_intro() -> void:
+# _exit_tree only clears the hold (play=false): a card freed early or a quit mid-fade must not start
+# an opening that was never seen, which would mark it shown and save the profile.
+func _release_intro(play := true) -> void:
 	if _game == null or not is_instance_valid(_game):
 		return
+	_game.remove_meta(&"intro_hold")
 	var presentation = _game.get("presentation")
 	var stage = presentation.get("title_stage") if presentation != null else null
-	if stage != null and is_instance_valid(stage):
+	if stage == null or not is_instance_valid(stage):
+		return
+	if play:
 		stage.release_intro()
+	else:
+		stage.intro_hold = false
 
 
 func _exit_tree() -> void:
-	_release_intro()
+	_release_intro(false)
 
 
 # A test sets close_handler to see the close without ending its process.
