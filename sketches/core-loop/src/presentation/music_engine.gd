@@ -457,8 +457,14 @@ static func prepare_rest() -> void:
 	for list in [Harmony.WEIR, Harmony.BRINDLE, Harmony.MINOR_OF.values(), Harmony.BRINDLE_PHRYGIAN]:
 		for chord in list:
 			Synth.organ_chord(chord["voicing"])
+	# The boss phases that lift the key (BOSS_SECTIONS) hold an organ from phase 2 on.
+	for pair in [[Harmony.BRINDLE_PHRYGIAN, 1], [Harmony.BRINDLE, 1], [Harmony.BRINDLE, 2]]:
+		for chord in pair[0]:
+			if SfxBank.bake_cancel:
+				return
+			Synth.organ_chord(_shift(chord["voicing"], pair[1]))
 	for pair in [[Harmony.SLUICE, 0], [Harmony.WEIR, 0], [Harmony.VICTORY, 0], [Harmony.BRINDLE, 0],
-			[Harmony.BRINDLE_PHRYGIAN, 1], [Harmony.BRINDLE, 2]]:
+			[Harmony.BRINDLE_PHRYGIAN, 1], [Harmony.BRINDLE, 1], [Harmony.BRINDLE, 2]]:
 		_prepare_club(pair[0], pair[1], [12, 19, 22, 24])
 	# The Warden's escalation: the lift a half step up, the sinister break and pivots.
 	var lifted: Array = Harmony.PROGRESSION + Harmony.SLUICE + Harmony.WEIR + Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE]
@@ -484,6 +490,13 @@ static func prepare_rest() -> void:
 		for id in ["class_up", "class_down", "stinger_milestone", "threat_up", "boss_phase"]:
 			SfxBank.samples_at(id, Harmony.STEP, shift)
 			SfxBank.samples_at(id, Harmony.BOSS_STEP, shift)
+	# Every recorded grid stinger on a boss grid, and the boss's defeat in each lifted key: a
+	# recorded cue's variants share the file's one resample, so the Mind's grid (PHASE3_STEP)
+	# and the fanfare's themes never resample it on the main thread mid-fight.
+	for id in SfxBank.STINGER_BEATS:
+		if SfxBank.file_backed(id):
+			for shift in [0, 1, 2, 3] if id == "stinger_boss_defeated" else [0]:
+				SfxBank.samples_at(id, Harmony.BOSS_STEP, shift)
 	# The restrained wobble of Brindle's drops.
 	_prepare_wobble(Harmony.PROGRESSION + Harmony.SLUICE + Harmony.WEIR + Harmony.BRINDLE, [0], [Harmony.BOSS_STEP], ["wub"])
 	_prepare_wobble(Harmony.BRINDLE_PHRYGIAN, [1], [Harmony.BOSS_STEP], ["wub"])
