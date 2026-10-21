@@ -7,8 +7,11 @@ extends SceneTree
 # reach the plates as they reach the floor. The camp row is entered last through enter_world on
 # the "camp" slot, as camp_hub.gd does, over the last place's lights.
 #   row 0  the Bible ground colours, lit
-#   row 1  the same grounds under a HAZARD fill at threat_grammar FILL_ALPHA (unshaded, alpha)
-#   row 2  the meaning colours at EDGE_ALPHA on threat_grammar's charcoal keyline band
+#   row 1  the same grounds under a hostile fill as threat_grammar paints it (fill()): under the
+#          default haze look HAZARD at FILL_ALPHA * HAZE_FILL; under classic the HAZARD stripe
+#          of the striped fill, HAZARD at FILL_ALPHA (unshaded, alpha)
+#   row 2  the meaning colours at EDGE_ALPHA over threat_grammar's charcoal under-band at
+#          UNDERLAY_ALPHA, both unshaded, on lit sandstone
 # It reads the pixels back and reports the graded colours and their CIE76 gaps. Needs a display:
 #   godot --path sketches/core-loop --resolution 1000x600 --script res://tools/grade_probe.gd -- --out=<dir> [--gate]
 # Writes <out>/grade_probe.json and <out>/<place>.png. --gate exits 1 when a gated pair falls
@@ -95,14 +98,28 @@ static func gated(pair: String) -> bool:
 	return pair.begins_with("edge:")
 
 
+# A hostile area's fill as the painter tints it on the live telegraph look. Classic tints white
+# over the HAZARD and charcoal stripe texture; its HAZARD stripe is HAZARD at the same alpha.
+static func fill() -> Color:
+	var tone: Color = ThreatGrammar._area_tone({"tone": Palette.HAZARD}, ThreatGrammar.FILL_ALPHA)
+	return tone if ThreatGrammar.haze() else Color(Palette.HAZARD, tone.a)
+
+
+# The keyline band under every line.
+static func band() -> Color:
+	return Color(Palette.CHARCOAL, ThreatGrammar.UNDERLAY_ALPHA)
+
+
 # The same gaps with no grade or light: the palette as authored, alpha-mixed as the painter mixes.
 static func raw() -> Dictionary:
 	var seen := {}
+	var over := func(under: Color, top: Color) -> Color: return under.lerp(Color(top, 1.0), top.a)
 	for id in GROUND:
 		seen[id] = GROUND[id]
-		seen["fill_" + id] = GROUND[id].lerp(Palette.HAZARD, ThreatGrammar.FILL_ALPHA)
+		seen["fill_" + id] = over.call(GROUND[id], fill())
+	var keyline: Color = over.call(Palette.SANDSTONE, band())
 	for id in MEANING:
-		seen["edge_" + id] = Palette.CHARCOAL.lerp(MEANING[id], ThreatGrammar.EDGE_ALPHA)
+		seen["edge_" + id] = over.call(keyline, Color(MEANING[id], ThreatGrammar.EDGE_ALPHA))
 	return gaps(seen)
 
 
@@ -126,7 +143,8 @@ func _run() -> void:
 	_build_grid()
 	DirAccess.make_dir_recursive_absolute(out)
 	report = {"tool": "grade_probe.gd", "adapter": RenderingServer.get_video_adapter_name(),
-		"table": Game.LAUNCH_TABLE, "gap": GAP, "raw": raw(), "places": []}
+		"table": Game.LAUNCH_TABLE, "telegraph": "haze" if ThreatGrammar.haze() else "classic",
+		"gap": GAP, "raw": raw(), "places": []}
 	for place in places(game.ctx.stages):
 		var owner: Node3D = null
 		if place.has("stage"):
@@ -172,18 +190,20 @@ func _build_grid() -> void:
 	for id in GROUND:
 		cells[id] = _plate(GROUND[id], 1.0, false, Vector2(column, 0), 0)
 		_plate(GROUND[id], 1.0, false, Vector2(column, 1), 0)
-		cells["fill_" + id] = _plate(Palette.HAZARD, ThreatGrammar.FILL_ALPHA, true, Vector2(column, 1), 1)
+		cells["fill_" + id] = _plate(fill(), fill().a, true, Vector2(column, 1), 1)
 		column += 1
 	column = 0
 	for id in MEANING:
-		_plate(Palette.CHARCOAL, 1.0, false, Vector2(column, 2), 0)
-		cells["edge_" + id] = _plate(MEANING[id], ThreatGrammar.EDGE_ALPHA, true, Vector2(column, 2), 1)
+		_plate(Palette.SANDSTONE, 1.0, false, Vector2(column, 2), 0)
+		_plate(band(), band().a, true, Vector2(column, 2), 1, 0.75)
+		cells["edge_" + id] = _plate(MEANING[id], ThreatGrammar.EDGE_ALPHA, true, Vector2(column, 2), 2)
 		column += 1
 
 
-func _plate(colour: Color, alpha: float, unshaded: bool, at: Vector2, layer: int) -> Vector2i:
+func _plate(colour: Color, alpha: float, unshaded: bool, at: Vector2, layer: int, size := 0.0) -> Vector2i:
 	var mesh := PlaneMesh.new()
-	mesh.size = Vector2(0.9, 0.9) if layer == 0 else Vector2(0.6, 0.6)
+	var side := size if size > 0.0 else (0.9 if layer == 0 else 0.6)
+	mesh.size = Vector2(side, side)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(colour, alpha)
 	mat.roughness = 1.0
@@ -207,6 +227,7 @@ func _probe(id: String) -> void:
 	game.player.body().freeze = true
 	var ball: Vector3 = game.player.ball_position()
 	var game_cam: Camera3D = root.get_camera_3d()
+	# The live chase camera's distance to the ball; without one, the arm's rest length (chase_camera.gd).
 	var reach: float = game_cam.global_position.distance_to(ball) if game_cam != null and game_cam != cam else 8.0
 	# Beside the ball at its centre height, above the floor, clear of its body and shadow.
 	grid.global_position = ball + Vector3(2.0, 0.0, 2.0)

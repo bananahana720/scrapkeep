@@ -3,9 +3,9 @@ extends SceneTree
 # what each look does to the meaning colours on the render bench; this test pins what holds
 # without a display:
 #   WG-1 the probe covers every launch-table stage at its time of day, each world's arena and the camp.
-#   WG-2 its gaps are DefenceBars' CIE76 at threat_grammar's alphas: edge pairs (beacon_colour_test's
-#        pairs plus HAZARD against AMBER and BRASS) gated at that test's 20, fills over the Bible
-#        grounds reported.
+#   WG-2 its gaps are DefenceBars' CIE76 at threat_grammar's alphas: edge pairs on the keyline band
+#        (beacon_colour_test's pairs plus HAZARD against AMBER and BRASS) gated at that test's 20,
+#        the hostile fill of the live telegraph look over the Bible grounds reported.
 #   WG-3 threat_grammar's marks never bloom: they are unshaded and at most bright() of their tone,
 #        so every preset with glow keeps its HDR threshold above 1.0 and no bloom term
 #        (VISUAL-LANGUAGE checklist item 14, for threat_grammar marks only; emissive wind-up bodies
@@ -55,10 +55,15 @@ func _contract() -> void:
 		_t.check("WG-1 world %d's arena is probed" % world, ids.has("arena-w%d" % world), str(ids))
 	_t.check("WG-1 the camp is probed", ids.has("camp"), str(ids))
 	var raw: Dictionary = Probe.raw()
-	var edge := func(c: Color) -> Color: return Palette.CHARCOAL.lerp(c, ThreatGrammar.EDGE_ALPHA)
-	_t.near("WG-2 an edge pair is CIE76 at EDGE_ALPHA on charcoal", raw["edge:hazard~amber"], DefenceBars.cie76(edge.call(Palette.HAZARD), edge.call(Palette.AMBER)))
-	_t.near("WG-2 a fill pair is CIE76 at FILL_ALPHA over its ground", raw["fill:hazard~sandstone"],
-		DefenceBars.cie76(Palette.SANDSTONE.lerp(Palette.HAZARD, ThreatGrammar.FILL_ALPHA), Palette.SANDSTONE))
+	# The painter's own alphas: the keyline band over sandstone, an edge over the band, and a hostile
+	# fill under the live telegraph look (haze by default: HAZARD at FILL_ALPHA * HAZE_FILL).
+	var fill_alpha := ThreatGrammar.FILL_ALPHA * (ThreatGrammar.HAZE_FILL if ThreatGrammar.haze() else 1.0)
+	_t.near("WG-2 the probe's fill is the painter's hostile fill", Probe.fill().a, fill_alpha)
+	var keyline := Palette.SANDSTONE.lerp(Palette.CHARCOAL, ThreatGrammar.UNDERLAY_ALPHA)
+	var edge := func(c: Color) -> Color: return keyline.lerp(c, ThreatGrammar.EDGE_ALPHA)
+	_t.near("WG-2 an edge pair is CIE76 at EDGE_ALPHA on the band", raw["edge:hazard~amber"], DefenceBars.cie76(edge.call(Palette.HAZARD), edge.call(Palette.AMBER)))
+	_t.near("WG-2 a fill pair is CIE76 at the fill's alpha over its ground", raw["fill:hazard~sandstone"],
+		DefenceBars.cie76(Palette.SANDSTONE.lerp(Palette.HAZARD, fill_alpha), Palette.SANDSTONE))
 	for pair in Probe.PAIRS:
 		var id := "edge:%s~%s" % pair
 		_t.check("WG-2 %s is gated" % id, raw.has(id) and Probe.gated(id), str(raw.keys()))

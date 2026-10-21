@@ -25,7 +25,10 @@ const WorldGrade := preload("res://src/presentation/world_grade.gd")
 # are the game's (ring, chevron, burst, lane).
 
 const LOOP := 3.6
-# The menu stages' exposure under the run's grade, measured so the subject keeps its Filmic mean L*.
+# The menu stages' exposure under the run's grade (Grading G4, #254). Measured under llvmpipe: the
+# AgX exposure at which each pilot's preview keeps its old Filmic mean L* crossed at 1.65 to 2.21
+# (tally the high end, its pale plates compress under AgX); 1.75 is the median, within 1 L* for five
+# pilots, -3.6 for tally. The customize bench's crossings sit near 1.70, so it shares the value.
 const MENU_EXPOSURE := 1.75
 # The loop phase each card holds at rest: the key art's moment.
 const REST := {"pylon_engineer": 0.54, "runner_gunner": 0.3, "demolitions_caster": 0.64, "tarn": 0.3,
