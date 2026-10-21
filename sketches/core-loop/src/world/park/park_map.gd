@@ -139,11 +139,12 @@ static func lane_mask_for(park_json: String, park_data: Dictionary) -> Dictionar
 #     along it), and a kicker's, launcher's, cable's or lift's two ends (the rest of that edge is flight). The graph
 #     holds ride edges for grind, kicker, glide and contraption rows only;
 #   - the long-axis centre chord of a routed row with no ride edge and a linear footprint (see LANE_LINEAR_ASPECT).
-# LINE_M is 8 m, the graph's own half-width of the line (tools/park_graph.gd; the rider's ball is Tuning.RADIUS 1.0,
-# well inside it). A piece belongs to its nearest node's cell, and the nearest node of a point is at most STEP/sqrt(2)
-# (5.66 m) from it, so cells are marked out to LANE_REACH_M + STEP/sqrt(2): every point within LANE_REACH_M of the line
-# finds a marked node (the minimum reach, 8 m), and a piece lies at most 13.66 m + 5.66 m = 19.3 m from the line at the
-# far end (the maximum extent, on a cell's corner).
+# One rule for every component, in node space: a node is marked when it lies within LANE_REACH_M (the graph's LINE_M,
+# 8 m, its own half-width of the line; the rider's ball is Tuning.RADIUS 1.0, well inside it) of the waymark path, of a
+# routed ride edge or of a routed chord. The LINE flags come from the graph already so marked; the edges and chords are
+# marked the same way here. A piece is sunk when its nearest node is marked, and that node is at most STEP/sqrt(2)
+# (5.66 m) from it, so the guarantee is only that a piece within LANE_REACH_M - STEP/sqrt(2) (about 2.34 m) of the line
+# is sunk, and a piece up to LANE_REACH_M + STEP/sqrt(2) (about 13.66 m) away may be; the same for every component.
 static func build_lane_mask(graph, park_data: Dictionary, graph_label := "") -> Dictionary:
 	if graph == null:
 		push_warning("park_map: %s has no readable graph.bin, so no lane mask: tall scatter is not sunk along its line" % graph_label)
@@ -198,12 +199,12 @@ static func build_lane_mask(graph, park_data: Dictionary, graph_label := "") -> 
 	return {"cells": cells, "side": side, "step": ParkGraph.STEP_M, "half": ParkGraph.HALF_M}
 
 
-# Marks every lattice cell whose node lies within LANE_REACH_M + STEP/sqrt(2) of the segment p-q on the ground plane.
+# Marks every lattice cell whose node lies within LANE_REACH_M of the segment p-q on the ground plane.
 static func _mark_near(cells: PackedByteArray, p: Vector2, q: Vector2) -> void:
 	var side := ParkGraph.SIDE
 	var step := ParkGraph.STEP_M
 	var half := ParkGraph.HALF_M
-	var reach := LANE_REACH_M + step / sqrt(2.0)
+	var reach := LANE_REACH_M
 	var lo := Vector2(minf(p.x, q.x) - reach, minf(p.y, q.y) - reach)
 	var hi := Vector2(maxf(p.x, q.x) + reach, maxf(p.y, q.y) + reach)
 	for j in range(maxi(0, ceili((lo.y + half) / step)), mini(side - 1, floori((hi.y + half) / step)) + 1):

@@ -468,7 +468,7 @@ func _plain_slopes() -> void:
 # Scatter.LANE_BAND_M above the ground keeps every piece whose centre is in the park's lane mask (park_map.gd build_lane_mask,
 # the graph's LINE nodes), sunk so its highest box corner is at most the band above the ground under that corner. Pieces
 # outside the mask, flat rows and off-line scatter are unchanged. Run over every chunk that holds a mask cell, with and
-# without map.scatter["lane_mask"], on flat ground and on a tilted, rolling one; then a threaded build is compared with a
+# without the mask (passed as the production path does, the `lane` argument), on flat ground and on a tilted, rolling one; then a threaded build is compared with a
 # main-thread one on a real park.
 func _lane_scatter() -> void:
 	var grounds := {
@@ -501,7 +501,6 @@ func _lane_scatter() -> void:
 		# The mask is made as scatter.gd's chunked build makes it (park_map.gd lane_mask_for).
 		var graph = ParkGraph.read(ParkMap.graph_path_for(map.path))
 		var mask: Dictionary = ParkMap.build_lane_mask(graph, map.park, map_id)
-		map.scatter["lane_mask"] = mask
 		if mask.is_empty():
 			problems.append("%s has no lane mask" % map_id)
 			continue
@@ -536,10 +535,8 @@ func _lane_scatter() -> void:
 				var changed := 0
 				var worst := -INF
 				for cell: Vector2i in cells:
-					map.scatter["lane_mask"] = {}
 					var free: Array[Transform3D] = Scatter.chunk_transforms(row, map, ground, aabb, cell.x, cell.y, [])
-					map.scatter["lane_mask"] = mask
-					var kept: Array[Transform3D] = Scatter.chunk_transforms(row, map, ground, aabb, cell.x, cell.y, [])
+					var kept: Array[Transform3D] = Scatter.chunk_transforms(row, map, ground, aabb, cell.x, cell.y, [], mask)
 					if free.size() != kept.size():
 						problems.append("%s %s %s: %d pieces became %d" % [map_id, ground_name, row["kind"], free.size(), kept.size()])
 						continue

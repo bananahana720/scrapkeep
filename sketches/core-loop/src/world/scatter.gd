@@ -196,6 +196,8 @@ static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB,
 	var keeps := [[map.spawn, float(clear["spawn"])], [map.beacon, float(clear["beacon"])], [map.vault, float(clear["vault"])]]
 	var keep_out: Array = map.scatter.get("keep_out", [])
 	var tall := is_tall(row, aabb)
+	# `lane` is the production path (the chunked build passes its mask); map.scatter["lane_mask"] is a fallback for tests
+	# that call this directly with a mask they made.
 	var lane_mask: Dictionary = (lane if not lane.is_empty() else map.scatter.get("lane_mask", {})) if tall else {}
 	var rng := RandomNumberGenerator.new()
 	rng.seed = ("%s/%d_%d" % [row["seed"], ci, cj]).hash()
@@ -416,6 +418,7 @@ class Chunked extends Node3D:
 		_mask_lock.lock()
 		if not _mask_done:
 			_mask_done = true
+			# Tests only: a map that already carries a mask (map.scatter["lane_mask"]) keeps it.
 			if _map.get("park") != null and _map.get("path") != null and (_map.scatter as Dictionary).has("lane_mask"):
 				lane_mask = _map.scatter["lane_mask"]
 			elif _map.get("park") != null and _map.get("path") != null:
