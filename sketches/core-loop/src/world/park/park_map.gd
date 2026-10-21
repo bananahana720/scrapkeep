@@ -10,6 +10,8 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 
+# The line half-width the graph bakes (tools/park_graph.gd LINE_M), the reach of the lane mask.
+const LANE_REACH_M := 8.0
 const FIXTURE := "res://src/world/park/park_test.json"
 # Andrew's "Ride lips only" ruling (2026-10-17 06:16Z): a plain bank, drop, ground shelf or sky island whose height
 # stamp is its whole shape is terrain, not a placeholder, so scatter lands on it as on the open ground. The same rows
@@ -109,18 +111,23 @@ func _fill() -> void:
 	# Coordinator ruling 5, 2026-10-19 (issue #149) and the #241 ruling, option (c): the kit pieces taller than the
 	# ghost-solid band (#183) are sunk to the band along the park's line (scatter.gd, LANE_BAND_M), not across whole
 	# row footprints. The mask is built here, on the main thread, and only read by the chunk workers.
-	scatter["lane_mask"] = lane_mask(path)
+	scatter["lane_mask"] = lane_mask(path, park)
 
 
 # The lane mask for the park at park_json: {"cells": PackedByteArray SIDE x SIDE, row-major (z, then x), 1 where the
-# ground lattice node is a LINE node; "side", "step", "half"} of park_graph.gd's lattice, {} when the park has no baked
-# graph. LINE (tools/park_graph.gd) is every node within LINE_M (8 m, the graph's own half-width of the line, 3D so a
-# deck's line leaves the ground under it alone) of the shortest path spawn -> waymarks -> beacon. The reach is that
-# 8 m and nothing more: the mask adds no margin of its own, and a piece belongs to its nearest node's cell (at most
-# half a step, 4 m, further out). The rider's ball is Tuning.RADIUS 1.0, well inside that band. One read a path a process.
+# ground lattice cell is on the line; "side", "step", "half"} of park_graph.gd's lattice, {} when the park has no baked
+# graph. The line is the union of two things, each marked out to LINE_M (8 m, the graph's own half-width of the line,
+# tools/park_graph.gd; the rider's ball is Tuning.RADIUS 1.0, well inside it) with no margin of the mask's own:
+#   - every ground node the graph flags LINE (within LINE_M of the shortest path spawn -> waymarks -> beacon);
+#   - the ride edges of the rows a route names in from, to or via: a grind row's chord from end to end (the rider rides
+#     along it), and a kicker's, launcher's, cable's or lift's two ends (the rest of that edge is flight). The graph
+#     holds ride edges for grind, kicker, glide and contraption rows only, so a flow line, bowl, bank or ground row
+#     adds nothing but what the waymark line crosses, however large the row.
+# A piece belongs to its nearest node's cell, so it can sit up to half a step (4 m) past that band. One read a path a
+# process; the park data of the first caller is the one used.
 static var _lane_masks := {}
 
-static func lane_mask(park_json: String) -> Dictionary:
+static func lane_mask(park_json: String, park_data: Dictionary) -> Dictionary:
 	var graph_path := "res://assets/park/%s/graph.bin" % park_json.get_file().get_basename()
 	if _lane_masks.has(graph_path):
 		return _lane_masks[graph_path]
@@ -128,14 +135,52 @@ static func lane_mask(park_json: String) -> Dictionary:
 	if FileAccess.file_exists(graph_path):
 		var graph = ParkGraph.read(graph_path)
 		if graph != null:
+			var side := ParkGraph.SIDE
 			var cells := PackedByteArray()
-			cells.resize(ParkGraph.SIDE * ParkGraph.SIDE)
+			cells.resize(side * side)
 			for n in cells.size():
 				if graph.node_flags[n] & ParkGraph.LINE != 0:
 					cells[n] = 1
-			mask = {"cells": cells, "side": ParkGraph.SIDE, "step": ParkGraph.STEP_M, "half": ParkGraph.HALF_M}
+			var routed := {}
+			for route: Dictionary in park_data.get("routes", []):
+				for id in [route.get("from", "")] + Array(route.get("via", [])) + [route.get("to", "")]:
+					routed[String(id)] = true
+			var grinds := {}
+			for row: Dictionary in park_data.get("park_rows", []):
+				if row["verb"] == "grind" or row["element"] == "grind_line" or row["element"] == "rail":
+					grinds[String(row["id"])] = true
+			for a in graph.node_count():
+				for e in range(graph.off[a], graph.off[a + 1]):
+					if graph.ride[e] < 0:
+						continue
+					var row_id: String = graph.names[graph.ride[e]]
+					if not routed.has(row_id):
+						continue
+					var b: int = graph.to[e]
+					var chord: bool = grinds.has(row_id) and a < side * side and b < side * side
+					for end in ([a, b] if not chord else []):
+						if end < side * side:
+							_mark_near(cells, graph, Vector2(graph.px[end], graph.pz[end]), Vector2(graph.px[end], graph.pz[end]))
+					if chord:
+						_mark_near(cells, graph, Vector2(graph.px[a], graph.pz[a]), Vector2(graph.px[b], graph.pz[b]))
+			mask = {"cells": cells, "side": side, "step": ParkGraph.STEP_M, "half": ParkGraph.HALF_M}
 	_lane_masks[graph_path] = mask
 	return mask
+
+
+# Marks every lattice cell whose node lies within LINE_M (8 m) of the segment p-q on the ground plane.
+static func _mark_near(cells: PackedByteArray, _graph, p: Vector2, q: Vector2) -> void:
+	var side := ParkGraph.SIDE
+	var step := ParkGraph.STEP_M
+	var half := ParkGraph.HALF_M
+	var reach := LANE_REACH_M
+	var lo := Vector2(minf(p.x, q.x) - reach, minf(p.y, q.y) - reach)
+	var hi := Vector2(maxf(p.x, q.x) + reach, maxf(p.y, q.y) + reach)
+	for j in range(maxi(0, ceili((lo.y + half) / step)), mini(side - 1, floori((hi.y + half) / step)) + 1):
+		for i in range(maxi(0, ceili((lo.x + half) / step)), mini(side - 1, floori((hi.x + half) / step)) + 1):
+			var c := Vector2(-half + step * i, -half + step * j)
+			if Geometry2D.get_closest_point_to_segment(c, p, q).distance_to(c) <= reach:
+				cells[j * side + i] = 1
 
 
 # Why keep_out leaves a row to the scatter: "ground", "scatter" (a row the scatter itself dresses), "plain_slope" or
