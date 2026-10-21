@@ -107,6 +107,18 @@ func _fill() -> void:
 		keep_out.append(_footprint(row))
 	keep_out.append(_footprint(mark))
 	scatter["keep_out"] = keep_out
+	# Coordinator ruling 5, 2026-10-19 (issue #149): a scatter-dressed row a route names in from, to or via is
+	# ridden, so the kit pieces taller than the ghost-solid band are sunk to the band there (scatter.gd, LANE_BAND_M);
+	# the flat ones keep landing there unchanged, as does everything off the routes.
+	var routed := {}
+	for route: Dictionary in park.get("routes", []):
+		for id in [route.get("from", "")] + Array(route.get("via", [])) + [route.get("to", "")]:
+			routed[String(id)] = true
+	var lane_out := []
+	for row in park["park_rows"]:
+		if row["recipe"] == ParkRecipes.SCATTER_DRESSED and routed.has(String(row["id"])):
+			lane_out.append(_footprint(row))
+	scatter["lane_out"] = lane_out
 
 
 # A stamped plain slope: a PLAIN_SLOPES greybox whose stamp shapes the ground and that has no absolute y, so
