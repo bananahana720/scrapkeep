@@ -4,6 +4,7 @@ extends SceneTree
 const Game = preload("res://src/game.gd")
 const BotDriver = preload("res://tools/bot_driver.gd")
 const T = preload("res://tests/support/t.gd")
+const SkillBand = preload("res://tools/skill_band.gd")
 var t = T.new("park_reactor_prelaunch_test")
 
 class Hands extends BotDriver:
@@ -34,6 +35,12 @@ func _run() -> void:
 	w._charge_time = w._charge_len - BotDriver.DROP_WAIT / 2.0
 	bot._fight(w, 1.0 / Engine.physics_ticks_per_second)
 	t.check("inbound starts before the sheet opens", not sheet.sheet_live() and bot.steer_seen.is_equal_approx(w.family_point_at()), str(bot.steer_seen))
+	# Below the full kit the hand plays by sight: no launch off the Warden's clock before the sheet opens.
+	bot.band = SkillBand.make("novice", 1, 1)
+	bot._fight(w, 1.0 / Engine.physics_ticks_per_second)
+	t.check("novice still runs the dam sheet hand", bot._goal.contains("spillway sheet"), bot._goal)
+	t.check("novice does not launch before the sheet opens", not sheet.sheet_live() and not bot.steer_seen.is_equal_approx(w.family_point_at()), str(bot.steer_seen))
+	bot.band = null
 	w._charging = false
 	for family in ["swarm", "mind"]:
 		w.family = family

@@ -47,13 +47,6 @@ extends RefCounted
 # a pack that holds a kind pressing the pilot's nemesis axis (combat/nemesis.gd) weighs
 # Nemesis.PACK_WEIGHT against 1.0 for the rest, in both draws. World one, an unknown class and an
 # empty build weigh nothing, so those draws stay the uniform pick, RNG call for call.
-#
-# 2026-10-20 (w17 Warden contact, ruling 15 (c')): while a Warden fight is live, from stage
-# WARDEN_RING_FROM_STAGE, a spawn lands on a ring WARDEN_RING around the Warden's core instead of
-# 60 to 90 m ahead of the ball, so the packs arrive where the core ring's damage is. Every honesty
-# rule above still holds: the 25 m gap from the ball, the 1 s ground ring, the cap, the interval and
-# the authored packs. Only the spot moves; nothing arrives sooner, in a larger crowd or tougher. With
-# no ring point valid it falls back to the old placement, and warden_core at INF draws no extra RNG.
 enum { CHASER, LOBBER }
 
 const Roster := preload("res://src/combat/roster.gd")
@@ -128,22 +121,6 @@ const MIN_GAP := 25.0
 const RIM_SEEK := 24.0
 const SLOW := 3.0
 const TRIES := 8
-# Warden contact: the inner and outer radius from the core where a spawn may land. The inner edge
-# clears the Warden's 6 m core ring and its guard's 9 m offset; the outer edge stays inside its
-# 30 m DEFAULT_REACH. Stage 1 keeps the old placement.
-const WARDEN_RING := Vector2(14.0, 32.0)
-const WARDEN_RING_FROM_STAGE := 2
-# A ring point may sit at most this far below the core's ground. Measured on the baked parks, 32
-# samples a ring: only the sinkhole has ground below its core inside the ring (pits 2 to 17 m
-# down; the other parks' ring points sit level with or above the core). 10 m turns the deep pits
-# away and keeps the sloped floor. The sky island's void lies past the ring (the isle is 180 m
-# wide), so there this is a backstop.
-const WARDEN_RING_DROP := 10.0
-# ...and at most this far above it, so the sinkhole's ring (core at the bottom of a ~100 m bowl) stays
-# on the floor and low ledges, not up the walls. Measured rise of 64 ring samples a park: dam to
-# 8.7 m, flume 12.9, crown 0.5, islands 0.2, pit 8.4, sinkhole median 1.9 (walls up to 101.9).
-# 15 m keeps every sample of the first five and 46 of the sinkhole's 64 (that pass the other tests).
-const WARDEN_RING_RISE := 15.0
 const HOME_WINDOW := Vector2(60.0, 250.0)
 # Past the stage's elite arrival, the chance at elite_rate 1.0 that an authored arrival is the
 # elite pack again; never two elites in a row.
@@ -168,15 +145,15 @@ var spike := false
 # The stage's threat: more enemies alive, arriving sooner, and base enemy HP.
 var threat := 1.0
 var world := 1
+# The run stage (1 to 6) of the row given to use_row(), for the per-stage challenge dials; 0 before
+# a row, which reads every by_stage dial as 1.0.
+var dial_stage := 0
 var dial_steps := StageDefs.RUN_TIER_DIAL_STEPS
 # From run.heft_class(): a heavier ball earns a bigger crowd to roll through.
 var heft_class := 1
 var play_rect := Rect2(-150.0, -150.0, 300.0, 300.0)
 # The stage's height source (height(x, z)), set by world.gd; null leaves rim placement off.
 var terrain = null
-# The live Warden's core on the ground plane; world.gd sets it each step while a Warden fight is
-# live and leaves INF otherwise. Finite moves spawns onto the WARDEN_RING (spawn_spot).
-var warden_core := Vector2.INF
 # A traversal test needs the stage without the fight in it.
 var paused := false
 # Spawns whose ground ring is showing: {"kind": int, "at": Vector2, "left": float}.
@@ -265,16 +242,16 @@ func rest_scale() -> float:
 
 
 func cap() -> int:
-	var base := int(round((6 + effective_tier() * 2) * threat * scale("pack_scale")))
+	var base := int(round((6 + effective_tier() * 2) * threat * scale("pack_scale") * ChallengeDials.stage_mult("mobs.pack_scale", dial_stage)))
 	if run_tier() != 0:
-		base = int(round((6 + effective_tier() * 2) * threat * scale("pack_scale") * RunTier.row(run_tier()).cap_weight))
+		base = int(round((6 + effective_tier() * 2) * threat * scale("pack_scale") * ChallengeDials.stage_mult("mobs.pack_scale", dial_stage) * RunTier.row(run_tier()).cap_weight))
 	return mini(HARD_CAP, base + HEFT_CAP_STEP * maxi(0, heft_class - 1))
 
 
 func interval() -> float:
 	if run_tier() == 0:
-		return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale"))
-	return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale") * RunTier.row(run_tier()).interval_weight)
+		return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale") * ChallengeDials.stage_mult("mobs.interval_scale", dial_stage))
+	return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale") * ChallengeDials.stage_mult("mobs.interval_scale", dial_stage) * RunTier.row(run_tier()).interval_weight)
 
 
 func lobber_share() -> float:
@@ -408,7 +385,7 @@ func _draw_credit() -> Dictionary:
 	if not elite.is_empty() and elite_arrival > 0:
 		if _arrivals_made + 1 == elite_arrival:
 			return elite
-		if _arrivals_made + 1 > elite_arrival and not _last_was_elite and _rng.randf() < ELITE_REPEAT * scale("elite_rate"):
+		if _arrivals_made + 1 > elite_arrival and not _last_was_elite and _rng.randf() < ELITE_REPEAT * scale("elite_rate") * ChallengeDials.stage_mult("mobs.elite_rate", dial_stage):
 			return elite
 	var choices: Array = authored
 	var weights := {}
@@ -533,7 +510,7 @@ func _draw_authored() -> Dictionary:
 	if not elite.is_empty() and elite_arrival > 0 and _arrivals_made + 1 == elite_arrival:
 		return elite
 	if not elite.is_empty() and elite_arrival > 0 and _arrivals_made + 1 > elite_arrival \
-			and not _last_was_elite and _rng.randf() < ELITE_REPEAT * scale("elite_rate"):
+			and not _last_was_elite and _rng.randf() < ELITE_REPEAT * scale("elite_rate") * ChallengeDials.stage_mult("mobs.elite_rate", dial_stage):
 		return elite
 	var pool := authored.filter(func(p: Dictionary) -> bool: return p["id"] != _last_pack_id)
 	if pool.is_empty():
@@ -577,6 +554,7 @@ func use_row(row: Dictionary, breath_option := "", tier_reader := Callable()) ->
 		set_run_tier_reader(tier_reader)
 	row = RunTier.stage_row(row, run_tier())
 	world = int(row.get("world", 1))
+	dial_stage = int(row.get("stage", 0))
 	_row = {}
 	if row.has("unlock_base") and row.has("ancient"):
 		_row = {"unlock_base": int(row["unlock_base"]), "ancient": String(row["ancient"])}
@@ -837,7 +815,7 @@ func reinforcement_weight() -> float:
 	var ticks := effective_tier()
 	if ticks <= 0:
 		return 0.0
-	return clampf(PACK_PER_TICK * scale("pack_scale") * ticks + PAST_BREAK_STEP * past_break_ticks(), 0.0, PACK_MAX)
+	return clampf(PACK_PER_TICK * scale("pack_scale") * ChallengeDials.stage_mult("mobs.pack_scale", dial_stage) * ticks + PAST_BREAK_STEP * past_break_ticks(), 0.0, PACK_MAX)
 
 
 func unlocked_counters() -> Array:
@@ -914,12 +892,6 @@ func compose() -> Array:
 
 
 func spawn_spot(ball: Vector2, velocity: Vector2, forward: Vector2) -> Vector2:
-	if warden_core.is_finite():
-		# Home spots lie ahead of the ball; at the Warden none does, so _place_pack spreads the pack from the ring spot.
-		_forward_homes.clear()
-		var ring := _warden_ring_spot(ball)
-		if ring != Vector2.INF:
-			return ring
 	if _park_map != null:
 		_forward_homes = _window_homes(ball)
 		if not _forward_homes.is_empty():
@@ -944,21 +916,4 @@ func spawn_spot(ball: Vector2, velocity: Vector2, forward: Vector2) -> Vector2:
 		spot.y = clampf(spot.y, play_rect.position.y, play_rect.end.y)
 		if spot.distance_to(ball) >= MIN_GAP and (_park_map == null or _park_safe(spot)):
 			return spot
-	return Vector2.INF
-
-
-# A point on the annulus around warden_core that passes the same tests as any other spawn, or INF.
-func _warden_ring_spot(ball: Vector2) -> Vector2:
-	for i in TRIES * 4:
-		var spot := warden_core + Vector2.RIGHT.rotated(_rng.randf_range(0.0, TAU)) \
-			* sqrt(_rng.randf_range(WARDEN_RING.x * WARDEN_RING.x, WARDEN_RING.y * WARDEN_RING.y))
-		if not play_rect.has_point(spot) or spot.distance_to(ball) < MIN_GAP:
-			continue
-		if _park_map != null and not _park_safe(spot):
-			continue
-		if terrain != null:
-			var rise: float = terrain.height(spot.x, spot.y) - terrain.height(warden_core.x, warden_core.y)
-			if rise < -WARDEN_RING_DROP or rise > WARDEN_RING_RISE:
-				continue
-		return spot
 	return Vector2.INF
