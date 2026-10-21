@@ -5,7 +5,7 @@ BoxShape3D post colliders. Line 122: "Report each family's silhouette-to-box gap
 collider-narrowing follow-up." This script is that report. A large gap means the ball stops against air beside a thin
 hoodoo or saguaro.
 
-  prlimit --as 12884901888 -- blender -b --factory-startup --threads 2 --python-exit-code 1 \
+  prlimit -v12884901888 blender -b --factory-startup --threads 2 --python-exit-code 1 \
       -P tools/blender/park/anchor_gap.py -- [--out FILE.json]       (from sketches/core-loop)
 
 Frame (anchors.py docstring, "Authoring contract"; park_recipes.gd ANCHOR_POST_M, ANCHOR_SINK_M, anchor_draws): +Y up in
