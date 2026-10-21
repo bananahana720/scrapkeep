@@ -61,9 +61,9 @@
 		"p10": 8.0
 	},
 	"draw_calls": {
-		"max": 389,
-		"median": 353.5,
-		"p95": 383.45
+		"max": 390,
+		"median": 354.0,
+		"p95": 384.0
 	},
 	"draw_label": "OpenGL compatibility proxy, cloud llvmpipe, not a frame-cost proof",
 	"draw_sample_idx": [
@@ -189,37 +189,37 @@
 	"map": "park_dam",
 	"poses_replayed": false,
 	"primitives": {
-		"max": 792164,
-		"median": 663818.0,
-		"p95": 748847.85
+		"max": 790596,
+		"median": 663897.5,
+		"p95": 749579.85
 	},
 	"props_only_draw_delta": {
-		"max": 56,
+		"max": 53,
 		"median": 11.5,
 		"park_props_nodes": 1609
 	},
 	"props_only_primitive_delta": {
-		"max": 122956,
-		"median": 16138.0
+		"max": 122704,
+		"median": 15992.0
 	},
 	"props_peak_pose": {
 		"breakdown": {
-			"hero/L2/tall": 6,
-			"litter/L1/low": 1,
-			"litter/L1/mid": 2,
-			"vignette/L0/low": 1,
+			"hero/L1/tall": 1,
+			"hero/L2/tall": 4,
+			"litter/L1/low": 2,
+			"litter/L1/mid": 3,
+			"vignette/L0/low": 4,
 			"vignette/L0/mid": 4,
-			"vignette/L1/low": 13,
-			"vignette/L1/mid": 8,
-			"vignette/L1/tall": 1,
-			"vignette/L2/merged": 12
+			"vignette/L1/low": 18,
+			"vignette/L1/mid": 9,
+			"vignette/L2/merged": 7
 		},
-		"delta": 56,
-		"idx": 72,
-		"x": -280.7,
-		"z": -531.0
+		"delta": 53,
+		"idx": 191,
+		"x": 9.8,
+		"z": -466.3
 	},
-	"runtime_s": 179.9,
+	"runtime_s": 180.3,
 	"samples": 258,
 	"stage": 1,
 	"step_m": 25.0,
