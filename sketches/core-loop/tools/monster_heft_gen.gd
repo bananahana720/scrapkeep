@@ -60,15 +60,14 @@ static func compute(index: Array) -> Dictionary:
 
 
 # The fights' thresholds from the entrance values (coordinator ruling on #222, 21 Oct): a park
-# Warden is judged at its ARRIVAL, the next stage's entrance (w1 takes s2 ... w5 takes s6); the
-# stage 6 Warden is the Mind's world and has no s7, so it takes s6 (w6 = 12.104 for now, same as
-# the Mind). The Waking takes its own entrance s4 and the Mind its own s6.
+# Warden is judged at its ARRIVAL, the next stage's entrance (w1 takes s2 ... w5 takes s6). The
+# stage 6 park Warden (the crown's choir) has no s7 and no ruled threshold, so it gets none and
+# fails closed (MonsterHeft reads INF). The Waking takes its own entrance s4 and the Mind its own s6.
 static func fights(entrances: Dictionary) -> Dictionary:
 	var wardens := {}
-	for stage in range(1, STAGES + 1):
-		var arrival := mini(stage + 1, STAGES)
-		if entrances.has(arrival):
-			wardens[str(stage)] = entrances[arrival]
+	for stage in range(1, STAGES):
+		if entrances.has(stage + 1):
+			wardens[str(stage)] = entrances[stage + 1]
 	return {"wardens": wardens, "waking": entrances.get(WAKING_STAGE, INF), "mind": entrances.get(MIND_STAGE, INF)}
 
 

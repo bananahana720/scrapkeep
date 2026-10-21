@@ -40,7 +40,7 @@ var smash_base := SMASH_BASE
 var other_base := OTHER_BASE
 var other_base_charging := OTHER_BASE_CHARGING
 var mult_min := MULT_MIN
-# The live ceiling: starts ordinary (see set_pilot_class), the row's mult_top for a monster build.
+# The live ceiling: starts ordinary (see set_monster), the row's mult_top for a monster build.
 var mult_max := ORDINARY_RATIO
 # The row's own ceiling, what a monster build reaches (a row's "mult_max", else MULT_MAX).
 var mult_top := MULT_MAX

@@ -32,10 +32,11 @@ func _initialize() -> void:
 	_t.check("entrances never fall with the stage", _rises(entrances), str(entrances))
 	for stage in range(1, 6):
 		_t.check("w%d takes the next entrance s%d" % [stage, stage + 1], fresh["wardens"][str(stage)] == entrances[str(stage + 1)], "")
-	_t.check("w6 takes s6 (no s7)", fresh["wardens"]["6"] == entrances["6"], "")
+	_t.check("w6 has no threshold (no s7, none ruled)", not fresh["wardens"].has("6"), str(fresh["wardens"].keys()))
+	_t.check("w6 fails closed through MonsterHeft", is_inf(MonsterHeft.threshold_for_stage(6)), str(MonsterHeft.threshold_for_stage(6)))
 	_t.check("the Waking takes its own entrance s4", fresh["waking"] == entrances["4"], "")
 	_t.check("the Mind takes its own entrance s6", fresh["mind"] == entrances["6"], "")
-	for stage in range(1, 7):
+	for stage in range(1, 6):
 		_t.check("w%d loads through MonsterHeft" % stage, absf(MonsterHeft.threshold_for_stage(stage) - float(fresh["wardens"][str(stage)])) <= TOLERANCE, "")
 	_t.check("the loader's Waking and Mind match", absf(MonsterHeft.waking_threshold() - float(fresh["waking"])) <= TOLERANCE and absf(MonsterHeft.mind_threshold() - float(fresh["mind"])) <= TOLERANCE, "")
 	_t.check("an unknown stage fails closed to INF", is_inf(MonsterHeft.threshold_for_stage(0)) and is_inf(MonsterHeft.threshold_for_stage(7)), "")
