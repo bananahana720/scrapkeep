@@ -5,15 +5,22 @@ joints collapse, seamless loops, bone budgets per class).
 
   prlimit --as 12884901888 -- blender -b --factory-startup --threads 2 --python-exit-code 1 \
       -P sketches/core-loop/tools/blender/rig_pose_audit.py -- --world one --out DIR \
-      [--glb world_one/enemy_foreman.glb] [--size 360] [--samples 10] [--no-render]
+      [--glb world_one/enemy_foreman.glb] [--size 360] [--samples 10] [--no-render] [--strict]
 
---world one|two|three picks the set; --glb audits one rig (a path under assets/models, with or
+--world one|two|three|bosses picks the set; --glb audits one rig (a path under assets/models, with or
 without assets/models/ or res://assets/models/ and .glb). Writes
   DIR/rig_audit_<world>.json   every number below
   DIR/pose_sheet_<world>.png   one row per rig: rest, then the 5 worst poses, labelled
   DIR/loops_<world>.png        per looped clip: first, middle, last, last over first at 50%
 and prints one `RIG_AUDIT <glb> {json summary}` line per rig. Flags are findings, so the exit
-code is 0 whenever the audit ran.
+code is 0 whenever the audit ran, unless --strict is given: then it is 1 when any rig has an
+unexcused COLLAPSE, CLIP or GAP flag (not DELIBERATE-*) or a failing loop seam not listed in
+STRICT_EXCUSED, so a gate can run the audit. The default behaviour is unchanged.
+
+--world bosses audits the boss rigs. They are not skinned: every part is a rigid node animated by
+object-level fcurves (no armature; boss_brindle.glb et al.), so the bone, collapse, clip and gap
+metrics do not apply and are reported as untested ("node_rig": true). Their loop seams are
+measured with the same seam rule, one row per animated node, from LOOPS below.
 
 Godot axes. Poses and ranges are expressed in Godot axes about the bone head (Godot (x, y, z) is
 Blender (x, -z, y)): rotation in degrees about X, Y, Z (Euler XYZ), translation in metres, scale
@@ -99,7 +106,11 @@ WORLDS = {
     "two": ["world_two/enemy_lamp_swarm", "warden_swarm", "warden_swarm_kit_drones"],
     "three": ["world_three/enemy_anchor_crew", "world_three/enemy_kite_drone", "warden_mind",
               "bosses/mind_hand"],
+    # Rigid-node boss rigs (no armature); see NODE_RIGS. Files under assets/models/bosses/.
+    "bosses": ["bosses/boss_brindle", "bosses/boss_brindle_scooter", "bosses/boss_mind_base",
+               "bosses/boss_mind_kit", "bosses/boss_waking_base", "bosses/boss_waking_kit"],
 }
+NODE_RIGS = set(WORLDS["bosses"])
 
 # Clips the game loops. special_rig.gd:12-17 CLIPS (foreman idle, dispatcher idle, splitter
 # crawl, splitter_piece scurry); linker.gd:48 (idle, braced); mind_hand.gd:263 (still_track);
@@ -115,6 +126,21 @@ LOOPS = {
     "warden_swarm_kit_drones": ["idle"],
     "warden_mind": ["idle"],
     "bosses/mind_hand": ["still_track"],
+    # BossModel.loop_clip (boss_model.gd:72): requisition.gd:253 idle_roll, requisition.gd:321 chase
+    # (on the scooter GLB), mind_dress.gd:93 attention. boss_waking_base/kit have none: the game
+    # never loops `sleeping` (waking_dress.gd opens on `wake`, :97). boss_mind_base has no loop.
+    "bosses/boss_brindle": ["idle_roll"],
+    "bosses/boss_brindle_scooter": ["chase"],
+    "bosses/boss_mind_kit": ["attention"],
+}
+
+# Seam failures that --strict does not count: (key, clip) -> reason. Same two the Godot
+# tests/rig_loop_seam_test.gd lists as KNOWN (a rolling drum keyed as one straight spin that is
+# not a whole number of turns, brindle_animation.py:113-114 and :211-213). Remove a row once the
+# clip is fixed; --strict then also fails a row whose seam is now clean.
+STRICT_EXCUSED = {
+    ("bosses/boss_brindle", "idle_roll"): "drums 366.69 deg per loop, 6.69 deg past a full turn",
+    ("bosses/boss_brindle_scooter", "chase"): "drum 7.96 turns per loop, 15.21 deg short of 8",
 }
 
 # Kit rigs measured against the body they ride: key -> body GLB and the clips that are excused
@@ -440,13 +466,13 @@ AXIS = {"X": np.array([1.0, 0, 0]), "Y": np.array([0, 1.0, 0]), "Z": np.array([0
 
 def args():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    a = {"world": "", "glb": "", "out": "", "size": 360, "samples": 10, "no-render": False}
+    a = {"world": "", "glb": "", "out": "", "size": 360, "samples": 10, "no-render": False, "strict": False}
     i = 0
     while i < len(argv):
         key = argv[i].lstrip("-")
         if key not in a:
             raise SystemExit("rig_pose_audit: unknown flag " + argv[i])
-        if key == "no-render":
+        if key in ("no-render", "strict"):
             a[key] = True
             i += 1
             continue
@@ -457,7 +483,7 @@ def args():
     if not a["out"] or (not a["world"] and not a["glb"]):
         raise SystemExit("rig_pose_audit: --out and --world or --glb are required")
     if a["world"] and a["world"] not in WORLDS:
-        raise SystemExit("rig_pose_audit: --world is one, two or three")
+        raise SystemExit("rig_pose_audit: --world is one, two, three or bosses")
     return a
 
 
@@ -1705,6 +1731,87 @@ def audit_rig(key, a, sheet_rows, loop_rows):
     return result
 
 
+# ---------------------------------------------------------------- rigid-node rigs (bosses)
+
+_NODE_PROP = re.compile(r'^(location|rotation_quaternion|rotation_euler|scale)$')
+
+
+class NodeClip(Clip):
+    """One action of a rigid-node rig: Blender 5 keeps one slot per animated object, so a
+    channelbag's slot names the node. Evaluates like Clip, one 'bone' per node."""
+
+    def __init__(self, action, fps):
+        self.name = action.name.split("|")[-1]
+        self.fps = fps
+        self.tracks = {}
+        lo, hi = math.inf, -math.inf
+        for layer in action.layers:
+            for strip in layer.strips:
+                for bag in strip.channelbags:
+                    node = bag.slot.name_display
+                    for fc in bag.fcurves:
+                        if not _NODE_PROP.match(fc.data_path) or not len(fc.keyframe_points):
+                            continue
+                        self.tracks.setdefault(node, {}).setdefault(fc.data_path, {})[fc.array_index] = fc
+                        lo = min(lo, fc.keyframe_points[0].co[0])
+                        hi = max(hi, fc.keyframe_points[-1].co[0])
+        self.start = 0.0 if lo == math.inf else lo
+        self.end = self.start if hi == -math.inf else hi
+        self.seconds = (self.end - self.start) / fps
+
+
+class NodeRig:
+    """What seam_check needs of a rig: clips, a name index and an identity rest per node."""
+
+    def __init__(self, key):
+        self.key = key
+        reset_scene()
+        bpy.ops.import_scene.gltf(filepath=os.path.join(MODELS, key + ".glb"))
+        self.fps = bpy.context.scene.render.fps
+        self.clips = {}
+        for act in bpy.data.actions:
+            clip = NodeClip(act, self.fps)
+            self.clips[clip.name] = clip
+        names = sorted({n for c in self.clips.values() for n in c.tracks})
+        self.index = {n: i for i, n in enumerate(names)}
+        self.rest = np.array([np.eye(4) for _ in names]) if names else np.zeros((0, 4, 4))
+
+
+def audit_node_rig(key):
+    t0 = time.time()
+    rig = NodeRig(key)
+    seams = {}
+    for cname in LOOPS.get(key, []):
+        seams[cname] = {"error": "clip not found", "clips": sorted(rig.clips)} if cname not in rig.clips \
+            else seam_check(rig, rig.clips[cname])
+    result = {"node_rig": True, "clips": {c: round(k.seconds, 4) for c, k in sorted(rig.clips.items())},
+              "nodes": len(rig.index), "flags": {}, "seams": seams,
+              "untested": "bone weights, collapse, clip and gap need an armature; this rig is rigid nodes",
+              "git_head": GIT_HEAD, "seconds": round(time.time() - t0, 1)}
+    summary = {"node_rig": True, "nodes": len(rig.index), "clips": len(rig.clips), "flags": {},
+               "seam": {c: ("UNTESTED" if s.get("seam_untested") else s.get("failing_bones", s.get("error")))
+                        for c, s in seams.items()}}
+    print("RIG_AUDIT %s %s" % (key + ".glb", json.dumps(summary)))
+    sys.stdout.flush()
+    return result
+
+
+def strict_failures(key, result):
+    """Unexcused COLLAPSE, CLIP, GAP flags and failing seams of one rig; and stale excuses."""
+    out = []
+    for f, slot in result.get("flags", {}).items():
+        if not f.startswith("DELIBERATE") and f.split("-")[-1] in ("COLLAPSE", "CLIP", "GAP"):
+            out.append("%s %s x%s" % (key, f, slot.get("count")))
+    for cname, seam in result.get("seams", {}).items():
+        failing = bool(seam.get("failing_bones")) or "error" in seam
+        excuse = STRICT_EXCUSED.get((key, cname))
+        if failing and not excuse:
+            out.append("%s seam %s: %s" % (key, cname, seam.get("failing_bones") or seam.get("error")))
+        elif excuse and not failing:
+            out.append("%s seam %s is clean but still in STRICT_EXCUSED (%s)" % (key, cname, excuse))
+    return out
+
+
 def basis_of_named(rig, values):
     return {b: mat4(quat_matrix(q), l, s) for b, (l, q, s) in values.items()}
 
@@ -1821,7 +1928,7 @@ def main():
     for key in keys:
         if not os.path.isfile(os.path.join(MODELS, key + ".glb")):
             raise SystemExit("rig_pose_audit: no such GLB " + key)
-        results[key + ".glb"] = audit_rig(key, a, sheet_rows, loop_rows)
+        results[key + ".glb"] = audit_node_rig(key) if key in NODE_RIGS else audit_rig(key, a, sheet_rows, loop_rows)
     path = os.path.join(a["out"], "rig_audit_%s.json" % tag)
     with open(path, "w") as f:
         json.dump({"world": tag, "git_head": GIT_HEAD, "thresholds": {
@@ -1839,6 +1946,15 @@ def main():
             lp = os.path.join(a["out"], "loops_%s.png" % tag)
             save_png(footer(pad_rows(loop_rows), "RIG_POSE_AUDIT %s LOOPS HEAD %s" % (tag, GIT_HEAD)), lp)
             print("LOOPS", lp)
+
+    if a["strict"]:
+        bad = [m for key in keys for m in strict_failures(key, results[key + ".glb"])]
+        for m in bad:
+            print("STRICT_FAIL", m)
+        print("STRICT %s: %d unexcused" % (tag, len(bad)))
+        sys.stdout.flush()
+        if bad:
+            sys.exit(1)
 
 
 main()

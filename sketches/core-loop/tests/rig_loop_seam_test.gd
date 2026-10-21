@@ -9,9 +9,16 @@ extends SceneTree
 # (5 mm, 0.5 degrees or 0.01 scale per frame). So a stepped track (a clock hand that ticks on
 # the beat grid, kill_first_rig.py) or a footfall that reverses mid-clip may reverse at the
 # seam too, while a smooth clip that arrives moving and leaves reversed fails.
-# Looped clips come from special_rig.gd CLIPS, linker.gd:48, mind_hand.gd:263 and the
-# hero_assets.gd idle replay. Mirrors tools/blender/rig_pose_audit.py section 5.
-# Real seam failures are findings: this test is allowed to stay red on shipped clips.
+# Looped clips come from special_rig.gd CLIPS, linker.gd:48, mind_hand.gd:263, the
+# hero_assets.gd idle replay and BossModel.loop_clip (boss_model.gd:72, LOOP_LINEAR): Brindle's
+# idle_roll (requisition.gd:253) and the scooter's chase (requisition.gd:321), and the Mind
+# kit's attention (mind_dress.gd:93). The Waking's `sleeping` is not here: waking_dress.gd
+# never plays it (it opens on `wake`, :97) and never sets a loop mode on it, so it is a
+# held 3 s base pose, not a loop (waking.py:56 gives it zero key-pose seconds). Mirrors tools/blender/rig_pose_audit.py section 5.
+# Real seam failures are findings. A failure that exists on the shipped clips today is listed in
+# KNOWN below with its cause; the test then requires it to still fail, so fixing the clip while
+# leaving its row fails the test as stale (the table ratchets down). Anything else that fails
+# is red.
 
 const T := preload("res://tests/support/t.gd")
 const M := "res://assets/models/"
@@ -34,7 +41,18 @@ const LOOPS := [
 	[M + "warden_swarm_kit_drones.glb", "idle"],
 	[M + "warden_mind.glb", "idle"],
 	[M + "bosses/mind_hand.glb", "still_track"],
+	[M + "bosses/boss_brindle.glb", "idle_roll"],
+	[M + "bosses/boss_brindle_scooter.glb", "chase"],
+	[M + "bosses/boss_mind_kit.glb", "attention"],
 ]
+
+# label -> measured cause (2026-10-21, base 20da407). No owning animation unit: neither A1, A2
+# nor A3 touches the Brindle rig. Both are a rolling drum keyed as one straight spin that is not a
+# whole number of turns.
+const KNOWN := {
+	"boss_brindle idle_roll": "Drum{L,R}{0..3} pitch -4/.75*1.2 = -6.4 rad = 366.69 deg, 6.69 deg past a full turn (brindle_animation.py:113-114)",
+	"boss_brindle_scooter chase": "Drums pitch -11/.22 = -50 rad = 7.96 turns, 15.21 deg short of 8 (brindle_animation.py:211-213)",
+}
 
 var t := T.new("rig_loop_seam_test")
 
@@ -205,6 +223,10 @@ func _run() -> void:
 		var detail := "%d tracks, %.3f s" % [out["tracks"], anim.length]
 		if not fails.is_empty():
 			detail += "; %d failing: %s" % [fails.size(), " | ".join(PackedStringArray(fails.slice(0, 12)))]
-		t.check(label + " loops seamlessly", fails.is_empty(), detail)
+		if KNOWN.has(label):
+			t.check(label + " still has its KNOWN seam failure (remove the KNOWN row once fixed)", not fails.is_empty(),
+				"known cause: " + String(KNOWN[label]))
+		else:
+			t.check(label + " loops seamlessly", fails.is_empty(), detail)
 		inst.queue_free()
 	quit(t.verdict())
