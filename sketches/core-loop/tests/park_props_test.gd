@@ -481,6 +481,18 @@ func _check_long_stamped(kit: Dictionary) -> void:
 		return plain.line_distance(Vector2(inst["pos"].x, inst["pos"].z)) - float(inst["radius"]) > ParkProps.LINE_CLEAR_MID_M and _blocked_by(plain, inst, "south_flats"))
 	_t.check("planted: a 2.5 m prop inside south_flats, past the mid tier, fails keepout alone", not in_flats.is_empty())
 
+	# A scatter-dressed row (World's ridden scatter rows): sinkhole's 800 m cinder_cone keeps tall and hero props out, lower ones stay
+	# under the line tiers.
+	var cone := _park_row(smap, "cinder_cone")
+	_t.check("sinkhole cinder_cone is a scatter-dressed row the context indexes", not cone.is_empty() and String(cone["recipe"]) == ParkProps.ParkRecipes.SCATTER_DRESSED \
+		and plain.scatter_rows.any(func(r: Dictionary) -> bool: return r["id"] == "cinder_cone"))
+	var cgrid := _row_grid(cone, 40, 20)
+	var cone_tall := _first_low(["scatter_row"], cgrid, kit, plain, sground, 5.0)
+	_t.check("planted: a 5 m (tall) prop inside cinder_cone, clear of every other rule, fails scatter_row alone", not cone_tall.is_empty(), "%d candidates" % cgrid.size())
+	if not cone_tall.is_empty():
+		_t.eq("planted: a 2.5 m prop at the same point passes", _rules(_with(cone_tall, "height", 2.5), plain), [])
+		_t.eq("planted: a hero at the same point fails scatter_row alone", _rules(_with(_with(cone_tall, "height", 2.5), "class", ParkProps.HERO), plain), ["scatter_row"])
+
 	# A wide long stamp is landform: pit's 900 by 900 m bowl admits mid and tall props that clear the lines.
 	var pit := ParkProps.world_for("park_pit")
 	var pmap = pit["map"]

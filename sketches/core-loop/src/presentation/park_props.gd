@@ -134,6 +134,8 @@ class Context:
 	var ground_rows := {}
 	var low_rows := {}
 	var stamped: Array = []
+	# Rows the park scatter dresses (recipe ParkRecipes.SCATTER_DRESSED), which riders ride: tall and hero props stay out of them.
+	var scatter_rows: Array = []
 	# Home sites and line waypoints that resolve to no place: file_errors-style rows, surfaced by --check and the test.
 	var unresolved: Array = []
 	var _cells := {}
@@ -290,6 +292,8 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 				and maxf(float(row["size"][0]), float(row["size"][2])) > ParkSites.STAMP_KEEP_M and Context.blocks_props(row) \
 				and (String(row.get("element", "")) == "sky_island" or minf(absf(float(row["size"][0])), absf(float(row["size"][2]))) <= STAMP_NARROW_M):
 			c.stamped.append(row)
+		if String(row.get("recipe", "")) == ParkRecipes.SCATTER_DRESSED:
+			c.scatter_rows.append(row)
 	for row: Dictionary in park_map.park.get("activity_rows", []):
 		if String(row.get("activity", "")) in CAMP_ACTIVITIES:
 			c.camps.append(_pair(row["at"]))
@@ -697,6 +701,12 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 		fail.call("line_clear", "%s, %.1f m from a line, want %.0f" % ["tall or hero" if tall else ("mid" if height > LOW_HEIGHT_M else "low"), edge, need])
 	if tall and ParkRecipes.in_clear(c.lanes, p, r):
 		fail.call("route_lane", "tall, inside a route lane")
+	if tall:
+		# World's scatter keep-out card (wave 18 board #241): tall pieces stay out of the ridden rows the scatter dresses.
+		for row: Dictionary in c.scatter_rows:
+			if ParkMap.footprint_contains(row, p, r):
+				fail.call("scatter_row", "tall or hero inside scatter-dressed row %s" % row.get("id", "?"))
+				break
 	if not c.rect.grow(-r).has_point(p):
 		fail.call("play_rect", "outside the play rect")
 	else:
