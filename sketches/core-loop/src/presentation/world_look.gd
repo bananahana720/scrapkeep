@@ -43,7 +43,16 @@ const ROWS := {
 			"volumetric_fog_emission": Color("000000"), "volumetric_fog_anisotropy": 0.6,
 			"volumetric_fog_length": 300.0, "volumetric_fog_ambient_inject": 0.3, "volumetric_fog_sky_affect": 0.0}},
 }
-# The bowl has no row: it sits in the Spillway's world row and daylight.
+# What a park map changes in its world's row (stage_look with a "park_" map id). The park's Dig
+# stages are an open pit at noon and a sinkhole open to the sky (PARK.md), not the legacy
+# underground dome: the Spillway's open-sky fill, no volumetric murk (the weather rows carry the air),
+# and the fog set per map from the standing weather row (park_fog), so it does not pop when that row lands.
+const PARK_ROWS := {
+	2: {"sky": "hdri", "fill": 0.5, "fill_pitch": -50.0, "fill_color": Color("a3c4e6"), "air": {}},
+}
+const PARK_DIR := "res://src/world/park/"
+static var _park_fog := {}
+# The bowl has no row: it keeps the stage it ends (stage 2, the Spillway row under the morning row).
 const ARENAS := {
 	# The Waking pit: no daylight, a black ceiling, cool walls under a cool core key, the amber
 	# accent on the floor pools.
@@ -144,12 +153,33 @@ static func time_row(stage: int) -> Dictionary:
 	return TIME_ROWS.get(time_id(stage), {})
 
 
+# The fog {density, color} of a park map's standing weather row (the first with trigger "always" in
+# World's park json, read-only); the Spillway's fog when it has none.
+static func park_fog(map: String) -> Dictionary:
+	if _park_fog.has(map):
+		return _park_fog[map]
+	var fog: Dictionary = ROWS[1].fog
+	var file := FileAccess.open(PARK_DIR + map + ".json", FileAccess.READ)
+	var data = JSON.parse_string(file.get_as_text()) if file != null else null
+	for weather in (data.get("weather_rows", []) if data is Dictionary else []):
+		if weather.get("trigger", {}).get("on") == "always" and weather.get("fog", {}).has("density"):
+			fog = {"density": float(weather.fog.density), "color": Color(String(weather.fog.color))}
+			break
+	_park_fog[map] = fog
+	return fog
+
+
 # The world row with the stage's time of day laid over it: sun, and the ambient colour and energy.
 # A dome world (underground) has no daylight to vary, so its energy and sun energy stay at the
 # world row; the time of day moves only the sun's direction and colour and the ambient colour there.
-static func stage_look(stage: int, world: int) -> Dictionary:
+static func stage_look(stage: int, world: int, map := "") -> Dictionary:
 	var base := row(world)
 	var look := base.duplicate()
+	var park: Dictionary = PARK_ROWS.get(world, {}) if map.begins_with("park_") else {}
+	if not park.is_empty():
+		look.merge(park, true)
+		look["fog"] = park_fog(map)
+		base = look
 	look.merge(time_row(stage), true)
 	if not time_id(stage).is_empty():
 		look["time"] = time_id(stage)
@@ -243,7 +273,7 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	var root: Node3D = terrain.geometry_root(stage)
 	var world: int = ctx.stages.world_of(stage)
 	var GraphicsPreset := load("res://src/presentation/graphics_preset.gd")
-	var look := stage_look(stage, world)
+	var look := stage_look(stage, world, String(ctx.stages.of(stage).get("map", "")))
 	GraphicsPreset.enter_world(root, terrain.environment, look)
 	var game = ctx.root
 	if game != null and game.get("world") != null and game.world.view != null:
