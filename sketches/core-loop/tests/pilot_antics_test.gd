@@ -99,6 +99,7 @@ func _shells() -> void:
 		_t.check(id + " is back in the pod as it sat", not antic.out and pilot.get_parent() == pod
 			and pilot.transform.is_equal_approx(seated) and core.transform.is_equal_approx(core_rest))
 		_stream(antic, fitted.animator, pilot, id)
+		await _in_engine(antic, fitted.animator, pilot, id)
 	painter.free()
 	stage.free()
 
@@ -108,7 +109,7 @@ func _shells() -> void:
 # move in one frame, (b) no segment asks a clip for time past its end (a hold), (c) the last
 # frame before the pod takes the pilot back is at rest, so seat() snaps nothing.
 #
-# (a) The threshold is the largest one-frame bone rotation (angle between frames, any bone) of
+# (a) The threshold is per bone: that bone's largest one-frame rotation (angle between frames) in
 # the pilot's own clips as this move plays them (clip time stepped by speed/60), measured by
 # _clip_motion at run time. Measured on 21 Oct 2026 at clip speed 1.0 (Godot 4.7.2): drop_land
 # 0.90 (Sable), 0.48 (Rivet), 0.84 (Kest), 0.06 (Tarn), 0.03 (Tally), 0.05 (Cannon); big_cheer
@@ -118,6 +119,9 @@ func _shells() -> void:
 const REST_TOLERANCE := 0.02
 # The move is sampled at 1/60 s from t 0, a clip's own motion at 1/60 s from clip time 0, so the
 # frames land in different phases; SLACK 1.1 covers that (Cannon's base run: 0.066 against 0.066).
+# BONE_FLOOR 0.02 rad (1.1 degrees, the same as REST_TOLERANCE) lets a bone that no clip moves absorb rounding (the clips' rest noise is
+# 0.0007 rad); any real pop on such a bone is far above it.
+const BONE_FLOOR := 0.02
 const SLACK := 1.1
 const FRAME := 1.0 / 60.0
 
@@ -127,12 +131,16 @@ func _stream(antic, animator: AnimationPlayer, pilot: Node3D, id: String) -> voi
 	skeleton.reset_bone_poses()
 	var rest := _rotations(skeleton)
 	var rows: Array = antic.segments()
-	var limit := 0.0
+	var limits: Array = []
+	limits.resize(rest.size())
+	limits.fill(BONE_FLOOR)
 	var past_end := ""
 	for row in rows:
 		if row.clip == "":
 			continue
-		limit = maxf(limit, _clip_motion(animator, skeleton, row.clip, row.speed, row.length))
+		var moved := _clip_motion(animator, skeleton, row.clip, row.speed, row.length)
+		for i in moved.size():
+			limits[i] = maxf(limits[i], moved[i])
 		var asks: float = (float(row.end) - float(row.start)) * PilotAntics.LENGTH * float(row.speed)
 		if asks > float(row.length) + 0.001:
 			past_end += " %s asks %.2f of %.2f s;" % [row.clip, asks, row.length]
@@ -142,36 +150,73 @@ func _stream(antic, animator: AnimationPlayer, pilot: Node3D, id: String) -> voi
 	var before := rest
 	var worst := 0.0
 	var worst_at := 0.0
+	var worst_bone := ""
+	var worst_limit := 0.0
+	var over := 0.0
 	var last := rest
 	for k in int(floor(PilotAntics.LENGTH / FRAME)) + 1:
 		var t := float(k) * FRAME / PilotAntics.LENGTH
 		antic.apply(t)
 		last = _rotations(skeleton)
-		var step := _step(before, last)
-		if step > worst:
-			worst = step
-			worst_at = t
+		for i in last.size():
+			var step: float = (before[i] as Quaternion).angle_to(last[i])
+			if step / (limits[i] * SLACK) > over:
+				over = step / (limits[i] * SLACK)
+				worst = step
+				worst_at = t
+				worst_bone = skeleton.get_bone_name(i)
+				worst_limit = limits[i]
 		before = last
 	_t.check("%s ends the bit at rest (%.3f rad off)" % [id, _step(rest, last)], _step(rest, last) <= REST_TOLERANCE)
 	antic.apply(1.0)
-	var seat_step := _step(last, _rotations(skeleton))
-	_t.check("%s seat() snaps nothing (%.3f rad)" % [id, seat_step], seat_step <= limit * SLACK)
-	_t.check("%s moves no faster than its own clips: worst %.3f rad/frame at t %.3f, limit %.3f" % [id, worst, worst_at, limit], worst <= limit * SLACK)
+	var after := _rotations(skeleton)
+	var seat_over := 0.0
+	for i in after.size():
+		seat_over = maxf(seat_over, (last[i] as Quaternion).angle_to(after[i]) / (limits[i] * SLACK))
+	_t.check("%s seat() snaps nothing (%.2f of the per-bone limit)" % [id, seat_over], seat_over <= 1.0)
+	_t.check("%s moves no bone faster than its own clips: %s %.3f rad/frame at t %.3f against %.3f (%.2f of limit)" \
+		% [id, worst_bone, worst, worst_at, worst_limit, over], over <= 1.0)
 	animator.stop()
 	skeleton.reset_bone_poses()
 
 
-func _clip_motion(animator: AnimationPlayer, skeleton: Skeleton3D, clip: String, speed: float, length: float) -> float:
+# Real process frames: the bit's pose must survive the engine running the animator and the scene
+# between apply() calls, and survive another clip being played on the animator mid-bit (a card's
+# unlock clip ending into its idle loop).
+func _in_engine(antic, animator: AnimationPlayer, pilot: Node3D, id: String) -> void:
+	var skeleton := pilot.find_children("*", "Skeleton3D", true, false)[0] as Skeleton3D
+	var t := 0.45
+	antic.apply(t)
+	var posed := _rotations(skeleton)
+	await process_frame
+	await process_frame
+	var kept := _step(posed, _rotations(skeleton))
+	_t.check("%s keeps its pose through engine frames (%.4f rad)" % [id, kept], kept < 0.001)
+	var other := "brace" if animator.has_animation("brace") else String(animator.get_animation_list()[0])
+	animator.play(other, 0.0)
+	await process_frame
+	antic.apply(t)
+	await process_frame
+	var again := _step(posed, _rotations(skeleton))
+	_t.check("%s retakes the animator after another clip played (%.4f rad)" % [id, again],
+		again < 0.001 and not animator.is_playing())
+	antic.apply(1.0)
+
+
+func _clip_motion(animator: AnimationPlayer, skeleton: Skeleton3D, clip: String, speed: float, length: float) -> Array:
 	animator.play(clip, 0.0)
 	animator.pause()
 	var before: Array = []
-	var worst := 0.0
+	var worst: Array = []
+	worst.resize(skeleton.get_bone_count())
+	worst.fill(0.0)
 	var at := 0.0
 	while true:
 		animator.seek(minf(at, length), true)
 		var now := _rotations(skeleton)
 		if not before.is_empty():
-			worst = maxf(worst, _step(before, now))
+			for i in now.size():
+				worst[i] = maxf(worst[i], (before[i] as Quaternion).angle_to(now[i]))
 		before = now
 		if at >= length:
 			break
