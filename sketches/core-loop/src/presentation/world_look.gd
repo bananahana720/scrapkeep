@@ -46,9 +46,9 @@ const ROWS := {
 # What a park map changes in its world's row (stage_look with a "park_" map id). The park's Dig
 # stages are an open pit at noon and a sinkhole open to the sky (PARK.md), not the legacy
 # underground dome: the Spillway's open-sky fill, no volumetric murk (the weather rows carry the air),
-# and the fog set per map from the standing weather row (park_fog), so it does not pop when that row lands.
+# and the fog density set per map from the standing weather row (park_fog), so it does not pop when that row lands.
 const PARK_ROWS := {
-	2: {"sky": "hdri", "fill": 0.5, "fill_pitch": -50.0, "fill_color": Color("a3c4e6"), "air": {}},
+	2: {"sky": "hdri", "fill": ROWS[1]["fill"], "fill_pitch": ROWS[1]["fill_pitch"], "fill_color": ROWS[1]["fill_color"], "air": {}},
 }
 const PARK_DIR := "res://src/world/park/"
 static var _park_fog := {}
@@ -179,7 +179,7 @@ static func stage_look(stage: int, world: int, map := "") -> Dictionary:
 	if not park.is_empty():
 		look.merge(park, true)
 		look["fog"] = park_fog(map)
-		base = look
+		base = look.duplicate()
 	look.merge(time_row(stage), true)
 	if not time_id(stage).is_empty():
 		look["time"] = time_id(stage)
