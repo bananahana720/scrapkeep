@@ -411,9 +411,8 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 			_add(out, id, "music_layer", "music_layer %s is no %s* WORLD_ROWS kind" % [str(layer), MUSIC_LAYER_PREFIX])
 	# Optional: "hide_on" names a natural collapse or impact event row (EventKinds.HIDING_NATURAL_KINDS) with an
 	# effect.swap. event_ground.gd hides the row's placed node (and so its collider) while that swap is live and shows
-	# it again on revert. Industrial and ancient
-	# events re-prepare on every activation, cave entries never reach apply_swap and the other natural kinds build no
-	# swap entry, so the contract stops short of them.
+	# it again on revert. Industrial and ancient events re-prepare on every activation, cave entries never reach
+	# apply_swap and the other natural kinds build no swap entry, so the contract stops short of them.
 	if row.has("hide_on"):
 		var event_id = row["hide_on"]
 		if not event_id is String or not events.has(event_id):
