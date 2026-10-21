@@ -19,8 +19,8 @@ const FEET := 0.54
 const SEAT := Vector3.ZERO
 const FALLBACK := "big_cheer"
 # Seconds one clip segment cross-fades into the next; the last fades out to rest in OUT_BLEND (a
-# move's "out" overrides it). 0.25 s is 15 frames at 60 fps. Entries that carry their own blend, and
-# Tarn's return starting at 0.86 with the hop back (it was 0.88), were found by sweeping against
+# move's "out" overrides it). 0.25 s (15 frames at 60 fps) is chosen and kept where the sweep below passed. Entries that carry their own blend, and
+# Tarn's return starting at 0.86 with the hop back (it was 0.88), and Cannon's 0.5 s out, were found by sweeping against
 # pilot_antics_test's per-bone limit: a fade of a pose gap D rad peaks near 1.5 * D / frames.
 const BLEND := 0.25
 const OUT_BLEND := 0.25

@@ -124,7 +124,12 @@ const REST_TOLERANCE := 0.02
 const BONE_FLOOR := 0.02
 const SLACK := 1.1
 const FRAME := 1.0 / 60.0
-const POP := 0.436  # 25 degrees
+# Chosen: a 25 degree planted pop, 6.6x and 19.9x the per-bone limit on the two control bones.
+const POP := 0.436
+# Chosen: the most new clip samples (cache misses) one apply() may take. Measured 3 at worst on all six bits (fixed grid
+# plus caches); without the grid cache a late frame seeks one sample per grid point already passed,
+# up to the bit's 224 frames.
+const SEEK_CAP := 4
 
 
 func _stream(antic, animator: AnimationPlayer, pilot: Node3D, id: String) -> void:
@@ -153,8 +158,8 @@ func _stream(antic, animator: AnimationPlayer, pilot: Node3D, id: String) -> voi
 	animator.stop()
 	skeleton.reset_bone_poses()
 	_t.check("%s never holds a clip past its end:%s" % [id, past_end], past_end == "")
-	# _lift tells a flipped sign from a real turn by the dot product between frames, which is
-	# only sound under a quarter turn of quaternion angle, i.e. PI/2 of rotation, per frame.
+	# _lift tells a flipped sign from a real turn by the sign of the dot product between frames,
+	# which is sound for any turn under PI per frame. PI/2 is chosen as half that, for margin.
 	_t.check("%s clips turn no bone PI/2 in a frame (%.3f rad, %s)" % [id, peak, peak_clip], peak < PI / 2.0)
 	var run := _scan(antic, skeleton, limits, rest)
 	_t.check("%s ends the bit at rest (%.3f rad off)" % [id, _step(rest, run.last)], _step(rest, run.last) <= REST_TOLERANCE)
@@ -174,6 +179,8 @@ func _stream(antic, animator: AnimationPlayer, pilot: Node3D, id: String) -> voi
 	elif id == "tally":
 		plant = {"bone": skeleton.find_bone("hand.L"), "frame": int((0.2 * PilotAntics.LENGTH + 0.1) / FRAME)}
 	if not plant.is_empty():
+		_t.check("%s has the control bone" % id, plant.bone >= 0)
+	if not plant.is_empty() and plant.bone >= 0:
 		skeleton.reset_bone_poses()
 		var pop := _scan(antic, skeleton, limits, rest, plant)
 		_t.check("%s pop check fires on a planted 25 degree pop on %s (%.2f of limit %.3f)" \
@@ -216,8 +223,8 @@ func _bone_like(skeleton: Skeleton3D, part: String) -> int:
 	return 0
 
 
-# Work per apply() at every 1/60 s frame of the bit: the clip samples it seeks (new entries in
-# the antic's _memo). Counted, not timed: the sketch lint forbids wall-clock reads in tests, and
+# Work per apply() at every 1/60 s frame of the bit: the new clip samples it takes (cache misses,
+# new entries in the antic's _memo; the one seek that poses a cached plain-path frame is not counted). Counted, not timed: the sketch lint forbids wall-clock reads in tests, and
 # headless time on this box says nothing about a player's machine (frame cost is NEEDS: gpu).
 func _cost(antic, id: String) -> void:
 	var seeks: Array = []
@@ -231,8 +238,9 @@ func _cost(antic, id: String) -> void:
 	var sorted := seeks.duplicate()
 	sorted.sort()
 	var worst: int = sorted[sorted.size() - 1]
-	print("COST %s apply() max %d clip seeks at t %.3f, p95 %d, median %d (%d frames)" % [id, worst,
+	print("COST %s apply() max %d new clip samples at t %.3f, p95 %d, median %d (%d frames)" % [id, worst,
 		at[seeks.find(worst)], sorted[int(sorted.size() * 0.95)], sorted[sorted.size() / 2], sorted.size()])
+	_t.check("%s apply() takes at most %d new clip samples a frame (%d)" % [id, SEEK_CAP, worst], worst <= SEEK_CAP)
 	antic.apply(1.0)
 
 
