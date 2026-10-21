@@ -71,6 +71,8 @@ const SHARE_BAND := [0.60, 0.80]
 # may sit under the band (Tarn measured 0.573 full, 0.568 alpha) (coordinator ruling (a), 22:54Z).
 # The random bot keeps the band.
 const GREEDY_SHARE_FLOOR := 0.55
+# 2026-10-21 (ruling 11, #149 6274605849): the full list's bar is at most 0.50, as the alpha list's;
+# a stacked-out swap (Parts._swap_stacked_out) lands Tarn on exactly 0.50 with Tally and the Cannon.
 const OVERLAP_MAX := 0.5
 const MOVEMENT_MAX := 0.15
 const TOP := 10
@@ -305,7 +307,7 @@ func _judge(label: String, stats: Dictionary, strict: bool) -> void:
 			var overlap := float(shared.size()) / float(maxi(1, mini(a.size(), b.size())))
 			var detail := "%.2f (%d of %d: %s)" % [overlap, shared.size(), mini(a.size(), b.size()), shared]
 			if strict:
-				_t.check("%s top-%d overlap %s and %s under 50%%" % [label, TOP, PILOTS[i], PILOTS[j]], overlap < OVERLAP_MAX, detail)
+				_t.check("%s top-%d overlap %s and %s at most %.2f" % [label, TOP, PILOTS[i], PILOTS[j], OVERLAP_MAX], overlap <= OVERLAP_MAX + 0.0001, detail)
 			else:
 				_t.check("%s top-%d overlap %s and %s at most %.2f" % [label, TOP, PILOTS[i], PILOTS[j], ALPHA_OVERLAP_MAX],
 					overlap <= ALPHA_OVERLAP_MAX + 0.0001, detail)
