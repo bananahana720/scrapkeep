@@ -85,16 +85,12 @@ const PRESSURE := [
 # Warden-fight packs (ruling 15 c'): drawn instead of "packs" while a Warden core is live, damage
 # dealers that close on a ball lapping the 6 m core ring. Stage 1 has none. Keep identical in park_defs.gd.
 const WARDEN_PACKS_REACH := [
-	{"id": "warden_press", "kinds": ["chaser", "chaser", "plated_brute"]},
-	{"id": "warden_lob", "kinds": ["chaser", "bola_thrower", "lobber"]},
-]
-const WARDEN_PACKS_DIG := [
-	{"id": "warden_bore", "kinds": ["burrower", "burrower", "drill_crew"]},
-	{"id": "warden_jaw", "kinds": ["drill_crew", "pit_jaw", "burrower"]},
+	{"id": "warden_press", "kinds": ["chaser", "plated_brute"]},
+	{"id": "warden_lob", "kinds": ["bola_thrower", "lobber"]},
 ]
 const WARDEN_PACKS_HIGHDRAFT := [
-	{"id": "warden_dive", "kinds": ["kite_drone", "kite_drone", "ballast_heavy"]},
-	{"id": "warden_cut", "kinds": ["line_cutter", "kite_drone", "line_cutter"]},
+	{"id": "warden_dive", "kinds": ["kite_drone", "kite_drone"]},
+	{"id": "warden_cut", "kinds": ["kite_drone", "kite_drone"]},
 ]
 
 const DEFS := [
@@ -121,7 +117,7 @@ const DEFS := [
 			{"id": "dig_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "drill_crew"]},
 			{"id": "dig_shift", "kinds": ["foreman", "drill_crew", "drill_crew", "burrower"]},
 			{"id": "dig_jaws", "kinds": ["pit_jaw", "pit_jaw", "burrower"]},
-		], "elite": DIG_ELITE, "warden_packs": WARDEN_PACKS_DIG, "warden_variant": ""},
+		], "elite": DIG_ELITE, "warden_variant": ""},
 	{"stage": 4, "world": 2, "music": {"theme": 1, "ace": "dig_deep"}, "warden_family": "swarm", "name": "Dig: the deep works", "map": "park_sinkhole", "threat": 1.2,
 		"unlock_base": 4, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
@@ -133,7 +129,7 @@ const DEFS := [
 			{"id": "deep_crew", "kinds": ["drill_crew", "drill_crew", "lamp_swarm", "prop_crew"]},
 			{"id": "deep_shift", "kinds": ["foreman", "drill_crew", "drill_crew", "burrower"]},
 			{"id": "deep_jaws", "kinds": ["pit_jaw", "pit_jaw", "drill_crew", "burrower"]},
-		], "elite": DIG_ELITE, "warden_packs": WARDEN_PACKS_DIG, "warden_variant": "brood"},
+		], "elite": DIG_ELITE, "warden_variant": "brood"},
 	{"stage": 5, "world": 3, "music": {"theme": 2, "ace": "highdraft"}, "warden_family": "mind", "name": "Highdraft", "map": "park_islands", "threat": 1.3,
 		"unlock_base": 2, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,

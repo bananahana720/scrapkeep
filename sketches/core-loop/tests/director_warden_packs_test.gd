@@ -12,6 +12,8 @@ const ParkDefs := preload("res://src/core/park_defs.gd")
 # the warden_core setter and "flip clears the cached pack" fails.
 
 const DRAWS := 40
+# Swarm Wardens (stages 3 and 4) keep the stage packs, so only the reactor and mind stages carry warden_packs.
+const STAGES := [2, 5, 6]
 const CORE := Vector2(100.0, 40.0)
 
 var _t := T.new("director_warden_packs_test")
@@ -49,22 +51,22 @@ func _draw_ids(d, count: int) -> Array:
 
 
 func _tables_match() -> void:
-	for stage in range(2, 7):
+	for stage in STAGES:
 		var a: Array = AlphaDefs.of(stage).get("warden_packs", [])
 		var p: Array = ParkDefs.of(stage).get("warden_packs", [])
-		_t.check("stage %d warden_packs present" % stage, a.size() == 2, str(a.size()))
+		_t.check("stage %d warden_packs present" % stage, a.size() == 2 and a.all(func(p: Dictionary) -> bool: return p["kinds"].size() == 2), str(a))
 		_t.check("stage %d alpha and park warden_packs identical" % stage, a == p)
 
 
 func _spawnable() -> void:
-	for stage in range(2, 7):
+	for stage in STAGES:
 		for pack in AlphaDefs.of(stage).get("warden_packs", []):
 			for kind in pack["kinds"]:
 				_t.check("stage %d %s: %s is a director kind" % [stage, pack["id"], kind], kind in Director.KIND_NAMES)
 
 
 func _swap_only_while_live() -> void:
-	for stage in range(2, 7):
+	for stage in STAGES:
 		var row: Dictionary = AlphaDefs.of(stage)
 		var warden_ids := _ids(row["warden_packs"])
 		var d = _director(row, 7 + stage)
@@ -97,7 +99,7 @@ func _flip_resets_cache() -> void:
 
 
 func _unchanged_without_warden() -> void:
-	for stage in range(2, 7):
+	for stage in STAGES:
 		var row: Dictionary = AlphaDefs.of(stage)
 		var keyless: Dictionary = row.duplicate()
 		keyless.erase("warden_packs")
@@ -124,7 +126,10 @@ func _swarm_keeps_out() -> void:
 	_t.check("swarm Warden live: no core", Director.contact_core(true, 3, "swarm", at) == Vector2.INF)
 	_t.check("no fight: no core", Director.contact_core(false, 3, "reactor", at) == Vector2.INF)
 	_t.check("stage 1: no core", Director.contact_core(true, 1, "reactor", at) == Vector2.INF)
-	var row: Dictionary = AlphaDefs.of(3)
+	for stage in [3, 4]:
+		_t.check("stage %d: swarm stage carries no warden_packs" % stage, not AlphaDefs.of(stage).has("warden_packs") and not ParkDefs.of(stage).has("warden_packs"))
+	var row: Dictionary = AlphaDefs.of(3).duplicate()
+	row["warden_packs"] = AlphaDefs.of(2)["warden_packs"]
 	var d = _director(row, 9)
 	d.warden_core = Director.contact_core(true, 3, "swarm", at)
 	var ids := _draw_ids(d, DRAWS)
