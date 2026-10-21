@@ -645,6 +645,16 @@ func _lane_mask_shape(map, graph, mask: Dictionary) -> void:
 						if Scatter._in_lane(mask, graph.px[end], graph.pz[end]):
 							marked += 1
 	t.check("a routed kicker's ground ends are in the mask (dam shelf_lip)", ends > 0 and marked == ends, "%d of %d" % [marked, ends])
+	# LINE alone may already cover those points, so the ride edges and chords must add cells of their own.
+	var bare: Dictionary = map.park.duplicate(false)
+	bare["routes"] = []
+	var line_only := ParkMap.build_lane_mask(graph, bare, "park_dam")
+	var line_cells := 0
+	var all_cells := 0
+	for n in (mask["cells"] as PackedByteArray).size():
+		line_cells += int(line_only["cells"][n] != 0)
+		all_cells += int(mask["cells"][n] != 0)
+	t.check("routed ride edges and chords add cells beyond LINE (dam, routes emptied)", all_cells > line_cells, "%d vs %d" % [all_cells, line_cells])
 
 
 # A square routed row adds nothing beyond LINE and the ride edges: park_sinkhole's cinder_cone, taken out of the park
