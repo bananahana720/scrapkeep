@@ -216,22 +216,23 @@ func _bone_like(skeleton: Skeleton3D, part: String) -> int:
 	return 0
 
 
-# Wall time of apply() at every 1/60 s frame of the bit, headless. Relative numbers only: this
-# box is not a player's machine and there is no renderer here.
+# Work per apply() at every 1/60 s frame of the bit: the clip samples it seeks (new entries in
+# the antic's _memo). Counted, not timed: the sketch lint forbids wall-clock reads in tests, and
+# headless time on this box says nothing about a player's machine (frame cost is NEEDS: gpu).
 func _cost(antic, id: String) -> void:
-	var times: Array = []
+	var seeks: Array = []
 	var at: Array = []
 	for k in int(floor(PilotAntics.LENGTH / FRAME)) + 1:
 		var t := float(k) * FRAME / PilotAntics.LENGTH
-		var begun := Time.get_ticks_usec()
+		var before: int = antic._memo.size()
 		antic.apply(t)
-		times.append(Time.get_ticks_usec() - begun)
+		seeks.append(antic._memo.size() - before)
 		at.append(t)
-	var sorted := times.duplicate()
+	var sorted := seeks.duplicate()
 	sorted.sort()
 	var worst: int = sorted[sorted.size() - 1]
-	print("COST %s apply() max %d us at t %.3f, p95 %d us, median %d us (%d frames)" % [id, worst,
-		at[times.find(worst)], sorted[int(sorted.size() * 0.95)], sorted[sorted.size() / 2], sorted.size()])
+	print("COST %s apply() max %d clip seeks at t %.3f, p95 %d, median %d (%d frames)" % [id, worst,
+		at[seeks.find(worst)], sorted[int(sorted.size() * 0.95)], sorted[sorted.size() / 2], sorted.size()])
 	antic.apply(1.0)
 
 
