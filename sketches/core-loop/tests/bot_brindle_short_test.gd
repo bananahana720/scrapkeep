@@ -82,6 +82,14 @@ func _physics_process(delta: float) -> bool:
 			_boss = _game.ctx.boss
 			_boss.jump_to_phase(int(c["phase"]))
 			_chunks = int(_boss.chunks_left())
+			# A bare ball has not grown. A run's first discovery of each codex entry pays a scrap
+			# burst (flow.discovery_burst, 40 at stage 2), and which tricks a bot happens to set off
+			# first moves with any physics change: Tally's set piece and its cash-in paid 80 and took
+			# the peak from 1.30 to 1.36 once spawned enemies entered physics where they stand
+			# (scrapkeep#231). So the phase starts with the run's codex already seen; kill scrap
+			# still counts.
+			for id in _game.ctx.codex._entries:
+				_game.ctx.codex._run_seen[id] = true
 		else:
 			_driver.tick(delta)
 		return false
