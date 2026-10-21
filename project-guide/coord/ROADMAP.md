@@ -42,11 +42,14 @@ The total is $20 to $100. It fits only if each wave's first half runs on the wee
 Each one would need Andrew's call. None is cut yet.
 
 1. **Ambient life (critters and locals).** It adds feel and is not on the 11-area acceptance list. Cost to the sitting: parks feel emptier.
-2. **HARD tier replay ladder.** Keep the skill bands, which are needed for boss tuning, and drop the ladder. Cost: no post-win difficulty climb.
-3. **Dressing beyond hero props.** One prop kit per park instead of 12 or more kinds. Cost: less lived-in parks.
-4. **Gamepad polish.** Already optional per ruling.
+2. **Dressing beyond hero props.** One prop kit per park instead of 12 or more kinds. Cost: less lived-in parks.
+3. **Gamepad polish.** Already optional per ruling.
 
-The following do not cut, because the acceptance gate needs them: zero placeholders, frame times in budget, the AppImage launch, all six dressed parks playable title to end, and the 81 radio takes.
+The following do not cut, because the acceptance gate needs them: zero placeholders, frame times in budget, the AppImage launch, all six dressed parks playable title to end, and the 81 radio takes. Since 21 Oct the difficulty work does not cut either: the skill-band targets in all six worlds and the HARD tier replay ladder. Andrew said the game must reach the challenge he expects. Challenge A owns worlds 1 to 3, and Challenge B owns worlds 4 to 6 and the ladder.
+
+## Lanes added 21 Oct (Andrew: keep churning, split by discipline, CPU work on the cloud)
+
+Cloud: Lighting, Grading, Animation, Effects, Challenge B, and Modeling (the wave 17 World Blender session, reused). PC: a render bench on the RTX 3060 for art stills, while the 4080 keeps perf. That makes 11 cloud lanes, over the old cap of 7, on Andrew's 21 Oct words. Pacing still applies: weekly % used stays at or below the share of the week gone plus 10 points. At 22:00Z, 3 hours in, it was 6%.
 
 ## Fixed dates
 
