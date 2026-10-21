@@ -82,13 +82,13 @@ static func rows() -> Array:
 	var r: Array = []
 	# Brindle: boss.gd commits each hazard and publishes boss_attack_telegraphed that frame.
 	r.append(["Brindle", "crane sweep (phase 1)", _hz(["rules", "CRANE_WARN"]), ["rules", "CRANE_SWEEP"], null, null, "zero",
-		{"id": "B01", "type": "WAVE", "event": true}, "Steals a share of mass (STEAL_SHARE, clamped) and tugs; no hull damage. Period CRANE_PERIOD."])
+		{"id": "B01", "type": "WAVE", "event": true}, "Steals a share of mass (STEAL_SHARE, clamped) and tugs; no hull damage. Period CRANE_PERIOD.", {"dial": ["brindle", 1]}])
 	r.append(["Brindle", "slag ring (phase 2)", _hz(["rules", "SLAG_WARN"]), ["rules", "SLAG_LIVE"], ["rules", "SLAG_GAP"], ["rules", "QUENCH_SECONDS"], ["rules", "SLAG_DAMAGE"],
-		{"id": "B02", "type": "INSTANT", "event": true}, "Punish is the quench the pilot lays (QUENCH_SECONDS), not a boss opening. Recovery is the gap before the next ring."])
+		{"id": "B02", "type": "INSTANT", "event": true}, "Punish is the quench the pilot lays (QUENCH_SECONDS), not a boss opening. Recovery is the gap before the next ring.", {"dial": ["brindle", 2]}])
 	r.append(["Brindle", "drone pad (phase 2)", _hz(["rules", "DRONE_WARN"]), ["rules", "DRONE_WAIT"], null, null, "zero",
 		{"id": "B04", "none": "amber marker is not hostile, so it joins no threat group and plays no threat sound"}, "A marker for the lobber drone's arrival; the drone's shell is the lobber row."])
 	r.append(["Brindle", "charge (phase 3)", _hz(["rules", "CHARGE_WARN"]), {"text": "length / %s + 0.2 (geometry)", "args": [["rules", "CHARGE_SPEED"]]}, ["rules", "CHARGE_RECOVER"], ["rules", "WALL_STUN"], ["rules", "CHARGE_DAMAGE"],
-		{"id": "B03", "type": "LANE", "event": true}, "Active is travel over the committed length plus 0.2 s (boss.gd _commit_charge). Punish is the wall stun when the nose buries; CHARGE_REST follows."])
+		{"id": "B03", "type": "LANE", "event": true}, "Active is travel over the committed length plus 0.2 s (boss.gd _commit_charge). Punish is the wall stun when the nose buries; CHARGE_REST follows.", {"dial": ["brindle", 3]}])
 	r.append(["Brindle", "eject (finale)", ["rules", "EJECT_FLIGHT"], null, null, null, "zero",
 		{"id": "B05", "none": "published as boss_attack_telegraphed only; no hazard is laid"}, "A 2.5 s arc to the ring then a chase; no direct damage."])
 	# The Waking: three Dig families, then the floor drop.
@@ -449,6 +449,16 @@ func build() -> Dictionary:
 		var damage := 0.0 if r[6] is String else value(r[6])
 		var snd := sound(r[7])
 		var extra: Dictionary = r[9] if r.size() > 9 else {}
+		# The tuned values the game ships: a row with a "dial" [boss, phase] reads its tell and damage through
+		# ChallengeDials, the same calls the boss makes, so the lethal check below judges the effective numbers.
+		var base_tell := tell
+		var base_damage := damage
+		if extra.has("dial"):
+			var boss := String(extra["dial"][0])
+			if not is_nan(tell):
+				tell = ChallengeDials.tell(boss, tell, value(["hazard", "MIN_WARN"]))
+			if damage > 0.0:
+				damage = ChallengeDials.damage(boss, damage, int(extra["dial"][1]))
 		var refs: Array = []
 		for i in range(2, 7):
 			if not (r[i] is String):
@@ -462,7 +472,7 @@ func build() -> Dictionary:
 		var row := {
 			"group": r[0], "attack": r[1],
 			"tell_s": _num(tell), "active_s": _num(active), "recovery_s": _num(recovery), "punish_s": _num(punish),
-			"damage": damage,
+			"damage": damage, "tell_base_s": _num(base_tell), "damage_base": base_damage,
 			"pct_hull_min": _num(damage / head["hull_max"] * 100.0) if damage > 0.0 else 0.0,
 			"pct_hull_max": _num(damage / head["hull_min"] * 100.0) if damage > 0.0 else 0.0,
 			"hits_to_kill": int(ceil(head["hull_min"] / damage - EPS)) if damage > 0.0 else null,

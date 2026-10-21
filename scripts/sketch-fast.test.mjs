@@ -86,6 +86,7 @@ test("unit_suite always runs, park data pulls every park test, and movement chan
     "tests/park_park_dam_test.gd": "",
     "tests/park_park_pit_test.gd": "",
     "tests/park_bake_fresh_test.gd": "",
+    "tests/park_props_test.gd": "",
     "tests/posture_bands_reactor_test.gd": "",
     "tests/alpha_posture_bands_test.gd": "",
   });
@@ -93,6 +94,10 @@ test("unit_suite always runs, park data pulls every park test, and movement chan
   assert.equal(picked.get("tests/unit_suite_test.gd").tier, 0);
   assert.ok(picked.has("tests/park_park_pit_test.gd"));
   assert.ok(picked.has("tests/park_bake_fresh_test.gd"));
+  assert.ok(picked.has("tests/park_props_test.gd"));
+  for (const rel of ["src/presentation/park_props.gd", "assets/models/park/props/bench.glb", "src/world/park/props/park_dam.json"]) {
+    assert.ok(selectTests(index, [rel]).picked.has("tests/park_props_test.gd"), rel);
+  }
   assert.deepEqual([...shards.keys()].sort(), ["tests/alpha_posture_bands_test.gd", "tests/posture_bands_reactor_test.gd"]);
   assert.equal(picked.has("tests/posture_bands_reactor_test.gd"), false);
   assert.deepEqual(unmapped, ["src/movement/ball.gd"]);
