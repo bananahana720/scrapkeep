@@ -1296,6 +1296,7 @@ func _watch_relay(s: Site, delta: float, ball: Vector3) -> void:
 	if outcome == "won":
 		s.stake_post.spent = true
 		ctx.events.event_ended.emit(s.id, "won")
+		ctx.events.relay_stake_paid.emit(int(relay.stakes))
 		_finish(s, s.global_position + Vector3(0.0, 0.0, 6.0))
 	elif outcome == "lost":
 		ctx.events.event_ended.emit(s.id, "lost")
