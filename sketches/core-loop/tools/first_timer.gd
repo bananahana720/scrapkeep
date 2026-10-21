@@ -5,6 +5,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
+const Interactables := preload("res://src/world/interactables.gd")
 
 # The FIRST-TIMER probe (alpha-status ambition map, unit 8). One headless bot run on a fresh
 # profile records the first tick each teaching surface is on screen and the first tick each
@@ -20,6 +21,9 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 # Teach ids, with the tick they first show (tick -1 is before play):
 #   prompt:<verb>     a key prompt drew (events.prompt_shown: ui/key_glyphs.gd, ui/first_steps.gd)
 #   objective:<id>    the objective plate's row (hud.objective_reading, core/objectives.gd)
+#   prompt:tip_<id>   a first-meet field tip told (ui/field_tips.gd: grip, jam, cast, radio, stake,
+#                     companion, active), emitted as prompt_shown once its toast has been on
+#                     screen MIN_SHOWN
 #   screen:dead       the SCRAPPED screen and its Retry key
 #   card:<slot>       a key on the chosen pilot's class card (ui/class_kit.gd card_keys)
 # Need ids: the first tick of the bus fact or flow state that names them (NEEDS below).
@@ -37,12 +41,24 @@ const NEEDS := {
 	"slam_used": "first slam",
 	"bay_entered": "first time in Moss's bay",
 	"scrap_collected": "first scrap",
+	"grip_used": "first wall carved at the fast tier",
+	"jam_hit": "first jam from a field's pulse",
+	"cast_started": "first slot cast with a cast time",
+	"radio_live": "pilot radio dial first on screen",
+	"relay_met": "first relay stake post within reach",
+	"companion_full": "SPIL-9's halo gauge first full",
+	"active_racked": "first active racked on F",
 }
+# How near a relay's stake post counts as met: E's lock reach, the first place E can take the stake.
+# The post's tip (field_tips.gd) goes up from 30 m and counts once on screen MIN_SHOWN, so a slow
+# approach is taught first and a fast one may reach the post first (the audit says late).
+const RELAY_MET := Interactables.LOCK_REACH
 
 var _settings := {}
 var _game
 var _driver
 var _tick := 0
+var _jams := 0
 var _stage := 0
 var _taught := {}
 var _needed := {}
@@ -106,6 +122,8 @@ func _start() -> void:
 	events.slammed.connect(func(_at: Vector3, _strength: float, _flatness: float): _need("slam_used"))
 	events.bay_entered.connect(func(_banked: float): _need("bay_entered"))
 	events.scrap_collected.connect(func(_amount: int, _at: Vector3, _total: int): _need("scrap_collected"))
+	if _game.get("combat") != null:
+		_game.combat.companion_assist_full.connect(func(): _need("companion_full"))
 	_driver = BotDriver.new(_game, String(_settings.get("policy", "skipper")), run_seed)
 	if _settings.has("pilot"):
 		_driver.class_index = BotDriver.class_index_for(run_seed, String(_settings["pilot"]))
@@ -138,6 +156,31 @@ func _watch() -> void:
 		var id: String = _game.hud.objective_reading()["id"]
 		if id != "":
 			_teach("objective:" + id)
+		_watch_fields()
+
+
+# The field-rule needs, read off the live state a tick at a time (not off field_tips.gd's own rules).
+func _watch_fields() -> void:
+	var player = _game.player
+	if player.state.carving:
+		_need("grip_used")
+	if player.abilities.jams > _jams:
+		_need("jam_hit")
+	_jams = player.abilities.jams
+	if player.abilities.casting != "":
+		_need("cast_started")
+	var deck = _game.get("radio_deck")
+	if deck != null and deck.dial != null and deck.dial.is_visible_in_tree():
+		_need("radio_live")
+	var interact = _game.ctx.root.get_node_or_null("Interact")
+	if interact != null:
+		for device in interact.devices:
+			if is_instance_valid(device) and device.has_method("terms") and "relay" in device and device.relay != null \
+					and device.reach_point().distance_to(player.ball_position()) <= RELAY_MET:
+				_need("relay_met")
+	var rack = _game.combat.get("actives") if _game.get("combat") != null else null
+	if rack != null and rack.active_id != "":
+		_need("active_racked")
 
 
 func _teach(id: String) -> void:

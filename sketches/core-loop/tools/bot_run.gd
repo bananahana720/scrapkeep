@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const BotProfile := preload("res://tools/bot_profile.gd")
 const BotAudit := preload("res://tools/bot_audit.gd")
+const SkillBand := preload("res://tools/skill_band.gd")
 const BotOptions := preload("res://tools/bot_options.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
@@ -19,10 +20,14 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd \
 #     -- --out=<dir> --policy=skipper|completionist|random [--seeds=1,2,3,4] [--trace=1]
-#     [--pilot=<class id>]
+#     [--pilot=<class id>] [--band=novice|learner|expert] [--attempt=N]
 #
 # --pilot plays that ClassDef id (pylon_engineer, runner_gunner, demolitions_caster, tarn,
 # tally, remembered_cannon) whatever the seed; without it the seed picks seed % roster size.
+#
+# --band plays the driver at a skill band (tools/skill_band.gd: slower reactions, missed tells and
+# a smaller kit below Expert); --attempt=N (default 1) is the attempt number a Learner has reached.
+# Without --band the driver is unchanged. Multi-seed children are forwarded every flag.
 #
 # --trace prints the bot's goal and the ball every two game seconds. --trace-ticks=1
 # writes full-precision pre-driver snapshots to trace-<seed>.ndjson. --ticks=N caps a
@@ -126,6 +131,14 @@ func _initialize() -> void:
 		return
 	if BotOptions.relay_stake(_settings) < 0:
 		printerr("bot_run: --relay-stake=%s is out of range; use a whole number 0 to 4" % _settings["relay-stake"])
+		quit(2)
+		return
+	if _settings.has("band") and String(_settings["band"]) not in SkillBand.BANDS:
+		printerr("bot_run: unknown --band=%s; use novice, learner or expert" % _settings["band"])
+		quit(2)
+		return
+	if _settings.has("attempt") and int(_settings["attempt"]) < 1:
+		printerr("bot_run: --attempt must be 1 or more")
 		quit(2)
 		return
 	_out = _absolute(_settings["out"])
@@ -247,6 +260,8 @@ func _physics_process(delta: float) -> bool:
 		_driver = BotDriver.new(_game, String(_settings.get("policy", "skipper")), _seeds[_index])
 		if _settings.has("pilot"):
 			_driver.class_index = BotDriver.class_index_for(_seeds[_index], String(_settings["pilot"]))
+		if _settings.has("band"):
+			_driver.band = SkillBand.make(String(_settings["band"]), int(_settings.get("attempt", "1")), _seeds[_index])
 		_driver.trace = _settings.has("trace")
 		if _driver.trace:
 			_game.events.world_entered.connect(func(world: int): print("  trace world %d entered" % world))

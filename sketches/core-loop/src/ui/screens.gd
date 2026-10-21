@@ -169,6 +169,7 @@ func setup(game_ref) -> void:
 	_content.add_child(_footer)
 	prologue_enabled = not game.bot_driven
 	_help = HelpPage.new()
+	_help.tuning = game.tuning
 	_help.visible = false
 	_help.back.pressed.connect(_press.bind("key_h"))
 	_content.add_child(_help)

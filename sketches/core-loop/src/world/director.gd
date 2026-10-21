@@ -146,6 +146,9 @@ var spike := false
 # The stage's threat: more enemies alive, arriving sooner, and base enemy HP.
 var threat := 1.0
 var world := 1
+# The run stage (1 to 6) of the row given to use_row(), for the per-stage challenge dials; 0 before
+# a row, which reads every by_stage dial as 1.0.
+var dial_stage := 0
 var dial_steps := StageDefs.RUN_TIER_DIAL_STEPS
 # From run.heft_class(): a heavier ball earns a bigger crowd to roll through.
 var heft_class := 1
@@ -240,16 +243,16 @@ func rest_scale() -> float:
 
 
 func cap() -> int:
-	var base := int(round((6 + effective_tier() * 2) * threat * scale("pack_scale")))
+	var base := int(round((6 + effective_tier() * 2) * threat * scale("pack_scale") * ChallengeDials.stage_mult("mobs.pack_scale", dial_stage)))
 	if run_tier() != 0:
-		base = int(round((6 + effective_tier() * 2) * threat * scale("pack_scale") * RunTier.row(run_tier()).cap_weight))
+		base = int(round((6 + effective_tier() * 2) * threat * scale("pack_scale") * ChallengeDials.stage_mult("mobs.pack_scale", dial_stage) * RunTier.row(run_tier()).cap_weight))
 	return mini(HARD_CAP, base + HEFT_CAP_STEP * maxi(0, heft_class - 1))
 
 
 func interval() -> float:
 	if run_tier() == 0:
-		return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale"))
-	return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale") * RunTier.row(run_tier()).interval_weight)
+		return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale") * ChallengeDials.stage_mult("mobs.interval_scale", dial_stage))
+	return maxf(MIN_INTERVAL, (BASE_INTERVAL - effective_tier() * 0.7) / threat * scale("interval_scale") * ChallengeDials.stage_mult("mobs.interval_scale", dial_stage) * RunTier.row(run_tier()).interval_weight)
 
 
 func lobber_share() -> float:
@@ -383,7 +386,7 @@ func _draw_credit() -> Dictionary:
 	if not elite.is_empty() and elite_arrival > 0:
 		if _arrivals_made + 1 == elite_arrival:
 			return elite
-		if _arrivals_made + 1 > elite_arrival and not _last_was_elite and _rng.randf() < ELITE_REPEAT * scale("elite_rate"):
+		if _arrivals_made + 1 > elite_arrival and not _last_was_elite and _rng.randf() < ELITE_REPEAT * scale("elite_rate") * ChallengeDials.stage_mult("mobs.elite_rate", dial_stage):
 			return elite
 	var choices: Array = authored
 	var weights := {}
@@ -508,7 +511,7 @@ func _draw_authored() -> Dictionary:
 	if not elite.is_empty() and elite_arrival > 0 and _arrivals_made + 1 == elite_arrival:
 		return elite
 	if not elite.is_empty() and elite_arrival > 0 and _arrivals_made + 1 > elite_arrival \
-			and not _last_was_elite and _rng.randf() < ELITE_REPEAT * scale("elite_rate"):
+			and not _last_was_elite and _rng.randf() < ELITE_REPEAT * scale("elite_rate") * ChallengeDials.stage_mult("mobs.elite_rate", dial_stage):
 		return elite
 	var pool := authored.filter(func(p: Dictionary) -> bool: return p["id"] != _last_pack_id)
 	if pool.is_empty():
@@ -552,6 +555,7 @@ func use_row(row: Dictionary, breath_option := "", tier_reader := Callable()) ->
 		set_run_tier_reader(tier_reader)
 	row = RunTier.stage_row(row, run_tier())
 	world = int(row.get("world", 1))
+	dial_stage = int(row.get("stage", 0))
 	_row = {}
 	if row.has("unlock_base") and row.has("ancient"):
 		_row = {"unlock_base": int(row["unlock_base"]), "ancient": String(row["ancient"])}
@@ -812,7 +816,7 @@ func reinforcement_weight() -> float:
 	var ticks := effective_tier()
 	if ticks <= 0:
 		return 0.0
-	return clampf(PACK_PER_TICK * scale("pack_scale") * ticks + PAST_BREAK_STEP * past_break_ticks(), 0.0, PACK_MAX)
+	return clampf(PACK_PER_TICK * scale("pack_scale") * ChallengeDials.stage_mult("mobs.pack_scale", dial_stage) * ticks + PAST_BREAK_STEP * past_break_ticks(), 0.0, PACK_MAX)
 
 
 func unlocked_counters() -> Array:

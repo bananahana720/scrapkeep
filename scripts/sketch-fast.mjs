@@ -41,7 +41,7 @@ export const PATH_RULES = [
   {
     name: "park data",
     match: /(^|\/)parks?\/|(^|\/)park_[^/]*$/,
-    tests: ["tests/park_park_*", "tests/park_bake_fresh_test.gd", "tests/park_graph_test.gd", "tests/park_dressing_pin_test.gd"],
+    tests: ["tests/park_park_*", "tests/park_bake_fresh_test.gd", "tests/park_graph_test.gd", "tests/park_dressing_pin_test.gd", "tests/park_props_test.gd"],
   },
 ];
 // Long whole-run proofs a change class must face; they go to the bot shards even past the budget.
