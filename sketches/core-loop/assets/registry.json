@@ -8683,6 +8683,66 @@
    }
   },
   {
+   "id": "isle_ride_apron",
+   "path": "res://assets/models/park/isle_ride_apron.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's stamped ground, which stays the only collider; no -col mesh)",
+   "provenance": {
+    "recipe": "tools/blender/park/isle_ride_pieces.py",
+    "notes": "isle_apron's flush ground sheet, conformed to the park_islands bake (park_islands placeholder burn-down); every vertex 0.04 to 0.08 m over ground.bin, none inside an event's footprint; built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "isle_ride_fan",
+   "path": "res://assets/models/park/isle_ride_fan.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's stamped ground, which stays the only collider; no -col mesh)",
+   "provenance": {
+    "recipe": "tools/blender/park/isle_ride_pieces.py",
+    "notes": "fan_band's flush ground sheet, conformed to the park_islands bake (park_islands placeholder burn-down); every vertex 0.04 to 0.08 m over ground.bin, none inside an event's footprint; built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "isle_ride_net_carve",
+   "path": "res://assets/models/park/isle_ride_net_carve.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's stamped ground, which stays the only collider; no -col mesh)",
+   "provenance": {
+    "recipe": "tools/blender/park/isle_ride_pieces.py",
+    "notes": "net_carve's flush ground sheet, conformed to the park_islands bake (park_islands placeholder burn-down); every vertex 0.04 to 0.08 m over ground.bin, none inside an event's footprint; built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "isle_ride_slickrock",
+   "path": "res://assets/models/park/isle_ride_slickrock.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's stamped ground, which stays the only collider; no -col mesh)",
+   "provenance": {
+    "recipe": "tools/blender/park/isle_ride_pieces.py",
+    "notes": "slickrock_run's flush ground sheet, conformed to the park_islands bake (park_islands placeholder burn-down); every vertex 0.04 to 0.08 m over ground.bin, none inside an event's footprint; built by this script, no external mesh"
+   }
+  },
+  {
+   "id": "isle_ride_wash_west",
+   "path": "res://assets/models/park/isle_ride_wash_west.glb",
+   "class": "landform",
+   "origin": "centre",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's stamped ground, which stays the only collider; no -col mesh)",
+   "provenance": {
+    "recipe": "tools/blender/park/isle_ride_pieces.py",
+    "notes": "cloud_wash_west's flush ground sheet, conformed to the park_islands bake (park_islands placeholder burn-down); every vertex 0.04 to 0.08 m over ground.bin, none inside an event's footprint; built by this script, no external mesh"
+   }
+  },
+  {
    "id": "isle_tram_head",
    "path": "res://assets/models/park/isle_tram_head.glb",
    "class": "landform",
@@ -13947,6 +14007,11 @@
   "island_small_sandstone-strata.webp",
   "isle_adit_portal",
   "isle_keel_rib",
+  "isle_ride_apron",
+  "isle_ride_fan",
+  "isle_ride_net_carve",
+  "isle_ride_slickrock",
+  "isle_ride_wash_west",
   "isle_tram_head",
   "kicker_wedge",
   "kicker_wedge_detail1",
