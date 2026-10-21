@@ -114,6 +114,7 @@ func find(id: String) -> bool:
 	if _audio != null:
 		_audio.play("bay_jukebox", 0.0, 1.0, "UI")
 	radio.premiere(id)
+	game.events.radio_take_found.emit(id, String(t["tier"]), String(t["found"].get("on", "")))
 	_save()
 	_plan_now()
 	return true

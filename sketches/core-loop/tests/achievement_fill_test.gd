@@ -10,7 +10,8 @@ const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
 const PilotBlocks := preload("res://tests/support/pilot_blocks.gd")
 
-# Every achievement pays a reward, and every earned paint has exactly one earner (alpha wave 14).
+# Every achievement pays a reward (except the record-only rows named in Achievements.RECORD_ONLY, wave 20),
+# and every earned paint has exactly one earner (alpha wave 14).
 #   F1 the table sizes: 16 achievements, 18 paints, no empty reward;
 #   F2 waking_stilled: only the world-two boss earns it, and it pays Dig Ochre;
 #   F3 highdraft_reached: entering world three earns it, and it pays Highdraft Sky;
@@ -71,11 +72,12 @@ func _tables() -> void:
 	# which every kit merge broke (49 and 47 on 19b3656). 2026-10-17 (first-win secrets, Andrew's Q8):
 	# six hidden secret_paint_* rows and their six paints join the shared rows; with the crown pass's
 	# isles_rescued (Tally's sky-islands rescue) that makes 50 and 47 (43 and 41 before).
-	_t.eq("F1 fifty achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 50)
+	# 2026-10-19 (w20 ACHIEVEMENTS-REFRESH): six reward-free content-family records (RECORD_ONLY); was 50.
+	_t.eq("F1 fifty-six achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 56)
 	_t.eq("F1 forty-seven cosmetics", PilotBlocks.shared(Cosmetics.ids(), "res://src/core/cosmetics.gd").size(), 47)
 	# A pilot's "or" rule row (class_def.gd unlock) pays that pilot through the class row, so its own reward is empty.
 	var or_rows := ClassDef.all().filter(func(d): return d.unlock.has("or")).map(func(d): return ClassDef.unlock_row(String(d.unlock["or"])))
-	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty() and not or_rows.has(id))
+	var empty := Achievements.ids().filter(func(id): return Achievements.reward_of(id).is_empty() and not or_rows.has(id) and not Achievements.RECORD_ONLY.has(id))
 	_t.eq("F1 no achievement has an empty reward", empty, [])
 
 

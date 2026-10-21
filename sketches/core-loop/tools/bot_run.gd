@@ -6,6 +6,7 @@ const BotProfile := preload("res://tools/bot_profile.gd")
 const BotAudit := preload("res://tools/bot_audit.gd")
 const BotOptions := preload("res://tools/bot_options.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
+const Terrain := preload("res://src/world/terrain.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
 const SignalTimer := preload("res://tools/signal_timer.gd")
 const PhysicsProbe := preload("res://tools/physics_probe.gd")
@@ -52,6 +53,9 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 # passes --table=park, which a launched game plays):
 # --wall-clock=1 leaves SimClock on the wall clock, as in a played game: park stages build on
 # worker threads and hit-stop reads real time, so the seed no longer replays exactly.
+# --threaded-stages=1 builds park stages on worker threads as --wall-clock=1 does, but keeps the
+# hit-stop clock on physics ticks: for frame captures, where the next stage's one-frame build on
+# the engage frame is a bot artifact. The seed no longer replays exactly.
 # --frame-log=1 writes frames-<seed>.ndjson: each frame's wall ms, stage, flow state and the
 # Performance process, physics, node, resource and object counts.
 # --entry-profile=1 writes entry-<seed>.ndjson: every GameEvents handler's main-thread ms by
@@ -103,6 +107,7 @@ var _physics_probe
 func _initialize() -> void:
 	_settings = _parse(OS.get_cmdline_user_args())
 	SimClock.ticks = _settings.get("wall-clock", "0") != "1"
+	Terrain.threaded_in_bot_runs = _settings.get("threaded-stages", "0") == "1"
 	_bot_options = BotOptions.new(_settings, self)
 	BotProfile.enabled = _settings.get("bot-profile", "0") == "1"
 	if BotProfile.enabled:
