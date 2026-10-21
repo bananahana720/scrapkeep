@@ -8,6 +8,11 @@ const Roster := preload("res://src/combat/roster.gd")
 const Director := preload("res://src/world/director.gd")
 const Parts := preload("res://src/build/parts.gd")
 const TelegraphScript := preload("res://src/combat/telegraph.gd")
+const ParkDefs := preload("res://src/core/park_defs.gd")
+const AlphaDefs := preload("res://src/core/alpha_defs.gd")
+const PerchPoints := preload("res://src/world/perch_points.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
 
 # MATCHUP LAB (design-v3/ENEMY-PRIORITY.md lever 7; usage and definitions in tools/matchup_lab.md).
 # A headless duel table: each pilot alone against each enemy kind, N seeds, recording time to
@@ -17,7 +22,9 @@ const TelegraphScript := preload("res://src/combat/telegraph.gd")
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/matchup_lab.gd \
 #     -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65]
-#     [--pilots=a,b] [--kinds=a,b] [--answer=1] [--give=<part id>]
+#     [--pilots=a,b] [--kinds=a,b] [--answer=1] [--give=<part id>] [--range=18] [--idle=0]
+#   pack mode: -- --out=<abs ndjson> --packs=<id,id|all> [--table=park|alpha] [--range=12] ...
+#   perched duel: -- --out=<abs ndjson> --kinds=dispatcher --perched=park,mast [--range=15] ...
 #   or: -- --from=<a.ndjson,b.ndjson> [--out=<heatmap txt>]   re-render saved rows
 #
 # Each duel is its own process (a bot run repeats exactly only in a fresh one). The harness is
@@ -46,15 +53,50 @@ const MIN_ROW_S := 1.0
 const WIN_SHARE := 0.5
 const DODGE := 0.65
 const DUEL_RANGE := 18.0
-const SETTLE_S := 1.0
+# Pack mode (--packs): a named authored pack is the opponent, closer in, spaced like Director._place_pack.
+const PACK_RANGE := 12.0
+# Beacon seconds no duel can reach (the stage's own is 25).
+const BEACON_PIN_S := 1.0e9
+const PACK_PREFIX := "pack:"
+const TABLES := ["park", "alpha"]
+# Perched duel (--perched): the Dispatcher on a park perch top (`park`) or on its own mast (`mast`).
+# The row key is `dispatcher@<mode>`. Both modes play the park table so the two rows share a map.
+const PERCHED_KIND := "dispatcher"
+const PERCHED_MODES := ["park", "mast"]
+const PERCH_SEP := "@"
+const PERCH_RANGE := 15.0
+# A relocated ball stands on ground this flat (height spread over STANDOFF_PROBES) and this clear of landforms.
+const STANDOFF_FLAT_M := 0.12
+# Probe offsets: the spot and 8 points on a 4 m ring, so a gentle slope (which rolls a resting ball) fails.
+const STANDOFF_PROBES := [Vector2(0, 0), Vector2(4, 0), Vector2(-4, 0), Vector2(0, 4), Vector2(0, -4), Vector2(2.8, 2.8), Vector2(-2.8, 2.8), Vector2(2.8, -2.8), Vector2(-2.8, -2.8)]
+const STANDOFF_CLEAR_M := 3.0
+const STANDOFF_BEARINGS := 16
+const STANDOFF_STEP_M := 5.0
+const STANDOFF_REACH_M := 15.0
+# A duel starts at rest: the ball must be grounded and slower than REST_SPEED for SETTLE_S in a
+# row. If it has not come to rest REST_WAIT_S after first landing, it is set to rest where it
+# stands (the player's own set_velocity_now); at SETTLE_MAX_S the duel starts regardless.
+const SETTLE_S := 2.0
+const REST_SPEED := 0.5
+const REST_WAIT_S := 6.0
+const SETTLE_MAX_S := 12.0
+# The hull pool a duel gives the ball, so a lost duel is measured by hull_lost and does not end the run.
+const HULL_POOL := 99999.0
 const WALL_LIMIT_S := 600.0
+# Outcomes that measured nothing: left out of the table and the answer arm.
+const NO_RESULT := ["no_result", "wall_timeout", "stage_changed", "no_perch", "not_perched"]
 const PENDING := "answer: pending (no answers tags on this base)"
 
 
 class DuelDriver extends BotDriver:
 	var enemy: Node3D = null
 	var adds: Array = []
+	# Pack mode: the pack's members; the driver fights the nearest live one (or add).
+	var members: Array = []
 	var dodge := 1.0
+	# --idle=1: the pilot stands still and never fights, so the lab's damage path can be shown
+	# (the planted positive control in tests/matchup_lab_test.gd).
+	var idle := false
 	var _dodge_rng := RandomNumberGenerator.new()
 	var _answers := {}
 
@@ -70,6 +112,9 @@ class DuelDriver extends BotDriver:
 		return out
 
 	func _roam(delta: float) -> void:
+		if idle:
+			source.hold = {}
+			return
 		var target := pick()
 		if target == null:
 			source.hold = {}
@@ -82,6 +127,10 @@ class DuelDriver extends BotDriver:
 		var ball: Vector3 = game.player.ball_position()
 		var best: Node3D = null
 		var best_d := INF
+		for member in members:
+			if alive(member) and ball.distance_to(member.global_position) < best_d:
+				best_d = ball.distance_to(member.global_position)
+				best = member
 		for add in adds:
 			if alive(add) and ball.distance_to(add.global_position) < best_d:
 				best_d = ball.distance_to(add.global_position)
@@ -109,6 +158,7 @@ var _sweep_dir := ""
 var _phase := 1
 var _pilots: Array = []
 var _kinds: Array = []
+var _table_id := "park"
 var _seeds: Array[int] = []
 var _answer_plan := {}
 var _out_rows: Array = []
@@ -122,6 +172,9 @@ var _driver
 var _spawned := false
 var _start_s := 0.0
 var _grounded_s := 0.0
+var _landed_s := 0.0
+var _rest_forced := false
+var _settle_s := 0.0
 var _hull_start := 0.0
 var _taken := 0.0
 var _hits := 0
@@ -129,10 +182,39 @@ var _kill_s := -1.0
 var _kill_dist := -1.0
 var _last_dist := -1.0
 var _enemy_set := false
+var _pack_mode := false
+var _pack_id := ""
+var _pack_members: Array = []
+var _pack_spawned := 0
+var _pack_skipped: Array = []
+var _collecting := false
+var _first_down_s := -1.0
+var _spawn_stage := 0
+var _stage_changed := false
 var _warnings := 0
 var _joined := 0
 var _scrap_serial := 0
 var _counter_serial := 0
+# Perched duel state (child).
+var _perched := ""
+var _perch_chosen := false
+var _early := ""
+var _relocated := false
+var _perch_top := Vector3.INF
+var _perch_source := "unknown"
+var _perch_base_rise := -1.0
+var _standoff_m := -1.0
+var _standoff_ok := false
+var _standoff_clear := false
+var _standoff_at := Vector2.ZERO
+var _held := false
+var _perched_under := false
+var _perch_over_ball := -1.0
+var _ball_to_perch := -1.0
+var _perch_rise := -1.0
+var _mast_built := false
+var _snap := {}
+var _dispatcher_down_s := -1.0
 
 
 func _initialize() -> void:
@@ -147,13 +229,39 @@ func _initialize() -> void:
 		_render_from()
 		return
 	if not _settings.has("out"):
-		printerr("matchup_lab: usage: -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65] [--pilots=a,b] [--kinds=a,b] [--answer=1]")
+		printerr("matchup_lab: usage: -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65] [--pilots=a,b] [--kinds=a,b | --packs=a,b|all --table=park|alpha | --kinds=dispatcher --perched=park,mast] [--answer=1]")
 		quit(2)
 		return
 	for part in String(_settings.get("seeds", "1,2,3,4,5,6,7,8")).split(",", false):
 		_seeds.append(int(part))
 	_pilots = Array(String(_settings.get("pilots", ",".join(PILOTS))).split(",", false))
 	_kinds = Array(String(_settings.get("kinds", ",".join(default_kinds()))).split(",", false))
+	if _settings.has("packs"):
+		_table_id = String(_settings.get("table", "park"))
+		if _table_id not in TABLES:
+			printerr("matchup_lab: unknown --table %s (park or alpha)" % _table_id)
+			quit(2)
+			return
+		var ids: Array = pack_ids(_table_id) if String(_settings["packs"]) == "all" else Array(String(_settings["packs"]).split(",", false))
+		_kinds = []
+		for id in ids:
+			if pack_kinds(_table_id, id).is_empty():
+				printerr("matchup_lab: unknown pack %s on the %s table" % [id, _table_id])
+				quit(2)
+				return
+			if PACK_PREFIX + id not in _kinds:
+				_kinds.append(PACK_PREFIX + id)
+		if _kinds.is_empty():
+			printerr("matchup_lab: --packs named no pack")
+			quit(2)
+			return
+	if _settings.has("perched"):
+		var plan := perched_plan(String(_settings["perched"]), _kinds, _settings.has("packs"))
+		if not plan["ok"]:
+			printerr("matchup_lab: %s" % plan["error"])
+			quit(2)
+			return
+		_kinds = plan["kinds"]
 	for p in _pilots:
 		if BotDriver.class_index_for(0, p) < 0:
 			printerr("matchup_lab: unknown pilot %s" % p)
@@ -193,6 +301,14 @@ func _render_from() -> void:
 			if r["kind"] == k:
 				kinds.append(k)
 				break
+	for r in rows:
+		var k := String(r["kind"])
+		if k.begins_with(PACK_PREFIX) and k not in kinds:
+			kinds.append(k)
+	for r in rows:
+		var k := String(r["kind"])
+		if PERCH_SEP in k and k not in kinds:
+			kinds.append(k)
 	var table := build_table(rows, pilots, kinds, _cap)
 	var lines := heatmap(table)
 	lines.append_array(gate_lines(table, grade_answers(table, [], {}, _cap, 0)))
@@ -228,6 +344,98 @@ static func default_kinds() -> Array:
 	return out
 
 
+# ---- Pack tables ------------------------------------------------------------------------
+
+static func _defs(table: String) -> Array:
+	return AlphaDefs.DEFS if table == "alpha" else ParkDefs.DEFS
+
+
+# Every distinct pack id on a table, in first-seen stage order: each stage's `packs`, then its `elite`.
+static func pack_ids(table: String) -> Array:
+	var out := []
+	for def in _defs(table):
+		var entries: Array = (def.get("packs", []) as Array).duplicate()
+		if def.get("elite") is Dictionary:
+			entries.append(def["elite"])
+		for pack in entries:
+			if String(pack["id"]) not in out:
+				out.append(String(pack["id"]))
+	return out
+
+
+# The member kinds of a pack id: the first stage that names it wins (empty for an unknown id).
+static func pack_kinds(table: String, id: String) -> Array:
+	for def in _defs(table):
+		var entries: Array = (def.get("packs", []) as Array).duplicate()
+		if def.get("elite") is Dictionary:
+			entries.append(def["elite"])
+		for pack in entries:
+			if String(pack["id"]) == id:
+				return (pack["kinds"] as Array).duplicate()
+	return []
+
+
+# The axis a pack's answer must carry: the most common ANSWER_AXIS among its members, ties by AXES order.
+static func pack_axis(members: Array) -> String:
+	var counts := {}
+	for k in members:
+		var axis: String = ANSWER_AXIS.get(k, "range")
+		counts[axis] = int(counts.get(axis, 0)) + 1
+	var best := "range"
+	var best_n := 0
+	for axis in AXES:
+		if int(counts.get(axis, 0)) > best_n:
+			best_n = int(counts[axis])
+			best = axis
+	return best
+
+
+# The 9-char heatmap row label: kinds as is, a pack row `+<id>`.
+static func row_label(kind: String) -> String:
+	if PERCH_SEP in kind:
+		var parts := kind.split(PERCH_SEP)
+		return (parts[0].substr(0, 4) + PERCH_SEP + parts[1].substr(0, 4)).substr(0, 9)
+	var text := "+" + kind.substr(PACK_PREFIX.length()) if kind.begins_with(PACK_PREFIX) else kind
+	return text.substr(0, 9)
+
+
+# ---- Perched duel ------------------------------------------------------------------------
+
+# The row key of a perched duel: `dispatcher@park` or `dispatcher@mast`.
+static func perched_key(mode: String) -> String:
+	return PERCHED_KIND + PERCH_SEP + mode
+
+
+# The mode of a perched row key, or "" for any other kind.
+static func perched_mode(kind: String) -> String:
+	if not kind.begins_with(PERCHED_KIND + PERCH_SEP):
+		return ""
+	var mode := kind.substr(PERCHED_KIND.length() + 1)
+	return mode if mode in PERCHED_MODES else ""
+
+
+# --perched=park,mast against the --kinds list: valid only with dispatcher as the one duel kind
+# (and not in pack mode). {ok, kinds (the row keys, in the order given), error}.
+static func perched_plan(modes_text: String, kinds: Array, packs: bool) -> Dictionary:
+	var modes := Array(modes_text.split(",", false))
+	var bad := {"ok": false, "kinds": [], "error": ""}
+	if modes.is_empty():
+		bad["error"] = "--perched named no mode (park or mast)"
+		return bad
+	for mode in modes:
+		if mode not in PERCHED_MODES:
+			bad["error"] = "unknown --perched mode %s (park or mast)" % mode
+			return bad
+	if packs or kinds != [PERCHED_KIND]:
+		bad["error"] = "--perched needs --kinds=dispatcher and no --packs"
+		return bad
+	var keys := []
+	for mode in modes:
+		if perched_key(mode) not in keys:
+			keys.append(perched_key(mode))
+	return {"ok": true, "kinds": keys, "error": ""}
+
+
 # ---- Answer lookup ----------------------------------------------------------------------
 
 # The `answers` tags of a part row, as an array; empty when the field is absent.
@@ -248,8 +456,8 @@ static func answers_field_exists(rows: Dictionary) -> bool:
 
 # The part to hand `pilot` for `kind`'s axis: the first id (sorted) whose answers carry the
 # axis and whose class gate admits the pilot. "" when none, or when the field does not exist.
-static func answer_item(rows: Dictionary, pilot: String, kind: String) -> String:
-	var axis: String = ANSWER_AXIS.get(kind, "range")
+static func answer_item(rows: Dictionary, pilot: String, kind: String, members := []) -> String:
+	var axis: String = pack_axis(members) if kind.begins_with(PACK_PREFIX) else ANSWER_AXIS.get(kind, "range")
 	var ids := rows.keys()
 	ids.sort()
 	for id in ids:
@@ -288,19 +496,40 @@ func _process(_delta: float) -> bool:
 	return false
 
 
+# The child's command line. A pack child names its pack list with --pack-table; a bare --table= here
+# would be read by Game._chosen_table() and move the duel onto a park or alpha stage map, away from
+# the legacy map the kind duels play.
+static func child_args(job: Dictionary, cap: float, settings: Dictionary, table_id: String, home: String, project_path: String) -> PackedStringArray:
+	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", project_path,
+			"--script", "res://tools/matchup_lab.gd", "--", "--pilot=" + String(job["pilot"]), "--kind=" + String(job["kind"]),
+			"--run-seed=%d" % job["seed"], "--cap=%s" % cap, "--result=" + home.path_join("result.json"), "--home=" + home])
+	if String(job["give"]) != "":
+		args.append("--give=" + String(job["give"]))
+	if settings.has("dodge"):
+		args.append("--dodge=%s" % settings["dodge"])
+	if settings.has("range"):
+		args.append("--range=%s" % settings["range"])
+	if settings.has("idle"):
+		args.append("--idle=%s" % settings["idle"])
+	if String(job["kind"]).begins_with(PACK_PREFIX):
+		args.append("--pack-table=" + table_id)
+	if perched_mode(String(job["kind"])) != "":
+		args.append("--perched=" + perched_mode(String(job["kind"])))
+	for key in BotOptions.FAST_FLAGS:
+		if settings.has(key):
+			args.append("--%s=%s" % [key, settings[key]])
+	return args
+
+
+# A pack whose members were all skipped (or never spawned) measured nothing: no_result, left out of the table.
+static func pack_outcome(spawned: int, outcome: String) -> String:
+	return "no_result" if spawned <= 0 else outcome
+
+
 func _spawn(job: Dictionary) -> void:
 	var home := _sweep_dir.path_join("job%d_%d" % [_phase, job["n"]])
 	DirAccess.make_dir_recursive_absolute(home)
-	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
-			"--script", "res://tools/matchup_lab.gd", "--", "--pilot=" + String(job["pilot"]), "--kind=" + String(job["kind"]),
-			"--run-seed=%d" % job["seed"], "--cap=%s" % _cap, "--result=" + home.path_join("result.json"), "--home=" + home])
-	if String(job["give"]) != "":
-		args.append("--give=" + String(job["give"]))
-	if _settings.has("dodge"):
-		args.append("--dodge=%s" % _settings["dodge"])
-	for key in BotOptions.FAST_FLAGS:
-		if _settings.has(key):
-			args.append("--%s=%s" % [key, _settings[key]])
+	var args := child_args(job, _cap, _settings, _table_id, home, ProjectSettings.globalize_path("res://"))
 	var previous := {}
 	for kind in ["DATA", "CONFIG", "CACHE"]:
 		var key: String = "XDG_%s_HOME" % kind
@@ -328,6 +557,11 @@ func _reap(run: Dictionary, timed_out: bool) -> void:
 	if not result is Dictionary:
 		result = {"pilot": run["pilot"], "kind": run["kind"], "seed": run["seed"], "give": run["give"],
 				"outcome": "wall_timeout" if timed_out else "no_result", "ttk_s": -1.0, "hull_lost": 0.0}
+	if String(run["kind"]).begins_with(PACK_PREFIX):
+		result["pack"] = String(run["kind"]).substr(PACK_PREFIX.length())
+		result["table"] = _table_id
+		if not result.has("members"):
+			result["members"] = pack_kinds(_table_id, result["pack"])
 	result["phase"] = "answer" if _phase == 2 else "baseline"
 	(_answer_results if _phase == 2 else _results).append(result)
 	_remove_tree(home)
@@ -356,7 +590,7 @@ func _begin_answer_phase() -> bool:
 	var field := answers_field_exists(rows)
 	var n := _total
 	for cell in table["hard"]:
-		var item := answer_item(rows, cell["pilot"], cell["kind"]) if field else ""
+		var item := answer_item(rows, cell["pilot"], cell["kind"], _row_members(cell["kind"])) if field else ""
 		_answer_plan[cell_key(cell["pilot"], cell["kind"])] = item
 		if item == "":
 			continue
@@ -364,6 +598,10 @@ func _begin_answer_phase() -> bool:
 			_queue.append({"n": n, "pilot": cell["pilot"], "kind": cell["kind"], "seed": seed_value, "give": item})
 			n += 1
 	return not _queue.is_empty()
+
+
+func _row_members(kind: String) -> Array:
+	return pack_kinds(_table_id, kind.substr(PACK_PREFIX.length())) if kind.begins_with(PACK_PREFIX) else []
 
 
 func _finish() -> void:
@@ -403,7 +641,7 @@ static func build_table(results: Array, pilots: Array, kinds: Array, cap: float)
 			cells[cell_key(pilot, kind)] = {"pilot": pilot, "kind": kind, "ttk": [], "hull": [], "kills": 0, "runs": 0, "hard": false}
 	for r in results:
 		var key := cell_key(String(r.get("pilot", "")), String(r.get("kind", "")))
-		if not cells.has(key) or String(r.get("outcome", "")) in ["no_result", "wall_timeout"]:
+		if not cells.has(key) or String(r.get("outcome", "")) in NO_RESULT:
 			continue
 		var cell: Dictionary = cells[key]
 		var killed := float(r.get("ttk_s", -1.0)) >= 0.0
@@ -468,7 +706,7 @@ static func grade_answers(table: Dictionary, answer_results: Array, plan: Dictio
 		var kills := 0
 		var runs := 0
 		for r in answer_results:
-			if cell_key(String(r.get("pilot", "")), String(r.get("kind", ""))) != key or String(r.get("outcome", "")) in ["no_result", "wall_timeout"]:
+			if cell_key(String(r.get("pilot", "")), String(r.get("kind", ""))) != key or String(r.get("outcome", "")) in NO_RESULT:
 				continue
 			runs += 1
 			if float(r.get("ttk_s", -1.0)) >= 0.0:
@@ -506,7 +744,7 @@ static func heatmap(table: Dictionary) -> Array:
 	lines.append("matchup_lab: heatmap, median seconds to kill (cap %.0fs); * = HARD (over %.1fx row median); med hull lost in brackets" % [table["cap"], HARD_RATIO])
 	lines.append(head)
 	for kind in table["kinds"]:
-		var line := "%-9s%5.1f" % [String(kind).substr(0, 9), table["row_median"][kind]]
+		var line := "%-9s%5.1f" % [row_label(String(kind)), table["row_median"][kind]]
 		for pilot in pilots:
 			var cell: Dictionary = table["cells"][cell_key(pilot, kind)]
 			if cell["runs"] == 0:
@@ -548,6 +786,14 @@ static func _answer_gate_word(answers: Dictionary) -> String:
 	return "PASS"
 
 
+# True when any row shows the enemy hurting the ball: a hit, damage taken or hull lost.
+static func damage_seen(rows: Array) -> bool:
+	for r in rows:
+		if float(r.get("hits", 0.0)) > 0.0 or float(r.get("damage_taken", 0.0)) > 0.0 or float(r.get("hull_lost", 0.0)) > 0.0:
+			return true
+	return false
+
+
 static func median(values: Array) -> float:
 	if values.is_empty():
 		return 0.0
@@ -567,10 +813,27 @@ func _begin_child() -> void:
 		quit(2)
 		return
 	_run_seed = int(_settings.get("run-seed", "1"))
+	if PERCH_SEP in _kind:
+		_perched = perched_mode(_kind)
+		if _perched == "" or String(_settings.get("perched", _perched)) != _perched:
+			printerr("matchup_lab: a perched child needs --kind=dispatcher@park|mast and a matching --perched")
+			quit(2)
+			return
+	if _kind.begins_with(PACK_PREFIX):
+		_pack_mode = true
+		_pack_id = _kind.substr(PACK_PREFIX.length())
+		_table_id = String(_settings.get("pack-table", "park"))
+		_pack_members = pack_kinds(_table_id, _pack_id)
+		if _pack_members.is_empty():
+			printerr("matchup_lab: unknown pack %s on the %s table" % [_pack_id, _table_id])
+			quit(2)
+			return
 	node_added.connect(_on_node_added)
 	seed(_run_seed)
 	_game = Game.new()
 	_game.test_mode = true
+	if _perched != "":
+		_game.table = "park"
 	root.add_child(_game)
 
 
@@ -599,8 +862,14 @@ func _physics_process(delta: float) -> bool:
 		_driver = DuelDriver.new(_game, "brawler", _run_seed)
 		_driver.class_index = BotDriver.class_index_for(0, _pilot)
 		_driver.dodge = float(_settings.get("dodge", str(DODGE)))
+		_driver.idle = String(_settings.get("idle", "0")) == "1"
 		_driver._dodge_rng.seed = hash(["dodge", _run_seed])
 		_driver.stage_limit = INF
+		# The calm map's beacon charges from the start (the ball begins in its ring; ctx.calm does not
+		# stop beacon.advance) and a full charge runs gates, launch and the next stage, which frees the
+		# duel's enemies (a long pack duel read `killed` with ttk -1 and duel_s -10.61). Pin the
+		# beacon out of reach so no duel can leave its stage; the stage guard below is the backstop.
+		_game.flow.beacon_seconds_override = BEACON_PIN_S
 		_game.presentation.audio.bake_now()
 		_bot_options.apply_audio(_game.presentation.audio)
 		_game.events.player_hit.connect(func(amount: float, _source: String):
@@ -612,21 +881,68 @@ func _physics_process(delta: float) -> bool:
 		_driver.start()
 		return false
 	if not _spawned:
-		_grounded_s = _grounded_s + delta if _game.flow.in_stage() and _game.player.state.grounded else 0.0
-		if _grounded_s >= SETTLE_S:
+		if _relocated:
+			# Perched duel: hold the relocated ball at its standoff (no level spot exists near the tops), zeroing
+			# its velocity every frame with the player's own set_velocity_now until the spawn.
+			_game.player.set_velocity_now(Vector3.ZERO, "matchup_lab")
+			_held = true
+		var down: bool = _game.flow.in_stage() and _game.player.state.grounded
+		if down:
+			_landed_s += delta
+		var slow: bool = _game.player.planar_velocity().length() < REST_SPEED
+		_grounded_s = _grounded_s + delta if down and slow else 0.0
+		if _landed_s >= REST_WAIT_S and not _rest_forced and _grounded_s <= 0.0:
+			_rest_forced = true
+			_game.player.set_velocity_now(Vector3.ZERO, "matchup_lab")
+		if _grounded_s >= SETTLE_S or _landed_s >= SETTLE_MAX_S:
+			if _perched != "" and not _perch_chosen:
+				_perch_chosen = true
+				var step := _choose_perch()
+				if step == "no_perch" or step == "not_perched":
+					# Ended before the spawn: nothing to fight. not_perched keeps its diagnostic fields on the row.
+					_early = step
+					_end_early()
+					return false
+				if step == "relocated":
+					# The ball was moved: rest-start again from its new spot before spawning.
+					_grounded_s = 0.0
+					_landed_s = 0.0
+					_rest_forced = false
+					_driver.source.hold = {}
+					return false
+			_settle_s = _landed_s
 			_spawn_duel()
+			if _early != "":
+				_end_early()
+				return false
 		else:
 			_driver.source.hold = {}
 			return false
 	var over: bool = _driver.tick(delta)
 	var t := _duel_s()
+	if not over and (_game.run.stage != _spawn_stage or _game.run.stage_time < _start_s):
+		# The stage changed under the duel: its enemies were freed, so "cleared" would be false.
+		_stage_changed = true
+		_driver._end("stage_changed")
+		over = true
 	# A freed object compares equal to null, so the duel's own flag says the enemy was ever set.
-	if _kill_s < 0.0 and _enemy_set and not DuelDriver.alive(_driver.enemy):
+	if _pack_mode:
+		if _first_down_s < 0.0 and _enemy_set:
+			for m in _driver.members:
+				if not DuelDriver.alive(m):
+					_first_down_s = t
+					break
+	elif _kill_s < 0.0 and _enemy_set and not DuelDriver.alive(_driver.enemy):
 		_kill_s = t
 		_kill_dist = _last_dist
-	elif DuelDriver.alive(_driver.enemy):
+		_dispatcher_down_s = t
+	elif not _pack_mode and DuelDriver.alive(_driver.enemy):
 		_last_dist = _game.player.ball_position().distance_to(_driver.enemy.global_position)
+		if _perched != "":
+			_snapshot(_driver.enemy)
 	if not over and _cleared():
+		if _pack_mode and _kill_s < 0.0:
+			_kill_s = t
 		_driver._end("killed")
 		over = true
 	if not over and t >= _cap:
@@ -644,6 +960,10 @@ func _physics_process(delta: float) -> bool:
 
 func _on_enemy_spawned(enemy: Node3D, _k: String) -> void:
 	# spawn_enemy emits this before it returns, so the duel's own enemy is not yet assigned.
+	if _collecting:
+		if enemy not in _driver.members:
+			_driver.members.append(enemy)
+		return
 	if _spawned and _enemy_set and enemy != _driver.enemy and enemy not in _driver.adds:
 		_driver.adds.append(enemy)
 		_joined += 1
@@ -660,13 +980,23 @@ func _cleared() -> bool:
 	for add in _driver.adds:
 		if DuelDriver.alive(add):
 			return false
+	for m in _driver.members:
+		if DuelDriver.alive(m):
+			return false
 	return not DuelDriver.alive(_driver.enemy)
 
 
 func _spawn_duel() -> void:
 	_spawned = true
 	_start_s = _game.run.stage_time
+	_spawn_stage = _game.run.stage
 	_hull_start = float(_game.run.metrics["hull_damage"])
+	# ctx.calm gates the Warden, the director's packs, flood and event pushes, and hit knockback in
+	# combat; it does not gate an enemy's attack or the damage it deals (combat._on_player_hit
+	# always calls run.damage). Turning it off here let director packs join and swamp the duel
+	# (joined 12 to 27 in a 40 s duel), so it stays on and the enemy under test attacks under the
+	# game's own rules. The hull is deep enough to measure a lost duel.
+	_game.run.set_max_hp(HULL_POOL)
 	if _settings.has("give"):
 		_game.run.add_part(String(_settings["give"]), "matchup_lab")
 	var ball: Vector3 = _game.player.ball_position()
@@ -674,18 +1004,226 @@ func _spawn_duel() -> void:
 	forward = Vector3(forward.x, 0.0, forward.z).normalized()
 	if forward.length() < 0.5:
 		forward = Vector3.FORWARD
-	var flat: Vector3 = ball + forward * DUEL_RANGE
+	var flat: Vector3 = ball + forward * float(_settings.get("range", str(PACK_RANGE if _pack_mode else DUEL_RANGE)))
+	if _pack_mode:
+		_spawn_pack(flat, forward)
+		return
+	if _perched != "":
+		_spawn_perched(ball)
+		return
 	_driver.enemy = _game.combat.spawn_enemy(_kind, _game.ctx.terrain.drop_point(flat.x, flat.z, 1.8))
+	_enemy_set = true
+
+
+# ---- Perched duel (child) ---------------------------------------------------------------
+
+# Every perch top of the stage with its source: [{"top": Vector3, "source": "post"|"ledge"}], sorted
+# by position. These are the two sources PerchPoints has on this base (anchor-field post tops and
+# landform tops), filtered by the same validity rules pick() applies. Empty off a ParkMap.
+func _all_tops() -> Array:
+	var terrain = _game.ctx.terrain
+	var m = terrain.map()
+	if not (m is ParkMap) or not m.ok:
+		return []
+	var ground := Callable(terrain, "height")
+	var blocked := PerchPoints.blockers(m.park)
+	var out := []
+	for top: Vector3 in PerchPoints.derive(m.park, ground):
+		if PerchPoints.valid(top, ground, blocked):
+			out.append({"top": top, "source": "post", "base_rise": top.y - float(ground.call(top.x, top.z))})
+	for ledge: Vector4 in PerchPoints.ledges(m.park, ground):
+		if PerchPoints.valid_ledge(ledge):
+			out.append({"top": Vector3(ledge.x, ledge.y, ledge.z), "source": "ledge", "base_rise": ledge.y - ledge.w})
+	return out
+
+
+# Records the early outcome (_early), frees the game (and any enemy already spawned) and quits.
+func _end_early() -> void:
+	_done = true
+	_record()
+	_game.free()
+	_game = null
+	quit(0)
+
+
+# Chooses this seed's perch top. "near": the terrain's own pick was within reach of the resting ball.
+# "relocated": none was, so the ball was moved to a standoff `--range` from a top chosen from the whole
+# stage by the seed. "no_perch": the stage has no top at all. "not_perched": the standoff (or the resting
+# ball) is not clear of landforms or not PERCH_MIN under the top, or no spot lies in the play rect; the duel
+# ends before the spawn.
+func _choose_perch() -> String:
+	var terrain = _game.ctx.terrain
+	var tops := _all_tops()
+	var ball: Vector3 = _game.player.ball_position()
+	var salt := hash(["perch", _run_seed])
+	var near: Vector3 = terrain.perch_near(ball, salt)
+	if near.x != INF:
+		_perch_top = near
+	elif tops.is_empty():
+		return "no_perch"
+	else:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(["perch_pick", _run_seed])
+		_perch_top = tops[rng.randi_range(0, tops.size() - 1)]["top"]
+		var found := _standoff(_perch_top, float(_settings.get("range", str(PERCH_RANGE))), rng.randf() * TAU)
+		_match_top(tops)
+		if found.is_empty():
+			return "not_perched"
+		var spot: Vector2 = found["p"]
+		_standoff_m = found["dist"]
+		_standoff_ok = found["ok"]
+		_standoff_clear = found["clear"]
+		_standoff_at = spot
+		_perched_under = found["under"]
+		_perch_over_ball = _perch_top.y - float(terrain.height(spot.x, spot.y))
+		if not (found["clear"] and found["under"]):
+			return "not_perched"
+		_game.player.reset_to(terrain.drop_point(spot.x, spot.y, 1.05))
+		_relocated = true
+	_match_top(tops)
+	if not _relocated and _perch_top.y - float(terrain.height(ball.x, ball.z)) < PerchPoints.PERCH_MIN:
+		# The terrain's own pick is not PERCH_MIN over the resting ball: not a perched duel.
+		_perched_under = false
+		_perch_over_ball = _perch_top.y - float(terrain.height(ball.x, ball.z))
+		return "not_perched"
+	return "relocated" if _relocated else "near"
+
+
+# The chosen top's source and base rise, read from the stage's tops.
+func _match_top(tops: Array) -> void:
+	for entry in tops:
+		if (entry["top"] as Vector3).is_equal_approx(_perch_top):
+			_perch_source = entry["source"]
+			_perch_base_rise = float(entry["base_rise"])
+
+
+# A level, landform-clear spot for the ball: bearings (16, from `start`) at `distance`, then the radius
+# stepped out by STANDOFF_STEP_M up to STANDOFF_REACH_M past it. The first spot whose ground spread over
+# STANDOFF_PROBES is within STANDOFF_FLAT_M, clear of landforms and PERCH_MIN under the top wins (ok = true).
+# When none is, the best of: clear of landforms, then under the top, then least spread, is used with
+# ok = false. Spots outside the map's play rect are never candidates; when none lies inside it the result is
+# empty (never an unchecked spot). Returns {p (x, z), dist, ok, clear, under}, or {}.
+func _standoff(top: Vector3, distance: float, start: float) -> Dictionary:
+	var terrain = _game.ctx.terrain
+	var m = terrain.map()
+	var blocked: Array = PerchPoints.blockers(m.park) if m is ParkMap and m.ok else []
+	var steps := int(STANDOFF_REACH_M / STANDOFF_STEP_M)
+	var play := Rect2()
+	if m is ParkMap and m.ok:
+		play = m.play_rect
+	var best := {}
+	var best_score := INF
+	for r in range(steps + 1):
+		var dist := distance + STANDOFF_STEP_M * r
+		for k in STANDOFF_BEARINGS:
+			var a := start + TAU * k / float(STANDOFF_BEARINGS)
+			var p := Vector2(top.x, top.z) + Vector2(cos(a), sin(a)) * dist
+			if play.size != Vector2.ZERO and not play.has_point(p):
+				continue
+			var lo := INF
+			var hi := -INF
+			for d in STANDOFF_PROBES:
+				var h: float = terrain.height(p.x + d.x, p.y + d.y)
+				lo = minf(lo, h)
+				hi = maxf(hi, h)
+			var clear := not ParkRecipes.in_clear(blocked, p, STANDOFF_CLEAR_M)
+			# The top must stand PERCH_MIN over the ground the ball is held on: stamped landforms are terrain,
+			# not blockers, so a spot can lie on the same plateau as a ledge top (a Dispatcher 2 m over the ball).
+			var under: bool = top.y - float(terrain.height(p.x, p.y)) >= PerchPoints.PERCH_MIN
+			if under and clear and hi - lo <= STANDOFF_FLAT_M:
+				return {"p": p, "dist": dist, "ok": true, "clear": true, "under": true}
+			# Clear first (a ball placed in a solid is wrong whatever the rise), then under, then spread; a
+			# clear spot that is not under the top is flagged by perched_under false.
+			var score := (hi - lo) + (0.0 if under else 1000.0) + (0.0 if clear else 10000.0)
+			if score < best_score:
+				best_score = score
+				best = {"p": p, "dist": dist, "ok": false, "clear": clear, "under": under}
+	return best
+
+
+# The Dispatcher goes on the chosen top: `park` passes it as the spawn's perch (no mast built);
+# `mast` leaves the arg off so the Dispatcher builds its own mast at the top's flat spot.
+func _spawn_perched(ball: Vector3) -> void:
+	var terrain = _game.ctx.terrain
+	var at: Vector3 = terrain.drop_point(_perch_top.x, _perch_top.z, 1.8)
+	if _perched == "park":
+		_driver.enemy = _game.combat.spawn_enemy(PERCHED_KIND, at, "", _perch_top)
+	else:
+		_driver.enemy = _game.combat.spawn_enemy(PERCHED_KIND, at)
+	_enemy_set = true
+	_ball_to_perch = Vector2(ball.x, ball.z).distance_to(Vector2(_perch_top.x, _perch_top.z))
+	_snapshot(_driver.enemy)
+	_perch_over_ball = _driver.enemy.global_position.y - float(terrain.height(ball.x, ball.z))
+	_perched_under = _perch_over_ball >= PerchPoints.PERCH_MIN
+	if not _perched_under:
+		# The real body is not PERCH_MIN over the ball (a mast row on a tall post, or a held ball that drifted
+		# uphill): not a perched duel. The caller ends the run before any fight.
+		_early = "not_perched"
+	_perch_rise = float(_driver.enemy.perch_height()) if _driver.enemy.has_method("perch_height") else -1.0
+	_mast_built = _driver.enemy.get("mast") != null
+
+
+# The Dispatcher's own counters, kept each tick while it lives (it is freed at death).
+func _snapshot(enemy: Node3D) -> void:
+	_snap = {"drops": int(enemy.get("drops")), "landed_hits": int(enemy.get("landed_hits")), "escalation": int(enemy.get("escalation"))}
+
+
+# The pack side by side across the line, centered offsets like Director._place_pack. Members the
+# roster has not built are skipped and recorded. Anything a member makes while it spawns joins the pack.
+func _spawn_pack(center: Vector3, forward: Vector3) -> void:
+	var side := Vector3(-forward.z, 0.0, forward.x)
+	_collecting = true
+	for i in _pack_members.size():
+		var kind: String = _pack_members[i]
+		if not Roster.ROWS.has(kind) or not Roster.built(kind):
+			_pack_skipped.append(kind)
+			continue
+		var spot: Vector3 = center + side * Director.PACK_SPREAD * (float(i) - float(_pack_members.size() - 1) * 0.5)
+		var enemy = _game.combat.spawn_enemy(kind, _game.ctx.terrain.drop_point(spot.x, spot.z, 1.8))
+		if enemy != null:
+			_pack_spawned += 1
+			if enemy not in _driver.members:
+				_driver.members.append(enemy)
+	_collecting = false
 	_enemy_set = true
 
 
 func _record() -> void:
 	var lost: float = float(_game.run.metrics["hull_damage"]) - _hull_start if _spawned else 0.0
-	var killed: bool = _kill_s >= 0.0 and _driver.outcome == "killed"
+	var outcome: String = _early if _early != "" else (pack_outcome(_pack_spawned, _driver.outcome) if _pack_mode else _driver.outcome)
+	var killed: bool = _kill_s >= 0.0 and outcome == "killed"
 	var row := {"pilot": _pilot, "class": _driver.class_id(), "kind": _kind, "seed": _run_seed, "give": String(_settings.get("give", "")),
-			"outcome": _driver.outcome, "ttk_s": snappedf(_kill_s if killed else -1.0, 0.01), "hull_lost": snappedf(lost, 0.1),
-			"kill_dist_m": snappedf(_kill_dist, 0.1), "hits": _hits, "damage_taken": snappedf(_taken, 0.1), "warnings": _warnings, "joined": _joined,
-			"duel_s": snappedf(_duel_s() if _spawned else 0.0, 0.01)}
+			"outcome": outcome, "ttk_s": snappedf(_kill_s if killed else -1.0, 0.01), "hull_lost": snappedf(lost, 0.1),
+			"kill_dist_m": snappedf(-1.0 if _stage_changed else _kill_dist, 0.1), "hits": _hits, "damage_taken": snappedf(_taken, 0.1), "warnings": _warnings, "joined": _joined,
+			"duel_s": snappedf(_duel_s() if _spawned else 0.0, 0.01), "settle_s": snappedf(_settle_s, 0.01), "rest_forced": _rest_forced, "stage_changed": _stage_changed}
+	if _perched != "":
+		row["perched"] = _perched
+		row["perch"] = [snappedf(_perch_top.x, 0.01), snappedf(_perch_top.y, 0.01), snappedf(_perch_top.z, 0.01)] if _perch_top.x != INF else []
+		row["perch_source"] = _perch_source
+		row["perch_rise_m"] = snappedf(_perch_rise, 0.01)
+		row["perch_base_rise_m"] = snappedf(_perch_base_rise, 0.01)
+		row["ball_to_perch_m"] = snappedf(_ball_to_perch, 0.1)
+		row["mast_built"] = _mast_built
+		row["dispatcher_down_s"] = snappedf(-1.0 if _stage_changed else _dispatcher_down_s, 0.01)
+		row["drops"] = int(_snap.get("drops", 0))
+		row["landed_hits"] = int(_snap.get("landed_hits", 0))
+		row["escalation"] = int(_snap.get("escalation", 0))
+		row["relocated"] = _relocated
+		if _standoff_at != Vector2.ZERO:
+			row["standoff_m"] = snappedf(_standoff_m, 0.1)
+			row["standoff_ok"] = _standoff_ok
+			row["standoff_clear"] = _standoff_clear
+			row["standoff_at"] = [snappedf(_standoff_at.x, 0.1), snappedf(_standoff_at.y, 0.1)]
+		row["held"] = _held
+		row["perched_under"] = _perched_under
+		row["perch_over_ball_m"] = snappedf(_perch_over_ball, 0.01)
+	if _pack_mode:
+		row["pack"] = _pack_id
+		row["members"] = _pack_members
+		row["table"] = _table_id
+		row["spawned"] = _pack_spawned
+		row["skipped"] = _pack_skipped
+		row["first_down_s"] = snappedf(-1.0 if _stage_changed else _first_down_s, 0.01)
 	var file := FileAccess.open(String(_settings["result"]), FileAccess.WRITE)
 	file.store_string(JSON.stringify(row) + "\n")
 	file.close()

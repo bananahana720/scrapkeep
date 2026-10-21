@@ -1,4 +1,4 @@
-# smoke: solo timeout=300s (a small real table: 2 pilots x 3 kinds x 2 seeds, 12 duel processes)
+# smoke: bots timeout=1200s (real duels in child processes: a 12-duel table, an idle control, a pack duel and a 30 s capped pack duel that must outlast the beacon charge, two perched duels (park and mast); 264 s alone on the base, 701 s and 894 s beside a lab table, killed at the 360 s solo ceiling in sketch:fast on 2026-10-20, so it joins the bot tier like alpha_posture_bands_test)
 extends SceneTree
 
 const Lab := preload("res://tools/matchup_lab.gd")
@@ -17,6 +17,11 @@ func _initialize() -> void:
 	_synthetic()
 	_lookup()
 	_real_run()
+	_damage_control()
+	_packs_pure()
+	_pack_duel()
+	_perched_pure()
+	_perched_duel()
 	print("matchup_lab_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 
@@ -140,15 +145,285 @@ func _real_run() -> void:
 	var bad := 0
 	for r in rows:
 		seen["%s|%s|%d" % [r["pilot"], r["kind"], int(r["seed"])]] = true
-		if String(r["outcome"]) in ["no_result", "wall_timeout"] or String(r.get("class", r["pilot"])) != String(r["pilot"]):
+		if String(r["outcome"]) in Lab.NO_RESULT or String(r.get("class", r["pilot"])) != String(r["pilot"]):
 			bad += 1
 	_check("every cell has both seeds", seen.size() == 12)
 	_check("every run produced a result for the pilot asked", bad == 0)
+	var rested := true
+	for r in rows:
+		rested = rested and float(r.get("settle_s", 0.0)) >= Lab.SETTLE_S and r.has("rest_forced")
+	_check("every duel waited at least SETTLE_S before the spawn and recorded settle_s", rested and not rows.is_empty())
 	var table := Lab.build_table(rows, PILOTS_SMALL, KINDS_SMALL, 40.0)
 	var runs_ok := true
 	for key in table["cells"]:
 		runs_ok = runs_ok and table["cells"][key]["runs"] == 2
 	_check("the table has two runs in every cell", runs_ok)
+
+
+# Planted positive control for damage: an idle pilot (never fights) 6 m from a plated brute and a
+# lobber must be hurt, so a run that reports 0 damage everywhere is a lab that cannot hurt the ball.
+func _damage_control() -> void:
+	_check("planted negative: rows with no hits, damage or hull lost show no damage",
+		not Lab.damage_seen([{"hits": 0.0, "damage_taken": 0.0, "hull_lost": 0.0}, {}]))
+	_check("damage_seen reads a hit", Lab.damage_seen([{"hits": 1.0, "damage_taken": 0.0, "hull_lost": 0.0}]))
+	var out := OS.get_user_data_dir().path_join("matchup_lab_test").path_join("idle.ndjson")
+	if FileAccess.file_exists(out):
+		DirAccess.remove_absolute(out)
+	var output := []
+	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--out=" + out, "--procs=2", "--seeds=1", "--idle=1", "--range=6", "--cap=12", "--pilots=tarn", "--kinds=plated_brute,lobber", "--answer=0",
+			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	_check("the idle damage control exits 0", code == 0)
+	var rows := []
+	if FileAccess.file_exists(out):
+		for line in FileAccess.get_file_as_string(out).split("\n", false):
+			var parsed = JSON.parse_string(line)
+			if parsed is Dictionary:
+				rows.append(parsed)
+	var hurt := false
+	for r in rows:
+		hurt = hurt or (float(r["hits"]) > 0.0 and float(r["damage_taken"]) > 0.0 and float(r["hull_lost"]) > 0.0)
+	_check("planted positive: an idle pilot is hit, takes damage and loses hull (2 rows)", rows.size() == 2 and hurt)
+
+
+func _packs_pure() -> void:
+	_check("run_down is chaser x3 + lobber on the park table", Lab.pack_kinds("park", "run_down") == ["chaser", "chaser", "chaser", "lobber"])
+	_check("an unknown pack id is empty", Lab.pack_kinds("park", "no_such_pack").is_empty() and Lab.pack_kinds("alpha", "").is_empty())
+	var ids: Array = Lab.pack_ids("park")
+	_check("pack_ids lists run_down then grounded first, each once, and includes the elite", ids.size() >= 3 and ids[0] == "run_down" and ids[1] == "grounded"
+		and "elite" in ids and ids.count("run_down") == 1)
+	var all_known := true
+	for id in ids:
+		all_known = all_known and not Lab.pack_kinds("park", id).is_empty()
+	_check("every listed pack id resolves to members", all_known)
+	_check("the alpha table has packs too", not Lab.pack_ids("alpha").is_empty())
+	# Axis: most common ANSWER_AXIS; ties by AXES order.
+	_check("run_down answers on fuse (3 chasers beat 1 lobber)", Lab.pack_axis(Lab.pack_kinds("park", "run_down")) == "fuse")
+	_check("an axis tie goes to the earlier AXES entry (lobber range vs mag_trapper cc)", Lab.pack_axis(["mag_trapper", "lobber"]) == "range")
+	_check("a pack row finds its answer item by the pack axis", Lab.answer_item({"p_fuse": {"answers": ["fuse"]}, "p_range": {"answers": ["range"]}}, "tarn", "pack:run_down", ["chaser", "chaser", "chaser", "lobber"]) == "p_fuse")
+	_check("the heatmap label is +id in 9 chars; a kind keeps its name", Lab.row_label("pack:run_down") == "+run_down" and Lab.row_label("pack:elite_highdraft") == "+elite_hi" and Lab.row_label("chaser") == "chaser")
+	# A mixed table: a kind row and two pack rows; the slow pack cell is HARD, the fast one is not.
+	var pilots := ["a", "b", "c"]
+	var kinds := ["chaser", "pack:slow", "pack:fast"]
+	var mixed := _table({"a|chaser": 2.0, "b|chaser": 2.0, "c|chaser": 2.0, "a|pack:slow": 3.0, "b|pack:slow": 3.0, "c|pack:slow": 12.0,
+			"a|pack:fast": 3.0, "b|pack:fast": 3.0, "c|pack:fast": 5.0}, pilots, kinds)
+	var hard_keys := []
+	for cell in mixed["hard"]:
+		hard_keys.append(Lab.cell_key(cell["pilot"], cell["kind"]))
+	_check("a planted slow pack cell is HARD and the fast pack cell is not", hard_keys == ["c|pack:slow"])
+	_check("planted negative: a slow-looking pack cell under 2x its row median is not hard", not mixed["cells"]["c|pack:fast"]["hard"] and not mixed["cells"]["a|pack:slow"]["hard"])
+	_check("pack rows feed the pilot hard-cell gate", Lab.gate_hard(mixed)["missing"] == ["a", "b"] and Lab.hard_by_pilot(mixed)["c"] == ["pack:slow"])
+	var heat := Lab.heatmap(mixed)
+	_check("the heatmap shows the pack row labelled +slow with its star", heat.size() == 5 and heat[3].begins_with("+slow") and "12.0*" in heat[3] and heat[2].begins_with("chaser"))
+	_merge_from()
+	_child_args_and_empty()
+
+
+func _child_args_and_empty() -> void:
+	var job := {"pilot": "tarn", "kind": "pack:run_down", "seed": 1, "give": "", "n": 0}
+	var args := Lab.child_args(job, 15.0, {"table": "alpha", "range": "9"}, "alpha", "/h", "/p")
+	var bare := false
+	for a in args:
+		bare = bare or a.begins_with("--table=")
+	_check("a pack child's args carry --pack-table and never a bare --table= (Game would pick a stage map)", not bare and "--pack-table=alpha" in args and "--range=9" in args)
+	var kind_args := Lab.child_args({"pilot": "tarn", "kind": "lobber", "seed": 1, "give": "", "n": 0}, 15.0, {}, "park", "/h", "/p")
+	var kind_bare := false
+	for a in kind_args:
+		kind_bare = kind_bare or a.begins_with("--table=") or a.begins_with("--pack-table=")
+	_check("a kind child gets no table arg at all", not kind_bare)
+	_check("planted negative: the bare-table detector would catch the old arg", "--table=park".begins_with("--table="))
+	_check("a pack with nothing spawned is no_result, one that spawned keeps its outcome", Lab.pack_outcome(0, "killed") == "no_result" and Lab.pack_outcome(3, "capped") == "capped")
+	var empty := Lab.build_table([{"pilot": "a", "kind": "pack:x", "outcome": Lab.pack_outcome(0, "killed"), "ttk_s": 0.0}], ["a"], ["pack:x"], 40.0)
+	_check("an all-skipped pack row is left out of the table", empty["cells"]["a|pack:x"]["runs"] == 0)
+	var changed := Lab.build_table([{"pilot": "a", "kind": "k1", "outcome": "stage_changed", "ttk_s": -1.0, "stage_changed": true}], ["a"], ["k1"], 40.0)
+	_check("a stage_changed run is no result: left out of the table", changed["cells"]["a|k1"]["runs"] == 0 and "stage_changed" in Lab.NO_RESULT)
+	_check("planted negative: a capped run still counts (the skip is only for no-result outcomes)", Lab.build_table([{"pilot": "a", "kind": "k1", "outcome": "capped", "ttk_s": -1.0}], ["a"], ["k1"], 40.0)["cells"]["a|k1"]["runs"] == 1)
+	# A table with a real hard cell (c|k1: 9 s against a 2 s row), then an answer arm with stage_changed rows.
+	var hard_table := _table({"a|k1": 2.0, "b|k1": 2.0, "c|k1": 9.0}, ["a", "b", "c"], ["k1"])
+	var wins := []
+	var junk := []
+	for sd in [1, 2, 3]:
+		wins.append(_row("c", "k1", sd, 3.0))
+		junk.append({"pilot": "c", "kind": "k1", "seed": sd, "outcome": "stage_changed", "ttk_s": -1.0, "stage_changed": true})
+	var clean: Dictionary = Lab.grade_answers(hard_table, wins, {"c|k1": "x"}, 40.0, 3)["c|k1"]
+	var mixed_arm: Dictionary = Lab.grade_answers(hard_table, wins + junk, {"c|k1": "x"}, 40.0, 3)["c|k1"]
+	var only_junk: Dictionary = Lab.grade_answers(hard_table, junk, {"c|k1": "x"}, 40.0, 3)["c|k1"]
+	_check("the hard cell exists and the clean answer arm wins", (hard_table["hard"] as Array).size() == 1 and clean["status"] == "won")
+	_check("grade_answers ignores stage_changed rows: same status, runs and kills with them added", mixed_arm["status"] == "won" and mixed_arm["runs"] == 3 and mixed_arm["kills"] == 3)
+	_check("an answer arm of only stage_changed rows has no runs (not a win)", only_junk["runs"] == 0 and only_junk["status"] == "lost")
+
+
+# --from merge order: kind rows (default kinds order) first, then pack rows in first-seen order.
+func _merge_from() -> void:
+	var dir := OS.get_user_data_dir().path_join("matchup_lab_test")
+	DirAccess.make_dir_recursive_absolute(dir)
+	var kind_path := dir.path_join("from_kinds.ndjson")
+	var pack_path := dir.path_join("from_packs.ndjson")
+	var out_path := dir.path_join("from_merge.txt")
+	var f := FileAccess.open(kind_path, FileAccess.WRITE)
+	for s in [1, 2]:
+		f.store_line(JSON.stringify(_row("tarn", "lobber", s, 2.0)))
+		f.store_line(JSON.stringify(_row("tarn", "chaser", s, 2.0)))
+	f.close()
+	f = FileAccess.open(pack_path, FileAccess.WRITE)
+	for s in [1, 2]:
+		f.store_line(JSON.stringify(_row("tarn", "pack:grounded", s, 6.0)))
+		f.store_line(JSON.stringify(_row("tarn", "pack:run_down", s, 7.0)))
+	f.close()
+	var output := []
+	var args := ["--headless", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--from=" + pack_path + "," + kind_path, "--out=" + out_path]
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	var text := "\n".join(output)
+	_check("--from merges a pack file and a kind file and exits 0", code == 0 and "matchup_lab: heatmap" in text)
+	var chaser := text.find("chaser ")
+	var lobber := text.find("lobber ")
+	var grounded := text.find("+grounded")
+	var run_down := text.find("+run_down")
+	_check("--from lists kind rows first (default order), then pack rows in first-seen order",
+		chaser >= 0 and lobber >= 0 and grounded > lobber and grounded > chaser and run_down > grounded)
+
+
+# One small real pack duel: run_down (3 chasers + a lobber), one pilot, one seed, a low cap.
+func _pack_duel() -> void:
+	var out := OS.get_user_data_dir().path_join("matchup_lab_test").path_join("pack.ndjson")
+	if FileAccess.file_exists(out):
+		DirAccess.remove_absolute(out)
+	var output := []
+	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--out=" + out, "--procs=1", "--seeds=1", "--cap=15", "--pilots=tarn", "--packs=run_down", "--answer=0",
+			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	_check("the pack duel exits 0", code == 0)
+	var rows := []
+	if FileAccess.file_exists(out):
+		for line in FileAccess.get_file_as_string(out).split("\n", false):
+			var parsed = JSON.parse_string(line)
+			if parsed is Dictionary:
+				rows.append(parsed)
+	_check("one pack row keyed pack:run_down with its pack, members and table", rows.size() == 1 and rows[0]["kind"] == "pack:run_down"
+		and rows[0]["pack"] == "run_down" and rows[0]["table"] == "park" and (rows[0]["members"] as Array).size() == 4)
+	if rows.is_empty():
+		return
+	var r: Dictionary = rows[0]
+	_check("more than one member spawned", int(r.get("spawned", 0)) > 1)
+	_check("the outcome is killed or capped", String(r["outcome"]) in ["killed", "capped"])
+	if String(r["outcome"]) == "killed":
+		_check("ttk_s covers the whole pack (not before the first member went down)", float(r["ttk_s"]) >= float(r["first_down_s"]) and float(r["first_down_s"]) >= 0.0)
+	else:
+		_check("a capped pack duel records no ttk", float(r["ttk_s"]) < 0.0)
+	_pack_capped()
+
+
+# An idle pilot cannot finish the pack inside a 30 s cap: live members must keep it from reading cleared. The
+# cap is past the ~24 s the calm map's beacon needed to charge and change stage (the regression for the
+# "killed, ttk -1, duel_s -10.61" rows), so the duel must run the whole cap on its own stage.
+func _pack_capped() -> void:
+	var out := OS.get_user_data_dir().path_join("matchup_lab_test").path_join("pack_capped.ndjson")
+	if FileAccess.file_exists(out):
+		DirAccess.remove_absolute(out)
+	var output := []
+	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--out=" + out, "--procs=1", "--seeds=1", "--cap=30", "--idle=1", "--pilots=tarn", "--packs=run_down", "--answer=0",
+			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	var rows := []
+	if FileAccess.file_exists(out):
+		for line in FileAccess.get_file_as_string(out).split("\n", false):
+			var parsed = JSON.parse_string(line)
+			if parsed is Dictionary:
+				rows.append(parsed)
+	_check("an idle pilot on a 30 s cap leaves the pack alive: capped, ttk -1", code == 0 and rows.size() == 1 and rows[0]["outcome"] == "capped" and float(rows[0]["ttk_s"]) < 0.0)
+	_check("the 30 s duel stays on its stage: stage_changed false and duel_s >= cap - 0.5", rows.size() == 1 and rows[0].get("stage_changed", true) == false and float(rows[0]["duel_s"]) >= 29.5)
+
+
+func _perched_pure() -> void:
+	_check("row keys are dispatcher@park and dispatcher@mast", Lab.perched_key("park") == "dispatcher@park" and Lab.perched_key("mast") == "dispatcher@mast"
+		and Lab.perched_mode("dispatcher@mast") == "mast" and Lab.perched_mode("dispatcher") == "" and Lab.perched_mode("dispatcher@moat") == "")
+	var both := Lab.perched_plan("park,mast", ["dispatcher"], false)
+	_check("--perched=park,mast queues both rows in order", both["ok"] and both["kinds"] == ["dispatcher@park", "dispatcher@mast"])
+	_check("a duplicate mode queues one row", Lab.perched_plan("mast,mast", ["dispatcher"], false)["kinds"] == ["dispatcher@mast"])
+	_check("planted negative: another kind, several kinds, packs or an unknown mode are usage errors",
+		not Lab.perched_plan("park", ["chaser"], false)["ok"] and not Lab.perched_plan("park", ["dispatcher", "chaser"], false)["ok"]
+		and not Lab.perched_plan("park", ["dispatcher"], true)["ok"] and not Lab.perched_plan("roof", ["dispatcher"], false)["ok"]
+		and not Lab.perched_plan("", ["dispatcher"], false)["ok"])
+	var rows := [_row("a", "dispatcher@park", 1, 3.0), _row("a", "dispatcher@park", 2, 5.0)]
+	rows.append({"pilot": "a", "kind": "dispatcher@park", "seed": 3, "outcome": "no_perch", "ttk_s": -1.0, "hull_lost": 0.0})
+	var table := Lab.build_table(rows, ["a"], ["dispatcher@park"], 40.0)
+	_check("no_perch counts as no result, not a capped duel", table["cells"]["a|dispatcher@park"]["runs"] == 2
+		and is_equal_approx(float(table["cells"]["a|dispatcher@park"]["median_ttk"]), 4.0))
+	_check("an all-no_perch table cell reads as no runs", Lab.build_table([rows[2]], ["a"], ["dispatcher@park"], 40.0)["cells"]["a|dispatcher@park"]["runs"] == 0)
+	var kid := Lab.child_args({"pilot": "tarn", "kind": "dispatcher@mast", "seed": 1, "give": "", "n": 0}, 40.0, {}, "park", "/x", "/p")
+	_check("a perched child gets --perched= and no --table=", "--perched=mast" in kid and not Array(kid).any(func(a): return String(a).begins_with("--table=")))
+	var np := {"pilot": "a", "kind": "dispatcher@park", "seed": 4, "outcome": "not_perched", "ttk_s": -1.0, "hull_lost": 0.0}
+	var with_np := Lab.build_table([rows[0], rows[1], np], ["a"], ["dispatcher@park"], 40.0)
+	_check("not_perched is a no-result outcome and build_table drops its row", "not_perched" in Lab.NO_RESULT and with_np["cells"]["a|dispatcher@park"]["runs"] == 2
+		and Lab.build_table([np], ["a"], ["dispatcher@park"], 40.0)["cells"]["a|dispatcher@park"]["runs"] == 0)
+	_check("perched labels stay distinct in 9 chars", Lab.row_label("dispatcher@park") == "disp@park" and Lab.row_label("dispatcher@mast") == "disp@mast")
+	# --from: kind rows, then pack rows, then perched rows, each first-seen.
+	var dir := OS.get_user_data_dir().path_join("matchup_lab_test")
+	DirAccess.make_dir_recursive_absolute(dir)
+	var path := dir.path_join("from_perched.ndjson")
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	for s in [1, 2]:
+		f.store_line(JSON.stringify(_row("tarn", "dispatcher@mast", s, 9.0)))
+		f.store_line(JSON.stringify(_row("tarn", "dispatcher@park", s, 3.0)))
+		f.store_line(JSON.stringify(_row("tarn", "pack:grounded", s, 6.0)))
+		f.store_line(JSON.stringify(_row("tarn", "lobber", s, 2.0)))
+	f.close()
+	var output := []
+	var code := OS.execute(OS.get_executable_path(), ["--headless", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--from=" + path, "--out=" + dir.path_join("from_perched.txt")], output, true)
+	var text := "\n".join(output)
+	var lobber := text.find("lobber ")
+	var pack := text.find("+grounded")
+	var mast := text.find("disp@mast")
+	var park := text.find("disp@park")
+	_check("--from lists kind, pack, then perched rows in first-seen order", code == 0 and lobber >= 0 and pack > lobber and mast > pack and park > mast)
+
+
+# Two real perched duels (1 pilot, seed 2 and a low cap). Seed 2 is the only park_dam seed of 1 to 4 whose standoff is both clear and under the top:
+# seeds 1 and 4 are clear but not under, seed 3 is under but not clear (those read not_perched). The park row stands the Dispatcher on a real
+# perch top with no mast; the mast row, planted as the negative, builds one.
+func _perched_duel() -> void:
+	var out := OS.get_user_data_dir().path_join("matchup_lab_test").path_join("perched.ndjson")
+	if FileAccess.file_exists(out):
+		DirAccess.remove_absolute(out)
+	var output := []
+	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
+			"--out=" + out, "--procs=1", "--seeds=2", "--cap=10", "--pilots=tarn", "--kinds=dispatcher", "--perched=park,mast", "--answer=0",
+			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
+	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	_check("the perched duels exit 0", code == 0)
+	var by := {}
+	if FileAccess.file_exists(out):
+		for line in FileAccess.get_file_as_string(out).split("\n", false):
+			var parsed = JSON.parse_string(line)
+			if parsed is Dictionary:
+				by[String(parsed["kind"])] = parsed
+	_check("one row per mode", by.size() == 2 and by.has("dispatcher@park") and by.has("dispatcher@mast"))
+	if by.size() != 2:
+		return
+	var park: Dictionary = by["dispatcher@park"]
+	var mast: Dictionary = by["dispatcher@mast"]
+	_check("the park row found a finite perch (not no_perch)", String(park["outcome"]) != "no_perch" and (park["perch"] as Array).size() == 3)
+	_check("park: no mast was built", park["mast_built"] == false)
+	_check("park: the chosen top is one of PerchPoints' tops (6 to 10 m over its base)", float(park["perch_base_rise_m"]) >= 5.99 and float(park["perch_base_rise_m"]) <= 10.01
+		and park["perch_source"] in ["post", "ledge"])
+	for row: Dictionary in [park, mast]:
+		_check("%s: the Dispatcher stands at least PERCH_MIN over the ball at the spawn (perched_under)" % row["kind"],
+			float(row["perch_over_ball_m"]) >= Lab.PerchPoints.PERCH_MIN and row["perched_under"] == true)
+	_check("park: the row records its perch fields", park.has("ball_to_perch_m") and park.has("drops") and park.has("landed_hits")
+		and park.has("escalation") and park.has("relocated") and park.has("dispatcher_down_s"))
+	_check("contrast row: the mast row builds its own mast, 8 m up", mast["mast_built"] == true and is_equal_approx(float(mast["perch_rise_m"]), 8.0))
+	# park_dam has no level, clear standoff near its tops, so the lab holds the ball there until the spawn.
+	for row: Dictionary in [park, mast]:
+		_check("%s: a relocated ball was held and stood within 3 m of its standoff at the spawn" % row["kind"], row["relocated"] == true and row["held"] == true
+			and absf(float(row["ball_to_perch_m"]) - float(row["standoff_m"])) <= 3.0)
+	_check("both rows' standoff spots are clear of landform footprints", park["standoff_clear"] == true and mast["standoff_clear"] == true)
+	print("perched park perch_over_ball_m=%s standoff_m=%s standoff_ok=%s b2p=%s" % [park["perch_over_ball_m"], park["standoff_m"], park["standoff_ok"], park["ball_to_perch_m"]])
+	_check("both rows chose the same top", park["perch"] == mast["perch"])
 
 
 func _check(label: String, ok: bool) -> void:
