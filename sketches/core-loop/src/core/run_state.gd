@@ -10,6 +10,7 @@ const Relics := preload("res://src/build/relics.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const Profile := preload("res://src/core/profile.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
+const Roster := preload("res://src/combat/roster.gd")
 const MAX_HP := 100.0
 const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
@@ -670,6 +671,7 @@ func record_kill(kind: String, at: Vector3, scrap_value: int, source := "") -> v
 	kills += 1
 	last_kill_from_spark = source == "spark"
 	events.enemy_killed.emit(kind, at, scrap_value)
+	if kind in Roster.SPECIALS: events.special_broken.emit(kind)
 	last_kill_from_spark = false
 
 
