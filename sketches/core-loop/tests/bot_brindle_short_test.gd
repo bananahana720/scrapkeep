@@ -21,7 +21,8 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 const SEED := 2
 const JUMP_STAGE := 2
 const HEFT_MAX := 1.3
-# Float tolerance on the 1.30 limit, not a looser rule: the deterministic phase 2 tally peak prints 1.30.
+# Float tolerance on the 1.30 limit, not a looser rule (the phase 2 tally peak printed 1.30 when the
+# run's discovery bursts still counted; with the codex seen it reads 1.00, scrapkeep#231).
 const HEFT_EPS := 0.005
 const CASES := [
 	{"phase": 2, "pilot": "tally", "cap_s": 120.0},
