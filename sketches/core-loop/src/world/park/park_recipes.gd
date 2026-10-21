@@ -43,6 +43,7 @@ const LandmarkProxy := preload("res://src/presentation/landmark_proxy.gd")
 const LandmarkBeam := preload("res://src/presentation/landmark_beam.gd")
 const WardenMind := preload("res://src/combat/warden_mind.gd")
 const IsleRig := preload("res://src/world/park/isle_rig.gd")
+const DamRig := preload("res://src/world/park/dam_rig.gd")
 
 const BUDGETS_PATH := "res://assets/asset_budgets.json"
 const GLB_DIR := "res://assets/models/park/"
@@ -143,11 +144,12 @@ const ROWS := {
 	"haulage_bed": {"family": "grind_lines", "budget": "park_large"},
 }
 
-# Wash dressing pieces (tools/blender/park/sinkhole_tubes.py) draped on the baked ground: a seat-fit row of one of these
-# moves every drawn vertex to the ground under it plus its height over the piece's own wash profile, so the drawn wall
-# band lies on the real wall wherever the floor sags under the seat's chord, a neighbour's cut overlaps or the row's own
-# end opens onto the plain. The -col keeps the seat fit; only the views move.
-const DRAPED := ["lava_wash", "lava_wash_short", "gallery_wash", "drift_wash"]
+# Wash dressing pieces (tools/blender/park/sinkhole_tubes.py) and the sinkhole's lava_channel (tools/blender/park/
+# lavachannels.py; its chained 51 to 60 m rows follow sagging sinkhole ground) draped on the baked ground: a seat-fit
+# row of one of these moves every drawn vertex to the ground under it plus its height over the piece's own wash
+# profile, so the drawn wall band lies on the real wall wherever the floor sags under the seat's chord, a neighbour's
+# cut overlaps or the row's own end opens onto the plain. The -col keeps the seat fit; only the views move.
+const DRAPED := ["lava_channel", "lava_wash", "lava_wash_short", "gallery_wash", "drift_wash"]
 
 # Each element's ride fact by its section 4 family; a row's own ride_fact wins. kicker_launch is the kicker's launch
 # path, not a WORLD_ROWS kind, so a kicker gets no ride sensor; ground and anchor_field carry none.
@@ -192,6 +194,12 @@ const ANCHOR_EDGE_STEP_M := 12.0
 # on its top). Until all three GLBs have landed the row draws grey posts like greybox:anchor_field.
 const ANCHOR_KITS := ["anchor_hoodoo", "anchor_basalt", "anchor_timber", "anchor_saguaro", "anchor_cairn"]
 const ANCHOR_VARIANTS := ["a", "b", "c"]
+# Pieces drawn over their row's greybox (the islands' collider-locked rows, coordinator on #149, 2026-10-19 02:18Z): a row
+# whose recipe is one of OVER_GREYBOX is placed exactly as its element's greybox (node, seat, ride sensor and box
+# collider, or none where its stamp replaces the box) and draws its GLB's views in place of the grey box. The row's
+# Collider stays the greybox's own; a GLB's -col (the adit portal's posts) is a separate PieceCollider
+# (tests/park_over_greybox_test.gd).
+const OVER_GREYBOX := ["isle_adit_portal", "isle_tram_head", "isle_keel_rib"]
 const ANCHOR_AUTHORED_M := 10.0
 # The waymark names that are no row: the spawn and the landmark (park_schema.gd DROP_IN and LANDMARK).
 const DROP_IN := "drop_in"
@@ -507,6 +515,8 @@ static func place(row: Dictionary, parent: Node3D, ground := Callable(), publish
 	if not ResourceLoader.exists(p["base"]):
 		push_warning("park_recipes: %s missing, %s stands in as greybox" % [p["base"], row.get("id", "")])
 		return place_greybox(row, String(row.get("element", "")), parent, ground, publish)
+	if OVER_GREYBOX.has(recipe):
+		return place_over_greybox(row, p, budget, parent, ground, publish)
 	if fits_seat(row):
 		var refusal := seat_refusal(row, recipe_ends(recipe))
 		if refusal != "":
@@ -565,7 +575,8 @@ static func landmark_datum(mark: Dictionary) -> float:
 # Places a park's hero landmark under parent (port notes P1 and P2): its GLB through place() when the base has landed,
 # views and -col collider and all, else its visual-only proxy (landmark_proxy.gd); then, when its light is the ancient
 # beam, the beam from the GLB's beam_root empty (or the proxy's) up past sight_top. The node is Landmark_<id> with meta
-# "landmark_proxy" true while it stands in. null when the park's landmark names no recipe.
+# "landmark_proxy" true while it stands in. The isle takes isle_rig.gd (P5) and the dam's gates dam_rig.gd (P6). null
+# when the park's landmark names no recipe.
 static func place_landmark(park: Dictionary, parent: Node3D, ground := Callable()) -> Node3D:
 	var row := landmark_row(park)
 	if row.is_empty():
@@ -592,6 +603,8 @@ static func place_landmark(park: Dictionary, parent: Node3D, ground := Callable(
 		LandmarkBeam.make(node, node.transform * (root as Vector3), float(row["sight_top"][1]), anchor_y)
 	if kind == "sky_island":
 		IsleRig.attach(node, null if node.has_meta("landmark_proxy") else _tip_shape(row))
+	if kind == "dam" and not node.has_meta("landmark_proxy"):
+		DamRig.attach(node)
 	return node
 
 
@@ -778,6 +791,38 @@ static func place_greybox(row: Dictionary, element: String, parent: Node3D, grou
 	node.add_child(view)
 	body.add_child(shape)
 	_sensor(node, row, publish)
+	return node
+
+
+# An OVER_GREYBOX row: its element's greybox with the GLB's views (paths p, ranges of budget) in place of the grey box.
+# A -col mesh in the GLB (the piece's own uprights, outside the row's footprint) goes on a separate PieceCollider body,
+# never on the row's Collider, so place_row's stamp_replaces drop and the row's box stay exactly the greybox's.
+static func place_over_greybox(row: Dictionary, p: Dictionary, budget: String, parent: Node3D, ground := Callable(),
+		publish := Callable()) -> Node3D:
+	var node := place_greybox(row, String(row.get("element", "")), parent, ground, publish)
+	if node == null:
+		return null
+	var grey := node.get_node("Greybox")
+	node.remove_child(grey)
+	grey.free()
+	var body := _body(node)
+	body.name = "PieceCollider"
+	var r := ranges(budget)
+	var shell_ranges: Array = r.get("shells", [])
+	var parts: Array = [[p["base"], [0.0, float(r.get("base_end", 0.0)), float(r.get("base_margin", 0.0))], true]]
+	for k in (p["shells"] as Array).size():
+		var sr: Array = shell_ranges[k] if k < shell_ranges.size() else [0.0, 0.0]
+		parts.append([p["shells"][k], [0.0, float(sr[0]), float(sr[1])], false])
+	for part: Array in parts:
+		for scene: Node in _load(part[0]):
+			for view in _views(scene, node, body, Transform3D.IDENTITY):
+				_range(view, part[1][0], part[1][1], part[1][2])
+				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if part[2] else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			scene.free()
+	if body.get_child_count() == 0:
+		node.remove_child(body)
+		body.free()
+	node.set_meta("over_greybox", true)
 	return node
 
 
@@ -1271,9 +1316,11 @@ static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), pub
 	return node
 
 
-# Whether a row's stamp stands in for its greybox solid: a greybox stand-in with a stamp and no absolute y.
+# Whether a row's stamp stands in for its greybox solid: a greybox stand-in (or an OVER_GREYBOX row, placed as one) with
+# a stamp and no absolute y.
 static func stamp_replaces(row: Dictionary) -> bool:
-	return String(row.get("stamp", "")) != "" and row.get("y") == null and stands_in(row)
+	return String(row.get("stamp", "")) != "" and row.get("y") == null \
+		and (stands_in(row) or OVER_GREYBOX.has(String(row.get("recipe", ""))))
 
 
 # The ground a row's node stands on: a stamp_replaces row, or a drape-fit row, stands on the ground less its own stamp's
@@ -1407,7 +1454,10 @@ class Placer extends Node3D:
 		# on the main thread through place()'s load(): with requests in flight its main-thread meshes raced the loader's
 		# RIDs ("Attempting to initialize the wrong RID" in place_greybox, and a null material on a part's free): 2 of 96
 		# park_holes_test runs six at a time before, 0 of 216 after (artifacts/local/alpha/push/w13/place/rid_sync/).
-		for path: String in (wanted if threaded else []):
+		# Headless, a threaded build loads on the main thread too: the dummy rasterizer's mesh RID owner is not
+		# thread-safe, and these loader-thread loads raced the scatter's kit meshes and the indicator's mesh in the
+		# frames they were in flight (13 of 30 headless boots). ending_sequence.gd's _build_crater has the same gate.
+		for path: String in (wanted if threaded and DisplayServer.get_name() != "headless" else []):
 			if ResourceLoader.load_threaded_request(path) == OK:
 				_pending.append(path)
 				threaded_loads += 1

@@ -5,7 +5,7 @@
  "time_of_day": "dawn",
  "spawn": {"at": [-150, -690], "heading_deg": 20},
  "play_rect": [-760, -780, 1520, 1480],
- "landmark": {"id": "spillway_dam", "kind": "dam", "at": [0, 620], "size": [120, 120, 320], "yaw_deg": 180, "recipe": "landmark_dam", "budget": "hero_landmark", "sight_top": [0, 141, 640], "sight_share": 0.85, "beacon": [0, 575], "reach_m": 30, "warden": {"family": "reactor", "mounting": "dam_face", "anchor": [0, 22, 590], "path": [], "hardpoints": 3, "harpoon_anchor": true}, "bay_dock": {"at": [0, 467], "facing_deg": 0}, "gate_slots": [{"at": [-16, 528], "facing_deg": 0}, {"at": [0, 528], "facing_deg": 0}, {"at": [16, 528], "facing_deg": 0}], "light": "ancient_beam", "music": "landmark_hum", "fragment": "dam_dedication_plaque"},
+ "landmark": {"id": "spillway_dam", "kind": "dam", "at": [0, 620], "size": [120, 120, 320], "yaw_deg": 180, "recipe": "landmark_dam", "budget": "hero_landmark", "sight_top": [0, 141, 640], "sight_share": 0.85, "beacon": [0, 575], "reach_m": 30, "warden": {"family": "reactor", "mounting": "dam_face", "anchor": [0, 22, 590], "path": [], "hardpoints": 3, "hardpoint_offsets": [[0, 1.6, 0], [-10, 0, 0], [10, 0, 0]], "harpoon_anchor": true}, "bay_dock": {"at": [0, 467], "facing_deg": 0}, "gate_slots": [{"at": [-16, 528], "facing_deg": 0}, {"at": [0, 528], "facing_deg": 0}, {"at": [16, 528], "facing_deg": 0}], "light": "ancient_beam", "music": "landmark_hum", "fragment": "dam_dedication_plaque"},
  "waymarks": ["drop_in", "domes_camp", "the_eye", "landmark"],
  "routes": [
   {"id": "shelf", "from": "drop_in", "to": "shelf_lip", "via": ["top_shelf_deck", "slickrock_domes"]},
@@ -196,7 +196,7 @@
  ],
  "activity_rows": [
   {"id": "domes_camp", "activity": "enemy_camp", "site": "slickrock_domes", "at": [-51, -396], "pack": ["chaser", "chaser", "chaser"], "pay": {"named": "hot_rivets", "rarities": ["common"]}},
-  {"id": "rim_cache", "activity": "cracked_cache", "site": "west_rim_bench", "at": [-206, 300], "pack": [], "pay": {"rarities": ["rare"]}},
+  {"id": "rim_cache", "activity": "cracked_cache", "site": "west_rim_bench", "at": [-210, 400], "pack": [], "pay": {"rarities": ["rare"]}},
   {"id": "bench_altar", "activity": "ambush_altar", "site": "east_rim_bench", "at": [206, 250], "pack": [], "pay": {"rarities": ["common", "rare"]}},
   {"id": "shelf_relay", "activity": "hold_the_relay", "site": "shelf_rise", "at": [-155, -385], "pack": [], "pay": {"rarities": ["common", "rare"]}}
  ],

@@ -37,6 +37,9 @@ const MIN_ROWS := 8
 # the card appears when the row lands, and that unit removes the id here.
 const PENDING_PILOTS := []
 # 2026-10-11 (PC-SABLE): preserve the twelve pre-wave lifetime grants; new grants fit one run.
+# Rows that carry no reward on purpose: a record of a content family (achievement_fill_test F1 skips them).
+const RECORD_ONLY := ["ach_w20_kill_first", "ach_w20_signal_cache", "ach_w20_legend_take", "ach_w20_relay_stake",
+	"ach_w20_maker_set", "ach_w20_overflow"]
 const GRANDFATHERED := ["kills_100", "kills_1000", "ach_d7_ink_stitch", "ach_d7_plum_curl",
 	"ach_d7_forge_chips", "ach_d7_snail_shell", "ach_d7_thimble", "ach_d7_paw", "ach_d7_seashell",
 	"ach_d7_forge_blue", "ach_d7_ember_plum", "ach_d7_dusk_pink"]
@@ -123,6 +126,21 @@ const ROWS := {
 		"where": {"kind": "cache_spent"}, "count": 1, "reward": {"option": "pocket_key"}},
 	"ach_meta_pocket_tint": {"name": "Fresh Eyes", "text": "Discover three new synergies.", "on": "synergy_discovered",
 		"where": {"first_time": true}, "count": 3, "reward": {"option": "pocket_tint"}},
+	# w20 content-family records (WHATS-LEFT row 9): reward {} and RECORD_ONLY, so no paint or art is owed.
+	# special_broken: a kill-first special (Foreman, Dispatcher, Splitter, Linker) fell.
+	"ach_w20_kill_first": {"name": "Kill First", "text": "Break three kill-first specials across your runs.", "on": "special_broken",
+		"count": 3, "reward": {}},
+	# radio_take_found carries the found rule's "on"; a Signal cache is source "cache".
+	"ach_w20_signal_cache": {"name": "Signal Found", "text": "Find a Signal cache in a park.", "on": "radio_take_found",
+		"where": {"source": "cache"}, "count": 1, "reward": {}},
+	"ach_w20_legend_take": {"name": "Legend Heard", "text": "Find a legend-tier radio take.", "on": "radio_take_found",
+		"where": {"tier": "legend"}, "count": 1, "reward": {}},
+	"ach_w20_relay_stake": {"name": "Stake Paid", "text": "Win a relay you staked.", "on": "relay_stake_paid",
+		"at_least": {"stakes": 1}, "count": 1, "reward": {}},
+	"ach_w20_maker_set": {"name": "Set Complete", "text": "Complete a maker set in one run.", "on": "maker_set_completed",
+		"count": 1, "reward": {}},
+	"ach_w20_overflow": {"name": "Overflow Paid", "text": "Fire an active carrying three overflow pieces.", "on": "overflow_cashed",
+		"at_least": {"pieces": 3}, "count": 1, "reward": {}},
 	# --- pylon_engineer (Sable): P-C Sable adds its grant rows here ---
 	"ach_sable_cable_runs": {"name": "Cable Runner", "text": "Land three Cable Runs in one run.", "on": "synergy_discovered", "where": {"synergy_id": "sable_cable_runs"}, "count": 1, "reward": {"cosmetic": "trail_sable_cable"}},
 	"ach_sable_parting_shot": {"name": "Parting Shot", "text": "Kill a machine within a second of a pylon slingshot.", "on": "synergy_discovered", "where": {"synergy_id": "parting_shot"}, "count": 1, "reward": {"cosmetic": "decal_sable_spool"}},
