@@ -39,6 +39,10 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 # --late-offer=take|skip (SG8) turns the tree's late_offer on, has the bot take a random branch at
 # each plain offer so depth 4 can open, and answers the take_or_skip offer with that policy;
 # bots.ndjson then carries a late_offer row. Without it the bot is unchanged.
+# --relay-stake=<0..4> (SR10) has the skipper stake the park relay (src/world/hold_relay.gd
+# set_stakes) once, before it rolls into the ring, work the relay to its pay, then go on to the
+# Warden; the stage row in bots.ndjson carries relay_stakes [{stage, k, ...}]. 0 or absent leaves
+# the bot byte-identical. Only the park table builds a relay (stages 1 and 5).
 # --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
 # run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the
 # same args (tuning.gd's FLAGS).
@@ -113,6 +117,10 @@ func _initialize() -> void:
 		return
 	if _settings.has("pilot") and (String(_settings["pilot"]) == "" or BotDriver.class_index_for(0, String(_settings["pilot"])) < 0):
 		printerr("bot_run: unknown --pilot=%s; use pylon_engineer, runner_gunner, demolitions_caster, tarn, tally or remembered_cannon" % _settings["pilot"])
+		quit(2)
+		return
+	if BotOptions.relay_stake(_settings) < 0:
+		printerr("bot_run: --relay-stake=%s is out of range; use a whole number 0 to 4" % _settings["relay-stake"])
 		quit(2)
 		return
 	_out = _absolute(_settings["out"])
@@ -237,6 +245,7 @@ func _physics_process(delta: float) -> bool:
 		_driver.trace = _settings.has("trace")
 		if _driver.trace:
 			_game.events.world_entered.connect(func(world: int): print("  trace world %d entered" % world))
+		_driver.relay_stake = BotOptions.relay_stake(_settings)
 		_driver.chain_hand_enabled = String(_settings.get("chain-hand", "1")) != "0"
 		if _settings.has("late-offer"):
 			var late := String(_settings["late-offer"])
