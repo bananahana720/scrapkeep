@@ -524,8 +524,8 @@ func _lane_scatter() -> void:
 		for f: Dictionary in lane + off:
 			var reach := (f["size"] as Vector2).length() * 0.5
 			var at: Vector2 = f["at"]
-			var lo := Vector2i(clampi(floori((at.x - reach + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9), clampi(floori((at.y - reach + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9))
-			var hi := Vector2i(clampi(floori((at.x + reach + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9), clampi(floori((at.y + reach + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9))
+			var lo := Vector2i(clampi(floori((at.x - reach + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, ParkTerrain.TILES_PER_SIDE - 1), clampi(floori((at.y - reach + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, ParkTerrain.TILES_PER_SIDE - 1))
+			var hi := Vector2i(clampi(floori((at.x + reach + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, ParkTerrain.TILES_PER_SIDE - 1), clampi(floori((at.y + reach + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, ParkTerrain.TILES_PER_SIDE - 1))
 			for ci in range(lo.x, hi.x + 1):
 				for cj in range(lo.y, hi.y + 1):
 					cells[Vector2i(ci, cj)] = true
@@ -560,20 +560,15 @@ func _lane_scatter() -> void:
 								in_lane += 1
 							continue
 						in_lane += 1
-						var free_worst := -INF
 						var before := -INF
-						for k in 8:
-							var corner0: Vector3 = free[i] * aabb.get_endpoint(k)
-							before = maxf(before, corner0.y - (ground.call(corner0.x, corner0.z, 0.0) as Vector3).y)
-						if before > Scatter.LANE_BAND_M + 1e-4:
-							over += 1
 						for k in 8:
 							var corner: Vector3 = kept[i] * aabb.get_endpoint(k)
 							worst = maxf(worst, corner.y - (ground.call(corner.x, corner.z, 0.0) as Vector3).y)
-							var free_corner: Vector3 = free[i] * aabb.get_endpoint(k)
-							free_worst = maxf(free_worst, free_corner.y - (ground.call(free_corner.x, free_corner.z, 0.0) as Vector3).y)
+							var corner0: Vector3 = free[i] * aabb.get_endpoint(k)
+							before = maxf(before, corner0.y - (ground.call(corner0.x, corner0.z, 0.0) as Vector3).y)
 						# The negative: without the sink this piece would have stood over the band.
-						if free_worst > Scatter.LANE_BAND_M + 1e-4:
+						if before > Scatter.LANE_BAND_M + 1e-4:
+							over += 1
 							sunk_over += 1
 						# Sunk straight down: the same spot, the same lean, the same size.
 						if not (kept[i].basis.is_equal_approx(free[i].basis) and is_equal_approx(kept[i].origin.x, free[i].origin.x) and is_equal_approx(kept[i].origin.z, free[i].origin.z) and kept[i].origin.y <= free[i].origin.y + 1e-5):
