@@ -15,7 +15,7 @@ const WorldLook := preload("res://src/presentation/world_look.gd")
 
 # Dense-scene diagnostic. Synthetic attacks do not establish gameplay or human readability.
 # Does a hostile telegraph stay readable when the screen fills, and what do the effect
-# counts and frame times look like? Three scenes on stage 1 as Rivet with a stacked build:
+# counts and frame times look like? Three scenes on stage 1 (or --stage=N) as Rivet with a stacked build:
 #   S1  1 pack, no extra telegraphs (baseline)
 #   S2  3 packs, 4 committed telegraphs of each hostile type around the ball
 #   S3  6 packs, 8 of each type, and the stage's Warden moved in front and charging
@@ -95,7 +95,8 @@ func _initialize() -> void:
 	var dims: PackedStringArray = String(settings.get("size", "1920x1080")).split("x")
 	if dims.size() == 2 and dims[0].is_valid_int() and dims[1].is_valid_int():
 		_size = Vector2i(int(dims[0]), int(dims[1]))
-	_timeout = float(settings.get("timeout", str(HARD_TIMEOUT)))
+	var timeout: String = settings.get("timeout", "")
+	_timeout = float(timeout) if timeout.is_valid_float() and float(timeout) > 0.0 else HARD_TIMEOUT
 	if settings.has("stage"):
 		var wanted: String = settings["stage"]
 		if not wanted.is_valid_int() or int(wanted) < 1 or int(wanted) > 6:
@@ -154,8 +155,8 @@ func _process(delta: float) -> bool:
 			_phase = "drop"
 			_phase_usec = now
 		"drop":
-			if _staged and _stage != 1 and not _entered and _game.flow.in_stage():
-				# The start lands on stage 1; move the run to stage N and let it settle.
+			if _staged and _stage != 1 and not _entered and _game.flow.in_stage() and _seconds_since(_phase_usec) > 1.5:
+				# The start lands on stage 1; once it has settled, move the run to stage N and settle again.
 				_entered = true
 				_game.flow.enter_stage(_stage, Vector3.ZERO, false)
 				_phase_usec = now
@@ -652,7 +653,7 @@ func _finish(reason: String) -> void:
 				_errors.append("load fell below target during sampling: " + result["scene"])
 				break
 	var info := {
-		"reason": reason, "dry_schema_only": _dry, "stage": _stage, "time_id": WorldLook.time_id(_stage), "table": _table, "errors": _errors,
+		"reason": reason, "dry_schema_only": _dry, "stage": _stage, "time_id": WorldLook.time_id(_stage), "table": _table if not _table.is_empty() else "default", "errors": _errors,
 		"godot": Engine.get_version_info()["string"], "source_sha256": _source_hashes(),
 		"timing": "uncapped frame intervals; captures and analysis excluded; replenishment included; GPU zero means unavailable",
 		"class": _game.run.class_id() if _game != null and _game.run != null else "",
@@ -666,7 +667,7 @@ func _finish(reason: String) -> void:
 		file.store_string(JSON.stringify(info, "  "))
 		file.close()
 	else:
-		printerr("stress_capture: could not write stress.json")
+		printerr("stress_capture: could not write " + ("stress.json" if not _staged else "stress-st%d.json" % _stage))
 		quit(1)
 		return
 	if reason == "done" and not _dry and OS.execute("which", ["montage"]) == 0:
@@ -734,7 +735,8 @@ func _source_hashes() -> Dictionary:
 	var hashes := {}
 	for path in ["res://tools/stress_capture.gd", "res://src/combat/telegraph.gd",
 		"res://src/combat/threat_grammar.gd", "res://src/presentation/vfx.gd",
-		"res://src/presentation/juice.gd", "res://src/game.gd"]:
+		"res://src/presentation/juice.gd", "res://src/game.gd", "res://src/core/flow.gd",
+		"res://src/presentation/world_look.gd"]:
 		hashes[path] = FileAccess.get_sha256(path)
 	return hashes
 
