@@ -571,6 +571,10 @@ func _step_director(delta: float) -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	var v: Vector3 = ctx.player.state.velocity
 	var forward: Vector3 = -ctx.camera.yaw_basis().z
+	# Warden contact (ruling 15 c'): spawns ring the live Warden's core; read every step, some Wardens move.
+	var w = ctx.flow.warden
+	director.warden_core = Vector2(w.global_position.x, w.global_position.z) if WhyCallout.warden_fight_live(ctx.flow) \
+		and ctx.flow.stage() >= Director.WARDEN_RING_FROM_STAGE else Vector2.INF
 	var due: Array = director.advance(delta, alive, Vector2(ball.x, ball.z), Vector2(v.x, v.z), Vector2(forward.x, forward.z))
 	for tier in director.take_threat_rises():
 		ctx.events.threat_rose.emit(tier)
