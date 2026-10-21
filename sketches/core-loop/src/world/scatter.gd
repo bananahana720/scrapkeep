@@ -214,8 +214,9 @@ static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB,
 			continue
 		var placed := out.size()
 		_stand(row, ground, aabb, x, z, yaw, s, tilt, out, grounds)
-		# A tall piece on the line stays, sunk to the band (ruling 5, revised): same draws, same count.
-		if tall and out.size() > placed and _in_lane(lane_mask, x, z):
+		# A tall piece on the line stays, sunk to the band (ruling 5, revised): same draws, same count. The line is read at the
+		# piece's own placed origin, the point a reader of the transform sees.
+		if tall and out.size() > placed and _in_lane(lane_mask, out[placed].origin.x, out[placed].origin.z):
 			out[placed] = _sunk_to_band(out[placed], ground, aabb)
 	return out
 

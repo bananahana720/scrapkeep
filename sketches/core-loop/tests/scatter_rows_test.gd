@@ -534,9 +534,7 @@ func _lane_scatter() -> void:
 						problems.append("%s %s %s: %d pieces became %d" % [map_id, ground_name, row["kind"], free.size(), kept.size()])
 						continue
 					for i in free.size():
-						# A piece's origin sits a little off the point the mask tests (the lean sinks it along its normal), so on a cell's edge
-						# the origin can read the other side; a piece that did move is on the line.
-						var inside := Scatter._in_lane(mask, free[i].origin.x, free[i].origin.z) or (tall and free[i] != kept[i])
+						var inside := Scatter._in_lane(mask, free[i].origin.x, free[i].origin.z)
 						if not inside or not tall:
 							if free[i] != kept[i]:
 								changed += 1
