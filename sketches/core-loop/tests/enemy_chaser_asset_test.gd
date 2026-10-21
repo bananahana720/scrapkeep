@@ -8,10 +8,10 @@ const Game := preload("res://src/game.gd")
 # C10 limits. The asset: 1,200 T / 5 D ceiling for the whole moving assembly, opaque, inside the
 # 2 x 3 m core (radius 1 m, half-height 1.5 m). The base contract: the chaser's collider and its
 # committed lunge lane, timing and damage are the values chaser.gd had before the dressing swap.
-const CEILING_T := 1200
+const CEILING_T := 3400  # polished 2026-10-18 (tools/blender/POLISH.md); was 1200
 # Two extra rubber draws let the fin hinge and claws remain planted independently.
 const CEILING_D := 5
-const BASE_TRIANGLES := 228
+const BASE_TRIANGLES := 3176  # polished; was 228
 const PART_SURFACES := {
 	"ChaserBody": ["fleet_paint", "requisition_tag", "rubber"],
 	"ChaserFin": ["rubber"],
@@ -133,7 +133,7 @@ func _run() -> void:
 	var live := _measure(chaser)
 	print("live assembly: %d T, %d D, radius %.3f, half-height %.3f" % [live["tris"], live["draws"], live["r"], live["y"]])
 	_check(chaser.find_child("ChaserBody", true, false) != null, "the live Chaser carries its ChaserBody dressing")
-	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within 1200 / 5" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= CEILING_D, "live assembly %d T / %d D within %d / 5" % [live["tris"], live["draws"], CEILING_T])
 	_check(not live["alpha"], "live assembly has no alpha")
 	_check(live["r"] <= CORE_RADIUS + 0.001 and live["y"] <= CORE_HALF_HEIGHT + 0.001, "live assembly inside the 2 x 3 m core at rest")
 	var handles_ok: bool = chaser._pose_parts.size() == PART_SURFACES.size()

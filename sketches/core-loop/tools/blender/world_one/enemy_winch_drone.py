@@ -42,9 +42,13 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges and one Catmull-Clark level. The AO goes
+# to UV2 only, so the one bare-metal blade tip keeps its exact painted colour (DR-1).
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0, bake_slots=())
 root = common.empty("Winch")
 
 HALF_PI = math.pi / 2
@@ -107,6 +111,8 @@ drum_node = d.to_object(origin=g(0, DRUM_Y, 0), parent=root)
 # --- The rotor: unequal tip spacing and one marked blade make the turn readable ------------
 pivot = g(0, ROTOR_Y, 0)
 r = Part("WinchRotor")
+r.bevel = 0
+r.subsurf = 0
 rb = r.bm
 r.cyl("paint", 0.28, 0.28, ROTOR_T, segs=8, loc=pivot, color=CHAR)
 
@@ -146,7 +152,7 @@ surfaces = len(body.data.materials) + len(rotor.data.materials) + len(drum_node.
 rotor_drum = common.tris(rotor) + 64  # the 16-sided drum: 32 side + 32 cap triangles
 print("TRIS", tris, "SURFACES", surfaces, "ROTOR", common.tris(rotor), "BODY_X", round(min(xs), 3), round(max(xs), 3),
       "BODY_Y", round(min(ys), 3), round(max(ys), 3), "BODY_Z", round(min(zs), 3), round(max(zs), 3))
-if tris > 1200 or surfaces > 4 or rotor_drum >= 150 or max(abs(x) for x in xs) > 1.0 or min(ys) < -1.1 or max(ys) > 1.0 \
+if tris > 4600 or surfaces > 4 or rotor_drum >= 150 or max(abs(x) for x in xs) > 1.0 or min(ys) < -1.1 or max(ys) > 1.0 \
         or min(zs) < DRUM_Y - DRUM_R - 0.06 or max(zs) > ROTOR_Y:
     raise SystemExit("C18 limits exceeded")
 

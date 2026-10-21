@@ -114,6 +114,7 @@ func find(id: String) -> bool:
 	if _audio != null:
 		_audio.play("bay_jukebox", 0.0, 1.0, "UI")
 	radio.premiere(id)
+	game.events.radio_take_found.emit(id, String(t["tier"]), String(t["found"].get("on", "")))
 	_save()
 	_plan_now()
 	return true
@@ -127,7 +128,7 @@ func _place_caches() -> void:
 	var root = game.ctx.get("root")
 	if terrain == null or root == null or not terrain.has_method("map") or terrain.map() == null:
 		return
-	RadioCache.spawn_for(String(terrain.map().title), root, self, game.ctx.player)
+	RadioCache.spawn_for(String(terrain.map().title), _found, root, self, game.ctx.player)
 
 
 func _found(id: String) -> bool:

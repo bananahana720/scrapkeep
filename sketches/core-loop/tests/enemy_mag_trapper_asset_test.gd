@@ -7,7 +7,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # C12's original 1,200 triangle / four-draw limit gains two draws when WG splits
 # the top disc's paint and core surfaces. Triangle and opacity bounds stay fixed.
 # Collider, pit, hold, timing and damage-side values remain the pre-dressing contract.
-const CEILING_T := 1200
+const CEILING_T := 5200  # polished 2026-10-18 (tools/blender/POLISH.md); was 1200
 const CEILING_D := 6 # Independent top disc adds two surfaces; geometry stays unchanged.
 # The live assembly adds MagTopLink, the mast from the stack to the lifted disc (PC): one more draw than the asset.
 const LIVE_CEILING_D := 7
@@ -75,7 +75,7 @@ func _run() -> void:
 	print("asset: %d T, %d D" % [m["tris"], m["draws"]])
 	_check(m["tris"] <= CEILING_T and m["tris"] > 0, "asset triangles %d <= %d" % [m["tris"], CEILING_T])
 	_check(m["draws"] <= CEILING_D, "asset draws %d <= %d" % [m["draws"], CEILING_D])
-	_check(m["tris"] >= 760 * 0.9 and m["tris"] <= 760 * 1.1, "WG-8 triangles within 10 percent of baseline 760")
+	_check(m["tris"] >= 4872 * 0.9 and m["tris"] <= 4872 * 1.1, "WG-8 triangles within 10 percent of baseline 4872 (polished; was 760)")
 	for node_name in ["MagTrapperBody", "MagDiscs", "MagTopDisc"]:
 		var part := scene.find_child(node_name, true, false) as MeshInstance3D
 		_check(part != null, "named asset node " + node_name)
@@ -128,7 +128,7 @@ func _run() -> void:
 	print("live assembly: %d T, %d D, %d meshes" % [live["tris"], live["draws"], live["meshes"]])
 	_check(trapper.find_child("MagTrapperBody", true, false) != null, "the live trapper carries its MagTrapperBody dressing")
 	_check(live["meshes"] > 0 and live["tris"] > 0, "the live measurement saw meshes (the check runs)")
-	_check(live["tris"] <= CEILING_T and live["draws"] <= LIVE_CEILING_D, "live assembly %d T / %d D within 1200 / 7" % [live["tris"], live["draws"]])
+	_check(live["tris"] <= CEILING_T and live["draws"] <= LIVE_CEILING_D, "live assembly %d T / %d D within %d / 7" % [live["tris"], live["draws"], CEILING_T])
 	_check(not live["alpha"], "live assembly has no alpha")
 
 	# The hazard cores glow at 0.6, read from the live material; a hit through the existing

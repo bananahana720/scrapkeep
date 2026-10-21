@@ -36,9 +36,19 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from lantern_beacon import kit, common, frustum, around
 from ore_cart import strut
+import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [900, 2000, 2]
+LANDMARK = [2400, 2000, 2]  # polish: was [900, 2000, 2]
+# Polish (tools/blender/POLISH.md): hard timber-and-steel machinery: bevels only.
+FINISH = {"Girders": {"bevel": .04}, "Fittings": {"bevel": .03}, "Arm": {"bevel": .04}, "Glass": {"bevel": .04}, "Detail1": {"bevel": 0}, "Detail2": {"bevel": 0}}
+
+
+def polish_on():
+    polish.enable(bevel=.04, bevel_min=.15, **kit.BAKE)
+    kit.FINISH.update(FINISH)
+
+
 NAME = "trebuchet_launcher"
 
 # One row per painted part, palette names or palette hex (src/core/palette.gd). common.HEX lacks CABLE 2a3231, LEDGER
@@ -357,6 +367,7 @@ def out_dir():
 
 
 def main():
+    polish_on()
     d = out_dir()
     export(NAME + "_frame", [("Girders", "enamel", False, girders), ("Fittings", "steel", False, fittings)],
            {"socket_arm": list(PIVOT), "socket_sphere": list(SPHERE[0])}, d)

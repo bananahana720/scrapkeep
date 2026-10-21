@@ -870,6 +870,8 @@ func _draw_overdrive(delta: float) -> void:
 		_flecks.amount_ratio = clampf(heat * (0.6 + 0.4 * might), 0.0, 1.0)
 		_embers.amount_ratio = clampf(heat * (0.5 + 0.5 * might), 0.0, 1.0)
 	if _flecks.emitting != on:
+		FxLibrary.set_heat(_flecks)
+		FxLibrary.set_heat(_embers)
 		_flecks.emitting = on
 		_embers.emitting = on
 
@@ -908,6 +910,7 @@ func _draw_carve() -> void:
 		var fast := clampf(speed / 30.0, 0.0, 1.0)
 		_carve.amount_ratio = clampf((0.35 + 0.65 * steep) * (0.7 + 0.3 * might) * fast, 0.1, 1.0)
 	if _carve.emitting != on:
+		FxLibrary.set_heat(_carve)
 		_carve.emitting = on
 		if on:
 			spawned["carve"] = spawned.get("carve", 0) + 1
@@ -922,6 +925,7 @@ func column(tint: Color, at := Vector3.INF) -> void:
 	p.global_transform = Transform3D(Basis.IDENTITY, base)
 	p.set_instance_shader_parameter("tint", _glow(heat_tint(tint), 1.15))
 	p.amount_ratio = clampf(0.5 + 0.5 * might, 0.0, 1.0)
+	FxLibrary.set_heat(p)
 	p.restart()
 	p.emitting = true
 	spawned["column"] = spawned.get("column", 0) + 1
@@ -929,11 +933,20 @@ func column(tint: Color, at := Vector3.INF) -> void:
 
 # --- Emitters ----------------------------------------------------------------------------
 
-func _emitter(pm: ParticleProcessMaterial, mesh: PrimitiveMesh, amount: int, life: float, blend: String, one_shot: bool) -> GPUParticles3D:
-	mesh.material = FxLibrary._material(blend)
+# The shape gives the look (FxLibrary._LOOKS): a long box is a streak along its motion, a ball
+# or a cube a soft glow.
+func _emitter(pm: ParticleProcessMaterial, shape: PrimitiveMesh, amount: int, life: float, blend: String, one_shot: bool) -> GPUParticles3D:
+	var size = shape.size if shape is BoxMesh else shape.height
+	var look := "streak" if size is Vector3 and maxf(size.y, size.z) > size.x * 2.0 else "glow"
+	var mesh := FxLibrary.look_mesh(look, size, blend)
+	mesh.material = FxLibrary.look_material(look, blend)
+	if look == "glow":
+		pm.angle_min = 0.0
+		pm.angle_max = 360.0
 	var p := GPUParticles3D.new()
 	p.process_material = pm
 	p.draw_pass_1 = mesh
+	p.set_meta("fx_look", look)
 	p.amount = amount
 	p.lifetime = life
 	p.one_shot = one_shot

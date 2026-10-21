@@ -339,7 +339,12 @@ func _w10_pack_tricks(home: Vector3) -> void:
 	_game.events.slammed.emit(jaw.telegraph().center, 1.0, 1.0)
 	_report("jaw_slam", _combat.discovered.has("jaw_slam") and jaw.slam_kills == 1,
 		"a slam on the open jaw shut it (slam_kills %d)" % jaw.slam_kills)
-	for node in [trap, brute, drone, jaw]:
+	# 2026-10-18 (w17 fix): 8cdcd49 gave the Linker its codex row; a bolt on its cable cuts it.
+	var linker: Node3D = _w9_spawn("linker", home + Vector3(12.0, 0.0, 10.0))
+	_combat.strike(linker, "bolt", 5.0, "cable")
+	_report("cable_cut", _combat.discovered.has("cable_cut") and linker.cut and linker.cut_by == "struck",
+		"a bolt on a Linker's cable cut it (cut %s by %s)" % [linker.cut, linker.cut_by])
+	for node in [trap, brute, drone, jaw, linker]:
 		if is_instance_valid(node):
 			node.queue_free()
 

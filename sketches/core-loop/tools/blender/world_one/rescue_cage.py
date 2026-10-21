@@ -12,6 +12,10 @@ from common import Part
 common.reset()
 common.SLOTS["cage_steel"] = {"vc": True, "rough": 0.72, "metal": 0.25}
 common.SLOTS["cage_signal"] = {"vc": True, "rough": 0.72, "metal": 0.25}
+# Polish (POLISH.md): the 1100 T / 2100 V cap and the 4-part, 4-draw check leave room for smooth shading and the
+# AO/wear bake only; the mint latch (cage_signal) is not baked so the ally state colour stays bright.
+import polish
+polish.enable(detail=1, bevel=0, bake_slots=("cage_steel",))
 root = common.empty("RescueCage")
 
 def g(x, y, z):

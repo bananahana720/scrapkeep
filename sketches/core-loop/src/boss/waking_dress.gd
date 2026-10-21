@@ -15,6 +15,13 @@ const KIT := "res://assets/models/bosses/boss_waking_kit.glb"
 const COLLARS := ["CollarSpoil", "CollarSeam", "CollarBedrock"]
 # Floor k's collar and the clips that warn of its drop and show it.
 const FLOOR_CLIPS := [["floor_warn", "floor_drop"], ["floor_warn_seam", "floor_drop_seam"], ["floor_warn_bedrock", "floor_drop_bedrock"]]
+# The pulse clips key only these parts; they ride their own players so a charge beside a floor
+# warn neither cuts the collar's rise nor leaves floor_drop starting from a half-raised collar.
+const PULSE_KIT := ["PressureLip0", "PressureLip1", "PressureLip2"]
+const PULSE_BASE := ["IntakeVane0", "IntakeVane1", "IntakeVane2"]
+const PULSE_CLIPS := ["pulse_warn", "pulse"]
+# The vanes also move in these base clips, so their tracks ride the vane player with the pulse.
+const VANE_CLIPS := PULSE_CLIPS + ["sleeping", "wake", "pit_defeat"]
 const CORE := ["CoreShutter0", "CoreShutter1", "CoreShutter2", "CoreLive", "CoreUnready", "ReactorCore"]
 # Test seam: a test points these at a missing file to prove the stub body stays.
 static var base_path := BASE
@@ -28,6 +35,8 @@ var kit: Node3D
 var _base_anim: AnimationPlayer
 var _kit_anim: AnimationPlayer
 var _core_anim: AnimationPlayer
+var _pulse_kit_anim: AnimationPlayer
+var _pulse_base_anim: AnimationPlayer
 var _seat: Node3D
 var _open := false
 var _charging := false
@@ -82,6 +91,8 @@ func setup(base_scene: Node3D, kit_scene: Node3D) -> void:
 	BossModel.strip_except(_base_anim, "SpineInner", FLOOR_CLIPS[0] + FLOOR_CLIPS[1] + FLOOR_CLIPS[2] + ["pit_defeat"])
 	# The core opens on its own player so a floor or pulse clip never closes it mid-stagger.
 	_core_anim = BossModel.split_player(_kit_anim, ["core_open"], CORE)
+	_pulse_kit_anim = BossModel.split_player(_kit_anim, PULSE_CLIPS, PULSE_KIT)
+	_pulse_base_anim = BossModel.split_player(_base_anim, VANE_CLIPS, PULSE_BASE)
 	BossModel.hide_warden_body(module.warden)
 	_both("wake")
 
@@ -101,7 +112,9 @@ func _physics_process(_delta: float) -> void:
 		var charging: bool = warden._charging
 		if charging != _charging:
 			_charging = charging
-			_both("pulse_warn" if charging else "pulse")
+			var pulse := "pulse_warn" if charging else "pulse"
+			BossModel.play(_pulse_base_anim, pulse)
+			BossModel.play(_pulse_kit_anim, pulse)
 	var dropping: int = module._dropping
 	if dropping != _dropping:
 		if dropping != 0:
@@ -112,8 +125,11 @@ func _physics_process(_delta: float) -> void:
 	if module.state == module.DEFEATED and not _defeated:
 		_defeated = true
 		BossModel.play(_base_anim, "pit_defeat")
+		BossModel.play(_pulse_base_anim, "pit_defeat")
 
 
 func _both(clip: String) -> void:
 	BossModel.play(_base_anim, clip)
 	BossModel.play(_kit_anim, clip)
+	if clip in VANE_CLIPS:
+		BossModel.play(_pulse_base_anim, clip)

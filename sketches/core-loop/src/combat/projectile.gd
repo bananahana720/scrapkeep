@@ -171,7 +171,7 @@ func rim_color() -> Color:
 
 
 func _build_rim() -> void:
-	_rim_material = Palette.solid(EventKinds.state_color("will_break"))
+	_rim_material = Palette.solid(EventKinds.state_color("will_break"), 0.0, false)
 	_rim_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_rim_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_rim_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED

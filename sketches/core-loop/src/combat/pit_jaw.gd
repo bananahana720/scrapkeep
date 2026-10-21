@@ -17,6 +17,13 @@ const STOP := 14.0
 const CENTRE := 10.0
 const BITE_DAMAGE := 6.0
 const HP := 40.0
+# E30's wind-up (event_kinds.gd, e30_jaw_part; coordinator call 2026-10-18, "no silent wind-ups"):
+# through the warn the jaw parts at the ring, its teeth spreading JAW_SPREAD wider and rising
+# JAW_RISE out of the floor; it stays parted live until it bites, then snaps shut. Presentation
+# only: the ring, the bite and the timing are unchanged.
+const JAW_SPREAD := 0.35
+const JAW_RISE := 0.18
+const JAW_GAPE := 0.6
 # The catch trap's glb stands in until the Bodies thread's world 2 pit jaw lands and replaces this path.
 const BODY := "res://assets/models/world_one/enemy_catch_trap.glb"
 
@@ -24,6 +31,7 @@ var bitten := 0
 var slam_kills := 0
 var _jaw: MeshInstance3D
 var _jaw_rest := Vector3.ZERO
+var _jaw_set := Vector3.ZERO
 
 static var _warned_asset := false
 static var _shared: Array = []
@@ -123,6 +131,7 @@ func _commit(_to_ball: Vector3) -> Node3D:
 	var ring := _commit_ring(Threat.Type.INSTANT, aim, JAW_RADIUS, 2.0)
 	_jaw.top_level = true
 	_jaw.global_position = Vector3(ring.center.x, Telegraph.ground_under(terrain, ring.center) + 0.06, ring.center.z)
+	_jaw_set = _jaw.global_position
 	return ring
 
 
@@ -165,3 +174,19 @@ func _on_end() -> void:
 	if _jaw != null:
 		_jaw.top_level = false
 		_jaw.position = _jaw_rest
+		_jaw.scale = Vector3.ONE
+
+
+# E30's pose, e30_jaw_part: the jaw parts through the warn and holds open until it bites.
+func _pose() -> void:
+	if _jaw == null or not _jaw.top_level:
+		return
+	var part := 0.0
+	if not is_dead():
+		if phase == Phase.WARN:
+			var t := clampf(_warn_progress(), 0.0, 1.0)
+			part = t * t * (3.0 - 2.0 * t)
+		elif phase == Phase.LIVE and caught_live == 0:
+			part = 1.0
+	_jaw.global_position = _jaw_set + Vector3.UP * JAW_RISE * part
+	_jaw.scale = Vector3(1.0 + JAW_SPREAD * part, 1.0 + JAW_GAPE * part, 1.0 + JAW_SPREAD * part)

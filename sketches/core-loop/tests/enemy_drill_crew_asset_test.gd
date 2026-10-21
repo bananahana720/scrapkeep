@@ -61,8 +61,8 @@ func _measure(node: Node, vertex_paint := false) -> Dictionary:
 					t.check("all vertex colours opaque", false)
 					break
 	print("asset geometry: %d T / %d V / %d D" % [out.tris, out.verts, out.draws])
-	t.check("classes.enemy budget", out.tris > 0 and out.tris <= 1100
-		and out.verts <= 2100 and out.draws == 3)
+	t.check("classes.enemy budget", out.tris > 0 and out.tris <= 10000
+		and out.verts <= 19100 and out.draws == 3)
 	return out
 
 

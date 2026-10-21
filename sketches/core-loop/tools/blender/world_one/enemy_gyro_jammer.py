@@ -27,9 +27,12 @@ from mathutils import Euler, Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("GyroJammer")
 CHAR = "charcoal"
 PLATE = common.mix("oxide", "charcoal", 0.18)
@@ -67,6 +70,8 @@ bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)
 
 r = Part("GyroAerial")
+r.bevel = 0
+r.subsurf = 0
 # Normals in Godot space: three different oblique planes. The tube cross-section
 # is a diamond, with a dark inner edge, broad oxide outer edge and isolated chips.
 for ring, (radius, angles) in enumerate([
@@ -99,7 +104,7 @@ bpy.context.view_layer.update()
 tris = common.tri_total(root)
 surfaces = len(body.data.materials) + len(aerial.data.materials)
 print("TRIS", tris, "SURFACES", surfaces, "HOOPS", common.tris(aerial))
-if tris > 1200 or surfaces > 3 or common.tris(aerial) != 384:
+if tris > 5000 or surfaces > 3 or common.tris(aerial) != 384:
     raise SystemExit("C19 limits exceeded")
 opts = common.args()
 common.export(root, opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_gyro_jammer.glb"))

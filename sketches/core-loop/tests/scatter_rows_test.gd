@@ -22,10 +22,13 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 
-# SHA-256 of every old-map scatter transform (kind, seed, instance buffer, maps sorted), recorded
-# 2026-10-11 on the untouched base d204cea (KB5). A change here moves an old map's scatter.
-const OLD_MAPS_HASH := "5bdc8fbaa2b82655daf9425a055b042a7b8ce55de12e01ce71e643a2a5ce7666"
+# SHA-256 of every old-map scatter transform (kind, seed, instance buffer, maps sorted). A change
+# here moves an old map's scatter. Re-pinned 2026-10-18 (coordinator call 2026-10-18) to a57519e6,
+# the value reported stable in this repo back to 0eeb995e; was 5bdc8fba, recorded 2026-10-11 on
+# the base d204cea (KB5), which is not in this repo.
+const OLD_MAPS_HASH := "a57519e6d2f7ff97671b7cb051b49fb168b2c550919fad2fe7e0ac2ec7610dd2"
 # The rows that hash covers: Dig 4, Dig Deep 4, Spillway 4 (a missing batch must not pass).
 const OLD_MAPS_ROWS := 12
 const PARK_TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}]}
@@ -162,7 +165,7 @@ func _run() -> void:
 
 	var old_hash := _old_maps_hash()
 	print("scatter_rows_test: old-map scatter hash ", old_hash)
-	t.eq("the old maps' scatter transforms are byte-identical to d204cea", old_hash, OLD_MAPS_HASH)
+	t.eq("the old maps' scatter transforms are byte-identical to the pin", old_hash, OLD_MAPS_HASH)
 
 	quit(t.verdict())
 
@@ -262,9 +265,23 @@ func _park_chunks() -> void:
 	t.eq("the stage root holds all 100 chunks", chunks.get_child_count(), ParkTerrain.TILE_COUNT)
 	t.check("start() is metered", chunks.start_usec > 0 and chunks.slowest_usec >= chunks.start_usec, "%d usec" % chunks.start_usec)
 	# The glb source is requested on the loader thread with the cache bypassed, so the main thread never
-	# loads it and the build is cold whatever the process has cached (KB5's receipt ran warm).
-	t.eq("the glb mesh sources load on the loader thread, not the main thread", chunks.get("threaded_loads"), 1)
-	t.check("the slot materials that are resources load on the loader thread", int(chunks.get("threaded_materials")) >= 1, str(chunks.get("threaded_materials")))
+	# loads it and the build is cold whatever the process has cached (KB5's receipt ran warm). Headless (the
+	# dummy rasterizer, whose mesh RID owner is not thread-safe) the sources load on the main thread instead.
+	if DisplayServer.get_name() != "headless":
+		t.eq("the glb mesh sources load on the loader thread, not the main thread", chunks.get("threaded_loads"), 1)
+		t.check("the slot materials that are resources load on the loader thread", int(chunks.get("threaded_materials")) >= 1, str(chunks.get("threaded_materials")))
+	else:
+		t.eq("headless, no glb source loads on the loader thread", chunks.get("threaded_loads"), 0)
+		t.eq("headless, no slot material loads on the loader thread", chunks.get("threaded_materials"), 0)
+		var glb_kinds := []
+		for row: Dictionary in Scatter.park_rows(map):
+			if String(row["mesh"]).begins_with("glb:") and not glb_kinds.has(row["kind"]):
+				glb_kinds.append(row["kind"])
+		var glb_views := 0
+		for view: MultiMeshInstance3D in chunks.find_children("*", "MultiMeshInstance3D", true, false):
+			if glb_kinds.has(view.get_meta("kind")) and view.multimesh.mesh != null:
+				glb_views += 1
+		t.check("headless, the glb sources still load (main thread) and their kinds are scattered", not glb_kinds.is_empty() and glb_views > 0, "%d batches of %s" % [glb_views, glb_kinds])
 	t.check("no main-thread scatter step over 8 ms during the build, start() included", chunks.slowest_usec > 0 and chunks.slowest_usec < FRAME_CAP_USEC, "%.2f ms" % slowest_ms)
 
 	# One MultiMesh per kind per chunk; no node for a kind a chunk has none of; each chunk sits in
@@ -402,7 +419,9 @@ func _plain_slopes() -> void:
 				plain.append(row)
 				if kept.has(row["id"]):
 					problems.append("%s/%s is a plain slope kept out" % [map_id, row["id"]])
-			elif row["element"] != "ground":
+			# 2026-10-18 (w17 fix): a scatter-dressed row (recipe "scatter", #114's cinder_cone) is dressed by
+			# the scatter, so park_map.gd keeps it out of keep_out; it is neither plain nor built here.
+			elif row["element"] != "ground" and row["recipe"] != ParkRecipes.SCATTER_DRESSED:
 				built.append(row)
 				if not kept.has(row["id"]):
 					problems.append("%s/%s is built but not kept out" % [map_id, row["id"]])

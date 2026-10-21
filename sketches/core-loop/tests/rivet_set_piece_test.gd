@@ -43,12 +43,26 @@ const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 # cell, the unshadowed cell selects two of them, and an in-front hull is still selected.
 # 2026-10-16 (BITE-PIN): 226 -> 229. A guard re-closed on the ball, and the landing, hold the
 # exceptions of bodies the ball is inside until it is clear (exception_hold.gd).
+# 2026-10-17 (RIVET-FREEZE): 230 -> 233 (after pilot paint's 229 -> 230). The terrain commit's skipped clips leave parts and
+# shadows byte-identical to a plain subtraction pass.
+# 2026-10-17 (RIVET-FREEZE, "Fewer lines"): 233 -> 237. Coplanar terrain faces merge into convex
+# polygons of the same area, the merged carve keeps the same volume, and the cell boxes select
+# what the plain selection does.
+# 2026-10-17 (RIVET-CURVE): 237 -> 238. A grazing bumpy floor, whose shadows are too thin for a
+# clearance, carves the same points as a plain subtraction pass.
+# 2026-10-18 (RIVET-CURVE, "Beat later" and "Spread every Breach"): 238 -> 243. A heavy Breach
+# carve takes a share per tick and hits once done, never before LATE_TICKS; a light one hits on
+# the landing tick. The carve is byte for byte the one made at once. Frame headroom (same day):
+# a heavy carve hits the tick after its last share, so selection never shares a tick with one.
 
 
 func _initialize() -> void:
 	_t = T.new("rivet_set_piece_test")
 	# 2026-10-16 (pilot paint): Calibrated is live, one check added.
-	_expected_checks = 231
+	# 2026-10-18 (stage/alpha-w17): 238 -> 239, RIVET-CURVE on top of EARNED-COSMETICS' one check;
+	# 239 -> 244 with "Beat later" and "Spread every Breach" (header); 244 -> 255 with the level-ground
+	# Breach (Andrew's 18 Oct ruling, option B).
+	_expected_checks = 255
 	super._initialize()
 
 
@@ -181,7 +195,7 @@ func _shape_dispatch_fixture() -> void:
 			var other_shapes: Dictionary = indicator.shapes
 			indicator.shapes = {"rivet_scar": scar}
 			_kit.volume_indicator._process(0.0)
-			var arrays: Array = _kit.volume_indicator._tris.surface_get_arrays(0)
+			var arrays: Array = _kit.volume_indicator.scar_mesh.surface_get_arrays(0)
 			var rendered: Array = []
 			for i in (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
 				if arrays[Mesh.ARRAY_COLOR][i].a < 1.0:
@@ -342,10 +356,10 @@ func _alpha_terrain_cost_fixture() -> void:
 	indicator._process(0.0)
 	var changes := [0]
 	var changed := func(): changes[0] += 1
-	indicator._tris.changed.connect(changed)
+	indicator.scar_mesh.changed.connect(changed)
 	indicator._process(0.0)
 	_t.eq("captured alpha frozen volume does not rebuild its mesh", changes[0], 0)
-	indicator._tris.changed.disconnect(changed)
+	indicator.scar_mesh.changed.disconnect(changed)
 	await _fresh()
 	var arena := Arena.new()
 	arena.position = Vector3(0.0, 50.75909, 118.0)
@@ -369,6 +383,7 @@ func _alpha_terrain_cost_fixture() -> void:
 	_t.eq("captured alpha bowl landing commits through one selector", _kit.selected_shapes.size(), 1)
 	_t.check("captured alpha bowl landing retains exposed volume", not (_kit.selected_shapes[0]["cells"] as Array).is_empty())
 	_t.eq("captured alpha bowl landing hits the exposed target exactly once", [snappedf(health_before - float(front.hp), 0.01), _hits(front).size()], [Ultimate.LANDING_DAMAGE * Ultimate.HEFT_MULT[2], 1])
+	_late_landing_fixture(arena_at, arena_heading)
 	_game.run.mass = prior_mass
 	var peak_at := Vector3(-5.500791, 52.43582, 115.2811)
 	var peak_aim := Vector3(0.672423, 0.593669, 0.442046).normalized()
@@ -389,6 +404,335 @@ func _alpha_terrain_cost_fixture() -> void:
 	arena.queue_free()
 	_game.ctx.terrain.use(1)
 	await _fresh()
+
+
+# Andrew's ruling (18 Oct 2026, option B): a Breach on level park ground hits on its landing tick.
+# A heightfield sheet of 2 m cells with a millimetre of noise is never coplanar, so only merge_level joins
+# it; the same sheet tilted past LEVEL_GROUND_DEG keeps the plain merge and the late path. The
+# carve is byte for byte the same however its work splits, and no merged corner leaves the
+# sheet by more than LEVEL_DEVIATION.
+func _plate(centre: Vector3, tilt_deg: float, noise: float, seed_value: int) -> StaticBody3D:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var cells := 20
+	var heights := {}
+	for x in range(0, cells + 1):
+		for z in range(0, cells + 1):
+			heights[Vector2i(x, z)] = tan(deg_to_rad(tilt_deg)) * float(x) * 2.0 + rng.randf_range(-noise, noise)
+	var triangles := PackedVector3Array()
+	for x in cells:
+		for z in cells:
+			var p := func(dx: int, dz: int) -> Vector3: return Vector3((x + dx - cells / 2) * 2.0, heights[Vector2i(x + dx, z + dz)], (z + dz - cells / 2) * 2.0)
+			triangles.append_array([p.call(0, 0), p.call(0, 1), p.call(1, 0), p.call(1, 0), p.call(0, 1), p.call(1, 1)])
+	var shape := ConcavePolygonShape3D.new()
+	shape.set_faces(triangles)
+	var holder := CollisionShape3D.new()
+	holder.shape = shape
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	body.add_child(holder)
+	_game.add_child(body)
+	body.global_position = centre
+	return body
+
+
+# One landing's carve on the plate: [late carve, shares the landing took, the plate's level flag].
+func _plate_landing(plate: StaticBody3D, work: int) -> Array:
+	var at := plate.global_position + Vector3.UP * 1.0
+	var late: Dictionary = _kit._carve_late("foundry_cutter", at, Vector3.FORWARD, _kit.breach_reach(), 1.0, 0.0)
+	_kit._shade_work = 0
+	var done: bool = _kit._shade_late(late, work)
+	return [late, done]
+
+
+func _level_ground_fixture() -> void:
+	await _fresh()
+	var level_deg: float = _kit.LEVEL_GROUND_DEG
+	# The boundary, on two triangles of a known tilt (the face under the landing decides).
+	var tilted := func(deg: float) -> Array:
+		var rise := tan(deg_to_rad(deg)) * 2.0
+		return [[Vector3(-2, 0, -2), Vector3(-2, 0, 2), Vector3(2, rise * 2.0, -2)], [Vector3(2, rise * 2.0, -2), Vector3(-2, 0, 2), Vector3(2, rise * 2.0, 2)]]
+	_t.check("level ground: a face 0.2 degrees under the line is level, 0.2 over is not", _kit.level_ground(tilted.call(level_deg - 0.2), Vector3(0.0, 1.0, 0.0)) and not _kit.level_ground(tilted.call(level_deg + 0.2), Vector3(0.0, 1.0, 0.0)))
+	_t.check("level ground: a landing with no face under it is not level", not _kit.level_ground(tilted.call(1.0), Vector3(30.0, 1.0, 0.0)) and not _kit.level_ground([], Vector3.ZERO))
+	_t.near("level ground: the line is 5 degrees and Andrew's 3.43 stand is under it", level_deg, 5.0)
+	# Level plate, 3.4 degrees like Andrew's stand, 1 mm noise.
+	var flat := _plate(Vector3(0.0, 400.0, 0.0), 3.4, 0.001, 7301)
+	await physics_frame
+	await physics_frame
+	var landing: Array = _plate_landing(flat, _kit.landing_work(true))
+	var late: Dictionary = landing[0]
+	_t.check("level ground: a Breach on a 3.4 degree sheet is level, carves in its landing share and has parts", bool(late["level"]) and landing[1] and int(late["shares"]) == 1 and not (late["result"] as Array).is_empty(), "%d shares, %d parts of work" % [int(late["shares"]), int(late["work"])])
+	var found: Dictionary = _kit._terrain_near(flat.global_position + Vector3.UP * 1.0, late["sector"]["cells"])
+	var plain: Array = TerrainFaces.merge(found["faces"])
+	var joined: Array = TerrainFaces.merge_level(found["faces"], _kit.LEVEL_GROUND_DEG, _kit.LEVEL_TOLERANCE_DEG, _kit.LEVEL_DEVIATION)
+	_t.check("level ground: the merge joins the sheet's faces into far fewer polygons than the plain merge", joined.size() * 3 <= plain.size() and joined.size() > 0, "%d vs %d polygons" % [joined.size(), plain.size()])
+	var worst := 0.0
+	for poly: Array in joined:
+		var n := Vector3.ZERO
+		for k in range(1, poly.size() - 1):
+			n += ((poly[k] as Vector3) - (poly[0] as Vector3)).cross((poly[k + 1] as Vector3) - (poly[0] as Vector3))
+		n = n.normalized()
+		for face: Array in found["faces"]:
+			for v: Vector3 in face:
+				if Geometry2D.is_point_in_polygon(Vector2(v.x, v.z), PackedVector2Array(poly.map(func(c): return Vector2(c.x, c.z)))):
+					worst = maxf(worst, absf(n.dot(v - (poly[0] as Vector3))))
+	_t.check("level ground: no face corner under a merged polygon is more than LEVEL_DEVIATION from it", worst <= _kit.LEVEL_DEVIATION + 0.002, "%.4f m" % worst)
+	# However the work splits, the carve is the same bytes.
+	var once: Array = _plate_landing(flat, 1 << 30)
+	var split: Dictionary = _plate_landing(flat, 1)[0]
+	var tick := 0
+	while not split.has("result") and tick < 1000:
+		_kit._shade_late(split, 7)
+		tick += 1
+	_t.check("level ground: a level carve is the same bytes made at once or in shares", var_to_bytes([once[0]["result"], once[0]["shadows"]]) == var_to_bytes([split["result"], split["shadows"]]) and tick > 1, "%d shares" % tick)
+	# The Breach itself: landing() hits inside the call on the level sheet.
+	var hits_before: int = _kit.carve_stats["breach_hits"]
+	_player.reset_to(flat.global_position + Vector3.UP * 1.0)
+	await physics_frame
+	await physics_frame
+	_piece("foundry_cutter", Vector3.FORWARD)
+	var queued: int = _kit._late.size()
+	_kit.landing("foundry_cutter", _player.ball_position(), 1.0, 1.0)
+	_t.check("level ground: landing() on the sheet hits in the call and queues nothing", int(_kit.carve_stats["breach_hits"]) == hits_before + 1 and _kit._late.size() == queued and bool(_kit.last_landing["level"]))
+	flat.queue_free()
+	# Slope plate, 12 degrees with 15 cm of noise: the plain merge, the old landing budget, the late path.
+	await _fresh()
+	var slope := _plate(Vector3(0.0, 400.0, 0.0), 12.0, 0.15, 7302)
+	await physics_frame
+	await physics_frame
+	var slope_landing: Array = _plate_landing(slope, _kit.landing_work(false))
+	var steep: Dictionary = slope_landing[0]
+	_t.check("level ground: a Breach on a 12 degree sheet is not level and cannot finish in its landing share", not bool(steep["level"]) and not slope_landing[1], "%d parts of work" % int(steep["work"]))
+	var ticks_before: int = _kit.carve_stats["breach_hits"]
+	_player.reset_to(slope.global_position + Vector3.UP * 1.0)
+	await physics_frame
+	await physics_frame
+	_piece("foundry_cutter", Vector3.FORWARD)
+	var now := Engine.get_physics_frames()
+	var waiting: int = _kit._late.size()
+	_kit.landing("foundry_cutter", _player.ball_position(), 1.0, 1.0)
+	var hit_at := -1
+	for t in range(now + 1, now + 400):
+		_kit._step_late(t)
+		if _kit._late.size() == waiting:
+			hit_at = t
+			break
+	_t.check("level ground: the slope landing queues, keeps one share a tick and hits no earlier than LATE_TICKS", _kit._late.size() == waiting and hit_at - now >= _kit.LATE_TICKS and int(_kit.carve_stats["breach_hits"]) == ticks_before + 1 and not bool(_kit.last_landing["level"]) and int(_kit.last_landing["shares"]) > 1, "hit at +%d, %d shares" % [hit_at - now, int(_kit.last_landing["shares"])])
+	slope.queue_free()
+	_t.eq("level ground: lowering late_work lowers the level landing budget too", [_kit.landing_work(true) > _kit.landing_work(false)], [true])
+	await _fresh()
+
+
+# RIVET-FREEZE: the terrain commit skips clips a margin proves cannot change a part. Its parts
+# and shadows must match one plain _subtract_shadow pass per face, byte for byte, across a flat
+# floor grid cutting the slab, a wall, a sliver, faces behind the origin and seeded strays.
+func _shade_identity_fixture() -> void:
+	var origin := Vector3(0.0, 0.3, 0.0)
+	var dir := Vector3(1.0, -0.15, 0.2).normalized()
+	var side := dir.cross(Vector3.UP).normalized()
+	var up := side.cross(dir).normalized()
+	var cells: Array = []
+	for i in 8:
+		var a := dir.rotated(up, lerpf(-0.6, 0.6, float(i) / 8.0))
+		var b := dir.rotated(up, lerpf(-0.6, 0.6, float(i + 1) / 8.0))
+		var sa := a.cross(up) * 0.4
+		var sb := b.cross(up) * 0.4
+		cells.append(_kit._commit_cell([origin + sa, origin + a * 12.0 + sa, origin + b * 12.0 - sb, origin - sb], up, 0.5))
+	var faces: Array = []
+	for x in range(-2, 14, 2):
+		for z in range(-8, 8, 2):
+			var p := Vector3(x, -0.4, z)
+			faces.append([p, p + Vector3(2.0, 0.0, 0.0), p + Vector3(0.0, 0.0, 2.0)])
+			faces.append([p + Vector3(2.0, 0.0, 0.0), p + Vector3(2.0, 0.0, 2.0), p + Vector3(0.0, 0.0, 2.0)])
+	faces.append([Vector3(9.0, -1.0, -3.0), Vector3(9.0, 2.0, -3.0), Vector3(9.0, 2.0, 3.0), Vector3(9.0, -1.0, 3.0)])
+	faces.append([Vector3(5.0, -0.2, 0.0), Vector3(5.0001, -0.2, 0.0), Vector3(5.0, -0.2, 4.0)])
+	faces.append([Vector3(-3.0, -1.0, -1.0), Vector3(-3.0, 1.0, 0.0), Vector3(-3.0, -1.0, 1.0)])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 36101
+	for i in 40:
+		var at := Vector3(rng.randf_range(-2.0, 13.0), rng.randf_range(-1.5, 1.5), rng.randf_range(-5.0, 5.0))
+		faces.append([at, at + Vector3(rng.randf_range(-2.0, 2.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-2.0, 2.0)), at + Vector3(rng.randf_range(-2.0, 2.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-2.0, 2.0))])
+	var plain := cells.duplicate(true)
+	var plain_shadows: Array = []
+	for face in faces:
+		var shadow: Array = _kit._face_shadow(origin, face)
+		if shadow.is_empty():
+			continue
+		plain_shadows.append(shadow)
+		var lit: Array = []
+		for cell in plain:
+			lit.append_array(_kit._subtract_shadow(cell, shadow))
+		plain = lit
+	var hull := [{"at": origin + up * 0.5, "normal": up}, {"at": origin - up * 0.5, "normal": -up}]
+	var shadows: Array = []
+	var fast: Array = _kit._shade(origin, faces, cells.duplicate(true), shadows, hull)
+	_t.check("shade fixture carves: the floor and wall change the parts", var_to_bytes(plain) != var_to_bytes(cells))
+	_t.check("shade parts match a plain subtraction pass byte for byte", var_to_bytes(fast) == var_to_bytes(plain), "%d vs %d parts" % [fast.size(), plain.size()])
+	_t.check("shade shadows match a plain subtraction pass byte for byte", var_to_bytes(shadows) == var_to_bytes(plain_shadows), "%d vs %d shadows" % [shadows.size(), plain_shadows.size()])
+
+
+# RIVET-FREEZE ("Fewer lines"): coplanar faces merge before the carve. A tiled square becomes its
+# outline, an L of tiles becomes convex pieces of the same area, and the carve through the merged
+# faces holds the same points as the carve through the triangles.
+func _merge_fixture() -> void:
+	var square: Array = []
+	for x in range(0, 8, 2):
+		for z in range(0, 8, 2):
+			var p := Vector3(x, -0.4, z)
+			square.append([p, p + Vector3(0.0, 0.0, 2.0), p + Vector3(2.0, 0.0, 0.0)])
+			square.append([p + Vector3(2.0, 0.0, 0.0), p + Vector3(0.0, 0.0, 2.0), p + Vector3(2.0, 0.0, 2.0)])
+	var merged: Array = TerrainFaces.merge(square)
+	_t.check("merge: a tiled square becomes its four-corner outline", merged.size() == 1 and (merged[0] as Array).size() == 4 and is_equal_approx(_area(merged[0]), 64.0), "%d polygons" % merged.size())
+	var ell: Array = square.filter(func(face): return not ((face[0] as Vector3) + face[1] + face[2]).x > 12.0 or not ((face[0] as Vector3) + face[1] + face[2]).z > 12.0)
+	var pieces: Array = TerrainFaces.merge(ell)
+	var area := 0.0
+	var convex := true
+	for piece in pieces:
+		area += _area(piece)
+		for i in piece.size():
+			var before: Vector3 = piece[(i + piece.size() - 1) % piece.size()]
+			var at: Vector3 = piece[i]
+			var after: Vector3 = piece[(i + 1) % piece.size()]
+			convex = convex and (at - before).cross(after - at).dot(Vector3.UP) > 0.0
+	_t.check("merge: an L of tiles becomes fewer strictly convex pieces of the same area", pieces.size() < ell.size() and pieces.size() <= 3 and convex and is_equal_approx(area, 48.0), "%d pieces, area %s" % [pieces.size(), area])
+	var origin := Vector3(1.0, 0.3, 1.0)
+	var dir := Vector3(1.0, -0.1, 0.8).normalized()
+	var side := dir.cross(Vector3.UP).normalized()
+	var up := side.cross(dir).normalized()
+	var cells: Array = []
+	for i in 6:
+		var a := dir.rotated(up, lerpf(-0.7, 0.7, float(i) / 6.0))
+		var b := dir.rotated(up, lerpf(-0.7, 0.7, float(i + 1) / 6.0))
+		cells.append(_kit._commit_cell([origin, origin + a * 9.0, origin + b * 9.0], up, 0.8))
+	var wall: Array = [[Vector3(5.0, -1.0, 2.0), Vector3(5.0, 1.0, 2.0), Vector3(5.0, 1.0, 4.0)], [Vector3(5.0, -1.0, 2.0), Vector3(5.0, 1.0, 4.0), Vector3(5.0, -1.0, 4.0)]]
+	var hull := [{"at": origin + up * 0.8, "normal": up}, {"at": origin - up * 0.8, "normal": -up}]
+	var plain: Array = _kit._shade(origin, ell + wall, cells.duplicate(true), [], hull)
+	var shadows: Array = []
+	var fewer: Array = _kit._shade(origin, TerrainFaces.merge(ell + wall), cells.duplicate(true), shadows, hull)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 36025
+	var held := 0
+	var differ := 0
+	for i in 4000:
+		var p := Vector3(rng.randf_range(0.0, 10.0), rng.randf_range(-1.5, 2.0), rng.randf_range(-1.0, 10.0))
+		var in_plain := plain.any(func(cell): return _kit._cell_intersects(cell, p, 0.0))
+		held += 1 if in_plain else 0
+		differ += 1 if in_plain != fewer.any(func(cell): return _kit._cell_intersects(cell, p, 0.0)) else 0
+	_t.check("merge: the carve through merged faces holds the same points", held > 200 and differ == 0, "%d held, %d differ" % [held, differ])
+	var shape := {"kind": "rivet_volume", "origin": origin, "cells": fewer, "shadows": shadows}
+	var boxes: Array = _kit._cell_boxes(shape)
+	var skipped := 0
+	for i in 2000:
+		var p := Vector3(rng.randf_range(-1.0, 11.0), rng.randf_range(-2.0, 2.5), rng.randf_range(-2.0, 11.0))
+		var hull_radius := rng.randf_range(0.0, 1.2)
+		skipped += 1 if _kit._in_shape(shape, p, hull_radius, boxes) != _kit._in_shape(shape, p, hull_radius) else 0
+	_t.eq("cell boxes select exactly what the plain selection does", skipped, 0)
+
+
+# RIVET-CURVE ("Beat later", "Spread every Breach"): the captured bowl landing. A light carve
+# finishes on the landing tick; a heavy one carves a share per tick and hits the tick after,
+# never before LATE_TICKS. Either way the carve is byte for byte the one made at once.
+func _late_landing_fixture(at: Vector3, dir: Vector3) -> void:
+	var reach: float = _kit.breach_reach()
+	var spot: Dictionary = _kit._commit_sector(at, dir, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)
+	_t.check("late landing: the bowl carves the sector", not (spot["shadows"] as Array).is_empty() and var_to_bytes(spot["cells"]) != var_to_bytes(_kit._sector_cells(at, dir, reach, acos(PlayerBall.SKID_CONE), 0.0, Weapons.BREACH_INNER)["cells"]))
+	_kit.late_work = 1 << 30
+	var light: Dictionary = _kit._carve_late("foundry_cutter", at, dir, reach, 1.0, 0.0)
+	_kit._shade_work = 0
+	var light_done: bool = _kit._shade_late(light)
+	var work: int = _kit._shade_work
+	_t.check("late landing: a light carve finishes on the landing tick, as the spot carve", light_done and var_to_bytes([light["result"], light["shadows"]]) == var_to_bytes([spot["cells"], spot["shadows"]]))
+	_kit.late_work = 1
+	var now := Engine.get_physics_frames()
+	var late: Dictionary = _kit._carve_late("foundry_cutter", at, dir, reach, 1.0, 0.0)
+	var shares := 1
+	if not _kit._shade_late(late):
+		_kit._late.append(late)
+	_kit.volume_indicator.clear("rivet_breach")
+	var carved_at := -1
+	var hit_at := -1
+	var twice := true
+	for tick in range(now + 1, now + 1000):
+		var next: int = late["next"]
+		_kit._step_late(tick)
+		# A second step in the same tick takes no second share.
+		var after: int = late["next"]
+		_kit._step_late(tick)
+		twice = twice and int(late["next"]) == after
+		if int(late["next"]) > next:
+			shares += 1
+		if carved_at < 0 and late.has("result"):
+			carved_at = tick
+		if _kit._late.is_empty():
+			hit_at = tick
+			break
+	var drawn: Dictionary = _kit.volume_indicator.shapes.get("rivet_breach", {})
+	_t.check("late landing: a heavy carve takes one share per tick and hits the tick after its last", twice and shares > _kit.LATE_TICKS and carved_at == now + shares - 1 and hit_at == carved_at + 1 and not drawn.is_empty(), "%d shares, carved at +%d, hit at +%d" % [shares, carved_at - now, hit_at - now])
+	# A carve done in two shares still waits for LATE_TICKS.
+	_kit.late_work = work / 2 + 1
+	var quick: Dictionary = _kit._carve_late("foundry_cutter", at, dir, reach, 1.0, 0.0)
+	_kit._shade_late(quick)
+	_kit._late.append(quick)
+	var quick_hit := -1
+	for tick in range(now + 1, now + 100):
+		_kit._step_late(tick)
+		if _kit._late.is_empty():
+			quick_hit = tick
+			break
+	_kit.late_work = _kit.LATE_WORK
+	_t.check("late landing: a carve done early hits LATE_TICKS after landing", quick.has("result") and quick_hit == int(quick["due"]) and int(quick["due"]) == int(quick["start"]) + _kit.LATE_TICKS, "hit at +%d" % [quick_hit - int(quick["start"])])
+	_t.check("late landing: the late carve is the spot carve byte for byte", var_to_bytes([drawn.get("cells"), drawn.get("shadows")]) == var_to_bytes([spot["cells"], spot["shadows"]]), "%d vs %d parts" % [(drawn.get("cells", []) as Array).size(), (spot["cells"] as Array).size()])
+
+
+# RIVET-CURVE: a landing just above a bumpy floor of small triangles. Their shadows meet at
+# grazing angles, so the carve skips them by the reach of each shadow's frustum; the parts it
+# keeps hold the same points as subtracting every shadow.
+func _grazing_fixture() -> void:
+	var origin := Vector3(0.0, 0.4, 0.0)
+	var up := Vector3.UP
+	var cells: Array = []
+	for i in 6:
+		var a := Vector3.RIGHT.rotated(up, TAU * float(i) / 6.0)
+		var b := Vector3.RIGHT.rotated(up, TAU * float(i + 1) / 6.0)
+		cells.append(_kit._commit_cell([origin, origin + a * 3.2, origin + b * 3.2], up, 1.0))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 36013
+	var heights := {}
+	for x in range(-4, 5):
+		for z in range(-4, 5):
+			heights[Vector2i(x, z)] = rng.randf_range(-0.35, 0.05)
+	var faces: Array = []
+	for x in range(-4, 4):
+		for z in range(-4, 4):
+			var p := func(dx: int, dz: int) -> Vector3: return Vector3((x + dx) * 0.8, heights[Vector2i(x + dx, z + dz)], (z + dz) * 0.8)
+			faces.append([p.call(0, 0), p.call(0, 1), p.call(1, 0)])
+			faces.append([p.call(1, 0), p.call(0, 1), p.call(1, 1)])
+	var plain := cells.duplicate(true)
+	for face in faces:
+		var shadow: Array = _kit._face_shadow(origin, face)
+		if shadow.is_empty():
+			continue
+		var lit: Array = []
+		for cell in plain:
+			lit.append_array(_kit._subtract_shadow(cell, shadow))
+		plain = lit
+	var hull := [{"at": origin + up, "normal": up}, {"at": origin - up, "normal": -up}]
+	var fast: Array = _kit._shade(origin, faces, cells.duplicate(true), [], hull)
+	var held := 0
+	var differ := 0
+	for i in 6000:
+		var q := Vector3(rng.randf_range(-3.2, 3.2), rng.randf_range(-0.6, 1.4), rng.randf_range(-3.2, 3.2))
+		var in_plain := plain.any(func(cell): return _kit._cell_intersects(cell, q, 0.0))
+		held += 1 if in_plain else 0
+		differ += 1 if in_plain != fast.any(func(cell): return _kit._cell_intersects(cell, q, 0.0)) else 0
+	_t.check("grazing floor: the carve holds the same points as a plain subtraction pass", held > 300 and differ == 0, "%d held, %d differ" % [held, differ])
+
+
+static func _area(polygon: Array) -> float:
+	var sum := Vector3.ZERO
+	for i in range(1, polygon.size() - 1):
+		sum += ((polygon[i] as Vector3) - polygon[0]).cross((polygon[i + 1] as Vector3) - polygon[0])
+	return sum.length() * 0.5
 
 
 # FU-RIVET-SHADOW: the empty-shadow case. The silhouette cone meets the cell, but the whole
@@ -492,7 +836,11 @@ func _run() -> void:
 	await _boot()
 	# First, so a broken shadow subtraction fails this direct check before a later fixture can stall.
 	_empty_shadow_fixture()
+	_shade_identity_fixture()
+	_merge_fixture()
+	_grazing_fixture()
 	await _alpha_terrain_cost_fixture()
+	await _level_ground_fixture()
 	await _cylinder_terrain_fixture()
 	await _shape_dispatch_fixture()
 	await _terrain_shadow_fixture()

@@ -21,6 +21,7 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import common
+import polish
 import rig_pilot as rig
 import anim_rivet_drop as shared
 from common import Part
@@ -228,7 +229,7 @@ def model():
         indices = [v.index for v in obj.data.vertices if tags.data[v.index].value == index+1]
         obj.vertex_groups.new(name=name).add(indices, 1, "REPLACE")
     assert all(len(v.groups) == 1 for v in obj.data.vertices)
-    assert common.tris(obj) <= 4600
+    assert common.tris(obj) <= 6000
     print("CANNON_MODEL: %d triangles; %d source vertices; rigid weights assigned" % (common.tris(obj), len(obj.data.vertices)))
     return obj
 
@@ -415,7 +416,7 @@ def export(arm, mesh, acts):
         export_animations=True, export_animation_mode="ACTIONS", export_anim_slide_to_zero=True,
         export_frame_range=False, export_force_sampling=True, export_def_bones=False,
         export_skins=True, export_yup=True, export_materials="EXPORT", export_cameras=False, export_lights=False)
-    common.canonical_indices(str(MODEL))
+    common.canonical_indices(str(MODEL), vertices=common.POLISH is not None)
     print("EXPORTED", MODEL)
 
 
@@ -478,6 +479,10 @@ def main():
     args = parser.parse_args(sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else [])
     OUT.mkdir(parents=True, exist_ok=True)
     common.reset()
+    # Polish (POLISH.md): the cast forms are already smooth; the baked AO gives the
+    # castings their contact shade. The bevel is under polish.shape's 5 mm floor, so edges
+    # stay as authored. Subdivision added 4x triangles for no visible change.
+    polish.enable(detail=2, bevel=.004)
     for name, digest in REFERENCES.items():
         assert hashlib.sha256((SHEET_ROOT/name).read_bytes()).hexdigest() == digest, "Inspected reference changed: "+name
     common.SLOTS["ancient_light"] = dict(common.SLOTS["ancient_light"], emit=.45)
@@ -485,14 +490,19 @@ def main():
     mesh = model()
     shell = None
     if not args.no_shell:
+        # The shell belongs to world_one/shell_cannon.py, which is unpolished.
+        polished, detail = common.POLISH, common.DETAIL
+        common.POLISH, common.DETAIL = None, 1
         mod = shell_module()
         shell = mod.build()
         common.export(shell, str(mod.MODEL))
+        common.POLISH, common.DETAIL = polished, detail
     bpy.ops.wm.save_as_mainfile(filepath=str(OUT/"pilot_cannon-model.blend"))
     arm, spec = skeleton(mesh)
     acts, tables = actions(arm)
     bpy.context.scene.render.fps = 30
     checks = check(arm, mesh, acts)
+    polish.bake(arm)
     export(arm, mesh, acts)
     arm.animation_data.action = acts[0]
     bpy.context.scene.frame_set(1)

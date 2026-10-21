@@ -18,93 +18,99 @@
  "silent_db": -80.0,
  "sources": {
   "calm": {
-   "take": "roam_highdraft",
-   "render": "sound-bible:renders/lab-round5-1/grid172/roam-highdraft-s2501-172bpm.wav",
-   "pick": "Highdraft roaming (s2501, tempo reads 166.65 then 177.4: needs an ear)",
-   "trim_samples": 248576,
-   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
-   "stems": {
-    "drums": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_highdraft/drums.wav",
-     "sha256": "7428e547a3848aa584b9bd38332cb6d4b8c1ec7384fd28181003c066e7e29bb3"
-    },
-    "bass": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_highdraft/bass.wav",
-     "sha256": "9e6e3533feb77f3e7e890e9d6a9776e8d5f28472c109948dc1e61619171ed34a"
-    },
-    "other": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_highdraft/other.wav",
-     "sha256": "b74f8aedf76dcd030f19caa19ed8eebb21e2c781c7e750b3122da288ad3ea9c9"
-    },
-    "vocals": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_highdraft/vocals.wav",
-     "sha256": "8377dc05dfb85f61db22847bcafde931df1f2b79ab56647bcc16098a875ada8d"
+   "take": "roam-highdraft-current",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/roam-highdraft-current.wav",
+   "render_sha256": "e1ce90f18436504c0b137ceb1ca45965c0afdd2ae6a59d93d8db7d1fd714f2ba",
+   "tempo_read": 170.95,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/drums.wav",
+      "sha256": "74b6589d02c5e6d1c2ea19a904194989d50caa6c278b9677e34daa10a74e92c3"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/bass.wav",
+      "sha256": "b6cceca2a5fb98cbdbf5cdbcedfab25b4ac54cc748cdbbaaa0c56a5f32889665"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/other.wav",
+      "sha256": "79d857e737676f64c0800e1c26ad64b3cd75e24ccd2f24459c28d7e1234cebc1"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/vocals.wav",
+      "sha256": "11abae8213d5cd093749c285ddf68c1b778c39349c421b432c2d551edb930ab2"
+     }
     }
-   },
-   "other_stem": "other plus vocals, scaled to peak 1 if over"
+   }
   },
   "travel": {
-   "take": "roam_highdraft",
-   "render": "sound-bible:renders/lab-round5-1/grid172/roam-highdraft-s2501-172bpm.wav",
-   "pick": "Highdraft roaming (s2501, tempo reads 166.65 then 177.4: needs an ear)",
-   "trim_samples": 1233152,
-   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
-   "stems": {
-    "drums": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_highdraft/drums.wav",
-     "sha256": "7428e547a3848aa584b9bd38332cb6d4b8c1ec7384fd28181003c066e7e29bb3"
-    },
-    "bass": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_highdraft/bass.wav",
-     "sha256": "9e6e3533feb77f3e7e890e9d6a9776e8d5f28472c109948dc1e61619171ed34a"
-    },
-    "other": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_highdraft/other.wav",
-     "sha256": "b74f8aedf76dcd030f19caa19ed8eebb21e2c781c7e750b3122da288ad3ea9c9"
-    },
-    "vocals": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_highdraft/vocals.wav",
-     "sha256": "8377dc05dfb85f61db22847bcafde931df1f2b79ab56647bcc16098a875ada8d"
+   "take": "roam-highdraft-current",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/roam-highdraft-current.wav",
+   "render_sha256": "e1ce90f18436504c0b137ceb1ca45965c0afdd2ae6a59d93d8db7d1fd714f2ba",
+   "tempo_read": 170.95,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/drums.wav",
+      "sha256": "74b6589d02c5e6d1c2ea19a904194989d50caa6c278b9677e34daa10a74e92c3"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/bass.wav",
+      "sha256": "b6cceca2a5fb98cbdbf5cdbcedfab25b4ac54cc748cdbbaaa0c56a5f32889665"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/other.wav",
+      "sha256": "79d857e737676f64c0800e1c26ad64b3cd75e24ccd2f24459c28d7e1234cebc1"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-current/vocals.wav",
+      "sha256": "11abae8213d5cd093749c285ddf68c1b778c39349c421b432c2d551edb930ab2"
+     }
     }
-   },
-   "other_stem": "other plus vocals, scaled to peak 1 if over"
+   }
   },
   "cadence": {
-   "take": "roam_highdraft",
-   "render": "sound-bible:renders/lab-round5-1/grid172/roam-highdraft-s2501-172bpm.wav",
-   "pick": "Highdraft roaming (s2501, tempo reads 166.65 then 177.4: needs an ear)",
-   "trim_samples": 2586944,
-   "timing": "downbeat measured from the drums and bass stems, never heard: unverified",
-   "stems": {
-    "drums": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_highdraft/drums.wav",
-     "sha256": "7428e547a3848aa584b9bd38332cb6d4b8c1ec7384fd28181003c066e7e29bb3"
-    },
-    "bass": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_highdraft/bass.wav",
-     "sha256": "9e6e3533feb77f3e7e890e9d6a9776e8d5f28472c109948dc1e61619171ed34a"
-    },
-    "other": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_highdraft/other.wav",
-     "sha256": "b74f8aedf76dcd030f19caa19ed8eebb21e2c781c7e750b3122da288ad3ea9c9"
-    },
-    "vocals": {
-     "path": "scratch:w16/soundint/picks/stems/htdemucs/roam_highdraft/vocals.wav",
-     "sha256": "8377dc05dfb85f61db22847bcafde931df1f2b79ab56647bcc16098a875ada8d"
+   "take": "roam-highdraft-spiced",
+   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/roam-highdraft-spiced.wav",
+   "render_sha256": "1cc3013087a8d16214f939da68cad35a4c02014f2be362286348593ad75475da",
+   "tempo_read": 170.95,
+   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "split": {
+    "tool": "htdemucs, vocals folded into other",
+    "stems": {
+     "drums": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-spiced/drums.wav",
+      "sha256": "2f19d67c274266a477187d7f89f7be038fcbb0d063aa68603e524cc1d18bc6d3"
+     },
+     "bass": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-spiced/bass.wav",
+      "sha256": "c191342d5a7f05257cf09cf2d72545f4afdc5c07cc6f061812309a22ce6729d0"
+     },
+     "other": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-spiced/other.wav",
+      "sha256": "5661702d128e71bd6cee9b53c8d165e6f07f6a9a6a01491632f910189f05b497"
+     },
+     "vocals": {
+      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-highdraft-spiced/vocals.wav",
+      "sha256": "cbd1ae3b8a8686d8930915d2dfd2d170775e29c40ad047e9a040d9025203c43d"
+     }
     }
-   },
-   "other_stem": "other plus vocals, scaled to peak 1 if over"
+   }
   }
  },
  "clips": {
   "calm": {
-   "parent": "picked",
-   "take": "roam_highdraft",
-   "source_state": "calm",
+   "parent": "roam",
+   "take": "roam-highdraft-current",
+   "source_state": "roam-highdraft-current bars 4-19",
    "source_bars": "5-20",
-   "source_start": 248576,
-   "take_start": 248576,
-   "bpm": 172,
+   "source_start": 257636,
+   "take_start": 257636,
+   "bpm": 172.0,
    "beat": 15384,
    "bar": 61536,
    "beats_per_bar": 4,
@@ -121,16 +127,24 @@
     "drums": "calm.drums.ogg",
     "bass": "calm.bass.ogg",
     "other": "calm.other.ogg"
+   },
+   "mix": "cur",
+   "grid_snap_ms": -1.99,
+   "gain_db": 0.1,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.4,
+    "note": "summed stems before Ogg encode"
    }
   },
   "travel": {
-   "parent": "picked",
-   "take": "roam_highdraft",
-   "source_state": "travel",
+   "parent": "roam",
+   "take": "roam-highdraft-current",
+   "source_state": "roam-highdraft-current bars 20-35",
    "source_bars": "21-36",
-   "source_start": 1233152,
-   "take_start": 1233152,
-   "bpm": 172,
+   "source_start": 1242282,
+   "take_start": 1242282,
+   "bpm": 172.0,
    "beat": 15384,
    "bar": 61536,
    "beats_per_bar": 4,
@@ -147,16 +161,24 @@
     "drums": "travel.drums.ogg",
     "bass": "travel.bass.ogg",
     "other": "travel.other.ogg"
+   },
+   "mix": "cur",
+   "grid_snap_ms": 0.0,
+   "gain_db": -0.2,
+   "measured": {
+    "lufs": -16.0,
+    "true_peak": -2.4,
+    "note": "summed stems before Ogg encode"
    }
   },
   "cadence": {
-   "parent": "picked",
-   "take": "roam_highdraft",
-   "source_state": "cadence",
-   "source_bars": "43-44",
-   "source_start": 2586944,
-   "take_start": 2586944,
-   "bpm": 172,
+   "parent": "roam",
+   "take": "roam-highdraft-spiced",
+   "source_state": "roam-highdraft-spiced bars 41-42",
+   "source_bars": "42-43",
+   "source_start": 2534514,
+   "take_start": 2534514,
+   "bpm": 172.0,
    "beat": 15384,
    "bar": 61536,
    "beats_per_bar": 4,
@@ -173,6 +195,14 @@
     "drums": "cadence.drums.ogg",
     "bass": "cadence.bass.ogg",
     "other": "cadence.other.ogg"
+   },
+   "mix": "high",
+   "grid_snap_ms": 0.0,
+   "gain_db": -0.05,
+   "measured": {
+    "lufs": -19.7,
+    "true_peak": -2.5,
+    "note": "summed stems before Ogg encode"
    }
   }
  },
@@ -365,6 +395,7 @@
   }
  },
  "breath_default": "hard",
- "cuts": "nominal-unverified",
- "timing_verified": false
+ "cuts": "measured-beat-phase",
+ "timing_verified": false,
+ "pick": "sound-bible-2026-10-16/spice"
 }

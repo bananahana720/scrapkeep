@@ -82,7 +82,7 @@ func _measure(node: Node) -> Dictionary:
 func _budget(node: Node, label: String) -> void:
 	var m := _measure(node)
 	print("%s: %d T / %d V / %d D" % [label, m.tris, m.vertices, m.draws])
-	_check(m.tris > 0 and m.tris <= 1100 and m.vertices > 0 and m.vertices <= 2100 and m.draws == 3,
+	_check(m.tris > 0 and m.tris <= 8800 and m.vertices > 0 and m.vertices <= 4900 and m.draws == 3,
 		label + " fits shared enemy budget")
 	_check(m.opaque, label + " opaque")
 

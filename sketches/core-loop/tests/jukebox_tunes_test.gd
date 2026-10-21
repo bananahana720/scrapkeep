@@ -8,6 +8,7 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
+const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
 
 # Moss's jukebox (TUNE-JUKEBOX, Andrew 2026-10-17: "finding and discovering these different
 # tunes ... having ways to come back to them"):
@@ -179,6 +180,19 @@ func _profile() -> void:
 	_t.eq("and holds no tunes", e.tune_ids(), [])
 
 
+# The ball set down in a camp station's zone, 2 m toward the plaza from its centre (camp_hub_test.gd walks them all).
+func _put_in(id: String) -> void:
+	var hub = _game.camp_hub
+	var toward: Vector3 = hub.root.global_position - hub.zone_position(id)
+	toward.y = 0.0
+	var at: Vector3 = hub.zone_position(id) + toward.normalized() * 1.5
+	at.y = 1.3
+	_game.player.reset_to(at)
+	_game.player.body().global_position = at
+	for i in 4:
+		await physics_frame
+
+
 func _frames(n: int) -> void:
 	for i in n:
 		await process_frame
@@ -193,6 +207,23 @@ func _settle(seconds: float) -> void:
 
 func _render(audio, frames := 8192) -> void:
 	audio.engine.render(frames)
+
+
+# The game's own audio path (no device): _pump hands the band over before each block,
+# which a bare engine.render never does.
+func _pump_for(audio, frames: int) -> void:
+	var until: int = audio.engine.clock + frames
+	while audio.engine.clock < until:
+		audio._pump(mini(4096, until - audio.engine.clock))
+
+
+func _rms(buf: PackedVector2Array, minus := PackedVector2Array()) -> float:
+	if buf.is_empty():
+		return 0.0
+	var sum := 0.0
+	for i in buf.size():
+		sum += (buf[i] - (minus[i] if i < minus.size() else Vector2.ZERO)).length_squared()
+	return sqrt(sum / buf.size())
 
 
 func _oggs_in(dir: String) -> int:
@@ -212,9 +243,15 @@ func _ace(audio) -> void:
 		return
 	_game.tuning.set_option(preload("res://src/movement/tuning.gd").MUSIC_KEY, "ace")
 	_t.check("ACE: roam-1-1 spins", audio.spin("roam-1-1"))
-	_render(audio, 44100 * 2)
+	_pump_for(audio, 44100 * 2)
 	_t.check("ACE: the recorded take plays", audio.ace_playing() and audio.ace.mode == "level", audio.ace_missing)
-	_t.check("ACE: the synth band hands over", audio.engine.band_muted)
+	# Two seconds is well past sound_from + STOP_RAMP: the synth band is muted and silent
+	# under the take, and the take itself sounds, so the hand-over leaves no hole.
+	var band_rms := _rms(audio.engine.out_music, audio.engine.out_landmark)
+	var heard_rms := _rms(audio.out_music)
+	_t.check("ACE: the synth band hands over", audio.engine.band_muted and audio._band_fade_start >= 0 and audio.engine.clock >= audio._band_fade_start + AceSequencer.STOP_RAMP, "muted=%s fade_start=%d clock=%d" % [audio.engine.band_muted, audio._band_fade_start, audio.engine.clock])
+	_t.check("ACE: the synth band is silent under the take", band_rms < 0.0001, "band rms %.5f" % band_rms)
+	_t.check("ACE: the take is heard", heard_rms > 0.01, "music rms %.5f" % heard_rms)
 	_t.check("ACE: warden-1-1 spins", audio.spin("warden-1-1"))
 	_render(audio, 44100)
 	_t.check("ACE: the Warden take plays", audio.ace_playing() and audio.ace.mode == "warden")
@@ -259,9 +296,12 @@ func _run() -> void:
 	# Camp, then J.
 	_game._screen_key(KEY_K)
 	_t.check("K opens the camp", screens.camp_open())
-	_t.check("the camp offers the jukebox on J", screens.camp_page().button_for("jukebox") != null)
 	_game._screen_key(KEY_J)
-	_t.check("J opens the jukebox", screens.jukebox_open() and not screens.camp_open())
+	_t.check("J outside the jukebox's zone opens nothing", not screens.jukebox_open())
+	await _put_in("jukebox")
+	_t.check("the jukebox station shows its prompt", _game.camp_hub.card_for("jukebox") != null)
+	_game._screen_key(KEY_J)
+	_t.check("J opens the jukebox", screens.jukebox_open() and not screens.walk_live())
 	var page = screens.jukebox_page()
 	var shelved := TuneRows.ids().filter(func(id): return not TuneRows.shut(id, _game.ctx.profile)).size()
 	_t.eq("the jukebox counts found records", page._count.text, "Records found: 3 of %d" % shelved)
@@ -305,7 +345,7 @@ func _run() -> void:
 	_game._screen_key(KEY_SPACE)
 	_t.eq("a boss record plays its fight", [audio.spinning, audio.engine.track], ["boss-brindle", "brindle"])
 	_game._screen_key(KEY_J)
-	_t.check("J goes back to the camp", screens.camp_open() and not screens.jukebox_open())
+	_t.check("J goes back to the camp walk", screens.walk_live() and not screens.jukebox_open())
 	_t.eq("and lifts the needle", audio.spinning, "")
 	_render(audio, 44100)
 	_t.eq("the title theme comes back", [audio.engine.track, audio.engine.mode], ["title", MusicEngine.IDLE])
@@ -379,4 +419,5 @@ func _run() -> void:
 	_t.check("leaving the title releases the deck", audio.spinning == "" and not screens.jukebox_open(), "spinning %s, flow %s" % [audio.spinning, _game.flow.state_name()])
 	_t.check("and the run parameters", audio.engine.parameter_source == Callable(audio, "sample_run_parameters"))
 
+	_game.free()
 	quit(_t.verdict())

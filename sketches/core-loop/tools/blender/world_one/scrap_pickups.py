@@ -12,6 +12,7 @@ import bmesh
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 SLOT = "field"
@@ -23,6 +24,7 @@ DARK = "6c7872"
 def finish(part, root):
     bmesh.ops.recalc_face_normals(part.bm, faces=part.bm.faces[:])
     obj = part.to_object(parent=root)
+    print("PICKUP", part.name, common.tris(obj), len(obj.data.vertices))
     assert common.tris(obj) <= 270, part.name + " prop triangle budget"
     assert all(max(abs(c) for c in v.co) <= 0.4001 for v in obj.data.vertices), part.name + " bounds"
     return obj
@@ -31,9 +33,13 @@ def finish(part, root):
 def build():
     common.reset()
     common.SLOTS[SLOT] = {"vc": True, "rough": 0.8}
+    # Polish (POLISH.md): pickups must stay bright and readable under the runtime tint, so the AO and wear bake
+    # is gentle; each part stays under the 270 T / 610 V prop cap.
+    polish.enable(detail=1, bevel=0, bevel_min=0.3, ao_strength=0.3, edge=0.1)
     root = common.empty("ScrapPickups")
 
     plate = Part("BentPlate")
+    plate.bevel = 0.015  # the flat plate takes a chamfer; the round parts have no room under 270 T
     plate.prism(SLOT, [(-.38, -.31), (.22, -.31), (.37, -.16),
                       (.34, .29), (-.24, .33), (-.38, .18)], .13,
                 matrix=common.mtx((0, 0, -.08)), color=MID)

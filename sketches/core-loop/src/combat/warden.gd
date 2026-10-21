@@ -352,9 +352,9 @@ func _step_slag(delta: float) -> void:
 		_slag_burn = 0.0
 		return
 	var ball_state = target.get("state")
-	if ball_state != null and not ball_state.grounded and fleet != null and _over_slag(_ball()):
+	if ball_state != null and not ball_state.on_floor() and fleet != null and _over_slag(_ball()):
 		fleet.discover("slag_hop", _ball())
-	if ball_state == null or not ball_state.grounded or not _slag_burns(_ball()):
+	if ball_state == null or not ball_state.on_floor() or not _slag_burns(_ball()):
 		_slag_burn = 0.0
 		return
 	# One hit per SLAG_DAMAGE burned, so the burn is SLAG_DAMAGE a second without a hit

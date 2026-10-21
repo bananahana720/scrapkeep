@@ -26,7 +26,7 @@ const LANDFORMS := ["slot_canyon", "arroyo", "dry_wash", "slickrock", "canal", "
 # net_weaver: the Highdraft's animals who string the nets, posts and balloon lifts (Andrew's "Now, light" tap,
 # 2026-10-17; stage 6 page section 15 asked for their id).
 const SOCIETIES := ["none", "hohokam", "ancestral_puebloan", "mining", "dam_era", "fleet", "ancient", "net_weaver"]
-const VERBS := ["roll", "pump", "grind", "launch", "drop", "swing", "glide", "lift", "bank", "slam"]
+const VERBS := ["roll", "pump", "grind", "launch", "drop", "swing", "glide", "lift", "bank", "slam", "cast"]
 const STAMPS := ["", "wash", "channel", "ridge", "mesa", "butte", "spire", "bowl", "terrace", "crater",
 	"sinkhole", "ramp", "plateau"]
 const BUDGETS := ["landform", "park_large", "hero_landmark", "detail"]
@@ -70,8 +70,10 @@ const CONTRAPTION_KEYS := {
 	"valve": ["at", "door"],
 	"cracked_wall": ["at", "size", "turn"],
 	"thermal": ["at", "radius", "height"],
+	"cinder": ["strips", "drag"],
+	"glaze": ["strips", "push", "cap"],
 }
-const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal"]
+const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal", "cinder", "glaze"]
 const CONTRAPTION_RECIPES := ["", "gauge", "geyser_vent", "cannon", "trebuchet", "lift_platform", "barge"]
 
 # Activity presentation uses an ACTIVITY_ROWS key or the kind's existing cue.view alias.
@@ -83,7 +85,7 @@ const WEATHER_KINDS := ["clear", "monsoon", "dust_squall", "heat_shimmer", "cave
 const RECIPES := [
 	"half_pipe_concrete", "slot_canyon_flow", "wash_dropin_lip",
 	"canal_lip", "flume_span", "penstock_run", "pipeline_rail",
-	"bench_coping", "tailings_lip", "pit_haul_ramp",
+	"bench_coping", "tailings_lip", "pit_haul_ramp", "pit_haul_lane",
 	"lava_tube_run", "adit_mouth", "shaft_drop", "spillway_tunnel",
 	"cenote_pool", "flooded_shaft", "cavern_shell",
 	"cliff_dwelling_row", "mesa_rim_ledge", "viga_pivot",
@@ -92,6 +94,9 @@ const RECIPES := [
 	"landmark_dam", "landmark_penstock_tower", "landmark_headframe", "landmark_sinkhole",
 	"landmark_sky_island", "landmark_spire",
 	"anchor_hoodoo", "anchor_basalt", "anchor_timber", "anchor_saguaro", "anchor_cairn",
+	"ore_bin", "ore_bin_row", "timber_portal",
+	"lava_wash", "lava_wash_short", "gallery_wash", "drift_wash",
+	"skylight_lip", "tube_mouth_lip", "breach_lip", "miners_cap", "great_room_deck", "haulage_bed",
 ]
 const GREYBOX := "greybox:"
 # The ground scatter dresses the row (park_recipes.gd SENSOR_ONLY, with LANDMARK).
@@ -145,14 +150,15 @@ const PARK_FIELDS := {
 }
 # Optional on a park row, absent on every row that places as before: "seat" seats a GLB recipe on the ground at its
 # entry and exit (park_recipes.gd seat_fit); "tile" repeats a shorter GLB recipe end to end, each copy seated on the
-# ground at its own ends (park_recipes.gd tile_fit).
-const FITS := ["seat", "tile"]
+# ground at its own ends (park_recipes.gd tile_fit); "drape" stands a ground-conforming GLB on the seat of its stamp
+# (park_recipes.gd fits_drape, seat), with no `y`, so the graph reads no deck.
+const FITS := ["seat", "tile", "drape"]
 # Optional on a park row: "music_layer" names a layer_* WORLD_ROWS kind its ride sensor publishes on entry, beside its
 # ride fact; a row with recipe "" gets a listening sensor of its footprint and nothing else (park_recipes.gd
 # place_layer). The music bakes each layer's sound_next; until then its stand-in sound plays.
 const MUSIC_LAYER_PREFIX := "layer_"
 # Optional at the top: "rescue_rows", the stage's caged pilots (rescue_site.gd). pilot is the ClassDef id sitting in
-# the cage, so who is rescued is data; quest is what rescue_completed carries (achievements.gd keys on it).
+# the cage, so who is rescued is data; quest is what rescue_completed carries (the achievement rows key on it).
 const RESCUE_FIELDS := {"id": "s", "site": "s", "at": "v2", "face": "v2", "quest": "s", "pilot": "s", "prompt": "s"}
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
@@ -391,8 +397,9 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 		if not routes.has(route):
 			_add(out, id, "reference", "route %s is no route" % str(route))
 	_recipe(out, id, row["recipe"])
-	# The one optional park row field: "fit" opts a GLB row in to park_recipes.gd's seat fit (PARK-SEAT, 2026-10-16) or
-	# its tile fit (PARK-TILE, 2026-10-16).
+	# The optional park row fields. "fit" opts a GLB row in to park_recipes.gd's seat fit (PARK-SEAT, 2026-10-16) or
+	# its tile fit (PARK-TILE, 2026-10-16) or its drape fit (dam kit, 2026-10-17). "rider" sets a GLB down beside the row
+	# whose jib turns when its "on" fact first fires (the dam's crest crane, 2026-10-18).
 	if row.has("fit"):
 		if not FITS.has(row["fit"]):
 			_add(out, id, "enum", "fit %s is not in its list" % str(row["fit"]))
@@ -402,6 +409,17 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 		var layer = row["music_layer"]
 		if not layer is String or not String(layer).begins_with(MUSIC_LAYER_PREFIX) or not EventKinds.WORLD_ROWS.has(layer):
 			_add(out, id, "music_layer", "music_layer %s is no %s* WORLD_ROWS kind" % [str(layer), MUSIC_LAYER_PREFIX])
+	if row.has("rider"):
+		var rider = row["rider"]
+		if not rider is Dictionary or not rider.get("at") is Array or (rider["at"] as Array).size() != 2 \
+				or String(rider.get("recipe", "")) == "" or String(rider.get("recipe", "")).begins_with("greybox:"):
+			_add(out, id, "rider", "rider needs a GLB recipe and an [x, z] at, not %s" % str(rider))
+		elif rider.has("on") and not String(rider["on"]).begins_with("layer_mind_quote_"):
+			_add(out, id, "rider", "rider on %s is no once-per-run fact (layer_mind_quote_*)" % str(rider["on"]))
+		elif rider.has("yaw_deg") and not (rider["yaw_deg"] is float or rider["yaw_deg"] is int):
+			_add(out, id, "rider", "rider yaw_deg %s is no number" % str(rider["yaw_deg"]))
+		else:
+			_recipe(out, id, String(rider["recipe"]))
 	if GUARDED_SOCIETIES.has(row["society"]):
 		if row["home"] != "":
 			_add(out, id, "guardrail", "a %s row houses no home (%s)" % [row["society"], row["home"]])

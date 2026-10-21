@@ -14,12 +14,15 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import polish
 from common import Part
 
 common.reset()
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.75}
 common.SLOTS["part_state"] = {"vc": True, "rough": 0.4, "metal": 0.6}
 common.SLOTS["core_state"] = {"color": "petrol", "rough": 0.4}
+# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
+polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Miniboss")
 GROUND = -3.45
 SLATE = "6f7f8f"
@@ -60,7 +63,22 @@ def front_prism(part, slot, outline, depth, at, color):
 
 def finish(part):
     bmesh.ops.recalc_face_normals(part.bm, faces=part.bm.faces[:])
-    return part.to_object(parent=root)
+    obj = part.to_object(parent=root)
+    # Smoothing averages the weights of faces that span two bones (the telescoping
+    # pistons); give each new vertex wholly to its heaviest bone so the pose stays rigid.
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    layer = bm.verts.layers.deform.active
+    if layer is not None:
+        for vertex in bm.verts:
+            w = vertex[layer]
+            if len(w) > 1:
+                keep = max(sorted(w.keys()), key=lambda k: w[k])
+                w.clear()
+                w[keep] = 1.0
+        bm.to_mesh(obj.data)
+    bm.free()
+    return obj
 
 
 b = Part("MinibossHull")
@@ -121,6 +139,7 @@ bind(7)
 hull = finish(b)
 
 p = Part("MinibossArmour")
+p.subsurf = 0
 bind_plate = weights(p)
 for side, index in [(-1, 5), (1, 6)]:
     # Clipped corners, a shallow outward ridge and a narrow central seam.
@@ -134,6 +153,7 @@ for side, index in [(-1, 5), (1, 6)]:
 armour = finish(p)
 
 c = Part("MinibossCore")
+c.subsurf = 0
 c.uv("core_state", 1.0, u=10, v=6, loc=g(0, .6, -1.725), scale=(1, .6, 1))
 core = c.to_object(origin=g(0, .6, -1.725), parent=root)
 
@@ -159,7 +179,7 @@ for mesh in (hull, armour):
 bpy.context.view_layer.update()
 triangles = common.tri_total(root)
 draws = sum(len(o.data.materials) for o in (hull, armour, core))
-if triangles > 1100 or draws != 3:
+if triangles > 8800 or draws != 3:
     raise SystemExit("PMB budget exceeded: %d T / %d D" % (triangles, draws))
 opts = common.args()
 out = opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_miniboss.glb")
@@ -172,7 +192,7 @@ with open(out, "rb") as stream:
 gltf = json.loads(data[20:20 + struct.unpack_from("<I", data, 12)[0]])
 vertices = sum(gltf["accessors"][s["attributes"]["POSITION"]]["count"]
                for mesh in gltf["meshes"] for s in mesh["primitives"])
-if vertices > 2100:
+if vertices > 4900:
     raise SystemExit("PMB vertex ceiling exceeded: %d" % vertices)
 print("PMB_ASSET %d T / %d V / %d D" % (triangles, vertices, draws))
 

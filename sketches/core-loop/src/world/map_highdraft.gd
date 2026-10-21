@@ -106,7 +106,7 @@ func _init() -> void:
 	]
 	# The bookkeeper's cage on the middle island's north-west lip, beside the bridge landing, facing
 	# the Lift (thermal_a): the same isles rescue as park_islands.json's Moorings cage, so either
-	# table frees Tally (achievements.gd isles_rescued).
+	# table frees Tally (the isles_rescued achievement).
 	rescue_sites = [{"id": "tally_cage", "quest": "isles", "pilot": "tally", "prompt": "free the bookkeeper",
 		"at": Vector2(-7.5, 52.0), "face": (THERMAL_A - Vector2(-7.5, 52.0)).normalized()}]
 

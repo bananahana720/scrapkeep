@@ -48,6 +48,7 @@ const ULTIMATE_STEP := 0.4
 const DRUMS_IN_SPEED := 0.25
 const DRUMS_FULL_SPEED := 0.5
 const PROTECTED := ["pivot", "drop", "break", "return", "home"]
+const SHELF_CLIPS := ["calm", "travel"]
 
 
 class Voice:
@@ -66,6 +67,8 @@ class Voice:
 	var wet := 0.0
 	var wet_target := 0.0
 	var wet_step := 0.0
+	# A shelf voice whose harmony has cleared for the pivot: nothing raises it again.
+	var cleared := false
 
 
 var manifest := {}
@@ -740,6 +743,8 @@ func _schedule(name: String, at: int, join_from_edge := false) -> void:
 	var join := _join_frames(name)
 	var begin := at if join_from_edge else maxi(clock, at - join)
 	var ramp := join if join_from_edge else at - begin
+	if name == "pivot" and section != "" and String(sections[section]["clip"]) in SHELF_CLIPS:
+		_clear_harmony(at)
 	var fresh: Array = []
 	var gains := _profile(name)
 	for stem in stems:
@@ -748,6 +753,17 @@ func _schedule(name: String, at: int, join_from_edge := false) -> void:
 	pending = {"section": name, "at": at, "begin": begin, "ramp": ramp, "entry": entry, "voices": fresh, "serial": _serial}
 	_add({"at": begin, "type": "begin", "serial": _serial})
 	_add({"at": at, "type": "commit", "serial": _serial})
+
+
+# The roaming shelf and the Warden's combat clips need not share a key (the rebuilt zone packs
+# cut the shelf from the world's roaming take, key_check.py reads it a fifth or a relative
+# away). So the shelf's bass and lead fade out over the beat before the pivot's downbeat and
+# only the drums cross it: two keys never sound together.
+func _clear_harmony(at: int) -> void:
+	var frames := mini(grid_beat, maxi(at - clock, 1))
+	for v: Voice in voices:
+		if v.stem != "drums":
+			_add({"at": maxi(clock, at - frames), "type": "clear", "voice": v, "frames": frames, "serial": _serial + 1})
 
 
 func _open(clip: Dictionary, stem: String, from: int, gains: Dictionary, ramp: int) -> Voice:
@@ -785,6 +801,8 @@ func _gain_of(stem_row: Dictionary, stem := "") -> float:
 
 
 func _ramp_to(v: Voice, g: float, frames: int) -> void:
+	if v.cleared and g > 0.0:
+		return
 	v.target = g
 	v.step = maxf(absf(g - v.gain), 0.000001) / maxf(frames, 1)
 
@@ -817,7 +835,7 @@ func _smooth_momentum(drums_before: float, chain_before: float, stripped_before:
 	var lead_moved := parameters.has("chain") and float(parameters.chain) != chain_before and not stripped and not stripped_before
 	var joining: Array = pending.get("voices", [])
 	for v: Voice in voices:
-		if v in joining:
+		if v in joining or v.cleared:
 			continue
 		if (v.stem == "drums" and drums_moved) or (v.stem == "other" and lead_moved):
 			_ramp_to(v, v.target, grid_beat if v.target > v.gain else grid_bar * 2)
@@ -898,6 +916,12 @@ func _run(action: Dictionary) -> void:
 			if pending.is_empty() or int(pending["serial"]) != int(action["serial"]):
 				return
 			_commit()
+		"clear":
+			# Only for the pivot it was scheduled for: a cancelled pivot leaves the shelf whole.
+			var v: Voice = action["voice"]
+			if not pending.is_empty() and int(pending["serial"]) == int(action["serial"]) and (v in voices or v in fading):
+				_ramp_to(v, 0.0, int(action["frames"]))
+				v.cleared = true
 		"then":
 			if int(action["serial"]) == _serial and pending.is_empty() and section == action["section"]:
 				_then(action)

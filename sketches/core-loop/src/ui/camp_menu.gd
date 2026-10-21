@@ -8,18 +8,23 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 
-# The interim camp between runs, a title page on K: which pilots are ready and how each
-# locked one unlocks, the companion pieces found and seated, where paint is chosen, and the
-# achievements count. Launch, Achievements, Settings, Jukebox, Mixtapes and Back press their keys through
-# screens.gd; Companion shows only when the companion owns a piece. The full camp scene
-# replaces this page.
+# The camp page on K. The camp is now a walk through the 3D hub (camp_hub.gd), so in walk mode this page is only a
+# key-hint strip; the pilot lines, the pieces count and the button row stay built (reading() and labels() still
+# serve the tests) but hidden, since every station is a zone in the world that opens its page by its own key.
 
 const NO_PIECES := "Companion: no pieces yet. Pieces turn up during runs."
+const WALK_HINTS := ["Roll: WASD", "Jump: Space", "Look: mouse", "Leave camp: K"]
 const PAINT := "Paint: choose on each pilot's card after Launch."
 
 var back: Button
+# The camp walk (camp_hub.gd) shows only a key-hint strip over the 3D camp: the pilot lines and the button row stay
+# hidden, since every station is a zone in the world and opens its page by its own key.
+var walk := false
+var customize
+var customize_entry: Button
 
 var _lines: VBoxContainer
+var _strip: HBoxContainer
 var _buttons: HBoxContainer
 var _companion: Button
 
@@ -46,7 +51,51 @@ func _init() -> void:
 	_buttons.add_child(ChoiceButton.new("radio", "key_r", "Mixtapes"))
 	back = ChoiceButton.new("back", "key_k", "Back")
 	_buttons.add_child(back)
+	_strip = HBoxContainer.new()
+	_strip.name = "WalkStrip"
+	_strip.alignment = BoxContainer.ALIGNMENT_CENTER
+	_strip.add_theme_constant_override("separation", 28)
+	_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_strip.visible = false
+	add_child(_strip)
+	for hint in WALK_HINTS:
+		var label := Label.new()
+		label.text = hint
+		label.add_theme_font_override("font", UiFonts.bold())
+		label.add_theme_font_size_override("font_size", 18)
+		label.add_theme_color_override("font_color", Palette.SAND)
+		label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
+		label.add_theme_constant_override("outline_size", 5)
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_strip.add_child(label)
 	preload("res://src/ui/customize_page.gd").attach(self)
+
+
+# Walk mode on or off: the strip replaces the lines and the button row.
+func set_walk(on: bool) -> void:
+	walk = on
+	_strip.visible = on
+	_lines.visible = not on
+	_buttons.visible = not on
+	if customize_entry != null:
+		customize_entry.visible = not on
+
+
+# The customize page covers the camp page and gives it back.
+func page_opened() -> void:
+	_lines.hide()
+	_buttons.hide()
+	_strip.hide()
+	if customize_entry != null:
+		customize_entry.hide()
+
+
+func page_closed() -> void:
+	_lines.visible = not walk
+	_buttons.visible = not walk
+	_strip.visible = walk
+	if customize_entry != null:
+		customize_entry.visible = not walk
 
 
 func button_for(action: String) -> Button:

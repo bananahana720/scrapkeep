@@ -23,6 +23,12 @@ from warden_mantle_hand import (
     PETROL,
     DUST,
 )
+import polish
+
+# Comb and shoes: 3 cm chamfers on real corners, smooth shading, baked AO (POLISH.md). Horns skip
+# the bevel so their exact .7 m diameters and stepped heights hold. No edge
+# lightening and softer AO keep ancient enamel under the section 11 cap.
+polish.enable(detail=1, bevel=0.03, bevel_angle=46.0, edge=0.0, ao_strength=0.35)
 
 
 def build():
@@ -35,6 +41,7 @@ def build():
     box(comb, "ancient_light", (0.012, 0.05, 4.06), (-2.884, 3.51, 0))
     comb.to_object(parent=body)
     horns = Part("ChoirFiveHorns")
+    horns.bevel = 0
     for i, (z, h) in enumerate(
         zip((-1.76, -0.88, 0, 0.88, 1.76), (0.9, 1.35, 1.8, 2.25, 2.7))
     ):
@@ -130,7 +137,8 @@ if __name__ == "__main__":
     options = common.args()
     output = options["out"] or common.default_out("warden_mantle_choir")
     root = build()
-    assert common.tri_total(root) <= 900
-    hand.finish(root, output, (900, 1700, 7))
+    # Polished caps (POLISH.md, 18 Oct).
+    assert common.tri_total(root) <= 1100
+    hand.finish(root, output, (1100, 1700, 7))
     if options["render"]:
         hand.preview(output, options["render"], "choir")

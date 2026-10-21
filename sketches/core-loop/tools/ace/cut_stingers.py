@@ -21,6 +21,8 @@ import numpy as np
 import soundfile as sf
 from scipy import ndimage, signal
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parent.parent
 DEFAULT_PACKS = Path("/home/andrew/Projects/scrapkeep/sketches/core-loop/assets/music_ace")
@@ -199,6 +201,10 @@ def write_wav(path, x):
     sf.write(path, np.clip(x, -1.0, 1.0), RATE, subtype="PCM_16", format="WAV")
 
 
+# cue -> fingerprints of the windows earlier stages cut for it (cut_stage)
+TAKEN = {}
+
+
 def cut_stage(zone, pack, park, packs_dir, out_dir):
     drops, risers = park_cues(park)
     import highdraft_stingers  # imported here: it reuses this module's finish and level
@@ -245,17 +251,19 @@ def cut_stage(zone, pack, park, packs_dir, out_dir):
     used = set()
     for cue in sorted(drops):
         spec = DROPS[cue]
-        best, best_score = None, -1e9
-        for c in cands:
-            if (c["clip"], c["bar"], c["beat"]) in used or c["clip"] not in spec["clips"]:
-                continue
-            score = sum(w * (c["f"][k] - stat[k][0]) / stat[k][1] for k, w in spec["rank"].items())
-            if score > best_score:
-                best, best_score = c, score
+        ranked = sorted((c for c in cands if (c["clip"], c["bar"], c["beat"]) not in used and c["clip"] in spec["clips"]),
+                        key=lambda c: -sum(w * (c["f"][k] - stat[k][0]) / stat[k][1] for k, w in spec["rank"].items()))
+        # Two stages can cut from one source track, so the same hit can rank first in both; each
+        # stage keeps its own sound by skipping a window another stage already took for this cue.
+        for best in ranked:
+            meta, stems = clips[best["clip"]]
+            n = spec["beats"] * meta["beat"]
+            x = mix(stems, spec["w"], best["start"], best["start"] + n, spec.get("lowpass"))
+            print_ = hashlib.sha256(np.round(x, 4).tobytes()).hexdigest()
+            if print_ not in TAKEN.setdefault(cue, set()):
+                TAKEN[cue].add(print_)
+                break
         used.add((best["clip"], best["bar"], best["beat"]))
-        meta, stems = clips[best["clip"]]
-        n = spec["beats"] * meta["beat"]
-        x = mix(stems, spec["w"], best["start"], best["start"] + n, spec.get("lowpass"))
         x = level(finish(x, spec["fade"]))
         write_wav(zdir / f"{cue}.wav", x)
         report[cue] = {"kind": "drop", "clip": best["clip"], "bar": best["bar"], "beat": best["beat"],
@@ -284,7 +292,8 @@ def main():
     print(f"{len(hashes)} stingers, {dupes} byte-identical duplicates")
     for zone, row in summary.items():
         for cue, r in row["cues"].items():
-            print(zone, cue, r["kind"], r["clip"], f"bar{r['bar']} beat{r['beat']}", r["samples"], r["lufs"], r["dbtp"])
+            where = f"{r['clip']} bar{r['bar']} beat{r['beat']}" if "clip" in r else "designed"
+            print(zone, cue, r["kind"], where, r["samples"], r["lufs"], r["dbtp"])
     return 0
 
 

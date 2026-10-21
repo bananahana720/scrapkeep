@@ -8,7 +8,8 @@ const Parts := preload("res://src/build/parts.gd")
 # PARK.md 2.12's pay ladder: every activity kind takes pay.rarities (and pay.named) from its park
 # row's spec, scrap stays PAY_SCRAP, and a park row naming a kind with no RULES row is caught.
 # Sites are built and finished directly on a live game; the paid part's rarity is read from the
-# table, so a named part is judged by its own tier. This does not qualify play feel.
+# table, so a named part is judged by its own tier. An ambush altar's authored pack replaces the rule's
+# chaser pack (park_pit's bench3_altar, 2026-10-17), and an empty one keeps it. This does not qualify play feel.
 
 const SEEDS := 20
 const KINDS := ["cracked_cache", "ambush_altar", "hauler_bounty", "enemy_camp"]
@@ -41,6 +42,7 @@ func _run() -> void:
 	_scrap_ignored()
 	_named()
 	_unruled_kinds()
+	_altar_pack()
 	_game.free()
 	quit(_t.verdict())
 
@@ -129,3 +131,15 @@ func _unruled_kinds() -> void:
 					unruled[String(row["activity"])] = true
 	_t.check("park files with activity_rows were scanned", scanned >= 1, "%d files" % scanned)
 	_t.eq("every park activity kind has a rule", unruled.keys(), [])
+
+
+func _altar_pack() -> void:
+	var acts = _game.world.activities
+	var pack := ["drill_crew", "lamp_swarm", "drill_crew"]
+	var s = acts._build("ambush_altar", Vector2.ZERO, {"id": "ambush_altar", "at": Vector2.ZERO, "pack": pack})
+	_t.eq("ambush_altar takes its row's pack", s.rule["pack"], pack)
+	s.queue_free()
+	s = acts._build("ambush_altar", Vector2.ZERO, {"id": "ambush_altar", "at": Vector2.ZERO, "pack": []})
+	_t.eq("ambush_altar empty pack keeps the rule's", s.rule["pack"], Activities.RULES["ambush_altar"]["pack"])
+	s.queue_free()
+	_t.eq("the rule's own pack is untouched", Activities.RULES["ambush_altar"]["pack"], ["chaser", "chaser", "lobber"])

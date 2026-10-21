@@ -152,7 +152,7 @@ func _live(_delta: float) -> bool:
 	var to := anchor() - _real_ball()
 	to.y = 0.0
 	var accel := to.normalized() * PULL if to.length() > NEAR else Vector3.ZERO
-	if not _player().state.grounded:
+	if not _player().state.on_floor():
 		accel.y = -DOWN
 	_pull(accel)
 	return true

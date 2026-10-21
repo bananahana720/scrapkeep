@@ -130,6 +130,8 @@ func _run() -> void:
 	for i in 3:
 		await physics_frame
 	won.ctx.calm = true
+	# The Mind's win opens the Q16 ending (fly-over, victory lap, credits); victory_lap_test owns it. This fixture ends on the summary.
+	won.flow.victory_lap = false
 	var earns := []
 	var ended := [0]
 	won.events.achievement_earned.connect(func(id): earns.append(id))

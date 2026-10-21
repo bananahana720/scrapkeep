@@ -126,7 +126,7 @@ func _pose() -> void:
 
 func _wants_attack(to_ball: Vector3) -> bool:
 	var player = _player()
-	return super(to_ball) and player != null and (player.kit.hooked or not player.state.grounded)
+	return super(to_ball) and player != null and (player.kit.hooked or not player.state.on_floor())
 
 
 func _commit(_to_ball: Vector3) -> Node3D:

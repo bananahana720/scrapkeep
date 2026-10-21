@@ -3,8 +3,9 @@ extends SceneTree
 # BUILD-SPEC.md Props: whole-file caps, including every mesh and pose.
 # Override only for a disposable broken-rule copy, never for shipping assets.
 const DIRECTORY := "res://assets/models/highdraft/"
-const MAX_TRIANGLES := 270
-const MAX_VERTICES := 610
+# 2026-10-18 polish (tools/blender/POLISH.md): was 270 / 610; prop class cap is 2000 / 4600.
+const MAX_TRIANGLES := 1100
+const MAX_VERTICES := 900
 const MAX_SURFACES := 1
 const PARTS := {
 	"spool": ["Flange", "Barrel", "Feet"],

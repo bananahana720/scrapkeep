@@ -47,6 +47,8 @@ const TuneMoments := preload("res://src/presentation/tune_moments.gd")
 # "until"}), the one the level band plays now, this run's rare remixes and their own rng (never
 # the run's), and whether this stage's Warden has taken the landmark's place.
 var tune_available: Callable = TuneMoments.available
+# Whether a title row's pack is on disk (title_theme); tests swap it.
+var title_available: Callable = func(row: String) -> bool: return MusicRows.pack_on_disk(MusicRows.resolve(row)["ace_manifest"])
 var _moments: Array = []
 var _moment_seq := 0
 var _moment_playing := ""
@@ -87,6 +89,7 @@ const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "cog_tick": 4, "hit_thwa
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
 const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "cog_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
 	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
+	"grown_sub": 60, "grown_crack": 60, "grown_tail": 120, "grown_rattle": 120,
 	"achievement_chime": 400, "rescue_fanfare": 400}
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Hitting on the beat pays in sound and look only (Andrew, Q10 "Sound only", 17 Oct 22:12Z):
@@ -190,7 +193,7 @@ const CHARACTER_KINDS := ["enemy_rebounded", "enemy_pinned", "vault_kicked", "ga
 # also drive the reactor pedal (v2 W5b), and hold_started and pack_arrived resolve by
 # who holds or arrives (v2 W9), so they get their own listeners below.
 const ENEMY_KINDS := ["hold_broken", "hold_ended", "tenacity_gained",
-	"shield_vaulted", "swarm_scattered", "mind_adapted", "weak_point_opened"]
+	"shield_vaulted", "swarm_scattered", "mind_adapted", "weak_point_opened", "enemy_ringed_out"]
 
 var ctx
 # Per posture Warden, the stagger and chunk count the last posture_changed showed.
@@ -202,6 +205,16 @@ var engine: MusicEngine
 # no pack, or any missing file, plays the synth.
 var ace: AceSequencer
 var ace_manifest := ""
+# The title's music row: "title" until an opening names its theme (title_theme).
+var title_row := "title"
+var _on_title := false
+# The row a won run's summary and the ending play: theme C, the show opening, with its whole-step
+# lift (Andrew, "Won run and ending", 17 Oct). The summary pack holds it: won, its return section
+# plays two bars of theme C and then theme C lifted a whole step (tools/ace/package_core_packs.py);
+# lost, its travel loop is the jazz-club summary. A pack not on disk falls back to the plain title-c.
+const WON_SUMMARY_ROW := "summary"
+# The camp page is open on the title (screens.gd): the camp pick plays while it is.
+var camp_open := false
 # The manifest the zone rows last selected. A caller that sets ace_manifest away from it
 # (a test's missing package) keeps its pick across stage entries (fix round D, 2026-10-04).
 var _ace_row_manifest := ""
@@ -211,9 +224,10 @@ var ace_missing := ""
 var _ace_failed := false
 # The stems load on a worker while the title shows (24 Oggs, 5.8 MB): the task, its
 # result and the manifest it read. ace_ready() waits for the rest of it, or loads them
-# in place when the option or the manifest changed after setup.
+# in place when the option or the manifest changed after setup. The worker writes into
+# _ace_slot, never into this node, so a node freed mid-load is not locked by the call.
 var _ace_task := -1
-var _ace_loaded: AceSequencer
+var _ace_slot: Array = []
 var _ace_loaded_from := ""
 var _ring_capacity := 0
 # The ACE ring's depth: the POC's QUEUE_TARGET, raised a step whenever the ring runs dry,
@@ -380,7 +394,8 @@ func setup(ctx_ref) -> void:
 	_make_overlay()
 	_connect_all(ctx.events)
 	_start_bake()
-	ace_manifest = MusicRows.resolve("title")["ace_manifest"]
+	# The worker preloads the take the first title plays (title A when it is on disk).
+	ace_manifest = MusicRows.resolve(title_now())["ace_manifest"]
 	_ace_row_manifest = ace_manifest
 	_start_ace_load()
 	_flow_queue.append(["idle"])
@@ -443,14 +458,24 @@ static func _poll_bake() -> bool:
 
 
 func _start_ace_load() -> void:
-	if ace_manifest == "" or _ace_task >= 0 or _ace_loaded != null or ace != null or _ace_failed or not ace_wanted():
+	if ace_manifest == "" or _ace_task >= 0 or not _ace_slot.is_empty() or ace != null or _ace_failed or not ace_wanted():
 		return
 	_ace_loaded_from = ace_manifest
-	_ace_task = WorkerThreadPool.add_task(_load_ace, true, "presentation ACE stems")
+	_ace_slot = []
+	_ace_task = WorkerThreadPool.add_task(_ace_loader(_ace_loaded_from, _ace_slot), true, "presentation ACE stems")
 
 
-func _load_ace() -> void:
-	_ace_loaded = AceSequencer.new(_ace_loaded_from)
+# Built in a static function so the lambda holds no self: a task bound to this node locks
+# it for the whole load, and freeing it then fails ("Object is locked") and corrupts the heap.
+static func _ace_loader(manifest: String, slot: Array) -> Callable:
+	return func(): slot.append(AceSequencer.new(manifest))
+
+
+func _notification(what: int) -> void:
+	# A node freed outside the tree (the tests) still waits for its stems to finish loading.
+	if what == NOTIFICATION_PREDELETE and _ace_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_ace_task)
+		_ace_task = -1
 
 
 # Blocks until stage 1's whole band is baked, as a player's time on the title allows for.
@@ -813,9 +838,9 @@ func ace_ready() -> bool:
 		# Loading started at setup; wait only for what is left of it.
 		WorkerThreadPool.wait_for_task_completion(_ace_task)
 		_ace_task = -1
-	if _ace_loaded != null and _ace_loaded_from == ace_manifest:
-		loaded = _ace_loaded
-	_ace_loaded = null
+	if not _ace_slot.is_empty() and _ace_loaded_from == ace_manifest:
+		loaded = _ace_slot[0]
+	_ace_slot = []
 	if loaded == null:
 		loaded = AceSequencer.new(ace_manifest)
 	if not loaded.ready():
@@ -1039,7 +1064,7 @@ func stop_spin() -> void:
 	var at := engine.next_beat()
 	engine.schedule_mode(at, MusicEngine.IDLE)
 	engine.menu_theme("title", true, at)
-	_ace_named("title", at)
+	_menu_home(at)
 
 
 # The game takes the music back (a run starts while a record plays): the parameters return
@@ -1107,6 +1132,10 @@ func radio_release() -> void:
 		engine.force_track("warden" if _warden_engaged and ctx.flow.get("sealed") else "level", _stage_theme(_stage_now))
 	_moment_playing = ""
 	_ace_stage(_stage_now, engine.next_bar())
+	# A release inside a sealed Warden fight goes straight to the fight's sections: the shelf
+	# (the world's roaming take) never plays inside an arena.
+	if _warden_engaged and ctx.flow.get("sealed") and ace_playing() and ace.mode == "level":
+		ace.commit_warden()
 	cue_log.append(["radio", "score", "bar", engine.next_bar(), 1.0])
 
 
@@ -1154,7 +1183,56 @@ func tune_unheard(id: String) -> bool:
 	return id != "" and not TuneRows.row(id).is_empty() and not _ear.heard(id)
 
 
+# The title opening (title_stage.gd) names its theme as its intro starts: the title plays that
+# theme's take from its first bar. A theme with no pack on disk keeps the plain title.
+func title_theme(theme: String) -> void:
+	var row := "title-" + theme.to_lower()
+	if not MusicRows.ROWS.has(row) or not title_available.call(row):
+		row = "title"
+	if row == title_row:
+		return
+	title_row = row
+	if _on_title and sound_ready:
+		_ace_named(title_row, engine.next_bar())
+		_on_title = true
+
+
+# The title row that plays now: the opening's theme, else title A (the keepers' theme, which
+# the rotation opens on), else the plain title.
+func title_now() -> String:
+	if title_row == "title" and title_available.call("title-a"):
+		return "title-a"
+	return title_row
+
+
+func summary_row(won: bool) -> String:
+	if won and not title_available.call(WON_SUMMARY_ROW) and title_available.call("title-c"):
+		return "title-c"
+	return "summary"
+
+
+# screens.gd says when the camp page opens and closes: the camp take plays while it is open,
+# and the title theme comes back when it closes. A camp with no pack on disk keeps the title.
+func camp_theme(open: bool) -> void:
+	if camp_open == open:
+		return
+	camp_open = open
+	if sound_ready and spinning == "" and radio_hold == "":
+		_menu_home(engine.next_bar())
+
+
+# The music of the title screen at transport sample at: the camp's while the camp is open,
+# else the title row.
+func _menu_home(at: int) -> void:
+	if camp_open and title_available.call("camp"):
+		_ace_named("camp", at)
+		return
+	_ace_named(title_now(), at)
+	_on_title = true
+
+
 func _ace_named(id: String, at: int, boss := false, won := true) -> void:
+	_on_title = false
 	_ace_arrival_stage = 0
 	_ace_arrival_at = -1
 	var manifest: String = MusicRows.resolve(id)["ace_manifest"]
@@ -2645,7 +2723,8 @@ func _on_boss_defeated() -> void:
 
 func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 	if _kind == "miniboss" and is_instance_valid(_miniboss):
-		end_moment("miniboss", str(_miniboss.get_instance_id()))
+		var key := str(_miniboss.get_instance_id())
+		end_moment("miniboss", key)
 	if _kind == "miniboss" and engine.track == "miniboss":
 		# The payoff on the kill: the drop home on the next beat, then the cadence.
 		engine.miniboss_drop()
@@ -2990,7 +3069,24 @@ func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
 		play("enemy_struck", db, _posture_note_ratio(enemy))
 	else:
 		play("enemy_struck", db, (1.0 if contact else 1.15) * _warden_ladder(enemy))
+	if contact:
+		_grown_layers(db)
 	_pay_beat(enemy, kind)
+
+
+# A grown pilot's contact hits carry more weight: one layer per heft class past I, started on
+# the hit's own frame with the hit's level. A sub drop from II, a heavier crack from III, a long
+# rumbling tail and a scrap rattle from IV, so a heft IV slam sounds about twice as layered.
+const GROWN_LAYERS := [[2, "grown_sub"], [3, "grown_crack"], [4, "grown_tail"], [4, "grown_rattle"]]
+
+
+func _grown_layers(db: float) -> void:
+	var heft := _heft_class
+	if ctx != null and ctx.run != null and ctx.run.has_method("heft_class"):
+		heft = int(ctx.run.heft_class())
+	for layer in GROWN_LAYERS:
+		if heft >= int(layer[0]):
+			play("enemy_struck", db, 1.0, "SFX", layer[1])
 
 
 # The hit's own sound has already played, so the beat never delays it.
@@ -3305,14 +3401,14 @@ func _flush_flow() -> void:
 					engine.schedule_cadence(start + Harmony.BAR)
 					engine.schedule_mode(start + Harmony.BAR * 3, MusicEngine.IDLE)
 					engine.menu_theme("summary", true, start + Harmony.BAR * 3)
-					_ace_named("summary", start + Harmony.BAR * 3, false, true)
+					_ace_named(summary_row(true), start + Harmony.BAR * 3, false, true)
 				else:
 					# on_beat returns -1 until sound is ready, so this is the guarded handoff for both outcomes.
 					var at := engine.next_beat()
 					engine.schedule_mode(at, MusicEngine.IDLE)
 					if sound_ready:
 						engine.menu_theme("summary", won, at)
-						_ace_named("summary", at, false, won)
+						_ace_named(summary_row(won), at, false, won)
 			"dead":
 				_radio_drop("flow")
 				_ace_end()
@@ -3326,7 +3422,7 @@ func _flush_flow() -> void:
 				# The title's own theme, kept across the class select.
 				if sound_ready:
 					engine.menu_theme("title", true, at)
-					_ace_named("title", at)
+					_menu_home(at)
 			"unseal":
 				engine.parameters_warden_broken()
 				_unseal_ms = Time.get_ticks_msec()

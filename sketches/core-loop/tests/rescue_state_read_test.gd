@@ -40,6 +40,9 @@ func _run() -> void:
 	t.check("freeing signal glows for active rescue", cage._signal.emission_energy_multiplier >= 1.5)
 	cage.tick(Site.BREAK_SECONDS * 0.5)
 	t.check("freed gate opens the exit and the locked bars are hidden", cage._open_walls.visible and not cage._bars.visible)
+	# The pilot now eases out over FREE_MOVE instead of teleporting; step the tween to its end.
+	t.check("freed pilot eases out rather than teleporting", cage._free_tween != null and cage._pilot.position.z < 2.1)
+	cage._free_tween.custom_step(Site.FREE_MOVE + 0.1)
 	t.check("freed pilot clears the frame", is_equal_approx(cage._pilot.position.z, 2.1) and cage._animator.assigned_animation == "unlock",
 		"position %s pose %s" % [cage._pilot.position, cage._animator.assigned_animation])
 	t.check("freed gate folds down toward the exit", cage._freed_wall != null and absf(cage._freed_wall.rotation.x) > deg_to_rad(60.0))

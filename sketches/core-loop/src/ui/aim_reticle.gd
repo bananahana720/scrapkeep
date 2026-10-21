@@ -12,6 +12,8 @@ const GAUGE_RING := 24.0
 const GAUGE_WIDTH := 3.0
 const HARPOON_RING := 19.0
 const HARPOON_WIDTH := 2.5
+# Reduced motion (Game.set_reduced_motion keeps it current): a dry fire no longer shakes the reticle.
+static var reduced_motion := false
 const DRY_SHAKE := 3.0
 const DRY_SHAKE_TIME := 0.25
 const SHAKE_HZ := 40.0
@@ -135,7 +137,7 @@ func harpoon_readiness() -> float:
 
 # How far a dry fire has pushed the reticle off the centre, in pixels: at most DRY_SHAKE.
 func shake_offset() -> Vector2:
-	if _shake_left <= 0.0:
+	if reduced_motion or _shake_left <= 0.0:
 		return Vector2.ZERO
 	return Vector2(sin(_shake_clock * TAU * SHAKE_HZ) * DRY_SHAKE, 0.0)
 
