@@ -543,12 +543,8 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 			push_warning("spawn_enemy: unknown kind '%s', spawning a chaser" % kind)
 			kind = "chaser"
 			enemy = Chaser.new()
-	# Placed before it joins the tree, so its body enters the physics space where it stands.
-	# Jolt reads a kinematic body moved after that as a velocity over the next step: one moved
-	# from the world origin to `at` shoved a ball rolling at the origin out at 500 m/s
-	# (item_fuzz seed 2751, 243.9 m/s against the 60 m/s ceiling).
-	enemy.position = ctx.root.global_transform.affine_inverse() * at
 	ctx.root.add_child(enemy)
+	enemy.global_position = at
 	# M0 (review fix round 1, finding 2): the only spawner call reachable while the boss
 	# arena is up is boss.gd's own drone drop, so a spawn landing here is a boss add, not
 	# an ordinary field enemy, whatever kind string it uses (currently always "lobber").
@@ -572,9 +568,6 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 				enemy_spec["affix"] = affix_id
 				enemy_spec["affix_world"] = director.world
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
-	# The vault and the Warden settle onto the ground or their landmark anchor in setup.
-	if enemy is CollisionObject3D and not enemy.global_position.is_equal_approx(at):
-		_reenter_space(enemy)
 	# Poles and flails weigh a body by its stage threat, as the trap ratings do (movement/grip.gd).
 	if "threat_level" in enemy:
 		enemy.threat_level = _threat()
@@ -599,16 +592,6 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 	ctx.events.enemy_spawned.emit(enemy, kind)
 	fleet.on_spawned(enemy, kind)
 	return enemy
-
-
-# A body moved after it entered the space would push what stands at its old spot along the
-# move; leaving the space and entering it again at the new transform places it with no push.
-static func _reenter_space(body: CollisionObject3D) -> void:
-	var rid := body.get_rid()
-	var space := PhysicsServer3D.body_get_space(rid)
-	PhysicsServer3D.body_set_space(rid, RID())
-	PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_TRANSFORM, body.global_transform)
-	PhysicsServer3D.body_set_space(rid, space)
 
 
 # What the director weights reinforcement packs against (fleet.gd build_read).
