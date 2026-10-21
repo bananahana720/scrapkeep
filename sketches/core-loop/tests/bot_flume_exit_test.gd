@@ -20,7 +20,7 @@ const T := preload("res://tests/support/t.gd")
 #   exit    from each of STARTS, the bot's own climb steering (_fight_way_up, then _act) puts the
 #           ball on the ground east of the drum wall, within LEVEL_BAND of the gate's height,
 #           inside EXIT_S;
-#   heavy   a ball of heft HEAVY_HEFT, started on the drum floor where the Warden breaks, driven by
+#   heavy   a ball of heft HEAVY_HEFT, started on the drum floor where the Warden breaks or partway up the kicker's climb, driven by
 #           _to_gate itself, gets out the same way. A heavy ball leaves the lip slow and drops short of
 #           the gate lip with its air jump unspent (seed 1 demolitions_caster stalled 12 times in a stage).
 #           Before the jump at the lip (_kicker_jump), runner_gunner seed 1's full run

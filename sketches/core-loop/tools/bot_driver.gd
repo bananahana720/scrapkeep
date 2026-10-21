@@ -885,6 +885,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_cache_phase = "runup"
 	_cache_clock = 0.0
 	_climb = []
+	_route_lips.clear()
 	_climb_for = ""
 	_fight_climb = []
 	_fight_climb_clock = 0.0
@@ -2897,7 +2898,8 @@ func _to_gate(delta: float) -> void:
 		_gate_hop = GATE_HOP_EVERY
 		source.press["jump_pressed"] = true
 	# Past a kicker's lip and falling short of the next floor, spend the air jump (the Flume's drum lip).
-	if not game.player.state.grounded and game.player.state.air_actions > 0 and game.player.state.velocity.y < 0.0:
+	if not game.player.state.grounded and game.player.state.air_actions > 0 and game.player.state.velocity.y < 0.0 \
+			and game.player.verb_ready("jump"):
 		for lip in _route_lips:
 			if _flat(ball_at, lip) < 12.0 and ball_at.y < lip.y + 2.5 and ball_at.y > lip.y - 2.0:
 				source.press["jump_pressed"] = true
