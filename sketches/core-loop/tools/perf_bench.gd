@@ -57,6 +57,8 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #   --no-trails          vfx.trails = false: the ball trail and speed lines are not built.
 #   --no-machine-fx      presentation MachineFx (enemy and boss steam, sparks, arcs, words):
 #                        process disabled, its root hidden, event listeners cut.
+#   --no-stills          run_moments takes no scrapbook stills (each reads the frame back from the GPU,
+#                        frame_post_draw); stills_taken in the result counts the reads either way.
 # Synthetic attacks recycle and never resolve damage. HP is topped up every tick.
 #
 # level-sites   (LEVEL-SITES-BENCH, scrapkeep#149 ruling 3, wave 17) what a level Breach landing costs on its landing tick
@@ -155,7 +157,7 @@ const Hitscan := preload("res://src/combat/hitscan.gd")
 const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
-const ABLATIONS := ["no-music", "no-audio", "no-vfx", "no-telegraph-draw", "no-hud", "no-enemy-ai", "no-trails", "cold-band", "no-machine-fx"]
+const ABLATIONS := ["no-music", "no-audio", "no-vfx", "no-telegraph-draw", "no-hud", "no-enemy-ai", "no-trails", "cold-band", "no-machine-fx", "no-stills"]
 const PACK_ORDER := ["grounded", "strung", "netted", "rebound", "reeled", "wobble", "flung", "cupped"]
 const EXTRA_COPIES := ["spiral_wave", "chain_arc", "cross_split", "gatling_heart", "double_feed", "arc_coil"]
 const RIVET_SEED := 1
@@ -1289,6 +1291,7 @@ func _finish() -> void:
 		"size": [root.get_texture().get_width(), root.get_texture().get_height()],
 		"physics_hz": Engine.physics_ticks_per_second, "seed": RIVET_SEED,
 		"warm_frames": _warm_frames, "warm_seconds": _warm_seconds, "record_frames": _samples.size(), "warden": _warden_note,
+		"stills_taken": _game.run_moments.shots_taken if _game != null and _game.run_moments != null else -1,
 		"sound_ready_at_s": snappedf(_sound_ready_s, 0.01), "parts_granted": _granted.size(), "telegraphs_committed": _threats.size(),
 		"perf_monitor_value_changes": _perf_updates, "mark_materials": Threat.Painter.materials_built, "mark_materials_built_in_window": Threat.Painter.materials_built - _materials_at_record,
 		"wall_seconds": snappedf(_seconds_since(_start_usec), 0.1),
