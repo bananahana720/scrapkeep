@@ -171,8 +171,7 @@
   "flood_staff": {
    "class": "dress_prop",
    "tags": [
-    "sign",
-    "tall"
+    "sign"
    ],
    "story": "A water-level staff on a concrete pier, its high-water line repainted higher three times.",
    "variants": {
@@ -183,12 +182,12 @@
       "res://assets/models/park/props/dam/flood_staff_a_lod2.glb"
      ],
      "tris": [
-      1000,
-      500,
-      150
+      728,
+      364,
+      104
      ],
-     "radius": 2.106,
-     "height": 4.579
+     "radius": 1.189,
+     "height": 2.604
     },
     "b": {
      "lod": [
@@ -197,12 +196,12 @@
       "res://assets/models/park/props/dam/flood_staff_b_lod2.glb"
      ],
      "tris": [
-      1072,
-      536,
-      154
+      800,
+      394,
+      108
      ],
-     "radius": 2.412,
-     "height": 4.67
+     "radius": 1.344,
+     "height": 2.6
     },
     "c": {
      "lod": [
@@ -538,8 +537,8 @@
       1064,
       304
      ],
-     "radius": 2.996,
-     "height": 2.423
+     "radius": 2.295,
+     "height": 1.857
     },
     "b": {
      "lod": [
@@ -552,8 +551,8 @@
       670,
       181
      ],
-     "radius": 3.302,
-     "height": 2.423
+     "radius": 2.532,
+     "height": 1.857
     },
     "c": {
      "lod": [
@@ -566,8 +565,8 @@
       997,
       272
      ],
-     "radius": 3.866,
-     "height": 2.85
+     "radius": 2.578,
+     "height": 1.9
     }
    }
   },

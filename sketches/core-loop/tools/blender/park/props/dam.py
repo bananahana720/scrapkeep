@@ -477,7 +477,8 @@ def survey_tent(p, v, rng):
 @K.kind("flood_staff", hero=False, tags=["sign"], variants="abc",
         story="A water-level staff on a concrete pier, its high-water line repainted higher three times.")
 def flood_staff(p, v, rng):
-    p = Sc(p, 1.5, lite=True)
+    # KITS.md dam brief: staff 2.6 m. a and b are scaled to it (3.05 m authored x 0.853 = 2.6 m); c lies fallen.
+    p = Sc(p, {"a": 0.853, "b": 0.836, "c": 1.5}[v], lite=True)  # b leans, so it reads taller
     lean = {"a": 0.0, "b": 0.16, "c": 1.5}[v]
     pivot = (0, 0, 0.35)
     ca, sa = math.cos(lean), math.sin(lean)
@@ -794,7 +795,8 @@ def shirt(p, top, col, rot_z=0.0, size=1.0, rng=None):
 @K.kind("laundry_line", hero=False, tags=["soft"], variants="abc",
         story="A crew washing line between two leaning posts: shirts, a towel, a sock, left out in the dawn wind.")
 def laundry_line(p, v, rng):
-    p = Sc(p, 1.5, lite=True)
+    # KITS.md dam brief: two posts under 2 m. Scale 1.15 (c: 1.0, its bush is taller) from 1.5 puts every variant at about 1.9 m.
+    p = Sc(p, 1.0 if v == "c" else 1.15, lite=True)
     ha, hb = 1.6, 1.4
     pa = (-1.6, 0.0, 0.0)
     pb = (1.7, 0.2, 0.0)

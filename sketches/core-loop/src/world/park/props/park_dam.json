@@ -1749,8 +1749,8 @@
    "id": "mid_laundry_5",
    "template": "mid_laundry",
    "at": [
-    -314,
-    -606
+    -310,
+    -598
    ],
    "yaw_deg": 29,
    "near": "dome_3: A washing line by a cold fire"
@@ -2389,8 +2389,8 @@
    "id": "mid_laundry_113",
    "template": "mid_laundry",
    "at": [
-    7,
-    279
+    9,
+    283
    ],
    "yaw_deg": -35,
    "near": "the_eye: A washing line by a cold fire"
@@ -2479,8 +2479,8 @@
    "id": "mid_laundry_125",
    "template": "mid_laundry",
    "at": [
-    -182,
-    -511
+    -197,
+    -451
    ],
    "yaw_deg": 146,
    "near": "dome_4: A washing line by a cold fire"
@@ -2609,8 +2609,8 @@
    "id": "mid_laundry_147",
    "template": "mid_laundry",
    "at": [
-    -39,
-    -291
+    -33,
+    -297
    ],
    "yaw_deg": 135,
    "near": "dome_23: A washing line by a cold fire"
@@ -3092,5 +3092,5 @@
   ],
   "seed": 11
  },
- "pin": 1759471770
+ "pin": 617986039
 }
