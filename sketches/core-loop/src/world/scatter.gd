@@ -20,7 +20,7 @@ const COIL_SEGMENTS := 5
 const SLOPE_PROBE := 1.0
 const FLOATS := 12
 # The ghost-solid lane band (#183): a thing the ride line can touch that stands more than this above the ground
-# is solid to the rider, and the kit has no collider, so a tall row stays out of the lanes (ruling 5, 2026-10-19).
+# is solid to the rider, and the kit has no collider, so a tall row's pieces in a lane are sunk to the band (ruling 5, 2026-10-19).
 const LANE_BAND_M := 0.12
 
 
@@ -195,7 +195,8 @@ static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB,
 	var clear: Dictionary = map.scatter["clear"]
 	var keeps := [[map.spawn, float(clear["spawn"])], [map.beacon, float(clear["beacon"])], [map.vault, float(clear["vault"])]]
 	var keep_out: Array = map.scatter.get("keep_out", [])
-	var lane_out: Array = map.scatter.get("lane_out", []) if is_tall(row, aabb) else []
+	var tall := is_tall(row, aabb)
+	var lane_out: Array = map.scatter.get("lane_out", []) if tall else []
 	var rng := RandomNumberGenerator.new()
 	rng.seed = ("%s/%d_%d" % [row["seed"], ci, cj]).hash()
 	var count := int(float(row["density"]) * rect.get_area() / 100.0)
@@ -209,10 +210,25 @@ static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB,
 		# The far edges belong to the next chunk.
 		if x >= rect.end.x or z >= rect.end.y:
 			continue
-		if _kept_clear(keeps, Vector2(x, z)) or _kept_out(keep_out, Vector2(x, z)) or _kept_out(lane_out, Vector2(x, z)):
+		if _kept_clear(keeps, Vector2(x, z)) or _kept_out(keep_out, Vector2(x, z)):
 			continue
+		var placed := out.size()
 		_stand(row, ground, aabb, x, z, yaw, s, tilt, out, grounds)
+		# A tall piece in a lane row stays, sunk to the band (ruling 5, revised): same draws, same count.
+		if tall and out.size() > placed and _kept_out(lane_out, Vector2(x, z)):
+			out[placed] = _sunk_to_band(out[placed], ground, aabb)
 	return out
+
+
+# xf sunk straight down until its highest box corner stands at most LANE_BAND_M above the ground under that corner.
+static func _sunk_to_band(xf: Transform3D, ground: Callable, aabb: AABB) -> Transform3D:
+	var worst := -INF
+	for i in 8:
+		var c := xf * aabb.get_endpoint(i)
+		worst = maxf(worst, c.y - (ground.call(c.x, c.z, 0.0) as Vector3).y)
+	if worst > LANE_BAND_M:
+		xf.origin.y -= worst - LANE_BAND_M
+	return xf
 
 
 # The visual vertices a camera at eye draws from a chunked scatter: every batch whose bounds centre
