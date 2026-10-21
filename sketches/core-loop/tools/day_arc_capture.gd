@@ -1,9 +1,9 @@
 extends SceneTree
 # One day per run: a still of every stage in run order, the boss arena that ends each world before
 # the last (the Brindle bowl keeps its stage's morning look; the Waking has its own pit look), then
-# the Mind's crown, each at the time of day its stage enters at (world_look.gd STAGE_TIME). The camera sits behind and above the ball and
-# looks a quarter turn off the day's sun, so the graded sky, its glow and the lit ground share a
-# frame. Needs a display (Xvfb works; llvmpipe GL draws without volumetric air):
+# the Mind's crown, each at the time of day its stage enters at (world_look.gd STAGE_TIME). The
+# camera sits behind and above the ball (an arena's centre for an arena) and looks 40 degrees off
+# the day's sun, so the graded sky, its glow and the lit ground share a frame. Needs a display (Xvfb works; llvmpipe GL draws without volumetric air):
 #   godot --path sketches/core-loop --resolution 1280x720 --script res://tools/day_arc_capture.gd -- --out=<dir> [--table=<id>]
 # --table defaults to "park", the shipped table (game.gd LAUNCH_TABLE); --table=alpha reproduces the
 # legacy-map frames. Writes <out>/<n>-stage<stage>-<time>.png (<n>-arena-<boss>.png for an
@@ -80,7 +80,7 @@ func _run() -> void:
 			var mod = game.flow._boss_module()
 			var centre = mod.get("pad") if mod.get("pad") != null else mod.get("arena")
 			var at: Vector3 = centre.global_position + Vector3.UP if centre != null else game.player.ball_position()
-			await _snap("%d-arena-%s" % [n, boss_id], stage if rot == null else 0, at, rot, 14.0, 18.0)
+			await _snap("%d-arena-%s" % [n, boss_id], stage, at, rot, 14.0, 18.0)
 			game.flow._boss_module().exit_arena()
 			game.flow.in_arena = false
 			game.flow.boss_active = false
