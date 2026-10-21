@@ -1,6 +1,6 @@
 """Swarm remnant body (KF6, wave 13): the hive, design-v3/wardens/swarm.md sections 1.1, 5 and 9.
 
-Blender 5.2.2, memory-capped by prlimit (address space 12884901888 bytes, the -v or --as= limit):
+Blender 5.2.2, memory-capped by prlimit (address space 12884901888 bytes, prlimit -v, the address-space limit):
   prlimit -v12884901888 blender --background --threads 2 --python-exit-code 1
     --python tools/blender/warden_swarm.py -- [--out DIR] [--count-only] [--render DIR]
   --out DIR      write both GLBs into DIR (default assets/models)
