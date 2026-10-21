@@ -12,6 +12,11 @@ extends "res://src/combat/counter.gd"
 const Splitter := preload("res://src/combat/splitter.gd")
 # The piece glb (PR #24), read through the Splitter's cache.
 const BODY := "res://assets/models/world_one/enemy_splitter_piece.glb"
+# The fuse wind-up is the roster's existing "gather, then burst" pose (windup_poses.gd,
+# e03_leap_spread: nose back 6 degrees, 0.80 tall, wider to keep the volume), shivering over the
+# last quarter (SHIVER_FROM, SHIVER_HZ). It reads progress and age from the warn clock the seam
+# glow and the ring already read, so nothing here has a timer of its own.
+const WIND_POSE := "e03_leap_spread"
 
 const HP := 40.0
 const WEIGHT := 0.6
@@ -35,6 +40,9 @@ var spent := false
 var _crumble := 0.0
 var _ring_had_ball := false
 var _glow: StandardMaterial3D
+# The visual pivot's child that holds the body and takes the fuse wind-up; never a collider.
+var _body: Node3D
+var _rig: Node
 
 
 func _configure(threat: float) -> void:
@@ -66,14 +74,25 @@ func _build_crew() -> void:
 	half_height = BODY_HALF
 	_add_capsule(BODY_RADIUS, BODY_HALF * 2.0, Palette.RUST).free()
 	_glow = Palette.solid(Palette.AMBER, GLOW_IDLE)
+	_body = Node3D.new()
+	_body.name = "PodBody"
+	_visual_parent().add_child(_body)
+	# On screen the glb's own scene stands in, so its scurry and pop_in clips play; it is born
+	# out of the burst (pop_in once, then the scurry loop). A headless run copies meshes.
+	var model := Splitter.SpecialRig.seat(self, _body, BODY, "splitter_piece")
+	if model != null:
+		_rig = get_node_or_null("SpecialRig")
+		_rig.moment("spawn")
 	for part in Splitter.parts(BODY)["meshes"]:
-		var mi := MeshInstance3D.new()
-		mi.name = part.name
-		mi.mesh = part.mesh
-		mi.transform = part.xform
+		var mi: MeshInstance3D = model.find_child(part.name, true, false) as MeshInstance3D if model != null else null
+		if mi == null:
+			mi = MeshInstance3D.new()
+			mi.name = part.name
+			mi.mesh = part.mesh
+			mi.transform = part.xform
+			_body.add_child(mi)
 		for i in mi.mesh.get_surface_count():
 			mi.set_surface_override_material(i, _material if part.paint else _glow)
-		_visual_parent().add_child(mi)
 		if part.paint:
 			_crew = mi
 	_base_color = Color.WHITE
@@ -123,9 +142,29 @@ func _physics_process(delta: float) -> void:
 func _pose() -> void:
 	if _glow == null:
 		return
+	_wind_up()
 	if spent:
 		_glow.emission_energy_multiplier = GLOW_SPENT
 		return
 	var burn := clampf(_warn_progress(), 0.0, 1.0) if phase == Phase.WARN else 0.0
 	var blink := 0.5 + 0.5 * sin(_t * TAU * FlashGuard.rate(lerpf(3.0, 10.0, burn)))
 	_glow.emission_energy_multiplier = FlashGuard.spike(GLOW_IDLE, lerpf(GLOW_IDLE, GLOW_FUSE, burn * blink))
+
+
+# The fuse's body read: the committed warn progress and age drive the wind-up pose, and the
+# scurry slows to a stop as it fills. Rotation and squash on the body node only.
+func fuse_progress() -> float:
+	return clampf(_warn_progress(), 0.0, 1.0) if phase == Phase.WARN and not spent else 0.0
+
+
+func wind_basis() -> Basis:
+	return WindupPoses.windup(WIND_POSE, fuse_progress(), _t, EnemyMotion.motion_scale)
+
+
+func _wind_up() -> void:
+	if _body != null:
+		_body.basis = wind_basis()
+		# Squash about the feet (the capsule's floor is -BODY_HALF), so the pod crouches, not floats.
+		_body.position = Vector3(0.0, -BODY_HALF * (1.0 - _body.basis.y.length()), 0.0)
+	if _rig != null:
+		_rig.player.speed_scale = 0.0 if spent else 1.0 - fuse_progress()
