@@ -7,6 +7,7 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
+const WorldGrade := preload("res://src/presentation/world_grade.gd")
 
 # The class card's portrait and live ability preview: the pilot's real hero shell
 # (hero_assets.gd's glb, painted by its own paint()) in a tiny world of its own. The
@@ -24,6 +25,8 @@ const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 # are the game's (ring, chevron, burst, lane).
 
 const LOOP := 3.6
+# The menu stages' exposure under the run's grade, measured so the subject keeps its Filmic mean L*.
+const MENU_EXPOSURE := 1.75
 # The loop phase each card holds at rest: the key art's moment.
 const REST := {"pylon_engineer": 0.54, "runner_gunner": 0.3, "demolitions_caster": 0.64, "tarn": 0.3,
 	"remembered_cannon": 0.22, "tally": 0.3}
@@ -161,7 +164,7 @@ func _build_stage() -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Palette.SAND
 	env.ambient_light_energy = WorldLook.PREVIEW.energy
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	WorldGrade.menu(env, MENU_EXPOSURE)
 	_camera.environment = env
 	_viewport.add_child(_camera)
 	preview_lights(_viewport, tint, true)

@@ -12,9 +12,16 @@ extends SceneTree
 #        are not covered here).
 #   WG-4 reduce flashes (DECISIONS section 10) leaves the grade alone: turning it on and off
 #        changes no tonemap, adjustment or glow field on the run's environment.
+#   WG-5 WorldGrade.BASE is what graphics_preset.gd writes: after bind and apply("high") every BASE key
+#        equals the bound environment's value, so the menus' grade cannot drift from the run's.
+#   WG-6 the class preview and the customize bench take AgX at BASE's contrast through WorldGrade.menu.
 const Game := preload("res://src/game.gd")
 const Probe := preload("res://tools/grade_probe.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const WorldGrade := preload("res://src/presentation/world_grade.gd")
+const ClassPreview := preload("res://src/ui/class_preview.gd")
+const Customize := preload("res://src/ui/customize_page.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const Palette := preload("res://src/core/palette.gd")
 const DefenceBars := preload("res://src/core/defence_bars.gd")
@@ -73,7 +80,21 @@ func _contract() -> void:
 		_t.check("WG-3 %s: glow threshold sits above threat_grammar's unshaded marks" % preset,
 			not env.glow_enabled or env.glow_hdr_threshold > 1.0, "threshold %.2f" % env.glow_hdr_threshold)
 	GraphicsPreset.apply("high")
+	for key in WorldGrade.BASE:
+		var want = WorldGrade.BASE[key]
+		# Environment stores floats at single precision.
+		_t.check("WG-5 BASE %s matches the run's preset" % key, absf(env.get(key) - want) < 0.0001 if want is float else env.get(key) == want, "%s vs %s" % [env.get(key), want])
 	sun.free()
+	var preview := ClassPreview.new(ClassDef.all()[0])
+	var page := Customize.new()
+	var menus := {"class preview": preview._camera.environment, "customize bench": page._viewport.get_child(0).environment}
+	for stage in menus:
+		var menu: Environment = menus[stage]
+		_t.check("WG-6 %s tonemaps with AgX" % stage, menu.tonemap_mode == Environment.TONE_MAPPER_AGX, str(menu.tonemap_mode))
+		_t.near("WG-6 %s contrast is BASE's" % stage, menu.tonemap_agx_contrast, WorldGrade.BASE.tonemap_agx_contrast)
+		_t.near("WG-6 %s saturation is the run's" % stage, menu.adjustment_saturation, WorldLook.ROWS[1].saturation)
+	preview.free()
+	page.free()
 
 
 func _grade(env: Environment) -> Dictionary:
