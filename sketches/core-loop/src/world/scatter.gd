@@ -187,7 +187,7 @@ static func build_chunked(parent: Node3D, map, ground: Callable, threaded: bool,
 
 # One row's pieces inside chunk (ci, cj): the old placement rule on the chunk's share of the play
 # rect, clear of the spawn, beacon, vault and every built footprint.
-static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB, ci: int, cj: int, grounds: Array) -> Array[Transform3D]:
+static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB, ci: int, cj: int, grounds: Array, lane: Dictionary = {}) -> Array[Transform3D]:
 	var out: Array[Transform3D] = []
 	var rect: Rect2 = chunk_rect(ci, cj).intersection(map.play_rect)
 	if rect.get_area() <= 0.0:
@@ -196,7 +196,7 @@ static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB,
 	var keeps := [[map.spawn, float(clear["spawn"])], [map.beacon, float(clear["beacon"])], [map.vault, float(clear["vault"])]]
 	var keep_out: Array = map.scatter.get("keep_out", [])
 	var tall := is_tall(row, aabb)
-	var lane_mask: Dictionary = map.scatter.get("lane_mask", {}) if tall else {}
+	var lane_mask: Dictionary = (lane if not lane.is_empty() else map.scatter.get("lane_mask", {})) if tall else {}
 	var rng := RandomNumberGenerator.new()
 	rng.seed = ("%s/%d_%d" % [row["seed"], ci, cj]).hash()
 	var count := int(float(row["density"]) * rect.get_area() / 100.0)
@@ -283,7 +283,7 @@ static func _pack(buffer: PackedFloat32Array, at: int, tr: Transform3D) -> void:
 
 
 # A chunk's batches as data, built on any thread: per kind {buffer, origins, grounds, bounds}.
-static func chunk_batches(groups: Array, map, ground: Callable, ci: int, cj: int) -> Array:
+static func chunk_batches(groups: Array, map, ground: Callable, ci: int, cj: int, lane_mask: Dictionary = {}) -> Array:
 	var batches := []
 	for group: Dictionary in groups:
 		var source: Dictionary = group["source"]
@@ -293,7 +293,7 @@ static func chunk_batches(groups: Array, map, ground: Callable, ci: int, cj: int
 		var bounds := AABB()
 		var first := true
 		for row: Dictionary in group["rows"]:
-			var xfs := chunk_transforms(row, map, ground, source["aabb"], ci, cj, grounds)
+			var xfs := chunk_transforms(row, map, ground, source["aabb"], ci, cj, grounds, lane_mask)
 			var at := buffer.size()
 			buffer.resize(at + xfs.size() * FLOATS)
 			for xf in xfs:
@@ -313,6 +313,7 @@ class Chunked extends Node3D:
 	signal built
 
 	const Self := preload("res://src/world/scatter.gd")
+	const ParkMapScript := preload("res://src/world/park/park_map.gd")
 	const Rows := preload("res://src/world/scatter_rows.gd")
 	const Tiles := preload("res://src/world/park/park_terrain.gd")
 	const Colours := preload("res://src/core/palette.gd")
@@ -332,6 +333,11 @@ class Chunked extends Node3D:
 	var slowest_step := ""
 	# start()'s own main-thread cost (mesh sources, glb load), also folded into slowest_usec.
 	var start_usec := 0
+	# The park's lane mask and what it cost, made by the first chunk job (_ensure_lane_mask).
+	var lane_mask := {}
+	var lane_mask_usec := 0
+	var _mask_done := false
+	var _mask_lock := Mutex.new()
 	var frame_usec_max := 0
 	var _last_frame_usec := 0
 	var _map: RefCounted
@@ -400,6 +406,23 @@ class Chunked extends Node3D:
 		else:
 			_launch()
 			finish()
+
+	# A park's lane mask (park_map.gd lane_mask_for), made once by whichever chunk job gets here first, on its worker
+	# thread, behind the lock: the others wait for it, so no chunk reads it before it is whole and nothing shared is
+	# written (it lives here, not in map.scatter, which the main thread may read). It reads its own copy of the graph,
+	# off the main thread, since the shared copy (Activities.shared_graph) is main-thread only and a cold read there cost
+	# 612 ms in the frame-cap test. lane_mask_usec is the mask's cost, graph read included.
+	func _ensure_lane_mask() -> void:
+		_mask_lock.lock()
+		if not _mask_done:
+			_mask_done = true
+			if _map.get("park") != null and _map.get("path") != null and (_map.scatter as Dictionary).has("lane_mask"):
+				lane_mask = _map.scatter["lane_mask"]
+			elif _map.get("park") != null and _map.get("path") != null:
+				var t0 := Time.get_ticks_usec()
+				lane_mask = ParkMapScript.lane_mask_for(_map.path, _map.park)
+				lane_mask_usec = Time.get_ticks_usec() - t0
+		_mask_lock.unlock()
 
 	# Drops the kinds with no source, then cuts the chunks onto worker threads (or builds them here).
 	func _launch() -> void:
@@ -485,7 +508,8 @@ class Chunked extends Node3D:
 
 	# Worker side: pure data, no scene tree.
 	func _build_chunk(c: int) -> void:
-		_results[c] = Self.chunk_batches(_groups, _map, _ground, c % Tiles.TILES_PER_SIDE, c / Tiles.TILES_PER_SIDE)
+		_ensure_lane_mask()
+		_results[c] = Self.chunk_batches(_groups, _map, _ground, c % Tiles.TILES_PER_SIDE, c / Tiles.TILES_PER_SIDE, lane_mask)
 		if OS.get_thread_caller_id() != OS.get_main_thread_id():
 			_lock.lock()
 			worker_chunks += 1

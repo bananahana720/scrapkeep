@@ -23,6 +23,7 @@ const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const ParkGraph := preload("res://src/world/park/park_graph.gd")
 
 # SHA-256 of every old-map scatter transform (kind, seed, instance buffer, maps sorted). A change
 # here moves an old map's scatter. Re-pinned 2026-10-18 (coordinator call 2026-10-18) to a57519e6,
@@ -464,7 +465,7 @@ func _plain_slopes() -> void:
 
 
 # Ruling 5, 2026-10-19 (issue #149) and the #241 ruling, option (c): a kit row that can stand more than
-# Scatter.LANE_BAND_M above the ground keeps every piece whose centre is in the park's lane mask (park_map.gd lane_mask,
+# Scatter.LANE_BAND_M above the ground keeps every piece whose centre is in the park's lane mask (park_map.gd build_lane_mask,
 # the graph's LINE nodes), sunk so its highest box corner is at most the band above the ground under that corner. Pieces
 # outside the mask, flat rows and off-line scatter are unchanged. Run over every chunk that holds a mask cell, with and
 # without map.scatter["lane_mask"], on flat ground and on a tilted, rolling one; then a threaded build is compared with a
@@ -497,7 +498,10 @@ func _lane_scatter() -> void:
 		if not map.ok:
 			problems.append("%s fails its schema" % map_id)
 			continue
-		var mask: Dictionary = map.scatter["lane_mask"]
+		# The mask is made as scatter.gd's chunked build makes it (park_map.gd lane_mask_for).
+		var graph = ParkGraph.read(ParkMap.graph_path_for(map.path))
+		var mask: Dictionary = ParkMap.build_lane_mask(graph, map.park, map_id)
+		map.scatter["lane_mask"] = mask
 		if mask.is_empty():
 			problems.append("%s has no lane mask" % map_id)
 			continue
@@ -510,7 +514,13 @@ func _lane_scatter() -> void:
 				mask_cells += 1
 				var x: float = -float(mask["half"]) + float(mask["step"]) * (n % side)
 				var z: float = -float(mask["half"]) + float(mask["step"]) * (n / side)
-				cells[Vector2i(clampi(floori((x + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9), clampi(floori((z + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9))] = true
+				var home := Vector2i(clampi(floori((x + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, ParkTerrain.TILES_PER_SIDE - 1), clampi(floori((z + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, ParkTerrain.TILES_PER_SIDE - 1))
+				# The chunk and its 8 neighbours: a piece's origin can sit across a chunk edge from its draw.
+				for dx in range(-1, 2):
+					for dz in range(-1, 2):
+						var nb := home + Vector2i(dx, dz)
+						if nb.x >= 0 and nb.y >= 0 and nb.x < ParkTerrain.TILES_PER_SIDE and nb.y < ParkTerrain.TILES_PER_SIDE:
+							cells[nb] = true
 		var report := []
 		var park_checked := 0
 		var park_over := 0
@@ -581,6 +591,10 @@ func _lane_scatter() -> void:
 		checked += park_checked
 		over_total += park_over
 		print("scatter_rows_test: %s lane mask %d of %d cells, %d chunks; %s" % [map_id, mask_cells, side * side, cells.size(), "; ".join(report)])
+		if map_id == "park_dam":
+			_lane_mask_shape(map, graph, mask)
+		if map_id == "park_sinkhole":
+			_lane_square_row(map, graph, mask)
 	t.check("every tall piece on the line is sunk to the band, none dropped, all else unchanged", problems.is_empty(), ", ".join(problems.slice(0, 8)))
 	print("scatter_rows_test: lane band, %d tall pieces on the line checked, %d over the band before the sink, max corner height %.4f m" % [checked, over_total, max_corner])
 	t.check("all six parks have a lane mask", masked_parks == 6, str(masked_parks))
@@ -588,6 +602,35 @@ func _lane_scatter() -> void:
 	t.check("some pieces stood over the band before the sink (the negative)", over_total > 0, str(over_total))
 	t.check("a flat row still lands on the line, unchanged", flat_kept > 0, str(flat_kept))
 	await _lane_threads()
+
+
+# A routed grind chord, a routed kicker's ends: park_dam's `canal_lips` and `shelf_lip` sit in the mask.
+func _lane_mask_shape(map, graph, mask: Dictionary) -> void:
+	var rows := {}
+	for row: Dictionary in map.park["park_rows"]:
+		rows[row["id"]] = row
+	var lips: Vector2 = ParkMap._v2(rows["canal_lips"]["at"])
+	t.check("a routed grind row's chord midpoint is in the mask (dam canal_lips)", Scatter._in_lane(mask, lips.x, lips.y), str(lips))
+	var ends := 0
+	var marked := 0
+	for a in ParkGraph.SIDE * ParkGraph.SIDE:
+		for e in range(graph.off[a], graph.off[a + 1]):
+			if graph.ride[e] >= 0 and graph.names[graph.ride[e]] == "shelf_lip":
+				for end in [a, graph.to[e]]:
+					if end < ParkGraph.SIDE * ParkGraph.SIDE:
+						ends += 1
+						if Scatter._in_lane(mask, graph.px[end], graph.pz[end]):
+							marked += 1
+	t.check("a routed kicker's ground ends are in the mask (dam shelf_lip)", ends > 0 and marked == ends, "%d of %d" % [marked, ends])
+
+
+# A square routed row adds nothing beyond LINE and the ride edges: park_sinkhole's cinder_cone, taken out of the park
+# data, leaves the mask as it was.
+func _lane_square_row(map, graph, mask: Dictionary) -> void:
+	var trimmed: Dictionary = map.park.duplicate(false)
+	trimmed["park_rows"] = (map.park["park_rows"] as Array).filter(func(r: Dictionary) -> bool: return r["id"] != "cinder_cone")
+	var without := ParkMap.build_lane_mask(graph, trimmed, "park_sinkhole")
+	t.check("a square routed row adds no cells to the mask (sinkhole cinder_cone)", (map.park["park_rows"] as Array).size() == trimmed["park_rows"].size() + 1 and without["cells"] == mask["cells"])
 
 
 # A threaded and a main-thread chunked build of one real park (its mask is not empty) give the same buffers.
@@ -613,8 +656,8 @@ func _lane_threads() -> void:
 			batches += 1
 			if (chunk.get_child(i).get_meta("instance_buffer") as PackedFloat32Array) != (twin.get_child(i).get_meta("instance_buffer") as PackedFloat32Array):
 				differ += 1
+	t.check("the chunked build made the lane mask itself, in a worker job before the chunks read it", not (thread_node.get("lane_mask") as Dictionary).is_empty() and thread_node.get("lane_mask") == main_node.get("lane_mask"))
 	t.check("a threaded and a main-thread build of park_sinkhole give identical buffers", thread_node.is_ready() and batches > 0 and differ == 0, "%d batches, %d differ" % [batches, differ])
-	t.check("park_sinkhole's mask is non-empty in that build", not (map.scatter["lane_mask"] as Dictionary).is_empty())
 	holder.free()
 
 

@@ -112,86 +112,98 @@ func _fill() -> void:
 	scatter["keep_out"] = keep_out
 	# Coordinator ruling 5, 2026-10-19 (issue #149) and the #241 ruling, option (c): the kit pieces taller than the
 	# ghost-solid band (#183) are sunk to the band along the park's line (scatter.gd, LANE_BAND_M), not across whole
-	# row footprints. The mask is built here, on the main thread, and only read by the chunk workers.
-	scatter["lane_mask"] = lane_mask(path, park)
+	# row footprints. Nothing is read or built here: scatter.gd's chunked build makes the mask on a worker, in the first
+	# of its chunk jobs (lane_mask_for), so a ParkMap stays cheap to make and the boot path never touches the graph.
 
 
-# The lane mask for the park at park_json: {"cells": PackedByteArray SIDE x SIDE, row-major (z, then x), 1 where the
-# ground lattice cell is on the line; "side", "step", "half"} of park_graph.gd's lattice, {} when the park has no baked
-# graph. The line is the union of two things, each marked out to LINE_M (8 m, the graph's own half-width of the line,
-# tools/park_graph.gd; the rider's ball is Tuning.RADIUS 1.0, well inside it) with no margin of the mask's own:
+# The res:// path of a park file's baked graph.
+static func graph_path_for(park_json: String) -> String:
+	return "res://assets/park/%s/graph.bin" % park_json.get_file().get_basename()
+
+
+# A park's lane mask from its own baked graph, read here privately (the graph is read-only data and a search writes its own
+# heap, so a worker may read one: activities.gd does the same). Pure and thread-safe: no static state, nothing shared.
+# scatter.gd's chunked build calls it from the first of its worker jobs.
+static func lane_mask_for(park_json: String, park_data: Dictionary) -> Dictionary:
+	var graph_path := graph_path_for(park_json)
+	var graph = ParkGraph.read(graph_path) if FileAccess.file_exists(graph_path) else null
+	return build_lane_mask(graph, park_data, graph_path)
+
+
+# The lane mask for a park, from its read graph and its parsed file: {"cells": PackedByteArray SIDE x SIDE, row-major
+# (z, then x), 1 where the ground lattice cell is on the line; "side", "step", "half"} of park_graph.gd's lattice, {}
+# (with a warning) when there is no graph. Pure, with no static state: scatter.gd's chunked build calls it once, on a
+# worker, behind a lock before any chunk job reads it (lane_mask_for); the chunk jobs only read it. The line is the union of
 #   - every ground node the graph flags LINE (within LINE_M of the shortest path spawn -> waymarks -> beacon);
 #   - the ride edges of the rows a route names in from, to or via: a grind row's chord from end to end (the rider rides
 #     along it), and a kicker's, launcher's, cable's or lift's two ends (the rest of that edge is flight). The graph
-#     holds ride edges for grind, kicker, glide and contraption rows only, so a flow line, bowl, bank or ground row
-#     adds nothing but what the waymark line crosses, however large the row.
-# A piece belongs to its nearest node's cell, so it can sit up to half a step (4 m) past that band. One read a path a
-# process; the park data of the first caller is the one used.
-static var _lane_masks := {}
-
-static func lane_mask(park_json: String, park_data: Dictionary) -> Dictionary:
-	var graph_path := "res://assets/park/%s/graph.bin" % park_json.get_file().get_basename()
-	if _lane_masks.has(graph_path):
-		return _lane_masks[graph_path]
-	var mask := {}
-	if FileAccess.file_exists(graph_path):
-		var graph = ParkGraph.read(graph_path)
-		if graph != null:
-			var side := ParkGraph.SIDE
-			var cells := PackedByteArray()
-			cells.resize(side * side)
-			for n in cells.size():
-				if graph.node_flags[n] & ParkGraph.LINE != 0:
-					cells[n] = 1
-			var routed := {}
-			for route: Dictionary in park_data.get("routes", []):
-				for id in [route.get("from", "")] + Array(route.get("via", [])) + [route.get("to", "")]:
-					routed[String(id)] = true
-			var edged := {}
-			var grinds := {}
-			for row: Dictionary in park_data.get("park_rows", []):
-				if row["verb"] == "grind" or row["element"] == "grind_line" or row["element"] == "rail":
-					grinds[String(row["id"])] = true
-			for a in graph.node_count():
-				for e in range(graph.off[a], graph.off[a + 1]):
-					if graph.ride[e] < 0:
-						continue
-					var row_id: String = graph.names[graph.ride[e]]
-					if not routed.has(row_id):
-						continue
-					edged[row_id] = true
-					var b: int = graph.to[e]
-					var chord: bool = grinds.has(row_id) and a < side * side and b < side * side
-					for end in ([a, b] if not chord else []):
-						if end < side * side:
-							_mark_near(cells, graph, Vector2(graph.px[end], graph.pz[end]), Vector2(graph.px[end], graph.pz[end]))
-					if chord:
-						_mark_near(cells, graph, Vector2(graph.px[a], graph.pz[a]), Vector2(graph.px[b], graph.pz[b]))
-			# Issue #241 comment 6327153207: a routed row with no ride edge and a linear footprint (long side at least
-			# LANE_LINEAR_ASPECT times the short) is ridden along its length, so its long-axis centre chord is a lane too.
-			# A squarish area row (a bowl, a deck, a wide ground row) adds nothing: there is no lane in it to protect.
-			for row: Dictionary in park_data.get("park_rows", []):
-				if not routed.has(String(row["id"])) or edged.has(String(row["id"])):
-					continue
-				var f := _footprint(row)
-				var size := Vector2(absf((f["size"] as Vector2).x), absf((f["size"] as Vector2).y))
-				if maxf(size.x, size.y) < LANE_LINEAR_ASPECT * minf(size.x, size.y) or minf(size.x, size.y) <= 0.0:
-					continue
-				var facing := Vector2(sin(f["yaw"]), cos(f["yaw"]))
-				var along := facing if size.x >= size.y else Vector2(facing.y, -facing.x)
-				var half_len := maxf(size.x, size.y) * 0.5
-				_mark_near(cells, null, (f["at"] as Vector2) - along * half_len, (f["at"] as Vector2) + along * half_len)
-			mask = {"cells": cells, "side": side, "step": ParkGraph.STEP_M, "half": ParkGraph.HALF_M}
-	_lane_masks[graph_path] = mask
-	return mask
+#     holds ride edges for grind, kicker, glide and contraption rows only;
+#   - the long-axis centre chord of a routed row with no ride edge and a linear footprint (see LANE_LINEAR_ASPECT).
+# LINE_M is 8 m, the graph's own half-width of the line (tools/park_graph.gd; the rider's ball is Tuning.RADIUS 1.0,
+# well inside it). A piece belongs to its nearest node's cell, and the nearest node of a point is at most STEP/sqrt(2)
+# (5.66 m) from it, so cells are marked out to LANE_REACH_M + STEP/sqrt(2): every point within LANE_REACH_M of the line
+# finds a marked node (the minimum reach, 8 m), and a piece lies at most 13.66 m + 5.66 m = 19.3 m from the line at the
+# far end (the maximum extent, on a cell's corner).
+static func build_lane_mask(graph, park_data: Dictionary, graph_label := "") -> Dictionary:
+	if graph == null:
+		push_warning("park_map: %s has no readable graph.bin, so no lane mask: tall scatter is not sunk along its line" % graph_label)
+		return {}
+	var side := ParkGraph.SIDE
+	var cells := PackedByteArray()
+	cells.resize(side * side)
+	for n in cells.size():
+		if graph.node_flags[n] & ParkGraph.LINE != 0:
+			cells[n] = 1
+	var routed := {}
+	for route: Dictionary in park_data.get("routes", []):
+		for id in [route.get("from", "")] + Array(route.get("via", [])) + [route.get("to", "")]:
+			routed[String(id)] = true
+	var edged := {}
+	var grinds := {}
+	for row: Dictionary in park_data.get("park_rows", []):
+		if row["verb"] == "grind" or row["element"] == "grind_line" or row["element"] == "rail":
+			grinds[String(row["id"])] = true
+	for a in graph.node_count():
+		for e in range(graph.off[a], graph.off[a + 1]):
+			if graph.ride[e] < 0:
+				continue
+			var row_id: String = graph.names[graph.ride[e]]
+			if not routed.has(row_id):
+				continue
+			edged[row_id] = true
+			var b: int = graph.to[e]
+			var pa := Vector2(graph.px[a], graph.pz[a])
+			var pb := Vector2(graph.px[b], graph.pz[b])
+			if grinds.has(row_id) and a < side * side and b < side * side:
+				_mark_near(cells, pa, pb)
+			else:
+				if a < side * side:
+					_mark_near(cells, pa, pa)
+				if b < side * side:
+					_mark_near(cells, pb, pb)
+	# Issue #241 comment 6327153207: a routed row with no ride edge and a linear footprint (long side at least
+	# LANE_LINEAR_ASPECT times the short) is ridden along its length, so its long-axis centre chord is a lane too. A
+	# squarish area row (a bowl, a deck, a wide ground row) adds nothing: there is no lane in it to protect.
+	for row: Dictionary in park_data.get("park_rows", []):
+		if not routed.has(String(row["id"])) or edged.has(String(row["id"])):
+			continue
+		var f := _footprint(row)
+		var size := Vector2(absf((f["size"] as Vector2).x), absf((f["size"] as Vector2).y))
+		if minf(size.x, size.y) <= 0.0 or maxf(size.x, size.y) < LANE_LINEAR_ASPECT * minf(size.x, size.y):
+			continue
+		var facing := Vector2(sin(f["yaw"]), cos(f["yaw"]))
+		var along := facing if size.x >= size.y else Vector2(facing.y, -facing.x)
+		var half_len := maxf(size.x, size.y) * 0.5
+		_mark_near(cells, (f["at"] as Vector2) - along * half_len, (f["at"] as Vector2) + along * half_len)
+	return {"cells": cells, "side": side, "step": ParkGraph.STEP_M, "half": ParkGraph.HALF_M}
 
 
-# Marks every lattice cell whose node lies within LINE_M (8 m) of the segment p-q on the ground plane.
-static func _mark_near(cells: PackedByteArray, _graph, p: Vector2, q: Vector2) -> void:
+# Marks every lattice cell whose node lies within LANE_REACH_M + STEP/sqrt(2) of the segment p-q on the ground plane.
+static func _mark_near(cells: PackedByteArray, p: Vector2, q: Vector2) -> void:
 	var side := ParkGraph.SIDE
 	var step := ParkGraph.STEP_M
 	var half := ParkGraph.HALF_M
-	var reach := LANE_REACH_M
+	var reach := LANE_REACH_M + step / sqrt(2.0)
 	var lo := Vector2(minf(p.x, q.x) - reach, minf(p.y, q.y) - reach)
 	var hi := Vector2(maxf(p.x, q.x) + reach, maxf(p.y, q.y) + reach)
 	for j in range(maxi(0, ceili((lo.y + half) / step)), mini(side - 1, floori((hi.y + half) / step)) + 1):
