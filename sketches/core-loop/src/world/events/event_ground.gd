@@ -411,6 +411,19 @@ static func hidden_rows(world, event_id: String) -> Array:
 	return out
 
 
+# A second event on a live swap key adds its hide_on nodes only while the swap is idle, and never the same node twice:
+# a node added mid-swap would record its parked home and stay hidden after the last revert.
+static func _share_hidden(entry: Dictionary, found: Array, id: String) -> void:
+	if not entry.has("hidden") or found.is_empty():
+		return
+	if not entry.owners.is_empty():
+		push_warning("event_ground: swap %s is live, so its new hide_on rows are skipped" % id)
+		return
+	for item in found:
+		if not entry.hidden.any(func(have): return have.node == item.node):
+			entry.hidden.append(item)
+
+
 # prepared holds surfaces the caller projected ahead (natural.gd plan: "surface", "target") and the
 # collider shape a previous entry made ("shape", written back here), so a stage entry skips them.
 static func prepare_overlay(world, owner: Node, row: Dictionary, record: Dictionary, collapse_target := Callable(), prepared := {}) -> OverlayMap:
@@ -420,7 +433,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	var current = world.terrain.map()
 	var overlay_map: OverlayMap = current if current is OverlayMap else null
 	if overlay_map != null and overlay_map.swaps.has(id):
-		overlay_map.swaps[id].get("hidden", []).append_array(hidden_rows(world, str(row.id)))
+		_share_hidden(overlay_map.swaps[id], hidden_rows(world, str(row.id)), id)
 		record.overlay = overlay_map.swaps[id].body
 		record.swap = id
 		record.overlay_map = overlay_map

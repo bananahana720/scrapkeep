@@ -133,7 +133,8 @@ func _check_surface(label: String, node: Node3D, site: Dictionary, kind := "mark
 		var ys := _heights(stats.bins, point)
 		t.check(label + " reported long-edge point stays above terrain", not ys.is_empty() and ys.all(func(y): return y >= _ground(point.x, point.y) + 0.1499), str(ys))
 
-# A row naming an event in hide_on is found once, by prepare_overlay, and hides with the swap and comes back on revert.
+# A row naming an event in hide_on is found once, by prepare_overlay, and hides with the swap and comes back on revert,
+# driven through set_overlay (the first-owner recapture and the last-owner revert), not a bare apply_swap.
 func _hide_on_controls(handler) -> void:
 	var live = game.world.terrain.map()
 	var park_row: Dictionary = {}
@@ -163,10 +164,10 @@ func _hide_on_controls(handler) -> void:
 	var home: Vector3 = node.position
 	var shown := node.visible
 	var bodies := node.find_children("*", "StaticBody3D", true, false)
-	overlay_map.apply_swap("hide_probe_ramp", true)
+	EventGround.set_overlay(game.world, row, record, true)
 	t.check("the swap hides the hide_on row and parks it down", not node.visible and node.position.y < home.y - 300.0, "%s -> %s" % [home, node.position])
 	t.check("its collider body rides the parked node", not bodies.is_empty() and (bodies[0] as Node3D).global_position.y < home.y - 300.0, str(bodies))
-	overlay_map.apply_swap("hide_probe_ramp", false)
+	EventGround.set_overlay(game.world, row, record, false)
 	t.check("revert restores the hide_on row", node.visible == shown and node.position.is_equal_approx(home), "%s visible %s" % [node.position, node.visible])
 	overlay_map.swaps.erase("hide_probe_ramp")
 	overlay_map.profiles.erase("hide_probe_ramp_after")

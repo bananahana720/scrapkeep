@@ -125,8 +125,18 @@ func _planted_rows() -> void:
 	# hide_on names an event row that carries an effect.swap (the row hides while that swap is applied).
 	_plant("hide_on of no event", "lip", "reference", func(p): _row(p, "park_rows", "lip")["hide_on"] = "nowhere")
 	_plant("hide_on of an event with no swap", "lip", "hide_on", func(p): _row(p, "park_rows", "lip")["hide_on"] = "pool_flood")
+	_plant("hide_on of an ancient swap event", "lip", "hide_on", func(p): _row(p, "park_rows", "lip")["hide_on"] = "tube_wakes")
+	_plant("hide_on of an industrial swap event", "lip", "hide_on", func(p): _row(p, "park_rows", "lip")["hide_on"] = "apron_boiler")
+	_plant("hide_on of a cave_in event", "lip", "hide_on", func(p):
+		var event := _row(p, "event_rows", "pool_flood")
+		event["kind"] = "cave_in"
+		event["family"] = "natural"
+		event["effect"]["swap"] = "pool_cave"
+		_row(p, "park_rows", "lip")["hide_on"] = "pool_flood")
 	var hidden: Dictionary = _fixture.duplicate(true)
-	_row(hidden, "park_rows", "lip")["hide_on"] = "tube_wakes"
+	var swapped := _row(hidden, "event_rows", "pool_flood")
+	swapped["effect"]["swap"] = "pool_ramp"
+	_row(hidden, "park_rows", "lip")["hide_on"] = "pool_flood"
 	_report("a hide_on naming a swap event loads", ParkSchema.validate(hidden).is_empty(), ParkSchema.describe(ParkSchema.validate(hidden)))
 	# The optional rescue_rows: the site resolves and the pilot is a class id.
 	var cage := {"id": "test_cage", "site": "deck", "at": [0, 0], "face": [0, 1], "quest": "test", "pilot": "tally", "prompt": "free the test"}

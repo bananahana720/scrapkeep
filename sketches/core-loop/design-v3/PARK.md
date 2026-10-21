@@ -87,7 +87,7 @@ One row per park element. A stage starts with 40 to 70 rows (start).
 | `budget` | enum | The asset budget class of its recipe: `landform`, `park_large`, `hero_landmark`, `detail` (section 9) |
 | `routes` | array | Route ids this element belongs to (2.8) |
 | `fragment` | string | A codex fragment id found here, or `""` (society layers feed the codex). A `ref_` prefix marks a reference fragment that describes a real culture's technique (section 4) |
-| `hide_on` | string | Optional. An event row id whose `effect.swap` hides this row (node and collider) while the swap is applied and shows it again on revert. The event must carry a swap |
+| `hide_on` | string | Optional. An event row id whose `effect.swap` hides this row (node and collider) while the swap is applied and shows it again on revert. The event must be `natural`, not `cave_in`, and carry a swap |
 
 Example, stage 1:
 
