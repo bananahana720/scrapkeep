@@ -1334,24 +1334,24 @@
  },
  "spots": [
   {
-   "id": "s001_gallery_fall",
-   "template": "gallery_fall",
+   "id": "s001_mid_cart_horn",
+   "template": "mid_cart_horn",
    "at": [
     -620.0,
     -770.0
    ],
    "yaw_deg": 165.3,
-   "near": "lava_channel_1: timbers down, water mark"
+   "near": "lava_channel_1: cart and fallen horn at the bank"
   },
   {
-   "id": "s002_lamp_wall",
-   "template": "lamp_wall",
+   "id": "s002_mid_horn_stubs",
+   "template": "mid_horn_stubs",
    "at": [
     -589.8,
     -598.08
    ],
    "yaw_deg": -55.5,
-   "near": "cinder_cone: lamps facing the wrong way"
+   "near": "cinder_cone: signal horn on a cradle, stub and hose at the bank"
   },
   {
    "id": "s003_mid_tailings_cart",
@@ -1364,14 +1364,14 @@
    "near": "cinder_cone: carts of tailings left"
   },
   {
-   "id": "s004_pump_station",
-   "template": "pump_station",
+   "id": "s004_mid_cart_stub",
+   "template": "mid_cart_stub",
    "at": [
     -560.0,
     -750.0
    ],
    "yaw_deg": 137.2,
-   "near": "lava_channel_2: pumped dry, left parked"
+   "near": "lava_channel_2: ore cart and a stub at the bank"
   },
   {
    "id": "s005_low_gear",
@@ -1404,14 +1404,14 @@
    "near": "lava_channel_4: ferns in the cracks"
   },
   {
-   "id": "s009_gallery_fall",
-   "template": "gallery_fall",
+   "id": "s009_mid_tailings_cart",
+   "template": "mid_tailings_cart",
    "at": [
     -600.23,
     -629.78
    ],
    "yaw_deg": -59.8,
-   "near": "lava_channel_4: timbers down, water mark"
+   "near": "lava_channel_4: carts of tailings left"
   },
   {
    "id": "s010_mid_column_field",
@@ -1444,14 +1444,14 @@
    "near": "lava_channel_6: rimstone and lichen"
   },
   {
-   "id": "s015_pump_station",
-   "template": "pump_station",
+   "id": "s015_mid_cart_horn",
+   "template": "mid_cart_horn",
    "at": [
     -529.57,
     -542.33
    ],
    "yaw_deg": -21.7,
-   "near": "lava_channel_5: pumped dry, left parked"
+   "near": "lava_channel_5: cart and fallen horn at the bank"
   },
   {
    "id": "s016_mid_skylight_garden",
@@ -1524,14 +1524,14 @@
    "near": "lava_channel_10: basalt stubs, lichen caps"
   },
   {
-   "id": "s027_lamp_wall",
-   "template": "lamp_wall",
+   "id": "s027_mid_horn_stubs",
+   "template": "mid_horn_stubs",
    "at": [
     -303.29,
     -645.04
    ],
    "yaw_deg": -178.5,
-   "near": "lava_channel_11: lamps facing the wrong way"
+   "near": "lava_channel_11: signal horn on a cradle, stub and hose at the bank"
   },
   {
    "id": "s028_low_ferns",
@@ -3057,5 +3057,5 @@
  "low_ground_rows": [
   "great_room"
  ],
- "pin": 215440848
+ "pin": 2160462734
 }
