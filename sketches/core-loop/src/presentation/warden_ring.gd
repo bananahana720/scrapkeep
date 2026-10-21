@@ -45,6 +45,7 @@ var _back_material: StandardMaterial3D
 var _mark_material: StandardMaterial3D
 var _built_at := Vector3.INF
 var _crack_index := -1
+var _points := {}
 
 
 func bind(warden: Node3D) -> void:
@@ -222,10 +223,16 @@ func _ground(x: float, z: float) -> float:
 	return terrain.height(x, z)
 
 
+# Neighbouring quads share their corners, so each build reads the ground once per corner.
 func _point(foot: Vector3, angle: float, radius: float) -> Vector3:
+	var key := Vector2(angle, radius)
+	if _points.has(key):
+		return _points[key]
 	var x := foot.x + cos(angle) * radius
 	var z := foot.z + sin(angle) * radius
-	return Vector3(x - foot.x, _ground(x, z) + LIFT, z - foot.z)
+	var point := Vector3(x - foot.x, _ground(x, z) + LIFT, z - foot.z)
+	_points[key] = point
+	return point
 
 
 # Arc i's angular span: a quarter of the circle less a gap, from the start angle.
@@ -238,6 +245,7 @@ func _span(i: int) -> Vector2:
 
 func _build(foot: Vector3) -> void:
 	_built_at = foot
+	_points.clear()
 	global_position = foot
 	var mid := _radius()
 	for i in ARCS:

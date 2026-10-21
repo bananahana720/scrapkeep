@@ -69,6 +69,35 @@ const CAMP_RANGE := 30.0
 const TRAVERSE_REACTION := 0.15
 const TRAVERSE_PRESS_GAP := 0.4
 const TRAVERSE_REACHED := 12.0
+# The traversal pilot's optional hands (traversal_line.gd --hands=), off unless named so the bare
+# pilot's baselines hold. The harpoon hand swings from an anchor hanging SWING_ABOVE over the ball
+# (a lower one only drags it) and within SWING_AHEAD (cosine) of the way to the waypoint, at
+# SWING_MIN_SPEED or more (a slow ball has nothing to swing). SWING_YAWS and SWING_PITCHES are the
+# bearings it looks along for one. A held line is let go once the anchor is behind the ball, once
+# the ball carries less than SWING_CARRY m/s toward the waypoint after SWING_GRACE s, or after
+# SWING_HOLD_MAX s; SWING_GAP s pass before the next bite.
+const HAND_NAMES := ["harpoon", "glide"]
+const SWING_ABOVE := 6.0
+const SWING_AHEAD := 0.5
+const SWING_MIN_SPEED := 6.0
+const SWING_YAWS := [0.0, 0.35, -0.35, 0.7, -0.7]
+const SWING_PITCHES := [0.3, 0.55, 0.8]
+const SWING_CARRY := 3.0
+const SWING_GRACE := 0.8
+const SWING_HOLD_MAX := 5.0
+const SWING_GAP := 1.5
+# A press is in flight for TRAVERSE_REACTION, and the line has not changed yet: no second press
+# until the first has landed.
+const SWING_SENT := 0.4
+# The glide hand holds glide over a thermal column and down a drop of GLIDE_DROP m or more to the
+# ground, and lets go once the ball is out of the column and gains under GLIDE_GAIN m/s toward the
+# waypoint. Only a kit with the glide augment (Kest's blink) has the hand.
+const GLIDE_DROP := 10.0
+const GLIDE_GAIN := 2.0
+# The glide hand also keeps GLIDE_ABOVE m of height over the waypoint and GLIDE_NEAR m of way to
+# it: a glide that ends short of the waypoint beats one that overshoots below it.
+const GLIDE_ABOVE := 6.0
+const GLIDE_NEAR := 40.0
 # Radians of camera yaw per second: a brisk mouse, not a snap.
 const TURN_RATE := 5.0
 const SENSITIVITY := 0.0022
@@ -485,6 +514,16 @@ var _cast_phase := ""
 var _cast_click_tick := -1
 var _ult_wait := 0.0
 var _traverse_point := Vector3.INF
+# The traversal hands (HAND_NAMES) the runner named, and what they decided this tick.
+var hands: Array[String] = []
+var _glide_held := false
+# True on a tick the harpoon hand turns the camera to a candidate anchor: the Q set piece flies
+# where the camera looks, so the traversal pilot does not press it then.
+var _hand_aim := false
+var _gliding := false
+var _swing_clock := 0.0
+var _swing_cool := 0.0
+var _swing_sent := 0.0
 # In-play seconds, the meter's own clock (it fills only in play), and the fill records.
 var _play_clock := 0.0
 var _fill_from := 0.0
@@ -1082,7 +1121,7 @@ func _traverse(delta: float) -> void:
 	source.press = {}
 	_defer_look = true
 	_look_delta = Vector2.ZERO
-	_act(point, null, delta)
+	_act(point, _traverse_hands(ball, point, delta), delta)
 	_defer_look = false
 	source.hold.erase("fire_held")
 	var stick: Vector2 = source.hold.get("move", Vector2.ZERO)
@@ -1098,9 +1137,109 @@ func _traverse(delta: float) -> void:
 	if source.hold.has("move"):
 		source.hold["move"] = _world_to_stick(sent["wish"])
 	source.press = sent["press"]
+	# The aim moved while the press was in flight: a bite that would now land on a body is dropped.
+	if source.press.has("harpoon_pressed") and "harpoon" in hands:
+		var now: Dictionary = game.player.kit.aim
+		if now.get("state", Augments.AIM_NONE) == Augments.AIM_NONE or now.get("body") != null:
+			source.press.erase("harpoon_pressed")
 	var picked: bool = source.press.has("slot_pick")
 	_gate_presses()
 	_traverse_click(picked)
+
+
+# The optional hands, decided before the stick like every other verb. Returns the aim the camera
+# turns to (the anchor the harpoon hand wants to bite), or null.
+func _traverse_hands(ball: Vector3, point: Vector3, delta: float) -> Variant:
+	_glide_held = false
+	_hand_aim = false
+	if hands.is_empty():
+		return null
+	if "glide" in hands:
+		_glide_hand(ball, point)
+	if "harpoon" in hands:
+		var aim = _swing_hand(ball, point, delta)
+		_hand_aim = aim != null
+		return aim
+	return null
+
+
+# Swings from an anchor ahead, and lets the line go before it can stop the ball. It bites the
+# world only: an enemy is a fight, and a body line (a Warden, an island tip, Sable's stake) winches
+# the ball in and holds it, which the on_body release below would drop the tick after the bite, so
+# stakes are left out of the hand rather than exempted from that release. Once hook-out lands a
+# world bite also releases holds that list `hook`: the hand can then act as a hold breaker in
+# traversal measurements, and that is intended.
+func _swing_hand(ball: Vector3, point: Vector3, delta: float) -> Variant:
+	var kit = game.player.kit
+	var way := Vector3(point.x - ball.x, 0.0, point.z - ball.z)
+	if way.length() < 0.5:
+		return null
+	way = way.normalized()
+	_swing_cool -= delta
+	_swing_sent -= delta
+	if kit.hooked:
+		_swing_clock += delta
+		var anchor: Vector3 = kit.anchor
+		var carried: float = game.player.planar_velocity().dot(way)
+		var past: bool = Vector3(anchor.x - ball.x, 0.0, anchor.z - ball.z).dot(way) < 0.0
+		if _swing_sent <= 0.0 and (kit.on_body or past or _swing_clock > SWING_HOLD_MAX \
+				or (_swing_clock > SWING_GRACE and carried < SWING_CARRY)):
+			_swing_sent = SWING_SENT
+			source.press["harpoon_released"] = true
+			_swing_cool = SWING_GAP
+			return null
+		_harpoon_held = true
+		return null
+	_swing_clock = 0.0
+	if _swing_cool > 0.0 or _swing_sent > 0.0 or kit.mounted or _cast_phase != "" or game.player.frozen() \
+			or not game.player.verb_ready("harpoon") or game.player.planar_velocity().length() < SWING_MIN_SPEED:
+		return null
+	if _swing_bites(kit.aim, ball, way):
+		source.press["harpoon_pressed"] = true
+		_swing_sent = SWING_SENT
+		return null
+	var best := Vector3.INF
+	var far := 0.0
+	var space = game.get_world_3d().direct_space_state
+	var reach: float = game.player.tuning.f("rope_range")
+	var assist: float = game.player.tuning.f("grapple_assist_deg")
+	for yaw in SWING_YAWS:
+		for pitch in SWING_PITCHES:
+			var dir: Vector3 = (way.rotated(Vector3.UP, yaw) * cos(pitch) + Vector3.UP * sin(pitch)).normalized()
+			var hit := Augments.grapple_target(space, ball + Vector3.UP * 0.8, dir, ball, reach, assist,
+				Augments.WORLD_MASK | Augments.ENEMY_MASK, false)
+			if _swing_bites(hit, ball, way) and (hit["point"] - ball).dot(way) > far:
+				far = (hit["point"] - ball).dot(way)
+				best = hit["point"]
+	return {"at": best} if best != Vector3.INF else null
+
+
+func _swing_bites(aim: Dictionary, ball: Vector3, way: Vector3) -> bool:
+	if aim.get("state", Augments.AIM_NONE) == Augments.AIM_NONE:
+		return false
+	if aim.get("body") != null:
+		return false
+	var to: Vector3 = aim["point"] - ball
+	return to.y >= SWING_ABOVE and to.length() > 0.5 and Vector3(to.x, 0.0, to.z).normalized().dot(way) >= SWING_AHEAD
+
+
+# Holds glide over a thermal column, or down a long drop while it still gains toward the waypoint.
+# _drive spends the air jump and holds the key once the ball falls.
+func _glide_hand(ball: Vector3, point: Vector3) -> void:
+	var player = game.player
+	if not player.kit.on("glide") or player.state.grounded or player.kit.hooked:
+		_gliding = false
+		return
+	var way := Vector3(point.x - ball.x, 0.0, point.z - ball.z).normalized()
+	var over := _inside_thermal(ball)
+	var drop: float = ball.y - _ground_point(ball.x, ball.z).y
+	var gains: bool = player.planar_velocity().dot(way) >= GLIDE_GAIN
+	# Glide carries a ball past a waypoint and lands it below one on a ledge it cannot climb back
+	# to (Highdraft islands, kest seed 1: 143 dead stops): only with height to spare over the
+	# waypoint and distance left to it.
+	var room: bool = ball.y - point.y >= GLIDE_ABOVE and Vector2(point.x - ball.x, point.z - ball.z).length() >= GLIDE_NEAR
+	_gliding = over or (room and gains and (drop >= GLIDE_DROP or _gliding))
+	_glide_held = _gliding
 
 
 # The traversal pilot's cast is one verb sent as two keys: the pick passes the press gate, and
@@ -3167,7 +3306,7 @@ func _ultimate_hands(fight: Node3D) -> void:
 	if policy == "traversal":
 		if _traverse_point != Vector3.INF:
 			var ahead := _flat(ball, _traverse_point)
-			want = ahead >= ULT_TRAVERSE_NEAR and ahead <= ULT_TRAVERSE_FAR and _way_clear(ball, _traverse_point)
+			want = not _hand_aim and ahead >= ULT_TRAVERSE_NEAR and ahead <= ULT_TRAVERSE_FAR and _way_clear(ball, _traverse_point)
 	elif band != null and not band.timed_ultimate():
 		# Below the Expert the press is untimed: the meter is ready and a fight is on.
 		var near_lock: bool = fight != null and is_instance_valid(fight) and ball.distance_to(fight.global_position) <= ULT_CROWD_RADIUS
@@ -3324,6 +3463,15 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 			source.press["jump_pressed"] = true
 		elif player.state.velocity.y < 2.0:
 			hold["brake_held"] = true
+	if _glide_held and not thermal:
+		# The glide hand's drop: spend the air jump, then hold the key while falling. A blink
+		# would leave the footprint, as in the thermal branch.
+		hold.erase("shift_held")
+		source.press.erase("shift_pressed")
+		if player.state.air_actions > 0:
+			source.press["jump_pressed"] = true
+		elif player.state.velocity.y < 0.0 and not player.kit.slamming:
+			hold["jump_held"] = true
 	if thermal:
 		# Spend the air jump before glide can engage; a blink would leave the footprint.
 		hold.erase("shift_held")
