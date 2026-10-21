@@ -464,7 +464,7 @@ func _plain_slopes() -> void:
 
 
 # Ruling 5, 2026-10-19 (issue #149), revised: a kit row that can stand more than Scatter.LANE_BAND_M above the ground
-# keeps every piece in a scatter-dressed park row a route names, sunk so its highest box corner is at most the band above
+# keeps every piece in a scatter-dressed park row that a route names, sunk so its highest box corner is at most the band above
 # the ground under that corner; the flat rows, the off-route scatter rows and open ground are unchanged. Run over the
 # chunks that cover each footprint, with and without map.scatter["lane_out"], on flat ground and on a tilted, rolling one.
 func _lane_scatter() -> void:
@@ -492,15 +492,29 @@ func _lane_scatter() -> void:
 	var checked := 0
 	var sunk_over := 0
 	var max_corner := -INF
-	for map_id: String in ["park_islands", "park_flume", "park_pit", "park_sinkhole"]:
+	for map_id: String in ["park_dam", "park_flume", "park_pit", "park_sinkhole", "park_islands", "park_crown"]:
 		var map = ParkMap.new("res://src/world/park/%s.json" % map_id)
 		if not map.ok:
 			problems.append("%s fails its schema" % map_id)
 			continue
 		var lane: Array = map.scatter["lane_out"]
 		var ids := []
+		var kinds := []
 		for f: Dictionary in lane:
 			ids.append(f["id"])
+		for prow: Dictionary in map.park["park_rows"]:
+			if ids.has(prow["id"]):
+				kinds.append("%s=%s" % [prow["id"], ParkMap.open_to_scatter(prow, map.play_rect)])
+		var routed := {}
+		for route: Dictionary in map.park.get("routes", []):
+			for rid in [route.get("from", "")] + Array(route.get("via", [])) + [route.get("to", "")]:
+				routed[String(rid)] = true
+		var open_info := {}
+		for prow: Dictionary in map.park["park_rows"]:
+			var why := ParkMap.open_to_scatter(prow, map.play_rect)
+			if why != "" and routed.has(String(prow["id"])):
+				open_info[why] = int(open_info.get(why, 0)) + 1
+		print("scatter_rows_test: %s on-route rows open to scatter, by exemption (information, not lanes): %s" % [map_id, open_info])
 		var off := []
 		for prow: Dictionary in map.park["park_rows"]:
 			if prow["recipe"] == ParkRecipes.SCATTER_DRESSED and not ids.has(prow["id"]):
@@ -510,9 +524,11 @@ func _lane_scatter() -> void:
 		for f: Dictionary in lane + off:
 			var reach := (f["size"] as Vector2).length() * 0.5
 			var at: Vector2 = f["at"]
-			for x in [at.x - reach, at.x + reach]:
-				for z in [at.y - reach, at.y + reach]:
-					cells[Vector2i(clampi(floori((x + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, ParkTerrain.TILES_PER_SIDE - 1), clampi(floori((z + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, ParkTerrain.TILES_PER_SIDE - 1))] = true
+			var lo := Vector2i(clampi(floori((at.x - reach + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9), clampi(floori((at.y - reach + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9))
+			var hi := Vector2i(clampi(floori((at.x + reach + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9), clampi(floori((at.y + reach + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9))
+			for ci in range(lo.x, hi.x + 1):
+				for cj in range(lo.y, hi.y + 1):
+					cells[Vector2i(ci, cj)] = true
 		var report := []
 		for ground_name: String in grounds:
 			var ground: Callable = grounds[ground_name]
@@ -523,6 +539,7 @@ func _lane_scatter() -> void:
 				var off_in := 0
 				var changed := 0
 				var worst := -INF
+				var over := 0
 				for cell: Vector2i in cells:
 					map.scatter["lane_out"] = []
 					var free: Array[Transform3D] = Scatter.chunk_transforms(row, map, ground, aabb, cell.x, cell.y, [])
@@ -544,6 +561,12 @@ func _lane_scatter() -> void:
 							continue
 						in_lane += 1
 						var free_worst := -INF
+						var before := -INF
+						for k in 8:
+							var corner0: Vector3 = free[i] * aabb.get_endpoint(k)
+							before = maxf(before, corner0.y - (ground.call(corner0.x, corner0.z, 0.0) as Vector3).y)
+						if before > Scatter.LANE_BAND_M + 1e-4:
+							over += 1
 						for k in 8:
 							var corner: Vector3 = kept[i] * aabb.get_endpoint(k)
 							worst = maxf(worst, corner.y - (ground.call(corner.x, corner.z, 0.0) as Vector3).y)
@@ -565,8 +588,8 @@ func _lane_scatter() -> void:
 					flat_kept += in_lane
 				if changed > 0:
 					problems.append("%s %s %s: %d pieces changed that should not have" % [map_id, ground_name, row["kind"], changed])
-				report.append("%s/%s %s %d in lanes (max corner %.4f m)" % [ground_name, row["kind"], "tall" if tall else "flat", in_lane, worst])
-		print("scatter_rows_test: %s on-route scatter rows %s; %s" % [map_id, ids, "; ".join(report)])
+				report.append("%s/%s %s %d in lanes, %d over the band before the sink (max corner %.4f m)" % [ground_name, row["kind"], "tall" if tall else "flat", in_lane, over, worst])
+		print("scatter_rows_test: %s on-route scatter-dressed rows %s; %s" % [map_id, kinds, "; ".join(report)])
 	t.check("every tall piece in an on-route scatter-dressed row is sunk to the band, none dropped, all else unchanged", problems.is_empty(), ", ".join(problems.slice(0, 8)))
 	print("scatter_rows_test: lane band, %d tall in-lane pieces checked, max corner height %.4f m" % [checked, max_corner])
 	t.check("tall pieces were checked in the lane rows", checked > 0, str(checked))

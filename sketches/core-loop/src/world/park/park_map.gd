@@ -100,23 +100,38 @@ func _fill() -> void:
 	scatter = scatter.duplicate(true)
 	var keep_out := []
 	for row in park["park_rows"]:
-		if row["element"] == "ground" or row["recipe"] == ParkRecipes.SCATTER_DRESSED or plain_slope(row) or mesa_edge(row, play_rect):
+		if open_to_scatter(row, play_rect) != "":
 			continue
 		keep_out.append(_footprint(row))
 	keep_out.append(_footprint(mark))
 	scatter["keep_out"] = keep_out
-	# Coordinator ruling 5, 2026-10-19 (issue #149): a scatter-dressed row a route names in from, to or via is
-	# ridden, so the kit pieces taller than the ghost-solid band are sunk to the band there (scatter.gd, LANE_BAND_M);
-	# the flat ones keep landing there unchanged, as does everything off the routes.
+	# Coordinator ruling 5, 2026-10-19 (issue #149): a scatter-dressed row (open_to_scatter "scatter") that a route names
+	# in from, to or via is ridden, so the kit pieces taller than the ghost-solid band (#183) are sunk to the band there
+	# (scatter.gd, LANE_BAND_M); the flat ones keep landing there unchanged, as does everything off the routes. Ground,
+	# plain_slope and mesa_edge rows are not lanes here, pending the coordinator's ruling on the wider scope.
 	var routed := {}
 	for route: Dictionary in park.get("routes", []):
 		for id in [route.get("from", "")] + Array(route.get("via", [])) + [route.get("to", "")]:
 			routed[String(id)] = true
 	var lane_out := []
 	for row in park["park_rows"]:
-		if row["recipe"] == ParkRecipes.SCATTER_DRESSED and routed.has(String(row["id"])):
+		if open_to_scatter(row, play_rect) == "scatter" and routed.has(String(row["id"])):
 			lane_out.append(_footprint(row))
 	scatter["lane_out"] = lane_out
+
+
+# Why keep_out leaves a row to the scatter: "ground", "scatter" (a row the scatter itself dresses), "plain_slope" or
+# "mesa_edge"; "" for a built row, which the scatter keeps out of. keep_out and lane_out both read this.
+static func open_to_scatter(row: Dictionary, rect: Rect2) -> String:
+	if row["element"] == "ground":
+		return "ground"
+	if row["recipe"] == ParkRecipes.SCATTER_DRESSED:
+		return "scatter"
+	if plain_slope(row):
+		return "plain_slope"
+	if mesa_edge(row, rect):
+		return "mesa_edge"
+	return ""
 
 
 # A stamped plain slope: a PLAIN_SLOPES greybox whose stamp shapes the ground and that has no absolute y, so
