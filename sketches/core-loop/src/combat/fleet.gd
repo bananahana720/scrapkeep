@@ -6,6 +6,7 @@ const Habits := preload("res://src/combat/habits.gd")
 const Swarm := preload("res://src/combat/swarm.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 
 # The v2 W7 enemies inside combat (DESIGN-V2 sections 10, 11 and 15). Combat owns it and
 # hands it three things: the spawner asks it for the units it knows (make), for their
@@ -75,6 +76,8 @@ var _joining = null
 var _launched := {}
 # Roster-row scripts loaded by make, by kind.
 var _loaded := {}
+# Script paths with a threaded load in flight, not yet taken by make.
+var _requested := {}
 
 
 func setup(ctx_ref, combat_ref) -> void:
@@ -86,7 +89,9 @@ func setup(ctx_ref, combat_ref) -> void:
 	holds.setup(ctx)
 	habits.bind(ctx.events)
 	ctx.events.run_started.connect(func(_class_id: String): reset_run())
-	ctx.events.stage_entered.connect(func(_stage: int, _retry: bool): swarms.clear())
+	ctx.events.stage_entered.connect(func(_stage: int, _retry: bool):
+		swarms.clear()
+		_warm_scripts())
 	ctx.events.enemy_pinned.connect(_on_pinned)
 
 
@@ -113,8 +118,32 @@ func make(kind: String) -> Node3D:
 	if not makes(kind):
 		return null
 	if not _loaded.has(kind):
-		_loaded[kind] = load(String(Roster.row(kind)["script"]))
+		var path := String(Roster.row(kind)["script"])
+		if _requested.has(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_LOADED:
+			_loaded[kind] = ResourceLoader.load_threaded_get(path)
+			_requested.erase(path)
+		else:
+			# Not ready: load now, as before. Waiting on the loader thread would run the message
+			# queue mid-frame and split a frame's pack across several flushes.
+			_loaded[kind] = load(path)
 	return _loaded[kind].new()
+
+
+# Asks the loader thread for every built later-world roster script on the stage-entry beat,
+# so the first spawn of a kind mid-fight does not load (and compile) its script then. A bot
+# run (SimClock.ticks) skips it: a spawn that finds its load still in flight joins it, the
+# wait can run the message queue mid-frame, and when that happens depends on CPU load, so a
+# seed would stop replaying. A played game keeps the warm-up.
+func _warm_scripts() -> void:
+	if SimClock.ticks:
+		return
+	for kind in Roster.ROWS.keys():
+		if _loaded.has(kind) or SCRIPTS.has(kind) or not Roster.row(kind).has("script") or not Roster.built(kind):
+			continue
+		var path := String(Roster.row(kind)["script"])
+		if not _requested.has(path) and not ResourceLoader.has_cached(path):
+			if ResourceLoader.load_threaded_request(path) == OK:
+				_requested[path] = true
 
 
 # The spec a W7 unit is set up with: the kind, the holds, this node, a plated unit's

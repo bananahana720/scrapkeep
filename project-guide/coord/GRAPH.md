@@ -59,7 +59,7 @@ Known base reds and cloud-only false fails are listed in [STATE.md](../handoff/S
 | #104 Overpowered pays; grown-pilot ratio reds (Mind, hive, reactor) | Challenge (from Perf, 19 Oct) | - | needs fix |
 | #73 Rivet carve; #146 dense fights; #147 boss-freeze profiler; launch title (Andrew's option A: 2D title in about 2 s, 3D crossfades in) | Perf, GPU bench | - | in progress |
 | Hook-out hold break, nemesis column, answer weighting, #145 bot hands | Systems | - | in progress |
-| Promote #116 to main, cut `stage/alpha-w18` | Coordinator | gate + persona clean | waiting |
+| Promote #116 to main, cut `stage/alpha-w18` | Coordinator | gate + persona clean | done 21 Oct: main 16df22d0, see BASELINE-2026-10-20.md |
 
 ## Pulled forward (19 Oct)
 
@@ -86,7 +86,7 @@ Placeholders: 60 at 1a7a7299, down from 1,442 at wave 15; 59 of them are park gr
 | 20 | HELP and ACHIEVEMENTS refresh; FLASH-COMFORT; bug bar | placeholder burn-down to zero | PERF-NIGHT on the 4080 after radio renders | frametime gate |
 | 21 | ALPHA-RC AppImage release candidate | last art holes | final 4080 pass | RC gate: `--win-proof` four proofs, five personas |
 
-Source plan: [PLAN-w16-plus.md](PLAN-w16-plus.md); where it differs from the 17 to 18 Oct handoff, the handoff wins.
+Source plan: [PLAN-w16-plus.md](PLAN-w16-plus.md); where it differs from the 17 to 18 Oct handoff, the handoff wins. The budgeted plan with wave 17 carry-over and cut candidates is [ROADMAP.md](ROADMAP.md) (20 Oct); the 20 Oct reconciliation of every open PR is [BASELINE-2026-10-20.md](BASELINE-2026-10-20.md).
 
 ## PC queue
 

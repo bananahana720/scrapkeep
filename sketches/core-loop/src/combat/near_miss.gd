@@ -57,9 +57,11 @@ func step(delta: float) -> void:
 			continue
 		var inside: bool = node.contains(at)
 		if w["resolved"] < 0.0:
-			if _landed(node, at):
+			# One read of the committed numbers serves every test below this tick.
+			var d: Dictionary = node.descriptor()
+			if _landed(node, at, d):
 				_resolve(id, inside, at)
-			elif inside or _ahead_of_front(node, at):
+			elif inside or _ahead_of_front(node, at, d):
 				if not w["entered"]:
 					w["entered_at"] = _clock
 				w["entered"] = true
@@ -72,10 +74,11 @@ func step(delta: float) -> void:
 			w["done"] = true
 
 
-static func _landed(node: Node, at: Vector3) -> bool:
-	if _front_wave(node):
-		return node.is_spent() or node.front_radius() - Threat.WAVE_EDGE > _flat_from(node, at)
-	var d: Dictionary = node.descriptor()
+static func _landed(node: Node, at: Vector3, d := {}) -> bool:
+	if d.is_empty():
+		d = node.descriptor()
+	if _front_wave(node, d):
+		return node.is_spent() or node.front_radius() - Threat.WAVE_EDGE > _flat_from(node, at, d)
 	return bool(d.get("live", false)) or float(d.get("progress", 0.0)) >= 1.0
 
 
@@ -83,26 +86,28 @@ static func _landed(node: Node, at: Vector3) -> bool:
 # all through the warning (F003). Its watch reads the front instead: the ball is in while
 # it stands inside the ring and the front has not run past it, and the wave lands for the
 # ball once the front has run past it or the wave is spent.
-static func _front_wave(node: Node) -> bool:
-	return node.has_method("front_radius") and node.has_method("is_spent") \
-			and int(node.descriptor().get("type", -1)) == Threat.Type.WAVE
+static func _front_wave(node: Node, d := {}) -> bool:
+	if not (node.has_method("front_radius") and node.has_method("is_spent")):
+		return false
+	return int((d if not d.is_empty() else node.descriptor()).get("type", -1)) == Threat.Type.WAVE
 
 
-static func _flat_from(node: Node, at: Vector3) -> float:
-	var centre: Vector3 = node.descriptor()["centre"]
+static func _flat_from(node: Node, at: Vector3, d := {}) -> float:
+	var centre: Vector3 = (d if not d.is_empty() else node.descriptor())["centre"]
 	return Vector2(at.x - centre.x, at.z - centre.z).length()
 
 
-static func _ahead_of_front(node: Node, at: Vector3) -> bool:
-	if not _front_wave(node):
+static func _ahead_of_front(node: Node, at: Vector3, d := {}) -> bool:
+	if d.is_empty():
+		d = node.descriptor()
+	if not _front_wave(node, d):
 		return false
-	var d: Dictionary = node.descriptor()
 	var terrain = node.get("terrain")
 	var ground: float = node.ground_under(terrain, at) if terrain != null else float(d["centre"].y)
 	var above := at.y - ground
 	if above > float(d.get("reach", 0.0)) or above < -2.0:
 		return false
-	var flat := _flat_from(node, at)
+	var flat := _flat_from(node, at, d)
 	return flat <= float(d.get("r_out", 0.0)) and node.front_radius() - Threat.WAVE_EDGE <= flat
 
 

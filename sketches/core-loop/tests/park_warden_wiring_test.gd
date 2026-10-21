@@ -301,8 +301,14 @@ func _check_park(game, path: String, stage: int) -> void:
 	var mounting: String = expected.get("mounting", MOUNTINGS.get(family + ":" + variant, ""))
 	t.eq(label + " family", w.family, family)
 	t.eq(label + " mounting", w.mounting, mounting)
-	t.eq(label + " hardpoint count", w.hardpoints.size(), int(expected["hardpoints"]))
-	t.eq(label + " hardpoints", w.hardpoints, HARDPOINTS.slice(0, int(expected["hardpoints"])))
+	# A park that names "hardpoint_offsets" (P4: the dam, the flume and the sinkhole) mounts those; the rest take the first n.
+	var want_points: Array = HARDPOINTS.slice(0, int(expected["hardpoints"]))
+	if expected.has("hardpoint_offsets"):
+		want_points = []
+		for offset in expected["hardpoint_offsets"]:
+			want_points.append(_v3(offset))
+	t.eq(label + " hardpoint count", w.hardpoints.size(), want_points.size())
+	t.eq(label + " hardpoints", w.hardpoints, want_points)
 	var anchored: bool = expected.get("harpoon_anchor", false)
 	t.eq(label + " harpoon anchor", w.harpoon_anchor, anchored)
 	if anchored:
