@@ -176,7 +176,12 @@ var play_rect := Rect2(-150.0, -150.0, 300.0, 300.0)
 var terrain = null
 # The live Warden's core on the ground plane; world.gd sets it each step while a Warden fight is
 # live and leaves INF otherwise. Finite moves spawns onto the WARDEN_RING (spawn_spot).
-var warden_core := Vector2.INF
+var warden_core := Vector2.INF:
+	set(value):
+		# A pack drawn for the other list is dropped on the flip, so the next arrival is drawn from the right one.
+		if value.is_finite() != warden_core.is_finite() and not warden_packs.is_empty():
+			_next_pack = {}
+		warden_core = value
 # A traversal test needs the stage without the fight in it.
 var paused := false
 # Spawns whose ground ring is showing: {"kind": int, "at": Vector2, "left": float}.
@@ -196,6 +201,9 @@ var packs: Array[Dictionary] = []
 # The stage table's authored packs ({id, kinds}), its elite pack and the arrival that is the
 # elite. Empty `authored` keeps the director's own rules.
 var authored: Array = []
+# The stage's Warden-fight packs ({id, kinds}): drawn in place of `authored` while warden_core is
+# finite. Empty keeps `authored` throughout.
+var warden_packs: Array = []
 var elite := {}
 var elite_arrival := 0
 # Pack kind names KIND_NAMES lacks, each warned once and never spawned.
@@ -535,9 +543,10 @@ func _draw_authored() -> Dictionary:
 	if not elite.is_empty() and elite_arrival > 0 and _arrivals_made + 1 > elite_arrival \
 			and not _last_was_elite and _rng.randf() < ELITE_REPEAT * scale("elite_rate"):
 		return elite
-	var pool := authored.filter(func(p: Dictionary) -> bool: return p["id"] != _last_pack_id)
+	var source: Array = warden_packs if warden_core.is_finite() and not warden_packs.is_empty() else authored
+	var pool := source.filter(func(p: Dictionary) -> bool: return p["id"] != _last_pack_id)
 	if pool.is_empty():
-		pool = authored
+		pool = source
 	var lean := _nemesis_weights(pool)
 	if lean.is_empty():
 		return pool[_rng.randi_range(0, pool.size() - 1)]

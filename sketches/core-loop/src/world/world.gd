@@ -551,6 +551,7 @@ func _spawn_vault() -> void:
 # own packs, elite and elite_arrival win over the table's.
 func _author_director(def := {}) -> void:
 	director.authored = def.get("packs", ctx.stages.packs())
+	director.warden_packs = def.get("warden_packs", [])
 	director.elite = def.get("elite", ctx.stages.elite())
 	director.elite_arrival = int(def.get("elite_arrival", ctx.stages.elite_arrival()))
 
