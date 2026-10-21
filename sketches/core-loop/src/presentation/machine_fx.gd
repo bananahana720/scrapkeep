@@ -372,7 +372,7 @@ func _draw_word(slot: Dictionary) -> void:
 # --- Bodies: arrival, wind-up, hits, stagger, death -----------------------------------
 
 func _on_spawned(enemy: Node3D, kind: String) -> void:
-	if not is_instance_valid(enemy):
+	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
 		return
 	var family := family_of(String(enemy.get("faction"))) if enemy.get("faction") != null else family_of_kind(kind)
 	var at := enemy.global_position
