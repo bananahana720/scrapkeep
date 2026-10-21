@@ -136,7 +136,7 @@ const DEFS := [
 			{"id": "draft_plate", "kinds": ["foreman", "plated_brute", "catch_trap"]},
 			{"id": "draft_dispatch", "kinds": ["dispatcher", "gap_net", "ballast_heavy"]},
 			# w18: presses the plating axis, mirrors alpha_defs.gd.
-			{"id": "plate_press_draft", "kinds": ["plated_brute", "plated_brute", "ballast_heavy"]},
+			{"id": "plate_press_draft", "kinds": ["plated_brute", "plated_brute", "gap_net"]},
 		], "elite": ELITE_HIGHDRAFT, "warden_variant": ""},
 	{"stage": 6, "world": 3, "music": {"theme": 2, "ace": "highdraft_crown"}, "warden_family": "mind", "name": "Highdraft: the crown", "map": "park_crown", "threat": 1.4,
 		"unlock_base": 4, "ancient": "mind_hand",
@@ -149,7 +149,7 @@ const DEFS := [
 			{"id": "crown_kites", "kinds": ["kite_drone", "kite_drone", "gap_net", "ballast_heavy"]},
 			{"id": "crown_guard", "kinds": ["dispatcher", "deflector", "gap_net"]},
 			{"id": "crown_trap", "kinds": ["foreman", "mag_trapper", "mag_trapper", "ballast_heavy"]},
-			{"id": "plate_press_crown", "kinds": ["plated_brute", "plated_brute", "ballast_heavy"]},
+			{"id": "plate_press_crown", "kinds": ["plated_brute", "plated_brute", "gap_net"]},
 		], "elite": ELITE_HIGHDRAFT, "warden_variant": "choir"},
 ]
 

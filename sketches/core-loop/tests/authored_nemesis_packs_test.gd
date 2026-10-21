@@ -152,7 +152,7 @@ func _control() -> void:
 	_t.check(_name + "control: a five-chaser pack exceeds the stage cap and prices infinite", not is_finite(Cards.cost(oversized)))
 
 
-# W18-PLATEPRESS: two plated rigs and a ballast heavy press the plating axis (ENEMY-PRIORITY.md
+# W18-PLATEPRESS: two plated rigs and a gap net press the plating axis (ENEMY-PRIORITY.md
 # section 5). The pack sits in the Highdraft only: a ninth pack in a Dig stage would drop the
 # alpha table's kill-first share under SHARE_MIN. Plating is the axis of Sable (pylon_engineer)
 # and Tally; Tarn, the Runner (spread), the Caster and the Cannon are spared by it.
@@ -167,7 +167,7 @@ func _plate_press() -> void:
 		_t.check(_name + "stage %d holds a plate_press pack" % stage, not found.is_empty())
 		if found.is_empty():
 			continue
-		_t.eq(_name + "stage %d plate_press kinds" % stage, found["kinds"], ["plated_brute", "plated_brute", "ballast_heavy"])
+		_t.eq(_name + "stage %d plate_press kinds" % stage, found["kinds"], ["plated_brute", "plated_brute", "gap_net"])
 		for id in pressed:
 			_t.check(_name + "stage %d plate_press presses %s" % [stage, id], Nemesis.pack_presses(id, found["kinds"]))
 		for id in spared:
@@ -181,6 +181,6 @@ func _plate_press() -> void:
 
 func _has_press_shape(packs: Array) -> bool:
 	for pack in packs:
-		if pack["kinds"] == ["plated_brute", "plated_brute", "ballast_heavy"] and Nemesis.pack_presses("pylon_engineer", pack["kinds"]) and not Nemesis.pack_presses("tarn", pack["kinds"]):
+		if pack["kinds"] == ["plated_brute", "plated_brute", "gap_net"] and Nemesis.pack_presses("pylon_engineer", pack["kinds"]) and not Nemesis.pack_presses("tarn", pack["kinds"]):
 			return true
 	return false
