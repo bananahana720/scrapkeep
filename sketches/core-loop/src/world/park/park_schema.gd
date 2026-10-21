@@ -409,9 +409,11 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 		var layer = row["music_layer"]
 		if not layer is String or not String(layer).begins_with(MUSIC_LAYER_PREFIX) or not EventKinds.WORLD_ROWS.has(layer):
 			_add(out, id, "music_layer", "music_layer %s is no %s* WORLD_ROWS kind" % [str(layer), MUSIC_LAYER_PREFIX])
-	# Optional: "hide_on" names a natural, non-cave_in event row with an effect.swap. event_ground.gd hides the row's
-	# placed node (and so its collider) while that swap is live and shows it again on revert. Industrial and ancient
-	# events re-prepare on every activation and cave entries never reach apply_swap, so the contract stops short of them.
+	# Optional: "hide_on" names a natural collapse or impact event row (EventKinds.HIDING_NATURAL_KINDS) with an
+	# effect.swap. event_ground.gd hides the row's placed node (and so its collider) while that swap is live and shows
+	# it again on revert. Industrial and ancient
+	# events re-prepare on every activation, cave entries never reach apply_swap and the other natural kinds build no
+	# swap entry, so the contract stops short of them.
 	if row.has("hide_on"):
 		var event_id = row["hide_on"]
 		if not event_id is String or not events.has(event_id):
@@ -420,8 +422,8 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 			var event: Dictionary = events[event_id]
 			if String(event.get("effect", {}).get("swap", "")) == "":
 				_add(out, id, "hide_on", "hide_on %s has no effect.swap to hide on" % event_id)
-			elif String(event["family"]) != "natural" or String(event["kind"]) == "cave_in":
-				_add(out, id, "hide_on", "hide_on %s is a %s %s event; only a natural, non-cave_in swap hides rows" % [event_id, event["family"], event["kind"]])
+			elif String(event["family"]) != "natural" or not EventKinds.HIDING_NATURAL_KINDS.has(String(event["kind"])):
+				_add(out, id, "hide_on", "hide_on %s is a %s %s event; only a natural %s swap hides rows" % [event_id, event["family"], event["kind"], "/".join(EventKinds.HIDING_NATURAL_KINDS)])
 	if row.has("rider"):
 		var rider = row["rider"]
 		if not rider is Dictionary or not rider.get("at") is Array or (rider["at"] as Array).size() != 2 \

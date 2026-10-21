@@ -134,7 +134,11 @@ func _planted_rows() -> void:
 		event["effect"]["swap"] = "pool_cave"
 		_row(p, "park_rows", "lip")["hide_on"] = "pool_flood")
 	var hidden: Dictionary = _fixture.duplicate(true)
+	_plant("hide_on of a natural flood_fill with a swap", "lip", "hide_on", func(p):
+		_row(p, "event_rows", "pool_flood")["effect"]["swap"] = "pool_ramp"
+		_row(p, "park_rows", "lip")["hide_on"] = "pool_flood")
 	var swapped := _row(hidden, "event_rows", "pool_flood")
+	swapped["kind"] = "collapse"
 	swapped["effect"]["swap"] = "pool_ramp"
 	_row(hidden, "park_rows", "lip")["hide_on"] = "pool_flood"
 	_report("a hide_on naming a swap event loads", ParkSchema.validate(hidden).is_empty(), ParkSchema.describe(ParkSchema.validate(hidden)))
