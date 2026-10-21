@@ -43,29 +43,30 @@ const Cards := preload("res://src/world/director_cards.gd")
 # flume pass (park rows) together; recorded with --record-base --section=runtime, seeds 0..19 in four-wide batches.
 # 2026-10-19 stage/alpha-w17 re-record at 958bbdcd (Gate lane): the candidate stack's park PRs (#170 crown, #180 pit,
 # #183 islands, #185 dam rim_cache) move park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged.
-# 2026-10-19 merge of origin/stage/alpha-w17 (2e247fc8) into claude/systems-b-w18: pins re-read from this test's own MEASURE lines (schedule0, tier0.hash), seeds 0..19.
-# 2026-10-19 W18-PLATEPRESS: plate_press_draft and plate_press_crown added to the Highdraft pack tables; pins re-read from this test's own MEASURE lines, seeds 0..19.
+# 2026-10-21 headframe leg swing rows (World, #241 6326650261 ruling (a)): two park_pit rows and the headframe_legs route
+# move park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged; recorded with --record-base --section=runtime --seed=N.
+# 2026-10-21 merge of stage/alpha-w18 0eb9c897 into claude/systems-b-w18 (after the plate_press removal): pins re-read from this test's own MEASURE lines (schedule0, tier0.hash), seeds 0..19.
 const BASE_SCHEDULE := [
-	"eaae2416995681d1494d1eade80b854412fca5a04cad2d22afc5206495c015bb",
-	"de1fb1eadfe1a15d5112c826d7631b076c0b16fa7efb605ca137354312ceb754",
-	"42f502f763d4fc1f413a53e08a24062718792b70ff4355e6be5aab9537224102",
-	"e1fe96e4b98f97e43c72f524422401cd69576fbe2b325471c29432aba1f8d4f9",
-	"d5641c205b6d6632c0861e2311217a3a6bbf6d5442faf753561caf59e4e11bd8",
-	"cd8a614f127f4d4f667823005b0d73be78fddf9c0696bc00bc5ba163f8d8d6be",
-	"d7b2fe704df0bc68ebe01fd1fe1de576214842c3d84e7fb4f1b6b22656731ec3",
-	"6c4b3c088b066320f044c49f43eb8b73febaa68d9a7d7bb3f8aa50bb73cde723",
-	"85470b1c207bd2b6d2fd96d14df7d625e6f4dce8a933b6deab2e3897fca4efca",
-	"77d00ba8aab15d0d32d048eff4ef2a96bc6a6f1834459f0518dd963a799f2e6f",
-	"f25d6447235ce8b28a0c3cabbc7a1c6d01adb9f5ecb0aefc39537ab03723c2e0",
-	"d9697a3eac3d279476267b97d7415e4ee7788863ec8199dc038a72610d00e97c",
-	"419992b082a581903db256b9d928ce814924a79c496b5489c0730df723591550",
-	"c6065b3763bc418294e6dfc973e572de0247ab5c64f317ed94b67efa7b8b5190",
-	"81a1c5f1d3d92bdcbb2e3081b1bbe2deadcce7c7e7d3c877caae53a1ec0e1b79",
-	"f6bfc9b3b482e35ea0bc81dd4c68e070c01afcceea9cfd52357cfe7311ca2d10",
-	"594452f82f1371c49a85c370ce540fe65334044290538d4f4bc0ec77b5ae6e10",
-	"23e1f970b61850a9207a5869d7d1bcb76d5eb6c249b72f927069fc2b41611aa5",
-	"bba564852d4ac9f686e814aaa4a26ddd16b9548502a30b430821a17bb2839f65",
-	"9022f7b87c39f602107be14471a6bce6af86008cf5b3325bc713071bbab9d5e8",
+	"e6e10e75d3fd9f14a5e167e6e0284f897e0d0d7805e2768bea4ee6932f867532",
+	"d639e886ee8be6d366bb9d639d869d38dc52eee5c3ca75799a2f12f44184f538",
+	"32a0b87f2a67b97eee6ad701cf25033c5f3f39f9415899feec2dd29a1c588f38",
+	"00316adf6747fb012e779b862659d9fb30be96af0065a373bf214e24ab9ee9d2",
+	"25ad114f572095138c1bd4bfed73664a06230fcd672517fe4e1f7ff974c69310",
+	"c6066d809ba2b2367118a79871b4742f93438a17134f4e3aa1c68a4e616ae0ad",
+	"76dd4825707ac55b47c5fb3c561cc18ac7dbe5388d93421b13c82d9cd9dafd84",
+	"4211b135b615547a051ca9e1ae4e5ca6c6f1142f882d09166d864be09fd85c2f",
+	"4c3af7eaffeac37e1db086c756f8177eaf07e6090bbd2646bf7d2255e304546b",
+	"5c0b416c8fa2ae0d2dbe6ad34b92f293cf93e4246dad7048fa8503e756685630",
+	"3ea0b4cb9e3c3c4edf8896e5d1b2aea72b6636801ada74c2e21dfb51417b944b",
+	"ea20cbc26bdd7214183f45df6ea41dc7f699a93b87b78b5a5b1c3e9fa87df957",
+	"7cca83d6fce9d0f3739acd1728b4c6c1529c4058ec692a9a4061e5b7539dba66",
+	"36d76e3e46f207e0cb392b2b7e869e9c4ab8f8e95d5c27bdce8390bf07db966a",
+	"c06ab720f805d1c6096b9f09f93bc05fd6043c294b9872a323774c5c33909d3a",
+	"e6d30abf7a786179bf58aeff39ddafda53be4489b367fb9e5227119e89523541",
+	"74866abe0cb52822588568ef097bdde3d3d2e0542c95220fb395fb9a2b86d931",
+	"f901b937db7e4a06f419292fb02efd660798bad0c47af68abfd3b5b676717c40",
+	"ddf68ddd2ccb1c7379afda63224af0185e2a3df8126921ac327207c869ed9edc",
+	"4c33cdf3fbb8f840a8578d0511dae15854f31793155bde06c874a06f12a839d1",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
@@ -73,28 +74,27 @@ const BASE_SCHEDULE := [
 # unchanged; recorded with BASE_SCHEDULE above.
 # 2026-10-19 answer weighting (Systems, #149: OFFER_WEIGHT 1.5 on the pilot's nemesis answers) merged with stage/alpha-w17
 # 1a7a7299: whole runs moved on all 20 seeds, schedules unchanged; recorded with --record-base --section=runtime, one seed at a time.
-# 2026-10-19 W18-PLATEPRESS: same two packs; whole-run pins re-read from this test's own MEASURE lines, seeds 0..19.
 const BASE_RUN := [
-	"6f2c93f0a12a253d650d578d08daf1302007e8c356d9b7de8dee280a2209f3bf",
-	"4141d9fe90f6a4796526a17b946f254dd64438900162dbab56d5ec500e42ce39",
-	"03dc3179d9361279c34ddfa35d7242195a0ad0bca026fd9516279dc563246960",
-	"1b2223c673afde75058b0e1343155bf5d524167843894b2fed1ec060194b7bb4",
-	"9b76b0e7828e3e317c841ddc7405147a667d8d97763cd9a9a77b68772f7aad1f",
-	"85593d1aa62dd22f92eb830a6441ddfb3e10a391a1a64837a784132b4298a2c5",
-	"5c26b8049ec0e8238ffce95bd8b390e9156da4760ee0b50eeb54b0ea3e103045",
-	"e411257ac5705be044ea3d70ef5d5aa00959204fb7b8915fac8b102d6ce99ac8",
-	"81d3d2d8f3c904d6ab32652f512aeef108dd52fed4fb83a3f0d2dd4c7220c125",
-	"91218b61b0bdb863e5ed484a076d2c68b1eb38957cc41ed21f96be26efb79085",
-	"0590f28f868871d7671f28296b985710ffa57a29e49858ac7a366dde11164242",
-	"c540822cb1b262417d615f5f73c1cad95b132f9276f34a45c4494f901236629e",
-	"a50edf7dec2f6915d33f015d43b7b28228b7524edffa3d46bfae7078a140e8bb",
-	"34bf7770ab6074dbc426b1059e096cf1b6d90828f2b4928c68700c34c0941105",
-	"bcca219cc3eac7ad1ae055e8e62fbca3c021c371ee438ff9f9d9d785985b9b21",
-	"1514eaa8fb5960b7c76ef911b732f12fa41ae2a755dbe86c7ec3af91d37e194d",
-	"e84610a40a95c5a577bf54beae407784866faf06350a721cc17f76dd312b4f2a",
-	"cc45afc83dc0b09cb2b7657eca6c3e86353cdf06965e26b8afa6d736f5041a4d",
-	"db5ff3dbfd482d21d38371cb0a9848ad9eaea74b1f6a21197d4d510b3a363b22",
-	"2c127d3d2abc99d80dc062150f6cf6b4a8ac8f010f4e8094a90c0e7236040e22",
+	"138ce89ff990f17428e26c4acf51385e758a569a52a988607280a9d9de8bf553",
+	"1f743ea448f2b5d34958c1acaf7722daeb2be28a16a32fc230432a6e637fb93a",
+	"99d36990223fabff0ea7a725159efeb6e76da2bdbe01f5421b69980d5e979f87",
+	"fbdcfaa206f078e5bf782aa406322c5c5822d2fdd155ae41746949aa7d26c56f",
+	"acdec945cdf3902debed99ecd9d057594bf551583529027bb3f5a875e5c3dece",
+	"0bef220d955953d58c129cb43e47575c855a4e7176a3785e27d9e9bc688c9fa6",
+	"1a23ca7cb9e5c44b6465c16a36dbf19b06fba0d75a8a15af809fe5417fe06f8b",
+	"2fd41d29ae624e422af9c77e3ecae371dfa2bac00bf6c4cd68b5208075dab9ea",
+	"b6d9398a112d1704981e97547d2bb6d7a53ab4ab43d8a43d632439717f90e4df",
+	"b13748076679b31d7f225cf6d99de5ba939803220bc2e14efe095a2938fb8964",
+	"04e3ccd463b6af647841237f5143db049649103a0d5658699ec266a1038fee20",
+	"c1b4b1dbc9984643597b8df8504e8a0420149d12d2910916d29f9848f8e3f03e",
+	"3881af5950647b3140f210101c8025b6537aa636bc954dc100b4ce4706a167e4",
+	"b3dff462a9c014037bc31d8fa243dff595677a27edfd83e1bf430b7d6c25d80f",
+	"229b8886dee2a74fc14b54edde35197b09ae29d965305bb0f146fb0e5910c36e",
+	"521475d3626f791a2ad52003bb5f1237045ed8815516a543444395f12326a342",
+	"aef28c14f1cec905eedd1b6fad9765802f39b75bef96c6e2e0da9c756f5e8ccd",
+	"50e954a01b7148d646c3b019964be2e16cc35212c694b63793fcdd453731c138",
+	"e302e46544fc42153e32eab747a4c11921d461978124d785a573d17d86beb41b",
+	"d608582fce19d41fbaecbca9062f5c3b52ccb07d458ab5196f98b9c907a63360",
 ]
 const SEEDS := 20
 const DRAWS := 400
