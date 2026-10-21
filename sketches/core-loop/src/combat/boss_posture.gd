@@ -11,16 +11,14 @@ const SMASH_BASE := 45.0
 const OTHER_BASE := 1.5
 const OTHER_BASE_CHARGING := 3.0
 const MULT_MIN := 0.2
-# Overpowered pays (Andrew's tap "Lift the ceiling", 17 Oct 22:04Z): a hit counts up to 3x
-# the plating it meets, so a monster build staggers a Warden well under the 45-70 s an
+# Overpowered pays (Andrew's tap "Lift the ceiling", 17 Oct 22:04Z): a monster build's hit counts
+# up to 3x the plating it meets (MULT_MAX), so it staggers a Warden well under the 45-70 s an
 # ordinary pilot takes; it was 1.5x. The hull bosses keep 1.5 in boss_rules.gd POSTURE.
-# The lift is for monster builds only: Andrew's rulings read "Monster builds stagger Wardens faster"
-# and "Ordinary pilots still take 45-70 s" (DECISIONS section 5). A Warden tells the rule the
-# pilot's heft class on every hit (set_pilot_class); below MONSTER_CLASS the ceiling stays at
-# ORDINARY_RATIO, at it or above it reaches the row's mult_max. Class III is where a grown
-# start (540 mass, heft 2.2) lands; the skipper's small arm stays in class I to II.
+# Who is a monster (coordinator ruling (B) on #222, 21 Oct): a run whose heft is strictly above the
+# library's top-bucket maximum heft for that fight (monster_heft.gd, generated from lib-base; the
+# Waking and the Mind have their own). A Warden tells the rule on every hit (set_monster). A rule
+# never told is ordinary: it fails closed to ORDINARY_RATIO.
 const MULT_MAX := 3.0
-const MONSTER_CLASS := 3
 # A row's "hit_cap" caps one hit's gain while its ratio is ordinary (at most ORDINARY_RATIO);
 # from there the cap climbs to FULL at mult_max, so one plain smash never fills the bar but a
 # monster build's still can. Without the key a hit may fill it, as before. With
@@ -42,8 +40,9 @@ var smash_base := SMASH_BASE
 var other_base := OTHER_BASE
 var other_base_charging := OTHER_BASE_CHARGING
 var mult_min := MULT_MIN
-var mult_max := MULT_MAX
-# The row's own ceiling; mult_max is this for a monster build or an unknown pilot, less below.
+# The live ceiling: starts ordinary (see set_pilot_class), the row's mult_top for a monster build.
+var mult_max := ORDINARY_RATIO
+# The row's own ceiling, what a monster build reaches (a row's "mult_max", else MULT_MAX).
 var mult_top := MULT_MAX
 var drain_delay := DRAIN_DELAY
 var drain_rate := DRAIN_RATE
@@ -82,8 +81,8 @@ func _init(numbers := {}) -> void:
 	other_base = float(numbers.get("other_base", OTHER_BASE))
 	other_base_charging = float(numbers.get("other_base_charging", OTHER_BASE_CHARGING))
 	mult_min = float(numbers.get("mult_min", MULT_MIN))
-	mult_max = float(numbers.get("mult_max", MULT_MAX))
-	mult_top = mult_max
+	mult_top = float(numbers.get("mult_max", MULT_MAX))
+	mult_max = ordinary_ceiling()
 	drain_delay = float(numbers.get("drain_delay", DRAIN_DELAY))
 	drain_rate = float(numbers.get("drain_rate", DRAIN_RATE))
 	contact_drain_delay = float(numbers.get("contact_drain_delay", 0.0))
@@ -97,11 +96,15 @@ func _init(numbers := {}) -> void:
 	hit_cap_until_stagger = bool(numbers.get("hit_cap_until_stagger", false))
 
 
-# The pilot's heft class for the next judge. Unknown (0 or less) fails closed: the ordinary ceiling,
-# as Ultimate._heft_index reads an unknown class as class I. Read per hit so a pilot who grows
-# mid-fight earns the lift. A rule never given a class (a hull boss, a bare test) keeps the row's ceiling.
-func set_pilot_class(heft_class: int) -> void:
-	mult_max = mult_top if heft_class >= MONSTER_CLASS else minf(mult_top, ORDINARY_RATIO)
+# The ceiling an ordinary pilot meets: the row's, but never past ORDINARY_RATIO.
+func ordinary_ceiling() -> float:
+	return minf(mult_top, ORDINARY_RATIO)
+
+
+# Whether the pilot is a monster build for the next judge: only then does mult_max reach mult_top.
+# Read per hit so a pilot who grows past the threshold mid-fight earns the lift.
+func set_monster(on: bool) -> void:
+	mult_max = mult_top if on else ordinary_ceiling()
 
 
 # hit: {kind, punch, plating, smash, tier, charging, frame, hp, max_hp}. The answer is
@@ -143,7 +146,7 @@ func cap_for(ratio: float) -> float:
 	# When mult_top <= ORDINARY_RATIO (a hull boss) a row's hit_cap is disabled.
 	if hit_cap >= FULL or mult_top <= ORDINARY_RATIO or (hit_cap_until_stagger and staggers > 0):
 		return FULL
-	# An ordinary pilot (mult_max held at ORDINARY_RATIO) always meets the ordinary cap.
+	# An ordinary pilot (mult_max held at the ordinary ceiling) always meets the ordinary cap.
 	var t := clampf((minf(ratio, mult_max) - ORDINARY_RATIO) / (mult_top - ORDINARY_RATIO), 0.0, 1.0)
 	return lerpf(hit_cap, FULL, t)
 

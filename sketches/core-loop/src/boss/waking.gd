@@ -1,5 +1,6 @@
 extends "res://src/boss/stub_boss.gd"
 
+const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const WakingFloors := preload("res://src/boss/waking_floors.gd")
@@ -470,6 +471,8 @@ func _warden_spec() -> Dictionary:
 	numbers["hit_cap"] = HIT_CAP
 	numbers["hit_cap_until_stagger"] = true
 	spec["posture"] = numbers
+	# A monster build here is heft above the library's top-bucket maximum at its own entrance, stage 4 (monster_heft.gd).
+	spec["monster_heft"] = MonsterHeft.waking_threshold()
 	return spec
 
 

@@ -120,73 +120,91 @@ func _harder_kept() -> void:
 		_t.check("%s pairs keep a harder hitter with its capped hitters stacked out" % pilot, pairs > 0 and missing == 0, "%d of %d pairs without one" % [missing, pairs])
 
 
-func _gain(numbers: Dictionary, ratio: float, frame := 1) -> float:
+# monster: judged as a monster build; else as the fail-closed default (a rule never told).
+func _gain(numbers: Dictionary, ratio: float, monster := false, frame := 1) -> float:
 	var rule = BossPosture.new(numbers)
+	if monster:
+		rule.set_monster(true)
 	return float(rule.judge({"kind": "ram", "punch": ratio * 100.0, "plating": 100.0, "frame": frame})["gain"])
 
 
-# Andrew's tap "Lift the ceiling" (17 Oct 22:04Z): a Warden counts a hit up to 3x its plating, so
-# a monster ram gains more than an ordinary one; an ordinary ram gains what it did; the hull
-# bosses keep the old 1.5 ceiling; hit_cap holds an ordinary hit and opens for a monster one.
+# Andrew's tap "Lift the ceiling" (17 Oct 22:04Z) under coordinator ruling (B) on #222 (21 Oct):
+# a monster build (heft strictly above the fight's library top-bucket maximum) counts a hit up to 3x
+# its plating; an ordinary ram, or a rule never told a class, keeps 1.5; the hull bosses keep 1.5.
 func _ceiling() -> void:
 	var row := {"curve": 2.0}
 	_t.check("a Warden ram at 1.0x plating gains as before", is_equal_approx(_gain(row, 1.0), 30.0), str(_gain(row, 1.0)))
 	var flat := {"curve": 1.0}
-	_t.check("a monster ram at 3x plating gains twice a 1.5x ram", is_equal_approx(_gain(flat, 3.0), 2.0 * _gain(flat, 1.5)), "%.1f vs %.1f" % [_gain(flat, 3.0), _gain(flat, 1.5)])
+	_t.check("a monster ram at 3x plating gains twice a 1.5x ram", is_equal_approx(_gain(flat, 3.0, true), 2.0 * _gain(flat, 1.5, true)), "%.1f vs %.1f" % [_gain(flat, 3.0, true), _gain(flat, 1.5, true)])
+	_t.check("a rule never told a class fails closed at 1.5", is_equal_approx(_gain(flat, 3.0), _gain(flat, 1.5)) and BossPosture.new(flat).mult_max == 1.5, str(BossPosture.new(flat).mult_max))
 	var hull: Dictionary = BossRules.POSTURE
-	_t.check("a hull boss still stops counting at 1.5x", is_equal_approx(_gain(hull, 3.0), _gain(hull, 1.5)), "%.1f" % _gain(hull, 3.0))
+	_t.check("a hull boss still stops counting at 1.5x", is_equal_approx(_gain(hull, 3.0, true), _gain(hull, 1.5, true)), "%.1f" % _gain(hull, 3.0, true))
 	var capped := {"curve": 2.0, "hit_cap": 20.0, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55}
 	_t.check("hit_cap holds an ordinary amplified ram", _gain(capped, 0.9) <= 20.0001, "%.1f" % _gain(capped, 0.9))
-	_t.check("hit_cap opens for a monster ram", _gain(capped, 3.0) >= BossPosture.FULL - 0.001, "%.1f" % _gain(capped, 3.0))
-	_t.check("hit_cap climbs between", _gain(capped, 2.25) > 20.0 and _gain(capped, 2.25) < BossPosture.FULL, "%.1f" % _gain(capped, 2.25))
+	_t.check("hit_cap holds an ordinary pilot's big ram", _gain(capped, 3.0) < BossPosture.FULL, "%.1f" % _gain(capped, 3.0))
+	_t.check("hit_cap opens for a monster ram", _gain(capped, 3.0, true) >= BossPosture.FULL - 0.001, "%.1f" % _gain(capped, 3.0, true))
+	_t.check("hit_cap climbs between", _gain(capped, 2.25, true) > 20.0 and _gain(capped, 2.25, true) < BossPosture.FULL, "%.1f" % _gain(capped, 2.25, true))
 	var first := BossPosture.new({"curve": 2.0, "hit_cap": 15.0, "hit_cap_until_stagger": true, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55})
 	var ram := {"kind": "ram", "punch": 90.0, "plating": 100.0, "frame": 1}
 	_t.check("hit_cap_until_stagger holds before the first stagger", float(first.judge(ram)["gain"]) <= 15.0001, "%.1f" % float(first.judge(ram)["gain"]))
 	first.staggers = 1
 	_t.check("hit_cap_until_stagger lets go after it", float(first.judge(ram)["gain"]) > 15.0, "%.1f" % float(first.judge(ram)["gain"]))
-	_t.eq("the ultimate fills up to 70 on a closed guard", preload("res://src/combat/ultimate.gd").WARDEN_POSTURE_CAP, 70.0)
+	_t.eq("the ultimate fills up to 70 on a closed guard for a monster", preload("res://src/combat/ultimate.gd").WARDEN_POSTURE_CAP, 70.0)
 	_pilot_class()
 
 
-# DECISIONS section 5: monster builds get the lift, ordinary pilots keep the old ceiling and cap.
+# Ruling (B): the lift needs a heft strictly above the fight's threshold.
 func _pilot_class() -> void:
 	var Ult := preload("res://src/combat/ultimate.gd")
 	var flat := {"curve": 1.0}
-	var ordinary := BossPosture.new(flat)
-	ordinary.set_pilot_class(2)
-	var at_cap := float(ordinary.judge({"kind": "ram", "punch": 250.0, "plating": 100.0, "frame": 1})["gain"])
-	_t.check("a class II hit at ratio 2.5 gains as if capped at 1.5", is_equal_approx(at_cap, _gain(flat, 1.5)), "%.1f vs %.1f" % [at_cap, _gain(flat, 1.5)])
-	for cls in [3, 4, 5]:
-		var monster := BossPosture.new(flat)
-		monster.set_pilot_class(cls)
-		var gain := float(monster.judge({"kind": "ram", "punch": 250.0, "plating": 100.0, "frame": 1})["gain"])
-		_t.check("a class %d hit at ratio 2.5 counts the lifted ceiling" % cls, is_equal_approx(gain, _gain(flat, 2.5)), "%.1f" % gain)
-		_t.check("a class %d hit tops out at 3x" % cls, is_equal_approx(float(monster.judge({"kind": "ram", "punch": 500.0, "plating": 100.0, "frame": 2})["gain"]), _gain(flat, 3.0)), "")
-	var grows := BossPosture.new(flat)
-	grows.set_pilot_class(2)
-	grows.set_pilot_class(3)
-	_t.check("a pilot who grows mid-fight earns the lift on the next hit", grows.mult_max == 3.0, str(grows.mult_max))
+	for on in [true, false]:
+		var rule := BossPosture.new(flat)
+		rule.set_monster(on)
+		var gain := float(rule.judge({"kind": "ram", "punch": 250.0, "plating": 100.0, "frame": 1})["gain"])
+		var want := _gain(flat, 2.5, true) if on else _gain(flat, 1.5)
+		_t.check("set_monster(%s) %s" % [on, "lifts" if on else "holds 1.5"], is_equal_approx(gain, want) and (rule.mult_max == 3.0) == on, "%.1f mult_max %.1f" % [gain, rule.mult_max])
+	var monster := BossPosture.new(flat)
+	monster.set_monster(true)
+	_t.check("a monster hit tops out at 3x", is_equal_approx(float(monster.judge({"kind": "ram", "punch": 500.0, "plating": 100.0, "frame": 2})["gain"]), _gain(flat, 3.0, true)), "")
+	monster.set_monster(false)
+	_t.check("a pilot back under the threshold loses the lift on the next hit", monster.mult_max == 1.5, str(monster.mult_max))
 	var hull := BossPosture.new(BossRules.POSTURE)
-	hull.set_pilot_class(5)
-	_t.check("a hull boss stays at 1.5 at any class", hull.mult_max == 1.5, str(hull.mult_max))
+	hull.set_monster(true)
+	_t.check("a hull boss stays at 1.5 for a monster", hull.mult_max == 1.5 and hull.ordinary_ceiling() == 1.5, str(hull.mult_max))
 	var waking := BossPosture.new({"curve": 2.0, "hit_cap": 20.0, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55})
-	waking.set_pilot_class(2)
-	_t.check("an ordinary pilot's hit_cap holds", float(waking.judge({"kind": "ram", "punch": 300.0, "plating": 100.0, "frame": 1})["gain"]) < BossPosture.FULL, "")
-	_t.eq("the set piece cap is 45 at class II", Ult.warden_cap(2), 45.0)
-	_t.eq("the set piece cap is 70 at class III", Ult.warden_cap(3), 70.0)
-	_t.eq("the set piece cap is 70 at class V", Ult.warden_cap(5), 70.0)
-	_t.eq("the set piece cap is 45 when the class is unknown", Ult.warden_cap(0), 45.0)
-	var unknown := BossPosture.new(flat)
-	unknown.set_pilot_class(0)
-	_t.check("an unknown class fails closed at 1.5", unknown.mult_max == 1.5, str(unknown.mult_max))
+	waking.set_monster(true)
+	_t.check("a monster build lifts mult_max over a hit_cap row", waking.mult_max == 3.0, str(waking.mult_max))
+	_t.eq("the set piece cap is 70 for a monster build", Ult.warden_cap(true), 70.0)
+	_t.eq("the set piece cap is 45 for anyone else", Ult.warden_cap(false), 45.0)
 	_warden_class_source()
 
 
-# A fleet-less Warden with no class source stays ordinary; one handed a class reads it.
+# A fleet-less Warden with no heft or threshold is no monster; a spec heft above its threshold flips it.
 func _warden_class_source() -> void:
 	var Warden := preload("res://src/combat/warden.gd")
+	var Ult := preload("res://src/combat/ultimate.gd")
+	var MonsterHeft := preload("res://src/combat/monster_heft.gd")
 	var bare = Warden.new()
-	_t.eq("a fleet-less Warden with no class source reads class 0", bare.pilot_heft_class(), 0)
-	bare.spec = {"heft_class": func() -> int: return 4}
-	_t.eq("a fleet-less Warden reads the class its spec hands in", bare.pilot_heft_class(), 4)
+	_t.eq("a fleet-less Warden with no heft source reads heft 0", bare.pilot_heft(), 0.0)
+	_t.check("a Warden with no stage or threshold has an infinite threshold", is_inf(bare.monster_threshold()), str(bare.monster_threshold()))
+	_t.check("a Warden with no heft source or threshold is no monster", not bare.monster_build(), "")
+	_t.eq("it gets the ordinary cap", Ult.cap_for_warden(bare), 45.0)
+	bare.spec = {"heft": func() -> float: return 99.0}
+	_t.check("a huge heft against no threshold is still no monster (fails closed)", not bare.monster_build(), "")
+	bare.spec = {"heft": func() -> float: return 5.0, "monster_heft": 4.0}
+	_t.check("spec heft above spec monster_heft is a monster build", bare.monster_build(), "")
+	_t.eq("a monster build gets 70", Ult.cap_for_warden(bare), 70.0)
+	bare.spec = {"heft": func() -> float: return 4.0, "monster_heft": 4.0}
+	_t.check("heft equal to the threshold is not strictly above it", not bare.monster_build(), "")
+	bare.spec = {"heft": func() -> float: return 3.0, "monster_heft": 4.0}
+	_t.check("spec heft below spec monster_heft is no monster", not bare.monster_build(), "")
+	bare.spec = {"stage": 4}
+	_t.eq("a spec stage reads that stage's library threshold", bare.monster_threshold(), MonsterHeft.threshold_for_stage(4))
+	_t.check("a missing stage threshold is infinite", is_inf(MonsterHeft.threshold_for_stage(99)), "")
 	bare.free()
+	var Waking := preload("res://src/boss/waking.gd")
+	var Mind := preload("res://src/boss/mind.gd")
+	for script in [Waking, Mind]:
+		_t.check("%s sets monster_heft from the loader" % script.resource_path.get_file(), script.source_code.contains('spec["monster_heft"] = MonsterHeft.'), "")
+	_t.eq("the Waking spec takes the s4 entrance", MonsterHeft.waking_threshold(), MonsterHeft.threshold_for_stage(3))
+	_t.eq("the Mind spec takes the s6 entrance", MonsterHeft.mind_threshold(), MonsterHeft.threshold_for_stage(5))

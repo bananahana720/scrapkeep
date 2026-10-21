@@ -123,8 +123,8 @@ func _warden_spec() -> Dictionary:
 	spec["lesson"] = "plate"
 	spec["family"] = Roster.REACTOR
 	spec["reach"] = PAD_RADIUS
-	# The arena Warden has no fleet, so it reads the pilot's heft class from here (Warden.pilot_heft_class).
-	spec["heft_class"] = func() -> int: return int(ctx.run.heft_class()) if ctx != null and ctx.run != null else 0
+	# The arena Warden has no fleet, so it reads the pilot's heft from here (Warden.pilot_heft).
+	spec["heft"] = func() -> float: return float(ctx.run.heft()) if ctx != null and ctx.run != null else 0.0
 	return spec
 
 

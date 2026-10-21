@@ -1,6 +1,5 @@
 extends Node
 
-const BossPosture := preload("res://src/combat/boss_posture.gd")
 const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -65,7 +64,7 @@ const DAMAGE_TAKEN := 0.2
 # was 45. Volleys on a Warden deal half damage; a boss takes half.
 const WARDEN_POSTURE_CAP := 70.0
 # The lift is for monster builds (DECISIONS section 5: "Monster builds stagger Wardens faster ...
-# Ordinary pilots still take 45-70 s"): below heft class III the cap is the old 45.
+# Ordinary pilots still take 45-70 s"): for any other pilot the cap is the old 45 (warden_cap).
 const WARDEN_POSTURE_CAP_ORDINARY := 45.0
 const WARDEN_VOLLEY := 0.5
 const BOSS_MULT := 0.5
@@ -804,11 +803,15 @@ func defend(amount: float, hp: float) -> float:
 	return clampf(amount * DAMAGE_TAKEN, 0.0, maxf(0.0, hp - 1.0))
 
 
-# The most one set piece adds on a closed Warden guard at this heft class (0 = unknown, ordinary).
-static func warden_cap(heft_class: int) -> float:
-	if heft_class < BossPosture.MONSTER_CLASS:
-		return WARDEN_POSTURE_CAP_ORDINARY
-	return WARDEN_POSTURE_CAP
+# The most one set piece adds on a closed Warden guard: 70 for a monster build (heft above the
+# fight's library top-bucket maximum, coordinator ruling (B) on #222, 21 Oct), else 45.
+static func warden_cap(monster: bool) -> float:
+	return WARDEN_POSTURE_CAP if monster else WARDEN_POSTURE_CAP_ORDINARY
+
+
+# warden_cap for a Warden node; one that cannot say reads as no monster, so 45.
+static func cap_for_warden(warden: Node) -> float:
+	return warden_cap(warden.monster_build() if warden.has_method("monster_build") else false)
 
 
 # Posture a hit on a closed Warden guard may still add in this set piece: the cap counts
@@ -817,7 +820,7 @@ static func warden_cap(heft_class: int) -> float:
 func warden_posture(warden: Node3D, result: Dictionary) -> void:
 	var id := warden.get_instance_id()
 	var spent := float(_posture_spent.get(id, 0.0))
-	var gain := minf(float(result.get("gain", 0.0)), maxf(0.0, warden_cap(warden.pilot_heft_class() if warden.has_method("pilot_heft_class") else 0) - spent))
+	var gain := minf(float(result.get("gain", 0.0)), maxf(0.0, cap_for_warden(warden) - spent))
 	result["gain"] = gain
 	result["shatter"] = false
 	result["crack"] = false

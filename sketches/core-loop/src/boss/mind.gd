@@ -1,5 +1,6 @@
 extends "res://src/boss/stub_boss.gd"
 
+const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
@@ -56,6 +57,8 @@ func _warden_spec() -> Dictionary:
 	var spec := super()
 	spec["family"] = Roster.MIND
 	spec["variant"] = "choir"
+	# The Mind is the stage 6 Warden: a monster build is heft above the library's top bucket at its own entrance, stage 6.
+	spec["monster_heft"] = MonsterHeft.mind_threshold()
 	spec["fleet"] = ctx.spawner.fleet if ctx.spawner != null and "fleet" in ctx.spawner else null
 	return spec
 

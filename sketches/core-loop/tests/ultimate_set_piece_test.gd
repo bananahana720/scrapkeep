@@ -18,7 +18,7 @@ const T := preload("res://tests/support/t.gd")
 # sources and the stage-entry restore; recall refunds, bail spends, a stage change and a
 # death abort; damage taken x0.2 with health floored at 1; Q breaks a hold and no hold starts
 # during the ride; the landing pays and ends the chain; the line cut publishes no "broke";
-# a closed Warden guard takes at most WARDEN_POSTURE_CAP posture in one set piece and an open core shatters;
+# a closed Warden guard takes at most its posture cap (Ultimate.warden_cap) in one set piece and an open core shatters;
 # the run log's rows. Evidence limit: the rules in a headless run, not the feel of the ride.
 
 const DT := 1.0 / 60.0
@@ -352,7 +352,7 @@ func _run() -> void:
 	_ult.press(_aim_at(_ground(18.0)))
 	await _ride_out()
 	var gained: float = w.posture() - before
-	_t.check("36 a closed guard takes at most the posture cap from one set piece", gained > 0.0 and gained <= preload("res://src/combat/ultimate.gd").WARDEN_POSTURE_CAP + 0.001 and w.chunks_left() == 4,
+	_t.check("36 a closed guard takes at most the posture cap from one set piece", gained > 0.0 and gained <= preload("res://src/combat/ultimate.gd").warden_cap(w.monster_build()) + 0.001 and w.chunks_left() == 4,
 		"gained %.2f, chunks %d" % [gained, w.chunks_left()])
 	await _home()
 	w._apply_posture({"gain": 100.0, "contact": false})

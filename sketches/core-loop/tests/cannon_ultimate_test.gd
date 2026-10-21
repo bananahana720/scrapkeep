@@ -228,7 +228,7 @@ func _cases() -> void:
 	var budget := {}
 	for i in 20:
 		_combat._cannon_set_piece_hit(w, 100.0, HOME, i == 19, false, budget)
-	_t.check("one set piece adds at most the Warden posture cap", float(budget.get(w.get_instance_id(), 0.0)) <= preload("res://src/combat/ultimate.gd").WARDEN_POSTURE_CAP and w.posture() > 0.0, str(budget))
+	_t.check("one set piece adds at most the Warden posture cap", float(budget.get(w.get_instance_id(), 0.0)) <= preload("res://src/combat/ultimate.gd").warden_cap(w.monster_build()) and w.posture() > 0.0, str(budget))
 	_t.eq("closed guard loses no chunk", w.chunks_left(), 4)
 	w._apply_posture({"gain": 100.0, "contact": false})
 	_t.check("core fixture is open", w.staggered())

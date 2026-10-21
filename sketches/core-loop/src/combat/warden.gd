@@ -7,6 +7,7 @@ const Habits := preload("res://src/combat/habits.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 
 # The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
 # it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
@@ -790,7 +791,7 @@ func chunk_cracked() -> bool:
 # What the rule says a hit does. The judge meets the plating this kind and part meet
 # (plating_for: the choir brace, the open point), so combat.resolve passes the part (F004).
 func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "") -> Dictionary:
-	_posture.set_pilot_class(pilot_heft_class())
+	_posture.set_monster(monster_build())
 	var result := _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating_for(hit_kind, part), "smash": smash, "tier": tier,
 			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp, "point": family_point()})
 	if hit_kind == "guard_rack":
@@ -802,17 +803,34 @@ func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "
 	return result
 
 
-# The run's heft class: from the fleet's run, else from a spec "heft_class" Callable (an arena
-# Warden has no fleet: the stub boss hands one in), else 0, which BossPosture and Ultimate read
-# as ordinary, so a Warden with no class source never gets the monster lift.
-func pilot_heft_class() -> int:
+# The run's heft: from the fleet's run, else from a spec "heft" Callable (an arena Warden has no
+# fleet: the stub boss hands one in), else 0.0, so a Warden with no heft source is never a monster.
+func pilot_heft() -> float:
 	var run = fleet.ctx.run if fleet != null and fleet.ctx != null else null
-	if run != null and run.has_method("heft_class"):
-		return int(run.heft_class())
-	var source = spec.get("heft_class")
+	if run != null and run.has_method("heft"):
+		return float(run.heft())
+	var source = spec.get("heft")
 	if source is Callable and source.is_valid():
-		return int(source.call())
-	return 0
+		return float(source.call())
+	return 0.0
+
+
+# The heft a pilot must be strictly above to be a monster build here: the spec's "monster_heft", else
+# the library's top-bucket maximum for this fight's stage (MonsterHeft), else INF (never a monster).
+func monster_threshold() -> float:
+	var given = spec.get("monster_heft")
+	if given is float or given is int:
+		return float(given)
+	var run = fleet.ctx.run if fleet != null and fleet.ctx != null else null
+	if run != null and "stage" in run:
+		return MonsterHeft.threshold_for_stage(int(run.stage))
+	if spec.has("stage"):
+		return MonsterHeft.threshold_for_stage(int(spec["stage"]))
+	return INF
+
+
+func monster_build() -> bool:
+	return pilot_heft() > monster_threshold()
 
 
 func _apply_posture(result: Dictionary) -> void:
