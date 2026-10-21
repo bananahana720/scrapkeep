@@ -19,6 +19,7 @@ const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
+const ParkProps := preload("res://src/presentation/park_props.gd")
 const AmbientLife := preload("res://src/presentation/ambient_life.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
@@ -62,6 +63,7 @@ var banner
 var hero_assets
 var ceremony
 var set_dressing: Node3D
+var park_props: Node3D
 var ambient_life: Node3D
 var title_stage: Node
 var ui_hidden := false
@@ -312,6 +314,12 @@ func _sync_dressing() -> void:
 	if is_instance_valid(set_dressing):
 		set_dressing.free()
 	set_dressing = null
+	# Park prop dressing is on for every park whatever the set-dressing preset flag says (it ranges itself down).
+	if is_instance_valid(park_props):
+		park_props.free()
+	park_props = ParkProps.new()
+	add_child(park_props)
+	park_props.setup(ctx)
 	if is_instance_valid(ambient_life):
 		ambient_life.free()
 	ambient_life = null
