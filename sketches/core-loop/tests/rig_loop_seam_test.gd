@@ -9,7 +9,7 @@ extends SceneTree
 # (5 mm, 0.5 degrees or 0.01 scale per frame). So a stepped track (a clock hand that ticks on
 # the beat grid, kill_first_rig.py) or a footfall that reverses mid-clip may reverse at the
 # seam too, while a smooth clip that arrives moving and leaves reversed fails.
-# Looped clips come from special_rig.gd CLIPS, linker.gd:48, mind_hand.gd:263, the
+# Looped clips come from special_rig.gd CLIPS, linker.gd:48, mind_hand.gd:265, the
 # hero_assets.gd idle replay and BossModel.loop_clip (boss_model.gd:72, LOOP_LINEAR): Brindle's
 # idle_roll (requisition.gd:253) and the scooter's chase (requisition.gd:321), and the Mind
 # kit's attention (mind_dress.gd:93). The Waking's `sleeping` is not here: waking_dress.gd

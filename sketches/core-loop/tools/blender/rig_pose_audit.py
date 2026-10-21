@@ -113,7 +113,7 @@ WORLDS = {
 NODE_RIGS = set(WORLDS["bosses"])
 
 # Clips the game loops. special_rig.gd:12-17 CLIPS (foreman idle, dispatcher idle, splitter
-# crawl, splitter_piece scurry); linker.gd:48 (idle, braced); mind_hand.gd:263 (still_track);
+# crawl, splitter_piece scurry); linker.gd:48 (idle, braced); mind_hand.gd:265 (still_track);
 # hero_assets.gd:2178 replays idle whenever a Warden clip ends.
 LOOPS = {
     "world_one/enemy_foreman": ["idle"],
