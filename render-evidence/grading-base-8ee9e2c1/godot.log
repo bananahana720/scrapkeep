@@ -1,0 +1,97 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+Vulkan 1.4.351 - Forward+ - Using Device #1: NVIDIA - NVIDIA GeForce RTX 3060
+ERROR: Condition "!present_queue_family" is true. Returning: FAILED
+   at: initialize (servers/rendering/rendering_device.cpp:8407)
+WARNING: Display driver x11 failed, falling back to wayland.
+   at: setup2 (main/main.cpp:3380)
+WARNING: xdg-toplevel-icon protocol not found! Cannot set window icon.
+   at: init (platform/linuxbsd/wayland/wayland_thread.cpp:5642)
+Vulkan 1.4.351 - Forward+ - Using Device #1: NVIDIA - NVIDIA GeForce RTX 3060
+
+SCRAPKEEP_MENU_READY ms=9664 profile=default pilots=1/6
+ACE music: generator ring 8191 frames, queue target 3072
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-8ee9e2c1/sketches/core-loop/assets/music_ace/title/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_named (res://src/presentation/audio.gd:1241)
+       [2] _menu_home (res://src/presentation/audio.gd:1230)
+       [3] _flush_flow (res://src/presentation/audio.gd:3425)
+       [4] park_transport (res://src/presentation/audio.gd:1954)
+       [5] _physics_process (res://src/world/world.gd:360)
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-8ee9e2c1/sketches/core-loop/assets/music_ace/spillway/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3349)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+SKIP control Fin.L
+SKIP control Fin.R
+snap 1-stage1-dawn
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-8ee9e2c1/sketches/core-loop/assets/music_ace/cable_reach/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3386)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+snap 2-stage2-morning
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-8ee9e2c1/sketches/core-loop/assets/music_ace/dig_upper/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3386)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+snap 3-stage3-noon
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-8ee9e2c1/sketches/core-loop/assets/music_ace/dig_deep/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3386)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+snap 4-stage4-afternoon
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-8ee9e2c1/sketches/core-loop/assets/music_ace/highdraft/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3386)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+snap 5-stage5-golden
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-8ee9e2c1/sketches/core-loop/assets/music_ace/highdraft_crown/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3386)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+snap 6-stage6-dusk
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-8ee9e2c1/sketches/core-loop/assets/music_ace/mind/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_named (res://src/presentation/audio.gd:1241)
+       [2] _begin_boss (res://src/presentation/audio.gd:2467)
+       [3] <anonymous lambda> (res://src/presentation/audio.gd:1641)
+       [4] enter_arena (res://src/boss/stub_boss.gd:66)
+       [5] enter_arena (res://src/boss/mind.gd:66)
+       [6] enter_boss (res://src/core/flow.gd:546)
+       [7] _run (res://tools/day_arc_capture.gd:60)
+       [8] _snap (res://tools/day_arc_capture.gd:100)
+snap 7-mind-crown-dusk
+snap 8-mind-fight-hud-0
+snap 9-mind-fight-hud-1
+snap 10-mind-fight-hud-2
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_scenario (servers/rendering/renderer_scene_cull.cpp:844)
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_base (servers/rendering/renderer_scene_cull.cpp:616)
