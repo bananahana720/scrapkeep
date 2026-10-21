@@ -30,10 +30,14 @@ class Post:
 		return global_position
 
 
-# A rack stand-in: the tip reads only active_id.
+# A rack stand-in: the tip reads enabled() (the actives option) and active_id.
 class Rack:
 	extends RefCounted
 	var active_id := ""
+	var on := true
+
+	func enabled() -> bool:
+		return on
 
 
 var _game
@@ -199,24 +203,65 @@ func _run() -> void:
 	interact.devices.append(post)
 	_advance(3.0)
 	_report("a stake post out of reach tells nothing", not tips.seen("stake") and _prompts.count("tip_stake") == 0, "prompts %s" % [_prompts])
+	# A tip still waiting when a new run starts belongs to the old run's moment: it is dropped, not
+	# shown in the new run, and told only when met again.
+	_fight(true)
+	post.global_position = _game.player.ball_position() + Vector3(FieldTips.STAKE_REACH - 5.0, 0.0, 0.0)
+	_advance(0.5)
+	var held: bool = tips.pending.has("stake")
+	_game.events.run_started.emit("pylon_engineer")
+	_report("a new run clears the queue", held and tips.pending.is_empty() and tips.showing == "",
+		"held %s, pending %s, showing %s" % [held, tips.pending, tips.showing])
+	_fight(false)
+	post.global_position = _game.player.ball_position() + Vector3(FieldTips.STAKE_REACH + 5.0, 0.0, 0.0)
+	var after_run := _advance(3.0)
+	_report("an old run's pending tip does not show in the new run", after_run.count("stake") == 0 and not tips.seen("stake")
+		and _prompts.count("tip_stake") == 0, "frames %d, prompts %s" % [after_run.count("stake"), _prompts])
+	# A tip on screen, not yet told, comes down with the old run and stays unseen.
+	_game.combat.companion_assist_full.emit()
+	_advance(0.1)
+	var up: bool = tips.showing == "companion" and _game.hud.toast_on_screen() == FieldTips.TIPS["companion"]
+	_game.events.run_started.emit("pylon_engineer")
+	var gone := _advance(3.0)
+	_report("a new run takes an untold tip down", up and gone.count("companion") == 0 and not tips.seen("companion")
+		and _prompts.count("tip_companion") == 0 and not _game.hud.toast_texts().has(FieldTips.TIPS["companion"]),
+		"was up %s, frames %d, prompts %s" % [up, gone.count("companion"), _prompts])
 	_tip("stake", func(): post.global_position = _game.player.ball_position() + Vector3(FieldTips.STAKE_REACH - 5.0, 0.0, 0.0))
 	interact.devices.erase(post)
-	post.queue_free()
 	_tip("companion", func(): _game.combat.companion_assist_full.emit())
 	var real_rack = _game.combat.actives
 	var rack := Rack.new()
 	_game.combat.actives = rack
 	_advance(3.0)
 	_report("an empty rack tells nothing", not tips.seen("active"), "prompts %s" % [_prompts])
+	rack.on = false
+	rack.active_id = "torch"
+	_advance(3.0)
+	_report("a rack with actives off tells nothing", not tips.seen("active") and tips.pending.is_empty(), "prompts %s" % [_prompts])
+	rack.on = true
+	rack.active_id = ""
 	_tip("active", func(): rack.active_id = "torch")
 	_game.combat.actives = real_rack
-	# A new run on the same profile repeats none of them.
+	# A new run on the same profile repeats none of them, every verb met again.
 	var count := _prompts.size()
 	_game.events.run_started.emit("pylon_engineer")
+	_game.combat.actives = rack
+	rack.active_id = "torch"
 	_game.player.state.carving = true
-	_advance(3.0)
+	_game.player.abilities.jam(0.5)
+	_game.player.abilities.casting = "special"
+	_game.combat.companion_assist_full.emit()
+	interact.devices.append(post)
+	post.global_position = _game.player.ball_position()
+	var again_run := _advance(3.0)
 	_game.player.state.carving = false
-	_report("no tip repeats in a new run", _prompts.size() == count, "prompts %d then %d" % [count, _prompts.size()])
+	_game.player.abilities.casting = ""
+	interact.devices.erase(post)
+	_game.combat.actives = real_rack
+	var drawn_tips := again_run.filter(func(id): return id != "")
+	_report("no tip repeats in a new run", _prompts.size() == count and drawn_tips.is_empty() and tips.pending.is_empty(),
+		"prompts %d then %d, drawn %s, pending %s" % [count, _prompts.size(), drawn_tips, tips.pending])
+	post.queue_free()
 	var reread := UiProfile.new(_game.storage_dir)
 	var saved := true
 	for id in FieldTips.TIPS:

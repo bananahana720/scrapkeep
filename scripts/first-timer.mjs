@@ -110,7 +110,7 @@ export const MECHANICS = [
   },
   {
     id: "cast",
-    name: "Cast times: a hit drops a cast",
+    name: "Cast times: a knock drops a cast",
     needed: "optional",
     need: "cast_started",
     teach: ["prompt:tip_cast"],

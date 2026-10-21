@@ -88,7 +88,7 @@ static var CONTROLS := controls()
 const FIELD_RULES := [
 	{"id": "grip", "words": "Wall grip: stay fast, climb walls"},
 	{"id": "jam", "words": "Jam: mats lock slots 2, 3"},
-	{"id": "cast", "words": "Cast time: hits drop casts"},
+	{"id": "cast", "words": "Cast time: knocks drop casts"},
 	{"id": "radio", "words": "Radio: . next , back / skip"},
 	{"id": "stake", "words": "Stake: hold E at relay mast"},
 	{"id": "active", "words": "F: fire your active"},

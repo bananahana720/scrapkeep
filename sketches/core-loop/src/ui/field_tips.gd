@@ -4,7 +4,8 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 # First-meet tips (HELP-REFRESH, alpha-status WHATS-LEFT row 8): the field rules no key prompt
-# carries, said once on a profile at the moment the player first meets them, as a toast.
+# carries, said once on a profile as a toast at the first calm moment after the player first
+# meets them: held while a fight is live and while another toast or tip holds the screen.
 #   grip       the ball carves a wall at the fast tier (state.carving)
 #   jam        a field's pulse jams the special and line slots (abilities.jams)
 #   cast       the bar holds a slot with a cast time, or one starts casting (abilities.casting)
@@ -22,11 +23,14 @@ const Palette := preload("res://src/core/palette.gd")
 # A fight keeps its word budget (ui_word_budget_test): while fight_live() no tip goes up and a
 # tip still on screen is taken down. Words come from the game's own: the Warden's slots are
 # numbers, the dial's keys are . , /.
+# A new run (events.run_started) clears the queue and takes down the tip on screen: each was
+# met in the old run's moment (its pilot's cast slot, a stake post, a rack, a halo), so it waits
+# to be met again rather than show out of context; nothing untold is marked seen.
 
 const TIPS := {
 	"grip": "Wall grip: stay fast and walls hold you.",
 	"jam": "Jammed: slots 2 and 3 shut. A fast ball slips the pulse.",
-	"cast": "Cast time: a hit or a second press drops it unspent.",
+	"cast": "Cast time: a knock or a second press drops it unspent.",
 	"radio": "Radio: . next station, , back, / skip the track.",
 	"stake": "Relay stake: hold E at the mast to raise the fight and the parts.",
 	"companion": "SPIL-9 is full: your next ram calls it in.",
@@ -56,6 +60,8 @@ func setup(game_ref, profile_ref, hud_ref) -> void:
 	profile = profile_ref
 	hud = hud_ref
 	process_mode = Node.PROCESS_MODE_PAUSABLE
+	if game != null and game.get("events") != null:
+		game.events.run_started.connect(_on_run_started)
 
 
 func seen(id: String) -> bool:
@@ -81,7 +87,8 @@ func _physics_process(delta: float) -> void:
 	if not seen("stake") and stake_near(player.ball_position()):
 		meet("stake")
 	var combat = game.get("combat")
-	if combat != null and not seen("active") and combat.get("actives") != null and combat.actives.active_id != "":
+	if combat != null and not seen("active") and combat.get("actives") != null and combat.actives.enabled() \
+			and combat.actives.active_id != "":
 		meet("active")
 	if abilities.casting != AbilityState.UNSTARTED:
 		meet("cast")
@@ -130,6 +137,17 @@ func meet(id: String, later := false) -> void:
 			at = i
 			break
 	pending.insert(at, id)
+
+
+func _on_run_started(_class_id: String) -> void:
+	pending.clear()
+	_later.clear()
+	_jams = 0
+	if showing != "":
+		hud.drop_toast(TIPS[showing])
+	showing = ""
+	_told = false
+	_shown_for = 0.0
 
 
 func _put_up(id: String) -> void:
