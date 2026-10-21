@@ -153,7 +153,7 @@ func _physics_process(delta: float) -> void:
 	super(delta)
 	if not active() or not is_instance_valid(warden) or floors == null:
 		return
-	floors.on_posture(warden.chunks_left())
+	floors.on_posture(shown_chunks_left())
 	while _queued < mini(floors.shattered, floors.floor_count()):
 		_queued += 1
 		_drops.append(_queued)
@@ -474,6 +474,10 @@ func _row() -> Dictionary:
 	return Worlds.BOSSES[BOSS_ID]
 
 
+func _hold_boss() -> String:
+	return BOSS_ID
+
+
 func _warden_spec() -> Dictionary:
 	var spec := super()
 	var numbers: Dictionary = spec.get("posture", {}).duplicate()
@@ -500,6 +504,10 @@ func music_state() -> Dictionary:
 	var state := super()
 	if not state.is_empty():
 		state["id"] = String(_row().get("music", BOSS_ID))
+		# A held phase reads as Brindle's does: the bar full, the music's held flag up.
+		if hold_active():
+			state["held"] = true
+			state["in_phase"] = 1.0
 		# Bedrock and the pit share the top phase: the final act, where the hype version plays.
 		state["phase"] = clampi(floors.shattered + 1, 1, Rules.PHASE_NAMES.size())
 	return state

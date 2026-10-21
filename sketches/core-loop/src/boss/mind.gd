@@ -55,6 +55,10 @@ func _row() -> Dictionary:
 	return Worlds.BOSSES[BOSS_ID]
 
 
+func _hold_boss() -> String:
+	return BOSS_ID
+
+
 func _warden_spec() -> Dictionary:
 	var spec := super()
 	spec["family"] = Roster.MIND
@@ -98,7 +102,7 @@ func _physics_process(delta: float) -> void:
 	super(delta)
 	if not active() or not is_instance_valid(warden):
 		return
-	var next := clampi(1 + BossPosture.CHUNKS - warden.chunks_left(), 1, MindAttacks.phase_cap())
+	var next := clampi(1 + BossPosture.CHUNKS - shown_chunks_left(), 1, MindAttacks.phase_cap())
 	if next == MindAttacks.phase_cap() and next > phase:
 		_brace_due = true
 		_attack_clock = minf(_attack_clock, 0.0)
@@ -260,6 +264,9 @@ func music_state() -> Dictionary:
 	if not state.is_empty():
 		state["id"] = String(_row().get("music", BOSS_ID))
 		state["phase"] = phase
+		if hold_active():
+			state["held"] = true
+			state["in_phase"] = 1.0
 	return state
 
 
@@ -270,7 +277,7 @@ func objective_text() -> String:
 	if warden.staggered():
 		var braced := "nothing" if warden.braced_kinds.is_empty() else "/".join(warden.braced_kinds)
 		return "%s is staggered: hit its open lens. It braces against %s." % [who, braced]
-	var text := "Fill %s's bar to stagger it. %d chunks left." % [who, warden.chunks_left()]
+	var text := "Fill %s's bar to stagger it. %d chunks left." % [who, shown_chunks_left()]
 	if _family != "":
 		text += " Incoming: %s." % _family.replace("_", " ")
 	if _family == "plate" and _plate_verb != "":

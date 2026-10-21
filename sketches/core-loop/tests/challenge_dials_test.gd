@@ -67,7 +67,7 @@ func _rules() -> void:
 		var ident: bool = true
 		if d is Array:
 			for x in d:
-				ident = ident and (float(x) == 1.0 or key.contains("counter"))
+				ident = ident and (float(x) == (0.0 if key.ends_with(".phase_min_by_phase") else 1.0) or key.contains("counter"))
 		else:
 			ident = float(d) == 1.0 or key == "brindle.combo" or key.ends_with(".combo")
 		if not ident:
@@ -78,6 +78,8 @@ func _rules() -> void:
 	_t.eq("parse floats", parsed["mind.damage_mult"], 1.5)
 	_t.eq("parse _by_phase arrays", parsed["waking.damage_by_phase"], [1.0, 1.25, 1.5, 2.0])
 	_t.eq("parse the combo", parsed["brindle.combo"], 2.0)
+	_t.eq("phase_min_by_phase parses as a list", ChallengeDials.parse("waking.phase_min_by_phase=18/18/18/18")["waking.phase_min_by_phase"], [18.0, 18.0, 18.0, 18.0])
+	_t.eq("phase_min_by_phase defaults to no hold", ChallengeDials.value("mind.phase_min_by_phase"), [0.0, 0.0, 0.0, 0.0])
 	ChallengeDials.quiet = true
 	_t.eq("parse drops an unknown key", ChallengeDials.parse("nope.nothing=3").size(), 0)
 	_t.eq("the unknown key is recorded as refused", ChallengeDials.rejected, ["challenge_dials: unknown dial 'nope.nothing' ignored"])

@@ -914,6 +914,13 @@ func monster_build() -> bool:
 
 
 func _apply_posture(result: Dictionary) -> void:
+	# A boss module's phase-minimum hold (stub_boss.gd hold_active): a closed Warden takes no posture.
+	var hold = spec.get("posture_hold")
+	if hold is Callable and hold.is_valid() and not _posture.staggered and hold.call():
+		result = result.duplicate()
+		result["gain"] = 0.0
+		result["crack"] = false
+		result["shatter"] = false
 	var before := _posture_signature()
 	var was_staggered := _posture.staggered
 	var chunks_before: int = _posture.chunks

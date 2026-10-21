@@ -31,6 +31,13 @@ var pad: StaticBody3D
 var warden: Node3D
 # The Warden's posture as last published; the stub has no fleet to publish it for the Warden.
 var _posture_seen: Array = []
+# Challenge dial <boss>.phase_min_by_phase (Brindle's PHASE_MIN_SECONDS, boss_rules.gd): a chunk lost
+# before its phase has lasted the dial's seconds holds the phase, and the Warden takes no posture
+# (warden.gd _apply_posture asks hold_active), until the minimum has passed. At the all-zero default
+# nothing is ever held. A subclass names its dial prefix in _hold_boss(); "" turns the hold off.
+var _phase_started := 0.0
+var _phase_open_at := 0.0
+var _chunks_lost_seen := 0
 
 
 func setup(ctx_ref) -> void:
@@ -60,6 +67,9 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_posture_seen = _posture_signature()
 	state = FIGHT
 	clock = 0.0
+	_phase_started = 0.0
+	_phase_open_at = 0.0
+	_chunks_lost_seen = 0
 	_place_ball(center, entry_velocity)
 	ctx.flow.boss_active = true
 	ctx.flow.boss_plating = live_plating()
@@ -81,8 +91,39 @@ func exit_arena() -> void:
 func _physics_process(delta: float) -> void:
 	if active():
 		clock += delta
+		_hold_update()
 		ctx.flow.boss_plating = live_plating()
 		_publish_posture()
+
+
+# The dial prefix of this boss's phase_min_by_phase ("waking", "mind"); "" means no hold.
+func _hold_boss() -> String:
+	return ""
+
+
+# Notes a chunk lost since the last look: the phase it ended began at _phase_started, and the next
+# opens at the later of now and that start plus the dial's seconds for the phase just played.
+func _hold_update() -> void:
+	if _hold_boss() == "" or not is_instance_valid(warden):
+		return
+	var lost: int = BossPosture.CHUNKS - warden.chunks_left()
+	if lost > _chunks_lost_seen:
+		_chunks_lost_seen = lost
+		var minimum := 0.0 if warden.chunks_left() <= 0 else ChallengeDials.by_phase(_hold_boss() + ".phase_min_by_phase", lost)
+		_phase_open_at = maxf(clock, _phase_started + minimum)
+		_phase_started = _phase_open_at
+
+
+# True while a lost chunk's phase has not yet played its minimum: the Warden is closed.
+func hold_active() -> bool:
+	_hold_update()
+	return clock < _phase_open_at
+
+
+# The chunks the fight reads as left: a held chunk still counts, so the phase, the floor and the
+# attacks wait for the minimum. Identical to warden.chunks_left() when nothing is held.
+func shown_chunks_left() -> int:
+	return warden.chunks_left() + (1 if hold_active() else 0)
 
 
 # A stage Warden publishes posture_changed and weak_point_opened through its fleet; the
@@ -124,6 +165,8 @@ func _warden_spec() -> Dictionary:
 	spec["family"] = Roster.REACTOR
 	spec["reach"] = PAD_RADIUS
 	# The arena Warden has no fleet, so it reads the pilot's heft from here (Warden.pilot_heft).
+	if _hold_boss() != "":
+		spec["posture_hold"] = Callable(self, "hold_active")
 	spec["heft"] = func() -> float: return float(ctx.run.heft()) if ctx != null and ctx.run != null else 0.0
 	return spec
 
