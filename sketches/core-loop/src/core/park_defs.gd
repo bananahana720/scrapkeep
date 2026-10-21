@@ -82,6 +82,21 @@ const PRESSURE := [
 	{"pack_scale": 1.40, "interval_scale": 0.80, "elite_rate": 1.60, "posture_curve": 1.10, "boss_phase_scale": 1.30},
 ]
 
+# Warden-fight packs (ruling 15 c'): drawn instead of "packs" while a Warden core is live, damage
+# dealers that close on a ball lapping the 6 m core ring. Stage 1 has none. Keep identical in park_defs.gd.
+const WARDEN_PACKS_REACH := [
+	{"id": "warden_press", "kinds": ["chaser", "chaser", "plated_brute"]},
+	{"id": "warden_lob", "kinds": ["chaser", "bola_thrower", "lobber"]},
+]
+const WARDEN_PACKS_DIG := [
+	{"id": "warden_bore", "kinds": ["burrower", "burrower", "drill_crew"]},
+	{"id": "warden_jaw", "kinds": ["drill_crew", "pit_jaw", "burrower"]},
+]
+const WARDEN_PACKS_HIGHDRAFT := [
+	{"id": "warden_dive", "kinds": ["kite_drone", "kite_drone", "ballast_heavy"]},
+	{"id": "warden_cut", "kinds": ["line_cutter", "kite_drone", "line_cutter"]},
+]
+
 const DEFS := [
 	{"stage": 1, "world": 1, "music": {"theme": 0, "ace": "spillway"}, "warden_family": "reactor", "name": "Spillway: the top shelf", "map": "park_dam", "threat": 1.0,
 		"unlock_base": 2, "ancient": "reactor_relic",
@@ -94,7 +109,7 @@ const DEFS := [
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "",
 		"posture": {"curve": POSTURE_CURVE * PRESSURE[1]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[1], "warden_hint": "Break its guard, then smash the core.",
-		"packs": PACKS_SHIFT, "elite": ELITE, "warden_variant": "meltdown"},
+		"packs": PACKS_SHIFT, "elite": ELITE, "warden_packs": WARDEN_PACKS_REACH, "warden_variant": "meltdown"},
 	{"stage": 3, "world": 2, "music": {"theme": 1, "ace": "dig_upper"}, "warden_family": "swarm", "name": "Dig: the upper bench", "map": "park_pit", "threat": 1.1,
 		"unlock_base": 2, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
@@ -106,7 +121,7 @@ const DEFS := [
 			{"id": "dig_lamps", "kinds": ["lamp_swarm", "lamp_swarm", "drill_crew"]},
 			{"id": "dig_shift", "kinds": ["foreman", "drill_crew", "drill_crew", "burrower"]},
 			{"id": "dig_jaws", "kinds": ["pit_jaw", "pit_jaw", "burrower"]},
-		], "elite": DIG_ELITE, "warden_variant": ""},
+		], "elite": DIG_ELITE, "warden_packs": WARDEN_PACKS_DIG, "warden_variant": ""},
 	{"stage": 4, "world": 2, "music": {"theme": 1, "ace": "dig_deep"}, "warden_family": "swarm", "name": "Dig: the deep works", "map": "park_sinkhole", "threat": 1.2,
 		"unlock_base": 4, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
@@ -118,7 +133,7 @@ const DEFS := [
 			{"id": "deep_crew", "kinds": ["drill_crew", "drill_crew", "lamp_swarm", "prop_crew"]},
 			{"id": "deep_shift", "kinds": ["foreman", "drill_crew", "drill_crew", "burrower"]},
 			{"id": "deep_jaws", "kinds": ["pit_jaw", "pit_jaw", "drill_crew", "burrower"]},
-		], "elite": DIG_ELITE, "warden_variant": "brood"},
+		], "elite": DIG_ELITE, "warden_packs": WARDEN_PACKS_DIG, "warden_variant": "brood"},
 	{"stage": 5, "world": 3, "music": {"theme": 2, "ace": "highdraft"}, "warden_family": "mind", "name": "Highdraft", "map": "park_islands", "threat": 1.3,
 		"unlock_base": 2, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
@@ -128,7 +143,7 @@ const DEFS := [
 			{"id": "draft_cut", "kinds": ["line_cutter", "line_cutter", "kite_drone"]},
 			{"id": "draft_anchor", "kinds": ["ballast_heavy", "line_cutter"]},
 			{"id": "draft_kites", "kinds": ["kite_drone", "kite_drone", "gap_net"]},
-		], "elite": ELITE_HIGHDRAFT, "warden_variant": ""},
+		], "elite": ELITE_HIGHDRAFT, "warden_packs": WARDEN_PACKS_HIGHDRAFT, "warden_variant": ""},
 	{"stage": 6, "world": 3, "music": {"theme": 2, "ace": "highdraft_crown"}, "warden_family": "mind", "name": "Highdraft: the crown", "map": "park_crown", "threat": 1.4,
 		"unlock_base": 4, "ancient": "mind_hand",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 5.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
@@ -138,7 +153,7 @@ const DEFS := [
 			{"id": "crown_cut", "kinds": ["line_cutter", "kite_drone", "gap_net"]},
 			{"id": "crown_anchor", "kinds": ["ballast_heavy", "ballast_heavy", "line_cutter"]},
 			{"id": "crown_kites", "kinds": ["kite_drone", "kite_drone", "gap_net", "ballast_heavy"]},
-		], "elite": ELITE_HIGHDRAFT, "warden_variant": "choir"},
+		], "elite": ELITE_HIGHDRAFT, "warden_packs": WARDEN_PACKS_HIGHDRAFT, "warden_variant": "choir"},
 ]
 
 
