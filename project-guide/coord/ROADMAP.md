@@ -15,7 +15,7 @@ Written 20 Oct 2026 after the [baseline](BASELINE-2026-10-20.md). It is linked f
 | --- | --- | --- |
 | #175, #184, #207, #217, #232, #238 (Systems B w18 chain) | Systems B | Gate each head, then re-record `run_tier_test` pins once on the stage after #214 lands |
 | Sable hard cell (#149) | Systems B | Rerun the capped rows at about 120 s; author no pack until that reads |
-| Ruling 15 c′ mobs-connect half (follows #234) | Challenge | Warden-fight packs |
+| #234 Warden spawn ring and the ruling 15 c′ mobs-connect half | World-2, Challenge | #234 alone makes the `posture_bands_swarm` camper break the hive and slows grown past 45 s; land it with the Warden-fight packs and re-pin the swarm bands once |
 | #191, #208, #209, #237 (skill bands to Spillway) | Challenge | Gate #191 and #208, re-gate #209, then stack #237 |
 | #220, #235 (dressing foundation, entry frames) | Dressing, Perf | Gate #220, then stack #235 |
 | #204, #206, #224 | World, Gate | Re-gate on the current stage (their PASS names an older SHA) |
