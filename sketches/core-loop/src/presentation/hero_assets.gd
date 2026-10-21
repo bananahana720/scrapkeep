@@ -35,7 +35,7 @@ const WARDEN_BODIES := {
 }
 # design-v3/wardens/<kind>.md section 5: the blend (s) each clip starts with.
 const WARDEN_BODY_BLENDS := {
-	"reactor": {"idle": 1.0, "pulse_warn": 2.0, "pulse": 0.1, "active": 0.5, "chunk_lost": 0.8, "chunk_lost_1": 0.8,
+	"reactor": {"idle": 1.0, "pulse_warn": 0.5, "pulse": 0.1, "active": 0.5, "chunk_lost": 0.8, "chunk_lost_1": 0.8,
 		"chunk_lost_2": 0.8, "chunk_lost_3": 0.8, "shrug": 0.2, "gates_open": 0.3, "pour": 0.3, "final_quiet": 2.0},
 	"swarm": {"idle": 1.0, "pulse": 0.1, "active": 0.5, "hoist_ride": 0.3, "snip": 0.2, "stagger_open": 0.5,
 		"chunk_shed": 0.8, "brood_dark": 0.5, "break": 2.0},
