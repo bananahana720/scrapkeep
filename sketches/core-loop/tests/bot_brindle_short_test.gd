@@ -21,7 +21,8 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 const SEED := 2
 const JUMP_STAGE := 2
 const HEFT_MAX := 1.3
-# Float tolerance on the 1.30 limit, not a looser rule: the deterministic phase 2 tally peak prints 1.30.
+# Float tolerance on the 1.30 limit, not a looser rule (the phase 2 tally peak printed 1.30 when the
+# run's discovery bursts still counted; with the codex seen it reads 1.00, scrapkeep#231).
 const HEFT_EPS := 0.005
 const CASES := [
 	{"phase": 2, "pilot": "tally", "cap_s": 120.0},
@@ -82,6 +83,14 @@ func _physics_process(delta: float) -> bool:
 			_boss = _game.ctx.boss
 			_boss.jump_to_phase(int(c["phase"]))
 			_chunks = int(_boss.chunks_left())
+			# A bare ball has not grown. A run's first discovery of each codex entry pays a scrap
+			# burst (flow.discovery_burst, 40 at stage 2), and which tricks a bot happens to set off
+			# first moves with any physics change: Tally's set piece and its cash-in paid 80 and took
+			# the peak from 1.30 to 1.36 once spawned enemies entered physics where they stand
+			# (scrapkeep#231). So the phase starts with the run's codex already seen; kill scrap
+			# still counts.
+			for id in _game.ctx.codex._entries:
+				_game.ctx.codex._run_seen[id] = true
 		else:
 			_driver.tick(delta)
 		return false

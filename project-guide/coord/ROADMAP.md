@@ -4,10 +4,10 @@ Written 20 Oct 2026 after the [baseline](BASELINE-2026-10-20.md). It is linked f
 
 ## Budget
 
-- **Two sources.** The account's weekly limit resets on 22 Oct and then weekly. About $100 of cloud credits remain after the baseline. The weekly limit is the main fuel. Credits cover overflow and urgent fixes only.
+- **Two sources (corrected 21 Oct).** The weekly limit reset on 21 Oct at 19:00Z, earlier than this plan assumed, and resets weekly after that (next 28 Oct 19:00Z). It is the main fuel. Extra usage (credits) stood at $38.37 of the $50 monthly cap, so about $11.60 is left this month for urgent fixes only. The app shows no balance that matches the earlier "about $100", so plan on $11.60. Pacing: weekly % used stays at or below the share of the week gone plus 10 points. Above that, no new lanes start.
 - **Calibration.** Wave 17's five Opus lane threads cost about $115 in one night (Perf $28, Systems B $36, Challenge $23, World-2 $13, parent $15).
 - **Model mix (Andrew, 20 Oct).** Use Sonnet 5.5 everywhere it can go. Opus 5.5 medium is only for the stage promotion gate. A Sonnet lane costs an estimated one third of an Opus lane, so a five-lane wave runs about $35 to $45. ASSERTED (unverified). Measure it with `get_session` usage at the end of wave 18 and correct this line.
-- **Rule.** Any wave that would draw more than $50 of credits stops and asks before its third lane starts.
+- **Rule.** A wave that would spend extra usage stops and asks before it starts a lane on credits.
 
 ## Carry-over into wave 18 (from the baseline)
 
@@ -42,13 +42,16 @@ The total is $20 to $100. It fits only if each wave's first half runs on the wee
 Each one would need Andrew's call. None is cut yet.
 
 1. **Ambient life (critters and locals).** It adds feel and is not on the 11-area acceptance list. Cost to the sitting: parks feel emptier.
-2. **HARD tier replay ladder.** Keep the skill bands, which are needed for boss tuning, and drop the ladder. Cost: no post-win difficulty climb.
-3. **Dressing beyond hero props.** One prop kit per park instead of 12 or more kinds. Cost: less lived-in parks.
-4. **Gamepad polish.** Already optional per ruling.
+2. **Dressing beyond hero props.** One prop kit per park instead of 12 or more kinds. Cost: less lived-in parks.
+3. **Gamepad polish.** Already optional per ruling.
 
-The following do not cut, because the acceptance gate needs them: zero placeholders, frame times in budget, the AppImage launch, all six dressed parks playable title to end, and the 81 radio takes.
+The following do not cut, because the acceptance gate needs them: zero placeholders, frame times in budget, the AppImage launch, all six dressed parks playable title to end, and the 81 radio takes. Since 21 Oct the difficulty work does not cut either: the skill-band targets in all six worlds and the HARD tier replay ladder. Andrew said the game must reach the challenge he expects. Challenge A owns worlds 1 to 3, and Challenge B owns worlds 4 to 6 and the ladder.
+
+## Lanes added 21 Oct (Andrew: keep churning, split by discipline, CPU work on the cloud)
+
+Cloud: Lighting, Grading, Animation, Effects, Challenge B, and Modeling (the wave 17 World Blender session, reused). PC: a render bench on the RTX 3060 for art stills, while the 4080 keeps perf. That makes 11 cloud lanes, over the old cap of 7, on Andrew's 21 Oct words. Pacing still applies: weekly % used stays at or below the share of the week gone plus 10 points. At 22:00Z, 3 hours in, it was 6%.
 
 ## Fixed dates
 
-- 22 Oct, 10 pm Phoenix time. The weekly limit resets, and wave 18 lanes start.
+- 21 Oct, 19:00Z. The weekly limit reset; wave 18 lanes started about 21:00Z. Next reset 28 Oct 19:00Z.
 - End of wave 21. Andrew's one sitting.
