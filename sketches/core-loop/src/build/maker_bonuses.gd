@@ -150,6 +150,7 @@ func _on_completed(bonus_id: String) -> void:
 		return
 	_announced[bonus_id] = true
 	ctx.events.cause_armed.emit("set_" + bonus_id)
+	ctx.events.maker_set_completed.emit(MakerSets.maker_of_bonus(bonus_id), bonus_id)
 	var fx = _effects()
 	if fx != null:
 		var ball: Vector3 = ctx.player.ball_position()
