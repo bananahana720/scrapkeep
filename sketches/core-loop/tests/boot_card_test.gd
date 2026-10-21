@@ -3,7 +3,7 @@ extends SceneTree
 # The 2D title card (src/boot/boot.gd; Andrew, 18 Oct, launch screen option A). Frame-driven, on a
 # headless display, with the card forced on (force_card). Checked: the card is interactive before
 # the game exists; it loads unpaced (no vsync, LOAD_FPS) and the hand-off puts the project's pacing
-# back; the game hands off and the 3D title's MENU_READY follows; a Start picked while
+# back before the game is added; the game hands off and the 3D title's MENU_READY follows; a Start picked while
 # loading is honoured once the game is up; a close request mid-load waits for the load; and the
 # synchronous path (what a headless launch, a test or a bot takes) leaves no card and no errors at
 # quit on the main scene's 300-frame boot.
@@ -45,8 +45,14 @@ func _run() -> void:
 	# 1. The card takes input before the game exists; an early Start is held, then honoured.
 	_t.check("the 3D title has not announced itself yet", not Screens._ready_announced)
 	var max_fps := Engine.max_fps
+	# A headless window has no vsync to read, so the checks read the frame cap the card sets with it.
+	var cap_at_game := []
+	var on_added := func(node: Node):
+		if node.name == "Game" and node.get_parent() == root:
+			cap_at_game.append(Engine.max_fps)
+	node_added.connect(on_added)
 	var boot = _card()
-	_t.check("the card loads unpaced: no vsync, the frame cap at LOAD_FPS", Engine.max_fps == boot.LOAD_FPS and int(boot._paced.get("max_fps", -1)) == max_fps, "max_fps %d" % Engine.max_fps)
+	_t.check("the card loads unpaced: the frame cap at LOAD_FPS, the project's saved", Engine.max_fps == boot.LOAD_FPS and int(boot._paced.get("max_fps", -1)) == max_fps, "max_fps %d" % Engine.max_fps)
 	boot._play.pressed.emit()
 	await process_frame
 	await process_frame
@@ -58,7 +64,8 @@ func _run() -> void:
 		quit(_t.verdict())
 		return
 	_t.check("MENU_READY follows the hand-off", Screens._ready_announced)
-	_t.check("the hand-off puts the project's vsync and frame cap back", Engine.max_fps == max_fps and boot._paced.is_empty(), "max_fps %d" % Engine.max_fps)
+	node_added.disconnect(on_added)
+	_t.check("the hand-off puts the project's pacing back before the game is added", cap_at_game == [max_fps] and Engine.max_fps == max_fps and boot._paced.is_empty(), "at the game %s, now %d" % [cap_at_game, Engine.max_fps])
 	_t.check("the early Start is honoured after the load", game.flow.state_name() == "class_select", game.flow.state_name())
 	_t.check("the card stopped taking input at the hand-off", boot._card.mouse_filter == Control.MOUSE_FILTER_IGNORE and not boot._play.has_focus())
 	var frames := 0

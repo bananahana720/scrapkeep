@@ -26,8 +26,8 @@ const FADE_S := 0.7
 # The fade waits for stage 1's ground behind the menu, at most this long, so the 3D park title is
 # what the card fades onto.
 const GROUND_WAIT_S := 1.5
-# A loader-thread call into the RenderingServer that returns a value waits for the main thread's
-# next frame, and at vsync a frame waits for the display (up to 16.7 ms a call). The card is one
+# A loader-thread call into the RenderingServer that returns a value is thought to wait for the main
+# thread's next frame, and at vsync a frame waits for the display (up to 16.7 ms a call). The card is one
 # flat panel, so while the game loads it draws without vsync, capped at LOAD_FPS, and the project's
 # vsync and frame cap come back at the hand-off, before the game's own setup runs. The 4080 read
 # cold menu-ready at 7.8 to 8.3 s before the card and 9.6 to 10.2 s with it (scrapkeep#241).
@@ -111,6 +111,10 @@ func _poll() -> void:
 			_add_game(load(GAME_SCENE))
 			if _closing:
 				_quit()
+
+
+func _exit_tree() -> void:
+	_repace()
 
 
 func _unpace() -> void:
