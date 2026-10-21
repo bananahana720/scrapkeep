@@ -12,6 +12,8 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 
 # The line half-width the graph bakes (tools/park_graph.gd LINE_M), the reach of the lane mask.
 const LANE_REACH_M := 8.0
+# A footprint is linear, a lane rather than an area, when its long side is at least this many times its short side.
+const LANE_LINEAR_ASPECT := 2.0
 const FIXTURE := "res://src/world/park/park_test.json"
 # Andrew's "Ride lips only" ruling (2026-10-17 06:16Z): a plain bank, drop, ground shelf or sky island whose height
 # stamp is its whole shape is terrain, not a placeholder, so scatter lands on it as on the open ground. The same rows
@@ -145,6 +147,7 @@ static func lane_mask(park_json: String, park_data: Dictionary) -> Dictionary:
 			for route: Dictionary in park_data.get("routes", []):
 				for id in [route.get("from", "")] + Array(route.get("via", [])) + [route.get("to", "")]:
 					routed[String(id)] = true
+			var edged := {}
 			var grinds := {}
 			for row: Dictionary in park_data.get("park_rows", []):
 				if row["verb"] == "grind" or row["element"] == "grind_line" or row["element"] == "rail":
@@ -156,6 +159,7 @@ static func lane_mask(park_json: String, park_data: Dictionary) -> Dictionary:
 					var row_id: String = graph.names[graph.ride[e]]
 					if not routed.has(row_id):
 						continue
+					edged[row_id] = true
 					var b: int = graph.to[e]
 					var chord: bool = grinds.has(row_id) and a < side * side and b < side * side
 					for end in ([a, b] if not chord else []):
@@ -163,6 +167,20 @@ static func lane_mask(park_json: String, park_data: Dictionary) -> Dictionary:
 							_mark_near(cells, graph, Vector2(graph.px[end], graph.pz[end]), Vector2(graph.px[end], graph.pz[end]))
 					if chord:
 						_mark_near(cells, graph, Vector2(graph.px[a], graph.pz[a]), Vector2(graph.px[b], graph.pz[b]))
+			# Issue #241 comment 6327153207: a routed row with no ride edge and a linear footprint (long side at least
+			# LANE_LINEAR_ASPECT times the short) is ridden along its length, so its long-axis centre chord is a lane too.
+			# A squarish area row (a bowl, a deck, a wide ground row) adds nothing: there is no lane in it to protect.
+			for row: Dictionary in park_data.get("park_rows", []):
+				if not routed.has(String(row["id"])) or edged.has(String(row["id"])):
+					continue
+				var f := _footprint(row)
+				var size := Vector2(absf((f["size"] as Vector2).x), absf((f["size"] as Vector2).y))
+				if maxf(size.x, size.y) < LANE_LINEAR_ASPECT * minf(size.x, size.y) or minf(size.x, size.y) <= 0.0:
+					continue
+				var facing := Vector2(sin(f["yaw"]), cos(f["yaw"]))
+				var along := facing if size.x >= size.y else Vector2(facing.y, -facing.x)
+				var half_len := maxf(size.x, size.y) * 0.5
+				_mark_near(cells, null, (f["at"] as Vector2) - along * half_len, (f["at"] as Vector2) + along * half_len)
 			mask = {"cells": cells, "side": side, "step": ParkGraph.STEP_M, "half": ParkGraph.HALF_M}
 	_lane_masks[graph_path] = mask
 	return mask

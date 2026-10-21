@@ -514,6 +514,7 @@ func _lane_scatter() -> void:
 		var report := []
 		var park_checked := 0
 		var park_over := 0
+		var flat_sunk := 0
 		for ground_name: String in grounds:
 			var ground: Callable = grounds[ground_name]
 			var g_checked := 0
@@ -533,7 +534,9 @@ func _lane_scatter() -> void:
 						problems.append("%s %s %s: %d pieces became %d" % [map_id, ground_name, row["kind"], free.size(), kept.size()])
 						continue
 					for i in free.size():
-						var inside := Scatter._in_lane(mask, free[i].origin.x, free[i].origin.z)
+						# A piece's origin sits a little off the point the mask tests (the lean sinks it along its normal), so on a cell's edge
+						# the origin can read the other side; a piece that did move is on the line.
+						var inside := Scatter._in_lane(mask, free[i].origin.x, free[i].origin.z) or (tall and free[i] != kept[i])
 						if not inside or not tall:
 							if free[i] != kept[i]:
 								changed += 1
@@ -562,9 +565,21 @@ func _lane_scatter() -> void:
 					flat_kept += in_lane
 				if changed > 0:
 					problems.append("%s %s %s: %d pieces changed that should not have" % [map_id, ground_name, row["kind"], changed])
+			if ground_name == "flat":
+				flat_sunk = g_checked
 			report.append("%s: %d tall pieces sunk, %d over the band before the sink" % [ground_name, g_checked, g_over])
 			park_checked += g_checked
 			park_over += g_over
+		# All the park's tall pieces on flat ground, for the share the line sinks.
+		var tall_all := 0
+		for row: Dictionary in rows:
+			var aabb2: AABB = Scatter._source(row["mesh"])["aabb"]
+			if row == flat_row or not Scatter.is_tall(row, aabb2):
+				continue
+			for ci in 10:
+				for cj in 10:
+					tall_all += Scatter.chunk_transforms(row, map, grounds["flat"], aabb2, ci, cj, []).size()
+		report.append("flat share sunk %.1f%% of %d tall pieces" % [100.0 * float(flat_sunk) / maxf(1.0, float(tall_all)), tall_all])
 		checked += park_checked
 		over_total += park_over
 		print("scatter_rows_test: %s lane mask %d of %d cells, %d chunks; %s" % [map_id, mask_cells, side * side, cells.size(), "; ".join(report)])
