@@ -490,6 +490,7 @@ func _lane_scatter() -> void:
 	var on_route_total := 0
 	var off_route_tall := 0
 	var checked := 0
+	var sunk_over := 0
 	var max_corner := -INF
 	for map_id: String in ["park_islands", "park_flume", "park_pit", "park_sinkhole"]:
 		var map = ParkMap.new("res://src/world/park/%s.json" % map_id)
@@ -511,7 +512,7 @@ func _lane_scatter() -> void:
 			var at: Vector2 = f["at"]
 			for x in [at.x - reach, at.x + reach]:
 				for z in [at.y - reach, at.y + reach]:
-					cells[Vector2i(clampi(floori((x + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9), clampi(floori((z + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, 9))] = true
+					cells[Vector2i(clampi(floori((x + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, ParkTerrain.TILES_PER_SIDE - 1), clampi(floori((z + ParkTerrain.HALF) / ParkTerrain.TILE_M), 0, ParkTerrain.TILES_PER_SIDE - 1))] = true
 		var report := []
 		for ground_name: String in grounds:
 			var ground: Callable = grounds[ground_name]
@@ -542,9 +543,15 @@ func _lane_scatter() -> void:
 								in_lane += 1
 							continue
 						in_lane += 1
+						var free_worst := -INF
 						for k in 8:
 							var corner: Vector3 = kept[i] * aabb.get_endpoint(k)
 							worst = maxf(worst, corner.y - (ground.call(corner.x, corner.z, 0.0) as Vector3).y)
+							var free_corner: Vector3 = free[i] * aabb.get_endpoint(k)
+							free_worst = maxf(free_worst, free_corner.y - (ground.call(free_corner.x, free_corner.z, 0.0) as Vector3).y)
+						# The negative: without the sink this piece would have stood over the band.
+						if free_worst > Scatter.LANE_BAND_M + 1e-4:
+							sunk_over += 1
 						# Sunk straight down: the same spot, the same lean, the same size.
 						if not (kept[i].basis.is_equal_approx(free[i].basis) and is_equal_approx(kept[i].origin.x, free[i].origin.x) and is_equal_approx(kept[i].origin.z, free[i].origin.z) and kept[i].origin.y <= free[i].origin.y + 1e-5):
 							changed += 1
@@ -563,6 +570,7 @@ func _lane_scatter() -> void:
 	t.check("every tall piece in an on-route scatter-dressed row is sunk to the band, none dropped, all else unchanged", problems.is_empty(), ", ".join(problems.slice(0, 8)))
 	print("scatter_rows_test: lane band, %d tall in-lane pieces checked, max corner height %.4f m" % [checked, max_corner])
 	t.check("tall pieces were checked in the lane rows", checked > 0, str(checked))
+	t.check("some in-lane pieces stood over the band before the sink", sunk_over > 0, str(sunk_over))
 	t.check("the parks carry on-route scatter-dressed rows to test", on_route_total > 0, str(on_route_total))
 	t.check("a flat row still lands in the lane rows", flat_kept > 0, str(flat_kept))
 	t.check("an off-route scatter-dressed row still gets tall pieces", off_route_tall > 0, str(off_route_tall))
