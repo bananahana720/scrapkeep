@@ -29,6 +29,10 @@ var map_id := ""
 var seed_value := 0
 var batches: Array[MultiMeshInstance3D] = []
 var _materials: Array[ShaderMaterial] = []
+# The protection mask last uploaded to _protected_for (_update_protection).
+var _protected_count := -1
+var _protected_rects: Array[Vector4] = []
+var _protected_for: Array[ShaderMaterial] = []
 var _dust: MultiMeshInstance3D
 var _clock := 0.0
 var _active := true
@@ -44,6 +48,9 @@ var _prep := {}
 var _dress_when_planned := false
 # Whether the current children were built from a worker's plan, for stage_entry_budget_test.
 var built_from_worker := false
+# Whether the last stage entry found its plan still drawing and left the build to _process, for
+# stage_entry_budget_test.
+var entry_deferred := false
 # The clutter kit's meshes and their target materials, read once (_kit_meshes).
 var _kit := {}
 var _kit_materials: Array[ShaderMaterial] = []
@@ -69,6 +76,7 @@ func setup(context) -> void:
 func _stage_entered(_stage: int, _retry: bool) -> void:
 	var started := Time.get_ticks_usec()
 	_active = true
+	entry_deferred = false
 	_build_stage()
 	last_entry_usec = Time.get_ticks_usec() - started
 
@@ -88,12 +96,17 @@ func _build_stage() -> void:
 	if key == _built_for and get_child_count() > 0:
 		_update_protection()
 		return
+	# A plan still drawing is never waited on here (DRESS-ENTRY: the wait was 140 to 380 ms of a
+	# stage entry on a quick exit, the plan taking ~360 ms on a worker, the build ~2 ms). The old
+	# stage's dressing goes, and _process builds this one the frame the worker is done.
+	if not _prep.is_empty() and _prep.key == key and not WorkerThreadPool.is_task_completed(_prep.task):
+		_clear_children()
+		_built_for = []
+		_dress_when_planned = true
+		entry_deferred = true
+		return
 	_built_for = key
-	for child in get_children():
-		child.free()
-	batches.clear()
-	_materials.clear()
-	_dust = null
+	_clear_children()
 	map_id = ctx.stages.of(stage).map
 	seed_value = map_id.hash()
 	_ground = ctx.terrain.ground_callable(stage)
@@ -112,6 +125,13 @@ func _build_stage() -> void:
 		streaks.material_override.set_shader_parameter("ground_streak", true)
 		streaks.material_override.set_shader_parameter("opacity", 0.018)
 	_update_protection()
+
+func _clear_children() -> void:
+	for child in get_children():
+		child.free()
+	batches.clear()
+	_materials.clear()
+	_dust = null
 
 func _key(stage: int, root: Node3D) -> Array:
 	return [stage, ctx.stages.of(stage).map, Preset.current, root.get_instance_id()]
@@ -583,16 +603,42 @@ func _update_protection(camera: Camera3D = null) -> void:
 		visible = false
 		return
 	# Scrap fills the remaining slots nearest the camera first, so a long scrap line
-	# cannot hide the whole ground dressing.
-	scrap = scrap.filter(func(piece): return piece is Node3D and piece.is_visible_in_tree())
-	scrap.sort_custom(func(a, b): return a.global_position.distance_squared_to(camera.global_position) < b.global_position.distance_squared_to(camera.global_position))
+	# cannot hide the whole ground dressing. The mask is a set of rectangles, so only which
+	# pieces get a slot matters: when they all fit, no ranking is needed.
+	var eye := camera.global_position
+	var pieces: Array[Node3D] = []
+	var distances := PackedFloat64Array()
 	for piece in scrap:
-		if rects.size() >= 64:
-			break
-		_add_rect(rects, camera, piece)
+		if piece is Node3D and piece.is_visible_in_tree():
+			pieces.append(piece)
+			distances.append(piece.global_position.distance_squared_to(eye))
+	# Nearest first, a band of as many pieces as there are free slots at a time; a piece off
+	# the screen takes no slot, so the next band fills the slots it left.
+	var ranked := distances.duplicate()
+	if pieces.size() > 64 - rects.size():
+		ranked.sort()
+	else:
+		ranked = PackedFloat64Array([INF])
+	var taken_upto := -INF
+	var r := 0
+	while rects.size() < 64 and r < ranked.size():
+		var upto := ranked[mini(r + 64 - rects.size(), ranked.size()) - 1]
+		for k in pieces.size():
+			if rects.size() >= 64:
+				break
+			if distances[k] > taken_upto and distances[k] <= upto:
+				_add_rect(rects, camera, pieces[k])
+		taken_upto = upto
+		r = ranked.bsearch(upto, false)
 	var count := rects.size()
 	while rects.size() < 64:
 		rects.append(Vector4(-1.0, -1.0, -1.0, -1.0))
+	# The same mask for the same materials needs no upload.
+	if count == _protected_count and rects == _protected_rects and _materials == _protected_for:
+		return
+	_protected_count = count
+	_protected_rects = rects
+	_protected_for = _materials.duplicate()
 	for material in _materials:
 		material.set_shader_parameter("protected_count", count)
 		material.set_shader_parameter("protected_rects", rects)

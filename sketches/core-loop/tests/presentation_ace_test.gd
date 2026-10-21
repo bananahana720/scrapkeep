@@ -85,7 +85,7 @@ func _enters(seq, from := 0) -> Array:
 
 
 # Calm from 0; pressure rises mid-bar (travel on the bar); the drop-line commit mid-bar
-# (pivot on the bar, build one 172 bar later); telegraph and open mid-bar (each on the
+# (pivot on the bar, build one pivot-clip bar later: the pivot is a 129 bar); telegraph and open mid-bar (each on the
 # next 129 beat, keeping the bar's beat); closed (build on the next bar, at its bar 9).
 func _bar_locked() -> void:
 	var seq := Ace.new()
@@ -94,6 +94,7 @@ func _bar_locked() -> void:
 	var cbar := int(calm["bar"])
 	var wbar := int(build["bar"])
 	var wbeat := int(build["beat"])
+	var pbar := int(seq.clips["pivot"]["bar"])
 	seq.start_level(0)
 	var rows := []
 	var ok := true
@@ -110,9 +111,9 @@ func _bar_locked() -> void:
 	_render_to(seq, 8 * cbar)
 	var got := _enters(seq, asked)
 	var pivot_at := 5 * cbar
-	ok = ok and got.size() >= 2 and got[0][2] == "pivot" and int(got[0][1]) == pivot_at and got[1][2] == "build" and int(got[1][1]) == pivot_at + cbar
-	rows.append("commit at %d: %s (pivot at bar 5 = %d, build at %d)" % [asked, got.map(func(e): return "%s@%d" % [e[2], e[1]]), pivot_at, pivot_at + cbar])
-	var origin := pivot_at + cbar
+	ok = ok and got.size() >= 2 and got[0][2] == "pivot" and int(got[0][1]) == pivot_at and got[1][2] == "build" and int(got[1][1]) == pivot_at + pbar
+	rows.append("commit at %d: %s (pivot at bar 5 = %d, build at %d)" % [asked, got.map(func(e): return "%s@%d" % [e[2], e[1]]), pivot_at, pivot_at + pbar])
+	var origin := pivot_at + pbar
 	_render_to(seq, origin + 2 * wbar + wbeat + 5000)
 	asked = seq.clock
 	seq.set_warden_state("telegraph")
@@ -433,15 +434,16 @@ func _joins() -> void:
 	var cbar := int(seq.clips["calm"]["bar"])
 	var wbar := int(seq.clips["build"]["bar"])
 	var wbeat := int(seq.clips["build"]["beat"])
+	var pbar := int(seq.clips["pivot"]["bar"])
 	seq.start_level(0)
 	_render_to(seq, cbar + 1000, 997)
 	seq.commit_warden()
 	var pivot_at := 2 * cbar
 	_render_to(seq, pivot_at + 2000, 997)
 	seq.set_warden_state("telegraph")
-	_render_to(seq, pivot_at + cbar + 2 * wbar, 997)
+	_render_to(seq, pivot_at + pbar + 2 * wbar, 997)
 	var got: Array = _enters(seq, pivot_at)
-	var build_at := pivot_at + cbar
+	var build_at := pivot_at + pbar
 	var tele: Array = got.filter(func(e): return e[2] == "telegraph")
 	var tele_ok: bool = got.size() >= 3 and got[1][2] == "build" and int(got[1][1]) == build_at and tele.size() == 1 \
 		and int(tele[0][1]) == build_at + wbeat

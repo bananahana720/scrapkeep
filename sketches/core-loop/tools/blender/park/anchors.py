@@ -23,7 +23,7 @@
 Soft toy (Andrew, 18 Oct): polish.enable below opts the kit into tools/blender/POLISH.md. Each convex piece is bevelled on its
 hard edges (a few cm to 0.2 m, never more than a quarter of the piece's thinnest side) and smooth shaded; edges past a
 per-piece crease angle stay hard (hex basalt corners, timber and strap corners keep a crisp bevelled edge). Round profiles
-carry 8 to 16 sides (hoodoo 10 or 12, cairn 9 to 12, saguaro 16 ribs, the small rings 8), and the AO and edge-wear bake
+carry 8 to 24 sides (hoodoo 12 to 14, cairn 12 to 16, saguaro 24 sides with 12 ribs, the small rings 12 segments of 4), and the AO and edge-wear bake
 multiplies the `enamel` vertex colour. The bake runs on the render mesh before the `-col` box is attached, so the box
 casts no occlusion and gets no UV. The render mesh carries a zeroed TEXCOORD_0 and the `Bake` UV map (TEXCOORD_1); the
 loader ignores UVs. Whether normals stay right under the loader's Y stretch is NOT verified here: it depends on how the
@@ -44,8 +44,9 @@ Authoring contract (the machine-side change to park_recipes.gd place_anchor_fiel
   eye, crown and collar, pin and ring) sits in the top 20 % (y 7 and up); every round feature is a horizontal ring or a
   vertical column, which stay round under a Y stretch. Geometry is continuous from y -1 up, so no part floats at any
   stretch.
-  Instanced through one MultiMesh per field: each render mesh is at most 700 triangles (BASE_TRIS; 400 before the soft-toy
-  pass; the dam and crown fields each draw over 6,000 posts, so the cap stays low until a frame check clears a higher one), a single mesh, a single material (`enamel`, vertex colour as albedo, as ledges.py). Deliberate deviation from the park family convention: no detail
+  Instanced through one MultiMesh per field: each render mesh is at most 1,000 triangles (BASE_TRIS; 400 before the soft-toy
+  pass, 700 before the 19 Oct ruling on #149; the dam and crown fields each draw over 6,000 posts, so going above 1,000 needs a
+  quiet-machine 4080 frame check first), a single mesh, a single material (`enamel`, vertex colour as albedo, as ledges.py). Deliberate deviation from the park family convention: no detail
   shells (_detail1/_detail2); instanced posts get no shells. Each GLB still carries the collision mesh `<id>-col`
   (the 8 x 8 x 10 post box, never drawn) so it matches the family's file shape; the loader keeps its BoxShape3D colliders.
 
@@ -88,7 +89,7 @@ MODELS = Path(common.SKETCH) / "assets/models/park"
 POST_HALF = 4.0            # ANCHOR_POST_M / 2 (park_recipes.gd)
 SINK = 1.0                 # ANCHOR_SINK_M
 TOP = 9.0                  # authored height 10 m from y -1
-BASE_TRIS = 700            # MultiMesh instancing cap per post, polished (was 400 flat shaded; class detail caps at 4,000)
+BASE_TRIS = 1000           # MultiMesh instancing cap per post, polished (400 flat shaded; 700 until the 19 Oct ruling on #149; class detail caps at 4,000)
 DETAIL_VERTS = 8000        # assets/asset_budgets.json class detail
 IDENTITY_Y = TOP - 2.0     # the top 20 % of the 10 m
 
@@ -116,6 +117,8 @@ SAGUARO = ("7d8b6a", "5f7552", "3f5a3e")
 SAGUARO_RIB = ("8a9876", "6b7f5c", "4c6a4b")
 SAND = ("d8c39a", "c9ad80", "8a7050")
 STONES = [SANDTOP, CREAM, RED, ("c8b494", "b3a07e", "7a6a50"), ("b78a62", "a8794f", "6e4e34")]
+WARM_STONES = [RED, ("b78a62", "a8794f", "6e4e34")]           # iron-oxide red and tan
+PALE_STONES = [SANDTOP, CREAM, ("c8b494", "b3a07e", "7a6a50")]
 
 
 def hexf(h):
@@ -460,11 +463,11 @@ def lerp_profile(profile, y):
 # ---------------------------------------------------------------------------------------------------------------- hoodoo
 # bands, waist profile [(y, r)], lean (x, z per metre), cap bottom y, cap radii
 HOODOO = {
-    "a": {"sides": 12, "bands": 6, "profile": [(.3, 3.05), (2.4, 2.55), (5.2, 1.4), (6.6, 1.7), (7.4, 2.05)], "lean": (0.0, 0.0), "cap_y": 7.4,
+    "a": {"sides": 14, "bands": 6, "profile": [(.3, 3.05), (2.4, 2.55), (5.2, 1.4), (6.6, 1.7), (7.4, 2.05)], "lean": (0.0, 0.0), "cap_y": 7.4,
           "cap": [(2.95, 3.25, 1.0), (2.75, 2.3, .6)], "tilt": (0.0, 0.0)},
-    "b": {"sides": 10, "bands": 8, "profile": [(.3, 2.7), (3.0, 2.1), (5.6, 1.2), (7.1, 1.5), (7.7, 1.8)], "lean": (.11, .04), "cap_y": 7.7,
+    "b": {"sides": 12, "bands": 8, "profile": [(.3, 2.7), (3.0, 2.1), (5.6, 1.2), (7.1, 1.5), (7.7, 1.8)], "lean": (.11, .04), "cap_y": 7.7,
           "cap": [(2.35, 2.6, .8), (2.4, 1.9, .5)], "tilt": (.35, -.15)},
-    "c": {"sides": 10, "bands": 5, "profile": [(.3, 3.3), (2.6, 3.0), (4.6, 2.1), (6.4, 1.3), (7.0, 1.6)], "lean": (-.04, .05), "cap_y": 7.0,
+    "c": {"sides": 14, "bands": 5, "profile": [(.3, 3.3), (2.6, 3.0), (4.6, 2.1), (6.4, 1.3), (7.0, 1.6)], "lean": (-.04, .05), "cap_y": 7.0,
           "cap": [(2.6, 2.75, .9), (1.9, 2.05, .55), (1.25, .9, .55)], "tilt": (-.2, .3)},
 }
 
@@ -496,7 +499,7 @@ def hoodoo(base, variant):
         ya, yb = edges[k], edges[k + 1]
         step = 1.0 + r.uniform(-.06, .07)
         tone = REDS[k % 3] if k % 2 == 0 else CREAMS[(k // 2) % 2]
-        # round strata: ten to twelve sides, smooth shaded (an 80 degree crease keeps the jittered facets blended)
+        # round strata: 12 to 14 sides, smooth shaded (an 80 degree crease keeps the jittered facets blended)
         lo_ring, top_ring = base.frustum(ya, yb, lerp_profile(p["profile"], ya) * step, lerp_profile(p["profile"], yb) * step, sides, tone,
                                          centre(ya), centre(yb), phase=r.uniform(0, 1), radii=jitter(r, sides, .07), caps=(k == 0, True))
         if k:
@@ -508,13 +511,23 @@ def hoodoo(base, variant):
     total = sum(h for _, _, h in p["cap"])
     scale = (TOP - y) / total
     tilt = p["tilt"]
-    base.look = {"bevel": .12, "sharp": 80.0}
+    base.look = {"bevel": .15, "sharp": 80.0, "segments": 2}      # polish clamps to a quarter of the thinnest slab, about .15
+    cap_top = None
     for k, (ra, rb, h) in enumerate(p["cap"]):
         h *= scale
         ca, cb = centre(y), centre(y + h)
         off = (tilt[0] * k, tilt[1] * k)
-        base.frustum(y, y + h, ra, rb, sides - 2, CAPROCK if k % 2 == 0 else CAPROCK2, (ca[0] + off[0], ca[1] + off[1]),
-                     (cb[0] + off[0] + tilt[0] * .5, cb[1] + off[1] + tilt[1] * .5), phase=r.uniform(0, 1), radii=jitter(r, sides - 2, .1))
+        tone = CAPROCK if k % 2 == 0 else CAPROCK2
+        # a slab after the first has no bottom cap while its bottom ring sits inside the slab below (the cap would be hidden);
+        # where the tilt makes it overhang, a flat unbevelled floor closes it instead (check_recipe asserts one or the other)
+        lo_ring, top_ring = base.frustum(y, y + h, ra, rb, sides, tone, (ca[0] + off[0], ca[1] + off[1]),
+                                         (cb[0] + off[0] + tilt[0] * .5, cb[1] + off[1] + tilt[1] * .5), phase=r.uniform(0, 1),
+                                         radii=jitter(r, sides, .05), caps=(k == 0, True))
+        if k:
+            if not inside_by(lo_ring, cap_top, .15):
+                base.floor(lo_ring, tone)
+            base.joints.append(("cap slab %d" % k, lo_ring, cap_top, .15))
+        cap_top = top_ring
         y += h
 
 
@@ -537,7 +550,7 @@ def basalt(base, variant):
     for x, z, rad, top, lx, lz, drips in BASALT_COLS[variant]:
         phase = r.uniform(0, math.pi / 3)
         span = top - .25
-        tone = BASALT if r.random() < .6 else BASALT2
+        tone = BASALT if base.crng.random() < .6 else BASALT2
 
         def at(y, x=x, z=z, lx=lx, lz=lz, span=span):
             f = (y - .25) / span
@@ -547,10 +560,12 @@ def basalt(base, variant):
         crust_h = .45 + .05 * rad
         # the glow band rising out of the apron, then the column, then the crust lip. The cut faces stay hexagonal: the six
         # vertical edges take a bevel wide enough to read from 40 m, and smooth shading rounds what is left of each corner.
-        base.look = {"bevel": 0.0}      # the glow band is short and half buried in the apron: no bevel, to hold the triangle cap
+        base.look = {"bevel": .08}      # the glow band is half buried in the apron; its six vertical edges still round
         base.frustum(g0, g1, rad * 1.03, rad, 6, GLOW, at(g0), at(g1), phase, caps=(False, False), mottle=.04)
-        base.look = {"bevel": .13}
+        # the six column edges take two bevel segments
+        base.look = {"bevel": .13, "segments": 2}
         base.frustum(g1, top - crust_h, rad, rad * .94, 6, tone, at(g1), at(top - crust_h), phase, caps=(False, False))
+        base.look = {"bevel": .13}      # the crust is about .5 m tall, so polish clamps a wider bevel to a quarter of that
         base.frustum(top - crust_h, top, rad * 1.1, rad * 1.04, 6, CRUST, at(top - crust_h), at(top), phase)
         cx, cz = at(top - crust_h)
         base.look = {"bevel": 0.0}
@@ -577,7 +592,7 @@ def timber(base, variant):
     r = base.rng
     hw = p["hw"]
     fy = p["footing"]
-    base.look = {"bevel": .1}
+    base.look = {"bevel": .12, "segments": 2}
     base.box((-3.8, -SINK, -3.8), (3.8, fy, 3.8), FOOTING, skip=("-y",), mottle=.12)
     cx_, cz_, cap_y = p["cap"]
     # the timbers: a grid of square sticks with a small gap, sunk 0.1 into the footing
@@ -589,7 +604,7 @@ def timber(base, variant):
         for k in range(nz):
             x0, z0 = -hw + i * (wx + gap), -hw + k * (wz + gap)
             base.box((x0, fy - .1, z0), (x0 + wx, cap_y + .05, z0 + wz), TIMBER if (i + k) % 2 == 0 else TIMBER_DARK, skip=("-y", "+y"), mottle=.14)
-    base.look = {"bevel": .06}
+    base.look = {"bevel": .06, "segments": 2}
     for y in p["straps"]:
         base.box((-hw - .1, y, -hw - .1), (hw + .1, y + .38, hw + .1), IRON, mottle=.06)
     if p["braces"]:
@@ -600,7 +615,7 @@ def timber(base, variant):
             poly = [(s * a, cap_y - 2.2), (s * a, cap_y - 1.5), (s * b, cap_y + .02), (s * (b - .7), cap_y + .02)]
             base.prism_z(poly, -.55, .55, TIMBER_DARK, mottle=.1)
     # the bolted cap block, top exactly at TOP, and bolt heads on its faces
-    base.look = {"bevel": .12}
+    base.look = {"bevel": .16, "segments": 2}
     base.box((-cx_, cap_y, -cz_), (cx_, TOP, cz_), TIMBER_DARK, mottle=.1)
     ym = (cap_y + TOP) / 2
     base.look = {"bevel": 0.0}
@@ -619,7 +634,7 @@ def timber(base, variant):
             for dy in (-.42, .42):
                 base.box((dx - .07, ey + dy - .07, face + .1), (dx + .07, ey + dy + .07, face + .18), BRASS, skip=("-z",), mottle=.03)
         base.box((-.22, ey - .12, face + .1), (.22, ey + .12, face + .78), BRASS, skip=("-z",), mottle=.04)
-        base.ring((0.0, ey, face + .78), .42, .09, BRASS)
+        base.ring((0.0, ey, face + .78), .42, .09, BRASS, segments=12, sides=4)
     else:
         face = hw
         base.box((face, ey - .65, -.85), (face + .1, ey + .65, .85), COPPER, skip=("-x",), mottle=.06)
@@ -627,7 +642,7 @@ def timber(base, variant):
             for dy in (-.42, .42):
                 base.box((face + .1, ey + dy - .07, dz - .07), (face + .18, ey + dy + .07, dz + .07), BRASS, skip=("-x",), mottle=.03)
         base.box((face + .1, ey - .12, -.22), (face + .78, ey + .12, .22), BRASS, skip=("-x",), mottle=.04)
-        base.ring((face + .78, ey, 0.0), .42, .09, BRASS)
+        base.ring((face + .78, ey, 0.0), .42, .09, BRASS, segments=12, sides=4)
 
 
 # ---------------------------------------------------------------------------------------------------------------- saguaro
@@ -644,14 +659,14 @@ def saguaro(base, variant):
     r = base.rng
     rad = p["r"]
     lean = p["lean"]
-    ribs = 16
+    ribs = 24
     rib = [1.0 if k % 2 == 0 else .88 for k in range(ribs)]
 
     def at(y):
         f = max(0.0, y) / TOP
         return (lean[0] * f * f, lean[1] * f * f)
 
-    # soft flutes: sixteen sides, eight ribs, smooth to a 75 degree crease so the flutes round instead of cutting; one bevel segment on the mound
+    # soft flutes: 24 sides, 12 ribs, smooth to a 75 degree crease so the flutes round instead of cutting; one bevel segment on the mound
     base.look = {"bevel": .1, "sharp": 75.0}
     base.frustum(-SINK, .35, 2.9, 2.0, 12, SAND, phase=r.uniform(0, 1), radii=jitter(r, 12, .08), caps=(False, True))
     base.look = {"bevel": 0.0, "sharp": 75.0}
@@ -668,16 +683,16 @@ def saguaro(base, variant):
         d = (math.cos(ang), math.sin(ang))
         start = (c[0] + d[0] * rad * .5, ye - .35, c[1] + d[1] * rad * .5)
         elbow = (c[0] + d[0] * reach, ye + .35, c[1] + d[1] * reach)
-        arm = [1.0 if k % 2 == 0 else .88 for k in range(12)]
-        base.rod(start, elbow, ar, SAGUARO, sides=12, caps=(False, True))
-        base.frustum(ye - ar * .6, tip - .45, ar * 1.02, ar * .95, 12, SAGUARO_RIB, (elbow[0], elbow[2]), (elbow[0], elbow[2]),
+        arm = [1.0 if k % 2 == 0 else .88 for k in range(16)]
+        base.rod(start, elbow, ar, SAGUARO, sides=16, caps=(False, False))     # the elbow end is buried in the upright
+        base.frustum(ye - ar * .6, tip - .45, ar * 1.02, ar * .95, 16, SAGUARO_RIB, (elbow[0], elbow[2]), (elbow[0], elbow[2]),
                      radii=arm, caps=(True, False), mottle=.06)
-        base.frustum(tip - .45, tip, ar * .95, 0.0, 12, SAGUARO, (elbow[0], elbow[2]), (elbow[0], elbow[2]),
+        base.frustum(tip - .45, tip, ar * .95, 0.0, 16, SAGUARO, (elbow[0], elbow[2]), (elbow[0], elbow[2]),
                      radii=arm, caps=(False, False), mottle=.04)
     # the iron collar under the crown, a lug and a flat anchor ring on it
     cc = at((collar0 + collar1) / 2)
     base.look = {"bevel": .06}
-    base.frustum(collar0, collar1, rad * 1.06, rad * 1.05, 16, IRON, at(collar0), at(collar1), mottle=.05)
+    base.frustum(collar0, collar1, rad * 1.06, rad * 1.05, 24, IRON, at(collar0), at(collar1), mottle=.05)
     base.look = {"bevel": 0.0}
     ang = p["arms"][0][0] + math.pi / 2
     d = (math.cos(ang), math.sin(ang))
@@ -685,15 +700,15 @@ def saguaro(base, variant):
     lug1 = rad * 1.05 + .55
     ym = (collar0 + collar1) / 2
     base.rod((cc[0] + d[0] * lug0, ym, cc[1] + d[1] * lug0), (cc[0] + d[0] * lug1, ym, cc[1] + d[1] * lug1), .13, IRON, sides=4)
-    base.ring((cc[0] + d[0] * (lug1 + .3), ym, cc[1] + d[1] * (lug1 + .3)), .38, .08, IRON)
+    base.ring((cc[0] + d[0] * (lug1 + .3), ym, cc[1] + d[1] * (lug1 + .3)), .38, .08, IRON, segments=12, sides=4)
 
 
 # ---------------------------------------------------------------------------------------------------------------- cairn
 # stones: relative heights, radii, drift per stone (x, z), and the pin's height over the top stone
 CAIRN_V = {
-    "a": {"sides": 12, "h": [1.5, 1.1, 1.0, 1.05, .95, .9, .85, .8], "r": [3.6, 3.25, 2.95, 2.6, 2.3, 2.0, 1.7, 1.4], "drift": (0.0, 0.0), "pin": .9},
-    "b": {"sides": 10, "h": [1.4, .8, .75, .8, .7, .75, .7, .65, .7, .6], "r": [3.5, 3.0, 2.8, 2.55, 2.35, 2.15, 1.9, 1.7, 1.5, 1.3], "drift": (.2, .09), "pin": .85},
-    "c": {"sides": 12, "h": [1.9, 1.5, 1.4, 1.35, 1.2, 1.1], "r": [3.62, 3.3, 2.8, 2.35, 1.9, 1.5], "drift": (-.08, .12), "pin": 1.0},
+    "a": {"sides": 16, "h": [1.5, 1.1, 1.0, 1.05, .95, .9, .85, .8], "r": [3.6, 3.25, 2.95, 2.6, 2.3, 2.0, 1.7, 1.4], "drift": (0.0, 0.0), "pin": .9},
+    "b": {"sides": 13, "h": [1.4, .8, .75, .8, .7, .75, .7, .65, .7, .6], "r": [3.5, 3.0, 2.8, 2.55, 2.35, 2.15, 1.9, 1.7, 1.5, 1.3], "drift": (.2, .09), "pin": .85},
+    "c": {"sides": 16, "h": [1.9, 1.5, 1.4, 1.35, 1.2, 1.1], "r": [3.62, 3.3, 2.8, 2.35, 1.9, 1.5], "drift": (-.08, .12), "pin": 1.0},
 }
 
 
@@ -706,14 +721,20 @@ def cairn(base, variant):
     hs = [h * span / sum(p["h"]) for h in p["h"]]
     y = -SINK
     cx = cz = 0.0
-    # pillowy stones: nine to twelve sides (alternate stones one fewer), smooth shaded, a wide bevel on the top rim. Each
+    # pillowy stones: 12 to 16 sides (alternate stones one fewer), smooth shaded, a wide bevel on the top rim. Each
     # stone after the first overhangs the bevelled top below, so its bottom ring is closed with a flat unbevelled floor.
     # The drift is bounded to 0.2 m a step.
     base.look = {"bevel": .2, "sharp": 80.0}
     below_top = None
+    warm0 = base.crng.randrange(2)
     for k, (h, rad) in enumerate(zip(hs, p["r"])):
         sides = p["sides"] - k % 2
-        taper, tone = r.uniform(.9, .97), STONES[r.randrange(len(STONES))]
+        base.look = {"bevel": .2, "sharp": 80.0, "segments": 3 if k + 1 == len(hs) else 1}
+        taper = r.uniform(.9, .97)
+        # tone comes from the colour RNG (crng), warm and pale stones alternating. crng also feeds the per-piece mottle (one draw per
+        # piece when polished, one per face when flat), so tones stay put under geometry tuning only in polished builds with the same piece count
+        pool = WARM_STONES if (k + warm0) % 2 == 0 else PALE_STONES
+        tone = pool[base.crng.randrange(len(pool))]
         phase, radii = r.uniform(0, 2 * math.pi), jitter(r, sides, .08)
         lo_ring, top_ring = base.frustum(y, y + h, rad, rad * taper, sides, tone, (cx, cz), (cx, cz),
                                          phase=phase, radii=radii, caps=(False, True), mottle=.12)
@@ -729,12 +750,12 @@ def cairn(base, variant):
     base.look = ROCK_LOOK
     for k in range(2):
         a = r.uniform(0, 2 * math.pi)
-        base.rock((math.cos(a) * 2.9, .1, math.sin(a) * 2.9), (r.uniform(.6, .9), r.uniform(.4, .6), r.uniform(.6, .9)), STONES[r.randrange(len(STONES))])
+        base.rock((math.cos(a) * 2.6, .1, math.sin(a) * 2.6), (r.uniform(.6, .9), r.uniform(.4, .6), r.uniform(.6, .9)), STONES[base.crng.randrange(len(STONES))])
     # the iron pin set in the top stone and the cable ring round it
     base.look = {"bevel": .04}
     base.box((cx - .16, ytop - .1, cz - .16), (cx + .16, TOP, cz + .16), IRON, skip=("-y",), mottle=.04)
     base.look = {"bevel": 0.0}
-    base.ring((cx, ytop + pin * .45, cz), .5, .1, IRON)
+    base.ring((cx, ytop + pin * .45, cz), .5, .1, IRON, segments=12, sides=4)
 
 
 FAMILIES = {"hoodoo": (hoodoo, 1301), "basalt": (basalt, 1311), "timber": (timber, 1321), "saguaro": (saguaro, 1331), "cairn": (cairn, 1341)}
