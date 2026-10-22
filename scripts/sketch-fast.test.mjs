@@ -21,6 +21,7 @@ import {
   selectTests,
   timingsFromReceipt,
   medianTimings,
+  mergeTimings,
   DEFAULT_ESTIMATE_MS,
   usableBaseRun,
 } from "./sketch-fast.mjs";
@@ -244,6 +245,11 @@ test("the timings fold takes the median across receipts", () => {
   const row = (ms) => ({ results: [{ test: "tests/a_test.gd", ok: true, ms }] });
   assert.deepEqual(medianTimings([row(100), row(900), row(200)]), { "tests/a_test.gd": 200 });
   assert.deepEqual(medianTimings([row(100), row(300)]), { "tests/a_test.gd": 200 });
+});
+
+test("a refresh never lowers an existing row, raises a lower one and adds a new one", () => {
+  const merged = mergeTimings({ "tests/a_test.gd": 5000, "tests/b_test.gd": 5000, "tests/c_test.gd": 700 }, { "tests/a_test.gd": 2000, "tests/b_test.gd": 9000, "tests/d_test.gd": 300 });
+  assert.deepEqual(merged, { "tests/a_test.gd": 5000, "tests/b_test.gd": 9000, "tests/c_test.gd": 700, "tests/d_test.gd": 300 });
 });
 
 test("an unknown bot-named test goes to the bot shards; a known fast test stays in the lane", () => {

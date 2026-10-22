@@ -341,6 +341,14 @@ export function timingsFromReceipt(receipt) {
   return tests;
 }
 
+// A refresh never lowers a price: receipts come from a PC faster than the lane box, whose tests ran
+// about 2.9x their price. A test with a row keeps max(old, new); a test with none takes the new time.
+export function mergeTimings(prior, fresh) {
+  const out = { ...prior };
+  for (const [test, ms] of Object.entries(fresh)) out[test] = Math.max(out[test] ?? 0, ms);
+  return out;
+}
+
 // Median of each test's time across receipts.
 export function medianTimings(receipts) {
   const seen = {};
@@ -815,7 +823,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const paths = process.argv.slice(3);
     const receipts = paths.map((file) => JSON.parse(readFileSync(file, "utf8")));
     const prior = readTimings();
-    const tests = { ...prior, ...medianTimings(receipts) };
+    const tests = mergeTimings(prior, medianTimings(receipts));
     const source = receipts.length === 1 ? `${receipts[0].label} ${receipts[0].head ?? ""}`.trim() : `median of ${receipts.length} receipts`;
     writeFileSync(TIMINGS_FILE, JSON.stringify({ source, tests: Object.fromEntries(Object.entries(tests).sort()) }, null, 2) + "\n");
     console.log(`sketch:fast timings: ${Object.keys(tests).length} tests from ${paths.length} receipts`);
