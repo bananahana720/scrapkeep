@@ -627,7 +627,7 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 	steer_weapon_ring(pod, _aim_of(v), delta)
 	var kit = player.kit
 	if kit.get("hooked") == true:
-		steer_fairlead(pod, kit.anchor)
+		steer_fairlead(pod, kit.anchor, delta)
 
 
 func apply_kest_state(pod: Node3D, state: Dictionary, paint_tint := Color.WHITE) -> void:
@@ -784,7 +784,7 @@ static func add_fairlead(pod: Node3D) -> Node3D:
 	return carriage
 
 
-func steer_fairlead(pod: Node3D, anchor: Vector3) -> void:
+func steer_fairlead(pod: Node3D, anchor: Vector3, delta: float) -> void:
 	if not pod.is_inside_tree():
 		return
 	var carriage := pod.get_node_or_null("Fairlead") as Node3D
@@ -792,7 +792,7 @@ func steer_fairlead(pod: Node3D, anchor: Vector3) -> void:
 		return
 	var pz := pod.global_basis.z
 	var cz := carriage.global_basis.z
-	var yaw := LineView.fairlead_yaw(atan2(cz.x, cz.z), pod.global_position, anchor)
+	var yaw := LineView.fairlead_yaw(atan2(cz.x, cz.z), pod.global_position, anchor, delta)
 	carriage.rotation = Vector3(0.0, wrapf(yaw - atan2(pz.x, pz.z), -PI, PI), 0.0)
 
 

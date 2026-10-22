@@ -664,7 +664,7 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 
 **Requested seams (not blocking).**
 
-1. **`player_ball.gd`.** Start the grapple rope at `HeroPod/RopeExit` when it exists, so the rope leaves the spool's fairlead.
+1. **`player_ball.gd`.** Done (MOTION-SPEC swing row): `RopeExit` rides the `Fairlead` carriage on `HeroPod`, 1.06 m out on the anchor's planar side, and `line_view.gd` draws the rope from that fairlead. Physics still pulls through the centre.
 2. **An ability-active fact per class.** Would let `class_accent` brighten only while its device works (section 9, "emissive only at the working device").
 3. **`palette.gd`.** Add `ANCIENT` (W7's delta). The hook then drops its local candidate-A constant.
 

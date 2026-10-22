@@ -42,6 +42,9 @@ const PULSE_DEPTH := 0.14
 
 # The fairlead runs round the carrier's collar at this radius, outside the 1.0 collider.
 const FAIRLEAD_RADIUS := 1.06
+# The collar is a free bearing, so the fairlead turns at a finite rate: PI / 15 = 0.21 s for a
+# half turn, fast enough to track a swing and slow enough that it never pops across the ball.
+const FAIRLEAD_TURN_RATE := 15.0
 const COLLAR_MIN := 0.9
 const COLLAR_MAX := 3.2
 const COLLAR_PER_METRE := 0.07
@@ -145,11 +148,14 @@ func _process(delta: float) -> void:
 
 # The fairlead carriage's yaw (-Z faces yaw 0, as the weapon ring's): it turns to the anchor's
 # planar direction and holds the last yaw when the anchor is overhead or below.
-static func fairlead_yaw(yaw: float, centre: Vector3, anchor: Vector3) -> float:
+# It turns by the shorter arc at no more than FAIRLEAD_TURN_RATE.
+static func fairlead_yaw(yaw: float, centre: Vector3, anchor: Vector3, delta: float) -> float:
 	var flat := Vector2(anchor.x - centre.x, anchor.z - centre.z)
 	if flat.length_squared() < 0.0001:
 		return yaw
-	return atan2(-flat.x, -flat.y)
+	var gap := wrapf(atan2(-flat.x, -flat.y) - yaw, -PI, PI)
+	var most := FAIRLEAD_TURN_RATE * delta
+	return wrapf(yaw + clampf(gap, -most, most), -PI, PI)
 
 
 # The point on the collar the rope leaves: centre + FAIRLEAD_RADIUS x the flat direction at `yaw`.
@@ -167,7 +173,7 @@ func step(delta: float) -> void:
 	_advance(delta)
 	var smash: bool = kit.hooked and kit.line_state == Augments.LINE_SMASH
 	_smash_age = _smash_age + delta if smash else 0.0
-	_draw_cable(kit, ball, smash)
+	_draw_cable(kit, ball, smash, delta)
 	_draw_lock(kit)
 	_draw_latch(kit, ball)
 	_draw_pop()
@@ -258,10 +264,10 @@ func projected_px(radius: float, depth: float) -> float:
 	return half_width(radius, depth) * 2.0 * focal_px() / depth
 
 
-func _draw_cable(kit, centre: Vector3, smash: bool) -> void:
+func _draw_cable(kit, centre: Vector3, smash: bool, delta: float) -> void:
 	# The physics pulls through the centre (a free bearing); only the drawn rope starts at the collar.
 	var toward: Vector3 = kit.anchor if kit.hooked else (_gone_anchor if _broke_age >= 0.0 or _let_go_age >= 0.0 else centre + _dry_dir)
-	_fairlead_yaw = fairlead_yaw(_fairlead_yaw, centre, toward)
+	_fairlead_yaw = fairlead_yaw(_fairlead_yaw, centre, toward, delta)
 	var ball := fairlead_point(centre, _fairlead_yaw)
 	cable_origin = ball
 	var mesh: ImmediateMesh = cable.mesh

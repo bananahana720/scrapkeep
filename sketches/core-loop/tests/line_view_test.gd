@@ -2,6 +2,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const LineView := preload("res://src/presentation/line_view.gd")
+const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const AimStyle := preload("res://src/movement/aim_style.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
@@ -57,6 +58,7 @@ func _run() -> void:
 	view.setup(player, camera, player.events)
 	_cable(view, player, camera)
 	_fairlead(view, player)
+	_carriage()
 	_latch(view, player, camera)
 	_lock(view, player)
 	_transients(view, player)
@@ -71,6 +73,33 @@ func _run() -> void:
 
 # MOTION-SPEC swing row: the drawn rope leaves the collar fairlead, 1.06 m from the centre on the
 # anchor's planar side, never inside the 1.0 collider; overhead it holds the last yaw.
+# The hero's Fairlead carriage turns RopeExit to the anchor's side, through a yawed pod.
+func _carriage() -> void:
+	var hook := HeroAssets.new()
+	var pod := Node3D.new()
+	pod.position = Vector3(2.0, 1.0, 3.0)
+	pod.rotation.y = 0.7
+	var exit := Node3D.new()
+	exit.name = "RopeExit"
+	pod.add_child(exit)
+	root.add_child(pod)
+	HeroAssets.add_fairlead(pod)
+	var anchor := pod.position + Vector3(-9.0, 5.0, 4.0)
+	for i in 40:
+		hook.steer_fairlead(pod, anchor, FRAME)
+	var off := exit.global_position - pod.position
+	var flat := Vector3(-9.0, 0.0, 4.0).normalized()
+	_t.check("FL-5 RopeExit rides the carriage to the anchor's side", exit.get_parent().name == "Fairlead" and absf(off.length() - 1.06) <= 0.001 and absf(off.y) <= 0.001 and off.normalized().distance_to(flat) <= 0.001,
+		"RopeExit %s from the pod, want 1.06 m toward %s" % [off, flat])
+	pod.free()
+	hook.free()
+
+
+func _settle(view, frames := 30) -> void:
+	for i in frames:
+		view.step(FRAME)
+
+
 func _fairlead(view, player) -> void:
 	var kit = player.kit
 	kit.hooked = true
@@ -78,21 +107,38 @@ func _fairlead(view, player) -> void:
 	kit.rope = 30.0
 	var centre: Vector3 = player.global_position
 	kit.anchor = centre + Vector3(6.0, 8.0, -8.0)
-	view.step(FRAME)
+	_settle(view)
 	var flat := Vector3(6.0, 0.0, -8.0).normalized()
 	var off: Vector3 = view.cable_origin - centre
 	_t.check("FL-1 starts 1.06 m out on the anchor's side", absf(off.length() - 1.06) <= 0.001 and off.normalized().distance_to(flat) <= 0.001 and absf(off.y) <= 0.001,
 		"first point %s from the centre, want 1.06 m toward %s" % [off, flat])
 	_t.check("FL-1 never inside the collider", off.length() > 1.0, "%.3f m from the centre, collider 1.0" % off.length())
 	kit.anchor = centre + Vector3(0.0, 12.0, 0.0)
-	view.step(FRAME)
+	_settle(view, 10)
 	var held: Vector3 = view.cable_origin - centre
 	_t.check("FL-2 overhead holds the last yaw", held.distance_to(off) <= 0.001 and absf(held.length() - 1.06) <= 0.001,
 		"overhead first point %s, last %s" % [held, off])
 	kit.anchor = centre + Vector3(-5.0, -3.0, 0.0)
-	view.step(FRAME)
+	_settle(view)
 	var west: Vector3 = view.cable_origin - centre
 	_t.check("FL-3 turns with the anchor", west.distance_to(Vector3(-1.06, 0.0, 0.0)) <= 0.001, "first point %s, want (-1.06, 0, 0)" % west)
+	# FL-4: the anchor flips to the far side in one step (a swing's bottom); the origin turns at a
+	# finite rate by the shorter arc instead of jumping across the collar.
+	kit.anchor = centre + Vector3(5.0, -3.0, 0.0)
+	var worst := 0.0
+	var prev: Vector3 = view.cable_origin - centre
+	var steps := 0
+	for i in 40:
+		view.step(FRAME)
+		var now: Vector3 = view.cable_origin - centre
+		worst = maxf(worst, prev.angle_to(now))
+		prev = now
+		steps += 1
+	# Independent of the constant: a half turn must take at least 0.15 s, so under 0.35 rad a step.
+	var limit := PI / (0.15 * 60.0)
+	_t.check("FL-4 turn rate is limited", worst <= limit + 0.0001,
+		"largest per-step arc %.4f rad, limit %.4f rad (jump would be %.2f rad)" % [worst, limit, PI])
+	_t.check("FL-4 arrives", prev.distance_to(Vector3(1.06, 0.0, 0.0)) <= 0.001, "settled at %s after %d steps" % [prev, steps])
 	kit.hooked = false
 
 
