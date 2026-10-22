@@ -1,0 +1,130 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+Vulkan 1.4.351 - Forward+ - Using Device #1: NVIDIA - NVIDIA GeForce RTX 3060
+ERROR: Condition "!present_queue_family" is true. Returning: FAILED
+   at: initialize (servers/rendering/rendering_device.cpp:8407)
+WARNING: Display driver x11 failed, falling back to wayland.
+   at: setup2 (main/main.cpp:3380)
+WARNING: xdg-toplevel-icon protocol not found! Cannot set window icon.
+   at: init (platform/linuxbsd/wayland/wayland_thread.cpp:5642)
+Vulkan 1.4.351 - Forward+ - Using Device #1: NVIDIA - NVIDIA GeForce RTX 3060
+
+WARNING: instance_reset_physics_interpolation() is deprecated.
+   at: _instance_reset_physics_interpolation_bind_compat_104269 (servers/rendering/rendering_server.compat.inc:62)
+   GDScript backtrace (most recent call first):
+       [0] make_render (res://src/world/park/park_terrain.gd:112)
+       [1] build (res://src/world/terrain.gd:163)
+       [2] setup (res://src/world/world.gd:112)
+       [3] _module (res://src/game.gd:473)
+       [4] _ready (res://src/game.gd:233)
+       [5] _run (res://tools/grade_probe.gd:136)
+SCRAPKEEP_MENU_READY ms=8730 profile=default pilots=1/6
+ACE music: generator ring 8191 frames, queue target 3072
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-6971ad96/sketches/core-loop/assets/music_ace/title/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_named (res://src/presentation/audio.gd:1241)
+       [2] _menu_home (res://src/presentation/audio.gd:1230)
+       [3] _flush_flow (res://src/presentation/audio.gd:3436)
+       [4] park_transport (res://src/presentation/audio.gd:1954)
+       [5] _physics_process (res://src/world/world.gd:360)
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-6971ad96/sketches/core-loop/assets/music_ace/spillway/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3360)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+SKIP control Fin.L
+SKIP control Fin.R
+place stage1-dawn hazard~amber 36.1 fill~sandstone 26.0 reach 10.3
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-6971ad96/sketches/core-loop/assets/music_ace/cable_reach/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3397)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+place stage2-morning hazard~amber 35.5 fill~sandstone 13.7 reach 10.4
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-6971ad96/sketches/core-loop/assets/music_ace/brindle/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_named (res://src/presentation/audio.gd:1241)
+       [2] _begin_boss (res://src/presentation/audio.gd:2478)
+       [3] <anonymous lambda> (res://src/presentation/audio.gd:1641)
+       [4] _publish (res://src/boss/boss.gd:1373)
+       [5] enter_arena (res://src/boss/boss.gd:140)
+       [6] enter_boss (res://src/core/flow.gd:546)
+       [7] _run (res://tools/grade_probe.gd:154)
+       [8] _probe (res://tools/grade_probe.gd:271)
+place arena-w1 hazard~amber 35.5 fill~sandstone 13.7 reach 10.7
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-6971ad96/sketches/core-loop/assets/music_ace/dig_upper/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3397)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+place stage3-noon hazard~amber 33.0 fill~sandstone 17.3 reach 10.3
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-6971ad96/sketches/core-loop/assets/music_ace/dig_deep/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3397)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+place stage4-afternoon hazard~amber 33.3 fill~sandstone 18.5 reach 10.5
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-6971ad96/sketches/core-loop/assets/music_ace/waking/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_named (res://src/presentation/audio.gd:1241)
+       [2] _begin_boss (res://src/presentation/audio.gd:2478)
+       [3] <anonymous lambda> (res://src/presentation/audio.gd:1641)
+       [4] enter_arena (res://src/boss/stub_boss.gd:66)
+       [5] enter_arena (res://src/boss/waking.gd:101)
+       [6] enter_boss (res://src/core/flow.gd:546)
+       [7] _run (res://tools/grade_probe.gd:154)
+       [8] _probe (res://tools/grade_probe.gd:271)
+place arena-w2 hazard~amber 38.1 fill~sandstone 53.5 reach 10.5
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-6971ad96/sketches/core-loop/assets/music_ace/highdraft/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3397)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+place stage5-golden hazard~amber 35.0 fill~sandstone 11.8 reach 10.5
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-6971ad96/sketches/core-loop/assets/music_ace/highdraft_crown/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3397)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+place stage6-dusk hazard~amber 35.4 fill~sandstone 34.4 reach 10.3
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-6971ad96/sketches/core-loop/assets/music_ace/mind/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_named (res://src/presentation/audio.gd:1241)
+       [2] _begin_boss (res://src/presentation/audio.gd:2478)
+       [3] <anonymous lambda> (res://src/presentation/audio.gd:1641)
+       [4] enter_arena (res://src/boss/stub_boss.gd:66)
+       [5] enter_arena (res://src/boss/mind.gd:66)
+       [6] enter_boss (res://src/core/flow.gd:546)
+       [7] _run (res://tools/grade_probe.gd:154)
+       [8] _probe (res://tools/grade_probe.gd:271)
+place arena-w3 hazard~amber 29.4 fill~sandstone 15.0 reach 10.5
+place camp hazard~amber 34.4 fill~sandstone 11.2 reach 10.0
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_scenario (servers/rendering/renderer_scene_cull.cpp:844)
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_base (servers/rendering/renderer_scene_cull.cpp:616)
