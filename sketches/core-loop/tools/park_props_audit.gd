@@ -89,7 +89,6 @@ var cam_name := "mid"
 # finds no legal cell in the view cone of any pose in the window). A missing or unknown reason exits 2; a window whose reason
 # fails is judged on its kinds like any other and listed in the summary's density_open_rejected.
 var open_spaces: Array = []
-const OPEN_RUNOUT_M := 40.0
 var _probe := {}
 
 var game
@@ -128,14 +127,12 @@ func _initialize() -> void:
 		elif a.begins_with("--cam="):
 			cam_name = a.trim_prefix("--cam=")
 		elif a.begins_with("--open="):
-			for part in a.trim_prefix("--open=").split(",", false):
-				var f := part.split(":", true, 3)
-				var reason := String(f[3]) if f.size() == 4 else ""
-				if f.size() != 4 or not (reason == "no_cell" or (reason.begins_with("runout:") and reason.length() > 7)):
-					printerr("park_props_audit: --open entry '%s' wants x:z:r:no_cell or x:z:r:runout:<kicker>" % part)
-					quit(2)
-					return
-				open_spaces.append([Vector2(float(f[0]), float(f[1])), float(f[2]), reason])
+			var parsed := ParkProps.parse_open(a.trim_prefix("--open="))
+			if parsed.has("error"):
+				printerr("park_props_audit: " + String(parsed["error"]))
+				quit(2)
+				return
+			open_spaces.append_array(parsed["spaces"])
 		elif a == "--counts-only":
 			counts_only = true
 	if map_id == "" or out_root == "" or not CAMERAS.has(cam_name):
@@ -948,27 +945,16 @@ func _check_open(at: Vector2, window_poses: Array) -> Dictionary:
 	var out := {"kind": "runout" if reason.begins_with("runout:") else "no_cell", "reason": reason, "r": space[1], "why": "", "cell": null}
 	if _probe.is_empty():
 		var world := ParkProps.world_for(map_id)
-		var c := ParkProps.context(world["map"], world["ground"], world["stage"])
 		var file := ParkProps.load_json(ParkProps.file_path(map_id))
 		var kit_path := String(file.get("kit", "res://assets/models/park/props/%s/manifest.json" % map_id.trim_prefix("park_")))
-		var kit := ParkProps.load_json(kit_path)
-		_probe = {"c": c, "kit": kit, "kind": ParkProps.probe_kind_of(kit)}
-	var ctx = _probe["c"]
-	if reason.begins_with("runout:"):
-		out["why"] = ParkProps.runout_near(ctx, reason.trim_prefix("runout:"), at, OPEN_RUNOUT_M)
-		return out
-	if String(_probe["kind"]) == "":
-		out["why"] = "no kit to probe with"
-		return out
-	var fov_v := deg_to_rad(float(CAMERAS[cam_name]["fov"]))
-	var fov_h := rad_to_deg(2.0 * atan(tan(fov_v * 0.5) * float(SIZE.x) / float(SIZE.y)))
+		_probe = {"c": ParkProps.context(world["map"], world["ground"], world["stage"]), "kit": ParkProps.load_json(kit_path), "file": file}
 	var poses: Array = []
 	for smp in window_poses:
-		poses.append({"x": smp["x"], "z": smp["z"], "yaw": smp["yaw"], "arm": CAMERAS[cam_name]["arm"], "pitch": CAM_PITCH})
-	var cells := ParkProps.cone_legal_cells(ctx, _probe["kit"], String(_probe["kind"]), poses, fov_h, NEAR_M)
-	if not cells.is_empty():
-		out["cell"] = [cells[0].x, cells[0].y]
-		out["why"] = "probe kind %s has a legal cell at (%.0f, %.0f) in the view cone" % [_probe["kind"], cells[0].x, cells[0].y]
+		poses.append({"x": smp["x"], "z": smp["z"], "yaw": smp["yaw"]})
+	var cam_spec := {"arm": CAMERAS[cam_name]["arm"], "pitch": CAM_PITCH, "up": CAM_UP, "fov_deg": CAMERAS[cam_name]["fov"], "aspect": float(SIZE.x) / float(SIZE.y)}
+	var decided := ParkProps.open_reason(_probe["c"], _probe["kit"], _probe["file"], reason, at, poses, cam_spec)
+	out["why"] = "" if decided["ok"] else String(decided["why"])
+	out["cell"] = decided["cell"]
 	return out
 
 

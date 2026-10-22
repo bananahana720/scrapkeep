@@ -53,6 +53,8 @@ const LINE_CLEAR_KIND_MAX_M := 60.0
 # makes the 30 m tier checked: kit_errors fails a kit that defines one without line_clear_m at or above this.
 const BRIEF_LINE_KINDS := {"laundry_line": 30.0, "washline": 30.0, "windsock": 30.0, "kite_pennant": 30.0}
 const LOW_HEIGHT_M := 1.2
+# The density audit's view range (tools/park_props_audit.gd NEAR_M) that no_cell probes out to.
+const NEAR_RANGE_M := 60.0
 const TALL_HEIGHT_M := 3.0
 # Row footprints keep props out when the row is a ride feature; ground, banks, terraces and anchor fields do not.
 const RIDE_ELEMENTS := ["kicker", "drop", "rail", "grind_line", "half_pipe", "bowl", "elevated_line", "ledge", "tunnel", "flow_line", "sky_island"]
@@ -384,60 +386,140 @@ static func runout_near(c: Context, kicker_id: String, at: Vector2, within := 40
 	return "no kicker %s in the park" % kicker_id
 
 
-# The kit's lowest-height kind (ties: smallest radius, then name), the probe for cone_legal_cells; "" for an empty kit.
-static func probe_kind_of(kit: Dictionary) -> String:
-	var best := ""
-	var best_key := [INF, INF]
+# The smallest scale any instance of a vignette file takes: 1.0, or lower for a template prop's own scale or the litter's
+# 0.9 to 1.15 range (expand). The probe uses it so it fits wherever the file's smallest prop could.
+static func min_scale(file: Dictionary) -> float:
+	var scale := 1.0
+	for template: Dictionary in (file.get("templates", {}) as Dictionary).values():
+		for prop: Dictionary in template.get("props", []):
+			scale = minf(scale, float(prop.get("scale", 1.0)))
+	if file.get("litter") is Dictionary:
+		scale = minf(scale, 0.9)
+	return scale
+
+
+# The probe set for no_cell: every kind whose smallest-radius variant stands at most LOW_HEIGHT_M tall at `scale` and carries
+# no line_clear_m, each at that variant, as {kind, v, fallback}. A kit with no such kind falls back to its smallest-radius
+# variant overall (fallback true), so the audit can name it.
+static func probe_kinds_of(kit: Dictionary, scale := 1.0) -> Array:
+	var out := []
 	var names: Array = (kit.get("kinds", {}) as Dictionary).keys()
 	names.sort()
+	var smallest := {}
 	for kind: String in names:
-		var low := INF
-		var small := INF
-		for v: Dictionary in (kit["kinds"][kind]["variants"] as Dictionary).values():
-			low = minf(low, float(v["height"]))
-			small = minf(small, float(v["radius"]))
-		if low < best_key[0] or (low == best_key[0] and small < best_key[1]):
-			best = kind
-			best_key = [low, small]
-	return best
+		var variants: Dictionary = kit["kinds"][kind]["variants"]
+		var pick := ""
+		var keys: Array = variants.keys()
+		keys.sort()
+		for v: String in keys:
+			if pick == "" or float(variants[v]["radius"]) < float(variants[pick]["radius"]):
+				pick = v
+		if pick == "":
+			continue
+		var entry := {"kind": kind, "v": pick, "fallback": false}
+		if smallest.is_empty() or float(variants[pick]["radius"]) < float(kit["kinds"][smallest["kind"]]["variants"][smallest["v"]]["radius"]):
+			smallest = {"kind": kind, "v": pick, "fallback": true}
+		if float(variants[pick]["height"]) * scale <= LOW_HEIGHT_M and not kit["kinds"][kind].has("line_clear_m"):
+			out.append(entry)
+	if out.is_empty() and not smallest.is_empty():
+		out.append(smallest)
+	return out
 
 
-# Up to `limit` cell centres (cell_m grid, scanned in x then z) inside the horizontal view cone of the poses, within range_m
-# of the camera, where the probe kind's smallest-radius variant passes every placement rule; [] when none does (the audit's
-# no_cell --open reason). A pose is {x, z, yaw} with optional arm and pitch: the chase camera stands arm behind the
-# player along the view direction and looks along forward (-sin yaw, -cos yaw), as the audit's _place sets it.
-static func cone_legal_cells(c: Context, kit: Dictionary, probe_kind: String, poses: Array, fov_h_deg: float, range_m: float, cell_m := 5.0, limit := 1) -> Array:
+# True when any probe passes every placement rule standing at `at` (scaled by `scale`).
+static func probe_legal_at(c: Context, kit: Dictionary, probes: Array, scale: float, at: Vector2) -> bool:
+	for probe: Dictionary in probes:
+		var inst := _instance("probe", String(probe["kind"]), String(probe["v"]), kit, at, 0.0, scale, 0.0, c.ground, false)
+		if check_one(inst, c).is_empty():
+			return true
+	return false
+
+
+# The audit's chase camera for a pose {x, z, yaw}: the anchor 1 + cam.up above the ground at the pose, the basis
+# Basis(UP, yaw) * Basis(RIGHT, cam.pitch), and the camera cam.arm behind along its z (tools/park_props_audit.gd _place).
+static func camera_for(pose: Dictionary, cam: Dictionary, ground: Callable) -> Transform3D:
+	var x := float(pose["x"])
+	var z := float(pose["z"])
+	var anchor := Vector3(x, _height(ground, Vector2(x, z)) + 1.0 + float(cam["up"]), z)
+	var basis := Basis(Vector3.UP, float(pose["yaw"])) * Basis(Vector3.RIGHT, float(cam["pitch"]))
+	return Transform3D(basis, anchor + basis * Vector3(0.0, 0.0, float(cam["arm"])))
+
+
+# Whether a world point is inside the camera's real frustum, without a Camera3D: in front, and inside both tan half-angles
+# of the vertical fov (cam.fov_deg, Godot keeps the height) and the aspect (cam.aspect), within range_m horizontally.
+static func cell_visible(view: Transform3D, cam: Dictionary, point: Vector3, range_m: float) -> bool:
+	if Vector2(point.x - view.origin.x, point.z - view.origin.z).length() > range_m:
+		return false
+	var local := view.affine_inverse() * point
+	var depth := -local.z
+	if depth <= 0.1:
+		return false
+	var tan_v := tan(deg_to_rad(float(cam["fov_deg"])) * 0.5)
+	return absf(local.y) <= depth * tan_v and absf(local.x) <= depth * tan_v * float(cam["aspect"])
+
+
+# Up to `limit` cell centres (cell_m grid, scanned in x then z) inside the real view frustum of the poses, within range_m of
+# the camera, where any probe (probe_kinds_of) passes every placement rule; [] when none does (the audit's no_cell --open
+# reason). Tolerance: the grid is cell_m (2.5 m), so a legal pocket narrower than about 2.5 m can be missed, which lets a
+# no_cell claim pass; the horizontal range errs safe. A pose is {x, z, yaw}; cam is {arm, pitch, up, fov_deg, aspect}.
+static func cone_legal_cells(c: Context, kit: Dictionary, probes: Array, scale: float, poses: Array, cam: Dictionary, range_m: float, cell_m := 2.5, limit := 1) -> Array:
 	var out := []
-	if not (kit.get("kinds", {}) as Dictionary).has(probe_kind):
+	if probes.is_empty():
 		return out
-	var variants: Dictionary = kit["kinds"][probe_kind]["variants"]
-	var names: Array = variants.keys()
-	names.sort()
-	var variant: String = names[0]
-	for name: String in names:
-		if float(variants[name]["radius"]) < float(variants[variant]["radius"]):
-			variant = name
-	var half := deg_to_rad(fov_h_deg) * 0.5
 	for pose: Dictionary in poses:
-		var yaw := float(pose["yaw"])
-		var forward := Vector2(-sin(yaw), -cos(yaw))
-		var cam := Vector2(float(pose["x"]), float(pose["z"])) - forward * float(pose.get("arm", 0.0)) * cos(float(pose.get("pitch", 0.0)))
-		var x0 := floori((cam.x - range_m) / cell_m)
-		var x1 := ceili((cam.x + range_m) / cell_m)
-		var z0 := floori((cam.y - range_m) / cell_m)
-		var z1 := ceili((cam.y + range_m) / cell_m)
+		var view := camera_for(pose, cam, c.ground)
+		var x0 := floori((view.origin.x - range_m) / cell_m)
+		var x1 := ceili((view.origin.x + range_m) / cell_m)
+		var z0 := floori((view.origin.z - range_m) / cell_m)
+		var z1 := ceili((view.origin.z + range_m) / cell_m)
 		for ix in range(x0, x1 + 1):
 			for iz in range(z0, z1 + 1):
 				var at := Vector2((ix + 0.5) * cell_m, (iz + 0.5) * cell_m)
-				var rel := at - cam
-				if rel.length() > range_m or rel.length() < 0.5 or absf(forward.angle_to(rel)) > half:
+				if not cell_visible(view, cam, Vector3(at.x, _height(c.ground, at), at.y), range_m):
 					continue
-				var inst := _instance("probe", probe_kind, variant, kit, at, 0.0, 1.0, 0.0, c.ground, false)
-				if check_one(inst, c).is_empty():
+				if probe_legal_at(c, kit, probes, scale, at):
 					out.append(at)
 					if out.size() >= limit:
 						return out
 	return out
+
+
+# "--open=" argument text (x:z:r:<reason>,...) to {spaces: [[Vector2 centre, radius, reason]]} or {error}. The reason is
+# everything after the third colon: no_cell, or runout:<kicker> with a non-empty kicker.
+static func parse_open(arg: String) -> Dictionary:
+	var spaces := []
+	for part in arg.split(",", false):
+		var f := part.split(":", true, 3)
+		var reason := String(f[3]) if f.size() == 4 else ""
+		if f.size() != 4 or not (reason == "no_cell" or (reason.begins_with("runout:") and reason.length() > 7)):
+			return {"error": "--open entry '%s' wants x:z:r:no_cell or x:z:r:runout:<kicker>" % part}
+		spaces.append([Vector2(float(f[0]), float(f[1])), float(f[2]), reason])
+	return {"spaces": spaces}
+
+
+# The audit's decision for one --open window: {ok, why, cell}. ok is true when the reason holds. `file` is the park's
+# vignette file ({} when it has none): its ground_rows and low_ground_rows apply to the probe as expand applies them, and
+# its smallest scale sizes the probes. `at` is the window midpoint and `poses` every sample pose in the window.
+static func open_reason(c: Context, kit: Dictionary, file: Dictionary, reason: String, at: Vector2, poses: Array, cam: Dictionary) -> Dictionary:
+	if reason.begins_with("runout:"):
+		var why := runout_near(c, reason.trim_prefix("runout:"), at)
+		return {"ok": why == "", "why": why, "cell": null}
+	if reason != "no_cell":
+		return {"ok": false, "why": "unknown reason %s" % reason, "cell": null}
+	c.use_ground_rows(file.get("ground_rows"))
+	c.use_low_ground_rows(file.get("low_ground_rows"))
+	var scale := min_scale(file)
+	var probes := probe_kinds_of(kit, scale)
+	if probes.is_empty():
+		return {"ok": false, "why": "no kit to probe with", "cell": null}
+	var names := []
+	for probe: Dictionary in probes:
+		names.append("%s/%s" % [probe["kind"], probe["v"]])
+	var label := "probe %s%s at scale %.2f" % [", ".join(names), " (fallback: no low kind)" if probes[0]["fallback"] else "", scale]
+	var cells := cone_legal_cells(c, kit, probes, scale, poses, cam, NEAR_RANGE_M)
+	if cells.is_empty():
+		return {"ok": true, "why": label + " finds no legal cell in the view frustum", "cell": null}
+	return {"ok": false, "why": "%s has a legal cell at (%.1f, %.1f) in the view frustum" % [label, cells[0].x, cells[0].y], "cell": [cells[0].x, cells[0].y]}
 
 
 static func _pair(value) -> Vector2:
