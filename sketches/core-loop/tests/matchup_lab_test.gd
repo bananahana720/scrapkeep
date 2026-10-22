@@ -287,7 +287,7 @@ func _merge_from() -> void:
 		chaser >= 0 and lobber >= 0 and grounded > lobber and grounded > chaser and run_down > grounded)
 
 
-# WALL guard: a row every pilot capped with no kill is marked WALL, fails the gate line and names
+# WALL guard: a row a pilot ran and no pilot killed is marked WALL, fails the gate line and names
 # its id; a row one pilot killed is not. Synthetic saved rows through --from, no duels.
 func _wall_rows() -> void:
 	var dir := OS.get_user_data_dir().path_join("matchup_lab_test")
