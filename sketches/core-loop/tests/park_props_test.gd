@@ -846,14 +846,23 @@ func _check_synthetic(file: Dictionary, kit: Dictionary, world: Dictionary) -> v
 	built.free()
 
 
-# prepare() is what the worker runs: it equals the plain expansion and warms every mesh the build reads.
+# prepare() is what the worker runs: it equals the plain expansion and lists every mesh the build reads, but reads none
+# (a mesh loaded on a worker races the headless renderer, thread_guard.gd); the main thread reads them.
 func _check_prepare(file: Dictionary, kit: Dictionary, world: Dictionary, list: Array) -> void:
 	ParkProps.file_overrides[FIXTURE_MAP] = FIXTURE_FILE
 	ParkProps.release_shared()
 	var out := ParkProps.prepare(FIXTURE_MAP, world["map"], world["ground"], world["stage"], false)
 	_t.eq("prepare equals the plain expansion", ParkProps.fingerprint(out.get("list", [])), ParkProps.fingerprint(list))
 	_t.eq("prepare reports no schema errors", out.get("errors"), [])
-	_t.check("prepare warmed the meshes the build reads", ParkProps._meshes.size() > 0 and not ParkProps._meshes.values().has(null), str(ParkProps._meshes.size()))
+	_t.check("prepare reads no mesh", ParkProps._meshes.is_empty(), str(ParkProps._meshes.size()))
+	var paths: Array = out.get("paths", [])
+	var meshes := paths.map(func(path: String): return ParkProps._mesh(path))
+	_t.check("prepare lists the meshes, and each reads on the main thread", not paths.is_empty() and not meshes.has(null), "%d paths" % paths.size())
+	var holder := Node3D.new()
+	for job: Dictionary in ParkProps.jobs(out["list"], false):
+		ParkProps.build_job(holder, job, out["kit"], false)
+	_t.eq("the build reads no mesh that prepare left out", ParkProps._meshes.size(), paths.size())
+	holder.free()
 	ParkProps.file_overrides[FIXTURE_MAP] = "res://tests/fixtures/park_props/no_such_file.json"
 	var broken := ParkProps.prepare(FIXTURE_MAP, world["map"], world["ground"], world["stage"], false)
 	_t.check("a park without a file prepares nothing", broken.is_empty())
