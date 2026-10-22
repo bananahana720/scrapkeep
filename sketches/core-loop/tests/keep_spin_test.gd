@@ -152,21 +152,43 @@ func _more() -> void:
 	_player._spin_basis = Basis(Vector3(1.0, 1.0, 0.0).normalized(), 2.0)
 	_player._spin_omega = Vector3.ZERO
 	var previous := _lattice()
+	var prev_step := 0.0
 	var worst := 0.0
 	var landed := -1
+	var body_prev: Basis = _player.shown_transform().basis
 	for i in 400:
 		await process_frame
 		var now := _lattice()
+		var body_now: Basis = _player.shown_transform().basis
 		var step := _turn(previous, now)
+		var body_step := _turn(body_prev, body_now)
 		if landed < 0 and _player.state.grounded:
 			landed = i
 		if landed >= 0:
-			worst = maxf(worst, step)
+			# The drawn turn may change across the hand-off only by the body's own turn.
+			worst = maxf(worst, absf(step - prev_step) - body_step)
 		previous = now
+		prev_step = step
+		body_prev = body_now
 		if landed >= 0 and i > landed + 20:
 			break
 	t.check("the ball landed", landed >= 0, "landed at frame %d" % landed)
-	t.check("landing leaves no jump in the drawn turn", worst < 0.3, "largest per-frame turn after landing %.3f rad (a 2 rad catch-up would show)" % worst)
+	t.check("landing leaves no jump in the drawn turn", worst < 0.01, "largest per-frame change in drawn turn beyond the body's own %.4f rad (the old ease was about 0.22)" % worst)
+
+	# Take-off seeds from the basis the draw reads (interpolated), not the raw body's.
+	paused = false
+	physics_interpolation = true
+	await _airborne_spin()
+	var gap := 0.0
+	for i in 40:
+		await process_frame
+		gap = _turn(_player._rigid.global_transform.basis, _player.shown_transform().basis)
+		if gap > 0.02:
+			break
+	_player._keep_spin()
+	var seeded := _turn(_player._spin_basis, _player.shown_transform().basis.orthonormalized() * _player._spin_offset)
+	t.check("take-off seed matches the drawn basis", gap > 0.02 and seeded < 0.001, "raw-vs-shown gap %.3f rad, seed off by %.5f rad" % [gap, seeded])
+	physics_interpolation = false
 
 	# reset_to clears the carry and the offset.
 	await _airborne_spin()

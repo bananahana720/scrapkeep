@@ -390,7 +390,10 @@ func _keep_spin() -> void:
 		return
 	_spin_on = true
 	_spin_freeze = false
-	_spin_basis = (_rigid.global_transform.basis.orthonormalized() * _spin_offset).orthonormalized()
+	# The seed reads the basis the draw reads, and settles a landing freeze this frame has not
+	# drawn yet, so a grounded set then an airborne one inside a frame cannot overwrite it.
+	_settle_offset(_body_basis())
+	_spin_basis = (_body_basis() * _spin_offset).orthonormalized()
 	_spin_omega = _rigid.angular_velocity
 
 
@@ -400,6 +403,17 @@ func _spin_end() -> void:
 	if _spin_on:
 		_spin_on = false
 		_spin_freeze = true
+
+
+# The body orientation the lattice is drawn against: the same (interpolated) one _process reads.
+func _body_basis() -> Basis:
+	return shown_transform().basis.orthonormalized()
+
+
+func _settle_offset(body_basis: Basis) -> void:
+	if _spin_freeze:
+		_spin_freeze = false
+		_spin_offset = (body_basis.inverse() * _spin_basis).orthonormalized()
 
 
 func _spin_clear() -> void:
@@ -420,9 +434,7 @@ func _drawn_basis(body_basis: Basis, delta: float) -> Basis:
 		if w > 0.0001:
 			_spin_basis = (Basis(_spin_omega / w, w * delta) * _spin_basis).orthonormalized()
 		return _spin_basis
-	if _spin_freeze:
-		_spin_freeze = false
-		_spin_offset = (body_basis.inverse() * _spin_basis).orthonormalized()
+	_settle_offset(body_basis)
 	return (body_basis * _spin_offset).orthonormalized()
 
 
