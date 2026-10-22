@@ -2,7 +2,7 @@
 
 > **Historical single-increment protocol.** [ORCHESTRATOR.md](../../ORCHESTRATOR.md) now owns worker assignment, tracking, review and checkpoint rules. Read the root [backlog](../../BACKLOG.md) and [board](../../TRACKING.md) for current scope. The old P10 priority, clean-checkout stop and automatic build preflight below do not override the current documentation-only authorization. Retain this file as the source for previous increments.
 
-Updated 5 September 2026. This protocol runs one planning session for Scrapkeep. It settles Andrew's key decisions in conversation, scopes one bounded increment, and only then hands implementation to an agent swarm with verification gates. It is host neutral. Claude Code invokes it through the `plan-session` project skill. Codex reads this file directly.
+Updated 22 October 2026. This protocol runs one planning session for Scrapkeep. It settles Andrew's key decisions in conversation, scopes one bounded increment, and only then hands implementation to an agent swarm with verification gates. Claude Code invokes it through the `plan-session` project skill.
 
 **The one rule.** No implementation starts until Phase 2 has recorded a scoped increment document and Andrew has said go. A proposal, an audit, a research desk, or a backlog row is not approval to build.
 
@@ -43,7 +43,7 @@ Exit. The brief is in chat. Andrew has not been asked anything yet.
 
 Present only unresolved decisions relevant to the candidate work, one at a time. At most seven per session. Order by backlog dependency; historic tier labels do not override current rulings.
 
-Each decision uses the host's structured question tool. In Claude Code that is AskUserQuestion. In Codex it is asynchronous user input. Each question carries these parts.
+Each decision uses the AskUserQuestion tool. Each question carries these parts.
 
 - The recommendation first, with its evidence type. Fixture, paper, or playtest.
 - Two to four options.

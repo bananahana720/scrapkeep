@@ -1,6 +1,6 @@
 # Project skills
 
-Each directory here is one skill that Claude Code and Codex both load. Claude reaches it through a symlink in `.claude/skills/`; Codex reads it here. This page says when to add a skill and how to write one.
+Each directory here is one skill that Claude Code loads. Claude reaches it through a symlink in `.claude/skills/`. This page says when to add a skill and how to write one.
 
 | Skill | Kind | Use it to |
 | --- | --- | --- |
@@ -75,8 +75,7 @@ Resolve this skill directory through symlinks, then run `git -C <resolved-skill-
 ## Host adapter
 
 - Claude Code: `/<name>`.
-- Codex: `$<name>`.
-- Both apps read this same body. Report the actual model and `CLAUDE_EFFORT` or its absence.
+- Report the actual model and `CLAUDE_EFFORT` or its absence.
 ```
 
 Lesson format for `.agents/skills/<name>/references/lessons.md`:
