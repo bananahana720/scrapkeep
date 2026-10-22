@@ -83,7 +83,7 @@ const PRESSURE := [
 ]
 
 # Warden-fight packs (ruling 15 c'): drawn instead of "packs" while a Warden core is live, damage
-# dealers that close on a ball lapping the 6 m core ring. Stage 1 has none. Keep identical in park_defs.gd.
+# dealers that close on a ball lapping the 6 m core ring. Stage 1 has none. Keep identical in alpha_defs.gd.
 const WARDEN_PACKS_REACH := [
 	{"id": "warden_press", "kinds": ["chaser", "plated_brute"]},
 	{"id": "warden_lob", "kinds": ["bola_thrower", "lobber"]},

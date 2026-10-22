@@ -134,4 +134,4 @@ func _swarm_keeps_out() -> void:
 	d.warden_core = Director.contact_core(true, 3, "swarm", at)
 	var ids := _draw_ids(d, DRAWS)
 	_t.check("swarm Warden: draws only the stage packs", ids.all(func(i: String) -> bool: return not i in _ids(row["warden_packs"])))
-	_t.check("swarm Warden: spawn spot is not on the ring", not d.warden_core.is_finite())
+	_t.check("swarm Warden: the director holds no ring core, so spawn_spot keeps the old placement", not d.warden_core.is_finite())
