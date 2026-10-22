@@ -1,5 +1,6 @@
 extends Node
 
+const LineView := preload("res://src/presentation/line_view.gd")
 const Palette := preload("res://src/core/palette.gd")
 const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -624,6 +625,9 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 		var paint_tint: Color = rec.get("shell", {}).get("tints", {}).get("paint", Color.WHITE)
 		apply_kest_state(pod, kest, paint_tint)
 	steer_weapon_ring(pod, _aim_of(v), delta)
+	var kit = player.kit
+	if kit.get("hooked") == true:
+		steer_fairlead(pod, kit.anchor, delta)
 
 
 func apply_kest_state(pod: Node3D, state: Dictionary, paint_tint := Color.WHITE) -> void:
@@ -760,6 +764,36 @@ func steer_weapon_ring(pod: Node3D, aim: Vector3, delta: float) -> void:
 	var rz := ring.global_basis.z
 	var yaw := weapon_ring_yaw(atan2(rz.x, rz.z), aim, delta)
 	ring.rotation = Vector3(0.0, wrapf(yaw - atan2(pz.x, pz.z), -PI, PI), 0.0)
+
+
+# The Fairlead carriage (MOTION-SPEC swing row): a level carrier node on the collar that turns
+# to the anchor's planar direction and holds its last yaw when the anchor is overhead. RopeExit
+# rides it at LineView.FAIRLEAD_RADIUS, so the drawn rope and the model agree. Physics is untouched.
+static func add_fairlead(pod: Node3D) -> Node3D:
+	var carriage := pod.get_node_or_null("Fairlead") as Node3D
+	if carriage != null:
+		return carriage
+	carriage = Node3D.new()
+	carriage.name = "Fairlead"
+	pod.add_child(carriage)
+	var exit := pod.find_child("RopeExit", true, false) as Node3D
+	if exit != null:
+		exit.reparent(carriage, false)
+		exit.position = Vector3(0.0, 0.0, -LineView.FAIRLEAD_RADIUS)
+		exit.rotation = Vector3.ZERO
+	return carriage
+
+
+func steer_fairlead(pod: Node3D, anchor: Vector3, delta: float) -> void:
+	if not pod.is_inside_tree():
+		return
+	var carriage := pod.get_node_or_null("Fairlead") as Node3D
+	if carriage == null:
+		return
+	var pz := pod.global_basis.z
+	var cz := carriage.global_basis.z
+	var yaw := LineView.fairlead_yaw(atan2(cz.x, cz.z), pod.global_position, anchor, delta)
+	carriage.rotation = Vector3(0.0, wrapf(yaw - atan2(pz.x, pz.z), -PI, PI), 0.0)
 
 
 # One step of the ring's world yaw toward aim; a vertical or empty aim holds it.
@@ -967,6 +1001,7 @@ static func _split(scene: Node) -> Dictionary:
 	core.get_parent().remove_child(core)
 	pod.get_parent().remove_child(pod)
 	scene.free()
+	add_fairlead(pod)
 	return {"core": core, "pod": pod}
 
 
