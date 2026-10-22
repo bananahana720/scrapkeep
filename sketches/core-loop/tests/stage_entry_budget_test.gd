@@ -133,7 +133,7 @@ func _run() -> void:
 	print("stage_entry_budget_test: machine load at start (1 min) %s" % FileAccess.get_file_as_string("/proc/loadavg").split(" ")[0])
 	SimClock.ticks = true
 	_big_file = _write_big_fixture()
-	ParkProps.file_overrides["park_flume"] = _big_file
+	pass  # Dressing scratch: real flume kit (#251) builds, no synthetic override
 	seed(11)
 	_game = Game.new()
 	_game.test_mode = true
