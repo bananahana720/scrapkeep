@@ -41,6 +41,9 @@ const EXTRA_COPIES := ["spiral_wave", "chain_arc", "cross_split", "gatling_heart
 const HUE_TOL := 12.0
 const SAT_MIN := 0.5
 const VAL_MIN := 0.25
+# A run is strong when S3's differential mask holds at least this many candidate pixels, so the
+# P1 bar reads straight from the file (ruling #241 comment 6332468877).
+const STRONG_MIN := 50000
 const RIVET_SEED := 1
 
 var _out := ""
@@ -662,6 +665,7 @@ func _finish(reason: String) -> void:
 		"granted_parts": _granted, "hazard": "#ff5a3c", "hue_tol_deg": HUE_TOL, "sat_min": SAT_MIN, "val_min": VAL_MIN,
 		"wall_seconds": snappedf(_seconds_since(_start_usec), 0.1), "scenes": _results,
 	}
+	info.merge(_strength(_results))
 	var file := FileAccess.open(_out.path_join("stress.json" if not _staged else "stress-st%d.json" % _stage), FileAccess.WRITE)
 	if file != null:
 		file.store_string(JSON.stringify(info, "  "))
@@ -731,6 +735,15 @@ func _edge_coverage(imgs: Dictionary, id: String) -> Dictionary:
 		"valid": not _dry and candidates >= 100, "minimum_reference_delta": 12, "contrast_retention": 0.5}
 
 
+# s3_mask_px is S3's P1 candidate pixel count, -1 when S3 has no analysed edges.
+static func _strength(results: Array) -> Dictionary:
+	var mask := -1
+	for result in results:
+		if result.get("scene", "") == "s3" and result.has("p1_edges"):
+			mask = int(result["p1_edges"]["candidate_pixels"])
+	return {"s3_mask_px": mask, "strong": mask >= STRONG_MIN}
+
+
 func _source_hashes() -> Dictionary:
 	var hashes := {}
 	for path in ["res://tools/stress_capture.gd", "res://src/combat/telegraph.gd",
@@ -755,6 +768,18 @@ func _metric_self_test() -> void:
 		"full": full, "full_no_edges": empty}, "self-test-quarter")
 	var missing := _edge_coverage({"threats": empty, "clean_no_edges": empty,
 		"full": empty, "full_no_edges": empty}, "self-test-empty")
-	var passed: bool = known["candidate_pixels"] == 400 and known["lost_pixels"] == 100 and is_equal_approx(known["lost_pct"], 25.0) and known["valid"] and not missing["valid"] and missing["lost_pct"] == -1.0 and _errors.is_empty()
-	print("stress_capture metric self-test: ", "PASS" if passed else "FAIL", " ", JSON.stringify({"quarter": known, "empty": missing}))
+	# Planted controls: a telegraph off-screen leaves S3 an empty mask and must not read strong;
+	# a mask of exactly STRONG_MIN pixels must.
+	var wide := Image.create(250, 200, false, Image.FORMAT_RGB8)
+	wide.fill(Color(0.5, 0.5, 0.5))
+	var wide_empty := Image.create(250, 200, false, Image.FORMAT_RGB8)
+	wide_empty.fill(Color.BLACK)
+	var at_floor := _edge_coverage({"threats": wide, "clean_no_edges": wide_empty,
+		"full": wide, "full_no_edges": wide_empty}, "self-test-floor")
+	var off_screen := _strength([{"scene": "s3", "p1_edges": missing}])
+	var floor_run := _strength([{"scene": "s3", "p1_edges": at_floor}])
+	var below_run := _strength([{"scene": "s3", "p1_edges": {"candidate_pixels": STRONG_MIN - 1}}])
+	var strength_ok: bool = off_screen == {"s3_mask_px": 0, "strong": false} and floor_run == {"s3_mask_px": STRONG_MIN, "strong": true} and not below_run["strong"] and _strength([])["s3_mask_px"] == -1
+	var passed: bool = strength_ok and known["candidate_pixels"] == 400 and known["lost_pixels"] == 100 and is_equal_approx(known["lost_pct"], 25.0) and known["valid"] and not missing["valid"] and missing["lost_pct"] == -1.0 and _errors.is_empty()
+	print("stress_capture metric self-test: ", "PASS" if passed else "FAIL", " ", JSON.stringify({"quarter": known, "empty": missing, "off_screen": off_screen, "floor": floor_run}))
 	quit(0 if passed else 1)
