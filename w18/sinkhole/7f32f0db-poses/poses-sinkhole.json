@@ -1,0 +1,9 @@
+{
+ "map": "park_sinkhole",
+ "camera": "audit mid camera (park_props_audit.gd CAMERAS mid: arm 9.0 m, fov 72.5; CAM_PITCH -0.30 rad; CAM_UP 0.8 above ball centre at ground + 1.0). x/z are the ball, yaw in radians, forward (-sin yaw, -cos yaw). Stage 4 light is afternoon (world_look.gd STAGE_TIME).",
+ "poses": [
+  {"idx": 1, "line": "vignette:s065_lamp_wall rain_gauge + cannon_tube_vent launcher dial (44.7 m apart)", "along_m": 0.0, "x": -47.5, "z": -264.5, "yaw": 0.16},
+  {"idx": 2, "line": "vignette:s109_mid_shift_board rain_gauge close", "along_m": 0.0, "x": 8.7, "z": 60.6, "yaw": 1.257},
+  {"idx": 3, "line": "vignette:s104_pump_station pump_engine front three-quarter, drain cock", "along_m": 0.0, "x": 175.7, "z": -29.5, "yaw": -0.262}
+ ]
+}

@@ -1,0 +1,16 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+VERIFY|idx=1|ok=true|cam=(-46.13, -80.14, -256.01)|ball_ground=-84.60|cam_over_ground_min(1.5m disc)=4.65|keepout_cam=''|keepout_ball=''|prop_cam=''|prop_ball=''|subject_facing_dot=0.43
+  pt=(-44.61, -83.94, -267.99) cell_visible=true ndc=(0.21, -0.02) dist=12.7 los_min_clear=0.90 ball_occludes=false
+  pt=(-44.88, -83.84, -267.97) cell_visible=true ndc=(0.20, -0.01) dist=12.6 los_min_clear=1.00 ball_occludes=false
+  pt=(-42.08, -82.10, -312.59) cell_visible=true ndc=(0.19, 0.37) dist=56.8 los_min_clear=2.18 ball_occludes=false
+VERIFY|idx=2|ok=true|cam=(16.88, -89.01, 63.25)|ball_ground=-93.47|cam_over_ground_min(1.5m disc)=4.49|keepout_cam=''|keepout_ball=''|prop_cam=''|prop_ball=''|subject_facing_dot=1.00
+  pt=(6.20, -92.69, 57.79) cell_visible=true ndc=(0.12, -0.00) dist=12.6 los_min_clear=1.01 ball_occludes=false
+  pt=(5.97, -92.71, 57.67) cell_visible=true ndc=(0.12, 0.00) dist=12.8 los_min_clear=0.98 ball_occludes=false
+VERIFY|idx=3|ok=true|cam=(173.47, -86.55, -21.20)|ball_ground=-91.01|cam_over_ground_min(1.5m disc)=4.65|keepout_cam=''|keepout_ball=''|prop_cam=''|prop_ball=''|subject_facing_dot=1.00
+  pt=(175.82, -88.55, -35.98) cell_visible=true ndc=(-0.08, 0.23) dist=15.1 los_min_clear=2.45 ball_occludes=false
+  pt=(174.76, -90.42, -33.48) cell_visible=true ndc=(-0.12, -0.01) dist=12.9 los_min_clear=0.83 ball_occludes=false
+VERIFY|idx=99|ok=false|cam=(-48.87, -80.14, -272.99)|ball_ground=-84.60|cam_over_ground_min(1.5m disc)=-15.11|keepout_cam=''|keepout_ball=''|prop_cam=''|prop_ball=''|subject_facing_dot=-0.96
+  pt=(-44.61, -83.94, -267.99) cell_visible=true ndc=(-0.40, -0.41) dist=7.6 los_min_clear=1.06 ball_occludes=false
+  pt=(-44.88, -83.84, -267.97) cell_visible=true ndc=(-0.37, -0.40) dist=7.4 los_min_clear=1.18 ball_occludes=false
+  pt=(-42.08, -82.10, -312.59) cell_visible=false ndc=(0.28, 0.50) dist=40.2 los_min_clear=-2.63 ball_occludes=false

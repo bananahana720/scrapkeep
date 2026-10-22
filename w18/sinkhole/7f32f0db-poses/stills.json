@@ -1,0 +1,47 @@
+{
+	"map": "park_sinkhole",
+	"stills": [
+		{
+			"along_m": 0.0,
+			"bare": false,
+			"core_60": 30,
+			"file": "park_sinkhole-1--48_-265.png",
+			"idx": 1,
+			"kinds_120": 19,
+			"line": "vignette:s065_lamp_wall rain_gauge + cannon_tube_vent launcher dial (44.7 m apart)",
+			"props_120": 124,
+			"void": false,
+			"x": -47.5,
+			"yaw": 0.16,
+			"z": -264.5
+		},
+		{
+			"along_m": 0.0,
+			"bare": false,
+			"core_60": 26,
+			"file": "park_sinkhole-2-9_61.png",
+			"idx": 2,
+			"kinds_120": 17,
+			"line": "vignette:s109_mid_shift_board rain_gauge close",
+			"props_120": 142,
+			"void": false,
+			"x": 8.7,
+			"yaw": 1.257,
+			"z": 60.6
+		},
+		{
+			"along_m": 0.0,
+			"bare": false,
+			"core_60": 70,
+			"file": "park_sinkhole-3-176_-30.png",
+			"idx": 3,
+			"kinds_120": 32,
+			"line": "vignette:s104_pump_station pump_engine front three-quarter, drain cock",
+			"props_120": 341,
+			"void": false,
+			"x": 175.7,
+			"yaw": -0.262,
+			"z": -29.5
+		}
+	]
+}
