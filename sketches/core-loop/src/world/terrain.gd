@@ -112,7 +112,7 @@ var _reaper: Reaper
 
 # A released park stage's root goes here instead of queue_free: its placed rows ran to 20,000 nodes (stage 1), and
 # freeing them in one frame cost the stage 2 exit frame 263 ms on the cloud. It frees the tree a leaf at a time within
-# REAP_BUDGET_USEC a frame. The root is parked (hidden, below the map, processing off) while it waits, as an idle stage is.
+# REAP_BUDGET_USEC a frame. The root waits disabled (out of physics, no processing), hidden and below the map.
 class Reaper:
 	extends Node
 	var dying: Array[Node] = []
@@ -123,14 +123,18 @@ class Reaper:
 	func reap(budget_usec: int) -> void:
 		var deadline := Time.get_ticks_usec() + budget_usec
 		while not dying.is_empty() and Time.get_ticks_usec() < deadline:
-			var node: Node = dying[-1]
-			if not is_instance_valid(node):
+			var top = dying[-1]
+			if not is_instance_valid(top):
 				dying.pop_back()
 				continue
+			var node: Node = top
 			while node.get_child_count() > 0:
 				node = node.get_child(-1)
-			if node == dying[-1]:
+			if node == top:
 				dying.pop_back()
+			# Out of the tree before the free: its _exit_tree runs first, where a ground scatter still building waits for
+			# its worker jobs (scatter.gd Chunked); free() refuses an object a worker thread is still calling into.
+			node.get_parent().remove_child(node)
 			node.free()
 
 
@@ -388,7 +392,7 @@ func _free_stage(i: int) -> void:
 	if slot >= 0:
 		_render_owner[slot] = -1
 	# A ground still attaching must not add one more region to the render node it just gave up
-	# in the frames before queue_free lands; the stage that takes the node may already own it.
+	# in the frames before the reaper frees it; the stage that takes the node may already own it.
 	if _grounds[i] != null:
 		_grounds[i].set_process(false)
 	_release_root(_roots[i])
@@ -411,8 +415,8 @@ func _release_root(root: Node3D) -> void:
 		_reaper = Reaper.new()
 		_reaper.name = "StageReaper"
 		_parent.add_child(_reaper)
-	_park(root, true)
 	root.process_mode = Node.PROCESS_MODE_DISABLED
+	_park(root, true)
 	_reaper.dying.append(root)
 
 

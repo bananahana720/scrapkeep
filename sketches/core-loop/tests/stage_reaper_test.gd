@@ -47,7 +47,10 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	# A queue_free from the entry would be gone by now; the reaper frees a slice a frame.
-	t.check("it outlives the entry frame (no one-frame free)", is_instance_valid(first), "%d nodes left" % (_count(first) if is_instance_valid(first) else 0))
+	var left := _count(first) if is_instance_valid(first) else 0
+	t.check("it outlives the entry frame (no one-frame free)", is_instance_valid(first), "%d nodes left" % left)
+	# Leaves first and a slice a frame: two frames in, the root still stands and part of its tree is already gone.
+	t.check("it frees a slice a frame, leaves first", left > 0 and left < nodes, "%d of %d nodes left" % [left, nodes])
 	var frames := 2
 	while is_instance_valid(first) and frames < MAX_FRAMES:
 		await process_frame
