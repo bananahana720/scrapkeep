@@ -1,0 +1,125 @@
+{
+	"map": "park_sinkhole",
+	"stills": [
+		{
+			"along_m": 0.0,
+			"cam": [
+				-41.22,
+				-82.803,
+				-264.556
+			],
+			"caption": "s065_lamp_wall eye 0.0 px 6796 aabb 4.9%",
+			"file": "park_sinkhole-v56-s065_lamp_wall-eye.png",
+			"idx": 112,
+			"line": "vignette:s065_lamp_wall",
+			"look": [
+				-44.877,
+				-83.945,
+				-267.966
+			],
+			"x": -35.516,
+			"yaw": 0.8203,
+			"z": -259.237
+		},
+		{
+			"along_m": 0.0,
+			"caption": "s065_lamp_wall chase 0.0 px 868 aabb 0.6%",
+			"file": "park_sinkhole-v56-s065_lamp_wall-chase.png",
+			"idx": 113,
+			"line": "vignette:s065_lamp_wall",
+			"x": -39.515,
+			"yaw": 0.8203,
+			"z": -266.385
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				9.308,
+				-91.692,
+				61.389
+			],
+			"caption": "s109_mid_shift_board eye 0.0 px 8941 aabb 4.9%",
+			"file": "park_sinkhole-v100-s109_mid_shift_board-eye.png",
+			"idx": 200,
+			"line": "vignette:s109_mid_shift_board",
+			"look": [
+				5.968,
+				-92.702,
+				57.668
+			],
+			"x": 14.545,
+			"yaw": 0.73129,
+			"z": 67.226
+		},
+		{
+			"along_m": 0.0,
+			"caption": "s109_mid_shift_board chase 0.0 px 1177 aabb 0.7%",
+			"file": "park_sinkhole-v100-s109_mid_shift_board-chase.png",
+			"idx": 201,
+			"line": "vignette:s109_mid_shift_board",
+			"x": 11.168,
+			"yaw": 0.73129,
+			"z": 59.72
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				184.932,
+				-89.599,
+				-15.376
+			],
+			"caption": "s113_lamp_wall eye 0.0 px 6953 aabb 5.0%",
+			"file": "park_sinkhole-v104-s113_lamp_wall-eye.png",
+			"idx": 208,
+			"line": "vignette:s113_lamp_wall",
+			"look": [
+				188.367,
+				-90.933,
+				-11.743
+			],
+			"x": 179.621,
+			"yaw": -2.38412,
+			"z": -20.992
+		},
+		{
+			"along_m": 0.0,
+			"caption": "s113_lamp_wall chase 0.0 px 949 aabb 0.7%",
+			"file": "park_sinkhole-v104-s113_lamp_wall-chase.png",
+			"idx": 209,
+			"line": "vignette:s113_lamp_wall",
+			"x": 183.115,
+			"yaw": -2.38412,
+			"z": -13.658
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				114.186,
+				-95.346,
+				195.344
+			],
+			"caption": "s132_lamp_wall eye 0.0 px 6917 aabb 4.7%",
+			"file": "park_sinkhole-v123-s132_lamp_wall-eye.png",
+			"idx": 246,
+			"line": "vignette:s132_lamp_wall",
+			"look": [
+				109.763,
+				-96.644,
+				197.676
+			],
+			"x": 121.035,
+			"yaw": 2.056,
+			"z": 191.733
+		},
+		{
+			"along_m": 0.0,
+			"caption": "s132_lamp_wall chase 0.0 px 936 aabb 0.6%",
+			"file": "park_sinkhole-v123-s132_lamp_wall-chase.png",
+			"idx": 247,
+			"line": "vignette:s132_lamp_wall",
+			"x": 113.02,
+			"yaw": 2.056,
+			"z": 193.133
+		}
+	]
+}

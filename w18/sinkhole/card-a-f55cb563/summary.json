@@ -1,0 +1,43 @@
+{
+	"adapter": "llvmpipe (LLVM 20.1.2, 256 bits)",
+	"blocked_all": 0,
+	"constants": {
+		"bare_min_core_near": 5,
+		"bare_min_kinds_far": 4,
+		"bare_rule": "BARE if (props+clutter+scenery+rows) within near_m in view < bare_min_core_near, or distinct kinds within far_m in view < bare_min_kinds_far",
+		"camera": {
+			"arm_m": 9.0,
+			"far": 700.0,
+			"fov": 72.5,
+			"name": "mid",
+			"pitch_rad": -0.3,
+			"source": "src/movement/chase_camera.gd: speed_arm 7.5..10.5, FOV_REST 65..FOV_FAST 80, pitch -0.30, anchor +0.8 m; mid = half speed",
+			"up_m": 0.8
+		},
+		"categories": [
+			"props",
+			"clutter",
+			"scatter",
+			"anchors",
+			"rows",
+			"scenery",
+			"landforms"
+		],
+		"dedup_m": 10.0,
+		"draw_label": "OpenGL compatibility proxy, cloud llvmpipe, not a frame-cost proof",
+		"far_m": 120.0,
+		"near_m": 60.0,
+		"step_m": 25.0
+	},
+	"frames_without_isolation": 0,
+	"frames_zero_subject_px": 0,
+	"map": "park_sinkhole",
+	"mode": "vignettes",
+	"runtime_s": 78.4,
+	"spots_in_file": 169,
+	"spots_rendered": 4,
+	"spots_skipped": [],
+	"stage": 4,
+	"subject_px_note": "px inside the projected box, minus pixels that move between two unchanged renders; a guide",
+	"subject_rule": "first instance of kind rain_gauge in the spot; spots without it skipped"
+}
