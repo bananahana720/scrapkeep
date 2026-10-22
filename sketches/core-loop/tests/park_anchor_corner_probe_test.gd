@@ -31,7 +31,7 @@ extends SceneTree
 # (gap_*_m, gap_face_worst_*_m in anchor_fit.json); this one reads what the game places. An event is a stop or a bounce
 # with air above FAR_M (1.5 m, the ruling's line). On a ride line = AnchorContacts.on_lane at the contact point (the lane
 # mask is generous: its cell is 8 m wide).
-# Gate (head only, where anchor_fit_boxes exists): 0 events on a ride line and at most 3 per park. The same file runs on the
+# Gate (head only, where anchor_fit_boxes exists): 0 events per park, on a ride line or off it (ruling 6332145318). The same file runs on the
 # base 5366a351 (copy it and traversal_line.gd into a base worktree), where it prints the numbers and gates nothing: there the
 # 8 m boxes should show the empty-air events Modeling measured (the positive control).
 
@@ -57,7 +57,7 @@ const STOP_WINDOW_S := 0.8
 const MAX_TICKS := 300
 const BOUNCE_MIN_MPS := 1.0
 const BOX_REACH_M := 25.0
-const GATE_PER_PARK := 3
+const GATE_PER_PARK := 0
 const GATE_ON_LINE := 0
 
 var _t := T.new("park_anchor_corner_probe_test")
@@ -226,6 +226,8 @@ func _probe_park(park_name: String, speeds: Array) -> void:
 	var rows_used := posted.filter(func(e: Dictionary) -> bool: return not e["picked"].is_empty())
 	var drawn := _drawn_posts(posted)
 	var boxes := _collect_boxes(posted)
+	if _head:
+		_check_hull_faces_visible(park_name, boxes)
 	var shots_by_speed := {}
 	for pair: Array in speeds:
 		var shots := _make_shots(park_name, targets, boxes, pair[0], float(pair[1]))
@@ -288,7 +290,8 @@ func _collect_boxes(posted: Array) -> Array:
 				out.append(rec)
 			elif shape is CollisionShape3D and shape.shape is ConvexPolygonShape3D:
 				# A hull band (the drawn mesh's convex hull): its post-local bounding box stands in as the aim target (the
-				# old box's corners) and the bounce rule's surface; the contact point itself is read from the engine.
+				# old box's corners). The surface tests (contact normal, bounce rule) read the band as the recorder does, a
+				# vertical prism of its XZ hull ("surface"), so a glance off a hull face well inside the box still counts.
 				var box := AABB()
 				var pts := (shape.shape as ConvexPolygonShape3D).points
 				for n in pts.size():
@@ -297,6 +300,7 @@ func _collect_boxes(posted: Array) -> Array:
 				var rec: Dictionary = _AC.box_record(xf, box.size, info)
 				rec["body"] = entry["body"].get_instance_id()
 				rec["hull"] = true
+				rec["surface"] = _AC.hull_record(shape.global_transform, _AC.hull_outline(pts), info)
 				out.append(rec)
 	return out
 
@@ -396,6 +400,50 @@ func _any_hull(list: Array) -> bool:
 
 
 # The contact point the engine reports for a ball at `at` (the touched shape's closest point), else the fallback.
+# The bounce rule can see a hull face: a point 0.5 m out from a prism edge's midpoint, where that point is still inside
+# the band's aim box (the hull is cut well inside it), reads 0.5 m and a level outward normal from the surface the bounce
+# rule uses, where the aim box alone reads it as inside (0 m, normal UP), so no sideways arrival could ever count.
+func _check_hull_faces_visible(park_name: String, boxes: Array) -> void:
+	var planted := 0
+	var good := 0
+	var first := ""
+	for rec: Dictionary in boxes:
+		if not rec.has("surface"):
+			continue
+		var prism: Dictionary = rec["surface"]
+		var poly: Array = prism["poly"]
+		var y := (float(prism["y0"]) + float(prism["y1"])) * 0.5
+		for e in poly.size():
+			var a2: Vector2 = poly[e]
+			var b2: Vector2 = poly[(e + 1) % poly.size()]
+			var edge := b2 - a2
+			if edge.length() < 0.5:
+				continue
+			var out2 := Vector2(edge.y, -edge.x).normalized()
+			var p2 := (a2 + b2) * 0.5 + out2 * 0.5
+			var at := Vector3(p2.x, y, p2.y)
+			if float(_AC.surface_of(at, rec)["dist"]) > 0.0:
+				continue
+			planted += 1
+			var hit: Dictionary = _AC.nearest_surface(at, _surfaces([rec]))
+			var n: Vector3 = hit["normal"]
+			if absf(float(hit["dist"]) - 0.5) < 0.01 and absf(n.y) < 0.01 and Vector2(n.x, n.z).dot(out2) > 0.99:
+				good += 1
+			elif first == "":
+				first = "%s edge %d: dist %.3f normal %s" % [rec["row"], e, float(hit["dist"]), str(n)]
+			break
+	_t.check("%s: hull faces cut inside their aim box are planted for the bounce rule (%d bands)" % [park_name, planted], planted > 0)
+	_t.check("%s: the bounce rule reads each planted hull face at 0.5 m with its level outward normal (%d of %d)%s" % [park_name, good, planted, "" if first == "" else ", first miss " + first], good == planted)
+
+
+# The records the surface tests read: a hull band's prism in place of its aim box.
+func _surfaces(list: Array) -> Array:
+	var out: Array = []
+	for rec: Dictionary in list:
+		out.append(rec.get("surface", rec))
+	return out
+
+
 func _engine_contact(at: Vector3, fallback: Vector3) -> Vector3:
 	var query := PhysicsShapeQueryParameters3D.new()
 	var sphere := SphereShape3D.new()
@@ -443,7 +491,7 @@ func _fly(shots: Array, parent: Node3D, boxes: Array, drawn: Array, mask: Dictio
 				var arrived := Vector2(prev_v[i].x, prev_v[i].z).length()
 				traversals[i] = RunLog.Traversal.new(Engine.physics_ticks_per_second, _cruise)
 				traversals[i].step(maxi(SpeedTier.of(arrived, _cruise), SpeedTier.CRUISE), arrived, false, false, false)
-				var hit: Dictionary = _AC.nearest_surface(at, shot["near"])
+				var hit: Dictionary = _AC.nearest_surface(at, _surfaces(shot["near"]))
 				var cp: Vector3 = at - (hit["normal"] as Vector3) * float(hit["dist"])
 				if _any_hull(shot["near"]):
 					cp = _engine_contact(at, cp)
@@ -455,7 +503,7 @@ func _fly(shots: Array, parent: Node3D, boxes: Array, drawn: Array, mask: Dictio
 			if int(shot["contact"]) >= 0:
 				traversals[i].step(SpeedTier.of(planar, _cruise), planar, false, false, false)
 				if touching or tick - int(shot["contact"]) <= 2:
-					var hit2: Dictionary = _AC.nearest_surface(at, shot["near"])
+					var hit2: Dictionary = _AC.nearest_surface(at, _surfaces(shot["near"]))
 					if hit2["dist"] <= 2.0 and (prev_v[i] as Vector3).dot(hit2["normal"]) < -BOUNCE_MIN_MPS and v.dot(hit2["normal"]) > 0.0:
 						shot["bounced"] = true
 				if traversals[i].dead_stops > 0:
@@ -495,11 +543,13 @@ func _report(park_name: String, targets: Array, rows_used: Array, by_speed: Dict
 	var event_posts := {}
 	var all_touched := 0
 	var all_shots := 0
+	var all_bounces := 0
 	for speed_name: String in by_speed:
 		var shots: Array = by_speed[speed_name]
 		var touched := 0
 		var stops := 0
 		var bounces := 0
+		var any_bounces := 0
 		var events: Array = []
 		var on_line := 0
 		var worst := -1.0
@@ -512,6 +562,7 @@ func _report(park_name: String, targets: Array, rows_used: Array, by_speed: Dict
 			var far := float(s["gap"]) > FAR_M
 			stops += 1 if s["stopped"] and far else 0
 			bounces += 1 if s["bounced"] and far and not s["stopped"] else 0
+			any_bounces += 1 if s["bounced"] else 0
 			if _is_event(s):
 				events.append(s)
 				event_posts["%s:%d" % [s["row"], s["post"]]] = true
@@ -522,14 +573,16 @@ func _report(park_name: String, targets: Array, rows_used: Array, by_speed: Dict
 				worst = maxf(worst, minf(float(s["gap"]), 99.0))
 				var label := "%s%s size %s" % [s["row"], "*" if s["over_limit"] else "", s["size_y"]]
 				rows[label] = int(rows.get(label, 0)) + 1
-		print("PROBE %s %s %.1f m/s: shots %d, touched %d, far stops %d, far bounces (not stops) %d, events %d, on ride line %d, worst air %.2f m, over 2 m %d, rows %s" % [
-			park_name, speed_name, float(shots[0]["speed"]) if not shots.is_empty() else 0.0, shots.size(), touched, stops, bounces, events.size(), on_line, worst, over2, str(rows)])
+		print("PROBE %s %s %.1f m/s: shots %d, touched %d, far stops %d, far bounces (not stops) %d, bounces at any air %d, events %d, on ride line %d, worst air %.2f m, over 2 m %d, rows %s" % [
+			park_name, speed_name, float(shots[0]["speed"]) if not shots.is_empty() else 0.0, shots.size(), touched, stops, bounces, any_bounces, events.size(), on_line, worst, over2, str(rows)])
 		all_events.append_array(events)
 		all_line += on_line
 		all_touched += touched
+		all_bounces += any_bounces
 		all_shots += shots.size()
 		_t.check("%s %s: the probe touched at least 90%% of its shots (%d of %d)" % [park_name, speed_name, touched, shots.size()], not shots.is_empty() and touched * 10 >= shots.size() * 9)
 	_t.check("%s: at least %d fitted posts targeted (%d)" % [park_name, MIN_POSTS, targets.size()], targets.size() >= MIN_POSTS)
+	_t.check("%s: the bounce rule fires in flight, so a far bounce could be seen (%d bounces at any air)" % [park_name, all_bounces], all_bounces > 0)
 	if _head:
 		_t.check("%s: no stop or bounce more than %.1f m from the visible post lies on a ride line (%d of %d events)" % [park_name, FAR_M, all_line, all_events.size()], all_line <= GATE_ON_LINE)
 		_t.check("%s: at most %d stops or bounces more than %.1f m from the visible post (%d)" % [park_name, GATE_PER_PARK, FAR_M, all_events.size()], all_events.size() <= GATE_PER_PARK)
