@@ -400,8 +400,6 @@ static func lower_roof(roof: Dictionary, drop: float) -> void:
 	var surface := Surface.new()
 	surface.cells = roof.baseline.cells
 	var normals: PackedVector3Array = roof.baseline.normals
-	if normals.size() != roof.baseline.vertices.size():
-		normals = roof.baseline.mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
 	for vertex: Vector3 in roof.baseline.vertices:
 		surface.vertices.append(vertex + Vector3.DOWN * drop)
 	roof.surface = mesh_surface(surface, normals)
