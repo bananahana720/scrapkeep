@@ -52,8 +52,18 @@ var _defeated := false
 var _lens_placed := false
 
 
+# Reads the base and kit ahead on loader threads while the approach runs (mind.gd's prepare_arena):
+# loading them took 18 to 31 ms of the boss-entry frame on the cloud (scrapkeep#241).
+static func prepare() -> void:
+	for path in [base_path, kit_path]:
+		if ResourceLoader.exists(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			ResourceLoader.load_threaded_request(path)
+
+
 static func attach(owner_module):
 	preload("res://src/presentation/quiet_gun.gd").attach(owner_module)
+	# The loader thread's copies, held so load_scene's load() finds them in the cache.
+	var _read := [_take(base_path), _take(kit_path)]
 	var base_scene := BossModel.load_scene(base_path)
 	var kit_scene := BossModel.load_scene(kit_path)
 	if base_scene == null or kit_scene == null or not _has_parts(base_scene, BASE_PARTS) or not _has_parts(kit_scene, KIT_PARTS):
@@ -69,6 +79,14 @@ static func attach(owner_module):
 	dress.global_position = owner_module.pad.global_position + Vector3.UP * owner_module.PAD_THICK * 0.5
 	dress.setup(base_scene, kit_scene)
 	return dress
+
+
+# A file prepare() asked for, from its loader thread (waiting if it is still loading); null when
+# nothing asked, and load_scene loads it.
+static func _take(path: String) -> Resource:
+	if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+		return ResourceLoader.load_threaded_get(path)
+	return null
 
 
 static func _has_parts(scene: Node, parts: Array) -> bool:
