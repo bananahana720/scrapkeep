@@ -125,20 +125,20 @@ def coil_tip(name="CoilMast", tip=MAST_TIP):
 
 def spool_kit(p):
     """Winch spool on a fore-aft axle at 3 o'clock: copper flanges, bone rope drum, charcoal axle,
-    bracket, stake hatch and fairlead (all on the paint surface in charcoal vertex colour, so the
-    kit spends two draws), a copper ratchet pawl and the rope mouth."""
+    bracket, stake hatch and fairlead (all on the paint surface in charcoal vertex colour, alpha 0 so
+    no equipped paint takes them, and the kit spends two draws), a copper ratchet pawl and the rope mouth."""
     c = SPOOL_C
     for side in (-1, 1):
         p.cyl("copper", SPOOL_R, SPOOL_R, 0.02, 8, loc=c + Vector((0, side * SPOOL_HALF, 0)), rot=(math.pi / 2, 0, 0))
     p.cyl("paint", 0.072, 0.072, 2 * SPOOL_HALF - 0.02, 8, loc=c, rot=(math.pi / 2, 0, 0), color="bone", caps=False)
-    p.rod("paint", c + Vector((0, -SPOOL_HALF - 0.03, 0)), c + Vector((0, SPOOL_HALF + 0.03, 0)), 0.02, 4, color="charcoal")
-    p.beam("paint", SPOOL_ARM_FROM, c + Vector((-0.04, 0, 0)), 0.04, color="charcoal")
+    p.rod("paint", c + Vector((0, -SPOOL_HALF - 0.03, 0)), c + Vector((0, SPOOL_HALF + 0.03, 0)), 0.02, 4, color="charcoal", alpha=0)
+    p.beam("paint", SPOOL_ARM_FROM, c + Vector((-0.04, 0, 0)), 0.04, color="charcoal", alpha=0)
     # Stake hatch under the spool (the stakes ride inside it).
-    p.box("paint", (0.10, 0.12, 0.05), loc=c + Vector((-0.04, 0.0, -SPOOL_R - 0.035)), color="charcoal")
+    p.box("paint", (0.10, 0.12, 0.05), loc=c + Vector((-0.04, 0.0, -SPOOL_R - 0.035)), color="charcoal", alpha=0)
     # Ratchet pawl on the rear flange (it clacks when Bank Shot locks the line).
     p.box("copper", (0.02, 0.012, 0.06), loc=c + Vector((0.0, -SPOOL_HALF - 0.016, SPOOL_R - 0.01)), rot=(0, 0.5, 0))
     # Fairlead: the rope mouth at the front, where RopeExit sits.
-    p.beam("paint", c + Vector((-0.03, SPOOL_HALF, 0.0)), ROPE_EXIT, 0.035, color="charcoal")
+    p.beam("paint", c + Vector((-0.03, SPOOL_HALF, 0.0)), ROPE_EXIT, 0.035, color="charcoal", alpha=0)
 
 
 def wrench_rack():
