@@ -474,6 +474,8 @@ func _build_crew() -> void:
 	shell.name = "PilotShell"
 	_scene.add_child(shell)
 	_snapshot(game.player.juice_node(), shell, true)
+	if game.player.has_method("pod_mount"):
+		_snapshot(game.player.pod_mount(), shell, true)
 	companion = Node3D.new()
 	companion.name = "SPIL9"
 	_scene.add_child(companion)

@@ -34,7 +34,14 @@ import {
   namedRunMustWait,
   noMatchMessage,
   parseArgs,
+  expiredLine,
+  expiredQuarantine,
   parseQuarantine,
+  quarantineLines,
+  quarantineRecords,
+  quarantineNote,
+  readQuarantine,
+  readQuarantineEntries,
   quarantinedNames,
   quarantineVerdict,
   runPasses,
@@ -641,6 +648,49 @@ test("the quarantine file parses into entries and names", () => {
   assert.deepEqual(parseQuarantine(text)[0], { test: "a_test", owner: "O1", reason: "why", added: "2026-10-01", deadline: "wave 3" });
   assert.deepEqual([...quarantinedNames(text)], ["a_test", "b_test"]);
   assert.deepEqual(parseQuarantine(""), []);
+});
+
+test("a quarantined failure names its owner and reason, and the readers agree", () => {
+  const entry = parseQuarantine("test\towner\treason\tadded\tdeadline\na_test\tO1\twhy; #1\t2026-10-01\twave 3\n")[0];
+  assert.equal(quarantineNote(entry), "quarantined: a_test (O1: why; #1)");
+  const dir = mkdtempSync(path.join(os.tmpdir(), "quarantine-"));
+  try {
+    mkdirSync(path.join(dir, "tests"));
+    writeFileSync(path.join(dir, "tests", "QUARANTINE.tsv"), "test\towner\treason\tadded\tdeadline\nfixture_test\tSystems\texit abort after 12 passing checks; #241 1\t2026-10-22\t2026-10-29\n");
+    const rows = readQuarantineEntries(dir);
+    const fixture = rows.find((row) => row.test === "fixture_test");
+    assert.equal(fixture.owner, "Systems");
+    assert.match(quarantineNote(fixture), /^quarantined: fixture_test \(Systems: exit abort .*#241 1\)$/);
+    assert.deepEqual([...readQuarantine(dir)], rows.map((row) => row.test));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("an expired quarantine row is reported and an unexpired or free-text one is not", () => {
+  const rows = parseQuarantine("test\towner\treason\tadded\tdeadline\na_test\tO1\twhy\t2026-10-01\t2026-10-29\nb_test\tO2\twhy\t2026-10-01\twave 3\n");
+  assert.deepEqual(expiredQuarantine(rows, "2026-10-29"), []);
+  const late = expiredQuarantine(rows, "2026-10-30");
+  assert.deepEqual(late.map((row) => row.test), ["a_test"]);
+  assert.equal(expiredLine(late[0]).startsWith("quarantine expired: a_test (O1) deadline 2026-10-29"), true);
+});
+
+test("quarantine rows reach the human output and the receipt with that run's result", () => {
+  const entry = { test: "a_test", owner: "Systems", reason: "why; #1", added: "2026-10-22", deadline: "2026-10-29" };
+  const stale = { ...entry, test: "b_test" };
+  const results = [
+    result(testLabel("a_test"), false, { quarantined: true, quarantine: entry, exit: null, signal: "SIGABRT", fails: 0 }),
+    result(testLabel("b_test"), true, { quarantined: true, quarantine: stale, exit: 0, fails: 0 }),
+    result(testLabel("c_test"), true),
+  ];
+  const records = quarantineRecords(results);
+  assert.deepEqual(records.map((row) => [row.test, row.result, row.signal, row.failing_checks]), [["a_test", "red", "SIGABRT", 0], ["b_test", "green", null, 0]]);
+  const lines = quarantineLines(records);
+  assert.ok(lines.some((line) => line.includes("a_test: 0 failing checks, signal SIGABRT (Systems: why; #1; deadline 2026-10-29)")));
+  assert.ok(lines.some((line) => line.startsWith("quarantined but green")) && lines.some((line) => line.includes("b_test")));
+  const receipt = buildReceipt({ label: "t", argv: [], root: "/r", git: null, godot: "g", sketches: [], flags: [], width: 1, lockWaitMs: 0, startedAt: "x", wallMs: 1, stems: {}, results, expired: [] });
+  assert.equal(receipt.quarantined.length, 2);
+  assert.deepEqual(Object.keys(receipt.quarantined[0]).sort(), ["deadline", "exit", "failing_checks", "owner", "reason", "result", "signal", "test"]);
 });
 
 test("a red quarantined test does not fail the run, a green one is stale, any other failure fails", () => {

@@ -648,7 +648,9 @@ func start(resume := false) -> void:
 		if not boss_note.is_empty():
 			var hits: Dictionary = boss_note["weak_point_hits"]
 			hits[point_id] = int(hits.get(point_id, 0)) + 1)
-	_connect_optional("boss_defeated", func(): _boss_set("defeated_s", snappedf(_boss_clock, 0.01)))
+	_connect_optional("boss_defeated", func():
+		_boss_set("defeated_s", snappedf(_boss_clock, 0.01))
+		_boss_hold_note())
 	events.scrap_lost.connect(func(amount: int, _at: Vector3, _total: int, cause: String):
 		if cause == "crane":
 			_boss_set("stolen", int(boss_note.get("stolen", 0)) + amount))
@@ -857,6 +859,7 @@ func _end(why: String) -> void:
 			boss_note["died_s"] = snappedf(_boss_clock, 0.01)
 		boss_note["outcome"] = why
 		boss_note["seconds"] = snappedf(_boss_clock, 0.01)
+		_boss_hold_note()
 		var boss = _boss()
 		if boss != null:
 			boss_note["phase_reached"] = boss.get("phase")
@@ -894,6 +897,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_cache_phase = "runup"
 	_cache_clock = 0.0
 	_climb = []
+	_route_lips.clear()
 	_climb_for = ""
 	_fight_climb = []
 	_fight_climb_clock = 0.0
@@ -1071,7 +1075,17 @@ func _on_boss_entered() -> void:
 	boss_note = {"entered_run_s": snappedf(game.run.run_time, 0.01), "entry_heft": snappedf(game.run.heft(), 0.001),
 		"entry_parts": game.run.parts.size(), "phases": [], "weak_point_hits": {}, "hp_lost": 0.0, "hits": 0,
 		"evasions": 0, "plants": 0, "slingshots": 0, "specials": 0, "stolen": 0, "defeated_s": null,
+		"hold_s": null, "hold_bound_s": null,
 		"charge_reads": 0, "charge_sidesteps": 0, "charge_hits": 0, "clash_tries": 0}
+
+
+# The stub bosses' phase-hold seconds (stub_boss.gd); a hull boss has none and records null.
+func _boss_hold_note() -> void:
+	var boss = _boss()
+	if boss == null or not "hold_s" in boss:
+		return
+	_boss_set("hold_s", snappedf(boss.hold_s, 0.01))
+	_boss_set("hold_bound_s", snappedf(boss.hold_bound_s, 0.01))
 
 
 func _on_boss_phase(phase: int, phase_name: String) -> void:
@@ -2955,6 +2969,14 @@ func _to_gate(delta: float) -> void:
 	if _gate_time > GATE_HOP_SECONDS and _gate_hop <= 0.0 and game.player.state.grounded and along < 0.0 and along > -14.0:
 		_gate_hop = GATE_HOP_EVERY
 		source.press["jump_pressed"] = true
+	# Past a kicker's lip and falling short of the next floor, spend the air jump (the Flume's drum lip).
+	if not game.player.state.grounded and game.player.state.air_actions > 0 and game.player.state.velocity.y < 0.0 \
+			and game.player.verb_ready("jump"):
+		for lip in _route_lips:
+			if _flat(ball_at, lip) < 12.0 and ball_at.y < lip.y + 2.5 and ball_at.y > lip.y - 2.0:
+				source.press["jump_pressed"] = true
+				_count("gate_air_jumps")
+				break
 	if trace and ticks % (Engine.physics_ticks_per_second * 2) == 0:
 		var ball: Vector3 = game.player.ball_position()
 		print("    gate %d at=(%.1f, %.1f, %.1f) facing=(%.2f, %.2f, %.2f) ball=(%.1f, %.1f, %.1f) along=%.1f side=%.1f dy=%.1f ground=%.1f target=(%.1f, %.1f, %.1f)"

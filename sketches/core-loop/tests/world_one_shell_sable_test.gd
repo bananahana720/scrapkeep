@@ -264,10 +264,16 @@ func _check_machinery(shell: Node) -> void:
 	_report("sable spool bulge", absf(spool_r - (LATTICE_OUT + SPOOL_PAST)) <= TOL,
 		"Pod reaches %.3f at 3 o'clock, want %.3f (0.12 m past the lattice)" % [spool_r, LATTICE_OUT + SPOOL_PAST])
 	_report("sable nothing at one", one_r <= 1.0, "Pod reaches %.3f at 1 o'clock, inside the collider" % one_r)
-	var rope := pod.find_child("RopeExit", true, false) as Node3D
-	var rope_at := to_root(rope, shell).origin if rope != null else Vector3.ZERO
-	_report("sable rope exit", rope != null and rope_at.x > 0.85 and rope_at.z < -0.08 and clock(rope_at) > 2.5 and clock(rope_at) < 3.75,
-		"RopeExit at the spool's front rope mouth, %s" % rope_at)
+	# Rope: the fairlead carriage (MOTION-SPEC swing row) carries RopeExit round the collar at 1.06,
+	# outside the 1.0 collider, so the rope never leaves the centre. Fitted on a fresh load.
+	var fitted := _load(SHELL)
+	var fitted_pod := fitted.find_child("Pod", true, false) as Node3D
+	HeroAssets.add_fairlead(fitted_pod)
+	var rope := fitted_pod.find_child("RopeExit", true, false) as Node3D
+	var rope_at := to_root(rope, fitted).origin if rope != null else Vector3.ZERO
+	_report("sable rope exit", rope != null and rope.get_parent().name == "Fairlead" and absf(rope_at.length() - 1.06) <= 0.001
+		and absf(rope_at.y) <= 0.001, "RopeExit rides the Fairlead carriage at radius 1.06 on the flat, %s" % rope_at)
+	fitted.free()
 	# Rack: one mesh, one class_accent surface, five index bands in COLOR.r (rail, four wrenches).
 	_report("sable rack surface", rack.mesh.get_surface_count() == 1 and HeroAssets.slot_of(rack.mesh, 0) == "class_accent",
 		"WrenchRack is one class_accent surface")

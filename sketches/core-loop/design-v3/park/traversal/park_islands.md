@@ -1,5 +1,21 @@
 # park_islands traversal
 
+## Decoration-only pass, head vs base, 2026-10-19 (revised after review)
+
+The pass draws six rows as decoration-only liners and sets three to `scatter` (see `stages/5-park_islands.md`); `slickrock_run`, `fan_band`, `net_carve` and `isle_apron` were reverted to their greybox recipes after review because a scatter row's sensor stands on the raw ground and scatter would have opened the `twin_fins`, `west_wing` and `lens_rocks` event footprints. Method: `tools/traversal_line.gd --table=park --stage=5 --seeds=1,2,3,4,5,6,7,8 --child-timeout=900`, headless, `--fixed-fps 90`, `nice`, for Rivet, Tally and Sable (Kest, Tarn, Cannon, the floor line and the skill line were not re-run for this revision). Head: the revision commit on `claude/eloquent-rubin-83eps3-islands`; base: `137db801`, the true parent (park_flume and park_pit liners, no islands change), in a detached worktree. One pilot at a time, head and base run side by side (two Godot children on a shared 4-vCPU box). Receipts (not committed): `artifacts/local/isles-trav-r2/` (`head/`, `base/` first batch; `re-head/`, `re-base/` the seeds 1, 2, 5, 7 rerun; `re6-head/`, `re6-base/` the seed 6 rerun; `sum.py` summarises them).
+
+| Line | Head reached | Head dead stops (positions) | Head time_to_warden median (range) | Base reached | Base dead stops (positions) | Base time_to_warden median (range) |
+| --- | --- | --- | --- | --- | --- | --- |
+| rivet | 6 of 8 (seeds 6, 7 stall) | seeds 1, 2 at (157, -570), 13 to 17 s; seed 6 at (155, -562); seed 7 at (147, -513) repeatedly | 89.23 s (88.9 to 95.8) | 6 of 8 (seeds 1, 5 stall) | seed 1 at (155, -562); seed 5 at (147 to 157, -529) repeatedly; seed 7 at (156.5, -562) | 88.91 s (88.2 to 107.7) |
+| tally | 8 of 8 | seed 3 at (0, -298); seed 4 at (159, -562); seed 6 at (98.5, -618) | 70.41 s (69.5 to 75.8) | 7 of 8 (seed 6 stalls) | seed 3 at (0, -298); seed 4 at (159, -562); seed 6 at (98.5, -618) and (156, -562); seed 8 at (157, -570) | 70.67 s (68.1 to 77.2) |
+| sable | 7 of 8 (seed 1 stalls) | seed 1 around (-188 to -167, -561), 120 stops; seed 3 at (270, -125) | 59.71 s (57.5 to 67.4) | 7 of 8 (seed 1 stalls) | the same seed 1 and seed 3 stops; seed 8 at (-109, -690) | 59.96 s (59.1 to 67.4) |
+
+Reading. Tally and Sable repeat the base's dead stops to the decimetre (the same seeds, positions and times), so the pass changed nothing they feel. Rivet is not repeatable run to run on either tree: the stop at (157, -570) hit head seeds 1 and 2 and base's Tally seed 8 in this batch, so I reran Rivet seeds 1, 2, 5 and 7 on both trees. Rerun: base reached all four with no stops (89.7, 88.7, 89.1, 89.1 s); head reached seeds 2, 5 and 7 clean (88.7, 89.1, 89.1 s) and seed 1 stalled once at (156.6, -562) at 14.6 s, the other known weak spot at the same place as base's first-batch seed 1 stop (155, -562) and Tally's (159, -562). So the stop at (157, -570) recurred on head in the first batch (2 seeds against 0 on base's Rivet) and did not recur in the rerun; the neighbouring (155 to 160, -562 to -570) pocket also stops base runs (Rivet seeds 1 and 7, Tally seeds 4, 6, 8). Head Rivet seed 6, which stalled at (155, -562) in the first batch, was not in that rerun set, so I reran it on both trees afterwards: head reached (90.4 s, 0 stops) and base reached (92.9 s) with one stop at (155.0, -562.7) at 16.3 s, so the same pocket stops both trees intermittently. The measure cannot separate a head-only effect from this run-to-run noise: the pass moves no collider and no ride sensor of consequence (plateau-row sensors up by at most 1 cm), but this is a bot trace, not a proof.
+
+Round 3 (cross-lane clip, rims dropped, lane-edge cap) changed only draw geometry: no collider and no ride sensor moved, so the traversal was not re-run for it and the table above stands for the shipped state.
+
+Limits: automated bot lines only, no feel and no human play; Kest, Tarn, Cannon, the floor line and Rivet's skill line were measured on the earlier unrevised candidate (all within about 2 s of base, 8 of 8) and not re-run here; two Godot children shared the box, so wall-clock-sensitive seeds vary.
+
 ## Round 5 measurement, 2026-10-13
 
 Admission remains held. Candidate `3debeb8` merged without conflicts at

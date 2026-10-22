@@ -19,6 +19,10 @@ const BOSS_ID := "mind"
 const ATTACK_PERIOD := 3.5
 const ATTACK_DAMAGE := 10.0
 const HAND_CAP := 2
+# Seconds each phase lasts before a chunk lost in it opens the next (Brindle's PHASE_MIN_SECONDS); the
+# last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps on
+# scratch/challenge-tune-btC-1/-2.
+const PHASE_MIN_SECONDS := [22.0, 22.0, 22.0, 22.0]
 const HAND_PHASE := 2
 # How far off the ball's side a hand lands, and how far inside the pad edge it stays.
 const HAND_OFFSET := 10.0
@@ -55,6 +59,14 @@ func _row() -> Dictionary:
 	return Worlds.BOSSES[BOSS_ID]
 
 
+func _hold_boss() -> String:
+	return BOSS_ID
+
+
+func _hold_minimums() -> Array:
+	return PHASE_MIN_SECONDS
+
+
 func _warden_spec() -> Dictionary:
 	var spec := super()
 	spec["family"] = Roster.MIND
@@ -63,6 +75,13 @@ func _warden_spec() -> Dictionary:
 	spec["monster_heft"] = MonsterHeft.mind_threshold()
 	spec["fleet"] = ctx.spawner.fleet if ctx.spawner != null and "fleet" in ctx.spawner else null
 	return spec
+
+
+# Flow calls this on the script while stage 6's beacon, gates and launch run, before it makes the
+# module, so the arena's dress is read and painted off the boss-entry frame.
+static func prepare_arena() -> void:
+	ArenaMindDress.prepare()
+	MindDress.prepare()
 
 
 func enter_arena(entry_velocity: Vector3) -> void:
@@ -98,7 +117,7 @@ func _physics_process(delta: float) -> void:
 	super(delta)
 	if not active() or not is_instance_valid(warden):
 		return
-	var next := clampi(1 + BossPosture.CHUNKS - warden.chunks_left(), 1, MindAttacks.phase_cap())
+	var next := clampi(1 + BossPosture.CHUNKS - shown_chunks_left(), 1, MindAttacks.phase_cap())
 	if next == MindAttacks.phase_cap() and next > phase:
 		_brace_due = true
 		_attack_clock = minf(_attack_clock, 0.0)
@@ -260,6 +279,9 @@ func music_state() -> Dictionary:
 	if not state.is_empty():
 		state["id"] = String(_row().get("music", BOSS_ID))
 		state["phase"] = phase
+		if hold_active():
+			state["held"] = true
+			state["in_phase"] = 1.0
 	return state
 
 
@@ -271,6 +293,8 @@ func objective_text() -> String:
 		var braced := "nothing" if warden.braced_kinds.is_empty() else "/".join(warden.braced_kinds)
 		return "%s is staggered: hit its open lens. It braces against %s." % [who, braced]
 	var text := "Fill %s's bar to stagger it. %d chunks left." % [who, warden.chunks_left()]
+	if hold_capped():
+		text = "%s's bar is full. It breaks in %d s: keep the pressure on." % [who, ceili(hold_left())]
 	if _family != "":
 		text += " Incoming: %s." % _family.replace("_", " ")
 	if _family == "plate" and _plate_verb != "":

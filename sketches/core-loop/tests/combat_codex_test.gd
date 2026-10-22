@@ -353,6 +353,11 @@ func _w10_pack_tricks(home: Vector3) -> void:
 	cup._on_hold_released(cup.get_instance_id(), "cup", "boost")
 	_report("cup_break", _combat.discovered.has("cup_break") and cup.broken_by == "boost",
 		"a boost out of a catch trap's cup broke its hold (broken_by %s)" % cup.broken_by)
+	# 2026-10-21: the swatter is reachable (plate_press packs); a boost out of its bat opens paddle_ride.
+	var swatter: Node3D = _w9_spawn("swatter", home + Vector3(-14.0, 0.0, 10.0))
+	swatter._on_hold_released(swatter.get_instance_id(), "paddle_bat", "boost")
+	_report("paddle_ride", _combat.discovered.has("paddle_ride") and swatter.broken_by == "boost",
+		"a boost out of a swatter's bat broke its hold (broken_by %s)" % swatter.broken_by)
 	# A Dispatcher killed after at least one drop cuts its stream.
 	var dispatcher: Node3D = _w9_spawn("dispatcher", home + Vector3(14.0, 0.0, 10.0))
 	dispatcher._go_live()
@@ -360,7 +365,7 @@ func _w10_pack_tricks(home: Vector3) -> void:
 	_combat.strike(dispatcher, "slam", 100000.0)
 	_report("stream_cut", _combat.discovered.has("stream_cut") and dropped > 0,
 		"a Dispatcher that dropped %d chaser(s) was killed" % dropped)
-	for node in [trap, brute, drone, jaw, linker, cup, dispatcher]:
+	for node in [trap, brute, drone, jaw, linker, cup, swatter, dispatcher]:
 		if is_instance_valid(node):
 			node.queue_free()
 

@@ -4,13 +4,18 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  countChecks,
   acquireMachine,
   binary,
   importWithRetry,
   isBot,
   isSolo,
   judge,
-  readQuarantine,
+  expiredLine,
+  expiredQuarantine,
+  quarantineNote,
+  quarantineRecord,
+  readQuarantineEntries,
   testTimeoutMs,
 } from "./sketch-smoke.mjs";
 
@@ -354,7 +359,7 @@ function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
       timedOut = true;
       child.kill("SIGKILL");
     }, timeoutMs);
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
       clearTimeout(timer);
       running.delete(child);
       rmSync(dataHome, { recursive: true, force: true });
@@ -362,7 +367,7 @@ function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
       // A kill before the time limit that the lane did not send is usually the container's
       // memory limit (dmesg "Memory cgroup out of memory"), not the test.
       const reason = code === null && !timedOut && child.killedByLane !== true ? "killed by a signal before its time limit (often the container's memory limit; see dmesg)" : verdict.reason;
-      resolve({ test, ok: verdict.ok, exit: code, ms: Date.now() - started, reason, checks: failingChecks(output), tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut });
+      resolve({ test, ok: verdict.ok, exit: code, signal: signal ?? null, ms: Date.now() - started, reason, checks: failingChecks(output), passes: countChecks(output).passes, tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut });
     });
   });
 }
@@ -417,9 +422,21 @@ export function trustedBaseEntry(entry) {
 // The base run that may judge this run's verdict. A lane stop says nothing; a base timeout or
 // outside kill (exit null, say the OOM killer) says "red on the base too" only when the head rerun
 // timed out as well, else a crash on the head would hide behind a load failure on the base.
+// One exception: a base that died by a signal keeps its verdict when the head rerun died by the
+// same signal and both fail the same checks (an abort at exit on both sides).
+// SIGKILL is the OOM killer or the lane's own timeout kill, so it never counts.
 export function usableBaseRun(rerun, baseRun) {
   if (!baseRun || baseRun.killed) return null;
-  if ((baseRun.timedOut || baseRun.exit === null) && !rerun.timedOut) return null;
+  if ((baseRun.timedOut || baseRun.exit === null) && !rerun.timedOut) {
+    const signal = baseRun.signal;
+    const sameSignal = Boolean(signal) && signal !== "SIGKILL" && rerun.signal === signal && !baseRun.timedOut && !rerun.killed;
+    const head = [...(rerun.checks ?? [])].sort();
+    const base = [...(baseRun.checks ?? [])].sort();
+    const sameChecks = head.length === base.length && head.every((check, i) => check === base[i]);
+    // An earlier abort on the head shows as fewer passing checks, so the counts must match too.
+    const samePasses = rerun.passes === baseRun.passes;
+    return sameSignal && sameChecks && samePasses ? baseRun : null;
+  }
   return baseRun;
 }
 
@@ -599,6 +616,11 @@ async function main() {
   }
 
   // Stage 2: Godot. Import with one retry, boot, then the selected tests.
+  const quarantineEntries = readQuarantineEntries(sketchDir);
+  const quarantine = new Set(quarantineEntries.map((entry) => entry.test));
+  const expired = expiredQuarantine(quarantineEntries);
+  for (const entry of expired) log(expiredLine(entry));
+  if (!stage("quarantine", expired.length === 0, { note: expired.length ? `${expired.length} expired: ${expired.map((entry) => entry.test).join(", ")}` : `${quarantineEntries.length} rows, none expired` })) finish();
   if (!existsSync(binary)) {
     console.error(`Godot binary not found at ${binary}; set GODOT_BIN`);
     finish(2);
@@ -615,7 +637,6 @@ async function main() {
   const bootVerdict = judge({ status: boot.status, output: (boot.stdout || "") + (boot.stderr || "") });
   if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
 
-  const quarantine = readQuarantine(sketchDir);
   const results = [];
   const flaky = [];
   const baseRed = [];
@@ -722,8 +743,12 @@ async function main() {
 
   async function handle(result) {
     const quarantined = quarantine.has(path.posix.basename(result.test, ".gd"));
-    results.push({ test: result.test, ok: result.ok, exit: result.exit, ms: result.ms, reason: result.reason, quarantined });
+    results.push({ test: result.test, ok: result.ok, exit: result.exit, signal: result.signal ?? null, failing: (result.checks ?? []).length, ms: result.ms, reason: result.reason, quarantined });
     log(`${result.ok ? "PASS" : "FAIL"} ${result.test} exit=${result.exit} ${(result.ms / 1000).toFixed(1)}s${quarantined ? " (quarantined)" : ""}`);
+    if (!result.ok && quarantined) {
+      const entry = quarantineEntries.find((row) => row.test === path.posix.basename(result.test, ".gd"));
+      log(`  ${quarantineNote(entry)}`);
+    }
     if (result.ok || quarantined || result.killed) return;
     const { kind, newChecks } = await confirm(result);
     log(`  ${result.test}: ${kind}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`);
@@ -750,6 +775,7 @@ async function main() {
     await handle(await runGodot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test))));
   }
   receipt.results = results;
+  receipt.quarantined = results.filter((row) => row.quarantined).map((row) => quarantineRecord(quarantineEntries.find((entry) => entry.test === path.posix.basename(row.test, ".gd")), { ok: row.ok, exit: row.exit, signal: row.signal, failing: row.failing }));
   receipt.flaky = flaky;
   receipt.base_red = baseRed;
   if (prRed) {
