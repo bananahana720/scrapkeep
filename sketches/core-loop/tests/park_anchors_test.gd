@@ -11,6 +11,11 @@ extends SceneTree
 #     along Y only by tall / 10 with authored y -1 on the collider's bottom, and square to its collider (quarter turns in
 #     the row's space, on a row with a yaw of 30 degrees).
 # (f) A kit row does not stand in, and its preload list is its three variants.
+# (g) Fitted colliders (anchors/anchor_fit.json, #241): a row whose (variant, size[1]) is in the table has posts x boxes
+#     shapes, each box turned with its post's drawn turn (centre = turn * c, x and z sizes swapped on an odd turn);
+#     (h) no fitted box leaves the old 8 m footprint; (i) an unlisted pair keeps one 8 m box per post and a greybox row
+#     is untouched; (j) the table's GLB sha256s match the GLBs on disk (a GLB rebuild without a table rebuild fails);
+#     (k) a radius 1 sphere rolled at h 1 into a fitted post stops within 1 m of the table's after-gap expectation.
 # Evidence limit: file shape, bounds and placement data only; no look (no render), no frame cost.
 
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
@@ -36,6 +41,9 @@ func _run() -> void:
 		for v: String in VARIANTS:
 			_check("anchor_%s_%s" % [fam, v])
 		_place("anchor_" + fam)
+	_fitted()
+	_stale()
+	_probe()
 	quit(_t.verdict())
 
 
@@ -51,7 +59,7 @@ func _place(recipe: String) -> void:
 	var posts := int(node.get_meta("anchor_posts", 0))
 	var shapes := node.find_children("*", "CollisionShape3D", true, false)
 	_t.check("(e) %s keeps greybox's posts and colliders" % recipe, posts > 1 and posts == int(plain.get_meta("anchor_posts", -1))
-		and shapes.size() == posts and plain.find_children("*", "CollisionShape3D", true, false).size() == posts, "posts %d shapes %d" % [posts, shapes.size()])
+		and shapes.size() == posts * maxi(1, ParkRecipes.anchor_fit_boxes(row).size()) and plain.find_children("*", "CollisionShape3D", true, false).size() == posts, "posts %d shapes %d" % [posts, shapes.size()])
 	_t.check("(e) %s draws the kit, not grey posts" % recipe, node.get_meta("anchor_kit", false) and not plain.get_meta("anchor_kit", true))
 	var tall := 14.0 + ParkRecipes.ANCHOR_SINK_M
 	var bad := []
@@ -165,3 +173,127 @@ func _check(id: String) -> void:
 		"%s to %s" % [lo, hi])
 	_t.check("(d) %s has a -col mesh named %s-col" % [id, id], scene.find_child(id + "-col", true, false) != null and not col.is_empty())
 	scene.free()
+
+
+func _fit_row(recipe: String, size_y: float, fitted: bool) -> Dictionary:
+	for n in 64:
+		var row := {"id": "fit_%s_%d" % [recipe, n], "element": "anchor_field", "at": [0, 0], "y": null, "size": [120, size_y, 90],
+			"yaw_deg": 30, "ride_fact": "", "recipe": recipe, "stamp": "", "budget": "detail"}
+		if ParkRecipes.anchor_fit_boxes(row).is_empty() != fitted:
+			return row
+	return {}
+
+
+func _fitted() -> void:
+	var flat := func(_x: float, _z: float) -> float: return 3.0
+	var rows := 0
+	var posts_fitted := 0
+	var total_posts := 0
+	var inside := true
+	var table: Dictionary = ParkRecipes.anchor_fit_table()
+	for key: String in table["fits"]:
+		for entry: Dictionary in table["fits"][key]:
+			for b: Dictionary in entry["boxes"]:
+				inside = inside and b["x"][0] >= -4.0 and b["x"][1] <= 4.0 and b["z"][0] >= -4.0 and b["z"][1] <= 4.0
+	_t.check("(h) every fitted box lies inside the old 8 m footprint", inside and table["fits"].size() == 12)
+	for fam: String in FAMILIES:
+		var recipe := "anchor_" + fam
+		for entry_size in [2.0, 6.0, 10.0, 14.0, 18.0, 4.0]:
+			var row := _fit_row(recipe, entry_size, true)
+			if row.is_empty():
+				continue
+			var parent := Node3D.new()
+			var node: Node3D = ParkRecipes.place_row(row, parent, flat)
+			var boxes := ParkRecipes.anchor_fit_boxes(row)
+			var posts := ParkRecipes.anchor_posts(row)
+			var shapes := node.find_children("*", "CollisionShape3D", true, false)
+			rows += 1
+			posts_fitted += posts.size()
+			_t.check("(g) %s size %s: posts %d x boxes %d shapes" % [recipe, entry_size, posts.size(), boxes.size()],
+				shapes.size() == posts.size() * boxes.size(), "shapes %d" % shapes.size())
+			var inv := node.transform.affine_inverse()
+			var bad := []
+			var odd_seen := 0
+			var distinct := {}
+			for k in posts.size():
+				var turn := ParkRecipes.anchor_turn(row, k)
+				var odd := ParkRecipes.anchor_quarters(row, k) % 2 == 1
+				odd_seen += 1 if odd else 0
+				for i in boxes.size():
+					var b: Dictionary = boxes[i]
+					var shape: CollisionShape3D = shapes[k * boxes.size() + i]
+					var c := Vector3((b["x"][0] + b["x"][1]) * 0.5, (b["h"][0] + b["h"][1]) * 0.5, (b["z"][0] + b["z"][1]) * 0.5)
+					var want_c := inv * Vector3(posts[k].x, 3.0, posts[k].y) + turn * c
+					var sx: float = b["x"][1] - b["x"][0]
+					var sz: float = b["z"][1] - b["z"][0]
+					var want_size := Vector3(sz, b["h"][1] - b["h"][0], sx) if odd else Vector3(sx, b["h"][1] - b["h"][0], sz)
+					var got: Vector3 = (shape.shape as BoxShape3D).size
+					distinct[shape.shape] = true
+					if shape.position.distance_to(want_c) > 0.001 or got.distance_to(want_size) > 0.001:
+						bad.append("post %d box %d" % [k, i])
+			_t.check("(g) %s size %s: centres are turn * c, odd turns swap x and z (%d odd posts), shapes shared (%d)" % [recipe, entry_size, odd_seen, distinct.size()],
+				bad.is_empty() and distinct.size() <= boxes.size() * 2, str(bad.slice(0, 3)))
+			parent.free()
+	_t.check("(g) fitted rows exercised (%d rows, %d posts)" % [rows, posts_fitted], rows >= 8)
+	# (i) control: an unlisted height keeps one 8 m box per post; greybox is the same path as before.
+	var control := _fit_row("anchor_hoodoo", 13.0, false)
+	var parent2 := Node3D.new()
+	var kit_node: Node3D = ParkRecipes.place_row(control, parent2, flat)
+	var kit_shapes := kit_node.find_children("*", "CollisionShape3D", true, false)
+	var kit_posts := int(kit_node.get_meta("anchor_posts", 0))
+	var one := kit_posts > 1 and kit_shapes.size() == kit_posts
+	for sh: CollisionShape3D in kit_shapes:
+		one = one and (sh.shape as BoxShape3D).size == Vector3(8.0, 14.0, 8.0)
+	_t.check("(i) an unlisted size keeps one 8 m box per post", one, "posts %d shapes %d" % [kit_posts, kit_shapes.size()])
+	var grey := control.duplicate()
+	grey["recipe"] = ParkRecipes.GREYBOX + "anchor_field"
+	var grey_node: Node3D = ParkRecipes.place_row(grey, parent2, flat)
+	var grey_shapes := grey_node.find_children("*", "CollisionShape3D", true, false)
+	var grey_one := grey_shapes.size() == int(grey_node.get_meta("anchor_posts", -1)) and grey_shapes.size() > 1
+	for sh: CollisionShape3D in grey_shapes:
+		grey_one = grey_one and (sh.shape as BoxShape3D).size == Vector3(8.0, 14.0, 8.0)
+	_t.check("(i) a greybox row keeps one 8 m box per post", grey_one)
+	parent2.free()
+
+
+func _stale() -> void:
+	var glbs: Dictionary = ParkRecipes.anchor_fit_table().get("glbs", {})
+	_t.check("(j) the table lists all 15 GLBs", glbs.size() == 15)
+	for id: String in glbs:
+		var path := DIR + id + ".glb"
+		_t.check("(j) %s matches the table's sha256" % id, FileAccess.get_sha256(path) == String(glbs[id]), "GLB rebuilt without rebuilding anchor_fit.json")
+
+
+# (k) A radius 1 sphere rolls along +x at h 1 toward a fitted post's -x face centre line (post at the origin, no turn).
+func _probe() -> void:
+	var row := _fit_row("anchor_hoodoo", 10.0, true)
+	var boxes := ParkRecipes.anchor_fit_boxes(row)
+	var lowest: Dictionary = boxes[0]
+	var space_root := Node3D.new()
+	root.add_child(space_root)
+	var body := StaticBody3D.new()
+	space_root.add_child(body)
+	for b: Dictionary in boxes:
+		var shape := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = Vector3(b["x"][1] - b["x"][0], b["h"][1] - b["h"][0], b["z"][1] - b["z"][0])
+		shape.shape = box
+		shape.position = Vector3((b["x"][0] + b["x"][1]) * 0.5, (b["h"][0] + b["h"][1]) * 0.5, (b["z"][0] + b["z"][1]) * 0.5)
+		body.add_child(shape)
+	var ball := SphereShape3D.new()
+	ball.radius = 1.0
+	var zc: float = (lowest["z"][0] + lowest["z"][1]) * 0.5
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = ball
+	query.transform = Transform3D(Basis.IDENTITY, Vector3(-30.0, 1.0, zc))
+	query.motion = Vector3(60.0, 0.0, 0.0)
+	var space := space_root.get_world_3d().direct_space_state
+	var rest := space.cast_motion(query)
+	var stop_x := -30.0 + 60.0 * rest[0]
+	var face := float(lowest["x"][0])
+	for b: Dictionary in boxes:
+		if b["h"][0] <= 1.0 and b["h"][1] >= 1.0:
+			face = float(b["x"][0])
+	var air := face - (stop_x + 1.0)
+	_t.check("(k) a ball at h 1 stops within 1 m of the fitted face (air %.3f m)" % air, rest[0] < 1.0 and absf(air) <= 1.0, "stop x %.3f face %.3f" % [stop_x, face])
+	space_root.free()

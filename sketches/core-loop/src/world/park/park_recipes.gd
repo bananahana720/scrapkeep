@@ -222,6 +222,12 @@ static var _ends := {}
 static var _tiles := {}
 # _anchor_mesh() of each anchors kit variant GLB, read once.
 static var _anchor_meshes := {}
+# anchors/anchor_fit.json (Modeling's per-variant, per-height collider boxes), read once under _anchor_fit_lock. place_row
+# runs on the main thread (Placer._build_step; only anchor_posts goes to the worker), but the guard keeps a worker caller safe.
+const ANCHOR_FIT_PATH := "res://src/world/park/anchors/anchor_fit.json"
+static var _anchor_fit := {}
+static var _anchor_fit_read := false
+static var _anchor_fit_lock := Mutex.new()
 
 
 # A budget class's visibility ranges from assets/asset_budgets.json: base_end and base_margin for the base views,
@@ -1213,9 +1219,32 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 	var kit := anchor_kit_ready(recipe)
 	if ANCHOR_KITS.has(recipe) and not kit:
 		push_warning("park_recipes: %s variants missing, %s stands in as grey posts" % [recipe, row.get("id", "")])
+	var fit := anchor_fit_boxes(row) if kit else []
+	var fit_shapes := {}
 	for k in posts.size():
 		var p: Vector2 = posts[k]
 		var base := float(ground.call(p.x, p.y)) if ground.is_valid() else node.position.y
+		if not fit.is_empty():
+			# Fitted: h is metres above the ground sample (h -1 is the box's old bottom, base - ANCHOR_SINK_M), so
+			# world y = base + h. Each box is turned by the post's drawn turn, about the post's centre.
+			var turn := anchor_turn(row, k)
+			var odd := anchor_quarters(row, k) % 2 == 1
+			var origin := inv * Vector3(p.x, base, p.y)
+			for i in fit.size():
+				var b: Dictionary = fit[i]
+				var key := i * 2 + (1 if odd else 0)
+				if not fit_shapes.has(key):
+					var fitted := BoxShape3D.new()
+					var sx := float(b["x"][1]) - float(b["x"][0])
+					var sz := float(b["z"][1]) - float(b["z"][0])
+					fitted.size = Vector3(sz, float(b["h"][1]) - float(b["h"][0]), sx) if odd else Vector3(sx, float(b["h"][1]) - float(b["h"][0]), sz)
+					fit_shapes[key] = fitted
+				var part := CollisionShape3D.new()
+				part.shape = fit_shapes[key]
+				part.position = origin + turn * Vector3((float(b["x"][0]) + float(b["x"][1])) * 0.5,
+					(float(b["h"][0]) + float(b["h"][1])) * 0.5, (float(b["z"][0]) + float(b["z"][1])) * 0.5)
+				body.add_child(part)
+			continue
 		var shape := CollisionShape3D.new()
 		shape.shape = box
 		shape.position = inv * Vector3(p.x, base - ANCHOR_SINK_M + tall * 0.5, p.y)
@@ -1253,6 +1282,45 @@ static func anchor_variant(row: Dictionary) -> int:
 	return hash(String(row.get("id", ""))) % ANCHOR_VARIANTS.size()
 
 
+# A kit post's quarter turn about Y, shared by the drawn mesh and the fitted collider boxes so they never disagree.
+static func anchor_turn(row: Dictionary, k: int) -> Basis:
+	return Basis(Vector3.UP, PI * 0.5 * float(anchor_quarters(row, k)))
+
+
+# How many quarter turns post k takes (0 to 3); an odd count swaps its box's x and z extents.
+static func anchor_quarters(row: Dictionary, k: int) -> int:
+	return hash("%s:%d" % [row.get("id", ""), k]) % 4
+
+
+# The anchor_fit.json table, read once; {} (with one push_warning) when the file is missing or malformed.
+static func anchor_fit_table() -> Dictionary:
+	_anchor_fit_lock.lock()
+	if not _anchor_fit_read:
+		_anchor_fit_read = true
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string(ANCHOR_FIT_PATH)) if FileAccess.file_exists(ANCHOR_FIT_PATH) else null
+		if parsed is Dictionary and parsed.get("fits") is Dictionary:
+			_anchor_fit = parsed
+		else:
+			push_warning("park_recipes: %s missing or unreadable, anchor posts keep the %s m box" % [ANCHOR_FIT_PATH, ANCHOR_POST_M])
+	var out := _anchor_fit
+	_anchor_fit_lock.unlock()
+	return out
+
+
+# The fitted collider boxes ({"h", "x", "z"}) for a kit row's variant at its height (size[1]), [] when the pair is unlisted.
+static func anchor_fit_boxes(row: Dictionary) -> Array:
+	var recipe := String(row.get("recipe", ""))
+	if not ANCHOR_KITS.has(recipe):
+		return []
+	var fits: Dictionary = anchor_fit_table().get("fits", {})
+	var key: String = anchor_paths(recipe)[anchor_variant(row)].get_file().get_basename()
+	var tall := float(row["size"][1])
+	for entry in fits.get(key, []):
+		if is_equal_approx(float(entry["size"]), tall):
+			return entry["boxes"]
+	return []
+
+
 # The drawn posts' transforms in the node's space (node_xf the row node's transform): a kit row's posts stretched and
 # turned (header) in the node's space, so they square up with the colliders under any yaw_deg, else the unstretched box
 # centres of grey posts.
@@ -1267,7 +1335,7 @@ static func anchor_draws(row: Dictionary, posts: PackedVector2Array, ground: Cal
 		if not kit:
 			out.append(inv * Transform3D(Basis.IDENTITY, Vector3(p.x, bottom + tall * 0.5, p.y)))
 			continue
-		var turn := Basis(Vector3.UP, PI * 0.5 * float(hash("%s:%d" % [row.get("id", ""), k]) % 4))
+		var turn := anchor_turn(row, k)
 		out.append(Transform3D(turn * stretch, inv * Vector3(p.x, bottom + tall / ANCHOR_AUTHORED_M, p.y)))
 	return out
 
