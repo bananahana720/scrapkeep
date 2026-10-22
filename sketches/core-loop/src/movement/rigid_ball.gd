@@ -17,6 +17,11 @@ signal landed(impact: float)
 var tuning
 var state
 var drive_basis := Basis.IDENTITY
+# Draw-side hooks (MOTION-SPEC row 210). Emitted before the body takes a velocity set, and
+# before a teleport, so the drawn lattice can keep its spin through the forced floor roll the
+# set applies below. Nothing here reads or changes the body.
+signal velocity_setting
+signal teleporting
 var intent
 var kit
 # Pushes from the world (the flood's drag and current), an acceleration in m/s^2. The
@@ -77,11 +82,13 @@ func set_active(active: bool) -> void:
 
 
 func set_velocity_now(new_velocity: Vector3) -> void:
+	velocity_setting.emit()
 	_pending_velocity = new_velocity
 	state.velocity = new_velocity
 
 
 func teleport(to: Vector3, new_velocity: Vector3) -> void:
+	teleporting.emit()
 	_pending_position = to
 	_pending_velocity = new_velocity
 	state.velocity = new_velocity
