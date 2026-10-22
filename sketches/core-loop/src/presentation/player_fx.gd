@@ -701,12 +701,18 @@ static func _project_box(box: AABB, cam: Camera3D, span: Array) -> void:
 	var plane := cam.near + NEAR_EPSILON
 	var corners: Array[Vector3] = []
 	var depths: Array[float] = []
+	var in_front := 0
 	for c in 8:
 		var corner: Vector3 = box.position + box.size * Vector3(c & 1, (c >> 1) & 1, (c >> 2) & 1)
 		corners.append(corner)
 		depths.append((corner - origin).dot(forward))
 		if depths[c] > plane:
+			in_front += 1
 			_grow_span(span, cam.unproject_position(corner))
+	# Edges only cross the plane when some corners are in front and some are not; a box wholly
+	# in front (the common case) or wholly behind has no crossing to add.
+	if in_front == 0 or in_front == 8:
+		return
 	# The edges join corners that differ in one bit.
 	for c in 8:
 		for bit in [1, 2, 4]:

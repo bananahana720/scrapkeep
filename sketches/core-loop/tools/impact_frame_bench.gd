@@ -6,8 +6,13 @@ extends SceneTree
 #   $GODOT_BIN --headless --path sketches/core-loop --script res://tools/impact_frame_bench.gd
 # It times the frame's refresh (apply_rects, the upload the live refresh uses) and `_shapes`
 # apart at 0, 4, 16 and 64 hostile rects, with the per-fire figure (one shapes call plus
-# FRAME_FRAMES refreshes), then warning_rects on 4 and 16 real hostile marks against the
-# per-mesh version it replaced. Exit 0, or 1 when a sanity check fails (sample count,
+# FRAME_FRAMES refreshes, the rect source not in it), then warning_rects on 4 and 16 real
+# hostile marks three ways: the old per-mesh projection, the per-warning mesh walk
+# (use_bounds false, the fallback) and the cached box (the default, lighting L7 #297). At each
+# count it also prints a per-fire figure that INCLUDES the rect walk: real ImpactFrame fires
+# (rect_source = warning_rects, walk and box) over FIRES fires, each fire's shape and rect
+# microseconds from the frame's own counters, and the refreshes counted per fire (rect_calls).
+# Exit 0, or 1 when a sanity check fails (sample count,
 # p99 >= mean >= 0, mean under SANITY_MEAN_USEC); the 0.2 ms bar is judged from the lines.
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
@@ -16,6 +21,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 
 const CALLS := 1000
 const WARM_UP := 50
+const FIRES := 200
 const SCREEN := Vector2(1920.0, 1080.0)
 # Far past any real run; a hang or an accidental O(n^3) trips it, a slow box does not.
 const SANITY_MEAN_USEC := 100000.0
@@ -156,6 +162,47 @@ static func _old_project(node: Node, cam: Camera3D, span: Array) -> void:
 		_old_project(child, cam, span)
 
 
+func _rects_pass(pass_name: String, tree: SceneTree, cam: Camera3D, margin: float) -> void:
+	if pass_name == "old":
+		_old_rects(tree, cam, margin)
+	else:
+		PlayerFx.warning_rects(tree, cam, margin, pass_name == "box")
+
+
+# Real fires of a live ImpactFrame over the scene's marks: per fire, the shapes it built
+# plus the rect refreshes it made (the frame times both itself), so the walk is inside the
+# figure. FRAME_FRAMES refreshes a fire: fire() sends once and each of the next
+# FRAME_FRAMES - 1 live frames sends again; the count printed is measured, not assumed.
+func _fire_bench(count: int, tree: SceneTree, cam: Camera3D, use_bounds: bool) -> void:
+	var frame := PlayerFx.ImpactFrame.new()
+	frame.rect_source = func() -> Array[Rect2]: return PlayerFx.warning_rects(tree, cam, 0.0, use_bounds)
+	root.add_child(frame)
+	await _frames(2)
+	var usec: Array = []
+	var refreshes := 0
+	for i in FIRES + WARM_UP:
+		var shapes_before := frame.shape_usec
+		var rects_before := frame.rect_usec
+		var calls_before := frame.rect_calls
+		frame.fire(Vector2(960.0, 540.0), 1.0, 7 + i, 0.9)
+		await _frames(PlayerFx.FRAME_FRAMES + 1)
+		if i >= WARM_UP:
+			usec.append((frame.shape_usec - shapes_before) + (frame.rect_usec - rects_before))
+			refreshes = frame.rect_calls - calls_before
+	var label := "box" if use_bounds else "walk"
+	_check("fire %d %s: samples taken" % [count, label], usec.size() == FIRES, str(usec.size()))
+	_check("fire %d %s: every fire refreshes FRAME_FRAMES times" % [count, label], refreshes == PlayerFx.FRAME_FRAMES, str(refreshes))
+	usec.sort()
+	var sum := 0
+	for u in usec:
+		sum += u
+	var mean := float(sum) / float(maxi(usec.size(), 1))
+	var p99: float = usec[int(ceil(0.99 * usec.size())) - 1] if not usec.is_empty() else 0.0
+	print("impact_frame_fire_bench %s marks=%d fires=%d rect_refreshes_per_fire=%d per_fire_mean_us=%.1f per_fire_p99_us=%.1f per_fire_max_us=%d" % [label, count, usec.size(), refreshes, mean, p99, usec.back() if not usec.is_empty() else 0])
+	frame.queue_free()
+	await _frames(1)
+
+
 # warning_rects on a scene of real hostile marks: committed Telegraph rings and boss Hazard
 # annuli on a ground grid in front of a camera, both versions timed over CALLS calls and
 # printed, old first.
@@ -189,19 +236,18 @@ func _rects_bench() -> void:
 		for k in mini(old.size(), now.size()):
 			grow = maxf(grow, now[k].get_area() / maxf(old[k].get_area(), 1.0))
 		print("warning_rects_bench marks=%d largest new/old area ratio=%.3f" % [count, grow])
-		for pass_name in ["old", "new"]:
+		for pass_name in ["old", "walk", "box"]:
 			for i in WARM_UP:
-				_old_rects(tree, cam, margin) if pass_name == "old" else PlayerFx.warning_rects(tree, cam, margin)
+				_rects_pass(pass_name, tree, cam, margin)
 			var usec: Array = []
 			for i in CALLS:
 				var began := Time.get_ticks_usec()
-				if pass_name == "old":
-					_old_rects(tree, cam, margin)
-				else:
-					PlayerFx.warning_rects(tree, cam, margin)
+				_rects_pass(pass_name, tree, cam, margin)
 				usec.append(Time.get_ticks_usec() - began)
 			var sum := _summary("rects %d %s" % [count, pass_name], usec)
 			print("warning_rects_bench %s marks=%d calls=%d mean_us=%.1f p99_us=%.1f max_us=%d" % [pass_name, count, CALLS, sum[0], sum[1], sum[2]])
+		for use_bounds in [false, true]:
+			await _fire_bench(count, tree, cam, use_bounds)
 		for mark in marks:
 			mark.free()
 		await _frames(1)
