@@ -27,6 +27,11 @@ const BRACKET_HALF_PER_M := 0.015
 # The keyline under a dot is DOT_SIZE + 0.08 (_projectile, _driven_projectile).
 const KEYLINE_EXTRA := 0.08
 
+# Test-only: scales every ground pad of a footprint (a lane's, a rim's, a sweep's), so a test
+# can plant a box that is too tight and watch the containment check fail. 1.0 in play; nothing
+# in src/ sets it.
+static var test_pad_scale := 1.0
+
 # How far a line's charcoal underlay widens it (_lined's draw(UNDERLAY)).
 const GROW := Threat.UNDERLAY
 
@@ -48,8 +53,14 @@ const LANE_PAD := maxf(Threat.RAIL + GROW, OWNER_OUT + OWNER_HALF + GROW)
 # sampled ground; Y_ALLOWANCE covers that, and the containment test holds the box to those
 # marks on bumpy and heightfield ground. It is an allowance, not a bound: a cliff between a
 # sampled vertex and an unsampled one (the park heightfields have rises of 17 m and more
-# between neighbouring 2 m vertices, measured) can exceed it, and the box then clips a rect's
-# top or bottom edge by that much.
+# between neighbouring 2 m vertices, measured) can exceed it. So a mark that REPAINTS on
+# ground the build did not sample (a Hazard, which is never driven) does not rely on it: it
+# merges its meshes' box into the cached one after every repaint (Hazard._grow_bound), which
+# holds each mesh it has ever drawn. On the real park ground, with only the allowance, such
+# hazards missed by up to 16.4 m (tests/warning_bound_park_ground_test.gd), and the footprint
+# relief did not predict the misses (a 3.0 m relief missed by 4.9 m, a 17 m relief held), so a
+# relief threshold could not be derived. Driven telegraphs build every mark at full extent, so
+# they have no such gap, and held on every real-ground case.
 const Y_ALLOWANCE := Threat.UNDERLAY
 
 # The merged world box of every visible mesh under `node` (the painter's layers, which are
@@ -166,5 +177,6 @@ static func _grow(span: Array, x: float, z: float) -> void:
 
 
 static func _pad(span: Array, by: float) -> void:
+	by *= test_pad_scale
 	span[0] = (span[0] as Vector2) - Vector2(by, by)
 	span[1] = (span[1] as Vector2) + Vector2(by, by)

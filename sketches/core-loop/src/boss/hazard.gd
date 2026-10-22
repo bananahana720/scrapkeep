@@ -66,7 +66,7 @@ var _open: Array[bool] = []
 # first FULL paint: in _ready, or, for an annulus that starts with spans quenched, on the first
 # step that leaves none quenched (later quenches only remove drawn spans, so the full paint's
 # meshes hold every later one). Empty until then, so warning_rects walks the meshes. Only a
-# hostile hazard gets one. The committed numbers never change after commit, and nothing moves
+# hostile hazard gets one, and it grows with every repaint (_grow_bound). The committed numbers never change after commit, and nothing moves
 # a hazard, so it is never recut.
 var _bound := AABB()
 
@@ -150,6 +150,7 @@ func step(delta: float) -> void:
 	_paint(reshaped)
 	if reshaped:
 		_cut_bound()
+	_grow_bound()
 
 
 # ANNULUS: whether the drawing covers a point. A quenched span is left undrawn, so the
@@ -301,6 +302,15 @@ func screen_bound_box() -> AABB:
 	if _painter == null or state == DONE:
 		return AABB()
 	return _bound
+
+
+# The motion marks are repainted every step, on ground the first paint did not sample (a fill
+# ring's inner edge, a sweep's spoke and chevrons, a lane's run strip), so the box takes in the
+# meshes' box after each repaint: it holds every mesh the hazard has drawn, and a reader sees
+# a mesh no larger than the last one merged. One mesh walk a step.
+func _grow_bound() -> void:
+	if _bound.size != Vector3.ZERO:
+		_bound = _bound.merge(WarningBound.mesh_box(_painter))
 
 
 func _cut_bound() -> void:

@@ -300,6 +300,9 @@ func _repaint() -> void:
 		_painter.drive(Threat.drive(d))
 	else:
 		_painter.paint(Threat.marks(d, true), Threat.MOTION_LAYERS)
+		# Repainted marks stand on ground the build did not sample; take their meshes in.
+		if _bound.size != Vector3.ZERO:
+			_bound = _bound.merge(WarningBound.mesh_box(_painter))
 	var fill := Threat.fill_tint(d)
 	if fill != _fill_tint:
 		_fill_tint = fill

@@ -648,8 +648,8 @@ func impact_frame(at: Vector3, strength: float) -> bool:
 # back to the mesh walk: its visual meshes' world boxes merged into one (see _merge_meshes).
 # `use_bounds` false forces the walk, for the bench and the tests. Reusable by any 2D layer
 # that must not cover warnings. The nodes come from Threat.GROUP, which every hostile mark
-# joins (telegraph.gd:236-237 for combat telegraphs, boss/hazard.gd:110-111 for boss and
-# world-event hazards) and no neutral or owned mark does (a Silo amber ring, a Warden lift).
+# joins (Telegraph._build for combat telegraphs, Hazard._ready for boss and world-event
+# hazards) and no neutral or owned mark does (a Silo amber ring, a Warden lift).
 static func warning_rects(tree: SceneTree, cam: Camera3D, margin: float, use_bounds := true) -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	if tree == null or cam == null:

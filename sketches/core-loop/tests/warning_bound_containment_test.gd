@@ -316,3 +316,25 @@ func _planted() -> void:
 	var nudged := AABB(bound.position, bound.size - Vector3(0.0, 0.5, 0.0))
 	t.check("planted: a box 0.5 m short in y fails containment", not nudged.grow(TOLERANCE).encloses(mesh), "slack %.3f m" % _slack(nudged, mesh))
 	ring.free()
+
+	# A planted constant: the pads zeroed by the test-only override (the constants stay as they
+	# are), so a per-shape case must fail. The lane's rails, an INSTANT ring's rim and a sweep's
+	# chevrons all stand outside their footprints.
+	WarningBound.test_pad_scale = 0.0
+	var ground := Flat.new()
+	var planted := {
+		"lane": Telegraph.lane(_world, ground, Threat.Type.LANE, Vector3(4.0, 0.0, 4.0), Vector3(0.6, 0.0, 0.8), 24.0, 4.0),
+		"ring INSTANT": Telegraph.ring(_world, ground, Threat.Type.INSTANT, Vector3(4.0, 0.0, 4.0), 6.0),
+		"ring WAVE": Telegraph.wave(_world, ground, Vector3(4.0, 0.0, 4.0), 18.0, 12.0, 1.0),
+	}
+	for label in planted:
+		var node: Node3D = planted[label]
+		var pad_box: AABB = node.screen_bound_box()
+		var pad_mesh := _mesh_box(node)
+		t.check("planted: LANE_PAD/rim/chevron pads zeroed, the %s case fails containment" % label, not pad_box.grow(TOLERANCE).encloses(pad_mesh), "slack %.3f m" % _slack(pad_box, pad_mesh))
+		node.free()
+	WarningBound.test_pad_scale = 1.0
+	var restored: Node3D = Telegraph.lane(_world, ground, Threat.Type.LANE, Vector3(4.0, 0.0, 4.0), Vector3(0.6, 0.0, 0.8), 24.0, 4.0)
+	t.check("planted: with the override back at 1.0 the lane case passes again", (restored.screen_bound_box()).grow(TOLERANCE).encloses(_mesh_box(restored)))
+	restored.free()
+
