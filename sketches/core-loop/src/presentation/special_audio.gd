@@ -13,6 +13,8 @@ const SpecialCues := preload("res://src/combat/special_cues.gd")
 # the splitter's break reads SpecialCues.rammed (`rammed_at_ground` or its `split` meta). `died` ends it.
 
 const CAP := 2
+# The drop answer's gain on top of the spawn cue's own trim (sfx_bank.gd, -6 dB).
+const DROP_DB := -3.0
 const PRESENCE_DB := -14.0
 const PRESENCE_UNIT_SIZE := 12.0
 const PRESENCE_MAX_DISTANCE := 70.0
@@ -24,6 +26,9 @@ static func is_special(kind: String) -> bool:
 
 # The cue for one part of a special. Only the splitter breaks two ways.
 static func cue(name: String, part: String, rammed_at_ground := false) -> String:
+	# The Dispatcher's drop answer is its rendered spawn cue again (no file of its own).
+	if part == "drop":
+		return "%s_spawn" % name
 	if part == "break" and name == "splitter":
 		return "splitter_break_split" if rammed_at_ground else "splitter_break_clean"
 	return "%s_%s" % [name, part]
