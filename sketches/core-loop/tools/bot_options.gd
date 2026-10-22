@@ -24,6 +24,18 @@ static func configure(settings: Dictionary) -> void:
 				settings[key] = "1"
 
 
+# --relay-stake=<0..4> (SR10): the stake the skipper puts on the park relay before it rolls in.
+# 0 (and an absent flag) leaves the bot untouched. Returns -1 for anything outside 0..4.
+static func relay_stake(settings: Dictionary) -> int:
+	if not settings.has("relay-stake"):
+		return 0
+	var text := String(settings["relay-stake"])
+	if not text.is_valid_int():
+		return -1
+	var k := int(text)
+	return k if k >= 0 and k <= 4 else -1
+
+
 func apply_audio(audio: Node) -> void:
 	if _enabled("bot-no-mix"):
 		audio.engine.bot_skip_samples = true

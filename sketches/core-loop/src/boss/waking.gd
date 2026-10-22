@@ -1,5 +1,6 @@
 extends "res://src/boss/stub_boss.gd"
 
+const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const WakingFloors := preload("res://src/boss/waking_floors.gd")
@@ -50,6 +51,11 @@ const LANDING_ATTACK := 1.2
 # The Warden's posture gains, scaled so the first stagger lands in the 45 to 70 s band
 # (Andrew, 19:42Z 17 Oct). Before the attacks, bots staggered it at 23 to 36 s.
 const POSTURE_GAIN := 0.565
+const HIT_CAP := 15.0
+# Seconds each phase lasts before a chunk lost in it opens the next (Brindle's PHASE_MIN_SECONDS); the
+# last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps on
+# scratch/challenge-tune-btC-1/-2.
+const PHASE_MIN_SECONDS := [21.0, 21.0, 21.0, 21.0]
 const FAMILY_NAMES := {"burrow": "burrow lane", "cave_in": "cave-in", "bore": "bore breach"}
 
 var floors: WakingFloors
@@ -151,7 +157,7 @@ func _physics_process(delta: float) -> void:
 	super(delta)
 	if not active() or not is_instance_valid(warden) or floors == null:
 		return
-	floors.on_posture(warden.chunks_left())
+	floors.on_posture(shown_chunks_left())
 	while _queued < mini(floors.shattered, floors.floor_count()):
 		_queued += 1
 		_drops.append(_queued)
@@ -472,6 +478,14 @@ func _row() -> Dictionary:
 	return Worlds.BOSSES[BOSS_ID]
 
 
+func _hold_boss() -> String:
+	return BOSS_ID
+
+
+func _hold_minimums() -> Array:
+	return PHASE_MIN_SECONDS
+
+
 func _warden_spec() -> Dictionary:
 	var spec := super()
 	var numbers: Dictionary = spec.get("posture", {}).duplicate()
@@ -483,7 +497,14 @@ func _warden_spec() -> Dictionary:
 	numbers["smash_base"] = float(numbers.get("smash_base", BossPosture.SMASH_BASE)) * POSTURE_GAIN
 	numbers["other_base"] = float(numbers.get("other_base", BossPosture.OTHER_BASE)) * POSTURE_GAIN
 	numbers["other_base_charging"] = float(numbers.get("other_base_charging", BossPosture.OTHER_BASE_CHARGING)) * POSTURE_GAIN
+	# The Dig row's contact gain (150 over 0.55) lets one ordinary ram fill the bar from about 17
+	# (brawler seeds 1 and 3 staggered it at 9.8 s); HIT_CAP holds one ordinary hit until the first
+	# stagger. alpha-status/waking-stagger-table.md has the sweep.
+	numbers["hit_cap"] = HIT_CAP
+	numbers["hit_cap_until_stagger"] = true
 	spec["posture"] = numbers
+	# A monster build here is heft above the library's top-bucket maximum at its own entrance, stage 4 (monster_heft.gd).
+	spec["monster_heft"] = MonsterHeft.waking_threshold()
 	return spec
 
 
@@ -491,6 +512,10 @@ func music_state() -> Dictionary:
 	var state := super()
 	if not state.is_empty():
 		state["id"] = String(_row().get("music", BOSS_ID))
+		# A held phase reads as Brindle's does: the bar full, the music's held flag up.
+		if hold_active():
+			state["held"] = true
+			state["in_phase"] = 1.0
 		# Bedrock and the pit share the top phase: the final act, where the hype version plays.
 		state["phase"] = clampi(floors.shattered + 1, 1, Rules.PHASE_NAMES.size())
 	return state
@@ -499,6 +524,8 @@ func music_state() -> Dictionary:
 func objective_text() -> String:
 	if state == FIGHT and floors != null:
 		var text := "%s, %s" % [String(_row().get("name", "The Waking")), floors.objective()]
+		if hold_capped():
+			text = "%s's bar is full. It breaks in %d s: keep the pressure on" % [String(_row().get("name", "The Waking")), ceili(hold_left())]
 		if jammed():
 			text += ". Its drill is jammed: hit it now"
 		elif _family != "":

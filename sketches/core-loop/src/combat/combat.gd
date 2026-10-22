@@ -31,6 +31,7 @@ const KestKit := preload("res://src/combat/kest_kit.gd")
 const Sight := preload("res://src/combat/sight.gd")
 # v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
+const Dunk := preload("res://src/combat/dunk.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # The roster row fleet.gd's own reinforcement-pack system reads (M0's "adds" classification).
 const Roster := preload("res://src/combat/roster.gd")
@@ -524,7 +525,7 @@ func setup(ctx_ref) -> void:
 # kind is "chaser", "lobber", "miniboss", "warden" or "vault". An unknown kind spawns a
 # chaser, with a warning, so a typo in an event table never leaves a stage empty. The
 # Warden and the vault sit on the ground under `at`; the others are placed at `at`.
-func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
+func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF) -> Node3D:
 	var enemy: Node3D
 	match kind:
 		"lobber":
@@ -561,6 +562,9 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 	var enemy_spec: Dictionary = fleet.dress(kind, _spec_for(kind))
 	if affix_id == EliteAffixes.PLATED:
 		enemy_spec["armour"] = EliteAffixes.PLATED
+	# A park perch top (terrain.perch_near) is the Dispatcher's spec["perch"]; with none it builds its own mast.
+	if kind == "dispatcher" and perch.is_finite():
+		enemy_spec["perch"] = perch
 	if kind not in ["warden", "vault"]:
 		var director = ctx.root.get_node("World").director
 		health_scale = director.hp_scale()
@@ -634,13 +638,20 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 		ultimate.warden_posture(enemy, resolve(enemy, kind, force, part))
 		return
 	door.pass_hit({"enemy": enemy, "kind": kind, "force": force, "part": part, "source": source,
-		"impact": impact}, _strike_stages)
+		"impact": impact, "dunk": _dunk_bonus(enemy, kind)}, _strike_stages)
 
 
 # --- SR1: strike()'s stages, in damage_door.gd's ORDER --------------------------------
 
 func _door_armour(hit: Dictionary) -> void:
-	hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"])
+	hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"], hit["dunk"])
+	if hit["dunk"] > 0.0:
+		if bool(hit["result"].get("guarded", false)):
+			hit["dunk"] = 0.0
+			hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"])
+		else:
+			ctx.player.dunk.spend(hit["enemy"])
+			hit["result"]["dunk"] = hit["dunk"]
 	hit["cls"] = _classify_source(hit["kind"], hit["source"] if hit["source"] != "" else _forced_source)
 
 
@@ -656,6 +667,26 @@ func _door_caps(hit: Dictionary) -> void:
 	# its own mark.
 	if hit["kind"] == ARC_MARK_KIND:
 		_arc_mark(enemy)
+
+
+# The dunk charge (dunk.gd) pays on a reel impact on the body the line bit: the stored slam
+# damage joins the hit's punch, so it meets the same plating, chip, weak point and armour
+# rules as the reel it rides on. Read here, spent in _door_armour once the hit is known not
+# to be guard-blocked; knockback and the struck force are untouched.
+func _dunk_bonus(enemy: Node3D, kind: String) -> float:
+	if ctx == null or ctx.player == null or not ctx.player.get("dunk"):
+		return 0.0
+	var smash: bool = ctx.player.smash_landing == enemy
+	if not is_reel_impact(kind, smash) or not (smash or ctx.player.kit.anchor_body == enemy):
+		return 0.0
+	return ctx.player.dunk.peek()
+
+
+# The reel test punch_of's winch branch already uses (a smash landing counts as hooked: the
+# landing lets the line go before its strikes resolve), shared with the dunk charge.
+func is_reel_impact(kind: String, smash: bool) -> bool:
+	var kit = ctx.player.kit
+	return Dunk.is_reel_impact(kind, smash, kit.hooked, kit.winching)
 
 
 # Damage families (DamageFamilies, FIELDS-AND-CASTS section 6): a hit that beat the plating
@@ -699,7 +730,7 @@ func _door_announce(hit: Dictionary) -> void:
 	hit["id"] = enemy.get_instance_id()
 	_detect_before(enemy, kind, result)
 	var outer := _pending
-	_pending = {"id": enemy.get_instance_id(), "kind": kind, "force": force, "part": result["part"]}
+	_pending = {"id": enemy.get_instance_id(), "kind": kind, "force": force, "part": result["part"], "dunk": hit["dunk"]}
 	hit["hp_before"] = _hp_of(enemy)
 	var outer_impact := last_impact
 	last_impact = {"key": hit["impact"], "enemy": enemy.get_instance_id()} if hit["impact"] != "" else {}
@@ -1212,15 +1243,19 @@ func delivered_damage() -> Dictionary:
 # The one plating rule. Returns {punch, plating, full, dealt, part}. Asked from an
 # enemy_struck or strike_deflected handler with that strike's enemy, kind and force, it
 # answers with the strike's own part, so the handler sees the plating the hit meets.
-func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionary:
-	if part == "" and not _pending.is_empty() and _pending["id"] == enemy.get_instance_id() \
+func resolve(enemy: Node3D, kind: String, force: float, part := "", dunk := 0.0) -> Dictionary:
+	if not _pending.is_empty() and _pending["id"] == enemy.get_instance_id() \
 			and _pending["kind"] == kind and _pending["force"] == force:
-		part = _pending["part"]
+		if part == "":
+			part = _pending["part"]
+		if dunk == 0.0:
+			dunk = _pending["dunk"]
 	if part == "" and kind in CONTACT_KINDS and enemy.has_method("contact_part"):
 		part = enemy.contact_part(ctx.player.ball_position(), kind)
 	if kind == SYNERGY:
 		part = ""
-	var punch := punch_of(kind, force)
+	# The dunk's stored slam rides the punch, so every rule below treats it as part of the reel.
+	var punch := punch_of(kind, force) + dunk
 	if enemy.has_method("fight") and enemy.fight() == "posture":
 		var tier: int = SpeedTier.of(force, ctx.player.tuning.f("cruise")) if kind == "ram" else 0
 		var smash: bool = ctx.player.smash_landing == enemy
@@ -2274,7 +2309,7 @@ func _cannon_set_piece_hit(enemy: Node3D, damage: float, at: Vector3, landing: b
 			damage if landing else damage * Ultimate.WARDEN_VOLLEY, landing, 0)
 		var id := enemy.get_instance_id()
 		var spent := float(budget.get(id, 0.0))
-		judged["gain"] = minf(float(judged.get("gain", 0.0)), maxf(0.0, Ultimate.WARDEN_POSTURE_CAP - spent))
+		judged["gain"] = minf(float(judged.get("gain", 0.0)), maxf(0.0, Ultimate.cap_for_warden(enemy) - spent))
 		judged["shatter"] = false
 		judged["crack"] = false
 		budget[id] = spent + float(judged["gain"])

@@ -381,6 +381,13 @@ var tree_picks: Array[String] = []
 # SG8's lab switch (bot_run --late-offer): "" leaves the tree's late_offer off and the bot as it
 # was; "take" or "skip" turns late_offer on and answers only the take_or_skip offer that way.
 var late_offer_policy := ""
+# SR10's lab switch (bot_run --relay-stake=0..4): above 0, the skipper stakes the park relay with
+# the game's own set_stakes before it rolls in, works it to its pay, then goes on to the Warden.
+# 0 leaves every code path below untouched.
+var relay_stake := 0
+const RELAY_ARM_SECONDS := 150.0
+var _relay_clock := 0.0
+var _relay_closed := {}
 var late_offer_counts := {"offered": 0, "taken": 0, "declined": 0}
 var _tree_rng := RandomNumberGenerator.new()
 
@@ -641,7 +648,9 @@ func start(resume := false) -> void:
 		if not boss_note.is_empty():
 			var hits: Dictionary = boss_note["weak_point_hits"]
 			hits[point_id] = int(hits.get(point_id, 0)) + 1)
-	_connect_optional("boss_defeated", func(): _boss_set("defeated_s", snappedf(_boss_clock, 0.01)))
+	_connect_optional("boss_defeated", func():
+		_boss_set("defeated_s", snappedf(_boss_clock, 0.01))
+		_boss_hold_note())
 	events.scrap_lost.connect(func(amount: int, _at: Vector3, _total: int, cause: String):
 		if cause == "crane":
 			_boss_set("stolen", int(boss_note.get("stolen", 0)) + amount))
@@ -850,6 +859,7 @@ func _end(why: String) -> void:
 			boss_note["died_s"] = snappedf(_boss_clock, 0.01)
 		boss_note["outcome"] = why
 		boss_note["seconds"] = snappedf(_boss_clock, 0.01)
+		_boss_hold_note()
 		var boss = _boss()
 		if boss != null:
 			boss_note["phase_reached"] = boss.get("phase")
@@ -882,9 +892,12 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_activity = ""
 	_activity_time = {}
 	_activity_skip = {}
+	_relay_clock = 0.0
+	_relay_closed = {}
 	_cache_phase = "runup"
 	_cache_clock = 0.0
 	_climb = []
+	_route_lips.clear()
 	_climb_for = ""
 	_fight_climb = []
 	_fight_climb_clock = 0.0
@@ -1062,7 +1075,17 @@ func _on_boss_entered() -> void:
 	boss_note = {"entered_run_s": snappedf(game.run.run_time, 0.01), "entry_heft": snappedf(game.run.heft(), 0.001),
 		"entry_parts": game.run.parts.size(), "phases": [], "weak_point_hits": {}, "hp_lost": 0.0, "hits": 0,
 		"evasions": 0, "plants": 0, "slingshots": 0, "specials": 0, "stolen": 0, "defeated_s": null,
+		"hold_s": null, "hold_bound_s": null,
 		"charge_reads": 0, "charge_sidesteps": 0, "charge_hits": 0, "clash_tries": 0}
+
+
+# The stub bosses' phase-hold seconds (stub_boss.gd); a hull boss has none and records null.
+func _boss_hold_note() -> void:
+	var boss = _boss()
+	if boss == null or not "hold_s" in boss:
+		return
+	_boss_set("hold_s", snappedf(boss.hold_s, 0.01))
+	_boss_set("hold_bound_s", snappedf(boss.hold_bound_s, 0.01))
 
 
 func _on_boss_phase(phase: int, phase_name: String) -> void:
@@ -1119,6 +1142,8 @@ func _roam(delta: float) -> void:
 		_note["magnet_stuns"] = maxi(int(_note.get("magnet_stuns", 0)), int(warden.get("magnet_stuns") if warden.get("magnet_stuns") != null else 0))
 	match policy:
 		"skipper":
+			if relay_stake > 0 and _relay_arm(delta):
+				return
 			_fight(warden, delta)
 		"completionist":
 			_completionist(warden, delta)
@@ -1387,6 +1412,54 @@ func _random(warden: Node3D, delta: float) -> void:
 			source.press["jump_pressed"] = true
 	_goal = "wander"
 	_act(ball + _wander_heading * 30.0, _nearest_enemy(), delta)
+
+
+# SR10 bot arm. On a map with a relay site (the park's dam and islands), set the stake through the
+# relay's own API while it is not charging (set_stakes refuses once it is, and clamps at 4), roll
+# into the ring, and stay on it until it pays and the pay is taken or RELAY_ARM_SECONDS run out.
+# One row per relay in the stage note's relay_stakes. True when it drove this tick.
+func _relay_arm(delta: float) -> bool:
+	if relay_stake <= 0:
+		return false
+	var world = game.world
+	if world == null or world.activities == null:
+		return false
+	var s = world.activities.site("hold_the_relay")
+	if s == null or s.relay == null or _relay_closed.has(s.id):
+		return false
+	var rows: Array = _note.get("relay_stakes", [])
+	var row: Dictionary
+	if rows.is_empty():
+		s.relay.set_stakes(relay_stake)
+		row = {"stage": game.run.stage, "k": s.relay.stakes, "parts_before": game.run.parts.size()}
+		rows.append(row)
+		_note["relay_stakes"] = rows
+	else:
+		row = rows[0]
+	_relay_clock += delta
+	var ball: Vector3 = game.player.ball_position()
+	if s.started and not row.has("credit"):
+		# The credit the game granted at the start (the first buy may already be spent by now).
+		var activities = world.activities
+		row["credit"] = snappedf(s.relay.pack_credit(activities.relay_pack_cost(s) * int(s.rule["waves"])), 0.01)
+		row["rewards"] = s.relay.rewards()
+	row["minibosses"] = s.minibosses_sent
+	if s.done:
+		row["outcome"] = "won"
+		if s.pickup != null and not s.pickup_taken and _relay_clock <= RELAY_ARM_SECONDS:
+			_goal = "relay pay"
+			_pay_roll(s, ball, delta)
+			return true
+	elif _relay_clock > RELAY_ARM_SECONDS:
+		row["outcome"] = "gave_up"
+	else:
+		_goal = "relay charge" if s.started else "relay approach"
+		_act(_approach(s, ball), _nearest_enemy(), delta)
+		return true
+	row["parts"] = game.run.parts.size() - int(row["parts_before"])
+	row["seconds"] = snappedf(_relay_clock, 0.01)
+	_relay_closed[s.id] = true
+	return false
 
 
 # The slice's standing activities (src/world/activities.gd), nearest first: the ambush altar's
@@ -2896,6 +2969,14 @@ func _to_gate(delta: float) -> void:
 	if _gate_time > GATE_HOP_SECONDS and _gate_hop <= 0.0 and game.player.state.grounded and along < 0.0 and along > -14.0:
 		_gate_hop = GATE_HOP_EVERY
 		source.press["jump_pressed"] = true
+	# Past a kicker's lip and falling short of the next floor, spend the air jump (the Flume's drum lip).
+	if not game.player.state.grounded and game.player.state.air_actions > 0 and game.player.state.velocity.y < 0.0 \
+			and game.player.verb_ready("jump"):
+		for lip in _route_lips:
+			if _flat(ball_at, lip) < 12.0 and ball_at.y < lip.y + 2.5 and ball_at.y > lip.y - 2.0:
+				source.press["jump_pressed"] = true
+				_count("gate_air_jumps")
+				break
 	if trace and ticks % (Engine.physics_ticks_per_second * 2) == 0:
 		var ball: Vector3 = game.player.ball_position()
 		print("    gate %d at=(%.1f, %.1f, %.1f) facing=(%.2f, %.2f, %.2f) ball=(%.1f, %.1f, %.1f) along=%.1f side=%.1f dy=%.1f ground=%.1f target=(%.1f, %.1f, %.1f)"

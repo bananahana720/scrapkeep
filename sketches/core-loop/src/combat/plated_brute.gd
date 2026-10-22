@@ -1,6 +1,7 @@
 extends "res://src/combat/counter.gd"
 
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
+const SwingArc := preload("res://src/combat/swing_arc.gd")
 
 # The plated brute (DESIGN-V2 section 10): a mini-Warden, bolted plate layers visibly
 # one layer more than any other crew. It keeps the Warden's plating grammar (a punch
@@ -9,6 +10,11 @@ const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 # so the body takes only the second. It walks you down and slams the ground around
 # itself: an instant ring that knocks you out of it. It holds nothing; as the
 # director's punisher it lands on a ball a controller is holding.
+#
+# A pilot latched on a line is out of the slam's reach, so the brute hurls a plate: when the
+# line stands and the ball is HURL_MIN or more above the ground, it commits an aerial ring
+# (telegraph.gd aerial_ring) at the swing arc's forecast (swing_arc.gd) over its warn, within
+# HURL_RANGE on the flat. The band is HURL_BAND tall, the same geometry it draws and hits with.
 
 const PLATING_SCALE := 0.6
 const SLAM_RADIUS := 6.0
@@ -16,6 +22,16 @@ const SLAM_RANGE := 6.5
 const SLAM_DAMAGE := 12.0
 const SLAM_SHOVE := 9.0
 const HP := 110.0
+const HURL_RANGE := 22.0
+const HURL_MIN := 3.0
+# A thrown plate climbs about as far as it flies on the flat (22 m out, 20 m up is a steep lob);
+# a pilot latched higher than that over the brute is out of its throw.
+const HURL_MAX_UP := 20.0
+const HURL_RADIUS := 3.0
+const HURL_BAND := 5.0
+const HURL_LOB := 4.0
+const HURL_DAMAGE := 10.0
+const HURL_SHOVE := 5.0
 
 var plates := 1
 var plates_popped := 0
@@ -24,6 +40,8 @@ var slam_shove := SLAM_SHOVE
 var affix := {}
 var affix_attacks := 0
 var _affix_attack := false
+var hurls := 0
+var _hurl := false
 var _next_affix := true
 # A hauler bounty's brute (world/activities.gd): it stands at bounty_home until the ball comes
 # within bounty_wake or it is hit, follows the ball while the ball is within bounty_leash of
@@ -180,7 +198,19 @@ static func _mask_uvs(mesh: ArrayMesh) -> ArrayMesh:
 func _wants_attack(to_ball: Vector3) -> bool:
 	if is_bounty() and (not bounty_woken or _homeward(to_ball)):
 		return false
-	return to_ball.length() <= attack_range and is_on_floor()
+	return (to_ball.length() <= attack_range or _can_hurl(to_ball)) and is_on_floor()
+
+
+# The ball hangs on a line, above the slam and inside the hurl's flat range.
+func _can_hurl(to_ball: Vector3) -> bool:
+	var player = _player()
+	if player == null or not player.kit.hooked:
+		return false
+	# to_ball is flat; the ball's own height is what the slam cannot reach.
+	var ball := _real_ball()
+	var ground: float = terrain.height(ball.x, ball.z) if terrain != null else 0.0
+	return ball.y - ground >= HURL_MIN and ball.y - global_position.y <= HURL_MAX_UP \
+		and Vector2(to_ball.x, to_ball.z).length() <= HURL_RANGE
 
 
 func is_bounty() -> bool:
@@ -227,6 +257,17 @@ func _roam(to_ball: Vector3) -> Vector3:
 
 func _commit(to_ball: Vector3) -> Node3D:
 	_facing(to_ball)
+	_hurl = _can_hurl(to_ball)
+	if _hurl:
+		warn_seconds = 1.1
+		_affix_attack = false
+		var aim: Vector3 = SwingArc.forecast(_player(), warn_seconds)
+		_clear_telegraph()
+		_telegraph = Telegraph.aerial_ring(world_root, terrain, Threat.Type.PROJECTILE,
+			aim - Vector3.UP * HURL_BAND * 0.5, HURL_RADIUS, HURL_BAND)
+		_telegraph.set_flight(global_position + Vector3.UP * 2.5, HURL_LOB)
+		_facts_begin(_telegraph)
+		return _telegraph
 	_affix_attack = not affix.is_empty() and _next_affix
 	if not affix.is_empty():
 		_next_affix = not _next_affix
@@ -250,6 +291,17 @@ func _voice(tele: Node3D) -> void:
 
 
 func _go_live() -> void:
+	if _hurl:
+		hurls += 1
+		var thrown := telegraph()
+		var target_ball := _real_ball()
+		if thrown == null or not thrown.contains(target_ball):
+			return
+		var away: Vector3 = target_ball - thrown.center
+		away.y = 0.0
+		var heading := away.normalized() if away.length() > 0.1 else Vector3.FORWARD
+		hit_player.emit(HURL_DAMAGE, heading * HURL_SHOVE + Vector3.DOWN * 2.0)
+		return
 	if _affix_attack:
 		affix_attacks += 1
 	else:
