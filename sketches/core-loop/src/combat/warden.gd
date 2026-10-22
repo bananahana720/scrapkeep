@@ -917,11 +917,16 @@ func monster_build() -> bool:
 
 func _apply_posture(result: Dictionary) -> void:
 	# A boss module's phase-minimum hold (stub_boss.gd hold_active): the hit lands in full but the bar
-	# stops at HOLD_CAP, so no stagger starts before the hold ends. Crack and shatter need a stagger.
+	# stops at HOLD_CAP, so no stagger starts before the hold ends. A hit that would have gained still
+	# restarts the drain clock, so a pressed bar stays full.
 	var hold = spec.get("posture_hold")
 	if hold is Callable and hold.is_valid() and not _posture.staggered and hold.call():
 		result = result.duplicate()
+		if float(result.get("gain", 0.0)) > 0.0:
+			_posture.idle = 0.0
 		result["gain"] = clampf(float(result.get("gain", 0.0)), 0.0, maxf(0.0, HOLD_CAP - _posture.posture))
+		result["crack"] = false
+		result["shatter"] = false
 	var before := _posture_signature()
 	var was_staggered := _posture.staggered
 	var chunks_before: int = _posture.chunks

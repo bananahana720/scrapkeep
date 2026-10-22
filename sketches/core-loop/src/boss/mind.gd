@@ -20,7 +20,8 @@ const ATTACK_PERIOD := 3.5
 const ATTACK_DAMAGE := 10.0
 const HAND_CAP := 2
 # Seconds each phase lasts before a chunk lost in it opens the next (Brindle's PHASE_MIN_SECONDS); the
-# last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps scratch/challenge-tune-btT-1/-2 (66699e63, 08b0923b).
+# last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps on
+# scratch/challenge-tune-btC-1/-2.
 const PHASE_MIN_SECONDS := [22.0, 22.0, 22.0, 22.0]
 const HAND_PHASE := 2
 # How far off the ball's side a hand lands, and how far inside the pad edge it stays.
@@ -284,9 +285,9 @@ func objective_text() -> String:
 	if warden.staggered():
 		var braced := "nothing" if warden.braced_kinds.is_empty() else "/".join(warden.braced_kinds)
 		return "%s is staggered: hit its open lens. It braces against %s." % [who, braced]
+	var text := "Fill %s's bar to stagger it. %d chunks left." % [who, warden.chunks_left()]
 	if hold_capped():
-		return "%s's bar is full. It breaks in %d s: keep the pressure on." % [who, ceili(hold_left())]
-	var text := "Fill %s's bar to stagger it. %d chunks left." % [who, shown_chunks_left()]
+		text = "%s's bar is full. It breaks in %d s: keep the pressure on." % [who, ceili(hold_left())]
 	if _family != "":
 		text += " Incoming: %s." % _family.replace("_", " ")
 	if _family == "plate" and _plate_verb != "":

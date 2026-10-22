@@ -34,8 +34,9 @@ var _posture_seen: Array = []
 # The fight's PHASE_MIN_SECONDS (Brindle's, boss_rules.gd), times the dial <boss>.phase_min_by_phase
 # (a multiplier, identity 1.0): a chunk lost before its phase has lasted that many seconds holds the
 # phase, and the Warden's bar fills only to warden.gd HOLD_CAP (_apply_posture asks hold_active; every hit
-# still lands, none staggers) until the minimum has passed; the next hit then staggers. A subclass names
-# its dial prefix in _hold_boss() and its seconds in _hold_minimums(); "" turns the hold off.
+# still lands, none staggers) until the minimum has passed; the next contact then staggers (a bolt, or a bar
+# drained in the hold, may take more). A subclass names its dial prefix in _hold_boss() and its seconds in
+# _hold_minimums(); "" turns the hold off.
 var _phase_started := 0.0
 var _phase_open_at := 0.0
 var _chunks_lost_seen := 0
