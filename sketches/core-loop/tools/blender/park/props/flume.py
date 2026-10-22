@@ -36,6 +36,8 @@ kit.Prop.ico = _ico_rooted
 K = kit.Kit("flume", polish_opts={"detail": 1})
 WHITE = "e6e3d6"  # chalk white: dial face (not emissive, not a palette hazard colour)
 PETROL = "365754"  # petrol enamel: waterworks machine bodies (Spillway props board; kit.py owns the palette, so raw hex here)
+OXIDE = "9b513a"  # iron oxide: a painted wheel (Spillway props board, Sluice Wheelhouse)
+BONE = "d2c5a5"  # bone: label plates
 COPPER = "b77843"  # copper fittings, small accents only (WARN colour: never dominant)
 FACE = (math.pi / 2, 0, 0)  # rotates a Z-axis cylinder to face -Y
 SIDE = (0, math.pi / 2, 0)  # rotates a Z-axis cylinder to lie along X
@@ -77,10 +79,10 @@ def rope_coil(p, loc, r, col, turns=3, tube=0.045):
 def boom_crane_wreck(p, v, rng):
     # Winch cab on a sleeper plinth, at the foot (x < 0).
     p.box((3.6, 3.0, 0.4), (-4.2, 0, 0.2), C["concrete"], style="hard_smooth")
-    plank_wall_x(p, rng, -5.9, -2.5, -1.4, 0.4, 2.5, 14, C["timber"])
-    plank_wall_x(p, rng, -5.9, -2.5, 1.4, 0.4, 2.5, 14, C["timber_grey"], skip=(5, 6) if v != "a" else ())
-    plank_wall_y(p, rng, -1.4, 1.4, -5.9, 0.4, 2.5, 12, C["timber_dark"])
-    plank_wall_y(p, rng, -1.4, 1.4, -2.5, 0.4, 2.5, 12, C["timber"], skip=(4, 5, 6, 7))  # open front for the drum
+    plank_wall_x(p, rng, -5.9, -2.5, -1.4, 0.4, 2.5, 14, PETROL)
+    plank_wall_x(p, rng, -5.9, -2.5, 1.4, 0.4, 2.5, 14, PETROL, skip=(5, 6) if v != "a" else ())
+    plank_wall_y(p, rng, -1.4, 1.4, -5.9, 0.4, 2.5, 12, PETROL)
+    plank_wall_y(p, rng, -1.4, 1.4, -2.5, 0.4, 2.5, 12, PETROL, skip=(4, 5, 6, 7))  # open front for the drum
     for s in (-1, 1):
         for r in range(6):
             if v == "c" and s == 1 and r > 2:
@@ -105,7 +107,7 @@ def boom_crane_wreck(p, v, rng):
     # A-frame stub behind the foot (stout, apex capped; not a gate).
     for s in (-1, 1):
         p.beam((-1.9, s * 1.4, 0.2), (-2.5, s * 0.25, 4.1), 0.34, C["timber_dark"])
-    p.box((0.5, 1.2, 0.34), (-2.5, 0, 4.15), C["timber_dark"], style="hard_smooth")
+    p.box((0.5, 1.2, 0.34), (-2.5, 0, 4.15), BONE, style="hard_smooth")  # bone cap plate
     p.cyl(0.4, 0.3, (-2.5, 0, 3.75), C["iron"], segs=12, rot=FACE, style="hard_smooth")
     p.beam((-2.0, -1.3, 1.2), (-2.5, 0, 3.0), 0.12, C["timber_dark"])
     # The boom, jack-knifed into chunky lattice segments (steep or short, never a long shallow run).
@@ -268,13 +270,13 @@ def sluice_shed(p, v, rng):
                 p.beam((x, y, 0.5), (x + 0.6, y - 0.4, 1.8), 0.26, C["timber_dark"])  # post kicked out
                 continue
             p.beam((x, y, 0.5), (x, y, 3.3), 0.26, C["timber_dark"])
-    plank_wall_x(p, rng, -2.3, 2.3, 1.9, 0.5, 3.1, 20, C["timber"], skip=(3, 4, 5) if v != "a" else ())
-    plank_wall_y(p, rng, -1.8, 1.8, -2.4, 0.5, 3.1, 16, C["timber_grey"])
-    plank_wall_x(p, rng, -2.3, 2.3, -1.9, 0.5, 3.1, 20, C["timber_pale"], skip=(11, 12, 13, 14, 15) if v != "c" else tuple(range(8, 20)))
+    plank_wall_x(p, rng, -2.3, 2.3, 1.9, 0.5, 3.1, 20, PETROL, skip=(3, 4, 5) if v != "a" else ())
+    plank_wall_y(p, rng, -1.8, 1.8, -2.4, 0.5, 3.1, 16, PETROL)
+    plank_wall_x(p, rng, -2.3, 2.3, -1.9, 0.5, 3.1, 20, PETROL, skip=(11, 12, 13, 14, 15) if v != "c" else tuple(range(8, 20)))
     if v != "c":
-        plank_wall_y(p, rng, -1.8, 1.8, 2.4, 0.5, 3.1, 16, C["timber"], skip=(6, 7, 8) if v == "b" else ())
+        plank_wall_y(p, rng, -1.8, 1.8, 2.4, 0.5, 3.1, 16, PETROL, skip=(6, 7, 8) if v == "b" else ())
     # Door frame on the front, open.
-    p.box((1.3, 0.2, 0.12), (0.0, -2.0, 2.15), C["timber_dark"])
+    p.box((1.3, 0.2, 0.12), (0.0, -2.0, 2.15), BONE)  # bone name plate over the door
     # Gabled roof: planks up both slopes. c: one side gone.
     rise, half = 1.5, 2.3
     th = math.atan2(rise, half)
@@ -287,7 +289,7 @@ def sluice_shed(p, v, rng):
                 continue
             t = (r + 0.5) / rows
             p.box((5.6, half / rows * 1.5, 0.1), (0, s * half * (1 - t), 3.3 + rise * t),
-                  tint(C["timber_grey"] if (r % 2) else C["timber_dark"], rng, 0.08), rot=(-s * th, 0, 0), jit=0.004)
+                  tint(PETROL if (r % 2) else mix(PETROL, C["charcoal"], 0.35), rng, 0.08), rot=(-s * th, 0, 0), jit=0.004)
     p.beam((-2.9, 0, 3.3 + rise), (2.9, 0, 3.3 + rise), 0.26, C["timber_dark"])
     for x in (-2.4, 0, 2.4):
         for s in (-1, 1):
@@ -306,7 +308,7 @@ def sluice_shed(p, v, rng):
         broken = v != "a" and k in (2, 3, 7)
         r_end = wr * (0.55 if broken else 1.0)
         for sy in (-1.05, 1.05):
-            p.beam((wx + 0.3 + 0.0, sy, wz), (wx + 0.3 + r_end * math.sin(a), sy, wz + r_end * math.cos(a)), 0.2, C["timber_dark"], h=0.16)
+            p.beam((wx + 0.3 + 0.0, sy, wz), (wx + 0.3 + r_end * math.sin(a), sy, wz + r_end * math.cos(a)), 0.2, OXIDE, h=0.16)
         if not broken:
             p.box((0.14, 2.3, 0.7), (wx + 0.3 + wr * math.sin(a), 0, wz + wr * math.cos(a)), tint(C["timber"], rng),
                   rot=(0, a, 0), jit=0.004)
@@ -546,10 +548,10 @@ def tool_peg(p, v, rng):
         polish_opts={"bevel_min": 0.2}, story="A hut with one big chalk-white dial: flume flow logged as steady, whatever it does.")
 def gauge_dial_shed(p, v, rng):
     p.box((2.4, 2.0, 0.3), (0, 0, 0.15), C["concrete"], style="hard_smooth")
-    plank_wall_x(p, rng, -1.05, 1.05, 0.9, 0.3, 2.2, 5, C["timber"])
-    plank_wall_x(p, rng, -1.05, 1.05, -0.9, 0.3, 2.2, 5, C["timber_pale"], skip=(2,) if v == "b" else ())
-    plank_wall_y(p, rng, -0.85, 0.85, -1.05, 0.3, 2.2, 4, C["timber_grey"])
-    plank_wall_y(p, rng, -0.85, 0.85, 1.05, 0.3, 2.2, 4, C["timber_grey"])
+    plank_wall_x(p, rng, -1.05, 1.05, 0.9, 0.3, 2.2, 5, PETROL)
+    plank_wall_x(p, rng, -1.05, 1.05, -0.9, 0.3, 2.2, 5, PETROL, skip=(2,) if v == "b" else ())
+    plank_wall_y(p, rng, -0.85, 0.85, -1.05, 0.3, 2.2, 4, PETROL)
+    plank_wall_y(p, rng, -0.85, 0.85, 1.05, 0.3, 2.2, 4, PETROL)
     for r in range(5):
         for s in (-1, 1):
             if v == "b" and s == 1 and r == 4:
@@ -558,7 +560,7 @@ def gauge_dial_shed(p, v, rng):
     # The dial: back plate, white face, ring, tick marks, needle.
     dz = 1.5
     p.cyl(0.85, 0.16, (0, -1.1, dz), PETROL, segs=20, rot=FACE, style="hard_smooth")
-    p.cyl(0.72, 0.06, (0, -1.2, dz), WHITE if v != "c" else mix(WHITE, C["canvas_stain"], 0.5), segs=20, rot=FACE, style="fine")
+    p.cyl(0.72, 0.06, (0, -1.2, dz), BONE if v != "c" else mix(BONE, C["canvas_stain"], 0.5), segs=20, rot=FACE, style="fine")  # bone dial face
     p.torus(0.8, 0.05, (0, -1.19, dz), C["iron_light"], rot=FACE, major=14, minor=4, style="flat")
     for k in range(8):
         a = math.tau * k / 8

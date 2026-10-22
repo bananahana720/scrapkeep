@@ -97,13 +97,19 @@ Boards (under `docs/art/reference/`):
 - `pilots/pilots-balls-heft-moodboard.jpg` (scale, relative only).
 
 **Palette roles.** The Spillway props board (`spillway-props-moodboard.jpg`; `spillway/README.md` line 52) paints waterworks machines in petrol enamel 365754 with copper or steel fittings, on sandstone, oxide, charcoal and bone. Per role, from grepping each kind's colour calls in `tools/blender/park/props/flume.py` (the `C` table is `kit.py` lines 59-67; `PETROL` and `COPPER` are raw hex at the top of the recipe, because the foundation PR owns `kit.py`):
-- Machine bodies in petrol 365754: boom_crane_wreck winch drum (line 92) and hook block (line 157); sluice_shed axle and hub (lines 299 and 302); gauge_dial_shed back plate (line 560); pipe_section variant a body (line 696). pipe_section variants b and c keep rust.
-- Copper b77843 fittings, small accents only: boom_crane_wreck crank ring (line 95); pipe_section end flanges (line 699). It is a WARN colour in `kit.py`, so the build prints a warning, no error.
+- Machine bodies in petrol 365754 (`PETROL`, line 38): boom_crane_wreck winch-cab walls (lines 82 to 85), winch drum (94) and hook block (159); sluice_shed housing walls (273 to 277), gable roof planks (292, petrol and a darker petrol mix), axle and hub (301, 304); gauge_dial_shed hut walls (551 to 554) and back plate (562); pipe_section variant a body (698; variants b and c keep rust). The board panels followed are Sluice Wheelhouse (a petrol housing on a stone block with a wheel) and Pump Repair (petrol body, copper and steel fittings). The Spillway board has no gauge hut, so I took the nearest panel, Pump Repair, for gauge_dial_shed. The crane has no board panel; its working parts are timber on the carry board's trestles, so the boom, lattice, roof and A-frame stay timber and iron and only the winch cab is petrol.
+- Oxide 9b513a (`OXIDE`, line 39): the sluice wheel spokes (line 311), as the Wheelhouse wheel. Paddles, rims, sill and trim stay timber and iron.
+- Bone d2c5a5 (`BONE`, line 40), one part per machine kind: boom_crane_wreck A-frame cap plate (line 110), sluice_shed name plate over the door (279), gauge_dial_shed dial face (563). No new geometry.
+- Copper b77843 fittings, small accents only: boom_crane_wreck crank ring and pipe_section end flanges. It is a WARN colour in `kit.py`, so the build prints a warning, no error.
 - Steel fittings stay iron or iron_light: flanges, hoops, bolts, crank spokes and the dial ring.
 - Verdigris 5f8a7c is not a machine colour here. It is on a flask (sluice_shed, line 322), a cup (tea_hearth, line 439) and a shirt and a cloth heap (washline, lines 463 and 470): small accents.
 - Sandstone c6a274 is unused: hearth stones and the shed footing are grey concrete.
 - Timber, canvas, concrete and charcoal carry the rest; the leaf greens are olive, not Ancient.
-Colour guard (`kit.py` `check_colour` runs at build): the rebuild of boom_crane_wreck, sluice_shed, gauge_dial_shed and pipe_section exited 0 with no banned or hazard-like colour; only the copper WARN line printed. Tris, radius and height are unchanged for all 12 variants (same KIT_BUILT lines; the manifest and registry are byte-identical). Previews (`artifacts/local/dressing/flume/preview/`, local): pipe_section_a now reads as a petrol drum with copper flanges, close to the Pump repair panel. The winch drum, sluice hub and dial plate are petrol but small or mostly hidden, so the wheelhouse and crane read mainly as timber, not as the board's petrol Wheelhouse body; that is the limit of a recolour and is left for review.
+Colour guard (`kit.py` `check_colour` runs at build): both rebuilds exited 0 with no banned or hazard-like colour; only the copper WARN line printed. Tris, radius and height are unchanged for every variant of the four recoloured kinds (identical KIT_BUILT lines; manifest and registry byte-identical). Previews (`artifacts/local/dressing/flume/preview/`, local) looked at against the props board:
+- sluice_shed_a: reads as the board's petrol Wheelhouse, a petrol housing and roof with an oxide spoked wheel, timber paddles and a bone name plate.
+- gauge_dial_shed_a: a petrol hut with a bone dial face and a timber roof; reads as a petrol machine hut like Pump Repair.
+- pipe_section_a: a petrol drum with copper flanges, like Pump Repair.
+- boom_crane_wreck_a: the winch cab is a petrol body with a bone cap plate, and the boom stays timber. It reads as a petrol cab with a timber crane, not a fully petrol machine; that is deliberate (no crane panel on the boards) and I flag it for review.
 
 **Shape language.** Broad worn, soft toy shapes: `flume.py` builds with `style="round"` and `hard_smooth` blobs, low sleepers (line 61, "never a crate"), draped shirts, and rounded shed and hearth masses, like the Pump repair and Wheelhouse panels. Silhouettes stay low and wide beside the tall machinery.
 
@@ -131,7 +137,7 @@ Colour guard (`kit.py` `check_colour` runs at build): the rebuild of boom_crane_
 
 ## Board drift (for review)
 
-Fixed in this round: machine bodies were iron grey and rust, not the board's petrol with copper or steel fittings (see Palette roles). Washline gained `line_clear_m: 30` in the earlier commit and now also has a recolour (verdigris shirt and cloth, unchanged here). Open items, none changed in this unit:
+Fixed in this round: machine bodies were iron grey and rust, not the board's petrol with copper or steel fittings; the sluice, gauge hut and crane cab are now petrol bodies (see Palette roles). Washline gained `line_clear_m: 30` in the earlier commit and now also has a recolour (verdigris shirt and cloth, unchanged here). Open items, none changed in this unit:
 - boom_crane_wreck variant a chain sag 0.2 is the nearest to a taut read.
 - The concrete, timber and canvas neutrals are outside the 13 palette chips, though the boards' materials show them.
 - The tea_hearth kettle reads as a dark sphere: needs a play-check.
