@@ -175,7 +175,7 @@ Spec keys are today's (`src/world/contraptions.gd:86-101`; shapes as in `src/wor
 | `tipple_lift` | lift, `lift_platform` | `tipple_deck` | at (20, 262), radius 4.5, rise 40, charge 3.2 s | pops a ball onto the tipple deck for the drop finisher |
 | `sump_geyser` | launcher (geyser), `geyser_vent` | `floor_sump` | at (-70, 128), target (0, -59.2, 240), floor 16, min flight 2.2 s, charge 3.0 s | a burst dewatering standpipe that throws you onto the tipple deck |
 | `rim_zip` | cable, `""` | `pit` | from (60, 1.5, -298) to (150, -37.5, -178), radius 6, floor 22 | the rim road's downhill grapple line over bench 1 to the camp on bench 2 (the Rivet and Tally lines) |
-| `tailings_conveyor` | cable, `""` | `tailings_bench_east` | from (337, -38.5, -40) to (337, -37.5, 110), radius 6, floor 22 | the bench 2 east conveyor: a 150 m level grapple line over the tailings pond (the east branch) |
+| `tailings_conveyor` | cable, `""` | `tailings_bench_east` | from (337, -38.5, -40) to (337, -37.5, 110), radius 6, floor 22 | the bench 2 east conveyor: a 150 m grapple line over the tailings pond, near level (its landing end sits 1 m above its start, for the 2.35 m end clearance) (the east branch) |
 | `bench2_haul_cable` | cable, `""` | `pit` | from (60, -38.5, -150) to (-90, -37.5, -150), radius 6, floor 22 | the bench 2 north haul cable west from the camp (the Kest line) |
 | `skip_cable` | cable, `""` | `pit` | from (175, -38.5, -125) to (120, -77.5, 25), radius 6, floor 22 | a skip cable from the camp down over bench 3 to bench 4 (the Tarn and Tally lines) |
 | `west_winze_cable` | cable, `""` | `pit` | from (-150, -58.5, -25) to (-100, -97.5, 170), radius 6, floor 22 | the Kest line's second west cable, over bench 4 to the floor |

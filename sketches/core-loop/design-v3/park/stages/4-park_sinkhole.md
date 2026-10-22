@@ -214,7 +214,7 @@ Advantage and counter text is in each row of the park file. `drift_drill_crews` 
 
 ## 7. `contraption_rows` (shipped)
 
-Spec keys are today's (`src/world/contraptions.gd:86-101`). 28 rows since the authored pass (2026-10-17, "Wall pays" and the floor is lava; `tools/park_sinkhole_pass.py` writes the ropes, vents, cinder strips and glaze).
+Spec keys are today's (`src/world/contraptions.gd:86-101`). 28 rows since the authored pass (2026-10-17, "Wall pays" and the floor is lava; `tools/park_sinkhole_pass.py` writes the ropes, vents, cinder strips and glaze; the ropes' `to` y were later raised to at least 2.35 m over the baked ground, guarded by `tests/park_cable_ends_test.gd`).
 
 | Id | Kind, recipe | Site | Spec | What it is for |
 | --- | --- | --- | --- | --- |
