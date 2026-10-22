@@ -1723,7 +1723,7 @@
     -667
    ],
    "yaw_deg": -151,
-   "near": "dome_16: Three pails on a flat rock and a brittle"
+   "near": "dome_16: Three pails on a flat rock and a brittlebush seedling: lunch"
   },
   {
    "id": "mid_tool_bench_2",
@@ -1803,7 +1803,7 @@
     -510
    ],
    "yaw_deg": 8,
-   "near": "dome_3: A cold fire ring with pails and a sandba"
+   "near": "dome_3: A cold fire ring with pails and a sandbag seat."
   },
   {
    "id": "survey_station_14",
@@ -1832,18 +1832,18 @@
     -263,
     -550
    ],
-   "yaw_deg": -172,
-   "near": "dome_4: A cable spool"
+   "yaw_deg": 4,
+   "near": "sable line z -534: A cable spool, a small compressor and a pail left on a bench"
   },
   {
    "id": "low_slump_bags_17",
    "template": "low_slump_bags",
    "at": [
     -245,
-    -550
+    -547
    ],
-   "yaw_deg": -172,
-   "near": "dome_4: Sandbags slumping against the bank"
+   "yaw_deg": 12,
+   "near": "sable line z -536: Sandbags slumping against the bank, a tripod resting on"
   },
   {
    "id": "low_lunch_rock_18",
@@ -1852,8 +1852,8 @@
     -226,
     -549
    ],
-   "yaw_deg": -172,
-   "near": "dome_4: Three pails on a flat rock and a brittle"
+   "yaw_deg": 8,
+   "near": "sable line z -539: Three pails on a flat rock and a brittlebush seedling: lunch"
   },
   {
    "id": "crew_camp_20",
@@ -1883,7 +1883,7 @@
     -539
    ],
    "yaw_deg": 4,
-   "near": "dome_19: A cold fire ring with pails and a sandba"
+   "near": "dome_19: A cold fire ring with pails and a sandbag seat."
   },
   {
    "id": "low_spool_stub_28",
@@ -1913,7 +1913,7 @@
     -504
    ],
    "yaw_deg": 72,
-   "near": "dome_19: A collapsed canvas tent with a washing l"
+   "near": "dome_19: A collapsed canvas tent with a washing line and boots,"
   },
   {
    "id": "low_slump_bags_31",
@@ -1922,8 +1922,8 @@
     -32,
     -489
    ],
-   "yaw_deg": 72,
-   "near": "dome_19: Sandbags slumping against the bank"
+   "yaw_deg": -108,
+   "near": "sable line z -493: Sandbags slumping against the bank, a tripod resting on"
   },
   {
    "id": "mid_tool_bench_32",
@@ -1932,8 +1932,8 @@
     -36,
     -471
    ],
-   "yaw_deg": 72,
-   "near": "dome_19: A cable spool"
+   "yaw_deg": -104,
+   "near": "sable line z -475: A cable spool, a small compressor and a pail left on a bench"
   },
   {
    "id": "low_lunch_rock_33",
@@ -1942,8 +1942,8 @@
     -44,
     -454
    ],
-   "yaw_deg": 72,
-   "near": "dome_19: Three pails on a flat rock and a brittle"
+   "yaw_deg": -108,
+   "near": "sable line z -458: Three pails on a flat rock and a brittlebush seedling: lunch"
   },
   {
    "id": "low_tool_roll_34",
@@ -1963,7 +1963,7 @@
     -368
    ],
    "yaw_deg": 56,
-   "near": "dome_23: The water-level staff and its stencil po"
+   "near": "dome_23: The water-level staff and its stencil post: three high-water"
   },
   {
    "id": "mid_hat_wall_40",
@@ -2023,7 +2023,7 @@
     -598
    ],
    "yaw_deg": 70,
-   "near": "domes_fin_east: Three pails on a flat rock and a brittle"
+   "near": "domes_fin_east: Three pails on a flat rock and a brittlebush seedling: lunch"
   },
   {
    "id": "low_tool_roll_48",
@@ -2063,7 +2063,7 @@
     -525
    ],
    "yaw_deg": 8,
-   "near": "dome_4: A cold fire ring with pails and a sandba"
+   "near": "dome_4: A cold fire ring with pails and a sandbag seat."
   },
   {
    "id": "tool_wall_54",
@@ -2073,7 +2073,7 @@
     -577
    ],
    "yaw_deg": -172,
-   "near": "dome_4: A works wall of hard hats with a compres"
+   "near": "dome_4: A works wall of hard hats with a compressor and a gauge"
   },
   {
    "id": "pour_site_55",
@@ -2093,7 +2093,7 @@
     -458
    ],
    "yaw_deg": -34,
-   "near": "dome_4: The sluice crew's wheelhouse and the odd"
+   "near": "dome_4: The sluice crew's wheelhouse and the odds and ends of their"
   },
   {
    "id": "mixer_graveyard_58",
@@ -2123,7 +2123,7 @@
     -336
    ],
    "yaw_deg": 63,
-   "near": "dome_23: Three pails on a flat rock and a brittle"
+   "near": "dome_23: Three pails on a flat rock and a brittlebush seedling: lunch"
   },
   {
    "id": "low_tool_roll_62",
@@ -2193,7 +2193,7 @@
     -648
    ],
    "yaw_deg": -173,
-   "near": "dome_2: A cold fire ring with pails and a sandba"
+   "near": "dome_2: A cold fire ring with pails and a sandbag seat."
   },
   {
    "id": "mid_tool_bench_78",
@@ -2229,11 +2229,11 @@
    "id": "crew_camp_81",
    "template": "crew_camp",
    "at": [
-    -12,
-    -680
+    -14,
+    -686
    ],
-   "yaw_deg": -173,
-   "near": "dome_2: A cold crew campfire with a seat log"
+   "yaw_deg": -24,
+   "near": "rivet line z -650: A cold crew campfire with a seat log, a kettle, a washing"
   },
   {
    "id": "low_slump_bags_82",
@@ -2242,8 +2242,8 @@
     9,
     -663
    ],
-   "yaw_deg": -173,
-   "near": "dome_7: Sandbags slumping against the bank"
+   "yaw_deg": 7,
+   "near": "cannon line z -649: Sandbags slumping against the bank, a tripod resting on"
   },
   {
    "id": "low_lunch_rock_85",
@@ -2253,7 +2253,7 @@
     -621
    ],
    "yaw_deg": 130,
-   "near": "dome_7: Three pails on a flat rock and a brittle"
+   "near": "dome_7: Three pails on a flat rock and a brittlebush seedling: lunch"
   },
   {
    "id": "bunk_collapse_86",
@@ -2263,7 +2263,7 @@
     -562
    ],
    "yaw_deg": 99,
-   "near": "domes_fin_east: A collapsed canvas tent with a washing l"
+   "near": "domes_fin_east: A collapsed canvas tent with a washing line and boots,"
   },
   {
    "id": "flood_gauge_87",
@@ -2273,7 +2273,7 @@
     -604
    ],
    "yaw_deg": 130,
-   "near": "dome_8: The water-level staff and its stencil po"
+   "near": "dome_8: The water-level staff and its stencil post: three high-water"
   },
   {
    "id": "low_tool_roll_88",
@@ -2313,7 +2313,7 @@
     -503
    ],
    "yaw_deg": 48,
-   "near": "dome_20: A works wall of hard hats with a compres"
+   "near": "dome_20: A works wall of hard hats with a compressor and a gauge"
   },
   {
    "id": "pour_site_93",
@@ -2343,7 +2343,7 @@
     -421
    ],
    "yaw_deg": 56,
-   "near": "dome_20: A cold fire ring with pails and a sandba"
+   "near": "dome_20: A cold fire ring with pails and a sandbag seat."
   },
   {
    "id": "low_spool_stub_97",
@@ -2363,7 +2363,7 @@
     -301
    ],
    "yaw_deg": 135,
-   "near": "dome_23: The sluice crew's wheelhouse and the odd"
+   "near": "dome_23: The sluice crew's wheelhouse and the odds and ends of their"
   },
   {
    "id": "low_lunch_rock_111",
@@ -2373,7 +2373,7 @@
     179
    ],
    "yaw_deg": 93,
-   "near": "the_eye: Three pails on a flat rock and a brittle"
+   "near": "the_eye: Three pails on a flat rock and a brittlebush seedling: lunch"
   },
   {
    "id": "survey_station_112",
@@ -2433,17 +2433,17 @@
     422
    ],
    "yaw_deg": 77,
-   "near": "eye_chute_east: A cold fire ring with pails and a sandba"
+   "near": "eye_chute_east: A cold fire ring with pails and a sandbag seat."
   },
   {
    "id": "low_spool_stub_121",
    "template": "low_spool_stub",
    "at": [
-    53,
+    52,
     470
    ],
-   "yaw_deg": -103,
-   "near": "the_eye: A cable spool on its side with a sandbag"
+   "yaw_deg": 81,
+   "near": "kest line z 473: A cable spool on its side with a sandbag chock."
   },
   {
    "id": "mid_hat_wall_122",
@@ -2523,7 +2523,7 @@
     291
    ],
    "yaw_deg": 35,
-   "near": "the_eye: Three pails on a flat rock and a brittle"
+   "near": "the_eye: Three pails on a flat rock and a brittlebush seedling: lunch"
   },
   {
    "id": "low_tool_roll_134",
@@ -2532,8 +2532,8 @@
     -10,
     -657
    ],
-   "yaw_deg": -173,
-   "near": "dome_2: A survey tripod dropped with its sandbag"
+   "yaw_deg": 11,
+   "near": "cannon line z -647: A survey tripod dropped with its sandbag weights and a lost"
   },
   {
    "id": "bunk_collapse_135",
@@ -2543,7 +2543,7 @@
     -671
    ],
    "yaw_deg": 130,
-   "near": "dome_7: A collapsed canvas tent with a washing l"
+   "near": "dome_7: A collapsed canvas tent with a washing line and boots,"
   },
   {
    "id": "flood_gauge_136",
@@ -2553,7 +2553,7 @@
     -641
    ],
    "yaw_deg": 130,
-   "near": "dome_7: The water-level staff and its stencil po"
+   "near": "dome_7: The water-level staff and its stencil post: three high-water"
   },
   {
    "id": "low_peg_line_139",
@@ -2632,8 +2632,8 @@
     38,
     127
    ],
-   "yaw_deg": 76,
-   "near": "eye_fin_east: A hat wall sagging in the sun"
+   "yaw_deg": -100,
+   "near": "cannon line z 122: A hat wall sagging in the sun, a spool and a dropped pail."
   },
   {
    "id": "low_slump_bags_154",
@@ -2662,8 +2662,8 @@
     80,
     -10
    ],
-   "yaw_deg": 93,
-   "near": "slot_fin_far: A works wall of hard hats with a compres"
+   "yaw_deg": -91,
+   "near": "cannon line z -11: A works wall of hard hats with a compressor and a gauge"
   },
   {
    "id": "pour_site_159",
@@ -2683,7 +2683,7 @@
     90
    ],
    "yaw_deg": 92,
-   "near": "eye_fin_east: The sluice crew's wheelhouse and the odd"
+   "near": "eye_fin_east: The sluice crew's wheelhouse and the odds and ends of their"
   },
   {
    "id": "mixer_graveyard_162",
@@ -2749,11 +2749,11 @@
    "id": "low_chalk_tally_tally_0",
    "template": "low_chalk_tally",
    "at": [
-    46,
+    45,
     398
    ],
-   "yaw_deg": -103,
-   "near": "tally fill, 41 m from line"
+   "yaw_deg": 77,
+   "near": "kest line z 407: A chalk tally board, a fallen gauge staff and a dropped"
   },
   {
    "id": "low_cold_fire_tally_1",
@@ -2772,8 +2772,8 @@
     52,
     428
    ],
-   "yaw_deg": -103,
-   "near": "tally fill, 28 m from line"
+   "yaw_deg": 81,
+   "near": "kest line z 432: A cable spool on its side with a sandbag chock."
   },
   {
    "id": "low_brittle_rebar_tally_3",
@@ -2782,8 +2782,8 @@
     52,
     452
    ],
-   "yaw_deg": -103,
-   "near": "tally fill, 23 m from line"
+   "yaw_deg": 77,
+   "near": "kest line z 457: Rebar stubs half taken by brittlebush, a split sandbag"
   },
   {
    "id": "low_slump_bags_canyon_5",
@@ -2792,8 +2792,8 @@
     78,
     -107
    ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 64 m from line"
+   "yaw_deg": -87,
+   "near": "cannon line z -104: Sandbags slumping against the bank, a tripod resting on"
   },
   {
    "id": "mid_pour_edge_canyon_7",
@@ -2802,8 +2802,8 @@
     90,
     -89
    ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 75 m from line"
+   "yaw_deg": -83,
+   "near": "cannon line z -80: The edge of a pour: a toppled gauge staff, bags and rebar."
   },
   {
    "id": "low_tool_roll_canyon_8",
@@ -2812,18 +2812,18 @@
     72,
     -71
    ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 56 m from line"
+   "yaw_deg": -87,
+   "near": "cannon line z -68: A survey tripod dropped with its sandbag weights and a lost"
   },
   {
    "id": "low_chalk_tally_canyon_9",
    "template": "low_chalk_tally",
    "at": [
-    72,
+    76,
     -47
    ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 54 m from line"
+   "yaw_deg": -87,
+   "near": "cannon line z -44: A chalk tally board, a fallen gauge staff and a dropped"
   },
   {
    "id": "mid_overgrown_canyon_10",
@@ -2832,18 +2832,18 @@
     84,
     -59
    ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 67 m from line"
+   "yaw_deg": -83,
+   "near": "cannon line z -51: Rebar, spool and compressor swallowed by brittlebush."
   },
   {
    "id": "low_cold_fire_canyon_11",
    "template": "low_cold_fire",
    "at": [
-    72,
+    74,
     -29
    ],
-   "yaw_deg": 93,
-   "near": "canyon fill, 53 m from line"
+   "yaw_deg": -83,
+   "near": "cannon line z -22: A cold fire ring with pails and a sandbag seat."
   },
   {
    "id": "low_spool_stub_canyon_13",
@@ -2902,18 +2902,18 @@
     48,
     109
    ],
-   "yaw_deg": 76,
-   "near": "canyon fill, 34 m from line"
+   "yaw_deg": -104,
+   "near": "cannon line z 101: A cold fire ring with pails and a sandbag seat."
   },
   {
    "id": "mid_tool_bench_canyon_19",
    "template": "mid_tool_bench",
    "at": [
     66,
-    109
+    110
    ],
-   "yaw_deg": 76,
-   "near": "canyon fill, 51 m from line"
+   "yaw_deg": -100,
+   "near": "cannon line z 101: A cable spool, a small compressor and a pail left on a bench"
   },
   {
    "id": "rebar_thicket_rim_20",
@@ -3042,8 +3042,8 @@
     29,
     124
    ],
-   "yaw_deg": 76,
-   "near": "pose 161, north mouth of upper_slot, 19 m from line"
+   "yaw_deg": -104,
+   "near": "cannon line z 119: A cold fire ring with pails and a sandbag seat."
   }
  ],
  "litter": {
@@ -3072,5 +3072,5 @@
   ],
   "seed": 11
  },
- "pin": 280859597
+ "pin": 2441315749
 }

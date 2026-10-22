@@ -102,7 +102,7 @@ What changed:
 - Moved crew_camp_rim_24 from (-160, 75) to (-176, 72), yaw -95, label "west rim hollow ... looking across the canyon". The offset breaks the line; the spot is legal (0 violations).
 - Canyon fill: rewrote the labels of low_spool_stub_canyon_13, low_slump_bags_canyon_14, mid_laundry_canyon_15, low_chalk_tally_canyon_16 and mid_hat_wall_canyon_17 to a place and a moment. Yaws changed from 89 to 70, 100, 128, 112 and 60; pour_site_159 became 85 and wheelhouse_yard_160 92 (their slot_fin_far and eye_fin_east labels already named a place). Some neighbours still sit within 12 degrees: 14/16 12 at 30 m, 14/tool_wall_158 7 at 35.9 m, 159/158 8 at 50 m, 159/160 7 at 50 m, 14/canyon_11 7 at 54 m, 14/160 8 at 65.5 m, 13/17 10 at 66.3 m, 159/canyon_11 8 at 69.5 m (verifier measure, pairs within 70 m). Others differ more: 14/159 15, 16/160 20. Spots 13, 14, 16 and 17 still stand along x = 72 to 78 at the loose scan's tolerance, now with varied yaws; the strict scan finds no row. No canyon spot moved.
 
-Remaining one-yaw groups (12) are not this round's flagged set. They are the northern canyon fill (canyon_5 to 11 and tool_wall_158 at yaw 93) and ten dome/eye camp clusters. Not all are one site: dome_3 with dome_4 and dome_23 with dome_20 mix sites, one group joins tally fill to the_eye, some hold density-window and pose pegs, and the north canyon fill has only generic labels with canyon_8, 9 and 11 at x = 72 (acceptance gate note). Two older loose runs also remain: tally_0, 2, 3 with spool_121 at yaw -103, 23 to 41 m from the line, and canyon_9, 11, 15 with tool_wall_158. Proposed as a wave 19 row/yaw card on #241, not changed here.
+Remaining one-yaw groups: the 7 that card (b)'s check flags (the north canyon fill, the tally fill with spool_121, the three dome camp trios and the canyon 18/19 group, plus the z -550 row) were fixed in w18l; see "w18l row and yaw fixes" below. The looser lane scans still list a few small dome/eye clusters that the card (b) rule (3 or more spots within 24 m, yaws within 1 degree) does not flag. Not changed here.
 
 New counts: 133 spots (was 135), 816 instances (was 834), 83 litter, 0 plan violations, pin 1202620946 to 280859597 (intended re-pin).
 
@@ -136,3 +136,46 @@ The kit review found two kinds built off the dam brief (`sketches/core-loop/desi
 - 2026-10-21 World, #242 lane width ("called the LINE flag the actual ride line"): read `check_one` and the event plan in `park_props.gd` before moving anything, rather than assuming what a telegraph zone is (it is a strike circle here, not the site box).
 - 2026-10-21 Modeling, #241 lane map ("listed units as owed that the stage held byte for byte"): in the 30 m pass, rebuilt only `laundry_line` and checked that `git status` showed no GLB change, only the manifest field (the later palette pass did rebuild the five recoloured kinds' GLBs).
 - 2026-10-21 Modeling, M1 anchor gap tool (run line copied from siblings, exit 127): ran the Blender command from the packet verbatim and confirmed exit 0.
+
+## w18l row and yaw fixes (card (b), #323)
+
+Card (b)'s check flagged dam for 1 row and 6 yaw groups (the row's trio is also one yaw group). This round fixes all 7, which covers the fix list from the coordinator (canyon_5 to 11, tool_wall_158, tally_0, 2, 3 and spool_121). No spot was added or deleted.
+
+Yaw. Each changed spot now faces the nearest point on the closest ride line (yaw = degrees(atan2(dx, dz)), the kit front being local +Z). Their old yaws pointed away from the rider. Where two linked spots would still land within 3 degrees, one was turned 4 degrees (the table gives the turn) toward a point on the same line a little up or down it; the label names that point. The tool also said five spots could not take the line-facing yaw: crew_camp_81 (a laundry_line prop 23.2 m from a line, 30 wanted), tally_0 (flood_staff on a 26.9 degree slope), spool_121 (sandbags 6.1 m from east_lane_fin), canyon_11 (sandbags 6.2 m from slot_fin_far) and canyon_19 (a compressor_cart 5.2 m from slot_fin_far). Each moved by the smallest step that passed (1 to 2 m, canyon_11 from x 72 to 74, except crew_camp_81, 6.3 m back from the line). Two more moves break the row and the x = 72 column: low_slump_bags_17 from z -550 to -547 (3 m off the z -550 line, so the trio no longer sits within 1.5 m of one line) and canyon_9 from x 72 to 76.
+
+| Spot | at (old -> new) | yaw (old -> new) | near label (new) | Target faced |
+| --- | --- | --- | --- | --- |
+| mid_tool_bench_16 | [-263, -550] -> same | -172 -> 4 | sable line z -534 | sable line at (-262, -534), -4 deg off the nearest point |
+| low_slump_bags_17 | [-245, -550] -> [-245, -547] | -172 -> 12 | sable line z -536 | sable line at (-243, -536), 4 deg off the nearest point |
+| low_lunch_rock_18 | [-226, -549] -> same | -172 -> 8 | sable line z -539 | sable line at (-225, -539), 0 deg off the nearest point |
+| low_slump_bags_31 | [-32, -489] -> same | 72 -> -108 | sable line z -493 | sable line at (-46, -493), 0 deg off the nearest point |
+| mid_tool_bench_32 | [-36, -471] -> same | 72 -> -104 | sable line z -475 | sable line at (-52, -475), 4 deg off the nearest point |
+| low_lunch_rock_33 | [-44, -454] -> same | 72 -> -108 | sable line z -458 | sable line at (-57, -458), 0 deg off the nearest point |
+| crew_camp_81 | [-12, -680] -> [-14, -686] | -173 -> -24 | rivet line z -650 | rivet line at (-30, -650), 0 deg off the nearest point |
+| low_slump_bags_82 | [9, -663] -> same | -173 -> 7 | cannon line z -649 | cannon line at (11, -649), 0 deg off the nearest point |
+| low_spool_stub_121 | [53, 470] -> [52, 470] | -103 -> 81 | kest line z 473 | kest line at (71, 473), 4 deg off the nearest point |
+| low_tool_roll_134 | [-10, -657] -> same | -173 -> 11 | cannon line z -647 | cannon line at (-8, -647), 4 deg off the nearest point |
+| mid_hat_wall_153 | [38, 127] -> same | 76 -> -100 | cannon line z 122 | cannon line at (10, 122), 4 deg off the nearest point |
+| tool_wall_158 | [80, -10] -> same | 93 -> -91 | cannon line z -11 | cannon line at (19, -11), -4 deg off the nearest point |
+| low_chalk_tally_tally_0 | [46, 398] -> [45, 398] | -103 -> 77 | kest line z 407 | kest line at (86, 407), 0 deg off the nearest point |
+| low_spool_stub_tally_2 | [52, 428] -> same | -103 -> 81 | kest line z 432 | kest line at (80, 432), 4 deg off the nearest point |
+| low_brittle_rebar_tally_3 | [52, 452] -> same | -103 -> 77 | kest line z 457 | kest line at (74, 457), 0 deg off the nearest point |
+| low_slump_bags_canyon_5 | [78, -107] -> same | 93 -> -87 | cannon line z -104 | cannon line at (14, -104), 0 deg off the nearest point |
+| mid_pour_edge_canyon_7 | [90, -89] -> same | 93 -> -83 | cannon line z -80 | cannon line at (16, -80), 4 deg off the nearest point |
+| low_tool_roll_canyon_8 | [72, -71] -> same | 93 -> -87 | cannon line z -68 | cannon line at (16, -68), 0 deg off the nearest point |
+| low_chalk_tally_canyon_9 | [72, -47] -> [76, -47] | 93 -> -87 | cannon line z -44 | cannon line at (18, -44), 0 deg off the nearest point |
+| mid_overgrown_canyon_10 | [84, -59] -> same | 93 -> -83 | cannon line z -51 | cannon line at (17, -51), 4 deg off the nearest point |
+| low_cold_fire_canyon_11 | [72, -29] -> [74, -29] | 93 -> -83 | cannon line z -22 | cannon line at (19, -22), 4 deg off the nearest point |
+| low_cold_fire_canyon_18 | [48, 109] -> same | 76 -> -104 | cannon line z 101 | cannon line at (15, 101), 0 deg off the nearest point |
+| mid_tool_bench_canyon_19 | [66, 109] -> [66, 110] | 76 -> -100 | cannon line z 101 | cannon line at (15, 101), 4 deg off the nearest point |
+| low_cold_fire_p134 | [29, 124] -> same | 76 -> -104 | cannon line z 119 | cannon line at (11, 119), 0 deg off the nearest point |
+
+Labels. 26 dam labels were the template story cut mid-word at 40 characters. They now read "<row id>: <story cut at the last whole word within 60 characters>"; for example low_lunch_rock_1 is "dome_16: Three pails on a flat rock and a brittlebush seedling: lunch" (was "...a brittle") and bunk_collapse_30 is "dome_19: A collapsed canvas tent with a washing line and boots," cut at its last whole word. The 24 changed spots above use "<line> line z <station>: <story cut>" naming the line point they face; 3 of the 26 are among them, so 23 spots changed label only. The row ids dome_2, dome_4, dome_7, dome_19 and the_eye are no longer in the 24 spots' labels.
+
+Checks (headless Godot 4.7.2, Linux).
+- New check (`park_props_plan --map=park_dam --check`, scan merged in a separate tree): 816 instances, 0 violations, 0 pattern, 0 pin, 0 lint.
+- Old check on this branch alone: 0 violations, fingerprint 2441315749 (matches the pin).
+- Pin: 280859597 to 2441315749 (intended re-pin; positions, yaws and moves changed the expansion).
+- park_props_test: exit 0, "[park_dam expansion matches its pin]" passes.
+- Density (w18l, no `--open`): 24 of 49 windows pass, 24 exempt (12 arena, 1 camp, 11 telegraph); failing: kest (18.3, -32.4), the same corkscrew window. No new fail. Draw calls max 391, median 363.5; bare share 38.8 percent, longest bare run 175 m. Not a frame-cost proof, not human feel.
+- Loose lane scans for comparison: strict scan 1 run and 12 one-yaw clusters before, 0 runs and 7 after; the proto scan 1 row and 16 yaw groups before, 0 rows and 14 after.
