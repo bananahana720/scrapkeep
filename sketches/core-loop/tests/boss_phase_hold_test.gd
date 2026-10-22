@@ -1,4 +1,4 @@
-# smoke: solo timeout=600s (five simulated boss fights per boss, three of them held 60 s or more: 5 min wall on a quiet box)
+# smoke: bots timeout=900s (five simulated boss fights per boss, three of them held 60 s or more: 5 min wall on a quiet box, 390 s alone on a cloud box on 2026-10-22, so the 360 s solo ceiling no longer fits; bot tier, as alpha_posture_bands_test)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
