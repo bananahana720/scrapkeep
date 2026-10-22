@@ -9,6 +9,9 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const SkillBand := preload("res://tools/skill_band.gd")
+const BossRules := preload("res://src/boss/boss_rules.gd")
+const Requisition := preload("res://src/boss/requisition.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -68,6 +71,35 @@ const CAMP_RANGE := 30.0
 const TRAVERSE_REACTION := 0.15
 const TRAVERSE_PRESS_GAP := 0.4
 const TRAVERSE_REACHED := 12.0
+# The traversal pilot's optional hands (traversal_line.gd --hands=), off unless named so the bare
+# pilot's baselines hold. The harpoon hand swings from an anchor hanging SWING_ABOVE over the ball
+# (a lower one only drags it) and within SWING_AHEAD (cosine) of the way to the waypoint, at
+# SWING_MIN_SPEED or more (a slow ball has nothing to swing). SWING_YAWS and SWING_PITCHES are the
+# bearings it looks along for one. A held line is let go once the anchor is behind the ball, once
+# the ball carries less than SWING_CARRY m/s toward the waypoint after SWING_GRACE s, or after
+# SWING_HOLD_MAX s; SWING_GAP s pass before the next bite.
+const HAND_NAMES := ["harpoon", "glide"]
+const SWING_ABOVE := 6.0
+const SWING_AHEAD := 0.5
+const SWING_MIN_SPEED := 6.0
+const SWING_YAWS := [0.0, 0.35, -0.35, 0.7, -0.7]
+const SWING_PITCHES := [0.3, 0.55, 0.8]
+const SWING_CARRY := 3.0
+const SWING_GRACE := 0.8
+const SWING_HOLD_MAX := 5.0
+const SWING_GAP := 1.5
+# A press is in flight for TRAVERSE_REACTION, and the line has not changed yet: no second press
+# until the first has landed.
+const SWING_SENT := 0.4
+# The glide hand holds glide over a thermal column and down a drop of GLIDE_DROP m or more to the
+# ground, and lets go once the ball is out of the column and gains under GLIDE_GAIN m/s toward the
+# waypoint. Only a kit with the glide augment (Kest's blink) has the hand.
+const GLIDE_DROP := 10.0
+const GLIDE_GAIN := 2.0
+# The glide hand also keeps GLIDE_ABOVE m of height over the waypoint and GLIDE_NEAR m of way to
+# it: a glide that ends short of the waypoint beats one that overshoots below it.
+const GLIDE_ABOVE := 6.0
+const GLIDE_NEAR := 40.0
 # Radians of camera yaw per second: a brisk mouse, not a snap.
 const TURN_RATE := 5.0
 const SENSITIVITY := 0.0022
@@ -255,6 +287,15 @@ const CLOSE_FIGHT := 14.0
 # The boss.
 const BOSS_ORBIT := 32.0
 const BAIT_RADIUS := 47.0
+# Brindle's charge lane: a read lane is left to half its width plus this margin (m). A clash needs
+# the ball closing on the bow at CLASH_SPEED (m/s), at least CLASH_MIN_GAP (m) ahead of the front, and
+# lined up within CLASH_ALIGN (m) of the axis at CLASH_ROLL (m/s) with CLASH_SPARE (s) to spare.
+const CHARGE_MARGIN := 2.0
+const CLASH_SPEED := 8.0
+const CLASH_MIN_GAP := 5.0
+const CLASH_ALIGN := 1.5
+const CLASH_ROLL := 12.0
+const CLASH_SPARE := 0.3
 const RAMP_ANGLES := [0.0, 180.0]
 const RAMP_BOTTOM := 46.0
 const RAMP_PAST := 18.0
@@ -340,6 +381,13 @@ var tree_picks: Array[String] = []
 # SG8's lab switch (bot_run --late-offer): "" leaves the tree's late_offer off and the bot as it
 # was; "take" or "skip" turns late_offer on and answers only the take_or_skip offer that way.
 var late_offer_policy := ""
+# SR10's lab switch (bot_run --relay-stake=0..4): above 0, the skipper stakes the park relay with
+# the game's own set_stakes before it rolls in, works it to its pay, then goes on to the Warden.
+# 0 leaves every code path below untouched.
+var relay_stake := 0
+const RELAY_ARM_SECONDS := 150.0
+var _relay_clock := 0.0
+var _relay_closed := {}
 var late_offer_counts := {"offered": 0, "taken": 0, "declined": 0}
 var _tree_rng := RandomNumberGenerator.new()
 
@@ -417,7 +465,18 @@ var _plate_hand := {}
 var _ignore_walls := false
 # Telegraph reading: instance id -> tick first seen; the ids evaded this stage.
 var _seen := {}
+# A skill band (tools/skill_band.gd) or null. Null is the driver as it always was: REACTION,
+# every tell read, every hand on. A band slows the reaction, drops unread tells and refuses
+# the kit hands it does not have (see _kit).
+var band = null
+# The lowest hull the run reached, for the record; it steers nothing.
+var _min_hp := INF
 var _evaded := {}
+# Brindle charge lanes (hazard instance id) already counted as read, sidestepped, clash-tried, and the clash taken.
+var _charge_read := {}
+var _charge_stepped := {}
+var _clash_tried := {}
+var _clash_latched := {}
 # The pulse ring the caps loop takes on purpose, by its centre.
 var _welcome_ring_at := Vector3.INF
 # Engineer plant cycle: idle, seek or mounted.
@@ -427,6 +486,12 @@ var _plant_cool := 0.0
 var _plant_face := Vector3.ZERO
 var _plant_target: Node3D = null
 var _boss_clock := 0.0
+# The hull at the last tick or hit: a hit's hull loss is what it took off this, after scrap armour.
+var _hull_seen := -1.0
+# The opening the 19 Oct ruling protects: no boss kills a Learner in its first 45 s.
+const FIRST_45_S := 45.0
+# Seconds the dam's spillway sheet has been open in this cycle, for a band that launches by sight; -1 shut.
+var _sheet_live_s := -1.0
 var _punch_seen := 0.0
 var _warden_hp_at := -1.0
 var _warden_kinds := {}
@@ -474,12 +539,22 @@ var _cast_phase := ""
 var _cast_click_tick := -1
 var _ult_wait := 0.0
 var _traverse_point := Vector3.INF
+# The traversal hands (HAND_NAMES) the runner named, and what they decided this tick.
+var hands: Array[String] = []
+var _glide_held := false
+# True on a tick the harpoon hand turns the camera to a candidate anchor: the Q set piece flies
+# where the camera looks, so the traversal pilot does not press it then.
+var _hand_aim := false
+var _gliding := false
+var _swing_clock := 0.0
+var _swing_cool := 0.0
+var _swing_sent := 0.0
 # In-play seconds, the meter's own clock (it fills only in play), and the fill records.
 var _play_clock := 0.0
 var _fill_from := 0.0
 var _fills: Array[float] = []
 var _fill_open := true
-var _totals := {"slot_casts_special": 0, "slot_casts_line": 0, "ultimates": 0, "ult_presses": 0}
+var _totals := {"slot_casts_special": 0, "slot_casts_line": 0, "ultimates": 0, "ult_presses": 0, "shots": 0}
 # The meter's points by source at the first full meter, for the record only.
 var _first_fill_sources := {}
 
@@ -550,6 +625,7 @@ func start(resume := false) -> void:
 	events.enemy_struck.connect(_on_enemy_struck)
 	events.special_used.connect(func(_id: String, _at: Vector3): _count("specials"))
 	events.shot_fired.connect(func(_weapon: String, _from: Vector3, _to: Vector3):
+		_totals["shots"] = int(_totals["shots"]) + 1
 		var kit = game.player.kit
 		if kit.hooked and kit.on_body and _anchor_warden(kit.anchor_body):
 			_count("latch_shots"))
@@ -635,6 +711,7 @@ func tick(delta: float) -> bool:
 	if outcome != "":
 		return true
 	ticks += 1
+	_hull_seen = float(game.run.hp)
 	var flow = game.flow
 	var state: String = flow.state_name()
 	match state:
@@ -670,6 +747,7 @@ func tick(delta: float) -> bool:
 		return true
 	_boost_clock -= delta
 	_play_clock += delta
+	_min_hp = minf(_min_hp, float(game.run.hp))
 	_ult_wait -= delta
 	_harpoon_held = false
 	_harpoon_commit = false
@@ -775,6 +853,8 @@ func _end(why: String) -> void:
 	outcome = why
 	_close_note()
 	if not boss_note.is_empty():
+		if why == "died" and not boss_note.has("outcome"):
+			boss_note["died_s"] = snappedf(_boss_clock, 0.01)
 		boss_note["outcome"] = why
 		boss_note["seconds"] = snappedf(_boss_clock, 0.01)
 		var boss = _boss()
@@ -809,6 +889,8 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_activity = ""
 	_activity_time = {}
 	_activity_skip = {}
+	_relay_clock = 0.0
+	_relay_closed = {}
 	_cache_phase = "runup"
 	_cache_clock = 0.0
 	_climb = []
@@ -902,13 +984,37 @@ func _in_boss() -> bool:
 
 
 func _on_player_hit(amount: float, source_id: String) -> void:
+	# hp_lost and the largest hit are the whole hit before scrap armour; hull_lost is what reached the hull.
+	var hull: float = amount if _hull_seen < 0.0 else maxf(0.0, _hull_seen - float(game.run.hp))
+	_hull_seen = float(game.run.hp)
 	_count("hp_lost", amount)
+	_count("hull_lost", hull)
 	_count("hits")
-	var into: Dictionary = boss_note if _in_boss() else _note
+	if source_id == "brindle_charge":
+		_count("charge_hits")
+	var in_boss := _in_boss()
+	var into: Dictionary = boss_note if in_boss else _note
 	if not into.is_empty():
 		if not into.has("hit_sources"):
 			into["hit_sources"] = {}
 		into["hit_sources"][source_id] = snappedf(float(into["hit_sources"].get(source_id, 0.0)) + amount, 0.1)
+		# The comps study's per-fight report (research/comps/difficulty/SUMMARY.md, Lab measure): the largest
+		# single hit as a share of pilot health, and the damage taken in the fight's first 45 s. A stage note
+		# counts only from its Warden fight's start to the break, so mob hits on the way in or out stay out of
+		# the Warden's row. The study file arrives with #167.
+		var fight_start = null if in_boss else fight_start_of(_note)
+		if in_boss or (fight_start != null and _note.get("warden_broken_s") == null):
+			var fight_s: float = _boss_clock if in_boss else game.run.stage_time - float(fight_start)
+			if amount > float(into.get("largest_hit", 0.0)):
+				into["largest_hit"] = snappedf(amount, 0.1)
+				into["largest_hit_source"] = source_id
+				into["largest_hit_share"] = snappedf(amount / maxf(float(game.run.max_hp), 1.0), 0.001)
+			if hull > float(into.get("largest_hull_hit", 0.0)):
+				into["largest_hull_hit"] = snappedf(hull, 0.1)
+				into["largest_hull_hit_share"] = snappedf(hull / maxf(float(game.run.max_hp), 1.0), 0.001)
+			if fight_s <= FIRST_45_S:
+				into["hp_lost_45s"] = snappedf(float(into.get("hp_lost_45s", 0.0)) + amount, 0.1)
+				into["hull_lost_45s"] = snappedf(float(into.get("hull_lost_45s", 0.0)) + hull, 0.1)
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
@@ -944,6 +1050,7 @@ func _close_note() -> void:
 		return
 	_note["exit_s"] = snappedf(game.run.stage_time, 0.01)
 	_note["hp_lost"] = snappedf(float(_note["hp_lost"]), 0.1)
+	_note["hull_lost"] = snappedf(float(_note.get("hull_lost", 0.0)), 0.1)
 	_note["punch_short_s"] = snappedf(float(_note["punch_short_s"]), 0.01)
 	stage_notes.append(_note)
 	_note = {}
@@ -954,12 +1061,17 @@ func _on_boss_entered() -> void:
 	_boss_clock = 0.0
 	_seen = {}
 	_evaded = {}
+	_charge_read = {}
+	_charge_stepped = {}
+	_clash_tried = {}
+	_clash_latched = {}
 	_plant_state = "idle"
 	_fight_phase = "charge"
 	_fight_target = null
 	boss_note = {"entered_run_s": snappedf(game.run.run_time, 0.01), "entry_heft": snappedf(game.run.heft(), 0.001),
 		"entry_parts": game.run.parts.size(), "phases": [], "weak_point_hits": {}, "hp_lost": 0.0, "hits": 0,
-		"evasions": 0, "plants": 0, "slingshots": 0, "specials": 0, "stolen": 0, "defeated_s": null}
+		"evasions": 0, "plants": 0, "slingshots": 0, "specials": 0, "stolen": 0, "defeated_s": null,
+		"charge_reads": 0, "charge_sidesteps": 0, "charge_hits": 0, "clash_tries": 0}
 
 
 func _on_boss_phase(phase: int, phase_name: String) -> void:
@@ -1016,6 +1128,8 @@ func _roam(delta: float) -> void:
 		_note["magnet_stuns"] = maxi(int(_note.get("magnet_stuns", 0)), int(warden.get("magnet_stuns") if warden.get("magnet_stuns") != null else 0))
 	match policy:
 		"skipper":
+			if relay_stake > 0 and _relay_arm(delta):
+				return
 			_fight(warden, delta)
 		"completionist":
 			_completionist(warden, delta)
@@ -1053,7 +1167,7 @@ func _traverse(delta: float) -> void:
 	source.press = {}
 	_defer_look = true
 	_look_delta = Vector2.ZERO
-	_act(point, null, delta)
+	_act(point, _traverse_hands(ball, point, delta), delta)
 	_defer_look = false
 	source.hold.erase("fire_held")
 	var stick: Vector2 = source.hold.get("move", Vector2.ZERO)
@@ -1069,9 +1183,109 @@ func _traverse(delta: float) -> void:
 	if source.hold.has("move"):
 		source.hold["move"] = _world_to_stick(sent["wish"])
 	source.press = sent["press"]
+	# The aim moved while the press was in flight: a bite that would now land on a body is dropped.
+	if source.press.has("harpoon_pressed") and "harpoon" in hands:
+		var now: Dictionary = game.player.kit.aim
+		if now.get("state", Augments.AIM_NONE) == Augments.AIM_NONE or now.get("body") != null:
+			source.press.erase("harpoon_pressed")
 	var picked: bool = source.press.has("slot_pick")
 	_gate_presses()
 	_traverse_click(picked)
+
+
+# The optional hands, decided before the stick like every other verb. Returns the aim the camera
+# turns to (the anchor the harpoon hand wants to bite), or null.
+func _traverse_hands(ball: Vector3, point: Vector3, delta: float) -> Variant:
+	_glide_held = false
+	_hand_aim = false
+	if hands.is_empty():
+		return null
+	if "glide" in hands:
+		_glide_hand(ball, point)
+	if "harpoon" in hands:
+		var aim = _swing_hand(ball, point, delta)
+		_hand_aim = aim != null
+		return aim
+	return null
+
+
+# Swings from an anchor ahead, and lets the line go before it can stop the ball. It bites the
+# world only: an enemy is a fight, and a body line (a Warden, an island tip, Sable's stake) winches
+# the ball in and holds it, which the on_body release below would drop the tick after the bite, so
+# stakes are left out of the hand rather than exempted from that release. Once hook-out lands a
+# world bite also releases holds that list `hook`: the hand can then act as a hold breaker in
+# traversal measurements, and that is intended.
+func _swing_hand(ball: Vector3, point: Vector3, delta: float) -> Variant:
+	var kit = game.player.kit
+	var way := Vector3(point.x - ball.x, 0.0, point.z - ball.z)
+	if way.length() < 0.5:
+		return null
+	way = way.normalized()
+	_swing_cool -= delta
+	_swing_sent -= delta
+	if kit.hooked:
+		_swing_clock += delta
+		var anchor: Vector3 = kit.anchor
+		var carried: float = game.player.planar_velocity().dot(way)
+		var past: bool = Vector3(anchor.x - ball.x, 0.0, anchor.z - ball.z).dot(way) < 0.0
+		if _swing_sent <= 0.0 and (kit.on_body or past or _swing_clock > SWING_HOLD_MAX \
+				or (_swing_clock > SWING_GRACE and carried < SWING_CARRY)):
+			_swing_sent = SWING_SENT
+			source.press["harpoon_released"] = true
+			_swing_cool = SWING_GAP
+			return null
+		_harpoon_held = true
+		return null
+	_swing_clock = 0.0
+	if _swing_cool > 0.0 or _swing_sent > 0.0 or kit.mounted or _cast_phase != "" or game.player.frozen() \
+			or not game.player.verb_ready("harpoon") or game.player.planar_velocity().length() < SWING_MIN_SPEED:
+		return null
+	if _swing_bites(kit.aim, ball, way):
+		source.press["harpoon_pressed"] = true
+		_swing_sent = SWING_SENT
+		return null
+	var best := Vector3.INF
+	var far := 0.0
+	var space = game.get_world_3d().direct_space_state
+	var reach: float = game.player.tuning.f("rope_range")
+	var assist: float = game.player.tuning.f("grapple_assist_deg")
+	for yaw in SWING_YAWS:
+		for pitch in SWING_PITCHES:
+			var dir: Vector3 = (way.rotated(Vector3.UP, yaw) * cos(pitch) + Vector3.UP * sin(pitch)).normalized()
+			var hit := Augments.grapple_target(space, ball + Vector3.UP * 0.8, dir, ball, reach, assist,
+				Augments.WORLD_MASK | Augments.ENEMY_MASK, false)
+			if _swing_bites(hit, ball, way) and (hit["point"] - ball).dot(way) > far:
+				far = (hit["point"] - ball).dot(way)
+				best = hit["point"]
+	return {"at": best} if best != Vector3.INF else null
+
+
+func _swing_bites(aim: Dictionary, ball: Vector3, way: Vector3) -> bool:
+	if aim.get("state", Augments.AIM_NONE) == Augments.AIM_NONE:
+		return false
+	if aim.get("body") != null:
+		return false
+	var to: Vector3 = aim["point"] - ball
+	return to.y >= SWING_ABOVE and to.length() > 0.5 and Vector3(to.x, 0.0, to.z).normalized().dot(way) >= SWING_AHEAD
+
+
+# Holds glide over a thermal column, or down a long drop while it still gains toward the waypoint.
+# _drive spends the air jump and holds the key once the ball falls.
+func _glide_hand(ball: Vector3, point: Vector3) -> void:
+	var player = game.player
+	if not player.kit.on("glide") or player.state.grounded or player.kit.hooked:
+		_gliding = false
+		return
+	var way := Vector3(point.x - ball.x, 0.0, point.z - ball.z).normalized()
+	var over := _inside_thermal(ball)
+	var drop: float = ball.y - _ground_point(ball.x, ball.z).y
+	var gains: bool = player.planar_velocity().dot(way) >= GLIDE_GAIN
+	# Glide carries a ball past a waypoint and lands it below one on a ledge it cannot climb back
+	# to (Highdraft islands, kest seed 1: 143 dead stops): only with height to spare over the
+	# waypoint and distance left to it.
+	var room: bool = ball.y - point.y >= GLIDE_ABOVE and Vector2(point.x - ball.x, point.z - ball.z).length() >= GLIDE_NEAR
+	_gliding = over or (room and gains and (drop >= GLIDE_DROP or _gliding))
+	_glide_held = _gliding
 
 
 # The traversal pilot's cast is one verb sent as two keys: the pick passes the press gate, and
@@ -1184,6 +1398,54 @@ func _random(warden: Node3D, delta: float) -> void:
 			source.press["jump_pressed"] = true
 	_goal = "wander"
 	_act(ball + _wander_heading * 30.0, _nearest_enemy(), delta)
+
+
+# SR10 bot arm. On a map with a relay site (the park's dam and islands), set the stake through the
+# relay's own API while it is not charging (set_stakes refuses once it is, and clamps at 4), roll
+# into the ring, and stay on it until it pays and the pay is taken or RELAY_ARM_SECONDS run out.
+# One row per relay in the stage note's relay_stakes. True when it drove this tick.
+func _relay_arm(delta: float) -> bool:
+	if relay_stake <= 0:
+		return false
+	var world = game.world
+	if world == null or world.activities == null:
+		return false
+	var s = world.activities.site("hold_the_relay")
+	if s == null or s.relay == null or _relay_closed.has(s.id):
+		return false
+	var rows: Array = _note.get("relay_stakes", [])
+	var row: Dictionary
+	if rows.is_empty():
+		s.relay.set_stakes(relay_stake)
+		row = {"stage": game.run.stage, "k": s.relay.stakes, "parts_before": game.run.parts.size()}
+		rows.append(row)
+		_note["relay_stakes"] = rows
+	else:
+		row = rows[0]
+	_relay_clock += delta
+	var ball: Vector3 = game.player.ball_position()
+	if s.started and not row.has("credit"):
+		# The credit the game granted at the start (the first buy may already be spent by now).
+		var activities = world.activities
+		row["credit"] = snappedf(s.relay.pack_credit(activities.relay_pack_cost(s) * int(s.rule["waves"])), 0.01)
+		row["rewards"] = s.relay.rewards()
+	row["minibosses"] = s.minibosses_sent
+	if s.done:
+		row["outcome"] = "won"
+		if s.pickup != null and not s.pickup_taken and _relay_clock <= RELAY_ARM_SECONDS:
+			_goal = "relay pay"
+			_pay_roll(s, ball, delta)
+			return true
+	elif _relay_clock > RELAY_ARM_SECONDS:
+		row["outcome"] = "gave_up"
+	else:
+		_goal = "relay charge" if s.started else "relay approach"
+		_act(_approach(s, ball), _nearest_enemy(), delta)
+		return true
+	row["parts"] = game.run.parts.size() - int(row["parts_before"])
+	row["seconds"] = snappedf(_relay_clock, 0.01)
+	_relay_closed[s.id] = true
+	return false
 
 
 # The slice's standing activities (src/world/activities.gd), nearest first: the ambush altar's
@@ -1604,7 +1866,7 @@ func _fight(target: Node3D, delta: float) -> void:
 	if short:
 		_count("punch_short_s", delta)
 	_note_shred(target, delta)
-	if _anchor_warden(target):
+	if _anchor_warden(target) and (_kit("harpoon") or _sheet_warden(target)):
 		_anchor_fight(target, short, delta)
 		return
 	_ground_fight(target, short, delta)
@@ -1613,7 +1875,7 @@ func _fight(target: Node3D, delta: float) -> void:
 # The fight on the ground: the caps loop when punch is short of a caps Warden, else ram laps.
 func _ground_fight(target: Node3D, short: bool, delta: float) -> void:
 	var caps: bool = target.has_method("cap_points") and not (target.cap_points() as Array).is_empty()
-	if caps and short:
+	if caps and short and _kit("weak_points"):
 		_goal = "caps %s" % target.get("kind")
 		_cap_loop(target, delta)
 		return
@@ -1643,6 +1905,14 @@ func _anchor_warden(target) -> bool:
 	return target != null and is_instance_valid(target) and target.get("harpoon_anchor") == true
 
 
+# The dam reactor's spillway sheet: its hand releases the hook and breaks the Warden by ram, so
+# a band without the harpoon still runs it.
+func _sheet_warden(target: Node3D) -> bool:
+	return target.get("family") == "reactor" and target.get("mounting") == "dam_face" \
+			and target.spec.get("park_landmark", false) and target.mount_driver != null \
+			and target.mount_driver.has_method("sheet_live")
+
+
 func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 	var kit = game.player.kit
 	var ball: Vector3 = game.player.ball_position()
@@ -1667,9 +1937,7 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		if not game.player.state.grounded:
 			_count("latch_bites_air")
 	_anchor_lined = lined
-	if target.get("family") == "reactor" and target.get("mounting") == "dam_face" \
-			and target.spec.get("park_landmark", false) and target.mount_driver != null \
-			and target.mount_driver.has_method("sheet_live"):
+	if _sheet_warden(target):
 		var sheet = target.mount_driver
 		var dir: Vector3 = sheet.sheet_dir if sheet.sheet_dir != Vector3.ZERO else sheet._face_heading(target)
 		var runup: float = minf(RUNUP, float(sheet.SHEET_RUN) - RUNUP_EDGE)
@@ -1677,12 +1945,25 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		var live: bool = sheet.sheet_live()
 		if kit.hooked:
 			source.press["harpoon_released"] = true
-		var until_pulse: float = target._charge_len - target._charge_time if target._charging else target.PULSE_CYCLE - target._pulse_clock
+		var until_pulse: float = target._charge_len - target._charge_time if target._charging else target.pulse_cycle() - target._pulse_clock
 		if live and sheet.entered_sheet_cycle == sheet.gates_opened and game.player.body().get_colliding_bodies().has(target):
 			_fight_phase = "sheet return %d" % sheet.gates_opened
 		var rammed: bool = _fight_phase == "sheet return %d" % sheet.gates_opened
 		# In a stagger a second ram in the same live sheet is the break, so the ball goes again.
 		var launching: bool = (live and (not rammed or staggered)) or (not live and target._charging and until_pulse <= DROP_WAIT)
+		var timed := _sheet_timed()
+		if not timed:
+			# Below the full kit the hand plays by sight (skill_band.gd): an open sheet seen for the
+			# band's reaction and read this cycle, and the stagger re-ram only with the base kit.
+			if not live:
+				_sheet_live_s = -1.0
+			elif _sheet_live_s < 0.0:
+				_sheet_live_s = 0.0
+			else:
+				_sheet_live_s += delta
+			var seen: bool = live and _sheet_live_s >= _reaction() \
+					and band.reads(target.get_instance_id() * 1000 + int(sheet.gates_opened))
+			launching = seen and (not rammed or (staggered and _kit("weak_points")))
 		var steer: Vector3 = target.family_point_at() if launching else _ground_point(foot.x, foot.z)
 		_harpoon_held = false
 		_harpoon_commit = false
@@ -1705,10 +1986,10 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		_ignore_walls = launching
 		_slow_time = 0.0
 		_detour_time = 0.0
-		_act(steer, target, delta, target, false)
+		_act(steer, target, delta, target, not timed)
 		_ignore_walls = ignore_walls
 		_boost_clock = boost_clock
-		if staggered or float(target.posture()) >= SHEET_HOLD_FIRE:
+		if timed and (staggered or float(target.posture()) >= SHEET_HOLD_FIRE):
 			# Near a full bar, and in a stagger, any hit but the sheet ram only opens or spends a
 			# stagger that resets the bar (Tarn's claw, seed 3): the weapon, casts and ultimate wait.
 			source.hold.erase("fire_held")
@@ -1919,6 +2200,8 @@ func _note_shred(target: Node3D, delta: float) -> void:
 # The press is withheld where the player discards it (a charging special or slingshot, a
 # frozen ball), so a bite counts only when it can land.
 func _harpoon_hand(target: Node3D, delta: float) -> void:
+	if not _kit("harpoon"):
+		return
 	var kit = game.player.kit
 	var bank_shot: bool = game.player.abilities.id_of(AbilityState.LINE) == "bank_shot"
 	if _cast_phase == "await_smash":
@@ -1964,7 +2247,7 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			_cast(3)
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
-		if chain_hand_enabled and policy == "completionist" and not _in_boss() \
+		if chain_hand_enabled and _kit("chain") and policy == "completionist" and not _in_boss() \
 				and target != game.flow.warden and target.is_in_group("enemy") and game.player.verb_ready("jump"):
 			var second := _chain_partner(target)
 			if second != null:
@@ -2329,7 +2612,7 @@ func _cap_loop(target: Node3D, delta: float) -> void:
 # What to point the gun at: the weak point when punch is short and one shows (the
 # magnet while it tugs), else the body.
 func _aim_node(target: Node3D, short: bool):
-	if short and target.has_method("weak_points") and not (target.weak_points() as Array).is_empty():
+	if short and _kit("weak_points") and target.has_method("weak_points") and not (target.weak_points() as Array).is_empty():
 		return {"at": target.weak_points()[0]["at"]}
 	return target
 
@@ -2405,22 +2688,25 @@ func _fight_boss(delta: float) -> void:
 				else:
 					source.hold["brake_held"] = true
 			return
+		# Phase 3's charge lane, once read, outranks the ram laps and run-ups _fight plans.
+		if phase == 3 and _charge_plan(boss, hull, ball, punch, delta):
+			return
 		_fight(hull, delta)
 		return
 	match phase:
 		1:
-			var magnet := _live_part(boss, ship.magnets, ball)
+			var magnet: Node3D = _live_part(boss, ship.magnets, ball) if _kit("weak_points") else null
 			if pickup != Vector3.INF:
 				_goal = "boss pickup"
 				_act(pickup, magnet if magnet != null else hull, delta)
-			elif punch >= _plating(hull):
+			elif punch >= _plating(hull) or not _kit("weak_points"):
 				_goal = "boss ram"
 				_ram_laps(hull, magnet if magnet != null else hull, delta)
 			else:
 				_goal = "boss magnets"
 				_act(_orbit_point(arena, ball, BOSS_ORBIT), magnet if magnet != null else hull, delta)
 		2:
-			if punch >= _plating(hull):
+			if punch >= _plating(hull) or not _kit("weak_points"):
 				_goal = "boss ram"
 				_ram_laps(hull, hull, delta)
 			else:
@@ -2429,12 +2715,89 @@ func _fight_boss(delta: float) -> void:
 			if boss.has_method("stunned") and boss.stunned():
 				_goal = "boss stunned"
 				_ram_laps(hull, hull, delta)
-			elif boss.has_method("charging") and boss.charging() and punch >= float(boss.get("clash_punch") if boss.get("clash_punch") != null else 150.0):
-				_goal = "boss clash"
-				_act(hull.global_position, hull, delta, hull, false)
+			elif _charge_plan(boss, hull, ball, punch, delta):
+				pass
 			else:
 				_goal = "boss bait"
 				_act(arena.point_at(arena.angle_of(ball), BAIT_RADIUS), hull, delta, hull)
+
+
+# Brindle's committed charge lane when this band has seen it long enough and read it (the
+# `_threats` rules: seen for the band's reaction time, `band.reads`), else null. Counts each
+# read lane once.
+func _charge_lane(boss):
+	var c = boss.get("_charge")
+	if not c is Dictionary or not String(c.get("state", "")) in ["brace", "run"]:
+		return null
+	var h = c.get("hazard")
+	if h == null or not is_instance_valid(h) or h.is_done():
+		return null
+	var id: int = h.get_instance_id()
+	if not _seen.has(id):
+		_seen[id] = ticks
+		return null
+	if float(ticks - int(_seen[id])) / float(Engine.physics_ticks_per_second) < _reaction():
+		return null
+	if band != null and not band.reads(id):
+		return null
+	if not _charge_read.has(id):
+		_charge_read[id] = true
+		_count("charge_reads")
+	return h
+
+
+# Phase 3 against a read charge lane. Returns false (the old plan runs) on an unread lane.
+# The full kit clashes only when it can win; everything else steps out of the lane.
+func _charge_plan(boss, hull: Node3D, ball: Vector3, punch: float, delta: float) -> bool:
+	var h = _charge_lane(boss)
+	if h == null:
+		return false
+	var id: int = h.get_instance_id()
+	var lateral: float = h.lane_lateral(ball)
+	if _clash_viable(boss, h, ball, punch, id):
+		if not _clash_tried.has(id):
+			_clash_tried[id] = true
+			_count("clash_tries")
+		_goal = "boss clash"
+		_act(hull.global_position, hull, delta, hull, false)
+		return true
+	_clash_latched.erase(id)
+	if not _charge_stepped.has(id):
+		_charge_stepped[id] = true
+		_count("charge_sidesteps")
+	var out: float = h.half_width + CHARGE_MARGIN
+	var sign_side := 1.0 if lateral >= 0.0 else -1.0
+	var along: float = h.lane_along(ball)
+	var at: Vector3 = h.centre + h.heading * along + h.side() * sign_side * (out + 1.0)
+	_goal = "boss sidestep"
+	_act(Vector3(at.x, ball.y, at.z), hull, delta, hull, absf(lateral) >= h.half_width + 1.0)
+	return true
+
+
+# Head-on with time to spare: the full kit, enough punch, the ball closing on the bow at
+# speed, and it can line up with the lane's axis before the front arrives. Latched per lane
+# once taken, so the clash does not flicker.
+func _clash_viable(boss, h, ball: Vector3, punch: float, id: int) -> bool:
+	if band != null and band.kit != "full":
+		return false
+	var clash_punch: float = float(boss.get("clash_punch") if boss.get("clash_punch") != null else 150.0)
+	if punch < clash_punch:
+		return false
+	var c: Dictionary = boss.get("_charge")
+	var front: float = float(c.get("travelled", 0.0)) + Requisition.HULL.z * 0.5
+	var gap: float = h.lane_along(ball) - front
+	if gap < CLASH_MIN_GAP:
+		return _clash_latched.has(id) and gap > 0.0
+	var v: Vector3 = game.player.planar_velocity()
+	var closing: float = -v.dot(h.heading)
+	var wait: float = h.seconds_until_live() if not h.is_live() else 0.0
+	var arrive: float = wait + gap / (BossRules.CHARGE_SPEED + maxf(closing, 0.0))
+	var align: float = maxf(absf(h.lane_lateral(ball)) - CLASH_ALIGN, 0.0) / CLASH_ROLL
+	var ok: bool = _clash_latched.has(id) or closing >= CLASH_SPEED
+	ok = ok and (align <= 0.0 or align <= arrive - CLASH_SPARE)
+	if ok:
+		_clash_latched[id] = true
+	return ok
 
 
 func _live_part(boss, parts: Array, ball: Vector3) -> Node3D:
@@ -2776,7 +3139,7 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 	# A plant face does not replace a fight climb's waypoint: the face beside the crown's beacon
 	# ramp slingshots the engineer back to the deck before she reaches the Warden's floor.
 	# A seek dropped for the climb is not resumed afterwards: its face may lie back down the ramp.
-	if _engineer() and fight != null and is_instance_valid(fight):
+	if _engineer() and _kit("plant") and fight != null and is_instance_valid(fight):
 		if _climbing(player.ball_position(), fight.global_position):
 			_plant_state = "idle" if _plant_state == "seek" else _plant_state
 		else:
@@ -2800,7 +3163,9 @@ func _threats() -> Array:
 		if not _seen.has(id):
 			_seen[id] = ticks
 			continue
-		if float(ticks - int(_seen[id])) / float(Engine.physics_ticks_per_second) < REACTION:
+		if float(ticks - int(_seen[id])) / float(Engine.physics_ticks_per_second) < _reaction():
+			continue
+		if band != null and not band.reads(id):
 			continue
 		if _welcome_ring_at != Vector3.INF and h.get("center") != null and _flat(h.center, _welcome_ring_at) < 1.0:
 			continue
@@ -2810,7 +3175,24 @@ func _threats() -> Array:
 		for id in _seen.keys():
 			if not live.has(id):
 				_seen.erase(id)
+	if band != null:
+		band.forget(live)
 	return out
+
+
+# Whether the dam sheet hand reads the Warden's clock and holds fire (the Expert, and no band).
+func _sheet_timed() -> bool:
+	return band == null or band.timed_sheet()
+
+
+# Seconds from a telegraph appearing to the bot seeing it.
+func _reaction() -> float:
+	return REACTION if band == null else band.reaction_s
+
+
+# Whether the band has this verb's hand. No band has them all.
+func _kit(verb: String) -> bool:
+	return band == null or band.allows(verb)
 
 
 # The telegraphs a player can see: combat's rings and lanes under the game root (not
@@ -2981,6 +3363,8 @@ func _find_face(fight: Node3D) -> Vector3:
 
 
 func _specials(fight: Node3D, pressed_by_threat: bool) -> void:
+	if not _kit("special"):
+		return
 	var ball: Vector3 = game.player.ball_position()
 	var near := 0
 	for node in game.get_tree().get_nodes_in_group("enemy"):
@@ -3056,6 +3440,8 @@ func _cast_hands() -> void:
 # Slot 3 while a body line stands on an enemy within LINE_CAST_REACH. The load before a planned
 # bite is cast from _harpoon_hand, on the bite's own tick.
 func _line_hands() -> void:
+	if not _kit("line_cast"):
+		return
 	var kit = game.player.kit
 	if not kit.hooked or not kit.on_body or not is_instance_valid(kit.anchor_body):
 		return
@@ -3083,6 +3469,8 @@ func _set_piece_up() -> bool:
 # every policy is already looking at its target or along its way.
 func _ultimate_hands(fight: Node3D) -> void:
 	if _cast_phase == "await_smash": _await_smash_holds()
+	if not _kit("ultimate"):
+		return
 	if _ult_wait > 0.0 or _set_piece_up() or _cast_phase != "":
 		return
 	if String(game.player.abilities.ultimate().get("state", "")) != AbilityState.READY:
@@ -3092,7 +3480,11 @@ func _ultimate_hands(fight: Node3D) -> void:
 	if policy == "traversal":
 		if _traverse_point != Vector3.INF:
 			var ahead := _flat(ball, _traverse_point)
-			want = ahead >= ULT_TRAVERSE_NEAR and ahead <= ULT_TRAVERSE_FAR and _way_clear(ball, _traverse_point)
+			want = not _hand_aim and ahead >= ULT_TRAVERSE_NEAR and ahead <= ULT_TRAVERSE_FAR and _way_clear(ball, _traverse_point)
+	elif band != null and not band.timed_ultimate():
+		# Below the Expert the press is untimed: the meter is ready and a fight is on.
+		var near_lock: bool = fight != null and is_instance_valid(fight) and ball.distance_to(fight.global_position) <= ULT_CROWD_RADIUS
+		want = near_lock or _enemies_within(ball, ULT_CROWD_RADIUS) >= 1
 	else:
 		want = _core_open(fight, ball) or _enemies_within(ball, ULT_CROWD_RADIUS) >= ULT_CROWD
 	if not want:
@@ -3245,6 +3637,15 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 			source.press["jump_pressed"] = true
 		elif player.state.velocity.y < 2.0:
 			hold["brake_held"] = true
+	if _glide_held and not thermal:
+		# The glide hand's drop: spend the air jump, then hold the key while falling. A blink
+		# would leave the footprint, as in the thermal branch.
+		hold.erase("shift_held")
+		source.press.erase("shift_pressed")
+		if player.state.air_actions > 0:
+			source.press["jump_pressed"] = true
+		elif player.state.velocity.y < 0.0 and not player.kit.slamming:
+			hold["jump_held"] = true
 	if thermal:
 		# Spend the air jump before glide can engage; a blink would leave the footprint.
 		hold.erase("shift_held")
@@ -3282,8 +3683,13 @@ const TALLY_GATHER_RADIUS := 12.0
 func _card_hands() -> void:
 	if game.player.abilities.cap(AbilityState.WEAPON, "cards", null) == null:
 		return
-	_tally_gather_hands()
-	_tally_plate_hands()
+	# The press conversion below is the weapon and always runs. The gather plate is a slot 2 cast
+	# and the plate burst is Q, so each follows its verb. At base the plate burst stays as it is:
+	# it is a crowd read near an untimed press.
+	if _kit("special"):
+		_tally_gather_hands()
+	if _kit("ultimate"):
+		_tally_plate_hands()
 	if not source.hold.get("fire_held", false):
 		return
 	source.hold.erase("fire_held")
@@ -3418,12 +3824,14 @@ func record(wall_seconds: float) -> Dictionary:
 		"game_seconds": snappedf(float(ticks) / float(Engine.physics_ticks_per_second), 0.01),
 		"wall_seconds": snappedf(wall_seconds, 0.01), "stages": stage_notes,
 		"boss": boss_note if not boss_note.is_empty() else null,
-		"reaction_s": REACTION,
+		"reaction_s": _reaction(),
+		"band": band.describe() if band else null,
+		"min_hp": snappedf(_min_hp, 0.1) if _min_hp != INF else null, "max_hp": game.run.max_hp,
 		# The skill bar (SKILL-BAR section 8): casts of slots 2 and 3, set pieces started, Q presses,
 		# the in-play seconds each fill took (run start or the last set piece to a full meter), and
 		# the in-play seconds played, which bounds a meter that never filled.
 		"slot_casts": {"special": _totals["slot_casts_special"], "line": _totals["slot_casts_line"]},
-		"ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
+		"shots": _totals["shots"], "ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
 		"ult_fill_s": _fills, "play_s": snappedf(_play_clock, 0.01),
 		# The meter's points by source: over the run, and at the first full meter. A record for
 		# reading why a fill band is red; no hand reads either.
@@ -3432,4 +3840,7 @@ func record(wall_seconds: float) -> Dictionary:
 	if late_offer_policy != "":
 		row["late_offer"] = {"policy": late_offer_policy, "tree_picks": tree_picks.size()}
 		row["late_offer"].merge(late_offer_counts)
+	var dials := ChallengeDials.describe()
+	if not dials.is_empty():
+		row["dials"] = dials
 	return row

@@ -144,11 +144,12 @@ const ROWS := {
 	"haulage_bed": {"family": "grind_lines", "budget": "park_large"},
 }
 
-# Wash dressing pieces (tools/blender/park/sinkhole_tubes.py) draped on the baked ground: a seat-fit row of one of these
-# moves every drawn vertex to the ground under it plus its height over the piece's own wash profile, so the drawn wall
-# band lies on the real wall wherever the floor sags under the seat's chord, a neighbour's cut overlaps or the row's own
-# end opens onto the plain. The -col keeps the seat fit; only the views move.
-const DRAPED := ["lava_wash", "lava_wash_short", "gallery_wash", "drift_wash"]
+# Wash dressing pieces (tools/blender/park/sinkhole_tubes.py) and the sinkhole's lava_channel (tools/blender/park/
+# lavachannels.py; its chained 51 to 60 m rows follow sagging sinkhole ground) draped on the baked ground: a seat-fit
+# row of one of these moves every drawn vertex to the ground under it plus its height over the piece's own wash
+# profile, so the drawn wall band lies on the real wall wherever the floor sags under the seat's chord, a neighbour's
+# cut overlaps or the row's own end opens onto the plain. The -col keeps the seat fit; only the views move.
+const DRAPED := ["lava_channel", "lava_wash", "lava_wash_short", "gallery_wash", "drift_wash"]
 
 # Each element's ride fact by its section 4 family; a row's own ride_fact wins. kicker_launch is the kicker's launch
 # path, not a WORLD_ROWS kind, so a kicker gets no ride sensor; ground and anchor_field carry none.
@@ -198,7 +199,7 @@ const ANCHOR_VARIANTS := ["a", "b", "c"]
 # collider, or none where its stamp replaces the box) and draws its GLB's views in place of the grey box. The row's
 # Collider stays the greybox's own; a GLB's -col (the adit portal's posts) is a separate PieceCollider
 # (tests/park_over_greybox_test.gd).
-const OVER_GREYBOX := ["isle_adit_portal", "isle_tram_head", "isle_keel_rib"]
+const OVER_GREYBOX := ["isle_adit_portal", "isle_tram_head", "isle_keel_rib", "isle_ride_wash_west"]
 const ANCHOR_AUTHORED_M := 10.0
 # The waymark names that are no row: the spawn and the landmark (park_schema.gd DROP_IN and LANDMARK).
 const DROP_IN := "drop_in"
@@ -221,6 +222,19 @@ static var _ends := {}
 static var _tiles := {}
 # _anchor_mesh() of each anchors kit variant GLB, read once.
 static var _anchor_meshes := {}
+# anchors/anchor_fit.json (Modeling's per-variant, per-height collider boxes), read once under _anchor_fit_lock. place_row
+# runs on the main thread (Placer._build_step; only anchor_posts goes to the worker), but the guard keeps a worker caller safe.
+const ANCHOR_FIT_PATH := "res://src/world/park/anchors/anchor_fit.json"
+static var _anchor_fit := {}
+static var _anchor_fit_read := false
+static var _anchor_fit_lock := Mutex.new()
+# anchor_hulls() per (variant GLB, size[1]): one ConvexPolygonShape3D (or null) per fitted band, read once under _anchor_hull_lock.
+static var _anchor_hulls := {}
+static var _anchor_hull_lock := Mutex.new()
+# A band's hull keeps at most this many of its exact hull vertices (farthest-point sampled), so it stays inside the drawn
+# mesh's hull and only ever loses air (ruling 6332145318). With balls pressed on posts, 64 costs +4% (dam) and -4% (crown)
+# mean physics tick against the fitted boxes.
+const ANCHOR_HULL_CAP := 64
 
 
 # A budget class's visibility ranges from assets/asset_budgets.json: base_end and base_margin for the base views,
@@ -1212,9 +1226,40 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 	var kit := anchor_kit_ready(recipe)
 	if ANCHOR_KITS.has(recipe) and not kit:
 		push_warning("park_recipes: %s variants missing, %s stands in as grey posts" % [recipe, row.get("id", "")])
+	var fit := anchor_fit_boxes(row) if kit else []
+	var hulls := anchor_hulls(row, fit) if not fit.is_empty() else []
+	var fit_shapes := {}
 	for k in posts.size():
 		var p: Vector2 = posts[k]
 		var base := float(ground.call(p.x, p.y)) if ground.is_valid() else node.position.y
+		if not fit.is_empty():
+			# Fitted: h is metres above the ground sample (h -1 is the box's old bottom, base - ANCHOR_SINK_M), so
+			# world y = base + h. Each box is turned by the post's drawn turn, about the post's centre.
+			var turn := anchor_turn(row, k)
+			var odd := anchor_quarters(row, k) % 2 == 1
+			var origin := inv * Vector3(p.x, base, p.y)
+			for i in fit.size():
+				var b: Dictionary = fit[i]
+				if i < hulls.size() and hulls[i] != null:
+					# The drawn mesh's hull in this band, in post-local space with h from the post foot; the turn is the basis.
+					var hull_part := CollisionShape3D.new()
+					hull_part.shape = hulls[i]
+					hull_part.transform = Transform3D(turn, origin)
+					body.add_child(hull_part)
+					continue
+				var key := i * 2 + (1 if odd else 0)
+				if not fit_shapes.has(key):
+					var fitted := BoxShape3D.new()
+					var sx := float(b["x"][1]) - float(b["x"][0])
+					var sz := float(b["z"][1]) - float(b["z"][0])
+					fitted.size = Vector3(sz, float(b["h"][1]) - float(b["h"][0]), sx) if odd else Vector3(sx, float(b["h"][1]) - float(b["h"][0]), sz)
+					fit_shapes[key] = fitted
+				var part := CollisionShape3D.new()
+				part.shape = fit_shapes[key]
+				part.position = origin + turn * Vector3((float(b["x"][0]) + float(b["x"][1])) * 0.5,
+					(float(b["h"][0]) + float(b["h"][1])) * 0.5, (float(b["z"][0]) + float(b["z"][1])) * 0.5)
+				body.add_child(part)
+			continue
 		var shape := CollisionShape3D.new()
 		shape.shape = box
 		shape.position = inv * Vector3(p.x, base - ANCHOR_SINK_M + tall * 0.5, p.y)
@@ -1252,6 +1297,153 @@ static func anchor_variant(row: Dictionary) -> int:
 	return hash(String(row.get("id", ""))) % ANCHOR_VARIANTS.size()
 
 
+# A kit post's quarter turn about Y, shared by the drawn mesh and the fitted collider boxes so they never disagree.
+static func anchor_turn(row: Dictionary, k: int) -> Basis:
+	return Basis(Vector3.UP, PI * 0.5 * float(anchor_quarters(row, k)))
+
+
+# How many quarter turns post k takes (0 to 3); an odd count swaps its box's x and z extents.
+static func anchor_quarters(row: Dictionary, k: int) -> int:
+	return hash("%s:%d" % [row.get("id", ""), k]) % 4
+
+
+# The anchor_fit.json table, read once; {} (with one push_warning) when the file is missing or malformed.
+static func anchor_fit_table() -> Dictionary:
+	_anchor_fit_lock.lock()
+	if not _anchor_fit_read:
+		_anchor_fit_read = true
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string(ANCHOR_FIT_PATH)) if FileAccess.file_exists(ANCHOR_FIT_PATH) else null
+		if parsed is Dictionary and parsed.get("fits") is Dictionary:
+			_anchor_fit = parsed
+		else:
+			push_warning("park_recipes: %s missing or unreadable, anchor posts keep the %s m box" % [ANCHOR_FIT_PATH, ANCHOR_POST_M])
+	var out := _anchor_fit
+	_anchor_fit_lock.unlock()
+	return out
+
+
+# The fitted collider boxes ({"h", "x", "z"}) for a kit row's variant at its height (size[1]), [] when the pair is unlisted.
+static func anchor_fit_boxes(row: Dictionary) -> Array:
+	var recipe := String(row.get("recipe", ""))
+	if not ANCHOR_KITS.has(recipe):
+		return []
+	var fits: Dictionary = anchor_fit_table().get("fits", {})
+	var key: String = anchor_paths(recipe)[anchor_variant(row)].get_file().get_basename()
+	var tall := float(row["size"][1])
+	for entry in fits.get(key, []):
+		if is_equal_approx(float(entry["size"]), tall):
+			return entry["boxes"]
+	return []
+
+
+# One ConvexPolygonShape3D per fitted band of the row's variant at its height: the hull of the drawn mesh inside the band
+# (triangles clipped to h in [lo, hi], so bands meet with no gap), cut to at most ANCHOR_HULL_CAP of its vertices, null for
+# a band with no usable hull (that band keeps its table box). [] when the mesh cannot be read (one push_warning; the caller keeps the boxes). Points are (x, h, z) in
+# post-local space before the turn, h metres above the ground sample. Cached per (variant GLB, size[1]).
+# Height mapping, from anchor_draws: a post is drawn at origin y = bottom + tall / ANCHOR_AUTHORED_M with bottom = base -
+# ANCHOR_SINK_M and Y scaled by s = tall / ANCHOR_AUTHORED_M, so authored y gives world y = base - SINK + s + y * s, i.e.
+# h = (y + 1) * s - SINK (authored -1 is h -SINK, authored 9 is h size[1]). x and z are unscaled.
+static func anchor_hulls(row: Dictionary, fit: Array) -> Array:
+	var path: String = anchor_paths(String(row.get("recipe", "")))[anchor_variant(row)]
+	var key := "%s|%s" % [path, str(float(row["size"][1]))]
+	_anchor_hull_lock.lock()
+	if _anchor_hulls.has(key):
+		var cached: Array = _anchor_hulls[key]
+		_anchor_hull_lock.unlock()
+		return cached
+	var out := []
+	var mesh: Mesh = _anchor_mesh(path)[0]
+	if mesh == null:
+		push_warning("park_recipes: %s has no readable render mesh, its fitted posts keep boxes" % path)
+	else:
+		var s := (float(row["size"][1]) + ANCHOR_SINK_M) / ANCHOR_AUTHORED_M
+		var tris := PackedVector3Array()
+		for si in mesh.get_surface_count():
+			var arrays := mesh.surface_get_arrays(si)
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var index = arrays[Mesh.ARRAY_INDEX]
+			var order: PackedInt32Array = index if index != null and index.size() > 0 else PackedInt32Array(range(verts.size()))
+			for n in order.size():
+				var v := verts[order[n]]
+				tris.append(Vector3(v.x, (v.y + 1.0) * s - ANCHOR_SINK_M, v.z))
+		for b: Dictionary in fit:
+			out.append(_band_hull(tris, float(b["h"][0]), float(b["h"][1])))
+	_anchor_hulls[key] = out
+	_anchor_hull_lock.unlock()
+	return out
+
+
+# The convex hull shape of triangles (a flat list of corners, y = h) inside h in [lo, hi], at most ANCHOR_HULL_CAP of its
+# vertices; null with under 4 distinct points or when the hull has under 4 vertices (a flat band).
+static func _band_hull(tris: PackedVector3Array, lo: float, hi: float) -> ConvexPolygonShape3D:
+	var pts := PackedVector3Array()
+	for t in tris.size() / 3:
+		var poly: Array = [tris[t * 3], tris[t * 3 + 1], tris[t * 3 + 2]]
+		for plane in 2:
+			var edge := lo if plane == 0 else hi
+			var way := 1.0 if plane == 0 else -1.0
+			var next := []
+			for i in poly.size():
+				var a: Vector3 = poly[i]
+				var c: Vector3 = poly[(i + 1) % poly.size()]
+				var da := (a.y - edge) * way
+				var dc := (c.y - edge) * way
+				if da >= 0.0:
+					next.append(a)
+				if (da >= 0.0) != (dc >= 0.0):
+					var cut := a.lerp(c, da / (da - dc))
+					cut.y = edge
+					next.append(cut)
+			poly = next
+			if poly.is_empty():
+				break
+		pts.append_array(PackedVector3Array(poly))
+	var distinct := {}
+	for p in pts:
+		distinct[p] = true
+	if distinct.size() < 4:
+		return null
+	var cloud := ArrayMesh.new()
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array(distinct.keys())
+	cloud.add_surface_from_arrays(Mesh.PRIMITIVE_POINTS, arrays)
+	var hull := cloud.create_convex_shape(true, false)
+	if hull == null or hull.points.size() < 4:
+		return null
+	if hull.points.size() > ANCHOR_HULL_CAP:
+		hull.points = _farthest_points(hull.points, ANCHOR_HULL_CAP)
+	return hull
+
+
+# count of points, chosen greedily: the first is the largest x (then z, then y), each next the one farthest from those
+# already kept (the earliest on ties), so the kept set spans the cloud and is the same on every run.
+static func _farthest_points(points: PackedVector3Array, count: int) -> PackedVector3Array:
+	var first := 0
+	for i in points.size():
+		var a := points[i]
+		var b := points[first]
+		if a.x > b.x or (a.x == b.x and (a.z > b.z or (a.z == b.z and a.y > b.y))):
+			first = i
+	var near := PackedFloat64Array()
+	near.resize(points.size())
+	near.fill(INF)
+	var kept := PackedVector3Array()
+	var pick := first
+	while kept.size() < count:
+		var p := points[pick]
+		kept.append(p)
+		var best := -1.0
+		for i in points.size():
+			near[i] = minf(near[i], p.distance_squared_to(points[i]))
+			if near[i] > best:
+				best = near[i]
+				pick = i
+		if best <= 0.0:
+			break
+	return kept
+
+
 # The drawn posts' transforms in the node's space (node_xf the row node's transform): a kit row's posts stretched and
 # turned (header) in the node's space, so they square up with the colliders under any yaw_deg, else the unstretched box
 # centres of grey posts.
@@ -1266,7 +1458,7 @@ static func anchor_draws(row: Dictionary, posts: PackedVector2Array, ground: Cal
 		if not kit:
 			out.append(inv * Transform3D(Basis.IDENTITY, Vector3(p.x, bottom + tall * 0.5, p.y)))
 			continue
-		var turn := Basis(Vector3.UP, PI * 0.5 * float(hash("%s:%d" % [row.get("id", ""), k]) % 4))
+		var turn := anchor_turn(row, k)
 		out.append(Transform3D(turn * stretch, inv * Vector3(p.x, bottom + tall / ANCHOR_AUTHORED_M, p.y)))
 	return out
 

@@ -284,6 +284,7 @@ func _exit_tree() -> void:
 	load("res://src/world/director.gd").release_parks()
 	load("res://src/world/events/natural.gd").release_plans()
 	load("res://src/presentation/set_dressing.gd").release_shared()
+	load("res://src/presentation/park_props.gd").release_shared()
 	_interior_block = null
 	_wall = null
 
@@ -1296,6 +1297,7 @@ func _watch_relay(s: Site, delta: float, ball: Vector3) -> void:
 	if outcome == "won":
 		s.stake_post.spent = true
 		ctx.events.event_ended.emit(s.id, "won")
+		ctx.events.relay_stake_paid.emit(int(relay.stakes))
 		_finish(s, s.global_position + Vector3(0.0, 0.0, 6.0))
 	elif outcome == "lost":
 		ctx.events.event_ended.emit(s.id, "lost")

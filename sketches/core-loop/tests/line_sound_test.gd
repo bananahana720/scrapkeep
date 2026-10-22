@@ -329,10 +329,15 @@ func _hum() -> void:
 			"run_ended":
 				_game.events.run_ended.emit(true)
 		await _sim(1)
+		if route == "frozen":
+			# Frozen has no event: only the audio's per-frame tender sees it. A physics tick is not a
+			# rendered frame (two ticks can land in one frame under load), so run the tender by hand.
+			_audio._process(0.0)
 		_t.check("HLs-3 the hum is down one tick after %s" % route, up and not _audio.hum_on, "up before %s, hum_on %s after" % [up, _audio.hum_on])
 		_player.set_frozen(false)
 		if route == "frozen":
 			await _sim(1)
+			_audio._process(0.0)
 			_t.check("HLs-3 the hum is back when the ball thaws on a standing line", _player.kit.hooked and _audio.hum_on,
 				"hooked %s, hum_on %s" % [_player.kit.hooked, _audio.hum_on])
 		_player.release_grapple()

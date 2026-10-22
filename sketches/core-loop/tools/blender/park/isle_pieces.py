@@ -32,7 +32,7 @@ colours), one "enamel" surface (the slot role whose material reads vertex colour
 Palette: Highdraft mine timber, black iron, rust and flaking petrol hull paint, copper b77843 for the lamp (never brass),
 bone for the number board. No texture, no light, no mesh from any other source.
 
-  prlimit --as 12884901888 -- blender -b --factory-startup --threads 2 --python-exit-code 1 -P \\
+  prlimit -v12884901888 blender -b --factory-startup --threads 2 --python-exit-code 1 -P \\
       sketches/core-loop/tools/blender/park/isle_pieces.py -- [--out-dir DIR] [--recipe ID] [--count-only]
 """
 import argparse
@@ -163,7 +163,7 @@ def keel_rib(root, rng):
         z0, z1 = max(-RIB_HZ, z - RIB_STIFF / 2), min(RIB_HZ, z + RIB_STIFF / 2)
         block(rib, (-RIB_HX, RIB_FLANGE, z0), (RIB_HX, RIB_TOP - RIB_FLANGE, z1), shade(RUST_DK if k % 2 else RUST, rng))
     # rivets along both faces of the top flange and up every stiffener, proud of the box by 0.04 m (the count keeps the
-    # rib inside the detail class, 4,000 triangles, as the rows place it today)
+    # rib under 4,000 triangles, the detail cap, well inside its landform class's 8,000)
     with rib.region(bevel=0):
         for side in (-1, 1):
             x0, x1 = sorted((side * RIB_HX, side * (RIB_HX + 0.04)))
@@ -349,7 +349,7 @@ def adit_collider(root):
 # ---------------------------------------------------------------------------------------------------------- recipes
 # id: (builder, seed, budget class the row places it under)
 RECIPES = {
-    "isle_keel_rib": (keel_rib, 3101, "detail"),
+    "isle_keel_rib": (keel_rib, 3101, "landform"),
     "isle_tram_head": (tram_head, 3111, "landform"),
     "isle_adit_portal": (adit_portal, 3121, "park_large"),
 }

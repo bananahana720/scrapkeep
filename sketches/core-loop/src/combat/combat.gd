@@ -31,6 +31,7 @@ const KestKit := preload("res://src/combat/kest_kit.gd")
 const Sight := preload("res://src/combat/sight.gd")
 # v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
+const Dunk := preload("res://src/combat/dunk.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # The roster row fleet.gd's own reinforcement-pack system reads (M0's "adds" classification).
 const Roster := preload("res://src/combat/roster.gd")
@@ -524,7 +525,7 @@ func setup(ctx_ref) -> void:
 # kind is "chaser", "lobber", "miniboss", "warden" or "vault". An unknown kind spawns a
 # chaser, with a warning, so a typo in an event table never leaves a stage empty. The
 # Warden and the vault sit on the ground under `at`; the others are placed at `at`.
-func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
+func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF) -> Node3D:
 	var enemy: Node3D
 	match kind:
 		"lobber":
@@ -543,8 +544,12 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 			push_warning("spawn_enemy: unknown kind '%s', spawning a chaser" % kind)
 			kind = "chaser"
 			enemy = Chaser.new()
+	# Placed before it joins the tree, so its body enters the physics space where it stands.
+	# Jolt reads a kinematic body moved after that as a velocity over the next step: one moved
+	# from the world origin to `at` shoved a ball rolling at the origin out at 500 m/s
+	# (item_fuzz seed 2751, 243.9 m/s against the 60 m/s ceiling).
+	enemy.position = ctx.root.global_transform.affine_inverse() * at
 	ctx.root.add_child(enemy)
-	enemy.global_position = at
 	# M0 (review fix round 1, finding 2): the only spawner call reachable while the boss
 	# arena is up is boss.gd's own drone drop, so a spawn landing here is a boss add, not
 	# an ordinary field enemy, whatever kind string it uses (currently always "lobber").
@@ -557,6 +562,9 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 	var enemy_spec: Dictionary = fleet.dress(kind, _spec_for(kind))
 	if affix_id == EliteAffixes.PLATED:
 		enemy_spec["armour"] = EliteAffixes.PLATED
+	# A park perch top (terrain.perch_near) is the Dispatcher's spec["perch"]; with none it builds its own mast.
+	if kind == "dispatcher" and perch.is_finite():
+		enemy_spec["perch"] = perch
 	if kind not in ["warden", "vault"]:
 		var director = ctx.root.get_node("World").director
 		health_scale = director.hp_scale()
@@ -568,10 +576,15 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 				enemy_spec["affix"] = affix_id
 				enemy_spec["affix_world"] = director.world
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
+	# The vault and the Warden settle onto the ground or their landmark anchor in setup.
+	if enemy is CollisionObject3D and not enemy.global_position.is_equal_approx(at):
+		_reenter_space(enemy)
 	# Poles and flails weigh a body by its stage threat, as the trap ratings do (movement/grip.gd).
 	if "threat_level" in enemy:
 		enemy.threat_level = _threat()
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
+	if enemy.has_signal("counter_hit"):
+		enemy.counter_hit.connect(_on_player_hit.bind("warden_counter"))
 	enemy.died.connect(func(where: Vector3, scrap: int):
 		var source: String = enemy.last_damage_source if "last_damage_source" in enemy else ""
 		# A fuse death is an enemy spent by its own blast (splitter_pod.gd): nobody killed it.
@@ -592,6 +605,16 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 	ctx.events.enemy_spawned.emit(enemy, kind)
 	fleet.on_spawned(enemy, kind)
 	return enemy
+
+
+# A body moved after it entered the space would push what stands at its old spot along the
+# move; leaving the space and entering it again at the new transform places it with no push.
+static func _reenter_space(body: CollisionObject3D) -> void:
+	var rid := body.get_rid()
+	var space := PhysicsServer3D.body_get_space(rid)
+	PhysicsServer3D.body_set_space(rid, RID())
+	PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_TRANSFORM, body.global_transform)
+	PhysicsServer3D.body_set_space(rid, space)
 
 
 # What the director weights reinforcement packs against (fleet.gd build_read).
@@ -615,13 +638,20 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 		ultimate.warden_posture(enemy, resolve(enemy, kind, force, part))
 		return
 	door.pass_hit({"enemy": enemy, "kind": kind, "force": force, "part": part, "source": source,
-		"impact": impact}, _strike_stages)
+		"impact": impact, "dunk": _dunk_bonus(enemy, kind)}, _strike_stages)
 
 
 # --- SR1: strike()'s stages, in damage_door.gd's ORDER --------------------------------
 
 func _door_armour(hit: Dictionary) -> void:
-	hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"])
+	hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"], hit["dunk"])
+	if hit["dunk"] > 0.0:
+		if bool(hit["result"].get("guarded", false)):
+			hit["dunk"] = 0.0
+			hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"])
+		else:
+			ctx.player.dunk.spend(hit["enemy"])
+			hit["result"]["dunk"] = hit["dunk"]
 	hit["cls"] = _classify_source(hit["kind"], hit["source"] if hit["source"] != "" else _forced_source)
 
 
@@ -637,6 +667,26 @@ func _door_caps(hit: Dictionary) -> void:
 	# its own mark.
 	if hit["kind"] == ARC_MARK_KIND:
 		_arc_mark(enemy)
+
+
+# The dunk charge (dunk.gd) pays on a reel impact on the body the line bit: the stored slam
+# damage joins the hit's punch, so it meets the same plating, chip, weak point and armour
+# rules as the reel it rides on. Read here, spent in _door_armour once the hit is known not
+# to be guard-blocked; knockback and the struck force are untouched.
+func _dunk_bonus(enemy: Node3D, kind: String) -> float:
+	if ctx == null or ctx.player == null or not ctx.player.get("dunk"):
+		return 0.0
+	var smash: bool = ctx.player.smash_landing == enemy
+	if not is_reel_impact(kind, smash) or not (smash or ctx.player.kit.anchor_body == enemy):
+		return 0.0
+	return ctx.player.dunk.peek()
+
+
+# The reel test punch_of's winch branch already uses (a smash landing counts as hooked: the
+# landing lets the line go before its strikes resolve), shared with the dunk charge.
+func is_reel_impact(kind: String, smash: bool) -> bool:
+	var kit = ctx.player.kit
+	return Dunk.is_reel_impact(kind, smash, kit.hooked, kit.winching)
 
 
 # Damage families (DamageFamilies, FIELDS-AND-CASTS section 6): a hit that beat the plating
@@ -680,7 +730,7 @@ func _door_announce(hit: Dictionary) -> void:
 	hit["id"] = enemy.get_instance_id()
 	_detect_before(enemy, kind, result)
 	var outer := _pending
-	_pending = {"id": enemy.get_instance_id(), "kind": kind, "force": force, "part": result["part"]}
+	_pending = {"id": enemy.get_instance_id(), "kind": kind, "force": force, "part": result["part"], "dunk": hit["dunk"]}
 	hit["hp_before"] = _hp_of(enemy)
 	var outer_impact := last_impact
 	last_impact = {"key": hit["impact"], "enemy": enemy.get_instance_id()} if hit["impact"] != "" else {}
@@ -1193,15 +1243,19 @@ func delivered_damage() -> Dictionary:
 # The one plating rule. Returns {punch, plating, full, dealt, part}. Asked from an
 # enemy_struck or strike_deflected handler with that strike's enemy, kind and force, it
 # answers with the strike's own part, so the handler sees the plating the hit meets.
-func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionary:
-	if part == "" and not _pending.is_empty() and _pending["id"] == enemy.get_instance_id() \
+func resolve(enemy: Node3D, kind: String, force: float, part := "", dunk := 0.0) -> Dictionary:
+	if not _pending.is_empty() and _pending["id"] == enemy.get_instance_id() \
 			and _pending["kind"] == kind and _pending["force"] == force:
-		part = _pending["part"]
+		if part == "":
+			part = _pending["part"]
+		if dunk == 0.0:
+			dunk = _pending["dunk"]
 	if part == "" and kind in CONTACT_KINDS and enemy.has_method("contact_part"):
 		part = enemy.contact_part(ctx.player.ball_position(), kind)
 	if kind == SYNERGY:
 		part = ""
-	var punch := punch_of(kind, force)
+	# The dunk's stored slam rides the punch, so every rule below treats it as part of the reel.
+	var punch := punch_of(kind, force) + dunk
 	if enemy.has_method("fight") and enemy.fight() == "posture":
 		var tier: int = SpeedTier.of(force, ctx.player.tuning.f("cruise")) if kind == "ram" else 0
 		var smash: bool = ctx.player.smash_landing == enemy
@@ -2255,7 +2309,7 @@ func _cannon_set_piece_hit(enemy: Node3D, damage: float, at: Vector3, landing: b
 			damage if landing else damage * Ultimate.WARDEN_VOLLEY, landing, 0)
 		var id := enemy.get_instance_id()
 		var spent := float(budget.get(id, 0.0))
-		judged["gain"] = minf(float(judged.get("gain", 0.0)), maxf(0.0, Ultimate.WARDEN_POSTURE_CAP - spent))
+		judged["gain"] = minf(float(judged.get("gain", 0.0)), maxf(0.0, Ultimate.cap_for_warden(enemy) - spent))
 		judged["shatter"] = false
 		judged["crack"] = false
 		budget[id] = spent + float(judged["gain"])
@@ -3884,8 +3938,11 @@ static func _pinnable(enemy) -> bool:
 func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	if not ctx.flow.in_play():
 		return
-	if source not in ["warden", "vault"]:
+	if source not in ["warden", "warden_counter", "vault"]:
 		amount *= ctx.root.get_node("World").director.damage_scale()
+		# The Mind's hand is a boss part: it takes the mind.* dials in mind_hand.gd, not the mobs dial.
+		if source != "mind_hand":
+			amount *= ChallengeDials.stage_mult("mobs.damage", ctx.run.stage)
 	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames()}
 	# The set piece's defence: no knockback here; damage x0.2 and the health floor of 1 run
 	# inside ctx.run.damage through its defend_hook (SKILL-BAR section 4).

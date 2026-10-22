@@ -28,7 +28,10 @@ func _run() -> void:
 	await process_frame
 	Push.pad(root, JOY_BUTTON_A)
 	await process_frame
-	_t.check("gamepad A returns to Controls", help.diagram.visible and not help.pictures_showing())
+	_t.check("gamepad A opens Rules", help._rules.visible and not help.pictures_showing())
+	Push.pad(root, JOY_BUTTON_A)
+	await process_frame
+	_t.check("gamepad A returns to Controls", help.diagram.visible and not help.pictures_showing() and not help._rules.visible)
 	help.back.grab_focus()
 	Push.pad(root, JOY_BUTTON_A)
 	await process_frame

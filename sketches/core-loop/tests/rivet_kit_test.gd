@@ -66,7 +66,7 @@ func _cue_timing() -> void:
 
 
 var _t := T.new("rivet_kit_test")
-var _expected_checks := 54
+var _expected_checks := 58
 var _game
 var _player
 var _combat
@@ -232,6 +232,23 @@ func _shared_shape_cache() -> void:
 	var near := cache.faces_near(cache.cached(box, there), AABB(Vector3(98.0, -1.0, -2.0), Vector3(4.0, 2.0, 4.0)))
 	_t.eq("each placement reads its own faces", near.size() == 1 and (near[0][0] as Vector3).is_equal_approx(Vector3(99, 0, -1)), true)
 	cache.finish()
+	_level_ground_budget()
+
+
+# Andrew's 18 Oct ruling (option B): a Breach on level park ground hits on the landing tick. The
+# kit's landing budget is bigger on level ground, smaller than the shares of a heavy carve, and a
+# lowered late_work lowers both; the threshold is the one the ruling names.
+func _level_ground_budget() -> void:
+	_t.check("level ground: the landing budget is bigger on level ground, a lowered late_work lowers both",
+		_kit.landing_work(true) > _kit.landing_work(false) and _kit.landing_work(false) == Kit.LANDING_WORK and _kit.landing_work(true) == Kit.LEVEL_LANDING_WORK
+		and _kit.late_work == Kit.LATE_WORK, "")
+	_kit.late_work = 3
+	var lowered := [_kit.landing_work(true), _kit.landing_work(false)]
+	_kit.late_work = Kit.LATE_WORK
+	_t.eq("level ground: late_work 3 gives a 7 and a 3 part landing", lowered, [roundi(3.0 * Kit.LEVEL_LANDING_WORK / Kit.LATE_WORK), 3])
+	_t.check("level ground: the level budget is the ruled 400 parts, not a multiple of the slope share", Kit.LEVEL_LANDING_WORK == 400 and Kit.LATE_WORK == 182, "late %d" % Kit.LATE_WORK)
+	var flat := [[Vector3(-2, 0, -2), Vector3(-2, 0, 2), Vector3(2, 0, -2)], [Vector3(2, 0, -2), Vector3(-2, 0, 2), Vector3(2, 0, 2)]]
+	_t.check("level ground: a flat face under the landing is level, and the line is 5 degrees (Andrew's stand is 3.43)", _kit.level_ground(flat, Vector3(0.0, 0.5, 0.0)) and Kit.LEVEL_GROUND_DEG == 5.0 and 3.43 < Kit.LEVEL_GROUND_DEG, "")
 
 
 func _finish() -> void:

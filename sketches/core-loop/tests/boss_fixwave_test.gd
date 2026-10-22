@@ -164,7 +164,7 @@ func _furnace_checks() -> void:
 	_double.strike(cap, "synergy", 48.0)
 	var synergy_on_top: float = _boss.posture() - before
 	# A landing meets the open cap: the rule's slam base at its top ratio.
-	var landing_gain: float = BossPosture.BASE["slam"] * pow(BossPosture.MULT_MAX, float(Rules.POSTURE["curve"]))
+	var landing_gain: float = BossPosture.BASE["slam"] * pow(float(Rules.POSTURE.get("mult_max", BossPosture.MULT_MAX)), float(Rules.POSTURE["curve"]))
 	_report("synergy is not a landing", synergy_on_top == 0.0 and _boss.chunks_left() == chunks,
 		"a synergy strike of 48 on a cap with the ball on top, short of the hull's plating, moved the bar %.1f" % synergy_on_top)
 	_report("landing needs the ball on top", from_floor == 0.0 and is_equal_approx(on_top, landing_gain) and _boss.chunks_left() == chunks,
@@ -202,7 +202,7 @@ func _charge_checks() -> void:
 	var before: float = _boss.posture()
 	_double.strike(hull, "arc", 5.0)
 	var open_hit: float = _boss.posture() - before
-	var open_gain: float = BossPosture.OTHER_BASE * pow(BossPosture.MULT_MAX, float(Rules.POSTURE["curve"]))
+	var open_gain: float = BossPosture.OTHER_BASE * pow(float(Rules.POSTURE.get("mult_max", BossPosture.MULT_MAX)), float(Rules.POSTURE["curve"]))
 	var live: float = _boss.live_plating() if _has("live_plating") else -1.0
 	_report("stunned hull uncrushable", stunned and not crushable and not would and is_equal_approx(open_hit, open_gain) and live < 1.0,
 		"stunned %s: crushable() %s, would_crush on a 500 ram %s, a 5 shot pressed the bar %.3f at the top ratio (want %.3f), live plating %.2f"

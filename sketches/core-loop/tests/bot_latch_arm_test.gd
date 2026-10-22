@@ -23,7 +23,12 @@ const STAGE := 3
 const MASS := 540
 const RUN_CAP_S := 300.0
 const TURN_S := 30.0
-const RIDE_MIN_S := 3.0
+# 2026-10-22 (Gate lane, coordinator ruling A, #241 6329024348): 3.0 -> 2.5 s. The stage's new
+# stage-3 Dig packs (dig_rig, dig_dispatch) end seed 0's fight sooner: the hive breaks at 38 s after
+# 7 latches instead of 52 s after 19, and seed 0 (pylon_engineer) rides 2.7 s, every run. With the
+# packs ablated it rides 10.8 s and passes. The floor checks that the arm works, not pacing; the
+# planted controls below keep a 0 s ride or no latch failing. Wave 19: a fixed pack for this test.
+const RIDE_MIN_S := 2.5
 const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
 
 var _child := false
@@ -36,6 +41,11 @@ func _initialize() -> void:
 		super._initialize()
 		return
 	var t := T.new("bot_latch_arm_test")
+	# Planted controls: the per-seed rule must still reject a broken arm at the lowered floor.
+	t.check("planted: a 0 s ride fails", not _mechanism(3, 0.0, 2, 2)["ride"], "ride 0.0 s")
+	t.check("planted: a ride just under the floor fails", not _mechanism(3, RIDE_MIN_S - 0.1, 2, 2)["ride"], "ride %.1f s" % (RIDE_MIN_S - 0.1))
+	t.check("planted: no latch fails", not _mechanism(0, 0.0, 0, 0)["latch"], "0 latches")
+	t.check("planted: a working arm passes", _mechanism(7, 2.7, 1, 1).values().all(func(v): return v), "7 latches, 2.7 s, 1 shot, 1 chunk")
 	var folder := OS.get_user_data_dir().path_join("bot-latch-arm-%d" % OS.get_process_id())
 	DirAccess.make_dir_recursive_absolute(folder)
 	var jobs := []
@@ -68,10 +78,11 @@ func _initialize() -> void:
 			run_seed, PILOTS[run_seed % PILOTS.size()], bites, int(note.get("latch_bites_air", 0)), ride, shots, hauls, chunks,
 			int(note.get("drop_hauls", 0)), int(note.get("drop_chunks", 0)), broke, drop])
 		t.check("seed %d fought an anchor hive on the hoist" % run_seed, hoisted, "anchor.txt written %s" % hoisted)
-		t.check("seed %d latches a hardpoint" % run_seed, bites >= 1, "%d latches" % bites)
-		t.check("seed %d rides the line %.0f s" % [run_seed, RIDE_MIN_S], ride >= RIDE_MIN_S, "%.1f s on the line" % ride)
-		t.check("seed %d fires from the line" % run_seed, shots >= 1, "%d shots" % shots)
-		t.check("seed %d takes a chunk with a haul" % run_seed, chunks >= 1, "%d hauls, %d chunks from a haul" % [hauls, chunks])
+		var held := _mechanism(bites, ride, shots, chunks)
+		t.check("seed %d latches a hardpoint" % run_seed, held["latch"], "%d latches" % bites)
+		t.check("seed %d rides the line %.1f s" % [run_seed, RIDE_MIN_S], held["ride"], "%.1f s on the line" % ride)
+		t.check("seed %d fires from the line" % run_seed, held["shot"], "%d shots" % shots)
+		t.check("seed %d takes a chunk with a haul" % run_seed, held["haul"], "%d hauls, %d chunks from a haul" % [hauls, chunks])
 	# 2026-10-11 (KF-BOT merge): the drop finish is printed, not checked. Seed 0 plays a different fight
 	# on repeat runs (broken at 108.9, 139.6 and 192.0 s on one head), so a gate on it alone fails at
 	# random; seeds 1 and 2 never set it. The haul-chunk check above carries the finish: 2 to 4 on every
@@ -81,6 +92,11 @@ func _initialize() -> void:
 	if t.failures == 0:
 		_remove_tree(folder)
 	quit(t.verdict())
+
+
+# The per-seed mechanism rule, one place for the run checks and the planted controls.
+static func _mechanism(bites: int, ride: float, shots: int, chunks: int) -> Dictionary:
+	return {"latch": bites >= 1, "ride": ride >= RIDE_MIN_S, "shot": shots >= 1, "haul": chunks >= 1}
 
 
 # The child: bot_run, with the stage's swarm Warden made an anchor on the hoist.

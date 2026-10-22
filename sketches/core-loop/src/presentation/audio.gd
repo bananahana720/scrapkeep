@@ -1509,6 +1509,7 @@ func _connect_all(events) -> void:
 	events.dashed.connect(func(_direction: Vector3): play("dashed"))
 	events.landed.connect(_on_landed)
 	events.slammed.connect(_on_slammed)
+	_connect_dunk()
 	events.mounted.connect(func(_at: Vector3, banked: float): play("mounted", 0.0, Harmony.ratio(minf(banked / 4.0, 7.0))))
 	events.dismounted.connect(_on_dismounted)
 	events.enemy_spawned.connect(_on_enemy_spawned)
@@ -2378,6 +2379,8 @@ func special_spawned(enemy: Node3D, name: String) -> void:
 	if enemy.has_signal("special_tell"):
 		# The bodies emit special_tell(moment); the tell cue sounds on the "tell" moment only.
 		enemy.connect("special_tell", func(moment: String): if moment == "tell": special_tell(enemy))
+	if enemy.has_signal("dispatched"):
+		enemy.connect("dispatched", func(_add = null): special_drop(enemy))
 	if enemy.has_signal("died"):
 		enemy.connect("died", func(_a = null, _b = null): special_broken(enemy))
 	enemy.tree_exiting.connect(_special_gone.bind(id), CONNECT_ONE_SHOT)
@@ -2389,6 +2392,15 @@ func special_tell(enemy: Node3D) -> bool:
 	if row.is_empty():
 		return false
 	return play("special_tell", 0.0, 1.0, "SFX", SpecialAudio.cue(row["name"], "tell"))
+
+
+# A Dispatcher landed a chaser: its spawn cue answers it on the next beat, a notch under the
+# arrival. It takes no presence player, so the two-loop cap is untouched. -1 when it sounds nothing.
+func special_drop(enemy: Node3D) -> int:
+	var row: Dictionary = _specials.get(enemy.get_instance_id(), {})
+	if row.is_empty():
+		return -1
+	return on_beat("special_drop", SpecialAudio.DROP_DB, false, 1, SpecialAudio.cue(row["name"], "drop"))
 
 
 # The special died: its loop stops and its break sounds, the splitter's by how it was rammed.
@@ -3190,6 +3202,17 @@ func _integrity(enemy: Node3D) -> float:
 	if ctx.spawner != null and ctx.spawner.has_method("integrity_of"):
 		return float(ctx.spawner.integrity_of(enemy))
 	return 1.0
+
+
+# The dunk charge (dunk.gd) cues: a held charge is a whistle up, its spend a crack. They read
+# the one record the glow reads and borrow the slammed row and existing sound ids, so the
+# event table stays as it is; Effects restyles them.
+func _connect_dunk() -> void:
+	var dunk = ctx.player.get("dunk") if ctx != null and ctx.get("player") != null else null
+	if dunk == null:
+		return
+	dunk.stored.connect(func(_record: Dictionary): play("slammed", -4.0, Harmony.ratio(7.0), "SFX", "smash_whistle"))
+	dunk.spent.connect(func(_record: Dictionary, _enemy: Node3D): play("slammed", 0.0, 1.0, "SFX", "smash_crack"))
 
 
 # Each active sounds its own launch ("active_" + id) when the bank has it, else the row's.

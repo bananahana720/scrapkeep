@@ -18,6 +18,15 @@ extends SceneTree
 # and FIRST_MS on the exit into stage 2, the set dressing DRESSING_MS on a stage it already dressed.
 # World's whole handler and the entry frame stay measured by tools/perf_bench.gd, not here.
 #
+# ENTRY-FRAMES (see the measured basis at FRAME_MS below): each module's handler is timed alone above,
+# but a quick exit can put the set dressing's deferred build (DRESS-ENTRY) and ParkProps' node slices
+# (3 ms a frame) in the same frames. From the entry until both are done, this test reads what the two
+# nodes record of their own _process (last_process_usec and last_process_frame, as last_entry_usec above),
+# pairs the readings by frame, and holds the main-thread time they spend together in a frame under FRAME_MS.
+# It watches the exit into stage 2 and a quick exit (the planted slow plan, with ParkProps asked to build
+# again), and checks that a props slice and the dressing's deferred build really ran in the timed frames
+# and whether they shared one.
+#
 # Also checked: the worker's results equal the synchronous computation on the live map, and the
 # audio and activities share one graph per map.
 #
@@ -34,12 +43,21 @@ extends SceneTree
 # site specs drawn again from a fresh graph and the run's memory as it stood before the exit.
 
 const T := preload("res://tests/support/t.gd")
+const SafeStore := preload("res://src/core/safe_store.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
+const ParkProps := preload("res://src/presentation/park_props.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const TradePockets := preload("res://src/world/trade_pockets.gd")
 const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
+# No park ships a vignette file yet, so stage 2 (park_flume) borrows park_props_test's park_dam file, which
+# ParkProps places on park_flume's map, and so has nodes to build in the frames after the entry.
+const PROPS_FIXTURE := "res://tests/fixtures/park_props/park_dam.json"
+# ... with its spots copied to this many vignettes (park_props_test's _check_synthetic does the same), so the
+# build takes many frames at the slice budget on any CPU and a build without it takes exactly one.
+const SYNTHETIC_VIGNETTES := 60
+const SLICE_FRAMES_MIN := 2
 const NATURAL_PATH := "res://src/world/events/natural.gd"
 const DIRECTOR_PATH := "res://src/world/director.gd"
 
@@ -47,14 +65,53 @@ const RETRY_MS := 20.0
 const FIRST_MS := 50.0
 const DRESSING_MS := 4.0
 const NEW_DRESSING_MS := 15.0
+# DRESS-ENTRY: a plan still drawing at the entry is built by _process when its worker is done.
+const DRESSING_FRAMES_MAX := 240
+# ENTRY-FRAMES (measured 2026-10-20 at 03f19df8 plus this unit, 4 vCPU cloud box, headless, with the 60-vignette
+# fixture: 470 instances, 659 views): the most main-thread ms the set dressing's _process and ParkProps' _process
+# spend together in one frame after the entry frame (frames 1..N; frame 0 is reported, not gated). A ParkProps
+# slice runs 3 ms (BUILD_SLICE_USEC) plus the job that crosses it, 3.3 to 4.7 ms; the dressing's deferred build
+# adds about 1.9 ms. Worst gated frames in good runs: verifier receipts at load 2 to 4 were 4.5 to 5.2 ms at the
+# exit and 4.7 to 5.8 ms in the quick exit; loaded runs reached 8.2 ms at the exit and 6.3 ms in the quick exit
+# (the build and first slice sharing a frame). Planted (a temporary park_props.gd patch slicing without a
+# budget): the whole build took 65.8 to 127.6 ms in 1 slice frame, so both the frame check and the slice-frame
+# count failed every time. The count is CPU-independent: a budgeted build spans many frames on any CPU, a whole
+# one is 1. 12 ms clears these gated peaks and sits 4.7 ms under the 16.7 ms frame.
+const FRAME_MS := 12.0
+# The held plan of the quick exit is let go after this many frames whatever ParkProps is doing.
+const GATE_FRAMES_MAX := 600
+const GATE_SPIN_MAX := 20000000
+const FRAMES_WATCH_MAX := 3000
 const SETTLE_TICKS := 30
 const WAIT_TICKS_MAX := 3600
+const CATCH_UP_SPIN := 10000000
 const TIMED := ["activities", "set_dressing"]
 
 var _game
 var _t := T.new("stage_entry_budget_test")
 # The run's trade and pocket memory just before the exit into stage 2, for the fresh site draw.
 var _before_exit := {}
+# '<node id>_<frame>' of every _process reading already added to a frame's sum.
+var _seen := {}
+# The enlarged vignette file under user://, one folder per process (worktrees share user://).
+var _big_file := ""
+
+
+# park_dam.json with its spots copied to SYNTHETIC_VIGNETTES vignettes, written under user:// (ParkProps reads any path).
+func _write_big_fixture() -> String:
+	var file := ParkProps.load_json(PROPS_FIXTURE)
+	var source: Array = file["spots"]
+	var spots: Array = []
+	for i in SYNTHETIC_VIGNETTES:
+		var spot: Dictionary = (source[i % source.size()] as Dictionary).duplicate(true)
+		spot["id"] = "synthetic_%d" % i
+		spots.append(spot)
+	file["spots"] = spots
+	var dir := "user://stage_entry_budget_test_%d" % OS.get_process_id()
+	DirAccess.make_dir_recursive_absolute(dir)
+	var path := dir + "/park_flume.json"
+	SafeStore.write_atomic(path, JSON.stringify(file))
+	return path
 
 
 # The run fields TradePockets.stage_site and PocketDraw.stage_sites read, so a fresh draw can use
@@ -76,6 +133,8 @@ func _initialize() -> void:
 func _run() -> void:
 	print("stage_entry_budget_test: machine load at start (1 min) %s" % FileAccess.get_file_as_string("/proc/loadavg").split(" ")[0])
 	SimClock.ticks = true
+	_big_file = _write_big_fixture()
+	ParkProps.file_overrides["park_flume"] = _big_file
 	seed(11)
 	_game = Game.new()
 	_game.test_mode = true
@@ -107,11 +166,26 @@ func _run() -> void:
 	# Under SimClock.ticks (set above) prepare() builds it whole inside the call (terrain.gd
 	# _worker_builds), so the wait loop below ends at once; the entry handlers timed here run after it.
 	var terrain = _game.ctx.terrain
+	# A slow frame just before the build (a spin of 0.1 s or more), so the frames after it step physics several times
+	# before any _process (the 4080's case in row 26b): the wait below must still see both plans started.
+	var spun := 0
+	for i in CATCH_UP_SPIN:
+		spun += i
+	await physics_frame
 	terrain.prepare(2)
 	var waited := 0
 	while not terrain.is_ready(2) and waited < WAIT_TICKS_MAX:
 		await physics_frame
 		waited += 1
+	# natural.gd and set_dressing.gd start stage 2's worker plans from _process once its ground is ready; in play the
+	# Warden fight runs many frames before the exit. A slow frame makes the next one step physics several times before
+	# any _process (the 4080, scrapkeep#235 row 26b), so the ticks below can end with neither plan started and the
+	# exit planning on the main thread. Wait for the frames play always has.
+	var frames_waited := 0
+	while not _plans_started() and frames_waited < WAIT_TICKS_MAX:
+		await process_frame
+		frames_waited += 1
+	_t.check("stage 2's natural and dressing plans were on workers before the exit, as in play", _plans_started(), "%d frames" % frames_waited)
 	_game.player.reset_to(terrain.spawn_point(1) + Vector3.UP * 2.0, Vector3(0.0, 0.0, 6.0))
 	await _ticks(2)
 	var run = _game.ctx.run
@@ -124,7 +198,16 @@ func _run() -> void:
 	_report("exit into stage 2", exit_1)
 	_t.check("the exit entered park stage 2", _game.flow.stage() == 2 and _park_id() != "", "stage %d map %s" % [_game.flow.stage(), _park_id()])
 	_t.check("exit into stage 2: activities within %.0f ms" % FIRST_MS, exit_1.get("activities", INF) <= FIRST_MS, _ms(exit_1, "activities"))
-	_t.check("exit into stage 2: set dressing builds the new stage within %.0f ms" % NEW_DRESSING_MS, exit_1.get("set_dressing", INF) <= NEW_DRESSING_MS, _ms(exit_1, "set_dressing"))
+	_t.check("exit into stage 2: set dressing's entry frame within %.0f ms" % NEW_DRESSING_MS, exit_1.get("set_dressing", INF) <= NEW_DRESSING_MS, _ms(exit_1, "set_dressing"))
+	var entry_deferred: bool = _game.presentation.set_dressing.entry_deferred
+	var watch := await _watch_frames()
+	var complete := {"done": watch.dressing_done, "frames": watch.dressing_frames}
+	print("stage_entry_budget_test: exit into stage 2: dressing deferred %s, complete after %d frames" % [entry_deferred, complete.frames])
+	_check_frames("exit into stage 2", watch, false)
+	_check_watch_builds_same(watch)
+	_t.check("exit into stage 2: the dressing is complete within %d frames" % DRESSING_FRAMES_MAX, complete.done and complete.frames <= DRESSING_FRAMES_MAX,
+		"%d frames, deferred %s" % [complete.frames, entry_deferred])
+	_check_big_fixture()
 	_check_prepared()
 	_check_stage_two_workers()
 	_check_natural_fresh("exit into stage 2")
@@ -148,9 +231,322 @@ func _run() -> void:
 	var graph = _game.world.activities._graph
 	_t.check("audio and activities share one graph per map", graph != null and audio._parameter_graph == graph,
 		"activities %s, audio %s" % [str(graph), str(audio._parameter_graph)])
+	await _check_slow_plan_control()
 	_game.queue_free()
 	await physics_frame
+	ParkProps.file_overrides.clear()
+	DirAccess.remove_absolute(_big_file)
+	DirAccess.remove_absolute(_big_file.get_base_dir())
 	quit(_t.verdict())
+
+
+# ENTRY-FRAMES: from the frame of a stage entry until the set dressing is built and ParkProps has no work
+# left (bounded), read what the two nodes record of their own _process (last_process_usec, stamped with
+# last_process_frame). process_frame emits before the nodes' _process, so each wake sees the frame before:
+# the readings are keyed by their frame stamp and paired by it into one sum per frame. Frame 0 is the
+# entry itself: the two handlers' last_entry_usec and the first stamp's _process readings. Returns the
+# frames' ms, and per frame whether each did its build work (the dressing's wait flag dropped; ParkProps'
+# views grew).
+func _watch_frames(gate := {}) -> Dictionary:
+	var dressing = _game.presentation.set_dressing
+	var props = _game.presentation.park_props
+	# Readings up to now belong to frames before the entry; only newer stamps are the entry's and after.
+	for node in [dressing, props]:
+		_seen["%d_%d" % [node.get_instance_id(), node.last_process_frame]] = true
+	var by_frame := {}
+	var dress_at := {}
+	var slice_at := {}
+	var steps_at := {}
+	var frames := 0
+	var dressing_frames := -1
+	var dressing_done: bool = not dressing.batches.is_empty() and not dressing._dress_when_planned
+	var was_waiting: bool = dressing._dress_when_planned
+	var views_was: int = props.views.size()
+	var reads_was: int = ParkProps.far_reads
+	var deferred_built := false
+	while frames < FRAMES_WATCH_MAX and not (dressing_done and props.is_built()):
+		await process_frame
+		frames += 1
+		_read_frame(by_frame, dressing, props, dress_at, slice_at, steps_at, was_waiting, views_was)
+		was_waiting = dressing._dress_when_planned
+		views_was = props.views.size()
+		# The quick-exit control: the planted plan is held until ParkProps' worker is done (or already taken),
+		# then let go at once, so the deferred build and the first slice land in one frame, the worst the two
+		# can do. A missed condition is let go after GATE_FRAMES_MAX frames.
+		if not gate.is_empty() and not gate.open:
+			var how := ""
+			if props._task < 0:
+				how = "worker taken"
+			elif WorkerThreadPool.is_task_completed(props._task):
+				how = "worker done"
+			elif frames >= GATE_FRAMES_MAX:
+				how = "frame limit"
+			if how != "":
+				gate.open = true
+				gate.how = how
+				gate.sem.post()
+				var spins := 0
+				while not dressing._prep.is_empty() and not WorkerThreadPool.is_task_completed(dressing._prep.task) and spins < GATE_SPIN_MAX:
+					spins += 1
+				print("stage_entry_budget_test: the held plan was let go at frame %d: %s" % [frames, how])
+		dressing_done = not dressing.batches.is_empty() and not dressing._dress_when_planned
+		if dressing_done and dressing_frames < 0:
+			dressing_frames = frames
+	if not gate.is_empty() and not gate.open:
+		gate.open = true
+		gate.how = "after the watch"
+		gate.sem.post()
+	await process_frame
+	_read_frame(by_frame, dressing, props, dress_at, slice_at, steps_at, was_waiting, views_was)
+	var stamps := by_frame.keys()
+	stamps.sort()
+	# Frame 0 is the entry frame: the handlers and the nodes' own _process, which share the engine frame.
+	var first_process: float = by_frame[stamps[0]] if not stamps.is_empty() else 0.0
+	var entry_parts := {"dressing_entry": dressing.last_entry_usec / 1000.0, "props_entry": props.last_entry_usec / 1000.0, "process": first_process}
+	var ms: Array[float] = [(dressing.last_entry_usec + props.last_entry_usec) / 1000.0 + first_process]
+	var dress_ran: Array[bool] = [false]
+	var slice_ran: Array[bool] = [false]
+	var steps: Array = [steps_at.get(stamps[0], PackedStringArray()) if not stamps.is_empty() else PackedStringArray()]
+	for stamp in stamps.slice(1):
+		ms.append(by_frame[stamp])
+		steps.append(steps_at.get(stamp, PackedStringArray()))
+		dress_ran.append(dress_at.has(stamp))
+		slice_ran.append(slice_at.has(stamp))
+		deferred_built = deferred_built or dress_at.has(stamp)
+	return {"entry_parts": entry_parts, "ms": ms, "dress_ran": dress_ran, "slice_ran": slice_ran, "steps": steps, "frames": frames, "dressing_frames": dressing_frames, "dressing_done": dressing_done,
+		"props_built": props.is_built(), "deferred_built": deferred_built, "views": props.views.size(), "batches": dressing.batches.size(),
+		"children": dressing.get_child_count(), "instances": props.instances.size(), "far_reads": ParkProps.far_reads - reads_was}
+
+
+# One wake's readings: both nodes' last _process, summed under the frame they ran in. A frame only one of them
+# stamped counts that one alone; state changes since the last wake belong to the frame the stamps name.
+func _read_frame(by_frame: Dictionary, dressing, props, dress_at: Dictionary, slice_at: Dictionary, steps_at: Dictionary, was_waiting: bool, views_was: int) -> void:
+	for node in [dressing, props]:
+		var stamp: int = node.last_process_frame
+		var key := "%d_%d" % [node.get_instance_id(), stamp]
+		if stamp >= 0 and not _seen.has(key):
+			_seen[key] = true
+			by_frame[stamp] = by_frame.get(stamp, 0.0) + node.last_process_usec / 1000.0
+			if node == props:
+				steps_at[stamp] = props.last_steps
+	if was_waiting and not dressing._dress_when_planned:
+		dress_at[dressing.last_process_frame] = true
+	if props.views.size() > views_was:
+		slice_at[props.last_process_frame] = true
+
+
+# ENTRY-FRAMES: the frames after an entry stay under FRAME_MS together, and the check could fire: a props
+# slice ran in the timed frames, and in a quick exit the dressing's deferred build did too.
+func _check_frames(label: String, watch: Dictionary, quick: bool) -> void:
+	var ms: Array = watch.ms
+	var worst := 0.0
+	var worst_at := 0
+	var over := 0
+	var slices := 0
+	var dress_frames := 0
+	var overlap_same := 0
+	var overlap_adjacent := 0
+	for i in ms.size():
+		# Frame 0 is the entry frame, which this file leaves to tools/perf_bench.gd (see the header). set_dressing's
+		# handler keeps its own NEW_DRESSING_MS check. ParkProps' entry (freeing the previous stage's views: 7.1 to
+		# 9.3 ms with the 60-vignette fixture, up to 15.7 ms under load) and the frame's first _process are
+		# reported here, not budgeted.
+		if i > 0:
+			if ms[i] > worst:
+				worst = ms[i]
+				worst_at = i
+			if ms[i] > FRAME_MS:
+				over += 1
+		if watch.slice_ran[i]:
+			slices += 1
+		if watch.dress_ran[i]:
+			dress_frames += 1
+			if watch.slice_ran[i]:
+				overlap_same += 1
+			elif (i > 0 and watch.slice_ran[i - 1]) or (i + 1 < ms.size() and watch.slice_ran[i + 1]):
+				overlap_adjacent += 1
+	var listing := PackedStringArray()
+	for v in ms:
+		listing.append("%.1f" % v)
+	var parts: Dictionary = watch.entry_parts
+	print("stage_entry_budget_test: %s: entry frame (reported, not gated) %.1f ms = dressing entry %.1f + props entry %.1f + first _process %.1f" % [
+		label, ms[0], parts.dressing_entry, parts.props_entry, parts.process])
+	print("stage_entry_budget_test: %s: %d frames, worst after entry %.1f ms, %d props slice frames, dressing deferred build %s (%d frames), same frame %d, adjacent %d, props instances %d, views %d, frames ms [%s]" % [
+		label, watch.frames, worst, slices, watch.deferred_built, dress_frames, overlap_same, overlap_adjacent, watch.instances, watch.views, ", ".join(listing)])
+	print("stage_entry_budget_test: %s: worst frame %d (%.1f ms): dressing build %s, props steps [%s]" % [
+		label, worst_at, worst, watch.dress_ran[worst_at], ", ".join(watch.steps[worst_at])])
+	_t.check("%s: every frame after the entry frame within %.0f ms for the dressing's build and ParkProps' slices together" % [label, FRAME_MS], over == 0 and ms.size() > 1,
+		"worst %.1f ms, %d of %d frames over" % [worst, over, ms.size()])
+	_t.check("%s: the dressing and ParkProps both finished inside the timed frames" % label, watch.dressing_done and watch.props_built and watch.frames < FRAMES_WATCH_MAX,
+		"%d frames, dressing %s, props %s" % [watch.frames, watch.dressing_done, watch.props_built])
+	_t.check("%s: ParkProps' build spanned at least %d slice frames (a whole build in one frame is 1)" % [label, SLICE_FRAMES_MIN], slices >= SLICE_FRAMES_MIN,
+		"%d slice frames, %d views" % [slices, watch.views])
+	if quick:
+		_t.check("%s: the dressing's deferred build ran in the timed frames" % label, watch.deferred_built, "%d frames" % dress_frames)
+		_t.check("%s: the build and a props slice fell in the same or adjacent frames" % label, overlap_same + overlap_adjacent >= 1,
+			"same %d, adjacent %d" % [overlap_same, overlap_adjacent])
+
+
+# The enlarged vignette file is valid on park_flume's map, so a smaller build later means a real change.
+func _check_big_fixture() -> void:
+	var file := ParkProps.load_json(_big_file)
+	var kit := ParkProps.load_json(String(file.get("kit", "")))
+	var errors := ParkProps.file_errors(file, kit, _game.ctx.terrain.map_for(2)) + ParkProps.kit_errors(kit)
+	_t.check("the enlarged vignette file has %d spots and no file errors on park_flume's map" % SYNTHETIC_VIGNETTES, file.get("spots", []).size() == SYNTHETIC_VIGNETTES and errors.is_empty(), str(errors))
+
+
+# The timed build equals the others: ParkProps rebuilt whole by finish() has the same instance and view counts,
+# and the dressing has the batch and child counts of a fresh synchronous plan (the instance buffers are
+# compared to a fresh plan by _check_dressing_fresh).
+func _check_watch_builds_same(watch: Dictionary) -> void:
+	var props = _game.presentation.park_props
+	# A far merge reads its LOD2 meshes back from the renderer, which stalls a real GPU: once per mesh, never once per prop.
+	var far_paths := {}
+	var far_props := 0
+	for inst: Dictionary in props.instances:
+		if not inst["litter"] and inst["class"] != ParkProps.HERO:
+			far_props += 1
+			far_paths[ParkProps._lod_paths(props._kit, inst)[2]] = true
+	_t.check("the timed ParkProps build read each far mesh back once, not once a prop", watch.far_reads > 0 and watch.far_reads <= far_paths.size(),
+		"%d reads, %d far meshes, %d far props" % [watch.far_reads, far_paths.size(), far_props])
+	props._built_for = []
+	props._stage_entered(2, false)
+	props.finish()
+	_t.check("the timed ParkProps build equals a whole build by finish()", watch.instances > 0 and props.instances.size() == watch.instances and props.views.size() == watch.views,
+		"timed %d instances %d views, finish() %d and %d" % [watch.instances, watch.views, props.instances.size(), props.views.size()])
+	_check_far_merge_exact(props)
+	var dressing = _game.presentation.set_dressing
+	var terrain = _game.ctx.terrain
+	var map = terrain.map_for(2)
+	var fresh: Dictionary = dressing.plan(dressing.map_rows(map), dressing.keepouts(map, 2), terrain.ground_callable(2),
+		String(_game.ctx.stages.of(2).map).hash(), dressing._flags())
+	var want := 0
+	for key in ["rock", "dust", "streaks"]:
+		want += 1 if fresh.get(key) != null else 0
+	want += fresh.get("clutter", {}).size()
+	_t.check("the timed dressing build has the batch and child counts of a fresh plan", want > 0 and watch.batches == want and watch.children == want,
+		"timed %d batches %d children, fresh plan %d" % [watch.batches, watch.children, want])
+
+
+# ParkProps copies a vignette's far props into its merged mesh a few members a step, with whole-array transforms
+# (scrapkeep#235 row 26b). Each merged mesh must equal, byte for byte, the one the single per-vertex loop made before.
+func _check_far_merge_exact(props) -> void:
+	var compared := 0
+	var unequal := []
+	for job: Dictionary in ParkProps.jobs(props.instances, props._low):
+		if job["litter"]:
+			continue
+		var groups := {}
+		var keys := []
+		for inst: Dictionary in job["members"]:
+			if inst["class"] == ParkProps.HERO:
+				continue
+			var key := "%s_%s" % [inst["kind"], inst["v"]]
+			if not groups.has(key):
+				groups[key] = []
+				keys.append(key)
+			groups[key].append(inst)
+		var members := []
+		for key in keys:
+			members.append_array(groups[key])
+		var want := _far_reference(members, props._kit)
+		var holder: Node = props.get_node_or_null(NodePath(String(job["name"])))
+		var view: MeshInstance3D = holder.get_node_or_null("Far_L2") if holder != null else null
+		if want.is_empty() and view == null:
+			continue
+		compared += 1
+		if want.is_empty() or view == null:
+			unequal.append(job["name"])
+			continue
+		var reference := ArrayMesh.new()
+		reference.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, want)
+		if var_to_bytes(reference.surface_get_arrays(0)) != var_to_bytes(view.mesh.surface_get_arrays(0)):
+			unequal.append(job["name"])
+	_t.check("every merged far mesh equals the per-vertex merge, byte for byte", compared > 0 and unequal.is_empty(),
+		"%d compared, unequal %s" % [compared, str(unequal)])
+
+
+# The far merge as one loop over every member and vertex (park_props.gd before scrapkeep#235 row 26b).
+static func _far_reference(members: Array, kit: Dictionary) -> Array:
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colours := PackedColorArray()
+	var indices := PackedInt32Array()
+	var centre := Vector3.ZERO
+	for inst: Dictionary in members:
+		centre += (inst["pos"] as Vector3) / members.size()
+	for inst: Dictionary in members:
+		var source := ParkProps._far_source(ParkProps._lod_paths(kit, inst)[2])
+		if source.is_empty():
+			continue
+		var src_v: PackedVector3Array = source[Mesh.ARRAY_VERTEX]
+		var src_n = source[Mesh.ARRAY_NORMAL]
+		var src_c = source[Mesh.ARRAY_COLOR]
+		var tr := ParkProps._transform(inst)
+		var basis := (inst["basis"] as Basis)
+		var base := vertices.size()
+		for k in src_v.size():
+			vertices.append(tr * src_v[k] - centre)
+			normals.append((basis * (src_n[k] if src_n != null else Vector3.UP)).normalized())
+			colours.append(src_c[k] if src_c != null else Color.WHITE)
+		for index in (source[Mesh.ARRAY_INDEX] as PackedInt32Array):
+			indices.append(base + index)
+	if vertices.is_empty():
+		return []
+	var built := []
+	built.resize(Mesh.ARRAY_MAX)
+	built[Mesh.ARRAY_VERTEX] = vertices
+	built[Mesh.ARRAY_NORMAL] = normals
+	built[Mesh.ARRAY_COLOR] = colours
+	built[Mesh.ARRAY_INDEX] = indices
+	return built
+
+
+# The planted control (lesson 34): the stage entered the moment its plan starts on a worker (the
+# plan takes about 360 ms there). A handler that waits on the worker spends that in the entry and
+# fails the budget; one that defers leaves the stage bare for the entry, then builds the same
+# buffers in a later frame.
+func _check_slow_plan_control() -> void:
+	var dressing = _game.presentation.set_dressing
+	var terrain = _game.ctx.terrain
+	var map = terrain.map_for(2)
+	var rows: Dictionary = dressing.map_rows(map)
+	var keep: Array = dressing.keepouts(map, 2)
+	var ground: Callable = terrain.ground_callable(2)
+	var seed_two: int = String(_game.ctx.stages.of(2).map).hash()
+	var flags: Dictionary = dressing._flags()
+	var out := {}
+	# Held open by _watch_frames once the entry has returned (armed), so a handler that waits on the plan waits
+	# the plan only and fails the entry budget; the dressing's build can be made to share a frame with ParkProps' slices.
+	# The pool runs one low-priority task at a time (4 threads, 0.3 of them), so a held low-priority plan would
+	# starve ParkProps' worker; this one holds a normal-priority thread. In play the two workers run one after the other.
+	var gate := {"open": false, "armed": false, "how": "", "sem": Semaphore.new()}
+	# The built stage 2 stays up, so "bare" below is the deferral's own clear; a plan already in
+	# flight (the next stage's) is collected first, not dropped.
+	dressing._built_for = []
+	if not dressing._prep.is_empty():
+		WorkerThreadPool.wait_for_task_completion(dressing._prep.task)
+	var planted := func():
+		out.merge(dressing.plan(rows, keep, ground, seed_two, flags))
+		if gate.armed:
+			gate.sem.wait()
+	dressing._prep = {"key": dressing._key(2, terrain.geometry_root(2)), "out": out,
+		"task": WorkerThreadPool.add_task(planted, true, "planted slow plan")}
+	dressing._stage_entered(2, false)
+	gate.armed = true
+	var entry_ms: float = dressing.last_entry_usec / 1000.0
+	var bare: bool = dressing.get_child_count() == 0
+	_t.check("planted slow plan: the entry stays within %.0f ms and leaves the stage bare" % NEW_DRESSING_MS,
+		entry_ms <= NEW_DRESSING_MS and bare and dressing.entry_deferred, "%.1f ms, %d children, deferred %s" % [entry_ms, dressing.get_child_count(), dressing.entry_deferred])
+	# A quick exit also starts ParkProps again, so its slices land in the frames the deferred build does.
+	var props = _game.presentation.park_props
+	props._built_for = []
+	props._stage_entered(2, false)
+	var watch := await _watch_frames(gate)
+	var complete := {"done": watch.dressing_done, "frames": watch.dressing_frames}
+	_t.check("planted slow plan: the dressing completes in a later frame, after the worker", complete.done and complete.frames >= 1, "%d frames" % complete.frames)
+	_check_frames("quick exit (planted slow plan)", watch, true)
+	_check_dressing_fresh("planted slow plan")
 
 
 # Each handler's recorded time of the last stage entry, in ms; a handler that records none is absent.
@@ -187,6 +583,13 @@ func _check_prepared() -> void:
 
 
 # Stage 2's natural plan, dressing plan and director map were each made on a worker before the entry.
+func _plans_started() -> bool:
+	var plans = load(NATURAL_PATH).get("_plans")
+	var key: int = load(NATURAL_PATH).call("_root_key", _game.ctx.terrain, 2)
+	var prep: Dictionary = _game.presentation.set_dressing._prep
+	return plans is Dictionary and plans.has(key) and not prep.is_empty() and prep.key[0] == 2
+
+
 func _check_stage_two_workers() -> void:
 	var natural = load(NATURAL_PATH)
 	var plans = natural.get("_plans")

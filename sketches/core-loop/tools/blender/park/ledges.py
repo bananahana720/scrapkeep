@@ -24,7 +24,7 @@ Colour: Southwest palette only, as vertex colour: sandstone c6a274, cream e6d9b8
 3a3027, sage 7d8b6a, juniper 3f5a3e. No copper machinery here (no machinery), no brass, no texture, no light.
 Lore: the cliff builders' rooms are dry-laid sandstone with log beams; nothing here names a living people.
 
-  prlimit --as 12884901888 -- blender --background --threads 2 --python-exit-code 1 --python \\
+  prlimit -v12884901888 blender --background --threads 2 --python-exit-code 1 --python \\
       sketches/core-loop/tools/blender/park/ledges.py -- [--out-dir DIR] [--count-only] [--log FILE]
 """
 import argparse

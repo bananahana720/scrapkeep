@@ -64,8 +64,8 @@ const VERB_ROWS := [
 ]
 const MENU_ROWS := [
 	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "caps": ["key_tab"], "short": "notes"},
-	{"keys": "F", "does": "fire your active: Scrap Rocket, Lift Pulse and Glass Lance go at once; Cutting Torch winds up 0.3 s, Silo Battery and Quake Knock 0.5 s. A jam field's pulse cancels a wind-up and gives the charge back; speed, air or a held line breaks the jam"},
-	{"keys": ", / . / / / ;", "does": "pilot radio: previous station, next station, skip the track, pin it"},
+	{"keys": ". , / ;", "does": "radio: . next station, , back, / skip the track, ; keep the track on through a boss"},
+	{"keys": "F", "does": "fire the racked active, when actives are on (the D-pad down on a pad); nothing is racked otherwise"},
 	{"keys": "- / =", "does": "music volume down / up (also in the pause menu)"},
 	{"keys": "[ / ]", "does": "effects volume down / up (also in the pause menu)"},
 	{"keys": "M", "does": "mute or unmute"},
@@ -77,6 +77,22 @@ const MENU_ROWS := [
 	{"keys": "Esc", "does": "outside play: quit"},
 ]
 static var CONTROLS := controls()
+
+# The field rules page of the title's Help (help_page.gd), one line per rule, each short enough
+# for its calm-screen budget of 40 words with the title and buttons. A line is {id, words}; the
+# words open with the rule's own name. They go with the key list above: the keys read F (the
+# active; the help page shows its line only while the actives option is on) and . , / (the
+# radio). Wall grip, jam fields, cast times and relay stakes have no key; each is also said once,
+# in play, when first met (field_tips.gd). A cast is a slot with a cast time: the Q variants and
+# Gather Plate (ability_state.gd VARIANT_CAST).
+const FIELD_RULES := [
+	{"id": "grip", "words": "Wall grip: stay fast, climb walls"},
+	{"id": "jam", "words": "Jam: mats lock slots 2, 3"},
+	{"id": "cast", "words": "Cast time: knocks drop casts"},
+	{"id": "radio", "words": "Radio: . next , back / skip"},
+	{"id": "stake", "words": "Stake: hold E at relay mast"},
+	{"id": "active", "words": "F: fire your active"},
+]
 
 const SCREEN_KEYS := [
 	{"keys": "Space", "does": "title: start; summary: choose a class (after a short beat)"},

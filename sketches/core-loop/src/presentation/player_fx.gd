@@ -161,6 +161,9 @@ var _might_wait := 0.0
 var _pin_times: Array = []
 
 
+var _dunk_glow: MeshInstance3D
+
+
 func setup(ctx_ref, vfx_ref = null) -> void:
 	ctx = ctx_ref
 	vfx = vfx_ref
@@ -176,6 +179,7 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	for i in WORD_POOL:
 		_words.append(_make_word())
 	_build_aura()
+	_build_dunk_glow()
 	_build_rim()
 	_flecks = _emitter(_flecks_material(), _box(Vector3(0.12, 0.12, 0.55)), FLECKS, 0.35, "add", false)
 	_flecks.name = "OverdriveFlecks"
@@ -198,6 +202,51 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	_frame = ImpactFrame.new()
 	layer.add_child(_frame)
 	_wire()
+
+
+# --- Dunk charge --------------------------------------------------------------------------
+# A placeholder glow while the ball holds a dunk charge (dunk.gd): a soft shell in the pilot's
+# class colour from the charge record, pulsing faster as the window runs out. Effects owns the
+# collar look; this reads the same record, so the restyle swaps the drawing and nothing else.
+
+func _build_dunk_glow() -> void:
+	var mesh := SphereMesh.new()
+	mesh.radius = 1.0
+	mesh.height = 2.0
+	mesh.radial_segments = 12
+	mesh.rings = 6
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mesh.material = mat
+	_dunk_glow = MeshInstance3D.new()
+	_dunk_glow.name = "DunkGlow"
+	_dunk_glow.mesh = mesh
+	_dunk_glow.top_level = true
+	_dunk_glow.visible = false
+	_dunk_glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(_dunk_glow)
+
+
+func dunk_glow_shown() -> bool:
+	return _dunk_glow != null and _dunk_glow.visible
+
+
+func _draw_dunk_glow() -> void:
+	var dunk = player.get("dunk")
+	if _dunk_glow == null or dunk == null or not dunk.held():
+		if _dunk_glow != null:
+			_dunk_glow.visible = false
+		return
+	var record: Dictionary = dunk.charge
+	var urgency := 1.0 - clampf(dunk.left() / dunk.WINDOW, 0.0, 1.0)
+	var pulse := 0.5 + 0.5 * sin(_clock * (6.0 + 10.0 * urgency))
+	var colour: Color = record["color"]
+	colour.a = 0.18 + 0.22 * pulse
+	(_dunk_glow.mesh.material as StandardMaterial3D).albedo_color = colour
+	_dunk_glow.global_transform = Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * (1.25 + 0.12 * pulse)), player.shown_position())
+	_dunk_glow.visible = true
 
 
 # --- Might -------------------------------------------------------------------------------
@@ -1106,5 +1155,6 @@ func _process(delta: float) -> void:
 		else:
 			_draw_word(w)
 	_draw_aura(delta)
+	_draw_dunk_glow()
 	_draw_overdrive(delta)
 	_draw_carve()

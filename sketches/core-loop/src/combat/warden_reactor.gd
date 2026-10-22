@@ -189,11 +189,11 @@ func judge_sheet_ram(warden, posture, hit: Dictionary, result: Dictionary) -> vo
 	var heft: float = sheet_heft(warden, target.heft_of.call())
 	var plating: float = hit["plating"]
 	var grown_punch: float = float(hit["punch"]) / heft * Run.HEFT_CLASS_AT[2]
-	var grown_ratio: float = grown_punch / plating if plating > 0.0 else posture.mult_max
-	var ratio: float = float(hit["punch"]) / plating if plating > 0.0 else posture.mult_max
+	var grown_ratio: float = grown_punch / plating if plating > 0.0 else posture.ordinary_ceiling()
+	var ratio: float = float(hit["punch"]) / plating if plating > 0.0 else posture.ordinary_ceiling()
 	var curve: float = MOUNTED_POSTURE["heft_curve"]
-	var relative_gain: float = pow(clampf(ratio, posture.mult_min, posture.mult_max), curve) \
-			/ pow(clampf(grown_ratio, posture.mult_min, posture.mult_max), curve)
+	var relative_gain: float = pow(clampf(ratio, posture.mult_min, posture.ordinary_ceiling()), curve) \
+			/ pow(clampf(grown_ratio, posture.mult_min, posture.ordinary_ceiling()), curve)
 	var gain: float = posture.FULL / float(MOUNTED_POSTURE["sheet_ram_breaks"]) * relative_gain
 	if int(hit["frame"]) == posture.gain_frame:
 		gain = maxf(0.0, gain - posture.gain_in_frame)
@@ -224,7 +224,7 @@ func sheet_heft(warden, heft: float) -> float:
 
 func on_charge(warden, seconds: float) -> void:
 	if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face":
-		warden._charge_time = maxf(0.0, warden._pulse_clock - (warden.PULSE_CYCLE - seconds))
+		warden._charge_time = maxf(0.0, warden._pulse_clock - (warden.pulse_cycle(warden.stage) - seconds))
 	if sheet_live():
 		sheet_left = 0.0
 		_close_sheet()

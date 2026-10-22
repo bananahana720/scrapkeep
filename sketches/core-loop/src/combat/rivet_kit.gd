@@ -1275,8 +1275,9 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	var pins: float = float(_knob("ult_pins", 1.0))
 	var damage: float = Ultimate.LANDING_DAMAGE * heft * chain
 	var late := _carve_late(id, at, heading, reach, pins, damage)
+	last_landing = late
 	var result: Array = [0, 0.0, "late"]
-	if _shade_late(late, mini(late_work, LANDING_WORK)):
+	if _shade_late(late, landing_work(bool(late["level"]))):
 		result = _breach(_late_shape(late), at, heading, reach, pins, damage)
 	else:
 		_late.append(late)
@@ -1323,26 +1324,67 @@ func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pin
 
 
 # The Breach Skid's carve shades its cells in order until it has tested LATE_WORK parts against
-# shadows in a tick (about 30 us each, in the cloud and on Andrew's 4080 alike). A light carve
+# shadows in a tick (about 30 us of shading each, in the cloud and on Andrew's 4080 alike). A light carve
 # finishes on the landing tick and hits there. A heavy one (bumpy or curved ground) carries on a
 # tick at a time and hits once it is done, and never before LATE_TICKS (about 55 ms) after the
 # landing (Andrew's "Beat later" and "Spread every Breach", 2026-10-18). Work is counted, never
 # timed, so a replay is the same on any machine. The cells' parts join in cell order, as _shade
-# joins them, so the shape is the same as a carve made at once.
+# joins them, so the shape is the same as a carve made at once. LATE_WORK is sized from the 4080's
+# whole share tick: 1.5 shares a frame must stay under 16.7 ms, so a share at most 11.1 ms. Its worst
+# share tick was 11.4 ms at 200 parts (rows 23 and 27) and 19.1 ms at 290; 11.4 ms over 200 parts,
+# the tick's fixed cost included, is 0.057 ms a part, so 182 holds about 10.4 ms (a share can pass
+# its budget by part of a cell, at 200 as here). The p3 slope (1247 parts, 21 degrees) then hits 7
+# ticks (78 ms) after landing, as it did at 200, inside Andrew's "Smooth, 0.11 s" (2026-10-18); the
+# heaviest slopes stay over it (scrapkeep#137, row 27).
 const LATE_TICKS := 5
-const LATE_WORK := 200
+const LATE_WORK := 182
 # The landing tick also gathers the faces and cuts, about as much again as a share, so its
 # share is smaller; flat ground (one part a cell, 96 cells) and a shallow bowl (158) still carve
 # and hit there. A
 # later carve's hits (selection and drawing) take a tick of their own after its last share.
 # Both keep a carve tick inside the frame's headroom on Andrew's 4080 (coordinator, 2026-10-18).
 const LANDING_WORK := 160
+# Level ground (Andrew's ruling, 18 Oct 2026, coordinator comment 6260010878 on #149, option B: "a
+# Breach on level park ground hits on the landing tick"; a 2 to 4 ms frame bump is allowed). A Breach
+# is on level ground when the face it lands on is within LEVEL_GROUND_DEG of straight up. The
+# park's ground is 2 m cells, never one plane, so such a landing also flattens its near-level faces
+# into larger polygons (TerrainFaces.merge_level: normals within LEVEL_TOLERANCE_DEG, every corner
+# within LEVEL_DEVIATION m of the region's plane) and its landing share is LEVEL_LANDING_WORK
+# parts (the coordinator's ruling 3, option A, the stand-sized budget; it does not follow LATE_WORK). A level carve that fits hits on the landing
+# tick; one that still needs more takes the late path. Andrew's stand: 859 parts become 101; of 80
+# sampled level park sites, 72 % fit (scrapkeep#73-B).
+# 5 degrees, against the park's 2 m cells (360,000 sampled, scrapkeep#73-B): 85 % are under 5, only
+# 0.3 % lie between 5 and 6 and 14 % are over 10, so the line sits in a gap in the ground, above
+# Andrew's stand (3.43) and the park's rolling 2 to 3.5 degrees, below every real slope. Steeper
+# landings are untouched: the plain merge, LANDING_WORK, a share a tick, the hit after the last
+# share and never before LATE_TICKS. Decided from the faces, never timed.
+const LEVEL_GROUND_DEG := 5.0
+const LEVEL_TOLERANCE_DEG := 2.0
+const LEVEL_DEVIATION := 0.05
+const LEVEL_LANDING_WORK := 400
+
+# The latest Breach carve landing() made, for a timing run to read its level, shares and work.
+var last_landing := {}
 
 # The tick's work budget; a test lowers it to see the stages.
 var late_work := LATE_WORK
 
+
+# The parts a Breach may test on its landing tick: LANDING_WORK, or on level ground
+# LEVEL_LANDING_WORK, in proportion when a test lowers late_work (a lowered late_work lowers both).
+func landing_work(level: bool) -> int:
+	if level:
+		return maxi(1, roundi(float(late_work) * LEVEL_LANDING_WORK / LATE_WORK))
+	return mini(late_work, LANDING_WORK)
+
+
+# True when the face under `at` is within LEVEL_GROUND_DEG of straight up.
+func level_ground(faces: Array, at: Vector3) -> bool:
+	var normal := TerrainFaces.ground_normal(faces, at)
+	return normal.y >= cos(deg_to_rad(LEVEL_GROUND_DEG))
+
 # Breach carves waiting to hit, oldest first: {centre, start, due, sector, cell_cuts, next,
-# shaded, lit, shadows, id, at, heading, reach, pins, damage, record}, with result once carved.
+# shaded, lit, level, work, shadows, id, at, heading, reach, pins, damage, record}, with result once carved.
 var _late: Array = []
 
 # What the carve did, so a timing run can prove it fired (lesson 34): full_cut commits, Breach
@@ -1356,11 +1398,13 @@ func _carve_late(id: String, at: Vector3, heading: Vector3, reach: float, pins: 
 	var cells: Array = sector["cells"]
 	var found := _terrain_near(at, cells)
 	var shadows: Array = []
-	var cuts := _cuts(at, TerrainFaces.merge(found["faces"]), cells, shadows, sector["hull"])
+	var level := level_ground(found["faces"], at)
+	var merged: Array = TerrainFaces.merge_level(found["faces"], LEVEL_GROUND_DEG, LEVEL_TOLERANCE_DEG, LEVEL_DEVIATION) if level else TerrainFaces.merge(found["faces"])
+	var cuts := _cuts(at, merged, cells, shadows, sector["hull"])
 	var start := Engine.get_physics_frames()
 	var late := {"centre": _commit_beam(at, heading, reach, 0.0), "start": start, "due": start + LATE_TICKS, "sector": sector,
 		"cell_cuts": [], "next": 0, "shaded": -1, "lit": [], "shadows": shadows, "id": id, "at": at, "heading": heading,
-		"reach": reach, "pins": pins, "damage": damage, "record": combat.ultimate._record if combat.ultimate != null else {}}
+		"reach": reach, "pins": pins, "damage": damage, "level": level, "record": combat.ultimate._record if combat.ultimate != null else {}}
 	carve_stats["breach_started"] += 1
 	late["shares"] = 0
 	if found.has("unreadable"):
@@ -1392,6 +1436,7 @@ func _shade_late(late: Dictionary, budget := -1) -> bool:
 		var i: int = late["next"]
 		lit.append_array(_shade_cell(late["at"], cell_cuts[i], [cells[i]]))
 		late["next"] = i + 1
+	late["work"] = int(late.get("work", 0)) + _shade_work
 	if int(late["next"]) == cells.size():
 		late["result"] = lit
 		carve_stats["breach_flat" if int(late["shares"]) == 1 else "breach_slope"] += 1

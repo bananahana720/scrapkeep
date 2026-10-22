@@ -19,6 +19,9 @@ const COIL_RINGS := 10
 const COIL_SEGMENTS := 5
 const SLOPE_PROBE := 1.0
 const FLOATS := 12
+# The ghost-solid lane band (#183): a thing the ride line can touch that stands more than this above the ground
+# is solid to the rider, and the kit has no collider, so a tall row's pieces on the line are sunk to the band (ruling 5, 2026-10-19; the lane is the graph's LINE mask).
+const LANE_BAND_M := 0.12
 
 
 # ground: (x, z, clearance) -> Vector3 on the drawn ground (terrain.gd _relief_at or _ground_at).
@@ -105,6 +108,30 @@ static func _stand(row: Dictionary, ground: Callable, aabb: AABB, x: float, z: f
 	grounds.append(at)
 
 
+# The highest a piece of the row can stand above the ground at its foot, an upper bound: the source box's corners
+# at the row's top scale, sunk by the bury share, swung through the steepest lean the slope floor allows plus the
+# tilt (+-0.25 rad), taking each corner at its highest angle.
+static func top_bound(row: Dictionary, aabb: AABB) -> float:
+	var slope := float(row["slope"])
+	var swing := acos(clampf(slope, 0.0, 1.0)) + 0.25
+	var s: float = (row["scale"] as Vector2).y
+	var sink := (aabb.position.y + aabb.size.y * float(row["bury"])) * s
+	var best := -INF
+	for i in 8:
+		var c := aabb.get_endpoint(i)
+		var r := Vector2(c.x, c.z).length()
+		var h := maxf(c.y, c.y * cos(swing) + r * sin(swing))
+		var peak := atan2(r, c.y)
+		if c.y > 0.0 and peak <= swing:
+			h = Vector2(r, c.y).length()
+		best = maxf(best, h)
+	return best * s - sink * (minf(slope, 1.0) if sink > 0.0 else 1.0)
+
+
+static func is_tall(row: Dictionary, aabb: AABB) -> bool:
+	return top_bound(row, aabb) > LANE_BAND_M
+
+
 static func _kept_clear(keeps: Array, at: Vector2) -> bool:
 	for keep: Array in keeps:
 		if at.distance_to(keep[0] as Vector2) < float(keep[1]):
@@ -160,7 +187,7 @@ static func build_chunked(parent: Node3D, map, ground: Callable, threaded: bool,
 
 # One row's pieces inside chunk (ci, cj): the old placement rule on the chunk's share of the play
 # rect, clear of the spawn, beacon, vault and every built footprint.
-static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB, ci: int, cj: int, grounds: Array) -> Array[Transform3D]:
+static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB, ci: int, cj: int, grounds: Array, lane: Dictionary = {}) -> Array[Transform3D]:
 	var out: Array[Transform3D] = []
 	var rect: Rect2 = chunk_rect(ci, cj).intersection(map.play_rect)
 	if rect.get_area() <= 0.0:
@@ -168,6 +195,10 @@ static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB,
 	var clear: Dictionary = map.scatter["clear"]
 	var keeps := [[map.spawn, float(clear["spawn"])], [map.beacon, float(clear["beacon"])], [map.vault, float(clear["vault"])]]
 	var keep_out: Array = map.scatter.get("keep_out", [])
+	var tall := is_tall(row, aabb)
+	# `lane` is the production path (the chunked build passes its mask); map.scatter["lane_mask"] is a fallback for tests
+	# that call this directly with a mask they made.
+	var lane_mask: Dictionary = (lane if not lane.is_empty() else map.scatter.get("lane_mask", {})) if tall else {}
 	var rng := RandomNumberGenerator.new()
 	rng.seed = ("%s/%d_%d" % [row["seed"], ci, cj]).hash()
 	var count := int(float(row["density"]) * rect.get_area() / 100.0)
@@ -183,8 +214,36 @@ static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB,
 			continue
 		if _kept_clear(keeps, Vector2(x, z)) or _kept_out(keep_out, Vector2(x, z)):
 			continue
+		var placed := out.size()
 		_stand(row, ground, aabb, x, z, yaw, s, tilt, out, grounds)
+		# A tall piece on the line stays, sunk to the band (ruling 5, revised): same draws, same count. The line is read at the
+		# piece's own placed origin, the point a reader of the transform sees.
+		if tall and out.size() > placed and _in_lane(lane_mask, out[placed].origin.x, out[placed].origin.z):
+			out[placed] = _sunk_to_band(out[placed], ground, aabb)
 	return out
+
+
+# Whether (x, z) falls in the cell of a LINE node of park_map.gd's lane mask (its nearest lattice node).
+static func _in_lane(mask: Dictionary, x: float, z: float) -> bool:
+	if mask.is_empty():
+		return false
+	var side: int = mask["side"]
+	var step: float = mask["step"]
+	var half: float = mask["half"]
+	var i := clampi(roundi((x + half) / step), 0, side - 1)
+	var j := clampi(roundi((z + half) / step), 0, side - 1)
+	return (mask["cells"] as PackedByteArray)[j * side + i] != 0
+
+
+# xf sunk straight down until its highest box corner stands at most LANE_BAND_M above the ground under that corner.
+static func _sunk_to_band(xf: Transform3D, ground: Callable, aabb: AABB) -> Transform3D:
+	var worst := -INF
+	for i in 8:
+		var c := xf * aabb.get_endpoint(i)
+		worst = maxf(worst, c.y - (ground.call(c.x, c.z, 0.0) as Vector3).y)
+	if worst > LANE_BAND_M:
+		xf.origin.y -= worst - LANE_BAND_M
+	return xf
 
 
 # The visual vertices a camera at eye draws from a chunked scatter: every batch whose bounds centre
@@ -226,7 +285,7 @@ static func _pack(buffer: PackedFloat32Array, at: int, tr: Transform3D) -> void:
 
 
 # A chunk's batches as data, built on any thread: per kind {buffer, origins, grounds, bounds}.
-static func chunk_batches(groups: Array, map, ground: Callable, ci: int, cj: int) -> Array:
+static func chunk_batches(groups: Array, map, ground: Callable, ci: int, cj: int, lane_mask: Dictionary = {}) -> Array:
 	var batches := []
 	for group: Dictionary in groups:
 		var source: Dictionary = group["source"]
@@ -236,7 +295,7 @@ static func chunk_batches(groups: Array, map, ground: Callable, ci: int, cj: int
 		var bounds := AABB()
 		var first := true
 		for row: Dictionary in group["rows"]:
-			var xfs := chunk_transforms(row, map, ground, source["aabb"], ci, cj, grounds)
+			var xfs := chunk_transforms(row, map, ground, source["aabb"], ci, cj, grounds, lane_mask)
 			var at := buffer.size()
 			buffer.resize(at + xfs.size() * FLOATS)
 			for xf in xfs:
@@ -256,6 +315,7 @@ class Chunked extends Node3D:
 	signal built
 
 	const Self := preload("res://src/world/scatter.gd")
+	const ParkMapScript := preload("res://src/world/park/park_map.gd")
 	const Rows := preload("res://src/world/scatter_rows.gd")
 	const Tiles := preload("res://src/world/park/park_terrain.gd")
 	const Colours := preload("res://src/core/palette.gd")
@@ -275,6 +335,11 @@ class Chunked extends Node3D:
 	var slowest_step := ""
 	# start()'s own main-thread cost (mesh sources, glb load), also folded into slowest_usec.
 	var start_usec := 0
+	# The park's lane mask and what it cost, made by the first chunk job (_ensure_lane_mask).
+	var lane_mask := {}
+	var lane_mask_usec := 0
+	var _mask_done := false
+	var _mask_lock := Mutex.new()
 	var frame_usec_max := 0
 	var _last_frame_usec := 0
 	var _map: RefCounted
@@ -343,6 +408,24 @@ class Chunked extends Node3D:
 		else:
 			_launch()
 			finish()
+
+	# A park's lane mask (park_map.gd lane_mask_for), made once by whichever chunk job gets here first, on its worker
+	# thread, behind the lock: the others wait for it, so no chunk reads it before it is whole and nothing shared is
+	# written (it lives here, not in map.scatter, which the main thread may read). It reads its own copy of the graph,
+	# off the main thread, since the shared copy (Activities.shared_graph) is main-thread only and a cold read there cost
+	# 612 ms in the frame-cap test. lane_mask_usec is the mask's cost, graph read included.
+	func _ensure_lane_mask() -> void:
+		_mask_lock.lock()
+		if not _mask_done:
+			_mask_done = true
+			# Tests only: a map that already carries a mask (map.scatter["lane_mask"]) keeps it.
+			if _map.get("park") != null and _map.get("path") != null and (_map.scatter as Dictionary).has("lane_mask"):
+				lane_mask = _map.scatter["lane_mask"]
+			elif _map.get("park") != null and _map.get("path") != null:
+				var t0 := Time.get_ticks_usec()
+				lane_mask = ParkMapScript.lane_mask_for(_map.path, _map.park)
+				lane_mask_usec = Time.get_ticks_usec() - t0
+		_mask_lock.unlock()
 
 	# Drops the kinds with no source, then cuts the chunks onto worker threads (or builds them here).
 	func _launch() -> void:
@@ -428,7 +511,8 @@ class Chunked extends Node3D:
 
 	# Worker side: pure data, no scene tree.
 	func _build_chunk(c: int) -> void:
-		_results[c] = Self.chunk_batches(_groups, _map, _ground, c % Tiles.TILES_PER_SIDE, c / Tiles.TILES_PER_SIDE)
+		_ensure_lane_mask()
+		_results[c] = Self.chunk_batches(_groups, _map, _ground, c % Tiles.TILES_PER_SIDE, c / Tiles.TILES_PER_SIDE, lane_mask)
 		if OS.get_thread_caller_id() != OS.get_main_thread_id():
 			_lock.lock()
 			worker_chunks += 1

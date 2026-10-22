@@ -2,7 +2,7 @@
 
 The one board for who owns what, which unit waits on which, and which test gates each unit must pass. Owner: the local coordinator (a Claude Code session on Andrew's PC). Lanes propose changes on the wave's Wave board issue; only the coordinator edits this file. Rulings live in [DECISIONS.md](../handoff/DECISIONS.md); newest wins.
 
-Goal: a finished-feeling Linux alpha by the end of wave 21, judged by Andrew's one full playtest of the 11 areas. Last updated 2026-10-18 20:55Z.
+Goal: a finished-feeling Linux alpha by the end of wave 21, judged by Andrew's one full playtest of the 11 areas. Last updated 2026-10-21 21:15Z (wave 18 opened).
 
 ## Topology
 
@@ -17,7 +17,7 @@ Goal: a finished-feeling Linux alpha by the end of wave 21, judged by Andrew's o
    GPU bench (4080)   Music (ACE-Step)   Systems B (w18)   Content (w20)   ← local sessions on the PC
 ```
 
-Local CPU budget (19 Oct): Systems B at most 12 concurrent Godot, Content 8, all at nice 10 through `cpuq`; the GPU bench times runs only below a 1-minute load of 40, interleaving base and PR runs.
+Local CPU budget (19 Oct, still in force): the CPU shed lane (Systems B and Challenge sweeps sent to the PC) at most 12 concurrent Godot, Content 8, all at nice 10 through `cpuq`; the GPU bench times runs only below a 1-minute load of 40, interleaving base and PR runs.
 
 ## Ownership
 
@@ -48,7 +48,7 @@ Agent → its lane coordinator → local coordinator → Andrew. Local sessions 
 
 Known base reds and cloud-only false fails are listed in [STATE.md](../handoff/STATE.md); a fail needs a solo rerun before it counts.
 
-## Wave 17 (current), stage `stage/alpha-w17`, PR #116
+## Wave 17 (closed 21 Oct, promoted in #116), stage `stage/alpha-w17`
 
 | Unit | Lane | Depends on | State |
 | --- | --- | --- | --- |
@@ -59,7 +59,31 @@ Known base reds and cloud-only false fails are listed in [STATE.md](../handoff/S
 | #104 Overpowered pays; grown-pilot ratio reds (Mind, hive, reactor) | Challenge (from Perf, 19 Oct) | - | needs fix |
 | #73 Rivet carve; #146 dense fights; #147 boss-freeze profiler; launch title (Andrew's option A: 2D title in about 2 s, 3D crossfades in) | Perf, GPU bench | - | in progress |
 | Hook-out hold break, nemesis column, answer weighting, #145 bot hands | Systems | - | in progress |
-| Promote #116 to main, cut `stage/alpha-w18` | Coordinator | gate + persona clean | waiting |
+| Promote #116 to main, cut `stage/alpha-w18` | Coordinator | gate + persona clean | done 21 Oct: main 16df22d0, see BASELINE-2026-10-20.md |
+
+## Wave 18 (current), stage `stage/alpha-w18`, board #241
+
+Opened 21 Oct about 21:00Z. The stage was fast-forwarded to main 9cd6805e (wave 17 plus #239). All 21 PRs that targeted `stage/alpha-w17` now target w18 with unchanged diffs. A receipt on a pre-w18 head needs a re-gate. Lanes are the wave 17 cloud sessions, reused by direct message. Unit lists are refreshed from the intake (BASELINE refresh).
+
+| Lane (session) | Units, in order | Depends on | State |
+| --- | --- | --- | --- |
+| Gate + staging (cloud c9e5b1) | re-gate and stack #173, #222 to #228, #230, #204, #206, #240; re-fold shared ids; base-red solo reruns; check the ObjectDB leak rise from #240 | - | briefed |
+| Systems (cloud 3c55bb), owns Systems B | #207 → #232 → #238 into the #175 chain with #184 and #217, then #175 onto w18; run_tier re-pin once after #214; SR10, SI3, launch shell, title-intro wiring | #214 for the re-pin; Sable rerun on the PC | briefed |
+| Challenge (cloud 76a049) | #191 → #208 → #209 → #237; #234 with the c′ mobs half and a swarm re-pin; caster stage-3 stall; boss and mob tuning to section 5 | #191, #208, #209, #237 conflict with w18 (intake) | briefed |
+| World (cloud b10865) | #214 → #219 after GPU rows 24 and 25; #242 scatter keep-out; #243 cloud_wash_west; islands burn-down on the whole-rect ruling; anchor fields | GPU rows 24, 25 | running |
+| Perf (cloud bbb17f) | #231 heft fix or re-pin ask; #235 after #220; #137 after GPU row 23; dense fights | #220, GPU rows 23, 26, 27 | briefed |
+| Dressing (cloud c2965c) | #220 re-gate; Dressing A park kits, one PR per park | - | briefed |
+| GPU bench (PC, card to start) | queue rows 23 to 27 | - | waiting on Andrew's click |
+| Music (PC, card to start) | heat remake PR; zero-placeholder `--win-proof` export (queue row 7) | #225 for stems-sync | waiting on Andrew's click |
+| CPU shed (PC, coordinator) | Sable hard cell at about 120 s; CPU-bound sweeps that lanes post as `NEEDS: coordinator (cpu)` | Systems posts the command | waiting |
+| Lighting (cloud, new 21 Oct) | single writer of `world_look.gd`, `time_sky.gdshader`, `arena_*_dress.gd`; day-arc stills sign-off; volumetric air conflict | gpu-render stills | starting |
+| Grading (cloud, new) | G2 probe and G4 menu parity in #254; G3 waits on stills | Lighting | paused after current unit (pacing, 21 Oct 23:35Z) |
+| Modeling (cloud 9f9a90, reused) | `tools/blender/**` and GLBs: three Warden GLB rebuilds, six landmarks soft toy, anchor swap, cosmetics | gpu A/B | paused after the anchor-gap table (pacing, 21 Oct 23:35Z) |
+| Animation (cloud, new) | #260, #261, #262, #265 up; A6 and the rest to wave 19 | Systems behaviour | paused after current unit (pacing, 21 Oct 23:35Z) |
+| Effects (cloud, new) | special-enemy cues from one telegraph moment; 10 empty ATTACK_ROWS; armour-hit sound; SPEED-SOFTCAP trail (with Systems) | Perf `density.gd` | parked (never claimed; pacing, 21 Oct 23:35Z) |
+| Challenge B (cloud, new) | worlds 4 to 6 to the section 5 skill bands; HARD replay ladder | Challenge A for shared code | paused after current sweep (pacing, 21 Oct 23:35Z) |
+| Render bench (PC, RTX 3060) | serves `NEEDS: gpu-render` stills and clips | - | running |
+| Promote w18 to main, cut `stage/alpha-w19` | Coordinator | stage head gate-clean, at least 3 new units | - |
 
 ## Pulled forward (19 Oct)
 
@@ -86,7 +110,7 @@ Placeholders: 60 at 1a7a7299, down from 1,442 at wave 15; 59 of them are park gr
 | 20 | HELP and ACHIEVEMENTS refresh; FLASH-COMFORT; bug bar | placeholder burn-down to zero | PERF-NIGHT on the 4080 after radio renders | frametime gate |
 | 21 | ALPHA-RC AppImage release candidate | last art holes | final 4080 pass | RC gate: `--win-proof` four proofs, five personas |
 
-Source plan: [PLAN-w16-plus.md](PLAN-w16-plus.md); where it differs from the 17 to 18 Oct handoff, the handoff wins.
+Source plan: [PLAN-w16-plus.md](PLAN-w16-plus.md); where it differs from the 17 to 18 Oct handoff, the handoff wins. The budgeted plan with wave 17 carry-over and cut candidates is [ROADMAP.md](ROADMAP.md) (20 Oct); the 20 Oct reconciliation of every open PR is [BASELINE-2026-10-20.md](BASELINE-2026-10-20.md).
 
 ## PC queue
 

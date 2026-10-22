@@ -28,10 +28,16 @@ var back: Button
 var diagram
 var pictures := {}
 var page_button: Button
-# 0 is the controls diagram; 1 onward are MechanicsDiagram.PAGES rows.
+# 0 is the controls diagram; 1 onward are MechanicsDiagram.PAGES rows, then the rules page.
 var page := 0
+var rules := {}
+# The run's tuning (screens.gd sets it): the F active's rule line shows only while the actives
+# option is on, as active_rack.gd racks one only then.
+var tuning
 var _mechanics: HBoxContainer
 var _rows: Array[HBoxContainer] = []
+var _rules: VBoxContainer
+var _goal: HBoxContainer
 
 
 func _init() -> void:
@@ -39,7 +45,8 @@ func _init() -> void:
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	add_theme_constant_override("separation", 26)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_goal_row())
+	_goal = _goal_row()
+	add_child(_goal)
 	diagram = ControlsDiagram.new()
 	diagram.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	add_child(diagram)
@@ -49,6 +56,9 @@ func _init() -> void:
 		_rows.append(row)
 		add_child(row)
 	_mechanics = _rows[0]
+	_rules = _rules_column()
+	_rules.visible = false
+	add_child(_rules)
 	var actions := _hbox(18)
 	page_button = ChoiceButton.new("pictures", "", "Pictures")
 	page_button.pressed.connect(toggle_pictures)
@@ -60,22 +70,43 @@ func _init() -> void:
 	visibility_changed.connect(_reset_page)
 
 
-# Controls, then each picture page, then back to controls.
+# The Help button steps Controls, each picture page, Rules and back; its label names the next page.
 func toggle_pictures() -> void:
-	show_page((page + 1) % (_rows.size() + 1))
+	show_page((page + 1) % (_rows.size() + 2))
 
 
 func show_page(index: int) -> void:
 	page = index
+	var rules_page := page == _rows.size() + 1
 	diagram.visible = page == 0
 	for i in _rows.size():
 		_rows[i].visible = page == i + 1
-	_mechanics = _rows[maxi(page - 1, 0)]
-	page_button.text = "Pictures" if page == 0 else ("More" if page < _rows.size() else "Controls")
+	_mechanics = _rows[clampi(page - 1, 0, _rows.size() - 1)]
+	_rules.visible = rules_page
+	rules["active"].visible = actives_on()
+	# The rules page drops the goal row so its lines (six, five with actives off) fit the
+	# calm-screen budget.
+	_goal.visible = not rules_page
+	if page == 0:
+		page_button.text = "Pictures"
+	elif page < _rows.size():
+		page_button.text = "More"
+	elif page == _rows.size():
+		page_button.text = "Rules"
+	else:
+		page_button.text = "Controls"
+
+
+func _show(name: String) -> void:
+	show_page({"controls": 0, "pictures": 1, "rules": _rows.size() + 1}[name])
 
 
 func pictures_showing() -> bool:
-	return page > 0
+	return page > 0 and page <= _rows.size()
+
+
+func actives_on() -> bool:
+	return tuning != null and tuning.option("actives") == "on"
 
 
 func _reset_page() -> void:
@@ -103,6 +134,22 @@ func _mechanics_row(ids: Array) -> HBoxContainer:
 		row.add_child(card)
 		pictures[id] = {"picture": picture, "caption": caption}
 	return row
+
+
+# One label per FieldNotes.FIELD_RULES line: wall grip, jam fields, cast times, the radio dial,
+# relay stakes and the F active (hidden while actives are off; see _show).
+func _rules_column() -> VBoxContainer:
+	var column := VBoxContainer.new()
+	column.name = "FieldRules"
+	column.add_theme_constant_override("separation", 12)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for rule in FieldNotes.FIELD_RULES:
+		var line := _label(rule["words"], 26, Palette.SAND)
+		line.name = "Rule_" + String(rule["id"])
+		line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		column.add_child(line)
+		rules[rule["id"]] = line
+	return column
 
 
 func _goal_row() -> HBoxContainer:

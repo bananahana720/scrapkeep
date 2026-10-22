@@ -22,6 +22,9 @@ const ClassDef := preload("res://src/core/class_def.gd")
 # priority  0 ambient (music only), 1 feedback (sound and small VFX), 2 notable (toast),
 #           3 critical (big toast, stinger on the beat).
 
+# The natural event kinds whose swap overlay hides park_rows named by hide_on (natural.gd builds their swap entry, a
+# cave_in entry is a roof that never reaches apply_swap; park_schema.gd reads this too).
+const HIDING_NATURAL_KINDS := ["collapse", "impact"]
 const GROUPS := ["movement", "combat", "economy", "flow", "event"]
 const SHAPES := ["ring", "diamond", "square", "chevron", "arrow", "burst", "bar", "star", "cross", "wave", "core", "lane", "none"]
 const FIELDS := ["group", "color", "shape", "sound", "hud", "objective", "priority"]
@@ -187,12 +190,19 @@ const ROWS := {
 	"ultimate_peak": {"group": "combat", "color": Palette.ARC, "shape": "star", "sound": "special_fire", "sound_next": "motif_stinger", "hud": "", "objective": "", "priority": 1},
 	"ultimate_landed": {"group": "combat", "color": Palette.AMBER, "shape": "burst", "sound": "ultimate_land", "hud": "", "objective": "", "priority": 1},
 	"ultimate_cancelled": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "dry_tick", "hud": "", "objective": "", "priority": 1},
+	# Achievement facts (w20): quiet stand-ins; the achievement toast is the player's cue, listed in GRAMMAR_SIGNALS.
+	"special_broken": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"radio_take_found": {"group": "flow", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"relay_stake_paid": {"group": "event", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"maker_set_completed": {"group": "economy", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
+	"overflow_cashed": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 }
 
 # The grammar's bus signals that have no presentation listener. A unit that wires a listener
 # for one removes it from this list. The skill-bar signals wait for wave P-B's HUD and
 # ultimate units (design-v3/SKILL-BAR.md section 10), which wire their listeners.
-const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window", "slot_selected", "slot_cast", "line_skill_expired"]
+const GRAMMAR_SIGNALS := ["prompt_shown", "escape_window", "slot_selected", "slot_cast", "line_skill_expired",
+	"special_broken", "radio_take_found", "relay_stake_paid", "maker_set_completed", "overflow_cashed"]
 
 # v3 W11 juice
 # How hard a fact lands, keyed by the ROWS kind it dresses, so a fact's stop, shake,
@@ -425,6 +435,11 @@ const WEIGHT_EXEMPT := {
 	"tree_offered": "Reward and economy ladders own the cue; rewards never stop time.",
 	"tree_picked": "Reward and economy ladders own the cue; rewards never stop time.",
 	"ultimate_cancelled": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
+	"special_broken": "Achievement facts own no impact; the earned toast is the cue.",
+	"radio_take_found": "Achievement facts own no impact; the earned toast is the cue.",
+	"relay_stake_paid": "Achievement facts own no impact; the earned toast is the cue.",
+	"maker_set_completed": "Achievement facts own no impact; the earned toast is the cue.",
+	"overflow_cashed": "Achievement facts own no impact; the earned toast is the cue.",
 	"ultimate_peak": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"ultimate_ready": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"ultimate_started": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
