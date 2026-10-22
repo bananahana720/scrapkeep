@@ -37,6 +37,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
+const ParkProps := preload("res://src/presentation/park_props.gd")
 
 const NEAR_M := 60.0
 const FAR_M := 120.0
@@ -82,8 +83,13 @@ var draw_count := 40
 var counts_only := false
 var poses_file := ""
 var cam_name := "mid"
-# --open=x:z:r,x:z:r : ruled open spaces (centre and radius, metres) whose windows are exempt from the density bar.
+# --open=x:z:r:<reason>,... : ruled open spaces (centre and radius, metres) whose windows are exempt from the density bar,
+# each with a reason the audit checks instead of trusting (coordinator ruling #241 6329579296). The reason is everything after
+# the third colon: runout:<kicker> (a kicker run-out lies within 40 m of the window centre) or no_cell (the audit's own probe
+# finds no legal cell in the view cone of any pose in the window). A missing or unknown reason exits 2; a window whose reason
+# fails is judged on its kinds like any other and listed in the summary's density_open_rejected.
 var open_spaces: Array = []
+var _probe := {}
 
 var game
 var cam: Camera3D
@@ -121,10 +127,12 @@ func _initialize() -> void:
 		elif a.begins_with("--cam="):
 			cam_name = a.trim_prefix("--cam=")
 		elif a.begins_with("--open="):
-			for part in a.trim_prefix("--open=").split(",", false):
-				var f := part.split(":")
-				if f.size() == 3:
-					open_spaces.append([Vector2(float(f[0]), float(f[1])), float(f[2])])
+			var parsed := ParkProps.parse_open(a.trim_prefix("--open="))
+			if parsed.has("error"):
+				printerr("park_props_audit: " + String(parsed["error"]))
+				quit(2)
+				return
+			open_spaces.append_array(parsed["spaces"])
 		elif a == "--counts-only":
 			counts_only = true
 	if map_id == "" or out_root == "" or not CAMERAS.has(cam_name):
@@ -861,7 +869,7 @@ func _summary(samples: Array, draw_idx: Array, info: Dictionary) -> Dictionary:
 #   arena      the footprint of a home_rows site (park row, or the activity row's point) or the landmark row, grown by ENGAGE_RING_M
 #   camp       an activity_rows enemy_camp (the camp's `at` point), grown by ENGAGE_RING_M (the validator's camp ring)
 #   telegraph  the footprint of an event_rows site (park row), grown by the event's hold_clear_m (0 when absent)
-#   open       a --open=x:z:r space (a ruling keeps it open; the park JSON carries none)
+#   open       a --open=x:z:r:<reason> space whose reason checks out (runout:<kicker> or no_cell, see _check_open); a failed reason is not exempt
 func _density(samples: Array) -> Dictionary:
 	var by_line := {}
 	for s in samples:
@@ -873,6 +881,8 @@ func _density(samples: Array) -> Dictionary:
 	var passed := 0
 	var reasons := {}
 	var fails: Array = []
+	var rejected: Array = []
+	var checked := 0
 	var line_names := by_line.keys()
 	line_names.sort()
 	for line in line_names:
@@ -885,12 +895,14 @@ func _density(samples: Array) -> Dictionary:
 			if stop - start < (DENSITY_WINDOW_M if start + DENSITY_WINDOW_M <= end_m else DENSITY_TAIL_MIN_M):
 				break
 			var kinds := {}
+			var window_poses: Array = []
 			var mid: Dictionary = {}
 			var best := INF
 			for smp in list:
 				var a := float(smp["along_m"])
 				if a < start or a >= start + DENSITY_WINDOW_M:
 					continue
+				window_poses.append(smp)
 				for k in smp.get("prop_kinds_60", []):
 					kinds[k] = true
 				if absf(a - (start + stop) * 0.5) < best:
@@ -901,6 +913,14 @@ func _density(samples: Array) -> Dictionary:
 				continue
 			windows += 1
 			var why := _density_exempt(Vector2(mid["x"], mid["z"]))
+			if why == "open":
+				checked += 1
+				var verdict := _check_open(Vector2(mid["x"], mid["z"]), window_poses)
+				if String(verdict["why"]) == "":
+					why = "open:" + String(verdict["kind"])
+				else:
+					why = ""
+					rejected.append({"at": [mid["x"], mid["z"]], "r": verdict["r"], "reason": verdict["reason"], "why": verdict["why"], "cell": verdict["cell"]})
 			if why != "":
 				exempt += 1
 				reasons[why] = int(reasons.get(why, 0)) + 1
@@ -910,8 +930,32 @@ func _density(samples: Array) -> Dictionary:
 				fails.append({"line": line, "start_m": start - DENSITY_WINDOW_M, "kinds": kinds.size(), "at": [mid["x"], mid["z"]]})
 	var counted := windows - exempt
 	return {"density_windows": windows, "density_exempt": exempt, "density_exempt_by": reasons, "density_pass": passed,
-		"density_fail_windows": fails, "density_share": snappedf(float(passed) / maxf(1.0, counted), 0.001),
+		"density_fail_windows": fails, "density_open_checked": checked, "density_open_rejected": rejected, "density_share": snappedf(float(passed) / maxf(1.0, counted), 0.001),
 		"density_rule": "%d+ distinct park-prop kinds in view within %.0f m per %.0f m window" % [DENSITY_MIN_KINDS, NEAR_M, DENSITY_WINDOW_M]}
+
+
+# Verifies the --open space holding `at` against its reason: {kind, reason, r, why ("" when it holds), cell}.
+func _check_open(at: Vector2, window_poses: Array) -> Dictionary:
+	var space: Array = []
+	for candidate in open_spaces:
+		if (candidate[0] as Vector2).distance_to(at) <= float(candidate[1]):
+			space = candidate
+			break
+	var reason: String = space[2]
+	var out := {"kind": "runout" if reason.begins_with("runout:") else "no_cell", "reason": reason, "r": space[1], "why": "", "cell": null}
+	if _probe.is_empty():
+		var world := ParkProps.world_for(map_id)
+		var file := ParkProps.load_json(ParkProps.file_path(map_id))
+		var kit_path := String(file.get("kit", "res://assets/models/park/props/%s/manifest.json" % map_id.trim_prefix("park_")))
+		_probe = {"c": ParkProps.context(world["map"], world["ground"], world["stage"]), "kit": ParkProps.load_json(kit_path), "file": file}
+	var poses: Array = []
+	for smp in window_poses:
+		poses.append({"x": smp["x"], "z": smp["z"], "yaw": smp["yaw"]})
+	var cam_spec := {"arm": CAMERAS[cam_name]["arm"], "pitch": CAM_PITCH, "up": CAM_UP, "fov_deg": CAMERAS[cam_name]["fov"], "aspect": float(SIZE.x) / float(SIZE.y)}
+	var decided := ParkProps.open_reason(_probe["c"], _probe["kit"], _probe["file"], reason, at, poses, cam_spec)
+	out["why"] = "" if decided["ok"] else String(decided["why"])
+	out["cell"] = decided["cell"]
+	return out
 
 
 func _density_exempt(at: Vector2) -> String:
