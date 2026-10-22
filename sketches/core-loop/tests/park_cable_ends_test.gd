@@ -3,7 +3,8 @@ extends SceneTree
 # Rule: a park cable's landing (`to`) end hangs at least 2.35 m over the baked ground, so the cable ride's
 # target (the end less the hang, CABLE_HANG 1.3, still CABLE_LAND_CLEAR 1.05 up) never cuts the hang short and
 # the cable never runs through the ball. Walks every park map's cable rows against ParkGround. The control
-# is a synthetic row 1.0 m over the ground, which fails the same predicate.
+# is a synthetic row 1.0 m over the ground, which fails the same predicate. Also guards one landing's runout:
+# the park_sinkhole lava-channel bend past tube_rope_1 (BEND_AT below).
 
 const T := preload("res://tests/support/t.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
@@ -17,7 +18,7 @@ const MAPS := ["park_crown", "park_dam", "park_flume", "park_islands", "park_pit
 
 # A landing's runout: the ride's ball leaves a cable and rolls on over the channel bend. A post stamped on the
 # bank (sheer +20 m) at that bend ends the run in a dead stop (park_sinkhole tube_rope_1 landing, lava_channel_post_21i
-# at (-164.9, -448.2) stopped Rivet at (-172.8, -446.2)). The bend's baked ground must not rise more than
+# at (-164.9, -448.2) was struck at (-172.8, -446.2), and Rivet dead-stopped 1.5 s later at (-171.2, -438.9)). The bend's baked ground must not rise more than
 # BEND_RISE_MAX_M across a BEND_RADIUS_M disc round that spot. Checked on this bend only: measured over every cable end
 # (measured 2026-10-22 on the baked grounds), tube_rope_3 and _4, east_haulage_rope_2 and domes_zip already rise 2.8 to 22.6 m within
 # 30 m of their ends along the heading, so a general runout rule would fail maps outside this unit.
