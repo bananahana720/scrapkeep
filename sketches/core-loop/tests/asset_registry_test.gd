@@ -10,7 +10,7 @@ const REGISTRY := "res://assets/registry.json"
 const BUDGETS := "res://assets/asset_budgets.json"
 const ROOT := "res://assets"
 # Draw ceilings (baked-bracket card, MOTION-SPEC row 208, wave 19; coordinator rulings 6348145961, 6348389397 and
-# 6348497831 on #241, and the pending 6348848322 for the five layers). w13-PD (docs/decisions.tsv, 2026-10-10T21:29:13) sets
+# 6348497831 on #241, and 6348855434 for the five layers). w13-PD (docs/decisions.tsv, 2026-10-10T21:29:13) sets
 # 16 draws for a pilot shell, 2 for a class III layer and 1 for every other layer. An asset over its ceiling passes only when
 # it is named here with its decided figure, and then only at or under that figure. A new entry needs its own
 # docs/decisions.tsv row, not a quiet exception.
@@ -21,11 +21,11 @@ const DECIDED_OVER_CEILING := {
 	"shell_tarn": {"draws": 17, "why": "docs/decisions.tsv 2026-10-10T23:14 w13-PD (Tarn 17: four articulated two-surface jaws; row 2026-10-11T00:16)"},
 	"shell_tarn_redjaw_teeth": {"draws": 17, "why": "docs/decisions.tsv 2026-10-10T23:14 w13-PD (Tarn 17, same machinery; row 2026-10-11T00:16)"},
 	"shell_tarn_c3": {"draws": 3, "why": "ruling 6348497831 on #241: class III layer at 3, ClawHooks banks; docs/decisions.tsv 2026-10-22T18:42"},
-	"shell_cannon_c5": {"draws": 2, "why": "pending ruling 6348848322 on #241: PortHoods banks (1 to 2)"},
-	"shell_tally_c4": {"draws": 2, "why": "pending ruling 6348848322 on #241: DrumHoods banks (1 to 2)"},
-	"shell_tally_c5": {"draws": 2, "why": "pending ruling 6348848322 on #241: HeavyDrums banks (1 to 2)"},
-	"shell_tarn_c4": {"draws": 2, "why": "pending ruling 6348848322 on #241: ClawHooks banks (1 to 2)"},
-	"shell_tarn_c5": {"draws": 2, "why": "pending ruling 6348848322 on #241: ClawHooks banks (1 to 2)"},
+	"shell_cannon_c5": {"draws": 2, "why": "ruling 6348855434 on #241: PortHoods banks (1 to 2)"},
+	"shell_tally_c4": {"draws": 2, "why": "ruling 6348855434 on #241: DrumHoods banks (1 to 2)"},
+	"shell_tally_c5": {"draws": 2, "why": "ruling 6348855434 on #241: HeavyDrums banks (1 to 2)"},
+	"shell_tarn_c4": {"draws": 2, "why": "ruling 6348855434 on #241: ClawHooks banks (1 to 2)"},
+	"shell_tarn_c5": {"draws": 2, "why": "ruling 6348855434 on #241: ClawHooks banks (1 to 2)"},
 }
 var failures := 0
 var _layer_rule := RegEx.new()
