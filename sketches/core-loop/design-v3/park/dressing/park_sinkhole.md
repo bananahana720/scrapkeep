@@ -204,7 +204,7 @@ Both moves are legal in the plan check (0 violations).
 
 Base 6ec831ba. Authority: coordinator 6342666489 item 10, option (a): each park head fails only on the rows and yaw groups #323 lists, and each group is fixed on the park's own PR. The plan check with the #323 rules reported 2 rows and 4 yaw groups (total 6, fingerprint 3120478943); the groups are now clear. Method: the plan check run headless on Godot 4.7.2; this proves the rules and numbers, not human feel.
 
-Yaw. Front is local +Z, so a spot faces a target at degrees(atan2(dx, dz)). Every spot in the four yaw groups now faces the nearest point on its nearest ride line (kest for the cinder-cone cluster, sable for the main-tube pair, rivet for the west chamber, tarn for lava channel 13), rounded to 1 degree. Spots in one group face almost the same direction, so I then turned each one off its own target by a different step of 6 to 12 degrees: -8, 0, +8 for the groups of three and -12, -6, 0, +6, +12 for the groups of five. The largest turn is 12 degrees, inside the 15 allowed. The steps are in the order of the id list in the check. After the turns no two linked spots share a yaw within 1 degree.
+Yaw. Front is local +Z, so a spot faces a target at degrees(atan2(dx, dz)). Every spot in the four yaw groups now faces the nearest point on its nearest ride line (kest for the cinder-cone cluster, sable for the main-tube pair, rivet for the west chamber, tarn for lava channel 13), rounded to 1 degree. Spots in one group face almost the same direction, so I then turned each one off its own target by a different step of 6 to 12 degrees: -8, 0, +8 for the groups of three and -12, -6, 0, +6, +12 for the groups of five. The largest turn is 12 degrees, inside the 15 allowed. The steps are in the order of the id list in the check (the kest group was reworked in round 2 below). After the turns no two linked spots share a yaw within 1 degree.
 
 Rows. Two rows were moved by the single middle spot, which is the fewest spots:
 - `s009_mid_tailings_cart` (kest row): `at` (-600.23, -629.78) to (-604.04, -628.57), 4 m perpendicular to the row, away from the line.
@@ -221,10 +221,10 @@ Changed spots (old yaw to new yaw; target is the nearest point on the named line
 | f11_low_stones | -28.9 to 145 | rivet line, station 1392 |
 | f12_low_ferns | -28.9 to 151 | rivet line, station 1386 |
 | gr2_low_stones | -28.9 to 157 | rivet line, station 1414 |
-| s097_low_gear | -28.9 to 163 | rivet line, station 1372 |
-| m02_mid_horn_stubs | -59.8 to 112 | kest line, station 128 |
-| m03_mid_cart_stub | -59.8 to 120 | kest line, station 140 |
-| s009_mid_tailings_cart | -59.8 to 128 | kest line, station 162 |
+| s097_low_gear | -28.9 to 162 | rivet line, station ~1372 (at moved, see round 2) |
+| m02_mid_horn_stubs | -59.8 to 108 | kest line, station 131 |
+| m03_mid_cart_stub | -59.8 to 123 | kest line, station 139 |
+| s009_mid_tailings_cart | -59.8 to 129 | kest line, station 158 |
 | m13_mid_horn_stubs | 130.4 to -62 | tarn line, station 597 |
 | s028_low_ferns | 130.4 to -56 | tarn line, station 575 |
 | s030_gallery_fall | 130.4 to -50 | tarn line, station 578 |
@@ -233,6 +233,11 @@ Changed spots (old yaw to new yaw; target is the nearest point on the named line
 
 `near` labels are unchanged: each already names a park row and its story, and the lint stays at 0.
 
-Pin and checks. Fingerprint 3120478943 to 1537548870, re-pinned on purpose (`pin` in `park_sinkhole.json`). Plan check with the #323 rules (vsinkhole-vg reading this file): 1,419 instances (229 litter), 0 violations, 0 pattern, 0 pin, 0 lint. The old plan check here: 0 violations, same fingerprint. `park_props_test`: PASS (226 checks).
+Round 2 (verifier on #323, rule fix af522720: a line-defining pair over 40 m now counts). Two more rows appeared and were fixed with the smallest legal moves:
+- `f11_low_stones`, `gr2_low_stones`, `s097_low_gear` (gaps 19.9 and 21.7, CV 0.043): `s097_low_gear` `at` (-77.5, -40.9) to (-83.6, -44.3), 7 m along the row away from f11. Gaps are now 26.9 and 21.7, CV 0.108. Moving f11 sideways failed (slope, or a new row with f10 and f12), and moving s097 sideways failed (slope or line-clear). Its yaw is the rivet-line target (150) plus the same +12 turn, 162.
+- `m19_mid_horn_stubs`, `s055_low_ferns`, `s072_lamp_wall` (gaps 34.0 and 32.9, CV 0.016): `s055_low_ferns` `at` (-45.1, -450.7) to (-44.55, -454.66), 4 m perpendicular, away from the tarn line. Yaw stays 141.4.
+The kest fan was regular (+8 and +8 in position order). It now faces three different stations of the kest line, so the turns differ in size: `m02_mid_horn_stubs` faces station 131 (108, turned -12 from its nearest point), `m03_mid_cart_stub` station 139 (123, +3), `s009_mid_tailings_cart` station 158 (129, +9). All are within 15 degrees and no yaw group forms.
+
+Pin and checks. Fingerprint 3120478943 to 1439281478, re-pinned on purpose (`pin` in `park_sinkhole.json`, line 3060). Plan check with the fixed #323 rules (vsinkhole-vg reading this file): 1,419 instances (229 litter), 0 violations, 0 pattern, 0 pin, 0 lint. The old plan check here: 0 violations, same fingerprint. `park_props_test`: PASS (226 checks), "[park_sinkhole expansion matches its pin] got 1439281478, want 1439281478 -> PASS". The span row scan at 80 m: triples 0.
 
 Density audit (default run, mid camera, step 25 m, 309 samples; `artifacts/local/w18m`): 52 pass, 11 exempt (all arena), 1 fail, the kest 900 m window at (52.3, -332.4) with 0 kinds that 6329171089 ruled open space. Identical to the w18k line. Vignette frames of the moved spots were not rendered in this round because the branch's audit has no `--vignettes` mode.
