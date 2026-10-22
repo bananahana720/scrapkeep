@@ -236,7 +236,9 @@ func _pilot(pilot: Node, document: Dictionary) -> void:
 
 
 func _shell(shell: Node, document: Dictionary) -> void:
-	_budget("shell", shell, Vector3i(11000, 11600, 10), ["paint", "rubber", "class_accent", "copper"])
+	# 11 draws: the registry exception for DrumBrackets, its own mesh so the carrier bank tilts it (pending the
+	# coordinator's ruling on #241); the shell class cap is 10.
+	_budget("shell", shell, Vector3i(11000, 11600, 11), ["paint", "rubber", "class_accent", "copper"])
 	_check("shell has no skeleton", document.get("skins", []).is_empty())
 	_check("no duplicate pilot", shell.find_child("Pilot", true, false) == null)
 	var source_names: Array = document.get("nodes", []).map(func(n): return n.get("name", ""))

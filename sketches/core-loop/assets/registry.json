@@ -12980,9 +12980,9 @@
    "ships": true,
    "loader": "src/presentation/hero_assets.gd:38-40",
    "exception": {
-    "draws": 14
+    "draws": 17
    },
-   "exception_why": "PD-SABLE Hoberman mecha, 14 draws inside the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv 2026-10-10: base 10 plus machinery and the Pilot placeholder); PD-0's base takes 10 (Core 3, Pod 3, Gyro, GyroInner, WeaponRing 2), the hidden placeholder Pilot, the CoilMast tip and the WrenchRack each need their own node and the emitter coils add copper on the ring",
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the winch spool is its own SpoolKit mesh (copper, bone paint, rubber) so the carrier bank tilts it off a wall, three more draws than PD-SABLE's 14, pending coordinator ruling on #241. PD-SABLE Hoberman mecha, 14 draws inside the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv 2026-10-10: base 10 plus machinery and the Pilot placeholder); PD-0's base takes 10 (Core 3, Pod 3, Gyro, GyroInner, WeaponRing 2), the hidden placeholder Pilot, the CoilMast tip and the WrenchRack each need their own node and the emitter coils add copper on the ring",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_sable.py",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -13044,9 +13044,9 @@
    "ships": true,
    "loader": "src/presentation/hero_assets.gd fit_shell_into (shell variant shell_sable_felt, CUSTOMIZE section 8 Felt Rig; layers borrow the default shell_sable_c2..c5)",
    "exception": {
-    "draws": 14
+    "draws": 17
    },
-   "exception_why": "same node set as shell_sable (see its row): 14 draws, inside the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv 2026-10-10)",
+   "exception_why": "same node set as shell_sable (see its row): 17 draws, the baked-bracket bank split of the winch spool into its own SpoolKit mesh (wave 19, MOTION-SPEC row 208) adding three to the 14, pending coordinator ruling on #241",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_sable.py --variant felt",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -13063,7 +13063,11 @@
     "recipe": "tools/blender/shell_tally.py",
     "helper": "tools/blender/shell_base.py hoberman()",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png"
-   }
+   },
+   "exception": {
+    "draws": 11
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the two drum brackets are their own DrumBrackets mesh (one paint draw, rubber folded in charcoal) so the carrier bank tilts them off a wall; one more draw than the shell class cap of 10, pending coordinator ruling on #241"
   },
   {
    "id": "shell_tally_abacus",
@@ -13075,7 +13079,11 @@
     "recipe": "tools/blender/shell_tally.py --variant abacus",
     "helper": "tools/blender/shell_base.py hoberman()",
     "concept": "CUSTOMIZE.md section 8 (shell_tally_abacus); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png"
-   }
+   },
+   "exception": {
+    "draws": 11
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the two drum brackets are their own DrumBrackets mesh (one paint draw, rubber folded in charcoal) so the carrier bank tilts them off a wall; one more draw than the shell class cap of 10, pending coordinator ruling on #241"
   },
   {
    "id": "shell_tally_c2",

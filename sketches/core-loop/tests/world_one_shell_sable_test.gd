@@ -19,8 +19,10 @@ const RIG := "res://assets/models/pilot_sable_anim.glb"
 const EXPECTED_CHECKS := 60
 const MAX_V := 15000
 const MAX_T := 16000
-const MAX_DRAWS := 19
-const SHELL_DRAWS := 14
+# 2026-10-22: SpoolKit (the winch spool, copper, paint and rubber) is its own mesh so the carrier bank tilts it
+# (baked-bracket bank split, pending the coordinator's ruling on #241): shell 17 by its registry exception.
+const MAX_DRAWS := 22
+const SHELL_DRAWS := 17
 const SHELL_TRIS := 6500        # hero_assets_test's world-one shell band, pilot excluded
 const LAYER_TRIS := 1500
 const CORE_LIMIT := 0.985
@@ -255,6 +257,10 @@ func _check_machinery(shell: Node) -> void:
 	var one_r := 0.0
 	var all_pod := points(pod, shell)
 	all_pod.append_array(tip)
+	# The spool is its own mesh under the Pod (SpoolKit, so the carrier bank tilts it), still part of the Pod's reach.
+	var spool := shell.find_child("SpoolKit", true, false) as MeshInstance3D
+	if spool != null:
+		all_pod.append_array(points(spool, shell))
 	for p in all_pod:
 		var c := clock(p)
 		if c >= 2.5 and c <= 3.75:
