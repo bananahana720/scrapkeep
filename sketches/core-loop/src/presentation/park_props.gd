@@ -93,7 +93,7 @@ const MERGE_CHUNK := 4
 
 static var file_overrides := {}
 static var _meshes := {}
-# Guards _meshes: warm() fills it on a worker while release_shared() and _build_stage() can clear it on the main thread.
+# Guards _meshes: warm() fills it on a worker while release_shared() and _take() can clear it on the main thread.
 static var _mesh_lock := Mutex.new()
 static var _cache_owner := ""
 # _far_source's reads, by path, and how many it has made (a test reads it).
@@ -123,6 +123,12 @@ var _holder: Node3D
 var _steps: Array = []
 var _kit := {}
 var _low := false
+# The next stage's plan, started on a worker once that stage's ground is ready (as natural.gd and set_dressing.gd start theirs),
+# with the far sources its build will read. A far read blocks until the GPU has drawn every frame in flight, and in the frames
+# after a stage entry that is the entry frame's 200 ms or so: one read step cost the 4080 18 to 44 ms there (scrapkeep#235,
+# row 26c). So the reads go one a frame while the stage before still plays, and the entry's read steps find them cached.
+var _next := {}
+var _next_reads: Array = []
 
 
 # What the placement rules read of a park, built once: the lines' legs, the route lanes, the keepouts
@@ -1171,6 +1177,8 @@ func _process(_delta: float) -> void:
 		_take()
 	if not _jobs.is_empty():
 		_slice(BUILD_SLICE_USEC)
+	elif _task < 0 and not _pending:
+		_prepare_next()
 	last_process_usec = Time.get_ticks_usec() - started
 	last_process_frame = Engine.get_process_frames()
 
@@ -1201,6 +1209,10 @@ func _clear_stage(_reason: String) -> void:
 
 func _exit_tree() -> void:
 	_free_views()
+	if not _next.is_empty():
+		WorkerThreadPool.wait_for_task_completion(_next.task)
+		_next = {}
+	_next_reads = []
 
 
 func _free_views() -> void:
@@ -1228,21 +1240,20 @@ func _build_stage() -> void:
 		return
 	var id := String(map.park["map"])
 	var low: bool = Preset.current == LOW_PRESET
-	# A pure function of the park, its ground and the preset: the same key keeps what is built (retries).
-	var key := [stage, id, low, ctx.terrain.geometry_root(stage).get_instance_id()]
+	var key := _key(stage)
 	visible = true
 	if key == _built_for:
 		return
 	_free_views()
-	if _cache_owner != id:
-		_mesh_lock.lock()
-		_meshes.clear()
-		_mesh_lock.unlock()
-		_far_sources.clear()
-		_cache_owner = id
 	map_id = id
 	_built_for = key
 	_low = low
+	if not _next.is_empty() and _next.key == key:
+		_task = _next.task
+		_out = _next.out
+		_next = {}
+		_next_reads = []
+		return
 	var out := {}
 	_out = out
 	var ground: Callable = ctx.terrain.ground_callable(stage)
@@ -1260,7 +1271,100 @@ func _take() -> void:
 		return
 	instances = out["list"]
 	_kit = out["kit"]
+	# A next-stage plan already read (this stage rebuilt under a new key) keeps its meshes and reads too.
+	var next_out: Dictionary = _next.out if not _next.is_empty() and _next.listed else {}
+	_keep_cached(instances, _kit, next_out)
+	_cache_owner = map_id
 	_jobs = jobs(instances, _low)
+
+
+# A pure function of the park, its ground and the preset: the same key keeps what is built (retries), and a plan made
+# for the next stage is taken when its key still holds at the entry.
+func _key(stage: int) -> Array:
+	return [stage, String(ctx.terrain.map_for(stage).park["map"]), Preset.current == LOW_PRESET, ctx.terrain.geometry_root(stage).get_instance_id()]
+
+
+# The next park stage's key once its ground is ready, else [].
+func _next_key() -> Array:
+	var terrain = ctx.terrain
+	if not "maps" in terrain:
+		return []
+	var next: int = terrain.stage + 1
+	if next > terrain.maps.size() or not terrain.is_ready(next):
+		return []
+	var map = terrain.map_for(next)
+	if not ParkSites.is_park(map) or not FileAccess.file_exists(file_path(String(map.park.get("map", "")))):
+		return []
+	return _key(next)
+
+
+# Idle frames only (no build running): plans the next stage on a worker, then reads its far sources one a frame.
+# A plan no stage can take any more (a new run, a preset change) is dropped once its worker is done.
+func _prepare_next() -> void:
+	var key := _next_key()
+	if _next.is_empty() or _next.key != key:
+		_next_reads = []
+	if not _next_reads.is_empty():
+		var started := Time.get_ticks_usec()
+		_far_source(_next_reads.pop_back())
+		last_steps.append("pre-read %.1f" % ((Time.get_ticks_usec() - started) / 1000.0))
+		return
+	if not _next.is_empty():
+		if _next.key != key:
+			if WorkerThreadPool.is_task_completed(_next.task):
+				WorkerThreadPool.wait_for_task_completion(_next.task)
+				_next = {}
+		elif not _next.listed and WorkerThreadPool.is_task_completed(_next.task):
+			_next.listed = true
+			var planned: Dictionary = _next.out
+			if not planned.is_empty() and planned["errors"].is_empty():
+				_next_reads = far_paths(planned["list"], planned["kit"])
+		return
+	if key.is_empty() or key == _built_for:
+		return
+	var stage: int = key[0]
+	var id: String = key[1]
+	var low: bool = key[2]
+	var map = ctx.terrain.map_for(stage)
+	var ground: Callable = ctx.terrain.ground_callable(stage)
+	var out := {}
+	_next = {"key": key, "out": out, "listed": false,
+		"task": WorkerThreadPool.add_task(func(): out.merge(prepare(id, map, ground, stage, low)), false, "park props next plan")}
+
+
+# True once the next stage (stage) is planned and its far sources are read: what the stage's entry would otherwise read.
+func next_read(stage: int) -> bool:
+	return not _next.is_empty() and int(_next.key[0]) == stage and _next.listed and _next_reads.is_empty()
+
+
+# The LOD2 paths a list's far merges read (job_steps' read steps), each once.
+static func far_paths(list: Array, kit: Dictionary) -> Array:
+	var seen := {}
+	for inst: Dictionary in list:
+		if not inst["litter"] and inst["class"] != HERO:
+			seen[_lod_paths(kit, inst)[2]] = true
+	return seen.keys()
+
+
+# The cache keeps what this list builds from and lets the last park's meshes and far sources go. The next stage's plan
+# warms its own meshes and reads its far sources into the same cache before the exit, so nothing is cleared at an entry.
+static func _keep_cached(list: Array, kit: Dictionary, next_out: Dictionary) -> void:
+	var keep := {}
+	for inst: Dictionary in list:
+		for path in _lod_paths(kit, inst):
+			keep[path] = true
+	if not next_out.is_empty() and next_out["errors"].is_empty():
+		for inst: Dictionary in next_out["list"]:
+			for path in _lod_paths(next_out["kit"], inst):
+				keep[path] = true
+	_mesh_lock.lock()
+	for path in _meshes.keys():
+		if not keep.has(path):
+			_meshes.erase(path)
+	_mesh_lock.unlock()
+	for path in _far_sources.keys():
+		if not keep.has(path):
+			_far_sources.erase(path)
 
 
 func _slice(budget_usec: int) -> void:
