@@ -1,0 +1,76 @@
+extends SceneTree
+
+# Bench-only (render bench, not in the repo): Sable (pylon_engineer) with one paint equipped, stage 1 of the
+# park table, still ball, the game's own chase camera, HUD hidden. One paint per launch.
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const SIZE := Vector2i(1280, 720)
+var game
+var out := ""
+var paint := ""
+var pilot := "pylon_engineer"
+var stage := 1
+
+
+func _initialize() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--out="):
+			out = a.trim_prefix("--out=")
+		elif a.begins_with("--paint="):
+			paint = a.trim_prefix("--paint=")
+			if paint == "none":
+				paint = ""
+		elif a.begins_with("--pilot="):
+			pilot = a.trim_prefix("--pilot=")
+		elif a.begins_with("--stage="):
+			stage = int(a.trim_prefix("--stage="))
+	root.size = SIZE
+	root.content_scale_size = SIZE
+	root.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
+	_run.call_deferred()
+
+
+func _frames(n: int) -> void:
+	for i in n:
+		await physics_frame
+
+
+func _run() -> void:
+	seed(171022)
+	game = Game.new()
+	game.test_mode = true
+	game.table = "park"
+	root.add_child(game)
+	while game.flow == null:
+		await physics_frame
+	game.ctx.calm = true
+	game.flow.press_start()
+	var profile = game.ctx.profile
+	profile.equip(pilot, "paint", paint)
+	var idx := -1
+	for i in game.flow.classes.size():
+		if game.flow.classes[i].id == pilot:
+			idx = i
+	print("class index ", idx, " paint '", paint, "' equipped '", profile.equipped(pilot, "paint"), "'")
+	game.flow.choose_class(idx)
+	game.run.set_max_hp(999999.0)
+	game.player.source = Intent.Scripted.new()
+	game.flow.enter_stage(stage, Vector3.ZERO, false)
+	await _frames(120)
+	game.player.body().freeze = true
+	await _frames(60)
+	var shown: Array = root.find_children("*", "CanvasLayer", true, false).filter(func(n): return n.visible)
+	for n in shown:
+		n.visible = false
+	for i in 12:
+		await RenderingServer.frame_post_draw
+	DirAccess.make_dir_recursive_absolute(out)
+	var tag := paint if paint != "" else "default"
+	root.get_texture().get_image().save_png(out.path_join("chase-%s.png" % tag))
+	var cam := root.get_camera_3d()
+	var d: float = cam.global_position.distance_to(game.player.ball_position()) if cam else -1.0
+	var f := FileAccess.open(out.path_join("chase-%s.json" % tag), FileAccess.WRITE)
+	f.store_string(JSON.stringify({"tool": "paint_chase.gd (bench)", "adapter": RenderingServer.get_video_adapter_name(), "pilot": pilot, "paint": paint, "equipped": profile.equipped(pilot, "paint"), "stage": stage, "camera_to_ball_m": d}, "\t"))
+	f.close()
+	print("snap ", tag, " cam dist ", d)
+	quit()
