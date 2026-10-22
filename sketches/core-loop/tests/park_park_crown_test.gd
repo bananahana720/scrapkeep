@@ -413,22 +413,49 @@ static func sentinel_clearance_failures(park: Dictionary, parent: Node3D, ground
 			rope_range = float(spec["value"])
 	var shapes := node.find_children("*", "CollisionShape3D", true, false)
 	for shape: CollisionShape3D in shapes:
-		if not shape.shape is BoxShape3D:
+		var span := surface_distance(shape, point)
+		if span.is_empty():
 			out.append("sentinel_40 has an unsupported collider")
 			continue
-		var half := (shape.shape as BoxShape3D).size * 0.5
-		var local := shape.to_local(point)
-		var closest := Vector3(clampf(local.x, -half.x, half.x), clampf(local.y, -half.y, half.y), clampf(local.z, -half.z, half.z))
-		var distance := point.distance_to(shape.to_global(closest))
-		nearest = minf(nearest, distance)
-		collisions += int(distance <= Tuning.RADIUS)
+		nearest = minf(nearest, span[0])
+		collisions += int(span[0] <= Tuning.RADIUS)
 	print("[sentinel_40_clearance] colliding posts %d nearest physical surface %.3f m" % [collisions, nearest])
 	if collisions != 0:
 		out.append("%d posts touch the recorded ball sphere at %s" % [collisions, point])
-	if shapes.is_empty() or rope_range <= 0.0 or nearest > rope_range:
+	var reach := INF
+	for shape: CollisionShape3D in shapes:
+		var span := surface_distance(shape, point)
+		if not span.is_empty():
+			reach = minf(reach, span[1])
+	if shapes.is_empty() or rope_range <= 0.0 or reach > rope_range:
 		out.append("no reachable physical anchor at the recorded approach")
 	node.free()
 	return out
+
+
+# [at most, at least] the distance from point to a collider's surface, each bound on its safe side: a box is exact on both;
+# a fitted anchor hull (ConvexPolygonShape3D, #289) is bounded below by its local bounding box (the hull lies inside it, so
+# "clear of the ball" holds if even the box is clear) and above by its nearest vertex (a hull point, so "in rope reach" holds if
+# even that is in reach). [] for any other shape.
+static func surface_distance(shape: CollisionShape3D, point: Vector3) -> Array:
+	var local := shape.to_local(point)
+	if shape.shape is BoxShape3D:
+		var half := (shape.shape as BoxShape3D).size * 0.5
+		var closest := Vector3(clampf(local.x, -half.x, half.x), clampf(local.y, -half.y, half.y), clampf(local.z, -half.z, half.z))
+		var d := point.distance_to(shape.to_global(closest))
+		return [d, d]
+	if shape.shape is ConvexPolygonShape3D:
+		var pts := (shape.shape as ConvexPolygonShape3D).points
+		if pts.is_empty():
+			return []
+		var box := AABB(pts[0], Vector3.ZERO)
+		var vertex := INF
+		for p in pts:
+			box = box.expand(p)
+			vertex = minf(vertex, point.distance_to(shape.to_global(p)))
+		var closest := Vector3(clampf(local.x, box.position.x, box.end.x), clampf(local.y, box.position.y, box.end.y), clampf(local.z, box.position.z, box.end.z))
+		return [point.distance_to(shape.to_global(closest)), vertex]
+	return []
 
 
 static func signal_clearance_failures(park: Dictionary, parent: Node3D, ground: Callable) -> Array:
@@ -457,14 +484,14 @@ static func signal_clearance_failures(park: Dictionary, parent: Node3D, ground: 
 			rope_range = float(spec["value"])
 	for point: Vector3 in approaches:
 		var nearest := INF
+		var reach := INF
 		for shape: CollisionShape3D in shapes:
-			if not shape.shape is BoxShape3D:
+			var span := surface_distance(shape, point)
+			if span.is_empty():
 				out.append("signal mast has an unsupported collider")
 				continue
-			var half := (shape.shape as BoxShape3D).size * 0.5
-			var local := shape.to_local(point)
-			var closest := Vector3(clampf(local.x, -half.x, half.x), clampf(local.y, -half.y, half.y), clampf(local.z, -half.z, half.z))
-			nearest = minf(nearest, point.distance_to(shape.to_global(closest)))
+			nearest = minf(nearest, span[0])
+			reach = minf(reach, span[1])
 		var yaw := deg_to_rad(float(row["yaw_deg"]))
 		var delta := Vector2(point.x - float(row["at"][0]), point.z - float(row["at"][1]))
 		var along := absf(delta.dot(Vector2(sin(yaw), cos(yaw))))
@@ -473,7 +500,7 @@ static func signal_clearance_failures(park: Dictionary, parent: Node3D, ground: 
 		print("[signal_clearance] approach %s nearest physical surface %.3f m outside ridge %s" % [point, nearest, outside_ridge])
 		if nearest <= Tuning.RADIUS or not outside_ridge:
 			out.append("mast collider or ridge intersects the recorded approach at %s" % point)
-		if shapes.is_empty() or nearest > rope_range:
+		if shapes.is_empty() or reach > rope_range:
 			out.append("no reachable physical mast at %s" % point)
 	node.free()
 	return out

@@ -115,6 +115,11 @@ func _go_live() -> void:
 	_catch(BAT, _sweep_dir * KNOCK / step)
 
 
+func _on_broken(method: String) -> void:
+	if method == "boost" and fleet != null:
+		fleet.discover("paddle_ride", _real_ball())
+
+
 func _live(_delta: float) -> bool:
 	return _holding()
 
