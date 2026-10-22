@@ -5,7 +5,8 @@ extends SceneTree
 # assets/asset_budgets.json. A shipped model fails on any triangle, vertex or draw (surface) count over its class,
 # or over its own exception in the registry. Counts are taken after Godot import, the way the per-asset tests take
 # them: surface index count / 3 triangles, surface vertex count, one draw per surface. Env SCRAPKEEP_AB_MEASURE=1
-# prints the table and fails nothing on caps, for deriving a cap from its members.
+# prints the table and fails nothing on class caps, for deriving a cap from its members; the w13-PD draw
+# ceiling below still runs in that mode.
 const REGISTRY := "res://assets/registry.json"
 const BUDGETS := "res://assets/asset_budgets.json"
 const ROOT := "res://assets"
@@ -21,11 +22,11 @@ const DECIDED_OVER_CEILING := {
 	"shell_tarn": {"draws": 17, "why": "docs/decisions.tsv 2026-10-10T23:14 w13-PD (Tarn 17: four articulated two-surface jaws; row 2026-10-11T00:16)"},
 	"shell_tarn_redjaw_teeth": {"draws": 17, "why": "docs/decisions.tsv 2026-10-10T23:14 w13-PD (Tarn 17, same machinery; row 2026-10-11T00:16)"},
 	"shell_tarn_c3": {"draws": 3, "why": "ruling 6348497831 on #241: class III layer at 3, ClawHooks banks; docs/decisions.tsv 2026-10-22T18:42"},
-	"shell_cannon_c5": {"draws": 2, "why": "ruling 6348855434 on #241: PortHoods banks (1 to 2)"},
-	"shell_tally_c4": {"draws": 2, "why": "ruling 6348855434 on #241: DrumHoods banks (1 to 2)"},
-	"shell_tally_c5": {"draws": 2, "why": "ruling 6348855434 on #241: HeavyDrums banks (1 to 2)"},
-	"shell_tarn_c4": {"draws": 2, "why": "ruling 6348855434 on #241: ClawHooks banks (1 to 2)"},
-	"shell_tarn_c5": {"draws": 2, "why": "ruling 6348855434 on #241: ClawHooks banks (1 to 2)"},
+	"shell_cannon_c5": {"draws": 2, "why": "ruling 6348855434 on #241: PortHoods banks (1 to 2); docs/decisions.tsv 2026-10-22T19:02"},
+	"shell_tally_c4": {"draws": 2, "why": "ruling 6348855434 on #241: DrumHoods banks (1 to 2); docs/decisions.tsv 2026-10-22T19:02"},
+	"shell_tally_c5": {"draws": 2, "why": "ruling 6348855434 on #241: HeavyDrums banks (1 to 2); docs/decisions.tsv 2026-10-22T19:02"},
+	"shell_tarn_c4": {"draws": 2, "why": "ruling 6348855434 on #241: ClawHooks banks (1 to 2); docs/decisions.tsv 2026-10-22T19:02"},
+	"shell_tarn_c5": {"draws": 2, "why": "ruling 6348855434 on #241: ClawHooks banks (1 to 2); docs/decisions.tsv 2026-10-22T19:02"},
 }
 var failures := 0
 var _layer_rule := RegEx.new()
@@ -52,7 +53,7 @@ func _ceiling(id: String, cls: String) -> int:
 		var m := _layer_rule.search(id)
 		if m != null:
 			return LAYER_DRAW_CEILING_III if m.get_string(1) == "3" else LAYER_DRAW_CEILING
-		return LAYER_DRAW_CEILING_III
+		return LAYER_DRAW_CEILING
 	return -1
 
 
