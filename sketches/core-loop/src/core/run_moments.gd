@@ -15,7 +15,9 @@ extends Node
 # pictures), sfx the drawn sound word ("" for none), size a layout hint (wide, tall,
 # square), facts a small dict of numbers, shot an Image (SHOT_WIDTH wide, null headless or
 # when no still was taken). save() hands the page to the scrapbook; page_ready tells the
-# summary screen it can draw it.
+# summary screen it can draw it. At run_ended the save runs on a worker: writing the stills and
+# the page took 78 to 82 ms of the 4080's 316 ms victory frame (scrapkeep#241), and the summary
+# draws the page from memory. saved_path() waits for it.
 #
 # A Continued run starts its moments at the resume (run_started resets them), so its opening
 # is the stage it resumed on.
@@ -88,9 +90,13 @@ var storage_dir := "user://"
 var stills := not ("--no-stills" in OS.get_cmdline_user_args())
 # Stills read back so far, so a timing run can show the switch fired (lesson 34).
 var shots_taken := 0
-# The last page finished by run_ended, and where save() put it ("" when unsaved).
+# The last page finished by run_ended, and where save() put it ("" when unsaved, or until the
+# save's worker is done: read it through saved_path()).
 var last_page := {}
 var last_page_path := ""
+# The run_ended save's WorkerThreadPool task (-1 for none) and the path it returns.
+var _save_task := -1
+var _save_out := {}
 
 var _best := {}
 var _staggered := {}
@@ -125,6 +131,7 @@ func setup(events_ref, run_ref, player_ref, flow_ref, stages_ref, dir: String) -
 
 
 func _reset() -> void:
+	saved_path()
 	_best.clear()
 	_staggered.clear()
 	_pending_death = {}
@@ -137,6 +144,8 @@ func _reset() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _save_task >= 0 and WorkerThreadPool.is_task_completed(_save_task):
+		saved_path()
 	_shot_wait = maxf(0.0, _shot_wait - delta)
 	if run == null or run.over or run.class_def == null:
 		return
@@ -228,7 +237,7 @@ func _on_run_ended(won: bool) -> void:
 	ledger["t"] = minf(float(ledger["t"]), float(finale["t"]))
 	_keep("ledger", ledger)
 	last_page = build_page(won, finale)
-	last_page_path = save(last_page)
+	_save_later(last_page)
 	page_ready.emit(last_page)
 
 
@@ -297,12 +306,39 @@ func _panel(row: Dictionary) -> Dictionary:
 	}
 
 
+# Where the last run_ended page was saved, waiting for its worker if it is still writing.
+func saved_path() -> String:
+	if _save_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_save_task)
+		_save_task = -1
+		last_page_path = String(_save_out.get("path", ""))
+		_save_out = {}
+	return last_page_path
+
+
+# save() on a worker. The store is made here (it loads a script); the worker writes a copy of the
+# page, whose stills it only reads.
+func _save_later(page: Dictionary) -> void:
+	saved_path()
+	var store = load(STORE_PATH).new(storage_dir) if ResourceLoader.exists(STORE_PATH) else null
+	var copy := page.duplicate(true)
+	var out := {}
+	_save_out = out
+	_save_task = WorkerThreadPool.add_task(func(): out["path"] = save(copy, store), false, "run_moments save")
+
+
+func _exit_tree() -> void:
+	saved_path()
+
+
 # Saves through the camp's scrapbook store (scrapbook_store.gd) when the build has it; until
 # then the same layout by hand: <storage_dir>/scrapbook/<run_id>.json, each still beside it as
-# <run_id>_<i>.png named in its panel's shot. Returns the JSON's path, or "".
-func save(page: Dictionary) -> String:
-	if ResourceLoader.exists(STORE_PATH):
-		var store = load(STORE_PATH).new(storage_dir)
+# <run_id>_<i>.png named in its panel's shot. Returns the JSON's path, or "". store is one made
+# ahead on the main thread (a worker save), or null to make it here.
+func save(page: Dictionary, store = null) -> String:
+	if store == null and ResourceLoader.exists(STORE_PATH):
+		store = load(STORE_PATH).new(storage_dir)
+	if store != null:
 		var saved := String(store.save(page))
 		if saved == "":
 			push_warning("run_moments: scrapbook refused the page: %s" % store.last_error)
