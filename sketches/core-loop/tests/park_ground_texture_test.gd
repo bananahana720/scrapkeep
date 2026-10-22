@@ -8,6 +8,7 @@ const Terrain := preload("res://src/world/terrain.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
 class Table:
 	const DEFS := [{"map": "park_sinkhole", "stage": 1, "world": 1}, {"map": "park_flume", "stage": 2, "world": 1}]
@@ -30,18 +31,26 @@ func _run() -> void:
 	terrain.build(w)
 	var row: Dictionary = MaterialSlots.row("ground")
 	var want := [Palette.look_texture(row.textures.floor_map).resource_path, Palette.look_texture(row.textures.strata_map).resource_path]
+	# The floor's tile size is the non-park floor's: sandstone.gdshader's own floor_metres default.
+	var shader_text := FileAccess.get_file_as_string("res://src/presentation/sandstone.gdshader")
+	var found := RegEx.create_from_string("uniform float floor_metres = ([0-9.]+);").search(shader_text)
+	t.check("sandstone.gdshader declares floor_metres", found != null)
+	if found != null:
+		t.near("park floor tile = sandstone floor_metres", ParkTerrain.GROUND_FLOOR_METRES, float(found.get_string(1)), 0.0001)
+	var metres := [ParkTerrain.GROUND_FLOOR_METRES, float(row.triplanar_scale)]
 	await process_frame
 	var nodes: Array = w.get_children().filter(func(n): return n.name.begins_with("ParkRender"))
 	t.eq("park build makes two render nodes", nodes.size(), 2)
 	for stage in [1, 2]:
 		terrain.use(stage)
 		for node in nodes:
-			_check_node(node, want, row, "stage %d %s" % [stage, node.name])
+			_check_node(node, want, metres, "stage %d %s" % [stage, node.name])
 	if nodes.size() == 2:
-		t.check("render nodes share one asset list", nodes[0].assets == nodes[1].assets)
+		t.check("each render node has its own asset list", nodes[0].assets != null and nodes[0].assets != nodes[1].assets)
 	quit(t.verdict())
 
-func _check_node(node: Node, want: Array, row: Dictionary, label: String) -> void:
+# Terrain3D's tile is 1 / (uv_scale * 0.5) at control 0 (see ParkTerrain.ground_assets).
+func _check_node(node: Node, want: Array, metres: Array, label: String) -> void:
 	var assets: Object = node.assets
 	t.check(label + " has assets", assets != null)
 	if assets == null:
@@ -51,6 +60,6 @@ func _check_node(node: Node, want: Array, row: Dictionary, label: String) -> voi
 	for i in mini(2, assets.get_texture_count()):
 		var tex: Object = assets.get_texture(i)
 		t.eq(label + " texture %d path" % i, tex.albedo_texture.resource_path if tex.albedo_texture else "", want[i])
-		t.near(label + " texture %d tile" % i, 1.0 / tex.uv_scale, float(row.triplanar_scale), 0.001)
+		t.near(label + " texture %d tile metres" % i, 2.0 / tex.uv_scale, float(metres[i]), 0.001)
 	var material: Object = node.material
 	t.check(label + " auto-shader on", material.auto_shader)
