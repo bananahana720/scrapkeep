@@ -281,7 +281,7 @@ class Kit:
         self.polish_opts.update(polish_opts or {})
         assert self.polish_opts["detail"] >= 1, "polish detail %r: common _segs(n) returns 0 below 1 and every cylinder and sphere vanishes" % (self.polish_opts["detail"],)
 
-    def kind(self, name, hero=False, tags=(), story="", variants="ab", polish_opts=None):
+    def kind(self, name, hero=False, tags=(), story="", variants="ab", polish_opts=None, line_clear_m=None):
         def deco(fn):
             if name in self.kinds:
                 raise ValueError("duplicate kind " + name)
@@ -289,7 +289,7 @@ class Kit:
                 raise ValueError("2 or 3 variants per kind (1 allowed only while drafting)")
             self.kinds[name] = {"fn": fn, "class": "dress_hero" if hero else "dress_prop",
                                 "tags": list(tags), "story": story, "variants": list(variants),
-                                "polish": dict(polish_opts or {})}
+                                "polish": dict(polish_opts or {}), "line_clear_m": line_clear_m}
             return fn
         return deco
 
@@ -476,6 +476,8 @@ class Kit:
             if max(x["height"] for x in variants.values()) > 3 and "tall" not in tags:
                 tags.append("tall")
             kinds[kind] = {"class": spec["class"], "tags": tags, "story": spec["story"], "variants": variants}
+            if spec.get("line_clear_m") is not None:
+                kinds[kind]["line_clear_m"] = float(spec["line_clear_m"])
         doc = {"schema": SCHEMA, "park": self.park,
                "recipe": "tools/blender/park/props/%s.py" % self.park, "kinds": kinds}
         path.write_text(json.dumps(doc, indent=1) + "\n")
