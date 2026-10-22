@@ -1,0 +1,9 @@
+{
+	"adapter": "NVIDIA GeForce RTX 3060",
+	"camera_to_ball_m": 8.02925586700439,
+	"equipped": "paint_sable_violet",
+	"paint": "paint_sable_violet",
+	"pilot": "pylon_engineer",
+	"stage": 1,
+	"tool": "paint_chase.gd (bench)"
+}
