@@ -65,7 +65,8 @@ func _main_thread() -> void:
 	var want: Dictionary = setters.get_data()
 	var got: Dictionary = region.get_data() if region != null else {}
 	for key in want:
-		var same: bool = got.get(key) is Image and got[key].get_data() == want[key].get_data() if want[key] is Image else got.get(key) == want[key]
+		var same: bool = got.get(key) is Image and got[key].get_format() == want[key].get_format() and got[key].has_mipmaps() == want[key].has_mipmaps() \
+			and got[key].get_data() == want[key].get_data() if want[key] is Image else got.get(key) == want[key]
 		if not same:
 			differ.append("%s: %s, setters %s" % [key, str(got.get(key)), str(want[key])])
 	_t.check("the set_data region holds what the setters' region holds, field by field", region != null and differ.is_empty()
