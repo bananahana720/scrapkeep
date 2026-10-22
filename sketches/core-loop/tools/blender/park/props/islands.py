@@ -2,8 +2,8 @@
 
 Pine-topped mesas over desert. The animals' net crews work in ochre rope and patched canvas,
 a dam-era fire crew left a lookout and a tram, and the Fleet moors on one mesa. Slickrock
-pink, sandstone tan, relict pine and manzanita. Fleet colours (iron oxide, charcoal, one brass
-tag) appear only on Fleet-owned kinds (winch_drum, the balloon tag).
+pink, sandstone tan, relict pine and manzanita. Brass (one tag) appears only on the Fleet-owned
+winch_drum; oxide wear and charcoal also sit on the tram and ore_trolley. The balloon tag is plain canvas.
 
 blender -b --factory-startup --threads 2 --python-exit-code 1 -P \
   sketches/core-loop/tools/blender/park/props/islands.py -- \
@@ -36,7 +36,7 @@ TIMBER_D = "4b4136"
 SAND = "b5a384"
 SAND_D = "9c8d73"
 SAND_P = "c9bb9f"
-OXIDE = "9b513a"      # Fleet only
+OXIDE = "9b513a"      # oxide wear: winch_drum, tram, ore_trolley
 BRASS = "d9b44a"      # Fleet only, one tag
 PETROL = "365754"     # Highdraft props board: machine-body enamel
 BONE = "d2c5a5"       # board bone: one panel or plate per machine kind
@@ -313,7 +313,7 @@ def tram_car_parked(p, v, rng):
     p.box((L - 0.8, 0.5, 0.15), (0, 0.7, z0 + 0.5), TIMBER)
     p.box((0.7, 0.5, 0.2), (0.0, -Wd / 2 - 0.6, 0.1), SAND_D, style="hard_smooth")
     p.cyl(0.14, 0.24, (0.0, -Wd / 2 - 0.62, 0.32), COPPER, segs=8, r2=0.17, style="hard_smooth")
-    # Iron corner straps on the long walls and plank ends (flat bands, no bolt holes).
+    # Oxide corner straps on the long walls and plank ends (flat bands, no bolt holes).
     for s in (-1, 1):
         for x in (-L / 2 + 0.05, L / 2 - 0.05):
             p.box((0.14, 0.16, H), (x, s * Wd / 2, z0 + H / 2), OXIDE, style="hard_smooth")

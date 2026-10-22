@@ -1,9 +1,9 @@
 # Islands park dressing note (Dressing lane)
 
 Base line: branch head after merging `origin/stage/alpha-w18` (f259e8cf421fc3c305b53ae104005dda40af9a41, merge 9577225bbf5bb2ceeee1a76997a6b5a8cfc18407) and the foundation `claude/zealous-franklin-ed0sxr-lineclear` (e72fff7d96a88118e622f30658bcddb3105ae206, merge a4b4fc5b08b315b21531766569b64fc3ae33ce1c); then the foundation again at be6189ec5f5c8eb33591c33ecc76d72e56828394 (e72fff7d plus the stage f259e8cf merge; merge 628de2e1c3167fe83d2dbb843114b44f1f92a23b); then `origin/stage/alpha-w18` again at 3c83375501aa98543b8785e3129a0cd028e0b1e8 (merge 90cd90d031db3c604d8b1d1d118abc15ab7b52fc); previous head b117ddd0.
-Plan check: `park_props_plan.gd --map=park_islands --check` reports 480 instances (50 litter), 0 violations, fingerprint 3322127868 = pin (re-pinned from 3660265306 by two density spots, f450 and f600; the earlier pin was 2014119072).
+Plan check: `park_props_plan.gd --map=park_islands --check` reports 430 instances (50 litter), 0 violations, fingerprint 2348699063 = pin (w18g re-pin from 3322127868, which was the w18f pin after f450 and f600; history: 2014119072, 3660265306, 3322127868; the w18g prune removed the ten-spot even row w400 to w408 and w901, 480 to 430 instances).
 
-Vignette file: `src/world/park/props/park_islands.json` (81 spots, 480 instances, 50 of them litter, pin 3322127868). Kit: `assets/models/park/props/islands/manifest.json`. Rules: DRESSING-KITS.md, READABILITY.md, KITS.md (islands). Audit: `tools/park_props_audit.gd` via the lock wrapper; the numbers below are from the merged tree (stage/alpha-w18 8ee9e2c1).
+Vignette file: `src/world/park/props/park_islands.json` (71 spots, 430 instances, 50 of them litter, pin 2348699063). Kit: `assets/models/park/props/islands/manifest.json`. Rules: `design-v3/park/DRESSING-KITS.md` (Readability rules, line 45 colours, lines 46 to 54 shapes to avoid) and the dressing brief `design-v3/park/dressing/KITS.md` (lands in #269; a stub here). Audit: `tools/park_props_audit.gd` via the lock wrapper; the current numbers are the "Audit (w18g)" section below (tree 1411f07f plus the w18g prune). Older numbers are labelled by run (7e05da67, w18e, w18f); the `stage/alpha-w18 8ee9e2c1` audit that this line used to cite is the older record.
 
 ## What and why (lore, #241 6329943362)
 
@@ -14,13 +14,13 @@ The giant machines are the humans' utility fleet: construction, mining and manuf
 Every template carries its `story` line in the file. Moments, by group:
 
 - **Heroes (5 spots).** `lookout_post` x2 (a fire crew's stilted cab by the stair, the dam-era lookout story), `balloon_landing` and `balloon_graveyard` (the net crews' balloon that came down, patched in two stitch hands), `tram_halt` (the mining tram cabin set down on blocks, never hung). Hero heights 2.2 to 5.2 m come from the manifest (lookout_hut 5.18/5.17/3.99 m, balloon_basket_wreck 2.20/3.18/3.10 m, tram_car_parked 4.40/4.38/4.42 m). The hero spots sit at least 80 m from World's `fire_lookout` row at (150, -700), a distance I chose as 4x the 20 m TALL line clearance; the nearest hero is far beyond it.
-- **Mids (11 spots).** `net_crew_corner`, `patchwork_rock`, `stair_marker`, `pine_ledge`, `ore_spill` (net menders' yard, sewing rock, hikers' numbered stones, relict pines, tipped ore bin) and one `mooring_spares` (winch drum, brass tag), which is only placed on a cell whose nearest row's society is `fleet` (mooring_pad_ramp). BRASS stays Fleet-only (READABILITY.md).
-- **Low story groups (63 spots).** `net_mending`, `chart_stones`, `dropped_bolt`, `rope_basket_rest`, `tuft_cairn`, `net_drying`, plus the earlier `stone_nook`, `rope_heap`, `cobble_pair`, `net_scrap`, `stool_rest`, `pine_cairn`. These are the Dressing-lane density answer: 3 or more distinct kinds per 150 m window of ride line (AMBITION-BRIEF, DRESSING-KITS "Density bar"). Each group has one moment (a mending spot, a chart-stone curve, a dropped bolt of cloth), with open ground between groups.
+- **Mids (11 spots).** `net_crew_corner`, `patchwork_rock`, `stair_marker`, `pine_ledge`, `ore_spill` (net menders' yard, sewing rock, hikers' numbered stones, relict pines, tipped ore bin) and one `mooring_spares` (winch drum, brass tag), which is only placed on a cell whose nearest row's society is `fleet` (mooring_pad_ramp). BRASS stays Fleet-only (DRESSING-KITS.md line 45).
+- **Low story groups (55 spots).** `net_mending`, `chart_stones`, `dropped_bolt`, `rope_basket_rest`, `tuft_cairn`, `net_drying`, plus the earlier `stone_nook`, `rope_heap`, `cobble_pair`, `net_scrap`, `stool_rest`, `pine_cairn`. These are the Dressing-lane density answer: 3 or more distinct kinds per 150 m window of ride line (AMBITION-BRIEF, DRESSING-KITS "Density bar"). Each group has one moment (a mending spot, a chart-stone curve, a dropped bolt of cloth), with open ground between groups.
 - Scales in the new low templates are 0.85 to 1.1, chosen so the scaled height is at most 1.0 m from manifest heights (net_bundle 0.60 to 0.85, mender_stool b/c 0.83/0.82, rope_basket a 0.87, patch_bolt 0.50 to 0.64, stair_stones 0.18 to 0.49, stone_scatter 0.36 to 0.85, grass_tufts a/b 0.86/0.61). `LOW_GROUND_MAX_M` is 1.0 m (park_props.gd).
 
 ## Why they read without blocking a line, a lander or a telegraph
 
-- No pickup, crate, ramp, gate, rail, creature or hanging machine shape (READABILITY.md "Shapes to avoid"); rope coils lie flat; the tram is on blocks.
+- No pickup, crate, ramp, gate, rail, creature or hanging machine shape (DRESSING-KITS.md "Shapes to avoid", lines 46 to 54); rope coils lie flat; the tram is on blocks.
 - The validator gives the placement: LOW 6 m, MID 10 m, TALL or hero 20 m from every `lines.json` leg, route lanes for TALL, 25 m from homes and camps, slope 25 degrees, seat 0.15 m. `park_props_plan.gd --check` reports 0 violations.
 - The kicker lip and run-out capsules are untouched. They are the landing zones, so they are the named step-lip keepout (coordinator ruling): the 9 failing windows with no valid cell are all inside it.
 - Colours: rope, wicker, patch cloth, sandstone, timber and slickrock were desaturated and darkened in `islands.py` after the first colour stills showed orange flecks under the low sun (stills #189, #210 in `before_after_even.png`). No hazard, mint or ancient hue; no emissive; no stripes.
@@ -55,9 +55,9 @@ None for islands (the brief names none), so no kind carries `line_clear_m` here.
 
 ## What I checked
 
-- Plan check: 0 violations (fingerprint 2014119072 equals the pin).
+- Plan check: 0 violations, fingerprint 2348699063 equals the pin (w18g; the 2014119072 that this line once recorded is an old record).
 - Tests (SMOKE_SLOTS=2): park_props_test, park_park_islands_test, park_dressing_pin_test, pocket_line_clear_test, set_dressing_test, asset_registry_test, scatter_rows_test all PASS (scatter_rows_test failed once, 1 of 90 checks, in the first batch run while the box was shared, then passed 90 of 90 twice on rerun; cause not identified).
-- Audit of the new head: run, see "Audit (w18e, --open)" below. The numbers in the next bullet are the older 7e05da67 audit.
+- Audit of the current head: see "Audit (w18g)" below. The next two bullets are the older 7e05da67 audit (previous run, superseded).
 - Audit, full run (7e05da67): 48 windows, 16 exempt (arena 10, telegraph 6), 21 pass, 11 fail (share 0.656; the pass count was 13 before this pass); draw delta median 3, max 64 (bar 120); primitives median 516,739, max 798,889; void poses 0; bare share 72.0%.
 - Failing windows (centre; kinds in view): floor 150 (6, -559; 0), floor 750 (-282, -212; 0), floor 1350 (93, 205; 1), floor 1500 (32, 334; 1), rivet 150 (157, -568; 0), sable 300 (-100, -499; 0), sable 600 (153, -318; 2), sable 750 (262, -215; 0), sable 900 (229, -93; 0), tarn 150 (-130, -570; 0), tarn 300 (-60, -500; 0). Probe of a 4 m radius, 1.0 m prop on a 5 m grid within 70 m of each centre: 0 valid cells for 9 windows (kicker run-out 120 to 587 of about 613 cells each; kicker ramp, line_clear and ground_row also), and for floor 1500 and sable 600 the valid cells (41 and 46) lie 43 m or more from the line, mostly beyond the 40 m band; one low spot was added at (170, -370) for sable 600, which still shows 2 kinds.
 - Stills: `artifacts/local/dressing/islands/before_after.png` and `before_after_even.png` (same-tree before frames with the vignette file moved aside, via `before.sh`). Pixel change per pose (pixels differing by more than 24 grey levels): 0.04 to 1.06 percent; this is small because low props are small in the frame and most poses sit in keepouts.
@@ -68,14 +68,14 @@ The litter schema has no scale or variant cap (scale 0.9 to 1.15 in `_litter`, g
 
 ## Not met and named fails
 
-Status after the w18f audit: no density window fails (see "Audit (w18f)"). The first two bullets and the test bullet below are the 7e05da67 record and are superseded; the run-out bullet is now the `--open` list.
+Status after the w18g audit: no density window fails (see "Audit (w18g)"; w18f gave the same result with 10 more spots). The first two bullets and the test bullet below are the 7e05da67 record and are superseded; the run-out bullet is now the `--open` list.
 
-- Sable 600 (153,-318): 9 more low spots were added in the 43 to 60 m band at (165..190, -378..-366) from the probe's legal cells (spacing 10 m), because density counts kinds within 60 m of the camera. The audit that shows the result is held (see above).
+- Sable 600 (153,-318): 9 more low spots (w400 to w408, plus w901) were once added in the 43 to 60 m band at (165..190, -378..-366). Removed in w18g: they were a zigzag line of 4 to 12 m spacing, all at yaw 137, reading as scatter (DECISIONS section 8, "vignettes, not scatter"), and f600 is what fills that window.
 - Floor 1500 (32,334) has 0 legal cells within 80 m of its centre after the telegraph rule, so no fill is possible there.
-- Windows with a kicker run-out within 40 m of the window centre (distance from the run-out capsule surface, from `park_map.kickers`, run-out capsule as in `kicker_keepouts`): floor 150 (6.3,-559) run_step_lip_1 (-5.0 m); floor 750 (-281.9,-211.6) fan_step_lip_3 (-8.4); floor 1350 (93,204.6) carve_step_lip_1 (-1.4); floor 1500 (32.3,333.5) carve_step_lip_5 (-7.5); rivet 150 (156.5,-567.9) lookout_lip (-6.3); sable 300 (-100.4,-499.1) run_step_lip_2 (-7.1); sable 750 (262.4,-215.2) fan_step_lip_3 (-4.8); sable 900 (228.6,-92.5) fan_step_lip_6 (-7.5); tarn 150 (-130.2,-570.2) lookout_lip (-10.2); tarn 300 (-59.5,-499.5) run_step_lip_2 (-7.5). Negative means the centre is inside the capsule. I did not pass `--open`.
+- Windows with a kicker run-out within 40 m of the window centre (distance from the run-out capsule surface, from `park_map.kickers`, run-out capsule as in `kicker_keepouts`): floor 150 (6.3,-559) run_step_lip_1 (-5.0 m); floor 750 (-281.9,-211.6) fan_step_lip_3 (-8.4); floor 1350 (93,204.6) carve_step_lip_1 (-1.4); floor 1500 (32.3,333.5) carve_step_lip_5 (-7.5); rivet 150 (156.5,-567.9) lookout_lip (-6.3); sable 300 (-100.4,-499.1) run_step_lip_2 (-7.1); sable 750 (262.4,-215.2) fan_step_lip_3 (-4.8); sable 900 (228.6,-92.5) fan_step_lip_6 (-7.5); tarn 150 (-130.2,-570.2) lookout_lip (-10.2); tarn 300 (-59.5,-499.5) run_step_lip_2 (-7.5). Negative means the centre is inside the capsule. That 7e05da67 audit did not pass `--open`; superseded by the `--open` sections below.
 - Tests: run_tier_test failed 20 of 192 checks, every failure a runtime-child timeout (`exit=-1 timeout=true`) with the box at load average 22; scatter_rows_test timed out twice for the same reason (it passed 90 of 90 on the previous head). The other tests passed (counts in the hand-back).
 
-## Audit (w18f, --open), ruling 6329579296
+## Audit (w18f, --open, previous run), ruling 6329579296
 
 Ruling 6329579296: an `--open` window carries a reason the audit checks. `runout:<kicker>` needs a kicker run-out within 40 m of the window centre, and the audit fails an `--open` window whose reason does not check out.
 
@@ -96,14 +96,14 @@ Pre-audit (`artifacts/local/w18e-pre`, no `--open`): 48 windows, 16 exempt (aren
 | tarn 150 | -130.2, -570.2 | lookout_lip |
 | tarn 300 | -59.5, -499.5 | run_step_lip_2 |
 
-Result of the final audit (`artifacts/local/w18f`, after the recolour and the two fill spots): 48 windows, exempt 26 (arena 10, `open:runout` 10, telegraph 6), pass 22, fail 0, density share 1.0; `density_open_checked` 10, `density_open_rejected` empty; void poses 0; props-only draw delta max 66, median 3.5 (bar 120); bare share 73.2 percent. The earlier w18e audit (before the fill) had 20 pass and 2 fail.
+Result of the previous audit (w18f; `artifacts/local/w18f`, superseded by w18g; after the recolour and the two fill spots): 48 windows, exempt 26 (arena 10, `open:runout` 10, telegraph 6), pass 22, fail 0, density share 1.0; `density_open_checked` 10, `density_open_rejected` empty; void poses 0; props-only draw delta max 66, median 3.5 (bar 120); bare share 73.2 percent. The earlier w18e audit (before the fill) had 20 pass and 2 fail.
 
 ### The two filled windows (ruling #241 6332450092 not needed)
 
 Coordinator ruling 6332450092 says a window that cannot be filled stays a documented density fail with no `--open`. Neither did: both filled.
 - kest 450 (-47.9, -366.1): 2 kinds before (grass_tufts, stone_scatter). Probed with `fill_probe.gd` (a throwaway script that applies the audit's own camera, `camera_for` and `cell_visible`, 2.5 m grid, mid camera, within 60 m, over the window's 3 poses, and expands a whole template through `validate`): 29 cells where a whole `net_mending` passes, 41 for `rope_heap`, 35 for `net_scrap` and `net_drying`, 13 for `chart_stones`. Spot `f450` (`net_mending`, at (-98.8, -326.2), 22.5 m from the nearest pose).
 - sable 600 (153.0, -317.8): 2 kinds before (stone_scatter, patch_bolt). 48 cells for `net_mending`, 60 for `net_scrap`, 55 for `rope_heap`, 30 for `stool_rest`. Spot `f600` (`net_mending`, at (171.2, -326.2), 20 m from the nearest pose).
-- After: both windows show 6 kinds (grass_tufts, mender_stool, net_bundle, patch_bolt, rope_basket, stone_scatter) in `artifacts/local/w18f/park_islands/samples.json`. Plan check 0 violations, so every keepout, line-clear, slope and seat rule holds at both spots. Re-pin: 3660265306 to 3322127868 (470 to 480 instances).
+- After: both windows show 6 kinds (grass_tufts, mender_stool, net_bundle, patch_bolt, rope_basket, stone_scatter) in `artifacts/local/w18f/park_islands/samples.json`. Plan check 0 violations, so every keepout, line-clear, slope and seat rule holds at both spots. Re-pin at the time: 3660265306 to 3322127868 (470 to 480 instances); w18g then re-pinned to 2348699063 (430).
 
 ## Recolour to the Highdraft props board (this round)
 
@@ -118,13 +118,25 @@ Machine part to board panel (lines from grep of the final recipe):
 - KIT_BUILT before (`artifacts/local/w18f/base.log`, built from the unchanged recipe) and after (`after.log`) are identical for all 8 variants: tram a `[10228, 5114, 1534]` radius 3.82 height 4.40, b `[11580, 5790, 1736]` 3.81 4.38, c `[13316, 6658, 1996]` 4.35 4.42; ore a `[2572, 1286, 386]` 1.16 1.33, b `[2932, 1466, 440]` 1.45 1.31, c `[2804, 1402, 420]` 1.53 1.57; winch a `[2528, 1264, 376]` 1.53 1.30, b `[1896, 948, 283]` 1.34 1.30.
 - Previews: `sketches/core-loop/artifacts/local/dressing/islands/w18f/` (contact sheet and per-variant stills), opened and compared with the props board by eye: petrol bodies, bone and oxide accents and small copper fittings read as the board's machines; they are chunkier and flatter than the painted board (no chipped paint texture; one vertex colour material only).
 
+## Audit (w18g)
+
+Run: `artifacts/local/w18g` on the tree at 1411f07f plus the w18g prune (spots w400 to w408 and w901 removed; plan check 0 violations, 430 instances, pin 2348699063), the same ten `--open=x:z:10:runout:<kicker>` args as the w18f table above.
+
+Ruling 6329579296: an `--open` window carries a reason the audit checks. `runout:<kicker>` needs a kicker run-out within 40 m of the window centre, and the audit fails an `--open` window whose reason does not check out.
+
+- 48 windows; exempt 26 (arena 10, `open:runout` 10, telegraph 6); pass 22; fail 0; density share 1.0.
+- `density_open_checked` 10; `density_open_rejected` empty.
+- Props-only draw delta max 63, median 2.5 (bar 120); primitives median 515,597, max 797,289.
+- Bare share 73.2 percent; void poses 0.
+- No window newly failed from the prune, so no spot was restored from the row; sable 600 still passes on f600 and the earlier spots.
+
 ## Reference boards (rulings 6330671507, 6331210075)
 
 Boards read (each opened and looked at): `docs/art/reference/highdraft/highdraft-props-moodboard.jpg`, `highdraft-crew-moodboard.jpg`, `highdraft-landmark-hanging-isle.jpg`, `docs/art/reference/era/era-space-ground-ends-moodboard.jpg`, `style/style-palette-moodboard.jpg`, `style-materials-moodboard.jpg`, `style-shape-moodboard.jpg`, `pilots/pilots-balls-heft-moodboard.jpg`. Boards settle look only.
 
 Board colours. Props board swatch strip: sandstone c6a274, oxide 9b513a, charcoal 242a28, petrol 365754, bone d2c5a5, copper b77843. Crew board adds brass d9b44a (Fleet plate on the mooring winch) and life 8f84b3. The props board paints machine bodies (braked drum, heat shields, closed furnace door) as petrol enamel with bone panels, copper pipes and clamps, charcoal housings and oxide wear; its README says "broad material differences and contact wear" and "props remain matte".
 
-**Palette roles.** Machine bodies now use the board's petrol, bone, oxide and copper (recolour section above). Sandstone, bone and charcoal also appear as SAND, SAND_D, SAND_P, `C.bone`, `C.charcoal` and `C.cable`. Non-machine kinds (rope, timber, wicker, plants, slickrock) keep their desaturated colours; see drift.
+**Palette roles.** Machine bodies now use the board's petrol, bone, oxide and copper (recolour section above). Bone and charcoal also appear as `C.bone`, `C.charcoal` and `C.cable`. Sandstone is a drift, not a match (see Board drift item 5). Non-machine kinds (rope, timber, wicker, plants, slickrock) keep their desaturated colours; see drift.
 
 **Shape language.** Broad wear and soft toy shapes: low-poly lumps rounded by subsurf (`blob`, styles "soft" and "round"), flat-lying coils, a tub bin on stub axles, a three-legged stool, a tram on blocks. Silhouettes are low and wide like the board's benches and stools.
 
@@ -166,6 +178,7 @@ Recoloured this round: machine bodies (tram_car_parked, ore_trolley, winch_drum)
 2. Neutral greys `C.iron`, `C.iron_light`, `C.concrete`, `C.concrete_dark`: lookout_hut hardware (144, 148), the rock mixes (337, 444), stair-stone chips (476), rope_basket (524, 525, 527), patch_bolt tin (603, 604). Board metal is petrol, charcoal or copper.
 3. Greens PINE, PINE_D, `C.leaf`, `C.leaf_dark`, `C.dry_grass`: foliage in lookout_hut, balloon_basket_wreck, pine_sapling, manzanita, grass_tufts, net_bundle, mender_stool, chart_post, ore_trolley, rope_basket, tram_car_parked: shown in the board's images but with no swatch.
 4. Chunkier than the board: one vertex-colour material, so no chipped-paint wear (kit.py line 566 enforces one material and no images).
+5. Sand family near, not equal to, the board swatch: SAND b5a384, SAND_D 9c8d73 and SAND_P c9bb9f (`islands.py` lines 36 to 38) against the board's sandstone c6a274; `C["sandstone"]` is unused. Colours not changed.
 The reviewer rules on FAIL and the ART-MISTAKES line.
 
 ## Smoke, final tree (w18f round)
