@@ -2377,10 +2377,10 @@
    "id": "s113_lamp_wall",
    "template": "lamp_wall",
    "at": [
-    180.0,
-    -30.0
+    184.0,
+    -20.0
    ],
-   "yaw_deg": 30.9,
+   "yaw_deg": -136.6,
    "near": "east_drift_10: lamps facing the wrong way"
   },
   {
@@ -2567,7 +2567,7 @@
    "id": "s132_lamp_wall",
    "template": "lamp_wall",
    "at": [
-    104.89,
+    118.89,
     195.69
    ],
    "yaw_deg": 117.8,
@@ -3057,5 +3057,5 @@
  "low_ground_rows": [
   "great_room"
  ],
- "pin": 2700969323
+ "pin": 3120478943
 }

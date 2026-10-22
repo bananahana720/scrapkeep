@@ -1436,23 +1436,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "rain_gauge variant a LOD0 (2400 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; polished and baked."
+    "notes": "rain_gauge variant a LOD0 (1580 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.6977,
+     -0.6871,
      0,
-     -0.6519
+     -0.6673
     ],
     "max": [
-     0.6977,
+     0.6871,
      1.3836,
-     0.6519
+     0.6673
     ],
     "size": [
-     1.3954,
+     1.3742,
      1.3836,
-     1.3038
+     1.3346
     ]
    }
   },
@@ -1464,23 +1464,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "rain_gauge variant a LOD1 (1200 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "rain_gauge variant a LOD1 (790 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.6983,
+     -0.6877,
      0,
-     -0.6514
+     -0.6668
     ],
     "max": [
-     0.6991,
+     0.6871,
      1.3865,
-     0.6515
+     0.6658
     ],
     "size": [
-     1.3974,
+     1.3748,
      1.3865,
-     1.3029
+     1.3326
     ]
    }
   },
@@ -1492,23 +1492,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "rain_gauge variant a LOD2 (360 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "rain_gauge variant a LOD2 (234 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.6995,
+     -0.6889,
      0,
-     -0.6588
+     -0.6735
     ],
     "max": [
-     0.7032,
-     1.3651,
-     0.6478
+     0.6799,
+     1.3853,
+     0.6715
     ],
     "size": [
-     1.4027,
-     1.3651,
-     1.3066
+     1.3688,
+     1.3853,
+     1.345
     ]
    }
   },
@@ -1520,23 +1520,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "rain_gauge variant b LOD0 (2684 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; polished and baked."
+    "notes": "rain_gauge variant b LOD0 (1868 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.9588,
+     -0.9636,
      0,
-     -0.6561
+     -0.6555
     ],
     "max": [
-     0.9588,
+     0.9636,
      1.3887,
-     0.6561
+     0.6555
     ],
     "size": [
-     1.9176,
+     1.9272,
      1.3887,
-     1.3122
+     1.311
     ]
    }
   },
@@ -1548,23 +1548,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "rain_gauge variant b LOD1 (1342 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "rain_gauge variant b LOD1 (934 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.9584,
+     -0.9632,
      0,
-     -0.6557
+     -0.6555
     ],
     "max": [
-     0.9594,
+     0.9636,
      1.3887,
-     0.6556
+     0.6562
     ],
     "size": [
-     1.9178,
+     1.9268,
      1.3887,
-     1.3113
+     1.3117
     ]
    }
   },
@@ -1576,23 +1576,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "rain_gauge variant b LOD2 (402 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "rain_gauge variant b LOD2 (277 tris): Drip gauge on a short post: the crew counted every drop falling down from the skylights. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.9572,
+     -0.9712,
      0,
-     -0.6631
+     -0.6591
     ],
     "max": [
-     0.9621,
+     0.9681,
      1.3865,
-     0.6536
+     0.6561
     ],
     "size": [
-     1.9193,
+     1.9393,
      1.3865,
-     1.3167
+     1.3152
     ]
    }
   },

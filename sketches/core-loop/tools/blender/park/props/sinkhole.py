@@ -360,14 +360,15 @@ def rain_gauge(p, v, rng):
     p.beam((0, 0, 0.25), (0.2 * lean[0] * 4, 0, 1.0), 0.2, C["timber_pale"], style="hard")
     ox = lean[0] * 0.8
     p.cyl(0.4, 0.36, (ox, 0, 1.2), C["iron_light"], segs=6, r2=0.55, style="hard_smooth")  # funnel
-    # Chunky dial on the post, face to -Y.
-    p.torus(0.36, 0.07, (ox, -0.25, 0.7), STEEL_D, rot=(FLAT, 0, 0), major=14, minor=5)
-    p.cyl(0.34, 0.08, (ox, -0.2, 0.7), PALE_PAINT, segs=6, rot=(FLAT, 0, 0), style="hard_smooth")
-    for k in range(8):
-        a = TAU * k / 8
-        p.box((0.05, 0.03, 0.09), (ox + 0.27 * math.cos(a), -0.3, 0.7 + 0.27 * math.sin(a)), C["charcoal"], style="fine", jit=0.006)
-    a = 2.3 if v == "a" else 4.4
-    p.rod((ox, -0.31, 0.7), (ox + 0.25 * math.cos(a), -0.31, 0.7 + 0.25 * math.sin(a)), 0.03, C["charcoal"], segs=5)
+    # Graduated measuring tube on the post, front to -Y: tall, narrow, straight, no round face.
+    # Pale glass above a petrol (STEEL, a board colour) water column; a fuller on a, lower on b.
+    tx, ty, z0, zt, fill = ox, -0.2, 0.35, 1.05, (0.35 if v == "a" else 0.2)
+    p.cyl(0.1, 0.04, (tx, ty, z0 - 0.02), C["iron_light"], segs=8, style="hard")  # foot cap
+    p.cyl(0.09, fill, (tx, ty, z0 + fill / 2), STEEL, segs=8, style="hard")  # water column
+    p.cyl(0.09, zt - z0 - fill, (tx, ty, z0 + fill + (zt - z0 - fill) / 2), PALE_PAINT, segs=8, style="hard")  # glass
+    for k in range(5):  # ladder scale up the left side
+        p.box((0.09 if k % 2 == 0 else 0.06, 0.03, 0.025), (tx - 0.05, ty - 0.075, 0.47 + 0.12 * k), C["charcoal"],
+              style="fine", jit=0.004)
     p.ico(0.25, (0.6, -0.6, 0.15), LICHEN, scale=(1.3, 1, 0.4), subdiv=0, style="soft", jit=0.02)
     if v == "b":
         p.cyl(0.18, 0.3, (-0.9, -0.5, 0.18), C["iron_light"], segs=6, rot=(0, FLAT, 0.4), style="hard_smooth")  # spare tin cup, tipped

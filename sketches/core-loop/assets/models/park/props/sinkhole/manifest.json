@@ -320,11 +320,11 @@
       "res://assets/models/park/props/sinkhole/rain_gauge_a_lod2.glb"
      ],
      "tris": [
-      2400,
-      1200,
-      360
+      1580,
+      790,
+      234
      ],
-     "radius": 0.854,
+     "radius": 0.838,
      "height": 1.384
     },
     "b": {
@@ -334,11 +334,11 @@
       "res://assets/models/park/props/sinkhole/rain_gauge_b_lod2.glb"
      ],
      "tris": [
-      2684,
-      1342,
-      402
+      1868,
+      934,
+      277
      ],
-     "radius": 1.086,
+     "radius": 1.088,
      "height": 1.389
     }
    }
