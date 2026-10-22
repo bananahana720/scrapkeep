@@ -39,6 +39,9 @@ var _posture_seen: Array = []
 var _phase_started := 0.0
 var _phase_open_at := 0.0
 var _chunks_lost_seen := 0
+# Whether the build was a monster build when the fight began (warden.gd monster_build, latched at entry).
+# The hold's exemption reads this, not the live heft, which climbs with the scrap picked up in the fight.
+var _entry_monster := false
 
 
 func setup(ctx_ref) -> void:
@@ -71,6 +74,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_phase_started = 0.0
 	_phase_open_at = 0.0
 	_chunks_lost_seen = 0
+	latch_monster()
 	_place_ball(center, entry_velocity)
 	ctx.flow.boss_active = true
 	ctx.flow.boss_plating = live_plating()
@@ -123,12 +127,18 @@ func _hold_update() -> void:
 		_phase_started = _phase_open_at
 
 
-# True while a lost chunk's phase has not yet played its minimum: the Warden is closed. A monster
-# build (warden.gd monster_build, read now like the posture judge reads it per hit) is never held, so
-# an overpowered build still breaks the fight faster than an ordinary one.
+# Reads the build's monster status now and keeps it for the hold. Called at entry; tests call it after
+# they set a Warden's monster_heft.
+func latch_monster() -> void:
+	_entry_monster = is_instance_valid(warden) and warden.monster_build()
+
+
+# True while a lost chunk's phase has not yet played its minimum: the Warden is closed. A build that
+# was a monster build at entry (latch_monster) is never held, so an overpowered build still breaks the
+# fight faster than an ordinary one; an ordinary build stays held however much heft it picks up.
 func hold_active() -> bool:
 	_hold_update()
-	return clock < _phase_open_at and not (is_instance_valid(warden) and warden.monster_build())
+	return clock < _phase_open_at and not _entry_monster
 
 
 # The chunks the fight reads as left: a held chunk still counts, so the phase, the floor and the

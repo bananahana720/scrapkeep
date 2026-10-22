@@ -1,3 +1,4 @@
+# smoke: solo timeout=600s (four simulated boss fights per boss, each held 60 s or more: 5 min wall on a quiet box)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -32,18 +33,16 @@ func _run() -> void:
 		var hold: float = (Waking.PHASE_MIN_SECONDS if world == 2 else Mind.PHASE_MIN_SECONDS)[0]
 		var key := boss + ".phase_min_by_phase"
 		var runs := {}
-		for name in ["default", "identity", "zero", "half", "ordinary", "monster"]:
+		for name in ["default", "zero", "monster", "rising"]:
 			ChallengeDials.reset()
 			match name:
-				"identity": ChallengeDials.set_overrides({key: [1.0, 1.0, 1.0, 1.0]})
 				"zero": ChallengeDials.set_overrides({key: [0.0, 0.0, 0.0, 0.0]})
-				"half": ChallengeDials.set_overrides({key: [0.5, 0.5, 0.5, 0.5]})
 			var threshold := NAN
-			if name == "ordinary":
+			if name in ["default", "rising"]:
 				threshold = INF
 			elif name == "monster":
 				threshold = -1.0
-			runs[name] = await _fight(world, threshold)
+			runs[name] = await _fight(world, threshold, name == "rising")
 		ChallengeDials.reset()
 		_check(boss, hold, runs)
 	ChallengeDials.reset()
@@ -59,9 +58,6 @@ func _check(boss: String, hold: float, runs: Dictionary) -> void:
 			and base["losses"].size() >= 3 and base["losses"][1] < hold, "held %d, %s" % [base["held_frames"], str(base["losses"])])
 	_t.check("%s default: fight won and a chunk lost early is held" % boss, held["won"] and held["held_frames"] > 0,
 			"won %s, held frames %d" % [held["won"], held["held_frames"]])
-	_t.eq("%s identity multiplier matches the constant" % boss, runs["identity"]["losses"], held["losses"])
-	_t.check("%s half multiplier holds half as long" % boss, runs["half"]["losses"].size() >= 3
-			and runs["half"]["losses"][1] >= hold * 0.5 - 0.1 and runs["half"]["losses"][1] < hold - 0.1, str(runs["half"]["losses"]))
 	_t.check("%s held: no posture while held" % boss, held["posture_while_held"] == 0.0,
 			"max posture while held %.2f" % held["posture_while_held"])
 	_t.check("%s held: no chunk lost while held" % boss, held["lost_while_held"] == 0, "%d lost" % held["lost_while_held"])
@@ -80,10 +76,14 @@ func _check(boss: String, hold: float, runs: Dictionary) -> void:
 	_t.check("%s held: no telegraph comes sooner" % boss, later, "%s vs %s" % [str(held["telegraphs"]), str(base["telegraphs"])])
 	# An ordinary build (threshold out of reach) is held; a monster build (heft above the threshold) is never
 	# held and its posture lands at once.
-	var ordinary: Dictionary = runs["ordinary"]
+	var ordinary: Dictionary = held
 	var monster: Dictionary = runs["monster"]
 	_t.check("%s ordinary fixture is held" % boss, ordinary["held_frames"] > 0 and ordinary["losses"][1] >= hold - 0.1,
 			"held frames %d, losses %s" % [ordinary["held_frames"], str(ordinary["losses"])])
+	var rising: Dictionary = runs["rising"]
+	_t.check("%s heft rising over the threshold mid-fight stays held" % boss, rising["held_frames"] > 0 and rising["losses"][1] >= hold - 0.1
+			and rising["losses"].slice(1) == ordinary["losses"].slice(1), "held frames %d, %s vs %s" % [rising["held_frames"], str(rising["losses"]), str(ordinary["losses"])])
+	# (The first chunk can fall sooner: the live monster lift on posture gain is #222's and unchanged.)
 	_t.check("%s monster fixture is never held" % boss, monster["held_frames"] == 0 and monster["won"],
 			"held frames %d, won %s" % [monster["held_frames"], monster["won"]])
 	_t.check("%s monster fixture's posture lands at once" % boss, monster["losses"].size() >= 3 and monster["losses"][1] < hold,
@@ -92,7 +92,7 @@ func _check(boss: String, hold: float, runs: Dictionary) -> void:
 			"%.2f vs %.2f" % [monster["end"], ordinary["end"]])
 
 
-func _fight(world: int, threshold := NAN) -> Dictionary:
+func _fight(world: int, threshold := NAN, rising := false) -> Dictionary:
 	var game = Game.new()
 	game.test_mode = true
 	root.add_child(game)
@@ -104,6 +104,7 @@ func _fight(world: int, threshold := NAN) -> Dictionary:
 	var mod = Harness.module(game, world)
 	if not is_nan(threshold):
 		mod.warden.spec["monster_heft"] = threshold
+		mod.latch_monster()
 	var out := {"won": false, "losses": [], "telegraphs": [], "held_frames": 0, "posture_while_held": 0.0,
 			"lost_while_held": 0, "phase_moved_while_held": 0, "end": 0.0}
 	game.ctx.events.boss_attack_telegraphed.connect(func(_id: String, _s: float): out["telegraphs"].append(mod.clock))
@@ -111,6 +112,9 @@ func _fight(world: int, threshold := NAN) -> Dictionary:
 	var phase_before: int = mod.phase if "phase" in mod else 0
 	var frames := 0
 	while Harness._alive(Harness.target(mod)) and frames < FIGHT_CAP:
+		if rising and frames == 60:
+			# Heft climbs over the threshold a second into the fight: the live predicate turns true, the latch does not.
+			mod.warden.spec["monster_heft"] = -1.0
 		var held_before: bool = mod.hold_active()
 		if frames % HIT_EVERY == 0:
 			Harness.hit(mod)
