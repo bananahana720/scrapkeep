@@ -176,21 +176,21 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "haul_truck variant c LOD0 (17468 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; polished and baked."
+    "notes": "haul_truck variant c LOD0 (12248 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -3.9021,
+     -3.8982,
      0,
      -6.6883
     ],
     "max": [
-     3.9021,
+     3.8982,
      6.4984,
      6.6883
     ],
     "size": [
-     7.8042,
+     7.7964,
      6.4984,
      13.3766
     ]
@@ -204,21 +204,21 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "haul_truck variant c LOD1 (8734 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "haul_truck variant c LOD1 (6124 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.9021,
+     -3.8982,
      0,
      -6.6862
     ],
     "max": [
-     3.9021,
+     3.9024,
      6.4984,
      6.6883
     ],
     "size": [
-     7.8042,
+     7.8006,
      6.4984,
      13.3745
     ]
@@ -232,23 +232,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "haul_truck variant c LOD2 (2605 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "haul_truck variant c LOD2 (1824 tris): The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.8936,
+     -3.8897,
      0,
-     -6.6637
+     -6.6624
     ],
     "max": [
-     3.9008,
-     6.4676,
+     3.8951,
+     6.4892,
      6.673
     ],
     "size": [
-     7.7944,
-     6.4676,
-     13.3367
+     7.7848,
+     6.4892,
+     13.3354
     ]
    }
   },
@@ -344,7 +344,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "drill_rig_wreck variant b LOD0 (9952 tris): Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle. Deterministic; polished and baked."
+    "notes": "drill_rig_wreck variant b LOD0 (8424 tris): Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -354,12 +354,12 @@
     ],
     "max": [
      5.2647,
-     5.1583,
+     5.116,
      6.7805
     ],
     "size": [
      10.5294,
-     5.1583,
+     5.116,
      13.561
     ]
    }
@@ -372,7 +372,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "drill_rig_wreck variant b LOD1 (4976 tris): Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "drill_rig_wreck variant b LOD1 (4212 tris): Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -382,12 +382,12 @@
     ],
     "max": [
      5.2647,
-     5.1621,
+     5.1254,
      6.7789
     ],
     "size": [
      10.5297,
-     5.1621,
+     5.1254,
      13.558
     ]
    }
@@ -400,22 +400,22 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "drill_rig_wreck variant b LOD2 (1485 tris): Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "drill_rig_wreck variant b LOD2 (1256 tris): Powder-cut drill rig left on its crawler pads, the mast lowered flat onto its cradle. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -5.2711,
+     -5.2839,
      0,
      -6.8007
     ],
     "max": [
      5.2556,
-     5.1551,
+     5.1213,
      6.7612
     ],
     "size": [
-     10.5267,
-     5.1551,
+     10.5395,
+     5.1213,
      13.5619
     ]
    }
@@ -428,23 +428,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "rope_drum_wagon variant a LOD0 (16476 tris): Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it. Deterministic; polished and baked."
+    "notes": "rope_drum_wagon variant a LOD0 (10200 tris): Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -3.9332,
+     -3.9422,
      0,
-     -5.5351
+     -5.5401
     ],
     "max": [
-     3.9332,
-     5.7502,
-     5.5351
+     3.9422,
+     5.7605,
+     5.5401
     ],
     "size": [
-     7.8664,
-     5.7502,
-     11.0702
+     7.8844,
+     5.7605,
+     11.0802
     ]
    }
   },
@@ -456,23 +456,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "rope_drum_wagon variant a LOD1 (8238 tris): Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "rope_drum_wagon variant a LOD1 (5100 tris): Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.9332,
+     -3.9422,
      0,
-     -5.5332
+     -5.5401
     ],
     "max": [
-     3.9287,
-     5.741,
-     5.5314
+     3.9422,
+     5.7605,
+     5.5401
     ],
     "size": [
-     7.8619,
-     5.741,
-     11.0646
+     7.8844,
+     5.7605,
+     11.0802
     ]
    }
   },
@@ -484,23 +484,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "rope_drum_wagon variant a LOD2 (2470 tris): Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "rope_drum_wagon variant a LOD2 (1530 tris): Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.9258,
+     -3.9345,
      0,
-     -5.541
+     -5.5335
     ],
     "max": [
-     3.9124,
-     5.7631,
-     5.5191
+     3.9241,
+     5.8066,
+     5.524
     ],
     "size": [
-     7.8382,
-     5.7631,
-     11.0601
+     7.8586,
+     5.8066,
+     11.0575
     ]
    }
   },
@@ -512,22 +512,22 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "rope_drum_wagon variant b LOD0 (18288 tris): Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it. Deterministic; polished and baked."
+    "notes": "rope_drum_wagon variant b LOD0 (11532 tris): Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -5.3682,
+     -5.3794,
      0,
      -6.1554
     ],
     "max": [
-     5.3682,
-     5.9144,
+     5.3794,
+     5.9245,
      6.1554
     ],
     "size": [
-     10.7364,
-     5.9144,
+     10.7588,
+     5.9245,
      12.3108
     ]
    }
@@ -540,23 +540,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "rope_drum_wagon variant b LOD1 (9144 tris): Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "rope_drum_wagon variant b LOD1 (5766 tris): Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -5.3694,
+     -5.3794,
      0,
      -6.1556
     ],
     "max": [
-     5.3686,
-     5.9106,
-     6.1454
+     5.3794,
+     5.9245,
+     6.1515
     ],
     "size": [
-     10.738,
-     5.9106,
-     12.301
+     10.7588,
+     5.9245,
+     12.3071
     ]
    }
   },
@@ -568,22 +568,22 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "rope_drum_wagon variant b LOD2 (2736 tris): Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "rope_drum_wagon variant b LOD2 (1722 tris): Hoist-rope wagon: a giant coiled drum on a timber bed, parked where the last shift unspooled it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -5.3635,
+     -5.3748,
      0,
      -6.1514
     ],
     "max": [
-     5.3664,
-     5.9347,
+     5.3678,
+     5.9696,
      6.1412
     ],
     "size": [
-     10.7299,
-     5.9347,
+     10.7426,
+     5.9696,
      12.2926
     ]
    }

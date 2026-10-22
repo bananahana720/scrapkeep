@@ -65,10 +65,10 @@ def rot_x(y, z, theta):
     return (y * math.cos(theta) - z * math.sin(theta), y * math.sin(theta) + z * math.cos(theta))
 
 
-def bursage(p, x, y, z, s, rng, dry=False):
-    """A grey-green bursage mound; `dry` swaps in straw tones."""
+def bursage(p, x, y, z, s, rng, dry=False, blobs=4):
+    """A grey-green bursage mound; `dry` swaps in straw tones. Heroes pass blobs=2: their LOD0 is a shadow caster."""
     base = "a39a64" if dry else SAGE
-    for k in range(4):
+    for k in range(blobs):
         a = k * 1.9 + rng.uniform(0, 1)
         soft_ico(p, 0.3 * s, (x + math.cos(a) * 0.22 * s, y + math.sin(a) * 0.22 * s, z + 0.18 * s + 0.05 * k * s),
               tint(base if k % 2 else (SAGE_PALE if not dry else "b0a674"), rng, 0.07),
@@ -236,9 +236,9 @@ def haul_truck(p, v, rng):
         for k in range(5):
             p.box((0.05, 0.5, 1.0), (-2.74, -2.8 + k * 1.6, hz + 0.8), OXIDE_DARK, style="fine")
             p.box((0.05, 0.5, 1.0), (2.74, -2.8 + k * 1.6, hz + 0.8), OXIDE_DARK, style="fine")
-        for k, (bx, by) in enumerate(((-1.0, 1.0), (0.9, -1.0), (0.0, 2.8), (-0.8, -3.0))):
-            bursage(p, bx, by, hz + 0.4, 1.7, rng)
-        bursage(p, 3.6, 4.4, 0.0, 1.2, rng)
+        for k, (bx, by) in enumerate(((-1.0, 1.0), (0.9, -1.0), (-0.4, 2.8))):
+            bursage(p, bx, by, hz + 0.4, 1.7, rng, blobs=2)
+        bursage(p, 3.6, 4.4, 0.0, 1.2, rng, blobs=2)
         soft_ico(p, 1.0, (0, 6.0, 0.25), TAILS_DARK, scale=(2.2, 1.4, 0.35), style="soft")
 
 
@@ -302,9 +302,9 @@ def drill_rig_wreck(p, v, rng):
                 q = tuple(a_pt[i] + (b_pt[i] - a_pt[i]) * t for i in range(3))
                 p.box((1.2, 0.28, 1.1), q, shade(OXIDE, 0.85), rot=(ang, 0, 0), style="hard")
         p.cyl(0.55, 0.9, (0.0, 3.6, 4.5), C["iron"], segs=10, rot=(math.pi / 2, 0, 0), style="hard")
-        bursage(p, 1.8, -4.2, 0.0, 1.8, rng)
-        bursage(p, -2.4, -4.8, 0.0, 1.4, rng, dry=True)
-        bursage(p, 4.2, 2.0, 0.0, 1.5, rng)
+        bursage(p, 1.8, -4.2, 0.0, 1.8, rng, blobs=2)
+        bursage(p, -2.4, -4.8, 0.0, 1.4, rng, dry=True, blobs=2)
+        bursage(p, 4.2, 2.0, 0.0, 1.5, rng, blobs=2)
     # Drill steels lying flat along the left pad, and a rod-handling arm stub.
     for k in range(4):
         p.rod((-4.9 + 0.0 * k, -2.5 + k * 0.28, 0.2), (-4.9, 2.4 + k * 0.1, 0.2), 0.11, C["iron_light"], segs=8)
@@ -334,12 +334,12 @@ def rope_drum_wagon(p, v, rng):
             wz = 1.15 if not broken else 0.95
             ox = sx * 2.25 + (-0.35 if broken else 0.0)
             tilt = 0.25 if broken else 0.0
-            p.torus(1.05, 0.14, (ox, yy, wz), C["iron"], rot=(0, math.pi / 2 + tilt, 0), major=16, minor=6)
+            p.torus(1.05, 0.14, (ox, yy, wz), C["iron"], rot=(0, math.pi / 2 + tilt, 0), major=14, minor=5)
             p.cyl(0.28, 0.5, (ox, yy, wz), C["timber_dark"], segs=10, rot=(0, math.pi / 2 + tilt, 0), style="hard")
-            for k in range(8):
-                a = math.tau * k / 8 + 0.2
+            for k in range(6):
+                a = math.tau * k / 6 + 0.2
                 p.rod((ox, yy + 0.2 * math.cos(a), wz + 0.2 * math.sin(a)),
-                      (ox + 0.04 * tilt, yy + 1.0 * math.cos(a), wz + 1.0 * math.sin(a)), 0.07, C["timber"], segs=6)
+                      (ox + 0.04 * tilt, yy + 1.0 * math.cos(a), wz + 1.0 * math.sin(a)), 0.08, C["timber"], segs=5)
     # Giant rope drum on two stout side cheeks (cheeks are blocks, not an arch).
     dz = bed_z + 0.3 + 1.9 - sag * 0.0
     for sx in (-1, 1):
@@ -348,27 +348,27 @@ def rope_drum_wagon(p, v, rng):
     p.cyl(0.35, 4.3, (0, 0, dz), C["iron"], segs=10, rot=(0, math.pi / 2, 0), style="round")
     rr = 1.75 if v == "a" else 1.25   # b: half unwound, so a smaller coil
     for sx in (-1, 1):
-        p.cyl(2.1, 0.25, (sx * 1.55, 0, dz), C["timber_grey"], segs=20, rot=(0, math.pi / 2, 0), style="hard")
-        p.cyl(2.2, 0.12, (sx * 1.66, 0, dz), C["iron"], segs=20, rot=(0, math.pi / 2, 0), style="hard")
+        p.cyl(2.1, 0.25, (sx * 1.55, 0, dz), C["timber_grey"], segs=16, rot=(0, math.pi / 2, 0), style="hard")
+        p.cyl(2.2, 0.12, (sx * 1.66, 0, dz), C["iron"], segs=16, rot=(0, math.pi / 2, 0), style="hard")
     # Rope as stacked wraps: a core cylinder plus ridged turns.
-    p.cyl(rr, 2.9, (0, 0, dz), shade(HEMP, 0.9), segs=20, rot=(0, math.pi / 2, 0), style="round")
-    for k in range(8):
-        xx = -1.25 + k * 0.36
-        p.torus(rr, 0.2, (xx, 0, dz), tint(HEMP, rng, 0.07), rot=(0, math.pi / 2, 0), major=20, minor=6)
+    p.cyl(rr, 2.9, (0, 0, dz), shade(HEMP, 0.9), segs=16, rot=(0, math.pi / 2, 0), style="round")
+    for k in range(6):
+        xx = -1.25 + k * 0.5
+        p.torus(rr, 0.24, (xx, 0, dz), tint(HEMP, rng, 0.07), rot=(0, math.pi / 2, 0), major=16, minor=5)
     # Loose rope tail lying flat on the ground, coiled in a spiral (never taut).
     pts = []
-    for k in range(18):
-        a = k * 0.42
-        rad = 0.4 + 0.075 * k if v == "a" else 0.55 + 0.11 * k
+    for k in range(12):
+        a = k * 0.63
+        rad = 0.4 + 0.112 * k if v == "a" else 0.55 + 0.165 * k
         pts.append((3.9 + math.cos(a) * rad * 0.9, -3.0 + math.sin(a) * rad * 0.9 if v == "a" else -3.4 + math.sin(a) * rad, 0.12))
     for a, b in zip(pts, pts[1:]):
-        p.rod(a, b, 0.11, HEMP, segs=6)
+        p.rod(a, b, 0.12, HEMP, segs=5)
     # Drawbar lying on the ground, chunky and low, plus a wooden chock.
     p.beam((0, -3.5, 0.35), (0.6, -7.2, 0.18), 0.3, C["timber_dark"], h=0.28)
     p.box((0.8, 0.4, 0.4), (2.5, -4.2, 0.2), C["timber_dark"], rot=(0, 0, 0.2))
     if v == "b":
-        bursage(p, -3.6, 3.2, 0.0, 1.6, rng)
-        bursage(p, 3.0, 0.5, 0.0, 1.2, rng, dry=True)
+        bursage(p, -3.6, 3.2, 0.0, 1.6, rng, blobs=2)
+        bursage(p, 3.0, 0.5, 0.0, 1.2, rng, dry=True, blobs=2)
         p.box((0.9, 1.6, 0.18), (-4.0, 1.0, 0.1), C["timber_grey"], rot=(0, 0, 0.5))
     pebbles(p, "rope_drum_wagon_" + v, rng, 5.0)
 

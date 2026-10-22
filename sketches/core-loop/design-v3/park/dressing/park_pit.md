@@ -133,3 +133,32 @@ pit_011 moved 2 m north because facing wash_berm from its old point put a cholla
 Labels: the lint flagged 55 `near` labels (25 cut mid-word, 30 with leading or trailing whitespace), and 4 more (the hoist-rope wagon ones) ended on a comma; each is now "<row id>: <the template story cut at the last whole word within 60 characters>". For example, pit_011 "wash_berm, bursage and cholla thickening along " is now "wash_berm: Bursage and cholla thickening along the haul road's edge", and pit_012 "slickrock_15, the fallen shift bell with its rope " is now "slickrock_15: The fallen shift bell with its rope tail, a sign board".
 
 Results: pin 795077205 to 3124860388. #323's check (with its row-span fix af522720, run with `--file` on this copy) reports 0 violations, 0 pattern, 0 pin, 0 lint; the old check gives 0 violations and the same fingerprint; `park_props_test` passes (226 checks, pin line PASS). Density (w18m): 27 of 31 windows pass, 4 exempt (1 arena, 2 camp, 1 telegraph), none failing, the same as before.
+
+## Frame-cost cut (#241 ruling, World lane; base fffa813e, #252 head)
+
+#252's 4080 row failed: median p99 +2.07 ms against a +1.0 ms bar, the extra 33 ms frames mostly in stage 3 state 3 (the Warden fight). This unit cuts the heaviest hero meshes of the pit kit. It changes no spot, no litter and no shared code; the plan pin does not move (3124860388, 1166 instances, 207 litter, 0 violations before and after).
+
+What the CPU-side measurement showed (no GPU, so it names no mechanism for the 4080 figure):
+
+- Pit is not an outlier on totals against the two kits that passed. Instances: pit 1166 (207 litter), dam 816 (83), sinkhole 1419 (229). Heroes: pit 14, dam 18, sinkhole 34. Hero LOD0 tris summed: pit 163k, dam 230k, sinkhole 367k. Props-only draw delta at the audit poses: pit max 69 / median 25, sinkhole 79 / 27.5, dam 55 / 10.5 (the dam and sinkhole rows are from their notes). Dam and sinkhole figures are from their kit manifests and vignette files on origin/claude/zealous-franklin-ed0sxr-dam and -sinkhole, read-only, expanded by the same ParkProps code.
+- Pit is the outlier on hero LOD0 size: haul_truck_c 17468, rope_drum_wagon_b 18288, rope_drum_wagon_a 16476 against a sinkhole maximum of 12252 (the dam's gate_wheelhouse and mixer_wreck sit at 12.7k to 17.5k). `_hero` in park_props.gd makes LOD0 the only shadow-casting LOD (`_tag(view, inst, lod, lod == 0)`), so hero LOD0 tris are the shadow-pass cost.
+- At the Warden anchor (0, 255) the in-range meshes by ring model (hero LOD0 0 to 78 m, LOD1 62 to 188 m, LOD2 172 to 458 m; props 0 to 38, 32 to 93, 87 to 203; litter 0 to 73 m) are 116 meshes and about 62k tris for pit, against 42 and 20k for the dam (anchor (0, 590)) and 39 and 24k for the sinkhole (anchor (0, 388)). No hero LOD0 is in range there (nearest hero rope_yard pit_730 is 135 m away, drawn at LOD1).
+- The audit replayed at 24 poses on rings of 30, 60 and 100 m around the Warden anchor (`artifacts/local/pitcost/arena_poses.json`, not a ride line): props-only draw delta max 17, median 5.5; props-only primitive delta max 61.9k, median 13.3k. So the kit adds few draws there; the tri and shadow-caster size is what this unit can cut.
+- The build is not the hitch: `build_job` over the 93 pit jobs takes 106 ms in total, 2.4 ms for the largest (litter), under the 3 ms slice; `prepare` is 194 ms on the worker.
+
+The cut (`tools/blender/park/props/pit.py`, rebuilt with the recipe, manifest and registry fragment written by the tool, `fold_registry.py` re-run):
+
+| kind | LOD0 before | LOD0 after |
+| --- | --- | --- |
+| haul_truck_c | 17468 | 12248 |
+| rope_drum_wagon_a | 16476 | 10200 |
+| rope_drum_wagon_b | 18288 | 11532 |
+| drill_rig_wreck_b | 9952 | 8424 |
+
+- `bursage()` takes `blobs` (default 4, so the scrub prop kinds are unchanged); heroes pass 2. haul_truck_c has 3 bed bursage (was 4) and the one on the ground; drill_rig_wreck_b and rope_drum_wagon_b use blobs=2.
+- rope_drum_wagon: wheel tyres 14 by 5 segments (was 16 by 6), 6 spokes of 5 segments (was 8 of 6), 6 rope wraps of 16 by 5, thicker (was 8 of 20 by 6), flanges and core 16 segments (was 20), rope tail 12 rods (was 18).
+- Pit hero LOD0 maximum is now 12248, equal to the sinkhole's 12252. Hero LOD0 sum 163020 to 126104 (14 heroes); LOD1 and LOD2 follow at 50 percent and 15 percent. Heights moved by at most 0.04 m (drill_rig_wreck_b 5.158 to 5.116; rope_drum_wagon_a 5.75 to 5.761), radii by 0.01 m; the plan check stays at 0 violations.
+- Audit default run, before to after (same 169 poses, llvmpipe proxy, not a frame-cost proof): props-only draw delta max 69 to 69, median 25.0 to 25.0; props-only primitive delta max 170488 to 150716, median 57717 to 54705. At the arena poses: max 61939 to 57174, median 13273 to 6131.5. Draws do not move because no node was added or removed.
+- Look: Blender preview renders of haul_truck_c and rope_drum_wagon_a were viewed. The truck keeps its tipped bed, flat tyre and bursage in the bed (three tufts, each two blobs instead of four); the wagon keeps its drum, four wheels and coiled tail, with visibly fewer wraps and spokes. The drill rig b was not previewed.
+
+Limit: none of this is a 4080 measurement. If the GPU pair still fails, the remaining pit-only levers are fewer hero spots within 200 m of the Warden anchor (rope_yard pit_730 at 135 m, drill_yard pit_729 at 171 m) and thinner bursage litter; a cap on the LOD0 shadow range would be a change to the shared park_props.gd and is not made here.

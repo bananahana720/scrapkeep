@@ -56,14 +56,14 @@
       "res://assets/models/park/props/pit/haul_truck_c_lod2.glb"
      ],
      "tris": [
-      17468,
-      8734,
-      2605
+      12248,
+      6124,
+      1824
      ],
-     "radius": 7.148,
+     "radius": 7.147,
      "height": 6.498,
      "perch": [
-      -1.74,
+      -1.736,
       6.498,
       2.388
      ]
@@ -99,12 +99,12 @@
       "res://assets/models/park/props/pit/drill_rig_wreck_b_lod2.glb"
      ],
      "tris": [
-      9952,
-      4976,
-      1485
+      8424,
+      4212,
+      1256
      ],
      "radius": 6.788,
-     "height": 5.158
+     "height": 5.116
     }
    }
   },
@@ -123,12 +123,12 @@
       "res://assets/models/park/props/pit/rope_drum_wagon_a_lod2.glb"
      ],
      "tris": [
-      16476,
-      8238,
-      2470
+      10200,
+      5100,
+      1530
      ],
-     "radius": 6.668,
-     "height": 5.75
+     "radius": 6.658,
+     "height": 5.761
     },
     "b": {
      "lod": [
@@ -137,12 +137,12 @@
       "res://assets/models/park/props/pit/rope_drum_wagon_b_lod2.glb"
      ],
      "tris": [
-      18288,
-      9144,
-      2736
+      11532,
+      5766,
+      1722
      ],
-     "radius": 6.717,
-     "height": 5.914
+     "radius": 6.693,
+     "height": 5.924
     }
    }
   },
