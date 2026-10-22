@@ -43,6 +43,8 @@ class FakeTree:
 class FakeState:
 	extends RefCounted
 	var grounded := true
+	func on_floor() -> bool:
+		return grounded
 
 
 class FakePlayer:
