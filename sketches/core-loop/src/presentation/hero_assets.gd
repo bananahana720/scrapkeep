@@ -518,7 +518,7 @@ func _fit(rec: Dictionary) -> void:
 	var tints := {"class": player.class_color()}
 	if tint != null:
 		tints["paint"] = tint
-	var shell := fit_shell_into(rolling, id, variant, _run_heft_class(), tints, player.juice_node())
+	var shell := fit_shell_into(rolling, id, variant, _run_heft_class(), tints, player.pod_mount() if player.has_method("pod_mount") else player.juice_node())
 	if shell.is_empty():
 		return
 	hide_placeholder(rolling)
@@ -971,7 +971,7 @@ static func _split(scene: Node) -> Dictionary:
 
 
 # Builds the shell under ball: HeroCore and HeroPod plus one holder per layer, painted with
-# tints, layers shown up to heft_class. pod_parent receives HeroPod (the game's juice node);
+# tints, layers shown up to heft_class. pod_parent receives HeroPod (the player's level pod mount);
 # null puts it under ball (previews). The game's _fit, the class card preview and the customize
 # preview all call it. Returns {core, pod, layers: {2: {core, pod}, ...}, variant, heft} or {}
 # when even the default base is unavailable.
