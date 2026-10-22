@@ -60,6 +60,7 @@ const SUMMARY_GUARD := 0.75
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
 const SEED := 20260926
+const SimClock := preload("res://src/core/sim_clock.gd")
 const BOSS_PATH := "res://src/boss/boss.gd"
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
@@ -146,6 +147,9 @@ var _restart_latched := false
 # still be pressing Space to jump, and the run's only summary must stay readable.
 var summary_guard_left := 0.0
 var _hit_stopped := false
+# A headless test's stop counts physics ticks, not wall time; -1 is a wall-time stop.
+var _stop_ticks_left := -1
+var _scale_before_stop := 1.0
 # The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
 var last_device := "kbm"
 # Loaded at run time only when the pack carries tools/, never preloaded (lint L7 allows this line).
@@ -517,6 +521,10 @@ func _physics_process(delta: float) -> void:
 	if not _progress_ready:
 		_progress_ready = true
 		progress.setup(events, run, ctx.profile, Callable(), codex)
+	if _stop_ticks_left > 0:
+		_stop_ticks_left -= 1
+		if _stop_ticks_left == 0:
+			_end_hit_stop()
 	player.drive_basis = camera.yaw_basis()
 	flow.physics_step(delta)
 	if flow.in_play():
@@ -579,17 +587,27 @@ func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 	return player.kit.aim
 
 
+# A played game holds the stop for wall time (the timer ignores the time scale). A headless test
+# (test_mode) holds it for the same span in physics ticks, so load cannot change how many slowed
+# ticks run. Bot runs (SimClock.ticks) keep the timer: their fixed frames already make it exact,
+# and a tick count would move the balance sweeps.
 func hit_stop(seconds: float) -> void:
 	if _hit_stopped or seconds <= 0.0 or not flow.in_play():
 		return
 	_hit_stopped = true
+	_scale_before_stop = Engine.time_scale
 	Engine.time_scale = HIT_STOP_SCALE
-	var timer := get_tree().create_timer(minf(seconds, HIT_STOP_MAX), true, false, true)
+	var held := minf(seconds, HIT_STOP_MAX)
+	if test_mode and not SimClock.ticks:
+		_stop_ticks_left = maxi(1, roundi(held * Engine.physics_ticks_per_second))
+		return
+	var timer := get_tree().create_timer(held, true, false, true)
 	timer.timeout.connect(_end_hit_stop)
 
 
 func _end_hit_stop() -> void:
-	Engine.time_scale = 1.0
+	Engine.time_scale = _scale_before_stop
+	_stop_ticks_left = -1
 	_hit_stopped = false
 
 
