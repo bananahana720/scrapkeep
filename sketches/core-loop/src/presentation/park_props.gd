@@ -549,10 +549,18 @@ const FILLED_CELL_LIMIT := 4096
 
 
 # The filled:<cx>:<cz> decision over the frustum's legal `cells`: {ok, why, cell}. A cell is taken when its centre lies within an
-# instance's radius plus half a cell of the instance (xz distance).
+# instance's radius plus half a cell of the instance (xz distance). The cone lists a cell once per pose that sees it, so cells are
+# deduplicated; a list that reached FILLED_CELL_LIMIT may have stopped before a free cell, so it never holds.
 static func _filled_verdict(cells: Array, named: Vector2, placed: Array) -> Dictionary:
 	if cells.is_empty():
 		return {"ok": false, "why": "no legal cell: use no_cell", "cell": null}
+	if cells.size() >= FILLED_CELL_LIMIT:
+		return {"ok": false, "why": "the cone scan stopped at %d legal cells, so free cells may be unseen" % FILLED_CELL_LIMIT, "cell": null}
+	var unique := []
+	for cell: Vector2 in cells:
+		if not unique.has(cell):
+			unique.append(cell)
+	cells = unique
 	var taken := []
 	for cell: Vector2 in cells:
 		var is_taken := false

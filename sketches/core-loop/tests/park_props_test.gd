@@ -788,6 +788,13 @@ func _check_filled(kit: Dictionary, world: Dictionary) -> void:
 	var edge := {"x": fresh.rect.position.x - 80.0, "z": fresh.rect.get_center().y, "yaw": PI * 0.5}
 	var none := ParkProps.open_reason(fresh, kit, {}, named_text, Vector2(edge["x"], edge["z"]), [edge], CAM_SPEC, placed)
 	_t.check("filled: a window with no legal cell is told to use no_cell", not none["ok"] and String(none["why"]) == "no legal cell: use no_cell", str(none))
+	var capped := []
+	for i in ParkProps.FILLED_CELL_LIMIT:
+		capped.append(Vector2(i * 2.5, 0.0))
+	var at_cap := ParkProps._filled_verdict(capped, Vector2.ZERO, [])
+	_t.check("filled: a cone list that hit the cell cap never holds", not at_cap["ok"] and String(at_cap["why"]).contains("stopped at"), str(at_cap["why"]))
+	var twice := ParkProps._filled_verdict([Vector2(1, 1), Vector2(1, 1)], Vector2(1, 1), [{"pos": Vector3(1, 0, 1), "radius": 1.0}])
+	_t.check("filled: a cell seen by two poses counts once", twice["ok"] and String(twice["why"]).begins_with("1 legal cells"), str(twice["why"]))
 
 
 # The audit's checked --open reasons (coordinator ruling #241 6329579296): runout:<kicker> and no_cell.
