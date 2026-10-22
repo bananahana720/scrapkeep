@@ -89,8 +89,10 @@ const MULT_BASALT := Color(0.610, 0.685, 1.0, float(COLOR_ALPHA_BYTE) / 255.0)
 # Concrete: docs/art/reference/spillway/spillway-landmarks-flume-carry.jpg. The pale concrete ramp, crop
 # 60x14+1080+410, reads 239,194,148; the lit sand ground, crops 100x30+880+600 and 100x30+600+640,
 # read 244,167,102 and 242,167,103 (mean 243,167,102.5). Concrete is paler than the ground, which a
-# multiplier cannot show: capped, it draws at the floor's value as a less orange sand, target
-# (0.665, 0.540, 0.412), L* 59.5 (uncapped L* 71.1). A concrete texture is the real fix.
+# multiplier cannot show: only blue reaches the floor's value, so concrete draws as a less orange sand,
+# target (0.665, 0.540, 0.412), L* 59.5, about 5.6 below the sand around it. Pale concrete (L* 71)
+# cannot be shown: desaturating the orange floor under a cap of 1 must lower its luminance. A concrete
+# texture is the real fix.
 const MULT_CONCRETE := Color(0.907, 0.903, 1.0, float(COLOR_ALPHA_BYTE) / 255.0)
 # The floor texture's mean albedo (packed-sand-floor.webp, every pixel of the base level): the
 # floor is what flat ground draws, so a multiplier times this is the colour a cell's mean lands on.
