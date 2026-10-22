@@ -2,8 +2,9 @@ extends SceneTree
 
 # Gate for the park ground's surface (step 2 of the park ground): every vertex of a park's four
 # Terrain3D regions has the control map's auto bit (hole vertices keep the hole bit too), and the
-# colour map tints the cells of surface.bin's concrete, tailings and basalt slots by target / the floor texture's mean
-# (alpha at Terrain3D's default 127/255) while the other slots, the net and the apron stay white.
+# colour map tints the cells of surface.bin's concrete, tailings and basalt slots by target / the
+# floor texture's mean (alpha at Terrain3D's default 127/255) while the other slots, the net and the
+# apron stay white.
 # The parks are built through the real path (make_render, start, finish); the targets are pinned to
 # their sources. Headless Terrain3D draws nothing, so this reads the maps, not pixels.
 
@@ -58,7 +59,9 @@ func _run() -> void:
 # GROUND_FLOOR_MEAN is the true mean of the floor texture's base level, recomputed here over every pixel.
 func _pin_floor_mean() -> void:
 	var row: Dictionary = MaterialSlots.row("ground")
-	var img: Image = Palette.look_texture(row.textures.floor_map).get_image()
+	# A copy: headless, get_image() hands back the texture's own image, and the decompress and
+	# convert below would change the format Terrain3D later reads from it.
+	var img: Image = Palette.look_texture(row.textures.floor_map).get_image().duplicate()
 	if img.is_compressed():
 		img.decompress()
 	img.clear_mipmaps()
@@ -94,6 +97,8 @@ func _pin_targets() -> void:
 		var d := Color(float(dark.get_string(1)), float(dark.get_string(2)), float(dark.get_string(3)))
 		var l := Color(float(light.get_string(1)), float(light.get_string(2)), float(light.get_string(3)))
 		basalt = d.lerp(l, 0.5)
+	var dig := FileAccess.get_file_as_string("res://src/world/map_dig.gd")
+	t.check("map_dig.gd's pit floor tint is CHARCOAL.lerp(RUST, 0.4)", dig.contains("tint = Palette.CHARCOAL.lerp(Palette.RUST, 0.4)"))
 	var tailings := Palette.CHARCOAL.lerp(Palette.RUST, 0.4)
 	_targets = {2: concrete, 3: tailings, 4: basalt}
 	for slot in _targets:
@@ -217,21 +222,25 @@ func _check_cells(id: String, render: Node3D, surface: PackedByteArray, rng: Ran
 		t.eq("%s slot %d cells (%d in the bake) wear their tint on all four vertices" % [id, slot, cells.size()], bad, 0)
 
 
-# A planted control: a tinted cell beside a cell of another slot, so the check can see a border.
+# A planted control per axis: a tinted cell beside a cell of another slot (+x, then +z), so a
+# one-vertex shift along either axis fails.
 func _check_border(id: String, render: Node3D, surface: PackedByteArray) -> void:
-	var tinted := -1
-	for k in surface.size():
-		if _targets.has(surface[k]) and k % CELLS < CELLS - 1 and surface[k + 1] != surface[k]:
-			tinted = k
-			break
-	if not t.check(id + " has a tinted cell beside another slot", tinted >= 0):
-		return
-	var x := -CELLS + 2 * (tinted % CELLS)
-	var z := -CELLS + 2 * (tinted / CELLS)
-	var inside: Color = _vertex(render, x + 1, z)[1]
-	var across: Color = _vertex(render, x + 2, z)[1]
-	t.check(id + " border: the tinted cell's vertex is tinted", _same(inside, _tint(surface[tinted])) and not _same(inside, _tint(0)), str(inside))
-	t.check(id + " border: the neighbour across the slot border is not", _same(across, _tint(surface[tinted + 1])) and not _same(across, inside), str(across))
+	for axis in ["x", "z"]:
+		var step := 1 if axis == "x" else CELLS
+		var tinted := -1
+		for k in surface.size():
+			var room := k % CELLS < CELLS - 1 if axis == "x" else k / CELLS < CELLS - 1
+			if _targets.has(surface[k]) and room and surface[k + step] != surface[k]:
+				tinted = k
+				break
+		if not t.check("%s has a tinted cell beside another slot along %s" % [id, axis], tinted >= 0):
+			continue
+		var x := -CELLS + 2 * (tinted % CELLS)
+		var z := -CELLS + 2 * (tinted / CELLS)
+		var inside: Color = _vertex(render, x + 1, z)[1] if axis == "x" else _vertex(render, x, z + 1)[1]
+		var across: Color = _vertex(render, x + 2, z)[1] if axis == "x" else _vertex(render, x, z + 2)[1]
+		t.check("%s %s border: the tinted cell's vertex is tinted" % [id, axis], _same(inside, _tint(surface[tinted])) and not _same(inside, _tint(0)), str(inside))
+		t.check("%s %s border: the neighbour across the slot border is not" % [id, axis], _same(across, _tint(surface[tinted + step])) and not _same(across, inside), str(across))
 
 
 func _check_holes(id: String, render: Node3D, holes: PackedByteArray) -> void:

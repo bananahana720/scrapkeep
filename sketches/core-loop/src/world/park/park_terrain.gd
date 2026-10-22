@@ -131,8 +131,8 @@ static func slot_target(slot: int) -> Color:
 	return Color.WHITE
 
 
-# The colour-map multiplier of a surface slot: target / GROUND_FLOOR_MEAN per channel, clamped, alpha at the
-# default (so roughness is unchanged). White for slots that do not tint.
+# The colour-map multiplier of a surface slot: target / GROUND_FLOOR_MEAN per channel, clamped,
+# alpha at the default (so roughness is unchanged). White for slots that do not tint.
 static func slot_tint(slot: int) -> Color:
 	var target := slot_target(slot)
 	if target == Color.WHITE:
@@ -170,8 +170,9 @@ static func make_render(parent: Node, label: String) -> Node3D:
 	node.assets = ground_assets()
 	var material: Object = node.material
 	# The regions' control maps carry the auto bit everywhere (_build_region), so the auto-shader
-	# picks the texture: the overlay (flat) is the floor, the base (steep) the strata, auto_slope 1.0 putting the half-way blend at normal.y 0.75, near the middle (0.755) of
-	# sandstone.gdshader's strata ramp smoothstep(0.58, 0.93, normal.y). Height reduction is off.
+	# picks the texture: the overlay (flat) is the floor, the base (steep) the strata. auto_slope 1.0
+	# puts the half-way blend at normal.y 0.75, near the middle (0.755) of sandstone.gdshader's
+	# strata ramp smoothstep(0.58, 0.93, normal.y). Height reduction is off.
 	material.auto_shader = true
 	material.set_shader_param("auto_base_texture", GROUND_STRATA_ID)
 	material.set_shader_param("auto_overlay_texture", GROUND_FLOOR_ID)
