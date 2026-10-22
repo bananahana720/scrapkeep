@@ -62,12 +62,6 @@ const KNOWN_BAKED := {
 	"tally|5|(pod)": 1.0159,
 	"tally|5|HeftC4/Pod": 1.0758,
 	"tally|5|HeftC5/Pod": 1.0838,
-	"remembered_cannon|1|(pod)": 1.1128,
-	"remembered_cannon|2|(pod)": 1.1128,
-	"remembered_cannon|3|(pod)": 1.1128,
-	"remembered_cannon|4|(pod)": 1.1128,
-	"remembered_cannon|5|(pod)": 1.1128,
-	"remembered_cannon|5|HeftC5/Pod/Carapace5": 1.1917,
 }
 
 var _t := T.new("baked_bracket_reach_test")
