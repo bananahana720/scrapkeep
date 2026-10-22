@@ -11,7 +11,7 @@ Method: automated headless Godot 4.7.2 on cloud llvmpipe (OpenGL compatibility p
 
 ## Plan check
 
-`tools/park_props_plan.gd --map=park_pit --check`: 1166 instances (207 litter), 0 violations, fingerprint 3124860388. Pin 3170188153 to 3124860388. Spots now face their named row within 15 degrees; pit_011 moved from (-409, -494) to (-409, -492), 2 m, yaw -98.5 (bearing to wash_berm -97.5 degrees). Facing wash_berm from the old point put a cholla within 3.9 m of dump_wash_2 (keepout); that move clears it, with no yaw turn away from the row. Before the move the merged rules gave 8 violations, all `telegraph`, in two spots.
+`tools/park_props_plan.gd --map=park_pit --check`: 1166 instances (207 litter), 0 violations, fingerprint 3124860388. Pin 3170188153 to 3124860388. Spots now face their named row within 15 degrees; pit_011 moved from (-409, -494) to (-409, -492), 2 m, yaw -98.5, the bearing to wash_berm from the new point. Facing wash_berm from the old point put a cholla within 3.9 m of dump_wash_2 (keepout); that move clears it, with no yaw turn away from the row. Before the move the merged rules gave 8 violations, all `telegraph`, in two spots.
 
 ## Telegraph zones
 
@@ -110,3 +110,26 @@ None of the rows read is a Conflict row, so none is "not copied".
 **Board drift (for review).** The two earlier items (large oxide areas on `water_tank` and `drill_rig_wreck`; absent bone panels) are fixed in the second recolour commit. Remaining: (1) the `windsock` story was rewritten to match variant a's stiff cone (`pit.py` line 619); the geometry, GLBs and bounds are unchanged (manifest radius 1.8, height 3.068); (2) the bone panels are single recoloured parts, so on `drill_rig_wreck` the bone cab roof reads as a pale cream block rather than a label plate; (3) previews are Blender flat-lit renders, not game captures. The reviewer decides FAIL and the ART-MISTAKES line.
 
 **Recolour previews.** Rendered with `pit.py --only haul_truck,drill_rig_wreck,water_tank,core_trays --preview-dir` to `artifacts/local/dressing/pit/preview/` (local, not committed), viewed next to `dig-props-moodboard.jpg` and `enemies/enemies-dig-moodboard.jpg`. Result: every machine body, cab, boom, dome and barrel is petrol; oxide shows as rims, canopy, rib bands and hubs; copper as hoops and cheeks; bone as a single plate. Against the enemies board (oxide and charcoal crawlers with brass plates, orange hazard rings), no machine kind in the pit kit still reads in the enemy colour role: the dominant colour is petrol where the enemies are oxide, and there is no brass or hazard colour. This is my reading of flat-lit renders; the reviewer should still check it in game. Manifest radius, height and tris are unchanged (in the recolour commit the manifest and registry fragments showed no diff; only the GLBs changed: drill_rig_wreck, haul_truck, ore_cart_stub, rock_bucket, water_tank).
+
+## w18m row, yaw and label fixes (card (b), #323)
+
+#323's check found 1 row and 2 yaw groups in pit at c371b7c4: the row pit_012, pit_389 and pit_396 (gaps 27.7 and 23.7 m, CV 0.079); the yaw groups pit_011, pit_026 and pit_898, and pit_012, pit_028 and pit_396, all at -35.6; and pit_121, pit_123 and pit_125, all at 150.9. Each spot now faces a named row from `park_rows`, rounded to 1 degree (in the 0.5 case, to 0.5).
+
+| Spot | `at` | Yaw | Faces |
+| --- | --- | --- | --- |
+| pit_011 | (-409, -494) to (-409, -492) | -35.6 to -98.5 | wash_berm |
+| pit_026 | same | -35.6 to -118 | wash_berm |
+| pit_898 | same | -35.6 to -104 | wash_berm, turned 13 degrees off its bearing (-117) so it does not link with pit_026 at 22 m |
+| pit_012 | same | -35.6 to -44 | slickrock_15 |
+| pit_028 | same | -35.6 to -66 | slickrock_15 |
+| pit_396 | (-312, -418) to (-313.8, -418.9) | -35.6 to -56 | slickrock_15; the move takes the row's gaps to 21.7 and 29.7 m (CV over 0.1) |
+| pit_389 | same | -35.6 to 32 | rim_haul_ramp |
+| pit_121 | same | 150.9 to -119 | camp_dive_windrow_1 |
+| pit_125 | same | 150.9 to -112 | camp_dive_windrow_1 |
+| pit_123 | same | 150.9 to -6 | bench2_east_bank |
+
+pit_011 moved 2 m north because facing wash_berm from its old point put a cholla 3.9 m from dump_wash_2 (keepout).
+
+Labels: 55 `near` labels were cut mid-word; each is now "<row id>: <the template story cut at the last whole word within 60 characters>". For example, pit_011 "wash_berm, bursage and cholla thickening along " is now "wash_berm: Bursage and cholla thickening along the haul road's edge", and pit_012 "slickrock_15, the fallen shift bell with its rope " is now "slickrock_15: The fallen shift bell with its rope tail, a sign board".
+
+Results: pin 795077205 to 3124860388. #323's check (with its row-span fix af522720, run with `--file` on this copy) reports 0 violations, 0 pattern, 0 pin, 0 lint; the old check gives 0 violations and the same fingerprint; `park_props_test` passes (226 checks, pin line PASS). Density (w18m): 27 of 31 windows pass, 4 exempt (1 arena, 2 camp, 1 telegraph), none failing, the same as before.
