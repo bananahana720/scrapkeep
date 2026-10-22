@@ -13159,9 +13159,9 @@
    "ships": true,
    "loader": "src/presentation/hero_assets.gd (fit_shell_into, heft class III layer)",
    "exception": {
-    "draws": 2
+    "draws": 3
    },
-   "exception_why": "ROSTER-LOOK section 5: class III adds side-gap panels on the Pod and thicker tread caps on the Core, two parts at one draw each, within the class III layer cap of 2 draws (ROSTER-LOOK:250; docs/decisions.tsv 2026-10-10 w13-PD)",
+   "exception_why": "ROSTER-LOOK section 5: class III adds side-gap panels on the Pod and thicker tread caps on the Core, two parts at one draw each, within the class III layer cap of 2 draws (ROSTER-LOOK:250; docs/decisions.tsv 2026-10-10 w13-PD); baked-bracket bank split (wave 19, MOTION-SPEC row 208): the claw hooks are their own ClawHooks mesh under Pod so the carrier bank tilts them off a wall, one more draw than the class cap of 2 (3 draws: Pod, Core, ClawHooks), pending coordinator ruling on #241",
    "provenance": {
     "recipe": "tools/blender/shell_tarn_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
