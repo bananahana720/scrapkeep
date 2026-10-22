@@ -972,9 +972,11 @@ static func update_carrier_bank(pod: Node3D, normal: Vector3, delta: float) -> B
 	var hull := _bank_hull(pod)
 	var solved := CarrierBank.solve(hull["ring"], yaw, hull["brackets"], face)
 	var angle: float = solved["angle"]
-	var residual := maxf(0.0, float(solved["reach"]) - CarrierBank.LIMIT) if not solved["clears"] else 0.0
+	var residual := 0.0 if solved["clears"] else maxf(0.0, float(solved["reach"]) - CarrierBank.LIMIT)
 	pod.set_meta("bank_residual", residual)
-	if residual > 0.0 and (not pod.has_meta("bank_warned") or pod.get_meta("bank_warned") != hull["key"]):
+	if residual <= 0.0:
+		pod.remove_meta("bank_warned")
+	elif CarrierBank.UP.cross(face).length() >= CarrierBank.FLAT and (not pod.has_meta("bank_warned") or pod.get_meta("bank_warned") != hull["key"]):
 		pod.set_meta("bank_warned", hull["key"])
 		push_warning("hero_assets: no carrier bank clears the %.2f m limit (%.3f m over) for hull %s" % [CarrierBank.LIMIT, residual, hull["key"]])
 	var bank := CarrierBank.basis_for(face, angle)
