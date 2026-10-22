@@ -352,12 +352,21 @@ func _build_region(location: Vector2i) -> Array:
 				if cx >= 0 and cx < REGION_SIZE and cz >= 0 and cz < REGION_SIZE:
 					control[cz * REGION_SIZE + cx] = HOLE_BIT
 	return [location, Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, data.to_byte_array()),
-		Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, control.to_byte_array())]
+		Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, control.to_byte_array()), color_map()]
 
 
-# A region's Terrain3DRegion from the worker's [location, height map, control map], made on the main thread: it is the
-# addon's object (GDExtension, its source is not in this repo), so no worker makes or sets one. set_height_map works out
-# the height range itself (a calc_height_range after it cost as much again for the same range); _attach_step sanitizes.
+# The color map sanitize_maps makes for a region without one (white, roughness 0.5, mipmapped). Made here, on the worker,
+# it is plain Image data; left to sanitize_maps on the main thread it cost 37 to 88 ms a region on the cloud.
+static func color_map() -> Image:
+	var image := Image.create_empty(REGION_SIZE, REGION_SIZE, true, Image.FORMAT_RGBA8)
+	image.fill(Color(1.0, 1.0, 1.0, 0.5))
+	return image
+
+
+# A region's Terrain3DRegion from the worker's [location, height map, control map, color map], made on the main thread:
+# it is the addon's object (GDExtension, its source is not in this repo), so no worker makes or sets one. set_height_map
+# works out the height range itself (a calc_height_range after it cost as much again for the same range), and with the
+# worker's color map _attach_step's sanitize has nothing left to make.
 static func _make_region(maps: Array) -> Object:
 	if not ThreadGuard.main_only("park_terrain region"):
 		return null
@@ -367,6 +376,8 @@ static func _make_region(maps: Array) -> Object:
 	region.set_location(maps[0])
 	region.set_height_map(maps[1])
 	region.set_control_map(maps[2])
+	if maps.size() > 3:
+		region.set_color_map(maps[3])
 	return region
 
 
@@ -435,12 +446,8 @@ func _attach_step(deadline: int) -> void:
 		if deadline >= 0:
 			return
 	if _next_region < _regions.size():
-		# A region takes two steps, a frame each: making it with its maps, then the sanitize and the add.
-		if _regions[_next_region] is Array:
-			_regions[_next_region] = _make_region(_regions[_next_region])
-			if deadline >= 0:
-				return
-		var region: Object = _regions[_next_region]
+		# A region a frame: making it with its maps (set_height_map is most of it), then the sanitize and the add.
+		var region: Object = _make_region(_regions[_next_region])
 		region.sanitize_maps()
 		if terrain3d.data.has_region(region.get_location()):
 			terrain3d.data.remove_regionl(region.get_location(), false)

@@ -3,7 +3,8 @@ extends SceneTree
 # The worker-race fixes (scrapkeep#241, 6343074031) keep meshes and Terrain3D regions on the main thread, behind
 # ThreadGuard. Checked: on the main thread the guarded paths build and count nothing. The planted control runs this
 # script again in a child with --planted, where a worker calls the park props mesh read (which instantiates a GLB)
-# and the region maker: each must fail the guard's assert, count a violation and make nothing. The child is its own
+# and the region maker: each must fail the guard's assert, count a violation and make nothing. The region's color map,
+# made on the worker, must equal the one sanitize_maps would make on the main thread. The child is its own
 # process because the assert prints a SCRIPT ERROR, which fails any test that prints it.
 
 const T := preload("res://tests/support/t.gd")
@@ -32,10 +33,27 @@ func _main_thread() -> void:
 	_t.check("the main thread passes the guard", ThreadGuard.main_only("thread_guard_test main"))
 	ParkProps.release_shared()
 	_t.check("the park props mesh read builds on the main thread", ParkProps._mesh(GLB) != null)
-	var region := ParkTerrain._make_region(_maps())
+	var maps := _maps()
+	var region := ParkTerrain._make_region(maps)
 	_t.check("the region maker builds on the main thread", region != null and region.get_location() == Vector2i(1, -1))
 	# set_height_map works out the range itself (_make_region no longer calls calc_height_range after it).
 	_t.eq("the region's height range spans its height map", region.get_height_range() if region != null else Vector2.ZERO, Vector2(LOW_M, HIGH_M))
+	# The worker's color map is the one sanitize_maps makes for a region without one, so the main thread's sanitize keeps it.
+	var bare := ParkTerrain._make_region(_maps().slice(0, 3))
+	bare.sanitize_maps()
+	var given: Image = region.get_color_map() if region != null else null
+	if region != null:
+		region.sanitize_maps()
+	var made: Image = bare.get_color_map()
+	_t.check("the worker's color map equals the one sanitize_maps makes (format, mipmaps, every byte)", given != null and made != null
+		and given.get_format() == made.get_format() and given.has_mipmaps() == made.has_mipmaps() and given.get_data() == made.get_data(),
+		"%s / %s" % [str(given), str(made)])
+	# Made in the form the region keeps: one without mipmaps gets them from set_color_map, on the main thread (45 ms on the cloud).
+	var fresh := ParkTerrain.color_map()
+	_t.check("the worker makes the color map with its mipmaps, in the region's format", fresh.has_mipmaps() and made != null
+		and fresh.get_format() == made.get_format(), "mipmaps %s, format %d" % [fresh.has_mipmaps(), fresh.get_format()])
+	_t.check("the region keeps the worker's color map as given, and the sanitize keeps it", region != null and given == maps[3]
+		and region.get_color_map() == given)
 	_t.eq("no violation on the main thread", ThreadGuard.violations, 0)
 	ParkProps.release_shared()
 
@@ -78,4 +96,4 @@ static func _maps() -> Array:
 	heights[7] = LOW_M
 	heights[size * size - 9] = HIGH_M
 	return [Vector2i(1, -1), Image.create_from_data(size, size, false, Image.FORMAT_RF, heights.to_byte_array()),
-		Image.create_empty(size, size, false, Image.FORMAT_RF)]
+		Image.create_empty(size, size, false, Image.FORMAT_RF), ParkTerrain.color_map()]
