@@ -65,27 +65,32 @@ def rot_x(y, z, theta):
     return (y * math.cos(theta) - z * math.sin(theta), y * math.sin(theta) + z * math.cos(theta))
 
 
-def bursage(p, x, y, z, s, rng, dry=False):
-    """A grey-green bursage mound; `dry` swaps in straw tones."""
+def bursage(p, x, y, z, s, rng, dry=False, lean=False):
+    """A grey-green bursage mound; `dry` swaps in straw tones. `lean` (the scrub kinds, hundreds per park) drops a
+    blob and a stem and draws the rest unsubdivided: an 80-tri ico (subdiv 2) in place of a 20-tri one under a subsurf (120)."""
     base = "a39a64" if dry else SAGE
-    for k in range(4):
+    blob = dict(style="flat", subdiv=2) if lean else dict(style="soft")
+    for k in range(3 if lean else 4):
         a = k * 1.9 + rng.uniform(0, 1)
         soft_ico(p, 0.3 * s, (x + math.cos(a) * 0.22 * s, y + math.sin(a) * 0.22 * s, z + 0.18 * s + 0.05 * k * s),
               tint(base if k % 2 else (SAGE_PALE if not dry else "b0a674"), rng, 0.07),
-              scale=(1.0, 1.0, 0.75), style="soft")
-    for k in range(3):
+              scale=(1.0, 1.0, 0.75), **blob)
+    for k in range(2 if lean else 3):
         a = k * 2.3 + 0.4
         p.rod((x, y, z + 0.1 * s), (x + math.cos(a) * 0.3 * s, y + math.sin(a) * 0.3 * s, z + 0.65 * s),
-              0.018 * s, "a39a64", segs=5)
+              0.018 * s, "a39a64", segs=5, style="flat" if lean else "round")
 
 
-def cholla(p, x, y, z, s, rng, arms=2):
-    """A jointed cholla: chunky segments, pale fuzz knobs (no spines to read as a creature)."""
+def cholla(p, x, y, z, s, rng, arms=2, lean=False):
+    """A jointed cholla: chunky segments, pale fuzz knobs (no spines to read as a creature). `lean` (the scrub kinds)
+    keeps one trunk knob, gives the trunk 6 sides and draws the knobs as 80-tri icos with no subsurf."""
     col = "8c9a72"
     top = z + 0.9 * s
-    p.rod((x, y, z), (x, y, top), 0.1 * s, col, segs=7, r2=0.085 * s)
-    for h in (0.25, 0.5, 0.75):
-        soft_ico(p, 0.12 * s, (x, y, z + 0.9 * s * h), "a9ae88", scale=(1.0, 1.0, 0.8), style="soft")
+    segs = 6 if lean else 7  # 6 sides is the fewest the subsurf rounds off (crease_angle 70; a pentagon creases at 72)
+    knob = dict(style="flat", subdiv=2) if lean else dict(style="soft")
+    p.rod((x, y, z), (x, y, top), 0.1 * s, col, segs=segs, r2=0.085 * s)
+    for h in ((0.5,) if lean else (0.25, 0.5, 0.75)):
+        soft_ico(p, 0.12 * s, (x, y, z + 0.9 * s * h), "a9ae88", scale=(1.0, 1.0, 0.8), **knob)
     for k in range(arms):
         a = k * math.pi + 0.8 + rng.uniform(-0.2, 0.2)
         sx, sz = z + 0.5 * s + 0.12 * k * s, 0
@@ -94,8 +99,8 @@ def cholla(p, x, y, z, s, rng, arms=2):
         end = (x + math.cos(a) * 0.4 * s, y + math.sin(a) * 0.4 * s, sx + 0.7 * s)
         p.rod(start, mid, 0.08 * s, col, segs=6)
         p.rod(mid, end, 0.075 * s, tint(col, rng, 0.05), segs=6)
-        soft_ico(p, 0.11 * s, end, "a9ae88", scale=(1, 1, 0.85), style="soft")
-    soft_ico(p, 0.12 * s, (x, y, top + 0.04 * s), "a9ae88", scale=(1, 1, 0.85), style="soft")
+        soft_ico(p, 0.11 * s, end, "a9ae88", scale=(1, 1, 0.85), **knob)
+    soft_ico(p, 0.12 * s, (x, y, top + 0.04 * s), "a9ae88", scale=(1, 1, 0.85), **knob)
 
 
 def rock(p, x, y, z, r, rng, vein=False, col=HOST):
@@ -712,18 +717,18 @@ def core_trays(p, v, rng):
 def bursage_kind(p, v, rng):
     p.cyl(0.7, 0.22, (0, 0, 0.11), C["soil"], segs=8, r2=0.55, style="hard")  # a mound of trodden dirt
     if v == "a":
-        bursage(p, 0, 0, 0.0, 1.5, rng)
-        bursage(p, 0.7, 0.5, 0.0, 1.0, rng)
-        bursage(p, -0.6, 0.6, 0.0, 0.9, rng)
+        bursage(p, 0, 0, 0.0, 1.5, rng, lean=True)
+        bursage(p, 0.7, 0.5, 0.0, 1.0, rng, lean=True)
+        bursage(p, -0.6, 0.6, 0.0, 0.9, rng, lean=True)
     elif v == "b":
-        bursage(p, 0, 0, 0.0, 1.6, rng, dry=True)
-        bursage(p, -0.7, -0.4, 0.0, 1.1, rng)
-        for k in range(5):
+        bursage(p, 0, 0, 0.0, 1.6, rng, dry=True, lean=True)
+        bursage(p, -0.7, -0.4, 0.0, 1.1, rng, lean=True)
+        for k in range(3):
             p.rod((0.0, 0.0, 0.2), (rng.uniform(-0.5, 0.5), rng.uniform(-0.5, 0.5), 1.1 + 0.1 * k), 0.015, "b0a674", segs=5)
     else:
-        bursage(p, 0, 0, 0.0, 1.0, rng, dry=True)
-        bursage(p, 0.8, -0.3, 0.0, 1.2, rng)
-        bursage(p, -0.7, 0.5, 0.0, 0.8, rng)
+        bursage(p, 0, 0, 0.0, 1.0, rng, dry=True, lean=True)
+        bursage(p, 0.8, -0.3, 0.0, 1.2, rng, lean=True)
+        bursage(p, -0.7, 0.5, 0.0, 0.8, rng, lean=True)
         rock(p, 0.2, 0.9, 0.0, 0.3, rng, vein=True)
 
 
@@ -731,19 +736,19 @@ def bursage_kind(p, v, rng):
         story="Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints.")
 def cholla_kind(p, v, rng):
     if v == "a":
-        cholla(p, 0, 0, 0.0, 1.5, rng, arms=2)
+        cholla(p, 0, 0, 0.0, 1.5, rng, arms=2, lean=True)
     elif v == "b":
-        cholla(p, -0.4, 0, 0.0, 1.3, rng, arms=1)
-        cholla(p, 0.5, 0.3, 0.0, 1.0, rng, arms=2)
-        cholla(p, 0.1, -0.6, 0.0, 0.8, rng, arms=0)
+        cholla(p, -0.4, 0, 0.0, 1.3, rng, arms=1, lean=True)
+        cholla(p, 0.5, 0.3, 0.0, 1.0, rng, arms=2, lean=True)
+        cholla(p, 0.1, -0.6, 0.0, 0.8, rng, arms=0, lean=True)
     else:
         # Fallen joints in a mat.
-        for k in range(6):
+        for k in range(4):
             a = rng.uniform(0, 3)
             x, y = rng.uniform(-0.6, 0.6), rng.uniform(-0.6, 0.6)
-            p.cyl(0.1, 0.5, (x, y, 0.1), "8c9a72", segs=7, rot=(0, math.pi / 2, a), style="hard")
-            soft_ico(p, 0.11, (x + math.cos(a) * 0.27, y - math.sin(a) * 0.27, 0.1), "a9ae88", scale=(1, 1, 0.8), style="soft")
-        cholla(p, 0.0, 0.0, 0.0, 0.9, rng, arms=1)
+            p.cyl(0.1, 0.5, (x, y, 0.1), "8c9a72", segs=6, rot=(0, math.pi / 2, a), style="hard")
+            soft_ico(p, 0.11, (x + math.cos(a) * 0.27, y - math.sin(a) * 0.27, 0.1), "a9ae88", scale=(1, 1, 0.8), style="flat", subdiv=2)
+        cholla(p, 0.0, 0.0, 0.0, 0.9, rng, arms=1, lean=True)
         rock(p, 0.7, 0.5, 0.0, 0.25, rng)
 
 

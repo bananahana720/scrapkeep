@@ -133,3 +133,18 @@ pit_011 moved 2 m north because facing wash_berm from its old point put a cholla
 Labels: the lint flagged 55 `near` labels (25 cut mid-word, 30 with leading or trailing whitespace), and 4 more (the hoist-rope wagon ones) ended on a comma; each is now "<row id>: <the template story cut at the last whole word within 60 characters>". For example, pit_011 "wash_berm, bursage and cholla thickening along " is now "wash_berm: Bursage and cholla thickening along the haul road's edge", and pit_012 "slickrock_15, the fallen shift bell with its rope " is now "slickrock_15: The fallen shift bell with its rope tail, a sign board".
 
 Results: pin 795077205 to 3124860388. #323's check (with its row-span fix af522720, run with `--file` on this copy) reports 0 violations, 0 pattern, 0 pin, 0 lint; the old check gives 0 violations and the same fingerprint; `park_props_test` passes (226 checks, pin line PASS). Density (w18m): 27 of 31 windows pass, 4 exempt (1 arena, 2 camp, 1 telegraph), none failing, the same as before.
+
+## w18n kit cost cut (GPU row #252 6350030903, coordinator 6350036287)
+
+The 4080 row failed on p99 (+2.07 ms against +1.0 ms), with the extra frames in the fight state (3, 3). The coordinator asked for a cut to the kit's cost and then one new pair per side. A headless probe (each park's expansion, park_props.gd's ranges and batching, a sphere with no frustum) put bursage and cholla first: 675 of the pit's 1166 instances, about a third of the kit's triangles from the arena ring (17 points within 50 m of the Warden anchor (0, 255)), and over half on the ride lines. Hero shadows were already zero there.
+
+Only those two kinds changed. Their blobs and knobs are now 80-tri icos with no subsurf, in place of 20-tri icos under one subsurf (120). Each bursage mound drops a blob and a stem, bursage_b drops two of its five straw stems, each cholla keeps one of its three trunk knobs and gets a 6-sided trunk (6 is the fewest sides the subsurf rounds off; 5 sides crease at 72 degrees, over crease_angle 70), and cholla_c's mat has 4 joints, not 6. The look checked against the kit previews before and after: same mounds, colours and silhouettes.
+
+| Variant | LOD0 tris before | after |
+|---|---|---|
+| bursage_a / b / c | 2072 / 1712 / 2548 | 908 / 816 / 1356 |
+| cholla_a / b / c | 1092 / 2484 / 2472 | 680 / 1368 / 1516 |
+
+LOD1 and LOD2 follow (50% and 14 to 15% of LOD0). Footprint radii grow by up to 0.10 m (bursage_b 0.998 to 1.099), which drops one bursage litter instance: 1165 instances (206 litter), fingerprint 3124860388 to 3367089674, re-pinned.
+
+Probe, kit triangles in view (draws unchanged): arena ring median 55,732 to 43,873 and peak 96,044 to 71,019; ride lines (44 points, one per 40 m) median 181,882 to 132,546 and peak 282,564 to 203,701. These are estimates, not frame costs; the new GPU pair is the test.

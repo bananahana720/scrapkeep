@@ -12022,23 +12022,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "bursage variant a LOD0 (2072 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; polished and baked."
+    "notes": "bursage variant a LOD0 (908 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.0272,
+     -1.0485,
      0,
-     -0.8161
+     -0.8611
     ],
     "max": [
-     1.0272,
-     0.9927,
-     0.8161
+     1.0485,
+     1.0538,
+     0.8611
     ],
     "size": [
-     2.0544,
-     0.9927,
-     1.6322
+     2.097,
+     1.0538,
+     1.7222
     ]
    }
   },
@@ -12050,23 +12050,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "bursage variant a LOD1 (1036 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "bursage variant a LOD1 (448 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.0272,
+     -1.0544,
      0,
-     -0.8155
+     -0.8584
     ],
     "max": [
-     1.0307,
-     0.9927,
-     0.8253
+     1.0551,
+     1.0526,
+     0.8646
     ],
     "size": [
-     2.0579,
-     0.9927,
-     1.6408
+     2.1095,
+     1.0526,
+     1.723
     ]
    }
   },
@@ -12078,23 +12078,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "bursage variant a LOD2 (301 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "bursage variant a LOD2 (130 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.0312,
+     -1.0423,
      0,
-     -0.8319
+     -0.8342
     ],
     "max": [
-     1.0443,
-     0.9697,
-     0.8253
+     1.0416,
+     1.0199,
+     0.8583
     ],
     "size": [
-     2.0755,
-     0.9697,
-     1.6572
+     2.0839,
+     1.0199,
+     1.6925
     ]
    }
   },
@@ -12106,23 +12106,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "bursage variant b LOD0 (1712 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; polished and baked."
+    "notes": "bursage variant b LOD0 (816 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.9246,
+     -0.9977,
      0,
-     -0.781
+     -0.8485
     ],
     "max": [
-     0.9246,
-     1.5084,
-     0.781
+     0.9977,
+     1.3769,
+     0.8485
     ],
     "size": [
-     1.8492,
-     1.5084,
-     1.562
+     1.9954,
+     1.3769,
+     1.697
     ]
    }
   },
@@ -12134,23 +12134,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "bursage variant b LOD1 (856 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "bursage variant b LOD1 (403 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.9246,
+     -1.005,
      0,
-     -0.7902
+     -0.8485
     ],
     "max": [
-     0.9246,
-     1.5084,
-     0.781
+     0.9977,
+     1.3709,
+     0.8485
     ],
     "size": [
-     1.8492,
-     1.5084,
-     1.5712
+     2.0027,
+     1.3709,
+     1.697
     ]
    }
   },
@@ -12162,23 +12162,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "bursage variant b LOD2 (245 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "bursage variant b LOD2 (115 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.9317,
+     -0.9902,
      0,
-     -0.7904
+     -0.8432
     ],
     "max": [
-     0.9228,
-     1.4907,
-     0.7741
+     0.9867,
+     1.3336,
+     0.8449
     ],
     "size": [
-     1.8545,
-     1.4907,
-     1.5645
+     1.9769,
+     1.3336,
+     1.6881
     ]
    }
   },
@@ -12190,23 +12190,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "bursage variant c LOD0 (2548 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; polished and baked."
+    "notes": "bursage variant c LOD0 (1356 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.1985,
+     -1.1967,
      0,
-     -0.987
+     -1.0369
     ],
     "max": [
-     1.1985,
-     0.7957,
-     0.987
+     1.1967,
+     0.8431,
+     1.0369
     ],
     "size": [
-     2.397,
-     0.7957,
-     1.974
+     2.3934,
+     0.8431,
+     2.0738
     ]
    }
   },
@@ -12218,23 +12218,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "bursage variant c LOD1 (1274 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "bursage variant c LOD1 (674 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.1985,
+     -1.1967,
      0,
-     -0.9856
+     -1.0447
     ],
     "max": [
-     1.2027,
-     0.7935,
-     0.987
+     1.1967,
+     0.8379,
+     1.0369
     ],
     "size": [
-     2.4012,
-     0.7935,
-     1.9726
+     2.3934,
+     0.8379,
+     2.0816
     ]
    }
   },
@@ -12246,23 +12246,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "bursage variant c LOD2 (372 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "bursage variant c LOD2 (195 tris): Bursage and brittle desert scrub taking back the bench, greying with the season. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.2113,
+     -1.2263,
      0,
-     -0.9725
+     -1.0428
     ],
     "max": [
-     1.2062,
-     0.8089,
-     0.9823
+     1.1885,
+     0.8322,
+     1.0333
     ],
     "size": [
-     2.4175,
-     0.8089,
-     1.9548
+     2.4148,
+     0.8322,
+     2.0761
     ]
    }
   },
@@ -12274,23 +12274,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "cholla variant a LOD0 (1092 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; polished and baked."
+    "notes": "cholla variant a LOD0 (680 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.5622,
+     -0.5903,
      0,
-     -0.5445
+     -0.5781
     ],
     "max": [
-     0.5622,
-     2.0944,
-     0.5445
+     0.5903,
+     2.1202,
+     0.5781
     ],
     "size": [
-     1.1244,
-     2.0944,
-     1.089
+     1.1806,
+     2.1202,
+     1.1562
     ]
    }
   },
@@ -12302,23 +12302,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "cholla variant a LOD1 (546 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "cholla variant a LOD1 (340 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.5616,
+     -0.5903,
      0,
-     -0.5441
+     -0.5781
     ],
     "max": [
-     0.5642,
-     2.0915,
-     0.5424
+     0.5903,
+     2.1194,
+     0.5781
     ],
     "size": [
-     1.1258,
-     2.0915,
-     1.0865
+     1.1806,
+     2.1194,
+     1.1562
     ]
    }
   },
@@ -12330,23 +12330,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "cholla variant a LOD2 (164 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "cholla variant a LOD2 (102 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.5422,
+     -0.5939,
      0,
-     -0.5546
+     -0.5506
     ],
     "max": [
-     0.5725,
-     2.0868,
-     0.5408
+     0.5858,
+     2.0886,
+     0.5957
     ],
     "size": [
-     1.1147,
-     2.0868,
-     1.0954
+     1.1797,
+     2.0886,
+     1.1463
     ]
    }
   },
@@ -12358,23 +12358,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "cholla variant b LOD0 (2484 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; polished and baked."
+    "notes": "cholla variant b LOD0 (1368 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.6799,
+     -0.7025,
      0,
-     -0.6873
+     -0.7083
     ],
     "max": [
-     0.6799,
-     1.6592,
-     0.6873
+     0.7025,
+     1.6815,
+     0.7083
     ],
     "size": [
-     1.3598,
-     1.6592,
-     1.3746
+     1.405,
+     1.6815,
+     1.4166
     ]
    }
   },
@@ -12386,23 +12386,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "cholla variant b LOD1 (1242 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "cholla variant b LOD1 (684 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.6799,
+     -0.7025,
      0,
-     -0.6859
+     -0.7083
     ],
     "max": [
-     0.6795,
-     1.6592,
-     0.6861
+     0.705,
+     1.6808,
+     0.7083
     ],
     "size": [
-     1.3594,
-     1.6592,
-     1.372
+     1.4075,
+     1.6808,
+     1.4166
     ]
    }
   },
@@ -12414,23 +12414,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "cholla variant b LOD2 (372 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "cholla variant b LOD2 (204 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.6833,
+     -0.6987,
      0,
-     -0.6956
+     -0.706
     ],
     "max": [
-     0.6772,
-     1.6503,
-     0.6939
+     0.7075,
+     1.667,
+     0.7021
     ],
     "size": [
-     1.3605,
-     1.6503,
-     1.3895
+     1.4062,
+     1.667,
+     1.4081
     ]
    }
   },
@@ -12442,23 +12442,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "cholla variant c LOD0 (2472 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; polished and baked."
+    "notes": "cholla variant c LOD0 (1516 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.7881,
+     -0.7828,
      0,
-     -0.7284
+     -0.7269
     ],
     "max": [
-     0.7881,
-     1.1616,
-     0.7284
+     0.7828,
+     1.1641,
+     0.7269
     ],
     "size": [
-     1.5762,
-     1.1616,
-     1.4568
+     1.5656,
+     1.1641,
+     1.4538
     ]
    }
   },
@@ -12470,23 +12470,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "cholla variant c LOD1 (1236 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "cholla variant c LOD1 (758 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.7895,
+     -0.7828,
      0,
-     -0.7298
+     -0.7304
     ],
     "max": [
-     0.7877,
-     1.1583,
-     0.7282
+     0.7844,
+     1.1636,
+     0.7269
     ],
     "size": [
-     1.5772,
-     1.1583,
-     1.458
+     1.5672,
+     1.1636,
+     1.4573
     ]
    }
   },
@@ -12498,23 +12498,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "cholla variant c LOD2 (370 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "cholla variant c LOD2 (226 tris): Cholla, jointed and fuzzy, standing in cluster or fallen in a mat of dropped joints. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.7949,
+     -0.7926,
      0,
-     -0.7328
+     -0.7319
     ],
     "max": [
-     0.7848,
-     1.1673,
-     0.7228
+     0.787,
+     1.1451,
+     0.7246
     ],
     "size": [
-     1.5797,
-     1.1673,
-     1.4556
+     1.5796,
+     1.1451,
+     1.4565
     ]
    }
   },

@@ -561,12 +561,12 @@
       "res://assets/models/park/props/pit/bursage_a_lod2.glb"
      ],
      "tris": [
-      2072,
-      1036,
-      301
+      908,
+      448,
+      130
      ],
-     "radius": 1.225,
-     "height": 0.993
+     "radius": 1.248,
+     "height": 1.054
     },
     "b": {
      "lod": [
@@ -575,12 +575,12 @@
       "res://assets/models/park/props/pit/bursage_b_lod2.glb"
      ],
      "tris": [
-      1712,
-      856,
-      245
+      816,
+      403,
+      115
      ],
-     "radius": 0.998,
-     "height": 1.508
+     "radius": 1.099,
+     "height": 1.377
     },
     "c": {
      "lod": [
@@ -589,12 +589,12 @@
       "res://assets/models/park/props/pit/bursage_c_lod2.glb"
      ],
      "tris": [
-      2548,
-      1274,
-      372
+      1356,
+      674,
+      195
      ],
-     "radius": 1.281,
-     "height": 0.796
+     "radius": 1.308,
+     "height": 0.843
     }
    }
   },
@@ -612,12 +612,12 @@
       "res://assets/models/park/props/pit/cholla_a_lod2.glb"
      ],
      "tris": [
-      1092,
-      546,
-      164
+      680,
+      340,
+      102
      ],
-     "radius": 0.728,
-     "height": 2.094
+     "radius": 0.762,
+     "height": 2.12
     },
     "b": {
      "lod": [
@@ -626,12 +626,12 @@
       "res://assets/models/park/props/pit/cholla_b_lod2.glb"
      ],
      "tris": [
-      2484,
-      1242,
-      372
+      1368,
+      684,
+      204
      ],
-     "radius": 0.931,
-     "height": 1.659
+     "radius": 0.955,
+     "height": 1.682
     },
     "c": {
      "lod": [
@@ -640,12 +640,12 @@
       "res://assets/models/park/props/pit/cholla_c_lod2.glb"
      ],
      "tris": [
-      2472,
-      1236,
-      370
+      1516,
+      758,
+      226
      ],
-     "radius": 0.993,
-     "height": 1.162
+     "radius": 0.971,
+     "height": 1.164
     }
    }
   }
