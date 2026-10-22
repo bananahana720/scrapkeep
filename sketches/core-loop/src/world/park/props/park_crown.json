@@ -1549,6 +1549,367 @@
      "tilt_deg": 0
     }
    ]
+  },
+  "watch_post_nokite": {
+   "story": "A lookout's perch: stool, lantern and a cup, a pennant to read the wind, without its pennant: used where the line runs closer than the brief's 30 m for a kite pennant, so a pennant here could read as a kite drone.",
+   "props": [
+    {
+     "kind": "watch_stool",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.2,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "storm_lantern",
+     "v": "a",
+     "at": [
+      -2.5,
+      0.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.18,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "a",
+     "at": [
+      2,
+      -3.5
+     ],
+     "yaw_deg": 20,
+     "scale": 1.19,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_fence",
+     "v": "a",
+     "at": [
+      -6.5,
+      3.5
+     ],
+     "yaw_deg": 150,
+     "scale": 1.16,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hammock_rig",
+     "v": "a",
+     "at": [
+      6,
+      6.5
+     ],
+     "yaw_deg": 100,
+     "scale": 1.26,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      -8.5,
+      -2
+     ],
+     "yaw_deg": 185,
+     "scale": 1.21,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      9.5,
+      -3
+     ],
+     "yaw_deg": 70,
+     "scale": 1.21,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "c",
+     "at": [
+      -4,
+      -5.5
+     ],
+     "yaw_deg": 200,
+     "scale": 1.29,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "net_lesson_nokite": {
+   "story": "A mending lesson: spare net in a basket, knot samples, a fence for the apprentices, without its pennant: used where the line runs closer than the brief's 30 m for a kite pennant, so a pennant here could read as a kite drone.",
+   "props": [
+    {
+     "kind": "knot_board",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 15,
+     "scale": 1.23,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "knot_board",
+     "v": "c",
+     "at": [
+      -4.5,
+      2
+     ],
+     "yaw_deg": 60,
+     "scale": 1.25,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_fence",
+     "v": "b",
+     "at": [
+      5,
+      -2.5
+     ],
+     "yaw_deg": 8,
+     "scale": 1.22,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hammock_rig",
+     "v": "b",
+     "at": [
+      4,
+      6
+     ],
+     "yaw_deg": 70,
+     "scale": 1.25,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "watch_stool",
+     "v": "c",
+     "at": [
+      -3,
+      -4.5
+     ],
+     "yaw_deg": 175,
+     "scale": 1.22,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "c",
+     "at": [
+      -7.5,
+      -2
+     ],
+     "yaw_deg": 350,
+     "scale": 1.21,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      8.5,
+      3
+     ],
+     "yaw_deg": 50,
+     "scale": 1.3,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      -8.5,
+      6.5
+     ],
+     "yaw_deg": 300,
+     "scale": 1.26,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "lightning_scar_nokite": {
+   "story": "Where the storm walked: glass tubes in a sand scar, a bent rod, and a lantern someone left, without its pennant: used where the line runs closer than the brief's 30 m for a kite pennant, so a pennant here could read as a kite drone.",
+   "props": [
+    {
+     "kind": "fulgurite",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.28,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "b",
+     "at": [
+      6.5,
+      3
+     ],
+     "yaw_deg": 120,
+     "scale": 1.15,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "c",
+     "at": [
+      -5.5,
+      2.5
+     ],
+     "yaw_deg": 200,
+     "scale": 1.18,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "storm_lantern",
+     "v": "b",
+     "at": [
+      3,
+      -4.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.29,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rope_fence",
+     "v": "c",
+     "at": [
+      -7.5,
+      -3.5
+     ],
+     "yaw_deg": 25,
+     "scale": 1.22,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      -3,
+      6.5
+     ],
+     "yaw_deg": 250,
+     "scale": 1.3,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      9.5,
+      -2
+     ],
+     "yaw_deg": 310,
+     "scale": 1.21,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "dish_stones",
+     "v": "b",
+     "at": [
+      -1,
+      -5.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.23,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "log_post_nokite": {
+   "story": "A crew log post: tally slabs, a dead lantern and a pennant on a cairn, nobody home, without its pennant: used where the line runs closer than the brief's 30 m for a kite pennant, so a pennant here could read as a kite drone.",
+   "props": [
+    {
+     "kind": "tally_slab",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 25,
+     "scale": 1.2,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tally_slab",
+     "v": "c",
+     "at": [
+      -4,
+      3
+     ],
+     "yaw_deg": 170,
+     "scale": 1.28,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "storm_lantern",
+     "v": "c",
+     "at": [
+      -2,
+      -4.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.18,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "watch_stool",
+     "v": "c",
+     "at": [
+      3.5,
+      -3.5
+     ],
+     "yaw_deg": 100,
+     "scale": 1.21,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      7,
+      5.5
+     ],
+     "yaw_deg": 60,
+     "scale": 1.28,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "yucca",
+     "v": "b",
+     "at": [
+      -8,
+      -1
+     ],
+     "yaw_deg": 200,
+     "scale": 1.16,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "fulgurite",
+     "v": "c",
+     "at": [
+      8.5,
+      -2.5
+     ],
+     "yaw_deg": 60,
+     "scale": 1.17,
+     "tilt_deg": 0
+    }
+   ]
   }
  },
  "spots": [
@@ -1614,7 +1975,7 @@
   },
   {
    "id": "crown_07",
-   "template": "watch_post",
+   "template": "watch_post_nokite",
    "at": [
     117.0,
     -376.8
@@ -1744,7 +2105,7 @@
   },
   {
    "id": "crown_20",
-   "template": "net_lesson",
+   "template": "net_lesson_nokite",
    "at": [
     144.0,
     -266.0
@@ -1814,7 +2175,7 @@
   },
   {
    "id": "crown_27",
-   "template": "net_lesson",
+   "template": "net_lesson_nokite",
    "at": [
     -286.0,
     -234.0
@@ -1894,7 +2255,7 @@
   },
   {
    "id": "crown_35",
-   "template": "watch_post",
+   "template": "watch_post_nokite",
    "at": [
     -262.0,
     -186.0
@@ -1974,7 +2335,7 @@
   },
   {
    "id": "crown_43",
-   "template": "lightning_scar",
+   "template": "lightning_scar_nokite",
    "at": [
     144.0,
     -114.0
@@ -2094,7 +2455,7 @@
   },
   {
    "id": "crown_55",
-   "template": "lightning_scar",
+   "template": "lightning_scar_nokite",
    "at": [
     10.0,
     -26.0
@@ -2344,7 +2705,7 @@
   },
   {
    "id": "crown_80",
-   "template": "log_post",
+   "template": "log_post_nokite",
    "at": [
     -14.0,
     246.0
@@ -2444,7 +2805,7 @@
   },
   {
    "id": "crown_90",
-   "template": "log_post",
+   "template": "log_post_nokite",
    "at": [
     26.0,
     374.0
@@ -2524,7 +2885,7 @@
   },
   {
    "id": "crown_98",
-   "template": "net_lesson",
+   "template": "net_lesson_nokite",
    "at": [
     58.0,
     430.0
@@ -2564,7 +2925,7 @@
   },
   {
    "id": "crown_102",
-   "template": "log_post",
+   "template": "log_post_nokite",
    "at": [
     -46.0,
     494.0
@@ -3131,7 +3492,7 @@
   ],
   "seed": 31
  },
- "pin": 2069366017,
+ "pin": 2441257203,
  "low_ground_rows": [
   "drop_ramp",
   "watch_butte",

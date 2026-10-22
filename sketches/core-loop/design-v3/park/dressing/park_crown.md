@@ -33,7 +33,7 @@ Variants run a (in use), b (run down), c (collapsed or overgrown). Notes on swap
 
 ## Placement (21 October 2026, round 5)
 
-`src/world/park/props/park_crown.json`: 19 templates, 154 spots, 934 vignette instances plus 133 litter (1067 in all), pinned (2069366017). Low vignettes stand 8 to 16 m off the line, mid ones to 40 m, heroes 24 to 60 m. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing is within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script against `validate` (`park_props.gd` check_one), not hand-picked; plan `--check` reports 0 violations.
+`src/world/park/props/park_crown.json`: 23 templates, 154 spots, 924 vignette instances plus 133 litter (1057 in all), pinned (2441257203, was 2069366017 before the pennant change). Low vignettes stand 8 to 16 m off the line, mid ones to 40 m, heroes 24 to 60 m. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing is within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script against `validate` (`park_props.gd` check_one), not hand-picked; plan `--check` reports 0 violations.
 
 ### Purpose and why each template reads
 
@@ -56,8 +56,29 @@ Each template's `story` line in the file says what it is and which moment it sho
 
 ### Density windows (audit r7) and bare poses
 
-- cannon (34.1, -336.2): filled by a low_cairn at (78, -330) and low_tiny at (72, -360); the window now passes.
+- cannon (34.1, -336.2): filled by the fill spots `crown_mv_*` at (72, -360) and (78, -330) (low_tiny and low_cairn, fitted to the camera cone); the r8 audit no longer lists it.
 - floor (9.7, -441.9), sable (8, -476.3), tarn (-32.8, -319.1): no legal spot in view. These samples ride the elevated Watch Butte drop (terrain 108.8, 132.5 and 116.1 m high); the ground within 60 m in the camera cone is either steeper than the 25 degree slope rule or inside a kicker keepout, and level ground beside it is 40 m or more lower, outside the 60 m view. A cone scan of the camera frustum (width 72.5 degree field of view, 60 m, pitch -0.3) found 0 legal cells for each: floor and sable are all `slope` and `line_clear`, tarn is `kicker run-out` of `bajada_lip` plus `slope`. The audit has no arena or camp exemption for them.
 - Bare poses in the 12-pose replay: 11 (17.3, -541.0) and 16 (8.1, -416.9) are on the drop (slope and the `bajada_lip` kicker ramp, 0 legal cells in view); 115 (-24.6, 474.1) improved from 3 to more core items (needs 5), where `warden bowl` and `crown_spire` keepouts leave only a thin strip; 208 (124.5, 237.5), the one void pose, stands on the gauntlet platform over a drop, and `home_clear` of the gauntlet_anchor_crew home plus the `gauntlet_west` row block everything level.
 
 Known gaps: the three windows and the poses named above stay bare for those reasons.
+
+### 30 m brief kinds
+
+- Kind: `kite_pennant`. Brief line (KITS.md, crown): keep it at least 30 m from lines, so it does not read as a kite drone. The plan check does not enforce this. The measure is edge distance: `Context.line_distance(centre)` minus the instance radius (the `line_clear` measure in `park_props.gd`), probed with `kind_dist_probe.gd` (scratch, not committed). The target is 30.5 m or more.
+- Before: 38 pennants, 10 under 30.5 m. After: 28 pennants, 0 under 30.5 m (the nearest is crown_63 at 30.73 m). The other 28 did not move; their edge_m is unchanged, from 30.73 to 65.39 m.
+- Fix: the ten short spots keep their other props and use a template copy without the pennant (the file schema has per-template props only, no per-spot override; `park_props.gd` expand). No spot moved, so no `near` label changed.
+
+| Spot | edge_m before | Change | edge_m after |
+| --- | --- | --- | --- |
+| crown_07 | 22.58 | pennant dropped (template `*_nokite`) | none left |
+| crown_20 | 17.84 | pennant dropped (template `*_nokite`) | none left |
+| crown_27 | 21.55 | pennant dropped (template `*_nokite`) | none left |
+| crown_35 | 23.03 | pennant dropped (template `*_nokite`) | none left |
+| crown_43 | 26.59 | pennant dropped (template `*_nokite`) | none left |
+| crown_55 | 26.80 | pennant dropped (template `*_nokite`) | none left |
+| crown_80 | 28.01 | pennant dropped (template `*_nokite`) | none left |
+| crown_90 | 27.92 | pennant dropped (template `*_nokite`) | none left |
+| crown_98 | 21.20 | pennant dropped (template `*_nokite`) | none left |
+| crown_102 | 22.16 | pennant dropped (template `*_nokite`) | none left |
+
+Pin before 2069366017, after 2441257203; plan check 0 violations (1057 instances).
