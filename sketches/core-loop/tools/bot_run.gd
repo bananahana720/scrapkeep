@@ -63,9 +63,11 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 # the engage frame is a bot artifact. The seed no longer replays exactly.
 # --frame-log=1 writes frames-<seed>.ndjson: each frame's wall ms, stage, flow state and the
 # Performance process, physics, node, resource and object counts; the renderer's draw calls and
-# objects in frame; video, texture and buffer memory (MB); and the five pipeline compilation
-# counters as Performance reports them ("pipelines": canvas, mesh, surface, draw, specialization),
-# so a frame that compiles pipelines or uploads a stage's buffers shows which (scrapkeep#235).
+# objects in frame; video, texture and buffer memory (MB, totals, so an upload is a step between
+# rows); and the five pipeline compilation counters ("pipelines": canvas, mesh, surface, draw,
+# specialization), running totals whose difference from the previous row is that frame's compiles,
+# so a frame that compiles pipelines or uploads a stage's buffers shows which (scrapkeep#241 row 28).
+# The pipeline counters exist on the RenderingDevice renderers only and read 0 under Compatibility.
 # --entry-profile=1 writes entry-<seed>.ndjson: every GameEvents handler's main-thread ms by
 # frame (tools/signal_timer.gd), signals under 5 ms a frame dropped. It slows the run about 2.5x.
 # --physics-probe=1 writes physics-<seed>.ndjson: for each physics tick over 100 ms, the Game
