@@ -97,34 +97,34 @@ Boards (under `docs/art/reference/`):
 - `pilots/pilots-balls-heft-moodboard.jpg` (scale, relative only).
 
 **Palette roles.** The Spillway props board (`spillway-props-moodboard.jpg`; `spillway/README.md` line 52) paints waterworks machines in petrol enamel 365754 with copper or steel fittings, on sandstone, oxide, charcoal and bone. Per role, from grepping each kind's colour calls in `tools/blender/park/props/flume.py` (the `C` table is `kit.py` lines 59-67; `PETROL` and `COPPER` are raw hex at the top of the recipe, because the foundation PR owns `kit.py`):
-- Machine bodies in petrol 365754 (`PETROL`, line 38): boom_crane_wreck winch-cab walls (lines 82 to 85), winch drum (94) and hook block (159); sluice_shed housing walls (273 to 277), gable roof planks (292, petrol and a darker petrol mix), axle and hub (301, 304); gauge_dial_shed hut walls (551 to 554) and back plate (562); pipe_section variant a body (698; variants b and c keep rust). The board panels followed are Sluice Wheelhouse (a petrol housing on a stone block with a wheel) and Pump Repair (petrol body, copper and steel fittings). The Spillway board has no gauge hut, so I took the nearest panel, Pump Repair, for gauge_dial_shed. The crane has no board panel; its working parts are timber on the carry board's trestles, so the boom, lattice, roof and A-frame stay timber and iron and only the winch cab is petrol.
+- Machine bodies in petrol 365754 (`PETROL`, line 38): boom_crane_wreck winch-cab walls (lines 82 to 85), winch drum (94) and hook block (159); sluice_shed housing walls (273 to 277), gable roof planks (292, petrol and a darker petrol mix), axle and hub (301, 304); gauge_dial_shed hut walls (551 to 554) and back plate (562); pipe_section variant a body (698; variants b and c keep rust). The board panels followed are Sluice Wheelhouse (a petrol housing on a stone block with a wheel) and Pump Repair (petrol body, copper and steel fittings). The Spillway board has no gauge hut, so I took the nearest panel, Pump Repair, for gauge_dial_shed. The crane has no board panel; its working parts are timber on the carry board's trestles, so the boom, lattice, roof and A-frame stay timber and iron; the petrol parts are the winch cab walls, the drum and the hook block, with a bone cap plate on the A-frame (line 110).
 - Oxide 9b513a (`OXIDE`, line 39): the sluice wheel spokes (line 311), as the Wheelhouse wheel. Paddles, rims, sill and trim stay timber and iron.
 - Bone d2c5a5 (`BONE`, line 40), one part per machine kind: boom_crane_wreck A-frame cap plate (line 110), sluice_shed name plate over the door (279), gauge_dial_shed dial face (563). No new geometry.
 - Copper b77843 fittings, small accents only: boom_crane_wreck crank ring and pipe_section end flanges. It is a WARN colour in `kit.py`, so the build prints a warning, no error.
 - Steel fittings stay iron or iron_light: flanges, hoops, bolts, crank spokes and the dial ring.
-- Verdigris 5f8a7c is not a machine colour here. It is on a flask (sluice_shed, line 322), a cup (tea_hearth, line 439) and a shirt and a cloth heap (washline, lines 463 and 470): small accents.
+- Verdigris 5f8a7c is not a machine colour here. It is on a flask (sluice_shed, line 324), a cup (tea_hearth, line 441) and a shirt and a cloth heap (washline, lines 465 and 472): small accents.
 - Sandstone c6a274 is unused: hearth stones and the shed footing are grey concrete.
 - Timber, canvas, concrete and charcoal carry the rest; the leaf greens are olive, not Ancient.
 Colour guard (`kit.py` `check_colour` runs at build): both rebuilds exited 0 with no banned or hazard-like colour; only the copper WARN line printed. Tris, radius and height are unchanged for every variant of the four recoloured kinds (identical KIT_BUILT lines; manifest and registry byte-identical). Previews (`artifacts/local/dressing/flume/preview/`, local) looked at against the props board:
 - sluice_shed_a: reads as the board's petrol Wheelhouse, a petrol housing and roof with an oxide spoked wheel, timber paddles and a bone name plate.
 - gauge_dial_shed_a: a petrol hut with a bone dial face and a timber roof; reads as a petrol machine hut like Pump Repair.
 - pipe_section_a: a petrol drum with copper flanges, like Pump Repair.
-- boom_crane_wreck_a: the winch cab is a petrol body with a bone cap plate, and the boom stays timber. It reads as a petrol cab with a timber crane, not a fully petrol machine; that is deliberate (no crane panel on the boards) and I flag it for review.
+- boom_crane_wreck_a: the winch cab, drum and hook block are petrol, the A-frame carries a bone cap plate, and the boom stays timber. It reads as a petrol cab with a timber crane, not a fully petrol machine; that is deliberate (no crane panel on the boards) and I flag it for review.
 
 **Shape language.** Broad worn, soft toy shapes: `flume.py` builds with `style="round"` and `hard_smooth` blobs, low sleepers (line 61, "never a crate"), draped shirts, and rounded shed and hearth masses, like the Pump repair and Wheelhouse panels. Silhouettes stay low and wide beside the tall machinery.
 
-**Materials.** The kit uses no brass anywhere: no `d9b44a`, `brass`, amber or copper hex appears in `flume.py` and none in the `C` table. Fittings are iron, iron_light and rust (steel and oxide), per the Materials board's rule that brass is Fleet ownership.
+**Materials.** The kit uses no brass: no `d9b44a`, `brass` or amber appears in `flume.py` and none in the `C` table, per the Materials board's rule that brass is Fleet ownership. Copper b77843 (`COPPER`, line 41) appears only as the crane's crank ring (line 97) and the pipe flanges (line 701); `kit.py` line 72 makes it a WARN colour, never dominant. Other fittings are iron, iron_light and rust.
 
 **Scale to the pilot ball.** The ball radius is 1.0 m, so diameter 2.0 m (`src/movement/tuning.gd:95`; `anchor_fit.json` `ball_radius_m` 1.0). Manifest kit heights against it, relative only: tea_hearth 0.8 (0.4 ball), bent_numbers 0.9 to 1.0, saltbush 0.8 to 1.0, washline 1.46, tool_peg 1.5 to 1.6, bunk_cots 1.0 to 1.95 (under one ball), skiff_on_blocks 3.1 to 3.4, boom_crane_wreck 4.8 and sluice_shed 5.6 (about 2.4 and 2.8 balls). Camp props stay under or near one ball and the sheds sit at a few balls: the plush-crew-among-giants contrast. No new metres asserted.
 
 **Avoid list** (checked against the kit and the manifest):
 - no emission: pass. `kit.py` line 567 asserts no `emissiveFactor` in any GLB, and the flume manifest has 0 `emissive` entries;
 - no hazard stripes or coral: pass. No stripe code in `flume.py`; `kit.py` bans ff5a3c and near colours and hazard-like hues (line 105);
-- no cache-shaped containers: pass. Sleepers are "never a crate" (line 61); the only box-like props are the sheds;
-- no taut or decorative grapple cables: pass with a note. The washline is a draped slack line (line 449, "never taut"). The boom_crane_wreck chains (lines 152 to 158) are heaped slack chain with sag 0.2 to 0.7, a wreck's rigging, not a line; variant a at 0.2 is the least slack, so review should look at it;
+- no cache-shaped containers: pass. Sleepers are "never a crate" (line 65); the only box-like props are the sheds;
+- no taut or decorative grapple cables: pass with a note. The washline is a draped slack line (line 453, "never taut"). The boom_crane_wreck chains (lines 151 to 162) are heaped slack chain with sag 0.2 to 0.7, a wreck's rigging, not a line; variant a at 0.2 is the least slack, so review should look at it;
 - no fake ride surfaces: pass. All props are low clutter or sheds; `check_one` keeps them off ride rows;
-- no glowing lamps: pass. The crane's lantern (lines 159 to 162) is unlit chalk white `e6e3d6`, with no emission;
-- no ancient-green or uranium-green: pass. No 9dff3c or near colour (`kit.py` line 70); the leaf greens are olive (6f7f4a, 4f5e38), not the board's bright Ancient green;
+- no glowing lamps: pass. The crane's lantern (lines 163 to 165) is unlit chalk white `e6e3d6`, with no emission;
+- no ancient-green or uranium-green: pass. No 9dff3c or near colour (`kit.py` line 69); the leaf greens are olive (6f7f4a, 4f5e38), not the board's bright Ancient green;
 - Highdraft items: not applicable to flume.
 
 **GROUNDING rows read** (`GROUNDING.md` (main cb534a2d), scratchpad copy):
