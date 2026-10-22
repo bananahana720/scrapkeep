@@ -72,6 +72,7 @@ var cable_radius := SLACK_RADIUS
 # Where the drawn cable starts: the collar fairlead, never the ball's centre (MOTION-SPEC swing row).
 var cable_origin := Vector3.ZERO
 var _fairlead_yaw := 0.0
+var _was_hooked := false
 var brackets: MeshInstance3D
 var lock_scale := 1.0
 var barb: MeshInstance3D
@@ -267,7 +268,11 @@ func projected_px(radius: float, depth: float) -> float:
 func _draw_cable(kit, centre: Vector3, smash: bool, delta: float) -> void:
 	# The physics pulls through the centre (a free bearing); only the drawn rope starts at the collar.
 	var toward: Vector3 = kit.anchor if kit.hooked else (_gone_anchor if _broke_age >= 0.0 or _let_go_age >= 0.0 else centre + _dry_dir)
-	_fairlead_yaw = fairlead_yaw(_fairlead_yaw, centre, toward, delta)
+	# A fresh rope (nothing drawn last frame, or a new hook) leaves from the anchor's side at once:
+	# turning in from a stale yaw would draw it through the lattice and the pilot.
+	var fresh: bool = not cable.visible or (kit.hooked and not _was_hooked)
+	_was_hooked = kit.hooked
+	_fairlead_yaw = fairlead_yaw(_fairlead_yaw, centre, toward, INF if fresh else delta)
 	var ball := fairlead_point(centre, _fairlead_yaw)
 	cable_origin = ball
 	var mesh: ImmediateMesh = cable.mesh

@@ -139,6 +139,15 @@ func _fairlead(view, player) -> void:
 	_t.check("FL-4 turn rate is limited", worst <= limit + 0.0001,
 		"largest per-step arc %.4f rad, limit %.4f rad (jump would be %.2f rad)" % [worst, limit, PI])
 	_t.check("FL-4 arrives", prev.distance_to(Vector3(1.06, 0.0, 0.0)) <= 0.001, "settled at %s after %d steps" % [prev, steps])
+	# FL-6: a new hook on the far side leaves from the anchor's side on its first frame; the rate limit
+	# is for a live rope only, or the fresh line would cross the ball while the collar turned.
+	kit.hooked = false
+	_settle(view, 120)
+	kit.hooked = true
+	kit.anchor = centre + Vector3(-5.0, 2.0, 0.0)
+	view.step(FRAME)
+	var fresh: Vector3 = view.cable_origin - centre
+	_t.check("FL-6 a new hook starts on the anchor's side", fresh.distance_to(Vector3(-1.06, 0.0, 0.0)) <= 0.001, "first frame %s, want (-1.06, 0, 0)" % fresh)
 	kit.hooked = false
 
 
