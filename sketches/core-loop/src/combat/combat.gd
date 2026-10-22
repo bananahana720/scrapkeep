@@ -2277,7 +2277,7 @@ func _cannon_set_piece_hit(enemy: Node3D, damage: float, at: Vector3, landing: b
 			damage if landing else damage * Ultimate.WARDEN_VOLLEY, landing, 0)
 		var id := enemy.get_instance_id()
 		var spent := float(budget.get(id, 0.0))
-		judged["gain"] = minf(float(judged.get("gain", 0.0)), maxf(0.0, Ultimate.WARDEN_POSTURE_CAP - spent))
+		judged["gain"] = minf(float(judged.get("gain", 0.0)), maxf(0.0, Ultimate.cap_for_warden(enemy) - spent))
 		judged["shatter"] = false
 		judged["crack"] = false
 		budget[id] = spent + float(judged["gain"])

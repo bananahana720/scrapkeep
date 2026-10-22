@@ -71,6 +71,8 @@ var _stick := Vector2.ZERO
 func setup(ctx) -> void:
 	name = "TitleStage"
 	_ctx = ctx
+	# boot.gd marks the game before it enters the tree while its 2D title card is up.
+	intro_hold = ctx.root != null and ctx.root.has_meta(&"intro_hold")
 	intro_autoplay = ctx.root != null and not bool(ctx.root.get("bot_driven")) and not bool(ctx.root.get("test_mode")) \
 		and DisplayServer.get_name() != "headless" and not "--no-intro" in OS.get_cmdline_user_args()
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -127,7 +129,16 @@ func show_flow(state: String) -> void:
 	_sync_dressing()
 	if state == "title" and intro_autoplay and not _intro_tried and not intro_hold:
 		_intro_tried = true
-		play_intro.call_deferred()
+		_autoplay_intro.call_deferred()
+
+
+# The deferred autoplay re-checks the hold: one set after this call was queued (boot.gd marking the
+# game late) still stops it, and the opening stays untried for release_intro().
+func _autoplay_intro() -> void:
+	if intro_hold:
+		_intro_tried = false
+		return
+	play_intro()
 
 
 # The 2D title card hands off here: lifts the hold and starts the once-per-launch opening if the
@@ -136,7 +147,7 @@ func release_intro() -> void:
 	intro_hold = false
 	if _flow_state == "title" and intro_autoplay and not _intro_tried and not intro_playing():
 		_intro_tried = true
-		play_intro.call_deferred()
+		_autoplay_intro.call_deferred()
 
 
 func intro_playing() -> bool:

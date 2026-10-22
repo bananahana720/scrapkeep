@@ -31,6 +31,12 @@ const LIFE_S := 0.9
 const MAX_VISIBLE := 8
 const FONT := 22
 const CRIT_FONT := 30
+# Overpowered pays (17 Oct): a bigger hit draws a bigger number. From BIG_FROM up, every
+# doubling of the figure adds BIG_STEP points, so a merged burst keeps swelling as it grows,
+# until MEGA_FONT keeps the biggest one on screen.
+const BIG_FROM := 40.0
+const BIG_STEP := 6.0
+const MEGA_FONT := 60
 const RISE := 46.0
 const FADE_FROM := 0.6
 
@@ -67,6 +73,13 @@ static func is_crit(result: Dictionary, body_plating: float) -> bool:
 	var dealt := float(result.get("dealt", 0.0))
 	var weak := String(result.get("part", "")) != "" and float(result.get("plating", 0.0)) < body_plating
 	return weak or dealt > float(result.get("punch", dealt)) * 1.01
+
+
+static func font_size(value: float, crit := false) -> int:
+	var size := float(CRIT_FONT if crit else FONT)
+	if value > BIG_FROM:
+		size += BIG_STEP * log(value / BIG_FROM) / log(2.0)
+	return mini(MEGA_FONT, roundi(size))
 
 
 func _init() -> void:
@@ -136,7 +149,7 @@ func _draw() -> void:
 		var t: float = number["age"] / LIFE_S
 		var colour: Color = number["color"]
 		colour.a = 1.0 if t < FADE_FROM else 1.0 - (t - FADE_FROM) / (1.0 - FADE_FROM)
-		var size := CRIT_FONT if number["crit"] else FONT
+		var size := font_size(number["value"], number["crit"])
 		var text := str(maxi(1, roundi(number["value"])))
 		var font := UiFonts.mono()
 		var spot: Vector2 = p + Vector2(-font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5, -RISE * t)
