@@ -7,7 +7,9 @@ enters the sight cone, the front face gap or a claw arm's gap.
 
   II   the six lowest gaps, every panel below Z -0.35
   III  the side gaps, the claw hooks out to 0.18 m past the lattice, and (Core part) thicker
-       tread-cap rims, so class III is two draws (registry exception)
+       tread-cap rims, so class III is two draws (registry exception); the hooks (here and at IV
+       and V) are their own ClawHooks mesh under Pod, one more draw, so the carrier bank tilts
+       them with the claw arms (hero_assets BRACKET_PARTS)
   IV   most remaining gaps (the crown stays open), hooks to 0.21 m, hinge guards on both claw
        arms and a slab skirt round the pull drum
   V    every remaining non-sight gap, the heavy hooks to 0.25 m with a second tooth row
@@ -190,9 +192,10 @@ def layer(n, gaps):
         slab(pod, diamonds[i][0], diamonds[i][1], i)
     reach = st.CLAW_REACH[n - 1]
     tips = []
+    hooks = Part("ClawHooks")
     if n >= 3:
         for sign in (1, -1):
-            tips.append(hook(pod, sign, reach, teeth=(n == 5)))
+            tips.append(hook(hooks, sign, reach, teeth=(n == 5)))
     if n == 4:
         guards(pod)
     sb._sharpen(pod)
@@ -204,6 +207,9 @@ def layer(n, gaps):
     else:
         core_obj = common.empty("Core", (0, 0, 0), root)
     pod_obj = pod.to_object((0, 0, 0), root)
+    if n >= 3:
+        sb._sharpen(hooks)
+        hooks.to_object((0, 0, 0), pod_obj)
     return root, core_obj, pod_obj, tips
 
 
