@@ -264,6 +264,23 @@ func _rects() -> void:
 			contained = contained and now.any(func(n: Rect2) -> bool: return n.grow(0.01).encloses(r))
 		t.check("rects %d: a rect for every mark" % count, tree.get_nodes_in_group(Threat.GROUP).size() == count and now.size() == count, "%d marks, %d old, %d new" % [tree.get_nodes_in_group(Threat.GROUP).size(), old.size(), now.size()])
 		t.check("rects %d: every old rect lies inside a new one" % count, contained)
+		# The box path is the one taken for both classes (lighting L7, #297): every mark answers
+		# with a box, and its rect is the box's projection, not the mesh walk's.
+		var boxed := true
+		var projected := true
+		for k in marks.size():
+			var box: AABB = marks[k].screen_bound_box()
+			boxed = boxed and box.size != Vector3.ZERO
+			var span := [Vector2(INF, INF), Vector2(-INF, -INF)]
+			PlayerFx._project_box(box, cam, span)
+			projected = projected and now.size() == marks.size() and now[k].is_equal_approx(Rect2(span[0], span[1] - span[0]).grow(margin))
+		t.check("rects %d: every telegraph and hazard answers with a box" % count, boxed)
+		t.check("rects %d: warning_rects projects that box" % count, projected)
+		var walked := PlayerFx.warning_rects(tree, cam, margin, false)
+		var differs := false
+		for k in mini(walked.size(), now.size()):
+			differs = differs or not walked[k].is_equal_approx(now[k])
+		t.check("rects %d: the forced mesh walk is a different, tighter path" % count, walked.size() == now.size() and differs)
 		for mark in marks:
 			mark.free()
 		await _frames(1)
