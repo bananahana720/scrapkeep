@@ -57,9 +57,10 @@ const THROW_STOP_MS := [22.0, 58.0]
 const THROW_SHAKE := [0.2, 0.5]
 # Bursts per frame, so a blast through a crowd costs a handful of emitters, not one each.
 const MAX_BURSTS := 6
-# The shell grows a tenth per heft class above I (visual only; the collider never
-# changes), and springs there with a little overshoot.
-const SHELL_PER_CLASS := 0.1
+# The outline stays the collision ball's size at every heft class (DECISIONS "Fixed outline"):
+# heft reads as panels, caps, modules and accretion chunks, never as whole-ball scale. The
+# shell still springs (pickup pulses) but its resting target is 1.0 at every class.
+const SHELL_PER_CLASS := 0.0
 const SHELL_RATE := 9.0
 # A pickup kicks the shell's spring outward this fast per unit of pulse: a heft gain.
 const PULSE_SPEED := 9.0
@@ -291,6 +292,10 @@ func _process(delta: float) -> void:
 	# ground rather than sunk into it.
 	var ground: Vector3 = player.state.contact_normal if player.state.grounded else Vector3.UP
 	juice.position = -_axis * Tuning.RADIUS * clampf(_squash, -0.3, MAX_SQUASH) * 0.9 * shell + ground * Tuning.RADIUS * (shell - 1.0)
+	# The cockpit rides the same offset but never the squash or shell basis.
+	var mount: Node3D = player.pod_mount() if player.has_method("pod_mount") else null
+	if mount != null:
+		mount.position = juice.position
 	_animate_pylon(delta)
 	if vfx != null and audio != null:
 		vfx.set_chain(audio.kill_streak.length if audio.kill_streak.live(Time.get_ticks_msec()) else 0, audio.kill_streak.rung)
@@ -679,11 +684,10 @@ func _on_rocket_jumped(_at: Vector3, _speed: float) -> void:
 	squash(-float(row["squash"]), Vector3.UP)
 
 
-# A new heft class: the shell swells to its new size and the ball pops.
+# A new heft class: the ball pops and the panels slam in (the outline does not grow).
 func _on_heft_class(heft_class: int, _heft: float) -> void:
 	if heft_class > _heft_class:
 		squash(0.32, Vector3.UP)
-		_shell_velocity += 1.2
 		hook_log.append(["class_up", "heft_class_changed"])
 	_heft_class = heft_class
 
