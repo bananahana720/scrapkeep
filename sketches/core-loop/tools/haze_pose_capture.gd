@@ -141,7 +141,9 @@ func _ring(at: Vector3, from_y: float) -> Node3D:
 	var hit: Dictionary = game.get_world_3d().direct_space_state.intersect_ray(query)
 	var floor_at := FloorAt.new()
 	floor_at.y = float(hit["position"].y) if not hit.is_empty() else from_y
-	return Telegraph.ring(game, floor_at, Threat.Type.INSTANT, at, RING_RADIUS)
+	# reach 0 draws no fence (threat_grammar.gd: no posts or rail at reach <= 0.05), so no rail
+	# projects over the ring or gap boxes; the fill and slag being read are unchanged.
+	return Telegraph.ring(game, floor_at, Threat.Type.INSTANT, at, RING_RADIUS, 0.0)
 
 
 func _ring_box(image: Image, cam: Camera3D, centre: Vector3, right: Vector3) -> Dictionary:
