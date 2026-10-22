@@ -62,7 +62,10 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 # hit-stop clock on physics ticks: for frame captures, where the next stage's one-frame build on
 # the engage frame is a bot artifact. The seed no longer replays exactly.
 # --frame-log=1 writes frames-<seed>.ndjson: each frame's wall ms, stage, flow state and the
-# Performance process, physics, node, resource and object counts.
+# Performance process, physics, node, resource and object counts; the renderer's draw calls and
+# objects in frame; video, texture and buffer memory (MB); and the five pipeline compilation
+# counters as Performance reports them ("pipelines": canvas, mesh, surface, draw, specialization),
+# so a frame that compiles pipelines or uploads a stage's buffers shows which (scrapkeep#235).
 # --entry-profile=1 writes entry-<seed>.ndjson: every GameEvents handler's main-thread ms by
 # frame (tools/signal_timer.gd), signals under 5 ms a frame dropped. It slows the run about 2.5x.
 # --physics-probe=1 writes physics-<seed>.ndjson: for each physics tick over 100 ms, the Game
@@ -443,7 +446,13 @@ func _process(_delta: float) -> bool:
 			_frame_log.store_line(JSON.stringify({"f": _frame_index, "ms": (now - _frame_usec) / 1000.0, "stage": _game.run.stage, "state": _game.flow.state,
 				"process_ms": Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, "physics_ms": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
 				"nodes": Performance.get_monitor(Performance.OBJECT_NODE_COUNT), "resources": Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT),
-				"objects": Performance.get_monitor(Performance.OBJECT_COUNT)}))
+				"objects": Performance.get_monitor(Performance.OBJECT_COUNT),
+				"draws": Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), "drawn": Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
+				"video_mb": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0, "texture_mb": Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
+				"buffer_mb": Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) / 1048576.0,
+				"pipelines": [Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_CANVAS), Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_MESH),
+					Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_SURFACE), Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_DRAW),
+					Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_SPECIALIZATION)]}))
 		_frame_usec = now
 		_frame_index += 1
 	if _signal_timer != null:
