@@ -79,6 +79,10 @@ var ground: Callable
 var cruise := 14.0
 var gravity := 26.0
 
+# How far under the cable the ball hangs while it rides (MOTION-SPEC cableway row): the held path ends here
+# below the cable end, which leaves the ball centre 1.1 m over a 2.4 m landing end.
+const CABLE_HANG := 1.3
+
 var barges: Array[Dictionary] = []
 var lifts: Array[Dictionary] = []
 var launchers: Array[Dictionary] = []
@@ -266,7 +270,11 @@ func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, ste
 		if riding or c["rest"] > 0.0 or ball.distance_to(c["from"]) > c["spec"]["radius"]:
 			continue
 		c["rest"] = CABLE_REST
-		facts.append({"kind": "ride", "ride": RideRail.line("grapple_line", ball, c["to"], planar, c["spec"]["floor"])})
+		# The ball hangs HANG below the cable and rides it down; the line view draws the hanger up to the cable.
+		var ride = RideRail.line("grapple_line", ball, (c["to"] as Vector3) - Vector3.UP * CABLE_HANG, planar, c["spec"]["floor"])
+		ride.cable_from = c["from"]
+		ride.cable_to = c["to"]
+		facts.append({"kind": "ride", "ride": ride})
 		facts.append({"kind": "fact", "fact": "ride_grapple_line", "at": c["from"]})
 		riding = true
 	for v in valves:

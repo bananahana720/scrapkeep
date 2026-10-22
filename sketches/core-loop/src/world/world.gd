@@ -233,6 +233,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_park_warden_chunks = 4
 	launch.stop()
 	ride = null
+	_show_ride()
 	bay.undock()
 	_bay_calm = false
 	terrain.use(stage)
@@ -295,6 +296,7 @@ func _on_stage_content_cleared(_reason: String) -> void:
 	launch.stop()
 	launch.clear_landing()
 	ride = null
+	_show_ride()
 	bay.undock()
 	_bay_calm = false
 	terrain_view.clear()
@@ -344,6 +346,7 @@ func _physics_process(delta: float) -> void:
 			player.set_velocity_now(rail)
 	elif ride != null:
 		_hold_ride(delta)
+	_show_ride()
 	var ball: Vector3 = player.ball_position()
 	var velocity: Vector3 = player.state.velocity
 	var riding: bool = ride != null or launch.flying()
@@ -624,6 +627,13 @@ func _hold_ride(delta: float) -> void:
 		return
 	ctx.player.set_velocity_now(ride.release_velocity())
 	ride = null
+
+
+# The line view draws the cable ride's hanger from the ride the ball is on; null clears it.
+func _show_ride() -> void:
+	var presentation = ctx.root.get("presentation") if ctx.root != null else null
+	if presentation != null and presentation.get("line_view") != null:
+		presentation.line_view.set_ride(ride)
 
 
 func _contraption_fact(fact: Dictionary) -> void:
