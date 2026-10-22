@@ -17,10 +17,16 @@ extends SceneTree
 # toward +X), are printed. KNOWN_BAKED lists today's over-limit nodes with their measured reach: a node past
 # the limit that is not listed fails (something new pokes out), a listed node that grows fails, and the
 # follow-up fix's acceptance is deleting rows until the table is empty. A listed node that no longer
-# reaches past the limit prints as CLEARED (delete its row).
+# reaches past the limit prints as CLEARED and fails (delete its row), and a listed node more than TOL below its
+# value fails as improved (lower its value), so the list tracks the truth.
+# The cosmetic shell variants (VARIANTS: each swaps in its own base pod; classes 2 to 5 borrow the default
+# layers) are measured at heft class 1 only, keyed by the variant's cosmetics id in the pilot field.
+# Meshes hidden by a heft Replace (VisualInstance3D layers 0) are skipped. Only the base pod's Fairlead counts
+# as banked (update_carrier_bank poses that one alone). Vertex arrays are cached per fit across classes.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CarrierBank := preload("res://src/presentation/carrier_bank.gd")
+const Cosmetics := preload("res://src/core/cosmetics.gd")
 const T := preload("res://tests/support/t.gd")
 
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
@@ -28,6 +34,8 @@ const CLASSES := [1, 2, 3, 4, 5]
 const DT := 1.0 / 60.0
 const FRAMES := 40
 const SLACK := 0.002
+const VARIANTS := ["shell_sable_felt", "shell_rivet_calibrated", "shell_kest_roost", "shell_tarn_redjaw_teeth",
+	"shell_tally_abacus", "shell_cannon_choir"]
 # A listed node may read this much above its measured value before it counts as worse.
 const TOL := 0.003
 const POD_YAW := 0.7
@@ -68,12 +76,16 @@ const KNOWN_BAKED := {
 	"remembered_cannon|4|(pod)": 1.1128,
 	"remembered_cannon|5|(pod)": 1.1128,
 	"remembered_cannon|5|HeftC5/Pod/Carapace5": 1.1917,
+	"shell_sable_felt|1|(pod)": 1.0806,
+	"shell_tally_abacus|1|(pod)": 1.0159,
+	"shell_cannon_choir|1|(pod)": 1.1128,
 }
 
 var _t := T.new("baked_bracket_reach_test")
 var _over := 0
 var _cleared := 0
 var _seen := {}
+var _cache := {}
 
 
 func _initialize() -> void:
@@ -82,34 +94,44 @@ func _initialize() -> void:
 
 func _run() -> void:
 	for pilot in PILOTS:
-		_shell(pilot)
+		_shell(pilot, pilot, "", CLASSES)
+	for variant in VARIANTS:
+		var row: Dictionary = Cosmetics.row(variant)
+		_shell(variant, String(row.get("pilot", "")), variant, [1])
 	for key in KNOWN_BAKED:
 		if not _seen.has(key):
 			_cleared += 1
-			print("CLEARED %s (listed %.4f m, now inside the limit: delete its KNOWN_BAKED row)" % [key, KNOWN_BAKED[key]])
+			_t.check("%s: cleared" % key, false, "CLEARED (listed %.4f m), now inside the limit: delete its KNOWN_BAKED row" % KNOWN_BAKED[key])
 	print("baked_bracket_reach_test: %d node/class rows past %.3f m, %d allowlist rows cleared" % [_over, CarrierBank.LIMIT + SLACK, _cleared])
 	quit(_t.verdict())
 
 
-func _shell(pilot: String) -> void:
+func _shell(label: String, pilot: String, variant: String, classes: Array) -> void:
+	_cache.clear()
 	var hook := HeroAssets.new()
-	var map := {}
+	var map: Dictionary = Cosmetics.asset_paths() if variant != "" else {}
 	for p in PILOTS:
 		map[p] = HeroAssets.SHELLS[p]
 	hook.shell_assets = map
 	root.add_child(hook)
 	var ball := Node3D.new()
 	root.add_child(ball)
-	var rec: Dictionary = hook.fit_shell_into(ball, pilot, "", 1, {})
-	if not _t.check("%s fits" % pilot, not rec.is_empty(), HeroAssets.SHELLS[pilot]):
+	var rec: Dictionary = hook.fit_shell_into(ball, pilot, variant, 1, {})
+	if not _t.check("%s fits" % label, not rec.is_empty() and (variant == "" or (ResourceLoader.exists(String(map.get(variant, ""))) and rec.variant == variant)), "pilot %s variant '%s'" % [pilot, variant]):
 		ball.free()
 		hook.free()
 		return
 	var pod: Node3D = rec.pod
 	pod.rotation.y = POD_YAW
-	for cls in CLASSES:
+	# The closed form for baked nodes needs the pod at the ball centre with an orthonormal, unit-scale basis.
+	var b := pod.global_basis
+	var rigid := absf(b.x.length() - 1.0) < 1e-4 and absf(b.y.length() - 1.0) < 1e-4 and absf(b.z.length() - 1.0) < 1e-4 \
+		and absf(b.x.dot(b.y)) < 1e-4 and absf(b.y.dot(b.z)) < 1e-4 and absf(b.x.dot(b.z)) < 1e-4 and b.determinant() > 0.0
+	_t.check("%s pod is rigid at the ball centre" % label, pod.global_position.distance_to(ball.global_position) < 1e-4 and rigid,
+		"origin %.6f m off, basis %s" % [pod.global_position.distance_to(ball.global_position), "orthonormal" if rigid else "NOT rigid"])
+	for cls in classes:
 		hook.set_heft_class(rec, cls, false)
-		_measure(hook, pod, pilot, cls)
+		_measure(hook, pod, label, cls)
 	ball.free()
 	hook.free()
 
@@ -118,7 +140,7 @@ func _shell(pilot: String) -> void:
 static func _banked(pod: Node3D, node: Node) -> bool:
 	var at := node
 	while at != null and at != pod:
-		if at.name == "WeaponRing" or at.name == "CarrierBank" or at.name == "Fairlead":
+		if at.name == "WeaponRing" or at.name == "CarrierBank" or (at.name == "Fairlead" and at.get_parent() == pod):
 			return true
 		at = at.get_parent()
 	return false
@@ -141,11 +163,15 @@ func _measure(hook, pod: Node3D, pilot: String, cls: int) -> void:
 		var mi := node as MeshInstance3D
 		if mi == null:
 			continue
-		if mi.mesh == null or not mi.is_visible_in_tree():
+		if mi.mesh == null or not mi.is_visible_in_tree() or mi.layers == 0:
 			continue
 		var verts := PackedVector3Array()
-		for s in mi.mesh.get_surface_count():
-			verts.append_array(mi.mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX])
+		if _cache.has(mi.mesh):
+			verts = _cache[mi.mesh]
+		else:
+			for s in mi.mesh.get_surface_count():
+				verts.append_array(mi.mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX])
+			_cache[mi.mesh] = verts
 		var n := verts.size()
 		var r := {"node": mi, "path": "(pod)" if mi == pod else String(pod.get_path_to(mi)), "mesh": mi.mesh.resource_name, "verts": verts,
 			"banked": _banked(pod, mi), "max": -INF, "sane": true,
@@ -214,8 +240,11 @@ func _verdict(pilot: String, cls: int, path: String, peak: float) -> void:
 	if not KNOWN_BAKED.has(key):
 		_t.check("%s class %d %s: not past the limit" % [pilot, cls, path], false, "NEW: reaches %.4f m (limit %.2f), not in KNOWN_BAKED" % [peak, CarrierBank.LIMIT])
 	else:
-		_t.check("%s class %d %s: no worse than the known reach" % [pilot, cls, path], peak <= float(KNOWN_BAKED[key]) + TOL,
-			"reach %.4f m, known %.4f m" % [peak, KNOWN_BAKED[key]])
+		var known := float(KNOWN_BAKED[key])
+		_t.check("%s class %d %s: no worse than the known reach" % [pilot, cls, path], peak <= known + TOL,
+			"reach %.4f m, known %.4f m" % [peak, known])
+		_t.check("%s class %d %s: not improved" % [pilot, cls, path], peak >= known - TOL,
+			"reach %.4f m, listed %.4f m; improved: lower its KNOWN_BAKED value to %.4f" % [peak, known, peak])
 
 
 # The furthest this pod-frame point can reach along -normal over every pod yaw.
