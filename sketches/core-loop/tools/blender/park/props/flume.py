@@ -35,6 +35,8 @@ kit.Prop.ico = _ico_rooted
 
 K = kit.Kit("flume", polish_opts={"detail": 1})
 WHITE = "e6e3d6"  # chalk white: dial face (not emissive, not a palette hazard colour)
+PETROL = "365754"  # petrol enamel: waterworks machine bodies (Spillway props board; kit.py owns the palette, so raw hex here)
+COPPER = "b77843"  # copper fittings, small accents only (WARN colour: never dominant)
 FACE = (math.pi / 2, 0, 0)  # rotates a Z-axis cylinder to face -Y
 SIDE = (0, math.pi / 2, 0)  # rotates a Z-axis cylinder to lie along X
 
@@ -87,10 +89,10 @@ def boom_crane_wreck(p, v, rng):
                   tint(C["timber_grey"] if (r % 2) else C["timber_dark"], rng, 0.08), rot=(-s * 0.12, 0, 0), jit=0.004)
     p.beam((-6.0, 0, 3.2), (-2.4, 0, 3.2), 0.2, C["timber_dark"])
     # Winch drum with a wound chain, crank wheel.
-    p.cyl(0.55, 2.0, (-3.4, 0, 1.0), C["iron"], segs=12, rot=FACE, style="hard_smooth")
+    p.cyl(0.55, 2.0, (-3.4, 0, 1.0), PETROL, segs=12, rot=FACE, style="hard_smooth")
     for k in range(7):
         p.torus(0.58, 0.07, (-3.4, -0.85 + k * 0.28, 1.0), C["cable"], rot=FACE, major=14, minor=5)
-    p.torus(0.6, 0.07, (-3.4, 1.15, 1.0), C["iron_light"], rot=FACE, major=14, minor=5)
+    p.torus(0.6, 0.07, (-3.4, 1.15, 1.0), COPPER, rot=FACE, major=14, minor=5)
     for k in range(4):
         a = math.tau * k / 4
         p.rod((-3.4, 1.15, 1.0), (-3.4 + 0.6 * math.cos(a), 1.15, 1.0 + 0.6 * math.sin(a)), 0.05, C["iron"])
@@ -152,7 +154,7 @@ def boom_crane_wreck(p, v, rng):
     p.chain((lx, -0.62, 1.6), (lx - 0.3, -0.5, 1.0), C["cable"], link=0.2, radius=0.04, sag=sag)
     p.chain((lx, -0.62, 1.6), (lx + 0.5, 0.6, 1.7), C["cable"], link=0.2, radius=0.04, sag=sag)
     # Hook block on the ground by the boom's end, chain slack in a heap.
-    p.box((0.6, 0.5, 0.8), (hx, hy, 0.4), C["iron"], style="hard_smooth")
+    p.box((0.6, 0.5, 0.8), (hx, hy, 0.4), PETROL, style="hard_smooth")
     p.cyl(0.32, 0.2, (hx, hy - 0.3, 0.45), C["iron_light"], segs=12, rot=FACE, style="hard_smooth")
     p.torus(0.22, 0.07, (hx, hy, 0.95), C["iron"], rot=FACE, major=10, minor=5)
     p.chain((hx, hy, 0.9), (hx + 1.2, hy + (-1.3 if hy > 0 else 1.3), 0.1), C["cable"], link=0.2, radius=0.04, sag=0.3)
@@ -294,10 +296,10 @@ def sluice_shed(p, v, rng):
     wx, wr = 3.2, 2.5
     wz = 2.6
     side = (0, math.pi / 2, 0)
-    p.cyl(0.22, 2.0, (2.9, 0, wz), C["iron"], segs=10, rot=side)
+    p.cyl(0.22, 2.0, (2.9, 0, wz), PETROL, segs=10, rot=side)
     for sy in (-1.05, 1.05):
         p.torus(wr, 0.12, (wx + 0.3, sy, wz), C["timber_dark"] if v != "a" else C["iron_light"], rot=side, major=20, minor=5)
-    p.cyl(0.45, 2.3, (wx + 0.3, 0, wz), C["iron"], segs=12, rot=side, style="hard_smooth")
+    p.cyl(0.45, 2.3, (wx + 0.3, 0, wz), PETROL, segs=12, rot=side, style="hard_smooth")
     spokes = 10
     for k in range(spokes):
         a = math.tau * k / spokes + 0.15
@@ -555,7 +557,7 @@ def gauge_dial_shed(p, v, rng):
             p.box((2.7, 0.55, 0.07), (0, s * (1.0 - r * 0.2), 2.25 + r * 0.14), tint(C["timber_dark"] if r % 2 else C["timber_grey"], rng, 0.08), rot=(-s * 0.14, 0, 0), jit=0.004)
     # The dial: back plate, white face, ring, tick marks, needle.
     dz = 1.5
-    p.cyl(0.85, 0.16, (0, -1.1, dz), C["iron"], segs=20, rot=FACE, style="hard_smooth")
+    p.cyl(0.85, 0.16, (0, -1.1, dz), PETROL, segs=20, rot=FACE, style="hard_smooth")
     p.cyl(0.72, 0.06, (0, -1.2, dz), WHITE if v != "c" else mix(WHITE, C["canvas_stain"], 0.5), segs=20, rot=FACE, style="fine")
     p.torus(0.8, 0.05, (0, -1.19, dz), C["iron_light"], rot=FACE, major=14, minor=4, style="flat")
     for k in range(8):
@@ -691,10 +693,10 @@ def saltbush(p, v, rng):
 def pipe_section(p, v, rng):
     L = {"a": 3.2, "b": 2.6, "c": 2.4}[v]
     r = 0.62 if v != "c" else 0.48
-    p.cyl(r, L, (0, 0, r + 0.2), C["iron_light"] if v == "a" else C["rust"], segs=10, rot=SIDE, style="hard_smooth")
+    p.cyl(r, L, (0, 0, r + 0.2), PETROL if v == "a" else C["rust"], segs=10, rot=SIDE, style="hard_smooth")
     p.cyl(r - 0.1, 0.06, (L / 2 + 0.02, 0, r + 0.2), C["charcoal"], segs=12, rot=SIDE, style="flat")
     for x in (-L / 2 + 0.2, L / 2 - 0.2):
-        p.cyl(r + 0.08, 0.2, (x, 0, r + 0.2), C["iron"], segs=10, rot=SIDE, style="hard_smooth")
+        p.cyl(r + 0.08, 0.2, (x, 0, r + 0.2), COPPER, segs=10, rot=SIDE, style="hard_smooth")
         for k in range(4):
             a = math.tau * k / 4
             p.cyl(0.05, 0.08, (x + 0.12 * (1 if x > 0 else -1), (r + 0.1) * math.cos(a), r + 0.2 + (r + 0.1) * math.sin(a)), C["iron_light"], segs=6, rot=SIDE)

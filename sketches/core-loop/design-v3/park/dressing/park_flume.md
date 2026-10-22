@@ -96,7 +96,14 @@ Boards (under `docs/art/reference/`):
 - `style/style-palette-moodboard.jpg`, `style/style-materials-moodboard.jpg`, `style/style-shape-moodboard.jpg`;
 - `pilots/pilots-balls-heft-moodboard.jpg` (scale, relative only).
 
-**Palette roles.** The Spillway props board sets sandstone, oxide, charcoal, petrol, bone and copper; the carry board shows timber trestles, sage shrubs and sandstone ground. The kit palette (`C` in `tools/blender/park/props/kit.py` lines 59-67, used by `flume.py`) sits in the Terrain and Harmless roles: sandstone, timber, concrete and canvas (Drying alcove cloth, Survey bag); charcoal/iron/cable for the Seals and hoses blacks; bone; `verdigris` (5f8a7c, 4 uses in `flume.py`) for the petrol enamel of the sluice and pump panels. Kit colours outside the board's 13 chips: the concrete greys, timber browns, canvas tints, `rust`, and the shrub greens `leaf`, `leaf_dark`, `dry_grass`. The boards show all of them as materials and vegetation (trestles, stone, shrubs, Oxide rust), not as roles, so I read them as inside the board's world. `kit.py` line 69 bans HAZARD, ANCIENT and MINT hexes plus near colours.
+**Palette roles.** The Spillway props board (`spillway-props-moodboard.jpg`; `spillway/README.md` line 52) paints waterworks machines in petrol enamel 365754 with copper or steel fittings, on sandstone, oxide, charcoal and bone. Per role, from grepping each kind's colour calls in `tools/blender/park/props/flume.py` (the `C` table is `kit.py` lines 59-67; `PETROL` and `COPPER` are raw hex at the top of the recipe, because the foundation PR owns `kit.py`):
+- Machine bodies in petrol 365754: boom_crane_wreck winch drum (line 92) and hook block (line 157); sluice_shed axle and hub (lines 299 and 302); gauge_dial_shed back plate (line 560); pipe_section variant a body (line 696). pipe_section variants b and c keep rust.
+- Copper b77843 fittings, small accents only: boom_crane_wreck crank ring (line 95); pipe_section end flanges (line 699). It is a WARN colour in `kit.py`, so the build prints a warning, no error.
+- Steel fittings stay iron or iron_light: flanges, hoops, bolts, crank spokes and the dial ring.
+- Verdigris 5f8a7c is not a machine colour here. It is on a flask (sluice_shed, line 322), a cup (tea_hearth, line 439) and a shirt and a cloth heap (washline, lines 463 and 470): small accents.
+- Sandstone c6a274 is unused: hearth stones and the shed footing are grey concrete.
+- Timber, canvas, concrete and charcoal carry the rest; the leaf greens are olive, not Ancient.
+Colour guard (`kit.py` `check_colour` runs at build): the rebuild of boom_crane_wreck, sluice_shed, gauge_dial_shed and pipe_section exited 0 with no banned or hazard-like colour; only the copper WARN line printed. Tris, radius and height are unchanged for all 12 variants (same KIT_BUILT lines; the manifest and registry are byte-identical). Previews (`artifacts/local/dressing/flume/preview/`, local): pipe_section_a now reads as a petrol drum with copper flanges, close to the Pump repair panel. The winch drum, sluice hub and dial plate are petrol but small or mostly hidden, so the wheelhouse and crane read mainly as timber, not as the board's petrol Wheelhouse body; that is the limit of a recolour and is left for review.
 
 **Shape language.** Broad worn, soft toy shapes: `flume.py` builds with `style="round"` and `hard_smooth` blobs, low sleepers (line 61, "never a crate"), draped shirts, and rounded shed and hearth masses, like the Pump repair and Wheelhouse panels. Silhouettes stay low and wide beside the tall machinery.
 
@@ -124,4 +131,12 @@ Boards (under `docs/art/reference/`):
 
 ## Board drift (for review)
 
-None found that blocks. Two things for the reviewer: boom_crane_wreck variant a chain sag (0.2) is the nearest to a taut read, and the concrete, timber and canvas neutrals are outside the 13 palette chips though present in the boards' materials. The kit is not changed in this unit.
+Fixed in this round: machine bodies were iron grey and rust, not the board's petrol with copper or steel fittings (see Palette roles). Washline gained `line_clear_m: 30` in the earlier commit and now also has a recolour (verdigris shirt and cloth, unchanged here). Open items, none changed in this unit:
+- boom_crane_wreck variant a chain sag 0.2 is the nearest to a taut read.
+- The concrete, timber and canvas neutrals are outside the 13 palette chips, though the boards' materials show them.
+- The tea_hearth kettle reads as a dark sphere: needs a play-check.
+- tool_peg is the kit's only gate-like silhouette: needs a play-check against "no fake ride surfaces".
+- timber_ties in the even-spaced litter layer is a prop, not ground cover. Dropping it would change the pin and the audit, so it is deferred and named here (ART-MISTAKES 2026-10-19 #219: cut or refit, never drop geometry to pass a check).
+- v82's sluice shed has a weak story at its new spot (30 m from bend_zip_pier_18, not at water); World could swap the template.
+
+ART-MISTAKES rows checked: 2026-10-19 World #219 flush lanes, "never drop geometry to pass a check" (the recolour changes colour, drops nothing; timber_ties is deferred, not removed); 2026-10-21 Grading #241 mapping claim, "measure before claiming" (the palette claims come from grepping the recipe lines and the previews were opened, not from memory).
