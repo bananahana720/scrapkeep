@@ -6,6 +6,7 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Density := preload("res://src/presentation/density.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
 # The player-side effects vfx.gd does not draw (PLAYER-FX.md). Everything here answers a
 # committed fact or the ball's own motion and never decides an outcome (TADR-008).
@@ -23,7 +24,8 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 #   carve      grinding sparks while the ball rides banked ground at speed
 #   column     a rising brass column for a heft class up or a fusion
 #   frame      a 3-frame ink focus-line impact frame on the biggest hits; edge band only,
-#              so the centre and every telegraph stay clear
+#              so the centre stays clear, and it skips every wedge and wash piece that
+#              would cross a hostile warning's screen rect (enemy warnings draw on top)
 # Colour carries the meaning: the pilot's colour is "you did this", brass is growth,
 # the heat ramp is overdrive, element colours are the build.
 
@@ -633,37 +635,44 @@ func impact_frame(at: Vector3, strength: float) -> bool:
 	return true
 
 
-# The screen rect of every live telegraph, grown by `margin` px: its visual meshes' boxes,
+# The screen rect of every hostile warning, grown by `margin` px: its visual meshes' boxes,
 # each of the 8 corners projected through `cam`. A corner behind the camera has no screen
-# position and is skipped; a mesh with every corner behind is skipped. The frame below yields
-# to these rects, and edge_flash.gd can ask the same question. Telegraph holds no screen
-# bounds of its own (telegraph.gd keeps shape numbers; the geometry lives in its painter's
-# meshes), so the meshes are the footprint.
+# position and is skipped; a mesh with every corner behind is skipped. Reusable by any 2D
+# layer that must not cover warnings. The nodes come from Threat.GROUP, which every hostile
+# mark joins (telegraph.gd:236-237 for combat telegraphs, boss/hazard.gd:110-111 for boss
+# and world-event hazards) and no neutral or owned mark does (a Silo amber ring, a Warden
+# lift). Neither class keeps screen bounds (they keep shape numbers; the geometry lives in
+# the Painter's meshes), so the meshes are the footprint.
 static func warning_rects(tree: SceneTree, cam: Camera3D, margin: float) -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	if tree == null or cam == null:
 		return out
-	for node in tree.get_nodes_in_group("telegraph"):
+	for node in tree.get_nodes_in_group(Threat.GROUP):
 		if not (node is Node3D) or not node.is_visible_in_tree():
 			continue
-		var low := Vector2(INF, INF)
-		var high := Vector2(-INF, -INF)
-		for inst in node.find_children("*", "VisualInstance3D", true, false):
-			if not inst.is_visible_in_tree():
-				continue
-			var box: AABB = inst.get_aabb()
-			if box.size == Vector3.ZERO:
-				continue
-			for c in 8:
-				var corner: Vector3 = inst.global_transform * (box.position + box.size * Vector3(c & 1, (c >> 1) & 1, (c >> 2) & 1))
-				if cam.is_position_behind(corner):
-					continue
-				var at := cam.unproject_position(corner)
-				low = low.min(at)
-				high = high.max(at)
-		if low.x <= high.x:
-			out.append(Rect2(low, high - low).grow(margin))
+		var span := [Vector2(INF, INF), Vector2(-INF, -INF)]
+		_project_meshes(node, cam, span)
+		if span[0].x <= span[1].x:
+			out.append(Rect2(span[0], span[1] - span[0]).grow(margin))
 	return out
+
+
+# Grows span (low, high) by the screen position of every visible mesh box under `node`.
+static func _project_meshes(node: Node, cam: Camera3D, span: Array) -> void:
+	for child in node.get_children():
+		if child is Node3D and not child.visible:
+			continue
+		if child is VisualInstance3D:
+			var box: AABB = child.get_aabb()
+			if box.size != Vector3.ZERO:
+				for c in 8:
+					var corner: Vector3 = child.global_transform * (box.position + box.size * Vector3(c & 1, (c >> 1) & 1, (c >> 2) & 1))
+					if cam.is_position_behind(corner):
+						continue
+					var at := cam.unproject_position(corner)
+					span[0] = span[0].min(at)
+					span[1] = span[1].max(at)
+		_project_meshes(child, cam, span)
 
 
 # Manga focus lines: ink wedges pointing at the hit from the screen edge, only in the outer
@@ -694,7 +703,8 @@ class ImpactFrame:
 	var _left := 0
 	var _seed := 0
 	# Answers with the live warning rects (PlayerFx.warning_rects on the game camera); set by
-	# the owner, since an inner class cannot call the outer class's statics.
+	# the owner: a bare warning_rects() call from in here is a parse error ("not found in
+	# base self"), so the outer class hands the function in.
 	var rect_source := Callable()
 	var _rects: Array[Rect2] = []
 	# Pieces drawn and left out by the last draw, for tests.
@@ -758,6 +768,10 @@ class ImpactFrame:
 	func _shapes(rect: Vector2, rects: Array) -> Array:
 		var out := []
 		var band := minf(rect.x, rect.y) * BAND
+		# Only a rect that reaches the edge band can meet a piece (a wedge's tip and the wash
+		# lie within BAND of an edge); with none, nothing is tested or split.
+		var inset := Rect2(Vector2(band, band), rect - Vector2(band, band) * 2.0)
+		rects = rects.filter(func(r: Rect2) -> bool: return r.intersects(Rect2(Vector2.ZERO, rect)) and not inset.encloses(r))
 		var focus := _focus.clamp(Vector2.ZERO, rect)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = _seed

@@ -10,6 +10,9 @@ const Game := preload("res://src/game.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 var t := T.new("player_fx_test")
 var _game
@@ -237,7 +240,7 @@ func _run() -> void:
 	t.check("the camera sees the ground at the left edge", hit != null)
 	if hit != null:
 		var ground := FlatGround.new()
-		var warn = Telegraph.ring(_game, ground, 1, Vector3(hit.x, 0.0, hit.z), 2.0)
+		var warn = Telegraph.ring(_game, ground, Threat.Type.INSTANT, Vector3(hit.x, 0.0, hit.z), 2.0)
 		await _frames(1)
 		var rects := PlayerFx.warning_rects(root.get_tree(), cam, PlayerFx.ImpactFrame.YIELD_MARGIN_PX)
 		t.check("a live telegraph has a screen rect", rects.size() >= 1, str(rects.size()))
@@ -258,6 +261,28 @@ func _run() -> void:
 		warn.queue_free()
 		await _frames(1)
 		t.eq("a spent telegraph leaves no rect", PlayerFx.warning_rects(root.get_tree(), cam, 0.0).filter(func(r): return r.has_point(Vector2(vp.x * 0.04, vp.y * 0.5))).size(), 0)
+		# Boss and world-event hazards are not in group "telegraph" but are enemy warnings too;
+		# a neutral mark (a Warden lift, a Silo ring) is not one.
+		var rects_before := PlayerFx.warning_rects(root.get_tree(), cam, 0.0).size()
+		var neutral = Telegraph.ring(_game, ground, Threat.Type.INSTANT, Vector3(hit.x, 0.0, hit.z), 2.0, 3.5, Palette.SAND)
+		var amber = Telegraph.ring(_game, ground, Threat.Type.INSTANT, Vector3(hit.x, 0.0, hit.z), 2.0, 3.5, Palette.AMBER)
+		await _frames(1)
+		t.eq("neutral and owned marks add no rect", PlayerFx.warning_rects(root.get_tree(), cam, 0.0).size(), rects_before)
+		neutral.queue_free()
+		amber.queue_free()
+		var hazard := Hazard.new()
+		hazard.commit_annulus("edge_test", Threat.Type.INSTANT, Vector3(hit.x, 0.0, hit.z), Vector2(0.0, 2.0), 3.5, 2.0, 1.0)
+		_game.add_child(hazard)
+		await _frames(1)
+		t.check("the hazard is not in group telegraph", not hazard.is_in_group("telegraph") and hazard.is_in_group(Threat.GROUP))
+		var hz := PlayerFx.warning_rects(root.get_tree(), cam, PlayerFx.ImpactFrame.YIELD_MARGIN_PX)
+		t.check("a hostile boss hazard has a screen rect", hz.size() == 1 and hz[0].position.x < minf(vp.x, vp.y) * PlayerFx.ImpactFrame.BAND, str(hz))
+		frame.hide_now()
+		fx._last_frame = -1.0e9
+		fx.impact_frame(Vector3(hit.x + 30.0, 0.0, hit.z), 1.0)
+		t.check("the frame yields to a boss hazard", frame._shapes(vp, frame._rects).any(func(sh): return sh["skipped"]))
+		t.check("a rect clear of the edge band tests and splits nothing", frame._shapes(vp, [Rect2(vp * 0.4, vp * 0.2)]).all(func(sh): return not sh["skipped"]))
+		hazard.queue_free()
 	quit(t.verdict())
 
 
