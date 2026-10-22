@@ -18,7 +18,7 @@ Status: **works with a fix**
 - **Pod and pilot:** Always level with gravity (player_ball.gd:1100). It turns only to the heading, within limits (see the rolling row). The pod is never scaled, squashed or stretched. Ladder from the inside out: pilot reach up to 0.80 (after the three clip re-keys, cage_contract_test.gd:60-69), optional inner sphere at about 0.815, gimbal rings 0.83-0.865, panels 0.88-0.92.
 - **Weapon ring and carrier:** The level carrier: the band, the bearing collar and the gap-bracket modules (ring 1.02-1.10, modules up to 1.25). The ring turns to the aim on its bearing (hero_assets.gd:755-769). Story: an electromagnetic field bearing across the 0.985-1.02 air gap (BIBLE.md:42 'electromagnetic mech'). That is why nothing solid crosses the tumbling lattice. Proposed: the carrier banks toward a steep contact face just enough to keep every carrier part off that face.
 - **Rope:** Proposed: the rope always leaves a fairlead that runs round the collar, on the anchor's side, at about r 1.06. It never leaves the centre. The collar is a free bearing, so the pull still acts through the centre with no torque, which matches the physics at augments.gd:722-743.
-- **Heft:** Growth shows as panels on the pod, thicker caps, heavy module forms and accretion chunks. The lattice radius stays fixed, pending Andrew's ruling. The outline barely grows (ROSTER-LOOK.md:275).
+- **Heft:** Growth shows as panels on the pod, thicker caps, heavy module forms and accretion chunks. The lattice radius stays fixed (Andrew, 22 Oct, "Fixed outline"). The outline barely grows (ROSTER-LOOK.md:275).
 - **Camera:** World-up chase rig, unchanged: arm 7.5 to 10.5 m, lens 65 to 80 degrees, roll capped at 0.13 rad (chase_camera.gd:219-256).
 
 ### Flat rolling and steering
@@ -157,7 +157,7 @@ Status: **works with a fix**
 
 Status: **works with a fix**
 
-- **Lattice:** Fixed radius (default, pending Andrew's ruling). Thicker caps from class III.
+- **Lattice:** Fixed radius (Andrew, 22 Oct, "Fixed outline"). Thicker caps from class III.
 - **Pod and pilot:** Constant. Today the juice shell grows the pilot to 1.4x (juice.gd:289, 691-692).
 - **Weapon ring and carrier:** Constant band. Hub modules swap to their heavy form at V, up to 1.25.
 - **Rope:** Unchanged.
@@ -220,7 +220,7 @@ Status: **not in game**
 
 ## Board corrections
 
-- pilots-balls-heft-moodboard: the class V ball is drawn bigger, with 'EXPANDING HUSK / SCALE PROPOSAL' and the scissors 'OPEN TO GROW'. The spec keeps the lattice radius fixed, pending a ruling. Growth shows through panels, thicker caps, heavy modules and chunks. Label the scale panel as a proposal, not to copy.
+- pilots-balls-heft-moodboard: the class V ball is drawn bigger, with 'EXPANDING HUSK / SCALE PROPOSAL' and the scissors 'OPEN TO GROW'. Andrew ruled the outline fixed on 22 Oct, so this panel is do-not-copy. Growth shows through panels, thicker caps, heavy modules and chunks. Label the scale panel as a proposal, not to copy.
 - pilots-balls-heft-moodboard, pilots-reference-cannon-heft-study and pilots-reference-sable-salvage-cockpit: panels are drawn on the outside of the lattice. Canon puts them on the pod at 0.88-0.92, inside the lattice, with the struts rolling past in front (ROSTER-LOOK.md:59, 269).
 - Sable salvage, Tally and Cannon boards: the weapon band looks bolted to the struts. It floats on its collar across a visible air gap (the field bearing). Nothing solid joins the band to the lattice.
 - Rope exits: the boards place them at a side winch, at 1-2 o'clock with a hanging hook (forbidden by ROSTER-LOOK.md:107), at 4-5 o'clock pointing down, at 9 o'clock with slack rope, and at 3 o'clock. The spec has one rule: the rope leaves a fairlead on the collar, on the anchor's side. The winch drum is a module that turns while reeling.
@@ -259,7 +259,7 @@ Panels:
 6. Swing and fling. The rope leaves the collar fairlead on the anchor's side and stays outside the lattice. The pod faces the anchor through the apex. On release the spin carries on (WITH FIX: fairlead, anchor facing, keep spin).
 7. Reel and haul into a riveted hatch. The line is taut from the fairlead, the winch drum turns, and the pilot's back faces the camera (WITH FIX: fairlead).
 8. Air slam and landing. The lattice clenches by about 3%, the pilot plays drop_land, the seat dips, and the ring and pilot stay full size. The stored charge glows in class colour on the collar's rear arc (WITH FIX: clench, dunk display).
-9. Heft growth in motion, I to III to V. Panels slam into the pod gaps with overshoot, caps thicken, and modules take their heavy form at V. The outline barely grows. A second frame, marked PENDING RULING, shows the alternative of an opened husk past the collider.
+9. Heft growth in motion, I to III to V. Panels slam into the pod gaps with overshoot, caps thicken, and modules take their heavy form at V. The outline barely grows. No opened-husk frame: Andrew ruled the outline fixed on 22 Oct.
 10. Bounce chain on bumpers. The ring holds the aim while the pod turns no more than 45 degrees off the camera (WITH FIX: yaw clamp).
 11. PROPOSAL: low gravity. Long air time, and the seat sways more.
 12. PROPOSAL: ceiling roll. The pilot hangs upright, the top brackets fold, and the camera sits below the ball looking up. Labelled 'owner call: camera'.
