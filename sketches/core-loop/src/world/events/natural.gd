@@ -111,7 +111,7 @@ func setup(world_ref) -> void:
 		var record := {"site": entry.site, "at": entry.at, "geometry": entry.geometry.duplicate(), "overlay": null, "marks": entry.get("marks", {})}
 		if entry.has("water"):
 			record.water_surface = entry.water
-		if row.kind in ["cave_in", "collapse", "impact"]:
+		if row.kind == "cave_in" or row.kind in Kinds.HIDING_NATURAL_KINDS:
 			_prepare_overlay(row, record, entry)
 		_prepared[row.id] = record
 	_plan_marks(planned)
