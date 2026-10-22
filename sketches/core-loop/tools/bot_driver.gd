@@ -1083,7 +1083,8 @@ func _on_boss_entered() -> void:
 		"entry_parts": game.run.parts.size(), "phases": [], "weak_point_hits": {}, "hp_lost": 0.0, "hits": 0,
 		"evasions": 0, "plants": 0, "slingshots": 0, "specials": 0, "stolen": 0, "defeated_s": null,
 		"hold_s": null, "hold_bound_s": null,
-		"weak_opened": null, "weak_sealed": null, "weak_timed_out": null, "weak_broken": null, "crew_waves": null,
+		"weak_opened": null, "weak_sealed": null, "weak_timed_out": null, "weak_broken": null, "weak_open_at_end": null,
+		"crew_waves": null,
 		"charge_reads": 0, "charge_sidesteps": 0, "charge_hits": 0, "clash_tries": 0}
 
 
@@ -1107,6 +1108,7 @@ func _boss_weak_note(boss) -> void:
 	_boss_set("weak_sealed", (stats["sealed"] as Dictionary).duplicate())
 	_boss_set("weak_timed_out", (stats["timed_out"] as Dictionary).duplicate())
 	_boss_set("weak_broken", (stats["broken"] as Dictionary).duplicate())
+	_boss_set("weak_open_at_end", (stats["open_at_end"] as Dictionary).duplicate())
 	_boss_set("crew_waves", (stats["crew_waves"] as Dictionary).duplicate())
 
 
