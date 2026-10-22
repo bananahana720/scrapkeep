@@ -121,6 +121,9 @@ test("parkGreybox counts a mesa edge spanning the play rect as terrain and keeps
   assert.equal(isMesaEdge(edge, rect), true);
   assert.equal(isMesaEdge(narrow, rect), false);
   assert.equal(isMesaEdge(unstamped, rect), false);
+  // coordinator ruling (a) 2026-10-21: any element, not only a kicker
+  assert.equal(isMesaEdge({ ...edge, id: "run", element: "flow_line", recipe: "greybox:flow_line" }, rect), true);
+  assert.equal(isMesaEdge({ ...edge, id: "dressed", element: "flow_line", recipe: "isle_ride_x" }, rect), false);
   const found = parkGreybox("park_islands", { play_rect: rect, park_rows: [edge, narrow, unstamped] }, () => false);
   assert.deepEqual(found.map((f) => [f.what, f.count]), [["2 greybox kicker: fin_nose_kicker, loose_lip", 2]]);
 });
