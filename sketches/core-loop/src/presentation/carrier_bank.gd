@@ -10,7 +10,8 @@ extends RefCounted
 const UP := Vector3.UP
 # Support distance the carrier may reach along the contact normal (the collider is 1.0; 0.01 m of air).
 const LIMIT := 0.99
-# Six bisection steps over 90 degrees settle within 1.5 degrees, always on the clear side.
+# Six bisection steps over 90 degrees settle within 1.5 degrees, on the clear side whenever any
+# bank clears (solve reports when none does).
 const STEPS := 6
 const MAX_ANGLE := PI * 0.5
 # Below this |UP x normal| the face is a floor (or a ceiling) and has no side to bank toward.
@@ -50,23 +51,45 @@ static func basis_for(normal: Vector3, angle: float) -> Basis:
 	return Basis(axis.normalized(), angle)
 
 
-# The smallest angle (to bisection precision, rounded up) that keeps the support along -normal
-# at `limit` or less. 0 when it already does, or on a floor.
-static func angle_for(ring: PackedVector3Array, yaw: float, brackets: PackedVector3Array, normal: Vector3, limit := LIMIT, steps := STEPS) -> float:
-	if UP.cross(normal).length() < FLAT:
-		return 0.0
+# The bank that keeps the support along -normal at `limit` or less, and what it leaves over:
+# {angle, reach, clears}. `reach` is the support at `angle`; `clears` is reach <= limit (the
+# bisection's own test, no epsilon). The angle is the smallest one (to bisection precision, rounded
+# up) that clears, 0 when 0 already does or on a floor. When nothing clears (a hull point farther
+# than `limit` from the pivot never can, rotation keeps its radius) the angle is the least-reach one
+# of those evaluated (0, each midpoint, MAX_ANGLE), the smallest angle on a tie.
+static func solve(ring: PackedVector3Array, yaw: float, brackets: PackedVector3Array, normal: Vector3, limit := LIMIT, steps := STEPS) -> Dictionary:
 	var toward := -normal
-	if support(ring, yaw, brackets, Basis.IDENTITY, toward) <= limit:
-		return 0.0
+	var level := support(ring, yaw, brackets, Basis.IDENTITY, toward)
+	if UP.cross(normal).length() < FLAT or level <= limit:
+		return {"angle": 0.0, "reach": level, "clears": level <= limit}
 	var lo := 0.0
 	var hi := MAX_ANGLE
+	var hi_reach := INF
+	var best_angle := 0.0
+	var best_reach := level
 	for i in steps:
 		var mid := (lo + hi) * 0.5
-		if support(ring, yaw, brackets, basis_for(normal, mid), toward) <= limit:
+		var r := support(ring, yaw, brackets, basis_for(normal, mid), toward)
+		if r < best_reach:
+			best_angle = mid
+			best_reach = r
+		if r <= limit:
 			hi = mid
+			hi_reach = r
 		else:
 			lo = mid
-	return hi
+	if hi_reach <= limit:
+		return {"angle": hi, "reach": hi_reach, "clears": true}
+	var end := support(ring, yaw, brackets, basis_for(normal, MAX_ANGLE), toward)
+	if end < best_reach:
+		best_angle = MAX_ANGLE
+		best_reach = end
+	return {"angle": best_angle, "reach": best_reach, "clears": false}
+
+
+# The angle of solve, for callers that do not need the residual.
+static func angle_for(ring: PackedVector3Array, yaw: float, brackets: PackedVector3Array, normal: Vector3, limit := LIMIT, steps := STEPS) -> float:
+	return solve(ring, yaw, brackets, normal, limit, steps)["angle"]
 
 
 # One frame of the normal's smoothing toward the target (a unit vector; an empty one holds).
