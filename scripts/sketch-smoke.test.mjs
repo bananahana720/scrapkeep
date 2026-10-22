@@ -654,12 +654,15 @@ test("the quarantine file parses into entries and names", () => {
 test("a quarantined failure names its owner and reason, and the readers agree", () => {
   const entry = parseQuarantine("test\towner\treason\tadded\tdeadline\na_test\tO1\twhy; #1\t2026-10-01\twave 3\n")[0];
   assert.equal(quarantineNote(entry), "quarantined: a_test (O1: why; #1)");
-  const dir = fileURLToPath(new URL("../sketches/core-loop", import.meta.url));
+  const dir = mkdtempSync(path.join(os.tmpdir(), "quarantine-"));
+  mkdirSync(path.join(dir, "tests"));
+  writeFileSync(path.join(dir, "tests", "QUARANTINE.tsv"), "test\towner\treason\tadded\tdeadline\nfixture_test\tSystems\texit abort after 12 passing checks; #241 1\t2026-10-22\t2026-10-29\n");
   const rows = readQuarantineEntries(dir);
-  const cave = rows.find((row) => row.test === "park_cave_in_test");
-  assert.equal(cave.owner, "Systems");
-  assert.match(quarantineNote(cave), /^quarantined: park_cave_in_test \(Systems: exit abort .*#241 6332288729\)$/);
+  const fixture = rows.find((row) => row.test === "fixture_test");
+  assert.equal(fixture.owner, "Systems");
+  assert.match(quarantineNote(fixture), /^quarantined: fixture_test \(Systems: exit abort .*#241 1\)$/);
   assert.deepEqual([...readQuarantine(dir)], rows.map((row) => row.test));
+  rmSync(dir, { recursive: true, force: true });
 });
 
 test("an expired quarantine row is reported and an unexpired or free-text one is not", () => {
