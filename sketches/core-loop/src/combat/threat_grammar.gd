@@ -102,12 +102,19 @@ const OWNER_SPACING := 4.0
 # HAZE_FILL, so each stencil class still holds one alpha and the LIVE / RUN ratio the drive
 # hands the shader is unchanged; the P1 lines, their keylines, the geometry, contains() and
 # the drive clips are not touched. HAZE_SOLID is the live INSTANT slag layer's alpha.
-# HAZE_FILL is the lowest step (0.1) at which the fill clears 10 CIE76 over every ground in
-# every place on the launch table (tools/grade_probe.gd; ruling #241 6328893598). On the 3060
-# (#241 comment 6331769617) the lowest gap, camp ledger, was 8.65 at 1.0 and 10.03 at 1.1.
+# HAZE_FILL is the first 0.05 step at which the fill clears every place by at least 0.5 over the
+# 10 CIE76 floor (tools/grade_probe.gd; rulings #241 6328893598 and 6331787112). On the 3060
+# (#241 comment 6331769617) the lowest gap, camp ledger, was 8.65 at 1.0, 10.03 at 1.1 and 10.72
+# at 1.15.
 # Above 1.25 the live alpha (LIVE_ALPHA x HAZE_FILL) passes 1.0.
-const HAZE_FILL := 1.1
-const HAZE_SOLID := 0.4
+# HAZE_SOLID: the live slag is drawn over the pending fill, which stays on (p = 1 once live), so
+# live must read more solid than pending (ATTACK-READS.md:27: "Clear live/pending distinctions
+# and safe holes survive haze."). The pending INSTANT fill is FILL_ALPHA x HAZE_FILL = 0.4025 at
+# 1.15, so the old 0.4 matched it. Ruling 6331787112 asks for a live-over-pending alpha step of
+# at least 0.2, so HAZE_SOLID - 0.4025 >= 0.2 needs 0.6025 or more; 0.61 clears it (0.6 misses
+# by 0.0025). Stacked on the pending fill the live read is higher still.
+const HAZE_FILL := 1.15
+const HAZE_SOLID := 0.61
 const TELEGRAPH_FLAG := "telegraph"
 
 

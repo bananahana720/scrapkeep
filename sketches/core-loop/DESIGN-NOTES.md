@@ -1143,6 +1143,11 @@ ROADMAP "Feedback and discovery": the floor marking becomes support, the attacke
 
 Open, for play: whether 0.5 is thin enough or too faint at 25%; whether the pending `run` and live lane want a wider gap; the tuning.gd row (`telegraph`: classic, haze) was added at integration, and `--telegraph` is now a `Tuning.FLAGS` row. Andrew compares the looks in play.
 
+**Follow-up, 2026-10-22 (Lighting L5b, PR #284): `HAZE_FILL` 1.15, `HAZE_SOLID` 0.61.** The 28 Sep entry above stands as written; these two constants have moved since, and `threat_grammar.gd` carries the live values.
+- `HAZE_FILL` is 1.15. On the RTX 3060 the lowest hostile-fill gap (camp ledger, CIE76 over the 10 floor) read 8.65 at 1.0, 10.03 at 1.1 and 10.72 at 1.15 (#241 comment 6331769617). The coordinator ruled 1.15, the first 0.05 step that clears every place by at least 0.5 (#241 comment 6331787112, item 1).
+- `HAZE_SOLID` is 0.61 (was 0.4). At 1.15 the pending INSTANT fill is `FILL_ALPHA` x `HAZE_FILL` = 0.4025 (0.4000 measured in the 8-bit vertex colour), so a live slag at 0.4 read as solid as the pending fill, against ATTACK-READS.md:27 ("Clear live/pending distinctions and safe holes survive haze."). Ruling 6331787112, item 2, asks for a live-over-pending alpha step of at least 0.2: that needs 0.6025, and 0.6 misses by 0.0025, so 0.61 (step 0.21 on the measured 0.4000). `threat_grammar_test` pins the step; `tools/grade_probe.gd` reports a `live~pending:<ground>` gap per place (not gated).
+- Evidence still owed: a held-pose still pair on the 3060 (pending and live in one frame, stage 2 morning and the Mind arena), per ruling item 2.
+
 ## Armour sounds (durability prototype)
 
 A hit in `--scrap=armor` no longer sounds like one thing. Serves the durability prototype's readability: you hear whether the hull or only the plating paid, without looking at the gauge. Strains no principle; it adds no gameplay and never touches the ball. Flag off, audio is unchanged.

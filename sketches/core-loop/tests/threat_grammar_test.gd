@@ -438,11 +438,12 @@ func _fill_alpha(node: Node3D, layer: String) -> float:
 # Fills unioned in one stencil class draw once, so one class must mean one alpha (an
 # overlap shows whichever drew first, which flips with camera depth); and a live lane
 # batches after a pending one, a fill and a swept ring, so its band always wins. Under the
-# default haze every hostile fill alpha is scaled by HAZE_FILL (1.1): 0.385 pending, 0.88 live. The 8-bit vertex colour
+# default haze every hostile fill alpha is scaled by HAZE_FILL (1.15): 0.4025 pending, 0.92 live. The 8-bit vertex colour
 # truncates the pending alpha by up to one step (1/255), and the live alpha is that stored value times
 # LIVE_ALPHA / RUN_ALPHA, so live may fall short of its target by that step times the ratio (0.0090) and
-# never exceeds it. Measured under haze: pending 0.3843 and live 0.8784 (0.0007 and 0.0016 short of 0.385
-# and 0.88). The classic alphas are not checked here.
+# never exceeds it. Measured under haze (Godot 4.7.2 headless): pending 0.4000 and live 0.9143 (0.0025 and 0.0057 short of
+# 0.4025 and 0.92). The pending INSTANT fill measures 0.4000 too, so HAZE_SOLID 0.61 leaves a live-over-pending
+# step of 0.21, checked below against ATTACK-READS.md:27 and ruling 6331787112 (at least 0.2). The classic alphas are not checked here.
 func _check_fill_classes() -> void:
 	var ring: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, 400.0), 6.0)
 	var wedge: Node3D = Telegraph.wedge(_world, _ground, Threat.Type.LANE, Vector3(20.0, 0.0, 400.0), Vector3.FORWARD, 9.0, 30.0)
@@ -484,6 +485,12 @@ func _check_fill_classes() -> void:
 		and live_priority > Threat.PRIORITY
 	lane.set_progress(0.5)
 	var back_to_run: bool = _stencil(lane, "stripe_motion") == pending_class
+	# The live slag (HAZE_SOLID) over the pending INSTANT fill, which the ring drew just above.
+	var instant_pending := _fill_alpha(ring, "stripe_motion")
+	var slag_step: float = Threat.HAZE_SOLID - instant_pending
+	_report("live slag over pending fill", Threat.haze() and instant_pending > 0.39 and slag_step >= 0.2 - 0.0001,
+		"pending INSTANT fill alpha %.4f measured, live slag alpha %.2f, step %.4f (at least 0.2, ruling 6331787112; ATTACK-READS.md:27)"
+			% [instant_pending, Threat.HAZE_SOLID, slag_step])
 	var step := 1.0 / 255.0
 	var pending_target: float = Threat.RUN_ALPHA * Threat.HAZE_FILL
 	var live_target: float = Threat.LIVE_ALPHA * Threat.HAZE_FILL
