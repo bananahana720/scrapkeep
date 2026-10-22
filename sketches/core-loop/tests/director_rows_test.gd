@@ -4,6 +4,7 @@ const TwoWorld := preload("res://tests/doubles/two_world_defs.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const Director := preload("res://src/world/director.gd")
+const Cards := preload("res://src/world/director_cards.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The spawn director takes the stage's counter unlock level and ancient enemy from the
@@ -50,9 +51,29 @@ func _physics_process(_delta: float) -> bool:
 	_enter(2, 4, "swarm_remnant")
 	_enter(4, 3, "mind_hand")
 	_enter(6, 7, "swarm_remnant")
+	_no_dispatcher()
 	_done = true
 	quit(_t.verdict())
 	return true
+
+
+# The dispatcher is a card, not a random draw: composed packs never hold one, so every existing
+# director output is unchanged until an authored pack names it.
+func _no_dispatcher() -> void:
+	var d = _game.world.director
+	d.stage_time = Director.TIER_SECONDS * 2
+	var seen := 0
+	var dispatchers := 0
+	for i in 400:
+		var pack: Array = d.compose()
+		seen += 1
+		dispatchers += int(pack.has("dispatcher"))
+	_t.check("composed packs were drawn", seen == 400)
+	_t.eq("no composed pack holds a dispatcher", dispatchers, 0)
+	# Planted negative control: the same count over a pack that holds one must see it.
+	_t.eq("negative control: the counter sees a planted dispatcher", int(["chaser", "dispatcher"].has("dispatcher")), 1)
+	_t.check("the kind is placeable", Director.KIND_NAMES.has("dispatcher") and is_finite(Cards.cost(["dispatcher"])))
+	_t.check("a second one in a purchase is INF", not is_finite(Cards.cost(["dispatcher", "dispatcher"])))
 
 
 func _enter(stage: int, unlock: int, ancient: String) -> void:
