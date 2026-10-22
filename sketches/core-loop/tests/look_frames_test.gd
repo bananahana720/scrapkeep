@@ -141,6 +141,7 @@ func _game_checks() -> void:
 	var pod := rig["pod"] as Node3D
 	var gyro := pod.get_node_or_null("Gyro") as Node3D
 	var core = _game.presentation.hero_assets.shell_of(player).get("core")
+	_t.check("the subject's pod has a gyro and a lattice core", gyro != null and core != null, "gyro %s, core %s" % [gyro, core])
 	if gyro != null and core != null:
 		var yaw_o := Subjects.frame_options(["--frames=2", "--fps=60", "--speed=30", "--pod-yaw=45"])
 		Harness.strip_frame(rig, yaw_o, 0, at)
