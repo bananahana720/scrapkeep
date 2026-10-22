@@ -60,6 +60,8 @@ var catches := 0
 var _delta := 1.0 / 90.0
 var _next_attack := 0.0
 var _crane_turn := 0
+# Challenge dial brindle.combo: follow-up attacks still owed after the lead; -1 when none is open.
+var _combo_left := -1
 var _cranes: Array = [{}, {}]
 var _pickups: Array = []
 var _slag_turn := 0
@@ -264,14 +266,17 @@ func _enter_phase(next: int) -> void:
 		1:
 			_next_attack = Rules.INTRO_SECONDS
 			_crane_turn = 0
+			_combo_left = -1
 		2:
 			_next_attack = clock + 2.0
 			_next_lobber = clock + 3.0
 			_slag_turn = 0
+			_combo_left = -1
 		3:
 			ship.shed_armour()
 			ship.cockpit_open(true, "enter_scuttle")
-			_charge = {"state": "rest", "timer": Rules.CHARGE_REST}
+			_combo_left = -1
+			_charge = {"state": "rest", "timer": ChallengeDials.period("brindle", Rules.CHARGE_REST, 3)}
 	ship.cue_phase(next)
 	_publish("boss_phase_changed", [next, Rules.PHASE_NAMES[next - 1]])
 
@@ -296,12 +301,30 @@ func _move_ship_on_circle(delta: float) -> void:
 	ship.move_to(arena.point_at(_ship_angle, Rules.CIRCLE_RADIUS), Arena.tangent(_ship_angle))
 
 
+# The delay to the next crane or slag attack: the normal one, or WARN_GAP while the
+# brindle.combo dial still owes follow-ups.
+func _paced(normal: float) -> float:
+	_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
+	if _combo_left > 0:
+		return ChallengeDials.WARN_GAP
+	_combo_left = -1
+	return normal
+
+
+# The rest before the next charge: WARN_GAP while a combo is owed, else CHARGE_REST scaled.
+func _rest_time() -> float:
+	if _combo_left > 0:
+		return ChallengeDials.WARN_GAP
+	_combo_left = -1
+	return ChallengeDials.period("brindle", Rules.CHARGE_REST, 3)
+
+
 func _step_cranes(delta: float, ball: Vector3) -> void:
 	_move_ship_on_circle(delta)
 	if clock >= _next_attack:
 		_commit_crane(_crane_turn, ball)
 		_crane_turn = 1 - _crane_turn
-		_next_attack = clock + Rules.CRANE_PERIOD
+		_next_attack = clock + _paced(ChallengeDials.period("brindle", Rules.CRANE_PERIOD, 1))
 	for i in 2:
 		_step_crane(i, delta, ball)
 
@@ -321,7 +344,7 @@ func _commit_crane(i: int, ball: Vector3) -> void:
 	var sweep := 1.0 if i == 0 else -1.0
 	var h = _new_hazard()
 	h.commit_sector("crane_%d" % i, Hazard.Threat.Type.WAVE, centre, Rules.CRANE_BAND, bearing - sweep * Rules.CRANE_SPAN * 0.5,
-		bearing + sweep * Rules.CRANE_SPAN * 0.5, Rules.CRANE_REACH, Rules.CRANE_WARN, Rules.CRANE_SWEEP)
+		bearing + sweep * Rules.CRANE_SPAN * 0.5, Rules.CRANE_REACH, ChallengeDials.tell("brindle", Rules.CRANE_WARN, Hazard.MIN_WARN), Rules.CRANE_SWEEP)
 	_add_hazard(h)
 	ship.cue("crane_warn", h.get_instance_id())
 	_cranes[i] = {"hazard": h, "caught": false, "held": 0, "trail": [], "values": [], "dripped": 0, "drip": 0.0}
@@ -561,12 +584,13 @@ func _step_furnace(delta: float) -> void:
 		var band: Vector2 = Arena.RING_A if _slag_turn % 2 == 0 else Arena.RING_B
 		var id := "slag_ring_a" if _slag_turn % 2 == 0 else "slag_ring_b"
 		var h = _new_hazard()
-		h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position, band, Rules.SLAG_REACH, Rules.SLAG_WARN, Rules.SLAG_LIVE)
+		var slag_warn := ChallengeDials.tell("brindle", Rules.SLAG_WARN, Hazard.MIN_WARN)
+		h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position, band, Rules.SLAG_REACH, slag_warn, Rules.SLAG_LIVE)
 		h.excluded = func(point: Vector3) -> bool: return arena.is_quenched(point, clock)
 		_add_hazard(h)
 		ship.cue("slag_warn", _slag_turn)
 		_slag_turn += 1
-		_next_attack = clock + Rules.SLAG_WARN + Rules.SLAG_LIVE + Rules.SLAG_GAP
+		_next_attack = clock + _paced(slag_warn + Rules.SLAG_LIVE + ChallengeDials.period("brindle", Rules.SLAG_GAP, 2))
 		_publish("boss_attack_telegraphed", [id, h.warn_seconds])
 	# Drones wait for the ship to park, so a pad is never swept by the hull.
 	if parked and clock >= _next_lobber:
@@ -634,7 +658,7 @@ func _step_vents(ball: Vector3) -> void:
 
 
 func _slag_hit(h, ball: Vector3) -> void:
-	ctx.run.damage(Rules.SLAG_DAMAGE, "brindle_slag")
+	ctx.run.damage(ChallengeDials.damage("brindle", Rules.SLAG_DAMAGE, phase), "brindle_slag")
 	_grace[h.get_instance_id()] = clock + Rules.SLAG_GRACE
 	if ctx.calm:
 		return
@@ -691,7 +715,7 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 				if _charge["state"] == "rest":
 					_commit_charge(ball)
 				else:
-					_charge = {"state": "rest", "timer": Rules.CHARGE_REST}
+					_charge = {"state": "rest", "timer": _rest_time()}
 		"brace":
 			if _charge["hazard"].is_live():
 				_charge["state"] = "run"
@@ -700,6 +724,7 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 
 
 func _commit_charge(ball: Vector3) -> void:
+	_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
 	var from: Vector3 = ship.global_position
 	var to_ball := Vector3(ball.x - from.x, 0.0, ball.z - from.z)
 	var heading: Vector3 = to_ball.normalized() if to_ball.length() > 2.0 else ship.heading
@@ -710,7 +735,7 @@ func _commit_charge(ball: Vector3) -> void:
 	var half := Requisition.HULL.z * 0.5
 	var h = _new_hazard()
 	h.commit_lane("charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
-		Requisition.HULL.y + 0.5, Rules.CHARGE_WARN, length / Rules.CHARGE_SPEED + 0.2)
+		Requisition.HULL.y + 0.5, ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN), length / Rules.CHARGE_SPEED + 0.2)
 	_add_hazard(h)
 	ship.move_to(from, heading)
 	ship.cue("charge_warn", h.get_instance_id())
@@ -744,7 +769,7 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 	if _charge["travelled"] >= _charge["length"]:
 		h.finish()
 		if _charge["into_wall"]:
-			_stun(Rules.WALL_STUN)
+			_stun(ChallengeDials.punish("brindle", Rules.WALL_STUN))
 			_discover(CodexEntries.WALL_BAIT, ship.global_position)
 		else:
 			_charge = {"state": "recover", "timer": Rules.CHARGE_RECOVER}
@@ -753,7 +778,7 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 # A charge hit shoves the ball sideways out of the lane and up, never along it, so the
 # hull can never carry the ball into the wall.
 func _charge_hit(h, ball: Vector3) -> void:
-	ctx.run.damage(Rules.CHARGE_DAMAGE, "brindle_charge")
+	ctx.run.damage(ChallengeDials.damage("brindle", Rules.CHARGE_DAMAGE, phase), "brindle_charge")
 	_grace[h.get_instance_id()] = clock + Rules.CHARGE_GRACE
 	if ctx.calm:
 		return
@@ -781,6 +806,7 @@ func _step_ghost() -> void:
 
 
 func _stun(seconds: float) -> void:
+	_combo_left = -1  # a punish window ends any combo
 	if _charge.has("hazard") and is_instance_valid(_charge["hazard"]):
 		_charge["hazard"].finish()
 	_charge = {"state": "stun", "timer": seconds}
@@ -1112,7 +1138,7 @@ func on_struck(target, kind: String, part: String, result: Dictionary) -> void:
 	if target.role == "hull" and kind == "ram" and charging() \
 			and float(result.get("punch", 0.0)) >= float(result.get("plating", INF)):
 		clashes += 1
-		_stun(Rules.CLASH_STUN)
+		_stun(ChallengeDials.punish("brindle", Rules.CLASH_STUN))
 	if state != FIGHT:
 		return
 	if target.role == "hull" and result.has("gain"):

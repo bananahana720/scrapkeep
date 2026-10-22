@@ -8,8 +8,9 @@ const Core := preload("res://tools/attack_sheet_core.gd")
 # - each boss (Brindle, the Waking, the Mind) has at least three rows;
 # - both output files are written, and the JSON parses back to the same row count;
 # - damage rows carry a hull share and a hit count;
-# - the LETHAL TELL < 0.6 s flags are reported and not failed on; the tuning units turn that
-#   into a hard check.
+# - the sheet reads the effective dials (ChallengeDials), so Brindle's rows carry the tuned damage;
+# - HARD: no Brindle attack that deals damage (the sheet's lethal-class definition: damage above 0)
+#   has a tell under 0.6 s at the tuned values. Other groups' LETHAL TELL flags are still reported only.
 
 
 func _initialize() -> void:
@@ -34,6 +35,37 @@ func _initialize() -> void:
 	t.eq("every damage row has a tell, a share of hull and a hit count", bad, 0)
 	t.check("hulls read from the classes", sheet["header"]["hull_min"] > 0.0 and sheet["header"]["hull_max"] >= sheet["header"]["hull_min"],
 		"%s to %s" % [sheet["header"]["hull_min"], sheet["header"]["hull_max"]])
+	var brindle_damage := 0
+	var short_tells: Array = []
+	var tuned_seen := false
+	for row in sheet["rows"]:
+		if row["group"] != "Brindle" or row["damage"] <= 0.0:
+			continue
+		brindle_damage += 1
+		tuned_seen = tuned_seen or row["damage"] > row["damage_base"] + 1e-6
+		if row["tell_s"] == null or row["tell_s"] < Core.LETHAL_FLOOR - Core.EPS:
+			short_tells.append("%s tell %s" % [row["attack"], str(row["tell_s"])])
+	t.check("Brindle has damaging attacks on the sheet", brindle_damage >= 2, "%d" % brindle_damage)
+	t.check("the sheet carries the tuned Brindle damage (above the base)", tuned_seen)
+	t.eq("no Brindle attack that deals damage has a tell under 0.6 s at the tuned values", short_tells, [])
+	var boss_flagged: Array = []
+	for row in sheet["rows"]:
+		if Core.BOSS_GROUPS.has(row["group"]) and row["flags"].has(Core.LETHAL_FLAG):
+			boss_flagged.append("%s / %s" % [row["group"], row["attack"]])
+	t.eq("no boss attack (Brindle, Waking, Mind) carries LETHAL TELL < 0.6 s", boss_flagged, [])
+	# The sheet follows the dials: a doubled Brindle damage_mult doubles the slag row.
+	ChallengeDials.set_overrides({"brindle.damage_mult": 2.0})
+	var doubled: Dictionary = Core.new().build()
+	ChallengeDials.reset()
+	var slag_now := 0.0
+	var slag_x2 := 0.0
+	for row in sheet["rows"]:
+		if row["group"] == "Brindle" and str(row["attack"]).begins_with("slag"):
+			slag_now = row["damage"]
+	for row in doubled["rows"]:
+		if row["group"] == "Brindle" and str(row["attack"]).begins_with("slag"):
+			slag_x2 = row["damage"]
+	t.near("the sheet reads the effective dials (damage_mult 2 doubles the slag row)", slag_x2, slag_now * 2.0, 1e-6)
 	var flagged := 0
 	for row in sheet["rows"]:
 		if not row["flags"].is_empty():

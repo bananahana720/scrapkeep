@@ -92,7 +92,7 @@ The KF5 body exports these clips in the shape of the boss bodies' clip tables (`
 | Clip | Length, blend (s) | When | What moves |
 | --- | --- | --- | --- |
 | `idle` | 4.0, 1.0 | default loop | Seams breathe at 0.8; the stacks shimmer with heat |
-| `pulse_warn` | 2.0, 2.0 | the charge (`warden.gd:375-383`) | Stacks rise 0.6 m; seams ramp to full; the core dome's cage glows |
+| `pulse_warn` | 2.0, 0.5 | the charge (`warden.gd:375-383`) | Stacks rise 0.6 m; seams ramp to full; the core dome's cage glows |
 | `pulse` | 0.3, 0.1 | the pulse (`warden.gd:386`) | Stacks drop; a ring of steam from the drum's foot |
 | `active` | 0.5, 0.5 | stagger open (`warden.gd:526`) | The jaws lean open 14 degrees (`warden_look.gd:72`); the cage splits; the core blazes |
 | `chunk_lost` | 1.0, 0.8 | a chunk shatters | One quarter of the drum's jacket falls away |
