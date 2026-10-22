@@ -221,6 +221,12 @@ static func environment(look: Dictionary, air: bool) -> Dictionary:
 		values["fog_sky_affect"] = 0.25
 		if look.sky == "hdri":
 			values["sky"] = Palette.hdri_sky()
+	var diag := OS.get_environment("SK_FOG")
+	if not diag.is_empty():
+		var f := diag.split(",")
+		values["fog_light_energy"] = float(f[0])
+		values["fog_sun_scatter"] = float(f[1])
+		values["fog_density"] = float(values.get("fog_density", 0.0)) * float(f[2])
 	if values.volumetric_fog_enabled:
 		values.merge(look.air)
 	return values

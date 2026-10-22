@@ -66,6 +66,9 @@ func _run() -> void:
 		game.player.body().freeze = true
 		n += 1
 		await _snap("%d-stage%d-%s" % [n, stage, WorldLook.time_id(stage)], stage, game.player.ball_position())
+		if not OS.get_environment("SK_STOP").is_empty() and stage >= int(OS.get_environment("SK_STOP")):
+			quit(0)
+			return
 		var world: int = game.ctx.stages.world_of(stage)
 		if game.ctx.stages.is_world_last(stage) and world != last_world:
 			# The arena that ends this world, entered as the flow enters it after the stage's launch.
