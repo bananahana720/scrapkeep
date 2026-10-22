@@ -4,7 +4,7 @@ extends SceneTree
 
 const Palette := preload("res://src/core/palette.gd")
 const GLB := "res://assets/models/world_one/enemy_ramp_flipper.glb"
-const BASE_MECHANIC_SHA := "b52181b178e4e9fab039ae3ae2acb13ccdb56d3d4dc3c6bbbacc4e4c56a16bde"
+const BASE_MECHANIC_SHA := "f81182dc76a0d07f3d50b1ac083e67d90b0a64ddaaa85f105217348d8d4a949d"
 const BASE_CONSTS := {"PLATE_RADIUS": 3.6, "LEAD": .9, "TILT": .35, "FLING_UP": 30.0,
 	"FLING_SIDE": 22.0, "RIDE_UP": 9.0, "HP": 45.0}
 const BASE_VALUES := {"radius": .8, "half_height": 1.1, "weight": 1.2, "scrap_value": 4,
