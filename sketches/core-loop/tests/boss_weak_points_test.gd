@@ -160,6 +160,14 @@ func _empty_bar(mod) -> void:
 	mod.warden._posture.staggered = false
 
 
+# Floors 1..n gone the way a drop leaves them: body freed, hatch freed with it.
+func _drop_floors(mod, n: int) -> void:
+	for k in range(1, n + 1):
+		mod._free_part("hatch_%d" % k)
+		mod._free_body(mod._floor_bodies.get(k))
+		mod._floor_bodies.erase(k)
+
+
 func _place_ball(mod, at: Vector3) -> void:
 	mod.ctx.player.reset_to(at)
 	mod.ctx.player.body().global_position = at
@@ -177,6 +185,23 @@ func _waking() -> void:
 			and mod.warden.spec.get("weak_judge_all", false), str(mod.warden._posture.contact_gain_scale))
 	var chip: Dictionary = mod._weak_judge(HIT.duplicate())
 	_t.near("waking: a hit with no point open pays the chip", chip["gain"], 3.0)
+	# The lip drop: a ball in the air that was carving opens the CURRENT floor's hatch (the one it can reach), once per
+	# drop. The floor below is buried under it, so hatch_phase + 1 stays shut.
+	mod._lip_seen = false
+	mod._carved_at = mod.clock
+	mod.ctx.player.state.grounded = false
+	mod.phase = 1
+	mod._open_by_lip()
+	_t.check("waking: a lip drop in phase 1 opens hatch_1", mod.weak_open() == ["hatch_1"], str(mod.weak_open()))
+	_t.check("waking: and not the buried hatch_2", mod.weak.state("hatch_2") == WeakPoints.SHUT, "")
+	mod.weak.step(mod.clock + WeakPoints.OPEN_SECONDS + 0.1)
+	mod._open_by_lip()
+	_t.check("waking: an open point re-seals, and the same drop does not reopen it", mod.weak_open().is_empty() and mod.weak.state("hatch_1") == WeakPoints.SHUT, "")
+	mod._lip_seen = false
+	mod._open_by_lip()
+	_t.check("waking: a second drop opens it again", mod.weak_open() == ["hatch_1"], str(mod.weak_open()))
+	mod.weak.step(mod.clock + 100.0)
+	_drop_floors(mod, 2)
 	# The bore: hatch_3 off the pit, the override in it.
 	_bore(mod, 3)
 	_t.check("waking: a bore jam opens the third hatch", mod.weak_open() == ["hatch_3"], str(mod.weak_open()))
@@ -197,16 +222,6 @@ func _waking() -> void:
 			and mod._removed_families() == ["bore"] and WakingAttacks.exposed(3, mod._removed_families()) == ["burrow", "cave_in"], str(mod._removed_families()))
 	_t.check("waking: a family is never removed to nothing", WakingAttacks.exposed(1, mod._removed_families()) == ["burrow"], "")
 	_t.check("waking: a broken hatch stays out of the way", mod.weak_open().is_empty() and not mod.objective_text().contains("is open"), "")
-	# The lip drop: a ball in the air that was carving opens the hatch below, once per drop.
-	mod._lip_seen = false
-	mod._carved_at = mod.clock
-	mod.ctx.player.state.grounded = false
-	mod.phase = 1
-	mod._open_by_lip()
-	_t.check("waking: a lip drop opens the floor below's hatch", mod.weak_open() == ["hatch_2"], str(mod.weak_open()))
-	mod.weak.step(mod.clock + WeakPoints.OPEN_SECONDS + 0.1)
-	mod._open_by_lip()
-	_t.check("waking: an open point re-seals, and the same drop does not reopen it", mod.weak_open().is_empty() and mod.weak.state("hatch_2") == WeakPoints.SHUT, "")
 	# The pit: the override.
 	_bore(mod, 4)
 	_t.check("waking: a bore jam in the pit opens the override", mod.weak_open() == ["override"], str(mod.weak_open()))
@@ -218,7 +233,7 @@ func _waking() -> void:
 	mod._weak_judge({"gain": 10.0, "punch": 500.0, "reel": true}, "override", "ram")
 	var sprayless := WakingAttacks.bore(5, Vector3(10, 0, 0), center, 4, 36.0, mod._removed_families())
 	_t.check("waking: breaking the override ends the spray", sprayless.size() == 1 and mod._removed_families() == ["bore", "pit_spray"], str(mod._removed_families()))
-	# Last floor: a lip drop opens nothing, with every point shut first.
+	# Last floor: a lip drop opens nothing, with every point shut first (phase 3's hatch is broken, the pit has none).
 	mod.weak.step(mod.clock + 100.0)
 	for last in [3, 4]:
 		mod.phase = last

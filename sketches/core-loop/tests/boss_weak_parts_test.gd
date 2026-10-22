@@ -37,10 +37,12 @@ func _run() -> void:
 	await _contacts()
 	await _hookable()
 	await _openers()
+	await _reachable()
 	await _breaks()
 	await _lifecycle()
 	await _mind_seats()
 	await _mind_hands()
+	await _mind_hand_reel()
 	await _ultimate()
 	await _bot()
 	ChallengeDials.reset()
@@ -94,6 +96,14 @@ func _contact(mod, body: Node3D, kind: String, force: float, landing: bool) -> f
 	player.struck.emit(body, kind, force)
 	player.smash_landing = null
 	return mod.warden.posture()
+
+
+# Floors 1..n gone the way a drop leaves them: body freed, hatch freed with it.
+func _drop_floors(mod, n: int) -> void:
+	for k in range(1, n + 1):
+		mod._free_part("hatch_%d" % k)
+		mod._free_body(mod._floor_bodies.get(k))
+		mod._floor_bodies.erase(k)
 
 
 func _place_ball(mod, at: Vector3) -> void:
@@ -188,6 +198,7 @@ func _contacts() -> void:
 	var slams := [0]
 	game.events.enemy_struck.connect(func(enemy: Node3D, kind: String, _force: float):
 		slams[0] += 1 if enemy == mod.warden and kind == "slam" else 0)
+	_drop_floors(mod, 1)
 	mod._open_weak("hatch_2")
 	var want: float = await _next_gain(mod, "ram", RAM, true)
 	var open_bar: float = await _real_landing(mod, "hatch_2")
@@ -285,7 +296,7 @@ func _hookable() -> void:
 
 # Each attack's own end opens its hatch, once. mod.clock is advanced by hand and the hazards laid and stepped by the
 # module's own methods, so the end is the real end (every hazard past its live seconds).
-func _run_attack(mod, family: String, hatch: String) -> Dictionary:
+func _run_attack(mod, family: String, hatch: String, drop_floor := 0) -> Dictionary:
 	var opens: Array = []
 	var listener := func(id: String, _at: Vector3, _seconds: float): opens.append(id)
 	mod.ctx.events.weak_point_opened.connect(listener)
@@ -298,6 +309,10 @@ func _run_attack(mod, family: String, hatch: String) -> Dictionary:
 	var shut_while_live := true
 	for i in 900:
 		mod.clock += 0.02
+		# drop_floor: that floor's drop warning starts once the attack is fully laid, so it ends inside the warning.
+		if drop_floor > 0 and mod._pending.is_empty() and mod._dropping == 0:
+			mod._dropping = drop_floor
+			mod._drop_left = 1.0
 		mod._lay_pending()
 		mod._step_attacks(0.02)
 		var live := false
@@ -328,21 +343,19 @@ func _openers() -> void:
 	_t.eq("a burrow opens hatch_1 once, as it ends", burrow["opens"], 1)
 	_t.check("the burrow opens it on the step its last hazard finished", burrow["open_step"] == burrow["end_step"] and burrow["end_step"] > 0, str(burrow))
 	mod.weak.step(mod.clock + 100.0)
+	_drop_floors(mod, 1)
 	mod.phase = 2
 	var cave := _run_attack(mod, "cave_in", "hatch_2")
 	_t.check("a cave-in leaves hatch_2 shut while it is live", cave["shut_while_live"], "")
 	_t.eq("a cave-in opens hatch_2 once, as it settles", cave["opens"], 1)
 	_t.check("the cave-in opens it on the step its last hole finished", cave["open_step"] == cave["end_step"] and cave["end_step"] > 0, str(cave))
-	# The burrow in the second phase: floor 1 stands, so it opens hatch_1 again only if that is still a live hatch.
-	mod.weak.step(mod.clock + 100.0)
-	mod._free_part("hatch_1")
-	mod._free_body(mod._floor_bodies.get(1))
-	mod._floor_bodies.erase(1)
+	# The burrow in the second phase: floor 1 is gone, and its hatch left with it.
 	mod.weak.step(mod.clock + 100.0)
 	var gone := _run_attack(mod, "burrow", "hatch_1")
 	_t.eq("a burrow after floor 1 dropped opens nothing: the hatch left with its floor", gone["opens"], 0)
 	# The bore jam: hatch_3 off the pit, the override in it, once per jam.
 	mod.weak.step(mod.clock + 100.0)
+	_drop_floors(mod, 2)
 	mod.phase = 3
 	mod._jammed_until = -INF
 	var opens: Array = []
@@ -380,6 +393,110 @@ func _bore(mod, phase: int) -> void:
 	mod._jammed_until = -INF
 	mod.phase = phase
 	mod._step_attacks(0.0)
+
+
+# Only a reachable hatch opens (dial 1): floor k's hatch is buried while a floor above it stands, and not worth opening
+# once its own floor is on its way down.
+func _reachable() -> void:
+	var booted = await _boot(2, {"waking.weak_points": 1.0})
+	var game = booted[0]
+	var mod = booted[1]
+	mod.set_physics_process(false)
+	mod.phase = 1
+	_t.check("phase 1 on a fresh floor: hatch_1 is reachable, the rest are buried", mod.part_reachable("hatch_1") and not mod.part_reachable("hatch_2")
+			and not mod.part_reachable("hatch_3") and not mod.part_reachable("override"), "")
+	# The gate's path: an attack that ends inside floor 1's drop warning opens nothing and says nothing.
+	var emitted: Array = []
+	game.events.weak_point_opened.connect(func(id: String, _at: Vector3, _s: float): emitted.append(id))
+	var warned := _run_attack(mod, "burrow", "hatch_1", 1)
+	_t.check("floor 1 in its drop warning: hatch_1 is not reachable", mod._dropping == 1 and not mod.part_reachable("hatch_1"), "")
+	_t.check("a burrow ending inside the drop warning opens nothing and emits nothing", warned["opens"] == 0 and mod.weak_open().is_empty()
+			and mod.weak.state("hatch_1") == WeakPoints.SHUT and emitted.is_empty(), str(emitted))
+	_t.check("and no objective text or bot target for it", not mod.objective_text().contains("is open"), mod.objective_text())
+	mod._dropping = 0
+	mod._clear_attacks()
+	mod._drops.append(1)
+	_t.check("floor 1 queued behind another drop is not reachable either", not mod.part_reachable("hatch_1"), "")
+	var queued := _run_attack(mod, "burrow", "hatch_1")
+	_t.check("a burrow ending while its floor is queued opens nothing", queued["opens"] == 0 and emitted.is_empty(), str(emitted))
+	mod._drops.clear()
+	# A buried hatch never opens: a cave-in or a bore jam in phase 1 leaves hatch_2 and hatch_3 shut.
+	var cave := _run_attack(mod, "cave_in", "hatch_2")
+	_t.check("a cave-in ending in phase 1 leaves hatch_2 shut with no emit", cave["opens"] == 0 and mod.weak.state("hatch_2") == WeakPoints.SHUT and emitted.is_empty(), str(emitted))
+	_bore(mod, 1)
+	_t.check("a bore jam in phase 1 leaves hatch_3 shut with no emit", mod.weak.state("hatch_3") == WeakPoints.SHUT and mod.weak.state("override") == WeakPoints.SHUT
+			and emitted.is_empty(), str(emitted))
+	# The same family in its own phase still opens its hatch (the control that the refusals above are the check's doing).
+	var own := _run_attack(mod, "burrow", "hatch_1")
+	_t.eq("a burrow ending in phase 1 with floor 1 standing still opens hatch_1", own["opens"], 1)
+	mod.weak.step(mod.clock + 100.0)
+	# Phase 2: floor 1 gone, floor 2 top; the override stays buried until the pit.
+	_drop_floors(mod, 1)
+	mod.phase = 2
+	_t.check("after floor 1 drops hatch_2 is reachable and hatch_3 is not", mod.part_reachable("hatch_2") and not mod.part_reachable("hatch_3") and not mod.part_reachable("hatch_1"), "")
+	mod.phase = 4
+	_t.check("the override is reachable in the pit phase only", mod.part_reachable("override"), "")
+	mod.phase = 3
+	_t.check("and not in phase 3", not mod.part_reachable("override"), "")
+	game.free()
+	await physics_frame
+	# A buried part is not touched: it pays nothing to the Warden's bar, not even the chip.
+	booted = await _boot(2, {"waking.weak_points": 1.0})
+	game = booted[0]
+	mod = booted[1]
+	var control: float = await _real_landing(mod, "hatch_1")
+	_t.check("control: a landing on the reachable shut hatch_1 pays the chip", control > 0.0, str(control))
+	mod.weak_part("hatch_1").global_position += Vector3(0.0, -60.0, 0.0)  # park it: only the buried part is in reach
+	var buried: float = await _real_landing(mod, "hatch_2")
+	_t.near("a landing on the buried hatch_2 pays nothing", buried, 0.0, 0.0001)
+	mod._open_weak("hatch_3")
+	var buried_open: float = await _real_landing(mod, "hatch_3")
+	_t.near("and nothing on a buried hatch the rule had opened", buried_open, 0.0, 0.0001)
+	# OPEN visuals: the cover is hidden, the cavity shows with the gap emission, and the part is on the stake layer.
+	var part = mod.weak_part("hatch_1")
+	mod._open_weak("hatch_1")
+	mod._sync_part("hatch_1")
+	_t.check("an OPEN part: cover hidden, cavity visible, gap emission, on the stake layer",
+			not part._cover.visible and part._cavity.visible and part._cavity_material.emission.is_equal_approx(WeakPart.GAP)
+			and part._cavity_material.emission_energy_multiplier > 0.0 and part.collision_layer == Augments.STAKE_MASK and part.hookable(), "")
+	game.free()
+	await physics_frame
+
+
+# A hand's reel test is combat's shared predicate: a smash landing or a winching haul on a ram/stomp/slam contact.
+func _mind_hand_reel() -> void:
+	var booted = await _boot(3, {"mind.weak_points": 1.0})
+	var game = booted[0]
+	var mod = booted[1]
+	var player = mod.ctx.player
+	mod.phase = Mind.HAND_PHASE
+	mod._send_hand()
+	var hand = mod.hands[0]
+	await physics_frame
+	hand.phase = hand.Phase.ROAM
+	_brace(mod, hand)
+	var shared: bool = mod.ctx.spawner.is_reel_impact("ram", false)
+	_t.check("premise: a hooked, winching ram is a reel by the shared predicate; unhooked is not", not shared, "")
+	mod.ctx.spawner.strike(hand, "ram", 12.0)
+	_t.eq("a hit that is not a reel pays chip: the button is unworn", mod.weak.seal_hp("hand_0"), Mind.SEAL_HP)
+	await physics_frame
+	_brace(mod, hand)
+	player.kit.hooked = true
+	player.kit.winching = true
+	_t.check("premise: now the shared predicate calls it a reel", mod.ctx.spawner.is_reel_impact("ram", false), "")
+	mod.ctx.spawner.strike(hand, "ram", 12.0)
+	var worn: float = mod.weak.seal_hp("hand_0")
+	_t.check("a winching haul hit on the hand is a reel and wears the button", worn < Mind.SEAL_HP, str(worn))
+	player.kit.hooked = false
+	player.kit.winching = false
+	await physics_frame
+	_brace(mod, hand)
+	player.smash_landing = hand
+	mod.ctx.spawner.strike(hand, "ram", 12.0)
+	player.smash_landing = null
+	_t.check("a smash-landing hit on the hand is a reel", mod.weak.seal_hp("hand_0") < worn, str(mod.weak.seal_hp("hand_0")))
+	game.free()
+	await physics_frame
 
 
 func _breaks() -> void:

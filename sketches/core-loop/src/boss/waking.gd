@@ -329,7 +329,7 @@ func _step_attacks(delta: float) -> void:
 				if _jammed_until <= clock:
 					# The jam opens the third hatch (Bedrock's bore), or the override in the pit (#241 6332288729).
 					if phase >= WakingAttacks.PIT_PHASE:
-						_open_weak("override")
+						_open_override()
 					else:
 						_open_hatch(3)
 				_jammed_until = clock + (h.warn_seconds + h.live_seconds - h.age) + ChallengeDials.punish("waking", BORE_JAM)
@@ -355,10 +355,38 @@ func _attack_ended(attack: Dictionary) -> bool:
 	return true
 
 
-# Opens floor k's hatch while that floor stands: a dropped floor takes its hatch with it.
+# Whether the ball could get at a part now (dial 1). Hatch k sits on floor k's rim at the pad radius, so floor k hides
+# it until every floor above it is gone: it is reachable only when floor k stands, no floor below k still stands, and
+# floor k is not in the drop pipeline (its warning, or queued behind another drop). That is stricter than k == phase:
+# phase moves to k + 1 the moment chunk k is lost, while floor k still stands through its drop wait and warning, so
+# in that gap nothing is reachable. The override sits on the pit floor and is buried until the pit phase.
+func part_reachable(id: String) -> bool:
+	if id == "override":
+		return phase >= WakingAttacks.PIT_PHASE
+	if not id.begins_with("hatch_"):
+		return true
+	var k := int(id.substr(6))
+	if not _floor_bodies.has(k) or _dropping == k or _drops.has(k):
+		return false
+	for j in range(1, k):
+		if _floor_bodies.has(j):
+			return false
+	return true
+
+
+func _part_reachable(id: String) -> bool:
+	return part_reachable(id)
+
+
+# Opens floor k's hatch only while it is reachable; a refused open changes nothing and says nothing.
 func _open_hatch(k: int) -> void:
-	if _floor_bodies.has(k):
+	if part_reachable("hatch_%d" % k):
 		_open_weak("hatch_%d" % k)
+
+
+func _open_override() -> void:
+	if part_reachable("override"):
+		_open_weak("override")
 
 
 func _bank_ride(family: String, at: Vector3) -> void:
@@ -382,11 +410,12 @@ func carving_now() -> bool:
 	return state.grounded and state.tier >= SpeedTier.FAST and not FloorRule.on_floor(state)
 
 
-# A lip drop opens the hatch of the floor below the current one, once per drop, if that floor stands.
+# A lip drop opens the current floor's hatch, once per drop, in the phases before the pit. The floor below is always
+# buried under the current one, so only the hatch the ball can reach is worth opening (part_reachable decides).
 func _open_by_lip() -> void:
 	var lip := lip_drop()
-	if lip and not _lip_seen and phase < WakingAttacks.PIT_PHASE - 1:
-		_open_hatch(phase + 1)
+	if lip and not _lip_seen and phase < WakingAttacks.PIT_PHASE:
+		_open_hatch(phase)
 	_lip_seen = lip
 
 

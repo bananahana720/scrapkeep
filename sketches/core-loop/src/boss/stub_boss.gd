@@ -151,6 +151,11 @@ func _weak_parts() -> Array:
 	return []
 
 
+# Whether the ball can get at a part now; a buried part is not touched. The Waking overrides it.
+func _part_reachable(_id: String) -> bool:
+	return true
+
+
 # The attack families broken points have taken away (the Mind answers by its own count).
 func _removed_families() -> Array:
 	return weak.removed_families()
@@ -307,7 +312,7 @@ func _step_parts() -> void:
 			_part_nodes.erase(id)
 			continue
 		_sync_part(id)
-		var near: bool = weak.state(id) != WeakPoints.BROKEN and ball.distance_to(part.global_position) <= WeakPart.REACH
+		var near: bool = weak.state(id) != WeakPoints.BROKEN and _part_reachable(id) and ball.distance_to(part.global_position) <= WeakPart.REACH
 		if near and not bool(_touching.get(id, false)) and ctx.player.has_method("_on_enemy_touched"):
 			var away := Vector3(ball.x - part.global_position.x, 0.0, ball.z - part.global_position.z)
 			ctx.player._on_enemy_touched(part, away.normalized() if away.length() > 0.01 else Vector3.UP)

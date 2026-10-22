@@ -294,7 +294,9 @@ func _hand_struck(hand: Node3D, kind: String, force: float) -> void:
 	if state != FIGHT or not hand.braced() or not kind in Rules.CONTACT_KINDS:
 		return
 	var frame := Engine.get_physics_frames()
-	var reel: bool = ctx.player.smash_landing == hand or (ctx.player.kit.hooked and ctx.player.kit.winching)
+	var smash: bool = ctx.player.smash_landing == hand
+	var reel: bool = ctx.spawner.is_reel_impact(kind, smash) if ctx.spawner != null and ctx.spawner.has_method("is_reel_impact") \
+			else smash or (ctx.player.kit.hooked and ctx.player.kit.winching)
 	if reel and int(_reel_frame.get(id, -1)) == frame:
 		reel = false
 	var punch: float = ctx.spawner.punch_of(kind, force) if ctx.spawner != null and ctx.spawner.has_method("punch_of") else force
