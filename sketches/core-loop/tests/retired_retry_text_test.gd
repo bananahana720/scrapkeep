@@ -25,6 +25,10 @@ const PHRASES := [
 	"(?<!no )free retry",
 	"retries once",
 	"\\br to retry\\b",
+	"death screen: choose a class",
+	"death screen: replay",
+	"death screen offers",
+	"(?<!no )\\bretry the stage\\b",
 ]
 # Case-sensitive: a capitalised Retry as a button or menu label (quoted, bracketed or a table cell).
 const LABELS := [
@@ -44,6 +48,10 @@ const KNOWN_BAD := [
 	"| Retry | restart the stage |",
 	"[Retry]",
 	"the Retry button",
+	"| C | death screen: choose a class |",
+	"| T | death screen: replay the world's last stage |",
+	"The death screen offers R, T and N.",
+	"Press N to retry the stage.",
 ]
 
 const KNOWN_GOOD := [
@@ -62,6 +70,9 @@ const KNOWN_GOOD := [
 	"release before holding again",
 	"The arena retry rewinds only what the fight discovered.",
 	"(Superseded: the dead screen has no Retry button now.)",
+	"Hold R to start a new run as the same pilot.",
+	"# retry the fetch once if the asset download times out",
+	"var tries := 0  # retry the request on a network error",
 ]
 
 var _t := T.new("retired_retry_text_test")

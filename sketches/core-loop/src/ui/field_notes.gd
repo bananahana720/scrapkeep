@@ -95,7 +95,7 @@ const FIELD_RULES := [
 ]
 
 const SCREEN_KEYS := [
-	{"keys": "Space", "does": "title: start; summary: choose a class (pad B on the summary), after a short beat"},
+	{"keys": "Space", "does": "title: start; summary: choose a class (pad B on the summary)"},
 	{"keys": "H", "does": "title: how to play, and back"},
 	{"keys": "1, 2, ...", "does": "class select: one number per class card, left to right"},
 	{"keys": "N", "does": "summary: new run, same class (pad A on the summary)"},
