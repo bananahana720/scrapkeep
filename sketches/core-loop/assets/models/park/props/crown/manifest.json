@@ -63,7 +63,7 @@
     "sign",
     "tall"
    ],
-   "story": "Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift.",
+   "story": "Fleet signal crew's tally hut: faded petrol-enamel walls patched with oxide and timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift.",
    "variants": {
     "a": {
      "lod": [
@@ -72,11 +72,11 @@
       "res://assets/models/park/props/crown/billing_booth_a_lod2.glb"
      ],
      "tris": [
-      10880,
-      5440,
-      1604
+      11096,
+      5548,
+      1634
      ],
-     "radius": 4.5,
+     "radius": 4.504,
      "height": 4.102
     },
     "b": {
@@ -86,12 +86,12 @@
       "res://assets/models/park/props/crown/billing_booth_b_lod2.glb"
      ],
      "tris": [
-      11060,
-      5530,
-      1635
+      11296,
+      5648,
+      1671
      ],
-     "radius": 4.496,
-     "height": 4.103
+     "radius": 4.5,
+     "height": 4.102
     },
     "c": {
      "lod": [
@@ -100,9 +100,9 @@
       "res://assets/models/park/props/crown/billing_booth_c_lod2.glb"
      ],
      "tris": [
-      9752,
-      4876,
-      1462
+      9976,
+      4988,
+      1496
      ],
      "radius": 4.544,
      "height": 4.102

@@ -1910,6 +1910,22 @@
      "tilt_deg": 0
     }
    ]
+  },
+  "floor_brush": {
+   "story": "One rabbitbrush the net-weaver crews leave standing on the one scrap of legal ground beside the floor line, a patch of green in the dust the giant machines roll past.",
+   "props": [
+    {
+     "kind": "rabbitbrush",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 0.85,
+     "tilt_deg": 0
+    }
+   ]
   }
  },
  "spots": [
@@ -3452,6 +3468,16 @@
    ],
    "yaw_deg": 0,
    "near": "bare fill for pose 115"
+  },
+  {
+   "id": "crown_fb_01",
+   "template": "floor_brush",
+   "at": [
+    -18.75,
+    -398.75
+   ],
+   "yaw_deg": 0,
+   "near": "floor line, net-weaver gear"
   }
  ],
  "litter": {
@@ -3492,7 +3518,7 @@
   ],
   "seed": 31
  },
- "pin": 533729188,
+ "pin": 2154852281,
  "low_ground_rows": [
   "drop_ramp",
   "watch_butte",

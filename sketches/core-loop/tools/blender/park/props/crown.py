@@ -1,7 +1,7 @@
 """Crown park dressing kit (Dressing lane; contract: design-v3/park/DRESSING-KITS.md).
 
 Highdraft at dusk under a storm cell: the net-weavers (ochre rope, hammocks, looms; builders
-only, no faces) and the Fleet signal crew (iron oxide, charcoal, one brass tag; abandoned
+only, no faces) and the Fleet signal crew (petrol enamel bodies, copper fittings, oxide patches, one brass tag; abandoned
 equipment, never a camp). The ancient spires are never touched, so the kit has none.
 
 blender -b --factory-startup --threads 2 --python-exit-code 1 -P \
@@ -22,16 +22,18 @@ K = kit.Kit("crown")
 C.update({
     "ochre": "b49d6a", "ochre_dark": "857248", "ochre_pale": "cdb98a",  # a touch greyer: low sun turns saturated ochre to amber
     "sage": "9aa58a", "sage_dark": "6f7d5f", "sage_pale": "b9c2a8",
-    # Fleet iron oxide #9b513a / #74402f, sun-bleached toward canvas so abandoned Fleet gear
-    # reads pale and dead against red-orange sandstone, not as a live camp.
+    # Fleet iron oxide #9b513a / #74402f, sun-bleached toward canvas: now patches only on the petrol bodies.
     "oxide": mix("9b513a", "c9c1ae", 0.64), "oxide_dark": mix("74402f", "a79e83", 0.5),
     "brass": "d9b44a",  # Fleet tags only
+    # Board machine colours (highdraft-props-moodboard.jpg swatch strip): petrol enamel bodies, copper fittings, oxide as patches only.
+    "petrol": "365754", "copper": "b77843",
     "glass": "aaa496", "glass_dark": "8c8678", "chalk": "ece6d2",
     "flower": "c8b865", "slate": "2f3634", "steam": "cfccc2",
 })
 # Mid values lifted a little so props register against the dark dusk ground (no pale specks, no amber).
 C.update({"timber": shade(C["timber"], 1.14), "timber_dark": shade(C["timber_dark"], 1.15),
           "timber_pale": shade(C["timber_pale"], 1.04), "sage": "a3ad8f", "sage_dark": "7a8a66"})
+PETROL, PETROL_LT, COPPER = C["petrol"], shade(C["petrol"], 1.3), C["copper"]  # PETROL_LT is a weathered shade of the same enamel
 OXIDE, CHAR, BRASS = C["oxide"], C["charcoal"], C["brass"]
 TAU = math.tau
 
@@ -204,7 +206,7 @@ def loom_frame(p, v, rng):
 
 
 @K.kind("billing_booth", hero=True, variants="abc", tags=["machine", "sign"],
-        story="Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift.")
+        story="Fleet signal crew's tally hut: faded petrol-enamel walls patched with oxide and timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift.")
 def billing_booth(p, v, rng):
     W, D, H = 4.4, 3.4, 2.6
     # Foundation stones.
@@ -216,13 +218,13 @@ def billing_booth(p, v, rng):
     for i in range(20):
         x = -W / 2 + 0.2 + i * (W - 0.4) / 19
         hh = H - (0.0 if not (v == "c" and i > 14) else 1.3)
-        p.box((0.22, 0.12, hh), (x, D / 2, 0.3 + hh / 2), tint(OXIDE, rng, 0.07), jit=0.004)
+        p.box((0.22, 0.12, hh), (x, D / 2, 0.3 + hh / 2), tint(PETROL if i % 5 else PETROL_LT, rng, 0.05), jit=0.004)
     for s in (-1, 1):
         for i in range(15):
             y = -D / 2 + 0.2 + i * (D - 0.4) / 14
             if v == "b" and s == 1 and i in (6, 7):
                 continue
-            p.box((0.12, 0.22, H), (s * W / 2, y, 0.3 + H / 2), tint(C["oxide_dark"] if s == 1 else OXIDE, rng, 0.07), jit=0.004)
+            p.box((0.12, 0.22, H), (s * W / 2, y, 0.3 + H / 2), tint(PETROL_LT if (i % 4 == 0) else PETROL, rng, 0.05), jit=0.004)
     # Timber patches nailed over the weathered oxide; b and c have a stove-in panel.
     for (px, py, pw, ph, pz) in ((-1.2, D / 2 + 0.09, 0.9, 0.7, 1.4), (1.3, D / 2 + 0.09, 0.6, 1.1, 0.9)):
         p.box((pw, 0.07, ph), (px, py, pz), tint(C["timber_pale"], rng, 0.1), rot=(0, 0.04, 0.05), style="hard_smooth")
@@ -235,11 +237,14 @@ def billing_booth(p, v, rng):
         x = -W / 2 + 0.2 + i * (W - 0.4) / 19
         window = -0.5 < x < 0.9
         if window:
-            p.box((0.22, 0.12, 0.9), (x, -D / 2, 0.75), tint(OXIDE, rng, 0.07))
-            p.box((0.22, 0.12, 0.45), (x, -D / 2, H - 0.05), tint(OXIDE, rng, 0.07))
+            p.box((0.22, 0.12, 0.9), (x, -D / 2, 0.75), tint(PETROL, rng, 0.05))
+            p.box((0.22, 0.12, 0.45), (x, -D / 2, H - 0.05), tint(PETROL, rng, 0.05))
         else:
-            p.box((0.22, 0.12, H), (x, -D / 2, 0.3 + H / 2), tint(OXIDE, rng, 0.07))
+            p.box((0.22, 0.12, H), (x, -D / 2, 0.3 + H / 2), tint(PETROL if i % 5 else PETROL_LT, rng, 0.05))
     p.box((1.8, 0.5, 0.1), (0.2, -D / 2 - 0.25, 1.25), C["timber_pale"])  # serving shelf
+    # Oxide stays as two bleached patches over the petrol enamel (board: patched scrap, oxide as the patch).
+    p.box((0.8, 0.05, 0.6), (-1.7, -D / 2 - 0.09, 1.6), tint(OXIDE, rng, 0.06), rot=(0, 0.03, 0.04), style="hard_smooth")
+    p.box((0.6, 0.05, 0.9), (1.7, -D / 2 - 0.09, 1.1), tint(C["oxide_dark"], rng, 0.06), rot=(0, 0.03, -0.05), style="hard_smooth")
     # Roof: charcoal gabled planks, a short stovepipe.
     rise, half = 0.95, D / 2 + 0.35
     th = math.atan2(rise, half)
@@ -252,7 +257,7 @@ def billing_booth(p, v, rng):
             p.box((W + 0.5, 0.58, 0.09), (0, s * half * (1 - t), H + 0.28 + rise * t - sag_d), tint(C["slate"], rng, 0.1),
                   rot=(-s * th + (0.12 if sag_d else 0.0), 0, 0), jit=0.004)
     p.beam((-W / 2 - 0.25, 0, H + 0.28 + rise), (W / 2 + 0.25, 0, H + 0.28 + rise), 0.18, CHAR)
-    p.cyl(0.14, 0.8, (-1.4, 0.9, H + 1.1), CHAR, segs=8, r2=0.12, style="hard_smooth")
+    p.cyl(0.14, 0.8, (-1.4, 0.9, H + 1.1), COPPER, segs=8, r2=0.12, style="hard_smooth")  # copper stovepipe
     # Chalkboard on posts at the right of the window: slate with two columns of tally strokes.
     bx, by, bz = 2.9, -D / 2 - 1.25, 1.55
     for s in (-1, 1):
@@ -314,7 +319,7 @@ def storm_station(p, v, rng):
                                          (-0.8, 1.2, 0.65, 0.5), (1.9, -0.9, 0.5, 0.55), (-1.6, -1.1, 0.55, 0.5), (0.3, 1.6, 0.55, 0.5))):
         p.ico(r, (x, y, r * sq * 0.9), tint(C["concrete"] if k % 2 else C["sandstone_pale"], rng, 0.08), scale=(1.0, 0.85, sq),
               rot=(0, 0, rng.uniform(0, 3)), subdiv=1, style="round")
-    p.box((2.4, 1.6, 1.3), (0.3, 0.3, 1.25), tint(OXIDE, rng, 0.05), style="hard_smooth", jit=0.004)
+    p.box((2.4, 1.6, 1.3), (0.3, 0.3, 1.25), tint(PETROL, rng, 0.04), style="hard_smooth", jit=0.004)
     p.box((2.5, 1.7, 0.16), (0.3, 0.3, 1.98), CHAR, style="hard_smooth", jit=0.004)
     p.box((1.0, 0.07, 0.6), (0.9, -0.52, 1.0), tint(C["timber_pale"], rng, 0.1), rot=(0, 0, 0.06), style="hard_smooth")  # timber patch
     p.box((0.9, 0.06, 1.0), (-0.3, -0.58, 1.2), tint(C["oxide_dark"], rng), rot=((0.0 if v == "a" else 0.3), 0, 0), style="hard_smooth", jit=0.004)  # locker door, stove in on b and c
@@ -332,18 +337,18 @@ def storm_station(p, v, rng):
             a = TAU * k / 3 + 0.4
             p.beam((mx + 0.6 * math.cos(a), my + 0.6 * math.sin(a), 2.05), (mx, my, 2.9), 0.14, C["iron"], h=0.12)
         # Anemometer: hub and three cup arms (static), cups are open half-spheres.
-        p.cyl(0.2, 0.18, (mx, my, tip[2] + 0.1), C["iron_light"], segs=10, style="hard_smooth", jit=0.004)
+        p.cyl(0.2, 0.18, (mx, my, tip[2] + 0.1), COPPER, segs=10, style="hard_smooth", jit=0.004)
         ncup = 3 if v == "a" else 2
         for k in range(ncup):
             a = TAU * k / 3 + 0.5
             ex, ey = mx + 0.9 * math.cos(a), my + 0.9 * math.sin(a)
-            p.rod((mx, my, tip[2] + 0.1), (ex, ey, tip[2] + 0.1), 0.06, C["iron_light"])
+            p.rod((mx, my, tip[2] + 0.1), (ex, ey, tip[2] + 0.1), 0.06, COPPER)
             p.uv(0.3, (ex, ey, tip[2] + 0.2), C["canvas"], scale=(1, 1, 0.8), u=10, v=6, style="round")
             p.ring(0.18, 0.3, 0.06, (ex, ey, tip[2] + 0.34), C["canvas_dark"], segs=10)
         # Wind vane: a short arrow on the mast with a broad flat tail, bent on b.
         vz = 3.3
         bend = 0.0 if v == "a" else 0.5
-        p.rod((mx + 0.8, my - 0.3, vz), (mx - 0.8, my + 0.3, vz - bend * 0.4), 0.06, C["iron_light"])
+        p.rod((mx + 0.8, my - 0.3, vz), (mx - 0.8, my + 0.3, vz - bend * 0.4), 0.06, COPPER)
         p.prism([(0, 0), (0.7, 0.35), (0.7, -0.35)], 0.05, (mx + 0.95, my - 0.36, vz), C["canvas_dark"], rot=(0, 0, 0.45), style="flat")
         p.prism([(0, 0), (0.6, 0.4), (0.6, -0.4), (0.0, 0.0)], 0.05, (mx - 1.0, my + 0.35, vz - bend * 0.4), C["canvas"], rot=(0, 0, 0.45 + math.pi), style="flat")
         if v == "b":
@@ -557,9 +562,9 @@ def spool_shed(p, v, rng):
     sx, sy = -0.1, 0.0
     p.cyl(0.95, 0.12, (sx, sy, 0.1), CHAR, segs=14, style="hard")
     p.cyl(0.95, 0.12, (sx, sy, 0.78), CHAR, segs=14, style="hard")
-    p.cyl(0.62, 0.7, (sx, sy, 0.44), C["iron"] if v != "b" else C["rust"], segs=14, style="round")
+    p.cyl(0.62, 0.7, (sx, sy, 0.44), PETROL if v != "b" else PETROL_LT, segs=14, style="round")  # enamel barrel
     for k in range(4):
-        p.torus(0.62, 0.05, (sx, sy, 0.22 + 0.16 * k), C["iron_light"], major=16, minor=4)
+        p.torus(0.62, 0.05, (sx, sy, 0.22 + 0.16 * k), COPPER, major=16, minor=4)  # copper windings
     p.cyl(0.18, 0.2, (sx, sy, 0.95), C["iron"], segs=6, style="hard")
     # Loose wire end curled on the ground, flat.
     for k in range(2):
