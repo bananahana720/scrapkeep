@@ -26,6 +26,7 @@ const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
 const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
+const EventDirector := preload("res://src/world/event_director.gd")
 
 const FILE_SCHEMA := "scrapkeep-park-props/1"
 const KIT_SCHEMA := "scrapkeep-park-props-kit/1"
@@ -44,9 +45,13 @@ const LOW_PRESET := "low"
 const LINE_CLEAR_LOW_M := 6.0
 const LINE_CLEAR_MID_M := 10.0
 const LINE_CLEAR_TALL_M := 20.0
-# A kind's own line_clear_m (kit manifest, optional) may raise the need above its tier, never past this: LINE_REACH_M
-# is as far as the line index sees, so past it the distance is unknown.
+# A kind's own line_clear_m (kit manifest, optional) may raise the need above its tier, never past this: the line index
+# sees LINE_REACH_M (64 m) from a leg, so a footprint whose need plus radius passes 64 m has an unknown distance, and
+# check_one fails it closed (line_clear, "rule beyond the line reach").
 const LINE_CLEAR_KIND_MAX_M := 60.0
+# Kinds the dressing brief (design-v3/park/dressing/KITS.md) reads as a ride line; coordinator ruling #241 comment 6329056497
+# makes the 30 m tier checked: kit_errors fails a kit that defines one without line_clear_m at or above this.
+const BRIEF_LINE_KINDS := {"laundry_line": 30.0, "washline": 30.0, "windsock": 30.0, "kite_pennant": 30.0}
 const LOW_HEIGHT_M := 1.2
 const TALL_HEIGHT_M := 3.0
 # Row footprints keep props out when the row is a ride feature; ground, banks, terraces and anchor fields do not.
@@ -142,8 +147,9 @@ class Context:
 	# Home sites and line waypoints that resolve to no place: file_errors-style rows, surfaced by --check and the test.
 	var unresolved: Array = []
 	# Park event_rows as the telegraph rule's zones, in the event's own geometry (natural.gd plan, event_director.gd _park_clear):
-	# {id, site (NaturalFootprint.resolve of the row and its park row), half (Vector2 box half extents, null for a circle),
-	# radius (strike_m, a lightning event's circle), hold (hold_clear_m)}.
+	# {id, site (NaturalFootprint.resolve of the row and its park row), half (Vector2 box half extents), box (the director holds
+	# the box: any non-lightning event, or a ground event per EventDirector._park_ground), strike (strike_m for a lightning
+	# event's circle, -1 for none), hazard (hazard_m[0], -1 for none), hold (hold_clear_m, at least 0)}.
 	var events: Array = []
 	var _cells := {}
 
@@ -308,9 +314,13 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 			if effect.has("footprint_m"):
 				var footprint = effect["footprint_m"]
 				half = (footprint if footprint is Vector2 else Vector2(float(footprint[0]), float(footprint[1]))).abs() * 0.5
-			var circle: bool = String(ev.get("kind", "")) == "lightning"
-			c.events.append({"id": String(ev.get("id", event_site)), "site": site, "half": null if circle else half,
-				"radius": maxf(0.0, float(effect.get("strike_m", 0.0))), "hold": float(ev.get("hold_clear_m", 0.0))})
+			var lightning: bool = String(ev.get("kind", "")) == "lightning"
+			var hazard_m = effect.get("hazard_m")
+			c.events.append({"id": String(ev.get("id", event_site)), "site": site, "half": half,
+				"box": not lightning or EventDirector._park_ground(ev),
+				"strike": maxf(0.0, float(effect.get("strike_m", 0.0))) if lightning else -1.0,
+				"hazard": maxf(0.0, float(hazard_m[0])) if hazard_m is Array and not (hazard_m as Array).is_empty() else -1.0,
+				"hold": maxf(0.0, float(ev.get("hold_clear_m", 0.0)))})
 		else:
 			c.unresolved.append("event_rows site %s (event %s) names no park row" % [event_site, String(ev.get("id", event_site))])
 	for row: Dictionary in park_map.park.get("park_rows", []):
@@ -536,9 +546,12 @@ static func kit_errors(kit: Dictionary, min_kinds := 0, min_variants := 1) -> Ar
 			continue
 		if not def.get("tags") is Array:
 			errors.append("kind %s has no tags" % kind)
+		var brief := float(BRIEF_LINE_KINDS.get(kind, 0.0))
+		if brief > 0.0 and not ((def.get("line_clear_m") is float or def.get("line_clear_m") is int) and float(def["line_clear_m"]) >= brief):
+			errors.append("kind %s is a brief line kind and needs line_clear_m of at least %.0f" % [kind, brief])
 		if def.has("line_clear_m"):
 			var reach = def["line_clear_m"]
-			if not (reach is float or reach is int) or float(reach) <= LINE_CLEAR_LOW_M or float(reach) > LINE_CLEAR_KIND_MAX_M:
+			if not (reach is float or reach is int) or float(reach) != float(reach) or float(reach) <= LINE_CLEAR_LOW_M or float(reach) > LINE_CLEAR_KIND_MAX_M:
 				errors.append("kind %s line_clear_m %s is not a number above %.0f and at most %.0f" % [kind, str(reach), LINE_CLEAR_LOW_M, LINE_CLEAR_KIND_MAX_M])
 		var variants = def.get("variants")
 		if not variants is Dictionary or (variants as Dictionary).size() < min_variants:
@@ -730,18 +743,25 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 	var tier_need := LINE_CLEAR_TALL_M if tall else (LINE_CLEAR_MID_M if height > LOW_HEIGHT_M else LINE_CLEAR_LOW_M)
 	var kind_need := float(inst.get("line_clear_m", 0.0))
 	var need := maxf(tier_need, kind_need)
-	if edge < need:
+	if need + r > LINE_REACH_M:
+		fail.call("line_clear", "rule beyond the line reach (need + radius > %.0f m)" % LINE_REACH_M)
+	elif edge < need:
 		if kind_need > tier_need:
 			fail.call("line_clear", "kind %s, %.1f m from a line, want %.0f" % [inst["kind"], edge, need])
 		else:
 			fail.call("line_clear", "%s, %.1f m from a line, want %.0f" % ["tall or hero" if tall else ("mid" if height > LOW_HEIGHT_M else "low"), edge, need])
 	for ev: Dictionary in c.events:
 		var grown: float = float(ev["hold"]) + r
-		var hit: bool
-		if ev["half"] == null:
-			hit = _pair(ev["site"]["at"]).distance_to(p) < float(ev["radius"]) + grown
-		else:
+		var hit := false
+		var site_at := _pair(ev["site"]["at"])
+		if ev["box"]:
 			hit = ParkMap.footprint_contains(ev["site"], p, grown, Vector2.INF, ev["half"])
+		# A lightning strike is a strike_m circle at the site point (natural.gd plan); an industrial hazard reaches at most
+		# hazard_m[0] from it, a superset of the cone or annulus industrial.gd commit_sector commits.
+		if float(ev["strike"]) >= 0.0 and site_at.distance_to(p) < float(ev["strike"]) + grown:
+			hit = true
+		if float(ev["hazard"]) >= 0.0 and site_at.distance_to(p) < float(ev["hazard"]) + grown:
+			hit = true
 		if hit:
 			fail.call("telegraph", "inside event %s hold zone (%s grown %.0f m)" % [ev["id"], ev["site"].get("id", "?"), ev["hold"]])
 	if tall and ParkRecipes.in_clear(c.lanes, p, r):
