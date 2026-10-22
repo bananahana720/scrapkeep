@@ -532,6 +532,52 @@ static func maxed(part_id: String, held: Array) -> bool:
 	return level_of(part_id, held) >= PartDef.MAX_LEVEL
 
 
+# Overpowered pays (17 Oct): true when another copy of part_id adds nothing, a levelled part at
+# its top level or a linear or capped part held at stack_cap copies (BuildSheet.from_parts stops
+# folding there). Hyperbolic rows keep growing; spike rows stay offered too, on the safe side,
+# because their effect value (PartDef.Stacking) keeps its own ceiling.
+static func stacked_out(part_id: String, held: Array) -> bool:
+	if maxed(part_id, held):
+		return true
+	var d: Resource = def(part_id)
+	if d == null or not d.levels.is_empty() or not d.stack_rule in ["linear", "capped"] or d.stack_cap < 1.0:
+		return false
+	return held.count(part_id) >= int(d.stack_cap)
+
+
+# A stacked-out pick swaps for a part left in the pool under its repeat cap, of the same kit side and bucket when one
+# is left, else of the same bucket, else any; with none left the slot goes. The draw keeps its
+# kit and bucket lean, so a strong build's offers keep their shape.
+static func _swap_stacked_out(rng: RandomNumberGenerator, class_id: String, held: Array, picks: Array, pool: Array,
+		offered: Dictionary) -> Array:
+	var out: Array = []
+	var left: Array = _uncapped(class_id, pool, offered).filter(func(key): return not stacked_out(key, held) and not key in picks)
+	for key in picks:
+		if not stacked_out(key, held):
+			out.append(key)
+			continue
+		# The swap keeps what roll() promised: a harder hitter stays a harder hitter and a shelf
+		# part stays a shelf part (the pair rule and _keep_a_neutral), when the pool has one.
+		var hard: bool = def(key).hits_harder()
+		var shelf: bool = key in NEUTRAL_SHELF
+		var kept: Array = left.filter(func(k): return (not hard or def(k).hits_harder()) and (not shelf or k in NEUTRAL_SHELF))
+		if kept.is_empty():
+			kept = left
+		var bucket := bucket_of(key)
+		var kit := in_kit(class_id, key)
+		var same: Array = kept.filter(func(k): return bucket_of(k) == bucket and in_kit(class_id, k) == kit)
+		if same.is_empty():
+			same = kept.filter(func(k): return bucket_of(k) == bucket)
+		if same.is_empty():
+			same = kept
+		if same.is_empty():
+			continue
+		var swap: String = same[rng.randi_range(0, same.size() - 1)]
+		out.append(swap)
+		left.erase(swap)
+	return out
+
+
 # part_id's def at level (1 to PartDef.MAX_LEVEL): its row with that level's numbers in place.
 # def() for a part with no levels.
 static func def_at(part_id: String, level: int) -> Resource:
@@ -959,7 +1005,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 			continue
 		if not listed_only() and rng.randf() < GENERATED_SHARE:
 			var recipe := ItemGen.roll_id(rng, rarity)
-			if not recipe in picks and not recipe in exclude:
+			if not recipe in picks and not recipe in exclude and not stacked_out(recipe, held):
 				picks.append(recipe)
 			continue
 		var bucket: Array = pool.filter(func(key): return rows()[key]["rarity"] == rarity)
@@ -993,7 +1039,7 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 			picks[at] = harder[rng.randi_range(0, harder.size() - 1)]
 	if leans:
 		_keep_a_neutral(rng, class_id, picks, pool, offered, 1 if not picks.is_empty() and picks[0] == bait else 0)
-	return picks
+	return _swap_stacked_out(rng, class_id, held, picks, pool, offered)
 
 
 # A leaning pilot's draw that holds no kit part still shows a shelf part: the first slot from first

@@ -52,6 +52,11 @@ const DRIVER_PATH := "res://src/combat/warden_mind.gd"
 # tune inside 20 percent reaches the band.
 # 2026-10-11 (wave 13 KF4, anchor off): measured 66.4 / 49.4 s (small/grown 1.34) with the tilt; the same arms with
 # no driver measured 78.6 / 41.5 s (1.89).
+# 2026-10-18 (Overpowered pays, #104, U1): the pin stays at Andrew's accepted 101.5 s. The 89.2 s re-pin (f472f71b)
+# was measured on cand/alpha-w16 b696fbbb; #104 leaves the Mind arms byte-identical to the stage base (the Mind is a stage
+# Warden, class-gated like the hive: small stays under class III and grown's ratios do not pass 1.5 at plating 170),
+# which measures 111.2 / 58.5 s (small /
+# grown) at 102324cd, inside the small tolerance. The grown miss is stage drift, not #104.
 const EXPECT_SMALL_S := 101.5
 const EXPECT_GROWN_S := 42.7
 const TOLERANCE := 0.10

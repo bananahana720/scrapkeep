@@ -136,8 +136,45 @@ func _playback(capture: String) -> void:
 		var refused: bool = not display.play_intro("sable")
 		game.flow.show_title()
 		return refused).call())
+	await _hold(game, display)
 	game.free()
 	await process_frame
+
+
+# intro_hold keeps the autoplay off until release_intro(); released twice it still starts once.
+func _hold(game: Node, display) -> void:
+	display.intro_autoplay = true
+	display.intro_hold = true
+	display._intro_tried = false
+	game.flow.press_start()
+	game.flow.show_title()
+	await process_frame
+	await process_frame
+	_t.check("a held title starts no opening", not display.intro_playing() and not display._intro_tried)
+	display.release_intro()
+	_t.check("release lifts the hold", not display.intro_hold)
+	await process_frame
+	_t.check("release starts the opening", display.intro_playing())
+	display.intro.skip()
+	await process_frame
+	display.release_intro()
+	await process_frame
+	_t.check("a second release starts nothing", not display.intro_playing())
+	# Off the title a release leaves the opening untried.
+	display.intro_hold = true
+	display._intro_tried = false
+	game.flow.press_start()
+	display.release_intro()
+	await process_frame
+	_t.check("release off the title starts nothing", not display.intro_playing() and not display._intro_tried)
+	# Planted control: a hold that is never released shows no opening on the title.
+	display.intro_hold = true
+	game.flow.show_title()
+	await process_frame
+	await process_frame
+	_t.check("an unreleased hold never plays", not display.intro_playing() and not display._intro_tried)
+	display.intro_hold = false
+	display.intro_autoplay = false
 
 
 func _play_row(game: Node, display, id: String, capture: String) -> void:
