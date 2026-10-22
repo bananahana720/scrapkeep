@@ -193,7 +193,7 @@ func _build() -> void:
 		lights.append({"object": light, "values": {"visible": false}})
 	var look: Dictionary = WorldLook.ARENAS.waking
 	GraphicsPreset.set_lighting(self, module.ctx.terrain.environment,
-		WorldLook.environment(look, GraphicsPreset.PRESETS[GraphicsPreset.current].air), lights, "arena")
+		WorldLook.environment(look, GraphicsPreset.PRESETS[GraphicsPreset.current].air), lights, "arena", look)
 
 
 # The preset baseline is dark; the active arena alone supplies energy and visibility.

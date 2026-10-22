@@ -72,7 +72,7 @@ static func _unregister_dressing_host(id: int) -> void:
 # Restore one shared baseline, then compose live overrides in entry order. An older
 # arena can leave after a new stage has entered without restoring over that stage.
 static func set_lighting(owner: Node, environment: Environment, values: Dictionary,
-		lights: Array = [], slot: String = "") -> Dictionary:
+		lights: Array = [], slot: String = "", look: Dictionary = {}) -> Dictionary:
 	var world := _lighting_for(environment)
 	if world.is_empty():
 		world = {"environment": weakref(environment), "defaults": [], "overrides": []}
@@ -95,7 +95,7 @@ static func set_lighting(owner: Node, environment: Environment, values: Dictiona
 		for light in lights:
 			_lighting_defaults(world, light.object, light.values)
 			properties.append({"object": weakref(light.object), "values": light.values})
-	world.overrides.append({"id": id, "slot": slot, "properties": properties})
+	world.overrides.append({"id": id, "slot": slot, "properties": properties, "look": look})
 	var on_exit := release_lighting.bind(id)
 	if not owner.tree_exiting.is_connected(on_exit):
 		owner.tree_exiting.connect(on_exit, CONNECT_ONE_SHOT)
@@ -135,7 +135,7 @@ static func enter_world(owner: Node, environment: Environment, look: Dictionary,
 		if world.environment == environment and world.sun.get_ref() != null:
 			sun = world.sun.get_ref()
 	set_lighting(holder, environment, WorldLook.environment(look, PRESETS[current].air),
-		WorldLook.lights(look, sun) + WorldLook.sky_rows(look), slot)
+		WorldLook.lights(look, sun) + WorldLook.sky_rows(look), slot, look)
 
 
 static func _lighting_for(environment: Environment) -> Dictionary:
@@ -225,6 +225,10 @@ static func _apply_world(world: Dictionary) -> void:
 		_restore_lighting(lighting)
 	_restore_target(world)
 	var spec: Dictionary = PRESETS[current]
+	for row in lighting.get("overrides", []):
+		if not row.look.is_empty():
+			WorldLook.follow_air(row.properties[0].values, row.look, spec.air)
+			_lighting_defaults(lighting, row.properties[0].object.get_ref(), row.properties[0].values)
 	var look: Dictionary = WorldLook.ROWS[1]
 	if not spec.has("shadow_atlas") and _target_server_active:
 		_restore_target_server()
