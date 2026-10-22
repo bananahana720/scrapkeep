@@ -852,7 +852,7 @@ static func job_steps(job: Dictionary, kit: Dictionary, low: bool) -> Array:
 		if not lods[2] in far_paths:
 			far_paths.append(lods[2])
 	for path: String in far_paths:
-		steps.append(func(_holder: Node3D): _far_source(path))
+		steps.append(func(_h: Node3D): _far_source(path))
 	steps.append(func(holder: Node3D): _merged_far(holder, far_members, kit, _range(PROP_RANGES[2], low, 2)))
 	return steps
 
