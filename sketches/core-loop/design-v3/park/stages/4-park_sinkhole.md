@@ -214,20 +214,20 @@ Advantage and counter text is in each row of the park file. `drift_drill_crews` 
 
 ## 7. `contraption_rows` (shipped)
 
-Spec keys are today's (`src/world/contraptions.gd:86-101`). 28 rows since the authored pass (2026-10-17, "Wall pays" and the floor is lava; `tools/park_sinkhole_pass.py` writes the ropes, vents, cinder strips and glaze).
+Spec keys are today's (`src/world/contraptions.gd:86-101`). 28 rows since the authored pass (2026-10-17, "Wall pays" and the floor is lava; `tools/park_sinkhole_pass.py` writes the ropes, vents, cinder strips and glaze; the ropes' `to` y were later raised to at least 2.35 m over the baked ground, guarded by `tests/park_cable_ends_test.gd`).
 
 | Id | Kind, recipe | Site | Spec | What it is for |
 | --- | --- | --- | --- | --- |
-| `tube_rope_1` | cable, `` | `lava_channel_14` | from [-196.0, -78.8, -547.4] to [-198.8, -79.4, -502.7], radius 3.4, floor 24 | the channel crossing: a fan of two rings per wall on the carve band, none on the floor (the stage pin keeps four) |
-| `tube_rope_2` | cable, `` | `lava_channel_14` | from [-198.5, -77.1, -547.6] to [-201.3, -77.8, -502.9], radius 3.4, floor 24 | the channel crossing: a fan of two rings per wall on the carve band, none on the floor (the stage pin keeps four) |
-| `tube_rope_3` | cable, `` | `lava_channel_14` | from [-175.9, -78.8, -546.2] to [-178.7, -79.4, -501.5], radius 3.4, floor 24 | the channel crossing: a fan of two rings per wall on the carve band, none on the floor (the stage pin keeps four) |
-| `tube_rope_4` | cable, `` | `lava_channel_14` | from [-173.4, -77.1, -546.0] to [-176.2, -77.8, -501.3], radius 3.4, floor 24 | the channel crossing: a fan of two rings per wall on the carve band, none on the floor (the stage pin keeps four) |
-| `main_tube_lower_rope_1` | cable, `` | `main_tube_lower_4` | from [-75.1, -96.2, 125.0] to [-53.5, -96.1, 144.0], radius 3.4, floor 26 | the caisson swing: one ring per wall on the band, the fastest rope in the park, toward the bowl |
-| `main_tube_lower_rope_2` | cable, `` | `main_tube_lower_4` | from [-61.2, -96.2, 109.2] to [-39.6, -96.1, 128.3], radius 3.4, floor 26 | the caisson swing: one ring per wall on the band, the fastest rope in the park, toward the bowl |
-| `east_haulage_rope_1` | cable, `` | `east_haulage_4` | from [145.9, -95.2, 88.9] to [163.7, -95.3, 112.6], radius 3.4, floor 18 | the haulage cable: one ring per drift wall, the slowest rope; the drift floor is the drill crews' |
-| `east_haulage_rope_2` | cable, `` | `east_haulage_4` | from [161.5, -95.2, 77.3] to [179.2, -95.3, 100.9], radius 3.4, floor 18 | the haulage cable: one ring per drift wall, the slowest rope; the drift floor is the drill crews' |
-| `west_breakthrough_rope_1` | cable, `` | `west_breakthrough_6` | from [-168.1, -97.7, 177.9] to [-158.9, -98.0, 206.0], radius 3.4, floor 24 | the breakthrough run: one ring per wall on the band |
-| `west_breakthrough_rope_2` | cable, `` | `west_breakthrough_6` | from [-148.1, -97.7, 171.3] to [-138.9, -98.0, 199.4], radius 3.4, floor 24 | the breakthrough run: one ring per wall on the band |
+| `tube_rope_1` | cable, `` | `lava_channel_14` | from [-196.0, -78.8, -547.4] to [-198.8, -78.7, -502.7], radius 3.4, floor 24 | the channel crossing: a fan of two rings per wall on the carve band, none on the floor (the stage pin keeps four) |
+| `tube_rope_2` | cable, `` | `lava_channel_14` | from [-198.5, -77.1, -547.6] to [-201.3, -77.3, -502.9], radius 3.4, floor 24 | the channel crossing: a fan of two rings per wall on the carve band, none on the floor (the stage pin keeps four) |
+| `tube_rope_3` | cable, `` | `lava_channel_14` | from [-175.9, -78.8, -546.2] to [-178.7, -78.8, -501.5], radius 3.4, floor 24 | the channel crossing: a fan of two rings per wall on the carve band, none on the floor (the stage pin keeps four) |
+| `tube_rope_4` | cable, `` | `lava_channel_14` | from [-173.4, -77.1, -546.0] to [-176.2, -77.4, -501.3], radius 3.4, floor 24 | the channel crossing: a fan of two rings per wall on the carve band, none on the floor (the stage pin keeps four) |
+| `main_tube_lower_rope_1` | cable, `` | `main_tube_lower_4` | from [-75.1, -96.2, 125.0] to [-53.5, -95.7, 144.0], radius 3.4, floor 26 | the caisson swing: one ring per wall on the band, the fastest rope in the park, toward the bowl |
+| `main_tube_lower_rope_2` | cable, `` | `main_tube_lower_4` | from [-61.2, -96.2, 109.2] to [-39.6, -95.2, 128.3], radius 3.4, floor 26 | the caisson swing: one ring per wall on the band, the fastest rope in the park, toward the bowl |
+| `east_haulage_rope_1` | cable, `` | `east_haulage_4` | from [145.9, -95.2, 88.9] to [163.7, -94.6, 112.6], radius 3.4, floor 18 | the haulage cable: one ring per drift wall, the slowest rope; the drift floor is the drill crews' |
+| `east_haulage_rope_2` | cable, `` | `east_haulage_4` | from [161.5, -95.2, 77.3] to [179.2, -94.3, 100.9], radius 3.4, floor 18 | the haulage cable: one ring per drift wall, the slowest rope; the drift floor is the drill crews' |
+| `west_breakthrough_rope_1` | cable, `` | `west_breakthrough_6` | from [-168.1, -97.7, 177.9] to [-158.9, -96.9, 206.0], radius 3.4, floor 24 | the breakthrough run: one ring per wall on the band |
+| `west_breakthrough_rope_2` | cable, `` | `west_breakthrough_6` | from [-148.1, -97.7, 171.3] to [-138.9, -97.4, 199.4], radius 3.4, floor 24 | the breakthrough run: one ring per wall on the band |
 | `main_tube_upper_vent` | launcher, `geyser_vent` | `main_tube_upper_4` | at (78.3, -232.8), radius 5, target [58.8, -87.6, -191.9], floor 16, min flight 2.2 s, charge 2 s | skylight exit: mouth on the wall band, quick 2 s charge |
 | `skylight_chain_vent` | launcher, `geyser_vent` | `skylight_chain_8` | at (120.5, -133.9), radius 5, target [89.8, -90.3, -93.2], floor 16, min flight 2.2 s, charge 3 s | skylight exit: mouth on the wall band, 3 s charge |
 | `east_drift_vent` | launcher, `geyser_vent` | `east_drift_9` | at (189.5, -108.8), radius 5, target [152.8, -90.8, -75.1], floor 16, min flight 2.2 s, charge 4 s | a miners' floor vent, left on the drift floor and slow (4 s) |
