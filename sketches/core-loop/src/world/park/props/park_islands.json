@@ -2683,6 +2683,16 @@
    ],
    "yaw_deg": -162.0,
    "near": "saddle_step_2, A kicked cairn and cobbles in a slickrock cr"
+  },
+  {
+   "id": "w901",
+   "template": "chart_stones",
+   "at": [
+    185.0,
+    -365.0
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head_lip, sable 600 m window"
   }
  ],
  "ground_rows": [
@@ -2768,6 +2778,6 @@
   ],
   "seed": 5
  },
- "pin": 3144070020,
+ "pin": 2014119072,
  "notes": "ground_rows steps (lookout_step_1, lookout_step_2, lookout_step_3, lookout_step_4, run_step_1, run_step_2, run_step_3, run_step_4, run_step_5, saddle_step_1, saddle_step_2, fan_step_1, fan_step_2, fan_step_3, fan_step_4, fan_step_5, fan_step_6, landing_step_1, anvil_step_1, anvil_step_2, anvil_step_3, anvil_step_4, carve_step_1, carve_step_2, carve_step_3, carve_step_4, carve_step_5, carve_step_6, carve_step_7): terrace treads, each a 32 to 50 m deep step-down of 2 to 4 m between kicker lips (park_islands.json row sizes); the tiers and kicker capsules govern them. anvil_face (a 2 m face) is never listed."
 }
