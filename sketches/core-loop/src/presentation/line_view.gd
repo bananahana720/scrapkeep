@@ -40,6 +40,8 @@ const MARK_PX := 3.0
 const PULSE_HZ := 2.0
 const PULSE_DEPTH := 0.14
 
+# The fairlead runs round the carrier's collar at this radius, outside the 1.0 collider.
+const FAIRLEAD_RADIUS := 1.06
 const COLLAR_MIN := 0.9
 const COLLAR_MAX := 3.2
 const COLLAR_PER_METRE := 0.07
@@ -64,6 +66,9 @@ var events
 var cable: MeshInstance3D
 var cable_taut := false
 var cable_radius := SLACK_RADIUS
+# Where the drawn cable starts: the collar fairlead, never the ball's centre (MOTION-SPEC swing row).
+var cable_origin := Vector3.ZERO
+var _fairlead_yaw := 0.0
 var brackets: MeshInstance3D
 var lock_scale := 1.0
 var barb: MeshInstance3D
@@ -136,6 +141,20 @@ static func _material(over := false) -> StandardMaterial3D:
 
 func _process(delta: float) -> void:
 	step(delta)
+
+
+# The fairlead carriage's yaw (-Z faces yaw 0, as the weapon ring's): it turns to the anchor's
+# planar direction and holds the last yaw when the anchor is overhead or below.
+static func fairlead_yaw(yaw: float, centre: Vector3, anchor: Vector3) -> float:
+	var flat := Vector2(anchor.x - centre.x, anchor.z - centre.z)
+	if flat.length_squared() < 0.0001:
+		return yaw
+	return atan2(-flat.x, -flat.y)
+
+
+# The point on the collar the rope leaves: centre + FAIRLEAD_RADIUS x the flat direction at `yaw`.
+static func fairlead_point(centre: Vector3, yaw: float) -> Vector3:
+	return centre + Vector3(-sin(yaw), 0.0, -cos(yaw)) * FAIRLEAD_RADIUS
 
 
 # One frame of the view. Tests step it with fixed deltas; the engine calls it from _process.
@@ -239,7 +258,12 @@ func projected_px(radius: float, depth: float) -> float:
 	return half_width(radius, depth) * 2.0 * focal_px() / depth
 
 
-func _draw_cable(kit, ball: Vector3, smash: bool) -> void:
+func _draw_cable(kit, centre: Vector3, smash: bool) -> void:
+	# The physics pulls through the centre (a free bearing); only the drawn rope starts at the collar.
+	var toward: Vector3 = kit.anchor if kit.hooked else (_gone_anchor if _broke_age >= 0.0 or _let_go_age >= 0.0 else centre + _dry_dir)
+	_fairlead_yaw = fairlead_yaw(_fairlead_yaw, centre, toward)
+	var ball := fairlead_point(centre, _fairlead_yaw)
+	cable_origin = ball
 	var mesh: ImmediateMesh = cable.mesh
 	mesh.clear_surfaces()
 	var live := EventKinds.line_color("latched_world")
@@ -247,7 +271,7 @@ func _draw_cable(kit, ball: Vector3, smash: bool) -> void:
 		_dry_age = -1.0
 		_let_go_age = -1.0
 		_broke_age = -1.0
-		var gap: float = ball.distance_to(kit.anchor)
+		var gap: float = centre.distance_to(kit.anchor)
 		var taut: bool = smash or kit.on_body or kit.winching or gap >= kit.rope - TAUT_MARGIN
 		cable_taut = taut
 		cable_radius = TAUT_RADIUS if taut else SLACK_RADIUS

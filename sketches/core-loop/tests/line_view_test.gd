@@ -56,6 +56,7 @@ func _run() -> void:
 	root.add_child(view)
 	view.setup(player, camera, player.events)
 	_cable(view, player, camera)
+	_fairlead(view, player)
 	_latch(view, player, camera)
 	_lock(view, player)
 	_transients(view, player)
@@ -66,6 +67,33 @@ func _run() -> void:
 	player.free()
 	camera.free()
 	quit(_t.verdict())
+
+
+# MOTION-SPEC swing row: the drawn rope leaves the collar fairlead, 1.06 m from the centre on the
+# anchor's planar side, never inside the 1.0 collider; overhead it holds the last yaw.
+func _fairlead(view, player) -> void:
+	var kit = player.kit
+	kit.hooked = true
+	kit.on_body = false
+	kit.rope = 30.0
+	var centre: Vector3 = player.global_position
+	kit.anchor = centre + Vector3(6.0, 8.0, -8.0)
+	view.step(FRAME)
+	var flat := Vector3(6.0, 0.0, -8.0).normalized()
+	var off: Vector3 = view.cable_origin - centre
+	_t.check("FL-1 starts 1.06 m out on the anchor's side", absf(off.length() - 1.06) <= 0.001 and off.normalized().distance_to(flat) <= 0.001 and absf(off.y) <= 0.001,
+		"first point %s from the centre, want 1.06 m toward %s" % [off, flat])
+	_t.check("FL-1 never inside the collider", off.length() > 1.0, "%.3f m from the centre, collider 1.0" % off.length())
+	kit.anchor = centre + Vector3(0.0, 12.0, 0.0)
+	view.step(FRAME)
+	var held: Vector3 = view.cable_origin - centre
+	_t.check("FL-2 overhead holds the last yaw", held.distance_to(off) <= 0.001 and absf(held.length() - 1.06) <= 0.001,
+		"overhead first point %s, last %s" % [held, off])
+	kit.anchor = centre + Vector3(-5.0, -3.0, 0.0)
+	view.step(FRAME)
+	var west: Vector3 = view.cable_origin - centre
+	_t.check("FL-3 turns with the anchor", west.distance_to(Vector3(-1.06, 0.0, 0.0)) <= 0.001, "first point %s, want (-1.06, 0, 0)" % west)
+	kit.hooked = false
 
 
 func _cable(view, player, camera) -> void:
