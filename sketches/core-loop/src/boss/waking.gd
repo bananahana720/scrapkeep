@@ -88,10 +88,10 @@ const PLATE_FITTED_CLEAR := 0.7
 const PLATE_FALL_SPEED := 9.0
 const PLATE_FALL_SECONDS := 1.2
 const PLATE_REST_TILT := 0.35
-# The seal sound: an existing non-hostile row (the ancient weak_point_opened row) with the existing baked latch tick,
-# repeated faster and higher as the seal fills. Swap SEAL_SOUND for a purpose-made cue later; nothing else changes.
+# The seal sound: an existing non-hostile row (the ancient weak_point_opened row) with its own baked two-click ratchet,
+# repeated faster and higher as the seal fills.
 const SEAL_CUE_KIND := "weak_point_opened"
-const SEAL_SOUND := "lock_tick"
+const SEAL_SOUND := "seal_ratchet"
 const SEAL_GAP_SLOW := 0.55
 const SEAL_GAP_FAST := 0.14
 const SEAL_PITCH_LOW := 0.85

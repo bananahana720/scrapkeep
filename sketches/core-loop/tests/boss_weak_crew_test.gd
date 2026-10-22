@@ -482,6 +482,7 @@ func _cue_and_plate() -> void:
 	var ticks_log: Array = mod.seal_cue_log
 	var climbs := ticks_log.size() - ticks_before >= 3 and float(ticks_log[-1][1]) > float(ticks_log[ticks_before][1]) and float(ticks_log[-1][0]) > float(ticks_log[ticks_before][0])
 	_t.check("two fitting: the seal tick repeats and its pitch rises with progress", climbs, str(ticks_log.slice(ticks_before)))
+	_t.check("the seal tick plays its own seal_ratchet cue, not the harpoon's lock_tick", mod.SEAL_SOUND == "seal_ratchet" and mod.SEAL_SOUND != "lock_tick", str(mod.SEAL_SOUND))
 	var plate = mod._plates.get("hatch_1")
 	_t.check("the plate is held clear of the hatch, sized to its seat, inert",
 			plate != null and plate is MeshInstance3D and plate.find_children("*", "CollisionObject3D", true, false).is_empty()
