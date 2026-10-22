@@ -11,20 +11,6 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 #
 # Reads only. It changes no damage, timing, contains() or look.
 
-# Ground sampling for the y range. The Painter lifts each vertex to the ground under it
-# (Painter.paint), so the box's y range is the ground's range over the footprint. Combat's
-# ground is the stage heightfield, which is piecewise linear over STEP cells (terrain.gd STEP;
-# the test checks this copy against it), so its extremes sit on the lattice and sampling the
-# STEP lattice over the box finds them. A smoother ground (the boss bowl) can exceed its
-# lattice samples between them by about (Dx + Dz) / 8, with Dx and Dz the largest second
-# differences along each axis (the bilinear interpolation error bound, curvature estimated from
-# the samples), so that is added to both ends: a bumpier ground widens its own margin.
-const GROUND_STEP := 2.0
-# Cost cap at commit: at most this many samples a side (1024 ground calls). A box wider than
-# (LATTICE_MAX - 1) * GROUND_STEP samples at a coarser spacing, which raises the second
-# differences and with them the margin.
-const LATTICE_MAX := 32
-
 # Mirrors of literals inside threat_grammar.gd's drawing, kept here because the grammar names
 # no constant for them; the containment test fails if the grammar outgrows any of them.
 # _owner_ticks: a tick runs to r + 0.4 and is 0.2 + grow wide (threat_grammar.gd _owner_ticks).
@@ -51,9 +37,47 @@ const CHEVRON_PAD := Threat.WAVE_EDGE + CHEVRON_AHEAD_GAP + Threat.CHEVRON_DEPTH
 const LANE_PAD := maxf(Threat.RAIL + GROW, OWNER_OUT + OWNER_HALF + GROW)
 
 
-# The box for a descriptor (Telegraph.descriptor() or Hazard.descriptor()). `ground` is the
-# Painter's ground callable (Callable() draws flat at floor_y) and `lift` its lift.
-static func box(d: Dictionary, ground: Callable, floor_y: float, lift: float) -> AABB:
+# The y range comes from the painter's own meshes, read once after the first full paint
+# (mesh_box): the area footprint, the edge and the fence are all drawn full-extent at build, and
+# each is draped on the ground under it, so their y range already holds the ground under the
+# footprint. No ground function is called. A WAVE's curtain, which is not drawn at build, is
+# added from its numbers: reach + BAND_TOP + underlay above the ground, and a short reach dips
+# its low edge below it.
+# Marks drawn between or beyond the build-time vertices (a lane's run strip, a sweep's chevrons,
+# brackets) stand on ground the meshes did not sample. Their ground can differ from the
+# sampled ground; Y_ALLOWANCE covers that, and the containment test holds the box to those
+# marks on bumpy and heightfield ground. It is an allowance, not a bound: a cliff between a
+# sampled vertex and an unsampled one (the park heightfields have rises of 17 m and more
+# between neighbouring 2 m vertices, measured) can exceed it, and the box then clips a rect's
+# top or bottom edge by that much.
+const Y_ALLOWANCE := Threat.UNDERLAY
+
+# The merged world box of every visible mesh under `node` (the painter's layers, which are
+# top-level, so their boxes are already world boxes). AABB() when there is none.
+static func mesh_box(node: Node) -> AABB:
+	var merged := [AABB(), false]
+	_merge(node, merged)
+	return merged[0] if merged[1] else AABB()
+
+
+static func _merge(node: Node, merged: Array) -> void:
+	for child in node.get_children():
+		if child is Node3D and not child.visible:
+			continue
+		if child is VisualInstance3D:
+			var box: AABB = child.get_aabb()
+			if box.size != Vector3.ZERO:
+				var world: AABB = child.global_transform * box
+				merged[0] = world.merge(merged[0]) if merged[1] else world
+				merged[1] = true
+		_merge(child, merged)
+
+
+# The box for a descriptor (Telegraph.descriptor() or Hazard.descriptor()) and the box of the
+# painter's meshes after its first full paint. AABB() when there are no meshes to read.
+static func box(d: Dictionary, meshes: AABB) -> AABB:
+	if meshes.size == Vector3.ZERO:
+		return AABB()
 	var c: Vector3 = d["centre"]
 	var span := [Vector2(INF, INF), Vector2(-INF, -INF)]
 	if d["form"] == "lane":
@@ -79,13 +103,14 @@ static func box(d: Dictionary, ground: Callable, floor_y: float, lift: float) ->
 		_pad(span, pad)
 	var lo: Vector2 = span[0]
 	var hi: Vector2 = span[1]
-	var range_y := _ground_range(ground, floor_y, lo, hi)
 	var reach: float = d["reach"]
-	# Vertex height is ground + lift + (0 .. reach + BAND_TOP + grow): the rail on top of a
-	# fence is centred on reach and BAND_TOP + grow tall each way; a reach shorter than that
-	# dips the rail's low edge below the ground (min with 0).
-	var y_min := range_y.x + lift + minf(0.0, reach - Threat.BAND_TOP - GROW)
-	var y_max := range_y.y + lift + reach + Threat.BAND_TOP + GROW
+	# A WAVE draws no fence at build: its curtain (reach tall) appears with its front, on ground
+	# the build meshes did not sample, so it adds the full reach. Every other type's fence is in
+	# the build meshes (static layers, built whole), tops included.
+	var wave := int(d["type"]) == Threat.Type.WAVE
+	var up := (reach + Threat.BAND_TOP + GROW) if wave else 0.0
+	var y_min := meshes.position.y + (minf(0.0, reach - Threat.BAND_TOP - GROW) if wave else 0.0) - Y_ALLOWANCE
+	var y_max := meshes.end.y + up + Y_ALLOWANCE
 	var out := AABB(Vector3(lo.x, y_min, lo.y), Vector3(hi.x - lo.x, y_max - y_min, hi.y - lo.y))
 	if d.has("launch"):
 		out = out.merge(_flight_box(d, c))
@@ -133,38 +158,6 @@ static func _sector_span(d: Dictionary, span: Array) -> void:
 		var axis := k * PI * 0.5
 		_grow(span, c.x + cos(axis) * r_out, c.z + sin(axis) * r_out)
 		k += 1
-
-
-# The lowest and highest ground over the box, with the curvature margin (see GROUND_STEP).
-static func _ground_range(ground: Callable, floor_y: float, lo: Vector2, hi: Vector2) -> Vector2:
-	if not ground.is_valid():
-		return Vector2(floor_y, floor_y)
-	var x0 := floorf(lo.x / GROUND_STEP) * GROUND_STEP
-	var x1 := ceilf(hi.x / GROUND_STEP) * GROUND_STEP
-	var z0 := floorf(lo.y / GROUND_STEP) * GROUND_STEP
-	var z1 := ceilf(hi.y / GROUND_STEP) * GROUND_STEP
-	var nx := clampi(int(round((x1 - x0) / GROUND_STEP)) + 1, 3, LATTICE_MAX)
-	var nz := clampi(int(round((z1 - z0) / GROUND_STEP)) + 1, 3, LATTICE_MAX)
-	var heights := PackedFloat32Array()
-	heights.resize(nx * nz)
-	var low := INF
-	var high := -INF
-	for j in nz:
-		for i in nx:
-			var h: float = ground.call(Vector3(lerpf(x0, x1, float(i) / (nx - 1)), floor_y, lerpf(z0, z1, float(j) / (nz - 1))))
-			heights[j * nx + i] = h
-			low = minf(low, h)
-			high = maxf(high, h)
-	var dx := 0.0
-	var dz := 0.0
-	for j in nz:
-		for i in nx:
-			if i > 0 and i < nx - 1:
-				dx = maxf(dx, absf(heights[j * nx + i - 1] - 2.0 * heights[j * nx + i] + heights[j * nx + i + 1]))
-			if j > 0 and j < nz - 1:
-				dz = maxf(dz, absf(heights[(j - 1) * nx + i] - 2.0 * heights[j * nx + i] + heights[(j + 1) * nx + i]))
-	var margin := (dx + dz) / 8.0
-	return Vector2(low - margin, high + margin)
 
 
 static func _grow(span: Array, x: float, z: float) -> void:

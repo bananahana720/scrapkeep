@@ -23,6 +23,8 @@ const PIXEL_TOLERANCE := 1.0e-3
 var t := T.new("warning_bound_containment_test")
 var _world: Node3D
 var _grounds := {}
+# The quenched annulus case: true while its east half is quenched.
+var _quench := [true]
 var _cases := 0
 var _slack_worst := INF
 var _slack_label := ""
@@ -84,7 +86,6 @@ class Field:
 
 
 func _run() -> void:
-	t.near("ground step: WarningBound's lattice is the terrain's cell", WarningBound.GROUND_STEP, Terrain.STEP)
 	_grounds = {"flat": Flat.new(), "slope": Slope.new(), "bumpy": Bumpy.new(), "field": Field.new()}
 	_world = Node3D.new()
 	root.add_child(_world)
@@ -159,7 +160,7 @@ func _hazards(ground_name: String) -> void:
 		"annulus INSTANT disc": [func(h: Node3D) -> void: h.commit_annulus("t_ad", Threat.Type.INSTANT, at, Vector2(0.0, 2.5), 0.0, 1.0, 1.0)],
 		"annulus INSTANT quenched": [func(h: Node3D) -> void:
 			h.commit_annulus("t_aq", Threat.Type.INSTANT, at, Vector2(6.0, 14.0), 3.5, 1.0, 1.0)
-			h.excluded = func(point: Vector3) -> bool: return point.x > at.x],
+			h.excluded = func(point: Vector3) -> bool: return _quench[0] and point.x > at.x],
 		"annulus LANE": [func(h: Node3D) -> void: h.commit_annulus("t_al", Threat.Type.LANE, at, Vector2(4.0, 16.0), 3.0, 1.0, 1.0)],
 		"annulus PROJECTILE": [func(h: Node3D) -> void: h.commit_annulus("t_ap", Threat.Type.PROJECTILE, at, Vector2(0.0, 5.0), 3.0, 1.0, 1.0)],
 		"lane LANE": [func(h: Node3D) -> void: h.commit_lane("t_l", Threat.Type.LANE, at, heading, 2.0, 30.0, 3.0, 3.0, 1.0, 1.0)],
@@ -168,6 +169,7 @@ func _hazards(ground_name: String) -> void:
 	for label in specs:
 		# Plain, and again with the owner's brass rim ticks (Brindle's attacks).
 		for owner in [false, true]:
+			_quench[0] = label == "annulus INSTANT quenched"
 			var hazard := Hazard.new()
 			hazard.ground = func(point: Vector3) -> float: return ground.height_at(point) if ground.has_method("height_at") else ground.height(point.x, point.z)
 			if owner:
@@ -181,9 +183,21 @@ func _hazards(ground_name: String) -> void:
 			# Progress 0, half, 1; then LIVE at the middle and just before it ends.
 			var ages := [0.0, warn * 0.5, warn, warn + live * 0.5, warn + live * 0.99]
 			var done_age := 0.0
+			var quenched: bool = label == "annulus INSTANT quenched"
+			if quenched:
+				# It starts with spans quenched, so it has no full paint yet: no box (the rects
+				# walk the meshes), until the quench lifts; then the box is cut, and a later
+				# quench, which only removes drawn spans, stays inside it.
+				hazard.step(0.0)
+				t.eq("%s: no box while spans are quenched at the start" % name, hazard.screen_bound_box(), AABB())
+				_quench[0] = false
+				hazard.step(0.0)
+				t.check("%s: boxed after its first full paint" % name, hazard.screen_bound_box().size != Vector3.ZERO)
 			for age in ages:
 				hazard.step(age - done_age)
 				done_age = age
+				if quenched and age == ages[2]:
+					_quench[0] = true
 				_contained(hazard, "%s age=%.2f" % [name, age])
 			_projected(hazard, name)
 			hazard.step(warn + live)
@@ -207,6 +221,10 @@ func _fallbacks() -> void:
 	var walked := PlayerFx.warning_rects(root.get_tree(), cam, 0.0, false)
 	t.check("fallback: the carried ring still gets its mesh rect", fallback.size() == 1 and walked.size() == 1 and fallback[0].is_equal_approx(walked[0]), "%s vs %s" % [fallback, walked])
 	ring.free()
+	var amber: Node3D = Telegraph.ring(_world, ground, Threat.Type.INSTANT, Vector3(2.0, 0.0, 2.0), 4.0, 3.5, Palette.AMBER)
+	await _frames(1)
+	t.check("non-hostile: an amber ring is outside the group and has no box", not amber.is_in_group(Threat.GROUP) and amber.screen_bound_box() == AABB())
+	amber.free()
 	var bare := Node3D.new()
 	bare.add_to_group(Threat.GROUP)
 	_world.add_child(bare)

@@ -248,11 +248,14 @@ func screen_bound_box() -> AABB:
 	return _bound
 
 
+# Only a hostile mark joins Threat.GROUP, so only a hostile mark is read by warning_rects and
+# gets a box; the others keep an empty one. The y range reads the painter's meshes, which are
+# all built by now (static layers, driven layers at full extent).
 func _cut_bound() -> void:
-	if _painter == null:
+	if _painter == null or not is_hostile():
 		return
 	_bound_centre = center
-	_bound = WarningBound.box(descriptor(), _painter.ground, center.y, LIFT)
+	_bound = WarningBound.box(descriptor(), WarningBound.mesh_box(self))
 
 
 func _build() -> void:

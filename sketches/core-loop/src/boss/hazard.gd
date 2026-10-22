@@ -62,9 +62,12 @@ var prev_fraction := 0.0
 var _painter
 # ANNULUS: which of its drawn segments are open (quenched) right now.
 var _open: Array[bool] = []
-# The world box of everything the painter can draw, cut once in _ready (WarningBound). The
-# committed numbers never change after commit, and nothing moves a hazard, so it is never
-# recut.
+# The world box of everything the painter can draw (WarningBound), cut once, right after the
+# first FULL paint: in _ready, or, for an annulus that starts with spans quenched, on the first
+# step that leaves none quenched (later quenches only remove drawn spans, so the full paint's
+# meshes hold every later one). Empty until then, so warning_rects walks the meshes. Only a
+# hostile hazard gets one. The committed numbers never change after commit, and nothing moves
+# a hazard, so it is never recut.
 var _bound := AABB()
 
 
@@ -128,7 +131,7 @@ func _ready() -> void:
 	if shape == Shape.ANNULUS:
 		_open = _open_segments()
 	_paint(true)
-	_bound = WarningBound.box(descriptor(), _painter.ground, centre.y, DRAW_LIFT)
+	_cut_bound()
 
 
 func step(delta: float) -> void:
@@ -145,6 +148,8 @@ func step(delta: float) -> void:
 			_open = open
 			reshaped = true
 	_paint(reshaped)
+	if reshaped:
+		_cut_bound()
 
 
 # ANNULUS: whether the drawing covers a point. A quenched span is left undrawn, so the
@@ -296,6 +301,12 @@ func screen_bound_box() -> AABB:
 	if _painter == null or state == DONE:
 		return AABB()
 	return _bound
+
+
+func _cut_bound() -> void:
+	if _bound.size != Vector3.ZERO or _painter == null or not is_hostile() or _open.has(true):
+		return
+	_bound = WarningBound.box(descriptor(), WarningBound.mesh_box(_painter))
 
 
 # Static layers redraw only when the shape changes (a quench opens or closes a span);

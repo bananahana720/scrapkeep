@@ -13,7 +13,7 @@ extends SceneTree
 # (rect_source = warning_rects, walk and box) over FIRES fires, each fire's shape and rect
 # microseconds from the frame's own counters, and the refreshes counted per fire (rect_calls).
 # A last section times the work screen_bound_box does at COMMIT (the descriptor, the ground
-# lattice and the box; the whole commit beside it) on a typical ring, a lane and the largest
+# mesh read and the box, no ground calls; the whole commit beside it) on a typical ring, a lane and the largest
 # hazards the repo commits, over the real park ground (Terrain.height of the park table's
 # stage 1) built here. Exit 0, or 1 when a sanity check fails (sample count,
 # p99 >= mean >= 0, mean under SANITY_MEAN_USEC); the 0.2 ms bar is judged from the lines.
@@ -267,8 +267,9 @@ const COMMIT_CALLS := 1000
 # Whole commits are built and freed, so fewer.
 const WHOLE_CALLS := 200
 
-# The cost of the box at commit. The ground is the real park terrain (stage 1 of ParkDefs, the
-# table the game launches), so each lattice sample is the real Terrain.height. Cases, with the
+# The cost of the box at commit: the descriptor, the painter's mesh box and the xz span. The
+# ground is the real park terrain (stage 1 of ParkDefs, the table the game launches) under each
+# mark's own drawing. Cases, with the
 # repo's own numbers:
 #   ring INSTANT r 6   the stress and bench ring (stress_capture.gd _commit_threats)
 #   lane 24 x 4        a lane from a Telegraph (the shipped ones run 14 to 24 long)
@@ -315,7 +316,7 @@ func _commit_bench() -> void:
 		for i in WARM_UP + COMMIT_CALLS:
 			var began := Time.get_ticks_usec()
 			if node is Hazard:
-				WarningBound.box(node.descriptor(), node.painter().ground, node.centre.y, Hazard.DRAW_LIFT)
+				WarningBound.box(node.descriptor(), WarningBound.mesh_box(node.painter()))
 			else:
 				node._cut_bound()
 			if i >= WARM_UP:
