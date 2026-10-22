@@ -44,7 +44,7 @@ func _check(ok: bool, label: String) -> void:
 
 
 # The ceiling for an asset id and class, or -1 when none applies. Shells get 16. A shell_<pilot>_c<N> layer gets 2 at
-# class III and 1 at every other N; any other shell_ detail asset keeps 2. Outfits and trails share the detail class and
+# class III and 1 at every other N; any other shell_ detail asset gets 1. Outfits and trails share the detail class and
 # are not heft layers.
 func _ceiling(id: String, cls: String) -> int:
 	if cls == "shell":
@@ -96,6 +96,7 @@ func _self_check_ceiling() -> void:
 	_check(_over_ceiling("shell_planted_c4", "detail", 2), "ceiling self-check: an unnamed class IV layer at 2 draws is over")
 	_check(not _over_ceiling("shell_planted_c4", "detail", 1), "ceiling self-check: an unnamed class IV layer at 1 draw is not over")
 	_check(not _over_ceiling("outfit_planted", "detail", 3), "ceiling self-check: a non-shell detail asset is outside the layer rule")
+	_check(_over_ceiling("shell_planted_extra", "detail", 2), "ceiling self-check: an unnamed shell_ detail asset outside the layer pattern at 2 draws is over")
 	_check(not _over_ceiling("shell_tarn_c3", "detail", 3), "ceiling self-check: named shell_tarn_c3 at 3 draws is not over")
 	_check(_over_ceiling("shell_tarn_c3", "detail", 4), "ceiling self-check: named shell_tarn_c3 at 4 draws is over")
 	_check(not _over_ceiling("shell_tarn_c4", "detail", 2), "ceiling self-check: named shell_tarn_c4 at 2 draws is not over")
