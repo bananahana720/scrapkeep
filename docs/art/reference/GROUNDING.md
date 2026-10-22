@@ -436,3 +436,16 @@ Re-audited 22 Oct on the nine redrawn pilot boards, at main 51f2a21b. Correction
 | era-looping-titan-reference / cheerful-dystopia | Waking's swarm-drone crew fitting seam plates over its weak points, as the on-screen justification for crew-site machinery | boss | Planned | board-241.md:2919,2922 (Challenge U4: capped drone waves, reel impact knocks plate off; state wave and add caps first) (found by checker) | No new card; link era boards to the Challenge U4 design post so the hatch idea is judged there. |
 | era-space-ground-ends / titans | Haul truck route or swinging crane as a moving pinball part in other parks (board's 'locals beside machinery' shown as a route element) | cycle_motion | Planned | board-241.md:2923 (one candidate looping worker per park with cycle period, wave 19 World card); park_recipes.gd:71-75 rider crane swing is the only precedent per auditor (found by checker) | Cite this card as the grounding for any looping-machine idea on the era boards; cap at the candidate list for the alpha. |
 
+
+## boss_weak_points
+
+Made on 22 Oct from Challenge's approved U4 design (board #241 comment 6330969251, ruling 6331005392), so every gameplay idea on it is planned by U4. Build from it, plus its [SET-BRIEF](boss_weak_points/SET-BRIEF.md), which names the members, the shut, open and broken states and which lane owns each.
+
+| Board | Idea | Area | Status | Evidence | What grounds it |
+|---|---|---|---|---|---|
+| boss_weak_points-maintenance-moodboard | Hatch, seam plate, bore override, lens seats and hand button in shut, open and broken states | boss | Planned | U4 design 6330969251; ruling 6331005392 | Challenge U4 `weak_points.gd`, dial 1 |
+| boss_weak_points-waking-reference | Bore jam blows the floor hatch open; two fitters carry a seam plate; broken hatch removes that floor's attack | boss | Planned | U4 design (waking.gd:306 bore jam) | Challenge U4 |
+| boss_weak_points-mind-reference | Lens seats open 2.5 s after the plate sweep; hand button opens during the 5 s brace; first break removes split lane, second removes rush | boss | Planned | U4 design | Challenge U4 |
+| boss_weak_points-readability-reference | Open weak points read in ancient green with the seam pattern, never hazard orange, at chase distance | ui_ux | Planned | VISUAL-LANGUAGE ANCIENT row; U4 design | Effects open glow; Lighting readability check |
+| boss_weak_points-waking-reference | What opens the bore-head override | boss | Not grounded | U4 names the button but not its opening tell | Challenge: name the tell before building |
+| boss_weak_points-mind-reference | What breaking the third lens seat removes | boss | Not grounded | U4 lists the first two breaks only | Challenge: name the third break's effect |
