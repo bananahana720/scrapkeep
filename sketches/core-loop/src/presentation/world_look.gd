@@ -227,6 +227,13 @@ static func environment(look: Dictionary, air: bool) -> Dictionary:
 		values["fog_light_energy"] = float(f[0])
 		values["fog_sun_scatter"] = float(f[1])
 		values["fog_density"] = float(values.get("fog_density", 0.0)) * float(f[2])
+	# Diagnostic only (claude/lighting-noon-floor-diag): one-variable noon floor sweep, #241 6332870085.
+	if not OS.get_environment("SK_AMB").is_empty():
+		values["ambient_light_energy"] = float(values.ambient_light_energy) * float(OS.get_environment("SK_AMB"))
+	if not OS.get_environment("SK_EXPO").is_empty():
+		values["tonemap_exposure"] = float(values.tonemap_exposure) * float(OS.get_environment("SK_EXPO"))
+	if not OS.get_environment("SK_WHITE").is_empty():
+		values["tonemap_white"] = float(OS.get_environment("SK_WHITE"))
 	if values.volumetric_fog_enabled:
 		values.merge(look.air)
 	return values
