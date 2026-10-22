@@ -1,16 +1,20 @@
 extends SceneTree
-# One day per run: a still of every stage in run order, then the Mind's crown, each at the time of
-# day its stage enters at (world_look.gd STAGE_TIME). The camera sits behind and above the ball and
-# looks a quarter turn off the day's sun, so the graded sky, its glow and the lit ground share a
-# frame. Needs a display (Xvfb works; llvmpipe GL draws without volumetric air):
-#   godot --path sketches/core-loop --resolution 1280x720 --script res://tools/day_arc_capture.gd -- --out=<dir>
-# Writes <out>/<n>-stage<stage>-<time>.png and frames.json. Evidence limit: colour and composition
+# One day per run: a still of every stage in run order, the boss arena that ends each world before
+# the last (the Brindle bowl keeps its stage's morning look; the Waking has its own pit look), then
+# the Mind's crown, each at the time of day its stage enters at (world_look.gd STAGE_TIME). The
+# camera sits behind and above the ball (an arena's centre for an arena) and looks 40 degrees off
+# the day's sun, so the graded sky, its glow and the lit ground share a frame. Needs a display (Xvfb works; llvmpipe GL draws without volumetric air):
+#   godot --path sketches/core-loop --resolution 1280x720 --script res://tools/day_arc_capture.gd -- --out=<dir> [--table=<id>]
+# --table defaults to "park", the shipped table (game.gd LAUNCH_TABLE); --table=alpha reproduces the
+# legacy-map frames. Writes <out>/<n>-stage<stage>-<time>.png (<n>-arena-<boss>.png for an
+# arena) and frames.json, which records the table. Evidence limit: colour and composition
 # only; frame times come from the 4080.
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const SIZE := Vector2i(1280, 720)
 var out := ""
+var table := "park"
 var game
 var cam: Camera3D
 var recs: Array = []
@@ -20,6 +24,8 @@ func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--out="):
 			out = a.trim_prefix("--out=")
+		elif a.begins_with("--table="):
+			table = a.trim_prefix("--table=")
 	if DisplayServer.get_name() == "headless" or out == "":
 		printerr("needs a display and --out")
 		quit(2)
@@ -39,7 +45,7 @@ func _run() -> void:
 	seed(171022)
 	game = Game.new()
 	game.test_mode = true
-	game.table = "alpha"
+	game.table = table
 	root.add_child(game)
 	while game.flow == null:
 		await physics_frame
@@ -52,34 +58,56 @@ func _run() -> void:
 	cam.far = 1800.0
 	game.add_child(cam)
 	DirAccess.make_dir_recursive_absolute(out)
+	var n := 0
+	var last_world: int = game.ctx.stages.world_of(game.ctx.stages.COUNT)
 	for stage in range(1, game.ctx.stages.COUNT + 1):
 		game.flow.enter_stage(stage, Vector3.ZERO, false)
 		await _frames(40)
 		game.player.body().freeze = true
-		await _snap("%d-stage%d-%s" % [stage, stage, WorldLook.time_id(stage)], stage, game.player.ball_position())
+		n += 1
+		await _snap("%d-stage%d-%s" % [n, stage, WorldLook.time_id(stage)], stage, game.player.ball_position())
+		var world: int = game.ctx.stages.world_of(stage)
+		if game.ctx.stages.is_world_last(stage) and world != last_world:
+			# The arena that ends this world, entered as the flow enters it after the stage's launch.
+			var boss_id := String(game.flow.boss_row(world).get("kind", "boss"))
+			game.flow.enter_boss(Vector3.ZERO)
+			await _frames(90)
+			game.player.body().freeze = true
+			var rot = WorldLook.ARENAS[boss_id].sun_rotation if WorldLook.ARENAS.has(boss_id) else null
+			n += 1
+			# Framed on the arena's centre from inside its mast ring (arena.gd MAST_R 27 m, MAST_HEIGHT 20 m):
+			# the stage frame's 34 m pull-back puts a bowl mast in front of the lens.
+			var mod = game.flow._boss_module()
+			var centre = mod.get("pad") if mod.get("pad") != null else mod.get("arena")
+			var at: Vector3 = centre.global_position + Vector3.UP if centre != null else game.player.ball_position()
+			await _snap("%d-arena-%s" % [n, boss_id], stage, at, rot, 14.0, 18.0)
+			game.flow._boss_module().exit_arena()
+			game.flow.in_arena = false
+			game.flow.boss_active = false
+			game.player.body().freeze = false
 	game.flow.enter_boss(Vector3.ZERO)
 	await _frames(90)
 	game.player.body().freeze = true
 	var pad: Vector3 = game.flow._boss_module().pad.global_position + Vector3.UP
-	await _snap("7-mind-crown-dusk", 0, pad, WorldLook.ARENAS.mind.sun_rotation)
+	await _snap("%d-mind-crown-dusk" % (n + 1), 0, pad, WorldLook.ARENAS.mind.sun_rotation)
 	# The readability read: the live fight through the game's own camera with the HUD up, after the
 	# Mind has had time to start its attacks (telegraphs on the floor).
 	cam.current = false
 	game.player.body().freeze = false
 	for k in 3:
 		await _frames(150 + k * 60)
-		await _shot("%d-mind-fight-hud-%d" % [8 + k, k])
+		await _shot("%d-mind-fight-hud-%d" % [n + 2 + k, k])
 	var f := FileAccess.open(out.path_join("frames.json"), FileAccess.WRITE)
-	f.store_string(JSON.stringify({"tool": "day_arc_capture.gd", "adapter": RenderingServer.get_video_adapter_name(), "frames": recs}, "\t"))
+	f.store_string(JSON.stringify({"tool": "day_arc_capture.gd", "table": table, "adapter": RenderingServer.get_video_adapter_name(), "frames": recs}, "\t"))
 	f.close()
 	quit(0)
 
 
-func _snap(id: String, stage: int, at: Vector3, sun_rotation = null) -> void:
+func _snap(id: String, stage: int, at: Vector3, sun_rotation = null, back := 34.0, up := 14.0) -> void:
 	var r: Vector3 = sun_rotation if sun_rotation != null else WorldLook.time_row(stage).get("sun_rotation", Vector3(-45, 0, 0))
 	var toward_sun := Basis.from_euler(Vector3(0.0, deg_to_rad(r.y), 0.0)).z
 	var look := toward_sun.rotated(Vector3.UP, deg_to_rad(40.0))
-	cam.global_position = at - look * 34.0 + Vector3.UP * 14.0
+	cam.global_position = at - look * back + Vector3.UP * up
 	cam.look_at(at + look * 60.0 + Vector3.UP * 10.0, Vector3.UP)
 	cam.fov = 68.0
 	cam.current = true

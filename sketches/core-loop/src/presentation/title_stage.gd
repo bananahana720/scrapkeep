@@ -4,6 +4,7 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CompanionBody := preload("res://src/presentation/companion_body.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const WorldGrade := preload("res://src/presentation/world_grade.gd")
 const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const TitleIntros := preload("res://src/presentation/title_intros.gd")
@@ -56,6 +57,8 @@ var _flow_state := "title"
 var intro: Node
 var intro_autoplay := true
 var _intro_tried := false
+# True while a 2D title card sits above this stage: the opening waits for release_intro().
+var intro_hold := false
 var _ctx
 var deck_antics: Array = []
 var look_target := 1
@@ -69,6 +72,8 @@ var _stick := Vector2.ZERO
 func setup(ctx) -> void:
 	name = "TitleStage"
 	_ctx = ctx
+	# boot.gd marks the game before it enters the tree while its 2D title card is up.
+	intro_hold = ctx.root != null and ctx.root.has_meta(&"intro_hold")
 	intro_autoplay = ctx.root != null and not bool(ctx.root.get("bot_driven")) and not bool(ctx.root.get("test_mode")) \
 		and DisplayServer.get_name() != "headless" and not "--no-intro" in OS.get_cmdline_user_args()
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -123,9 +128,27 @@ func show_flow(state: String) -> void:
 	if state != "title" and intro_playing():
 		intro.skip()
 	_sync_dressing()
-	if state == "title" and intro_autoplay and not _intro_tried:
+	if state == "title" and intro_autoplay and not _intro_tried and not intro_hold:
 		_intro_tried = true
-		play_intro.call_deferred()
+		_autoplay_intro.call_deferred()
+
+
+# The deferred autoplay re-checks the hold: one set after this call was queued (boot.gd marking the
+# game late) still stops it, and the opening stays untried for release_intro().
+func _autoplay_intro() -> void:
+	if intro_hold:
+		_intro_tried = false
+		return
+	play_intro()
+
+
+# The 2D title card hands off here: lifts the hold and starts the once-per-launch opening if the
+# title is up and it has not been tried. Off the title it does nothing.
+func release_intro() -> void:
+	intro_hold = false
+	if _flow_state == "title" and intro_autoplay and not _intro_tried and not intro_playing():
+		_intro_tried = true
+		_autoplay_intro.call_deferred()
 
 
 func intro_playing() -> bool:
@@ -351,11 +374,12 @@ func _build_lights() -> void:
 	_environment.background_color = WorldLook.TITLE.background
 	_environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	_environment.ambient_light_color = WorldLook.TITLE.ambient
-	_environment.tonemap_mode = Environment.TONE_MAPPER_AGX
+	_environment.tonemap_mode = WorldGrade.BASE.tonemap_mode
+	_environment.tonemap_agx_white = WorldGrade.BASE.tonemap_agx_white
 	_environment.tonemap_exposure = WorldLook.TITLE.exposure
 	_environment.tonemap_agx_contrast = WorldLook.TITLE.contrast
-	_environment.glow_intensity = 0.18
-	_environment.glow_hdr_threshold = 1.5
+	_environment.glow_intensity = WorldGrade.BASE.glow_intensity
+	_environment.glow_hdr_threshold = WorldGrade.BASE.glow_hdr_threshold
 	_environment.ssao_radius = 0.45
 	_environment.ssao_intensity = 1.15
 	_sun = DirectionalLight3D.new()

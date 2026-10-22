@@ -232,7 +232,7 @@ func _apply_environment(terrain, root: Node) -> void:
 	sky.sky_material = _sky_material
 	var values := WorldLook.environment(look, GraphicsPreset.PRESETS[GraphicsPreset.current].air)
 	values["sky"] = sky
-	_saved = GraphicsPreset.set_lighting(self, env, values, WorldLook.lights(look, sun), "arena")
+	_saved = GraphicsPreset.set_lighting(self, env, values, WorldLook.lights(look, sun), "arena", look)
 
 
 func restore_environment() -> void:
