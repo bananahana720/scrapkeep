@@ -183,19 +183,19 @@ Checks (headless Godot 4.7.2, Linux).
 
 ## w18n rows after the #323 span fix
 
-The row rule in #323 first skipped any line-defining pair more than 40 m apart, so w18l missed three rows whose end spots sit 60 to 70 m apart. Card 1 caps only the consecutive gaps (at most 40 m), and af522720 on the scan branch now allows pairs up to 80 m. Three spots moved, one each; yaws and labels are unchanged, and each was a 2 m or larger perpendicular move.
+The row rule in #323 first skipped any line-defining pair more than 40 m apart, so w18l missed three rows whose end spots sit 55 to 67 m apart. Card 1 caps only the consecutive gaps (at most 40 m), and af522720 on the scan branch now allows pairs up to 80 m. Three spots moved, one each, each by 2 m or more perpendicular; labels are unchanged.
 
 | spot | at | yaw |
 | --- | --- | --- |
-| bunk_collapse_30 | [-12, -504] -> [-5, -512] | 72, kept |
+| bunk_collapse_30 | [-12, -504] -> [-5, -512] | 72 -> 48 |
 | low_lunch_rock_132 | [-49, 291] -> [-49, 286] | 35, kept |
 | low_peg_line_view_4 | [-222, -522] -> [-218, -522] | 146, kept |
 
-The first try for bunk_collapse_30 (-17, -504) broke its laundry line's 30 m clearance, so it moved to (-5, -512), about 5 m off the row.
+The first try for bunk_collapse_30 (-17, -504) broke its laundry line's 30 m clearance, so it moved to (-5, -512), about 5 m off the row. Its yaw 72 predates w18l, which did not re-aim it. Review found it faced exactly away from sable, 32.6 m west (bearing -108.4). The spot stands between two ride lines: the cannon, kest and tally trunk is 41.7 m east (bearing 47.7). Turned to -108 toward sable, its laundry line came 24.9 m from the line (want 30), and moving it back far enough made a new row. So it now faces the trunk, which three lines share, at yaw 48. The other two moved spots keep their yaws.
 
 Checks (headless Godot 4.7.2, Linux).
 - New check with `--file` against dam plus af522720: 816 instances, 0 violations, 0 pattern, 0 pin, 0 lint. `rows.py <file> 80` prints "triples 0".
-- Old check on this branch alone: 0 violations, fingerprint 2928990529 (matches the pin).
-- Pin: 2441315749 to 2928990529 (intended re-pin).
+- Old check on this branch alone: 0 violations, fingerprint 746751661 (matches the pin).
+- Pin: 2441315749 to 2928990529, then 746751661 after the yaw turn (intended re-pins).
 - park_props_test: exit 0, "[park_dam expansion matches its pin]" passes.
 - Density (no `--open`): 24 of 49 windows pass, 24 exempt (12 arena, 1 camp, 11 telegraph); failing: kest (18.3, -32.4), unchanged. No new fail.

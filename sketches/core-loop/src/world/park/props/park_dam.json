@@ -1912,7 +1912,7 @@
     -5,
     -512
    ],
-   "yaw_deg": 72,
+   "yaw_deg": 48,
    "near": "dome_19: A collapsed canvas tent with a washing line and boots"
   },
   {
@@ -3072,5 +3072,5 @@
   ],
   "seed": 11
  },
- "pin": 2928990529
+ "pin": 746751661
 }
