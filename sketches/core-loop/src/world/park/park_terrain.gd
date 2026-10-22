@@ -16,9 +16,12 @@ extends Node3D
 #             reads as it does on the old maps. _load computes that from heights, for baked and
 #             unbaked parks alike; it is not stored in the bake (PARK.md says "the bake calls": this
 #             is the load step of the same data), so no bake binary changes.
-#             Each multiplier is a ratio between two patches of one reference board (MULT_*), and the
-#             colour map is feathered over 8 m (feather()), so a slot border or the square's edge
-#             fades instead of stepping.
+#             Each multiplier comes from one rule on a reference board's material and lit-ground
+#             patches (board_multiplier(): the material's hue, a value scaled by material over ground,
+#             capped at the floor's own, since a colour map cannot brighten). The colour map is
+#             feathered over 8 m texels (feather()), so a slot border or the square's edge fades
+#             instead of stepping; the texel grid is fixed, so a straight border fades over 8 to 16 m
+#             by where it falls, and a stamp narrower than about 16 m loses tint by its position.
 #             Terrain3D collision stays 0 (DISABLED): it never makes a second height source.
 #   collider  100 tiles of 160 m (80 by 80 cells of the 2 m grid), each a ConcavePolygonShape3D with
 #             the two triangles and winding terrain.gd uses for the old maps; a hole cell has none.
@@ -72,26 +75,29 @@ const AUTO_BIT := 1
 const SLOT_CONCRETE := 2
 const SLOT_TAILINGS := 3
 const SLOT_BASALT := 4
-# Each tinted slot's colour-map multiplier is one ratio between two patches of one reference board:
-# the material over the lit ground in the same board (sRGB box means, ImageMagick
-# `convert <board> -crop WxH+X+Y -resize 1x1!`, each crop checked by eye). The colour map multiplies
-# the albedo and RGBA8 caps a multiplier at 1, so it can only darken or move hue.
+# Each tinted slot's colour-map multiplier comes from board_multiplier() on two patches of one
+# reference board: the material and the lit ground beside it (sRGB box means, ImageMagick
+# `convert <board> -crop WxH+X+Y -resize 1x1!`, each crop checked by eye). The rule: chromaticity is
+# the material's (g/r, b/r); the target's luminance is the floor texture's times material / ground;
+# a target brighter than the floor in any channel is scaled down until none is, because RGBA8 caps a
+# multiplier at 1; the multiplier is target / GROUND_FLOOR_MEAN. The values below are board_multiplier()
+# of the numbers cited, stored as literals (the surface test pins each).
 # Tailings: docs/art/reference/dig/dig-landmark-headframe-noon.jpg, the worked pit floor at noon.
-# Crops 120x40+1150+700, 120x40+880+600 and 100x30+1150+620 read 242,169,113, 245,172,117 and
-# 245,172,116 (median 245,172,116). The multiplier keeps red at 1 and gives green and blue the board
-# floor's chromaticity (g/r and b/r) over the floor texture's own, so only the hue moves toward oxide:
-# a target of about (0.733, 0.514, 0.347), L* 59.5 against the floor's 65.1.
+# Material and ground are the same floor: crops 120x40+1150+700, 120x40+880+600 and 100x30+1150+620
+# read 242,169,113, 245,172,117 and 245,172,116 (median 245,172,116). The value ratio is 1, so red
+# stays at 1 and only the hue moves toward oxide: target (0.733, 0.514, 0.347), L* 59.5.
 const MULT_TAILINGS := Color(1.0, 0.861, 0.843, float(COLOR_ALPHA_BYTE) / 255.0)
 # Basalt: docs/art/reference/dig/dig-landmark-sinkhole-afternoon.jpg. The basalt cap, crops
-# 120x40+960+215 and 100x40+1180+210, reads 104,95,95 and 98,90,91 (mean 101,93,93); the lit pale
-# limestone in the same board, crop 80x60+1120+330, reads 153,126,111. Cap / limestone, L* 47.8.
-const MULT_BASALT := Color(0.660, 0.738, 0.838, float(COLOR_ALPHA_BYTE) / 255.0)
+# 120x40+960+215 and 100x40+1180+210, reads 104,95,95 and 98,90,91 (mean 101,92.5,93); the lit pale
+# limestone in the same board, crop 80x60+1120+330, reads 153,126,111. Capped: target
+# (0.447, 0.410, 0.412), L* 45.1.
+const MULT_BASALT := Color(0.610, 0.685, 1.0, float(COLOR_ALPHA_BYTE) / 255.0)
 # Concrete: docs/art/reference/spillway/spillway-landmarks-flume-carry.jpg. The pale concrete ramp, crop
 # 60x14+1080+410, reads 239,194,148; the lit sand ground, crops 100x30+880+600 and 100x30+600+640,
-# read 244,167,102 and 242,167,103. The raw ratio is (0.984, 1.162, 1.444), but concrete is paler than
-# the ground and a multiplier cannot exceed 1, so green and blue clamp to 1 and concrete draws close to
-# the floor. A concrete texture is the real fix.
-const MULT_CONCRETE := Color(0.984, 1.0, 1.0, float(COLOR_ALPHA_BYTE) / 255.0)
+# read 244,167,102 and 242,167,103 (mean 243,167,102.5). Concrete is paler than the ground, which a
+# multiplier cannot show: capped, it draws at the floor's value as a less orange sand, target
+# (0.665, 0.540, 0.412), L* 59.5 (uncapped L* 71.1). A concrete texture is the real fix.
+const MULT_CONCRETE := Color(0.907, 0.903, 1.0, float(COLOR_ALPHA_BYTE) / 255.0)
 # The floor texture's mean albedo (packed-sand-floor.webp, every pixel of the base level): the
 # floor is what flat ground draws, so a multiplier times this is the colour a cell's mean lands on.
 # Steep ground draws strata, whose mean is slightly darker (see GROUND_STRATA_MEAN).
@@ -101,7 +107,9 @@ const GROUND_FLOOR_MEAN := Color(0.7327, 0.5977, 0.4117)
 const GROUND_STRATA_MEAN := Color(0.731, 0.535, 0.366)
 # The colour map is feathered over 8 m: the per-cell multipliers are padded with FEATHER_PAD white
 # cells (so a tint at the play square's edge fades toward the apron), box-filtered to 8 m texels (mip
-# level FEATHER_LEVEL) and bilinearly stretched back to 1 m vertices.
+# level FEATHER_LEVEL) and bilinearly stretched back to 1 m vertices. The texel grid is fixed, so a
+# straight border fades over 8 to 16 m depending on where it falls, and a stamp narrower than about
+# 16 m loses tint depending on its position.
 const FEATHER_PAD := 4
 const FEATHER_LEVEL := 2
 # One-metre pixels of padding on each side of feather()'s image: vertex m is at pixel m + this.
@@ -188,6 +196,46 @@ static func bite_multiplier(slot_mult: Color, n_y: float, w: float) -> Color:
 			clampf(lerpf(slot_mult.g, tint.g / d.g, w), 0.0, 1.0),
 			clampf(lerpf(slot_mult.b, tint.b / d.b, w), 0.0, 1.0),
 			float(COLOR_ALPHA_BYTE) / 255.0)
+
+
+# The colour-map multiplier of a surface material from two patches of one reference board, given as raw
+# sRGB bytes (0 to 255, may be fractional): the material, and the lit ground beside it.
+#   chromaticity  the material's g/r and b/r;
+#   value         target luminance Y = Y(GROUND_FLOOR_MEAN) * Y(material) / Y(ground), with
+#                 Y = 0.2126 R + 0.7152 G + 0.0722 B on sRGB-decoded channels, solved for the red that
+#                 gives it at that chromaticity;
+#   cap           if a target channel exceeds the floor's, scale the target down until the largest
+#                 channel ratio is 1 (a colour map cannot brighten);
+#   multiplier    target / GROUND_FLOOR_MEAN, alpha at the default.
+static func board_multiplier(material: Vector3, ground: Vector3) -> Color:
+	var m := material / 255.0
+	var g := ground / 255.0
+	var want := _luma(GROUND_FLOOR_MEAN.r, GROUND_FLOOR_MEAN.g, GROUND_FLOOR_MEAN.b) * _luma(m.x, m.y, m.z) / _luma(g.x, g.y, g.z)
+	var gr := m.y / m.x
+	var br := m.z / m.x
+	var lo := 0.0
+	var hi := 4.0
+	for i in 60:
+		var mid := (lo + hi) * 0.5
+		if _luma(mid, mid * gr, mid * br) < want:
+			lo = mid
+		else:
+			hi = mid
+	var target := Vector3(lo, lo * gr, lo * br)
+	var f := GROUND_FLOOR_MEAN
+	var worst := maxf(target.x / f.r, maxf(target.y / f.g, target.z / f.b))
+	if worst > 1.0:
+		target /= worst
+	return Color(target.x / f.r, target.y / f.g, target.z / f.b, float(COLOR_ALPHA_BYTE) / 255.0)
+
+
+# Luminance of sRGB-encoded channels (each 0 to 1), decoded to linear first.
+static func _luma(r: float, g: float, b: float) -> float:
+	return 0.2126 * _linear(r) + 0.7152 * _linear(g) + 0.0722 * _linear(b)
+
+
+static func _linear(c: float) -> float:
+	return c / 12.92 if c <= 0.04045 else pow((c + 0.055) / 1.055, 2.4)
 
 
 # The 800 by 800 per-cell multiplier image as a one-metre-vertex image, feathered over 8 m: pad with
