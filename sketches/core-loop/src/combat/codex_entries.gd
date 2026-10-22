@@ -149,6 +149,18 @@ const ENTRIES := [
 		"clue": "a Splitter pod + rolling out of its ring",
 		"text": "A torn-off Splitter pod: runs at you, lights a one-second fuse ring and blows up; roll out of the ring.",
 	},
+	{
+		"id": "cup_break", "name": "Out of the Cup",
+		"hint": "A cup only keeps what sits still.",
+		"clue": "a catch trap's cup + a boost or smash out of it",
+		"text": "Sets a spring-jawed cup where you will roll and holds you dead still inside it; boost or smash out, or take down the crew before the jaws close.",
+	},
+	{
+		"id": "stream_cut", "name": "Cut the Stream",
+		"hint": "Ignore the chute and the chute never stops.",
+		"clue": "a Dispatcher's mast + a kill after it has dropped a chaser",
+		"text": "Perched on a mast, it never attacks but drops a chaser at you every 8 s; reach it by grapple, vault or a long gun and the stream stops.",
+	},
 	# 2026-10-08 (wave 10, ST4): the rest of the roster that spawns: the alpha packs' and elite's
 	# Fleet crews, and the Warden with one entry per variant whose trick differs.
 	{
@@ -336,6 +348,8 @@ const DETECTORS := {
 	"roof_drop": {"kind": "prop_crew", "script": "res://src/combat/prop_crew.gd"},
 	"split_pop": {"kind": "splitter", "script": "res://src/combat/splitter.gd"},
 	"fuse_pod": {"kind": "splitter_pod", "script": "res://src/combat/splitter_pod.gd"},
+	"cup_break": {"kind": "catch_trap", "script": "res://src/combat/catch_trap.gd"},
+	"stream_cut": {"kind": "dispatcher", "script": "res://src/combat/dispatcher.gd"},
 	"ring_out": {"kind": "ballast_heavy", "script": "res://src/combat/ballast_heavy.gd"},
 	"gap_sling": {"kind": "gap_net", "script": "res://src/combat/gap_net.gd"},
 	"heavy_roll": {"kind": "mag_trapper", "script": "res://src/combat/mag_trapper.gd"},
