@@ -280,8 +280,8 @@ def tin_cart(p, v, rng):
         else:
             p.cyl(0.2, 0.34, (1.8, 0.8, 0.17), C["iron_light"], segs=6, r2=0.23, style="hard")  # pail on ground
     else:
-        # Tipped onto its side: the bin is laid down a quarter turn about X (mouth toward -Y, no open top),
-        # so every part below is the upright bin's part with y,z -> -z,y+0.83 and its box sizes swapped.
+        # Tipped onto its side: a hand-laid box set, not a transform of the upright parts. Mouth toward -Y,
+        # no open top; a chassis plate on top, five slats on the open side, two end boards and a floor plank.
         p.box((2.2, 1.3, 0.2), (0, -0.7, 0.83), C["timber_dark"])  # chassis plate, now the top
         for k in range(5):
             p.box((0.42, 0.1, 0.7), (-0.9 + k * 0.45, -0.15 - k * 0.01, 0.43), tint(C["timber_pale"], rng), rot=(0, -0.1 * k, 0))
