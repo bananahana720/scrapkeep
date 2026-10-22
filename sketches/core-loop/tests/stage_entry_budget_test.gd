@@ -84,6 +84,7 @@ const GATE_SPIN_MAX := 20000000
 const FRAMES_WATCH_MAX := 3000
 const SETTLE_TICKS := 30
 const WAIT_TICKS_MAX := 3600
+const CATCH_UP_SPIN := 10000000
 const TIMED := ["activities", "set_dressing"]
 
 var _game
@@ -165,11 +166,26 @@ func _run() -> void:
 	# Under SimClock.ticks (set above) prepare() builds it whole inside the call (terrain.gd
 	# _worker_builds), so the wait loop below ends at once; the entry handlers timed here run after it.
 	var terrain = _game.ctx.terrain
+	# A slow frame just before the build (a spin of 0.1 s or more), so the frames after it step physics several times
+	# before any _process (the 4080's case in row 26b): the wait below must still see both plans started.
+	var spun := 0
+	for i in CATCH_UP_SPIN:
+		spun += i
+	await physics_frame
 	terrain.prepare(2)
 	var waited := 0
 	while not terrain.is_ready(2) and waited < WAIT_TICKS_MAX:
 		await physics_frame
 		waited += 1
+	# natural.gd and set_dressing.gd start stage 2's worker plans from _process once its ground is ready; in play the
+	# Warden fight runs many frames before the exit. A slow frame makes the next one step physics several times before
+	# any _process (the 4080, scrapkeep#235 row 26b), so the ticks below can end with neither plan started and the
+	# exit planning on the main thread. Wait for the frames play always has.
+	var frames_waited := 0
+	while not _plans_started() and frames_waited < WAIT_TICKS_MAX:
+		await process_frame
+		frames_waited += 1
+	_t.check("stage 2's natural and dressing plans were on workers before the exit, as in play", _plans_started(), "%d frames" % frames_waited)
 	_game.player.reset_to(terrain.spawn_point(1) + Vector3.UP * 2.0, Vector3(0.0, 0.0, 6.0))
 	await _ticks(2)
 	var run = _game.ctx.run
@@ -240,6 +256,7 @@ func _watch_frames(gate := {}) -> Dictionary:
 	var by_frame := {}
 	var dress_at := {}
 	var slice_at := {}
+	var steps_at := {}
 	var frames := 0
 	var dressing_frames := -1
 	var dressing_done: bool = not dressing.batches.is_empty() and not dressing._dress_when_planned
@@ -250,7 +267,7 @@ func _watch_frames(gate := {}) -> Dictionary:
 	while frames < FRAMES_WATCH_MAX and not (dressing_done and props.is_built()):
 		await process_frame
 		frames += 1
-		_read_frame(by_frame, dressing, props, dress_at, slice_at, was_waiting, views_was)
+		_read_frame(by_frame, dressing, props, dress_at, slice_at, steps_at, was_waiting, views_was)
 		was_waiting = dressing._dress_when_planned
 		views_was = props.views.size()
 		# The quick-exit control: the planted plan is held until ParkProps' worker is done (or already taken),
@@ -280,7 +297,7 @@ func _watch_frames(gate := {}) -> Dictionary:
 		gate.how = "after the watch"
 		gate.sem.post()
 	await process_frame
-	_read_frame(by_frame, dressing, props, dress_at, slice_at, was_waiting, views_was)
+	_read_frame(by_frame, dressing, props, dress_at, slice_at, steps_at, was_waiting, views_was)
 	var stamps := by_frame.keys()
 	stamps.sort()
 	# Frame 0 is the entry frame: the handlers and the nodes' own _process, which share the engine frame.
@@ -289,25 +306,29 @@ func _watch_frames(gate := {}) -> Dictionary:
 	var ms: Array[float] = [(dressing.last_entry_usec + props.last_entry_usec) / 1000.0 + first_process]
 	var dress_ran: Array[bool] = [false]
 	var slice_ran: Array[bool] = [false]
+	var steps: Array = [steps_at.get(stamps[0], PackedStringArray()) if not stamps.is_empty() else PackedStringArray()]
 	for stamp in stamps.slice(1):
 		ms.append(by_frame[stamp])
+		steps.append(steps_at.get(stamp, PackedStringArray()))
 		dress_ran.append(dress_at.has(stamp))
 		slice_ran.append(slice_at.has(stamp))
 		deferred_built = deferred_built or dress_at.has(stamp)
-	return {"entry_parts": entry_parts, "ms": ms, "dress_ran": dress_ran, "slice_ran": slice_ran, "frames": frames, "dressing_frames": dressing_frames, "dressing_done": dressing_done,
+	return {"entry_parts": entry_parts, "ms": ms, "dress_ran": dress_ran, "slice_ran": slice_ran, "steps": steps, "frames": frames, "dressing_frames": dressing_frames, "dressing_done": dressing_done,
 		"props_built": props.is_built(), "deferred_built": deferred_built, "views": props.views.size(), "batches": dressing.batches.size(),
 		"children": dressing.get_child_count(), "instances": props.instances.size(), "far_reads": ParkProps.far_reads - reads_was}
 
 
 # One wake's readings: both nodes' last _process, summed under the frame they ran in. A frame only one of them
 # stamped counts that one alone; state changes since the last wake belong to the frame the stamps name.
-func _read_frame(by_frame: Dictionary, dressing, props, dress_at: Dictionary, slice_at: Dictionary, was_waiting: bool, views_was: int) -> void:
+func _read_frame(by_frame: Dictionary, dressing, props, dress_at: Dictionary, slice_at: Dictionary, steps_at: Dictionary, was_waiting: bool, views_was: int) -> void:
 	for node in [dressing, props]:
 		var stamp: int = node.last_process_frame
 		var key := "%d_%d" % [node.get_instance_id(), stamp]
 		if stamp >= 0 and not _seen.has(key):
 			_seen[key] = true
 			by_frame[stamp] = by_frame.get(stamp, 0.0) + node.last_process_usec / 1000.0
+			if node == props:
+				steps_at[stamp] = props.last_steps
 	if was_waiting and not dressing._dress_when_planned:
 		dress_at[dressing.last_process_frame] = true
 	if props.views.size() > views_was:
@@ -319,6 +340,7 @@ func _read_frame(by_frame: Dictionary, dressing, props, dress_at: Dictionary, sl
 func _check_frames(label: String, watch: Dictionary, quick: bool) -> void:
 	var ms: Array = watch.ms
 	var worst := 0.0
+	var worst_at := 0
 	var over := 0
 	var slices := 0
 	var dress_frames := 0
@@ -330,7 +352,9 @@ func _check_frames(label: String, watch: Dictionary, quick: bool) -> void:
 		# 9.3 ms with the 60-vignette fixture, up to 15.7 ms under load) and the frame's first _process are
 		# reported here, not budgeted.
 		if i > 0:
-			worst = maxf(worst, ms[i])
+			if ms[i] > worst:
+				worst = ms[i]
+				worst_at = i
 			if ms[i] > FRAME_MS:
 				over += 1
 		if watch.slice_ran[i]:
@@ -349,6 +373,8 @@ func _check_frames(label: String, watch: Dictionary, quick: bool) -> void:
 		label, ms[0], parts.dressing_entry, parts.props_entry, parts.process])
 	print("stage_entry_budget_test: %s: %d frames, worst after entry %.1f ms, %d props slice frames, dressing deferred build %s (%d frames), same frame %d, adjacent %d, props instances %d, views %d, frames ms [%s]" % [
 		label, watch.frames, worst, slices, watch.deferred_built, dress_frames, overlap_same, overlap_adjacent, watch.instances, watch.views, ", ".join(listing)])
+	print("stage_entry_budget_test: %s: worst frame %d (%.1f ms): dressing build %s, props steps [%s]" % [
+		label, worst_at, worst, watch.dress_ran[worst_at], ", ".join(watch.steps[worst_at])])
 	_t.check("%s: every frame after the entry frame within %.0f ms for the dressing's build and ParkProps' slices together" % [label, FRAME_MS], over == 0 and ms.size() > 1,
 		"worst %.1f ms, %d of %d frames over" % [worst, over, ms.size()])
 	_t.check("%s: the dressing and ParkProps both finished inside the timed frames" % label, watch.dressing_done and watch.props_built and watch.frames < FRAMES_WATCH_MAX,
@@ -388,6 +414,7 @@ func _check_watch_builds_same(watch: Dictionary) -> void:
 	props.finish()
 	_t.check("the timed ParkProps build equals a whole build by finish()", watch.instances > 0 and props.instances.size() == watch.instances and props.views.size() == watch.views,
 		"timed %d instances %d views, finish() %d and %d" % [watch.instances, watch.views, props.instances.size(), props.views.size()])
+	_check_far_merge_exact(props)
 	var dressing = _game.presentation.set_dressing
 	var terrain = _game.ctx.terrain
 	var map = terrain.map_for(2)
@@ -399,6 +426,80 @@ func _check_watch_builds_same(watch: Dictionary) -> void:
 	want += fresh.get("clutter", {}).size()
 	_t.check("the timed dressing build has the batch and child counts of a fresh plan", want > 0 and watch.batches == want and watch.children == want,
 		"timed %d batches %d children, fresh plan %d" % [watch.batches, watch.children, want])
+
+
+# ParkProps copies a vignette's far props into its merged mesh a few members a step, with whole-array transforms
+# (scrapkeep#235 row 26b). Each merged mesh must equal, byte for byte, the one the single per-vertex loop made before.
+func _check_far_merge_exact(props) -> void:
+	var compared := 0
+	var unequal := []
+	for job: Dictionary in ParkProps.jobs(props.instances, props._low):
+		if job["litter"]:
+			continue
+		var groups := {}
+		var keys := []
+		for inst: Dictionary in job["members"]:
+			if inst["class"] == ParkProps.HERO:
+				continue
+			var key := "%s_%s" % [inst["kind"], inst["v"]]
+			if not groups.has(key):
+				groups[key] = []
+				keys.append(key)
+			groups[key].append(inst)
+		var members := []
+		for key in keys:
+			members.append_array(groups[key])
+		var want := _far_reference(members, props._kit)
+		var holder: Node = props.get_node_or_null(NodePath(String(job["name"])))
+		var view: MeshInstance3D = holder.get_node_or_null("Far_L2") if holder != null else null
+		if want.is_empty() and view == null:
+			continue
+		compared += 1
+		if want.is_empty() or view == null:
+			unequal.append(job["name"])
+			continue
+		var reference := ArrayMesh.new()
+		reference.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, want)
+		if var_to_bytes(reference.surface_get_arrays(0)) != var_to_bytes(view.mesh.surface_get_arrays(0)):
+			unequal.append(job["name"])
+	_t.check("every merged far mesh equals the per-vertex merge, byte for byte", compared > 0 and unequal.is_empty(),
+		"%d compared, unequal %s" % [compared, str(unequal)])
+
+
+# The far merge as one loop over every member and vertex (park_props.gd before scrapkeep#235 row 26b).
+static func _far_reference(members: Array, kit: Dictionary) -> Array:
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colours := PackedColorArray()
+	var indices := PackedInt32Array()
+	var centre := Vector3.ZERO
+	for inst: Dictionary in members:
+		centre += (inst["pos"] as Vector3) / members.size()
+	for inst: Dictionary in members:
+		var source := ParkProps._far_source(ParkProps._lod_paths(kit, inst)[2])
+		if source.is_empty():
+			continue
+		var src_v: PackedVector3Array = source[Mesh.ARRAY_VERTEX]
+		var src_n = source[Mesh.ARRAY_NORMAL]
+		var src_c = source[Mesh.ARRAY_COLOR]
+		var tr := ParkProps._transform(inst)
+		var basis := (inst["basis"] as Basis)
+		var base := vertices.size()
+		for k in src_v.size():
+			vertices.append(tr * src_v[k] - centre)
+			normals.append((basis * (src_n[k] if src_n != null else Vector3.UP)).normalized())
+			colours.append(src_c[k] if src_c != null else Color.WHITE)
+		for index in (source[Mesh.ARRAY_INDEX] as PackedInt32Array):
+			indices.append(base + index)
+	if vertices.is_empty():
+		return []
+	var built := []
+	built.resize(Mesh.ARRAY_MAX)
+	built[Mesh.ARRAY_VERTEX] = vertices
+	built[Mesh.ARRAY_NORMAL] = normals
+	built[Mesh.ARRAY_COLOR] = colours
+	built[Mesh.ARRAY_INDEX] = indices
+	return built
 
 
 # The planted control (lesson 34): the stage entered the moment its plan starts on a worker (the
@@ -482,6 +583,12 @@ func _check_prepared() -> void:
 
 
 # Stage 2's natural plan, dressing plan and director map were each made on a worker before the entry.
+func _plans_started() -> bool:
+	var plans = load(NATURAL_PATH).get("_plans")
+	var key: int = load(NATURAL_PATH).call("_root_key", _game.ctx.terrain, 2)
+	return plans is Dictionary and plans.has(key) and not _game.presentation.set_dressing._prep.is_empty()
+
+
 func _check_stage_two_workers() -> void:
 	var natural = load(NATURAL_PATH)
 	var plans = natural.get("_plans")
