@@ -171,7 +171,7 @@ const DEFS := [
 			{"id": "draft_plate", "kinds": ["foreman", "plated_brute", "catch_trap"]},
 			{"id": "draft_dispatch", "kinds": ["dispatcher", "gap_net", "ballast_heavy"]},
 			# w18: presses the plating axis (Sable, Tally). The Dig cannot take it: its kill-first share would fall under 0.25.
-			{"id": "plate_press_draft", "kinds": ["plated_brute", "plated_brute", "ballast_heavy"]},
+			{"id": "plate_press_draft", "kinds": ["plated_brute", "swatter"]},
 		], "elite": ELITE_HIGHDRAFT, "warden_variant": ""},
 	{"stage": 6, "world": 3, "music": {"theme": 2, "ace": "highdraft_crown"}, "warden_family": "mind", "name": "Highdraft: the crown", "map": "highdraft_crown", "threat": 1.4,
 		"unlock_base": 4, "ancient": "mind_hand",
@@ -185,7 +185,7 @@ const DEFS := [
 			{"id": "crown_linked", "kinds": ["linker", "ballast_heavy", "line_cutter", "kite_drone"]},
 			{"id": "crown_guard", "kinds": ["dispatcher", "deflector", "gap_net"]},
 			{"id": "crown_trap", "kinds": ["foreman", "mag_trapper", "mag_trapper", "ballast_heavy"]},
-			{"id": "plate_press_crown", "kinds": ["plated_brute", "plated_brute", "ballast_heavy"]},
+			{"id": "plate_press_crown", "kinds": ["plated_brute", "swatter"]},
 		], "elite": ELITE_HIGHDRAFT, "warden_variant": "choir"},
 ]
 
