@@ -1,0 +1,101 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+Vulkan 1.4.351 - Forward+ - Using Device #1: NVIDIA - NVIDIA GeForce RTX 3060
+ERROR: Condition "!present_queue_family" is true. Returning: FAILED
+   at: initialize (servers/rendering/rendering_device.cpp:8407)
+WARNING: Display driver x11 failed, falling back to wayland.
+   at: setup2 (main/main.cpp:3380)
+WARNING: xdg-toplevel-icon protocol not found! Cannot set window icon.
+   at: init (platform/linuxbsd/wayland/wayland_thread.cpp:5642)
+Vulkan 1.4.351 - Forward+ - Using Device #1: NVIDIA - NVIDIA GeForce RTX 3060
+
+WARNING: instance_reset_physics_interpolation() is deprecated.
+   at: _instance_reset_physics_interpolation_bind_compat_104269 (servers/rendering/rendering_server.compat.inc:62)
+   GDScript backtrace (most recent call first):
+       [0] make_render (res://src/world/park/park_terrain.gd:112)
+       [1] build (res://src/world/terrain.gd:163)
+       [2] setup (res://src/world/world.gd:112)
+       [3] _module (res://src/game.gd:473)
+       [4] _ready (res://src/game.gd:233)
+       [5] _run (res://tools/park_props_audit.gd:182)
+SCRAPKEEP_MENU_READY ms=8571 profile=default pilots=1/6
+ACE music: generator ring 8191 frames, queue target 3072
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-2e08ecc4/sketches/core-loop/assets/music_ace/title/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_named (res://src/presentation/audio.gd:1241)
+       [2] _menu_home (res://src/presentation/audio.gd:1230)
+       [3] _flush_flow (res://src/presentation/audio.gd:3436)
+       [4] park_transport (res://src/presentation/audio.gd:1954)
+       [5] _physics_process (res://src/world/world.gd:360)
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-2e08ecc4/sketches/core-loop/assets/music_ace/spillway/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3360)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+park_props_audit: park_dam built in 0 frames, flow stage
+park_props_audit: 13402 items in 1756 nodes, 81 kinds, by category ["props", "clutter", "scatter", "anchors", "rows", "scenery", "landforms"] [2336, 1038, 3882, 6059, 0, 33, 54]
+park_props_audit: sample 0 draws 349 prims 634754
+park_props_audit: sample 7 draws 255 prims 480093
+park_props_audit: sample 13 draws 242 prims 447004
+park_props_audit: sample 20 draws 263 prims 431804
+park_props_audit: sample 24 draws 284 prims 460181 still park_dam-24--69_-147.png
+park_props_audit: sample 26 draws 310 prims 536627
+park_props_audit: sample 32 draws 295 prims 515670 still park_dam-32--32_49.png
+park_props_audit: sample 33 draws 321 prims 598602
+park_props_audit: sample 40 draws 330 prims 491501
+park_props_audit: sample 46 draws 263 prims 407823
+park_props_audit: sample 53 draws 245 prims 468913
+park_props_audit: sample 55 draws 252 prims 544818 still park_dam-55--27_548.png
+park_props_audit: sample 59 draws 152 prims 222309
+park_props_audit: sample 66 draws 212 prims 471570
+park_props_audit: sample 72 draws 350 prims 498555
+park_props_audit: sample 79 draws 370 prims 549548
+park_props_audit: sample 86 draws 286 prims 530818
+park_props_audit: sample 92 draws 301 prims 521390
+park_props_audit: sample 97 draws 299 prims 556175 still park_dam-97--85_7.png
+park_props_audit: sample 99 draws 318 prims 594913
+park_props_audit: sample 105 draws 317 prims 522397
+park_props_audit: sample 112 draws 273 prims 445509
+park_props_audit: sample 113 draws 299 prims 514995 still park_dam-113--105_366.png
+park_props_audit: sample 119 draws 257 prims 531764
+park_props_audit: sample 125 draws 344 prims 366561
+park_props_audit: sample 132 draws 330 prims 678380
+park_props_audit: sample 138 draws 324 prims 738441
+park_props_audit: sample 145 draws 289 prims 596581
+park_props_audit: sample 152 draws 312 prims 529089
+park_props_audit: sample 155 draws 326 prims 581658 still park_dam-155--50_-37.png
+park_props_audit: sample 158 draws 311 prims 587815
+park_props_audit: sample 161 draws 330 prims 591960 still park_dam-161--15_109.png
+park_props_audit: sample 165 draws 280 prims 451169
+park_props_audit: sample 169 draws 306 prims 515741 still park_dam-169--17_417.png
+park_props_audit: sample 171 draws 240 prims 474988
+park_props_audit: sample 178 draws 323 prims 326946
+park_props_audit: sample 185 draws 351 prims 584170
+park_props_audit: sample 191 draws 316 prims 756021
+park_props_audit: sample 198 draws 293 prims 530043
+park_props_audit: sample 204 draws 308 prims 542066
+park_props_audit: sample 211 draws 306 prims 555498
+park_props_audit: sample 217 draws 301 prims 586476
+park_props_audit: sample 224 draws 267 prims 511774
+park_props_audit: sample 226 draws 259 prims 519165 still park_dam-226-76_451.png
+park_props_audit: sample 231 draws 222 prims 414182
+park_props_audit: sample 233 draws 281 prims 636673 still park_dam-233--132_-234.png
+park_props_audit: sample 237 draws 208 prims 375342
+park_props_audit: sample 239 draws 310 prims 767916 still park_dam-239-93_285.png
+park_props_audit: sample 244 draws 306 prims 570226
+park_props_audit: sample 250 draws 224 prims 425224
+park_props_audit: sample 254 draws 297 prims 548055 still park_dam-254-86_562.png
+park_props_audit: sample 257 draws 272 prims 512518
+park_props_audit: contact sheet exit 1 Traceback (most recent call last):
+  File "/home/andrew/scratch/w18/render/wt-2e08ecc4/sketches/core-loop/tools/park_props_contact.py", line 11, in <module>
+    from PIL import Image, ImageDraw, ImageFont
+ModuleNotFoundError: No module named 'PIL'
+park_props_audit: done park_dam in 26 s
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_scenario (servers/rendering/renderer_scene_cull.cpp:844)
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_base (servers/rendering/renderer_scene_cull.cpp:616)

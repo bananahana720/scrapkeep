@@ -1,0 +1,61 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+Vulkan 1.4.351 - Forward+ - Using Device #1: NVIDIA - NVIDIA GeForce RTX 3060
+ERROR: Condition "!present_queue_family" is true. Returning: FAILED
+   at: initialize (servers/rendering/rendering_device.cpp:8407)
+WARNING: Display driver x11 failed, falling back to wayland.
+   at: setup2 (main/main.cpp:3380)
+WARNING: xdg-toplevel-icon protocol not found! Cannot set window icon.
+   at: init (platform/linuxbsd/wayland/wayland_thread.cpp:5642)
+Vulkan 1.4.351 - Forward+ - Using Device #1: NVIDIA - NVIDIA GeForce RTX 3060
+
+WARNING: instance_reset_physics_interpolation() is deprecated.
+   at: _instance_reset_physics_interpolation_bind_compat_104269 (servers/rendering/rendering_server.compat.inc:62)
+   GDScript backtrace (most recent call first):
+       [0] make_render (res://src/world/park/park_terrain.gd:112)
+       [1] build (res://src/world/terrain.gd:163)
+       [2] setup (res://src/world/world.gd:112)
+       [3] _module (res://src/game.gd:473)
+       [4] _ready (res://src/game.gd:233)
+       [5] _run (res://tools/park_props_audit.gd:174)
+SCRAPKEEP_MENU_READY ms=8411 profile=default pilots=1/6
+ACE music: generator ring 8191 frames, queue target 3072
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-f259e8cf/sketches/core-loop/assets/music_ace/title/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_named (res://src/presentation/audio.gd:1241)
+       [2] _menu_home (res://src/presentation/audio.gd:1230)
+       [3] _flush_flow (res://src/presentation/audio.gd:3436)
+       [4] park_transport (res://src/presentation/audio.gd:1954)
+       [5] _physics_process (res://src/world/world.gd:360)
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-f259e8cf/sketches/core-loop/assets/music_ace/spillway/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3360)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+park_props_audit: park_dam built in 0 frames, flow stage
+park_props_audit: 11066 items in 147 nodes, 66 kinds, by category ["props", "clutter", "scatter", "anchors", "rows", "scenery", "landforms"] [0, 1038, 3882, 6059, 0, 33, 54]
+park_props_audit: sample 24 draws 268 prims 417576 still park_dam-24--69_-147.png
+park_props_audit: sample 32 draws 282 prims 495479 still park_dam-32--32_49.png
+park_props_audit: sample 55 draws 227 prims 400170 still park_dam-55--27_548.png
+park_props_audit: sample 97 draws 322 prims 762184 still park_dam-97--85_7.png
+park_props_audit: sample 113 draws 276 prims 466090 still park_dam-113--105_366.png
+park_props_audit: sample 155 draws 339 prims 750322 still park_dam-155--50_-37.png
+park_props_audit: sample 161 draws 321 prims 691064 still park_dam-161--15_109.png
+park_props_audit: sample 169 draws 299 prims 546038 still park_dam-169--17_417.png
+park_props_audit: sample 226 draws 261 prims 542736 still park_dam-226-76_451.png
+park_props_audit: sample 233 draws 291 prims 620021 still park_dam-233--132_-234.png
+park_props_audit: sample 239 draws 304 prims 707915 still park_dam-239-93_285.png
+park_props_audit: sample 254 draws 291 prims 527289 still park_dam-254-86_562.png
+park_props_audit: contact sheet exit 1 Traceback (most recent call last):
+  File "/home/andrew/scratch/w18/render/wt-f259e8cf/sketches/core-loop/tools/park_props_contact.py", line 11, in <module>
+    from PIL import Image, ImageDraw, ImageFont
+ModuleNotFoundError: No module named 'PIL'
+park_props_audit: done park_dam in 22 s
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_scenario (servers/rendering/renderer_scene_cull.cpp:844)
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_base (servers/rendering/renderer_scene_cull.cpp:616)

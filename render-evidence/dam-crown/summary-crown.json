@@ -1,0 +1,247 @@
+{
+	"adapter": "NVIDIA GeForce RTX 3060",
+	"bare_ground_share": 33.8,
+	"bare_samples": 78,
+	"bare_share_pct": 34.4,
+	"constants": {
+		"bare_min_core_near": 5,
+		"bare_min_kinds_far": 4,
+		"bare_rule": "BARE if (props+clutter+scenery+rows) within near_m in view < bare_min_core_near, or distinct kinds within far_m in view < bare_min_kinds_far",
+		"camera": {
+			"arm_m": 9.0,
+			"far": 700.0,
+			"fov": 72.5,
+			"name": "mid",
+			"pitch_rad": -0.3,
+			"source": "src/movement/chase_camera.gd: speed_arm 7.5..10.5, FOV_REST 65..FOV_FAST 80, pitch -0.30, anchor +0.8 m; mid = half speed",
+			"up_m": 0.8
+		},
+		"categories": [
+			"props",
+			"clutter",
+			"scatter",
+			"anchors",
+			"rows",
+			"scenery",
+			"landforms"
+		],
+		"dedup_m": 10.0,
+		"draw_label": "OpenGL compatibility proxy, cloud llvmpipe, not a frame-cost proof",
+		"far_m": 120.0,
+		"near_m": 60.0,
+		"step_m": 25.0
+	},
+	"core_in_view_60": {
+		"median": 10.0,
+		"p10": 0.0
+	},
+	"density_exempt": 13,
+	"density_exempt_by": {
+		"arena": 6,
+		"telegraph": 7
+	},
+	"density_fail_windows": [
+		{
+			"at": [
+				9.7,
+				-441.9
+			],
+			"kinds": 1,
+			"line": "floor",
+			"start_m": 300.0
+		},
+		{
+			"at": [
+				8.0,
+				-476.3
+			],
+			"kinds": 0,
+			"line": "sable",
+			"start_m": 300.0
+		},
+		{
+			"at": [
+				-32.8,
+				-319.1
+			],
+			"kinds": 0,
+			"line": "tarn",
+			"start_m": 300.0
+		}
+	],
+	"density_open_checked": 0,
+	"density_open_rejected": [],
+	"density_pass": 25,
+	"density_rule": "3+ distinct park-prop kinds in view within 60 m per 150 m window",
+	"density_share": 0.893,
+	"density_windows": 41,
+	"distinct_kinds_120": {
+		"median": 14.0,
+		"p10": 6.0
+	},
+	"draw_calls": {
+		"max": 542,
+		"median": 368.5,
+		"p95": 464.3
+	},
+	"draw_label": "OpenGL compatibility proxy, cloud llvmpipe, not a frame-cost proof",
+	"draw_sample_idx": [
+		0,
+		6,
+		11,
+		12,
+		17,
+		23,
+		24,
+		28,
+		29,
+		35,
+		41,
+		46,
+		52,
+		58,
+		64,
+		70,
+		75,
+		81,
+		85,
+		87,
+		93,
+		96,
+		99,
+		101,
+		104,
+		110,
+		116,
+		122,
+		127,
+		131,
+		133,
+		139,
+		142,
+		145,
+		151,
+		156,
+		162,
+		168,
+		174,
+		180,
+		185,
+		191,
+		197,
+		199,
+		203,
+		208,
+		209,
+		214,
+		220,
+		226
+	],
+	"draw_samples": 50,
+	"dressing_in_view_120": {
+		"median": 45.0,
+		"p10": 15.0
+	},
+	"dressing_in_view_60": {
+		"median": 10.0,
+		"p10": 0.0
+	},
+	"in_view_by_category": {
+		"anchors": {
+			"median_120": 4.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"clutter": {
+			"median_120": 12.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"landforms": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"props": {
+			"median_120": 25.0,
+			"median_60": 5.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"rows": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"scatter": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"scenery": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		}
+	},
+	"items_collected": 9753,
+	"kinds_collected": 48,
+	"line_lengths_m": {
+		"cannon": 1592.2,
+		"floor": 1376.4,
+		"kest": 1548.1,
+		"rivet": 1466.7,
+		"sable": 1674.9,
+		"tally": 1570.2,
+		"tarn": 1837.7
+	},
+	"longest_bare_ground_run_m": 200.0,
+	"longest_bare_run_m": 200.0,
+	"map": "park_crown",
+	"poses_replayed": false,
+	"primitives": {
+		"max": 908629,
+		"median": 631053.0,
+		"p95": 809474.0
+	},
+	"props_only_draw_delta": {
+		"max": 62,
+		"median": 23.5,
+		"park_props_nodes": 2068
+	},
+	"props_only_primitive_delta": {
+		"max": 128033,
+		"median": 25834.5
+	},
+	"props_peak_pose": {
+		"breakdown": {
+			"hero/L0/tall": 1,
+			"hero/L1/tall": 3,
+			"hero/L2/tall": 5,
+			"litter/L1/low": 2,
+			"litter/L1/mid": 1,
+			"vignette/L0/low": 1,
+			"vignette/L0/mid": 8,
+			"vignette/L1/low": 5,
+			"vignette/L1/mid": 23,
+			"vignette/L2/merged": 9
+		},
+		"delta": 62,
+		"idx": 41,
+		"x": 5.7,
+		"z": 118.8
+	},
+	"runtime_s": 29.3,
+	"samples": 227,
+	"stage": 6,
+	"step_m": 25.0,
+	"union_line_km": 5.68,
+	"union_samples": 227,
+	"void_poses": 2
+}
