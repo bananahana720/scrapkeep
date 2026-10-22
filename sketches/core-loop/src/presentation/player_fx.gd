@@ -106,6 +106,9 @@ const SMASH_FRAME_MPS := [32.0, 18.0]
 # An impact frame holds for rendered frames, not seconds: 3 frames is 50 ms at 60 fps.
 const FRAME_FRAMES := 3
 const FRAME_GAP_S := 0.6
+# A warning's box is clipped this far (m) past the camera's near plane, so every crossing
+# point is in front of the lens and projects.
+const NEAR_EPSILON := 0.01
 
 # GPU particle ceilings: pool x max, pinned by player_fx_test.
 const FLECKS := 96
@@ -636,14 +639,14 @@ func impact_frame(at: Vector3, strength: float) -> bool:
 
 
 # The screen rect of every hostile warning, grown by `margin` px: its visual meshes' world
-# boxes merged into one box, whose 8 corners are projected through `cam`. A corner behind
-# the camera has no screen position and is skipped; a warning with every corner behind is
-# skipped. The merged box is conservative (see _merge_meshes). Reusable by any 2D
-# layer that must not cover warnings. The nodes come from Threat.GROUP, which every hostile
-# mark joins (telegraph.gd:236-237 for combat telegraphs, boss/hazard.gd:110-111 for boss
-# and world-event hazards) and no neutral or owned mark does (a Silo amber ring, a Warden
-# lift). Neither class keeps screen bounds (they keep shape numbers; the geometry lives in
-# the Painter's meshes), so the meshes are the footprint.
+# boxes merged into one box, clipped at the camera's near plane and projected through `cam`
+# (see _project_box); a warning with every corner behind is skipped. The merged box is
+# conservative (see _merge_meshes). Reusable by any 2D layer that must not cover warnings.
+# The nodes come from Threat.GROUP, which every hostile mark joins (telegraph.gd:236-237 for
+# combat telegraphs, boss/hazard.gd:110-111 for boss and world-event hazards) and no neutral
+# or owned mark does (a Silo amber ring, a Warden lift). Neither class keeps screen bounds
+# (they keep shape numbers; the geometry lives in the Painter's meshes), so the meshes are
+# the footprint.
 static func warning_rects(tree: SceneTree, cam: Camera3D, margin: float) -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	if tree == null or cam == null:
@@ -663,8 +666,8 @@ static func warning_rects(tree: SceneTree, cam: Camera3D, margin: float) -> Arra
 
 # Grows `merged` ([box, any]) by the world box of every visible mesh under `node`. One box
 # per warning means 8 projections instead of 8 per mesh. The merged box holds every mesh's
-# box, so its screen rect is conservative: it can only be larger than the union of the
-# per-mesh rects, never smaller, and a warning stays protected.
+# box, so its screen rect is conservative: with the near-plane clip in _project_box it covers
+# the whole on-screen footprint of every mesh, and a warning stays protected.
 static func _merge_meshes(node: Node, merged: Array) -> void:
 	for child in node.get_children():
 		if child is Node3D and not child.visible:
@@ -678,16 +681,36 @@ static func _merge_meshes(node: Node, merged: Array) -> void:
 		_merge_meshes(child, merged)
 
 
-# Grows span (low, high) by the screen position of the 8 corners of `box`; a corner behind
-# the camera has no screen position and is skipped.
+# Grows span (low, high) by the screen footprint of `box`: the 8 corners in front of the
+# camera, and where each of the 12 edges crosses a plane just beyond the near plane. A box
+# that crosses the near plane reaches the screen edge nearest the camera (the bottom, where
+# the frame's band draws), and the crossing points are what put that part in the rect. A
+# box with every corner behind adds nothing.
 static func _project_box(box: AABB, cam: Camera3D, span: Array) -> void:
+	var forward := -cam.global_transform.basis.z
+	var origin := cam.global_transform.origin
+	var plane := cam.near + NEAR_EPSILON
+	var corners: Array[Vector3] = []
+	var depths: Array[float] = []
 	for c in 8:
 		var corner: Vector3 = box.position + box.size * Vector3(c & 1, (c >> 1) & 1, (c >> 2) & 1)
-		if cam.is_position_behind(corner):
-			continue
-		var at := cam.unproject_position(corner)
-		span[0] = span[0].min(at)
-		span[1] = span[1].max(at)
+		corners.append(corner)
+		depths.append((corner - origin).dot(forward))
+		if depths[c] > plane:
+			_grow_span(span, cam.unproject_position(corner))
+	# The edges join corners that differ in one bit.
+	for c in 8:
+		for bit in [1, 2, 4]:
+			var other: int = c | bit
+			if other == c or (depths[c] > plane) == (depths[other] > plane):
+				continue
+			var t: float = (plane - depths[c]) / (depths[other] - depths[c])
+			_grow_span(span, cam.unproject_position(corners[c].lerp(corners[other], t)))
+
+
+static func _grow_span(span: Array, at: Vector2) -> void:
+	span[0] = span[0].min(at)
+	span[1] = span[1].max(at)
 
 
 # Manga focus lines: ink wedges pointing at the hit from the screen edge, only in the outer

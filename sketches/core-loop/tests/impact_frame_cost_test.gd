@@ -11,6 +11,7 @@ const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 
 const SCREEN := Vector2(1920.0, 1080.0)
 
@@ -32,6 +33,7 @@ func _run() -> void:
 	await _overflow()
 	_placement()
 	await _rects()
+	await _near_plane()
 	await _frames(2)
 	quit(t.verdict())
 
@@ -265,4 +267,95 @@ func _rects() -> void:
 		for mark in marks:
 			mark.free()
 		await _frames(1)
+	world.free()
+
+
+# A warning that crosses the camera's near plane reaches the screen edge nearest the camera,
+# the bottom, where the frame's band draws; projecting only the corners in front of the
+# lens left that part out. The camera sits where the chase camera puts it: the arm is 8 m
+# (chase_camera.gd:80, spring_length) at the default pitch (chase_camera.gd:36, -0.30 rad),
+# fov 65 (chase_camera.gd:92), over a ball resting on flat ground at the origin.
+func _near_plane() -> void:
+	var world := Node3D.new()
+	root.add_child(world)
+	var rig := ChaseCamera.new()
+	var pitch: float = rig.pitch
+	rig.free()
+	var cam := Camera3D.new()
+	world.add_child(cam)
+	cam.fov = 65.0
+	cam.far = 700.0
+	cam.current = true
+	cam.basis = Basis(Vector3.RIGHT, pitch)
+	cam.position = Basis(Vector3.RIGHT, pitch) * Vector3(0.0, 0.0, 8.0)
+	await _frames(2)
+	var vp: Vector2 = cam.get_viewport().get_visible_rect().size
+	var forward := -cam.global_transform.basis.z
+	var tree := root.get_tree()
+	var ground := FlatGround.new()
+	# A big ring on the camera's foot (the ball): the camera sits above its edge, so its box
+	# crosses the near plane.
+	var big := Telegraph.ring(world, ground, Threat.Type.INSTANT, Vector3.ZERO, 20.0)
+	await _frames(2)
+	var rects := PlayerFx.warning_rects(tree, cam, 0.0)
+	# A point of the ring's own box, at its mid height, on the plane just past the near plane
+	# and on the view's centre line: it is on the ring's footprint and on screen only by way
+	# of the near-plane clip.
+	var merged_big := [AABB(), false]
+	PlayerFx._merge_meshes(big, merged_big)
+	var mid_y: float = (merged_big[0] as AABB).get_center().y
+	var depth := cam.near + PlayerFx.NEAR_EPSILON
+	var foot_z := cam.position.z + (depth - (mid_y - cam.position.y) * forward.y) / forward.z
+	var just_in_front := Vector3(0.0, mid_y, foot_z)
+	t.check("near plane: the probe point is inside the ring's box", (merged_big[0] as AABB).has_point(just_in_front), str(just_in_front))
+	var behind := (just_in_front - cam.position).dot(forward)
+	t.check("near plane: the probe point sits just past the near plane", absf(behind - depth) < 0.001, "%.4f m" % behind)
+	t.check("near plane: the camera is above the ring and part of its box is behind it", cam.is_position_behind(Vector3(0.0, 0.0, 20.0)) and not cam.is_position_behind(Vector3(0.0, 0.0, -20.0)))
+	var probe := cam.unproject_position(just_in_front)
+	t.check("near plane: one rect for the ring", rects.size() == 1, str(rects.size()))
+	if rects.size() == 1:
+		t.check("near plane: the rect reaches the bottom of the viewport", rects[0].end.y >= vp.y - 1.0, "%s in %s" % [rects[0], vp])
+		t.check("near plane: and covers the point just past the near plane", rects[0].has_point(probe), "%s in %s" % [probe, rects[0]])
+	# The control: the old projection, which skipped corners behind, misses both.
+	var skipped := _old_rects(tree, cam, 0.0)
+	t.check("near plane control: the skip-only projection stops short of the bottom", skipped.size() == 1 and skipped[0].end.y < vp.y - 1.0 and not skipped[0].has_point(probe), str(skipped))
+	big.free()
+	await _frames(1)
+
+	# A merge case: one warning of two small flat marks, each fully in front of the lens, whose
+	# merged box (the high one over the low one) has a corner behind it. The rect must still
+	# cover each mark's own projection.
+	var warning := Node3D.new()
+	warning.add_to_group(Threat.GROUP)
+	world.add_child(warning)
+	var own: Array[Rect2] = []
+	for at in [Vector3(0.0, 0.0, 7.0), Vector3(0.0, 8.0, 4.0)]:
+		var plane := MeshInstance3D.new()
+		var mesh := PlaneMesh.new()
+		mesh.size = Vector2(2.0, 2.0)
+		plane.mesh = mesh
+		plane.position = at
+		warning.add_child(plane)
+		var span := [Vector2(INF, INF), Vector2(-INF, -INF)]
+		var behind_any := false
+		for c in 8:
+			var corner: Vector3 = plane.global_transform * (plane.get_aabb().position + plane.get_aabb().size * Vector3(c & 1, (c >> 1) & 1, (c >> 2) & 1))
+			behind_any = behind_any or (corner - cam.position).dot(forward) <= cam.near
+			span[0] = span[0].min(cam.unproject_position(corner))
+			span[1] = span[1].max(cam.unproject_position(corner))
+		t.check("merge: the mark at %s is fully in front" % at, not behind_any)
+		own.append(Rect2(span[0], span[1] - span[0]))
+	await _frames(1)
+	var merged := [AABB(), false]
+	PlayerFx._merge_meshes(warning, merged)
+	var merged_behind := false
+	var box: AABB = merged[0]
+	for c in 8:
+		merged_behind = merged_behind or ((box.position + box.size * Vector3(c & 1, (c >> 1) & 1, (c >> 2) & 1)) - cam.position).dot(forward) <= cam.near
+	t.check("merge: the merged box has a corner behind the lens", merged_behind)
+	var merged_rects := PlayerFx.warning_rects(tree, cam, 0.0)
+	t.check("merge: one rect for the warning", merged_rects.size() == 1, str(merged_rects.size()))
+	if merged_rects.size() == 1:
+		t.check("merge: the rect covers both marks' own projections", merged_rects[0].grow(0.01).encloses(own[0]) and merged_rects[0].grow(0.01).encloses(own[1]), "%s vs %s" % [merged_rects[0], own])
+	warning.free()
 	world.free()
