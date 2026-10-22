@@ -15,6 +15,7 @@ var _wait := 0
 var _ticks := 0
 var _unended := 0
 var _timer_kept := false
+var _timer_scale := 0.0
 var _slow := 0
 var _runs: Array = []
 
@@ -66,13 +67,14 @@ func _process(_delta: float) -> bool:
 		5:
 			# A run on the sim clock (SimClock.ticks) keeps the wall timer: no tick counter starts.
 			SimClock.ticks = true
-			Engine.time_scale = 1.0
+			Engine.time_scale = 1.5
 			_ticks = 0
 			_game.hit_stop(0.06)
 			_timer_kept = _game._hit_stopped and _game._stop_ticks_left <= 0
 			_stage = 6
 		6:
 			if _ended():
+				_timer_scale = Engine.time_scale
 				SimClock.ticks = false
 				_stage = 7
 		7:
@@ -86,8 +88,8 @@ func _process(_delta: float) -> bool:
 				scales_ok = scales_ok and _runs[i][1] == scales[i]
 			_check("slowed ticks", counts_ok,
 				"0.06 s, 0.03 s and 0.5 s (capped at %.2f) slow %s ticks at %d ticks/s (want %s)" % [Game.HIT_STOP_MAX, [_runs[0][0], _runs[1][0], _runs[2][0]], Engine.physics_ticks_per_second, expect])
-			_check("sim clock keeps the timer", _timer_kept and Engine.time_scale == 1.0,
-				"with SimClock.ticks a stop starts with no tick counter (%s) and ends with the scale back at %s" % [_timer_kept, Engine.time_scale])
+			_check("sim clock keeps the timer", _timer_kept and _timer_scale == 1.5,
+				"with SimClock.ticks a stop starts with no tick counter (%s) and ends with the prior scale 1.5 back, got %s" % [_timer_kept, _timer_scale])
 			_check("stops end", _unended == 0, "%d stops still running 600 ticks after they began" % _unended)
 			_check("scale restored", scales_ok,
 				"scales before %s, after %s" % [scales, [_runs[0][1], _runs[1][1], _runs[2][1]]])
