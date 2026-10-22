@@ -1,6 +1,6 @@
 # park_flume dressing, wave 18 re-proof
 
-Base: merge of the Dressing foundation aaeb5e10 (stage/alpha-w18 9cd6805e plus the `scatter_row` rule) into the flume branch, then on 2026-10-22 merges of stage/alpha-w18 (b0e64a40, which holds b22a2ca3 and #175) and the line_clear_m/telegraph foundation (07748516); the commit "Apply flume line_clear_m and telegraph rules" follows them.
+Base: merge of the Dressing foundation aaeb5e10 (stage/alpha-w18 9cd6805e plus the `scatter_row` rule) into the flume branch, then on 2026-10-22 merges of stage/alpha-w18 (b0e64a40, which holds b22a2ca3 and #175) and the line_clear_m/telegraph foundation (07748516); the commit "Apply flume line_clear_m and telegraph rules" (8d109d1c27a262dc1ea58493a853088e44215ef8) follows them. Final merge (2026-10-22): stage/alpha-w18 f259e8cf421fc3c305b53ae104005dda40af9a41, then the accepted foundation e72fff7d96a88118e622f30658bcddb3105ae206 (gate round 7). The foundation commits after 07748516 change only the audit, static checks and `park_props_test`, so the pin is unchanged (plan check fingerprint 4063400762 equals the pin). The w18d audit below stands; no new audit and no `--open` windows were run.
 Brief: `sketches/core-loop/design-v3/park/dressing/KITS.md` (lands in #269), flume section.
 Method: automated headless Godot 4.7.2 on cloud llvmpipe (OpenGL compatibility proxy, not a frame-cost proof, not human feel).
 
@@ -86,3 +86,42 @@ Do the moved spots' stories still hold? Nearest feature is from `park_flume.json
 - 2026-10-21 Modeling M1 anchor gap tool (a run line copied without running it): the Blender rebuild command was run, exit 0, and the diff confirmed only the manifest `line_clear_m` line changed.
 - 2026-10-21 Animation #261 receipt (SHAs typed from memory): SHAs in this unit's report are pasted from `git rev-parse`.
 - 2026-10-21 Animation A1 (pkill by text pattern): no process was killed by pattern.
+
+## Reference boards
+
+Rulings 6330671507 (reference before making) and 6331210075 (board grounding). Boards settle look only, not mechanics, scale numbers or collision. I opened each board image before citing it.
+
+Boards (under `docs/art/reference/`):
+- `spillway/spillway-props-moodboard.jpg`, `spillway/spillway-landmarks-flume-carry.jpg`, `spillway/spillway-landmarks-moodboard.jpg`;
+- `style/style-palette-moodboard.jpg`, `style/style-materials-moodboard.jpg`, `style/style-shape-moodboard.jpg`;
+- `pilots/pilots-balls-heft-moodboard.jpg` (scale, relative only).
+
+**Palette roles.** The Spillway props board sets sandstone, oxide, charcoal, petrol, bone and copper; the carry board shows timber trestles, sage shrubs and sandstone ground. The kit palette (`C` in `tools/blender/park/props/kit.py` lines 59-67, used by `flume.py`) sits in the Terrain and Harmless roles: sandstone, timber, concrete and canvas (Drying alcove cloth, Survey bag); charcoal/iron/cable for the Seals and hoses blacks; bone; `verdigris` (5f8a7c, 4 uses in `flume.py`) for the petrol enamel of the sluice and pump panels. Kit colours outside the board's 13 chips: the concrete greys, timber browns, canvas tints, `rust`, and the shrub greens `leaf`, `leaf_dark`, `dry_grass`. The boards show all of them as materials and vegetation (trestles, stone, shrubs, Oxide rust), not as roles, so I read them as inside the board's world. `kit.py` line 69 bans HAZARD, ANCIENT and MINT hexes plus near colours.
+
+**Shape language.** Broad worn, soft toy shapes: `flume.py` builds with `style="round"` and `hard_smooth` blobs, low sleepers (line 61, "never a crate"), draped shirts, and rounded shed and hearth masses, like the Pump repair and Wheelhouse panels. Silhouettes stay low and wide beside the tall machinery.
+
+**Materials.** The kit uses no brass anywhere: no `d9b44a`, `brass`, amber or copper hex appears in `flume.py` and none in the `C` table. Fittings are iron, iron_light and rust (steel and oxide), per the Materials board's rule that brass is Fleet ownership.
+
+**Scale to the pilot ball.** The ball radius is 1.0 m, so diameter 2.0 m (`src/movement/tuning.gd:95`; `anchor_fit.json` `ball_radius_m` 1.0). Manifest kit heights against it, relative only: tea_hearth 0.8 (0.4 ball), bent_numbers 0.9 to 1.0, saltbush 0.8 to 1.0, washline 1.46, tool_peg 1.5 to 1.6, bunk_cots 1.0 to 1.95 (under one ball), skiff_on_blocks 3.1 to 3.4, boom_crane_wreck 4.8 and sluice_shed 5.6 (about 2.4 and 2.8 balls). Camp props stay under or near one ball and the sheds sit at a few balls: the plush-crew-among-giants contrast. No new metres asserted.
+
+**Avoid list** (checked against the kit and the manifest):
+- no emission: pass. `kit.py` line 567 asserts no `emissiveFactor` in any GLB, and the flume manifest has 0 `emissive` entries;
+- no hazard stripes or coral: pass. No stripe code in `flume.py`; `kit.py` bans ff5a3c and near colours and hazard-like hues (line 105);
+- no cache-shaped containers: pass. Sleepers are "never a crate" (line 61); the only box-like props are the sheds;
+- no taut or decorative grapple cables: pass with a note. The washline is a draped slack line (line 449, "never taut"). The boom_crane_wreck chains (lines 152 to 158) are heaped slack chain with sag 0.2 to 0.7, a wreck's rigging, not a line; variant a at 0.2 is the least slack, so review should look at it;
+- no fake ride surfaces: pass. All props are low clutter or sheds; `check_one` keeps them off ride rows;
+- no glowing lamps: pass. The crane's lantern (lines 159 to 162) is unlit chalk white `e6e3d6`, with no emission;
+- no ancient-green or uranium-green: pass. No 9dff3c or near colour (`kit.py` line 70); the leaf greens are olive (6f7f4a, 4f5e38), not the board's bright Ancient green;
+- Highdraft items: not applicable to flume.
+
+**GROUNDING rows read** (`GROUNDING.md` (main cb534a2d), scratchpad copy):
+- line 159 (carry board): not a prop row; the unit keeps props off the carry and ride rows through `check_one`. No Conflict.
+- line 161 (Canal country and Surge tower): destination read stays the landmark; props stay low. No Conflict.
+- line 167 (props: no emission, stripes, cache silhouettes, taut cables, fake ride surfaces; short clothesline domestic only): the avoid list above; the washline is the domestic line.
+- line 172 (ancient light only on the distant beacon): no kit prop carries ancient light.
+- line 173 (intakes, bunk ledges and siphon pieces as route structures): not changed; the camps sit beside them.
+- No Conflict row in 159, 161, 167, 172 or 173: nothing marked "not copied".
+
+## Board drift (for review)
+
+None found that blocks. Two things for the reviewer: boom_crane_wreck variant a chain sag (0.2) is the nearest to a taut read, and the concrete, timber and canvas neutrals are outside the 13 palette chips though present in the boards' materials. The kit is not changed in this unit.
