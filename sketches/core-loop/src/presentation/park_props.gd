@@ -1271,7 +1271,9 @@ func _take() -> void:
 		return
 	instances = out["list"]
 	_kit = out["kit"]
-	_keep_cached(instances, _kit)
+	# A next-stage plan already read (this stage rebuilt under a new key) keeps its meshes and reads too.
+	var next_out: Dictionary = _next.out if not _next.is_empty() and _next.listed else {}
+	_keep_cached(instances, _kit, next_out)
 	_cache_owner = map_id
 	_jobs = jobs(instances, _low)
 
@@ -1299,12 +1301,14 @@ func _next_key() -> Array:
 # Idle frames only (no build running): plans the next stage on a worker, then reads its far sources one a frame.
 # A plan no stage can take any more (a new run, a preset change) is dropped once its worker is done.
 func _prepare_next() -> void:
+	var key := _next_key()
+	if _next.is_empty() or _next.key != key:
+		_next_reads = []
 	if not _next_reads.is_empty():
 		var started := Time.get_ticks_usec()
 		_far_source(_next_reads.pop_back())
 		last_steps.append("pre-read %.1f" % ((Time.get_ticks_usec() - started) / 1000.0))
 		return
-	var key := _next_key()
 	if not _next.is_empty():
 		if _next.key != key:
 			if WorkerThreadPool.is_task_completed(_next.task):
@@ -1344,11 +1348,15 @@ static func far_paths(list: Array, kit: Dictionary) -> Array:
 
 # The cache keeps what this list builds from and lets the last park's meshes and far sources go. The next stage's plan
 # warms its own meshes and reads its far sources into the same cache before the exit, so nothing is cleared at an entry.
-static func _keep_cached(list: Array, kit: Dictionary) -> void:
+static func _keep_cached(list: Array, kit: Dictionary, next_out: Dictionary) -> void:
 	var keep := {}
 	for inst: Dictionary in list:
 		for path in _lod_paths(kit, inst):
 			keep[path] = true
+	if not next_out.is_empty() and next_out["errors"].is_empty():
+		for inst: Dictionary in next_out["list"]:
+			for path in _lod_paths(next_out["kit"], inst):
+				keep[path] = true
 	_mesh_lock.lock()
 	for path in _meshes.keys():
 		if not keep.has(path):
