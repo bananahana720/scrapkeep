@@ -4,7 +4,7 @@
 
 The dam's crew sites (camps, bunks, benches, laundry) read as plush crews living among working giants: the giant machines are the humans' utility fleet (construction, mining, manufacturing), some corrupted, some loyal drones, some looping workers. Scale contrast is the point, so the crew props stay small, human-sized and homely beside them. This unit brings the dam onto the two checked rules: a per-kind line clearance for the brief's 30 m kind, and the telegraph keepout.
 
-Base: head f419ac50 (dam branch). Merges: origin/stage/alpha-w18 at 9703fd14 and again at e83a21c2 (stage moved past b22a2ca3, #175 stacked), and origin/claude/zealous-franklin-ed0sxr-lineclear 07748516 at fd5a5c59. The earlier base was the foundation aaeb5e10.
+Base: dam head 8bca3482, merged with origin/stage/alpha-w18 f259e8cf (merge d249c53f) and the accepted foundation origin/claude/zealous-franklin-ed0sxr-lineclear e72fff7d (merge 88ce4e96). Earlier rounds merged stage 9703fd14 and e83a21c2 and foundation 07748516. The later foundation commits touch only the audit, the static checks and `park_props_test`, so the plan check and pin are unchanged.
 Method: automated headless Godot 4.7.2 on cloud llvmpipe (OpenGL compatibility proxy, not a frame-cost proof, not human feel).
 
 ## Plan check
@@ -19,9 +19,50 @@ Rule: `park_props.gd` `check_one` fails a prop inside an event's own geometry gr
 - Litter dropped: none (83 litter before and after).
 - The other five events (plunge_pool_flood, west_wash_flash_flood, east_bench_dropship, toe_vents_wake, powerhouse_boiler) had no hits.
 
-## Tests (each run alone, GODOT_BIN 4.7.2, box load about 20)
+## Tests (each run alone, GODOT_BIN 4.7.2, box load about 20; final merge re-run: park_props_test, park_park_dam_test, park_dressing_pin_test smoke PASS, sketch:lint 0 findings, check:docs 0 failures at 189 files)
 
-park_props_test, park_park_dam_test, park_dressing_pin_test, pocket_line_clear_test, asset_registry_test: smoke PASS (no counts printed). scatter_rows_test: smoke timed out twice at its 180 s cap under load; run directly it passes, 95 checks (3m43s). run_tier_test: FAIL, 16 of 192 checks, 892 s under load (not diagnosed; no run, tier or scatter file changed in this unit). `npm run sketch:lint` 0 findings; `npm run check:docs` 0 failures (178 files, 6978 links). Registry fold: 1053 assets, no change.
+park_props_test, park_park_dam_test, park_dressing_pin_test, pocket_line_clear_test, asset_registry_test: smoke PASS (no counts printed). scatter_rows_test: smoke timed out twice at its 180 s cap under load; run directly it passes, 95 checks (3m43s). run_tier_test: FAIL, 16 of 192 checks, 892 s under load (not diagnosed; no run, tier or scatter file changed in this unit). Measured base-red: the clean stage b0e64a40 fails run_tier_test the same way at load 17, 8 of 192 checks, all `[runtime child seed N] exit=-1 timeout=true`, 3531 PASS lines (coordinator's run), alongside this branch's 16 of 192 at load about 20; not re-run here per the coordinator. `npm run sketch:lint` 0 findings; `npm run check:docs` 0 failures (178 files, 6978 links). Registry fold: 1053 assets, no change.
+
+## Reference boards
+
+Standing rules: ruling 6330671507 (build from named boards; boards settle look only, never mechanics, scale numbers or collision) and ruling 6331210075 (read the board's GROUNDING rows first). Boards viewed for this note, all under `docs/art/reference/`:
+- `style/style-palette-moodboard.jpg`, `style/style-materials-moodboard.jpg`, `style/style-shape-moodboard.jpg`
+- `pilots/pilots-balls-heft-moodboard.jpg` (relative scale only)
+- `spillway/spillway-props-moodboard.jpg`, `spillway/spillway-crews-moodboard.jpg`, `spillway/spillway-landmarks-dam-face.jpg`
+
+Sources for claims: the kit recipe `tools/blender/park/props/dam.py`, its palette `tools/blender/park/props/kit.py` (`C`, `BANNED`, `WARN`), and `assets/models/park/props/dam/manifest.json`. This unit changes no kit geometry or colour; the notes below describe the kit as it stands.
+
+**Palette roles.** The spillway props board lists sandstone c6a274, oxide 9b513a, charcoal 242a28, petrol 365754, bone d2c5a5 and copper b77843. The kit matches sandstone (`C["sandstone"]`), charcoal and bone exactly. Its rust (`C["rust"]` 8a5a44) stands in for oxide, its iron and verdigris (5f8a7c) for the petrol enamel panels (gate_wheelhouse, compressor_cart), and timber and canvas (8a6a46, d9d2bc) for the drying-alcove cloth and rope. Kit colours outside the board palette: concrete greys, timber browns, leaf and dry-grass greens (the board's reeds and shrubs), `DUSK_BLUE` 6c7f8c (faded work-shirt blue, `dam.py` line 227), `FLOWER` c9b45e (brittlebush yellow, "not brass", line 228) and `SILVER_LEAF` 8f9a78. None is ancient green, mint or hazard: `kit.py` `BANNED` rejects ff5a3c, 9dff3c and 8bf0d3 and anything within 0.08 of them. The crews board's Life Lilac is not used on props (grounding line 171 keeps it for ambient critters and locals). Copper b77843 is not used by any dam recipe call.
+
+**Shape language.** Broad wear and soft toy shapes: props are built from `style="hard_smooth"`, `"round"` and `"soft"` primitives (`kit.py` STYLES), with chunky bevelled boxes for the wheelhouse and compressor_cart (the board's wheelhouse and pump panels), rolled canvas and slack rope for the survey_tent, laundry_line and cable_drum (the board's survey roll and drying rope), and low rounded heaps for sandbags and rebar_bloom. Silhouettes stay readable and low except the two tall machines (gate_wheelhouse, mixer_wreck), which carry the board's giant utility-fleet reading.
+
+**Materials.** The kit uses brass in one place: the single `d9b44a` tag on stencil_post variant c, the Fleet docket marker (`dam.py` lines 525 and 541, comment "the one brass tag"). Brass reads as Fleet ownership; it is a deliberate Fleet docket there, but the dressing rule prefers copper or steel fittings, so it is named under "Board drift (for review)". Everything else is painted iron, rust, concrete, timber, canvas and rope. Each GLB is one vertex-colour material with no image and no emission (`kit.py` `inspect_glb` asserts `emissiveFactor` is empty).
+
+**Scale to the pilot ball.** Relative only. The ball is `Tuning.RADIUS` 1.0 (`src/movement/tuning.gd` line 95), so its diameter is 2.0 in world units. Manifest heights against that diameter: lunch_pail 0.90 to 1.18 (about half to 0.6x), cold_campfire 1.23 to 1.65, laundry_line 1.857 to 1.900 and stencil_post 1.6 to 1.94 (just under one diameter), flood_staff 2.60 and hardhat_rack 2.61 (about 1.3x), compressor_cart 2.5 to 2.7 and desert_scrub 2.2 to 2.7, survey_tent 2.6 to 4.1, and the two machines gate_wheelhouse 5.7 and mixer_wreck 5.9 (about 2.9x). Crew props sit around or under the ball and the giants well above it, which is the scale contrast the "What and why" section asks for. No new metre values are asserted; the numbers come from the manifest and are unchanged.
+
+**Avoid list, checked against `dam.py`, `kit.py` and the manifest.**
+- No emission: pass. `inspect_glb` asserts it per GLB; the manifest has no emission key; no `emi` or `glow` call in `dam.py`.
+- No hazard stripes or coral: pass. The only `stripe` hit is a comment, "plain, no stripes" (`dam.py` line 547). ff5a3c is in `BANNED`; no `chevron` or `coral` hit.
+- No cache-shaped containers: pass. No `cache`, `chest` or `crate` in `dam.py`. lunch_pail is a small pail, cable_drum a spool, hardhat_rack a rack.
+- No taut or decorative grapple cables: pass with a note. cable_drum is a flat rope coil and spilled loop (lines 657 to 700). The gate_wheelhouse cable chains are `sag=0.3` to `0.35`, thin (radius 0.022) and short (wheel to ground ring, lines 171 to 175), so they hang slack rather than span; flagged below for the reviewer.
+- No fake ride surfaces: pass. Heaps and slabs (stencil_post c) are at most about 0.5 m, and the recipe comment says "nothing that stands up"; no ramp, deck or rail kind exists. Collision and ride surfaces are not decided by the board.
+- No glowing lamps: pass. The two lanterns are "lantern, unlit" and "unlit lantern" (`dam.py` lines 434 and 467), `iron_light`, with no emission.
+- No ancient-green or uranium-green: pass. `BANNED` holds 9dff3c; the greens in the kit are leaf, verdigris and silver-leaf plants and patina.
+- Highdraft-only items (closed furnace mouths, slack nets): not applicable to the dam.
+
+**GROUNDING rows read** (`GROUNDING.md` (main cb534a2d), no Conflict row among them):
+- Line 162, dam-face landmark: in the game; the dam face is World's landform, not copied by props.
+- Line 166, spillway props board (wheelhouse, tripod, bench, seals, alcove, recess): planned; the kit follows the wheelhouse, tripod and pump readings, and the drying alcove and seal bench stay board proposals until Andrew approves them.
+- Line 167, no emission, hazard stripes, cache silhouettes, taut cables or fake ride surfaces; short clothesline domestic only: followed per the avoid list; laundry_line is the domestic clothesline and carries `line_clear_m` 30.
+- Line 168, crews board harmless locals: ambient life, not a prop; not copied.
+- Line 169, ambient life hides in boss fights: Life's system, not touched.
+- Line 170, second keeper and rest alcove vignettes: not grounded; not built here.
+- Line 171, Life Lilac: no lilac on props, as above.
+
+## Board drift (for review)
+
+- stencil_post variant c carries a brass tag (`d9b44a`, `dam.py` line 541). Against the materials board, brass is Fleet ownership; the unit's brief says dressing uses copper or steel, so this is a candidate drift. Not changed in this unit; the reviewer decides.
+- gate_wheelhouse sagging chains (`dam.py` lines 171 to 175) are slack by design; named in case a reviewer reads them as decorative cables. Not changed.
 
 ## Audit (w18d, default run, mid camera, step 25 m, 258 samples; w18b before in brackets)
 
