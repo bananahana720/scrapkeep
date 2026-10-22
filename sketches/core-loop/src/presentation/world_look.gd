@@ -106,7 +106,7 @@ const NODE := "WorldLook"
 #   fog_tint: the colour the stage's fog leans halfway toward (not under a dome).
 #   sun_energy and energy: the ground's light, sun_energy x sin(sun height) + energy, rises from dawn to
 #   noon and falls after (park_day_light_test). Noon is morning x 1.30 and afternoon is just under noon:
-#   on the 3060 stills (#241) a noon of morning x 2.2 lifted the floor from L* 62.8 to 76.7 and flattened it
+#   on the 3060 stills (#241 comment 6328587862) a noon of morning x 2.2 lifted the floor from L* 62.8 to 76.7 and flattened it
 #   (spread 9.0 to 5.0). From those two stills the floor's Y goes as that light ^0.625, so x 1.30 is a
 #   floor about 4 L* over morning.
 const TIME_ORDER := ["dawn", "morning", "noon", "afternoon", "golden", "dusk"]

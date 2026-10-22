@@ -9,7 +9,7 @@ const WorldLook := preload("res://src/presentation/world_look.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 
 const EXPECTED_CHECKS := 37
-# The floor's Y goes as the ground's light ^0.625 (3060 stills, #241), so x 1.34 is a floor step of 5 L*
+# The floor's Y goes as the ground's light ^0.625 (3060 stills, #241 comment 6328587862), so x 1.34 is a floor step of 5 L*
 # over morning's 62.8; the morning-to-noon step that read as a jump to white was x 2.2.
 const MAX_NOON_STEP := 1.34
 var _t := T.new("park_day_light_test")
