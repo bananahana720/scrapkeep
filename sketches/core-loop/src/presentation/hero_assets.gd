@@ -139,11 +139,11 @@ const WEAPON_RING_RATE := 14.0
 const BANK_RATE := 8.0
 # Gap-bracket modules that ride the banked carrier (ROSTER-LOOK section 4 'bracket'). Geometry baked into
 # the Pod mesh (a seat arm, Cannon's rush ring) stays level with the pod. Cannon's split ports and class V
-# hoods are their own meshes (SplitPorts, PortHoods) so they bank.
+# hoods are their own meshes (SplitPorts, PortHoods) so they bank, as are Tarn's heft-layer claw hooks (ClawHooks).
 const BRACKET_PARTS := ["CoilMast", "Exhaust_L", "Exhaust_R", "VaneL", "VaneR", "ClawPivot_L", "ClawPivot_R",
 	"ClawTip_L", "ClawTip_R", "ClawLower_L", "ClawLower_R", "ClawUpper_L", "ClawUpper_R", "Flywheel_L",
 	"Flywheel_R", "FlywheelAxis_L", "FlywheelAxis_R", "SplitExit_L", "SplitExit_R", "RushContact",
-	"SplitPorts", "PortHoods"]
+	"SplitPorts", "PortHoods", "ClawHooks"]
 # The shell's air-factor cue: a flat ring on the pod, in the row's colour and shape, that swells
 # out on the rise and draws in on the return (a different motion from juice.gd's shell pulse,
 # which means heft). No overlay: it is a mesh under the pod.
