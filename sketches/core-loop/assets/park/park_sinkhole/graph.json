@@ -1,9 +1,9 @@
 {
-  "bake_sha256": "c00f51c071148b2dbc69a83068c9e674a74b8ebdd8041c1815f4e85b5787809e",
+  "bake_sha256": "a5342c25bfd0e9652d451adaed37741c781248cc8b24a552950d6124af7bf858",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 946067,
-  "edges": 314835,
+  "bytes": 946531,
+  "edges": 314838,
   "first_failed": "",
   "flags": {
     "deck": 37,
@@ -15,13 +15,13 @@
   },
   "full_visit_m": 1913,
   "full_visit_ratio": "1.361",
-  "graph_sha256": "1cd365ce28fd43ac2d3da71b1347f0672a06156ad7cd3b9ae338832354e45927",
+  "graph_sha256": "438b4356ae69bb4517d1c7d8e0e9fbc6e86a35f5ece3b9f64e6debc862615af4",
   "line_errors": [],
   "line_path_nodes": 175,
-  "longest_est_m": 2039,
+  "longest_est_m": 2038,
   "map": "park_sinkhole",
   "nodes": 40438,
-  "park_sha256": "5be3ce246022cf60f290d5ee43e0242597a825d106baf4a3e58361119c060190",
+  "park_sha256": "98a64497d57749c8d3ba361b6046ee26cd3e692a6849c86ba8b24abc1e54999a",
   "pockets": [
     {
       "clear_ring": [],
@@ -193,7 +193,7 @@
   "zones": {
     "anchors": [
       {
-        "cost": 1292.8,
+        "cost": 1292.7,
         "d_landmark": 307.2,
         "name": "bore_apron",
         "on_route": false,
