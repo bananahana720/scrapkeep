@@ -245,6 +245,7 @@ func _watch_frames(gate := {}) -> Dictionary:
 	var dressing_done: bool = not dressing.batches.is_empty() and not dressing._dress_when_planned
 	var was_waiting: bool = dressing._dress_when_planned
 	var views_was: int = props.views.size()
+	var reads_was: int = ParkProps.far_reads
 	var deferred_built := false
 	while frames < FRAMES_WATCH_MAX and not (dressing_done and props.is_built()):
 		await process_frame
@@ -295,7 +296,7 @@ func _watch_frames(gate := {}) -> Dictionary:
 		deferred_built = deferred_built or dress_at.has(stamp)
 	return {"entry_parts": entry_parts, "ms": ms, "dress_ran": dress_ran, "slice_ran": slice_ran, "frames": frames, "dressing_frames": dressing_frames, "dressing_done": dressing_done,
 		"props_built": props.is_built(), "deferred_built": deferred_built, "views": props.views.size(), "batches": dressing.batches.size(),
-		"children": dressing.get_child_count(), "instances": props.instances.size()}
+		"children": dressing.get_child_count(), "instances": props.instances.size(), "far_reads": ParkProps.far_reads - reads_was}
 
 
 # One wake's readings: both nodes' last _process, summed under the frame they ran in. A frame only one of them
@@ -373,6 +374,15 @@ func _check_big_fixture() -> void:
 # compared to a fresh plan by _check_dressing_fresh).
 func _check_watch_builds_same(watch: Dictionary) -> void:
 	var props = _game.presentation.park_props
+	# A far merge reads its LOD2 meshes back from the renderer, which stalls a real GPU: once per mesh, never once per prop.
+	var far_paths := {}
+	var far_props := 0
+	for inst: Dictionary in props.instances:
+		if not inst["litter"] and inst["class"] != ParkProps.HERO:
+			far_props += 1
+			far_paths[ParkProps._lod_paths(props._kit, inst)[2]] = true
+	_t.check("the timed ParkProps build read each far mesh back once, not once a prop", watch.far_reads > 0 and watch.far_reads <= far_paths.size(),
+		"%d reads, %d far meshes, %d far props" % [watch.far_reads, far_paths.size(), far_props])
 	props._built_for = []
 	props._stage_entered(2, false)
 	props.finish()

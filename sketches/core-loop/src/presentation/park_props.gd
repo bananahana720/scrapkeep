@@ -94,6 +94,9 @@ static var _meshes := {}
 # Guards _meshes: warm() fills it on a worker while release_shared() and _build_stage() can clear it on the main thread.
 static var _mesh_lock := Mutex.new()
 static var _cache_owner := ""
+# _far_source's reads, by path, and how many it has made (a test reads it).
+static var _far_sources := {}
+static var far_reads := 0
 static var _material: StandardMaterial3D
 
 var ctx
@@ -111,6 +114,9 @@ var _pending := false
 var _task := -1
 var _out := {}
 var _jobs: Array = []
+# The job _slice is building: its holder and the steps left.
+var _holder: Node3D
+var _steps: Array = []
 var _kit := {}
 var _low := false
 
@@ -799,16 +805,30 @@ static func jobs(list: Array, low := false) -> Array:
 
 # Builds one job's holder under parent and returns it.
 static func build_job(parent: Node3D, job: Dictionary, kit: Dictionary, low: bool) -> Node3D:
+	var holder := new_holder(parent, job)
+	for step: Callable in job_steps(job, kit, low):
+		step.call(holder)
+	return holder
+
+
+static func new_holder(parent: Node3D, job: Dictionary) -> Node3D:
 	var holder := Node3D.new()
 	holder.name = job["name"]
 	parent.add_child(holder)
+	return holder
+
+
+# One job's build as steps, each taking the holder: a hero, a batch, one LOD2 mesh's first read, or the far merge.
+# A node checks its frame budget between steps, so a frame never holds more than one step past it.
+static func job_steps(job: Dictionary, kit: Dictionary, low: bool) -> Array:
+	var steps := []
 	var groups := {}
 	var keys := []
 	# The far LOD of a vignette's props is one merged mesh, not one batch per (mesh, LOD): see _merged_far.
 	var far_members := []
 	for inst: Dictionary in job["members"]:
 		if inst["class"] == HERO:
-			_hero(holder, inst, kit)
+			steps.append(func(holder: Node3D): _hero(holder, inst, kit))
 			continue
 		var pos: Vector3 = inst["pos"]
 		var key := "%s_%s" % [inst["kind"], inst["v"]]
@@ -818,17 +838,23 @@ static func build_job(parent: Node3D, job: Dictionary, kit: Dictionary, low: boo
 			groups[key] = []
 			keys.append(key)
 		groups[key].append(inst)
+	var far_paths := []
 	for key in keys:
-		var first: Dictionary = groups[key][0]
+		var members: Array = groups[key]
+		var first: Dictionary = members[0]
 		var lods := _lod_paths(kit, first)
 		if job["litter"]:
-			_batch(holder, "Litter_" + String(key), _mesh(lods[1]), groups[key], first, 1, LITTER_RANGE, PROP_MARGIN_M, true)
+			steps.append(func(holder: Node3D): _batch(holder, "Litter_" + String(key), _mesh(lods[1]), members, first, 1, LITTER_RANGE, PROP_MARGIN_M, true))
 			continue
 		for lod in 2:
-			_batch(holder, "%s_L%d" % [key, lod], _mesh(lods[lod]), groups[key], first, lod, _range(PROP_RANGES[lod], low, lod), PROP_MARGIN_M, false)
-		far_members.append_array(groups[key])
-	_merged_far(holder, far_members, kit, _range(PROP_RANGES[2], low, 2))
-	return holder
+			steps.append(func(holder: Node3D): _batch(holder, "%s_L%d" % [key, lod], _mesh(lods[lod]), members, first, lod, _range(PROP_RANGES[lod], low, lod), PROP_MARGIN_M, false))
+		far_members.append_array(members)
+		if not lods[2] in far_paths:
+			far_paths.append(lods[2])
+	for path: String in far_paths:
+		steps.append(func(_holder: Node3D): _far_source(path))
+	steps.append(func(holder: Node3D): _merged_far(holder, far_members, kit, _range(PROP_RANGES[2], low, 2)))
+	return steps
 
 
 # Loads every mesh a list needs into the cache (safe on a worker: the node reads it only after the worker is done).
@@ -930,16 +956,13 @@ static func _merged_far(holder: Node3D, members: Array, kit: Dictionary, begin_e
 	for inst: Dictionary in members:
 		centre += (inst["pos"] as Vector3) / members.size()
 	for inst: Dictionary in members:
-		var mesh := _mesh(_lod_paths(kit, inst)[2])
-		if mesh == null or mesh.get_surface_count() == 0:
+		var source := _far_source(_lod_paths(kit, inst)[2])
+		if source.is_empty():
 			continue
-		var arrays := mesh.surface_get_arrays(0)
-		var src_v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-		var src_n = arrays[Mesh.ARRAY_NORMAL]
-		var src_c = arrays[Mesh.ARRAY_COLOR]
-		var src_i = arrays[Mesh.ARRAY_INDEX]
-		if src_v.is_empty() or src_i == null:
-			continue
+		var src_v: PackedVector3Array = source[Mesh.ARRAY_VERTEX]
+		var src_n = source[Mesh.ARRAY_NORMAL]
+		var src_c = source[Mesh.ARRAY_COLOR]
+		var src_i = source[Mesh.ARRAY_INDEX]
 		var tr := _transform(inst)
 		var basis := (inst["basis"] as Basis)
 		var base := vertices.size()
@@ -972,6 +995,23 @@ static func _merged_far(holder: Node3D, members: Array, kit: Dictionary, begin_e
 	view.set_meta("dress_member_pos", positions)
 	view.set_meta("dress_member_kinds", kinds)
 	holder.add_child(view)
+
+
+# A LOD2 mesh's surface arrays, read once per path ([] when it has no usable surface). Reading a mesh's arrays back from the
+# renderer stalls the GPU until every frame in flight is done; a read per prop cost the 4080 25 to 89 ms frames (scrapkeep#235,
+# row 26), where the headless renderer copies them for free. Main thread only, like the merge.
+static func _far_source(path: String) -> Array:
+	if _far_sources.has(path):
+		return _far_sources[path]
+	var out := []
+	var mesh := _mesh(path)
+	if mesh != null and mesh.get_surface_count() > 0:
+		far_reads += 1
+		var arrays := mesh.surface_get_arrays(0)
+		if not (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).is_empty() and arrays[Mesh.ARRAY_INDEX] != null:
+			out = arrays
+	_far_sources[path] = out
+	return out
 
 
 static func _ranges(view: GeometryInstance3D, begin_end: Array, margin: float) -> void:
@@ -1068,14 +1108,15 @@ static func release_shared() -> void:
 	_mesh_lock.lock()
 	_meshes.clear()
 	_mesh_lock.unlock()
+	_far_sources.clear()
 	_material = null
 	_cache_owner = ""
 
 
 # --- Node lifecycle ---------------------------------------------------------------------------------
 
-# A stage's file, kit and instances are drawn on a worker (prepare) and its nodes are built a vignette at a time
-# within BUILD_SLICE_USEC a frame, so entering a park hitches on neither. finish() does both at once, for tests.
+# A stage's file, kit and instances are drawn on a worker (prepare) and its nodes are built a step at a time
+# (job_steps) within BUILD_SLICE_USEC a frame, so entering a park hitches on neither. finish() does both at once, for tests.
 
 func setup(context_in) -> void:
 	ctx = context_in
@@ -1134,6 +1175,8 @@ func _free_views() -> void:
 		_task = -1
 	_out = {}
 	_jobs = []
+	_holder = null
+	_steps = []
 	for child in get_children():
 		child.free()
 	views.clear()
@@ -1161,6 +1204,7 @@ func _build_stage() -> void:
 		_mesh_lock.lock()
 		_meshes.clear()
 		_mesh_lock.unlock()
+		_far_sources.clear()
 		_cache_owner = id
 	map_id = id
 	_built_for = key
@@ -1188,8 +1232,15 @@ func _take() -> void:
 func _slice(budget_usec: int) -> void:
 	var started := Time.get_ticks_usec()
 	while not _jobs.is_empty():
-		var holder := build_job(self, _jobs.pop_front(), _kit, _low)
-		for view: GeometryInstance3D in holder.find_children("*", "GeometryInstance3D", true, false):
-			views.append(view)
+		if _holder == null:
+			_holder = new_holder(self, _jobs[0])
+			_steps = job_steps(_jobs[0], _kit, _low)
+		var before := _holder.get_child_count()
+		(_steps.pop_front() as Callable).call(_holder)
+		for i in range(before, _holder.get_child_count()):
+			views.append(_holder.get_child(i))
+		if _steps.is_empty():
+			_jobs.pop_front()
+			_holder = null
 		if Time.get_ticks_usec() - started >= budget_usec:
 			break
