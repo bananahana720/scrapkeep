@@ -127,6 +127,7 @@ var _rigid
 # free for presentation (squash, stretch, trails); _mesh rolls; _roll_mount rolls with
 # the mesh for anything that should stick to the ball's surface, like accreted scrap.
 var _visual_root: Node3D
+var _pod_mount: Node3D
 var _juice: Node3D
 var _mesh: MeshInstance3D
 var _roll_mount: Node3D
@@ -235,6 +236,10 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_juice = Node3D.new()
 	_juice.name = "Juice"
 	_visual_root.add_child(_juice)
+	# Level sibling of Juice for the cockpit: takes the juice offset, never its basis.
+	_pod_mount = Node3D.new()
+	_pod_mount.name = "PodMount"
+	_visual_root.add_child(_pod_mount)
 	_mesh = MeshInstance3D.new()
 	var sphere := SphereMesh.new()
 	sphere.radius = Tuning.RADIUS
@@ -287,6 +292,11 @@ func shown_position() -> Vector3:
 # the spine never writes it. The roll mount turns with the ball's surface.
 func juice_node() -> Node3D:
 	return _juice
+
+
+# Where HeroPod mounts: follows the juice position, ignores its squash and shell scale.
+func pod_mount() -> Node3D:
+	return _pod_mount
 
 
 func roll_node() -> Node3D:

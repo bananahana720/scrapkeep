@@ -10,7 +10,7 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 # stream; clank is not hit_thwack; a heft class reached mid-bar starts its three-note
 # stinger on a beat boundary; each new fact reaches the cue its row names, now or on
 # the beat; a bonus core warms the band; a discovery gets its fanfare, banner and
-# ring; the shell grows with heft while the collider stays the same. Signals the
+# ring; the outline stays the collider's size at every heft class. Signals the
 # bus does not carry yet are added locally, the way the spine will add them.
 
 const NEW_SOUNDS := ["stinger_unseal", "class_up", "clank", "scrap_rip", "threat_up", "core_socket", "synergy_fanfare",
@@ -113,7 +113,7 @@ func _process(_delta: float) -> bool:
 			var on_beat := start > _asked_at and (off <= 1 or off >= _beat_frames - 1) and start - _asked_at <= _beat_frames
 			_check("class up on the beat", on_beat, "asked mid-bar at sample %d (%.2f into its beat), stinger started at %d, %d frames off the beat" % [_asked_at, float(posmod(_asked_at - _beat_origin, _beat_frames)) / _beat_frames, start, mini(off, _beat_frames - off)])
 			var juice = _game.presentation.juice
-			_check("class up juice", _logged(juice, "class_up") and is_equal_approx(juice.shell_target(), 1.1) and _game.presentation.vfx.spawned.get("heft_class_changed", 0) >= 1,
+			_check("class up juice", _logged(juice, "class_up") and is_equal_approx(juice.shell_target(), 1.0) and _game.presentation.vfx.spawned.get("heft_class_changed", 0) >= 1,
 				"squash-pop, a ripple ring and a shell target of %.2f" % juice.shell_target())
 			_audio.cue_log.clear()
 			var dummy := Node3D.new()
@@ -151,7 +151,7 @@ func _process(_delta: float) -> bool:
 			_check("unseal", unseal.size() == 1 and stop.size() == 1 and _game.presentation.vfx.spawned.get("beacon_unsealed", 0) >= 2,
 				"the unseal stinger on the beat, a hit-stop request and a flash over the beacon")
 			var grown: float = _game.presentation.juice.shell
-			_check("shell not collider", grown > 1.05 and is_equal_approx(_collider_radius(), _radius_before), "the shell reads %.2fx at heft II; the collider radius stays %.2f m" % [grown, _collider_radius()])
+			_check("outline stays the collider", absf(grown - 1.0) < 0.02 and is_equal_approx(_collider_radius(), _radius_before), "the shell reads %.2fx at heft II (fixed outline, no whole-ball growth); the collider radius stays %.2f m" % [grown, _collider_radius()])
 			events.emit_signal("stage_entered", 1, true)
 			_check("overcharge resets", engine.overcharge == 0, "a stage entry clears the warm pad")
 			print("presentation_rows_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
