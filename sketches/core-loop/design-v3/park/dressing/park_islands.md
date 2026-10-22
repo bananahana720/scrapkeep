@@ -70,7 +70,7 @@ The litter schema has no scale or variant cap (scale 0.9 to 1.15 in `_litter`, g
 
 Status after the w18g audit: no density window fails (see "Audit (w18g)"; w18f gave the same result with 10 more spots). The first two bullets and the test bullet below are the 7e05da67 record and are superseded; the run-out bullet is now the `--open` list.
 
-- Sable 600 (153,-318): 9 more low spots (w400 to w408, plus w901) were once added in the 43 to 60 m band at (165..190, -378..-366). Removed in w18g: they were a zigzag line of 4 to 12 m spacing, all at yaw 137, reading as scatter (DECISIONS section 8, "vignettes, not scatter"), and f600 is what fills that window.
+- Sable 600 (153,-318): 10 low spots (w400 to w408 and w901) were once added in the 43 to 60 m band at (165..190, -378..-366). Removed in w18g: they were a zigzag line of 4 to 12 m spacing, all at yaw 137, reading as scatter (DECISIONS section 8, "vignettes, not scatter"), and f600 is what fills that window.
 - Floor 1500 (32,334) has 0 legal cells within 80 m of its centre after the telegraph rule, so no fill is possible there.
 - Windows with a kicker run-out within 40 m of the window centre (distance from the run-out capsule surface, from `park_map.kickers`, run-out capsule as in `kicker_keepouts`): floor 150 (6.3,-559) run_step_lip_1 (-5.0 m); floor 750 (-281.9,-211.6) fan_step_lip_3 (-8.4); floor 1350 (93,204.6) carve_step_lip_1 (-1.4); floor 1500 (32.3,333.5) carve_step_lip_5 (-7.5); rivet 150 (156.5,-567.9) lookout_lip (-6.3); sable 300 (-100.4,-499.1) run_step_lip_2 (-7.1); sable 750 (262.4,-215.2) fan_step_lip_3 (-4.8); sable 900 (228.6,-92.5) fan_step_lip_6 (-7.5); tarn 150 (-130.2,-570.2) lookout_lip (-10.2); tarn 300 (-59.5,-499.5) run_step_lip_2 (-7.5). Negative means the centre is inside the capsule. That 7e05da67 audit did not pass `--open`; superseded by the `--open` sections below.
 - Tests: run_tier_test failed 20 of 192 checks, every failure a runtime-child timeout (`exit=-1 timeout=true`) with the box at load average 22; scatter_rows_test timed out twice for the same reason (it passed 90 of 90 on the previous head). The other tests passed (counts in the hand-back).
@@ -126,7 +126,7 @@ Ruling 6329579296: an `--open` window carries a reason the audit checks. `runout
 
 - 48 windows; exempt 26 (arena 10, `open:runout` 10, telegraph 6); pass 22; fail 0; density share 1.0.
 - `density_open_checked` 10; `density_open_rejected` empty.
-- Props-only draw delta max 63, median 2.5 (bar 120); primitives median 515,597, max 797,289.
+- Props-only draw delta max 63, median 2.5 (bar 120); primitives median 515,597, max 797,289. An independent rerun of the same audit at 0837d3ed gave max 63, median 3.5, primitives median 513,177, max 805,721, with every density figure identical: llvmpipe draw and primitive counts vary run to run.
 - Bare share 73.2 percent; void poses 0.
 - No window newly failed from the prune, so no spot was restored from the row; sable 600 still passes on f600 and the earlier spots.
 
