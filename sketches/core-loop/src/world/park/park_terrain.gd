@@ -83,6 +83,8 @@ const GROUND_FLOOR_MEAN := Color(0.7327, 0.5977, 0.4117)
 const GROUND_STRATA_MEAN := Color(0.731, 0.535, 0.366)
 # Terrain3D's default colour map is white with alpha 127/255, which leaves roughness unchanged.
 const COLOR_ALPHA_BYTE := 127
+# n.y < FACE exactly when dx^2 + dz^2 > (2 STEP)^2 * (1 / FACE^2 - 1), n = (dx, 2 STEP, dz) normalised.
+const BITE_G2 := 4.0 * STEP * STEP * (1.0 / (PylonBite.FACE * PylonBite.FACE) - 1.0)
 const COLLISION_DISABLED := 0
 const MESH_LODS := 7
 const MESH_SIZE := 48
@@ -391,32 +393,61 @@ func _load_tints(path: String) -> void:
 	_tints = image
 
 
+# The normal y of grid vertex (i, j) from its four neighbours' heights (edges clamped), as terrain.gd.
+func _normal_y(i: int, j: int) -> float:
+	var idx := j * SIDE + i
+	var dx := heights[idx - (1 if i > 0 else 0)] - heights[idx + (1 if i < SIDE - 1 else 0)]
+	var dz := heights[idx - (SIDE if j > 0 else 0)] - heights[idx + (SIDE if j < SIDE - 1 else 0)]
+	return 2.0 * STEP / sqrt(dx * dx + 4.0 * STEP * STEP + dz * dz)
+
+
+# A grid vertex past BITE_G2: store its n.y and weight and flag the (up to four) cells that touch it.
+func _mark(i: int, j: int, dx: float, dz: float, weights: PackedFloat32Array, ny: PackedFloat32Array, flagged: PackedByteArray, cells: PackedInt32Array) -> void:
+	var y := 2.0 * STEP / sqrt(dx * dx + 4.0 * STEP * STEP + dz * dz)
+	ny[j * SIDE + i] = y
+	weights[j * SIDE + i] = PylonBite.weight(y)
+	for cj in range(maxi(j - 1, 0), mini(j, CELLS - 1) + 1):
+		for ci in range(maxi(i - 1, 0), mini(i, CELLS - 1) + 1):
+			var k := cj * CELLS + ci
+			if flagged[k] == 0:
+				flagged[k] = 1
+				cells.append(k)
+
+
 # Patches the 1600 by 1600 vertex colours where a pylon can bite. The normal is terrain.gd's, from the
 # four neighbouring heights of each 2 m grid vertex (edges clamped); only cells with a biting corner
 # are touched. A cell's four 1 m vertices take the weight and n.y of the grid points they sit on
 # (_build_region's heights: the corner, an edge midpoint, or the b-c diagonal's midpoint, the
 # diagonal the collider's two triangles share), and the multiplier is made from those.
+# Most vertices are flat, so pass 1 only compares the squared slope with BITE_G2 and does the sqrt and
+# the weight for the few past it; pass 2 visits just the cells those touch.
 func _apply_bite() -> void:
 	var weights := PackedFloat32Array()
 	var ny := PackedFloat32Array()
 	weights.resize(SIDE * SIDE)
 	ny.resize(SIDE * SIDE)
+	var flagged := PackedByteArray()
+	flagged.resize(CELLS * CELLS)
+	var cells := PackedInt32Array()
 	var h := heights
-	var any := false
 	for j in SIDE:
 		var up := SIDE if j > 0 else 0
 		var down := SIDE if j < SIDE - 1 else 0
-		for i in SIDE:
-			var idx := j * SIDE + i
+		var row := j * SIDE
+		# Columns 1 to SIDE - 2 need no edge clamp; the two edge columns go through _mark_edge.
+		for i in range(1, SIDE - 1):
+			var idx := row + i
+			var dx := h[idx - 1] - h[idx + 1]
+			var dz := h[idx - up] - h[idx + down]
+			if dx * dx + dz * dz > BITE_G2:
+				_mark(i, j, dx, dz, weights, ny, flagged, cells)
+		for i: int in [0, SIDE - 1]:
+			var idx := row + i
 			var dx := h[idx - (1 if i > 0 else 0)] - h[idx + (1 if i < SIDE - 1 else 0)]
 			var dz := h[idx - up] - h[idx + down]
-			var y := 2.0 * STEP / sqrt(dx * dx + 4.0 * STEP * STEP + dz * dz)
-			ny[idx] = y
-			var w := PylonBite.weight(y)
-			weights[idx] = w
-			if w > 0.0:
-				any = true
-	if not any:
+			if dx * dx + dz * dz > BITE_G2:
+				_mark(i, j, dx, dz, weights, ny, flagged, cells)
+	if cells.is_empty():
 		return
 	var pixels := PackedByteArray()
 	if _tints != null:
@@ -431,38 +462,41 @@ func _apply_bite() -> void:
 	for slot in 6:
 		mults.append(slot_tint(slot))
 	var row_px := CELLS * 2
-	for j in CELLS:
-		for i in CELLS:
-			var a := j * SIDE + i
-			var b := a + 1
-			var c := a + SIDE
-			if weights[a] == 0.0 and weights[b] == 0.0 and weights[c] == 0.0 and weights[c + 1] == 0.0:
-				continue
-			var mult := white
-			if not _slots.is_empty():
-				mult = mults[mini(_slots[j * CELLS + i], 5)]
-			for k in 4:
-				var w := 0.0
-				var y := 0.0
-				match k:
-					0:
-						w = weights[a]
-						y = ny[a]
-					1:
-						w = (weights[a] + weights[b]) * 0.5
-						y = (ny[a] + ny[b]) * 0.5
-					2:
-						w = (weights[a] + weights[c]) * 0.5
-						y = (ny[a] + ny[c]) * 0.5
-					3:
-						w = (weights[b] + weights[c]) * 0.5
-						y = (ny[b] + ny[c]) * 0.5
-				var m := bite_multiplier(mult, y, w)
-				var at := ((2 * j + (k >> 1)) * row_px + 2 * i + (k & 1)) * 4
-				pixels[at] = roundi(m.r * 255.0)
-				pixels[at + 1] = roundi(m.g * 255.0)
-				pixels[at + 2] = roundi(m.b * 255.0)
-				pixels[at + 3] = COLOR_ALPHA_BYTE
+	for k in cells:
+		var i := k % CELLS
+		var j := k / CELLS
+		var a := j * SIDE + i
+		var b := a + 1
+		var c := a + SIDE
+		var mult := white
+		if not _slots.is_empty():
+			mult = mults[mini(_slots[k], 5)]
+		# A corner that never passed the threshold has weight 0 and no stored n.y: compute it here.
+		var ya := ny[a] if weights[a] > 0.0 else _normal_y(i, j)
+		var yb := ny[b] if weights[b] > 0.0 else _normal_y(i + 1, j)
+		var yc := ny[c] if weights[c] > 0.0 else _normal_y(i, j + 1)
+		for q in 4:
+			var w := 0.0
+			var y := 0.0
+			match q:
+				0:
+					w = weights[a]
+					y = ya
+				1:
+					w = (weights[a] + weights[b]) * 0.5
+					y = (ya + yb) * 0.5
+				2:
+					w = (weights[a] + weights[c]) * 0.5
+					y = (ya + yc) * 0.5
+				3:
+					w = (weights[b] + weights[c]) * 0.5
+					y = (yb + yc) * 0.5
+			var m := bite_multiplier(mult, y, w)
+			var at := ((2 * j + (q >> 1)) * row_px + 2 * i + (q & 1)) * 4
+			pixels[at] = roundi(m.r * 255.0)
+			pixels[at + 1] = roundi(m.g * 255.0)
+			pixels[at + 2] = roundi(m.b * 255.0)
+			pixels[at + 3] = COLOR_ALPHA_BYTE
 	_tints = Image.create_from_data(row_px, row_px, false, Image.FORMAT_RGBA8, pixels)
 
 

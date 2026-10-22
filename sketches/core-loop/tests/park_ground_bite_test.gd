@@ -14,6 +14,7 @@ const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const PylonBite := preload("res://src/world/pylon_bite.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Palette := preload("res://src/core/palette.gd")
+const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 
 const PARKS := ["park_pit", "park_sinkhole", "park_test"]
 const CELLS := 800
@@ -45,6 +46,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_pin_strata_mean()
 	_check_rule()
 	_check_old_map()
 	var holder := Node3D.new()
@@ -70,6 +72,30 @@ func _run() -> void:
 	await process_frame
 	_check_ramp(ground, render)
 	quit(t.verdict())
+
+
+# GROUND_STRATA_MEAN is the true mean of the strata texture, recomputed here over every pixel.
+func _pin_strata_mean() -> void:
+	var row: Dictionary = MaterialSlots.row("ground")
+	# A copy: headless, get_image() hands back the texture's own image, and the decompress and
+	# convert below would change the format Terrain3D later reads from it.
+	var img: Image = Palette.look_texture(row.textures.strata_map).get_image().duplicate()
+	if img.is_compressed():
+		img.decompress()
+	img.clear_mipmaps()
+	img.convert(Image.FORMAT_RGBA8)
+	var data := img.get_data()
+	var n := data.size() / 4
+	var sum := [0, 0, 0]
+	for p in n:
+		sum[0] += data[p * 4]
+		sum[1] += data[p * 4 + 1]
+		sum[2] += data[p * 4 + 2]
+	var mean := Color(sum[0] / 255.0 / n, sum[1] / 255.0 / n, sum[2] / 255.0 / n)
+	print("strata mean measured over %d pixels: %s" % [n, mean])
+	var declared = (ParkTerrain as GDScript).get_script_constant_map().get("GROUND_STRATA_MEAN", Color.MAGENTA)
+	t.check("GROUND_STRATA_MEAN = strata texture mean over %d pixels, within 0.002" % n, absf(declared.r - mean.r) <= 0.002 and absf(declared.g - mean.g) <= 0.002 and absf(declared.b - mean.b) <= 0.002, "got %s, want %s" % [declared, mean])
+	t.check("the test's STRATA_MEAN matches the declared one", declared == STRATA_MEAN, str(declared))
 
 
 func _old_weight(n_y: float) -> float:
