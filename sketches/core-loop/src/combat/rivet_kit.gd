@@ -1329,11 +1329,13 @@ func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pin
 # tick at a time and hits once it is done, and never before LATE_TICKS (about 55 ms) after the
 # landing (Andrew's "Beat later" and "Spread every Breach", 2026-10-18). Work is counted, never
 # timed, so a replay is the same on any machine. The cells' parts join in cell order, as _shade
-# joins them, so the shape is the same as a carve made at once. LATE_WORK is the 4080's ceiling:
-# its largest share at 200 was 7.5 ms, and 1.5 shares a frame must stay under 16.7 ms; a steep
-# slope then hits about 0.12 s (11 ticks) after landing, near Andrew's "Smooth, 0.11 s" (2026-10-18).
+# joins them, so the shape is the same as a carve made at once. LATE_WORK is sized from the 4080's
+# cost per part: 1.5 shares a frame must stay under 16.7 ms, so a share at most 11.1 ms. Its worst
+# share was 11.4 ms at 200 parts (rows 23 and 27) and 19.1 ms at 290, about 0.057 ms a part at 200;
+# 182 holds 10.4 ms. The p3 slope (1247 parts, 21 degrees) then hits 7 ticks (78 ms) after landing,
+# as it did at 200, inside Andrew's "Smooth, 0.11 s" (2026-10-18; scrapkeep#137 row 27).
 const LATE_TICKS := 5
-const LATE_WORK := 290
+const LATE_WORK := 182
 # The landing tick also gathers the faces and cuts, about as much again as a share, so its
 # share is smaller; flat ground (one part a cell, 96 cells) and a shallow bowl (158) still carve
 # and hit there. A
