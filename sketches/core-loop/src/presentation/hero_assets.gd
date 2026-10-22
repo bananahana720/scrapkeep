@@ -637,6 +637,11 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 	var kit = player.kit
 	if kit.get("hooked") == true:
 		steer_fairlead(pod, kit.anchor, delta)
+	else:
+		# A cable ride: the carriage turns to the trolley clamp the hanger leaves for.
+		var view = get_parent().get("line_view") if get_parent() != null else null
+		if view != null and view.hanger.visible:
+			steer_fairlead(pod, view.hanger_to, INF if view.hanger_fresh else delta)
 	# Draw only: the face under the ball, or world up in the air.
 	var face: Vector3 = player.state.get("contact_normal") if player.state.get("grounded") == true else Vector3.UP
 	player.set_meta("carrier_bank", update_carrier_bank(pod, face, delta))
