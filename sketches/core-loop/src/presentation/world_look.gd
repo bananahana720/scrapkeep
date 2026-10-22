@@ -97,7 +97,7 @@ const NODE := "WorldLook"
 
 # Time of day (KE7; PARK.md section 6; Andrew's "one day per run", 2026-10-17): one day across a
 # run, dawn at the dam to dusk at the crown, and the light carries the run's arc: a cool hopeful
-# dawn, a plain working noon underground, a warm golden swing over the islands, a lonely dusk.
+# dawn, a plain working noon over the open pit, a warm golden swing over the islands, a lonely dusk.
 # Each stage enters at its time; the row lays its sun and ambient over the world row. The sun's
 # height is minus its pitch (sun_rotation.x): it peaks at noon and is lowest at dawn and dusk.
 #   grade: the time-of-day sky (time_sky.gdshader) over an "hdri" or "own" panorama: zenith and

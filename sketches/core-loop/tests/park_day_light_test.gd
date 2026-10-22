@@ -11,7 +11,7 @@ const ParkDefs := preload("res://src/core/park_defs.gd")
 const EXPECTED_CHECKS := 37
 # Provisional cap (#241 comment 6333015981): x 1.34 came from a light-to-floor fit on 3060 stills
 # (#241 comment 6328587862) whose park ground was Terrain3D's untextured checkerboard. On sand the
-# step is 8.3 L* at this cap (#241 comment 6334779159); the wave 19 exposure unit re-derives it
+# step is 8.3 L* at these values (#241 comment 6334779159); the wave 19 exposure unit re-derives it
 # (#241 comment 6334820540). The step that read as a jump to white was x 2.2.
 const MAX_NOON_STEP := 1.34
 var _t := T.new("park_day_light_test")
