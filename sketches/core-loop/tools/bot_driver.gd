@@ -381,6 +381,13 @@ var tree_picks: Array[String] = []
 # SG8's lab switch (bot_run --late-offer): "" leaves the tree's late_offer off and the bot as it
 # was; "take" or "skip" turns late_offer on and answers only the take_or_skip offer that way.
 var late_offer_policy := ""
+# SR10's lab switch (bot_run --relay-stake=0..4): above 0, the skipper stakes the park relay with
+# the game's own set_stakes before it rolls in, works it to its pay, then goes on to the Warden.
+# 0 leaves every code path below untouched.
+var relay_stake := 0
+const RELAY_ARM_SECONDS := 150.0
+var _relay_clock := 0.0
+var _relay_closed := {}
 var late_offer_counts := {"offered": 0, "taken": 0, "declined": 0}
 var _tree_rng := RandomNumberGenerator.new()
 
@@ -882,6 +889,8 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_activity = ""
 	_activity_time = {}
 	_activity_skip = {}
+	_relay_clock = 0.0
+	_relay_closed = {}
 	_cache_phase = "runup"
 	_cache_clock = 0.0
 	_climb = []
@@ -1120,6 +1129,8 @@ func _roam(delta: float) -> void:
 		_note["magnet_stuns"] = maxi(int(_note.get("magnet_stuns", 0)), int(warden.get("magnet_stuns") if warden.get("magnet_stuns") != null else 0))
 	match policy:
 		"skipper":
+			if relay_stake > 0 and _relay_arm(delta):
+				return
 			_fight(warden, delta)
 		"completionist":
 			_completionist(warden, delta)
@@ -1388,6 +1399,54 @@ func _random(warden: Node3D, delta: float) -> void:
 			source.press["jump_pressed"] = true
 	_goal = "wander"
 	_act(ball + _wander_heading * 30.0, _nearest_enemy(), delta)
+
+
+# SR10 bot arm. On a map with a relay site (the park's dam and islands), set the stake through the
+# relay's own API while it is not charging (set_stakes refuses once it is, and clamps at 4), roll
+# into the ring, and stay on it until it pays and the pay is taken or RELAY_ARM_SECONDS run out.
+# One row per relay in the stage note's relay_stakes. True when it drove this tick.
+func _relay_arm(delta: float) -> bool:
+	if relay_stake <= 0:
+		return false
+	var world = game.world
+	if world == null or world.activities == null:
+		return false
+	var s = world.activities.site("hold_the_relay")
+	if s == null or s.relay == null or _relay_closed.has(s.id):
+		return false
+	var rows: Array = _note.get("relay_stakes", [])
+	var row: Dictionary
+	if rows.is_empty():
+		s.relay.set_stakes(relay_stake)
+		row = {"stage": game.run.stage, "k": s.relay.stakes, "parts_before": game.run.parts.size()}
+		rows.append(row)
+		_note["relay_stakes"] = rows
+	else:
+		row = rows[0]
+	_relay_clock += delta
+	var ball: Vector3 = game.player.ball_position()
+	if s.started and not row.has("credit"):
+		# The credit the game granted at the start (the first buy may already be spent by now).
+		var activities = world.activities
+		row["credit"] = snappedf(s.relay.pack_credit(activities.relay_pack_cost(s) * int(s.rule["waves"])), 0.01)
+		row["rewards"] = s.relay.rewards()
+	row["minibosses"] = s.minibosses_sent
+	if s.done:
+		row["outcome"] = "won"
+		if s.pickup != null and not s.pickup_taken and _relay_clock <= RELAY_ARM_SECONDS:
+			_goal = "relay pay"
+			_pay_roll(s, ball, delta)
+			return true
+	elif _relay_clock > RELAY_ARM_SECONDS:
+		row["outcome"] = "gave_up"
+	else:
+		_goal = "relay charge" if s.started else "relay approach"
+		_act(_approach(s, ball), _nearest_enemy(), delta)
+		return true
+	row["parts"] = game.run.parts.size() - int(row["parts_before"])
+	row["seconds"] = snappedf(_relay_clock, 0.01)
+	_relay_closed[s.id] = true
+	return false
 
 
 # The slice's standing activities (src/world/activities.gd), nearest first: the ambush altar's
