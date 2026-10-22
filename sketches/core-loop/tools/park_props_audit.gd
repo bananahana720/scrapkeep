@@ -25,8 +25,9 @@ extends SceneTree
 # If none is clear it takes the front and marks the row blocked_all. Two stills per spot, both replayable (poses.json carries "cam" and
 # "look" for the eye frame; the chase frame is a plain pose): "eye" at that point looking at the centre (fov 72.5), the ball parked 8 m
 # behind the camera, and "chase" with the ball offset 2.5 m sideways at the same range and the player camera behind it. For each frame the
-# subject is hidden and the frame drawn again: subject_px counts pixels that differ by more than 8 in any channel (a guide, not a gate;
-# null when the instance cannot be isolated from the built nodes), beside the screen share of its projected box (aabb_share).
+# subject is hidden and the frame drawn again: subject_px counts pixels inside its projected box that differ by more than 8 in any channel,
+# leaving out pixels that already differ between two unchanged renders (motes, streaks; noise_px), a guide and not a gate (null when the
+# instance cannot be isolated from the built nodes), beside aabb_share, the screen share of that box, and frame_diff_px, the unmasked whole frame.
 # Writes <map>-v<spot idx>-<spot>-eye.png and -chase.png, vignettes.json, poses.json, stills.json, summary.json and the contact sheet.
 #
 # What counts as dressing (each item is one entry with a world-space centre; kinds are distinct meshes or dress_kind):
@@ -680,15 +681,24 @@ func _run_vignettes() -> void:
 			var png := "%s-v%d-%s-%s.png" % [map_id, si, id, fname]
 			var shot := _grab()
 			shot.save_png(dir.path_join(png))
-			var res := {"png": png, "subject_px": null, "subject_share": null, "aabb_share": snappedf(_aabb_share(subject), 0.00001)}
+			var box := _aabb(subject)
+			var res := {"png": png, "subject_px": null, "subject_share": null, "aabb_share": snappedf(float(box["share"]), 0.00001),
+				"frame_diff_px": null, "noise_px": null}
 			if not handle.is_empty():
+				# A control (the same frame drawn again, nothing hidden) finds what moves by itself (motes, streaks): those pixels are not
+				# counted. The count is the pixels inside the subject's projected box; frame_diff_px is the whole frame, unmasked.
+				await _drawn(3)
+				var control := _grab()
 				_set_hidden(handle, true)
 				await _drawn(3)
 				var bare_shot := _grab()
 				_set_hidden(handle, false)
-				var px := _diff_px(shot, bare_shot)
+				var whole := Rect2i(0, 0, shot.get_width(), shot.get_height())
+				var px := _diff_px(shot, bare_shot, box["rect"], control)
 				res["subject_px"] = px
 				res["subject_share"] = snappedf(float(px) / float(shot.get_width() * shot.get_height()), 0.00001)
+				res["frame_diff_px"] = _diff_px(shot, bare_shot, whole, null)
+				res["noise_px"] = _diff_px(shot, control, box["rect"], null)
 				if px == 0:
 					zero_px += 1
 			else:
@@ -707,7 +717,7 @@ func _run_vignettes() -> void:
 		rows.append(row)
 		print("park_props_audit: %s bearing %s %s eye px %s chase px %s" % [id, str(pick["off"]), "BLOCKED_ALL" if all_blocked else "ok", str(row["eye"]["subject_px"]), str(row["chase"]["subject_px"])])
 	var summary := {"mode": "vignettes", "map": map_id, "stage": stage_index, "spots_in_file": spots.size(), "spots_rendered": rows.size(), "spots_skipped": skipped,
-		"blocked_all": blocked_all, "frames_without_isolation": null_px, "frames_zero_subject_px": zero_px, "constants": _constants(),
+		"blocked_all": blocked_all, "subject_px_note": "px inside the projected box, minus pixels that move between two unchanged renders; a guide", "frames_without_isolation": null_px, "frames_zero_subject_px": zero_px, "constants": _constants(),
 		"adapter": RenderingServer.get_video_adapter_name(), "runtime_s": snappedf((Time.get_ticks_msec() - started_msec) / 1000.0, 0.1)}
 	_write(dir.path_join("vignettes.json"), {"map": map_id, "stage": stage_index, "rows": rows})
 	_write(dir.path_join("poses.json"), {"map": map_id, "poses": poses})
@@ -758,19 +768,22 @@ func _grab() -> Image:
 	return img
 
 
-# Pixels whose RGB differs by more than V_DIFF in any channel.
-func _diff_px(a: Image, b: Image) -> int:
+# Pixels inside `rect` whose RGB differs by more than V_DIFF in any channel, leaving out those that also differ between a and `ignore`
+# (a control render of the same frame) when it is given.
+func _diff_px(a: Image, b: Image, rect: Rect2i, ignore: Image) -> int:
 	var da := a.get_data()
 	var db := b.get_data()
 	if da == db:
 		return 0
-	var n := mini(da.size(), db.size())
+	var dc := ignore.get_data() if ignore != null else PackedByteArray()
+	var w := a.get_width()
 	var count := 0
-	var i := 0
-	while i + 2 < n:
-		if absi(da[i] - db[i]) > V_DIFF or absi(da[i + 1] - db[i + 1]) > V_DIFF or absi(da[i + 2] - db[i + 2]) > V_DIFF:
-			count += 1
-		i += 3
+	for y in range(maxi(rect.position.y, 0), mini(rect.end.y, a.get_height())):
+		for x in range(maxi(rect.position.x, 0), mini(rect.end.x, w)):
+			var i := (y * w + x) * 3
+			if absi(da[i] - db[i]) > V_DIFF or absi(da[i + 1] - db[i + 1]) > V_DIFF or absi(da[i + 2] - db[i + 2]) > V_DIFF:
+				if dc.is_empty() or not (absi(da[i] - dc[i]) > V_DIFF or absi(da[i + 1] - dc[i + 1]) > V_DIFF or absi(da[i + 2] - dc[i + 2]) > V_DIFF):
+					count += 1
 	return count
 
 
@@ -812,8 +825,9 @@ func _set_hidden(handle: Dictionary, hidden: bool) -> void:
 
 
 # The screen share of the subject's projected box (the 8 corners of its cylinder's bounds from pos, radius and height), clipped to the
-# screen: the box's edges are cut at the near plane, projected with the camera's lens, and their bounds taken.
-func _aabb_share(inst: Dictionary) -> float:
+# screen: the box's edges are cut at the near plane, projected with the camera's lens, and their bounds taken. Returns {"share", "rect"}
+# (the bounds in pixels, grown by 4).
+func _aabb(inst: Dictionary) -> Dictionary:
 	var at: Vector3 = inst["pos"]
 	var r := float(inst["radius"])
 	var h := float(inst["height"])
@@ -839,7 +853,7 @@ func _aabb_share(inst: Dictionary) -> float:
 			if ia != ib:
 				pts.append(a.lerp(b, (-near - a.z) / (b.z - a.z)))
 	if pts.is_empty():
-		return 0.0
+		return {"share": 0.0, "rect": Rect2i()}
 	var tan_half := tan(deg_to_rad(cam.fov) * 0.5)
 	var aspect := float(SIZE.x) / float(SIZE.y)
 	var lo := Vector2(INF, INF)
@@ -851,7 +865,11 @@ func _aabb_share(inst: Dictionary) -> float:
 		hi = Vector2(maxf(hi.x, nx), maxf(hi.y, ny))
 	lo = Vector2(clampf(lo.x, -1.0, 1.0), clampf(lo.y, -1.0, 1.0))
 	hi = Vector2(clampf(hi.x, -1.0, 1.0), clampf(hi.y, -1.0, 1.0))
-	return (hi.x - lo.x) * (hi.y - lo.y) / 4.0
+	var x0 := int(floor((lo.x + 1.0) * 0.5 * SIZE.x)) - 4
+	var x1 := int(ceil((hi.x + 1.0) * 0.5 * SIZE.x)) + 4
+	var y0 := int(floor((1.0 - hi.y) * 0.5 * SIZE.y)) - 4
+	var y1 := int(ceil((1.0 - lo.y) * 0.5 * SIZE.y)) + 4
+	return {"share": (hi.x - lo.x) * (hi.y - lo.y) / 4.0, "rect": Rect2i(x0, y0, x1 - x0, y1 - y0)}
 
 
 # ---- the ride path ----
