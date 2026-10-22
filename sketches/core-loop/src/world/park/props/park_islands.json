@@ -1982,7 +1982,7 @@
     65.0
    ],
    "yaw_deg": 32.0,
-   "near": "anvil_step_3, A kicked cairn and cobbles in a slickrock cr"
+   "near": "anvil_step_3, kicked cairn facing the anvil camp (0,104)"
   },
   {
    "id": "l035",
@@ -1991,48 +1991,8 @@
     15.0,
     70.0
    ],
-   "yaw_deg": -39.0,
-   "near": "anvil_step_3, Two cobbles and a tuft where the slickrock s"
-  },
-  {
-   "id": "l036",
-   "template": "net_scrap",
-   "at": [
-    -30.0,
-    75.0
-   ],
-   "yaw_deg": 32.0,
-   "near": "anvil_step_3, A folded net and a scrap of patch cloth blow"
-  },
-  {
-   "id": "l038",
-   "template": "pine_cairn",
-   "at": [
-    -15.0,
-    80.0
-   ],
-   "yaw_deg": 32.0,
-   "near": "anvil_step_3, A small pine at a cairn"
-  },
-  {
-   "id": "l039",
-   "template": "stone_nook",
-   "at": [
-    25.0,
-    80.0
-   ],
-   "yaw_deg": -45.0,
-   "near": "anvil_step_3, A kicked cairn and cobbles in a slickrock cr"
-  },
-  {
-   "id": "l041",
-   "template": "rope_basket_rest",
-   "at": [
-    -45.0,
-    85.0
-   ],
-   "yaw_deg": 32.0,
-   "near": "anvil_step_4, A relict pine finding root beside a worn sta"
+   "yaw_deg": -24.0,
+   "near": "anvil_step_3, cobbles facing the anvil camp (0,104)"
   },
   {
    "id": "l042",
@@ -2041,38 +2001,18 @@
     -30.0,
     90.0
    ],
-   "yaw_deg": 32.0,
-   "near": "anvil_step_4, Two cobbles and a tuft where the slickrock s"
+   "yaw_deg": 65.0,
+   "near": "anvil_step_4, cobbles facing the anvil camp (0,104)"
   },
   {
    "id": "l044",
    "template": "stool_rest",
    "at": [
-    45.0,
-    100.0
+    50.0,
+    110.0
    ],
-   "yaw_deg": -45.0,
-   "near": "anvil_step_4, A mender's stool tipped aside"
-  },
-  {
-   "id": "l045",
-   "template": "pine_cairn",
-   "at": [
-    70.0,
-    100.0
-   ],
-   "yaw_deg": -27.0,
-   "near": "anvil_step_4, A small pine at a cairn"
-  },
-  {
-   "id": "l046",
-   "template": "stone_nook",
-   "at": [
-    -70.0,
-    105.0
-   ],
-   "yaw_deg": 27.0,
-   "near": "anvil_step_4, A kicked cairn and cobbles in a slickrock cr"
+   "yaw_deg": -80.0,
+   "near": "anvil_step_4, a stool facing the anvil camp (0,104)"
   },
   {
    "id": "l050",
@@ -2085,41 +2025,21 @@
    "near": "east_wing, A folded net and a scrap of patch cloth blow"
   },
   {
-   "id": "w015",
-   "template": "dropped_bolt",
-   "at": [
-    125.0,
-    105.0
-   ],
-   "yaw_deg": 153.0,
-   "near": "ore_chute, A dropped bolt of patch cloth"
-  },
-  {
    "id": "w016",
    "template": "rope_basket_rest",
    "at": [
-    145.0,
-    105.0
+    138.0,
+    108.0
    ],
-   "yaw_deg": 153.0,
-   "near": "ore_chute, A rope basket and a stool left where the cre"
-  },
-  {
-   "id": "w035",
-   "template": "chart_stones",
-   "at": [
-    185.0,
-    135.0
-   ],
-   "yaw_deg": 153.0,
-   "near": "wing_gust_lip_e, Chart stones"
+   "yaw_deg": 40.0,
+   "near": "ore_chute, basket and stool of the menders' corner, facing the hut"
   },
   {
    "id": "w038",
    "template": "tuft_cairn",
    "at": [
-    235.0,
-    295.0
+    233.0,
+    296.0
    ],
    "yaw_deg": 68.0,
    "near": "east_wing, A knee-high cairn with a pine seedling and d"
@@ -2168,31 +2088,31 @@
    "id": "m305",
    "template": "net_crew_corner",
    "at": [
-    -215.0,
-    -370.0
+    -212.0,
+    -372.0
    ],
-   "yaw_deg": -152.0,
-   "near": "saddle_gust_lip_w, Menders' corner"
+   "yaw_deg": -118.0,
+   "near": "saddle_step_2, menders' corner facing saddle_gust_lip_w (-300,-420)"
   },
   {
    "id": "m306",
    "template": "patchwork_rock",
    "at": [
-    -185.0,
-    -370.0
+    -196.0,
+    -366.0
    ],
-   "yaw_deg": -155.0,
-   "near": "west_shelf, A flat rock used as a sewing table; the bolt"
+   "yaw_deg": 130.0,
+   "near": "saddle_step_2, sewing rock facing saddle_cairn_w (-150,-400)"
   },
   {
    "id": "m308",
    "template": "pine_ledge",
    "at": [
-    -155.0,
-    -370.0
+    -150.0,
+    -374.0
    ],
-   "yaw_deg": -157.0,
-   "near": "west_shelf, Relict pines and manzanita crowding a slickr"
+   "yaw_deg": 176.0,
+   "near": "saddle_step_2, relict pines on the west ledge, facing back up the tread to the ride line start"
   },
   {
    "id": "m314",
@@ -2211,18 +2131,18 @@
     55.0,
     60.0
    ],
-   "yaw_deg": 153.0,
-   "near": "anvil_step_3, A bin tipped over and the day's ore trailing"
+   "yaw_deg": 137.0,
+   "near": "anvil_step_3, ore bin tipped, facing the ore chute (110,0)"
   },
   {
    "id": "m316",
    "template": "net_crew_corner",
    "at": [
-    155.0,
-    90.0
+    150.0,
+    92.0
    ],
-   "yaw_deg": 153.0,
-   "near": "ore_chute, Menders' corner"
+   "yaw_deg": 63.0,
+   "near": "ore_chute, menders' corner facing the lookout hut (235,135)"
   },
   {
    "id": "m317",
@@ -2241,8 +2161,8 @@
     185.0,
     90.0
    ],
-   "yaw_deg": 153.0,
-   "near": "ore_chute, The hikers' numbered stones climb past a stu"
+   "yaw_deg": -140.0,
+   "near": "ore_chute, numbered stones facing the tram cabin (160,60)"
   },
   {
    "id": "m319",
@@ -2268,21 +2188,21 @@
    "id": "w321",
    "template": "chart_stones",
    "at": [
-    0.0,
+    8.0,
     -670.0
    ],
-   "yaw_deg": -31.0,
-   "near": "lookout_step_3, Chart stones"
+   "yaw_deg": -51.0,
+   "near": "lookout_step_3, chart stones facing the step lip (0,-646)"
   },
   {
    "id": "w322",
    "template": "dropped_bolt",
    "at": [
-    30.0,
-    -670.0
+    38.0,
+    -671.0
    ],
-   "yaw_deg": -39.0,
-   "near": "lookout_step_3, A dropped bolt of patch cloth"
+   "yaw_deg": -83.0,
+   "near": "lookout_step_3, a bolt of cloth that rolled toward the lip, facing the ride line"
   },
   {
    "id": "w323",
@@ -2305,54 +2225,34 @@
    "near": "anvil_rock, A knee-high cairn with a pine seedling and d"
   },
   {
-   "id": "w328",
-   "template": "cobble_pair",
-   "at": [
-    -100.0,
-    90.0
-   ],
-   "yaw_deg": -153.0,
-   "near": "mooring_pad_ramp, Two cobbles and a tuft where the slickrock s"
-  },
-  {
    "id": "w331",
    "template": "chart_stones",
    "at": [
-    -30.0,
-    110.0
+    -48.0,
+    104.0
    ],
-   "yaw_deg": 32.0,
-   "near": "anvil_step_4, Chart stones"
+   "yaw_deg": 10.0,
+   "near": "anvil_step_4, chart stones facing the anvil face drop edge (z 123)"
   },
   {
    "id": "w333",
    "template": "rope_basket_rest",
    "at": [
-    -15.0,
-    -370.0
+    -14.0,
+    -371.0
    ],
-   "yaw_deg": 27.0,
-   "near": "saddle_step_2, A rope basket and a stool left where the cre"
-  },
-  {
-   "id": "w334",
-   "template": "tuft_cairn",
-   "at": [
-    70.0,
-    75.0
-   ],
-   "yaw_deg": 153.0,
-   "near": "anvil_step_3, A knee-high cairn with a pine seedling and d"
+   "yaw_deg": 72.0,
+   "near": "saddle_step_2, rope basket and stool, facing the ride line (x 0)"
   },
   {
    "id": "w335",
    "template": "net_drying",
    "at": [
-    180.0,
+    182.0,
     110.0
    ],
-   "yaw_deg": 153.0,
-   "near": "ore_chute, Nets laid out to dry on the slickrock"
+   "yaw_deg": 103.0,
+   "near": "ore_chute, nets drying toward the balloon graveyard (245,95)"
   },
   {
    "id": "w336",
@@ -2385,34 +2285,24 @@
    "near": "lookout_step_1, Two cobbles and a tuft where the slickrock s"
   },
   {
-   "id": "w339",
-   "template": "net_scrap",
-   "at": [
-    100.0,
-    -670.0
-   ],
-   "yaw_deg": 141.0,
-   "near": "lookout_step_3, A folded net and a scrap of patch cloth blow"
-  },
-  {
    "id": "w340",
    "template": "net_mending",
    "at": [
-    120.0,
-    -670.0
+    118.0,
+    -668.0
    ],
-   "yaw_deg": 139.0,
-   "near": "lookout_step_3, Net-crew mending spot"
+   "yaw_deg": 140.0,
+   "near": "lookout_step_3, mending spot facing the fire lookout (150,-700)"
   },
   {
    "id": "w341",
    "template": "chart_stones",
    "at": [
-    140.0,
-    -670.0
+    148.0,
+    -671.0
    ],
-   "yaw_deg": 138.0,
-   "near": "lookout_spill_lip_e, Chart stones"
+   "yaw_deg": 106.0,
+   "near": "lookout_step_3, chart stones facing the east spill lip (250,-680)"
   },
   {
    "id": "w342",
@@ -2438,121 +2328,71 @@
    "id": "w344",
    "template": "tuft_cairn",
    "at": [
-    -195.0,
-    -670.0
+    -205.0,
+    -668.0
    ],
-   "yaw_deg": -117.0,
-   "near": "lookout_spill_lip_w, A knee-high cairn with a pine seedling and d"
+   "yaw_deg": -112.0,
+   "near": "lookout_step_3, tuft cairn marking the west spill lip, facing lookout_spill_lip_w"
   },
   {
    "id": "w345",
    "template": "net_drying",
    "at": [
-    -175.0,
-    -670.0
+    -180.0,
+    -671.0
    ],
-   "yaw_deg": -120.0,
-   "near": "lookout_spill_lip_w, Nets laid out to dry on the slickrock"
-  },
-  {
-   "id": "w346",
-   "template": "stone_nook",
-   "at": [
-    -125.0,
-    -670.0
-   ],
-   "yaw_deg": 30.0,
-   "near": "lookout_step_3, A kicked cairn and cobbles in a slickrock cr"
-  },
-  {
-   "id": "w347",
-   "template": "rope_heap",
-   "at": [
-    -105.0,
-    -670.0
-   ],
-   "yaw_deg": 21.0,
-   "near": "lookout_step_3, Spare nets and a rope bale dumped where the "
-  },
-  {
-   "id": "w348",
-   "template": "cobble_pair",
-   "at": [
-    -85.0,
-    -670.0
-   ],
-   "yaw_deg": 21.0,
-   "near": "lookout_step_3, Two cobbles and a tuft where the slickrock s"
+   "yaw_deg": 88.0,
+   "near": "lookout_step_3, nets spread to dry, facing the ride line (x 0)"
   },
   {
    "id": "w349",
    "template": "net_scrap",
    "at": [
-    -65.0,
-    -670.0
+    -72.0,
+    -671.0
    ],
-   "yaw_deg": 16.0,
-   "near": "lookout_step_3, A folded net and a scrap of patch cloth blow"
+   "yaw_deg": 66.0,
+   "near": "lookout_step_3, scrap net beside the mending spot, facing the ride line"
   },
   {
    "id": "w350",
    "template": "net_mending",
    "at": [
-    -45.0,
-    -670.0
+    -58.0,
+    -667.0
    ],
-   "yaw_deg": 16.0,
-   "near": "lookout_step_3, Net-crew mending spot"
+   "yaw_deg": 96.0,
+   "near": "lookout_step_3, net-crew mending spot, facing the ride line (x 0)"
   },
   {
    "id": "w351",
    "template": "chart_stones",
    "at": [
-    15.0,
-    -375.0
+    14.0,
+    -373.0
    ],
-   "yaw_deg": -11.0,
-   "near": "saddle_step_2, Chart stones"
+   "yaw_deg": -30.0,
+   "near": "saddle_step_2, chart stones facing the drop edge (z -350)"
   },
   {
    "id": "w352",
    "template": "dropped_bolt",
    "at": [
-    35.0,
-    -370.0
+    33.0,
+    -373.0
    ],
-   "yaw_deg": -11.0,
-   "near": "saddle_step_2, A dropped bolt of patch cloth"
-  },
-  {
-   "id": "w354",
-   "template": "tuft_cairn",
-   "at": [
-    -135.0,
-    -375.0
-   ],
-   "yaw_deg": -161.0,
-   "near": "saddle_step_2, A knee-high cairn with a pine seedling and d"
+   "yaw_deg": 15.0,
+   "near": "saddle_step_2, a dropped bolt of cloth by the chart stones, facing the drop edge (z -350)"
   },
   {
    "id": "w355",
    "template": "net_drying",
    "at": [
-    -115.0,
+    -110.0,
     -375.0
    ],
-   "yaw_deg": -161.0,
-   "near": "saddle_step_2, Nets laid out to dry on the slickrock"
-  },
-  {
-   "id": "w356",
-   "template": "stone_nook",
-   "at": [
-    -95.0,
-    -375.0
-   ],
-   "yaw_deg": -162.0,
-   "near": "saddle_step_2, A kicked cairn and cobbles in a slickrock cr"
+   "yaw_deg": 90.0,
+   "near": "saddle_step_2, nets drying, facing the ride line (x 0)"
   },
   {
    "id": "h300",
@@ -2572,7 +2412,7 @@
     74.4
    ],
    "yaw_deg": -153.0,
-   "near": "mooring_pad_ramp, Fleet spares near the mooring"
+   "near": "mooring_pad_ramp, Fleet spares facing the mooring ramp (-130,30)"
   },
   {
    "id": "w327",
@@ -2581,18 +2421,8 @@
     -116.0,
     87.8
    ],
-   "yaw_deg": -153.0,
-   "near": "ledger_lip, moved out of a telegraph zone"
-  },
-  {
-   "id": "w329",
-   "template": "net_scrap",
-   "at": [
-    -115.5,
-    101.1
-   ],
-   "yaw_deg": -153.0,
-   "near": "ledger_lip, A folded net and a scrap of patch cloth blow"
+   "yaw_deg": -118.0,
+   "near": "ledger_lip, spare rope by the mooring ramp, moved out of a telegraph zone"
   },
   {
    "id": "w332",
@@ -2608,11 +2438,11 @@
    "id": "w353",
    "template": "rope_basket_rest",
    "at": [
-    52.5,
-    -369.3
+    48.0,
+    -371.0
    ],
-   "yaw_deg": -11.0,
-   "near": "saddle_step_2, A rope basket and a stool left where the cre"
+   "yaw_deg": -104.0,
+   "near": "saddle_step_2, a stool left facing the ride line from the east"
   },
   {
    "id": "m500",
@@ -2621,8 +2451,8 @@
     -80.0,
     70.0
    ],
-   "yaw_deg": -153.0,
-   "near": "mooring_pad_ramp, The hikers' numbered stones climb past a stu"
+   "yaw_deg": 78.0,
+   "near": "mooring_pad_ramp, numbered stones facing the ride line"
   },
   {
    "id": "f450",
@@ -2631,8 +2461,8 @@
     -98.8,
     -326.2
    ],
-   "yaw_deg": 0.0,
-   "near": "kest 450 window: menders' spot in view of the ride line"
+   "yaw_deg": -160.0,
+   "near": "fan_step_1, menders mending a net between the west hoodoo posts, facing back up the tread toward saddle_cairn_w (-150,-400)"
   },
   {
    "id": "f600",
@@ -2641,8 +2471,8 @@
     171.2,
     -326.2
    ],
-   "yaw_deg": 0.0,
-   "near": "sable 600 window: menders' spot in view of the ride line"
+   "yaw_deg": -100.0,
+   "near": "fan_step_1, menders by the tram head, facing the ride line (x 0)"
   }
  ],
  "ground_rows": [
@@ -2728,6 +2558,6 @@
   ],
   "seed": 5
  },
- "pin": 2348699063,
+ "pin": 3526488863,
  "notes": "ground_rows steps (lookout_step_1, lookout_step_2, lookout_step_3, lookout_step_4, run_step_1, run_step_2, run_step_3, run_step_4, run_step_5, saddle_step_1, saddle_step_2, fan_step_1, fan_step_2, fan_step_3, fan_step_4, fan_step_5, fan_step_6, landing_step_1, anvil_step_1, anvil_step_2, anvil_step_3, anvil_step_4, carve_step_1, carve_step_2, carve_step_3, carve_step_4, carve_step_5, carve_step_6, carve_step_7): terrace treads, each a 32 to 50 m deep step-down of 2 to 4 m between kicker lips (park_islands.json row sizes); the tiers and kicker capsules govern them. anvil_face (a 2 m face) is never listed."
 }

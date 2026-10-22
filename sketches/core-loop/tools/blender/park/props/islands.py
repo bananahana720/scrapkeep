@@ -319,7 +319,7 @@ def tram_car_parked(p, v, rng):
             p.box((0.14, 0.16, H), (x, s * Wd / 2, z0 + H / 2), OXIDE, style="hard_smooth")
         for x in (-1.5, 1.5):
             p.box((0.5, 0.05, 0.12), (x, s * Wd / 2 - s * 0.08, z0 + H * 0.28), BONE, style="hard_smooth")
-    # Interior: floor planks, a second bench, a rope-bound bundle, and a pail on the doorstep.
+    # Interior: floor planks, a second bench, a rope-bound bundle, and a sack on the doorstep (the pail is at line 315).
     for i in range(9):
         p.box((0.4, Wd - 0.2, 0.05), (-1.8 + i * 0.45, 0, z0 + 0.03), tint(TIMBER_D, rng, 0.1), jit=0.004)
     p.box((L - 1.2, 0.45, 0.12), (0, -0.7, z0 + 0.45), TIMBER)
@@ -599,7 +599,7 @@ def patch_bolt(p, v, rng):
         p.box((0.7, 0.55, 0.025), (0.45, -0.1, zr + 0.015), PATCH_B if v == "a" else PATCH_C, rot=(0, 0, 0.3), style="soft", jit=0.01)
     if v == "b":
         blob(p, 0.3, (0.1, 0.4, zr + 0.07), PATCH_C, scale=(1.5, 1.2, 0.3), style="soft")
-    # Sewing kit: round tin, lid off, spool of cable-dark thread and a pincushion.
+    # Sewing kit: round tin, lid off, spool of rope-dark thread and a pincushion.
     p.cyl(0.17, 0.12, (0.4, 0.35, zr + 0.06), C["iron_light"], segs=10, style="hard")
     p.cyl(0.19, 0.04, (0.7, 0.45, zr + 0.02), C["iron"], segs=10, rot=(0.1, 0, 0), style="hard")
     p.cyl(0.06, 0.1, (0.25, 0.12, zr + 0.05), ROPE_D, segs=8, style="round")
