@@ -792,7 +792,7 @@ def shirt(p, top, col, rot_z=0.0, size=1.0, rng=None):
               col, scale=(1.4, 0.4, 0.7), rot=(0, 0.3 * sx, rot_z), style="round")
 
 
-@K.kind("laundry_line", hero=False, tags=["soft"], variants="abc",
+@K.kind("laundry_line", hero=False, line_clear_m=30, tags=["soft"], variants="abc",
         story="A crew washing line between two leaning posts: shirts, a towel, a sock, left out in the dawn wind.")
 def laundry_line(p, v, rng):
     # KITS.md dam brief: two posts under 2 m. Scale 1.15 (c: 1.0, its bush is taller) from 1.5 puts every variant at about 1.9 m.

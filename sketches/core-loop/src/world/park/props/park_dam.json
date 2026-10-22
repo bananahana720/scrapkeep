@@ -2459,8 +2459,8 @@
    "id": "mid_tool_bench_123",
    "template": "mid_tool_bench",
    "at": [
-    -108,
-    -521
+    -124,
+    -530
    ],
    "yaw_deg": -106,
    "near": "dome_5: A cable spool"
@@ -3092,5 +3092,5 @@
   ],
   "seed": 11
  },
- "pin": 47128334
+ "pin": 1202620946
 }

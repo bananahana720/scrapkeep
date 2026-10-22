@@ -568,7 +568,8 @@
      "radius": 2.578,
      "height": 1.9
     }
-   }
+   },
+   "line_clear_m": 30.0
   },
   "sandbags": {
    "class": "dress_prop",
