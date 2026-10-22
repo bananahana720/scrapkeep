@@ -22,7 +22,7 @@ import {
   timingsFromReceipt,
   usableBaseRun,
 } from "./sketch-fast.mjs";
-import { importWithRetry } from "./sketch-smoke.mjs";
+import { importWithRetry, quarantineRecord } from "./sketch-smoke.mjs";
 
 const files = (entries) => indexFromFiles(new Map(Object.entries(entries)));
 
@@ -356,4 +356,11 @@ test("planted head red: a cached base red never hides a head-only red", () => {
   assert.deepEqual(grew.newChecks, ["x"]);
   assert.equal(classifyFailure({ rerunOk: false, baseOk: false, headChecks: [], baseChecks: confirmed.checks, baseCached: true }).kind, "pr-red");
   assert.equal(classifyFailure({ rerunOk: false, baseOk: false, headChecks: [], baseChecks: [], baseCached: false }).kind, "base-red");
+});
+
+test("a fast-lane quarantine receipt entry carries owner, reason, deadline and the run's result", () => {
+  const entry = { test: "a_test", owner: "Systems", reason: "why", added: "2026-10-22", deadline: "2026-10-29" };
+  assert.deepEqual(quarantineRecord(entry, { ok: false, exit: null, signal: "SIGABRT", failing: 0 }), {
+    test: "a_test", owner: "Systems", reason: "why", deadline: "2026-10-29", result: "red", exit: null, signal: "SIGABRT", failing_checks: 0,
+  });
 });

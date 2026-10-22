@@ -413,6 +413,43 @@ export function quarantineNote(entry) {
   return `quarantined: ${entry.test} (${entry.owner}: ${entry.reason})`;
 }
 
+// A row whose deadline is an ISO date before today is expired; the run fails until the row is
+// removed or its deadline is extended by the coordinator. A free-text deadline ("wave 3") is
+// not enforced because it has no date to compare.
+export function expiredQuarantine(entries, today = new Date().toISOString().slice(0, 10)) {
+  return entries.filter((entry) => /^\d{4}-\d{2}-\d{2}$/.test(entry.deadline ?? "") && entry.deadline < today);
+}
+
+export function expiredLine(entry) {
+  return `quarantine expired: ${entry.test} (${entry.owner}) deadline ${entry.deadline}; fix the test or have the coordinator extend the row in tests/QUARANTINE.tsv`;
+}
+
+// One receipt entry per quarantined test that ran: the row plus that run's result.
+export function quarantineRecord(entry, { ok, exit, signal = null, failing }) {
+  return { test: entry.test, owner: entry.owner, reason: entry.reason, deadline: entry.deadline, result: ok ? "green" : "red", exit: exit ?? null, signal, failing_checks: failing };
+}
+
+export function quarantineRecords(results) {
+  return results.filter((result) => result.quarantined && result.quarantine).map((result) => quarantineRecord(result.quarantine, { ok: result.ok, exit: result.exit, signal: result.signal, failing: result.fails }));
+}
+
+// Human lines for the full gate: red rows with the failing-check count and exit or signal, then stale green rows.
+export function quarantineLines(records) {
+  const how = (record) => (record.signal ? `signal ${record.signal}` : `exit ${record.exit}`);
+  const red = records.filter((record) => record.result === "red");
+  const green = records.filter((record) => record.result === "green");
+  const lines = [];
+  if (red.length > 0) {
+    lines.push(`quarantined (red) ${red.length} (known red; not a failure):`);
+    for (const record of red) lines.push(`  ${record.test}: ${record.failing_checks} failing checks, ${how(record)} (${record.owner}: ${record.reason}; deadline ${record.deadline})`);
+  }
+  if (green.length > 0) {
+    lines.push(`quarantined but green: remove from quarantine (${green.length}):`);
+    for (const record of green) lines.push(`  ${record.test} (${record.owner}; deadline ${record.deadline})`);
+  }
+  return lines;
+}
+
 // A quarantined test never fails the run. Green, it is stale and listed for removal.
 export function quarantineVerdict(results) {
   const label = (result) => result.label.replace(/^.* res:\/\/tests\//, "").replace(/\.gd$/, "");
@@ -449,7 +486,7 @@ export function emitReceipt(receipt, write = writeReceipt, log = console.log) {
   }
 }
 
-export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot, sketches, flags, width, lockWaitMs, startedAt, wallMs, stems, results, botTierNotRun = [] }) {
+export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot, sketches, flags, width, lockWaitMs, startedAt, wallMs, stems, results, botTierNotRun = [], expired = [] }) {
   const rows = results.map((result) => ({
     label: result.label,
     ok: result.ok,
@@ -488,6 +525,8 @@ export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot,
     started_at: startedAt,
     wall_ms: wallMs,
     stems,
+    quarantined: quarantineRecords(results),
+    quarantine_expired: expired.map((entry) => ({ test: entry.test, owner: entry.owner, deadline: entry.deadline })),
     results: rows,
     bot_tier_not_run: botTierNotRun,
     totals,
@@ -522,7 +561,7 @@ export function judge({ test, status, output }) {
   return { ok, verdict, skips, missing, reason };
 }
 
-function report(job, status, output, ms) {
+function report(job, status, output, ms, signal = null) {
   const { ok, verdict, skips, missing, reason } = judge({ test: job.test, status, output });
   const quarantined = Boolean(job.quarantined);
   const { passes, fails } = countChecks(output);
@@ -530,7 +569,7 @@ function report(job, status, output, ms) {
   if (!ok) console.log(output.split("\n").slice(-40).join("\n"));
   if (reason) console.log(reason);
   if (process.env.SMOKE_DEBUG_ARGS) console.log(`  args: ${job.args.join(" ")}`);
-  return { label: job.label, ok, exit: status, ms, solo: Boolean(job.solo), passes, fails, verdict_line: verdict, skips, test: Boolean(job.test), quarantined };
+  return { label: job.label, ok, exit: status, ms, solo: Boolean(job.solo), passes, fails, verdict_line: verdict, skips, test: Boolean(job.test), quarantined, signal: signal ?? null, ...(quarantined && job.quarantine ? { quarantine: job.quarantine } : {}) };
 }
 
 // Import writes the sketch's .godot cache, so it runs alone before anything reads it.
@@ -562,10 +601,10 @@ function runAsync(job) {
     child.stdout.on("data", (chunk) => (output += chunk));
     child.stderr.on("data", (chunk) => (output += chunk));
     const timer = setTimeout(() => child.kill("SIGKILL"), job.timeoutMs || TIMEOUT_MS);
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
       clearTimeout(timer);
       rmSync(dataHome, { recursive: true, force: true });
-      resolve(report(job, code, output, Date.now() - started));
+      resolve(report(job, code, output, Date.now() - started, signal));
     });
   });
 }
@@ -641,13 +680,16 @@ async function main() {
   const startedAt = new Date().toISOString();
   const started = Date.now();
   const results = [];
+  const expired = [];
   const jobs = [];
   const solo = [];
   const userArgs = options.flags.length > 0 ? ["--", ...options.flags] : [];
   for (const { directory, scripts } of plans) {
     const name = path.relative(root, directory);
     const base = ["--headless", "--path", directory];
-    const quarantine = readQuarantine(directory);
+    const quarantineRows = readQuarantineEntries(directory);
+    const quarantine = new Set(quarantineRows.map((row) => row.test));
+    expired.push(...expiredQuarantine(quarantineRows));
     const imported = importWithRetry(name, base);
     results.push(...imported.results);
     if (!imported.ok) {
@@ -658,7 +700,7 @@ async function main() {
     for (const script of scripts) {
       const isSoloJob = isSoloScript(directory, script);
       const timeoutMs = testTimeoutMs(readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"));
-      const job = { label: `${name} ${script}`, args: [...base, "--script", script, ...userArgs], test: script, solo: isSoloJob, timeoutMs, quarantined: quarantine.has(path.posix.basename(script, ".gd")) };
+      const job = { label: `${name} ${script}`, args: [...base, "--script", script, ...userArgs], test: script, solo: isSoloJob, timeoutMs, quarantined: quarantine.has(path.posix.basename(script, ".gd")), quarantine: quarantineRows.find((row) => row.test === path.posix.basename(script, ".gd")) };
       (isSoloJob ? solo : jobs).push(job);
     }
   }
@@ -667,7 +709,7 @@ async function main() {
   for (const job of solo) results.push(await runAsync(job));
   const soloSeconds = (Date.now() - soloStarted) / 1000;
   const verdict = quarantineVerdict(results);
-  const ok = runPasses(results);
+  const ok = runPasses(results) && expired.length === 0;
   const slowest = [...results].sort((a, b) => b.ms - a.ms).slice(0, SLOWEST);
   console.log(`slowest ${slowest.length}:`);
   for (const result of slowest) console.log(`  ${(result.ms / 1000).toFixed(1)}s ${result.label}`);
@@ -681,14 +723,8 @@ async function main() {
     console.log(`  ${result.label}`);
     for (const line of result.skips.slice(0, 3)) console.log(`    ${line}`);
   }
-  if (verdict.quarantined_red.length > 0) {
-    console.log(`quarantined (red) ${verdict.quarantined_red.length} (known red; see tests/QUARANTINE.tsv for owner and deadline; not a failure):`);
-    for (const name of verdict.quarantined_red) console.log(`  ${name}`);
-  }
-  if (verdict.quarantine_stale.length > 0) {
-    console.log(`quarantined but green: remove from quarantine (${verdict.quarantine_stale.length}):`);
-    for (const name of verdict.quarantine_stale) console.log(`  ${name}`);
-  }
+  for (const line of quarantineLines(quarantineRecords(results))) console.log(line);
+  for (const entry of expired) console.log(expiredLine(entry));
   const unverdicted = results.filter((result) => result.verdict_line === false && result.skips.length === 0);
   const names = unverdicted.slice(0, 10).map((result) => result.label.replace(/^.* res:\/\/tests\//, ""));
   console.log(
@@ -712,6 +748,7 @@ async function main() {
     stems: Object.fromEntries(sketches.map((directory) => [path.relative(root, directory), countStems(directory)])),
     results,
     botTierNotRun,
+    expired,
   });
   const receiptFailure = emitReceipt(receipt);
   process.exit(receiptFailure ?? (ok ? 0 : 1));

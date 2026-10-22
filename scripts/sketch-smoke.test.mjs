@@ -35,7 +35,11 @@ import {
   namedRunMustWait,
   noMatchMessage,
   parseArgs,
+  expiredLine,
+  expiredQuarantine,
   parseQuarantine,
+  quarantineLines,
+  quarantineRecords,
   quarantineNote,
   readQuarantine,
   readQuarantineEntries,
@@ -656,6 +660,32 @@ test("a quarantined failure names its owner and reason, and the readers agree", 
   assert.equal(cave.owner, "Systems");
   assert.match(quarantineNote(cave), /^quarantined: park_cave_in_test \(Systems: exit abort .*#241 6332288729\)$/);
   assert.deepEqual([...readQuarantine(dir)], rows.map((row) => row.test));
+});
+
+test("an expired quarantine row is reported and an unexpired or free-text one is not", () => {
+  const rows = parseQuarantine("test\towner\treason\tadded\tdeadline\na_test\tO1\twhy\t2026-10-01\t2026-10-29\nb_test\tO2\twhy\t2026-10-01\twave 3\n");
+  assert.deepEqual(expiredQuarantine(rows, "2026-10-29"), []);
+  const late = expiredQuarantine(rows, "2026-10-30");
+  assert.deepEqual(late.map((row) => row.test), ["a_test"]);
+  assert.equal(expiredLine(late[0]).startsWith("quarantine expired: a_test (O1) deadline 2026-10-29"), true);
+});
+
+test("quarantine rows reach the human output and the receipt with that run's result", () => {
+  const entry = { test: "a_test", owner: "Systems", reason: "why; #1", added: "2026-10-22", deadline: "2026-10-29" };
+  const stale = { ...entry, test: "b_test" };
+  const results = [
+    result(testLabel("a_test"), false, { quarantined: true, quarantine: entry, exit: null, signal: "SIGABRT", fails: 0 }),
+    result(testLabel("b_test"), true, { quarantined: true, quarantine: stale, exit: 0, fails: 0 }),
+    result(testLabel("c_test"), true),
+  ];
+  const records = quarantineRecords(results);
+  assert.deepEqual(records.map((row) => [row.test, row.result, row.signal, row.failing_checks]), [["a_test", "red", "SIGABRT", 0], ["b_test", "green", null, 0]]);
+  const lines = quarantineLines(records);
+  assert.ok(lines.some((line) => line.includes("a_test: 0 failing checks, signal SIGABRT (Systems: why; #1; deadline 2026-10-29)")));
+  assert.ok(lines.some((line) => line.startsWith("quarantined but green")) && lines.some((line) => line.includes("b_test")));
+  const receipt = buildReceipt({ label: "t", argv: [], root: "/r", git: null, godot: "g", sketches: [], flags: [], width: 1, lockWaitMs: 0, startedAt: "x", wallMs: 1, stems: {}, results, expired: [] });
+  assert.equal(receipt.quarantined.length, 2);
+  assert.deepEqual(Object.keys(receipt.quarantined[0]).sort(), ["deadline", "exit", "failing_checks", "owner", "reason", "result", "signal", "test"]);
 });
 
 test("a red quarantined test does not fail the run, a green one is stale, any other failure fails", () => {
