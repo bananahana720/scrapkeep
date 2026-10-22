@@ -22,10 +22,15 @@ extends RefCounted
 #           default only with a "dead_reason".
 #   baseline  whether the subject joins the baseline set.
 #
+# Frame strips (MOTION-SPEC row 217): --frames=N renders N consecutive frames of each camera at a fixed
+# --fps with pose overrides (look_harness.gd header); frame_options, frame_row and spin_step below are
+# the parse, the per-frame record and the per-frame roll, kept here so a headless test reaches them.
+#
 # Re-aimed rows (wave 12, push/w11/captures/DEAD-FRAMES.md) carry "reaim": the camera and why.
 # A row may pin the ball for a camera whose rule points a visual-only mesh hides (look_harness
 # ball_candidates): "ball": {camera: offset from the camera's target}, with "ball_reason".
 
+const Tuning := preload("res://src/movement/tuning.gd")
 const DEAD := {"black": 0.8, "sky": 0.6}
 const STAGES := 6
 # The Hoberman mecha rows (PD-0, ROSTER-LOOK section 9 step 6): chase eyes behind the heading at
@@ -418,3 +423,124 @@ static func problems(stage_count: int) -> Array:
 static func coin(subject: String, camera: String) -> bool:
 	var h := (subject + "/" + camera).sha256_buffer()
 	return (h[0] & 1) == 1
+
+
+# ---------------------------------------------------------------- frame strips (MOTION-SPEC row 217)
+# The flags the harness forwards to its group children; the parse is frame_options below.
+const FRAME_FLAGS := ["--frames=", "--fps=", "--speed=", "--dir=", "--pod-yaw=", "--contact-normal=", "--anchor=", "--anchor-rel=", "--squash-tick=", "--squash="]
+const PHYSICS_HZ := 90.0
+const MAX_FRAMES := 600
+const MAX_SQUASH := 0.45
+
+
+static func _set_vec(o: Dictionary, key: String, text: String) -> void:
+	var vec = _vec(text)
+	if vec == null:
+		o["problems"].append("--%s needs x,y,z" % key.replace("_", "-"))
+	else:
+		o[key] = vec
+
+
+static func _vec(text: String) -> Variant:
+	var parts := text.split(",", false)
+	if parts.size() != 3 or not Array(parts).all(func(x): return String(x).is_valid_float()):
+		return null
+	return Vector3(float(parts[0]), float(parts[1]), float(parts[2]))
+
+
+# The strip options of a command line. {"frames": 0} is the single-still run and carries nothing
+# else, so a still stays byte-compatible. "problems" names every refusal: an override without
+# --frames, a count over MAX_FRAMES, a non-positive fps, a zero --dir or --contact-normal, a vector
+# that is not x,y,z. Overrides left out are absent from the dictionary.
+static func frame_options(args: Array) -> Dictionary:
+	var o := {"frames": 0, "fps": 60.0, "problems": []}
+	var seen: Array = []
+	for a in args:
+		var arg := String(a)
+		if arg.begins_with("--frames="): o["frames"] = int(arg.trim_prefix("--frames="))
+		elif arg.begins_with("--fps="): o["fps"] = float(arg.trim_prefix("--fps="))
+		elif arg.begins_with("--speed="): o["speed"] = float(arg.trim_prefix("--speed="))
+		elif arg.begins_with("--pod-yaw="): o["pod_yaw"] = float(arg.trim_prefix("--pod-yaw="))
+		elif arg.begins_with("--squash-tick="): o["squash_tick"] = int(arg.trim_prefix("--squash-tick="))
+		elif arg.begins_with("--squash="): o["squash"] = float(arg.trim_prefix("--squash="))
+		elif arg.begins_with("--dir="): _set_vec(o, "dir", arg.trim_prefix("--dir="))
+		elif arg.begins_with("--contact-normal="): _set_vec(o, "contact_normal", arg.trim_prefix("--contact-normal="))
+		elif arg.begins_with("--anchor-rel="): _set_vec(o, "anchor_rel", arg.trim_prefix("--anchor-rel="))
+		elif arg.begins_with("--anchor="): _set_vec(o, "anchor", arg.trim_prefix("--anchor="))
+		else: continue
+		seen.append(arg.split("=")[0] + "=")
+	if o["frames"] < 0:
+		o["problems"].append("--frames must be 1 or more")
+	elif o["frames"] == 0 and seen.any(func(f): return f != "--frames="):
+		o["problems"].append("a pose override or --fps needs --frames=N (N >= 1)")
+	if o["frames"] > MAX_FRAMES:
+		o["problems"].append("--frames=%d is over %d" % [o["frames"], MAX_FRAMES])
+	if o["fps"] <= 0.0:
+		o["problems"].append("--fps must be positive")
+	for key in ["dir", "contact_normal"]:
+		if o.has(key) and (o[key] as Vector3).length() < 0.0001:
+			o["problems"].append("--%s is the zero vector" % key.replace("_", "-"))
+	if o.has("squash") and not o.has("squash_tick"):
+		o["problems"].append("--squash needs --squash-tick")
+	if o.has("squash_tick") and o["squash_tick"] < 0:
+		o["problems"].append("--squash-tick must be 0 or more")
+	if o.has("anchor") and o.has("anchor_rel"):
+		o["problems"].append("--anchor and --anchor-rel are exclusive")
+	if o["frames"] <= 0:
+		return {"frames": 0, "fps": 60.0, "problems": o["problems"]}
+	return o
+
+
+static func is_strip(o: Dictionary) -> bool:
+	return int(o.get("frames", 0)) > 0
+
+
+# The unit direction of travel: --dir, else forward (-Z), made tangent to the contact surface
+# when --contact-normal is set (a ball gripping a wall runs along it, never into it).
+static func travel_dir(o: Dictionary) -> Vector3:
+	var d: Vector3 = (o.get("dir", Vector3(0, 0, -1)) as Vector3).normalized()
+	if o.has("contact_normal"):
+		var n: Vector3 = (o["contact_normal"] as Vector3).normalized()
+		var t := d - n * d.dot(n)
+		if t.length() < 0.0001:
+			t = n.cross(Vector3.UP) if absf(n.dot(Vector3.UP)) < 0.99 else n.cross(Vector3.RIGHT)
+		d = t.normalized()
+	return d
+
+
+# The frames.json "frame" block of frame i: index, time since frame 0 (s), the fixed fps and every
+# override as applied (the dir after the contact tangent, the squash as ticks since the impulse
+# at this frame, 90 Hz physics ticks).
+static func frame_row(o: Dictionary, i: int) -> Dictionary:
+	var applied := {}
+	if o.has("speed"):
+		var d := travel_dir(o)
+		applied["speed"] = o["speed"]
+		applied["dir"] = [d.x, d.y, d.z]
+	if o.has("pod_yaw"): applied["pod_yaw"] = o["pod_yaw"]
+	for key in ["contact_normal", "anchor", "anchor_rel"]:
+		if o.has(key):
+			var v: Vector3 = (o[key] as Vector3).normalized() if key == "contact_normal" else o[key]
+			applied[key] = [v.x, v.y, v.z]
+	if o.has("squash_tick"):
+		applied["squash_ticks_since"] = squash_ticks(o, i)
+		applied["squash"] = o.get("squash", MAX_SQUASH)
+	return {"index": i, "time": snappedf(i / float(o["fps"]), 0.000001), "fps": o["fps"], "overrides": applied}
+
+
+# Physics ticks since the impulse at frame i (a tick is 1/90 s; a 60 fps frame is 1.5 ticks).
+static func squash_ticks(o: Dictionary, i: int) -> float:
+	return int(o.get("squash_tick", 0)) + i * PHYSICS_HZ / float(o["fps"])
+
+
+# How far a ball rolling at speed m/s turns in dt seconds, as a rotation to pre-multiply onto its
+# basis. A ball on a surface turns about normal x dir (rolling without slip); in the air (no
+# --contact-normal) it spins about UP x dir as on a floor. Radius is the collider's.
+static func spin_step(o: Dictionary, dt: float) -> Basis:
+	if not o.has("speed") or float(o["speed"]) == 0.0:
+		return Basis.IDENTITY
+	var n: Vector3 = (o.get("contact_normal", Vector3.UP) as Vector3).normalized()
+	var axis := n.cross(travel_dir(o))
+	if axis.length() < 0.0001:
+		return Basis.IDENTITY
+	return Basis(axis.normalized(), float(o["speed"]) * dt / Tuning.RADIUS)
