@@ -27,6 +27,9 @@ var _began := 0
 
 
 func _initialize() -> void:
+	# These tests pin mechanics with a smash-per-frame TARGET hit, not the fight's length: the PHASE_MIN_SECONDS
+	# hold (waking.gd, mind.gd; tests/boss_phase_hold_test.gd) is multiplied out.
+	ChallengeDials.set_overrides({"waking.phase_min_by_phase": [0.0, 0.0, 0.0, 0.0], "mind.phase_min_by_phase": [0.0, 0.0, 0.0, 0.0]})
 	_began = Engine.get_physics_frames()
 	_game = Game.new()
 	_game.test_mode = true
