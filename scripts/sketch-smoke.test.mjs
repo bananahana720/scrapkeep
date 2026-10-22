@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 import * as smoke from "./sketch-smoke.mjs";
 import {
@@ -35,6 +36,9 @@ import {
   noMatchMessage,
   parseArgs,
   parseQuarantine,
+  quarantineNote,
+  readQuarantine,
+  readQuarantineEntries,
   quarantinedNames,
   quarantineVerdict,
   runPasses,
@@ -641,6 +645,17 @@ test("the quarantine file parses into entries and names", () => {
   assert.deepEqual(parseQuarantine(text)[0], { test: "a_test", owner: "O1", reason: "why", added: "2026-10-01", deadline: "wave 3" });
   assert.deepEqual([...quarantinedNames(text)], ["a_test", "b_test"]);
   assert.deepEqual(parseQuarantine(""), []);
+});
+
+test("a quarantined failure names its owner and reason, and the readers agree", () => {
+  const entry = parseQuarantine("test\towner\treason\tadded\tdeadline\na_test\tO1\twhy; #1\t2026-10-01\twave 3\n")[0];
+  assert.equal(quarantineNote(entry), "quarantined: a_test (O1: why; #1)");
+  const dir = fileURLToPath(new URL("../sketches/core-loop", import.meta.url));
+  const rows = readQuarantineEntries(dir);
+  const cave = rows.find((row) => row.test === "park_cave_in_test");
+  assert.equal(cave.owner, "Systems");
+  assert.match(quarantineNote(cave), /^quarantined: park_cave_in_test \(Systems: exit abort .*#241 6332288729\)$/);
+  assert.deepEqual([...readQuarantine(dir)], rows.map((row) => row.test));
 });
 
 test("a red quarantined test does not fail the run, a green one is stale, any other failure fails", () => {

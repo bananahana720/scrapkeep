@@ -399,9 +399,18 @@ export function quarantinedNames(text) {
 }
 
 export function readQuarantine(directory) {
+  return new Set(readQuarantineEntries(directory).map((entry) => entry.test));
+}
+
+// The rows themselves, for a lane that names the owner and reason of a quarantined failure.
+export function readQuarantineEntries(directory) {
   const file = path.join(directory, "tests", "QUARANTINE.tsv");
-  if (!existsSync(file)) return new Set();
-  return quarantinedNames(readFileSync(file, "utf8"));
+  if (!existsSync(file)) return [];
+  return parseQuarantine(readFileSync(file, "utf8"));
+}
+
+export function quarantineNote(entry) {
+  return `quarantined: ${entry.test} (${entry.owner}: ${entry.reason})`;
 }
 
 // A quarantined test never fails the run. Green, it is stale and listed for removal.

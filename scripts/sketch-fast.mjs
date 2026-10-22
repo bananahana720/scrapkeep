@@ -10,7 +10,8 @@ import {
   isBot,
   isSolo,
   judge,
-  readQuarantine,
+  quarantineNote,
+  readQuarantineEntries,
   testTimeoutMs,
 } from "./sketch-smoke.mjs";
 
@@ -615,7 +616,8 @@ async function main() {
   const bootVerdict = judge({ status: boot.status, output: (boot.stdout || "") + (boot.stderr || "") });
   if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
 
-  const quarantine = readQuarantine(sketchDir);
+  const quarantineEntries = readQuarantineEntries(sketchDir);
+  const quarantine = new Set(quarantineEntries.map((entry) => entry.test));
   const results = [];
   const flaky = [];
   const baseRed = [];
@@ -724,6 +726,10 @@ async function main() {
     const quarantined = quarantine.has(path.posix.basename(result.test, ".gd"));
     results.push({ test: result.test, ok: result.ok, exit: result.exit, ms: result.ms, reason: result.reason, quarantined });
     log(`${result.ok ? "PASS" : "FAIL"} ${result.test} exit=${result.exit} ${(result.ms / 1000).toFixed(1)}s${quarantined ? " (quarantined)" : ""}`);
+    if (!result.ok && quarantined) {
+      const entry = quarantineEntries.find((row) => row.test === path.posix.basename(result.test, ".gd"));
+      log(`  ${quarantineNote(entry)}`);
+    }
     if (result.ok || quarantined || result.killed) return;
     const { kind, newChecks } = await confirm(result);
     log(`  ${result.test}: ${kind}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`);
