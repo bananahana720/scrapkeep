@@ -239,6 +239,13 @@ static func environment(look: Dictionary, air: bool) -> Dictionary:
 		values["fog_sky_affect"] = 0.25
 		if look.sky == "hdri":
 			values["sky"] = Palette.hdri_sky()
+	# Diagnostic only (claude/lighting-noon-floor-diag): one-variable noon floor sweep, #241 6332870085.
+	if not OS.get_environment("SK_AMB").is_empty():
+		values["ambient_light_energy"] = float(values.ambient_light_energy) * float(OS.get_environment("SK_AMB"))
+	if not OS.get_environment("SK_EXPO").is_empty():
+		values["tonemap_exposure"] = float(values.tonemap_exposure) * float(OS.get_environment("SK_EXPO"))
+	if not OS.get_environment("SK_WHITE").is_empty():
+		values["tonemap_white"] = float(OS.get_environment("SK_WHITE"))
 	return values
 
 
