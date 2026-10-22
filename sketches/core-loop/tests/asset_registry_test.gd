@@ -10,19 +10,29 @@ const REGISTRY := "res://assets/registry.json"
 const BUDGETS := "res://assets/asset_budgets.json"
 const ROOT := "res://assets"
 # Draw ceilings (baked-bracket card, MOTION-SPEC row 208, wave 19; coordinator rulings 6348145961, 6348389397 and
-# 6348497831 on #241). No pilot shell exception goes above 16 draws and no detail layer above 2, unless the asset is named
-# here with its decision. A new entry needs its own docs/decisions.tsv row, not a quiet exception.
+# 6348497831 on #241, and the pending 6348848322 for the five layers). w13-PD (docs/decisions.tsv, 2026-10-10T21:29:13) sets
+# 16 draws for a pilot shell, 2 for a class III layer and 1 for every other layer. An asset over its ceiling passes only when
+# it is named here with its decided figure, and then only at or under that figure. A new entry needs its own
+# docs/decisions.tsv row, not a quiet exception.
 const SHELL_DRAW_CEILING := 16
-const LAYER_DRAW_CEILING := 2
+const LAYER_DRAW_CEILING_III := 2
+const LAYER_DRAW_CEILING := 1
 const DECIDED_OVER_CEILING := {
-	"shell_tarn": "docs/decisions.tsv 2026-10-10T23:14 w13-PD (Tarn 17: four articulated two-surface jaws; row 2026-10-11T00:16)",
-	"shell_tarn_redjaw_teeth": "docs/decisions.tsv 2026-10-10T23:14 w13-PD (Tarn 17, same machinery; row 2026-10-11T00:16)",
-	"shell_tarn_c3": "docs/decisions.tsv 2026-10-22T18:42 (ruling 6348497831 on #241: class III layer at 3, ClawHooks banks)",
+	"shell_tarn": {"draws": 17, "why": "docs/decisions.tsv 2026-10-10T23:14 w13-PD (Tarn 17: four articulated two-surface jaws; row 2026-10-11T00:16)"},
+	"shell_tarn_redjaw_teeth": {"draws": 17, "why": "docs/decisions.tsv 2026-10-10T23:14 w13-PD (Tarn 17, same machinery; row 2026-10-11T00:16)"},
+	"shell_tarn_c3": {"draws": 3, "why": "ruling 6348497831 on #241: class III layer at 3, ClawHooks banks; docs/decisions.tsv 2026-10-22T18:42"},
+	"shell_cannon_c5": {"draws": 2, "why": "pending ruling 6348848322 on #241: PortHoods banks (1 to 2)"},
+	"shell_tally_c4": {"draws": 2, "why": "pending ruling 6348848322 on #241: DrumHoods banks (1 to 2)"},
+	"shell_tally_c5": {"draws": 2, "why": "pending ruling 6348848322 on #241: HeavyDrums banks (1 to 2)"},
+	"shell_tarn_c4": {"draws": 2, "why": "pending ruling 6348848322 on #241: ClawHooks banks (1 to 2)"},
+	"shell_tarn_c5": {"draws": 2, "why": "pending ruling 6348848322 on #241: ClawHooks banks (1 to 2)"},
 }
 var failures := 0
+var _layer_rule := RegEx.new()
 
 
 func _initialize() -> void:
+	_layer_rule.compile("^shell_[a-z]+_c([0-9])$")
 	call_deferred("_run")
 
 
@@ -32,23 +42,67 @@ func _check(ok: bool, label: String) -> void:
 	print("%s %s" % ["PASS" if ok else "FAIL", label])
 
 
-# True when an asset's draws are over its ceiling and the asset is not a named, decided exception.
-func _over_ceiling(id: String, cls: String, draws: int) -> bool:
-	var ceiling := -1
+# The ceiling for an asset id and class, or -1 when none applies. Shells get 16. A shell_<pilot>_c<N> layer gets 2 at
+# class III and 1 at every other N; any other shell_ detail asset keeps 2. Outfits and trails share the detail class and
+# are not heft layers.
+func _ceiling(id: String, cls: String) -> int:
 	if cls == "shell":
-		ceiling = SHELL_DRAW_CEILING
-	elif cls == "detail" and id.begins_with("shell_"):  # outfits and trails share the detail class and are not heft layers
-		ceiling = LAYER_DRAW_CEILING
-	return ceiling >= 0 and draws > ceiling and not DECIDED_OVER_CEILING.has(id)
+		return SHELL_DRAW_CEILING
+	if cls == "detail" and id.begins_with("shell_"):
+		var m := _layer_rule.search(id)
+		if m != null:
+			return LAYER_DRAW_CEILING_III if m.get_string(1) == "3" else LAYER_DRAW_CEILING
+		return LAYER_DRAW_CEILING_III
+	return -1
+
+
+# True when draws are over the asset's ceiling and the asset is not a named, decided exception that holds them.
+func _over_ceiling(id: String, cls: String, draws: int) -> bool:
+	var ceiling := _ceiling(id, cls)
+	if ceiling < 0 or draws <= ceiling:
+		return false
+	if DECIDED_OVER_CEILING.has(id):
+		return draws > int(DECIDED_OVER_CEILING[id]["draws"])
+	return true
+
+
+# The cap a registry row resolves to: its budget class with the row's own exception merged over it.
+func _merged_cap(entry: Dictionary, classes: Dictionary) -> Dictionary:
+	var cap: Dictionary = classes[entry["class"]].duplicate()
+	var ex: Dictionary = entry.get("exception", {})
+	for k in ex:
+		if cap.has(k):
+			cap[k] = ex[k]
+	return cap
+
+
+# The draw count a row is held to: a shell at its merged cap; a layer at what it draws or at its exception if higher, so the
+# detail class cap of 2 does not loosen the layer rule.
+func _held_draws(entry: Dictionary, classes: Dictionary, measured: int) -> int:
+	var cap := _merged_cap(entry, classes)
+	if entry["class"] == "shell":
+		return int(cap["draws"])
+	return maxi(measured, int(entry.get("exception", {}).get("draws", 0)))
 
 
 func _self_check_ceiling() -> void:
 	_check(_over_ceiling("planted_unnamed_shell", "shell", 17), "ceiling self-check: an unnamed shell at 17 draws is over")
 	_check(not _over_ceiling("shell_tarn", "shell", 17), "ceiling self-check: named shell_tarn at 17 draws is not over")
+	_check(_over_ceiling("shell_tarn", "shell", 18), "ceiling self-check: named shell_tarn at 18 draws is over")
 	_check(not _over_ceiling("planted_unnamed_shell", "shell", 16), "ceiling self-check: an unnamed shell at 16 draws is not over")
-	_check(_over_ceiling("shell_planted_c3", "detail", 3), "ceiling self-check: an unnamed shell layer at 3 draws is over")
+	_check(_over_ceiling("shell_planted_c3", "detail", 3), "ceiling self-check: an unnamed class III layer at 3 draws is over")
+	_check(not _over_ceiling("shell_planted_c3", "detail", 2), "ceiling self-check: an unnamed class III layer at 2 draws is not over")
+	_check(_over_ceiling("shell_planted_c4", "detail", 2), "ceiling self-check: an unnamed class IV layer at 2 draws is over")
+	_check(not _over_ceiling("shell_planted_c4", "detail", 1), "ceiling self-check: an unnamed class IV layer at 1 draw is not over")
 	_check(not _over_ceiling("outfit_planted", "detail", 3), "ceiling self-check: a non-shell detail asset is outside the layer rule")
 	_check(not _over_ceiling("shell_tarn_c3", "detail", 3), "ceiling self-check: named shell_tarn_c3 at 3 draws is not over")
+	_check(_over_ceiling("shell_tarn_c3", "detail", 4), "ceiling self-check: named shell_tarn_c3 at 4 draws is over")
+	_check(not _over_ceiling("shell_tarn_c4", "detail", 2), "ceiling self-check: named shell_tarn_c4 at 2 draws is not over")
+	_check(_over_ceiling("shell_tarn_c4", "detail", 3), "ceiling self-check: named shell_tarn_c4 at 3 draws is over")
+	# The control goes through the cap-merge code the scan uses: a layer row whose exception raises its draws to 2.
+	var classes: Dictionary = _json(BUDGETS)["classes"]
+	var planted := {"id": "shell_planted_c4", "path": "res://planted.glb", "class": "detail", "exception": {"draws": 2}}
+	_check(_over_ceiling(planted["id"], planted["class"], _held_draws(planted, classes, 1)), "ceiling self-check: an unnamed class IV layer row with a 2-draw exception is over through the cap merge")
 
 
 func _scan(dir: String, ext: Array, out: Array) -> void:
@@ -142,13 +196,10 @@ func _run() -> void:
 			if not e["ships"]:
 				print("%-48s %-12s %-5s (not shipped, not counted)" % [path.trim_prefix(ROOT + "/"), e["class"], "false"])
 			continue
-		var cap: Dictionary = classes[e["class"]].duplicate()
-		var ex: Dictionary = e.get("exception", {})
-		for k in ex:
-			if cap.has(k):
-				cap[k] = ex[k]
+		var cap := _merged_cap(e, classes)
 		var asset_id := String(e.get("id", path.get_file().get_basename()))
-		_check(not _over_ceiling(asset_id, e["class"], cap["draws"]), "%s exception cap of %d draws within the %s ceiling or a named decision" % [asset_id, cap["draws"], e["class"]])
+		var held := _held_draws(e, classes, int(m["draws"]))
+		_check(not _over_ceiling(asset_id, e["class"], held), "%s %d draws within the %s ceiling or its named decision" % [asset_id, held, e["class"]])
 		print("%-48s %-12s %-5s %7d %7d %5d | %7d %7d %5d" % [path.trim_prefix(ROOT + "/"), e["class"], "true", m["tris"], m["verts"], m["draws"], cap["tris"], cap["verts"], cap["draws"]])
 		if measure_only:
 			continue

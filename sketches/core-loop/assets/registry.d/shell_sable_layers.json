@@ -55,9 +55,9 @@
    "ships": true,
    "loader": "src/presentation/hero_assets.gd fit_shell_into (shell variant shell_sable_felt, CUSTOMIZE section 8 Felt Rig; layers borrow the default shell_sable_c2..c5)",
    "exception": {
-    "draws": 14
+    "draws": 16
    },
-   "exception_why": "same node set as shell_sable (see its row): 14 draws, inside the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv 2026-10-10)",
+   "exception_why": "same node set as shell_sable (see its row): 16 draws, the baked-bracket bank split of the winch spool into its own SpoolKit mesh (wave 19, MOTION-SPEC row 208) adding two to the 14, within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10T21:29). Baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241; recorded in docs/decisions.tsv beside w13-PD (2026-10-22T18:42).",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_sable.py --variant felt",
     "helper": "tools/blender/shell_base.py hoberman()",
