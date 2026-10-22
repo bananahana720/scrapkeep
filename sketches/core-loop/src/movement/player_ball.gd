@@ -19,6 +19,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const ChainState := preload("res://src/combat/chain.gd")
+const Dunk := preload("res://src/combat/dunk.gd")
 const CombatRules := preload("res://src/combat/combat.gd")
 const ExceptionHold := preload("res://src/movement/exception_hold.gd")
 
@@ -108,6 +109,9 @@ var _smashes := {}
 var smash_landing: Node3D
 # The harpoon chain; this player is its only writer (HOOK-CHAIN.md).
 var chain := ChainState.new()
+# The dunk charge (dunk.gd): this player stores it from an air slam and ticks its clock; combat
+# spends it on a reel impact; the glow and the cue read its signals.
+var dunk := Dunk.new()
 # The chain's multiplier while a smash landing resolves; 1.0 otherwise.
 var _landing_mult := 1.0
 # The skill bar's router (design-v3/SKILL-BAR.md section 1). set_piece_phase answers the
@@ -187,7 +191,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	else:
 		_rigid.position = spawn_point
 	_rigid.enemy_touched.connect(_on_enemy_touched)
-	_rigid.slammed.connect(_on_slammed)
+	_rigid.slammed.connect(_on_rigid_slammed)
 	_rigid.pylon_planted.connect(_on_pylon_planted)
 	_rigid.pylon_ejected.connect(func(v: Vector3): events.dismounted.emit(v))
 	_rigid.jumped.connect(func(air: bool): events.jumped.emit(air))
@@ -197,6 +201,8 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	tree.picked.connect(_on_tree_picked)
 	events.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): kit.rewind_left = 0.0)
 	events.player_died.connect(func(): kit.drop_line("reset"))
+	events.player_died.connect(func(): dunk.clear("reset"))
+	events.stage_content_cleared.connect(func(_reason: String): dunk.clear("reset"))
 	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo, "rend": _smash_rend, "stamp": _smash_stamp}
 	events.run_started.connect(func(class_id: String):
 		fit_class(ClassDef.by_id(class_id))
@@ -569,6 +575,7 @@ func _physics_process(delta: float) -> void:
 		events.grapple_released.emit()
 	_was_hooked = kit.hooked
 	_publish_line(delta)
+	dunk.tick(delta)
 	_tick_chain(delta)
 	_recheck_bow()
 	_tick_face_tags(delta)
@@ -1274,6 +1281,18 @@ static func slam_strength(speed: float, flatness := 1.0) -> float:
 # The shockwave carries the same flatness as the plant: a full thump on flat ground,
 # next to nothing when the slam went into a launch.
 # Every class slams the same way; the landing then takes the class's flavour.
+# The body's own slam (cast in the air, landed on the ground) is the one that feeds the dunk
+# charge: the shared slam first, then its damage, flavour and the pilot's colour stored. The
+# harpoon's smash landing calls _on_slammed directly and stores nothing.
+func _on_rigid_slammed(at: Vector3, speed: float, flatness: float) -> void:
+	_on_slammed(at, speed, flatness)
+	var strength := slam_strength(speed, flatness)
+	if strength < 0.05:
+		return
+	dunk.store(Dunk.slam_damage(Augments.SLAM_KNOCK * strength, CombatRules.STRIKE_DAMAGE["slam"], heft()),
+		kit.smash_flavour, String(class_def.id) if class_def != null else "", class_color())
+
+
 func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	var strength := slam_strength(speed, flatness)
 	events.slammed.emit(at, strength, flatness)

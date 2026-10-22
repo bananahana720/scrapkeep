@@ -57,6 +57,8 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 #   --no-trails          vfx.trails = false: the ball trail and speed lines are not built.
 #   --no-machine-fx      presentation MachineFx (enemy and boss steam, sparks, arcs, words):
 #                        process disabled, its root hidden, event listeners cut.
+#   --no-stills          run_moments takes no scrapbook stills (each reads the frame back from the GPU,
+#                        frame_post_draw); stills_taken in the result counts the reads either way.
 # Synthetic attacks recycle and never resolve damage. HP is topped up every tick.
 #
 # level-sites   (LEVEL-SITES-BENCH, scrapkeep#149 ruling 3, wave 17) what a level Breach landing costs on its landing tick
@@ -67,8 +69,8 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 # share, the hit when it fits, the bookkeeping), then a second pass of its parts for the split: carve_ms, share_ms, breach_ms.
 # This measures landing() ms, not the landing frame: the scar mesh build in VolumeIndicator._process and the report_landing
 # listeners are outside the timed span. The split pass runs hot (the same site a second time), so its parts need not sum to
-# landing_ms. A queued carve is dropped after each site. --landing-scale=N sets the level budget to N x LATE_WORK parts (default: the shipped
-# LEVEL_LANDING_SCALE). Per site: fit (the carve hit inside landing()), work, shares, builds and the ms; the summary gives fit,
+# landing_ms. A queued carve is dropped after each site. --landing-scale=N sets the level budget to N/2 x LEVEL_LANDING_WORK parts, so 2 is
+# the shipped 400 and 4 is 800 (late_work moves in proportion). Per site: fit (the carve hit inside landing()), work, shares, builds and the ms; the summary gives fit,
 # median/p90/max landing ms over level sites ("all") and over the fitting ones, and the stand's landing ms (median of 5). The run is
 # invalid if any row's builds delta, which covers both the timed landing and the split pass, shows a terrain build. The warm-up cache variant (merge_level moved to a worker) was measured and
 # closed: 27444187 on claude/perf-merge-level-warm; cloud 80 sites, live 400 56/80 median 21.9 ms, cached 400/800/1000 40/56/59 of 80 at 20.5/33.1/34.9 ms.
@@ -155,7 +157,7 @@ const Hitscan := preload("res://src/combat/hitscan.gd")
 const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
-const ABLATIONS := ["no-music", "no-audio", "no-vfx", "no-telegraph-draw", "no-hud", "no-enemy-ai", "no-trails", "cold-band", "no-machine-fx"]
+const ABLATIONS := ["no-music", "no-audio", "no-vfx", "no-telegraph-draw", "no-hud", "no-enemy-ai", "no-trails", "cold-band", "no-machine-fx", "no-stills"]
 const PACK_ORDER := ["grounded", "strung", "netted", "rebound", "reeled", "wobble", "flung", "cupped"]
 const EXTRA_COPIES := ["spiral_wave", "chain_arc", "cross_split", "gatling_heart", "double_feed", "arc_coil"]
 const RIVET_SEED := 1
@@ -1289,6 +1291,7 @@ func _finish() -> void:
 		"size": [root.get_texture().get_width(), root.get_texture().get_height()],
 		"physics_hz": Engine.physics_ticks_per_second, "seed": RIVET_SEED,
 		"warm_frames": _warm_frames, "warm_seconds": _warm_seconds, "record_frames": _samples.size(), "warden": _warden_note,
+		"stills_taken": _game.run_moments.shots_taken if _game != null and _game.run_moments != null else -1,
 		"sound_ready_at_s": snappedf(_sound_ready_s, 0.01), "parts_granted": _granted.size(), "telegraphs_committed": _threats.size(),
 		"perf_monitor_value_changes": _perf_updates, "mark_materials": Threat.Painter.materials_built, "mark_materials_built_in_window": Threat.Painter.materials_built - _materials_at_record,
 		"wall_seconds": snappedf(_seconds_since(_start_usec), 0.1),
@@ -1337,8 +1340,8 @@ func _level_sites() -> void:
 		ult._plan = {"legs": []}
 	kit.warm_cycle()
 	kit.terrain.finish()
-	var scale := _sites_scale if _sites_scale > 0.0 else float(RivetKit.LEVEL_LANDING_SCALE)
-	kit.late_work = roundi(float(RivetKit.LATE_WORK) * scale / float(RivetKit.LEVEL_LANDING_SCALE))
+	var scale := _sites_scale if _sites_scale > 0.0 else 2.0
+	kit.late_work = roundi(float(RivetKit.LATE_WORK) * scale / 2.0)
 	var budget: int = kit.landing_work(true)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = _sites_seed
