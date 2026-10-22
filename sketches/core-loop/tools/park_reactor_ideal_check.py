@@ -27,7 +27,7 @@ def owners():
         "sheet_ram_breaks": constant("src/combat/warden_reactor.gd", "MOUNTED_POSTURE")["sheet_ram_breaks"],
         "full": constant(posture, "FULL"),
         "mult_min": constant(posture, "MULT_MIN"),
-        "mult_max": constant(posture, "MULT_MAX"),
+        "mult_max": constant(posture, "ORDINARY_RATIO"),
         "curve": constant("src/core/park_defs.gd", "POSTURE_CURVE") * pressure,
         "hefts": constant("src/core/run_state.gd", "HEFT_CLASS_AT"),
         "core_radius": constant("src/combat/warden.gd", "FAMILY_POINT_RADIUS"),

@@ -139,6 +139,11 @@ func _add_game(scene: PackedScene) -> void:
 		get_tree().quit(1)
 		return
 	_game = scene.instantiate()
+	# The game builds its title stage inside add_child (_ready), and that stage queues the opening
+	# at once, so the hold is a meta read in TitleStage.setup: set before the game enters the tree.
+	# Only a card holds; the in-place path leaves it unset and the opening runs as ever.
+	if _card != null:
+		_game.set_meta(&"intro_hold", true)
 	var tree := get_tree()
 	tree.root.add_child(_game)
 	tree.current_scene = _game
@@ -184,7 +189,33 @@ func _step_fade(delta: float) -> void:
 	_fade_started = true
 	var tween := create_tween()
 	tween.tween_property(_card, "modulate:a", 0.0, FADE_S)
-	tween.finished.connect(queue_free)
+	tween.finished.connect(_fade_done)
+
+
+# The card is gone from the player's eye: the 3D title's opening may now play (title_stage.gd).
+func _fade_done() -> void:
+	_release_intro()
+	queue_free()
+
+
+# _exit_tree only clears the hold (play=false): a card freed early or a quit mid-fade must not start
+# an opening that was never seen, which would mark it shown and save the profile.
+func _release_intro(play := true) -> void:
+	if _game == null or not is_instance_valid(_game):
+		return
+	_game.remove_meta(&"intro_hold")
+	var presentation = _game.get("presentation")
+	var stage = presentation.get("title_stage") if presentation != null else null
+	if stage == null or not is_instance_valid(stage):
+		return
+	if play:
+		stage.release_intro()
+	else:
+		stage.intro_hold = false
+
+
+func _exit_tree() -> void:
+	_release_intro(false)
 
 
 # A test sets close_handler to see the close without ending its process.
