@@ -253,3 +253,7 @@ The templates `tram_halt` and `ore_spill` are used only by h302 and m315. `tram_
 No spot moved, so the row scans are unchanged (0 straight runs, 0 yaw groups).
 
 Plan check: 364 instances (50 litter), 0 violations. The template prop count is 164 before and after, so the instance count is unchanged. Merged with stage 85a051a4 (which adds #243), the plan check is the same: 0 violations, fingerprint 4203578688. The pin changed from 251580569 to 4203578688 (an intended re-pin). `park_props_test` passes, including "park_islands expansion matches its pin".
+
+## w18n labels (#323's lint on stage d19c9120)
+
+With #323 on stage, its label lint flagged 12 islands `near` labels: 11 cut mid-word at 44 characters and w337 with trailing whitespace. Each is now "<place>, <the template story in full>", without its final full stop; the place is the one the old label named. Labels are not in the fingerprint, so the pin stays 4203578688. #323's plan check: 364 instances (50 litter), 0 violations, 0 pattern, 0 pin, 0 lint.
