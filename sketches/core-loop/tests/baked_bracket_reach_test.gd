@@ -133,8 +133,9 @@ static func _banked(pod: Node3D, node: Node) -> bool:
 	return false
 
 # One pose: the pod at `yaw` degrees, the ring aimed at bearing `aim` degrees, the bank settled for the wall;
-# the reach of every vertex of the nodes in `recs` (banked ones only when `baked_only` is false) is folded in.
-func _pose(hook, pod: Node3D, recs: Array, label: String, yaw: float, aim: float, baked_only: bool) -> void:
+# the reach of every vertex of the nodes in `recs` is folded in. Banked nodes are always folded in; baked ones
+# are skipped when `skip_baked` is true (their worst case is closed form, so one pose per wall covers them).
+func _pose(hook, pod: Node3D, recs: Array, label: String, yaw: float, aim: float, skip_baked: bool) -> void:
 	var normal: Vector3 = WALLS[label]
 	pod.rotation.y = deg_to_rad(yaw)
 	_hold(hook, pod, normal, deg_to_rad(aim))
@@ -143,7 +144,7 @@ func _pose(hook, pod: Node3D, recs: Array, label: String, yaw: float, aim: float
 	var centre := pod.global_position
 	for r in recs:
 		var banked: bool = r["banked"]
-		if not banked and baked_only:
+		if not banked and skip_baked:
 			continue
 		var xf: Transform3D = (r["node"] as Node3D).global_transform
 		var verts: PackedVector3Array = r["verts"]
@@ -237,8 +238,8 @@ func _measure(hook, pod: Node3D, pilot: String, cls: int) -> void:
 		for yi in range(YAWS):
 			for aim_yaw in AIMS:
 				# Baked nodes need one pose per wall (their worst yaw is closed form); banked ones every pose.
-				var baked_only: bool = yi > 0 or aim_yaw != AIMS[0]
-				_pose(hook, pod, recs, label, rad_to_deg(TAU * yi / YAWS), rad_to_deg(aim_yaw), baked_only)
+				var skip_baked: bool = yi > 0 or aim_yaw != AIMS[0]
+				_pose(hook, pod, recs, label, rad_to_deg(TAU * yi / YAWS), rad_to_deg(aim_yaw), skip_baked)
 	var signature := ""
 	for r in recs:
 		if r["banked"]:

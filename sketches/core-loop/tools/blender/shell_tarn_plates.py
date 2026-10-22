@@ -192,8 +192,8 @@ def layer(n, gaps):
         slab(pod, diamonds[i][0], diamonds[i][1], i)
     reach = st.CLAW_REACH[n - 1]
     tips = []
-    hooks = Part("ClawHooks")
     if n >= 3:
+        hooks = Part("ClawHooks")
         for sign in (1, -1):
             tips.append(hook(hooks, sign, reach, teeth=(n == 5)))
     if n == 4:

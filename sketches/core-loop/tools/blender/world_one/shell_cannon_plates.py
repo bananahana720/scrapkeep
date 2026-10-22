@@ -334,8 +334,9 @@ def check(n, root, pod, points, bins, count, pod_points=()):
     tris = common.tri_total(root)
     meshes = [o for o in common.tree(root) if o.type == "MESH"]
     draws = sum(len(o.data.materials) for o in meshes)
-    # PortHoods rides the carrier bank as its own mesh: one more draw at class V.
-    hood_draws = sum(len(o.data.materials) for o in meshes if o.name.startswith("PortHoods"))
+    # PortHoods rides the carrier bank as its own one-material mesh (ancient_enamel): one more draw at class V.
+    # The expected count is pinned here, not read from the mesh, so a missing or extra hood fails the draw check.
+    hood_draws = 1 if n == 5 else 0
     cone = sb.sight_cone_hits(pod)
     front = sb.sight_cone_hits(pod, eyes=FRONT_EYES)
     sweep = sc.sweep_hits(pod, bins)

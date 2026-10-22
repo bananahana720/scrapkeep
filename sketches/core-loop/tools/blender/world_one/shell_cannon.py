@@ -26,8 +26,9 @@ Node tree, Blender +Y forward, +Z up (Godot -Z forward, +Y up):
                               origin (the trunnion, BarrelPivot) from -10 to +35 degrees;
                               LaneMuzzle, SectorShutter and SectorPivot ride it
 Draws: Core paint, copper, rubber; Pod rubber, copper; Gyro; GyroInner; WeaponRing paint;
-MainBarrel ancient_enamel, class_accent. Ten, under the Hoberman pilot mecha cap of 16 (base 10
-plus machinery and the Pilot placeholder; coordinator call, docs/decisions.tsv 2026-10-10). The
+MainBarrel ancient_enamel, class_accent; SplitPorts copper, rubber. Twelve, under the Hoberman
+pilot mecha cap of 16 (base 10 plus machinery and the Pilot placeholder; coordinator call,
+docs/decisions.tsv w13-PD 2026-10-10), the last two from the bank split. The
 seat rides rubber and the whole ring rides paint so the barrel carries the class glow.
 
 Rebuilt 2026-10-10 (PD-CANNON fix round 2) on PD-0b's shell_base defaults: struts 0.06 m, tread
