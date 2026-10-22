@@ -1,0 +1,10 @@
+82a83
+> var _fixed := false
+114a116
+> 	_fixed = settings.get("fixed", "0") == "1"
+213a216,220
+> 	if _fixed:
+> 		# Render-bench variant (not in the repo): ball and camera held still in both modes, so fire is the only difference.
+> 		hold = {"fire_held": not _calm, "move": Vector2.ZERO}
+> 		_driver.source.hold = hold
+> 		return
