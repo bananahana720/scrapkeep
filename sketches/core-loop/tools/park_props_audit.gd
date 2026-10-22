@@ -24,7 +24,9 @@ extends SceneTree
 # (ground + 1.8), the first one whose sight line to the centre clears terrain, other props' cylinders, colliders and the eye point itself.
 # If none is clear it takes the front and marks the row blocked_all. Two stills per spot, both replayable (poses.json carries "cam" and
 # "look" for the eye frame; the chase frame is a plain pose): "eye" at that point looking at the centre (fov 72.5), the ball parked 8 m
-# behind the camera, and "chase" with the ball offset 2.5 m sideways at the same range and the player camera behind it. For each frame the
+# behind the camera, and "chase" with the ball 5 m out on the bearing and 2.5 m to its side, the player camera looking along -d (yaw =
+# the bearing angle, the eye frame's axis) so the subject sits beside the ball, not behind it. bearing_deg is the yaw offset from the
+# spot's front, not a compass bearing. For each frame the
 # subject is hidden and the frame drawn again: subject_px counts pixels inside its projected box that differ by more than 8 in any channel,
 # leaving out pixels that already differ between two unchanged renders (motes, streaks; noise_px), a guide and not a gate (null when the
 # instance cannot be isolated from the built nodes), beside aabb_share, the screen share of that box, and frame_diff_px, the unmasked whole frame.
@@ -664,7 +666,7 @@ func _run_vignettes() -> void:
 		var frames := {
 			"eye": {"idx": si * 2, "x": eye_ball.x, "z": eye_ball.z, "yaw": atan2(-(centre.x - eye_pos.x), -(centre.z - eye_pos.z)),
 				"cam": [eye_pos.x, eye_pos.y, eye_pos.z], "look": [centre.x, centre.y, centre.z]},
-			"chase": {"idx": si * 2 + 1, "x": chase_ball.x, "z": chase_ball.y, "yaw": atan2(-(centre.x - chase_ball.x), -(centre.z - chase_ball.y))}}
+			"chase": {"idx": si * 2 + 1, "x": chase_ball.x, "z": chase_ball.y, "yaw": float(pick["a"])}}
 		var row := {"id": id, "template": String(spot.get("template", "")), "subject_kind": subject["kind"], "subject_v": subject["v"],
 			"C": [snappedf(centre.x, 0.01), snappedf(centre.y, 0.01), snappedf(centre.z, 0.01)], "radius_m": snappedf(float(subject["radius"]), 0.01),
 			"height_m": snappedf(float(subject["height"]), 0.01), "front_deg": float(spot.get("yaw_deg", 0.0)), "bearing_deg": pick["off"],
