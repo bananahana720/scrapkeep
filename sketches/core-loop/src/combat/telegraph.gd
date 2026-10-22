@@ -66,8 +66,8 @@ var _fill_tint := Color(-1.0, -1.0, -1.0, -1.0)
 # centre it was cut for. Computed in _build and again when the flight is set.
 var _bound := AABB()
 var _bound_centre := Vector3.ZERO
-# A non-driven repaint since the box last took the meshes in (unreachable for a hostile mark,
-# which is always driven); bound_merges counts the mesh walks that took.
+# A non-driven repaint since the box last took the meshes in (a partial wave or a motion
+# wave, the marks Threat.can_drive leaves undriven); bound_merges counts the mesh walks that took.
 var _bound_stale := false
 var bound_merges := 0
 
