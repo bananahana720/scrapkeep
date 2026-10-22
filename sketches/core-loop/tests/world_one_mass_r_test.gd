@@ -49,6 +49,9 @@ func _rows() -> Array:
 
 func _run() -> void:
 	_game.ctx.calm = true
+	# A hit stop slows Engine.time_scale for wall time and starts only when the previous one has
+	# ended, so which turn windows it lands in depends on CPU speed; measure without stops.
+	_game.presentation.juice.hit_stop_sink = func(_seconds: float): pass
 	_game.flow.press_start()
 	_game.flow.choose_class(Route.CLASS_INDEX)
 	_game.run.set_max_hp(99999.0)

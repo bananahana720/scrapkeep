@@ -33,6 +33,9 @@ var time := 0.0
 var release_speed := 0.0
 var heading := Vector3.FORWARD
 var active := false
+# A cable ride's cable ends (the grapple line), for the line view's hanger; unset on every other ride.
+var cable_from := Vector3.ZERO
+var cable_to := Vector3.ZERO
 
 
 # An arc from origin down onto target. planar_in is the ball's own planar speed.

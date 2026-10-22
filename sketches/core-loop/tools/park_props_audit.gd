@@ -12,9 +12,32 @@ extends SceneTree
 #   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
 #     --resolution 1280x720 --script res://tools/park_props_audit.gd -- --map=park_dam --out=<abs dir> \
 #     [--step=25] [--stills=12] [--draws=40] [--counts-only] [--poses=<poses.json>] [--cam=rest|mid|fast]
+#     [--vignettes [--spots=id,id] [--subject-kind=<kind>]]
 #
 # Writes <out>/<map>/samples.json, summary.json, stills.json, poses.json and <map>-<idx>-<x>_<z>.png, then runs
 # tools/park_props_contact.py for the contact sheet. Needs a display unless --counts-only.
+#
+# --vignettes (Dressing card (c)) does not ride: it reads the map's props file and kit as the runtime does (ParkProps.prepare), expands
+# it with the game's ground, and for each spot (or the --spots filter) takes the subject (the first instance of that vignette, the lead
+# prop) and finds a clear view of it by search, not by hand: bearings from the spot's front of 0, +45, -45, +90, -90, +135, -135 and 180
+# degrees (a yaw offset: Godot +Z is the front, direction (sin yaw, cos yaw)), eye_m = max(5, radius + 1.5) m from the subject's centre at the chase anchor height
+# (ground + 1.8), the first one whose sight line to the centre clears terrain, other props' cylinders, colliders and the eye point itself.
+# If none is clear it takes the front and marks the row blocked_all. Two stills per spot, both replayable (poses.json carries "cam" and
+# "look" for the eye frame; the chase frame is a plain pose): "eye" at that point looking at the centre (fov 72.5), the ball parked 8 m
+# behind the camera, and "chase" with the ball eye_m out on the bearing and 2.5 m to its side, the player camera looking along -d (yaw =
+# the bearing angle, the eye frame's axis) so the subject sits beside the ball, not behind it. bearing_deg is the yaw offset from the
+# spot's front, not a compass bearing. For each frame the
+# subject is hidden and the frame drawn again: subject_px counts pixels inside its projected box that differ by more than 8 in any channel,
+# leaving out pixels that already differ between two unchanged renders (motes, streaks; noise_px), a guide and not a gate (null when the
+# instance cannot be isolated from the built nodes), beside aabb_share, the screen share of that box, and frame_diff_px, the unmasked whole frame.
+# --subject-kind=<kind> makes the subject the first instance of that kind in the spot (spots without one are skipped); vignettes.json
+# records the rule as subject_rule. Each frame also lists rows_in_view: the ids of the park file's park_rows (a footprint grid, 7 points
+# a side at most) and contraption_rows (launchers and the like: the point or a ring of their radius) with any sampled point inside the
+# camera frustum within 150 m (ParkProps.cell_visible, ground height, no occlusion).
+# Known limit: the chase frame is not sight-tested (only the eye frame is searched), and the collider ray does not exclude the subject.
+# The eye distance is max(5, subject radius + 1.5) m (eye_m per row): the frame must stand outside the subject's own footprint, so wide
+# subjects (wrecks, trucks) get a longer one; 5 m stays the rule for props. The subject itself never blocks its own sight line or eye point.
+# Writes <map>-v<spot idx>-<spot>-eye.png and -chase.png, vignettes.json, poses.json, stills.json, summary.json and the contact sheet.
 #
 # What counts as dressing (each item is one entry with a world-space centre; kinds are distinct meshes or dress_kind):
 #   props     nodes in group "park_props": every MultiMesh instance, every MeshInstance3D; kind = meta dress_kind
@@ -37,6 +60,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
+const ParkProps := preload("res://src/presentation/park_props.gd")
 
 const NEAR_M := 60.0
 const FAR_M := 120.0
@@ -72,6 +96,28 @@ const CAMERAS := {"rest": {"arm": 7.5, "fov": 65.0}, "mid": {"arm": 9.0, "fov": 
 const CAM_UP := 0.8
 const CAM_PITCH := -0.30
 const CAM_FAR := 700.0
+# Drawn frames a still waits after a pose: 3 normally, SETTLE_JUMP_FRAMES when the camera moved more than SETTLE_JUMP_M from the
+# previous pose. Reason: LOD fade and visibility ranges after a long jump.
+const SETTLE_DRAWN := 3
+const SETTLE_JUMP_FRAMES := 12
+const SETTLE_JUMP_M := 60.0
+# The vignette search (see the header): eye distance, bearing offsets in degrees, sight samples, the radius around the subject centre
+# that the prop rule ignores, the lens, the ball's parking distance behind the eye camera, the chase ball's sideways offset, the
+# pixel difference threshold and the smallest prop a sight line is blocked by.
+const V_RANGE_M := 5.0
+const V_OUTSIDE_M := 1.5
+const V_BEARINGS := [0.0, 45.0, -45.0, 90.0, -90.0, 135.0, -135.0, 180.0]
+const V_TERRAIN_SAMPLES := 10
+const V_PROP_SAMPLES := 80
+const V_CENTRE_SKIP_M := 0.3
+const V_FOV := 72.5
+const V_BALL_BEHIND_M := 8.0
+const V_CHASE_SIDE_M := 2.5
+const V_EYE_UP := 1.8
+const V_DIFF := 8
+const V_LITTER_MIN_H := 0.3
+const V_ROWS_RANGE_M := 150.0
+const V_ROWS_GRID := 7
 const DRAW_LABEL := "OpenGL compatibility proxy, cloud llvmpipe, not a frame-cost proof"
 
 var map_id := ""
@@ -82,8 +128,18 @@ var draw_count := 40
 var counts_only := false
 var poses_file := ""
 var cam_name := "mid"
-# --open=x:z:r,x:z:r : ruled open spaces (centre and radius, metres) whose windows are exempt from the density bar.
+var vignettes := false
+var spot_filter: Array = []
+var subject_kind := ""
+var _prev_cam := Vector3.INF
+# --open=x:z:r:<reason>,... : ruled open spaces (centre and radius, metres) whose windows are exempt from the density bar,
+# each with a reason the audit checks instead of trusting (coordinator ruling #241 6329579296). The reason is everything after
+# the third colon: runout:<kicker> (a kicker run-out lies within 40 m of the window centre) or no_cell (the audit's own probe
+# finds no legal cell in the view cone of any pose in the window) or filled:<cx>:<cz> (every legal cell in that cone is covered by
+# a placed prop, and the named cell is one of them). A missing or unknown reason exits 2; a window whose reason
+# fails is judged on its kinds like any other and listed in the summary's density_open_rejected.
 var open_spaces: Array = []
+var _probe := {}
 
 var game
 var cam: Camera3D
@@ -121,14 +177,26 @@ func _initialize() -> void:
 		elif a.begins_with("--cam="):
 			cam_name = a.trim_prefix("--cam=")
 		elif a.begins_with("--open="):
-			for part in a.trim_prefix("--open=").split(",", false):
-				var f := part.split(":")
-				if f.size() == 3:
-					open_spaces.append([Vector2(float(f[0]), float(f[1])), float(f[2])])
+			var parsed := ParkProps.parse_open(a.trim_prefix("--open="))
+			if parsed.has("error"):
+				printerr("park_props_audit: " + String(parsed["error"]))
+				quit(2)
+				return
+			open_spaces.append_array(parsed["spaces"])
 		elif a == "--counts-only":
 			counts_only = true
+		elif a == "--vignettes":
+			vignettes = true
+		elif a.begins_with("--subject-kind="):
+			subject_kind = a.trim_prefix("--subject-kind=")
+		elif a.begins_with("--spots="):
+			spot_filter = Array(a.trim_prefix("--spots=").split(",", false))
 	if map_id == "" or out_root == "" or not CAMERAS.has(cam_name):
 		printerr("park_props_audit: pass --map=<park map> --out=<absolute dir> [--cam=rest|mid|fast]")
+		quit(2)
+		return
+	if vignettes and (counts_only or poses_file != ""):
+		printerr("park_props_audit: --vignettes draws its own poses: no --counts-only or --poses")
 		quit(2)
 		return
 	if DisplayServer.get_name() == "headless" and not counts_only:
@@ -161,6 +229,10 @@ func _drawn(n: int) -> void:
 func _run() -> void:
 	seed(171019)
 	started_msec = Time.get_ticks_msec()
+	if vignettes and ParkProps.load_json(ParkProps.file_path(map_id)).is_empty():
+		printerr("park_props_audit: %s has no props file (%s), nothing to do for --vignettes" % [map_id, ParkProps.file_path(map_id)])
+		quit(2)
+		return
 	park = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/%s.json" % map_id))
 	var lines = JSON.parse_string(FileAccess.get_file_as_string("res://assets/park/%s/lines.json" % map_id))
 	if not park is Dictionary or not lines is Dictionary:
@@ -198,6 +270,9 @@ func _run() -> void:
 	cam.make_current()
 	if not counts_only:
 		game.presentation.hide_ui()
+	if vignettes:
+		await _run_vignettes()
+		return
 	_collect()
 	var tally := [0, 0, 0, 0, 0, 0, 0]
 	for c in icat:
@@ -248,13 +323,16 @@ func _run() -> void:
 		var s: Dictionary = by_idx[idx]
 		_place(s)
 		await _frames(2)
-		await _drawn(3)
+		await _drawn(_settle_frames())
 		var png := ""
 		if still_idx.has(idx):
 			png = "%s-%d-%d_%d.png" % [map_id, idx, int(round(s["x"])), int(round(s["z"]))]
 			root.get_texture().get_image().save_png(dir.path_join(png))
 			stills.append({"file": png, "idx": idx, "x": s["x"], "z": s["z"], "yaw": s["yaw"], "line": s["line"], "along_m": s["along_m"],
 				"props_120": s["total_120"], "core_60": s["core_60"], "kinds_120": s["kinds_120"], "bare": s["bare"], "void": s["void"]})
+			if s.has("cam"):
+				stills.back()["cam"] = s["cam"]
+				stills.back()["look"] = s["look"]
 		s["draw_calls"] = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
 		s["primitives"] = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
 		if has_props:
@@ -524,6 +602,338 @@ func _set_props_visible(on: bool) -> void:
 			n.visible = on
 
 
+# ---- --vignettes ----
+
+func _run_vignettes() -> void:
+	var file := ParkProps.load_json(ParkProps.file_path(map_id))
+	var kit := ParkProps.load_json(String(file.get("kit", "")))
+	var terrain = game.ctx.terrain
+	var pmap = terrain.map_for(stage_index)
+	var ground: Callable = terrain.ground_callable(stage_index)
+	var list: Array = ParkProps.expand(file, kit, pmap, ground, ParkProps.context(pmap, ground, stage_index))
+	var pp = game.presentation.park_props
+	if pp != null and pp.instances.size() != list.size():
+		printerr("park_props_audit: expand gave %d instances, the built stage has %d" % [list.size(), pp.instances.size()])
+	var space: PhysicsDirectSpaceState3D = game.get_world_3d().direct_space_state
+	var ball_rid: RID = game.player.body().get_rid()
+	var dir := out_root.path_join(map_id)
+	DirAccess.make_dir_recursive_absolute(dir)
+	var spots: Array = file.get("spots", [])
+	var rows: Array = []
+	var poses: Array = []
+	var stills: Array = []
+	var skipped: Array = []
+	var blocked_all := 0
+	var null_px := 0
+	var zero_px := 0
+	for si in spots.size():
+		var spot: Dictionary = spots[si]
+		var id := String(spot["id"])
+		if not spot_filter.is_empty() and not spot_filter.has(id):
+			continue
+		var subject_i := -1
+		for k in list.size():
+			if not list[k]["litter"] and String(list[k]["vignette"]) == id and (subject_kind == "" or String(list[k]["kind"]) == subject_kind):
+				subject_i = k
+				break
+		if subject_i < 0:
+			skipped.append(id)
+			if subject_kind == "":
+				printerr("park_props_audit: spot %s has no instance (template missing?)" % id)
+			continue
+		var subject: Dictionary = list[subject_i]
+		var spos: Vector3 = subject["pos"]
+		var centre := spos + Vector3(0.0, float(subject["height"]) * 0.5, 0.0)
+		var front := deg_to_rad(float(spot.get("yaw_deg", 0.0)))
+		# The frame must stand outside the subject's footprint, so a wide subject gets a longer eye distance; 5 m stays the rule for props.
+		var eye_m := maxf(V_RANGE_M, float(subject["radius"]) + V_OUTSIDE_M)
+		var near: Array = []
+		for k in list.size():
+			var other: Dictionary = list[k]
+			var opos: Vector3 = other["pos"]
+			if other["litter"] and float(other["height"]) < V_LITTER_MIN_H:
+				continue
+			if Vector2(opos.x - centre.x, opos.z - centre.z).length() < eye_m + float(other["radius"]) + 1.0:
+				near.append(k)
+		var blocked: Array = []
+		var pick := {}
+		for off in V_BEARINGS:
+			var a := front + deg_to_rad(off)
+			var d := Vector2(sin(a), cos(a))
+			var eye := Vector3(centre.x + eye_m * d.x, 0.0, centre.z + eye_m * d.y)
+			eye.y = terrain.height(eye.x, eye.z) + V_EYE_UP
+			var why := _sight_block(eye, centre, list, near, subject_i, terrain, space, ball_rid)
+			if why == "":
+				pick = {"off": off, "a": a, "d": d, "eye": eye}
+				break
+			blocked.append({"bearing_deg": off, "reason": why})
+		var all_blocked := pick.is_empty()
+		if all_blocked:
+			blocked_all += 1
+			var fd := Vector2(sin(front), cos(front))
+			var fe := Vector3(centre.x + eye_m * fd.x, 0.0, centre.z + eye_m * fd.y)
+			fe.y = terrain.height(fe.x, fe.z) + V_EYE_UP
+			pick = {"off": 0.0, "a": front, "d": fd, "eye": fe}
+		var bd: Vector2 = pick["d"]
+		var eye_pos: Vector3 = pick["eye"]
+		var to_c := (centre - eye_pos).normalized()
+		var eye_ball := eye_pos - to_c * V_BALL_BEHIND_M
+		var ba: float = float(pick["a"]) + PI * 0.5
+		var chase_ball := Vector2(centre.x + eye_m * bd.x + V_CHASE_SIDE_M * sin(ba), centre.z + eye_m * bd.y + V_CHASE_SIDE_M * cos(ba))
+		var frames := {
+			"eye": {"idx": si * 2, "x": eye_ball.x, "z": eye_ball.z, "yaw": atan2(-(centre.x - eye_pos.x), -(centre.z - eye_pos.z)),
+				"cam": [eye_pos.x, eye_pos.y, eye_pos.z], "look": [centre.x, centre.y, centre.z]},
+			"chase": {"idx": si * 2 + 1, "x": chase_ball.x, "z": chase_ball.y, "yaw": float(pick["a"])}}
+		var row := {"id": id, "template": String(spot.get("template", "")), "subject_kind": subject["kind"], "subject_v": subject["v"],
+			"C": [snappedf(centre.x, 0.01), snappedf(centre.y, 0.01), snappedf(centre.z, 0.01)], "radius_m": snappedf(float(subject["radius"]), 0.01),
+			"height_m": snappedf(float(subject["height"]), 0.01), "front_deg": float(spot.get("yaw_deg", 0.0)), "eye_m": snappedf(eye_m, 0.01), "bearing_deg": pick["off"],
+			"blocked": blocked, "blocked_all": all_blocked, "isolated": false}
+		var handle := _isolate(pp, subject)
+		row["isolated"] = not handle.is_empty()
+		for fname in ["eye", "chase"]:
+			var s: Dictionary = frames[fname]
+			s["line"] = "vignette:" + id
+			s["along_m"] = 0.0
+			_place(s)
+			await _frames(2)
+			await _drawn(_settle_frames())
+			var png := "%s-v%d-%s-%s.png" % [map_id, si, id, fname]
+			var shot := _grab()
+			shot.save_png(dir.path_join(png))
+			var box := _aabb(subject)
+			var res := {"png": png, "rows_in_view": _rows_in_view(file, terrain), "subject_px": null, "subject_share": null, "aabb_share": snappedf(float(box["share"]), 0.00001),
+				"frame_diff_px": null, "noise_px": null}
+			if not handle.is_empty():
+				# A control (the same frame drawn again, nothing hidden) finds what moves by itself (motes, streaks): those pixels are not
+				# counted. The count is the pixels inside the subject's projected box; frame_diff_px is the whole frame, unmasked.
+				await _drawn(3)
+				var control := _grab()
+				_set_hidden(handle, true)
+				await _drawn(3)
+				var bare_shot := _grab()
+				_set_hidden(handle, false)
+				var whole := Rect2i(0, 0, shot.get_width(), shot.get_height())
+				var px := _diff_px(shot, bare_shot, box["rect"], control)
+				res["subject_px"] = px
+				res["subject_share"] = snappedf(float(px) / float(shot.get_width() * shot.get_height()), 0.00001)
+				res["frame_diff_px"] = _diff_px(shot, bare_shot, whole, null)
+				res["noise_px"] = _diff_px(shot, control, box["rect"], null)
+				if px == 0:
+					zero_px += 1
+			else:
+				null_px += 1
+			row[fname] = res
+			var pose := {"idx": s["idx"], "line": s["line"], "along_m": 0.0, "x": snappedf(float(s["x"]), 0.001), "z": snappedf(float(s["z"]), 0.001),
+				"yaw": snappedf(float(s["yaw"]), 0.00001), "file": png}
+			if s.has("cam"):
+				pose["cam"] = s["cam"].map(func(v): return snappedf(float(v), 0.001))
+				pose["look"] = s["look"].map(func(v): return snappedf(float(v), 0.001))
+			poses.append(pose)
+			var caption := "%s %s %s%s px %s aabb %.1f%%" % [id, fname, str(pick["off"]), " BLOCKED" if all_blocked else "", str(res["subject_px"]), float(res["aabb_share"]) * 100.0]
+			var still := pose.duplicate()
+			still["caption"] = caption
+			stills.append(still)
+		rows.append(row)
+		print("park_props_audit: %s bearing %s %s eye px %s chase px %s" % [id, str(pick["off"]), "BLOCKED_ALL" if all_blocked else "ok", str(row["eye"]["subject_px"]), str(row["chase"]["subject_px"])])
+	var summary := {"mode": "vignettes", "map": map_id, "stage": stage_index, "spots_in_file": spots.size(), "spots_rendered": rows.size(), "spots_skipped": skipped,
+		"blocked_all": blocked_all, "subject_px_note": "px inside the projected box, minus pixels that move between two unchanged renders; a guide", "frames_without_isolation": null_px, "frames_zero_subject_px": zero_px, "constants": _constants(),
+		"adapter": RenderingServer.get_video_adapter_name(), "runtime_s": snappedf((Time.get_ticks_msec() - started_msec) / 1000.0, 0.1)}
+	var rule := "lead prop: the first instance of the spot's vignette" if subject_kind == "" else "first instance of kind %s in the spot; spots without it skipped" % subject_kind
+	summary["subject_rule"] = rule
+	_write(dir.path_join("vignettes.json"), {"map": map_id, "stage": stage_index, "subject_rule": rule, "rows": rows})
+	_write(dir.path_join("poses.json"), {"map": map_id, "poses": poses})
+	_write(dir.path_join("stills.json"), {"map": map_id, "stills": stills})
+	_write(dir.path_join("summary.json"), summary)
+	var res_out := []
+	var code := OS.execute("python3", [ProjectSettings.globalize_path("res://tools/park_props_contact.py"), dir], res_out, true)
+	print("park_props_audit: contact sheet exit %d %s" % [code, "".join(res_out).strip_edges()])
+	print("park_props_audit: done %s vignettes in %.0f s" % [map_id, summary["runtime_s"]])
+	quit(0)
+
+
+# "" when the sight from eye to centre is clear, else why not: inside:<vignette>/<kind> (the eye is in that prop's cylinder; the eye stands
+# above the terrain by construction, so there is no inside:terrain), terrain, prop:<vignette>/<kind> (the blocker's own vignette) or collider:<node name>.
+func _sight_block(eye: Vector3, centre: Vector3, list: Array, near: Array, subject_i: int, terrain, space: PhysicsDirectSpaceState3D, ball_rid: RID) -> String:
+	for k in near:
+		if k != subject_i and _in_cylinder(eye, list[k]):
+			return "inside:%s/%s" % [list[k]["vignette"], list[k]["kind"]]
+	for i in range(1, V_TERRAIN_SAMPLES + 1):
+		var p := eye.lerp(centre, float(i) / float(V_TERRAIN_SAMPLES + 1))
+		if terrain.height(p.x, p.z) > p.y:
+			return "terrain"
+	for i in range(V_PROP_SAMPLES + 1):
+		var p2 := eye.lerp(centre, float(i) / float(V_PROP_SAMPLES))
+		if p2.distance_to(centre) <= V_CENTRE_SKIP_M:
+			continue
+		for k in near:
+			if k != subject_i and _in_cylinder(p2, list[k]):
+				return "prop:%s/%s" % [list[k]["vignette"], list[k]["kind"]]
+	var query := PhysicsRayQueryParameters3D.create(eye, centre)
+	query.exclude = [ball_rid]
+	var hit := space.intersect_ray(query)
+	if not hit.is_empty():
+		return "collider:%s" % String((hit["collider"] as Node).name)
+	return ""
+
+
+# Ids of the file's park rows and contraption rows with a sampled point in the camera frustum within V_ROWS_RANGE_M (frustum only, no
+# occlusion). A park row is sampled over its footprint (a V_ROWS_GRID grid, centre included); a contraption row at its point and a ring of its radius.
+func _rows_in_view(file: Dictionary, terrain) -> Array:
+	var spec := {"fov_deg": cam.fov, "aspect": float(SIZE.x) / float(SIZE.y)}
+	var view := cam.global_transform
+	var out: Array = []
+	var park_file: Dictionary = park
+	for row: Dictionary in park_file.get("park_rows", []):
+		if not row.get("at") is Array or not row.get("size") is Array:
+			continue
+		var centre := Vector2(float(row["at"][0]), float(row["at"][1]))
+		var half := ParkMap.footprint_half_extents(row)
+		var yaw := deg_to_rad(float(row.get("yaw_deg", 0.0)))
+		var seen := false
+		for i in V_ROWS_GRID:
+			for j in V_ROWS_GRID:
+				var local := Vector2(lerpf(-half.x, half.x, float(i) / float(V_ROWS_GRID - 1)), lerpf(-half.y, half.y, float(j) / float(V_ROWS_GRID - 1)))
+				var w := centre + local.rotated(-yaw)
+				if ParkProps.cell_visible(view, spec, Vector3(w.x, terrain.height(w.x, w.y), w.y), V_ROWS_RANGE_M):
+					seen = true
+					break
+			if seen:
+				break
+		if seen:
+			out.append(String(row["id"]))
+	for row: Dictionary in park_file.get("contraption_rows", []):
+		if not row.get("at") is Array:
+			continue
+		var c := Vector2(float(row["at"][0]), float(row["at"][1]))
+		var r := float(row.get("radius", 0.0))
+		var pts: Array = [c]
+		for k in 8:
+			pts.append(c + Vector2.from_angle(k * TAU / 8.0) * r)
+		for w2: Vector2 in pts:
+			if ParkProps.cell_visible(view, spec, Vector3(w2.x, terrain.height(w2.x, w2.y), w2.y), V_ROWS_RANGE_M):
+				out.append(String(row["id"]))
+				break
+	return out
+
+
+func _in_cylinder(p: Vector3, inst: Dictionary) -> bool:
+	var at: Vector3 = inst["pos"]
+	if p.y < at.y or p.y > at.y + float(inst["height"]):
+		return false
+	return Vector2(p.x - at.x, p.z - at.z).length() <= float(inst["radius"])
+
+
+func _grab() -> Image:
+	var img := root.get_texture().get_image()
+	if img.get_format() != Image.FORMAT_RGB8:
+		img.convert(Image.FORMAT_RGB8)
+	return img
+
+
+# Pixels inside `rect` whose RGB differs by more than V_DIFF in any channel, leaving out those that also differ between a and `ignore`
+# (a control render of the same frame) when it is given.
+func _diff_px(a: Image, b: Image, rect: Rect2i, ignore: Image) -> int:
+	var da := a.get_data()
+	var db := b.get_data()
+	if da == db:
+		return 0
+	var dc := ignore.get_data() if ignore != null else PackedByteArray()
+	var w := a.get_width()
+	var count := 0
+	for y in range(maxi(rect.position.y, 0), mini(rect.end.y, a.get_height())):
+		for x in range(maxi(rect.position.x, 0), mini(rect.end.x, w)):
+			var i := (y * w + x) * 3
+			if absi(da[i] - db[i]) > V_DIFF or absi(da[i + 1] - db[i + 1]) > V_DIFF or absi(da[i + 2] - db[i + 2]) > V_DIFF:
+				if dc.is_empty() or not (absi(da[i] - dc[i]) > V_DIFF or absi(da[i + 1] - dc[i + 1]) > V_DIFF or absi(da[i + 2] - dc[i + 2]) > V_DIFF):
+					count += 1
+	return count
+
+
+# The built views of one instance, to hide: {"views": [MeshInstance3D], "multi": [[MultiMeshInstance3D, index, Transform3D]]}; {} when it cannot be
+# told apart. A hero is a MeshInstance3D per LOD; anything else is a member of a MultiMesh per LOD0 and LOD1 (LOD2 is one merged mesh of the
+# whole vignette, drawn from 90 m (PROP_RANGES, park_props.gd:101), far past any eye_m here, and is not touched).
+func _isolate(pp, inst: Dictionary) -> Dictionary:
+	if pp == null:
+		return {}
+	var holder: Node = pp.get_node_or_null("Vignette_" + String(inst["vignette"]))
+	if holder == null:
+		return {}
+	var pos: Vector3 = inst["pos"]
+	var views: Array = []
+	var multi: Array = []
+	for child in holder.get_children():
+		if String(child.get_meta("dress_kind", "")) != String(inst["kind"]):
+			continue
+		if child is MeshInstance3D and inst["class"] == ParkProps.HERO:
+			if child.transform.origin.distance_to(pos) < 0.01:
+				views.append(child)
+		elif child is MultiMeshInstance3D and inst["class"] != ParkProps.HERO and int(child.get_meta("dress_lod", 9)) < 2:
+			var mm: MultiMesh = child.multimesh
+			for i in mm.instance_count:
+				var t := mm.get_instance_transform(i)
+				if t.origin.distance_to(pos) < 0.01:
+					multi.append([child, i, t])
+	if views.is_empty() and multi.is_empty():
+		return {}
+	return {"views": views, "multi": multi}
+
+
+func _set_hidden(handle: Dictionary, hidden: bool) -> void:
+	for v in handle["views"]:
+		v.visible = not hidden
+	for m in handle["multi"]:
+		var t: Transform3D = m[2]
+		m[0].multimesh.set_instance_transform(m[1], Transform3D(Basis.from_scale(Vector3.ZERO), t.origin) if hidden else t)
+
+
+# The screen share of the subject's projected box (the 8 corners of its cylinder's bounds from pos, radius and height), clipped to the
+# screen: the box's edges are cut at the near plane, projected with the camera's lens, and their bounds taken. Returns {"share", "rect"}
+# (the bounds in pixels, grown by 4).
+func _aabb(inst: Dictionary) -> Dictionary:
+	var at: Vector3 = inst["pos"]
+	var r := float(inst["radius"])
+	var h := float(inst["height"])
+	var inv := cam.global_transform.affine_inverse()
+	var corners: Array = []
+	for i in 8:
+		corners.append(inv * (at + Vector3(r if (i & 1) != 0 else -r, h if (i & 4) != 0 else 0.0, r if (i & 2) != 0 else -r)))
+	var pts: Array = []
+	var near := 0.05
+	for i in 8:
+		for bit in [1, 2, 4]:
+			var j: int = i ^ bit
+			if j < i:
+				continue
+			var a: Vector3 = corners[i]
+			var b: Vector3 = corners[j]
+			var ia := a.z <= -near
+			var ib := b.z <= -near
+			if ia:
+				pts.append(a)
+			if ib:
+				pts.append(b)
+			if ia != ib:
+				pts.append(a.lerp(b, (-near - a.z) / (b.z - a.z)))
+	if pts.is_empty():
+		return {"share": 0.0, "rect": Rect2i()}
+	var tan_half := tan(deg_to_rad(cam.fov) * 0.5)
+	var aspect := float(SIZE.x) / float(SIZE.y)
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for p: Vector3 in pts:
+		var nx := p.x / (-p.z) / (tan_half * aspect)
+		var ny := p.y / (-p.z) / tan_half
+		lo = Vector2(minf(lo.x, nx), minf(lo.y, ny))
+		hi = Vector2(maxf(hi.x, nx), maxf(hi.y, ny))
+	lo = Vector2(clampf(lo.x, -1.0, 1.0), clampf(lo.y, -1.0, 1.0))
+	hi = Vector2(clampf(hi.x, -1.0, 1.0), clampf(hi.y, -1.0, 1.0))
+	var x0 := int(floor((lo.x + 1.0) * 0.5 * SIZE.x)) - 4
+	var x1 := int(ceil((hi.x + 1.0) * 0.5 * SIZE.x)) + 4
+	var y0 := int(floor((1.0 - hi.y) * 0.5 * SIZE.y)) - 4
+	var y1 := int(ceil((1.0 - lo.y) * 0.5 * SIZE.y)) + 4
+	return {"share": (hi.x - lo.x) * (hi.y - lo.y) / 4.0, "rect": Rect2i(x0, y0, x1 - x0, y1 - y0)}
+
+
 # ---- the ride path ----
 
 func _place_of(id: String) -> Vector2:
@@ -596,7 +1006,11 @@ func _samples_from_poses() -> Array:
 	var data = JSON.parse_string(FileAccess.get_file_as_string(poses_file))
 	var out: Array = []
 	for p in data.get("poses", []):
-		out.append({"idx": int(p["idx"]), "line": p.get("line", ""), "along_m": p.get("along_m", 0.0), "x": float(p["x"]), "z": float(p["z"]), "yaw": float(p["yaw"])})
+		var s := {"idx": int(p["idx"]), "line": p.get("line", ""), "along_m": p.get("along_m", 0.0), "x": float(p["x"]), "z": float(p["z"]), "yaw": float(p["yaw"])}
+		if p.get("cam") is Array and p.get("look") is Array:
+			s["cam"] = p["cam"]
+			s["look"] = p["look"]
+		out.append(s)
 	return out
 
 
@@ -608,10 +1022,26 @@ func _place(s: Dictionary) -> void:
 	var body = game.player.body()
 	body.global_position = Vector3(x, ground + 1.0, z)
 	body.linear_velocity = Vector3.ZERO
+	if s.has("cam"):
+		# An eye pose (--vignettes): the camera stands at "cam" looking at "look"; the ball is parked behind it, out of frame.
+		var at := Vector3(float(s["cam"][0]), float(s["cam"][1]), float(s["cam"][2]))
+		var target := Vector3(float(s["look"][0]), float(s["look"][1]), float(s["look"][2]))
+		cam.global_transform = Transform3D(Basis.looking_at(target - at, Vector3.UP), at)
+		cam.fov = V_FOV
+		body.global_position = at - (target - at).normalized() * V_BALL_BEHIND_M
+		return
 	var anchor := Vector3(x, ground + 1.0 + CAM_UP, z)
 	var basis := Basis(Vector3.UP, float(s["yaw"])) * Basis(Vector3.RIGHT, CAM_PITCH)
 	cam.global_transform = Transform3D(basis, anchor + basis * Vector3(0.0, 0.0, float(CAMERAS[cam_name]["arm"])))
 	cam.fov = CAMERAS[cam_name]["fov"]
+
+
+# Drawn frames to wait after _place: more after a long jump of the camera (see SETTLE_JUMP_FRAMES). Remembers the pose it settled at.
+func _settle_frames() -> int:
+	var at := cam.global_position
+	var far := _prev_cam == Vector3.INF or at.distance_to(_prev_cam) > SETTLE_JUMP_M
+	_prev_cam = at
+	return SETTLE_JUMP_FRAMES if far else SETTLE_DRAWN
 
 
 # ---- counting ----
@@ -861,7 +1291,7 @@ func _summary(samples: Array, draw_idx: Array, info: Dictionary) -> Dictionary:
 #   arena      the footprint of a home_rows site (park row, or the activity row's point) or the landmark row, grown by ENGAGE_RING_M
 #   camp       an activity_rows enemy_camp (the camp's `at` point), grown by ENGAGE_RING_M (the validator's camp ring)
 #   telegraph  the footprint of an event_rows site (park row), grown by the event's hold_clear_m (0 when absent)
-#   open       a --open=x:z:r space (a ruling keeps it open; the park JSON carries none)
+#   open       a --open=x:z:r:<reason> space whose reason checks out (runout:<kicker>, no_cell or filled:<cx>:<cz>, see _check_open); a failed reason is not exempt
 func _density(samples: Array) -> Dictionary:
 	var by_line := {}
 	for s in samples:
@@ -873,6 +1303,8 @@ func _density(samples: Array) -> Dictionary:
 	var passed := 0
 	var reasons := {}
 	var fails: Array = []
+	var rejected: Array = []
+	var checked := 0
 	var line_names := by_line.keys()
 	line_names.sort()
 	for line in line_names:
@@ -885,12 +1317,14 @@ func _density(samples: Array) -> Dictionary:
 			if stop - start < (DENSITY_WINDOW_M if start + DENSITY_WINDOW_M <= end_m else DENSITY_TAIL_MIN_M):
 				break
 			var kinds := {}
+			var window_poses: Array = []
 			var mid: Dictionary = {}
 			var best := INF
 			for smp in list:
 				var a := float(smp["along_m"])
 				if a < start or a >= start + DENSITY_WINDOW_M:
 					continue
+				window_poses.append(smp)
 				for k in smp.get("prop_kinds_60", []):
 					kinds[k] = true
 				if absf(a - (start + stop) * 0.5) < best:
@@ -901,6 +1335,14 @@ func _density(samples: Array) -> Dictionary:
 				continue
 			windows += 1
 			var why := _density_exempt(Vector2(mid["x"], mid["z"]))
+			if why == "open":
+				checked += 1
+				var verdict := _check_open(Vector2(mid["x"], mid["z"]), window_poses)
+				if String(verdict["why"]) == "":
+					why = "open:" + String(verdict["kind"])
+				else:
+					why = ""
+					rejected.append({"at": [mid["x"], mid["z"]], "r": verdict["r"], "reason": verdict["reason"], "why": verdict["why"], "cell": verdict["cell"]})
 			if why != "":
 				exempt += 1
 				reasons[why] = int(reasons.get(why, 0)) + 1
@@ -910,8 +1352,41 @@ func _density(samples: Array) -> Dictionary:
 				fails.append({"line": line, "start_m": start - DENSITY_WINDOW_M, "kinds": kinds.size(), "at": [mid["x"], mid["z"]]})
 	var counted := windows - exempt
 	return {"density_windows": windows, "density_exempt": exempt, "density_exempt_by": reasons, "density_pass": passed,
-		"density_fail_windows": fails, "density_share": snappedf(float(passed) / maxf(1.0, counted), 0.001),
+		"density_fail_windows": fails, "density_open_checked": checked, "density_open_rejected": rejected, "density_share": snappedf(float(passed) / maxf(1.0, counted), 0.001),
 		"density_rule": "%d+ distinct park-prop kinds in view within %.0f m per %.0f m window" % [DENSITY_MIN_KINDS, NEAR_M, DENSITY_WINDOW_M]}
+
+
+# Verifies the --open space holding `at` against its reason: {kind, reason, r, why ("" when it holds), cell}.
+func _check_open(at: Vector2, window_poses: Array) -> Dictionary:
+	var space: Array = []
+	for candidate in open_spaces:
+		if (candidate[0] as Vector2).distance_to(at) <= float(candidate[1]):
+			space = candidate
+			break
+	var reason: String = space[2]
+	var kind := "runout" if reason.begins_with("runout:") else ("filled" if reason.begins_with("filled:") else "no_cell")
+	var out := {"kind": kind, "reason": reason, "r": space[1], "why": "", "cell": null}
+	if _probe.is_empty():
+		var world := ParkProps.world_for(map_id)
+		var file := ParkProps.load_json(ParkProps.file_path(map_id))
+		var kit_path := String(file.get("kit", "res://assets/models/park/props/%s/manifest.json" % map_id.trim_prefix("park_")))
+		var probe_c := ParkProps.context(world["map"], world["ground"], world["stage"])
+		var probe_kit := ParkProps.load_json(kit_path)
+		var placed: Array = ParkProps.expand(file, probe_kit, world["map"], world["ground"], probe_c) if reason.begins_with("filled:") or _filled_open() else []
+		_probe = {"c": probe_c, "kit": probe_kit, "file": file, "placed": placed}
+	var poses: Array = []
+	for smp in window_poses:
+		poses.append({"x": smp["x"], "z": smp["z"], "yaw": smp["yaw"]})
+	var cam_spec := {"arm": CAMERAS[cam_name]["arm"], "pitch": CAM_PITCH, "up": CAM_UP, "fov_deg": CAMERAS[cam_name]["fov"], "aspect": float(SIZE.x) / float(SIZE.y)}
+	var decided := ParkProps.open_reason(_probe["c"], _probe["kit"], _probe["file"], reason, at, poses, cam_spec, _probe["placed"])
+	out["why"] = "" if decided["ok"] else String(decided["why"])
+	out["cell"] = decided["cell"]
+	return out
+
+
+# Whether any --open space claims filled:, so the probe expands the file once only when it needs the instances.
+func _filled_open() -> bool:
+	return open_spaces.any(func(space: Array) -> bool: return String(space[2]).begins_with("filled:"))
 
 
 func _density_exempt(at: Vector2) -> String:

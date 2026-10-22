@@ -7,6 +7,8 @@ const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 # and stored in data/challenge/monster_heft.json; this regenerates it and fails on drift, so the data
 # is never hand-tuned (coordinator ruling (B) on #222, 21 Oct).
 const TOLERANCE := 0.0005
+# sha256 of data/challenge/lib_base_index.json as copied from scratch/challenge-lib 01a9f50d.
+const INDEX_SHA256 := "8cd3054894c6a1e756c40a5aa56bb7a58e0bf17848388f5c420801b58ddc167b"
 
 var _t := preload("res://tests/support/t.gd").new("monster_heft_test")
 
@@ -39,6 +41,11 @@ func _initialize() -> void:
 	for stage in range(1, 6):
 		_t.check("w%d loads through MonsterHeft" % stage, absf(MonsterHeft.threshold_for_stage(stage) - float(fresh["wardens"][str(stage)])) <= TOLERANCE, "")
 	_t.check("the loader's Waking and Mind match", absf(MonsterHeft.waking_threshold() - float(fresh["waking"])) <= TOLERANCE and absf(MonsterHeft.mind_threshold() - float(fresh["mind"])) <= TOLERANCE, "")
+	for doc in index:
+		var at := str(int(doc["stage"]))
+		if entrances.has(at):
+			_t.check("%s is not a monster at its own entrance" % doc["file"], Gen.heft_of(float(doc["mass"])) <= float(entrances[at]), "heft %.5f, entrance %.3f" % [Gen.heft_of(float(doc["mass"])), float(entrances[at])])
+	_t.eq("the lib-base copy is the pinned one", FileAccess.get_sha256(Gen.INDEX_PATH), INDEX_SHA256)
 	_t.check("an unknown stage fails closed to INF", is_inf(MonsterHeft.threshold_for_stage(0)) and is_inf(MonsterHeft.threshold_for_stage(7)), "")
 	quit(_t.verdict())
 

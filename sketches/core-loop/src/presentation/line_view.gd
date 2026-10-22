@@ -40,6 +40,13 @@ const MARK_PX := 3.0
 const PULSE_HZ := 2.0
 const PULSE_DEPTH := 0.14
 
+# The fairlead runs round the carrier's collar at this radius, outside the 1.0 collider.
+const FAIRLEAD_RADIUS := 1.06
+# The collar is a free bearing, so the fairlead turns at a finite rate: PI / 15 = 0.21 s for a
+# half turn, fast enough to track a swing and slow enough that it never pops across the ball.
+const FAIRLEAD_TURN_RATE := 15.0
+# An anchor that moves further than this in one frame is a new bite, not a moving body.
+const ANCHOR_JUMP := 2.0
 const COLLAR_MIN := 0.9
 const COLLAR_MAX := 3.2
 const COLLAR_PER_METRE := 0.07
@@ -47,6 +54,11 @@ const POST_RING := 1.1
 const RING_CAP := 6
 const RING_STEP := 0.22
 const BARB_SIZE := 0.55
+
+# The cableway hanger (MOTION-SPEC cableway row): a rope from the collar fairlead up to a trolley clamp on the cable.
+const CLAMP_HALF := 0.35
+const CLAMP_RADIUS := 0.3
+const CABLE_RADIUS := 0.18
 
 const DRY_DART := 8.0
 const DRY_TIME := 0.25
@@ -64,6 +76,21 @@ var events
 var cable: MeshInstance3D
 var cable_taut := false
 var cable_radius := SLACK_RADIUS
+# Where the drawn cable starts: the collar fairlead, never the ball's centre (MOTION-SPEC swing row).
+var cable_origin := Vector3.ZERO
+var _fairlead_yaw := 0.0
+var hanger: MeshInstance3D
+# The hanger's two ends while a cable ride is on: the fairlead point and the trolley clamp on the cable.
+var hanger_from := Vector3.ZERO
+var hanger_to := Vector3.ZERO
+var _hanger_yaw := 0.0
+var _hanger_was_on := false
+# True on the tick a ride's hanger first draws: the carriage snaps to the clamp's side then too.
+var hanger_fresh := false
+var _ride
+var _hanger_material: StandardMaterial3D
+var _was_hooked := false
+var _last_anchor := Vector3.ZERO
 var brackets: MeshInstance3D
 var lock_scale := 1.0
 var barb: MeshInstance3D
@@ -108,6 +135,8 @@ func setup(player_ref, camera_ref: Camera3D, events_ref) -> void:
 	post_ring = _node("PostRing", _ring_material)
 	_pop_material = _material(true)
 	pop = _node("SmashPop", _pop_material)
+	_hanger_material = _material()
+	hanger = _node("Hanger", _hanger_material)
 	events.line_state_changed.connect(_on_line_state)
 
 
@@ -138,6 +167,24 @@ func _process(delta: float) -> void:
 	step(delta)
 
 
+# The fairlead carriage's yaw (-Z faces yaw 0, as the weapon ring's): it turns to the anchor's
+# planar direction and holds the last yaw when the anchor is overhead or below.
+# It turns by the shorter arc at no more than FAIRLEAD_TURN_RATE.
+static func fairlead_yaw(yaw: float, centre: Vector3, anchor: Vector3, delta: float) -> float:
+	var flat := Vector2(anchor.x - centre.x, anchor.z - centre.z)
+	if flat.length_squared() < 0.0001:
+		return yaw
+	var gap := wrapf(atan2(-flat.x, -flat.y) - yaw, -PI, PI)
+	var most := FAIRLEAD_TURN_RATE * delta
+	return wrapf(yaw + clampf(gap, -most, most), -PI, PI)
+
+
+# The point on the collar the rope leaves: centre + FAIRLEAD_RADIUS x the flat direction at `yaw`,
+# leaned by the carrier bank (the fairlead is banked with the carrier, MOTION-SPEC row 209).
+static func fairlead_point(centre: Vector3, yaw: float, bank := Basis.IDENTITY) -> Vector3:
+	return centre + bank * (Vector3(-sin(yaw), 0.0, -cos(yaw)) * FAIRLEAD_RADIUS)
+
+
 # One frame of the view. Tests step it with fixed deltas; the engine calls it from _process.
 func step(delta: float) -> void:
 	if player == null or camera == null:
@@ -148,10 +195,11 @@ func step(delta: float) -> void:
 	_advance(delta)
 	var smash: bool = kit.hooked and kit.line_state == Augments.LINE_SMASH
 	_smash_age = _smash_age + delta if smash else 0.0
-	_draw_cable(kit, ball, smash)
+	_draw_cable(kit, ball, smash, delta)
 	_draw_lock(kit)
 	_draw_latch(kit, ball)
 	_draw_pop()
+	_draw_hanger(ball, delta)
 
 
 func _advance(delta: float) -> void:
@@ -239,7 +287,19 @@ func projected_px(radius: float, depth: float) -> float:
 	return half_width(radius, depth) * 2.0 * focal_px() / depth
 
 
-func _draw_cable(kit, ball: Vector3, smash: bool) -> void:
+func _draw_cable(kit, centre: Vector3, smash: bool, delta: float) -> void:
+	# The physics pulls through the centre (a free bearing); only the drawn rope starts at the collar.
+	var toward: Vector3 = kit.anchor if kit.hooked else (_gone_anchor if _broke_age >= 0.0 or _let_go_age >= 0.0 else centre + _dry_dir)
+	# A fresh rope (nothing drawn last frame, a new hook, or a hook that jumped to another anchor)
+	# leaves from the anchor's side at once: turning in from a stale yaw would draw it through the
+	# lattice and the pilot. A moving body anchor travels well under ANCHOR_JUMP a frame.
+	var fresh: bool = not cable.visible or (kit.hooked and (not _was_hooked or kit.anchor.distance_to(_last_anchor) > ANCHOR_JUMP))
+	_was_hooked = kit.hooked
+	if kit.hooked:
+		_last_anchor = kit.anchor
+	_fairlead_yaw = fairlead_yaw(_fairlead_yaw, centre, toward, INF if fresh else delta)
+	var ball := fairlead_point(centre, _fairlead_yaw, player.get_meta("carrier_bank", Basis.IDENTITY) if player != null else Basis.IDENTITY)
+	cable_origin = ball
 	var mesh: ImmediateMesh = cable.mesh
 	mesh.clear_surfaces()
 	var live := EventKinds.line_color("latched_world")
@@ -247,7 +307,7 @@ func _draw_cable(kit, ball: Vector3, smash: bool) -> void:
 		_dry_age = -1.0
 		_let_go_age = -1.0
 		_broke_age = -1.0
-		var gap: float = ball.distance_to(kit.anchor)
+		var gap: float = centre.distance_to(kit.anchor)
 		var taut: bool = smash or kit.on_body or kit.winching or gap >= kit.rope - TAUT_MARGIN
 		cable_taut = taut
 		cable_radius = TAUT_RADIUS if taut else SLACK_RADIUS
@@ -298,6 +358,45 @@ func _ribbon(mesh: ImmediateMesh, from: Vector3, to: Vector3, sag: float, radius
 		mesh.surface_add_vertex(points[i] + side * half)
 		mesh.surface_add_vertex(points[i] - side * half)
 	mesh.surface_end()
+
+
+# The world hands the view the ride the ball is on (a RideRail) each tick, or null off a ride.
+func set_ride(ride) -> void:
+	_ride = ride
+
+
+# The nearest point to `p` on the segment a..b.
+static func clamp_on_cable(a: Vector3, b: Vector3, p: Vector3) -> Vector3:
+	var ab := b - a
+	var len2 := ab.length_squared()
+	if len2 < 0.0001:
+		return a
+	return a + ab * clampf((p - a).dot(ab) / len2, 0.0, 1.0)
+
+
+# While the ball rides a cable it hangs under it: a hanger from the fairlead up to a trolley clamp on the
+# cable. The clamp slides along the span with the ball, and the fairlead turns to it as it turns to an anchor.
+func _draw_hanger(centre: Vector3, delta: float) -> void:
+	var mesh: ImmediateMesh = hanger.mesh
+	mesh.clear_surfaces()
+	var on: bool = _ride != null and _ride.active and _ride.cable_from != _ride.cable_to
+	var fresh := on and not _hanger_was_on
+	hanger_fresh = fresh
+	_hanger_was_on = on
+	hanger.visible = on
+	if not on:
+		return
+	var clamp_at := clamp_on_cable(_ride.cable_from, _ride.cable_to, centre)
+	# A fresh ride leaves from the clamp's side at once, as a fresh hook does.
+	_hanger_yaw = fairlead_yaw(_hanger_yaw, centre, clamp_at, INF if fresh else delta)
+	hanger_from = fairlead_point(centre, _hanger_yaw, player.get_meta("carrier_bank", Basis.IDENTITY) if player != null else Basis.IDENTITY)
+	hanger_to = clamp_at
+	_hanger_material.albedo_color = EventKinds.line_color("latched_world").lightened(TAUT_LIGHTEN)
+	_ribbon(mesh, hanger_from, hanger_to, 0.0, TAUT_RADIUS)
+	var along: Vector3 = (_ride.cable_to - _ride.cable_from).normalized() * CLAMP_HALF
+	# The trolley sits just under the cable's axis, so it reads as gripping the cable from below.
+	var grip := Vector3.DOWN * (CLAMP_RADIUS - CABLE_RADIUS)
+	_ribbon(mesh, clamp_at - along + grip, clamp_at + along + grip, 0.0, CLAMP_RADIUS)
 
 
 func _draw_lock(kit) -> void:

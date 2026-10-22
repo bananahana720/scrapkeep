@@ -79,6 +79,12 @@ var ground: Callable
 var cruise := 14.0
 var gravity := 26.0
 
+# How far under the cable the ball hangs while it rides (MOTION-SPEC cableway row): the held path ends here
+# below the cable end, which leaves the ball centre 1.1 m over a 2.4 m landing end.
+const CABLE_HANG := 1.3
+# The ride never lands the ball centre closer than this to the ground under the cable end.
+const CABLE_LAND_CLEAR := 1.05
+
 var barges: Array[Dictionary] = []
 var lifts: Array[Dictionary] = []
 var launchers: Array[Dictionary] = []
@@ -112,6 +118,12 @@ var _puff_rng := RandomNumberGenerator.new()
 
 func _init() -> void:
 	_puff_rng.seed = 0x50FF
+
+
+# How far under its end the ride hangs: CABLE_HANG, less where the ground is close, so the landing centre
+# stays CABLE_LAND_CLEAR over it (zero where the cable end itself is that close: today's target).
+static func cable_hang(end_y: float, ground_y: float) -> float:
+	return clampf(end_y - ground_y - CABLE_LAND_CLEAR, 0.0, CABLE_HANG)
 
 
 func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void:
@@ -266,7 +278,13 @@ func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, ste
 		if riding or c["rest"] > 0.0 or ball.distance_to(c["from"]) > c["spec"]["radius"]:
 			continue
 		c["rest"] = CABLE_REST
-		facts.append({"kind": "ride", "ride": RideRail.line("grapple_line", ball, c["to"], planar, c["spec"]["floor"])})
+		# The ball hangs HANG below the cable and rides it down; the line view draws the hanger up to the cable.
+		var end: Vector3 = c["to"]
+		var hang := cable_hang(end.y, (ground.call(end.x, end.z, 0.0) as Vector3).y)
+		var ride = RideRail.line("grapple_line", ball, end - Vector3.UP * hang, planar, c["spec"]["floor"])
+		ride.cable_from = c["from"]
+		ride.cable_to = c["to"]
+		facts.append({"kind": "ride", "ride": ride})
 		facts.append({"kind": "fact", "fact": "ride_grapple_line", "at": c["from"]})
 		riding = true
 	for v in valves:

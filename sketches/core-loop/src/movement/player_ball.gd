@@ -19,6 +19,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const ChainState := preload("res://src/combat/chain.gd")
+const Dunk := preload("res://src/combat/dunk.gd")
 const CombatRules := preload("res://src/combat/combat.gd")
 const ExceptionHold := preload("res://src/movement/exception_hold.gd")
 
@@ -108,6 +109,9 @@ var _smashes := {}
 var smash_landing: Node3D
 # The harpoon chain; this player is its only writer (HOOK-CHAIN.md).
 var chain := ChainState.new()
+# The dunk charge (dunk.gd): this player stores it from an air slam and ticks its clock; combat
+# spends it on a reel impact; the glow and the cue read its signals.
+var dunk := Dunk.new()
 # The chain's multiplier while a smash landing resolves; 1.0 otherwise.
 var _landing_mult := 1.0
 # The skill bar's router (design-v3/SKILL-BAR.md section 1). set_piece_phase answers the
@@ -127,6 +131,7 @@ var _rigid
 # free for presentation (squash, stretch, trails); _mesh rolls; _roll_mount rolls with
 # the mesh for anything that should stick to the ball's surface, like accreted scrap.
 var _visual_root: Node3D
+var _pod_mount: Node3D
 var _juice: Node3D
 var _mesh: MeshInstance3D
 var _roll_mount: Node3D
@@ -135,6 +140,19 @@ var _wings_material: StandardMaterial3D
 var _pylon: Node3D
 var _plate: MeshInstance3D
 var _roll := Basis.IDENTITY
+# Keep-spin (MOTION-SPEC row 210): a mid-air velocity set forces a floor-roll spin on the
+# body, which the lattice would draw as a mid-air wheel and a snap. The body keeps that spin
+# (its friction and torque feed translation, so it is physics), and the lattice instead
+# carries its own spin through the set, drawn only. A grounded hand-off lets it go.
+const SPIN_AIR_DAMP := 0.25
+const SPIN_HELD_DAMP := 2.5
+var _spin_on := false
+var _spin_basis := Basis.IDENTITY
+var _spin_omega := Vector3.ZERO
+var _spin_set_tick := -10
+var _spin_held := false
+var _spin_freeze := false
+var _spin_offset := Basis.IDENTITY
 var _frozen := false
 var _was_hooked := false
 # Ctrl's raw state last tick, and whether a body line has claimed the press still held.
@@ -179,6 +197,8 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_rigid.setup(tuning, state)
 	_rigid.intent = intent
 	_rigid.kit = kit
+	_rigid.velocity_setting.connect(_keep_spin)
+	_rigid.teleporting.connect(_spin_clear)
 	# Seed the body before its first physics step: a pending teleport arrives too late
 	# on the very first tick. Outside the tree only the local position can be set.
 	if _rigid.is_inside_tree():
@@ -186,7 +206,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	else:
 		_rigid.position = spawn_point
 	_rigid.enemy_touched.connect(_on_enemy_touched)
-	_rigid.slammed.connect(_on_slammed)
+	_rigid.slammed.connect(_on_rigid_slammed)
 	_rigid.pylon_planted.connect(_on_pylon_planted)
 	_rigid.pylon_ejected.connect(func(v: Vector3): events.dismounted.emit(v))
 	_rigid.jumped.connect(func(air: bool): events.jumped.emit(air))
@@ -196,6 +216,8 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	tree.picked.connect(_on_tree_picked)
 	events.enemy_killed.connect(func(_kind: String, _at: Vector3, _scrap: int): kit.rewind_left = 0.0)
 	events.player_died.connect(func(): kit.drop_line("reset"))
+	events.player_died.connect(func(): dunk.clear("reset"))
+	events.stage_content_cleared.connect(func(_reason: String): dunk.clear("reset"))
 	_smashes = {"arc": _smash_arc, "skid": _smash_skid, "demo": _smash_demo, "rend": _smash_rend, "stamp": _smash_stamp}
 	events.run_started.connect(func(class_id: String):
 		fit_class(ClassDef.by_id(class_id))
@@ -235,6 +257,10 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	_juice = Node3D.new()
 	_juice.name = "Juice"
 	_visual_root.add_child(_juice)
+	# Level sibling of Juice for the cockpit: takes the juice offset, never its basis.
+	_pod_mount = Node3D.new()
+	_pod_mount.name = "PodMount"
+	_visual_root.add_child(_pod_mount)
 	_mesh = MeshInstance3D.new()
 	var sphere := SphereMesh.new()
 	sphere.radius = Tuning.RADIUS
@@ -289,6 +315,11 @@ func juice_node() -> Node3D:
 	return _juice
 
 
+# Where HeroPod mounts: follows the juice position, ignores its squash and shell scale.
+func pod_mount() -> Node3D:
+	return _pod_mount
+
+
 func roll_node() -> Node3D:
 	return _roll_mount
 
@@ -339,6 +370,7 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	kit.clear_runtime()
 	chain.clear_active()
 	_roll = Basis.IDENTITY
+	_spin_clear()
 	_was_hooked = false
 	_brake_was_held = false
 	_ctrl_claimed = false
@@ -357,6 +389,68 @@ func set_velocity_now(velocity: Vector3, cause := "launched") -> void:
 	cut_line(cause)
 	_clear_speed_bank()
 	_rigid.set_velocity_now(velocity)
+
+
+# Runs from the body's velocity_setting signal, before every velocity set however it is made
+# (a ride tick, a reel, a fling, a launch). Airborne, the lattice starts (or keeps) its own
+# spin from the body's spin of this moment; a set on consecutive ticks is a held ride, which
+# decays toward 0. Grounded, the hand-off ends the carry.
+func _keep_spin() -> void:
+	var tick := Engine.get_physics_frames()
+	if state.grounded:
+		_spin_end()
+		return
+	_spin_held = tick - _spin_set_tick <= 1
+	_spin_set_tick = tick
+	if _spin_on:
+		return
+	_spin_on = true
+	# The seed reads the basis the draw reads, and settles a landing freeze this frame has not
+	# drawn yet, so a grounded set then an airborne one inside a frame cannot overwrite it.
+	_settle_offset(_body_basis())
+	_spin_basis = (_body_basis() * _spin_offset).orthonormalized()
+	_spin_omega = _rigid.angular_velocity
+
+
+# A grounded hand-off: the lattice takes the body's spin at once. Its orientation is frozen
+# as an offset from the body's, so nothing turns to catch up.
+func _spin_end() -> void:
+	if _spin_on:
+		_spin_on = false
+		_spin_freeze = true
+
+
+# The body orientation the lattice is drawn against: the same (interpolated) one _process reads.
+func _body_basis() -> Basis:
+	return shown_transform().basis.orthonormalized()
+
+
+func _settle_offset(body_basis: Basis) -> void:
+	if _spin_freeze:
+		_spin_freeze = false
+		_spin_offset = (body_basis.inverse() * _spin_basis).orthonormalized()
+
+
+func _spin_clear() -> void:
+	_spin_on = false
+	_spin_freeze = false
+	_spin_offset = Basis.IDENTITY
+
+
+# The basis the lattice draws: the body's times the frozen offset, unless a carried spin runs.
+func _drawn_basis(body_basis: Basis, delta: float) -> Basis:
+	body_basis = body_basis.orthonormalized()
+	if _spin_on and state.grounded and Engine.get_physics_frames() - _spin_set_tick > 1:
+		_spin_end()
+	if _spin_on:
+		var held := _spin_held and Engine.get_physics_frames() - _spin_set_tick <= 1
+		_spin_omega *= exp(-(SPIN_HELD_DAMP if held else SPIN_AIR_DAMP) * delta)
+		var w := _spin_omega.length()
+		if w > 0.0001:
+			_spin_basis = (Basis(_spin_omega / w, w * delta) * _spin_basis).orthonormalized()
+		return _spin_basis
+	_settle_offset(body_basis)
+	return (body_basis * _spin_offset).orthonormalized()
 
 
 # PC-SABLE: the hand-off bypasses RMB's Coil Hook fling. A committed smash keeps its
@@ -559,6 +653,7 @@ func _physics_process(delta: float) -> void:
 		events.grapple_released.emit()
 	_was_hooked = kit.hooked
 	_publish_line(delta)
+	dunk.tick(delta)
 	_tick_chain(delta)
 	_recheck_bow()
 	_tick_face_tags(delta)
@@ -1094,13 +1189,13 @@ func _fling() -> void:
 	_rigid.set_velocity_now(flung)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	var shown := shown_transform()
 	_visual_root.global_position = shown.origin
 	_visual_root.global_basis = Basis.IDENTITY
 	_update_augment_visuals(shown.origin)
 	_update_aim_cones(shown.origin)
-	_roll = shown.basis.orthonormalized()
+	_roll = _drawn_basis(shown.basis, delta)
 	_mesh.basis = (_squash_basis() if builtin_squash else Basis.IDENTITY) * _roll
 
 
@@ -1264,6 +1359,18 @@ static func slam_strength(speed: float, flatness := 1.0) -> float:
 # The shockwave carries the same flatness as the plant: a full thump on flat ground,
 # next to nothing when the slam went into a launch.
 # Every class slams the same way; the landing then takes the class's flavour.
+# The body's own slam (cast in the air, landed on the ground) is the one that feeds the dunk
+# charge: the shared slam first, then its damage, flavour and the pilot's colour stored. The
+# harpoon's smash landing calls _on_slammed directly and stores nothing.
+func _on_rigid_slammed(at: Vector3, speed: float, flatness: float) -> void:
+	_on_slammed(at, speed, flatness)
+	var strength := slam_strength(speed, flatness)
+	if strength < 0.05:
+		return
+	dunk.store(Dunk.slam_damage(Augments.SLAM_KNOCK * strength, CombatRules.STRIKE_DAMAGE["slam"], heft()),
+		kit.smash_flavour, String(class_def.id) if class_def != null else "", class_color())
+
+
 func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	var strength := slam_strength(speed, flatness)
 	events.slammed.emit(at, strength, flatness)
@@ -1437,6 +1544,18 @@ func pre_contact_velocity(toward: Vector3) -> Vector3:
 			closing = c
 			best = velocity
 	return best
+
+
+# The public way for a module to report a contact the RigidBall never sees, such as a boss
+# weak part outside the enemy group. The normal points from the body to the ball, full 3D, as
+# RigidBall reports it, so a drop onto the body from above reads as a stomp. Omitted or zero, it is
+# derived as RigidBall derives it; a given normal is normalized.
+# `body` is untyped on purpose: a typed Node3D argument errors at the call when the body is freed.
+func touch_body(body, normal := Vector3.ZERO) -> void:
+	if not is_instance_valid(body) or not body is Node3D:
+		return
+	var n := normal.normalized() if normal.length() > 0.01 else Contact.normal_between(ball_position(), body.global_position)
+	_on_enemy_touched(body, n)
 
 
 func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:

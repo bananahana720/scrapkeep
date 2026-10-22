@@ -8,10 +8,15 @@ extends SceneTree
 # its ground as entered, started by the natural setup, so the entry itself does not grow.
 #
 # Checked on stage 1 and stage 2, whose span collapse sits on its overlay's marker surface: every
-# natural row has planned telegraph marks, and a landing mark unless it is a collapse or impact;
-# each planned surface equals a live projection on the stage's ground vertex for vertex; a
-# telegraph mark built while the ground is as planned uses the planned meshes instead of
-# projecting them, and an overlay down on the stage's map sends marks back to live projection.
+# natural row has planned telegraph marks, and a landing mark unless it is an impact;
+# each planned surface equals a live projection on the stage's ground vertex for vertex (a
+# collapse's landing mark on its overlay's target surface); a telegraph mark built while the
+# ground is as planned uses the planned meshes instead of projecting them. With an overlay down on
+# the stage's map, the marks near it go back to live projection, and every mark it leaves as
+# planned equals a live projection with it down (dense fights, wave 18: once any overlay was down,
+# every later mark of the stage was projected live). A collapse landing with its own overlay down
+# uses its planned landing mark, which equals a live projection then (the flume's hollow trestle
+# projected it live on its landing tick, 437 ms on the cloud).
 
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
@@ -23,6 +28,8 @@ const SETTLE_TICKS := 30
 const WAIT_TICKS_MAX := 3600
 
 var _game
+# Collapse rows whose landing mark _check_stage built with their own overlay down.
+var _collapses_checked := 0
 var _t := T.new("natural_marks_planned_test")
 
 
@@ -64,6 +71,7 @@ func _run() -> void:
 	_t.check("the exit entered park stage 2", _game.flow.stage() == 2 and _natural() != null, "stage %d" % _game.flow.stage())
 	await _until_marks()
 	_check_stage("stage 2")
+	_t.check("stage 2's collapse landing was checked with its own overlay down", _collapses_checked > 0, str(_collapses_checked))
 	_game.queue_free()
 	await physics_frame
 	quit(_t.verdict())
@@ -89,9 +97,9 @@ func _check_stage(label: String) -> void:
 	for row in rows:
 		var marks: Dictionary = natural._prepared[row.id].marks
 		_t.check("%s %s: planned telegraph mark" % [label, row.id], marks.has("telegraph"), str(marks.keys()))
-		_t.check("%s %s: planned landing mark unless a collapse or impact" % [label, row.id], marks.has("land") != (row.kind in ["collapse", "impact"]), str(marks.keys()))
+		_t.check("%s %s: planned landing mark unless an impact" % [label, row.id], marks.has("land") != (row.kind == "impact"), str(marks.keys()))
 		for phase in marks:
-			var live: Dictionary = Natural._mark_surfaces(natural.world, row, natural._prepared[row.id].geometry, phase == "land", natural._overlay_map)
+			var live: Dictionary = _live(natural, row, phase == "land")
 			var planned: Dictionary = marks[phase]
 			var same: bool = live.keys() == planned.keys()
 			for part in live:
@@ -107,8 +115,68 @@ func _check_stage(label: String) -> void:
 	if live_map is Natural.OverlayMap and not live_map.profiles.is_empty():
 		var id = live_map.profiles.keys()[0]
 		terrain.overlays.append(id)
-		_t.check("%s: an overlay down sends marks back to live projection" % label, not natural._ground_as_planned(), str(id))
+		var near := []
+		var clear := []
+		var differ := []
+		for each in rows:
+			for phase in natural._prepared[each.id].marks:
+				var planned: Dictionary = natural._prepared[each.id].marks[phase]
+				if not natural._ground_as_planned(planned):
+					near.append("%s %s" % [each.id, phase])
+					continue
+				clear.append("%s %s" % [each.id, phase])
+				var live: Dictionary = _live(natural, each, phase == "land")
+				for part in live:
+					if not planned.has(part) or planned[part].vertices != live[part].vertices:
+						differ.append("%s %s %s" % [each.id, phase, part])
 		terrain.overlays.erase(id)
+		_t.check("%s: overlay %s down sends the marks near it back to live projection" % [label, id], not near.is_empty(), "near %s, clear %s" % [near, clear])
+		_t.check("%s: every mark overlay %s leaves as planned equals a live projection with it down" % [label, id], not clear.is_empty() and differ.is_empty(),
+			"clear %s, differ %s" % [clear, differ])
+	for fall in rows.filter(func(r): return r.kind == "collapse"):
+		var landing: Dictionary = natural._prepared[fall.id].marks.get("land", {})
+		natural._set_overlay(fall, true)
+		var own_down: bool = terrain.overlays.has(natural._prepared[fall.id].swap + "_after")
+		var landed_mark: Node3D = natural._mark(fall, natural._prepared[fall.id].geometry, true)
+		var landed_style = landed_mark.get_node_or_null("Style")
+		var landed_mesh = landed_style.mesh if landed_style != null else null
+		var live_landing: Dictionary = _live(natural, fall, true)
+		var same_landing: bool = not landing.is_empty() and live_landing.keys() == landing.keys()
+		for part in live_landing:
+			same_landing = same_landing and landing.has(part) and landing[part].vertices == live_landing[part].vertices
+		landed_mark.free()
+		natural._set_overlay(fall, false)
+		_collapses_checked += 1
+		_t.check("%s %s: the landing mark with its own overlay down uses the planned mesh" % [label, fall.id],
+			own_down and landed_mesh != null and not landing.is_empty() and landed_mesh == landing.Style.mesh, "down %s, planned %s" % [own_down, landing.keys()])
+		_t.check("%s %s: the planned landing mark equals a live projection with its own overlay down" % [label, fall.id], same_landing, str(landing.keys()))
+	# Overlay colliders come from their surfaces' own vertices (EventGround.trimesh), not from a mesh read
+	# back from the renderer: each equals the collider the surface's mesh gives.
+	if live_map is Natural.OverlayMap and not live_map.swaps.is_empty():
+		var compared := []
+		var unequal := []
+		for swap in live_map.swaps:
+			var entry: Dictionary = live_map.swaps[swap]
+			for key in ["baseline", "target", "collider"]:
+				var surface = entry.get("baseline" if key == "collider" else key)
+				if surface == null or surface.mesh == null or (key == "collider" and entry.get("cave", false)):
+					continue
+				var want = surface.mesh.create_trimesh_shape()
+				var got = entry.body.get_child(1).shape if key == "collider" else Natural.EventGround.trimesh(surface)
+				compared.append("%s %s" % [swap, key])
+				if (want == null) != (got == null) or (want != null and want.get_faces() != got.get_faces()):
+					unequal.append("%s %s" % [swap, key])
+		_t.check("%s: each overlay collider equals the one its surface's mesh gives" % label, not compared.is_empty() and unequal.is_empty(),
+			"compared %s, unequal %s" % [compared, unequal])
+
+
+# A live projection of row's mark, as natural._mark makes one: a landed collapse's on its target.
+func _live(natural, row: Dictionary, landed: bool) -> Dictionary:
+	var geometry: Dictionary = natural._prepared[row.id].geometry
+	if landed and row.kind == "collapse":
+		geometry = geometry.duplicate()
+		geometry.marker_surface = natural._overlay_map.swaps[natural._prepared[row.id].swap].target
+	return Natural._mark_surfaces(natural.world, row, geometry, landed, natural._overlay_map)
 
 
 func _ticks(n: int) -> void:

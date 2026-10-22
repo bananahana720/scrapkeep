@@ -84,6 +84,9 @@ var _boss_kills := 0
 
 
 func _initialize() -> void:
+	# The flow is pinned with a smash-per-frame fight, not the fight's length: the PHASE_MIN_SECONDS hold
+	# (waking.gd, mind.gd; tests/boss_phase_hold_test.gd) is multiplied out so each Warden falls inside the cap.
+	ChallengeDials.set_overrides({"waking.phase_min_by_phase": [0.0, 0.0, 0.0, 0.0], "mind.phase_min_by_phase": [0.0, 0.0, 0.0, 0.0]})
 	_boot()
 
 
