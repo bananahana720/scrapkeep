@@ -6,7 +6,7 @@ Method: automated headless Godot 4.7.2 on cloud llvmpipe (OpenGL compatibility p
 
 ## What and why
 
-Flume is the canal park. The giant machines are the humans' utility fleet: construction, mining and manufacturing. Some are corrupted, some are loyal drones, and some are looping workers. The dressing reads as plush crews living among those working giants, so the scale contrast is the point: small camps, laundry, tea and tool pegs at the foot of big machinery. Nothing in this park is a war machine.
+Flume is the canal park. The giant machines are the humans' utility fleet: construction, mining and manufacturing. Some are corrupted, some are loyal drones, and some are looping workers. The dressing reads as plush crews living among those working giants, so the scale contrast is the point: small camps, laundry, tea and tool pegs at the foot of big machinery.
 This unit keeps the camps honest to their rules. Washlines (laundry) stay 30 m clear of ride lines so they do not read as grind or grapple lines (KITS.md brief). Props stay out of the `bend_relic_wakes` telegraph so a waking relic never lands on a camp.
 
 ## Plan check
