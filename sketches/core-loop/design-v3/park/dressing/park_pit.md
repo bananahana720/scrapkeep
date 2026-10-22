@@ -148,3 +148,5 @@ Only those two kinds changed. Their blobs and knobs are now 80-tri icos with no 
 LOD1 and LOD2 follow (50% and 14 to 15% of LOD0). Footprint radii grow by up to 0.10 m (bursage_b 0.998 to 1.099), which drops one bursage litter instance: 1165 instances (206 litter), fingerprint 3124860388 to 3367089674, re-pinned.
 
 Probe, kit triangles in view (draws unchanged): arena ring median 55,732 to 43,873 and peak 96,044 to 71,019; ride lines (44 points, one per 40 m) median 181,882 to 132,546 and peak 282,564 to 203,701. These are estimates, not frame costs; the new GPU pair is the test.
+
+Density audit on the cut (default run, mid camera, step 25 m): 27 of 31 windows pass, 4 exempt, none failing, the same as before; dressing in view within 120 m (median 56) and distinct kinds (median 15) are unchanged. Its props-only primitive delta (OpenGL on cloud llvmpipe, a proxy, not a frame cost) falls from a median of 57,071 to 33,477 and a peak of 172,072 to 139,700. Props-only draws are 24 to 25 at the median, 70 to 69 at the peak.
