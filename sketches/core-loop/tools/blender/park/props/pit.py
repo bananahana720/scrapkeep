@@ -1,9 +1,9 @@
 """Pit park dressing kit (The Dig, world 2, noon, copper porphyry open pit).
 
-The pit crews were a day-shift mining outfit: faded ochre trucks, rust oxide and grey-green
-host rock, pale tailings, lunch pails left on shelves. LAMP VETO: nothing here is lit, no
-lamp, no light pool, no glass that could read as glowing. Turquoise copper streaks appear
-only as thin veins on rock, never as paint.
+The pit crews were a day-shift mining outfit: petrol enamel machine bodies with oxide bands and
+bone plates, grey-green host rock, pale tailings, lunch pails left on shelves. LAMP VETO: nothing
+here is lit, no lamp, no light pool, no glass that could read as glowing. The petrol veins appear
+only as thin streaks on rock and core.
 
 blender -b --factory-startup --threads 2 --python-exit-code 1 -P \
   sketches/core-loop/tools/blender/park/props/pit.py -- \
@@ -180,7 +180,7 @@ def haul_truck(p, v, rng):
     p.box((0.12, 1.6, 0.9), (-2.57, -1.6, 3.9), GLASS, style="fine")
     p.box((0.12, 1.6, 0.9), (-0.43, -1.6, 3.9), GLASS, style="fine")
     p.box((2.6, 3.2, 0.2), (-1.5, -1.9, 4.7), trim, style="hard")
-    # A level sunshade deck on four stout posts above the cab roof: a flat 3.6 m top that holds without a mast.
+    # A level sunshade deck on four stout posts above the cab roof: a flat 3.8 m top that holds without a mast.
     for dx in (-1.7, 1.7):
         for dy in (-1.7, 1.7):
             p.box((0.3, 0.3, 1.6), (-1.5 + dx, -1.9 + dy, 5.5), C["iron"], style="hard")
@@ -616,7 +616,7 @@ def timber_lagging(p, v, rng):
 
 
 @K.kind("windsock", tags=["tall", "sign"], variants="ab", line_clear_m=30,
-        story="Haul-road windsock on a stout mast; the wind has dropped and the sock hangs limp.")
+        story="Haul-road windsock on a stout mast, the sock held out stiff in a steady wind.")
 def windsock(p, v, rng):
     if v == "a":
         p.cyl(0.38, 0.5, (0, 0, 0.25), HOST, segs=8, r2=0.34, style="hard")

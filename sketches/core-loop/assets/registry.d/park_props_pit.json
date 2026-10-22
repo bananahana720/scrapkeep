@@ -1940,7 +1940,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "windsock variant a LOD0 (2076 tris): Haul-road windsock on a stout mast; the wind has dropped and the sock hangs limp. Deterministic; polished and baked."
+    "notes": "windsock variant a LOD0 (2076 tris): Haul-road windsock on a stout mast, the sock held out stiff in a steady wind. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -1968,7 +1968,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "windsock variant a LOD1 (1038 tris): Haul-road windsock on a stout mast; the wind has dropped and the sock hangs limp. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "windsock variant a LOD1 (1038 tris): Haul-road windsock on a stout mast, the sock held out stiff in a steady wind. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -1996,7 +1996,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "windsock variant a LOD2 (310 tris): Haul-road windsock on a stout mast; the wind has dropped and the sock hangs limp. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "windsock variant a LOD2 (310 tris): Haul-road windsock on a stout mast, the sock held out stiff in a steady wind. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -2024,7 +2024,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "windsock variant b LOD0 (1380 tris): Haul-road windsock on a stout mast; the wind has dropped and the sock hangs limp. Deterministic; polished and baked."
+    "notes": "windsock variant b LOD0 (1380 tris): Haul-road windsock on a stout mast, the sock held out stiff in a steady wind. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -2052,7 +2052,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "windsock variant b LOD1 (690 tris): Haul-road windsock on a stout mast; the wind has dropped and the sock hangs limp. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "windsock variant b LOD1 (690 tris): Haul-road windsock on a stout mast, the sock held out stiff in a steady wind. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -2080,7 +2080,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "windsock variant b LOD2 (203 tris): Haul-road windsock on a stout mast; the wind has dropped and the sock hangs limp. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "windsock variant b LOD2 (203 tris): Haul-road windsock on a stout mast, the sock held out stiff in a steady wind. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
