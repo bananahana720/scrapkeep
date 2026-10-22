@@ -754,9 +754,11 @@ func _check_open_decisions(world: Dictionary, kit: Dictionary, c) -> void:
 
 	var fresh := ParkProps.context(map, ground, world["stage"])
 	var file := {}
-	var probes := ParkProps.probe_kinds_of(kit)
-	var bench_probe := probes.filter(func(p: Dictionary) -> bool: return p["kind"] == "fix_bench")
-	_t.check("the probe set holds every fixture kind at its smallest-radius variant", probes.size() == kit["kinds"].size() and bench_probe[0]["v"] == "b", str(probes))
+	var probes := ParkProps.probe_variants_of(kit)
+	var variant_count := 0
+	for kind: String in kit["kinds"]:
+		variant_count += (kit["kinds"][kind]["variants"] as Dictionary).size()
+	_t.check("the probe set holds every variant of every fixture kind", probes.size() == variant_count and probes.filter(func(p: Dictionary) -> bool: return p["kind"] == "fix_bench" and p["v"] == "b").size() == 1, str(probes))
 	var found := []
 	var found_pose := {}
 	for pt: Vector2 in _grid(fresh.rect, 60):
@@ -810,9 +812,13 @@ func _check_open_decisions(world: Dictionary, kit: Dictionary, c) -> void:
 			variants[v]["radius"] = 3.0 if name == "wide_low" else (0.1 if name == "mid_slim" else 0.4)
 			variants[v]["height"] = 0.8 if name == "wide_low" else (2.0 if name == "mid_slim" else 1.1)
 	pair["kinds"]["tagged_low"]["line_clear_m"] = 20.0
-	var set := ParkProps.probe_kinds_of(pair)
+	var set := ParkProps.probe_variants_of(pair)
 	var kinds_in_set := set.map(func(p: Dictionary) -> String: return p["kind"])
-	_t.eq("the probe set has every kind, mid and line_clear_m ones included", kinds_in_set, ["mid_slim", "tagged_low", "thin_low", "wide_low"])
+	var unique_kinds := []
+	for name in kinds_in_set:
+		if not unique_kinds.has(name):
+			unique_kinds.append(name)
+	_t.eq("the probe set has every kind, mid and line_clear_m ones included", unique_kinds, ["mid_slim", "tagged_low", "thin_low", "wide_low"])
 	var pocket := Vector2.INF
 	for key in fresh.lines:
 		var line: PackedVector2Array = fresh.lines[key]
@@ -841,6 +847,34 @@ func _check_open_decisions(world: Dictionary, kit: Dictionary, c) -> void:
 			break
 	_t.check("planted: a pocket at the play-rect edge fits only the slim mid kind", slim != Vector2.INF)
 	_t.eq("planted: the probe set finds that pocket legal and names the mid kind", ParkProps.probe_at(fresh, pair, set, 1.0, slim), "mid_slim/a")
+	# A kind whose smallest-radius variant a (mid tier) cannot stand 8 m from a line, but whose lower variant b (low tier) can.
+	var twin := kit.duplicate(true)
+	twin["kinds"] = {"twin": template.duplicate(true)}
+	twin["kinds"]["twin"]["variants"] = {"a": template["variants"]["a"].duplicate(true), "b": template["variants"]["b"].duplicate(true)}
+	twin["kinds"]["twin"]["variants"]["a"]["radius"] = 0.5
+	twin["kinds"]["twin"]["variants"]["a"]["height"] = 1.5
+	twin["kinds"]["twin"]["variants"]["b"]["radius"] = 0.6
+	twin["kinds"]["twin"]["variants"]["b"]["height"] = 1.0
+	var twin_set := ParkProps.probe_variants_of(twin)
+	var twin_pocket := Vector2.INF
+	for key in fresh.lines:
+		var line: PackedVector2Array = fresh.lines[key]
+		for k in range(0, line.size() - 1):
+			var leg := line[k + 1] - line[k]
+			if leg.length() < 40.0:
+				continue
+			var normal := Vector2(-leg.y, leg.x).normalized()
+			for off in [7.0, 7.5, 8.0, 8.5, 9.0]:
+				var at: Vector2 = (line[k] + line[k + 1]) * 0.5 + normal * off
+				if fresh.rect.has_point(at) and ParkProps.probe_at(fresh, twin, twin_set, 1.0, at) == "twin/b" and not ParkProps.probe_legal_at(fresh, twin, [{"kind": "twin", "v": "a"}], 1.0, at):
+					twin_pocket = at
+					break
+			if twin_pocket != Vector2.INF:
+				break
+		if twin_pocket != Vector2.INF:
+			break
+	_t.check("planted: a pocket 7 to 9 m from a line fits only the low-tier variant b of a kind", twin_pocket != Vector2.INF)
+	_t.eq("planted: the probe set names twin/b there", ParkProps.probe_at(fresh, twin, twin_set, 1.0, twin_pocket) if twin_pocket != Vector2.INF else "", "twin/b")
 	# open_reason applies the file's rows to a copy of the context's lists only.
 	fresh.use_ground_rows([far_row])
 	var before: Array = fresh.ground_rows.keys()

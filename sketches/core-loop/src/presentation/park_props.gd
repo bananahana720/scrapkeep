@@ -398,23 +398,19 @@ static func min_scale(file: Dictionary) -> float:
 	return scale
 
 
-# The probe set for no_cell: every kind's smallest-radius variant, as {kind, v}. Mid and tall kinds and kinds with a
-# line_clear_m are probed too, each judged by check_one under its own tier and line_clear_m, so a cell is legal when any
-# kind the file could place passes there.
-static func probe_kinds_of(kit: Dictionary) -> Array:
+# The probe set for no_cell: every variant of every kind, as {kind, v}. The tier comes from each instance's own height, so a
+# lower variant of a kind can be low tier and fit beside a line where its smallest-radius variant (mid tier) does not. Mid and
+# tall kinds and kinds with a line_clear_m are probed too, each judged by check_one under its own tier and line_clear_m, so a
+# cell is legal when any variant the file could place passes there.
+static func probe_variants_of(kit: Dictionary) -> Array:
 	var out := []
 	var names: Array = (kit.get("kinds", {}) as Dictionary).keys()
 	names.sort()
 	for kind: String in names:
-		var variants: Dictionary = kit["kinds"][kind]["variants"]
-		var pick := ""
-		var keys: Array = variants.keys()
+		var keys: Array = (kit["kinds"][kind]["variants"] as Dictionary).keys()
 		keys.sort()
 		for v: String in keys:
-			if pick == "" or float(variants[v]["radius"]) < float(variants[pick]["radius"]):
-				pick = v
-		if pick != "":
-			out.append({"kind": kind, "v": pick})
+			out.append({"kind": kind, "v": v})
 	return out
 
 
@@ -456,7 +452,7 @@ static func cell_visible(view: Transform3D, cam: Dictionary, point: Vector3, ran
 
 
 # Up to `limit` cell centres (cell_m grid, scanned in x then z) inside the real view frustum of the poses, within range_m of
-# the camera, where any probe (every kind's smallest-radius variant, probe_kinds_of) passes every placement rule; [] when none does (the audit's no_cell --open
+# the camera, where any probe (every variant of every kind, probe_variants_of) passes every placement rule; [] when none does (the audit's no_cell --open
 # reason). Tolerance: the grid is cell_m (2.5 m), so a legal pocket narrower than about 2.5 m can be missed, which lets a
 # no_cell claim pass; the horizontal range errs safe. A pose is {x, z, yaw}; cam is {arm, pitch, up, fov_deg, aspect}.
 static func cone_legal_cells(c: Context, kit: Dictionary, probes: Array, scale: float, poses: Array, cam: Dictionary, range_m: float, cell_m := 2.5, limit := 1) -> Array:
@@ -509,11 +505,11 @@ static func open_reason(c: Context, kit: Dictionary, file: Dictionary, reason: S
 	c.use_ground_rows(file.get("ground_rows"))
 	c.use_low_ground_rows(file.get("low_ground_rows"))
 	var scale := min_scale(file)
-	var probes := probe_kinds_of(kit)
+	var probes := probe_variants_of(kit)
 	var result := {"ok": false, "why": "no kit to probe with", "cell": null}
 	if not probes.is_empty():
 		var cells := cone_legal_cells(c, kit, probes, scale, poses, cam, NEAR_RANGE_M)
-		var label := "%d probe kinds (smallest-radius variants) at scale %.2f" % [probes.size(), scale]
+		var label := "%d probe variants at scale %.2f" % [probes.size(), scale]
 		if cells.is_empty():
 			result = {"ok": true, "why": label + " find no legal cell in the view frustum", "cell": null}
 		else:
