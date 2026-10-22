@@ -63,7 +63,7 @@ const ENTRIES := [
 		"id": "plate_drop", "name": "Foreman's Crew",
 		"hint": "Someone is patching the machine behind your back.",
 		"clue": "a fitter at a hatch + a reel impact",
-		"text": "Those drones are the Waking's work crew, patching the machine they were built to keep. Knock one off its plate and the seam stays open.",
+		"text": "Those drones are the Waking's maintenance crew, still patching the foreman's excavator. Knock one off its plate and the seam stays open.",
 	},
 	{
 		"id": "what_it_learned", "name": "What It Learned",
