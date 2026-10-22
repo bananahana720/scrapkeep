@@ -19,7 +19,7 @@ Note: the stage checked did not yet hold the 22 Oct lore and era rulings in DECI
 | Board | Conflict | Settled by | Detail |
 |---|---|---|---|
 | style-character-sable-reference / style-shape-moodboard | Mast near 12 and winch near 4-5 o'clock versus ROSTER-LOOK.md:419,519 (mast 11, winch 3) | Don't copy the board | Model from ROSTER-LOOK.md; keep mast out of the 1 o'clock outline. Owner can instead amend ROSTER-LOOK and PILOTS.md first. |
-| style-materials-moodboard (GLASS) | Glass bubble canopy on the fox pilot; forbidden at ROSTER-LOOK.md:106, BOARDS.md:7, DECISIONS.md:266 | Don't copy the board | Reject as pilot reference; glass only as small gauge lens or visor. |
+| style-materials-moodboard (GLASS) | Clear canopy over the fox pilot | Settled by Andrew's 22 Oct lore ruling | The inner cockpit may be a clear or semi-opaque sphere that stays level (ROSTER-LOOK, Inner cockpit sphere row). What stays forbidden is a glass outer shell: the lattice is the ball's outline. Updated after the audit. |
 | style-lighting-moodboard (AFTERNOON/SINKHOLE) | Plain grey tiers and calm water omit the glaze band and cinder floor (DECISIONS.md:199-201) | Don't copy the board | Regenerate with glaze band and cinder tell; add to REVIEW limits. |
 | style-telegraphs-moodboard (INSTANT) | Unstriped orange annulus versus 45 degree HAZARD stripes (VISUAL-LANGUAGE.md:98,107) | Don't copy the board | Code already draws stripes; regenerate the still with stripes. |
 | style-telegraphs-moodboard (FIGHT) | Tall long-necked local near the danger lane versus AMBIENT-LIFE.md:7,9 (small kinds, scatter within 30 m) | Don't copy the board | Redraw with an existing kind at 30 m or more or reacting; keep no-target-mark rule. |
