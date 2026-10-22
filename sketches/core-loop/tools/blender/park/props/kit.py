@@ -120,6 +120,99 @@ def _selftest_colours():
 _selftest_colours()
 
 
+# --- board palette (opt-in per park; DRESSING-KITS.md "Board palette check") -----------------
+# A park declares the swatches of its reference boards (docs/art/reference/); every painted colour must then
+# sit on them. Known limit: the shared base palette `C` is not itself board-checked; it is accepted as the
+# shared material set (sandstone, timber, canvas, iron ...) and is not park-specific.
+REPO = HERE.parents[5]
+BOARD_ROOT = REPO / "docs" / "art" / "reference"
+# Within this Euclidean distance (0..1 sRGB) of a swatch or approved hex counts as that colour: about 13/255 on
+# each channel, the 0.05 that tint()'s default 0.08 value jitter moves a mid colour (0.08 x ~0.6), which covers
+# hand-sampled swatch rounding and 8-bit quantisation.
+BOARD_NEAR = 0.05
+# An approved shade of a swatch keeps its hue and saturation and only changes value, as shade() and tint() do.
+# 0.03 hue (about 11 degrees of 360) absorbs 8-bit quantisation of dark colours; a 0.08 hue shift fails.
+SHADE_HUE = 0.03
+SHADE_SAT = 0.08   # absolute saturation difference, same reason
+# shade(c, 0.75) passes; tint() at its default amount spans 0.92..1.08; 1.25 allows a lightened wear tone.
+SHADE_VAL_MIN, SHADE_VAL_MAX = 0.70, 1.25
+BRASS_HEX = "d9b44a"  # the WARN brass: Fleet only, one tag per site
+BRASS_TAG_PARTS = 4   # a plate plus its rivets
+BRASS_TAG_BOX = 0.6   # metres: every brass face centre of a variant lies inside a box this size
+# Known limit: the kit sees one variant at a time, so "one tag per site" (per vignette) is not checkable here.
+
+
+def _hsv(h):
+    return colorsys.rgb_to_hsv(*(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)))
+
+
+def is_shade_of(h, base):
+    """True when h is an approved shade of base: same hue and saturation, value within the shade range."""
+    hh, hs, hv = _hsv(h)
+    bh, bs, bv = _hsv(base)
+    if abs(hs - bs) > SHADE_SAT:
+        return False
+    if max(hs, bs) >= 0.10:  # greys have no meaningful hue
+        d = abs(hh - bh)
+        if min(d, 1.0 - d) > SHADE_HUE:
+            return False
+    return SHADE_VAL_MIN * bv <= hv <= SHADE_VAL_MAX * bv + 1.0 / 255
+
+
+def check_board(c, board, where="?"):
+    """Hard fail unless colour c is on the board (see the four ways in the card). board = {"swatches", "approved"} hex dicts."""
+    h = hexcolor(c)
+    swatches, approved = board["swatches"], board["approved"]
+    for sw in swatches:
+        if _distance(h, sw) <= BOARD_NEAR or is_shade_of(h, sw):
+            return h
+    for ap in approved:
+        if _distance(h, ap) <= BOARD_NEAR:
+            return h
+    for base in C.values():
+        if h == base or is_shade_of(h, base):
+            return h
+    near = min(swatches, key=lambda s: _distance(h, s))
+    raise ValueError("off-board colour #%s in %s: nearest swatch #%s (%s) at %.3f"
+                     % (h, where, near, swatches[near], _distance(h, near)))
+
+
+def check_brass(where, centres):
+    """centres: one list of face centres (x, y, z) per primitive painted in brass. They must form one tag."""
+    if not centres:
+        return
+    pts = [p for prim in centres for p in prim]
+    span = max(max(p[i] for p in pts) - min(p[i] for p in pts) for i in range(3))
+    if len(centres) > BRASS_TAG_PARTS or span > BRASS_TAG_BOX:
+        raise ValueError("%s: brass on %d primitives spanning %.2f m; brass is one Fleet tag per site"
+                         % (where, len(centres), span))
+
+
+def make_board(park, board, root=None):
+    """Validate a park's board declaration and return it normalised (lower-case hex)."""
+    def hx(v, what):
+        v = str(v).lstrip("#").lower()
+        if len(v) != 6 or any(ch not in "0123456789abcdef" for ch in v):
+            raise ValueError("%s: board %s #%s is not a 6-digit hex" % (park, what, v))
+        check_colour(v, quiet=True)
+        return v
+    out = {"boards": list(board.get("boards", [])), "swatches": {}, "approved": {}}
+    if not out["boards"]:
+        raise ValueError(park + ": a board declares at least one reference board path")
+    for path in out["boards"]:
+        if not ((root or BOARD_ROOT) / path).exists():
+            raise ValueError("%s: board %s not found under docs/art/reference/" % (park, path))
+    for k, label in board.get("swatches", {}).items():
+        out["swatches"][hx(k, "swatch")] = label
+    if not out["swatches"]:
+        raise ValueError(park + ": a board declares at least one swatch")
+    for k, reason in board.get("approved", {}).items():
+        if not str(reason).strip():
+            raise ValueError("%s: approved #%s needs a reason" % (park, k))
+        out["approved"][hx(k, "approved")] = reason
+    return out
+
+
 def mix(a, b, t):
     """Blend two colours; t = 0 gives a."""
     ca, cb = common.srgb(hexcolor(a)), common.srgb(hexcolor(b))
@@ -134,6 +227,60 @@ def shade(c, f):
 def tint(c, rng, amount=0.08):
     """Small seeded value jitter, so planks and stones differ."""
     return shade(c, 1.0 + rng.uniform(-amount, amount))
+
+
+def _selftest_board():
+    import tempfile
+    board = {"swatches": {"365754": "petrol", "d2c5a5": "bone"}, "approved": {mix("365754", "d2c5a5", 0.5): "petrol-bone mix"}}
+    rng = random.Random("selftest")
+    for ok in ("365754", "d2c5a5", shade("365754", 0.75), tint("d2c5a5", rng), tint("365754", rng),
+               board["approved"] and next(iter(board["approved"])), C["timber"], shade(C["timber"], 0.75)):
+        check_board(ok, board, "selftest")
+    for _ in range(200):
+        for sw in board["swatches"]:
+            check_board(tint(sw, rng), board, "selftest")
+    for bad in ("3a5fa8", "e060a0"):  # planted off-board colours: mid saturated blue, pink
+        try:
+            check_board(bad, board, "selftest_a")
+        except ValueError as e:
+            assert str(e).startswith("off-board colour #%s in selftest_a: nearest swatch #" % bad), e
+            continue
+        raise AssertionError("colour #%s should fail check_board" % bad)
+    hh, hs, hv = _hsv("365754")  # a 0.08 hue shift of petrol must fail
+    shifted = hexcolor(colorsys.hsv_to_rgb((hh + 0.08) % 1.0, hs, hv))
+    try:
+        check_board(shifted, {"swatches": {"365754": "petrol"}, "approved": {}}, "selftest")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a 0.08 hue shift should fail check_board")
+    box = lambda x: [(x, 0.0, 0.0)]
+    check_brass("selftest", [])
+    check_brass("selftest", [box(0.0), box(0.2)])
+    for bad in ([box(0.0)] * 5, [box(0.0), box(2.0)]):
+        try:
+            check_brass("selftest", bad)
+        except ValueError as e:
+            assert "one Fleet tag per site" in str(e)
+            continue
+        raise AssertionError("brass %r should fail check_brass" % (bad,))
+    tmp = tempfile.TemporaryDirectory()
+    root = Path(tmp.name)  # the self-test must not depend on the checkout's docs
+    (root / "board.png").write_bytes(b"")
+    for bad in ({"boards": ["no-such-board.png"], "swatches": {"365754": "p"}},
+                {"boards": ["board.png"], "swatches": {"36575": "p"}},
+                {"boards": ["board.png"], "swatches": {"365754": "p"}, "approved": {"3a5fa8": " "}},
+                {"boards": ["board.png"], "swatches": {"ff5a3c": "banned"}}):
+        try:
+            make_board("selftest", bad, root)
+        except ValueError:
+            continue
+        raise AssertionError("board %r should fail make_board" % (bad,))
+    make_board("selftest", {"boards": ["board.png"], "swatches": {"365754": "p"}, "approved": {"3a5fa8": "kept"}}, root)
+    tmp.cleanup()
+
+
+_selftest_board()
 
 
 # (bevel metres, subsurf levels) per look.
@@ -153,10 +300,12 @@ class Prop:
     primitive's vertices by that many metres with the variant's seeded rng. Helpers return
     the new faces."""
 
-    def __init__(self, name, rng):
+    def __init__(self, name, rng, board=None):
         common.reset()
         self.name = name
         self.rng = rng
+        self.board = board
+        self.brass = []  # face centres per primitive painted in brass
         self.root = common.empty(name)
         self.parts = {}
         self.perch_at = None
@@ -176,9 +325,22 @@ class Prop:
             self.parts[style] = part
         return self.parts[style]
 
+    def _paint_ok(self, color):
+        """check_colour, then the board check (when a board is declared); returns the hex."""
+        h = check_colour(color)
+        if self.board:
+            check_board(h, self.board, self.name)
+        return h
+
+    def _note_brass(self, h, faces):
+        if _distance(h, BRASS_HEX) < BANNED_NEAR:
+            self.brass.append([tuple(f.calc_center_median()) for f in faces])
+
     def _do(self, style, method, color, jit, *args, **kwargs):
         part = self.part(style)
-        faces = getattr(part, method)("paint", *args, color=check_colour(color), **kwargs)
+        h = self._paint_ok(color)
+        faces = getattr(part, method)("paint", *args, color=h, **kwargs)
+        self._note_brass(h, faces)
         if jit:
             part.jitter(faces, self.rng, jit)
         return faces
@@ -230,7 +392,9 @@ class Prop:
         faces = [part.bm.faces.new((rows[i][j], rows[(i + 1) % major][j],
                                     rows[(i + 1) % major][(j + 1) % minor], rows[i][(j + 1) % minor]))
                  for i in range(major) for j in range(minor)]
-        part.paint(faces, "paint", check_colour(color))
+        h = self._paint_ok(color)
+        part.paint(faces, "paint", h)
+        self._note_brass(h, faces)
         if jit:
             part.jitter(faces, self.rng, jit)
         return faces
@@ -253,6 +417,7 @@ class Prop:
         objs = [self.parts[k].to_object(parent=self.root) for k in sorted(self.parts)]
         if not objs:
             raise ValueError(self.name + ": the builder drew nothing")
+        check_brass(self.name, self.brass)
         obj = objs[0]
         if len(objs) > 1:
             bpy.ops.object.select_all(action="DESELECT")
@@ -274,8 +439,11 @@ class Prop:
 
 
 class Kit:
-    def __init__(self, park, polish_opts=None):
+    def __init__(self, park, polish_opts=None, board=None):
         self.park = park
+        self.board = make_board(park, board) if board else None
+        if not board:
+            print("KIT note: %s declares no board palette; the board check is off" % park, flush=True)
         self.kinds = {}
         self.polish_opts = dict(detail=2, bevel=0.04, bevel_min=0.08)
         self.polish_opts.update(polish_opts or {})
@@ -300,7 +468,7 @@ class Kit:
         opts = dict(self.polish_opts, **spec["polish"])
         assert opts["detail"] >= 1, "%s: polish detail %r; common _segs(n) returns 0 below 1 and every cylinder and sphere vanishes" % (kind, opts["detail"])
         polish.enable(**opts)
-        p = Prop("%s_%s" % (kind, variant), rng)
+        p = Prop("%s_%s" % (kind, variant), rng, self.board)
         spec["fn"](p, variant, rng)
         return p.root, p.finish()
 
