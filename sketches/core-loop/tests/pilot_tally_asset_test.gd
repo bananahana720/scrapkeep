@@ -248,6 +248,18 @@ func _shell(shell: Node, document: Dictionary) -> void:
 	# The brackets paint on the paint surface in charcoal, as the Pod's folded rubber did; a rubber slot
 	# here would be a second draw and a different material from the base.
 	var brackets := shell.find_child("DrumBrackets", true, false) as MeshInstance3D
+	# Charcoal is tools/blender common.py "charcoal" 242a28 in linear vertex colour (0.018, 0.023, 0.021); every vertex of the
+	# one paint surface must carry it within 0.01 a channel, so a white bracket on paint fails.
+	var charcoal_ok := false
+	if brackets != null and brackets.mesh.get_surface_count() == 1:
+		var bracket_cols = brackets.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+		charcoal_ok = bracket_cols != null and bracket_cols.size() > 0
+		if charcoal_ok:
+			for c in bracket_cols:
+				if absf(c.r - 0.018) > 0.01 or absf(c.g - 0.023) > 0.01 or absf(c.b - 0.021) > 0.01:
+					charcoal_ok = false
+					break
+	_check("DrumBrackets vertices are charcoal", charcoal_ok, "every vertex within 0.01 of (0.018, 0.023, 0.021)")
 	_check("DrumBrackets is paint only", brackets != null and brackets.get_parent() == shell.find_child("Pod", true, false)
 		and brackets.mesh.get_surface_count() == 1
 		and brackets.mesh.surface_get_material(0).resource_name == "paint",

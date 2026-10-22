@@ -8,6 +8,7 @@ extends SceneTree
 # Fix round 2 (PD-0b base, docs/decisions.tsv 2026-10-10): shell cap 16 draws, class III layer 2,
 # every other layer 1, checked per layer. Class V is the doubled coil alone (one copper surface,
 # no Replace_ node, the base mint tip stays); its three top panels moved into c4.
+# 2026-10-22: shell 16 after the SpoolKit split and rubber fold (baked-bracket card; docs/decisions.tsv 2026-10-22T18:42).
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Palette := preload("res://src/core/palette.gd")
