@@ -127,6 +127,24 @@ func _check_stage(label: String) -> void:
 		_t.check("%s: overlay %s down sends the marks near it back to live projection" % [label, id], not near.is_empty(), "near %s, clear %s" % [near, clear])
 		_t.check("%s: every mark overlay %s leaves as planned equals a live projection with it down" % [label, id], not clear.is_empty() and differ.is_empty(),
 			"clear %s, differ %s" % [clear, differ])
+	# Overlay colliders come from their surfaces' own vertices (EventGround.trimesh), not from a mesh read
+	# back from the renderer: each equals the collider the surface's mesh gives.
+	if live_map is Natural.OverlayMap and not live_map.swaps.is_empty():
+		var compared := []
+		var unequal := []
+		for swap in live_map.swaps:
+			var entry: Dictionary = live_map.swaps[swap]
+			for key in ["baseline", "target", "collider"]:
+				var surface = entry.get("baseline" if key == "collider" else key)
+				if surface == null or surface.mesh == null or (key == "collider" and entry.get("cave", false)):
+					continue
+				var want = surface.mesh.create_trimesh_shape()
+				var got = entry.body.get_child(1).shape if key == "collider" else Natural.EventGround.trimesh(surface)
+				compared.append("%s %s" % [swap, key])
+				if (want == null) != (got == null) or (want != null and want.get_faces() != got.get_faces()):
+					unequal.append("%s %s" % [swap, key])
+		_t.check("%s: each overlay collider equals the one its surface's mesh gives" % label, not compared.is_empty() and unequal.is_empty(),
+			"compared %s, unequal %s" % [compared, unequal])
 
 
 func _ticks(n: int) -> void:

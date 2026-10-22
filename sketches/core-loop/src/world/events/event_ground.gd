@@ -10,6 +10,8 @@ class Surface:
 	extends RefCounted
 	var mesh: ArrayMesh
 	var vertices := PackedVector3Array()
+	# The normals the mesh was built with, kept so lowering a roof never reads them back.
+	var normals := PackedVector3Array()
 	var cells := {}
 	# A surface a worker projected carries its mesh arrays here until finish() builds the mesh on
 	# the main thread (no worker touches the rendering server).
@@ -25,6 +27,7 @@ class Surface:
 	func copy() -> Surface:
 		var out := Surface.new()
 		out.vertices = vertices.duplicate()
+		out.normals = normals.duplicate()
 		out.cells = cells.duplicate(true)
 		return out
 	func height(point: Vector2) -> float:
@@ -250,6 +253,7 @@ static func project_surface(world, geometry: Dictionary, shapes: Array, offset :
 
 static func mesh_surface(surface: Surface, normals: PackedVector3Array, mesh: ArrayMesh = null, deferred := false) -> Surface:
 	var vertices := surface.vertices
+	surface.normals = normals
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
@@ -367,16 +371,37 @@ static func roof_body(owner: Node, surface: Surface, single_collider := true) ->
 	body.add_child(view)
 	if single_collider:
 		var collider := CollisionShape3D.new()
-		collider.shape = surface.mesh.create_trimesh_shape()
+		collider.shape = trimesh(surface)
 		body.add_child(collider)
 	owner.add_child(body)
 	return {"body": body, "baseline": surface, "surface": surface}
 
 
+# The collider a surface's mesh would give (Mesh.create_trimesh_shape), built from the vertices it
+# was made from (mesh_surface indexes them in order as a triangle list), snapped to 0.1 mm as the
+# engine's triangle mesh snaps them (equal on 30,000 random vertices). Reading a mesh back stalls a
+# real GPU until every frame in flight is done (the headless renderer copies it for free), and a
+# collapse fill or a cave-in drop made one every physics tick.
+const TRIMESH_SNAP := Vector3(0.0001, 0.0001, 0.0001)
+
+static func trimesh(surface: Surface) -> ConcavePolygonShape3D:
+	if surface.vertices.is_empty():
+		return null
+	var faces := PackedVector3Array()
+	faces.resize(surface.vertices.size())
+	for k in surface.vertices.size():
+		faces[k] = surface.vertices[k].snapped(TRIMESH_SNAP)
+	var shape := ConcavePolygonShape3D.new()
+	shape.set_faces(faces)
+	return shape
+
+
 static func lower_roof(roof: Dictionary, drop: float) -> void:
 	var surface := Surface.new()
 	surface.cells = roof.baseline.cells
-	var normals: PackedVector3Array = roof.baseline.mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
+	var normals: PackedVector3Array = roof.baseline.normals
+	if normals.size() != roof.baseline.vertices.size():
+		normals = roof.baseline.mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
 	for vertex: Vector3 in roof.baseline.vertices:
 		surface.vertices.append(vertex + Vector3.DOWN * drop)
 	roof.surface = mesh_surface(surface, normals)
@@ -386,7 +411,7 @@ static func lower_roof(roof: Dictionary, drop: float) -> void:
 			if collider.has_meta("home"):
 				collider.position = collider.get_meta("home") + (Vector3.ZERO if collider.has_meta("retained") else Vector3.DOWN * drop)
 			else:
-				collider.shape = surface.mesh.create_trimesh_shape()
+				collider.shape = trimesh(surface)
 
 
 # prepared holds surfaces the caller projected ahead (natural.gd plan: "surface", "target") and the
@@ -447,7 +472,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	view.mesh = surface.mesh
 	view.material_override = Palette.ground_material()
 	var collider := CollisionShape3D.new()
-	collider.shape = prepared.get("shape", null) if prepared.has("shape") else surface.mesh.create_trimesh_shape()
+	collider.shape = prepared.get("shape", null) if prepared.has("shape") else trimesh(surface)
 	if not prepared.is_empty():
 		prepared["shape"] = collider.shape
 	body.add_child(view)
@@ -494,7 +519,7 @@ static func overlay_surface(world, kind: String, geometry: Dictionary, deferred 
 static func install_surface(overlay_map: OverlayMap, id: String, surface: Surface) -> void:
 	var body: StaticBody3D = overlay_map.swaps[id].body
 	body.get_child(0).mesh = surface.mesh
-	body.get_child(1).shape = surface.mesh.create_trimesh_shape()
+	body.get_child(1).shape = trimesh(surface)
 	overlay_map.profiles[id + "_after"].surface = surface
 
 
