@@ -60,7 +60,7 @@ Each template's `story` line in the file says what it is and which moment it sho
 
 ### Density windows (audit r7) and bare poses
 
-Superseded by "Spot added for the floor window" and "Audit (final, 22 October 2026)" below: the floor window got one legal cell, filled by `crown_fb_01`, and stays a documented fail (ruling 6332450092). This section is the r7 record.
+Superseded by "Spot added for the floor window" and "Audit (final, 22 October 2026)" below: the floor window's first legal cell was filled by `crown_fb_01` (the `no_cell` probe stops at the first cell and never counted the rest; #323's `filled:` probe found a second, filled in "w18m row fixes" below), and stays a documented fail (ruling 6332450092). This section is the r7 record.
 
 - cannon (34.1, -336.2): filled by the fill spots `crown_mv_*` at (72, -360) and (78, -330) (low_tiny and low_cairn, fitted to the camera cone); the r8 audit no longer lists it.
 - floor (9.7, -441.9), sable (8, -476.3), tarn (-32.8, -319.1): no legal spot in view. These samples ride the elevated Watch Butte drop (terrain 108.8, 132.5 and 116.1 m high); the ground within 60 m in the camera cone is either steeper than the 25 degree slope rule or inside a kicker keepout, and level ground beside it is 40 m or more lower, outside the 60 m view. A cone scan of the camera frustum (width 72.5 degree field of view, 60 m, pitch -0.3) found 0 legal cells for each: floor and sable are all `slope` and `line_clear`, tarn is `kicker run-out` of `bajada_lip` plus `slope`. The audit has no arena or camp exemption for them.
@@ -95,7 +95,7 @@ Foundation `be6189ec` (lineclear, e72fff7d plus a stage f259e8cf merge) and stag
 
 ### Spot added for the floor window (22 October 2026)
 
-`crown_fb_01`, template `floor_brush` (one `rabbitbrush` b at scale 0.85), at (-18.75, -398.75), the cell the audit probe found for the floor window (9.7, -441.9). Story: "One dry rabbitbrush clump the net-weaver crews leave standing on the one scrap of legal ground beside the floor line, a gray-brown tuft in the dust the giant machines roll past." (Variant b is the dry winter brush.) I fitted 576 two-prop variants (fulgurite, tally_slab, rabbitbrush, yucca, dish_stones, watch_stool within 3 m, scales 0.85 and 1.0); only the brush alone passes `check_one` (the kicker keepout within 4.6 m and the 25 degree slope exclude the rest), so the window stays at one kind in view, not three (a documented density fail, see Audit).
+`crown_fb_01`, template `floor_brush` (one `rabbitbrush` b at scale 0.85), at (-18.75, -398.75), the cell the audit probe found for the floor window (9.7, -441.9). Story: "One dry rabbitbrush clump the net-weaver crews leave standing on the one scrap of legal ground beside the floor line, a gray-brown tuft in the dust the giant machines roll past." (Variant b is the dry winter brush.) I fitted 576 two-prop variants (fulgurite, tally_slab, rabbitbrush, yucca, dish_stones, watch_stool within 3 m, scales 0.85 and 1.0); only the brush alone passes `check_one` (the kicker keepout within 4.6 m and the 25 degree slope exclude the rest), so the window stays at one kind in view, not three (a documented density fail, see Audit). Correction (w18m): this was not the only legal cell. The `no_cell` probe stops at the first cell and never counted them; the template story's "one scrap" is stale, but the story is kit data and was not edited.
 
 ### Telegraph zones
 
@@ -129,7 +129,7 @@ Ruling 6329579296: an `--open` window carries a reason the audit checks (`no_cel
 | bare share | 34.4% |
 | void poses | 2 |
 
-The one density fail is the floor window (9.7, -441.9), 1 kind in view. Its one legal cell, found by the probe (rabbitbrush/b at scale 0.85, (-18.8, -398.8)), is filled by `crown_fb_01`. Nothing else fits there: the kicker keepout (4.6 m) and the 25 degree slope bound every other cell, and 576 two-prop variants all failed `check_one`. The sable (`no_cell`) and tarn (`runout:bajada_lip`) windows were accepted.
+The one density fail is the floor window (9.7, -441.9), 1 kind in view. Its first legal cell, found by the probe (rabbitbrush/b at scale 0.85, (-18.8, -398.8)), is filled by `crown_fb_01`. The probe stops at the first cell, so it never counted the cells; #323's `filled:` probe found a free legal cell at (-16.25, -398.75) too (see "w18m row fixes" below). Nothing else fits there: the kicker keepout (4.6 m) and the 25 degree slope bound every other cell, and 576 two-prop variants all failed `check_one`. The sable (`no_cell`) and tarn (`runout:bajada_lip`) windows were accepted.
 
 Bare poses kept as named: 11 (17.3, -541.0) and 16 (8.1, -416.9) are on the Watch Butte drop (slope and the `bajada_lip` kicker keepout, no legal cell in view); 208 (124.5, 237.5) is on the gauntlet platform where `home_clear` and `gauntlet_west` block every level cell. The audit's second void pose is sample 143 (-32.8, -319.1), the tarn window, inside the `bajada_lip` run-out (its `--open` reason above).
 
@@ -173,3 +173,28 @@ Boards looked at (all under `docs/art/reference/`): `highdraft/highdraft-props-m
 ### ART-MISTAKES entries checked
 
 Read all rows of `project-guide/handoff/ART-MISTAKES.md`. Applied: 2026-10-21 World #242 "Read the function before describing what a flag means" (I read `check_one` for the telegraph and line_clear_m rules before moving spots); 2026-10-21 Coordinator #222 "Measure a number at the moment it applies" (the plan check on the merged head is the authority, not the earlier PASS); 2026-10-21 Coordinator #231 and #234 "check the last gate's drop list before stacking" (merged the current stage and re-ran the plan check). My own rows from this lane (audits outside the lock, the `P()` scale argument, `expand()` resetting the low rows) were re-read before this unit.
+
+### w18m row fixes and floor-window fill (card (b), #323)
+
+The new scan (#323) found 8 row groups in crown and no yaw groups. I moved 12 spots off their lines by 2 m or more of perpendicular offset, kept every template, story and `near`, and left all yaws alone. No move created a yaw group, and the lint stays at 0.
+
+| spot | old `at` | new `at` |
+|---|---|---|
+| crown_07 | (117, -376.8) | (117, -373.8) |
+| crown_13 | (18, -298) | (18, -294.5) |
+| crown_16 | (-6, -290) | (-6, -286.5) |
+| crown_73 | (-6, 126) | (-9, 126) |
+| crown_mv_06 | (110, 290) | (110, 293) |
+| crown_mv_08 | (26, 500) | (26, 503) |
+| crown_lo_13 | (46, -714) | (46, -717) |
+| crown_lo_12 | (86, -658) | (82.5, -658) |
+| crown_lo_05 | (62, -586) | (62, -589) |
+| crown_lo_10 | (-2, -658) | (-5.5, -660) |
+| crown_lo_11 | (-2, -698) | (-5.5, -698) |
+| crown_lo_15 | (-2, -594) | (-5.5, -594) |
+
+The nine-spot low-ground group (crown_lo_03 to 17) is broken by moving lo_05, lo_10, lo_11 and lo_15, so no three of its spots stay on a line with even gaps. Several first tries failed `line_clear` (lo_13, lo_10, lo_15, lo_05, crown_73) and were moved the other way. Each of the 8 groups lost at least one spot from its line; the other spots did not move.
+
+Floor window (9.7, -441.9): #323's `filled:` probe found a free legal cell at (-16.25, -398.75). I added `crown_fb_02`, template `floor_brush`, yaw 90, `near` "floor line, net-weaver gear", at that cell; it passes the plan check. It is the same single kind as `crown_fb_01`, so the window still sees 1 kind and stays a documented density fail (ruling 6332450092). The `filled:` claim is untested here, pending #323 (the audit tree did not have its head). Once #323 stacks, crown's audit args add `--open=9.7:-441.9:10:filled:-16.25:-398.75`, if that run shows the claim holds. Until then the window is a documented fail.
+
+Results: pin 3161838182 (was 542438207). The new check, run with `--file` on this copy in a tree holding the scan code, reports 0 violations, 0 pattern, 0 pin, 0 lint. The old check reports 0 violations, same fingerprint. `park_props_test` passes. The density audit gives 41 windows: 25 pass, 15 exempt (arena 6, telegraph 7, open:no_cell 1, open:runout 1), 1 fail, the same as before; `density_open_checked` 2, `density_open_rejected` none.
