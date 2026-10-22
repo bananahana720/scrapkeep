@@ -232,7 +232,8 @@ static var _anchor_fit_lock := Mutex.new()
 static var _anchor_hulls := {}
 static var _anchor_hull_lock := Mutex.new()
 # A band's hull keeps at most this many of its exact hull vertices (farthest-point sampled), so it stays inside the drawn
-# mesh's hull. 256 cost +11 to +18% mean physics tick over the boxes on dam and crown; ruling 6332145318 caps it at 64.
+# mesh's hull and only ever loses air (ruling 6332145318). With balls pressed on posts, 64 costs +4% (dam) and -4% (crown)
+# mean physics tick against the fitted boxes.
 const ANCHOR_HULL_CAP := 64
 
 
@@ -1336,8 +1337,8 @@ static func anchor_fit_boxes(row: Dictionary) -> Array:
 
 
 # One ConvexPolygonShape3D per fitted band of the row's variant at its height: the hull of the drawn mesh inside the band
-# (triangles clipped to h in [lo, hi], so bands meet with no gap), null for a band the mesh never enters (that band keeps
-# its table box). [] when the mesh cannot be read (one push_warning; the caller keeps the boxes). Points are (x, h, z) in
+# (triangles clipped to h in [lo, hi], so bands meet with no gap), cut to at most ANCHOR_HULL_CAP of its vertices, null for
+# a band with no usable hull (that band keeps its table box). [] when the mesh cannot be read (one push_warning; the caller keeps the boxes). Points are (x, h, z) in
 # post-local space before the turn, h metres above the ground sample. Cached per (variant GLB, size[1]).
 # Height mapping, from anchor_draws: a post is drawn at origin y = bottom + tall / ANCHOR_AUTHORED_M with bottom = base -
 # ANCHOR_SINK_M and Y scaled by s = tall / ANCHOR_AUTHORED_M, so authored y gives world y = base - SINK + s + y * s, i.e.
@@ -1372,7 +1373,8 @@ static func anchor_hulls(row: Dictionary, fit: Array) -> Array:
 	return out
 
 
-# The convex hull shape of triangles (a flat list of corners, y = h) inside h in [lo, hi], null with under 4 distinct points.
+# The convex hull shape of triangles (a flat list of corners, y = h) inside h in [lo, hi], at most ANCHOR_HULL_CAP of its
+# vertices; null with under 4 distinct points or when the hull has under 4 vertices (a flat band).
 static func _band_hull(tris: PackedVector3Array, lo: float, hi: float) -> ConvexPolygonShape3D:
 	var pts := PackedVector3Array()
 	for t in tris.size() / 3:

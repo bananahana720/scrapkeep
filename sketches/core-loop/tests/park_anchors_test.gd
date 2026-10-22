@@ -36,6 +36,7 @@ const Y_MAX := 9.05
 
 var _t := T.new("park_anchors_test")
 var _worst_over := 0.0
+var _at_cap := 0
 
 
 func _initialize() -> void:
@@ -255,6 +256,7 @@ func _fitted() -> void:
 								bad.append("band %d hull sticks %.3f m out of its box" % [i, over])
 							if hull.points.size() > ParkRecipes.ANCHOR_HULL_CAP:
 								bad.append("band %d hull has %d points, over the cap %d" % [i, hull.points.size(), ParkRecipes.ANCHOR_HULL_CAP])
+							_at_cap += 1 if hull.points.size() == ParkRecipes.ANCHOR_HULL_CAP else 0
 					else:
 						var c := Vector3((b["x"][0] + b["x"][1]) * 0.5, (b["h"][0] + b["h"][1]) * 0.5, (b["z"][0] + b["z"][1]) * 0.5)
 						var sx: float = b["x"][1] - b["x"][0]
@@ -270,6 +272,7 @@ func _fitted() -> void:
 			parent.free()
 	print("hull XZ overshoot of the table box, worst over bands of the rows exercised: %.4f m" % _worst_over)
 	_t.check("(g) fitted rows exercised (%d rows, %d posts)" % [rows, posts_fitted], rows >= 8)
+	_t.check("(g) the hull cap is applied: %d exercised bands hold exactly %d points" % [_at_cap, ParkRecipes.ANCHOR_HULL_CAP], _at_cap > 0)
 	# (i) control: an unlisted height keeps one 8 m box per post; greybox is the same path as before.
 	var control := _fit_row("anchor_hoodoo", 13.0, false)
 	var parent2 := Node3D.new()
