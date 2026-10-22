@@ -30,6 +30,7 @@ func _run() -> void:
 	await _waves()
 	await _fit_clock()
 	await _knock()
+	await _cue_and_plate()
 	await _retire()
 	await _death_on_the_sealing_tick()
 	await _record_survives()
@@ -104,6 +105,9 @@ func _dial_zero() -> void:
 		seen += 1 if e.get("kind") == "crew_fitter" else 0
 	_t.check("dial 0: no opening path opens a point (so none calls a crew)", blocked, "")
 	_t.check("dial 0: no crew_fitter ever stands and no crew is kept", seen == 0 and mod._crew.is_empty() and mod.crew().is_empty(), str(seen))
+	var cue_nodes: Array = mod.get_tree().root.find_children("SeamPlate*", "", true, false) + mod.get_tree().root.find_children("WeldSpark", "", true, false)
+	_t.check("dial 0: no plate or cue node exists and no seal cue fired", cue_nodes.is_empty() and mod._plates.is_empty() and mod._fallen.is_empty()
+			and mod.seal_cue_log.is_empty(), str(cue_nodes))
 	game.free()
 	await physics_frame
 
@@ -432,6 +436,84 @@ func _stats() -> void:
 	_t.check("dial 0: the weak fields stay null and nothing is counted", obot.boss_note["weak_opened"] == null and obot.boss_note["crew_waves"] == null
 			and off[1].weak_stats["opened"].is_empty(), "")
 	off[0].free()
+	await physics_frame
+
+
+# The fitting cue (step 2c): the seam brightens with the fit clock, the plate is held then fitted or dropped, and the
+# seal tick sounds only while fit_min fitters fit. Evidence limit: material energies and node state, not a render.
+func _cue_and_plate() -> void:
+	var booted = await _boot({"waking.weak_points": 1.0})
+	var game = booted[0]
+	var mod = booted[1]
+	mod._open_hatch(1)
+	var all := _fitters(mod)
+	for i in range(2, all.size()):
+		all[i].take_damage(1000.0)
+	var two := all.slice(0, 2)
+	await physics_frame
+	await physics_frame
+	_t.check("inbound: the seam stays at its normal lit state, no spark, no plate, no seal tick",
+			is_equal_approx(two[0].seam_energy(), CrewFitter.SEAM_LIT) and not two[0].spark_visible() and mod._plates.is_empty() and mod.seal_cue_log.is_empty(),
+			"%s" % two[0].seam_energy())
+	_seat(two[0])
+	await _step_until(mod, 0.2)
+	_t.check("one fitting fitter shows the plate at fit start but sounds no seal tick (below fit_min)", mod._plates.has("hatch_1") and mod.seal_cue_log.is_empty(), str(mod.seal_cue_log.size()))
+	_seat(two[1])
+	var last := 0.0
+	var rising := true
+	var sparked := false
+	var ticks_before: int = mod.seal_cue_log.size()
+	var until: float = mod.clock + 3.0
+	while mod.clock < until:
+		for f in two:
+			if f.fit_state == f.State.FITTING:
+				_seat(f)
+		await physics_frame
+		var e: float = two[0].seam_energy()
+		rising = rising and e >= last - 0.0001 and e >= CrewFitter.SEAM_LIT - 0.0001
+		last = e
+		sparked = sparked or two[0].spark_visible()
+	_t.check("fitting: the seam is lit and its brightness never falls as progress rises", rising and last > CrewFitter.SEAM_LIT, "%s" % last)
+	_t.check("fitting: a weld spark flickers at the hatch contact", sparked, "")
+	var ticks_log: Array = mod.seal_cue_log
+	var climbs := ticks_log.size() - ticks_before >= 3 and float(ticks_log[-1][1]) > float(ticks_log[ticks_before][1]) and float(ticks_log[-1][0]) > float(ticks_log[ticks_before][0])
+	_t.check("two fitting: the seal tick repeats and its pitch rises with progress", climbs, str(ticks_log.slice(ticks_before)))
+	var plate = mod._plates.get("hatch_1")
+	_t.check("the plate is held clear of the hatch, sized to its seat, inert",
+			plate != null and plate is MeshInstance3D and plate.find_children("*", "CollisionObject3D", true, false).is_empty()
+			and plate.get_groups().is_empty() and not (plate as MeshInstance3D).mesh.get_aabb().size.x < 3.0, "")
+	_t.check("before the knock the plate_drop codex row is not found", not "plate_drop" in game.ctx.codex.discovered_this_run(), "")
+	_strike(mod, two[0], "ram", true)
+	await physics_frame
+	_t.check("the reel knock-off finds the plate_drop codex row", "plate_drop" in game.ctx.codex.discovered_this_run(), str(game.ctx.codex.discovered_this_run()))
+	_t.check("knocked: the seam goes dark and the spark stops", is_equal_approx(two[0].seam_energy(), CrewFitter.SEAM_DIM) and not two[0].spark_visible(), "%s" % two[0].seam_energy())
+	var fallen: Array = mod._fallen
+	_t.check("a knock below fit_min drops the plate: inert, no collision layer, not a target, not in any group",
+			fallen.size() == 1 and not mod._plates.has("hatch_1") and not (fallen[0]["node"] is CollisionObject3D)
+			and fallen[0]["node"].find_children("*", "CollisionObject3D", true, false).is_empty() and fallen[0]["node"].get_groups().is_empty(), str(fallen.size()))
+	var ticks: int = mod.seal_cue_log.size()
+	await _step_until(mod, 0.6)
+	_t.check("the seal tick stops when fewer than fit_min fit", mod.seal_cue_log.size() == ticks, "%d -> %d" % [ticks, mod.seal_cue_log.size()])
+	await _step_until(mod, 0.2)
+	_t.check("the fallen plate lies still and a lone fitter does not pick up a new one", mod._fallen.size() == 1 and not mod._plates.has("hatch_1"), "")
+	await _step_until(mod, CrewFitter.KNOCK_SECONDS)
+	_t.check("after KNOCK_SECONDS the seam is lit again", two[0].seam_energy() >= CrewFitter.SEAM_LIT - 0.0001, "%s" % two[0].seam_energy())
+	_seat(two[0])
+	await _step_until(mod, 0.3)
+	_t.check("with fit_min fitters back a new plate is carried", mod._plates.has("hatch_1"), "")
+	game.free()
+	await physics_frame
+	booted = await _boot({"waking.weak_points": 1.0})
+	game = booted[0]
+	mod = booted[1]
+	two = _open_two(mod)
+	await _step_until(mod, 0.5)
+	_t.check("a fresh fit carries the plate", mod._plates.has("hatch_1"), "")
+	await _step_until(mod, WeakPoints.FIT_SECONDS + 0.2)
+	_t.check("on seal the plate is fitted: the hatch is SHUT and no plate is held", mod.weak.state("hatch_1") == WeakPoints.SHUT and not mod._plates.has("hatch_1"), "")
+	var part = mod.weak_part("hatch_1")
+	_t.check("and the shut hatch shows its cover", part._cover.visible and part.lit_colors().is_empty(), "")
+	game.free()
 	await physics_frame
 
 

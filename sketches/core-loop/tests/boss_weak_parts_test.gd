@@ -467,9 +467,9 @@ func _reachable() -> void:
 	var part = mod.weak_part("hatch_1")
 	mod._open_weak("hatch_1")
 	mod._sync_part("hatch_1")
-	_t.check("an OPEN part: cover hidden, cavity visible, gap emission, on the stake layer",
-			not part._cover.visible and part._cavity.visible and part._cavity_material.emission.is_equal_approx(WeakPart.GAP)
-			and part._cavity_material.emission_energy_multiplier > 0.0 and part.collision_layer == Augments.STAKE_MASK and part.hookable(), "")
+	_t.check("an OPEN part: cover hidden, cavity visible, ancient-green notches lit, on the stake layer",
+			not part._cover.visible and part._cavity.visible and part._notches.visible and not part.lit_colors().is_empty()
+			and part.collision_layer == Augments.STAKE_MASK and part.hookable(), "")
 	game.free()
 	await physics_frame
 

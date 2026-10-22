@@ -81,6 +81,21 @@ const CREW_SPAWN_RADIUS := 30.0
 const CREW_SPAWN_SPACING := 1.8
 const CREW_SLOT_SPACING := 2.4
 const CREW_SLOT_INSET := 2.0
+# The seam plate (step 2c): held clear of the hatch face while fitters fit, nearer as the seal fills; a dropped plate
+# falls at PLATE_FALL_SPEED for at most PLATE_FALL_SECONDS and lies where it lands.
+const PLATE_HELD_CLEAR := 1.6
+const PLATE_FITTED_CLEAR := 0.7
+const PLATE_FALL_SPEED := 9.0
+const PLATE_FALL_SECONDS := 1.2
+const PLATE_REST_TILT := 0.35
+# The seal sound: an existing non-hostile row (the ancient weak_point_opened row) with the existing baked latch tick,
+# repeated faster and higher as the seal fills. Swap SEAL_SOUND for a purpose-made cue later; nothing else changes.
+const SEAL_CUE_KIND := "weak_point_opened"
+const SEAL_SOUND := "lock_tick"
+const SEAL_GAP_SLOW := 0.55
+const SEAL_GAP_FAST := 0.14
+const SEAL_PITCH_LOW := 0.85
+const SEAL_PITCH_HIGH := 1.6
 
 var floors: WakingFloors
 # Floor number to its body, while the body stands.
@@ -125,6 +140,15 @@ var _pulse_charging := false
 var _crew: Array = []
 var _crew_waves := 0
 var _crew_phase := 0
+# The seam plates carried at a hatch, by hatch id. A plate a knock dropped moves to _fallen as {node, id, fall_left}, and
+# its hatch is latched (_plate_latch) until fit_min fitters are on it again. All empty at dial 0, and no node exists
+# until a crew does.
+var _plates := {}
+var _plate_latch := {}
+var _fallen: Array = []
+# The seal sound's record: [progress, pitch] per tick of the cue, kept whether or not an audio director answers.
+var seal_cue_log: Array = []
+var _seal_cue_left := 0.0
 # Every hatch the crew's fit sealed: [{id, phase, at}], at on the fight clock. The sweep reads the seal rate per floor phase.
 # This record and weak_stats live until the next fight's enter_arena, not until the crew retires or the Warden dies.
 var weak_sealed: Array = []
@@ -233,6 +257,8 @@ func _physics_process(delta: float) -> void:
 	if weak.active():
 		_note_weak()
 		_step_crew()
+		_step_plates(delta)
+		_step_seal_cue(delta)
 	_read_pulse()
 	_read_ball()
 	_open_by_lip()
@@ -737,7 +763,7 @@ func _call_crew(id: String) -> void:
 		if fitter == null:
 			continue
 		var slot_index := _free_slot(id)
-		fitter.assign(id, _slot_at(id, hatch, slot_index))
+		fitter.assign(id, _slot_at(id, hatch, slot_index), _plate_at(id, 0.0))
 		var entry := {"node": fitter, "id": id, "counted": false, "slot": slot_index}
 		_crew.append(entry)
 		# A fitter that dies gives its fit back at once: weak.step runs before _step_crew, so a death on the sealing
@@ -852,10 +878,134 @@ func _crew_struck(f: Node3D, kind: String) -> void:
 			return
 		_uncount(c)
 		f.dislodge(f.global_position - ctx.player.ball_position())
+		_discover("plate_drop", f.global_position)
+		_plate_knocked(c["id"])
 		return
 
 
+# --- The seam plate and the seal sound ---------------------------------------------------------
+
+# The plate's place at a hatch: its face (the way the part looks) pushed out by clear.
+func _plate_at(id: String, clear: float) -> Vector3:
+	var part = weak_part(id)
+	if part == null:
+		return _weak_position(id)
+	return part.global_position - part.global_transform.basis.z * (WeakPart.SIZE.z * 0.5 + clear)
+
+
+func _fitting_count(id: String) -> int:
+	var n := 0
+	for c in _crew:
+		if c["id"] == id and c["counted"] and is_instance_valid(c["node"]) and c["node"].fit_state == c["node"].State.FITTING:
+			n += 1
+	return n
+
+
+# Held while any fitter fits and no knock has dropped it; it comes closer as the seal fills.
+func _step_plates(delta: float) -> void:
+	for id in _plates.keys():
+		if weak.state(id) != WeakPoints.OPEN or weak_part(id) == null:
+			# Sealed (the plate is fitted: the hatch's own cover shows), timed out or broken: no plate at the hatch.
+			_free_plate(id)
+	for id in _plate_latch.keys():
+		if weak.state(id) != WeakPoints.OPEN:
+			_plate_latch.erase(id)
+	for c in _crew:
+		var id: String = c["id"]
+		var f = c["node"]
+		if not is_instance_valid(f) or f.fit_state != f.State.FITTING or weak.state(id) != WeakPoints.OPEN:
+			continue
+		if _fitting_count(id) >= weak.fit_min:
+			_plate_latch.erase(id)
+		var part = weak_part(id)
+		if _plate_latch.has(id) or part == null:
+			continue
+		if not _plates.has(id):
+			var made := WeakPart.make_plate()
+			made.name = "SeamPlate_%s" % id
+			ctx.root.add_child(made)
+			_plates[id] = made
+		var node: Node3D = _plates[id]
+		node.global_transform = Transform3D(part.global_transform.basis,
+				_plate_at(id, lerpf(PLATE_HELD_CLEAR, PLATE_FITTED_CLEAR, f.seal_progress)))
+	var rest: Array = []
+	for fall in _fallen:
+		var node: Node3D = fall["node"]
+		if not is_instance_valid(node):
+			continue
+		if fall["fall_left"] > 0.0:
+			fall["fall_left"] = float(fall["fall_left"]) - delta
+			var p := node.global_position
+			var ground := ground_height_at(p)
+			p.y -= PLATE_FALL_SPEED * delta
+			if is_finite(ground) and p.y <= ground + 0.1:
+				p.y = ground + 0.1
+				fall["fall_left"] = 0.0
+			node.global_position = p
+			if fall["fall_left"] <= 0.0:
+				node.rotation.x += PLATE_REST_TILT
+		rest.append(fall)
+	_fallen = rest
+
+
+# A fitter was struck off: if that leaves the hatch with fewer than fit_min fitting, the carried plate falls.
+func _plate_knocked(id: String) -> void:
+	if _fitting_count(id) >= weak.fit_min:
+		return
+	_plate_latch[id] = true
+	var node = _plates.get(id)
+	_plates.erase(id)
+	if node == null or not is_instance_valid(node):
+		return
+	# One fallen plate per hatch: an older one is cleared away.
+	_fallen = _fallen.filter(func(fall):
+		var keep: bool = fall["id"] != id
+		if not keep and is_instance_valid(fall["node"]):
+			fall["node"].queue_free()
+		return keep)
+	_fallen.append({"node": node, "id": id, "fall_left": PLATE_FALL_SECONDS})
+
+
+func _free_plate(id: String) -> void:
+	var node = _plates.get(id)
+	if node != null and is_instance_valid(node):
+		node.queue_free()
+	_plates.erase(id)
+
+
+# The seal sound: a tick at a rate and pitch that rise with the fit clock, only while fit_min or more are fitting.
+func _step_seal_cue(delta: float) -> void:
+	var progress := -1.0
+	for c in _crew:
+		var id: String = c["id"]
+		if is_instance_valid(c["node"]) and c["node"].fit_state == c["node"].State.FITTING \
+				and _fitting_count(id) >= weak.fit_min and weak.state(id) == WeakPoints.OPEN:
+			progress = maxf(progress, float(c["node"].seal_progress))
+	if progress < 0.0:
+		_seal_cue_left = 0.0
+		return
+	_seal_cue_left -= delta
+	if _seal_cue_left > 0.0:
+		return
+	_seal_cue_left = lerpf(SEAL_GAP_SLOW, SEAL_GAP_FAST, progress)
+	var pitch := lerpf(SEAL_PITCH_LOW, SEAL_PITCH_HIGH, progress)
+	seal_cue_log.append([progress, pitch])
+	var presentation = ctx.root.get("presentation") if ctx != null and ctx.root != null else null
+	var audio = presentation.audio if presentation != null else null
+	if audio != null:
+		audio.play(SEAL_CUE_KIND, -6.0, pitch, "SFX", SEAL_SOUND)
+
+
 func _retire_crew() -> void:
+	for id in _plates.keys():
+		_free_plate(id)
+	for fall in _fallen:
+		if is_instance_valid(fall["node"]):
+			fall["node"].queue_free()
+	_fallen.clear()
+	_plate_latch.clear()
+	_seal_cue_left = 0.0
+	seal_cue_log.clear()
 	for c in _crew:
 		if is_instance_valid(c["node"]):
 			_uncount(c)

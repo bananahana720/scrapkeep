@@ -27,6 +27,12 @@ const KNOCK_SECONDS := 1.5
 const DISLODGE_FORCE := 14.0
 const PLATE_SIZE := Vector3(1.1, 0.12, 0.8)
 const PLATE_COLOR := Color(0.62, 0.55, 0.42)
+const SEAM_LIT := SwarmRemnant.SEAM_LIT
+const SEAM_DIM := SwarmRemnant.SEAM_DIM
+# The seam at full seal progress.
+const SEAM_SEALING := 4.4
+const SPARK_SIZE := 0.16
+const SPARK_HZ := 18.0
 
 enum State { INBOUND, FITTING, KNOCKED, RETIRING }
 
@@ -41,6 +47,13 @@ var _slab: Node3D
 # Kept for the fitting cue (step 2c): _seam is the casting's seam strip the cue lights with seal_progress.
 var _body: MeshInstance3D
 var _seam: MeshInstance3D
+# The sealing cue (step 2c). The seam is the casting's own inlay in ancient green (the non-hostile channel the swarm's
+# seam already speaks): lit as usual while inbound, brighter with seal_progress while fitting, dark while knocked. A
+# small weld spark flickers at the hatch contact point while fitting. Never the dive cue, never hazard red.
+var _seam_material: StandardMaterial3D
+var _spark: MeshInstance3D
+var _contact := Vector3.INF
+var _cue_clock := 0.0
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -62,9 +75,10 @@ func state_name() -> String:
 
 
 # Sent to a hatch: fly to this slot until retired.
-func assign(id: String, at: Vector3) -> void:
+func assign(id: String, at: Vector3, contact := Vector3.INF) -> void:
 	point_id = id
 	slot = at
+	_contact = contact
 	fit_state = State.INBOUND
 	_show_plate(true)
 
@@ -81,6 +95,7 @@ func arrived() -> bool:
 func start_fit() -> void:
 	if fit_state == State.INBOUND:
 		fit_state = State.FITTING
+		_update_cue(0.0)
 
 
 # Only a reel impact moves a fitter off its plate (dislodge). Any other shove leaves a fitting fitter seated, so its
@@ -98,6 +113,7 @@ func dislodge(away: Vector3) -> void:
 	fit_state = State.KNOCKED
 	_knocked_left = KNOCK_SECONDS
 	_show_plate(false)
+	_update_cue(0.0)
 	var flat := Vector3(away.x, 0.0, away.z)
 	var dir := flat.normalized() if flat.length_squared() > 0.0001 else Vector3.RIGHT
 	_knock = dir * DISLODGE_FORCE
@@ -149,6 +165,50 @@ func _fly(delta: float, desired: Vector3) -> void:
 		rotation.y = atan2(horizontal.x, horizontal.z)
 
 
+# Seam energy now: the lit inlay inbound, rising with the fit clock while fitting, dark while knocked.
+func seam_energy() -> float:
+	if _seam_material == null:
+		return 0.0
+	return _seam_material.emission_energy_multiplier
+
+
+func spark_visible() -> bool:
+	return _spark != null and _spark.visible
+
+
+func _update_cue(delta: float) -> void:
+	if _seam_material == null:
+		return
+	_cue_clock += delta
+	var dark := fit_state == State.KNOCKED
+	var energy := SEAM_LIT
+	if dark:
+		energy = SEAM_DIM
+	elif fit_state == State.FITTING:
+		energy = lerpf(SEAM_LIT, SEAM_SEALING, clampf(seal_progress, 0.0, 1.0))
+	_seam_material.emission_energy_multiplier = energy
+	_seam_material.albedo_color = Roster.ANCIENT_LIGHT.darkened(0.6) if dark else Roster.ANCIENT_LIGHT
+	var sparking := fit_state == State.FITTING
+	if sparking and _spark == null:
+		_build_spark()
+	if _spark != null:
+		_spark.visible = sparking and fposmod(_cue_clock * SPARK_HZ, 1.0) < 0.6
+		if _contact != Vector3.INF:
+			_spark.global_position = _contact
+
+
+func _build_spark() -> void:
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3.ONE * SPARK_SIZE
+	_spark = MeshInstance3D.new()
+	_spark.name = "WeldSpark"
+	_spark.mesh = mesh
+	_spark.material_override = Palette.solid(Roster.ANCIENT_LIGHT, SEAM_SEALING, false)
+	_spark.top_level = true
+	add_child(_spark)
+	_spark.visible = false
+
+
 func _show_plate(on: bool) -> void:
 	if _plate != null:
 		_plate.visible = on
@@ -180,6 +240,8 @@ func _build_body() -> void:
 				_body = mi
 			elif part.name == "RemnantSeam":
 				_seam = mi
+				_seam_material = (mi.mesh.surface_get_material(0) as StandardMaterial3D).duplicate()
+				mi.set_surface_override_material(0, _seam_material)
 	else:
 		_base_color = Roster.ANCIENT_ENAMEL
 		_material = Palette.solid(Roster.ANCIENT_ENAMEL)
@@ -192,6 +254,18 @@ func _build_body() -> void:
 		_body.mesh = prism
 		_body.material_override = _material
 		_slab.add_child(_body)
+		# No casting: the same lit inlay as the swarm's fallback, so the sealing cue still has a seam to light.
+		var edge := CylinderMesh.new()
+		edge.radial_segments = 3
+		edge.top_radius = SIZE * 0.55
+		edge.bottom_radius = SIZE * 0.55
+		edge.height = 0.24
+		_seam = MeshInstance3D.new()
+		_seam.mesh = edge
+		_seam_material = Palette.solid(Roster.ANCIENT_LIGHT, SEAM_LIT)
+		_seam.material_override = _seam_material
+		_seam.position = Vector3.UP * 0.02
+		_slab.add_child(_seam)
 	var plate := BoxMesh.new()
 	plate.size = PLATE_SIZE
 	_plate = MeshInstance3D.new()
