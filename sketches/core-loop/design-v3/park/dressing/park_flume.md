@@ -146,3 +146,13 @@ Fixed in this round: machine bodies were iron grey and rust, not the board's pet
 - v82's sluice shed has a weak story at its new spot (30 m from bend_zip_pier_18, not at water); World could swap the template.
 
 ART-MISTAKES rows checked: 2026-10-19 World #219 flush lanes, "never drop geometry to pass a check" (the recolour changes colour, drops nothing; timber_ties is deferred, not removed); 2026-10-21 Grading #241 mapping claim, "measure before claiming" (the palette claims come from grepping the recipe lines and the previews were opened, not from memory).
+
+## w18m row, yaw and label fixes (card (b), #323)
+
+The plan check listed one yaw group: flume_m014, flume_m038 and flume_v104, all at yaw -9.1 and within 24 m of each other. No row group was listed.
+
+- flume_v104 (tie_yard at [-40.0, 460.0]) turns from yaw -9.1 to -33. It now faces bench_return_pier, the row its label names, at [-53, 480] (dx -13, dz 20, atan2 gives -33 degrees). Its position is unchanged.
+- flume_m014 and flume_m038 stay at -9.1 with their positions unchanged. Their link is now a pair, which the card allows. Turning them to face the floor line (yaw 171) broke line_clear and keepout for their litter props, so I left them. The chain breaks at v104 alone.
+- Labels: 38 `near` labels fixed, all that the lint flagged (30 cut mid-word, and 8 padded with a trailing space: v04, v32, v42, v65, v81, v88, v106 and v114). Each is now "<row id>: <story cut at the last whole word within 60 characters>". Examples: flume_v03 "weir_gatehouse: Boom 3 on its blocks beside the winch cab, the lock still"; flume_m009 "verge of the line: A cold hearth, one cup and a cot left out."
+- New pin 633467776 (was 4063400762), an intended re-pin. The check via `--file` reports 0 violations, 0 pattern, 0 pin, 0 lint; the old check in this tree reports 0 violations at the same fingerprint; park_props_test passes, including "park_flume expansion matches its pin".
+- Density (w18m audit, no `--open`): 36 of 45 windows pass, 9 exempt (arena 5, telegraph 4), none failing, as before.
