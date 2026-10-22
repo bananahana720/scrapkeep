@@ -7,7 +7,7 @@ const Palette := preload("res://src/core/palette.gd")
 # hoop), opaque; the crew inside the 0.8 m collider footprint and the 2.2 m capsule's height, the
 # hoop centred 2.2 m over the origin (the base torus seat) within 1.12 m of its centre. The base
 # contract: the thrower's collider, hitbox, throw timing, damage and projectile constants are the
-# values bola_thrower.gd had before the dressing swap.
+# values bola_thrower.gd had before the dressing swap, except the wind-up, raised from 0.5 to TELL_FLOOR 0.6.
 const CEILING_T := 4200  # polished 2026-10-18 (tools/blender/POLISH.md); was 1200
 const CEILING_D := 3
 const CREW_R := 0.8
@@ -104,7 +104,7 @@ func _run() -> void:
 	_check(bola.radius == 0.8 and bola.half_height == 1.1 and bola.weight == 1.0, "radius 0.8, half-height 1.1 and weight 1 unchanged")
 	_check(is_equal_approx(bola.warn_seconds, 0.6) and is_equal_approx(bola.live_seconds, 2.6) and is_equal_approx(bola.rest_seconds, 3.2)
 		and is_equal_approx(bola.attack_range, 30.0) and is_equal_approx(bola.keep_near, 14.0) and bola.scrap_value == 4,
-		"warn 0.6, live 2.6, rest 3.2, range 30, keep-near 14 and scrap 4 unchanged")
+		"warn 0.6 (TELL_FLOOR); live 2.6, rest 3.2, range 30, keep-near 14 and scrap 4 unchanged")
 	var consts: Dictionary = (bola.get_script() as Script).get_script_constant_map()
 	var same := true
 	for key in BASE_CONSTS:
