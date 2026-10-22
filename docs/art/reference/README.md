@@ -14,5 +14,6 @@ Approved by Andrew on 22 Oct 2026 as the shared reference for every art lane (se
 | Enemies | 7 | [enemies/README.md](enemies/README.md) |
 | Bosses and Wardens | 7 | [bosses/README.md](bosses/README.md) |
 | Enemy hierarchy and rogues | 7 | [hierarchy/README.md](hierarchy/README.md) |
+| Boss weak points | 4 | [boss_weak_points/README.md](boss_weak_points/README.md) |
 | Effects and UI | 9 | [fx_ui/README.md](fx_ui/README.md) |
 | The era | 6 | [era/README.md](era/README.md) |
