@@ -88,7 +88,7 @@ class Sc:
 
 
 @K.kind("gate_wheelhouse", hero=True, tags=["machine"], variants="ab",
-        story="Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth.")
+        story="Sluice crew's wheelhouse: a big hand wheel chained shut, petrol-enamel walls on a concrete plinth.")
 def gate_wheelhouse(p, v, rng):
     p = Sc(p, 1.8)  # 3.2 m hut built at 1.8x: about 5.8 m tall
     sag = 0.38 if v == "b" else 0.0
@@ -100,24 +100,24 @@ def gate_wheelhouse(p, v, rng):
     # Corner posts.
     for x in (-1.75, 1.75):
         for y in (-1.3, 1.3):
-            p.beam((x, y, 0.4), (x, y, 2.35), 0.2, tint(C["timber_dark"], rng, 0.05))
+            p.beam((x, y, 0.4), (x, y, 2.35), 0.2, tint(mix(PETROL, "charcoal", 0.3), rng, 0.05))
     # Wall planks: back, sides, front (a door of wide planks, set a hair proud).
     for i in range(16):
         x = -1.58 + i * 0.21
-        p.box((0.2, 0.12, 1.9), (x, 1.3, 1.35), tint(C["timber"], rng), jit=0.004)
+        p.box((0.2, 0.12, 1.9), (x, 1.3, 1.35), tint(PETROL, rng), jit=0.004)
     for s in (-1, 1):
         for i in range(11):
             y = -1.05 + i * 0.21
             if v == "b" and s == 1 and i in (3, 4):
                 continue  # a gap where two planks came away
-            p.box((0.12, 0.2, 1.9), (s * 1.75, y, 1.35), tint(C["timber_grey"] if s == 1 else C["timber"], rng), jit=0.004)
+            p.box((0.12, 0.2, 1.9), (s * 1.75, y, 1.35), tint(mix(PETROL, "concrete_stain", 0.3) if s == 1 else PETROL, rng), jit=0.004)
     for i in range(16):
         x = -1.58 + i * 0.21
         door = -0.62 <= x <= 0.1
         p.box((0.2, 0.12, 1.9 if not door else 1.75), (x, -1.3, 1.35 if not door else 1.275),
-              tint(C["timber_pale"] if door else C["timber"], rng), jit=0.004)
+              tint(mix(PETROL, "bone", 0.2) if door else PETROL, rng), jit=0.004)
     for z in (0.7, 1.9):
-        p.beam((-1.78, -1.38, z), (1.78, -1.38, z), 0.1, C["timber_dark"], h=0.08)
+        p.beam((-1.78, -1.38, z), (1.78, -1.38, z), 0.1, mix(PETROL, "charcoal", 0.3), h=0.08)
     # Roof: planks in rows up each slope; the ridge dips in the sagging variant.
     rise, half, rows, segs = 0.75, 1.85, 8, 6
     theta = math.atan2(rise, half)
@@ -154,7 +154,7 @@ def gate_wheelhouse(p, v, rng):
     face = (math.pi / 2, 0, 0)
     p.box((0.34, 0.3, 1.5), (wx, -1.5, 1.1), C["timber_dark"])  # wheel bracket
     p.cyl(0.09, 0.5, (wx, -1.65, wz), C["iron"], segs=8, rot=face)  # axle
-    p.torus(wr, 0.075, (wx, wy, wz), C["iron_light"] if v == "a" else C["rust"], rot=face, major=16, minor=6)
+    p.torus(wr, 0.075, (wx, wy, wz), OXIDE, rot=face, major=16, minor=6)
     p.cyl(0.2, 0.2, (wx, wy, wz), C["iron"], segs=10, rot=face, style="round")
     for k in range(8):
         a = math.tau * k / 8 + 0.2
@@ -224,7 +224,7 @@ def survey_tripod(p, v, rng):
 V = kit.Vector if hasattr(kit, "Vector") else None
 from mathutils import Vector
 
-PETROL = "365754"      # board petrol: old-enamel machine bodies (style palette, spillway props README)
+PETROL, OXIDE = "365754", "9b513a"   # board petrol (old-enamel machine bodies) and oxide (Sluice Wheelhouse hand wheel), spillway props board
 DUSK_BLUE = mix(PETROL, "bone", 0.35)   # crew shirts: petrol worn toward bone, the crews board's two cloth colours
 FLOWER = "c9b45e"      # brittlebush yellow, muted (not brass)
 SILVER_LEAF = "8f9a78"

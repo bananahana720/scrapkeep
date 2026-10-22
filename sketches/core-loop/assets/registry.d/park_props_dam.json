@@ -8,7 +8,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "gate_wheelhouse variant a LOD0 (16588 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; polished and baked."
+    "notes": "gate_wheelhouse variant a LOD0 (16588 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, petrol-enamel walls on a concrete plinth. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -36,7 +36,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "gate_wheelhouse variant a LOD1 (8294 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "gate_wheelhouse variant a LOD1 (8294 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, petrol-enamel walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -64,7 +64,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "gate_wheelhouse variant a LOD2 (2488 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "gate_wheelhouse variant a LOD2 (2488 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, petrol-enamel walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -92,7 +92,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "gate_wheelhouse variant b LOD0 (17520 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; polished and baked."
+    "notes": "gate_wheelhouse variant b LOD0 (17520 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, petrol-enamel walls on a concrete plinth. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -120,7 +120,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "gate_wheelhouse variant b LOD1 (8760 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "gate_wheelhouse variant b LOD1 (8760 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, petrol-enamel walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -148,7 +148,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/dam.py",
-    "notes": "gate_wheelhouse variant b LOD2 (2628 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "gate_wheelhouse variant b LOD2 (2628 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, petrol-enamel walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
