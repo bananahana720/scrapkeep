@@ -30,7 +30,7 @@ Floor codes: **L** thin projection boundary/axis; **H** translucent hazard haze;
 
 ## Enemy attacks
 
-Current floor grammar is striped closing fill for INSTANT (under haze, live is a dark scorched core under the same HAZARD edge and keyline), closing reticle plus flight trace for PROJECTILE, and source-to-end fill for LANE, `combat/threat_grammar.gd:12`. Each row specifies its current shape and any existing body motion; all proposed changes follow the timing at the cited source.
+Current floor grammar is striped closing fill for INSTANT (under haze, live is a dark scorched core under the same HAZARD edge and keyline, except E07's air net, which keeps HAZARD at alpha 0.61), closing reticle plus flight trace for PROJECTILE, and source-to-end fill for LANE, `combat/threat_grammar.gd:12`. Each row specifies its current shape and any existing body motion; all proposed changes follow the timing at the cited source.
 
 | ID and attack; current committed geometry/read | Proposed body read and start before strike | Sound at wind-up; haze support; smallest slice |
 | --- | --- | --- |

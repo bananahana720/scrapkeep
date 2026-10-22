@@ -40,6 +40,7 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 #             while arming
 #   launch, bump   PROJECTILE: flight_point() from launch to centre
 #   tone, live_tone, pull (a wedge that pulls toward its apex), owner (a rim tick colour)
+#   air       true when only a ball in the air can be caught (the netcaster); drawing only
 
 enum Type { INSTANT, WAVE, PROJECTILE, LANE }
 
@@ -120,8 +121,11 @@ const OWNER_SPACING := 4.0
 # the candidates either side.
 # AIR_LIVE_ALPHA: an air-only mark (the netcaster's net, which catches the ball only in the air)
 # must not wear the scorch, which reads as the strongest ground hit and sends the player off the
-# ground. It keeps the stage's HAZARD tint at 0.61, the stage's haze live alpha (HAZE_SOLID on
-# stage/alpha-w18 43918e26); ruling #241 6347013047 section 4.
+# ground. It keeps the pre-scorch look at this fill: HAZARD at 0.61, the HAZE_SOLID that cf302195
+# paired with HAZE_FILL 1.15 (ruling #241 6331787112; the stage's 0.4 would sit level with the
+# 0.4025 pending fill). Rulings #241 6347013047 section 4 and 6347979378. On the 3060 this tint
+# read -1.2 / +0.3 L* live minus pending (6342833117), so E07's live cue belongs in the air band
+# (the wave 19 card), not in this fill.
 const HAZE_FILL := 1.15
 const LIVE_SCORCH := 0.4
 const LIVE_SCORCH_ALPHA := 0.8
