@@ -3073,8 +3073,8 @@
    "id": "crown_lo_03",
    "template": "low_slab",
    "at": [
-    30.0,
-    -578.0
+    33,
+    -575
    ],
    "yaw_deg": 102,
    "near": "watch_butte, abandoned Fleet gear"
@@ -3123,8 +3123,8 @@
    "id": "crown_lo_08",
    "template": "low_cairn",
    "at": [
-    -2.0,
-    -570.0
+    -6.5,
+    -568
    ],
    "yaw_deg": -90,
    "near": "drop_ramp, net-weaver gear"
@@ -3133,8 +3133,8 @@
    "id": "crown_lo_09",
    "template": "low_slab",
    "at": [
-    -50.0,
-    -650.0
+    -53.5,
+    -651
    ],
    "yaw_deg": -90,
    "near": "watch_butte, abandoned Fleet gear"
@@ -3143,8 +3143,8 @@
    "id": "crown_lo_10",
    "template": "low_cairn",
    "at": [
-    -5.5,
-    -660
+    -2.2,
+    -664
    ],
    "yaw_deg": -90,
    "near": "watch_butte, net-weaver gear"
@@ -3153,8 +3153,8 @@
    "id": "crown_lo_11",
    "template": "low_cairn",
    "at": [
-    -5.5,
-    -698
+    -9,
+    -702
    ],
    "yaw_deg": -90,
    "near": "watch_butte, net-weaver gear"
@@ -3183,8 +3183,8 @@
    "id": "crown_lo_14",
    "template": "low_cairn",
    "at": [
-    86.0,
-    -610.0
+    84,
+    -607
    ],
    "yaw_deg": -90,
    "near": "watch_butte, net-weaver gear"
@@ -3193,8 +3193,8 @@
    "id": "crown_lo_15",
    "template": "low_slab",
    "at": [
-    -5.5,
-    -594
+    -10.6,
+    -596
    ],
    "yaw_deg": -45,
    "near": "watch_butte, abandoned Fleet gear"
@@ -3213,8 +3213,8 @@
    "id": "crown_lo_17",
    "template": "low_cairn",
    "at": [
-    -2.0,
-    -618.0
+    -7.6,
+    -616
    ],
    "yaw_deg": -90,
    "near": "watch_butte, net-weaver gear"
@@ -3273,8 +3273,8 @@
    "id": "crown_lo_23",
    "template": "low_cairn",
    "at": [
-    86.0,
-    -578.0
+    91.5,
+    -580
    ],
    "yaw_deg": 37,
    "near": "watch_butte, net-weaver gear"
@@ -3373,8 +3373,8 @@
    "id": "crown_lo_33",
    "template": "low_slab",
    "at": [
-    -2.0,
-    -746.0
+    -5,
+    -746
    ],
    "yaw_deg": -159,
    "near": "watch_butte, abandoned Fleet gear"
@@ -3528,7 +3528,7 @@
   ],
   "seed": 31
  },
- "pin": 3161838182,
+ "pin": 804932062,
  "low_ground_rows": [
   "drop_ramp",
   "watch_butte",

@@ -95,7 +95,7 @@ Foundation `be6189ec` (lineclear, e72fff7d plus a stage f259e8cf merge) and stag
 
 ### Spot added for the floor window (22 October 2026)
 
-`crown_fb_01`, template `floor_brush` (one `rabbitbrush` b at scale 0.85), at (-18.75, -398.75), the cell the audit probe found for the floor window (9.7, -441.9). Story: "One dry rabbitbrush clump the net-weaver crews leave standing on the one scrap of legal ground beside the floor line, a gray-brown tuft in the dust the giant machines roll past." (Variant b is the dry winter brush.) I fitted 576 two-prop variants (fulgurite, tally_slab, rabbitbrush, yucca, dish_stones, watch_stool within 3 m, scales 0.85 and 1.0); only the brush alone passes `check_one` (the kicker keepout within 4.6 m and the 25 degree slope exclude the rest), so the window stays at one kind in view, not three (a documented density fail, see Audit). Correction (w18m): this was not the only legal cell. The `no_cell` probe stops at the first cell and never counted them; the template story's "one scrap" is stale, but the story is kit data and was not edited.
+`crown_fb_01`, template `floor_brush` (one `rabbitbrush` b at scale 0.85), at (-18.75, -398.75), the cell the audit probe found for the floor window (9.7, -441.9). Story: "One dry rabbitbrush clump the net-weaver crews leave standing on the one scrap of legal ground beside the floor line, a gray-brown tuft in the dust the giant machines roll past." (Variant b is the dry winter brush.) I fitted 576 two-prop variants (fulgurite, tally_slab, rabbitbrush, yucca, dish_stones, watch_stool within 3 m, scales 0.85 and 1.0); only the brush alone passes `check_one` (the kicker keepout within 4.6 m and the 25 degree slope exclude the rest), so the window stays at one kind in view, not three (a documented density fail, see Audit). Correction (w18m): this was not the only legal cell. The `no_cell` probe stops at the first cell and never counted them; the template story's "one scrap" was stale, so the coordinator reworded it in 7f7ee982 to "the few scraps of legal ground".
 
 ### Telegraph zones
 
@@ -176,7 +176,7 @@ Read all rows of `project-guide/handoff/ART-MISTAKES.md`. Applied: 2026-10-21 Wo
 
 ### w18m row fixes and floor-window fill (card (b), #323)
 
-The new scan (#323) found 8 row groups in crown and no yaw groups. I moved 12 spots off their lines by 2 m or more of perpendicular offset, kept every template, story and `near`, and left all yaws alone. No move created a yaw group, and the lint stays at 0.
+The new scan (#323) found 8 row groups in crown and no yaw groups. I moved 12 spots off their lines, 11 of them by 2 m or more of perpendicular offset. crown_16 stays 0.68 m from its line and clears the rule only through the spacing change (CV now 0.1 or more), kept every template and `near` (the one story change is the `floor_brush` rewording above), and left all yaws alone. No move created a yaw group, and the lint stays at 0.
 
 | spot | old `at` | new `at` |
 |---|---|---|
@@ -200,3 +200,22 @@ Floor window (9.7, -441.9): #323's `filled:` probe found a free legal cell at (-
 With two brush spots on the floor, the `floor_brush` story now reads "the few scraps of legal ground" instead of "the one scrap of legal ground". The story is not in the fingerprint, so the pin is unchanged. The quote in "Spot added for the floor window" above is the old text, kept as the record.
 
 Results: pin 3161838182 (was 542438207). The new check, run with `--file` on this copy in a tree holding the scan code, reports 0 violations, 0 pattern, 0 pin, 0 lint. The old check reports 0 violations, same fingerprint. `park_props_test` passes. The density audit gives 41 windows: 25 pass, 15 exempt (arena 6, telegraph 7, open:no_cell 1, open:runout 1), 1 fail, the same as before; `density_open_checked` 2, `density_open_rejected` none.
+
+#### Round 2: long-span rows and parallel columns (#323 af522720)
+
+The row rule had skipped line-defining pairs over 40 m, though card 1 caps only the gaps. With the fix, crown failed on two more rows: (crown_lo_03, 05, 08) and (crown_lo_04, 09, 11). The verifier also noted that my x = -2 column had become two parallel lines 3.5 m apart, and that lo_23, lo_14 and lo_07 still sat on x = 86. I gave the spots varied offsets of 2 to 6 m, with no two moved spots sharing an x within 1 m. Yaws, templates and `near` are unchanged.
+
+| spot | old `at` | new `at` |
+|---|---|---|
+| crown_lo_03 | (30, -578) | (33, -575) |
+| crown_lo_08 | (-2, -570) | (-6.5, -568) |
+| crown_lo_09 | (-50, -650) | (-53.5, -651) |
+| crown_lo_10 | (-5.5, -660) | (-2.2, -664) |
+| crown_lo_11 | (-5.5, -698) | (-9, -702) |
+| crown_lo_14 | (86, -610) | (84, -607) |
+| crown_lo_15 | (-5.5, -594) | (-10.6, -596) |
+| crown_lo_17 | (-2, -618) | (-7.6, -616) |
+| crown_lo_23 | (86, -578) | (91.5, -580) |
+| crown_lo_33 | (-2, -746) | (-5, -746) |
+
+crown_lo_07 stays at (86, -634). Every move I tried for it failed the plan check (`line_clear` to the east, `slope` and `seat` or a new row to the west), so only lo_14 and lo_23 left the x = 86 column. Pin 804932062 (was 3161838182). The results are in the hand-back to the coordinator and in the commit message.
