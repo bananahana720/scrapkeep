@@ -18,6 +18,7 @@ Node tree, Blender +Y forward, +Z up (Godot -Z forward, +Y up):
   Core                        the petrol lattice from hoberman(), tumbling with the ball
   Pod                         seat (charcoal), controls, split ports at 5 and 7 o'clock from
                               the mid chase eye on gap brackets, the rush ring at the bottom
+  Pod > SplitPorts            the two split ports in one mesh, so the carrier bank tilts them
   Pod > Gyro > GyroInner      the gimbal rings
   Pod > WeaponRing            bone band, charcoal clamps and collar, the barrel's trunnion cheeks;
                               yawed to the aim by hero_assets; BarrelPivot marks the trunnion axis
@@ -159,17 +160,27 @@ def oriented_box(part, slot, centre, axes, size, color=None):
     return part.paint(part._faces(r["verts"]), slot, color)
 
 
-def split_ports(p):
-    """Twin-bore copper blocks with rubber bores and copper flanges, on rubber gap brackets."""
+def split_port(p, side):
+    """One twin-bore copper block with rubber bores and copper flanges, on a rubber gap bracket."""
+    c, n, f, u = port_axes(side)
+    oriented_box(p, "copper", c, (n, f, u), PORT_SIZE)
+    for along in (-0.09, 0.09):
+        oriented_box(p, "copper", c + f * along, (n, f, u), (PORT_SIZE[0] + 0.012, 0.03, PORT_SIZE[2] + 0.012))
+    for off in (-0.027, 0.027):
+        mid = c + n * off
+        p.rod("rubber", mid - f * (PORT_SIZE[1] / 2 + 0.02), mid + f * (PORT_SIZE[1] / 2 + 0.02), BORE_R, 8)
+    p.rod("rubber", Vector((side * 0.30, -0.20, -0.36)), c - n * (PORT_SIZE[0] / 2), 0.022, 6)
+
+
+def split_ports(pod):
+    """Both split ports as one mesh, SplitPorts, under Pod (origin at the pod's). They are not part of
+    the Pod mesh, so hero_assets banks them with the carrier instead of leaving them level and past
+    the ball on a wall; one mesh for the pair costs two draws (copper, rubber), not four."""
+    p = Part("SplitPorts")
     for side in (1, -1):
-        c, n, f, u = port_axes(side)
-        oriented_box(p, "copper", c, (n, f, u), PORT_SIZE)
-        for along in (-0.09, 0.09):
-            oriented_box(p, "copper", c + f * along, (n, f, u), (PORT_SIZE[0] + 0.012, 0.03, PORT_SIZE[2] + 0.012))
-        for off in (-0.027, 0.027):
-            mid = c + n * off
-            p.rod("rubber", mid - f * (PORT_SIZE[1] / 2 + 0.02), mid + f * (PORT_SIZE[1] / 2 + 0.02), BORE_R, 8)
-        p.rod("rubber", Vector((side * 0.30, -0.20, -0.36)), c - n * (PORT_SIZE[0] / 2), 0.022, 6)
+        split_port(p, side)
+    sb._sharpen(p)
+    p.to_object((0, 0, 0), pod)
 
 
 def rush_ring(p):
@@ -187,7 +198,6 @@ _BASE_RING = sb.weapon_ring
 def cannon_cockpit(seat, bank):
     """hoberman's cockpit with the Cannon's ports and rush ring; the seat moves to rubber."""
     p = _BASE_COCKPIT(seat, bank)
-    split_ports(p)
     rush_ring(p)
     reslot(p, "paint", "rubber")
     sb._sharpen(p)
@@ -293,6 +303,7 @@ def build_shell(variant=""):
     # The animated pilot is fitted at run time; a Pilot node here would be a second pilot.
     bpy.data.objects.remove(shell["pilot"], do_unlink=True)
     pod, ring = shell["pod"], shell["ring"]
+    split_ports(pod)
     main = barrel(variant).to_object(PIVOT, ring)
     socket("BarrelPivot", PIVOT, (0, 1, 0), ring)
     socket("LaneMuzzle", (0, MUZZLE_Y + 0.002, 0), (0, 1, 0), main)

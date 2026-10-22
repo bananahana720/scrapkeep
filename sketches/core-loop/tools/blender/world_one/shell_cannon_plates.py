@@ -184,17 +184,24 @@ def tread_collars(hubs):
     return p
 
 
-def heavy_forms(part):
+def heavy_forms(part, pod):
     """Class V: a cast hood over each split port (a top slab and an outer lip), standing the port
-    0.20 m past the lattice and staying above Z -0.6, and a cast guard ring round the rush ring."""
+    0.20 m past the lattice and staying above Z -0.6, and a cast guard ring round the rush ring.
+    The two hoods are one mesh under pod, PortHoods, so the carrier bank tilts them with the ports
+    (one more draw, 2 at class V); the guard ring stays on Carapace (inside the 0.99 limit)."""
+    hoods = Part("PortHoods")
     for side in (1, -1):
         c, n, f, u = sc.port_axes(side)
         rad, fwd, up = sc.PORT_SIZE
         length = fwd + 0.06
-        sc.oriented_box(part, "ancient_enamel", c + u * (up / 2 + 0.016) + n * 0.03, (n, f, u),
+        sc.oriented_box(hoods, "ancient_enamel", c + u * (up / 2 + 0.016) + n * 0.03, (n, f, u),
                         (rad + 0.10, length, 0.026), RIM)
-        sc.oriented_box(part, "ancient_enamel", c + n * (rad / 2 + 0.065) + u * 0.05, (n, f, u),
+        sc.oriented_box(hoods, "ancient_enamel", c + n * (rad / 2 + 0.065) + u * 0.05, (n, f, u),
                         (0.026, length, up / 2 + 0.04), VERDIGRIS)
+    hoods.bm.normal_update()
+    bmesh.ops.recalc_face_normals(hoods.bm, faces=hoods.bm.faces[:])
+    sb._sharpen(hoods)
+    hoods.to_object((0, 0, 0), pod)
     r_in, r_out, depth, z = GUARD
     part.ring("ancient_enamel", r_in, r_out, depth, 12, loc=(0, 0, z), color=RIM)
 
@@ -288,7 +295,7 @@ def build_layer(n, panels, hubs, gaps, rng, scrap=False):
         points += rim + top + [c] + back + [back_c]
         centre += g
     if n == 5:
-        heavy_forms(part)
+        heavy_forms(part, pod)
     part.bm.normal_update()
     bmesh.ops.recalc_face_normals(part.bm, faces=part.bm.faces[:])
     sb._sharpen(part)
@@ -327,6 +334,8 @@ def check(n, root, pod, points, bins, count, pod_points=()):
     tris = common.tri_total(root)
     meshes = [o for o in common.tree(root) if o.type == "MESH"]
     draws = sum(len(o.data.materials) for o in meshes)
+    # PortHoods rides the carrier bank as its own mesh: one more draw at class V.
+    hood_draws = sum(len(o.data.materials) for o in meshes if o.name.startswith("PortHoods"))
     cone = sb.sight_cone_hits(pod)
     front = sb.sight_cone_hits(pod, eyes=FRONT_EYES)
     sweep = sc.sweep_hits(pod, bins)
@@ -340,7 +349,7 @@ def check(n, root, pod, points, bins, count, pod_points=()):
     print("LAYER c%d panels %d tris %d draws %d sight %d front %d sweep %d low %d nearest %.3f "
           "panel_outer %.3f core %.4f down %.1f (rush %.1f)"
           % (n, count, tris, draws, cone, front, sweep, low, inner, outer, core_far, down, rush))
-    return (scrap_ok and count > 0 and tris <= LAYER_TRIS and draws == (2 if n == 3 else 1) + extra
+    return (scrap_ok and count > 0 and tris <= LAYER_TRIS and draws == (2 if n == 3 else 1) + extra + hood_draws
             and cone == 0 and front == 0
             and sweep == 0 and low == 0 and inner >= GIMBAL_CLEAR and outer <= sb.LATTICE_INNER - 0.005
             and core_far <= sb.CORE_LIMIT + 1e-4 and down >= rush + 1.0)
