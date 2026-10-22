@@ -459,8 +459,8 @@
      "kind": "ore_trolley",
      "v": "a",
      "at": [
-      -4.5,
-      -1.5
+      -5.2,
+      6.5
      ],
      "yaw_deg": 116,
      "scale": 1.16,
@@ -470,8 +470,8 @@
      "kind": "ore_trolley",
      "v": "b",
      "at": [
-      3.5,
-      -2.5
+      5.0,
+      4.0
      ],
      "yaw_deg": -9,
      "scale": 1.08,
@@ -867,8 +867,8 @@
       0,
       3.0
      ],
-     "yaw_deg": 20,
-     "scale": 0.99,
+     "yaw_deg": -70,
+     "scale": 1.15,
      "tilt_deg": 0
     },
     {
@@ -2558,6 +2558,6 @@
   ],
   "seed": 5
  },
- "pin": 251580569,
+ "pin": 4203578688,
  "notes": "ground_rows steps (lookout_step_1, lookout_step_2, lookout_step_3, lookout_step_4, run_step_1, run_step_2, run_step_3, run_step_4, run_step_5, saddle_step_1, saddle_step_2, fan_step_1, fan_step_2, fan_step_3, fan_step_4, fan_step_5, fan_step_6, landing_step_1, anvil_step_1, anvil_step_2, anvil_step_3, anvil_step_4, carve_step_1, carve_step_2, carve_step_3, carve_step_4, carve_step_5, carve_step_6, carve_step_7): terrace treads, each a 32 to 50 m deep step-down of 2 to 4 m between kicker lips (park_islands.json row sizes); the tiers and kicker capsules govern them. anvil_face (a 2 m face) is never listed."
 }
