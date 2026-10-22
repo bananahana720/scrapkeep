@@ -795,6 +795,8 @@ func _check_filled(kit: Dictionary, world: Dictionary) -> void:
 	_t.check("filled: a cone list that hit the cell cap never holds", not at_cap["ok"] and String(at_cap["why"]).contains("stopped at"), str(at_cap["why"]))
 	var twice := ParkProps._filled_verdict([Vector2(1, 1), Vector2(1, 1)], Vector2(1, 1), [{"pos": Vector3(1, 0, 1), "radius": 1.0}])
 	_t.check("filled: a cell seen by two poses counts once", twice["ok"] and String(twice["why"]).begins_with("1 legal cells"), str(twice["why"]))
+	var by_litter := ParkProps._filled_verdict([Vector2(1, 1)], Vector2(1, 1), [{"pos": Vector3(1, 0, 1), "radius": 1.0, "litter": true}])
+	_t.check("filled: litter on a cell does not fill it", not by_litter["ok"] and String(by_litter["why"]).begins_with("free legal cell"), str(by_litter["why"]))
 
 
 # The audit's checked --open reasons (coordinator ruling #241 6329579296): runout:<kicker> and no_cell.

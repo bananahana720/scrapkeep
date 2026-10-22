@@ -550,7 +550,8 @@ const FILLED_CELL_LIMIT := 4096
 
 # The filled:<cx>:<cz> decision over the frustum's legal `cells`: {ok, why, cell}. A cell is taken when its centre lies within an
 # instance's radius plus half a cell of the instance (xz distance). The cone lists a cell once per pose that sees it, so cells are
-# deduplicated; a list that reached FILLED_CELL_LIMIT may have stopped before a free cell, so it never holds.
+# deduplicated; a list that reached FILLED_CELL_LIMIT may have stopped before a free cell, so it never holds. Litter fills
+# nothing: validate() skips it, so a vignette prop must stand there.
 static func _filled_verdict(cells: Array, named: Vector2, placed: Array) -> Dictionary:
 	if cells.is_empty():
 		return {"ok": false, "why": "no legal cell: use no_cell", "cell": null}
@@ -565,6 +566,8 @@ static func _filled_verdict(cells: Array, named: Vector2, placed: Array) -> Dict
 	for cell: Vector2 in cells:
 		var is_taken := false
 		for inst: Dictionary in placed:
+			if inst.get("litter", false):
+				continue
 			var pos: Vector3 = inst["pos"]
 			if Vector2(pos.x, pos.z).distance_to(cell) <= float(inst["radius"]) + FILLED_CELL_M * 0.5:
 				is_taken = true
