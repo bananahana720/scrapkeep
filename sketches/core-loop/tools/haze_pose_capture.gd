@@ -30,19 +30,27 @@ const WorldLook := preload("res://src/presentation/world_look.gd")
 const PENDING_PROGRESS := 0.95
 const RING_RADIUS := 3.0
 # Per place: metres ahead of the ball along the camera's flat lens-to-ball heading and each ring's offset
-# to its side, picked so the ground box between the rings sits on pale floor (see the PNG per place). The
-# arena also lays a dark probe: a live ring at (dark_ahead, dark_side) whose rim, on the side of `dark_dir`
-# (ahead, side components), lies against the tower base.
+# to its side, picked so the ground box between the rings sits on pale floor. The arena also lays a dark
+# probe: a live ring at (dark_ahead, dark_side) whose rim, on the side of `dark_dir` (ahead, side
+# components), lies against the tower base.
+# Provenance: the per-place offsets (ahead, side and the ground box distance) and the arena dark ring spot
+# were picked by eye from xvfb llvmpipe renders, by opening the PNGs until the ground box lay on pale
+# floor. They are geometric (metres in the world), so the GPU does not move them. The arena dark ring
+# reuses the live ring's spot (8, 4) because the pair is hidden for the dark frame.
 const PLACES := [
 	{"id": "stage2-morning", "stage": 2, "ahead": 24.0, "side": 5.0, "ground_ahead": 7.0, "ground_side": 0.0},
 	{"id": "arena-w3", "boss": true, "ahead": 8.0, "side": 4.0, "ground_ahead": 0.0, "ground_side": 8.0, "dark_ahead": 8.0, "dark_side": 4.0, "dark_dir": Vector2(0.0, -1.0)},
 ]
 # The ground box sits between the rings, moved `ground_ahead` and `ground_side` metres when the ball or its
-# shadow stands between them. The dark probe: the rim box's half-size (it holds the keyline, the HAZARD edge
-# and a little of each side), the ground box's offset past the rim and its half-size.
+# shadow stands between them. The dark probe has three boxes on the rim line: the keyline box (rim + 0.05 m
+# to rim + Threat.UNDERLAY - 0.05 m outward, inside the keyline's width), the HAZARD edge box (the band
+# inside r_out of width Threat.edge_width) and the ground box (GROUND_OUT past the rim, GROUND_HALF).
+# BAND_HALF, GROUND_OUT and GROUND_HALF were chosen for the box size, in metres; no other source sets them.
+# BAND_HALF now only sizes the combined rim `band` kept in the JSON for the PNG read.
 const BAND_HALF := 0.5
 const GROUND_OUT := 1.2
 const GROUND_HALF := 0.4
+const KEYLINE_GAP := 0.05
 # Inner box, as a share of the ring's projected radius; the gap box is this share of RING_RADIUS in metres.
 const INNER := 0.4
 const GAP_HALF := 0.5
@@ -165,6 +173,8 @@ func _pose(place: Dictionary) -> void:
 	for s in scorches:
 		for a in alphas:
 			if swept:
+				# No game path takes overrides: Threat.fill_tint reads the LIVE_SCORCH constants. This mirrors
+				# the hostile-haze branch of threat_grammar.gd fill_tint, so change both together.
 				var tint := Color(Palette.HAZARD.lerp(Palette.CHARCOAL, s), a)
 				live.painter().tint("fill", tint)
 				if dark != null:
@@ -199,11 +209,17 @@ func _pose(place: Dictionary) -> void:
 				var rim: Vector3 = dark.center + dir3 * RING_RADIUS
 				var band := _box(image, cam, rim, right, BAND_HALF)
 				var ground := _box(image, cam, rim + dir3 * GROUND_OUT, right, GROUND_HALF)
-				# The HAZARD edge is the band's brightest pixel and the keyline its darkest; each is held
-				# against the dark ground's mean.
+				# The keyline lies just outside the rim, inside its UNDERLAY widening; the HAZARD edge lies just
+				# inside r_out, edge_width wide. Each is the box's mean L*, held against the ground's mean.
+				var kl_len: float = Threat.UNDERLAY - 2.0 * KEYLINE_GAP
+				var keyline := _box(image, cam, rim + dir3 * (KEYLINE_GAP + kl_len * 0.5), right, kl_len * 0.5)
+				var ew := Threat.edge_width({"r_out": RING_RADIUS})
+				var edge := _box(image, cam, rim - dir3 * (ew * 0.5), right, ew * 0.5)
 				var gl := float(ground["mean_l"])
-				rec["dark"] = {"band": band, "ground": ground, "edge_l": band["max_l"], "keyline_l": band["min_l"],
-					"edge_separation": absf(float(band["max_l"]) - gl), "keyline_separation": absf(float(band["min_l"]) - gl)}
+				var kl := float(keyline["mean_l"])
+				var el := float(edge["mean_l"])
+				rec["dark"] = {"band": band, "ground": ground, "keyline": keyline, "edge": edge, "edge_l": el, "keyline_l": kl, "ground_l": gl,
+					"edge_separation": absf(el - gl), "keyline_separation": absf(kl - gl)}
 			recs.append(rec)
 			print("pose ", tag, " ", rec)
 	for n in shown:
