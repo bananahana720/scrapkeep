@@ -126,8 +126,14 @@ var _crew: Array = []
 var _crew_waves := 0
 var _crew_phase := 0
 # Every hatch the crew's fit sealed: [{id, phase, at}], at on the fight clock. The sweep reads the seal rate per floor phase.
+# This record and weak_stats live until the next fight's enter_arena, not until the crew retires or the Warden dies.
 var weak_sealed: Array = []
+# Per floor phase ("1" to "4") counts for the sweep's seal rate, each {phase: count}: opened (each hatch or override
+# opening), sealed (the crew's fit sealed it), timed_out (the window ran out), broken (a reel broke its seal) and
+# crew_waves (waves of fitters called). Empty at dial 0.
+var weak_stats := {"opened": {}, "sealed": {}, "timed_out": {}, "broken": {}, "crew_waves": {}}
 var _seals_seen := {}
+var _weak_last := {}
 
 
 func setup(ctx_ref) -> void:
@@ -137,6 +143,7 @@ func setup(ctx_ref) -> void:
 
 
 func enter_arena(entry_velocity: Vector3) -> void:
+	_reset_weak_record()
 	super(entry_velocity)
 	_center = pad.global_position + Vector3.UP * PAD_THICK * 0.5
 	_add_bank(pad)
@@ -219,7 +226,7 @@ func _physics_process(delta: float) -> void:
 			_combo_left = -1
 	phase = clampi(floors.shattered + 1, 1, WakingAttacks.PIT_PHASE)
 	if weak.active():
-		_note_seals()
+		_note_weak()
 		_step_crew()
 	_read_pulse()
 	_read_ball()
@@ -409,6 +416,8 @@ func _open_hatch(k: int) -> void:
 # The one place a point opens: the open calls its crew.
 func _open_point(id: String) -> void:
 	if _open_weak(id):
+		_tally("opened")
+		_weak_last[id] = WeakPoints.OPEN
 		_call_crew(id)
 
 
@@ -705,6 +714,7 @@ func _call_crew(id: String) -> void:
 	if count <= 0 or _crew_waves >= CREW_WAVES_PER_PHASE:
 		return
 	_crew_waves += 1
+	_tally("crew_waves")
 	var part = weak_part(id)
 	var hatch: Vector3 = part.global_position if part != null else _weak_position(id)
 	var out := Vector3(hatch.x - _center.x, 0.0, hatch.z - _center.z)
@@ -719,7 +729,11 @@ func _call_crew(id: String) -> void:
 			continue
 		var slot_index := _free_slot(id)
 		fitter.assign(id, _slot_at(id, hatch, slot_index))
-		_crew.append({"node": fitter, "id": id, "counted": false, "slot": slot_index})
+		var entry := {"node": fitter, "id": id, "counted": false, "slot": slot_index}
+		_crew.append(entry)
+		# A fitter that dies gives its fit back at once: weak.step runs before _step_crew, so a death on the sealing
+		# tick must not still count. _uncount is once per entry, so _step_crew and retire do not take it twice.
+		fitter.died.connect(func(_at: Vector3, _scrap: int): _uncount(entry))
 
 
 func _free_slot(id: String) -> int:
@@ -764,15 +778,39 @@ func _step_crew() -> void:
 	_crew = kept
 
 
-# Records each seal the crew's fit made since the last look (the weak_point_opened pattern, as a record: the event
-# table is shared and has no sealed row).
-func _note_seals() -> void:
+# Records what the rule did to each hatch since the last look (the weak_point_opened pattern, as a record: the event
+# table is shared and has no sealed row): a seal by the crew's fit, a timeout, or a broken seal, on the floor phase.
+func _note_weak() -> void:
 	for p in _weak_parts():
 		var id: String = p["id"]
 		var n: int = weak.fit_seals(id)
-		for i in n - int(_seals_seen.get(id, 0)):
+		var sealed: int = n - int(_seals_seen.get(id, 0))
+		for i in sealed:
 			weak_sealed.append({"id": id, "phase": phase, "at": clock})
+			_tally("sealed")
 		_seals_seen[id] = n
+		var now: int = weak.state(id)
+		if int(_weak_last.get(id, WeakPoints.SHUT)) == WeakPoints.OPEN and now != WeakPoints.OPEN:
+			if now == WeakPoints.BROKEN:
+				_tally("broken")
+			elif sealed <= 0:
+				_tally("timed_out")
+		_weak_last[id] = now
+
+
+func _tally(key: String) -> void:
+	var by_phase: Dictionary = weak_stats[key]
+	var k := str(phase)
+	by_phase[k] = int(by_phase.get(k, 0)) + 1
+
+
+# The sweep's record of the last fight is kept until the next one starts.
+func _reset_weak_record() -> void:
+	weak_sealed.clear()
+	_seals_seen.clear()
+	_weak_last.clear()
+	for key in weak_stats:
+		(weak_stats[key] as Dictionary).clear()
 
 
 func _uncount(c: Dictionary) -> void:
@@ -806,8 +844,6 @@ func _retire_crew() -> void:
 	_crew.clear()
 	_crew_waves = 0
 	_crew_phase = 0
-	weak_sealed.clear()
-	_seals_seen.clear()
 
 
 func _free_parts() -> void:

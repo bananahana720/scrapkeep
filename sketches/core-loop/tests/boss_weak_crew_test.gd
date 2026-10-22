@@ -31,7 +31,12 @@ func _run() -> void:
 	await _fit_clock()
 	await _knock()
 	await _retire()
+	await _death_on_the_sealing_tick()
+	await _record_survives()
+	await _plain_shove()
 	await _bot()
+	await _learner()
+	await _stats()
 	ChallengeDials.reset()
 	quit(_t.verdict())
 
@@ -140,7 +145,6 @@ func _waves() -> void:
 	var six: int = _fitters(cmod).size()
 	cmod._open_point("hatch_3")
 	var still_six: int = _fitters(cmod).size()
-	cmod._crew_alive()
 	_t.check("never more than 6 alive: 3 then 3 then none", six == 6 and still_six == 6, "%d %d" % [six, still_six])
 	_fitters(cmod)[0].take_damage(1000.0)
 	cmod.weak.step(cmod.clock + 100.0)
@@ -262,7 +266,6 @@ func _bot() -> void:
 	var game = booted[0]
 	var mod = booted[1]
 	var two := _open_two(mod)
-	var inbound: Node3D = _fitters(mod).filter(func(f): return f != two[0] and f != two[1])[0] if _fitters(mod).size() > 2 else null
 	await _step_until(mod, 0.1)
 	var hatch = mod.weak_part("hatch_1")
 	var expert = BotDriver.new(game, "skipper", 1)
@@ -292,4 +295,140 @@ func _bot() -> void:
 	_t.check("novice: targets neither a fitter nor the hatch and draws nothing", novice._open_fitter(nmod) == null and novice._open_part(nmod) == null
 			and not novice._goal.begins_with("fitter") and not novice._goal.begins_with("part") and novice.rng.state == state_before, novice._goal)
 	nov[0].free()
+	await physics_frame
+
+
+# L1: weak.step runs before _step_crew, so a fitter that dies on the tick its fit reaches FIT_SECONDS must already
+# have given its fit back (the died signal), or the hatch seals with one live fitter.
+func _death_on_the_sealing_tick() -> void:
+	var booted = await _boot({"waking.weak_points": 1.0})
+	var game = booted[0]
+	var mod = booted[1]
+	var two := _open_two(mod)
+	await _step_until(mod, WeakPoints.OPEN_MIN + 0.1)
+	_t.check("sealing tick: both fitters are counted before the kill", mod.weak.fitters("hatch_1") == 2, str(mod.weak.fitters("hatch_1")))
+	# Shorten the rule's fit so the next tick's weak.step, whatever the tick length, is the one that would seal (past OPEN_MIN, which holds a seal back).
+	mod.weak.fit_seconds = mod.clock - _fit_since(mod) + 0.00001
+	two[1].take_damage(1000.0)
+	# A resumed await runs before that frame's nodes do, so the second one is after the boss's tick.
+	await physics_frame
+	await physics_frame
+	_t.check("sealing tick: a fitter dying on it does not seal the hatch", mod.weak.state("hatch_1") == WeakPoints.OPEN and mod.weak.fit_seals("hatch_1") == 0
+			and mod.weak_sealed.is_empty(), str(mod.weak.state("hatch_1")))
+	_t.check("sealing tick: its fit is given back exactly once", mod.weak.fitters("hatch_1") == 1 and mod.weak._parts["hatch_1"]["fit_since"] < 0.0, str(mod.weak.fitters("hatch_1")))
+	await physics_frame
+	_t.check("sealing tick: _step_crew does not take it a second time", mod.weak.fitters("hatch_1") == 1, str(mod.weak.fitters("hatch_1")))
+	game.free()
+	await physics_frame
+
+
+# L2: the seal record and the counts outlive the crew's retirement and the Warden's death, and the next entry clears them.
+func _record_survives() -> void:
+	var booted = await _boot({"waking.weak_points": 1.0})
+	var game = booted[0]
+	var mod = booted[1]
+	_open_two(mod)
+	await _step_until(mod, WeakPoints.FIT_SECONDS + 0.3)
+	_t.check("record: the crew sealed the hatch", mod.weak_sealed.size() == 1 and mod.weak_stats["sealed"] == {"1": 1}, str(mod.weak_sealed))
+	mod._on_warden_died(Vector3.ZERO, 0)
+	_t.check("record: the seal and the counts survive the Warden's death", mod.weak_sealed.size() == 1 and mod.weak_stats["sealed"] == {"1": 1}
+			and mod.weak_stats["opened"] == {"1": 1} and mod.crew().is_empty(), str(mod.weak_stats))
+	mod.exit_arena()
+	_t.check("record: and leaving the arena", mod.weak_sealed.size() == 1 and mod.weak_stats["sealed"] == {"1": 1}, str(mod.weak_stats))
+	mod.enter_arena(Vector3.ZERO)
+	_t.check("record: the next arena entry clears it", mod.weak_sealed.is_empty() and mod.weak_stats["sealed"].is_empty()
+			and mod.weak_stats["opened"].is_empty() and mod.weak_stats["crew_waves"].is_empty(), str(mod.weak_stats))
+	game.free()
+	await physics_frame
+
+
+# N7: only a reel impact moves a fitter off its plate. A plain shove (enemy.knock), with no re-seat helper at work,
+# leaves a fitting fitter on its slot and its fit counted; dislodge still takes it off.
+func _plain_shove() -> void:
+	var booted = await _boot({"waking.weak_points": 1.0})
+	var game = booted[0]
+	var mod = booted[1]
+	var two := _open_two(mod)
+	await physics_frame
+	await physics_frame
+	var f = two[0]
+	_t.check("shove: the fitter is fitting and counted", f.state_name() == "fitting" and mod.weak.fitters("hatch_1") == 2, f.state_name())
+	f.knock(Vector3(1.0, 0.0, 0.0), 40.0)
+	var off := 0.0
+	var until: float = mod.clock + 0.3
+	while mod.clock < until:
+		await physics_frame
+		off = maxf(off, f.global_position.distance_to(f.slot))
+	_t.check("shove: a plain knock leaves it seated, still fitting and still counted", f.state_name() == "fitting" and off <= 0.25
+			and mod.weak.fitters("hatch_1") == 2, "%s %.2f %d" % [f.state_name(), off, mod.weak.fitters("hatch_1")])
+	mod._crew_struck(f, "ram")
+	_t.check("shove: a plain contact event does not either", f.state_name() == "fitting" and mod.weak.fitters("hatch_1") == 2, f.state_name())
+	game.free()
+	await physics_frame
+
+
+# L3: the Learner goes for a fitter after the hatch has been open 0.6 s and only when its one roll is under 0.5.
+func _learner() -> void:
+	var seeds := {}
+	for s in 200:
+		var probe := RandomNumberGenerator.new()
+		probe.seed = s
+		seeds["go" if probe.randf() < 0.5 else "skip"] = s
+		if seeds.size() == 2:
+			break
+	for how in ["go", "skip"]:
+		var booted = await _boot({"waking.weak_points": 1.0})
+		var game = booted[0]
+		var mod = booted[1]
+		var two := _open_two(mod)
+		await _step_until(mod, 0.1)
+		var learner = BotDriver.new(game, "skipper", 1)
+		learner.band = SkillBand.make("learner", 1, 1)
+		learner.rng.seed = int(seeds[how])
+		learner._read_weak_points(mod, 0.3)
+		var early = learner._open_fitter(mod)
+		learner._read_weak_points(mod, 0.31)
+		var late = learner._open_fitter(mod)
+		learner._fight_posture_boss(mod, 0.016)
+		if how == "go":
+			_t.check("learner (roll under 0.5): no fitter before 0.6 s", early == null, str(early))
+			_t.check("learner (roll under 0.5): after 0.6 s it targets a fitting fitter before the hatch", late in two and learner._goal.begins_with("fitter"), learner._goal)
+		else:
+			_t.check("learner (roll skipped): it never targets the fitter", early == null and late == null and not learner._goal.begins_with("fitter"), learner._goal)
+		game.free()
+		await physics_frame
+
+
+# The record the sweep reads: one seal and one timeout in a dial 1 fight, counted per floor phase.
+func _stats() -> void:
+	var booted = await _boot({"waking.weak_points": 1.0})
+	var game = booted[0]
+	var mod = booted[1]
+	var two := _open_two(mod)
+	await _step_until(mod, WeakPoints.FIT_SECONDS + 0.3)
+	mod._open_point("hatch_2")
+	mod.weak.step(mod.clock + 100.0)
+	await physics_frame
+	var bot = BotDriver.new(game, "skipper", 1)
+	bot._on_boss_entered()
+	_t.check("record shape: the weak fields start null", bot.boss_note.has("weak_opened") and bot.boss_note["weak_opened"] == null and bot.boss_note["weak_sealed"] == null
+			and bot.boss_note["weak_timed_out"] == null and bot.boss_note["weak_broken"] == null and bot.boss_note["crew_waves"] == null, str(bot.boss_note.keys()))
+	bot._boss_weak_note(mod)
+	var n: Dictionary = bot.boss_note
+	_t.check("record: two openings, one seal, one timeout, no break, two waves, all on phase 1",
+			n["weak_opened"] == {"1": 2} and n["weak_sealed"] == {"1": 1} and n["weak_timed_out"] == {"1": 1}
+			and (n["weak_broken"] as Dictionary).is_empty() and n["crew_waves"] == {"1": 2}, str(n))
+	mod._open_point("hatch_3")
+	mod._weak_judge({"gain": 10.0, "punch": 500.0, "reel": true}, "hatch_3", "ram")
+	await physics_frame
+	_t.check("record: a broken seal counts as broken, not as a timeout", mod.weak_stats["broken"] == {"1": 1} and mod.weak_stats["timed_out"] == {"1": 1}, str(mod.weak_stats))
+	game.free()
+	await physics_frame
+	var off = await _boot({})
+	var obot = BotDriver.new(off[0], "skipper", 1)
+	obot._on_boss_entered()
+	obot._boss_weak_note(off[1])
+	_t.check("dial 0: the weak fields stay null and nothing is counted", obot.boss_note["weak_opened"] == null and obot.boss_note["crew_waves"] == null
+			and off[1].weak_stats["opened"].is_empty(), "")
+	off[0].free()
 	await physics_frame

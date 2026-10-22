@@ -19,8 +19,6 @@ const SwarmRemnant := preload("res://src/combat/swarm_remnant.gd")
 const MODEL := "res://assets/models/world_one/enemy_swarm_remnant.glb"
 const HP := 12.0
 const SIZE := SwarmRemnant.SIZE
-const HOVER := SwarmRemnant.HOVER_HIGH
-const CLIMB := SwarmRemnant.CLIMB
 const FLY_SPEED := 24.0
 const SLOT_GAIN := 5.0
 # Within this of its slot a fitter is on the hatch.
@@ -40,6 +38,7 @@ var fit_state := State.INBOUND
 var _knocked_left := 0.0
 var _plate: MeshInstance3D
 var _slab: Node3D
+# Kept for the fitting cue (step 2c): _seam is the casting's seam strip the cue lights with seal_progress.
 var _body: MeshInstance3D
 var _seam: MeshInstance3D
 
@@ -82,6 +81,14 @@ func arrived() -> bool:
 func start_fit() -> void:
 	if fit_state == State.INBOUND:
 		fit_state = State.FITTING
+
+
+# Only a reel impact moves a fitter off its plate (dislodge). Any other shove leaves a fitting fitter seated, so its
+# counted fit and its place stay in step.
+func knock(direction: Vector3, force: float) -> void:
+	if fit_state == State.FITTING:
+		return
+	super(direction, force)
 
 
 # A reel impact: off the hatch, the plate falls, a short throw away from the slot.
