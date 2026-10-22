@@ -5,6 +5,7 @@ const Harness := preload("res://tests/doubles/module_harness.gd")
 const T := preload("res://tests/support/t.gd")
 const WeakPoints := preload("res://src/boss/weak_points.gd")
 const Waking := preload("res://src/boss/waking.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const CrewFitter := preload("res://src/combat/crew_fitter.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
@@ -30,6 +31,7 @@ func _run() -> void:
 	await _waves()
 	await _fit_clock()
 	await _knock()
+	await _real_damage()
 	await _cue_and_plate()
 	await _retire()
 	await _death_on_the_sealing_tick()
@@ -152,7 +154,7 @@ func _waves() -> void:
 	cmod._open_point("hatch_3")
 	var still_six: int = _fitters(cmod).size()
 	_t.check("never more than 6 alive: 3 then 3 then none", six == 6 and still_six == 6, "%d %d" % [six, still_six])
-	_fitters(cmod)[0].take_damage(1000.0)
+	_fitters(cmod)[0].remove_for_test()
 	cmod.weak.step(cmod.clock + 100.0)
 	cmod._open_point("override")
 	_t.check("with one dead the next wave is 6 - alive = 1", _fitters(cmod).size() == 6 and cmod._crew_alive() == 6, str(_fitters(cmod).size()))
@@ -164,7 +166,7 @@ func _open_two(mod) -> Array:
 	mod._open_hatch(1)
 	var all := _fitters(mod)
 	for i in range(2, all.size()):
-		all[i].take_damage(1000.0)
+		all[i].remove_for_test()
 	var two := all.slice(0, 2)
 	for f in two:
 		_seat(f)
@@ -196,7 +198,7 @@ func _fit_clock() -> void:
 	var lone = await _boot({"waking.weak_points": 1.0})
 	var lmod = lone[1]
 	var pair := _open_two(lmod)
-	pair[1].take_damage(1000.0)
+	pair[1].remove_for_test()
 	await _step_until(lmod, 5.0)
 	_t.check("one fitter never seals it (held 5 s of the 6 s window)", lmod.weak.state("hatch_1") == WeakPoints.OPEN and lmod.weak.fitters("hatch_1") == 1
 			and lmod.weak._parts["hatch_1"]["fit_since"] < 0.0, str(lmod.weak.fitters("hatch_1")))
@@ -230,6 +232,32 @@ func _knock() -> void:
 	_t.check("a second reel on the knocked fitter changes nothing", mod.weak.fitters("hatch_1") == 1, "")
 	await _step_until(mod, CrewFitter.KNOCK_SECONDS + 0.1)
 	_t.check("after KNOCK_SECONDS it is inbound or back on the hatch", two[0].state_name() in ["inbound", "fitting"], two[0].state_name())
+	game.free()
+	await physics_frame
+
+
+# The real damage path (combat's strike and door pass), not a bare enemy_struck: a ram-level reel impact must knock a
+# fitting fitter off and never hurt or kill it, so no kill, meter or on-kill effect books for a harmless drone.
+func _real_damage() -> void:
+	var booted = await _boot({"waking.weak_points": 1.0})
+	var game = booted[0]
+	var mod = booted[1]
+	var two := _open_two(mod)
+	await _step_until(mod, 0.5)
+	var f = two[0]
+	var kills: int = mod.ctx.run.kills
+	var kit = mod.ctx.player.kit
+	kit.hooked = true
+	kit.winching = true
+	mod.ctx.spawner.strike(f, "ram", 60.0)
+	kit.hooked = false
+	kit.winching = false
+	_t.check("a real ram-level reel strike dislodges a fitting fitter", f.state_name() == "knocked", f.state_name())
+	_t.check("and it is still alive and valid, at full health", is_instance_valid(f) and not f.is_dead() and f.hp == f.max_hp, str(f.hp))
+	_t.check("and no kill is recorded", mod.ctx.run.kills == kills, "%d %d" % [mod.ctx.run.kills, kills])
+	_t.check("and plate_drop is discovered", "plate_drop" in game.ctx.codex.discovered_this_run(), "")
+	await _step_until(mod, CrewFitter.KNOCK_SECONDS + 0.1)
+	_t.check("after KNOCK_SECONDS it is inbound again", is_instance_valid(f) and f.state_name() in ["inbound", "fitting"], f.state_name() if is_instance_valid(f) else "freed")
 	game.free()
 	await physics_frame
 
@@ -283,7 +311,7 @@ func _bot() -> void:
 	expert._fight_posture_boss(mod, 0.016)
 	_t.check("expert: the fight goal names the fitter", expert._goal.begins_with("fitter"), expert._goal)
 	for f in two:
-		f.take_damage(1000.0)
+		f.remove_for_test()
 	mod._step_crew()
 	expert._read_weak_points(mod, 0.016)
 	_t.check("expert: with the crew gone the hatch is the target again", expert._open_fitter(mod) == null and expert._open_part(mod) == hatch, "")
@@ -315,7 +343,7 @@ func _death_on_the_sealing_tick() -> void:
 	_t.check("sealing tick: both fitters are counted before the kill", mod.weak.fitters("hatch_1") == 2, str(mod.weak.fitters("hatch_1")))
 	# Shorten the rule's fit so the next tick's weak.step, whatever the tick length, is the one that would seal (past OPEN_MIN, which holds a seal back).
 	mod.weak.fit_seconds = mod.clock - _fit_since(mod) + 0.00001
-	two[1].take_damage(1000.0)
+	two[1].remove_for_test()
 	# A resumed await runs before that frame's nodes do, so the second one is after the boss's tick.
 	await physics_frame
 	await physics_frame
@@ -450,7 +478,7 @@ func _cue_and_plate() -> void:
 	mod._open_hatch(1)
 	var all := _fitters(mod)
 	for i in range(2, all.size()):
-		all[i].take_damage(1000.0)
+		all[i].remove_for_test()
 	var two := all.slice(0, 2)
 	await physics_frame
 	await physics_frame
@@ -483,6 +511,9 @@ func _cue_and_plate() -> void:
 	var climbs := ticks_log.size() - ticks_before >= 3 and float(ticks_log[-1][1]) > float(ticks_log[ticks_before][1]) and float(ticks_log[-1][0]) > float(ticks_log[ticks_before][0])
 	_t.check("two fitting: the seal tick repeats and its pitch rises with progress", climbs, str(ticks_log.slice(ticks_before)))
 	_t.check("the seal tick plays its own seal_ratchet cue, not the harpoon's lock_tick", mod.SEAL_SOUND == "seal_ratchet" and mod.SEAL_SOUND != "lock_tick", str(mod.SEAL_SOUND))
+	# A missing recipe still bakes (a 0.12 s fallback blip), so the real two-click ratchet is the shorter buffer.
+	var ratchet: PackedFloat32Array = SfxBank._bake("seal_ratchet")
+	_t.check("seal_ratchet has a recipe and bakes a non-empty buffer", SfxBank.has_recipe("seal_ratchet") and ratchet.size() > 0 and ratchet.size() < SfxBank._bake("no_such_recipe_probe").size(), str(ratchet.size()))
 	var plate = mod._plates.get("hatch_1")
 	_t.check("the plate is held clear of the hatch, sized to its seat, inert",
 			plate != null and plate is MeshInstance3D and plate.find_children("*", "CollisionObject3D", true, false).is_empty()
@@ -507,7 +538,6 @@ func _cue_and_plate() -> void:
 		guard += 1
 	_t.check("the frame KNOCKED ends the seam is back at its normal lit state, not stuck dim", two[0].state_name() == "inbound"
 			and is_equal_approx(two[0].seam_energy(), CrewFitter.SEAM_LIT), "%s %s" % [two[0].state_name(), two[0].seam_energy()])
-	_t.check("after KNOCK_SECONDS the seam is back at its normal lit state, not stuck dim", two[0].state_name() != "knocked" and two[0].seam_energy() >= CrewFitter.SEAM_LIT - 0.0001, "%s %s" % [two[0].state_name(), two[0].seam_energy()])
 	_seat(two[0])
 	await _step_until(mod, 0.3)
 	_t.check("with fit_min fitters back a new plate is carried", mod._plates.has("hatch_1"), "")

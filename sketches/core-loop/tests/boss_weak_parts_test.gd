@@ -457,6 +457,17 @@ func _reachable() -> void:
 	mod = booted[1]
 	var control: float = await _real_landing(mod, "hatch_1")
 	_t.check("control: a landing on the reachable shut hatch_1 pays the chip", control > 0.0, str(control))
+	# A fly-by with no line on it: the ball inside REACH of a shut hatch pays nothing.
+	var flyer = mod.ctx.player
+	flyer.kit.hooked = false
+	flyer.kit.anchor_body = null
+	_empty_bar(mod)
+	_place_ball(mod, mod.weak_part("hatch_1").global_position + Vector3(2.0, 0.0, 0.0))
+	flyer._rigid.recent_velocities.clear()
+	flyer._rigid.recent_velocities.append(Vector3(-RAM, 0.0, 0.0))
+	mod._touching.clear()
+	mod._step_parts()
+	_t.near("a ball flying past a shut hatch with no line on it pays nothing", mod.warden.posture(), 0.0, 0.0001)
 	mod.weak_part("hatch_1").global_position += Vector3(0.0, -60.0, 0.0)  # park it: only the buried part is in reach
 	var buried: float = await _real_landing(mod, "hatch_2")
 	_t.near("a landing on the buried hatch_2 pays nothing", buried, 0.0, 0.0001)

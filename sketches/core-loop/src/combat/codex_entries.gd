@@ -60,10 +60,10 @@ const ENTRIES := [
 		"text": "Bowl through a swarm and its drones follow you for two seconds. Lead them into another enemy and they hit it like pins. Fragment 5 reads: awaiting operator.",
 	},
 	{
-		"id": "plate_drop", "name": "Foreman's Crew",
+		"id": "plate_drop", "name": "Maintenance Crew",
 		"hint": "Someone is patching the machine behind your back.",
 		"clue": "a fitter at a hatch + a reel impact",
-		"text": "Those drones are the Waking's maintenance crew, still patching the foreman's excavator. Knock one off its plate and the seam stays open.",
+		"text": "Those drones are the Waking's maintenance crew, still patching the Mind's excavator. Knock one off its plate and the seam stays open.",
 	},
 	{
 		"id": "what_it_learned", "name": "What It Learned",

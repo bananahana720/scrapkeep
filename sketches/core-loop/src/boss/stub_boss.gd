@@ -108,7 +108,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_touching.clear()
 	_paying = ""
 	_paid_frame = -1
-	if weak.active() and ctx.player.has_signal("struck"):
+	if weak.active() and ctx.player.has_signal("struck") and not ctx.player.struck.is_connected(_on_player_struck):
 		ctx.player.struck.connect(_on_player_struck)
 	_place_ball(center, entry_velocity)
 	ctx.flow.boss_active = true
@@ -216,9 +216,10 @@ func _brace_scale(_kind: String) -> float:
 
 
 # Warden.on_struck's hook (and _apply_posture's, for a hit that did not come through on_struck): chips or keeps a
-# hit's posture gain by the weak-point rule. The point is the part the ball touched (its id, named by
-# _on_player_struck) or, for a boss that judges by position, _weak_point_for; the Warden's body is no point, so a
-# contact on it pays the chip. Off returns the same object.
+# hit's posture gain by the weak-point rule. The part argument is "" in production (on_struck always passes ""); the
+# point is _paying (the part's id, set by _on_player_struck) or, for a boss that judges by position, _weak_point_for;
+# the Warden's body is no point, so a contact
+# on it pays the chip. Off returns the same object.
 func _weak_judge(result: Dictionary, part := "", kind := "") -> Dictionary:
 	if not weak.active():
 		return result
@@ -313,7 +314,8 @@ func _step_parts() -> void:
 			_part_nodes.erase(id)
 			continue
 		_sync_part(id)
-		var near: bool = weak.state(id) != WeakPoints.BROKEN and _part_reachable(id) and ball.distance_to(part.global_position) <= WeakPart.REACH
+		var near: bool = weak.state(id) != WeakPoints.BROKEN and _part_reachable(id) and ball.distance_to(part.global_position) <= WeakPart.REACH \
+				and (weak.state(id) == WeakPoints.OPEN or (ctx.player.kit.hooked and ctx.player.kit.anchor_body == part))
 		if near and not bool(_touching.get(id, false)) and ctx.player.has_method("touch_body"):
 			ctx.player.touch_body(part)
 		_touching[id] = near

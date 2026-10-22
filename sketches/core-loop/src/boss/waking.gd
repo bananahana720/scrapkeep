@@ -830,6 +830,7 @@ func _note_weak() -> void:
 		if int(_weak_last.get(id, WeakPoints.SHUT)) == WeakPoints.OPEN and now != WeakPoints.OPEN:
 			if now == WeakPoints.BROKEN:
 				_tally("broken", opened_in)
+			# A hatch still OPEN when its floor drops (_free_part) files as timed_out too.
 			elif sealed <= 0:
 				_tally("timed_out", opened_in)
 		if now != WeakPoints.OPEN:
@@ -882,7 +883,6 @@ func _crew_struck(f: Node3D, kind: String) -> void:
 		_uncount(c)
 		f.dislodge(f.global_position - ctx.player.ball_position())
 		_discover("plate_drop", f.global_position)
-		_plate_knocked(c["id"])
 		return
 
 

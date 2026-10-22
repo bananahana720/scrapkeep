@@ -106,6 +106,19 @@ func knock(direction: Vector3, force: float) -> void:
 	super(direction, force)
 
 
+# The player never hurts a fitter: combat's strike and door pass still reach here (so enemy_struck fires and the boss
+# dislodges it), but the amount is ignored and the hit is only seen. Retire (or remove_for_test) is how one leaves.
+func take_damage(_amount: float) -> float:
+	if not _dead:
+		flash()
+	return 0.0
+
+
+# Test and teardown only: the swarm's ordinary death (died, then freed), for the uncount and refill cases.
+func remove_for_test() -> void:
+	super.take_damage(hp)
+
+
 # A reel impact: off the hatch, the plate falls, a short throw away from the slot.
 func dislodge(away: Vector3) -> void:
 	if fit_state != State.FITTING:
