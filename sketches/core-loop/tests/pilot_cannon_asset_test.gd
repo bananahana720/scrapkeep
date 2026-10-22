@@ -307,7 +307,14 @@ func _run() -> void:
 		root.add_child(shell)
 		var budgets: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(BUDGETS))
 		check_budget("pilot", pilot, budgets.classes.pilot)
-		check_budget("shell", shell, budgets.classes.shell)
+		var shell_cap: Dictionary = budgets.classes.shell.duplicate()
+		# The registry's per-asset exception (baked-bracket bank split, pending ruling on #241) sets this shell's draws.
+		var registry: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/registry.json"))
+		for entry in registry.get("assets", []):
+			if entry is Dictionary and entry.get("id", "") == "shell_cannon":
+				for k in entry.get("exception", {}):
+					shell_cap[k] = entry["exception"][k]
+		check_budget("shell", shell, shell_cap)
 		check_rig(pilot, glb_json(path))
 		check_shell(shell)
 		pilot.free()

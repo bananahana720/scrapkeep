@@ -138,10 +138,13 @@ const WEAPON_RING_RATE := 14.0
 # (63 percent in 0.125 s), so the bank never pops on a take or a peel.
 const BANK_RATE := 8.0
 # Gap-bracket modules that ride the banked carrier (ROSTER-LOOK section 4 'bracket'). Geometry baked into
-# the Pod mesh (a seat arm, Cannon's split ports and rush ring) stays level with the pod.
+# the Pod mesh (a seat arm, Cannon's rush ring) stays level with the pod. Cannon's split ports and class V
+# hoods are their own meshes (SplitPorts, PortHoods) so they bank, as are Sable's SpoolKit, Tally's
+# DrumBrackets, DrumHoods and HeavyDrums, and Tarn's heft-layer claw hooks (ClawHooks).
 const BRACKET_PARTS := ["CoilMast", "Exhaust_L", "Exhaust_R", "VaneL", "VaneR", "ClawPivot_L", "ClawPivot_R",
 	"ClawTip_L", "ClawTip_R", "ClawLower_L", "ClawLower_R", "ClawUpper_L", "ClawUpper_R", "Flywheel_L",
-	"Flywheel_R", "FlywheelAxis_L", "FlywheelAxis_R", "SplitExit_L", "SplitExit_R", "RushContact"]
+	"Flywheel_R", "FlywheelAxis_L", "FlywheelAxis_R", "SplitExit_L", "SplitExit_R", "RushContact",
+	"SplitPorts", "PortHoods", "SpoolKit", "DrumBrackets", "DrumHoods", "HeavyDrums", "ClawHooks"]
 # The shell's air-factor cue: a flat ring on the pod, in the row's colour and shape, that swells
 # out on the rise and draws in on the return (a different motion from juice.gd's shell pulse,
 # which means heft). No overlay: it is a mesh under the pod.
@@ -867,9 +870,18 @@ static func _frame_in(pod: Node3D, node: Node3D) -> Transform3D:
 	var frame := Transform3D.IDENTITY
 	var at := node.get_parent() as Node3D
 	while at != null and at != pod:
-		frame = at.transform * frame
+		frame = _rest_transform(at) * frame
 		at = at.get_parent() as Node3D
 	return frame
+
+
+# A node's transform with its `heft_rest` position in place of where a slam or fling has it now. The
+# layer's own Pod mesh slams too (rest 0, so it moves up), and it is the parent of the layer's holder.
+static func _rest_transform(node: Node3D) -> Transform3D:
+	var local := node.transform
+	if node.has_meta("heft_rest"):
+		local.origin = node.get_meta("heft_rest")
+	return local
 
 
 # Which heft layers show now: the hull below is only valid for one such state.
@@ -908,9 +920,11 @@ static func _bank_hull(pod: Node3D, visible_only := true) -> Dictionary:
 
 # Mesh vertices (and node origins when `origins`) under `node`, in `top`'s frame; a hidden
 # child's subtree is left out when `visible_only`.
+# A heft layer's mesh is read at its `heft_rest` position, not where a slam or fling has it now, so
+# a hull built mid-tween (and cached until the next visibility change) still holds the settled shape.
 static func _points_under(node: Node3D, top: Node3D, origins: bool, visible_only := true, to := Transform3D.IDENTITY) -> PackedVector3Array:
 	var out := PackedVector3Array()
-	var here := to if node == top else to * node.transform
+	var here := to if node == top else to * _rest_transform(node)
 	if node is MeshInstance3D and (node as MeshInstance3D).mesh != null:
 		var mesh: Mesh = (node as MeshInstance3D).mesh
 		for i in mesh.get_surface_count():

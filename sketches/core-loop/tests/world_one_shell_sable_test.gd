@@ -8,6 +8,7 @@ extends SceneTree
 # Fix round 2 (PD-0b base, docs/decisions.tsv 2026-10-10): shell cap 16 draws, class III layer 2,
 # every other layer 1, checked per layer. Class V is the doubled coil alone (one copper surface,
 # no Replace_ node, the base mint tip stays); its three top panels moved into c4.
+# 2026-10-22: shell 16 after the SpoolKit split and rubber fold (baked-bracket card; docs/decisions.tsv 2026-10-22T18:42).
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -16,11 +17,14 @@ const SHELL := "res://assets/models/world_one/shell_sable.glb"
 const FELT := "res://assets/models/world_one/shell_sable_felt.glb"
 const LAYER := "res://assets/models/world_one/shell_sable_c%d.glb"
 const RIG := "res://assets/models/pilot_sable_anim.glb"
-const EXPECTED_CHECKS := 60
+const EXPECTED_CHECKS := 61
 const MAX_V := 15000
 const MAX_T := 16000
-const MAX_DRAWS := 19
-const SHELL_DRAWS := 14
+# 2026-10-22: SpoolKit (the winch spool, copper and paint, its rubber folded into paint in charcoal) is its
+# own mesh so the carrier bank tilts it (baked-bracket bank split): shell 16 by its registry exception,
+# inside the 16-draw Hoberman pilot mecha cap (docs/decisions.tsv w13-PD).
+const MAX_DRAWS := 21
+const SHELL_DRAWS := 16
 const SHELL_TRIS := 6500        # hero_assets_test's world-one shell band, pilot excluded
 const LAYER_TRIS := 1500
 const CORE_LIMIT := 0.985
@@ -255,6 +259,11 @@ func _check_machinery(shell: Node) -> void:
 	var one_r := 0.0
 	var all_pod := points(pod, shell)
 	all_pod.append_array(tip)
+	# The spool is its own mesh under the Pod (SpoolKit, so the carrier bank tilts it), still part of the Pod's reach.
+	var spool := shell.find_child("SpoolKit", true, false) as MeshInstance3D
+	_report("sable spool kit parent", spool != null and spool.get_parent() == pod, "SpoolKit is a direct child of the Pod")
+	if spool != null:
+		all_pod.append_array(points(spool, shell))
 	for p in all_pod:
 		var c := clock(p)
 		if c >= 2.5 and c <= 3.75:

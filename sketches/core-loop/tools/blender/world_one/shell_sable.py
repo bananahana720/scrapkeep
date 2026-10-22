@@ -4,7 +4,8 @@
 #     at 10.8 o'clock), a copper stepped coil standing 0.20 m past the lattice; its mint tip is the
 #     `CoilMast` node, the mast's only class_accent surface (class V's Replace.CoilMast swaps it);
 #   - the winch spool on a gap bracket at 3 o'clock (rest pose: Hub.26), a 0.12 m round bump,
-#     with the ratchet pawl, the stake hatch under it and `RopeExit` at the rope mouth;
+#     with the ratchet pawl, the stake hatch under it and `RopeExit` at the rope mouth; all of it
+#     is one mesh, `SpoolKit`, under Pod so the carrier bank tilts it (it is not in the Pod mesh);
 #   - the four-wrench rack on the seat back, the rear tell: one mesh, `WrenchRack`, on one
 #     class_accent surface. Its lit count is a per-instance shader parameter (`lit_count`) read
 #     by the material code, never a material_override. COLOR.r carries each piece's index in
@@ -123,20 +124,21 @@ def coil_tip(name="CoilMast", tip=MAST_TIP):
 
 
 def spool_kit(p):
-    """Winch spool on a fore-aft axle at 3 o'clock: copper flanges, bone rope drum, rubber axle,
-    bracket, stake hatch, ratchet pawl and the fairlead at the rope mouth."""
+    """Winch spool on a fore-aft axle at 3 o'clock: copper flanges, bone rope drum, charcoal axle,
+    bracket, stake hatch and fairlead (all on the paint surface in charcoal vertex colour, so the
+    kit spends two draws), a copper ratchet pawl and the rope mouth."""
     c = SPOOL_C
     for side in (-1, 1):
         p.cyl("copper", SPOOL_R, SPOOL_R, 0.02, 8, loc=c + Vector((0, side * SPOOL_HALF, 0)), rot=(math.pi / 2, 0, 0))
     p.cyl("paint", 0.072, 0.072, 2 * SPOOL_HALF - 0.02, 8, loc=c, rot=(math.pi / 2, 0, 0), color="bone", caps=False)
-    p.rod("rubber", c + Vector((0, -SPOOL_HALF - 0.03, 0)), c + Vector((0, SPOOL_HALF + 0.03, 0)), 0.02, 4)
-    p.beam("rubber", SPOOL_ARM_FROM, c + Vector((-0.04, 0, 0)), 0.04)
+    p.rod("paint", c + Vector((0, -SPOOL_HALF - 0.03, 0)), c + Vector((0, SPOOL_HALF + 0.03, 0)), 0.02, 4, color="charcoal")
+    p.beam("paint", SPOOL_ARM_FROM, c + Vector((-0.04, 0, 0)), 0.04, color="charcoal")
     # Stake hatch under the spool (the stakes ride inside it).
-    p.box("rubber", (0.10, 0.12, 0.05), loc=c + Vector((-0.04, 0.0, -SPOOL_R - 0.035)))
+    p.box("paint", (0.10, 0.12, 0.05), loc=c + Vector((-0.04, 0.0, -SPOOL_R - 0.035)), color="charcoal")
     # Ratchet pawl on the rear flange (it clacks when Bank Shot locks the line).
     p.box("copper", (0.02, 0.012, 0.06), loc=c + Vector((0.0, -SPOOL_HALF - 0.016, SPOOL_R - 0.01)), rot=(0, 0.5, 0))
     # Fairlead: the rope mouth at the front, where RopeExit sits.
-    p.beam("rubber", c + Vector((-0.03, SPOOL_HALF, 0.0)), ROPE_EXIT, 0.035)
+    p.beam("paint", c + Vector((-0.03, SPOOL_HALF, 0.0)), ROPE_EXIT, 0.035, color="charcoal")
 
 
 def wrench_rack():
@@ -232,9 +234,15 @@ def build(variant=""):
         print("FELT_PADS %d pivot triangles moved from copper to rubber" % felt_pads(shell["core"]))
     kit = Part("SableKit")
     mast_kit(kit)
-    spool_kit(kit)
     sb._sharpen(kit)
     merge(pod, kit)
+    # The spool stands 0.12 m past the lattice at 3 o'clock, so it is its own mesh, SpoolKit (copper and
+    # paint, its dark parts in charcoal vertex colour: two draws), which hero_assets banks with the carrier instead of leaving
+    # it level and past the ball on a wall.
+    spool = Part("SpoolKit")
+    spool_kit(spool)
+    sb._sharpen(spool)
+    spool.to_object((0, 0, 0), pod)
     coil_tip().to_object(MAST_DIR * MAST_STEPS[0][0], pod)
     common.empty("RopeExit", ROPE_EXIT, pod)
     wrench_rack().to_object((0, RACK_Y, RACK_TOP), pod)
