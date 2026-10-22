@@ -26,7 +26,7 @@ const TESTING := [
 	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.",
 	"Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores (the diamonds beside the objective) that raise the gate tiers.",
 	"Sable's pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
-	"Death is one key: R retries the stage from its start with the scrap, health and parts you entered with; N starts a new run as the same class. Hold R in play to retry the stage. In a boss arena, R retries the fight from its entry and T replays that world's last stage.",
+	"Death ends the run, and the next one starts with no save: N starts a new run as the same class. The one second chance is a part you earn, the Spare Frame, which leaves you at 20% health once a run. Hold R in play to restart the stage from its start.",
 ]
 
 const QUESTIONS := [
@@ -34,7 +34,7 @@ const QUESTIONS := [
 	"Does the loop read without instructions: where to go, what the beacon wants, what a gate gives?",
 	"Does the launch into the next stage feel like momentum carried, or like a load screen?",
 	"Is the shoulder view while mounted enough to see what you are shooting?",
-	"Is retry fast enough that dying costs you nothing but the stage?",
+	"Does dying and starting again feel quick enough that you want one more run?",
 ]
 
 const TRY_FIRST := [
@@ -98,7 +98,6 @@ const SCREEN_KEYS := [
 	{"keys": "Space", "does": "title: start; summary: choose a class (after a short beat)"},
 	{"keys": "H", "does": "title: how to play, and back"},
 	{"keys": "1, 2, ...", "does": "class select: one number per class card, left to right"},
-	{"keys": "R", "does": "death screen: retry the stage, or the fight in the arena"},
 	{"keys": "T", "does": "arena death screen: replay the world's last stage from its start"},
 	{"keys": "N", "does": "death or summary: new run, same class"},
 	{"keys": "C", "does": "death screen: choose a class"},

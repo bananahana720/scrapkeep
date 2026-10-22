@@ -338,7 +338,6 @@ func _on_flow_changed(state: String) -> void:
 				_begin_prologue()
 		"dead":
 			_show("SCRAPPED", EventKinds.color("player_died"), game.flow.gap_line())
-			_action("retry", "key_r", "Retry the arena" if game.flow.in_arena else "Retry stage %d" % game.ctx.stages.local(game.run.stage))
 			_action("new", "key_n", "New run")
 			_action("class", "key_c", "Choose class")
 			if not game.run.companion.is_empty():

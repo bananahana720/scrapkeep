@@ -841,7 +841,7 @@ func set_fullscreen(on: bool) -> void:
 
 
 # The key a pad press stands for on the title, death and summary screens, or KEY_NONE: A is
-# the screen's primary key (Space; R on death), B on the death screen is N, Y there opens class
+# the screen's primary key (Space; N on death), B on the death screen is N, Y there opens class
 # select and X replays, B on the summary starts a new run. On the title a focused Control or an
 # open overlay keeps A for the GUI (ui_accept presses the focused button; an overlay swallows it).
 func pad_screen_key(event: InputEvent) -> int:
@@ -863,7 +863,7 @@ func pad_screen_key(event: InputEvent) -> int:
 		if state == "summary":
 			return KEY_SPACE
 		if state == "dead":
-			return KEY_R
+			return KEY_N
 	elif event.button_index == JOY_BUTTON_B:
 		if state == "dead" or state == "summary":
 			return KEY_N
@@ -1011,10 +1011,6 @@ func _screen_key(key: int) -> bool:
 					flow.choose_class(key - KEY_1)
 				return true
 		"dead":
-			if key == KEY_R:
-				_restart_latched = true
-				flow.retry_stage()
-				return true
 			if key == KEY_N:
 				flow.new_run()
 				return true
