@@ -135,6 +135,19 @@ var _wings_material: StandardMaterial3D
 var _pylon: Node3D
 var _plate: MeshInstance3D
 var _roll := Basis.IDENTITY
+# Keep-spin (MOTION-SPEC row 210): a mid-air velocity set forces a floor-roll spin on the
+# body, which the lattice would draw as a mid-air wheel and a snap. The body keeps that spin
+# (its friction and torque feed translation, so it is physics), and the lattice instead
+# carries its own spin through the set, drawn only. A grounded hand-off lets it go.
+const SPIN_AIR_DAMP := 0.25
+const SPIN_HELD_DAMP := 2.5
+const SPIN_BLEND_S := 0.15
+var _spin_on := false
+var _spin_basis := Basis.IDENTITY
+var _spin_omega := Vector3.ZERO
+var _spin_set_tick := -10
+var _spin_held := false
+var _spin_blend := 0.0
 var _frozen := false
 var _was_hooked := false
 # Ctrl's raw state last tick, and whether a body line has claimed the press still held.
@@ -339,6 +352,8 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	kit.clear_runtime()
 	chain.clear_active()
 	_roll = Basis.IDENTITY
+	_spin_on = false
+	_spin_blend = 0.0
 	_was_hooked = false
 	_brake_was_held = false
 	_ctrl_claimed = false
@@ -356,7 +371,51 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 func set_velocity_now(velocity: Vector3, cause := "launched") -> void:
 	cut_line(cause)
 	_clear_speed_bank()
+	_keep_spin()
 	_rigid.set_velocity_now(velocity)
+
+
+# Called before every velocity set. Airborne, the lattice starts (or keeps) its own spin from
+# the body's spin of this moment; a set on consecutive ticks is a held ride, which decays
+# toward 0. Grounded, the hand-off resets the spin as it always did.
+func _keep_spin() -> void:
+	var tick := Engine.get_physics_frames()
+	if state.grounded:
+		_spin_end()
+		return
+	_spin_held = tick - _spin_set_tick <= 1
+	_spin_set_tick = tick
+	if _spin_on:
+		return
+	_spin_on = true
+	_spin_blend = 0.0
+	_spin_basis = _rigid.global_transform.basis.orthonormalized()
+	_spin_omega = _rigid.angular_velocity
+
+
+func _spin_end() -> void:
+	if _spin_on:
+		_spin_on = false
+		_spin_blend = SPIN_BLEND_S
+
+
+# The basis the lattice draws: the body's, unless a carried spin is running or easing back.
+func _drawn_basis(body_basis: Basis, delta: float) -> Basis:
+	body_basis = body_basis.orthonormalized()
+	if _spin_on:
+		if state.grounded and Engine.get_physics_frames() - _spin_set_tick > 1:
+			_spin_end()
+		else:
+			_spin_omega *= exp(-(SPIN_HELD_DAMP if _spin_held and Engine.get_physics_frames() - _spin_set_tick <= 1 else SPIN_AIR_DAMP) * delta)
+			var w := _spin_omega.length()
+			if w > 0.0001:
+				_spin_basis = (Basis(_spin_omega / w, w * delta) * _spin_basis).orthonormalized()
+			return _spin_basis
+	if _spin_blend > 0.0:
+		_spin_blend = maxf(0.0, _spin_blend - delta)
+		var k := 1.0 - _spin_blend / SPIN_BLEND_S
+		return Basis(_spin_basis.get_rotation_quaternion().slerp(body_basis.get_rotation_quaternion(), k))
+	return body_basis
 
 
 # PC-SABLE: the hand-off bypasses RMB's Coil Hook fling. A committed smash keeps its
@@ -1078,6 +1137,7 @@ func _pole_exit() -> void:
 	if to_body.length() < 0.01:
 		return
 	var share := Augments.POLE_EXIT_SABLE if class_def != null and class_def.id == "pylon_engineer" else Augments.POLE_EXIT
+	_keep_spin()
 	_rigid.set_velocity_now(Augments.pole_exit(v, to_body.normalized(), share))
 
 
@@ -1091,16 +1151,17 @@ func _fling() -> void:
 	var flung := v + dir * fling
 	if kit.mass_on:
 		flung += dir * Augments.mass_spend(kit, flung.length())
+	_keep_spin()
 	_rigid.set_velocity_now(flung)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	var shown := shown_transform()
 	_visual_root.global_position = shown.origin
 	_visual_root.global_basis = Basis.IDENTITY
 	_update_augment_visuals(shown.origin)
 	_update_aim_cones(shown.origin)
-	_roll = shown.basis.orthonormalized()
+	_roll = _drawn_basis(shown.basis, delta)
 	_mesh.basis = (_squash_basis() if builtin_squash else Basis.IDENTITY) * _roll
 
 
