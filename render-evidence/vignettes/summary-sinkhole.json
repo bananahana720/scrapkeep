@@ -1,0 +1,158 @@
+{
+	"adapter": "NVIDIA GeForce RTX 3060",
+	"bare_ground_share": 0.0,
+	"bare_samples": 0,
+	"bare_share_pct": 0.0,
+	"constants": {
+		"bare_min_core_near": 5,
+		"bare_min_kinds_far": 4,
+		"bare_rule": "BARE if (props+clutter+scenery+rows) within near_m in view < bare_min_core_near, or distinct kinds within far_m in view < bare_min_kinds_far",
+		"camera": {
+			"arm_m": 9.0,
+			"far": 700.0,
+			"fov": 72.5,
+			"name": "mid",
+			"pitch_rad": -0.3,
+			"source": "src/movement/chase_camera.gd: speed_arm 7.5..10.5, FOV_REST 65..FOV_FAST 80, pitch -0.30, anchor +0.8 m; mid = half speed",
+			"up_m": 0.8
+		},
+		"categories": [
+			"props",
+			"clutter",
+			"scatter",
+			"anchors",
+			"rows",
+			"scenery",
+			"landforms"
+		],
+		"dedup_m": 10.0,
+		"draw_label": "OpenGL compatibility proxy, cloud llvmpipe, not a frame-cost proof",
+		"far_m": 120.0,
+		"near_m": 60.0,
+		"step_m": 25.0
+	},
+	"core_in_view_60": {
+		"median": 30.0,
+		"p10": 26.8
+	},
+	"density_exempt": 0,
+	"density_exempt_by": {},
+	"density_fail_windows": [],
+	"density_open_checked": 0,
+	"density_open_rejected": [],
+	"density_pass": 0,
+	"density_rule": "3+ distinct park-prop kinds in view within 60 m per 150 m window",
+	"density_share": 0.0,
+	"density_windows": 0,
+	"distinct_kinds_120": {
+		"median": 15.0,
+		"p10": 13.4
+	},
+	"draw_calls": {
+		"max": 468,
+		"median": 466.0,
+		"p95": 467.8
+	},
+	"draw_label": "OpenGL compatibility proxy, cloud llvmpipe, not a frame-cost proof",
+	"draw_sample_idx": [
+		1,
+		2,
+		3
+	],
+	"draw_samples": 3,
+	"dressing_in_view_120": {
+		"median": 56.0,
+		"p10": 56.0
+	},
+	"dressing_in_view_60": {
+		"median": 30.0,
+		"p10": 26.8
+	},
+	"in_view_by_category": {
+		"anchors": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"clutter": {
+			"median_120": 46.0,
+			"median_60": 23.0,
+			"p10_120": 11.6,
+			"p10_60": 7.0
+		},
+		"landforms": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"props": {
+			"median_120": 47.0,
+			"median_60": 23.0,
+			"p10_120": 13.4,
+			"p10_60": 7.0
+		},
+		"rows": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"scatter": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"scenery": {
+			"median_120": 5.0,
+			"median_60": 4.0,
+			"p10_120": 2.6,
+			"p10_60": 0.8
+		}
+	},
+	"items_collected": 6498,
+	"kinds_collected": 52,
+	"longest_bare_ground_run_m": 0.0,
+	"longest_bare_run_m": 0.0,
+	"map": "park_sinkhole",
+	"poses_replayed": true,
+	"primitives": {
+		"max": 786954,
+		"median": 764736.0,
+		"p95": 784732.2
+	},
+	"props_only_draw_delta": {
+		"max": 56,
+		"median": 42.0,
+		"park_props_nodes": 2338
+	},
+	"props_only_primitive_delta": {
+		"max": 80017,
+		"median": 30064.0
+	},
+	"props_peak_pose": {
+		"breakdown": {
+			"hero/L0/tall": 3,
+			"hero/L2/tall": 7,
+			"litter/L1/low": 2,
+			"litter/L1/mid": 2,
+			"vignette/L0/low": 8,
+			"vignette/L0/mid": 8,
+			"vignette/L1/low": 13,
+			"vignette/L1/mid": 9,
+			"vignette/L2/merged": 6
+		},
+		"delta": 56,
+		"idx": 3,
+		"x": 175.7,
+		"z": -29.5
+	},
+	"runtime_s": 24.7,
+	"samples": 3,
+	"stage": 4,
+	"step_m": 25.0,
+	"union_line_km": null,
+	"void_poses": 0
+}
