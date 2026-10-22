@@ -57,7 +57,9 @@ var mechanic_tag := ""
 
 var _painter
 var _flashed := false
-# Driven: the motion marks were built once and each frame only moves them (E1).
+# Driven: the motion marks were built once and each frame only moves them (E1). Every type
+# except a wave is driven; a wave is driven only when it is full and its area layer is not
+# "motion" (Threat.can_drive), so a partial wave or a motion wave is repainted instead.
 var _driven := false
 var _fill_tint := Color(-1.0, -1.0, -1.0, -1.0)
 # The world box of everything the painter can draw, at any progress (WarningBound), and the
@@ -243,9 +245,11 @@ func painter():
 
 # The conservative world box of everything this mark's painter draws at any progress: the
 # footprint at progress 1, the fence up to reach_up, the lift, a wave's final extent and a
-# projectile's flight trace (WarningBound). Cut at commit; a read after a non-driven repaint also takes the painter's current meshes in, so the cache only grows. Empty (AABB()) when
-# it cannot promise: nothing is built, or the mark was carried off its committed centre (the
-# Warden's mounting moves a pulse ring's center after commit), so the caller walks the meshes.
+# projectile's flight trace (WarningBound). It is cut at commit. A read after a non-driven
+# repaint also takes the painter's current meshes in, so the cache only grows. The box is
+# empty (AABB()) when it cannot promise: nothing is built, or the mark was carried off its
+# committed centre (the Warden's mounting moves a pulse ring's center after commit). The
+# caller then walks the meshes.
 func screen_bound_box() -> AABB:
 	if _painter == null or center != _bound_centre:
 		return AABB()
@@ -263,7 +267,7 @@ func _cut_bound() -> void:
 	if _painter == null or not is_hostile():
 		return
 	_bound_centre = center
-	_bound = WarningBound.box(descriptor(), WarningBound.mesh_box(self))
+	_bound = WarningBound.box(descriptor(), WarningBound.mesh_box(_painter))
 
 
 func _build() -> void:
