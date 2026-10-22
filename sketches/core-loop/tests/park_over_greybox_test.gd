@@ -18,9 +18,15 @@ const Terrain := preload("res://src/world/terrain.gd")
 
 const MAP := "park_islands"
 const PIECES := {"ore_adit": "isle_adit_portal", "tram_head": "isle_tram_head", "keel_rib_w": "isle_keel_rib",
-	"keel_rib_e": "isle_keel_rib"}
+	"keel_rib_e": "isle_keel_rib", "cloud_wash_west": "isle_ride_wash_west"}
 # The stamped rows carry no collider of their own today: the stamped ground is their shape (place_row).
-const STAMPED := ["ore_adit", "tram_head"]
+const STAMPED := ["ore_adit", "tram_head", "cloud_wash_west"]
+# The ride-surface sheet (tools/blender/park/isle_ride_pieces.py): the stamped ground is its whole collider, and every
+# vertex of the drawn sheet must lie between MIN_LIFT and FLUSH over it (ghost solid, #183; no z-fight), measured against
+# the game's own ground, Terrain._park_floor_at. fin_chute stays greybox (twin_fins' collapse drops its ground 8 m).
+const SHEETS := ["cloud_wash_west"]
+const FLUSH := 0.12
+const MIN_LIFT := 0.03
 # The piece whose GLB carries its own uprights' collider, and the least |x| any of its faces may reach in the row frame:
 # the inner face of the portal posts (isle_pieces.py ADIT_POST_X - ADIT_POST / 2), outside the 7 m half width.
 const PIECE_COLLIDER := {"ore_adit": 9.225}
@@ -41,7 +47,7 @@ func _run() -> void:
 	for row: Dictionary in park["park_rows"]:
 		if PIECES.has(String(row.get("id", ""))):
 			rows[String(row["id"])] = row
-	t.eq("the four collider-locked rows are in the park", rows.keys().size(), PIECES.size())
+	t.eq("the collider-locked rows are in the park", rows.keys().size(), PIECES.size())
 	for recipe: String in PIECES.values():
 		t.check("%s is an over-greybox recipe" % recipe, ParkRecipes.OVER_GREYBOX.has(recipe))
 		t.check("%s's GLB has landed" % recipe, ResourceLoader.exists(ParkRecipes.paths(recipe, "landform")["base"]))
@@ -95,6 +101,20 @@ func _run() -> void:
 					faces += 1
 			t.check("%s's piece collider stands outside the lane" % id, faces > 0 and inner >= PIECE_COLLIDER[id] - 0.001,
 				"least |x| %.3f over %d face vertices" % [inner, faces])
+		if SHEETS.has(id):
+			var lo := INF
+			var hi := -INF
+			var verts := 0
+			for view: MeshInstance3D in views:
+				for surface in view.mesh.get_surface_count():
+					for v: Vector3 in view.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]:
+						var w := view.global_transform * v
+						var off := w.y - float(ground.call(w.x, w.z))
+						lo = minf(lo, off)
+						hi = maxf(hi, off)
+						verts += 1
+			t.check("%s's sheet stands between +%.2f and +%.2f over the ground (%.3f .. %.3f over %d vertices)" % [id, MIN_LIFT, FLUSH, lo, hi, verts],
+				verts > 0 and hi <= FLUSH and lo >= MIN_LIFT - 0.00001)
 		t.check("%s's base view casts shadows" % id, views.any(func(v): return v.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF))
 	parent.free()
 	quit(t.verdict())

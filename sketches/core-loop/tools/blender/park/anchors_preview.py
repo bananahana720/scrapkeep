@@ -1,7 +1,7 @@
 """Preview still for the anchors family (anchors.py): all fifteen posts in a 5 x 3 lineup (families across, variants a/b/c
 going back) on a sand ground plane, seen at a 3/4 angle. Cycles on the CPU, so it runs without a GPU; 1600 x 900.
 
-  prlimit --as 12884901888 -- blender --background --threads 2 --python-exit-code 1 --python \\
+  prlimit -v12884901888 blender --background --threads 2 --python-exit-code 1 --python \\
       sketches/core-loop/tools/blender/park/anchors_preview.py -- [--models DIR] --out FILE.png [--samples N]
 """
 import argparse

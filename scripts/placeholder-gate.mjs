@@ -39,8 +39,9 @@ export const LANDMARK_DRESSED = "landmark";
 // park_recipes.gd: the park's ground scatter dresses the row, so it is no stand-in.
 export const SCATTER_DRESSED = "scatter";
 // Andrew's "Edges are ground" (2026-10-17 22:29Z): a stamped greybox kicker spanning the whole play rect across its
-// facing (the Highdraft's mesa step lips) is a mesa edge, ground like a plain slope (park_map.gd mesa_edge).
-export const MESA_EDGE = "kicker";
+// facing (the Highdraft's mesa step lips) is a mesa edge, ground like a plain slope (park_map.gd mesa_edge). Extended
+// to every element by World NEEDS #149 6325353865, coordinator ruling (a) 2026-10-21, Andrew's veto list: any stamped
+// greybox row with no absolute y whose cross size spans the rect (a 1,600 m ride band) is ground too.
 export const TEXT_MARKER = /\b(todo|tbd|fixme|xxx|lorem|placeholders?|coming soon|not yet implemented)\b/i;
 // Calls whose text goes to the log, not the screen.
 export const LOG_CALL = /\b(print|prints|printerr|print_rich|push_warning|push_error|assert|_warn|_warn_once|_fail)\s*\(/;
@@ -154,7 +155,7 @@ export function isPlainSlope(row) {
 }
 
 export function isMesaEdge(row, playRect) {
-  if (row.element !== MESA_EDGE || row.recipe !== GREYBOX + MESA_EDGE || (row.stamp ?? "") === "" || row.y != null) return false;
+  if (!String(row.recipe ?? "").startsWith(GREYBOX) || (row.stamp ?? "") === "" || row.y != null) return false;
   if (!Array.isArray(playRect) || !Array.isArray(row.size)) return false;
   const a = ((row.yaw_deg ?? 0) * Math.PI) / 180;
   return row.size[2] >= Math.abs(Math.cos(a)) * playRect[2] + Math.abs(Math.sin(a)) * playRect[3];
@@ -413,7 +414,7 @@ function main() {
   console.log(args.json ? JSON.stringify(findings, null, 2) : report(findings, args.limit));
   if (!args.json) {
     const terrain = terrainRows(args.project);
-    if (terrain > 0) console.log(`note: ${terrain} stamped plain slope(s) and mesa edge(s) counted as terrain, not placeholders (PLAIN_SLOPES, MESA_EDGE)`);
+    if (terrain > 0) console.log(`note: ${terrain} stamped plain slope(s) and mesa edge(s) counted as terrain, not placeholders (PLAIN_SLOPES, isMesaEdge)`);
   }
   process.exitCode = findings.length === 0 ? 0 : 1;
 }
