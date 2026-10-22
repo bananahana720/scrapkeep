@@ -2024,7 +2024,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "winch_drum variant a LOD0 (2528 tris): The Fleet's mooring winch: a charcoal drum wound with neat rope on an oxide frame, one brass tag. Deterministic; polished and baked."
+    "notes": "winch_drum variant a LOD0 (2528 tris): The Fleet's mooring winch: a petrol drum wound with neat rope in a petrol housing, oxide rims, one brass tag. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -2052,7 +2052,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "winch_drum variant a LOD1 (1264 tris): The Fleet's mooring winch: a charcoal drum wound with neat rope on an oxide frame, one brass tag. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "winch_drum variant a LOD1 (1264 tris): The Fleet's mooring winch: a petrol drum wound with neat rope in a petrol housing, oxide rims, one brass tag. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -2080,7 +2080,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "winch_drum variant a LOD2 (376 tris): The Fleet's mooring winch: a charcoal drum wound with neat rope on an oxide frame, one brass tag. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "winch_drum variant a LOD2 (376 tris): The Fleet's mooring winch: a petrol drum wound with neat rope in a petrol housing, oxide rims, one brass tag. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -2108,7 +2108,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "winch_drum variant b LOD0 (1896 tris): The Fleet's mooring winch: a charcoal drum wound with neat rope on an oxide frame, one brass tag. Deterministic; polished and baked."
+    "notes": "winch_drum variant b LOD0 (1896 tris): The Fleet's mooring winch: a petrol drum wound with neat rope in a petrol housing, oxide rims, one brass tag. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -2136,7 +2136,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "winch_drum variant b LOD1 (948 tris): The Fleet's mooring winch: a charcoal drum wound with neat rope on an oxide frame, one brass tag. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "winch_drum variant b LOD1 (948 tris): The Fleet's mooring winch: a petrol drum wound with neat rope in a petrol housing, oxide rims, one brass tag. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -2164,7 +2164,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/islands.py",
-    "notes": "winch_drum variant b LOD2 (283 tris): The Fleet's mooring winch: a charcoal drum wound with neat rope on an oxide frame, one brass tag. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "winch_drum variant b LOD2 (283 tris): The Fleet's mooring winch: a petrol drum wound with neat rope in a petrol housing, oxide rims, one brass tag. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [

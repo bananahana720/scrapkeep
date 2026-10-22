@@ -2723,6 +2723,26 @@
    ],
    "yaw_deg": -153.0,
    "near": "mooring_pad_ramp, The hikers' numbered stones climb past a stu"
+  },
+  {
+   "id": "f450",
+   "template": "net_mending",
+   "at": [
+    -98.8,
+    -326.2
+   ],
+   "yaw_deg": 0.0,
+   "near": "kest 450 window: menders' spot in view of the ride line"
+  },
+  {
+   "id": "f600",
+   "template": "net_mending",
+   "at": [
+    171.2,
+    -326.2
+   ],
+   "yaw_deg": 0.0,
+   "near": "sable 600 window: menders' spot in view of the ride line"
   }
  ],
  "ground_rows": [
@@ -2808,6 +2828,6 @@
   ],
   "seed": 5
  },
- "pin": 3660265306,
+ "pin": 3322127868,
  "notes": "ground_rows steps (lookout_step_1, lookout_step_2, lookout_step_3, lookout_step_4, run_step_1, run_step_2, run_step_3, run_step_4, run_step_5, saddle_step_1, saddle_step_2, fan_step_1, fan_step_2, fan_step_3, fan_step_4, fan_step_5, fan_step_6, landing_step_1, anvil_step_1, anvil_step_2, anvil_step_3, anvil_step_4, carve_step_1, carve_step_2, carve_step_3, carve_step_4, carve_step_5, carve_step_6, carve_step_7): terrace treads, each a 32 to 50 m deep step-down of 2 to 4 m between kicker lips (park_islands.json row sizes); the tiers and kicker capsules govern them. anvil_face (a 2 m face) is never listed."
 }

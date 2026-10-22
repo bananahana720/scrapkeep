@@ -38,6 +38,9 @@ SAND_D = "9c8d73"
 SAND_P = "c9bb9f"
 OXIDE = "9b513a"      # Fleet only
 BRASS = "d9b44a"      # Fleet only, one tag
+PETROL = "365754"     # Highdraft props board: machine-body enamel
+BONE = "d2c5a5"       # board bone: one panel or plate per machine kind
+COPPER = "b77843"     # board copper: 2 to 4 small fittings, never dominant (kit WARN)
 
 
 def rock(p, loc, r, col, rng, sq=0.7, style="round", sub=0):
@@ -263,11 +266,11 @@ def tram_car_parked(p, v, rng):
     L, Wd, H = 4.6, 2.6, 2.3
     tilt = {"a": 0.0, "b": 0.05, "c": 0.12}[v]
     zf = 0.55
-    body = C["timber_grey"] if v == "a" else mix(C["timber_grey"], C["rust"], 0.4)
+    body = PETROL  # board petrol enamel body and cab panels
     for x in (-1.5, 0, 1.5):
         for y in (-0.85, 0.85):
             p.box((0.7, 0.55, 0.55), (x, y, 0.27), tint(TIMBER_D, rng, 0.1), rot=(0, 0, rng.uniform(-0.1, 0.1)))
-    p.box((L + 0.2, Wd + 0.2, 0.2), (0, 0, zf + 0.1), C["iron"], rot=(0, tilt * 0.3, 0), style="hard_smooth")
+    p.box((L + 0.2, Wd + 0.2, 0.2), (0, 0, zf + 0.1), C["charcoal"], rot=(0, tilt * 0.3, 0), style="hard_smooth")
     z0 = zf + 0.2
     # Cabin planks on the long sides, ends, with a long window band.
     for s in (-1, 1):
@@ -300,22 +303,22 @@ def tram_car_parked(p, v, rng):
         if v == "c" and 3 <= k <= 5:
             continue
         p.box((L + 0.3, 0.55, 0.09), (0, math.sin(a) * Wd * 0.62, z0 + H + 0.1 + (math.cos(a) - 0.6) * 0.9),
-              tint(mix(C["rust"], TIMBER_D, 0.4) if k % 2 else TIMBER_D, rng, 0.08), rot=(a, 0, 0), jit=0.004)
+              tint(PETROL if k % 2 else TIMBER_D, rng, 0.08), rot=(a, 0, 0), jit=0.004)
     for x in (-1.6, 0, 1.6):
         p.beam((x, -Wd * 0.58, z0 + H + 0.1), (x, 0, z0 + H + 0.62), 0.1, TIMBER_D)
         p.beam((x, Wd * 0.58, z0 + H + 0.1), (x, 0, z0 + H + 0.62), 0.1, TIMBER_D)
-    p.box((0.7, 0.6, 0.3), (0, 0, z0 + H + 0.85), C["iron"], style="hard_smooth")  # stub where the hanger bolted on
-    p.cyl(0.14, 0.3, (0, 0, z0 + H + 1.1), C["iron_light"], segs=8, style="hard_smooth")
+    p.box((0.7, 0.6, 0.3), (0, 0, z0 + H + 0.85), C["charcoal"], style="hard_smooth")  # stub where the hanger bolted on
+    p.cyl(0.14, 0.3, (0, 0, z0 + H + 1.1), COPPER, segs=8, style="hard_smooth")
     # Interior bench seen through the door, and a lantern pail on the doorstep (unlit).
     p.box((L - 0.8, 0.5, 0.15), (0, 0.7, z0 + 0.5), TIMBER)
     p.box((0.7, 0.5, 0.2), (0.0, -Wd / 2 - 0.6, 0.1), SAND_D, style="hard_smooth")
-    p.cyl(0.14, 0.24, (0.0, -Wd / 2 - 0.62, 0.32), C["iron_light"], segs=8, r2=0.17, style="hard_smooth")
+    p.cyl(0.14, 0.24, (0.0, -Wd / 2 - 0.62, 0.32), COPPER, segs=8, r2=0.17, style="hard_smooth")
     # Iron corner straps on the long walls and plank ends (flat bands, no bolt holes).
     for s in (-1, 1):
         for x in (-L / 2 + 0.05, L / 2 - 0.05):
-            p.box((0.14, 0.16, H), (x, s * Wd / 2, z0 + H / 2), C["iron"], style="hard_smooth")
+            p.box((0.14, 0.16, H), (x, s * Wd / 2, z0 + H / 2), OXIDE, style="hard_smooth")
         for x in (-1.5, 1.5):
-            p.box((0.5, 0.05, 0.12), (x, s * Wd / 2 - s * 0.08, z0 + H * 0.28), C["iron_light"], style="hard_smooth")
+            p.box((0.5, 0.05, 0.12), (x, s * Wd / 2 - s * 0.08, z0 + H * 0.28), BONE, style="hard_smooth")
     # Interior: floor planks, a second bench, a rope-bound bundle, and a pail on the doorstep.
     for i in range(9):
         p.box((0.4, Wd - 0.2, 0.05), (-1.8 + i * 0.45, 0, z0 + 0.03), tint(TIMBER_D, rng, 0.1), jit=0.004)
@@ -328,7 +331,7 @@ def tram_car_parked(p, v, rng):
     # Gravel and brush where it was set down, plus the bolted-off axle brackets.
     for s in (-1, 1):
         for x in (-1.6, 1.6):
-            p.box((0.4, 0.6, 0.18), (x, s * (Wd / 2 + 0.2), zf - 0.15), C["iron"], style="hard_smooth")
+            p.box((0.4, 0.6, 0.18), (x, s * (Wd / 2 + 0.2), zf - 0.15), C["charcoal"], style="hard_smooth")
     for i in range(7 if v != "a" else 4):
         rock(p, (rng.uniform(-3.2, 3.2), rng.choice((-1, 1)) * rng.uniform(1.8, 2.8), 0.1), rng.uniform(0.2, 0.4),
              mix(SLICK_D, C["concrete"], 0.4), rng, 0.5, sub=1)
@@ -432,17 +435,17 @@ def ore_trolley(p, v, rng):
     # Bin: a tub (flared cylinder, not a crate) on two thick axle stubs.
     tilt = {"a": 0.0, "b": 0.12, "c": 0.0}[v]
     zc = 0.65 if v != "c" else 0.3
-    p.cyl(0.62, 0.7, (0, 0, zc), C["iron"] if v == "a" else mix(C["iron"], C["rust"], 0.5), segs=12, r2=0.78,
+    p.cyl(0.62, 0.7, (0, 0, zc), PETROL, segs=12, r2=0.78,
           rot=(0, tilt, 0) if v != "c" else (0.0, 1.3, 0.0), style="hard_smooth")
     if v != "c":
-        p.torus(0.78, 0.05, (0, 0, zc + 0.35), C["iron_light"], rot=(0, tilt, 0), major=14, minor=5, style="fine")
+        p.torus(0.78, 0.05, (0, 0, zc + 0.35), BONE, rot=(0, tilt, 0), major=14, minor=5, style="fine")
         for k in range(5):
             rock(p, (rng.uniform(-0.3, 0.3), rng.uniform(-0.3, 0.3), zc + 0.35 + 0.05 * k), rng.uniform(0.15, 0.25),
                  mix(SAND_D, C["concrete_dark"], 0.3), rng, 0.8)
     for s in (-1, 1):
-        p.cyl(0.34, 0.14, (0, s * 0.72, 0.34), TIMBER_D if v != "c" else C["iron"], segs=10, rot=(math.pi / 2, 0, 0), style="hard_smooth")
-        p.cyl(0.1, 0.18, (0, s * 0.72, 0.34), C["iron_light"], segs=8, rot=(math.pi / 2, 0, 0), style="round")
-    p.cyl(0.05, 1.2, (0, 0, 0.34), C["iron"], segs=6, rot=(math.pi / 2, 0, 0), style="round")
+        p.cyl(0.34, 0.14, (0, s * 0.72, 0.34), TIMBER_D if v != "c" else C["charcoal"], segs=10, rot=(math.pi / 2, 0, 0), style="hard_smooth")
+        p.cyl(0.1, 0.18, (0, s * 0.72, 0.34), COPPER, segs=8, rot=(math.pi / 2, 0, 0), style="round")
+    p.cyl(0.05, 1.2, (0, 0, 0.34), OXIDE, segs=6, rot=(math.pi / 2, 0, 0), style="round")
     p.box((1.3, 0.3, 0.12), (0, 0, 0.1), TIMBER_D)  # chock blocks both sides
     p.box((0.4, 0.3, 0.2), (0.95, 0, 0.1), TIMBER_D)
     p.box((0.4, 0.3, 0.2), (-0.95, 0, 0.1), TIMBER_D)
@@ -451,7 +454,7 @@ def ore_trolley(p, v, rng):
             rock(p, (-1.0 + k * 0.25, -1.0, 0.1), 0.18, SAND_D, rng, 0.6)
     if v == "c":
         # Tipped on its side, mouth rim showing, ore spilled in a fan from the mouth.
-        p.torus(0.76, 0.05, (0.33, 0, zc), C["iron_light"], rot=(0, 1.3, 0), major=14, minor=5, style="fine")
+        p.torus(0.76, 0.05, (0.33, 0, zc), BONE, rot=(0, 1.3, 0), major=14, minor=5, style="fine")
         for k in range(4):
             rock(p, (0.9 + 0.25 * k, rng.uniform(-0.1, 0.1) * (k + 1), 0.12), rng.uniform(0.13, 0.26), SAND_D, rng, 0.6)
         blades(p, (-0.2, 0.9, 0), 10, 0.7, 0.3, rng, [C["dry_grass"], C["leaf"]])
@@ -481,15 +484,15 @@ def stair_stones(p, v, rng):
 
 
 @K.kind("winch_drum", tags=["machine", "fleet"],
-        story="The Fleet's mooring winch: a charcoal drum wound with neat rope on an oxide frame, one brass tag.", variants="ab")
+        story="The Fleet's mooring winch: a petrol drum wound with neat rope in a petrol housing, oxide rims, one brass tag.", variants="ab")
 def winch_drum(p, v, rng):
-    # Fleet-owned: iron oxide frame, charcoal drum, one brass tag.
+    # Fleet-owned: petrol drum and housing, oxide rims, one bone panel, copper crank fittings, one brass tag.
     p.box((1.9, 1.2, 0.2), (0, 0, 0.1), C["charcoal"], style="hard")
     for sx in (-0.75, 0.75):
-        p.box((0.22, 1.0, 0.8), (sx, 0, 0.6), OXIDE, style="hard")
-    p.cyl(0.45, 1.3, (0, 0, 0.7), C["charcoal"], segs=14, rot=(0, math.pi / 2, 0), style="hard")
+        p.box((0.22, 1.0, 0.8), (sx, 0, 0.6), PETROL if sx < 0 else BONE, style="hard")  # petrol housing, one bone end panel
+    p.cyl(0.45, 1.3, (0, 0, 0.7), PETROL, segs=14, rot=(0, math.pi / 2, 0), style="hard")
     for sx in (-0.55, 0.55):
-        p.cyl(0.62, 0.1, (sx, 0, 0.7), C["charcoal"], segs=14, rot=(0, math.pi / 2, 0), style="hard")
+        p.cyl(0.62, 0.1, (sx, 0, 0.7), OXIDE, segs=14, rot=(0, math.pi / 2, 0), style="hard")  # oxide drum rims
     if v == "a":
         for k in range(6):
             p.torus(0.5, 0.05, (-0.4 + k * 0.16, 0, 0.7), ROPE, rot=(0, math.pi / 2, 0), major=12, minor=4, style="fine")  # neat rope
@@ -502,8 +505,8 @@ def winch_drum(p, v, rng):
             blob(p, 0.25, (0.4 + 0.2 * k, -0.7 + 0.1 * k, 0.2), mix(ROPE, C["canvas_dark"], 0.3), scale=(1.5, 1.0, 0.5), rot=(0, 0, k))
         p.rod((0.3, 0.3, 0.4), (-1.0, 0.8, 0.06), 0.045, ROPE_D, segs=5)
     p.box((0.18, 0.04, 0.12), (0, -0.52, 0.55), BRASS, style="flat")  # the one brass tag
-    p.cyl(0.07, 0.4, (0.85, 0.3, 0.88), C["charcoal"], segs=8, rot=(0.0, 0.9, 0.0), style="round")  # crank handle stub
-    p.cyl(0.06, 0.16, (1.0, 0.3, 1.0), OXIDE, segs=8, style="round")
+    p.cyl(0.07, 0.4, (0.85, 0.3, 0.88), COPPER, segs=8, rot=(0.0, 0.9, 0.0), style="round")  # crank handle stub
+    p.cyl(0.06, 0.16, (1.0, 0.3, 1.0), COPPER, segs=8, style="round")
     p.cyl(0.07, 0.8, (0.0, 0.0, 0.75), C["charcoal"], segs=8, rot=(0, math.pi / 2, 0), style="round")
 
 

@@ -1,9 +1,9 @@
 # Islands park dressing note (Dressing lane)
 
 Base line: branch head after merging `origin/stage/alpha-w18` (f259e8cf421fc3c305b53ae104005dda40af9a41, merge 9577225bbf5bb2ceeee1a76997a6b5a8cfc18407) and the foundation `claude/zealous-franklin-ed0sxr-lineclear` (e72fff7d96a88118e622f30658bcddb3105ae206, merge a4b4fc5b08b315b21531766569b64fc3ae33ce1c); then the foundation again at be6189ec5f5c8eb33591c33ecc76d72e56828394 (e72fff7d plus the stage f259e8cf merge; merge 628de2e1c3167fe83d2dbb843114b44f1f92a23b); previous head b117ddd0.
-Plan check: `park_props_plan.gd --map=park_islands --check` reports 470 instances (50 litter), 0 violations, fingerprint 3660265306 = pin (was 2014119072).
+Plan check: `park_props_plan.gd --map=park_islands --check` reports 480 instances (50 litter), 0 violations, fingerprint 3322127868 = pin (re-pinned from 3660265306 by two density spots, f450 and f600; the earlier pin was 2014119072).
 
-Vignette file: `src/world/park/props/park_islands.json` (79 spots, 470 instances, 50 of them litter, pin 3660265306). Kit: `assets/models/park/props/islands/manifest.json`. Rules: DRESSING-KITS.md, READABILITY.md, KITS.md (islands). Audit: `tools/park_props_audit.gd` via the lock wrapper; the numbers below are from the merged tree (stage/alpha-w18 8ee9e2c1).
+Vignette file: `src/world/park/props/park_islands.json` (81 spots, 480 instances, 50 of them litter, pin 3322127868). Kit: `assets/models/park/props/islands/manifest.json`. Rules: DRESSING-KITS.md, READABILITY.md, KITS.md (islands). Audit: `tools/park_props_audit.gd` via the lock wrapper; the numbers below are from the merged tree (stage/alpha-w18 8ee9e2c1).
 
 ## What and why (lore, #241 6329943362)
 
@@ -68,18 +68,20 @@ The litter schema has no scale or variant cap (scale 0.9 to 1.15 in `_litter`, g
 
 ## Not met and named fails
 
+Status after the w18f audit: no density window fails (see "Audit (w18f)"). The first two bullets and the test bullet below are the 7e05da67 record and are superseded; the run-out bullet is now the `--open` list.
+
 - Sable 600 (153,-318): 9 more low spots were added in the 43 to 60 m band at (165..190, -378..-366) from the probe's legal cells (spacing 10 m), because density counts kinds within 60 m of the camera. The audit that shows the result is held (see above).
 - Floor 1500 (32,334) has 0 legal cells within 80 m of its centre after the telegraph rule, so no fill is possible there.
 - Windows with a kicker run-out within 40 m of the window centre (distance from the run-out capsule surface, from `park_map.kickers`, run-out capsule as in `kicker_keepouts`): floor 150 (6.3,-559) run_step_lip_1 (-5.0 m); floor 750 (-281.9,-211.6) fan_step_lip_3 (-8.4); floor 1350 (93,204.6) carve_step_lip_1 (-1.4); floor 1500 (32.3,333.5) carve_step_lip_5 (-7.5); rivet 150 (156.5,-567.9) lookout_lip (-6.3); sable 300 (-100.4,-499.1) run_step_lip_2 (-7.1); sable 750 (262.4,-215.2) fan_step_lip_3 (-4.8); sable 900 (228.6,-92.5) fan_step_lip_6 (-7.5); tarn 150 (-130.2,-570.2) lookout_lip (-10.2); tarn 300 (-59.5,-499.5) run_step_lip_2 (-7.5). Negative means the centre is inside the capsule. I did not pass `--open`.
 - Tests: run_tier_test failed 20 of 192 checks, every failure a runtime-child timeout (`exit=-1 timeout=true`) with the box at load average 22; scatter_rows_test timed out twice for the same reason (it passed 90 of 90 on the previous head). The other tests passed (counts in the hand-back).
 
-## Audit (w18e, --open), ruling 6329579296
+## Audit (w18f, --open), ruling 6329579296
 
 Ruling 6329579296: an `--open` window carries a reason the audit checks. `runout:<kicker>` needs a kicker run-out within 40 m of the window centre, and the audit fails an `--open` window whose reason does not check out.
 
-Pre-audit (`artifacts/local/w18e-pre`, no `--open`): 48 windows, 16 exempt (arena 10, telegraph 6), 20 pass, 12 fail. Ten of the failures are the windows below, centres matching the table to 0.1 m. Two further failures are not in the ten and stay failed: kest 450 (-47.9, -366.1; 2 kinds) and sable 600 (153.0, -317.8; 2 kinds). Kest 450 was not a failure in the 7e05da67 audit; sable 600 is the window the earlier note already named as not met. Neither carries a run-out reason, so I did not `--open` them.
+Pre-audit (`artifacts/local/w18e-pre`, no `--open`): 48 windows, 16 exempt (arena 10, telegraph 6), 20 pass, 12 fail. Ten of the failures are the windows below, centres matching to 0.1 m. Two more, kest 450 (-47.9, -366.1) and sable 600 (153.0, -317.8), had 2 kinds each and no run-out reason, so they were not `--open`ed; they are filled (next section).
 
-`--open=x:z:10:runout:<kicker>` for each, one arg per window (the audit's arg loop does `open_spaces.append_array`, so several are accepted):
+`--open=x:z:10:runout:<kicker>`, one arg per window (the audit's arg loop does `open_spaces.append_array`):
 
 | Window | Centre (x, z) | Kicker |
 |---|---|---|
@@ -94,39 +96,55 @@ Pre-audit (`artifacts/local/w18e-pre`, no `--open`): 48 windows, 16 exempt (aren
 | tarn 150 | -130.2, -570.2 | lookout_lip |
 | tarn 300 | -59.5, -499.5 | run_step_lip_2 |
 
-Result (`artifacts/local/w18e`): `density_open_checked` 10, `density_open_rejected` empty, exempt 26 (arena 10, open:runout 10, telegraph 6), pass 20, fail 2 (kest 450, sable 600), share 0.909. Props-only draw delta max 63, median 4 (bar 120); bare share 74.4 percent; void poses 0.
+Result of the final audit (`artifacts/local/w18f`, after the recolour and the two fill spots): 48 windows, exempt 26 (arena 10, `open:runout` 10, telegraph 6), pass 22, fail 0, density share 1.0; `density_open_checked` 10, `density_open_rejected` empty; void poses 0; props-only draw delta max 66, median 3.5 (bar 120); bare share 73.2 percent. The earlier w18e audit (before the fill) had 20 pass and 2 fail.
+
+### The two filled windows (ruling #241 6332450092 not needed)
+
+Coordinator ruling 6332450092 says a window that cannot be filled stays a documented density fail with no `--open`. Neither did: both filled.
+- kest 450 (-47.9, -366.1): 2 kinds before (grass_tufts, stone_scatter). Probed with `fill_probe.gd` (a throwaway script that applies the audit's own camera, `camera_for` and `cell_visible`, 2.5 m grid, mid camera, within 60 m, over the window's 3 poses, and expands a whole template through `validate`): 29 cells where a whole `net_mending` passes, 41 for `rope_heap`, 35 for `net_scrap` and `net_drying`, 13 for `chart_stones`. Spot `f450` (`net_mending`, at (-98.8, -326.2), 22.5 m from the nearest pose).
+- sable 600 (153.0, -317.8): 2 kinds before (stone_scatter, patch_bolt). 48 cells for `net_mending`, 60 for `net_scrap`, 55 for `rope_heap`, 30 for `stool_rest`. Spot `f600` (`net_mending`, at (171.2, -326.2), 20 m from the nearest pose).
+- After: both windows show 6 kinds (grass_tufts, mender_stool, net_bundle, patch_bolt, rope_basket, stone_scatter) in `artifacts/local/w18f/park_islands/samples.json`. Plan check 0 violations, so every keepout, line-clear, slope and seat rule holds at both spots. Re-pin: 3660265306 to 3322127868 (470 to 480 instances).
+
+## Recolour to the Highdraft props board (this round)
+
+Reference: `docs/art/reference/highdraft/highdraft-props-moodboard.jpg`. I read the swatch strip: sandstone c6a274, oxide 9b513a, charcoal 242a28, petrol 365754, bone d2c5a5, copper b77843. Colour-only change; `kit.py` untouched. Constants added in `islands.py`: PETROL 365754 (line 41), BONE d2c5a5 (42), COPPER b77843 (43); OXIDE 9b513a (39) and BRASS d9b44a (40) existed.
+
+Machine part to board panel (lines from grep of the final recipe):
+- `tram_car_parked` (def line 265): body and cab planks PETROL (269), roof boards alternate PETROL and TIMBER_D (306), as the Heat shields panel's petrol enamel; corner straps OXIDE (319), the panel's oxide wear as bands; two short bone plates per side BONE (321), as the Closed furnace latch plate; copper fittings COPPER on the hanger stub (311) and the doorstep pail (315), as the Closed furnace pipework. Frame deck, hanger box and axle brackets are `C["charcoal"]`.
+- `ore_trolley` (434): tub PETROL (438), as the Braked drum housing; rim BONE (441, and 457 tipped variant), oxide axle OXIDE (448), two copper hubs COPPER (447). Wheels TIMBER_D, or charcoal for variant c.
+- `winch_drum` (488): drum and one housing end PETROL (493, 492), the other housing end BONE (492, the one bone panel), drum rims OXIDE (495), copper crank fittings COPPER (508, 509), the single BRASS tag kept (507, coordinator allows one Fleet requisition tag per site). Base slab charcoal.
+- Copper counts: tram 2, ore_trolley 2, winch_drum 2 (kit WARN only, as expected). Timber, rope, wicker and plants are as before.
+- Machines still using non-board colours, from grep of `C["iron`, `C["iron_light`, `C["rust`, `C["concrete`: none in the three machine kinds' bodies. Remaining uses are `lookout_hut` hardware (144, 148; a building, not a machine), the ore and ground rocks (337, 444), the winch rope (503), `rope_basket` (524, 525, 527), `patch_bolt` (603, 604, 606) and stair-stone chips (476).
+- KIT_BUILT before (`artifacts/local/w18f/base.log`, built from the unchanged recipe) and after (`after.log`) are identical for all 8 variants: tram a `[10228, 5114, 1534]` radius 3.82 height 4.40, b `[11580, 5790, 1736]` 3.81 4.38, c `[13316, 6658, 1996]` 4.35 4.42; ore a `[2572, 1286, 386]` 1.16 1.33, b `[2932, 1466, 440]` 1.45 1.31, c `[2804, 1402, 420]` 1.53 1.57; winch a `[2528, 1264, 376]` 1.53 1.30, b `[1896, 948, 283]` 1.34 1.30.
+- Previews: `sketches/core-loop/artifacts/local/dressing/islands/w18f/` (contact sheet and per-variant stills), opened and compared with the props board by eye: petrol bodies, bone and oxide accents and small copper fittings read as the board's machines; they are chunkier and flatter than the painted board (no chipped paint texture; one vertex colour material only).
 
 ## Reference boards (rulings 6330671507, 6331210075)
 
 Boards read (each opened and looked at): `docs/art/reference/highdraft/highdraft-props-moodboard.jpg`, `highdraft-crew-moodboard.jpg`, `highdraft-landmark-hanging-isle.jpg`, `docs/art/reference/era/era-space-ground-ends-moodboard.jpg`, `style/style-palette-moodboard.jpg`, `style-materials-moodboard.jpg`, `style-shape-moodboard.jpg`, `pilots/pilots-balls-heft-moodboard.jpg`. Boards settle look only.
 
-Board colours. Props board swatch strip: sandstone c6a274, oxide 9b513a, charcoal 242a28, petrol 365754, bone d2c5a5, copper b77843. Crew board adds brass d9b44a (Fleet plate on the mooring winch) and life 8f84b3. The props board paints machine bodies (braked drum, heat shields, closed furnace door) as petrol enamel with bone panels, copper pipes, rivets and clamps, charcoal housings and oxide wear chips; the highdraft README says "broad material differences and contact wear" and "props remain matte".
+Board colours. Props board swatch strip: sandstone c6a274, oxide 9b513a, charcoal 242a28, petrol 365754, bone d2c5a5, copper b77843. Crew board adds brass d9b44a (Fleet plate on the mooring winch) and life 8f84b3. The props board paints machine bodies (braked drum, heat shields, closed furnace door) as petrol enamel with bone panels, copper pipes and clamps, charcoal housings and oxide wear; its README says "broad material differences and contact wear" and "props remain matte".
 
-**Palette roles.** The kit (`tools/blender/park/props/islands.py`, manifest `assets/models/park/props/islands/manifest.json`) matches the board's sandstone, bone, charcoal and oxide through SAND, SAND_D, SAND_P (sandstone and bone shades, nearest-swatch distance 0.06 to 0.18), `C.bone`, `C.charcoal`, `C.cable` (charcoal shade), OXIDE (exact, winch_drum only) and `C.rust` (oxide shade). It has no petrol and no copper anywhere: the machine bodies are the drift below.
+**Palette roles.** Machine bodies now use the board's petrol, bone, oxide and copper (recolour section above). Sandstone, bone and charcoal also appear as SAND, SAND_D, SAND_P, `C.bone`, `C.charcoal` and `C.cable`. Non-machine kinds (rope, timber, wicker, plants, slickrock) keep their desaturated colours; see drift.
 
-**Shape language.** Wear is broad and the shapes are soft toy shapes: low-poly lumps rounded by subsurf (`blob`, style "soft", "round"), flat-lying coils, a tub bin on stub axles, a three-legged stool, a tram on blocks. Silhouettes are low and wide, like the board's benches and stools. Detail is small-scale rope and stitching, not decoration.
+**Shape language.** Broad wear and soft toy shapes: low-poly lumps rounded by subsurf (`blob`, styles "soft" and "round"), flat-lying coils, a tub bin on stub axles, a three-legged stool, a tram on blocks. Silhouettes are low and wide like the board's benches and stools.
 
-**Materials.** The kit uses brass: one `BRASS` tag on `winch_drum` (islands.py line 504; the manifest story says "one brass tag"), and `mooring_spares` only lands on a `fleet` society cell. The board's crew panel shows a brass Fleet plate on the mooring winch, so this matches the board, but the packet says dressing uses copper or steel fittings instead of brass. Named under drift for review; I did not change the kit. No other brass.
+**Materials.** Brass: one BRASS tag on `winch_drum` (line 507) and nothing else (grep of `BRASS` in islands.py: definition 40 and use 507). It matches the crew board's Fleet plate and the coordinator's one-tag-per-site allowance. Fittings elsewhere are COPPER.
 
-**Scale to the pilot ball.** The ball is `Tuning.RADIUS` 1.0 m (`src/movement/tuning.gd:95`), so 2.0 m across. Kit heights from the manifest, as a share of the ball's diameter: low props 0.18 to 1.57 m (stair_stones 0.09x to ore_trolley c 0.79x), heroes 2.20 to 5.18 m (balloon_basket_wreck a 1.1x to lookout_hut a 2.6x). Relative only. The pilots board shows the ball as a roomy egg a person-sized pilot sits in, so a 0.6 to 1.0 m stool or basket reads at knee height to the ball, which matches the props board's low benches.
+**Scale to the pilot ball.** Ball diameter is 2.0 m: `Tuning.RADIUS` is 1.0 (`src/movement/tuning.gd:95`). Ratios are manifest height / 2.0, relative only:
+- Heroes: lookout_hut a 5.176/2.0=2.588, b 5.166/2.0=2.583, c 3.994/2.0=1.997; balloon_basket_wreck a 2.197/2.0=1.099, b 3.177/2.0=1.589, c 3.1/2.0=1.550; tram_car_parked a 4.398/2.0=2.199, b 4.377/2.0=2.188, c 4.424/2.0=2.212.
+- Props: net_bundle 0.605/2.0=0.302 (a, b), c 0.849/2.0=0.424; mender_stool a 0.966/2.0=0.483, b 0.826/2.0=0.413, c 0.823/2.0=0.411; chart_post a 1.361/2.0=0.680, b 1.318/2.0=0.659, c 0.835/2.0=0.417; ore_trolley a 1.331/2.0=0.665, b 1.309/2.0=0.654, c 1.571/2.0=0.785; stair_stones a 0.183/2.0=0.091, b 0.22/2.0=0.110, c 0.494/2.0=0.247; winch_drum 1.304/2.0=0.652 (a, b); rope_basket a 0.869/2.0=0.434, b 1.001/2.0=0.500, c 0.898/2.0=0.449; pine_sapling a 1.112/2.0=0.556, b 1.406/2.0=0.703, c 0.822/2.0=0.411; manzanita a 1.471/2.0=0.736, b 1.397/2.0=0.699, c 1.388/2.0=0.694; grass_tufts a 0.861/2.0=0.430, b 0.611/2.0=0.305, c 1.272/2.0=0.636; patch_bolt a 0.637/2.0=0.319, b 0.585/2.0=0.292, c 0.502/2.0=0.251; stone_scatter a 0.677/2.0=0.339, b 0.358/2.0=0.179, c 0.851/2.0=0.425.
 
-### Colour constants against the boards (grepped per kind)
+### Avoid list, per item (greps of `tools/blender/park/props/islands.py`, `kit.py` and `park_islands.json` after the final edit)
 
-Constants and `C[...]` uses, by kind, from the calls in islands.py (line of first use in brackets), mapped to a swatch or a shade of one (nearest swatch by RGB distance, hue read by hand):
-- Maps to a swatch or a shade of one: OXIDE winch_drum (489); `C.charcoal` winch_drum (487); `C.bone` net_bundle (362), patch_bolt (604); `C.cable` balloon_basket_wreck (245); `C.rust` tram_car_parked (266), ore_trolley (435), winch_drum (500), patch_bolt (603); SAND, SAND_D, SAND_P lookout_hut (121-122), ore_trolley (441), stone_scatter (619, 624), tram_car_parked (311); `C.timber_pale` lookout_hut (120), tram_car_parked (289), net_bundle (360) (sandstone-copper brown); `C.canvas`, `C.canvas_dark`, `C.canvas_stain`, PATCH_A, PATCH_C (bone or sandstone shades, desaturated) in balloon_basket_wreck (209), patch_bolt (594-603), mender_stool, chart_post, lookout_hut (149, 177), tram_car_parked (327), winch_drum (502), grass_tufts (582); BRASS winch_drum (504, crew board swatch).
-- Maps to no swatch (see drift): ROPE, ROPE_D, WICKER, TIMBER, TIMBER_D, BARK, `C.timber_grey`, SLICK, SLICK_D, PATCH_B (desaturated browns and greys, saturation 0.09 to 0.17 against the board's 0.3 to 0.4 sandstone, bone and copper); `C.iron`, `C.iron_light`, `C.concrete`, `C.concrete_dark` (neutral greys); PINE, PINE_D, `C.leaf`, `C.leaf_dark`, `C.dry_grass` (greens and olive, no green swatch on the props board).
-
-### Avoid list, per item (kit recipe islands.py and manifest, file park_islands.json)
-
-- No emission: the kit's glTF check asserts no `emissiveFactor` (kit.py line 567); islands.py has no emissive call; line 519 comment says unlit.
-- No hazard stripes or coral: `kit.py` BANNED holds ff5a3c; grep of islands.py for hazard, stripe, coral hits none; the kit has no stripe pattern.
-- No cache-shaped containers: ore_trolley is a flared tub on axle stubs (line 432 comment "not a crate"); rope and patch bundles are lumps; no crate.
-- No taut or decorative grapple cables: the only `cable` colour use is stitch-thread ticks on the balloon patch (line 245); suspension ropes lie slack on the basket; rope coils are flat.
-- No fake ride surfaces: no ramp, rail, gate or flat plate; the tram is on blocks, ore_trolley has no rails.
-- No glowing lamps: rope_basket is an unlit lantern basket (line 519).
-- No ancient-green or uranium-green: BANNED holds 9dff3c and 8bf0d3 (mint); islands.py greens are olive (PINE 4d6840, leaf 6f7f4a), hue 78 to 109, far from 9dff3c.
-- Closed furnace mouths only: the kit has no furnace; grep of islands.py and park_islands.json for furnace returns 0.
-- Slack nets distinct from the netcaster silhouette: net_bundle is a coiled ground bundle at most 0.85 m high; the kit has no mast or frame shapes (grep of islands.py for mast returns 0).
+- No emission: grep `emissive` in islands.py hits only the comment at line 522 ("no emissive"); kit.py line 567 asserts every exported material has no `emissiveFactor`, and the kit export ran clean.
+- No hazard stripes or coral: grep `stripe` and `coral` in islands.py: no hits. `hazard` hits only the comment at line 22. `ff5a3c` (hazard hex) no hits; kit.py line 69 BANNED holds it.
+- No cache-shaped containers: grep `crate`: only the comment at line 435 ("not a crate"); the ore bin is a flared cylinder (line 438).
+- No taut or decorative grapple cables: grep `cable` hits line 248 (stitch-tick colour `C["cable"]` on the balloon patch), 602 (comment on cable-dark thread); the kit has no cable geometry.
+- No fake ride surfaces: grep `ramp` no hits; `rail` hits only the story at line 433 ("no rails anywhere").
+- No glowing lamps: `lantern` hits lines 312 (unlit pail comment), 514 (story, unlit basket).
+- No ancient-green or uranium-green: grep `9dff3c` and `8bf0d3` in islands.py no hits (both in kit.py BANNED, line 69).
+- Closed furnace mouths only: grep `furnace` in islands.py no hits; `furnace` count in `park_islands.json` 0.
+- Slack nets distinct from the netcaster silhouette: grep `mast` in islands.py no hits; `net_bundle` is at most 0.849 m high (ratio above).
 
 ### GROUNDING rows read (GROUNDING.md (main cb534a2d))
 
@@ -143,9 +161,13 @@ Constants and `C[...]` uses, by kind, from the calls in islands.py (line of firs
 
 ### Board drift (for review)
 
-1. Machine bodies carry no petrol enamel or copper fittings. The board paints machines petrol with bone panels and copper hardware. `tram_car_parked` (islands.py 262-337: TIMBER_D 269, `C.iron` 270, `C.iron_light` 308, `C.rust` 266, `C.concrete` 334), `ore_trolley` (429-457: `C.iron` 435, `C.iron_light` 438, `C.concrete_dark` 441, `C.rust` 435) and `winch_drum` (483-504: `C.charcoal` 487, OXIDE 489, BRASS 504, `C.rust` 500) are timber, iron grey, rust and charcoal. No kit constant is petrol 365754 or copper b77843 (`C.verdigris` 5f8a7c exists in kit.py and islands.py does not use it).
-2. Desaturated browns and greys with no swatch: ROPE, ROPE_D, WICKER, TIMBER, TIMBER_D, BARK, SLICK, SLICK_D, PATCH_B, `C.timber_grey` (kinds: lookout_hut, balloon_basket_wreck, tram_car_parked, net_bundle, mender_stool, chart_post, rope_basket, winch_drum, patch_bolt, stair_stones, stone_scatter, pine_sapling, manzanita), lines from 23 to 40 and the uses listed above. Desaturated on purpose after the low sun showed orange flecks (stills #189, #210); the board's rope is bone-pale.
-3. Neutral greys `C.iron`, `C.iron_light`, `C.concrete`, `C.concrete_dark` (tram_car_parked, ore_trolley, lookout_hut, rope_basket, patch_bolt, stair_stones): board metal is petrol, charcoal or copper, not mid grey.
-4. Greens PINE, PINE_D, `C.leaf`, `C.leaf_dark`, `C.dry_grass` (lookout_hut, balloon_basket_wreck, pine_sapling, manzanita, grass_tufts, net_bundle, mender_stool, chart_post, ore_trolley, rope_basket, tram_car_parked): foliage, shown in the board's images but with no swatch.
-5. BRASS tag on winch_drum (line 504): matches the crew board's Fleet plate; the packet's rule prefers copper or steel for dressing.
-I made no kit change. The reviewer rules on FAIL and the ART-MISTAKES line.
+Recoloured this round: machine bodies (tram_car_parked, ore_trolley, winch_drum) now carry petrol, bone, oxide and copper. Still off the board's swatches, not changed:
+1. Desaturated browns and greys with no swatch: ROPE, ROPE_D, WICKER, TIMBER, TIMBER_D, BARK, SLICK, SLICK_D, PATCH_B (islands.py lines 23 to 33 and 34 to 35) and `C.timber_grey`, used in lookout_hut, balloon_basket_wreck, tram_car_parked interior and ground, net_bundle, mender_stool, chart_post, rope_basket, winch_drum rope, patch_bolt, stair_stones, stone_scatter, pine_sapling, manzanita. Kept desaturated on purpose after the low sun showed orange flecks (stills #189, #210); the board's rope is bone-pale. Timber, rope, wicker and plants stay as they are under the coordinator's ruling.
+2. Neutral greys `C.iron`, `C.iron_light`, `C.concrete`, `C.concrete_dark`: lookout_hut hardware (144, 148), the rock mixes (337, 444), stair-stone chips (476), rope_basket (524, 525, 527), patch_bolt tin (603, 604). Board metal is petrol, charcoal or copper.
+3. Greens PINE, PINE_D, `C.leaf`, `C.leaf_dark`, `C.dry_grass`: foliage in lookout_hut, balloon_basket_wreck, pine_sapling, manzanita, grass_tufts, net_bundle, mender_stool, chart_post, ore_trolley, rope_basket, tram_car_parked: shown in the board's images but with no swatch.
+4. Chunkier than the board: one vertex-colour material, so no chipped-paint wear (kit.py line 566 enforces one material and no images).
+The reviewer rules on FAIL and the ART-MISTAKES line.
+
+## Smoke, final tree (w18f round)
+
+park_props_test, park_park_islands_test, park_dressing_pin_test and asset_registry_test PASS (load 3.9 to 4.2). scatter_rows_test PASS (95 checks); direct run at load 13.6: "no main-thread scatter step over 8 ms during the build, start() included] 3.81 ms -> PASS". run_tier_test PASS in 586 s (load 4.7 before, 15.0 after; `artifacts/local/run_tier-islands.log`, no FAIL and no timeout line). The earlier run on the merged tree failed 3 of 192 at load 6 to 16 and its failure lines were not kept, so I do not call it base-red.
