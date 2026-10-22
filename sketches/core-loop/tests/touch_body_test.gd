@@ -125,7 +125,7 @@ func _run() -> void:
 	# A short caller normal is still normalized: 0.2 stomps only once it is unit length (the bar is 0.3).
 	var f := _setup(Vector3(0.0, 2.0, 0.0), fall)
 	_game.player.touch_body(f, Vector3(0.0, 0.2, 0.0))
-	_report("long caller normal is normalized", _events.size() == 1 and _last()[0] == "stomp", "events %s" % [_events])
+	_report("short caller normal is normalized", _events.size() == 1 and _last()[0] == "stomp", "events %s" % [_events])
 	f.free()
 
 	# Invalid bodies do nothing.
