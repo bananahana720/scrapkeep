@@ -158,6 +158,7 @@ const AIR_CUE_NAME := "AirCue"
 # An equipped paint lerps the paint surfaces' baked vertex colour this far toward its tint,
 # so a dark lattice takes the hue instead of only darkening (PAINT-TRACE card A2, start value).
 const PAINT_TAKE := 0.6
+# Vertex alpha 0 keeps a part's baked colour under any paint; alpha at or above 0.05 takes full paint, so Tally's window-index alphas (0.2 to 0.8) are unchanged.
 # Plate maps average darker than the old neutral value noise; the paint slot lifts once.
 const PAINT_LIFT := 1.2
 const PAINT_SHADER := """shader_type spatial;
@@ -172,14 +173,14 @@ void vertex() {
 	local_pos = VERTEX;
 	local_normal = NORMAL;
 }
-vec3 painted(vec3 vertex_color, vec3 pos, vec3 normal) {
+vec3 painted(vec3 vertex_color, float mask, vec3 pos, vec3 normal) {
 	vec3 weights = abs(normalize(normal));
 	weights /= max(weights.x + weights.y + weights.z, 0.001);
 	vec3 p = pos / 1.5;
 	vec3 plate = texture(plate_texture, p.yz).rgb * weights.x
 		+ texture(plate_texture, p.xz).rgb * weights.y
 		+ texture(plate_texture, p.xy).rgb * weights.z;
-	return mix(vertex_color * lift.rgb, paint_tint.rgb, paint_take) * plate;
+	return mix(vertex_color * lift.rgb, paint_tint.rgb, paint_take * step(0.05, mask)) * plate;
 }
 """
 
@@ -316,7 +317,7 @@ void fragment() {
 	if slot == "paint" and tint != Color.WHITE:
 		var painted := ShaderMaterial.new()
 		painted.shader = _paint_shader("paint", PAINT_SHADER + """void fragment() {
-	ALBEDO = painted(COLOR.rgb, local_pos, local_normal);
+	ALBEDO = painted(COLOR.rgb, COLOR.a, local_pos, local_normal);
 	ROUGHNESS = 0.8;
 }
 """)
@@ -677,7 +678,7 @@ instance uniform int lit_count = 0;
 instance uniform int heft_class = 1;
 void fragment() {
 	if (UV2.y > float(heft_class) + 0.1) { discard; }
-	ALBEDO = painted(COLOR.rgb, local_pos, local_normal);
+	ALBEDO = painted(COLOR.rgb, COLOR.a, local_pos, local_normal);
 	ROUGHNESS = 0.8;
 	if (UV2.x > 0.5) {
 		bool lit = UV2.x <= float(lit_count) + 0.1;
