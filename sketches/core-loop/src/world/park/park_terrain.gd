@@ -319,6 +319,8 @@ func _build_region(location: Vector2i) -> Array:
 	var data := PackedFloat32Array()
 	data.resize(REGION_SIZE * REGION_SIZE)
 	var inner := int(HALF)
+	var low := INF
+	var high := -INF
 	for row in REGION_SIZE:
 		var z := z0 + row
 		var base := row * REGION_SIZE
@@ -340,6 +342,10 @@ func _build_region(location: Vector2i) -> Array:
 			else:
 				v = _outside(x, z)
 			data[base + col] = v
+			if v < low:
+				low = v
+			if v > high:
+				high = v
 	var control := PackedInt32Array()
 	control.resize(REGION_SIZE * REGION_SIZE)
 	for k in _hole_cells:
@@ -352,7 +358,8 @@ func _build_region(location: Vector2i) -> Array:
 				if cx >= 0 and cx < REGION_SIZE and cz >= 0 and cz < REGION_SIZE:
 					control[cz * REGION_SIZE + cx] = HOLE_BIT
 	return [location, Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, data.to_byte_array()),
-		Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, control.to_byte_array()), color_map()]
+		Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, control.to_byte_array()), color_map(),
+		Vector2(low, high)]
 
 
 # The color map sanitize_maps makes for a region without one (white, roughness 0.5, mipmapped). Made here, on the worker,
@@ -363,10 +370,11 @@ static func color_map() -> Image:
 	return image
 
 
-# A region's Terrain3DRegion from the worker's [location, height map, control map, color map], made on the main thread:
-# it is the addon's object (GDExtension, its source is not in this repo), so no worker makes or sets one. set_height_map
-# works out the height range itself (a calc_height_range after it cost as much again for the same range), and with the
-# worker's color map _attach_step's sanitize has nothing left to make.
+# A region's Terrain3DRegion from the worker's [location, height map, control map, color map, height range], made on
+# the main thread: it is the addon's object (GDExtension, its source is not in this repo), so no worker makes or sets one.
+# set_height_map always works out the height range itself (14 ms a region on the cloud, a preset range or not); set_data
+# takes the maps and the worker's range as given, the same region state the setters leave, in 0.02 ms. With the worker's
+# color map _attach_step's sanitize has nothing left to make. Maps without a range (or a color map) take the setters.
 static func _make_region(maps: Array) -> Object:
 	if not ThreadGuard.main_only("park_terrain region"):
 		return null
@@ -374,6 +382,15 @@ static func _make_region(maps: Array) -> Object:
 	region.set_region_size(REGION_SIZE)
 	region.set_vertex_spacing(VERTEX_SPACING)
 	region.set_location(maps[0])
+	if maps.size() > 4:
+		var data: Dictionary = region.get_data()
+		data["height_map"] = maps[1]
+		data["control_map"] = maps[2]
+		data["color_map"] = maps[3]
+		data["height_range"] = maps[4]
+		data["modified"] = true
+		region.set_data(data)
+		return region
 	region.set_height_map(maps[1])
 	region.set_control_map(maps[2])
 	if maps.size() > 3:
@@ -447,7 +464,7 @@ func _attach_step(deadline: int) -> void:
 		if deadline >= 0:
 			return
 	if _next_region < _regions.size():
-		# A region a frame: making it with its maps (set_height_map is most of it), then the sanitize and the add.
+		# A region a frame: making it with its maps, then the sanitize and the add.
 		var region: Object = _make_region(_regions[_next_region])
 		region.sanitize_maps()
 		if terrain3d.data.has_region(region.get_location()):

@@ -4,7 +4,8 @@ extends SceneTree
 # ThreadGuard. Checked: on the main thread the guarded paths build and count nothing. The planted control runs this
 # script again in a child with --planted, where a worker calls the park props mesh read (which instantiates a GLB)
 # and the region maker: each must fail the guard's assert, count a violation and make nothing. The region's color map,
-# made on the worker, must equal the one sanitize_maps would make on the main thread. The child is its own
+# made on the worker, must equal the one sanitize_maps would make on the main thread, and the worker's height range the one
+# calc_height_range works out (on park_test's baked maps, holes included), since set_data keeps it as given. The child is its own
 # process because the assert prints a SCRIPT ERROR, which fails any test that prints it.
 
 const T := preload("res://tests/support/t.gd")
@@ -13,6 +14,7 @@ const ParkProps := preload("res://src/presentation/park_props.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
 const GLB := "res://assets/models/highdraft/prop_bench.glb"
+const PARK := "park_test"
 const PLANTED_ARG := "--planted"
 const LOW_M := -3.5
 const HIGH_M := 12.25
@@ -36,8 +38,9 @@ func _main_thread() -> void:
 	var maps := _maps()
 	var region := ParkTerrain._make_region(maps)
 	_t.check("the region maker builds on the main thread", region != null and region.get_location() == Vector2i(1, -1))
-	# set_height_map works out the range itself (_make_region no longer calls calc_height_range after it).
-	_t.eq("the region's height range spans its height map", region.get_height_range() if region != null else Vector2.ZERO, Vector2(LOW_M, HIGH_M))
+	# Without a range the setters work it out (set_height_map runs calc_height_range).
+	_t.eq("the setters' region works out the height range of its height map", ParkTerrain._make_region(maps.slice(0, 4)).get_height_range(), Vector2(LOW_M, HIGH_M))
+	_worker_ranges()
 	# The worker's color map is the one sanitize_maps makes for a region without one, so the main thread's sanitize keeps it.
 	var bare := ParkTerrain._make_region(_maps().slice(0, 3))
 	bare.sanitize_maps()
@@ -55,8 +58,44 @@ func _main_thread() -> void:
 		and fresh.get_format() == made.get_format(), "mipmaps %s, format %d" % [fresh.has_mipmaps(), fresh.get_format()])
 	_t.check("the region keeps the worker's color map as given, and the sanitize keeps it", region != null and given == maps[3]
 		and region.get_color_map() == given)
+	# set_data leaves the region as the setters do: every field the same, the maps the very images the worker made.
+	var setters := ParkTerrain._make_region(maps.slice(0, 4))
+	setters.sanitize_maps()
+	var differ := []
+	var want: Dictionary = setters.get_data()
+	var got: Dictionary = region.get_data() if region != null else {}
+	for key in want:
+		var same: bool = got.get(key) is Image and got[key].get_data() == want[key].get_data() if want[key] is Image else got.get(key) == want[key]
+		if not same:
+			differ.append("%s: %s, setters %s" % [key, str(got.get(key)), str(want[key])])
+	_t.check("the set_data region holds what the setters' region holds, field by field", region != null and differ.is_empty()
+		and got.keys() == want.keys(), "; ".join(differ))
+	_t.check("the set_data region keeps the worker's maps as given", region != null and region.get_height_map() == maps[1]
+		and region.get_control_map() == maps[2])
 	_t.eq("no violation on the main thread", ThreadGuard.violations, 0)
 	ParkProps.release_shared()
+
+
+# park_test's baked ground, built region by region as the worker builds it: each range it hands set_data must be the one
+# calc_height_range works out from the same height map, or the region's bounds are wrong and nothing says so.
+func _worker_ranges() -> void:
+	var park = ParkTerrain.new()
+	park.map_id = PARK
+	park.baked = ParkTerrain.has_bake(PARK)
+	park._load()
+	var holes := 0
+	var misses := []
+	for location in ParkTerrain.REGIONS:
+		var maps: Array = park._build_region(location)
+		var control: PackedInt32Array = maps[2].get_data().to_int32_array()
+		holes += control.count(ParkTerrain.HOLE_BIT)
+		var worked_out: Vector2 = ParkTerrain._make_region(maps.slice(0, 4)).get_height_range()
+		if maps.size() < 5 or maps[4] != worked_out:
+			misses.append("%s: worker %s, calc_height_range %s" % [location, str(maps[4] if maps.size() > 4 else null), worked_out])
+	var baked: bool = park.baked
+	park.free()
+	_t.check("park_test is baked, with holes in its regions", baked and holes > 0, "%d hole pixels" % holes)
+	_t.check("the worker's height range is calc_height_range's, on every region of park_test", misses.is_empty(), "; ".join(misses))
 
 
 func _child() -> void:
@@ -97,4 +136,4 @@ static func _maps() -> Array:
 	heights[7] = LOW_M
 	heights[size * size - 9] = HIGH_M
 	return [Vector2i(1, -1), Image.create_from_data(size, size, false, Image.FORMAT_RF, heights.to_byte_array()),
-		Image.create_empty(size, size, false, Image.FORMAT_RF), ParkTerrain.color_map()]
+		Image.create_empty(size, size, false, Image.FORMAT_RF), ParkTerrain.color_map(), Vector2(LOW_M, HIGH_M)]
