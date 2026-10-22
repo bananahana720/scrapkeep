@@ -35,7 +35,7 @@ const RING_RADIUS := 3.0
 # (ahead, side components), lies against the tower base.
 const PLACES := [
 	{"id": "stage2-morning", "stage": 2, "ahead": 24.0, "side": 5.0, "ground_ahead": 7.0, "ground_side": 0.0},
-	{"id": "arena-w3", "boss": true, "ahead": 8.0, "side": 4.0, "ground_ahead": 0.0, "ground_side": 5.0, "dark_ahead": 8.0, "dark_side": 4.0, "dark_dir": Vector2(0.0, -1.0)},
+	{"id": "arena-w3", "boss": true, "ahead": 8.0, "side": 4.0, "ground_ahead": 0.0, "ground_side": 8.0, "dark_ahead": 8.0, "dark_side": 4.0, "dark_dir": Vector2(0.0, -1.0)},
 ]
 # The ground box sits between the rings, moved `ground_ahead` and `ground_side` metres when the ball or its
 # shadow stands between them. The dark probe: the rim box's half-size (it holds the keyline, the HAZARD edge
