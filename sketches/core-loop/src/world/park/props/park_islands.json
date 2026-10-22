@@ -2085,16 +2085,6 @@
    "near": "east_wing, A folded net and a scrap of patch cloth blow"
   },
   {
-   "id": "w012",
-   "template": "net_drying",
-   "at": [
-    -180.0,
-    375.0
-   ],
-   "yaw_deg": -49.0,
-   "near": "west_wing, Nets laid out to dry on the slickrock"
-  },
-  {
    "id": "w015",
    "template": "dropped_bolt",
    "at": [
@@ -2133,16 +2123,6 @@
    ],
    "yaw_deg": 68.0,
    "near": "east_wing, A knee-high cairn with a pine seedling and d"
-  },
-  {
-   "id": "h300",
-   "template": "lookout_post",
-   "at": [
-    -255.0,
-    100.0
-   ],
-   "yaw_deg": -142.0,
-   "near": "manifest_lip, A fire crew's stilted log cab"
   },
   {
    "id": "h301",
@@ -2205,16 +2185,6 @@
    "near": "west_shelf, A flat rock used as a sewing table; the bolt"
   },
   {
-   "id": "m307",
-   "template": "stair_marker",
-   "at": [
-    -250.0,
-    295.0
-   ],
-   "yaw_deg": -68.0,
-   "near": "west_wing, The hikers' numbered stones climb past a stu"
-  },
-  {
    "id": "m308",
    "template": "pine_ledge",
    "at": [
@@ -2223,46 +2193,6 @@
    ],
    "yaw_deg": -157.0,
    "near": "west_shelf, Relict pines and manzanita crowding a slickr"
-  },
-  {
-   "id": "m309",
-   "template": "ore_spill",
-   "at": [
-    -150.0,
-    100.0
-   ],
-   "yaw_deg": -153.0,
-   "near": "ledger_lip, A bin tipped over and the day's ore trailing"
-  },
-  {
-   "id": "m310",
-   "template": "mooring_spares",
-   "at": [
-    -120.0,
-    85.0
-   ],
-   "yaw_deg": -153.0,
-   "near": "mooring_pad_ramp, Fleet spares near the mooring"
-  },
-  {
-   "id": "m312",
-   "template": "patchwork_rock",
-   "at": [
-    -175.0,
-    295.0
-   ],
-   "yaw_deg": 120.0,
-   "near": "west_wing, A flat rock used as a sewing table; the bolt"
-  },
-  {
-   "id": "m313",
-   "template": "stair_marker",
-   "at": [
-    -185.0,
-    215.0
-   ],
-   "yaw_deg": 74.0,
-   "near": "west_wing, The hikers' numbered stones climb past a stu"
   },
   {
    "id": "m314",
@@ -2375,36 +2305,6 @@
    "near": "anvil_rock, A knee-high cairn with a pine seedling and d"
   },
   {
-   "id": "w325",
-   "template": "net_drying",
-   "at": [
-    -90.0,
-    70.0
-   ],
-   "yaw_deg": -153.0,
-   "near": "mooring_pad_ramp, Nets laid out to dry on the slickrock"
-  },
-  {
-   "id": "w326",
-   "template": "stone_nook",
-   "at": [
-    -70.0,
-    70.0
-   ],
-   "yaw_deg": -153.0,
-   "near": "anvil_step_3, A kicked cairn and cobbles in a slickrock cr"
-  },
-  {
-   "id": "w327",
-   "template": "rope_heap",
-   "at": [
-    -145.0,
-    80.0
-   ],
-   "yaw_deg": -153.0,
-   "near": "ledger_lip, Spare nets and a rope bale dumped where the "
-  },
-  {
    "id": "w328",
    "template": "cobble_pair",
    "at": [
@@ -2415,16 +2315,6 @@
    "near": "mooring_pad_ramp, Two cobbles and a tuft where the slickrock s"
   },
   {
-   "id": "w329",
-   "template": "net_scrap",
-   "at": [
-    -130.0,
-    105.0
-   ],
-   "yaw_deg": -153.0,
-   "near": "ledger_lip, A folded net and a scrap of patch cloth blow"
-  },
-  {
    "id": "w331",
    "template": "chart_stones",
    "at": [
@@ -2433,16 +2323,6 @@
    ],
    "yaw_deg": 32.0,
    "near": "anvil_step_4, Chart stones"
-  },
-  {
-   "id": "w332",
-   "template": "dropped_bolt",
-   "at": [
-    -250.0,
-    215.0
-   ],
-   "yaw_deg": -93.0,
-   "near": "west_wing, A dropped bolt of patch cloth"
   },
   {
    "id": "w333",
@@ -2645,16 +2525,6 @@
    "near": "saddle_step_2, A dropped bolt of patch cloth"
   },
   {
-   "id": "w353",
-   "template": "rope_basket_rest",
-   "at": [
-    55.0,
-    -365.0
-   ],
-   "yaw_deg": -11.0,
-   "near": "saddle_step_2, A rope basket and a stool left where the cre"
-  },
-  {
    "id": "w354",
    "template": "tuft_cairn",
    "at": [
@@ -2693,6 +2563,166 @@
    ],
    "yaw_deg": 137.0,
    "near": "tram_head_lip, sable 600 m window"
+  },
+  {
+   "id": "h300",
+   "template": "lookout_post",
+   "at": [
+    -310.0,
+    100.0
+   ],
+   "yaw_deg": -142.0,
+   "near": "manifest_lip, moved out of a telegraph zone"
+  },
+  {
+   "id": "m310",
+   "template": "mooring_spares",
+   "at": [
+    -109.4,
+    74.4
+   ],
+   "yaw_deg": -153.0,
+   "near": "mooring_pad_ramp, Fleet spares near the mooring"
+  },
+  {
+   "id": "w327",
+   "template": "rope_heap",
+   "at": [
+    -116.0,
+    87.8
+   ],
+   "yaw_deg": -153.0,
+   "near": "ledger_lip, moved out of a telegraph zone"
+  },
+  {
+   "id": "w329",
+   "template": "net_scrap",
+   "at": [
+    -115.5,
+    101.1
+   ],
+   "yaw_deg": -153.0,
+   "near": "ledger_lip, A folded net and a scrap of patch cloth blow"
+  },
+  {
+   "id": "w332",
+   "template": "dropped_bolt",
+   "at": [
+    -327.8,
+    137.2
+   ],
+   "yaw_deg": -93.0,
+   "near": "west_wing, moved out of a telegraph zone"
+  },
+  {
+   "id": "w353",
+   "template": "rope_basket_rest",
+   "at": [
+    52.5,
+    -369.3
+   ],
+   "yaw_deg": -11.0,
+   "near": "saddle_step_2, A rope basket and a stool left where the cre"
+  },
+  {
+   "id": "w400",
+   "template": "chart_stones",
+   "at": [
+    177.0,
+    -377.799987792969
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head, sable 600 m window"
+  },
+  {
+   "id": "w401",
+   "template": "net_mending",
+   "at": [
+    189.0,
+    -377.799987792969
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head, sable 600 m window"
+  },
+  {
+   "id": "w402",
+   "template": "tuft_cairn",
+   "at": [
+    197.0,
+    -369.799987792969
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head, sable 600 m window"
+  },
+  {
+   "id": "w403",
+   "template": "dropped_bolt",
+   "at": [
+    205.0,
+    -377.799987792969
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head, sable 600 m window"
+  },
+  {
+   "id": "w404",
+   "template": "chart_stones",
+   "at": [
+    209.0,
+    -365.799987792969
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head, sable 600 m window"
+  },
+  {
+   "id": "w405",
+   "template": "net_mending",
+   "at": [
+    217.0,
+    -377.799987792969
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head, sable 600 m window"
+  },
+  {
+   "id": "w406",
+   "template": "tuft_cairn",
+   "at": [
+    221.0,
+    -365.799987792969
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head, sable 600 m window"
+  },
+  {
+   "id": "w407",
+   "template": "dropped_bolt",
+   "at": [
+    229.0,
+    -377.799987792969
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head, sable 600 m window"
+  },
+  {
+   "id": "w408",
+   "template": "chart_stones",
+   "at": [
+    233.0,
+    -365.799987792969
+   ],
+   "yaw_deg": 137.0,
+   "near": "tram_head, sable 600 m window"
+  },
+  {
+   "id": "m500",
+   "template": "stair_marker",
+   "at": [
+    -80.0,
+    70.0
+   ],
+   "yaw_deg": -153.0,
+   "near": "mooring_pad_ramp, The hikers' numbered stones climb past a stu"
   }
  ],
  "ground_rows": [
@@ -2778,6 +2808,6 @@
   ],
   "seed": 5
  },
- "pin": 2014119072,
+ "pin": 3660265306,
  "notes": "ground_rows steps (lookout_step_1, lookout_step_2, lookout_step_3, lookout_step_4, run_step_1, run_step_2, run_step_3, run_step_4, run_step_5, saddle_step_1, saddle_step_2, fan_step_1, fan_step_2, fan_step_3, fan_step_4, fan_step_5, fan_step_6, landing_step_1, anvil_step_1, anvil_step_2, anvil_step_3, anvil_step_4, carve_step_1, carve_step_2, carve_step_3, carve_step_4, carve_step_5, carve_step_6, carve_step_7): terrace treads, each a 32 to 50 m deep step-down of 2 to 4 m between kicker lips (park_islands.json row sizes); the tiers and kicker capsules govern them. anvil_face (a 2 m face) is never listed."
 }
