@@ -865,9 +865,18 @@ static func _frame_in(pod: Node3D, node: Node3D) -> Transform3D:
 	var frame := Transform3D.IDENTITY
 	var at := node.get_parent() as Node3D
 	while at != null and at != pod:
-		frame = at.transform * frame
+		frame = _rest_transform(at) * frame
 		at = at.get_parent() as Node3D
 	return frame
+
+
+# A node's transform with its `heft_rest` position in place of where a slam or fling has it now. The
+# layer's own Pod mesh slams too (rest 0, so it moves up), and it is the parent of the layer's holder.
+static func _rest_transform(node: Node3D) -> Transform3D:
+	var local := node.transform
+	if node.has_meta("heft_rest"):
+		local.origin = node.get_meta("heft_rest")
+	return local
 
 
 # Which heft layers show now: the hull below is only valid for one such state.
@@ -906,9 +915,11 @@ static func _bank_hull(pod: Node3D, visible_only := true) -> Dictionary:
 
 # Mesh vertices (and node origins when `origins`) under `node`, in `top`'s frame; a hidden
 # child's subtree is left out when `visible_only`.
+# A heft layer's mesh is read at its `heft_rest` position, not where a slam or fling has it now, so
+# a hull built mid-tween (and cached until the next visibility change) still holds the settled shape.
 static func _points_under(node: Node3D, top: Node3D, origins: bool, visible_only := true, to := Transform3D.IDENTITY) -> PackedVector3Array:
 	var out := PackedVector3Array()
-	var here := to if node == top else to * node.transform
+	var here := to if node == top else to * _rest_transform(node)
 	if node is MeshInstance3D and (node as MeshInstance3D).mesh != null:
 		var mesh: Mesh = (node as MeshInstance3D).mesh
 		for i in mesh.get_surface_count():
