@@ -1,0 +1,145 @@
+{
+	"map": "park_islands",
+	"poses": [
+		{
+			"along_m": 0.0,
+			"cam": [
+				164.994,
+				109.359,
+				50.199
+			],
+			"file": "park_islands-v12-h302-eye.png",
+			"idx": 24,
+			"line": "vignette:h302",
+			"look": [
+				162.724,
+				108.889,
+				54.654
+			],
+			"x": 168.61,
+			"yaw": 2.67035,
+			"z": 43.102
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_islands-v12-h302-chase.png",
+			"idx": 25,
+			"line": "vignette:h302",
+			"x": 162.766,
+			"yaw": 2.67035,
+			"z": 49.064
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				60.456,
+				108.944,
+				54.149
+			],
+			"file": "park_islands-v19-m315-eye.png",
+			"idx": 38,
+			"line": "vignette:m315",
+			"look": [
+				57.046,
+				107.478,
+				57.806
+			],
+			"x": 65.692,
+			"yaw": 2.3911,
+			"z": 48.535
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_islands-v19-m315-chase.png",
+			"idx": 39,
+			"line": "vignette:m315",
+			"x": 58.628,
+			"yaw": 2.3911,
+			"z": 52.444
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-113.486,
+				107.66,
+				66.381
+			],
+			"file": "park_islands-v47-m310-eye.png",
+			"idx": 94,
+			"line": "vignette:m310",
+			"look": [
+				-111.216,
+				105.883,
+				70.836
+			],
+			"x": -116.908,
+			"yaw": -2.67035,
+			"z": 59.664
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_islands-v47-m310-chase.png",
+			"idx": 95,
+			"line": "vignette:m310",
+			"x": -115.713,
+			"yaw": -2.67035,
+			"z": 67.516
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-100.51,
+				187.043,
+				-330.898
+			],
+			"file": "park_islands-v52-f450-eye.png",
+			"idx": 104,
+			"line": "vignette:f450",
+			"look": [
+				-98.8,
+				185.073,
+				-326.2
+			],
+			"x": -103.056,
+			"yaw": -2.79253,
+			"z": -337.893
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_islands-v52-f450-chase.png",
+			"idx": 105,
+			"line": "vignette:f450",
+			"x": -102.859,
+			"yaw": -2.79253,
+			"z": -330.043
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				166.276,
+				186.69,
+				-327.068
+			],
+			"file": "park_islands-v53-f600-eye.png",
+			"idx": 106,
+			"line": "vignette:f600",
+			"look": [
+				171.2,
+				185.073,
+				-326.2
+			],
+			"x": 158.78,
+			"yaw": -1.74533,
+			"z": -328.39
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_islands-v53-f600-chase.png",
+			"idx": 107,
+			"line": "vignette:f600",
+			"x": 165.842,
+			"yaw": -1.74533,
+			"z": -324.606
+		}
+	]
+}
