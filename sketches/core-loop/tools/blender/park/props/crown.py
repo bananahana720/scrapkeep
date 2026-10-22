@@ -569,8 +569,9 @@ def spool_shed(p, v, rng):
     # Loose wire end curled on the ground, flat.
     for k in range(2):
         p.torus(0.4 - 0.12 * k, 0.04, (1.15 + 0.1 * k, -0.8, 0.07 + 0.08 * k), CHAR, major=10, minor=4)
-    p.box((0.2, 0.05, 0.28), (1.15, -1.35, 0.9), BRASS, style="hard")  # the brass tag on a short stake
-    p.rod((1.15, -1.3, 0.0), (1.15, -1.3, 0.75), 0.04, C["timber_dark"])
+    if v != "c":  # c is the collapsed canopy: no tag, so a site with another tagged Fleet prop carries one tag only
+        p.box((0.2, 0.05, 0.28), (1.15, -1.35, 0.9), BRASS, style="hard")  # the brass tag on a short stake
+        p.rod((1.15, -1.3, 0.0), (1.15, -1.3, 0.75), 0.04, C["timber_dark"])
     if v == "a":
         tarp(p, (-1.5, -1.8, 0.2), (0.8, 0.6, 0.4), C["canvas"], rng)
         p.torus(0.3, 0.05, (1.15, -0.8, 0.5), C["iron"], major=6, minor=4) if False else None

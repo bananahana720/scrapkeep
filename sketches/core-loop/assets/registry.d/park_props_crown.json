@@ -1688,23 +1688,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "spool_shed variant c LOD0 (2656 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; polished and baked."
+    "notes": "spool_shed variant c LOD0 (2484 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
      -1.8071,
      0,
-     -1.3388
+     -1.3013
     ],
     "max": [
      1.8071,
      2.1023,
-     1.3388
+     1.3013
     ],
     "size": [
      3.6142,
      2.1023,
-     2.6776
+     2.6026
     ]
    }
   },
@@ -1716,23 +1716,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "spool_shed variant c LOD1 (1328 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "spool_shed variant c LOD1 (1242 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
      -1.803,
      0,
-     -1.3388
+     -1.3018
     ],
     "max": [
-     1.808,
+     1.8028,
      2.1005,
-     1.3336
+     1.3005
     ],
     "size": [
-     3.611,
+     3.6058,
      2.1005,
-     2.6724
+     2.6023
     ]
    }
   },
@@ -1744,23 +1744,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "spool_shed variant c LOD2 (398 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "spool_shed variant c LOD2 (372 tris): A Fleet cable spool lying flat under a four-post canopy, its brass tag the only mark of owner. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
      -1.8241,
      0,
-     -1.3544
+     -1.3169
     ],
     "max": [
      1.8179,
      2.1145,
-     1.3351
+     1.2848
     ],
     "size": [
      3.642,
      2.1145,
-     2.6895
+     2.6017
     ]
    }
   },

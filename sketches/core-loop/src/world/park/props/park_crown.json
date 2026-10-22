@@ -687,7 +687,7 @@
     },
     {
      "kind": "tally_slab",
-     "v": "a",
+     "v": "c",
      "at": [
       5.5,
       2.5
@@ -928,7 +928,7 @@
     },
     {
      "kind": "tally_slab",
-     "v": "a",
+     "v": "c",
      "at": [
       -5.5,
       1.5
@@ -1912,7 +1912,7 @@
    ]
   },
   "floor_brush": {
-   "story": "One rabbitbrush the net-weaver crews leave standing on the one scrap of legal ground beside the floor line, a patch of green in the dust the giant machines roll past.",
+   "story": "One dry rabbitbrush clump the net-weaver crews leave standing on the one scrap of legal ground beside the floor line, a gray-brown tuft in the dust the giant machines roll past.",
    "props": [
     {
      "kind": "rabbitbrush",
@@ -3518,7 +3518,7 @@
   ],
   "seed": 31
  },
- "pin": 2154852281,
+ "pin": 542438207,
  "low_ground_rows": [
   "drop_ramp",
   "watch_butte",

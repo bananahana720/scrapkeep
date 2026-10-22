@@ -373,11 +373,11 @@
       "res://assets/models/park/props/crown/spool_shed_c_lod2.glb"
      ],
      "tris": [
-      2656,
-      1328,
-      398
+      2484,
+      1242,
+      372
      ],
-     "radius": 2.166,
+     "radius": 2.147,
      "height": 2.102
     }
    }
