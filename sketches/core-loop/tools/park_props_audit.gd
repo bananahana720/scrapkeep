@@ -20,7 +20,7 @@ extends SceneTree
 # --vignettes (Dressing card (c)) does not ride: it reads the map's props file and kit as the runtime does (ParkProps.prepare), expands
 # it with the game's ground, and for each spot (or the --spots filter) takes the subject (the first instance of that vignette, the lead
 # prop) and finds a clear view of it by search, not by hand: bearings from the spot's front of 0, +45, -45, +90, -90, +135, -135 and 180
-# degrees (a yaw offset: Godot +Z is the front, direction (sin yaw, cos yaw)), 5 m from the subject's centre at the chase anchor height
+# degrees (a yaw offset: Godot +Z is the front, direction (sin yaw, cos yaw)), eye_m = max(5, radius + 1.5) m from the subject's centre at the chase anchor height
 # (ground + 1.8), the first one whose sight line to the centre clears terrain, other props' cylinders, colliders and the eye point itself.
 # If none is clear it takes the front and marks the row blocked_all. Two stills per spot, both replayable (poses.json carries "cam" and
 # "look" for the eye frame; the chase frame is a plain pose): "eye" at that point looking at the centre (fov 72.5), the ball parked 8 m
@@ -34,6 +34,7 @@ extends SceneTree
 # records the rule as subject_rule. Each frame also lists rows_in_view: the ids of the park file's park_rows (a footprint grid, 7 points
 # a side at most) and contraption_rows (launchers and the like: the point or a ring of their radius) with any sampled point inside the
 # camera frustum within 150 m (ParkProps.cell_visible, ground height, no occlusion).
+# Known limit: the chase frame is not sight-tested (only the eye frame is searched), and the collider ray does not exclude the subject.
 # The eye distance is max(5, subject radius + 1.5) m (eye_m per row): the frame must stand outside the subject's own footprint, so wide
 # subjects (wrecks, trucks) get a longer one; 5 m stays the rule for props. The subject itself never blocks its own sight line or eye point.
 # Writes <map>-v<spot idx>-<spot>-eye.png and -chase.png, vignettes.json, poses.json, stills.json, summary.json and the contact sheet.
@@ -660,7 +661,7 @@ func _run_vignettes() -> void:
 			var d := Vector2(sin(a), cos(a))
 			var eye := Vector3(centre.x + eye_m * d.x, 0.0, centre.z + eye_m * d.y)
 			eye.y = terrain.height(eye.x, eye.z) + V_EYE_UP
-			var why := _sight_block(eye, centre, id, list, near, subject_i, terrain, space, ball_rid)
+			var why := _sight_block(eye, centre, list, near, subject_i, terrain, space, ball_rid)
 			if why == "":
 				pick = {"off": off, "a": a, "d": d, "eye": eye}
 				break
@@ -749,11 +750,12 @@ func _run_vignettes() -> void:
 	quit(0)
 
 
-# "" when the sight from eye to centre is clear, else why not: inside, terrain, prop:<spot>/<kind> or collider:<node name>.
-func _sight_block(eye: Vector3, centre: Vector3, spot_id: String, list: Array, near: Array, subject_i: int, terrain, space: PhysicsDirectSpaceState3D, ball_rid: RID) -> String:
+# "" when the sight from eye to centre is clear, else why not: inside:<vignette>/<kind> (the eye is in that prop's cylinder; the eye stands
+# above the terrain by construction, so there is no inside:terrain), terrain, prop:<vignette>/<kind> (the blocker's own vignette) or collider:<node name>.
+func _sight_block(eye: Vector3, centre: Vector3, list: Array, near: Array, subject_i: int, terrain, space: PhysicsDirectSpaceState3D, ball_rid: RID) -> String:
 	for k in near:
 		if k != subject_i and _in_cylinder(eye, list[k]):
-			return "inside"
+			return "inside:%s/%s" % [list[k]["vignette"], list[k]["kind"]]
 	for i in range(1, V_TERRAIN_SAMPLES + 1):
 		var p := eye.lerp(centre, float(i) / float(V_TERRAIN_SAMPLES + 1))
 		if terrain.height(p.x, p.z) > p.y:
@@ -764,7 +766,7 @@ func _sight_block(eye: Vector3, centre: Vector3, spot_id: String, list: Array, n
 			continue
 		for k in near:
 			if k != subject_i and _in_cylinder(p2, list[k]):
-				return "prop:%s/%s" % [spot_id, list[k]["kind"]]
+				return "prop:%s/%s" % [list[k]["vignette"], list[k]["kind"]]
 	var query := PhysicsRayQueryParameters3D.create(eye, centre)
 	query.exclude = [ball_rid]
 	var hit := space.intersect_ray(query)
