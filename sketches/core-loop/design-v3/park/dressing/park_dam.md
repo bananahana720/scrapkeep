@@ -1,23 +1,34 @@
 # park_dam dressing, wave 18 re-proof
 
-Base: merge of the Dressing foundation aaeb5e10 (stage/alpha-w18 9cd6805e plus the `scatter_row` rule) into the dam branch.
+## What and why
+
+The dam's crew sites (camps, bunks, benches, laundry) read as plush crews living among working giants: the giant machines are the humans' utility fleet (construction, mining, manufacturing), some corrupted, some loyal drones, some looping workers. Scale contrast is the point, so the crew props stay small, human-sized and homely beside them. This unit brings the dam onto the two checked rules: a per-kind line clearance for the brief's 30 m kind, and the telegraph keepout.
+
+Base: head f419ac50 (dam branch). Merges: origin/stage/alpha-w18 at 9703fd14 and again at e83a21c2 (stage moved past b22a2ca3, #175 stacked), and origin/claude/zealous-franklin-ed0sxr-lineclear 07748516 at fd5a5c59. The earlier base was the foundation aaeb5e10.
 Method: automated headless Godot 4.7.2 on cloud llvmpipe (OpenGL compatibility proxy, not a frame-cost proof, not human feel).
 
 ## Plan check
 
-`tools/park_props_plan.gd --map=park_dam --check`: 834 instances (83 litter), 0 violations, fingerprint 1759471770. No spot moved. Pin 1759471770 unchanged (old and new).
+`tools/park_props_plan.gd --map=park_dam --check`: 834 instances (83 litter), 5 violations on the merged rules (all `telegraph`, spot mid_tool_bench_123), then 0 violations after the move below, fingerprint 1202620946. Pin 47128334 to 1202620946 (617986039 before the 30 m pass).
 
-## Tests (each run alone, GODOT_BIN 4.7.2)
+## Telegraph zones
 
-park_props_test 162, park_park_dam_test 16, park_dressing_pin_test 8, pocket_line_clear_test 25, scatter_rows_test 82; set_dressing_test and asset_registry_test PASS (no count printed). Registry fold: 1053 assets, no change.
+Rule: `park_props.gd` `check_one` fails a prop inside an event's own geometry grown by `hold_clear_m` (a lightning strike is a `strike_m` circle at the site point; design in `DRESSING-KITS.md`), so no prop stands where a telegraph will be drawn and damage lands. Litter that fails is dropped automatically; authored spots fail the plan check.
 
-## Audit (default run, mid camera, step 25 m, 258 samples)
+- `dome_lightning` (site slickrock_domes at (-110, -520), `strike_m` 6, `hold_clear_m` 0): 5 instances of mid_tool_bench_123 (cable_drum, compressor_cart, lunch_pail, sandbags, desert_scrub) stood inside the circle. The spot moved from (-108, -521) to (-124, -530), 18.4 m, the smallest of the positions tried that cleared both the circle and the 10 m mid line clearance (nearer ones on the south side failed line_clear). The `near` label (dome_5) is unchanged since the move is under 20 m.
+- Litter dropped: none (83 litter before and after).
+- The other five events (plunge_pool_flood, west_wash_flash_flood, east_bench_dropship, toe_vents_wake, powerhouse_boiler) had no hits.
 
-- props-only draw delta: max 56, median 11.5 (peak pose idx 72 at -280.7, -531.0). Earlier pass: max 59.
-- draw calls: max 389, median 353.5, p95 383.45; primitives max 792164 (median 663818)
-- density: 24 of 25 non-exempt windows pass (0.96; 24 exempt: 12 arena, 1 camp, 11 telegraph). Failing: kest start 900 m at (18.3, -32.4), 0 kinds, the corkscrew-slot hard keepout. Earlier pass: 24/25 with the same window.
-- bare share 38.8 percent (100 of 258), longest bare run 175 m; bare ground share 38.8, longest 175 m; void poses 0
-- median dressing core in view within 60 m 8.0, distinct kinds within 120 m median 16
+## Tests (each run alone, GODOT_BIN 4.7.2, box load about 20)
+
+park_props_test, park_park_dam_test, park_dressing_pin_test, pocket_line_clear_test, asset_registry_test: smoke PASS (no counts printed). scatter_rows_test: smoke timed out twice at its 180 s cap under load; run directly it passes, 95 checks (3m43s). run_tier_test: FAIL, 16 of 192 checks, 892 s under load (not diagnosed; no run, tier or scatter file changed in this unit). `npm run sketch:lint` 0 findings; `npm run check:docs` 0 failures (178 files, 6978 links). Registry fold: 1053 assets, no change.
+
+## Audit (w18d, default run, mid camera, step 25 m, 258 samples; w18b before in brackets)
+
+- props-only draw delta: max 57, median 12.0 [53, 11.5]
+- draw calls: max 390, median 353.0, p95 383.45
+- density: 24 of 49 windows pass, 24 exempt (12 arena, 1 camp, 11 telegraph) [24 of 49, 24 exempt]. Failing: the same kest window at (18.3, -32.4), 0 kinds, the corkscrew-slot hard keepout
+- bare share 38.8 percent [38.8], longest bare run 175 m; void poses 0
 
 ## 12-pose replay (before = same tree, `props/park_dam.json` moved aside, same poses; after = default run stills)
 
@@ -38,8 +49,14 @@ The Fable kit review found two kinds built off the dam brief (`sketches/core-loo
 
 ## 30 m brief kinds
 
-- Kind `laundry_line`. Brief line: "keep at least 30 m from lines", because a washing line reads as a grind or grapple line. Measure: edge-to-line, ParkProps `line_distance(centre)` minus the instance radius, as `check_one` uses for `line_clear`. Target 30.5 m or more.
+- Kind `laundry_line` now carries `line_clear_m: 30` (`tools/blender/park/props/dam.py` `@K.kind`, manifest `line_clear_m: 30.0`), so the plan check enforces it; GLBs are byte-identical, only the manifest gained the field. Brief line (`sketches/core-loop/design-v3/park/dressing/KITS.md`, dam section; the lead is adding that file in a separate docs PR, so the citation will resolve): "keep at least 30 m from lines", because a washing line reads as a grind or grapple line. Measure: edge-to-line, `line_distance(centre)` minus the instance radius.
 - Two of 14 instances were under: bunk_collapse_30 (v=c) edge 28.41 to 30.94; mid_laundry_142 (v=a) edge 29.14 to 31.10. The other 12 are 31.04 or more, unchanged.
-- Spots moved: bunk_collapse_30 from (-15, -503) to (-12, -504), about 3.2 m; mid_laundry_142 from (-4, 300) to (-2, 300), 2 m. Neither move is near 20 m, so the `near` labels stay.
-- Pin 617986039 to 47128334. Plan check: 834 instances, 0 violations. Probe: under30_edge=0.
-- Audit pending the line_clear_m foundation merge.
+- Spots moved: bunk_collapse_30 from (-15, -503) to (-12, -504), about 3.2 m; mid_laundry_142 from (-4, 300) to (-2, 300), 2 m. Near labels unchanged.
+- Pin 617986039 to 47128334 for this pass.
+
+## ART-MISTAKES entries checked
+
+`project-guide/handoff/ART-MISTAKES.md` has 9 rows on this head; applied:
+- 2026-10-21 World, #242 lane width ("called the LINE flag the actual ride line"): read `check_one` and the event plan in `park_props.gd` before moving anything, rather than assuming what a telegraph zone is (it is a strike circle here, not the site box).
+- 2026-10-21 Modeling, #241 lane map ("listed units as owed that the stage held byte for byte"): rebuilt only `laundry_line` and checked that `git status` showed no GLB change, only the manifest field.
+- 2026-10-21 Modeling, M1 anchor gap tool (run line copied from siblings, exit 127): ran the Blender command from the packet verbatim and confirmed exit 0.
