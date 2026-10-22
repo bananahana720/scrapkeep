@@ -179,7 +179,7 @@ Checks (headless Godot 4.7.2, Linux).
 - park_props_test: exit 0, "[park_dam expansion matches its pin]" passes.
 - Density (w18l, no `--open`): 24 of 49 windows pass, 24 exempt (12 arena, 1 camp, 11 telegraph); failing: kest (18.3, -32.4), the same corkscrew window. No new fail. Draw calls max 391, median 363.5; bare share 38.8 percent, longest bare run 175 m. Not a frame-cost proof, not human feel.
 - Loose lane scans for comparison: strict scan 0 runs and 12 one-yaw clusters before, 0 runs and 7 after; the proto scan 1 row and 16 yaw groups before, 0 rows and 14 after.
-- Labels that ended on a dangling word ("a tripod resting on", "a kettle, a washing", "the odds") or a trailing comma were cut back to the previous clause: 15 spots, `near` text only, so the pin is unchanged.
+- Labels that ended on a dangling word ("a tripod resting on", "a kettle, a washing", "the odds") or a trailing comma were cut back to the previous clause: 15 spots, `near` text only, so the pin is unchanged. Five more (two ending "left where", three ending "at the") were missed here and are fixed in w18n below.
 
 ## w18n rows after the #323 span fix
 
@@ -199,3 +199,5 @@ Checks (headless Godot 4.7.2, Linux).
 - Pin: 2441315749 to 2928990529, then 746751661 after the yaw turn (intended re-pins).
 - park_props_test: exit 0, "[park_dam expansion matches its pin]" passes.
 - Density (no `--open`): 24 of 49 windows pass, 24 exempt (12 arena, 1 camp, 11 telegraph); failing: kest (18.3, -32.4), unchanged. No new fail.
+
+Labels, gate review: five labels still ended on a dangling word, because the lint accepts a whole-word ending. rebar_thicket_45 and rebar_thicket_89 ("...slab chunks left where") now end "...left where the forms came down". pour_site_55, pour_site_93 and pour_site_159 ("...in silt at the") now end "...in silt at the last pour". `near` text only, so the pin stays 746751661. No dam label now ends on a comma, a space or a dangling word.
