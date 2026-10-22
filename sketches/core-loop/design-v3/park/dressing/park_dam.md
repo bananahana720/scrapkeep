@@ -4,7 +4,7 @@
 
 The dam's crew sites (camps, bunks, benches, laundry) read as plush crews living among working giants: the giant machines are the humans' utility fleet (construction, mining, manufacturing), some corrupted, some loyal drones, some looping workers. Scale contrast is the point, so the crew props stay small, human-sized and homely beside them. This unit brings the dam onto the two checked rules: a per-kind line clearance for the brief's 30 m kind, and the telegraph keepout.
 
-Base: dam head 8bca3482, merged with origin/stage/alpha-w18 f259e8cf (merge d249c53f) and the accepted foundation origin/claude/zealous-franklin-ed0sxr-lineclear e72fff7d (merge 88ce4e96). Earlier rounds merged stage 9703fd14 and e83a21c2 and foundation 07748516. The later foundation commits touch only the audit, the static checks and `park_props_test`, so the plan check and pin are unchanged.
+Base: dam head 8bca3482, merged with origin/stage/alpha-w18 f259e8cf (merge d249c53f) and the accepted foundation origin/claude/zealous-franklin-ed0sxr-lineclear e72fff7d (merge 88ce4e96), then the foundation's stage merge be6189ec (merge 9fb8910f; the tree is unchanged). Earlier rounds merged stage 9703fd14 and e83a21c2 and foundation 07748516. The later foundation commits touch only the audit, the static checks and `park_props_test`, so the plan check and pin are unchanged.
 Method: automated headless Godot 4.7.2 on cloud llvmpipe (OpenGL compatibility proxy, not a frame-cost proof, not human feel).
 
 ## Plan check
@@ -19,7 +19,7 @@ Rule: `park_props.gd` `check_one` fails a prop inside an event's own geometry gr
 - Litter dropped: none (83 litter before and after).
 - The other five events (plunge_pool_flood, west_wash_flash_flood, east_bench_dropship, toe_vents_wake, powerhouse_boiler) had no hits.
 
-## Tests (each run alone, GODOT_BIN 4.7.2, box load about 20; final merge re-run: park_props_test, park_park_dam_test, park_dressing_pin_test smoke PASS, sketch:lint 0 findings, check:docs 0 failures at 189 files)
+## Tests (an earlier pass, before the be6189ec merge; the final fast lane on 36f31ac7 ran 72 tests, 1 flaky (`first_win_secrets_test`, 180 s limit under load; it passes alone in 65 to 80 s on head and base) and 0 base-red. Each run alone, GODOT_BIN 4.7.2, box load about 20; final merge re-run: park_props_test, park_park_dam_test, park_dressing_pin_test smoke PASS, sketch:lint 0 findings, check:docs 0 failures at 189 files)
 
 park_props_test, park_park_dam_test, park_dressing_pin_test, pocket_line_clear_test, asset_registry_test: smoke PASS (no counts printed). scatter_rows_test: smoke timed out twice at its 180 s cap under load; run directly it passes, 95 checks (3m43s). run_tier_test: FAIL, 16 of 192 checks, 892 s under load (not diagnosed; no run, tier or scatter file changed in this unit). Measured base-red: the clean stage b0e64a40 fails run_tier_test the same way at load 17, 8 of 192 checks, all `[runtime child seed N] exit=-1 timeout=true`, 3531 PASS lines (coordinator's run), alongside this branch's 16 of 192 at load about 20; not re-run here per the coordinator. `npm run sketch:lint` 0 findings; `npm run check:docs` 0 failures (178 files, 6978 links). Registry fold: 1053 assets, no change.
 
@@ -84,15 +84,15 @@ Previews (Blender `--preview-dir`, local, not committed) in `sketches/core-loop/
 
 ## 12-pose replay (before = same tree, `props/park_dam.json` moved aside, same poses; after = default run stills)
 
-Pixel change (share of pixels with a channel difference over 12): 113,-105 6.80; 118,-85 0.38; 155,-50 5.07; 161,-15 0.55; 226,76 0.54; 232,2 0.05; 233,-132 0.17; 239,93 15.29; 24,-69 1.53; 249,163 1.09; 32,-32 0.03; 97,-85 0.90. Median 0.73.
-The poses are the barest places; most sit on the canyon floor between walls, the slot keepouts and the corkscrew, where nothing legal can stand, so the change there is small. The pixel figures are not dressing evidence on their own. The independent review of the full-size stills found that the large values at 239,93 (15.29), 113,-105 (6.80) and 155,-50 (5.07) are world-state or render differences: no park prop is in frame at 239, and the slot_bulkhead plank state differs at 113. Visible dressing change is at 161 and 249, with far bits at 24 and 226. The bare share (38.8%) is structural. The lines run on slot-canyon floors 34 m wide, which are keepouts too narrow for low_ground_rows, and through the eye arena and telegraph sites. The density bar passes 24 of 25, and the one fail is inside the corkscrew_slot keepout.
+Pixel change (share of pixels with a channel difference over 12), from the published 29bda9bf replay (`w18/dam/pixel_change.json` on the evidence branch): 113,-105 6.96; 118,-85 0.34; 155,-50 4.08; 161,-15 0.56; 226,76 0.50; 232,2 0.04; 233,-132 0.66; 239,93 15.40; 24,-69 1.36; 249,163 1.01; 32,-32 0.02; 97,-85 0.91. Median 0.785. An earlier replay gave 15.29, 6.80 and 5.07 for the three large values.
+The poses are the barest places; most sit on the canyon floor between walls, the slot keepouts and the corkscrew, where nothing legal can stand, so the change there is small. The pixel figures are not dressing evidence on their own. The independent review of the full-size stills found that the large values at 239,93, 113,-105 and 155,-50 are world-state or render differences: no park prop is in frame at 239, and the slot_bulkhead plank state differs at 113. Visible dressing change is at 161 and 249, with far bits at 24 and 226. The bare share (38.8%) is structural. The lines run on slot-canyon floors 34 m wide, which are keepouts too narrow for low_ground_rows, and through the eye arena and telegraph sites. The density bar passes 24 of 25, and the one fail is inside the corkscrew_slot keepout.
 Props-off replay draws: max 390, median 340.
 
 Stills: `artifacts/local/dressing/dam/w18/{before,after}/park_dam/`, sheet `artifacts/local/dressing/dam/w18/before_after.png` (local, not committed).
 
 ## Kit heights to brief
 
-The Fable kit review found two kinds built off the dam brief (`sketches/core-loop/design-v3/park/dressing/KITS.md`, dam section; the lead is adding that file in a separate docs PR, so the citation will resolve). Both are rescaled in `tools/blender/park/props/dam.py`, with no change to geometry, tri budgets or colours.
+The kit review found two kinds built off the dam brief (`sketches/core-loop/design-v3/park/dressing/KITS.md`, dam section; lands in #269, not on this branch). Both are rescaled in `tools/blender/park/props/dam.py`, with no change to geometry, tri budgets or colours.
 
 - `flood_staff` (brief: "water-level staff, 2.6 m"): a 4.579 to 2.604 m, b 4.67 to 2.600 m, c unchanged at 1.732 m (fallen). LOD0 tris a 1000 to 728, b 1072 to 800, c 2240. The two upright variants are no longer auto-tagged tall.
 - `laundry_line` (brief: "two posts under 2 m"; "keep at least 30 m from lines"): a and b 2.423 to 1.857 m, c 2.85 to 1.900 m. LOD0 tris unchanged (2128, 1340, 2016).
@@ -101,7 +101,7 @@ The Fable kit review found two kinds built off the dam brief (`sketches/core-loo
 
 ## 30 m brief kinds
 
-- Kind `laundry_line` now carries `line_clear_m: 30` (`tools/blender/park/props/dam.py` `@K.kind`, manifest `line_clear_m: 30.0`), so the plan check enforces it; GLBs are byte-identical, only the manifest gained the field. Brief line (`sketches/core-loop/design-v3/park/dressing/KITS.md`, dam section; the lead is adding that file in a separate docs PR, so the citation will resolve): "keep at least 30 m from lines", because a washing line reads as a grind or grapple line. Measure: edge-to-line, `line_distance(centre)` minus the instance radius.
+- Kind `laundry_line` now carries `line_clear_m: 30` (`tools/blender/park/props/dam.py` `@K.kind`, manifest `line_clear_m: 30.0`), so the plan check enforces it; GLBs are byte-identical, only the manifest gained the field. Brief line (`sketches/core-loop/design-v3/park/dressing/KITS.md`, dam section; lands in #269, not on this branch): "keep at least 30 m from lines", because a washing line reads as a grind or grapple line. Measure: edge-to-line, `line_distance(centre)` minus the instance radius.
 - Two of 14 instances were under: bunk_collapse_30 (v=c) edge 28.41 to 30.94; mid_laundry_142 (v=a) edge 29.14 to 31.10. The other 12 are 31.04 or more, unchanged.
 - Spots moved: bunk_collapse_30 from (-15, -503) to (-12, -504), about 3.2 m; mid_laundry_142 from (-4, 300) to (-2, 300), 2 m. Near labels unchanged.
 - Pin 617986039 to 47128334 for this pass.
