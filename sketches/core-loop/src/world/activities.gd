@@ -179,6 +179,8 @@ var _prep := {}
 static var _shared_graphs := {}
 # The main-thread time of the last stage_entered handler, for stage_entry_budget_test.
 var last_entry_usec := 0
+# That handler's parts, each "part ms" (clear, then a site id per _build), so the test can name what a slow entry built.
+var last_entry_steps := PackedStringArray()
 # The trade interior's block material, built once instead of a checker texture a block;
 # dress_props reads its two colours and replaces it, so every block can share it.
 static var _interior_block: StandardMaterial3D
@@ -366,12 +368,15 @@ func _entry_data(map) -> Dictionary:
 
 func _on_stage_entered(_stage: int, retry: bool) -> void:
 	var started := Time.get_ticks_usec()
+	last_entry_steps = PackedStringArray()
 	_enter_stage(retry)
 	last_entry_usec = Time.get_ticks_usec() - started
 
 
 func _enter_stage(retry: bool) -> void:
+	var cleared := Time.get_ticks_usec()
 	clear()
+	last_entry_steps.append("clear %.1f" % ((Time.get_ticks_usec() - cleared) / 1000.0))
 	_elite_arrivals = 0
 	stage_modifier = {}
 	# A retry does not re-arm the piece, so dying cannot farm one.
@@ -475,6 +480,13 @@ func standing() -> int:
 
 
 func _build(id: String, at: Vector2, spec := {}) -> Site:
+	var started := Time.get_ticks_usec()
+	var site := _build_site(id, at, spec)
+	last_entry_steps.append("%s %.1f" % [id, (Time.get_ticks_usec() - started) / 1000.0])
+	return site
+
+
+func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	var s := Site.new()
 	s.id = id
 	s.rule = RULES[id]
