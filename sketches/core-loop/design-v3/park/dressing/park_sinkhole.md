@@ -61,6 +61,53 @@ Rows of `project-guide/handoff/ART-MISTAKES.md` read before the unit and applied
 - 2026-10-21 Animation #261 receipt, SHAs typed from memory. Every SHA here was copied from `git rev-parse` or `git log` output.
 - 2026-10-21 Animation A1, "kill only PIDs found by pgrep". I used no `pkill`; a stuck test was left to its own timeout.
 
+## Reference boards
+
+Rulings 6330671507 (reference before making) and 6331210075 (board grounding). Boards settle look only, never mechanics, scale numbers or collision. I opened each image listed here before writing this section. The kit is unchanged by this note: recipe `sketches/core-loop/tools/blender/park/props/sinkhole.py` (sinkhole.py), colours from `tools/blender/park/props/kit.py` (kit.py), measures from `assets/models/park/props/sinkhole/manifest.json` (manifest).
+
+Boards:
+- `docs/art/reference/dig/dig-props-moodboard.jpg` (hoist bearing, cart repair, coil stores, ore sorting, keep water out, shift rest)
+- `docs/art/reference/dig/dig-crew-moodboard.jpg`
+- `docs/art/reference/dig/dig-landmark-sinkhole-afternoon.jpg`
+- `docs/art/reference/style/style-palette-moodboard.jpg`, `style-materials-moodboard.jpg`, `style-shape-moodboard.jpg`
+- `docs/art/reference/pilots/pilots-balls-heft-moodboard.jpg`, relative scale only
+
+**Palette roles.** The Dig props board gives sandstone c6a274, oxide 9b513a, charcoal 242a28, petrol 365754, bone d2c5a5 and copper b77843. The kit's sandstone_pale d8c19a and bone d2c5a5 sit in the sandstone rock and bone panels (the cart bed, the sorting frame, the shift-rest canvas), and the kit's charcoal 242a28 and cable 2a3231 sit with the hose, rubber and pipe blacks (coil stores, keep water out). The canvas d9d2bc and canvas_dark b9b095 sit with the shift-rest canvas. Kit colours outside the board's six swatches: timber (8a6a46, 5d4630, 8e8470, a8885c; the landmark board's gallery rails and planks are the nearest panel), iron and steel greys (4a4e4c, 6b706c, 8f9893, 5d6563; the board's cast-iron blocks), limestone and lichen (cfc8b2, a9a28c, 9aa284), fern and moss (7b8a58, 58664a; the board's green shrubs), basalt 3d4140, soil 6a5a42 and a rust brown 8a5a44. The kit has no petrol and no oxide: C["verdigris"] is defined but unused in sinkhole.py, and the only rust is one C["rust"] use. See Board drift.
+
+**Shape language.** The board shapes are big, chunky, softly bevelled blocks with broad wear: bolted housings, round bearings, wide pipes (style-shape "repair" and "tool" panels; dig-props hoist bearing and manifold). The kit builds from the same rounded and bevelled primitives (`style="hard_smooth"`, `"round"`, `"flat"`), at 1,180 to 2,996 tris for props and 8,916 to 12,252 for heroes (manifest), with broad forms and no thin detail: the pump engine's plinth and drum, the horn's squat cradle, the timber reel. The crew board's soft plush crews are not modelled; the props are what they leave behind (mug, coat, tally).
+
+**Materials.** sinkhole.py uses no brass: STEEL's comment reads "steel-grey, no brass", and the oil can and nozzle are commented "brass-free". No `d9b44a` appears in sinkhole.py or in the palette it takes from kit.py (BRASS is in kit.py's WARN list as Fleet only). Copper is not used either (b77843 is not in sinkhole.py). The fittings are steel (STEEL, STEEL_D, iron_light), timber and canvas. The board shows copper pipe bands as accents; the kit has none, which is within the packet's "copper or steel fittings".
+
+**Scale to the pilot ball.** The ball's radius is `RADIUS := 1.0` (`src/movement/tuning.gd:95`), so its diameter is 2.0 on the pilots board's relative scale. Manifest heights against it: pump_engine 4.45 and 4.83 (about 2.2 to 2.4 balls), lamp_rack 4.305 (about 2.2), gallery_collapse 3.97 and 1.963 (about 2.0 and 1.0), echo_horn 2.879 and 1.267, column_stubs b 2.562; the rest of the props are 0.335 to 1.5 (cart 1.47 to 1.507, jars 1.13 to 1.47, hose reel 1.1 and 1.367, coat hooks 0.557 and 1.437, cave_fern 0.614 to 1.281, mist_rings 0.54 and 0.69). So heroes stand about twice the ball and the common props stand below it, which keeps the ball larger than a cart or a jar, as the board shows a ball beside a rail and a pipe. No new metres are asserted.
+
+**Avoid list, checked against sinkhole.py, kit.py and the manifest.**
+- No emission: pass. kit.py line 567 asserts no emissive material at build, and the manifest has no emissive factor. The lamp lenses are LENS e4e2d6, commented "plain white, non-emissive".
+- No hazard stripes or coral: pass. Grep of sinkhole.py for `ff5a3c`, hazard, stripe and coral finds only the colour-guard comments. The nearest any sinkhole colour comes to HAZARD, ANCIENT or MINT is 0.32 (concrete_light b8b7ae to MINT, by Euclidean sRGB, computed from the 26 colours the file uses); kit.py's guard rejects anything within 0.08.
+- No cache-shaped containers: pass with a note. `granary_jars` is lidded stone seed jars on limestone slabs, round, 1.1 to 1.5 m, in a trench-granary vignette, and the recipe says at line 508 it swapped stacked tin rings (which read as a cache) for wide, low stepped lips on `mist_rings`. The reviewer may judge the jars.
+- No taut or decorative grapple cables: pass. The only cable-like prop is `hose_reel`, a hose on a timber reel with its loose end coiled flat on the ground (hose torus rings use `style="flat"`). There is no rope, no cable span and no hook.
+- No fake ride surfaces: pass. `tin_cart` is "solid wheels, no rails" (manifest story), the planks in `gallery_collapse` are heaped and tilted, there is no ramp, no rail and no flat deck, and the dressing is held off the lines by the `line_clear` and `keepout` rules.
+- No glowing lamps: pass. Every lamp in `lamp_rack` and `coat_hooks` is the unlit `lamp()` with the plain lens; the brief's lamp veto says none is lit.
+- No ancient-green or uranium-green: pass. The greens are FERN 7b8a58, FERN_D 58664a and LICHEN 9aa284, a dusty grey-sage "never luminous, clear of mint and ancient green" (sinkhole.py line 27). The closest to ANCIENT is FERN at 0.49.
+
+**GROUNDING.md (main cb534a2d) rows read.**
+- Line 30 and line 201 (Conflict: the board's brood pod against the honeycomb nest): not copied. The props include no pod, no sphere-on-a-pipe and no hex cell.
+- Line 199 (open sky, gallery ring, 20 m caisson bowl): not a prop concern; the props stay out of the ring and bowl through the `set_dressing.gd` keepouts.
+- Line 200 (brood light column, ancient green only on ancient machines): not copied; no prop is green-lit.
+- Line 202 (tube to daylight, plain wooden rails, no glowing walls): followed; no prop emits.
+- Line 203 (rope hardware ownership left open): followed; no rope or hook prop.
+- Line 204 (rails and props clear of the rolling route; floor stays empty): followed through the line and route keepouts; the stills section above lists where this leaves the frames bare.
+- Line 205 (mining clusters in recesses, non-emissive, off the route): followed by the vignette templates and the plan check.
+- Line 206 (coils and manifolds as set dressing, water is reflected daylight): followed by `hose_reel` and the pump engine, neither a grapple point or pickup.
+- Line 213 (green only on ancient machines, unlit lamps): followed, as in the avoid list.
+- Line 217 (pump crew lore at the caisson): the pump engine and gallery vignettes are the visual hook for that line (`lore_rows.gd:338-341`).
+
+## Board drift (for review)
+
+I did not change the kit. The reviewer decides FAIL and the ART-MISTAKES line.
+- Petrol and oxide: the Dig props board's machines are petrol enamel and oxide panels with sandstone-edged rust patches (hoist bearing, cart repair, manifold). The sinkhole machines are steel grey and timber. The kit carries no petrol and one rust use, so the pump engine and cart read greyer and duller than the board.
+- Copper accents: the board's bands and pipe fittings are copper; the kit uses none. This is allowed by the brass rule, but it is a palette difference.
+- Plush crews: the crew board's soft-toy crews are not modelled; the props show only what the crew left. GROUNDING line 217 keeps the crew as lore, so I read this as intended.
+
 ## Stills: why most frames look unchanged (coordinator ruling, #241 6327644729: option (c))
 
 Two pose sets were replayed with the vignette file moved aside (before) and in place (after): the audit's 12 barest poses and 12 evenly spaced poses. Dressing is visible in 2 of the 24 after frames:
