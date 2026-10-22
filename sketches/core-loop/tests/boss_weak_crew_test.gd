@@ -37,6 +37,7 @@ func _run() -> void:
 	await _bot()
 	await _learner()
 	await _stats()
+	await _outcome_phase()
 	ChallengeDials.reset()
 	quit(_t.verdict())
 
@@ -431,4 +432,53 @@ func _stats() -> void:
 	_t.check("dial 0: the weak fields stay null and nothing is counted", obot.boss_note["weak_opened"] == null and obot.boss_note["crew_waves"] == null
 			and off[1].weak_stats["opened"].is_empty(), "")
 	off[0].free()
+	await physics_frame
+
+
+func _total(stats: Dictionary, key: String) -> int:
+	var n := 0
+	for phase in stats[key]:
+		n += int(stats[key][phase])
+	return n
+
+
+# Outcomes are filed under the floor phase the point opened in, not the phase live when the change is noticed, and
+# the killing blow's outcome and the hatches still open at the end close the books exactly.
+func _outcome_phase() -> void:
+	var booted = await _boot({"waking.weak_points": 1.0})
+	var game = booted[0]
+	var mod = booted[1]
+	mod._open_hatch(1)
+	mod._weak_judge({"gain": 10.0, "punch": 500.0, "reel": true}, "hatch_1", "ram")
+	mod.floors.chunks_shattered(1)
+	await physics_frame
+	await physics_frame
+	_t.check("a break that costs a chunk files opened and broken under the opening phase 1", mod.phase == 2 and mod.weak_stats["opened"] == {"1": 1}
+			and mod.weak_stats["broken"] == {"1": 1} and mod.weak_stats["timed_out"].is_empty(), "%d %s" % [mod.phase, str(mod.weak_stats)])
+	game.free()
+	await physics_frame
+	booted = await _boot({"waking.weak_points": 1.0})
+	game = booted[0]
+	mod = booted[1]
+	mod._open_hatch(1)
+	mod.floors.chunks_shattered(1)
+	mod.weak.step(mod.clock + 100.0)
+	await physics_frame
+	await physics_frame
+	_t.check("a timeout after the floor drops files under the opening phase 1", mod.phase == 2 and mod.weak_stats["timed_out"] == {"1": 1}
+			and mod.weak_stats["opened"] == {"1": 1}, "%d %s" % [mod.phase, str(mod.weak_stats)])
+	game.free()
+	await physics_frame
+	booted = await _boot({"waking.weak_points": 1.0})
+	game = booted[0]
+	mod = booted[1]
+	mod._open_hatch(1)
+	mod._open_point("hatch_2")
+	mod._weak_judge({"gain": 10.0, "punch": 500.0, "reel": true}, "hatch_1", "ram")
+	mod._on_warden_died(Vector3.ZERO, 0)
+	var s: Dictionary = mod.weak_stats
+	_t.check("the killing blow's break is counted before the defeat", s["broken"] == {"1": 1}, str(s))
+	_t.check("opened = sealed + timed_out + broken + open_at_end at fight end", _total(s, "opened") == 2 and _total(s, "opened")
+			== _total(s, "sealed") + _total(s, "timed_out") + _total(s, "broken") + _total(s, "open_at_end") and mod.weak_open_at_end == {"1": 1}, str(s))
+	game.free()
 	await physics_frame

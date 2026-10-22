@@ -131,7 +131,12 @@ var weak_sealed: Array = []
 # Per floor phase ("1" to "4") counts for the sweep's seal rate, each {phase: count}: opened (each hatch or override
 # opening), sealed (the crew's fit sealed it), timed_out (the window ran out), broken (a reel broke its seal) and
 # crew_waves (waves of fitters called). Empty at dial 0.
-var weak_stats := {"opened": {}, "sealed": {}, "timed_out": {}, "broken": {}, "crew_waves": {}}
+var weak_stats := {"opened": {}, "sealed": {}, "timed_out": {}, "broken": {}, "crew_waves": {}, "open_at_end": {}}
+# Hatches and the override open right now, {phase: count} by the phase they opened in (the same dictionary as
+# weak_stats["open_at_end"]). opened = sealed + timed_out + broken + weak_open_at_end holds once _note_weak has run.
+var weak_open_at_end: Dictionary = weak_stats["open_at_end"]
+# The floor phase each currently counted opening happened in; the outcome is filed under it, not under the live phase.
+var _weak_open_phase := {}
 var _seals_seen := {}
 var _weak_last := {}
 
@@ -416,7 +421,8 @@ func _open_hatch(k: int) -> void:
 # The one place a point opens: the open calls its crew.
 func _open_point(id: String) -> void:
 	if _open_weak(id):
-		_tally("opened")
+		_weak_open_phase[id] = phase
+		_tally("opened", phase)
 		_weak_last[id] = WeakPoints.OPEN
 		_call_crew(id)
 
@@ -535,6 +541,9 @@ func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 # Every natural death is in the pit: the chunk before the last has already dropped the
 # lowest floor (waking_floors.gd live()), so the final-floor row is the kill itself.
 func _on_warden_died(at: Vector3, scrap: int) -> void:
+	# The killing blow's outcome (a reel that breaks a part and kills the Warden) is filed before the defeat.
+	if weak.active():
+		_note_weak()
 	if state == FIGHT:
 		_discover(CodexEntries.WAKING_FINAL_FLOOR, ctx.player.ball_position())
 	_clear_attacks()
@@ -760,6 +769,7 @@ func _step_crew() -> void:
 	for c in _crew:
 		var f = c["node"]
 		if not is_instance_valid(f):
+			_uncount(c)
 			continue
 		var id: String = c["id"]
 		if f.is_dead():
@@ -785,22 +795,30 @@ func _note_weak() -> void:
 		var id: String = p["id"]
 		var n: int = weak.fit_seals(id)
 		var sealed: int = n - int(_seals_seen.get(id, 0))
+		var opened_in: int = int(_weak_open_phase.get(id, phase))
 		for i in sealed:
-			weak_sealed.append({"id": id, "phase": phase, "at": clock})
-			_tally("sealed")
+			weak_sealed.append({"id": id, "phase": opened_in, "at": clock})
+			_tally("sealed", opened_in)
 		_seals_seen[id] = n
 		var now: int = weak.state(id)
 		if int(_weak_last.get(id, WeakPoints.SHUT)) == WeakPoints.OPEN and now != WeakPoints.OPEN:
 			if now == WeakPoints.BROKEN:
-				_tally("broken")
+				_tally("broken", opened_in)
 			elif sealed <= 0:
-				_tally("timed_out")
+				_tally("timed_out", opened_in)
+		if now != WeakPoints.OPEN:
+			_weak_open_phase.erase(id)
 		_weak_last[id] = now
+	weak_open_at_end.clear()
+	for id in _weak_open_phase:
+		if weak.state(id) == WeakPoints.OPEN:
+			var key := str(_weak_open_phase[id])
+			weak_open_at_end[key] = int(weak_open_at_end.get(key, 0)) + 1
 
 
-func _tally(key: String) -> void:
+func _tally(key: String, at_phase := -1) -> void:
 	var by_phase: Dictionary = weak_stats[key]
-	var k := str(phase)
+	var k := str(at_phase if at_phase >= 0 else phase)
 	by_phase[k] = int(by_phase.get(k, 0)) + 1
 
 
@@ -809,6 +827,7 @@ func _reset_weak_record() -> void:
 	weak_sealed.clear()
 	_seals_seen.clear()
 	_weak_last.clear()
+	_weak_open_phase.clear()
 	for key in weak_stats:
 		(weak_stats[key] as Dictionary).clear()
 
