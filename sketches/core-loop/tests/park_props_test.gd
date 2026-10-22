@@ -680,7 +680,134 @@ func _check_controls(world: Dictionary, kit: Dictionary, c) -> void:
 	twin["height"] = 2.0
 	twin["tags"] = []
 	_t.check("planted: a non-hero twin at the same point passes the MID tier", not _rules(twin, c).has("line_clear"), str(_rules(twin, c)))
+	_check_kind_line_clear(kit, c, ground)
+	_check_brief_and_reach(kit, c, ground)
+	_check_telegraph(kit, c, world)
 	_check_branches(map, kit, c, ground)
+
+
+# A kind's own line_clear_m (the kit's optional field) binds when it is larger than the height tier; kit_errors bounds it.
+func _check_kind_line_clear(kit: Dictionary, c, ground: Callable) -> void:
+	var wide := kit.duplicate(true)
+	wide["kinds"]["fix_bench"]["line_clear_m"] = 30.0
+	var low := ["low", 1.0, [], 25.0, 31.0]
+	var near := _line_spot(wide, c, ground, low, 25.0)
+	var far := _line_spot(wide, c, ground, low, 31.0)
+	var plain := _line_spot(kit, c, ground, low, 25.0)
+	_t.check("planted: the kit kind carries line_clear_m into the instance", not near.is_empty() and near["line_clear_m"] == 30.0 and plain["line_clear_m"] == 0.0)
+	_t.check("planted: a line_clear_m 30 kind 25 m from a line turns line_clear red", not near.is_empty() and _rules(near, c).has("line_clear"), str(_rules(near, c)))
+	var detail := ""
+	for v: Dictionary in ParkProps.check_one(near, c):
+		if v["rule"] == "line_clear":
+			detail = v["detail"]
+	_t.check("planted: the line_clear detail names the kind value", detail.begins_with("kind fix_bench") and detail.ends_with("want 30"), detail)
+	_t.check("planted: the same kind 31 m from a line passes line_clear", not far.is_empty() and not _rules(far, c).has("line_clear"), str(_rules(far, c)))
+	_t.check("planted: the same kind without the field passes line_clear at 25 m (low tier 6 m)", not plain.is_empty() and not _rules(plain, c).has("line_clear"), str(_rules(plain, c)))
+	_t.eq("kit_errors accepts line_clear_m 30", ParkProps.kit_errors(wide), [])
+	for bad in [3, 70, "30", 6.0, true]:
+		var broken := kit.duplicate(true)
+		broken["kinds"]["fix_bench"]["line_clear_m"] = bad
+		var errors := ParkProps.kit_errors(broken)
+		_t.check("kit_errors rejects line_clear_m %s and names the kind" % str(bad), errors.size() == 1 and String(errors[0]).contains("fix_bench"), str(errors))
+
+
+# The brief's ride-line kinds must carry line_clear_m of at least 30, and a rule past the line reach fails closed.
+func _check_brief_and_reach(kit: Dictionary, c, ground: Callable) -> void:
+	var with_wash := kit.duplicate(true)
+	with_wash["kinds"]["washline"] = kit["kinds"]["fix_bench"].duplicate(true)
+	var errors := ParkProps.kit_errors(with_wash)
+	_t.check("kit_errors: a washline kind without line_clear_m is an error", errors.size() == 1 and String(errors[0]).contains("washline"), str(errors))
+	with_wash["kinds"]["washline"]["line_clear_m"] = 30.0
+	_t.eq("kit_errors: a washline kind with line_clear_m 30 passes", ParkProps.kit_errors(with_wash), [])
+	with_wash["kinds"]["washline"]["line_clear_m"] = 20.0
+	_t.check("kit_errors: a washline kind with line_clear_m 20 is an error", ParkProps.kit_errors(with_wash).size() == 1)
+	var nan := kit.duplicate(true)
+	nan["kinds"]["fix_bench"]["line_clear_m"] = NAN
+	_t.check("kit_errors rejects NaN line_clear_m", ParkProps.kit_errors(nan).size() == 1)
+	var far := _line_spot(kit, c, ground, ["low", 1.0, [], 0.0, 0.0], 40.0)
+	far["line_clear_m"] = 60.0
+	far["radius"] = 5.0
+	var reach := ParkProps.check_one(far, c).filter(func(v: Dictionary) -> bool: return v["rule"] == "line_clear")
+	_t.check("planted: need 60 plus radius 5 passes the line reach and fails closed", reach.size() == 1 and String(reach[0]["detail"]).contains("beyond the line reach"), str(reach))
+
+
+# The telegraph rule: an event_rows site footprint grown by hold_clear_m (plus the instance radius) keeps props out.
+func _check_telegraph(kit: Dictionary, c, world: Dictionary) -> void:
+	_t.check("the fixture park's event_rows resolve into the context", c.events.size() > 0 and c.unresolved.is_empty(), str(c.events.size()))
+	var ground: Callable = world["ground"]
+	var hold := 20.0
+	var half := 5.0
+	var probe := {}
+	var at := Vector2.ZERO
+	for candidate: Vector2 in _grid(c.rect, 20):
+		var inst := _planted(kit, "fix_bench", candidate, ground)
+		if _rules(inst, c).is_empty():
+			probe = inst
+			at = candidate
+			break
+	_t.check("a clean bench exists to plant the telegraph control on", not probe.is_empty())
+	if probe.is_empty():
+		return
+	var reach: float = half + hold + float(probe["radius"])
+	var make := func(dx: float) -> Object:
+		var zone := ParkProps.context(world["map"], ground, world["stage"])
+		var site := {"id": "planted_row", "at": [at.x + dx, at.y], "yaw_deg": 0, "size": [half * 2.0, 2.0, half * 2.0]}
+		zone.events = [{"id": "planted_event", "site": site, "half": ParkMap.footprint_half_extents(site), "box": true, "strike": -1.0, "hazard": -1.0, "hold": hold}]
+		return zone
+	var inside: Object = make.call(reach - 1.0)
+	var outside: Object = make.call(reach + 1.0)
+	_t.eq("planted: a bench inside an event hold zone fails telegraph alone", _rules(probe, inside), ["telegraph"])
+	var hits := ParkProps.check_one(probe, inside)
+	_t.check("planted: the telegraph detail names the event and site", not hits.is_empty() and hits[0]["detail"] == "inside event planted_event hold zone (planted_row grown 20 m)", str(hits))
+	_t.eq("planted: the same bench just outside the grown footprint passes", _rules(probe, outside), [])
+	var bare := ParkProps.context(world["map"], ground, world["stage"])
+	bare.events = []
+	_t.eq("planted: without events the bench passes", _rules(probe, bare), [])
+	# Event geometry: a lightning event is a strike_m circle at the site point, whatever the site's footprint (natural.gd plan);
+	# a box event with effect.footprint_m uses that footprint (event_director.gd _park_clear).
+	var big := {"id": "big_site", "element": "ground", "stamp": "", "recipe": "", "home": "", "ride_fact": "", "at": [at.x, at.y], "yaw_deg": 0, "size": [200.0, 2.0, 200.0]}
+	var strike := {"id": "planted_strike", "kind": "lightning", "family": "natural", "site": "big_site", "hold_clear_m": 0.0, "effect": {"strike_m": 8.0}}
+	var circle := _event_context(world, big, strike)
+	var at30 := _planted(kit, "fix_bench", at + Vector2(30, 0), ground)
+	var at5 := _planted(kit, "fix_bench", at + Vector2(5, 0), ground)
+	_t.check("planted: the lightning zone is a circle, not the 200 m site", circle.events.size() == 1 and not circle.events[0]["box"] and circle.events[0]["strike"] == 8.0)
+	_t.check("planted: a bench 30 m from a strike_m 8 centre, inside the big site, passes telegraph", not _rules(at30, circle).has("telegraph"), str(_rules(at30, circle)))
+	_t.check("planted: a bench 5 m from that centre fails telegraph", _rules(at5, circle).has("telegraph"), str(_rules(at5, circle)))
+	var boxed := _event_context(world, big, {"id": "planted_box", "kind": "flood_fill", "family": "natural", "site": "big_site", "hold_clear_m": 0.0, "effect": {"footprint_m": [20.0, 20.0]}})
+	_t.check("planted: a footprint_m 20 box event keeps 5 m out but not 30 m", boxed.events.size() == 1 and _rules(at5, boxed).has("telegraph") and not _rules(at30, boxed).has("telegraph"), str(boxed.events))
+	# A lightning event with a ground effect (effect.swap) also holds the director's box (event_director.gd _park_ground, _park_clear).
+	var spire := {"id": "spire_site", "element": "ground", "stamp": "", "recipe": "", "home": "", "ride_fact": "", "at": [at.x, at.y], "yaw_deg": 0, "size": [50.0, 2.0, 50.0]}
+	var at45 := _planted(kit, "fix_bench", at + Vector2(45, 0), ground)
+	var swap_row := {"id": "planted_spire", "kind": "lightning", "family": "natural", "site": "spire_site", "hold_clear_m": 30.0, "effect": {"strike_m": 10.0, "swap": "spire_top_ramp"}}
+	var no_swap := {"id": "planted_spire", "kind": "lightning", "family": "natural", "site": "spire_site", "hold_clear_m": 30.0, "effect": {"strike_m": 10.0}}
+	_t.check("planted: a bench outside the strike circle but inside the grown box fails telegraph when the lightning has a swap", _rules(at45, _event_context(world, spire, swap_row)).has("telegraph"))
+	_t.check("planted: the same bench passes telegraph without the swap", not _rules(at45, _event_context(world, spire, no_swap)).has("telegraph"))
+	# An industrial hazard reaches hazard_m[0] from the site point, past a small box.
+	var collector := {"id": "collector_site", "element": "ground", "stamp": "", "recipe": "", "home": "", "ride_fact": "", "at": [at.x, at.y], "yaw_deg": 0, "size": [30.0, 2.0, 8.0]}
+	var hazard_row := {"id": "planted_collector", "kind": "boiler_burst", "family": "industrial", "site": "collector_site", "hold_clear_m": 14.0, "effect": {"hazard_m": [24.0, 10.0]}}
+	var at21 := _planted(kit, "fix_bench", at + Vector2(21, 0), ground)
+	_t.check("planted: a bench 21 m along +x of a hazard_m [24, 10] site fails telegraph", _rules(at21, _event_context(world, collector, hazard_row)).has("telegraph"))
+	var plain_row := hazard_row.duplicate(true)
+	plain_row["effect"] = {}
+	_t.check("planted: the same site without hazard_m passes at 21 m", not _rules(at21, _event_context(world, collector, plain_row)).has("telegraph"))
+	var broken_map = world["map"]
+	broken_map.park["event_rows"].append({"id": "orphan_event", "site": "no_such_row", "hold_clear_m": 5.0})
+	var orphaned := ParkProps.context(broken_map, ground, world["stage"])
+	broken_map.park["event_rows"].pop_back()
+	_t.check("an event whose site resolves to no park row is unresolved", orphaned.unresolved.size() == 1 and String(orphaned.unresolved[0]).contains("orphan_event"), str(orphaned.unresolved))
+
+
+# A context whose only event is `event` on the in-memory park row `site`.
+func _event_context(world: Dictionary, site: Dictionary, event: Dictionary) -> Object:
+	var map = world["map"]
+	map.park["park_rows"].append(site)
+	map.park["event_rows"].append(event)
+	var made := ParkProps.context(map, world["ground"], world["stage"])
+	map.park["event_rows"].pop_back()
+	map.park["park_rows"].pop_back()
+	var mine: Array = made.events.filter(func(e: Dictionary) -> bool: return e["id"] == event["id"])
+	made.events = mine
+	return made
 
 
 # One planted instance per remaining validator branch, each of which must produce exactly its rule.
