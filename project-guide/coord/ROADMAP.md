@@ -72,6 +72,29 @@ From the [board grounding](../../docs/art/reference/GROUNDING.md): ideas the app
 | 20 | UI | Tally spent-window state check | Tally's clip is 3 (PILOTS.md:17), so there is no fourth slot. Check that each spent window of the three reads by shape plus colour in the HUD; fix only if missing. Boards: pilots-reference-tally-ledger-controls | none |
 | post-alpha | Challenge | Brindle hatch weak point (stretch) | One hatch reusing weak_points.gd that opens on a named tell and removes the crane attack family; only if U4 for the Waking and Mind lands at dial 1. Boards: bosses-world-boss-brindle | U4 weak-point rule object landing; owner ask |
 
+## Pilot ball motion fixes (22 Oct)
+
+From the [motion spec](../../docs/art/reference/MOTION-SPEC.md). Each fix keeps the physics as it is and changes only what the ball draws.
+
+| Wave | Lane | Card | Owner call |
+|---|---|---|---|
+| 19 | Systems | Take the cockpit out of the juice transform | no |
+| 19 | Systems | Stop the heft inflation (shell size 1.0 on Hoberman shells) | yes, default in the spec |
+| 20 | Animation | Replace the jelly squash with a lattice-only clench | no |
+| 19 | Animation | Drive the gimbal rings from the carrier's bank, not the lattice's tumble | no |
+| 20 | Systems | Bank the carrier off steep faces (a sideways twin of rule 6) | no |
+| 19 | Systems | The rope leaves the collar fairlead, never the centre | no |
+| 20 | Systems | Keep the spin through mid-air velocity sets | no |
+| 20 | Systems | Couple the cableway ride to the cable | no |
+| 20 | Animation | Pod yaw rules: clamp to the camera, face the anchor, slow the reversals | no |
+| 20 | Effects | Wagon-wheel strobe treatment | no |
+| 20 | Modeling | Inner cockpit sphere: place it in the ladder or cut it | yes, default in the spec |
+| 20 | Modeling | Record the radius ladder and pin it | no |
+| 20 | Effects | Dunk charge on the level carrier, in class colour | no |
+| 19 | Systems | Motion capture tooling for real frames | no |
+| 19 | Effects | Check that the placeholder glide wings hide on hero shells | no |
+| post-alpha | Systems | Ceiling rolls and low gravity stay as proposals | yes, default in the spec |
+
 ## Fixed dates
 
 - 21 Oct, 19:00Z. The weekly limit reset; wave 18 lanes started about 21:00Z. Next reset 28 Oct 19:00Z.

@@ -4,6 +4,8 @@ Approved by Andrew on 22 Oct 2026 as the shared reference for every art lane (se
 
 **Before building from a board, read its rows in [GROUNDING.md](GROUNDING.md):** each gameplay idea on every board is traced to the game, the roadmap, a conflict to avoid, or a cut.
 
+**Before drawing or building anything that moves the pilot ball, read [MOTION-SPEC.md](MOTION-SPEC.md):** what the lattice, cockpit, weapon ring, rope and husk do in each movement situation, checked against the code.
+
 | Set | Boards | Index |
 |---|---|---|
 | Overall style | 8 | [style/README.md](style/README.md) |
