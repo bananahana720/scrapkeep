@@ -243,7 +243,7 @@ func painter():
 
 # The conservative world box of everything this mark's painter draws at any progress: the
 # footprint at progress 1, the fence up to reach_up, the lift, a wave's final extent and a
-# projectile's flight trace (WarningBound). Cached at commit; read-only. Empty (AABB()) when
+# projectile's flight trace (WarningBound). Cut at commit; a read after a non-driven repaint also takes the painter's current meshes in, so the cache only grows. Empty (AABB()) when
 # it cannot promise: nothing is built, or the mark was carried off its committed centre (the
 # Warden's mounting moves a pulse ring's center after commit), so the caller walks the meshes.
 func screen_bound_box() -> AABB:
@@ -310,7 +310,7 @@ func _repaint() -> void:
 		_painter.paint(Threat.marks(d, true), Threat.MOTION_LAYERS)
 		# Repainted marks stand on ground the build did not sample; screen_bound_box() takes
 		# their meshes in when it is read.
-		_bound_stale = _bound.size != Vector3.ZERO
+		_bound_stale = _bound_stale or _bound.size != Vector3.ZERO
 	var fill := Threat.fill_tint(d)
 	if fill != _fill_tint:
 		_fill_tint = fill

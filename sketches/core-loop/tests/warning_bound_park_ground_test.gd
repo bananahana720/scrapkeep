@@ -14,10 +14,13 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Terrain := preload("res://src/world/terrain.gd")
+const WarningBound := preload("res://src/combat/warning_bound.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 
 const TOLERANCE := 1.0e-3
 const STAGES := [2, 4, 5, 6]
+# The planted control runs the hazards on these stages with the read-time merge switched off.
+const CONTROL_STAGES := [2, 4]
 # A spot's relief is the height range over its 3 x 3 neighbourhood at SCAN_STEP_M, the heightfield's
 # cell (terrain.gd STEP) doubled, so a spot with a cliff in reach scores high.
 const SCAN_STEP_M := 4.0
@@ -31,6 +34,9 @@ var _world: Node3D
 var _terrain
 var _worst := {}
 var _cases := 0
+# The control pass: hazards only, WarningBound.test_skip_hazard_merge on, misses counted not failed.
+var _control := false
+var _misses := 0
 
 
 func _initialize() -> void:
@@ -48,6 +54,21 @@ func _run() -> void:
 	_terrain.build(holder)
 	_world = Node3D.new()
 	root.add_child(_world)
+	# Control: with the hazards' read-time merge off, the same real-ground hazards must miss
+	# somewhere, or the pass below proves nothing (the merge reads the meshes it is compared to).
+	_control = true
+	WarningBound.test_skip_hazard_merge = true
+	for stage in CONTROL_STAGES:
+		_terrain.use(stage)
+		await process_frame
+		for spot in _spots(stage):
+			_place(stage, spot)
+	WarningBound.test_skip_hazard_merge = false
+	_control = false
+	print("park_ground control: %d hazard cases with the merge off, %d missed" % [_cases, _misses])
+	t.check("control: with the read-time merge off at least one real-ground hazard misses", _misses > 0, "%d misses of %d" % [_misses, _cases])
+	_cases = 0
+	_worst = {}
 	for stage in STAGES:
 		_terrain.use(stage)
 		await process_frame
@@ -118,6 +139,8 @@ func _place(stage: int, spot: Array) -> void:
 		"lane INSTANT": func() -> Node3D: return Telegraph.lane(_world, _terrain, Threat.Type.INSTANT, at, heading, 10.0, 8.0),
 		"wedge LANE": func() -> Node3D: return Telegraph.wedge(_world, _terrain, Threat.Type.LANE, at, heading, 22.0, 35.0),
 	}
+	if _control:
+		builds = {}
 	for label in builds:
 		var node: Node3D = builds[label].call()
 		var steps: Array = [0.0, 0.5, 1.0]
@@ -160,6 +183,10 @@ func _contained(node: Node3D, form: String, label: String) -> void:
 	PlayerFx._merge_meshes(node, merged)
 	var mesh: AABB = merged[0] if merged[1] else AABB()
 	_cases += 1
+	if _control:
+		if bound.size == Vector3.ZERO or not bound.grow(TOLERANCE).encloses(mesh):
+			_misses += 1
+		return
 	if bound.size == Vector3.ZERO or mesh.size == Vector3.ZERO:
 		t.check("contained: %s" % label, false, "box %s, meshes %s" % [bound, mesh])
 		return

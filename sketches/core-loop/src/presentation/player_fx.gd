@@ -643,7 +643,9 @@ func impact_frame(at: Vector3, strength: float) -> bool:
 # with every corner behind is skipped. The box is the node's own screen_bound_box() when it
 # has one and it is not empty: Telegraph and Hazard cut one at commit from their committed
 # geometry (WarningBound), conservative over everything their painter draws at any progress,
-# so a refresh projects 8 corners per warning and walks no meshes (lighting L7, #297). A node
+# so a refresh projects 8 corners per warning and a telegraph walks no meshes; a hostile hazard
+# stepped since its last read walks its own painter's meshes once on the read (lighting L7,
+# #297). A node
 # without one, or whose box is empty (a mark carried off its commit, a finished hazard), falls
 # back to the mesh walk: its visual meshes' world boxes merged into one (see _merge_meshes).
 # `use_bounds` false forces the walk, for the bench and the tests. Reusable by any 2D layer

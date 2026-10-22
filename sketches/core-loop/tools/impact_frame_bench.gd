@@ -48,6 +48,7 @@ func _run() -> void:
 	_bench()
 	await _rects_bench()
 	await _commit_bench()
+	await _read_bench()
 	await _frames(2)
 	print("impact_frame_bench: ", "PASS" if _failures == 0 else "FAIL (%d)" % _failures)
 	quit(0 if _failures == 0 else 1)
@@ -346,3 +347,52 @@ func _summary_n(label: String, usec: Array, want: int) -> Array:
 	_check(label + ": samples taken", usec.size() == want, str(usec.size()))
 	_check(label + ": p99 >= mean >= 0", p99 >= mean and mean >= 0.0, "mean %.1f p99 %.1f" % [mean, p99])
 	return [mean, p99, usec.back()]
+
+
+# --- Read after step ----------------------------------------------------------------------
+
+# Per read: a hostile hazard stepped since its last read takes its painter's meshes in (one mesh
+# walk); a telegraph's read is a cache hit. Only the reads are timed; the steps between them
+# are not. Marks sit on flat ground, so the figure is the read, not the ground.
+func _read_bench() -> void:
+	var world := Node3D.new()
+	root.add_child(world)
+	var ground := FlatGround.new()
+	var ring: Node3D = Telegraph.ring(world, ground, Threat.Type.INSTANT, Vector3.ZERO, 6.0)
+	for live in [1, 4]:
+		var hazards: Array = []
+		for k in live:
+			var h := Hazard.new()
+			h.ground = func(point: Vector3) -> float: return 0.0
+			h.commit_annulus("read_%d" % k, Threat.Type.INSTANT, Vector3(10.0 * k, 0.0, 10.0), Vector2(0.0, 6.0), 3.5, 100.0, 1.0)
+			world.add_child(h)
+			hazards.append(h)
+		var merges_before := 0
+		for h in hazards:
+			merges_before += h.bound_merges
+		var usec: Array = []
+		for i in WARM_UP + COMMIT_CALLS:
+			for h in hazards:
+				h.step(0.016)
+			var began := Time.get_ticks_usec()
+			for h in hazards:
+				h.screen_bound_box()
+			if i >= WARM_UP:
+				usec.append(Time.get_ticks_usec() - began)
+		var merged := 0
+		for h in hazards:
+			merged += h.bound_merges
+		_check("read %d hazards: every read merged" % live, merged - merges_before == live * (WARM_UP + COMMIT_CALLS), str(merged - merges_before))
+		var sum := _summary_n("read %d hazards" % live, usec, COMMIT_CALLS)
+		print("read_bench hazards_stepped_between_reads=%d reads=%d per_pass_mean_us=%.1f per_pass_p99_us=%.1f per_read_mean_us=%.1f" % [live, COMMIT_CALLS, sum[0], sum[1], sum[0] / live])
+		for h in hazards:
+			h.free()
+	var cached: Array = []
+	for i in WARM_UP + COMMIT_CALLS:
+		var began := Time.get_ticks_usec()
+		ring.screen_bound_box()
+		if i >= WARM_UP:
+			cached.append(Time.get_ticks_usec() - began)
+	var tsum := _summary_n("read telegraph", cached, COMMIT_CALLS)
+	print("read_bench telegraph reads=%d per_read_mean_us=%.1f per_read_p99_us=%.1f" % [COMMIT_CALLS, tsum[0], tsum[1]])
+	world.free()

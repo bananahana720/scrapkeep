@@ -300,12 +300,12 @@ func painter():
 
 # The conservative world box of everything this hazard's painter draws at any progress: the
 # full footprint, the fence up to `reach`, the lift, a sweep's chevrons ahead of its front
-# (WarningBound). Cached in _ready; read-only. Empty (AABB()) before the painter is built
+# (WarningBound). Cut in _ready; a read after a step also takes the painter's current meshes in (see _grow_bound), so the cache only grows. Empty (AABB()) before the painter is built
 # and once the hazard is DONE (its painter is hidden then, so the mesh walk finds nothing).
 func screen_bound_box() -> AABB:
 	if _painter == null or state == DONE:
 		return AABB()
-	if _bound_stale:
+	if _bound_stale and not WarningBound.test_skip_hazard_merge:
 		_bound_stale = false
 		bound_merges += 1
 		_bound = _bound.merge(WarningBound.mesh_box(_painter))

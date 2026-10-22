@@ -5,7 +5,9 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 # The world box that holds everything a committed warning's Painter can draw at any progress
 # (lighting L7, #297, proposal c). Telegraph and Hazard each compute it once, from the same
 # descriptor numbers the Painter reads, and cache it; PlayerFx.warning_rects projects the box
-# instead of walking every mesh on every impact-frame refresh. The box is conservative: it
+# instead of walking every mesh on every impact-frame refresh. A telegraph walks no meshes on a
+# read; a hazard stepped since its last read walks its own painter's meshes once on the read
+# (Hazard.screen_bound_box). The box is conservative: it
 # may be larger than the meshes, never smaller (tests/warning_bound_containment_test.gd holds
 # it to the real meshes, per shape and type, on flat and bumpy ground).
 #
@@ -31,6 +33,10 @@ const KEYLINE_EXTRA := 0.08
 # can plant a box that is too tight and watch the containment check fail. 1.0 in play; nothing
 # in src/ sets it.
 static var test_pad_scale := 1.0
+# Test-only: true makes a Hazard skip the read-time merge of its repainted meshes, leaving its
+# build-time box, so a test can show that merge is what holds hazards on real ground. False in
+# play; nothing in src/ sets it.
+static var test_skip_hazard_merge := false
 
 # How far a line's charcoal underlay widens it (_lined's draw(UNDERLAY)).
 const GROW := Threat.UNDERLAY
@@ -54,9 +60,10 @@ const LANE_PAD := maxf(Threat.RAIL + GROW, OWNER_OUT + OWNER_HALF + GROW)
 # marks on bumpy and heightfield ground. It is an allowance, not a bound: a cliff between a
 # sampled vertex and an unsampled one (the park heightfields have rises of 17 m and more
 # between neighbouring 2 m vertices, measured) can exceed it. So a mark that REPAINTS on
-# ground the build did not sample (a Hazard, which is never driven) does not rely on it: it
-# merges its meshes' box into the cached one after every repaint (Hazard._grow_bound), which
-# holds each mesh it has ever drawn. On the real park ground, with only the allowance, such
+# ground the build did not sample (a Hazard, which is never driven) does not rely on it: a
+# step only flags its box stale (Hazard._grow_bound), and the next screen_bound_box() read
+# merges the painter's current meshes' box into the cached one, so the cache holds each mesh
+# it has been read over. On the real park ground, with only the allowance, such
 # hazards missed by up to 16.4 m (tests/warning_bound_park_ground_test.gd), and the footprint
 # relief did not predict the misses (a 3.0 m relief missed by 4.9 m, a 17 m relief held), so a
 # relief threshold could not be derived. Driven telegraphs build every mark at full extent, so
