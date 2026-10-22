@@ -550,9 +550,8 @@ func apply_look() -> void:
 	camera.apply_look_settings(settings_store())
 
 
-# Hold R in play to retry. One retry per press: after any retry, from the hold or from
-# the death screen's R, the hold waits for R to come up before it counts again, so a
-# held R never retries twice.
+# Hold R in play to restart. One restart per press: after one, the hold waits for R to
+# come up before it counts again, so a held R never restarts twice.
 func step_restart_hold(delta: float, r_down: bool) -> void:
 	if not r_down:
 		_restart_latched = false
@@ -563,7 +562,13 @@ func step_restart_hold(delta: float, r_down: bool) -> void:
 	if _restart_held >= RESTART_HOLD:
 		_restart_held = 0.0
 		_restart_latched = true
-		flow.retry_stage()
+		# With a run store (the real game) a held R is a restart of the run: a new run as the same
+		# pilot, the open one logged as abandoned, never as a death. A store-less flow (tests,
+		# bots) keeps the stage retry.
+		if flow.store != null:
+			flow.new_run()
+		else:
+			flow.retry_stage()
 
 
 func restart_hold_fraction() -> float:

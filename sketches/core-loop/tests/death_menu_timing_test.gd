@@ -146,10 +146,34 @@ func _run() -> void:
 	_t.check("summary: N to rolling within %.2f s" % BAR_S, summary_path["ok"] and rest_s <= BAR_S, "%.3f s" % rest_s)
 	_t.check("summary: death to rolling, guard included, within %.2f s" % BAR_S, summary_path["ok"] and summary_path["total_s"] <= BAR_S,
 		"%.3f s (%d ticks)" % [summary_path["total_s"], summary_path["total_ticks"]])
+	await _hold_r_case()
 	_game.free()
 	_clean()
 	DirAccess.remove_absolute(DIR)
 	quit(_t.verdict())
+
+
+# Hold R mid-stage with a store: a new run in world 1 stage 1, the same pilot, no stage retry,
+# no death (the save stays unspent, no run_ended, the old run is not a loss).
+func _hold_r_case() -> void:
+	_game.flow.new_run()
+	await _frames(5)
+	var pilot: String = _game.run.class_id()
+	var old_run: String = _game.run.run_id
+	_game.flow.enter_stage(3, Vector3(0.0, 0.0, 14.0), false)
+	var retried := [0]
+	var ended := [false]
+	_game.events.stage_entered.connect(func(_s: int, retry: bool): retried[0] += 1 if retry else 0)
+	_game.events.run_ended.connect(func(_w: bool): ended[0] = true)
+	_game.step_restart_hold(0.1, true)
+	_t.check("a short hold of R restarts nothing", _game.run.run_id == old_run and _game.run.stage == 3, "stage %d" % _game.run.stage)
+	_game.step_restart_hold(_game.RESTART_HOLD, true)
+	await _frames(3)
+	var stages = _game.ctx.stages
+	_t.check("hold R mid-stage starts a new run in world 1 stage 1, same pilot, no stage retry",
+		_game.run.run_id != old_run and _game.run.stage == stages.first_of(1) and _game.run.world == 1 and _game.run.class_id() == pilot \
+			and retried[0] == 0 and _game.flow.state_name() == "stage" and not _game.run.death_save_spent and not ended[0],
+		"run %s to %s, stage %d world %d, pilot %s, stage retries %d, run_ended %s" % [old_run, _game.run.run_id, _game.run.stage, _game.run.world, _game.run.class_id(), retried[0], ended[0]])
 
 
 func _pad(button: int) -> InputEventJoypadButton:
