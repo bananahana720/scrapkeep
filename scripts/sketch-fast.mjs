@@ -1,16 +1,21 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  countChecks,
   acquireMachine,
   binary,
   importWithRetry,
   isBot,
   isSolo,
   judge,
-  readQuarantine,
+  expiredLine,
+  expiredQuarantine,
+  quarantineNote,
+  quarantineRecord,
+  readQuarantineEntries,
   testTimeoutMs,
 } from "./sketch-smoke.mjs";
 
@@ -221,9 +226,12 @@ export function plan({ picked, timings, budgetMs, width, solo = () => false, bot
 // not blamed); one that also fails on the base is base-red (listed, not blamed).
 // A test red on both sides is base-red only when the head fails no check the base passes:
 // #104 took unit_suite from 6 to 11 failing checks with the same test red on the base.
-export function classifyFailure({ rerunOk, baseOk, headChecks = [], baseChecks = [] }) {
+// A cached base red is weaker evidence than a fresh one, so a head red that shows no checks
+// (a crash) is never base-red on a cached verdict; it takes a fresh base run to say so.
+export function classifyFailure({ rerunOk, baseOk, headChecks = [], baseChecks = [], baseCached = false }) {
   if (rerunOk) return { kind: "flaky", newChecks: [] };
   if (baseOk === false) {
+    if (baseCached && headChecks.length === 0) return { kind: "pr-red", newChecks: [] };
     const base = new Set(baseChecks);
     const newChecks = headChecks.filter((check) => !base.has(check));
     return newChecks.length > 0 ? { kind: "pr-red", newChecks } : { kind: "base-red", newChecks: [] };
@@ -336,12 +344,13 @@ function placeholderRows(sketchDir) {
 
 const running = new Set();
 
-function runGodot(sketchDir, test, timeoutMs) {
+function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
   return new Promise((resolve) => {
     const started = Date.now();
     const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"));
     const child = spawn(binary, ["--headless", "--path", sketchDir, "--script", "res://" + test], { env: { ...process.env, XDG_DATA_HOME: dataHome } });
     running.add(child);
+    onChild(child);
     let output = "";
     child.stdout.on("data", (chunk) => (output += chunk));
     child.stderr.on("data", (chunk) => (output += chunk));
@@ -350,7 +359,7 @@ function runGodot(sketchDir, test, timeoutMs) {
       timedOut = true;
       child.kill("SIGKILL");
     }, timeoutMs);
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
       clearTimeout(timer);
       running.delete(child);
       rmSync(dataHome, { recursive: true, force: true });
@@ -358,16 +367,88 @@ function runGodot(sketchDir, test, timeoutMs) {
       // A kill before the time limit that the lane did not send is usually the container's
       // memory limit (dmesg "Memory cgroup out of memory"), not the test.
       const reason = code === null && !timedOut && child.killedByLane !== true ? "killed by a signal before its time limit (often the container's memory limit; see dmesg)" : verdict.reason;
-      resolve({ test, ok: verdict.ok, exit: code, ms: Date.now() - started, reason, checks: failingChecks(output), tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true });
+      resolve({ test, ok: verdict.ok, exit: code, signal: signal ?? null, ms: Date.now() - started, reason, checks: failingChecks(output), passes: countChecks(output).passes, tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut });
     });
   });
 }
 
+function stopChild(child) {
+  child.killedByLane = true;
+  child.kill("SIGKILL");
+}
+
 function stopRunning() {
-  for (const child of running) {
-    child.killedByLane = true;
-    child.kill("SIGKILL");
+  for (const child of running) stopChild(child);
+}
+
+// Every Godot process the lane starts holds one of `width` lanes, so a confirm's head rerun and
+// base run never push one machine slot past its width (GRAPH caps a 4 vCPU box at 6 lanes).
+// A task holds one lane at a time and never waits for a second, so lanes cannot deadlock.
+export function lanePool(width) {
+  let free = width;
+  const waiters = [];
+  return async (task) => {
+    if (free > 0) free--;
+    else await new Promise((resolve) => waiters.push(resolve));
+    try {
+      return await task();
+    } finally {
+      const next = waiters.shift();
+      if (next) next();
+      else free++;
+    }
+  };
+}
+
+// Only a clean base verdict is cached. A timeout or a kill can come from machine load, and a
+// cached one would read every later real red on that test as base-red.
+export function cacheableBaseRun(run) {
+  return run.exit !== null && !run.killed && !run.timedOut;
+}
+
+// A base red is trusted from the cache only once two base runs agreed on the same failing
+// checks (a flaky base red then lasts for the run that saw it). A fresh pass replaces the entry.
+export function settleBaseEntry(prior, run) {
+  if (run.ok) return { ok: true, checks: [] };
+  const same = prior && prior.ok === false && prior.checks.length > 0
+    && prior.checks.length === run.checks.length && prior.checks.every((check, i) => check === run.checks[i]);
+  return { ok: false, checks: run.checks, confirmed: Boolean(same) };
+}
+
+export function trustedBaseEntry(entry) {
+  return Boolean(entry) && (entry.ok === true || entry.confirmed === true);
+}
+
+// The base run that may judge this run's verdict. A lane stop says nothing; a base timeout or
+// outside kill (exit null, say the OOM killer) says "red on the base too" only when the head rerun
+// timed out as well, else a crash on the head would hide behind a load failure on the base.
+// One exception: a base that died by a signal keeps its verdict when the head rerun died by the
+// same signal and both fail the same checks (park_cave_in aborts at exit on both sides, #241).
+// SIGKILL is the OOM killer or the lane's own timeout kill, so it never counts.
+export function usableBaseRun(rerun, baseRun) {
+  if (!baseRun || baseRun.killed) return null;
+  if ((baseRun.timedOut || baseRun.exit === null) && !rerun.timedOut) {
+    const signal = baseRun.signal;
+    const sameSignal = Boolean(signal) && signal !== "SIGKILL" && rerun.signal === signal && !baseRun.timedOut && !rerun.killed;
+    const head = [...(rerun.checks ?? [])].sort();
+    const base = [...(baseRun.checks ?? [])].sort();
+    const sameChecks = head.length === base.length && head.every((check, i) => check === base[i]);
+    // An earlier abort on the head shows as fewer passing checks, so the counts must match too.
+    const samePasses = rerun.passes === baseRun.passes;
+    return sameSignal && sameChecks && samePasses ? baseRun : null;
   }
+  return baseRun;
+}
+
+function importAsync(args) {
+  return new Promise((resolve) => {
+    const child = spawn(binary, [...args, "--import"], { stdio: "ignore" });
+    const timer = setTimeout(() => child.kill("SIGKILL"), 180_000);
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolve(code);
+    });
+  });
 }
 
 function sourceOf(sketchDir, test) {
@@ -535,6 +616,11 @@ async function main() {
   }
 
   // Stage 2: Godot. Import with one retry, boot, then the selected tests.
+  const quarantineEntries = readQuarantineEntries(sketchDir);
+  const quarantine = new Set(quarantineEntries.map((entry) => entry.test));
+  const expired = expiredQuarantine(quarantineEntries);
+  for (const entry of expired) log(expiredLine(entry));
+  if (!stage("quarantine", expired.length === 0, { note: expired.length ? `${expired.length} expired: ${expired.map((entry) => entry.test).join(", ")}` : `${quarantineEntries.length} rows, none expired` })) finish();
   if (!existsSync(binary)) {
     console.error(`Godot binary not found at ${binary}; set GODOT_BIN`);
     finish(2);
@@ -551,46 +637,122 @@ async function main() {
   const bootVerdict = judge({ status: boot.status, output: (boot.stdout || "") + (boot.stderr || "") });
   if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
 
-  const quarantine = readQuarantine(sketchDir);
   const results = [];
   const flaky = [];
   const baseRed = [];
-  let baseImported = false;
   let prRed = null;
+  const inLane = lanePool(width);
+  const stopped = (test) => ({ test, ok: false, exit: null, ms: 0, reason: "lane stopped", checks: [], tail: "", killed: true, timedOut: false });
+  const godot = (dir, test, timeoutMs, onChild, skip = () => false) => inLane(() => (prRed || skip() ? stopped(test) : runGodot(dir, test, timeoutMs, onChild)));
 
-  // A failure is rerun alone on the head, then on the merge base, before it is the PR's.
-  async function confirm(first) {
-    const timeoutMs = testTimeoutMs(sourceOf(sketchDir, first.test));
-    log(`  rerunning ${first.test} alone (${first.reason})`);
-    const rerun = await runGodot(sketchDir, first.test, timeoutMs);
-    let baseOk = null;
-    let baseChecks = [];
-    if (!rerun.ok && options.baseCheck) {
-      const baseSketch = path.join(baseDir(), SKETCH);
-      if (existsSync(path.join(baseSketch, first.test))) {
-        if (!baseImported) {
-          importWithRetry(`${SKETCH} (base)`, ["--headless", "--path", baseSketch], (job) => {
-            const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: 180_000 });
-            return { label: job.label, exit: result.status, ok: result.status === 0 };
-          });
-          baseImported = true;
-        }
-        log(`  running ${first.test} on the merge base`);
-        const baseRun = await runGodot(baseSketch, first.test, timeoutMs);
-        baseOk = baseRun.ok;
-        baseChecks = baseRun.checks;
+  // A failure is rerun on the head and on the merge base side by side before it is the PR's
+  // (a solo test reruns alone first). Base verdicts are cached per base tree and Godot binary in
+  // the shared git directory, so every worktree reuses them and --pre merges hit the cache too.
+  const baseTreeId = git(["rev-parse", `${diffBase}^{tree}`]);
+  const baseCacheFile = path.join(path.resolve(root, git(["rev-parse", "--git-common-dir"])), "sketch-fast", `base-runs-${baseTreeId.slice(0, 12)}.json`);
+  const binaryStat = existsSync(binary) ? statSync(binary) : null;
+  const binaryId = `${binary} ${binaryStat?.size ?? 0} ${binaryStat?.mtimeMs ?? 0}`;
+  const readBaseCache = () => {
+    try {
+      const stored = JSON.parse(readFileSync(baseCacheFile, "utf8"));
+      return stored.binary === binaryId ? stored.tests ?? {} : {};
+    } catch {
+      return {};
+    }
+  };
+  const baseCache = readBaseCache();
+  let baseImport = null;
+  async function onBase(test, timeoutMs, cancel = { cancelled: false }) {
+    if (!options.baseCheck) return null;
+    if (trustedBaseEntry(baseCache[test])) {
+      log(`  ${test} on the merge base: cached (${baseCache[test].ok ? "green" : "red"})`);
+      return { ...baseCache[test], cached: true };
+    }
+    const baseSketch = path.join(baseDir(), SKETCH);
+    if (!existsSync(path.join(baseSketch, test))) return null;
+    if (cancel.cancelled || prRed) return null;
+    baseImport ??= inLane(async () => {
+      if (prRed) return false;
+      const args = ["--headless", "--path", baseSketch];
+      if ((await importAsync(args)) === 0) return true;
+      log(`${SKETCH} (base) import failed; retrying once`);
+      return (await importAsync(args)) === 0;
+    });
+    if (!(await baseImport)) {
+      log(`  ${test} on the merge base: no verdict (the base import failed twice)`);
+      return null;
+    }
+    if (cancel.cancelled) return null;
+    log(`  running ${test} on the merge base`);
+    const run = await godot(
+      baseSketch,
+      test,
+      timeoutMs,
+      (child) => {
+        cancel.child = child;
+        if (cancel.cancelled) stopChild(child);
+      },
+      () => cancel.cancelled,
+    );
+    if (cacheableBaseRun(run)) {
+      // Another lane on this base tree may have written since; keep its entries, replace atomically.
+      const disk = readBaseCache();
+      baseCache[test] = settleBaseEntry(disk[test] ?? baseCache[test], run);
+      const merged = { ...disk, ...baseCache };
+      try {
+        mkdirSync(path.dirname(baseCacheFile), { recursive: true });
+        const temp = `${baseCacheFile}.${process.pid}.tmp`;
+        writeFileSync(temp, JSON.stringify({ binary: binaryId, tree: baseTreeId, tests: merged }, null, 2) + "\n");
+        renameSync(temp, baseCacheFile);
+      } catch (error) {
+        log(`  base verdict cache not written (${error.message}); the verdict still stands`);
       }
     }
-    return { ...classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks }), rerun };
+    return run;
+  }
+
+  async function confirm(first) {
+    const source = sourceOf(sketchDir, first.test);
+    const timeoutMs = testTimeoutMs(source);
+    let rerun;
+    let baseRun = null;
+    if (isSolo(source)) {
+      log(`  rerunning ${first.test} alone (${first.reason})`);
+      rerun = await godot(sketchDir, first.test, timeoutMs);
+      if (!rerun.ok) baseRun = await onBase(first.test, timeoutMs);
+    } else {
+      log(`  rerunning ${first.test} on the head and the merge base (${first.reason})`);
+      const cancel = { cancelled: false, child: null };
+      const pending = godot(sketchDir, first.test, timeoutMs);
+      const basePending = onBase(first.test, timeoutMs, cancel);
+      rerun = await pending;
+      // A green rerun makes the base verdict moot: stop the base run and cache nothing from it.
+      if (rerun.ok) {
+        cancel.cancelled = true;
+        if (cancel.child) stopChild(cancel.child);
+      }
+      baseRun = await basePending;
+    }
+    // A run the lane stopped is not a verdict; the PR's red already decides the lane.
+    if (rerun.killed) return { kind: "stopped", newChecks: [], rerun };
+    baseRun = usableBaseRun(rerun, baseRun);
+    const baseOk = rerun.ok || !baseRun ? null : baseRun.ok;
+    const baseChecks = rerun.ok || !baseRun ? [] : baseRun.checks;
+    return { ...classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks, baseCached: Boolean(baseRun?.cached) }), rerun };
   }
 
   async function handle(result) {
     const quarantined = quarantine.has(path.posix.basename(result.test, ".gd"));
-    results.push({ test: result.test, ok: result.ok, exit: result.exit, ms: result.ms, reason: result.reason, quarantined });
+    results.push({ test: result.test, ok: result.ok, exit: result.exit, signal: result.signal ?? null, failing: (result.checks ?? []).length, ms: result.ms, reason: result.reason, quarantined });
     log(`${result.ok ? "PASS" : "FAIL"} ${result.test} exit=${result.exit} ${(result.ms / 1000).toFixed(1)}s${quarantined ? " (quarantined)" : ""}`);
+    if (!result.ok && quarantined) {
+      const entry = quarantineEntries.find((row) => row.test === path.posix.basename(result.test, ".gd"));
+      log(`  ${quarantineNote(entry)}`);
+    }
     if (result.ok || quarantined || result.killed) return;
     const { kind, newChecks } = await confirm(result);
     log(`  ${result.test}: ${kind}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`);
+    if (kind === "stopped") return;
     if (kind === "flaky") flaky.push(result.test);
     else if (kind === "base-red") baseRed.push(result.test);
     else if (!prRed) {
@@ -603,7 +765,7 @@ async function main() {
   async function worker() {
     while (queue.length > 0 && !prRed) {
       const row = queue.shift();
-      const result = await runGodot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test)));
+      const result = await godot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test)));
       await handle(result);
     }
   }
@@ -613,6 +775,7 @@ async function main() {
     await handle(await runGodot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test))));
   }
   receipt.results = results;
+  receipt.quarantined = results.filter((row) => row.quarantined).map((row) => quarantineRecord(quarantineEntries.find((entry) => entry.test === path.posix.basename(row.test, ".gd")), { ok: row.ok, exit: row.exit, signal: row.signal, failing: row.failing }));
   receipt.flaky = flaky;
   receipt.base_red = baseRed;
   if (prRed) {

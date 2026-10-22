@@ -67,8 +67,21 @@ func _gain(t) -> void:
 	_hit("runner", PLATING * 0.5, charging, {"charging": true})
 	t.near("a gun gains 3.0 times the multiplier while charging", charging.posture, 3.0 * 0.5)
 	var strong := Posture.new()
+	t.near("a rule never told a class starts at the ordinary 1.5 ceiling", strong.mult_max, 1.5)
+	strong.set_monster(true)
 	_hit("ram", PLATING * 4.0, strong)
-	t.near("the multiplier caps at 1.5", strong.posture, 45.0)
+	# Andrew's tap "Lift the ceiling" (17 Oct 22:04Z): the cap is 3.0, was 1.5.
+	t.near("a monster build caps at MULT_MAX 3.0", strong.posture, 90.0)
+	var unknown := Posture.new()
+	unknown.set_monster(false)
+	t.near("a rule told no monster holds 1.5", unknown.mult_max, 1.5)
+	var fresh := Posture.new()
+	_hit("ram", PLATING * 4.0, fresh)
+	t.near("a fresh rule meets the ordinary 1.5", fresh.posture, 45.0)
+	var ordinary := Posture.new()
+	ordinary.set_monster(false)
+	_hit("ram", PLATING * 4.0, ordinary)
+	t.near("a pilot who is no monster keeps the old 1.5 ceiling", ordinary.posture, 45.0)
 
 
 func _frame_max(t) -> void:
@@ -204,7 +217,7 @@ func _pure(t) -> void:
 
 
 # The kinds and ratios of 20 hits, each answered with the rule's original formula (base times
-# the clamped ratio, gain only outside a stagger, a core hit shattering for a smash or a ram of
+# the ratio clamped to 0.2-1.5, the ordinary ceiling a rule never told a class holds, gain only outside a stagger, a core hit shattering for a smash or a ram of
 # tier 2 or better) written out here. A stagger filled on a hit whose index is a multiple of 3 stays open for the next hit, and the
 # gun hits at i = 4 and 14 are charging.
 func _defaults_unchanged(t) -> void:
@@ -265,11 +278,17 @@ func _curve(t) -> void:
 	var square := Posture.new({"curve": 2.0})
 	t.near("curve 2 turns a half-matched ram into 30 x 0.25", _hit("ram", PLATING * 0.5, square)["gain"], 7.5)
 	t.near("curve 2 leaves a matched ram at 30", _hit("ram", PLATING, square)["gain"], 30.0)
-	t.near("curve 2 on the 1.5 cap is 30 x 2.25", _hit("ram", PLATING * 4.0, square)["gain"], 67.5)
+	t.near("curve 2 on the ordinary 1.5 cap is 30 x 2.25", _hit("ram", PLATING * 4.0, square)["gain"], 67.5)
+	var square_monster := Posture.new({"curve": 2.0})
+	square_monster.set_monster(true)
+	t.near("curve 2 on the 3.0 cap is 30 x 9", _hit("ram", PLATING * 4.0, square_monster)["gain"], 270.0)
 	t.near("curve 2 on a smash at 0.8 is 45 x 0.64", _hit("stomp", PLATING * 0.8, Posture.new({"curve": 2.0}), {"smash": true})["gain"], 28.8)
 	var cube := Posture.new({"curve": 3.0})
 	t.near("curve 3 turns a half-matched ram into 30 x 0.125", _hit("ram", PLATING * 0.5, cube)["gain"], 3.75)
-	t.near("curve 3 on the 1.5 cap is 30 x 3.375", _hit("ram", PLATING * 4.0, Posture.new({"curve": 3.0}))["gain"], 101.25)
+	var cube_monster := Posture.new({"curve": 3.0})
+	cube_monster.set_monster(true)
+	t.near("curve 3 on the 3.0 cap is 30 x 27", _hit("ram", PLATING * 4.0, cube_monster)["gain"], 810.0)
+	t.near("curve 3 on the ordinary 1.5 cap is 30 x 3.375", _hit("ram", PLATING * 4.0, Posture.new({"curve": 3.0}))["gain"], 101.25)
 	t.near("curve 3 on a gun bolt at 0.5 is 1.5 x 0.125", _hit("runner", PLATING * 0.5, Posture.new({"curve": 3.0}))["gain"], 0.1875)
 	var floor_rule := Posture.new({"curve": 3.0})
 	var glance := _hit("ram", PLATING * Posture.MULT_MIN, floor_rule)
