@@ -13,6 +13,8 @@ const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
 const GLB := "res://assets/models/highdraft/prop_bench.glb"
 const PLANTED_ARG := "--planted"
+const LOW_M := -3.5
+const HIGH_M := 12.25
 
 var _t := T.new("thread_guard_test")
 
@@ -32,6 +34,8 @@ func _main_thread() -> void:
 	_t.check("the park props mesh read builds on the main thread", ParkProps._mesh(GLB) != null)
 	var region := ParkTerrain._make_region(_maps())
 	_t.check("the region maker builds on the main thread", region != null and region.get_location() == Vector2i(1, -1))
+	# set_height_map works out the range itself (_make_region no longer calls calc_height_range after it).
+	_t.eq("the region's height range spans its height map", region.get_height_range() if region != null else Vector2.ZERO, Vector2(LOW_M, HIGH_M))
 	_t.eq("no violation on the main thread", ThreadGuard.violations, 0)
 	ParkProps.release_shared()
 
@@ -69,4 +73,9 @@ func _planted() -> void:
 
 static func _maps() -> Array:
 	var size := ParkTerrain.REGION_SIZE
-	return [Vector2i(1, -1), Image.create_empty(size, size, false, Image.FORMAT_RF), Image.create_empty(size, size, false, Image.FORMAT_RF)]
+	var heights := PackedFloat32Array()
+	heights.resize(size * size)
+	heights[7] = LOW_M
+	heights[size * size - 9] = HIGH_M
+	return [Vector2i(1, -1), Image.create_from_data(size, size, false, Image.FORMAT_RF, heights.to_byte_array()),
+		Image.create_empty(size, size, false, Image.FORMAT_RF)]

@@ -1009,10 +1009,10 @@ static func _transform(inst: Dictionary) -> Transform3D:
 
 # A GLB's one mesh, read once per path on the main thread; a path asked of the loader thread is taken from it.
 static func _mesh(path: String) -> Mesh:
-	if _meshes.has(path):
-		return _meshes[path]
 	if not ThreadGuard.main_only("park_props mesh " + path):
 		return null
+	if _meshes.has(path):
+		return _meshes[path]
 	var mesh: Mesh = null
 	var packed = ResourceLoader.load_threaded_get(path) if _requested.has(path) else load(path)
 	_requested.erase(path)
