@@ -332,7 +332,7 @@ func _physics_process(delta: float) -> bool:
 		_game.flow._end_run(false)
 	# The run-end comic page (run_moments.gd): its panel count and where it was saved.
 	record["comic_panels"] = (_game.run_moments.last_page.get("panels", []) as Array).size()
-	record["comic_page"] = _game.run_moments.last_page_path
+	record["comic_page"] = _game.run_moments.saved_path()
 	_results.append(record)
 	_game.codex.append_line(_out.path_join("bots.ndjson"), JSON.stringify(record))
 	_write_entries()

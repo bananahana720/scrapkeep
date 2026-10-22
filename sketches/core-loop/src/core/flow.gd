@@ -76,6 +76,11 @@ var boss_row_override := {}
 # another.
 const SCENE_BOSS := "res://src/boss/boss.gd"
 var _row_modules := {}
+# Boss module scripts read ahead on a loader thread while the world's last stage is in its beacon,
+# gates or launch: path -> null while loading, the Script once loaded, false when it failed. The
+# stage exit compiled mind.gd (89 ms on the cloud) and the arena's dress loaded and painted in the
+# same frame, the 4080's 254 to 274 ms boss-entry freeze (scrapkeep#241).
+var _boss_reads := {}
 var _home_boss: Node = null
 var _world := 0
 var _launched := false
@@ -173,10 +178,40 @@ func _load_module(path: String) -> Node:
 	if not ResourceLoader.exists(path):
 		warn_once("boss_script_" + path, "flow: boss script %s does not exist" % path)
 		return null
-	var module: Node = load(path).new()
+	var script = _boss_reads.get(path)
+	if not script is Script:
+		script = ResourceLoader.load_threaded_get(path) if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE else null
+	if not script is Script:
+		script = load(path)
+	var module: Node = script.new()
 	add_child(module)
 	module.setup(ctx)
 	return module
+
+
+# On the world's last stage, reads its boss module's script on a loader thread, then lets the
+# script prepare its arena (a static prepare_arena) before the stage exit makes the module.
+func _read_boss_ahead() -> void:
+	if ctx.stages.BOSS == "" or not ctx.stages.is_world_last(ctx.run.stage):
+		return
+	var row: Dictionary = boss_row(ctx.stages.world_of(ctx.run.stage))
+	var path := String(row.get("script", SCENE_BOSS))
+	if not bool(row.get("built", false)) or path == SCENE_BOSS or _row_modules.has(path):
+		return
+	if not _boss_reads.has(path):
+		_boss_reads[path] = null
+		if not ResourceLoader.exists(path) or ResourceLoader.load_threaded_request(path) != OK:
+			_boss_reads[path] = false
+		return
+	if _boss_reads[path] != null:
+		return
+	var status := ResourceLoader.load_threaded_get_status(path)
+	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		return
+	var script = ResourceLoader.load_threaded_get(path) if status == ResourceLoader.THREAD_LOAD_LOADED else null
+	_boss_reads[path] = script if script is Script else false
+	if script is Script and script.get_script_method_list().any(func(m): return m.name == "prepare_arena"):
+		script.call("prepare_arena")
 
 
 # The boss row that runs at the end of a world. Tests set boss_row_override[world] to stand
@@ -715,6 +750,8 @@ func physics_step(delta: float) -> void:
 	if not in_play():
 		return
 	ctx.run.advance(delta)
+	if state == BEACON or state == GATES or state == LAUNCH:
+		_read_boss_ahead()
 	var ball: Vector3 = ctx.player.ball_position()
 	match state:
 		STAGE, BEACON:
