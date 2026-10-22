@@ -224,7 +224,8 @@ def survey_tripod(p, v, rng):
 V = kit.Vector if hasattr(kit, "Vector") else None
 from mathutils import Vector
 
-DUSK_BLUE = "6c7f8c"   # faded work-shirt blue
+PETROL = "365754"      # board petrol: old-enamel machine bodies (style palette, spillway props README)
+DUSK_BLUE = mix(PETROL, "bone", 0.35)   # crew shirts: petrol worn toward bone, the crews board's two cloth colours
 FLOWER = "c9b45e"      # brittlebush yellow, muted (not brass)
 SILVER_LEAF = "8f9a78"
 
@@ -293,7 +294,7 @@ def mixer_wreck(p, v, rng):
         p.box((1.3, 0.28, 0.24), (-1.1, -2.55, 0.12), "timber_grey")
         p.box((0.28, 1.3, 0.24), (-1.0, -2.6, 0.36), "timber_dark")
     # Cab: cab-over block, one wide window band, flat bumper (no headlight pair).
-    cab = "sandstone_pale" if v != "c" else mix("sandstone_pale", "concrete_stain", 0.3)
+    cab = PETROL if v != "c" else mix(PETROL, "concrete_stain", 0.3)
     cz = 2.15 + dz
     p.box((2.4, 2.1, 1.75), (0, -2.95, cz), cab, style="hard_smooth")
     p.box((2.5, 2.2, 0.14), (0, -2.95, cz + 0.95), "iron_light", style="hard_smooth")
@@ -708,7 +709,7 @@ def cable_drum(p, v, rng):
 def compressor_cart(p, v, rng):
     p = Sc(p, 1.5, lite=True)
     tilt = 0.2 if v == "b" else 0.0
-    body = "iron" if v == "a" else ("rust" if v == "b" else "concrete_dark")
+    body = PETROL if v == "a" else ("rust" if v == "b" else mix(PETROL, "concrete_stain", 0.4))
     # Skid frame, horizontal tank beneath, boxy body with a vent panel.
     p.box((1.5, 0.95, 0.14), (0, 0, 0.52), "charcoal", rot=(0, tilt, 0), style="hard_smooth")
     p.cyl(0.24, 1.3, (0, 0, 0.38), "iron_light", segs=10, rot=(0, math.pi / 2 + tilt, 0), style="hard_smooth")
