@@ -209,9 +209,10 @@ def bracket(p, side):
     """The gap bracket: a dark-steel arm from the outer gimbal axle boss (on the ring axis, so the
     gimbal's sweep never reaches it) out through the side gap to the drum's inner face."""
     inner = DRUM_X - DRUM_DEPTH / 2
-    p.rod("paint", (side * 0.885, 0, 0), (side * (inner + 0.004), 0, DRUM_Z), 0.018, 6, color="charcoal")
-    p.cyl("paint", 0.035, 0.035, 0.012, 8, loc=(side * (inner - 0.002), 0, DRUM_Z), rot=(0, math.pi / 2, 0),
-          color="charcoal")
+    p.rod("paint", (side * 0.885, 0, 0), (side * (inner + 0.004), 0, DRUM_Z), 0.018, 6, color="charcoal", alpha=0.0)
+    # Alpha 0 is the paint take mask (PAINT_SHADER): the brackets keep their charcoal under any paint.
+    tint_alpha(p, p.cyl("paint", 0.035, 0.035, 0.012, 8, loc=(side * (inner - 0.002), 0, DRUM_Z),
+                        rot=(0, math.pi / 2, 0), color="charcoal"), 0.0)
 
 
 def carriage(p):
