@@ -102,9 +102,9 @@ func _run() -> void:
 	_check(bola.find_children("*", "Area3D", true, false).is_empty() and bola.find_children("*", "CollisionObject3D", true, false).is_empty(),
 		"the dressing adds no collision object")
 	_check(bola.radius == 0.8 and bola.half_height == 1.1 and bola.weight == 1.0, "radius 0.8, half-height 1.1 and weight 1 unchanged")
-	_check(is_equal_approx(bola.warn_seconds, 0.5) and is_equal_approx(bola.live_seconds, 2.6) and is_equal_approx(bola.rest_seconds, 3.2)
+	_check(is_equal_approx(bola.warn_seconds, 0.6) and is_equal_approx(bola.live_seconds, 2.6) and is_equal_approx(bola.rest_seconds, 3.2)
 		and is_equal_approx(bola.attack_range, 30.0) and is_equal_approx(bola.keep_near, 14.0) and bola.scrap_value == 4,
-		"warn 0.5, live 2.6, rest 3.2, range 30, keep-near 14 and scrap 4 unchanged")
+		"warn 0.6, live 2.6, rest 3.2, range 30, keep-near 14 and scrap 4 unchanged")
 	var consts: Dictionary = (bola.get_script() as Script).get_script_constant_map()
 	var same := true
 	for key in BASE_CONSTS:
