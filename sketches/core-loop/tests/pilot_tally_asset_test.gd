@@ -9,7 +9,7 @@ extends SceneTree
 # LapBar, Pedal and Trigger controls are pinned; the reader slot is the only class_accent.
 # The pilot half is unchanged.
 # 2026-10-11 (PD-TALLY fix round): the draw cap returns to the shell class's 10 (the gate
-# refused the 13-draw exception). Both drums now share one mesh, Flywheel.R, spinning on their
+# refused the 13-draw exception; now the registry's 11 for DrumBrackets). Both drums now share one mesh, Flywheel.R, spinning on their
 # common X axis (span 2 x 1.033 + 0.07 m); Flywheel.L is an empty at the left drum's centre.
 
 const PILOT := "res://assets/models/pilot_tally_anim.glb"
@@ -236,7 +236,34 @@ func _pilot(pilot: Node, document: Dictionary) -> void:
 
 
 func _shell(shell: Node, document: Dictionary) -> void:
-	_budget("shell", shell, Vector3i(11000, 11600, 10), ["paint", "rubber", "class_accent", "copper"])
+	# The registry exception sets the draws (DrumBrackets, its own mesh so the carrier bank tilts it); the
+	# shell class cap is 10 and the Hoberman pilot mecha cap 16 (docs/decisions.tsv w13-PD).
+	var draws := 10
+	var registry: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/registry.json"))
+	for entry in registry.get("assets", []):
+		if entry is Dictionary and entry.get("id", "") == "shell_tally":
+			draws = int(entry.get("exception", {}).get("draws", draws))
+	_check("registry draw exception", draws == 11 and draws <= 16, "shell_tally exception %d draws, cap 16" % draws)
+	_budget("shell", shell, Vector3i(11000, 11600, draws), ["paint", "rubber", "class_accent", "copper"])
+	# The brackets paint on the paint surface in charcoal, as the Pod's folded rubber did; a rubber slot
+	# here would be a second draw and a different material from the base.
+	var brackets := shell.find_child("DrumBrackets", true, false) as MeshInstance3D
+	# Charcoal is tools/blender common.py "charcoal" 242a28 in linear vertex colour (0.018, 0.023, 0.021); every vertex of the
+	# one paint surface must carry it within 0.01 a channel, so a white bracket on paint fails.
+	var charcoal_ok := false
+	if brackets != null and brackets.mesh.get_surface_count() == 1:
+		var bracket_cols = brackets.mesh.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+		charcoal_ok = bracket_cols != null and bracket_cols.size() > 0
+		if charcoal_ok:
+			for c in bracket_cols:
+				if absf(c.r - 0.018) > 0.01 or absf(c.g - 0.023) > 0.01 or absf(c.b - 0.021) > 0.01:
+					charcoal_ok = false
+					break
+	_check("DrumBrackets vertices are charcoal", charcoal_ok, "every vertex within 0.01 of (0.018, 0.023, 0.021)")
+	_check("DrumBrackets is paint only", brackets != null and brackets.get_parent() == shell.find_child("Pod", true, false)
+		and brackets.mesh.get_surface_count() == 1
+		and brackets.mesh.surface_get_material(0).resource_name == "paint",
+		"surfaces %d" % (brackets.mesh.get_surface_count() if brackets != null else -1))
 	_check("shell has no skeleton", document.get("skins", []).is_empty())
 	_check("no duplicate pilot", shell.find_child("Pilot", true, false) == null)
 	var source_names: Array = document.get("nodes", []).map(func(n): return n.get("name", ""))
