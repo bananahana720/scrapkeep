@@ -64,6 +64,9 @@ func _run() -> void:
 	_player = _game.player
 	_player.source = _source
 	_combat = _game.ctx.spawner
+	# A hit stop slows Engine.time_scale for wall time, so how many physics ticks a timed window
+	# lasts would depend on CPU speed; tick-counting checks need the stops off.
+	_game.presentation.juice.hit_stop_sink = func(_seconds: float): pass
 	_game.flow.press_start()
 	_game.flow.choose_class(1)
 	await _frames(_seconds(0.4))
