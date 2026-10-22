@@ -3,6 +3,7 @@ extends RefCounted
 const EventGround := preload("res://src/world/events/event_ground.gd")
 
 const Palette := preload("res://src/core/palette.gd")
+const PylonBite := preload("res://src/world/pylon_bite.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const Reach := preload("res://src/world/map_reach.gd")
@@ -44,9 +45,9 @@ const HALF := 200.0
 const STEP := 2.0
 const CELLS := int(2.0 * HALF / STEP)
 const SIDE := CELLS + 1
-# A face steeper than this (the normal's y below it) takes the pylon tint: the ball's
+# Steeper than PylonBite.FACE (the normal's y below it) takes the pylon tint: the ball's
 # pylon bites a face that leans less than 60 degrees off vertical (augments.gd).
-const PYLON_FACE := 0.866
+const PYLON_FACE := PylonBite.FACE
 const PARK_DEPTH := 5000.0
 
 var maps: Array = []
@@ -671,7 +672,7 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 			uvs[idx] = Vector2(x, z) * 0.1
 			colors[idx] = s[1]
 
-	var pylon_tint := Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.25)
+	var pylon_tint := PylonBite.tint()
 	var normals := PackedVector3Array()
 	normals.resize(SIDE * SIDE)
 	for j in SIDE:
@@ -685,7 +686,7 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 			normals[idx] = n
 			# Form mirrors function: any face a pylon can bite reads as concrete.
 			if n.y < PYLON_FACE:
-				colors[idx] = colors[idx].lerp(pylon_tint, clampf((PYLON_FACE - n.y) * 6.0, 0.0, 0.8))
+				colors[idx] = colors[idx].lerp(pylon_tint, PylonBite.weight(n.y))
 
 	var indices := PackedInt32Array()
 	indices.resize(CELLS * CELLS * 6)

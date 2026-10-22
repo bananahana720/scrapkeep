@@ -204,9 +204,11 @@ class Part:
             self.slots.append(slot)
         return self.slots.index(slot)
 
-    def paint(self, faces, slot, color=None):
+    def paint(self, faces, slot, color=None, alpha=1.0):
+        """alpha is the paint take mask: 0 keeps the vertex colour under any equipped paint."""
         idx = self._slot(slot)
         c = rgba(color) if color is not None else (1.0, 1.0, 1.0, 1.0)
+        c = (*c[:3], alpha)
         for f in faces:
             f.material_index = idx
             for loop in f.loops:
@@ -219,27 +221,27 @@ class Part:
         self.bm.faces.index_update()
         return sorted({f for v in verts for f in v.link_faces}, key=lambda f: f.index)
 
-    def box(self, slot, size, loc=(0, 0, 0), rot=(0, 0, 0), color=None):
+    def box(self, slot, size, loc=(0, 0, 0), rot=(0, 0, 0), color=None, alpha=1.0):
         r = bmesh.ops.create_cube(self.bm, size=1.0, matrix=mtx(loc, rot, size))
-        return self.paint(self._faces(r["verts"]), slot, color)
+        return self.paint(self._faces(r["verts"]), slot, color, alpha)
 
     def cyl(self, slot, r1, r2, depth, segs=8, loc=(0, 0, 0), rot=(0, 0, 0), color=None, caps=True):
         r = bmesh.ops.create_cone(self.bm, cap_ends=caps, cap_tris=False, segments=_segs(segs),
                                   radius1=r1, radius2=r2, depth=depth, matrix=mtx(loc, rot))
         return self.paint(self._faces(r["verts"]), slot, color)
 
-    def rod(self, slot, a, b, r, segs=6, color=None, r2=None):
+    def rod(self, slot, a, b, r, segs=6, color=None, r2=None, alpha=1.0):
         m, length = aim(a, b)
         res = bmesh.ops.create_cone(self.bm, cap_ends=True, cap_tris=False, segments=_segs(segs),
                                     radius1=r, radius2=r if r2 is None else r2, depth=length, matrix=m)
-        return self.paint(self._faces(res["verts"]), slot, color)
+        return self.paint(self._faces(res["verts"]), slot, color, alpha)
 
-    def beam(self, slot, a, b, w, h=None, color=None, roll=0.0):
+    def beam(self, slot, a, b, w, h=None, color=None, roll=0.0, alpha=1.0):
         """A square-section beam from a to b."""
         m, length = aim(a, b)
         s = mtx((0, 0, 0), (0, 0, roll), (w, h if h else w, length))
         r = bmesh.ops.create_cube(self.bm, size=1.0, matrix=m @ s)
-        return self.paint(self._faces(r["verts"]), slot, color)
+        return self.paint(self._faces(r["verts"]), slot, color, alpha)
 
     def ico(self, slot, radius, subdiv=1, loc=(0, 0, 0), scale=(1, 1, 1), rot=(0, 0, 0), color=None):
         r = bmesh.ops.create_icosphere(self.bm, subdivisions=subdiv + (DETAIL > 1), radius=radius, matrix=mtx(loc, rot, scale))

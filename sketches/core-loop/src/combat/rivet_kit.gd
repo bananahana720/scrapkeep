@@ -1324,14 +1324,20 @@ func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pin
 
 
 # The Breach Skid's carve shades its cells in order until it has tested LATE_WORK parts against
-# shadows in a tick (about 30 us each, in the cloud and on Andrew's 4080 alike). A light carve
+# shadows in a tick (about 30 us of shading each, in the cloud and on Andrew's 4080 alike). A light carve
 # finishes on the landing tick and hits there. A heavy one (bumpy or curved ground) carries on a
 # tick at a time and hits once it is done, and never before LATE_TICKS (about 55 ms) after the
 # landing (Andrew's "Beat later" and "Spread every Breach", 2026-10-18). Work is counted, never
 # timed, so a replay is the same on any machine. The cells' parts join in cell order, as _shade
-# joins them, so the shape is the same as a carve made at once.
+# joins them, so the shape is the same as a carve made at once. LATE_WORK is sized from the 4080's
+# whole share tick: 1.5 shares a frame must stay under 16.7 ms, so a share at most 11.1 ms. Its worst
+# share tick was 11.4 ms at 200 parts (rows 23 and 27) and 19.1 ms at 290; 11.4 ms over 200 parts,
+# the tick's fixed cost included, is 0.057 ms a part, so 182 holds about 10.4 ms (a share can pass
+# its budget by part of a cell, at 200 as here). The p3 slope (1247 parts, 21 degrees) then hits 7
+# ticks (78 ms) after landing, as it did at 200, inside Andrew's "Smooth, 0.11 s" (2026-10-18); the
+# heaviest slopes stay over it (scrapkeep#137, row 27).
 const LATE_TICKS := 5
-const LATE_WORK := 200
+const LATE_WORK := 182
 # The landing tick also gathers the faces and cuts, about as much again as a share, so its
 # share is smaller; flat ground (one part a cell, 96 cells) and a shallow bowl (158) still carve
 # and hit there. A
@@ -1343,8 +1349,8 @@ const LANDING_WORK := 160
 # is on level ground when the face it lands on is within LEVEL_GROUND_DEG of straight up. The
 # park's ground is 2 m cells, never one plane, so such a landing also flattens its near-level faces
 # into larger polygons (TerrainFaces.merge_level: normals within LEVEL_TOLERANCE_DEG, every corner
-# within LEVEL_DEVIATION m of the region's plane) and its landing share is LEVEL_LANDING_SCALE
-# times larger (400 parts at the default late_work). A level carve that fits hits on the landing
+# within LEVEL_DEVIATION m of the region's plane) and its landing share is LEVEL_LANDING_WORK
+# parts (the coordinator's ruling 3, option A, the stand-sized budget; it does not follow LATE_WORK). A level carve that fits hits on the landing
 # tick; one that still needs more takes the late path. Andrew's stand: 859 parts become 101; of 80
 # sampled level park sites, 72 % fit (scrapkeep#73-B).
 # 5 degrees, against the park's 2 m cells (360,000 sampled, scrapkeep#73-B): 85 % are under 5, only
@@ -1355,7 +1361,7 @@ const LANDING_WORK := 160
 const LEVEL_GROUND_DEG := 5.0
 const LEVEL_TOLERANCE_DEG := 2.0
 const LEVEL_DEVIATION := 0.05
-const LEVEL_LANDING_SCALE := 2
+const LEVEL_LANDING_WORK := 400
 
 # The latest Breach carve landing() made, for a timing run to read its level, shares and work.
 var last_landing := {}
@@ -1365,10 +1371,10 @@ var late_work := LATE_WORK
 
 
 # The parts a Breach may test on its landing tick: LANDING_WORK, or on level ground
-# LEVEL_LANDING_SCALE x late_work (a lowered late_work lowers both).
+# LEVEL_LANDING_WORK, in proportion when a test lowers late_work (a lowered late_work lowers both).
 func landing_work(level: bool) -> int:
 	if level:
-		return late_work * LEVEL_LANDING_SCALE
+		return maxi(1, roundi(float(late_work) * LEVEL_LANDING_WORK / LATE_WORK))
 	return mini(late_work, LANDING_WORK)
 
 

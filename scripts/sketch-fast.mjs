@@ -423,7 +423,7 @@ export function trustedBaseEntry(entry) {
 // outside kill (exit null, say the OOM killer) says "red on the base too" only when the head rerun
 // timed out as well, else a crash on the head would hide behind a load failure on the base.
 // One exception: a base that died by a signal keeps its verdict when the head rerun died by the
-// same signal and both fail the same checks (park_cave_in aborts at exit on both sides, #241).
+// same signal and both fail the same checks (an abort at exit on both sides).
 // SIGKILL is the OOM killer or the lane's own timeout kill, so it never counts.
 export function usableBaseRun(rerun, baseRun) {
   if (!baseRun || baseRun.killed) return null;

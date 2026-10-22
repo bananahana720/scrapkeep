@@ -174,11 +174,11 @@ Spec keys are today's (`src/world/contraptions.gd:86-101`; shapes as in `src/wor
 | `incline_skip` | barge, `barge` | `pit` | a (0, -19.4, -225) to b (0, -99.4, 100), 14 m deck, travel 9 s, dwell 3 s | the old ore skip down the north wall: an 80 m descent you can ride instead of diving |
 | `tipple_lift` | lift, `lift_platform` | `tipple_deck` | at (20, 262), radius 4.5, rise 40, charge 3.2 s | pops a ball onto the tipple deck for the drop finisher |
 | `sump_geyser` | launcher (geyser), `geyser_vent` | `floor_sump` | at (-70, 128), target (0, -59.2, 240), floor 16, min flight 2.2 s, charge 3.0 s | a burst dewatering standpipe that throws you onto the tipple deck |
-| `rim_zip` | cable, `""` | `pit` | from (60, 1.5, -298) to (150, -38.5, -178), radius 6, floor 22 | the rim road's downhill grapple line over bench 1 to the camp on bench 2 (the Rivet and Tally lines) |
-| `tailings_conveyor` | cable, `""` | `tailings_bench_east` | from (337, -38.5, -40) to (337, -38.5, 110), radius 6, floor 22 | the bench 2 east conveyor: a 150 m level grapple line over the tailings pond (the east branch) |
-| `bench2_haul_cable` | cable, `""` | `pit` | from (60, -38.5, -150) to (-90, -38.5, -150), radius 6, floor 22 | the bench 2 north haul cable west from the camp (the Kest line) |
-| `skip_cable` | cable, `""` | `pit` | from (175, -38.5, -125) to (120, -78.5, 25), radius 6, floor 22 | a skip cable from the camp down over bench 3 to bench 4 (the Tarn and Tally lines) |
-| `west_winze_cable` | cable, `""` | `pit` | from (-150, -58.5, -25) to (-100, -98.5, 170), radius 6, floor 22 | the Kest line's second west cable, over bench 4 to the floor |
+| `rim_zip` | cable, `""` | `pit` | from (60, 1.5, -298) to (150, -37.5, -178), radius 6, floor 22 | the rim road's downhill grapple line over bench 1 to the camp on bench 2 (the Rivet and Tally lines) |
+| `tailings_conveyor` | cable, `""` | `tailings_bench_east` | from (337, -38.5, -40) to (337, -37.5, 110), radius 6, floor 22 | the bench 2 east conveyor: a 150 m grapple line over the tailings pond, near level (its landing end sits 1 m above its start, for the 2.35 m end clearance) (the east branch) |
+| `bench2_haul_cable` | cable, `""` | `pit` | from (60, -38.5, -150) to (-90, -37.5, -150), radius 6, floor 22 | the bench 2 north haul cable west from the camp (the Kest line) |
+| `skip_cable` | cable, `""` | `pit` | from (175, -38.5, -125) to (120, -77.5, 25), radius 6, floor 22 | a skip cable from the camp down over bench 3 to bench 4 (the Tarn and Tally lines) |
+| `west_winze_cable` | cable, `""` | `pit` | from (-150, -58.5, -25) to (-100, -97.5, 170), radius 6, floor 22 | the Kest line's second west cable, over bench 4 to the floor |
 | `adit_valve` | valve, `gauge` | `adit_back_door` | at (94, -374), door at (88, -368), 10 by 5 by 1 m, turn 2.16 | the hidden pocket: opens the adit's back door on the north rim; its tell is the `back_door_portal` row, an 8 by 6 m timbered portal 18 m behind the gauge |
 | `sealed_portal` | cracked_wall, `""` | `deep_adit` | at (262.5, 400), 12 by 7 by 1.4 m, turn 1.24 | decorative: smash the seal before the eruption to see the green seam early; 70 m off the eruption site (R3) |
 | `dust_devil_east` | thermal, `""` | `tailings_bench_east` | at (400, -60), radius 5, height 62 | a visible dust devil over hot tailings: a lift lane, never a push |
@@ -239,6 +239,8 @@ Greybox measured on the merged candidate, 2026-10-12, before the failed dressing
 - `bench3_west_berm` and `bench4_ore_bin`.
 - `camp_ore_bin` (fix round), a 10 m greybox ore bin 14 m tall on bench 1 at (160, -218), beside the camp dive. Sable's flight off the dive runs about 45 m at bench 1 height with no face in reach (anchor gap 40.7 to 46.7 m on three seeds before it, 23 to 30 m after).
 - Six ore piles on the floor: `ore_pile_east`, `_mid`, `_north`, `_west`, `_sw` and `_nw`.
+
+Look versus function: the ground's concrete tint skips the footprints of the six berm rows (`dump_berm_east`, `dump_berm_west`, `rim_road_berm`, `haul_ramp_berm`, `wash_berm` and `bench3_west_berm`, each padded 2 m; `PylonBite.BERM_ROWS`), so they keep their landform colour, yet a ball at their foot still bites their flanks (101 of 108 flank and foot samples in the probe posted on #241 6345448625). The tint under-reports them by design, and the padded footprints also untint 51 vertices on the pit rim's top edge where `dump_berm_east`'s end and `haul_ramp_berm` meet it (coordinator 6342820238 item 3, 6345347272 item 4, NEEDS 6350588099).
 
 Two pieces of geometry were moved to clear dead stops. The canal channel is 16 m wide, so the arroyo's 40 degree turn into it does not stop a ball against the far wall. The camp dive's east windrow starts 60 m east of the lip, clear of Sable's overshoot. The fix round moved four more pieces for the same reason, once KB9 made kickers solid wedges: the camp dive (section 14 call 8) and the three east dives, now 30 to 40 m wide.
 

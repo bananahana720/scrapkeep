@@ -174,15 +174,15 @@
   {"id": "incline_skip", "kind": "barge", "site": "pit", "recipe": "barge", "a": [0, -19.4, -225], "b": [0, -99.4, 100], "size": [14, 1.2, 14], "travel": 9.0, "dwell": 3.0, "offset": 0.0},
   {"id": "tipple_lift", "kind": "lift", "site": "tipple_deck", "recipe": "lift_platform", "at": [20, 262], "radius": 4.5, "rise": 40.0, "charge": 3.2, "offset": 0.0},
   {"id": "sump_geyser", "kind": "launcher", "site": "floor_sump", "recipe": "geyser_vent", "style": "geyser", "at": [-70, 128], "radius": 3.5, "target": [0, -59.2, 240], "floor": 16.0, "min_flight": 2.2, "charge": 3.0},
-  {"id": "rim_zip", "kind": "cable", "site": "pit", "recipe": "", "from": [60, 1.5, -298], "to": [150, -38.5, -178], "radius": 6.0, "floor": 22.0},
+  {"id": "rim_zip", "kind": "cable", "site": "pit", "recipe": "", "from": [60, 1.5, -298], "to": [150, -37.5, -178], "radius": 6.0, "floor": 22.0},
   {"id": "adit_valve", "kind": "valve", "site": "adit_back_door", "recipe": "gauge", "at": [94, -374], "door": {"at": [88, -368], "size": [10, 5, 1], "turn": 2.16}, "vent": null},
   {"id": "sealed_portal", "kind": "cracked_wall", "site": "deep_adit", "recipe": "", "at": [262.5, 400], "size": [12, 7, 1.4], "turn": 1.24},
   {"id": "dust_devil_east", "kind": "thermal", "site": "tailings_bench_east", "recipe": "", "at": [400, -60], "radius": 5.0, "height": 62.0},
   {"id": "dust_devil_floor", "kind": "thermal", "site": "pit", "recipe": "", "at": [-30, 160], "radius": 12.0, "height": 60.0},
-  {"id": "tailings_conveyor", "kind": "cable", "site": "tailings_bench_east", "recipe": "", "from": [337, -38.5, -40], "to": [337, -38.5, 110], "radius": 6.0, "floor": 22.0},
-  {"id": "bench2_haul_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [60, -38.5, -150], "to": [-90, -38.5, -150], "radius": 6.0, "floor": 22.0},
-  {"id": "skip_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [175, -38.5, -125], "to": [120, -78.5, 25], "radius": 6.0, "floor": 22.0},
-  {"id": "west_winze_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [-150, -58.5, -25], "to": [-100, -98.5, 170], "radius": 6.0, "floor": 22.0}
+  {"id": "tailings_conveyor", "kind": "cable", "site": "tailings_bench_east", "recipe": "", "from": [337, -38.5, -40], "to": [337, -37.5, 110], "radius": 6.0, "floor": 22.0},
+  {"id": "bench2_haul_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [60, -38.5, -150], "to": [-90, -37.5, -150], "radius": 6.0, "floor": 22.0},
+  {"id": "skip_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [175, -38.5, -125], "to": [120, -77.5, 25], "radius": 6.0, "floor": 22.0},
+  {"id": "west_winze_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [-150, -58.5, -25], "to": [-100, -97.5, 170], "radius": 6.0, "floor": 22.0}
  ],
  "weather_rows": [
   {"id": "noon_shimmer", "kind": "heat_shimmer", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0015, "color": "#e8d7b0"}, "sky": "clear", "sound": "heat_tick", "music_layer": "shimmer_pad", "event_odds": {}, "handling": "none"},

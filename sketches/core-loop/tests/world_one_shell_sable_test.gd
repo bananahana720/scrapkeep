@@ -8,6 +8,7 @@ extends SceneTree
 # Fix round 2 (PD-0b base, docs/decisions.tsv 2026-10-10): shell cap 16 draws, class III layer 2,
 # every other layer 1, checked per layer. Class V is the doubled coil alone (one copper surface,
 # no Replace_ node, the base mint tip stays); its three top panels moved into c4.
+# 2026-10-22: shell 16 after the SpoolKit split and rubber fold (baked-bracket card; docs/decisions.tsv 2026-10-22T18:42).
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -16,11 +17,16 @@ const SHELL := "res://assets/models/world_one/shell_sable.glb"
 const FELT := "res://assets/models/world_one/shell_sable_felt.glb"
 const LAYER := "res://assets/models/world_one/shell_sable_c%d.glb"
 const RIG := "res://assets/models/pilot_sable_anim.glb"
-const EXPECTED_CHECKS := 60
+const EXPECTED_CHECKS := 66
 const MAX_V := 15000
 const MAX_T := 16000
-const MAX_DRAWS := 19
-const SHELL_DRAWS := 14
+# 2026-10-22: SpoolKit (the winch spool, copper and paint, its rubber folded into paint in charcoal) is its
+# own mesh so the carrier bank tilts it (baked-bracket bank split): shell 16 by its registry exception,
+# inside the 16-draw Hoberman pilot mecha cap (docs/decisions.tsv w13-PD).
+const MAX_DRAWS := 21
+const SHELL_DRAWS := 16
+# SpoolKit's charcoal paint vertices: 4 parts (rod, bracket beam, hatch box, fairlead beam) x 24 loops each.
+const SPOOL_DARK_LOOPS := 96
 const SHELL_TRIS := 6500        # hero_assets_test's world-one shell band, pilot excluded
 const LAYER_TRIS := 1500
 const CORE_LIMIT := 0.985
@@ -255,6 +261,11 @@ func _check_machinery(shell: Node) -> void:
 	var one_r := 0.0
 	var all_pod := points(pod, shell)
 	all_pod.append_array(tip)
+	# The spool is its own mesh under the Pod (SpoolKit, so the carrier bank tilts it), still part of the Pod's reach.
+	var spool := shell.find_child("SpoolKit", true, false) as MeshInstance3D
+	_report("sable spool kit parent", spool != null and spool.get_parent() == pod, "SpoolKit is a direct child of the Pod")
+	if spool != null:
+		all_pod.append_array(points(spool, shell))
 	for p in all_pod:
 		var c := clock(p)
 		if c >= 2.5 and c <= 3.75:
@@ -264,10 +275,16 @@ func _check_machinery(shell: Node) -> void:
 	_report("sable spool bulge", absf(spool_r - (LATTICE_OUT + SPOOL_PAST)) <= TOL,
 		"Pod reaches %.3f at 3 o'clock, want %.3f (0.12 m past the lattice)" % [spool_r, LATTICE_OUT + SPOOL_PAST])
 	_report("sable nothing at one", one_r <= 1.0, "Pod reaches %.3f at 1 o'clock, inside the collider" % one_r)
-	var rope := pod.find_child("RopeExit", true, false) as Node3D
-	var rope_at := to_root(rope, shell).origin if rope != null else Vector3.ZERO
-	_report("sable rope exit", rope != null and rope_at.x > 0.85 and rope_at.z < -0.08 and clock(rope_at) > 2.5 and clock(rope_at) < 3.75,
-		"RopeExit at the spool's front rope mouth, %s" % rope_at)
+	# Rope: the fairlead carriage (MOTION-SPEC swing row) carries RopeExit round the collar at 1.06,
+	# outside the 1.0 collider, so the rope never leaves the centre. Fitted on a fresh load.
+	var fitted := _load(SHELL)
+	var fitted_pod := fitted.find_child("Pod", true, false) as Node3D
+	HeroAssets.add_fairlead(fitted_pod)
+	var rope := fitted_pod.find_child("RopeExit", true, false) as Node3D
+	var rope_at := to_root(rope, fitted).origin if rope != null else Vector3.ZERO
+	_report("sable rope exit", rope != null and rope.get_parent().name == "Fairlead" and absf(rope_at.length() - 1.06) <= 0.001
+		and absf(rope_at.y) <= 0.001, "RopeExit rides the Fairlead carriage at radius 1.06 on the flat, %s" % rope_at)
+	fitted.free()
 	# Rack: one mesh, one class_accent surface, five index bands in COLOR.r (rail, four wrenches).
 	_report("sable rack surface", rack.mesh.get_surface_count() == 1 and HeroAssets.slot_of(rack.mesh, 0) == "class_accent",
 		"WrenchRack is one class_accent surface")
@@ -303,7 +320,34 @@ func _check_materials(shell: Node) -> void:
 				if String(mi.name) == "Pod" and not near_any(c, [Palette.SAND]):
 					seat_off += 1
 	_report("sable paint", off == 0, "paint vertex colours are section 6 enamels (%d off)" % off)
+	_report_mask("sable", shell)
+	# A string check on the shader source, not a render: the mask is step(0.05, alpha) on paint_take, fed from COLOR.a.
+	var src: String = HeroAssets.PAINT_SHADER
+	_report("sable paint shader mask", src.contains("paint_take * step(0.05, mask)"),
+		"PAINT_SHADER masks paint_take with step(0.05, COLOR.a) (string check)")
 	_report("sable seat bone", seat_off == 0, "every Pod paint face (seat, decal plate, rope drum) is bone (%d off)" % seat_off)
+
+
+# SpoolKit's charcoal paint vertices carry alpha 0 (no paint takes them); every other paint vertex has alpha 1.
+func _report_mask(label: String, root: Node) -> void:
+	var dark := 0
+	var spool_off := 0
+	var other_off := 0
+	for mi in meshes(root):
+		for i in mi.mesh.get_surface_count():
+			if HeroAssets.slot_of(mi.mesh, i) != "paint":
+				continue
+			var cols = mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_COLOR]
+			for c in Array(cols if cols != null else []):
+				if String(mi.name) == "SpoolKit" and near_any(c, [Palette.CHARCOAL]):
+					dark += 1
+					if c.a != 0.0:
+						spool_off += 1
+				elif c.a != 1.0:
+					other_off += 1
+	_report("%s spool paint mask" % label, dark == SPOOL_DARK_LOOPS and spool_off == 0,
+		"%d SpoolKit charcoal paint vertices, %d with alpha not 0 (alpha 0 keeps them charcoal under any paint)" % [dark, spool_off])
+	_report("%s other paint alpha" % label, other_off == 0, "every other paint vertex has alpha 1 (%d off)" % other_off)
 
 
 func _check_layers() -> void:
@@ -361,6 +405,7 @@ func _check_felt(shell: Node) -> void:
 	var core := felt.find_child("Core", true, false) as MeshInstance3D
 	var r := far(points(core, felt)) if core != null else INF
 	_report("sable felt lattice", r <= CORE_LIMIT + 0.0001 and problems(felt).is_empty(), "Felt Rig lattice reaches %.4f, clean slots" % r)
+	_report_mask("sable felt", felt)
 	felt.free()
 
 
