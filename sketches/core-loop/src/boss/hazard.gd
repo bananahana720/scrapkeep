@@ -69,6 +69,10 @@ var _open: Array[bool] = []
 # hostile hazard gets one, and it grows with every repaint (_grow_bound). The committed numbers never change after commit, and nothing moves
 # a hazard, so it is never recut.
 var _bound := AABB()
+# A step repainted since the box last took the meshes in; bound_merges counts the mesh walks
+# that took (tests/warning_bound_containment_test.gd: idle steps cost none).
+var _bound_stale := false
+var bound_merges := 0
 
 
 func commit_sector(id: String, threat_type: int, at: Vector3, band: Vector2, from_angle: float, to_angle: float, height: float,
@@ -301,16 +305,20 @@ func painter():
 func screen_bound_box() -> AABB:
 	if _painter == null or state == DONE:
 		return AABB()
+	if _bound_stale:
+		_bound_stale = false
+		bound_merges += 1
+		_bound = _bound.merge(WarningBound.mesh_box(_painter))
 	return _bound
 
 
 # The motion marks are repainted every step, on ground the first paint did not sample (a fill
-# ring's inner edge, a sweep's spoke and chevrons, a lane's run strip), so the box takes in the
-# meshes' box after each repaint: it holds every mesh the hazard has drawn, and a reader sees
-# a mesh no larger than the last one merged. One mesh walk a step.
+# ring's inner edge, a sweep's spoke and chevrons, a lane's run strip). A step only marks the
+# box stale; screen_bound_box() takes the meshes' box in when it is read, so the box holds every
+# mesh drawn up to the read and a step that nobody reads after costs nothing.
 func _grow_bound() -> void:
 	if _bound.size != Vector3.ZERO:
-		_bound = _bound.merge(WarningBound.mesh_box(_painter))
+		_bound_stale = true
 
 
 func _cut_bound() -> void:

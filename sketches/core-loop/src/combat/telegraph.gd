@@ -64,6 +64,10 @@ var _fill_tint := Color(-1.0, -1.0, -1.0, -1.0)
 # centre it was cut for. Computed in _build and again when the flight is set.
 var _bound := AABB()
 var _bound_centre := Vector3.ZERO
+# A non-driven repaint since the box last took the meshes in (unreachable for a hostile mark,
+# which is always driven); bound_merges counts the mesh walks that took.
+var _bound_stale := false
+var bound_merges := 0
 
 
 static func ring(parent: Node, terrain_ref, threat_type: int, at: Vector3, ring_radius: float, reach := 3.5,
@@ -245,6 +249,10 @@ func painter():
 func screen_bound_box() -> AABB:
 	if _painter == null or center != _bound_centre:
 		return AABB()
+	if _bound_stale:
+		_bound_stale = false
+		bound_merges += 1
+		_bound = _bound.merge(WarningBound.mesh_box(_painter))
 	return _bound
 
 
@@ -300,9 +308,9 @@ func _repaint() -> void:
 		_painter.drive(Threat.drive(d))
 	else:
 		_painter.paint(Threat.marks(d, true), Threat.MOTION_LAYERS)
-		# Repainted marks stand on ground the build did not sample; take their meshes in.
-		if _bound.size != Vector3.ZERO:
-			_bound = _bound.merge(WarningBound.mesh_box(_painter))
+		# Repainted marks stand on ground the build did not sample; screen_bound_box() takes
+		# their meshes in when it is read.
+		_bound_stale = _bound.size != Vector3.ZERO
 	var fill := Threat.fill_tint(d)
 	if fill != _fill_tint:
 		_fill_tint = fill

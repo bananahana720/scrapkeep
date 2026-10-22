@@ -17,7 +17,7 @@ const Terrain := preload("res://src/world/terrain.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 
 const TOLERANCE := 1.0e-3
-const STAGES := [2, 4]
+const STAGES := [2, 4, 5, 6]
 # A spot's relief is the height range over its 3 x 3 neighbourhood at SCAN_STEP_M, the heightfield's
 # cell (terrain.gd STEP) doubled, so a spot with a cliff in reach scores high.
 const SCAN_STEP_M := 4.0

@@ -338,3 +338,22 @@ func _planted() -> void:
 	t.check("planted: with the override back at 1.0 the lane case passes again", (restored.screen_bound_box()).grow(TOLERANCE).encloses(_mesh_box(restored)))
 	restored.free()
 
+	# Idle steps cost nothing: a hostile hazard repainted on every step walks its meshes only
+	# when its box is read (counted, no clock).
+	var idle := Hazard.new()
+	idle.ground = func(point: Vector3) -> float: return 0.0
+	idle.commit_annulus("t_idle", Threat.Type.INSTANT, Vector3(2.0, 0.0, 2.0), Vector2(0.0, 6.0), 3.5, 1.0, 1.0)
+	_world.add_child(idle)
+	for i in 30:
+		idle.step(0.02)
+	t.eq("idle: 30 steps with no read walk no meshes", idle.bound_merges, 0)
+	t.check("idle: the first read walks them once", idle.screen_bound_box().size != Vector3.ZERO and idle.bound_merges == 1)
+	idle.screen_bound_box()
+	t.eq("idle: a second read with no step between walks none", idle.bound_merges, 1)
+	idle.step(0.02)
+	idle.step(0.02)
+	idle.screen_bound_box()
+	t.eq("idle: two steps and a read walk once more", idle.bound_merges, 2)
+	_contained(idle, "idle hazard after reads")
+	idle.free()
+
