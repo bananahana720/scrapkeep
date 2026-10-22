@@ -40,7 +40,7 @@ A locked pilot's card names what unlocks it, and a pilot you earn is selectable 
 8. **Boss.** The last stage of a world launches you into that world's boss arena. Beat the boss to rout it. A victory screen naming the rout (BRINDLE ROUTED, for one) follows, and the run continues into the next world's first stage; the last world's boss ends the run.
 9. **Summary.** The summary reads RUN COMPLETE or RUN OVER, with time, stages, scrap, parts, kills, events won and whether the earned save was used. N runs again as the same class. Anything you were holding when the summary opened (Space, the fire button, a pad button) is ignored until you let go; the next fresh press works at once, with no wait.
 
-If you are scrapped, a death ends the run as RUN OVER: there is no free stage retry. Press N for a new run as the same class, or C to choose a class. An earned save (an item, once a run, if you carry it) catches one lethal hit instead; once spent it stays spent for the run. M opens the companion panel from the death screen when the run holds pieces.
+If you are scrapped, a death ends the run as RUN OVER: there is no free stage retry. Press N for a new run as the same class, or Space to choose a class. An earned save (an item, once a run, if you carry it) catches one lethal hit instead; once spent it stays spent for the run. M opens the companion panel from the summary when the run holds pieces.
 
 ## Controls
 
@@ -70,12 +70,10 @@ On the screens outside play, every choice is also a button: click it, or press t
 
 | Keys                             | Does                                                                                                                   |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Space                            | title: start; summary: choose a class                                                                                  |
+| Space                            | title: start; summary: choose a class (pad B on the summary)                                                           |
 | H                                | title: the how-to-play page; H or Esc closes it                                                                        |
 | 1, 2, ...                        | class select: one number per class card, left to right                                                                 |
-| T                                | arena death screen: replay the world's last stage from its start                                                       |
-| N                                | death or summary: new run as the same class                                                                            |
-| C                                | death screen: choose a class                                                                                           |
+| N                                | summary: new run as the same class (pad A on the summary)                                                              |
 | 1 or 2, A/D then Enter, or click | upgrade pick (run start, Moss's bay, or stage clear if you skipped the bay); Esc is "Later" and keeps the pick waiting |
 | roll up slowly to Moss's counter | opens the shop: click a plate or move focus with the keys; T talks to Moss                                             |
 
@@ -105,7 +103,7 @@ These mirror `src/ui/field_notes.gd`. The Tab overlay no longer prints them.
 2. Roll the scrap lines on the way down. Scrap is your armour and your weight, and a heavier ball hits harder.
 3. Break the Warden. The line at the top of the screen says what it wants next. Its gates open when it breaks; roll through one to take its part.
 4. As Sable, hit a steep face at speed and press E. Fire with left mouse, then hold and release Space to slingshot off.
-5. Get scrapped on purpose, then press R. You are back at the stage start in under a second.
+5. Get scrapped on purpose, then hold R. You are in a new run as the same pilot, back at world 1.
 
 ## Run the Linux build
 
@@ -143,7 +141,7 @@ A built package is a `scrapkeep-core-loop-<sha7>.tar.gz`, where `<sha7>` is the 
 `npm run sketch:smoke` runs the headless import, a 300-frame boot and every test in `tests/`. `npm run sketch:gate` runs `sketch:lint`, then the smoke run with a receipt. The spine tests are:
 
 - `spine_run_test.gd` drives a scripted full run through every flow state and measures speed through each gate and each launch.
-- `spine_restart_test.gd` checks that a retry restores the stage-start snapshot, from play and from the death screen.
+- `spine_restart_test.gd` checks that a retry restores the stage-start snapshot, from play and from the storeless death screen (tests and bots only; a real run ends on the summary).
 - `spine_event_kinds_test.gd` checks that every bus signal has a well-formed `event_kinds` row.
 - `spine_movement_test.gd` covers slam, winch, aim, mount, the momentum bank and the slingshot.
 - `spine_live_test.gd` runs a short fight through the module seams.

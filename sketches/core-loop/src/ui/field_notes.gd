@@ -42,7 +42,7 @@ const TRY_FIRST := [
 	"Roll the scrap lines on the way down: scrap is your armour and your weight, and a heavier ball hits harder.",
 	"Break the Warden: the line at the top of the screen says what it wants next. Its gates open when it breaks; roll through one to take its part.",
 	"As Sable, hit a steep face at speed, press E, fire with left mouse, then hold and release Space to slingshot off.",
-	"Get scrapped on purpose, then press R: you are back at the stage start in under a second.",
+	"Get scrapped on purpose, then hold R: a new run, the same pilot, from world 1.",
 	"Against Brindle, read the ship's plating line: hit what glows amber, slam the vent caps in phase 2, and ram or stomp the scooter when he runs.",
 ]
 
@@ -95,12 +95,10 @@ const FIELD_RULES := [
 ]
 
 const SCREEN_KEYS := [
-	{"keys": "Space", "does": "title: start; summary: choose a class (after a short beat)"},
+	{"keys": "Space", "does": "title: start; summary: choose a class (pad B on the summary), after a short beat"},
 	{"keys": "H", "does": "title: how to play, and back"},
 	{"keys": "1, 2, ...", "does": "class select: one number per class card, left to right"},
-	{"keys": "T", "does": "arena death screen: replay the world's last stage from its start"},
-	{"keys": "N", "does": "death or summary: new run, same class"},
-	{"keys": "C", "does": "death screen: choose a class"},
+	{"keys": "N", "does": "summary: new run, same class (pad A on the summary)"},
 ]
 
 # The key list in display order: a row per verb with its table keys and caps, then the menu keys.

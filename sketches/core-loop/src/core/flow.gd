@@ -105,7 +105,7 @@ var run_won := false
 var victory_lap := true
 var lap: Node3D = null
 var lap_stats := {}
-# The entrance doc last written, kept so a spent retry rewrites the entrance, never the arena.
+# The entrance doc last written, kept so the earned save's spend rewrites the entrance, never the arena.
 var _entrance := {}
 
 
