@@ -2,11 +2,13 @@ extends SceneTree
 
 # Gate for the park ground's surface (step 2 of the park ground): every vertex of a park's four
 # Terrain3D regions has the control map's auto bit (hole vertices keep the hole bit too), and the
-# colour map tints the cells of surface.bin's concrete, tailings and basalt slots by target / the
-# floor texture's mean (alpha at Terrain3D's default 127/255) while the other slots, the net and the
-# apron stay white.
-# The parks are built through the real path (make_render, start, finish); the targets are pinned to
-# their sources. Headless Terrain3D draws nothing, so this reads the maps, not pixels.
+# colour map carries each concrete, tailings and basalt cell's multiplier (a ratio between two patches
+# of one reference board, pinned here from the raw sRGB numbers) feathered over 8 m: a cell 5 or more
+# cells from another slot and from the play edge wears its slot's multiplier, no 1 m step at a real
+# slot border or the square's edge exceeds the full difference over 8 plus 2/255, and the apron
+# beyond the margin stays white. Alpha stays at Terrain3D's default 127/255 throughout.
+# The parks are built through the real path (make_render, start, finish). Headless Terrain3D draws
+# nothing, so this reads the maps, not pixels.
 
 const T := preload("res://tests/support/t.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
@@ -22,9 +24,14 @@ const REGION := 1024
 const SAMPLES := 2500
 const CELL_SAMPLES := 150
 const BYTE := 1.0 / 255.0 + 0.0001
+# A deep cell's colour is a byte-rounded mip average of equal cells, within 2/255 of its multiplier.
+const TOL := 2.0 / 255.0 + 0.0001
+# Cells from any other slot or the edge that count as "deep": the feather's 4 cells plus the bilinear support.
+const DEEP := 5
+const MARGIN := 8
 
 var t := T.new("park_ground_surface_test")
-var _targets := {}
+var _mults := {}
 var _floor_mean := Color.WHITE
 var _hole_cells_seen := 0
 
@@ -35,7 +42,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_pin_floor_mean()
-	_pin_targets()
+	_pin_mults()
 	var holder := Node3D.new()
 	root.add_child(holder)
 	var camera := Camera3D.new()
@@ -52,6 +59,7 @@ func _run() -> void:
 		ground.queue_free()
 		render.queue_free()
 		await process_frame
+	_check_planted()
 	t.check("some park checked has hole cells", _hole_cells_seen > 0, str(_hole_cells_seen))
 	quit(t.verdict())
 
@@ -79,34 +87,27 @@ func _pin_floor_mean() -> void:
 	_floor_mean = mean
 
 
-# The three targets, read from their sources and not from park_terrain.gd's constants.
-func _pin_targets() -> void:
-	var gpw := FileAccess.get_file_as_string("res://assets/materials/gpw_workshop.gdshader")
-	var m := RegEx.create_from_string("uniform vec4 base_color : source_color = vec4\\(([0-9.]+), ([0-9.]+), ([0-9.]+),").search(gpw)
-	t.check("gpw_workshop.gdshader declares base_color", m != null)
-	var concrete := Color.WHITE
-	if m != null:
-		concrete = Color(float(m.get_string(1)), float(m.get_string(2)), float(m.get_string(3)))
-		_near_color("concrete target = gpw_workshop base_color = VERDIGRIS", concrete, Palette.VERDIGRIS)
-	var cinder := FileAccess.get_file_as_string("res://assets/materials/dig_stone/cinder.gdshader")
-	var dark := RegEx.create_from_string("uniform vec3 grit_dark : source_color = vec3\\(([0-9.]+), ([0-9.]+), ([0-9.]+)\\)").search(cinder)
-	var light := RegEx.create_from_string("uniform vec3 grit_light : source_color = vec3\\(([0-9.]+), ([0-9.]+), ([0-9.]+)\\)").search(cinder)
-	t.check("cinder.gdshader declares grit_dark and grit_light", dark != null and light != null)
-	var basalt := Color.WHITE
-	if dark != null and light != null:
-		var d := Color(float(dark.get_string(1)), float(dark.get_string(2)), float(dark.get_string(3)))
-		var l := Color(float(light.get_string(1)), float(light.get_string(2)), float(light.get_string(3)))
-		basalt = d.lerp(l, 0.5)
-	var dig := FileAccess.get_file_as_string("res://src/world/map_dig.gd")
-	t.check("map_dig.gd's pit floor tint is CHARCOAL.lerp(RUST, 0.4)", dig.contains("tint = Palette.CHARCOAL.lerp(Palette.RUST, 0.4)"))
-	var tailings := Palette.CHARCOAL.lerp(Palette.RUST, 0.4)
-	_targets = {2: concrete, 3: tailings, 4: basalt}
-	for slot in _targets:
-		var c: Color = _targets[slot]
-		t.check("slot %d tint needs no clamp (target < floor mean)" % slot, c.r < _floor_mean.r and c.g < _floor_mean.g and c.b < _floor_mean.b, str(c))
-	_near_color("park_terrain basalt target = mean of grit_dark and grit_light", _park_target(4), basalt)
-	_near_color("park_terrain tailings target = CHARCOAL.lerp(RUST, 0.4)", _park_target(3), tailings)
-	_near_color("park_terrain concrete target = pinned base_color", _park_target(2), concrete)
+# The three multipliers, from the reference boards' raw sRGB patch means (park_terrain.gd's comments
+# cite the crops): material / lit ground, with the floor texture's mean as the ground's own chromaticity
+# for the tailings (red kept at 1), and clamped to what an RGBA8 colour map can hold.
+func _pin_mults() -> void:
+	var fm := _floor_mean
+	# Tailings: the board floor 245,172,116 against the floor texture's g/r and b/r.
+	var tailings := Color(1.0, (172.0 / 245.0) / (fm.g / fm.r), (116.0 / 245.0) / (fm.b / fm.r), 0.5)
+	# Basalt: the cap 101,93,93 over the lit limestone 153,126,111.
+	var basalt := Color(101.0 / 153.0, 93.0 / 126.0, 93.0 / 111.0, 0.5)
+	# Concrete: the ramp 239,194,148 over the lit sand 243,167,102.5, each channel at most 1.
+	var concrete := Color(minf(239.0 / 243.0, 1.0), minf(194.0 / 167.0, 1.0), minf(148.0 / 102.5, 1.0), 0.5)
+	_mults = {2: concrete, 3: tailings, 4: basalt}
+	for slot in _mults:
+		var want: Color = _mults[slot]
+		var got := ParkTerrain.slot_tint(slot)
+		t.check("slot %d multiplier = board ratio %s" % [slot, want], absf(got.r - want.r) <= 0.002 and absf(got.g - want.g) <= 0.002 and absf(got.b - want.b) <= 0.002, "got %s" % got)
+		t.near("slot %d multiplier alpha is Terrain3D's default 127/255" % slot, got.a, 127.0 / 255.0, 0.0001)
+		var target := _park_target(slot)
+		_near_color("slot %d target = multiplier * floor mean" % slot, target, Color(got.r * fm.r, got.g * fm.g, got.b * fm.b))
+	t.check("the tailings multiplier keeps red at 1 and darkens green and blue", ParkTerrain.slot_tint(3).r == 1.0 and ParkTerrain.slot_tint(3).g < 1.0 and ParkTerrain.slot_tint(3).b < 1.0)
+	t.check("the tailings target is much lighter than the old charcoal tint", _park_target(3).g > 0.45, str(_park_target(3)))
 
 
 # park_terrain.gd's target for a slot, or magenta where it declares none (so the check fails, not parses).
@@ -120,12 +121,15 @@ func _near_color(label: String, got: Color, want: Color) -> void:
 	t.check(label, absf(got.r - want.r) <= BYTE and absf(got.g - want.g) <= BYTE and absf(got.b - want.b) <= BYTE, "got %s, want %s" % [got, want])
 
 
-# What the colour map should hold for a surface slot: target / the floor mean per channel, white where untinted.
+# What the colour map should hold for a surface slot: its multiplier, white where untinted.
 func _tint(slot: int) -> Color:
-	if not _targets.has(slot):
+	if not _mults.has(slot):
 		return Color(1.0, 1.0, 1.0, 0.5)
-	var c: Color = _targets[slot]
-	return Color(minf(c.r / _floor_mean.r, 1.0), minf(c.g / _floor_mean.g, 1.0), minf(c.b / _floor_mean.b, 1.0), 0.5)
+	return _mults[slot]
+
+
+func _near(a: Color, b: Color, tol: float) -> bool:
+	return absf(a.r - b.r) <= tol and absf(a.g - b.g) <= tol and absf(a.b - b.b) <= tol and absf(a.a - b.a) <= tol
 
 
 func _same(a: Color, b: Color) -> bool:
@@ -144,6 +148,7 @@ func _check_park(id: String, render: Node3D) -> void:
 	var surface := FileAccess.get_file_as_bytes(dir + "/surface.bin")
 	var holes := FileAccess.get_file_as_bytes(dir + "/holes.bin")
 	t.eq(id + " surface.bin size", surface.size(), CELLS * CELLS)
+	var deep := _deep_cells(surface)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20261022
 	var bad_auto := 0
@@ -160,8 +165,8 @@ func _check_park(id: String, render: Node3D) -> void:
 		var x0 := loc.x * REGION
 		var z0 := loc.y * REGION
 		var points: Array[Vector2i] = [Vector2i(0, 0), Vector2i(REGION - 1, 0), Vector2i(0, REGION - 1), Vector2i(REGION - 1, REGION - 1)]
-		# The play square's edges and the +800 edge, where a cell has no 1 m vertex of its own.
-		for edge in [-CELLS, -CELLS + 1, CELLS - 2, CELLS - 1, CELLS, CELLS + 1]:
+		# The play square's edges and the +800 edge.
+		for edge in [-CELLS - 9, -CELLS - 8, -CELLS, -CELLS + 1, CELLS - 2, CELLS - 1, CELLS, CELLS + 1, CELLS + 8, CELLS + 9]:
 			for along in [-CELLS, -1, 0, 1, CELLS - 1, CELLS]:
 				points.append(Vector2i(edge - x0, along - z0))
 				points.append(Vector2i(along - x0, edge - z0))
@@ -180,17 +185,29 @@ func _check_park(id: String, render: Node3D) -> void:
 				if first.is_empty():
 					first = "no auto bit at (%d, %d)" % [x, z]
 			var slot := _slot_at(surface, x, z)
-			var want := _tint(slot)
-			seen[slot] = true
-			if not _same(color.get_pixel(p.x, p.y), want):
+			var want := Color(1.0, 1.0, 1.0, 0.5)
+			if slot >= 0:
+				# Cells near another slot or the edge are feathered: the bound check below covers them.
+				if deep[((z + CELLS) >> 1) * CELLS + ((x + CELLS) >> 1)] == 0:
+					continue
+				want = _tint(slot)
+			elif x >= -CELLS - MARGIN - 1 and x <= CELLS + MARGIN and z >= -CELLS - MARGIN - 1 and z <= CELLS + MARGIN:
+				continue
+			seen[slot] = int(seen.get(slot, 0)) + 1
+			if not _near(color.get_pixel(p.x, p.y), want, TOL):
 				bad_color += 1
 				if first.is_empty():
 					first = "colour %s at (%d, %d) slot %d, want %s" % [color.get_pixel(p.x, p.y), x, z, slot, want]
 		t.check("%s region %s checked 2000+ vertices" % [id, loc], checked >= 2000, str(checked))
+	var colour_checked := 0
+	for slot in seen:
+		colour_checked += int(seen[slot])
+	print("%s: random vertices colour-checked per slot (feathered ones skipped, -1 is the far apron): %s" % [id, seen])
+	t.check(id + " colour-checked 2000+ deep or far-apron vertices", colour_checked >= 2000, str(colour_checked))
 	t.eq(id + " vertices without the auto bit", bad_auto, 0)
 	t.eq(id + " vertices with the wrong colour " + first, bad_color, 0)
-	_check_cells(id, render, surface, rng)
-	_check_border(id, render, surface)
+	_check_cells(id, render, surface, deep, rng)
+	_check_boundaries(id, render, surface, rng)
 	_check_holes(id, render, holes)
 
 
@@ -202,45 +219,207 @@ func _vertex(render: Node3D, x: int, z: int) -> Array:
 	return [region.get_control_map().get_data().decode_u32((pz * REGION + px) * 4), region.get_color_map().get_pixel(px, pz)]
 
 
-# Seeded cells of every slot present: all four vertices carry that slot's tint.
-func _check_cells(id: String, render: Node3D, surface: PackedByteArray, rng: RandomNumberGenerator) -> void:
+# 1 for each cell DEEP or more cells (Chebyshev) from any other slot and from the play edge. A cell is
+# a boundary when a 4-neighbour differs; a window with no boundary cell holds one slot.
+func _deep_cells(surface: PackedByteArray) -> PackedByteArray:
+	var edge := PackedInt32Array()
+	edge.resize(CELLS * CELLS)
+	for j in CELLS:
+		for i in CELLS:
+			var k := j * CELLS + i
+			var slot := surface[k]
+			if (i < CELLS - 1 and surface[k + 1] != slot) or (j < CELLS - 1 and surface[k + CELLS] != slot):
+				edge[k] = 1
+				if i < CELLS - 1 and surface[k + 1] != slot:
+					edge[k + 1] = 1
+				if j < CELLS - 1 and surface[k + CELLS] != slot:
+					edge[k + CELLS] = 1
+	# Window sums with a horizontal then a vertical running total.
+	var wide := 2 * DEEP + 1
+	var rows := PackedInt32Array()
+	rows.resize(CELLS * CELLS)
+	for j in CELLS:
+		var run := 0
+		for i in range(0, mini(DEEP, CELLS)):
+			run += edge[j * CELLS + i]
+		for i in CELLS:
+			if i + DEEP < CELLS:
+				run += edge[j * CELLS + i + DEEP]
+			if i - DEEP - 1 >= 0:
+				run -= edge[j * CELLS + i - DEEP - 1]
+			rows[j * CELLS + i] = run
+	var deep := PackedByteArray()
+	deep.resize(CELLS * CELLS)
+	for i in CELLS:
+		var run := 0
+		for j in range(0, mini(DEEP, CELLS)):
+			run += rows[j * CELLS + i]
+		for j in CELLS:
+			if j + DEEP < CELLS:
+				run += rows[(j + DEEP) * CELLS + i]
+			if j - DEEP - 1 >= 0:
+				run -= rows[(j - DEEP - 1) * CELLS + i]
+			if run == 0 and i >= DEEP and i < CELLS - DEEP and j >= DEEP and j < CELLS - DEEP:
+				deep[j * CELLS + i] = 1
+	return deep
+
+
+# Seeded deep cells of every slot present: all four vertices carry that slot's multiplier.
+func _check_cells(id: String, render: Node3D, surface: PackedByteArray, deep: PackedByteArray, rng: RandomNumberGenerator) -> void:
 	var by_slot := {}
 	for k in surface.size():
 		if not by_slot.has(surface[k]):
 			by_slot[surface[k]] = []
 		by_slot[surface[k]].append(k)
+	var counts := {}
 	for slot in by_slot:
-		var cells: Array = by_slot[slot]
+		# Draw seeded deep cells until CELL_SAMPLES are checked, or the slot has none left to draw.
+		var pool: Array = by_slot[slot].filter(func(k): return deep[k] == 1)
 		var bad := 0
-		for n in mini(CELL_SAMPLES, cells.size()):
-			var k: int = cells[rng.randi_range(0, cells.size() - 1)]
+		var n := mini(CELL_SAMPLES, pool.size())
+		for s in n:
+			var k: int = pool[rng.randi_range(0, pool.size() - 1)]
 			for dz in 2:
 				for dx in 2:
 					var v := _vertex(render, -CELLS + 2 * (k % CELLS) + dx, -CELLS + 2 * (k / CELLS) + dz)
-					if not _same(v[1], _tint(slot)):
+					if not _near(v[1], _tint(slot), TOL):
 						bad += 1
-		t.eq("%s slot %d cells (%d in the bake) wear their tint on all four vertices" % [id, slot, cells.size()], bad, 0)
-
-
-# A planted control per axis: a tinted cell beside a cell of another slot (+x, then +z), so a
-# one-vertex shift along either axis fails.
-func _check_border(id: String, render: Node3D, surface: PackedByteArray) -> void:
-	for axis in ["x", "z"]:
-		var step := 1 if axis == "x" else CELLS
-		var tinted := -1
-		for k in surface.size():
-			var room := k % CELLS < CELLS - 1 if axis == "x" else k / CELLS < CELLS - 1
-			if _targets.has(surface[k]) and room and surface[k + step] != surface[k]:
-				tinted = k
-				break
-		if not t.check("%s has a tinted cell beside another slot along %s" % [id, axis], tinted >= 0):
+		counts[slot] = n
+		t.eq("%s slot %d cells (%d in the bake, %d deep) wear their multiplier on all four vertices" % [id, slot, by_slot[slot].size(), pool.size()], bad, 0)
+		if n >= 100:
+			t.check("%s slot %d: at least 100 deep cells checked" % [id, slot], true, "%d checked of %d deep" % [n, pool.size()])
 			continue
-		var x := -CELLS + 2 * (tinted % CELLS)
-		var z := -CELLS + 2 * (tinted / CELLS)
-		var inside: Color = _vertex(render, x + 1, z)[1] if axis == "x" else _vertex(render, x, z + 1)[1]
-		var across: Color = _vertex(render, x + 2, z)[1] if axis == "x" else _vertex(render, x, z + 2)[1]
-		t.check("%s %s border: the tinted cell's vertex is tinted" % [id, axis], _same(inside, _tint(surface[tinted])) and not _same(inside, _tint(0)), str(inside))
-		t.check("%s %s border: the neighbour across the slot border is not" % [id, axis], _same(across, _tint(surface[tinted + step])) and not _same(across, inside), str(across))
+		# Thin stamps (the pit's concrete) have too few deep cells: check 100 of the slot's cells against the
+		# hull of all multipliers present (a feathered colour lies between them) and say so.
+		var near_bad := 0
+		var near_n := mini(CELL_SAMPLES, by_slot[slot].size())
+		var lo := Color(1, 1, 1)
+		var hi := Color(0, 0, 0)
+		for other in by_slot:
+			var m := _tint(other)
+			lo = Color(minf(lo.r, m.r), minf(lo.g, m.g), minf(lo.b, m.b))
+			hi = Color(maxf(hi.r, m.r), maxf(hi.g, m.g), maxf(hi.b, m.b))
+		for s in near_n:
+			var k: int = by_slot[slot][rng.randi_range(0, by_slot[slot].size() - 1)]
+			var c: Color = _vertex(render, -CELLS + 2 * (k % CELLS), -CELLS + 2 * (k / CELLS))[1]
+			if c.r < lo.r - TOL or c.r > hi.r + TOL or c.g < lo.g - TOL or c.g > hi.g + TOL or c.b < lo.b - TOL or c.b > hi.b + TOL:
+				near_bad += 1
+		t.eq("%s slot %d has only %d deep cells; %d of its cells stay inside the multiplier hull (cells off it)" % [id, slot, pool.size(), near_n], near_bad, 0)
+		t.check("%s slot %d: at least 100 cells checked against the hull" % [id, slot], near_n >= 100, str(near_n))
+	print("%s: deep cells checked per slot: %s" % [id, counts])
+
+
+# The largest per-channel difference between the multipliers of any two slots in a set.
+func _full_diff(slots: Array) -> Array:
+	var diff := [0.0, 0.0, 0.0]
+	for a in slots:
+		for b in slots:
+			var ca := _tint(a)
+			var cb := _tint(b)
+			diff[0] = maxf(diff[0], absf(ca.r - cb.r))
+			diff[1] = maxf(diff[1], absf(ca.g - cb.g))
+			diff[2] = maxf(diff[2], absf(ca.b - cb.b))
+	return diff
+
+
+# The largest 1 m step per channel (horizontal and vertical neighbours) over a window of vertices.
+func _max_step(read: Callable, x0: int, z0: int, w: int, h: int) -> Array:
+	var step := [0.0, 0.0, 0.0]
+	for z in range(z0, z0 + h):
+		for x in range(x0, x0 + w):
+			var c: Color = read.call(x, z)
+			for d in [Vector2i(1, 0), Vector2i(0, 1)]:
+				var o: Color = read.call(x + d.x, z + d.y)
+				step[0] = maxf(step[0], absf(c.r - o.r))
+				step[1] = maxf(step[1], absf(c.g - o.g))
+				step[2] = maxf(step[2], absf(c.b - o.b))
+	return step
+
+
+# Real slot borders: no step between 1 m neighbours in a window around them exceeds the full multiplier
+# difference over 8 plus 2/255, per channel (the feather spreads a border over 8 m).
+func _check_boundaries(id: String, render: Node3D, surface: PackedByteArray, rng: RandomNumberGenerator) -> void:
+	var pick: int = {"park_pit": 3, "park_sinkhole": 4, "park_test": 2}[id]
+	var found: Array[int] = []
+	for k in surface.size():
+		if surface[k] == pick and k % CELLS > 30 and k % CELLS < CELLS - 30 and k / CELLS > 30 and k / CELLS < CELLS - 30 and surface[k + 1] != pick:
+			found.append(k)
+	if not t.check("%s has a slot %d cell with another slot to its +x side" % [id, pick], not found.is_empty()):
+		return
+	var read := func(x: int, z: int) -> Color: return _vertex(render, x, z)[1]
+	var worst := [0.0, 0.0, 0.0]
+	var worst_diff := [0.0, 0.0, 0.0]
+	for n in 3:
+		var k := found[rng.randi_range(0, found.size() - 1)]
+		var cx := -CELLS + 2 * (k % CELLS)
+		var cz := -CELLS + 2 * (k / CELLS)
+		var present := {}
+		for dj in range(-14, 15):
+			for di in range(-14, 15):
+				present[surface[k + dj * CELLS + di]] = true
+		var diff := _full_diff(present.keys())
+		var step := _max_step(read, cx - 24, cz - 24, 48, 48)
+		for c in 3:
+			t.check("%s border near vertex (%d, %d) channel %d: max step %.4f <= diff %.4f / 8 + 2/255" % [id, cx, cz, c, step[c], diff[c]], step[c] <= diff[c] / 8.0 + 2.0 / 255.0 + 0.0001)
+			worst[c] = maxf(worst[c], step[c])
+			worst_diff[c] = maxf(worst_diff[c], diff[c])
+		if maxf(diff[0], maxf(diff[1], diff[2])) >= 0.05:
+			t.check("%s border near (%d, %d) is a real border (some channel steps 1/255 or more)" % [id, cx, cz], maxf(step[0], maxf(step[1], step[2])) >= 1.0 / 255.0)
+	print("%s: max 1 m step over 3 real borders (r, g, b): %s of full difference %s" % [id, worst, worst_diff])
+
+
+# feather() on constructed per-cell images: one isolated tinted cell among white ones, and tint up to the edge.
+func _check_planted() -> void:
+	var white := Color(1.0, 1.0, 1.0, 0.5)
+	var tailings := _tint(3)
+	var cells := Image.create(CELLS, CELLS, false, Image.FORMAT_RGBA8)
+	cells.fill(Color8(255, 255, 255, 127))
+	var script: GDScript = ParkTerrain
+	if not t.check("park_terrain.gd declares feather()", script.get_script_method_list().any(func(m): return m.name == "feather")):
+		return
+	cells.set_pixel(400, 400, Color(tailings.r, tailings.g, tailings.b, 127.0 / 255.0))
+	var img: Image = script.call("feather", cells)
+	var margin: int = script.get_script_constant_map().get("FEATHER_MARGIN", 8)
+	t.eq("feather() of 800 cells is 1600 plus a margin each side", img.get_width(), CELLS * 2 + 2 * margin)
+	var read := func(x: int, z: int) -> Color: return img.get_pixel(x + CELLS + margin, z + CELLS + margin)
+	var diff := [absf(white.r - tailings.r), absf(white.g - tailings.g), absf(white.b - tailings.b)]
+	# The cell (400, 400) covers vertices 0 and 1 on both axes.
+	var step := _max_step(read, -20, -20, 40, 40)
+	for c in 3:
+		t.check("planted isolated cell channel %d: max step %.4f <= diff %.4f / 8 + 2/255" % [c, step[c], diff[c]], step[c] <= diff[c] / 8.0 + 2.0 / 255.0 + 0.0001)
+		if diff[c] >= 0.01:
+			t.check("planted isolated cell channel %d: no step reaches the full difference %.4f" % [c, diff[c]], step[c] < diff[c])
+	var middle: Color = read.call(0, 0)
+	t.check("planted isolated cell: its centre is tinted a little (an 8 m texel averages 1 cell in 16)", middle.g < white.g - 0.5 / 255.0 and middle.g > tailings.g + 0.05, str(middle))
+	# A 4 by 4 cell block that fills one 8 m texel: the steepest fade, near the bound but under the full difference.
+	cells.fill(Color8(255, 255, 255, 127))
+	for j in range(400, 404):
+		for i in range(400, 404):
+			cells.set_pixel(i, j, Color(tailings.r, tailings.g, tailings.b, 127.0 / 255.0))
+	var block: Image = script.call("feather", cells)
+	var block_read := func(x: int, z: int) -> Color: return block.get_pixel(x + CELLS + margin, z + CELLS + margin)
+	var block_step := _max_step(block_read, -20, -20, 48, 48)
+	for c in [1, 2]:
+		t.check("planted 4 by 4 block channel %d: step %.4f within [diff / 16, diff / 8 + 2/255]" % [c, block_step[c]], block_step[c] <= diff[c] / 8.0 + 2.0 / 255.0 + 0.0001 and block_step[c] >= diff[c] / 16.0)
+		t.check("planted 4 by 4 block channel %d: no step reaches the full difference" % c, block_step[c] < diff[c])
+	cells.fill(Color(tailings.r, tailings.g, tailings.b, 127.0 / 255.0))
+	t.check("planted isolated cell: alpha stays 127", img.get_pixel(CELLS + margin, CELLS + margin).a8 == 127 and img.get_pixel(0, 0).a8 == 127)
+	t.check("planted isolated cell: pixels 20 m away are white", _near(read.call(20, 0), white, TOL) and _near(read.call(0, -20), white, TOL))
+	# Tint up to the square's edge fades to white over the margin, with bounded steps and a white last pixel.
+	var all: Image = script.call("feather", cells)
+	var edge_read := func(x: int, z: int) -> Color: return all.get_pixel(x + CELLS + margin, z + CELLS + margin)
+	for c in 3:
+		var along := 0.0
+		for x in range(-CELLS - margin, -CELLS + 12):
+			var a: Color = edge_read.call(x, 0)
+			var b: Color = edge_read.call(x + 1, 0)
+			var dc := [absf(a.r - b.r), absf(a.g - b.g), absf(a.b - b.b)]
+			along = maxf(along, dc[c])
+		t.check("tint up to the edge, channel %d: max step %.4f <= diff %.4f / 8 + 2/255" % [c, along, diff[c]], along <= diff[c] / 8.0 + 2.0 / 255.0 + 0.0001)
+	t.check("tint up to the edge: 8 m outside it the colour is white", _near(edge_read.call(-CELLS - margin, 0), white, TOL), str(edge_read.call(-CELLS - margin, 0)))
+	t.check("tint up to the edge: the edge vertex is partway", edge_read.call(-CELLS, 0).g < white.g - 0.01, str(edge_read.call(-CELLS, 0)))
+	t.check("tint up to the edge: 8 m inside it is the full tint", _near(edge_read.call(-CELLS + 8, 0), tailings, TOL), str(edge_read.call(-CELLS + 8, 0)))
+	t.check("tint up to the far edge: 8 m outside it is white", _near(edge_read.call(CELLS + margin - 1, 0), white, TOL), str(edge_read.call(CELLS + margin - 1, 0)))
 
 
 func _check_holes(id: String, render: Node3D, holes: PackedByteArray) -> void:
