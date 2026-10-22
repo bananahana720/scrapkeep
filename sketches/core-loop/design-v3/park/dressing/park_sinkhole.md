@@ -112,7 +112,7 @@ Kit colours outside the board's six swatches: timber (8a6a46, 5d4630, 8e8470, a8
 
 ## Board drift (for review)
 
-Fable review of 9f1bb6bb failed the palette: the machines were steel grey, not petrol with oxide and bone panels and copper fittings. Recoloured in this commit (STEEL and STEEL_D to petrol; bone caps and flanges; oxide band and cart straps; copper on three small fittings; a bone rim on the horn bell, so it reads as a horn from behind). The crew board's plush crews are not a drift (reviewer ruling). Remaining differences from the board for review:
+The board review of 9f1bb6bb failed the palette: the machines were steel grey, not petrol with oxide and bone panels and copper fittings. Recoloured in this commit (STEEL and STEEL_D to petrol; bone caps and flanges; oxide band and cart straps; copper on three small fittings; a bone rim on the horn bell, so it reads as a horn from behind). The crew board's plush crews are not a drift (reviewer ruling). Remaining differences from the board for review:
 - No enamel wear: the board's petrol panels have sandstone-edged rust patches; the kit's are clean flat colour.
 - Neutral iron 6b706c remains on pails, the funnel, and drill-steel alternates; the board's pails are dark iron or charcoal.
 - Lamp rack lamps and the coat-hook lamp are petrol with a white lens, not lit; the board has no lamp.
