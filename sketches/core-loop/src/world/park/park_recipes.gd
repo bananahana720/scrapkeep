@@ -185,6 +185,7 @@ const ANCHOR_SINK_M := 1.0
 const ANCHOR_RUNOUT_M := 10.0
 const ANCHOR_SIDE_M := 6.0
 const ROUTE_LANE_HALF_M := 20.0
+const ANCHOR_SPAN_FRACTION := 1.0
 const ANCHOR_EDGE_STEP_M := 12.0
 # An anchor field dressed with the anchors kit (tools/blender/park/anchors.py): a row whose recipe is one of
 # ANCHOR_KITS lays out the same posts and box colliders as a greybox anchor field and draws each post as one of the
@@ -1070,7 +1071,7 @@ static func clear_zones(park: Dictionary) -> Array:
 		var half := Vector2(sin(yaw), cos(yaw)) * float(row["size"][0]) * 0.5
 		places[row["id"]] = [_v2(row["at"])]
 		ends[row["id"]] = [_v2(row["at"]) - half, _v2(row["at"]) + half]
-		if row["element"] != "ground" and row["element"] != "anchor_field":
+		if row["element"] != "ground" and row["element"] != "anchor_field" and not spans_park(row, park):
 			out.append(_zone(row))
 	for row: Dictionary in park.get("activity_rows", []):
 		places[row["id"]] = [_v2(row["at"])]
@@ -1104,6 +1105,17 @@ static func clear_zones(park: Dictionary) -> Array:
 			if best > 0.001:
 				out.append({"a": leg[0], "b": leg[1], "half": ROUTE_LANE_HALF_M})
 	return out
+
+
+# Whether a row's footprint spans the park: its across size (size[2], along its cross axis) reaches ANCHOR_SPAN_FRACTION
+# of the play rect's extent on that axis. The same measure as park_map.gd mesa_edge, whose whole-rect reach is the one
+# precedent for a full-width band. Such a band is a landform the ball rides, not a spot to keep posts off.
+static func spans_park(row: Dictionary, park: Dictionary) -> bool:
+	if not park.has("play_rect"):
+		return false
+	var rect: Array = park["play_rect"]
+	var yaw := deg_to_rad(float(row.get("yaw_deg", 0.0)))
+	return float(row["size"][2]) >= ANCHOR_SPAN_FRACTION * (absf(cos(yaw)) * float(rect[2]) + absf(sin(yaw)) * float(rect[3]))
 
 
 static func _zone(row: Dictionary) -> Dictionary:
