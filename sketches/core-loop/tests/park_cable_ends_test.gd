@@ -15,6 +15,16 @@ const EPS_M := 0.001
 const MAPS := ["park_crown", "park_dam", "park_flume", "park_islands", "park_pit", "park_sinkhole"]
 # park_test is the bake fixture: its bench_zip is a flat-world stand-in over a 40 m bench, not a played cable.
 
+# A landing's runout: the ride's ball leaves a cable and rolls on over the channel bend. A post stamped on the
+# bank (sheer +20 m) at that bend ends the run in a dead stop (park_sinkhole tube_rope_1 landing, lava_channel_post_21i
+# at (-164.9, -448.2) stopped Rivet at (-172.8, -446.2)). The bend's baked ground must not rise more than
+# BEND_RISE_MAX_M across a BEND_RADIUS_M disc round that spot. Checked on this bend only: measured over every cable end
+# (measured 2026-10-22 on the baked grounds), tube_rope_3 and _4, east_haulage_rope_2 and domes_zip already rise 2.8 to 22.6 m within
+# 30 m of their ends along the heading, so a general runout rule would fail maps outside this unit.
+const BEND_AT := Vector2(-172.8, -446.2)
+const BEND_RADIUS_M := 8.0
+const BEND_RISE_MAX_M := 8.0
+
 var t := T.new("park_cable_ends_test")
 
 
@@ -24,6 +34,23 @@ func _initialize() -> void:
 
 static func end_clear(end: Vector3, ground: Callable) -> bool:
 	return end.y - float(ground.call(end.x, end.z)) >= MIN_OVER_M - EPS_M
+
+
+# The ground's rise (highest minus lowest) over a disc of radius r round c, sampled every 1 m.
+static func disc_rise(ground: Callable, c: Vector2, r: float) -> float:
+	var lo := INF
+	var hi := -INF
+	var dx := -r
+	while dx <= r:
+		var dz := -r
+		while dz <= r:
+			if dx * dx + dz * dz <= r * r:
+				var y := float(ground.call(c.x + dx, c.y + dz))
+				lo = minf(lo, y)
+				hi = maxf(hi, y)
+			dz += 1.0
+		dx += 1.0
+	return hi - lo
 
 
 func _run() -> void:
@@ -38,8 +65,14 @@ func _run() -> void:
 			rows += 1
 			t.check("%s %s to end is %.2f m over its ground, want %.2f" % [id, spec["id"], end.y - float(ground.call(end.x, end.z)), MIN_OVER_M], end_clear(end, ground))
 	t.check("the walk found cable rows (%d)" % rows, rows >= 30)
+	var sink: Callable = ParkGround.ground("park_sinkhole")
+	var rise := disc_rise(sink, BEND_AT, BEND_RADIUS_M)
+	t.check("park_sinkhole bend runout: ground rises %.1f m over a %.0f m disc at %s, want at most %.1f" % [rise, BEND_RADIUS_M, BEND_AT, BEND_RISE_MAX_M], rise <= BEND_RISE_MAX_M)
 	# Control: a row at ground + 1.0 fails; the minimum itself passes.
 	var flat := func(_x: float, _z: float) -> float: return -40.0
 	t.check("control: an end 1.0 m over the ground fails", not end_clear(Vector3(150.0, -39.0, -178.0), flat))
 	t.check("control: an end exactly 2.35 m over the ground passes", end_clear(Vector3(150.0, -37.65, -178.0), flat))
+	var wall := func(x: float, _z: float) -> float: return -80.0 if x < -170.0 else -60.0
+	t.check("control: a 20 m wall in the bend disc fails", disc_rise(wall, Vector2(-172.8, -446.2), BEND_RADIUS_M) > BEND_RISE_MAX_M)
+	t.check("control: flat ground in the bend disc passes", disc_rise(flat, Vector2(-172.8, -446.2), BEND_RADIUS_M) <= BEND_RISE_MAX_M)
 	quit(t.verdict())
