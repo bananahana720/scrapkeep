@@ -6,7 +6,11 @@ extends SceneTree
 # there; cells with no biting corner keep step 2's slot tint.
 # The expected values are recomputed here from ground.heights with the old formula inline, not by
 # calling park_terrain.gd's bite code. Parks go through make_render, start, finish; the unbaked path
-# is driven by a fake map whose sample() is a ramp. Headless Terrain3D draws nothing, so this reads
+# is driven by a fake map whose sample() is a ramp.
+# park_pit also skips the tint inside the footprints of its six berm rows (PylonBite.BERM_ROWS, padded 2 m): a LOOK
+# rule. The berm flanks stay bitable (a ball at their foot bites them) but untinted by design, so the tint
+# under-reports them (coordinator 6342820238 item 3, 6345347272 item 4, NEEDS 6350588099). The expected values below
+# apply an independently written copy of that mask; every other park has none. Headless Terrain3D draws nothing, so this reads
 # the colour maps.
 
 const T := preload("res://tests/support/t.gd")
@@ -17,6 +21,10 @@ const Palette := preload("res://src/core/palette.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 
 const PARKS := ["park_pit", "park_sinkhole", "park_test"]
+# The parks with no berm mask, loaded only to check the mask stays off.
+const OTHER_PARKS := ["park_dam", "park_flume", "park_sinkhole", "park_crown", "park_islands"]
+const BERM_ROWS := ["dump_berm_east", "dump_berm_west", "rim_road_berm", "haul_ramp_berm", "wash_berm", "bench3_west_berm"]
+const BERM_PAD := 2.0
 const CELLS := 800
 # Cells from another slot or the edge within which the colour map is feathered (park_ground_surface_test.gd).
 const DEEP := 5
@@ -105,6 +113,10 @@ func _run() -> void:
 	ground.start("no_such_park", Wall.new(), false, render)
 	await process_frame
 	_check_wall(ground, render)
+	ground.queue_free()
+	render.queue_free()
+	await process_frame
+	await _check_planted_and_others(holder)
 	quit(t.verdict())
 
 
@@ -190,7 +202,7 @@ func _check_old_map() -> void:
 
 
 # One grid vertex's n.y and weight from the heights, terrain.gd's rule written out again.
-func _grid(h: PackedFloat32Array) -> Array:
+func _grid(h: PackedFloat32Array, mask := PackedByteArray()) -> Array:
 	var ny := PackedFloat32Array()
 	var w := PackedFloat32Array()
 	ny.resize(SIDE * SIDE)
@@ -204,8 +216,47 @@ func _grid(h: PackedFloat32Array) -> Array:
 			var front: float = h[idx + (SIDE if j < SIDE - 1 else 0)]
 			var n := Vector3(left - right, 4.0, back - front).normalized()
 			ny[idx] = n.y
-			w[idx] = _old_weight(n.y)
+			w[idx] = 0.0 if not mask.is_empty() and mask[idx] == 1 else _old_weight(n.y)
 	return [ny, w]
+
+
+# The berm rows' footprint mask on the 2 m grid, written out again from park_pit.json: along = (sin a, cos a),
+# across = (cos a, -sin a), half length and half width plus BERM_PAD. Empty for every other map.
+func _mask(id: String) -> PackedByteArray:
+	var mask := PackedByteArray()
+	if id != "park_pit":
+		return mask
+	mask.resize(SIDE * SIDE)
+	var data = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/park_pit.json"))
+	var rows := 0
+	for r in data["park_rows"]:
+		if not BERM_ROWS.has(String(r["id"])):
+			continue
+		rows += 1
+		var at := Vector2(float(r["at"][0]), float(r["at"][1]))
+		var a := deg_to_rad(float(r["yaw_deg"]))
+		var along := Vector2(sin(a), cos(a))
+		var across := Vector2(cos(a), -sin(a))
+		var hl := float(r["size"][0]) * 0.5 + BERM_PAD
+		var hw := float(r["size"][2]) * 0.5 + BERM_PAD
+		for j in SIDE:
+			for i in SIDE:
+				var d := Vector2(-CELLS + 2 * i, -CELLS + 2 * j) - at
+				if absf(d.dot(along)) <= hl and absf(d.dot(across)) <= hw:
+					mask[j * SIDE + i] = 1
+	t.eq("park_pit has six berm rows", rows, 6)
+	return mask
+
+
+# The height span of the 5 by 5 grid vertices around (i, j) (4 m each way), edges clamped; picks the tall-wall control.
+func _relief(h: PackedFloat32Array, i: int, j: int) -> float:
+	var lo := INF
+	var hi := -INF
+	for e in range(maxi(j - 2, 0), mini(j + 2, SIDE - 1) + 1):
+		for d in range(maxi(i - 2, 0), mini(i + 2, SIDE - 1) + 1):
+			lo = minf(lo, h[e * SIDE + d])
+			hi = maxf(hi, h[e * SIDE + d])
+	return hi - lo
 
 
 # slot_mult.lerp(tint / D, w) with D = STRATA.lerp(FLOOR, clamp(2 n_y - 1)), per channel, clamped.
@@ -269,7 +320,13 @@ func _cell_bad(render: Node3D, grid: Array, i: int, j: int, mult: Color) -> int:
 
 func _check_park(id: String, ground: Node, render: Node3D) -> void:
 	var surface := FileAccess.get_file_as_bytes("res://assets/park/" + id + "/surface.bin")
-	var grid := _grid(ground.heights)
+	var mask := _mask(id)
+	var masked := 0
+	for m in mask:
+		masked += m
+	t.eq("%s: the ground masked the vertices the test's own footprints do" % id, ground.bite_masked, masked)
+	t.check("%s: the berm mask is %s" % [id, "on" if id == "park_pit" else "off"], (masked > 0) == (id == "park_pit"), str(masked))
+	var grid := _grid(ground.heights, mask)
 	var w: PackedFloat32Array = grid[1]
 	var biting_cells: Array[int] = []
 	var biting_slot_cells: Array[int] = []
@@ -325,6 +382,8 @@ func _check_park(id: String, ground: Node, render: Node3D) -> void:
 		if w[a] > 0.1 and not _near(_pixel(render, -CELLS + 2 * (k % CELLS), -CELLS + 2 * (k / CELLS)), ParkTerrain.slot_tint(surface[k]), 3.0 / 255.0):
 			moved += 1
 	t.check(id + " strongly biting corners differ from the plain slot tint", moved > 0, str(moved))
+	if id == "park_pit":
+		_check_berms_and_walls(ground, render, surface, mask, true)
 
 
 # The unbaked path: a ramp of slope 0.8 for 0 < x < 40 over a flat plain.
@@ -409,3 +468,106 @@ func _check_wall(ground: Node, render: Node3D) -> void:
 	var grid := _grid(ground.heights)
 	t.eq("wall: edge cell i = 0 matches the recomputed grid", _cell_bad(render, grid, 0, 400, white), 0)
 	t.eq("wall: edge cell i = 799 matches the recomputed grid", _cell_bad(render, grid, 799, 400, white), 0)
+
+
+# The berm samples: every second vertex inside a berm footprint with a pylon-biting slope (old weight above 0) and a
+# one-slot neighbourhood, so a missing mask would tint it.
+func _berm_samples(h: PackedFloat32Array, surface: PackedByteArray, mask: PackedByteArray) -> Array:
+	var out := []
+	var count := 0
+	for j in range(1, SIDE - 1):
+		for i in range(1, SIDE - 1):
+			if mask[j * SIDE + i] == 0 or _old_weight(_ny(h, i, j)) <= 0.0 or not _uniform(surface, i, j):
+				continue
+			count += 1
+			if count % 2 == 0:
+				out.append([i, j])
+	return out
+
+
+func _ny(h: PackedFloat32Array, i: int, j: int) -> float:
+	var idx := j * SIDE + i
+	var dx: float = h[idx - 1] - h[idx + 1]
+	var dz: float = h[idx - SIDE] - h[idx + SIDE]
+	return 4.0 / sqrt(dx * dx + 16.0 + dz * dz)
+
+
+# Tall walls outside the berm footprints: pylon-biting slopes (old weight 0.5 or more) with 10 m or more of relief
+# in their 5 by 5 window.
+func _wall_samples(h: PackedFloat32Array, surface: PackedByteArray, mask: PackedByteArray) -> Array:
+	var out := []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20261022
+	var tries := 0
+	while out.size() < 200 and tries < 400000:
+		tries += 1
+		var i := rng.randi_range(8, SIDE - 9)
+		var j := rng.randi_range(8, SIDE - 9)
+		if mask[j * SIDE + i] == 1 or _old_weight(_ny(h, i, j)) < 0.5 or _relief(h, i, j) < 10.0 or not _uniform(surface, i, j):
+			continue
+		out.append([i, j])
+	return out
+
+
+# masked true: the berm samples wear their slot's colour (their old weight is above 0, so this is not vacuous) and
+# the wall samples outside the footprints wear the old-rule tint. masked false (the planted control, berm_rows = {}):
+# the same berm samples are tinted again, so the berm check would fail.
+func _check_berms_and_walls(ground: Node, render: Node3D, surface: PackedByteArray, mask: PackedByteArray, masked: bool) -> void:
+	var h: PackedFloat32Array = ground.heights
+	var label := "mask on" if masked else "mask off (planted control)"
+	var berms := _berm_samples(h, surface, mask)
+	var walls := _wall_samples(h, surface, mask)
+	var berm_clean := 0
+	var berm_tinted := 0
+	for s in berms:
+		var mult := ParkTerrain.slot_tint(surface[s[1] * CELLS + s[0]])
+		if _near(_pixel(render, -CELLS + 2 * s[0], -CELLS + 2 * s[1]), mult, TOL):
+			berm_clean += 1
+		else:
+			berm_tinted += 1
+	var wall_bad := 0
+	for s in walls:
+		var mult := ParkTerrain.slot_tint(surface[s[1] * CELLS + s[0]])
+		var ny := _ny(h, s[0], s[1])
+		if not _near(_pixel(render, -CELLS + 2 * s[0], -CELLS + 2 * s[1]), _expect(mult, ny, _old_weight(ny)), TOL):
+			wall_bad += 1
+	print("park_pit berms (%s): %d samples, %d untinted, %d tinted; %d wall samples, %d off the old-rule tint" % [label, berms.size(), berm_clean, berm_tinted, walls.size(), wall_bad])
+	t.check("park_pit berm samples: at least 150 (%s)" % label, berms.size() >= 150, str(berms.size()))
+	t.check("park_pit wall samples: at least 100 (%s)" % label, walls.size() >= 100, str(walls.size()))
+	if masked:
+		t.eq("park_pit berm samples tinted with the mask on (the tint under-reports berm flanks by design)", berm_tinted, 0)
+	else:
+		t.eq("park_pit berm samples left untinted with the mask off", berm_clean, 0)
+	t.eq("park_pit tall walls wear the old-rule tint (%s): samples off it" % label, wall_bad, 0)
+
+
+# The planted control (an empty mask re-tints the berms) and the parks that name no rows (no vertices masked).
+func _check_planted_and_others(holder: Node3D) -> void:
+	var render: Node3D = ParkTerrain.make_render(holder, "Render_pit_off")
+	var ground := ParkTerrain.new()
+	holder.add_child(ground)
+	ground.berm_rows = {}
+	ground.start("park_pit", null, false, render)
+	await process_frame
+	t.eq("an empty berm mask masks no vertex", ground.bite_masked, 0)
+	_check_berms_and_walls(ground, render, FileAccess.get_file_as_bytes("res://assets/park/park_pit/surface.bin"), _mask("park_pit"), false)
+	ground.queue_free()
+	render.queue_free()
+	await process_frame
+	for id in OTHER_PARKS:
+		render = ParkTerrain.make_render(holder, "Render_" + id)
+		ground = ParkTerrain.new()
+		holder.add_child(ground)
+		ground.start(id, null, false, render)
+		await process_frame
+		var weights := 0
+		var h: PackedFloat32Array = ground.heights
+		for j in range(1, SIDE - 1, 2):
+			for i in range(1, SIDE - 1, 2):
+				weights += 1 if _old_weight(_ny(h, i, j)) > 0.0 else 0
+		print("%s: berm mask off, %d vertices masked, %d of the sampled quarter bite" % [id, ground.bite_masked, weights])
+		t.eq("%s names no berm rows: no vertex masked, so its tint is the old rule's" % id, ground.bite_masked, 0)
+		t.check("%s has biting vertices the old rule tints" % id, weights > 0, str(weights))
+		ground.queue_free()
+		render.queue_free()
+		await process_frame

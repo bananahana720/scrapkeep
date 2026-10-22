@@ -45,6 +45,7 @@ signal built
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const Palette := preload("res://src/core/palette.gd")
 const PylonBite := preload("res://src/world/pylon_bite.gd")
+const ParkStamps := preload("res://src/world/park/park_stamps.gd")
 const GROUND_FLOOR_ID := 0
 const GROUND_STRATA_ID := 1
 # Metres per tile of the floor texture: sandstone.gdshader's floor_metres default (:9), which the
@@ -131,6 +132,11 @@ enum Phase { IDLE, LOADING, BUILDING, ATTACHING, READY }
 var map_id := ""
 var baked := false
 var heights := PackedFloat32Array()
+# PylonBite.BERM_ROWS (map id -> row ids whose footprint the bite tint skips); a test sets {} to disable it before start().
+var berm_rows: Dictionary = PylonBite.BERM_ROWS
+# Grid vertices the berm rows' footprints exclude from the bite tint, and the 0/1 mask itself (empty when no rows apply).
+var bite_masked := 0
+var _bite_mask := PackedByteArray()
 var holes := PackedByteArray()
 var under := PackedFloat32Array()
 var terrain3d: Node3D
@@ -488,8 +494,44 @@ func _normal_y(i: int, j: int) -> float:
 	return 2.0 * STEP / sqrt(dx * dx + 4.0 * STEP * STEP + dz * dz)
 
 
+# The 0/1 mask over the grid of the footprints of this map's PylonBite.BERM_ROWS (park_stamps.gd's frame, padded by
+# PylonBite.BERM_PAD_M); empty when the map names none, so every other park skips it. Rows are read from the park's
+# own JSON.
+func _berm_mask() -> PackedByteArray:
+	bite_masked = 0
+	var ids: Array = berm_rows.get(map_id, [])
+	if ids.is_empty():
+		return PackedByteArray()
+	var data = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/%s.json" % map_id))
+	var mask := PackedByteArray()
+	if not data is Dictionary:
+		return mask
+	mask.resize(SIDE * SIDE)
+	for row: Dictionary in data.get("park_rows", []):
+		if not ids.has(String(row["id"])):
+			continue
+		var f := ParkStamps.frame(row)
+		var box := ParkStamps.bounds(f)
+		var pad := PylonBite.BERM_PAD_M
+		var i0 := maxi(floori((box[0] - pad + HALF) / STEP), 0)
+		var i1 := mini(ceili((box[2] + pad + HALF) / STEP), SIDE - 1)
+		var j0 := maxi(floori((box[1] - pad + HALF) / STEP), 0)
+		var j1 := mini(ceili((box[3] + pad + HALF) / STEP), SIDE - 1)
+		var rel_x: float = f["length"] * 0.5 + pad
+		var rel_z: float = f["width"] * 0.5 + pad
+		for j in range(j0, j1 + 1):
+			for i in range(i0, i1 + 1):
+				var d: Vector2 = Vector2(-HALF + i * STEP, -HALF + j * STEP) - (f["at"] as Vector2)
+				if absf(d.dot(f["along"])) <= rel_x and absf(d.dot(f["across"])) <= rel_z and mask[j * SIDE + i] == 0:
+					mask[j * SIDE + i] = 1
+					bite_masked += 1
+	return mask
+
+
 # A grid vertex past BITE_G2: store its n.y and weight and flag the (up to four) cells that touch it.
 func _mark(i: int, j: int, dx: float, dz: float, weights: PackedFloat32Array, ny: PackedFloat32Array, flagged: PackedByteArray, cells: PackedInt32Array) -> void:
+	if not _bite_mask.is_empty() and _bite_mask[j * SIDE + i] == 1:
+		return
 	var y := 2.0 * STEP / sqrt(dx * dx + 4.0 * STEP * STEP + dz * dz)
 	ny[j * SIDE + i] = y
 	weights[j * SIDE + i] = PylonBite.weight(y)
@@ -501,7 +543,8 @@ func _mark(i: int, j: int, dx: float, dz: float, weights: PackedFloat32Array, ny
 				cells.append(k)
 
 
-# Patches the colour image's vertices (feather()'s layout) where a pylon can bite. The normal is terrain.gd's, from the
+# Patches the colour image's vertices (feather()'s layout) where a pylon can bite, except inside the pit berm rows'
+# footprints (PylonBite.BERM_ROWS: a look rule, those flanks stay bitable but untinted). The normal is terrain.gd's, from the
 # four neighbouring heights of each 2 m grid vertex (edges clamped); only cells with a biting corner
 # are touched. A cell's four 1 m vertices take the weight and n.y of the grid points they sit on
 # (_build_region's heights: the corner, an edge midpoint, or the b-c diagonal's midpoint, the
@@ -510,6 +553,7 @@ func _mark(i: int, j: int, dx: float, dz: float, weights: PackedFloat32Array, ny
 # the weight for the few past it; pass 2 visits just the cells those touch. Each vertex's slot
 # multiplier is the feathered pixel already in the image.
 func _apply_bite() -> void:
+	_bite_mask = _berm_mask()
 	var weights := PackedFloat32Array()
 	var ny := PackedFloat32Array()
 	weights.resize(SIDE * SIDE)

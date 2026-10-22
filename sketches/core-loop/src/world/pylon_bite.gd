@@ -21,3 +21,14 @@ static func weight(n_y: float) -> float:
 	if n_y >= FACE:
 		return 0.0
 	return clampf((FACE - n_y) * 6.0, 0.0, 0.8)
+
+
+# A LOOK rule for the park ground, not the pylon's: the six pit berms below stay bitable (a ball at their
+# foot bites a flank: 101 of 108 probe samples) but their ground colour is not tinted, by design, so
+# the tint under-reports them (coordinator 6342820238 item 3, 6345347272 item 4, NEEDS 6350588099). The
+# rows are named here and nowhere else, keyed by map id; any other map has no mask. A row's footprint
+# is its own at/size/yaw frame (park_stamps.gd) padded by BERM_PAD_M on every side so the flank feet are covered.
+const BERM_ROWS := {
+	"park_pit": ["dump_berm_east", "dump_berm_west", "rim_road_berm", "haul_ramp_berm", "wash_berm", "bench3_west_berm"],
+}
+const BERM_PAD_M := 2.0
