@@ -69,8 +69,8 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 # share, the hit when it fits, the bookkeeping), then a second pass of its parts for the split: carve_ms, share_ms, breach_ms.
 # This measures landing() ms, not the landing frame: the scar mesh build in VolumeIndicator._process and the report_landing
 # listeners are outside the timed span. The split pass runs hot (the same site a second time), so its parts need not sum to
-# landing_ms. A queued carve is dropped after each site. --landing-scale=N sets the level budget to N x LATE_WORK parts (default: the shipped
-# LEVEL_LANDING_SCALE). Per site: fit (the carve hit inside landing()), work, shares, builds and the ms; the summary gives fit,
+# landing_ms. A queued carve is dropped after each site. --landing-scale=N sets the level budget to N/2 x LEVEL_LANDING_WORK parts, so 2 is
+# the shipped 400 and 4 is 800 (late_work moves in proportion). Per site: fit (the carve hit inside landing()), work, shares, builds and the ms; the summary gives fit,
 # median/p90/max landing ms over level sites ("all") and over the fitting ones, and the stand's landing ms (median of 5). The run is
 # invalid if any row's builds delta, which covers both the timed landing and the split pass, shows a terrain build. The warm-up cache variant (merge_level moved to a worker) was measured and
 # closed: 27444187 on claude/perf-merge-level-warm; cloud 80 sites, live 400 56/80 median 21.9 ms, cached 400/800/1000 40/56/59 of 80 at 20.5/33.1/34.9 ms.
@@ -1340,8 +1340,8 @@ func _level_sites() -> void:
 		ult._plan = {"legs": []}
 	kit.warm_cycle()
 	kit.terrain.finish()
-	var scale := _sites_scale if _sites_scale > 0.0 else float(RivetKit.LEVEL_LANDING_SCALE)
-	kit.late_work = roundi(float(RivetKit.LATE_WORK) * scale / float(RivetKit.LEVEL_LANDING_SCALE))
+	var scale := _sites_scale if _sites_scale > 0.0 else 2.0
+	kit.late_work = roundi(float(RivetKit.LATE_WORK) * scale / 2.0)
 	var budget: int = kit.landing_work(true)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = _sites_seed
