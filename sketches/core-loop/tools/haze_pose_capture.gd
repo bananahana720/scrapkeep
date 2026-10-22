@@ -34,11 +34,13 @@ const RING_RADIUS := 3.0
 # arena also lays a dark probe: a live ring at (dark_ahead, dark_side) whose rim, on the side of `dark_dir`
 # (ahead, side components), lies against the tower base.
 const PLACES := [
-	{"id": "stage2-morning", "stage": 2, "ahead": 8.0, "side": 4.0},
-	{"id": "arena-w3", "boss": true, "ahead": 8.0, "side": 4.0, "dark_ahead": 8.0, "dark_side": 4.0, "dark_dir": Vector2(0.0, 1.0)},
+	{"id": "stage2-morning", "stage": 2, "ahead": 24.0, "side": 5.0, "ground_ahead": 7.0, "ground_side": 0.0},
+	{"id": "arena-w3", "boss": true, "ahead": 8.0, "side": 4.0, "ground_ahead": 0.0, "ground_side": 5.0, "dark_ahead": 8.0, "dark_side": 4.0, "dark_dir": Vector2(0.0, -1.0)},
 ]
-# The dark probe: the edge band's box half-size floor, the ground box's offset past the rim and its half-size.
-const BAND_HALF := 0.2
+# The ground box sits between the rings, moved `ground_ahead` and `ground_side` metres when the ball or its
+# shadow stands between them. The dark probe: the rim box's half-size (it holds the keyline, the HAZARD edge
+# and a little of each side), the ground box's offset past the rim and its half-size.
+const BAND_HALF := 0.5
 const GROUND_OUT := 1.2
 const GROUND_HALF := 0.4
 # Inner box, as a share of the ring's projected radius; the gap box is this share of RING_RADIUS in metres.
@@ -167,6 +169,10 @@ func _pose(place: Dictionary) -> void:
 				live.painter().tint("fill", tint)
 				if dark != null:
 					dark.painter().tint("fill", tint)
+			if dark != null:
+				pending.visible = true
+				live.visible = true
+				dark.visible = false
 			for i in 12:
 				await RenderingServer.frame_post_draw
 			var image := root.get_texture().get_image()
@@ -176,16 +182,28 @@ func _pose(place: Dictionary) -> void:
 			rec["pending"] = _ring_box(image, cam, pending.center, right)
 			rec["live"] = _ring_box(image, cam, live.center, right)
 			var mid: Vector3 = (pending.center + live.center) * 0.5
-			rec["ground"] = _box(image, cam, mid, right, GAP_HALF)
+			rec["ground"] = _box(image, cam, mid + fwd * float(place["ground_ahead"]) + right * float(place["ground_side"]), right, GAP_HALF)
 			rec["step"] = float(rec["pending"]["mean_l"]) - float(rec["live"]["mean_l"])
 			if dark != null:
+				# The dark probe is its own frame: the pair is hidden and the live dark ring shown, so the
+				# pair's rings never cross the rim and ground boxes.
+				pending.visible = false
+				live.visible = false
+				dark.visible = true
+				for i in 12:
+					await RenderingServer.frame_post_draw
+				image = root.get_texture().get_image()
+				image.save_png(out.path_join("haze-pose-%s-dark.png" % tag))
 				var dir2: Vector2 = place["dark_dir"]
 				var dir3 := (fwd * dir2.x + right * dir2.y).normalized()
 				var rim: Vector3 = dark.center + dir3 * RING_RADIUS
-				var band_half := maxf(BAND_HALF, Threat.edge_width({"r_out": RING_RADIUS}) * 0.5)
-				var band := _box(image, cam, rim, right, band_half)
+				var band := _box(image, cam, rim, right, BAND_HALF)
 				var ground := _box(image, cam, rim + dir3 * GROUND_OUT, right, GROUND_HALF)
-				rec["dark"] = {"band": band, "ground": ground, "separation": absf(float(band["mean_l"]) - float(ground["mean_l"]))}
+				# The HAZARD edge is the band's brightest pixel and the keyline its darkest; each is held
+				# against the dark ground's mean.
+				var gl := float(ground["mean_l"])
+				rec["dark"] = {"band": band, "ground": ground, "edge_l": band["max_l"], "keyline_l": band["min_l"],
+					"edge_separation": absf(float(band["max_l"]) - gl), "keyline_separation": absf(float(band["min_l"]) - gl)}
 			recs.append(rec)
 			print("pose ", tag, " ", rec)
 	for n in shown:
@@ -224,9 +242,14 @@ func _box(image: Image, cam: Camera3D, centre: Vector3, right: Vector3, half: fl
 	var clipped := rect.intersection(Rect2i(Vector2i.ZERO, image.get_size()))
 	var total := 0.0
 	var n := 0
+	var top := -1.0
+	var bottom := 101.0
 	for y in range(clipped.position.y, clipped.end.y):
 		for x in range(clipped.position.x, clipped.end.x):
-			total += DefenceBars._lab(image.get_pixel(x, y)).x
+			var l: float = DefenceBars._lab(image.get_pixel(x, y)).x
+			total += l
+			top = maxf(top, l)
+			bottom = minf(bottom, l)
 			n += 1
 	return {"rect": [rect.position.x, rect.position.y, rect.size.x, rect.size.y], "on_screen": clipped == rect and n > 0,
-		"mean_l": total / n if n > 0 else -1.0}
+		"mean_l": total / n if n > 0 else -1.0, "max_l": top, "min_l": bottom}
