@@ -524,7 +524,7 @@ func setup(ctx_ref) -> void:
 # kind is "chaser", "lobber", "miniboss", "warden" or "vault". An unknown kind spawns a
 # chaser, with a warning, so a typo in an event table never leaves a stage empty. The
 # Warden and the vault sit on the ground under `at`; the others are placed at `at`.
-func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
+func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF) -> Node3D:
 	var enemy: Node3D
 	match kind:
 		"lobber":
@@ -561,6 +561,9 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "") -> Node3D:
 	var enemy_spec: Dictionary = fleet.dress(kind, _spec_for(kind))
 	if affix_id == EliteAffixes.PLATED:
 		enemy_spec["armour"] = EliteAffixes.PLATED
+	# A park perch top (terrain.perch_near) is the Dispatcher's spec["perch"]; with none it builds its own mast.
+	if kind == "dispatcher" and perch.is_finite():
+		enemy_spec["perch"] = perch
 	if kind not in ["warden", "vault"]:
 		var director = ctx.root.get_node("World").director
 		health_scale = director.hp_scale()
@@ -2274,7 +2277,7 @@ func _cannon_set_piece_hit(enemy: Node3D, damage: float, at: Vector3, landing: b
 			damage if landing else damage * Ultimate.WARDEN_VOLLEY, landing, 0)
 		var id := enemy.get_instance_id()
 		var spent := float(budget.get(id, 0.0))
-		judged["gain"] = minf(float(judged.get("gain", 0.0)), maxf(0.0, Ultimate.WARDEN_POSTURE_CAP - spent))
+		judged["gain"] = minf(float(judged.get("gain", 0.0)), maxf(0.0, Ultimate.cap_for_warden(enemy) - spent))
 		judged["shatter"] = false
 		judged["crack"] = false
 		budget[id] = spent + float(judged["gain"])
