@@ -1843,7 +1843,7 @@
     -547
    ],
    "yaw_deg": 12,
-   "near": "sable line z -536: Sandbags slumping against the bank, a tripod resting on"
+   "near": "sable line z -536: Sandbags slumping against the bank"
   },
   {
    "id": "low_lunch_rock_18",
@@ -1913,7 +1913,7 @@
     -504
    ],
    "yaw_deg": 72,
-   "near": "dome_19: A collapsed canvas tent with a washing line and boots,"
+   "near": "dome_19: A collapsed canvas tent with a washing line and boots"
   },
   {
    "id": "low_slump_bags_31",
@@ -1923,7 +1923,7 @@
     -489
    ],
    "yaw_deg": -108,
-   "near": "sable line z -493: Sandbags slumping against the bank, a tripod resting on"
+   "near": "sable line z -493: Sandbags slumping against the bank"
   },
   {
    "id": "mid_tool_bench_32",
@@ -2093,7 +2093,7 @@
     -458
    ],
    "yaw_deg": -34,
-   "near": "dome_4: The sluice crew's wheelhouse and the odds and ends of their"
+   "near": "dome_4: The sluice crew's wheelhouse"
   },
   {
    "id": "mixer_graveyard_58",
@@ -2233,7 +2233,7 @@
     -686
    ],
    "yaw_deg": -24,
-   "near": "rivet line z -650: A cold crew campfire with a seat log, a kettle, a washing"
+   "near": "rivet line z -650: A cold crew campfire with a seat log, a kettle"
   },
   {
    "id": "low_slump_bags_82",
@@ -2243,7 +2243,7 @@
     -663
    ],
    "yaw_deg": 7,
-   "near": "cannon line z -649: Sandbags slumping against the bank, a tripod resting on"
+   "near": "cannon line z -649: Sandbags slumping against the bank"
   },
   {
    "id": "low_lunch_rock_85",
@@ -2263,7 +2263,7 @@
     -562
    ],
    "yaw_deg": 99,
-   "near": "domes_fin_east: A collapsed canvas tent with a washing line and boots,"
+   "near": "domes_fin_east: A collapsed canvas tent with a washing line and boots"
   },
   {
    "id": "flood_gauge_87",
@@ -2363,7 +2363,7 @@
     -301
    ],
    "yaw_deg": 135,
-   "near": "dome_23: The sluice crew's wheelhouse and the odds and ends of their"
+   "near": "dome_23: The sluice crew's wheelhouse"
   },
   {
    "id": "low_lunch_rock_111",
@@ -2533,7 +2533,7 @@
     -657
    ],
    "yaw_deg": 11,
-   "near": "cannon line z -647: A survey tripod dropped with its sandbag weights and a lost"
+   "near": "cannon line z -647: A survey tripod dropped with its sandbag weights"
   },
   {
    "id": "bunk_collapse_135",
@@ -2543,7 +2543,7 @@
     -671
    ],
    "yaw_deg": 130,
-   "near": "dome_7: A collapsed canvas tent with a washing line and boots,"
+   "near": "dome_7: A collapsed canvas tent with a washing line and boots"
   },
   {
    "id": "flood_gauge_136",
@@ -2683,7 +2683,7 @@
     90
    ],
    "yaw_deg": 92,
-   "near": "eye_fin_east: The sluice crew's wheelhouse and the odds and ends of their"
+   "near": "eye_fin_east: The sluice crew's wheelhouse"
   },
   {
    "id": "mixer_graveyard_162",
@@ -2753,7 +2753,7 @@
     398
    ],
    "yaw_deg": 77,
-   "near": "kest line z 407: A chalk tally board, a fallen gauge staff and a dropped"
+   "near": "kest line z 407: A chalk tally board, a fallen gauge staff"
   },
   {
    "id": "low_cold_fire_tally_1",
@@ -2793,7 +2793,7 @@
     -107
    ],
    "yaw_deg": -87,
-   "near": "cannon line z -104: Sandbags slumping against the bank, a tripod resting on"
+   "near": "cannon line z -104: Sandbags slumping against the bank"
   },
   {
    "id": "mid_pour_edge_canyon_7",
@@ -2813,7 +2813,7 @@
     -71
    ],
    "yaw_deg": -87,
-   "near": "cannon line z -68: A survey tripod dropped with its sandbag weights and a lost"
+   "near": "cannon line z -68: A survey tripod dropped with its sandbag weights"
   },
   {
    "id": "low_chalk_tally_canyon_9",
@@ -2823,7 +2823,7 @@
     -47
    ],
    "yaw_deg": -87,
-   "near": "cannon line z -44: A chalk tally board, a fallen gauge staff and a dropped"
+   "near": "cannon line z -44: A chalk tally board, a fallen gauge staff"
   },
   {
    "id": "mid_overgrown_canyon_10",
