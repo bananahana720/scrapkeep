@@ -20,6 +20,8 @@ import {
   referrers,
   selectTests,
   timingsFromReceipt,
+  medianTimings,
+  DEFAULT_ESTIMATE_MS,
   usableBaseRun,
 } from "./sketch-fast.mjs";
 import { importWithRetry, quarantineRecord } from "./sketch-smoke.mjs";
@@ -224,15 +226,51 @@ test("placeholder increase is per kind and place, so a fix elsewhere cannot hide
   assert.deepEqual(placeholderIncrease(base, [{ kind: "park", where: "park_dam", count: 1 }, { kind: "attack", where: "E40", count: 1 }]), ["attack E40: 0 -> 1"]);
 });
 
-test("timings fold only passing test rows from a smoke receipt", () => {
+test("timings fold keeps failing tests' times and reads a row's test key as well as its label", () => {
   const receipt = {
     results: [
       { label: "sketches/core-loop import", ok: true, ms: 20000 },
       { label: "sketches/core-loop res://tests/a_test.gd", ok: true, ms: 1234.4 },
       { label: "sketches/core-loop res://tests/b_test.gd", ok: false, ms: 180000 },
+      { test: "tests/c_test.gd", ok: true, ms: 700 },
+      { test: "tests/bot_d_test.gd", ok: false, ms: 98000 },
+      { test: "tests/stopped_test.gd", ok: false, ms: 0, reason: "lane stopped" },
     ],
   };
-  assert.deepEqual(timingsFromReceipt(receipt), { "tests/a_test.gd": 1234 });
+  assert.deepEqual(timingsFromReceipt(receipt), { "tests/a_test.gd": 1234, "tests/b_test.gd": 180000, "tests/c_test.gd": 700, "tests/bot_d_test.gd": 98000 });
+});
+
+test("the timings fold takes the median across receipts", () => {
+  const row = (ms) => ({ results: [{ test: "tests/a_test.gd", ok: true, ms }] });
+  assert.deepEqual(medianTimings([row(100), row(900), row(200)]), { "tests/a_test.gd": 200 });
+  assert.deepEqual(medianTimings([row(100), row(300)]), { "tests/a_test.gd": 200 });
+});
+
+test("an unknown bot-named test goes to the bot shards; a known fast test stays in the lane", () => {
+  const picked = new Map([
+    ["tests/bot_planted_unknown_test.gd", { tier: 1, why: "names" }],
+    ["tests/planted_sweep_unknown_test.gd", { tier: 1, why: "names" }],
+    ["tests/known_fast_test.gd", { tier: 1, why: "names" }],
+  ]);
+  const out = plan({ picked, timings: { "tests/known_fast_test.gd": 2_000 }, budgetMs: 600_000, width: 2 });
+  assert.deepEqual(out.bots, ["tests/bot_planted_unknown_test.gd", "tests/planted_sweep_unknown_test.gd"]);
+  assert.deepEqual(out.parallel.map((row) => row.test), ["tests/known_fast_test.gd"]);
+  assert.equal(out.parallel[0].ms, 2_000);
+});
+
+test("a known bot-named test with a timings row is not rerouted by its name", () => {
+  const picked = new Map([["tests/bot_known_test.gd", { tier: 1, why: "names" }]]);
+  const out = plan({ picked, timings: { "tests/bot_known_test.gd": 5_000 }, budgetMs: 600_000, width: 2 });
+  assert.deepEqual(out.bots, []);
+  assert.deepEqual(out.parallel.map((row) => row.test), ["tests/bot_known_test.gd"]);
+});
+
+test("an unknown test that is not bot-named is priced at 180 s", () => {
+  assert.equal(DEFAULT_ESTIMATE_MS, 180_000);
+  const picked = new Map([["tests/air_planted_unknown_test.gd", { tier: 1, why: "names" }]]);
+  const out = plan({ picked, timings: {}, budgetMs: 600_000, width: 2 });
+  assert.equal(out.parallel[0].ms, 180_000);
+  assert.equal(out.estimateMs, 90_000);
 });
 
 test("parseArgs defaults to origin/main and a 15 minute budget", () => {
