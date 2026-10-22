@@ -586,7 +586,8 @@ func _check_prepared() -> void:
 func _plans_started() -> bool:
 	var plans = load(NATURAL_PATH).get("_plans")
 	var key: int = load(NATURAL_PATH).call("_root_key", _game.ctx.terrain, 2)
-	return plans is Dictionary and plans.has(key) and not _game.presentation.set_dressing._prep.is_empty()
+	var prep: Dictionary = _game.presentation.set_dressing._prep
+	return plans is Dictionary and plans.has(key) and not prep.is_empty() and prep.key[0] == 2
 
 
 func _check_stage_two_workers() -> void:

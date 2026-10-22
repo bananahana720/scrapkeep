@@ -1003,7 +1003,8 @@ static func _merge_far(merge: FarMerge, members: Array, kit: Dictionary) -> void
 		var src_c = source[Mesh.ARRAY_COLOR]
 		var src_i = source[Mesh.ARRAY_INDEX]
 		var base := merge.vertices.size()
-		# Whole-array transforms, each element the same arithmetic as tr * v - centre and basis * n.
+		# Whole-array transforms with the per-vertex values of tr * v - centre and basis * n (a -0 normal component
+		# comes out +0); stage_entry_budget_test pins the uploaded mesh to the per-vertex merge.
 		merge.vertices.append_array(Transform3D(Basis.IDENTITY, -merge.centre) * (_transform(inst) * src_v))
 		var normals: PackedVector3Array
 		if src_n != null:
