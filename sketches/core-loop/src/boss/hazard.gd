@@ -66,8 +66,8 @@ var _open: Array[bool] = []
 # first FULL paint: in _ready, or, for an annulus that starts with spans quenched, on the first
 # step that leaves none quenched (later quenches only remove drawn spans, so the full paint's
 # meshes hold every later one). Empty until then, so warning_rects walks the meshes. Only a
-# hostile hazard gets one, and it grows with every repaint (_grow_bound). The committed numbers
-# never change after commit and nothing moves a hazard, so the box is never recut.
+# hostile hazard gets one; the first read after a repainting step grows it (_grow_bound). The
+# committed numbers never change after commit and nothing moves a hazard, so it is never recut.
 var _bound := AABB()
 # A step repainted since the box last took the meshes in; bound_merges counts the mesh walks
 # that took (tests/warning_bound_containment_test.gd: idle steps cost none).
@@ -302,8 +302,9 @@ func painter():
 # full footprint, the fence up to `reach`, the lift, a sweep's chevrons ahead of its front
 # (WarningBound). It is cut in _ready. A read after a step also takes the painter's current
 # meshes in (see _grow_bound), so the cache only grows. The box is empty (AABB()) before the
-# painter is built and once the hazard is DONE (its painter is hidden then, so the mesh walk
-# finds nothing).
+# painter is built and once the hazard is DONE. finish() sets DONE without a repaint, so the
+# painter is hidden only on the next step; until then the caller's mesh walk still finds its
+# meshes, which is conservative.
 func screen_bound_box() -> AABB:
 	if _painter == null or state == DONE:
 		return AABB()
