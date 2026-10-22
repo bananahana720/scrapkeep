@@ -54,12 +54,6 @@ const WALLS := {
 
 # "pilot|heft class|node path under the pod" -> reach in metres measured 2026-10-22 on the base 26ac844b.
 const KNOWN_BAKED := {
-	"tarn|3|HeftC3/Pod": 1.1418,
-	"tarn|4|HeftC3/Pod": 1.1418,
-	"tarn|4|HeftC4/Pod": 1.1716,
-	"tarn|5|HeftC3/Pod": 1.1418,
-	"tarn|5|HeftC4/Pod": 1.1716,
-	"tarn|5|HeftC5/Pod": 1.2113,
 }
 
 var _t := T.new("baked_bracket_reach_test")
