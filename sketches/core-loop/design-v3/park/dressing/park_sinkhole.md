@@ -241,3 +241,9 @@ The kest fan was regular (+8 and +8 in position order). It now faces three diffe
 Pin and checks. Fingerprint 3120478943 to 1439281478, re-pinned on purpose (`pin` in `park_sinkhole.json`, line 3060). Plan check with the fixed #323 rules (vsinkhole-vg reading this file): 1,419 instances (229 litter), 0 violations, 0 pattern, 0 pin, 0 lint. The old plan check here: 0 violations, same fingerprint. `park_props_test`: PASS (226 checks), "[park_sinkhole expansion matches its pin] got 1439281478, want 1439281478 -> PASS". The span row scan at 80 m: triples 0.
 
 Density audit (default run, mid camera, step 25 m, 309 samples; `artifacts/local/w18m`): 52 pass, 11 exempt (all arena), 1 fail, the kest 900 m window at (52.3, -332.4) with 0 kinds that 6329171089 ruled open space. Identical to the w18k line. Vignette frames of the moved spots were not rendered in this round because the branch's audit has no `--vignettes` mode.
+
+## w18n stage merge (stage 0446a2f2, ruling 6335352057)
+
+The merge conflicted only in the folded `assets/registry.json`; it takes stage's file and re-folds (`fold_registry`: PASS, 1533 assets). World's b4dba39a moved `lava_channel_post_21i` from (-164.9, -448.2) to (-158.3, -450.6), and its plateau now sat under m17's tin_cart and column stub (slope 85.2 and 83.8 degrees, want 25 at most). A grid search of the whole-park check within 25 m (1 m step, 555 legal points) gave (-149.7, -454.8) as the nearest; m17 moves there from (-153.72, -450.83), 5.7 m, with the same yaw, template and label.
+
+Pin 1439281478 to 1683370189. Plan check: 1419 instances (229 litter), 0 violations; #323's check in a scratch merge: 0 violations, 0 pattern, 0 pin, 0 lint. `park_props_test` PASS (270 checks, pin line PASS). Density audit (default run, mid camera, step 25 m, 309 samples): 52 pass, 11 exempt, 1 fail, the kest 900 m window (ruled open, 6329171089), unchanged; bare share 18.1 percent; props-only draw delta max 79.
