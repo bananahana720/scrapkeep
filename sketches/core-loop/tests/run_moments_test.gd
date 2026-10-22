@@ -14,6 +14,7 @@ const T := preload("res://tests/support/t.gd")
 # A park Warden as the run log reads one.
 class FakeWarden:
 	extends Node3D
+	var kind := "warden"
 	var family := "reactor"
 
 	func chunks_left() -> int:
