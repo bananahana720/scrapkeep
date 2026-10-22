@@ -195,6 +195,23 @@ static func stage_look(stage: int, world: int, map := "") -> Dictionary:
 	return look
 
 
+# The volumetric keys of a row: off unless the preset has air and the row has some.
+static func air_values(look: Dictionary, air: bool) -> Dictionary:
+	var on: bool = air and not look.air.is_empty()
+	var values := {"volumetric_fog_enabled": on}
+	if on:
+		values.merge(look.air)
+	return values
+
+
+# A live override's volumetric keys follow a preset change: drop the old ones, lay the new.
+static func follow_air(values: Dictionary, look: Dictionary, air: bool) -> void:
+	values.erase("volumetric_fog_enabled")
+	for key in look.air:
+		values.erase(key)
+	values.merge(air_values(look, air))
+
+
 # The Environment values a row sets. Every row writes the same keys, so an arena's row covers
 # the stage row it sits on, and leaving the arena uncovers it again.
 static func environment(look: Dictionary, air: bool) -> Dictionary:
@@ -204,8 +221,8 @@ static func environment(look: Dictionary, air: bool) -> Dictionary:
 		"ambient_light_color": look.ambient, "ambient_light_energy": look.energy,
 		"tonemap_exposure": look.exposure, "adjustment_saturation": look.saturation,
 		"fog_enabled": true, "fog_light_energy": fog.get("light_energy", 0.75), "fog_sun_scatter": fog.get("sun_scatter", 0.25),
-		"volumetric_fog_enabled": air and not look.air.is_empty(),
 	}
+	values.merge(air_values(look, air))
 	if fog.has("density"):
 		values["fog_density"] = fog.density
 		values["fog_light_color"] = fog.color
@@ -222,8 +239,6 @@ static func environment(look: Dictionary, air: bool) -> Dictionary:
 		values["fog_sky_affect"] = 0.25
 		if look.sky == "hdri":
 			values["sky"] = Palette.hdri_sky()
-	if values.volumetric_fog_enabled:
-		values.merge(look.air)
 	return values
 
 

@@ -32,7 +32,7 @@ colours), one "enamel" surface (the slot role whose material reads vertex colour
 Palette: Highdraft mine timber, black iron, rust and flaking petrol hull paint, copper b77843 for the lamp (never brass),
 bone for the number board. No texture, no light, no mesh from any other source.
 
-  prlimit --as 12884901888 -- blender -b --factory-startup --threads 2 --python-exit-code 1 -P \\
+  prlimit -v12884901888 blender -b --factory-startup --threads 2 --python-exit-code 1 -P \\
       sketches/core-loop/tools/blender/park/isle_pieces.py -- [--out-dir DIR] [--recipe ID] [--count-only]
 """
 import argparse
