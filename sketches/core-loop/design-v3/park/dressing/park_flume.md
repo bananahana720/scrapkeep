@@ -1,22 +1,45 @@
 # park_flume dressing, wave 18 re-proof
 
-Base: merge of the Dressing foundation aaeb5e10 (stage/alpha-w18 9cd6805e plus the `scatter_row` rule) into the flume branch.
+Base: merge of the Dressing foundation aaeb5e10 (stage/alpha-w18 9cd6805e plus the `scatter_row` rule) into the flume branch, then on 2026-10-22 merges of stage/alpha-w18 (b0e64a40, which holds b22a2ca3 and #175) and the line_clear_m/telegraph foundation (07748516); the commit "Apply flume line_clear_m and telegraph rules" follows them.
+Brief: `sketches/core-loop/design-v3/park/dressing/KITS.md` (lands in #269), flume section.
 Method: automated headless Godot 4.7.2 on cloud llvmpipe (OpenGL compatibility proxy, not a frame-cost proof, not human feel).
+
+## What and why
+
+Flume is the canal park. The giant machines are the humans' utility fleet: construction, mining and manufacturing. Some are corrupted, some are loyal drones, and some are looping workers. The dressing reads as plush crews living among those working giants, so the scale contrast is the point: small camps, laundry, tea and tool pegs at the foot of big machinery. Nothing in this park is a war machine.
+This unit keeps the camps honest to their rules. Washlines (laundry) stay 30 m clear of ride lines so they do not read as grind or grapple lines (KITS.md brief). Props stay out of the `bend_relic_wakes` telegraph so a waking relic never lands on a camp.
 
 ## Plan check
 
-`tools/park_props_plan.gd --map=park_flume --check`: 1120 instances (440 litter), 0 violations, fingerprint 1477437796 (merge pin was 875855731).
+`tools/park_props_plan.gd --map=park_flume --check`: `park_props_plan: park_flume 1113 instances (433 litter), 0 violations, fingerprint 4063400762`. Pin history: 875855731 (merge), 1477437796 (density fix), 2392297130 (30 m moves), 4063400762 (line_clear_m plus telegraph).
 The expected `scatter_row` failure in `horseshoe_gorge` did not appear: no tall or hero instance lies inside that scatter row.
 
 ## Density fix (two windows, each filled)
 
 The first w18 run failed two windows at 2 kinds (saltbush, bent_numbers): cannon 1200 m near (-9.6, 206) and tally 1050 m near (-16.6, 226). Each window has one sample, camera facing about +z. North of z 235 is blocked: `home_clear` (25 m of home wasteway_chasers) plus `line_clear` and `keepout` on siphon_runout_pier; a 5 m probe grid of single low pieces over x -60..40, z 190..280 found only a handful of legal cells. Added two single-piece spots on legal ground between the windows and the existing scrub: flume_s094 (mini_ties, timber_ties) at (-5, 225) and flume_s095 (mini_cup, tea_hearth) at (-5, 230). No line, landing or telegraph is touched (0 violations).
 
-## Tests (each run alone, GODOT_BIN 4.7.2)
+## Telegraph zones
 
-park_props_test 162, park_park_flume_test 127, park_dressing_pin_test 8, pocket_line_clear_test 25, scatter_rows_test 82; set_dressing_test and asset_registry_test PASS (no count printed). Registry fold: 1074 assets, no change.
+`bend_relic_wakes` (machine_eruption, site `bend_overlook`, half 15 x 70, `hold_clear_m` 15) holds the zone. The rule is `park_props.gd` `check_one` ("telegraph": no prop inside the event's geometry grown by `hold_clear_m`; damage and telegraph share the committed geometry, DRESSING-KITS.md). Litter that fails is dropped by `expand`; authored spots fail the plan check.
+- Inside before: 16 authored instances (flume_v72 9, flume_v80 2, flume_v82 5) plus 7 litter (440 to 433 litter instances).
+- Spots moved: flume_v72 [150.0, -70.0] to [186.0, -70.0] (36 m); flume_v80 [130.0, 30.0] to [131.0, 33.9] (4 m); flume_v82 [120.0, -130.0] to [120.0, -162.0] (32 m). Each is the nearest of a 15-degree by 2 m ring search (to 60 m) whose every instance passes `check_one`.
+- `near` labels: flume_v82 is now `bend_zip_pier_18` (30.1 m, grind_line). flume_v72 stays `bend_overlook` (still nearest, 37.4 m, bank). flume_v80 moved 4 m and is unchanged.
+- Story check: v72 tie yard, v80 tie yard and v82 sluice shed remain beside the bend; v82's shed now stands 30 m from a zip pier, not at the water, which the kit story ("sluice shed with its wheel") does not name; flagged for World/Art.
+- Plan check after: 0 violations.
 
-## Audit (default run, mid camera, step 25 m, 238 samples, 5.95 km of union line)
+## Tests (each run alone, GODOT_BIN 4.7.2, 2026-10-22)
+
+park_props_test, park_park_flume_test, park_dressing_pin_test, pocket_line_clear_test, asset_registry_test and run_tier_test each exit 0 (the smoke runner prints verdicts, not assert counts, for passing runs). scatter_rows_test timed out at the runner's 180 s on a loaded box with every assert PASS, then exit 0 in 113.8 s on a rerun. `sketch:lint` 0 findings; `check:docs` pass (178 files, 0 failures). Registry fold unchanged.
+
+## Audit (w18d, after line_clear_m and telegraph; default run, mid camera, step 25 m, 238 samples)
+
+Method: `park_props_audit.gd` via the lock wrapper, OpenGL compatibility on cloud llvmpipe (not a frame-cost proof). Before values are the w18 run below. The brief's "density 2 of 10" figure does not match that run's summary (36 of 36 non-exempt); this run is compared with the summary.
+- density: 36 of 45 windows pass, 9 exempt (arena 5, telegraph 4), `density_fail_windows` empty (before: 36 of 36, 9 exempt)
+- props-only draw delta: max 46, median 24.5 (before 46, 24.0); draw calls max 429, median 308.0, p95 407.6
+- bare share 21.8 percent (52 of 238; before 21.0), longest bare run 100 m, void poses 0
+- Artifacts: `artifacts/local/dressing/flume/w18d/park_flume/` (local, not committed)
+
+### Previous audit (w18, before this unit)
 
 - props-only draw delta: max 46, median 24.0 (peak pose idx 149 at -48.7, -111.6)
 - draw calls: max 467, median 317.5, p95 428.6 (llvmpipe, varies run to run); primitives max 811390 (median 658772)
@@ -49,4 +72,17 @@ Kind `washline`. Brief line (lane KITS.md, flume): "At least 30 m from lines". M
 
 The other 9 instances already passed and are unchanged. flume_v10 (32 m move) and flume_v105 (63 m move; nothing legal within 45 m) changed `near` to the nearest park row by centre: weir_trestles and bluff_ride_pier_9. Pin 1477437796 to 2392297130. Plan check: 0 violations. Probe: under30_edge=0.
 
-Audit pending the line_clear_m foundation merge.
+The `washline` kind now carries `line_clear_m: 30` in `tools/blender/park/props/flume.py` (manifest `"line_clear_m": 30.0`), and `park_props.gd` `check_one` takes the larger of the tier and the kind value, so the plan check enforces it. The 8 moves above stay valid under it.
+
+Do the moved spots' stories still hold? Nearest feature is from `park_flume.json` park_rows (ground rows excluded), by centre:
+- flume_v10 (32 m move, washday "by the trestles"): nearest is weir_trestles (anchor_field), 23.1 m. Holds, the label is now `weir_trestles`.
+- flume_v105 (63 m move, camp_corner): nearest is bluff_ride_pier_9 (grind_line), 16.7 m, then bluff_ride_pier_12. A crew camp in the lee of a pier. Holds, the label is now `bluff_ride_pier_9`; a camp corner has no row-specific story.
+- The other six moved 1 to 10 m; their nearest rows and stories are unchanged.
+
+## ART-MISTAKES entries checked
+
+`project-guide/handoff/ART-MISTAKES.md`, read before the unit:
+- 2026-10-21 World #242 lane width ("read the function before describing a flag"): I read `park_props.gd` `expand()` and `check_one` before saying the spot schema has no per-spot override, and read the telegraph rule before describing it.
+- 2026-10-21 Modeling M1 anchor gap tool (a run line copied without running it): the Blender rebuild command was run, exit 0, and the diff confirmed only the manifest `line_clear_m` line changed.
+- 2026-10-21 Animation #261 receipt (SHAs typed from memory): SHAs in this unit's report are pasted from `git rev-parse`.
+- 2026-10-21 Animation A1 (pkill by text pattern): no process was killed by pattern.
