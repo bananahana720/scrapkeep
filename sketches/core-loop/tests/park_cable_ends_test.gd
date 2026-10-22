@@ -3,8 +3,8 @@ extends SceneTree
 # Rule: a park cable's landing (`to`) end hangs at least 2.35 m over the baked ground, so the cable ride's
 # target (the end less the hang, CABLE_HANG 1.3, still CABLE_LAND_CLEAR 1.05 up) never cuts the hang short and
 # the cable never runs through the ball. Walks every park map's cable rows against ParkGround. The control
-# is a synthetic row 1.0 m over the ground, which fails the same predicate. Also guards one landing's runout:
-# the park_sinkhole lava-channel bend past tube_rope_1 (BEND_AT below).
+# is a synthetic row 1.0 m over the ground, which fails the same predicate. Also guards three park_sinkhole
+# runouts against sheer posts: the lava-channel bend past tube_rope_1 (BEND_AT) and two post strikes (POST_STRIKES).
 
 const T := preload("res://tests/support/t.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
@@ -27,12 +27,12 @@ const BEND_RADIUS_M := 8.0
 const BEND_RISE_MAX_M := 8.0
 # Two more sheer anchor posts that stopped the Sable pilot (traversal_line --table=park --stage=4 --pilot=sable, seeds
 # 1..8, 90 fps, 2026-10-22). Same rule and limit as the bend, a table of (name, strike point):
-#   main_tube_upper_post_11i at (-35.3, -120.2): a corner stood 0.4 m inside main_tube_upper_8's wash footprint; five
-#     of eight seeds dead-stopped at (-40.8, -114.4); ground rise over the 8 m disc 26.0 m before, 6.0 m after.
-#   lava_channel_post_13i at (-313.1, -585.2), 2.0 m off lava_channel_10: seed 8 struck it airborne (vx 43.4 to -4.6)
-#     and stopped at (-318.7, -588.4); rise 22.3 m before, 4.7 m after.
-# Both posts move outward (11i to (-27.3, -120.2), 13i to (-307.1, -582.2)); a further 1 m east gives the same 6.0 m, so that is the wash's own relief,
-# so the limit stays the bend's 8.0 m: the fix passes with 2.0 m and 3.3 m margin, the base fails by 18.0 m and 14.3 m.
+#   main_tube_upper_post_11i at (-35.3, -120.2): a corner stood 0.4 m inside main_tube_upper_8's wash footprint; Sable
+#     dead-stopped at (-40.8, -114.4) on 5 of 8 seeds on stage 42ed00ee (#241 6352524432) and on 2 of 8 (seeds 3
+#     and 6) on this change's base 0446a2f2; ground rise over the 8 m disc 26.0 m before, 6.0 m after.
+#   lava_channel_post_13i at (-313.1, -585.2), 2.0 m off lava_channel_10: seed 8 struck it airborne (vx 43.4 to -4.6 in the
+#     42ed00ee trace, #241 6352524432) and stopped at (-318.7, -588.4); rise 22.3 m before, 4.7 m after.
+# Both posts move outward (11i to (-27.3, -120.2), 13i to (-307.1, -582.2)). The limit stays the bend's 8.0 m: the fix passes with 2.0 m and 3.3 m margin, the base fails by 18.0 m and 14.3 m.
 const POST_STRIKES := [
 	["main_tube_upper_post_11i", Vector2(-40.8, -114.4)],
 	["lava_channel_post_13i", Vector2(-318.7, -588.4)],
