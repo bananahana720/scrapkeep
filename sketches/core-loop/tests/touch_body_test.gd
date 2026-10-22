@@ -145,5 +145,8 @@ func _run() -> void:
 	_report("freed body does nothing", _events.is_empty(), "events %s" % [_events])
 
 	_game.free()
-	print("touch_body_test: %d checks, %s" % [_checks, "PASS" if _failures == 0 else "FAIL (%d)" % _failures])
+	if _failures == 0:
+		print("touch_body_test: PASS (%d checks)" % _checks)
+	else:
+		print("touch_body_test: FAIL (%d of %d checks)" % [_failures, _checks])
 	quit(0 if _failures == 0 else 1)
