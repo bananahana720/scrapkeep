@@ -1,0 +1,88 @@
+{
+	"HAZE_FILL": 1.15,
+	"HAZE_SOLID": 0.61,
+	"adapter": "NVIDIA GeForce RTX 3060",
+	"haze": true,
+	"head": "ea2b504d0253270877e5f39da17775b47ba9c4f3",
+	"pending_progress": 0.95,
+	"places": [
+		{
+			"camera_to_ball": 11.9853067398071,
+			"ground": {
+				"mean_l": 67.0358233451843,
+				"on_screen": true,
+				"rect": [
+					631,
+					616,
+					16,
+					16
+				]
+			},
+			"image": [
+				1280,
+				720
+			],
+			"live": {
+				"mean_l": 62.8945246052742,
+				"on_screen": true,
+				"rect": [
+					698,
+					604,
+					40,
+					40
+				]
+			},
+			"pending": {
+				"mean_l": 64.1013952101006,
+				"on_screen": true,
+				"rect": [
+					541,
+					604,
+					39,
+					39
+				]
+			},
+			"place": "stage2-morning"
+		},
+		{
+			"camera_to_ball": 9.24419784545898,
+			"ground": {
+				"mean_l": 29.1163263904805,
+				"on_screen": true,
+				"rect": [
+					636,
+					337,
+					7,
+					7
+				]
+			},
+			"image": [
+				1280,
+				720
+			],
+			"live": {
+				"mean_l": 60.3730165950155,
+				"on_screen": true,
+				"rect": [
+					745,
+					332,
+					17,
+					17
+				]
+			},
+			"pending": {
+				"mean_l": 60.0703336326309,
+				"on_screen": true,
+				"rect": [
+					516,
+					332,
+					17,
+					17
+				]
+			},
+			"place": "arena-w3"
+		}
+	],
+	"tool": "haze_pose_capture.gd",
+	"viewport": "(1280.0, 720.0)"
+}
