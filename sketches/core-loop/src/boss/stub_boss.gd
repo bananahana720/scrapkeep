@@ -34,16 +34,18 @@ var _posture_seen: Array = []
 # The fight's PHASE_MIN_SECONDS (Brindle's, boss_rules.gd), times the dial <boss>.phase_min_by_phase
 # (a multiplier, identity 1.0): a chunk lost before its phase has lasted that many seconds holds the
 # phase, and the Warden's bar fills only to warden.gd HOLD_CAP (_apply_posture asks hold_active; every hit
-# still lands, none staggers) until the minimum has passed; the next hit then staggers. A subclass names
-# its dial prefix in _hold_boss() and its seconds in _hold_minimums(); "" turns the hold off.
+# still lands, none staggers) until the minimum has passed; the next contact then staggers (a bolt, or a bar
+# drained in the hold, may take more). A subclass names its dial prefix in _hold_boss() and its seconds in
+# _hold_minimums(); "" turns the hold off.
 var _phase_started := 0.0
 var _phase_open_at := 0.0
 var _chunks_lost_seen := 0
 # Whether the build was a monster build when the fight began (warden.gd monster_build, latched at entry).
 # The hold's exemption reads this, not the live heft, which climbs with the scrap picked up in the fight.
 var _entry_monster := false
-# Per fight (reset at entry): seconds held, and seconds the hold was the binding constraint (from the
-# first frame of a hold with the bar at the cap to its end: the build had already earned the break).
+# Per fight (reset at entry): seconds held, and seconds the hold was the binding constraint: from the
+# first frame of a hold with the bar at the cap to the hold's end, even if the bar later drains below the
+# cap (the build had already earned the break once).
 var hold_s := 0.0
 var hold_bound_s := 0.0
 var _hold_capped := false

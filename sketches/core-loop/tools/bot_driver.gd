@@ -859,6 +859,7 @@ func _end(why: String) -> void:
 			boss_note["died_s"] = snappedf(_boss_clock, 0.01)
 		boss_note["outcome"] = why
 		boss_note["seconds"] = snappedf(_boss_clock, 0.01)
+		_boss_hold_note()
 		var boss = _boss()
 		if boss != null:
 			boss_note["phase_reached"] = boss.get("phase")

@@ -1,4 +1,4 @@
-# smoke: solo timeout=600s (four simulated boss fights per boss, each held 60 s or more: 5 min wall on a quiet box)
+# smoke: solo timeout=600s (five simulated boss fights per boss, three of them held 60 s or more: 5 min wall on a quiet box)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")

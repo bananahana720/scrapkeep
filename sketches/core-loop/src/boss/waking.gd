@@ -53,7 +53,8 @@ const LANDING_ATTACK := 1.2
 const POSTURE_GAIN := 0.565
 const HIT_CAP := 15.0
 # Seconds each phase lasts before a chunk lost in it opens the next (Brindle's PHASE_MIN_SECONDS); the
-# last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps scratch/challenge-tune-btT-1/-2 (66699e63, 08b0923b).
+# last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps on
+# scratch/challenge-tune-btC-1/-2.
 const PHASE_MIN_SECONDS := [21.0, 21.0, 21.0, 21.0]
 const FAMILY_NAMES := {"burrow": "burrow lane", "cave_in": "cave-in", "bore": "bore breach"}
 
@@ -522,9 +523,9 @@ func music_state() -> Dictionary:
 
 func objective_text() -> String:
 	if state == FIGHT and floors != null:
-		if hold_capped():
-			return "%s's bar is full. It breaks in %d s: keep the pressure on." % [String(_row().get("name", "The Waking")), ceili(hold_left())]
 		var text := "%s, %s" % [String(_row().get("name", "The Waking")), floors.objective()]
+		if hold_capped():
+			text = "%s's bar is full. It breaks in %d s: keep the pressure on" % [String(_row().get("name", "The Waking")), ceili(hold_left())]
 		if jammed():
 			text += ". Its drill is jammed: hit it now"
 		elif _family != "":
