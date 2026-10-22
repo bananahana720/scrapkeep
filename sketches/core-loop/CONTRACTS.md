@@ -266,7 +266,8 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
 ## Ball hooks (`src/movement/player_ball.gd`)
 
 - `juice_node() -> Node3D` belongs to presentation. It follows the ball and never rotates. Scale it for squash and stretch, and parent trails or speed lines to it. The spine never writes it.
-- `roll_node() -> Node3D` rolls with the ball's surface. Parent anything that should stick to the ball there, such as accreted scrap (B). The shell may grow visually; the collider never does.
+- `pod_mount() -> Node3D` sits beside the juice node and takes only its position, never its basis. The cockpit pod parents here, so squash, stretch and heft never scale the pilot (MOTION-SPEC row 204).
+- `roll_node() -> Node3D` rolls with the ball's surface. Parent anything that should stick to the ball there, such as accreted scrap (B). The drawn outline stays the collider's size at every heft class (DECISIONS, 22 Oct, fixed outline).
 - `pylon_node() -> Node3D` is the drawn pylon, for plant and eject animation.
 - `builtin_squash: bool` is the spine's landing squash. Presentation sets it false when it draws its own.
 - `speed_tier() -> int` (0 walk, 1 cruise, 2 fast, 3 blazing), `speed_fraction() -> float`, `shown_position()`, `planar_velocity()`, `ball_position()`.
@@ -652,7 +653,7 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 
 | Owner | What the hook reads | What it adds |
 | --- | --- | --- |
-| `movement/player_ball.gd` | `class_def`, `class_color()`, `state.velocity`, `kit.gliding`, `roll_node()` (whose parent is the rolling mesh), `juice_node()` | `HeroCore` under the rolling mesh, `HeroPod` under the juice node; the greybox ball mesh is hidden |
+| `movement/player_ball.gd` | `class_def`, `class_color()`, `state.velocity`, `kit.gliding`, `roll_node()` (whose parent is the rolling mesh), `juice_node()`, `pod_mount()` | `HeroCore` under the rolling mesh, `HeroPod` under the pod mount (`pod_mount()`); the greybox ball mesh is hidden |
 | `build/accretion.gd` | Each direct `MeshInstance3D` child is a chunk; its slot index is read back from `position` (`_slot(i, MAX_CHUNKS) * 1.02`) | `HeroChunk` under each chunk; the box is hidden |
 | `build/reward_gates.gd` | Each child `Node3D` is a gate; its offer is the `offers` row whose `at` matches its position; `Topper`, `Glyph<i>` sprites, `rarity_color()` | `HeroArch`, `Topper/HeroTopper`, one `HeroPlate<i>` per glyph; posts, bar, topper and heart are hidden |
 
@@ -664,7 +665,7 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 
 **Requested seams (not blocking).**
 
-1. **`player_ball.gd`.** Start the grapple rope at `HeroPod/RopeExit` when it exists, so the rope leaves the spool's fairlead.
+1. **`player_ball.gd`.** Done (MOTION-SPEC swing row): `RopeExit` rides the `Fairlead` carriage on `HeroPod`, 1.06 m out on the anchor's planar side, and `line_view.gd` draws the rope from that fairlead. Physics still pulls through the centre.
 2. **An ability-active fact per class.** Would let `class_accent` brighten only while its device works (section 9, "emissive only at the working device").
 3. **`palette.gd`.** Add `ANCIENT` (W7's delta). The hook then drops its local candidate-A constant.
 

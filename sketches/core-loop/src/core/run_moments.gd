@@ -85,8 +85,11 @@ var player
 var flow
 var stages
 var storage_dir := "user://"
-# Stills need a renderer; tests may switch them off on a display.
-var stills := true
+# Stills need a renderer; tests may switch them off on a display, and --no-stills (a user arg
+# after --) switches them off for a timing run: each still reads the whole frame back from the GPU.
+var stills := not ("--no-stills" in OS.get_cmdline_user_args())
+# Stills read back so far, so a timing run can show the switch fired (lesson 34).
+var shots_taken := 0
 # The last page finished by run_ended, and where save() put it ("" when unsaved, or until the
 # save's worker is done: read it through saved_path()).
 var last_page := {}
@@ -397,6 +400,7 @@ func _grab_into(row: Dictionary, rare := false) -> void:
 		if not is_inside_tree():
 			return
 		var image := get_viewport().get_texture().get_image()
+		shots_taken += 1
 		if image == null or image.is_empty():
 			return
 		# The HUD's top and bottom bands are not part of the picture.
