@@ -24,7 +24,7 @@ var fit_seconds := FIT_SECONDS
 var fit_min := FIT_MIN
 var enabled := true
 
-# id -> {seal_hp, max_hp, removes, state, opened_at, first_open, fit_since, fitters}
+# id -> {seal_hp, max_hp, removes, state, opened_at, first_open, fit_since, fitters, fit_seals}
 var _parts := {}
 
 
@@ -38,7 +38,7 @@ func _init(parts := [], numbers := {}, on := true) -> void:
 	for part in parts:
 		var hp := float(part.get("seal_hp", 0.0))
 		_parts[String(part["id"])] = {"seal_hp": hp, "max_hp": hp, "removes": String(part.get("removes", "")),
-				"state": SHUT, "opened_at": 0.0, "first_open": 0.0, "fit_since": -1.0, "fitters": 0}
+				"state": SHUT, "opened_at": 0.0, "first_open": 0.0, "fit_since": -1.0, "fitters": 0, "fit_seals": 0}
 
 
 # The identity rule: every hit counts in full and nothing ever changes.
@@ -136,6 +136,20 @@ func step(now: float) -> void:
 		if fitted or now - float(part["opened_at"]) >= open_seconds:
 			part["state"] = SHUT
 			part["fit_since"] = -1.0
+			if fitted:
+				part["fit_seals"] = int(part["fit_seals"]) + 1
+
+
+# How many times the crew's fit has sealed this point.
+func fit_seals(id: String) -> int:
+	return int(_parts[id]["fit_seals"]) if _parts.has(id) else 0
+
+
+# The fit clock as 0 to 1 of fit_seconds: 0 while fewer than fit_min fitters are on the point.
+func fit_progress(id: String, now: float) -> float:
+	if not _parts.has(id) or float(_parts[id]["fit_since"]) < 0.0 or fit_seconds <= 0.0:
+		return 0.0
+	return clampf((now - float(_parts[id]["fit_since"])) / fit_seconds, 0.0, 1.0)
 
 
 func has(id: String) -> bool:

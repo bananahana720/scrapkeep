@@ -70,6 +70,18 @@ const HATCH_INSET := 0.5
 const BORE_HEAD_RADIUS := 20.0
 const BORE_HEAD_BEARING := PI * 0.25
 
+# The crew (dial 1 only): an opening calls one wave of fitters (crew_fitter.gd), CREW_WAVE of them but never more than
+# CREW_CAP alive, and at most CREW_WAVES_PER_PHASE waves per floor phase (the pit override is its own phase).
+# They spawn CREW_SPAWN_ARC off the hatch's bearing at CREW_SPAWN_RADIUS, alternating sides, so the player has travel time.
+const CREW_WAVE := 3
+const CREW_CAP := 6
+const CREW_WAVES_PER_PHASE := 3
+const CREW_SPAWN_ARC := TAU * 110.0 / 360.0
+const CREW_SPAWN_RADIUS := 30.0
+const CREW_SPAWN_SPACING := 1.8
+const CREW_SLOT_SPACING := 2.4
+const CREW_SLOT_INSET := 2.0
+
 var floors: WakingFloors
 # Floor number to its body, while the body stands.
 var _floor_bodies := {}
@@ -109,6 +121,13 @@ var _base_plating := 0.0
 # Families ridden out while carving, for the Wall Is Home find.
 var _banked := {}
 var _pulse_charging := false
+# The crew: [{node, id, counted}], counted when the weak rule holds this fitter's fit. Empty at dial 0.
+var _crew: Array = []
+var _crew_waves := 0
+var _crew_phase := 0
+# Every hatch the crew's fit sealed: [{id, phase, at}], at on the fight clock. The sweep reads the seal rate per floor phase.
+var weak_sealed: Array = []
+var _seals_seen := {}
 
 
 func setup(ctx_ref) -> void:
@@ -199,6 +218,9 @@ func _physics_process(delta: float) -> void:
 			_attack_clock = LANDING_ATTACK
 			_combo_left = -1
 	phase = clampi(floors.shattered + 1, 1, WakingAttacks.PIT_PHASE)
+	if weak.active():
+		_note_seals()
+		_step_crew()
 	_read_pulse()
 	_read_ball()
 	_open_by_lip()
@@ -326,12 +348,11 @@ func _step_attacks(delta: float) -> void:
 					_bank_ride(attack["family"], ball)
 			if h.is_live() and attack["family"] == "bore" and h.attack_id.begins_with("waking_bore_0"):
 				_end_combo()  # a punish window ends any combo
-				if _jammed_until <= clock:
-					# The jam opens the third hatch (Bedrock's bore), or the override in the pit (#241 6332288729).
-					if phase >= WakingAttacks.PIT_PHASE:
-						_open_override()
-					else:
-						_open_hatch(3)
+				# The bore opens the third hatch (Bedrock's), or the override in the pit (#241 6332288729), once per
+				# attack, apart from the punish guard below: a jam renewed while the part was buried must not keep
+				# the first reachable bore from opening it. A buried part retries on a later live frame.
+				if weak.active() and not attack.get("opened", false) and _open_bore_part():
+					attack["opened"] = true
 				_jammed_until = clock + (h.warn_seconds + h.live_seconds - h.age) + ChallengeDials.punish("waking", BORE_JAM)
 			if not (h.is_done() and h.age >= h.warn_seconds + h.live_seconds + 0.5):
 				done = false
@@ -382,12 +403,27 @@ func _part_reachable(id: String) -> bool:
 # Opens floor k's hatch only while it is reachable; a refused open changes nothing and says nothing.
 func _open_hatch(k: int) -> void:
 	if part_reachable("hatch_%d" % k):
-		_open_weak("hatch_%d" % k)
+		_open_point("hatch_%d" % k)
+
+
+# The one place a point opens: the open calls its crew.
+func _open_point(id: String) -> void:
+	if _open_weak(id):
+		_call_crew(id)
 
 
 func _open_override() -> void:
 	if part_reachable("override"):
-		_open_weak("override")
+		_open_point("override")
+
+
+# A live bore's open: true once the part is reachable (opened now, or already open or broken), false while buried.
+func _open_bore_part() -> bool:
+	var id := "override" if phase >= WakingAttacks.PIT_PHASE else "hatch_3"
+	if not part_reachable(id):
+		return false
+	_open_point(id)
+	return true
 
 
 func _bank_ride(family: String, at: Vector3) -> void:
@@ -471,6 +507,8 @@ func _free_hazards(attack: Dictionary) -> void:
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
+	if not _crew.is_empty():
+		_crew_struck(enemy, kind)
 	if state != FIGHT or enemy != warden or kind != "slam":
 		return
 	var at: Vector3 = ctx.player.ball_position()
@@ -640,3 +678,138 @@ func objective_text() -> String:
 			text += ". Its %s is open: hook it and haul in" % ("override button" if open[-1] == "override" else "hatch")
 		return text
 	return super()
+
+
+# --- The crew ----------------------------------------------------------------------------------
+
+func crew() -> Array:
+	return _crew.filter(func(c): return is_instance_valid(c["node"])).map(func(c): return c["node"])
+
+
+func _crew_alive() -> int:
+	var n := 0
+	for c in _crew:
+		if is_instance_valid(c["node"]) and not c["node"].is_dead():
+			n += 1
+	return n
+
+
+# One wave for an opening: min(CREW_WAVE, CREW_CAP - alive) fitters, none past the phase's wave count.
+func _call_crew(id: String) -> void:
+	if not weak.active() or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+		return
+	if phase != _crew_phase:
+		_crew_phase = phase
+		_crew_waves = 0
+	var count := mini(CREW_WAVE, CREW_CAP - _crew_alive())
+	if count <= 0 or _crew_waves >= CREW_WAVES_PER_PHASE:
+		return
+	_crew_waves += 1
+	var part = weak_part(id)
+	var hatch: Vector3 = part.global_position if part != null else _weak_position(id)
+	var out := Vector3(hatch.x - _center.x, 0.0, hatch.z - _center.z)
+	var bearing := atan2(out.z, out.x) + CREW_SPAWN_ARC * (1.0 if _crew_waves % 2 == 1 else -1.0)
+	var way := Vector3(cos(bearing), 0.0, sin(bearing))
+	var side := Vector3.UP.cross(way)
+	var base := Vector3(_center.x, _top() + 1.0, _center.z) + way * CREW_SPAWN_RADIUS
+	for i in count:
+		var at := base + side * (float(i) - float(count - 1) * 0.5) * CREW_SPAWN_SPACING
+		var fitter = ctx.spawner.spawn_enemy("crew_fitter", at)
+		if fitter == null:
+			continue
+		var slot_index := _free_slot(id)
+		fitter.assign(id, _slot_at(id, hatch, slot_index))
+		_crew.append({"node": fitter, "id": id, "counted": false, "slot": slot_index})
+
+
+func _free_slot(id: String) -> int:
+	var held := []
+	for c in _crew:
+		if c["id"] == id and is_instance_valid(c["node"]):
+			held.append(int(c["slot"]))
+	var k := 0
+	while held.has(k):
+		k += 1
+	return k
+
+
+# Fitter slots sit across the hatch's face, a second row further in.
+func _slot_at(_id: String, hatch: Vector3, k: int) -> Vector3:
+	var in_way := Vector3(_center.x - hatch.x, 0.0, _center.z - hatch.z).normalized()
+	var side := Vector3.UP.cross(in_way)
+	return hatch + in_way * (CREW_SLOT_INSET + float(k / 3) * CREW_SLOT_INSET) + side * (float(k % 3) - 1.0) * CREW_SLOT_SPACING
+
+
+# Every tick: fitters that arrived book their fit, a dead one gives its fit back, and a closed hatch retires its crew.
+func _step_crew() -> void:
+	var kept: Array = []
+	for c in _crew:
+		var f = c["node"]
+		if not is_instance_valid(f):
+			continue
+		var id: String = c["id"]
+		if f.is_dead():
+			_uncount(c)
+			continue
+		if weak.state(id) != WeakPoints.OPEN or not part_reachable(id):
+			_uncount(c)
+			f.retire()
+			continue
+		if f.fit_state == f.State.INBOUND and f.arrived():
+			f.start_fit()
+			weak.begin_fit(id, clock)
+			c["counted"] = true
+		f.seal_progress = weak.fit_progress(id, clock)
+		kept.append(c)
+	_crew = kept
+
+
+# Records each seal the crew's fit made since the last look (the weak_point_opened pattern, as a record: the event
+# table is shared and has no sealed row).
+func _note_seals() -> void:
+	for p in _weak_parts():
+		var id: String = p["id"]
+		var n: int = weak.fit_seals(id)
+		for i in n - int(_seals_seen.get(id, 0)):
+			weak_sealed.append({"id": id, "phase": phase, "at": clock})
+		_seals_seen[id] = n
+
+
+func _uncount(c: Dictionary) -> void:
+	if c["counted"]:
+		weak.knock_fit(c["id"])
+		c["counted"] = false
+
+
+# A reel impact on a fitting fitter throws it off its plate; any other contact only shoves it (enemy.knock).
+func _crew_struck(f: Node3D, kind: String) -> void:
+	for c in _crew:
+		if c["node"] != f:
+			continue
+		if state != FIGHT or f.fit_state != f.State.FITTING or not kind in Rules.CONTACT_KINDS:
+			return
+		var smash: bool = ctx.player.smash_landing == f
+		var reel: bool = ctx.spawner.is_reel_impact(kind, smash) if ctx.spawner != null and ctx.spawner.has_method("is_reel_impact") \
+				else smash or (ctx.player.kit.hooked and ctx.player.kit.winching)
+		if not reel:
+			return
+		_uncount(c)
+		f.dislodge(f.global_position - ctx.player.ball_position())
+		return
+
+
+func _retire_crew() -> void:
+	for c in _crew:
+		if is_instance_valid(c["node"]):
+			_uncount(c)
+			c["node"].retire()
+	_crew.clear()
+	_crew_waves = 0
+	_crew_phase = 0
+	weak_sealed.clear()
+	_seals_seen.clear()
+
+
+func _free_parts() -> void:
+	_retire_crew()
+	super()

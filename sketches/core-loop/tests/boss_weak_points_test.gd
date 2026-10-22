@@ -35,6 +35,7 @@ func _run() -> void:
 	_same_without_removal()
 	await _waking()
 	await _jam_guard()
+	await _jam_renewed()
 	await _hook()
 	await _hold()
 	await _mind()
@@ -205,12 +206,16 @@ func _waking() -> void:
 	# Phase 3, floors 1 and 2 gone, hatch_3 standing and shut: a lip drop opens it (the positive control for the
 	# last-floor check below, which runs with hatch_3 already broken and so cannot fail).
 	mod.phase = 3
+	var grounded_before: bool = mod.ctx.player.state.grounded
+	var lip_seen_before: bool = mod._lip_seen
 	mod._lip_seen = false
 	mod._carved_at = mod.clock
 	mod.ctx.player.state.grounded = false
 	_t.check("waking: hatch_3 stands shut before the phase 3 lip", mod.weak.state("hatch_3") == WeakPoints.SHUT and mod.part_reachable("hatch_3"), "")
 	mod._open_by_lip()
 	_t.check("waking: a lip drop in phase 3 opens hatch_3", mod.weak_open() == ["hatch_3"], str(mod.weak_open()))
+	mod.ctx.player.state.grounded = grounded_before
+	mod._lip_seen = lip_seen_before
 	mod.weak.step(mod.clock + 100.0)
 	# The bore: hatch_3 off the pit, the override in it.
 	_bore(mod, 3)
@@ -257,13 +262,67 @@ func _waking() -> void:
 	await physics_frame
 
 
+# A bore attack that is live now, not yet stepped, and the guard left as it is.
+func _bore_attack(mod, phase: int) -> Dictionary:
+	var d: Dictionary = WakingAttacks.bore(1, mod.ctx.player.ball_position(), Vector3(mod._center.x, mod._top(), mod._center.z), phase, mod.PAD_RADIUS)[0]
+	var h = MindAttacks.build(d)
+	h.ground = Callable(mod, "ground_height_at")
+	mod.add_child(h)
+	for i in 400:
+		if h.is_live():
+			break
+		h.step(0.01)
+	var attack := {"hazards": [h], "family": "bore", "landed": false, "descs": [d]}
+	mod.attacks.append(attack)
+	return attack
+
+
+# The open is apart from the punish guard: a jam renewed while the part was buried must not hold the next bore off.
+func _jam_renewed() -> void:
+	var booted = await _boot(2, {"waking.weak_points": 1.0})
+	var game = booted[0]
+	var mod = booted[1]
+	_drop_floors(mod, 3)
+	mod._dropping = 3
+	mod.phase = 4
+	var first: Dictionary = _bore_attack(mod, 4)
+	mod._step_attacks(0.0)
+	_t.check("renewed jam: the buried bore opens nothing, arms the guard and leaves its attack free to retry",
+			mod.weak_open().is_empty() and mod._jammed_until > mod.clock and not first.get("opened", false), str(mod._jammed_until))
+	mod._dropping = 0
+	mod._clear_attacks()
+	var second: Dictionary = _bore_attack(mod, 4)
+	_t.check("renewed jam: the guard is still up when the next bore goes live", mod._jammed_until > mod.clock, "")
+	mod._step_attacks(0.0)
+	_t.check("renewed jam: the first reachable bore opens the override under the armed guard", mod.weak_open() == ["override"] and second.get("opened", false), str(mod.weak_open()))
+	var again: float = mod._jammed_until
+	mod._step_attacks(0.0)
+	_t.check("renewed jam: one open per bore, the guard keeps renewing", mod._weak_opened.count("override") == 1 and mod._jammed_until >= again, "")
+	game.free()
+	await physics_frame
+	# The same attack retries: buried on its first live frame, open on a later one.
+	var retry = await _boot(2, {"waking.weak_points": 1.0})
+	var mod2 = retry[1]
+	_drop_floors(mod2, 3)
+	mod2._dropping = 3
+	mod2.phase = 4
+	var attack: Dictionary = _bore_attack(mod2, 4)
+	mod2._step_attacks(0.0)
+	var buried: bool = mod2.weak_open().is_empty()
+	mod2._dropping = 0
+	mod2._step_attacks(0.0)
+	_t.check("renewed jam: a buried first frame retries on a later live frame of the same bore", buried and mod2.weak_open() == ["override"], str(mod2.weak_open()))
+	retry[0].free()
+	await physics_frame
+
+
 # One open per jam: the jam guard, with the point fresh (not broken) so a reopen would show.
 func _jam_guard() -> void:
 	var booted = await _boot(2, {"waking.weak_points": 1.0})
 	var game = booted[0]
 	var mod = booted[1]
-	# Phase 4 the frame chunk 3 shatters: floor 3 still stands and is in its drop warning, so the buried override stays shut.
-	_drop_floors(mod, 2)
+	# Phase 4 the frame chunk 3 shatters: floor 3 is in its drop warning with its body already gone, so only the warning buries the override.
+	_drop_floors(mod, 3)
 	mod._dropping = 3
 	mod._drop_left = 1.0
 	_bore(mod, 4)

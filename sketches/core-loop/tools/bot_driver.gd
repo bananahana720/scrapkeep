@@ -2659,6 +2659,10 @@ func _fight_posture_boss(boss, delta: float) -> void:
 		_goal = "boss wait"
 		_act(game.player.ball_position() + game.player.planar_velocity(), null, delta)
 		return
+	var fitter := _open_fitter(boss)
+	if fitter != null:
+		_fight_fitter(fitter, delta)
+		return
 	var part := _open_part(boss)
 	if part != null:
 		_fight_part(part, delta)
@@ -2673,6 +2677,34 @@ func _open_part(boss) -> Node3D:
 		return null
 	var open: Array = boss.weak_open()
 	return boss.weak_part(String(open[-1])) if not open.is_empty() else null
+
+
+# A fitter of the open hatch to hit before the hatch itself (waking.gd crew): the first one holding a plate, else the
+# first inbound. Gated by the same go as the part, so the expert always, the learner after its read and roll, the
+# novice never; it draws nothing.
+func _open_fitter(boss) -> Node3D:
+	if not _weak_go or not boss.has_method("crew") or not boss.has_method("weak_open"):
+		return null
+	var open: Array = boss.weak_open()
+	if open.is_empty():
+		return null
+	var id := String(open[-1])
+	var pick: Node3D = null
+	for f in boss.crew():
+		if f.point_id != id or f.is_dead():
+			continue
+		if f.fit_state == f.State.FITTING:
+			return f
+		if pick == null and f.fit_state == f.State.INBOUND:
+			pick = f
+	return pick
+
+
+func _fight_fitter(fitter: Node3D, delta: float) -> void:
+	_goal = "fitter %s" % fitter.point_id
+	_weak_warden = fitter
+	_harpoon_hand(fitter, delta)
+	_act(fitter.global_position, fitter, delta, fitter)
 
 
 # An open hatch or override: roll at it, bite it with the harpoon hand and commit the haul. The hand's wait between
