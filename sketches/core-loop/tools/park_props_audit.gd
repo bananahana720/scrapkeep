@@ -12,7 +12,7 @@ extends SceneTree
 #   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
 #     --resolution 1280x720 --script res://tools/park_props_audit.gd -- --map=park_dam --out=<abs dir> \
 #     [--step=25] [--stills=12] [--draws=40] [--counts-only] [--poses=<poses.json>] [--cam=rest|mid|fast]
-#     [--vignettes [--spots=id,id]]
+#     [--vignettes [--spots=id,id] [--subject-kind=<kind>]]
 #
 # Writes <out>/<map>/samples.json, summary.json, stills.json, poses.json and <map>-<idx>-<x>_<z>.png, then runs
 # tools/park_props_contact.py for the contact sheet. Needs a display unless --counts-only.
@@ -30,6 +30,10 @@ extends SceneTree
 # subject is hidden and the frame drawn again: subject_px counts pixels inside its projected box that differ by more than 8 in any channel,
 # leaving out pixels that already differ between two unchanged renders (motes, streaks; noise_px), a guide and not a gate (null when the
 # instance cannot be isolated from the built nodes), beside aabb_share, the screen share of that box, and frame_diff_px, the unmasked whole frame.
+# --subject-kind=<kind> makes the subject the first instance of that kind in the spot (spots without one are skipped); vignettes.json
+# records the rule as subject_rule. Each frame also lists rows_in_view: the ids of the park file's park_rows (a footprint grid, 7 points
+# a side at most) and contraption_rows (launchers and the like: the point or a ring of their radius) with any sampled point inside the
+# camera frustum within 150 m (ParkProps.cell_visible, ground height, no occlusion).
 # Writes <map>-v<spot idx>-<spot>-eye.png and -chase.png, vignettes.json, poses.json, stills.json, summary.json and the contact sheet.
 #
 # What counts as dressing (each item is one entry with a world-space centre; kinds are distinct meshes or dress_kind):
@@ -108,6 +112,8 @@ const V_CHASE_SIDE_M := 2.5
 const V_EYE_UP := 1.8
 const V_DIFF := 8
 const V_LITTER_MIN_H := 0.3
+const V_ROWS_RANGE_M := 150.0
+const V_ROWS_GRID := 7
 const DRAW_LABEL := "OpenGL compatibility proxy, cloud llvmpipe, not a frame-cost proof"
 
 var map_id := ""
@@ -120,6 +126,7 @@ var poses_file := ""
 var cam_name := "mid"
 var vignettes := false
 var spot_filter: Array = []
+var subject_kind := ""
 var _prev_cam := Vector3.INF
 # --open=x:z:r:<reason>,... : ruled open spaces (centre and radius, metres) whose windows are exempt from the density bar,
 # each with a reason the audit checks instead of trusting (coordinator ruling #241 6329579296). The reason is everything after
@@ -175,6 +182,8 @@ func _initialize() -> void:
 			counts_only = true
 		elif a == "--vignettes":
 			vignettes = true
+		elif a.begins_with("--subject-kind="):
+			subject_kind = a.trim_prefix("--subject-kind=")
 		elif a.begins_with("--spots="):
 			spot_filter = Array(a.trim_prefix("--spots=").split(",", false))
 	if map_id == "" or out_root == "" or not CAMERAS.has(cam_name):
@@ -619,12 +628,13 @@ func _run_vignettes() -> void:
 			continue
 		var subject_i := -1
 		for k in list.size():
-			if not list[k]["litter"] and String(list[k]["vignette"]) == id:
+			if not list[k]["litter"] and String(list[k]["vignette"]) == id and (subject_kind == "" or String(list[k]["kind"]) == subject_kind):
 				subject_i = k
 				break
 		if subject_i < 0:
 			skipped.append(id)
-			printerr("park_props_audit: spot %s has no instance (template missing?)" % id)
+			if subject_kind == "":
+				printerr("park_props_audit: spot %s has no instance (template missing?)" % id)
 			continue
 		var subject: Dictionary = list[subject_i]
 		var spos: Vector3 = subject["pos"]
@@ -684,7 +694,7 @@ func _run_vignettes() -> void:
 			var shot := _grab()
 			shot.save_png(dir.path_join(png))
 			var box := _aabb(subject)
-			var res := {"png": png, "subject_px": null, "subject_share": null, "aabb_share": snappedf(float(box["share"]), 0.00001),
+			var res := {"png": png, "rows_in_view": _rows_in_view(file, terrain), "subject_px": null, "subject_share": null, "aabb_share": snappedf(float(box["share"]), 0.00001),
 				"frame_diff_px": null, "noise_px": null}
 			if not handle.is_empty():
 				# A control (the same frame drawn again, nothing hidden) finds what moves by itself (motes, streaks): those pixels are not
@@ -721,7 +731,9 @@ func _run_vignettes() -> void:
 	var summary := {"mode": "vignettes", "map": map_id, "stage": stage_index, "spots_in_file": spots.size(), "spots_rendered": rows.size(), "spots_skipped": skipped,
 		"blocked_all": blocked_all, "subject_px_note": "px inside the projected box, minus pixels that move between two unchanged renders; a guide", "frames_without_isolation": null_px, "frames_zero_subject_px": zero_px, "constants": _constants(),
 		"adapter": RenderingServer.get_video_adapter_name(), "runtime_s": snappedf((Time.get_ticks_msec() - started_msec) / 1000.0, 0.1)}
-	_write(dir.path_join("vignettes.json"), {"map": map_id, "stage": stage_index, "rows": rows})
+	var rule := "lead prop: the first instance of the spot's vignette" if subject_kind == "" else "first instance of kind %s in the spot; spots without it skipped" % subject_kind
+	summary["subject_rule"] = rule
+	_write(dir.path_join("vignettes.json"), {"map": map_id, "stage": stage_index, "subject_rule": rule, "rows": rows})
 	_write(dir.path_join("poses.json"), {"map": map_id, "poses": poses})
 	_write(dir.path_join("stills.json"), {"map": map_id, "stills": stills})
 	_write(dir.path_join("summary.json"), summary)
@@ -754,6 +766,46 @@ func _sight_block(eye: Vector3, centre: Vector3, spot_id: String, list: Array, n
 	if not hit.is_empty():
 		return "collider:%s" % String((hit["collider"] as Node).name)
 	return ""
+
+
+# Ids of the file's park rows and contraption rows with a sampled point in the camera frustum within V_ROWS_RANGE_M (frustum only, no
+# occlusion). A park row is sampled over its footprint (a V_ROWS_GRID grid, centre included); a contraption row at its point and a ring of its radius.
+func _rows_in_view(file: Dictionary, terrain) -> Array:
+	var spec := {"fov_deg": cam.fov, "aspect": float(SIZE.x) / float(SIZE.y)}
+	var view := cam.global_transform
+	var out: Array = []
+	var park_file: Dictionary = park
+	for row: Dictionary in park_file.get("park_rows", []):
+		if not row.get("at") is Array or not row.get("size") is Array:
+			continue
+		var centre := Vector2(float(row["at"][0]), float(row["at"][1]))
+		var half := ParkMap.footprint_half_extents(row)
+		var yaw := deg_to_rad(float(row.get("yaw_deg", 0.0)))
+		var seen := false
+		for i in V_ROWS_GRID:
+			for j in V_ROWS_GRID:
+				var local := Vector2(lerpf(-half.x, half.x, float(i) / float(V_ROWS_GRID - 1)), lerpf(-half.y, half.y, float(j) / float(V_ROWS_GRID - 1)))
+				var w := centre + local.rotated(-yaw)
+				if ParkProps.cell_visible(view, spec, Vector3(w.x, terrain.height(w.x, w.y), w.y), V_ROWS_RANGE_M):
+					seen = true
+					break
+			if seen:
+				break
+		if seen:
+			out.append(String(row["id"]))
+	for row: Dictionary in park_file.get("contraption_rows", []):
+		if not row.get("at") is Array:
+			continue
+		var c := Vector2(float(row["at"][0]), float(row["at"][1]))
+		var r := float(row.get("radius", 0.0))
+		var pts: Array = [c]
+		for k in 8:
+			pts.append(c + Vector2.from_angle(k * TAU / 8.0) * r)
+		for w2: Vector2 in pts:
+			if ParkProps.cell_visible(view, spec, Vector3(w2.x, terrain.height(w2.x, w2.y), w2.y), V_ROWS_RANGE_M):
+				out.append(String(row["id"]))
+				break
+	return out
 
 
 func _in_cylinder(p: Vector3, inst: Dictionary) -> bool:
