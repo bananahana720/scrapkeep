@@ -17,6 +17,9 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("-fixture-dir="):
 			_fixture_dir = arg.trim_prefix("-fixture-dir=")
+	# The dressing is pinned with a smash-per-frame fight, not the fight's length: the PHASE_MIN_SECONDS hold
+	# (mind.gd; tests/boss_phase_hold_test.gd) is multiplied out so the Mind falls inside the frame cap.
+	ChallengeDials.set_overrides({"mind.phase_min_by_phase": [0.0, 0.0, 0.0, 0.0]})
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
