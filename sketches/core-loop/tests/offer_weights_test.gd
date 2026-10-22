@@ -66,6 +66,13 @@ const STAGES := 4
 const GATES_PER_STAGE := 5
 const CHOICES := 2
 const SHARE_BAND := [0.60, 0.80]
+# 2026-10-17 (Overpowered pays, Parts._swap_stacked_out): a part held at its stack cap is swapped
+# out of the draw, so a greedy bot that has stacked out its kit sees off-kit parts and its share
+# may sit under the band (Tarn measured 0.573 full, 0.568 alpha) (coordinator ruling (a), 22:54Z).
+# The random bot keeps the band.
+const GREEDY_SHARE_FLOOR := 0.55
+# 2026-10-21 (ruling 11, #149 6274605849): the full list's bar is at most 0.50, as the alpha list's;
+# a stacked-out swap (Parts._swap_stacked_out) lands Tarn on exactly 0.50 with Tally and the Cannon.
 const OVERLAP_MAX := 0.5
 const MOVEMENT_MAX := 0.15
 const TOP := 10
@@ -73,7 +80,10 @@ const MIN_DISTINCT_PAIRS := 5
 const MAX_PILOTS_PER_PAIR := 2
 const UNREACHABLE_PAIR := ["defence", "movement"]
 # 2026-10-15 SQ19b: the alpha list's own bars (see the header).
-const ALPHA_OVERLAP_MAX := 0.40
+# 2026-10-17 (Overpowered pays): 0.50, was 0.40 (coordinator ruling (a), 22:54Z). A stacked-out
+# shelf pick swaps for another shelf part (_keep_a_neutral's promise), so on the 45-part alpha list
+# Demolitions and the Cannon share five top-10 shelf parts (measured 0.50).
+const ALPHA_OVERLAP_MAX := 0.50
 const ALPHA_MIN_PAIRS := 4
 const TALLY_PART := "winch_pawl"
 const NUDGE_DRIFT := 0.03
@@ -278,8 +288,9 @@ func _judge(label: String, stats: Dictionary, strict: bool) -> void:
 					share += x
 				share /= seeds.size()
 				detail = "mean %.3f over %d seeds, min %.3f max %.3f" % [share, seeds.size(), seeds.min(), seeds.max()]
-			var in_band: bool = share >= SHARE_BAND[0] and share <= SHARE_BAND[1]
-			_t.check("%s %s %s weighted share inside 60 to 80%%" % [label, pilot, bot], in_band, detail)
+			var floor_share: float = GREEDY_SHARE_FLOOR if bot == "greedy" else SHARE_BAND[0]
+			var in_band: bool = share >= floor_share and share <= SHARE_BAND[1]
+			_t.check("%s %s %s weighted share inside %d to 80%%" % [label, pilot, bot, roundi(floor_share * 100.0)], in_band, detail)
 			_t.check("%s %s %s movement at most 15%%" % [label, pilot, bot], _bucket_share(s, "movement") <= MOVEMENT_MAX, "%.3f" % _bucket_share(s, "movement"))
 			_t.check("%s %s %s no neutral part over its repeat cap" % [label, pilot, bot], s["neutral_max"] <= Parts.NEUTRAL_REPEAT_CAP,
 				"max %d a stage, cap %d" % [s["neutral_max"], Parts.NEUTRAL_REPEAT_CAP])
@@ -296,7 +307,7 @@ func _judge(label: String, stats: Dictionary, strict: bool) -> void:
 			var overlap := float(shared.size()) / float(maxi(1, mini(a.size(), b.size())))
 			var detail := "%.2f (%d of %d: %s)" % [overlap, shared.size(), mini(a.size(), b.size()), shared]
 			if strict:
-				_t.check("%s top-%d overlap %s and %s under 50%%" % [label, TOP, PILOTS[i], PILOTS[j]], overlap < OVERLAP_MAX, detail)
+				_t.check("%s top-%d overlap %s and %s at most %.2f" % [label, TOP, PILOTS[i], PILOTS[j], OVERLAP_MAX], overlap <= OVERLAP_MAX + 0.0001, detail)
 			else:
 				_t.check("%s top-%d overlap %s and %s at most %.2f" % [label, TOP, PILOTS[i], PILOTS[j], ALPHA_OVERLAP_MAX],
 					overlap <= ALPHA_OVERLAP_MAX + 0.0001, detail)

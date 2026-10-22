@@ -1,9 +1,10 @@
+# smoke: timeout=300s (eight fixed-90-fps children of 20 s, one at a time)
 extends SceneTree
 
 # The item fuzzer's smoke slice (DESIGN-V2 section 7): 8 seeds x 20 s of tools/item_fuzz.gd
-# in its own headless process at --fixed-fps 90, so it runs faster than real time and
-# sketch:smoke stays under its 120 s per-test timeout. The full 200 x 90 s run is the
-# tool's job, not this test's.
+# at --fixed-fps 90, so it runs faster than real time. The tool runs each seed in its own
+# child process, about 5 s of boot apiece, which is why this slice declares 300 s. The
+# full 200 x 90 s run is the tool's job, not this test's.
 #
 # It fails on a hard invariant (a non-finite number, a bolt over the cap, a slot past its
 # charge ceiling or under the cooldown floor, a trigger firing twice in one pass, damage

@@ -9344,31 +9344,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them."
-   }
-  },
-  {
-   "id": "liner_bench2_camp_lane_detail1",
-   "path": "res://assets/models/park/liner_bench2_camp_lane_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 1 of liner_bench2_camp_lane, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_bench2_camp_lane_detail2",
-   "path": "res://assets/models/park/liner_bench2_camp_lane_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_bench2_camp_lane, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush graded gravel sheet with two tyre-rut colour bands and a verge band of low cobble relief. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -9380,31 +9356,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them."
-   }
-  },
-  {
-   "id": "liner_bench2_east_bank_detail1",
-   "path": "res://assets/models/park/liner_bench2_east_bank_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 1 of liner_bench2_east_bank, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_bench2_east_bank_detail2",
-   "path": "res://assets/models/park/liner_bench2_east_bank_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_bench2_east_bank, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush graded gravel sheet with two tyre-rut colour bands and a verge band of low cobble relief. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -9416,31 +9368,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
-   }
-  },
-  {
-   "id": "liner_bench_run_wash_detail1",
-   "path": "res://assets/models/park/liner_bench_run_wash_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_bench_run_wash, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_bench_run_wash_detail2",
-   "path": "res://assets/models/park/liner_bench_run_wash_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_bench_run_wash, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -9452,31 +9380,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
-   }
-  },
-  {
-   "id": "liner_bend_return_wash_detail1",
-   "path": "res://assets/models/park/liner_bend_return_wash_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_bend_return_wash, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_bend_return_wash_detail2",
-   "path": "res://assets/models/park/liner_bend_return_wash_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_bend_return_wash, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -9488,31 +9392,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. earthen bank berms, cobble armouring at the lip and a silt floor, a shaped reference to how an earth canal holds its lip."
-   }
-  },
-  {
-   "id": "liner_butte_gap_detail1",
-   "path": "res://assets/models/park/liner_butte_gap_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_butte_gap, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_butte_gap_detail2",
-   "path": "res://assets/models/park/liner_butte_gap_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_butte_gap, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a canal lining with a lip band, earth batter and colour bands: the lip is capped to the 0.12 m band inside every ride row's footprint, not removed, and keeps its full relief outside. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -9524,31 +9404,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. earthen bank berms, cobble armouring at the lip and a silt floor, a shaped reference to how an earth canal holds its lip."
-   }
-  },
-  {
-   "id": "liner_canal_lip_detail1",
-   "path": "res://assets/models/park/liner_canal_lip_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 1 of liner_canal_lip, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_canal_lip_detail2",
-   "path": "res://assets/models/park/liner_canal_lip_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_canal_lip, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a canal lining with a lip band, earth batter and colour bands: the lip is capped to the 0.12 m band inside every ride row's footprint, not removed, and keeps its full relief outside. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -9560,7 +9416,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: every vertex inside any ride row's footprint stays within 0.12 m of the ground, the verge band included, and the sheet ships no rim props (no rocks, no tufts) and no detail shells."
+    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -9608,31 +9464,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
-   }
-  },
-  {
-   "id": "liner_dump_wash_1_detail1",
-   "path": "res://assets/models/park/liner_dump_wash_1_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 1 of liner_dump_wash_1, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_dump_wash_1_detail2",
-   "path": "res://assets/models/park/liner_dump_wash_1_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_dump_wash_1, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -9644,31 +9476,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
-   }
-  },
-  {
-   "id": "liner_dump_wash_2_detail1",
-   "path": "res://assets/models/park/liner_dump_wash_2_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 1 of liner_dump_wash_2, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_dump_wash_2_detail2",
-   "path": "res://assets/models/park/liner_dump_wash_2_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_dump_wash_2, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -9680,7 +9488,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush graded gravel sheet with two tyre-rut colour bands and a verge band of low cobble relief. Flush lane: every vertex inside any ride row's footprint stays within 0.12 m of the ground, the verge band included, and the sheet ships no rim props (no rocks, no tufts) and no detail shells."
+    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush graded gravel sheet with two tyre-rut colour bands and a verge band of low cobble relief. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -9722,37 +9530,13 @@
   {
    "id": "liner_gap_wash",
    "path": "res://assets/models/park/liner_gap_wash.glb",
-   "class": "landform",
+   "class": "park_large",
    "origin": "centre",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
-   }
-  },
-  {
-   "id": "liner_gap_wash_detail1",
-   "path": "res://assets/models/park/liner_gap_wash_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_gap_wash, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_gap_wash_detail2",
-   "path": "res://assets/models/park/liner_gap_wash_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_gap_wash, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells. Registry class park_large (16000 triangles): cutting it to the ground mesh within that band needs more than the 8,000 triangles of landform; the park row's budget stays landform."
    }
   },
   {
@@ -9764,67 +9548,19 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. a graded gravel haul surface with two tyre-rut bands, cobbles along both verges and sage tufts beyond them."
-   }
-  },
-  {
-   "id": "liner_haul_road_west_5_detail1",
-   "path": "res://assets/models/park/liner_haul_road_west_5_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 1 of liner_haul_road_west_5, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_haul_road_west_5_detail2",
-   "path": "res://assets/models/park/liner_haul_road_west_5_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Detail shell 2 of liner_haul_road_west_5, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_pit bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush graded gravel sheet with two tyre-rut colour bands and a verge band of low cobble relief. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
    "id": "liner_lateral_canal",
    "path": "res://assets/models/park/liner_lateral_canal.glb",
-   "class": "landform",
+   "class": "park_large",
    "origin": "centre",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. earthen bank berms, cobble armouring at the lip and a silt floor, a shaped reference to how an earth canal holds its lip."
-   }
-  },
-  {
-   "id": "liner_lateral_canal_detail1",
-   "path": "res://assets/models/park/liner_lateral_canal_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_lateral_canal, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_lateral_canal_detail2",
-   "path": "res://assets/models/park/liner_lateral_canal_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_lateral_canal, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a canal lining with a lip band, earth batter and colour bands: the lip is capped to the 0.12 m band inside every ride row's footprint, not removed, and keeps its full relief outside. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells. Registry class park_large (16000 triangles): cutting it to the ground mesh within that band needs more than the 8,000 triangles of landform; the park row's budget stays landform."
    }
   },
   {
@@ -9836,43 +9572,19 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush graded gravel sheet with two tyre-rut colour bands and a verge band of low cobble relief. Flush lane: every vertex inside any ride row's footprint stays within 0.12 m of the ground, the verge band included, and the sheet ships no rim props (no rocks, no tufts) and no detail shells."
+    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush graded gravel sheet with two tyre-rut colour bands and a verge band of low cobble relief. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
    "id": "liner_main_canal",
    "path": "res://assets/models/park/liner_main_canal.glb",
-   "class": "landform",
+   "class": "park_large",
    "origin": "centre",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. earthen bank berms, cobble armouring at the lip and a silt floor, a shaped reference to how an earth canal holds its lip."
-   }
-  },
-  {
-   "id": "liner_main_canal_detail1",
-   "path": "res://assets/models/park/liner_main_canal_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_main_canal, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_main_canal_detail2",
-   "path": "res://assets/models/park/liner_main_canal_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_main_canal, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a canal lining with a lip band, earth batter and colour bands: the lip is capped to the 0.12 m band inside every ride row's footprint, not removed, and keeps its full relief outside. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells. Registry class park_large (16000 triangles): cutting it to the ground mesh within that band needs more than the 8,000 triangles of landform; the park row's budget stays landform."
    }
   },
   {
@@ -9956,31 +9668,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
-   }
-  },
-  {
-   "id": "liner_mesa_spill_detail1",
-   "path": "res://assets/models/park/liner_mesa_spill_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_mesa_spill, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_mesa_spill_detail2",
-   "path": "res://assets/models/park/liner_mesa_spill_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_mesa_spill, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -9992,7 +9680,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush graded gravel sheet with two tyre-rut colour bands and a verge band of low cobble relief. Flush lane: every vertex inside any ride row's footprint stays within 0.12 m of the ground, the verge band included, and the sheet ships no rim props (no rocks, no tufts) and no detail shells."
+    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush graded gravel sheet with two tyre-rut colour bands and a verge band of low cobble relief. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -10004,7 +9692,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush light-rail bed: two rails 0.03 m proud of a gravel bed, flush colour bands for the tie sleepers and a verge band of low cobble relief. Flush lane: every vertex inside any ride row's footprint stays within 0.12 m of the ground, the verge band included, and the sheet ships no rim props (no rocks, no tufts) and no detail shells."
+    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush light-rail bed: two rails 0.03 m proud of a gravel bed, flush colour bands for the tie sleepers and a verge band of low cobble relief. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -10016,79 +9704,31 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: every vertex inside any ride row's footprint stays within 0.12 m of the ground, the verge band included, and the sheet ships no rim props (no rocks, no tufts) and no detail shells."
+    "note": "Decoration only, conformed to the park_islands bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
    "id": "liner_trestle_hollow",
    "path": "res://assets/models/park/liner_trestle_hollow.glb",
-   "class": "landform",
+   "class": "park_large",
    "origin": "centre",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. banded sandstone ledges along both wall bands, cobble scatter on the floor margins, varnish streaks."
-   }
-  },
-  {
-   "id": "liner_trestle_hollow_detail1",
-   "path": "res://assets/models/park/liner_trestle_hollow_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_trestle_hollow, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_trestle_hollow_detail2",
-   "path": "res://assets/models/park/liner_trestle_hollow_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_trestle_hollow, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a flush sandstone sheet: banded strata relief of at most 0.06 m with colour bands and varnish streaks inside the lane. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells. Registry class park_large (16000 triangles): cutting it to the ground mesh within that band needs more than the 8,000 triangles of landform; the park row's budget stays landform."
    }
   },
   {
    "id": "liner_wasteway_chute",
    "path": "res://assets/models/park/liner_wasteway_chute.glb",
-   "class": "landform",
+   "class": "hero_landmark",
    "origin": "centre",
    "ships": true,
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. board-formed concrete liner panels with dark form joints and a worn cream coping strip at the rims; a painted gauge staff on one wall."
-   }
-  },
-  {
-   "id": "liner_wasteway_chute_detail1",
-   "path": "res://assets/models/park/liner_wasteway_chute_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_wasteway_chute, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_wasteway_chute_detail2",
-   "path": "res://assets/models/park/liner_wasteway_chute_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_wasteway_chute, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a board-formed concrete chute with form joints, coping bands, wall relief and the painted gauge staff: the joints, the wall and the gauge are capped to the 0.12 m band inside every ride row's footprint, not removed, and keep their full relief outside. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells. Registry class hero_landmark (24000 triangles): cutting it to the ground mesh within that band needs more than the 8,000 triangles of landform; the park row's budget stays landform."
    }
   },
   {
@@ -10136,31 +9776,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. board-formed concrete liner panels with dark form joints and a worn cream coping strip at the rims."
-   }
-  },
-  {
-   "id": "liner_weir_chute_detail1",
-   "path": "res://assets/models/park/liner_weir_chute_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_weir_chute, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_weir_chute_detail2",
-   "path": "res://assets/models/park/liner_weir_chute_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_weir_chute, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a board-formed concrete chute with form joints, coping bands, wall relief and the painted gauge staff: the joints, the wall and the gauge are capped to the 0.12 m band inside every ride row's footprint, not removed, and keep their full relief outside. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -10172,31 +9788,7 @@
    "loader": "src/world/park/park_recipes.gd",
    "provenance": {
     "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. concrete rim ring and a stone pitched lining around a flush floor."
-   }
-  },
-  {
-   "id": "liner_weir_pond_detail1",
-   "path": "res://assets/models/park/liner_weir_pond_detail1.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 1 of liner_weir_pond, drawn by range (the detail class): small rocks on the rims."
-   }
-  },
-  {
-   "id": "liner_weir_pond_detail2",
-   "path": "res://assets/models/park/liner_weir_pond_detail2.glb",
-   "class": "detail",
-   "origin": "centre",
-   "ships": true,
-   "loader": "src/world/park/park_recipes.gd",
-   "provenance": {
-    "recipe": "tools/blender/park/flume_works.py",
-    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Detail shell 2 of liner_weir_pond, drawn by range (the detail class): sage tufts on the rims."
+    "note": "Decoration only, conformed to the park_flume bake; rebuild after a re-bake. Procedural, authored in this repository from Blender bmesh sheets; no external mesh. No -col mesh: the stamped terrain stays the only collider. Ships a stone-pitched pond lining with a concrete rim ring and a flush floor: the rim ring and the pitching are capped to the 0.12 m band inside every ride row's footprint, not removed, and keep their full relief outside. Flush lane: measured exactly against the game's ground mesh, the drawn surface stands 0.03 to 0.12 m above it inside any ride row's footprint and at least 0.03 m above it everywhere; walls, lips and verges outside a footprint may stand higher. The sheet ships no rim props (no rocks, no tufts) and no detail shells."
    }
   },
   {
@@ -11424,6 +11016,342 @@
    "provenance": {
     "recipe": "tools/blender/park/kickers.py",
     "notes": "Industrial plate kicker for the flume and pit rows of size [8, 3, 20] (placeholder unit C); seats rows 6 to 12 m long. Built by this script, no external mesh or texture; vertex colour."
+   }
+  },
+  {
+   "id": "dprop_dam_gate_wheelhouse_a",
+   "path": "res://assets/models/park/props/dam/gate_wheelhouse_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "gate_wheelhouse variant a LOD0 (16880 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.1048,
+     0,
+     -2.2587
+    ],
+    "max": [
+     2.1048,
+     3.1729,
+     2.2587
+    ],
+    "size": [
+     4.2096,
+     3.1729,
+     4.5174
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_gate_wheelhouse_a_lod1",
+   "path": "res://assets/models/park/props/dam/gate_wheelhouse_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "gate_wheelhouse variant a LOD1 (8440 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.1048,
+     0,
+     -2.2587
+    ],
+    "max": [
+     2.1071,
+     3.1732,
+     2.2561
+    ],
+    "size": [
+     4.2119,
+     3.1732,
+     4.5148
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_gate_wheelhouse_a_lod2",
+   "path": "res://assets/models/park/props/dam/gate_wheelhouse_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "gate_wheelhouse variant a LOD2 (2532 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.1016,
+     0,
+     -2.259
+    ],
+    "max": [
+     2.1038,
+     3.1779,
+     2.2714
+    ],
+    "size": [
+     4.2054,
+     3.1779,
+     4.5304
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_gate_wheelhouse_b",
+   "path": "res://assets/models/park/props/dam/gate_wheelhouse_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "gate_wheelhouse variant b LOD0 (17864 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.0984,
+     0,
+     -2.2576
+    ],
+    "max": [
+     2.0984,
+     3.1497,
+     2.2576
+    ],
+    "size": [
+     4.1968,
+     3.1497,
+     4.5152
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_gate_wheelhouse_b_lod1",
+   "path": "res://assets/models/park/props/dam/gate_wheelhouse_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "gate_wheelhouse variant b LOD1 (8932 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.0984,
+     0,
+     -2.2576
+    ],
+    "max": [
+     2.0984,
+     3.15,
+     2.255
+    ],
+    "size": [
+     4.1968,
+     3.15,
+     4.5126
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_gate_wheelhouse_b_lod2",
+   "path": "res://assets/models/park/props/dam/gate_wheelhouse_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "gate_wheelhouse variant b LOD2 (2680 tris): Sluice crew's wheelhouse: a big hand wheel chained shut, timber walls on a concrete plinth. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.1097,
+     0,
+     -2.2588
+    ],
+    "max": [
+     2.0925,
+     3.1341,
+     2.2703
+    ],
+    "size": [
+     4.2022,
+     3.1341,
+     4.5291
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_survey_tripod_a",
+   "path": "res://assets/models/park/props/dam/survey_tripod_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "survey_tripod variant a LOD0 (2952 tris): A survey tripod knocked flat when the line broke, its plumb bob still on its cord. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.2442,
+     0,
+     -0.8449
+    ],
+    "max": [
+     1.2442,
+     0.9237,
+     0.8449
+    ],
+    "size": [
+     2.4884,
+     0.9237,
+     1.6898
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_survey_tripod_a_lod1",
+   "path": "res://assets/models/park/props/dam/survey_tripod_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "survey_tripod variant a LOD1 (1476 tris): A survey tripod knocked flat when the line broke, its plumb bob still on its cord. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.2442,
+     0,
+     -0.845
+    ],
+    "max": [
+     1.2442,
+     0.9225,
+     0.8447
+    ],
+    "size": [
+     2.4884,
+     0.9225,
+     1.6897
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_survey_tripod_a_lod2",
+   "path": "res://assets/models/park/props/dam/survey_tripod_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "survey_tripod variant a LOD2 (442 tris): A survey tripod knocked flat when the line broke, its plumb bob still on its cord. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.2466,
+     0,
+     -0.8459
+    ],
+    "max": [
+     1.2443,
+     0.923,
+     0.8447
+    ],
+    "size": [
+     2.4909,
+     0.923,
+     1.6906
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_survey_tripod_b",
+   "path": "res://assets/models/park/props/dam/survey_tripod_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "survey_tripod variant b LOD0 (2952 tris): A survey tripod knocked flat when the line broke, its plumb bob still on its cord. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.8623,
+     0,
+     -1.0767
+    ],
+    "max": [
+     0.8623,
+     0.4202,
+     1.0767
+    ],
+    "size": [
+     1.7246,
+     0.4202,
+     2.1534
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_survey_tripod_b_lod1",
+   "path": "res://assets/models/park/props/dam/survey_tripod_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "survey_tripod variant b LOD1 (1476 tris): A survey tripod knocked flat when the line broke, its plumb bob still on its cord. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.8627,
+     0,
+     -1.0769
+    ],
+    "max": [
+     0.8623,
+     0.4193,
+     1.0767
+    ],
+    "size": [
+     1.725,
+     0.4193,
+     2.1536
+    ]
+   }
+  },
+  {
+   "id": "dprop_dam_survey_tripod_b_lod2",
+   "path": "res://assets/models/park/props/dam/survey_tripod_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_dam.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/dam.py",
+    "notes": "survey_tripod variant b LOD2 (442 tris): A survey tripod knocked flat when the line broke, its plumb bob still on its cord. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.8628,
+     0,
+     -1.0767
+    ],
+    "max": [
+     0.8626,
+     0.4285,
+     1.0766
+    ],
+    "size": [
+     1.7254,
+     0.4285,
+     2.1533
+    ]
    }
   },
   {
@@ -13843,6 +13771,18 @@
   "decal_seashell_mask.png",
   "decal_snail_shell_mask.png",
   "decal_thimble_mask.png",
+  "dprop_dam_gate_wheelhouse_a",
+  "dprop_dam_gate_wheelhouse_a_lod1",
+  "dprop_dam_gate_wheelhouse_a_lod2",
+  "dprop_dam_gate_wheelhouse_b",
+  "dprop_dam_gate_wheelhouse_b_lod1",
+  "dprop_dam_gate_wheelhouse_b_lod2",
+  "dprop_dam_survey_tripod_a",
+  "dprop_dam_survey_tripod_a_lod1",
+  "dprop_dam_survey_tripod_a_lod2",
+  "dprop_dam_survey_tripod_b",
+  "dprop_dam_survey_tripod_b_lod1",
+  "dprop_dam_survey_tripod_b_lod2",
   "drift_wash",
   "drift_wash_detail1",
   "drift_wash_detail2",
@@ -14033,50 +13973,26 @@
   "lift_platform_glass",
   "lift_platform_pump",
   "liner_bench2_camp_lane",
-  "liner_bench2_camp_lane_detail1",
-  "liner_bench2_camp_lane_detail2",
   "liner_bench2_east_bank",
-  "liner_bench2_east_bank_detail1",
-  "liner_bench2_east_bank_detail2",
   "liner_bench_run_wash",
-  "liner_bench_run_wash_detail1",
-  "liner_bench_run_wash_detail2",
   "liner_bend_return_wash",
-  "liner_bend_return_wash_detail1",
-  "liner_bend_return_wash_detail2",
   "liner_butte_gap",
-  "liner_butte_gap_detail1",
-  "liner_butte_gap_detail2",
   "liner_canal_lip",
-  "liner_canal_lip_detail1",
-  "liner_canal_lip_detail2",
   "liner_cloud_wash_east",
   "liner_drop_ramp",
   "liner_drop_ramp_detail1",
   "liner_drop_ramp_detail2",
   "liner_dump_wash_1",
-  "liner_dump_wash_1_detail1",
-  "liner_dump_wash_1_detail2",
   "liner_dump_wash_2",
-  "liner_dump_wash_2_detail1",
-  "liner_dump_wash_2_detail2",
   "liner_east_ribs",
   "liner_east_wash",
   "liner_east_wash_detail1",
   "liner_east_wash_detail2",
   "liner_gap_wash",
-  "liner_gap_wash_detail1",
-  "liner_gap_wash_detail2",
   "liner_haul_road_west_5",
-  "liner_haul_road_west_5_detail1",
-  "liner_haul_road_west_5_detail2",
   "liner_lateral_canal",
-  "liner_lateral_canal_detail1",
-  "liner_lateral_canal_detail2",
   "liner_lookout_stair",
   "liner_main_canal",
-  "liner_main_canal_detail1",
-  "liner_main_canal_detail2",
   "liner_meander",
   "liner_meander_bend",
   "liner_meander_bend_detail1",
@@ -14084,26 +14000,16 @@
   "liner_meander_detail1",
   "liner_meander_detail2",
   "liner_mesa_spill",
-  "liner_mesa_spill_detail1",
-  "liner_mesa_spill_detail2",
   "liner_net_post_run",
   "liner_ore_chute",
   "liner_run_turn_wash",
   "liner_trestle_hollow",
-  "liner_trestle_hollow_detail1",
-  "liner_trestle_hollow_detail2",
   "liner_wasteway_chute",
-  "liner_wasteway_chute_detail1",
-  "liner_wasteway_chute_detail2",
   "liner_watch_butte_crest",
   "liner_watch_butte_crest_detail1",
   "liner_watch_butte_crest_detail2",
   "liner_weir_chute",
-  "liner_weir_chute_detail1",
-  "liner_weir_chute_detail2",
   "liner_weir_pond",
-  "liner_weir_pond_detail1",
-  "liner_weir_pond_detail2",
   "liner_west_wash",
   "liner_west_wash_detail1",
   "liner_west_wash_detail2",
