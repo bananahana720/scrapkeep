@@ -202,7 +202,7 @@ func _end_by_death() -> void:
 		game.run.damage(99999.0, "test")
 		await _until(func(): return flow.state_name() == "dead" or flow.state_name() == "summary")
 		if flow.state_name() == "dead":
-			game._screen_key(KEY_R)
+			game._screen_key(KEY_N)
 	await _frames(5)
 	_t.eq("the run ends on the summary", flow.state_name(), "summary")
 	var screens = game.screens

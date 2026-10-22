@@ -155,7 +155,7 @@ func _run() -> void:
 	_game.run.damage(99999.0, "test")
 	await _frames(12)
 	_t.eq("S5-5 dead", flow.state_name(), "dead")
-	_t.eq("S5-5 A on death is still R", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_R)
+	_t.eq("S5-5 A on death is N (the default)", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_N)
 	_t.eq("S5-5 B on death is still N", _game.pad_screen_key(_pad(JOY_BUTTON_B)), KEY_N)
 	_t.eq("S5-5 X on death is T", _game.pad_screen_key(_pad(JOY_BUTTON_X)), KEY_T)
 	_t.eq("S5-5 Y on death is C", _game.pad_screen_key(_pad(JOY_BUTTON_Y)), KEY_C)
@@ -168,7 +168,7 @@ func _run() -> void:
 	await _frames(12)
 	_game._screen_key(_game.pad_screen_key(_pad(JOY_BUTTON_A)))
 	await _frames(3)
-	_t.check("S5-2 no focus after a retry", flow.in_play() and _focus() == null, "state %s focus %s" % [flow.state_name(), _focus()])
+	_t.check("S5-2 no focus after a new run from the death screen", flow.in_play() and _focus() == null, "state %s focus %s" % [flow.state_name(), _focus()])
 	flow._set_state(flow.SUMMARY)
 	_game.summary_guard_left = 0.0
 	_t.eq("S5-5 A on the summary is still Space", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_SPACE)
@@ -181,7 +181,6 @@ func _run() -> void:
 	ws.armed = true
 	_game.run.damage(99999.0, "test")
 	await _frames(12)
-	_game._screen_key(KEY_R)
 	await _settle(0.5)
 	flow.new_run()
 	await _settle(0.8)

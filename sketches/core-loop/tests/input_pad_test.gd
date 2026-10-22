@@ -72,11 +72,11 @@ func _process(_delta: float) -> bool:
 			_game.run.damage(99999.0, "test")
 		"dead_a":
 			_t.eq("S1-5 dead", flow.state_name(), "dead")
-			_t.eq("S1-5 A on death is R", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_R)
+			_t.eq("S1-5 A on death is N", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_N)
 			_t.eq("S1-5 B on death is N", _game.pad_screen_key(_pad(JOY_BUTTON_B)), KEY_N)
 			_t.eq("S1-5 a release maps to nothing", _game.pad_screen_key(_pad(JOY_BUTTON_A, false)), KEY_NONE)
 			_game._screen_key(_game.pad_screen_key(_pad(JOY_BUTTON_A)))
-			_t.check("S1-5 A retries from the death screen", flow.in_play(), "state %s" % flow.state_name())
+			_t.check("S1-5 A starts a new run from the death screen", flow.in_play(), "state %s" % flow.state_name())
 		"dead_b":
 			_t.eq("S1-5 dead again", flow.state_name(), "dead")
 			_game._screen_key(_game.pad_screen_key(_pad(JOY_BUTTON_B)))

@@ -92,7 +92,7 @@ func _physics_process(_delta: float) -> bool:
 			_s["gap"] = flow.gap_line()
 			_s["arena_deaths"] = (_game.run_log._record.get("arena", {}).get("deaths", []) as Array).size()
 			_s["stage3_deaths"] = (_game.run_log._stages[3]["deaths"] as Array).size()
-			_game._screen_key(KEY_R)
+			flow.retry_stage()
 			_s["after_r"] = flow.state_name()
 			_s["scrap_after_r"] = run.scrap
 			_game.step_restart_hold(0.6, true)
