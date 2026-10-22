@@ -256,6 +256,9 @@ func descriptor() -> Dictionary:
 			d.merge({"form": "radial", "r_in": r_in, "r_out": r_out, "a0": a_from, "a1": a_to})
 		Shape.ANNULUS:
 			d.merge({"form": "radial", "r_in": r_in, "r_out": r_out, "a0": 0.0, "a1": TAU, "open": _open,
+				# Classic only: under haze a hostile live slag takes fill_tint's dark scorched core (one live
+				# look for every INSTANT, ATTACK-READS.md B02). Nothing else reads live_tone; quenched
+				# holes are left out of the geometry, so they stay clear.
 				"live_tone": color.lerp(MOLTEN, 0.5)})
 		Shape.LANE:
 			d.merge({"form": "lane", "dir": heading, "back": back, "length": length, "half_width": half_width})

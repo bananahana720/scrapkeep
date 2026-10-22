@@ -7,8 +7,13 @@ extends SceneTree
 #   godot --path sketches/core-loop --resolution 1280x720 --script res://tools/haze_pose_capture.gd -- --out=<abs dir>
 # Cloud check under xvfb:
 #   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --path sketches/core-loop --resolution 1280x720 --script res://tools/haze_pose_capture.gd -- --out=<abs dir>
+# Sweep (opt-in, capture only; no game code reads these flags): --scorch=0.3,0.4,0.5 --live-alpha=0.7,0.8,0.9
+# renders every (scorch, alpha) pair in each place from one head, re-tinting the live rings' slag layer
+# at runtime, and writes one PNG per candidate (haze-pose-<place>-s<scorch>-a<alpha>.png) and one JSON row:
+# pending L*, live L*, step (pending minus live), and in the arena the dark-ground edge separation.
+# Without flags it renders once at the game's own LIVE_SCORCH and LIVE_SCORCH_ALPHA (no override).
 # On the RTX 3060 bench run it without xvfb; the frame is SIZE (1280x720, as day_arc_capture). Writes <out>/haze-pose-<place>.png
-# (stage2-morning, arena-w3) and <out>/haze-pose.json: the head, HAZE_FILL and HAZE_SOLID, and per
+# (stage2-morning, arena-w3) and <out>/haze-pose.json: the head, HAZE_FILL, LIVE_SCORCH and LIVE_SCORCH_ALPHA, and per
 # ring its screen rect and the mean CIE L* of an inner box (INNER share of the ring's projected
 # radius), plus a ground-only box in the gap between the rings. The rings' rim lines and the landing
 # flash (gone after SETTLE_FRAMES) are not in the boxes. Exit 2 without a display or --out.
@@ -17,15 +22,25 @@ extends SceneTree
 # frames (calm is set); read the PNG as well as the boxes.
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const DefenceBars := preload("res://src/core/defence_bars.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const PENDING_PROGRESS := 0.95
 const RING_RADIUS := 3.0
-# Metres ahead of the ball along the camera's flat lens-to-ball heading, and each ring's offset to its side.
-const AHEAD := 8.0
-const SIDE := 4.0
+# Per place: metres ahead of the ball along the camera's flat lens-to-ball heading and each ring's offset
+# to its side, picked so the ground box between the rings sits on pale floor (see the PNG per place). The
+# arena also lays a dark probe: a live ring at (dark_ahead, dark_side) whose rim, on the side of `dark_dir`
+# (ahead, side components), lies against the tower base.
+const PLACES := [
+	{"id": "stage2-morning", "stage": 2, "ahead": 8.0, "side": 4.0},
+	{"id": "arena-w3", "boss": true, "ahead": 8.0, "side": 4.0, "dark_ahead": 8.0, "dark_side": 4.0, "dark_dir": Vector2(0.0, 1.0)},
+]
+# The dark probe: the edge band's box half-size floor, the ground box's offset past the rim and its half-size.
+const BAND_HALF := 0.2
+const GROUND_OUT := 1.2
+const GROUND_HALF := 0.4
 # Inner box, as a share of the ring's projected radius; the gap box is this share of RING_RADIUS in metres.
 const INNER := 0.4
 const GAP_HALF := 0.5
@@ -45,20 +60,39 @@ class FloorAt:
 var out := ""
 var game
 var recs: Array = []
+var scorches: Array = []
+var alphas: Array = []
+var swept := false
 
 
 func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--out="):
 			out = a.trim_prefix("--out=")
+		elif a.begins_with("--scorch="):
+			scorches = _floats(a.trim_prefix("--scorch="))
+		elif a.begins_with("--live-alpha="):
+			alphas = _floats(a.trim_prefix("--live-alpha="))
 	if DisplayServer.get_name() == "headless" or out == "":
 		printerr("needs a display and --out")
 		quit(2)
 		return
+	swept = not scorches.is_empty() or not alphas.is_empty()
+	if scorches.is_empty():
+		scorches = [Threat.LIVE_SCORCH]
+	if alphas.is_empty():
+		alphas = [Threat.LIVE_SCORCH_ALPHA]
 	root.size = SIZE
 	root.content_scale_size = SIZE
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
 	_run.call_deferred()
+
+
+static func _floats(text: String) -> Array:
+	var result := []
+	for part in text.split(",", false):
+		result.append(float(part))
+	return result
 
 
 func _frames(n: int) -> void:
@@ -80,25 +114,28 @@ func _run() -> void:
 	game.run.set_max_hp(999999.0)
 	game.player.source = Intent.Scripted.new()
 	DirAccess.make_dir_recursive_absolute(out)
-	game.flow.enter_stage(2, Vector3.ZERO, false)
-	await _frames(40)
-	await _pose("stage2-morning")
-	game.flow.enter_stage(game.ctx.stages.COUNT, Vector3.ZERO, false)
-	await _frames(40)
-	game.flow.enter_boss(Vector3.ZERO)
-	await _frames(90)
-	await _pose("arena-w3")
+	for place in PLACES:
+		if place.has("stage"):
+			game.flow.enter_stage(place.stage, Vector3.ZERO, false)
+			await _frames(40)
+		else:
+			game.flow.enter_stage(game.ctx.stages.COUNT, Vector3.ZERO, false)
+			await _frames(40)
+			game.flow.enter_boss(Vector3.ZERO)
+			await _frames(90)
+		await _pose(place)
 	var head: Array = []
 	OS.execute("git", ["rev-parse", "HEAD"], head)
 	var f := FileAccess.open(out.path_join("haze-pose.json"), FileAccess.WRITE)
 	f.store_string(JSON.stringify({"tool": "haze_pose_capture.gd", "head": String(head[0]).strip_edges() if head.size() > 0 else "",
 		"adapter": RenderingServer.get_video_adapter_name(), "haze": Threat.haze(), "HAZE_FILL": Threat.HAZE_FILL,
-		"HAZE_SOLID": Threat.HAZE_SOLID, "pending_progress": PENDING_PROGRESS, "viewport": root.get_visible_rect().size, "places": recs}, "\t"))
+		"LIVE_SCORCH": Threat.LIVE_SCORCH, "LIVE_SCORCH_ALPHA": Threat.LIVE_SCORCH_ALPHA, "swept": swept, "pending_progress": PENDING_PROGRESS, "viewport": root.get_visible_rect().size, "places": recs}, "\t"))
 	f.close()
 	quit(0)
 
 
-func _pose(place: String) -> void:
+func _pose(place: Dictionary) -> void:
+	var id: String = place["id"]
 	game.player.body().freeze = true
 	var cam: Camera3D = game.camera.cam
 	cam.current = true
@@ -108,8 +145,14 @@ func _pose(place: String) -> void:
 	fwd.y = 0.0
 	fwd = fwd.normalized()
 	var right := fwd.cross(Vector3.UP).normalized()
-	var pending := _ring(ball + fwd * AHEAD - right * SIDE, ball.y)
-	var live := _ring(ball + fwd * AHEAD + right * SIDE, ball.y)
+	var ahead: float = place["ahead"]
+	var side: float = place["side"]
+	var pending := _ring(ball + fwd * ahead - right * side, ball.y)
+	var live := _ring(ball + fwd * ahead + right * side, ball.y)
+	var dark: Node3D = null
+	if place.has("dark_ahead"):
+		dark = _ring(ball + fwd * float(place["dark_ahead"]) + right * float(place["dark_side"]), ball.y)
+		dark.set_progress(1.0)
 	pending.set_progress(PENDING_PROGRESS)
 	live.set_progress(1.0)
 	await _frames(SETTLE_FRAMES)
@@ -117,23 +160,42 @@ func _pose(place: String) -> void:
 	var shown: Array = root.find_children("*", "CanvasLayer", true, false).filter(func(n): return n.visible)
 	for n in shown:
 		n.visible = false
-	for i in 12:
-		await RenderingServer.frame_post_draw
-	var image := root.get_texture().get_image()
-	image.save_png(out.path_join("haze-pose-%s.png" % place))
-	var rec := {"place": place, "image": [image.get_width(), image.get_height()], "camera_to_ball": cam.global_position.distance_to(ball)}
-	rec["pending"] = _ring_box(image, cam, pending.center, right)
-	rec["live"] = _ring_box(image, cam, live.center, right)
-	var mid: Vector3 = (pending.center + live.center) * 0.5
-	rec["ground"] = _box(image, cam, mid, right, GAP_HALF)
-	recs.append(rec)
+	for s in scorches:
+		for a in alphas:
+			if swept:
+				var tint := Color(Palette.HAZARD.lerp(Palette.CHARCOAL, s), a)
+				live.painter().tint("fill", tint)
+				if dark != null:
+					dark.painter().tint("fill", tint)
+			for i in 12:
+				await RenderingServer.frame_post_draw
+			var image := root.get_texture().get_image()
+			var tag := id if not swept else "%s-s%.2f-a%.2f" % [id, s, a]
+			image.save_png(out.path_join("haze-pose-%s.png" % tag))
+			var rec := {"place": id, "scorch": s, "live_alpha": a, "image": [image.get_width(), image.get_height()], "camera_to_ball": cam.global_position.distance_to(ball)}
+			rec["pending"] = _ring_box(image, cam, pending.center, right)
+			rec["live"] = _ring_box(image, cam, live.center, right)
+			var mid: Vector3 = (pending.center + live.center) * 0.5
+			rec["ground"] = _box(image, cam, mid, right, GAP_HALF)
+			rec["step"] = float(rec["pending"]["mean_l"]) - float(rec["live"]["mean_l"])
+			if dark != null:
+				var dir2: Vector2 = place["dark_dir"]
+				var dir3 := (fwd * dir2.x + right * dir2.y).normalized()
+				var rim: Vector3 = dark.center + dir3 * RING_RADIUS
+				var band_half := maxf(BAND_HALF, Threat.edge_width({"r_out": RING_RADIUS}) * 0.5)
+				var band := _box(image, cam, rim, right, band_half)
+				var ground := _box(image, cam, rim + dir3 * GROUND_OUT, right, GROUND_HALF)
+				rec["dark"] = {"band": band, "ground": ground, "separation": absf(float(band["mean_l"]) - float(ground["mean_l"]))}
+			recs.append(rec)
+			print("pose ", tag, " ", rec)
 	for n in shown:
 		n.visible = true
 	paused = false
 	pending.free()
 	live.free()
+	if dark != null:
+		dark.free()
 	game.player.body().freeze = false
-	print("pose ", place, " ", rec)
 
 
 func _ring(at: Vector3, from_y: float) -> Node3D:

@@ -11,8 +11,8 @@ extends SceneTree
 #          default haze look HAZARD at FILL_ALPHA * HAZE_FILL; under classic the HAZARD stripe
 #          of the striped fill, HAZARD at FILL_ALPHA (unshaded, alpha)
 #          plus a small live plate on each fill, the live INSTANT slag layer (live_fill()) over it:
-#          the "live~pending:" pair is that live colour against the pending fill beside it, reported
-#          and not gated (ATTACK-READS.md:27, live and pending must stay distinct under haze). The
+#          the "live~pending:" value is the L* step, pending L* minus live L*, of that live colour
+#          against the pending fill beside it (live is a dark scorched core), reported and not gated (ATTACK-READS.md:27, live and pending must stay distinct under haze). The
 #          plate stacks slag over the fill; the game also draws the footprint's AREA_ALPHA base
 #          under both, which the plate leaves out.
 #   row 2  the meaning colours at EDGE_ALPHA over threat_grammar's charcoal under-band at
@@ -96,8 +96,14 @@ static func gaps(seen: Dictionary) -> Dictionary:
 		result["edge:%s~%s" % pair] = DefenceBars.cie76(seen["edge_" + pair[0]], seen["edge_" + pair[1]])
 	for ground in GROUND:
 		result["fill:hazard~" + ground] = DefenceBars.cie76(seen["fill_" + ground], seen[ground])
-		result["live~pending:" + ground] = DefenceBars.cie76(seen["live_" + ground], seen["fill_" + ground])
+		result["live~pending:" + ground] = lstar_step(seen["fill_" + ground], seen["live_" + ground])
 	return result
+
+
+# The L* step the live slag leaves under the pending fill: pending L* minus live L*, signed (a
+# positive step means live reads darker). Report-only; the bar is 10 on the 3060 (#241 6343230462).
+static func lstar_step(pending: Color, live: Color) -> float:
+	return DefenceBars._lab(pending).x - DefenceBars._lab(live).x
 
 
 static func gated(pair: String) -> bool:
