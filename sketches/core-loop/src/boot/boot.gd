@@ -113,10 +113,6 @@ func _poll() -> void:
 				_quit()
 
 
-func _exit_tree() -> void:
-	_repace()
-
-
 func _unpace() -> void:
 	_paced = {"vsync": DisplayServer.window_get_vsync_mode(), "max_fps": Engine.max_fps}
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
@@ -215,6 +211,7 @@ func _release_intro(play := true) -> void:
 
 
 func _exit_tree() -> void:
+	_repace()
 	_release_intro(false)
 
 
