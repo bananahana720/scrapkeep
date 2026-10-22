@@ -1,6 +1,6 @@
 # park_sinkhole dressing, wave 18
 
-Base: sinkhole branch head b100f674 before this note's commit, which is da453531 (the gated head) plus three merges: `origin/stage/alpha-w18` 58437220 (0eb9c897 at that time), the Dressing foundation follow-up `claude/zealous-franklin-ed0sxr-lineclear` 66d37439 (07748516; per-kind `line_clear_m` and the `telegraph` rule), then `origin/stage/alpha-w18` b0e64a40 again (merge b100f674). The Dressing foundation (#220) and its `scatter_row` rule are on the stage.
+Base: sinkhole branch head 7afe0e43 (which already held the stage and foundation 07748516 merges) plus a final merge of `origin/stage/alpha-w18` f259e8cf (merge 27e6e028) and the accepted Dressing foundation `claude/zealous-franklin-ed0sxr-lineclear` e72fff7d (merge 4c23d363). The foundation commits after 07748516 change only the audit, static checks and `park_props_test`, so the plan check is unchanged. The Dressing foundation (#220) and its `scatter_row` rule are on the stage.
 Method: automated headless Godot 4.7.2 on cloud llvmpipe (an OpenGL compatibility proxy). This is not a frame-cost proof and says nothing about human feel.
 
 ## What and why
@@ -47,10 +47,10 @@ Why props stay clear of telegraphs: a prop inside the zone would be buried or th
 
 ## Gate checks
 
-On b100f674 (merge head before this note), each test run alone with `npm run sketch:smoke -- --sketch core-loop --test <name>`:
+On b100f674 (merge head before the final merge; the three park smoke tests, lint and docs were rerun on the final merge head, see the PR), each test run alone with `npm run sketch:smoke -- --sketch core-loop --test <name>`:
 - `park_props_test`, `park_park_sinkhole_test`, `park_dressing_pin_test`, `pocket_line_clear_test` and `asset_registry_test`: PASS (exit 0).
 - `scatter_rows_test`: the smoke wrapper hit its 180 s limit twice on the contended machine (exit null, all 24 printed checks PASS). Run directly with Godot headless it passes, 95 checks, exit 0.
-- `run_tier_test`: NOT green. The smoke run (receipt `artifacts/local/receipts/named-242c8c62dacc-2026-10-22T02-00-19-083Z.json`, 3,452 passes, 8 fails, 790 s) and a direct run (3,044 passes, 19 fails) failed only on `[runtime child seed N] exit=-1 timeout=true`, the fresh-process child timeouts, with every functional check in the log passing. The machine was running other lanes' Godot jobs at the same time. This branch changes no run, tier or combat code (props carry no collider), so I read these as load timeouts, but I have not shown it with a clean rerun. The gate should rerun `run_tier_test` on a quiet machine.
+- `run_tier_test`: red, and red on the base too. The smoke run (receipt `artifacts/local/receipts/named-242c8c62dacc-2026-10-22T02-00-19-083Z.json`, 3,452 passes, 8 fails, 790 s) and a direct run (3,044 passes, 19 fails) failed only on `[runtime child seed N] exit=-1 timeout=true`, the fresh-process child timeouts. The coordinator measured the clean stage b0e64a40 at load 17: the same failure, 8 of 192 checks, all child timeouts, 3,531 PASS lines. So this is measured base-red from machine load, not from this branch, which changes no run, tier or combat code.
 - `npm run sketch:lint` exit 0 and `npm run check:docs` exit 0.
 
 ## ART-MISTAKES entries checked
