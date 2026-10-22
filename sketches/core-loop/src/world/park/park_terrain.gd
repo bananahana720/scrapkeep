@@ -513,10 +513,12 @@ func _berm_mask() -> PackedByteArray:
 		var f := ParkStamps.frame(row)
 		var box := ParkStamps.bounds(f)
 		var pad := PylonBite.BERM_PAD_M
-		var i0 := maxi(floori((box[0] - pad + HALF) / STEP), 0)
-		var i1 := mini(ceili((box[2] + pad + HALF) / STEP), SIDE - 1)
-		var j0 := maxi(floori((box[1] - pad + HALF) / STEP), 0)
-		var j1 := mini(ceili((box[3] + pad + HALF) / STEP), SIDE - 1)
+		# A pad on a yawed footprint reaches up to pad * (|sin| + |cos|) <= pad * sqrt(2) past the unpadded bounds per axis.
+		var reach := pad * sqrt(2.0)
+		var i0 := maxi(floori((box[0] - reach + HALF) / STEP), 0)
+		var i1 := mini(ceili((box[2] + reach + HALF) / STEP), SIDE - 1)
+		var j0 := maxi(floori((box[1] - reach + HALF) / STEP), 0)
+		var j1 := mini(ceili((box[3] + reach + HALF) / STEP), SIDE - 1)
 		var rel_x: float = f["length"] * 0.5 + pad
 		var rel_z: float = f["width"] * 0.5 + pad
 		for j in range(j0, j1 + 1):
@@ -580,6 +582,7 @@ func _apply_bite() -> void:
 			var dz := h[idx - up] - h[idx + down]
 			if dx * dx + dz * dz > BITE_G2:
 				_mark(i, j, dx, dz, weights, ny, flagged, cells)
+	_bite_mask = PackedByteArray()
 	if cells.is_empty():
 		return
 	var pixels := PackedByteArray()

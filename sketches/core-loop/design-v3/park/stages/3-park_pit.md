@@ -235,11 +235,12 @@ Greybox measured on the merged candidate, 2026-10-12, before the failed dressing
 
 - `dump_berm_east` and `dump_berm_west`, the haul-road safety berms beside the dump.
 - `wash_berm`, `rim_road_berm` and `haul_ramp_berm`.
-- Look versus function: the ground's concrete tint skips the footprints of the six berm rows (`dump_berm_east`, `dump_berm_west`, `rim_road_berm`, `haul_ramp_berm`, `wash_berm` and `bench3_west_berm`, each padded 2 m; `PylonBite.BERM_ROWS`), so they stay sand-coloured, yet a ball at their foot still bites their flanks (101 of 108 probe samples). The tint under-reports them by design (coordinator 6342820238 item 3, 6345347272 item 4, NEEDS 6350588099).
 - The crest windrows either side of each kicker gap.
 - `bench3_west_berm` and `bench4_ore_bin`.
 - `camp_ore_bin` (fix round), a 10 m greybox ore bin 14 m tall on bench 1 at (160, -218), beside the camp dive. Sable's flight off the dive runs about 45 m at bench 1 height with no face in reach (anchor gap 40.7 to 46.7 m on three seeds before it, 23 to 30 m after).
 - Six ore piles on the floor: `ore_pile_east`, `_mid`, `_north`, `_west`, `_sw` and `_nw`.
+
+Look versus function: the ground's concrete tint skips the footprints of the six berm rows (`dump_berm_east`, `dump_berm_west`, `rim_road_berm`, `haul_ramp_berm`, `wash_berm` and `bench3_west_berm`, each padded 2 m; `PylonBite.BERM_ROWS`), so they keep their landform colour, yet a ball at their foot still bites their flanks (101 of 108 flank and foot samples in the probe posted on #241 6345448625). The tint under-reports them by design, and the padded footprints also untint 51 vertices on the pit rim's top edge where `dump_berm_east`'s end and `haul_ramp_berm` meet it (coordinator 6342820238 item 3, 6345347272 item 4, NEEDS 6350588099).
 
 Two pieces of geometry were moved to clear dead stops. The canal channel is 16 m wide, so the arroyo's 40 degree turn into it does not stop a ball against the far wall. The camp dive's east windrow starts 60 m east of the lip, clear of Sable's overshoot. The fix round moved four more pieces for the same reason, once KB9 made kickers solid wedges: the camp dive (section 14 call 8) and the three east dives, now 30 to 40 m wide.
 

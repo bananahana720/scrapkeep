@@ -24,7 +24,7 @@ static func weight(n_y: float) -> float:
 
 
 # A LOOK rule for the park ground, not the pylon's: the six pit berms below stay bitable (a ball at their
-# foot bites a flank: 101 of 108 probe samples) but their ground colour is not tinted, by design, so
+# foot bites a flank: 101 of 108 flank and foot samples in the probe posted on #241 6345448625) but their ground colour is not tinted, by design, so
 # the tint under-reports them (coordinator 6342820238 item 3, 6345347272 item 4, NEEDS 6350588099). The
 # rows are named here and nowhere else, keyed by map id; any other map has no mask. A row's footprint
 # is its own at/size/yaw frame (park_stamps.gd) padded by BERM_PAD_M on every side so the flank feet are covered.
