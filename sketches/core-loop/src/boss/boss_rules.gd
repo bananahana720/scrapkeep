@@ -8,7 +8,7 @@ extends RefCounted
 # stage row's "posture" dictionary does for a Warden. The slice Warden's numbers: a
 # glancing hit fills the bar on the square of its ratio, and only a smash shatters an
 # open core on the first contact, so every other opening is crack, then shatter.
-const POSTURE := {"curve": 2.0, "ram_shatters": false}
+const POSTURE := {"curve": 2.0, "ram_shatters": false, "mult_max": 1.5}
 # Health is the posture rule's four chunks, one per phase: the first three shattered on
 # the hull end Requisition, Furnace and Scuttle, and the fourth is the scooter, taken by
 # the catch. hp reads the chunks left, so MAX_HP is the chunk count.
