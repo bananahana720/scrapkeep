@@ -51,12 +51,13 @@ func _never() -> bool:
 	return false
 
 
-func _enemy() -> Node3D:
+func _enemy(plating := 0.0) -> Node3D:
 	var at: Vector3 = _game.ctx.terrain.drop_point(FLAT_SHELF.x, FLAT_SHELF.z, 1.0)
 	var enemy: Node3D = _combat.spawn_enemy("chaser", at)
 	enemy.live = Callable(self, "_never")
 	enemy.hp = 100000.0
 	enemy.max_hp = 100000.0
+	enemy.plating = plating
 	return enemy
 
 
@@ -77,12 +78,41 @@ func _slam() -> void:
 
 
 # One hit on a fresh enemy; returns the HP it removed. reel makes it a smash landing on it.
-func _hit(kind: String, reel: bool) -> float:
-	var enemy := _enemy()
+func _hit(kind: String, reel: bool, plating := 0.0) -> float:
+	var enemy := _enemy(plating)
 	var before: float = enemy.hp
 	_player.smash_landing = enemy if reel else null
 	_combat.strike(enemy, kind, FORCE)
 	_player.smash_landing = null
+	var removed: float = before - enemy.hp
+	enemy.queue_free()
+	return removed
+
+
+# A hooked, winching ram on a fresh enemy while the line is on the anchor: the enemy itself
+# (the bitten body) or a bystander. Returns the HP removed.
+func _haul_hit(on_bitten: bool) -> float:
+	var enemy := _enemy()
+	var other := _enemy()
+	_player.kit.hooked = true
+	_player.kit.winching = true
+	_player.kit.anchor_body = enemy if on_bitten else other
+	var before: float = enemy.hp
+	_combat.strike(enemy, "ram", FORCE)
+	_player.kit.hooked = false
+	_player.kit.winching = false
+	_player.kit.anchor_body = null
+	var removed: float = before - enemy.hp
+	enemy.queue_free()
+	other.queue_free()
+	return removed
+
+
+# A strike at an exact force on a fresh enemy; returns the HP removed.
+func _hit_at(kind: String, force: float) -> float:
+	var enemy := _enemy()
+	var before: float = enemy.hp
+	_combat.strike(enemy, kind, force)
 	var removed: float = before - enemy.hp
 	enemy.queue_free()
 	return removed
@@ -135,6 +165,47 @@ func _run() -> void:
 	var second := _hit("stomp", true)
 	_check("5 spent once", absf(second - plain_reel) < 0.01 and _spent.size() == 1,
 		"the next reel removed %.2f, plain is %.2f, spends %d" % [second, plain_reel, _spent.size()])
+
+	# The stored value is the real slam: a slam strike at the slam's own force deals it.
+	_fresh()
+	var real_force: float = Augments.SLAM_KNOCK * _strength()
+	var real_dealt := _hit_at("slam", real_force)
+	_check("3c stored equals the real slam", absf(real_dealt - float(charge["damage"])) < 0.01,
+		"a slam strike at force %.1f dealt %.2f, the stored charge is %.2f" % [real_force, real_dealt, float(charge["damage"])])
+
+	# A reel only on the bitten body: a bystander rammed during a world-line haul keeps the charge.
+	_fresh()
+	var plain_ram := _haul_hit(false)
+	_slam()
+	var bystander := _haul_hit(false)
+	var held_after: bool = _player.dunk.held()
+	var bitten := _haul_hit(true)
+	_check("9 bystander keeps it, bitten body spends it", absf(bystander - plain_ram) < 0.01 and held_after \
+			and absf(bitten - (plain_ram + stored_expect)) < 0.01 and not _player.dunk.held(),
+		"haul ram on a bystander %.2f (plain %.2f, charge held %s); on the bitten body %.2f (plain+stored %.2f)" \
+		% [bystander, plain_ram, held_after, bitten, plain_ram + stored_expect])
+
+	# One plating rule: the stored slam meets the body's plating like the reel it rides on.
+	_fresh()
+	var chip_plain := _hit("stomp", true, 200.0)
+	_slam()
+	var chip_dunk := _hit("stomp", true, 200.0)
+	_check("10a plated: both chipped", absf(chip_plain - plain_reel * _combat.CHIP) < 0.01 \
+			and absf(chip_dunk - (plain_reel + stored_expect) * _combat.CHIP) < 0.01,
+		"plating 200: reel %.2f (74 x chip), dunk-reel %.2f ((74 + stored) x chip)" % [chip_plain, chip_dunk])
+	_slam()
+	var over := _hit("stomp", true, 90.0)
+	_check("10b plated: the stored slam lifts the reel over the plating", absf(over - (plain_reel + stored_expect)) < 0.01,
+		"plating 90: dunk-reel %.2f in full (plain reel alone is chipped)" % over)
+
+	# A new slam replaces the held one: the old charge is reported expired as replaced.
+	_fresh()
+	_slam()
+	_player._on_rigid_slammed(Vector3(500.0, 0.0, 500.0), SPEED * 0.5, 1.0)
+	var smaller: float = _player.dunk.charge["damage"]
+	_check("11 replaced charge", _expired.size() == 1 and _expired[0][1] == "replaced" and _stored.size() == 2 \
+			and smaller < stored_expect - 0.01 and _player.dunk.held(),
+		"expired %s, stored events %d, held %.2f (first %.2f)" % [_expired.map(func(e): return e[1]), _stored.size(), smaller, stored_expect])
 
 	_fresh()
 	_slam()

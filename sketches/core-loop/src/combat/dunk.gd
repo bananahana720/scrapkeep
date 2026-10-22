@@ -67,6 +67,12 @@ static func is_reel_impact(kind: String, smash: bool, hooked: bool, winching: bo
 	return kind in ["stomp", "ram", "slam"] and (smash or (hooked and winching))
 
 
+# The damage a spend would pay now; 0 when nothing is held or it has run out. Does not spend.
+func peek() -> float:
+	_expire_if_due()
+	return float(charge["damage"]) if held() else 0.0
+
+
 # Returns the stored damage once and clears it; 0 when nothing is held or it has run out.
 func spend(enemy: Node3D) -> float:
 	_expire_if_due()
