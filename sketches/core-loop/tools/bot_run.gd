@@ -61,8 +61,11 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 # --threaded-stages=1 builds park stages on worker threads as --wall-clock=1 does, but keeps the
 # hit-stop clock on physics ticks: for frame captures, where the next stage's one-frame build on
 # the engage frame is a bot artifact. The seed no longer replays exactly.
-# --frame-log=1 writes frames-<seed>.ndjson: each frame's wall ms, stage, flow state and the
-# Performance process, physics, node, resource and object counts; the renderer's draw calls and
+# --frame-log=1 writes frames-<seed>.ndjson: each frame's wall ms, stage and flow state; that ms split
+# into idle_ms (the scene's _process), draw_ms (the RenderingServer's draw) and tick_ms (the physics
+# ticks after it, ticks of them), timed per frame; Performance's process and physics times, which are
+# each the slowest of the last second and update once a second, so they name no frame; the node,
+# resource and object counts; the renderer's draw calls and
 # objects in frame; video, texture and buffer memory (MB, totals, so an upload is a step between
 # rows); and the five pipeline compilation counters ("pipelines": canvas, mesh, surface, draw,
 # specialization), running totals whose difference from the previous row is that frame's compiles,
@@ -109,6 +112,12 @@ var _allocation_noise: Array[RefCounted] = []
 var _beats
 var _frame_log: FileAccess
 var _frame_usec := 0
+# The frame log's own split of a frame (Performance's process and physics times are each the slowest of the last
+# second, updated once a second, so they name no frame): the physics ticks since the last draw, and when the
+# RenderingServer began and ended that draw.
+var _ticks := 0
+var _draw_began := 0
+var _draw_ended := 0
 var _frame_index := 0
 var _signal_timer
 var _physics_probe
@@ -235,11 +244,24 @@ func _next() -> void:
 		_frame_log = FileAccess.open(_out.path_join("frames-%d.ndjson" % _seeds[_index]), FileAccess.WRITE)
 		_frame_usec = 0
 		_frame_index = 0
+		_ticks = 0
+		if not RenderingServer.frame_pre_draw.is_connected(_on_pre_draw):
+			RenderingServer.frame_pre_draw.connect(_on_pre_draw)
+			RenderingServer.frame_post_draw.connect(_on_post_draw)
 	if _settings.has("trace-ticks"):
 		_tick_trace = FileAccess.open(_out.path_join("trace-%d.ndjson" % _seeds[_index]), FileAccess.WRITE)
 
 
+func _on_pre_draw() -> void:
+	_draw_began = Time.get_ticks_usec()
+
+
+func _on_post_draw() -> void:
+	_draw_ended = Time.get_ticks_usec()
+
+
 func _physics_process(delta: float) -> bool:
+	_ticks += 1
 	if _next_pending:
 		_next_pending = false
 		_next()
@@ -445,7 +467,12 @@ func _process(_delta: float) -> bool:
 	if _frame_log != null and _game != null and _game.run != null:
 		var now := Time.get_ticks_usec()
 		if _frame_usec > 0:
+			# The row's ms runs from the last _process to this one: that idle step, the draw after it, then this frame's
+			# physics ticks. A headless run draws nothing, so there the idle and draw split is null.
+			var drew := _draw_began > _frame_usec and _draw_ended >= _draw_began
 			_frame_log.store_line(JSON.stringify({"f": _frame_index, "ms": (now - _frame_usec) / 1000.0, "stage": _game.run.stage, "state": _game.flow.state,
+				"idle_ms": (_draw_began - _frame_usec) / 1000.0 if drew else null, "draw_ms": (_draw_ended - _draw_began) / 1000.0 if drew else null,
+				"tick_ms": (now - (_draw_ended if drew else _frame_usec)) / 1000.0, "ticks": _ticks,
 				"process_ms": Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, "physics_ms": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
 				"nodes": Performance.get_monitor(Performance.OBJECT_NODE_COUNT), "resources": Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT),
 				"objects": Performance.get_monitor(Performance.OBJECT_COUNT),
@@ -457,6 +484,7 @@ func _process(_delta: float) -> bool:
 					Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_SPECIALIZATION)]}))
 		_frame_usec = now
 		_frame_index += 1
+		_ticks = 0
 	if _signal_timer != null:
 		_signal_timer.flush()
 		_signal_timer.frame = _frame_index
