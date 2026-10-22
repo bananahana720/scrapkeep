@@ -346,7 +346,6 @@ func _physics_process(delta: float) -> void:
 			player.set_velocity_now(rail)
 	elif ride != null:
 		_hold_ride(delta)
-	_show_ride()
 	var ball: Vector3 = player.ball_position()
 	var velocity: Vector3 = player.state.velocity
 	var riding: bool = ride != null or launch.flying()
@@ -370,6 +369,8 @@ func _physics_process(delta: float) -> void:
 		for fact in contraptions[ctx.flow.stage()].step(delta, ball, velocity, player.kit, ride != null or launch.flying(), steering):
 			_contraption_fact(fact)
 		_step_cinder(delta, ball)
+	# After the contraption step, so a ride that boarded this tick has its hanger on the boarding frame.
+	_show_ride()
 	if bay.in_yard(ball):
 		_free_cooldowns()
 	_watch_ground(delta, ball)

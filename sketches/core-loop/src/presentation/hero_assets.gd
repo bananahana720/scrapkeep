@@ -632,7 +632,7 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 		# A cable ride: the carriage turns to the trolley clamp the hanger leaves for.
 		var view = get_parent().get("line_view") if get_parent() != null else null
 		if view != null and view.hanger.visible:
-			steer_fairlead(pod, view.hanger_to, delta)
+			steer_fairlead(pod, view.hanger_to, INF if view.hanger_fresh else delta)
 
 
 func apply_kest_state(pod: Node3D, state: Dictionary, paint_tint := Color.WHITE) -> void:

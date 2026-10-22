@@ -58,6 +58,7 @@ const BARB_SIZE := 0.55
 # The cableway hanger (MOTION-SPEC cableway row): a rope from the collar fairlead up to a trolley clamp on the cable.
 const CLAMP_HALF := 0.35
 const CLAMP_RADIUS := 0.3
+const CABLE_RADIUS := 0.18
 
 const DRY_DART := 8.0
 const DRY_TIME := 0.25
@@ -84,6 +85,8 @@ var hanger_from := Vector3.ZERO
 var hanger_to := Vector3.ZERO
 var _hanger_yaw := 0.0
 var _hanger_was_on := false
+# True on the tick a ride's hanger first draws: the carriage snaps to the clamp's side then too.
+var hanger_fresh := false
 var _ride
 var _hanger_material: StandardMaterial3D
 var _was_hooked := false
@@ -377,6 +380,7 @@ func _draw_hanger(centre: Vector3, delta: float) -> void:
 	mesh.clear_surfaces()
 	var on: bool = _ride != null and _ride.active and _ride.cable_from != _ride.cable_to
 	var fresh := on and not _hanger_was_on
+	hanger_fresh = fresh
 	_hanger_was_on = on
 	hanger.visible = on
 	if not on:
@@ -389,7 +393,9 @@ func _draw_hanger(centre: Vector3, delta: float) -> void:
 	_hanger_material.albedo_color = EventKinds.line_color("latched_world").lightened(TAUT_LIGHTEN)
 	_ribbon(mesh, hanger_from, hanger_to, 0.0, TAUT_RADIUS)
 	var along: Vector3 = (_ride.cable_to - _ride.cable_from).normalized() * CLAMP_HALF
-	_ribbon(mesh, clamp_at - along, clamp_at + along, 0.0, CLAMP_RADIUS)
+	# The trolley sits just under the cable's axis, so it reads as gripping the cable from below.
+	var grip := Vector3.DOWN * (CLAMP_RADIUS - CABLE_RADIUS)
+	_ribbon(mesh, clamp_at - along + grip, clamp_at + along + grip, 0.0, CLAMP_RADIUS)
 
 
 func _draw_lock(kit) -> void:
