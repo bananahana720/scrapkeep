@@ -398,14 +398,13 @@ static func min_scale(file: Dictionary) -> float:
 	return scale
 
 
-# The probe set for no_cell: every kind whose smallest-radius variant stands at most LOW_HEIGHT_M tall at `scale` and carries
-# no line_clear_m, each at that variant, as {kind, v, fallback}. A kit with no such kind falls back to its smallest-radius
-# variant overall (fallback true), so the audit can name it.
-static func probe_kinds_of(kit: Dictionary, scale := 1.0) -> Array:
+# The probe set for no_cell: every kind's smallest-radius variant, as {kind, v}. Mid and tall kinds and kinds with a
+# line_clear_m are probed too, each judged by check_one under its own tier and line_clear_m, so a cell is legal when any
+# kind the file could place passes there.
+static func probe_kinds_of(kit: Dictionary) -> Array:
 	var out := []
 	var names: Array = (kit.get("kinds", {}) as Dictionary).keys()
 	names.sort()
-	var smallest := {}
 	for kind: String in names:
 		var variants: Dictionary = kit["kinds"][kind]["variants"]
 		var pick := ""
@@ -414,25 +413,23 @@ static func probe_kinds_of(kit: Dictionary, scale := 1.0) -> Array:
 		for v: String in keys:
 			if pick == "" or float(variants[v]["radius"]) < float(variants[pick]["radius"]):
 				pick = v
-		if pick == "":
-			continue
-		var entry := {"kind": kind, "v": pick, "fallback": false}
-		if smallest.is_empty() or float(variants[pick]["radius"]) < float(kit["kinds"][smallest["kind"]]["variants"][smallest["v"]]["radius"]):
-			smallest = {"kind": kind, "v": pick, "fallback": true}
-		if float(variants[pick]["height"]) * scale <= LOW_HEIGHT_M and not kit["kinds"][kind].has("line_clear_m"):
-			out.append(entry)
-	if out.is_empty() and not smallest.is_empty():
-		out.append(smallest)
+		if pick != "":
+			out.append({"kind": kind, "v": pick})
 	return out
 
 
-# True when any probe passes every placement rule standing at `at` (scaled by `scale`).
-static func probe_legal_at(c: Context, kit: Dictionary, probes: Array, scale: float, at: Vector2) -> bool:
+# The "kind/variant" of the first probe that passes every placement rule standing at `at` (scaled by `scale`), "" if none.
+static func probe_at(c: Context, kit: Dictionary, probes: Array, scale: float, at: Vector2) -> String:
 	for probe: Dictionary in probes:
 		var inst := _instance("probe", String(probe["kind"]), String(probe["v"]), kit, at, 0.0, scale, 0.0, c.ground, false)
 		if check_one(inst, c).is_empty():
-			return true
-	return false
+			return "%s/%s" % [probe["kind"], probe["v"]]
+	return ""
+
+
+# True when any probe passes every placement rule standing at `at`.
+static func probe_legal_at(c: Context, kit: Dictionary, probes: Array, scale: float, at: Vector2) -> bool:
+	return probe_at(c, kit, probes, scale, at) != ""
 
 
 # The audit's chase camera for a pose {x, z, yaw}: the anchor 1 + cam.up above the ground at the pose, the basis
@@ -459,7 +456,7 @@ static func cell_visible(view: Transform3D, cam: Dictionary, point: Vector3, ran
 
 
 # Up to `limit` cell centres (cell_m grid, scanned in x then z) inside the real view frustum of the poses, within range_m of
-# the camera, where any probe (probe_kinds_of) passes every placement rule; [] when none does (the audit's no_cell --open
+# the camera, where any probe (every kind's smallest-radius variant, probe_kinds_of) passes every placement rule; [] when none does (the audit's no_cell --open
 # reason). Tolerance: the grid is cell_m (2.5 m), so a legal pocket narrower than about 2.5 m can be missed, which lets a
 # no_cell claim pass; the horizontal range errs safe. A pose is {x, z, yaw}; cam is {arm, pitch, up, fov_deg, aspect}.
 static func cone_legal_cells(c: Context, kit: Dictionary, probes: Array, scale: float, poses: Array, cam: Dictionary, range_m: float, cell_m := 2.5, limit := 1) -> Array:
@@ -506,20 +503,24 @@ static func open_reason(c: Context, kit: Dictionary, file: Dictionary, reason: S
 		return {"ok": why == "", "why": why, "cell": null}
 	if reason != "no_cell":
 		return {"ok": false, "why": "unknown reason %s" % reason, "cell": null}
+	# The file's rows apply for this probe only: the caller's lists come back untouched.
+	var saved_ground := c.ground_rows
+	var saved_low := c.low_rows
 	c.use_ground_rows(file.get("ground_rows"))
 	c.use_low_ground_rows(file.get("low_ground_rows"))
 	var scale := min_scale(file)
-	var probes := probe_kinds_of(kit, scale)
-	if probes.is_empty():
-		return {"ok": false, "why": "no kit to probe with", "cell": null}
-	var names := []
-	for probe: Dictionary in probes:
-		names.append("%s/%s" % [probe["kind"], probe["v"]])
-	var label := "probe %s%s at scale %.2f" % [", ".join(names), " (fallback: no low kind)" if probes[0]["fallback"] else "", scale]
-	var cells := cone_legal_cells(c, kit, probes, scale, poses, cam, NEAR_RANGE_M)
-	if cells.is_empty():
-		return {"ok": true, "why": label + " finds no legal cell in the view frustum", "cell": null}
-	return {"ok": false, "why": "%s has a legal cell at (%.1f, %.1f) in the view frustum" % [label, cells[0].x, cells[0].y], "cell": [cells[0].x, cells[0].y]}
+	var probes := probe_kinds_of(kit)
+	var result := {"ok": false, "why": "no kit to probe with", "cell": null}
+	if not probes.is_empty():
+		var cells := cone_legal_cells(c, kit, probes, scale, poses, cam, NEAR_RANGE_M)
+		var label := "%d probe kinds (smallest-radius variants) at scale %.2f" % [probes.size(), scale]
+		if cells.is_empty():
+			result = {"ok": true, "why": label + " find no legal cell in the view frustum", "cell": null}
+		else:
+			result = {"ok": false, "why": "probe %s has a legal cell at (%.1f, %.1f) in the view frustum (%s)" % [probe_at(c, kit, probes, scale, cells[0]), cells[0].x, cells[0].y, label], "cell": [cells[0].x, cells[0].y]}
+	c.ground_rows = saved_ground
+	c.low_rows = saved_low
+	return result
 
 
 static func _pair(value) -> Vector2:

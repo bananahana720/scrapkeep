@@ -755,7 +755,8 @@ func _check_open_decisions(world: Dictionary, kit: Dictionary, c) -> void:
 	var fresh := ParkProps.context(map, ground, world["stage"])
 	var file := {}
 	var probes := ParkProps.probe_kinds_of(kit)
-	_t.check("the fixture kit has no low kind, so the probe falls back to its smallest radius variant and says so", probes.size() == 1 and probes[0]["fallback"] and probes[0]["kind"] == "fix_bench" and probes[0]["v"] == "b", str(probes))
+	var bench_probe := probes.filter(func(p: Dictionary) -> bool: return p["kind"] == "fix_bench")
+	_t.check("the probe set holds every fixture kind at its smallest-radius variant", probes.size() == kit["kinds"].size() and bench_probe[0]["v"] == "b", str(probes))
 	var found := []
 	var found_pose := {}
 	for pt: Vector2 in _grid(fresh.rect, 60):
@@ -802,16 +803,16 @@ func _check_open_decisions(world: Dictionary, kit: Dictionary, c) -> void:
 	# A kit with a wide low kind and a thin, slightly taller one: the pocket 7.5 m off a line fits only the thin one.
 	var pair := kit.duplicate(true)
 	var template: Dictionary = pair["kinds"]["fix_bench"]
-	pair["kinds"] = {"wide_low": template.duplicate(true), "thin_low": template.duplicate(true), "tagged_low": template.duplicate(true)}
+	pair["kinds"] = {"wide_low": template.duplicate(true), "thin_low": template.duplicate(true), "tagged_low": template.duplicate(true), "mid_slim": template.duplicate(true)}
 	for name: String in pair["kinds"]:
 		var variants: Dictionary = pair["kinds"][name]["variants"]
 		for v: String in variants:
-			variants[v]["radius"] = 3.0 if name == "wide_low" else 0.4
-			variants[v]["height"] = 0.8 if name == "wide_low" else 1.1
+			variants[v]["radius"] = 3.0 if name == "wide_low" else (0.1 if name == "mid_slim" else 0.4)
+			variants[v]["height"] = 0.8 if name == "wide_low" else (2.0 if name == "mid_slim" else 1.1)
 	pair["kinds"]["tagged_low"]["line_clear_m"] = 20.0
 	var set := ParkProps.probe_kinds_of(pair)
 	var kinds_in_set := set.map(func(p: Dictionary) -> String: return p["kind"])
-	_t.eq("the probe set has every low kind without a line_clear_m", kinds_in_set, ["thin_low", "wide_low"])
+	_t.eq("the probe set has every kind, mid and line_clear_m ones included", kinds_in_set, ["mid_slim", "tagged_low", "thin_low", "wide_low"])
 	var pocket := Vector2.INF
 	for key in fresh.lines:
 		var line: PackedVector2Array = fresh.lines[key]
@@ -831,6 +832,21 @@ func _check_open_decisions(world: Dictionary, kit: Dictionary, c) -> void:
 			break
 	_t.check("planted: a pocket beside a line fits the thin kind and not the wide one", pocket != Vector2.INF)
 	_t.check("planted: the probe set finds that pocket legal", pocket != Vector2.INF and ParkProps.probe_legal_at(fresh, pair, set, 1.0, pocket))
+	# A mid kind thinner than every low kind fits 0.3 m inside the play rect where no low kind does.
+	var slim := Vector2.INF
+	for z in range(int(fresh.rect.position.y) + 20, int(fresh.rect.end.y) - 20, 10):
+		var at := Vector2(fresh.rect.position.x + 0.3, z)
+		if ParkProps.probe_at(fresh, pair, [{"kind": "mid_slim", "v": "a"}], 1.0, at) != "" and ParkProps.probe_at(fresh, pair, [{"kind": "thin_low", "v": "a"}, {"kind": "wide_low", "v": "a"}], 1.0, at) == "":
+			slim = at
+			break
+	_t.check("planted: a pocket at the play-rect edge fits only the slim mid kind", slim != Vector2.INF)
+	_t.eq("planted: the probe set finds that pocket legal and names the mid kind", ParkProps.probe_at(fresh, pair, set, 1.0, slim), "mid_slim/a")
+	# open_reason applies the file's rows to a copy of the context's lists only.
+	fresh.use_ground_rows([far_row])
+	var before: Array = fresh.ground_rows.keys()
+	ParkProps.open_reason(fresh, kit, {"ground_rows": [String(map.park["park_rows"][0]["id"])]}, "no_cell", Vector2(found_pose["x"], found_pose["z"]), [found_pose], CAM_SPEC)
+	_t.check("open_reason leaves the caller's ground_rows alone", fresh.ground_rows.keys() == before and before.size() == 1, str(fresh.ground_rows.keys()))
+	fresh.use_ground_rows(null)
 
 
 # The brief's ride-line kinds must carry line_clear_m of at least 30, and a rule past the line reach fails closed.
