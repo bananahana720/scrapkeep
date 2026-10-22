@@ -361,7 +361,8 @@
      "radius": 2.223,
      "height": 1.46
     }
-   }
+   },
+   "line_clear_m": 30.0
   },
   "timber_ties": {
    "class": "dress_prop",

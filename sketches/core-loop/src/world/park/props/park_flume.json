@@ -1596,10 +1596,7 @@
   {
    "id": "flume_v72",
    "template": "tie_yard",
-   "at": [
-    150.0,
-    -70.0
-   ],
+   "at": [186.0, -70.0],
    "yaw_deg": 118.3,
    "near": "bend_overlook: A yard of spare ties and pipe"
   },
@@ -1646,10 +1643,7 @@
   {
    "id": "flume_v80",
    "template": "tie_yard",
-   "at": [
-    130.0,
-    30.0
-   ],
+   "at": [131.0, 33.9],
    "yaw_deg": 60.6,
    "near": "bend_return_wash: A yard of spare ties and pipe"
   },
@@ -1666,12 +1660,9 @@
   {
    "id": "flume_v82",
    "template": "sluice_station",
-   "at": [
-    120.0,
-    -130.0
-   ],
+   "at": [120.0, -162.0],
    "yaw_deg": 118.3,
-   "near": "bend_zip_pier_20: The sluice shed with its wheel"
+   "near": "bend_zip_pier_18: The sluice shed with its wheel"
   },
   {
    "id": "flume_v84",
@@ -2308,5 +2299,5 @@
   ],
   "seed": 1021
  },
- "pin": 2392297130
+ "pin": 4063400762
 }

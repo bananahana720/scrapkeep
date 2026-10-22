@@ -444,7 +444,7 @@ def tea_hearth(p, v, rng):
 
 # --------------------------------------------------------------------------------------
 @K.kind("washline", tags=["soft"], variants="abc",
-        polish_opts={"bevel_min": 0.2}, story="A tub, a washboard and a short line of shirts: laundry day, interrupted.")
+        polish_opts={"bevel_min": 0.2}, line_clear_m=30, story="A tub, a washboard and a short line of shirts: laundry day, interrupted.")
 def washline(p, v, rng):
     # Two squat posts, a slack line (draped, never taut), shirts hung on it.
     for x in (-2.0, 2.0):
