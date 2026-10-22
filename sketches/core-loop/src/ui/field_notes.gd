@@ -26,7 +26,7 @@ const TESTING := [
 	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.",
 	"Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores (the diamonds beside the objective) that raise the gate tiers.",
 	"Sable's pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
-	"Death ends the run, and the next one starts with no save: N starts a new run as the same class. The one second chance is a part you earn, the Spare Frame, which leaves you at 20% health once a run. Hold R in play to abandon the run and start a new one.",
+	"Death ends the run; the next one starts from world 1: N starts a new run as the same class. The one second chance is a part you earn, the Spare Frame, which leaves you at 20% health once a run. Hold R in play to abandon the run and start a new one.",
 ]
 
 const QUESTIONS := [

@@ -235,7 +235,7 @@ func _run() -> void:
 	await _frames(5)
 	_t.eq("summary", flow.state_name(), "summary")
 	# Headless frames outrun the guard's wall-clock seconds; the Guard section below covers it.
-	_game.summary_guard_left = 0.0
+	_game.summary_latched = false
 	_t.check("companion button on the summary", _game.screens.button_for("companion") != null, "")
 	Push.key(root, KEY_M)
 	await _frames(2)
@@ -250,15 +250,17 @@ func _run() -> void:
 	flow.new_run()
 	await _frames(5)
 	_t.eq("new run keeps the summary assembly", _game.run.companion, want)
-	# The guard: a mashed M as the summary arrives opens nothing.
+	# The latch: an M held as the summary arrives opens nothing.
+	_hold(KEY_M, true)
 	flow._end_run(false)
 	await _frames(1)
-	_t.check("guard up", _game.summary_guard_left > 0.0, "%.2f left" % _game.summary_guard_left)
+	_t.check("latch up", _game.summary_latched, "latched %s" % _game.summary_latched)
 	Push.key(root, KEY_M)
 	await _frames(1)
-	_t.check("M under the summary guard opens nothing", not panel.is_open(), "")
+	_t.check("M under the summary latch opens nothing", not panel.is_open(), "")
+	_hold(KEY_M, false)
 	# Moss's counter in the bay: the in-run intermission.
-	_game.summary_guard_left = 0.0
+	_game.summary_latched = false
 	flow.new_run()
 	await _frames(20)
 	_game.run.companion = _doc(stub, [])
@@ -287,3 +289,13 @@ func _run() -> void:
 	_t.check("counter shut in play: M opens nothing", not panel.is_open() and not _ws.open_companion() and flow.in_play(), "state %s" % flow.state_name())
 	_game.queue_free()
 	quit(_t.verdict())
+
+
+# Holds or releases a physical key in the Input singleton, as a finger on it would.
+func _hold(code: Key, down: bool) -> void:
+	var event := InputEventKey.new()
+	event.keycode = code
+	event.physical_keycode = code
+	event.pressed = down
+	Input.parse_input_event(event)
+	Input.flush_buffered_events()

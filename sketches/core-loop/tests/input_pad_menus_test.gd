@@ -170,7 +170,7 @@ func _run() -> void:
 	await _frames(3)
 	_t.check("S5-2 no focus after a new run from the death screen", flow.in_play() and _focus() == null, "state %s focus %s" % [flow.state_name(), _focus()])
 	flow._set_state(flow.SUMMARY)
-	_game.summary_guard_left = 0.0
+	_game.summary_latched = false
 	_t.eq("S5-5 A on the summary is still Space", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_SPACE)
 	_t.eq("S5-5 B on the summary is N", _game.pad_screen_key(_pad(JOY_BUTTON_B)), KEY_N)
 	_game._screen_key(_game.pad_screen_key(_pad(JOY_BUTTON_B)))

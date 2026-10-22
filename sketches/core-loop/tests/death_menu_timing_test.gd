@@ -11,18 +11,23 @@ const T := preload("res://tests/support/t.gd")
 #       world 1 stage 1 as the same pilot.
 #   (b) timing, on the real game's path (a run store on, so a death goes straight to the summary):
 #       from player_died to the first physics frame where the new run is in play and the ball is not
-#       frozen, N pressed the first physics frame the summary takes keys. The number is printed in
-#       physics ticks and game seconds (sketch-lint L1 bans wall-clock reads in tests, so wall ms
-#       was measured once outside the committed test) and asserted against BAR_S of game time, the summary's key guard included, and split out.
-#       The dead-menu path (no guard) is timed the same way. A warm-up run comes first on the
+#       frozen, N pressed the first physics frame the summary takes keys (nothing held, so no latch).
+#       The number is printed in physics ticks and game seconds (sketch-lint L1 bans wall-clock
+#       reads in tests, so wall ms was measured once outside the committed test) and asserted
+#       against BAR_S of game time, and N to rolling against PRESS_BAR_S.
+#       The dead-menu path is timed the same way.
+#   (c) the input latch, on the same store path: Space, the fire button (left mouse) and N held
+#       from before the death keep the summary shut for over a second (the old 0.75 s lock would
+#       have lapsed), no key starts a run; after the release a fresh N rolls within PRESS_BAR_S. A warm-up run comes first on the
 #       store path; the game's own first world build is not the restart. The headless run logs a
 #       set_dressing "instantiate on null" script error (a missing kit asset), in other tests too.
 
 const DIR := "user://death_menu_timing_test/"
 const PATH := DIR + "run.json"
-# The bar: death to rolling in a new run, game seconds. The summary's own key guard
-# (Game.SUMMARY_GUARD, 0.75 s) is held on purpose and counted in.
+# The bars, game seconds: death to rolling in a new run, and a fresh press of N to rolling.
 const BAR_S := 1.0
+const PRESS_BAR_S := 0.1
+const HELD_S := 1.2
 
 var _t := T.new("death_menu_timing_test")
 var _game
@@ -82,7 +87,7 @@ func _time_new_run(screen: String) -> Dictionary:
 	var cap: int = int(ticks_hz * 6.0)
 	for i in cap:
 		var state: String = _game.flow.state_name()
-		if pressed_tick < 0 and state == screen and (screen != "summary" or _game.summary_guard_left <= 0.0):
+		if pressed_tick < 0 and state == screen and not _game.summary_latched:
 			pressed_tick = Engine.get_physics_frames()
 			_game._screen_key(KEY_N)
 		elif pressed_tick >= 0 and _game.run.run_id != old_run and _rolling():
@@ -140,12 +145,14 @@ func _run() -> void:
 	await _frames(20)
 	var summary_path: Dictionary = await _time_new_run("summary")
 	var rest_s: float = float(summary_path["press_to_rolling_ticks"]) / float(summary_path["hz"])
-	print("TIMING summary: death to N %d ticks (the %.2f s key guard), N to rolling %d ticks = %.3f s, total %d ticks = %.3f s game time (%d Hz)" \
-		% [summary_path["death_to_press_ticks"], Game.SUMMARY_GUARD, summary_path["press_to_rolling_ticks"], rest_s, summary_path["total_ticks"], summary_path["total_s"], int(summary_path["hz"])])
+	print("TIMING summary: death to N %d ticks, N to rolling %d ticks = %.3f s, total %d ticks = %.3f s game time (%d Hz)" \
+		% [summary_path["death_to_press_ticks"], summary_path["press_to_rolling_ticks"], rest_s, summary_path["total_ticks"], summary_path["total_s"], int(summary_path["hz"])])
 	_t.check("summary: the death ended the run", summary_path["ended"], "run_ended %s" % summary_path["ended"])
-	_t.check("summary: N to rolling within %.2f s" % BAR_S, summary_path["ok"] and rest_s <= BAR_S, "%.3f s" % rest_s)
-	_t.check("summary: death to rolling, guard included, within %.2f s" % BAR_S, summary_path["ok"] and summary_path["total_s"] <= BAR_S,
+	_t.check("summary: a fresh press of N to rolling within %.2f s" % PRESS_BAR_S, summary_path["ok"] and rest_s <= PRESS_BAR_S, "%.3f s (%d ticks)" % [rest_s, summary_path["press_to_rolling_ticks"]])
+	_t.check("summary: nothing held, so no latch and the first frame takes N", summary_path["death_to_press_ticks"] <= 1, "%d ticks" % summary_path["death_to_press_ticks"])
+	_t.check("summary: death to rolling within %.2f s" % BAR_S, summary_path["ok"] and summary_path["total_s"] <= BAR_S,
 		"%.3f s (%d ticks)" % [summary_path["total_s"], summary_path["total_ticks"]])
+	await _held_case()
 	await _hold_r_case()
 	_game.free()
 	_clean()
@@ -174,6 +181,66 @@ func _hold_r_case() -> void:
 		_game.run.run_id != old_run and _game.run.stage == stages.first_of(1) and _game.run.world == 1 and _game.run.class_id() == pilot \
 			and retried[0] == 0 and _game.flow.state_name() == "stage" and not _game.run.death_save_spent and not ended[0],
 		"run %s to %s, stage %d world %d, pilot %s, stage retries %d, run_ended %s" % [old_run, _game.run.run_id, _game.run.stage, _game.run.world, _game.run.class_id(), retried[0], ended[0]])
+	# The victory lap: a held R does not abandon the credits.
+	_game.step_restart_hold(0.0, false)
+	var lap_run: String = _game.run.run_id
+	_game.flow._set_state(_game.flow.LAP)
+	_game.step_restart_hold(_game.RESTART_HOLD, true)
+	_t.check("hold R during the victory lap restarts nothing", _game.run.run_id == lap_run and _game.flow.state_name() == "lap",
+		"flow %s, run %s (was %s)" % [_game.flow.state_name(), _game.run.run_id, lap_run])
+
+
+# Holds or releases Space, the fire button and N in the Input singleton.
+func _hold(down: bool) -> void:
+	for code in [KEY_SPACE, KEY_N]:
+		var key := InputEventKey.new()
+		key.keycode = code
+		key.physical_keycode = code
+		key.pressed = down
+		Input.parse_input_event(key)
+		Input.flush_buffered_events()
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = down
+	click.button_mask = MOUSE_BUTTON_MASK_LEFT if down else 0
+	Input.parse_input_event(click)
+	Input.flush_buffered_events()
+
+
+# Input held through the death keeps the summary shut for HELD_S; a fresh N after the release rolls.
+func _held_case() -> void:
+	_game.flow.new_run()
+	await _frames(20)
+	var ticks_hz: float = float(Engine.physics_ticks_per_second)
+	var old_run: String = _game.run.run_id
+	_hold(true)
+	_game.run.damage(9999.0, "test")
+	await physics_frame
+	var skipped := false
+	var ticks_held := int(ticks_hz * HELD_S)
+	for i in ticks_held:
+		for key in [KEY_N, KEY_SPACE, KEY_ENTER, KEY_K]:
+			_game._screen_key(key)
+		if _game.run.run_id != old_run or _game.flow.state_name() != "summary":
+			skipped = true
+			break
+		await physics_frame
+	_t.check("held Space, fire and N through the death: %.1f s later the summary is still up, no run started" % HELD_S,
+		not skipped and _game.flow.state_name() == "summary" and _game.run.run_id == old_run and _game.summary_latched,
+		"flow %s latched %s after %d ticks" % [_game.flow.state_name(), _game.summary_latched, ticks_held])
+	_hold(false)
+	await _frames(2)
+	_t.check("after the release the latch is open", not _game.summary_latched, "latched %s" % _game.summary_latched)
+	var pressed := Engine.get_physics_frames()
+	_game._screen_key(KEY_N)
+	var rolling := -1
+	for i in int(ticks_hz * 2.0):
+		if _game.run.run_id != old_run and _rolling():
+			rolling = Engine.get_physics_frames() - pressed
+			break
+		await physics_frame
+	print("TIMING held case: fresh N after release to rolling %d ticks = %.3f s (%d Hz), held %d ticks" % [rolling, float(rolling) / ticks_hz, int(ticks_hz), ticks_held])
+	_t.check("after the release a fresh N rolls within %.2f s" % PRESS_BAR_S, rolling >= 0 and float(rolling) / ticks_hz <= PRESS_BAR_S, "%d ticks" % rolling)
 
 
 func _pad(button: int) -> InputEventJoypadButton:
