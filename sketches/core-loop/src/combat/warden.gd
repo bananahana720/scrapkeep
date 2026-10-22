@@ -159,8 +159,9 @@ var _guard_wait := 0.0
 var _charge_len := PULSE_TELEGRAPH
 var _posture: BossPosture
 var _armed := 0.0
-# Whether on_struck has already put the result through the weak judge (see _apply_posture).
-var _judged := false
+# How many on_struck calls are inside _apply_posture with a judged result (see _apply_posture). A depth, not a
+# flag, so a strike nested inside another strike's posture cannot clear the outer one's mark.
+var _judged := 0
 var _guard_scatter_frame := -1
 var _guard_paid_scatters := 0
 var _slag_burn := 0.0
@@ -329,9 +330,9 @@ func on_struck(hit_kind: String, part: String, result: Dictionary) -> void:
 	if weak_judge is Callable and weak_judge.is_valid() and not staggered():
 		result = weak_judge.call(result, part, hit_kind)
 	# The judge has answered: _apply_posture must not ask it again.
-	_judged = true
+	_judged += 1
 	_apply_posture(result)
-	_judged = false
+	_judged -= 1
 
 
 func _physics_process(delta: float) -> void:
@@ -926,7 +927,7 @@ func monster_build() -> bool:
 func _apply_posture(result: Dictionary) -> void:
 	# A boss at weak-point dial 1 (spec "weak_judge_all") judges every posture hit, including one that skips
 	# on_struck (the ultimate's set piece, ultimate.gd warden_posture). Off, this is never reached.
-	if spec.get("weak_judge_all", false) and not _judged and not _posture.staggered:
+	if spec.get("weak_judge_all", false) and _judged == 0 and not _posture.staggered:
 		var weak_judge = spec.get("weak_judge")
 		if weak_judge is Callable and weak_judge.is_valid():
 			result = weak_judge.call(result, "", "")

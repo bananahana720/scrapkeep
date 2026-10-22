@@ -303,7 +303,8 @@ func _sync_part(id: String) -> void:
 
 
 # Every tick: the parts follow the rule (a re-seal needs no caller), and a ball that has just reached a part
-# touches it once, through the ball's own enemy-contact path so a committed haul lands (player_ball.gd).
+# touches it once, through the ball's public contact entry (player_ball.gd touch_body), which derives the 3D contact
+# normal the way RigidBall does, so a committed haul lands and a drop from above stomps.
 func _step_parts() -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	for id in _part_nodes.keys():
@@ -313,9 +314,8 @@ func _step_parts() -> void:
 			continue
 		_sync_part(id)
 		var near: bool = weak.state(id) != WeakPoints.BROKEN and _part_reachable(id) and ball.distance_to(part.global_position) <= WeakPart.REACH
-		if near and not bool(_touching.get(id, false)) and ctx.player.has_method("_on_enemy_touched"):
-			var away := Vector3(ball.x - part.global_position.x, 0.0, ball.z - part.global_position.z)
-			ctx.player._on_enemy_touched(part, away.normalized() if away.length() > 0.01 else Vector3.UP)
+		if near and not bool(_touching.get(id, false)) and ctx.player.has_method("touch_body"):
+			ctx.player.touch_body(part)
 		_touching[id] = near
 
 
