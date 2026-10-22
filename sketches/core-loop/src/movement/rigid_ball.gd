@@ -3,6 +3,7 @@ extends RigidBody3D
 const Tuning := preload("res://src/movement/tuning.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const Contact := preload("res://src/movement/contact.gd")
 
 signal enemy_touched(enemy: Node3D, normal: Vector3)
 signal slammed(at: Vector3, speed: float, flatness: float)
@@ -226,5 +227,4 @@ func _publish_kit(body_state: PhysicsDirectBodyState3D) -> void:
 
 func _on_body_entered(body: Node) -> void:
 	if _active and body.is_in_group("enemy"):
-		var normal: Vector3 = global_position - body.global_position
-		enemy_touched.emit(body, normal.normalized() if normal.length() > 0.01 else Vector3.UP)
+		enemy_touched.emit(body, Contact.normal_between(global_position, body.global_position))
