@@ -306,6 +306,30 @@ test("a base timeout counts only against a head that also timed out; a lane stop
   assert.equal(usableBaseRun(slow, outsideKill), outsideKill);
 });
 
+test("a base that dies by the same non-SIGKILL signal as the head keeps its verdict", () => {
+  const crash = (signal, checks = []) => ({ ok: false, exit: null, signal, killed: false, timedOut: false, checks });
+  const head = crash("SIGABRT");
+  const base = crash("SIGABRT");
+  assert.equal(usableBaseRun(head, base), base);
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: false, headChecks: head.checks, baseChecks: base.checks }).kind, "base-red");
+  assert.equal(cacheableBaseRun(base), false);
+  // A head-only crash: the base passed, so the head is the PR's red.
+  const pass = { ok: true, exit: 0, signal: null, killed: false, timedOut: false, checks: [] };
+  const kept = usableBaseRun(head, pass);
+  assert.equal(kept, pass);
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: kept.ok, headChecks: head.checks, baseChecks: [] }).kind, "pr-red");
+  // SIGKILL is the OOM killer or the lane's own timeout: no verdict.
+  assert.equal(usableBaseRun(crash("SIGKILL"), crash("SIGKILL")), null);
+  assert.equal(usableBaseRun(head, crash("SIGKILL")), null);
+  // A different signal says nothing about the base.
+  assert.equal(usableBaseRun(head, crash("SIGSEGV")), null);
+  // Same signal, different failing checks: the head's new checks are the PR's.
+  const headChecks = crash("SIGABRT", ["a", "b"]);
+  const baseChecks = crash("SIGABRT", ["a"]);
+  assert.equal(usableBaseRun(headChecks, baseChecks), null);
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: null }).kind, "pr-red");
+});
+
 test("a single base red is not trusted from the cache; a second agreeing run confirms it", () => {
   const first = settleBaseEntry(undefined, { ok: false, checks: ["a", "b"] });
   assert.equal(trustedBaseEntry(first), false);

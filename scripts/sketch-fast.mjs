@@ -355,7 +355,7 @@ function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
       timedOut = true;
       child.kill("SIGKILL");
     }, timeoutMs);
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
       clearTimeout(timer);
       running.delete(child);
       rmSync(dataHome, { recursive: true, force: true });
@@ -363,7 +363,7 @@ function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
       // A kill before the time limit that the lane did not send is usually the container's
       // memory limit (dmesg "Memory cgroup out of memory"), not the test.
       const reason = code === null && !timedOut && child.killedByLane !== true ? "killed by a signal before its time limit (often the container's memory limit; see dmesg)" : verdict.reason;
-      resolve({ test, ok: verdict.ok, exit: code, ms: Date.now() - started, reason, checks: failingChecks(output), tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut });
+      resolve({ test, ok: verdict.ok, exit: code, signal: signal ?? null, ms: Date.now() - started, reason, checks: failingChecks(output), tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut });
     });
   });
 }
@@ -418,9 +418,19 @@ export function trustedBaseEntry(entry) {
 // The base run that may judge this run's verdict. A lane stop says nothing; a base timeout or
 // outside kill (exit null, say the OOM killer) says "red on the base too" only when the head rerun
 // timed out as well, else a crash on the head would hide behind a load failure on the base.
+// One exception: a base that died by a signal keeps its verdict when the head rerun died by the
+// same signal and both fail the same checks (park_cave_in aborts at exit on both sides, #241).
+// SIGKILL is the OOM killer or the lane's own timeout kill, so it never counts.
 export function usableBaseRun(rerun, baseRun) {
   if (!baseRun || baseRun.killed) return null;
-  if ((baseRun.timedOut || baseRun.exit === null) && !rerun.timedOut) return null;
+  if ((baseRun.timedOut || baseRun.exit === null) && !rerun.timedOut) {
+    const signal = baseRun.signal;
+    const sameSignal = Boolean(signal) && signal !== "SIGKILL" && rerun.signal === signal && !baseRun.timedOut && !rerun.killed;
+    const head = [...(rerun.checks ?? [])].sort();
+    const base = [...(baseRun.checks ?? [])].sort();
+    const sameChecks = head.length === base.length && head.every((check, i) => check === base[i]);
+    return sameSignal && sameChecks ? baseRun : null;
+  }
   return baseRun;
 }
 
