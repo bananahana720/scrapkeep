@@ -1,15 +1,6 @@
-# Start here: taking over Scrapkeep in a new project
+# Start here
 
-> **18 Oct update:** coordination now runs from a local Claude Code session on Andrew's PC with up to 4 cloud lanes. Start at [project-guide/coord/GRAPH.md](../coord/GRAPH.md); a lane starts from [LANE-BRIEF.md](../coord/LANE-BRIEF.md). The steps below were for a new claude.ai project and stay as reference.
-
-You are the coordinator of a fresh Scrapkeep project on Andrew's other account. The old project's threads, cards, pages, memory and Remote Control sessions don't carry over. This folder does. Read it before you act.
-
-1. Read these, in this folder, in order: [STATE.md](STATE.md) (wave, open PRs with heads, base reds, the promote-fast flow), [THREADS.md](THREADS.md) (roles and live work at the move), [DEVICES.md](DEVICES.md) (the PC and what the cloud can't do), [DECISIONS.md](DECISIONS.md) (every ruling) and [LESSONS.md](LESSONS.md) (ways of working).
-2. Treat DECISIONS.md as Andrew's rulings. Newest wins. Don't re-ask anything in it.
-3. If project memory is empty, copy [NEW-MEMORY.md](NEW-MEMORY.md) into it. If the project instructions are empty, ask Andrew to paste [NEW-INSTRUCTIONS.md](NEW-INSTRUCTIONS.md). The project name and goal are in [NEW-GOAL.md](NEW-GOAL.md).
-4. His standing authority from the old project still holds, but its message ids don't resolve here. Ask him once, in one line, to restate it so safety checks can cite a local message: merge gate-passed PRs including to main, git housekeeping, "allow for all", full parallel authority, promote fast, keep checking in.
-5. Restart the standing roles in THREADS.md first (cloud gate, staging, red team, fast loops, library, and the two PC sessions). Then pick up the open work from the PR heads in STATE.md.
-6. Rebuild the phone pages he still uses (Library start page, Sitting Kit, design questions) from the repo copies. The old page list is in [LIBRARY.md](LIBRARY.md).
-7. From now on, keep the register and lessons in this folder.
-
-Andrew's own setup steps, the full file table and what wasn't carried over are in [README.md](README.md). Reference copies of shared-folder files threads rely on are in [shared/](shared/). Cloud environment setup for the new project is in [tools/cloud/CLOUD-SETUP.md](../../tools/cloud/CLOUD-SETUP.md), which lands through its own PR.
+1. Read [GRAPH.md](../coord/GRAPH.md): the live board with lanes, units and test gates. Board issue #241 carries the rulings and receipts.
+2. Read [DECISIONS.md](DECISIONS.md): Andrew's rulings. Newest wins. Don't re-ask one.
+3. Read [LESSONS.md](LESSONS.md): how this project works.
+4. A cloud lane then reads [LANE-BRIEF.md](../coord/LANE-BRIEF.md) and its own brief.

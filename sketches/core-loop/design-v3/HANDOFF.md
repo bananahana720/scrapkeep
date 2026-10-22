@@ -1,5 +1,7 @@
 # Alpha handoff: checkpoint 1 passed, 3 October 2026
 
+> **Historical handoff log (3 to 10 Oct).** The live handoff is [project-guide/coord/GRAPH.md](../../../project-guide/coord/GRAPH.md); rulings are in [project-guide/handoff/DECISIONS.md](../../../project-guide/handoff/DECISIONS.md). Retry and run-length lines below predate the 22 Oct rulings (no free retry; three worlds, 30 to 45 minutes).
+
 **Checkpoint 1 passed** (playtest entry 12, EV-0624). Andrew: "really fun", "getting really close", boss "much, much more refined"; difficulty 2, pacing 3, clarity 4; all seven calls kept. He asked for the full three-world alpha for a multi-hour sitting: "full-send it to complete the game." The hard gate is open: Dig and Highdraft may be built. The coordinator role is back with the Claude session that recorded EV-0623 and EV-0624; Codex owns the Sol asset lane only.
 
 ## Wave 11 landed (2026-10-09, 306bc4d = merge of cand/alpha-w11 054eb92); wave 12 seeded
