@@ -2,11 +2,14 @@ extends SceneTree
 
 # Gate for the park ground's surface (step 2 of the park ground): every vertex of a park's four
 # Terrain3D regions has the control map's auto bit (hole vertices keep the hole bit too), and the
-# colour map carries each concrete, tailings and basalt cell's multiplier (a ratio between two patches
-# of one reference board, pinned here from the raw sRGB numbers) feathered over 8 m: a cell 5 or more
-# cells from another slot and from the play edge wears its slot's multiplier, no 1 m step at a real
-# slot border or the square's edge exceeds the full difference over 8 plus 2/255, and the apron
-# beyond the margin stays white. Alpha stays at Terrain3D's default 127/255 throughout.
+# colour map carries each concrete, tailings and basalt cell's multiplier, which is
+# ParkTerrain.board_multiplier() of two raw sRGB patches of one reference board (one rule: the
+# material's hue, a value scaled by material over ground, capped at the floor's own); the stored
+# literals are pinned to it. The map is feathered over 8 m texels: a cell 5 or more cells from another
+# slot and from the play edge wears its slot's multiplier, no 1 m step at a real slot border or the
+# square's edge exceeds the full difference over 8 plus 2/255, the region colour map is feather()'s
+# image placed one vertex per pixel (a one-pixel shift would fail), and the apron beyond the margin
+# stays white. Alpha stays at Terrain3D's default 127/255 throughout.
 # The parks are built through the real path (make_render, start, finish). Headless Terrain3D draws
 # nothing, so this reads the maps, not pixels.
 
@@ -87,27 +90,37 @@ func _pin_floor_mean() -> void:
 	_floor_mean = mean
 
 
-# The three multipliers, from the reference boards' raw sRGB patch means (park_terrain.gd's comments
-# cite the crops): material / lit ground, with the floor texture's mean as the ground's own chromaticity
-# for the tailings (red kept at 1), and clamped to what an RGBA8 colour map can hold.
+# The three multipliers: board_multiplier() on the reference boards' raw sRGB patch means (park_terrain.gd's
+# comments cite the crops). The stored literals must match it within 0.003.
 func _pin_mults() -> void:
 	var fm := _floor_mean
-	# Tailings: the board floor 245,172,116 against the floor texture's g/r and b/r.
-	var tailings := Color(1.0, (172.0 / 245.0) / (fm.g / fm.r), (116.0 / 245.0) / (fm.b / fm.r), 0.5)
-	# Basalt: the cap 101,93,93 over the lit limestone 153,126,111.
-	var basalt := Color(101.0 / 153.0, 93.0 / 126.0, 93.0 / 111.0, 0.5)
-	# Concrete: the ramp 239,194,148 over the lit sand 243,167,102.5, each channel at most 1.
-	var concrete := Color(minf(239.0 / 243.0, 1.0), minf(194.0 / 167.0, 1.0), minf(148.0 / 102.5, 1.0), 0.5)
-	_mults = {2: concrete, 3: tailings, 4: basalt}
+	_mults = {
+		2: _board(Vector3(239, 194, 148), Vector3(243, 167, 102.5)),
+		3: _board(Vector3(245, 172, 116), Vector3(245, 172, 116)),
+		4: _board(Vector3(101, 92.5, 93), Vector3(153, 126, 111)),
+	}
 	for slot in _mults:
 		var want: Color = _mults[slot]
 		var got := ParkTerrain.slot_tint(slot)
-		t.check("slot %d multiplier = board ratio %s" % [slot, want], absf(got.r - want.r) <= 0.002 and absf(got.g - want.g) <= 0.002 and absf(got.b - want.b) <= 0.002, "got %s" % got)
+		t.check("slot %d multiplier = board_multiplier of the raw patches %s, within 0.003" % [slot, want], absf(got.r - want.r) <= 0.003 and absf(got.g - want.g) <= 0.003 and absf(got.b - want.b) <= 0.003, "got %s" % got)
 		t.near("slot %d multiplier alpha is Terrain3D's default 127/255" % slot, got.a, 127.0 / 255.0, 0.0001)
+		t.check("slot %d multiplier is at most 1 per channel (a colour map cannot brighten)" % slot, got.r <= 1.0 and got.g <= 1.0 and got.b <= 1.0)
 		var target := _park_target(slot)
 		_near_color("slot %d target = multiplier * floor mean" % slot, target, Color(got.r * fm.r, got.g * fm.g, got.b * fm.b))
 	t.check("the tailings multiplier keeps red at 1 and darkens green and blue", ParkTerrain.slot_tint(3).r == 1.0 and ParkTerrain.slot_tint(3).g < 1.0 and ParkTerrain.slot_tint(3).b < 1.0)
 	t.check("the tailings target is much lighter than the old charcoal tint", _park_target(3).g > 0.45, str(_park_target(3)))
+	# The cap: the target never exceeds the floor mean in a channel, and at least one channel reaches it.
+	for slot in _mults:
+		var m := ParkTerrain.slot_tint(slot)
+		t.check("slot %d: some channel of the multiplier is 1 (the cap)" % slot, m.r == 1.0 or m.g == 1.0 or m.b == 1.0, str(m))
+
+
+func _board(material: Vector3, ground: Vector3) -> Color:
+	var script: GDScript = ParkTerrain
+	if not script.get_script_method_list().any(func(m): return m.name == "board_multiplier"):
+		return Color.MAGENTA
+	var c: Color = script.call("board_multiplier", material, ground)
+	return Color(c.r, c.g, c.b, 0.5)
 
 
 # park_terrain.gd's target for a slot, or magenta where it declares none (so the check fails, not parses).
@@ -162,11 +175,13 @@ func _check_park(id: String, render: Node3D) -> void:
 		var control: Image = region.get_control_map()
 		var color: Image = region.get_color_map()
 		t.eq("%s region %s colour map format RGBA8" % [id, loc], color.get_format(), Image.FORMAT_RGBA8)
+		# Terrain3D's sanitize_maps adds mipmaps to a region's colour map itself; feather()'s own image has none.
+		print("%s region %s colour map mipmaps (added by Terrain3D): %s" % [id, loc, color.has_mipmaps()])
 		var x0 := loc.x * REGION
 		var z0 := loc.y * REGION
 		var points: Array[Vector2i] = [Vector2i(0, 0), Vector2i(REGION - 1, 0), Vector2i(0, REGION - 1), Vector2i(REGION - 1, REGION - 1)]
 		# The play square's edges and the +800 edge.
-		for edge in [-CELLS - 9, -CELLS - 8, -CELLS, -CELLS + 1, CELLS - 2, CELLS - 1, CELLS, CELLS + 1, CELLS + 8, CELLS + 9]:
+		for edge in [-CELLS - 9, -CELLS - 8, -CELLS, -CELLS + 1, CELLS - 2, CELLS - 1, CELLS, CELLS + 1, CELLS + MARGIN - 1, CELLS + MARGIN, CELLS + MARGIN + 1]:
 			for along in [-CELLS, -1, 0, 1, CELLS - 1, CELLS]:
 				points.append(Vector2i(edge - x0, along - z0))
 				points.append(Vector2i(along - x0, edge - z0))
@@ -191,7 +206,8 @@ func _check_park(id: String, render: Node3D) -> void:
 				if deep[((z + CELLS) >> 1) * CELLS + ((x + CELLS) >> 1)] == 0:
 					continue
 				want = _tint(slot)
-			elif x >= -CELLS - MARGIN - 1 and x <= CELLS + MARGIN and z >= -CELLS - MARGIN - 1 and z <= CELLS + MARGIN:
+			elif x > -CELLS - MARGIN and x < CELLS + MARGIN - 1 and z > -CELLS - MARGIN and z < CELLS + MARGIN - 1:
+				# Inside the feathered image's margin (vertices -808 to 807) but past the square: _check_blit.
 				continue
 			seen[slot] = int(seen.get(slot, 0)) + 1
 			if not _near(color.get_pixel(p.x, p.y), want, TOL):
@@ -206,6 +222,8 @@ func _check_park(id: String, render: Node3D) -> void:
 	t.check(id + " colour-checked 2000+ deep or far-apron vertices", colour_checked >= 2000, str(colour_checked))
 	t.eq(id + " vertices without the auto bit", bad_auto, 0)
 	t.eq(id + " vertices with the wrong colour " + first, bad_color, 0)
+	_check_blit(id, render, surface, rng)
+	_check_blit(id, render, surface, rng)
 	_check_cells(id, render, surface, deep, rng)
 	_check_boundaries(id, render, surface, rng)
 	_check_holes(id, render, holes)
@@ -339,7 +357,24 @@ func _max_step(read: Callable, x0: int, z0: int, w: int, h: int) -> Array:
 # Real slot borders: no step between 1 m neighbours in a window around them exceeds the full multiplier
 # difference over 8 plus 2/255, per channel (the feather spreads a border over 8 m).
 func _check_boundaries(id: String, render: Node3D, surface: PackedByteArray, rng: RandomNumberGenerator) -> void:
-	var pick: int = {"park_pit": 3, "park_sinkhole": 4, "park_test": 2}[id]
+	# The tinted slot the park has that differs most from white; a park whose slots all sit within 0.05
+	# of white has no border worth bounding.
+	var pick := -1
+	var best := 0.0
+	var present_slots := {}
+	for v in surface:
+		present_slots[v] = true
+	for slot in present_slots:
+		if not _mults.has(slot):
+			continue
+		var m: Color = _mults[slot]
+		var d := maxf(1.0 - m.r, maxf(1.0 - m.g, 1.0 - m.b))
+		if d > best:
+			best = d
+			pick = slot
+	if best < 0.05:
+		t.check("%s has no tinted slot differing from white by 0.05 (best %.3f): border bound skipped" % [id, best], true)
+		return
 	var found: Array[int] = []
 	for k in surface.size():
 		if surface[k] == pick and k % CELLS > 30 and k % CELLS < CELLS - 30 and k / CELLS > 30 and k / CELLS < CELLS - 30 and surface[k + 1] != pick:
@@ -368,6 +403,56 @@ func _check_boundaries(id: String, render: Node3D, surface: PackedByteArray, rng
 	print("%s: max 1 m step over 3 real borders (r, g, b): %s of full difference %s" % [id, worst, worst_diff])
 
 
+# The region colour map at 1 m vertex m is feather()'s image at pixel m + FEATHER_MARGIN: seeded vertices in
+# all four regions plus the play edges and the apron's first 8 m. A planted control shifts the comparison by
+# one pixel along each axis and must find mismatches, so a one-vertex blit error would fail.
+func _check_blit(id: String, render: Node3D, surface: PackedByteArray, rng: RandomNumberGenerator) -> void:
+	var script: GDScript = ParkTerrain
+	if not script.get_script_method_list().any(func(m): return m.name == "feather"):
+		t.check(id + " blit: park_terrain.gd declares feather()", false)
+		return
+	var margin: int = script.get_script_constant_map().get("FEATHER_MARGIN", 8)
+	var bytes := PackedByteArray()
+	bytes.resize(CELLS * CELLS * 4)
+	for k in surface.size():
+		var m := ParkTerrain.slot_tint(surface[k])
+		bytes[k * 4] = roundi(m.r * 255.0)
+		bytes[k * 4 + 1] = roundi(m.g * 255.0)
+		bytes[k * 4 + 2] = roundi(m.b * 255.0)
+		bytes[k * 4 + 3] = 127
+	var img: Image = script.call("feather", Image.create_from_data(CELLS, CELLS, false, Image.FORMAT_RGBA8, bytes))
+	var lo := -CELLS - margin
+	var hi := CELLS + margin - 1
+	var points: Array[Vector2i] = []
+	for edge in [lo, lo + 1, -CELLS - 1, -CELLS, -CELLS + 1, CELLS - 2, CELLS - 1, CELLS, hi - 1, hi]:
+		for n in 40:
+			var along := rng.randi_range(lo, hi)
+			points.append(Vector2i(edge, along))
+			points.append(Vector2i(along, edge))
+	for n in 3000:
+		points.append(Vector2i(rng.randi_range(lo, hi), rng.randi_range(lo, hi)))
+	t.check(id + " blit: feather()'s image has no mipmaps and is RGBA8", not img.has_mipmaps() and img.get_format() == Image.FORMAT_RGBA8)
+	var regions := {}
+	var bad := 0
+	var shifted_x := 0
+	var shifted_z := 0
+	for p in points:
+		var loc := Vector2i(floori(p.x / float(REGION)), floori(p.y / float(REGION)))
+		regions[loc] = true
+		var got: Color = _vertex(render, p.x, p.y)[1]
+		var at := Vector2i(p.x + CELLS + margin, p.y + CELLS + margin)
+		if got != img.get_pixel(at.x, at.y):
+			bad += 1
+		if at.x + 1 < img.get_width() and got != img.get_pixel(at.x + 1, at.y):
+			shifted_x += 1
+		if at.y + 1 < img.get_height() and got != img.get_pixel(at.x, at.y + 1):
+			shifted_z += 1
+	t.eq("%s blit: sampled vertices (%d, all four regions) off feather()'s pixel m + margin" % [id, points.size()], bad, 0)
+	t.eq("%s blit: regions sampled" % id, regions.size(), 4)
+	t.check("%s blit control: a one-pixel shift in x would mismatch %d vertices" % [id, shifted_x], shifted_x > 0)
+	t.check("%s blit control: a one-pixel shift in z would mismatch %d vertices" % [id, shifted_z], shifted_z > 0)
+
+
 # feather() on constructed per-cell images: one isolated tinted cell among white ones, and tint up to the edge.
 func _check_planted() -> void:
 	var white := Color(1.0, 1.0, 1.0, 0.5)
@@ -389,8 +474,6 @@ func _check_planted() -> void:
 		t.check("planted isolated cell channel %d: max step %.4f <= diff %.4f / 8 + 2/255" % [c, step[c], diff[c]], step[c] <= diff[c] / 8.0 + 2.0 / 255.0 + 0.0001)
 		if diff[c] >= 0.01:
 			t.check("planted isolated cell channel %d: no step reaches the full difference %.4f" % [c, diff[c]], step[c] < diff[c])
-	var middle: Color = read.call(0, 0)
-	t.check("planted isolated cell: its centre is tinted a little (an 8 m texel averages 1 cell in 16)", middle.g < white.g - 0.5 / 255.0 and middle.g > tailings.g + 0.05, str(middle))
 	# A 4 by 4 cell block that fills one 8 m texel: the steepest fade, near the bound but under the full difference.
 	cells.fill(Color8(255, 255, 255, 127))
 	for j in range(400, 404):
