@@ -1407,10 +1407,10 @@
    "id": "s009_mid_tailings_cart",
    "template": "mid_tailings_cart",
    "at": [
-    -600.23,
-    -629.78
+    -604.04,
+    -628.57
    ],
-   "yaw_deg": -59.8,
+   "yaw_deg": 128.0,
    "near": "lava_channel_4: carts of tailings left"
   },
   {
@@ -1540,7 +1540,7 @@
     -198.2,
     -613.9
    ],
-   "yaw_deg": 130.4,
+   "yaw_deg": -56.0,
    "near": "lava_channel_13: ferns in the cracks"
   },
   {
@@ -1557,10 +1557,10 @@
    "id": "s030_gallery_fall",
    "template": "gallery_fall",
    "at": [
-    -186.86,
-    -619.8
+    -184.57,
+    -621.74
    ],
-   "yaw_deg": 130.4,
+   "yaw_deg": -50.0,
    "near": "lava_channel_13: timbers down, water mark"
   },
   {
@@ -1570,7 +1570,7 @@
     -166.3,
     -582.4
    ],
-   "yaw_deg": 130.4,
+   "yaw_deg": -44.0,
    "near": "crater_breach: rimstone and lichen"
   },
   {
@@ -1580,7 +1580,7 @@
     -170.0,
     -610.0
    ],
-   "yaw_deg": 130.4,
+   "yaw_deg": -38.0,
    "near": "lava_channel_13: ferns under the skylight"
   },
   {
@@ -1677,8 +1677,8 @@
    "id": "s042_mid_skylight_garden",
    "template": "mid_skylight_garden",
    "at": [
-    -210.0,
-    -250.0
+    -213.8,
+    -251.3
    ],
    "yaw_deg": -108.5,
    "near": "west_gallery_5: ferns under the skylight"
@@ -1850,7 +1850,7 @@
     33.5,
     -295.2
    ],
-   "yaw_deg": -47.1,
+   "yaw_deg": 133.0,
    "near": "main_tube_upper_2: ferns in the cracks"
   },
   {
@@ -1987,10 +1987,10 @@
    "id": "s074_gallery_fall",
    "template": "gallery_fall",
    "at": [
-    37.37,
-    -278.48
+    35.17,
+    -276.44
    ],
-   "yaw_deg": -47.1,
+   "yaw_deg": 141.0,
    "near": "main_tube_upper_2: timbers down, water mark"
   },
   {
@@ -2220,7 +2220,7 @@
     -77.5,
     -40.9
    ],
-   "yaw_deg": -28.9,
+   "yaw_deg": 163.0,
    "near": "west_gallery_10: dropped gear in the dust"
   },
   {
@@ -2720,7 +2720,7 @@
     29.1,
     -291.1
    ],
-   "yaw_deg": -47.1,
+   "yaw_deg": 125.0,
    "near": "main_tube_upper_2: fern patch at the drip"
   },
   {
@@ -2740,7 +2740,7 @@
     -54.6,
     -32.1
    ],
-   "yaw_deg": -28.9,
+   "yaw_deg": 139.0,
    "near": "west_chamber verge: gear dropped"
   },
   {
@@ -2750,7 +2750,7 @@
     -60.0,
     -31.3
    ],
-   "yaw_deg": -28.9,
+   "yaw_deg": 145.0,
    "near": "west_chamber verge: rimstone"
   },
   {
@@ -2760,7 +2760,7 @@
     -63.5,
     -36.7
    ],
-   "yaw_deg": -28.9,
+   "yaw_deg": 151.0,
    "near": "west_chamber verge: ferns"
   },
   {
@@ -2800,7 +2800,7 @@
     -186.29,
     -594.71
    ],
-   "yaw_deg": 130.4,
+   "yaw_deg": -62.0,
    "near": "lava_channel_13: signal horn on a cradle, stub and hose at the bank"
   },
   {
@@ -2887,10 +2887,10 @@
    "id": "gr2_low_stones",
    "template": "low_stones",
    "at": [
-    -38.5,
-    -25.5
+    -39.95,
+    -22.87
    ],
-   "yaw_deg": -28.9,
+   "yaw_deg": 157.0,
    "near": "great_room: rimstone and lichen at a seep"
   },
   {
@@ -2930,7 +2930,7 @@
     -610.48,
     -663.35
    ],
-   "yaw_deg": -59.8,
+   "yaw_deg": 112.0,
    "near": "lava_channel_2: signal horn on a cradle, stub and hose at the bank"
   },
   {
@@ -2940,7 +2940,7 @@
     -614.78,
     -646.94
    ],
-   "yaw_deg": -59.8,
+   "yaw_deg": 120.0,
    "near": "lava_channel_3: ore cart and a stub at the bank"
   },
   {
@@ -3057,5 +3057,5 @@
  "low_ground_rows": [
   "great_room"
  ],
- "pin": 3120478943
+ "pin": 1537548870
 }

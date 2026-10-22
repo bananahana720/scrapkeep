@@ -199,3 +199,40 @@ Both moves are legal in the plan check (0 violations).
 - Frames, read by me: in all four eye frames the gauge is a short post with a tin funnel and a thin upright pale tube with a near-black petrol column at its foot and small dark bars up one side; the read is vertical and straight, with no round face. In the `s065` frame the launcher's round orange dial stands on the right horizon, and the two no longer look alike. In s113 the gauge stands on open floor with a distant blue-grey wall behind it. In s132 it stands on open floor with the rock block behind it, not in it. At this distance the tube is small beside the funnel and its bars are a few pixels wide; the bars are visible but they are the weakest part of the read.
 - Density audit (default run, mid camera, step 25 m, 309 samples; `artifacts/local/w18k`): 52 pass, 11 exempt (all arena), 1 fail of 64 windows, the kest 900 m window with 0 kinds that 6329171089 ruled open; the same as the line above. Bare share 18.1%, void poses 0. Props-only draw delta max 76, median 27.5 (bar 120); draw calls max 670, median 446.
 - `npm run sketch:lint` exit 0 (0 findings) and `npm run check:docs` exit 0.
+
+## w18m row and yaw fixes (card (b), #323)
+
+Base 6ec831ba. Authority: coordinator 6342666489 item 10, option (a): each park head fails only on the rows and yaw groups #323 lists, and each group is fixed on the park's own PR. The plan check with the #323 rules reported 2 rows and 4 yaw groups (total 6, fingerprint 3120478943); the groups are now clear. Method: the plan check run headless on Godot 4.7.2; this proves the rules and numbers, not human feel.
+
+Yaw. Front is local +Z, so a spot faces a target at degrees(atan2(dx, dz)). Every spot in the four yaw groups now faces the nearest point on its nearest ride line (kest for the cinder-cone cluster, sable for the main-tube pair, rivet for the west chamber, tarn for lava channel 13), rounded to 1 degree. Spots in one group face almost the same direction, so I then turned each one off its own target by a different step of 6 to 12 degrees: -8, 0, +8 for the groups of three and -12, -6, 0, +6, +12 for the groups of five. The largest turn is 12 degrees, inside the 15 allowed. The steps are in the order of the id list in the check. After the turns no two linked spots share a yaw within 1 degree.
+
+Rows. Two rows were moved by the single middle spot, which is the fewest spots:
+- `s009_mid_tailings_cart` (kest row): `at` (-600.23, -629.78) to (-604.04, -628.57), 4 m perpendicular to the row, away from the line.
+- `s042_mid_skylight_garden` (west gallery diagonal): `at` (-210.0, -250.0) to (-213.8, -251.3), 4 m perpendicular. Its yaw stays -108.5.
+Three more spots moved 3 m straight away from their line, because facing the line put a template member inside the line-clear band: `s030_gallery_fall` (-186.86, -619.8) to (-184.57, -621.74), `s074_gallery_fall` (37.37, -278.48) to (35.17, -276.44), `gr2_low_stones` (-38.5, -25.5) to (-39.95, -22.87).
+
+Changed spots (old yaw to new yaw; target is the nearest point on the named line):
+| spot | yaw | target |
+|---|---|---|
+| f05_low_ferns | -47.1 to 125 | sable line, near station 978 |
+| s060_low_ferns | -47.1 to 133 | sable line, station 978 |
+| s074_gallery_fall | -47.1 to 141 | sable line, station 993 |
+| f10_low_gear | -28.9 to 139 | rivet line, station 1396 |
+| f11_low_stones | -28.9 to 145 | rivet line, station 1392 |
+| f12_low_ferns | -28.9 to 151 | rivet line, station 1386 |
+| gr2_low_stones | -28.9 to 157 | rivet line, station 1414 |
+| s097_low_gear | -28.9 to 163 | rivet line, station 1372 |
+| m02_mid_horn_stubs | -59.8 to 112 | kest line, station 128 |
+| m03_mid_cart_stub | -59.8 to 120 | kest line, station 140 |
+| s009_mid_tailings_cart | -59.8 to 128 | kest line, station 162 |
+| m13_mid_horn_stubs | 130.4 to -62 | tarn line, station 597 |
+| s028_low_ferns | 130.4 to -56 | tarn line, station 575 |
+| s030_gallery_fall | 130.4 to -50 | tarn line, station 578 |
+| s031_low_stones | 130.4 to -44 | tarn line, station 620 |
+| s032_mid_skylight_garden | 130.4 to -38 | tarn line, station 596 |
+
+`near` labels are unchanged: each already names a park row and its story, and the lint stays at 0.
+
+Pin and checks. Fingerprint 3120478943 to 1537548870, re-pinned on purpose (`pin` in `park_sinkhole.json`). Plan check with the #323 rules (vsinkhole-vg reading this file): 1,419 instances (229 litter), 0 violations, 0 pattern, 0 pin, 0 lint. The old plan check here: 0 violations, same fingerprint. `park_props_test`: PASS (226 checks).
+
+Density audit (default run, mid camera, step 25 m, 309 samples; `artifacts/local/w18m`): 52 pass, 11 exempt (all arena), 1 fail, the kest 900 m window at (52.3, -332.4) with 0 kinds that 6329171089 ruled open space. Identical to the w18k line. Vignette frames of the moved spots were not rendered in this round because the branch's audit has no `--vignettes` mode.
