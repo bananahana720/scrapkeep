@@ -37,6 +37,20 @@ class Ramp:
 		return [0.8 * clampf(x, 0.0, 40.0), Color(0.5, 0.4, 0.3)]
 
 
+# A saddle, steep and bent in both x and z, so a cell's b-c and a-d diagonals disagree.
+class Saddle:
+	extends RefCounted
+	func sample(x: float, z: float) -> Array:
+		return [0.03 * clampf(x, -60.0, 60.0) * clampf(z, -60.0, 60.0), Color(0.5, 0.4, 0.3)]
+
+
+# A steep slope along x everywhere (2 m up per metre), so the play square's x edges bite with clamped neighbours.
+class Wall:
+	extends RefCounted
+	func sample(x: float, _z: float) -> Array:
+		return [2.0 * x, Color(0.5, 0.4, 0.3)]
+
+
 class World:
 	extends Node3D
 
@@ -71,6 +85,24 @@ func _run() -> void:
 	ground.start("no_such_park", Ramp.new(), false, render)
 	await process_frame
 	_check_ramp(ground, render)
+	ground.queue_free()
+	render.queue_free()
+	await process_frame
+	render = ParkTerrain.make_render(holder, "Render_saddle")
+	ground = ParkTerrain.new()
+	holder.add_child(ground)
+	ground.start("no_such_park", Saddle.new(), false, render)
+	await process_frame
+	_check_saddle(ground, render)
+	ground.queue_free()
+	render.queue_free()
+	await process_frame
+	render = ParkTerrain.make_render(holder, "Render_wall")
+	ground = ParkTerrain.new()
+	holder.add_child(ground)
+	ground.start("no_such_park", Wall.new(), false, render)
+	await process_frame
+	_check_wall(ground, render)
 	quit(t.verdict())
 
 
@@ -284,3 +316,61 @@ func _check_ramp(ground: Node, render: Node3D) -> void:
 	t.check("ramp: flat vertex (-100, 0) keeps the white default", _same(_pixel(render, -100, 0), white), str(_pixel(render, -100, 0)))
 	t.check("ramp: flat vertex (300, 200) keeps the white default", _same(_pixel(render, 300, 200), white), str(_pixel(render, 300, 200)))
 	t.check("ramp: the top (x = 100) is flat", _same(_pixel(render, 100, 0), white), str(_pixel(render, 100, 0)))
+
+
+# A saddle: in cells where b-c and a-d would give different colours, vertex (2i+1, 2j+1) wears the b-c one.
+func _check_saddle(ground: Node, render: Node3D) -> void:
+	var grid := _grid(ground.heights)
+	var ny: PackedFloat32Array = grid[0]
+	var w: PackedFloat32Array = grid[1]
+	var white := Color(1.0, 1.0, 1.0, 127.0 / 255.0)
+	var found := 0
+	var bad_bc := 0
+	var bad_cell := 0
+	var equals_ad := 0
+	for j in range(380, 440):
+		for i in range(380, 440):
+			var a := j * SIDE + i
+			var b := a + 1
+			var c := a + SIDE
+			var d := c + 1
+			var bc := _expect(white, (ny[b] + ny[c]) * 0.5, (w[b] + w[c]) * 0.5)
+			var ad := _expect(white, (ny[a] + ny[d]) * 0.5, (w[a] + w[d]) * 0.5)
+			if absf(bc.r - ad.r) + absf(bc.g - ad.g) + absf(bc.b - ad.b) < 6.0 / 255.0:
+				continue
+			found += 1
+			var got := _pixel(render, -CELLS + 2 * i + 1, -CELLS + 2 * j + 1)
+			if not _same(got, bc):
+				bad_bc += 1
+			if _same(got, ad):
+				equals_ad += 1
+			bad_cell += _cell_bad(render, grid, i, j, white)
+	t.check("saddle: cells where the two diagonals disagree by 6/255 or more exist", found >= 20, str(found))
+	t.eq("saddle: (2i+1, 2j+1) off the b-c mean in %d such cells" % found, bad_bc, 0)
+	t.eq("saddle: (2i+1, 2j+1) that match the a-d mean instead", equals_ad, 0)
+	t.eq("saddle: vertices of those cells off the expected multiplier", bad_cell, 0)
+
+
+# A wall steep along x: grid x = -800 (i = 0) and x = 800 (i = 800) clamp one neighbour to themselves.
+func _check_wall(ground: Node, render: Node3D) -> void:
+	var white := Color(1.0, 1.0, 1.0, 127.0 / 255.0)
+	# Edge: n = (h(x) - h(x + 2), 4, 0) = (-4, 4, 0); interior: (-8, 4, 0).
+	var y_edge := 4.0 / sqrt(16.0 + 16.0)
+	var y_in := 4.0 / sqrt(64.0 + 16.0)
+	t.check("wall: the edge vertex bites (n.y %.3f < FACE)" % y_edge, y_edge < FACE)
+	var w_edge := _old_weight(y_edge)
+	var w_in := _old_weight(y_in)
+	var edge_mult := _expect(white, y_edge, w_edge)
+	var in_mult := _expect(white, y_in, w_in)
+	t.check("wall: the clamped edge multiplier differs from the interior's (so a missed clamp fails)", not _same(edge_mult, in_mult), "%s vs %s" % [edge_mult, in_mult])
+	# x = -800 is vertex (i = 0): weight and n.y of grid vertex 0 itself.
+	var want0 := _expect(white, y_edge, w_edge)
+	t.check("wall: vertex (-800, 0) (grid i = 0, left neighbour clamped) is the clamped-normal multiplier", _same(_pixel(render, -800, 0), want0), "%s vs %s" % [_pixel(render, -800, 0), want0])
+	var mid0 := _expect(white, (y_edge + y_in) * 0.5, (w_edge + w_in) * 0.5)
+	t.check("wall: vertex (-799, 0) is the mean of grid i = 0 and i = 1", _same(_pixel(render, -799, 0), mid0), "%s vs %s" % [_pixel(render, -799, 0), mid0])
+	# x = +800 is grid i = 800 (right neighbour clamped); the 1 m vertex x = 799 is the mean of i = 799 and 800.
+	var mid800 := _expect(white, (y_edge + y_in) * 0.5, (w_edge + w_in) * 0.5)
+	t.check("wall: vertex (799, 0) is the mean of grid i = 799 and the clamped i = 800", _same(_pixel(render, 799, 0), mid800), "%s vs %s" % [_pixel(render, 799, 0), mid800])
+	var grid := _grid(ground.heights)
+	t.eq("wall: edge cell i = 0 matches the recomputed grid", _cell_bad(render, grid, 0, 400, white), 0)
+	t.eq("wall: edge cell i = 799 matches the recomputed grid", _cell_bad(render, grid, 799, 400, white), 0)

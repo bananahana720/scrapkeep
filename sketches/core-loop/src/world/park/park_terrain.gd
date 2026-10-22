@@ -434,7 +434,8 @@ func _apply_bite() -> void:
 		var up := SIDE if j > 0 else 0
 		var down := SIDE if j < SIDE - 1 else 0
 		var row := j * SIDE
-		# Columns 1 to SIDE - 2 need no edge clamp; the two edge columns go through _mark_edge.
+		# Columns 1 to SIDE - 2 need no edge clamp; columns 0 and SIDE - 1 clamp their x neighbour in the
+		# second loop. Both call _mark for a vertex past the threshold.
 		for i in range(1, SIDE - 1):
 			var idx := row + i
 			var dx := h[idx - 1] - h[idx + 1]

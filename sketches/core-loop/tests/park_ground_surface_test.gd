@@ -208,12 +208,17 @@ func _check_park(id: String, render: Node3D, heights: PackedFloat32Array) -> voi
 			if slot >= 0 and _bite[((z + CELLS) >> 1) * CELLS + ((x + CELLS) >> 1)] == 1:
 				continue
 			var want := _tint(slot)
-			seen[slot] = true
+			seen[slot] = int(seen.get(slot, 0)) + 1
 			if not _same(color.get_pixel(p.x, p.y), want):
 				bad_color += 1
 				if first.is_empty():
 					first = "colour %s at (%d, %d) slot %d, want %s" % [color.get_pixel(p.x, p.y), x, z, slot, want]
 		t.check("%s region %s checked 2000+ vertices" % [id, loc], checked >= 2000, str(checked))
+	var colour_checked := 0
+	for slot in seen:
+		colour_checked += int(seen[slot])
+	print("%s: random vertices colour-checked per slot (biting cells skipped): %s" % [id, seen])
+	t.check(id + " colour-checked 2000+ non-biting vertices", colour_checked >= 2000, str(colour_checked))
 	t.eq(id + " vertices without the auto bit", bad_auto, 0)
 	t.eq(id + " vertices with the wrong colour " + first, bad_color, 0)
 	_check_cells(id, render, surface, rng)
@@ -236,19 +241,24 @@ func _check_cells(id: String, render: Node3D, surface: PackedByteArray, rng: Ran
 		if not by_slot.has(surface[k]):
 			by_slot[surface[k]] = []
 		by_slot[surface[k]].append(k)
+	var counts := {}
 	for slot in by_slot:
-		var cells: Array = by_slot[slot]
+		# Draw seeded non-biting cells (biting ones are the bite test's) until CELL_SAMPLES are checked,
+		# or the slot has none left to draw.
+		var pool: Array = by_slot[slot].filter(func(k): return _bite[k] == 0)
 		var bad := 0
-		for n in mini(CELL_SAMPLES, cells.size()):
-			var k: int = cells[rng.randi_range(0, cells.size() - 1)]
-			if _bite[k] == 1:
-				continue
+		var n := mini(CELL_SAMPLES, pool.size())
+		for s in n:
+			var k: int = pool[rng.randi_range(0, pool.size() - 1)]
 			for dz in 2:
 				for dx in 2:
 					var v := _vertex(render, -CELLS + 2 * (k % CELLS) + dx, -CELLS + 2 * (k / CELLS) + dz)
 					if not _same(v[1], _tint(slot)):
 						bad += 1
-		t.eq("%s slot %d cells (%d in the bake) wear their tint on all four vertices" % [id, slot, cells.size()], bad, 0)
+		counts[slot] = n
+		t.eq("%s slot %d cells (%d in the bake, %d non-biting) wear their tint on all four vertices" % [id, slot, by_slot[slot].size(), pool.size()], bad, 0)
+		t.check("%s slot %d: at least 100 non-biting cells checked" % [id, slot], n >= 100, "%d checked of %d non-biting" % [n, pool.size()])
+	print("%s: non-biting cells checked per slot: %s" % [id, counts])
 
 
 # A planted control per axis: a tinted cell beside a cell of another slot (+x, then +z), so a
