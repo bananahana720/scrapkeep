@@ -4,6 +4,14 @@
 
 **21 Oct, 21:15Z. Wave 18 is open.** #239 merged, so `main` = `stage/alpha-w18` = 9cd6805e. The coordinator is back on the PC. Board: issue #241 (#149 is closed). Every PR on w17 now targets w18. Six PRs conflict with w18: #137, #191, #208, #209, #225 and #237. GPU queue rows 18 to 22 are stale and were re-requested as rows 23 to 27. Live units are in GRAPH.md "Wave 18".
 
+**22 Oct, 16:15Z. First wave 18 promotion done.** `main` = d7878a1b (#326, candidate 3eb3f12f, Gate PASS+NOTES). `stage/alpha-w18` = 9acc1a89 after batches B2 (Systems motion fixes) and B3. B3 stacked the older #235 head, so Gate must restack #235 at 4b22b5fd, the head that passed row 26d at 3.6 ms. Next promotion needs #235 at 4b22b5fd, #325 (worker races), #322 (Mind freezes) and four follow-ups: the swarm camper check (Challenge), warden_reactor ownership (Systems), a 10-run replay of the crashing seed on main (Gate), and the slow bot tier on the PC.
+
+- **Held:** the six park kits (#246, #251, #252, #306, #309, #313) wait on their 4080 cost rows and on row and yaw fixes; #317 and #327 wait on World's lava-bend fix; #314 on the drainage-ridge tint; #284 on the dark live core; #297 on its box-path cost; #307 lands, re-measured after #270.
+- **Benches:** the 4080 times one row at a time on CCD0; the 3060 and CCD1 take stills and correctness runs in parallel (ruling 6345030303). An isolation check (dam kit, 3 runs alone vs 3 with CCD1 busy, 0.5 ms bar) decides whether that holds.
+- **Orphan:** #228 is being revived by a PC session. Close it at wave 18 close if that fails.
+- **Playtest watch list:** the one-off headless crash, cockpit parts poking past the ball on wall rides, camp props at speed (islands is 78% bare), and any stage-change or periodic stutter still open.
+- **Lanes:** [THREADS.md](THREADS.md) has the current roster, paused lanes and the cloud sessions safe to archive.
+
 Coordination moved to a local Claude Code session on Andrew's PC on 18 Oct (DECISIONS.md section 2). The live board is [project-guide/coord/GRAPH.md](../coord/GRAPH.md); this file keeps the heads and base reds behind it. The 05:55Z version is in git history. Re-check every SHA with `git ls-remote origin` before relying on it.
 
 ## Where the waves stand
