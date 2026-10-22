@@ -19,6 +19,9 @@ const BOSS_ID := "mind"
 const ATTACK_PERIOD := 3.5
 const ATTACK_DAMAGE := 10.0
 const HAND_CAP := 2
+# Seconds each phase lasts before a chunk lost in it opens the next (Brindle's PHASE_MIN_SECONDS); the
+# last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps scratch/challenge-tune-btT-1/-2 (66699e63, 08b0923b).
+const PHASE_MIN_SECONDS := [22.0, 22.0, 22.0, 22.0]
 const HAND_PHASE := 2
 # How far off the ball's side a hand lands, and how far inside the pad edge it stays.
 const HAND_OFFSET := 10.0
@@ -57,6 +60,10 @@ func _row() -> Dictionary:
 
 func _hold_boss() -> String:
 	return BOSS_ID
+
+
+func _hold_minimums() -> Array:
+	return PHASE_MIN_SECONDS
 
 
 func _warden_spec() -> Dictionary:

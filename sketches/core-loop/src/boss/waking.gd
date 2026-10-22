@@ -52,6 +52,9 @@ const LANDING_ATTACK := 1.2
 # (Andrew, 19:42Z 17 Oct). Before the attacks, bots staggered it at 23 to 36 s.
 const POSTURE_GAIN := 0.565
 const HIT_CAP := 15.0
+# Seconds each phase lasts before a chunk lost in it opens the next (Brindle's PHASE_MIN_SECONDS); the
+# last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps scratch/challenge-tune-btT-1/-2 (66699e63, 08b0923b).
+const PHASE_MIN_SECONDS := [21.0, 21.0, 21.0, 21.0]
 const FAMILY_NAMES := {"burrow": "burrow lane", "cave_in": "cave-in", "bore": "bore breach"}
 
 var floors: WakingFloors
@@ -476,6 +479,10 @@ func _row() -> Dictionary:
 
 func _hold_boss() -> String:
 	return BOSS_ID
+
+
+func _hold_minimums() -> Array:
+	return PHASE_MIN_SECONDS
 
 
 func _warden_spec() -> Dictionary:

@@ -43,14 +43,14 @@ const DEFAULTS := {
 	"waking.damage_mult": 1.0, "waking.damage_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"waking.period_mult": 1.0, "waking.period_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"waking.tell_mult": 1.0, "waking.punish_mult": 1.0, "waking.combo": 0.0,
-	# phase_min_by_phase: seconds a phase must have lasted before a chunk lost in it lets the next phase open
-	# (Brindle's PHASE_MIN_SECONDS). Until then the boss takes no posture. One entry per chunk; the last is
-	# unused (the last chunk ends the fight). All 0.0 = no hold.
-	"waking.phase_min_by_phase": [0.0, 0.0, 0.0, 0.0],
+	# phase_min_by_phase: a multiplier on the fight's PHASE_MIN_SECONDS (waking.gd, mind.gd; Brindle's
+	# pattern), the seconds a phase must last before a chunk lost in it opens the next. Until then the boss
+	# takes no posture. One entry per chunk; the last is unused. 0 removes the hold.
+	"waking.phase_min_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"mind.damage_mult": 1.0, "mind.damage_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"mind.period_mult": 1.0, "mind.period_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"mind.tell_mult": 1.0, "mind.punish_mult": 1.0, "mind.combo": 0.0,
-	"mind.phase_min_by_phase": [0.0, 0.0, 0.0, 0.0],
+	"mind.phase_min_by_phase": [1.0, 1.0, 1.0, 1.0],
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
 	"warden.pulse_damage_by_stage": ONES6, "warden.pulse_cycle_by_stage": ONES6, "warden.slag_damage_by_stage": ONES6,

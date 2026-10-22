@@ -31,10 +31,11 @@ var pad: StaticBody3D
 var warden: Node3D
 # The Warden's posture as last published; the stub has no fleet to publish it for the Warden.
 var _posture_seen: Array = []
-# Challenge dial <boss>.phase_min_by_phase (Brindle's PHASE_MIN_SECONDS, boss_rules.gd): a chunk lost
-# before its phase has lasted the dial's seconds holds the phase, and the Warden takes no posture
-# (warden.gd _apply_posture asks hold_active), until the minimum has passed. At the all-zero default
-# nothing is ever held. A subclass names its dial prefix in _hold_boss(); "" turns the hold off.
+# The fight's PHASE_MIN_SECONDS (Brindle's, boss_rules.gd), times the dial <boss>.phase_min_by_phase
+# (a multiplier, identity 1.0): a chunk lost before its phase has lasted that many seconds holds the
+# phase, and the Warden takes no posture (warden.gd _apply_posture asks hold_active), until the minimum
+# has passed. A subclass names its dial prefix in _hold_boss() and its seconds in _hold_minimums();
+# "" turns the hold off.
 var _phase_started := 0.0
 var _phase_open_at := 0.0
 var _chunks_lost_seen := 0
@@ -101,6 +102,11 @@ func _hold_boss() -> String:
 	return ""
 
 
+# The seconds each phase must last, one per chunk (the last is unused).
+func _hold_minimums() -> Array:
+	return []
+
+
 # Notes a chunk lost since the last look: the phase it ended began at _phase_started, and the next
 # opens at the later of now and that start plus the dial's seconds for the phase just played.
 func _hold_update() -> void:
@@ -109,7 +115,10 @@ func _hold_update() -> void:
 	var lost: int = BossPosture.CHUNKS - warden.chunks_left()
 	if lost > _chunks_lost_seen:
 		_chunks_lost_seen = lost
-		var minimum := 0.0 if warden.chunks_left() <= 0 else ChallengeDials.by_phase(_hold_boss() + ".phase_min_by_phase", lost)
+		var minimums := _hold_minimums()
+		var minimum := 0.0
+		if warden.chunks_left() > 0 and not minimums.is_empty():
+			minimum = float(minimums[clampi(lost - 1, 0, minimums.size() - 1)]) * ChallengeDials.by_phase(_hold_boss() + ".phase_min_by_phase", lost)
 		_phase_open_at = maxf(clock, _phase_started + minimum)
 		_phase_started = _phase_open_at
 
