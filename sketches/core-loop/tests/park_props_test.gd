@@ -731,6 +731,8 @@ func _check_scan(file: Dictionary, kit: Dictionary, world: Dictionary) -> void:
 	_t.check("moving one trio spot to yaw 33 clears the yaw group", moved.is_empty(), str(moved))
 	var wrap := ParkProps.spot_pattern_errors(_spots([["a", 0, 0, 359.5], ["b", 15, 5, 0.0], ["c", 5, 18, 0.4]]))
 	_t.check("yaw links wrap at 360", wrap.size() == 1 and wrap[0]["rule"] == "yaw", str(wrap))
+	var wide := ParkProps.spot_pattern_errors(_spots([["a", 0, 0, 10], ["b", 33, 1.4, 50], ["c", 67, 0, 90]]))
+	_t.check("planted 67 m row (gaps 33 and 34 m, middle 1.4 m off): only the outer pair's line holds it, and it fires", wide.size() == 1 and wide[0]["rule"] == "row" and wide[0]["spots"] == ["a", "b", "c"], str(wide))
 	var loose := ParkProps.spot_pattern_errors(_spots([["a", 0, 0, 10], ["b", 20, 0, 50], ["c", 52, 0, 90]]))
 	_t.check("negative: a line with gaps 20 and 32 m (CV over 0.1) and distinct yaws passes", loose.is_empty(), str(loose))
 	var far := ParkProps.spot_pattern_errors(_spots([["a", 0, 0, 10], ["b", 50, 0, 10], ["c", 100, 0, 10]]))

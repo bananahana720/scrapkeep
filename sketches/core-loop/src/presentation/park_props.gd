@@ -688,7 +688,9 @@ static func file_errors(file: Dictionary, kit: Dictionary, park_map = null) -> A
 # Pattern rows {rule, spots: [ids], detail} for a vignette file's spots (reads id, at, yaw_deg only). A spot layout that reads as
 # a mechanical row or as one stamped heading fails the dressing check.
 #   row  3 or more spots lie within ROW_BAND_M of one line through two spots, and 3 consecutive ones along it have gaps with a
-#        coefficient of variation (population sd / mean) under ROW_CV. Gaps count between ROW_GAP_MIN_M and ROW_GAP_MAX_M.
+#        coefficient of variation (population sd / mean) under ROW_CV. Gaps count between ROW_GAP_MIN_M and ROW_GAP_MAX_M. The
+#        two spots that define the line may be up to two gaps apart (2 x ROW_GAP_MAX_M): for 3 spots at 33 m gaps, only the
+#        outer pair's line can hold the middle one inside the band.
 #   yaw  3 or more spots linked into one group, a link being two spots at most YAW_LINK_M apart whose yaws differ by at most 1 degree.
 # Numbers: 3 spots, 1.5 m and CV 0.1 are Dressing card 1 (#241); the 40 m gap cap is the lane scan's (scan_strict.py, the #241 LANE
 # DONE table); 24 m is two tall-tier vignette radii (park_props_plan.gd TIERS tall radius 12 m), so the discs touch.
@@ -721,7 +723,7 @@ static func spot_pattern_errors(file: Dictionary) -> Array:
 		for j in range(i + 1, n):
 			var dir: Vector2 = pts[j] - pts[i]
 			var span := dir.length()
-			if span <= ROW_GAP_MIN_M or span > ROW_GAP_MAX_M:
+			if span <= ROW_GAP_MIN_M or span > 2.0 * ROW_GAP_MAX_M:
 				continue
 			dir /= span
 			var on := []
