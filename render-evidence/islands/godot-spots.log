@@ -1,0 +1,56 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+Vulkan 1.4.351 - Forward+ - Using Device #1: NVIDIA - NVIDIA GeForce RTX 3060
+ERROR: Condition "!present_queue_family" is true. Returning: FAILED
+   at: initialize (servers/rendering/rendering_device.cpp:8407)
+WARNING: Display driver x11 failed, falling back to wayland.
+   at: setup2 (main/main.cpp:3380)
+WARNING: xdg-toplevel-icon protocol not found! Cannot set window icon.
+   at: init (platform/linuxbsd/wayland/wayland_thread.cpp:5642)
+Vulkan 1.4.351 - Forward+ - Using Device #1: NVIDIA - NVIDIA GeForce RTX 3060
+
+WARNING: instance_reset_physics_interpolation() is deprecated.
+   at: _instance_reset_physics_interpolation_bind_compat_104269 (servers/rendering/rendering_server.compat.inc:62)
+   GDScript backtrace (most recent call first):
+       [0] make_render (res://src/world/park/park_terrain.gd:112)
+       [1] build (res://src/world/terrain.gd:163)
+       [2] setup (res://src/world/world.gd:112)
+       [3] _module (res://src/game.gd:473)
+       [4] _ready (res://src/game.gd:233)
+       [5] _run (res://tools/park_props_audit.gd:182)
+SCRAPKEEP_MENU_READY ms=8373 profile=default pilots=1/6
+ACE music: generator ring 8191 frames, queue target 3072
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-23eeecab/sketches/core-loop/assets/music_ace/title/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_named (res://src/presentation/audio.gd:1241)
+       [2] _menu_home (res://src/presentation/audio.gd:1230)
+       [3] _flush_flow (res://src/presentation/audio.gd:3436)
+       [4] park_transport (res://src/presentation/audio.gd:1954)
+       [5] _physics_process (res://src/world/world.gd:360)
+WARNING: ACE music: missing /home/andrew/scratch/w18/render/wt-23eeecab/sketches/core-loop/assets/music_ace/spillway/calm.drums.ogg; playing the synth engine instead
+   at: push_warning (core/variant/variant_utility.cpp:1033)
+   GDScript backtrace (most recent call first):
+       [0] ace_ready (res://src/presentation/audio.gd:849)
+       [1] _ace_stage (res://src/presentation/audio.gd:950)
+       [2] _flush_flow (res://src/presentation/audio.gd:3360)
+       [3] park_transport (res://src/presentation/audio.gd:1954)
+       [4] _physics_process (res://src/world/world.gd:360)
+park_props_audit: park_islands built in 0 frames, flow stage
+park_props_audit: 8735 items in 913 nodes, 28 kinds, by category ["props", "clutter", "scatter", "anchors", "rows", "scenery", "landforms"] [992, 0, 7692, 0, 27, 10, 14]
+park_props_audit: sample 901 draws 273 prims 374988 still park_islands-901-164_52.png
+park_props_audit: sample 902 draws 278 prims 449058 still park_islands-902-158_51.png
+park_props_audit: sample 903 draws 264 prims 504299 still park_islands-903-61_53.png
+park_props_audit: sample 904 draws 289 prims 513260 still park_islands-904--114_66.png
+park_props_audit: sample 905 draws 227 prims 548074 still park_islands-905--107_66.png
+park_props_audit: sample 906 draws 268 prims 705633 still park_islands-906--102_-335.png
+park_props_audit: sample 907 draws 190 prims 268062 still park_islands-907-162_-328.png
+park_props_audit: contact sheet exit 1 Traceback (most recent call last):
+  File "/home/andrew/scratch/w18/render/wt-23eeecab/sketches/core-loop/tools/park_props_contact.py", line 11, in <module>
+    from PIL import Image, ImageDraw, ImageFont
+ModuleNotFoundError: No module named 'PIL'
+park_props_audit: done park_islands in 31 s
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_scenario (servers/rendering/renderer_scene_cull.cpp:844)
+ERROR: BUG, indexing did not unpair geometries from light.
+   at: instance_set_base (servers/rendering/renderer_scene_cull.cpp:616)

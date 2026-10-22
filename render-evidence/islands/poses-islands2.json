@@ -1,0 +1,61 @@
+{
+ "map": "park_islands",
+ "poses": [
+  {
+   "idx": 921,
+   "line": "ore trolleys m315 front r4",
+   "along_m": 0.0,
+   "x": 57.7,
+   "z": 57.1,
+   "yaw": 2.3911
+  },
+  {
+   "idx": 922,
+   "line": "ore trolleys m315 side+90",
+   "along_m": 0.0,
+   "x": 51.3,
+   "z": 56.6,
+   "yaw": 3.9619
+  },
+  {
+   "idx": 923,
+   "line": "ore trolleys m315 side-90",
+   "along_m": 0.0,
+   "x": 58.7,
+   "z": 63.4,
+   "yaw": 0.8203
+  },
+  {
+   "idx": 924,
+   "line": "winch m310 front r4",
+   "along_m": 0.0,
+   "x": -111.2,
+   "z": 70.8,
+   "yaw": -2.6704
+  },
+  {
+   "idx": 925,
+   "line": "menders f450 front r4",
+   "along_m": 0.0,
+   "x": -100.2,
+   "z": -330.0,
+   "yaw": -2.7925
+  },
+  {
+   "idx": 926,
+   "line": "menders f600 front r4",
+   "along_m": 0.0,
+   "x": 167.3,
+   "z": -326.9,
+   "yaw": -1.7453
+  },
+  {
+   "idx": 927,
+   "line": "tram h302 front r5",
+   "along_m": 0.0,
+   "x": 162.3,
+   "z": 55.5,
+   "yaw": 2.6704
+  }
+ ]
+}
