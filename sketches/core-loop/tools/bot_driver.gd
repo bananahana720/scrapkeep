@@ -497,6 +497,12 @@ var _warden_hp_at := -1.0
 var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
 var _harpoon_held := false
+# Weak points (stub_boss.gd weak_open, #241): the point being read, how long it has been open, the
+# learner's one roll for it, and whether the bot takes its winch-and-ram line on the Warden now.
+var _weak_seen := ""
+var _weak_age := 0.0
+var _weak_roll := 0.0
+var _weak_go := false
 var _harpoon_commit := false
 # Only the explorer changes hands: jump clear, bite, release at the apex, bite again, haul.
 # chain_hand_enabled = false keeps the one-bite hand, the control for the two-hook one.
@@ -2254,7 +2260,7 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 	if special != null and special.charging:
 		swallowed = true
 	if not swallowed and kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
-			and _off_line > DROP_MEMORY and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
+			and (_off_line > DROP_MEMORY or _weak_go) and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
 		# A movement exit waits for the haul; other line skills load on the bite.
 		if not bank_shot:
 			_cast(3)
@@ -2645,12 +2651,41 @@ func _boss():
 # A boss without a ship is the stub's one posture Warden on a flat pad (stub_boss.gd, its
 # `warden` field). The bot fights it with the routine it uses on a stage Warden.
 func _fight_posture_boss(boss, delta: float) -> void:
+	_read_weak_points(boss, delta)
 	var target = boss.get("warden")
 	if not boss.has_method("active") or not boss.active() or not is_instance_valid(target) or not target is Node3D:
 		_goal = "boss wait"
 		_act(game.player.ball_position() + game.player.planar_velocity(), null, delta)
 		return
 	_fight(target, delta)
+
+
+# Whether the bot takes its harpoon-winch-then-ram line on an open weak point: the expert always, the
+# learner once the point has been open 0.6 s and its one roll for the opening is under 0.5, the novice never.
+static func weak_point_go(band_name: String, opened_age: float, roll: float) -> bool:
+	match band_name:
+		"expert":
+			return true
+		"learner":
+			return opened_age >= 0.6 and roll < 0.5
+	return false
+
+
+# With no point open (always, at dial 0) this draws nothing and leaves the fight as it was. A learner draws
+# one roll per opening; the go waives the harpoon hand's wait between bites (_harpoon_hand).
+func _read_weak_points(boss, delta: float) -> void:
+	_weak_go = false
+	var open: Array = boss.weak_open() if boss.has_method("weak_open") else []
+	if open.is_empty():
+		_weak_seen = ""
+		return
+	var id := String(open[-1])
+	if id != _weak_seen:
+		_weak_seen = id
+		_weak_age = 0.0
+		_weak_roll = rng.randf() if band != null and band.name == "learner" else 0.0
+	_weak_age += delta
+	_weak_go = weak_point_go(band.name if band != null else "expert", _weak_age, _weak_roll)
 
 
 # Phase 1: guns on the live crane magnets from the orbit, chasing any stolen scrap.

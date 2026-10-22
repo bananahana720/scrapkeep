@@ -56,6 +56,8 @@ const HIT_CAP := 15.0
 # last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps on
 # scratch/challenge-tune-btC-1/-2.
 const PHASE_MIN_SECONDS := [21.0, 21.0, 21.0, 21.0]
+# Seal hp of each hatch and the override button: start value; the step 2 sweep owns it.
+const SEAL_HP := 60.0
 const FAMILY_NAMES := {"burrow": "burrow lane", "cave_in": "cave-in", "bore": "bore breach"}
 
 var floors: WakingFloors
@@ -91,6 +93,8 @@ var warnings: Array = []
 var _taught := {}
 var _jammed_until := -INF
 var _carved_at := -INF
+# Whether a lip drop was read last frame, so each drop opens a hatch once.
+var _lip_seen := false
 var _base_plating := 0.0
 # Families ridden out while carving, for the Wall Is Home find.
 var _banked := {}
@@ -148,6 +152,7 @@ func exit_arena() -> void:
 	_taught.clear()
 	_jammed_until = -INF
 	_carved_at = -INF
+	_lip_seen = false
 	_banked.clear()
 	_pulse_charging = false
 	super()
@@ -182,6 +187,7 @@ func _physics_process(delta: float) -> void:
 	phase = clampi(floors.shattered + 1, 1, WakingAttacks.PIT_PHASE)
 	_read_pulse()
 	_read_ball()
+	_open_by_lip()
 	_step_attacks(delta)
 	_lay_pending()
 	_set_plating()
@@ -245,12 +251,12 @@ func _commit_attack(family := "") -> void:
 	attack_count += 1
 	var seed: int = attack_count * 7919 + ctx.run.stage
 	if family == "":
-		family = WakingAttacks.newest(phase)
+		family = WakingAttacks.newest(phase, weak.removed_families())
 		if _taught.has(phase):
-			family = WakingAttacks.choose(seed, phase)
+			family = WakingAttacks.choose(seed, phase, weak.removed_families())
 		_taught[phase] = true
 	var safe := WakingAttacks.commit_safe(family, seed, ball, ctx.player.body().linear_velocity, center, phase, ctx.tuning.f("cruise"),
-			PAD_RADIUS)
+			PAD_RADIUS, weak.removed_families())
 	if WakingAttacks.FALLBACK_PATHS.has(safe["path"]):
 		push_warning("waking: attack %d had no escape; fell back to %s" % [attack_count, safe["path"]])
 	var descriptors: Array = safe["descriptors"]
@@ -306,6 +312,8 @@ func _step_attacks(delta: float) -> void:
 					_bank_ride(attack["family"], ball)
 			if h.is_live() and attack["family"] == "bore" and h.attack_id.begins_with("waking_bore_0"):
 				_end_combo()  # a punish window ends any combo
+				if _jammed_until <= clock:
+					_open_weak("override" if phase >= WakingAttacks.PIT_PHASE else "hatch_%d" % phase)
 				_jammed_until = clock + (h.warn_seconds + h.live_seconds - h.age) + ChallengeDials.punish("waking", BORE_JAM)
 			if not (h.is_done() and h.age >= h.warn_seconds + h.live_seconds + 0.5):
 				done = false
@@ -335,6 +343,22 @@ func carving_now() -> bool:
 	if "carving" in state:
 		return bool(state.carving)
 	return state.grounded and state.tier >= SpeedTier.FAST and not FloorRule.on_floor(state)
+
+
+# A lip drop opens the hatch of the floor below the current one, once per drop, if that floor stands.
+func _open_by_lip() -> void:
+	var lip := lip_drop()
+	if lip and not _lip_seen and phase < WakingAttacks.PIT_PHASE - 1:
+		_open_weak("hatch_%d" % (phase + 1))
+	_lip_seen = lip
+
+
+func _weak_parts() -> Array:
+	var parts := []
+	for k in WakingAttacks.FAMILIES.size():
+		parts.append({"id": "hatch_%d" % (k + 1), "seal_hp": SEAL_HP, "removes": WakingAttacks.FAMILIES[k]})
+	parts.append({"id": "override", "seal_hp": SEAL_HP, "removes": "pit_spray"})
+	return parts
 
 
 func jammed() -> bool:
@@ -530,5 +554,8 @@ func objective_text() -> String:
 			text += ". Its drill is jammed: hit it now"
 		elif _family != "":
 			text += ". Incoming: %s" % FAMILY_NAMES.get(_family, _family)
+		var open := weak_open()
+		if not open.is_empty():
+			text += ". Its %s is open: winch in and ram it" % ("override button" if open[-1] == "override" else "hatch")
 		return text
 	return super()

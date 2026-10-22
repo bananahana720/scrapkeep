@@ -323,6 +323,9 @@ func contact_part(ball: Vector3, hit_kind: String) -> String:
 func on_struck(hit_kind: String, _part: String, result: Dictionary) -> void:
 	if variant == "choir" and family_open() and not braced_kinds.is_empty() and not hit_kind in braced_kinds and fleet != null:
 		fleet.discover("choir_switch", family_point_at())
+	var weak_judge = spec.get("weak_judge")
+	if weak_judge is Callable and weak_judge.is_valid() and not staggered():
+		result = weak_judge.call(result)
 	_apply_posture(result)
 
 

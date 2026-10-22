@@ -5,6 +5,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
+const WeakPoints := preload("res://src/boss/weak_points.gd")
 
 # The stand-in fight for a boss whose own fight is not written yet. The Waking (waking.gd)
 # and the Mind (mind.gd) extend this file and run its fight until theirs land; test doubles
@@ -49,6 +50,10 @@ var _entry_monster := false
 var hold_s := 0.0
 var hold_bound_s := 0.0
 var _hold_capped := false
+# The fight's weak points (#241): off (the identity) unless the dial <boss>.weak_points is on at entry.
+var weak = WeakPoints.off()
+# The ids opened this fight, oldest first, so the most recently opened point that is still open is the one a hit counts on.
+var _weak_opened: Array = []
 
 
 func setup(ctx_ref) -> void:
@@ -85,6 +90,10 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	hold_bound_s = 0.0
 	_hold_capped = false
 	latch_monster()
+	_weak_opened.clear()
+	var parts := _weak_parts()
+	var weak_on: bool = _hold_boss() != "" and ChallengeDials.value(_hold_boss() + ".weak_points") >= 0.5
+	weak = WeakPoints.new(parts) if weak_on and not parts.is_empty() else WeakPoints.off()
 	_place_ball(center, entry_velocity)
 	ctx.flow.boss_active = true
 	ctx.flow.boss_plating = live_plating()
@@ -106,6 +115,7 @@ func exit_arena() -> void:
 func _physics_process(delta: float) -> void:
 	if active():
 		clock += delta
+		weak.step(clock)
 		_hold_update()
 		_hold_meter(delta)
 		ctx.flow.boss_plating = live_plating()
@@ -115,6 +125,44 @@ func _physics_process(delta: float) -> void:
 # The dial prefix of this boss's phase_min_by_phase ("waking", "mind"); "" means no hold.
 func _hold_boss() -> String:
 	return ""
+
+
+# The weak points this boss offers when its dial is on: [{id, seal_hp, removes}].
+func _weak_parts() -> Array:
+	return []
+
+
+# The attack families broken points have taken away (the Mind answers by its own count).
+func _removed_families() -> Array:
+	return weak.removed_families()
+
+
+# A tell opens a point; true when it was shut.
+func _open_weak(id: String) -> bool:
+	var opened: bool = weak.open(id, clock)
+	if opened:
+		_weak_opened.append(id)
+	return opened
+
+
+# The ids of the weak points open now, the most recently opened last, for the bot.
+func weak_open() -> Array:
+	return _weak_opened.filter(func(id): return weak.state(id) == WeakPoints.OPEN)
+
+
+# Warden.on_struck's hook: chips or keeps a hit's posture gain by the weak-point rule. Off returns the same object.
+func _weak_judge(result: Dictionary) -> Dictionary:
+	if not weak.active():
+		return result
+	var open := weak_open()
+	var hit := {"point": String(open[-1]) if not open.is_empty() else "",
+			"reel": bool(result.get("reel", false)), "punch": float(result.get("punch", 0.0)),
+			"gain": float(result.get("gain", 0.0))}
+	var answer: Dictionary = weak.judge(hit)
+	weak.apply(answer, clock)
+	var out := result.duplicate()
+	out["gain"] = float(result.get("gain", 0.0)) * float(answer["gain_scale"])
+	return out
 
 
 # The seconds each phase must last, one per chunk (the last is unused).
@@ -219,6 +267,7 @@ func _warden_spec() -> Dictionary:
 	# The arena Warden has no fleet, so it reads the pilot's heft from here (Warden.pilot_heft).
 	if _hold_boss() != "":
 		spec["posture_hold"] = Callable(self, "hold_active")
+		spec["weak_judge"] = Callable(self, "_weak_judge")
 	spec["heft"] = func() -> float: return float(ctx.run.heft()) if ctx != null and ctx.run != null else 0.0
 	return spec
 

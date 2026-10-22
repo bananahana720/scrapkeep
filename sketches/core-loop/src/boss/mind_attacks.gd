@@ -61,18 +61,21 @@ static func phase_cap() -> int:
 	return FAMILIES.size()
 
 
-static func exposed(phase: int) -> Array:
-	return FAMILIES.slice(0, clampi(phase, 1, phase_cap()))
+# removed: families a broken weak point took away (weak_points.gd); never all of them.
+static func exposed(phase: int, removed := []) -> Array:
+	var open := FAMILIES.slice(0, clampi(phase, 1, phase_cap()))
+	var kept := open.filter(func(f): return not removed.has(f))
+	return kept if not kept.is_empty() else open
 
 
-static func choose(seed: int, phase: int) -> String:
-	var open := exposed(phase)
+static func choose(seed: int, phase: int, removed := []) -> String:
+	var open := exposed(phase, removed)
 	var rng := _rng(seed)
 	return open[rng.randi() % open.size()]
 
 
-static func commit_any(seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R) -> Array:
-	return commit(choose(seed, phase), seed, ball, center, phase, radius)
+static func commit_any(seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R, removed := []) -> Array:
+	return commit(choose(seed, phase, removed), seed, ball, center, phase, radius)
 
 
 static func commit(family: String, seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R) -> Array:
@@ -100,11 +103,11 @@ const RECOMMIT_STRIDE := 104729
 const FALLBACK_PATHS := ["drop", "single", "none"]
 
 
-static func commit_safe(family: String, seed: int, ball: Vector3, center: Vector3, phase: int, cruise_speed: float, radius := Arena.FLOOR_R) -> Dictionary:
+static func commit_safe(family: String, seed: int, ball: Vector3, center: Vector3, phase: int, cruise_speed: float, radius := Arena.FLOOR_R, removed := []) -> Dictionary:
 	var first: Array = []
 	for k in RECOMMITS + 1:
 		var s := seed + k * RECOMMIT_STRIDE
-		var descs: Array = commit_any(s, ball, center, phase, radius) if family == "" else commit(family, s, ball, center, phase, radius)
+		var descs: Array = commit_any(s, ball, center, phase, radius, removed) if family == "" else commit(family, s, ball, center, phase, radius)
 		if k == 0:
 			first = descs
 		if escape_point(descs, ball, cruise_speed, center, radius) != null:

@@ -19,6 +19,10 @@ const BOSS_ID := "mind"
 const ATTACK_PERIOD := 3.5
 const ATTACK_DAMAGE := 10.0
 const HAND_CAP := 2
+# Seal hp of each lens seat: start value; the step 2 sweep owns it.
+const SEAL_HP := 60.0
+# What the first and second broken seats remove; the third removes nothing (#241 6332176012 option (a)).
+const SEAT_REMOVES := ["split_lane", "rush"]
 # Seconds each phase lasts before a chunk lost in it opens the next (Brindle's PHASE_MIN_SECONDS); the
 # last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps on
 # scratch/challenge-tune-btC-1/-2.
@@ -161,6 +165,34 @@ func _on_warden_died(at: Vector3, scrap: int) -> void:
 	super(at, scrap)
 
 
+# The lens seat whose bearing is nearest a plate's centre bearing: seat k sits at angle k * TAU / 3 around the Warden
+# (warden.gd family_point_at), which reads as bearing -k * TAU / 3 in the attacks' (cos, sin of x, z) convention.
+static func nearest_seat(bearing: float) -> int:
+	var best := 0
+	var gap := INF
+	for k in 3:
+		var d := absf(angle_difference(-k * TAU / 3.0, bearing))
+		if d < gap - 0.0001:
+			gap = d
+			best = k
+	return best
+
+
+func _weak_parts() -> Array:
+	var parts := []
+	for k in 3:
+		parts.append({"id": "seat_%d" % k, "seal_hp": SEAL_HP, "removes": ""})
+	return parts
+
+
+# The first broken seat removes the first of SEAT_REMOVES, the second the next; further seats remove nothing.
+func _removed_families() -> Array:
+	var broken := 0
+	for k in 3:
+		broken += 1 if weak.state("seat_%d" % k) == WeakPoints.BROKEN else 0
+	return SEAT_REMOVES.slice(0, mini(broken, SEAT_REMOVES.size()))
+
+
 # family names one family to commit; empty lets the phase choose.
 func _commit_attack(family := "") -> void:
 	var ball: Vector3 = ctx.player.ball_position()
@@ -168,7 +200,7 @@ func _commit_attack(family := "") -> void:
 	center.y = _top()
 	attack_count += 1
 	var seed: int = attack_count * 7919 + ctx.run.stage
-	var safe := MindAttacks.commit_safe(family, seed, ball, center, phase, ctx.tuning.f("cruise"), PAD_RADIUS)
+	var safe := MindAttacks.commit_safe(family, seed, ball, center, phase, ctx.tuning.f("cruise"), PAD_RADIUS, _removed_families())
 	var descriptors: Array = safe["descriptors"]
 	if MindAttacks.FALLBACK_PATHS.has(safe["path"]):
 		push_warning("mind: attack %d had no escape; fell back to %s" % [attack_count, safe["path"]])
@@ -187,6 +219,7 @@ func _commit_attack(family := "") -> void:
 			_plate_verb = String(d["verb"])
 			_end_combo()  # the plate's weak window ends any combo
 			_plate_until = clock + h.warn_seconds + h.live_seconds + ChallengeDials.punish("mind", MindAttacks.PLATE_WINDOW)
+			_open_weak("seat_%d" % nearest_seat((float(d["from_angle"]) + float(d["to_angle"])) * 0.5))
 		ctx.events.boss_attack_telegraphed.emit(String(d["id"]), h.warn_seconds)
 	var ledger: Dictionary = ctx.run.get_meta("boss_attacks", {})
 	ledger[_family] = int(ledger.get(_family, 0)) + 1
@@ -292,4 +325,6 @@ func objective_text() -> String:
 		text += " Incoming: %s." % _family.replace("_", " ")
 	if _family == "plate" and _plate_verb != "":
 		text += " Its plate braces %s." % _plate_verb
+	if not weak_open().is_empty():
+		text += " Its lens seat is open: winch in and ram it."
 	return text
