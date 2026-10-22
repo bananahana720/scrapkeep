@@ -88,9 +88,11 @@ const WARDEN_PACKS_REACH := [
 	{"id": "warden_press", "kinds": ["chaser", "plated_brute"]},
 	{"id": "warden_lob", "kinds": ["bola_thrower", "lobber"]},
 ]
+# A rope camper is the line_cutter's (coordinator ruling (a), 21 Oct 23:56Z): it cuts the line a pilot
+# hangs on above the kites' reach. The kites' aerial reach is Systems' card.
 const WARDEN_PACKS_HIGHDRAFT := [
 	{"id": "warden_dive", "kinds": ["kite_drone", "kite_drone"]},
-	{"id": "warden_cut", "kinds": ["kite_drone", "kite_drone"]},
+	{"id": "warden_cut", "kinds": ["line_cutter", "kite_drone"]},
 ]
 
 const DEFS := [
