@@ -8,7 +8,10 @@ const T := preload("res://tests/support/t.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 
-const EXPECTED_CHECKS := 35
+const EXPECTED_CHECKS := 37
+# The floor's Y goes as the ground's light ^0.625 (3060 stills, #241), so x 1.34 is a floor step of 5 L*
+# over morning's 62.8; the morning-to-noon step that read as a jump to white was x 2.2.
+const MAX_NOON_STEP := 1.34
 var _t := T.new("park_day_light_test")
 
 
@@ -43,8 +46,16 @@ func _run() -> void:
 		_t.eq(map + " has no volumetric fog", values.volumetric_fog_enabled, false)
 		_t.check(map + " differs from the legacy dome look (planted negative)", WorldLook.stage_look(stage, 2).sky == "dome"
 			and WorldLook.stage_look(stage, 2).fog.density != look.fog.density)
-	_t.near("the pit is noon-bright", WorldLook.stage_look(3, 2, "park_pit").sun_energy, 2.6)
-	_t.near("the sinkhole is afternoon", WorldLook.stage_look(4, 2, "park_sinkhole").sun_energy, 2.3)
+	_t.near("the pit's noon sun is 1.4", WorldLook.stage_look(3, 2, "park_pit").sun_energy, 1.4)
+	_t.near("the sinkhole's afternoon sun is 1.7", WorldLook.stage_look(4, 2, "park_sinkhole").sun_energy, 1.7)
+	var ground := []
+	for stage in range(1, 7):
+		var def := ParkDefs.of(stage)
+		var look := WorldLook.stage_look(stage, def.world, def.map)
+		ground.append(look.sun_energy * sin(deg_to_rad(-look.sun_rotation.x)) + look.energy)
+	_t.check("the ground's light rises to noon and falls after", ground[0] < ground[1] and ground[1] < ground[2]
+		and ground[2] > ground[3] and ground[3] > ground[4] and ground[4] > ground[5], str(ground))
+	_t.check("noon is at most morning x %.2f" % MAX_NOON_STEP, ground[2] <= ground[1] * MAX_NOON_STEP, "%.3f / %.3f" % [ground[2], ground[1]])
 	_t.near("the pit ambient is 0.32", WorldLook.stage_look(3, 2, "park_pit").energy, 0.32)
 	_t.near("the sinkhole ambient is 0.29", WorldLook.stage_look(4, 2, "park_sinkhole").energy, 0.29)
 	var legacy := WorldLook.stage_look(3, 2)
