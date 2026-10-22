@@ -1,0 +1,215 @@
+{
+	"adapter": "NVIDIA GeForce RTX 3060",
+	"bare_ground_share": 22.3,
+	"bare_samples": 53,
+	"bare_share_pct": 22.3,
+	"constants": {
+		"bare_min_core_near": 5,
+		"bare_min_kinds_far": 4,
+		"bare_rule": "BARE if (props+clutter+scenery+rows) within near_m in view < bare_min_core_near, or distinct kinds within far_m in view < bare_min_kinds_far",
+		"camera": {
+			"arm_m": 9.0,
+			"far": 700.0,
+			"fov": 72.5,
+			"name": "mid",
+			"pitch_rad": -0.3,
+			"source": "src/movement/chase_camera.gd: speed_arm 7.5..10.5, FOV_REST 65..FOV_FAST 80, pitch -0.30, anchor +0.8 m; mid = half speed",
+			"up_m": 0.8
+		},
+		"categories": [
+			"props",
+			"clutter",
+			"scatter",
+			"anchors",
+			"rows",
+			"scenery",
+			"landforms"
+		],
+		"dedup_m": 10.0,
+		"draw_label": "OpenGL compatibility proxy, cloud llvmpipe, not a frame-cost proof",
+		"far_m": 120.0,
+		"near_m": 60.0,
+		"step_m": 25.0
+	},
+	"core_in_view_60": {
+		"median": 11.0,
+		"p10": 2.0
+	},
+	"density_exempt": 9,
+	"density_exempt_by": {
+		"arena": 5,
+		"telegraph": 4
+	},
+	"density_fail_windows": [],
+	"density_open_checked": 0,
+	"density_open_rejected": [],
+	"density_pass": 36,
+	"density_rule": "3+ distinct park-prop kinds in view within 60 m per 150 m window",
+	"density_share": 1.0,
+	"density_windows": 45,
+	"distinct_kinds_120": {
+		"median": 14.0,
+		"p10": 9.0
+	},
+	"draw_calls": {
+		"max": 389,
+		"median": 259.0,
+		"p95": 359.75
+	},
+	"draw_label": "OpenGL compatibility proxy, cloud llvmpipe, not a frame-cost proof",
+	"draw_sample_idx": [
+		0,
+		6,
+		8,
+		12,
+		18,
+		24,
+		30,
+		36,
+		43,
+		49,
+		55,
+		59,
+		61,
+		67,
+		73,
+		79,
+		85,
+		89,
+		91,
+		97,
+		101,
+		103,
+		107,
+		109,
+		115,
+		122,
+		128,
+		134,
+		137,
+		140,
+		146,
+		149,
+		152,
+		158,
+		164,
+		170,
+		176,
+		182,
+		188,
+		194,
+		201,
+		207,
+		208,
+		213,
+		219,
+		220,
+		225,
+		227,
+		231,
+		237
+	],
+	"draw_samples": 50,
+	"dressing_in_view_120": {
+		"median": 43.0,
+		"p10": 25.7
+	},
+	"dressing_in_view_60": {
+		"median": 11.0,
+		"p10": 2.0
+	},
+	"in_view_by_category": {
+		"anchors": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"clutter": {
+			"median_120": 16.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"landforms": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"props": {
+			"median_120": 25.0,
+			"median_60": 6.0,
+			"p10_120": 9.0,
+			"p10_60": 0.0
+		},
+		"rows": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"scatter": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		},
+		"scenery": {
+			"median_120": 0.0,
+			"median_60": 0.0,
+			"p10_120": 0.0,
+			"p10_60": 0.0
+		}
+	},
+	"items_collected": 3793,
+	"kinds_collected": 71,
+	"line_lengths_m": {
+		"cannon": 1715.6,
+		"floor": 1740.8,
+		"kest": 1715.2,
+		"rivet": 1858.1,
+		"sable": 1776.0,
+		"tally": 1730.2,
+		"tarn": 1740.8
+	},
+	"longest_bare_ground_run_m": 150.0,
+	"longest_bare_run_m": 150.0,
+	"map": "park_flume",
+	"poses_replayed": false,
+	"primitives": {
+		"max": 829715,
+		"median": 532377.0,
+		"p95": 786559.6
+	},
+	"props_only_draw_delta": {
+		"max": 43,
+		"median": 19.0,
+		"park_props_nodes": 1536
+	},
+	"props_only_primitive_delta": {
+		"max": 141489,
+		"median": 40415.0
+	},
+	"props_peak_pose": {
+		"breakdown": {
+			"hero/L2/tall": 8,
+			"litter/L1/low": 8,
+			"litter/L1/mid": 4,
+			"vignette/L1/low": 10,
+			"vignette/L1/mid": 7,
+			"vignette/L2/merged": 8
+		},
+		"delta": 43,
+		"idx": 109,
+		"x": -150.0,
+		"z": 125.5
+	},
+	"runtime_s": 28.3,
+	"samples": 238,
+	"stage": 2,
+	"step_m": 25.0,
+	"union_line_km": 5.95,
+	"union_samples": 238,
+	"void_poses": 0
+}
