@@ -12,7 +12,7 @@ const GAMEPLAY := {
 	"anchor": "5d82c9d5dc860b5489b13a06f6c8c78cd755dc2642a7556dcea5fedf48061d20",
 	"_commit": "33b68cca3be97d85f1ceca25cd20e9ab9c6bb1fd1a170d1e53462ef00f51a2b6",
 	"_go_live": "32432948314db1ed83c1f168c4347b98e0f20bcf8bef23eb80f0143003fb7c82",
-	"_live": "922788a94ba22d28d18cc2734077951ad4b69219a7def45bb0fc128130c98dca",
+	"_live": "284881b86d5ee5a6fc1362199a770222a6ffac05dbc405e07278406ebf451d8e",
 	"_on_broken": "dba8bcae678917a5752b106c595b6df15ed90cc0b0c911994414c1a21f3976fd",
 }
 const SOCKETS := {
