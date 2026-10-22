@@ -232,7 +232,7 @@ func _fitted() -> void:
 					if shape.position.distance_to(want_c) > 0.001 or got.distance_to(want_size) > 0.001:
 						bad.append("post %d box %d" % [k, i])
 			_t.check("(g) %s size %s: centres are turn * c, odd turns swap x and z (%d odd posts), shapes shared (%d)" % [recipe, entry_size, odd_seen, distinct.size()],
-				bad.is_empty() and distinct.size() <= boxes.size() * 2, str(bad.slice(0, 3)))
+				bad.is_empty() and odd_seen > 0 and distinct.size() <= boxes.size() * 2, str(bad.slice(0, 3)))
 			parent.free()
 	_t.check("(g) fitted rows exercised (%d rows, %d posts)" % [rows, posts_fitted], rows >= 8)
 	# (i) control: an unlisted height keeps one 8 m box per post; greybox is the same path as before.
@@ -265,10 +265,15 @@ func _stale() -> void:
 
 
 # (k) A radius 1 sphere rolls along +x at h 1 toward a fitted post's -x face centre line (post at the origin, no turn).
+# The probe line is the low box spanning h 1, the acceptance line, not the sunk skirt box the table lists first.
 func _probe() -> void:
 	var row := _fit_row("anchor_hoodoo", 10.0, true)
 	var boxes := ParkRecipes.anchor_fit_boxes(row)
 	var lowest: Dictionary = boxes[0]
+	for b: Dictionary in boxes:
+		if b["h"][0] <= 1.0 and b["h"][1] >= 1.0:
+			lowest = b
+			break
 	var space_root := Node3D.new()
 	root.add_child(space_root)
 	var body := StaticBody3D.new()
@@ -291,9 +296,6 @@ func _probe() -> void:
 	var rest := space.cast_motion(query)
 	var stop_x := -30.0 + 60.0 * rest[0]
 	var face := float(lowest["x"][0])
-	for b: Dictionary in boxes:
-		if b["h"][0] <= 1.0 and b["h"][1] >= 1.0:
-			face = float(b["x"][0])
 	var air := face - (stop_x + 1.0)
 	_t.check("(k) a ball at h 1 stops within 1 m of the fitted face (air %.3f m)" % air, rest[0] < 1.0 and absf(air) <= 1.0, "stop x %.3f face %.3f" % [stop_x, face])
 	space_root.free()
