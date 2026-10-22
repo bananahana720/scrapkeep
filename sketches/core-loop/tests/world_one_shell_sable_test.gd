@@ -17,7 +17,7 @@ const SHELL := "res://assets/models/world_one/shell_sable.glb"
 const FELT := "res://assets/models/world_one/shell_sable_felt.glb"
 const LAYER := "res://assets/models/world_one/shell_sable_c%d.glb"
 const RIG := "res://assets/models/pilot_sable_anim.glb"
-const EXPECTED_CHECKS := 64
+const EXPECTED_CHECKS := 66
 const MAX_V := 15000
 const MAX_T := 16000
 # 2026-10-22: SpoolKit (the winch spool, copper and paint, its rubber folded into paint in charcoal) is its
@@ -307,34 +307,45 @@ func _check_materials(shell: Node) -> void:
 	var enamels := [Palette.VERDIGRIS, Palette.RUST, Palette.SAND, Palette.CHARCOAL]
 	var off := 0
 	var seat_off := 0
-	var spool_dark := 0
-	var spool_alpha_off := 0
-	var other_alpha_off := 0
 	for mi in meshes(shell):
 		for i in mi.mesh.get_surface_count():
 			if HeroAssets.slot_of(mi.mesh, i) != "paint":
 				continue
 			var cols = mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_COLOR]
 			for c in Array(cols if cols != null else []):
-				if String(mi.name) == "SpoolKit" and near_any(c, [Palette.CHARCOAL]):
-					spool_dark += 1
-					if c.a != 0.0:
-						spool_alpha_off += 1
-				elif c.a != 0.0:
-					other_alpha_off += 1
 				if not near_any(c, enamels):
 					off += 1
 				if String(mi.name) == "Pod" and not near_any(c, [Palette.SAND]):
 					seat_off += 1
 	_report("sable paint", off == 0, "paint vertex colours are section 6 enamels (%d off)" % off)
-	_report("sable spool paint mask", spool_dark > 0 and spool_alpha_off == 0,
-		"%d SpoolKit charcoal paint vertices, %d with alpha not 0 (alpha 0 keeps them charcoal under any paint)" % [spool_dark, spool_alpha_off])
-	_report("sable other paint alpha", other_alpha_off == 0, "every other paint vertex has alpha 1 (%d off)" % other_alpha_off)
+	_report_mask("sable", shell)
 	# A string check on the shader source, not a render: the mask is step(0.05, alpha) on paint_take, fed from COLOR.a.
 	var src: String = HeroAssets.PAINT_SHADER
 	_report("sable paint shader mask", src.contains("paint_take * step(0.05, mask)"),
 		"PAINT_SHADER masks paint_take with step(0.05, COLOR.a) (string check)")
 	_report("sable seat bone", seat_off == 0, "every Pod paint face (seat, decal plate, rope drum) is bone (%d off)" % seat_off)
+
+
+# SpoolKit's charcoal paint vertices carry alpha 0 (no paint takes them); every other paint vertex has alpha 1.
+func _report_mask(label: String, root: Node) -> void:
+	var dark := 0
+	var spool_off := 0
+	var other_off := 0
+	for mi in meshes(root):
+		for i in mi.mesh.get_surface_count():
+			if HeroAssets.slot_of(mi.mesh, i) != "paint":
+				continue
+			var cols = mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_COLOR]
+			for c in Array(cols if cols != null else []):
+				if String(mi.name) == "SpoolKit" and near_any(c, [Palette.CHARCOAL]):
+					dark += 1
+					if c.a != 0.0:
+						spool_off += 1
+				elif c.a != 1.0:
+					other_off += 1
+	_report("%s spool paint mask" % label, dark > 0 and spool_off == 0,
+		"%d SpoolKit charcoal paint vertices, %d with alpha not 0 (alpha 0 keeps them charcoal under any paint)" % [dark, spool_off])
+	_report("%s other paint alpha" % label, other_off == 0, "every other paint vertex has alpha 1 (%d off)" % other_off)
 
 
 func _check_layers() -> void:
@@ -392,6 +403,7 @@ func _check_felt(shell: Node) -> void:
 	var core := felt.find_child("Core", true, false) as MeshInstance3D
 	var r := far(points(core, felt)) if core != null else INF
 	_report("sable felt lattice", r <= CORE_LIMIT + 0.0001 and problems(felt).is_empty(), "Felt Rig lattice reaches %.4f, clean slots" % r)
+	_report_mask("sable felt", felt)
 	felt.free()
 
 

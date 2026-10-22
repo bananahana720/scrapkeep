@@ -31,14 +31,19 @@ static func _allowed(a: float, mesh_name: String, path: String) -> bool:
 
 
 # One entry per mesh with paint vertices that break the rule: "<file> <mesh>: <n> stray vertices".
-static func scan_mesh(path: String, mesh_name: String, mesh: Mesh) -> Array:
+# seen, when given, accumulates "surfaces" and "vertices" of paint scanned.
+static func scan_mesh(path: String, mesh_name: String, mesh: Mesh, seen: Dictionary = {}) -> Array:
 	var out := []
+	if mesh == null:
+		return ["%s %s: null mesh" % [path.get_file(), mesh_name]]
 	var bad := 0
 	for i in mesh.get_surface_count():
 		if HeroAssets.slot_of(mesh, i) != "paint":
 			continue
+		seen["surfaces"] = seen.get("surfaces", 0) + 1
 		var cols = mesh.surface_get_arrays(i)[Mesh.ARRAY_COLOR]
 		for c in Array(cols if cols != null else []):
+			seen["vertices"] = seen.get("vertices", 0) + 1
 			if not _allowed(c.a, mesh_name, path):
 				bad += 1
 	if bad > 0:
@@ -63,9 +68,9 @@ static func _meshes(node: Node, out: Array = []) -> Array:
 	return out
 
 
-func _planted() -> Array:
+func _planted(path: String, mesh_name: String, alpha: float) -> Array:
 	var verts := PackedVector3Array([Vector3(0, 0, 0), Vector3(1, 0, 0), Vector3(0, 1, 0)])
-	var cols := PackedColorArray([Color(1, 1, 1, 0), Color.WHITE, Color.WHITE])
+	var cols := PackedColorArray([Color(1, 1, 1, alpha), Color.WHITE, Color.WHITE])
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts
@@ -75,13 +80,22 @@ func _planted() -> Array:
 	var mat := StandardMaterial3D.new()
 	mat.resource_name = "paint"
 	mesh.surface_set_material(0, mat)
-	return scan_mesh("res://assets/models/world_one/shell_planted.glb", "PlantedMesh", mesh)
+	return scan_mesh(path, mesh_name, mesh)
 
 
 func _initialize() -> void:
-	var planted := _planted()
+	var planted := _planted("res://assets/models/world_one/shell_planted.glb", "PlantedMesh", 0.0)
 	_report("scan flags planted mask", planted.size() == 1 and "PlantedMesh" in planted[0] and "1 stray" in planted[0],
 		"alpha-0 vertex on a non-Sable paint mesh gives %s" % [planted])
+	var spool_elsewhere := _planted("res://assets/models/world_one/shell_tally.glb", "SpoolKit", 0.0)
+	_report("scan flags SpoolKit outside Sable", spool_elsewhere.size() == 1 and "SpoolKit" in spool_elsewhere[0],
+		"alpha-0 SpoolKit in a non-Sable file gives %s" % [spool_elsewhere])
+	var ambiguous := _planted("res://assets/models/world_one/shell_sable.glb", "SpoolKit", 0.02)
+	_report("scan flags alpha 0.02", ambiguous.size() == 1 and "1 stray" in ambiguous[0],
+		"alpha 0.02 in Sable SpoolKit (not exactly 0) gives %s" % [ambiguous])
+	var null_mesh := scan_mesh("res://assets/models/world_one/shell_sable.glb", "Gone", null)
+	_report("scan survives a null mesh", null_mesh.size() == 1 and "null mesh" in null_mesh[0], "null mesh records %s" % [null_mesh])
+	var seen := {}
 	var files := _files(ROOT)
 	var stray := []
 	var spool := 0
@@ -92,11 +106,13 @@ func _initialize() -> void:
 			continue
 		var root := packed.instantiate()
 		for mi in _meshes(root):
-			stray.append_array(scan_mesh(f, String(mi.name), mi.mesh))
+			stray.append_array(scan_mesh(f, String(mi.name), mi.mesh, seen))
 			if String(mi.name) == "SpoolKit":
 				spool += 1
 		root.free()
 	_report("shell GLBs scanned", files.size() >= 40 and spool == 2, "%d shell/pilot GLBs, %d SpoolKit meshes" % [files.size(), spool])
+	_report("paint scanned", seen.get("surfaces", 0) >= 40 and seen.get("vertices", 0) >= 1000,
+		"%d paint surfaces, %d paint vertices scanned (floor 40 and 1000)" % [seen.get("surfaces", 0), seen.get("vertices", 0)])
 	_report("no stray paint mask", stray.is_empty(), "paint alpha under 0.05 only in Sable SpoolKit, else 1 or a Tally window (%s)" % [stray])
 	print("paint_mask_scan_test: %s, %d checks" % ["PASS" if _failures == 0 else "FAIL (%d)" % _failures, _checks])
 	quit(0 if _failures == 0 else 1)
