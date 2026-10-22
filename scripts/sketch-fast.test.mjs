@@ -307,7 +307,7 @@ test("a base timeout counts only against a head that also timed out; a lane stop
 });
 
 test("a base that dies by the same non-SIGKILL signal as the head keeps its verdict", () => {
-  const crash = (signal, checks = []) => ({ ok: false, exit: null, signal, killed: false, timedOut: false, checks });
+  const crash = (signal, checks = [], passes = 172) => ({ ok: false, exit: null, signal, killed: false, timedOut: false, checks, passes });
   const head = crash("SIGABRT");
   const base = crash("SIGABRT");
   assert.equal(usableBaseRun(head, base), base);
@@ -327,7 +327,11 @@ test("a base that dies by the same non-SIGKILL signal as the head keeps its verd
   const headChecks = crash("SIGABRT", ["a", "b"]);
   const baseChecks = crash("SIGABRT", ["a"]);
   assert.equal(usableBaseRun(headChecks, baseChecks), null);
-  assert.equal(classifyFailure({ rerunOk: false, baseOk: null }).kind, "pr-red");
+  // Same signal and checks, but the head aborted earlier (fewer passing checks): no base verdict, so pr-red.
+  const early = crash("SIGABRT", [], 60);
+  const dropped = usableBaseRun(early, base);
+  assert.equal(dropped, null);
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: dropped ? dropped.ok : null }).kind, "pr-red");
 });
 
 test("a single base red is not trusted from the cache; a second agreeing run confirms it", () => {

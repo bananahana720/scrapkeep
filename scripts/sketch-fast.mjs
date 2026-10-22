@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  countChecks,
   acquireMachine,
   binary,
   importWithRetry,
@@ -366,7 +367,7 @@ function runGodot(sketchDir, test, timeoutMs, onChild = () => {}) {
       // A kill before the time limit that the lane did not send is usually the container's
       // memory limit (dmesg "Memory cgroup out of memory"), not the test.
       const reason = code === null && !timedOut && child.killedByLane !== true ? "killed by a signal before its time limit (often the container's memory limit; see dmesg)" : verdict.reason;
-      resolve({ test, ok: verdict.ok, exit: code, signal: signal ?? null, ms: Date.now() - started, reason, checks: failingChecks(output), tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut });
+      resolve({ test, ok: verdict.ok, exit: code, signal: signal ?? null, ms: Date.now() - started, reason, checks: failingChecks(output), passes: countChecks(output).passes, tail: output.split("\n").slice(-30).join("\n"), killed: child.killedByLane === true, timedOut });
     });
   });
 }
@@ -432,7 +433,9 @@ export function usableBaseRun(rerun, baseRun) {
     const head = [...(rerun.checks ?? [])].sort();
     const base = [...(baseRun.checks ?? [])].sort();
     const sameChecks = head.length === base.length && head.every((check, i) => check === base[i]);
-    return sameSignal && sameChecks ? baseRun : null;
+    // An earlier abort on the head shows as fewer passing checks, so the counts must match too.
+    const samePasses = rerun.passes === baseRun.passes;
+    return sameSignal && sameChecks && samePasses ? baseRun : null;
   }
   return baseRun;
 }

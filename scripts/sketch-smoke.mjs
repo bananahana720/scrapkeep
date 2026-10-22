@@ -708,7 +708,6 @@ async function main() {
   const soloStarted = Date.now();
   for (const job of solo) results.push(await runAsync(job));
   const soloSeconds = (Date.now() - soloStarted) / 1000;
-  const verdict = quarantineVerdict(results);
   const ok = runPasses(results) && expired.length === 0;
   const slowest = [...results].sort((a, b) => b.ms - a.ms).slice(0, SLOWEST);
   console.log(`slowest ${slowest.length}:`);
