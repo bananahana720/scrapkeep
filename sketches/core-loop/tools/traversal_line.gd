@@ -10,6 +10,8 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const FloorRule := preload("res://src/combat/floor_rule.gd")
 const CinderHeat := preload("res://src/world/cinder_heat.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
 const CINDER_SOURCE := CinderHeat.SOURCE
 const CINDER_BURN := CinderHeat.BURN_FACT
 
@@ -37,6 +39,12 @@ const CINDER_BURN := CinderHeat.BURN_FACT
 # and bot baseline is the bare pilot's; the flag reaches every child. A hands run writes
 # <pilot>.hands.json with a "hands" field and prints hands= on its summary line, never <pilot>.json;
 # --floor refuses --hands.
+#
+# --anchor-contacts (park table, off by default; with it off nothing below runs and every output is unchanged) measures
+# the fitted anchor colliders (park_recipes.gd place_anchor_field, anchor_fit.json): every dead stop and every bounce off an
+# anchor-field body, with its distance to the nearest fitted box's vertical-edge corner. The parent writes
+# anchor_contacts.json (anchor_contacts.hands.json for a hands run) beside the summary and prints one line per park.
+# See AnchorContacts for the definitions.
 #
 # The default out is artifacts/local/traversal at the repository root. The pilot's route and
 # bar come from tools/traversal_lines.json. The number judges a bot, not the feel of the map.
@@ -190,6 +198,8 @@ class Sampler:
 	# The sinkhole's lava floor (src/world/cinder_heat.gd): burns started and hull lost to it.
 	var _cinder_burns := 0
 	var _cinder_hp := 0.0
+	# --anchor-contacts: an AnchorContacts, null when the flag is off.
+	var contacts = null
 
 	func _init(game_ref) -> void:
 		game = game_ref
@@ -312,6 +322,8 @@ class Sampler:
 		traversal.step(player.speed_tier(), player.planar_velocity().length(), intent.brake_held, RunLog.Traversal.is_exempt(player), not grounded)
 		if traversal.dead_stops > stops:
 			dead_stop_at.append({"time": snappedf(game.run.stage_time, 0.01), "at": [snappedf(ball.x, 0.1), snappedf(ball.z, 0.1)]})
+		if contacts != null:
+			contacts.observe(game, ball, traversal.dead_stops > stops)
 		if tracing:
 			_record_tick(player, ball, grounded)
 
@@ -462,6 +474,240 @@ class Sampler:
 			"cinder_burns": _cinder_burns,
 			"cinder_hp": snappedf(_cinder_hp, 0.01),
 		}
+
+
+# --anchor-contacts: where the ball stops or bounces against an anchor field, and how far that is from a fitted box's corner.
+# Definitions (coordinator rulings 6329361490 and 6330065475 on issue #241):
+#   stop    a dead stop exactly as RunLog.Traversal counts it (the same tick Sampler.sample sees dead_stops rise).
+#   bounce  a tick where the ball's rigid body touches (this tick or the last) a StaticBody3D place_anchor_field built and
+#           its velocity's component along that body's nearest-box surface normal goes from below -BOUNCE_MIN_MPS to
+#           above 0. Godot gives no contact signal with a normal outside RigidBall's _integrate_forces, so the normal is the
+#           ball-centre-to-nearest-box direction, from the boxes' own transforms.
+#   corner  a fitted box's vertical-edge corner, in XZ, of the box as placed (turned and yawed); only a fitted row's boxes, and
+#           only boxes whose height span, widened by Y_SLACK_M, holds the ball. A stop or bounce "near a corner" is
+#           corner_dist_m <= NEAR_M, the ball's centre to the corner.
+#   row     the nearest anchor-field box of any row (fitted or the 8 m box), by distance to its surface; "near" it is
+#           surface_dist_m <= NEAR_M, which the over_limit count uses.
+#   ride line  the park's lane mask (ParkMap.lane_mask_for, as scatter.gd reads it): the cell of the lattice node nearest
+#           the ball's XZ is marked. That cell is 8 m wide and the mask's own guarantee is only about 2.3 to 13.7 m,
+#           so "on a ride line" is generous.
+class AnchorContacts:
+	extends RefCounted
+
+	const NEAR_M := 1.5
+	const Y_SLACK_M := 1.5
+	const BOUNCE_MIN_MPS := 1.0
+	const SURFACE_LIMIT_M := 2.0
+
+	var park_id := ""
+	var seed_number := 0
+	var lane := {}
+	var park_rows: Array = []
+	# One record per BoxShape3D of every anchor field, in scene order (see box_record).
+	var boxes: Array = []
+	var events: Array = []
+	var fields := 0
+	var _body_boxes := {}
+	var _ticks := 0
+	var _tries := 0
+	# Ticks the ball touched an anchor-field body: a run with none measured nothing, whatever its event count.
+	var touch_ticks := 0
+	var _prev_v := Vector3.INF
+	var _prev_touch := {}
+
+	func _init(park_name: String, seed_value: int, lane_mask: Dictionary, rows: Array) -> void:
+		park_id = park_name
+		seed_number = seed_value
+		lane = lane_mask
+		park_rows = rows
+
+	# A box: xf its global transform (yaw only), size its extents. info: row, key, size_y, fitted, over_limit.
+	static func box_record(xf: Transform3D, size: Vector3, info: Dictionary) -> Dictionary:
+		var half := size * 0.5
+		var corners: Array = []
+		for sx in [-1.0, 1.0]:
+			for sz in [-1.0, 1.0]:
+				var p := xf * Vector3(sx * half.x, 0.0, sz * half.z)
+				corners.append(Vector2(p.x, p.z))
+		var out := info.duplicate()
+		out["xf"] = xf
+		out["half"] = half
+		out["corners"] = corners
+		out["y0"] = xf.origin.y - half.y
+		out["y1"] = xf.origin.y + half.y
+		return out
+
+	# The anchor_fit.json entry ({"key", "over_limit", "fitted"}) of a row: fitted when its recipe is a kit with an entry at
+	# its height, else the 8 m box. kit: whether the placed node drew the kit (meta anchor_kit).
+	static func fit_info(row: Dictionary, kit: bool) -> Dictionary:
+		var info := {"row": String(row.get("id", "")), "key": String(row.get("recipe", "")), "size_y": float(row["size"][1]), "fitted": false, "over_limit": false}
+		if not kit or ParkRecipes.anchor_fit_boxes(row).is_empty():
+			return info
+		var recipe := String(row.get("recipe", ""))
+		info["key"] = ParkRecipes.anchor_paths(recipe)[ParkRecipes.anchor_variant(row)].get_file().get_basename()
+		for entry: Dictionary in ParkRecipes.anchor_fit_table().get("fits", {}).get(info["key"], []):
+			if is_equal_approx(float(entry["size"]), float(info["size_y"])):
+				info["fitted"] = true
+				info["over_limit"] = bool(entry.get("over_limit", false))
+		return info
+
+	# Every anchor-field box under root (nodes named Park_<row id> carrying the anchor_posts meta), for rows by id.
+	static func collect(root: Node, rows: Array) -> Array:
+		var by_id := {}
+		for row: Dictionary in rows:
+			by_id[String(row.get("id", ""))] = row
+		var out: Array = []
+		for node: Node in root.find_children("Park_*", "Node3D", true, false):
+			if not node.has_meta("anchor_posts") or not by_id.has(String(node.name).substr(5)):
+				continue
+			var body := node.get_node_or_null("Collider")
+			if body == null:
+				continue
+			var info := fit_info(by_id[String(node.name).substr(5)], bool(node.get_meta("anchor_kit", false)))
+			info["body"] = body.get_instance_id()
+			for shape: Node in body.get_children():
+				if shape is CollisionShape3D and shape.shape is BoxShape3D:
+					out.append(box_record(shape.global_transform, (shape.shape as BoxShape3D).size, info))
+		return out
+
+	# The nearest fitted box corner to at: {"dist" (INF if none), "box"}.
+	static func corner_distance(at: Vector3, list: Array) -> Dictionary:
+		var best := INF
+		var which := -1
+		var flat := Vector2(at.x, at.z)
+		for i in list.size():
+			var b: Dictionary = list[i]
+			if not b["fitted"] or at.y < float(b["y0"]) - Y_SLACK_M or at.y > float(b["y1"]) + Y_SLACK_M:
+				continue
+			for c: Vector2 in b["corners"]:
+				var d := flat.distance_to(c)
+				if d < best:
+					best = d
+					which = i
+		return {"dist": best, "box": which}
+
+	# The nearest box surface to at among list's indices (all when null): {"dist", "box", "normal"}; 0 inside a box.
+	static func nearest_surface(at: Vector3, list: Array, indices = null) -> Dictionary:
+		var best := INF
+		var which := -1
+		var normal := Vector3.UP
+		for n in (list.size() if indices == null else indices.size()):
+			var i: int = n if indices == null else indices[n]
+			var b: Dictionary = list[i]
+			var local: Vector3 = (b["xf"] as Transform3D).affine_inverse() * at
+			var half: Vector3 = b["half"]
+			var near := Vector3(clampf(local.x, -half.x, half.x), clampf(local.y, -half.y, half.y), clampf(local.z, -half.z, half.z))
+			var d := local.distance_to(near)
+			if d < best:
+				best = d
+				which = i
+				normal = ((b["xf"] as Transform3D).basis * (local - near)).normalized() if d > 0.0 else Vector3.UP
+		return {"dist": best, "box": which, "normal": normal}
+
+	# Whether (x, z) falls in a marked cell of ParkMap's lane mask (scatter.gd's rule: the cell of the nearest lattice node).
+	static func on_lane(mask: Dictionary, x: float, z: float) -> bool:
+		if mask.is_empty():
+			return false
+		var side: int = mask["side"]
+		var step: float = mask["step"]
+		var half: float = mask["half"]
+		var i := clampi(roundi((x + half) / step), 0, side - 1)
+		var j := clampi(roundi((z + half) / step), 0, side - 1)
+		return (mask["cells"] as PackedByteArray)[j * side + i] != 0
+
+	func _collect(game) -> void:
+		boxes = collect(game, park_rows)
+		_body_boxes = {}
+		for i in boxes.size():
+			var id: int = boxes[i]["body"]
+			if not _body_boxes.has(id):
+				_body_boxes[id] = []
+				fields += 1
+			_body_boxes[id].append(i)
+
+	# Called once per counted tick after the dead-stop clock steps; stopped is whether a dead stop was just counted.
+	func observe(game, ball: Vector3, stopped: bool) -> void:
+		_ticks += 1
+		if boxes.is_empty():
+			if _ticks % 90 == 1 and _tries < 8:
+				_tries += 1
+				_collect(game)
+			if boxes.is_empty():
+				return
+		var rigid = game.player._rigid
+		var v: Vector3 = rigid.linear_velocity
+		var touch := {}
+		for body in rigid.get_colliding_bodies():
+			if _body_boxes.has(body.get_instance_id()):
+				touch[body.get_instance_id()] = true
+		touch_ticks += 1 if not touch.is_empty() else 0
+		if _prev_v != Vector3.INF:
+			var ids: Array = touch.keys()
+			for id in _prev_touch:
+				if not touch.has(id):
+					ids.append(id)
+			ids.sort_custom(func(a, b): return _body_boxes[a][0] < _body_boxes[b][0])
+			for id in ids:
+				var hit := nearest_surface(ball, boxes, _body_boxes[id])
+				if hit["dist"] > SURFACE_LIMIT_M:
+					continue
+				if _prev_v.dot(hit["normal"]) < -BOUNCE_MIN_MPS and v.dot(hit["normal"]) > 0.0:
+					_record("bounce", game, ball, hit)
+		_prev_v = v
+		_prev_touch = touch
+		if stopped:
+			_record("stop", game, ball, nearest_surface(ball, boxes))
+
+	func _record(kind: String, game, ball: Vector3, hit: Dictionary) -> void:
+		events.append(describe(kind, park_id, seed_number, snappedf(game.run.stage_time, 0.01), ball, boxes, hit, lane))
+
+	# One event row. hit: nearest_surface over boxes; the row fields are the nearest box's, the corner fields the nearest fitted corner's.
+	static func describe(kind: String, park_name: String, seed_value: int, time: float, ball: Vector3, list: Array, hit: Dictionary, mask: Dictionary) -> Dictionary:
+		var corner := corner_distance(ball, list)
+		var near: Dictionary = list[hit["box"]] if int(hit["box"]) >= 0 else {}
+		var cb: Dictionary = list[corner["box"]] if int(corner["box"]) >= 0 else {}
+		return {
+			"park": park_name, "seed": seed_value, "kind": kind, "time": time,
+			"at": [snappedf(ball.x, 0.01), snappedf(ball.y, 0.01), snappedf(ball.z, 0.01)],
+			"row": near.get("row", ""), "key": near.get("key", ""), "size_y": near.get("size_y"), "fitted": near.get("fitted", false),
+			"over_limit": near.get("over_limit", false), "surface_dist_m": snappedf(float(hit["dist"]), 0.01) if is_finite(float(hit["dist"])) else null,
+			"corner_dist_m": snappedf(float(corner["dist"]), 0.01) if is_finite(float(corner["dist"])) else null,
+			"corner_row": cb.get("row", ""), "corner_key": cb.get("key", ""), "corner_size_y": cb.get("size_y"),
+			"corner_over_limit": cb.get("over_limit", false),
+			"on_ride_line": on_lane(mask, ball.x, ball.z),
+		}
+
+	func report() -> Dictionary:
+		var fitted := 0
+		for b in boxes:
+			fitted += 1 if b["fitted"] else 0
+		return {"seed": seed_number, "fields": fields, "boxes": boxes.size(), "fitted_boxes": fitted, "touch_ticks": touch_ticks, "events": events.duplicate(true)}
+
+	# One park's summary over event rows: events and those within NEAR_M of a fitted corner (and how many of them on a ride
+	# line), all events on a ride line, and the events near an over_limit variant's post (surface within NEAR_M), by row and size.
+	static func summarise(rows: Array) -> Dictionary:
+		var near_corner := 0
+		var corner_on_line := 0
+		var on_line := 0
+		var limit := {}
+		var by_row := {}
+		for e: Dictionary in rows:
+			var corner = e.get("corner_dist_m")
+			var is_near: bool = corner != null and float(corner) <= NEAR_M
+			if is_near:
+				near_corner += 1
+				var label := "%s size %s" % [e["corner_row"], e["corner_size_y"]]
+				by_row[label] = int(by_row.get(label, 0)) + 1
+				if e["on_ride_line"]:
+					corner_on_line += 1
+			if e["on_ride_line"]:
+				on_line += 1
+			var surface = e.get("surface_dist_m")
+			if e.get("over_limit", false) and surface != null and float(surface) <= NEAR_M:
+				var label := "%s size %s %s%s" % [e["row"], e["size_y"], e["key"], " (on ride line)" if e["on_ride_line"] else ""]
+				limit[label] = int(limit.get(label, 0)) + 1
+		return {"events": rows.size(), "near_corner": near_corner, "near_corner_on_ride_line": corner_on_line,
+			"near_corner_by_row": by_row, "events_on_ride_line": on_line, "over_limit_events": limit}
 
 
 # The park's ride facts among verbs, in the order they fired (PARK_RIDE_FACTS only).
@@ -1016,6 +1262,8 @@ func _physics_process(delta: float) -> bool:
 	if not over and not _sampler.engaged:
 		return false
 	var run := _sampler.result(_seeds[_index], "engaged" if _sampler.engaged else _driver.outcome)
+	if _sampler.contacts != null:
+		run["anchor_contacts"] = _sampler.contacts.report()
 	_runs.append(run)
 	if _sampler.tracing:
 		var trace_path := _out_dir().path_join("%s-seed-%d-trace.json" % [trace_stem(_pilot, hands_of(_settings)), _seeds[_index]])
@@ -1068,6 +1316,8 @@ func _start_park_driver() -> bool:
 		_game.flow.enter_stage(stage, Vector3.ZERO, false)
 	_sampler = Sampler.new(_game)
 	_sampler.setup_park(_line["waymarks"], open_graph(_map_id))
+	if _settings.has("anchor-contacts"):
+		_sampler.contacts = AnchorContacts.new(_map_id, _seeds[_index], ParkMap.lane_mask_for(map.path, park), ParkRecipes.placed_rows(park))
 	return true
 
 
@@ -1083,6 +1333,9 @@ func _finish() -> void:
 	var out := _out_dir()
 	var path := out.path_join(summary_name(_pilot, hands_of(_settings)))
 	var doc := {}
+	var contacts_doc := {}
+	if _settings.has("anchor-contacts") and _park and not _settings.has("child"):
+		contacts_doc = _take_contacts()
 	if _park:
 		doc = park_document(_pilot, _map_id, _stage, _commit(), _runs, _line.get("bar", {}), _floor_ref(out))
 		doc["class"] = PARK_PILOTS[_class_key]
@@ -1098,6 +1351,8 @@ func _finish() -> void:
 		for band in doc.get("bands", []):
 			band["inside"] = null
 	var written := write_document(path, doc)
+	if not contacts_doc.is_empty():
+		written = write_document(out.path_join("anchor_contacts.json" if hands_of(_settings).is_empty() else "anchor_contacts.hands.json"), contacts_doc) and written
 	if _park:
 		for band in doc["bands"]:
 			var verdict := "no data" if band["inside"] == null else ("inside" if band["inside"] else "OUTSIDE")
@@ -1108,6 +1363,34 @@ func _finish() -> void:
 	if _park and _stage == FIXTURE_STAGE:
 		restore_park_defs()
 	quit((0 if _inconclusive.is_empty() else 3) if written else 1)
+
+
+# The anchor-contacts document, taking each run's "anchor_contacts" out of the runs so the summary keeps its shape.
+func _take_contacts() -> Dictionary:
+	var per_seed: Array = []
+	var events: Array = []
+	for run in _runs:
+		if run.has("anchor_contacts"):
+			var one: Dictionary = run["anchor_contacts"]
+			run.erase("anchor_contacts")
+			per_seed.append({"seed": int(one["seed"]), "fields": int(one["fields"]), "boxes": int(one["boxes"]), "fitted_boxes": int(one["fitted_boxes"]), "touch_ticks": int(one["touch_ticks"]), "events": (one["events"] as Array).size()})
+			for e: Dictionary in one["events"]:
+				e["seed"] = int(e["seed"])
+				events.append(e)
+	var summary := AnchorContacts.summarise(events)
+	var posts := 0
+	for row in per_seed:
+		posts += int(row["fitted_boxes"])
+	print("traversal_line: anchor-contacts %s %s%s: %d events (%d stops, %d bounces), %d within %.1f m of a fitted corner, %d of those on a ride line, %d events on a ride line, over_limit near %s, fitted boxes per seed %s, anchor touch ticks per seed %s"
+		% [_map_id, _pilot, "" if hands_of(_settings).is_empty() else " hands=" + ",".join(hands_of(_settings)), events.size(),
+			events.filter(func(e): return e["kind"] == "stop").size(), events.filter(func(e): return e["kind"] == "bounce").size(),
+			summary["near_corner"], AnchorContacts.NEAR_M, summary["near_corner_on_ride_line"], summary["events_on_ride_line"], summary["over_limit_events"],
+			per_seed.map(func(r): return r["fitted_boxes"]), per_seed.map(func(r): return r["touch_ticks"])])
+	return {"park": _map_id, "stage": _stage, "pilot": _pilot, "hands": hands_of(_settings), "commit": _commit(),
+		"definitions": {"near_m": AnchorContacts.NEAR_M, "ride_line": "ParkMap.lane_mask_for cell of the nearest 8 m lattice node (scatter.gd rule)",
+			"corner": "fitted box vertical-edge corner, XZ, ball height within box span +/- %.1f m" % AnchorContacts.Y_SLACK_M,
+			"bounce": "contact with an anchor body and normal velocity from below -%.1f m/s to above 0" % AnchorContacts.BOUNCE_MIN_MPS},
+		"per_seed": per_seed, "summary": summary, "events": events}
 
 
 # The floor band's reference: the --ref pilot's (Rivet's by default) summary in the same out.

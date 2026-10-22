@@ -5,6 +5,7 @@ const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const TraversalLine := preload("res://tools/traversal_line.gd")
 const RunLog := preload("res://src/core/run_log.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const T := preload("res://tests/support/t.gd")
@@ -133,6 +134,7 @@ func _start_fixture() -> void:
 	_check_fixture_lines()
 	_check_summary()
 	_check_floor_hands()
+	_check_anchor_contacts()
 	_t.check("the fixture replaces the park table's first stage", TraversalLine.use_fixture(), "park_defs stage 1 map now park_test")
 	_new_game("park")
 
@@ -393,6 +395,54 @@ func _band_of(doc: Dictionary, measure: String) -> Dictionary:
 
 
 # The floor line's hands: only the stick and the brake survive the filter.
+# --anchor-contacts on planted geometry: a fitted box turned 90 degrees, a ball a known distance from its vertical-edge corner.
+func _check_anchor_contacts() -> void:
+	var AC = TraversalLine.AnchorContacts
+	var fitted := {"row": "plant", "key": "anchor_basalt_a", "size_y": 2.0, "fitted": true, "over_limit": true}
+	var grey := {"row": "grey", "key": "greybox:anchor_field", "size_y": 14.0, "fitted": false, "over_limit": false}
+	# Size (4, 6, 2) turned a quarter about Y at (10, 3, 20): x 9 to 11, z 16 to 24, one corner at (11, 18).
+	var xf := Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(10.0, 3.0, 20.0))
+	var list: Array = [AC.box_record(xf, Vector3(4.0, 6.0, 2.0), fitted), AC.box_record(Transform3D(Basis.IDENTITY, Vector3(13.5, 3.0, 18.0)), Vector3(1.0, 6.0, 1.0), grey)]
+	var ball := Vector3(12.2, 3.0, 18.0)
+	var corner: Dictionary = AC.corner_distance(ball, list)
+	_t.check("anchor contacts: the planted ball is 1.2 m from the turned fitted box's corner", int(corner["box"]) == 0 and absf(float(corner["dist"]) - 1.2) < 0.0001, str(corner))
+	_t.check("anchor contacts: a ball above the box's span has no corner, and an 8 m box has none", not is_finite(float(AC.corner_distance(Vector3(12.2, 11.0, 18.0), list)["dist"]))
+		and not is_finite(float(AC.corner_distance(ball, [list[1]])["dist"])))
+	var hit: Dictionary = AC.nearest_surface(ball, list)
+	_t.check("anchor contacts: the nearest surface is the grey box 0.8 m away, with a normal facing the ball", int(hit["box"]) == 1 and absf(float(hit["dist"]) - 0.8) < 0.0001 and (hit["normal"] as Vector3).x < -0.99, str(hit))
+	var mask := {"side": 4, "step": 8.0, "half": 16.0, "cells": PackedByteArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])}
+	_t.check("anchor contacts: the lane mask marks the planted cell only", AC.on_lane(mask, ball.x, ball.z) and not AC.on_lane(mask, -12.0, -12.0) and not AC.on_lane({}, ball.x, ball.z))
+	var hit_fit: Dictionary = AC.nearest_surface(ball, [list[0]])
+	var event: Dictionary = AC.describe("stop", "park_plant", 7, 3.5, ball, list, hit_fit, mask)
+	_t.check("anchor contacts: the event row carries park, seed, row, size, fitted, over_limit, distance and ride line",
+		event["park"] == "park_plant" and event["seed"] == 7 and event["row"] == "plant" and event["size_y"] == 2.0 and event["fitted"] and event["over_limit"]
+		and event["corner_dist_m"] == 1.2 and event["corner_row"] == "plant" and event["on_ride_line"] and event["kind"] == "stop", str(event))
+	var far: Dictionary = AC.describe("bounce", "park_plant", 7, 4.0, Vector3(-12.0, 3.0, -12.0), list, AC.nearest_surface(Vector3(-12.0, 3.0, -12.0), list), mask)
+	var summary: Dictionary = AC.summarise([event, far])
+	_t.check("anchor contacts: the summary counts the planted corner stop, on the ride line, and the over_limit one",
+		summary["events"] == 2 and summary["near_corner"] == 1 and summary["near_corner_on_ride_line"] == 1 and summary["events_on_ride_line"] == 1
+		and (summary["over_limit_events"] as Dictionary).size() == 1 and not far["on_ride_line"], str(summary))
+	var near_limit: Dictionary = AC.describe("stop", "park_plant", 7, 3.6, Vector3(11.8, 3.0, 20.0), list, AC.nearest_surface(Vector3(11.8, 3.0, 20.0), list), mask)
+	_t.check("anchor contacts: a stop 0.8 m from an over_limit box's face is counted under over_limit",
+		(AC.summarise([near_limit])["over_limit_events"] as Dictionary).size() == 1, str(AC.summarise([near_limit])))
+	# The recorder on a real fitted row placed by place_row: one record per BoxShape3D, all fitted, and a ball planted 0.9 m from a corner.
+	var row := {"id": "corner_t", "element": "anchor_field", "at": [0, 0], "y": null, "size": [60, 10, 60], "yaw_deg": 30, "ride_fact": "",
+		"recipe": "anchor_hoodoo", "stamp": "", "budget": "detail"}
+	var parent := Node3D.new()
+	root.add_child(parent)
+	var node: Node3D = ParkRecipes.place_row(row, parent, func(_x: float, _z: float) -> float: return 0.0)
+	var recorded: Array = AC.collect(root, [row])
+	var shapes := node.find_children("*", "CollisionShape3D", true, false)
+	var all_fitted := recorded.all(func(b: Dictionary) -> bool: return b["fitted"] and b["row"] == "corner_t")
+	_t.check("anchor contacts: collect finds every box of a placed fitted row (%d of %d)" % [recorded.size(), shapes.size()], recorded.size() == shapes.size() and shapes.size() > 0 and all_fitted)
+	if not recorded.is_empty():
+		var c: Vector2 = recorded[0]["corners"][0]
+		var planted := Vector3(c.x + 0.9, (float(recorded[0]["y0"]) + float(recorded[0]["y1"])) * 0.5, c.y)
+		var found: Dictionary = AC.corner_distance(planted, recorded)
+		_t.check("anchor contacts: a ball planted 0.9 m from a placed box's corner reads at most 0.9 m", float(found["dist"]) <= 0.9001, str(found))
+	parent.free()
+
+
 func _check_floor_hands() -> void:
 	var hold := {"move": Vector2(0, 1), "brake_held": true, "fire_held": true, "line_held": true, "boost_held": true, "special_held": true}
 	var press := {"jump_pressed": true, "special_pressed": true, "boost_pressed": true}
@@ -453,6 +503,7 @@ func _plant_tick(delta: float) -> void:
 
 func _check_measure() -> void:
 	var run: Dictionary = _sampler.result(1, "engaged" if _sampler.engaged else _driver.outcome)
+	_t.check("--anchor-contacts off: the sampler holds no contact recorder and the run row carries no anchor_contacts", _sampler.contacts == null and not run.has("anchor_contacts"))
 	var doc := TraversalLine.document("sable", "slice", "test", [run], {})
 	var path: String = _game.storage_dir.path_join("traversal_measure.json")
 	_t.check("document written", TraversalLine.write_document(path, doc), path)
