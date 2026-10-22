@@ -11350,23 +11350,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant a LOD0 (10880 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; polished and baked."
+    "notes": "billing_booth variant a LOD0 (11096 tris): Fleet signal crew's tally hut: faded petrol-enamel walls patched with oxide and timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -3.6734,
+     -3.6737,
      0,
-     -2.7182
+     -2.7121
     ],
     "max": [
-     3.6734,
-     4.1016,
-     2.7182
+     3.6737,
+     4.1015,
+     2.7121
     ],
     "size": [
-     7.3468,
-     4.1016,
-     5.4364
+     7.3474,
+     4.1015,
+     5.4242
     ]
    }
   },
@@ -11378,23 +11378,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant a LOD1 (5440 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "billing_booth variant a LOD1 (5548 tris): Fleet signal crew's tally hut: faded petrol-enamel walls patched with oxide and timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.6726,
+     -3.6721,
      0,
-     -2.7175
+     -2.711
     ],
     "max": [
-     3.669,
-     4.1017,
-     2.7179
+     3.6702,
+     4.1011,
+     2.7126
     ],
     "size": [
-     7.3416,
-     4.1017,
-     5.4354
+     7.3423,
+     4.1011,
+     5.4236
     ]
    }
   },
@@ -11406,23 +11406,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant a LOD2 (1604 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "billing_booth variant a LOD2 (1634 tris): Fleet signal crew's tally hut: faded petrol-enamel walls patched with oxide and timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.6757,
+     -3.6674,
      0,
-     -2.7188
+     -2.7032
     ],
     "max": [
-     3.6814,
-     4.0913,
-     2.7302
+     3.6834,
+     4.0891,
+     2.7134
     ],
     "size": [
-     7.3571,
-     4.0913,
-     5.449
+     7.3508,
+     4.0891,
+     5.4166
     ]
    }
   },
@@ -11434,23 +11434,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant b LOD0 (11060 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; polished and baked."
+    "notes": "billing_booth variant b LOD0 (11296 tris): Fleet signal crew's tally hut: faded petrol-enamel walls patched with oxide and timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -3.6732,
+     -3.6738,
      0,
-     -2.7234
+     -2.7201
     ],
     "max": [
-     3.6732,
-     4.1029,
-     2.7234
+     3.6738,
+     4.1016,
+     2.7201
     ],
     "size": [
-     7.3464,
-     4.1029,
-     5.4468
+     7.3476,
+     4.1016,
+     5.4402
     ]
    }
   },
@@ -11462,23 +11462,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant b LOD1 (5530 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "billing_booth variant b LOD1 (5648 tris): Fleet signal crew's tally hut: faded petrol-enamel walls patched with oxide and timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.6723,
+     -3.6735,
      0,
-     -2.7229
+     -2.7197
     ],
     "max": [
-     3.6696,
-     4.1027,
-     2.7186
+     3.6721,
+     4.1012,
+     2.7194
     ],
     "size": [
-     7.3419,
-     4.1027,
-     5.4415
+     7.3456,
+     4.1012,
+     5.4391
     ]
    }
   },
@@ -11490,23 +11490,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant b LOD2 (1635 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "billing_booth variant b LOD2 (1671 tris): Fleet signal crew's tally hut: faded petrol-enamel walls patched with oxide and timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
      -3.6667,
      0,
-     -2.7163
+     -2.7216
     ],
     "max": [
-     3.6828,
-     4.1013,
-     2.7355
+     3.6836,
+     4.1004,
+     2.7264
     ],
     "size": [
-     7.3495,
-     4.1013,
-     5.4518
+     7.3503,
+     4.1004,
+     5.448
     ]
    }
   },
@@ -11518,23 +11518,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant c LOD0 (9752 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; polished and baked."
+    "notes": "billing_booth variant c LOD0 (9976 tris): Fleet signal crew's tally hut: faded petrol-enamel walls patched with oxide and timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -3.7473,
+     -3.747,
      0,
-     -3.2142
+     -3.2145
     ],
     "max": [
-     3.7473,
-     4.1023,
-     3.2142
+     3.747,
+     4.1017,
+     3.2145
     ],
     "size": [
-     7.4946,
-     4.1023,
-     6.4284
+     7.494,
+     4.1017,
+     6.429
     ]
    }
   },
@@ -11546,23 +11546,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant c LOD1 (4876 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "billing_booth variant c LOD1 (4988 tris): Fleet signal crew's tally hut: faded petrol-enamel walls patched with oxide and timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.7473,
+     -3.7461,
      0,
-     -3.2141
+     -3.2138
     ],
     "max": [
-     3.7442,
-     4.1023,
-     3.2138
+     3.745,
+     4.1012,
+     3.2108
     ],
     "size": [
-     7.4915,
-     4.1023,
-     6.4279
+     7.4911,
+     4.1012,
+     6.4246
     ]
    }
   },
@@ -11574,23 +11574,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "billing_booth variant c LOD2 (1462 tris): Fleet signal crew's tally hut: sun-bleached oxide walls patched with timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "billing_booth variant c LOD2 (1496 tris): Fleet signal crew's tally hut: faded petrol-enamel walls patched with oxide and timber, a chalkboard counting ELEVEN against TWELVE, abandoned mid-shift. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -3.7411,
+     -3.7439,
      0,
-     -3.2067
+     -3.2132
     ],
     "max": [
-     3.751,
-     4.1008,
-     3.2177
+     3.7451,
+     4.0896,
+     3.2219
     ],
     "size": [
-     7.4921,
-     4.1008,
-     6.4244
+     7.489,
+     4.0896,
+     6.4351
     ]
    }
   },
