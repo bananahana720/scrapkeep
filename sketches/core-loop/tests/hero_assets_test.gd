@@ -380,7 +380,7 @@ func _check_stub() -> void:
 	_report("stub heading", forward.dot(Vector3.RIGHT) > 0.99, "pod faces the heading (%s)" % forward)
 	stub.kit.gliding = true
 	hook._process(1.0)
-	var vane := pod.get_node_or_null("VaneL") as Node3D
+	var vane := pod.find_child("VaneL", true, false) as Node3D
 	_report("stub vane", vane != null and absf(vane.rotation.z - PI * 0.5) < 0.01, "Kest's vane opens while gliding")
 	stub.free()
 	hook.free()

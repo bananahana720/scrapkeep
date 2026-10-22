@@ -266,7 +266,8 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
 ## Ball hooks (`src/movement/player_ball.gd`)
 
 - `juice_node() -> Node3D` belongs to presentation. It follows the ball and never rotates. Scale it for squash and stretch, and parent trails or speed lines to it. The spine never writes it.
-- `roll_node() -> Node3D` rolls with the ball's surface. Parent anything that should stick to the ball there, such as accreted scrap (B). The shell may grow visually; the collider never does.
+- `pod_mount() -> Node3D` sits beside the juice node and takes only its position, never its basis. The cockpit pod parents here, so squash, stretch and heft never scale the pilot (MOTION-SPEC row 204).
+- `roll_node() -> Node3D` rolls with the ball's surface. Parent anything that should stick to the ball there, such as accreted scrap (B). The drawn outline stays the collider's size at every heft class (DECISIONS, 22 Oct, fixed outline).
 - `pylon_node() -> Node3D` is the drawn pylon, for plant and eject animation.
 - `builtin_squash: bool` is the spine's landing squash. Presentation sets it false when it draws its own.
 - `speed_tier() -> int` (0 walk, 1 cruise, 2 fast, 3 blazing), `speed_fraction() -> float`, `shown_position()`, `planar_velocity()`, `ball_position()`.
@@ -652,13 +653,14 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 
 | Owner | What the hook reads | What it adds |
 | --- | --- | --- |
-| `movement/player_ball.gd` | `class_def`, `class_color()`, `state.velocity`, `kit.gliding`, `roll_node()` (whose parent is the rolling mesh), `juice_node()` | `HeroCore` under the rolling mesh, `HeroPod` under the juice node; the greybox ball mesh is hidden |
+| `movement/player_ball.gd` | `class_def`, `class_color()`, `state.velocity`, `kit.gliding`, `roll_node()` (whose parent is the rolling mesh), `juice_node()`, `pod_mount()` | `HeroCore` under the rolling mesh, `HeroPod` under the pod mount (`pod_mount()`); the greybox ball mesh is hidden |
 | `build/accretion.gd` | Each direct `MeshInstance3D` child is a chunk; its slot index is read back from `position` (`_slot(i, MAX_CHUNKS) * 1.02`) | `HeroChunk` under each chunk; the box is hidden |
 | `build/reward_gates.gd` | Each child `Node3D` is a gate; its offer is the `offers` row whose `at` matches its position; `Topper`, `Glyph<i>` sprites, `rarity_color()` | `HeroArch`, `Topper/HeroTopper`, one `HeroPlate<i>` per glyph; posts, bar, topper and heart are hidden |
 
 - **Hidden means hidden.** A placeholder keeps its node, script and transform, with `layers = 0` and shadows off. Anything that animates it (the topper's spin and pulse, the chunk pop and fling, the squash) still drives the hero child.
 - **Slots to colours.** `SLOTS` in the hook is the one table from section 9 slot names to palette roles. glb surfaces are named for their slot. Change a colour there or in `palette.gd`, never in a recipe.
 - **Shell nodes.** Each `shell_<class>.glb` is `Shell<Name>` > `Core`, `Pod` > `Dome` > `Pilot`, plus `RopeExit` (Sable) and `VaneL`/`VaneR` (Kest, hinged about Godot Z). The glbs use Godot axes, +Y up and -Z forward.
+- **Carrier bank (MOTION-SPEC row 208, draw only).** `HeroAssets.carrier_bank(pod)` returns the world `Basis` of the bank the carrier wears now: a tilt about the horizontal axis `UP x normal` that leans the carrier's up toward the smoothed contact normal, the smallest angle that keeps `WeaponRing` and the bracket modules within 0.99 m along it (`carrier_bank.gd`; identity on floors and in the air). The `WeaponRing`, the `Fairlead` carriage and every part named in `HeroAssets.BRACKET_PARTS`, which `_split` moves under a `Pod > CarrierBank` holder, wear it as `bank * yaw`; the pod, the pilot and the Gyro rings stay level. Row 207's gimbal drive reads `carrier_bank(pod)` and leaves `counter_tilt` alone. `LineView.fairlead_point` takes the bank, read from the player's `carrier_bank` meta.
 
 **Not wired (for the coordinator after W7 merges).** `warden_clamp_base.glb` is `WardenClampBase` > `Housing`, `Tower` > `KitMount`, `JawL`, `JawR`. The beacon stands at the origin. The jaw origins sit on the vertical hinge axis at x 2.2, so rotating them about Y opens the clamp, and closed is the modelled pose. `warden_kit_{reactor,hive,mind}.glb` roots sit at `KitMount`. Each has a `WeakPoint` node, plus `Vent0..2` (reactor), `Drone0..5` (hive), and `ArmL`, `ArmR` and `Shutter0..5` (mind). Their slots are `ancient_enamel`, `ancient_light`, `bare_metal` and `rubber` (the charcoal grooves). The hook's `paint(node, {})` dresses them with no tint.
 
