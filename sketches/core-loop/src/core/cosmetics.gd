@@ -37,7 +37,7 @@ const ROWS := {
 	"paint_any_salt": {"slot": "paint", "pilot": "", "name": "Salt White", "starter": true, "tint": Color("e9ecea")},
 	"paint_any_night": {"slot": "paint", "pilot": "", "name": "Night Slate", "starter": false, "tint": Color("2b3a4a")},
 	"paint_sable_lagoon": {"slot": "paint", "pilot": "pylon_engineer", "name": "Lagoon", "starter": true, "tint": Color("2fc6b5")},
-	"paint_sable_violet": {"slot": "paint", "pilot": "pylon_engineer", "name": "Violet Static", "starter": false, "tint": Color("8a6bd6")},
+	"paint_sable_violet": {"slot": "paint", "pilot": "pylon_engineer", "name": "Violet Static", "starter": false, "tint": Color("d651c4")},
 	"paint_rivet_moss": {"slot": "paint", "pilot": "runner_gunner", "name": "Moss", "starter": true, "tint": Color("6f9a4a")},
 	"paint_rivet_forge": {"slot": "paint", "pilot": "runner_gunner", "name": "Forge Blue", "starter": false, "tint": Color("3a6fb0")},
 	"paint_kest_plum": {"slot": "paint", "pilot": "demolitions_caster", "name": "Ember Plum", "starter": true, "tint": Color("8a3f6e")},
