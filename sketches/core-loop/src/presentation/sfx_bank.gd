@@ -240,6 +240,8 @@ const RENDERED_DIR := "res://assets/audio/sfx/"
 static var _rendered := {}
 # Set on the main thread to abandon a startup bake; the worker checks it between ids.
 static var bake_cancel := false
+# Tests set this to keep a startup bake parked before its first id until the cancel lands.
+static var bake_hold := false
 
 
 # The midi numbers of a break phrase's four notes, lowest first.
@@ -559,6 +561,8 @@ static func file_backed(id: String) -> bool:
 
 
 static func bake_all(ids: Array) -> void:
+	while bake_hold and not bake_cancel:
+		OS.delay_msec(1)
 	for id in ids:
 		if bake_cancel:
 			return

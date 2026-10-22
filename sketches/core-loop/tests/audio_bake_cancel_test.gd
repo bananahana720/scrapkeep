@@ -17,6 +17,7 @@ var _ids: Array = []
 
 
 func _initialize() -> void:
+	SfxBank.bake_hold = true
 	var unique := {}
 	for id in Audio._sound_ids():
 		unique[id] = true
@@ -48,6 +49,7 @@ func _process(_delta: float) -> bool:
 			_t.check("bake abandoned", baked < _ids.size(), "%d of %d unique ids baked when the game left the tree" % [baked, _ids.size()])
 			_t.check("not marked baked", not Audio._baked and Audio._bake_task == -1 and not SfxBank.bake_cancel, "baked bit false, task cleared, cancel flag cleared")
 			_game.free()
+			SfxBank.bake_hold = true
 			_game = _build()
 			_other = _build()
 			_step = 1
@@ -68,6 +70,7 @@ func _process(_delta: float) -> bool:
 		3:
 			_t.check("FX-2 re-entry restarts the bake", Audio._bake_task >= 0 and not Audio._baked, "task %d, baked %s after the re-entered frame" % [Audio._bake_task, Audio._baked])
 			var audio = _game.presentation.audio
+			SfxBank.bake_hold = false
 			audio.bake_now()
 			var missing := _missing()
 			_t.check("FX-1 survivor completes", missing.is_empty() and audio.sound_ready and Audio._baked, "every id baked, sound_ready %s, missing %s" % [audio.sound_ready, missing])
