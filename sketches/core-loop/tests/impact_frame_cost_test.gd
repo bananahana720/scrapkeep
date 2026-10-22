@@ -1,24 +1,18 @@
-# smoke: solo
 extends SceneTree
 
-# What the impact frame costs (lighting L7, #241). Inactive cost is provably zero: while no
-# frame is alive the rect source is never called, no uniform is written and nothing redraws.
-# A live frame's rect work (the refresh, the uniform upload and the shapes of one draw) is
-# counted, more rects than the shader holds draw nothing, and the upload plus `_shapes` is
-# micro-benched at 0, 4, 16 and 64 hostile rects. The bench prints its numbers but gates only
-# on facts that cannot flake on a slow runner; the 0.2 ms per fired frame bar at 16 rects is
-# judged from the printed line on a quiet box, never from cloud timing.
+# What the impact frame costs (lighting L7, #241), minus the clock. Inactive cost is provably
+# zero: while no frame is alive the rect source is never called, no uniform is written and
+# nothing redraws. A fire builds its pieces once and refreshes the rects on every live frame,
+# more rects than the shader holds draw nothing, and warning_rects keeps a rect for every
+# mark that contains the old per-mesh one. Timing lives in tools/impact_frame_bench.gd; tests
+# do not read the wall clock.
 const T := preload("res://tests/support/t.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
-const CALLS := 1000
-const WARM_UP := 50
 const SCREEN := Vector2(1920.0, 1080.0)
-# Far past any real runner; a hang or an accidental O(n^3) trips it, a slow box does not.
-const SANITY_MEAN_USEC := 100000.0
 
 var t := T.new("impact_frame_cost_test")
 
@@ -36,8 +30,8 @@ func _run() -> void:
 	await _inactive()
 	await _moving()
 	await _overflow()
-	_bench()
-	await _rects_bench()
+	_placement()
+	await _rects()
 	await _frames(2)
 	quit(t.verdict())
 
@@ -180,11 +174,9 @@ func _hostile(count: int) -> Array[Rect2]:
 	return rects
 
 
-# A fire builds the shapes once and refreshes the rects on each of FRAME_FRAMES live frames,
-# so the refresh (apply_rects, the function the live refresh uses, so the upload is timed)
-# and `_shapes` are timed apart, and the per-fire figure is one shapes call plus
-# FRAME_FRAMES refreshes. The rect source is not in this bench (see _rects_bench).
-func _bench() -> void:
+# The hostile rects reach the shader whole: written by the same function the live refresh
+# uses, and the frame is every wedge and the wash whatever the rect count.
+func _placement() -> void:
 	var frame := PlayerFx.ImpactFrame.new()
 	frame._focus = Vector2(960.0, 540.0)
 	frame._strength = 1.0
@@ -193,40 +185,9 @@ func _bench() -> void:
 	for count in [0, 4, 16, 64]:
 		var rects := _hostile(count)
 		frame.apply_rects(rects)
-		t.eq("bench %d: the rects are written" % count, frame.material.get_shader_parameter("rect_count"), count)
+		t.eq("placement %d: the rects are written" % count, frame.material.get_shader_parameter("rect_count"), count)
 		var shapes: Array = frame._shapes(SCREEN)
-		t.check("bench %d: the frame is every wedge and the wash" % count, shapes.size() > 8, str(shapes.size()))
-		for i in WARM_UP:
-			frame.apply_rects(rects)
-			frame._shapes(SCREEN)
-		var refresh: Array = []
-		var build: Array = []
-		var both: Array = []
-		for i in CALLS:
-			var began := Time.get_ticks_usec()
-			frame.apply_rects(rects)
-			var mid := Time.get_ticks_usec()
-			frame._shapes(SCREEN)
-			var done := Time.get_ticks_usec()
-			refresh.append(mid - began)
-			build.append(done - mid)
-			both.append(done - began)
-		var line := "impact_frame_bench rects=%d calls=%d" % [count, CALLS]
-		var means := {}
-		for row in [["refresh", refresh], ["shapes", build], ["call", both]]:
-			var usec: Array = row[1]
-			usec.sort()
-			var sum := 0
-			for u in usec:
-				sum += u
-			var mean := float(sum) / float(CALLS)
-			var p99: float = usec[int(ceil(0.99 * CALLS)) - 1]
-			means[row[0]] = mean
-			line += " %s_mean_us=%.1f %s_p99_us=%.1f %s_max_us=%d" % [row[0], mean, row[0], p99, row[0], usec.back()]
-			t.eq("bench %d %s: %d samples taken" % [count, row[0], CALLS], usec.size(), CALLS)
-			t.check("bench %d %s: p99 >= mean >= 0" % [count, row[0]], p99 >= mean and mean >= 0.0, "mean %.1f p99 %.1f" % [mean, p99])
-			t.check("bench %d %s: mean is nowhere near a hang" % [count, row[0]], mean < SANITY_MEAN_USEC, "%.1f us" % mean)
-		print(line + " per_fire_mean_us=%.1f" % (means["shapes"] + PlayerFx.FRAME_FRAMES * means["refresh"]))
+		t.check("placement %d: the frame is every wedge and the wash" % count, shapes.size() > 8, str(shapes.size()))
 	frame.free()
 
 
@@ -270,8 +231,8 @@ static func _old_project(node: Node, cam: Camera3D, span: Array) -> void:
 
 # warning_rects on a scene of real hostile marks: committed Telegraph rings and boss Hazard
 # annuli on a ground grid in front of a camera. The new rects must contain the old ones
-# (conservative); both are timed over CALLS calls and printed, old first.
-func _rects_bench() -> void:
+# (conservative), one rect per mark.
+func _rects() -> void:
 	var world := Node3D.new()
 	root.add_child(world)
 	var cam := Camera3D.new()
@@ -301,29 +262,6 @@ func _rects_bench() -> void:
 			contained = contained and now.any(func(n: Rect2) -> bool: return n.grow(0.01).encloses(r))
 		t.check("rects %d: a rect for every mark" % count, tree.get_nodes_in_group(Threat.GROUP).size() == count and now.size() == count, "%d marks, %d old, %d new" % [tree.get_nodes_in_group(Threat.GROUP).size(), old.size(), now.size()])
 		t.check("rects %d: every old rect lies inside a new one" % count, contained)
-		var grow := 0.0
-		for k in mini(old.size(), now.size()):
-			grow = maxf(grow, now[k].get_area() / maxf(old[k].get_area(), 1.0))
-		print("warning_rects_bench marks=%d largest new/old area ratio=%.3f" % [count, grow])
-		for pass_name in ["old", "new"]:
-			for i in WARM_UP:
-				_old_rects(tree, cam, margin) if pass_name == "old" else PlayerFx.warning_rects(tree, cam, margin)
-			var usec: Array = []
-			for i in CALLS:
-				var began := Time.get_ticks_usec()
-				if pass_name == "old":
-					_old_rects(tree, cam, margin)
-				else:
-					PlayerFx.warning_rects(tree, cam, margin)
-				usec.append(Time.get_ticks_usec() - began)
-			usec.sort()
-			var sum := 0
-			for u in usec:
-				sum += u
-			var mean := float(sum) / float(CALLS)
-			var p99: float = usec[int(ceil(0.99 * CALLS)) - 1]
-			print("warning_rects_bench %s marks=%d calls=%d mean_us=%.1f p99_us=%.1f max_us=%d" % [pass_name, count, CALLS, mean, p99, usec.back()])
-			t.check("rects %d %s: p99 >= mean >= 0 and no hang" % [count, pass_name], p99 >= mean and mean >= 0.0 and mean < SANITY_MEAN_USEC, "%.1f us" % mean)
 		for mark in marks:
 			mark.free()
 		await _frames(1)
