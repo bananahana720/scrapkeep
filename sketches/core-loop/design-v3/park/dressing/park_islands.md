@@ -1,6 +1,6 @@
 # Islands park dressing note (Dressing lane)
 
-Base line: branch head after merging `origin/stage/alpha-w18` (f259e8cf421fc3c305b53ae104005dda40af9a41, merge 9577225bbf5bb2ceeee1a76997a6b5a8cfc18407) and the foundation `claude/zealous-franklin-ed0sxr-lineclear` (e72fff7d96a88118e622f30658bcddb3105ae206, merge a4b4fc5b08b315b21531766569b64fc3ae33ce1c); previous head b117ddd0.
+Base line: branch head after merging `origin/stage/alpha-w18` (f259e8cf421fc3c305b53ae104005dda40af9a41, merge 9577225bbf5bb2ceeee1a76997a6b5a8cfc18407) and the foundation `claude/zealous-franklin-ed0sxr-lineclear` (e72fff7d96a88118e622f30658bcddb3105ae206, merge a4b4fc5b08b315b21531766569b64fc3ae33ce1c); then the foundation again at be6189ec5f5c8eb33591c33ecc76d72e56828394 (e72fff7d plus the stage f259e8cf merge; merge 628de2e1c3167fe83d2dbb843114b44f1f92a23b); previous head b117ddd0.
 Plan check: `park_props_plan.gd --map=park_islands --check` reports 470 instances (50 litter), 0 violations, fingerprint 3660265306 = pin (was 2014119072).
 
 Vignette file: `src/world/park/props/park_islands.json` (79 spots, 470 instances, 50 of them litter, pin 3660265306). Kit: `assets/models/park/props/islands/manifest.json`. Rules: DRESSING-KITS.md, READABILITY.md, KITS.md (islands). Audit: `tools/park_props_audit.gd` via the lock wrapper; the numbers below are from the merged tree (stage/alpha-w18 8ee9e2c1).
