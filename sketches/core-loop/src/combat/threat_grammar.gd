@@ -114,12 +114,18 @@ const OWNER_SPACING := 4.0
 # the 3060 live minus pending was -1.2 L* at stage 2 and +0.3 in the arena (#241 6342833117).
 # So the live slag is a dark scorched core, HAZARD.lerp(CHARCOAL, LIVE_SCORCH) at
 # LIVE_SCORCH_ALPHA, under the unchanged HAZARD edge and keyline. Linear-light model over grey
-# L* 67: pending 64.2, live about 48 at (0.4, 0.8), a 16 L* step. These are model estimates
-# pending the 3060 sweep (#241 6343070023, 6343230462); haze_pose_capture --scorch / --live-alpha
-# sweeps the candidates either side.
+# L* 67: pending 64.2, live about 48 at (0.4, 0.8), a 16 L* step. The 3060 sweep at 512b636f
+# (#241 6345835130) measured live 13.0 L* under pending in stage 2 and 11.4 in the arena, and the
+# coordinator kept 0.4 / 0.8 (#241 6345854759); haze_pose_capture --scorch / --live-alpha sweeps
+# the candidates either side.
+# AIR_LIVE_ALPHA: an air-only mark (the netcaster's net, which catches the ball only in the air)
+# must not wear the scorch, which reads as the strongest ground hit and sends the player off the
+# ground. It keeps the stage's HAZARD tint at 0.61, the stage's haze live alpha (HAZE_SOLID on
+# stage/alpha-w18 43918e26); ruling #241 6347013047 section 4.
 const HAZE_FILL := 1.15
 const LIVE_SCORCH := 0.4
 const LIVE_SCORCH_ALPHA := 0.8
+const AIR_LIVE_ALPHA := 0.61
 const TELEGRAPH_FLAG := "telegraph"
 
 
@@ -232,6 +238,8 @@ static func fill_tint(d: Dictionary) -> Color:
 	if int(d["type"]) != Type.INSTANT or not d.get("live", false):
 		return Color(0.0, 0.0, 0.0, 0.0)
 	if haze() and stance(d["tone"]) == "hostile":
+		if d.get("air", false):
+			return Color(d.get("live_tone", d["tone"]), AIR_LIVE_ALPHA)
 		return Color(Palette.HAZARD.lerp(Palette.CHARCOAL, LIVE_SCORCH), LIVE_SCORCH_ALPHA)
 	var live_tone: Color = d.get("live_tone", d["tone"])
 	return Color(live_tone, LIVE_ALPHA)

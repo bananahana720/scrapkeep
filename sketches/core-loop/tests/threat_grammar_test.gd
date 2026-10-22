@@ -47,6 +47,23 @@ func _process(_delta: float) -> bool:
 	_check_stances()
 	_check_wave()
 	_check_sweep()
+	# The netcaster catches only in the air, so its live ring must not wear the ground scorch
+	# (ruling #241 6347013047 section 4). Built the way netcaster._commit builds it; the planted
+	# control is the same descriptor without "air", which must still get the scorch.
+	var net: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, 400.0), 6.0)
+	net.air_only = true
+	net.set_progress(1.0)
+	var air_d: Dictionary = net.descriptor()
+	var ground_d: Dictionary = air_d.duplicate()
+	ground_d.erase("air")
+	var scorch := Color(Palette.HAZARD.lerp(Palette.CHARCOAL, Threat.LIVE_SCORCH), Threat.LIVE_SCORCH_ALPHA)
+	var air_tint := Threat.fill_tint(air_d)
+	var ground_tint := Threat.fill_tint(ground_d)
+	_report("air net keeps off the live scorch", Threat.haze() and air_d.get("live", false) and air_d.get("air", false)
+			and air_tint != scorch and air_tint == Color(Palette.HAZARD, Threat.AIR_LIVE_ALPHA) and ground_tint == scorch,
+		"air live fill %s is not the scorch %s and is HAZARD at %.2f; the planted control without air gives %s"
+			% [air_tint, scorch, Threat.AIR_LIVE_ALPHA, ground_tint])
+	net.free()
 	_check_projectile()
 	_check_driven()
 	_check_drive_layers()
@@ -496,7 +513,7 @@ func _check_fill_classes() -> void:
 	var slag_step: float = pending_l - live_l
 	var old_step: float = pending_l - old_l
 	_report("live slag over pending fill", Threat.haze() and instant_pending > 0.39 and slag_step >= LIVE_STEP and old_step < LIVE_STEP,
-		"modeled over L* %.2f: pending %.1f, live %.1f, step %.1f (at least %.0f; model estimate pending the 3060 sweep, #241 6343230462; ATTACK-READS.md:27); the old HAZARD tint at 0.61 gives live %.1f, step %.1f and fails"
+		"modeled over L* %.2f: pending %.1f, live %.1f, step %.1f (at least %.0f; model; the 3060 sweep measured 13.0 L* in stage 2 and 11.4 in the arena, #241 6345835130; ATTACK-READS.md:27); the old HAZARD tint at 0.61 gives live %.1f, step %.1f and fails"
 			% [PALE_L, pending_l, live_l, slag_step, LIVE_STEP, old_l, old_step])
 	var step := 1.0 / 255.0
 	var pending_target: float = Threat.RUN_ALPHA * Threat.HAZE_FILL
