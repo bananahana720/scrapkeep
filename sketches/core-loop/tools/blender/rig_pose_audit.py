@@ -3,7 +3,7 @@ metrics, loop seam check, and a pose contact sheet for the enemy and Warden rigs
 (AMBITION-BRIEF "Rigs and motion": range-of-motion tests at extreme poses, corrective shapes where
 joints collapse, seamless loops, bone budgets per class).
 
-  prlimit --as 12884901888 -- blender -b --factory-startup --threads 2 --python-exit-code 1 \
+  prlimit -v12884901888 blender -b --factory-startup --threads 2 --python-exit-code 1 \
       -P sketches/core-loop/tools/blender/rig_pose_audit.py -- --world one --out DIR \
       [--glb world_one/enemy_foreman.glb] [--size 360] [--samples 10] [--no-render] [--strict]
 

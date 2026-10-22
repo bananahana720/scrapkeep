@@ -21,7 +21,9 @@ const FIXTURE := "res://src/world/park/park_test.json"
 const PLAIN_SLOPES := ["bank", "drop", "ground", "sky_island"]
 # Andrew's "Edges are ground" (2026-10-17 22:29Z): a stamped kicker that spans the whole play rect across its facing
 # (the Highdraft's mesa step lips, 18 rows and 28.8 km on park_islands) is a mesa edge, ground like a plain slope.
-const MESA_EDGE := "kicker"
+# Extended to every element by World NEEDS #149 6325353865, coordinator ruling (a) 2026-10-21, Andrew's veto list: a
+# stamped greybox row of any element whose cross size spans the rect (a 1,600 m ride band) is ground too, because no
+# over-greybox piece can honestly dress it. Same as scripts/placeholder-gate.mjs isMesaEdge.
 
 var path := ""
 var ok := false
@@ -236,10 +238,11 @@ static func plain_slope(row: Dictionary) -> bool:
 		and String(row.get("stamp", "")) != "" and row.get("y") == null
 
 
-# A mesa edge: a stamped MESA_EDGE greybox (stamp_replaces, as plain_slope) whose cross size reaches across the
-# whole of rect, measured along the row's cross axis.
+# A mesa edge: a stamped greybox (stamp_replaces, as plain_slope) of any element or greybox recipe (isle_apron is element
+# terrace on greybox:ground) whose cross size reaches across the whole of rect, measured along the row's cross axis. Per
+# World NEEDS #149 6325353865, coordinator ruling (a) 2026-10-21, Andrew's veto list.
 static func mesa_edge(row: Dictionary, rect: Rect2) -> bool:
-	if String(row.get("element", "")) != MESA_EDGE or String(row.get("recipe", "")) != ParkRecipes.GREYBOX + MESA_EDGE \
+	if not String(row.get("recipe", "")).begins_with(ParkRecipes.GREYBOX) \
 			or String(row.get("stamp", "")) == "" or row.get("y") != null:
 		return false
 	var dir := _dir(float(row["yaw_deg"]))

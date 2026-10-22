@@ -58,7 +58,7 @@ sage 7d8b6a, juniper 3f5a3e, basalt charcoal 242a28. The timber post is industri
 d9b44a appear there (and iron on the saguaro collar and the cairn ring). The basalt glow is a warm vertex colour, not an
 emission. No texture, no light.
 
-  prlimit --as 12884901888 -- blender --background --threads 2 --python-exit-code 1 --python \\
+  prlimit -v12884901888 blender --background --threads 2 --python-exit-code 1 --python \\
       sketches/core-loop/tools/blender/park/anchors.py -- [--out-dir DIR] [--count-only] [--log FILE]
 """
 import argparse
