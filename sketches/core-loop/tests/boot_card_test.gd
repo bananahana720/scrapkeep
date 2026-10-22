@@ -8,6 +8,7 @@ extends SceneTree
 # quit on the main scene's 300-frame boot.
 
 const T := preload("res://tests/support/t.gd")
+const TitleIntros := preload("res://src/presentation/title_intros.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const BOOT_SCENE := "res://src/boot/boot.tscn"
 const FRAMES_MAX := 4000
@@ -96,6 +97,111 @@ func _run() -> void:
 	await process_frame
 	_t.check("the boot scene is gone", not is_instance_valid(plain))
 	built.free()
+	await process_frame
+
+	# 5. The opening waits for the card (title_stage.intro_hold, released when the card's fade ends).
+	# A headless display never autoplays, so the stage's autoplay is switched on once the game is up;
+	# the hold itself was set before the game entered the tree (checked at handed_off, which fires
+	# after the stage's own setup and first show_flow).
+	var held_at_handoff := []
+	var hold_boot = _card()
+	hold_boot.handed_off.connect(func(g: Node): held_at_handoff.append(g.presentation.title_stage.intro_hold))
+	var hold_game = await _wait_for_game()
+	var stage = hold_game.presentation.title_stage
+	_t.check("the stage is held before the hand-off signal, ahead of any autoplay", held_at_handoff == [true], str(held_at_handoff))
+	stage.intro_autoplay = true
+	stage.show_flow("title")
+	for i in 3:
+		await process_frame
+	_t.check("no opening plays while the card is up", is_instance_valid(hold_boot) and stage.intro_hold and not stage.intro_playing() and not stage._intro_tried)
+	frames = 0
+	while is_instance_valid(hold_boot) and frames < FRAMES_MAX:
+		await process_frame
+		frames += 1
+	_t.check("the card is gone after its fade", not is_instance_valid(hold_boot), "%d frames" % frames)
+	_t.check("the fade's end lifts the hold", not stage.intro_hold)
+	await process_frame
+	await process_frame
+	_t.check("the opening plays after the fade", stage.intro_playing())
+	var shown_after: bool = hold_game.ctx.profile.is_seen(TitleIntros.SEEN_PREFIX + "sable") or stage._intro_tried
+	stage.intro.skip()
+	await process_frame
+	stage.show_flow("title")
+	await process_frame
+	await process_frame
+	_t.check("a second return to the title does not replay the opening", shown_after and not stage.intro_playing())
+	hold_game.free()
+	await process_frame
+
+	# 5d. A card freed before its fade ends leaves the opening untried and nothing marked shown.
+	var early_boot = _card()
+	var early_game = await _wait_for_game()
+	var early_stage = early_game.presentation.title_stage
+	early_stage.intro_autoplay = true
+	var seen_before: bool = early_game.ctx.profile.is_seen(TitleIntros.SEEN_PREFIX + "sable")
+	var gen_before: int = early_game.ctx.profile.generation()
+	await process_frame
+	await process_frame
+	early_boot.free()
+	for i in 4:
+		await process_frame
+	_t.check("an early-freed card clears the hold without starting the opening", not early_stage.intro_hold and not early_stage.intro_playing() and not early_stage._intro_tried)
+	_t.check("and marks nothing shown nor writes the profile", early_game.ctx.profile.is_seen(TitleIntros.SEEN_PREFIX + "sable") == seen_before and early_game.ctx.profile.generation() == gen_before)
+	early_game.free()
+	await process_frame
+
+	# 5a. The ordering trap: a hold set after the autoplay was queued still stops it until released.
+	var late_game = load("res://main.tscn").instantiate()
+	root.add_child(late_game)
+	var late_stage = late_game.presentation.title_stage
+	late_stage.intro_autoplay = true
+	late_stage._intro_tried = false
+	late_stage.show_flow("title")
+	late_stage.intro_hold = true
+	for i in 3:
+		await process_frame
+	_t.check("a hold set after show_flow queued the autoplay still stops it", not late_stage.intro_playing() and not late_stage._intro_tried)
+	late_stage.release_intro()
+	await process_frame
+	await process_frame
+	_t.check("release then plays it", late_stage.intro_playing())
+	late_game.free()
+	await process_frame
+
+	# 5b. A Start pressed during the card: the run starts, no opening plays over it, the hold is released.
+	var start_boot = _card()
+	start_boot._play.pressed.emit()
+	var start_game = await _wait_for_game()
+	var start_stage = start_game.presentation.title_stage
+	start_stage.intro_autoplay = true
+	await process_frame
+	_t.check("the early Start reached the class select with the stage held", start_game.flow.state_name() == "class_select" and start_stage.intro_hold)
+	frames = 0
+	while is_instance_valid(start_boot) and frames < FRAMES_MAX:
+		await process_frame
+		frames += 1
+	await process_frame
+	await process_frame
+	_t.check("the hold is not stuck after the card", not start_stage.intro_hold)
+	_t.check("no opening plays over the run start", not start_stage.intro_playing() and start_game.flow.state_name() == "class_select")
+	start_game.flow.show_title()
+	await process_frame
+	await process_frame
+	_t.check("a later return to the title is eligible again", start_stage.intro_playing())
+	start_game.free()
+	await process_frame
+
+	# 5c. The no-card path never holds.
+	var plain_boot = _card(false)
+	var plain_game = await _wait_for_game()
+	var plain_stage = plain_game.presentation.title_stage
+	_t.check("the in-place path sets no hold", not plain_game.has_meta(&"intro_hold") and not plain_stage.intro_hold)
+	plain_stage.intro_autoplay = true
+	plain_stage.show_flow("title")
+	await process_frame
+	await process_frame
+	_t.check("the in-place path's opening is eligible at once", plain_stage.intro_playing())
+	plain_game.free()
 	await process_frame
 
 	# 3. No errors at quit: the main scene's 300-frame boot in its own process.
