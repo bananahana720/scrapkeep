@@ -547,6 +547,96 @@ class AnchorContacts:
 		out["y1"] = xf.origin.y + half.y
 		return out
 
+	# The XZ convex polygon (counter-clockwise in x right, z up terms) of points, by monotone chain, with their local y span:
+	# {"poly": Array[Vector2], "y0", "y1"}. Built once per shared shape (see collect).
+	static func hull_outline(points: PackedVector3Array) -> Dictionary:
+		var flat: Array = []
+		var lo := INF
+		var hi := -INF
+		for p in points:
+			flat.append(Vector2(p.x, p.z))
+			lo = minf(lo, p.y)
+			hi = maxf(hi, p.y)
+		flat.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x < b.x or (a.x == b.x and a.y < b.y))
+		var uniq: Array = []
+		for v: Vector2 in flat:
+			if uniq.is_empty() or not (uniq[-1] as Vector2).is_equal_approx(v):
+				uniq.append(v)
+		if uniq.size() < 3:
+			return {"poly": uniq, "y0": lo, "y1": hi}
+		var chain: Array = []
+		for pass_index in 2:
+			var start := chain.size()
+			for v: Vector2 in (uniq if pass_index == 0 else _reversed(uniq)):
+				while chain.size() >= start + 2 and ((chain[-1] - chain[-2]) as Vector2).cross(v - chain[-2]) <= 0.0:
+					chain.pop_back()
+				chain.append(v)
+			chain.pop_back()
+		return {"poly": chain, "y0": lo, "y1": hi}
+
+	static func _reversed(list: Array) -> Array:
+		var out := list.duplicate()
+		out.reverse()
+		return out
+
+	# A convex hull band as a vertical prism: outline (hull_outline of the shape's points, cached by the caller) carried through
+	# the shape's global transform xf into world XZ, plus its world h span. "corners" is the polygon's vertices, so the corner
+	# rule, the grid and the closest approach read it like a box's four. The "poly" key marks the prism.
+	static func hull_record(xf: Transform3D, outline: Dictionary, info: Dictionary) -> Dictionary:
+		var poly: Array = []
+		for v: Vector2 in outline["poly"]:
+			var p := xf * Vector3(v.x, 0.0, v.y)
+			poly.append(Vector2(p.x, p.z))
+		if poly.size() >= 3 and xf.basis.determinant() < 0.0:
+			poly.reverse()
+		var out := info.duplicate()
+		out["xf"] = xf
+		out["poly"] = poly
+		out["corners"] = poly
+		out["y0"] = (xf * Vector3(0.0, float(outline["y0"]), 0.0)).y
+		out["y1"] = (xf * Vector3(0.0, float(outline["y1"]), 0.0)).y
+		return out
+
+	# Distance and outward normal from at to record b's surface: a box by its own frame, a prism by its XZ polygon edge or its
+	# top and bottom faces. {"dist", "normal"}; 0 and UP inside.
+	static func surface_of(at: Vector3, b: Dictionary) -> Dictionary:
+		if b.has("poly"):
+			return _prism_surface(at, b)
+		var local: Vector3 = (b["xf"] as Transform3D).affine_inverse() * at
+		var half: Vector3 = b["half"]
+		var near := Vector3(clampf(local.x, -half.x, half.x), clampf(local.y, -half.y, half.y), clampf(local.z, -half.z, half.z))
+		var d := local.distance_to(near)
+		return {"dist": d, "normal": ((b["xf"] as Transform3D).basis * (local - near)).normalized() if d > 0.0 else Vector3.UP}
+
+	static func _prism_surface(at: Vector3, b: Dictionary) -> Dictionary:
+		var poly: Array = b["poly"]
+		var flat := Vector2(at.x, at.z)
+		var inside := poly.size() >= 3
+		var best := INF
+		var nearest := flat
+		for i in poly.size():
+			var a: Vector2 = poly[i]
+			var c: Vector2 = poly[(i + 1) % poly.size()]
+			if inside and (c - a).cross(flat - a) < 0.0:
+				inside = false
+			var edge := c - a
+			var len2 := edge.length_squared()
+			var t := clampf((flat - a).dot(edge) / len2, 0.0, 1.0) if len2 > 0.0 else 0.0
+			var q := a + edge * t
+			var dq := flat.distance_squared_to(q)
+			if dq < best:
+				best = dq
+				nearest = q
+		var dxz := 0.0 if inside or poly.is_empty() else sqrt(best)
+		var y0 := float(b["y0"])
+		var y1 := float(b["y1"])
+		var dy := (at.y - y0) if at.y < y0 else ((at.y - y1) if at.y > y1 else 0.0)
+		var d := Vector2(dxz, dy).length()
+		if d <= 0.0:
+			return {"dist": 0.0, "normal": Vector3.UP}
+		var away := flat - nearest if dxz > 0.0 else Vector2.ZERO
+		return {"dist": d, "normal": Vector3(away.x, dy, away.y).normalized()}
+
 	# The anchor_fit.json entry ({"key", "over_limit", "fitted"}) of a row: fitted when its recipe is a kit with an entry at
 	# its height, else the 8 m box. kit: whether the placed node drew the kit (meta anchor_kit).
 	static func fit_info(row: Dictionary, kit: bool) -> Dictionary:
@@ -567,6 +657,7 @@ class AnchorContacts:
 		for row: Dictionary in rows:
 			by_id[String(row.get("id", ""))] = row
 		var out: Array = []
+		var outlines := {}
 		for node: Node in root.find_children("Park_*", "Node3D", true, false):
 			if not node.has_meta("anchor_posts") or not by_id.has(String(node.name).substr(5)):
 				continue
@@ -578,6 +669,11 @@ class AnchorContacts:
 			for shape: Node in body.get_children():
 				if shape is CollisionShape3D and shape.shape is BoxShape3D:
 					out.append(box_record(shape.global_transform, (shape.shape as BoxShape3D).size, info))
+				elif shape is CollisionShape3D and shape.shape is ConvexPolygonShape3D:
+					var hull := shape.shape as ConvexPolygonShape3D
+					if not outlines.has(hull):
+						outlines[hull] = hull_outline(hull.points)
+					out.append(hull_record(shape.global_transform, outlines[hull], info))
 		return out
 
 	# The nearest fitted box corner to at: {"dist" (INF if none), "box"}.
@@ -603,15 +699,11 @@ class AnchorContacts:
 		var normal := Vector3.UP
 		for n in (list.size() if indices == null else indices.size()):
 			var i: int = n if indices == null else indices[n]
-			var b: Dictionary = list[i]
-			var local: Vector3 = (b["xf"] as Transform3D).affine_inverse() * at
-			var half: Vector3 = b["half"]
-			var near := Vector3(clampf(local.x, -half.x, half.x), clampf(local.y, -half.y, half.y), clampf(local.z, -half.z, half.z))
-			var d := local.distance_to(near)
-			if d < best:
-				best = d
+			var hit := surface_of(at, list[i])
+			if float(hit["dist"]) < best:
+				best = hit["dist"]
 				which = i
-				normal = ((b["xf"] as Transform3D).basis * (local - near)).normalized() if d > 0.0 else Vector3.UP
+				normal = hit["normal"]
 		return {"dist": best, "box": which, "normal": normal}
 
 	# Whether (x, z) falls in a marked cell of ParkMap's lane mask (scatter.gd's rule: the cell of the nearest lattice node).
@@ -664,9 +756,7 @@ class AnchorContacts:
 					continue
 				for i: int in indices:
 					var b: Dictionary = list[i]
-					var local: Vector3 = (b["xf"] as Transform3D).affine_inverse() * at
-					var half: Vector3 = b["half"]
-					var d := local.distance_to(Vector3(clampf(local.x, -half.x, half.x), clampf(local.y, -half.y, half.y), clampf(local.z, -half.z, half.z)))
+					var d := float(surface_of(at, b)["dist"])
 					if d < float(out["surface"]["dist"]):
 						out["surface"] = {"dist": d, "row": b["row"]}
 					var y := clampf(at.y, float(b["y0"]), float(b["y1"]))
@@ -1492,7 +1582,7 @@ func _take_contacts() -> Dictionary:
 			per_seed.map(func(r): return r["fitted_boxes"]), per_seed.map(func(r): return r["touch_ticks"])])
 	return {"park": _map_id, "stage": _stage, "pilot": _pilot, "hands": hands_of(_settings), "commit": _commit(),
 		"definitions": {"near_m": AnchorContacts.NEAR_M, "ride_line": "ParkMap.lane_mask_for cell of the nearest 8 m lattice node (scatter.gd rule)",
-			"corner": "fitted box vertical-edge corner, XZ, ball height within box span +/- %.1f m" % AnchorContacts.Y_SLACK_M,
+			"corner": "fitted box vertical-edge corner (a hull band: a vertex of its XZ polygon), XZ, ball height within box span +/- %.1f m" % AnchorContacts.Y_SLACK_M,
 			"bounce": "contact with an anchor body and normal velocity from below -%.1f m/s to above 0" % AnchorContacts.BOUNCE_MIN_MPS,
 			"closest_approach": "ball centre to a fitted box surface, and to a fitted corner's vertical edge (3D), over every counted tick; null when never within %.1f m" % AnchorContacts.CELL_M,
 			"over_limit_rows": "every placed row whose variant at its height has over_limit in anchor_fit.json, with the events whose nearest box is that row's and within %.1f m of its surface; 0 when none" % AnchorContacts.NEAR_M},
