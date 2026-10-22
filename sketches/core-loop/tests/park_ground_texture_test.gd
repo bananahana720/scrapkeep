@@ -34,10 +34,13 @@ func _run() -> void:
 	# The floor's tile size is the non-park floor's: sandstone.gdshader's own floor_metres default.
 	var shader_text := FileAccess.get_file_as_string("res://src/presentation/sandstone.gdshader")
 	var found := RegEx.create_from_string("uniform float floor_metres = ([0-9.]+);").search(shader_text)
+	# Read by name so the test still runs, and fails on its checks, where the constant is missing.
+	var floor_metres := float((load("res://src/world/park/park_terrain.gd") as Script).get_script_constant_map().get("GROUND_FLOOR_METRES", 0.0))
+	t.check("park_terrain.gd declares GROUND_FLOOR_METRES", floor_metres > 0.0)
 	t.check("sandstone.gdshader declares floor_metres", found != null)
 	if found != null:
-		t.near("park floor tile = sandstone floor_metres", ParkTerrain.GROUND_FLOOR_METRES, float(found.get_string(1)), 0.0001)
-	var metres := [ParkTerrain.GROUND_FLOOR_METRES, float(row.triplanar_scale)]
+		t.near("park floor tile = sandstone floor_metres", floor_metres, float(found.get_string(1)), 0.0001)
+	var metres := [floor_metres, float(row.triplanar_scale)]
 	await process_frame
 	var nodes: Array = w.get_children().filter(func(n): return n.name.begins_with("ParkRender"))
 	t.eq("park build makes two render nodes", nodes.size(), 2)

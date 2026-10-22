@@ -125,7 +125,7 @@ static func make_render(parent: Node, label: String) -> Node3D:
 	# Step 1 draws texture 0 (sand floor) everywhere: the regions' control maps are untouched, so
 	# no cell has the auto bit and Terrain3D takes texture 0 at blend 0. The auto-shader is set
 	# up for step 2, which sets that bit: the overlay (flat) is the floor, the base (steep) the
-	# strata, auto_slope 1.0 putting the half-way blend at normal.y ~0.755, the middle of
+	# strata, auto_slope 1.0 putting the half-way blend at normal.y 0.75, near the middle (0.755) of
 	# sandstone.gdshader's strata ramp smoothstep(0.58, 0.93, normal.y). Height reduction is off.
 	material.auto_shader = true
 	material.set_shader_param("auto_base_texture", GROUND_STRATA_ID)
@@ -136,7 +136,8 @@ static func make_render(parent: Node, label: String) -> Node3D:
 
 
 # A Terrain3DAssets for one park render node, from the `ground` slot so the park and the non-park
-# ground draw the same two textures at the same tile sizes: texture 0 is the slot's floor_map every
+# ground draw the same two textures at the same near-layer tile sizes (the non-park shader's far
+# layers, macro tint and ruts are not matched): texture 0 is the slot's floor_map every
 # GROUND_FLOOR_METRES, texture 1 its strata_map every triplanar_scale metres. Terrain3D samples a
 # texture at world xz * uv_scale * the control map's scale, which is 0.5 at control 0 (DECODE_SCALE
 # in the addon's shader; lightweight.gdshader:313 writes the same * 0.5), so uv_scale is 2 / metres.
