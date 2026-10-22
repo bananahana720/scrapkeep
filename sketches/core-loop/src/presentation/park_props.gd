@@ -14,7 +14,9 @@ extends Node3D
 #    "litter": {"kinds": [{"kind", "weight"}], "spacing_m", "band_m": [near, far], "seed"},
 #    "ground_rows": ["<park row id>", ...],   (optional: the explicit surfaces, see check_one's ground_row rule)
 #    "low_ground_rows": ["<park row id>", ...]}   (optional: area rows that admit instances up to LOW_GROUND_MAX_M tall, see low_ground)
-# Kit manifest (scrapkeep-park-props-kit/1): kinds -> {class, tags, story, variants -> {lod [3 GLBs], tris [3], radius, height}}.
+# Kit manifest (scrapkeep-park-props-kit/1): kinds -> {class, tags, story, line_clear_m (optional), variants -> {lod [3 GLBs], tris [3], radius, height}}.
+# Placement rules (validate): line_clear (height tier or the kind's line_clear_m, whichever is larger), route_lane, scatter_row, keepout,
+# low_ground, telegraph (event_rows site footprint grown by hold_clear_m), home_clear, play_rect, ground_row, slope, seat.
 
 const ParkSites := preload("res://src/presentation/park_sites.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
@@ -41,6 +43,9 @@ const LOW_PRESET := "low"
 const LINE_CLEAR_LOW_M := 6.0
 const LINE_CLEAR_MID_M := 10.0
 const LINE_CLEAR_TALL_M := 20.0
+# A kind's own line_clear_m (kit manifest, optional) may raise the need above its tier, never past this: LINE_REACH_M
+# is as far as the line index sees, so past it the distance is unknown.
+const LINE_CLEAR_KIND_MAX_M := 60.0
 const LOW_HEIGHT_M := 1.2
 const TALL_HEIGHT_M := 3.0
 # Row footprints keep props out when the row is a ride feature; ground, banks, terraces and anchor fields do not.
@@ -135,6 +140,8 @@ class Context:
 	var scatter_rows: Array = []
 	# Home sites and line waypoints that resolve to no place: file_errors-style rows, surfaced by --check and the test.
 	var unresolved: Array = []
+	# Park event_rows as {id, row (the resolved site's park row), hold (hold_clear_m)}: the telegraph rule's zones.
+	var events: Array = []
 	var _cells := {}
 
 	func line_distance(p: Vector2) -> float:
@@ -284,6 +291,17 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 			c.homes.append({"id": String(home.get("id", site)), "row": found})
 		else:
 			c.unresolved.append("home_rows site %s (home %s) names no park or activity row" % [site, String(home.get("id", site))])
+	for ev: Dictionary in park_map.park.get("event_rows", []):
+		var event_site := String(ev.get("site", ""))
+		var event_row := {}
+		for row: Dictionary in park_map.park.get("park_rows", []):
+			if row["id"] == event_site:
+				event_row = row
+				break
+		if not event_row.is_empty():
+			c.events.append({"id": String(ev.get("id", event_site)), "row": event_row, "hold": float(ev.get("hold_clear_m", 0.0))})
+		else:
+			c.unresolved.append("event_rows site %s (event %s) names no park row" % [event_site, String(ev.get("id", event_site))])
 	for row: Dictionary in park_map.park.get("park_rows", []):
 		if not String(row.get("stamp", "")).is_empty() \
 				and maxf(float(row["size"][0]), float(row["size"][2])) > ParkSites.STAMP_KEEP_M and Context.blocks_props(row) \
@@ -507,6 +525,10 @@ static func kit_errors(kit: Dictionary, min_kinds := 0, min_variants := 1) -> Ar
 			continue
 		if not def.get("tags") is Array:
 			errors.append("kind %s has no tags" % kind)
+		if def.has("line_clear_m"):
+			var reach = def["line_clear_m"]
+			if not (reach is float or reach is int) or float(reach) <= LINE_CLEAR_LOW_M or float(reach) > LINE_CLEAR_KIND_MAX_M:
+				errors.append("kind %s line_clear_m %s is not a number above %.0f and at most %.0f" % [kind, str(reach), LINE_CLEAR_LOW_M, LINE_CLEAR_KIND_MAX_M])
 		var variants = def.get("variants")
 		if not variants is Dictionary or (variants as Dictionary).size() < min_variants:
 			errors.append("kind %s has fewer than %d variants" % [kind, min_variants])
@@ -600,7 +622,7 @@ static func _instance(vignette: String, kind: String, v: String, kit: Dictionary
 			steepest = maxf(steepest, rad_to_deg(acos(clampf(_normal(ground, rim, span).y, -1.0, 1.0))))
 	return {"vignette": vignette, "kind": kind, "v": v, "class": String(def["class"]), "tags": (def.get("tags", []) as Array).duplicate(),
 		"pos": Vector3(at.x, y, at.y), "basis": basis, "scale": scale, "radius": radius, "height": height, "litter": litter,
-		"float_m": floating, "slope_deg": steepest}
+		"float_m": floating, "slope_deg": steepest, "line_clear_m": float(def.get("line_clear_m", 0.0))}
 
 
 static func _height(ground: Callable, at: Vector2) -> float:
@@ -671,7 +693,8 @@ static func _litter(litter: Dictionary, id: String, kit: Dictionary, c: Context,
 
 # --- Validate -------------------------------------------------------------------------------------
 
-# Violations {vignette, kind, pos, rule, detail} of the placement rules: line_clear, route_lane, keepout, low_ground, home_clear,
+# Violations {vignette, kind, pos, rule, detail} of the placement rules: line_clear (the larger of the height tier and the kind's
+# line_clear_m), route_lane, keepout, low_ground, telegraph (inside an event_rows site footprint grown by hold_clear_m), home_clear,
 # play_rect, ground_row (only with a file ground_rows list), slope, seat. Empty means every instance is placeable.
 static func validate(list: Array, park_map, ground: Callable, stage := -1, c: Context = null) -> Array:
 	if c == null:
@@ -693,9 +716,17 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 	var fail := func(rule: String, detail: String) -> void:
 		out.append({"vignette": inst["vignette"], "kind": inst["kind"], "pos": pos, "rule": rule, "detail": detail})
 	var edge := c.line_distance(p) - r
-	var need := LINE_CLEAR_TALL_M if tall else (LINE_CLEAR_MID_M if height > LOW_HEIGHT_M else LINE_CLEAR_LOW_M)
+	var tier_need := LINE_CLEAR_TALL_M if tall else (LINE_CLEAR_MID_M if height > LOW_HEIGHT_M else LINE_CLEAR_LOW_M)
+	var kind_need := float(inst.get("line_clear_m", 0.0))
+	var need := maxf(tier_need, kind_need)
 	if edge < need:
-		fail.call("line_clear", "%s, %.1f m from a line, want %.0f" % ["tall or hero" if tall else ("mid" if height > LOW_HEIGHT_M else "low"), edge, need])
+		if kind_need > tier_need:
+			fail.call("line_clear", "kind %s, %.1f m from a line, want %.0f" % [inst["kind"], edge, need])
+		else:
+			fail.call("line_clear", "%s, %.1f m from a line, want %.0f" % ["tall or hero" if tall else ("mid" if height > LOW_HEIGHT_M else "low"), edge, need])
+	for ev: Dictionary in c.events:
+		if ParkMap.footprint_contains(ev["row"], p, float(ev["hold"]) + r):
+			fail.call("telegraph", "inside event %s hold zone (%s grown %.0f m)" % [ev["id"], ev["row"].get("id", "?"), ev["hold"]])
 	if tall and ParkRecipes.in_clear(c.lanes, p, r):
 		fail.call("route_lane", "tall, inside a route lane")
 	if tall:
