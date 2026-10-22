@@ -61,6 +61,12 @@ class OverlayMap:
 		if is_instance_valid(entry.before):
 			entry.before.position = entry.before_home + Vector3.DOWN * Gorge.SWAP_PARK if changed else entry.before_home
 			entry.before.visible = false if changed else entry.before_visible
+		# Rows that declared hide_on for this swap's event leave the way the site row does: parked down with their
+		# own collider (the StaticBody3D is a child of the Park_ node), then home again on revert.
+		for hidden in entry.get("hidden", []):
+			if is_instance_valid(hidden.node):
+				hidden.node.position = hidden.home + Vector3.DOWN * Gorge.SWAP_PARK if changed else hidden.home
+				hidden.node.visible = false if changed else hidden.visible
 	func cave_height(x: float, z: float) -> float:
 		for entry in swaps.values():
 			if entry.get("cave", false):
@@ -389,6 +395,35 @@ static func lower_roof(roof: Dictionary, drop: float) -> void:
 				collider.shape = surface.mesh.create_trimesh_shape()
 
 
+# The placed nodes of every park row that names this event in hide_on, found once here and kept on the swap entry.
+static func hidden_rows(world, event_id: String) -> Array:
+	var out := []
+	var park = world.terrain.map().get("park")
+	if not park is Dictionary or not world.terrain.has_method("geometry_root"):
+		return out
+	var root: Node = world.terrain.geometry_root(world.terrain.stage)
+	for park_row in park.get("park_rows", []):
+		if String(park_row.get("hide_on", "")) != event_id:
+			continue
+		var node := root.find_child("Park_" + str(park_row.id), true, false) as Node3D
+		if node != null:
+			out.append({"node": node, "home": node.position, "visible": node.visible})
+	return out
+
+
+# A second event on a live swap key adds its hide_on nodes only while the swap is idle, and never the same node twice:
+# a node added mid-swap would record its parked home and stay hidden after the last revert.
+static func _share_hidden(entry: Dictionary, found: Array, id: String) -> void:
+	if not entry.has("hidden") or found.is_empty():
+		return
+	if not entry.owners.is_empty():
+		push_warning("event_ground: swap %s is live, so its new hide_on rows are skipped" % id)
+		return
+	for item in found:
+		if not entry.hidden.any(func(have): return have.node == item.node):
+			entry.hidden.append(item)
+
+
 # prepared holds surfaces the caller projected ahead (natural.gd plan: "surface", "target") and the
 # collider shape a previous entry made ("shape", written back here), so a stage entry skips them.
 static func prepare_overlay(world, owner: Node, row: Dictionary, record: Dictionary, collapse_target := Callable(), prepared := {}) -> OverlayMap:
@@ -398,6 +433,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	var current = world.terrain.map()
 	var overlay_map: OverlayMap = current if current is OverlayMap else null
 	if overlay_map != null and overlay_map.swaps.has(id):
+		_share_hidden(overlay_map.swaps[id], hidden_rows(world, str(row.id)), id)
 		record.overlay = overlay_map.swaps[id].body
 		record.swap = id
 		record.overlay_map = overlay_map
@@ -459,6 +495,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	overlay_map.swaps[id] = {"body": body, "home": body.position, "before": before,
 		"before_home": before.position if is_instance_valid(before) else Vector3.ZERO,
 		"before_visible": before.visible if is_instance_valid(before) else false, "owners": {},
+		"hidden": hidden_rows(world, str(row.id)),
 		"baseline": surface, "geometry": geometry, "progress": 0.0, "collapse": kind == "collapse"}
 	if kind == "collapse":
 		overlay_map.swaps[id].target = prepared.target if prepared.has("target") else collapse_target.call(row, geometry, surface)
@@ -518,6 +555,10 @@ static func set_overlay(world, row: Dictionary, record: Dictionary, changed: boo
 			if is_instance_valid(entry.before):
 				entry.before_home = entry.before.position
 				entry.before_visible = entry.before.visible
+			for hidden in entry.get("hidden", []):
+				if is_instance_valid(hidden.node):
+					hidden.home = hidden.node.position
+					hidden.visible = hidden.node.visible
 			overlay_map.apply_swap(id, true)
 			overlays.erase(id + "_before")
 			if not entry.had_after:
