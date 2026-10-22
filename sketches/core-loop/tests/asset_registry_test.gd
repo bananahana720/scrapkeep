@@ -9,6 +9,16 @@ extends SceneTree
 const REGISTRY := "res://assets/registry.json"
 const BUDGETS := "res://assets/asset_budgets.json"
 const ROOT := "res://assets"
+# Draw ceilings (baked-bracket card, MOTION-SPEC row 208, wave 19; coordinator rulings 6348145961, 6348389397 and
+# 6348497831 on #241). No pilot shell exception goes above 16 draws and no detail layer above 2, unless the asset is named
+# here with its decision. A new entry needs its own docs/decisions.tsv row, not a quiet exception.
+const SHELL_DRAW_CEILING := 16
+const LAYER_DRAW_CEILING := 2
+const DECIDED_OVER_CEILING := {
+	"shell_tarn": "docs/decisions.tsv 2026-10-10T23:14 w13-PD (Tarn 17: four articulated two-surface jaws; row 2026-10-11T00:16)",
+	"shell_tarn_redjaw_teeth": "docs/decisions.tsv 2026-10-10T23:14 w13-PD (Tarn 17, same machinery; row 2026-10-11T00:16)",
+	"shell_tarn_c3": "docs/decisions.tsv 2026-10-22T18:42 (ruling 6348497831 on #241: class III layer at 3, ClawHooks banks)",
+}
 var failures := 0
 
 
@@ -20,6 +30,25 @@ func _check(ok: bool, label: String) -> void:
 	if not ok:
 		failures += 1
 	print("%s %s" % ["PASS" if ok else "FAIL", label])
+
+
+# True when an asset's draws are over its ceiling and the asset is not a named, decided exception.
+func _over_ceiling(id: String, cls: String, draws: int) -> bool:
+	var ceiling := -1
+	if cls == "shell":
+		ceiling = SHELL_DRAW_CEILING
+	elif cls == "detail" and id.begins_with("shell_"):  # outfits and trails share the detail class and are not heft layers
+		ceiling = LAYER_DRAW_CEILING
+	return ceiling >= 0 and draws > ceiling and not DECIDED_OVER_CEILING.has(id)
+
+
+func _self_check_ceiling() -> void:
+	_check(_over_ceiling("planted_unnamed_shell", "shell", 17), "ceiling self-check: an unnamed shell at 17 draws is over")
+	_check(not _over_ceiling("shell_tarn", "shell", 17), "ceiling self-check: named shell_tarn at 17 draws is not over")
+	_check(not _over_ceiling("planted_unnamed_shell", "shell", 16), "ceiling self-check: an unnamed shell at 16 draws is not over")
+	_check(_over_ceiling("shell_planted_c3", "detail", 3), "ceiling self-check: an unnamed shell layer at 3 draws is over")
+	_check(not _over_ceiling("outfit_planted", "detail", 3), "ceiling self-check: a non-shell detail asset is outside the layer rule")
+	_check(not _over_ceiling("shell_tarn_c3", "detail", 3), "ceiling self-check: named shell_tarn_c3 at 3 draws is not over")
 
 
 func _scan(dir: String, ext: Array, out: Array) -> void:
@@ -69,6 +98,7 @@ func _run() -> void:
 		quit(1)
 		return
 	var classes: Dictionary = budgets["classes"]
+	_self_check_ceiling()
 	var entries := {}
 	for e in registry["assets"]:
 		_check(not entries.has(e["path"]), "%s is listed once" % e["path"])
@@ -117,6 +147,8 @@ func _run() -> void:
 		for k in ex:
 			if cap.has(k):
 				cap[k] = ex[k]
+		var asset_id := String(e.get("id", path.get_file().get_basename()))
+		_check(not _over_ceiling(asset_id, e["class"], cap["draws"]), "%s exception cap of %d draws within the %s ceiling or a named decision" % [asset_id, cap["draws"], e["class"]])
 		print("%-48s %-12s %-5s %7d %7d %5d | %7d %7d %5d" % [path.trim_prefix(ROOT + "/"), e["class"], "true", m["tris"], m["verts"], m["draws"], cap["tris"], cap["verts"], cap["draws"]])
 		if measure_only:
 			continue
