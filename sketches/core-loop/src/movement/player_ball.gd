@@ -1468,6 +1468,17 @@ func pre_contact_velocity(toward: Vector3) -> Vector3:
 	return best
 
 
+# The public way for a module to report a contact the RigidBall never sees, such as a boss
+# weak part outside the enemy group. The normal points from the body to the ball, full 3D, as
+# RigidBall reports it, so a drop onto the body from above reads as a stomp. Omit it to derive it.
+# `body` is untyped on purpose: a typed Node3D argument errors at the call when the body is freed.
+func touch_body(body, normal := Vector3.ZERO) -> void:
+	if not is_instance_valid(body):
+		return
+	var n := normal.normalized() if normal.length() > 0.01 else Contact.normal_between(ball_position(), body.global_position)
+	_on_enemy_touched(body, n)
+
+
 func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 	if _crushing.has(enemy.get_instance_id()):
 		return

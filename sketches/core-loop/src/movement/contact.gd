@@ -15,6 +15,13 @@ const VERTICAL_CAP := 1.4
 const MIN_CLOSING := 2.0
 
 
+# The contact normal, body to ball and full 3D, as RigidBall reports it. A zero or
+# near-zero offset (the centres coincide) reads as straight up.
+static func normal_between(ball_at: Vector3, body_at: Vector3) -> Vector3:
+	var offset := ball_at - body_at
+	return offset.normalized() if offset.length() > 0.01 else Vector3.UP
+
+
 static func rebounds(weight: float, heft: float, sprinting: bool) -> bool:
 	return weight >= heft * (SPRINT_REBOUND_WEIGHT if sprinting else REBOUND_WEIGHT)
 
