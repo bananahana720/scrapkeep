@@ -250,15 +250,15 @@ func _run() -> void:
 	flow.new_run()
 	await _frames(5)
 	_t.eq("new run keeps the summary assembly", _game.run.companion, want)
-	# The latch: an M held as the summary arrives opens nothing.
-	_hold(KEY_M, true)
+	# The latch: Space (a bound key) held as the summary arrives, and M pressed, opens nothing.
+	_hold(KEY_SPACE, true)
 	flow._end_run(false)
 	await _frames(1)
 	_t.check("latch up", _game.summary_latched, "latched %s" % _game.summary_latched)
 	Push.key(root, KEY_M)
 	await _frames(1)
 	_t.check("M under the summary latch opens nothing", not panel.is_open(), "")
-	_hold(KEY_M, false)
+	_hold(KEY_SPACE, false)
 	# Moss's counter in the bay: the in-run intermission.
 	_game.summary_latched = false
 	flow.new_run()
