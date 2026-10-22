@@ -12,12 +12,18 @@ extends SceneTree
 # count it also prints a per-fire figure that INCLUDES the rect walk: real ImpactFrame fires
 # (rect_source = warning_rects, walk and box) over FIRES fires, each fire's shape and rect
 # microseconds from the frame's own counters, and the refreshes counted per fire (rect_calls).
-# Exit 0, or 1 when a sanity check fails (sample count,
+# A last section times the work screen_bound_box does at COMMIT (the descriptor, the ground
+# lattice and the box; the whole commit beside it) on a typical ring, a lane and the largest
+# hazards the repo commits, over the real park ground (Terrain.height of the park table's
+# stage 1) built here. Exit 0, or 1 when a sanity check fails (sample count,
 # p99 >= mean >= 0, mean under SANITY_MEAN_USEC); the 0.2 ms bar is judged from the lines.
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const WarningBound := preload("res://src/combat/warning_bound.gd")
+const Terrain := preload("res://src/world/terrain.gd")
+const ParkDefs := preload("res://src/core/park_defs.gd")
 
 const CALLS := 1000
 const WARM_UP := 50
@@ -41,6 +47,7 @@ func _frames(n: int) -> void:
 func _run() -> void:
 	_bench()
 	await _rects_bench()
+	await _commit_bench()
 	await _frames(2)
 	print("impact_frame_bench: ", "PASS" if _failures == 0 else "FAIL (%d)" % _failures)
 	quit(0 if _failures == 0 else 1)
@@ -252,3 +259,89 @@ func _rects_bench() -> void:
 			mark.free()
 		await _frames(1)
 	world.free()
+
+
+# --- Commit cost ---------------------------------------------------------------------------
+
+const COMMIT_CALLS := 1000
+# Whole commits are built and freed, so fewer.
+const WHOLE_CALLS := 200
+
+# The cost of the box at commit. The ground is the real park terrain (stage 1 of ParkDefs, the
+# table the game launches), so each lattice sample is the real Terrain.height. Cases, with the
+# repo's own numbers:
+#   ring INSTANT r 6   the stress and bench ring (stress_capture.gd _commit_threats)
+#   lane 24 x 4        a lane from a Telegraph (the shipped ones run 14 to 24 long)
+#   annulus r 44       the largest circle a hazard takes: MindAttacks clamps a band to its
+#                      radius (mind_attacks.gd:155, :167), default Arena.FLOOR_R = 44 (arena.gd:14)
+#   charge lane 105    the largest lane: Brindle's charge runs rim to rim, up to 2 x CHARGE_STOP_R
+#                      (49, boss_rules.gd:101) plus the hull half length 7 behind and ahead of
+#                      the run (boss.gd:737, Requisition.HULL 9 x 5 x 14, requisition.gd:14), half
+#                      width 9 * 0.5 + 1
+func _commit_bench() -> void:
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var terrain := Terrain.new(ParkDefs)
+	terrain.build(holder)
+	terrain.use(1)
+	await _frames(2)
+	var spawn: Vector2 = terrain.map_for(1).spawn
+	var at := Vector3(spawn.x, terrain.height(spawn.x, spawn.y), spawn.y)
+	var world := Node3D.new()
+	root.add_child(world)
+	var half_hull := 7.0
+	var cases := {
+		"ring INSTANT r6": func() -> Node3D: return Telegraph.ring(world, terrain, Threat.Type.INSTANT, at, 6.0),
+		"lane 24x4": func() -> Node3D: return Telegraph.lane(world, terrain, Threat.Type.LANE, at, Vector3.RIGHT, 24.0, 4.0),
+		"hazard annulus r44": func() -> Node3D:
+			var h := Hazard.new()
+			h.ground = func(point: Vector3) -> float: return terrain.height(point.x, point.z)
+			h.commit_annulus("bench_big", Threat.Type.INSTANT, at, Vector2(0.0, 44.0), 3.0, 1.0, 1.0)
+			world.add_child(h)
+			return h,
+		"hazard charge lane 105": func() -> Node3D:
+			var h := Hazard.new()
+			h.ground = func(point: Vector3) -> float: return terrain.height(point.x, point.z)
+			h.commit_lane("bench_charge", Threat.Type.LANE, at, Vector3.RIGHT, half_hull, 98.0 + half_hull, 5.5, 5.5, 1.0, 1.0)
+			world.add_child(h)
+			return h,
+	}
+	for label in cases:
+		var node: Node3D = cases[label].call()
+		await _frames(1)
+		var box: AABB = node.screen_bound_box()
+		_check("commit %s: has a box" % label, box.size != Vector3.ZERO)
+		var usec: Array = []
+		for i in WARM_UP + COMMIT_CALLS:
+			var began := Time.get_ticks_usec()
+			if node is Hazard:
+				WarningBound.box(node.descriptor(), node.painter().ground, node.centre.y, Hazard.DRAW_LIFT)
+			else:
+				node._cut_bound()
+			if i >= WARM_UP:
+				usec.append(Time.get_ticks_usec() - began)
+		var sum := _summary_n("commit box %s" % label, usec, COMMIT_CALLS)
+		var whole: Array = []
+		for i in WHOLE_CALLS:
+			var began := Time.get_ticks_usec()
+			var again: Node3D = cases[label].call()
+			whole.append(Time.get_ticks_usec() - began)
+			again.free()
+		var all := _summary_n("commit whole %s" % label, whole, WHOLE_CALLS)
+		print("commit_bench %s box_samples=%d box_mean_us=%.1f box_p99_us=%.1f box_max_us=%d whole_samples=%d whole_mean_us=%.1f whole_p99_us=%.1f box_size=(%.1f, %.1f, %.1f)" % [label, COMMIT_CALLS, sum[0], sum[1], sum[2], WHOLE_CALLS, all[0], all[1], box.size.x, box.size.y, box.size.z])
+		node.free()
+		await _frames(1)
+	world.free()
+	holder.free()
+
+
+func _summary_n(label: String, usec: Array, want: int) -> Array:
+	usec.sort()
+	var sum := 0
+	for u in usec:
+		sum += u
+	var mean := float(sum) / float(usec.size())
+	var p99: float = usec[int(ceil(0.99 * usec.size())) - 1]
+	_check(label + ": samples taken", usec.size() == want, str(usec.size()))
+	_check(label + ": p99 >= mean >= 0", p99 >= mean and mean >= 0.0, "mean %.1f p99 %.1f" % [mean, p99])
+	return [mean, p99, usec.back()]
