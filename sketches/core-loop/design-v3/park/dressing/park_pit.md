@@ -113,7 +113,7 @@ None of the rows read is a Conflict row, so none is "not copied".
 
 ## w18m row, yaw and label fixes (card (b), #323)
 
-#323's check found 1 row and 2 yaw groups in pit at c371b7c4: the row pit_012, pit_389 and pit_396 (gaps 27.7 and 23.7 m, CV 0.079); the yaw groups pit_011, pit_026 and pit_898, and pit_012, pit_028 and pit_396, all at -35.6; and pit_121, pit_123 and pit_125, all at 150.9. Each spot now faces a named row from `park_rows`, rounded to 1 degree (in the 0.5 case, to 0.5).
+#323's check found 1 row and 3 yaw groups in pit at c371b7c4: the row pit_012, pit_389 and pit_396 (gaps 27.7 and 23.7 m, CV 0.078 as the check prints it); the yaw groups pit_011, pit_026 and pit_898, and pit_012, pit_028 and pit_396, all at -35.6; and pit_121, pit_123 and pit_125, all at 150.9. Each spot now faces a named row from `park_rows`, rounded to 1 degree (in the 0.5 case, to 0.5).
 
 | Spot | `at` | Yaw | Faces |
 | --- | --- | --- | --- |
@@ -130,6 +130,6 @@ None of the rows read is a Conflict row, so none is "not copied".
 
 pit_011 moved 2 m north because facing wash_berm from its old point put a cholla 3.9 m from dump_wash_2 (keepout).
 
-Labels: 55 `near` labels were cut mid-word; each is now "<row id>: <the template story cut at the last whole word within 60 characters>". For example, pit_011 "wash_berm, bursage and cholla thickening along " is now "wash_berm: Bursage and cholla thickening along the haul road's edge", and pit_012 "slickrock_15, the fallen shift bell with its rope " is now "slickrock_15: The fallen shift bell with its rope tail, a sign board".
+Labels: 55 `near` labels were cut mid-word, and 4 more (the hoist-rope wagon ones) ended on a comma; each is now "<row id>: <the template story cut at the last whole word within 60 characters>". For example, pit_011 "wash_berm, bursage and cholla thickening along " is now "wash_berm: Bursage and cholla thickening along the haul road's edge", and pit_012 "slickrock_15, the fallen shift bell with its rope " is now "slickrock_15: The fallen shift bell with its rope tail, a sign board".
 
 Results: pin 795077205 to 3124860388. #323's check (with its row-span fix af522720, run with `--file` on this copy) reports 0 violations, 0 pattern, 0 pin, 0 lint; the old check gives 0 violations and the same fingerprint; `park_props_test` passes (226 checks, pin line PASS). Density (w18m): 27 of 31 windows pass, 4 exempt (1 arena, 2 camp, 1 telegraph), none failing, the same as before.

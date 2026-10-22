@@ -1984,7 +1984,7 @@
     -258
    ],
    "yaw_deg": 126.9,
-   "near": "camp_ore_bin, hoist-rope wagon parked by its bell,"
+   "near": "camp_ore_bin: Hoist-rope wagon parked by its bell, the long rope coiled"
   },
   {
    "id": "pit_119",
@@ -2194,7 +2194,7 @@
     -332
    ],
    "yaw_deg": 179.0,
-   "near": "rim_road_lane_2, hoist-rope wagon parked by its bell,"
+   "near": "rim_road_lane_2: Hoist-rope wagon parked by its bell, the long rope coiled"
   },
   {
    "id": "pit_253",
@@ -2614,7 +2614,7 @@
     151
    ],
    "yaw_deg": 68.1,
-   "near": "ore_pile_mid, hoist-rope wagon parked by its bell,"
+   "near": "ore_pile_mid: Hoist-rope wagon parked by its bell, the long rope coiled"
   },
   {
    "id": "pit_764",
@@ -2664,7 +2664,7 @@
     -327
    ],
    "yaw_deg": -64.5,
-   "near": "haul_ramp_berm, hoist-rope wagon parked by its bell,"
+   "near": "haul_ramp_berm: Hoist-rope wagon parked by its bell, the long rope coiled"
   },
   {
    "id": "pit_941",
