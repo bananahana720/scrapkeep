@@ -12,11 +12,12 @@ extends SceneTree
 #     pod yaws (the pod yaws freely against a wall; each pose settles its own bank), reporting the worst yaw and
 #     the bank angle there. The coarse worst pose of each banked node at 0.95 m or more is then refined locally
 #     (yaw +-11.25 deg in 2.25 deg steps, ring bearing +-45 deg in 7.5 deg steps, the bank re-settled at each
-#     pose). Refinement runs once per distinct set of banked nodes in a shell (classes whose layers add none
-#     share the class 1 result);
+#     pose). Refinement runs once per distinct set of visible banked node paths in a shell; a class with the
+#     same set as an earlier class is judged on its coarse sweep alone, which holds while heft layers toggle
+#     holders and never swap a banked node's mesh in place;
 #   - baked nodes do not bank, so the pod's yaw alone moves them; their worst case over EVERY pod yaw is exact
 #     and closed form (|n horizontal| * horizontal radius - n.y * height), and is the number reported. A
-#     posed measurement at POD_YAW cross-checks the formula.
+#     posed measurement at pod yaw 0 cross-checks the formula (POD_YAW feeds only the rigid-pod check).
 # The max per node, and for nodes past LIMIT the vertices clustered by pod-frame angle (0 = forward, -Z; positive
 # toward +X), are printed. KNOWN_BAKED lists today's over-limit nodes with their measured reach: a node past
 # the limit that is not listed fails (something new pokes out), a listed node that grows fails, and the
