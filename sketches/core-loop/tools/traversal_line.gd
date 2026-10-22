@@ -44,7 +44,9 @@ const CINDER_BURN := CinderHeat.BURN_FACT
 # the fitted anchor colliders (park_recipes.gd place_anchor_field, anchor_fit.json): every dead stop and every bounce off an
 # anchor-field body, with its distance to the nearest fitted box's vertical-edge corner. The parent writes
 # anchor_contacts.json (anchor_contacts.hands.json for a hands run) beside the summary and prints one line per park.
-# See AnchorContacts for the definitions.
+# See AnchorContacts for the definitions. --anchor-contacts=0 leaves it off; on a non-park table it is ignored with one warning.
+# It also records, per seed and per park, the closest approach of the ball's centre to a fitted box surface and to a fitted
+# corner (with the row), and lists every placed row that carries an over_limit pair with its near-event count, 0 included.
 #
 # The default out is artifacts/local/traversal at the repository root. The pilot's route and
 # bar come from tools/traversal_lines.json. The number judges a bot, not the feel of the map.
@@ -488,6 +490,9 @@ class Sampler:
 #           corner_dist_m <= NEAR_M, the ball's centre to the corner.
 #   row     the nearest anchor-field box of any row (fitted or the 8 m box), by distance to its surface; "near" it is
 #           surface_dist_m <= NEAR_M, which the over_limit count uses.
+#   closest approach  per tick, the ball centre's distance to the nearest fitted box surface, and to the nearest fitted
+#           corner (the vertical edge, 3D), with the row; only boxes within the 3 by 3 cells of CELL_M around the ball are scanned,
+#           so a distance of CELL_M or more reads null (none that close).
 #   ride line  the park's lane mask (ParkMap.lane_mask_for, as scatter.gd reads it): the cell of the lattice node nearest
 #           the ball's XZ is marked. That cell is 8 m wide and the mask's own guarantee is only about 2.3 to 13.7 m,
 #           so "on a ride line" is generous.
@@ -498,6 +503,7 @@ class AnchorContacts:
 	const Y_SLACK_M := 1.5
 	const BOUNCE_MIN_MPS := 1.0
 	const SURFACE_LIMIT_M := 2.0
+	const CELL_M := 8.0
 
 	var park_id := ""
 	var seed_number := 0
@@ -508,6 +514,10 @@ class AnchorContacts:
 	var events: Array = []
 	var fields := 0
 	var _body_boxes := {}
+	# Fitted boxes by CELL_M cell of their XZ extent (Vector2i -> box indices), for the closest approach.
+	var _grid := {}
+	var closest_surface := {"dist": INF, "row": ""}
+	var closest_corner := {"dist": INF, "row": ""}
 	var _ticks := 0
 	var _tries := 0
 	# Ticks the ball touched an anchor-field body: a run with none measured nothing, whatever its event count.
@@ -615,8 +625,74 @@ class AnchorContacts:
 		var j := clampi(roundi((z + half) / step), 0, side - 1)
 		return (mask["cells"] as PackedByteArray)[j * side + i] != 0
 
+	# The grid cell of an XZ point.
+	static func cell_of(x: float, z: float) -> Vector2i:
+		return Vector2i(floori(x / CELL_M), floori(z / CELL_M))
+
+	# Fitted boxes by cell: every cell the box's XZ extent touches lists its index.
+	static func build_grid(list: Array) -> Dictionary:
+		var grid := {}
+		for i in list.size():
+			var b: Dictionary = list[i]
+			if not b["fitted"]:
+				continue
+			var lo := Vector2(INF, INF)
+			var hi := Vector2(-INF, -INF)
+			for c: Vector2 in b["corners"]:
+				lo = lo.min(c)
+				hi = hi.max(c)
+			var a := cell_of(lo.x, lo.y)
+			var z := cell_of(hi.x, hi.y)
+			for cx in range(a.x, z.x + 1):
+				for cz in range(a.y, z.y + 1):
+					var key := Vector2i(cx, cz)
+					if not grid.has(key):
+						grid[key] = []
+					grid[key].append(i)
+		return grid
+
+	# The closest approach of at to a fitted box surface and to a fitted corner (its vertical edge, 3D) among the grid's 3 by 3
+	# cells around at: {"surface": {"dist", "row"}, "corner": {"dist", "row"}}, dist INF when none lies within CELL_M.
+	static func approach(at: Vector3, list: Array, grid: Dictionary) -> Dictionary:
+		var out := {"surface": {"dist": INF, "row": ""}, "corner": {"dist": INF, "row": ""}}
+		var home := cell_of(at.x, at.z)
+		var flat := Vector2(at.x, at.z)
+		for dx in range(-1, 2):
+			for dz in range(-1, 2):
+				var indices = grid.get(Vector2i(home.x + dx, home.y + dz))
+				if indices == null:
+					continue
+				for i: int in indices:
+					var b: Dictionary = list[i]
+					var local: Vector3 = (b["xf"] as Transform3D).affine_inverse() * at
+					var half: Vector3 = b["half"]
+					var d := local.distance_to(Vector3(clampf(local.x, -half.x, half.x), clampf(local.y, -half.y, half.y), clampf(local.z, -half.z, half.z)))
+					if d < float(out["surface"]["dist"]):
+						out["surface"] = {"dist": d, "row": b["row"]}
+					var y := clampf(at.y, float(b["y0"]), float(b["y1"]))
+					for c: Vector2 in b["corners"]:
+						var dc := Vector3(flat.distance_to(c), at.y - y, 0.0).length()
+						if dc < float(out["corner"]["dist"]):
+							out["corner"] = {"dist": dc, "row": b["row"]}
+		for k in out:
+			if float(out[k]["dist"]) >= CELL_M:
+				out[k] = {"dist": INF, "row": ""}
+		return out
+
+	# Every placed row with an over_limit pair, from the collected boxes: [{"row", "key", "size_y"}], in row order.
+	func over_limit_rows() -> Array:
+		var seen := {}
+		var out: Array = []
+		for b: Dictionary in boxes:
+			if b["over_limit"] and not seen.has(b["row"]):
+				seen[b["row"]] = true
+				out.append({"row": b["row"], "key": b["key"], "size_y": b["size_y"]})
+		out.sort_custom(func(a, c): return String(a["row"]) < String(c["row"]))
+		return out
+
 	func _collect(game) -> void:
 		boxes = collect(game, park_rows)
+		_grid = build_grid(boxes)
 		_body_boxes = {}
 		for i in boxes.size():
 			var id: int = boxes[i]["body"]
@@ -634,6 +710,11 @@ class AnchorContacts:
 				_collect(game)
 			if boxes.is_empty():
 				return
+		var near := approach(ball, boxes, _grid)
+		if float(near["surface"]["dist"]) < float(closest_surface["dist"]):
+			closest_surface = near["surface"]
+		if float(near["corner"]["dist"]) < float(closest_corner["dist"]):
+			closest_corner = near["corner"]
 		var rigid = game.player._rigid
 		var v: Vector3 = rigid.linear_velocity
 		var touch := {}
@@ -681,16 +762,24 @@ class AnchorContacts:
 		var fitted := 0
 		for b in boxes:
 			fitted += 1 if b["fitted"] else 0
-		return {"seed": seed_number, "fields": fields, "boxes": boxes.size(), "fitted_boxes": fitted, "touch_ticks": touch_ticks, "events": events.duplicate(true)}
+		return {"seed": seed_number, "fields": fields, "boxes": boxes.size(), "fitted_boxes": fitted, "touch_ticks": touch_ticks, "events": events.duplicate(true),
+			"closest_surface_m": snappedf(float(closest_surface["dist"]), 0.01) if is_finite(float(closest_surface["dist"])) else null, "closest_surface_row": closest_surface["row"],
+			"closest_corner_m": snappedf(float(closest_corner["dist"]), 0.01) if is_finite(float(closest_corner["dist"])) else null, "closest_corner_row": closest_corner["row"],
+			"over_limit_rows": over_limit_rows()}
 
 	# One park's summary over event rows: events and those within NEAR_M of a fitted corner (and how many of them on a ride
 	# line), all events on a ride line, and the events near an over_limit variant's post (surface within NEAR_M), by row and size.
-	static func summarise(rows: Array) -> Dictionary:
+	# over_rows (AnchorContacts.over_limit_rows, unioned over seeds) lists every placed row carrying an over_limit pair, so
+	# "over_limit_rows" holds each with its near event count, 0 included.
+	static func summarise(rows: Array, over_rows: Array = []) -> Dictionary:
 		var near_corner := 0
 		var corner_on_line := 0
 		var on_line := 0
 		var limit := {}
 		var by_row := {}
+		var listed := {}
+		for r: Dictionary in over_rows:
+			listed["%s size %s %s" % [r["row"], r["size_y"], r["key"]]] = 0
 		for e: Dictionary in rows:
 			var corner = e.get("corner_dist_m")
 			var is_near: bool = corner != null and float(corner) <= NEAR_M
@@ -706,8 +795,11 @@ class AnchorContacts:
 			if e.get("over_limit", false) and surface != null and float(surface) <= NEAR_M:
 				var label := "%s size %s %s%s" % [e["row"], e["size_y"], e["key"], " (on ride line)" if e["on_ride_line"] else ""]
 				limit[label] = int(limit.get(label, 0)) + 1
+				var listed_label := "%s size %s %s" % [e["row"], e["size_y"], e["key"]]
+				if listed.has(listed_label):
+					listed[listed_label] = int(listed[listed_label]) + 1
 		return {"events": rows.size(), "near_corner": near_corner, "near_corner_on_ride_line": corner_on_line,
-			"near_corner_by_row": by_row, "events_on_ride_line": on_line, "over_limit_events": limit}
+			"near_corner_by_row": by_row, "events_on_ride_line": on_line, "over_limit_events": limit, "over_limit_rows": listed}
 
 
 # The park's ride facts among verbs, in the order they fired (PARK_RIDE_FACTS only).
@@ -1054,6 +1146,8 @@ func _initialize() -> void:
 	_settings = _parse(OS.get_cmdline_user_args())
 	_pilot = String(_settings.get("pilot", ""))
 	_park = String(_settings.get("table", TABLE)) == PARK
+	if contacts_on(_settings) and not _park and not _settings.has("child"):
+		print("traversal_line: warning: --anchor-contacts reads the park table's anchor fields; this table is not the park, so the flag is ignored")
 	if _park:
 		if not _setup_park():
 			quit(2)
@@ -1192,6 +1286,11 @@ func _game_stage() -> int:
 	return 1 if _stage == FIXTURE_STAGE else _stage
 
 
+# Whether --anchor-contacts is on: given, and not 0 or false.
+static func contacts_on(settings: Dictionary) -> bool:
+	return settings.has("anchor-contacts") and not String(settings["anchor-contacts"]) in ["0", "false", ""]
+
+
 static func _parse(args: PackedStringArray) -> Dictionary:
 	var out := {}
 	for arg in args:
@@ -1316,7 +1415,7 @@ func _start_park_driver() -> bool:
 		_game.flow.enter_stage(stage, Vector3.ZERO, false)
 	_sampler = Sampler.new(_game)
 	_sampler.setup_park(_line["waymarks"], open_graph(_map_id))
-	if _settings.has("anchor-contacts"):
+	if contacts_on(_settings):
 		_sampler.contacts = AnchorContacts.new(_map_id, _seeds[_index], ParkMap.lane_mask_for(map.path, park), ParkRecipes.placed_rows(park))
 	return true
 
@@ -1334,7 +1433,7 @@ func _finish() -> void:
 	var path := out.path_join(summary_name(_pilot, hands_of(_settings)))
 	var doc := {}
 	var contacts_doc := {}
-	if _settings.has("anchor-contacts") and _park and not _settings.has("child"):
+	if contacts_on(_settings) and _park and not _settings.has("child"):
 		contacts_doc = _take_contacts()
 	if _park:
 		doc = park_document(_pilot, _map_id, _stage, _commit(), _runs, _line.get("bar", {}), _floor_ref(out))
@@ -1369,28 +1468,54 @@ func _finish() -> void:
 func _take_contacts() -> Dictionary:
 	var per_seed: Array = []
 	var events: Array = []
+	var over_rows := {}
 	for run in _runs:
 		if run.has("anchor_contacts"):
 			var one: Dictionary = run["anchor_contacts"]
 			run.erase("anchor_contacts")
-			per_seed.append({"seed": int(one["seed"]), "fields": int(one["fields"]), "boxes": int(one["boxes"]), "fitted_boxes": int(one["fitted_boxes"]), "touch_ticks": int(one["touch_ticks"]), "events": (one["events"] as Array).size()})
+			per_seed.append({"seed": int(one["seed"]), "fields": int(one["fields"]), "boxes": int(one["boxes"]), "fitted_boxes": int(one["fitted_boxes"]), "touch_ticks": int(one["touch_ticks"]), "events": (one["events"] as Array).size(),
+				"closest_surface_m": one["closest_surface_m"], "closest_surface_row": one["closest_surface_row"], "closest_corner_m": one["closest_corner_m"], "closest_corner_row": one["closest_corner_row"]})
+			for r: Dictionary in one["over_limit_rows"]:
+				over_rows[r["row"]] = r
 			for e: Dictionary in one["events"]:
 				e["seed"] = int(e["seed"])
 				events.append(e)
-	var summary := AnchorContacts.summarise(events)
-	var posts := 0
-	for row in per_seed:
-		posts += int(row["fitted_boxes"])
-	print("traversal_line: anchor-contacts %s %s%s: %d events (%d stops, %d bounces), %d within %.1f m of a fitted corner, %d of those on a ride line, %d events on a ride line, over_limit near %s, fitted boxes per seed %s, anchor touch ticks per seed %s"
-		% [_map_id, _pilot, "" if hands_of(_settings).is_empty() else " hands=" + ",".join(hands_of(_settings)), events.size(),
+	var summary := AnchorContacts.summarise(events, over_rows.values())
+	var closest := closest_of(per_seed)
+	summary["closest_approach"] = closest
+	var note := "" if hands_of(_settings).is_empty() else " hands=" + ",".join(hands_of(_settings))
+	print("traversal_line: anchor-contacts %s %s%s: %d events (%d stops, %d bounces), %d of them within %.1f m of a fitted corner, %d of those near-corner events on a ride line (the gated number), %d events of any distance on a ride line, over_limit rows (events within %.1f m of the face) %s, closest approach to a fitted surface %s, to a fitted corner %s, fitted boxes per seed %s, anchor touch ticks per seed %s"
+		% [_map_id, _pilot, note, events.size(),
 			events.filter(func(e): return e["kind"] == "stop").size(), events.filter(func(e): return e["kind"] == "bounce").size(),
-			summary["near_corner"], AnchorContacts.NEAR_M, summary["near_corner_on_ride_line"], summary["events_on_ride_line"], summary["over_limit_events"],
+			summary["near_corner"], AnchorContacts.NEAR_M, summary["near_corner_on_ride_line"], summary["events_on_ride_line"], AnchorContacts.NEAR_M, summary["over_limit_rows"],
+			approach_text(closest["surface_m"], closest["surface_row"], closest["seed"]), approach_text(closest["corner_m"], closest["corner_row"], closest["corner_seed"]),
 			per_seed.map(func(r): return r["fitted_boxes"]), per_seed.map(func(r): return r["touch_ticks"])])
 	return {"park": _map_id, "stage": _stage, "pilot": _pilot, "hands": hands_of(_settings), "commit": _commit(),
 		"definitions": {"near_m": AnchorContacts.NEAR_M, "ride_line": "ParkMap.lane_mask_for cell of the nearest 8 m lattice node (scatter.gd rule)",
 			"corner": "fitted box vertical-edge corner, XZ, ball height within box span +/- %.1f m" % AnchorContacts.Y_SLACK_M,
-			"bounce": "contact with an anchor body and normal velocity from below -%.1f m/s to above 0" % AnchorContacts.BOUNCE_MIN_MPS},
+			"bounce": "contact with an anchor body and normal velocity from below -%.1f m/s to above 0" % AnchorContacts.BOUNCE_MIN_MPS,
+			"closest_approach": "ball centre to a fitted box surface, and to a fitted corner's vertical edge (3D), over every counted tick; null when never within %.1f m" % AnchorContacts.CELL_M,
+			"over_limit_rows": "every placed row whose variant at its height has over_limit in anchor_fit.json, with the events whose nearest box is that row's and within %.1f m of its surface; 0 when none" % AnchorContacts.NEAR_M},
 		"per_seed": per_seed, "summary": summary, "events": events}
+
+
+# The park's minimum closest approach over the per-seed rows: {"surface_m", "surface_row", "seed", "corner_m", "corner_row", "corner_seed"}.
+static func closest_of(per_seed: Array) -> Dictionary:
+	var out := {"surface_m": null, "surface_row": "", "seed": null, "corner_m": null, "corner_row": "", "corner_seed": null}
+	for row: Dictionary in per_seed:
+		if row["closest_surface_m"] != null and (out["surface_m"] == null or float(row["closest_surface_m"]) < float(out["surface_m"])):
+			out["surface_m"] = row["closest_surface_m"]
+			out["surface_row"] = row["closest_surface_row"]
+			out["seed"] = row["seed"]
+		if row["closest_corner_m"] != null and (out["corner_m"] == null or float(row["closest_corner_m"]) < float(out["corner_m"])):
+			out["corner_m"] = row["closest_corner_m"]
+			out["corner_row"] = row["closest_corner_row"]
+			out["corner_seed"] = row["seed"]
+	return out
+
+
+static func approach_text(metres, row: String, seed_number) -> String:
+	return "none within %.0f m" % AnchorContacts.CELL_M if metres == null else "%.2f m (%s, seed %d)" % [float(metres), row, int(seed_number)]
 
 
 # The floor band's reference: the --ref pilot's (Rivet's by default) summary in the same out.

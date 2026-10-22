@@ -15,7 +15,7 @@ extends SceneTree
 #     shapes, each box turned with its post's drawn turn (centre = turn * c, x and z sizes swapped on an odd turn);
 #     (h) no fitted box leaves the old 8 m footprint; (i) an unlisted pair keeps one 8 m box per post and a greybox row
 #     is untouched; (j) the table's GLB sha256s match the GLBs on disk (a GLB rebuild without a table rebuild fails);
-#     (k) a radius 1 sphere rolled at h 1 into a fitted post stops within 1 m of the table's after-gap expectation.
+#     (k) a radius 1 sphere rolled at h 1 into a fitted post stops within 1 m of that box's own -x face (h 1 must span a listed box).
 # Evidence limit: file shape, bounds and placement data only; no look (no render), no frame cost.
 
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
@@ -269,11 +269,14 @@ func _stale() -> void:
 func _probe() -> void:
 	var row := _fit_row("anchor_hoodoo", 10.0, true)
 	var boxes := ParkRecipes.anchor_fit_boxes(row)
-	var lowest: Dictionary = boxes[0]
+	var lowest := {}
 	for b: Dictionary in boxes:
 		if b["h"][0] <= 1.0 and b["h"][1] >= 1.0:
 			lowest = b
 			break
+	_t.check("(k) the fitted hoodoo size 10 lists a box spanning h 1", not lowest.is_empty(), "boxes %s" % [boxes])
+	if lowest.is_empty():
+		return
 	var space_root := Node3D.new()
 	root.add_child(space_root)
 	var body := StaticBody3D.new()

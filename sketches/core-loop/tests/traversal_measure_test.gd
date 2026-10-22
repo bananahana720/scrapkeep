@@ -65,6 +65,16 @@ const SLICE_RIDE_FACTS := ["ride_grapple_line", "ride_chute", "ride_skylight", "
 # A map id with no assets/park/<id>/graph.bin: the planted missing graph.
 const MISSING_GRAPH_MAP := "kb7b_planted_missing_graph"
 
+# A stand-in for Game: observe reads game.player._rigid and game.run.stage_time, collect walks its children.
+class FakeGame:
+	extends Node3D
+	var player := {}
+	var run := {"stage_time": 0.0}
+
+
+const CONTACT_DROP_TICKS := 120
+const CONTACT_SETTLE_TICKS := 240
+
 var _t := T.new("traversal_measure_test")
 var _game
 var _driver
@@ -90,6 +100,8 @@ func _physics_process(delta: float) -> bool:
 			_fixture_tick(delta)
 		"plant":
 			_plant_tick(delta)
+		"contact":
+			_contact_tick()
 		"park_plant", "park_control":
 			_park_plant_tick(delta)
 	return false
@@ -135,6 +147,11 @@ func _start_fixture() -> void:
 	_check_summary()
 	_check_floor_hands()
 	_check_anchor_contacts()
+	_start_contact()
+
+
+func _resume_fixture() -> void:
+	_phase = "fixture"
 	_t.check("the fixture replaces the park table's first stage", TraversalLine.use_fixture(), "park_defs stage 1 map now park_test")
 	_new_game("park")
 
@@ -394,13 +411,12 @@ func _band_of(doc: Dictionary, measure: String) -> Dictionary:
 	return {}
 
 
-# The floor line's hands: only the stick and the brake survive the filter.
 # --anchor-contacts on planted geometry: a fitted box turned 90 degrees, a ball a known distance from its vertical-edge corner.
 func _check_anchor_contacts() -> void:
 	var AC = TraversalLine.AnchorContacts
 	var fitted := {"row": "plant", "key": "anchor_basalt_a", "size_y": 2.0, "fitted": true, "over_limit": true}
 	var grey := {"row": "grey", "key": "greybox:anchor_field", "size_y": 14.0, "fitted": false, "over_limit": false}
-	# Size (4, 6, 2) turned a quarter about Y at (10, 3, 20): x 9 to 11, z 16 to 24, one corner at (11, 18).
+	# Size (4, 6, 2) turned a quarter about Y at (10, 3, 20): x 9 to 11, z 18 to 22 (the 2 m depth is now along x, the 4 m along z), one corner at (11, 18).
 	var xf := Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(10.0, 3.0, 20.0))
 	var list: Array = [AC.box_record(xf, Vector3(4.0, 6.0, 2.0), fitted), AC.box_record(Transform3D(Basis.IDENTITY, Vector3(13.5, 3.0, 18.0)), Vector3(1.0, 6.0, 1.0), grey)]
 	var ball := Vector3(12.2, 3.0, 18.0)
@@ -425,6 +441,26 @@ func _check_anchor_contacts() -> void:
 	var near_limit: Dictionary = AC.describe("stop", "park_plant", 7, 3.6, Vector3(11.8, 3.0, 20.0), list, AC.nearest_surface(Vector3(11.8, 3.0, 20.0), list), mask)
 	_t.check("anchor contacts: a stop 0.8 m from an over_limit box's face is counted under over_limit",
 		(AC.summarise([near_limit])["over_limit_events"] as Dictionary).size() == 1, str(AC.summarise([near_limit])))
+	# Every placed row with an over_limit pair is listed with its near-event count, 0 included, built from the boxes.
+	var quiet := {"row": "quiet", "key": "anchor_basalt_b", "size_y": 2.0, "fitted": true, "over_limit": true}
+	var rec = AC.new("park_plant", 7, {}, [])
+	rec.boxes = [list[0], AC.box_record(Transform3D(Basis.IDENTITY, Vector3(50.0, 1.0, 50.0)), Vector3(2.0, 2.0, 2.0), quiet), list[1]]
+	var rows: Array = rec.over_limit_rows()
+	var listing: Dictionary = AC.summarise([event, far, near_limit], rows)["over_limit_rows"]
+	_t.check("anchor contacts: over_limit rows come from the boxes, the quiet one listed with 0 and the planted one with its 2 near events",
+		rows.size() == 2 and listing.size() == 2 and listing["plant size 2.0 anchor_basalt_a"] == 2 and listing["quiet size 2.0 anchor_basalt_b"] == 0, str(listing))
+	# Closest approach: fitted boxes only, culled by the 8 m cell grid, a 3D distance to the surface and to the corner's vertical edge.
+	var grid: Dictionary = AC.build_grid(list)
+	var close: Dictionary = AC.approach(ball, list, grid)
+	_t.check("anchor contacts: closest approach to the fitted box is 1.2 m from the face and from the corner edge, and the 8 m box is ignored",
+		absf(float(close["surface"]["dist"]) - 1.2) < 0.0001 and close["surface"]["row"] == "plant" and absf(float(close["corner"]["dist"]) - 1.2) < 0.0001 and close["corner"]["row"] == "plant", str(close))
+	var above: Dictionary = AC.approach(Vector3(12.2, 11.0, 18.0), list, grid)
+	var diagonal := sqrt(1.2 * 1.2 + 25.0)
+	_t.check("anchor contacts: 5 m above the box's top (y 6) and 1.2 m beside its corner, surface and corner are both %.3f m away" % diagonal,
+		absf(float(above["corner"]["dist"]) - diagonal) < 0.0001 and absf(float(above["surface"]["dist"]) - diagonal) < 0.0001, str(above))
+	_t.check("anchor contacts: a ball 40 m from every fitted box reads none", not is_finite(float(AC.approach(Vector3(-40.0, 3.0, 20.0), list, grid)["surface"]["dist"])))
+	_t.check("anchor contacts: --anchor-contacts=0 and =false leave the flag off, a bare flag turns it on",
+		not TraversalLine.contacts_on({"anchor-contacts": "0"}) and not TraversalLine.contacts_on({"anchor-contacts": "false"}) and not TraversalLine.contacts_on({}) and TraversalLine.contacts_on({"anchor-contacts": "1"}))
 	# The recorder on a real fitted row placed by place_row: one record per BoxShape3D, all fitted, and a ball planted 0.9 m from a corner.
 	var row := {"id": "corner_t", "element": "anchor_field", "at": [0, 0], "y": null, "size": [60, 10, 60], "yaw_deg": 30, "ride_fact": "",
 		"recipe": "anchor_hoodoo", "stamp": "", "budget": "detail"}
@@ -435,12 +471,128 @@ func _check_anchor_contacts() -> void:
 	var shapes := node.find_children("*", "CollisionShape3D", true, false)
 	var all_fitted := recorded.all(func(b: Dictionary) -> bool: return b["fitted"] and b["row"] == "corner_t")
 	_t.check("anchor contacts: collect finds every box of a placed fitted row (%d of %d)" % [recorded.size(), shapes.size()], recorded.size() == shapes.size() and shapes.size() > 0 and all_fitted)
+	_check_placed_corners(row, node, recorded)
 	if not recorded.is_empty():
 		var c: Vector2 = recorded[0]["corners"][0]
 		var planted := Vector3(c.x + 0.9, (float(recorded[0]["y0"]) + float(recorded[0]["y1"])) * 0.5, c.y)
 		var found: Dictionary = AC.corner_distance(planted, recorded)
 		_t.check("anchor contacts: a ball planted 0.9 m from a placed box's corner reads at most 0.9 m", float(found["dist"]) <= 0.9001, str(found))
 	parent.free()
+
+
+# --- The bounce and touch path on a real physics step ---
+# A RigidBody3D ball drops 1 m onto the top of a fitted post that place_row built, bouncy, and AnchorContacts.observe reads it
+# each fixed tick: real get_colliding_bodies, real velocity. Then the ball is let settle (no bounce) and observe is fed
+# velocities set by hand while the space still reports the contact, in the two signs.
+
+var _fake
+var _ball: RigidBody3D
+var _rec
+var _contact_ticks := 0
+var _contact_row := {"id": "contact_t", "element": "anchor_field", "at": [0, 0], "y": null, "size": [20, 10, 20], "yaw_deg": 0, "ride_fact": "",
+	"recipe": "anchor_hoodoo", "stamp": "", "budget": "detail"}
+
+
+func _start_contact() -> void:
+	_phase = "contact"
+	_contact_ticks = 0
+	_fake = FakeGame.new()
+	root.add_child(_fake)
+	ParkRecipes.place_row(_contact_row, _fake, func(_x: float, _z: float) -> float: return 0.0)
+	var boxes: Array = TraversalLine.AnchorContacts.collect(_fake, [_contact_row])
+	var top: Dictionary = boxes[0]
+	for b: Dictionary in boxes:
+		if float(b["y1"]) > float(top["y1"]):
+			top = b
+	_ball = RigidBody3D.new()
+	var shape := CollisionShape3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = 0.5
+	shape.shape = sphere
+	_ball.add_child(shape)
+	_ball.collision_layer = 0
+	_ball.collision_mask = 0
+	_ball.set_collision_mask_value(ParkRecipes.WORLD_LAYER, true)
+	_ball.contact_monitor = true
+	_ball.max_contacts_reported = 8
+	_ball.physics_material_override = PhysicsMaterial.new()
+	_ball.physics_material_override.bounce = 0.6
+	_fake.add_child(_ball)
+	var centre: Vector3 = (top["xf"] as Transform3D).origin
+	_ball.global_position = Vector3(centre.x, float(top["y1"]) + 1.5, centre.z)
+	_fake.player = {"_rigid": _ball}
+	_rec = TraversalLine.AnchorContacts.new("park_contact", 1, {}, [_contact_row])
+
+
+func _contact_tick() -> void:
+	_contact_ticks += 1
+	_fake.run["stage_time"] = _contact_ticks / 90.0
+	if _contact_ticks <= CONTACT_DROP_TICKS:
+		_rec.observe(_fake, _ball.global_position, false)
+		return
+	if _contact_ticks == CONTACT_DROP_TICKS + 1:
+		var bounces: Array = _rec.events.filter(func(e: Dictionary) -> bool: return e["kind"] == "bounce")
+		_t.check("anchor contacts: a ball dropped on a placed fitted post touches it (%d touch ticks)" % _rec.touch_ticks, _rec.touch_ticks > 0)
+		_t.check("anchor contacts: the drop records a bounce on the post's row, against a face with a normal up (%d bounces)" % bounces.size(),
+			bounces.size() >= 1 and bounces.all(func(e: Dictionary) -> bool: return e["row"] == "contact_t" and e["fitted"]), str(_rec.events))
+		var rep: Dictionary = _rec.report()
+		_t.check("anchor contacts: the closest approach is the ball against the post's face, with its row and a corner in reach",
+			rep["closest_surface_m"] != null and float(rep["closest_surface_m"]) < 0.7 and rep["closest_surface_row"] == "contact_t"
+			and rep["closest_corner_m"] != null and rep["closest_corner_row"] == "contact_t", str(rep))
+		_ball.physics_material_override.bounce = 0.0
+		return
+	var resting := _ball.get_colliding_bodies().size() > 0 and _ball.linear_velocity.length() < 0.05
+	if _contact_ticks < CONTACT_DROP_TICKS + CONTACT_SETTLE_TICKS and not resting:
+		return
+	_t.check("anchor contacts: the settled ball is in contact with the post's body (%d ticks)" % _contact_ticks, resting)
+	var fresh = TraversalLine.AnchorContacts.new("park_contact", 2, {}, [_contact_row])
+	var at: Vector3 = _ball.global_position
+	# Moving away from the face, then arriving at it: a flipped normal would read these as a bounce.
+	for v in [Vector3(0, 4, 0), Vector3(0, 4, 0), Vector3(0, -2, 0)]:
+		_ball.linear_velocity = v
+		fresh.observe(_fake, at, false)
+	var wrong: int = fresh.events.size()
+	_t.check("anchor contacts: moving away from the face (up 4 m/s, twice) and then arriving at it (down 2 m/s) records no bounce, though the ball touches", wrong == 0 and fresh.touch_ticks == 3, str(fresh.events))
+	for v in [Vector3(0, -4, 0), Vector3(0, 2, 0)]:
+		_ball.linear_velocity = v
+		fresh.observe(_fake, at, false)
+	_t.check("anchor contacts: arriving at 4 m/s and leaving at 2 m/s up records one bounce on the post's row",
+		fresh.events.size() == 1 and fresh.events[0]["kind"] == "bounce" and fresh.events[0]["row"] == "contact_t", str(fresh.events))
+	_fake.free()
+	_resume_fixture()
+
+
+# A placed row's recorded corners against corners worked out from the park's own data: post centre (anchor_posts) plus the
+# row's turn, the post's anchor_turn and the table box's corners, for the first even-turn post and the first odd-turn one.
+func _check_placed_corners(row: Dictionary, node: Node3D, recorded: Array) -> void:
+	var fit := ParkRecipes.anchor_fit_boxes(row)
+	var posts := ParkRecipes.anchor_posts(row)
+	var wanted := {"even": -1, "odd": -1}
+	for k in posts.size():
+		var label := "odd" if ParkRecipes.anchor_quarters(row, k) % 2 == 1 else "even"
+		if wanted[label] < 0:
+			wanted[label] = k
+	_t.check("anchor contacts: the placed row has an even-turn and an odd-turn post to check (%d posts, %d boxes each)" % [posts.size(), fit.size()],
+		wanted["even"] >= 0 and wanted["odd"] >= 0 and recorded.size() == posts.size() * fit.size())
+	if wanted["even"] < 0 or wanted["odd"] < 0 or recorded.size() != posts.size() * fit.size():
+		return
+	for label: String in wanted:
+		var k: int = wanted[label]
+		var turn := ParkRecipes.anchor_turn(row, k)
+		var worst := 0.0
+		for i in fit.size():
+			var b: Dictionary = fit[i]
+			var expected: Array = []
+			for x in b["x"]:
+				for z in b["z"]:
+					var p := Vector3(posts[k].x, 0.0, posts[k].y) + node.global_transform.basis * (turn * Vector3(float(x), 0.0, float(z)))
+					expected.append(Vector2(p.x, p.z))
+			for c: Vector2 in recorded[k * fit.size() + i]["corners"]:
+				var nearest := INF
+				for e: Vector2 in expected:
+					nearest = minf(nearest, c.distance_to(e))
+				worst = maxf(worst, nearest)
+		_t.check("anchor contacts: every recorded corner of the first %s-turn post (%d) is a corner of its table box turned by anchor_turn (worst %.4f m)" % [label, k, worst], worst < 0.001)
 
 
 func _check_floor_hands() -> void:
