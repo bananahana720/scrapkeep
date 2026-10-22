@@ -7,6 +7,10 @@ extends Node3D
 #             Inside the play square a vertex is the 2 m grid's two-triangle surface (the 1 m points
 #             fall on grid vertices, edge midpoints and the b-c diagonal's midpoint, so the view lies
 #             on the collider); outside it is apron.bin. Hole cells mark their four 1 m vertices.
+#             Every vertex has the control map's auto bit, so Terrain3D's auto-shader draws sand floor
+#             flat and strata steep, as the non-park ground does. surface.bin's concrete, tailings and
+#             basalt cells (slots 2 to 4) tint the colour map, which multiplies the albedo, so a sand
+#             cell reads near that slot's colour; the other slots stay white (net never tints it).
 #             Terrain3D collision stays 0 (DISABLED): it never makes a second height source.
 #   collider  100 tiles of 160 m (80 by 80 cells of the 2 m grid), each a ConcavePolygonShape3D with
 #             the two triangles and winding terrain.gd uses for the old maps; a hole cell has none.
@@ -53,6 +57,19 @@ const TILES_PER_FRAME := 5
 const ATTACH_BUDGET_USEC := 8000
 # Terrain3D's control map: bit 2 is the hole bit (Terrain3DUtil.enc_hole).
 const HOLE_BIT := 4
+# Bit 0 is the auto bit: the auto-shader picks the base or overlay texture by slope.
+const AUTO_BIT := 1
+# surface.bin slots (park_stamps.gd SURFACE_SLOTS) that tint the colour map, and the colour each
+# tints a sand-textured cell toward. Slots 0, 1 and 5 (net) stay white.
+const SLOT_CONCRETE := 2
+const SLOT_TAILINGS := 3
+const SLOT_BASALT := 4
+# The `concrete` slot's base_color, gpw_workshop.gdshader:4 (vec4(0.212, 0.341, 0.329)).
+const TINT_CONCRETE := Palette.VERDIGRIS
+# The mean of cinder.gdshader:8-9 grit_dark (0.10, 0.11, 0.105) and grit_light (0.24, 0.22, 0.20).
+const TINT_BASALT := Color(0.17, 0.165, 0.1525)
+# Terrain3D's default colour map is white with alpha 127/255, which leaves roughness unchanged.
+const COLOR_ALPHA_BYTE := 127
 const COLLISION_DISABLED := 0
 const MESH_LODS := 7
 const MESH_SIZE := 48
@@ -84,6 +101,9 @@ var _map: RefCounted
 var _apron := PackedFloat32Array()
 var _apron_rows := PackedInt32Array()
 var _hole_cells := PackedInt32Array()
+# The 2 m cells' slot tints stretched to the 1 m vertices of the play square (1600 by 1600 RGBA8),
+# or null when the park has no surface.bin.
+var _tints: Image
 var _regions: Array = []
 var _faces: Array = []
 var _task := -1
@@ -93,6 +113,28 @@ var _next_region := 0
 var _next_map := 0
 var _next_tile := 0
 var _tiles_root: Node3D
+
+
+# The colour a surface slot tints toward; the tailings one is the old maps' tint, map_dig.gd:100.
+static func slot_target(slot: int) -> Color:
+	match slot:
+		SLOT_CONCRETE:
+			return TINT_CONCRETE
+		SLOT_TAILINGS:
+			return Palette.CHARCOAL.lerp(Palette.RUST, 0.4)
+		SLOT_BASALT:
+			return TINT_BASALT
+	return Color.WHITE
+
+
+# The colour-map multiplier of a surface slot: target / SAND per channel, clamped, alpha at the
+# default (so roughness is unchanged). White for slots that do not tint.
+static func slot_tint(slot: int) -> Color:
+	var target := slot_target(slot)
+	if target == Color.WHITE:
+		return Color(1.0, 1.0, 1.0, float(COLOR_ALPHA_BYTE) / 255.0)
+	return Color(minf(target.r / Palette.SAND.r, 1.0), minf(target.g / Palette.SAND.g, 1.0),
+			minf(target.b / Palette.SAND.b, 1.0), float(COLOR_ALPHA_BYTE) / 255.0)
 
 
 static func bake_dir(id: String) -> String:
@@ -122,10 +164,8 @@ static func make_render(parent: Node, label: String) -> Node3D:
 	node.vertex_spacing = VERTEX_SPACING
 	node.assets = ground_assets()
 	var material: Object = node.material
-	# Step 1 draws texture 0 (sand floor) everywhere: the regions' control maps are untouched, so
-	# no cell has the auto bit and Terrain3D takes texture 0 at blend 0. The auto-shader is set
-	# up for step 2, which sets that bit: the overlay (flat) is the floor, the base (steep) the
-	# strata, auto_slope 1.0 putting the half-way blend at normal.y 0.75, near the middle (0.755) of
+	# The regions' control maps carry the auto bit everywhere (_build_region), so the auto-shader
+	# picks the texture: the overlay (flat) is the floor, the base (steep) the strata, auto_slope 1.0 putting the half-way blend at normal.y 0.75, near the middle (0.755) of
 	# sandstone.gdshader's strata ramp smoothstep(0.58, 0.93, normal.y). Height reduction is off.
 	material.auto_shader = true
 	material.set_shader_param("auto_base_texture", GROUND_STRATA_ID)
@@ -277,6 +317,7 @@ func _load() -> void:
 				under[k] = floors[n]
 				_hole_cells.append(k)
 				n += 1
+		_load_tints(dir + "/surface.bin")
 		_apron_rows.resize(APRON_SIDE)
 		var at := 0
 		for j in APRON_SIDE:
@@ -288,6 +329,31 @@ func _load() -> void:
 			var z := -HALF + j * STEP
 			for i in SIDE:
 				heights[j * SIDE + i] = float(_map.sample(-HALF + i * STEP, z)[0])
+
+
+func _load_tints(path: String) -> void:
+	var surface := FileAccess.get_file_as_bytes(path)
+	if surface.size() != CELLS * CELLS:
+		return
+	var lookup := PackedByteArray()
+	for slot in 6:
+		var c := slot_tint(slot)
+		lookup.append_array(PackedByteArray([roundi(c.r * 255.0), roundi(c.g * 255.0), roundi(c.b * 255.0), COLOR_ALPHA_BYTE]))
+	var pixels := PackedByteArray()
+	pixels.resize(CELLS * CELLS * 4)
+	pixels.fill(255)
+	for k in surface.size():
+		var slot := surface[k]
+		pixels[k * 4 + 3] = COLOR_ALPHA_BYTE
+		if slot >= SLOT_CONCRETE and slot <= SLOT_BASALT:
+			var at := k * 4
+			var from := slot * 4
+			pixels[at] = lookup[from]
+			pixels[at + 1] = lookup[from + 1]
+			pixels[at + 2] = lookup[from + 2]
+	var image := Image.create_from_data(CELLS, CELLS, false, Image.FORMAT_RGBA8, pixels)
+	image.resize(CELLS * 2, CELLS * 2, Image.INTERPOLATE_NEAREST)
+	_tints = image
 
 
 static func _read_zstd(path: String, size: int) -> PackedByteArray:
@@ -341,6 +407,7 @@ func _build_region(location: Vector2i) -> Object:
 			data[base + col] = v
 	var control := PackedInt32Array()
 	control.resize(REGION_SIZE * REGION_SIZE)
+	control.fill(AUTO_BIT)
 	for k in _hole_cells:
 		var px := -inner + 2 * (k % CELLS) - x0
 		var pz := -inner + 2 * (k / CELLS) - z0
@@ -349,13 +416,19 @@ func _build_region(location: Vector2i) -> Object:
 				var cx := px + dx
 				var cz := pz + dz
 				if cx >= 0 and cx < REGION_SIZE and cz >= 0 and cz < REGION_SIZE:
-					control[cz * REGION_SIZE + cx] = HOLE_BIT
+					control[cz * REGION_SIZE + cx] = AUTO_BIT | HOLE_BIT
 	var region: Object = ClassDB.instantiate("Terrain3DRegion")
 	region.set_region_size(REGION_SIZE)
 	region.set_vertex_spacing(VERTEX_SPACING)
 	region.set_location(location)
 	region.set_height_map(Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, data.to_byte_array()))
 	region.set_control_map(Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, control.to_byte_array()))
+	if _tints != null:
+		# Cell (i, j)'s vertices are at -800 + 2i + (0, 1), so the 1600 image's pixel 0 is vertex -800.
+		var color := Image.create(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RGBA8)
+		color.fill(Color(1.0, 1.0, 1.0, float(COLOR_ALPHA_BYTE) / 255.0))
+		color.blit_rect(_tints, Rect2i(0, 0, CELLS * 2, CELLS * 2), Vector2i(-inner - x0, -inner - z0))
+		region.set_color_map(color)
 	region.sanitize_maps()
 	region.calc_height_range()
 	return region
