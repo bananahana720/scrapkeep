@@ -10,7 +10,7 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := 20
 const SECONDS := 30 * 60
 const H := 0.5
-const EXPECTED_FIXED_CHECKS := 1105  # 2026-10-17 (stage/alpha-w16): three Foreman shift packs and two pit jaw packs; was 1100
+const EXPECTED_FIXED_CHECKS := 1118  # 2026-10-18 (W18-PACKS): nine park packs priced, was 1110. 2026-10-18 (W18-DISP): five dispatcher card checks; was 1105. 2026-10-17 (stage/alpha-w16): three Foreman shift packs and two pit jaw packs; was 1100
 
 var _t := T.new("director_credit_test")
 
@@ -84,6 +84,12 @@ func _cards() -> void:
 	for member in cards.CARDS["chaser"].stage_cap + 1:
 		oversized.append("chaser")
 	_t.check("stage_cap rejects an oversized kind group", not is_finite(d.credit_pack_cost(oversized)))
+	# The dispatcher card (cost 4, stage_cap 1): purchasable alone, INF doubled or unpriced beside it.
+	_t.near("a dispatcher costs 4", d.credit_pack_cost(["dispatcher"]), 4.0)
+	_t.near("a dispatcher with a chaser costs 5", d.credit_pack_cost(["chaser", "dispatcher"]), 5.0)
+	_t.check("two dispatchers in one purchase are INF", not is_finite(d.credit_pack_cost(["dispatcher", "dispatcher"])))
+	_t.check("an unpriced kind beside a dispatcher is INF", not is_finite(d.credit_pack_cost(["dispatcher", "unpriced"])))
+	_t.near("an elite dispatcher pack doubles", d.credit_pack_cost(["dispatcher"], true), 4.0 * cards.ELITE_MULTIPLIER)
 	var expected_price := 0.0
 	for kind in Park.PACKS[0].kinds:
 		expected_price += cards.CARDS[kind].cost
