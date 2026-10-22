@@ -1,0 +1,176 @@
+{
+	"map": "park_islands",
+	"rows": [
+		{
+			"C": [
+				162.72,
+				108.89,
+				54.65
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.10185,
+				"frame_diff_px": 29820,
+				"noise_px": 730,
+				"png": "park_islands-v12-h302-chase.png",
+				"subject_px": 19327,
+				"subject_share": 0.02097
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 382458,
+				"noise_px": 14499,
+				"png": "park_islands-v12-h302-eye.png",
+				"subject_px": 369271,
+				"subject_share": 0.40068
+			},
+			"front_deg": 153.0,
+			"height_m": 4.4,
+			"id": "h302",
+			"isolated": true,
+			"radius_m": 3.82,
+			"subject_kind": "tram_car_parked",
+			"subject_v": "a",
+			"template": "tram_halt"
+		},
+		{
+			"C": [
+				57.05,
+				107.48,
+				57.81
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02144,
+				"frame_diff_px": 10005,
+				"noise_px": 681,
+				"png": "park_islands-v19-m315-chase.png",
+				"subject_px": 3499,
+				"subject_share": 0.0038
+			},
+			"eye": {
+				"aabb_share": 0.19056,
+				"frame_diff_px": 31006,
+				"noise_px": 282,
+				"png": "park_islands-v19-m315-eye.png",
+				"subject_px": 25830,
+				"subject_share": 0.02803
+			},
+			"front_deg": 137.0,
+			"height_m": 1.81,
+			"id": "m315",
+			"isolated": true,
+			"radius_m": 1.76,
+			"subject_kind": "ore_trolley",
+			"subject_v": "c",
+			"template": "ore_spill"
+		},
+		{
+			"C": [
+				-111.22,
+				105.88,
+				70.84
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01438,
+				"frame_diff_px": 17601,
+				"noise_px": 37,
+				"png": "park_islands-v47-m310-chase.png",
+				"subject_px": 2578,
+				"subject_share": 0.0028
+			},
+			"eye": {
+				"aabb_share": 0.11811,
+				"frame_diff_px": 18364,
+				"noise_px": 0,
+				"png": "park_islands-v47-m310-eye.png",
+				"subject_px": 17076,
+				"subject_share": 0.01853
+			},
+			"front_deg": -153.0,
+			"height_m": 1.3,
+			"id": "m310",
+			"isolated": true,
+			"radius_m": 1.53,
+			"subject_kind": "winch_drum",
+			"subject_v": "a",
+			"template": "mooring_spares"
+		},
+		{
+			"C": [
+				-98.8,
+				185.07,
+				-326.2
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00965,
+				"frame_diff_px": 6420,
+				"noise_px": 2,
+				"png": "park_islands-v52-f450-chase.png",
+				"subject_px": 812,
+				"subject_share": 0.00088
+			},
+			"eye": {
+				"aabb_share": 0.07709,
+				"frame_diff_px": 13835,
+				"noise_px": 1,
+				"png": "park_islands-v52-f450-eye.png",
+				"subject_px": 5580,
+				"subject_share": 0.00605
+			},
+			"front_deg": -160.0,
+			"height_m": 0.78,
+			"id": "f450",
+			"isolated": true,
+			"radius_m": 1.41,
+			"subject_kind": "mender_stool",
+			"subject_v": "b",
+			"template": "net_mending"
+		},
+		{
+			"C": [
+				171.2,
+				185.07,
+				-326.2
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00709,
+				"frame_diff_px": 8238,
+				"noise_px": 0,
+				"png": "park_islands-v53-f600-chase.png",
+				"subject_px": 848,
+				"subject_share": 0.00092
+			},
+			"eye": {
+				"aabb_share": 0.06821,
+				"frame_diff_px": 16482,
+				"noise_px": 2,
+				"png": "park_islands-v53-f600-eye.png",
+				"subject_px": 5719,
+				"subject_share": 0.00621
+			},
+			"front_deg": -100.0,
+			"height_m": 0.78,
+			"id": "f600",
+			"isolated": true,
+			"radius_m": 1.41,
+			"subject_kind": "mender_stool",
+			"subject_v": "b",
+			"template": "net_mending"
+		}
+	],
+	"stage": 5
+}
