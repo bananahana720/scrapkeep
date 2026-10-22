@@ -28,6 +28,8 @@ const SETTLE_TICKS := 30
 const WAIT_TICKS_MAX := 3600
 
 var _game
+# Collapse rows whose landing mark _check_stage built with their own overlay down.
+var _collapses_checked := 0
 var _t := T.new("natural_marks_planned_test")
 
 
@@ -69,6 +71,7 @@ func _run() -> void:
 	_t.check("the exit entered park stage 2", _game.flow.stage() == 2 and _natural() != null, "stage %d" % _game.flow.stage())
 	await _until_marks()
 	_check_stage("stage 2")
+	_t.check("stage 2's collapse landing was checked with its own overlay down", _collapses_checked > 0, str(_collapses_checked))
 	_game.queue_free()
 	await physics_frame
 	quit(_t.verdict())
@@ -143,6 +146,7 @@ func _check_stage(label: String) -> void:
 			same_landing = same_landing and landing.has(part) and landing[part].vertices == live_landing[part].vertices
 		landed_mark.free()
 		natural._set_overlay(fall, false)
+		_collapses_checked += 1
 		_t.check("%s %s: the landing mark with its own overlay down uses the planned mesh" % [label, fall.id],
 			own_down and landed_mesh != null and not landing.is_empty() and landed_mesh == landing.Style.mesh, "down %s, planned %s" % [own_down, landing.keys()])
 		_t.check("%s %s: the planned landing mark equals a live projection with its own overlay down" % [label, fall.id], same_landing, str(landing.keys()))
