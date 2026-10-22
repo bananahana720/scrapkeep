@@ -88,9 +88,9 @@ var _flight := 0.0
 var _last_percent := -1
 
 # Run saves (RS3): game hands flow a RunStore in play. Every zone entrance is written to it,
-# a death in a world may be retried once, and the second death there ends the run. A flow
-# with no store (the tests and bots that do not opt in) keeps unlimited death retries.
-const WORLD_RETRIES := 1
+# a death ends the run (there is no free retry; the earned save, a part, is the only second
+# chance and run_state spends it before player_died). A flow with no store (the tests and bots
+# that do not opt in) keeps the dead screen and unlimited stage retries.
 var store = null
 # The cause the last store write was refused with ("" when it saved); the run plays on.
 var store_error := ""
@@ -122,6 +122,7 @@ func setup(ctx_ref, beacon_ref) -> void:
 	start_card.reroll_requested.connect(reroll_start_pick)
 	start_card.tier_requested.connect(choose_run_tier)
 	ctx.events.player_died.connect(_on_player_died)
+	ctx.run.death_saved.connect(func(_hp: float): _on_death_saved())
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
 	ctx.events.launched.connect(_on_launched)
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
@@ -458,16 +459,12 @@ func _apply_tree_picks() -> void:
 		tree.allowed = maxi(allowed, tree.picks.size())
 
 
-# A retry after a death spends the world's one retry; the entrance is saved again with it.
-func _spend_world_retry() -> void:
-	if store == null:
+# The earned save fired: the entrance on disk carries the spent flag, so a quit and Continue
+# cannot hand the save back.
+func _on_death_saved() -> void:
+	if store == null or _entrance.is_empty():
 		return
-	var world: int = ctx.run.world
-	ctx.run.retries_spent[world] = int(ctx.run.retries_spent.get(world, 0)) + 1
-	if _entrance.is_empty():
-		return
-	var spent: Dictionary = _entrance["retries_spent"]
-	spent[str(world)] = int(ctx.run.retries_spent[world])
+	_entrance["death_save_spent"] = true
 	_save(_entrance)
 
 
@@ -533,8 +530,6 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 func retry_stage() -> void:
 	if not ctx.run.has_snapshot() or state == TITLE or state == CLASS_SELECT or state == SUMMARY or state == VICTORY or state == LAP:
 		return
-	if state == DEAD:
-		_spend_world_retry()
 	if in_arena:
 		_retry_arena()
 		return
@@ -974,7 +969,7 @@ func _on_player_died() -> void:
 		return
 	_death_plating = boss_plating_now() if state == BOSS else -1.0
 	ctx.player.set_frozen(true)
-	if store != null and int(ctx.run.retries_spent.get(ctx.run.world, 0)) >= WORLD_RETRIES:
+	if store != null:
 		_end_run(false)
 		return
 	_set_state(DEAD)
