@@ -1,0 +1,33 @@
+{
+	"map": "park_sinkhole",
+	"poses": [
+		{
+			"along_m": 0.0,
+			"bare": true,
+			"core_60": 0,
+			"file": "park_sinkhole-801--419_-119.png",
+			"idx": 801,
+			"kinds_120": 1,
+			"line": "basalt interior (60 m window all basalt)",
+			"props_120": 26,
+			"void": false,
+			"x": -419.0,
+			"yaw": 0.0,
+			"z": -119.0
+		},
+		{
+			"along_m": 0.0,
+			"bare": true,
+			"core_60": 0,
+			"file": "park_sinkhole-803-541_-519.png",
+			"idx": 803,
+			"kinds_120": 1,
+			"line": "basalt interior, east",
+			"props_120": 33,
+			"void": false,
+			"x": 541.0,
+			"yaw": 0.0,
+			"z": -519.0
+		}
+	]
+}
