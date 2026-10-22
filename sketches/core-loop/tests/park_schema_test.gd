@@ -122,6 +122,26 @@ func _planted_rows() -> void:
 	# A row's music_layer is a layer_* WORLD_ROWS kind (2026-10-17, crown authored pass).
 	_plant("music layer of no kind", "lip", "music_layer", func(p): _row(p, "park_rows", "lip")["music_layer"] = "layer_nowhere")
 	_plant("music layer not a layer", "lip", "music_layer", func(p): _row(p, "park_rows", "lip")["music_layer"] = "ride_bowl")
+	# hide_on names a natural collapse or impact event row with an effect.swap (the row hides while that swap is applied).
+	_plant("hide_on of no event", "lip", "reference", func(p): _row(p, "park_rows", "lip")["hide_on"] = "nowhere")
+	_plant("hide_on of an event with no swap", "lip", "hide_on", func(p): _row(p, "park_rows", "lip")["hide_on"] = "pool_flood")
+	_plant("hide_on of an ancient swap event", "lip", "hide_on", func(p): _row(p, "park_rows", "lip")["hide_on"] = "tube_wakes")
+	_plant("hide_on of an industrial swap event", "lip", "hide_on", func(p): _row(p, "park_rows", "lip")["hide_on"] = "apron_boiler")
+	_plant("hide_on of a cave_in event", "lip", "hide_on", func(p):
+		var event := _row(p, "event_rows", "pool_flood")
+		event["kind"] = "cave_in"
+		event["family"] = "natural"
+		event["effect"]["swap"] = "pool_cave"
+		_row(p, "park_rows", "lip")["hide_on"] = "pool_flood")
+	_plant("hide_on of a natural flood_fill with a swap", "lip", "hide_on", func(p):
+		_row(p, "event_rows", "pool_flood")["effect"]["swap"] = "pool_ramp"
+		_row(p, "park_rows", "lip")["hide_on"] = "pool_flood")
+	var hidden: Dictionary = _fixture.duplicate(true)
+	var swapped := _row(hidden, "event_rows", "pool_flood")
+	swapped["kind"] = "collapse"
+	swapped["effect"]["swap"] = "pool_ramp"
+	_row(hidden, "park_rows", "lip")["hide_on"] = "pool_flood"
+	_report("a hide_on naming a swap event loads", ParkSchema.validate(hidden).is_empty(), ParkSchema.describe(ParkSchema.validate(hidden)))
 	# The optional rescue_rows: the site resolves and the pilot is a class id.
 	var cage := {"id": "test_cage", "site": "deck", "at": [0, 0], "face": [0, 1], "quest": "test", "pilot": "tally", "prompt": "free the test"}
 	_plant("rescue at no site", "test_cage", "reference", func(p):
