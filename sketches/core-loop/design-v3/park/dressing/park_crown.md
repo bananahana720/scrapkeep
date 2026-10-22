@@ -218,6 +218,6 @@ The row rule had skipped line-defining pairs over 40 m, though card 1 caps only 
 | crown_lo_23 | (86, -578) | (91.5, -580) |
 | crown_lo_33 | (-2, -746) | (-5, -746) |
 
-crown_lo_07 stays at (86, -634). Every move I tried for it failed the plan check (`line_clear` to the east, `slope` and `seat` or a new row to the west), so only lo_14 and lo_23 left the x = 86 column. Pin 804932062 (was 3161838182). The results are in the hand-back to the coordinator and in the commit message.
+crown_lo_07 stays at (86, -634) in this round (superseded by the follow-up below). Every move I tried for it failed the plan check (`line_clear` to the east, `slope` and `seat` or a new row to the west), so only lo_14 and lo_23 left the x = 86 column. Pin 804932062 (was 3161838182). The results are in the hand-back to the coordinator and in the commit message.
 
 Round 2 follow-up: crown_lo_07 moves 7 m south along its column, from (86, -634) to (86, -641). That breaks the loose line it still made with crown_lo_12 and crown_lo_14 (gaps 24.1 and 26.9 m within a 3 m band; the 1.5 m rule did not flag it). So a legal move did exist; the sideways moves still fail `line_clear` or make a new row. crown_lo_10 moves from (-2.2, -664) to (-2.2, -662), which breaks its line with crown_lo_04 and crown_lo_27 (gaps 25.7 and 24.9 m, CV 0.017, within a 2 m band). One loose line is left in the low ground: crown_lo_03, 06 and 29, gaps 29.9 and 25.2 m, CV 0.085, within a 2 m band but not 1.5 m. Yaws, templates and `near` are unchanged. Pin 2071410145 (was 804932062).
