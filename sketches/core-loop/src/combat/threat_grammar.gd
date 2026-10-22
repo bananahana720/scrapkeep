@@ -103,9 +103,10 @@ const OWNER_SPACING := 4.0
 # hands the shader is unchanged; the P1 lines, their keylines, the geometry, contains() and
 # the drive clips are not touched. HAZE_SOLID is the live INSTANT slag layer's alpha.
 # HAZE_FILL is the lowest step (0.1) at which the fill clears 10 CIE76 over every ground in
-# every place on the launch table (tools/grade_probe.gd; ruling #241 6328893598): the cloud
-# sweep gave 9.5 at 0.9 and 10.4 at 1.0, and the bench run decides.
-const HAZE_FILL := 1.0
+# every place on the launch table (tools/grade_probe.gd; ruling #241 6328893598). On the 3060
+# (#241 comment 6331769617) the lowest gap, camp ledger, was 8.65 at 1.0 and 10.03 at 1.1.
+# Above 1.25 the live alpha (LIVE_ALPHA x HAZE_FILL) passes 1.0.
+const HAZE_FILL := 1.1
 const HAZE_SOLID := 0.4
 const TELEGRAPH_FLAG := "telegraph"
 
