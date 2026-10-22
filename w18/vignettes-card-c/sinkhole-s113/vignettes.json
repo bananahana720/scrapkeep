@@ -1,0 +1,154 @@
+{
+	"map": "park_sinkhole",
+	"rows": [
+		{
+			"C": [
+				177.52,
+				-90.19,
+				-39.01
+			],
+			"bearing_deg": 0.0,
+			"blocked": [
+				{
+					"bearing_deg": 0.0,
+					"reason": "inside:s104_pump_station/pump_engine"
+				},
+				{
+					"bearing_deg": 45.0,
+					"reason": "prop:s104_pump_station/pump_engine"
+				},
+				{
+					"bearing_deg": -45.0,
+					"reason": "inside:s104_pump_station/pump_engine"
+				},
+				{
+					"bearing_deg": 90.0,
+					"reason": "prop:s104_pump_station/pump_engine"
+				},
+				{
+					"bearing_deg": -90.0,
+					"reason": "inside:s104_pump_station/pump_engine"
+				},
+				{
+					"bearing_deg": 135.0,
+					"reason": "prop:s104_pump_station/pump_engine"
+				},
+				{
+					"bearing_deg": -135.0,
+					"reason": "prop:s104_pump_station/pump_engine"
+				},
+				{
+					"bearing_deg": 180.0,
+					"reason": "prop:s104_pump_station/pump_engine"
+				}
+			],
+			"blocked_all": true,
+			"chase": {
+				"aabb_share": 0.0065,
+				"frame_diff_px": 693,
+				"noise_px": 8,
+				"png": "park_sinkhole-v104-s113_lamp_wall-chase.png",
+				"rows_in_view": [
+					"skylight_chain_6",
+					"skylight_chain_7",
+					"skylight_chain_8",
+					"skylight_chain_9",
+					"skylight_chain_10",
+					"east_drift_7",
+					"east_drift_8",
+					"east_drift_9",
+					"east_drift_10",
+					"east_drift_11",
+					"east_drift_12",
+					"great_room",
+					"skylight_chain_post_9i",
+					"skylight_chain_post_9o",
+					"skylight_chain_post_10i",
+					"skylight_chain_post_11i",
+					"skylight_chain_post_12i",
+					"east_drift_post_9i",
+					"east_drift_post_10i",
+					"east_drift_post_11i",
+					"east_drift_post_11o",
+					"east_drift_post_12i",
+					"east_drift_post_12o",
+					"east_drift_post_13i",
+					"east_drift_post_13o",
+					"east_drift_post_14i",
+					"skylight_chain_fill_275",
+					"skylight_chain_fill_305",
+					"skylight_chain_fill_345",
+					"skylight_chain_fill_375",
+					"skylight_chain_fill_415",
+					"east_drift_fill_305",
+					"east_drift_fill_345",
+					"east_drift_fill_415",
+					"east_drift_fill_445",
+					"skylight_3",
+					"skylight_chain_vent",
+					"east_drift_vent"
+				],
+				"subject_px": 218,
+				"subject_share": 0.00024
+			},
+			"eye": {
+				"aabb_share": 0.04646,
+				"frame_diff_px": 1207,
+				"noise_px": 0,
+				"png": "park_sinkhole-v104-s113_lamp_wall-eye.png",
+				"rows_in_view": [
+					"skylight_chain_6",
+					"skylight_chain_7",
+					"skylight_chain_8",
+					"skylight_chain_9",
+					"skylight_chain_10",
+					"east_drift_7",
+					"east_drift_8",
+					"east_drift_9",
+					"east_drift_10",
+					"east_drift_11",
+					"east_drift_12",
+					"great_room",
+					"skylight_chain_post_8i",
+					"skylight_chain_post_9i",
+					"skylight_chain_post_9o",
+					"skylight_chain_post_10i",
+					"skylight_chain_post_11i",
+					"skylight_chain_post_12i",
+					"east_drift_post_9i",
+					"east_drift_post_10i",
+					"east_drift_post_11i",
+					"east_drift_post_12i",
+					"east_drift_post_12o",
+					"east_drift_post_13i",
+					"east_drift_post_13o",
+					"east_drift_post_14i",
+					"skylight_chain_fill_275",
+					"skylight_chain_fill_305",
+					"skylight_chain_fill_345",
+					"skylight_chain_fill_375",
+					"skylight_chain_fill_415",
+					"east_drift_fill_345",
+					"east_drift_fill_415",
+					"east_drift_fill_445",
+					"skylight_3",
+					"skylight_chain_vent",
+					"east_drift_vent"
+				],
+				"subject_px": 730,
+				"subject_share": 0.00079
+			},
+			"eye_m": 5.0,
+			"front_deg": 30.9,
+			"height_m": 1.18,
+			"id": "s113_lamp_wall",
+			"isolated": true,
+			"radius_m": 0.92,
+			"subject_kind": "rain_gauge",
+			"subject_v": "b",
+			"template": "lamp_wall"
+		}
+	],
+	"stage": 4,
+	"subject_rule": "first instance of kind rain_gauge in the spot; spots without it skipped"
+}

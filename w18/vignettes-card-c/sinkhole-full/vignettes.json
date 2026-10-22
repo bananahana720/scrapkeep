@@ -1,0 +1,6007 @@
+{
+	"map": "park_sinkhole",
+	"rows": [
+		{
+			"C": [
+				-620.0,
+				-25.13,
+				-770.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01451,
+				"frame_diff_px": 11194,
+				"noise_px": 18,
+				"png": "park_sinkhole-v0-s001_mid_cart_horn-chase.png",
+				"subject_px": 4609,
+				"subject_share": 0.005
+			},
+			"eye": {
+				"aabb_share": 0.15094,
+				"frame_diff_px": 36173,
+				"noise_px": 0,
+				"png": "park_sinkhole-v0-s001_mid_cart_horn-eye.png",
+				"subject_px": 35971,
+				"subject_share": 0.03903
+			},
+			"front_deg": 165.3,
+			"height_m": 1.47,
+			"id": "s001_mid_cart_horn",
+			"isolated": true,
+			"radius_m": 1.79,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_cart_horn"
+		},
+		{
+			"C": [
+				-589.8,
+				-29.18,
+				-598.08
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02455,
+				"frame_diff_px": 6649,
+				"noise_px": 14,
+				"png": "park_sinkhole-v1-s002_mid_horn_stubs-chase.png",
+				"subject_px": 5658,
+				"subject_share": 0.00614
+			},
+			"eye": {
+				"aabb_share": 0.24119,
+				"frame_diff_px": 45194,
+				"noise_px": 5,
+				"png": "park_sinkhole-v1-s002_mid_horn_stubs-eye.png",
+				"subject_px": 45169,
+				"subject_share": 0.04901
+			},
+			"front_deg": -55.5,
+			"height_m": 2.74,
+			"id": "s002_mid_horn_stubs",
+			"isolated": true,
+			"radius_m": 1.63,
+			"subject_kind": "echo_horn",
+			"subject_v": "a",
+			"template": "mid_horn_stubs"
+		},
+		{
+			"C": [
+				-640.0,
+				-28.34,
+				-650.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02216,
+				"frame_diff_px": 5976,
+				"noise_px": 34,
+				"png": "park_sinkhole-v2-s003_mid_tailings_cart-chase.png",
+				"subject_px": 5386,
+				"subject_share": 0.00584
+			},
+			"eye": {
+				"aabb_share": 0.19832,
+				"frame_diff_px": 43171,
+				"noise_px": 0,
+				"png": "park_sinkhole-v2-s003_mid_tailings_cart-eye.png",
+				"subject_px": 43106,
+				"subject_share": 0.04677
+			},
+			"front_deg": -40.6,
+			"height_m": 1.6,
+			"id": "s003_mid_tailings_cart",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_tailings_cart"
+		},
+		{
+			"C": [
+				-560.0,
+				-25.69,
+				-750.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01619,
+				"frame_diff_px": 4965,
+				"noise_px": 46,
+				"png": "park_sinkhole-v3-s004_mid_cart_stub-chase.png",
+				"subject_px": 4149,
+				"subject_share": 0.0045
+			},
+			"eye": {
+				"aabb_share": 0.13673,
+				"frame_diff_px": 31585,
+				"noise_px": 0,
+				"png": "park_sinkhole-v3-s004_mid_cart_stub-eye.png",
+				"subject_px": 31476,
+				"subject_share": 0.03415
+			},
+			"front_deg": 137.2,
+			"height_m": 1.43,
+			"id": "s004_mid_cart_stub",
+			"isolated": true,
+			"radius_m": 1.61,
+			"subject_kind": "tin_cart",
+			"subject_v": "c",
+			"template": "mid_cart_stub"
+		},
+		{
+			"C": [
+				-593.6,
+				-29.18,
+				-631.9
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02151,
+				"frame_diff_px": 2936,
+				"noise_px": 20,
+				"png": "park_sinkhole-v4-s005_low_gear-chase.png",
+				"subject_px": 2401,
+				"subject_share": 0.00261
+			},
+			"eye": {
+				"aabb_share": 0.20462,
+				"frame_diff_px": 18609,
+				"noise_px": 0,
+				"png": "park_sinkhole-v4-s005_low_gear-eye.png",
+				"subject_px": 18362,
+				"subject_share": 0.01992
+			},
+			"front_deg": -55.5,
+			"height_m": 0.94,
+			"id": "s005_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-559.42,
+				-27.22,
+				-710.47
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01643,
+				"frame_diff_px": 3943,
+				"noise_px": 58,
+				"png": "park_sinkhole-v5-s006_mid_rimstone_pool-chase.png",
+				"subject_px": 3266,
+				"subject_share": 0.00354
+			},
+			"eye": {
+				"aabb_share": 0.1542,
+				"frame_diff_px": 30178,
+				"noise_px": 0,
+				"png": "park_sinkhole-v5-s006_mid_rimstone_pool-eye.png",
+				"subject_px": 30098,
+				"subject_share": 0.03266
+			},
+			"front_deg": 128.9,
+			"height_m": 0.55,
+			"id": "s006_mid_rimstone_pool",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "mid_rimstone_pool"
+		},
+		{
+			"C": [
+				-541.6,
+				-28.16,
+				-666.9
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.0111,
+				"frame_diff_px": 1966,
+				"noise_px": 0,
+				"png": "park_sinkhole-v6-s007_low_ferns-chase.png",
+				"subject_px": 1613,
+				"subject_share": 0.00175
+			},
+			"eye": {
+				"aabb_share": 0.08678,
+				"frame_diff_px": 11232,
+				"noise_px": 0,
+				"png": "park_sinkhole-v6-s007_low_ferns-eye.png",
+				"subject_px": 11082,
+				"subject_share": 0.01202
+			},
+			"front_deg": 120.3,
+			"height_m": 1.01,
+			"id": "s007_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				-600.23,
+				-28.89,
+				-629.78
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02248,
+				"frame_diff_px": 6143,
+				"noise_px": 73,
+				"png": "park_sinkhole-v7-s009_mid_tailings_cart-chase.png",
+				"subject_px": 5380,
+				"subject_share": 0.00584
+			},
+			"eye": {
+				"aabb_share": 0.19103,
+				"frame_diff_px": 43418,
+				"noise_px": 20,
+				"png": "park_sinkhole-v7-s009_mid_tailings_cart-eye.png",
+				"subject_px": 43194,
+				"subject_share": 0.04687
+			},
+			"front_deg": -59.8,
+			"height_m": 1.6,
+			"id": "s009_mid_tailings_cart",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_tailings_cart"
+		},
+		{
+			"C": [
+				-528.15,
+				-28.05,
+				-661.27
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02458,
+				"frame_diff_px": 6421,
+				"noise_px": 6,
+				"png": "park_sinkhole-v8-s010_mid_column_field-chase.png",
+				"subject_px": 5798,
+				"subject_share": 0.00629
+			},
+			"eye": {
+				"aabb_share": 0.2208,
+				"frame_diff_px": 48358,
+				"noise_px": 11,
+				"png": "park_sinkhole-v8-s010_mid_column_field-eye.png",
+				"subject_px": 48190,
+				"subject_share": 0.05229
+			},
+			"front_deg": 124.5,
+			"height_m": 1.57,
+			"id": "s010_mid_column_field",
+			"isolated": true,
+			"radius_m": 2.04,
+			"subject_kind": "column_stubs",
+			"subject_v": "a",
+			"template": "mid_column_field"
+		},
+		{
+			"C": [
+				-571.58,
+				-31.12,
+				-558.4
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02203,
+				"frame_diff_px": 4038,
+				"noise_px": 69,
+				"png": "park_sinkhole-v9-s012_mid_skylight_garden-chase.png",
+				"subject_px": 3348,
+				"subject_share": 0.00363
+			},
+			"eye": {
+				"aabb_share": 0.20297,
+				"frame_diff_px": 24724,
+				"noise_px": 2,
+				"png": "park_sinkhole-v9-s012_mid_skylight_garden-eye.png",
+				"subject_px": 24600,
+				"subject_share": 0.02669
+			},
+			"front_deg": -44.6,
+			"height_m": 1.4,
+			"id": "s012_mid_skylight_garden",
+			"isolated": true,
+			"radius_m": 2.01,
+			"subject_kind": "cave_fern",
+			"subject_v": "b",
+			"template": "mid_skylight_garden"
+		},
+		{
+			"C": [
+				-487.2,
+				-43.08,
+				-538.2
+			],
+			"bearing_deg": 0.0,
+			"blocked": [
+				{
+					"bearing_deg": 0.0,
+					"reason": "collider:Tile1_1"
+				},
+				{
+					"bearing_deg": 45.0,
+					"reason": "collider:Tile1_1"
+				},
+				{
+					"bearing_deg": -45.0,
+					"reason": "collider:Tile1_1"
+				},
+				{
+					"bearing_deg": 90.0,
+					"reason": "collider:Tile1_1"
+				},
+				{
+					"bearing_deg": -90.0,
+					"reason": "prop:s014_low_stones/cave_fern"
+				},
+				{
+					"bearing_deg": 135.0,
+					"reason": "collider:Tile1_1"
+				},
+				{
+					"bearing_deg": -135.0,
+					"reason": "collider:Tile1_1"
+				},
+				{
+					"bearing_deg": 180.0,
+					"reason": "collider:Tile1_1"
+				}
+			],
+			"blocked_all": true,
+			"chase": {
+				"aabb_share": 0.00635,
+				"frame_diff_px": 1745,
+				"noise_px": 0,
+				"png": "park_sinkhole-v10-s014_low_stones-chase.png",
+				"subject_px": 1278,
+				"subject_share": 0.00139
+			},
+			"eye": {
+				"aabb_share": 0.05932,
+				"frame_diff_px": 9999,
+				"noise_px": 0,
+				"png": "park_sinkhole-v10-s014_low_stones-eye.png",
+				"subject_px": 9842,
+				"subject_share": 0.01068
+			},
+			"front_deg": -21.7,
+			"height_m": 0.41,
+			"id": "s014_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				-529.57,
+				-35.67,
+				-542.33
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01491,
+				"frame_diff_px": 5015,
+				"noise_px": 0,
+				"png": "park_sinkhole-v11-s015_mid_cart_horn-chase.png",
+				"subject_px": 4330,
+				"subject_share": 0.0047
+			},
+			"eye": {
+				"aabb_share": 0.13508,
+				"frame_diff_px": 35244,
+				"noise_px": 1,
+				"png": "park_sinkhole-v11-s015_mid_cart_horn-eye.png",
+				"subject_px": 34251,
+				"subject_share": 0.03716
+			},
+			"front_deg": -21.7,
+			"height_m": 1.47,
+			"id": "s015_mid_cart_horn",
+			"isolated": true,
+			"radius_m": 1.79,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_cart_horn"
+		},
+		{
+			"C": [
+				-489.22,
+				-31.86,
+				-612.11
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01876,
+				"frame_diff_px": 2991,
+				"noise_px": 36,
+				"png": "park_sinkhole-v12-s016_mid_skylight_garden-chase.png",
+				"subject_px": 2617,
+				"subject_share": 0.00284
+			},
+			"eye": {
+				"aabb_share": 0.19675,
+				"frame_diff_px": 20791,
+				"noise_px": 0,
+				"png": "park_sinkhole-v12-s016_mid_skylight_garden-eye.png",
+				"subject_px": 20398,
+				"subject_share": 0.02213
+			},
+			"front_deg": 159.6,
+			"height_m": 1.4,
+			"id": "s016_mid_skylight_garden",
+			"isolated": true,
+			"radius_m": 2.01,
+			"subject_kind": "cave_fern",
+			"subject_v": "b",
+			"template": "mid_skylight_garden"
+		},
+		{
+			"C": [
+				-520.83,
+				-41.4,
+				-517.91
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01851,
+				"frame_diff_px": 5278,
+				"noise_px": 0,
+				"png": "park_sinkhole-v13-s017_mid_column_field-chase.png",
+				"subject_px": 4702,
+				"subject_share": 0.0051
+			},
+			"eye": {
+				"aabb_share": 0.19398,
+				"frame_diff_px": 40410,
+				"noise_px": 0,
+				"png": "park_sinkhole-v13-s017_mid_column_field-eye.png",
+				"subject_px": 40297,
+				"subject_share": 0.04373
+			},
+			"front_deg": -21.7,
+			"height_m": 1.57,
+			"id": "s017_mid_column_field",
+			"isolated": true,
+			"radius_m": 2.04,
+			"subject_kind": "column_stubs",
+			"subject_v": "a",
+			"template": "mid_column_field"
+		},
+		{
+			"C": [
+				-440.0,
+				-40.92,
+				-610.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01834,
+				"frame_diff_px": 6584,
+				"noise_px": 29,
+				"png": "park_sinkhole-v14-s020_mid_tailings_cart-chase.png",
+				"subject_px": 4316,
+				"subject_share": 0.00468
+			},
+			"eye": {
+				"aabb_share": 0.18948,
+				"frame_diff_px": 35596,
+				"noise_px": 16,
+				"png": "park_sinkhole-v14-s020_mid_tailings_cart-eye.png",
+				"subject_px": 35464,
+				"subject_share": 0.03848
+			},
+			"front_deg": -176.6,
+			"height_m": 1.6,
+			"id": "s020_mid_tailings_cart",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_tailings_cart"
+		},
+		{
+			"C": [
+				-389.77,
+				-67.35,
+				-519.29
+			],
+			"bearing_deg": 0.0,
+			"blocked": [
+				{
+					"bearing_deg": 0.0,
+					"reason": "collider:Tile2_1"
+				},
+				{
+					"bearing_deg": 45.0,
+					"reason": "collider:Tile2_1"
+				},
+				{
+					"bearing_deg": -45.0,
+					"reason": "prop:s021_mid_rimstone_pool/cave_fern"
+				},
+				{
+					"bearing_deg": 90.0,
+					"reason": "collider:Tile2_1"
+				},
+				{
+					"bearing_deg": -90.0,
+					"reason": "collider:Tile2_1"
+				},
+				{
+					"bearing_deg": 135.0,
+					"reason": "collider:Tile2_1"
+				},
+				{
+					"bearing_deg": -135.0,
+					"reason": "collider:Tile2_1"
+				},
+				{
+					"bearing_deg": 180.0,
+					"reason": "collider:Tile2_1"
+				}
+			],
+			"blocked_all": true,
+			"chase": {
+				"aabb_share": 0.01249,
+				"frame_diff_px": 2931,
+				"noise_px": 0,
+				"png": "park_sinkhole-v15-s021_mid_rimstone_pool-chase.png",
+				"subject_px": 2546,
+				"subject_share": 0.00276
+			},
+			"eye": {
+				"aabb_share": 0.10196,
+				"frame_diff_px": 21042,
+				"noise_px": 0,
+				"png": "park_sinkhole-v15-s021_mid_rimstone_pool-eye.png",
+				"subject_px": 20964,
+				"subject_share": 0.02275
+			},
+			"front_deg": 18.2,
+			"height_m": 0.55,
+			"id": "s021_mid_rimstone_pool",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "mid_rimstone_pool"
+		},
+		{
+			"C": [
+				-354.0,
+				-69.8,
+				-550.7
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01899,
+				"frame_diff_px": 1437,
+				"noise_px": 17,
+				"png": "park_sinkhole-v16-s022_low_gear-chase.png",
+				"subject_px": 1072,
+				"subject_share": 0.00116
+			},
+			"eye": {
+				"aabb_share": 0.16017,
+				"frame_diff_px": 8435,
+				"noise_px": 0,
+				"png": "park_sinkhole-v16-s022_low_gear-eye.png",
+				"subject_px": 8294,
+				"subject_share": 0.009
+			},
+			"front_deg": 24.8,
+			"height_m": 0.94,
+			"id": "s022_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-314.2,
+				-74.09,
+				-567.6
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00994,
+				"frame_diff_px": 1853,
+				"noise_px": 0,
+				"png": "park_sinkhole-v17-s023_low_ferns-chase.png",
+				"subject_px": 1590,
+				"subject_share": 0.00173
+			},
+			"eye": {
+				"aabb_share": 0.07074,
+				"frame_diff_px": 10881,
+				"noise_px": 0,
+				"png": "park_sinkhole-v17-s023_low_ferns-eye.png",
+				"subject_px": 9892,
+				"subject_share": 0.01073
+			},
+			"front_deg": 20.2,
+			"height_m": 1.01,
+			"id": "s023_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				-350.76,
+				-61.0,
+				-642.12
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02465,
+				"frame_diff_px": 4644,
+				"noise_px": 26,
+				"png": "park_sinkhole-v18-s024_mid_column_field-chase.png",
+				"subject_px": 3306,
+				"subject_share": 0.00359
+			},
+			"eye": {
+				"aabb_share": 0.21412,
+				"frame_diff_px": 29820,
+				"noise_px": 4,
+				"png": "park_sinkhole-v18-s024_mid_column_field-eye.png",
+				"subject_px": 29699,
+				"subject_share": 0.03223
+			},
+			"front_deg": -160.3,
+			"height_m": 1.57,
+			"id": "s024_mid_column_field",
+			"isolated": true,
+			"radius_m": 2.04,
+			"subject_kind": "column_stubs",
+			"subject_v": "a",
+			"template": "mid_column_field"
+		},
+		{
+			"C": [
+				-303.29,
+				-69.91,
+				-645.04
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01924,
+				"frame_diff_px": 7363,
+				"noise_px": 5,
+				"png": "park_sinkhole-v19-s027_mid_horn_stubs-chase.png",
+				"subject_px": 4817,
+				"subject_share": 0.00523
+			},
+			"eye": {
+				"aabb_share": 0.20438,
+				"frame_diff_px": 40101,
+				"noise_px": 40,
+				"png": "park_sinkhole-v19-s027_mid_horn_stubs-eye.png",
+				"subject_px": 39545,
+				"subject_share": 0.04291
+			},
+			"front_deg": -178.5,
+			"height_m": 2.74,
+			"id": "s027_mid_horn_stubs",
+			"isolated": true,
+			"radius_m": 1.63,
+			"subject_kind": "echo_horn",
+			"subject_v": "a",
+			"template": "mid_horn_stubs"
+		},
+		{
+			"C": [
+				-198.2,
+				-74.61,
+				-613.9
+			],
+			"bearing_deg": 90.0,
+			"blocked": [
+				{
+					"bearing_deg": 0.0,
+					"reason": "prop:s028_low_ferns/hose_reel"
+				},
+				{
+					"bearing_deg": 45.0,
+					"reason": "prop:s028_low_ferns/hose_reel"
+				},
+				{
+					"bearing_deg": -45.0,
+					"reason": "prop:s028_low_ferns/hose_reel"
+				}
+			],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01123,
+				"frame_diff_px": 1754,
+				"noise_px": 5,
+				"png": "park_sinkhole-v20-s028_low_ferns-chase.png",
+				"subject_px": 1491,
+				"subject_share": 0.00162
+			},
+			"eye": {
+				"aabb_share": 0.09141,
+				"frame_diff_px": 10562,
+				"noise_px": 0,
+				"png": "park_sinkhole-v20-s028_low_ferns-eye.png",
+				"subject_px": 10357,
+				"subject_share": 0.01124
+			},
+			"front_deg": 130.4,
+			"height_m": 1.01,
+			"id": "s028_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				-220.0,
+				-73.34,
+				-650.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01868,
+				"frame_diff_px": 7429,
+				"noise_px": 15,
+				"png": "park_sinkhole-v21-s029_mid_tailings_cart-chase.png",
+				"subject_px": 5508,
+				"subject_share": 0.00598
+			},
+			"eye": {
+				"aabb_share": 0.18788,
+				"frame_diff_px": 43656,
+				"noise_px": 6,
+				"png": "park_sinkhole-v21-s029_mid_tailings_cart-eye.png",
+				"subject_px": 43420,
+				"subject_share": 0.04711
+			},
+			"front_deg": 158.7,
+			"height_m": 1.6,
+			"id": "s029_mid_tailings_cart",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_tailings_cart"
+		},
+		{
+			"C": [
+				-182.29,
+				-73.94,
+				-623.69
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.09453,
+				"frame_diff_px": 18694,
+				"noise_px": 58,
+				"png": "park_sinkhole-v22-s030_gallery_fall-chase.png",
+				"subject_px": 18486,
+				"subject_share": 0.02006
+			},
+			"eye": {
+				"aabb_share": 0.63668,
+				"frame_diff_px": 311702,
+				"noise_px": 97,
+				"png": "park_sinkhole-v22-s030_gallery_fall-eye.png",
+				"subject_px": 311133,
+				"subject_share": 0.3376
+			},
+			"front_deg": 130.4,
+			"height_m": 1.96,
+			"id": "s030_gallery_fall",
+			"isolated": true,
+			"radius_m": 4.19,
+			"subject_kind": "gallery_collapse",
+			"subject_v": "b",
+			"template": "gallery_fall"
+		},
+		{
+			"C": [
+				-166.3,
+				-75.77,
+				-582.4
+			],
+			"bearing_deg": 45.0,
+			"blocked": [
+				{
+					"bearing_deg": 0.0,
+					"reason": "prop:s031_low_stones/coat_hooks"
+				}
+			],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00586,
+				"frame_diff_px": 2405,
+				"noise_px": 0,
+				"png": "park_sinkhole-v23-s031_low_stones-chase.png",
+				"subject_px": 1898,
+				"subject_share": 0.00206
+			},
+			"eye": {
+				"aabb_share": 0.05784,
+				"frame_diff_px": 17061,
+				"noise_px": 0,
+				"png": "park_sinkhole-v23-s031_low_stones-eye.png",
+				"subject_px": 16192,
+				"subject_share": 0.01757
+			},
+			"front_deg": 130.4,
+			"height_m": 0.41,
+			"id": "s031_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				-168.29,
+				-74.5,
+				-611.46
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02288,
+				"frame_diff_px": 2886,
+				"noise_px": 25,
+				"png": "park_sinkhole-v24-s032_mid_skylight_garden-chase.png",
+				"subject_px": 2572,
+				"subject_share": 0.00279
+			},
+			"eye": {
+				"aabb_share": 0.20928,
+				"frame_diff_px": 23743,
+				"noise_px": 0,
+				"png": "park_sinkhole-v24-s032_mid_skylight_garden-eye.png",
+				"subject_px": 23497,
+				"subject_share": 0.0255
+			},
+			"front_deg": 130.4,
+			"height_m": 1.4,
+			"id": "s032_mid_skylight_garden",
+			"isolated": true,
+			"radius_m": 2.01,
+			"subject_kind": "cave_fern",
+			"subject_v": "b",
+			"template": "mid_skylight_garden"
+		},
+		{
+			"C": [
+				-156.1,
+				-77.0,
+				-528.4
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01777,
+				"frame_diff_px": 2105,
+				"noise_px": 32,
+				"png": "park_sinkhole-v25-s033_low_gear-chase.png",
+				"subject_px": 1768,
+				"subject_share": 0.00192
+			},
+			"eye": {
+				"aabb_share": 0.19345,
+				"frame_diff_px": 16388,
+				"noise_px": 0,
+				"png": "park_sinkhole-v25-s033_low_gear-eye.png",
+				"subject_px": 16335,
+				"subject_share": 0.01772
+			},
+			"front_deg": 100.3,
+			"height_m": 0.94,
+			"id": "s033_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-144.51,
+				-74.32,
+				-566.95
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.10882,
+				"frame_diff_px": 28624,
+				"noise_px": 57,
+				"png": "park_sinkhole-v26-s034_lamp_wall-chase.png",
+				"subject_px": 28097,
+				"subject_share": 0.03049
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 213505,
+				"noise_px": 23,
+				"png": "park_sinkhole-v26-s034_lamp_wall-eye.png",
+				"subject_px": 213482,
+				"subject_share": 0.23164
+			},
+			"front_deg": 100.3,
+			"height_m": 4.3,
+			"id": "s034_lamp_wall",
+			"isolated": true,
+			"radius_m": 4.11,
+			"subject_kind": "lamp_rack",
+			"subject_v": "b",
+			"template": "lamp_wall"
+		},
+		{
+			"C": [
+				-230.68,
+				-77.68,
+				-510.33
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01366,
+				"frame_diff_px": 3939,
+				"noise_px": 119,
+				"png": "park_sinkhole-v27-s035_mid_rimstone_pool-chase.png",
+				"subject_px": 3396,
+				"subject_share": 0.00368
+			},
+			"eye": {
+				"aabb_share": 0.13941,
+				"frame_diff_px": 29767,
+				"noise_px": 0,
+				"png": "park_sinkhole-v27-s035_mid_rimstone_pool-eye.png",
+				"subject_px": 29692,
+				"subject_share": 0.03222
+			},
+			"front_deg": -115.8,
+			"height_m": 0.55,
+			"id": "s035_mid_rimstone_pool",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "mid_rimstone_pool"
+		},
+		{
+			"C": [
+				-127.79,
+				-76.08,
+				-550.4
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02043,
+				"frame_diff_px": 6195,
+				"noise_px": 21,
+				"png": "park_sinkhole-v28-s036_mid_column_field-chase.png",
+				"subject_px": 5798,
+				"subject_share": 0.00629
+			},
+			"eye": {
+				"aabb_share": 0.20969,
+				"frame_diff_px": 48618,
+				"noise_px": 2,
+				"png": "park_sinkhole-v28-s036_mid_column_field-eye.png",
+				"subject_px": 48472,
+				"subject_share": 0.0526
+			},
+			"front_deg": 100.3,
+			"height_m": 1.57,
+			"id": "s036_mid_column_field",
+			"isolated": true,
+			"radius_m": 2.04,
+			"subject_kind": "column_stubs",
+			"subject_v": "a",
+			"template": "mid_column_field"
+		},
+		{
+			"C": [
+				-136.31,
+				-75.07,
+				-530.12
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.15121,
+				"frame_diff_px": 33879,
+				"noise_px": 53,
+				"png": "park_sinkhole-v29-s037_pump_station-chase.png",
+				"subject_px": 33031,
+				"subject_share": 0.03584
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 343508,
+				"noise_px": 65,
+				"png": "park_sinkhole-v29-s037_pump_station-eye.png",
+				"subject_px": 343445,
+				"subject_share": 0.37266
+			},
+			"front_deg": 100.3,
+			"height_m": 4.83,
+			"id": "s037_pump_station",
+			"isolated": true,
+			"radius_m": 4.72,
+			"subject_kind": "pump_engine",
+			"subject_v": "b",
+			"template": "pump_station"
+		},
+		{
+			"C": [
+				-230.23,
+				-77.63,
+				-445.58
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.11745,
+				"frame_diff_px": 32349,
+				"noise_px": 83,
+				"png": "park_sinkhole-v30-s038_lamp_wall-chase.png",
+				"subject_px": 31993,
+				"subject_share": 0.03471
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 218767,
+				"noise_px": 22,
+				"png": "park_sinkhole-v30-s038_lamp_wall-eye.png",
+				"subject_px": 218747,
+				"subject_share": 0.23736
+			},
+			"front_deg": -69.7,
+			"height_m": 4.3,
+			"id": "s038_lamp_wall",
+			"isolated": true,
+			"radius_m": 4.11,
+			"subject_kind": "lamp_rack",
+			"subject_v": "b",
+			"template": "lamp_wall"
+		},
+		{
+			"C": [
+				-157.7,
+				-78.93,
+				-466.6
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00824,
+				"frame_diff_px": 2094,
+				"noise_px": 0,
+				"png": "park_sinkhole-v31-s039_low_stones-chase.png",
+				"subject_px": 1688,
+				"subject_share": 0.00183
+			},
+			"eye": {
+				"aabb_share": 0.06525,
+				"frame_diff_px": 16788,
+				"noise_px": 0,
+				"png": "park_sinkhole-v31-s039_low_stones-eye.png",
+				"subject_px": 15705,
+				"subject_share": 0.01704
+			},
+			"front_deg": 110.2,
+			"height_m": 0.41,
+			"id": "s039_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				-194.7,
+				-80.11,
+				-414.3
+			],
+			"bearing_deg": 0.0,
+			"blocked": [
+				{
+					"bearing_deg": 0.0,
+					"reason": "prop:s040_low_gear/mist_rings"
+				},
+				{
+					"bearing_deg": 45.0,
+					"reason": "prop:s040_low_gear/mist_rings"
+				},
+				{
+					"bearing_deg": -45.0,
+					"reason": "prop:s040_low_gear/mist_rings"
+				},
+				{
+					"bearing_deg": 90.0,
+					"reason": "prop:s040_low_gear/mist_rings"
+				},
+				{
+					"bearing_deg": -90.0,
+					"reason": "prop:s040_low_gear/mist_rings"
+				},
+				{
+					"bearing_deg": 135.0,
+					"reason": "prop:s040_low_gear/mist_rings"
+				},
+				{
+					"bearing_deg": -135.0,
+					"reason": "prop:s040_low_gear/mist_rings"
+				},
+				{
+					"bearing_deg": 180.0,
+					"reason": "prop:s040_low_gear/mist_rings"
+				}
+			],
+			"blocked_all": true,
+			"chase": {
+				"aabb_share": 0.01779,
+				"frame_diff_px": 2120,
+				"noise_px": 24,
+				"png": "park_sinkhole-v32-s040_low_gear-chase.png",
+				"subject_px": 1657,
+				"subject_share": 0.0018
+			},
+			"eye": {
+				"aabb_share": 0.18641,
+				"frame_diff_px": 13186,
+				"noise_px": 0,
+				"png": "park_sinkhole-v32-s040_low_gear-eye.png",
+				"subject_px": 13135,
+				"subject_share": 0.01425
+			},
+			"front_deg": -23.7,
+			"height_m": 0.94,
+			"id": "s040_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-214.64,
+				-81.38,
+				-313.81
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.11175,
+				"frame_diff_px": 20211,
+				"noise_px": 161,
+				"png": "park_sinkhole-v33-s041_gallery_fall-chase.png",
+				"subject_px": 19238,
+				"subject_share": 0.02087
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 269912,
+				"noise_px": 85,
+				"png": "park_sinkhole-v33-s041_gallery_fall-eye.png",
+				"subject_px": 269835,
+				"subject_share": 0.29279
+			},
+			"front_deg": -129.4,
+			"height_m": 3.97,
+			"id": "s041_gallery_fall",
+			"isolated": true,
+			"radius_m": 4.03,
+			"subject_kind": "gallery_collapse",
+			"subject_v": "a",
+			"template": "gallery_fall"
+		},
+		{
+			"C": [
+				-212.13,
+				-84.34,
+				-250.71
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01733,
+				"frame_diff_px": 3669,
+				"noise_px": 13,
+				"png": "park_sinkhole-v34-s042_mid_skylight_garden-chase.png",
+				"subject_px": 3268,
+				"subject_share": 0.00355
+			},
+			"eye": {
+				"aabb_share": 0.1912,
+				"frame_diff_px": 25044,
+				"noise_px": 9,
+				"png": "park_sinkhole-v34-s042_mid_skylight_garden-eye.png",
+				"subject_px": 24971,
+				"subject_share": 0.0271
+			},
+			"front_deg": -108.5,
+			"height_m": 1.4,
+			"id": "s042_mid_skylight_garden",
+			"isolated": true,
+			"radius_m": 2.01,
+			"subject_kind": "cave_fern",
+			"subject_v": "b",
+			"template": "mid_skylight_garden"
+		},
+		{
+			"C": [
+				-150.0,
+				-80.43,
+				-390.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01855,
+				"frame_diff_px": 5619,
+				"noise_px": 26,
+				"png": "park_sinkhole-v35-s043_mid_tailings_cart-chase.png",
+				"subject_px": 5452,
+				"subject_share": 0.00592
+			},
+			"eye": {
+				"aabb_share": 0.1782,
+				"frame_diff_px": 43093,
+				"noise_px": 45,
+				"png": "park_sinkhole-v35-s043_mid_tailings_cart-eye.png",
+				"subject_px": 42976,
+				"subject_share": 0.04663
+			},
+			"front_deg": -22.1,
+			"height_m": 1.6,
+			"id": "s043_mid_tailings_cart",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_tailings_cart"
+		},
+		{
+			"C": [
+				-245.26,
+				-78.88,
+				-397.11
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.12939,
+				"frame_diff_px": 30643,
+				"noise_px": 80,
+				"png": "park_sinkhole-v36-s044_pump_station-chase.png",
+				"subject_px": 30164,
+				"subject_share": 0.03273
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 333795,
+				"noise_px": 47,
+				"png": "park_sinkhole-v36-s044_pump_station-eye.png",
+				"subject_px": 333755,
+				"subject_share": 0.36215
+			},
+			"front_deg": -61.2,
+			"height_m": 4.45,
+			"id": "s044_pump_station",
+			"isolated": true,
+			"radius_m": 4.2,
+			"subject_kind": "pump_engine",
+			"subject_v": "a",
+			"template": "pump_station"
+		},
+		{
+			"C": [
+				-200.28,
+				-80.71,
+				-399.31
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01269,
+				"frame_diff_px": 3855,
+				"noise_px": 14,
+				"png": "park_sinkhole-v37-s045_mid_rimstone_pool-chase.png",
+				"subject_px": 3598,
+				"subject_share": 0.0039
+			},
+			"eye": {
+				"aabb_share": 0.1274,
+				"frame_diff_px": 31693,
+				"noise_px": 0,
+				"png": "park_sinkhole-v37-s045_mid_rimstone_pool-eye.png",
+				"subject_px": 30636,
+				"subject_share": 0.03324
+			},
+			"front_deg": -22.1,
+			"height_m": 0.55,
+			"id": "s045_mid_rimstone_pool",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "mid_rimstone_pool"
+		},
+		{
+			"C": [
+				-137.7,
+				-80.57,
+				-395.4
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00967,
+				"frame_diff_px": 2235,
+				"noise_px": 0,
+				"png": "park_sinkhole-v38-s046_low_ferns-chase.png",
+				"subject_px": 1681,
+				"subject_share": 0.00182
+			},
+			"eye": {
+				"aabb_share": 0.07173,
+				"frame_diff_px": 11288,
+				"noise_px": 0,
+				"png": "park_sinkhole-v38-s046_low_ferns-eye.png",
+				"subject_px": 10952,
+				"subject_share": 0.01188
+			},
+			"front_deg": 14.4,
+			"height_m": 1.01,
+			"id": "s046_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				-129.65,
+				-79.45,
+				-377.9
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.08679,
+				"frame_diff_px": 32752,
+				"noise_px": 68,
+				"png": "park_sinkhole-v39-s047_lamp_wall-chase.png",
+				"subject_px": 32471,
+				"subject_share": 0.03523
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 234565,
+				"noise_px": 27,
+				"png": "park_sinkhole-v39-s047_lamp_wall-eye.png",
+				"subject_px": 234539,
+				"subject_share": 0.25449
+			},
+			"front_deg": 14.5,
+			"height_m": 4.3,
+			"id": "s047_lamp_wall",
+			"isolated": true,
+			"radius_m": 3.48,
+			"subject_kind": "lamp_rack",
+			"subject_v": "a",
+			"template": "lamp_wall"
+		},
+		{
+			"C": [
+				-82.7,
+				-80.78,
+				-398.6
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00566,
+				"frame_diff_px": 2445,
+				"noise_px": 0,
+				"png": "park_sinkhole-v40-s048_low_stones-chase.png",
+				"subject_px": 2053,
+				"subject_share": 0.00223
+			},
+			"eye": {
+				"aabb_share": 0.05384,
+				"frame_diff_px": 16410,
+				"noise_px": 0,
+				"png": "park_sinkhole-v40-s048_low_stones-eye.png",
+				"subject_px": 16390,
+				"subject_share": 0.01778
+			},
+			"front_deg": -3.1,
+			"height_m": 0.41,
+			"id": "s048_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				-256.0,
+				-84.22,
+				-209.96
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.09484,
+				"frame_diff_px": 20359,
+				"noise_px": 100,
+				"png": "park_sinkhole-v41-s049_gallery_fall-chase.png",
+				"subject_px": 19721,
+				"subject_share": 0.0214
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 269257,
+				"noise_px": 85,
+				"png": "park_sinkhole-v41-s049_gallery_fall-eye.png",
+				"subject_px": 269178,
+				"subject_share": 0.29208
+			},
+			"front_deg": -89.6,
+			"height_m": 3.97,
+			"id": "s049_gallery_fall",
+			"isolated": true,
+			"radius_m": 4.03,
+			"subject_kind": "gallery_collapse",
+			"subject_v": "a",
+			"template": "gallery_fall"
+		},
+		{
+			"C": [
+				-131.06,
+				-81.58,
+				-351.99
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02221,
+				"frame_diff_px": 3561,
+				"noise_px": 106,
+				"png": "park_sinkhole-v42-s050_mid_skylight_garden-chase.png",
+				"subject_px": 3287,
+				"subject_share": 0.00357
+			},
+			"eye": {
+				"aabb_share": 0.19718,
+				"frame_diff_px": 25117,
+				"noise_px": 0,
+				"png": "park_sinkhole-v42-s050_mid_skylight_garden-eye.png",
+				"subject_px": 24946,
+				"subject_share": 0.02707
+			},
+			"front_deg": -152.0,
+			"height_m": 1.4,
+			"id": "s050_mid_skylight_garden",
+			"isolated": true,
+			"radius_m": 2.01,
+			"subject_kind": "cave_fern",
+			"subject_v": "b",
+			"template": "mid_skylight_garden"
+		},
+		{
+			"C": [
+				-109.9,
+				-78.84,
+				-461.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01889,
+				"frame_diff_px": 2203,
+				"noise_px": 11,
+				"png": "park_sinkhole-v43-s051_low_gear-chase.png",
+				"subject_px": 1808,
+				"subject_share": 0.00196
+			},
+			"eye": {
+				"aabb_share": 0.19991,
+				"frame_diff_px": 16262,
+				"noise_px": 0,
+				"png": "park_sinkhole-v43-s051_low_gear-eye.png",
+				"subject_px": 16180,
+				"subject_share": 0.01756
+			},
+			"front_deg": -165.6,
+			"height_m": 0.94,
+			"id": "s051_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-161.28,
+				-82.04,
+				-331.85
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02449,
+				"frame_diff_px": 6151,
+				"noise_px": 42,
+				"png": "park_sinkhole-v44-s052_mid_column_field-chase.png",
+				"subject_px": 5769,
+				"subject_share": 0.00626
+			},
+			"eye": {
+				"aabb_share": 0.22247,
+				"frame_diff_px": 47812,
+				"noise_px": 60,
+				"png": "park_sinkhole-v44-s052_mid_column_field-eye.png",
+				"subject_px": 47699,
+				"subject_share": 0.05176
+			},
+			"front_deg": -145.3,
+			"height_m": 1.57,
+			"id": "s052_mid_column_field",
+			"isolated": true,
+			"radius_m": 2.04,
+			"subject_kind": "column_stubs",
+			"subject_v": "a",
+			"template": "mid_column_field"
+		},
+		{
+			"C": [
+				-150.67,
+				-85.59,
+				-220.33
+			],
+			"bearing_deg": -90.0,
+			"blocked": [
+				{
+					"bearing_deg": 0.0,
+					"reason": "collider:@StaticBody3D@10001"
+				},
+				{
+					"bearing_deg": 45.0,
+					"reason": "collider:@StaticBody3D@10001"
+				},
+				{
+					"bearing_deg": -45.0,
+					"reason": "prop:s053_mid_rimstone_pool/cave_fern"
+				},
+				{
+					"bearing_deg": 90.0,
+					"reason": "collider:@StaticBody3D@10001"
+				}
+			],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01394,
+				"frame_diff_px": 2395,
+				"noise_px": 8,
+				"png": "park_sinkhole-v45-s053_mid_rimstone_pool-chase.png",
+				"subject_px": 2249,
+				"subject_share": 0.00244
+			},
+			"eye": {
+				"aabb_share": 0.14153,
+				"frame_diff_px": 22599,
+				"noise_px": 0,
+				"png": "park_sinkhole-v45-s053_mid_rimstone_pool-eye.png",
+				"subject_px": 22444,
+				"subject_share": 0.02435
+			},
+			"front_deg": -116.0,
+			"height_m": 0.55,
+			"id": "s053_mid_rimstone_pool",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "mid_rimstone_pool"
+		},
+		{
+			"C": [
+				-54.05,
+				-76.65,
+				-472.36
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.15572,
+				"frame_diff_px": 37176,
+				"noise_px": 113,
+				"png": "park_sinkhole-v46-s054_pump_station-chase.png",
+				"subject_px": 36852,
+				"subject_share": 0.03999
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 388812,
+				"noise_px": 251,
+				"png": "park_sinkhole-v46-s054_pump_station-eye.png",
+				"subject_px": 388677,
+				"subject_share": 0.42174
+			},
+			"front_deg": 176.9,
+			"height_m": 4.83,
+			"id": "s054_pump_station",
+			"isolated": true,
+			"radius_m": 4.72,
+			"subject_kind": "pump_engine",
+			"subject_v": "b",
+			"template": "pump_station"
+		},
+		{
+			"C": [
+				-45.1,
+				-79.06,
+				-450.7
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01088,
+				"frame_diff_px": 4545,
+				"noise_px": 1,
+				"png": "park_sinkhole-v47-s055_low_ferns-chase.png",
+				"subject_px": 1586,
+				"subject_share": 0.00172
+			},
+			"eye": {
+				"aabb_share": 0.09103,
+				"frame_diff_px": 11157,
+				"noise_px": 0,
+				"png": "park_sinkhole-v47-s055_low_ferns-eye.png",
+				"subject_px": 11016,
+				"subject_share": 0.01195
+			},
+			"front_deg": 141.4,
+			"height_m": 1.01,
+			"id": "s055_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				-124.87,
+				-76.93,
+				-470.59
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.08741,
+				"frame_diff_px": 37190,
+				"noise_px": 166,
+				"png": "park_sinkhole-v48-s056_lamp_wall-chase.png",
+				"subject_px": 36799,
+				"subject_share": 0.03993
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 338830,
+				"noise_px": 49,
+				"png": "park_sinkhole-v48-s056_lamp_wall-eye.png",
+				"subject_px": 338800,
+				"subject_share": 0.36762
+			},
+			"front_deg": -165.6,
+			"height_m": 4.3,
+			"id": "s056_lamp_wall",
+			"isolated": true,
+			"radius_m": 3.48,
+			"subject_kind": "lamp_rack",
+			"subject_v": "a",
+			"template": "lamp_wall"
+		},
+		{
+			"C": [
+				170.4,
+				-80.91,
+				-370.63
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00991,
+				"frame_diff_px": 1910,
+				"noise_px": 2,
+				"png": "park_sinkhole-v49-s058_mid_shift_board-chase.png",
+				"subject_px": 1460,
+				"subject_share": 0.00158
+			},
+			"eye": {
+				"aabb_share": 0.07948,
+				"frame_diff_px": 16922,
+				"noise_px": 5,
+				"png": "park_sinkhole-v49-s058_mid_shift_board-eye.png",
+				"subject_px": 16770,
+				"subject_share": 0.0182
+			},
+			"front_deg": 147.7,
+			"height_m": 1.65,
+			"id": "s058_mid_shift_board",
+			"isolated": true,
+			"radius_m": 1.13,
+			"subject_kind": "coat_hooks",
+			"subject_v": "a",
+			"template": "mid_shift_board"
+		},
+		{
+			"C": [
+				32.53,
+				-78.56,
+				-408.78
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.13067,
+				"frame_diff_px": 31998,
+				"noise_px": 69,
+				"png": "park_sinkhole-v50-s059_pump_station-chase.png",
+				"subject_px": 31525,
+				"subject_share": 0.03421
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 370953,
+				"noise_px": 95,
+				"png": "park_sinkhole-v50-s059_pump_station-eye.png",
+				"subject_px": 370875,
+				"subject_share": 0.40243
+			},
+			"front_deg": 136.7,
+			"height_m": 4.45,
+			"id": "s059_pump_station",
+			"isolated": true,
+			"radius_m": 4.2,
+			"subject_kind": "pump_engine",
+			"subject_v": "a",
+			"template": "pump_station"
+		},
+		{
+			"C": [
+				33.5,
+				-83.3,
+				-295.2
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01103,
+				"frame_diff_px": 1994,
+				"noise_px": 10,
+				"png": "park_sinkhole-v51-s060_low_ferns-chase.png",
+				"subject_px": 1657,
+				"subject_share": 0.0018
+			},
+			"eye": {
+				"aabb_share": 0.08809,
+				"frame_diff_px": 10934,
+				"noise_px": 0,
+				"png": "park_sinkhole-v51-s060_low_ferns-eye.png",
+				"subject_px": 10857,
+				"subject_share": 0.01178
+			},
+			"front_deg": -47.1,
+			"height_m": 1.01,
+			"id": "s060_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				112.13,
+				-85.65,
+				-199.27
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01893,
+				"frame_diff_px": 6170,
+				"noise_px": 5,
+				"png": "park_sinkhole-v52-s061_mid_column_field-chase.png",
+				"subject_px": 5807,
+				"subject_share": 0.0063
+			},
+			"eye": {
+				"aabb_share": 0.20623,
+				"frame_diff_px": 48862,
+				"noise_px": 6,
+				"png": "park_sinkhole-v52-s061_mid_column_field-eye.png",
+				"subject_px": 48754,
+				"subject_share": 0.0529
+			},
+			"front_deg": 71.1,
+			"height_m": 1.57,
+			"id": "s061_mid_column_field",
+			"isolated": true,
+			"radius_m": 2.04,
+			"subject_kind": "column_stubs",
+			"subject_v": "a",
+			"template": "mid_column_field"
+		},
+		{
+			"C": [
+				-54.57,
+				-85.66,
+				-193.83
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.08983,
+				"frame_diff_px": 19322,
+				"noise_px": 98,
+				"png": "park_sinkhole-v53-s062_gallery_fall-chase.png",
+				"subject_px": 19027,
+				"subject_share": 0.02065
+			},
+			"eye": {
+				"aabb_share": 0.63901,
+				"frame_diff_px": 300185,
+				"noise_px": 4,
+				"png": "park_sinkhole-v53-s062_gallery_fall-eye.png",
+				"subject_px": 300125,
+				"subject_share": 0.32566
+			},
+			"front_deg": -154.7,
+			"height_m": 1.96,
+			"id": "s062_gallery_fall",
+			"isolated": true,
+			"radius_m": 4.19,
+			"subject_kind": "gallery_collapse",
+			"subject_v": "b",
+			"template": "gallery_fall"
+		},
+		{
+			"C": [
+				-10.2,
+				-85.85,
+				-210.72
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01393,
+				"frame_diff_px": 3528,
+				"noise_px": 41,
+				"png": "park_sinkhole-v54-s063_mid_rimstone_pool-chase.png",
+				"subject_px": 3264,
+				"subject_share": 0.00354
+			},
+			"eye": {
+				"aabb_share": 0.13385,
+				"frame_diff_px": 30031,
+				"noise_px": 0,
+				"png": "park_sinkhole-v54-s063_mid_rimstone_pool-eye.png",
+				"subject_px": 29830,
+				"subject_share": 0.03237
+			},
+			"front_deg": -164.7,
+			"height_m": 0.55,
+			"id": "s063_mid_rimstone_pool",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "mid_rimstone_pool"
+		},
+		{
+			"C": [
+				129.83,
+				-83.13,
+				-234.86
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.17698,
+				"frame_diff_px": 26763,
+				"noise_px": 56,
+				"png": "park_sinkhole-v55-s064_pump_station-chase.png",
+				"subject_px": 26598,
+				"subject_share": 0.02886
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 243915,
+				"noise_px": 2,
+				"png": "park_sinkhole-v55-s064_pump_station-eye.png",
+				"subject_px": 243914,
+				"subject_share": 0.26466
+			},
+			"front_deg": -58.4,
+			"height_m": 4.83,
+			"id": "s064_pump_station",
+			"isolated": true,
+			"radius_m": 4.72,
+			"subject_kind": "pump_engine",
+			"subject_v": "b",
+			"template": "pump_station"
+		},
+		{
+			"C": [
+				-35.25,
+				-82.79,
+				-255.57
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.09365,
+				"frame_diff_px": 33251,
+				"noise_px": 81,
+				"png": "park_sinkhole-v56-s065_lamp_wall-chase.png",
+				"subject_px": 32829,
+				"subject_share": 0.03562
+			},
+			"eye": {
+				"aabb_share": 0.90199,
+				"frame_diff_px": 237111,
+				"noise_px": 47,
+				"png": "park_sinkhole-v56-s065_lamp_wall-eye.png",
+				"subject_px": 237002,
+				"subject_share": 0.25716
+			},
+			"front_deg": 47.0,
+			"height_m": 4.3,
+			"id": "s065_lamp_wall",
+			"isolated": true,
+			"radius_m": 3.48,
+			"subject_kind": "lamp_rack",
+			"subject_v": "a",
+			"template": "lamp_wall"
+		},
+		{
+			"C": [
+				203.94,
+				-81.01,
+				-364.52
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.09233,
+				"frame_diff_px": 18833,
+				"noise_px": 37,
+				"png": "park_sinkhole-v57-s066_gallery_fall-chase.png",
+				"subject_px": 18524,
+				"subject_share": 0.0201
+			},
+			"eye": {
+				"aabb_share": 0.6377,
+				"frame_diff_px": 315244,
+				"noise_px": 7,
+				"png": "park_sinkhole-v57-s066_gallery_fall-eye.png",
+				"subject_px": 315096,
+				"subject_share": 0.3419
+			},
+			"front_deg": 138.9,
+			"height_m": 1.96,
+			"id": "s066_gallery_fall",
+			"isolated": true,
+			"radius_m": 4.19,
+			"subject_kind": "gallery_collapse",
+			"subject_v": "b",
+			"template": "gallery_fall"
+		},
+		{
+			"C": [
+				99.0,
+				-81.14,
+				-376.5
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01701,
+				"frame_diff_px": 3837,
+				"noise_px": 81,
+				"png": "park_sinkhole-v58-s067_low_gear-chase.png",
+				"subject_px": 2561,
+				"subject_share": 0.00278
+			},
+			"eye": {
+				"aabb_share": 0.1995,
+				"frame_diff_px": 19467,
+				"noise_px": 0,
+				"png": "park_sinkhole-v58-s067_low_gear-eye.png",
+				"subject_px": 19431,
+				"subject_share": 0.02108
+			},
+			"front_deg": 160.8,
+			"height_m": 0.94,
+			"id": "s067_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-174.9,
+				-88.18,
+				-274.1
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00945,
+				"frame_diff_px": 640,
+				"noise_px": 0,
+				"png": "park_sinkhole-v59-s068_low_stones-chase.png",
+				"subject_px": 0,
+				"subject_share": 0.0
+			},
+			"eye": {
+				"aabb_share": 0.08586,
+				"frame_diff_px": 17198,
+				"noise_px": 0,
+				"png": "park_sinkhole-v59-s068_low_stones-eye.png",
+				"subject_px": 17128,
+				"subject_share": 0.01859
+			},
+			"front_deg": -129.4,
+			"height_m": 0.41,
+			"id": "s068_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				53.9,
+				-84.76,
+				-241.7
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.0086,
+				"frame_diff_px": 1962,
+				"noise_px": 4,
+				"png": "park_sinkhole-v60-s069_low_ferns-chase.png",
+				"subject_px": 1560,
+				"subject_share": 0.00169
+			},
+			"eye": {
+				"aabb_share": 0.07702,
+				"frame_diff_px": 10666,
+				"noise_px": 0,
+				"png": "park_sinkhole-v60-s069_low_ferns-eye.png",
+				"subject_px": 10524,
+				"subject_share": 0.01142
+			},
+			"front_deg": -108.6,
+			"height_m": 1.01,
+			"id": "s069_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				-132.9,
+				-84.07,
+				-269.2
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02112,
+				"frame_diff_px": 1943,
+				"noise_px": 77,
+				"png": "park_sinkhole-v61-s070_low_gear-chase.png",
+				"subject_px": 1566,
+				"subject_share": 0.0017
+			},
+			"eye": {
+				"aabb_share": 0.20869,
+				"frame_diff_px": 15624,
+				"noise_px": 0,
+				"png": "park_sinkhole-v61-s070_low_gear-eye.png",
+				"subject_px": 15560,
+				"subject_share": 0.01688
+			},
+			"front_deg": 50.6,
+			"height_m": 0.94,
+			"id": "s070_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				38.74,
+				-84.85,
+				-231.86
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02268,
+				"frame_diff_px": 3942,
+				"noise_px": 54,
+				"png": "park_sinkhole-v62-s071_mid_skylight_garden-chase.png",
+				"subject_px": 3255,
+				"subject_share": 0.00353
+			},
+			"eye": {
+				"aabb_share": 0.20537,
+				"frame_diff_px": 29387,
+				"noise_px": 15,
+				"png": "park_sinkhole-v62-s071_mid_skylight_garden-eye.png",
+				"subject_px": 24440,
+				"subject_share": 0.02652
+			},
+			"front_deg": -145.8,
+			"height_m": 1.4,
+			"id": "s071_mid_skylight_garden",
+			"isolated": true,
+			"radius_m": 2.01,
+			"subject_kind": "cave_fern",
+			"subject_v": "b",
+			"template": "mid_skylight_garden"
+		},
+		{
+			"C": [
+				-7.58,
+				-77.5,
+				-449.6
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.09254,
+				"frame_diff_px": 36084,
+				"noise_px": 191,
+				"png": "park_sinkhole-v63-s072_lamp_wall-chase.png",
+				"subject_px": 35703,
+				"subject_share": 0.03874
+			},
+			"eye": {
+				"aabb_share": 0.92716,
+				"frame_diff_px": 349637,
+				"noise_px": 31,
+				"png": "park_sinkhole-v63-s072_lamp_wall-eye.png",
+				"subject_px": 341066,
+				"subject_share": 0.37008
+			},
+			"front_deg": 141.4,
+			"height_m": 4.3,
+			"id": "s072_lamp_wall",
+			"isolated": true,
+			"radius_m": 3.48,
+			"subject_kind": "lamp_rack",
+			"subject_v": "a",
+			"template": "lamp_wall"
+		},
+		{
+			"C": [
+				107.0,
+				-83.78,
+				-288.6
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00859,
+				"frame_diff_px": 2421,
+				"noise_px": 4,
+				"png": "park_sinkhole-v64-s073_low_stones-chase.png",
+				"subject_px": 2027,
+				"subject_share": 0.0022
+			},
+			"eye": {
+				"aabb_share": 0.07382,
+				"frame_diff_px": 16798,
+				"noise_px": 0,
+				"png": "park_sinkhole-v64-s073_low_stones-eye.png",
+				"subject_px": 16253,
+				"subject_share": 0.01764
+			},
+			"front_deg": -39.6,
+			"height_m": 0.41,
+			"id": "s073_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				32.97,
+				-83.47,
+				-274.4
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.09158,
+				"frame_diff_px": 19843,
+				"noise_px": 57,
+				"png": "park_sinkhole-v65-s074_gallery_fall-chase.png",
+				"subject_px": 19485,
+				"subject_share": 0.02114
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 287182,
+				"noise_px": 36,
+				"png": "park_sinkhole-v65-s074_gallery_fall-eye.png",
+				"subject_px": 287150,
+				"subject_share": 0.31158
+			},
+			"front_deg": -47.1,
+			"height_m": 1.96,
+			"id": "s074_gallery_fall",
+			"isolated": true,
+			"radius_m": 4.19,
+			"subject_kind": "gallery_collapse",
+			"subject_v": "b",
+			"template": "gallery_fall"
+		},
+		{
+			"C": [
+				108.34,
+				-86.68,
+				-161.52
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02407,
+				"frame_diff_px": 6100,
+				"noise_px": 23,
+				"png": "park_sinkhole-v66-s075_mid_column_field-chase.png",
+				"subject_px": 5726,
+				"subject_share": 0.00621
+			},
+			"eye": {
+				"aabb_share": 0.22706,
+				"frame_diff_px": 49908,
+				"noise_px": 5,
+				"png": "park_sinkhole-v66-s075_mid_column_field-eye.png",
+				"subject_px": 47929,
+				"subject_share": 0.05201
+			},
+			"front_deg": -132.6,
+			"height_m": 1.57,
+			"id": "s075_mid_column_field",
+			"isolated": true,
+			"radius_m": 2.04,
+			"subject_kind": "column_stubs",
+			"subject_v": "a",
+			"template": "mid_column_field"
+		},
+		{
+			"C": [
+				-146.9,
+				-85.04,
+				-231.2
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00991,
+				"frame_diff_px": 2462,
+				"noise_px": 0,
+				"png": "park_sinkhole-v67-s076_low_ferns-chase.png",
+				"subject_px": 1647,
+				"subject_share": 0.00179
+			},
+			"eye": {
+				"aabb_share": 0.08571,
+				"frame_diff_px": 11183,
+				"noise_px": 0,
+				"png": "park_sinkhole-v67-s076_low_ferns-eye.png",
+				"subject_px": 11022,
+				"subject_share": 0.01196
+			},
+			"front_deg": -118.7,
+			"height_m": 1.01,
+			"id": "s076_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				-201.74,
+				-83.5,
+				-281.43
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02196,
+				"frame_diff_px": 3280,
+				"noise_px": 34,
+				"png": "park_sinkhole-v68-s077_mid_skylight_garden-chase.png",
+				"subject_px": 2870,
+				"subject_share": 0.00311
+			},
+			"eye": {
+				"aabb_share": 0.20868,
+				"frame_diff_px": 23739,
+				"noise_px": 4,
+				"png": "park_sinkhole-v68-s077_mid_skylight_garden-eye.png",
+				"subject_px": 23678,
+				"subject_share": 0.02569
+			},
+			"front_deg": -129.4,
+			"height_m": 1.4,
+			"id": "s077_mid_skylight_garden",
+			"isolated": true,
+			"radius_m": 2.01,
+			"subject_kind": "cave_fern",
+			"subject_v": "b",
+			"template": "mid_skylight_garden"
+		},
+		{
+			"C": [
+				140.8,
+				-84.74,
+				-253.3
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00874,
+				"frame_diff_px": 4488,
+				"noise_px": 6,
+				"png": "park_sinkhole-v69-s078_low_stones-chase.png",
+				"subject_px": 2048,
+				"subject_share": 0.00222
+			},
+			"eye": {
+				"aabb_share": 0.07153,
+				"frame_diff_px": 16492,
+				"noise_px": 0,
+				"png": "park_sinkhole-v69-s078_low_stones-eye.png",
+				"subject_px": 16362,
+				"subject_share": 0.01775
+			},
+			"front_deg": -58.4,
+			"height_m": 0.41,
+			"id": "s078_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				255.42,
+				-81.18,
+				-312.56
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.12942,
+				"frame_diff_px": 30712,
+				"noise_px": 106,
+				"png": "park_sinkhole-v70-s079_pump_station-chase.png",
+				"subject_px": 30388,
+				"subject_share": 0.03297
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 370475,
+				"noise_px": 18,
+				"png": "park_sinkhole-v70-s079_pump_station-eye.png",
+				"subject_px": 370458,
+				"subject_share": 0.40197
+			},
+			"front_deg": 115.3,
+			"height_m": 4.45,
+			"id": "s079_pump_station",
+			"isolated": true,
+			"radius_m": 4.2,
+			"subject_kind": "pump_engine",
+			"subject_v": "a",
+			"template": "pump_station"
+		},
+		{
+			"C": [
+				240.68,
+				-83.38,
+				-280.32
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01042,
+				"frame_diff_px": 2224,
+				"noise_px": 0,
+				"png": "park_sinkhole-v71-s080_mid_shift_board-chase.png",
+				"subject_px": 1530,
+				"subject_share": 0.00166
+			},
+			"eye": {
+				"aabb_share": 0.07539,
+				"frame_diff_px": 16396,
+				"noise_px": 0,
+				"png": "park_sinkhole-v71-s080_mid_shift_board-eye.png",
+				"subject_px": 16301,
+				"subject_share": 0.01769
+			},
+			"front_deg": 115.3,
+			"height_m": 1.65,
+			"id": "s080_mid_shift_board",
+			"isolated": true,
+			"radius_m": 1.13,
+			"subject_kind": "coat_hooks",
+			"subject_v": "a",
+			"template": "mid_shift_board"
+		},
+		{
+			"C": [
+				208.2,
+				-83.07,
+				-305.9
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02211,
+				"frame_diff_px": 2642,
+				"noise_px": 55,
+				"png": "park_sinkhole-v72-s081_low_gear-chase.png",
+				"subject_px": 2395,
+				"subject_share": 0.0026
+			},
+			"eye": {
+				"aabb_share": 0.21857,
+				"frame_diff_px": 18808,
+				"noise_px": 0,
+				"png": "park_sinkhole-v72-s081_low_gear-eye.png",
+				"subject_px": 18648,
+				"subject_share": 0.02023
+			},
+			"front_deg": 133.5,
+			"height_m": 0.94,
+			"id": "s081_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				250.0,
+				-88.07,
+				-110.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02,
+				"frame_diff_px": 5958,
+				"noise_px": 104,
+				"png": "park_sinkhole-v73-s082_mid_tailings_cart-chase.png",
+				"subject_px": 5491,
+				"subject_share": 0.00596
+			},
+			"eye": {
+				"aabb_share": 0.18693,
+				"frame_diff_px": 44214,
+				"noise_px": 0,
+				"png": "park_sinkhole-v73-s082_mid_tailings_cart-eye.png",
+				"subject_px": 43552,
+				"subject_share": 0.04726
+			},
+			"front_deg": 62.9,
+			"height_m": 1.6,
+			"id": "s082_mid_tailings_cart",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_tailings_cart"
+		},
+		{
+			"C": [
+				8.5,
+				-87.65,
+				-135.6
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01065,
+				"frame_diff_px": 2052,
+				"noise_px": 0,
+				"png": "park_sinkhole-v74-s083_low_ferns-chase.png",
+				"subject_px": 1676,
+				"subject_share": 0.00182
+			},
+			"eye": {
+				"aabb_share": 0.07993,
+				"frame_diff_px": 11338,
+				"noise_px": 0,
+				"png": "park_sinkhole-v74-s083_low_ferns-eye.png",
+				"subject_px": 10923,
+				"subject_share": 0.01185
+			},
+			"front_deg": 25.1,
+			"height_m": 1.01,
+			"id": "s083_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				220.53,
+				-88.86,
+				-79.47
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01058,
+				"frame_diff_px": 2405,
+				"noise_px": 0,
+				"png": "park_sinkhole-v75-s084_mid_shift_board-chase.png",
+				"subject_px": 1998,
+				"subject_share": 0.00217
+			},
+			"eye": {
+				"aabb_share": 0.07931,
+				"frame_diff_px": 17713,
+				"noise_px": 1,
+				"png": "park_sinkhole-v75-s084_mid_shift_board-eye.png",
+				"subject_px": 17610,
+				"subject_share": 0.01911
+			},
+			"front_deg": 45.0,
+			"height_m": 1.65,
+			"id": "s084_mid_shift_board",
+			"isolated": true,
+			"radius_m": 1.13,
+			"subject_kind": "coat_hooks",
+			"subject_v": "a",
+			"template": "mid_shift_board"
+		},
+		{
+			"C": [
+				250.0,
+				-84.52,
+				-240.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01896,
+				"frame_diff_px": 5797,
+				"noise_px": 69,
+				"png": "park_sinkhole-v76-s085_mid_tailings_cart-chase.png",
+				"subject_px": 5214,
+				"subject_share": 0.00566
+			},
+			"eye": {
+				"aabb_share": 0.18866,
+				"frame_diff_px": 43719,
+				"noise_px": 0,
+				"png": "park_sinkhole-v76-s085_mid_tailings_cart-eye.png",
+				"subject_px": 42987,
+				"subject_share": 0.04664
+			},
+			"front_deg": 99.0,
+			"height_m": 1.6,
+			"id": "s085_mid_tailings_cart",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_tailings_cart"
+		},
+		{
+			"C": [
+				-17.5,
+				-86.14,
+				-190.9
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.0108,
+				"frame_diff_px": 2118,
+				"noise_px": 2,
+				"png": "park_sinkhole-v77-s086_low_ferns-chase.png",
+				"subject_px": 1646,
+				"subject_share": 0.00179
+			},
+			"eye": {
+				"aabb_share": 0.08413,
+				"frame_diff_px": 11150,
+				"noise_px": 0,
+				"png": "park_sinkhole-v77-s086_low_ferns-eye.png",
+				"subject_px": 11004,
+				"subject_share": 0.01194
+			},
+			"front_deg": -154.7,
+			"height_m": 1.01,
+			"id": "s086_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				64.22,
+				-86.05,
+				-127.69
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.17437,
+				"frame_diff_px": 34893,
+				"noise_px": 122,
+				"png": "park_sinkhole-v78-s087_pump_station-chase.png",
+				"subject_px": 34658,
+				"subject_share": 0.03761
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 384905,
+				"noise_px": 274,
+				"png": "park_sinkhole-v78-s087_pump_station-eye.png",
+				"subject_px": 384663,
+				"subject_share": 0.41739
+			},
+			"front_deg": -143.2,
+			"height_m": 4.83,
+			"id": "s087_pump_station",
+			"isolated": true,
+			"radius_m": 4.72,
+			"subject_kind": "pump_engine",
+			"subject_v": "b",
+			"template": "pump_station"
+		},
+		{
+			"C": [
+				-153.3,
+				-92.73,
+				-92.1
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02242,
+				"frame_diff_px": 252,
+				"noise_px": 47,
+				"png": "park_sinkhole-v79-s088_low_gear-chase.png",
+				"subject_px": 26,
+				"subject_share": 0.00003
+			},
+			"eye": {
+				"aabb_share": 0.23061,
+				"frame_diff_px": 17506,
+				"noise_px": 36,
+				"png": "park_sinkhole-v79-s088_low_gear-eye.png",
+				"subject_px": 17402,
+				"subject_share": 0.01888
+			},
+			"front_deg": -38.0,
+			"height_m": 0.94,
+			"id": "s088_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				242.5,
+				-85.48,
+				-226.4
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00702,
+				"frame_diff_px": 1950,
+				"noise_px": 0,
+				"png": "park_sinkhole-v80-s089_low_stones-chase.png",
+				"subject_px": 1666,
+				"subject_share": 0.00181
+			},
+			"eye": {
+				"aabb_share": 0.05884,
+				"frame_diff_px": 15832,
+				"noise_px": 0,
+				"png": "park_sinkhole-v80-s089_low_stones-eye.png",
+				"subject_px": 15790,
+				"subject_share": 0.01713
+			},
+			"front_deg": 99.0,
+			"height_m": 0.41,
+			"id": "s089_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				126.7,
+				-86.71,
+				-170.2
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01102,
+				"frame_diff_px": 2253,
+				"noise_px": 8,
+				"png": "park_sinkhole-v81-s090_low_ferns-chase.png",
+				"subject_px": 1769,
+				"subject_share": 0.00192
+			},
+			"eye": {
+				"aabb_share": 0.09154,
+				"frame_diff_px": 11033,
+				"noise_px": 0,
+				"png": "park_sinkhole-v81-s090_low_ferns-eye.png",
+				"subject_px": 10875,
+				"subject_share": 0.0118
+			},
+			"front_deg": -132.6,
+			"height_m": 1.01,
+			"id": "s090_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				-61.6,
+				-87.15,
+				-164.9
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00718,
+				"frame_diff_px": 2400,
+				"noise_px": 0,
+				"png": "park_sinkhole-v82-s091_low_stones-chase.png",
+				"subject_px": 1790,
+				"subject_share": 0.00194
+			},
+			"eye": {
+				"aabb_share": 0.06693,
+				"frame_diff_px": 15633,
+				"noise_px": 0,
+				"png": "park_sinkhole-v82-s091_low_stones-eye.png",
+				"subject_px": 15413,
+				"subject_share": 0.01672
+			},
+			"front_deg": -112.0,
+			"height_m": 0.41,
+			"id": "s091_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				286.26,
+				-82.64,
+				-261.76
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.11469,
+				"frame_diff_px": 32801,
+				"noise_px": 75,
+				"png": "park_sinkhole-v83-s092_lamp_wall-chase.png",
+				"subject_px": 32533,
+				"subject_share": 0.0353
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 264574,
+				"noise_px": 99,
+				"png": "park_sinkhole-v83-s092_lamp_wall-eye.png",
+				"subject_px": 264483,
+				"subject_share": 0.28698
+			},
+			"front_deg": 105.7,
+			"height_m": 4.3,
+			"id": "s092_lamp_wall",
+			"isolated": true,
+			"radius_m": 4.11,
+			"subject_kind": "lamp_rack",
+			"subject_v": "b",
+			"template": "lamp_wall"
+		},
+		{
+			"C": [
+				206.92,
+				-89.12,
+				-67.07
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.09199,
+				"frame_diff_px": 20780,
+				"noise_px": 97,
+				"png": "park_sinkhole-v84-s093_gallery_fall-chase.png",
+				"subject_px": 20370,
+				"subject_share": 0.0221
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 307245,
+				"noise_px": 19,
+				"png": "park_sinkhole-v84-s093_gallery_fall-eye.png",
+				"subject_px": 307227,
+				"subject_share": 0.33336
+			},
+			"front_deg": 45.0,
+			"height_m": 1.96,
+			"id": "s093_gallery_fall",
+			"isolated": true,
+			"radius_m": 4.19,
+			"subject_kind": "gallery_collapse",
+			"subject_v": "b",
+			"template": "gallery_fall"
+		},
+		{
+			"C": [
+				0.32,
+				-88.07,
+				-129.32
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01513,
+				"frame_diff_px": 3925,
+				"noise_px": 11,
+				"png": "park_sinkhole-v85-s094_mid_rimstone_pool-chase.png",
+				"subject_px": 3568,
+				"subject_share": 0.00387
+			},
+			"eye": {
+				"aabb_share": 0.13231,
+				"frame_diff_px": 30322,
+				"noise_px": 0,
+				"png": "park_sinkhole-v85-s094_mid_rimstone_pool-eye.png",
+				"subject_px": 30276,
+				"subject_share": 0.03285
+			},
+			"front_deg": 25.1,
+			"height_m": 0.55,
+			"id": "s094_mid_rimstone_pool",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "mid_rimstone_pool"
+		},
+		{
+			"C": [
+				-79.8,
+				-87.95,
+				-124.8
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00908,
+				"frame_diff_px": 1309,
+				"noise_px": 4,
+				"png": "park_sinkhole-v86-s095_low_ferns-chase.png",
+				"subject_px": 872,
+				"subject_share": 0.00095
+			},
+			"eye": {
+				"aabb_share": 0.08031,
+				"frame_diff_px": 6144,
+				"noise_px": 8,
+				"png": "park_sinkhole-v86-s095_low_ferns-eye.png",
+				"subject_px": 5640,
+				"subject_share": 0.00612
+			},
+			"front_deg": -112.0,
+			"height_m": 1.01,
+			"id": "s095_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				261.48,
+				-84.26,
+				-202.26
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.10725,
+				"frame_diff_px": 32408,
+				"noise_px": 78,
+				"png": "park_sinkhole-v87-s096_lamp_wall-chase.png",
+				"subject_px": 31805,
+				"subject_share": 0.03451
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 246597,
+				"noise_px": 69,
+				"png": "park_sinkhole-v87-s096_lamp_wall-eye.png",
+				"subject_px": 246547,
+				"subject_share": 0.26752
+			},
+			"front_deg": 99.0,
+			"height_m": 4.3,
+			"id": "s096_lamp_wall",
+			"isolated": true,
+			"radius_m": 4.11,
+			"subject_kind": "lamp_rack",
+			"subject_v": "b",
+			"template": "lamp_wall"
+		},
+		{
+			"C": [
+				-77.5,
+				-94.3,
+				-40.9
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02039,
+				"frame_diff_px": 681,
+				"noise_px": 0,
+				"png": "park_sinkhole-v88-s097_low_gear-chase.png",
+				"subject_px": 0,
+				"subject_share": 0.0
+			},
+			"eye": {
+				"aabb_share": 0.21707,
+				"frame_diff_px": 15130,
+				"noise_px": 0,
+				"png": "park_sinkhole-v88-s097_low_gear-eye.png",
+				"subject_px": 14994,
+				"subject_share": 0.01627
+			},
+			"front_deg": -28.9,
+			"height_m": 0.94,
+			"id": "s097_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-222.21,
+				-85.08,
+				-220.44
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01821,
+				"frame_diff_px": 4527,
+				"noise_px": 17,
+				"png": "park_sinkhole-v89-s098_mid_column_field-chase.png",
+				"subject_px": 4296,
+				"subject_share": 0.00466
+			},
+			"eye": {
+				"aabb_share": 0.21037,
+				"frame_diff_px": 47554,
+				"noise_px": 9,
+				"png": "park_sinkhole-v89-s098_mid_column_field-eye.png",
+				"subject_px": 47419,
+				"subject_share": 0.05145
+			},
+			"front_deg": -101.2,
+			"height_m": 1.57,
+			"id": "s098_mid_column_field",
+			"isolated": true,
+			"radius_m": 2.04,
+			"subject_kind": "column_stubs",
+			"subject_v": "a",
+			"template": "mid_column_field"
+		},
+		{
+			"C": [
+				71.2,
+				-88.66,
+				-109.8
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00907,
+				"frame_diff_px": 2192,
+				"noise_px": 7,
+				"png": "park_sinkhole-v90-s099_low_stones-chase.png",
+				"subject_px": 1874,
+				"subject_share": 0.00203
+			},
+			"eye": {
+				"aabb_share": 0.07717,
+				"frame_diff_px": 23178,
+				"noise_px": 0,
+				"png": "park_sinkhole-v90-s099_low_stones-eye.png",
+				"subject_px": 16110,
+				"subject_share": 0.01748
+			},
+			"front_deg": -143.2,
+			"height_m": 0.41,
+			"id": "s099_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				-185.22,
+				-90.81,
+				47.04
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.15992,
+				"frame_diff_px": 33615,
+				"noise_px": 146,
+				"png": "park_sinkhole-v91-s100_pump_station-chase.png",
+				"subject_px": 33341,
+				"subject_share": 0.03618
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 348146,
+				"noise_px": 22,
+				"png": "park_sinkhole-v91-s100_pump_station-eye.png",
+				"subject_px": 348128,
+				"subject_share": 0.37774
+			},
+			"front_deg": -119.6,
+			"height_m": 4.83,
+			"id": "s100_pump_station",
+			"isolated": true,
+			"radius_m": 4.72,
+			"subject_kind": "pump_engine",
+			"subject_v": "b",
+			"template": "pump_station"
+		},
+		{
+			"C": [
+				-173.69,
+				-88.71,
+				-45.27
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.10951,
+				"frame_diff_px": 19754,
+				"noise_px": 82,
+				"png": "park_sinkhole-v92-s101_gallery_fall-chase.png",
+				"subject_px": 19261,
+				"subject_share": 0.0209
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 262854,
+				"noise_px": 24,
+				"png": "park_sinkhole-v92-s101_gallery_fall-eye.png",
+				"subject_px": 262831,
+				"subject_share": 0.28519
+			},
+			"front_deg": -38.0,
+			"height_m": 3.97,
+			"id": "s101_gallery_fall",
+			"isolated": true,
+			"radius_m": 4.03,
+			"subject_kind": "gallery_collapse",
+			"subject_v": "a",
+			"template": "gallery_fall"
+		},
+		{
+			"C": [
+				-109.71,
+				-94.7,
+				181.06
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.09631,
+				"frame_diff_px": 32780,
+				"noise_px": 119,
+				"png": "park_sinkhole-v93-s102_lamp_wall-chase.png",
+				"subject_px": 32265,
+				"subject_share": 0.03501
+			},
+			"eye": {
+				"aabb_share": 0.92348,
+				"frame_diff_px": 314889,
+				"noise_px": 24,
+				"png": "park_sinkhole-v93-s102_lamp_wall-eye.png",
+				"subject_px": 314866,
+				"subject_share": 0.34165
+			},
+			"front_deg": 129.2,
+			"height_m": 4.3,
+			"id": "s102_lamp_wall",
+			"isolated": true,
+			"radius_m": 3.48,
+			"subject_kind": "lamp_rack",
+			"subject_v": "a",
+			"template": "lamp_wall"
+		},
+		{
+			"C": [
+				-235.43,
+				-87.01,
+				-107.45
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.11146,
+				"frame_diff_px": 20612,
+				"noise_px": 159,
+				"png": "park_sinkhole-v94-s103_gallery_fall-chase.png",
+				"subject_px": 19896,
+				"subject_share": 0.02159
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 265237,
+				"noise_px": 148,
+				"png": "park_sinkhole-v94-s103_gallery_fall-eye.png",
+				"subject_px": 265115,
+				"subject_share": 0.28767
+			},
+			"front_deg": -64.9,
+			"height_m": 3.97,
+			"id": "s103_gallery_fall",
+			"isolated": true,
+			"radius_m": 4.03,
+			"subject_kind": "gallery_collapse",
+			"subject_v": "a",
+			"template": "gallery_fall"
+		},
+		{
+			"C": [
+				175.82,
+				-88.55,
+				-35.98
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.17582,
+				"frame_diff_px": 32298,
+				"noise_px": 141,
+				"png": "park_sinkhole-v95-s104_pump_station-chase.png",
+				"subject_px": 31723,
+				"subject_share": 0.03442
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 309808,
+				"noise_px": 109,
+				"png": "park_sinkhole-v95-s104_pump_station-eye.png",
+				"subject_px": 309711,
+				"subject_share": 0.33606
+			},
+			"front_deg": 30.9,
+			"height_m": 4.83,
+			"id": "s104_pump_station",
+			"isolated": true,
+			"radius_m": 4.72,
+			"subject_kind": "pump_engine",
+			"subject_v": "b",
+			"template": "pump_station"
+		},
+		{
+			"C": [
+				-181.96,
+				-93.6,
+				88.89
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02024,
+				"frame_diff_px": 2734,
+				"noise_px": 63,
+				"png": "park_sinkhole-v96-s105_mid_skylight_garden-chase.png",
+				"subject_px": 2292,
+				"subject_share": 0.00249
+			},
+			"eye": {
+				"aabb_share": 0.19773,
+				"frame_diff_px": 22913,
+				"noise_px": 24,
+				"png": "park_sinkhole-v96-s105_mid_skylight_garden-eye.png",
+				"subject_px": 22703,
+				"subject_share": 0.02463
+			},
+			"front_deg": -119.6,
+			"height_m": 1.4,
+			"id": "s105_mid_skylight_garden",
+			"isolated": true,
+			"radius_m": 2.01,
+			"subject_kind": "cave_fern",
+			"subject_v": "b",
+			"template": "mid_skylight_garden"
+		},
+		{
+			"C": [
+				100.29,
+				-90.77,
+				-9.31
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.0102,
+				"frame_diff_px": 3987,
+				"noise_px": 0,
+				"png": "park_sinkhole-v97-s106_mid_shift_board-chase.png",
+				"subject_px": 1989,
+				"subject_share": 0.00216
+			},
+			"eye": {
+				"aabb_share": 0.07157,
+				"frame_diff_px": 17897,
+				"noise_px": 0,
+				"png": "park_sinkhole-v97-s106_mid_shift_board-eye.png",
+				"subject_px": 17639,
+				"subject_share": 0.01914
+			},
+			"front_deg": 22.5,
+			"height_m": 1.65,
+			"id": "s106_mid_shift_board",
+			"isolated": true,
+			"radius_m": 1.13,
+			"subject_kind": "coat_hooks",
+			"subject_v": "a",
+			"template": "mid_shift_board"
+		},
+		{
+			"C": [
+				173.1,
+				-89.77,
+				-60.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02137,
+				"frame_diff_px": 2719,
+				"noise_px": 12,
+				"png": "park_sinkhole-v98-s107_low_gear-chase.png",
+				"subject_px": 2370,
+				"subject_share": 0.00257
+			},
+			"eye": {
+				"aabb_share": 0.19788,
+				"frame_diff_px": 18393,
+				"noise_px": 0,
+				"png": "park_sinkhole-v98-s107_low_gear-eye.png",
+				"subject_px": 18315,
+				"subject_share": 0.01987
+			},
+			"front_deg": 31.0,
+			"height_m": 0.94,
+			"id": "s107_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-28.0,
+				-92.82,
+				54.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01112,
+				"frame_diff_px": 2117,
+				"noise_px": 0,
+				"png": "park_sinkhole-v99-s108_low_ferns-chase.png",
+				"subject_px": 1666,
+				"subject_share": 0.00181
+			},
+			"eye": {
+				"aabb_share": 0.08781,
+				"frame_diff_px": 11020,
+				"noise_px": 10,
+				"png": "park_sinkhole-v99-s108_low_ferns-eye.png",
+				"subject_px": 10997,
+				"subject_share": 0.01193
+			},
+			"front_deg": 41.9,
+			"height_m": 1.01,
+			"id": "s108_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				0.5,
+				-92.67,
+				60.56
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01066,
+				"frame_diff_px": 2273,
+				"noise_px": 0,
+				"png": "park_sinkhole-v100-s109_mid_shift_board-chase.png",
+				"subject_px": 2011,
+				"subject_share": 0.00218
+			},
+			"eye": {
+				"aabb_share": 0.0791,
+				"frame_diff_px": 17806,
+				"noise_px": 1,
+				"png": "park_sinkhole-v100-s109_mid_shift_board-eye.png",
+				"subject_px": 17629,
+				"subject_share": 0.01913
+			},
+			"front_deg": 41.9,
+			"height_m": 1.65,
+			"id": "s109_mid_shift_board",
+			"isolated": true,
+			"radius_m": 1.13,
+			"subject_kind": "coat_hooks",
+			"subject_v": "a",
+			"template": "mid_shift_board"
+		},
+		{
+			"C": [
+				-80.7,
+				-88.04,
+				-130.28
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01287,
+				"frame_diff_px": 3613,
+				"noise_px": 45,
+				"png": "park_sinkhole-v101-s110_mid_rimstone_pool-chase.png",
+				"subject_px": 3208,
+				"subject_share": 0.00348
+			},
+			"eye": {
+				"aabb_share": 0.13285,
+				"frame_diff_px": 28796,
+				"noise_px": 0,
+				"png": "park_sinkhole-v101-s110_mid_rimstone_pool-eye.png",
+				"subject_px": 28597,
+				"subject_share": 0.03103
+			},
+			"front_deg": -112.0,
+			"height_m": 0.55,
+			"id": "s110_mid_rimstone_pool",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "mid_rimstone_pool"
+		},
+		{
+			"C": [
+				32.9,
+				-92.54,
+				41.4
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01852,
+				"frame_diff_px": 2861,
+				"noise_px": 28,
+				"png": "park_sinkhole-v102-s111_low_gear-chase.png",
+				"subject_px": 2369,
+				"subject_share": 0.00257
+			},
+			"eye": {
+				"aabb_share": 0.19002,
+				"frame_diff_px": 18748,
+				"noise_px": 0,
+				"png": "park_sinkhole-v102-s111_low_gear-eye.png",
+				"subject_px": 18587,
+				"subject_share": 0.02017
+			},
+			"front_deg": -26.6,
+			"height_m": 0.94,
+			"id": "s111_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				88.51,
+				-87.58,
+				-131.69
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02271,
+				"frame_diff_px": 3953,
+				"noise_px": 34,
+				"png": "park_sinkhole-v103-s112_mid_skylight_garden-chase.png",
+				"subject_px": 2670,
+				"subject_share": 0.0029
+			},
+			"eye": {
+				"aabb_share": 0.21027,
+				"frame_diff_px": 23351,
+				"noise_px": 17,
+				"png": "park_sinkhole-v103-s112_mid_skylight_garden-eye.png",
+				"subject_px": 23261,
+				"subject_share": 0.02524
+			},
+			"front_deg": -138.5,
+			"height_m": 1.4,
+			"id": "s112_mid_skylight_garden",
+			"isolated": true,
+			"radius_m": 2.01,
+			"subject_kind": "cave_fern",
+			"subject_v": "b",
+			"template": "mid_skylight_garden"
+		},
+		{
+			"C": [
+				183.34,
+				-89.09,
+				-24.42
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.09481,
+				"frame_diff_px": 35099,
+				"noise_px": 72,
+				"png": "park_sinkhole-v104-s113_lamp_wall-chase.png",
+				"subject_px": 32789,
+				"subject_share": 0.03558
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 235420,
+				"noise_px": 12,
+				"png": "park_sinkhole-v104-s113_lamp_wall-eye.png",
+				"subject_px": 235408,
+				"subject_share": 0.25543
+			},
+			"front_deg": 30.9,
+			"height_m": 4.3,
+			"id": "s113_lamp_wall",
+			"isolated": true,
+			"radius_m": 3.48,
+			"subject_kind": "lamp_rack",
+			"subject_v": "a",
+			"template": "lamp_wall"
+		},
+		{
+			"C": [
+				79.63,
+				-92.95,
+				70.65
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00959,
+				"frame_diff_px": 8531,
+				"noise_px": 0,
+				"png": "park_sinkhole-v105-s114_mid_shift_board-chase.png",
+				"subject_px": 2013,
+				"subject_share": 0.00218
+			},
+			"eye": {
+				"aabb_share": 0.0755,
+				"frame_diff_px": 17930,
+				"noise_px": 0,
+				"png": "park_sinkhole-v105-s114_mid_shift_board-eye.png",
+				"subject_px": 17779,
+				"subject_share": 0.01929
+			},
+			"front_deg": -29.6,
+			"height_m": 1.65,
+			"id": "s114_mid_shift_board",
+			"isolated": true,
+			"radius_m": 1.13,
+			"subject_kind": "coat_hooks",
+			"subject_v": "a",
+			"template": "mid_shift_board"
+		},
+		{
+			"C": [
+				-110.0,
+				-94.34,
+				120.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02225,
+				"frame_diff_px": 6961,
+				"noise_px": 45,
+				"png": "park_sinkhole-v106-s115_mid_tailings_cart-chase.png",
+				"subject_px": 5301,
+				"subject_share": 0.00575
+			},
+			"eye": {
+				"aabb_share": 0.18778,
+				"frame_diff_px": 43178,
+				"noise_px": 0,
+				"png": "park_sinkhole-v106-s115_mid_tailings_cart-eye.png",
+				"subject_px": 42972,
+				"subject_share": 0.04663
+			},
+			"front_deg": -62.3,
+			"height_m": 1.6,
+			"id": "s115_mid_tailings_cart",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_tailings_cart"
+		},
+		{
+			"C": [
+				214.97,
+				-91.35,
+				66.64
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.17288,
+				"frame_diff_px": 34032,
+				"noise_px": 136,
+				"png": "park_sinkhole-v107-s116_pump_station-chase.png",
+				"subject_px": 33701,
+				"subject_share": 0.03657
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 372259,
+				"noise_px": 13,
+				"png": "park_sinkhole-v107-s116_pump_station-eye.png",
+				"subject_px": 372246,
+				"subject_share": 0.40391
+			},
+			"front_deg": 124.0,
+			"height_m": 4.83,
+			"id": "s116_pump_station",
+			"isolated": true,
+			"radius_m": 4.72,
+			"subject_kind": "pump_engine",
+			"subject_v": "b",
+			"template": "pump_station"
+		},
+		{
+			"C": [
+				-29.4,
+				-93.46,
+				89.54
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01075,
+				"frame_diff_px": 1988,
+				"noise_px": 0,
+				"png": "park_sinkhole-v108-s117_mid_shift_board-chase.png",
+				"subject_px": 1666,
+				"subject_share": 0.00181
+			},
+			"eye": {
+				"aabb_share": 0.08077,
+				"frame_diff_px": 17520,
+				"noise_px": 0,
+				"png": "park_sinkhole-v108-s117_mid_shift_board-eye.png",
+				"subject_px": 17403,
+				"subject_share": 0.01888
+			},
+			"front_deg": 127.5,
+			"height_m": 1.65,
+			"id": "s117_mid_shift_board",
+			"isolated": true,
+			"radius_m": 1.13,
+			"subject_kind": "coat_hooks",
+			"subject_v": "a",
+			"template": "mid_shift_board"
+		},
+		{
+			"C": [
+				73.8,
+				-93.2,
+				56.9
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00787,
+				"frame_diff_px": 6744,
+				"noise_px": 12,
+				"png": "park_sinkhole-v109-s118_low_stones-chase.png",
+				"subject_px": 2062,
+				"subject_share": 0.00224
+			},
+			"eye": {
+				"aabb_share": 0.06947,
+				"frame_diff_px": 17229,
+				"noise_px": 0,
+				"png": "park_sinkhole-v109-s118_low_stones-eye.png",
+				"subject_px": 16404,
+				"subject_share": 0.0178
+			},
+			"front_deg": -29.6,
+			"height_m": 0.41,
+			"id": "s118_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				46.89,
+				-92.48,
+				56.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.08167,
+				"frame_diff_px": 19968,
+				"noise_px": 31,
+				"png": "park_sinkhole-v110-s119_gallery_fall-chase.png",
+				"subject_px": 19512,
+				"subject_share": 0.02117
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 291403,
+				"noise_px": 3646,
+				"png": "park_sinkhole-v110-s119_gallery_fall-eye.png",
+				"subject_px": 287818,
+				"subject_share": 0.3123
+			},
+			"front_deg": -29.6,
+			"height_m": 1.96,
+			"id": "s119_gallery_fall",
+			"isolated": true,
+			"radius_m": 4.19,
+			"subject_kind": "gallery_collapse",
+			"subject_v": "b",
+			"template": "gallery_fall"
+		},
+		{
+			"C": [
+				89.0,
+				-91.11,
+				-11.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02004,
+				"frame_diff_px": 3012,
+				"noise_px": 1,
+				"png": "park_sinkhole-v111-s120_low_gear-chase.png",
+				"subject_px": 2271,
+				"subject_share": 0.00246
+			},
+			"eye": {
+				"aabb_share": 0.18936,
+				"frame_diff_px": 18018,
+				"noise_px": 0,
+				"png": "park_sinkhole-v111-s120_low_gear-eye.png",
+				"subject_px": 17998,
+				"subject_share": 0.01953
+			},
+			"front_deg": 21.5,
+			"height_m": 0.94,
+			"id": "s120_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-39.4,
+				-93.99,
+				96.9
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01129,
+				"frame_diff_px": 1563,
+				"noise_px": 0,
+				"png": "park_sinkhole-v112-s121_low_ferns-chase.png",
+				"subject_px": 1172,
+				"subject_share": 0.00127
+			},
+			"eye": {
+				"aabb_share": 0.09032,
+				"frame_diff_px": 10356,
+				"noise_px": 0,
+				"png": "park_sinkhole-v112-s121_low_ferns-eye.png",
+				"subject_px": 10304,
+				"subject_share": 0.01118
+			},
+			"front_deg": 127.5,
+			"height_m": 1.01,
+			"id": "s121_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				-175.67,
+				-97.33,
+				210.33
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.0152,
+				"frame_diff_px": 4010,
+				"noise_px": 62,
+				"png": "park_sinkhole-v113-s122_mid_rimstone_pool-chase.png",
+				"subject_px": 3417,
+				"subject_share": 0.00371
+			},
+			"eye": {
+				"aabb_share": 0.13604,
+				"frame_diff_px": 30329,
+				"noise_px": 0,
+				"png": "park_sinkhole-v113-s122_mid_rimstone_pool-eye.png",
+				"subject_px": 30131,
+				"subject_share": 0.03269
+			},
+			"front_deg": -63.9,
+			"height_m": 0.55,
+			"id": "s122_mid_rimstone_pool",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "mid_rimstone_pool"
+		},
+		{
+			"C": [
+				107.9,
+				-93.85,
+				80.7
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00845,
+				"frame_diff_px": 2262,
+				"noise_px": 4,
+				"png": "park_sinkhole-v114-s123_low_stones-chase.png",
+				"subject_px": 2042,
+				"subject_share": 0.00222
+			},
+			"eye": {
+				"aabb_share": 0.07312,
+				"frame_diff_px": 16830,
+				"noise_px": 0,
+				"png": "park_sinkhole-v114-s123_low_stones-eye.png",
+				"subject_px": 16359,
+				"subject_share": 0.01775
+			},
+			"front_deg": -37.2,
+			"height_m": 0.41,
+			"id": "s123_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				140.0,
+				-90.52,
+				-20.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.0224,
+				"frame_diff_px": 5896,
+				"noise_px": 15,
+				"png": "park_sinkhole-v115-s124_mid_tailings_cart-chase.png",
+				"subject_px": 5472,
+				"subject_share": 0.00594
+			},
+			"eye": {
+				"aabb_share": 0.18658,
+				"frame_diff_px": 43492,
+				"noise_px": 0,
+				"png": "park_sinkhole-v115-s124_mid_tailings_cart-eye.png",
+				"subject_px": 43425,
+				"subject_share": 0.04712
+			},
+			"front_deg": 28.6,
+			"height_m": 1.6,
+			"id": "s124_mid_tailings_cart",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_tailings_cart"
+		},
+		{
+			"C": [
+				140.8,
+				-94.25,
+				104.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.0215,
+				"frame_diff_px": 4472,
+				"noise_px": 83,
+				"png": "park_sinkhole-v116-s125_low_gear-chase.png",
+				"subject_px": 2124,
+				"subject_share": 0.0023
+			},
+			"eye": {
+				"aabb_share": 0.21002,
+				"frame_diff_px": 17431,
+				"noise_px": 0,
+				"png": "park_sinkhole-v116-s125_low_gear-eye.png",
+				"subject_px": 17099,
+				"subject_share": 0.01855
+			},
+			"front_deg": -46.5,
+			"height_m": 0.94,
+			"id": "s125_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-102.2,
+				-93.69,
+				74.7
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00886,
+				"frame_diff_px": 2391,
+				"noise_px": 2,
+				"png": "park_sinkhole-v117-s126_low_stones-chase.png",
+				"subject_px": 2045,
+				"subject_share": 0.00222
+			},
+			"eye": {
+				"aabb_share": 0.07461,
+				"frame_diff_px": 16578,
+				"noise_px": 0,
+				"png": "park_sinkhole-v117-s126_low_stones-eye.png",
+				"subject_px": 16353,
+				"subject_share": 0.01774
+			},
+			"front_deg": 46.4,
+			"height_m": 0.41,
+			"id": "s126_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				-151.63,
+				-92.41,
+				48.45
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02417,
+				"frame_diff_px": 6080,
+				"noise_px": 26,
+				"png": "park_sinkhole-v118-s127_mid_column_field-chase.png",
+				"subject_px": 5764,
+				"subject_share": 0.00625
+			},
+			"eye": {
+				"aabb_share": 0.22734,
+				"frame_diff_px": 47893,
+				"noise_px": 1,
+				"png": "park_sinkhole-v118-s127_mid_column_field-eye.png",
+				"subject_px": 47861,
+				"subject_share": 0.05193
+			},
+			"front_deg": -133.6,
+			"height_m": 1.57,
+			"id": "s127_mid_column_field",
+			"isolated": true,
+			"radius_m": 2.04,
+			"subject_kind": "column_stubs",
+			"subject_v": "a",
+			"template": "mid_column_field"
+		},
+		{
+			"C": [
+				31.3,
+				-96.74,
+				197.6
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00863,
+				"frame_diff_px": 2281,
+				"noise_px": 17,
+				"png": "park_sinkhole-v119-s128_low_ferns-chase.png",
+				"subject_px": 1662,
+				"subject_share": 0.0018
+			},
+			"eye": {
+				"aabb_share": 0.07512,
+				"frame_diff_px": 11091,
+				"noise_px": 0,
+				"png": "park_sinkhole-v119-s128_low_ferns-eye.png",
+				"subject_px": 10902,
+				"subject_share": 0.01183
+			},
+			"front_deg": -19.4,
+			"height_m": 1.01,
+			"id": "s128_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				-95.35,
+				-94.51,
+				176.21
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.13296,
+				"frame_diff_px": 31269,
+				"noise_px": 116,
+				"png": "park_sinkhole-v120-s129_pump_station-chase.png",
+				"subject_px": 30938,
+				"subject_share": 0.03357
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 369461,
+				"noise_px": 45,
+				"png": "park_sinkhole-v120-s129_pump_station-eye.png",
+				"subject_px": 369421,
+				"subject_share": 0.40085
+			},
+			"front_deg": 129.2,
+			"height_m": 4.45,
+			"id": "s129_pump_station",
+			"isolated": true,
+			"radius_m": 4.2,
+			"subject_kind": "pump_engine",
+			"subject_v": "a",
+			"template": "pump_station"
+		},
+		{
+			"C": [
+				150.8,
+				-96.02,
+				169.1
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01515,
+				"frame_diff_px": 2047,
+				"noise_px": 2,
+				"png": "park_sinkhole-v121-s130_low_gear-chase.png",
+				"subject_px": 1757,
+				"subject_share": 0.00191
+			},
+			"eye": {
+				"aabb_share": 0.17723,
+				"frame_diff_px": 16133,
+				"noise_px": 4,
+				"png": "park_sinkhole-v121-s130_low_gear-eye.png",
+				"subject_px": 15939,
+				"subject_share": 0.01729
+			},
+			"front_deg": -87.8,
+			"height_m": 0.94,
+			"id": "s130_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-50.7,
+				-96.2,
+				166.7
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00751,
+				"frame_diff_px": 2754,
+				"noise_px": 0,
+				"png": "park_sinkhole-v122-s131_low_stones-chase.png",
+				"subject_px": 2043,
+				"subject_share": 0.00222
+			},
+			"eye": {
+				"aabb_share": 0.06705,
+				"frame_diff_px": 16452,
+				"noise_px": 0,
+				"png": "park_sinkhole-v122-s131_low_stones-eye.png",
+				"subject_px": 16358,
+				"subject_share": 0.01775
+			},
+			"front_deg": -26.0,
+			"height_m": 0.41,
+			"id": "s131_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				110.64,
+				-95.01,
+				192.66
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.09486,
+				"frame_diff_px": 33923,
+				"noise_px": 120,
+				"png": "park_sinkhole-v123-s132_lamp_wall-chase.png",
+				"subject_px": 32912,
+				"subject_share": 0.03571
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 319138,
+				"noise_px": 20,
+				"png": "park_sinkhole-v123-s132_lamp_wall-eye.png",
+				"subject_px": 319126,
+				"subject_share": 0.34627
+			},
+			"front_deg": 117.8,
+			"height_m": 4.3,
+			"id": "s132_lamp_wall",
+			"isolated": true,
+			"radius_m": 3.48,
+			"subject_kind": "lamp_rack",
+			"subject_v": "a",
+			"template": "lamp_wall"
+		},
+		{
+			"C": [
+				150.0,
+				-95.16,
+				150.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01691,
+				"frame_diff_px": 5907,
+				"noise_px": 7,
+				"png": "park_sinkhole-v124-s133_mid_tailings_cart-chase.png",
+				"subject_px": 5456,
+				"subject_share": 0.00592
+			},
+			"eye": {
+				"aabb_share": 0.17958,
+				"frame_diff_px": 46053,
+				"noise_px": 0,
+				"png": "park_sinkhole-v124-s133_mid_tailings_cart-eye.png",
+				"subject_px": 43120,
+				"subject_share": 0.04679
+			},
+			"front_deg": -87.8,
+			"height_m": 1.6,
+			"id": "s133_mid_tailings_cart",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_tailings_cart"
+		},
+		{
+			"C": [
+				100.66,
+				-95.95,
+				159.65
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.0158,
+				"frame_diff_px": 3420,
+				"noise_px": 61,
+				"png": "park_sinkhole-v125-s134_mid_rimstone_pool-chase.png",
+				"subject_px": 3115,
+				"subject_share": 0.00338
+			},
+			"eye": {
+				"aabb_share": 0.1425,
+				"frame_diff_px": 29428,
+				"noise_px": 0,
+				"png": "park_sinkhole-v125-s134_mid_rimstone_pool-eye.png",
+				"subject_px": 29059,
+				"subject_share": 0.03153
+			},
+			"front_deg": 117.8,
+			"height_m": 0.55,
+			"id": "s134_mid_rimstone_pool",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "mid_rimstone_pool"
+		},
+		{
+			"C": [
+				11.33,
+				-94.13,
+				108.18
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02168,
+				"frame_diff_px": 3494,
+				"noise_px": 64,
+				"png": "park_sinkhole-v126-s135_mid_skylight_garden-chase.png",
+				"subject_px": 2959,
+				"subject_share": 0.00321
+			},
+			"eye": {
+				"aabb_share": 0.20716,
+				"frame_diff_px": 24702,
+				"noise_px": 3,
+				"png": "park_sinkhole-v126-s135_mid_skylight_garden-eye.png",
+				"subject_px": 24617,
+				"subject_share": 0.02671
+			},
+			"front_deg": 143.9,
+			"height_m": 1.4,
+			"id": "s135_mid_skylight_garden",
+			"isolated": true,
+			"radius_m": 2.01,
+			"subject_kind": "cave_fern",
+			"subject_v": "b",
+			"template": "mid_skylight_garden"
+		},
+		{
+			"C": [
+				70.0,
+				-95.38,
+				147.7
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00931,
+				"frame_diff_px": 2289,
+				"noise_px": 0,
+				"png": "park_sinkhole-v127-s136_low_ferns-chase.png",
+				"subject_px": 1655,
+				"subject_share": 0.0018
+			},
+			"eye": {
+				"aabb_share": 0.08225,
+				"frame_diff_px": 11224,
+				"noise_px": 0,
+				"png": "park_sinkhole-v127-s136_low_ferns-eye.png",
+				"subject_px": 11133,
+				"subject_share": 0.01208
+			},
+			"front_deg": 157.0,
+			"height_m": 1.01,
+			"id": "s136_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				114.7,
+				-97.59,
+				217.6
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00908,
+				"frame_diff_px": 2163,
+				"noise_px": 5,
+				"png": "park_sinkhole-v128-s137_low_stones-chase.png",
+				"subject_px": 1703,
+				"subject_share": 0.00185
+			},
+			"eye": {
+				"aabb_share": 0.07793,
+				"frame_diff_px": 15487,
+				"noise_px": 0,
+				"png": "park_sinkhole-v128-s137_low_stones-eye.png",
+				"subject_px": 15391,
+				"subject_share": 0.0167
+			},
+			"front_deg": -140.3,
+			"height_m": 0.41,
+			"id": "s137_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				50.88,
+				-94.31,
+				117.93
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02033,
+				"frame_diff_px": 5784,
+				"noise_px": 2,
+				"png": "park_sinkhole-v129-s138_mid_column_field-chase.png",
+				"subject_px": 5558,
+				"subject_share": 0.00603
+			},
+			"eye": {
+				"aabb_share": 0.20603,
+				"frame_diff_px": 48084,
+				"noise_px": 2,
+				"png": "park_sinkhole-v129-s138_mid_column_field-eye.png",
+				"subject_px": 47760,
+				"subject_share": 0.05182
+			},
+			"front_deg": 157.0,
+			"height_m": 1.57,
+			"id": "s138_mid_column_field",
+			"isolated": true,
+			"radius_m": 2.04,
+			"subject_kind": "column_stubs",
+			"subject_v": "a",
+			"template": "mid_column_field"
+		},
+		{
+			"C": [
+				-116.5,
+				-94.64,
+				118.4
+			],
+			"bearing_deg": 0.0,
+			"blocked": [
+				{
+					"bearing_deg": 0.0,
+					"reason": "prop:s139_low_gear/drill_steels"
+				},
+				{
+					"bearing_deg": 45.0,
+					"reason": "prop:s139_low_gear/echo_horn"
+				},
+				{
+					"bearing_deg": -45.0,
+					"reason": "prop:s139_low_gear/echo_horn"
+				},
+				{
+					"bearing_deg": 90.0,
+					"reason": "prop:s139_low_gear/echo_horn"
+				},
+				{
+					"bearing_deg": -90.0,
+					"reason": "prop:s139_low_gear/echo_horn"
+				},
+				{
+					"bearing_deg": 135.0,
+					"reason": "prop:s139_low_gear/column_stubs"
+				},
+				{
+					"bearing_deg": -135.0,
+					"reason": "prop:s139_low_gear/echo_horn"
+				},
+				{
+					"bearing_deg": 180.0,
+					"reason": "prop:s139_low_gear/echo_horn"
+				}
+			],
+			"blocked_all": true,
+			"chase": {
+				"aabb_share": 0.01948,
+				"frame_diff_px": 1572,
+				"noise_px": 67,
+				"png": "park_sinkhole-v130-s139_low_gear-chase.png",
+				"subject_px": 1264,
+				"subject_share": 0.00137
+			},
+			"eye": {
+				"aabb_share": 0.19801,
+				"frame_diff_px": 6628,
+				"noise_px": 0,
+				"png": "park_sinkhole-v130-s139_low_gear-eye.png",
+				"subject_px": 6548,
+				"subject_share": 0.00711
+			},
+			"front_deg": 60.4,
+			"height_m": 0.94,
+			"id": "s139_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				123.27,
+				-94.02,
+				112.41
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.09146,
+				"frame_diff_px": 20049,
+				"noise_px": 53,
+				"png": "park_sinkhole-v131-s140_gallery_fall-chase.png",
+				"subject_px": 19619,
+				"subject_share": 0.02129
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 288250,
+				"noise_px": 110,
+				"png": "park_sinkhole-v131-s140_gallery_fall-eye.png",
+				"subject_px": 288149,
+				"subject_share": 0.31266
+			},
+			"front_deg": -46.5,
+			"height_m": 1.96,
+			"id": "s140_gallery_fall",
+			"isolated": true,
+			"radius_m": 4.19,
+			"subject_kind": "gallery_collapse",
+			"subject_v": "b",
+			"template": "gallery_fall"
+		},
+		{
+			"C": [
+				163.83,
+				2.53,
+				284.62
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.13129,
+				"frame_diff_px": 30174,
+				"noise_px": 57,
+				"png": "park_sinkhole-v132-s141_pump_station-chase.png",
+				"subject_px": 29980,
+				"subject_share": 0.03253
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 328036,
+				"noise_px": 35,
+				"png": "park_sinkhole-v132-s141_pump_station-eye.png",
+				"subject_px": 328006,
+				"subject_share": 0.35591
+			},
+			"front_deg": 39.7,
+			"height_m": 4.45,
+			"id": "s141_pump_station",
+			"isolated": true,
+			"radius_m": 4.2,
+			"subject_kind": "pump_engine",
+			"subject_v": "a",
+			"template": "pump_station"
+		},
+		{
+			"C": [
+				200.67,
+				-97.3,
+				230.33
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00932,
+				"frame_diff_px": 2447,
+				"noise_px": 0,
+				"png": "park_sinkhole-v133-s142_mid_shift_board-chase.png",
+				"subject_px": 1860,
+				"subject_share": 0.00202
+			},
+			"eye": {
+				"aabb_share": 0.07466,
+				"frame_diff_px": 17904,
+				"noise_px": 9,
+				"png": "park_sinkhole-v133-s142_mid_shift_board-eye.png",
+				"subject_px": 17488,
+				"subject_share": 0.01898
+			},
+			"front_deg": 63.6,
+			"height_m": 1.65,
+			"id": "s142_mid_shift_board",
+			"isolated": true,
+			"radius_m": 1.13,
+			"subject_kind": "coat_hooks",
+			"subject_v": "a",
+			"template": "mid_shift_board"
+		},
+		{
+			"C": [
+				-123.7,
+				-96.15,
+				175.9
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00954,
+				"frame_diff_px": 1726,
+				"noise_px": 0,
+				"png": "park_sinkhole-v134-s143_low_ferns-chase.png",
+				"subject_px": 1147,
+				"subject_share": 0.00124
+			},
+			"eye": {
+				"aabb_share": 0.07386,
+				"frame_diff_px": 10142,
+				"noise_px": 0,
+				"png": "park_sinkhole-v134-s143_low_ferns-eye.png",
+				"subject_px": 9893,
+				"subject_share": 0.01073
+			},
+			"front_deg": 102.3,
+			"height_m": 1.01,
+			"id": "s143_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				-85.9,
+				-97.31,
+				216.2
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02126,
+				"frame_diff_px": 2620,
+				"noise_px": 26,
+				"png": "park_sinkhole-v135-s144_low_gear-chase.png",
+				"subject_px": 2395,
+				"subject_share": 0.0026
+			},
+			"eye": {
+				"aabb_share": 0.21595,
+				"frame_diff_px": 18977,
+				"noise_px": 0,
+				"png": "park_sinkhole-v135-s144_low_gear-eye.png",
+				"subject_px": 18909,
+				"subject_share": 0.02052
+			},
+			"front_deg": 142.4,
+			"height_m": 0.94,
+			"id": "s144_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-10.0,
+				-96.25,
+				190.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01696,
+				"frame_diff_px": 6196,
+				"noise_px": 7,
+				"png": "park_sinkhole-v136-s145_mid_tailings_cart-chase.png",
+				"subject_px": 5369,
+				"subject_share": 0.00583
+			},
+			"eye": {
+				"aabb_share": 0.1841,
+				"frame_diff_px": 43344,
+				"noise_px": 0,
+				"png": "park_sinkhole-v136-s145_mid_tailings_cart-eye.png",
+				"subject_px": 43209,
+				"subject_share": 0.04688
+			},
+			"front_deg": -10.4,
+			"height_m": 1.6,
+			"id": "s145_mid_tailings_cart",
+			"isolated": true,
+			"radius_m": 1.95,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_tailings_cart"
+		},
+		{
+			"C": [
+				-50.99,
+				-96.05,
+				182.02
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02073,
+				"frame_diff_px": 6304,
+				"noise_px": 11,
+				"png": "park_sinkhole-v137-s146_mid_column_field-chase.png",
+				"subject_px": 5721,
+				"subject_share": 0.00621
+			},
+			"eye": {
+				"aabb_share": 0.1992,
+				"frame_diff_px": 50342,
+				"noise_px": 11,
+				"png": "park_sinkhole-v137-s146_mid_column_field-eye.png",
+				"subject_px": 48929,
+				"subject_share": 0.05309
+			},
+			"front_deg": -26.0,
+			"height_m": 1.57,
+			"id": "s146_mid_column_field",
+			"isolated": true,
+			"radius_m": 2.04,
+			"subject_kind": "column_stubs",
+			"subject_v": "a",
+			"template": "mid_column_field"
+		},
+		{
+			"C": [
+				29.1,
+				-83.41,
+				-291.1
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01103,
+				"frame_diff_px": 1913,
+				"noise_px": 1,
+				"png": "park_sinkhole-v138-f05_low_ferns-chase.png",
+				"subject_px": 1666,
+				"subject_share": 0.00181
+			},
+			"eye": {
+				"aabb_share": 0.08809,
+				"frame_diff_px": 10905,
+				"noise_px": 0,
+				"png": "park_sinkhole-v138-f05_low_ferns-eye.png",
+				"subject_px": 10886,
+				"subject_share": 0.01181
+			},
+			"front_deg": -47.1,
+			"height_m": 1.01,
+			"id": "f05_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				50.0,
+				-84.05,
+				-270.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02058,
+				"frame_diff_px": 3294,
+				"noise_px": 80,
+				"png": "park_sinkhole-v139-f07_low_gear-chase.png",
+				"subject_px": 2442,
+				"subject_share": 0.00265
+			},
+			"eye": {
+				"aabb_share": 0.18975,
+				"frame_diff_px": 18864,
+				"noise_px": 0,
+				"png": "park_sinkhole-v139-f07_low_gear-eye.png",
+				"subject_px": 18612,
+				"subject_share": 0.0202
+			},
+			"front_deg": -65.0,
+			"height_m": 0.94,
+			"id": "f07_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-54.6,
+				-94.53,
+				-32.1
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.0191,
+				"frame_diff_px": 2394,
+				"noise_px": 2,
+				"png": "park_sinkhole-v140-f10_low_gear-chase.png",
+				"subject_px": 1482,
+				"subject_share": 0.00161
+			},
+			"eye": {
+				"aabb_share": 0.19603,
+				"frame_diff_px": 14783,
+				"noise_px": 0,
+				"png": "park_sinkhole-v140-f10_low_gear-eye.png",
+				"subject_px": 14556,
+				"subject_share": 0.01579
+			},
+			"front_deg": -28.9,
+			"height_m": 0.94,
+			"id": "f10_low_gear",
+			"isolated": true,
+			"radius_m": 2.14,
+			"subject_kind": "hose_reel",
+			"subject_v": "b",
+			"template": "low_gear"
+		},
+		{
+			"C": [
+				-60.0,
+				-94.79,
+				-31.3
+			],
+			"bearing_deg": -90.0,
+			"blocked": [
+				{
+					"bearing_deg": 0.0,
+					"reason": "prop:f11_low_stones/hose_reel"
+				},
+				{
+					"bearing_deg": 45.0,
+					"reason": "prop:f11_low_stones/hose_reel"
+				},
+				{
+					"bearing_deg": -45.0,
+					"reason": "prop:f11_low_stones/hose_reel"
+				},
+				{
+					"bearing_deg": 90.0,
+					"reason": "prop:f11_low_stones/cave_fern"
+				}
+			],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00802,
+				"frame_diff_px": 2724,
+				"noise_px": 13,
+				"png": "park_sinkhole-v141-f11_low_stones-chase.png",
+				"subject_px": 1642,
+				"subject_share": 0.00178
+			},
+			"eye": {
+				"aabb_share": 0.07238,
+				"frame_diff_px": 16743,
+				"noise_px": 0,
+				"png": "park_sinkhole-v141-f11_low_stones-eye.png",
+				"subject_px": 14476,
+				"subject_share": 0.01571
+			},
+			"front_deg": -28.9,
+			"height_m": 0.41,
+			"id": "f11_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				-63.5,
+				-94.35,
+				-36.7
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00986,
+				"frame_diff_px": 2503,
+				"noise_px": 0,
+				"png": "park_sinkhole-v142-f12_low_ferns-chase.png",
+				"subject_px": 1200,
+				"subject_share": 0.0013
+			},
+			"eye": {
+				"aabb_share": 0.0829,
+				"frame_diff_px": 10900,
+				"noise_px": 0,
+				"png": "park_sinkhole-v142-f12_low_ferns-eye.png",
+				"subject_px": 10074,
+				"subject_share": 0.01093
+			},
+			"front_deg": -28.9,
+			"height_m": 1.01,
+			"id": "f12_low_ferns",
+			"isolated": true,
+			"radius_m": 1.4,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_ferns"
+		},
+		{
+			"C": [
+				-660.0,
+				-90.1,
+				-38.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01315,
+				"frame_diff_px": 3749,
+				"noise_px": 0,
+				"png": "park_sinkhole-v143-g01_granary_ledge-chase.png",
+				"subject_px": 3528,
+				"subject_share": 0.00383
+			},
+			"eye": {
+				"aabb_share": 0.12908,
+				"frame_diff_px": 33946,
+				"noise_px": 0,
+				"png": "park_sinkhole-v143-g01_granary_ledge-eye.png",
+				"subject_px": 33851,
+				"subject_share": 0.03673
+			},
+			"front_deg": 0.0,
+			"height_m": 1.47,
+			"id": "g01_granary_ledge",
+			"isolated": true,
+			"radius_m": 1.75,
+			"subject_kind": "granary_jars",
+			"subject_v": "a",
+			"template": "granary_ledge"
+		},
+		{
+			"C": [
+				-660.0,
+				-88.84,
+				-84.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01329,
+				"frame_diff_px": 5382,
+				"noise_px": 3,
+				"png": "park_sinkhole-v144-g02_granary_ledge-chase.png",
+				"subject_px": 3929,
+				"subject_share": 0.00426
+			},
+			"eye": {
+				"aabb_share": 0.13425,
+				"frame_diff_px": 32892,
+				"noise_px": 40,
+				"png": "park_sinkhole-v144-g02_granary_ledge-eye.png",
+				"subject_px": 32773,
+				"subject_share": 0.03556
+			},
+			"front_deg": 180.0,
+			"height_m": 1.47,
+			"id": "g02_granary_ledge",
+			"isolated": true,
+			"radius_m": 1.75,
+			"subject_kind": "granary_jars",
+			"subject_v": "a",
+			"template": "granary_ledge"
+		},
+		{
+			"C": [
+				-635.0,
+				-90.1,
+				-38.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01315,
+				"frame_diff_px": 5772,
+				"noise_px": 0,
+				"png": "park_sinkhole-v145-g03_granary_ledge-chase.png",
+				"subject_px": 4377,
+				"subject_share": 0.00475
+			},
+			"eye": {
+				"aabb_share": 0.12908,
+				"frame_diff_px": 33834,
+				"noise_px": 10,
+				"png": "park_sinkhole-v145-g03_granary_ledge-eye.png",
+				"subject_px": 33714,
+				"subject_share": 0.03658
+			},
+			"front_deg": 0.0,
+			"height_m": 1.47,
+			"id": "g03_granary_ledge",
+			"isolated": true,
+			"radius_m": 1.75,
+			"subject_kind": "granary_jars",
+			"subject_v": "a",
+			"template": "granary_ledge"
+		},
+		{
+			"C": [
+				-186.29,
+				-74.28,
+				-594.71
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02468,
+				"frame_diff_px": 6113,
+				"noise_px": 32,
+				"png": "park_sinkhole-v146-m13_mid_horn_stubs-chase.png",
+				"subject_px": 5460,
+				"subject_share": 0.00592
+			},
+			"eye": {
+				"aabb_share": 0.24348,
+				"frame_diff_px": 45715,
+				"noise_px": 12,
+				"png": "park_sinkhole-v146-m13_mid_horn_stubs-eye.png",
+				"subject_px": 44721,
+				"subject_share": 0.04853
+			},
+			"front_deg": 130.4,
+			"height_m": 2.74,
+			"id": "m13_mid_horn_stubs",
+			"isolated": true,
+			"radius_m": 1.63,
+			"subject_kind": "echo_horn",
+			"subject_v": "a",
+			"template": "mid_horn_stubs"
+		},
+		{
+			"C": [
+				-210.04,
+				-76.28,
+				-545.18
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01362,
+				"frame_diff_px": 4890,
+				"noise_px": 3,
+				"png": "park_sinkhole-v147-m14_mid_cart_stub-chase.png",
+				"subject_px": 3072,
+				"subject_share": 0.00333
+			},
+			"eye": {
+				"aabb_share": 0.11621,
+				"frame_diff_px": 28642,
+				"noise_px": 0,
+				"png": "park_sinkhole-v147-m14_mid_cart_stub-eye.png",
+				"subject_px": 28602,
+				"subject_share": 0.03104
+			},
+			"front_deg": -79.7,
+			"height_m": 1.43,
+			"id": "m14_mid_cart_stub",
+			"isolated": true,
+			"radius_m": 1.61,
+			"subject_kind": "tin_cart",
+			"subject_v": "c",
+			"template": "mid_cart_stub"
+		},
+		{
+			"C": [
+				-210.51,
+				-77.27,
+				-508.29
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01655,
+				"frame_diff_px": 4910,
+				"noise_px": 29,
+				"png": "park_sinkhole-v148-m15_mid_cart_horn-chase.png",
+				"subject_px": 4609,
+				"subject_share": 0.005
+			},
+			"eye": {
+				"aabb_share": 0.15369,
+				"frame_diff_px": 36132,
+				"noise_px": 4,
+				"png": "park_sinkhole-v148-m15_mid_cart_horn-eye.png",
+				"subject_px": 35851,
+				"subject_share": 0.0389
+			},
+			"front_deg": -115.8,
+			"height_m": 1.47,
+			"id": "m15_mid_cart_horn",
+			"isolated": true,
+			"radius_m": 1.79,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_cart_horn"
+		},
+		{
+			"C": [
+				-220.38,
+				-77.58,
+				-473.51
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02334,
+				"frame_diff_px": 5877,
+				"noise_px": 9,
+				"png": "park_sinkhole-v149-m16_mid_horn_stubs-chase.png",
+				"subject_px": 3692,
+				"subject_share": 0.00401
+			},
+			"eye": {
+				"aabb_share": 0.21641,
+				"frame_diff_px": 28000,
+				"noise_px": 523,
+				"png": "park_sinkhole-v149-m16_mid_horn_stubs-eye.png",
+				"subject_px": 27370,
+				"subject_share": 0.0297
+			},
+			"front_deg": -69.7,
+			"height_m": 2.74,
+			"id": "m16_mid_horn_stubs",
+			"isolated": true,
+			"radius_m": 1.63,
+			"subject_kind": "echo_horn",
+			"subject_v": "a",
+			"template": "mid_horn_stubs"
+		},
+		{
+			"C": [
+				-153.72,
+				-78.85,
+				-450.83
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01413,
+				"frame_diff_px": 4451,
+				"noise_px": 1,
+				"png": "park_sinkhole-v150-m17_mid_cart_stub-chase.png",
+				"subject_px": 4101,
+				"subject_share": 0.00445
+			},
+			"eye": {
+				"aabb_share": 0.12661,
+				"frame_diff_px": 31472,
+				"noise_px": 0,
+				"png": "park_sinkhole-v150-m17_mid_cart_stub-eye.png",
+				"subject_px": 31335,
+				"subject_share": 0.034
+			},
+			"front_deg": 154.2,
+			"height_m": 1.43,
+			"id": "m17_mid_cart_stub",
+			"isolated": true,
+			"radius_m": 1.61,
+			"subject_kind": "tin_cart",
+			"subject_v": "c",
+			"template": "mid_cart_stub"
+		},
+		{
+			"C": [
+				-105.11,
+				-80.08,
+				-405.14
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01687,
+				"frame_diff_px": 4491,
+				"noise_px": 28,
+				"png": "park_sinkhole-v151-m18_mid_cart_horn-chase.png",
+				"subject_px": 3536,
+				"subject_share": 0.00384
+			},
+			"eye": {
+				"aabb_share": 0.14431,
+				"frame_diff_px": 35223,
+				"noise_px": 0,
+				"png": "park_sinkhole-v151-m18_mid_cart_horn-eye.png",
+				"subject_px": 35207,
+				"subject_share": 0.0382
+			},
+			"front_deg": 14.5,
+			"height_m": 1.47,
+			"id": "m18_mid_cart_horn",
+			"isolated": true,
+			"radius_m": 1.79,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_cart_horn"
+		},
+		{
+			"C": [
+				-77.9,
+				-78.12,
+				-453.76
+			],
+			"bearing_deg": 45.0,
+			"blocked": [
+				{
+					"bearing_deg": 0.0,
+					"reason": "prop:m19_mid_horn_stubs/cave_fern"
+				}
+			],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02587,
+				"frame_diff_px": 2360,
+				"noise_px": 157,
+				"png": "park_sinkhole-v152-m19_mid_horn_stubs-chase.png",
+				"subject_px": 0,
+				"subject_share": 0.0
+			},
+			"eye": {
+				"aabb_share": 0.24383,
+				"frame_diff_px": 50807,
+				"noise_px": 11,
+				"png": "park_sinkhole-v152-m19_mid_horn_stubs-eye.png",
+				"subject_px": 50728,
+				"subject_share": 0.05504
+			},
+			"front_deg": 176.9,
+			"height_m": 2.74,
+			"id": "m19_mid_horn_stubs",
+			"isolated": true,
+			"radius_m": 1.63,
+			"subject_kind": "echo_horn",
+			"subject_v": "a",
+			"template": "mid_horn_stubs"
+		},
+		{
+			"C": [
+				12.48,
+				-80.64,
+				-385.12
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01622,
+				"frame_diff_px": 5296,
+				"noise_px": 55,
+				"png": "park_sinkhole-v153-m21_mid_cart_stub-chase.png",
+				"subject_px": 4158,
+				"subject_share": 0.00451
+			},
+			"eye": {
+				"aabb_share": 0.13677,
+				"frame_diff_px": 31522,
+				"noise_px": 2,
+				"png": "park_sinkhole-v153-m21_mid_cart_stub-eye.png",
+				"subject_px": 31403,
+				"subject_share": 0.03407
+			},
+			"front_deg": 136.7,
+			"height_m": 1.43,
+			"id": "m21_mid_cart_stub",
+			"isolated": true,
+			"radius_m": 1.61,
+			"subject_kind": "tin_cart",
+			"subject_v": "c",
+			"template": "mid_cart_stub"
+		},
+		{
+			"C": [
+				-32.0,
+				-90.81,
+				-20.5
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.00949,
+				"frame_diff_px": 2084,
+				"noise_px": 0,
+				"png": "park_sinkhole-v154-gr1_low_rim_ferns-chase.png",
+				"subject_px": 1009,
+				"subject_share": 0.00109
+			},
+			"eye": {
+				"aabb_share": 0.07726,
+				"frame_diff_px": 10387,
+				"noise_px": 0,
+				"png": "park_sinkhole-v154-gr1_low_rim_ferns-eye.png",
+				"subject_px": 9927,
+				"subject_share": 0.01077
+			},
+			"front_deg": -36.5,
+			"height_m": 0.96,
+			"id": "gr1_low_rim_ferns",
+			"isolated": true,
+			"radius_m": 1.33,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_rim_ferns"
+		},
+		{
+			"C": [
+				-38.5,
+				-92.51,
+				-25.5
+			],
+			"bearing_deg": 0.0,
+			"blocked": [
+				{
+					"bearing_deg": 0.0,
+					"reason": "terrain"
+				},
+				{
+					"bearing_deg": 45.0,
+					"reason": "terrain"
+				},
+				{
+					"bearing_deg": -45.0,
+					"reason": "terrain"
+				},
+				{
+					"bearing_deg": 90.0,
+					"reason": "terrain"
+				},
+				{
+					"bearing_deg": -90.0,
+					"reason": "terrain"
+				},
+				{
+					"bearing_deg": 135.0,
+					"reason": "terrain"
+				},
+				{
+					"bearing_deg": -135.0,
+					"reason": "terrain"
+				},
+				{
+					"bearing_deg": 180.0,
+					"reason": "terrain"
+				}
+			],
+			"blocked_all": true,
+			"chase": {
+				"aabb_share": 0.00875,
+				"frame_diff_px": 3346,
+				"noise_px": 5,
+				"png": "park_sinkhole-v155-gr2_low_stones-chase.png",
+				"subject_px": 670,
+				"subject_share": 0.00073
+			},
+			"eye": {
+				"aabb_share": 0.07505,
+				"frame_diff_px": 6113,
+				"noise_px": 0,
+				"png": "park_sinkhole-v155-gr2_low_stones-eye.png",
+				"subject_px": 5122,
+				"subject_share": 0.00556
+			},
+			"front_deg": -28.9,
+			"height_m": 0.41,
+			"id": "gr2_low_stones",
+			"isolated": true,
+			"radius_m": 1.46,
+			"subject_kind": "mist_rings",
+			"subject_v": "a",
+			"template": "low_stones"
+		},
+		{
+			"C": [
+				-39.5,
+				-91.6,
+				-16.5
+			],
+			"bearing_deg": 0.0,
+			"blocked": [
+				{
+					"bearing_deg": 0.0,
+					"reason": "collider:Tile4_4"
+				},
+				{
+					"bearing_deg": 45.0,
+					"reason": "collider:Tile4_4"
+				},
+				{
+					"bearing_deg": -45.0,
+					"reason": "collider:Tile4_4"
+				},
+				{
+					"bearing_deg": 90.0,
+					"reason": "collider:Tile4_4"
+				},
+				{
+					"bearing_deg": -90.0,
+					"reason": "collider:Tile4_4"
+				},
+				{
+					"bearing_deg": 135.0,
+					"reason": "prop:gr3_low_rim_gear/drill_steels"
+				},
+				{
+					"bearing_deg": -135.0,
+					"reason": "collider:Tile4_4"
+				},
+				{
+					"bearing_deg": 180.0,
+					"reason": "collider:Tile4_4"
+				}
+			],
+			"blocked_all": true,
+			"chase": {
+				"aabb_share": 0.01079,
+				"frame_diff_px": 2461,
+				"noise_px": 30,
+				"png": "park_sinkhole-v156-gr3_low_rim_gear-chase.png",
+				"subject_px": 55,
+				"subject_share": 0.00006
+			},
+			"eye": {
+				"aabb_share": 0.09806,
+				"frame_diff_px": 4364,
+				"noise_px": 0,
+				"png": "park_sinkhole-v156-gr3_low_rim_gear-eye.png",
+				"subject_px": 2904,
+				"subject_share": 0.00315
+			},
+			"front_deg": -36.5,
+			"height_m": 0.53,
+			"id": "gr3_low_rim_gear",
+			"isolated": true,
+			"radius_m": 1.59,
+			"subject_kind": "coat_hooks",
+			"subject_v": "b",
+			"template": "low_rim_gear"
+		},
+		{
+			"C": [
+				11.5,
+				-89.82,
+				-65.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.0,
+				"frame_diff_px": 7254,
+				"noise_px": 0,
+				"png": "park_sinkhole-v157-gr4_low_rim_gear-chase.png",
+				"subject_px": 0,
+				"subject_share": 0.0
+			},
+			"eye": {
+				"aabb_share": 0.01048,
+				"frame_diff_px": 1428,
+				"noise_px": 0,
+				"png": "park_sinkhole-v157-gr4_low_rim_gear-eye.png",
+				"subject_px": 915,
+				"subject_share": 0.00099
+			},
+			"front_deg": -144.2,
+			"height_m": 0.53,
+			"id": "gr4_low_rim_gear",
+			"isolated": true,
+			"radius_m": 1.59,
+			"subject_kind": "coat_hooks",
+			"subject_v": "b",
+			"template": "low_rim_gear"
+		},
+		{
+			"C": [
+				7.5,
+				-91.95,
+				21.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01003,
+				"frame_diff_px": 4901,
+				"noise_px": 210,
+				"png": "park_sinkhole-v158-gr5_low_rim_ferns-chase.png",
+				"subject_px": 1435,
+				"subject_share": 0.00156
+			},
+			"eye": {
+				"aabb_share": 0.07852,
+				"frame_diff_px": 9672,
+				"noise_px": 0,
+				"png": "park_sinkhole-v158-gr5_low_rim_ferns-eye.png",
+				"subject_px": 9390,
+				"subject_share": 0.01019
+			},
+			"front_deg": 41.9,
+			"height_m": 0.96,
+			"id": "gr5_low_rim_ferns",
+			"isolated": true,
+			"radius_m": 1.33,
+			"subject_kind": "cave_fern",
+			"subject_v": "a",
+			"template": "low_rim_ferns"
+		},
+		{
+			"C": [
+				-610.48,
+				-27.4,
+				-663.35
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02437,
+				"frame_diff_px": 5743,
+				"noise_px": 18,
+				"png": "park_sinkhole-v159-m02_mid_horn_stubs-chase.png",
+				"subject_px": 5590,
+				"subject_share": 0.00607
+			},
+			"eye": {
+				"aabb_share": 0.23557,
+				"frame_diff_px": 45397,
+				"noise_px": 4,
+				"png": "park_sinkhole-v159-m02_mid_horn_stubs-eye.png",
+				"subject_px": 45126,
+				"subject_share": 0.04896
+			},
+			"front_deg": -59.8,
+			"height_m": 2.74,
+			"id": "m02_mid_horn_stubs",
+			"isolated": true,
+			"radius_m": 1.63,
+			"subject_kind": "echo_horn",
+			"subject_v": "a",
+			"template": "mid_horn_stubs"
+		},
+		{
+			"C": [
+				-614.78,
+				-28.5,
+				-646.94
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01598,
+				"frame_diff_px": 4741,
+				"noise_px": 40,
+				"png": "park_sinkhole-v160-m03_mid_cart_stub-chase.png",
+				"subject_px": 4249,
+				"subject_share": 0.00461
+			},
+			"eye": {
+				"aabb_share": 0.12609,
+				"frame_diff_px": 34451,
+				"noise_px": 9,
+				"png": "park_sinkhole-v160-m03_mid_cart_stub-eye.png",
+				"subject_px": 31333,
+				"subject_share": 0.034
+			},
+			"front_deg": -59.8,
+			"height_m": 1.43,
+			"id": "m03_mid_cart_stub",
+			"isolated": true,
+			"radius_m": 1.61,
+			"subject_kind": "tin_cart",
+			"subject_v": "c",
+			"template": "mid_cart_stub"
+		},
+		{
+			"C": [
+				-566.97,
+				-29.35,
+				-591.97
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02454,
+				"frame_diff_px": 7025,
+				"noise_px": 0,
+				"png": "park_sinkhole-v161-m04_mid_horn_stubs-chase.png",
+				"subject_px": 4973,
+				"subject_share": 0.0054
+			},
+			"eye": {
+				"aabb_share": 0.24538,
+				"frame_diff_px": 44890,
+				"noise_px": 7,
+				"png": "park_sinkhole-v161-m04_mid_horn_stubs-eye.png",
+				"subject_px": 44864,
+				"subject_share": 0.04868
+			},
+			"front_deg": -50.6,
+			"height_m": 2.74,
+			"id": "m04_mid_horn_stubs",
+			"isolated": true,
+			"radius_m": 1.63,
+			"subject_kind": "echo_horn",
+			"subject_v": "a",
+			"template": "mid_horn_stubs"
+		},
+		{
+			"C": [
+				-525.47,
+				-33.4,
+				-556.02
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01999,
+				"frame_diff_px": 5411,
+				"noise_px": 0,
+				"png": "park_sinkhole-v162-m05_mid_horn_stubs-chase.png",
+				"subject_px": 5042,
+				"subject_share": 0.00547
+			},
+			"eye": {
+				"aabb_share": 0.22017,
+				"frame_diff_px": 40612,
+				"noise_px": 24,
+				"png": "park_sinkhole-v162-m05_mid_horn_stubs-eye.png",
+				"subject_px": 40412,
+				"subject_share": 0.04385
+			},
+			"front_deg": -21.7,
+			"height_m": 2.74,
+			"id": "m05_mid_horn_stubs",
+			"isolated": true,
+			"radius_m": 1.63,
+			"subject_kind": "echo_horn",
+			"subject_v": "a",
+			"template": "mid_horn_stubs"
+		},
+		{
+			"C": [
+				-485.55,
+				-34.45,
+				-591.37
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01362,
+				"frame_diff_px": 5674,
+				"noise_px": 4,
+				"png": "park_sinkhole-v163-m06_mid_cart_stub-chase.png",
+				"subject_px": 3547,
+				"subject_share": 0.00385
+			},
+			"eye": {
+				"aabb_share": 0.12565,
+				"frame_diff_px": 28458,
+				"noise_px": 2,
+				"png": "park_sinkhole-v163-m06_mid_cart_stub-eye.png",
+				"subject_px": 28251,
+				"subject_share": 0.03065
+			},
+			"front_deg": 159.6,
+			"height_m": 1.43,
+			"id": "m06_mid_cart_stub",
+			"isolated": true,
+			"radius_m": 1.61,
+			"subject_kind": "tin_cart",
+			"subject_v": "c",
+			"template": "mid_cart_stub"
+		},
+		{
+			"C": [
+				-452.76,
+				-40.47,
+				-591.77
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01538,
+				"frame_diff_px": 5006,
+				"noise_px": 7,
+				"png": "park_sinkhole-v164-m07_mid_cart_horn-chase.png",
+				"subject_px": 2955,
+				"subject_share": 0.00321
+			},
+			"eye": {
+				"aabb_share": 0.14872,
+				"frame_diff_px": 28406,
+				"noise_px": 0,
+				"png": "park_sinkhole-v164-m07_mid_cart_horn-eye.png",
+				"subject_px": 28356,
+				"subject_share": 0.03077
+			},
+			"front_deg": -176.6,
+			"height_m": 1.47,
+			"id": "m07_mid_cart_horn",
+			"isolated": true,
+			"radius_m": 1.79,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_cart_horn"
+		},
+		{
+			"C": [
+				-417.22,
+				-47.37,
+				-598.22
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02349,
+				"frame_diff_px": 5325,
+				"noise_px": 5,
+				"png": "park_sinkhole-v165-m08_mid_horn_stubs-chase.png",
+				"subject_px": 3577,
+				"subject_share": 0.00388
+			},
+			"eye": {
+				"aabb_share": 0.18857,
+				"frame_diff_px": 37078,
+				"noise_px": 13,
+				"png": "park_sinkhole-v165-m08_mid_horn_stubs-eye.png",
+				"subject_px": 29305,
+				"subject_share": 0.0318
+			},
+			"front_deg": -162.0,
+			"height_m": 2.74,
+			"id": "m08_mid_horn_stubs",
+			"isolated": true,
+			"radius_m": 1.63,
+			"subject_kind": "echo_horn",
+			"subject_v": "a",
+			"template": "mid_horn_stubs"
+		},
+		{
+			"C": [
+				-397.04,
+				-51.78,
+				-604.94
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.02462,
+				"frame_diff_px": 4847,
+				"noise_px": 18,
+				"png": "park_sinkhole-v166-m09_mid_horn_stubs-chase.png",
+				"subject_px": 3151,
+				"subject_share": 0.00342
+			},
+			"eye": {
+				"aabb_share": 0.19928,
+				"frame_diff_px": 32065,
+				"noise_px": 0,
+				"png": "park_sinkhole-v166-m09_mid_horn_stubs-eye.png",
+				"subject_px": 28198,
+				"subject_share": 0.0306
+			},
+			"front_deg": -155.3,
+			"height_m": 2.74,
+			"id": "m09_mid_horn_stubs",
+			"isolated": true,
+			"radius_m": 1.63,
+			"subject_kind": "echo_horn",
+			"subject_v": "a",
+			"template": "mid_horn_stubs"
+		},
+		{
+			"C": [
+				-267.76,
+				-73.81,
+				-635.33
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01203,
+				"frame_diff_px": 2567,
+				"noise_px": 0,
+				"png": "park_sinkhole-v167-m11_mid_cart_stub-chase.png",
+				"subject_px": 1919,
+				"subject_share": 0.00208
+			},
+			"eye": {
+				"aabb_share": 0.114,
+				"frame_diff_px": 19137,
+				"noise_px": 0,
+				"png": "park_sinkhole-v167-m11_mid_cart_stub-eye.png",
+				"subject_px": 19055,
+				"subject_share": 0.02068
+			},
+			"front_deg": -178.5,
+			"height_m": 1.43,
+			"id": "m11_mid_cart_stub",
+			"isolated": true,
+			"radius_m": 1.61,
+			"subject_kind": "tin_cart",
+			"subject_v": "c",
+			"template": "mid_cart_stub"
+		},
+		{
+			"C": [
+				-247.32,
+				-75.24,
+				-582.74
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.01542,
+				"frame_diff_px": 5197,
+				"noise_px": 19,
+				"png": "park_sinkhole-v168-m12_mid_cart_horn-chase.png",
+				"subject_px": 4472,
+				"subject_share": 0.00485
+			},
+			"eye": {
+				"aabb_share": 0.14135,
+				"frame_diff_px": 35458,
+				"noise_px": 30,
+				"png": "park_sinkhole-v168-m12_mid_cart_horn-eye.png",
+				"subject_px": 35288,
+				"subject_share": 0.03829
+			},
+			"front_deg": -21.3,
+			"height_m": 1.47,
+			"id": "m12_mid_cart_horn",
+			"isolated": true,
+			"radius_m": 1.79,
+			"subject_kind": "tin_cart",
+			"subject_v": "a",
+			"template": "mid_cart_horn"
+		}
+	],
+	"stage": 4
+}

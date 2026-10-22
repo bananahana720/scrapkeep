@@ -1,0 +1,33 @@
+{
+	"map": "park_sinkhole",
+	"poses": [
+		{
+			"along_m": 0.0,
+			"cam": [
+				180.091,
+				-89.071,
+				-34.716
+			],
+			"file": "park_sinkhole-v104-s113_lamp_wall-eye.png",
+			"idx": 208,
+			"line": "vignette:s113_lamp_wall",
+			"look": [
+				177.523,
+				-90.189,
+				-39.006
+			],
+			"x": 184.1,
+			"yaw": 0.53931,
+			"z": -28.017
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v104-s113_lamp_wall-chase.png",
+			"idx": 209,
+			"line": "vignette:s113_lamp_wall",
+			"x": 182.236,
+			"yaw": 0.53931,
+			"z": -36.0
+		}
+	]
+}

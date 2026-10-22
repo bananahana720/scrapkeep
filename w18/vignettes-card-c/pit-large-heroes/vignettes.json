@@ -1,0 +1,767 @@
+{
+	"map": "park_pit",
+	"rows": [
+		{
+			"C": [
+				-433.49,
+				2.66,
+				-478.12
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.20833,
+				"frame_diff_px": 39821,
+				"noise_px": 138,
+				"png": "park_pit-v3-pit_026-chase.png",
+				"rows_in_view": [
+					"spoil_dump",
+					"dump_wash_1",
+					"dump_wash_2",
+					"canal_lip",
+					"wash_berm",
+					"canal_saguaros"
+				],
+				"subject_px": 39451,
+				"subject_share": 0.04281
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 262407,
+				"noise_px": 36,
+				"png": "park_pit-v3-pit_026-eye.png",
+				"rows_in_view": [
+					"spoil_dump",
+					"dump_wash_1",
+					"dump_wash_2",
+					"canal_lip",
+					"wash_berm",
+					"canal_saguaros"
+				],
+				"subject_px": 262379,
+				"subject_share": 0.2847
+			},
+			"eye_m": 8.2,
+			"front_deg": -35.6,
+			"height_m": 5.32,
+			"id": "pit_026",
+			"isolated": true,
+			"radius_m": 6.7,
+			"subject_kind": "drill_rig_wreck",
+			"subject_v": "a",
+			"template": "drill_yard"
+		},
+		{
+			"C": [
+				-321.49,
+				3.74,
+				-391.12
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.31085,
+				"frame_diff_px": 81185,
+				"noise_px": 291,
+				"png": "park_pit-v4-pit_028-chase.png",
+				"rows_in_view": [
+					"canal_lip",
+					"rim_haul_ramp",
+					"canal_saguaros",
+					"slickrock_8"
+				],
+				"subject_px": 80622,
+				"subject_share": 0.08748
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 502992,
+				"noise_px": 0,
+				"png": "park_pit-v4-pit_028-eye.png",
+				"rows_in_view": [
+					"canal_lip",
+					"canal_saguaros",
+					"slickrock_8"
+				],
+				"subject_px": 502992,
+				"subject_share": 0.54578
+			},
+			"eye_m": 8.22,
+			"front_deg": -35.6,
+			"height_m": 7.49,
+			"id": "pit_028",
+			"isolated": true,
+			"radius_m": 6.72,
+			"subject_kind": "haul_truck",
+			"subject_v": "a",
+			"template": "haul_graveyard"
+		},
+		{
+			"C": [
+				152.8,
+				-17.12,
+				-261.6
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.24279,
+				"frame_diff_px": 29648,
+				"noise_px": 98,
+				"png": "park_pit-v19-pit_115-chase.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"bench1_haul_lane",
+					"rim_road_berm",
+					"camp_dive",
+					"camp_dive_windrow_2",
+					"camp_ore_bin",
+					"camp_dive_windrow_3"
+				],
+				"subject_px": 29457,
+				"subject_share": 0.03196
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 144403,
+				"noise_px": 49,
+				"png": "park_pit-v19-pit_115-eye.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"bench1_haul_lane",
+					"bench2_north_lane",
+					"rim_road_berm",
+					"camp_dive",
+					"camp_dive_windrow_2",
+					"camp_ore_bin"
+				],
+				"subject_px": 144356,
+				"subject_share": 0.15664
+			},
+			"eye_m": 8.17,
+			"front_deg": 126.9,
+			"height_m": 5.75,
+			"id": "pit_115",
+			"isolated": true,
+			"radius_m": 6.67,
+			"subject_kind": "rope_drum_wagon",
+			"subject_v": "a",
+			"template": "rope_yard"
+		},
+		{
+			"C": [
+				285.13,
+				-16.75,
+				-219.61
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.3233,
+				"frame_diff_px": 79806,
+				"noise_px": 214,
+				"png": "park_pit-v20-pit_119-chase.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"bench2_east_bank",
+					"switchback_camp",
+					"bench2_camp_lane",
+					"bench3_dive_windrow_1",
+					"camp_dive_windrow_1",
+					"camp_dive_windrow_3",
+					"bench3_dive"
+				],
+				"subject_px": 79251,
+				"subject_share": 0.08599
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 575408,
+				"noise_px": 14,
+				"png": "park_pit-v20-pit_119-eye.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"bench2_east_bank",
+					"switchback_camp",
+					"bench2_camp_lane",
+					"bench3_dive_windrow_1",
+					"camp_dive_windrow_1",
+					"camp_dive_windrow_3",
+					"bench3_dive"
+				],
+				"subject_px": 575401,
+				"subject_share": 0.62435
+			},
+			"eye_m": 8.65,
+			"front_deg": 159.2,
+			"height_m": 6.5,
+			"id": "pit_119",
+			"isolated": true,
+			"radius_m": 7.15,
+			"subject_kind": "haul_truck",
+			"subject_v": "c",
+			"template": "haul_graveyard"
+		},
+		{
+			"C": [
+				288.47,
+				-37.42,
+				-116.02
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.20234,
+				"frame_diff_px": 41450,
+				"noise_px": 107,
+				"png": "park_pit-v21-pit_120-chase.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"bench2_east_bank",
+					"bench2_camp_lane",
+					"camp_dive_windrow_1"
+				],
+				"subject_px": 41257,
+				"subject_share": 0.04477
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 350736,
+				"noise_px": 0,
+				"png": "park_pit-v21-pit_120-eye.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"bench2_east_bank",
+					"bench2_camp_lane",
+					"camp_dive_windrow_1",
+					"camp_dive_windrow_3"
+				],
+				"subject_px": 350736,
+				"subject_share": 0.38057
+			},
+			"eye_m": 8.29,
+			"front_deg": -5.1,
+			"height_m": 5.16,
+			"id": "pit_120",
+			"isolated": true,
+			"radius_m": 6.79,
+			"subject_kind": "drill_rig_wreck",
+			"subject_v": "b",
+			"template": "drill_yard"
+		},
+		{
+			"C": [
+				51.09,
+				-77.42,
+				2.56
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.20173,
+				"frame_diff_px": 41285,
+				"noise_px": 178,
+				"png": "park_pit-v23-pit_1213-chase.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"pit_bench_4",
+					"pit_floor",
+					"bench4_dive",
+					"bench4_dive_windrow_1",
+					"floor_dive",
+					"floor_dive_windrow_1",
+					"floor_dive_windrow_2"
+				],
+				"subject_px": 41031,
+				"subject_share": 0.04452
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 346955,
+				"noise_px": 293,
+				"png": "park_pit-v23-pit_1213-eye.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"pit_bench_4",
+					"pit_floor",
+					"bench4_dive",
+					"bench4_dive_windrow_1",
+					"floor_dive",
+					"floor_dive_windrow_1",
+					"east_dive_3_windrow_2"
+				],
+				"subject_px": 346728,
+				"subject_share": 0.37622
+			},
+			"eye_m": 8.29,
+			"front_deg": -125.0,
+			"height_m": 5.16,
+			"id": "pit_1213",
+			"isolated": true,
+			"radius_m": 6.79,
+			"subject_kind": "drill_rig_wreck",
+			"subject_v": "b",
+			"template": "drill_yard"
+		},
+		{
+			"C": [
+				-30.9,
+				2.88,
+				-338.0
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.21835,
+				"frame_diff_px": 31857,
+				"noise_px": 151,
+				"png": "park_pit-v40-pit_249-chase.png",
+				"rows_in_view": [
+					"pit",
+					"bench1_haul_lane",
+					"rim_road_lane_2",
+					"rim_road_berm"
+				],
+				"subject_px": 31622,
+				"subject_share": 0.03431
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 162090,
+				"noise_px": 170,
+				"png": "park_pit-v40-pit_249-eye.png",
+				"rows_in_view": [
+					"pit",
+					"bench1_haul_lane",
+					"rim_road_lane_2",
+					"rim_road_berm"
+				],
+				"subject_px": 161959,
+				"subject_share": 0.17574
+			},
+			"eye_m": 8.17,
+			"front_deg": 179.0,
+			"height_m": 5.75,
+			"id": "pit_249",
+			"isolated": true,
+			"radius_m": 6.67,
+			"subject_kind": "rope_drum_wagon",
+			"subject_v": "a",
+			"template": "rope_yard"
+		},
+		{
+			"C": [
+				395.97,
+				-17.34,
+				-72.44
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.20855,
+				"frame_diff_px": 42498,
+				"noise_px": 83,
+				"png": "park_pit-v45-pit_317-chase.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"bench2_east_bank",
+					"bench2_camp_lane",
+					"dust_devil_east"
+				],
+				"subject_px": 42329,
+				"subject_share": 0.04593
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 307811,
+				"noise_px": 22,
+				"png": "park_pit-v45-pit_317-eye.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"bench2_east_bank",
+					"bench2_camp_lane",
+					"bench3_dive_windrow_1"
+				],
+				"subject_px": 307792,
+				"subject_share": 0.33398
+			},
+			"eye_m": 8.2,
+			"front_deg": 84.6,
+			"height_m": 5.32,
+			"id": "pit_317",
+			"isolated": true,
+			"radius_m": 6.7,
+			"subject_kind": "drill_rig_wreck",
+			"subject_v": "a",
+			"template": "drill_yard"
+		},
+		{
+			"C": [
+				253.36,
+				-57.42,
+				207.84
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.1914,
+				"frame_diff_px": 41794,
+				"noise_px": 165,
+				"png": "park_pit-v48-pit_361-chase.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"pit_bench_4",
+					"pit_floor",
+					"tailings_bench_east",
+					"adit_east",
+					"east_dive",
+					"east_dive_windrow_1",
+					"east_dive_windrow_2",
+					"east_dive_2",
+					"east_dive_2_windrow_1",
+					"east_dive_2_windrow_2",
+					"east_dive_3",
+					"east_dive_3_windrow_2"
+				],
+				"subject_px": 41602,
+				"subject_share": 0.04514
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 355321,
+				"noise_px": 81,
+				"png": "park_pit-v48-pit_361-eye.png",
+				"rows_in_view": [
+					"pit_bench_2",
+					"pit_bench_3",
+					"pit_bench_4",
+					"pit_floor",
+					"tailings_bench_east",
+					"adit_east",
+					"east_dive",
+					"east_dive_windrow_1",
+					"east_dive_windrow_2",
+					"east_dive_2",
+					"east_dive_2_windrow_1",
+					"east_dive_2_windrow_2",
+					"east_dive_3",
+					"east_dive_3_windrow_2"
+				],
+				"subject_px": 355240,
+				"subject_share": 0.38546
+			},
+			"eye_m": 8.29,
+			"front_deg": 13.1,
+			"height_m": 5.16,
+			"id": "pit_361",
+			"isolated": true,
+			"radius_m": 6.79,
+			"subject_kind": "drill_rig_wreck",
+			"subject_v": "b",
+			"template": "drill_yard"
+		},
+		{
+			"C": [
+				-105.19,
+				-75.18,
+				-6.49
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.413,
+				"frame_diff_px": 103779,
+				"noise_px": 107,
+				"png": "park_pit-v64-pit_550-chase.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"pit_bench_4",
+					"pit_floor",
+					"bench4_ore_bin",
+					"bench3_west_berm"
+				],
+				"subject_px": 103118,
+				"subject_share": 0.11189
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 544806,
+				"noise_px": 9,
+				"png": "park_pit-v64-pit_550-eye.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_3",
+					"pit_bench_4",
+					"pit_floor",
+					"bench4_ore_bin",
+					"bench3_west_berm"
+				],
+				"subject_px": 544798,
+				"subject_share": 0.59114
+			},
+			"eye_m": 9.53,
+			"front_deg": 104.4,
+			"height_m": 9.65,
+			"id": "pit_550",
+			"isolated": true,
+			"radius_m": 8.03,
+			"subject_kind": "haul_truck",
+			"subject_v": "b",
+			"template": "haul_graveyard"
+		},
+		{
+			"C": [
+				189.63,
+				-76.26,
+				3.06
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.36075,
+				"frame_diff_px": 90607,
+				"noise_px": 182,
+				"png": "park_pit-v76-pit_704-chase.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"pit_bench_4",
+					"pit_floor",
+					"bench3_dive_windrow_2",
+					"bench4_dive",
+					"bench4_dive_windrow_1",
+					"bench4_dive_windrow_2",
+					"floor_dive",
+					"floor_dive_windrow_1"
+				],
+				"subject_px": 90211,
+				"subject_share": 0.09789
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 523122,
+				"noise_px": 268,
+				"png": "park_pit-v76-pit_704-eye.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"pit_bench_4",
+					"bench3_dive_windrow_2",
+					"bench4_dive",
+					"bench4_dive_windrow_1",
+					"bench4_dive_windrow_2",
+					"floor_dive",
+					"floor_dive_windrow_1"
+				],
+				"subject_px": 522854,
+				"subject_share": 0.56733
+			},
+			"eye_m": 8.22,
+			"front_deg": 69.9,
+			"height_m": 7.49,
+			"id": "pit_704",
+			"isolated": true,
+			"radius_m": 6.72,
+			"subject_kind": "haul_truck",
+			"subject_v": "a",
+			"template": "haul_graveyard"
+		},
+		{
+			"C": [
+				20.43,
+				-97.42,
+				82.76
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.21735,
+				"frame_diff_px": 43033,
+				"noise_px": 196,
+				"png": "park_pit-v81-pit_729-chase.png",
+				"rows_in_view": [
+					"pit_bench_2",
+					"pit_bench_3",
+					"pit_bench_4",
+					"pit_floor",
+					"floor_dive",
+					"floor_dive_windrow_1",
+					"ore_pile_mid"
+				],
+				"subject_px": 40911,
+				"subject_share": 0.04439
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 344943,
+				"noise_px": 40,
+				"png": "park_pit-v81-pit_729-eye.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"pit_bench_4",
+					"pit_floor",
+					"floor_dive",
+					"floor_dive_windrow_1",
+					"east_dive_3_windrow_2",
+					"ore_pile_mid"
+				],
+				"subject_px": 344911,
+				"subject_share": 0.37425
+			},
+			"eye_m": 8.29,
+			"front_deg": -111.9,
+			"height_m": 5.16,
+			"id": "pit_729",
+			"isolated": true,
+			"radius_m": 6.79,
+			"subject_kind": "drill_rig_wreck",
+			"subject_v": "b",
+			"template": "drill_yard"
+		},
+		{
+			"C": [
+				88.57,
+				-97.12,
+				153.24
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.24775,
+				"frame_diff_px": 29719,
+				"noise_px": 425,
+				"png": "park_pit-v82-pit_730-chase.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"pit_bench_4",
+					"pit_floor",
+					"collar_dish",
+					"floor_dive",
+					"floor_dive_windrow_2",
+					"ore_pile_mid",
+					"ore_pile_north",
+					"ore_pile_sw",
+					"dust_devil_floor"
+				],
+				"subject_px": 29189,
+				"subject_share": 0.03167
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 139046,
+				"noise_px": 760,
+				"png": "park_pit-v82-pit_730-eye.png",
+				"rows_in_view": [
+					"pit",
+					"pit_bench_2",
+					"pit_bench_3",
+					"pit_bench_4",
+					"pit_floor",
+					"collar_dish",
+					"floor_dive",
+					"floor_dive_windrow_2",
+					"ore_pile_mid",
+					"ore_pile_north",
+					"ore_pile_sw",
+					"dust_devil_floor"
+				],
+				"subject_px": 138370,
+				"subject_share": 0.15014
+			},
+			"eye_m": 8.17,
+			"front_deg": 68.1,
+			"height_m": 5.75,
+			"id": "pit_730",
+			"isolated": true,
+			"radius_m": 6.67,
+			"subject_kind": "rope_drum_wagon",
+			"subject_v": "a",
+			"template": "rope_yard"
+		},
+		{
+			"C": [
+				-206.42,
+				2.96,
+				-324.42
+			],
+			"bearing_deg": 0.0,
+			"blocked": [],
+			"blocked_all": false,
+			"chase": {
+				"aabb_share": 0.24409,
+				"frame_diff_px": 14980,
+				"noise_px": 7,
+				"png": "park_pit-v87-pit_922-chase.png",
+				"rows_in_view": [
+					"rim_road_lane_1",
+					"rim_road_berm",
+					"haul_ramp_berm"
+				],
+				"subject_px": 14972,
+				"subject_share": 0.01625
+			},
+			"eye": {
+				"aabb_share": 1.0,
+				"frame_diff_px": 150769,
+				"noise_px": 72,
+				"png": "park_pit-v87-pit_922-eye.png",
+				"rows_in_view": [
+					"rim_road_lane_1",
+					"rim_road_berm"
+				],
+				"subject_px": 150699,
+				"subject_share": 0.16352
+			},
+			"eye_m": 8.22,
+			"front_deg": -64.5,
+			"height_m": 5.91,
+			"id": "pit_922",
+			"isolated": true,
+			"radius_m": 6.72,
+			"subject_kind": "rope_drum_wagon",
+			"subject_v": "b",
+			"template": "rope_yard"
+		}
+	],
+	"stage": 3,
+	"subject_rule": "lead prop: the first instance of the spot's vignette"
+}

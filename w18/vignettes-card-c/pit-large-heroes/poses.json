@@ -1,0 +1,397 @@
+{
+	"map": "park_pit",
+	"poses": [
+		{
+			"along_m": 0.0,
+			"cam": [
+				-438.267,
+				1.8,
+				-471.453
+			],
+			"file": "park_pit-v3-pit_026-eye.png",
+			"idx": 6,
+			"line": "vignette:pit_026",
+			"look": [
+				-433.493,
+				2.658,
+				-478.121
+			],
+			"x": -442.898,
+			"yaw": -0.62134,
+			"z": -464.984
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v3-pit_026-chase.png",
+			"idx": 7,
+			"line": "vignette:pit_026",
+			"x": -436.234,
+			"yaw": -0.62134,
+			"z": -469.998
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-326.278,
+				1.8,
+				-384.438
+			],
+			"file": "park_pit-v4-pit_028-eye.png",
+			"idx": 8,
+			"line": "vignette:pit_028",
+			"look": [
+				-321.493,
+				3.744,
+				-391.121
+			],
+			"x": -330.81,
+			"yaw": -0.62134,
+			"z": -378.108
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v4-pit_028-chase.png",
+			"idx": 9,
+			"line": "vignette:pit_028",
+			"x": -324.245,
+			"yaw": -0.62134,
+			"z": -382.982
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				159.33,
+				-18.2,
+				-266.507
+			],
+			"file": "park_pit-v19-pit_115-eye.png",
+			"idx": 38,
+			"line": "vignette:pit_115",
+			"look": [
+				152.798,
+				-17.125,
+				-261.603
+			],
+			"x": 165.673,
+			"yaw": 2.21482,
+			"z": -271.269
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v19-pit_115-chase.png",
+			"idx": 39,
+			"line": "vignette:pit_115",
+			"x": 157.829,
+			"yaw": 2.21482,
+			"z": -268.506
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				288.202,
+				-18.2,
+				-227.693
+			],
+			"file": "park_pit-v20-pit_119-eye.png",
+			"idx": 40,
+			"line": "vignette:pit_119",
+			"look": [
+				285.131,
+				-16.751,
+				-219.609
+			],
+			"x": 291.003,
+			"yaw": 2.77857,
+			"z": -235.069
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v20-pit_119-chase.png",
+			"idx": 41,
+			"line": "vignette:pit_119",
+			"x": 285.865,
+			"yaw": 2.77856,
+			"z": -228.581
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				287.73,
+				-38.2,
+				-107.769
+			],
+			"file": "park_pit-v21-pit_120-eye.png",
+			"idx": 42,
+			"line": "vignette:pit_120",
+			"look": [
+				288.467,
+				-37.421,
+				-116.024
+			],
+			"x": 287.022,
+			"yaw": -0.08901,
+			"z": -99.835
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v21-pit_120-chase.png",
+			"idx": 43,
+			"line": "vignette:pit_120",
+			"x": 290.22,
+			"yaw": -0.08901,
+			"z": -107.546
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				44.296,
+				-78.2,
+				-2.195
+			],
+			"file": "park_pit-v23-pit_1213-eye.png",
+			"idx": 46,
+			"line": "vignette:pit_1213",
+			"look": [
+				51.085,
+				-77.421,
+				2.559
+			],
+			"x": 37.771,
+			"yaw": -2.18166,
+			"z": -6.764
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v23-pit_1213-chase.png",
+			"idx": 47,
+			"line": "vignette:pit_1213",
+			"x": 42.862,
+			"yaw": -2.18166,
+			"z": -0.147
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-30.753,
+				1.8,
+				-346.166
+			],
+			"file": "park_pit-v40-pit_249-eye.png",
+			"idx": 80,
+			"line": "vignette:pit_249",
+			"look": [
+				-30.895,
+				2.875,
+				-337.999
+			],
+			"x": -30.614,
+			"yaw": 3.12414,
+			"z": -354.096
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v40-pit_249-chase.png",
+			"idx": 81,
+			"line": "vignette:pit_249",
+			"x": -33.252,
+			"yaw": 3.12414,
+			"z": -346.209
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				404.138,
+				-18.2,
+				-71.664
+			],
+			"file": "park_pit-v45-pit_317-eye.png",
+			"idx": 90,
+			"line": "vignette:pit_317",
+			"look": [
+				395.973,
+				-17.342,
+				-72.435
+			],
+			"x": 412.059,
+			"yaw": 1.47655,
+			"z": -70.915
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v45-pit_317-chase.png",
+			"idx": 91,
+			"line": "vignette:pit_317",
+			"x": 404.373,
+			"yaw": 1.47655,
+			"z": -74.152
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				255.238,
+				-58.2,
+				215.916
+			],
+			"file": "park_pit-v48-pit_361-eye.png",
+			"idx": 96,
+			"line": "vignette:pit_361",
+			"look": [
+				253.36,
+				-57.421,
+				207.844
+			],
+			"x": 257.044,
+			"yaw": 0.22864,
+			"z": 223.674
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v48-pit_361-chase.png",
+			"idx": 97,
+			"line": "vignette:pit_361",
+			"x": 257.673,
+			"yaw": 0.22864,
+			"z": 215.35
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-95.957,
+				-78.2,
+				-8.862
+			],
+			"file": "park_pit-v64-pit_550-eye.png",
+			"idx": 128,
+			"line": "vignette:pit_550",
+			"look": [
+				-105.188,
+				-75.175,
+				-6.492
+			],
+			"x": -88.571,
+			"yaw": 1.82212,
+			"z": -10.759
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v64-pit_550-chase.png",
+			"idx": 129,
+			"line": "vignette:pit_550",
+			"x": -96.579,
+			"yaw": 1.82212,
+			"z": -11.284
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				197.354,
+				-78.2,
+				5.887
+			],
+			"file": "park_pit-v76-pit_704-eye.png",
+			"idx": 152,
+			"line": "vignette:pit_704",
+			"look": [
+				189.635,
+				-76.256,
+				3.062
+			],
+			"x": 204.665,
+			"yaw": 1.21999,
+			"z": 8.562
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v76-pit_704-chase.png",
+			"idx": 153,
+			"line": "vignette:pit_704",
+			"x": 198.213,
+			"yaw": 1.21999,
+			"z": 3.539
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				12.743,
+				-98.2,
+				79.671
+			],
+			"file": "park_pit-v81-pit_729-eye.png",
+			"idx": 162,
+			"line": "vignette:pit_729",
+			"look": [
+				20.433,
+				-97.421,
+				82.762
+			],
+			"x": 5.353,
+			"yaw": -1.95302,
+			"z": 76.7
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v81-pit_729-chase.png",
+			"idx": 163,
+			"line": "vignette:pit_729",
+			"x": 11.811,
+			"yaw": -1.95302,
+			"z": 81.99
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				96.146,
+				-98.2,
+				156.285
+			],
+			"file": "park_pit-v82-pit_730-eye.png",
+			"idx": 164,
+			"line": "vignette:pit_730",
+			"look": [
+				88.567,
+				-97.125,
+				153.238
+			],
+			"x": 103.505,
+			"yaw": 1.18857,
+			"z": 159.243
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v82-pit_730-chase.png",
+			"idx": 165,
+			"line": "vignette:pit_730",
+			"x": 97.078,
+			"yaw": 1.18857,
+			"z": 153.965
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-213.832,
+				1.8,
+				-320.879
+			],
+			"file": "park_pit-v87-pit_922-eye.png",
+			"idx": 174,
+			"line": "vignette:pit_922",
+			"look": [
+				-206.416,
+				2.957,
+				-324.417
+			],
+			"x": -220.982,
+			"yaw": -1.12574,
+			"z": -317.469
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_pit-v87-pit_922-chase.png",
+			"idx": 175,
+			"line": "vignette:pit_922",
+			"x": -212.756,
+			"yaw": -1.12574,
+			"z": -318.623
+		}
+	]
+}

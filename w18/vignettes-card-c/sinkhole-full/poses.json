@@ -1,0 +1,4737 @@
+{
+	"map": "park_sinkhole",
+	"poses": [
+		{
+			"along_m": 0.0,
+			"cam": [
+				-618.731,
+				-23.886,
+				-774.836
+			],
+			"file": "park_sinkhole-v0-s001_mid_cart_horn-eye.png",
+			"idx": 0,
+			"line": "vignette:s001_mid_cart_horn",
+			"look": [
+				-620.0,
+				-25.132,
+				-770.0
+			],
+			"x": -616.761,
+			"yaw": 2.88503,
+			"z": -782.345
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v0-s001_mid_cart_horn-chase.png",
+			"idx": 1,
+			"line": "vignette:s001_mid_cart_horn",
+			"x": -621.149,
+			"yaw": 2.88503,
+			"z": -775.471
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-593.921,
+				-28.784,
+				-595.248
+			],
+			"file": "park_sinkhole-v1-s002_mid_horn_stubs-eye.png",
+			"idx": 2,
+			"line": "vignette:s002_mid_horn_stubs",
+			"look": [
+				-589.8,
+				-29.184,
+				-598.08
+			],
+			"x": -600.493,
+			"yaw": -0.96865,
+			"z": -590.731
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v1-s002_mid_horn_stubs-chase.png",
+			"idx": 3,
+			"line": "vignette:s002_mid_horn_stubs",
+			"x": -592.505,
+			"yaw": -0.96866,
+			"z": -593.188
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-643.254,
+				-27.394,
+				-646.204
+			],
+			"file": "park_sinkhole-v2-s003_mid_tailings_cart-eye.png",
+			"idx": 4,
+			"line": "vignette:s003_mid_tailings_cart",
+			"look": [
+				-640.0,
+				-28.343,
+				-650.0
+			],
+			"x": -648.369,
+			"yaw": -0.7086,
+			"z": -640.236
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v2-s003_mid_tailings_cart-chase.png",
+			"idx": 5,
+			"line": "vignette:s003_mid_tailings_cart",
+			"x": -641.356,
+			"yaw": -0.7086,
+			"z": -644.577
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-556.603,
+				-24.464,
+				-753.669
+			],
+			"file": "park_sinkhole-v3-s004_mid_cart_stub-eye.png",
+			"idx": 6,
+			"line": "vignette:s004_mid_cart_stub",
+			"look": [
+				-560.0,
+				-25.692,
+				-750.0
+			],
+			"x": -551.324,
+			"yaw": 2.39459,
+			"z": -759.369
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v3-s004_mid_cart_stub-chase.png",
+			"idx": 7,
+			"line": "vignette:s004_mid_cart_stub",
+			"x": -558.437,
+			"yaw": 2.39459,
+			"z": -755.367
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-597.721,
+				-27.862,
+				-629.068
+			],
+			"file": "park_sinkhole-v4-s005_low_gear-eye.png",
+			"idx": 8,
+			"line": "vignette:s005_low_gear",
+			"look": [
+				-593.6,
+				-29.176,
+				-631.9
+			],
+			"x": -604.097,
+			"yaw": -0.96865,
+			"z": -624.685
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v4-s005_low_gear-chase.png",
+			"idx": 9,
+			"line": "vignette:s005_low_gear",
+			"x": -596.305,
+			"yaw": -0.96866,
+			"z": -627.008
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-555.525,
+				-25.556,
+				-713.611
+			],
+			"file": "park_sinkhole-v5-s006_mid_rimstone_pool-eye.png",
+			"idx": 10,
+			"line": "vignette:s006_mid_rimstone_pool",
+			"look": [
+				-559.416,
+				-27.219,
+				-710.471
+			],
+			"x": -549.617,
+			"yaw": 2.24973,
+			"z": -718.378
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v5-s006_mid_rimstone_pool-chase.png",
+			"idx": 11,
+			"line": "vignette:s006_mid_rimstone_pool",
+			"x": -557.095,
+			"yaw": 2.24973,
+			"z": -715.556
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-537.283,
+				-26.761,
+				-669.423
+			],
+			"file": "park_sinkhole-v6-s007_low_ferns-eye.png",
+			"idx": 12,
+			"line": "vignette:s007_low_ferns",
+			"look": [
+				-541.6,
+				-28.161,
+				-666.9
+			],
+			"x": -530.632,
+			"yaw": 2.09963,
+			"z": -673.309
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v6-s007_low_ferns-chase.png",
+			"idx": 13,
+			"line": "vignette:s007_low_ferns",
+			"x": -538.544,
+			"yaw": 2.09963,
+			"z": -671.581
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-604.551,
+				-27.911,
+				-627.265
+			],
+			"file": "park_sinkhole-v7-s009_mid_tailings_cart-eye.png",
+			"idx": 14,
+			"line": "vignette:s009_mid_tailings_cart",
+			"look": [
+				-600.23,
+				-28.894,
+				-629.78
+			],
+			"x": -611.336,
+			"yaw": -1.04371,
+			"z": -623.316
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v7-s009_mid_tailings_cart-chase.png",
+			"idx": 15,
+			"line": "vignette:s009_mid_tailings_cart",
+			"x": -603.294,
+			"yaw": -1.04371,
+			"z": -625.104
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-524.025,
+				-26.906,
+				-664.106
+			],
+			"file": "park_sinkhole-v8-s010_mid_column_field-eye.png",
+			"idx": 16,
+			"line": "vignette:s010_mid_column_field",
+			"look": [
+				-528.146,
+				-28.055,
+				-661.274
+			],
+			"x": -517.599,
+			"yaw": 2.17294,
+			"z": -668.523
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v8-s010_mid_column_field-chase.png",
+			"idx": 17,
+			"line": "vignette:s010_mid_column_field",
+			"x": -525.441,
+			"yaw": 2.17293,
+			"z": -666.167
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-575.091,
+				-30.04,
+				-554.838
+			],
+			"file": "park_sinkhole-v9-s012_mid_skylight_garden-eye.png",
+			"idx": 18,
+			"line": "vignette:s012_mid_skylight_garden",
+			"look": [
+				-571.58,
+				-31.117,
+				-558.398
+			],
+			"x": -580.582,
+			"yaw": -0.77842,
+			"z": -549.269
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v9-s012_mid_skylight_garden-chase.png",
+			"idx": 19,
+			"line": "vignette:s012_mid_skylight_garden",
+			"x": -573.311,
+			"yaw": -0.77842,
+			"z": -553.082
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-489.049,
+				-41.785,
+				-533.554
+			],
+			"file": "park_sinkhole-v10-s014_low_stones-eye.png",
+			"idx": 20,
+			"line": "vignette:s014_low_stones",
+			"look": [
+				-487.2,
+				-43.077,
+				-538.2
+			],
+			"x": -491.913,
+			"yaw": -0.37873,
+			"z": -526.358
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v10-s014_low_stones-chase.png",
+			"idx": 21,
+			"line": "vignette:s014_low_stones",
+			"x": -486.726,
+			"yaw": -0.37874,
+			"z": -532.63
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-531.419,
+				-34.87,
+				-537.684
+			],
+			"file": "park_sinkhole-v11-s015_mid_cart_horn-eye.png",
+			"idx": 22,
+			"line": "vignette:s015_mid_cart_horn",
+			"look": [
+				-529.57,
+				-35.668,
+				-542.33
+			],
+			"x": -534.34,
+			"yaw": -0.37874,
+			"z": -530.344
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v11-s015_mid_cart_horn-chase.png",
+			"idx": 23,
+			"line": "vignette:s015_mid_cart_horn",
+			"x": -529.096,
+			"yaw": -0.37874,
+			"z": -536.76
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-487.473,
+				-30.325,
+				-616.795
+			],
+			"file": "park_sinkhole-v12-s016_mid_skylight_garden-eye.png",
+			"idx": 24,
+			"line": "vignette:s016_mid_skylight_garden",
+			"look": [
+				-489.216,
+				-31.862,
+				-612.109
+			],
+			"x": -484.807,
+			"yaw": 2.78555,
+			"z": -623.963
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v12-s016_mid_skylight_garden-chase.png",
+			"idx": 25,
+			"line": "vignette:s016_mid_skylight_garden",
+			"x": -489.816,
+			"yaw": 2.78555,
+			"z": -617.667
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-522.681,
+				-40.692,
+				-513.264
+			],
+			"file": "park_sinkhole-v13-s017_mid_column_field-eye.png",
+			"idx": 26,
+			"line": "vignette:s017_mid_column_field",
+			"look": [
+				-520.832,
+				-41.404,
+				-517.909
+			],
+			"x": -525.609,
+			"yaw": -0.37874,
+			"z": -505.905
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v13-s017_mid_column_field-chase.png",
+			"idx": 27,
+			"line": "vignette:s017_mid_column_field",
+			"x": -520.358,
+			"yaw": -0.37874,
+			"z": -512.339
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-440.297,
+				-38.823,
+				-614.991
+			],
+			"file": "park_sinkhole-v14-s020_mid_tailings_cart-eye.png",
+			"idx": 28,
+			"line": "vignette:s020_mid_tailings_cart",
+			"look": [
+				-440.0,
+				-40.923,
+				-610.0
+			],
+			"x": -440.734,
+			"yaw": -3.08225,
+			"z": -622.354
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v14-s020_mid_tailings_cart-chase.png",
+			"idx": 29,
+			"line": "vignette:s020_mid_tailings_cart",
+			"x": -442.792,
+			"yaw": -3.08225,
+			"z": -614.843
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-388.204,
+				-66.511,
+				-514.538
+			],
+			"file": "park_sinkhole-v15-s021_mid_rimstone_pool-eye.png",
+			"idx": 30,
+			"line": "vignette:s021_mid_rimstone_pool",
+			"look": [
+				-389.766,
+				-67.355,
+				-519.288
+			],
+			"x": -385.74,
+			"yaw": 0.31765,
+			"z": -507.044
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v15-s021_mid_rimstone_pool-chase.png",
+			"idx": 31,
+			"line": "vignette:s021_mid_rimstone_pool",
+			"x": -385.829,
+			"yaw": 0.31765,
+			"z": -515.319
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-351.903,
+				-68.99,
+				-546.161
+			],
+			"file": "park_sinkhole-v16-s022_low_gear-eye.png",
+			"idx": 32,
+			"line": "vignette:s022_low_gear",
+			"look": [
+				-354.0,
+				-69.801,
+				-550.7
+			],
+			"x": -348.59,
+			"yaw": 0.43284,
+			"z": -538.993
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v16-s022_low_gear-chase.png",
+			"idx": 33,
+			"line": "vignette:s022_low_gear",
+			"x": -349.633,
+			"yaw": 0.43284,
+			"z": -547.21
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-312.474,
+				-73.151,
+				-562.908
+			],
+			"file": "park_sinkhole-v17-s023_low_ferns-eye.png",
+			"idx": 34,
+			"line": "vignette:s023_low_ferns",
+			"look": [
+				-314.2,
+				-74.088,
+				-567.6
+			],
+			"x": -309.758,
+			"yaw": 0.35256,
+			"z": -555.528
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v17-s023_low_ferns-chase.png",
+			"idx": 35,
+			"line": "vignette:s023_low_ferns",
+			"x": -310.127,
+			"yaw": 0.35256,
+			"z": -563.771
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-352.444,
+				-58.695,
+				-646.826
+			],
+			"file": "park_sinkhole-v18-s024_mid_column_field-eye.png",
+			"idx": 36,
+			"line": "vignette:s024_mid_column_field",
+			"look": [
+				-350.758,
+				-60.999,
+				-642.118
+			],
+			"x": -354.893,
+			"yaw": -2.79776,
+			"z": -653.666
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v18-s024_mid_column_field-chase.png",
+			"idx": 37,
+			"line": "vignette:s024_mid_column_field",
+			"x": -354.798,
+			"yaw": -2.79776,
+			"z": -645.983
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-303.421,
+				-68.965,
+				-650.038
+			],
+			"file": "park_sinkhole-v19-s027_mid_horn_stubs-eye.png",
+			"idx": 38,
+			"line": "vignette:s027_mid_horn_stubs",
+			"look": [
+				-303.29,
+				-69.911,
+				-645.04
+			],
+			"x": -303.627,
+			"yaw": -3.11541,
+			"z": -657.896
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v19-s027_mid_horn_stubs-chase.png",
+			"idx": 39,
+			"line": "vignette:s027_mid_horn_stubs",
+			"x": -305.92,
+			"yaw": -3.11541,
+			"z": -649.973
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-201.441,
+				-73.172,
+				-617.708
+			],
+			"file": "park_sinkhole-v20-s028_low_ferns-eye.png",
+			"idx": 40,
+			"line": "vignette:s028_low_ferns",
+			"look": [
+				-198.2,
+				-74.607,
+				-613.9
+			],
+			"x": -206.424,
+			"yaw": -2.43648,
+			"z": -623.564
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v20-s028_low_ferns-chase.png",
+			"idx": 41,
+			"line": "vignette:s028_low_ferns",
+			"x": -203.344,
+			"yaw": 3.84671,
+			"z": -616.087
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-218.184,
+				-72.164,
+				-654.658
+			],
+			"file": "park_sinkhole-v21-s029_mid_tailings_cart-eye.png",
+			"idx": 42,
+			"line": "vignette:s029_mid_tailings_cart",
+			"look": [
+				-220.0,
+				-73.343,
+				-650.0
+			],
+			"x": -215.355,
+			"yaw": 2.76984,
+			"z": -661.913
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v21-s029_mid_tailings_cart-chase.png",
+			"idx": 43,
+			"line": "vignette:s029_mid_tailings_cart",
+			"x": -220.513,
+			"yaw": 2.76984,
+			"z": -655.567
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-178.483,
+				-72.92,
+				-626.929
+			],
+			"file": "park_sinkhole-v22-s030_gallery_fall-eye.png",
+			"idx": 44,
+			"line": "vignette:s030_gallery_fall",
+			"look": [
+				-182.291,
+				-73.941,
+				-623.689
+			],
+			"x": -172.514,
+			"yaw": 2.27591,
+			"z": -632.009
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v22-s030_gallery_fall-chase.png",
+			"idx": 45,
+			"line": "vignette:s030_gallery_fall",
+			"x": -180.103,
+			"yaw": 2.27591,
+			"z": -628.833
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-165.899,
+				-73.999,
+				-587.384
+			],
+			"file": "park_sinkhole-v23-s031_low_stones-eye.png",
+			"idx": 46,
+			"line": "vignette:s031_low_stones",
+			"look": [
+				-166.3,
+				-75.767,
+				-582.4
+			],
+			"x": -165.294,
+			"yaw": 3.06131,
+			"z": -594.902
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v23-s031_low_stones-chase.png",
+			"idx": 47,
+			"line": "vignette:s031_low_stones",
+			"x": -168.391,
+			"yaw": 3.06131,
+			"z": -587.584
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-164.479,
+				-73.254,
+				-614.699
+			],
+			"file": "park_sinkhole-v24-s032_mid_skylight_garden-eye.png",
+			"idx": 48,
+			"line": "vignette:s032_mid_skylight_garden",
+			"look": [
+				-168.287,
+				-74.499,
+				-611.458
+			],
+			"x": -158.567,
+			"yaw": 2.27591,
+			"z": -619.73
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v24-s032_mid_skylight_garden-chase.png",
+			"idx": 49,
+			"line": "vignette:s032_mid_skylight_garden",
+			"x": -166.099,
+			"yaw": 2.27591,
+			"z": -616.603
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-151.181,
+				-75.583,
+				-529.294
+			],
+			"file": "park_sinkhole-v25-s033_low_gear-eye.png",
+			"idx": 50,
+			"line": "vignette:s033_low_gear",
+			"look": [
+				-156.1,
+				-76.998,
+				-528.4
+			],
+			"x": -143.607,
+			"yaw": 1.75056,
+			"z": -530.67
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v25-s033_low_gear-chase.png",
+			"idx": 51,
+			"line": "vignette:s033_low_gear",
+			"x": -151.628,
+			"yaw": 1.75057,
+			"z": -531.754
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-139.595,
+				-74.531,
+				-567.846
+			],
+			"file": "park_sinkhole-v26-s034_lamp_wall-eye.png",
+			"idx": 52,
+			"line": "vignette:s034_lamp_wall",
+			"look": [
+				-144.515,
+				-74.315,
+				-566.952
+			],
+			"x": -131.732,
+			"yaw": 1.75056,
+			"z": -569.275
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v26-s034_lamp_wall-chase.png",
+			"idx": 53,
+			"line": "vignette:s034_lamp_wall",
+			"x": -140.042,
+			"yaw": 1.75057,
+			"z": -570.306
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-235.177,
+				-76.041,
+				-512.503
+			],
+			"file": "park_sinkhole-v27-s035_mid_rimstone_pool-eye.png",
+			"idx": 54,
+			"line": "vignette:s035_mid_rimstone_pool",
+			"look": [
+				-230.675,
+				-77.677,
+				-510.326
+			],
+			"x": -242.022,
+			"yaw": -2.02109,
+			"z": -515.812
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v27-s035_mid_rimstone_pool-chase.png",
+			"idx": 55,
+			"line": "vignette:s035_mid_rimstone_pool",
+			"x": -236.265,
+			"yaw": -2.02109,
+			"z": -510.252
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-122.867,
+				-74.983,
+				-551.296
+			],
+			"file": "park_sinkhole-v28-s036_mid_column_field-eye.png",
+			"idx": 56,
+			"line": "vignette:s036_mid_column_field",
+			"look": [
+				-127.786,
+				-76.078,
+				-550.402
+			],
+			"x": -115.178,
+			"yaw": 1.75056,
+			"z": -552.693
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v28-s036_mid_column_field-chase.png",
+			"idx": 57,
+			"line": "vignette:s036_mid_column_field",
+			"x": -123.314,
+			"yaw": 1.75057,
+			"z": -553.756
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-131.387,
+				-75.536,
+				-531.017
+			],
+			"file": "park_sinkhole-v29-s037_pump_station-eye.png",
+			"idx": 58,
+			"line": "vignette:s037_pump_station",
+			"look": [
+				-136.307,
+				-75.074,
+				-530.123
+			],
+			"x": -123.55,
+			"yaw": 1.75056,
+			"z": -532.441
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v29-s037_pump_station-chase.png",
+			"idx": 59,
+			"line": "vignette:s037_pump_station",
+			"x": -131.834,
+			"yaw": 1.75057,
+			"z": -533.477
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-234.916,
+				-77.913,
+				-443.85
+			],
+			"file": "park_sinkhole-v30-s038_lamp_wall-eye.png",
+			"idx": 60,
+			"line": "vignette:s038_lamp_wall",
+			"look": [
+				-230.226,
+				-77.625,
+				-445.585
+			],
+			"x": -242.406,
+			"yaw": -1.21649,
+			"z": -441.079
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v30-s038_lamp_wall-chase.png",
+			"idx": 61,
+			"line": "vignette:s038_lamp_wall",
+			"x": -234.048,
+			"yaw": -1.21649,
+			"z": -441.505
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-153.008,
+				-77.246,
+				-468.327
+			],
+			"file": "park_sinkhole-v31-s039_low_stones-eye.png",
+			"idx": 62,
+			"line": "vignette:s039_low_stones",
+			"look": [
+				-157.7,
+				-78.926,
+				-466.6
+			],
+			"x": -145.891,
+			"yaw": 1.92336,
+			"z": -470.945
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v31-s039_low_stones-chase.png",
+			"idx": 63,
+			"line": "vignette:s039_low_stones",
+			"x": -153.871,
+			"yaw": 1.92335,
+			"z": -470.673
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-196.71,
+				-78.844,
+				-409.722
+			],
+			"file": "park_sinkhole-v32-s040_low_gear-eye.png",
+			"idx": 64,
+			"line": "vignette:s040_low_gear",
+			"look": [
+				-194.7,
+				-80.11,
+				-414.3
+			],
+			"x": -199.827,
+			"yaw": -0.41364,
+			"z": -402.621
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v32-s040_low_gear-chase.png",
+			"idx": 65,
+			"line": "vignette:s040_low_gear",
+			"x": -194.421,
+			"yaw": -0.41364,
+			"z": -408.717
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-218.5,
+				-81.373,
+				-316.982
+			],
+			"file": "park_sinkhole-v33-s041_gallery_fall-eye.png",
+			"idx": 66,
+			"line": "vignette:s041_gallery_fall",
+			"look": [
+				-214.636,
+				-81.385,
+				-313.808
+			],
+			"x": -224.682,
+			"yaw": -2.25846,
+			"z": -322.06
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v33-s041_gallery_fall-chase.png",
+			"idx": 67,
+			"line": "vignette:s041_gallery_fall",
+			"x": -220.087,
+			"yaw": -2.25846,
+			"z": -315.05
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-216.875,
+				-83.137,
+				-252.3
+			],
+			"file": "park_sinkhole-v34-s042_mid_skylight_garden-eye.png",
+			"idx": 68,
+			"line": "vignette:s042_mid_skylight_garden",
+			"look": [
+				-212.134,
+				-84.337,
+				-250.714
+			],
+			"x": -224.253,
+			"yaw": -1.89368,
+			"z": -254.769
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v34-s042_mid_skylight_garden-chase.png",
+			"idx": 69,
+			"line": "vignette:s042_mid_skylight_garden",
+			"x": -217.669,
+			"yaw": -1.89368,
+			"z": -249.93
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-151.881,
+				-79.508,
+				-385.367
+			],
+			"file": "park_sinkhole-v35-s043_mid_tailings_cart-eye.png",
+			"idx": 70,
+			"line": "vignette:s043_mid_tailings_cart",
+			"look": [
+				-150.0,
+				-80.434,
+				-390.0
+			],
+			"x": -154.841,
+			"yaw": -0.38572,
+			"z": -378.079
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v35-s043_mid_tailings_cart-chase.png",
+			"idx": 71,
+			"line": "vignette:s043_mid_tailings_cart",
+			"x": -149.565,
+			"yaw": -0.38572,
+			"z": -384.427
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-249.639,
+				-79.254,
+				-394.701
+			],
+			"file": "park_sinkhole-v36-s044_pump_station-eye.png",
+			"idx": 72,
+			"line": "vignette:s044_pump_station",
+			"look": [
+				-245.258,
+				-78.878,
+				-397.109
+			],
+			"x": -256.63,
+			"yaw": -1.06814,
+			"z": -390.857
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v36-s044_pump_station-chase.png",
+			"idx": 73,
+			"line": "vignette:s044_pump_station",
+			"x": -248.435,
+			"yaw": -1.06814,
+			"z": -392.51
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-202.163,
+				-79.254,
+				-394.672
+			],
+			"file": "park_sinkhole-v37-s045_mid_rimstone_pool-eye.png",
+			"idx": 74,
+			"line": "vignette:s045_mid_rimstone_pool",
+			"look": [
+				-200.282,
+				-80.705,
+				-399.305
+			],
+			"x": -205.054,
+			"yaw": -0.38572,
+			"z": -387.554
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v37-s045_mid_rimstone_pool-chase.png",
+			"idx": 75,
+			"line": "vignette:s045_mid_rimstone_pool",
+			"x": -199.847,
+			"yaw": -0.38572,
+			"z": -393.732
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-136.457,
+				-79.367,
+				-390.557
+			],
+			"file": "park_sinkhole-v38-s046_low_ferns-eye.png",
+			"idx": 76,
+			"line": "vignette:s046_low_ferns",
+			"look": [
+				-137.7,
+				-80.566,
+				-395.4
+			],
+			"x": -134.522,
+			"yaw": 0.25133,
+			"z": -383.022
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v38-s046_low_ferns-chase.png",
+			"idx": 77,
+			"line": "vignette:s046_low_ferns",
+			"x": -134.035,
+			"yaw": 0.25133,
+			"z": -391.179
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-128.401,
+				-79.844,
+				-373.056
+			],
+			"file": "park_sinkhole-v39-s047_lamp_wall-eye.png",
+			"idx": 78,
+			"line": "vignette:s047_lamp_wall",
+			"look": [
+				-129.653,
+				-79.454,
+				-377.897
+			],
+			"x": -126.404,
+			"yaw": 0.25307,
+			"z": -365.335
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v39-s047_lamp_wall-chase.png",
+			"idx": 79,
+			"line": "vignette:s047_lamp_wall",
+			"x": -125.98,
+			"yaw": 0.25307,
+			"z": -373.682
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-82.97,
+				-79.283,
+				-393.607
+			],
+			"file": "park_sinkhole-v40-s048_low_stones-eye.png",
+			"idx": 80,
+			"line": "vignette:s048_low_stones",
+			"look": [
+				-82.7,
+				-80.78,
+				-398.6
+			],
+			"x": -83.385,
+			"yaw": -0.05411,
+			"z": -385.955
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v40-s048_low_stones-chase.png",
+			"idx": 81,
+			"line": "vignette:s048_low_stones",
+			"x": -80.474,
+			"yaw": -0.05411,
+			"z": -393.472
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-261.0,
+				-84.293,
+				-209.923
+			],
+			"file": "park_sinkhole-v41-s049_gallery_fall-eye.png",
+			"idx": 82,
+			"line": "vignette:s049_gallery_fall",
+			"look": [
+				-256.0,
+				-84.217,
+				-209.958
+			],
+			"x": -268.999,
+			"yaw": -1.56381,
+			"z": -209.867
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v41-s049_gallery_fall-chase.png",
+			"idx": 83,
+			"line": "vignette:s049_gallery_fall",
+			"x": -260.982,
+			"yaw": -1.56382,
+			"z": -207.423
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-133.404,
+				-80.298,
+				-356.401
+			],
+			"file": "park_sinkhole-v42-s050_mid_skylight_garden-eye.png",
+			"idx": 84,
+			"line": "vignette:s050_mid_skylight_garden",
+			"look": [
+				-131.056,
+				-81.575,
+				-351.987
+			],
+			"x": -137.043,
+			"yaw": -2.6529,
+			"z": -363.245
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v42-s050_mid_skylight_garden-chase.png",
+			"idx": 85,
+			"line": "vignette:s050_mid_skylight_garden",
+			"x": -135.611,
+			"yaw": -2.6529,
+			"z": -355.228
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-111.143,
+				-77.313,
+				-465.843
+			],
+			"file": "park_sinkhole-v43-s051_low_gear-eye.png",
+			"idx": 86,
+			"line": "vignette:s051_low_gear",
+			"look": [
+				-109.9,
+				-78.836,
+				-461.0
+			],
+			"x": -113.047,
+			"yaw": -2.89027,
+			"z": -473.255
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v43-s051_low_gear-chase.png",
+			"idx": 87,
+			"line": "vignette:s051_low_gear",
+			"x": -113.565,
+			"yaw": -2.89027,
+			"z": -465.221
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-164.127,
+				-80.856,
+				-335.961
+			],
+			"file": "park_sinkhole-v44-s052_mid_column_field-eye.png",
+			"idx": 88,
+			"line": "vignette:s052_mid_column_field",
+			"look": [
+				-161.281,
+				-82.039,
+				-331.85
+			],
+			"x": -168.559,
+			"yaw": -2.53596,
+			"z": -342.361
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v44-s052_mid_column_field-chase.png",
+			"idx": 89,
+			"line": "vignette:s052_mid_column_field",
+			"x": -166.183,
+			"yaw": -2.53596,
+			"z": -334.537
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-148.482,
+				-83.887,
+				-224.823
+			],
+			"file": "park_sinkhole-v45-s053_mid_rimstone_pool-eye.png",
+			"idx": 90,
+			"line": "vignette:s053_mid_rimstone_pool",
+			"look": [
+				-150.674,
+				-85.586,
+				-220.329
+			],
+			"x": -145.162,
+			"yaw": 2.68781,
+			"z": -231.63
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v45-s053_mid_rimstone_pool-chase.png",
+			"idx": 91,
+			"line": "vignette:s053_mid_rimstone_pool",
+			"x": -150.729,
+			"yaw": -3.59538,
+			"z": -225.919
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-53.775,
+				-76.999,
+				-477.354
+			],
+			"file": "park_sinkhole-v46-s054_pump_station-eye.png",
+			"idx": 92,
+			"line": "vignette:s054_pump_station",
+			"look": [
+				-54.046,
+				-76.649,
+				-472.361
+			],
+			"x": -53.344,
+			"yaw": 3.08749,
+			"z": -485.323
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v46-s054_pump_station-chase.png",
+			"idx": 93,
+			"line": "vignette:s054_pump_station",
+			"x": -56.271,
+			"yaw": 3.08749,
+			"z": -477.489
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-41.981,
+				-77.62,
+				-454.608
+			],
+			"file": "park_sinkhole-v47-s055_low_ferns-eye.png",
+			"idx": 94,
+			"line": "vignette:s055_low_ferns",
+			"look": [
+				-45.1,
+				-79.058,
+				-450.7
+			],
+			"x": -37.184,
+			"yaw": 2.46789,
+			"z": -460.616
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v47-s055_low_ferns-chase.png",
+			"idx": 95,
+			"line": "vignette:s055_low_ferns",
+			"x": -43.934,
+			"yaw": 2.4679,
+			"z": -456.167
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-126.11,
+				-77.052,
+				-475.429
+			],
+			"file": "park_sinkhole-v48-s056_lamp_wall-eye.png",
+			"idx": 96,
+			"line": "vignette:s056_lamp_wall",
+			"look": [
+				-124.866,
+				-76.926,
+				-470.586
+			],
+			"x": -128.099,
+			"yaw": -2.89027,
+			"z": -483.175
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v48-s056_lamp_wall-chase.png",
+			"idx": 97,
+			"line": "vignette:s056_lamp_wall",
+			"x": -128.531,
+			"yaw": -2.89027,
+			"z": -474.807
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				173.073,
+				-79.795,
+				-374.86
+			],
+			"file": "park_sinkhole-v49-s058_mid_shift_board-eye.png",
+			"idx": 98,
+			"line": "vignette:s058_mid_shift_board",
+			"look": [
+				170.401,
+				-80.914,
+				-370.634
+			],
+			"x": 177.244,
+			"yaw": 2.57785,
+			"z": -381.459
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v49-s058_mid_shift_board-chase.png",
+			"idx": 99,
+			"line": "vignette:s058_mid_shift_board",
+			"x": 170.959,
+			"yaw": 2.57785,
+			"z": -376.196
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				35.964,
+				-78.77,
+				-412.415
+			],
+			"file": "park_sinkhole-v50-s059_pump_station-eye.png",
+			"idx": 100,
+			"line": "vignette:s059_pump_station",
+			"look": [
+				32.535,
+				-78.559,
+				-408.777
+			],
+			"x": 41.446,
+			"yaw": 2.38586,
+			"z": -418.232
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v50-s059_pump_station-chase.png",
+			"idx": 101,
+			"line": "vignette:s059_pump_station",
+			"x": 34.145,
+			"yaw": 2.38587,
+			"z": -414.13
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				29.837,
+				-82.06,
+				-291.796
+			],
+			"file": "park_sinkhole-v51-s060_low_ferns-eye.png",
+			"idx": 102,
+			"line": "vignette:s060_low_ferns",
+			"look": [
+				33.5,
+				-83.298,
+				-295.2
+			],
+			"x": 24.149,
+			"yaw": -0.82205,
+			"z": -286.51
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v51-s060_low_ferns-chase.png",
+			"idx": 103,
+			"line": "vignette:s060_low_ferns",
+			"x": 31.539,
+			"yaw": -0.82205,
+			"z": -289.965
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				116.859,
+				-84.628,
+				-197.652
+			],
+			"file": "park_sinkhole-v52-s061_mid_column_field-eye.png",
+			"idx": 104,
+			"line": "vignette:s061_mid_column_field",
+			"look": [
+				112.129,
+				-85.655,
+				-199.271
+			],
+			"x": 124.273,
+			"yaw": 1.24093,
+			"z": -195.113
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v52-s061_mid_column_field-chase.png",
+			"idx": 105,
+			"line": "vignette:s061_mid_column_field",
+			"x": 117.669,
+			"yaw": 1.24093,
+			"z": -200.017
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-56.711,
+				-84.609,
+				-198.355
+			],
+			"file": "park_sinkhole-v53-s062_gallery_fall-eye.png",
+			"idx": 106,
+			"line": "vignette:s062_gallery_fall",
+			"look": [
+				-54.574,
+				-85.665,
+				-193.835
+			],
+			"x": -60.056,
+			"yaw": -2.70002,
+			"z": -205.431
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v53-s062_gallery_fall-chase.png",
+			"idx": 107,
+			"line": "vignette:s062_gallery_fall",
+			"x": -58.971,
+			"yaw": -2.70002,
+			"z": -197.287
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-11.517,
+				-84.14,
+				-215.546
+			],
+			"file": "park_sinkhole-v54-s063_mid_rimstone_pool-eye.png",
+			"idx": 108,
+			"line": "vignette:s063_mid_rimstone_pool",
+			"look": [
+				-10.198,
+				-85.848,
+				-210.723
+			],
+			"x": -13.515,
+			"yaw": -2.87456,
+			"z": -222.848
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v54-s063_mid_rimstone_pool-chase.png",
+			"idx": 109,
+			"line": "vignette:s063_mid_rimstone_pool",
+			"x": -13.929,
+			"yaw": -2.87456,
+			"z": -214.887
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				125.571,
+				-83.684,
+				-232.236
+			],
+			"file": "park_sinkhole-v55-s064_pump_station-eye.png",
+			"idx": 110,
+			"line": "vignette:s064_pump_station",
+			"look": [
+				129.83,
+				-83.127,
+				-234.856
+			],
+			"x": 118.799,
+			"yaw": -1.01927,
+			"z": -228.07
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v55-s064_pump_station-chase.png",
+			"idx": 111,
+			"line": "vignette:s064_pump_station",
+			"x": 126.881,
+			"yaw": -1.01927,
+			"z": -230.107
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-31.589,
+				-83.141,
+				-252.157
+			],
+			"file": "park_sinkhole-v56-s065_lamp_wall-eye.png",
+			"idx": 112,
+			"line": "vignette:s065_lamp_wall",
+			"look": [
+				-35.246,
+				-82.791,
+				-255.567
+			],
+			"x": -25.753,
+			"yaw": 0.82031,
+			"z": -246.714
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v56-s065_lamp_wall-chase.png",
+			"idx": 113,
+			"line": "vignette:s065_lamp_wall",
+			"x": -29.884,
+			"yaw": 0.8203,
+			"z": -253.985
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				207.231,
+				-79.974,
+				-368.289
+			],
+			"file": "park_sinkhole-v57-s066_gallery_fall-eye.png",
+			"idx": 114,
+			"line": "vignette:s066_gallery_fall",
+			"look": [
+				203.944,
+				-81.009,
+				-364.521
+			],
+			"x": 212.381,
+			"yaw": 2.42426,
+			"z": -374.192
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v57-s066_gallery_fall-chase.png",
+			"idx": 115,
+			"line": "vignette:s066_gallery_fall",
+			"x": 205.347,
+			"yaw": 2.42426,
+			"z": -369.933
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				100.644,
+				-79.621,
+				-381.222
+			],
+			"file": "park_sinkhole-v58-s067_low_gear-eye.png",
+			"idx": 116,
+			"line": "vignette:s067_low_gear",
+			"look": [
+				99.0,
+				-81.141,
+				-376.5
+			],
+			"x": 103.162,
+			"yaw": 2.80649,
+			"z": -388.45
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v58-s067_low_gear-chase.png",
+			"idx": 117,
+			"line": "vignette:s067_low_gear",
+			"x": 98.283,
+			"yaw": 2.80649,
+			"z": -382.044
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-178.764,
+				-85.732,
+				-277.274
+			],
+			"file": "park_sinkhole-v59-s068_low_stones-eye.png",
+			"idx": 118,
+			"line": "vignette:s068_low_stones",
+			"look": [
+				-174.9,
+				-88.176,
+				-274.1
+			],
+			"x": -184.318,
+			"yaw": -2.25846,
+			"z": -281.836
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v59-s068_low_stones-chase.png",
+			"idx": 119,
+			"line": "vignette:s068_low_stones",
+			"x": -180.35,
+			"yaw": -2.25846,
+			"z": -275.342
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				49.161,
+				-83.383,
+				-243.295
+			],
+			"file": "park_sinkhole-v60-s069_low_ferns-eye.png",
+			"idx": 120,
+			"line": "vignette:s069_low_ferns",
+			"look": [
+				53.9,
+				-84.758,
+				-241.7
+			],
+			"x": 41.85,
+			"yaw": -1.89543,
+			"z": -245.755
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v60-s069_low_ferns-chase.png",
+			"idx": 121,
+			"line": "vignette:s069_low_ferns",
+			"x": 48.364,
+			"yaw": -1.89543,
+			"z": -240.925
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-129.036,
+				-82.763,
+				-266.026
+			],
+			"file": "park_sinkhole-v61-s070_low_gear-eye.png",
+			"idx": 122,
+			"line": "vignette:s070_low_gear",
+			"look": [
+				-132.9,
+				-84.067,
+				-269.2
+			],
+			"x": -123.055,
+			"yaw": 0.88314,
+			"z": -261.113
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v61-s070_low_gear-chase.png",
+			"idx": 123,
+			"line": "vignette:s070_low_gear",
+			"x": -127.45,
+			"yaw": 0.88314,
+			"z": -267.958
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				35.925,
+				-83.582,
+				-235.996
+			],
+			"file": "park_sinkhole-v62-s071_mid_skylight_garden-eye.png",
+			"idx": 124,
+			"line": "vignette:s071_mid_skylight_garden",
+			"look": [
+				38.735,
+				-84.851,
+				-231.861
+			],
+			"x": 31.566,
+			"yaw": -2.54469,
+			"z": -242.41
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v62-s071_mid_skylight_garden-chase.png",
+			"idx": 125,
+			"line": "vignette:s071_mid_skylight_garden",
+			"x": 33.857,
+			"yaw": -2.54469,
+			"z": -234.591
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-4.465,
+				-77.65,
+				-453.507
+			],
+			"file": "park_sinkhole-v63-s072_lamp_wall-eye.png",
+			"idx": 126,
+			"line": "vignette:s072_lamp_wall",
+			"look": [
+				-7.585,
+				-77.499,
+				-449.6
+			],
+			"x": 0.523,
+			"yaw": 2.46789,
+			"z": -459.757
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v63-s072_lamp_wall-chase.png",
+			"idx": 127,
+			"line": "vignette:s072_lamp_wall",
+			"x": -6.419,
+			"yaw": 2.4679,
+			"z": -455.067
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				103.813,
+				-82.252,
+				-284.747
+			],
+			"file": "park_sinkhole-v64-s073_low_stones-eye.png",
+			"idx": 128,
+			"line": "vignette:s073_low_stones",
+			"look": [
+				107.0,
+				-83.78,
+				-288.6
+			],
+			"x": 98.936,
+			"yaw": -0.69115,
+			"z": -278.852
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v64-s073_low_stones-chase.png",
+			"idx": 129,
+			"line": "vignette:s073_low_stones",
+			"x": 105.739,
+			"yaw": -0.69115,
+			"z": -283.154
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				29.312,
+				-82.627,
+				-270.992
+			],
+			"file": "park_sinkhole-v65-s074_gallery_fall-eye.png",
+			"idx": 130,
+			"line": "vignette:s074_gallery_fall",
+			"look": [
+				32.975,
+				-83.467,
+				-274.396
+			],
+			"x": 23.533,
+			"yaw": -0.82205,
+			"z": -265.622
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v65-s074_gallery_fall-chase.png",
+			"idx": 131,
+			"line": "vignette:s074_gallery_fall",
+			"x": 31.014,
+			"yaw": -0.82205,
+			"z": -269.161
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				104.663,
+				-85.521,
+				-164.907
+			],
+			"file": "park_sinkhole-v66-s075_mid_column_field-eye.png",
+			"idx": 132,
+			"line": "vignette:s075_mid_column_field",
+			"look": [
+				108.344,
+				-86.684,
+				-161.523
+			],
+			"x": 98.928,
+			"yaw": -2.31431,
+			"z": -170.181
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v66-s075_mid_column_field-chase.png",
+			"idx": 133,
+			"line": "vignette:s075_mid_column_field",
+			"x": 102.971,
+			"yaw": -2.31431,
+			"z": -163.067
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-151.286,
+				-83.647,
+				-233.601
+			],
+			"file": "park_sinkhole-v67-s076_low_ferns-eye.png",
+			"idx": 134,
+			"line": "vignette:s076_low_ferns",
+			"look": [
+				-146.9,
+				-85.044,
+				-231.2
+			],
+			"x": -158.044,
+			"yaw": -2.07171,
+			"z": -237.301
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v67-s076_low_ferns-chase.png",
+			"idx": 135,
+			"line": "vignette:s076_low_ferns",
+			"x": -152.486,
+			"yaw": -2.07171,
+			"z": -231.408
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-205.602,
+				-82.256,
+				-284.602
+			],
+			"file": "park_sinkhole-v68-s077_mid_skylight_garden-eye.png",
+			"idx": 136,
+			"line": "vignette:s077_mid_skylight_garden",
+			"look": [
+				-201.739,
+				-83.499,
+				-281.428
+			],
+			"x": -211.602,
+			"yaw": -2.25846,
+			"z": -289.53
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v68-s077_mid_skylight_garden-chase.png",
+			"idx": 137,
+			"line": "vignette:s077_mid_skylight_garden",
+			"x": -207.189,
+			"yaw": -2.25846,
+			"z": -282.67
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				136.541,
+				-83.181,
+				-250.68
+			],
+			"file": "park_sinkhole-v69-s078_low_stones-eye.png",
+			"idx": 138,
+			"line": "vignette:s078_low_stones",
+			"look": [
+				140.8,
+				-84.743,
+				-253.3
+			],
+			"x": 130.037,
+			"yaw": -1.01927,
+			"z": -246.679
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v69-s078_low_stones-chase.png",
+			"idx": 139,
+			"line": "vignette:s078_low_stones",
+			"x": 137.851,
+			"yaw": -1.01927,
+			"z": -248.551
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				259.945,
+				-81.435,
+				-314.701
+			],
+			"file": "park_sinkhole-v70-s079_pump_station-eye.png",
+			"idx": 140,
+			"line": "vignette:s079_pump_station",
+			"look": [
+				255.424,
+				-81.183,
+				-312.564
+			],
+			"x": 267.168,
+			"yaw": 2.01236,
+			"z": -318.115
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v70-s079_pump_station-chase.png",
+			"idx": 141,
+			"line": "vignette:s079_pump_station",
+			"x": 258.877,
+			"yaw": 2.01236,
+			"z": -316.961
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				245.198,
+				-82.315,
+				-282.457
+			],
+			"file": "park_sinkhole-v71-s080_mid_shift_board-eye.png",
+			"idx": 142,
+			"line": "vignette:s080_mid_shift_board",
+			"look": [
+				240.678,
+				-83.378,
+				-280.321
+			],
+			"x": 252.273,
+			"yaw": 2.01236,
+			"z": -285.801
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v71-s080_mid_shift_board-chase.png",
+			"idx": 143,
+			"line": "vignette:s080_mid_shift_board",
+			"x": 244.13,
+			"yaw": 2.01236,
+			"z": -284.718
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				211.827,
+				-81.582,
+				-309.342
+			],
+			"file": "park_sinkhole-v72-s081_low_gear-eye.png",
+			"idx": 144,
+			"line": "vignette:s081_low_gear",
+			"look": [
+				208.2,
+				-83.066,
+				-305.9
+			],
+			"x": 217.39,
+			"yaw": 2.33001,
+			"z": -314.621
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v72-s081_low_gear-chase.png",
+			"idx": 145,
+			"line": "vignette:s081_low_gear",
+			"x": 210.106,
+			"yaw": 2.33001,
+			"z": -311.155
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				254.451,
+				-87.08,
+				-107.722
+			],
+			"file": "park_sinkhole-v73-s082_mid_tailings_cart-eye.png",
+			"idx": 146,
+			"line": "vignette:s082_mid_tailings_cart",
+			"look": [
+				250.0,
+				-88.07,
+				-110.0
+			],
+			"x": 261.437,
+			"yaw": 1.09781,
+			"z": -104.147
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v73-s082_mid_tailings_cart-chase.png",
+			"idx": 147,
+			"line": "vignette:s082_mid_tailings_cart",
+			"x": 255.59,
+			"yaw": 1.09781,
+			"z": -109.948
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				10.621,
+				-86.443,
+				-131.072
+			],
+			"file": "park_sinkhole-v74-s083_low_ferns-eye.png",
+			"idx": 148,
+			"line": "vignette:s083_low_ferns",
+			"look": [
+				8.5,
+				-87.651,
+				-135.6
+			],
+			"x": 13.92,
+			"yaw": 0.43808,
+			"z": -124.03
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v74-s083_low_ferns-chase.png",
+			"idx": 149,
+			"line": "vignette:s083_low_ferns",
+			"x": 12.885,
+			"yaw": 0.43808,
+			"z": -132.133
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				224.066,
+				-87.947,
+				-75.934
+			],
+			"file": "park_sinkhole-v75-s084_mid_shift_board-eye.png",
+			"idx": 150,
+			"line": "vignette:s084_mid_shift_board",
+			"look": [
+				220.53,
+				-88.855,
+				-79.47
+			],
+			"x": 229.632,
+			"yaw": 0.7854,
+			"z": -70.368
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v75-s084_mid_shift_board-chase.png",
+			"idx": 151,
+			"line": "vignette:s084_mid_shift_board",
+			"x": 225.834,
+			"yaw": 0.7854,
+			"z": -77.702
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				254.938,
+				-83.451,
+				-240.782
+			],
+			"file": "park_sinkhole-v76-s085_mid_tailings_cart-eye.png",
+			"idx": 152,
+			"line": "vignette:s085_mid_tailings_cart",
+			"look": [
+				250.0,
+				-84.525,
+				-240.0
+			],
+			"x": 262.664,
+			"yaw": 1.72787,
+			"z": -242.006
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v76-s085_mid_tailings_cart-chase.png",
+			"idx": 153,
+			"line": "vignette:s085_mid_tailings_cart",
+			"x": 254.547,
+			"yaw": 1.72788,
+			"z": -243.251
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-19.637,
+				-84.689,
+				-195.42
+			],
+			"file": "park_sinkhole-v77-s086_low_ferns-eye.png",
+			"idx": 154,
+			"line": "vignette:s086_low_ferns",
+			"look": [
+				-17.5,
+				-86.143,
+				-190.9
+			],
+			"x": -22.92,
+			"yaw": -2.70002,
+			"z": -202.365
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v77-s086_low_ferns-chase.png",
+			"idx": 155,
+			"line": "vignette:s086_low_ferns",
+			"x": -21.897,
+			"yaw": -2.70002,
+			"z": -194.352
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				61.221,
+				-86.426,
+				-131.698
+			],
+			"file": "park_sinkhole-v78-s087_pump_station-eye.png",
+			"idx": 156,
+			"line": "vignette:s087_pump_station",
+			"look": [
+				64.216,
+				-86.049,
+				-127.694
+			],
+			"x": 56.442,
+			"yaw": -2.49931,
+			"z": -138.086
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v78-s087_pump_station-chase.png",
+			"idx": 157,
+			"line": "vignette:s087_pump_station",
+			"x": 59.219,
+			"yaw": -2.49931,
+			"z": -130.2
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-156.378,
+				-90.569,
+				-88.16
+			],
+			"file": "park_sinkhole-v79-s088_low_gear-eye.png",
+			"idx": 158,
+			"line": "vignette:s088_low_gear",
+			"look": [
+				-153.3,
+				-92.727,
+				-92.1
+			],
+			"x": -160.9,
+			"yaw": -0.66322,
+			"z": -82.372
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v79-s088_low_gear-chase.png",
+			"idx": 159,
+			"line": "vignette:s088_low_gear",
+			"x": -154.408,
+			"yaw": -0.66323,
+			"z": -86.621
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				247.438,
+				-83.822,
+				-227.182
+			],
+			"file": "park_sinkhole-v80-s089_low_stones-eye.png",
+			"idx": 160,
+			"line": "vignette:s089_low_stones",
+			"look": [
+				242.5,
+				-85.477,
+				-226.4
+			],
+			"x": 254.94,
+			"yaw": 1.72787,
+			"z": -228.37
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v80-s089_low_stones-chase.png",
+			"idx": 161,
+			"line": "vignette:s089_low_stones",
+			"x": 247.047,
+			"yaw": 1.72788,
+			"z": -229.651
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				123.02,
+				-85.284,
+				-173.584
+			],
+			"file": "park_sinkhole-v81-s090_low_ferns-eye.png",
+			"idx": 162,
+			"line": "vignette:s090_low_ferns",
+			"look": [
+				126.7,
+				-86.708,
+				-170.2
+			],
+			"x": 117.356,
+			"yaw": -2.31431,
+			"z": -178.792
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v81-s090_low_ferns-chase.png",
+			"idx": 163,
+			"line": "vignette:s090_low_ferns",
+			"x": 121.327,
+			"yaw": -2.31431,
+			"z": -171.744
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-66.236,
+				-85.47,
+				-166.773
+			],
+			"file": "park_sinkhole-v82-s091_low_stones-eye.png",
+			"idx": 164,
+			"line": "vignette:s091_low_stones",
+			"look": [
+				-61.6,
+				-87.154,
+				-164.9
+			],
+			"x": -73.265,
+			"yaw": -1.95477,
+			"z": -169.613
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v82-s091_low_stones-chase.png",
+			"idx": 165,
+			"line": "vignette:s091_low_stones",
+			"x": -67.172,
+			"yaw": -1.95477,
+			"z": -164.455
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				291.071,
+				-82.842,
+				-263.112
+			],
+			"file": "park_sinkhole-v83-s092_lamp_wall-eye.png",
+			"idx": 166,
+			"line": "vignette:s092_lamp_wall",
+			"look": [
+				286.258,
+				-82.639,
+				-261.759
+			],
+			"x": 298.766,
+			"yaw": 1.84481,
+			"z": -265.275
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v83-s092_lamp_wall-chase.png",
+			"idx": 167,
+			"line": "vignette:s092_lamp_wall",
+			"x": 290.394,
+			"yaw": 1.84481,
+			"z": -265.519
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				210.458,
+				-88.285,
+				-63.532
+			],
+			"file": "park_sinkhole-v84-s093_gallery_fall-eye.png",
+			"idx": 168,
+			"line": "vignette:s093_gallery_fall",
+			"look": [
+				206.923,
+				-89.122,
+				-67.067
+			],
+			"x": 216.038,
+			"yaw": 0.7854,
+			"z": -57.952
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v84-s093_gallery_fall-chase.png",
+			"idx": 169,
+			"line": "vignette:s093_gallery_fall",
+			"x": 212.226,
+			"yaw": 0.7854,
+			"z": -65.3
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				2.439,
+				-86.615,
+				-124.793
+			],
+			"file": "park_sinkhole-v85-s094_mid_rimstone_pool-eye.png",
+			"idx": 170,
+			"line": "vignette:s094_mid_rimstone_pool",
+			"look": [
+				0.318,
+				-88.068,
+				-129.321
+			],
+			"x": 5.698,
+			"yaw": 0.43808,
+			"z": -117.836
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v85-s094_mid_rimstone_pool-chase.png",
+			"idx": 171,
+			"line": "vignette:s094_mid_rimstone_pool",
+			"x": 4.703,
+			"yaw": 0.43808,
+			"z": -125.853
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-84.436,
+				-86.563,
+				-126.673
+			],
+			"file": "park_sinkhole-v86-s095_low_ferns-eye.png",
+			"idx": 172,
+			"line": "vignette:s095_low_ferns",
+			"look": [
+				-79.8,
+				-87.946,
+				-124.8
+			],
+			"x": -91.585,
+			"yaw": -1.95477,
+			"z": -129.562
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v86-s095_low_ferns-chase.png",
+			"idx": 173,
+			"line": "vignette:s095_low_ferns",
+			"x": -85.372,
+			"yaw": -1.95477,
+			"z": -124.355
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				266.418,
+				-84.481,
+				-203.039
+			],
+			"file": "park_sinkhole-v87-s096_lamp_wall-eye.png",
+			"idx": 174,
+			"line": "vignette:s096_lamp_wall",
+			"look": [
+				261.48,
+				-84.262,
+				-202.257
+			],
+			"x": 274.312,
+			"yaw": 1.72787,
+			"z": -204.289
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v87-s096_lamp_wall-chase.png",
+			"idx": 175,
+			"line": "vignette:s096_lamp_wall",
+			"x": 266.027,
+			"yaw": 1.72788,
+			"z": -205.508
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-79.916,
+				-92.211,
+				-36.523
+			],
+			"file": "park_sinkhole-v88-s097_low_gear-eye.png",
+			"idx": 176,
+			"line": "vignette:s097_low_gear",
+			"look": [
+				-77.5,
+				-94.3,
+				-40.9
+			],
+			"x": -83.484,
+			"yaw": -0.5044,
+			"z": -30.06
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v88-s097_low_gear-chase.png",
+			"idx": 177,
+			"line": "vignette:s097_low_gear",
+			"x": -77.728,
+			"yaw": -0.5044,
+			"z": -35.314
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-227.112,
+				-83.98,
+				-221.408
+			],
+			"file": "park_sinkhole-v89-s098_mid_column_field-eye.png",
+			"idx": 178,
+			"line": "vignette:s098_mid_column_field",
+			"look": [
+				-222.207,
+				-85.078,
+				-220.437
+			],
+			"x": -234.777,
+			"yaw": -1.76627,
+			"z": -222.926
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v89-s098_mid_column_field-chase.png",
+			"idx": 179,
+			"line": "vignette:s098_mid_column_field",
+			"x": -227.598,
+			"yaw": -1.76627,
+			"z": -218.956
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				68.205,
+				-86.914,
+				-113.804
+			],
+			"file": "park_sinkhole-v90-s099_low_stones-eye.png",
+			"idx": 180,
+			"line": "vignette:s099_low_stones",
+			"look": [
+				71.2,
+				-88.657,
+				-109.8
+			],
+			"x": 63.68,
+			"yaw": -2.49931,
+			"z": -119.853
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v90-s099_low_stones-chase.png",
+			"idx": 181,
+			"line": "vignette:s099_low_stones",
+			"x": 66.203,
+			"yaw": -2.49931,
+			"z": -112.306
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-189.564,
+				-91.234,
+				44.567
+			],
+			"file": "park_sinkhole-v91-s100_pump_station-eye.png",
+			"idx": 182,
+			"line": "vignette:s100_pump_station",
+			"look": [
+				-185.217,
+				-90.815,
+				47.036
+			],
+			"x": -196.496,
+			"yaw": -2.08741,
+			"z": 40.629
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v91-s100_pump_station-chase.png",
+			"idx": 183,
+			"line": "vignette:s100_pump_station",
+			"x": -190.799,
+			"yaw": -2.08741,
+			"z": 46.74
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-176.772,
+				-88.891,
+				-41.332
+			],
+			"file": "park_sinkhole-v92-s101_gallery_fall-eye.png",
+			"idx": 184,
+			"line": "vignette:s101_gallery_fall",
+			"look": [
+				-173.694,
+				-88.708,
+				-45.272
+			],
+			"x": -181.694,
+			"yaw": -0.66323,
+			"z": -35.032
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v92-s101_gallery_fall-chase.png",
+			"idx": 185,
+			"line": "vignette:s101_gallery_fall",
+			"x": -174.802,
+			"yaw": -0.66323,
+			"z": -39.793
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-105.838,
+				-94.87,
+				177.902
+			],
+			"file": "park_sinkhole-v93-s102_lamp_wall-eye.png",
+			"idx": 186,
+			"line": "vignette:s102_lamp_wall",
+			"look": [
+				-109.713,
+				-94.699,
+				181.062
+			],
+			"x": -99.642,
+			"yaw": 2.25496,
+			"z": 172.848
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v93-s102_lamp_wall-chase.png",
+			"idx": 187,
+			"line": "vignette:s102_lamp_wall",
+			"x": -107.418,
+			"yaw": 2.25497,
+			"z": 175.964
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-239.961,
+				-87.145,
+				-105.334
+			],
+			"file": "park_sinkhole-v94-s103_gallery_fall-eye.png",
+			"idx": 188,
+			"line": "vignette:s103_gallery_fall",
+			"look": [
+				-235.433,
+				-87.013,
+				-107.455
+			],
+			"x": -247.203,
+			"yaw": -1.13272,
+			"z": -101.941
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v94-s103_gallery_fall-chase.png",
+			"idx": 189,
+			"line": "vignette:s103_gallery_fall",
+			"x": -238.901,
+			"yaw": -1.13272,
+			"z": -103.07
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				178.389,
+				-89.154,
+				-31.691
+			],
+			"file": "park_sinkhole-v95-s104_pump_station-eye.png",
+			"idx": 190,
+			"line": "vignette:s104_pump_station",
+			"look": [
+				175.821,
+				-88.551,
+				-35.982
+			],
+			"x": 182.468,
+			"yaw": 0.53931,
+			"z": -24.876
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v95-s104_pump_station-chase.png",
+			"idx": 191,
+			"line": "vignette:s104_pump_station",
+			"x": 180.534,
+			"yaw": 0.53931,
+			"z": -32.975
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-186.304,
+				-92.375,
+				86.419
+			],
+			"file": "park_sinkhole-v96-s105_mid_skylight_garden-eye.png",
+			"idx": 192,
+			"line": "vignette:s105_mid_skylight_garden",
+			"look": [
+				-181.956,
+				-93.599,
+				88.889
+			],
+			"x": -193.06,
+			"yaw": -2.08741,
+			"z": 82.581
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v96-s105_mid_skylight_garden-chase.png",
+			"idx": 193,
+			"line": "vignette:s105_mid_skylight_garden",
+			"x": -187.539,
+			"yaw": -2.08741,
+			"z": 88.593
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				102.2,
+				-89.89,
+				-4.688
+			],
+			"file": "park_sinkhole-v97-s106_mid_shift_board-eye.png",
+			"idx": 194,
+			"line": "vignette:s106_mid_shift_board",
+			"look": [
+				100.287,
+				-90.769,
+				-9.307
+			],
+			"x": 105.216,
+			"yaw": 0.3927,
+			"z": 2.592
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v97-s106_mid_shift_board-chase.png",
+			"idx": 195,
+			"line": "vignette:s106_mid_shift_board",
+			"x": 104.51,
+			"yaw": 0.3927,
+			"z": -5.644
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				175.675,
+				-88.499,
+				-55.714
+			],
+			"file": "park_sinkhole-v98-s107_low_gear-eye.png",
+			"idx": 196,
+			"line": "vignette:s107_low_gear",
+			"look": [
+				173.1,
+				-89.773,
+				-60.0
+			],
+			"x": 179.668,
+			"yaw": 0.54105,
+			"z": -49.069
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v98-s107_low_gear-chase.png",
+			"idx": 197,
+			"line": "vignette:s107_low_gear",
+			"x": 177.818,
+			"yaw": 0.54105,
+			"z": -57.002
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-24.661,
+				-91.592,
+				57.722
+			],
+			"file": "park_sinkhole-v99-s108_low_ferns-eye.png",
+			"idx": 198,
+			"line": "vignette:s108_low_ferns",
+			"look": [
+				-28.0,
+				-92.822,
+				54.0
+			],
+			"x": -19.473,
+			"yaw": 0.73129,
+			"z": 63.504
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v99-s108_low_ferns-chase.png",
+			"idx": 199,
+			"line": "vignette:s108_low_ferns",
+			"x": -22.8,
+			"yaw": 0.73129,
+			"z": 56.052
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				3.84,
+				-91.771,
+				64.28
+			],
+			"file": "park_sinkhole-v100-s109_mid_shift_board-eye.png",
+			"idx": 200,
+			"line": "vignette:s109_mid_shift_board",
+			"look": [
+				0.501,
+				-92.674,
+				60.558
+			],
+			"x": 9.098,
+			"yaw": 0.73129,
+			"z": 70.139
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v100-s109_mid_shift_board-chase.png",
+			"idx": 201,
+			"line": "vignette:s109_mid_shift_board",
+			"x": 5.701,
+			"yaw": 0.73129,
+			"z": 62.61
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-85.331,
+				-86.414,
+				-132.154
+			],
+			"file": "park_sinkhole-v101-s110_mid_rimstone_pool-eye.png",
+			"idx": 202,
+			"line": "vignette:s110_mid_rimstone_pool",
+			"look": [
+				-80.695,
+				-88.042,
+				-130.281
+			],
+			"x": -92.384,
+			"yaw": -1.95477,
+			"z": -135.004
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v101-s110_mid_rimstone_pool-chase.png",
+			"idx": 203,
+			"line": "vignette:s110_mid_rimstone_pool",
+			"x": -86.268,
+			"yaw": -1.95477,
+			"z": -129.836
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				30.661,
+				-91.269,
+				45.871
+			],
+			"file": "park_sinkhole-v102-s111_low_gear-eye.png",
+			"idx": 204,
+			"line": "vignette:s111_low_gear",
+			"look": [
+				32.9,
+				-92.538,
+				41.4
+			],
+			"x": 27.189,
+			"yaw": -0.46426,
+			"z": 52.804
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v102-s111_low_gear-chase.png",
+			"idx": 205,
+			"line": "vignette:s111_low_gear",
+			"x": 32.897,
+			"yaw": -0.46426,
+			"z": 46.99
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				85.196,
+				-86.325,
+				-135.43
+			],
+			"file": "park_sinkhole-v103-s112_mid_skylight_garden-eye.png",
+			"idx": 206,
+			"line": "vignette:s112_mid_skylight_garden",
+			"look": [
+				88.509,
+				-87.583,
+				-131.685
+			],
+			"x": 80.055,
+			"yaw": -2.41728,
+			"z": -141.24
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v103-s112_mid_skylight_garden-chase.png",
+			"idx": 207,
+			"line": "vignette:s112_mid_skylight_garden",
+			"x": 83.324,
+			"yaw": -2.41728,
+			"z": -133.773
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				185.906,
+				-89.469,
+				-20.132
+			],
+			"file": "park_sinkhole-v104-s113_lamp_wall-eye.png",
+			"idx": 208,
+			"line": "vignette:s113_lamp_wall",
+			"look": [
+				183.338,
+				-89.094,
+				-24.423
+			],
+			"x": 190.003,
+			"yaw": 0.53931,
+			"z": -13.287
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v104-s113_lamp_wall-chase.png",
+			"idx": 209,
+			"line": "vignette:s113_lamp_wall",
+			"x": 188.051,
+			"yaw": 0.53931,
+			"z": -21.416
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				77.16,
+				-92.064,
+				75.0
+			],
+			"file": "park_sinkhole-v105-s114_mid_shift_board-eye.png",
+			"idx": 210,
+			"line": "vignette:s114_mid_shift_board",
+			"look": [
+				79.63,
+				-92.95,
+				70.652
+			],
+			"x": 73.269,
+			"yaw": -0.51662,
+			"z": 81.849
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v105-s114_mid_shift_board-chase.png",
+			"idx": 211,
+			"line": "vignette:s114_mid_shift_board",
+			"x": 79.334,
+			"yaw": -0.51662,
+			"z": 76.234
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-114.427,
+				-93.354,
+				122.324
+			],
+			"file": "park_sinkhole-v106-s115_mid_tailings_cart-eye.png",
+			"idx": 212,
+			"line": "vignette:s115_mid_tailings_cart",
+			"look": [
+				-110.0,
+				-94.343,
+				120.0
+			],
+			"x": -121.376,
+			"yaw": -1.08734,
+			"z": 125.972
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v106-s115_mid_tailings_cart-chase.png",
+			"idx": 213,
+			"line": "vignette:s115_mid_tailings_cart",
+			"x": -113.265,
+			"yaw": -1.08734,
+			"z": 124.538
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				219.119,
+				-91.76,
+				63.849
+			],
+			"file": "park_sinkhole-v107-s116_pump_station-eye.png",
+			"idx": 214,
+			"line": "vignette:s116_pump_station",
+			"look": [
+				214.974,
+				-91.35,
+				66.645
+			],
+			"x": 225.73,
+			"yaw": 2.16421,
+			"z": 59.39
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v107-s116_pump_station-chase.png",
+			"idx": 215,
+			"line": "vignette:s116_pump_station",
+			"x": 217.721,
+			"yaw": 2.16421,
+			"z": 61.776
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-25.438,
+				-92.377,
+				86.5
+			],
+			"file": "park_sinkhole-v108-s117_mid_shift_board-eye.png",
+			"idx": 216,
+			"line": "vignette:s117_mid_shift_board",
+			"look": [
+				-29.405,
+				-93.465,
+				89.543
+			],
+			"x": -19.236,
+			"yaw": 2.22529,
+			"z": 81.741
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v108-s117_mid_shift_board-chase.png",
+			"idx": 217,
+			"line": "vignette:s117_mid_shift_board",
+			"x": -26.96,
+			"yaw": 2.22529,
+			"z": 84.516
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				71.33,
+				-91.689,
+				61.247
+			],
+			"file": "park_sinkhole-v109-s118_low_stones-eye.png",
+			"idx": 218,
+			"line": "vignette:s118_low_stones",
+			"look": [
+				73.8,
+				-93.203,
+				56.9
+			],
+			"x": 67.548,
+			"yaw": -0.51662,
+			"z": 67.905
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v109-s118_low_stones-chase.png",
+			"idx": 219,
+			"line": "vignette:s118_low_stones",
+			"x": 73.504,
+			"yaw": -0.51662,
+			"z": 62.482
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				44.417,
+				-91.664,
+				60.344
+			],
+			"file": "park_sinkhole-v110-s119_gallery_fall-eye.png",
+			"idx": 220,
+			"line": "vignette:s119_gallery_fall",
+			"look": [
+				46.886,
+				-92.478,
+				55.997
+			],
+			"x": 40.516,
+			"yaw": -0.51662,
+			"z": 67.21
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v110-s119_gallery_fall-chase.png",
+			"idx": 221,
+			"line": "vignette:s119_gallery_fall",
+			"x": 46.59,
+			"yaw": -0.51662,
+			"z": 61.579
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				90.833,
+				-89.845,
+				-6.348
+			],
+			"file": "park_sinkhole-v111-s120_low_gear-eye.png",
+			"idx": 222,
+			"line": "vignette:s120_low_gear",
+			"look": [
+				89.0,
+				-91.109,
+				-11.0
+			],
+			"x": 93.675,
+			"yaw": 0.37525,
+			"z": 0.868
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v111-s120_low_gear-chase.png",
+			"idx": 223,
+			"line": "vignette:s120_low_gear",
+			"x": 93.159,
+			"yaw": 0.37525,
+			"z": -7.264
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-35.433,
+				-92.578,
+				93.856
+			],
+			"file": "park_sinkhole-v112-s121_low_ferns-eye.png",
+			"idx": 224,
+			"line": "vignette:s121_low_ferns",
+			"look": [
+				-39.4,
+				-93.992,
+				96.9
+			],
+			"x": -29.326,
+			"yaw": 2.22529,
+			"z": 89.17
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v112-s121_low_ferns-chase.png",
+			"idx": 225,
+			"line": "vignette:s121_low_ferns",
+			"x": -36.955,
+			"yaw": 2.22529,
+			"z": 91.873
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-180.164,
+				-95.814,
+				212.53
+			],
+			"file": "park_sinkhole-v113-s122_mid_rimstone_pool-eye.png",
+			"idx": 226,
+			"line": "vignette:s122_mid_rimstone_pool",
+			"look": [
+				-175.674,
+				-97.332,
+				210.33
+			],
+			"x": -187.038,
+			"yaw": -1.11527,
+			"z": 215.898
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v113-s122_mid_rimstone_pool-chase.png",
+			"idx": 227,
+			"line": "vignette:s122_mid_rimstone_pool",
+			"x": -179.064,
+			"yaw": -1.11527,
+			"z": 214.775
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				104.877,
+				-92.328,
+				84.683
+			],
+			"file": "park_sinkhole-v114-s123_low_stones-eye.png",
+			"idx": 228,
+			"line": "vignette:s123_low_stones",
+			"look": [
+				107.9,
+				-93.852,
+				80.7
+			],
+			"x": 100.25,
+			"yaw": -0.64926,
+			"z": 90.778
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v114-s123_low_stones-chase.png",
+			"idx": 229,
+			"line": "vignette:s123_low_stones",
+			"x": 106.868,
+			"yaw": -0.64926,
+			"z": 86.194
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				142.393,
+				-89.592,
+				-15.61
+			],
+			"file": "park_sinkhole-v115-s124_mid_tailings_cart-eye.png",
+			"idx": 230,
+			"line": "vignette:s124_mid_tailings_cart",
+			"look": [
+				140.0,
+				-90.525,
+				-20.0
+			],
+			"x": 146.158,
+			"yaw": 0.49916,
+			"z": -8.705
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v115-s124_mid_tailings_cart-chase.png",
+			"idx": 231,
+			"line": "vignette:s124_mid_tailings_cart",
+			"x": 144.588,
+			"yaw": 0.49916,
+			"z": -16.807
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				137.173,
+				-92.948,
+				107.442
+			],
+			"file": "park_sinkhole-v116-s125_low_gear-eye.png",
+			"idx": 232,
+			"line": "vignette:s125_low_gear",
+			"look": [
+				140.8,
+				-94.246,
+				104.0
+			],
+			"x": 131.556,
+			"yaw": -0.81158,
+			"z": 112.772
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v116-s125_low_gear-chase.png",
+			"idx": 233,
+			"line": "vignette:s125_low_gear",
+			"x": 138.894,
+			"yaw": -0.81158,
+			"z": 109.255
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-98.579,
+				-92.149,
+				78.148
+			],
+			"file": "park_sinkhole-v117-s126_low_stones-eye.png",
+			"idx": 234,
+			"line": "vignette:s126_low_stones",
+			"look": [
+				-102.2,
+				-93.688,
+				74.7
+			],
+			"x": -93.042,
+			"yaw": 0.80983,
+			"z": 83.421
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v117-s126_low_stones-chase.png",
+			"idx": 235,
+			"line": "vignette:s126_low_stones",
+			"x": -96.855,
+			"yaw": 0.80983,
+			"z": 76.338
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-155.25,
+				-91.245,
+				45.0
+			],
+			"file": "park_sinkhole-v118-s127_mid_column_field-eye.png",
+			"idx": 236,
+			"line": "vignette:s127_mid_column_field",
+			"look": [
+				-151.629,
+				-92.411,
+				48.448
+			],
+			"x": -160.892,
+			"yaw": -2.33176,
+			"z": 39.627
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v118-s127_mid_column_field-chase.png",
+			"idx": 237,
+			"line": "vignette:s127_mid_column_field",
+			"x": -156.974,
+			"yaw": -2.33176,
+			"z": 46.811
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				29.639,
+				-95.536,
+				202.316
+			],
+			"file": "park_sinkhole-v119-s128_low_ferns-eye.png",
+			"idx": 238,
+			"line": "vignette:s128_low_ferns",
+			"look": [
+				31.3,
+				-96.738,
+				197.6
+			],
+			"x": 27.056,
+			"yaw": -0.33859,
+			"z": 209.653
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v119-s128_low_ferns-chase.png",
+			"idx": 239,
+			"line": "vignette:s128_low_ferns",
+			"x": 31.997,
+			"yaw": -0.33859,
+			"z": 203.147
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-91.476,
+				-94.738,
+				173.048
+			],
+			"file": "park_sinkhole-v120-s129_pump_station-eye.png",
+			"idx": 240,
+			"line": "vignette:s129_pump_station",
+			"look": [
+				-95.35,
+				-94.514,
+				176.208
+			],
+			"x": -85.282,
+			"yaw": 2.25496,
+			"z": 167.997
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v120-s129_pump_station-chase.png",
+			"idx": 241,
+			"line": "vignette:s129_pump_station",
+			"x": -93.056,
+			"yaw": 2.25497,
+			"z": 171.11
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				145.804,
+				-94.635,
+				169.292
+			],
+			"file": "park_sinkhole-v121-s130_low_gear-eye.png",
+			"idx": 242,
+			"line": "vignette:s130_low_gear",
+			"look": [
+				150.8,
+				-96.021,
+				169.1
+			],
+			"x": 138.1,
+			"yaw": -1.5324,
+			"z": 169.588
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v121-s130_low_gear-chase.png",
+			"idx": 243,
+			"line": "vignette:s130_low_gear",
+			"x": 145.9,
+			"yaw": -1.5324,
+			"z": 171.79
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-52.892,
+				-94.687,
+				171.194
+			],
+			"file": "park_sinkhole-v122-s131_low_stones-eye.png",
+			"idx": 244,
+			"line": "vignette:s131_low_stones",
+			"look": [
+				-50.7,
+				-96.197,
+				166.7
+			],
+			"x": -56.249,
+			"yaw": -0.45379,
+			"z": 178.077
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v122-s131_low_stones-chase.png",
+			"idx": 245,
+			"line": "vignette:s131_low_stones",
+			"x": -50.645,
+			"yaw": -0.45379,
+			"z": 172.29
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				115.063,
+				-95.209,
+				190.327
+			],
+			"file": "park_sinkhole-v123-s132_lamp_wall-eye.png",
+			"idx": 246,
+			"line": "vignette:s132_lamp_wall",
+			"look": [
+				110.64,
+				-95.015,
+				192.658
+			],
+			"x": 122.134,
+			"yaw": 2.056,
+			"z": 186.598
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v123-s132_lamp_wall-chase.png",
+			"idx": 247,
+			"line": "vignette:s132_lamp_wall",
+			"x": 113.897,
+			"yaw": 2.056,
+			"z": 188.115
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				145.004,
+				-94.114,
+				150.192
+			],
+			"file": "park_sinkhole-v124-s133_mid_tailings_cart-eye.png",
+			"idx": 248,
+			"line": "vignette:s133_mid_tailings_cart",
+			"look": [
+				150.0,
+				-95.161,
+				150.0
+			],
+			"x": 137.179,
+			"yaw": -1.5324,
+			"z": 150.493
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v124-s133_mid_tailings_cart-chase.png",
+			"idx": 249,
+			"line": "vignette:s133_mid_tailings_cart",
+			"x": 145.1,
+			"yaw": -1.5324,
+			"z": 152.69
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				105.086,
+				-94.309,
+				157.318
+			],
+			"file": "park_sinkhole-v125-s134_mid_rimstone_pool-eye.png",
+			"idx": 250,
+			"line": "vignette:s134_mid_rimstone_pool",
+			"look": [
+				100.663,
+				-95.95,
+				159.65
+			],
+			"x": 111.81,
+			"yaw": 2.056,
+			"z": 153.773
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v125-s134_mid_rimstone_pool-chase.png",
+			"idx": 251,
+			"line": "vignette:s134_mid_rimstone_pool",
+			"x": 103.92,
+			"yaw": 2.056,
+			"z": 155.107
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				14.272,
+				-92.858,
+				104.142
+			],
+			"file": "park_sinkhole-v126-s135_mid_skylight_garden-eye.png",
+			"idx": 252,
+			"line": "vignette:s135_mid_skylight_garden",
+			"look": [
+				11.326,
+				-94.125,
+				108.182
+			],
+			"x": 18.841,
+			"yaw": 2.51153,
+			"z": 97.876
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v126-s135_mid_skylight_garden-chase.png",
+			"idx": 253,
+			"line": "vignette:s135_mid_skylight_garden",
+			"x": 12.252,
+			"yaw": 2.51153,
+			"z": 102.669
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				71.954,
+				-93.921,
+				143.097
+			],
+			"file": "park_sinkhole-v127-s136_low_ferns-eye.png",
+			"idx": 254,
+			"line": "vignette:s136_low_ferns",
+			"look": [
+				70.0,
+				-95.378,
+				147.7
+			],
+			"x": 74.955,
+			"yaw": 2.74017,
+			"z": 136.027
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v127-s136_low_ferns-chase.png",
+			"idx": 255,
+			"line": "vignette:s136_low_ferns",
+			"x": 69.652,
+			"yaw": 2.74017,
+			"z": 142.121
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				111.506,
+				-95.848,
+				213.753
+			],
+			"file": "park_sinkhole-v128-s137_low_stones-eye.png",
+			"idx": 256,
+			"line": "vignette:s137_low_stones",
+			"look": [
+				114.7,
+				-97.586,
+				217.6
+			],
+			"x": 106.679,
+			"yaw": -2.4487,
+			"z": 207.939
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v128-s137_low_stones-chase.png",
+			"idx": 257,
+			"line": "vignette:s137_low_stones",
+			"x": 109.583,
+			"yaw": -2.4487,
+			"z": 215.35
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				52.833,
+				-93.109,
+				113.326
+			],
+			"file": "park_sinkhole-v129-s138_mid_column_field-eye.png",
+			"idx": 258,
+			"line": "vignette:s138_mid_column_field",
+			"look": [
+				50.879,
+				-94.306,
+				117.929
+			],
+			"x": 55.873,
+			"yaw": 2.74017,
+			"z": 106.165
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v129-s138_mid_column_field-chase.png",
+			"idx": 259,
+			"line": "vignette:s138_mid_column_field",
+			"x": 50.532,
+			"yaw": 2.74017,
+			"z": 112.35
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-112.153,
+				-93.315,
+				120.87
+			],
+			"file": "park_sinkhole-v130-s139_low_gear-eye.png",
+			"idx": 260,
+			"line": "vignette:s139_low_gear",
+			"look": [
+				-116.5,
+				-94.638,
+				118.4
+			],
+			"x": -105.428,
+			"yaw": 1.05418,
+			"z": 124.69
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v130-s139_low_gear-chase.png",
+			"idx": 261,
+			"line": "vignette:s139_low_gear",
+			"x": -110.918,
+			"yaw": 1.05418,
+			"z": 118.696
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				119.641,
+				-93.178,
+				115.852
+			],
+			"file": "park_sinkhole-v131-s140_gallery_fall-eye.png",
+			"idx": 262,
+			"line": "vignette:s140_gallery_fall",
+			"look": [
+				123.268,
+				-94.017,
+				112.41
+			],
+			"x": 113.918,
+			"yaw": -0.81158,
+			"z": 121.283
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v131-s140_gallery_fall-chase.png",
+			"idx": 263,
+			"line": "vignette:s140_gallery_fall",
+			"x": 121.362,
+			"yaw": -0.81158,
+			"z": 117.665
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				167.026,
+				2.115,
+				288.463
+			],
+			"file": "park_sinkhole-v132-s141_pump_station-eye.png",
+			"idx": 264,
+			"line": "vignette:s141_pump_station",
+			"look": [
+				163.833,
+				2.53,
+				284.616
+			],
+			"x": 172.119,
+			"yaw": 0.6929,
+			"z": 294.597
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v132-s141_pump_station-chase.png",
+			"idx": 265,
+			"line": "vignette:s141_pump_station",
+			"x": 168.95,
+			"yaw": 0.6929,
+			"z": 286.866
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				205.15,
+				-96.361,
+				232.557
+			],
+			"file": "park_sinkhole-v133-s142_mid_shift_board-eye.png",
+			"idx": 266,
+			"line": "vignette:s142_mid_shift_board",
+			"look": [
+				200.672,
+				-97.304,
+				230.333
+			],
+			"x": 212.192,
+			"yaw": 1.11003,
+			"z": 236.052
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v133-s142_mid_shift_board-chase.png",
+			"idx": 267,
+			"line": "vignette:s142_mid_shift_board",
+			"x": 206.262,
+			"yaw": 1.11003,
+			"z": 230.317
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-118.815,
+				-94.786,
+				174.835
+			],
+			"file": "park_sinkhole-v134-s143_low_ferns-eye.png",
+			"idx": 268,
+			"line": "vignette:s143_low_ferns",
+			"look": [
+				-123.7,
+				-96.147,
+				175.9
+			],
+			"x": -111.273,
+			"yaw": 1.78547,
+			"z": 173.19
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v134-s143_low_ferns-chase.png",
+			"idx": 269,
+			"line": "vignette:s143_low_ferns",
+			"x": -119.347,
+			"yaw": 1.78547,
+			"z": 172.392
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-82.849,
+				-95.807,
+				212.239
+			],
+			"file": "park_sinkhole-v135-s144_low_gear-eye.png",
+			"idx": 270,
+			"line": "vignette:s144_low_gear",
+			"look": [
+				-85.9,
+				-97.306,
+				216.2
+			],
+			"x": -78.174,
+			"yaw": 2.48535,
+			"z": 206.167
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v135-s144_low_gear-chase.png",
+			"idx": 271,
+			"line": "vignette:s144_low_gear",
+			"x": -84.83,
+			"yaw": 2.48535,
+			"z": 210.713
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-10.903,
+				-95.334,
+				194.918
+			],
+			"file": "park_sinkhole-v136-s145_mid_tailings_cart-eye.png",
+			"idx": 272,
+			"line": "vignette:s145_mid_tailings_cart",
+			"look": [
+				-10.0,
+				-96.252,
+				190.0
+			],
+			"x": -12.323,
+			"yaw": -0.18151,
+			"z": 202.657
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v136-s145_mid_tailings_cart-chase.png",
+			"idx": 273,
+			"line": "vignette:s145_mid_tailings_cart",
+			"x": -8.444,
+			"yaw": -0.18151,
+			"z": 195.369
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-53.178,
+				-95.105,
+				186.516
+			],
+			"file": "park_sinkhole-v137-s146_mid_column_field-eye.png",
+			"idx": 274,
+			"line": "vignette:s146_mid_column_field",
+			"look": [
+				-50.986,
+				-96.054,
+				182.022
+			],
+			"x": -56.624,
+			"yaw": -0.45379,
+			"z": 193.581
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v137-s146_mid_column_field-chase.png",
+			"idx": 275,
+			"line": "vignette:s146_mid_column_field",
+			"x": -50.931,
+			"yaw": -0.45379,
+			"z": 187.612
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				25.437,
+				-82.172,
+				-287.696
+			],
+			"file": "park_sinkhole-v138-f05_low_ferns-eye.png",
+			"idx": 276,
+			"line": "vignette:f05_low_ferns",
+			"look": [
+				29.1,
+				-83.41,
+				-291.1
+			],
+			"x": 19.749,
+			"yaw": -0.82205,
+			"z": -282.41
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v138-f05_low_ferns-chase.png",
+			"idx": 277,
+			"line": "vignette:f05_low_ferns",
+			"x": 27.139,
+			"yaw": -0.82205,
+			"z": -285.865
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				45.468,
+				-82.712,
+				-267.887
+			],
+			"file": "park_sinkhole-v139-f07_low_gear-eye.png",
+			"idx": 278,
+			"line": "vignette:f07_low_gear",
+			"look": [
+				50.0,
+				-84.046,
+				-270.0
+			],
+			"x": 38.463,
+			"yaw": -1.13446,
+			"z": -264.62
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v139-f07_low_gear-chase.png",
+			"idx": 279,
+			"line": "vignette:f07_low_gear",
+			"x": 46.525,
+			"yaw": -1.13446,
+			"z": -265.621
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-57.016,
+				-93.227,
+				-27.723
+			],
+			"file": "park_sinkhole-v140-f10_low_gear-eye.png",
+			"idx": 280,
+			"line": "vignette:f10_low_gear",
+			"look": [
+				-54.6,
+				-94.534,
+				-32.1
+			],
+			"x": -60.757,
+			"yaw": -0.5044,
+			"z": -20.947
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v140-f10_low_gear-chase.png",
+			"idx": 281,
+			"line": "vignette:f10_low_gear",
+			"x": -54.828,
+			"yaw": -0.5044,
+			"z": -26.514
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-64.377,
+				-93.096,
+				-33.716
+			],
+			"file": "park_sinkhole-v141-f11_low_stones-eye.png",
+			"idx": 282,
+			"line": "vignette:f11_low_stones",
+			"look": [
+				-60.0,
+				-94.79,
+				-31.3
+			],
+			"x": -71.01,
+			"yaw": -2.0752,
+			"z": -37.378
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v141-f11_low_stones-chase.png",
+			"idx": 283,
+			"line": "vignette:f11_low_stones",
+			"x": -65.586,
+			"yaw": -2.0752,
+			"z": -31.528
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-65.916,
+				-93.12,
+				-32.323
+			],
+			"file": "park_sinkhole-v142-f12_low_ferns-eye.png",
+			"idx": 284,
+			"line": "vignette:f12_low_ferns",
+			"look": [
+				-63.5,
+				-94.348,
+				-36.7
+			],
+			"x": -69.671,
+			"yaw": -0.5044,
+			"z": -25.521
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v142-f12_low_ferns-chase.png",
+			"idx": 285,
+			"line": "vignette:f12_low_ferns",
+			"x": -63.728,
+			"yaw": -0.5044,
+			"z": -31.114
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-660.0,
+				-89.118,
+				-33.0
+			],
+			"file": "park_sinkhole-v143-g01_granary_ledge-eye.png",
+			"idx": 286,
+			"line": "vignette:g01_granary_ledge",
+			"look": [
+				-660.0,
+				-90.095,
+				-38.0
+			],
+			"x": -660.0,
+			"yaw": 0.0,
+			"z": -25.149
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v143-g01_granary_ledge-chase.png",
+			"idx": 287,
+			"line": "vignette:g01_granary_ledge",
+			"x": -657.5,
+			"yaw": 0.0,
+			"z": -33.0
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-660.0,
+				-87.591,
+				-89.0
+			],
+			"file": "park_sinkhole-v144-g02_granary_ledge-eye.png",
+			"idx": 288,
+			"line": "vignette:g02_granary_ledge",
+			"look": [
+				-660.0,
+				-88.841,
+				-84.0
+			],
+			"x": -660.0,
+			"yaw": -3.14159,
+			"z": -96.761
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v144-g02_granary_ledge-chase.png",
+			"idx": 289,
+			"line": "vignette:g02_granary_ledge",
+			"x": -662.5,
+			"yaw": 3.14159,
+			"z": -89.0
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-635.0,
+				-89.118,
+				-33.0
+			],
+			"file": "park_sinkhole-v145-g03_granary_ledge-eye.png",
+			"idx": 290,
+			"line": "vignette:g03_granary_ledge",
+			"look": [
+				-635.0,
+				-90.095,
+				-38.0
+			],
+			"x": -635.0,
+			"yaw": 0.0,
+			"z": -25.149
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v145-g03_granary_ledge-chase.png",
+			"idx": 291,
+			"line": "vignette:g03_granary_ledge",
+			"x": -632.5,
+			"yaw": 0.0,
+			"z": -33.0
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-182.482,
+				-73.71,
+				-597.951
+			],
+			"file": "park_sinkhole-v146-m13_mid_horn_stubs-eye.png",
+			"idx": 292,
+			"line": "vignette:m13_mid_horn_stubs",
+			"look": [
+				-186.29,
+				-74.276,
+				-594.71
+			],
+			"x": -176.429,
+			"yaw": 2.27591,
+			"z": -603.103
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v146-m13_mid_horn_stubs-chase.png",
+			"idx": 293,
+			"line": "vignette:m13_mid_horn_stubs",
+			"x": -184.103,
+			"yaw": 2.27591,
+			"z": -599.854
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-214.959,
+				-75.174,
+				-544.286
+			],
+			"file": "park_sinkhole-v147-m14_mid_cart_stub-eye.png",
+			"idx": 294,
+			"line": "vignette:m14_mid_cart_stub",
+			"look": [
+				-210.04,
+				-76.278,
+				-545.18
+			],
+			"x": -222.645,
+			"yaw": -1.39103,
+			"z": -542.889
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v147-m14_mid_cart_stub-chase.png",
+			"idx": 295,
+			"line": "vignette:m14_mid_cart_stub",
+			"x": -214.512,
+			"yaw": -1.39103,
+			"z": -541.826
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-215.012,
+				-76.096,
+				-510.466
+			],
+			"file": "park_sinkhole-v148-m15_mid_cart_horn-eye.png",
+			"idx": 296,
+			"line": "vignette:m15_mid_cart_horn",
+			"look": [
+				-210.51,
+				-77.269,
+				-508.29
+			],
+			"x": -222.024,
+			"yaw": -2.02109,
+			"z": -513.856
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v148-m15_mid_cart_horn-chase.png",
+			"idx": 297,
+			"line": "vignette:m15_mid_cart_horn",
+			"x": -216.1,
+			"yaw": -2.02109,
+			"z": -508.215
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-225.069,
+				-77.152,
+				-471.775
+			],
+			"file": "park_sinkhole-v149-m16_mid_horn_stubs-eye.png",
+			"idx": 298,
+			"line": "vignette:m16_mid_horn_stubs",
+			"look": [
+				-220.38,
+				-77.581,
+				-473.51
+			],
+			"x": -232.545,
+			"yaw": -1.21649,
+			"z": -469.01
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v149-m16_mid_horn_stubs-chase.png",
+			"idx": 299,
+			"line": "vignette:m16_mid_horn_stubs",
+			"x": -224.202,
+			"yaw": -1.21649,
+			"z": -469.431
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-151.544,
+				-77.6,
+				-455.332
+			],
+			"file": "park_sinkhole-v150-m17_mid_cart_stub-eye.png",
+			"idx": 300,
+			"line": "vignette:m17_mid_cart_stub",
+			"look": [
+				-153.72,
+				-78.851,
+				-450.83
+			],
+			"x": -148.166,
+			"yaw": 2.6913,
+			"z": -462.319
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v150-m17_mid_cart_stub-chase.png",
+			"idx": 301,
+			"line": "vignette:m17_mid_cart_stub",
+			"x": -153.795,
+			"yaw": 2.6913,
+			"z": -456.42
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-103.858,
+				-79.101,
+				-400.299
+			],
+			"file": "park_sinkhole-v151-m18_mid_cart_horn-eye.png",
+			"idx": 302,
+			"line": "vignette:m18_mid_cart_horn",
+			"look": [
+				-105.11,
+				-80.083,
+				-405.14
+			],
+			"x": -101.893,
+			"yaw": 0.25307,
+			"z": -392.699
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v151-m18_mid_cart_horn-chase.png",
+			"idx": 303,
+			"line": "vignette:m18_mid_cart_horn",
+			"x": -101.438,
+			"yaw": 0.25307,
+			"z": -400.925
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-81.239,
+				-77.541,
+				-457.482
+			],
+			"file": "park_sinkhole-v152-m19_mid_horn_stubs-eye.png",
+			"idx": 304,
+			"line": "vignette:m19_mid_horn_stubs",
+			"look": [
+				-77.9,
+				-78.12,
+				-453.76
+			],
+			"x": -86.546,
+			"yaw": -2.4103,
+			"z": -463.397
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v152-m19_mid_horn_stubs-chase.png",
+			"idx": 305,
+			"line": "vignette:m19_mid_horn_stubs",
+			"x": -83.1,
+			"yaw": 3.87289,
+			"z": -455.812
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				15.909,
+				-79.416,
+				-388.759
+			],
+			"file": "park_sinkhole-v153-m21_mid_cart_stub-eye.png",
+			"idx": 306,
+			"line": "vignette:m21_mid_cart_stub",
+			"look": [
+				12.48,
+				-80.643,
+				-385.12
+			],
+			"x": 21.237,
+			"yaw": 2.38586,
+			"z": -394.413
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v153-m21_mid_cart_stub-chase.png",
+			"idx": 307,
+			"line": "vignette:m21_mid_cart_stub",
+			"x": 14.09,
+			"yaw": 2.38587,
+			"z": -390.473
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-34.974,
+				-89.569,
+				-16.481
+			],
+			"file": "park_sinkhole-v154-gr1_low_rim_ferns-eye.png",
+			"idx": 308,
+			"line": "vignette:gr1_low_rim_ferns",
+			"look": [
+				-32.0,
+				-90.814,
+				-20.5
+			],
+			"x": -39.592,
+			"yaw": -0.63705,
+			"z": -10.24
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v154-gr1_low_rim_ferns-chase.png",
+			"idx": 309,
+			"line": "vignette:gr1_low_rim_ferns",
+			"x": -32.964,
+			"yaw": -0.63705,
+			"z": -14.994
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-40.916,
+				-90.642,
+				-21.123
+			],
+			"file": "park_sinkhole-v155-gr2_low_stones-eye.png",
+			"idx": 310,
+			"line": "vignette:gr2_low_stones",
+			"look": [
+				-38.5,
+				-92.508,
+				-25.5
+			],
+			"x": -44.538,
+			"yaw": -0.5044,
+			"z": -14.561
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v155-gr2_low_stones-chase.png",
+			"idx": 311,
+			"line": "vignette:gr2_low_stones",
+			"x": -38.728,
+			"yaw": -0.5044,
+			"z": -19.914
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-42.474,
+				-89.781,
+				-12.481
+			],
+			"file": "park_sinkhole-v156-gr3_low_rim_gear-eye.png",
+			"idx": 312,
+			"line": "vignette:gr3_low_rim_gear",
+			"look": [
+				-39.5,
+				-91.603,
+				-16.5
+			],
+			"x": -46.945,
+			"yaw": -0.63705,
+			"z": -6.438
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v156-gr3_low_rim_gear-chase.png",
+			"idx": 313,
+			"line": "vignette:gr3_low_rim_gear",
+			"x": -40.464,
+			"yaw": -0.63705,
+			"z": -10.994
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				8.575,
+				-68.135,
+				-69.055
+			],
+			"file": "park_sinkhole-v157-gr4_low_rim_gear-eye.png",
+			"idx": 314,
+			"line": "vignette:gr4_low_rim_gear",
+			"look": [
+				11.5,
+				-89.824,
+				-65.0
+			],
+			"x": 7.524,
+			"yaw": -2.51676,
+			"z": -70.513
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v157-gr4_low_rim_gear-chase.png",
+			"idx": 315,
+			"line": "vignette:gr4_low_rim_gear",
+			"x": 6.548,
+			"yaw": -2.51676,
+			"z": -67.593
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				10.839,
+				-90.692,
+				24.722
+			],
+			"file": "park_sinkhole-v158-gr5_low_rim_ferns-eye.png",
+			"idx": 316,
+			"line": "vignette:gr5_low_rim_ferns",
+			"look": [
+				7.5,
+				-91.946,
+				21.0
+			],
+			"x": 16.022,
+			"yaw": 0.73129,
+			"z": 30.497
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v158-gr5_low_rim_ferns-chase.png",
+			"idx": 317,
+			"line": "vignette:gr5_low_rim_ferns",
+			"x": 12.7,
+			"yaw": 0.73129,
+			"z": 23.052
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-614.801,
+				-26.995,
+				-660.835
+			],
+			"file": "park_sinkhole-v159-m02_mid_horn_stubs-eye.png",
+			"idx": 318,
+			"line": "vignette:m02_mid_horn_stubs",
+			"look": [
+				-610.48,
+				-27.404,
+				-663.35
+			],
+			"x": -621.693,
+			"yaw": -1.04371,
+			"z": -656.824
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v159-m02_mid_horn_stubs-chase.png",
+			"idx": 319,
+			"line": "vignette:m02_mid_horn_stubs",
+			"x": -613.544,
+			"yaw": -1.04371,
+			"z": -658.674
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-619.101,
+				-27.443,
+				-644.425
+			],
+			"file": "park_sinkhole-v160-m03_mid_cart_stub-eye.png",
+			"idx": 320,
+			"line": "vignette:m03_mid_cart_stub",
+			"look": [
+				-614.78,
+				-28.503,
+				-646.94
+			],
+			"x": -625.865,
+			"yaw": -1.04371,
+			"z": -640.488
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v160-m03_mid_cart_stub-chase.png",
+			"idx": 321,
+			"line": "vignette:m03_mid_cart_stub",
+			"x": -617.844,
+			"yaw": -1.04371,
+			"z": -642.264
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-570.834,
+				-28.96,
+				-588.796
+			],
+			"file": "park_sinkhole-v161-m04_mid_horn_stubs-eye.png",
+			"idx": 322,
+			"line": "vignette:m04_mid_horn_stubs",
+			"look": [
+				-566.97,
+				-29.351,
+				-591.97
+			],
+			"x": -576.997,
+			"yaw": -0.88314,
+			"z": -583.734
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v161-m04_mid_horn_stubs-chase.png",
+			"idx": 323,
+			"line": "vignette:m04_mid_horn_stubs",
+			"x": -569.247,
+			"yaw": -0.88314,
+			"z": -586.865
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-527.319,
+				-33.196,
+				-551.374
+			],
+			"file": "park_sinkhole-v162-m05_mid_horn_stubs-eye.png",
+			"idx": 324,
+			"line": "vignette:m05_mid_horn_stubs",
+			"look": [
+				-525.47,
+				-33.396,
+				-556.02
+			],
+			"x": -530.274,
+			"yaw": -0.37874,
+			"z": -543.947
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v162-m05_mid_horn_stubs-chase.png",
+			"idx": 325,
+			"line": "vignette:m05_mid_horn_stubs",
+			"x": -524.996,
+			"yaw": -0.37874,
+			"z": -550.45
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-483.807,
+				-32.842,
+				-596.056
+			],
+			"file": "park_sinkhole-v163-m06_mid_cart_stub-eye.png",
+			"idx": 326,
+			"line": "vignette:m06_mid_cart_stub",
+			"look": [
+				-485.55,
+				-34.455,
+				-591.37
+			],
+			"x": -481.153,
+			"yaw": 2.78555,
+			"z": -603.193
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v163-m06_mid_cart_stub-chase.png",
+			"idx": 327,
+			"line": "vignette:m06_mid_cart_stub",
+			"x": -486.15,
+			"yaw": 2.78555,
+			"z": -596.928
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-453.057,
+				-38.291,
+				-596.761
+			],
+			"file": "park_sinkhole-v164-m07_mid_cart_horn-eye.png",
+			"idx": 328,
+			"line": "vignette:m07_mid_cart_horn",
+			"look": [
+				-452.76,
+				-40.475,
+				-591.77
+			],
+			"x": -453.491,
+			"yaw": -3.08225,
+			"z": -604.08
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v164-m07_mid_cart_horn-chase.png",
+			"idx": 329,
+			"line": "vignette:m07_mid_cart_horn",
+			"x": -455.552,
+			"yaw": -3.08225,
+			"z": -596.613
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-418.765,
+				-45.506,
+				-602.975
+			],
+			"file": "park_sinkhole-v165-m08_mid_horn_stubs-eye.png",
+			"idx": 330,
+			"line": "vignette:m08_mid_horn_stubs",
+			"look": [
+				-417.22,
+				-47.373,
+				-598.22
+			],
+			"x": -421.081,
+			"yaw": -2.82744,
+			"z": -610.103
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v165-m08_mid_horn_stubs-chase.png",
+			"idx": 331,
+			"line": "vignette:m08_mid_horn_stubs",
+			"x": -421.143,
+			"yaw": -2.82743,
+			"z": -602.203
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-399.129,
+				-49.808,
+				-609.483
+			],
+			"file": "park_sinkhole-v166-m09_mid_horn_stubs-eye.png",
+			"idx": 332,
+			"line": "vignette:m09_mid_horn_stubs",
+			"look": [
+				-397.04,
+				-51.777,
+				-604.94
+			],
+			"x": -402.24,
+			"yaw": -2.7105,
+			"z": -616.245
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v166-m09_mid_horn_stubs-chase.png",
+			"idx": 333,
+			"line": "vignette:m09_mid_horn_stubs",
+			"x": -401.401,
+			"yaw": -2.7105,
+			"z": -608.438
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-267.891,
+				-72.528,
+				-640.328
+			],
+			"file": "park_sinkhole-v167-m11_mid_cart_stub-eye.png",
+			"idx": 334,
+			"line": "vignette:m11_mid_cart_stub",
+			"look": [
+				-267.76,
+				-73.807,
+				-635.33
+			],
+			"x": -268.094,
+			"yaw": -3.11541,
+			"z": -648.076
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v167-m11_mid_cart_stub-chase.png",
+			"idx": 335,
+			"line": "vignette:m11_mid_cart_stub",
+			"x": -270.39,
+			"yaw": -3.11541,
+			"z": -640.263
+		},
+		{
+			"along_m": 0.0,
+			"cam": [
+				-249.136,
+				-74.252,
+				-578.082
+			],
+			"file": "park_sinkhole-v168-m12_mid_cart_horn-eye.png",
+			"idx": 336,
+			"line": "vignette:m12_mid_cart_horn",
+			"look": [
+				-247.32,
+				-75.239,
+				-582.74
+			],
+			"x": -251.987,
+			"yaw": -0.37176,
+			"z": -570.769
+		},
+		{
+			"along_m": 0.0,
+			"file": "park_sinkhole-v168-m12_mid_cart_horn-chase.png",
+			"idx": 337,
+			"line": "vignette:m12_mid_cart_horn",
+			"x": -246.807,
+			"yaw": -0.37176,
+			"z": -577.173
+		}
+	]
+}
