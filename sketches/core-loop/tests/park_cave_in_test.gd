@@ -106,6 +106,7 @@ func _run() -> void:
 	w.events.end_all()
 	await _sample("ended", fill_s + 2.0, true)
 	handler.release()
+	Natural.release_plans()
 	w.free()
 	var result := t.verdict()
 	quit(result)
