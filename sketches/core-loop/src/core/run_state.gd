@@ -12,6 +12,12 @@ const Profile := preload("res://src/core/profile.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const MAX_HP := 100.0
+# A hit that would kill from full health leaves 1.0 instead (coordinator ruling, 19 Oct 02:29Z:
+# at base tier no single hit kills from full). Applies at every tier; the ladder's top step may
+# thin it through `one_shot_guard`. A hit of SCRIPTED_KILL or more is a scripted death (tests and
+# scripted ends use 9999 or 99999), never an attack, so the guard lets it through.
+const ONE_SHOT_GUARD := true
+const SCRIPTED_KILL := 9999.0
 const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
 # Match HUD.LOW_HEALTH. Two seconds allows a clutch move before the 5 s regen delay;
@@ -48,6 +54,7 @@ var class_def: Resource
 var stage := 1
 var max_hp := MAX_HP
 var hp := MAX_HP
+var one_shot_guard := ONE_SHOT_GUARD
 var scrap := 0
 # Mass is separate from the scrap wallet: spending compacts scrap into a part and keeps
 # the mass; only lose_scrap (a crane theft) takes mass away.
@@ -268,8 +275,10 @@ func advance(delta: float) -> void:
 	stage_time += delta
 	escape_window_left = maxf(0.0, escape_window_left - maxf(0.0, delta))
 	since_damage += delta
-	if since_damage > REGEN_DELAY and hp < max_hp:
-		hp = minf(max_hp, hp + REGEN_RATE * delta)
+	# pilot.regen_* dials are plumbed but NOT allowed levers yet: a ruling is needed before any
+	# non-default value ships.
+	if since_damage > REGEN_DELAY * ChallengeDials.f("pilot.regen_delay_mult") and hp < max_hp:
+		hp = minf(max_hp, hp + REGEN_RATE * ChallengeDials.f("pilot.regen_rate_mult") * delta)
 
 
 func add_scrap(amount: int, at: Vector3) -> void:
@@ -534,12 +543,22 @@ func damage(amount: float, source: String) -> void:
 	if armor_mode:
 		_damage_armored(amount, source)
 		return
-	hp = maxf(0.0, hp - amount)
+	hp = _after_hit(amount)
 	since_damage = 0.0
 	_try_escape_window()
 	events.player_hit.emit(amount, source)
 	if hp <= 0.0:
 		events.player_died.emit()
+
+
+# The hull after a hit of `amount`. A pilot at full health is left at 1.0 by a hit that would
+# kill from there: no single hit kills from full. `hit` is the whole hit before armour, which
+# decides a scripted kill.
+func _after_hit(amount: float, hit: float = -1.0) -> float:
+	var whole := amount if hit < 0.0 else hit
+	if one_shot_guard and whole < SCRIPTED_KILL and hp >= max_hp - 0.001 and hp - amount <= 0.0:
+		return 1.0
+	return maxf(0.0, hp - amount)
 
 
 func _damage_armored(amount: float, source: String) -> void:
@@ -573,7 +592,7 @@ func _damage_armored(amount: float, source: String) -> void:
 			metrics["heft_at_hits"].append(snappedf(heft(), 0.01))
 		armor_hit.emit(removed, spill, source)
 	if overflow > 0.0:
-		var after := maxf(0.0, hp - overflow)
+		var after := _after_hit(overflow, amount)
 		# A ward holds the hull at its floor, once, inside the same order.
 		if ward_hook.is_valid():
 			after = maxf(after, float(ward_hook.call(after)))

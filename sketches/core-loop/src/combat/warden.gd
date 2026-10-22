@@ -61,6 +61,9 @@ const Augments := preload("res://src/movement/augments.gd")
 #   lane_origin(warden) -> Vector3, where a meltdown slag lane is laid from (KF2c); without it the
 #   lane starts at the body, and the windup, strike and recover facts publish "at" the lane's origin.
 
+# The counter-pulse's hit, apart from hit_player so the combat layer records it as "warden_counter".
+signal counter_hit(amount: float, shove: Vector3)
+
 const HALF_HEIGHT := 1.6
 const RADIUS := 2.8
 const DEFAULT_REACH := 30.0
@@ -108,6 +111,8 @@ static var warned_variants := {}
 var stage := 1
 var reach := DEFAULT_REACH
 var pulses := 0
+# Counter-pulse rings committed (dial warden.counter_damage_by_stage); 0 at the defaults.
+var counters := 0
 # Whether the last pulse's reach ring contained the ball (and so lifted it).
 var last_pulse_lifted := false
 var min_pulse_telegraph := INF
@@ -138,6 +143,12 @@ var _pulse_clock := 0.0
 var _charging := false
 var _charge_time := 0.0
 var _core_ring: Node3D
+# The counter-pulse (off at counter damage 0): seconds into this stagger, whether this stagger's
+# counter is already committed, and its ring and charge.
+var _stagger_time := 0.0
+var _counter_spent := false
+var _counter_ring: Node3D
+var _counter_time := 0.0
 var _since_pulse := INF
 var _look: Node3D
 var _kit: Node3D
@@ -362,7 +373,7 @@ func _step_slag(delta: float) -> void:
 	_slag_burn += SLAG_DAMAGE * delta
 	if _slag_burn >= SLAG_DAMAGE:
 		_slag_burn -= SLAG_DAMAGE
-		hit_player.emit(SLAG_DAMAGE, Vector3.ZERO)
+		hit_player.emit(SLAG_DAMAGE * ChallengeDials.stage_mult("warden.slag_damage", stage), Vector3.ZERO)
 
 
 # True where a lane's footprint lies, by the lane node's own hit test, whether or not it
@@ -647,7 +658,9 @@ func _shrug() -> void:
 # lands even if you leave, but only a ball its rings contain feels it.
 func _step_pulse(delta: float, inside: bool) -> void:
 	if staggered():
+		_step_counter(delta)
 		return
+	_end_counter()
 	if _charging:
 		_charge_time += delta
 		if _flaring < 0 and not _flare_picked:
@@ -664,10 +677,10 @@ func _step_pulse(delta: float, inside: bool) -> void:
 	if not inside:
 		return
 	_pulse_clock += delta
-	if _pulse_clock >= PULSE_CYCLE - PULSE_TELEGRAPH and _charge_allowed():
+	if _pulse_clock >= pulse_cycle(stage) - pulse_telegraph(stage) and _charge_allowed():
 		_charging = true
 		_charge_time = 0.0
-		_charge_len = PULSE_TELEGRAPH
+		_charge_len = pulse_telegraph(stage)
 		_flaring = lined_hardpoint()
 		_flare_picked = _flaring >= 0
 		_commit_ring(Threat.Type.INSTANT, global_position, pulse_radius, LIFT_REACH_UP, Palette.SAND)
@@ -678,6 +691,72 @@ func _step_pulse(delta: float, inside: bool) -> void:
 		_hook("on_charge", [self, _charge_len])
 
 
+# Counter-pulse (challenge dial warden.counter_damage_by_stage > 0): once per stagger, counter_delay
+# seconds in, the core ring is committed again and charges for counter_telegraph seconds. If it lands
+# with the ball inside it hits for the counter damage and lifts like the pulse. A stagger that ends first
+# cancels it. It leaves the stagger, the posture and the pulse clock alone.
+func _step_counter(delta: float) -> void:
+	if counter_damage(stage) <= 0.0 and not is_instance_valid(_counter_ring):
+		return
+	_stagger_time += delta
+	if is_instance_valid(_counter_ring):
+		_counter_time += delta
+		var charge := counter_telegraph(stage)
+		_counter_ring.set_progress(_counter_time / charge)
+		if _counter_time >= charge:
+			if _counter_ring.contains(_ball()):
+				target.crowd_control("warden_counter", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
+				counter_hit.emit(counter_damage(stage), Vector3.ZERO)
+			_cancel_counter()
+		return
+	if _counter_spent or _stagger_time < counter_delay(stage):
+		return
+	_counter_spent = true
+	_counter_time = 0.0
+	counters += 1
+	_counter_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, global_position, CORE_RADIUS)
+	_counter_ring.owner_voice = String(Roster.faction(family)["voice"]) if family != Roster.MIND else ""
+	if family == Roster.REACTOR and fleet != null:
+		fleet.events().vent_charging.emit(global_position, counter_telegraph(stage))
+
+
+# The stagger is over (or never was): drop an unlanded ring and re-arm for the next stagger.
+func _end_counter() -> void:
+	_cancel_counter()
+	_stagger_time = 0.0
+	_counter_spent = false
+
+
+func _cancel_counter() -> void:
+	if is_instance_valid(_counter_ring):
+		_counter_ring.queue_free()
+	_counter_ring = null
+
+
+static func counter_damage(at_stage := 0) -> float:
+	return ChallengeDials.by_stage_or("warden.counter_damage_by_stage", at_stage, 0.0)
+
+
+# Never under the boss tell floor, whatever the dial says.
+static func counter_telegraph(at_stage := 0) -> float:
+	return maxf(ChallengeDials.TELL_FLOOR, ChallengeDials.by_stage_or("warden.counter_telegraph_by_stage", at_stage, 0.8))
+
+
+static func counter_delay(at_stage := 0) -> float:
+	return ChallengeDials.by_stage_or("warden.counter_delay_by_stage", at_stage, 1.0)
+
+
+# Challenge dial warden.pulse_cycle_mult: the pulse cycle never drops under the boss tell floor,
+# and the telegraph is PULSE_TELEGRAPH, never longer than the cycle. at_stage is the Warden's stage
+# for warden.pulse_cycle_by_stage; the default 0 (a caller with no Warden) reads that list as 1.0.
+static func pulse_cycle(at_stage := 0) -> float:
+	return ChallengeDials.floored(PULSE_CYCLE, ChallengeDials.stage_mult("warden.pulse_cycle", at_stage))
+
+
+static func pulse_telegraph(at_stage := 0) -> float:
+	return minf(PULSE_TELEGRAPH, pulse_cycle(at_stage))
+
+
 func _pulse() -> void:
 	var ball := _ball()
 	var ring := telegraph()
@@ -685,7 +764,7 @@ func _pulse() -> void:
 	if last_pulse_lifted:
 		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
-		hit_player.emit(PULSE_DAMAGE, Vector3.ZERO)
+		hit_player.emit(PULSE_DAMAGE * ChallengeDials.stage_mult("warden.pulse_damage", stage), Vector3.ZERO)
 	if _flaring >= 0:
 		_shrug_left = shrug_delay
 		if shrug_delay <= 0.0:
@@ -709,6 +788,7 @@ func _pulse() -> void:
 
 func _exit_tree() -> void:
 	super._exit_tree()
+	_cancel_counter()
 	if is_instance_valid(_core_ring):
 		_core_ring.queue_free()
 	for lane in slag_lanes:
@@ -826,6 +906,7 @@ func _step_posture(delta: float) -> void:
 
 
 func _begin_stagger() -> void:
+	_end_counter()
 	_flaring = -1
 	_shrug_left = -1.0
 	_charging = false
