@@ -43,7 +43,16 @@ const ROWS := {
 			"volumetric_fog_emission": Color("000000"), "volumetric_fog_anisotropy": 0.6,
 			"volumetric_fog_length": 300.0, "volumetric_fog_ambient_inject": 0.3, "volumetric_fog_sky_affect": 0.0}},
 }
-# The bowl has no row: it sits in the Spillway's world row and daylight.
+# What a park map changes in its world's row (stage_look with a "park_" map id). The park's Dig
+# stages are an open pit at noon and a sinkhole open to the sky (PARK.md), not the legacy
+# underground dome: the Spillway's open-sky fill, no volumetric murk (the weather rows carry the air),
+# and the fog density set per map from the standing weather row (park_fog), so it does not pop when that row lands.
+const PARK_ROWS := {
+	2: {"sky": "hdri", "fill": ROWS[1]["fill"], "fill_pitch": ROWS[1]["fill_pitch"], "fill_color": ROWS[1]["fill_color"], "air": {}},
+}
+const PARK_DIR := "res://src/world/park/"
+static var _park_fog := {}
+# The bowl has no row: it keeps the stage it ends (stage 2, the Spillway row under the morning row).
 const ARENAS := {
 	# The Waking pit: no daylight, a black ceiling, cool walls under a cool core key, the amber
 	# accent on the floor pools.
@@ -88,13 +97,20 @@ const NODE := "WorldLook"
 
 # Time of day (KE7; PARK.md section 6; Andrew's "one day per run", 2026-10-17): one day across a
 # run, dawn at the dam to dusk at the crown, and the light carries the run's arc: a cool hopeful
-# dawn, a plain working noon underground, a warm golden swing over the islands, a lonely dusk.
+# dawn, a plain working noon over the open pit, a warm golden swing over the islands, a lonely dusk.
 # Each stage enters at its time; the row lays its sun and ambient over the world row. The sun's
 # height is minus its pitch (sun_rotation.x): it peaks at noon and is lowest at dawn and dusk.
 #   grade: the time-of-day sky (time_sky.gdshader) over an "hdri" or "own" panorama: zenith and
 #   horizon tints, recolor toward them, a cap on the painted sun, a horizon glow under the day's
 #   sun, and the sky's energy. A dome world has no sky to grade.
 #   fog_tint: the colour the stage's fog leans halfway toward (not under a dome).
+#   sun_energy and energy: the ground's light, sun_energy x sin(sun height) + energy, rises from dawn to
+#   noon and falls after (park_day_light_test). Noon is morning x 1.30 and afternoon is just under noon.
+#   Provisional (#241 comment 6333015981): these values were fit to 3060 stills whose park ground
+#   was Terrain3D's untextured checkerboard. On real sand the 3060 sweep (#241 comment 6334779159)
+#   reads the noon floor at L* 73.9 against morning's 65.7, a step of 8.3 over the 5 target; no
+#   single ambient or exposure change closes it. Ruling #241 comment 6334820540 keeps these values
+#   for wave 18 and gives the step to a wave 19 exposure curve keyed to sun height.
 const TIME_ORDER := ["dawn", "morning", "noon", "afternoon", "golden", "dusk"]
 const STAGE_TIME := {1: "dawn", 2: "morning", 3: "noon", 4: "afternoon", 5: "golden", 6: "dusk"}
 const TIME_ROWS := {
@@ -106,11 +122,11 @@ const TIME_ROWS := {
 		"ambient": Color("a9c4d6"), "energy": 0.26, "fog_tint": Color("e4ecf2"),
 		"grade": {"top": Color("f2f6ff"), "horizon": Color("fff1e0"), "recolor": 0.0, "highlight": 8.0,
 			"glow": Color("2a2214"), "energy": 1.0}},
-	"noon": {"sun_rotation": Vector3(-62.0, -40.0, 0.0), "sun_color": Color("fff1dc"), "sun_energy": 2.6,
+	"noon": {"sun_rotation": Vector3(-62.0, -40.0, 0.0), "sun_color": Color("fff1dc"), "sun_energy": 1.4,
 		"ambient": Color("dbe6ec"), "energy": 0.32, "fog_tint": Color("dfe6ea"),
 		"grade": {"top": Color("ffffff"), "horizon": Color("ffffff"), "recolor": 0.0, "highlight": 65504.0,
 			"glow": Color("000000"), "energy": 1.05}},
-	"afternoon": {"sun_rotation": Vector3(-45.0, -15.0, 0.0), "sun_color": Color("ffd7a0"), "sun_energy": 2.3,
+	"afternoon": {"sun_rotation": Vector3(-45.0, -15.0, 0.0), "sun_color": Color("ffd7a0"), "sun_energy": 1.7,
 		"ambient": Color("c9c0a8"), "energy": 0.29, "fog_tint": Color("e6dcc8"),
 		"grade": {"top": Color("fbf6ee"), "horizon": Color("ffe6c4"), "recolor": 0.1, "highlight": 8.0,
 			"glow": Color("2c1e0e"), "energy": 1.0}},
@@ -144,12 +160,33 @@ static func time_row(stage: int) -> Dictionary:
 	return TIME_ROWS.get(time_id(stage), {})
 
 
+# The fog {density, color} of a park map's standing weather row (the first with trigger "always" in
+# World's park json, read-only); the Spillway's fog when it has none.
+static func park_fog(map: String) -> Dictionary:
+	if _park_fog.has(map):
+		return _park_fog[map]
+	var fog: Dictionary = ROWS[1].fog
+	var file := FileAccess.open(PARK_DIR + map + ".json", FileAccess.READ)
+	var data = JSON.parse_string(file.get_as_text()) if file != null else null
+	for weather in (data.get("weather_rows", []) if data is Dictionary else []):
+		if weather.get("trigger", {}).get("on") == "always" and weather.get("fog", {}).has("density"):
+			fog = {"density": float(weather.fog.density), "color": Color(String(weather.fog.color))}
+			break
+	_park_fog[map] = fog
+	return fog
+
+
 # The world row with the stage's time of day laid over it: sun, and the ambient colour and energy.
 # A dome world (underground) has no daylight to vary, so its energy and sun energy stay at the
 # world row; the time of day moves only the sun's direction and colour and the ambient colour there.
-static func stage_look(stage: int, world: int) -> Dictionary:
+static func stage_look(stage: int, world: int, map := "") -> Dictionary:
 	var base := row(world)
 	var look := base.duplicate()
+	var park: Dictionary = PARK_ROWS.get(world, {}) if map.begins_with("park_") else {}
+	if not park.is_empty():
+		look.merge(park, true)
+		look["fog"] = park_fog(map)
+		base = look.duplicate()
 	look.merge(time_row(stage), true)
 	if not time_id(stage).is_empty():
 		look["time"] = time_id(stage)
@@ -157,6 +194,23 @@ static func stage_look(stage: int, world: int) -> Dictionary:
 		look.energy = base.energy
 		look.sun_energy = base.sun_energy
 	return look
+
+
+# The volumetric keys of a row: off unless the preset has air and the row has some.
+static func air_values(look: Dictionary, air: bool) -> Dictionary:
+	var on: bool = air and not look.air.is_empty()
+	var values := {"volumetric_fog_enabled": on}
+	if on:
+		values.merge(look.air)
+	return values
+
+
+# A live override's volumetric keys follow a preset change: drop the old ones, lay the new.
+static func follow_air(values: Dictionary, look: Dictionary, air: bool) -> void:
+	values.erase("volumetric_fog_enabled")
+	for key in look.air:
+		values.erase(key)
+	values.merge(air_values(look, air))
 
 
 # The Environment values a row sets. Every row writes the same keys, so an arena's row covers
@@ -168,8 +222,8 @@ static func environment(look: Dictionary, air: bool) -> Dictionary:
 		"ambient_light_color": look.ambient, "ambient_light_energy": look.energy,
 		"tonemap_exposure": look.exposure, "adjustment_saturation": look.saturation,
 		"fog_enabled": true, "fog_light_energy": fog.get("light_energy", 0.75), "fog_sun_scatter": fog.get("sun_scatter", 0.25),
-		"volumetric_fog_enabled": air and not look.air.is_empty(),
 	}
+	values.merge(air_values(look, air))
 	if fog.has("density"):
 		values["fog_density"] = fog.density
 		values["fog_light_color"] = fog.color
@@ -186,8 +240,6 @@ static func environment(look: Dictionary, air: bool) -> Dictionary:
 		values["fog_sky_affect"] = 0.25
 		if look.sky == "hdri":
 			values["sky"] = Palette.hdri_sky()
-	if values.volumetric_fog_enabled:
-		values.merge(look.air)
 	return values
 
 
@@ -243,7 +295,7 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	var root: Node3D = terrain.geometry_root(stage)
 	var world: int = ctx.stages.world_of(stage)
 	var GraphicsPreset := load("res://src/presentation/graphics_preset.gd")
-	var look := stage_look(stage, world)
+	var look := stage_look(stage, world, String(ctx.stages.of(stage).get("map", "")))
 	GraphicsPreset.enter_world(root, terrain.environment, look)
 	var game = ctx.root
 	if game != null and game.get("world") != null and game.world.view != null:

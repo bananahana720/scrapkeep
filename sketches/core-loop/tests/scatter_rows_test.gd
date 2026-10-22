@@ -1,3 +1,4 @@
+# smoke: solo timeout=300s (builds the chunked scatter for three parks; 115 s alone at load 5 on 2026-10-22, killed at the 180 s default cap on head fbd7f110 and base e83a21c2 in a width-2 fast lane)
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")

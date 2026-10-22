@@ -526,7 +526,7 @@ func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 
 func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	var surfaces: Dictionary = _prepared[row.id].marks.get("land" if landed else "telegraph", {}) if _prepared.has(row.id) else {}
-	if surfaces.is_empty() or not _ground_as_planned():
+	if surfaces.is_empty() or not _ground_as_planned(surfaces):
 		if landed and row.kind == "collapse":
 			geometry = geometry.duplicate()
 			geometry.marker_surface = _overlay_map.swaps[_prepared[row.id].swap].target
@@ -559,19 +559,52 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	return mark
 
 
-# True while the stage's ground is the one the plan projected on: no cave roof lowered and no
-# overlay down that reshapes the ground, so a planned mark matches one projected now.
-func _ground_as_planned() -> bool:
+# True while the ground under a planned mark is the one the plan projected on: no lowered cave roof
+# and no overlay down near it, so the planned mark matches one projected now. A mark reads the ground
+# only in the cells its faces cover and their neighbours (EventGround.project_surface, Surface.height),
+# and a roof or overlay changes it only in its own surface's cells, so a change two cells clear of the
+# mark leaves it as planned. Projecting a mark live costs up to about 250 ms (a flash flood's), and
+# once any roof or overlay was down every later mark of the stage was projected live (scrapkeep#241).
+func _ground_as_planned(surfaces: Dictionary) -> bool:
+	var changed := []
 	var terrain = world.terrain
-	if "_cave_roofs" in terrain and not EventGround.pristine(terrain, terrain.stage):
-		return false
+	if "_cave_roofs" in terrain:
+		for roof in terrain._cave_roofs.get(terrain.stage - 1, {}).values():
+			if roof.surface != roof.baseline:
+				changed.append(roof.baseline)
 	# The live map, not this handler's: another family's swap (a boiler burst) installs its own.
 	var m = terrain.map()
 	if m is OverlayMap:
 		for id in terrain.overlays:
 			if m.profiles.has(id):
-				return false
+				changed.append(m.profiles[id].surface)
+	if changed.is_empty():
+		return true
+	var reach := Rect2i()
+	for surface in surfaces.values():
+		reach = _merge_cells(reach, surface)
+	if reach.size == Vector2i.ZERO:
+		return false
+	reach = reach.grow(MARK_GROUND_CELLS)
+	for surface in changed:
+		var cells := _merge_cells(Rect2i(), surface)
+		if cells.size == Vector2i.ZERO or cells.intersects(reach):
+			return false
 	return true
+
+
+# The cells the mark reads beyond its own (the neighbours Surface.height looks in, and one more).
+const MARK_GROUND_CELLS := 2
+
+
+# rect grown to hold every cell of surface (one past its last, so a single cell has size 1).
+static func _merge_cells(rect: Rect2i, surface) -> Rect2i:
+	if surface == null:
+		return rect
+	for cell: Vector2i in surface.cells:
+		var one := Rect2i(cell, Vector2i.ONE)
+		rect = one if rect.size == Vector2i.ZERO else rect.merge(one)
+	return rect
 
 
 # A mark's projected surfaces by node name: Style, CrawlingCrack for a dust crack and Footprint for

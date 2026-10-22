@@ -36,9 +36,9 @@ def main(directory):
         y = (i // COLS) * (TILE_H + CAPTION_H)
         image = Image.open(os.path.join(directory, still["file"])).convert("RGB").resize((TILE_W, TILE_H), Image.LANCZOS)
         sheet.paste(image, (x, y + CAPTION_H))
-        bare = bool(still["bare"])
+        bare = bool(still.get("bare", False))
         draw.rectangle((x, y, x + TILE_W - 1, y + CAPTION_H - 1), fill=(120, 20, 20) if bare else (30, 60, 40))
-        text = "#%d %dm %s | in view %d | core60 %d | kinds %d | %s" % (
+        text = still.get("caption") or "#%d %dm %s | in view %d | core60 %d | kinds %d | %s" % (
             still["idx"], round(still["along_m"]), still["line"], still["props_120"], still["core_60"], still["kinds_120"], "VOID" if still.get("void") else ("BARE" if bare else "ok"))
         draw.text((x + 6, y + 8), text, fill=(255, 255, 255), font=small)
     out = os.path.join(directory, "contact.png")

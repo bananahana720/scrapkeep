@@ -31,6 +31,27 @@ extends SceneTree
 #     0 pairs fails after it (exit 1); either prints the reason (pair_problem).
 #   Every frames.json in a run must name the run's adapter; a drift fails the run.
 #   Non-ui subjects hide the Moss bubble and the world prompts (presentation.hide_ui) unless --hide-ui=0.
+# Frame strips (MOTION-SPEC row 217): --frames=N renders N consecutive frames of every camera of a non-ui
+#   subject at a fixed --fps (default 60), for the strobe, bank, rope and slam reads a still cannot show.
+#     --frames=N          the strip length (1..600); without it every flag below is refused (exit 2).
+#     --fps=F             the fixed rate: frame i is i/F seconds after frame 0, whatever the wall clock.
+#     --speed=M [--dir=x,y,z]   roll at M m/s along dir (default forward, -Z; made tangent to a
+#                         --contact-normal). The ball stays on its camera's point (a treadmill):
+#                         the speed drives the roll, the stretch and the pod's heading, not travel.
+#     --pod-yaw=DEG       the pod's world yaw, held around the game's own steering each frame (0 faces -Z);
+#                         a subject with no pod warns and records "pod_yaw_applied": false.
+#     --contact-normal=x,y,z   the surface under the ball (a park wall: its normal); the squash axis
+#                         and the rolling axis follow it, and the ball counts as grounded.
+#     --anchor=x,y,z | --anchor-rel=x,y,z   hook the harpoon line there (world point, or an offset
+#                         from the ball) and set the rope taut.
+#     --squash-tick=N [--squash=A]   frame 0 is N physics ticks (1/90 s) after a slam or landing
+#                         squash of amount A (default 0.45, the peak) along the contact normal (else up).
+#   Not stepped: player_fx (trails, speed rings, sound words) and the camera, so those freeze across a strip.
+#   The tree stays paused: each frame steps the ball's roll, the pod, the juice springs and the line
+#   by exactly 1/F s, so spin and squash advance between frames. Writes <out>/<subject>/<camera>/f0000.png
+#   and a frames.json row per frame (id <camera>_f0000, "frame": {index, time, fps, overrides}). Ball
+#   visibility is measured on frame 0 and shared by the strip ("seen_of": 0). Stills are untouched by
+#   these flags: a run without --frames writes the same files as before.
 # Serve: --serve --out=<abs dir> renders each <out>/requests/<id>.json ({"subjects": [...]} or
 #   {"quit": true}) and answers <out>/answers/<id>.json, for units with many render cycles.
 # Boss smoke: --boss=bowl|waking|mind boots on the native display, enters that world's last stage
@@ -75,6 +96,8 @@ var baseline_root := ""
 var serve := false
 var hide_ui := true
 var boss := ""
+var strip := {"frames": 0}
+var strip_args: Array = []
 
 var game
 var cam: Camera3D
@@ -102,6 +125,14 @@ func _initialize() -> void:
 		elif a == "--serve": serve = true
 		elif a.begins_with("--hide-ui="): hide_ui = a.trim_prefix("--hide-ui=") != "0"
 		elif a.begins_with("--boss="): boss = a.trim_prefix("--boss=")
+	for a in OS.get_cmdline_user_args():
+		if Subjects.FRAME_FLAGS.any(func(f): return String(a).begins_with(f)):
+			strip_args.append(a)
+	strip = Subjects.frame_options(strip_args)
+	if not (strip["problems"] as Array).is_empty():
+		printerr("look_harness: ", "; ".join(strip["problems"]))
+		quit(2)
+		return
 	if baseline_root.is_empty():
 		baseline_root = ProjectSettings.globalize_path("res://").path_join("../../artifacts/local/alpha/baselines").simplify_path()
 	if not baseline.is_empty():
@@ -156,6 +187,10 @@ func _main() -> void:
 		printerr("look_harness: needs --subject=, --all, --serve or --boss=")
 		quit(2)
 		return
+	if Subjects.is_strip(strip) and requested.any(func(n): return Subjects.SUBJECTS[n]["kind"] == "ui"):
+		printerr("look_harness: --frames needs actor, prop or scene subjects, not ui rows")
+		quit(2)
+		return
 	var groups := _groups_of(requested)
 	if not group_arg.is_empty() or groups.size() == 1:
 		await _run_group(groups[0] if group_arg.is_empty() else group_arg)
@@ -191,6 +226,7 @@ func _render_children(subjects: Array, dir: String) -> int:
 		if tick_override >= 0: args.append("--tick=%d" % tick_override)
 		if not preset.is_empty(): args.append("--preset=" + preset)
 		if not variant.is_empty(): args.append("--variant=" + variant)
+		args.append_array(strip_args)
 		if not base.is_empty(): args.append_array(["--base=" + base, "--baseline-root=" + baseline_root])
 		var started := Time.get_ticks_msec()
 		var output: Array = []
@@ -622,6 +658,9 @@ func _shoot(subject: String, extra := {}) -> void:
 			ball = ball_box(cam, p, Tuning.RADIUS, SIZE)
 			ball["at"] = [p.x, p.y, p.z]
 			ball["placed"] = placed["placed"]
+		if Subjects.is_strip(strip) and not ui:
+			recs.append_array(await _strip_camera(subject, shot, v, dir, ball))
+			continue
 		for i in DRAW_FRAMES:
 			await RenderingServer.frame_post_draw
 		var img := root.get_texture().get_image()
@@ -646,11 +685,145 @@ func _shoot(subject: String, extra := {}) -> void:
 	var doc := {"tool": "look_harness.gd", "subject": subject, "group": row["group"], "stage": row["stage"], "class": class_index, "kind": row["kind"],
 		"owner": row["owner"], "variant": variant, "preset": preset, "tick": tick, "adapter": RenderingServer.get_video_adapter_name(),
 		"rendering": RenderingServer.get_current_rendering_method(), "extra": extra, "frames": recs}
+	if Subjects.is_strip(strip):
+		doc["strip"] = {"frames": strip["frames"], "fps": strip["fps"], "args": strip_args}
 	var f := FileAccess.open(dir.path_join("frames.json"), FileAccess.WRITE)
 	f.store_string(JSON.stringify(doc, "\t"))
 	f.close()
 	paused = was_paused
 	print("snap ", subject, " ", recs.size(), " tick ", tick["tick"])
+
+
+
+# ---------------------------------------------------------------- frame strips
+# The nodes a strip steps, by role; hero and line_view may be absent (a stub in the test).
+func _strip_rig() -> Dictionary:
+	var player = game.player
+	var hero = game.presentation.hero_assets
+	return {"player": player, "mesh": player.roll_node().get_parent(), "juice": game.presentation.juice, "hero": hero,
+		"line_view": game.presentation.line_view, "pod": hero.shell_of(player).get("pod") if hero != null else null,
+		"core": hero.shell_of(player).get("core") if hero != null else null}
+
+
+# Frame 0: the overrides that are states rather than rates. Returns the anchor it hooked, if any.
+static func strip_begin(rig: Dictionary, o: Dictionary, ball_at: Vector3) -> Dictionary:
+	var player = rig["player"]
+	var resolved := {}
+	(rig["mesh"] as Node3D).basis = Basis.IDENTITY
+	var dir := Subjects.travel_dir(o)
+	player.state.velocity = dir * float(o.get("speed", 0.0))
+	var n: Vector3 = (o["contact_normal"] as Vector3).normalized() if o.has("contact_normal") else Vector3.UP
+	player.state.contact_normal = n
+	player.state.grounded = o.has("contact_normal")
+	var juice = rig["juice"]
+	juice.squash(0.0, Vector3.UP)
+	if o.has("squash_tick"):
+		juice.squash(float(o.get("squash", Subjects.MAX_SQUASH)), n)
+		juice._process(float(o["squash_tick"]) / Subjects.PHYSICS_HZ)
+	if o.has("anchor") or o.has("anchor_rel"):
+		var a: Vector3 = o["anchor"] if o.has("anchor") else ball_at + (o["anchor_rel"] as Vector3)
+		player.kit.hooked = true
+		player.kit.anchor = a
+		player.kit.rope = ball_at.distance_to(a)
+		resolved["anchor"] = [a.x, a.y, a.z]
+	if o.has("pod_yaw"):
+		var pod = rig.get("pod")
+		resolved["pod_yaw_applied"] = pod != null and is_instance_valid(pod)
+		if not resolved["pod_yaw_applied"]:
+			printerr("look_harness: --pod-yaw ignored: this subject has no pod (recorded as pod_yaw_applied false)")
+	# Frame 0 shows exactly the state its row records: the same presentation pass as a step, for no time.
+	_strip_present(rig, o, 0.0)
+	return resolved
+
+
+# The game's own per-frame code for dt, with the pod yaw override set before it (so the gyro and the
+# lattice solve against the overridden yaw) and again after it (the pod's own steering turns it).
+static func _strip_present(rig: Dictionary, o: Dictionary, dt: float) -> void:
+	_strip_pod(rig, o)
+	if rig.get("hero") != null:
+		rig["hero"]._process(dt)
+	rig["juice"]._process(dt)
+	_strip_pod(rig, o)
+	# The pod's steering lerped the yaw toward the heading before the override put it back, so the
+	# gyro and lattice it solved are off by that turn: solve them again at the held yaw.
+	var pod = rig.get("pod")
+	if o.has("pod_yaw") and rig.get("hero") != null and pod != null and is_instance_valid(pod):
+		var gyro := (pod as Node3D).get_node_or_null("Gyro") as Node3D
+		var core = rig.get("core")
+		if gyro != null and gyro.has_node("GyroInner") and core != null and is_instance_valid(core):
+			rig["hero"].counter_tilt(pod, gyro, core)
+	if rig.get("line_view") != null and rig["player"].kit.hooked:
+		rig["line_view"].step(dt)
+
+
+# Frame i of a strip: the begin pose for 0, else one step. Returns what the begin resolved.
+static func strip_frame(rig: Dictionary, o: Dictionary, i: int, ball_at: Vector3) -> Dictionary:
+	if i == 0:
+		return strip_begin(rig, o, ball_at)
+	strip_step(rig, o, 1.0 / float(o["fps"]))
+	return {}
+
+
+static func _strip_pod(rig: Dictionary, o: Dictionary) -> void:
+	var pod = rig.get("pod")
+	if o.has("pod_yaw") and pod != null and is_instance_valid(pod):
+		(pod as Node3D).rotation.y = deg_to_rad(float(o["pod_yaw"]))
+
+
+# One frame on: the roll turns by speed * dt / r, then the game's own per-frame code runs for dt
+# (the pod's steering and the gyro, the juice springs, the line), then the held pod yaw is set.
+static func strip_step(rig: Dictionary, o: Dictionary, dt: float) -> void:
+	var mesh: Node3D = rig["mesh"]
+	mesh.basis = (Subjects.spin_step(o, dt) * mesh.basis).orthonormalized()
+	_strip_present(rig, o, dt)
+
+func _strip_camera(subject: String, shot: Array, v: Dictionary, dir: String, ball: Dictionary) -> Array:
+	var cam_dir := dir.path_join(String(shot[0]))
+	DirAccess.make_dir_recursive_absolute(cam_dir)
+	var rig := _strip_rig()
+	var at := Vector3(ball["at"][0], ball["at"][1], ball["at"][2])
+	var resolved := {}
+	var recs: Array = []
+	for i in int(strip["frames"]):
+		var started := Time.get_ticks_msec()
+		var began := strip_frame(rig, strip, i, at)
+		if i == 0:
+			resolved = began
+			for k in DRAW_FRAMES:
+				await RenderingServer.frame_post_draw
+		else:
+			await RenderingServer.frame_post_draw
+			await RenderingServer.frame_post_draw
+		var file := "f%04d.png" % i
+		var img := root.get_texture().get_image()
+		var png := cam_dir.path_join(file)
+		img.save_png(png)
+		if i == 0:
+			_ball_root().visible = false
+			for k in DRAW_FRAMES:
+				await RenderingServer.frame_post_draw
+			var off := root.get_texture().get_image()
+			_ball_root().visible = true
+			ball["visible"] = snappedf(ball_seen(img, off, ball["bbox"]), 0.001) if ball["in_frame"] else 0.0
+			ball["seen"] = ball["in_frame"] and ball["visible"] >= SEEN_SHARE
+			ball["seen_of"] = 0
+			for k in 2:
+				await RenderingServer.frame_post_draw
+		var m := frame_metrics(img)
+		var dead := is_dead(m, Subjects.dead_limits(subject))
+		var frame := Subjects.frame_row(strip, i)
+		frame["resolved"] = resolved
+		recs.append({"id": "%s_f%04d" % [shot[0], i], "camera": shot[0], "eye": [v["eye"].x, v["eye"].y, v["eye"].z], "target": [v["target"].x, v["target"].y, v["target"].z],
+			"fov": v["fov"], "file": "%s/%s" % [shot[0], file], "sha256": FileAccess.get_sha256(png), "metrics": m, "dead": dead, "ball": ball.duplicate(),
+			"wall_ms": Time.get_ticks_msec() - started, "stage_yaw": {}, "frame": frame})
+		if dead:
+			printerr("DEAD frame %s/%s black=%.3f sky=%.3f" % [subject, recs[-1]["id"], m["black"], m["sky"]])
+	var player = rig["player"]
+	player.kit.hooked = false
+	player.state.velocity = Vector3.ZERO
+	player.state.contact_normal = Vector3.UP
+	player.state.grounded = false
+	return recs
 
 
 func _run_group(group: String) -> void:

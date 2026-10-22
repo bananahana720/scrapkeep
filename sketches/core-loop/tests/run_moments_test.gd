@@ -87,6 +87,9 @@ func _full_run() -> void:
 	run.run_time = 63.0
 	_game.flow._end_run(true)
 	var moments = _game.run_moments
+	# The save runs on a worker (78 to 82 ms of the 4080's victory frame, scrapkeep#241): the page
+	# is ready at run_ended, and its path only once saved_path() has waited for the worker.
+	_t.check("the run_ended save runs on a worker, not in the ending frame", moments._save_task >= 0 and moments.last_page_path == "", "task %d, path '%s'" % [moments._save_task, moments.last_page_path])
 	var page: Dictionary = moments.last_page
 	var panels: Array = page.get("panels", [])
 	_t.check("won page has 4 to 6 panels", panels.size() >= RunMoments.MIN_PANELS and panels.size() <= RunMoments.MAX_PANELS, "%d" % panels.size())
@@ -107,7 +110,7 @@ func _full_run() -> void:
 	var stagger: Dictionary = panels.filter(func(p): return p["kind"] == "boss_stagger").front() if kinds.has("boss_stagger") else {}
 	_t.eq("a park stagger names its Warden", String(stagger.get("facts", {}).get("who", "")), "The Reactor Warden")
 	_t.eq("page is won", page.get("won"), true)
-	var path: String = moments.last_page_path
+	var path: String = moments.saved_path()
 	_t.check("page saved under scrapbook/", path.contains("/%s/" % RunMoments.DIR) and FileAccess.file_exists(path), path)
 	var doc = JSON.parse_string(FileAccess.get_file_as_string(path)) if path != "" else null
 	_t.check("saved page parses with its panels", doc is Dictionary and (doc["panels"] as Array).size() == panels.size() and int(doc["schema"]) == RunMoments.SCHEMA, "%s" % [doc])

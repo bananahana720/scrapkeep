@@ -19,9 +19,34 @@ const SKY_RING := 460.0
 # A missing-folder fixture uses the same loader as the real fight.
 static var dir := DIR
 static var _sky_material: ShaderMaterial
+# The panorama painted ahead on a worker by prepare(): its task (-1 for none) and {image}.
+static var _panorama_task := -1
+static var _panorama_out := {}
 
 var _saved := {}
 var _greybox: Array[Dictionary] = []
+
+
+# Reads the kit ahead on loader threads and paints the sky panorama on a worker, while the
+# approach to the arena runs (flow, through mind.gd's prepare_arena): loading the kit and painting
+# the panorama took 80 to 150 ms of the boss-entry frame on the cloud (scrapkeep#241).
+static func prepare() -> void:
+	for key in PARTS:
+		var path: String = dir.path_join(PARTS[key][0])
+		if ResourceLoader.exists(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			ResourceLoader.load_threaded_request(path)
+	if _sky_material == null and _panorama_task < 0:
+		var out := {}
+		_panorama_out = out
+		_panorama_task = WorkerThreadPool.add_task(func(): out["image"] = _paint_panorama(), false, "mind panorama")
+
+
+# A kit file: the loader thread's copy when prepare() asked for it (waiting if it is still
+# loading), else a plain load.
+static func _take(path: String) -> Resource:
+	if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+		return ResourceLoader.load_threaded_get(path)
+	return load(path)
 
 
 static func attach(module):
@@ -52,7 +77,7 @@ func _load_kit() -> Dictionary:
 		var path: String = dir.path_join(PARTS[key][0])
 		if not ResourceLoader.exists(path):
 			return {}
-		var packed := load(path) as PackedScene
+		var packed := _take(path) as PackedScene
 		if packed == null:
 			return {}
 		var instance := packed.instantiate()
@@ -232,7 +257,7 @@ func _apply_environment(terrain, root: Node) -> void:
 	sky.sky_material = _sky_material
 	var values := WorldLook.environment(look, GraphicsPreset.PRESETS[GraphicsPreset.current].air)
 	values["sky"] = sky
-	_saved = GraphicsPreset.set_lighting(self, env, values, WorldLook.lights(look, sun), "arena")
+	_saved = GraphicsPreset.set_lighting(self, env, values, WorldLook.lights(look, sun), "arena", look)
 
 
 func restore_environment() -> void:
@@ -253,8 +278,20 @@ func _exit_tree() -> void:
 
 
 # The Highdraft sheet's painted panorama, graded to the run's dusk by the Mind's look row, with a
-# local cache and per-fight saved values.
+# local cache and per-fight saved values. The worker's painting when prepare() started one.
 static func _make_panorama() -> ImageTexture:
+	if _panorama_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_panorama_task)
+		_panorama_task = -1
+	var image: Image = _panorama_out.get("image")
+	_panorama_out = {}
+	if image == null:
+		image = _paint_panorama()
+	return ImageTexture.create_from_image(image)
+
+
+# The panorama's pixels. Touches no node or server, so a worker can paint it.
+static func _paint_panorama() -> Image:
 	var image := Image.create_empty(512, 256, false, Image.FORMAT_RGB8)
 	var noise := FastNoiseLite.new()
 	noise.seed = 301006
@@ -276,4 +313,4 @@ static func _make_panorama() -> ImageTexture:
 				color = color.lerp(cream, smoothstep(0.3, 0.55, cloud) * smoothstep(0.05, 0.25, elevation) * 0.7)
 			image.set_pixel(x, y, color)
 	image.generate_mipmaps()
-	return ImageTexture.create_from_image(image)
+	return image

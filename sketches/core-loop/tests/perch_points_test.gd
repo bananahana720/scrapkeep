@@ -100,9 +100,8 @@ func _initialize() -> void:
 	var terrain := Terrain.new(StageDefs)
 	_t.eq("a non-park stage answers INF", terrain.perch_near(Vector3.ZERO, 1), Vector3.INF)
 
-	# Real data: a shipped park's anchor fields give perches, the same on every run.
-	# (The Islands' 279 hoodoo posts all sit on route lanes, which anchor_posts keeps clear, so
-	# they place no post and give no perch: the Dispatcher builds its mast there.)
+	# Real data: a shipped park's anchor fields give perches, the same on every run. (Islands is
+	# checked below.)
 	for id in ["pit", "crown"]:
 		var park_map := ParkMap.new("res://src/world/park/park_%s.json" % id)
 		_t.check("park_%s loads" % id, park_map.ok)
@@ -121,7 +120,9 @@ func _initialize() -> void:
 	var islands := ParkMap.new("res://src/world/park/park_islands.json")
 	_t.check("park_islands loads", islands.ok)
 	if islands.ok:
-		_t.eq("park_islands: every post is on a route lane, so no perch and the mast fallback", PerchPoints.derive(islands.park, _flat).size(), 0)
+		# Was 0 while the full-width bands cleared every islands post (park_recipes.gd spans_park); the returned hoodoo
+		# posts in the perch band (rise 6 to 10 m) are 120 tops.
+		_t.eq("park_islands: the returned posts in the perch band give perch tops", PerchPoints.derive(islands.park, _flat).size(), 120)
 	_landform_tops()
 	_park_coverage()
 	quit(_t.verdict())
