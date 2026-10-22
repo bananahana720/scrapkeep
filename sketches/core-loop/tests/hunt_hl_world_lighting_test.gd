@@ -7,6 +7,9 @@ var _t := T.new("hunt_hl_world_lighting_test")
 
 
 func _initialize() -> void:
+	# The lighting is pinned with a smash-per-frame fight, not the fight's length: the PHASE_MIN_SECONDS hold
+	# (waking.gd; tests/boss_phase_hold_test.gd) is multiplied out so the Waking falls inside the frame cap.
+	ChallengeDials.set_overrides({"waking.phase_min_by_phase": [0.0, 0.0, 0.0, 0.0]})
 	call_deferred("_run")
 
 

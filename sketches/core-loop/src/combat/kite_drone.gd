@@ -3,6 +3,7 @@ extends "res://src/combat/counter.gd"
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const IslandEdge := preload("res://src/combat/island_edge.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
+const SwingArc := preload("res://src/combat/swing_arc.gd")
 
 # The kite drone (roster_highdraft.gd): it marks where the ball will be in DIVE + warn seconds
 # and, when the mark fills, dives onto it in DIVE seconds. A ball that meets the diving drone at
@@ -17,6 +18,12 @@ const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 # (bolts while it circles) still works, slowly. A map with no thermal leaves it hovering HOVER
 # over the ball's own height, as before.
 #
+# A latched ball is not on the ground, so a ground mark (MARK_REACH) would never touch it. While
+# the line stands the lead follows the pendulum arc (swing_arc.gd), not the ball's straight-line
+# velocity, and a forecast above AIR_MIN hangs the mark in the air: a ring at the forecast
+# height, AIR_BAND tall, drawn and hit-tested as that band. The drone dives to the band's middle.
+# The warn is still warn_seconds (0.8), so the telegraph stays above the 0.6 s floor.
+#
 # Grown remix: it circles over the nearest gap instead (GAP_OUT past the rim nearest the ball),
 # and the air-ram kill drops the ball (DROP_KICK down, FLING on along its heading) toward the
 # next island.
@@ -26,6 +33,8 @@ const CLIMB := 4.0
 const DIVE := 0.7
 const MARK_RADIUS := 2.4
 const MARK_REACH := 2.0
+const AIR_MIN := 2.0
+const AIR_BAND := 5.0
 const DIVE_DAMAGE := 9.0
 const BAT_KICK := 12.0
 const HP := 70.0
@@ -190,6 +199,16 @@ func _commit(to_ball: Vector3) -> Node3D:
 	var landing: Vector3 = _ball() + target.planar_velocity() * (DIVE + warn_seconds)
 	_facing(to_ball)
 	_dive_from = global_position
+	var swing: Vector3 = SwingArc.forecast(_player(), DIVE + warn_seconds)
+	if swing != Vector3.INF:
+		landing = swing
+		var ground: float = terrain.height(landing.x, landing.z) if terrain != null else 0.0
+		if landing.y - ground > AIR_MIN:
+			_clear_telegraph()
+			_telegraph = Telegraph.aerial_ring(world_root, terrain, Threat.Type.INSTANT,
+				landing - Vector3.UP * AIR_BAND * 0.5, MARK_RADIUS, AIR_BAND)
+			_facts_begin(_telegraph)
+			return _telegraph
 	return _commit_ring(Threat.Type.INSTANT, landing, MARK_RADIUS, MARK_REACH)
 
 
@@ -203,10 +222,10 @@ func _live(_delta: float) -> bool:
 	if ring == null:
 		return false
 	if _t < DIVE:
-		global_position = _dive_from.lerp(ring.center + Vector3.UP * 0.5, _t / DIVE)
+		global_position = _dive_from.lerp(_dive_goal(ring), _t / DIVE)
 		return true
 	if not _landed:
-		global_position = ring.center + Vector3.UP * 0.5
+		global_position = _dive_goal(ring)
 		_landed = true
 		var ball := _real_ball()
 		if ring.contains(ball):
@@ -217,6 +236,11 @@ func _live(_delta: float) -> bool:
 		elif fleet != null:
 			fleet.discover("thermal_dive", ball)
 	return false
+
+
+# Where the dive ends: just above a ground ring, the middle of an aerial one's band.
+func _dive_goal(ring: Node3D) -> Vector3:
+	return ring.center + Vector3.UP * (ring.reach_up * 0.5 if ring.aerial else 0.5)
 
 
 func _diving() -> bool:
