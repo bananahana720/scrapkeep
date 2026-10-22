@@ -1,11 +1,11 @@
 # park_sinkhole dressing, wave 18
 
-Base: `stage/alpha-w18` bd86a7e4 merged into the sinkhole branch (head 535aa9e5). The Dressing foundation (#220) and its `scatter_row` rule are on the stage.
+Base: sinkhole branch head b100f674 before this note's commit, which is da453531 (the gated head) plus three merges: `origin/stage/alpha-w18` 58437220 (0eb9c897 at that time), the Dressing foundation follow-up `claude/zealous-franklin-ed0sxr-lineclear` 66d37439 (07748516; per-kind `line_clear_m` and the `telegraph` rule), then `origin/stage/alpha-w18` b0e64a40 again (merge b100f674). The Dressing foundation (#220) and its `scatter_row` rule are on the stage.
 Method: automated headless Godot 4.7.2 on cloud llvmpipe (an OpenGL compatibility proxy). This is not a frame-cost proof and says nothing about human feel.
 
 ## What and why
 
-Sinkhole is world 2's underground afternoon: basalt, lava tubes and the timber gallery ring. Mining crews and their pumps worked here, and the old trench people kept granaries in it. The brief has a lamp veto (KITS.md, sinkhole section): lamp racks face the wrong way and none is lit.
+Sinkhole is world 2's underground afternoon: basalt, lava tubes and the timber gallery ring. Mining crews and their pumps worked here, and the old trench people kept granaries in it. The brief has a lamp veto (`sketches/core-loop/design-v3/park/dressing/KITS.md`, sinkhole section; the file lands in #269): lamp racks face the wrong way and none is lit.
 
 The file holds 17 templates over 169 spots:
 - Ten are crew moments: a pump parked off mid-shift, a lamp wall, a fallen gallery set, carts, a shift board, dropped gear, a signal horn.
@@ -13,18 +13,53 @@ The file holds 17 templates over 169 spots:
 - Six are fern, moss and rimstone clusters where a skylight or a seep reaches the floor.
 - A litter layer runs between them.
 
+Machine lore (Andrew's ruling, #241 6329943362): the giant machines are the humans' utility fleet, built for construction, mining and manufacturing. Some are corrupted, some are loyal drones and some are looping workers. The Waking is the Mind's buried excavator, and the swarm remnants are its maintenance crew. Here the crew sites (pumps, lamp walls, gallery sets) read as plush crews living among working giants. The scale contrast is the point: small soft-toy props that crowd under machines that dwarf them.
+
 ## Plan check
 
-`tools/park_props_plan.gd --map=park_sinkhole --check` reports 1,420 instances (230 litter), 0 violations and fingerprint 2160462734, which equals the pin. The figures are the same on a2b6cee5 and after the bd86a7e4 merge.
+`tools/park_props_plan.gd --map=park_sinkhole --check` reports 1,419 instances (229 litter), 0 violations and fingerprint 2700969323, which equals the new pin (old pin 2160462734). Before the move it reported 3 `telegraph` violations on the checked-in vignettes (fingerprint 4292016683). It is the same on b100f674 after the second stage merge.
 
 The `scatter_row` rule moved six cone heroes out of the scatter-dressed `cinder_cone` (commit ebff7251). Now no tall or hero spot lies in any scatter row: `cinder_cone`, `machine_vault`, `pump_gallery`, `east_mesa` and `gallery_ring` 1 to 3.
 
-## Audit (head 535aa9e5; default run, mid camera, step 25 m, 309 samples)
+## Audit (66d37439 plus the s122 move; the later stage merge touched no props, scatter or sinkhole files; default run, mid camera, step 25 m, 309 samples)
 
-- Props-only draw delta: max 82, median 28.5. The bar is 120 at every pose.
-- Draw calls: max 810, median 445. Primitives: max 1,018,554, median 707,176.
-- Density: 52 of 53 non-exempt windows pass, with 11 exempt (all arena). The one fail is kest at 900 m, (52.3, -332.4). It sits at the tube mouths `main_tube_upper_1`, `skylight_chain_1` and `east_drift_1`, which are all tunnel keepouts.
-- Bare share 18.4%; void poses 0.
+- Props-only draw delta: max 79, median 27.5 (before 82 and 28.5). The bar is 120 at every pose.
+- Draw calls: max 743, median 455 (before max 810, median 445). Primitives delta: max 164,033, median 40,577.5.
+- Density: 52 of 53 non-exempt windows pass (64 windows), with 11 exempt (all arena); the same as before. The one fail is kest at 900 m, (52.3, -332.4), with 0 kinds. It sits at the tube mouths `main_tube_upper_1`, `skylight_chain_1` and `east_drift_1`, which are all tunnel keepouts. The coordinator ruled on it at #241 6329171089: "the 22:25Z option (c) covers it. Tunnel keepouts are open space for the density audit, so it isn't a fail." It is therefore not counted as a fail.
+- Bare share 18.1% (before 18.4%); void poses 0.
+
+## Telegraph zones
+
+The `telegraph` rule (`park_props.gd` `check_one`, documented in DRESSING-KITS.md) keeps every instance, litter included, out of each `event_rows` event's own geometry grown by its `hold_clear_m` plus the instance radius. Litter that fails is dropped; an authored spot that fails fails the plan check. Events in `park_sinkhole.json`:
+
+| Event | Site, hold | Inside before | Result |
+|---|---|---|---|
+| `west_roof_cave_in` | `west_tube_roof` (-205, 250), box 40 x 30, hold 20 m | 3 instances of `s122_mid_rimstone_pool` (2 `cave_fern`, 1 `column_stubs`, near (-182, 214)) | spot moved |
+| `junction_machine_wakes` | `machine_vault`, hold 15 m | 1 litter instance | dropped automatically (litter 230 to 229, instances 1,420 to 1,419) |
+| `pump_boiler` | boiler_burst with `hazard_m` | none found by the plan check | none |
+
+Spot moved: `s122_mid_rimstone_pool` `at` (-180.0, 210.0) to (-175.0, 210.0), 5 m east. Search: I tried the straight line away from the site first, which ran into the kicker run-out keepout (2 to 5 violations at 2 to 10 m). East offsets of 2 and 4 m still left 3 and 1 violations, and 5 m gave 0. The 5 m shift is under the 20 m limit, so the `near` label stays. All members are legal.
+
+Why props stay clear of telegraphs: a prop inside the zone would be buried or thrown by the event, and would hide the telegraph itself. Other guards that keep props off the same ground:
+- The colour guard in `tools/blender/park/props/kit.py` rejects any prop colour within 0.08 sRGB of HAZARD (ff5a3c), ANCIENT or MINT, and no prop has emission, so no prop can read as a telegraph.
+- `home_clear` keeps props 25 m (`HOME_CLEAR_M`) from enemy homes and camps.
+- The warden bowl (`Features.BOWL_FLAT + 3.0`) and activity sites (11 m) are keepouts in `set_dressing.gd` `keepouts`.
+
+## Gate checks
+
+On b100f674 (merge head before this note), each test run alone with `npm run sketch:smoke -- --sketch core-loop --test <name>`:
+- `park_props_test`, `park_park_sinkhole_test`, `park_dressing_pin_test`, `pocket_line_clear_test` and `asset_registry_test`: PASS (exit 0).
+- `scatter_rows_test`: the smoke wrapper hit its 180 s limit twice on the contended machine (exit null, all 24 printed checks PASS). Run directly with Godot headless it passes, 95 checks, exit 0.
+- `run_tier_test`: NOT green. The smoke run (receipt `artifacts/local/receipts/named-242c8c62dacc-2026-10-22T02-00-19-083Z.json`, 3,452 passes, 8 fails, 790 s) and a direct run (3,044 passes, 19 fails) failed only on `[runtime child seed N] exit=-1 timeout=true`, the fresh-process child timeouts, with every functional check in the log passing. The machine was running other lanes' Godot jobs at the same time. This branch changes no run, tier or combat code (props carry no collider), so I read these as load timeouts, but I have not shown it with a clean rerun. The gate should rerun `run_tier_test` on a quiet machine.
+- `npm run sketch:lint` exit 0 and `npm run check:docs` exit 0.
+
+## ART-MISTAKES entries checked
+
+Rows of `project-guide/handoff/ART-MISTAKES.md` read before the unit and applied:
+- 2026-10-21 World #242 lane width, "read the function before describing what a flag means". I read `check_one` and the telegraph zone code in `park_props.gd` (lines 149 to 152, 323 and 766) before describing the rule, and used the plan check's own `detail` text for each violation instead of paraphrasing from the rule name.
+- 2026-10-21 Modeling #241 lane map, "rebuild against the stage and run the check; a doc line is not a status". I did not carry over the old "0 violations" line. I re-ran the plan check, the audit and the tests on the merged tree and replaced every number in this note.
+- 2026-10-21 Animation #261 receipt, SHAs typed from memory. Every SHA here was copied from `git rev-parse` or `git log` output.
+- 2026-10-21 Animation A1, "kill only PIDs found by pgrep". I used no `pkill`; a stuck test was left to its own timeout.
 
 ## Stills: why most frames look unchanged (coordinator ruling, #241 6327644729: option (c))
 
