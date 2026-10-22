@@ -34,6 +34,8 @@ extends SceneTree
 # records the rule as subject_rule. Each frame also lists rows_in_view: the ids of the park file's park_rows (a footprint grid, 7 points
 # a side at most) and contraption_rows (launchers and the like: the point or a ring of their radius) with any sampled point inside the
 # camera frustum within 150 m (ParkProps.cell_visible, ground height, no occlusion).
+# The eye distance is max(5, subject radius + 1.5) m (eye_m per row): the frame must stand outside the subject's own footprint, so wide
+# subjects (wrecks, trucks) get a longer one; 5 m stays the rule for props. The subject itself never blocks its own sight line or eye point.
 # Writes <map>-v<spot idx>-<spot>-eye.png and -chase.png, vignettes.json, poses.json, stills.json, summary.json and the contact sheet.
 #
 # What counts as dressing (each item is one entry with a world-space centre; kinds are distinct meshes or dress_kind):
@@ -102,6 +104,7 @@ const SETTLE_JUMP_M := 60.0
 # that the prop rule ignores, the lens, the ball's parking distance behind the eye camera, the chase ball's sideways offset, the
 # pixel difference threshold and the smallest prop a sight line is blocked by.
 const V_RANGE_M := 5.0
+const V_OUTSIDE_M := 1.5
 const V_BEARINGS := [0.0, 45.0, -45.0, 90.0, -90.0, 135.0, -135.0, 180.0]
 const V_TERRAIN_SAMPLES := 10
 const V_PROP_SAMPLES := 80
@@ -640,20 +643,22 @@ func _run_vignettes() -> void:
 		var spos: Vector3 = subject["pos"]
 		var centre := spos + Vector3(0.0, float(subject["height"]) * 0.5, 0.0)
 		var front := deg_to_rad(float(spot.get("yaw_deg", 0.0)))
+		# The frame must stand outside the subject's footprint, so a wide subject gets a longer eye distance; 5 m stays the rule for props.
+		var eye_m := maxf(V_RANGE_M, float(subject["radius"]) + V_OUTSIDE_M)
 		var near: Array = []
 		for k in list.size():
 			var other: Dictionary = list[k]
 			var opos: Vector3 = other["pos"]
 			if other["litter"] and float(other["height"]) < V_LITTER_MIN_H:
 				continue
-			if Vector2(opos.x - centre.x, opos.z - centre.z).length() < V_RANGE_M + float(other["radius"]) + 1.0:
+			if Vector2(opos.x - centre.x, opos.z - centre.z).length() < eye_m + float(other["radius"]) + 1.0:
 				near.append(k)
 		var blocked: Array = []
 		var pick := {}
 		for off in V_BEARINGS:
 			var a := front + deg_to_rad(off)
 			var d := Vector2(sin(a), cos(a))
-			var eye := Vector3(centre.x + V_RANGE_M * d.x, 0.0, centre.z + V_RANGE_M * d.y)
+			var eye := Vector3(centre.x + eye_m * d.x, 0.0, centre.z + eye_m * d.y)
 			eye.y = terrain.height(eye.x, eye.z) + V_EYE_UP
 			var why := _sight_block(eye, centre, id, list, near, subject_i, terrain, space, ball_rid)
 			if why == "":
@@ -664,7 +669,7 @@ func _run_vignettes() -> void:
 		if all_blocked:
 			blocked_all += 1
 			var fd := Vector2(sin(front), cos(front))
-			var fe := Vector3(centre.x + V_RANGE_M * fd.x, 0.0, centre.z + V_RANGE_M * fd.y)
+			var fe := Vector3(centre.x + eye_m * fd.x, 0.0, centre.z + eye_m * fd.y)
 			fe.y = terrain.height(fe.x, fe.z) + V_EYE_UP
 			pick = {"off": 0.0, "a": front, "d": fd, "eye": fe}
 		var bd: Vector2 = pick["d"]
@@ -672,14 +677,14 @@ func _run_vignettes() -> void:
 		var to_c := (centre - eye_pos).normalized()
 		var eye_ball := eye_pos - to_c * V_BALL_BEHIND_M
 		var ba: float = float(pick["a"]) + PI * 0.5
-		var chase_ball := Vector2(centre.x + V_RANGE_M * bd.x + V_CHASE_SIDE_M * sin(ba), centre.z + V_RANGE_M * bd.y + V_CHASE_SIDE_M * cos(ba))
+		var chase_ball := Vector2(centre.x + eye_m * bd.x + V_CHASE_SIDE_M * sin(ba), centre.z + eye_m * bd.y + V_CHASE_SIDE_M * cos(ba))
 		var frames := {
 			"eye": {"idx": si * 2, "x": eye_ball.x, "z": eye_ball.z, "yaw": atan2(-(centre.x - eye_pos.x), -(centre.z - eye_pos.z)),
 				"cam": [eye_pos.x, eye_pos.y, eye_pos.z], "look": [centre.x, centre.y, centre.z]},
 			"chase": {"idx": si * 2 + 1, "x": chase_ball.x, "z": chase_ball.y, "yaw": float(pick["a"])}}
 		var row := {"id": id, "template": String(spot.get("template", "")), "subject_kind": subject["kind"], "subject_v": subject["v"],
 			"C": [snappedf(centre.x, 0.01), snappedf(centre.y, 0.01), snappedf(centre.z, 0.01)], "radius_m": snappedf(float(subject["radius"]), 0.01),
-			"height_m": snappedf(float(subject["height"]), 0.01), "front_deg": float(spot.get("yaw_deg", 0.0)), "bearing_deg": pick["off"],
+			"height_m": snappedf(float(subject["height"]), 0.01), "front_deg": float(spot.get("yaw_deg", 0.0)), "eye_m": snappedf(eye_m, 0.01), "bearing_deg": pick["off"],
 			"blocked": blocked, "blocked_all": all_blocked, "isolated": false}
 		var handle := _isolate(pp, subject)
 		row["isolated"] = not handle.is_empty()
@@ -747,7 +752,7 @@ func _run_vignettes() -> void:
 # "" when the sight from eye to centre is clear, else why not: inside, terrain, prop:<spot>/<kind> or collider:<node name>.
 func _sight_block(eye: Vector3, centre: Vector3, spot_id: String, list: Array, near: Array, subject_i: int, terrain, space: PhysicsDirectSpaceState3D, ball_rid: RID) -> String:
 	for k in near:
-		if _in_cylinder(eye, list[k]):
+		if k != subject_i and _in_cylinder(eye, list[k]):
 			return "inside"
 	for i in range(1, V_TERRAIN_SAMPLES + 1):
 		var p := eye.lerp(centre, float(i) / float(V_TERRAIN_SAMPLES + 1))
