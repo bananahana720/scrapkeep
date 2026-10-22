@@ -12,6 +12,7 @@ const SettingsStore := preload("res://src/ui/settings_store.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CosmeticPresentation := preload("res://src/presentation/cosmetic_presentation.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
+const WorldGrade := preload("res://src/presentation/world_grade.gd")
 
 # The customize page, mouse first (design-v3/CUSTOMIZE.md section 7): a live preview of the
 # ball you will ride on the left, built by the game's own loader; on the right the pilot strip,
@@ -360,7 +361,7 @@ func _build_preview() -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Palette.SAND
 	env.ambient_light_energy = 0.45
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	WorldGrade.menu(env, ClassPreview.MENU_EXPOSURE)
 	world.environment = env
 	_viewport.add_child(world)
 	# The one sun, from the class card's listed preview-light helper (lint L6).
