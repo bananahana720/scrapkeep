@@ -72,6 +72,11 @@ static func prepare_arena() -> void:
 	MindDress.prepare()
 
 
+# A step of the arena's main-thread work ahead of the entry, a frame at a time; true once done.
+static func warm_arena() -> bool:
+	return ArenaMindDress.warm_kit()
+
+
 func enter_arena(entry_velocity: Vector3) -> void:
 	super(entry_velocity)
 	phase = 1
