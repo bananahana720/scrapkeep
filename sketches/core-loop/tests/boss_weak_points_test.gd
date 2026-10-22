@@ -29,7 +29,9 @@ func _initialize() -> void:
 func _run() -> void:
 	await _off("waking", 2)
 	await _off("mind", 3)
+	_same_without_removal()
 	await _waking()
+	await _hold()
 	await _mind()
 	_go_table()
 	ChallengeDials.reset()
@@ -64,13 +66,35 @@ func _off(boss: String, world: int) -> void:
 	mod._open_weak("hatch_1")
 	mod._open_weak("seat_0")
 	_t.check("%s dial 0: nothing can open" % boss, mod.weak_open().is_empty() and mod.objective_text() == before, mod.objective_text())
-	_t.check("%s dial 0: no family is removed" % boss, mod._removed_families().is_empty()
-			and WakingAttacks.exposed(3, mod._removed_families()) == WakingAttacks.exposed(3)
-			and MindAttacks.exposed(4, mod._removed_families()) == MindAttacks.exposed(4), "")
+	var fam_ok: bool = mod._removed_families().is_empty()
+	var waking_pins := [["burrow"], ["burrow", "cave_in"], ["burrow", "cave_in", "bore"], ["burrow", "cave_in", "bore"]]
+	var mind_pins := [["lane"], ["lane", "split_lane"], ["lane", "split_lane", "rush"], ["lane", "split_lane", "rush", "plate"]]
+	for n in 4:
+		fam_ok = fam_ok and WakingAttacks.exposed(n + 1, mod._removed_families()) == waking_pins[n] \
+				and MindAttacks.exposed(n + 1, mod._removed_families()) == mind_pins[n]
+	_t.check("%s dial 0: no family is removed, every phase against pinned lists" % boss, fam_ok, "")
 	_t.check("%s dial 0: the Warden carries the hook and the pit spray is whole" % boss, mod.warden.spec["weak_judge"] is Callable
 			and WakingAttacks.bore(5, Vector3(10, 0, 0), Vector3.ZERO, 4, 36.0, mod._removed_families()).size() == 4, "")
 	game.free()
 	await physics_frame
+
+
+# removed=[] is the no-argument call: the same families, and the same picks and sets for a spread of seeds.
+func _same_without_removal() -> void:
+	var ok := true
+	var center := Vector3.ZERO
+	for seed in 16:
+		for phase in range(1, 5):
+			var ball := Vector3(3.0 + seed, 0.0, 5.0)
+			ok = ok and WakingAttacks.choose(seed, phase, []) == WakingAttacks.choose(seed, phase) \
+					and WakingAttacks.newest(phase, []) == WakingAttacks.newest(phase) \
+					and MindAttacks.choose(seed, phase, []) == MindAttacks.choose(seed, phase) \
+					and MindAttacks.commit_any(seed, ball, center, phase, 36.0, []) == MindAttacks.commit_any(seed, ball, center, phase, 36.0)
+			for family in WakingAttacks.FAMILIES:
+				ok = ok and WakingAttacks.commit_safe(family, seed, ball, Vector3.RIGHT * 5.0, center, phase, 8.0, 36.0, []) \
+						== WakingAttacks.commit_safe(family, seed, ball, Vector3.RIGHT * 5.0, center, phase, 8.0, 36.0)
+			ok = ok and MindAttacks.commit_safe("", seed, ball, center, phase, 8.0, 36.0, []) == MindAttacks.commit_safe("", seed, ball, center, phase, 8.0, 36.0)
+	_t.check("removed=[] equals the no-argument call, seeds 0..15, every phase", ok, "")
 
 
 func _bore(mod, phase: int) -> void:
@@ -98,7 +122,7 @@ func _waking() -> void:
 	_t.near("waking: a hit with no point open pays the chip", chip["gain"], 3.0)
 	_bore(mod, 1)
 	_t.check("waking: a bore jam opens this floor's hatch", mod.weak_open() == ["hatch_1"], str(mod.weak_open()))
-	_t.check("waking: the objective names the open hatch", mod.objective_text().contains("hatch is open: winch in and ram it"), mod.objective_text())
+	_t.check("waking: the objective names the open hatch", mod.objective_text().contains("hatch is open: hook it and haul in"), mod.objective_text())
 	var body: Dictionary = mod._weak_judge({"gain": 10.0, "punch": 20.0, "reel": false})
 	_t.near("waking: a non-reel hit on the open hatch pays the chip", body["gain"], 3.0)
 	_t.near("waking: and leaves its seal alone", mod.weak.seal_hp("hatch_1"), Waking_SEAL())
@@ -129,6 +153,26 @@ func _waking() -> void:
 	mod._weak_judge({"gain": 10.0, "punch": 500.0, "reel": true})
 	var sprayless := WakingAttacks.bore(5, Vector3(10, 0, 0), center, 4, 36.0, mod._removed_families())
 	_t.check("waking: breaking the override ends the spray", sprayless.size() == 1 and mod._removed_families() == ["burrow", "pit_spray"], str(mod._removed_families()))
+	# Last floor: a lip drop opens nothing. One open per jam.
+	for last in [3, 4]:
+		mod.phase = last
+		mod._lip_seen = false
+		mod.ctx.player.state.grounded = false
+		mod._carved_at = mod.clock
+		mod._open_by_lip()
+		_t.check("waking: a lip drop on phase %d opens nothing" % last, mod.weak_open().is_empty() or mod.weak_open() == ["override"], str(mod.weak_open()))
+	var fresh: int = mod._weak_opened.size()
+	mod._step_attacks(0.0)
+	_t.check("waking: a jam still running opens nothing new", mod._weak_opened.size() == fresh and mod.weak_open().is_empty(), str(mod._weak_opened))
+	mod.weak.step(mod.clock + 100.0)
+	mod.weak.open("hatch_2", mod.clock)
+	_bore(mod, 3)
+	var jam_open: int = mod._weak_opened.size()
+	mod.weak.step(mod.clock + WeakPoints.OPEN_SECONDS + 0.1)
+	mod._step_attacks(0.0)
+	_t.check("waking: one open per jam: a re-sealed hatch is not reopened while the jam runs", mod.weak_open().is_empty() and mod._weak_opened.size() == jam_open, str(mod._weak_opened))
+	mod._open_weak("hatch_3")
+	_t.check("waking: reopening a point leaves one entry, newest last", mod._weak_opened.count("hatch_3") == 1 and mod.weak_open()[-1] == "hatch_3", str(mod._weak_opened))
 	# The Warden's hook.
 	var called := [false]
 	mod.warden.spec["weak_judge"] = func(r: Dictionary) -> Dictionary:
@@ -136,6 +180,32 @@ func _waking() -> void:
 		return r
 	mod.warden.on_struck("slam", "", mod.warden.judge_hit("slam", 1.0, false, 0))
 	_t.check("waking: the Warden asks the judge on a struck hit", called[0], "")
+	called[0] = false
+	mod.warden._posture.staggered = true
+	mod.warden.on_struck("slam", "", mod.warden.judge_hit("slam", 1.0, false, 0))
+	mod.warden._posture.staggered = false
+	_t.check("waking: a staggered Warden does not ask the judge", not called[0], "")
+	game.free()
+	await physics_frame
+
+
+# With a hold active, a chipped or full gain still clamps at HOLD_CAP and the bar never staggers.
+func _hold() -> void:
+	var booted = await _boot(2, {"waking.weak_points": 1.0, "waking.phase_min_by_phase": [1.0, 1.0, 1.0, 1.0]})
+	var game = booted[0]
+	var mod = booted[1]
+	mod._open_weak("hatch_1")
+	mod._phase_open_at = mod.clock + 1000.0
+	var capped := true
+	var calm := true
+	for i in 60:
+		var r: Dictionary = mod.warden.judge_hit("slam", 9999.0, true, 3)
+		r["reel"] = i % 2 == 0
+		mod.warden.on_struck("slam", "", r)
+		capped = capped and mod.warden.posture() <= load("res://src/combat/warden.gd").HOLD_CAP + 0.001
+		calm = calm and not mod.warden.staggered()
+	_t.check("hold with weak on: the bar stops at the cap and never staggers", mod.hold_active() and capped and calm and mod.warden.posture() > 0.0,
+			"posture %.2f" % mod.warden.posture())
 	game.free()
 	await physics_frame
 
@@ -161,7 +231,7 @@ func _mind() -> void:
 	mod.warden.open_lens = 0
 	mod._commit_attack("plate")
 	_t.check("a plate commit opens the nearest seat (the ball sits at bearing pi/2: seat 2)", mod.weak_open() == ["seat_2"], str(mod.weak_open()))
-	_t.check("the objective names the open lens seat", mod.objective_text().contains("lens seat is open: winch in and ram it"), mod.objective_text())
+	_t.check("the objective names the open lens seat", mod.objective_text().contains("lens seat is open: hook it and haul in"), mod.objective_text())
 	_t.near("mind: a non-reel hit pays the chip", mod._weak_judge({"gain": 10.0, "punch": 20.0, "reel": false})["gain"], 3.0)
 	_t.near("mind: a reel hit on the open seat pays full", mod._weak_judge({"gain": 10.0, "punch": 20.0, "reel": true})["gain"], 10.0)
 	_t.near("mind: and wears the seal", mod.weak.seal_hp("seat_2"), Mind.SEAL_HP - 20.0)

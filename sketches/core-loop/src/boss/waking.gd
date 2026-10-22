@@ -556,6 +556,6 @@ func objective_text() -> String:
 			text += ". Incoming: %s" % FAMILY_NAMES.get(_family, _family)
 		var open := weak_open()
 		if not open.is_empty():
-			text += ". Its %s is open: winch in and ram it" % ("override button" if open[-1] == "override" else "hatch")
+			text += ". Its %s is open: hook it and haul in" % ("override button" if open[-1] == "override" else "hatch")
 		return text
 	return super()

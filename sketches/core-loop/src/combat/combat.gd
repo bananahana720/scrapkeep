@@ -1232,8 +1232,8 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "") -> Dictionar
 		var judged: Dictionary = enemy.judge_hit(kind, punch, smash, tier, part) \
 				if enemy.get_method_argument_count("judge_hit") >= 5 else enemy.judge_hit(kind, punch, smash, tier)
 		if not judged.is_empty():
-			# A reel impact: a contact while the line is hooked and winching (punch_of's winch branch).
-			judged["reel"] = kind in CONTACT_KINDS and ctx.player.kit.hooked and ctx.player.kit.winching
+			# A reel impact: a smash landing on what the line bit, or a contact while winching a world line (punch_of's winch branch).
+			judged["reel"] = kind in CONTACT_KINDS and (smash or (ctx.player.kit.hooked and ctx.player.kit.winching))
 			return judged
 	var guard := guard_of(enemy)
 	if guard != null and guard.blocks(kind):

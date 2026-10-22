@@ -141,6 +141,7 @@ func _removed_families() -> Array:
 func _open_weak(id: String) -> bool:
 	var opened: bool = weak.open(id, clock)
 	if opened:
+		_weak_opened.erase(id)
 		_weak_opened.append(id)
 	return opened
 

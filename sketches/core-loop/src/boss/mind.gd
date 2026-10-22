@@ -326,5 +326,5 @@ func objective_text() -> String:
 	if _family == "plate" and _plate_verb != "":
 		text += " Its plate braces %s." % _plate_verb
 	if not weak_open().is_empty():
-		text += " Its lens seat is open: winch in and ram it."
+		text += " Its lens seat is open: hook it and haul in."
 	return text
