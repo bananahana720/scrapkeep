@@ -1099,7 +1099,7 @@
    ]
   },
   "mini_hammock": {
-   "story": "A one-hammock rest spot: a stool, a sprig of brush.",
+   "story": "A one-hammock rest on the flow: a net-weaver stops mid-climb for a rest, so the Watch Butte approach and the washes read as walked, not just ridden.",
    "props": [
     {
      "kind": "hammock_rig",
@@ -1148,7 +1148,7 @@
    ]
   },
   "mini_lesson": {
-   "story": "A mending basket set down: a knot board, a cup, a bit of fence.",
+   "story": "A mending basket set down on a wash bank: net-weaver teaching gear that shows the weavers work this slope, seen from the line at the wash crossings.",
    "props": [
     {
      "kind": "knot_board",
@@ -1197,7 +1197,7 @@
    ]
   },
   "mini_post": {
-   "story": "A lookout's stool and lantern, a cup left on a rock.",
+   "story": "A lookout's stool and lantern with a cup on a rock: a small sign someone watches the line here, used where the ground is too tight for a full watch_post.",
    "props": [
     {
      "kind": "watch_stool",
@@ -1257,7 +1257,7 @@
    ]
   },
   "low_cairn": {
-   "story": "A net-weaver's rest cairn: a stool, a cup on a rock, a sprig of brush; all kept low.",
+   "story": "A net-weaver rest cairn kept under 1.0 m (the low_ground cap): fills the Watch Butte drop and its approach, where only low things may stand, so the drop reads inhabited without covering the ride.",
    "props": [
     {
      "kind": "watch_stool",
@@ -1317,7 +1317,7 @@
    ]
   },
   "low_slab": {
-   "story": "Fleet tally slabs left lying low in the dust, a glassy fulgurite by them.",
+   "story": "Fleet tally slabs lying low in the dust: the signal crew's abandoned count on the Watch Butte drop, 60 m or more from camp_signal, kept under 1.0 m for the low_ground cap.",
    "props": [
     {
      "kind": "tally_slab",
@@ -1366,7 +1366,7 @@
    ]
   },
   "lookout_a": {
-   "story": "A net-weavers' log-crib lookout deck, with a few low things at its foot.",
+   "story": "A net-weavers' log lookout with its shade cloth up, 9.3 m tall: the perch a Dispatcher can stand on near the ride, and a landmark the weavers keep watch from on the open flats.",
    "props": [
     {
      "kind": "lookout_deck",
@@ -1415,7 +1415,7 @@
    ]
   },
   "lookout_b": {
-   "story": "A net-weavers' log-crib lookout deck, with a few low things at its foot.",
+   "story": "The same lookout with its shade cloth half down, 9.1 m tall: a run-down weaver post, so the perches vary along the park.",
    "props": [
     {
      "kind": "lookout_deck",
@@ -1464,7 +1464,7 @@
    ]
   },
   "lookout_c": {
-   "story": "A net-weavers' log-crib lookout deck, with a few low things at its foot.",
+   "story": "The same lookout bare, cloth gone, 8.4 m tall: an abandoned watch deck, the third variant that keeps the perches from repeating.",
    "props": [
     {
      "kind": "lookout_deck",
@@ -1513,7 +1513,7 @@
    ]
   },
   "low_tiny": {
-   "story": "A scrap of net-weaver camp left on the slope: a stool, a dish, a sprig of brush.",
+   "story": "A scrap of net-weaver camp (stool, dish, brush) no wider than 4 m: the smallest legal fill where a window or pose has only a sliver of low ground, such as the shelf beside the bajada_lip drop.",
    "props": [
     {
      "kind": "watch_stool",
@@ -3071,6 +3071,26 @@
    ],
    "yaw_deg": 0,
    "near": "density/bare fill for pose 220"
+  },
+  {
+   "id": "crown_mv_08",
+   "template": "low_tiny",
+   "at": [
+    26.0,
+    500.0
+   ],
+   "yaw_deg": 315,
+   "near": "bare fill for pose 115"
+  },
+  {
+   "id": "crown_mv_09",
+   "template": "mini_lesson",
+   "at": [
+    32.0,
+    512.0
+   ],
+   "yaw_deg": 0,
+   "near": "bare fill for pose 115"
   }
  ],
  "litter": {
@@ -3111,7 +3131,7 @@
   ],
   "seed": 31
  },
- "pin": 937138648,
+ "pin": 2069366017,
  "low_ground_rows": [
   "drop_ramp",
   "watch_butte",

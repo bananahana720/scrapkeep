@@ -31,12 +31,33 @@ Variants run a (in use), b (run down), c (collapsed or overgrown). Notes on swap
 - `loom_frame` leans back and carries an awning so it does not read as a two-post gate. Plants-through-scrap are `rabbitbrush_c` (iron wheel) and `yucca_c` (gear plate). Crew warmth: hammock blanket, thermos on a stool, mug and laundry at the booth, steaming dish stone.
 - Keep `kite_pennant` 30 m from lines.
 
-## Placement (19 October 2026, round 4)
+## Placement (21 October 2026, round 5)
 
-`src/world/park/props/park_crown.json`: 18 templates (net-weaver: mending_yard, weaver_boneyard, hammock_camp, net_lesson, watch_post, lightning_scar, the minis, `low_cairn` and `lookout_a/b/c`; Fleet and abandoned only: abandoned_booth, dead_weather_post, cable_corner, log_post, `low_slab`), 145 spots, 899 vignette instances plus 133 litter (1032 in all), pinned. Low vignettes stand 8 to 16 m off the line, mid ones to 40 m, heroes 24 to 60 m. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing is within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script against `validate`.
+`src/world/park/props/park_crown.json`: 19 templates, 154 spots, 934 vignette instances plus 133 litter (1067 in all), pinned (2069366017). Low vignettes stand 8 to 16 m off the line, mid ones to 40 m, heroes 24 to 60 m. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing is within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script against `validate` (`park_props.gd` check_one), not hand-picked; plan `--check` reports 0 violations.
 
-Low ground: the file lists `watch_butte`, `watch_butte_crest` and `drop_ramp` in `low_ground_rows`, so the Watch Butte drop takes instances 1.0 m or lower (`low_cairn`, `low_slab`: 33 spots, all scaled to 1.0 or less). The washes are ridden and stay unlisted; the spots that fix round 5 turned out of `meander`, `west_wash` and `east_wash` (crown_06, 07, 09, 10, 15, 18, 19, 20, 24, 29, 33, 43, 46) were moved to the nearest legal ground.
+### Purpose and why each template reads
 
-Perches: `lookout_deck` carries `perch` (deck centre, 7.05 m over the foot, flat 4.4 m square), and seven `lookout_*` spots (`crown_lk_*`) stand off the line. Under the Dressing-gate rules the ride-row keepouts leave only one legal pocket near `gauntlet_net_2` (296, 240), so the other six stand where the uncovered Dispatcher pack points are. `perch_coverage.gd crown`: 23 of 200 before, 61 of 200 after (7 prop tops, all accepted); `PerchPoints.perch_errors(kit)` is empty.
+Each template's `story` line in the file says what it is and which moment it shows. Why they read without blocking a line or a telegraph, and what was checked:
 
-Known gaps: density windows still failing are floor 9.7/-441.9, sable 8/-476.3, tarn -32.8/-319.1 and cannon 34.1/-336.2 (the `bajada_lip` kicker keepout).
+| Template | Moment it serves | Why it reads and clears the line |
+| --- | --- | --- |
+| mending_yard, weaver_boneyard, hammock_camp, net_lesson, watch_post, lightning_scar | The net-weavers' working slope beside the ride | Ochre rope, nets and hammocks against the red-orange sandstone (KIT palette in DRESSING-KITS.md); heroes stand 24 m or more from a line and out of route lanes (TALL tier), low pieces 6 m or more (LOW tier), all by `validate`. |
+| abandoned_booth, dead_weather_post, cable_corner, log_post | The Fleet signal crew's abandoned equipment | Oxide and charcoal, one brass tag, never in a camp: at least 60 m from `camp_signal` and the Fleet homes (BRIEF Fleet rule, checked by the fit script). No barrels or mast-like guns. |
+| mini_hammock, mini_lesson, mini_post | Small rest spots where a full camp will not fit | Same pieces at mid height; at least 10 m from the line (MID tier). |
+| low_cairn, low_slab, low_tiny | The Watch Butte drop and bare slope fills | Every prop 1.0 m or lower after scale, the `LOW_GROUND_MAX_M` cap for `low_ground_rows` (`park_props.gd`, DRESSING-KITS.md "Low ground in area rows"). |
+| lookout_a/b/c | A perch the Dispatcher can stand on, and a weavers' watch landmark | Deck 7.05 m over the foot with a 3.6 m flat deck (PERCH-ANCHOR.md); it is a crib of logs with a roofed or open deck, never a mast, ladder, ramp or gate; TALL tier, 20 m clear of the line and out of route lanes. |
+
+### Numbers and where they come from
+
+- Tris: lookout_deck 15464/15532/15532 at LOD0 against the hero band 6000 to 20000 (`kit.py` BUDGET); LOD1 and LOD2 land in the 40 to 60 percent and 10 to 20 percent bands (manifest `tris`). Other kinds are in the table above, from the manifest.
+- Scales: 1.15 to 1.3 on mid pieces came from the round 3 "chunkier" fix list; the explicit 1.0 on low pieces keeps watch_stool b (0.94 m), rabbitbrush b (0.98 m) and dish_stones c (0.74 m) at or under the 1.0 m cap (manifest `height`); lookout_deck is 1.0 so its deck sits at 7.05 m inside the 6 to 10 m perch band (manifest `perch`).
+- Style: soft blobs use a bare icosahedron and flat rods to hold the tri budget (crown.py, comments there); the lookout reuses the kit's hard and flat styles.
+- Perch coverage: `perch_coverage.gd crown` 23 of 200 before, 61 of 200 after (measured in a scratch tree; the target was 36). Seven `lookout_*` spots; one stands near `gauntlet_net_2` because the ride-row keepouts leave only that pocket within 60 m of the nets.
+
+### Density windows (audit r7) and bare poses
+
+- cannon (34.1, -336.2): filled by a low_cairn at (78, -330) and low_tiny at (72, -360); the window now passes.
+- floor (9.7, -441.9), sable (8, -476.3), tarn (-32.8, -319.1): no legal spot in view. These samples ride the elevated Watch Butte drop (terrain 108.8, 132.5 and 116.1 m high); the ground within 60 m in the camera cone is either steeper than the 25 degree slope rule or inside a kicker keepout, and level ground beside it is 40 m or more lower, outside the 60 m view. A cone scan of the camera frustum (width 72.5 degree field of view, 60 m, pitch -0.3) found 0 legal cells for each: floor and sable are all `slope` and `line_clear`, tarn is `kicker run-out` of `bajada_lip` plus `slope`. The audit has no arena or camp exemption for them.
+- Bare poses in the 12-pose replay: 11 (17.3, -541.0) and 16 (8.1, -416.9) are on the drop (slope and the `bajada_lip` kicker ramp, 0 legal cells in view); 115 (-24.6, 474.1) improved from 3 to more core items (needs 5), where `warden bowl` and `crown_spire` keepouts leave only a thin strip; 208 (124.5, 237.5), the one void pose, stands on the gauntlet platform over a drop, and `home_clear` of the gauntlet_anchor_crew home plus the `gauntlet_west` row block everything level.
+
+Known gaps: the three windows and the poses named above stay bare for those reasons.
