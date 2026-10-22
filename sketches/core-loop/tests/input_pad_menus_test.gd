@@ -15,7 +15,7 @@ const T := preload("res://tests/support/t.gd")
 #   S5-3 title: d-pad then A presses the focused button, A with nothing focused starts the
 #        run, B closes help or achievements and A does not start a run;
 #   S5-4 class select by pad: d-pad, A picks (a locked card only shakes), X cycles the paint;
-#   S5-5 dead and summary: Y class select, X replay, B new run;
+#   S5-5 dead and summary: Y class select, X replay, B new run (summary: A new run, B class select);
 #   S5-6 workshop: Y talks while the counter is open; the upgrade pick's first A picks
 #        nothing and the second picks, unless the d-pad moved focus first;
 #   S5-7 field notes: Back held shows them, d-pad right turns a page, release hides them.
@@ -171,10 +171,10 @@ func _run() -> void:
 	_t.check("S5-2 no focus after a new run from the death screen", flow.in_play() and _focus() == null, "state %s focus %s" % [flow.state_name(), _focus()])
 	flow._set_state(flow.SUMMARY)
 	_game.summary_latched = false
-	_t.eq("S5-5 A on the summary is still Space", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_SPACE)
-	_t.eq("S5-5 B on the summary is N", _game.pad_screen_key(_pad(JOY_BUTTON_B)), KEY_N)
-	_game._screen_key(_game.pad_screen_key(_pad(JOY_BUTTON_B)))
-	_t.check("S5-5 B on the summary starts a new run", flow.in_play(), "state %s" % flow.state_name())
+	_t.eq("S5-5 B on the summary is Space", _game.pad_screen_key(_pad(JOY_BUTTON_B)), KEY_SPACE)
+	_t.eq("S5-5 A on the summary is N", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_N)
+	_game._screen_key(_game.pad_screen_key(_pad(JOY_BUTTON_A)))
+	_t.check("S5-5 A on the summary starts a new run", flow.in_play(), "state %s" % flow.state_name())
 	_t.check("S5-2 no focus after a new run", _focus() == null, "focus %s" % _focus())
 	# S5-6: the upgrade pick and the counter's talk.
 	var ws = _game.get_node("Workshop")

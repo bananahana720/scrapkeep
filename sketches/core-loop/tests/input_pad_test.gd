@@ -84,9 +84,14 @@ func _process(_delta: float) -> bool:
 		"summary":
 			flow._set_state(flow.SUMMARY)
 			_game.summary_latched = false
-			_t.eq("S1-5 A on the summary is Space", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_SPACE)
+			_t.eq("S1-5 A on the summary is N", _game.pad_screen_key(_pad(JOY_BUTTON_A)), KEY_N)
+			_t.eq("S1-5 B on the summary is Space", _game.pad_screen_key(_pad(JOY_BUTTON_B)), KEY_SPACE)
+			_game._screen_key(_game.pad_screen_key(_pad(JOY_BUTTON_B)))
+			_t.eq("S1-5 B opens class select from the summary", flow.state_name(), "class_select")
+			flow._set_state(flow.SUMMARY)
+			_game.summary_latched = false
 			_game._screen_key(_game.pad_screen_key(_pad(JOY_BUTTON_A)))
-			_t.eq("S1-5 A continues from the summary", flow.state_name(), "class_select")
+			_t.check("S1-5 A starts a new run from the summary", flow.in_play(), "state %s" % flow.state_name())
 		"done":
 			quit(_t.verdict())
 			return true
