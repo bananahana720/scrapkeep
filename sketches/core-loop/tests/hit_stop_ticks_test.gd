@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 
-# A headless test's hit stop (Game.test_mode, no SimClock.ticks) slows round(seconds * physics rate)
+# A headless test's hit stop (Game.test_mode, no SimClock.ticks) slows floor(seconds * physics rate)
 # physics ticks and hands back the time scale that was in force before it. The count is exact
 # while a frame carries one physics tick (Godot reads the scale once per frame), so a CPU too slow
 # for that could add ticks. A played game keeps the wall-time timer; this covers the tick path only.
@@ -79,7 +79,7 @@ func _process(_delta: float) -> bool:
 				_stage = 7
 		7:
 			Engine.time_scale = 1.0
-			var expect := [5, 3, 5]
+			var expect := [5, 2, 5]
 			var scales := [1.0, 2.0, 1.0]
 			var counts_ok := true
 			var scales_ok := true

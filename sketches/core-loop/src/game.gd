@@ -589,7 +589,8 @@ func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 
 
 # A played game holds the stop for wall time (the timer ignores the time scale). A headless test
-# (test_mode) holds it for the same span in physics ticks instead. Godot reads Engine.time_scale
+# (test_mode) holds it for the same span in physics ticks instead, floored: the wall timer usually
+# ends the stop on the next tick after it expires, so floor matches its usual count. Godot reads Engine.time_scale
 # once per frame, so the count is exact only while a frame carries one tick; a slow frame that
 # runs several keeps the ticks after the counter ends slowed too. Runs on the sim clock
 # (SimClock.ticks: the bot and sweep tools, all launched at fixed fps) keep the timer, so balance
@@ -604,7 +605,7 @@ func hit_stop(seconds: float) -> void:
 	Engine.time_scale = HIT_STOP_SCALE
 	var held := minf(seconds, HIT_STOP_MAX)
 	if test_mode and not SimClock.ticks:
-		_stop_ticks_left = maxi(1, roundi(held * Engine.physics_ticks_per_second))
+		_stop_ticks_left = maxi(1, floori(held * Engine.physics_ticks_per_second))
 		return
 	var timer := get_tree().create_timer(held, true, false, true)
 	timer.timeout.connect(_end_hit_stop)
