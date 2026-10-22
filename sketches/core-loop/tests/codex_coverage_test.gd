@@ -30,7 +30,7 @@ const BOSS_SUMMONS := {
 
 # Roster kinds no table, site or summon reaches today. Each keeps its script and gets no
 # new entry (ST4 ruling 1); the test fails if one becomes reachable, so its entry is written then.
-const NEVER_SPAWNS := ["miniboss", "vault", "netcaster", "bola_thrower", "gyro_jammer", "swatter",
+const NEVER_SPAWNS := ["miniboss", "vault", "netcaster", "bola_thrower", "gyro_jammer",
 	"ramp_flipper", "reactor_relic", "hooker", "splitter_pod", "jolt_layer", "anchor_crew"]
 
 
