@@ -3112,10 +3112,7 @@
   {
    "id": "crown_lo_07",
    "template": "low_cairn",
-   "at": [
-    86.0,
-    -634.0
-   ],
+   "at": [86, -641],
    "yaw_deg": -90,
    "near": "watch_butte, net-weaver gear"
   },
@@ -3142,10 +3139,7 @@
   {
    "id": "crown_lo_10",
    "template": "low_cairn",
-   "at": [
-    -2.2,
-    -664
-   ],
+   "at": [-2.2, -662],
    "yaw_deg": -90,
    "near": "watch_butte, net-weaver gear"
   },
@@ -3528,7 +3522,7 @@
   ],
   "seed": 31
  },
- "pin": 804932062,
+ "pin": 2071410145,
  "low_ground_rows": [
   "drop_ramp",
   "watch_butte",
