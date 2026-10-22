@@ -18,7 +18,8 @@ extends Node3D
 #             is the load step of the same data), so no bake binary changes.
 #             Each multiplier comes from one rule on a reference board's material and lit-ground
 #             patches (board_multiplier(): the material's hue, a value scaled by material over ground,
-#             capped at the floor's own, since a colour map cannot brighten). The colour map is
+#             capped at the floor's own, since a colour map cannot brighten); tailings and basalt are then
+#             darkened for the 3060 render (linear_scaled(), render_corrected()). The colour map is
 #             feathered over 8 m texels (feather()), so a slot border or the square's edge fades
 #             instead of stepping; the texel grid is fixed, so a straight border fades over 8 to 16 m
 #             by where it falls, and a stamp narrower than about 16 m loses tint by its position.
@@ -82,7 +83,8 @@ const SLOT_BASALT := 4
 # the material's (g/r, b/r); the target's luminance is the floor texture's times material / ground;
 # a target brighter than the floor in any channel is scaled down until none is, because RGBA8 caps a
 # multiplier at 1; the multiplier is target / GROUND_FLOOR_MEAN. The values below are board_multiplier()
-# of the numbers cited, stored as literals (the surface test pins each).
+# of the numbers cited, then darkened where the 3060 render asked for it (tailings by linear_scaled(),
+# basalt by render_corrected()), stored as literals (the surface test pins each).
 # Tailings: docs/art/reference/dig/dig-landmark-headframe-noon.jpg, the worked pit floor at noon.
 # Material and ground are the same floor: crops 120x40+1150+700, 120x40+880+600 and 100x30+1150+620
 # read 242,169,113, 245,172,117 and 245,172,116 (median 245,172,116). The value ratio is 1, so red
@@ -103,7 +105,8 @@ const MULT_TAILINGS := Color(0.827, 0.710, 0.695, float(COLOR_ALPHA_BYTE) / 255.
 # (0.610, 0.685, 1.0), target L* 45.1. Render-corrected (#241 6352984236, the 3060 render bench of
 # d19c9120): crop 600x200 at x 340, y 480 of a 1280x720 frame, poses 801 and 803 of park_props_audit
 # --map=park_sinkhole, read L*/a*/b* 52.49/+7.1/+12.2 and 52.27/+7.2/+12.2 against the board patch
-# (101, 93, 93), L* 40.2/+2.7/+0.7: 12 L* too bright and too warm, the stage's afternoon light and haze
+# (101, 93, 93), L* 40.2/+2.7/+0.7 (the bench's rounding of the crop mean above; the half byte of green
+# moves the multiplier by under 0.002): 12 L* too bright and too warm, the stage's afternoon light and haze
 # sitting between the multiplier and the pixel. render_corrected() scales the multiplier by board over
 # rendered (mean of the two poses), per channel in linear light, because Terrain3D samples _color_maps
 # with source_color and multiplies it into the albedo after decoding. One render pass, measured once on

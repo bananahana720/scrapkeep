@@ -4,8 +4,9 @@ extends SceneTree
 # Terrain3D regions has the control map's auto bit (hole vertices keep the hole bit too), and the
 # colour map carries each concrete, tailings and basalt cell's multiplier, which is
 # ParkTerrain.board_multiplier() of two raw sRGB patches of one reference board (one rule: the
-# material's hue, a value scaled by material over ground, capped at the floor's own); the stored
-# literals are pinned to it. The map is feathered over 8 m texels: a cell 5 or more cells from another
+# material's hue, a value scaled by material over ground, capped at the floor's own), then for tailings
+# linear_scaled() and for basalt render_corrected() (the 3060 render's corrections); the stored literals
+# are pinned to that. The map is feathered over 8 m texels: a cell 5 or more cells from another
 # slot and from the play edge wears its slot's multiplier, no 1 m step at a real slot border or the
 # square's edge exceeds the full difference over 8 plus 2/255, the region colour map is feather()'s
 # image placed one vertex per pixel (a one-pixel shift would fail), and the apron beyond the margin
@@ -110,7 +111,8 @@ func _pin_floor_mean() -> void:
 # The three multipliers, re-derived here from the reference boards' raw sRGB patch means (park_terrain.gd's
 # comments cite the crops). _derive() duplicates park_terrain.gd's board_multiplier() on purpose: that
 # duplication is what makes this pin independent of the code it checks. The stored literals must match
-# within 0.003, and each target's L* must match the value the design was judged at.
+# within 0.003, and each target's L* must match: concrete's the value the design was judged at, tailings'
+# and basalt's the L* of the corrected multiplier.
 func _pin_mults() -> void:
 	var fm := _floor_mean
 	var boards := {
@@ -137,7 +139,8 @@ func _pin_mults() -> void:
 		_near_color("slot %d target = multiplier * floor mean" % slot, park_target, Color(got.r * fm.r, got.g * fm.g, got.b * fm.b))
 	t.check("the tailings multiplier darkens red, green and blue and keeps red the largest", ParkTerrain.slot_tint(3).r < 1.0 and ParkTerrain.slot_tint(3).r > ParkTerrain.slot_tint(3).g and ParkTerrain.slot_tint(3).g >= ParkTerrain.slot_tint(3).b)
 	t.check("the tailings target is much lighter than the old charcoal tint", _park_target(3).g > 0.40, str(_park_target(3)))
-	# The cap: at least one channel of each multiplier reaches 1 (tailings by its red).
+	# The cap: at least one channel of concrete's multiplier reaches 1. Tailings and basalt are darkened below it
+# on purpose.
 	for slot in _mults:
 		if slot == 4 or slot == 3:
 			continue  # render-corrected or scaled: darkened below the cap on purpose
