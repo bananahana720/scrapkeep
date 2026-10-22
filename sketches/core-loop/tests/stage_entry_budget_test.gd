@@ -95,6 +95,8 @@ var _before_exit := {}
 var _seen := {}
 # The enlarged vignette file under user://, one folder per process (worktrees share user://).
 var _big_file := ""
+# ParkProps' far reads made for stage 2 before the exit (its next-stage plan's pre-reads).
+var _pre_exit_reads := 0
 
 
 # park_dam.json with its spots copied to SYNTHETIC_VIGNETTES vignettes, written under user:// (ParkProps reads any path).
@@ -172,6 +174,7 @@ func _run() -> void:
 	for i in CATCH_UP_SPIN:
 		spun += i
 	await physics_frame
+	var reads_before: int = ParkProps.far_reads
 	terrain.prepare(2)
 	var waited := 0
 	while not terrain.is_ready(2) and waited < WAIT_TICKS_MAX:
@@ -181,11 +184,17 @@ func _run() -> void:
 	# Warden fight runs many frames before the exit. A slow frame makes the next one step physics several times before
 	# any _process (the 4080, scrapkeep#235 row 26b), so the ticks below can end with neither plan started and the
 	# exit planning on the main thread. Wait for the frames play always has.
+	# ParkProps plans stage 2 the same way, then reads its far meshes back one a frame (scrapkeep#235 row 26c), which the
+	# Warden fight also has frames for.
+	var props = _game.presentation.park_props
 	var frames_waited := 0
-	while not _plans_started() and frames_waited < WAIT_TICKS_MAX:
+	while not (_plans_started() and props.next_read(2)) and frames_waited < WAIT_TICKS_MAX:
 		await process_frame
 		frames_waited += 1
+	_pre_exit_reads = ParkProps.far_reads - reads_before
 	_t.check("stage 2's natural and dressing plans were on workers before the exit, as in play", _plans_started(), "%d frames" % frames_waited)
+	_t.check("stage 2's park props were planned on a worker and their far meshes read before the exit", props.next_read(2) and _pre_exit_reads > 0,
+		"%d frames, %d reads" % [frames_waited, _pre_exit_reads])
 	_game.player.reset_to(terrain.spawn_point(1) + Vector3.UP * 2.0, Vector3(0.0, 0.0, 6.0))
 	await _ticks(2)
 	var run = _game.ctx.run
@@ -407,8 +416,8 @@ func _check_watch_builds_same(watch: Dictionary) -> void:
 		if not inst["litter"] and inst["class"] != ParkProps.HERO:
 			far_props += 1
 			far_paths[ParkProps._lod_paths(props._kit, inst)[2]] = true
-	_t.check("the timed ParkProps build read each far mesh back once, not once a prop", watch.far_reads > 0 and watch.far_reads <= far_paths.size(),
-		"%d reads, %d far meshes, %d far props" % [watch.far_reads, far_paths.size(), far_props])
+	_t.check("stage 2's far meshes were read back once each before the exit, and the timed build read none", watch.far_reads == 0 and _pre_exit_reads > 0 and _pre_exit_reads <= far_paths.size(),
+		"%d reads before the exit, %d in the build, %d far meshes, %d far props" % [_pre_exit_reads, watch.far_reads, far_paths.size(), far_props])
 	props._built_for = []
 	props._stage_entered(2, false)
 	props.finish()
@@ -721,7 +730,7 @@ func _report(label: String, times: Dictionary) -> void:
 	var parts := PackedStringArray()
 	for file in TIMED:
 		parts.append("%s %s" % [file, _ms(times, file)])
-	print("stage_entry_budget_test: %s: %s" % [label, ", ".join(parts)])
+	print("stage_entry_budget_test: %s: %s; activities steps [%s]" % [label, ", ".join(parts), ", ".join(_game.world.activities.last_entry_steps)])
 
 
 static func _ms(times: Dictionary, file: String) -> String:
