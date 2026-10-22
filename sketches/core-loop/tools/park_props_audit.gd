@@ -24,7 +24,7 @@ extends SceneTree
 # (ground + 1.8), the first one whose sight line to the centre clears terrain, other props' cylinders, colliders and the eye point itself.
 # If none is clear it takes the front and marks the row blocked_all. Two stills per spot, both replayable (poses.json carries "cam" and
 # "look" for the eye frame; the chase frame is a plain pose): "eye" at that point looking at the centre (fov 72.5), the ball parked 8 m
-# behind the camera, and "chase" with the ball 5 m out on the bearing and 2.5 m to its side, the player camera looking along -d (yaw =
+# behind the camera, and "chase" with the ball eye_m out on the bearing and 2.5 m to its side, the player camera looking along -d (yaw =
 # the bearing angle, the eye frame's axis) so the subject sits beside the ball, not behind it. bearing_deg is the yaw offset from the
 # spot's front, not a compass bearing. For each frame the
 # subject is hidden and the frame drawn again: subject_px counts pixels inside its projected box that differ by more than 8 in any channel,
@@ -850,7 +850,7 @@ func _diff_px(a: Image, b: Image, rect: Rect2i, ignore: Image) -> int:
 
 # The built views of one instance, to hide: {"views": [MeshInstance3D], "multi": [[MultiMeshInstance3D, index, Transform3D]]}; {} when it cannot be
 # told apart. A hero is a MeshInstance3D per LOD; anything else is a member of a MultiMesh per LOD0 and LOD1 (LOD2 is one merged mesh of the
-# whole vignette, out of range at the audit's 5 m eye, and is not touched).
+# whole vignette, drawn from 90 m (PROP_RANGES, park_props.gd:101), far past any eye_m here, and is not touched).
 func _isolate(pp, inst: Dictionary) -> Dictionary:
 	if pp == null:
 		return {}
