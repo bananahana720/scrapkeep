@@ -86,7 +86,8 @@ var cam_name := "mid"
 # --open=x:z:r:<reason>,... : ruled open spaces (centre and radius, metres) whose windows are exempt from the density bar,
 # each with a reason the audit checks instead of trusting (coordinator ruling #241 6329579296). The reason is everything after
 # the third colon: runout:<kicker> (a kicker run-out lies within 40 m of the window centre) or no_cell (the audit's own probe
-# finds no legal cell in the view cone of any pose in the window). A missing or unknown reason exits 2; a window whose reason
+# finds no legal cell in the view cone of any pose in the window) or filled:<cx>:<cz> (every legal cell in that cone is covered by
+# a placed prop, and the named cell is one of them). A missing or unknown reason exits 2; a window whose reason
 # fails is judged on its kinds like any other and listed in the summary's density_open_rejected.
 var open_spaces: Array = []
 var _probe := {}
@@ -869,7 +870,7 @@ func _summary(samples: Array, draw_idx: Array, info: Dictionary) -> Dictionary:
 #   arena      the footprint of a home_rows site (park row, or the activity row's point) or the landmark row, grown by ENGAGE_RING_M
 #   camp       an activity_rows enemy_camp (the camp's `at` point), grown by ENGAGE_RING_M (the validator's camp ring)
 #   telegraph  the footprint of an event_rows site (park row), grown by the event's hold_clear_m (0 when absent)
-#   open       a --open=x:z:r:<reason> space whose reason checks out (runout:<kicker> or no_cell, see _check_open); a failed reason is not exempt
+#   open       a --open=x:z:r:<reason> space whose reason checks out (runout:<kicker>, no_cell or filled:<cx>:<cz>, see _check_open); a failed reason is not exempt
 func _density(samples: Array) -> Dictionary:
 	var by_line := {}
 	for s in samples:
@@ -942,20 +943,29 @@ func _check_open(at: Vector2, window_poses: Array) -> Dictionary:
 			space = candidate
 			break
 	var reason: String = space[2]
-	var out := {"kind": "runout" if reason.begins_with("runout:") else "no_cell", "reason": reason, "r": space[1], "why": "", "cell": null}
+	var kind := "runout" if reason.begins_with("runout:") else ("filled" if reason.begins_with("filled:") else "no_cell")
+	var out := {"kind": kind, "reason": reason, "r": space[1], "why": "", "cell": null}
 	if _probe.is_empty():
 		var world := ParkProps.world_for(map_id)
 		var file := ParkProps.load_json(ParkProps.file_path(map_id))
 		var kit_path := String(file.get("kit", "res://assets/models/park/props/%s/manifest.json" % map_id.trim_prefix("park_")))
-		_probe = {"c": ParkProps.context(world["map"], world["ground"], world["stage"]), "kit": ParkProps.load_json(kit_path), "file": file}
+		var probe_c := ParkProps.context(world["map"], world["ground"], world["stage"])
+		var probe_kit := ParkProps.load_json(kit_path)
+		var placed: Array = ParkProps.expand(file, probe_kit, world["map"], world["ground"], probe_c) if reason.begins_with("filled:") or _filled_open() else []
+		_probe = {"c": probe_c, "kit": probe_kit, "file": file, "placed": placed}
 	var poses: Array = []
 	for smp in window_poses:
 		poses.append({"x": smp["x"], "z": smp["z"], "yaw": smp["yaw"]})
 	var cam_spec := {"arm": CAMERAS[cam_name]["arm"], "pitch": CAM_PITCH, "up": CAM_UP, "fov_deg": CAMERAS[cam_name]["fov"], "aspect": float(SIZE.x) / float(SIZE.y)}
-	var decided := ParkProps.open_reason(_probe["c"], _probe["kit"], _probe["file"], reason, at, poses, cam_spec)
+	var decided := ParkProps.open_reason(_probe["c"], _probe["kit"], _probe["file"], reason, at, poses, cam_spec, _probe["placed"])
 	out["why"] = "" if decided["ok"] else String(decided["why"])
 	out["cell"] = decided["cell"]
 	return out
+
+
+# Whether any --open space claims filled:, so the probe expands the file once only when it needs the instances.
+func _filled_open() -> bool:
+	return open_spaces.any(func(space: Array) -> bool: return String(space[2]).begins_with("filled:"))
 
 
 func _density_exempt(at: Vector2) -> String:
