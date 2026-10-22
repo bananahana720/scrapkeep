@@ -16,7 +16,7 @@ extends Node3D
 #    "low_ground_rows": ["<park row id>", ...]}   (optional: area rows that admit instances up to LOW_GROUND_MAX_M tall, see low_ground)
 # Kit manifest (scrapkeep-park-props-kit/1): kinds -> {class, tags, story, line_clear_m (optional), variants -> {lod [3 GLBs], tris [3], radius, height}}.
 # Placement rules (validate): line_clear (height tier or the kind's line_clear_m, whichever is larger), route_lane, scatter_row, keepout,
-# low_ground, telegraph (event_rows site footprint grown by hold_clear_m), home_clear, play_rect, ground_row, slope, seat.
+# low_ground, telegraph (the event's own zone, a lightning strike circle or the site box, grown by hold_clear_m), home_clear, play_rect, ground_row, slope, seat.
 
 const ParkSites := preload("res://src/presentation/park_sites.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
@@ -25,6 +25,7 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
+const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
 
 const FILE_SCHEMA := "scrapkeep-park-props/1"
 const KIT_SCHEMA := "scrapkeep-park-props-kit/1"
@@ -140,7 +141,9 @@ class Context:
 	var scatter_rows: Array = []
 	# Home sites and line waypoints that resolve to no place: file_errors-style rows, surfaced by --check and the test.
 	var unresolved: Array = []
-	# Park event_rows as {id, row (the resolved site's park row), hold (hold_clear_m)}: the telegraph rule's zones.
+	# Park event_rows as the telegraph rule's zones, in the event's own geometry (natural.gd plan, event_director.gd _park_clear):
+	# {id, site (NaturalFootprint.resolve of the row and its park row), half (Vector2 box half extents, null for a circle),
+	# radius (strike_m, a lightning event's circle), hold (hold_clear_m)}.
 	var events: Array = []
 	var _cells := {}
 
@@ -299,7 +302,15 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 				event_row = row
 				break
 		if not event_row.is_empty():
-			c.events.append({"id": String(ev.get("id", event_site)), "row": event_row, "hold": float(ev.get("hold_clear_m", 0.0))})
+			var effect: Dictionary = ev.get("effect", {})
+			var site := NaturalFootprint.resolve(ev, event_row)
+			var half = ParkMap.footprint_half_extents(site)
+			if effect.has("footprint_m"):
+				var footprint = effect["footprint_m"]
+				half = (footprint if footprint is Vector2 else Vector2(float(footprint[0]), float(footprint[1]))).abs() * 0.5
+			var circle: bool = String(ev.get("kind", "")) == "lightning"
+			c.events.append({"id": String(ev.get("id", event_site)), "site": site, "half": null if circle else half,
+				"radius": maxf(0.0, float(effect.get("strike_m", 0.0))), "hold": float(ev.get("hold_clear_m", 0.0))})
 		else:
 			c.unresolved.append("event_rows site %s (event %s) names no park row" % [event_site, String(ev.get("id", event_site))])
 	for row: Dictionary in park_map.park.get("park_rows", []):
@@ -694,7 +705,7 @@ static func _litter(litter: Dictionary, id: String, kit: Dictionary, c: Context,
 # --- Validate -------------------------------------------------------------------------------------
 
 # Violations {vignette, kind, pos, rule, detail} of the placement rules: line_clear (the larger of the height tier and the kind's
-# line_clear_m), route_lane, keepout, low_ground, telegraph (inside an event_rows site footprint grown by hold_clear_m), home_clear,
+# line_clear_m), route_lane, keepout, low_ground, telegraph (inside an event's own zone grown by hold_clear_m: natural.gd plan, event_director.gd _park_clear), home_clear,
 # play_rect, ground_row (only with a file ground_rows list), slope, seat. Empty means every instance is placeable.
 static func validate(list: Array, park_map, ground: Callable, stage := -1, c: Context = null) -> Array:
 	if c == null:
@@ -725,8 +736,14 @@ static func check_one(inst: Dictionary, c: Context) -> Array:
 		else:
 			fail.call("line_clear", "%s, %.1f m from a line, want %.0f" % ["tall or hero" if tall else ("mid" if height > LOW_HEIGHT_M else "low"), edge, need])
 	for ev: Dictionary in c.events:
-		if ParkMap.footprint_contains(ev["row"], p, float(ev["hold"]) + r):
-			fail.call("telegraph", "inside event %s hold zone (%s grown %.0f m)" % [ev["id"], ev["row"].get("id", "?"), ev["hold"]])
+		var grown: float = float(ev["hold"]) + r
+		var hit: bool
+		if ev["half"] == null:
+			hit = _pair(ev["site"]["at"]).distance_to(p) < float(ev["radius"]) + grown
+		else:
+			hit = ParkMap.footprint_contains(ev["site"], p, grown, Vector2.INF, ev["half"])
+		if hit:
+			fail.call("telegraph", "inside event %s hold zone (%s grown %.0f m)" % [ev["id"], ev["site"].get("id", "?"), ev["hold"]])
 	if tall and ParkRecipes.in_clear(c.lanes, p, r):
 		fail.call("route_lane", "tall, inside a route lane")
 	if tall:

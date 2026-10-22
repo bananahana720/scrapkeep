@@ -730,21 +730,48 @@ func _check_telegraph(kit: Dictionary, c, world: Dictionary) -> void:
 	var reach: float = half + hold + float(probe["radius"])
 	var make := func(dx: float) -> Object:
 		var zone := ParkProps.context(world["map"], ground, world["stage"])
-		zone.events = [{"id": "planted_event", "row": {"id": "planted_row", "at": [at.x + dx, at.y], "yaw_deg": 0, "size": [half * 2.0, 2.0, half * 2.0]}, "hold": hold}]
+		var site := {"id": "planted_row", "at": [at.x + dx, at.y], "yaw_deg": 0, "size": [half * 2.0, 2.0, half * 2.0]}
+		zone.events = [{"id": "planted_event", "site": site, "half": ParkMap.footprint_half_extents(site), "radius": 0.0, "hold": hold}]
 		return zone
 	var inside: Object = make.call(reach - 1.0)
 	var outside: Object = make.call(reach + 1.0)
 	_t.eq("planted: a bench inside an event hold zone fails telegraph alone", _rules(probe, inside), ["telegraph"])
-	_t.check("planted: the telegraph detail names the event and site", ParkProps.check_one(probe, inside)[0]["detail"] == "inside event planted_event hold zone (planted_row grown 20 m)")
+	var hits := ParkProps.check_one(probe, inside)
+	_t.check("planted: the telegraph detail names the event and site", not hits.is_empty() and hits[0]["detail"] == "inside event planted_event hold zone (planted_row grown 20 m)", str(hits))
 	_t.eq("planted: the same bench just outside the grown footprint passes", _rules(probe, outside), [])
 	var bare := ParkProps.context(world["map"], ground, world["stage"])
 	bare.events = []
 	_t.eq("planted: without events the bench passes", _rules(probe, bare), [])
+	# Event geometry: a lightning event is a strike_m circle at the site point, whatever the site's footprint (natural.gd plan);
+	# a box event with effect.footprint_m uses that footprint (event_director.gd _park_clear).
+	var big := {"id": "big_site", "element": "ground", "stamp": "", "recipe": "", "home": "", "ride_fact": "", "at": [at.x, at.y], "yaw_deg": 0, "size": [200.0, 2.0, 200.0]}
+	var strike := {"id": "planted_strike", "kind": "lightning", "site": "big_site", "hold_clear_m": 0.0, "effect": {"strike_m": 8.0}}
+	var circle := _event_context(world, big, strike)
+	var at30 := _planted(kit, "fix_bench", at + Vector2(30, 0), ground)
+	var at5 := _planted(kit, "fix_bench", at + Vector2(5, 0), ground)
+	_t.check("planted: the lightning zone is a circle, not the 200 m site", circle.events.size() == 1 and circle.events[0]["half"] == null and circle.events[0]["radius"] == 8.0)
+	_t.check("planted: a bench 30 m from a strike_m 8 centre, inside the big site, passes telegraph", not _rules(at30, circle).has("telegraph"), str(_rules(at30, circle)))
+	_t.check("planted: a bench 5 m from that centre fails telegraph", _rules(at5, circle).has("telegraph"), str(_rules(at5, circle)))
+	var boxed := _event_context(world, big, {"id": "planted_box", "kind": "flood_fill", "site": "big_site", "hold_clear_m": 0.0, "effect": {"footprint_m": [20.0, 20.0]}})
+	_t.check("planted: a footprint_m 20 box event keeps 5 m out but not 30 m", boxed.events.size() == 1 and _rules(at5, boxed).has("telegraph") and not _rules(at30, boxed).has("telegraph"), str(boxed.events))
 	var broken_map = world["map"]
 	broken_map.park["event_rows"].append({"id": "orphan_event", "site": "no_such_row", "hold_clear_m": 5.0})
 	var orphaned := ParkProps.context(broken_map, ground, world["stage"])
 	broken_map.park["event_rows"].pop_back()
 	_t.check("an event whose site resolves to no park row is unresolved", orphaned.unresolved.size() == 1 and String(orphaned.unresolved[0]).contains("orphan_event"), str(orphaned.unresolved))
+
+
+# A context whose only event is `event` on the in-memory park row `site`.
+func _event_context(world: Dictionary, site: Dictionary, event: Dictionary) -> Object:
+	var map = world["map"]
+	map.park["park_rows"].append(site)
+	map.park["event_rows"].append(event)
+	var made := ParkProps.context(map, world["ground"], world["stage"])
+	map.park["event_rows"].pop_back()
+	map.park["park_rows"].pop_back()
+	var mine: Array = made.events.filter(func(e: Dictionary) -> bool: return e["id"] == event["id"])
+	made.events = mine
+	return made
 
 
 # One planted instance per remaining validator branch, each of which must produce exactly its rule.
