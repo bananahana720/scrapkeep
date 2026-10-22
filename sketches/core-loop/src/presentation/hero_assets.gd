@@ -840,22 +840,70 @@ static func carrier_bank(pod: Node3D) -> Basis:
 	return p * local * p.inverse()
 
 
-# Hull points of the ring (in the ring's frame, at yaw 0) and of the bracket modules (in the
-# holder's frame), taken once per pod: the convex hull holds every furthest point.
-static func _bank_hull(pod: Node3D) -> Dictionary:
-	if pod.has_meta("bank_hull"):
+# Every CarrierBank holder under the pod: the base shell's and each heft layer's (HeftC<n> > Pod >
+# CarrierBank). With `visible_only`, a hidden layer's is left out.
+static func _holders(pod: Node3D, visible_only := true) -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	var base := pod.get_node_or_null("CarrierBank") as Node3D
+	if base != null:
+		out.append(base)
+	for layer in pod.get_children():
+		if not String(layer.name).begins_with("HeftC") or not layer is Node3D or (visible_only and not (layer as Node3D).visible):
+			continue
+		for sub in layer.get_children():
+			var holder := sub.get_node_or_null("CarrierBank") as Node3D
+			if holder != null and (not visible_only or (sub as Node3D).visible):
+				out.append(holder)
+	return out
+
+
+# The pod-frame transform of a node's parent chain below the pod (what a holder's points ride).
+static func _frame_in(pod: Node3D, node: Node3D) -> Transform3D:
+	var frame := Transform3D.IDENTITY
+	var at := node.get_parent() as Node3D
+	while at != null and at != pod:
+		frame = at.transform * frame
+		at = at.get_parent() as Node3D
+	return frame
+
+
+# Which heft layers show now: the hull below is only valid for one such state.
+static func _bank_key(pod: Node3D) -> String:
+	var key := ""
+	var ring := pod.get_node_or_null("WeaponRing")
+	for scope in [pod, ring]:
+		if scope == null:
+			continue
+		for child in scope.get_children():
+			if String(child.name).begins_with("HeftC") and child is Node3D:
+				key += "1" if (child as Node3D).visible else "0"
+	return key
+
+
+# Hull points of the ring (in the ring's frame, at yaw 0) and of the bracket modules (in the pod's
+# frame), of the parts that show now: the convex hull holds every furthest point. Rebuilt when a
+# heft layer appears or goes, so a hidden layer never banks the carrier.
+static func _bank_hull(pod: Node3D, visible_only := true) -> Dictionary:
+	var key := _bank_key(pod) if visible_only else "all"
+	if visible_only and pod.has_meta("bank_hull") and pod.get_meta("bank_hull")["key"] == key:
 		return pod.get_meta("bank_hull")
 	var ring := pod.get_node_or_null("WeaponRing") as Node3D
-	var holder := pod.get_node_or_null("CarrierBank") as Node3D
-	var hull := {
-		"ring": CarrierBank.hull(_points_under(ring, ring, false)) if ring != null else PackedVector3Array(),
-		"brackets": CarrierBank.hull(_points_under(holder, holder, true)) if holder != null else PackedVector3Array()}
-	pod.set_meta("bank_hull", hull)
+	var brackets := PackedVector3Array()
+	for holder in _holders(pod, visible_only):
+		var frame := _frame_in(pod, holder)
+		for v in _points_under(holder, holder, true, visible_only):
+			brackets.append(frame * v)
+	var hull := {"key": key,
+		"ring": CarrierBank.hull(_points_under(ring, ring, false, visible_only)) if ring != null else PackedVector3Array(),
+		"brackets": CarrierBank.hull(brackets)}
+	if visible_only:
+		pod.set_meta("bank_hull", hull)
 	return hull
 
 
-# Mesh vertices (and node origins when `origins`) under `node`, in `top`'s frame.
-static func _points_under(node: Node3D, top: Node3D, origins: bool, to := Transform3D.IDENTITY) -> PackedVector3Array:
+# Mesh vertices (and node origins when `origins`) under `node`, in `top`'s frame; a hidden
+# child's subtree is left out when `visible_only`.
+static func _points_under(node: Node3D, top: Node3D, origins: bool, visible_only := true, to := Transform3D.IDENTITY) -> PackedVector3Array:
 	var out := PackedVector3Array()
 	var here := to if node == top else to * node.transform
 	if node is MeshInstance3D and (node as MeshInstance3D).mesh != null:
@@ -866,8 +914,8 @@ static func _points_under(node: Node3D, top: Node3D, origins: bool, to := Transf
 	elif origins and node != top:
 		out.append(here.origin)
 	for child in node.get_children():
-		if child is Node3D:
-			out.append_array(_points_under(child, top, origins, here))
+		if child is Node3D and not (visible_only and not (child as Node3D).visible):
+			out.append_array(_points_under(child, top, origins, visible_only, here))
 	return out
 
 
@@ -916,8 +964,7 @@ static func update_carrier_bank(pod: Node3D, normal: Vector3, delta: float) -> B
 	pod.set_meta("bank_local", bank)
 	for i in carriers.size():
 		carriers[i].basis = bank * levels[i]
-	var holder := pod.get_node_or_null("CarrierBank") as Node3D
-	if holder != null:
+	for holder in _holders(pod, false):
 		holder.basis = bank
 	return p * bank * p.inverse()
 

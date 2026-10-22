@@ -57,6 +57,7 @@ func _run() -> void:
 		_smooth(hook, pod, pilot)
 		_fairlead(hook, pod, pilot)
 		stage.queue_free()
+	_heft(hook)
 	var out := OS.get_environment("SCRAPKEEP_BANK_OUT")
 	if out != "":
 		var file := FileAccess.open(out, FileAccess.WRITE)
@@ -65,13 +66,12 @@ func _run() -> void:
 	quit(_t.verdict())
 
 
-# Holds `normal` for FRAMES steps with the aim at `aim_yaw` (-Z faces yaw 0); `banked` false skips the bank.
-func _hold(hook, pod: Node3D, normal: Vector3, aim_yaw: float, banked := true, frames := FRAMES) -> void:
+# Holds `normal` for FRAMES steps with the aim at `aim_yaw` (-Z faces yaw 0).
+func _hold(hook, pod: Node3D, normal: Vector3, aim_yaw: float, frames := FRAMES) -> void:
 	var aim := Vector3(-sin(aim_yaw), 0.0, -cos(aim_yaw))
 	for i in frames:
 		hook.steer_weapon_ring(pod, aim, DT)
-		if banked:
-			HeroAssets.update_carrier_bank(pod, normal, DT)
+		HeroAssets.update_carrier_bank(pod, normal, DT)
 
 
 static func _angle(pod: Node3D) -> float:
@@ -80,7 +80,7 @@ static func _angle(pod: Node3D) -> float:
 
 # The furthest reach, from the pod's centre along -normal, of every vertex of the ring and the bracket
 # modules as drawn now, and of the bracket mounts' origins.
-static func _reach(pod: Node3D, normal: Vector3) -> float:
+static func _reach(pod: Node3D, normal: Vector3, layers := false) -> float:
 	var best := -INF
 	var centre := pod.global_position
 	var carriers: Array[Node3D] = []
@@ -88,6 +88,8 @@ static func _reach(pod: Node3D, normal: Vector3) -> float:
 		var carrier := pod.get_node_or_null(carrier_name) as Node3D
 		if carrier != null:
 			carriers.append(carrier)
+	if layers:
+		carriers.append_array(HeroAssets._holders(pod))
 	for carrier in carriers:
 		var nodes := [carrier] + carrier.find_children("*", "Node3D", true, false)
 		for node: Node3D in nodes:
@@ -119,7 +121,7 @@ func _wall(hook, pod: Node3D, pilot: String, label: String, normal: Vector3) -> 
 	var off := 0.0
 	for aim_yaw in AIMS:
 		pod.set_meta("bank_normal", Vector3.UP)
-		_hold(hook, pod, Vector3.UP, aim_yaw, true, 2)
+		_hold(hook, pod, Vector3.UP, aim_yaw, 2)
 		_hold(hook, pod, normal, aim_yaw)
 		worst = maxf(worst, _reach(pod, normal))
 		angle = maxf(angle, _angle(pod))
@@ -141,7 +143,7 @@ func _wall(hook, pod: Node3D, pilot: String, label: String, normal: Vector3) -> 
 			"pod up dot %.6f" % pod.global_basis.y.normalized().dot(Vector3.UP))
 		# Negative control: the same pose with the bank off must reach past 0.99.
 		pod.set_meta("bank_normal", Vector3.UP)
-		_hold(hook, pod, Vector3.UP, 0.0, true, 2)
+		_hold(hook, pod, Vector3.UP, 0.0, 2)
 		var level := _reach(pod, normal)
 		_t.check("%s %s: control, bank off reaches past 0.99" % [pilot, label], level > CarrierBank.LIMIT + 0.02,
 			"level carrier reaches %.4f m into the wall" % level)
@@ -152,14 +154,14 @@ func _wall(hook, pod: Node3D, pilot: String, label: String, normal: Vector3) -> 
 func _airborne(hook, pod: Node3D, pilot: String) -> void:
 	_hold(hook, pod, Vector3.RIGHT, 0.0)
 	var held := _angle(pod)
-	_hold(hook, pod, Vector3.UP, 0.0, true, 240)
+	_hold(hook, pod, Vector3.UP, 0.0, 240)
 	_t.check("%s returns to 0 in the air" % pilot, held > 0.3 and _angle(pod) < 0.0005,
 		"%.1f deg on the wall, %.4f deg after 4 s of world up" % [rad_to_deg(held), rad_to_deg(_angle(pod))])
 
 
 func _smooth(hook, pod: Node3D, pilot: String) -> void:
 	pod.set_meta("bank_normal", Vector3.UP)
-	_hold(hook, pod, Vector3.UP, 0.0, true, 2)
+	_hold(hook, pod, Vector3.UP, 0.0, 2)
 	var last := 0.0
 	var biggest_step := 0.0
 	for i in FRAMES:
@@ -168,7 +170,7 @@ func _smooth(hook, pod: Node3D, pilot: String) -> void:
 		biggest_step = maxf(biggest_step, now - last)
 		last = now
 	_t.check("%s bank never pops" % pilot, biggest_step < last * 0.5, "largest one-frame step %.1f deg of %.1f deg" % [rad_to_deg(biggest_step), rad_to_deg(last)])
-	_hold(hook, pod, Vector3.UP, 0.0, true, 240)
+	_hold(hook, pod, Vector3.UP, 0.0, 240)
 
 
 func _fairlead(hook, pod: Node3D, pilot: String) -> void:
@@ -185,4 +187,89 @@ func _fairlead(hook, pod: Node3D, pilot: String) -> void:
 	var want := LineView.fairlead_point(pod.global_position, yaw, HeroAssets.carrier_bank(pod))
 	_t.check("%s rope leaves the banked fairlead" % pilot, exit.global_position.distance_to(want) < 0.001 and _angle(pod) > 0.3,
 		"RopeExit %.5f m from LineView.fairlead_point with the bank, bank %.1f deg" % [exit.global_position.distance_to(want), rad_to_deg(_angle(pod))])
-	_hold(hook, pod, Vector3.UP, 0.0, true, 240)
+	_hold(hook, pod, Vector3.UP, 0.0, 240)
+
+
+# --- heft layers ---------------------------------------------------------------------------------
+# The shipped layer glbs bake their modules into the layer Pod mesh and carry none of BRACKET_PARTS, so
+# these use a fixture layer that does: an Exhaust_L box 1.25 m out toward the wall, in classes 2 and 3.
+
+func _layer_scene() -> PackedScene:
+	var layer := Node3D.new()
+	var core := Node3D.new()
+	core.name = "Core"
+	layer.add_child(core)
+	var pod := Node3D.new()
+	pod.name = "Pod"
+	layer.add_child(pod)
+	var part := MeshInstance3D.new()
+	part.name = "Exhaust_L"
+	var box := BoxMesh.new()
+	box.size = Vector3.ONE * 0.1
+	var paint := StandardMaterial3D.new()
+	paint.resource_name = "paint"
+	box.material = paint
+	part.mesh = box
+	part.position = Vector3(-1.25, 0.0, 0.0)
+	pod.add_child(part)
+	for n in [core, pod, part]:
+		n.owner = layer
+	var packed := PackedScene.new()
+	packed.pack(layer)
+	layer.free()
+	return packed
+
+
+func _fit(layers: bool, heft: int) -> Array:
+	var hook := HeroAssets.new()
+	hook.shell_assets = {"fx": HeroAssets.SHELLS["pylon_engineer"]}
+	if layers:
+		for n in [2, 3]:
+			hook.shell_assets["fx_c%d" % n] = "fixture://layer%d" % n
+			hook._scenes["fixture://layer%d" % n] = _layer_scene()
+	root.add_child(hook)
+	var ball := Node3D.new()
+	root.add_child(ball)
+	var rec: Dictionary = hook.fit_shell_into(ball, "pylon_engineer", "fx", heft, {})
+	return [hook, ball, rec]
+
+
+func _heft(_unused) -> void:
+	var wall := Vector3.RIGHT
+	var plain := _fit(false, 1)
+	var with_layers := _fit(true, 3)
+	var low := _fit(true, 1)
+	var holders := HeroAssets._holders(with_layers[2].pod, false)
+	_t.check("heft fixture: layer holders found", holders.size() >= 3, "%d CarrierBank holders under the pod (base, the two fixture layers, and the shipped c4 and c5 layers, empty)" % holders.size())
+	# 1. Heft 3: every holder is posed, and the layer brackets reach 0.99 or less.
+	var pod: Node3D = with_layers[2].pod
+	_hold(with_layers[0], pod, wall, 0.0)
+	var reach := _reach(pod, wall, true)
+	_t.check("heft 3 on a vertical wall: layer brackets reach 0.99 or less", reach <= CarrierBank.LIMIT + SLACK and _angle(pod) > deg_to_rad(30.0),
+		"worst reach %.4f m with the layer brackets, bank %.1f deg" % [reach, rad_to_deg(_angle(pod))])
+	for h in HeroAssets._holders(pod, false):
+		h.basis = Basis.IDENTITY
+	var unposed := _reach(pod, wall, true)
+	_t.check("heft 3 control: layer holders left level reach past 0.99", unposed > CarrierBank.LIMIT + 0.05, "reach %.4f m" % unposed)
+	# 2. Heft 1: the hidden layers' parts do not tilt the carrier; heft 3 tilts it more; back to 1 settles back.
+	var want_pod: Node3D = plain[2].pod
+	_hold(plain[0], want_pod, wall, 0.0)
+	var visible_need := _angle(want_pod)
+	var first: Node3D = low[2].pod
+	_hold(low[0], first, wall, 0.0)
+	_t.check("heft 1 bank is what its visible parts need", absf(_angle(first) - visible_need) < 0.0005,
+		"%.2f deg with hidden layers, %.2f deg without them" % [rad_to_deg(_angle(first)), rad_to_deg(visible_need)])
+	var hulls := HeroAssets._bank_hull(first, false)
+	var stale := CarrierBank.angle_for(hulls["ring"], 0.0, hulls["brackets"], wall)
+	_t.check("heft 1 control: a hull of every layer banks further", rad_to_deg(stale) > rad_to_deg(visible_need) + 3.0,
+		"all-layer hull %.2f deg, visible %.2f deg" % [rad_to_deg(stale), rad_to_deg(visible_need)])
+	low[0].set_heft_class(low[2], 3, false)
+	_hold(low[0], first, wall, 0.0)
+	var raised := _angle(first)
+	low[0].set_heft_class(low[2], 1, false)
+	_hold(low[0], first, wall, 0.0)
+	_t.check("the hull follows the heft class", raised > visible_need + deg_to_rad(3.0) and absf(_angle(first) - visible_need) < 0.0005,
+		"heft 1 %.2f deg, heft 3 %.2f deg, back to heft 1 %.2f deg" % [rad_to_deg(visible_need), rad_to_deg(raised), rad_to_deg(_angle(first))])
+	for fitted in [plain, with_layers, low]:
+		fitted[1].free()
+		fitted[0].free()
