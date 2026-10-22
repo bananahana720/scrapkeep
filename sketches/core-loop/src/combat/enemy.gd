@@ -824,10 +824,15 @@ func owned_materials() -> Array:
 		if prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE == 0:
 			continue
 		var value = get(prop.name)
+		# A target or list entry freed before the deferred bake runs still sits in its variable.
+		if typeof(value) == TYPE_OBJECT and not is_instance_valid(value):
+			continue
 		if value is StandardMaterial3D:
 			out.append(value)
 		elif value is Array:
 			for item in value:
+				if typeof(item) == TYPE_OBJECT and not is_instance_valid(item):
+					continue
 				if item is StandardMaterial3D:
 					out.append(item)
 	return out
