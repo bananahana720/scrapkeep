@@ -56,6 +56,8 @@ var _flow_state := "title"
 var intro: Node
 var intro_autoplay := true
 var _intro_tried := false
+# True while a 2D title card sits above this stage: the opening waits for release_intro().
+var intro_hold := false
 var _ctx
 var deck_antics: Array = []
 var look_target := 1
@@ -123,7 +125,16 @@ func show_flow(state: String) -> void:
 	if state != "title" and intro_playing():
 		intro.skip()
 	_sync_dressing()
-	if state == "title" and intro_autoplay and not _intro_tried:
+	if state == "title" and intro_autoplay and not _intro_tried and not intro_hold:
+		_intro_tried = true
+		play_intro.call_deferred()
+
+
+# The 2D title card hands off here: lifts the hold and starts the once-per-launch opening if the
+# title is up and it has not been tried. Off the title it does nothing.
+func release_intro() -> void:
+	intro_hold = false
+	if _flow_state == "title" and intro_autoplay and not _intro_tried and not intro_playing():
 		_intro_tried = true
 		play_intro.call_deferred()
 
