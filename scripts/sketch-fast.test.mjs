@@ -22,7 +22,7 @@ import {
   timingsFromReceipt,
   usableBaseRun,
 } from "./sketch-fast.mjs";
-import { importWithRetry } from "./sketch-smoke.mjs";
+import { importWithRetry, quarantineRecord } from "./sketch-smoke.mjs";
 
 const files = (entries) => indexFromFiles(new Map(Object.entries(entries)));
 
@@ -306,6 +306,34 @@ test("a base timeout counts only against a head that also timed out; a lane stop
   assert.equal(usableBaseRun(slow, outsideKill), outsideKill);
 });
 
+test("a base that dies by the same non-SIGKILL signal as the head keeps its verdict", () => {
+  const crash = (signal, checks = [], passes = 172) => ({ ok: false, exit: null, signal, killed: false, timedOut: false, checks, passes });
+  const head = crash("SIGABRT");
+  const base = crash("SIGABRT");
+  assert.equal(usableBaseRun(head, base), base);
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: false, headChecks: head.checks, baseChecks: base.checks }).kind, "base-red");
+  assert.equal(cacheableBaseRun(base), false);
+  // A head-only crash: the base passed, so the head is the PR's red.
+  const pass = { ok: true, exit: 0, signal: null, killed: false, timedOut: false, checks: [] };
+  const kept = usableBaseRun(head, pass);
+  assert.equal(kept, pass);
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: kept.ok, headChecks: head.checks, baseChecks: [] }).kind, "pr-red");
+  // SIGKILL is the OOM killer or the lane's own timeout: no verdict.
+  assert.equal(usableBaseRun(crash("SIGKILL"), crash("SIGKILL")), null);
+  assert.equal(usableBaseRun(head, crash("SIGKILL")), null);
+  // A different signal says nothing about the base.
+  assert.equal(usableBaseRun(head, crash("SIGSEGV")), null);
+  // Same signal, different failing checks: the head's new checks are the PR's.
+  const headChecks = crash("SIGABRT", ["a", "b"]);
+  const baseChecks = crash("SIGABRT", ["a"]);
+  assert.equal(usableBaseRun(headChecks, baseChecks), null);
+  // Same signal and checks, but the head aborted earlier (fewer passing checks): no base verdict, so pr-red.
+  const early = crash("SIGABRT", [], 60);
+  const dropped = usableBaseRun(early, base);
+  assert.equal(dropped, null);
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: dropped ? dropped.ok : null }).kind, "pr-red");
+});
+
 test("a single base red is not trusted from the cache; a second agreeing run confirms it", () => {
   const first = settleBaseEntry(undefined, { ok: false, checks: ["a", "b"] });
   assert.equal(trustedBaseEntry(first), false);
@@ -332,4 +360,11 @@ test("planted head red: a cached base red never hides a head-only red", () => {
   assert.deepEqual(grew.newChecks, ["x"]);
   assert.equal(classifyFailure({ rerunOk: false, baseOk: false, headChecks: [], baseChecks: confirmed.checks, baseCached: true }).kind, "pr-red");
   assert.equal(classifyFailure({ rerunOk: false, baseOk: false, headChecks: [], baseChecks: [], baseCached: false }).kind, "base-red");
+});
+
+test("a fast-lane quarantine receipt entry carries owner, reason, deadline and the run's result", () => {
+  const entry = { test: "a_test", owner: "Systems", reason: "why", added: "2026-10-22", deadline: "2026-10-29" };
+  assert.deepEqual(quarantineRecord(entry, { ok: false, exit: null, signal: "SIGABRT", failing: 0 }), {
+    test: "a_test", owner: "Systems", reason: "why", deadline: "2026-10-29", result: "red", exit: null, signal: "SIGABRT", failing_checks: 0,
+  });
 });
