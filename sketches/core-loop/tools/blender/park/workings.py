@@ -33,7 +33,7 @@ Palette: Southwest stone (sandstone c6a274, desert varnish 3a3027, iron-oxide re
 b77843 for machinery (the gate lever), never brass; ore in oxide red and chrysocolla green 8fa38a. No texture, no light,
 no mesh from any other source.
 
-  prlimit --as 12884901888 -- blender --background --threads 2 --python-exit-code 1 --python \\
+  prlimit -v12884901888 blender --background --threads 2 --python-exit-code 1 --python \\
       sketches/core-loop/tools/blender/park/workings.py -- [--out-dir DIR] [--recipe ID] [--count-only]
 """
 import argparse
