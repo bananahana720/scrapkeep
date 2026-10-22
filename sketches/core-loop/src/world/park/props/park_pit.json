@@ -1791,10 +1791,10 @@
    "template": "low_scrub",
    "at": [
     -409,
-    -494
+    -492
    ],
-   "yaw_deg": -35.6,
-   "near": "wash_berm, bursage and cholla thickening along "
+   "yaw_deg": -98.5,
+   "near": "wash_berm: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_012",
@@ -1803,8 +1803,8 @@
     -333,
     -429
    ],
-   "yaw_deg": -35.6,
-   "near": "slickrock_15, the fallen shift bell with its rope "
+   "yaw_deg": -44,
+   "near": "slickrock_15: The fallen shift bell with its rope tail, a sign board"
   },
   {
    "id": "pit_024",
@@ -1823,8 +1823,8 @@
     -430,
     -483
    ],
-   "yaw_deg": -35.6,
-   "near": "wash_berm, powder-cut drill rig left in its yar"
+   "yaw_deg": -118,
+   "near": "wash_berm: Powder-cut drill rig left in its yard, steels and cuttings"
   },
   {
    "id": "pit_028",
@@ -1833,7 +1833,7 @@
     -318,
     -396
    ],
-   "yaw_deg": -35.6,
+   "yaw_deg": -66,
    "near": "slickrock_15, where the last haul truck died"
   },
   {
@@ -1844,7 +1844,7 @@
     -246
    ],
    "yaw_deg": -22.6,
-   "near": "north_dive_windrow_2, bursage and cholla thickening along "
+   "near": "north_dive_windrow_2: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_055",
@@ -1864,7 +1864,7 @@
     -228
    ],
    "yaw_deg": -0.6,
-   "near": "north_dive_windrow_2, spilled drill-core trays beside drop"
+   "near": "north_dive_windrow_2: Spilled drill-core trays beside dropped lagging, scrub"
   },
   {
    "id": "pit_069",
@@ -1874,7 +1874,7 @@
     -256
    ],
    "yaw_deg": 179.4,
-   "near": "rim_road_lane_2, bursage and cholla thickening along "
+   "near": "rim_road_lane_2: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_071",
@@ -1894,7 +1894,7 @@
     -222
    ],
    "yaw_deg": -12.3,
-   "near": "camp_ore_bin, bench marker knocked flat, the old b"
+   "near": "camp_ore_bin: Bench marker knocked flat, the old bell on its side, lagging"
   },
   {
    "id": "pit_086",
@@ -1904,7 +1904,7 @@
     -215
    ],
    "yaw_deg": -86.3,
-   "near": "camp_ore_bin, bursage and cholla thickening along "
+   "near": "camp_ore_bin: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_095",
@@ -1914,7 +1914,7 @@
     -207
    ],
    "yaw_deg": 159.2,
-   "near": "camp_dive_windrow_3, bench marker knocked flat, the old b"
+   "near": "camp_dive_windrow_3: Bench marker knocked flat, the old bell on its side, lagging"
   },
   {
    "id": "pit_098",
@@ -1924,7 +1924,7 @@
     -170
    ],
    "yaw_deg": 169.4,
-   "near": "camp_dive_windrow_1, the fallen shift bell with its rope "
+   "near": "camp_dive_windrow_1: The fallen shift bell with its rope tail, a sign board"
   },
   {
    "id": "pit_101",
@@ -1934,7 +1934,7 @@
     -177
    ],
    "yaw_deg": 159.2,
-   "near": "camp_dive_windrow_1, bursage and cholla thickening along "
+   "near": "camp_dive_windrow_1: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_109",
@@ -1964,7 +1964,7 @@
     -268
    ],
    "yaw_deg": 166.3,
-   "near": "haul_ramp_berm, spilled drill-core trays beside drop"
+   "near": "haul_ramp_berm: Spilled drill-core trays beside dropped lagging, scrub"
   },
   {
    "id": "pit_113",
@@ -2004,7 +2004,7 @@
     -122
    ],
    "yaw_deg": -5.1,
-   "near": "bench3_dive_windrow_1, powder-cut drill rig left in its yar"
+   "near": "bench3_dive_windrow_1: Powder-cut drill rig left in its yard, steels and cuttings"
   },
   {
    "id": "pit_121",
@@ -2013,8 +2013,8 @@
     317,
     -159
    ],
-   "yaw_deg": 150.9,
-   "near": "camp_dive_windrow_1, spilled drill-core trays beside drop"
+   "yaw_deg": -119,
+   "near": "camp_dive_windrow_1: Spilled drill-core trays beside dropped lagging, scrub"
   },
   {
    "id": "pit_1213",
@@ -2024,7 +2024,7 @@
     6
    ],
    "yaw_deg": -125.0,
-   "near": "bench4_dive_windrow_2, powder-cut drill rig left in its yar"
+   "near": "bench4_dive_windrow_2: Powder-cut drill rig left in its yard, steels and cuttings"
   },
   {
    "id": "pit_122",
@@ -2034,7 +2034,7 @@
     -127
    ],
    "yaw_deg": -29.1,
-   "near": "bench3_dive_windrow_1, bursage and cholla thickening along "
+   "near": "bench3_dive_windrow_1: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_1227",
@@ -2053,8 +2053,8 @@
     346,
     -141
    ],
-   "yaw_deg": 150.9,
-   "near": "bench2_east_bank, the fallen shift bell with its rope "
+   "yaw_deg": -6,
+   "near": "bench2_east_bank: The fallen shift bell with its rope tail, a sign board"
   },
   {
    "id": "pit_125",
@@ -2063,7 +2063,7 @@
     339.9,
     -160.2
    ],
-   "yaw_deg": 150.9,
+   "yaw_deg": -112,
    "near": "camp_dive_windrow_1, bench survey station"
   },
   {
@@ -2074,7 +2074,7 @@
     -72
    ],
    "yaw_deg": 84.6,
-   "near": "bench2_east_bank, bursage and cholla thickening along "
+   "near": "bench2_east_bank: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_130",
@@ -2084,7 +2084,7 @@
     -55
    ],
    "yaw_deg": -95.4,
-   "near": "bench2_east_bank, the fallen shift bell with its rope "
+   "near": "bench2_east_bank: The fallen shift bell with its rope tail, a sign board"
   },
   {
    "id": "pit_131",
@@ -2114,7 +2114,7 @@
     -27
    ],
    "yaw_deg": -90.0,
-   "near": "bench2_east_bank, bench marker knocked flat, the old b"
+   "near": "bench2_east_bank: Bench marker knocked flat, the old bell on its side, lagging"
   },
   {
    "id": "pit_139",
@@ -2124,7 +2124,7 @@
     -7
    ],
    "yaw_deg": 90.0,
-   "near": "bench2_east_bank, spilled drill-core trays beside drop"
+   "near": "bench2_east_bank: Spilled drill-core trays beside dropped lagging, scrub"
   },
   {
    "id": "pit_177",
@@ -2154,7 +2154,7 @@
     -345
    ],
    "yaw_deg": -64.5,
-   "near": "haul_ramp_berm, bursage and cholla thickening along "
+   "near": "haul_ramp_berm: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_233",
@@ -2174,7 +2174,7 @@
     -315
    ],
    "yaw_deg": 179.0,
-   "near": "rim_road_lane_2, bursage and cholla thickening along "
+   "near": "rim_road_lane_2: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_243",
@@ -2204,7 +2204,7 @@
     -312
    ],
    "yaw_deg": 178.6,
-   "near": "rim_road_lane_2, spilled drill-core trays beside drop"
+   "near": "rim_road_lane_2: Spilled drill-core trays beside dropped lagging, scrub"
   },
   {
    "id": "pit_257",
@@ -2224,7 +2224,7 @@
     -242
    ],
    "yaw_deg": 126.9,
-   "near": "camp_ore_bin, the fallen shift bell with its rope "
+   "near": "camp_ore_bin: The fallen shift bell with its rope tail, a sign board"
   },
   {
    "id": "pit_271",
@@ -2244,7 +2244,7 @@
     -73
    ],
    "yaw_deg": 84.6,
-   "near": "bench2_east_bank, powder-cut drill rig left in its yar"
+   "near": "bench2_east_bank: Powder-cut drill rig left in its yard, steels and cuttings"
   },
   {
    "id": "pit_329",
@@ -2274,7 +2274,7 @@
     202
    ],
    "yaw_deg": 13.1,
-   "near": "east_dive_2_windrow_1, powder-cut drill rig left in its yar"
+   "near": "east_dive_2_windrow_1: Powder-cut drill rig left in its yard, steels and cuttings"
   },
   {
    "id": "pit_389",
@@ -2283,17 +2283,17 @@
     -287,
     -406
    ],
-   "yaw_deg": -35.6,
-   "near": "rim_haul_ramp, bursage and cholla thickening along "
+   "yaw_deg": 32,
+   "near": "rim_haul_ramp: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_396",
    "template": "bench_survey",
    "at": [
-    -312,
-    -418
+    -313.8,
+    -418.9
    ],
-   "yaw_deg": -35.6,
+   "yaw_deg": -56,
    "near": "slickrock_15, bench survey station"
   },
   {
@@ -2304,7 +2304,7 @@
     -231
    ],
    "yaw_deg": -0.6,
-   "near": "north_dive_windrow_2, bursage and cholla thickening along "
+   "near": "north_dive_windrow_2: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_447",
@@ -2334,7 +2334,7 @@
     -135
    ],
    "yaw_deg": -0.0,
-   "near": "bench2_north_lane, bench marker knocked flat, the old b"
+   "near": "bench2_north_lane: Bench marker knocked flat, the old bell on its side, lagging"
   },
   {
    "id": "pit_484",
@@ -2344,7 +2344,7 @@
     -135
    ],
    "yaw_deg": -0.0,
-   "near": "bench2_north_lane, bursage and cholla thickening along "
+   "near": "bench2_north_lane: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_488",
@@ -2354,7 +2354,7 @@
     -136
    ],
    "yaw_deg": -0.0,
-   "near": "bench2_north_lane, bursage and cholla thickening along "
+   "near": "bench2_north_lane: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_492",
@@ -2364,7 +2364,7 @@
     -139
    ],
    "yaw_deg": -0.0,
-   "near": "west_dive_windrow_1, bursage and cholla thickening along "
+   "near": "west_dive_windrow_1: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_494",
@@ -2394,7 +2394,7 @@
     33
    ],
    "yaw_deg": -75.6,
-   "near": "bench4_ore_bin, spilled drill-core trays beside drop"
+   "near": "bench4_ore_bin: Spilled drill-core trays beside dropped lagging, scrub"
   },
   {
    "id": "pit_532",
@@ -2404,7 +2404,7 @@
     44
    ],
    "yaw_deg": 104.4,
-   "near": "bench4_ore_bin, bursage and cholla thickening along "
+   "near": "bench4_ore_bin: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_534",
@@ -2414,7 +2414,7 @@
     77
    ],
    "yaw_deg": 104.4,
-   "near": "bench4_ore_bin, bench marker knocked flat, the old b"
+   "near": "bench4_ore_bin: Bench marker knocked flat, the old bell on its side, lagging"
   },
   {
    "id": "pit_539",
@@ -2424,7 +2424,7 @@
     162
    ],
    "yaw_deg": -75.6,
-   "near": "floor_sump, spilled drill-core trays beside drop"
+   "near": "floor_sump: Spilled drill-core trays beside dropped lagging, scrub"
   },
   {
    "id": "pit_550",
@@ -2444,7 +2444,7 @@
     179
    ],
    "yaw_deg": 7.3,
-   "near": "ore_pile_sw, the fallen shift bell with its rope "
+   "near": "ore_pile_sw: The fallen shift bell with its rope tail, a sign board"
   },
   {
    "id": "pit_558",
@@ -2454,7 +2454,7 @@
     148
    ],
    "yaw_deg": -172.7,
-   "near": "ore_pile_north, bench marker knocked flat, the old b"
+   "near": "ore_pile_north: Bench marker knocked flat, the old bell on its side, lagging"
   },
   {
    "id": "pit_619",
@@ -2464,7 +2464,7 @@
     -233
    ],
    "yaw_deg": -22.6,
-   "near": "north_dive_windrow_2, bench marker knocked flat, the old b"
+   "near": "north_dive_windrow_2: Bench marker knocked flat, the old bell on its side, lagging"
   },
   {
    "id": "pit_621",
@@ -2474,7 +2474,7 @@
     -219
    ],
    "yaw_deg": -65.6,
-   "near": "north_dive_windrow_2, bursage and cholla thickening along "
+   "near": "north_dive_windrow_2: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_623",
@@ -2494,7 +2494,7 @@
     -180
    ],
    "yaw_deg": -180.0,
-   "near": "bench2_north_lane, spilled drill-core trays beside drop"
+   "near": "bench2_north_lane: Spilled drill-core trays beside dropped lagging, scrub"
   },
   {
    "id": "pit_656",
@@ -2504,7 +2504,7 @@
     -181
    ],
    "yaw_deg": -180.0,
-   "near": "bench2_north_lane, spilled drill-core trays beside drop"
+   "near": "bench2_north_lane: Spilled drill-core trays beside dropped lagging, scrub"
   },
   {
    "id": "pit_658",
@@ -2514,7 +2514,7 @@
     -182
    ],
    "yaw_deg": -86.3,
-   "near": "bench3_dive_windrow_2, the fallen shift bell with its rope "
+   "near": "bench3_dive_windrow_2: The fallen shift bell with its rope tail, a sign board"
   },
   {
    "id": "pit_675",
@@ -2524,7 +2524,7 @@
     -141
    ],
    "yaw_deg": -29.8,
-   "near": "bench3_dive_windrow_2, bursage and cholla thickening along "
+   "near": "bench3_dive_windrow_2: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_679",
@@ -2544,7 +2544,7 @@
     -73
    ],
    "yaw_deg": -110.1,
-   "near": "bench3_dive_windrow_2, bench marker knocked flat, the old b"
+   "near": "bench3_dive_windrow_2: Bench marker knocked flat, the old bell on its side, lagging"
   },
   {
    "id": "pit_704",
@@ -2564,7 +2564,7 @@
     36
    ],
    "yaw_deg": 29.7,
-   "near": "floor_dive_windrow_1, the fallen shift bell with its rope "
+   "near": "floor_dive_windrow_1: The fallen shift bell with its rope tail, a sign board"
   },
   {
    "id": "pit_722",
@@ -2574,7 +2574,7 @@
     142
    ],
    "yaw_deg": 68.1,
-   "near": "ore_pile_mid, bursage and cholla thickening along "
+   "near": "ore_pile_mid: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_724",
@@ -2584,7 +2584,7 @@
     171
    ],
    "yaw_deg": 68.1,
-   "near": "ore_pile_mid, bench marker knocked flat, the old b"
+   "near": "ore_pile_mid: Bench marker knocked flat, the old bell on its side, lagging"
   },
   {
    "id": "pit_726",
@@ -2604,7 +2604,7 @@
     85
    ],
    "yaw_deg": -111.9,
-   "near": "floor_dive_windrow_2, powder-cut drill rig left in its yar"
+   "near": "floor_dive_windrow_2: Powder-cut drill rig left in its yard, steels and cuttings"
   },
   {
    "id": "pit_730",
@@ -2624,7 +2624,7 @@
     -389
    ],
    "yaw_deg": 168.7,
-   "near": "slickrock_8, bench marker knocked flat, the old b"
+   "near": "slickrock_8: Bench marker knocked flat, the old bell on its side, lagging"
   },
   {
    "id": "pit_806",
@@ -2634,7 +2634,7 @@
     -304
    ],
    "yaw_deg": 126.9,
-   "near": "back_door_portal, bursage and cholla thickening along "
+   "near": "back_door_portal: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_829",
@@ -2644,7 +2644,7 @@
     -127
    ],
    "yaw_deg": -29.8,
-   "near": "bench3_dive_windrow_2, bursage and cholla thickening along "
+   "near": "bench3_dive_windrow_2: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_898",
@@ -2653,7 +2653,7 @@
     -410,
     -473
    ],
-   "yaw_deg": -35.6,
+   "yaw_deg": -104,
    "near": "wash_berm, ore cart gone to bursage on its stub"
   },
   {
@@ -2674,7 +2674,7 @@
     -159
    ],
    "yaw_deg": -9.1,
-   "near": "north_dive_windrow_2, bursage and cholla thickening along "
+   "near": "north_dive_windrow_2: Bursage and cholla thickening along the haul road's edge"
   },
   {
    "id": "pit_946",
@@ -2684,7 +2684,7 @@
     -183
    ],
    "yaw_deg": -180.0,
-   "near": "north_dive_windrow_2, the fallen shift bell with its rope "
+   "near": "north_dive_windrow_2: The fallen shift bell with its rope tail, a sign board"
   },
   {
    "id": "pit_992",
@@ -2737,5 +2737,5 @@
   ],
   "seed": 3
  },
- "pin": 795077205
+ "pin": 3124860388
 }

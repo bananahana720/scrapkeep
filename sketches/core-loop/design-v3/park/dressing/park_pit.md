@@ -6,12 +6,12 @@ The pit's props dress a working open-pit mine. The giant machines are the humans
 
 Brief citation: `sketches/core-loop/design-v3/park/dressing/KITS.md` (lands in #269), pit section: windsock, "Tag it tall; keep 30 m from lines".
 
-Base: pit branch head 6311cec8, then the final merge of origin/stage/alpha-w18 f259e8cf421fc3c305b53ae104005dda40af9a41 and the Dressing foundation origin/claude/zealous-franklin-ed0sxr-lineclear e72fff7d96a88118e622f30658bcddb3105ae206 (merge commits, no conflicts; ART-MISTAKES.md identical to stage). The plan check on the merged head gives fingerprint 795077205 = the file pin, so the w18d audit stands (the props and placement path did not change). No `--open` windows were used, so there is nothing for `density_open_checked`/`density_open_rejected` to report.
+Base: pit branch head 6311cec8, then the final merge of origin/stage/alpha-w18 f259e8cf421fc3c305b53ae104005dda40af9a41 and the Dressing foundation origin/claude/zealous-franklin-ed0sxr-lineclear e72fff7d96a88118e622f30658bcddb3105ae206 (merge commits, no conflicts; ART-MISTAKES.md identical to stage). The plan check on the merged head gave fingerprint 795077205; the w18m spot moves (below) change it to 3124860388 = the file pin, so the density audit was re-run (w18m). No `--open` windows were used, so there is nothing for `density_open_checked`/`density_open_rejected` to report.
 Method: automated headless Godot 4.7.2 on cloud llvmpipe (OpenGL compatibility proxy, not a frame-cost proof, not human feel).
 
 ## Plan check
 
-`tools/park_props_plan.gd --map=park_pit --check`: 1166 instances (207 litter), 0 violations, fingerprint 795077205. Pin 3170188153 to 795077205. Before the move the merged rules gave 8 violations, all `telegraph`, in two spots.
+`tools/park_props_plan.gd --map=park_pit --check`: 1166 instances (207 litter), 0 violations, fingerprint 3124860388. Pin 3170188153 to 3124860388. Spots now face their named row within 15 degrees; pit_011 moved from (-409, -494) to (-409, -492), 2 m, yaw -98.5 (bearing to wash_berm -97.5 degrees). Facing wash_berm from the old point put a cholla within 3.9 m of dump_wash_2 (keepout); that move clears it, with no yaw turn away from the row. Before the move the merged rules gave 8 violations, all `telegraph`, in two spots.
 
 ## Telegraph zones
 
@@ -30,7 +30,7 @@ Rule: `park_props.gd` `check_one` fails any prop inside an event's own geometry 
 
 `project-guide/handoff/ART-MISTAKES.md`, read before the unit:
 - 2026-10-21 World, #242 lane width ("named a mechanism from its label"): I read `check_one`, the `Context.line_distance` measure and the telegraph zone code before describing either rule, and took the zone sizes from `park_pit.json` event rows, not from names.
-- 2026-10-21 Coordinator, #231/#234 (a PASS receipt older than a drop is void): the audit was run on this tree; after the final stage merge the plan fingerprint was unchanged (795077205), and I say so below rather than re-audit.
+- 2026-10-21 Coordinator, #231/#234 (a PASS receipt older than a drop is void): the audit was run on this tree; the spot moves changed the plan fingerprint (795077205 to 3124860388), so the audit was re-run on this tree (w18m).
 - 2026-10-21 Modeling, anchor gap tool (run commands exactly as written): every command in this note was run as written.
 - 2026-10-19 World, #219 flush lanes (look at a capture before calling it done): I rendered and viewed the previews of four recoloured kinds next to the board; they are Blender renders, not game captures, and said so.
 - 2026-10-21 Grading, #241 mapping claim (judged by eye on a resized still): I make no clipping or colour-accuracy claim from the resized contact sheet; colours come from the recipe constants and the guard, not from the still.
@@ -43,13 +43,13 @@ Rule: `park_props.gd` `check_one` fails any prop inside an event's own geometry 
 - run_tier_test: FAIL, 21 of 192 checks, fresh-process Continue children timed out (867 s run). Measured base-red: the clean stage b0e64a40 fails it the same way at load 17 (8 of 192, all `[runtime child seed N] exit=-1 timeout=true`). Outside this unit's files.
 - `npm run sketch:lint`: pass, 0 findings. `npm run check:docs`: pass, 178 Markdown files, 0 failures.
 
-## Audit (w18d, default run, mid camera, step 25 m, 169 samples; run before the last stage merge, whose plan fingerprint is unchanged at 795077205)
+## Audit (w18m, default run, mid camera, step 25 m, 169 samples; run on the tree whose plan fingerprint is 3124860388)
 
 - density: 27 of 31 windows pass (4 exempt: 1 arena, 2 camp, 1 telegraph), no failing windows. Before: 27 of 31, 4 exempt, none failing.
-- props-only draw delta: max 69, median 25.0 (before: 69, 28.0). draw calls max 389, median 318.0, p95 371.2.
+- props-only draw delta: max 71, median 25.0 (w18d: 69, 25.0). draw calls max 374, median 298.0, p95 352.8.
 - bare share 21.9 percent (before 21.3), void poses 0.
 
-## Pose replay (before = same tree, `props/park_pit.json` moved aside, same poses; after = default run stills)
+## Pose replay (from the w18d run; not repeated for w18m, whose only art-relevant change is pit_011 and the spot yaws) (before = same tree, `props/park_pit.json` moved aside, same poses; after = default run stills)
 
 The default run wrote 11 stills (12 requested, one pose de-duplicated). Pixel change (share of pixels with a channel difference over 12):
 106,-299 1.48; 126,-150 0.12; 135,-122 3.77; 148,-150 0.30; 153,-37 0.18; 21,-257 1.81; 47,205 0.38; 63,15 1.78; 79,337 0.41; 87,174 0.07; 9,-501 0.36. Median 0.38.
