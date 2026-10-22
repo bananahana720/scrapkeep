@@ -25,6 +25,18 @@ const MAPS := ["park_crown", "park_dam", "park_flume", "park_islands", "park_pit
 const BEND_AT := Vector2(-172.8, -446.2)
 const BEND_RADIUS_M := 8.0
 const BEND_RISE_MAX_M := 8.0
+# Two more sheer anchor posts that stopped the Sable pilot (traversal_line --table=park --stage=4 --pilot=sable, seeds
+# 1..8, 90 fps, 2026-10-22). Same rule and limit as the bend, a table of (name, strike point):
+#   main_tube_upper_post_11i at (-35.3, -120.2): a corner stood 0.4 m inside main_tube_upper_8's wash footprint; five
+#     of eight seeds dead-stopped at (-40.8, -114.4); ground rise over the 8 m disc 26.0 m before, 6.0 m after.
+#   lava_channel_post_13i at (-313.1, -585.2), 2.0 m off lava_channel_10: seed 8 struck it airborne (vx 43.4 to -4.6)
+#     and stopped at (-318.7, -588.4); rise 22.3 m before, 4.7 m after.
+# Both posts move outward (11i to (-27.3, -120.2), 13i to (-307.1, -582.2)); a further 1 m east gives the same 6.0 m, so that is the wash's own relief,
+# so the limit stays the bend's 8.0 m: the fix passes with 2.0 m and 3.3 m margin, the base fails by 18.0 m and 14.3 m.
+const POST_STRIKES := [
+	["main_tube_upper_post_11i", Vector2(-40.8, -114.4)],
+	["lava_channel_post_13i", Vector2(-318.7, -588.4)],
+]
 
 var t := T.new("park_cable_ends_test")
 
@@ -69,6 +81,9 @@ func _run() -> void:
 	var sink: Callable = ParkGround.ground("park_sinkhole")
 	var rise := disc_rise(sink, BEND_AT, BEND_RADIUS_M)
 	t.check("park_sinkhole bend runout: ground rises %.1f m over a %.0f m disc at %s, want at most %.1f" % [rise, BEND_RADIUS_M, BEND_AT, BEND_RISE_MAX_M], rise <= BEND_RISE_MAX_M)
+	for ps in POST_STRIKES:
+		var pr := disc_rise(sink, ps[1], BEND_RADIUS_M)
+		t.check("park_sinkhole %s strike: ground rises %.1f m over a %.0f m disc at %s, want at most %.1f" % [ps[0], pr, BEND_RADIUS_M, ps[1], BEND_RISE_MAX_M], pr <= BEND_RISE_MAX_M)
 	# Control: a row at ground + 1.0 fails; the minimum itself passes.
 	var flat := func(_x: float, _z: float) -> float: return -40.0
 	t.check("control: an end 1.0 m over the ground fails", not end_clear(Vector3(150.0, -39.0, -178.0), flat))
@@ -76,4 +91,9 @@ func _run() -> void:
 	var wall := func(x: float, _z: float) -> float: return -80.0 if x < -170.0 else -60.0
 	t.check("control: a 20 m wall in the bend disc fails", disc_rise(wall, Vector2(-172.8, -446.2), BEND_RADIUS_M) > BEND_RISE_MAX_M)
 	t.check("control: flat ground in the bend disc passes", disc_rise(flat, Vector2(-172.8, -446.2), BEND_RADIUS_M) <= BEND_RISE_MAX_M)
+	for ps in POST_STRIKES:
+		var cx: float = ps[1].x
+		var post_wall := func(x: float, _z: float) -> float: return -80.0 if x < cx else -60.0
+		t.check("control: a 20 m wall through the %s disc fails" % ps[0], disc_rise(post_wall, ps[1], BEND_RADIUS_M) > BEND_RISE_MAX_M)
+		t.check("control: flat ground in the %s disc passes" % ps[0], disc_rise(flat, ps[1], BEND_RADIUS_M) <= BEND_RISE_MAX_M)
 	quit(t.verdict())
