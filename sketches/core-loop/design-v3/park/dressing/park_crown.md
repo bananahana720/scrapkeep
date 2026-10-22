@@ -6,7 +6,7 @@ Dressing lane (DRESSING-KITS.md): the Blender kit and its placement. Recipe `too
 
 The giant machines of Highdraft are the humans' utility fleet (construction, mining, manufacturing), per Andrew's machine ruling (#241): some are corrupted, some are loyal drones, some are looping workers. The crew sites in this kit read as plush crews living among working giants, so the scale contrast is the point: small ochre rope and petrol-enamel gear at the feet of tall machines and spires. These are working machines, never weapons. Brief: `sketches/core-loop/design-v3/park/dressing/KITS.md` (lands in #269); where it is absent on this branch, the lane's KITS.md copy was read.
 
-The kit tells two stories. The net-weavers are non-hostile builders, so only their gear appears (ochre rope, nets, hammocks, a loom, mending baskets), never a face or a creature. The Fleet signal crew's gear has petrol enamel `#365754` bodies, copper `#b77843` fittings, iron oxide `#9b513a` only as patches, and one brass tag, and is drawn as abandoned equipment: a hut, a weather post, a flat-lying cable spool and a tally slab, with no barrels and no gun-like masts. The ancient spires are never touched. Props use pale canvas, ochre rope, dusty sage and charcoal so they separate in value and hue from the red-orange sandstone ground, which sits close to HAZARD in hue. Brass is `#d9b44a`, used only on the Fleet tags.
+The kit tells two stories. The net-weavers are non-hostile builders, so only their gear appears (ochre rope, nets, hammocks, a loom, mending baskets), never a face or a creature. The Fleet signal crew's gear has petrol enamel `#365754` bodies, copper `#b77843` fittings, iron oxide `#9b513a` on patches, shutters, doors and the dial needle, and at most one brass tag per site, and is drawn as abandoned equipment: a hut, a weather post, a flat-lying cable spool and a tally slab, with no barrels and no gun-like masts. The ancient spires are never touched. Props use pale canvas, ochre rope, dusty sage and charcoal so they separate in value and hue from the red-orange sandstone ground, which sits close to HAZARD in hue. Brass is `#d9b44a`, used only on the Fleet tags.
 
 | Kind | Class | LOD0 tris (a/b/c) | Height m | Tags | Story |
 | --- | --- | --- | --- | --- | --- |
@@ -46,7 +46,7 @@ Each template's `story` line in the file says what it is and which moment it sho
 | Template | Moment it serves | Why it reads and clears the line |
 | --- | --- | --- |
 | mending_yard, weaver_boneyard, hammock_camp, net_lesson, watch_post, lightning_scar | The net-weavers' working slope beside the ride | Ochre rope, nets and hammocks against the red-orange sandstone (KIT palette in DRESSING-KITS.md); heroes stand 24 m or more from a line and out of route lanes (TALL tier), low pieces 6 m or more (LOW tier), all by `validate`. |
-| abandoned_booth, dead_weather_post, cable_corner, log_post | The Fleet signal crew's abandoned equipment | Petrol enamel, copper fittings, oxide patches, at most one brass tag per site (`crown.py` :300 booth, :326 storm station a and b, :573 spool shed a and b, :775 tally slab a; each of these templates carries at most one of them), never in a camp: at least 60 m from `camp_signal` and the Fleet homes (BRIEF Fleet rule, checked by the fit script). No barrels or mast-like guns. |
+| abandoned_booth, dead_weather_post, cable_corner, log_post, log_post_nokite, low_slab | The Fleet signal crew's abandoned equipment | Petrol enamel, copper fittings, oxide patches, at most one brass tag per site (`crown.py` :300 booth, :326 storm station a and b, :573 spool shed a and b, :775 tally slab a; each of these templates carries at most one of them), never in a camp: at least 60 m from `camp_signal` and the Fleet homes (BRIEF Fleet rule, checked by the fit script). No barrels or mast-like guns. |
 | mini_hammock, mini_lesson, mini_post | Small rest spots where a full camp will not fit | Same pieces at mid height; at least 10 m from the line (MID tier). |
 | low_cairn, low_slab, low_tiny | The Watch Butte drop and bare slope fills | Every prop 1.0 m or lower after scale, the `LOW_GROUND_MAX_M` cap for `low_ground_rows` (`park_props.gd`, DRESSING-KITS.md "Low ground in area rows"). |
 | lookout_a/b/c | A perch the Dispatcher can stand on, and a weavers' watch landmark | Deck 7.05 m over the foot with a 3.6 m flat deck (PERCH-ANCHOR.md); it is a crib of logs with a roofed or open deck, never a mast, ladder, ramp or gate; TALL tier, 20 m clear of the line and out of route lanes. |
@@ -59,6 +59,8 @@ Each template's `story` line in the file says what it is and which moment it sho
 - Perch coverage: `perch_coverage.gd crown` 23 of 200 before, 61 of 200 after (measured in a scratch tree; the target was 36). Seven `lookout_*` spots; one stands near `gauntlet_net_2` because the ride-row keepouts leave only that pocket within 60 m of the nets.
 
 ### Density windows (audit r7) and bare poses
+
+Superseded by "Spot added for the floor window" and "Audit (final, 22 October 2026)" below: the floor window got one legal cell, filled by `crown_fb_01`, and stays a documented fail (ruling 6332450092). This section is the r7 record.
 
 - cannon (34.1, -336.2): filled by the fill spots `crown_mv_*` at (72, -360) and (78, -330) (low_tiny and low_cairn, fitted to the camera cone); the r8 audit no longer lists it.
 - floor (9.7, -441.9), sable (8, -476.3), tarn (-32.8, -319.1): no legal spot in view. These samples ride the elevated Watch Butte drop (terrain 108.8, 132.5 and 116.1 m high); the ground within 60 m in the camera cone is either steeper than the 25 degree slope rule or inside a kicker keepout, and level ground beside it is 40 m or more lower, outside the 60 m view. A cone scan of the camera frustum (width 72.5 degree field of view, 60 m, pitch -0.3) found 0 legal cells for each: floor and sable are all `slope` and `line_clear`, tarn is `kicker run-out` of `bajada_lip` plus `slope`. The audit has no arena or camp exemption for them.
@@ -89,7 +91,7 @@ Pin before 2069366017, after 2441257203; plan check 0 violations (1057 instances
 
 ### Base line and plan check (22 October 2026)
 
-Foundation `be6189ec` (lineclear, e72fff7d plus a stage f259e8cf merge) and stage `origin/stage/alpha-w18` f259e8cf are both ancestors of this branch: stage merged at 9d3b53f3, lineclear first at d3ebc525 and again, at be6189ec, at 376a90f2 (merge commits only). ART-MISTAKES.md matches the stage version (diff empty). `park_props_plan --check`: 1034 instances (109 litter), 0 violations, fingerprint 542438207, which is the pin in `park_crown.json`. It moved from 533729188 to 2154852281 when one spot was added (below), then to 542438207 when tally_slab a became c in `abandoned_booth` and `cable_corner` and the spool_shed c tag was removed (one brass tag per site); the recolour changes GLB colours only, not placement.
+Foundation `be6189ec` (lineclear, e72fff7d plus a stage f259e8cf merge) and stage `origin/stage/alpha-w18` f259e8cf are both ancestors of this branch: stage merged at 9d3b53f3, lineclear first at d3ebc525 and again, at be6189ec, at 376a90f2 (merge commits only). ART-MISTAKES.md matches the stage version (diff empty). `park_props_plan --check`: 1034 instances (109 litter), 0 violations, fingerprint 542438207, which is the pin in `park_crown.json`. It moved from 533729188 to 2154852281 when one spot was added (below), then to 542438207 when tally_slab a became c in `abandoned_booth` and `cable_corner` and the spool_shed c tag was removed (at most one brass tag per site); the recolour changes GLB colours only, not placement.
 
 ### Spot added for the floor window (22 October 2026)
 
@@ -129,7 +131,7 @@ Ruling 6329579296: an `--open` window carries a reason the audit checks (`no_cel
 
 The one density fail is the floor window (9.7, -441.9), 1 kind in view. Its one legal cell, found by the probe (rabbitbrush/b at scale 0.85, (-18.8, -398.8)), is filled by `crown_fb_01`. Nothing else fits there: the kicker keepout (4.6 m) and the 25 degree slope bound every other cell, and 576 two-prop variants all failed `check_one`. The sable (`no_cell`) and tarn (`runout:bajada_lip`) windows were accepted.
 
-Bare poses kept as named: 11 (17.3, -541.0) and 16 (8.1, -416.9) are on the Watch Butte drop (slope and the `bajada_lip` kicker keepout, no legal cell in view); 208 (124.5, 237.5) is on the gauntlet platform where `home_clear` and `gauntlet_west` block every level cell.
+Bare poses kept as named: 11 (17.3, -541.0) and 16 (8.1, -416.9) are on the Watch Butte drop (slope and the `bajada_lip` kicker keepout, no legal cell in view); 208 (124.5, 237.5) is on the gauntlet platform where `home_clear` and `gauntlet_west` block every level cell. The audit's second void pose is sample 143 (-32.8, -319.1), the tarn window, inside the `bajada_lip` run-out (its `--open` reason above).
 
 Smoke: `park_props_test` PASS (226), `park_park_crown_test` PASS (50), `park_dressing_pin_test` PASS (8), `asset_registry_test` PASS; `npm run sketch:lint` 0 findings; `npm run check:docs` pass. `run_tier_test` is base-red: clean stage b0e64a40 fails it the same way at load 17 (8 of 192, child timeouts).
 
@@ -165,6 +167,7 @@ Boards looked at (all under `docs/art/reference/`): `highdraft/highdraft-props-m
 
 - Timber, ochre, sage and plant greens, concrete greys, glass and steam have no swatch on the props board or the style palette. They are the net-weaver and plant colours of the kit's earlier rounds; I did not recolour them in this unit (the instruction was machine bodies only). Kinds and lines are in the Palette roles list above. Brass is on the style palette but is used as the single Fleet tag only.
 - The loom_frame is tagged `machine` but is timber and rope, so it has no petrol; it is the net-weavers' own craft (the board shows hand rope and timber around the machines).
+- `spool_shed` story (`crown.py` :531, manifest :339) still says "its brass tag the only mark of owner" for all variants, but variant c carries no tag after :572-573; the recipe docstring (:4) still says "one brass tag". A story or docstring fix needs a kit rebuild of the manifest, so it waits for the polish pass; the placement rule (at most one tag per site) holds.
 - Petrol `365754` is dark against the dusk ground; the previews show the booth and storm station reading as dark silhouettes against the pale props. A stills review should check them in the park at dusk.
 
 ### ART-MISTAKES entries checked
