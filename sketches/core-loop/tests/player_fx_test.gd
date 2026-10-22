@@ -174,8 +174,10 @@ func _run() -> void:
 				under = under and mat.render_priority < Threat.LINE_UNDER_PRIORITY
 	t.check("every player effect sorts under the threat marks", under)
 
-	# The impact frame yields to warnings at the screen edge (Andrew, 17 Oct 16:36Z: warnings
-	# always draw on top). With nothing to yield to it is the old frame, polygon for polygon.
+	# The impact frame yields to warnings on the GPU (Andrew, 17 Oct 16:36Z: warnings always
+	# draw on top): its shader discards inside each warning rect plus a margin. The CPU draws
+	# every piece, so the geometry is the old frame, polygon for polygon, and the rects go up
+	# as uniforms.
 	var frame = fx._frame
 	var screen := Vector2(1920.0, 1080.0)
 	for case in [[1.0, 0.0, 11], [0.5, 0.9, 99], [1.0, 0.9, 5]]:
@@ -183,53 +185,37 @@ func _run() -> void:
 		frame._heat = case[1]
 		frame._seed = case[2]
 		frame._focus = Vector2(900.0, 500.0)
-		var now: Array = frame._shapes(screen, [])
+		var now: Array = frame._shapes(screen)
 		var old := _old_shapes(screen, frame._focus, case[0], case[1], case[2])
 		var same := now.size() == old.size()
-		var skipped := 0
 		for k in mini(now.size(), old.size()):
-			skipped += 1 if now[k]["skipped"] else 0
 			same = same and now[k]["poly"] == old[k]["poly"] and now[k].get("color") == old[k].get("color") and now[k].get("colors") == old[k].get("colors")
-		t.check("no warning: the frame is the old frame (strength %.1f heat %.1f)" % [case[0], case[1]], same and skipped == 0 and old.size() > 0,
+		t.check("the frame is the old frame (strength %.1f heat %.1f)" % [case[0], case[1]], same and old.size() > 0,
 			"%d now, %d old" % [now.size(), old.size()])
-		t.eq("no warning: same piece count (strength %.1f heat %.1f)" % [case[0], case[1]], now.size(), old.size())
+		t.eq("same piece count (strength %.1f heat %.1f)" % [case[0], case[1]], now.size(), old.size())
 	frame._strength = 1.0
 	frame._heat = 0.9
 	frame._seed = 5
-	var open_shapes: Array = frame._shapes(screen, [])
+	var open_shapes: Array = frame._shapes(screen)
 	var open_wedges := open_shapes.filter(func(sh): return sh.has("color"))
 	t.eq("a hot full-strength frame is 8 wash trapezoids and its wedges", open_shapes.size() - open_wedges.size(), 8)
+
+	# A synthetic rect on the edge reaches the shader as a uniform, and the shader's test (written
+	# out in GDScript) discards inside the rect plus the margin and keeps a pixel on its edge.
+	var margin: float = PlayerFx.ImpactFrame.YIELD_MARGIN_PX
 	var left_edge := Rect2(0.0, 380.0, 150.0, 320.0)
-	var yielded_shapes: Array = frame._shapes(screen, [left_edge])
-	var overlap := 0
-	var absent := true
-	for sh in yielded_shapes:
-		if not sh["skipped"]:
-			overlap += 0 if Geometry2D.intersect_polygons(sh["poly"], PackedVector2Array([left_edge.position, Vector2(left_edge.end.x, left_edge.position.y), left_edge.end, Vector2(left_edge.position.x, left_edge.end.y)])).is_empty() else 1
-	var cut := yielded_shapes.filter(func(sh): return sh["skipped"]).size()
-	for sh in yielded_shapes.filter(func(sh): return sh.has("color")):
-		if not sh["skipped"]:
-			absent = absent and open_wedges.any(func(w): return w["poly"] == sh["poly"] and w["color"] == sh["color"])
-	t.check("a rect on the edge skips wedges and wash", cut > 0, str(cut))
-	t.eq("no drawn piece crosses the rect", overlap, 0)
-	t.check("a drawn wedge is one the open frame draws: the random stream is unmoved", absent)
-	t.eq("every wedge is still computed", yielded_shapes.filter(func(sh): return sh.has("color")).size(), open_wedges.size())
-	# The wash pieces tile the side they cut: same area, same four colours.
-	var wash_area := 0.0
-	var open_area := 0.0
-	for sh in yielded_shapes:
-		if sh.has("colors"):
-			wash_area += _area(sh["poly"])
-	for sh in open_shapes:
-		if sh.has("colors"):
-			open_area += _area(sh["poly"])
-	var skipped_area := 0.0
-	for sh in yielded_shapes:
-		if sh.has("colors") and sh["skipped"]:
-			skipped_area += _area(sh["poly"])
-	# Vertices are float32, so the sums agree to a part in 1e6, not exactly.
-	t.check("wash drawn plus wash left out is the whole wash", absf(wash_area / open_area - 1.0) < 1.0e-6, str(wash_area / open_area - 1.0))
-	t.check("the wash yields a sliver, not the whole side", skipped_area > 0.0 and skipped_area < 0.2 * open_area, str(skipped_area / open_area))
+	frame.apply_rects([left_edge])
+	var mat: ShaderMaterial = frame.material
+	t.check("the frame has the yield shader", mat != null and mat.shader != null and mat.shader.code.contains("discard"))
+	t.eq("one rect: the count uniform", mat.get_shader_parameter("rect_count"), 1)
+	t.eq("the margin uniform is the yield margin", mat.get_shader_parameter("margin"), margin)
+	t.eq("the rect uniform is x, y, w, h", (mat.get_shader_parameter("rects") as PackedVector4Array)[0], Vector4(0.0, 380.0, 150.0, 320.0))
+	var yields := func(p: Vector2) -> bool: return PlayerFx.ImpactFrame._yields(p, [left_edge], 1, margin)
+	t.check("a point inside the rect is discarded", yields.call(Vector2(60.0, 500.0)))
+	t.check("a point inside the margin is discarded", yields.call(Vector2(150.0 + margin - 0.5, 500.0)) and yields.call(Vector2(60.0, 380.0 - margin + 0.5)))
+	t.check("a point on the margin's edge stays", not yields.call(Vector2(150.0 + margin, 500.0)) and not yields.call(Vector2(60.0, 380.0 - margin)))
+	t.check("a point just outside the margin stays", not yields.call(Vector2(150.0 + margin + 0.5, 500.0)) and not yields.call(Vector2(60.0, 700.0 + margin + 0.5)))
+	t.check("only the first count rects count", not PlayerFx.ImpactFrame._yields(Vector2(60.0, 500.0), [left_edge], 0, margin))
 
 	# A real telegraph whose ground footprint projects into the edge band.
 	var cam: Camera3D = fx.camera.cam
@@ -242,7 +228,7 @@ func _run() -> void:
 		var ground := FlatGround.new()
 		var warn = Telegraph.ring(_game, ground, Threat.Type.INSTANT, Vector3(hit.x, 0.0, hit.z), 2.0)
 		await _frames(1)
-		var rects := PlayerFx.warning_rects(root.get_tree(), cam, PlayerFx.ImpactFrame.YIELD_MARGIN_PX)
+		var rects := PlayerFx.warning_rects(root.get_tree(), cam, 0.0)
 		t.check("a live telegraph has a screen rect", rects.size() >= 1, str(rects.size()))
 		var band_hit := false
 		for r in rects:
@@ -254,10 +240,16 @@ func _run() -> void:
 		var fired: bool = fx.impact_frame(burst, 1.0)
 		t.check("the frame fires with a warning on screen", fired and frame.active())
 		t.check("the frame holds the warning's rect", frame._rects.size() >= 1)
-		var live: Array = frame._shapes(vp, frame._rects)
-		t.check("the frame yields to the real telegraph", live.any(func(sh): return sh["skipped"]))
+		var sent := PlayerFx.warning_rects(root.get_tree(), cam, 0.0)
+		var uniforms: PackedVector4Array = frame.material.get_shader_parameter("rects")
+		var matched: bool = frame._rects.size() == sent.size() and int(frame.material.get_shader_parameter("rect_count")) == sent.size()
+		for k in sent.size():
+			matched = matched and uniforms[k] == Vector4(sent[k].position.x, sent[k].position.y, sent[k].size.x, sent[k].size.y)
+		t.check("the uniforms are the real telegraph's rects", matched and sent.size() >= 1, "%d sent, %d held" % [sent.size(), frame._rects.size()])
+		var inside: Vector2 = sent[0].get_center() if not sent.is_empty() else Vector2(-1.0, -1.0)
+		t.check("the shader test discards the telegraph's centre", PlayerFx.ImpactFrame._yields(inside, frame._rects, frame._rects.size(), margin))
 		await _frames(1)
-		t.check("the draw counted what it left out", frame.yielded + frame.drawn > 0 and frame.yielded > 0, "%d drawn, %d yielded" % [frame.drawn, frame.yielded])
+		t.check("the draw drew the frame", frame.drawn > 0, str(frame.drawn))
 		warn.queue_free()
 		await _frames(1)
 		t.eq("a spent telegraph leaves no rect", PlayerFx.warning_rects(root.get_tree(), cam, 0.0).filter(func(r): return r.has_point(Vector2(vp.x * 0.04, vp.y * 0.5))).size(), 0)
@@ -275,13 +267,14 @@ func _run() -> void:
 		_game.add_child(hazard)
 		await _frames(1)
 		t.check("the hazard is not in group telegraph", not hazard.is_in_group("telegraph") and hazard.is_in_group(Threat.GROUP))
-		var hz := PlayerFx.warning_rects(root.get_tree(), cam, PlayerFx.ImpactFrame.YIELD_MARGIN_PX)
+		var hz := PlayerFx.warning_rects(root.get_tree(), cam, 0.0)
 		t.check("a hostile boss hazard has a screen rect", hz.size() == 1 and hz[0].position.x < minf(vp.x, vp.y) * PlayerFx.ImpactFrame.BAND, str(hz))
 		frame.hide_now()
 		fx._last_frame = -1.0e9
 		fx.impact_frame(Vector3(hit.x + 30.0, 0.0, hit.z), 1.0)
-		t.check("the frame yields to a boss hazard", frame._shapes(vp, frame._rects).any(func(sh): return sh["skipped"]))
-		t.check("a rect clear of the edge band tests and splits nothing", frame._shapes(vp, [Rect2(vp * 0.4, vp * 0.2)]).all(func(sh): return not sh["skipped"]))
+		var hz_uniform: PackedVector4Array = frame.material.get_shader_parameter("rects")
+		t.check("the frame sends a boss hazard's rect to the shader", frame._rects.size() == 1 and int(frame.material.get_shader_parameter("rect_count")) == 1 and hz_uniform[0] == Vector4(hz[0].position.x, hz[0].position.y, hz[0].size.x, hz[0].size.y), str(hz_uniform[0]))
+		t.check("the shader test discards the hazard's centre", PlayerFx.ImpactFrame._yields(hz[0].get_center(), frame._rects, 1, margin))
 		hazard.queue_free()
 	quit(t.verdict())
 
@@ -291,14 +284,6 @@ class FlatGround:
 
 	func height(_x: float, _z: float) -> float:
 		return 0.0
-
-
-static func _area(poly: PackedVector2Array) -> float:
-	var a := 0.0
-	for i in poly.size():
-		var j := (i + 1) % poly.size()
-		a += poly[i].x * poly[j].y - poly[j].x * poly[i].y
-	return absf(a) * 0.5
 
 
 # The impact frame as it was before it yielded (player_fx.gd at f259e8cf), written out again

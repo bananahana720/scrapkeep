@@ -64,6 +64,8 @@ var _last_usec := 0
 var _committed := false
 var _warden_note := ""
 var _spawned_at_start := {}
+# PlayerFx impact-frame counters when the sample window opened (see _impact_counters).
+var _impact_at_sample := [0, 0, 0, 0, 0]
 var _images := {}
 var _render_rid: RID
 var _dry := false
@@ -75,6 +77,7 @@ var _errors: Array = []
 # --timeout=<seconds> and --size=WxH (default 1920x1080) are for slow software renderers.
 # --calm=1 holds no fire and no roll, so no hit bursts or speed lines reach the frame; the
 # telegraphs, packs and light are the same. It tags outputs "calm-" (the dusk P1 split, #241).
+# Contact hits can still fire impact frames under calm (measured: 3 and 6 fires in two scenes).
 var _stage := 1
 var _staged := false
 var _entered := false
@@ -187,6 +190,7 @@ func _process(delta: float) -> bool:
 			if t >= PLAY_SECONDS:
 				_phase = "sample"
 				_last_usec = now
+				_impact_open()
 		"sample":
 			_maintain_load()
 			_step_threats(delta)
@@ -301,6 +305,49 @@ func _next_scene() -> void:
 	_spawned_at_start = (_vfx().spawned as Dictionary).duplicate() if _vfx() != null else {}
 	_phase = "play"
 	_phase_usec = Time.get_ticks_usec()
+
+
+# [fires, rect calls, rect usec, shape calls, shape usec] so far. A fire is rate-limited
+# (PlayerFx.FRAME_GAP_S), so fires can be fewer than the hits that asked. A rect call is one
+# refresh of a live impact frame (the source and the uniform upload), made every live frame;
+# a shape call is one build and draw of its pieces, made once per fire (ImpactFrame).
+func _impact_counters() -> Array:
+	var fx = _game.presentation.player_fx
+	if fx == null or fx._frame == null:
+		return [0, 0, 0, 0, 0]
+	var f = fx._frame
+	return [int(fx.spawned.get("impact_frame", 0)), f.rect_calls, f.rect_usec, f.shape_calls, f.shape_usec]
+
+
+# Opens a window: the worst single call is reset so the window's max is its own.
+func _impact_open() -> void:
+	_impact_at_sample = _impact_counters()
+	var fx = _game.presentation.player_fx
+	if fx != null and fx._frame != null:
+		fx._frame.rect_usec_max = 0
+		fx._frame.shape_usec_max = 0
+
+
+# What the impact frame did since the sample window opened: fires, the refresh and shapes
+# cost in ms per call, and ms per fire (all refreshes plus all shapes over the fires), the
+# figure the 0.2 ms bar reads.
+func _impact_window() -> Dictionary:
+	var now := _impact_counters()
+	var fires: int = now[0] - _impact_at_sample[0]
+	var rect_calls: int = now[1] - _impact_at_sample[1]
+	var rect_usec: int = now[2] - _impact_at_sample[2]
+	var shape_calls: int = now[3] - _impact_at_sample[3]
+	var shape_usec: int = now[4] - _impact_at_sample[4]
+	var rect_max := 0.0
+	var shape_max := 0.0
+	var fx = _game.presentation.player_fx
+	if fx != null and fx._frame != null:
+		rect_max = fx._frame.rect_usec_max / 1000.0
+		shape_max = fx._frame.shape_usec_max / 1000.0
+	return {"fired": fires,
+		"rect_ms": {"calls": rect_calls, "mean": snappedf(float(rect_usec) / 1000.0 / float(rect_calls), 0.0001) if rect_calls > 0 else 0.0, "max": snappedf(rect_max, 0.0001)},
+		"shapes_ms": {"calls": shape_calls, "mean": snappedf(float(shape_usec) / 1000.0 / float(shape_calls), 0.0001) if shape_calls > 0 else 0.0, "max": snappedf(shape_max, 0.0001)},
+		"ms_per_fire": snappedf(float(rect_usec + shape_usec) / 1000.0 / float(fires), 0.0001) if fires > 0 else 0.0}
 
 
 func _vfx():
@@ -443,6 +490,7 @@ func _capture() -> void:
 	var id: String = scene["id"]
 	paused = true
 	var counts := _counts()
+	var impact := _impact_window()
 	var fx := _player_fx()
 	var threats := get_nodes_in_group(Threat.GROUP)
 	var edges: Array = []
@@ -483,7 +531,7 @@ func _capture() -> void:
 	_results.append({"scene": id, "packs": scene["packs"], "telegraphs_committed": _scene_threats.size(),
 		"synthetic_per_type": scene["per_type"], "edge_nodes": edges.size(), "unsupported_threats": unsupported,
 		"warden": _warden_note, "counts": counts, "pre_capture_frames": _stats(_pre_frames),
-		"frames": _stats(_frames), "count_samples": _count_samples.duplicate(),
+		"frames": _stats(_frames), "impact_frames_fired": impact["fired"], "impact_rect_ms": impact["rect_ms"], "impact_shapes_ms": impact["shapes_ms"], "impact_ms_per_fire": impact["ms_per_fire"], "count_samples": _count_samples.duplicate(),
 		"load_valid": counts["fixture_enemies_live"] == int(scene["packs"]) * 4 and counts["synthetic_threats_live"] == int(scene["per_type"]) * 4})
 	paused = false
 	_last_usec = 0

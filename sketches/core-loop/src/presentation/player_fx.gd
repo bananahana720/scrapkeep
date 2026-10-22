@@ -199,7 +199,7 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	add_child(layer)
 	_frame = ImpactFrame.new()
 	_frame.rect_source = func() -> Array[Rect2]:
-		return warning_rects(get_tree(), camera.cam if camera != null else null, ImpactFrame.YIELD_MARGIN_PX)
+		return warning_rects(get_tree(), camera.cam if camera != null else null, 0.0)
 	layer.add_child(_frame)
 	_wire()
 
@@ -635,9 +635,10 @@ func impact_frame(at: Vector3, strength: float) -> bool:
 	return true
 
 
-# The screen rect of every hostile warning, grown by `margin` px: its visual meshes' boxes,
-# each of the 8 corners projected through `cam`. A corner behind the camera has no screen
-# position and is skipped; a mesh with every corner behind is skipped. Reusable by any 2D
+# The screen rect of every hostile warning, grown by `margin` px: its visual meshes' world
+# boxes merged into one box, whose 8 corners are projected through `cam`. A corner behind
+# the camera has no screen position and is skipped; a warning with every corner behind is
+# skipped. The merged box is conservative (see _merge_meshes). Reusable by any 2D
 # layer that must not cover warnings. The nodes come from Threat.GROUP, which every hostile
 # mark joins (telegraph.gd:236-237 for combat telegraphs, boss/hazard.gd:110-111 for boss
 # and world-event hazards) and no neutral or owned mark does (a Silo amber ring, a Warden
@@ -651,36 +652,51 @@ static func warning_rects(tree: SceneTree, cam: Camera3D, margin: float) -> Arra
 		if not (node is Node3D) or not node.is_visible_in_tree():
 			continue
 		var span := [Vector2(INF, INF), Vector2(-INF, -INF)]
-		_project_meshes(node, cam, span)
+		var merged := [AABB(), false]
+		_merge_meshes(node, merged)
+		if merged[1]:
+			_project_box(merged[0], cam, span)
 		if span[0].x <= span[1].x:
 			out.append(Rect2(span[0], span[1] - span[0]).grow(margin))
 	return out
 
 
-# Grows span (low, high) by the screen position of every visible mesh box under `node`.
-static func _project_meshes(node: Node, cam: Camera3D, span: Array) -> void:
+# Grows `merged` ([box, any]) by the world box of every visible mesh under `node`. One box
+# per warning means 8 projections instead of 8 per mesh. The merged box holds every mesh's
+# box, so its screen rect is conservative: it can only be larger than the union of the
+# per-mesh rects, never smaller, and a warning stays protected.
+static func _merge_meshes(node: Node, merged: Array) -> void:
 	for child in node.get_children():
 		if child is Node3D and not child.visible:
 			continue
 		if child is VisualInstance3D:
 			var box: AABB = child.get_aabb()
 			if box.size != Vector3.ZERO:
-				for c in 8:
-					var corner: Vector3 = child.global_transform * (box.position + box.size * Vector3(c & 1, (c >> 1) & 1, (c >> 2) & 1))
-					if cam.is_position_behind(corner):
-						continue
-					var at := cam.unproject_position(corner)
-					span[0] = span[0].min(at)
-					span[1] = span[1].max(at)
-		_project_meshes(child, cam, span)
+				var world: AABB = child.global_transform * box
+				merged[0] = world.merge(merged[0]) if merged[1] else world
+				merged[1] = true
+		_merge_meshes(child, merged)
+
+
+# Grows span (low, high) by the screen position of the 8 corners of `box`; a corner behind
+# the camera has no screen position and is skipped.
+static func _project_box(box: AABB, cam: Camera3D, span: Array) -> void:
+	for c in 8:
+		var corner: Vector3 = box.position + box.size * Vector3(c & 1, (c >> 1) & 1, (c >> 2) & 1)
+		if cam.is_position_behind(corner):
+			continue
+		var at := cam.unproject_position(corner)
+		span[0] = span[0].min(at)
+		span[1] = span[1].max(at)
 
 
 # Manga focus lines: ink wedges pointing at the hit from the screen edge, only in the outer
 # BAND of the screen, so the hit, the ball and every telegraph inside stay readable. The
-# frame also yields at the edge: a wedge or a piece of the wash that would cross a live
-# telegraph's screen rect is not drawn, because enemy warnings always draw on top of player
-# effects (Andrew, 17 Oct 16:36Z; RENDER_PRIORITY above). The frame is a 2D layer that no
-# 3D render priority can sort under, so it steps out of the way instead.
+# frame also yields at the edge: a pixel inside a live telegraph's screen rect, grown by
+# YIELD_MARGIN_PX, is discarded by the frame's shader, because enemy warnings always draw on
+# top of player effects (Andrew, 17 Oct 16:36Z; RENDER_PRIORITY above). The frame is a 2D
+# layer that no 3D render priority can sort under, so it steps out of the way on the GPU:
+# the CPU draws every wedge and wash quad and uploads only the rects.
 class ImpactFrame:
 	extends Control
 
@@ -693,28 +709,84 @@ class ImpactFrame:
 	# The room left around a warning is the widest wedge half-width, so no wedge edge sits
 	# closer to a warning than the wedge is wide.
 	const YIELD_MARGIN_PX := WEDGE_WIDTH_MAX
-	# Wash pieces are as long as that margin, so a skipped piece never bares more than one
-	# margin of edge beyond the warning. A side is only split where a rect touches it.
-	const WASH_PIECE_PX := YIELD_MARGIN_PX
+	# The shader's rect array. More live warnings than this and the frame cannot promise to
+	# stay off all of them, so it draws nothing for that refresh (overflow_hides).
+	const MAX_RECTS := 64
+	# The rects arrive in the Control's local px: the Control is full-rect at the origin of a
+	# CanvasLayer with an identity transform, and Camera3D.unproject_position answers in the
+	# viewport's own px, the same space get_viewport_rect() sizes the Control in, so the
+	# canvas_items content scale applies to both alike. The varying carries the local VERTEX,
+	# not FRAGCOORD, so the window's y origin and scale do not matter.
+	const YIELD_SHADER := """
+shader_type canvas_item;
+uniform vec4 rects[64];
+uniform int rect_count = 0;
+uniform float margin = 0.0;
+varying vec2 local;
 
+void vertex() {
+	local = VERTEX;
+}
+
+void fragment() {
+	for (int i = 0; i < rect_count; i++) {
+		vec4 r = rects[i];
+		if (local.x > r.x - margin && local.x < r.x + r.z + margin && local.y > r.y - margin && local.y < r.y + r.w + margin) {
+			discard;
+		}
+	}
+}
+"""
 	var _focus := Vector2.ZERO
 	var _strength := 0.0
 	var _heat := 0.0
 	var _left := 0
 	var _seed := 0
-	# Answers with the live warning rects (PlayerFx.warning_rects on the game camera); set by
-	# the owner: a bare warning_rects() call from in here is a parse error ("not found in
-	# base self"), so the outer class hands the function in.
+	# Answers with the live warning rects, ungrown (PlayerFx.warning_rects on the game camera
+	# with margin 0; the shader grows them); set by the owner: a bare warning_rects() call
+	# from in here is a parse error ("not found in base self"), so the outer class hands the
+	# function in.
 	var rect_source := Callable()
 	var _rects: Array[Rect2] = []
-	# Pieces drawn and left out by the last draw, for tests.
+	var _uniform_rects := PackedVector4Array()
+	var _material: ShaderMaterial
+	# Pieces drawn by the last draw, for tests; a refresh past MAX_RECTS draws none.
 	var drawn := 0
-	var yielded := 0
+	var overflow_hides := 0
+	var _overflowed := false
+	# What a live frame costs, for the stress capture and the tests, in microseconds summed and
+	# worst. A rect call is one refresh (the source and the uniform upload), made on every
+	# live frame; a shape call is one build and draw of the pieces, made once per fire. A
+	# frame that is not alive never refreshes or draws, so these stay put
+	# (impact_frame_cost_test).
+	var rect_calls := 0
+	var rect_usec := 0
+	var rect_usec_max := 0
+	var shape_calls := 0
+	var shape_usec := 0
+	var shape_usec_max := 0
+	# The viewport size the pieces were drawn for.
+	var _drawn_size := Vector2.ZERO
 
 	func _ready() -> void:
 		set_anchors_preset(Control.PRESET_FULL_RECT)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		visible = false
+		_ensure_material()
+
+	# Built once per frame, here or on the first rects, so a frame never in a tree can be fed.
+	func _ensure_material() -> void:
+		if _material != null:
+			return
+		var shader := Shader.new()
+		shader.code = YIELD_SHADER
+		_uniform_rects.resize(MAX_RECTS)
+		_material = ShaderMaterial.new()
+		_material.shader = shader
+		_material.set_shader_parameter("margin", YIELD_MARGIN_PX)
+		_material.set_shader_parameter("rect_count", 0)
+		_material.set_shader_parameter("rects", _uniform_rects)
+		material = _material
 
 	func fire(focus: Vector2, strength: float, seed_value: int, heat_value := 0.0) -> void:
 		_focus = focus
@@ -742,41 +814,82 @@ class ImpactFrame:
 		if _left <= 0:
 			visible = false
 		else:
-			# Warnings and the camera move while the frame lives.
+			# Warnings and the camera move while the frame lives, so the rects are sent again.
+			# The pieces depend only on what fire() set and the viewport size, so the canvas
+			# keeps its draw commands; a resized viewport redraws (checked per frame).
 			_refresh_rects()
-			queue_redraw()
+			if get_viewport_rect().size != _drawn_size:
+				size = get_viewport_rect().size
+				queue_redraw()
 
 	func _refresh_rects() -> void:
-		_rects = rect_source.call() if rect_source.is_valid() and is_inside_tree() else ([] as Array[Rect2])
+		var began := Time.get_ticks_usec()
+		apply_rects(rect_source.call() if rect_source.is_valid() and is_inside_tree() else ([] as Array[Rect2]))
+		var cost := Time.get_ticks_usec() - began
+		rect_calls += 1
+		rect_usec += cost
+		rect_usec_max = maxi(rect_usec_max, cost)
+
+	# Takes the warning rects: keeps them and writes them to the shader. More than MAX_RECTS
+	# cannot be written whole, so the frame hides itself while they overflow, and draws
+	# again (a redraw, since an overflowed fire drew nothing) once they fit.
+	func apply_rects(found: Array) -> void:
+		_ensure_material()
+		var was_overflowed := _overflowed
+		_overflowed = found.size() > MAX_RECTS
+		if _overflowed:
+			overflow_hides += 1
+			_rects = []
+			_material.set_shader_parameter("rect_count", 0)
+			visible = false
+			return
+		if _left > 0:
+			visible = true
+			if was_overflowed:
+				queue_redraw()
+		_rects.assign(found)
+		for k in found.size():
+			var r: Rect2 = found[k]
+			_uniform_rects[k] = Vector4(r.position.x, r.position.y, r.size.x, r.size.y)
+		_material.set_shader_parameter("rects", _uniform_rects)
+		_material.set_shader_parameter("rect_count", found.size())
+
+	# The shader's test in GDScript, for the tests: whether a local px point is discarded by
+	# the first `count` rects grown by `margin`. A point exactly on the grown edge stays.
+	static func _yields(point: Vector2, rects: Array, count: int, margin: float) -> bool:
+		for k in mini(count, rects.size()):
+			var r: Rect2 = rects[k]
+			if point.x > r.position.x - margin and point.x < r.end.x + margin and point.y > r.position.y - margin and point.y < r.end.y + margin:
+				return true
+		return false
 
 	func _draw() -> void:
 		drawn = 0
-		yielded = 0
-		for shape in _shapes(get_viewport_rect().size, _rects):
-			if shape["skipped"]:
-				yielded += 1
-				continue
+		if _overflowed:
+			return
+		var began := Time.get_ticks_usec()
+		_drawn_size = get_viewport_rect().size
+		for shape in _shapes(_drawn_size):
 			drawn += 1
 			if shape.has("colors"):
 				draw_polygon(shape["poly"], shape["colors"])
 			else:
 				draw_colored_polygon(shape["poly"], shape["color"])
+		var cost := Time.get_ticks_usec() - began
+		shape_calls += 1
+		shape_usec += cost
+		shape_usec_max = maxi(shape_usec_max, cost)
 
-	# Every piece the frame is made of, in draw order: {poly, skipped, colors} for the wash
-	# and {poly, skipped, color} for a wedge. Every piece is computed whether or not it is
-	# skipped, so the random stream and the look with no warnings are the same as before.
-	func _shapes(rect: Vector2, rects: Array) -> Array:
+	# Every piece the frame is made of, in draw order: {poly, colors} for the wash and
+	# {poly, color} for a wedge.
+	func _shapes(rect: Vector2) -> Array:
 		var out := []
 		var band := minf(rect.x, rect.y) * BAND
-		# Only a rect that reaches the edge band can meet a piece (a wedge's tip and the wash
-		# lie within BAND of an edge); with none, nothing is tested or split.
-		var inset := Rect2(Vector2(band, band), rect - Vector2(band, band) * 2.0)
-		rects = rects.filter(func(r: Rect2) -> bool: return r.intersects(Rect2(Vector2.ZERO, rect)) and not inset.encloses(r))
 		var focus := _focus.clamp(Vector2.ZERO, rect)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = _seed
 		if _heat > 0.0:
-			_wash_shapes(out, rect, band, rects)
+			_wash_shapes(out, rect, band)
 		for i in int(LINES * _strength):
 			var angle := TAU * (float(i) + rng.randf() * 0.8) / float(LINES * _strength)
 			var dir := Vector2(cos(angle), sin(angle))
@@ -804,59 +917,28 @@ class ImpactFrame:
 			if accent:
 				ink = Color(1, 1, 1, 0.5).lerp(Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.9), _heat)
 				ink.a = FlashGuard.alpha(ink.a)
-			var poly := PackedVector2Array([tip, outer + side, outer - side])
-			out.append({"poly": poly, "color": ink, "skipped": _hits(poly, rects)})
+			out.append({"poly": PackedVector2Array([tip, outer + side, outer - side]), "color": ink})
 		return out
 
 	# A hot build's edge wash: the screen edge dips dark, glows heat orange halfway in and
 	# fades to nothing before the middle, so the build's heat and weight read on every grown
 	# hit and the centre stays clear.
-	func _wash_shapes(out: Array, rect: Vector2, band: float, rects: Array) -> void:
+	func _wash_shapes(out: Array, rect: Vector2, band: float) -> void:
 		var dark := Color(INK.r, INK.g, INK.b, 0.8 * _heat)
 		var hot := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, FlashGuard.alpha(0.4 * _heat))
 		var clear := Color(hot.r, hot.g, hot.b, 0.0)
-		_ring_shapes(out, rect, 0.0, band * 0.6, dark, hot, rects)
-		_ring_shapes(out, rect, band * 0.6, band, hot, clear, rects)
+		_ring_shapes(out, rect, 0.0, band * 0.6, dark, hot)
+		_ring_shapes(out, rect, band * 0.6, band, hot, clear)
 
 	# A screen-edge ring from `outer` to `inner` pixels in, shaded from one colour to the other.
-	# Each side is one trapezoid; a side a rect touches is cut along its length into pieces and
-	# the touched pieces are skipped. A piece keeps the side's four vertex colours, so the
-	# gradient across the band is the same and the pieces tile the side exactly.
-	func _ring_shapes(out: Array, rect: Vector2, outer: float, inner: float, from: Color, to: Color, rects: Array) -> void:
+	# Each side is one trapezoid keeping the side's four vertex colours.
+	func _ring_shapes(out: Array, rect: Vector2, outer: float, inner: float, from: Color, to: Color) -> void:
 		var o := [Vector2(outer, outer), Vector2(rect.x - outer, outer), rect - Vector2(outer, outer), Vector2(outer, rect.y - outer)]
 		var i := [Vector2(inner, inner), Vector2(rect.x - inner, inner), rect - Vector2(inner, inner), Vector2(inner, rect.y - inner)]
 		var colors := PackedColorArray([from, from, to, to])
 		for k in 4:
 			var n := (k + 1) % 4
-			var whole := PackedVector2Array([o[k], o[n], i[n], i[k]])
-			if not _hits(whole, rects):
-				out.append({"poly": whole, "colors": colors, "skipped": false})
-				continue
-			var pieces := maxi(1, ceili(o[k].distance_to(o[n]) / WASH_PIECE_PX))
-			for p in pieces:
-				var t0 := float(p) / pieces
-				var t1 := float(p + 1) / pieces
-				var poly := PackedVector2Array([o[k].lerp(o[n], t0), o[k].lerp(o[n], t1), i[k].lerp(i[n], t1), i[k].lerp(i[n], t0)])
-				out.append({"poly": poly, "colors": colors, "skipped": _hits(poly, rects)})
-
-	# Whether a polygon crosses any rect. The bounding box is the cheap reject; the exact
-	# polygon test follows, so a wedge's empty corner of its box does not count.
-	static func _hits(poly: PackedVector2Array, rects: Array) -> bool:
-		if rects.is_empty():
-			return false
-		var low := poly[0]
-		var high := poly[0]
-		for v in poly:
-			low = low.min(v)
-			high = high.max(v)
-		var box := Rect2(low, high - low)
-		for r in rects:
-			if not (r as Rect2).intersects(box, true):
-				continue
-			var corners := PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)])
-			if not Geometry2D.intersect_polygons(poly, corners).is_empty():
-				return true
-		return false
+			out.append({"poly": PackedVector2Array([o[k], o[n], i[n], i[k]]), "colors": colors})
 
 
 # --- Aura --------------------------------------------------------------------------------
