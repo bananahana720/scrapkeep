@@ -984,7 +984,7 @@ func _run() -> void:
 		"%s %s" % [_kit.beam_width("foundry_cutter"), _kit.breach_reach()])
 	_game.run.mass = 0.0
 
-	# Wardens: an open core in the cone shatters; a closed guard takes 45 posture at most.
+	# Wardens: an open core in the cone shatters; a closed guard takes its posture cap (Ultimate.warden_cap) at most.
 	await _fresh()
 	_piece("foundry_cutter")
 	var warden := _enemy("warden", 6.0)
@@ -992,7 +992,7 @@ func _run() -> void:
 	for i in 6:
 		_tech("foundry_cutter", 1 + (i % 3))
 	ult._strike(_player.ball_position())
-	_t.check("a closed guard takes 45 posture at most", warden.posture() <= Ultimate.WARDEN_POSTURE_CAP + 0.001 and warden.posture() > 0.0, str(warden.posture()))
+	_t.check("a closed guard takes the posture cap at most", warden.posture() <= Ultimate.warden_cap(warden.monster_build()) + 0.001 and warden.posture() > 0.0, str(warden.posture()))
 	await _fresh()
 	_piece("foundry_cutter")
 	warden = _enemy("warden", 6.0)

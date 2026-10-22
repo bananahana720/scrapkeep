@@ -112,6 +112,11 @@ func _live(_delta: float) -> bool:
 	return true
 
 
+func _on_broken(_method: String) -> void:
+	if fleet != null:
+		fleet.discover("cup_break", _real_ball())
+
+
 func _on_end() -> void:
 	if _cup != null:
 		_cup.top_level = false

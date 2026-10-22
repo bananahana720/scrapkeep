@@ -165,4 +165,29 @@ func _run() -> void:
 	t.eq("a fallen chaser frees the next drop", rig.phase, rig.Phase.WARN)
 	_clear()
 
+	# The director card: cost 4, one per purchase, and the kind is placeable.
+	var Cards := preload("res://src/world/director_cards.gd")
+	var Director := preload("res://src/world/director.gd")
+	t.eq("the dispatcher card costs 4", Cards.cost(["dispatcher"]), 4.0)
+	t.eq("its stage cap is 1", Cards.cost(["dispatcher", "dispatcher"]), INF)
+	t.check("the director names it", Director.KIND_NAMES.has("dispatcher"))
+	# Planted negative control: a kind with no card is INF, as the dispatcher was before its card.
+	t.eq("negative control: an unknown kind has no card", Cards.cost(["dispatcher_missing"]), INF)
+
+	# A park perch from the spec: the body stands on it, builds no mast, and the perch is not the fallback's.
+	var at := Vector3(ball.x + 14.0, 0.0, ball.z + 4.0)
+	at.y = game.ctx.terrain.height(at.x, at.z)
+	var top := Vector3(at.x + 20.0, at.y + 9.0, at.z)
+	var fallback = game.combat.spawn_enemy("dispatcher", at)
+	var perched = game.combat.spawn_enemy("dispatcher", at, "", top)
+	var infinite = game.combat.spawn_enemy("dispatcher", at, "", Vector3.INF)
+	await _frames(2)
+	t.eq("a spec perch is the perch top", perched.perch_top, top)
+	t.check("it builds no mast of its own", perched.mast == null)
+	t.near("its body stands on the perch", perched.global_position.y, top.y + Dispatcher.FLOOR_DROP, 0.01)
+	t.check("negative control: the fallback differs from the perch", fallback.perch_top != perched.perch_top)
+	t.check("no perch: its own mast, where it spawned", fallback.mast != null and is_equal_approx(fallback.perch_top.x, at.x))
+	t.check("an INF perch is no perch", infinite.mast != null and infinite.perch_top != top)
+	_clear()
+
 	quit(t.verdict())
