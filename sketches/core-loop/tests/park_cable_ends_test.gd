@@ -28,10 +28,11 @@ const BEND_RISE_MAX_M := 8.0
 # Two more sheer anchor posts that stopped the Sable pilot (traversal_line --table=park --stage=4 --pilot=sable, seeds
 # 1..8, 90 fps, 2026-10-22). Same rule and limit as the bend, a table of (name, strike point):
 #   main_tube_upper_post_11i at (-35.3, -120.2): a corner stood 0.4 m inside main_tube_upper_8's wash footprint; Sable
-#     dead-stopped at (-40.8, -114.4) on 5 of 8 seeds on stage 42ed00ee (#241 6352524432) and on 2 of 8 (seeds 3
+#     dead-stopped at (-40.8, -114.4) on 5 of 8 seeds in the scratch trace tree 49aebc32
+#     (#241 6352524432; its park_sinkhole data and bake equal stage 42ed00ee's) and on 2 of 8 (seeds 3
 #     and 6) on this change's base 0446a2f2; ground rise over the 8 m disc 26.0 m before, 6.0 m after.
-#   lava_channel_post_13i at (-313.1, -585.2), 2.0 m off lava_channel_10: seed 8 struck it airborne (vx 43.4 to -4.6 in the
-#     42ed00ee trace, #241 6352524432) and stopped at (-318.7, -588.4); rise 22.3 m before, 4.7 m after.
+#   lava_channel_post_13i at (-313.1, -585.2), 2.0 m off lava_channel_10: seed 8 struck it airborne (vx 43.4 to -4.6 in that
+#     49aebc32 trace) and stopped at (-318.7, -588.4); rise 22.3 m before, 4.7 m after.
 # Both posts move outward (11i to (-27.3, -120.2), 13i to (-307.1, -582.2)). The limit stays the bend's 8.0 m: the fix passes with 2.0 m and 3.3 m margin, the base fails by 18.0 m and 14.3 m.
 const POST_STRIKES := [
 	["main_tube_upper_post_11i", Vector2(-40.8, -114.4)],
