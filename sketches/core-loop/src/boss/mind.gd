@@ -65,6 +65,13 @@ func _warden_spec() -> Dictionary:
 	return spec
 
 
+# Flow calls this on the script while stage 6's beacon, gates and launch run, before it makes the
+# module, so the arena's dress is read and painted off the boss-entry frame.
+static func prepare_arena() -> void:
+	ArenaMindDress.prepare()
+	MindDress.prepare()
+
+
 func enter_arena(entry_velocity: Vector3) -> void:
 	super(entry_velocity)
 	phase = 1
