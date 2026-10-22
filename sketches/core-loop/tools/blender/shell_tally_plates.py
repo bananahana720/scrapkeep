@@ -6,10 +6,10 @@ each stamped with the class's tally strokes.
   II   six plates in the lower gaps, below Z -0.35; two strokes
   III  plates in the side gaps (three strokes), and thicker six-sided tread caps on every hub
        (the layer's Core part, so the class costs two draws; registry exception)
-  IV   plates in most gaps (four strokes) and the two drum hoods, curved square plates over the
+  IV   plates in most gaps (four strokes) and the two drum hoods (own mesh, DrumHoods), curved square plates over the
        top half of each drum; the drum faces, the pressure read, stay open
   V    every remaining non-sight gap (the crossed five-bar gate) and the heavy drums: 30 percent
-       wider with a second tape reel, outline break 0.20 m. Replace.Flywheel.R and .L hide the
+       wider with a second tape reel, outline break 0.20 m (own mesh, HeavyDrums). Replace.Flywheel.R and .L hide the
        light drums while the class shows (CUSTOMIZE section 6, Replace.<name>).
 
 No plate enters the sight cone from the head to the chase eyes or the front sight line to the
@@ -166,17 +166,7 @@ def hoods(p):
 
 def heavy(p):
     for side in (1, -1):
-        d = st.drum("Heavy", side, (side * HEAVY_X, 0.0, HEAVY_Z), radius=HEAVY_R, depth=HEAVY_DEPTH, reel=True)
-        # Fold the heavy drum's faces into the layer mesh, keeping its colours and window alphas.
-        src = d.bm
-        col = src.loops.layers.float_color.get("Color")
-        vmap = {v: p.bm.verts.new(v.co) for v in src.verts}
-        for f in src.faces:
-            nf = p.bm.faces.new([vmap[v] for v in f.verts])
-            nf.material_index = p._slot("paint")
-            for a, b in zip(f.loops, nf.loops):
-                b[p.col] = a[col]
-        src.free()
+        st.drum("HeavyDrums", side, (side * HEAVY_X, 0.0, HEAVY_Z), radius=HEAVY_R, depth=HEAVY_DEPTH, reel=True, part=p)
 
 
 def build(n, gaps, classes, rng):
@@ -186,12 +176,19 @@ def build(n, gaps, classes, rng):
     strokes = {2: 2, 3: 3, 4: 4, 5: 5}[n]
     for i in classes[n]:
         plate(p, gaps[i], strokes)
-    if n == 4:
-        hoods(p)
-    if n == 5:
-        heavy(p)
     sb._sharpen(p)
     pod = p.to_object((0, 0, 0), root)
+    # The hoods and the heavy drums stand past the ball, so each is its own mesh under Pod
+    # (DrumHoods, HeavyDrums): hero_assets banks them with the carrier, one more draw at IV and V.
+    if n == 4:
+        hp = Part("DrumHoods")
+        hoods(hp)
+        sb._sharpen(hp)
+        hp.to_object((0, 0, 0), pod)
+    if n == 5:
+        hp = Part("HeavyDrums")
+        heavy(hp)
+        hp.to_object((0, 0, 0), pod)
     if n == 3:
         cp = Part("Core")
         caps(cp, rng)
@@ -204,18 +201,20 @@ def build(n, gaps, classes, rng):
             common.empty("Replace.Flywheel." + side, (0, 0, 0), pod)
     bpy.context.view_layer.update()
     tris = common.tri_total(root)
+    # low_reach and sight_cone_hits walk the Pod subtree; the other checks take the split meshes too.
+    parts = [pod] + [c for c in pod.children if c.type == "MESH"]
     low = sb.low_reach(pod)
     cone = sb.sight_cone_hits(pod)
     front = 0
     cos_half = math.cos(math.radians(sb.SIGHT_HALF_ANGLE))
     axes = [(e - sb.HEAD).normalized() for e in FRONT_EYES]
-    for v in pod.data.vertices:
-        dv = (pod.matrix_world @ v.co) - sb.HEAD
+    world = [o.matrix_world @ v.co for o in parts for v in o.data.vertices]
+    for w in world:
+        dv = w - sb.HEAD
         if dv.length > 1e-6 and any(dv.normalized().dot(a) > cos_half for a in axes):
             front += 1
-    pod_far = max((pod.matrix_world @ v.co).length for v in pod.data.vertices)
-    plates_far = max(((pod.matrix_world @ v.co).length for v in pod.data.vertices
-                      if (pod.matrix_world @ v.co).length < 0.96), default=0.0)
+    pod_far = max(w.length for w in world)
+    plates_far = max((w.length for w in world if w.length < 0.96), default=0.0)
     core_far = common.max_radius(core) if core.type == "MESH" else 0.0
     row = {"class": n, "plates": len(classes[n]), "gaps": classes[n], "tris": tris, "low_reach": low,
            "sight_cone": cone, "front_sight": front, "pod_far": round(pod_far, 4),

@@ -4,7 +4,8 @@
 #     at 10.8 o'clock), a copper stepped coil standing 0.20 m past the lattice; its mint tip is the
 #     `CoilMast` node, the mast's only class_accent surface (class V's Replace.CoilMast swaps it);
 #   - the winch spool on a gap bracket at 3 o'clock (rest pose: Hub.26), a 0.12 m round bump,
-#     with the ratchet pawl, the stake hatch under it and `RopeExit` at the rope mouth;
+#     with the ratchet pawl, the stake hatch under it and `RopeExit` at the rope mouth; all of it
+#     is one mesh, `SpoolKit`, under Pod so the carrier bank tilts it (it is not in the Pod mesh);
 #   - the four-wrench rack on the seat back, the rear tell: one mesh, `WrenchRack`, on one
 #     class_accent surface. Its lit count is a per-instance shader parameter (`lit_count`) read
 #     by the material code, never a material_override. COLOR.r carries each piece's index in
@@ -232,9 +233,15 @@ def build(variant=""):
         print("FELT_PADS %d pivot triangles moved from copper to rubber" % felt_pads(shell["core"]))
     kit = Part("SableKit")
     mast_kit(kit)
-    spool_kit(kit)
     sb._sharpen(kit)
     merge(pod, kit)
+    # The spool stands 0.12 m past the lattice at 3 o'clock, so it is its own mesh, SpoolKit (copper,
+    # bone paint, rubber: three draws), which hero_assets banks with the carrier instead of leaving
+    # it level and past the ball on a wall.
+    spool = Part("SpoolKit")
+    spool_kit(spool)
+    sb._sharpen(spool)
+    spool.to_object((0, 0, 0), pod)
     coil_tip().to_object(MAST_DIR * MAST_STEPS[0][0], pod)
     common.empty("RopeExit", ROPE_EXIT, pod)
     wrench_rack().to_object((0, RACK_Y, RACK_TOP), pod)

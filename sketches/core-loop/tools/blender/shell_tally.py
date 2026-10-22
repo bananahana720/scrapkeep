@@ -28,7 +28,8 @@ Calls made here (P-UNITS PD common rule C6 reading, listed in the PD-TALLY repor
   section 4 and tally.md:246.)
 - Draws, held to 10 under the Hoberman pilot mecha cap of 16 (docs/decisions.tsv w13-PD
   register 2026-10-10T21:29:13): Core 3 (paint, copper, rubber), Pod 2, Gyro 1,
-  GyroInner 1, WeaponRing 2 (paint, class_accent) and one drum mesh. Both drums sit on one
+  GyroInner 1, WeaponRing 2 (paint, class_accent), one drum mesh and DrumBrackets (one draw,
+  an 11th, a per-asset registry exception pending the coordinator's ruling on #241). Both drums sit on one
   axis (X, through Z DRUM_Z), so they are one mesh, Flywheel.R, that spins about that axis;
   Flywheel.L is an empty at the left drum's centre. The rubber parts hoberman() puts on Pod and
   WeaponRing fold into their paint surface in charcoal vertex colour, as the drum's punch marks
@@ -305,11 +306,17 @@ def build(variant=""):
     merge(ring, mag)
     cab = Part("PodTally")
     carriage(cab)
-    for side in (1, -1):
-        bracket(cab, side)
     sb._sharpen(cab)
     merge(pod, cab)
     shell["folded"] = fold_rubber(pod) + fold_rubber(ring)
+    # The two drum brackets end in discs 1.016 m out, past the ball on a wall, so they are their own
+    # mesh, DrumBrackets, under Pod for hero_assets to bank with the carrier. Rubber folds into paint
+    # in charcoal as on the Pod, so the pair costs one draw.
+    brackets = Part("DrumBrackets")
+    for side in (1, -1):
+        bracket(brackets, side)
+    sb._sharpen(brackets)
+    shell["folded"] += fold_rubber(brackets.to_object((0, 0, 0), pod))
     # Both drums in one mesh on the shared X axis, origin at the right drum's centre.
     wheels = Part("Flywheel.R")
     for name, side in (("R", 1), ("L", -1)):
@@ -349,9 +356,9 @@ def main():
           % (variant or "default", tris, common.tris(shell["core"]), TARGET_TRIS,
              "fits" if tris <= TARGET_TRIS else "over target", shell["dropped"], shell["folded"]))
     draws = sum(len(o.data.materials) for o in common.tree(root) if o.type == "MESH")
-    print("DRAWS Tally %d (unit budget 10, Hoberman pilot cap 16) %s" % (draws, "ok" if draws <= 10 else "OVER"))
-    if draws > 10:
-        raise SystemExit("Tally shell spends %d draws, over the unit's budget of 10" % draws)
+    print("DRAWS Tally %d (unit budget 10 plus DrumBrackets, Hoberman pilot cap 16) %s" % (draws, "ok" if draws <= 11 else "OVER"))
+    if draws > 11:
+        raise SystemExit("Tally shell spends %d draws, over the unit's budget of 11" % draws)
     for d in shell["drums"]:
         print("DRUM %s radius %.4f" % (d.name, common.max_radius(d)))
     out = flag("--out") or (ABACUS_OUT if variant == "abacus" else OUT)
