@@ -88,12 +88,17 @@ const HERO_MARGIN_M := 8.0
 const PROP_MARGIN_M := 3.0
 const LOW_RANGE_SCALE := 0.5
 const BUILD_SLICE_USEC := 3000
+# Far props copied into a vignette's merged LOD2 mesh per build step (_merge_far).
+const MERGE_CHUNK := 4
 
 static var file_overrides := {}
 static var _meshes := {}
 # Guards _meshes: warm() fills it on a worker while release_shared() and _build_stage() can clear it on the main thread.
 static var _mesh_lock := Mutex.new()
 static var _cache_owner := ""
+# _far_source's reads, by path, and how many it has made (a test reads it).
+static var _far_sources := {}
+static var far_reads := 0
 static var _material: StandardMaterial3D
 
 var ctx
@@ -101,13 +106,21 @@ var map_id := ""
 var instances: Array = []
 var views: Array[GeometryInstance3D] = []
 # The main-thread time of the last stage entry's build call (the worker's expansion and the node slices are not in it).
-# stage_entry_budget_test does not read it: its modules table lists activities and set_dressing only.
+# stage_entry_budget_test reads it for the entry frame, and last_process_usec for the frames after.
 var last_entry_usec := 0
+# The main-thread time of _process in the frame it last ran (Engine.get_process_frames), for stage_entry_budget_test.
+var last_process_usec := 0
+var last_process_frame := -1
+# The steps that frame's _slice ran, each "kind ms" (job_steps' kinds), so the test can name what a slow frame built.
+var last_steps := PackedStringArray()
 var _built_for := []
 var _pending := false
 var _task := -1
 var _out := {}
 var _jobs: Array = []
+# The job _slice is building: its holder and the steps left.
+var _holder: Node3D
+var _steps: Array = []
 var _kit := {}
 var _low := false
 
@@ -796,16 +809,30 @@ static func jobs(list: Array, low := false) -> Array:
 
 # Builds one job's holder under parent and returns it.
 static func build_job(parent: Node3D, job: Dictionary, kit: Dictionary, low: bool) -> Node3D:
+	var holder := new_holder(parent, job)
+	for step: Array in job_steps(job, kit, low):
+		(step[1] as Callable).call(holder)
+	return holder
+
+
+static func new_holder(parent: Node3D, job: Dictionary) -> Node3D:
 	var holder := Node3D.new()
 	holder.name = job["name"]
 	parent.add_child(holder)
+	return holder
+
+
+# One job's build as [kind, step] pairs, each step taking the holder: a hero, a batch, a litter chunk, one LOD2 mesh's
+# first read, or the far merge. A node checks its frame budget between steps, so a frame never holds more than one step past it.
+static func job_steps(job: Dictionary, kit: Dictionary, low: bool) -> Array:
+	var steps := []
 	var groups := {}
 	var keys := []
 	# The far LOD of a vignette's props is one merged mesh, not one batch per (mesh, LOD): see _merged_far.
 	var far_members := []
 	for inst: Dictionary in job["members"]:
 		if inst["class"] == HERO:
-			_hero(holder, inst, kit)
+			steps.append(["hero", func(holder: Node3D): _hero(holder, inst, kit)])
 			continue
 		var pos: Vector3 = inst["pos"]
 		var key := "%s_%s" % [inst["kind"], inst["v"]]
@@ -815,17 +842,28 @@ static func build_job(parent: Node3D, job: Dictionary, kit: Dictionary, low: boo
 			groups[key] = []
 			keys.append(key)
 		groups[key].append(inst)
+	var far_paths := []
 	for key in keys:
-		var first: Dictionary = groups[key][0]
+		var members: Array = groups[key]
+		var first: Dictionary = members[0]
 		var lods := _lod_paths(kit, first)
 		if job["litter"]:
-			_batch(holder, "Litter_" + String(key), _mesh(lods[1]), groups[key], first, 1, LITTER_RANGE, PROP_MARGIN_M, true)
+			steps.append(["litter", func(holder: Node3D): _batch(holder, "Litter_" + String(key), _mesh(lods[1]), members, first, 1, LITTER_RANGE, PROP_MARGIN_M, true)])
 			continue
 		for lod in 2:
-			_batch(holder, "%s_L%d" % [key, lod], _mesh(lods[lod]), groups[key], first, lod, _range(PROP_RANGES[lod], low, lod), PROP_MARGIN_M, false)
-		far_members.append_array(groups[key])
-	_merged_far(holder, far_members, kit, _range(PROP_RANGES[2], low, 2))
-	return holder
+			steps.append(["batch", func(holder: Node3D): _batch(holder, "%s_L%d" % [key, lod], _mesh(lods[lod]), members, first, lod, _range(PROP_RANGES[lod], low, lod), PROP_MARGIN_M, false)])
+		far_members.append_array(members)
+		if not lods[2] in far_paths:
+			far_paths.append(lods[2])
+	for path: String in far_paths:
+		steps.append(["read", func(_h: Node3D): _far_source(path)])
+	if not far_members.is_empty():
+		var merge := FarMerge.new(far_members)
+		for start in range(0, far_members.size(), MERGE_CHUNK):
+			var chunk := far_members.slice(start, start + MERGE_CHUNK)
+			steps.append(["merge", func(_h: Node3D): _merge_far(merge, chunk, kit)])
+		steps.append(["upload", func(holder: Node3D): _merged_far(holder, merge, far_members[0], _range(PROP_RANGES[2], low, 2))])
+	return steps
 
 
 # Loads every mesh a list needs into the cache (safe on a worker: the node reads it only after the worker is done).
@@ -913,62 +951,100 @@ static func _batch(holder: Node3D, label: String, mesh: Mesh, members: Array, fi
 # A vignette's props at LOD2 as ONE mesh (one draw): the LOD2 meshes are 40 to 450 triangles, so the vignette's few dozen of them
 # bake into a single surface of a few thousand, where a batch per (mesh, LOD) cost a draw each (a dozen per vignette, 100 at the
 # dam's peak pose). The range is the props' LOD2 range, measured to the merged bounds centre like every other batch here. The
-# merged view keeps its members' positions and kinds in meta, so the audit still counts each prop in view.
-static func _merged_far(holder: Node3D, members: Array, kit: Dictionary, begin_end: Array) -> void:
-	if members.is_empty():
+# merged view keeps its members' positions and kinds in meta, so the audit still counts each prop in view. The copy is made
+# MERGE_CHUNK members a step (_merge_far; the whole vignette in one step cost 5 to 7 ms of a frame in the cloud, scrapkeep#235
+# row 26b), and this last step only uploads it.
+static func _merged_far(holder: Node3D, merge: FarMerge, first: Dictionary, begin_end: Array) -> void:
+	if merge.vertices.is_empty():
 		return
+	var built := []
+	built.resize(Mesh.ARRAY_MAX)
+	built[Mesh.ARRAY_VERTEX] = merge.vertices
+	built[Mesh.ARRAY_NORMAL] = merge.normals
+	built[Mesh.ARRAY_COLOR] = merge.colours
+	built[Mesh.ARRAY_INDEX] = merge.indices
+	var merged := ArrayMesh.new()
+	merged.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, built)
+	var view := MeshInstance3D.new()
+	view.name = "Far_L2"
+	view.mesh = merged
+	view.position = merge.centre
+	_ranges(view, begin_end, PROP_MARGIN_M)
+	_tag(view, first, 2, false)
+	view.set_meta("dress_tier", "merged")
+	view.set_meta("dress_count", merge.positions.size())
+	view.set_meta("dress_member_pos", merge.positions)
+	view.set_meta("dress_member_kinds", merge.kinds)
+	holder.add_child(view)
+
+
+# One vignette's LOD2 copies, gathered a chunk of members at a time, in member order, around the members' centre.
+class FarMerge extends RefCounted:
+	var centre := Vector3.ZERO
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var colours := PackedColorArray()
 	var indices := PackedInt32Array()
 	var positions := PackedVector3Array()
 	var kinds := PackedStringArray()
-	var centre := Vector3.ZERO
+
+	func _init(members: Array) -> void:
+		for inst: Dictionary in members:
+			centre += (inst["pos"] as Vector3) / members.size()
+
+
+static func _merge_far(merge: FarMerge, members: Array, kit: Dictionary) -> void:
 	for inst: Dictionary in members:
-		centre += (inst["pos"] as Vector3) / members.size()
-	for inst: Dictionary in members:
-		var mesh := _mesh(_lod_paths(kit, inst)[2])
-		if mesh == null or mesh.get_surface_count() == 0:
+		var source := _far_source(_lod_paths(kit, inst)[2])
+		if source.is_empty():
 			continue
+		var src_v: PackedVector3Array = source[Mesh.ARRAY_VERTEX]
+		var src_n = source[Mesh.ARRAY_NORMAL]
+		var src_c = source[Mesh.ARRAY_COLOR]
+		var src_i = source[Mesh.ARRAY_INDEX]
+		var base := merge.vertices.size()
+		# Whole-array transforms with the per-vertex values of tr * v - centre and basis * n (a -0 normal component
+		# comes out +0); stage_entry_budget_test pins the uploaded mesh to the per-vertex merge.
+		merge.vertices.append_array(Transform3D(Basis.IDENTITY, -merge.centre) * (_transform(inst) * src_v))
+		var normals: PackedVector3Array
+		if src_n != null:
+			normals = Transform3D(inst["basis"] as Basis, Vector3.ZERO) * (src_n as PackedVector3Array)
+		else:
+			normals.resize(src_v.size())
+			normals.fill((inst["basis"] as Basis) * Vector3.UP)
+		for k in normals.size():
+			normals[k] = normals[k].normalized()
+		merge.normals.append_array(normals)
+		if src_c != null:
+			merge.colours.append_array(src_c)
+		else:
+			var white := PackedColorArray()
+			white.resize(src_v.size())
+			white.fill(Color.WHITE)
+			merge.colours.append_array(white)
+		var at := merge.indices.size()
+		merge.indices.append_array(src_i)
+		for k in range(at, merge.indices.size()):
+			merge.indices[k] += base
+		merge.positions.append(inst["pos"])
+		merge.kinds.append(String(inst["kind"]))
+
+
+# A LOD2 mesh's surface arrays, read once per path ([] when it has no usable surface). Reading a mesh's arrays back from the
+# renderer stalls the GPU until every frame in flight is done; a read per prop cost the 4080 25 to 89 ms frames (scrapkeep#235,
+# row 26), where the headless renderer copies them for free. Main thread only, like the merge.
+static func _far_source(path: String) -> Array:
+	if _far_sources.has(path):
+		return _far_sources[path]
+	var out := []
+	var mesh := _mesh(path)
+	if mesh != null and mesh.get_surface_count() > 0:
+		far_reads += 1
 		var arrays := mesh.surface_get_arrays(0)
-		var src_v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-		var src_n = arrays[Mesh.ARRAY_NORMAL]
-		var src_c = arrays[Mesh.ARRAY_COLOR]
-		var src_i = arrays[Mesh.ARRAY_INDEX]
-		if src_v.is_empty() or src_i == null:
-			continue
-		var tr := _transform(inst)
-		var basis := (inst["basis"] as Basis)
-		var base := vertices.size()
-		for k in src_v.size():
-			vertices.append(tr * src_v[k] - centre)
-			normals.append((basis * (src_n[k] if src_n != null else Vector3.UP)).normalized())
-			colours.append(src_c[k] if src_c != null else Color.WHITE)
-		for index in (src_i as PackedInt32Array):
-			indices.append(base + index)
-		positions.append(inst["pos"])
-		kinds.append(String(inst["kind"]))
-	if vertices.is_empty():
-		return
-	var built := []
-	built.resize(Mesh.ARRAY_MAX)
-	built[Mesh.ARRAY_VERTEX] = vertices
-	built[Mesh.ARRAY_NORMAL] = normals
-	built[Mesh.ARRAY_COLOR] = colours
-	built[Mesh.ARRAY_INDEX] = indices
-	var merged := ArrayMesh.new()
-	merged.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, built)
-	var view := MeshInstance3D.new()
-	view.name = "Far_L2"
-	view.mesh = merged
-	view.position = centre
-	_ranges(view, begin_end, PROP_MARGIN_M)
-	_tag(view, members[0], 2, false)
-	view.set_meta("dress_tier", "merged")
-	view.set_meta("dress_count", positions.size())
-	view.set_meta("dress_member_pos", positions)
-	view.set_meta("dress_member_kinds", kinds)
-	holder.add_child(view)
+		if not (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).is_empty() and arrays[Mesh.ARRAY_INDEX] != null:
+			out = arrays
+	_far_sources[path] = out
+	return out
 
 
 static func _ranges(view: GeometryInstance3D, begin_end: Array, margin: float) -> void:
@@ -1065,14 +1141,15 @@ static func release_shared() -> void:
 	_mesh_lock.lock()
 	_meshes.clear()
 	_mesh_lock.unlock()
+	_far_sources.clear()
 	_material = null
 	_cache_owner = ""
 
 
 # --- Node lifecycle ---------------------------------------------------------------------------------
 
-# A stage's file, kit and instances are drawn on a worker (prepare) and its nodes are built a vignette at a time
-# within BUILD_SLICE_USEC a frame, so entering a park hitches on neither. finish() does both at once, for tests.
+# A stage's file, kit and instances are drawn on a worker (prepare) and its nodes are built a step at a time
+# (job_steps) within BUILD_SLICE_USEC a frame, so entering a park hitches on neither. finish() does both at once, for tests.
 
 func setup(context_in) -> void:
 	ctx = context_in
@@ -1086,12 +1163,16 @@ func setup(context_in) -> void:
 
 
 func _process(_delta: float) -> void:
+	var started := Time.get_ticks_usec()
+	last_steps = PackedStringArray()
 	if _pending and ctx.terrain.is_ready(ctx.terrain.stage):
 		_build_stage()
 	if _task >= 0 and WorkerThreadPool.is_task_completed(_task):
 		_take()
 	if not _jobs.is_empty():
 		_slice(BUILD_SLICE_USEC)
+	last_process_usec = Time.get_ticks_usec() - started
+	last_process_frame = Engine.get_process_frames()
 
 
 # True once the stage's nodes are all built (or it has none).
@@ -1128,6 +1209,8 @@ func _free_views() -> void:
 		_task = -1
 	_out = {}
 	_jobs = []
+	_holder = null
+	_steps = []
 	for child in get_children():
 		child.free()
 	views.clear()
@@ -1155,6 +1238,7 @@ func _build_stage() -> void:
 		_mesh_lock.lock()
 		_meshes.clear()
 		_mesh_lock.unlock()
+		_far_sources.clear()
 		_cache_owner = id
 	map_id = id
 	_built_for = key
@@ -1182,8 +1266,18 @@ func _take() -> void:
 func _slice(budget_usec: int) -> void:
 	var started := Time.get_ticks_usec()
 	while not _jobs.is_empty():
-		var holder := build_job(self, _jobs.pop_front(), _kit, _low)
-		for view: GeometryInstance3D in holder.find_children("*", "GeometryInstance3D", true, false):
-			views.append(view)
+		if _holder == null:
+			_holder = new_holder(self, _jobs[0])
+			_steps = job_steps(_jobs[0], _kit, _low)
+		var before := _holder.get_child_count()
+		var step: Array = _steps.pop_front()
+		var step_started := Time.get_ticks_usec()
+		(step[1] as Callable).call(_holder)
+		last_steps.append("%s %.1f" % [step[0], (Time.get_ticks_usec() - step_started) / 1000.0])
+		for i in range(before, _holder.get_child_count()):
+			views.append(_holder.get_child(i))
+		if _steps.is_empty():
+			_jobs.pop_front()
+			_holder = null
 		if Time.get_ticks_usec() - started >= budget_usec:
 			break

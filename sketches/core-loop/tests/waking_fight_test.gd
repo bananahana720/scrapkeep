@@ -35,6 +35,10 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	# This test pins the floor drops, not the fight's length. The fight's PHASE_MIN_SECONDS hold
+	# (waking.gd, tests/boss_phase_hold_test.gd) stretches a smash-every-frame fight past the 90 s cap and
+	# an idle pilot dies in it, so the hold is multiplied out here.
+	ChallengeDials.set_overrides({"waking.phase_min_by_phase": [0.0, 0.0, 0.0, 0.0]})
 	while _game.flow == null:
 		await physics_frame
 	await _walk()
