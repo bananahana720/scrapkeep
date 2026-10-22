@@ -38,9 +38,9 @@ A locked pilot's card names what unlocks it, and a pilot you earn is selectable 
 6. **Reward gates and Moss's bay.** Roll through one of two arches to take its part. A hover barge, Moss's workshop bay, docks behind the gate row when it finds room: an opt-in pit stop with a shop and a practice yard.
 7. **Launch.** Taking a gate launches you into the next stage at the speed you were going.
 8. **Boss.** The last stage of a world launches you into that world's boss arena. Beat the boss to rout it. A victory screen naming the rout (BRINDLE ROUTED, for one) follows, and the run continues into the next world's first stage; the last world's boss ends the run.
-9. **Summary.** The summary reads RUN COMPLETE or RUN OVER, with time, stages, scrap, parts, kills, events won and retries. N runs again as the same class.
+9. **Summary.** The summary reads RUN COMPLETE or RUN OVER, with time, stages, scrap, parts, kills, events won and whether the earned save was used. N runs again as the same class. Anything you were holding when the summary opened (Space, the fire button, a pad button) is ignored until you let go; the next fresh press works at once, with no wait.
 
-If you are scrapped, press R to retry the stage from its start (each world allows one retry; a death after it ends the run as RUN OVER), N for a new run, or C to choose a class. M opens the companion panel from the death screen when the run holds pieces.
+If you are scrapped, a death ends the run as RUN OVER: there is no free stage retry. Press N for a new run as the same class, or C to choose a class. An earned save (an item, once a run, if you carry it) catches one lethal hit instead; once spent it stays spent for the run. M opens the companion panel from the death screen when the run holds pieces.
 
 ## Controls
 
@@ -60,7 +60,7 @@ If you are scrapped, press R to retry the stage from its start (each world allow
 | [ / ]      | effects volume down / up (also in the pause menu)                                                                                                                                                                                                                                             |
 | M          | mute or unmute                                                                                                                                                                                                                                                                                |
 | P / Esc    | pause menu: resume, restart the run, field notes, music and effects volume, quit                                                                                                                                                                                                              |
-| R (hold)   | retry the stage from its start (in the arena, the fight); release before holding again                                                                                                                                                                                                        |
+| R (hold)   | restart the run: a new run as the same pilot, from world 1 (not during the victory lap); release before holding again                                                                                                                                                                                                        |
 | F1         | launched with --dev only: tuning panel (frees the mouse)                                                                                                                                                                                                                                      |
 | F3         | launched with --dev only: physics interpolation on/off (off by default)                                                                                                                                                                                                                       |
 | F4         | launched with --dev only: save every tuning value to user://tuning-<time>.json                                                                                                                                                                                                                |
@@ -73,7 +73,6 @@ On the screens outside play, every choice is also a button: click it, or press t
 | Space                            | title: start; summary: choose a class                                                                                  |
 | H                                | title: the how-to-play page; H or Esc closes it                                                                        |
 | 1, 2, ...                        | class select: one number per class card, left to right                                                                 |
-| R                                | death screen: retry the stage, or the fight in the arena                                                               |
 | T                                | arena death screen: replay the world's last stage from its start                                                       |
 | N                                | death or summary: new run as the same class                                                                            |
 | C                                | death screen: choose a class                                                                                           |
@@ -90,7 +89,7 @@ These mirror `src/ui/field_notes.gd`. The Tab overlay no longer prints them.
 - Growth is heft. Scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.
 - Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores, the diamonds beside the objective, which raise the gate tiers.
 - Sable's pylon banks the speed you plant with. Space slingshots you off along the face with that speed plus a boost, and E drops off where you are. The camera goes to the shoulder while you are mounted.
-- Death takes one key. R retries the stage from its start with the scrap, health and parts you entered with, and N starts a new run as the same class. Hold R in play to retry the stage.
+- Death takes one key. A death ends the run; N starts a new run as the same class, and a fresh press of N rolls it at once (a key held through the death waits for its release). Hold R in play to restart the run.
 
 ### Questions for you
 
@@ -98,7 +97,7 @@ These mirror `src/ui/field_notes.gd`. The Tab overlay no longer prints them.
 - Does the loop read without instructions: where to go, what the beacon wants, what a gate gives?
 - Does the launch into the next stage feel like momentum carried, or like a load screen?
 - Is the shoulder view while mounted enough to see what you are shooting?
-- Is retry fast enough that dying costs you nothing but the stage?
+- Is a new run fast enough that dying costs you nothing but the run?
 
 ### What to try first
 
