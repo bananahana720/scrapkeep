@@ -11,7 +11,9 @@ extends SceneTree
 # natural row has planned telegraph marks, and a landing mark unless it is a collapse or impact;
 # each planned surface equals a live projection on the stage's ground vertex for vertex; a
 # telegraph mark built while the ground is as planned uses the planned meshes instead of
-# projecting them, and an overlay down on the stage's map sends marks back to live projection.
+# projecting them. With an overlay down on the stage's map, the marks near it go back to live
+# projection, and every mark it leaves as planned equals a live projection with it down (dense
+# fights, wave 18: once any overlay was down, every later mark of the stage was projected live).
 
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
@@ -107,8 +109,42 @@ func _check_stage(label: String) -> void:
 	if live_map is Natural.OverlayMap and not live_map.profiles.is_empty():
 		var id = live_map.profiles.keys()[0]
 		terrain.overlays.append(id)
-		_t.check("%s: an overlay down sends marks back to live projection" % label, not natural._ground_as_planned(), str(id))
+		var near := []
+		var clear := []
+		var differ := []
+		for each in rows:
+			for phase in natural._prepared[each.id].marks:
+				var planned: Dictionary = natural._prepared[each.id].marks[phase]
+				if not natural._ground_as_planned(planned):
+					near.append("%s %s" % [each.id, phase])
+					continue
+				clear.append("%s %s" % [each.id, phase])
+				var live: Dictionary = Natural._mark_surfaces(natural.world, each, natural._prepared[each.id].geometry, phase == "land", natural._overlay_map)
+				for part in live:
+					if not planned.has(part) or planned[part].vertices != live[part].vertices:
+						differ.append("%s %s %s" % [each.id, phase, part])
 		terrain.overlays.erase(id)
+		_t.check("%s: overlay %s down sends the marks near it back to live projection" % [label, id], not near.is_empty(), "near %s, clear %s" % [near, clear])
+		_t.check("%s: every mark overlay %s leaves as planned equals a live projection with it down" % [label, id], not clear.is_empty() and differ.is_empty(),
+			"clear %s, differ %s" % [clear, differ])
+	# Overlay colliders come from their surfaces' own vertices (EventGround.trimesh), not from a mesh read
+	# back from the renderer: each equals the collider the surface's mesh gives.
+	if live_map is Natural.OverlayMap and not live_map.swaps.is_empty():
+		var compared := []
+		var unequal := []
+		for swap in live_map.swaps:
+			var entry: Dictionary = live_map.swaps[swap]
+			for key in ["baseline", "target", "collider"]:
+				var surface = entry.get("baseline" if key == "collider" else key)
+				if surface == null or surface.mesh == null or (key == "collider" and entry.get("cave", false)):
+					continue
+				var want = surface.mesh.create_trimesh_shape()
+				var got = entry.body.get_child(1).shape if key == "collider" else Natural.EventGround.trimesh(surface)
+				compared.append("%s %s" % [swap, key])
+				if (want == null) != (got == null) or (want != null and want.get_faces() != got.get_faces()):
+					unequal.append("%s %s" % [swap, key])
+		_t.check("%s: each overlay collider equals the one its surface's mesh gives" % label, not compared.is_empty() and unequal.is_empty(),
+			"compared %s, unequal %s" % [compared, unequal])
 
 
 func _ticks(n: int) -> void:
