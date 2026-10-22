@@ -123,7 +123,9 @@ _selftest_colours()
 # --- board palette (opt-in per park; DRESSING-KITS.md "Board palette check") -----------------
 # A park declares the swatches of its reference boards (docs/art/reference/); every painted colour must then
 # sit on them. Known limit: the shared base palette `C` is not itself board-checked; it is accepted as the
-# shared material set (sandstone, timber, canvas, iron ...) and is not park-specific.
+# shared material set (sandstone, timber, canvas, iron ...) and is not park-specific. The snapshot is taken here,
+# before any park script runs C.update(...), so a park's own additions get no free pass.
+BASE_C = dict(C)
 REPO = HERE.parents[5]
 BOARD_ROOT = REPO / "docs" / "art" / "reference"
 # Within this Euclidean distance (0..1 sRGB) of a swatch or approved hex counts as that colour: about 13/255 on
@@ -169,7 +171,7 @@ def check_board(c, board, where="?"):
     for ap in approved:
         if _distance(h, ap) <= BOARD_NEAR:
             return h
-    for base in C.values():
+    for base in BASE_C.values():
         if h == base or is_shade_of(h, base):
             return h
     near = min(swatches, key=lambda s: _distance(h, s))
@@ -246,6 +248,15 @@ def _selftest_board():
             assert str(e).startswith("off-board colour #%s in selftest_a: nearest swatch #" % bad), e
             continue
         raise AssertionError("colour #%s should fail check_board" % bad)
+    C["selftest_planted"] = "3a5fa8"  # a park's own C.update(...) must not put a colour on board
+    try:
+        check_board("3a5fa8", board, "selftest")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("a colour added to C after import should fail check_board")
+    finally:
+        del C["selftest_planted"]
     hh, hs, hv = _hsv("365754")  # a 0.08 hue shift of petrol must fail
     shifted = hexcolor(colorsys.hsv_to_rgb((hh + 0.08) % 1.0, hs, hv))
     try:
