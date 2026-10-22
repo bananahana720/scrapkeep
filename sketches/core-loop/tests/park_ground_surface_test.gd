@@ -32,6 +32,19 @@ const TOL := 2.0 / 255.0 + 0.0001
 # Cells from any other slot or the edge that count as "deep": the feather's 4 cells plus the bilinear support.
 const DEEP := 5
 const MARGIN := 8
+# The basalt render correction (park_terrain.gd's MULT_BASALT comment): the 3060 render bench of d19c9120
+# (#241 6352984236), crop 600x200 at x 340, y 480, poses 801 and 803 of park_props_audit --map=park_sinkhole.
+const BASALT_RENDERED_LAB := [Vector3(52.49, 7.1, 12.2), Vector3(52.27, 7.2, 12.2)]
+const BASALT_BOARD := Vector3(101, 93, 93)
+# The literal before the correction, board_multiplier() alone: the planted control.
+const BASALT_UNCORRECTED := Color(0.610, 0.685, 1.0, 0.5)
+# L* of the corrected basalt multiplier times the floor mean (the uncorrected one was 45.1).
+const BASALT_CORRECTED_LSTAR := 34.9
+# Tailings, darkened for the noon pit's ground-over-horizon gap: scale 0.65 in linear light, the multiplier
+# before it, and the L* of the scaled multiplier times the floor mean (59.5 before).
+const TAILINGS_SCALE := 0.65
+const TAILINGS_UNSCALED := Color(1.0, 0.861, 0.843, 0.5)
+const TAILINGS_SCALED_LSTAR := 49.7
 
 var t := T.new("park_ground_surface_test")
 var _mults := {}
@@ -49,6 +62,7 @@ func _initialize() -> void:
 func _run() -> void:
 	_pin_floor_mean()
 	_pin_mults()
+	_pin_render_correction()
 	var holder := Node3D.new()
 	root.add_child(holder)
 	var camera := Camera3D.new()
@@ -101,14 +115,18 @@ func _pin_mults() -> void:
 	var fm := _floor_mean
 	var boards := {
 		2: [Vector3(239, 194, 148), Vector3(243, 167, 102.5), 59.5],
-		3: [Vector3(245, 172, 116), Vector3(245, 172, 116), 59.5],
-		4: [Vector3(101, 92.5, 93), Vector3(153, 126, 111), 45.1],
+		3: [Vector3(245, 172, 116), Vector3(245, 172, 116), TAILINGS_SCALED_LSTAR],
+		4: [Vector3(101, 92.5, 93), Vector3(153, 126, 111), BASALT_CORRECTED_LSTAR],
 	}
 	_mults = {}
 	for slot in boards:
 		var b: Array = boards[slot]
 		var target := _derive(b[0], b[1], fm)
 		var want := Color(target.x / fm.r, target.y / fm.g, target.z / fm.b, 0.5)
+		if slot == 4:
+			want = ParkTerrain.render_corrected(want, _basalt_rendered(), BASALT_BOARD)
+		elif slot == 3:
+			want = ParkTerrain.linear_scaled(want, ParkTerrain.TAILINGS_NOON_SCALE)
 		_mults[slot] = want
 		var got := ParkTerrain.slot_tint(slot)
 		t.check("slot %d multiplier = the rule on the raw patches %s, within 0.003" % [slot, want], absf(got.r - want.r) <= 0.003 and absf(got.g - want.g) <= 0.003 and absf(got.b - want.b) <= 0.003, "got %s" % got)
@@ -117,12 +135,45 @@ func _pin_mults() -> void:
 		t.check("slot %d multiplier is at most 1 per channel (a colour map cannot brighten)" % slot, got.r <= 1.0 and got.g <= 1.0 and got.b <= 1.0)
 		var park_target := _park_target(slot)
 		_near_color("slot %d target = multiplier * floor mean" % slot, park_target, Color(got.r * fm.r, got.g * fm.g, got.b * fm.b))
-	t.check("the tailings multiplier keeps red at 1 and darkens green and blue", ParkTerrain.slot_tint(3).r == 1.0 and ParkTerrain.slot_tint(3).g < 1.0 and ParkTerrain.slot_tint(3).b < 1.0)
-	t.check("the tailings target is much lighter than the old charcoal tint", _park_target(3).g > 0.45, str(_park_target(3)))
+	t.check("the tailings multiplier darkens red, green and blue and keeps red the largest", ParkTerrain.slot_tint(3).r < 1.0 and ParkTerrain.slot_tint(3).r > ParkTerrain.slot_tint(3).g and ParkTerrain.slot_tint(3).g >= ParkTerrain.slot_tint(3).b)
+	t.check("the tailings target is much lighter than the old charcoal tint", _park_target(3).g > 0.40, str(_park_target(3)))
 	# The cap: at least one channel of each multiplier reaches 1 (tailings by its red).
 	for slot in _mults:
+		if slot == 4 or slot == 3:
+			continue  # render-corrected or scaled: darkened below the cap on purpose
 		var m := ParkTerrain.slot_tint(slot)
 		t.check("slot %d: some channel of the multiplier is 1 (the cap)" % slot, m.r == 1.0 or m.g == 1.0 or m.b == 1.0, str(m))
+
+
+func _basalt_rendered() -> Vector3:
+	return (BASALT_RENDERED_LAB[0] + BASALT_RENDERED_LAB[1]) * 0.5
+
+
+# render_corrected(): the basalt pin, the helper's identity and direction, and the planted control.
+func _pin_render_correction() -> void:
+	var fm := _floor_mean
+	var b := _derive(Vector3(101, 92.5, 93), Vector3(153, 126, 111), fm)
+	var base := Color(b.x / fm.r, b.y / fm.g, b.z / fm.b, 0.5)
+	var want := ParkTerrain.render_corrected(base, _basalt_rendered(), BASALT_BOARD)
+	var got: Color = ParkTerrain.MULT_BASALT
+	t.check("MULT_BASALT = render_corrected(board_multiplier, mean of the two poses, board patch), within 0.002", _near(got, want, 0.002), "got %s, want %s" % [got, want])
+	# Linear-light multiply (the shader's source_color decode): about (0.426, 0.535, 0.898), not the raw-multiply (0.281, 0.398, 0.783).
+	t.check("the correction lands near the linear-light value (0.426, 0.535, 0.898)", _near(want, Color(0.426, 0.535, 0.898, 0.5), 0.003), str(want))
+	var same := ParkTerrain.render_corrected(base, Vector3(40.2, 2.7, 0.7), Vector3(101, 93, 93))
+	t.check("a render equal to the board returns the multiplier (identity), within 0.01", _near(same, base, 0.01), "got %s, want %s" % [same, base])
+	var mid := Color(0.8, 0.8, 0.8, 0.5)
+	var warm := ParkTerrain.render_corrected(mid, Vector3(52.0, 12.0, 20.0), Vector3(101, 93, 93))
+	var cool := ParkTerrain.render_corrected(mid, Vector3(52.0, 0.0, 0.0), Vector3(101, 93, 93))
+	t.check("a render warmer than the board lowers red relative to blue", warm.r / warm.b < cool.r / cool.b, "%s vs %s" % [warm, cool])
+	t.check("the result is clamped to [0, 1]", ParkTerrain.render_corrected(Color(1, 1, 1, 0.5), Vector3(10, 0, 0), Vector3(200, 200, 200)).b <= 1.0)
+	# Tailings: the literal is the unscaled multiplier scaled by 0.65 in linear light; the unscaled literal fails.
+	var scaled := ParkTerrain.linear_scaled(TAILINGS_UNSCALED, TAILINGS_SCALE)
+	t.check("MULT_TAILINGS = linear_scaled(board_multiplier, 0.65), within 0.002", _near(ParkTerrain.MULT_TAILINGS, scaled, 0.002), "got %s, want %s" % [ParkTerrain.MULT_TAILINGS, scaled])
+	t.near("TAILINGS_NOON_SCALE is the cited 0.65", ParkTerrain.TAILINGS_NOON_SCALE, TAILINGS_SCALE, 0.0001)
+	t.check("planted control: the unscaled tailings literal fails the new pin", not _near(TAILINGS_UNSCALED, scaled, 0.002))
+	t.check("linear_scaled(m, 1) is the identity", _near(ParkTerrain.linear_scaled(Color(0.3, 0.6, 0.9, 0.5), 1.0), Color(0.3, 0.6, 0.9, 0.5), 0.001))
+	# Planted control: the pre-correction literal is not the corrected value.
+	t.check("planted control: the old literal %s fails the new pin" % BASALT_UNCORRECTED, not _near(BASALT_UNCORRECTED, want, 0.002), str(want))
 
 
 # The target colour (sRGB, 0 to 1) of a material patch against the lit ground beside it: the material's
