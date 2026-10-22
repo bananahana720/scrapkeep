@@ -273,7 +273,7 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
 - `speed_tier() -> int` (0 walk, 1 cruise, 2 fast, 3 blazing), `speed_fraction() -> float`, `shown_position()`, `planar_velocity()`, `ball_position()`.
 - `state` (`BallState`: `velocity`, `grounded`, `contact_normal`, `impact`, `tier`) and `kit` (`AugmentKit`: `mounted`, `mount_banked`, `mount_point`, `mount_normal`, `hooked`, `gliding`, `slamming`) are read-only.
 - `intent` holds this tick's input. Combat reads `fire_pressed`, `fire_held` and `special_pressed`. The spine fills it.
-- `touch_body(body, normal = Vector3.ZERO)` reports a contact the ball's own `enemy_touched` never sees, such as a boss weak part outside the `enemy` group, and runs the ordinary contact. `normal` points from the body to the ball, full 3D; omitted, it is derived as RigidBall derives it, so a drop from above stomps. A freed body is ignored.
+- `touch_body(body, normal = Vector3.ZERO)` reports a contact the ball's own `enemy_touched` never sees, such as a boss weak part outside the `enemy` group, and runs the ordinary contact. `normal` points from the body to the ball, full 3D; omitted or zero, it is derived as RigidBall derives it, so a drop from above stomps; a given normal is normalized. A freed body is ignored.
 - `add_external_accel(accel)` adds a push in m/s², accumulated per physics tick and spent once. It does nothing while the ball is planted, mounted or frozen, and `set_frozen(true)` and `reset_to` drop any push already handed over, so a killing blow's shove never reaches the retry. Its users:
   - the world, for the flood;
   - combat, for the shove of a committed, telegraphed hit;
