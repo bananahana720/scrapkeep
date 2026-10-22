@@ -87,6 +87,7 @@ func _run() -> void:
 	_t.eq("final win: the page title is ENDING's", screens._ending_title.text, String(Worlds.ENDING["title"]))
 	_t.check("final win: the summary actions are hidden", not screens._actions.visible, "actions visible")
 	_t.check("final win: the stats are hidden", not screens._stats.visible, "stats visible")
+	_t.check("final win: the comic row is hidden under the page", not screens._comic_row.visible, "comic row visible")
 	_key(KEY_SPACE)
 	await process_frame
 	_t.check("Space inside the hold leaves the page open", screens.ending_open(), "closed early")
@@ -100,6 +101,7 @@ func _run() -> void:
 	_t.check("the summary reads RUN COMPLETE", screens._title.text.contains("RUN COMPLETE"), screens._title.text)
 	_t.check("the summary holds the Mind's epitaph", screens._body.text.contains(String(mind["epitaph"])), screens._body.text)
 	_t.check("the summary actions are back", screens._actions.visible and screens._actions.get_child_count() > 0, "hidden")
+	_t.check("the comic row is back", screens._comic_row.visible, "hidden")
 	_t.eq("run_ended fired once", _ended, 1)
 	Push.pad(root, JOY_BUTTON_A)
 	_game._screen_key(_game.pad_screen_key(_pad(JOY_BUTTON_A)))
