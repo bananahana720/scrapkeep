@@ -10,6 +10,7 @@ Approved by Andrew on 22 Oct 2026 as the shared reference for every art lane (se
 |---|---|---|
 | Overall style | 8 | [style/README.md](style/README.md) |
 | Pilots | 9 | [pilots/README.md](pilots/README.md) |
+| Pilot ball movement | 13 | [movement/README.md](movement/README.md) |
 | Spillway parks | 7 | [spillway/README.md](spillway/README.md) |
 | Dig parks | 7 | [dig/README.md](dig/README.md) |
 | Highdraft parks | 7 | [highdraft/README.md](highdraft/README.md) |
