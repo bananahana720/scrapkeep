@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const WarningBound := preload("res://src/combat/warning_bound.gd")
 
 # One committed attack area: a crane's sweep, a slag ring or a charge lane. It is laid
 # once, when the attack commits, and the drawing and every hit test read the same
@@ -61,6 +62,10 @@ var prev_fraction := 0.0
 var _painter
 # ANNULUS: which of its drawn segments are open (quenched) right now.
 var _open: Array[bool] = []
+# The world box of everything the painter can draw, cut once in _ready (WarningBound). The
+# committed numbers never change after commit, and nothing moves a hazard, so it is never
+# recut.
+var _bound := AABB()
 
 
 func commit_sector(id: String, threat_type: int, at: Vector3, band: Vector2, from_angle: float, to_angle: float, height: float,
@@ -123,6 +128,7 @@ func _ready() -> void:
 	if shape == Shape.ANNULUS:
 		_open = _open_segments()
 	_paint(true)
+	_bound = WarningBound.box(descriptor(), _painter.ground, centre.y, DRAW_LIFT)
 
 
 func step(delta: float) -> void:
@@ -280,6 +286,16 @@ func threat_at() -> Vector3:
 
 func painter():
 	return _painter
+
+
+# The conservative world box of everything this hazard's painter draws at any progress: the
+# full footprint, the fence up to `reach`, the lift, a sweep's chevrons ahead of its front
+# (WarningBound). Cached in _ready; read-only. Empty (AABB()) before the painter is built
+# and once the hazard is DONE (its painter is hidden then, so the mesh walk finds nothing).
+func screen_bound_box() -> AABB:
+	if _painter == null or state == DONE:
+		return AABB()
+	return _bound
 
 
 # Static layers redraw only when the shape changes (a quench opens or closes a span);

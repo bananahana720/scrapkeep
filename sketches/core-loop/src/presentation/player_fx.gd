@@ -638,16 +638,19 @@ func impact_frame(at: Vector3, strength: float) -> bool:
 	return true
 
 
-# The screen rect of every hostile warning, grown by `margin` px: its visual meshes' world
-# boxes merged into one box, clipped at the camera's near plane and projected through `cam`
-# (see _project_box); a warning with every corner behind is skipped. The merged box is
-# conservative (see _merge_meshes). Reusable by any 2D layer that must not cover warnings.
-# The nodes come from Threat.GROUP, which every hostile mark joins (telegraph.gd:236-237 for
-# combat telegraphs, boss/hazard.gd:110-111 for boss and world-event hazards) and no neutral
-# or owned mark does (a Silo amber ring, a Warden lift). Neither class keeps screen bounds
-# (they keep shape numbers; the geometry lives in the Painter's meshes), so the meshes are
-# the footprint.
-static func warning_rects(tree: SceneTree, cam: Camera3D, margin: float) -> Array[Rect2]:
+# The screen rect of every hostile warning, grown by `margin` px: the warning's world box,
+# clipped at the camera's near plane and projected through `cam` (see _project_box); a warning
+# with every corner behind is skipped. The box is the node's own screen_bound_box() when it
+# has one and it is not empty: Telegraph and Hazard cut one at commit from their committed
+# geometry (WarningBound), conservative over everything their painter draws at any progress,
+# so a refresh projects 8 corners per warning and walks no meshes (lighting L7, #297). A node
+# without one, or whose box is empty (a mark carried off its commit, a finished hazard), falls
+# back to the mesh walk: its visual meshes' world boxes merged into one (see _merge_meshes).
+# `use_bounds` false forces the walk, for the bench and the tests. Reusable by any 2D layer
+# that must not cover warnings. The nodes come from Threat.GROUP, which every hostile mark
+# joins (telegraph.gd:236-237 for combat telegraphs, boss/hazard.gd:110-111 for boss and
+# world-event hazards) and no neutral or owned mark does (a Silo amber ring, a Warden lift).
+static func warning_rects(tree: SceneTree, cam: Camera3D, margin: float, use_bounds := true) -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	if tree == null or cam == null:
 		return out
@@ -655,10 +658,16 @@ static func warning_rects(tree: SceneTree, cam: Camera3D, margin: float) -> Arra
 		if not (node is Node3D) or not node.is_visible_in_tree():
 			continue
 		var span := [Vector2(INF, INF), Vector2(-INF, -INF)]
-		var merged := [AABB(), false]
-		_merge_meshes(node, merged)
-		if merged[1]:
-			_project_box(merged[0], cam, span)
+		var cached := AABB()
+		if use_bounds and node.has_method("screen_bound_box"):
+			cached = node.screen_bound_box()
+		if cached.size != Vector3.ZERO:
+			_project_box(cached, cam, span)
+		else:
+			var merged := [AABB(), false]
+			_merge_meshes(node, merged)
+			if merged[1]:
+				_project_box(merged[0], cam, span)
 		if span[0].x <= span[1].x:
 			out.append(Rect2(span[0], span[1] - span[0]).grow(margin))
 	return out

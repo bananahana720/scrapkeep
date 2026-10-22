@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const WarningBound := preload("res://src/combat/warning_bound.gd")
 
 # A committed telegraph: the one piece of geometry an enemy attack both draws and
 # damages with. The attack decides its shape and its attack type once, at commit, and
@@ -59,6 +60,10 @@ var _flashed := false
 # Driven: the motion marks were built once and each frame only moves them (E1).
 var _driven := false
 var _fill_tint := Color(-1.0, -1.0, -1.0, -1.0)
+# The world box of everything the painter can draw, at any progress (WarningBound), and the
+# centre it was cut for. Computed in _build and again when the flight is set.
+var _bound := AABB()
+var _bound_centre := Vector3.ZERO
 
 
 static func ring(parent: Node, terrain_ref, threat_type: int, at: Vector3, ring_radius: float, reach := 3.5,
@@ -186,6 +191,7 @@ func set_flight(from: Vector3, arc_bump: float) -> void:
 	has_flight = true
 	_paint_motion()
 	_repaint()
+	_cut_bound()
 
 
 func set_progress(value: float) -> void:
@@ -231,6 +237,24 @@ func painter():
 	return _painter
 
 
+# The conservative world box of everything this mark's painter draws at any progress: the
+# footprint at progress 1, the fence up to reach_up, the lift, a wave's final extent and a
+# projectile's flight trace (WarningBound). Cached at commit; read-only. Empty (AABB()) when
+# it cannot promise: nothing is built, or the mark was carried off its committed centre (the
+# Warden's mounting moves a pulse ring's center after commit), so the caller walks the meshes.
+func screen_bound_box() -> AABB:
+	if _painter == null or center != _bound_centre:
+		return AABB()
+	return _bound
+
+
+func _cut_bound() -> void:
+	if _painter == null:
+		return
+	_bound_centre = center
+	_bound = WarningBound.box(descriptor(), _painter.ground, center.y, LIFT)
+
+
 func _build() -> void:
 	add_to_group("telegraph")
 	if is_hostile():
@@ -255,6 +279,7 @@ func _build() -> void:
 	_painter.paint(Threat.marks(d, false), Threat.STATIC_LAYERS)
 	_paint_motion()
 	_repaint()
+	_cut_bound()
 
 
 # A driven telegraph builds its motion marks here, at commit and when its flight is set;
