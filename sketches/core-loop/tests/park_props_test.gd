@@ -681,6 +681,7 @@ func _check_controls(world: Dictionary, kit: Dictionary, c) -> void:
 	twin["tags"] = []
 	_t.check("planted: a non-hero twin at the same point passes the MID tier", not _rules(twin, c).has("line_clear"), str(_rules(twin, c)))
 	_check_kind_line_clear(kit, c, ground)
+	_check_open_reasons(world, kit, c)
 	_check_brief_and_reach(kit, c, ground)
 	_check_telegraph(kit, c, world)
 	_check_branches(map, kit, c, ground)
@@ -709,6 +710,45 @@ func _check_kind_line_clear(kit: Dictionary, c, ground: Callable) -> void:
 		broken["kinds"]["fix_bench"]["line_clear_m"] = bad
 		var errors := ParkProps.kit_errors(broken)
 		_t.check("kit_errors rejects line_clear_m %s and names the kind" % str(bad), errors.size() == 1 and String(errors[0]).contains("fix_bench"), str(errors))
+
+
+# The audit's checked --open reasons (coordinator ruling #241 6329579296): runout:<kicker> and no_cell.
+func _check_open_reasons(world: Dictionary, kit: Dictionary, c) -> void:
+	var map = world["map"]
+	var rows: Array = map.park["park_rows"]
+	_t.check("the fixture park has a kicker", map.kickers.size() > 0)
+	var kicker: Dictionary = map.kickers[0]
+	var dir: Vector2 = kicker["dir"]
+	var length := 12.0
+	for row: Dictionary in rows:
+		if row["id"] == kicker["id"]:
+			length = float(row["size"][0])
+	var side := Vector2(-dir.y, dir.x) * float(kicker["width"]) * 0.5
+	var run: Vector2 = kicker["at"] + dir * ParkProps.KICK_RUNOUT_M * 0.5
+	var hand := PackedVector2Array([run - side, run + side])
+	var radius := maxf(length * 0.5 + ParkProps.KICK_MARGIN_M, ParkProps.KICK_RUNOUT_M * 0.5)
+	var made := ParkProps.kicker_runout(kicker, rows)
+	_t.check("kicker_runout equals a hand recomputation", made["points"] == hand and made["radius"] == radius, str(made))
+	var listed := ParkProps.kicker_keepouts([], map.kickers, rows).filter(func(r: Dictionary) -> bool: return r["what"] == "kicker run-out")
+	_t.check("kicker_keepouts still adds that run-out capsule", listed.size() == map.kickers.size() and listed[0]["points"] == hand and listed[0]["radius"] == radius)
+	var kid := String(kicker["id"])
+	_t.eq("runout_near: 10 m off the run-out edge passes", ParkProps.runout_near(c, kid, run + dir * (radius + 10.0)), "")
+	_t.check("runout_near: 200 m away fails", ParkProps.runout_near(c, kid, run + dir * (radius + 200.0)) != "")
+	_t.check("runout_near: an unknown kicker fails", ParkProps.runout_near(c, "no_such_kicker", run) != "")
+	var probe := ParkProps.probe_kind_of(kit)
+	_t.check("the probe kind is the kit's lowest kind", probe != "" and kit["kinds"].has(probe), probe)
+	var found := []
+	var found_pose := {}
+	for pt: Vector2 in _grid(c.rect, 60):
+		var pose := {"x": pt.x, "z": pt.y, "yaw": 0.0}
+		found = ParkProps.cone_legal_cells(c, kit, probe, [pose], 100.0, 60.0)
+		if not found.is_empty():
+			found_pose = pose
+			break
+	# A no_cell claim at a pose with a legal cell is false, so the audit must reject it.
+	_t.check("planted false no_cell: a pose in open ground has a legal cell, so the claim fails", not found.is_empty() and ParkProps.cone_legal_cells(c, kit, probe, [found_pose], 100.0, 60.0, 5.0, 3).size() >= 1, str(found_pose))
+	var edge := {"x": c.rect.position.x + 1.0, "z": c.rect.get_center().y, "yaw": PI * 0.5}
+	_t.eq("a pose at the play-rect edge looking out has no legal cell", ParkProps.cone_legal_cells(c, kit, probe, [edge], 100.0, 60.0), [])
 
 
 # The brief's ride-line kinds must carry line_clear_m of at least 30, and a rule past the line reach fails closed.

@@ -341,17 +341,102 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 static func kicker_keepouts(keepouts: Array, kickers: Array, park_rows: Array) -> Array:
 	var out := keepouts.filter(func(row: Dictionary) -> bool: return row["what"] != "kicker ramp")
 	for kicker: Dictionary in kickers:
-		var length := 12.0
-		for row: Dictionary in park_rows:
-			if row["id"] == kicker.get("id"):
-				length = float(row["size"][0])
+		var length := _kicker_length(kicker, park_rows)
 		var dir: Vector2 = kicker["dir"]
 		var side := Vector2(-dir.y, dir.x) * float(kicker["width"]) * 0.5
 		var radius := length * 0.5 + KICK_MARGIN_M
 		var body: Vector2 = kicker["at"] - dir * length * 0.5
-		var run: Vector2 = kicker["at"] + dir * KICK_RUNOUT_M * 0.5
 		out.append({"what": "kicker ramp", "points": PackedVector2Array([body - side, body + side]), "radius": radius, "ride": true})
-		out.append({"what": "kicker run-out", "points": PackedVector2Array([run - side, run + side]), "radius": maxf(radius, KICK_RUNOUT_M * 0.5), "ride": true})
+		var run := kicker_runout(kicker, park_rows)
+		out.append({"what": "kicker run-out", "points": run["points"], "radius": run["radius"], "ride": true})
+	return out
+
+
+static func _kicker_length(kicker: Dictionary, park_rows: Array) -> float:
+	var length := 12.0
+	for row: Dictionary in park_rows:
+		if row["id"] == kicker.get("id"):
+			length = float(row["size"][0])
+	return length
+
+
+# The launch run-out capsule {points, radius} of a kicker (the one kicker_keepouts adds as "kicker run-out").
+static func kicker_runout(kicker: Dictionary, park_rows: Array) -> Dictionary:
+	var dir: Vector2 = kicker["dir"]
+	var side := Vector2(-dir.y, dir.x) * float(kicker["width"]) * 0.5
+	var run: Vector2 = kicker["at"] + dir * KICK_RUNOUT_M * 0.5
+	var radius := _kicker_length(kicker, park_rows) * 0.5 + KICK_MARGIN_M
+	return {"points": PackedVector2Array([run - side, run + side]), "radius": maxf(radius, KICK_RUNOUT_M * 0.5)}
+
+
+# "" when `at` lies within `within` m of the named kicker's run-out capsule (the audit's runout:<kicker> --open reason),
+# otherwise the reason it does not.
+static func runout_near(c: Context, kicker_id: String, at: Vector2, within := 40.0) -> String:
+	for kicker: Dictionary in c.map.kickers:
+		if String(kicker.get("id", "")) != kicker_id:
+			continue
+		var run := kicker_runout(kicker, c.map.park.get("park_rows", []))
+		var pts: PackedVector2Array = run["points"]
+		var gap := at.distance_to(Geometry2D.get_closest_point_to_segment(at, pts[0], pts[1])) - float(run["radius"])
+		if gap <= within:
+			return ""
+		return "%.0f m from the %s run-out edge, want at most %.0f" % [gap, kicker_id, within]
+	return "no kicker %s in the park" % kicker_id
+
+
+# The kit's lowest-height kind (ties: smallest radius, then name), the probe for cone_legal_cells; "" for an empty kit.
+static func probe_kind_of(kit: Dictionary) -> String:
+	var best := ""
+	var best_key := [INF, INF]
+	var names: Array = (kit.get("kinds", {}) as Dictionary).keys()
+	names.sort()
+	for kind: String in names:
+		var low := INF
+		var small := INF
+		for v: Dictionary in (kit["kinds"][kind]["variants"] as Dictionary).values():
+			low = minf(low, float(v["height"]))
+			small = minf(small, float(v["radius"]))
+		if low < best_key[0] or (low == best_key[0] and small < best_key[1]):
+			best = kind
+			best_key = [low, small]
+	return best
+
+
+# Up to `limit` cell centres (cell_m grid, scanned in x then z) inside the horizontal view cone of the poses, within range_m
+# of the camera, where the probe kind's smallest-radius variant passes every placement rule; [] when none does (the audit's
+# no_cell --open reason). A pose is {x, z, yaw} with optional arm and pitch: the chase camera stands arm behind the
+# player along the view direction and looks along forward (-sin yaw, -cos yaw), as the audit's _place sets it.
+static func cone_legal_cells(c: Context, kit: Dictionary, probe_kind: String, poses: Array, fov_h_deg: float, range_m: float, cell_m := 5.0, limit := 1) -> Array:
+	var out := []
+	if not (kit.get("kinds", {}) as Dictionary).has(probe_kind):
+		return out
+	var variants: Dictionary = kit["kinds"][probe_kind]["variants"]
+	var names: Array = variants.keys()
+	names.sort()
+	var variant: String = names[0]
+	for name: String in names:
+		if float(variants[name]["radius"]) < float(variants[variant]["radius"]):
+			variant = name
+	var half := deg_to_rad(fov_h_deg) * 0.5
+	for pose: Dictionary in poses:
+		var yaw := float(pose["yaw"])
+		var forward := Vector2(-sin(yaw), -cos(yaw))
+		var cam := Vector2(float(pose["x"]), float(pose["z"])) - forward * float(pose.get("arm", 0.0)) * cos(float(pose.get("pitch", 0.0)))
+		var x0 := floori((cam.x - range_m) / cell_m)
+		var x1 := ceili((cam.x + range_m) / cell_m)
+		var z0 := floori((cam.y - range_m) / cell_m)
+		var z1 := ceili((cam.y + range_m) / cell_m)
+		for ix in range(x0, x1 + 1):
+			for iz in range(z0, z1 + 1):
+				var at := Vector2((ix + 0.5) * cell_m, (iz + 0.5) * cell_m)
+				var rel := at - cam
+				if rel.length() > range_m or rel.length() < 0.5 or absf(forward.angle_to(rel)) > half:
+					continue
+				var inst := _instance("probe", probe_kind, variant, kit, at, 0.0, 1.0, 0.0, c.ground, false)
+				if check_one(inst, c).is_empty():
+					out.append(at)
+					if out.size() >= limit:
+						return out
 	return out
 
 
