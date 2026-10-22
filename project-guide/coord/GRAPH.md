@@ -76,6 +76,13 @@ Opened 21 Oct about 21:00Z. The stage was fast-forwarded to main 9cd6805e (wave 
 | GPU bench (PC, card to start) | queue rows 23 to 27 | - | waiting on Andrew's click |
 | Music (PC, card to start) | heat remake PR; zero-placeholder `--win-proof` export (queue row 7) | #225 for stems-sync | waiting on Andrew's click |
 | CPU shed (PC, coordinator) | Sable hard cell at about 120 s; CPU-bound sweeps that lanes post as `NEEDS: coordinator (cpu)` | Systems posts the command | waiting |
+| Lighting (cloud, new 21 Oct) | single writer of `world_look.gd`, `time_sky.gdshader`, `arena_*_dress.gd`; day-arc stills sign-off; volumetric air conflict | gpu-render stills | starting |
+| Grading (cloud, new) | title-opening grades; look review of day-arc stills, with numbers proposed to Lighting | Lighting | starting |
+| Modeling (cloud 9f9a90, reused) | `tools/blender/**` and GLBs: three Warden GLB rebuilds, six landmarks soft toy, anchor swap, cosmetics | gpu A/B | briefed |
+| Animation (cloud, new) | Splitter and Linker bodies and motion; rig pose-test gate; Tarn and Cannon polish only | Systems behaviour | starting |
+| Effects (cloud, new) | special-enemy cues from one telegraph moment; 10 empty ATTACK_ROWS; armour-hit sound; SPEED-SOFTCAP trail (with Systems) | Perf `density.gd` | starting |
+| Challenge B (cloud, new) | worlds 4 to 6 to the section 5 skill bands; HARD replay ladder | Challenge A for shared code | starting |
+| Render bench (PC, RTX 3060) | serves `NEEDS: gpu-render` stills and clips | - | running |
 | Promote w18 to main, cut `stage/alpha-w19` | Coordinator | stage head gate-clean, at least 3 new units | - |
 
 ## Pulled forward (19 Oct)

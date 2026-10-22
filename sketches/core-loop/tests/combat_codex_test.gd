@@ -22,6 +22,9 @@ class LegacyGame extends "res://src/game.gd":
 class StateDouble extends RefCounted:
 	var grounded := true
 
+	func on_floor() -> bool:
+		return grounded
+
 
 class BallDouble extends RefCounted:
 	var state := StateDouble.new()
