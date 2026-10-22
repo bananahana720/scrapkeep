@@ -575,7 +575,9 @@ func _step_director(delta: float) -> void:
 	# Warden contact (ruling 15 c'): spawns ring the live Warden's core; read every step, some Wardens move.
 	var w = ctx.flow.warden
 	var fight_live: bool = WhyCallout.warden_fight_live(ctx.flow)
-	director.warden_core = Director.contact_core(fight_live, ctx.flow.stage(), w.family if fight_live else "",
+	# A Warden without a family (a test double) reads as no family, so its fight keeps the ring.
+	var family: String = String(w.get("family")) if fight_live and w.get("family") != null else ""
+	director.warden_core = Director.contact_core(fight_live, ctx.flow.stage(), family,
 		Vector2(w.global_position.x, w.global_position.z) if fight_live else Vector2.INF)
 	var due: Array = director.advance(delta, alive, Vector2(ball.x, ball.z), Vector2(v.x, v.z), Vector2(forward.x, forward.z))
 	for tier in director.take_threat_rises():
