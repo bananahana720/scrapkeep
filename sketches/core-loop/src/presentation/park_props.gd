@@ -53,6 +53,8 @@ const LINE_CLEAR_KIND_MAX_M := 60.0
 # makes the 30 m tier checked: kit_errors fails a kit that defines one without line_clear_m at or above this.
 const BRIEF_LINE_KINDS := {"laundry_line": 30.0, "washline": 30.0, "windsock": 30.0, "kite_pennant": 30.0}
 const LOW_HEIGHT_M := 1.2
+# The density audit's view range (tools/park_props_audit.gd NEAR_M) that no_cell probes out to.
+const NEAR_RANGE_M := 60.0
 const TALL_HEIGHT_M := 3.0
 # Row footprints keep props out when the row is a ride feature; ground, banks, terraces and anchor fields do not.
 const RIDE_ELEMENTS := ["kicker", "drop", "rail", "grind_line", "half_pipe", "bowl", "elevated_line", "ledge", "tunnel", "flow_line", "sky_island"]
@@ -68,6 +70,9 @@ const LINE_REACH_M := 64.0
 const KICK_MARGIN_M := 8.0
 const KICK_RUNOUT_M := 40.0
 const LITTER_CHUNK_M := 160.0
+# The range a litter item's scale is drawn from (_litter), and the extremes the no_cell probe samples.
+const LITTER_SCALE_MIN := 0.9
+const LITTER_SCALE_MAX := 1.15
 const LITTER_GAP_RATIO := 0.5
 const CAMP_ACTIVITIES := ["enemy_camp"]
 # Explicit surfaces: with a file "ground_rows" list, every instance stands inside a listed row's footprint, inset at least this far
@@ -341,18 +346,188 @@ static func context(park_map, ground: Callable, stage := -1) -> Context:
 static func kicker_keepouts(keepouts: Array, kickers: Array, park_rows: Array) -> Array:
 	var out := keepouts.filter(func(row: Dictionary) -> bool: return row["what"] != "kicker ramp")
 	for kicker: Dictionary in kickers:
-		var length := 12.0
-		for row: Dictionary in park_rows:
-			if row["id"] == kicker.get("id"):
-				length = float(row["size"][0])
+		var length := _kicker_length(kicker, park_rows)
 		var dir: Vector2 = kicker["dir"]
 		var side := Vector2(-dir.y, dir.x) * float(kicker["width"]) * 0.5
 		var radius := length * 0.5 + KICK_MARGIN_M
 		var body: Vector2 = kicker["at"] - dir * length * 0.5
-		var run: Vector2 = kicker["at"] + dir * KICK_RUNOUT_M * 0.5
 		out.append({"what": "kicker ramp", "points": PackedVector2Array([body - side, body + side]), "radius": radius, "ride": true})
-		out.append({"what": "kicker run-out", "points": PackedVector2Array([run - side, run + side]), "radius": maxf(radius, KICK_RUNOUT_M * 0.5), "ride": true})
+		var run := kicker_runout(kicker, park_rows)
+		out.append({"what": "kicker run-out", "points": run["points"], "radius": run["radius"], "ride": true})
 	return out
+
+
+static func _kicker_length(kicker: Dictionary, park_rows: Array) -> float:
+	var length := 12.0
+	for row: Dictionary in park_rows:
+		if row["id"] == kicker.get("id"):
+			length = float(row["size"][0])
+	return length
+
+
+# The launch run-out capsule {points, radius} of a kicker (the one kicker_keepouts adds as "kicker run-out").
+static func kicker_runout(kicker: Dictionary, park_rows: Array) -> Dictionary:
+	var dir: Vector2 = kicker["dir"]
+	var side := Vector2(-dir.y, dir.x) * float(kicker["width"]) * 0.5
+	var run: Vector2 = kicker["at"] + dir * KICK_RUNOUT_M * 0.5
+	var radius := _kicker_length(kicker, park_rows) * 0.5 + KICK_MARGIN_M
+	return {"points": PackedVector2Array([run - side, run + side]), "radius": maxf(radius, KICK_RUNOUT_M * 0.5)}
+
+
+# "" when `at` lies within `within` m of the named kicker's run-out capsule (the audit's runout:<kicker> --open reason),
+# otherwise the reason it does not.
+static func runout_near(c: Context, kicker_id: String, at: Vector2, within := 40.0) -> String:
+	for kicker: Dictionary in c.map.kickers:
+		if String(kicker.get("id", "")) != kicker_id:
+			continue
+		var run := kicker_runout(kicker, c.map.park.get("park_rows", []))
+		var pts: PackedVector2Array = run["points"]
+		var gap := at.distance_to(Geometry2D.get_closest_point_to_segment(at, pts[0], pts[1])) - float(run["radius"])
+		if gap <= within:
+			return ""
+		return "%.0f m from the %s run-out edge, want at most %.0f" % [gap, kicker_id, within]
+	return "no kicker %s in the park" % kicker_id
+
+
+# The scales a vignette file places instances at, sorted and distinct: 1.0, every template prop's own scale, and the litter's
+# LITTER_SCALE_MIN and LITTER_SCALE_MAX when the file has litter (expand draws litter scales in that range). Slope and seat
+# sample the footprint, so a probe fits or not by scale; scales between the litter min and max are not sampled.
+static func probe_scales(file: Dictionary) -> PackedFloat32Array:
+	var found := [1.0]
+	for template: Dictionary in (file.get("templates", {}) as Dictionary).values():
+		for prop: Dictionary in template.get("props", []):
+			found.append(float(prop.get("scale", 1.0)))
+	if file.get("litter") is Dictionary:
+		found.append(LITTER_SCALE_MIN)
+		found.append(LITTER_SCALE_MAX)
+	found.sort()
+	var out := PackedFloat32Array()
+	for scale: float in found:
+		if out.is_empty() or not is_equal_approx(out[out.size() - 1], scale):
+			out.append(scale)
+	return out
+
+
+# The probe set for no_cell: every variant of every kind, as {kind, v}. The tier comes from each instance's own height, so a
+# lower variant of a kind can be low tier and fit beside a line where its smallest-radius variant (mid tier) does not. Mid and
+# tall kinds and kinds with a line_clear_m are probed too, each judged by check_one under its own tier and line_clear_m, so a
+# cell is legal when any variant the file could place passes there.
+static func probe_variants_of(kit: Dictionary) -> Array:
+	var out := []
+	var names: Array = (kit.get("kinds", {}) as Dictionary).keys()
+	names.sort()
+	for kind: String in names:
+		var keys: Array = (kit["kinds"][kind]["variants"] as Dictionary).keys()
+		keys.sort()
+		for v: String in keys:
+			out.append({"kind": kind, "v": v})
+	return out
+
+
+# The "kind/variant@scale" of the first (scale, probe) that passes every placement rule standing at `at`, "" if none.
+static func probe_at(c: Context, kit: Dictionary, probes: Array, scales: Array, at: Vector2) -> String:
+	for scale: float in scales:
+		for probe: Dictionary in probes:
+			var inst := _instance("probe", String(probe["kind"]), String(probe["v"]), kit, at, 0.0, scale, 0.0, c.ground, false)
+			if check_one(inst, c).is_empty():
+				return "%s/%s@%.2f" % [probe["kind"], probe["v"], scale]
+	return ""
+
+
+# True when any (variant, scale) probe passes every placement rule standing at `at`.
+static func probe_legal_at(c: Context, kit: Dictionary, probes: Array, scales: Array, at: Vector2) -> bool:
+	return probe_at(c, kit, probes, scales, at) != ""
+
+
+# The audit's chase camera for a pose {x, z, yaw}: the anchor 1 + cam.up above the ground at the pose, the basis
+# Basis(UP, yaw) * Basis(RIGHT, cam.pitch), and the camera cam.arm behind along its z (tools/park_props_audit.gd _place).
+static func camera_for(pose: Dictionary, cam: Dictionary, ground: Callable) -> Transform3D:
+	var x := float(pose["x"])
+	var z := float(pose["z"])
+	var anchor := Vector3(x, _height(ground, Vector2(x, z)) + 1.0 + float(cam["up"]), z)
+	var basis := Basis(Vector3.UP, float(pose["yaw"])) * Basis(Vector3.RIGHT, float(cam["pitch"]))
+	return Transform3D(basis, anchor + basis * Vector3(0.0, 0.0, float(cam["arm"])))
+
+
+# Whether a world point is inside the camera's real frustum, without a Camera3D: in front, and inside both tan half-angles
+# of the vertical fov (cam.fov_deg, Godot keeps the height) and the aspect (cam.aspect), within range_m horizontally.
+static func cell_visible(view: Transform3D, cam: Dictionary, point: Vector3, range_m: float) -> bool:
+	if Vector2(point.x - view.origin.x, point.z - view.origin.z).length() > range_m:
+		return false
+	var local := view.affine_inverse() * point
+	var depth := -local.z
+	if depth <= 0.1:
+		return false
+	var tan_v := tan(deg_to_rad(float(cam["fov_deg"])) * 0.5)
+	return absf(local.y) <= depth * tan_v and absf(local.x) <= depth * tan_v * float(cam["aspect"])
+
+
+# Up to `limit` cell centres (cell_m grid, scanned in x then z) inside the real view frustum of the poses, within range_m of
+# the camera, where any probe (every variant of every kind at each placement scale, probe_variants_of and probe_scales) passes every placement rule; [] when none does (the audit's no_cell --open
+# reason). Tolerance: the grid is cell_m (2.5 m), so a legal pocket narrower than about 2.5 m can be missed, which lets a
+# no_cell claim pass; the horizontal range errs safe. A pose is {x, z, yaw}; cam is {arm, pitch, up, fov_deg, aspect}.
+static func cone_legal_cells(c: Context, kit: Dictionary, probes: Array, scales: Array, poses: Array, cam: Dictionary, range_m: float, cell_m := 2.5, limit := 1) -> Array:
+	var out := []
+	if probes.is_empty():
+		return out
+	for pose: Dictionary in poses:
+		var view := camera_for(pose, cam, c.ground)
+		var x0 := floori((view.origin.x - range_m) / cell_m)
+		var x1 := ceili((view.origin.x + range_m) / cell_m)
+		var z0 := floori((view.origin.z - range_m) / cell_m)
+		var z1 := ceili((view.origin.z + range_m) / cell_m)
+		for ix in range(x0, x1 + 1):
+			for iz in range(z0, z1 + 1):
+				var at := Vector2((ix + 0.5) * cell_m, (iz + 0.5) * cell_m)
+				if not cell_visible(view, cam, Vector3(at.x, _height(c.ground, at), at.y), range_m):
+					continue
+				if probe_legal_at(c, kit, probes, scales, at):
+					out.append(at)
+					if out.size() >= limit:
+						return out
+	return out
+
+
+# "--open=" argument text (x:z:r:<reason>,...) to {spaces: [[Vector2 centre, radius, reason]]} or {error}. The reason is
+# everything after the third colon: no_cell, or runout:<kicker> with a non-empty kicker.
+static func parse_open(arg: String) -> Dictionary:
+	var spaces := []
+	for part in arg.split(",", false):
+		var f := part.split(":", true, 3)
+		var reason := String(f[3]) if f.size() == 4 else ""
+		if f.size() != 4 or not (reason == "no_cell" or (reason.begins_with("runout:") and reason.length() > 7)):
+			return {"error": "--open entry '%s' wants x:z:r:no_cell or x:z:r:runout:<kicker>" % part}
+		spaces.append([Vector2(float(f[0]), float(f[1])), float(f[2]), reason])
+	return {"spaces": spaces}
+
+
+# The audit's decision for one --open window: {ok, why, cell}. ok is true when the reason holds. `file` is the park's
+# vignette file ({} when it has none): its ground_rows and low_ground_rows apply to the probe as expand applies them, and
+# its smallest scale sizes the probes. `at` is the window midpoint and `poses` every sample pose in the window.
+static func open_reason(c: Context, kit: Dictionary, file: Dictionary, reason: String, at: Vector2, poses: Array, cam: Dictionary) -> Dictionary:
+	if reason.begins_with("runout:"):
+		var why := runout_near(c, reason.trim_prefix("runout:"), at)
+		return {"ok": why == "", "why": why, "cell": null}
+	if reason != "no_cell":
+		return {"ok": false, "why": "unknown reason %s" % reason, "cell": null}
+	# The file's rows apply for this probe only: the caller's lists come back untouched.
+	var saved_ground := c.ground_rows
+	var saved_low := c.low_rows
+	c.use_ground_rows(file.get("ground_rows"))
+	c.use_low_ground_rows(file.get("low_ground_rows"))
+	var scales := Array(probe_scales(file))
+	var probes := probe_variants_of(kit)
+	var result := {"ok": false, "why": "no kit to probe with", "cell": null}
+	if not probes.is_empty():
+		var cells := cone_legal_cells(c, kit, probes, scales, poses, cam, NEAR_RANGE_M)
+		var label := "%d probe variants at scales %s" % [probes.size(), str(scales)]
+		if cells.is_empty():
+			result = {"ok": true, "why": label + " find no legal cell in the view frustum", "cell": null}
+		else:
+			result = {"ok": false, "why": "probe %s has a legal cell at (%.1f, %.1f) in the view frustum (%s)" % [probe_at(c, kit, probes, scales, cells[0]), cells[0].x, cells[0].y, label], "cell": [cells[0].x, cells[0].y]}
+	c.ground_rows = saved_ground
+	c.low_rows = saved_low
+	return result
 
 
 static func _pair(value) -> Vector2:
@@ -691,7 +866,7 @@ static func _litter(litter: Dictionary, id: String, kit: Dictionary, c: Context,
 				var pick := rng.randf() * total
 				var vr := rng.randi()
 				var yaw := rng.randf_range(0.0, TAU)
-				var scale := rng.randf_range(0.9, 1.15)
+				var scale := rng.randf_range(LITTER_SCALE_MIN, LITTER_SCALE_MAX)
 				var at := pts[i - 1] + dir * d + side_dir * side * lateral
 				d += spacing
 				var kind := String((kinds[0] as Dictionary)["kind"])
