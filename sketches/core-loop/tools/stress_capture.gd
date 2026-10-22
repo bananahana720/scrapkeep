@@ -12,6 +12,7 @@ const Bolts := preload("res://src/combat/bolts.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const Director := preload("res://src/world/director.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
 # Dense-scene diagnostic. Synthetic attacks do not establish gameplay or human readability.
 # Does a hostile telegraph stay readable when the screen fills, and what do the effect
@@ -23,6 +24,9 @@ const WorldLook := preload("res://src/presentation/world_look.gd")
 # After four seconds of warmup, time 240 live frames while preserving the fixture load.
 # Then pause and save six paired images to isolate P1 edges from fills and scenery.
 # Needs imported assets and a real display; see FEEL-READABILITY.md section 6.3.
+# Options, all after `--`: --out=<dir> (required), --stage, --calm, --dry, --size, --timeout and
+# --impact=hold (forces impact-frame fires in the sample phase so impact_ms_per_fire is read
+# from real fires; opt-in, notes at --calm below).
 # --dry=1 skips readback and writes schema/control-flow evidence only, never pixels or
 # valid performance evidence. Synthetic attacks recycle and do not resolve damage.
 
@@ -45,6 +49,8 @@ const VAL_MIN := 0.25
 # P1 bar reads straight from the file (ruling #241 comment 6332468877).
 const STRONG_MIN := 50000
 const RIVET_SEED := 1
+# --impact=hold: the shortest gap between forced fires, the game's own rate limit.
+const IMPACT_HOLD_PERIOD_S := PlayerFx.FRAME_GAP_S
 
 var _out := ""
 var _game
@@ -78,6 +84,15 @@ var _errors: Array = []
 # --calm=1 holds no fire and no roll, so no hit bursts or speed lines reach the frame; the
 # telegraphs, packs and light are the same. It tags outputs "calm-" (the dusk P1 split, #241).
 # Contact hits can still fire impact frames under calm (measured: 3 and 6 fires in two scenes).
+# --impact=hold forces impact frames during the sample phase, so impact_ms_per_fire reads from
+# real fires over the scene's live warnings (the 4080 read for lighting L7, #297): each scene
+# asks PlayerFx.impact_frame (at the ball, strength 1.0) every IMPACT_HOLD_PERIOD_S of
+# sample time, the shortest gap the game itself allows (PlayerFx.FRAME_GAP_S; a gated ask
+# retries on the next frame). The scene's synthetic telegraphs are the warnings: S2 holds 16
+# and S3 32, plus the packs' own. Each result then also carries "impact_hold": forced fires,
+# the period and the fewest and most hostile marks (Threat.GROUP) standing at a fire. Opt-in:
+# absent, no fire is forced, no field is added and the output names are as before; present,
+# outputs are tagged "impact-". Meaningful only on a rendered display, like the rest of the tool.
 var _stage := 1
 var _staged := false
 var _entered := false
@@ -86,6 +101,10 @@ var _tag := ""
 var _timeout := HARD_TIMEOUT
 var _size := Vector2i(1920, 1080)
 var _calm := false
+var _impact_hold := false
+var _impact_clock := 0.0
+# Hostile marks standing at each forced fire, this scene.
+var _impact_marks: Array = []
 
 
 func _initialize() -> void:
@@ -120,6 +139,9 @@ func _initialize() -> void:
 	_calm = settings.get("calm", "0") == "1"
 	if _calm:
 		_tag += "calm-"
+	_impact_hold = settings.get("impact", "") == "hold"
+	if _impact_hold:
+		_tag += "impact-"
 	if not _out.is_absolute_path() or DirAccess.make_dir_recursive_absolute(_out) != OK:
 		printerr("stress_capture: --out must be an absolute writable directory")
 		quit(2)
@@ -196,6 +218,7 @@ func _process(delta: float) -> bool:
 			_step_threats(delta)
 			_frames.append(_sample(dt_ms))
 			_count_samples.append(_counts())
+			_hold_impact(delta)
 			if _frames.size() >= SAMPLE_FRAMES:
 				_busy = true
 				_capture()
@@ -319,8 +342,25 @@ func _impact_counters() -> Array:
 	return [int(fx.spawned.get("impact_frame", 0)), f.rect_calls, f.rect_usec, f.shape_calls, f.shape_usec]
 
 
+# --impact=hold: asks for a fire every IMPACT_HOLD_PERIOD_S of sample time. The game's rate
+# limit and its own checks decide whether it fires; a refused ask is retried next frame.
+func _hold_impact(delta: float) -> void:
+	var fx = _game.presentation.player_fx
+	if not _impact_hold or fx == null:
+		return
+	_impact_clock += delta
+	if _impact_clock < IMPACT_HOLD_PERIOD_S:
+		return
+	var marks := get_nodes_in_group(Threat.GROUP).size()
+	if fx.impact_frame(_game.player.ball_position(), 1.0):
+		_impact_clock = 0.0
+		_impact_marks.append(marks)
+
+
 # Opens a window: the worst single call is reset so the window's max is its own.
 func _impact_open() -> void:
+	_impact_clock = 0.0
+	_impact_marks = []
 	_impact_at_sample = _impact_counters()
 	var fx = _game.presentation.player_fx
 	if fx != null and fx._frame != null:
@@ -533,6 +573,9 @@ func _capture() -> void:
 		"warden": _warden_note, "counts": counts, "pre_capture_frames": _stats(_pre_frames),
 		"frames": _stats(_frames), "impact_frames_fired": impact["fired"], "impact_rect_ms": impact["rect_ms"], "impact_shapes_ms": impact["shapes_ms"], "impact_ms_per_fire": impact["ms_per_fire"], "count_samples": _count_samples.duplicate(),
 		"load_valid": counts["fixture_enemies_live"] == int(scene["packs"]) * 4 and counts["synthetic_threats_live"] == int(scene["per_type"]) * 4})
+	if _impact_hold:
+		_results.back()["impact_hold"] = {"forced_fires": _impact_marks.size(), "period_s": IMPACT_HOLD_PERIOD_S,
+			"marks_min": _impact_marks.min() if not _impact_marks.is_empty() else 0, "marks_max": _impact_marks.max() if not _impact_marks.is_empty() else 0}
 	paused = false
 	_last_usec = 0
 	_busy = false
