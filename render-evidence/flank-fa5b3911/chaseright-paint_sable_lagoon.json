@@ -1,0 +1,11 @@
+{
+	"adapter": "NVIDIA GeForce RTX 3060",
+	"camera_to_ball_m": 4.06323909759521,
+	"dist": 4.0,
+	"equipped": "paint_sable_lagoon",
+	"paint": "paint_sable_lagoon",
+	"pilot": "pylon_engineer",
+	"stage": 1,
+	"tool": "paint_chase.gd (bench)",
+	"view": "right"
+}

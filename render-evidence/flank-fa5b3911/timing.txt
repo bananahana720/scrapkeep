@@ -1,0 +1,11 @@
+start 2026-10-22T13:46:28-07:00 (lock held)
+import exit 0
+right none rc=0
+right paint_sable_lagoon rc=0
+right paint_sable_violet rc=0
+right paint_any_salt rc=0
+podx none rc=0
+podx paint_sable_lagoon rc=0
+podx paint_sable_violet rc=0
+podx paint_any_salt rc=0
+end 2026-10-22T13:50:24-07:00
