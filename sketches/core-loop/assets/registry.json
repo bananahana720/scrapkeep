@@ -12739,7 +12739,11 @@
     "recipe": "tools/blender/world_one/shell_cannon.py",
     "helper": "tools/blender/shell_base.py hoberman()",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/cannon/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png"
-   }
+   },
+   "exception": {
+    "draws": 12
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the split ports are their own SplitPorts mesh (copper, rubber) so the carrier bank tilts them off a wall; two more draws than the shell class cap of 10, pending coordinator ruling on #241"
   },
   {
    "id": "shell_cannon_c2",
@@ -12795,7 +12799,11 @@
     "recipe": "tools/blender/world_one/shell_cannon.py --variant choir",
     "helper": "tools/blender/shell_base.py hoberman()",
     "concept": "design-v3/CUSTOMIZE.md section 8 (Choir Barrel); pilots/cannon.md section 7"
-   }
+   },
+   "exception": {
+    "draws": 12
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the split ports are their own SplitPorts mesh (copper, rubber) so the carrier bank tilts them off a wall; two more draws than the shell class cap of 10, pending coordinator ruling on #241"
   },
   {
    "path": "res://assets/models/world_one/shell_kest.glb",
