@@ -688,7 +688,7 @@ static func build_table(results: Array, pilots: Array, kinds: Array, cap: float)
 	return {"cells": cells, "pilots": pilots, "kinds": kinds, "row_median": row_median, "hard": hard, "cap": cap, "wall": wall_rows(cells, pilots, kinds)}
 
 
-# WALL rows: at least one pilot ran the row and none of the pilots that ran it ever killed. Such a
+# WALL rows: at least one pilot ran the row and no pilot killed. Such a
 # row's median is the cap, so the HARD rule (over 2.0 x the row median) can never flag it.
 static func wall_rows(cells: Dictionary, pilots: Array, kinds: Array) -> Array:
 	var out := []
@@ -804,7 +804,7 @@ static func gate_lines(table: Dictionary, answers: Dictionary) -> Array:
 	var g := gate_hard(table)
 	lines.append("matchup_lab: gate every pilot has a hard cell: %s%s" % ["PASS" if g["ok"] else "FAIL", "" if g["ok"] else " (missing: %s)" % ", ".join(g["missing"])])
 	var wall: Array = table.get("wall", [])
-	lines.append("matchup_lab: gate no wall row (every pilot capped, no kill): %s" % ("PASS" if wall.is_empty() else "FAIL (wall rows: %s)" % ", ".join(wall)))
+	lines.append("matchup_lab: gate no wall row (a pilot ran it, no pilot killed): %s" % ("PASS" if wall.is_empty() else "FAIL (wall rows: %s)" % ", ".join(wall)))
 	lines.append("matchup_lab: gate brawler wins each hard cell with its answer item: %s" % _answer_gate_word(answers))
 	lines.append("matchup_lab: gate verdict %s" % gate_verdict(table, answers))
 	return lines

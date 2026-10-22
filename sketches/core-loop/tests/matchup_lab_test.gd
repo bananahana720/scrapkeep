@@ -20,6 +20,7 @@ func _initialize() -> void:
 	_damage_control()
 	_packs_pure()
 	_wall_rows()
+	_wall_verdict()
 	_pack_duel()
 	_perched_pure()
 	_perched_duel()
@@ -317,6 +318,27 @@ func _wall_rows() -> void:
 	_check("colliding row labels are made unique", labels["pack:plate_press_draft"] != labels["pack:plate_press_crown"] and labels["chaser"] == "chaser")
 	var live := _table({"a|k": 2.0, "b|k": 3.0}, ["a", "b"], ["k"])
 	_check("a table with kills has no wall row", (live["wall"] as Array).is_empty())
+
+
+# gate_verdict in isolation: every pilot has a hard cell (gate part one passes), so only the WALL
+# row can move the verdict. k4 is run by every pilot and killed by none.
+func _wall_verdict() -> void:
+	var pilots := ["a", "b", "c"]
+	var kinds := ["k1", "k2", "k3", "k4"]
+	var base := {"a|k1": 9.0, "b|k1": 2.0, "c|k1": 2.0, "a|k2": 2.0, "b|k2": 9.0, "c|k2": 2.0, "a|k3": 2.0, "b|k3": 2.0, "c|k3": 9.0}
+	var walled := base.duplicate()
+	for p in pilots:
+		walled[p + "|k4"] = -1.0
+	var wall_table := _table(walled, pilots, kinds)
+	_check("wall verdict: the all-capped row is the only wall row", wall_table["wall"] == ["k4"] and Lab.gate_hard(wall_table)["ok"])
+	_check("wall verdict: a wall row alone fails the gate", Lab.gate_verdict(wall_table, {}) == "FAIL")
+	var killed := base.duplicate()
+	killed["a|k4"] = -1.0
+	killed["b|k4"] = -1.0
+	killed["c|k4"] = 3.0
+	var live_table := _table(killed, pilots, kinds)
+	_check("wall verdict control: one pilot's kill clears the wall", (live_table["wall"] as Array).is_empty() and Lab.gate_hard(live_table)["ok"])
+	_check("wall verdict control: no wall row, no failure", Lab.gate_verdict(live_table, {}) == "PASS")
 
 
 func _row_text(text: String, label: String) -> String:
