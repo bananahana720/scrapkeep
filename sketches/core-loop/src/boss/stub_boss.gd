@@ -43,8 +43,9 @@ var _chunks_lost_seen := 0
 # Whether the build was a monster build when the fight began (warden.gd monster_build, latched at entry).
 # The hold's exemption reads this, not the live heft, which climbs with the scrap picked up in the fight.
 var _entry_monster := false
-# Per fight (reset at entry): seconds held, and seconds the hold was the binding constraint (from the
-# first frame of a hold with the bar at the cap to its end: the build had already earned the break).
+# Per fight (reset at entry): seconds held, and seconds the hold was the binding constraint: from the
+# first frame of a hold with the bar at the cap to the hold's end, even if the bar later drains below the
+# cap (the build had already earned the break once).
 var hold_s := 0.0
 var hold_bound_s := 0.0
 var _hold_capped := false
