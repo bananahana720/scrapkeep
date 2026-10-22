@@ -6,15 +6,18 @@ extends SceneTree
 # - the roof (ShoredRoof and its canopy), the prop and the falling slab carry no collider
 #   (counter.gd _box and the GLB meshes are bare MeshInstance3D), so the standing frame blocks
 #   no ride line;
-# - the RubbleFall frees itself after its live tick, and nothing collidable is left within
-#   the disc once it has gone;
-# - the roof lands only on a ball on the floor (floor_rule.gd): a ball in the air passes
-#   through, with a floor ball hit from the same setup as the positive control;
-# - the collider counter itself sees a planted collider, so the zero counts are not vacuous.
+# - the committed RubbleFall (its Hazard child included) carries no collider, frees itself
+#   after its live tick, and nothing collidable is left within the disc once it has gone;
+# - the roof lands only on a ball on the floor (floor_rule.gd): a ball about 2 m up, inside
+#   the hazard's reach so the disc contains it, is still not hit because it is off the floor;
+#   a floor ball from the same setup is the positive control;
+# - both counters (collider walk, stray scan) are run on a planted collider, so the zero
+#   counts are not vacuous.
 # The crew's own body is not checked: enemies are hit by design.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const PropCrew := preload("res://src/combat/prop_crew.gd")
 const FloorRule := preload("res://src/combat/floor_rule.gd")
 const WarningGap := preload("res://src/world/events/warning_gap.gd")
 const T := preload("res://tests/support/t.gd")
@@ -101,6 +104,19 @@ static func _nodes_under(node: Node) -> int:
 	return 0 if node == null else 1 + node.find_children("*", "", true, false).size()
 
 
+# CollisionObject3D nodes in the tree that were not in before and sit within radius of centre
+# in xz. Enemies that existed before are already in before, so the enemy group needs no
+# exclusion: anything new the fall leaves, an enemy included, counts.
+func _strays(before: Dictionary, centre: Vector3, radius: float) -> Array:
+	var found_at := []
+	for found in root.find_children("*", "CollisionObject3D", true, false):
+		if before.has(found.get_instance_id()):
+			continue
+		if found is Node3D and _flat(found.global_position).distance_to(_flat(centre)) <= radius:
+			found_at.append(found.get_path())
+	return found_at
+
+
 func _all_bodies() -> Dictionary:
 	var ids := {}
 	for found in root.find_children("*", "CollisionObject3D", true, false):
@@ -119,14 +135,17 @@ func _drop_on_ball(air: bool) -> Dictionary:
 	var here: Vector3 = game.player.ball_position()
 	crew.global_position += Vector3(here.x, 0.0, here.z) - Vector3(crew.roof_centre().x, 0.0, crew.roof_centre().z)
 	var hp: float = game.run.hp
-	var out := {"hit": null, "floored": null, "hp0": hp, "hp1": hp, "landed": false}
+	var out := {"contained": null, "hit": null, "floored": null, "hp0": hp, "hp1": hp, "landed": false}
 	root.remove_meta(WarningGap.LAST_META)
 	var fall = crew.knock_prop()
 	fall.landed.connect(func(_crushed: Array, hit_ball: bool) -> void:
 		out.hit = hit_ball
+		out.contained = fall.hazard.contains(game.player.ball_position())
 		out.landed = true
 		out.floored = FloorRule.on_floor(game.player.state))
-	var held: Vector3 = game.player.ball_position() + Vector3(0.0, 8.0, 0.0)
+	# About 2 m up: inside the hazard's reach (REACH_M 3.5), so contains() is true and only
+	# the floor rule keeps the ball clear.
+	var held: Vector3 = Vector3(here.x, game.ctx.terrain.height(here.x, here.z) + 2.0, here.z)
 	var frames: int = 0
 	while not out.landed and frames < 240:
 		if air and fall.committed():
@@ -182,6 +201,15 @@ func _run() -> void:
 	t.check("the fall carries the slab", slab == roof, "%s" % slab)
 	t.check("the slab walk found its nodes", _nodes_under(slab) > 1, "%d" % _nodes_under(slab))
 	t.eq("the falling slab carries no collider", _colliders_under(slab), 0)
+	# The Hazard is added when the fall commits; walk the whole fall with it present.
+	var committing: int = 0
+	while is_instance_valid(fall) and not fall.committed() and committing < 120:
+		await physics_frame
+		committing += 1
+	t.check("the fall committed", is_instance_valid(fall) and fall.committed(), "%d frames" % committing)
+	t.check("the fall's hazard is in the walk", fall.hazard != null and fall.is_ancestor_of(fall.hazard))
+	t.check("the fall walk found slab and hazard", _nodes_under(fall) >= _nodes_under(slab) + 1, "%d nodes" % _nodes_under(fall))
+	t.eq("the committed fall carries no collider", _colliders_under(fall), 0)
 	var landed := []
 	fall.landed.connect(func(_crushed: Array, _hit_ball: bool) -> void: landed.append(true))
 	var waited: int = 0
@@ -190,13 +218,15 @@ func _run() -> void:
 		waited += 1
 	t.check("the fall landed", landed.size() == 1, "%d landings" % landed.size())
 	t.check("the fall freed itself", not is_instance_valid(fall), "%d frames" % waited)
-	var strays := []
-	for found in root.find_children("*", "CollisionObject3D", true, false):
-		if before.has(found.get_instance_id()) or found.is_in_group("enemy"):
-			continue
-		if found is Node3D and _flat(found.global_position).distance_to(_flat(centre)) <= crew.ROOF_RADIUS + 1.0:
-			strays.append(found.get_path())
+	var strays := _strays(before, centre, PropCrew.ROOF_RADIUS + 1.0)
 	t.eq("nothing collidable is left within the disc", strays, [])
+	# Control: a collider planted in the disc after the before-set is found by the same scan.
+	var plant := StaticBody3D.new()
+	plant.add_child(CollisionShape3D.new())
+	root.add_child(plant)
+	plant.global_position = centre
+	t.eq("a collider planted in the disc is found", _strays(before, centre, PropCrew.ROOF_RADIUS + 1.0).size(), 1)
+	plant.free()
 	_clear()
 	await _frames(2)
 
@@ -205,6 +235,6 @@ func _run() -> void:
 	t.check("the control fall landed on a floor ball", floor_drop.landed and floor_drop.floored == true, "%s" % [floor_drop])
 	t.check("the roof hits a ball on the floor (control)", floor_drop.hit == true and floor_drop.hp1 < floor_drop.hp0, "hp %.1f to %.1f" % [floor_drop.hp0, floor_drop.hp1])
 	var air_drop: Dictionary = await _drop_on_ball(true)
-	t.check("the air fall landed with the ball off the floor", air_drop.landed and air_drop.floored == false, "%s" % [air_drop])
+	t.check("the air fall landed with the disc containing a ball off the floor", air_drop.landed and air_drop.contained == true and air_drop.floored == false, "%s" % [air_drop])
 	t.check("the roof passes a ball in the air", air_drop.hit == false and air_drop.hp1 >= air_drop.hp0, "hp %.1f to %.1f" % [air_drop.hp0, air_drop.hp1])
 	quit(t.verdict())
