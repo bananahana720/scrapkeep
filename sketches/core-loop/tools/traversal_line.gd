@@ -158,6 +158,13 @@ class Sampler:
 	var max_anchor_gap := 0.0
 	var _path := 0.0
 	var _last_anchor := 0.0
+	# Where the worst gap lies: the ball and stage second at the last anchored tick before it, and
+	# at the tick it closed (or the run ended).
+	var _last_anchor_ball := Vector3.INF
+	var _last_anchor_time := 0.0
+	var _gap_from := Vector3.INF
+	var _gap_to := Vector3.INF
+	var _gap_t := [0.0, 0.0]
 	var _last_ball := Vector3.INF
 	var _clock := -1.0
 	var _rides: Array[String] = []
@@ -284,6 +291,8 @@ class Sampler:
 		var ball: Vector3 = player.ball_position()
 		if _start == Vector3.INF:
 			_begin(ball)
+			_last_anchor_ball = ball
+			_last_anchor_time = game.run.stage_time
 		if _last_ball != Vector3.INF:
 			_path += ball.distance_to(_last_ball)
 		_last_ball = ball
@@ -303,8 +312,10 @@ class Sampler:
 		if record_glide and player.kit.gliding:
 			_verb("glide")
 		if _anchored(ball):
-			max_anchor_gap = maxf(max_anchor_gap, _path - _last_anchor)
+			_note_gap(ball)
 			_last_anchor = _path
+			_last_anchor_ball = ball
+			_last_anchor_time = game.run.stage_time
 		_watch_drop(ball)
 		_watch_marks(ball)
 		var intent = player.intent
@@ -400,7 +411,16 @@ class Sampler:
 		return false
 
 	func _close_gap() -> void:
-		max_anchor_gap = maxf(max_anchor_gap, _path - _last_anchor)
+		_note_gap(_last_ball)
+
+	# Keeps max_anchor_gap as maxf of every gap, and where the first longest one lay.
+	func _note_gap(ball: Vector3) -> void:
+		var gap := _path - _last_anchor
+		if gap > max_anchor_gap and _last_anchor_ball != Vector3.INF and ball != Vector3.INF:
+			_gap_from = _last_anchor_ball
+			_gap_to = ball
+			_gap_t = [snappedf(_last_anchor_time, 0.01), snappedf(game.run.stage_time, 0.01)]
+		max_anchor_gap = maxf(max_anchor_gap, gap)
 
 	func _segments() -> Array:
 		var out: Array = []
@@ -421,6 +441,9 @@ class Sampler:
 			return null
 		return snappedf((float(_graph_start) - d) / seconds, 0.01)
 
+	func _xz(p: Vector3) -> Variant:
+		return [snappedf(p.x, 0.1), snappedf(p.z, 0.1)] if p != Vector3.INF else null
+
 	func result(seed_number: int, outcome: String) -> Dictionary:
 		if not engaged:
 			_close_gap()
@@ -437,6 +460,9 @@ class Sampler:
 			"flow_share": snappedf(float(share), 0.0001) if share != null else 0.0,
 			"dead_stops": traversal.dead_stops,
 			"max_anchor_gap_m": snappedf(max_anchor_gap, 0.1),
+			"max_anchor_gap_from": _xz(_gap_from),
+			"max_anchor_gap_to": _xz(_gap_to),
+			"max_anchor_gap_t": _gap_t.duplicate(),
 			"time_to_warden_s": time_to_warden,
 			"reached_warden": engaged,
 			"path_length_m": snappedf(_path, 0.1),
