@@ -1,0 +1,82 @@
+{
+	"adapter": "NVIDIA GeForce RTX 3060",
+	"frames": [
+		{
+			"ambient": "9db5cf",
+			"ambient_energy": 0.219999998807907,
+			"fog": "cbc0c2",
+			"id": "1-stage1-dawn",
+			"stage": 1
+		},
+		{
+			"ambient": "a9c4d6",
+			"ambient_energy": 0.259999990463257,
+			"fog": "c4d5e1",
+			"id": "2-stage2-morning",
+			"stage": 2
+		},
+		{
+			"ambient": "a9c4d6",
+			"ambient_energy": 0.259999990463257,
+			"fog": "c4d5e1",
+			"id": "3-arena-brindle",
+			"stage": 2
+		},
+		{
+			"ambient": "dbe6ec",
+			"ambient_energy": 0.119999997317791,
+			"fog": "56636f",
+			"id": "4-stage3-noon",
+			"stage": 3
+		},
+		{
+			"ambient": "c9c0a8",
+			"ambient_energy": 0.119999997317791,
+			"fog": "56636f",
+			"id": "5-stage4-afternoon",
+			"stage": 4
+		},
+		{
+			"ambient": "9ba8a3",
+			"ambient_energy": 0.159999996423721,
+			"fog": "242a28",
+			"id": "6-arena-waking",
+			"stage": 4
+		},
+		{
+			"ambient": "e0b58a",
+			"ambient_energy": 0.25,
+			"fog": "cdb7a3",
+			"id": "7-stage5-golden",
+			"stage": 5
+		},
+		{
+			"ambient": "5d6b86",
+			"ambient_energy": 0.159999996423721,
+			"fog": "9a98af",
+			"id": "8-stage6-dusk",
+			"stage": 6
+		},
+		{
+			"ambient": "9097bd",
+			"ambient_energy": 0.319999992847443,
+			"fog": "9a98af",
+			"id": "9-mind-crown-dusk",
+			"stage": 0
+		},
+		{
+			"id": "10-mind-fight-hud-0",
+			"stage": 0
+		},
+		{
+			"id": "11-mind-fight-hud-1",
+			"stage": 0
+		},
+		{
+			"id": "12-mind-fight-hud-2",
+			"stage": 0
+		}
+	],
+	"table": "park",
+	"tool": "day_arc_capture.gd"
+}

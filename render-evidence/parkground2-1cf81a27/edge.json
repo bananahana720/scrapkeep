@@ -1,0 +1,37 @@
+{
+	"adapter": "NVIDIA GeForce RTX 3060",
+	"frames": [
+		{
+			"ground_y": 1.0919998884201,
+			"id": "e1-play-edge-px",
+			"x": 740.0,
+			"z": 0.0
+		},
+		{
+			"ground_y": 0.228042764782905,
+			"id": "e2-region-edge-px",
+			"x": 980.0,
+			"z": 0.0
+		},
+		{
+			"ground_y": 0.775200188159943,
+			"id": "e3-region-edge-nx",
+			"x": -980.0,
+			"z": 0.0
+		},
+		{
+			"ground_y": 0.0,
+			"id": "e4-region-edge-pz",
+			"x": 0.0,
+			"z": 980.0
+		},
+		{
+			"ground_y": 0.228042764782905,
+			"id": "e5-over-edge-px",
+			"x": 1010.0,
+			"z": 0.0
+		}
+	],
+	"stage": 3,
+	"tool": "edge_capture.gd (bench)"
+}

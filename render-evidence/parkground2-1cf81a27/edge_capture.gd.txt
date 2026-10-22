@@ -1,0 +1,83 @@
+extends SceneTree
+
+# Bench-only (render bench, not in the repo): stage N of the park table, then a free camera at
+# fixed positions near the play-square edge (|x| 800) and the region edge (|x| 1024).
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+const SIZE := Vector2i(1280, 720)
+var game
+var cam: Camera3D
+var out := ""
+var stage := 3
+var recs: Array = []
+
+
+func _initialize() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--out="):
+			out = a.trim_prefix("--out=")
+		elif a.begins_with("--stage="):
+			stage = int(a.trim_prefix("--stage="))
+	root.size = SIZE
+	root.content_scale_size = SIZE
+	root.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
+	_run.call_deferred()
+
+
+func _frames(n: int) -> void:
+	for i in n:
+		await physics_frame
+
+
+func _run() -> void:
+	seed(171022)
+	game = Game.new()
+	game.test_mode = true
+	game.table = "park"
+	root.add_child(game)
+	while game.flow == null:
+		await physics_frame
+	game.ctx.calm = true
+	game.flow.press_start()
+	game.flow.choose_class(1)
+	game.run.set_max_hp(999999.0)
+	game.player.source = Intent.Scripted.new()
+	cam = Camera3D.new()
+	cam.far = 1800.0
+	game.add_child(cam)
+	DirAccess.make_dir_recursive_absolute(out)
+	game.flow.enter_stage(stage, Vector3.ZERO, false)
+	await _frames(40)
+	game.player.body().freeze = true
+	# [id, x, z, look dx, look dz]
+	var shots := [
+		["e1-play-edge-px", 740.0, 0.0, 1.0, 0.0],
+		["e2-region-edge-px", 980.0, 0.0, 1.0, 0.0],
+		["e3-region-edge-nx", -980.0, 0.0, -1.0, 0.0],
+		["e4-region-edge-pz", 0.0, 980.0, 0.0, 1.0],
+		["e5-over-edge-px", 1010.0, 0.0, 1.0, 0.0],
+	]
+	for s in shots:
+		var x: float = s[1]
+		var z: float = s[2]
+		var gy: float = game.ctx.terrain.height(x, z)
+		cam.global_position = Vector3(x, gy + 6.0, z)
+		cam.look_at(Vector3(x + s[3] * 40.0, gy - 1.0, z + s[4] * 40.0), Vector3.UP)
+		cam.fov = 68.0
+		cam.current = true
+		paused = true
+		var shown: Array = root.find_children("*", "CanvasLayer", true, false).filter(func(n): return n.visible)
+		for n in shown:
+			n.visible = false
+		for i in 12:
+			await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png(out.path_join(s[0] + ".png"))
+		recs.append({"id": s[0], "x": x, "z": z, "ground_y": gy})
+		for n in shown:
+			n.visible = true
+		paused = false
+		print("snap ", s[0])
+	var f := FileAccess.open(out.path_join("edge.json"), FileAccess.WRITE)
+	f.store_string(JSON.stringify({"tool": "edge_capture.gd (bench)", "adapter": RenderingServer.get_video_adapter_name(), "stage": stage, "frames": recs}, "\t"))
+	f.close()
+	quit()
