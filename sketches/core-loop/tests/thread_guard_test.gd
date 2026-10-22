@@ -42,11 +42,12 @@ func _main_thread() -> void:
 	var bare := ParkTerrain._make_region(_maps().slice(0, 3))
 	bare.sanitize_maps()
 	var given: Image = region.get_color_map() if region != null else null
+	var given_data := given.get_data() if given != null else PackedByteArray()
 	if region != null:
 		region.sanitize_maps()
 	var made: Image = bare.get_color_map()
 	_t.check("the worker's color map equals the one sanitize_maps makes (format, mipmaps, every byte)", given != null and made != null
-		and given.get_format() == made.get_format() and given.has_mipmaps() == made.has_mipmaps() and given.get_data() == made.get_data(),
+		and given.get_format() == made.get_format() and given.has_mipmaps() == made.has_mipmaps() and given_data == made.get_data(),
 		"%s / %s" % [str(given), str(made)])
 	# Made in the form the region keeps: one without mipmaps gets them from set_color_map, on the main thread (45 ms on the cloud).
 	var fresh := ParkTerrain.color_map()

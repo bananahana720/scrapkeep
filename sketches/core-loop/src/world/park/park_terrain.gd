@@ -441,6 +441,7 @@ func _attach_step(deadline: int) -> void:
 		if terrain3d == null or terrain3d.data == null:
 			push_warning("park_terrain: %s has no Terrain3D render node; collider only" % map_id)
 			terrain3d = null
+			_regions.fill(null)
 			_next_region = REGION_COUNT
 			_next_map = MAP_TYPES.size()
 		if deadline >= 0:
