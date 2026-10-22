@@ -31,6 +31,7 @@ const KestKit := preload("res://src/combat/kest_kit.gd")
 const Sight := preload("res://src/combat/sight.gd")
 # v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
+const Dunk := preload("res://src/combat/dunk.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # The roster row fleet.gd's own reinforcement-pack system reads (M0's "adds" classification).
 const Roster := preload("res://src/combat/roster.gd")
@@ -659,6 +660,27 @@ func _door_caps(hit: Dictionary) -> void:
 	# its own mark.
 	if hit["kind"] == ARC_MARK_KIND:
 		_arc_mark(enemy)
+	_spend_dunk(enemy, hit["kind"], result)
+
+
+# The dunk charge (dunk.gd) pays on a reel impact: exactly the stored slam damage, once, added
+# after the multipliers so it lands as stored. A blocked hit keeps the charge for the next.
+func _spend_dunk(enemy: Node3D, kind: String, result: Dictionary) -> void:
+	if ctx == null or ctx.player == null or not ctx.player.get("dunk") or bool(result.get("guarded", false)):
+		return
+	if not is_reel_impact(kind, ctx.player.smash_landing == enemy):
+		return
+	var bonus: float = ctx.player.dunk.spend(enemy)
+	if bonus > 0.0:
+		result["dealt"] = float(result["dealt"]) + bonus
+		result["dunk"] = bonus
+
+
+# The reel test punch_of's winch branch already uses (a smash landing counts as hooked: the
+# landing lets the line go before its strikes resolve), shared with the dunk charge.
+func is_reel_impact(kind: String, smash: bool) -> bool:
+	var kit = ctx.player.kit
+	return Dunk.is_reel_impact(kind, smash, kit.hooked, kit.winching)
 
 
 # Damage families (DamageFamilies, FIELDS-AND-CASTS section 6): a hit that beat the plating
