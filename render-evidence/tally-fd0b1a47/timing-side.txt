@@ -1,0 +1,16 @@
+start 2026-10-22T15:13:17-07:00 (lock held)
+import a7e81dc2 exit 0
+a7e81dc2 right none rc=0
+a7e81dc2 right paint_any_salt rc=0
+a7e81dc2 right paint_any_cobalt rc=0
+a7e81dc2 left none rc=0
+a7e81dc2 left paint_any_salt rc=0
+a7e81dc2 left paint_any_cobalt rc=0
+import fd0b1a47 exit 0
+fd0b1a47 right none rc=0
+fd0b1a47 right paint_any_salt rc=0
+fd0b1a47 right paint_any_cobalt rc=0
+fd0b1a47 left none rc=0
+fd0b1a47 left paint_any_salt rc=0
+fd0b1a47 left paint_any_cobalt rc=0
+end 2026-10-22T15:19:22-07:00

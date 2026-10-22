@@ -1,0 +1,11 @@
+{
+	"adapter": "NVIDIA GeForce RTX 3060",
+	"camera_to_ball_m": 3.0,
+	"dist": 3.0,
+	"equipped": "paint_any_salt",
+	"paint": "paint_any_salt",
+	"pilot": "tally",
+	"stage": 1,
+	"tool": "paint_chase.gd (bench)",
+	"view": "top"
+}
