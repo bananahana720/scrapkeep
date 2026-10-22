@@ -50,6 +50,9 @@ func _parse_checks() -> void:
 	_t.check("a zero normal is refused", not Subjects.frame_options(["--frames=3", "--contact-normal=0,0,0"])["problems"].is_empty())
 	_t.check("--squash without --squash-tick is refused", not Subjects.frame_options(["--frames=3", "--squash=0.2"])["problems"].is_empty())
 	_t.check("both anchors are refused", not Subjects.frame_options(["--frames=3", "--anchor=1,2,3", "--anchor-rel=1,2,3"])["problems"].is_empty())
+	for bad in ["--frames=abc", "--speed=abc", "--pod-yaw=abc", "--fps=x", "--squash-tick=1.5", "--squash-tick=x"]:
+		var args: Array = ["--frames=3", bad] if not bad.begins_with("--frames") else [bad]
+		_t.check("%s exits 2 with a message" % bad, not Subjects.frame_options(args)["problems"].is_empty(), str(Subjects.frame_options(args)["problems"]))
 	var tangent := Subjects.travel_dir({"dir": Vector3(0, 0, -1), "contact_normal": Vector3(1, 0, -1)})
 	_t.near("travel along a wall is tangent to its normal", tangent.dot(Vector3(1, 0, -1).normalized()), 0.0)
 	var rows: Array = []
@@ -88,7 +91,7 @@ func _game_checks() -> void:
 	_game.player.body().freeze = true
 	var player = _game.player
 	var rig := {"player": player, "mesh": player.roll_node().get_parent(), "juice": _game.presentation.juice, "hero": _game.presentation.hero_assets,
-		"line_view": _game.presentation.line_view, "pod": _game.presentation.hero_assets.shell_of(player).get("pod")}
+		"line_view": _game.presentation.line_view, "pod": _game.presentation.hero_assets.shell_of(player).get("pod"), "core": _game.presentation.hero_assets.shell_of(player).get("core")}
 	_t.check("the booted game has a pod to steer", rig["pod"] != null)
 	var at: Vector3 = player.ball_position()
 	paused = true
@@ -105,6 +108,55 @@ func _game_checks() -> void:
 	_t.check("the anchor is hooked at the offset", player.kit.hooked and player.kit.anchor.is_equal_approx(at + Vector3(0, 6, -8)), str(player.kit.anchor))
 	_t.check("the lattice (core) turns between frames", _varies(live["gyro"]), str(live["gyro"]))
 
+	# Frame 0 matches its row (review finding 1): the rope is drawn and the speed stretch is on.
+	var cable: MeshInstance3D = rig["line_view"].cable
+	_t.check("frame 0 of an anchor strip has a drawn cable", cable.visible and (cable.mesh as ImmediateMesh).get_surface_count() > 0)
+	var fresh := Subjects.frame_options(["--frames=2", "--fps=60", "--speed=40", "--anchor-rel=0,6,-8"])
+	player.kit.hooked = false
+	rig["line_view"].step(0.0)
+	_t.check("the cable is gone before the strip begins", not cable.visible)
+	player.state.velocity = Vector3.ZERO
+	rig["juice"].squash(0.0, Vector3.UP)
+	rig["juice"]._process(0.0)
+	var rest_basis: Basis = player.juice_node().basis
+	Harness.strip_frame(rig, fresh, 0, at)
+	var jb: Basis = player.juice_node().basis
+	_t.check("frame 0 has the speed stretch applied", not jb.is_equal_approx(rest_basis), "%s vs %s" % [jb, rest_basis])
+	_t.check("frame 0 hooks and draws the cable from the begin pass alone", cable.visible and player.kit.hooked)
+	# Planted control: without the begin pass the same checks fail (begin without its present step).
+	player.kit.hooked = false
+	rig["line_view"].step(0.0)
+	rig["juice"]._process(0.0)
+	var no_present := rig.duplicate()
+	no_present["line_view"] = null
+	no_present["hero"] = null
+	player.state.velocity = Vector3.ZERO
+	no_present["juice"] = _Idle.new()
+	rig["juice"].squash(0.0, Vector3.UP)
+	rig["juice"]._process(0.0)
+	Harness.strip_begin(no_present, fresh, at)
+	_t.check("PLANTED: with the present pass off, frame 0 has no cable", not cable.visible)
+	_t.check("PLANTED: with the present pass off, frame 0 has no stretch", player.juice_node().basis.is_equal_approx(rest_basis))
+	# The gyro solves against the overridden yaw (finding 2).
+	var pod := rig["pod"] as Node3D
+	var gyro := pod.get_node_or_null("Gyro") as Node3D
+	var core = _game.presentation.hero_assets.shell_of(player).get("core")
+	if gyro != null and core != null:
+		var yaw_o := Subjects.frame_options(["--frames=2", "--fps=60", "--speed=30", "--pod-yaw=45"])
+		Harness.strip_frame(rig, yaw_o, 0, at)
+		Harness.strip_frame(rig, yaw_o, 1, at)
+		var got := gyro.rotation
+		_game.presentation.hero_assets.counter_tilt(pod, gyro, core)
+		_t.check("the gyro equals the game's solve for a pod resting at 45 degrees", got.is_equal_approx(gyro.rotation), "%s vs %s" % [got, gyro.rotation])
+		# Planted: solving with the pod at another yaw gives a different gyro, so the check can fail.
+		pod.rotation.y = deg_to_rad(38.1)
+		_game.presentation.hero_assets.counter_tilt(pod, gyro, core)
+		_t.check("PLANTED: a gyro solved at 38.1 degrees differs from the 45 degree one", not got.is_equal_approx(gyro.rotation))
+	var podless := rig.duplicate()
+	podless["pod"] = null
+	var applied := Harness.strip_begin(podless, yaw_less(), at)
+	_t.eq("a subject with no pod records pod_yaw_applied false", applied.get("pod_yaw_applied"), false)
+
 	var still_o := Subjects.frame_options(["--frames=8", "--fps=60"])
 	var at_rest := _strip(rig, still_o, at, true)
 	_t.check("no speed is no roll across the strip", not _roll_advances(at_rest["bases"], 0.001))
@@ -120,13 +172,13 @@ func _game_checks() -> void:
 
 # One strip on the harness's own begin and step. step=false is the planted control.
 func _strip(rig: Dictionary, o: Dictionary, at: Vector3, step: bool) -> Dictionary:
-	Harness.strip_begin(rig, o, at)
 	var out := {"bases": [], "squash": [], "yaws": [], "gyro": [], "turns": []}
-	var dt := 1.0 / float(o["fps"])
 	var core = _game.presentation.hero_assets.shell_of(rig["player"]).get("core")
 	for i in int(o["frames"]):
-		if i > 0 and step:
-			Harness.strip_step(rig, o, dt)
+		if i == 0:
+			Harness.strip_frame(rig, o, 0, at)
+		elif step:
+			Harness.strip_frame(rig, o, i, at)
 		out["bases"].append((rig["mesh"] as Node3D).basis)
 		out["squash"].append(rig["juice"].squash_amount())
 		out["yaws"].append((rig["pod"] as Node3D).rotation.y)
@@ -150,3 +202,15 @@ func _varies(values: Array) -> bool:
 		if absf(values[i] - values[i - 1]) > 0.00001:
 			return true
 	return false
+
+
+class _Idle:
+	func squash(_a, _b) -> void:
+		pass
+
+	func _process(_dt: float) -> void:
+		pass
+
+
+func yaw_less() -> Dictionary:
+	return Subjects.frame_options(["--frames=2", "--pod-yaw=45"])

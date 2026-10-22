@@ -433,6 +433,13 @@ const MAX_FRAMES := 600
 const MAX_SQUASH := 0.45
 
 
+static func _set_num(o: Dictionary, key: String, text: String, whole: bool) -> void:
+	if (whole and not text.is_valid_int()) or (not whole and not text.is_valid_float()):
+		o["problems"].append("--%s=%s is not a number" % [key.replace("_", "-"), text])
+	else:
+		o[key] = int(text) if whole else float(text)
+
+
 static func _set_vec(o: Dictionary, key: String, text: String) -> void:
 	var vec = _vec(text)
 	if vec == null:
@@ -457,12 +464,12 @@ static func frame_options(args: Array) -> Dictionary:
 	var seen: Array = []
 	for a in args:
 		var arg := String(a)
-		if arg.begins_with("--frames="): o["frames"] = int(arg.trim_prefix("--frames="))
-		elif arg.begins_with("--fps="): o["fps"] = float(arg.trim_prefix("--fps="))
-		elif arg.begins_with("--speed="): o["speed"] = float(arg.trim_prefix("--speed="))
-		elif arg.begins_with("--pod-yaw="): o["pod_yaw"] = float(arg.trim_prefix("--pod-yaw="))
-		elif arg.begins_with("--squash-tick="): o["squash_tick"] = int(arg.trim_prefix("--squash-tick="))
-		elif arg.begins_with("--squash="): o["squash"] = float(arg.trim_prefix("--squash="))
+		if arg.begins_with("--frames="): _set_num(o, "frames", arg.trim_prefix("--frames="), true)
+		elif arg.begins_with("--fps="): _set_num(o, "fps", arg.trim_prefix("--fps="), false)
+		elif arg.begins_with("--speed="): _set_num(o, "speed", arg.trim_prefix("--speed="), false)
+		elif arg.begins_with("--pod-yaw="): _set_num(o, "pod_yaw", arg.trim_prefix("--pod-yaw="), false)
+		elif arg.begins_with("--squash-tick="): _set_num(o, "squash_tick", arg.trim_prefix("--squash-tick="), true)
+		elif arg.begins_with("--squash="): _set_num(o, "squash", arg.trim_prefix("--squash="), false)
 		elif arg.begins_with("--dir="): _set_vec(o, "dir", arg.trim_prefix("--dir="))
 		elif arg.begins_with("--contact-normal="): _set_vec(o, "contact_normal", arg.trim_prefix("--contact-normal="))
 		elif arg.begins_with("--anchor-rel="): _set_vec(o, "anchor_rel", arg.trim_prefix("--anchor-rel="))

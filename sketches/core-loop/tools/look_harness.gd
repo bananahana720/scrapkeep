@@ -38,13 +38,15 @@ extends SceneTree
 #     --speed=M [--dir=x,y,z]   roll at M m/s along dir (default forward, -Z; made tangent to a
 #                         --contact-normal). The ball stays on its camera's point (a treadmill):
 #                         the speed drives the roll, the stretch and the pod's heading, not travel.
-#     --pod-yaw=DEG       the pod's world yaw, held after the game's own steering each frame (0 faces -Z).
+#     --pod-yaw=DEG       the pod's world yaw, held around the game's own steering each frame (0 faces -Z);
+#                         a subject with no pod warns and records "pod_yaw_applied": false.
 #     --contact-normal=x,y,z   the surface under the ball (a park wall: its normal); the squash axis
 #                         and the rolling axis follow it, and the ball counts as grounded.
 #     --anchor=x,y,z | --anchor-rel=x,y,z   hook the harpoon line there (world point, or an offset
 #                         from the ball) and set the rope taut.
 #     --squash-tick=N [--squash=A]   frame 0 is N physics ticks (1/90 s) after a slam or landing
 #                         squash of amount A (default 0.45, the peak) along the contact normal (else up).
+#   Not stepped: player_fx (trails, speed rings, sound words) and the camera, so those freeze across a strip.
 #   The tree stays paused: each frame steps the ball's roll, the pod, the juice springs and the line
 #   by exactly 1/F s, so spin and squash advance between frames. Writes <out>/<subject>/<camera>/f0000.png
 #   and a frames.json row per frame (id <camera>_f0000, "frame": {index, time, fps, overrides}). Ball
@@ -699,7 +701,8 @@ func _strip_rig() -> Dictionary:
 	var player = game.player
 	var hero = game.presentation.hero_assets
 	return {"player": player, "mesh": player.roll_node().get_parent(), "juice": game.presentation.juice, "hero": hero,
-		"line_view": game.presentation.line_view, "pod": hero.shell_of(player).get("pod") if hero != null else null}
+		"line_view": game.presentation.line_view, "pod": hero.shell_of(player).get("pod") if hero != null else null,
+		"core": hero.shell_of(player).get("core") if hero != null else null}
 
 
 # Frame 0: the overrides that are states rather than rates. Returns the anchor it hooked, if any.
@@ -723,8 +726,42 @@ static func strip_begin(rig: Dictionary, o: Dictionary, ball_at: Vector3) -> Dic
 		player.kit.anchor = a
 		player.kit.rope = ball_at.distance_to(a)
 		resolved["anchor"] = [a.x, a.y, a.z]
-	_strip_pod(rig, o)
+	if o.has("pod_yaw"):
+		var pod = rig.get("pod")
+		resolved["pod_yaw_applied"] = pod != null and is_instance_valid(pod)
+		if not resolved["pod_yaw_applied"]:
+			printerr("look_harness: --pod-yaw ignored: this subject has no pod (recorded as pod_yaw_applied false)")
+	# Frame 0 shows exactly the state its row records: the same presentation pass as a step, for no time.
+	_strip_present(rig, o, 0.0)
 	return resolved
+
+
+# The game's own per-frame code for dt, with the pod yaw override set before it (so the gyro and the
+# lattice solve against the overridden yaw) and again after it (the pod's own steering turns it).
+static func _strip_present(rig: Dictionary, o: Dictionary, dt: float) -> void:
+	_strip_pod(rig, o)
+	if rig.get("hero") != null:
+		rig["hero"]._process(dt)
+	rig["juice"]._process(dt)
+	_strip_pod(rig, o)
+	# The pod's steering lerped the yaw toward the heading before the override put it back, so the
+	# gyro and lattice it solved are off by that turn: solve them again at the held yaw.
+	var pod = rig.get("pod")
+	if o.has("pod_yaw") and rig.get("hero") != null and pod != null and is_instance_valid(pod):
+		var gyro := (pod as Node3D).get_node_or_null("Gyro") as Node3D
+		var core = rig.get("core")
+		if gyro != null and gyro.has_node("GyroInner") and core != null and is_instance_valid(core):
+			rig["hero"].counter_tilt(pod, gyro, core)
+	if rig.get("line_view") != null and rig["player"].kit.hooked:
+		rig["line_view"].step(dt)
+
+
+# Frame i of a strip: the begin pose for 0, else one step. Returns what the begin resolved.
+static func strip_frame(rig: Dictionary, o: Dictionary, i: int, ball_at: Vector3) -> Dictionary:
+	if i == 0:
+		return strip_begin(rig, o, ball_at)
+	strip_step(rig, o, 1.0 / float(o["fps"]))
+	return {}
 
 
 static func _strip_pod(rig: Dictionary, o: Dictionary) -> void:
@@ -738,28 +775,23 @@ static func _strip_pod(rig: Dictionary, o: Dictionary) -> void:
 static func strip_step(rig: Dictionary, o: Dictionary, dt: float) -> void:
 	var mesh: Node3D = rig["mesh"]
 	mesh.basis = (Subjects.spin_step(o, dt) * mesh.basis).orthonormalized()
-	if rig.get("hero") != null:
-		rig["hero"]._process(dt)
-	rig["juice"]._process(dt)
-	_strip_pod(rig, o)
-	if rig.get("line_view") != null and rig["player"].kit.hooked:
-		rig["line_view"]._process(dt)
-
+	_strip_present(rig, o, dt)
 
 func _strip_camera(subject: String, shot: Array, v: Dictionary, dir: String, ball: Dictionary) -> Array:
 	var cam_dir := dir.path_join(String(shot[0]))
 	DirAccess.make_dir_recursive_absolute(cam_dir)
 	var rig := _strip_rig()
 	var at := Vector3(ball["at"][0], ball["at"][1], ball["at"][2])
-	var resolved := strip_begin(rig, strip, at)
-	var dt := 1.0 / float(strip["fps"])
+	var resolved := {}
 	var recs: Array = []
-	for i in DRAW_FRAMES:
-		await RenderingServer.frame_post_draw
 	for i in int(strip["frames"]):
 		var started := Time.get_ticks_msec()
-		if i > 0:
-			strip_step(rig, strip, dt)
+		var began := strip_frame(rig, strip, i, at)
+		if i == 0:
+			resolved = began
+			for k in DRAW_FRAMES:
+				await RenderingServer.frame_post_draw
+		else:
 			await RenderingServer.frame_post_draw
 			await RenderingServer.frame_post_draw
 		var file := "f%04d.png" % i
