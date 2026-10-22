@@ -9,9 +9,16 @@ extends SceneTree
 # (5 mm, 0.5 degrees or 0.01 scale per frame). So a stepped track (a clock hand that ticks on
 # the beat grid, kill_first_rig.py) or a footfall that reverses mid-clip may reverse at the
 # seam too, while a smooth clip that arrives moving and leaves reversed fails.
-# Looped clips come from special_rig.gd CLIPS, linker.gd:48, mind_hand.gd:263 and the
-# hero_assets.gd idle replay. Mirrors tools/blender/rig_pose_audit.py section 5.
-# Real seam failures are findings: this test is allowed to stay red on shipped clips.
+# Looped clips come from special_rig.gd CLIPS, linker.gd:48, mind_hand.gd:265, the
+# hero_assets.gd idle replay and BossModel.loop_clip (boss_model.gd:72, LOOP_LINEAR): Brindle's
+# idle_roll (requisition.gd:253) and the scooter's chase (requisition.gd:321), and the Mind
+# kit's attention (mind_dress.gd:93). The Waking's `sleeping` is not here: waking_dress.gd
+# never plays it (it opens on `wake`, :97) and never sets a loop mode on it, so it is a
+# held 3 s base pose, not a loop (waking.py:56 gives it zero key-pose seconds). Mirrors tools/blender/rig_pose_audit.py section 5.
+# Real seam failures are findings. A failure that exists on the shipped clips today is listed in
+# KNOWN below with its cause; the test then requires it to still fail, so fixing the clip while
+# leaving its row fails the test as stale (the table ratchets down). Anything else that fails
+# is red.
 
 const T := preload("res://tests/support/t.gd")
 const M := "res://assets/models/"
@@ -34,9 +41,18 @@ const LOOPS := [
 	[M + "warden_swarm_kit_drones.glb", "idle"],
 	[M + "warden_mind.glb", "idle"],
 	[M + "bosses/mind_hand.glb", "still_track"],
+	[M + "bosses/boss_brindle.glb", "idle_roll"],
+	[M + "bosses/boss_brindle_scooter.glb", "chase"],
+	[M + "bosses/boss_mind_kit.glb", "attention"],
 ]
 
+# label -> measured cause for a seam that is known and not yet fixed. Empty: the Brindle drum
+# loops were the last two (fixed in brindle_animation.py as whole numbers of turns).
+const KNOWN := {
+}
+
 var t := T.new("rig_loop_seam_test")
+var _known_seen := {}
 
 
 func _initialize() -> void:
@@ -205,6 +221,13 @@ func _run() -> void:
 		var detail := "%d tracks, %.3f s" % [out["tracks"], anim.length]
 		if not fails.is_empty():
 			detail += "; %d failing: %s" % [fails.size(), " | ".join(PackedStringArray(fails.slice(0, 12)))]
-		t.check(label + " loops seamlessly", fails.is_empty(), detail)
+		if KNOWN.has(label):
+			_known_seen[label] = true
+			t.check(label + " still has its KNOWN seam failure (remove the KNOWN row once fixed)", not fails.is_empty(),
+				"known cause: " + String(KNOWN[label]))
+		else:
+			t.check(label + " loops seamlessly", fails.is_empty(), detail)
 		inst.queue_free()
+	for label in KNOWN:
+		t.check("KNOWN row was visited: " + label, _known_seen.has(label), "a KNOWN label no LOOPS entry produced is stale")
 	quit(t.verdict())

@@ -470,7 +470,10 @@ func _check_anchor_contacts() -> void:
 	var recorded: Array = AC.collect(root, [row])
 	var shapes := node.find_children("*", "CollisionShape3D", true, false)
 	var all_fitted := recorded.all(func(b: Dictionary) -> bool: return b["fitted"] and b["row"] == "corner_t")
-	_t.check("anchor contacts: collect finds every box of a placed fitted row (%d of %d)" % [recorded.size(), shapes.size()], recorded.size() == shapes.size() and shapes.size() > 0 and all_fitted)
+	_t.check("anchor contacts: collect records every shape of a placed fitted row, hulls as prisms (%d of %d)" % [recorded.size(), shapes.size()], recorded.size() == shapes.size() and shapes.size() > 0 and all_fitted)
+	var prisms := recorded.filter(func(b: Dictionary) -> bool: return b.has("poly"))
+	_t.check("anchor contacts: the placed row is recorded as hull prisms (%d of %d records)" % [prisms.size(), recorded.size()], prisms.size() > 0)
+	_check_planted_prism()
 	_check_placed_corners(row, node, recorded)
 	if not recorded.is_empty():
 		var c: Vector2 = recorded[0]["corners"][0]
@@ -519,6 +522,11 @@ func _start_contact() -> void:
 	_ball.physics_material_override.bounce = 0.6
 	_fake.add_child(_ball)
 	var centre: Vector3 = (top["xf"] as Transform3D).origin
+	if top.has("poly"):
+		# A hull record's frame is the post's foot, not the band; aim at the middle of its polygon.
+		centre = Vector3.ZERO
+		for c: Vector2 in top["poly"]:
+			centre += Vector3(c.x, 0.0, c.y) / float((top["poly"] as Array).size())
 	_ball.global_position = Vector3(centre.x, float(top["y1"]) + 1.5, centre.z)
 	_fake.player = {"_rigid": _ball}
 	_rec = TraversalLine.AnchorContacts.new("park_contact", 1, {}, [_contact_row])
@@ -576,23 +584,72 @@ func _check_placed_corners(row: Dictionary, node: Node3D, recorded: Array) -> vo
 		wanted["even"] >= 0 and wanted["odd"] >= 0 and recorded.size() == posts.size() * fit.size())
 	if wanted["even"] < 0 or wanted["odd"] < 0 or recorded.size() != posts.size() * fit.size():
 		return
+	var hulls := ParkRecipes.anchor_hulls(row, fit)
 	for label: String in wanted:
 		var k: int = wanted[label]
 		var turn := ParkRecipes.anchor_turn(row, k)
 		var worst := 0.0
+		var span := 0.0
+		var prism_bands := 0
 		for i in fit.size():
 			var b: Dictionary = fit[i]
+			var local_points: Array = []
+			var hull_band: bool = i < hulls.size() and hulls[i] != null
+			if hull_band:
+				for pt in (hulls[i] as ConvexPolygonShape3D).points:
+					local_points.append(pt)
+			else:
+				for x in b["x"]:
+					for z in b["z"]:
+						local_points.append(Vector3(float(x), 0.0, float(z)))
 			var expected: Array = []
-			for x in b["x"]:
-				for z in b["z"]:
-					var p := Vector3(posts[k].x, 0.0, posts[k].y) + node.global_transform.basis * (turn * Vector3(float(x), 0.0, float(z)))
-					expected.append(Vector2(p.x, p.z))
-			for c: Vector2 in recorded[k * fit.size() + i]["corners"]:
+			var lo := Vector2(INF, INF)
+			var hi := Vector2(-INF, -INF)
+			for pt: Vector3 in local_points:
+				var p := Vector3(posts[k].x, 0.0, posts[k].y) + node.global_transform.basis * (turn * Vector3(pt.x, 0.0, pt.z))
+				expected.append(Vector2(p.x, p.z))
+				lo = lo.min(Vector2(p.x, p.z))
+				hi = hi.max(Vector2(p.x, p.z))
+			var rec: Dictionary = recorded[k * fit.size() + i]
+			prism_bands += 1 if hull_band and rec.has("poly") else 0
+			var rlo := Vector2(INF, INF)
+			var rhi := Vector2(-INF, -INF)
+			for c: Vector2 in rec["corners"]:
 				var nearest := INF
 				for e: Vector2 in expected:
 					nearest = minf(nearest, c.distance_to(e))
 				worst = maxf(worst, nearest)
-		_t.check("anchor contacts: every recorded corner of the first %s-turn post (%d) is a corner of its table box turned by anchor_turn (worst %.4f m)" % [label, k, worst], worst < 0.001)
+				rlo = rlo.min(c)
+				rhi = rhi.max(c)
+			# The polygon spans what the independent points span (no extreme vertex dropped).
+			span = maxf(span, maxf(rlo.distance_to(lo), rhi.distance_to(hi)))
+		_t.check("anchor contacts: every recorded vertex of the first %s-turn post (%d) is a point of anchor_hulls or table box turned by anchor_turn (worst %.4f m, extent off %.4f m, %d prism bands)" % [label, k, worst, span, prism_bands],
+			worst < 0.001 and span < 0.001 and prism_bands > 0)
+
+
+# A planted prism (a square hull turned 45 degrees at (10, 3, 20), h span 0 to 2): distances and normals to its edge, vertex and top.
+func _check_planted_prism() -> void:
+	var AC = TraversalLine.AnchorContacts
+	var info := {"row": "prism", "key": "anchor_basalt_a", "size_y": 2.0, "fitted": true, "over_limit": false}
+	var pts := PackedVector3Array([Vector3(-1, 0, -1), Vector3(1, 0, -1), Vector3(1, 0, 1), Vector3(-1, 0, 1), Vector3(0, 0, 0), Vector3(-1, 2, -1), Vector3(1, 2, -1), Vector3(1, 2, 1), Vector3(-1, 2, 1)])
+	var xf := Transform3D(Basis(Vector3.UP, PI * 0.25), Vector3(10.0, 3.0, 20.0))
+	var rec: Dictionary = AC.hull_record(xf, AC.hull_outline(pts), info)
+	var root2 := sqrt(2.0)
+	_t.check("anchor contacts: a hull prism has the square's four vertices and the h span 3 to 5", (rec["poly"] as Array).size() == 4 and absf(float(rec["y0"]) - 3.0) < 0.0001 and absf(float(rec["y1"]) - 5.0) < 0.0001, str(rec))
+	var vertex := Vector3(10.0 + root2 + 0.6, 4.0, 20.0)
+	var corner: Dictionary = AC.corner_distance(vertex, [rec])
+	_t.check("anchor contacts: a ball 0.6 m outside the prism's vertex reads 0.6 m from a corner", absf(float(corner["dist"]) - 0.6) < 0.0001, str(corner))
+	var side := Vector3(10.0 + 0.5 * root2 + 0.3 / root2, 4.0, 20.0 + 0.5 * root2 + 0.3 / root2)
+	var edge_hit: Dictionary = AC.nearest_surface(side, [rec])
+	_t.check("anchor contacts: a ball 0.3 m off a polygon edge reads 0.3 m with the edge's outward normal", absf(float(edge_hit["dist"]) - 0.3) < 0.0001 and absf((edge_hit["normal"] as Vector3).x - 1.0 / root2) < 0.0001 and absf((edge_hit["normal"] as Vector3).z - 1.0 / root2) < 0.0001, str(edge_hit))
+	var up_hit: Dictionary = AC.nearest_surface(Vector3(10.0, 5.7, 20.0), [rec])
+	_t.check("anchor contacts: a ball 0.7 m over the prism reads 0.7 m with a normal up, and 0 inside", absf(float(up_hit["dist"]) - 0.7) < 0.0001 and (up_hit["normal"] as Vector3).y > 0.9999
+		and float(AC.nearest_surface(Vector3(10.0, 4.0, 20.0), [rec])["dist"]) == 0.0, str(up_hit))
+	var down_hit: Dictionary = AC.nearest_surface(Vector3(10.0, 2.5, 20.0), [rec])
+	_t.check("anchor contacts: a ball 0.5 m under the prism has a normal down", absf(float(down_hit["dist"]) - 0.5) < 0.0001 and (down_hit["normal"] as Vector3).y < -0.9999, str(down_hit))
+	var diagonal: Dictionary = AC.approach(Vector3(10.0 + root2 + 0.6, 5.8, 20.0), [rec], AC.build_grid([rec]))
+	var want := sqrt(0.6 * 0.6 + 0.8 * 0.8)
+	_t.check("anchor contacts: closest approach to a prism's vertex above its top reads the 3D distance %.3f m" % want, absf(float(diagonal["surface"]["dist"]) - want) < 0.0001 and absf(float(diagonal["corner"]["dist"]) - want) < 0.0001, str(diagonal))
 
 
 func _check_floor_hands() -> void:
