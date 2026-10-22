@@ -1,16 +1,18 @@
 extends SceneTree
 # Islands anchor posts (#241 ruling 6330671507 item 2): clear_zones skips a footprint that spans the park
-# (park_recipes.gd spans_park: size[2] reaches the play rect's extent on its cross axis, the park_map.gd mesa_edge
-# reach), and keeps every route lane.
-# (a) islands places posts (it placed 0 of 1,730 before) and its full-width bands are no footprint zone;
-# (b) the other five parks keep their post counts (pinned from base b12fd171);
-# (c) a full-width row's route lanes still clear a post.
+# (park_recipes.gd spans_park: park_map.gd mesa_edge's rule, a stamped greybox row with no y whose size[2] reaches the
+# play rect's extent on its cross axis), and keeps every route lane.
+# (a) islands places 1,229 posts (it placed 0 of 1,730 before) and its full-width bands are no footprint zone;
+# (b) the other five parks keep their post counts (pinned at b12fd171, unchanged at 74682daf);
+# (c) a full-width row's route lanes still clear a post;
+# (d) the cross axis on a non-square rect at yaw 0 and 90, and a full-width built solid (no stamp, or a y) keeps out.
 # Evidence limit: placement data only.
 
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const T := preload("res://tests/support/t.gd")
 
-# Posts per park at base b12fd171 (clear_zones without the span rule); islands was 0.
+# Posts per park at b12fd171 (clear_zones without the span rule; islands was 0), unchanged at 74682daf.
+const ISLANDS_POSTS := 1229
 const PINNED := {"dam": 6059, "flume": 20, "pit": 85, "sinkhole": 1281, "crown": 5618}
 
 var _t := T.new("park_anchor_span_test")
@@ -35,7 +37,7 @@ func _posts(park: Dictionary) -> int:
 
 func _run() -> void:
 	var islands := _park("islands")
-	_t.check("(a) islands places posts (%d)" % _posts(islands), _posts(islands) > 0)
+	_t.eq("(a) islands places its posts", _posts(islands), ISLANDS_POSTS)
 	var mesa := {}
 	for row: Dictionary in islands["park_rows"]:
 		if row["id"] == "lookout_mesa":
@@ -50,7 +52,7 @@ func _run() -> void:
 	var park := {
 		"play_rect": [-100, -100, 200, 200], "waymarks": [], "spawn": {"at": [0, -80]},
 		"park_rows": [
-			{"id": "band", "element": "drop", "at": [0, 0], "size": [40, 10, 200], "yaw_deg": 0},
+			{"id": "band", "element": "drop", "at": [0, 0], "size": [40, 10, 200], "yaw_deg": 0, "recipe": "greybox:drop", "stamp": "plateau", "y": null},
 			{"id": "far", "element": "drop", "at": [0, 60], "size": [10, 10, 10], "yaw_deg": 0},
 		],
 		"routes": [{"id": "r", "from": "drop_in", "via": ["band"], "to": "far"}],
@@ -61,4 +63,15 @@ func _run() -> void:
 	_t.eq("(c) the full-width band is no footprint, the small row is", foot.size(), 1)
 	_t.check("(c) the band's route lanes remain (%d)" % lane.size(), lane.size() == 2)
 	_t.check("(c) a point on the lane is cleared", ParkRecipes.in_clear(zones, Vector2(0, -40), 1.0))
+	# A 200 m wide (x) by 400 m deep (z) rect. At yaw 0 the across axis is x, at yaw 90 it is z; 300 m spans x only, so
+	# a swapped rect read fails both.
+	var tall := {"play_rect": [-100, -200, 200, 400]}
+	var stamped := {"element": "drop", "recipe": "greybox:drop", "stamp": "plateau", "y": null}
+	var across_x := stamped.merged({"size": [40, 10, 300], "yaw_deg": 0})
+	var across_z := stamped.merged({"size": [40, 10, 300], "yaw_deg": 90})
+	_t.check("(d) 300 m across at yaw 0 spans a 200 m wide rect", ParkRecipes.spans_park(across_x, tall))
+	_t.check("(d) 300 m across at yaw 90 does not span a 400 m deep rect", not ParkRecipes.spans_park(across_z, tall))
+	_t.check("(d) a full-width row with no stamp is a built solid, not a band", not ParkRecipes.spans_park(across_x.merged({"stamp": ""}, true), tall))
+	_t.check("(d) a full-width row with an absolute y is a built solid", not ParkRecipes.spans_park(across_x.merged({"y": 4.0}, true), tall))
+	_t.check("(d) a full-width row on a built recipe keeps out", not ParkRecipes.spans_park(across_x.merged({"recipe": "mesa_lip_kicker"}, true), tall))
 	quit(_t.verdict())

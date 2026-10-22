@@ -100,9 +100,8 @@ func _initialize() -> void:
 	var terrain := Terrain.new(StageDefs)
 	_t.eq("a non-park stage answers INF", terrain.perch_near(Vector3.ZERO, 1), Vector3.INF)
 
-	# Real data: a shipped park's anchor fields give perches, the same on every run.
-	# (The Islands' 279 hoodoo posts all sit on route lanes, which anchor_posts keeps clear, so
-	# they place no post and give no perch: the Dispatcher builds its mast there.)
+	# Real data: a shipped park's anchor fields give perches, the same on every run. (Islands is
+	# checked below.)
 	for id in ["pit", "crown"]:
 		var park_map := ParkMap.new("res://src/world/park/park_%s.json" % id)
 		_t.check("park_%s loads" % id, park_map.ok)

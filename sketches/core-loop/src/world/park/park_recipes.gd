@@ -172,7 +172,8 @@ const WEDGES := {"kicker": 1.0, "drop": -1.0}
 # the footprint has a post side within 40 m in one of the traversal probe's 12 directions (tools/traversal_line.gd
 # _anchored). Posts keep out of every other built footprint (ANCHOR_RUNOUT_M back from its ends on its facing, where a
 # ride enters and leaves; ANCHOR_SIDE_M from its sides, where a full run-out left a fixture point 41.1 m from any
-# anchor), and out of a lane ROUTE_LANE_HALF_M each side of every route leg and
+# anchor; a stamped greybox band that spans the park is ground, not a footprint, see spans_park), and out of a lane
+# ROUTE_LANE_HALF_M each side of every route leg and
 # of the waymarks chain (the line every pilot rides names the waymarks in order, park_schema.gd validate_lines), so a
 # line through a field rolls clear. A lane is lined with edge posts every ANCHOR_EDGE_STEP_M on both sides inside the
 # field, so a lane point keeps an anchor. The half width is bounded by the 40 m band where lanes overlap: two lanes
@@ -185,7 +186,6 @@ const ANCHOR_SINK_M := 1.0
 const ANCHOR_RUNOUT_M := 10.0
 const ANCHOR_SIDE_M := 6.0
 const ROUTE_LANE_HALF_M := 20.0
-const ANCHOR_SPAN_FRACTION := 1.0
 const ANCHOR_EDGE_STEP_M := 12.0
 # An anchor field dressed with the anchors kit (tools/blender/park/anchors.py): a row whose recipe is one of
 # ANCHOR_KITS lays out the same posts and box colliders as a greybox anchor field and draws each post as one of the
@@ -1063,8 +1063,8 @@ static func place_layer(row: Dictionary, parent: Node3D, ground := Callable(), p
 	return node
 
 
-# Where anchor posts keep out: every built footprint ({"at", "size": [along, across], "yaw"}, the ground and anchor
-# fields excepted, and the landmark), and a lane ({"a", "b", "half"}) along each leg of each route, from its `from`
+# Where anchor posts keep out: every built footprint ({"at", "size": [along, across], "yaw"}, the ground, anchor
+# fields and park-spanning bands (spans_park) excepted, and the landmark), and a lane ({"a", "b", "half"}) along each leg of each route, from its `from`
 # through its `via` rows to its `to`, and of the waymarks chain. A route leg joins its two places where they are
 # nearest: a park row's place is either end of its footprint on its facing (ride_frame's entry and exit; a ball leaves a
 # tube or a wash by an end, never its middle). A waymarks leg joins the places a pilot line aims at, a row's at
@@ -1114,15 +1114,17 @@ static func clear_zones(park: Dictionary) -> Array:
 	return out
 
 
-# Whether a row's footprint spans the park: its across size (size[2], along its cross axis) reaches ANCHOR_SPAN_FRACTION
-# of the play rect's extent on that axis. The same measure as park_map.gd mesa_edge, whose whole-rect reach is the one
-# precedent for a full-width band. Such a band is a landform the ball rides, not a spot to keep posts off.
+# Whether a row is a band that spans the park: park_map.gd mesa_edge's rule (which park_map.gd's preload of this file
+# keeps from being called here). A stamped greybox row with no absolute y, so terrain and no built solid, whose across
+# size (size[2], along its cross axis) reaches the play rect's extent on that axis. Such a band is a landform the ball
+# rides, not a spot to keep posts off; a full-width built solid still keeps them out.
 static func spans_park(row: Dictionary, park: Dictionary) -> bool:
-	if not park.has("play_rect"):
+	if not park.has("play_rect") or not String(row.get("recipe", "")).begins_with(GREYBOX) \
+			or String(row.get("stamp", "")) == "" or row.get("y") != null:
 		return false
 	var rect: Array = park["play_rect"]
 	var yaw := deg_to_rad(float(row.get("yaw_deg", 0.0)))
-	return float(row["size"][2]) >= ANCHOR_SPAN_FRACTION * (absf(cos(yaw)) * float(rect[2]) + absf(sin(yaw)) * float(rect[3]))
+	return float(row["size"][2]) >= absf(cos(yaw)) * float(rect[2]) + absf(sin(yaw)) * float(rect[3])
 
 
 static func _zone(row: Dictionary) -> Dictionary:
