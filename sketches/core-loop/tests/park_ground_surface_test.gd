@@ -2,7 +2,7 @@ extends SceneTree
 
 # Gate for the park ground's surface (step 2 of the park ground): every vertex of a park's four
 # Terrain3D regions has the control map's auto bit (hole vertices keep the hole bit too), and the
-# colour map tints the cells of surface.bin's concrete, tailings and basalt slots by target / SAND
+# colour map tints the cells of surface.bin's concrete, tailings and basalt slots by target / the floor texture's mean
 # (alpha at Terrain3D's default 127/255) while the other slots, the net and the apron stay white.
 # The parks are built through the real path (make_render, start, finish); the targets are pinned to
 # their sources. Headless Terrain3D draws nothing, so this reads the maps, not pixels.
@@ -10,6 +10,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Palette := preload("res://src/core/palette.gd")
+const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 
 const PARKS := ["park_pit", "park_sinkhole", "park_test"]
 # Terrain3D's control word: bit 0 auto, bit 2 hole (the addon's shader DECODE_AUTO and hole test).
@@ -23,6 +24,7 @@ const BYTE := 1.0 / 255.0 + 0.0001
 
 var t := T.new("park_ground_surface_test")
 var _targets := {}
+var _floor_mean := Color.WHITE
 var _hole_cells_seen := 0
 
 
@@ -31,6 +33,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	_pin_floor_mean()
 	_pin_targets()
 	var holder := Node3D.new()
 	root.add_child(holder)
@@ -50,6 +53,27 @@ func _run() -> void:
 		await process_frame
 	t.check("some park checked has hole cells", _hole_cells_seen > 0, str(_hole_cells_seen))
 	quit(t.verdict())
+
+
+# GROUND_FLOOR_MEAN is the true mean of the floor texture's base level, recomputed here over every pixel.
+func _pin_floor_mean() -> void:
+	var row: Dictionary = MaterialSlots.row("ground")
+	var img: Image = Palette.look_texture(row.textures.floor_map).get_image()
+	if img.is_compressed():
+		img.decompress()
+	img.clear_mipmaps()
+	img.convert(Image.FORMAT_RGBA8)
+	var data := img.get_data()
+	var n := data.size() / 4
+	var sum := [0, 0, 0]
+	for p in n:
+		sum[0] += data[p * 4]
+		sum[1] += data[p * 4 + 1]
+		sum[2] += data[p * 4 + 2]
+	var mean := Color(sum[0] / 255.0 / n, sum[1] / 255.0 / n, sum[2] / 255.0 / n)
+	var declared = (ParkTerrain as GDScript).get_script_constant_map().get("GROUND_FLOOR_MEAN", Color.MAGENTA)
+	t.check("GROUND_FLOOR_MEAN = floor texture mean over %d pixels, within 2/255" % n, absf(declared.r - mean.r) <= 2.0 / 255.0 and absf(declared.g - mean.g) <= 2.0 / 255.0 and absf(declared.b - mean.b) <= 2.0 / 255.0, "got %s, want %s" % [declared, mean])
+	_floor_mean = mean
 
 
 # The three targets, read from their sources and not from park_terrain.gd's constants.
@@ -72,6 +96,9 @@ func _pin_targets() -> void:
 		basalt = d.lerp(l, 0.5)
 	var tailings := Palette.CHARCOAL.lerp(Palette.RUST, 0.4)
 	_targets = {2: concrete, 3: tailings, 4: basalt}
+	for slot in _targets:
+		var c: Color = _targets[slot]
+		t.check("slot %d tint needs no clamp (target < floor mean)" % slot, c.r < _floor_mean.r and c.g < _floor_mean.g and c.b < _floor_mean.b, str(c))
 	_near_color("park_terrain basalt target = mean of grit_dark and grit_light", _park_target(4), basalt)
 	_near_color("park_terrain tailings target = CHARCOAL.lerp(RUST, 0.4)", _park_target(3), tailings)
 	_near_color("park_terrain concrete target = pinned base_color", _park_target(2), concrete)
@@ -88,13 +115,12 @@ func _near_color(label: String, got: Color, want: Color) -> void:
 	t.check(label, absf(got.r - want.r) <= BYTE and absf(got.g - want.g) <= BYTE and absf(got.b - want.b) <= BYTE, "got %s, want %s" % [got, want])
 
 
-# What the colour map should hold for a surface slot: target / SAND per channel, white where untinted.
+# What the colour map should hold for a surface slot: target / the floor mean per channel, white where untinted.
 func _tint(slot: int) -> Color:
 	if not _targets.has(slot):
 		return Color(1.0, 1.0, 1.0, 0.5)
 	var c: Color = _targets[slot]
-	var s := Palette.SAND
-	return Color(minf(c.r / s.r, 1.0), minf(c.g / s.g, 1.0), minf(c.b / s.b, 1.0), 0.5)
+	return Color(minf(c.r / _floor_mean.r, 1.0), minf(c.g / _floor_mean.g, 1.0), minf(c.b / _floor_mean.b, 1.0), 0.5)
 
 
 func _same(a: Color, b: Color) -> bool:

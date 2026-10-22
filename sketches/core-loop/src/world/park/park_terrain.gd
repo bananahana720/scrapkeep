@@ -9,7 +9,7 @@ extends Node3D
 #             on the collider); outside it is apron.bin. Hole cells mark their four 1 m vertices.
 #             Every vertex has the control map's auto bit, so Terrain3D's auto-shader draws sand floor
 #             flat and strata steep, as the non-park ground does. surface.bin's concrete, tailings and
-#             basalt cells (slots 2 to 4) tint the colour map, which multiplies the albedo, so a sand
+#             basalt cells (slots 2 to 4) tint the colour map, which multiplies the albedo, so a floor
 #             cell reads near that slot's colour; the other slots stay white (net never tints it).
 #             Terrain3D collision stays 0 (DISABLED): it never makes a second height source.
 #   collider  100 tiles of 160 m (80 by 80 cells of the 2 m grid), each a ConcavePolygonShape3D with
@@ -68,6 +68,10 @@ const SLOT_BASALT := 4
 const TINT_CONCRETE := Palette.VERDIGRIS
 # The mean of cinder.gdshader:8-9 grit_dark (0.10, 0.11, 0.105) and grit_light (0.24, 0.22, 0.20).
 const TINT_BASALT := Color(0.17, 0.165, 0.1525)
+# The floor texture's mean albedo (packed-sand-floor.webp, every pixel of the base level): the
+# floor is what flat ground draws, so a tint of target / this puts a cell's mean on the target.
+# Steep ground draws strata, whose mean is slightly darker (0.731, 0.535, 0.366).
+const GROUND_FLOOR_MEAN := Color(0.7327, 0.5977, 0.4117)
 # Terrain3D's default colour map is white with alpha 127/255, which leaves roughness unchanged.
 const COLOR_ALPHA_BYTE := 127
 const COLLISION_DISABLED := 0
@@ -127,14 +131,15 @@ static func slot_target(slot: int) -> Color:
 	return Color.WHITE
 
 
-# The colour-map multiplier of a surface slot: target / SAND per channel, clamped, alpha at the
+# The colour-map multiplier of a surface slot: target / GROUND_FLOOR_MEAN per channel, clamped, alpha at the
 # default (so roughness is unchanged). White for slots that do not tint.
 static func slot_tint(slot: int) -> Color:
 	var target := slot_target(slot)
 	if target == Color.WHITE:
 		return Color(1.0, 1.0, 1.0, float(COLOR_ALPHA_BYTE) / 255.0)
-	return Color(minf(target.r / Palette.SAND.r, 1.0), minf(target.g / Palette.SAND.g, 1.0),
-			minf(target.b / Palette.SAND.b, 1.0), float(COLOR_ALPHA_BYTE) / 255.0)
+	var m := GROUND_FLOOR_MEAN
+	return Color(minf(target.r / m.r, 1.0), minf(target.g / m.g, 1.0),
+			minf(target.b / m.b, 1.0), float(COLOR_ALPHA_BYTE) / 255.0)
 
 
 static func bake_dir(id: String) -> String:
