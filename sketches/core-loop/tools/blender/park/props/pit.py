@@ -615,7 +615,7 @@ def timber_lagging(p, v, rng):
     pebbles(p, "timber_lagging_" + v, rng, 1.8)
 
 
-@K.kind("windsock", tags=["tall", "sign"], variants="ab",
+@K.kind("windsock", tags=["tall", "sign"], variants="ab", line_clear_m=30,
         story="Haul-road windsock on a stout mast; the wind has dropped and the sock hangs limp.")
 def windsock(p, v, rng):
     if v == "a":

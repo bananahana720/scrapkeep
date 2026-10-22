@@ -2440,17 +2440,17 @@
    "id": "pit_557",
    "template": "low_bell_tail",
    "at": [
-    -66,
+    -28,
     179
    ],
    "yaw_deg": 7.3,
-   "near": "ore_pile_north, the fallen shift bell with its rope "
+   "near": "ore_pile_sw, the fallen shift bell with its rope "
   },
   {
    "id": "pit_558",
    "template": "low_marker",
    "at": [
-    -50,
+    -46,
     148
    ],
    "yaw_deg": -172.7,
@@ -2737,5 +2737,5 @@
   ],
   "seed": 3
  },
- "pin": 3170188153
+ "pin": 795077205
 }
