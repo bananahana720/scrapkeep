@@ -26,10 +26,10 @@ Calls made here (P-UNITS PD common rule C6 reading, listed in the PD-TALLY repor
   holds 3 and 9 o'clock to the heading, which the chase camera sits behind. (Accepted by the
   coordinator: docs/decisions.tsv w13-PD register 2026-10-10T21:29:13, which amends ROSTER-LOOK
   section 4 and tally.md:246.)
-- Draws, held to 10 under the Hoberman pilot mecha cap of 16 (docs/decisions.tsv w13-PD
+- Draws, 11 under the Hoberman pilot mecha cap of 16 (docs/decisions.tsv w13-PD
   register 2026-10-10T21:29:13): Core 3 (paint, copper, rubber), Pod 2, Gyro 1,
-  GyroInner 1, WeaponRing 2 (paint, class_accent), one drum mesh and DrumBrackets (one draw,
-  an 11th, a per-asset registry exception pending the coordinator's ruling on #241). Both drums sit on one
+  GyroInner 1, WeaponRing 2 (paint, class_accent), one drum mesh and DrumBrackets (paint only, one
+  draw, the 11th, a per-asset registry exception for the bank split). Both drums sit on one
   axis (X, through Z DRUM_Z), so they are one mesh, Flywheel.R, that spins about that axis;
   Flywheel.L is an empty at the left drum's centre. The rubber parts hoberman() puts on Pod and
   WeaponRing fold into their paint surface in charcoal vertex colour, as the drum's punch marks
@@ -209,8 +209,9 @@ def bracket(p, side):
     """The gap bracket: a dark-steel arm from the outer gimbal axle boss (on the ring axis, so the
     gimbal's sweep never reaches it) out through the side gap to the drum's inner face."""
     inner = DRUM_X - DRUM_DEPTH / 2
-    p.rod("rubber", (side * 0.885, 0, 0), (side * (inner + 0.004), 0, DRUM_Z), 0.018, 6)
-    p.cyl("rubber", 0.035, 0.035, 0.012, 8, loc=(side * (inner - 0.002), 0, DRUM_Z), rot=(0, math.pi / 2, 0))
+    p.rod("paint", (side * 0.885, 0, 0), (side * (inner + 0.004), 0, DRUM_Z), 0.018, 6, color="charcoal")
+    p.cyl("paint", 0.035, 0.035, 0.012, 8, loc=(side * (inner - 0.002), 0, DRUM_Z), rot=(0, math.pi / 2, 0),
+          color="charcoal")
 
 
 def carriage(p):
@@ -310,13 +311,13 @@ def build(variant=""):
     merge(pod, cab)
     shell["folded"] = fold_rubber(pod) + fold_rubber(ring)
     # The two drum brackets end in discs 1.016 m out, past the ball on a wall, so they are their own
-    # mesh, DrumBrackets, under Pod for hero_assets to bank with the carrier. Rubber folds into paint
-    # in charcoal as on the Pod, so the pair costs one draw.
+    # mesh, DrumBrackets, under Pod for hero_assets to bank with the carrier. They paint on the paint
+    # slot in charcoal vertex colour, as the Pod's folded rubber did, so the pair costs one draw.
     brackets = Part("DrumBrackets")
     for side in (1, -1):
         bracket(brackets, side)
     sb._sharpen(brackets)
-    shell["folded"] += fold_rubber(brackets.to_object((0, 0, 0), pod))
+    brackets.to_object((0, 0, 0), pod)
     # Both drums in one mesh on the shared X axis, origin at the right drum's centre.
     wheels = Part("Flywheel.R")
     for name, side in (("R", 1), ("L", -1)):
