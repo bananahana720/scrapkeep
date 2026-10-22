@@ -389,7 +389,6 @@ func _keep_spin() -> void:
 	if _spin_on:
 		return
 	_spin_on = true
-	_spin_freeze = false
 	# The seed reads the basis the draw reads, and settles a landing freeze this frame has not
 	# drawn yet, so a grounded set then an airborne one inside a frame cannot overwrite it.
 	_settle_offset(_body_basis())
