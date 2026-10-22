@@ -231,9 +231,9 @@ static var _anchor_fit_lock := Mutex.new()
 # anchor_hulls() per (variant GLB, size[1]): one ConvexPolygonShape3D (or null) per fitted band, read once under _anchor_hull_lock.
 static var _anchor_hulls := {}
 static var _anchor_hull_lock := Mutex.new()
-# A band's hull points past this many are snapped to ANCHOR_HULL_SNAP_M in x and z and deduplicated (Jolt reduces hulls itself).
-const ANCHOR_HULL_CAP := 256
-const ANCHOR_HULL_SNAP_M := 0.1
+# A band's hull keeps at most this many of its exact hull vertices (farthest-point sampled), so it stays inside the drawn
+# mesh's hull. 256 cost +11 to +18% mean physics tick over the boxes on dam and crown; ruling 6332145318 caps it at 64.
+const ANCHOR_HULL_CAP := 64
 
 
 # A budget class's visibility ranges from assets/asset_budgets.json: base_end and base_margin for the base views,
@@ -1396,23 +1396,50 @@ static func _band_hull(tris: PackedVector3Array, lo: float, hi: float) -> Convex
 			if poly.is_empty():
 				break
 		pts.append_array(PackedVector3Array(poly))
-	if pts.size() > ANCHOR_HULL_CAP:
-		var seen := {}
-		var snapped_pts := PackedVector3Array()
-		for p in pts:
-			var q := Vector3(snappedf(p.x, ANCHOR_HULL_SNAP_M), clampf(snappedf(p.y, ANCHOR_HULL_SNAP_M), lo, hi), snappedf(p.z, ANCHOR_HULL_SNAP_M))
-			if not seen.has(q):
-				seen[q] = true
-				snapped_pts.append(q)
-		pts = snapped_pts
 	var distinct := {}
 	for p in pts:
 		distinct[p] = true
 	if distinct.size() < 4:
 		return null
-	var shape := ConvexPolygonShape3D.new()
-	shape.points = pts
-	return shape
+	var cloud := ArrayMesh.new()
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array(distinct.keys())
+	cloud.add_surface_from_arrays(Mesh.PRIMITIVE_POINTS, arrays)
+	var hull := cloud.create_convex_shape(true, false)
+	if hull == null or hull.points.size() < 4:
+		return null
+	if hull.points.size() > ANCHOR_HULL_CAP:
+		hull.points = _farthest_points(hull.points, ANCHOR_HULL_CAP)
+	return hull
+
+
+# count of points, chosen greedily: the first is the largest x (then z, then y), each next the one farthest from those
+# already kept (the earliest on ties), so the kept set spans the cloud and is the same on every run.
+static func _farthest_points(points: PackedVector3Array, count: int) -> PackedVector3Array:
+	var first := 0
+	for i in points.size():
+		var a := points[i]
+		var b := points[first]
+		if a.x > b.x or (a.x == b.x and (a.z > b.z or (a.z == b.z and a.y > b.y))):
+			first = i
+	var near := PackedFloat64Array()
+	near.resize(points.size())
+	near.fill(INF)
+	var kept := PackedVector3Array()
+	var pick := first
+	while kept.size() < count:
+		var p := points[pick]
+		kept.append(p)
+		var best := -1.0
+		for i in points.size():
+			near[i] = minf(near[i], p.distance_squared_to(points[i]))
+			if near[i] > best:
+				best = near[i]
+				pick = i
+		if best <= 0.0:
+			break
+	return kept
 
 
 # The drawn posts' transforms in the node's space (node_xf the row node's transform): a kit row's posts stretched and

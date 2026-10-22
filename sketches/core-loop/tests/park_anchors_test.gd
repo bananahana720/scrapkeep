@@ -253,6 +253,8 @@ func _fitted() -> void:
 								bad.append("band %d h %.3f..%.3f outside %s" % [i, lo.y, hi.y, b["h"]])
 							if over > HULL_IN_BOX_M:
 								bad.append("band %d hull sticks %.3f m out of its box" % [i, over])
+							if hull.points.size() > ParkRecipes.ANCHOR_HULL_CAP:
+								bad.append("band %d hull has %d points, over the cap %d" % [i, hull.points.size(), ParkRecipes.ANCHOR_HULL_CAP])
 					else:
 						var c := Vector3((b["x"][0] + b["x"][1]) * 0.5, (b["h"][0] + b["h"][1]) * 0.5, (b["z"][0] + b["z"][1]) * 0.5)
 						var sx: float = b["x"][1] - b["x"][0]
