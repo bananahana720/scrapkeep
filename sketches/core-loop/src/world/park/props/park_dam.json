@@ -1909,8 +1909,8 @@
    "id": "bunk_collapse_30",
    "template": "bunk_collapse",
    "at": [
-    -12,
-    -504
+    -5,
+    -512
    ],
    "yaw_deg": 72,
    "near": "dome_19: A collapsed canvas tent with a washing line and boots"
@@ -2520,7 +2520,7 @@
    "template": "low_lunch_rock",
    "at": [
     -49,
-    291
+    286
    ],
    "yaw_deg": 35,
    "near": "the_eye: Three pails on a flat rock and a brittlebush seedling: lunch"
@@ -2729,7 +2729,7 @@
    "id": "low_peg_line_view_4",
    "template": "low_peg_line",
    "at": [
-    -222,
+    -218,
     -522
    ],
    "yaw_deg": 146,
@@ -3072,5 +3072,5 @@
   ],
   "seed": 11
  },
- "pin": 2441315749
+ "pin": 2928990529
 }

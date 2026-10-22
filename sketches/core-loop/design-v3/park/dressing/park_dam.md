@@ -180,3 +180,22 @@ Checks (headless Godot 4.7.2, Linux).
 - Density (w18l, no `--open`): 24 of 49 windows pass, 24 exempt (12 arena, 1 camp, 11 telegraph); failing: kest (18.3, -32.4), the same corkscrew window. No new fail. Draw calls max 391, median 363.5; bare share 38.8 percent, longest bare run 175 m. Not a frame-cost proof, not human feel.
 - Loose lane scans for comparison: strict scan 0 runs and 12 one-yaw clusters before, 0 runs and 7 after; the proto scan 1 row and 16 yaw groups before, 0 rows and 14 after.
 - Labels that ended on a dangling word ("a tripod resting on", "a kettle, a washing", "the odds") or a trailing comma were cut back to the previous clause: 15 spots, `near` text only, so the pin is unchanged.
+
+## w18n rows after the #323 span fix
+
+The row rule in #323 first skipped any line-defining pair more than 40 m apart, so w18l missed three rows whose end spots sit 60 to 70 m apart. Card 1 caps only the consecutive gaps (at most 40 m), and af522720 on the scan branch now allows pairs up to 80 m. Three spots moved, one each; yaws and labels are unchanged, and each was a 2 m or larger perpendicular move.
+
+| spot | at | yaw |
+| --- | --- | --- |
+| bunk_collapse_30 | [-12, -504] -> [-5, -512] | 72, kept |
+| low_lunch_rock_132 | [-49, 291] -> [-49, 286] | 35, kept |
+| low_peg_line_view_4 | [-222, -522] -> [-218, -522] | 146, kept |
+
+The first try for bunk_collapse_30 (-17, -504) broke its laundry line's 30 m clearance, so it moved to (-5, -512), about 5 m off the row.
+
+Checks (headless Godot 4.7.2, Linux).
+- New check with `--file` against dam plus af522720: 816 instances, 0 violations, 0 pattern, 0 pin, 0 lint. `rows.py <file> 80` prints "triples 0".
+- Old check on this branch alone: 0 violations, fingerprint 2928990529 (matches the pin).
+- Pin: 2441315749 to 2928990529 (intended re-pin).
+- park_props_test: exit 0, "[park_dam expansion matches its pin]" passes.
+- Density (no `--open`): 24 of 49 windows pass, 24 exempt (12 arena, 1 camp, 11 telegraph); failing: kest (18.3, -32.4), unchanged. No new fail.
