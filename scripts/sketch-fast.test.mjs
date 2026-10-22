@@ -7,8 +7,12 @@ import {
   hygieneFindings,
   canaries,
   classify,
+  cacheableBaseRun,
+  settleBaseEntry,
+  trustedBaseEntry,
   classifyFailure,
   indexFromFiles,
+  lanePool,
   nodeTestsFor,
   parseArgs,
   placeholderIncrease,
@@ -16,6 +20,7 @@ import {
   referrers,
   selectTests,
   timingsFromReceipt,
+  usableBaseRun,
 } from "./sketch-fast.mjs";
 import { importWithRetry } from "./sketch-smoke.mjs";
 
@@ -254,4 +259,77 @@ test("import retries once after a crashed import and stops after two", () => {
   assert.equal(twice.results.length, 2);
   const clean = importWithRetry("core-loop", ["--headless"], () => ({ exit: 0, ok: false }), () => {});
   assert.equal(clean.results.length, 1, "an import that exits 0 with error lines is not retried");
+});
+
+test("the lane pool never runs more tasks than its width, and queued tasks still run", async () => {
+  const inLane = lanePool(2);
+  let live = 0;
+  let peak = 0;
+  const task = (ms) => inLane(async () => {
+    live++;
+    peak = Math.max(peak, live);
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    live--;
+    return ms;
+  });
+  // A confirm's rerun and base run queue behind the other worker's test, as in the lane.
+  const results = await Promise.all([task(20), task(5), task(5), task(1), task(1)]);
+  assert.deepEqual(results, [20, 5, 5, 1, 1]);
+  assert.equal(peak, 2);
+});
+
+test("a throwing task frees its lane", async () => {
+  const inLane = lanePool(1);
+  await assert.rejects(inLane(async () => { throw new Error("boom"); }));
+  assert.equal(await inLane(async () => "next"), "next");
+});
+
+test("only a clean base verdict is cached, never a timeout or a kill", () => {
+  assert.equal(cacheableBaseRun({ exit: 0, killed: false, timedOut: false }), true);
+  assert.equal(cacheableBaseRun({ exit: 1, killed: false, timedOut: false }), true);
+  assert.equal(cacheableBaseRun({ exit: null, killed: false, timedOut: true }), false);
+  assert.equal(cacheableBaseRun({ exit: null, killed: true, timedOut: false }), false);
+  assert.equal(cacheableBaseRun({ exit: null, killed: false, timedOut: false }), false);
+});
+
+test("a base timeout counts only against a head that also timed out; a lane stop never counts", () => {
+  const red = { ok: false, exit: 1, killed: false, timedOut: false };
+  const slow = { ok: false, exit: null, killed: false, timedOut: true };
+  const stopped = { ok: false, exit: null, killed: true, timedOut: false };
+  assert.equal(usableBaseRun(red, red), red);
+  assert.equal(usableBaseRun(red, slow), null);
+  assert.equal(usableBaseRun(slow, slow), slow);
+  assert.equal(usableBaseRun(red, stopped), null);
+  assert.equal(usableBaseRun(red, null), null);
+  const outsideKill = { ok: false, exit: null, killed: false, timedOut: false };
+  assert.equal(usableBaseRun(red, outsideKill), null);
+  assert.equal(usableBaseRun(slow, outsideKill), outsideKill);
+});
+
+test("a single base red is not trusted from the cache; a second agreeing run confirms it", () => {
+  const first = settleBaseEntry(undefined, { ok: false, checks: ["a", "b"] });
+  assert.equal(trustedBaseEntry(first), false);
+  assert.equal(trustedBaseEntry(settleBaseEntry(first, { ok: false, checks: ["a", "b"] })), true);
+  assert.equal(trustedBaseEntry(settleBaseEntry(first, { ok: false, checks: ["a"] })), false);
+  assert.equal(trustedBaseEntry(settleBaseEntry(settleBaseEntry(undefined, { ok: false, checks: [] }), { ok: false, checks: [] })), false);
+  assert.equal(trustedBaseEntry({ ok: true, checks: [] }), true);
+});
+
+test("a cached base red expires when a fresh base run passes", () => {
+  const flaky = settleBaseEntry(undefined, { ok: false, checks: ["a"] });
+  const after = settleBaseEntry(flaky, { ok: true, checks: [] });
+  assert.deepEqual(after, { ok: true, checks: [] });
+  const confirmed = settleBaseEntry(flaky, { ok: false, checks: ["a"] });
+  assert.equal(trustedBaseEntry(settleBaseEntry(confirmed, { ok: true, checks: [] })) && settleBaseEntry(confirmed, { ok: true, checks: [] }).ok, true);
+});
+
+test("planted head red: a cached base red never hides a head-only red", () => {
+  const cached = settleBaseEntry(undefined, { ok: false, checks: ["a"] });
+  assert.equal(trustedBaseEntry(cached), false, "single-run red is rerun, not reused");
+  const confirmed = settleBaseEntry(cached, { ok: false, checks: ["a"] });
+  const grew = classifyFailure({ rerunOk: false, baseOk: false, headChecks: ["a", "x"], baseChecks: confirmed.checks, baseCached: true });
+  assert.equal(grew.kind, "pr-red");
+  assert.deepEqual(grew.newChecks, ["x"]);
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: false, headChecks: [], baseChecks: confirmed.checks, baseCached: true }).kind, "pr-red");
+  assert.equal(classifyFailure({ rerunOk: false, baseOk: false, headChecks: [], baseChecks: [], baseCached: false }).kind, "base-red");
 });
