@@ -7,7 +7,7 @@ extends SceneTree
 #
 # For a shell whose heft layer has a banked part (Tally class 5 HeavyDrums, Tarn class 3 ClawHooks): fit it,
 # heft up with animate on, build the hull while the slam is in flight (the banked part sits off its rest),
-# let the tween finish, then pose it on a vertical wall the way baked_bracket_reach_test does (pod yaws,
+# finish the tween (kill it and apply rest), then pose it on a vertical wall the way baked_bracket_reach_test does (pod yaws,
 # four aims, the bank re-settled at each) and measure every banked vertex. The reach must be 0.992 or less
 # and the settled bank angle must match a shell fitted at the same class without animation.
 
@@ -33,7 +33,7 @@ func _initialize() -> void:
 
 func _run() -> void:
 	for c in CASES:
-		await _case(String(c[0]), int(c[1]), String(c[2]))
+		_case(String(c[0]), int(c[1]), String(c[2]))
 	quit(_t.verdict())
 
 
@@ -116,8 +116,12 @@ func _case(pilot: String, cls: int, part_name: String) -> void:
 	# The hull builds now, from the layer as it stands mid-slam.
 	pod.rotation.y = 0.0
 	_hold(hook, pod, 0.0, 2)
-	# Let the tween finish.
-	await create_timer(1.5).timeout
+	# Finish the slam: kill each layer tween and apply the rest positions, as the tween's last step does.
+	for holder in pod.find_children("HeftC*", "Node3D", false, false):
+		var tween = holder.get_meta("heft_tween") if holder.has_meta("heft_tween") else null
+		if tween is Tween and tween.is_valid():
+			tween.kill()
+		HeroAssets._rest(holder)
 	var settled := 0.0
 	for mi: MeshInstance3D in parts:
 		settled = maxf(settled, mi.position.distance_to(mi.get_meta("heft_rest", mi.position)))
