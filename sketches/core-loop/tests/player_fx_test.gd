@@ -9,6 +9,7 @@ const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const Density := preload("res://src/presentation/density.gd")
+const Telegraph := preload("res://src/combat/telegraph.gd")
 
 var t := T.new("player_fx_test")
 var _game
@@ -169,4 +170,155 @@ func _run() -> void:
 			if mat != null:
 				under = under and mat.render_priority < Threat.LINE_UNDER_PRIORITY
 	t.check("every player effect sorts under the threat marks", under)
+
+	# The impact frame yields to warnings at the screen edge (Andrew, 17 Oct 16:36Z: warnings
+	# always draw on top). With nothing to yield to it is the old frame, polygon for polygon.
+	var frame = fx._frame
+	var screen := Vector2(1920.0, 1080.0)
+	for case in [[1.0, 0.0, 11], [0.5, 0.9, 99], [1.0, 0.9, 5]]:
+		frame._strength = case[0]
+		frame._heat = case[1]
+		frame._seed = case[2]
+		frame._focus = Vector2(900.0, 500.0)
+		var now: Array = frame._shapes(screen, [])
+		var old := _old_shapes(screen, frame._focus, case[0], case[1], case[2])
+		var same := now.size() == old.size()
+		var skipped := 0
+		for k in mini(now.size(), old.size()):
+			skipped += 1 if now[k]["skipped"] else 0
+			same = same and now[k]["poly"] == old[k]["poly"] and now[k].get("color") == old[k].get("color") and now[k].get("colors") == old[k].get("colors")
+		t.check("no warning: the frame is the old frame (strength %.1f heat %.1f)" % [case[0], case[1]], same and skipped == 0 and old.size() > 0,
+			"%d now, %d old" % [now.size(), old.size()])
+		t.eq("no warning: same piece count (strength %.1f heat %.1f)" % [case[0], case[1]], now.size(), old.size())
+	frame._strength = 1.0
+	frame._heat = 0.9
+	frame._seed = 5
+	var open_shapes: Array = frame._shapes(screen, [])
+	var open_wedges := open_shapes.filter(func(sh): return sh.has("color"))
+	t.eq("a hot full-strength frame is 8 wash trapezoids and its wedges", open_shapes.size() - open_wedges.size(), 8)
+	var left_edge := Rect2(0.0, 380.0, 150.0, 320.0)
+	var yielded_shapes: Array = frame._shapes(screen, [left_edge])
+	var overlap := 0
+	var absent := true
+	for sh in yielded_shapes:
+		if not sh["skipped"]:
+			overlap += 0 if Geometry2D.intersect_polygons(sh["poly"], PackedVector2Array([left_edge.position, Vector2(left_edge.end.x, left_edge.position.y), left_edge.end, Vector2(left_edge.position.x, left_edge.end.y)])).is_empty() else 1
+	var cut := yielded_shapes.filter(func(sh): return sh["skipped"]).size()
+	for sh in yielded_shapes.filter(func(sh): return sh.has("color")):
+		if not sh["skipped"]:
+			absent = absent and open_wedges.any(func(w): return w["poly"] == sh["poly"] and w["color"] == sh["color"])
+	t.check("a rect on the edge skips wedges and wash", cut > 0, str(cut))
+	t.eq("no drawn piece crosses the rect", overlap, 0)
+	t.check("a drawn wedge is one the open frame draws: the random stream is unmoved", absent)
+	t.eq("every wedge is still computed", yielded_shapes.filter(func(sh): return sh.has("color")).size(), open_wedges.size())
+	# The wash pieces tile the side they cut: same area, same four colours.
+	var wash_area := 0.0
+	var open_area := 0.0
+	for sh in yielded_shapes:
+		if sh.has("colors"):
+			wash_area += _area(sh["poly"])
+	for sh in open_shapes:
+		if sh.has("colors"):
+			open_area += _area(sh["poly"])
+	var skipped_area := 0.0
+	for sh in yielded_shapes:
+		if sh.has("colors") and sh["skipped"]:
+			skipped_area += _area(sh["poly"])
+	# Vertices are float32, so the sums agree to a part in 1e6, not exactly.
+	t.check("wash drawn plus wash left out is the whole wash", absf(wash_area / open_area - 1.0) < 1.0e-6, str(wash_area / open_area - 1.0))
+	t.check("the wash yields a sliver, not the whole side", skipped_area > 0.0 and skipped_area < 0.2 * open_area, str(skipped_area / open_area))
+
+	# A real telegraph whose ground footprint projects into the edge band.
+	var cam: Camera3D = fx.camera.cam
+	var vp: Vector2 = cam.get_viewport().get_visible_rect().size
+	var ray_from := cam.project_ray_origin(Vector2(vp.x * 0.04, vp.y * 0.5))
+	var ray_dir := cam.project_ray_normal(Vector2(vp.x * 0.04, vp.y * 0.5))
+	var hit = Plane(Vector3.UP, 0.0).intersects_ray(ray_from, ray_dir)
+	t.check("the camera sees the ground at the left edge", hit != null)
+	if hit != null:
+		var ground := FlatGround.new()
+		var warn = Telegraph.ring(_game, ground, 1, Vector3(hit.x, 0.0, hit.z), 2.0)
+		await _frames(1)
+		var rects := PlayerFx.warning_rects(root.get_tree(), cam, PlayerFx.ImpactFrame.YIELD_MARGIN_PX)
+		t.check("a live telegraph has a screen rect", rects.size() >= 1, str(rects.size()))
+		var band_hit := false
+		for r in rects:
+			band_hit = band_hit or r.position.x < minf(vp.x, vp.y) * PlayerFx.ImpactFrame.BAND
+		t.check("that rect reaches the edge band", band_hit, str(rects))
+		frame.hide_now()
+		fx._last_frame = -1.0e9
+		var burst: Vector3 = Vector3(hit.x + 30.0, 0.0, hit.z)
+		var fired: bool = fx.impact_frame(burst, 1.0)
+		t.check("the frame fires with a warning on screen", fired and frame.active())
+		t.check("the frame holds the warning's rect", frame._rects.size() >= 1)
+		var live: Array = frame._shapes(vp, frame._rects)
+		t.check("the frame yields to the real telegraph", live.any(func(sh): return sh["skipped"]))
+		await _frames(1)
+		t.check("the draw counted what it left out", frame.yielded + frame.drawn > 0 and frame.yielded > 0, "%d drawn, %d yielded" % [frame.drawn, frame.yielded])
+		warn.queue_free()
+		await _frames(1)
+		t.eq("a spent telegraph leaves no rect", PlayerFx.warning_rects(root.get_tree(), cam, 0.0).filter(func(r): return r.has_point(Vector2(vp.x * 0.04, vp.y * 0.5))).size(), 0)
 	quit(t.verdict())
+
+
+class FlatGround:
+	extends RefCounted
+
+	func height(_x: float, _z: float) -> float:
+		return 0.0
+
+
+static func _area(poly: PackedVector2Array) -> float:
+	var a := 0.0
+	for i in poly.size():
+		var j := (i + 1) % poly.size()
+		a += poly[i].x * poly[j].y - poly[j].x * poly[i].y
+	return absf(a) * 0.5
+
+
+# The impact frame as it was before it yielded (player_fx.gd at f259e8cf), written out again
+# here so a change to the live geometry cannot move this reference with it.
+static func _old_shapes(rect: Vector2, focus_in: Vector2, strength: float, heat: float, seed_value: int) -> Array:
+	var out := []
+	var band := minf(rect.x, rect.y) * 0.2
+	var focus := focus_in.clamp(Vector2.ZERO, rect)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var ink_base := PlayerFx.INK
+	if heat > 0.0:
+		var dark := Color(ink_base.r, ink_base.g, ink_base.b, 0.8 * heat)
+		var hot := Color(PlayerFx.HEAT_COLOR.r, PlayerFx.HEAT_COLOR.g, PlayerFx.HEAT_COLOR.b, PlayerFx.FlashGuard.alpha(0.4 * heat))
+		var clear := Color(hot.r, hot.g, hot.b, 0.0)
+		for ring in [[0.0, band * 0.6, dark, hot], [band * 0.6, band, hot, clear]]:
+			var o := [Vector2(ring[0], ring[0]), Vector2(rect.x - ring[0], ring[0]), rect - Vector2(ring[0], ring[0]), Vector2(ring[0], rect.y - ring[0])]
+			var n_in := [Vector2(ring[1], ring[1]), Vector2(rect.x - ring[1], ring[1]), rect - Vector2(ring[1], ring[1]), Vector2(ring[1], rect.y - ring[1])]
+			for k in 4:
+				var n := (k + 1) % 4
+				out.append({"poly": PackedVector2Array([o[k], o[n], n_in[n], n_in[k]]), "colors": PackedColorArray([ring[2], ring[2], ring[3], ring[3]])})
+	for i in int(56 * strength):
+		var angle := TAU * (float(i) + rng.randf() * 0.8) / float(56 * strength)
+		var dir := Vector2(cos(angle), sin(angle))
+		var exit := INF
+		if dir.x > 0.001:
+			exit = minf(exit, (rect.x - focus.x) / dir.x)
+		elif dir.x < -0.001:
+			exit = minf(exit, -focus.x / dir.x)
+		if dir.y > 0.001:
+			exit = minf(exit, (rect.y - focus.y) / dir.y)
+		elif dir.y < -0.001:
+			exit = minf(exit, -focus.y / dir.y)
+		if exit == INF or exit < 1.0:
+			continue
+		var inner := maxf(0.0, exit - band * rng.randf_range(0.5, 1.0))
+		var width := rng.randf_range(5.0, 16.0) * (0.6 + 0.4 * strength)
+		var side := Vector2(-dir.y, dir.x) * width
+		var tip := focus + dir * inner
+		var outer := focus + dir * (exit + width * 2.0)
+		var accent := i % (3 if heat > 0.0 else 7) == 0
+		var ink := ink_base
+		ink.a = 0.75 + 0.2 * heat
+		if accent:
+			ink = Color(1, 1, 1, 0.5).lerp(Color(PlayerFx.HEAT_COLOR.r, PlayerFx.HEAT_COLOR.g, PlayerFx.HEAT_COLOR.b, 0.9), heat)
+			ink.a = PlayerFx.FlashGuard.alpha(ink.a)
+		out.append({"poly": PackedVector2Array([tip, outer + side, outer - side]), "color": ink})
+	return out

@@ -196,6 +196,8 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	layer.layer = 3
 	add_child(layer)
 	_frame = ImpactFrame.new()
+	_frame.rect_source = func() -> Array[Rect2]:
+		return warning_rects(get_tree(), camera.cam if camera != null else null, ImpactFrame.YIELD_MARGIN_PX)
 	layer.add_child(_frame)
 	_wire()
 
@@ -631,20 +633,73 @@ func impact_frame(at: Vector3, strength: float) -> bool:
 	return true
 
 
+# The screen rect of every live telegraph, grown by `margin` px: its visual meshes' boxes,
+# each of the 8 corners projected through `cam`. A corner behind the camera has no screen
+# position and is skipped; a mesh with every corner behind is skipped. The frame below yields
+# to these rects, and edge_flash.gd can ask the same question. Telegraph holds no screen
+# bounds of its own (telegraph.gd keeps shape numbers; the geometry lives in its painter's
+# meshes), so the meshes are the footprint.
+static func warning_rects(tree: SceneTree, cam: Camera3D, margin: float) -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if tree == null or cam == null:
+		return out
+	for node in tree.get_nodes_in_group("telegraph"):
+		if not (node is Node3D) or not node.is_visible_in_tree():
+			continue
+		var low := Vector2(INF, INF)
+		var high := Vector2(-INF, -INF)
+		for inst in node.find_children("*", "VisualInstance3D", true, false):
+			if not inst.is_visible_in_tree():
+				continue
+			var box: AABB = inst.get_aabb()
+			if box.size == Vector3.ZERO:
+				continue
+			for c in 8:
+				var corner: Vector3 = inst.global_transform * (box.position + box.size * Vector3(c & 1, (c >> 1) & 1, (c >> 2) & 1))
+				if cam.is_position_behind(corner):
+					continue
+				var at := cam.unproject_position(corner)
+				low = low.min(at)
+				high = high.max(at)
+		if low.x <= high.x:
+			out.append(Rect2(low, high - low).grow(margin))
+	return out
+
+
 # Manga focus lines: ink wedges pointing at the hit from the screen edge, only in the outer
-# BAND of the screen, so the hit, the ball and every telegraph inside stay readable.
+# BAND of the screen, so the hit, the ball and every telegraph inside stay readable. The
+# frame also yields at the edge: a wedge or a piece of the wash that would cross a live
+# telegraph's screen rect is not drawn, because enemy warnings always draw on top of player
+# effects (Andrew, 17 Oct 16:36Z; RENDER_PRIORITY above). The frame is a 2D layer that no
+# 3D render priority can sort under, so it steps out of the way instead.
 class ImpactFrame:
 	extends Control
 
 	const LINES := 56
 	# Lines live only in this share of the screen's short side, measured in from the edge.
 	const BAND := 0.2
+	# A wedge's half-width in px runs 5 to 16 at full strength (before the strength scale).
+	const WEDGE_WIDTH_MIN := 5.0
+	const WEDGE_WIDTH_MAX := 16.0
+	# The room left around a warning is the widest wedge half-width, so no wedge edge sits
+	# closer to a warning than the wedge is wide.
+	const YIELD_MARGIN_PX := WEDGE_WIDTH_MAX
+	# Wash pieces are as long as that margin, so a skipped piece never bares more than one
+	# margin of edge beyond the warning. A side is only split where a rect touches it.
+	const WASH_PIECE_PX := YIELD_MARGIN_PX
 
 	var _focus := Vector2.ZERO
 	var _strength := 0.0
 	var _heat := 0.0
 	var _left := 0
 	var _seed := 0
+	# Answers with the live warning rects (PlayerFx.warning_rects on the game camera); set by
+	# the owner, since an inner class cannot call the outer class's statics.
+	var rect_source := Callable()
+	var _rects: Array[Rect2] = []
+	# Pieces drawn and left out by the last draw, for tests.
+	var drawn := 0
+	var yielded := 0
 
 	func _ready() -> void:
 		set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -660,6 +715,7 @@ class ImpactFrame:
 		position = Vector2.ZERO
 		size = get_viewport_rect().size
 		visible = true
+		_refresh_rects()
 		queue_redraw()
 
 	func hide_now() -> void:
@@ -675,15 +731,38 @@ class ImpactFrame:
 		_left -= 1
 		if _left <= 0:
 			visible = false
+		else:
+			# Warnings and the camera move while the frame lives.
+			_refresh_rects()
+			queue_redraw()
+
+	func _refresh_rects() -> void:
+		_rects = rect_source.call() if rect_source.is_valid() and is_inside_tree() else ([] as Array[Rect2])
 
 	func _draw() -> void:
-		var rect := get_viewport_rect().size
+		drawn = 0
+		yielded = 0
+		for shape in _shapes(get_viewport_rect().size, _rects):
+			if shape["skipped"]:
+				yielded += 1
+				continue
+			drawn += 1
+			if shape.has("colors"):
+				draw_polygon(shape["poly"], shape["colors"])
+			else:
+				draw_colored_polygon(shape["poly"], shape["color"])
+
+	# Every piece the frame is made of, in draw order: {poly, skipped, colors} for the wash
+	# and {poly, skipped, color} for a wedge. Every piece is computed whether or not it is
+	# skipped, so the random stream and the look with no warnings are the same as before.
+	func _shapes(rect: Vector2, rects: Array) -> Array:
+		var out := []
 		var band := minf(rect.x, rect.y) * BAND
 		var focus := _focus.clamp(Vector2.ZERO, rect)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = _seed
 		if _heat > 0.0:
-			_draw_wash(rect, band)
+			_wash_shapes(out, rect, band, rects)
 		for i in int(LINES * _strength):
 			var angle := TAU * (float(i) + rng.randf() * 0.8) / float(LINES * _strength)
 			var dir := Vector2(cos(angle), sin(angle))
@@ -700,7 +779,7 @@ class ImpactFrame:
 			if exit == INF or exit < 1.0:
 				continue
 			var inner := maxf(0.0, exit - band * rng.randf_range(0.5, 1.0))
-			var width := rng.randf_range(5.0, 16.0) * (0.6 + 0.4 * _strength)
+			var width := rng.randf_range(WEDGE_WIDTH_MIN, WEDGE_WIDTH_MAX) * (0.6 + 0.4 * _strength)
 			var side := Vector2(-dir.y, dir.x) * width
 			var tip := focus + dir * inner
 			var outer := focus + dir * (exit + width * 2.0)
@@ -711,25 +790,59 @@ class ImpactFrame:
 			if accent:
 				ink = Color(1, 1, 1, 0.5).lerp(Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.9), _heat)
 				ink.a = FlashGuard.alpha(ink.a)
-			draw_colored_polygon(PackedVector2Array([tip, outer + side, outer - side]), ink)
+			var poly := PackedVector2Array([tip, outer + side, outer - side])
+			out.append({"poly": poly, "color": ink, "skipped": _hits(poly, rects)})
+		return out
 
 	# A hot build's edge wash: the screen edge dips dark, glows heat orange halfway in and
 	# fades to nothing before the middle, so the build's heat and weight read on every grown
 	# hit and the centre stays clear.
-	func _draw_wash(rect: Vector2, band: float) -> void:
+	func _wash_shapes(out: Array, rect: Vector2, band: float, rects: Array) -> void:
 		var dark := Color(INK.r, INK.g, INK.b, 0.8 * _heat)
 		var hot := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, FlashGuard.alpha(0.4 * _heat))
 		var clear := Color(hot.r, hot.g, hot.b, 0.0)
-		_ring(rect, 0.0, band * 0.6, dark, hot)
-		_ring(rect, band * 0.6, band, hot, clear)
+		_ring_shapes(out, rect, 0.0, band * 0.6, dark, hot, rects)
+		_ring_shapes(out, rect, band * 0.6, band, hot, clear, rects)
 
 	# A screen-edge ring from `outer` to `inner` pixels in, shaded from one colour to the other.
-	func _ring(rect: Vector2, outer: float, inner: float, from: Color, to: Color) -> void:
+	# Each side is one trapezoid; a side a rect touches is cut along its length into pieces and
+	# the touched pieces are skipped. A piece keeps the side's four vertex colours, so the
+	# gradient across the band is the same and the pieces tile the side exactly.
+	func _ring_shapes(out: Array, rect: Vector2, outer: float, inner: float, from: Color, to: Color, rects: Array) -> void:
 		var o := [Vector2(outer, outer), Vector2(rect.x - outer, outer), rect - Vector2(outer, outer), Vector2(outer, rect.y - outer)]
 		var i := [Vector2(inner, inner), Vector2(rect.x - inner, inner), rect - Vector2(inner, inner), Vector2(inner, rect.y - inner)]
+		var colors := PackedColorArray([from, from, to, to])
 		for k in 4:
 			var n := (k + 1) % 4
-			draw_polygon(PackedVector2Array([o[k], o[n], i[n], i[k]]), PackedColorArray([from, from, to, to]))
+			var whole := PackedVector2Array([o[k], o[n], i[n], i[k]])
+			if not _hits(whole, rects):
+				out.append({"poly": whole, "colors": colors, "skipped": false})
+				continue
+			var pieces := maxi(1, ceili(o[k].distance_to(o[n]) / WASH_PIECE_PX))
+			for p in pieces:
+				var t0 := float(p) / pieces
+				var t1 := float(p + 1) / pieces
+				var poly := PackedVector2Array([o[k].lerp(o[n], t0), o[k].lerp(o[n], t1), i[k].lerp(i[n], t1), i[k].lerp(i[n], t0)])
+				out.append({"poly": poly, "colors": colors, "skipped": _hits(poly, rects)})
+
+	# Whether a polygon crosses any rect. The bounding box is the cheap reject; the exact
+	# polygon test follows, so a wedge's empty corner of its box does not count.
+	static func _hits(poly: PackedVector2Array, rects: Array) -> bool:
+		if rects.is_empty():
+			return false
+		var low := poly[0]
+		var high := poly[0]
+		for v in poly:
+			low = low.min(v)
+			high = high.max(v)
+		var box := Rect2(low, high - low)
+		for r in rects:
+			if not (r as Rect2).intersects(box, true):
+				continue
+			var corners := PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)])
+			if not Geometry2D.intersect_polygons(poly, corners).is_empty():
+				return true
+		return false
 
 
 # --- Aura --------------------------------------------------------------------------------
