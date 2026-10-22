@@ -27,6 +27,13 @@ extends Node3D
 
 signal built
 
+const MaterialSlots := preload("res://src/presentation/material_slots.gd")
+const Palette := preload("res://src/core/palette.gd")
+const GROUND_FLOOR_ID := 0
+const GROUND_STRATA_ID := 1
+# Metres per tile of the floor texture: sandstone.gdshader's floor_metres default (:9), which the
+# `ground` slot leaves alone (palette.gd sets only strata_metres, from triplanar_scale).
+const GROUND_FLOOR_METRES := 5.0
 const HALF := 800.0
 const STEP := 2.0
 const CELLS := 800
@@ -113,7 +120,40 @@ static func make_render(parent: Node, label: String) -> Node3D:
 	node.collision.mode = COLLISION_DISABLED
 	node.region_size = REGION_SIZE
 	node.vertex_spacing = VERTEX_SPACING
+	node.assets = ground_assets()
+	var material: Object = node.material
+	# Step 1 draws texture 0 (sand floor) everywhere: the regions' control maps are untouched, so
+	# no cell has the auto bit and Terrain3D takes texture 0 at blend 0. The auto-shader is set
+	# up for step 2, which sets that bit: the overlay (flat) is the floor, the base (steep) the
+	# strata, auto_slope 1.0 putting the half-way blend at normal.y 0.75, near the middle (0.755) of
+	# sandstone.gdshader's strata ramp smoothstep(0.58, 0.93, normal.y). Height reduction is off.
+	material.auto_shader = true
+	material.set_shader_param("auto_base_texture", GROUND_STRATA_ID)
+	material.set_shader_param("auto_overlay_texture", GROUND_FLOOR_ID)
+	material.set_shader_param("auto_slope", 1.0)
+	material.set_shader_param("auto_height_reduction", 0.0)
 	return node
+
+
+# A Terrain3DAssets for one park render node, from the `ground` slot so the park and the non-park
+# ground draw the same two textures at the same near-layer tile sizes (the non-park shader's far
+# layers, macro tint and ruts are not matched): texture 0 is the slot's floor_map every
+# GROUND_FLOOR_METRES, texture 1 its strata_map every triplanar_scale metres. Terrain3D samples a
+# texture at world xz * uv_scale * the control map's scale, which is 0.5 at control 0 (DECODE_SCALE
+# in the addon's shader; lightweight.gdshader:313 writes the same * 0.5), so uv_scale is 2 / metres.
+# Each node gets its own list (an asset list keeps one terrain back-pointer); the textures are shared.
+static func ground_assets() -> Object:
+	var row: Dictionary = MaterialSlots.row("ground")
+	var assets: Object = ClassDB.instantiate("Terrain3DAssets")
+	var ids: Array = [row.textures.floor_map, row.textures.strata_map]
+	var metres: Array = [GROUND_FLOOR_METRES, float(row.triplanar_scale)]
+	for i in ids.size():
+		var asset: Object = ClassDB.instantiate("Terrain3DTextureAsset")
+		asset.name = ids[i]
+		asset.albedo_texture = Palette.look_texture(ids[i])
+		asset.uv_scale = 2.0 / float(metres[i])
+		assets.set_texture(i, asset)
+	return assets
 
 
 # render: the Terrain3D node this stage draws into (make_render), or null to collide only.
