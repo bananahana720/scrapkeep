@@ -245,11 +245,11 @@ The `--vignettes` eye frames are taken at 5 m. Two subjects could not be named t
    - Reason: in `park_islands-v12-h302-eye.png` both trolleys stood behind the cabin, on the far side from a front viewer, and were hidden. The spot's front is local +Z and the tram sits at (0, 6). They now stand beside the cabin, which matches the story's "one ore bin chocked beside it". Both are outside the tram footprint (radius 3.818 for variant a). The story still fits and is unchanged.
    - Trolley b sits 2.06 m from the grass_tufts at (7, 3.5), under the 2.70 m radius sum. Grass tufts are ground cover and the plan check allows it, so it was left as is.
 3. `ore_spill` ore_trolley c: yaw 20 to -70, scale 0.99 to 1.15.
-   - Reason: in `park_islands-v19-m315-eye.png` the tipped bin showed its dark underside and read as a dark box. In `islands.py:434-480` the mouth rim and ore fan of variant c point along local +X. Under `Basis(UP, yaw)` that faces the spot's front at yaw -90. Yaw -70 gives a three-quarter view with the mouth and ore fan toward the viewer and one axle stub showing.
+   - Reason: in `park_islands-v19-m315-eye.png` the tipped bin showed its dark underside and read as a dark box. In `islands.py:434-480` the mouth rim and ore fan of variant c point along local +X. Under `Basis(UP, yaw)` that faces the spot's front at yaw -90. Yaw -70 turns the mouth to 20 degrees off the front (verifier: mouth axis (0.342, 0, 0.940)). In the after frame (the vignettes run on e522becd, frame v19-m315-eye) the bone mouth rim is close to face-on, the interior is a black disc, and the ore spills toward the viewer. The axles barely show.
    - Scale 1.15 is inside this file's template range (0.85 to 1.18) and the litter range (0.9 to 1.15). Scaled height is 1.571 x 1.15 = 1.807 m. It was 1.555 m. Both are in the MID tier (over `LOW_HEIGHT_M` 1.2, under `TALL_HEIGHT_M` 3.0), so its line clearance is unchanged.
 
 The templates `tram_halt` and `ore_spill` are used only by h302 and m315. `tram_wreck` is used by no spot.
 
 No spot moved, so the row scans are unchanged (0 straight runs, 0 yaw groups).
 
-Plan check: 364 instances (50 litter), 0 violations. The instance count is unchanged. The pin changed from 251580569 to 4203578688 (an intended re-pin). `park_props_test` passes, including "park_islands expansion matches its pin".
+Plan check: 364 instances (50 litter), 0 violations. The template prop count is 164 before and after, so the instance count is unchanged. Merged with stage 85a051a4 (which adds #243), the plan check is the same: 0 violations, fingerprint 4203578688. The pin changed from 251580569 to 4203578688 (an intended re-pin). `park_props_test` passes, including "park_islands expansion matches its pin".
