@@ -37,7 +37,7 @@ Variants run a (in use), b (run down), c (collapsed or overgrown). Notes on swap
 
 ## Placement (21 October 2026, round 5)
 
-`src/world/park/props/park_crown.json`: 23 templates, 154 spots, 924 vignette instances plus 109 litter (1033 in all), pinned (533729188; 2441257203 before the telegraph pass). Low vignettes stand 8 to 16 m off the line, mid ones to 40 m, heroes 24 to 60 m. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing is within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script against `validate` (`park_props.gd` check_one), not hand-picked; plan `--check` reports 0 violations.
+`src/world/park/props/park_crown.json`: 24 templates, 155 spots, 925 vignette instances plus 109 litter (1034 in all), pinned (542438207; 2154852281 before the brass-per-site variant swaps, 533729188 before the floor-window spot, 2441257203 before the telegraph pass). Low vignettes stand 8 to 16 m off the line, mid ones to 40 m, heroes 24 to 60 m. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing is within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script against `validate` (`park_props.gd` check_one), not hand-picked; plan `--check` reports 0 violations.
 
 ### Purpose and why each template reads
 
@@ -46,7 +46,7 @@ Each template's `story` line in the file says what it is and which moment it sho
 | Template | Moment it serves | Why it reads and clears the line |
 | --- | --- | --- |
 | mending_yard, weaver_boneyard, hammock_camp, net_lesson, watch_post, lightning_scar | The net-weavers' working slope beside the ride | Ochre rope, nets and hammocks against the red-orange sandstone (KIT palette in DRESSING-KITS.md); heroes stand 24 m or more from a line and out of route lanes (TALL tier), low pieces 6 m or more (LOW tier), all by `validate`. |
-| abandoned_booth, dead_weather_post, cable_corner, log_post | The Fleet signal crew's abandoned equipment | Petrol enamel, copper fittings, oxide patches, one brass tag per site (`crown.py` :300 booth, :326 storm station a and b, :573 spool shed a and b, :775 tally slab a; each of these templates carries at most one of them), never in a camp: at least 60 m from `camp_signal` and the Fleet homes (BRIEF Fleet rule, checked by the fit script). No barrels or mast-like guns. |
+| abandoned_booth, dead_weather_post, cable_corner, log_post | The Fleet signal crew's abandoned equipment | Petrol enamel, copper fittings, oxide patches, at most one brass tag per site (`crown.py` :300 booth, :326 storm station a and b, :573 spool shed a and b, :775 tally slab a; each of these templates carries at most one of them), never in a camp: at least 60 m from `camp_signal` and the Fleet homes (BRIEF Fleet rule, checked by the fit script). No barrels or mast-like guns. |
 | mini_hammock, mini_lesson, mini_post | Small rest spots where a full camp will not fit | Same pieces at mid height; at least 10 m from the line (MID tier). |
 | low_cairn, low_slab, low_tiny | The Watch Butte drop and bare slope fills | Every prop 1.0 m or lower after scale, the `LOW_GROUND_MAX_M` cap for `low_ground_rows` (`park_props.gd`, DRESSING-KITS.md "Low ground in area rows"). |
 | lookout_a/b/c | A perch the Dispatcher can stand on, and a weavers' watch landmark | Deck 7.05 m over the foot with a 3.6 m flat deck (PERCH-ANCHOR.md); it is a crib of logs with a roofed or open deck, never a mast, ladder, ramp or gate; TALL tier, 20 m clear of the line and out of route lanes. |
@@ -89,7 +89,7 @@ Pin before 2069366017, after 2441257203; plan check 0 violations (1057 instances
 
 ### Base line and plan check (22 October 2026)
 
-Foundation `be6189ec` (lineclear, e72fff7d plus a stage f259e8cf merge) and stage `origin/stage/alpha-w18` f259e8cf are both ancestors of this branch: stage merged at 9d3b53f3, lineclear first at d3ebc525 and again, at be6189ec, at 376a90f2 (merge commits only). ART-MISTAKES.md matches the stage version (diff empty). `park_props_plan --check`: 1034 instances (109 litter), 0 violations, fingerprint 2154852281, which is the new pin (it was 533729188). The pin moved because one spot was added (below); the recolour changes GLB colours only, not placement.
+Foundation `be6189ec` (lineclear, e72fff7d plus a stage f259e8cf merge) and stage `origin/stage/alpha-w18` f259e8cf are both ancestors of this branch: stage merged at 9d3b53f3, lineclear first at d3ebc525 and again, at be6189ec, at 376a90f2 (merge commits only). ART-MISTAKES.md matches the stage version (diff empty). `park_props_plan --check`: 1034 instances (109 litter), 0 violations, fingerprint 542438207, which is the pin in `park_crown.json`. It moved from 533729188 to 2154852281 when one spot was added (below), then to 542438207 when tally_slab a became c in `abandoned_booth` and `cable_corner` and the spool_shed c tag was removed (one brass tag per site); the recolour changes GLB colours only, not placement.
 
 ### Spot added for the floor window (22 October 2026)
 
