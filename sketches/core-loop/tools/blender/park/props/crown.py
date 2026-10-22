@@ -837,7 +837,7 @@ def yucca(p, v, rng):
         p.rod((0, 0, 0.5), (0.3, 0.1, 1.5), 0.05, C["timber_grey"], r2=0.02, segs=5)
 
 
-@K.kind("kite_pennant", tags=[], variants="abc",
+@K.kind("kite_pennant", tags=[], variants="abc", line_clear_m=30,
         story="A crew pennant on a thick stake in a cairn: out in the wind, slack, or on the ground after the gale.")
 def kite_pennant(p, v, rng):
     H = 1.35

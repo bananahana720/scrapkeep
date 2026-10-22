@@ -1957,8 +1957,8 @@
    "id": "crown_05",
    "template": "mini_hammock",
    "at": [
-    146.0,
-    -338.0
+    156.4,
+    -344.0
    ],
    "yaw_deg": 135,
    "near": "kick_emid_1, net-weaver gear"
@@ -2047,10 +2047,10 @@
    "id": "crown_14",
    "template": "mini_hammock",
    "at": [
-    74.0,
-    -298.0
+    32.4,
+    -274.0
    ],
-   "yaw_deg": -13,
+   "yaw_deg": 167,
    "near": "turnstone, net-weaver gear"
   },
   {
@@ -2107,7 +2107,7 @@
    "id": "crown_20",
    "template": "net_lesson_nokite",
    "at": [
-    144.0,
+    216.0,
     -266.0
    ],
    "yaw_deg": 146,
@@ -2137,10 +2137,10 @@
    "id": "crown_23",
    "template": "mini_lesson",
    "at": [
-    74.0,
-    -258.0
+    65.0,
+    -242.4
    ],
-   "yaw_deg": -45,
+   "yaw_deg": 225,
    "near": "meander, net-weaver gear"
   },
   {
@@ -2227,18 +2227,18 @@
    "id": "crown_32",
    "template": "net_lesson",
    "at": [
-    74.0,
+    62.0,
     -210.0
    ],
-   "yaw_deg": -90,
+   "yaw_deg": 270,
    "near": "meander, net-weaver gear"
   },
   {
    "id": "crown_33",
    "template": "weaver_boneyard",
    "at": [
-    144.0,
-    -210.0
+    57.6,
+    -184.6
    ],
    "yaw_deg": 0,
    "near": "meander, net-weaver gear"
@@ -2297,10 +2297,10 @@
    "id": "crown_39",
    "template": "watch_post",
    "at": [
-    74.0,
+    56.0,
     -154.0
    ],
-   "yaw_deg": -90,
+   "yaw_deg": 0,
    "near": "meander, net-weaver gear"
   },
   {
@@ -2338,7 +2338,7 @@
    "template": "lightning_scar_nokite",
    "at": [
     144.0,
-    -114.0
+    -18.0
    ],
    "yaw_deg": 172,
    "near": "east_ribs, net-weaver gear"
@@ -2367,7 +2367,7 @@
    "id": "crown_46",
    "template": "hammock_camp",
    "at": [
-    155.6,
+    161.6,
     -114.0
    ],
    "yaw_deg": 162,
@@ -2437,10 +2437,10 @@
    "id": "crown_53",
    "template": "mini_lesson",
    "at": [
-    122.0,
-    -50.0
+    111.6,
+    -44.0
    ],
-   "yaw_deg": -162,
+   "yaw_deg": 198,
    "near": "east_ribs, net-weaver gear"
   },
   {
@@ -2517,11 +2517,11 @@
    "id": "crown_61",
    "template": "mini_post",
    "at": [
-    -22.0,
-    14.0
+    -15.5,
+    -39.6
    ],
-   "yaw_deg": -74,
-   "near": "spire_top_ramp, net-weaver gear"
+   "yaw_deg": 106,
+   "near": "hoodoo_9, net-weaver gear"
   },
   {
    "id": "crown_62",
@@ -2537,10 +2537,10 @@
    "id": "crown_63",
    "template": "lightning_scar",
    "at": [
-    -54.0,
-    38.0
+    -64.4,
+    44.0
    ],
-   "yaw_deg": -143,
+   "yaw_deg": 127,
    "near": "spire_top_ramp, net-weaver gear"
   },
   {
@@ -2567,10 +2567,10 @@
    "id": "crown_66",
    "template": "mini_hammock",
    "at": [
-    -14.0,
-    70.0
+    -20.3,
+    129.7
    ],
-   "yaw_deg": -86,
+   "yaw_deg": 184,
    "near": "spire_top_ramp, net-weaver gear"
   },
   {
@@ -2578,9 +2578,9 @@
    "template": "mini_post",
    "at": [
     18.0,
-    78.0
+    102.0
    ],
-   "yaw_deg": -75,
+   "yaw_deg": 105,
    "near": "spire_top_ramp, net-weaver gear"
   },
   {
@@ -2597,10 +2597,10 @@
    "id": "crown_69",
    "template": "net_lesson",
    "at": [
-    -30.0,
-    102.0
+    -24.8,
+    105.0
    ],
-   "yaw_deg": -86,
+   "yaw_deg": 184,
    "near": "spire_top_ramp, net-weaver gear"
   },
   {
@@ -3427,11 +3427,11 @@
    "id": "crown_mv_07",
    "template": "low_cairn",
    "at": [
-    78.0,
-    -330.0
+    96.0,
+    -361.2
    ],
    "yaw_deg": 0,
-   "near": "density/bare fill for pose 220"
+   "near": "turnstone_east_anchor, density/bare fill for pose 220"
   },
   {
    "id": "crown_mv_08",
@@ -3492,7 +3492,7 @@
   ],
   "seed": 31
  },
- "pin": 2441257203,
+ "pin": 533729188,
  "low_ground_rows": [
   "drop_ramp",
   "watch_butte",

@@ -2,6 +2,10 @@
 
 Dressing lane (DRESSING-KITS.md): the Blender kit and its placement. Recipe `tools/blender/park/props/crown.py`; GLBs, `manifest.json` and import stubs under `assets/models/park/props/crown/`; registry rows in `assets/registry.d/park_props_crown.json` (the Gate lane folds `registry.json`). Placement is in `src/world/park/props/park_crown.json`.
 
+## What and why
+
+The giant machines of Highdraft are the humans' utility fleet (construction, mining, manufacturing), per Andrew's machine ruling (#241): some are corrupted, some are loyal drones, some are looping workers. The crew sites in this kit read as plush crews living among working giants, so the scale contrast is the point: small ochre and oxide gear at the feet of tall machines and spires. These are working machines, never weapons. Brief: `sketches/core-loop/design-v3/park/dressing/KITS.md` (lands in #269); where it is absent on this branch, the lane's KITS.md copy was read.
+
 The kit tells two stories. The net-weavers are non-hostile builders, so only their gear appears (ochre rope, nets, hammocks, a loom, mending baskets), never a face or a creature. The Fleet signal crew's gear is iron oxide `#9b513a` and charcoal with one brass tag, and is drawn as abandoned equipment: a hut, a weather post, a flat-lying cable spool and a tally slab, with no barrels and no gun-like masts. The ancient spires are never touched. Props use pale canvas, ochre rope, dusty sage and charcoal so they separate in value and hue from the red-orange sandstone ground, which sits close to HAZARD in hue. Brass is `#d9b44a`, used only on the Fleet tags.
 
 | Kind | Class | LOD0 tris (a/b/c) | Height m | Tags | Story |
@@ -33,7 +37,7 @@ Variants run a (in use), b (run down), c (collapsed or overgrown). Notes on swap
 
 ## Placement (21 October 2026, round 5)
 
-`src/world/park/props/park_crown.json`: 23 templates, 154 spots, 924 vignette instances plus 133 litter (1057 in all), pinned (2441257203, was 2069366017 before the pennant change). Low vignettes stand 8 to 16 m off the line, mid ones to 40 m, heroes 24 to 60 m. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing is within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script against `validate` (`park_props.gd` check_one), not hand-picked; plan `--check` reports 0 violations.
+`src/world/park/props/park_crown.json`: 23 templates, 154 spots, 924 vignette instances plus 109 litter (1033 in all), pinned (533729188; 2441257203 before the telegraph pass). Low vignettes stand 8 to 16 m off the line, mid ones to 40 m, heroes 24 to 60 m. Fleet templates stand only at Fleet-row points at least 60 m from `camp_signal` and the Fleet homes; nothing is within 75 m of the alcove ledge; the spires and Content greybox rows are untouched. Spots were fitted by script against `validate` (`park_props.gd` check_one), not hand-picked; plan `--check` reports 0 violations.
 
 ### Purpose and why each template reads
 
@@ -82,3 +86,23 @@ Known gaps: the three windows and the poses named above stay bare for those reas
 | crown_102 | 22.16 | pennant dropped (template `*_nokite`) | none left |
 
 Pin before 2069366017, after 2441257203; plan check 0 violations (1057 instances).
+
+### Base line and plan check (22 October 2026)
+
+Head after the merges: stage/alpha-w18 (merge fa05ebd1) and `claude/zealous-franklin-ed0sxr-lineclear` (merge f048b087) on top of 73c80bae. `park_props_plan --check`: 1033 instances (109 litter), 0 violations, fingerprint 533729188 (pinned).
+
+### Telegraph zones
+
+Rule: `park_props.gd` `check_one` keeps props out of each event's site box grown by `hold_clear_m`, lightning strike circles and industrial `hazard_m` circles (DRESSING-KITS.md). On the merged head 82 instances failed it, all in two events: `meander_flash_flood` (hold 20 m, 60 instances in 11 spots) and `split_spire_strike` (hold 30 m on a 50 by 50 m site, a 55 m half box, 22 instances in 5 spots). No lightning circle or industrial hazard circle held an instance. Spots moved by the smallest legal distance found by script (old to new `at`): crown_46 (155.6,-114.0) to (161.6,-114.0); crown_69 (-30.0,102.0) to (-24.8,105.0); crown_23 (74.0,-258.0) to (65.0,-242.4); crown_32 (74.0,-210.0) to (62.0,-210.0); crown_63 (-54.0,38.0) to (-64.4,44.0); crown_05 (146.0,-338.0) to (156.4,-344.0); crown_53 (122.0,-50.0) to (111.6,-44.0); crown_39 (74.0,-154.0) to (56.0,-154.0); crown_67 (18.0,78.0) to (18.0,102.0); crown_66 (-14.0,70.0) to (-20.3,129.7); crown_mv_07 (78.0,-330.0) to (96.0,-361.2); crown_14 (74.0,-298.0) to (32.4,-274.0); crown_61 (-22.0,14.0) to (-15.5,-39.6); crown_20 (144.0,-266.0) to (216.0,-266.0); crown_33 (144.0,-210.0) to (57.6,-184.6); crown_43 (144.0,-114.0) to (144.0,-18.0). The `near` label was updated for the ones that moved more than 20 m. Litter dropped by the rule: 24 (133 to 109). The props stay clear of telegraphs because every authored instance passes the rule in the plan check.
+
+### 30 m brief kinds (enforced)
+
+`kite_pennant` now carries `line_clear_m: 30` in `crown.py` and the manifest (the GLBs are byte-identical; only the manifest line and the recipe line changed), so the plan check enforces the 30 m edge distance and the earlier probe-only measure is no longer needed.
+
+### Audit
+
+Held: the Watch Butte windows (floor 9.7/-441.9 and sable 8/-476.3 for `no_cell`, tarn -32.8/-319.1 for `runout:bajada_lip`) wait on the audit tool's checked `--open` reasons (#241). Before values (r8f): density 25 of 41, 13 exempt, draw delta max 63, median 24, bare 26.9%. The named bare poses are 11, 16 and 208 (accepted).
+
+### ART-MISTAKES entries checked
+
+Read all rows of `project-guide/handoff/ART-MISTAKES.md`. Applied: 2026-10-21 World #242 "Read the function before describing what a flag means" (I read `check_one` for the telegraph and line_clear_m rules before moving spots); 2026-10-21 Coordinator #222 "Measure a number at the moment it applies" (the plan check on the merged head is the authority, not the earlier PASS); 2026-10-21 Coordinator #231 and #234 "check the last gate's drop list before stacking" (merged the current stage and re-ran the plan check). My own rows from this lane (audits outside the lock, the `P()` scale argument, `expand()` resetting the low rows) were re-read before this unit.
