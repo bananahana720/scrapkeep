@@ -106,10 +106,11 @@ const NODE := "WorldLook"
 #   fog_tint: the colour the stage's fog leans halfway toward (not under a dome).
 #   sun_energy and energy: the ground's light, sun_energy x sin(sun height) + energy, rises from dawn to
 #   noon and falls after (park_day_light_test). Noon is morning x 1.30 and afternoon is just under noon.
-#   Provisional (#241 comment 6333015981): the 3060 stills these values were fit to (#241 comment
-#   6328587862) drew the park ground as Terrain3D's untextured checkerboard, so their floor L* and
-#   spread measured checker tiles, not sand. The noon floor is measured again once the park ground
-#   has its material.
+#   Provisional (#241 comment 6333015981): these values were fit to 3060 stills whose park ground
+#   was Terrain3D's untextured checkerboard. On real sand the 3060 sweep (#241 comment 6334779159)
+#   reads the noon floor at L* 73.9 against morning's 65.7, a step of 8.3 over the 5 target; no
+#   single ambient or exposure change closes it. Ruling #241 comment 6334820540 keeps these values
+#   for wave 18 and gives the step to a wave 19 exposure curve keyed to sun height.
 const TIME_ORDER := ["dawn", "morning", "noon", "afternoon", "golden", "dusk"]
 const STAGE_TIME := {1: "dawn", 2: "morning", 3: "noon", 4: "afternoon", 5: "golden", 6: "dusk"}
 const TIME_ROWS := {
