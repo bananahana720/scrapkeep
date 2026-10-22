@@ -359,10 +359,11 @@ func _attack_ended(attack: Dictionary) -> bool:
 # it until every floor above it is gone: it is reachable only when floor k stands, no floor below k still stands, and
 # floor k is not in the drop pipeline (its warning, or queued behind another drop). That is stricter than k == phase:
 # phase moves to k + 1 the moment chunk k is lost, while floor k still stands through its drop wait and warning, so
-# in that gap nothing is reachable. The override sits on the pit floor and is buried until the pit phase.
+# in that gap nothing is reachable. The override sits on the pit floor and is buried until the pit phase AND the last
+# floor is gone: phase reaches the pit the frame chunk 3 shatters, while floor 3 still stands through its queue and warning.
 func part_reachable(id: String) -> bool:
 	if id == "override":
-		return phase >= WakingAttacks.PIT_PHASE
+		return phase >= WakingAttacks.PIT_PHASE and _floor_bodies.is_empty() and _drops.is_empty() and _dropping == 0
 	if not id.begins_with("hatch_"):
 		return true
 	var k := int(id.substr(6))

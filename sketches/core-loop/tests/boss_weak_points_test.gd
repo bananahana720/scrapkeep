@@ -202,6 +202,16 @@ func _waking() -> void:
 	_t.check("waking: a second drop opens it again", mod.weak_open() == ["hatch_1"], str(mod.weak_open()))
 	mod.weak.step(mod.clock + 100.0)
 	_drop_floors(mod, 2)
+	# Phase 3, floors 1 and 2 gone, hatch_3 standing and shut: a lip drop opens it (the positive control for the
+	# last-floor check below, which runs with hatch_3 already broken and so cannot fail).
+	mod.phase = 3
+	mod._lip_seen = false
+	mod._carved_at = mod.clock
+	mod.ctx.player.state.grounded = false
+	_t.check("waking: hatch_3 stands shut before the phase 3 lip", mod.weak.state("hatch_3") == WeakPoints.SHUT and mod.part_reachable("hatch_3"), "")
+	mod._open_by_lip()
+	_t.check("waking: a lip drop in phase 3 opens hatch_3", mod.weak_open() == ["hatch_3"], str(mod.weak_open()))
+	mod.weak.step(mod.clock + 100.0)
 	# The bore: hatch_3 off the pit, the override in it.
 	_bore(mod, 3)
 	_t.check("waking: a bore jam opens the third hatch", mod.weak_open() == ["hatch_3"], str(mod.weak_open()))
@@ -222,7 +232,8 @@ func _waking() -> void:
 			and mod._removed_families() == ["bore"] and WakingAttacks.exposed(3, mod._removed_families()) == ["burrow", "cave_in"], str(mod._removed_families()))
 	_t.check("waking: a family is never removed to nothing", WakingAttacks.exposed(1, mod._removed_families()) == ["burrow"], "")
 	_t.check("waking: a broken hatch stays out of the way", mod.weak_open().is_empty() and not mod.objective_text().contains("is open"), "")
-	# The pit: the override.
+	# The pit: the override, once the last floor is gone.
+	_drop_floors(mod, 3)
 	_bore(mod, 4)
 	_t.check("waking: a bore jam in the pit opens the override", mod.weak_open() == ["override"], str(mod.weak_open()))
 	_t.check("waking: the objective names the override button", mod.objective_text().contains("override button is open"), mod.objective_text())
@@ -251,6 +262,16 @@ func _jam_guard() -> void:
 	var booted = await _boot(2, {"waking.weak_points": 1.0})
 	var game = booted[0]
 	var mod = booted[1]
+	# Phase 4 the frame chunk 3 shatters: floor 3 still stands and is in its drop warning, so the buried override stays shut.
+	_drop_floors(mod, 2)
+	mod._dropping = 3
+	mod._drop_left = 1.0
+	_bore(mod, 4)
+	_t.check("jam: a bore jam during floor 3's drop warning opens nothing", mod.weak_open().is_empty() and mod._weak_opened.is_empty()
+			and mod.weak.state("override") == WeakPoints.SHUT and mod.weak.state("hatch_3") == WeakPoints.SHUT, str(mod.weak_open()))
+	mod._dropping = 0
+	_drop_floors(mod, 3)
+	mod._clear_attacks()
 	_bore(mod, 4)
 	_t.check("jam: the pit's jam opens the override", mod.weak_open() == ["override"], str(mod.weak_open()))
 	var opened: int = mod._weak_opened.size()

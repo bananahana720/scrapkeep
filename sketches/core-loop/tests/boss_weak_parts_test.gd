@@ -366,6 +366,9 @@ func _openers() -> void:
 	mod._step_attacks(0.0)
 	_t.eq("and a jam still running opens nothing more", opens.size(), 1)
 	mod.weak.step(mod.clock + 100.0)
+	# Floor 3's body is gone (the pit's override is buried until then); its hatch stays for the checks below.
+	mod._free_body(mod._floor_bodies.get(3))
+	mod._floor_bodies.erase(3)
 	_bore(mod, 4)
 	_t.check("a bore jam in the pit opens the override", mod.weak_open() == ["override"] and opens.back() == "override", str(opens))
 	# Each open carries the point's world position and its open seconds.
@@ -410,7 +413,7 @@ func _reachable() -> void:
 	game.events.weak_point_opened.connect(func(id: String, _at: Vector3, _s: float): emitted.append(id))
 	var warned := _run_attack(mod, "burrow", "hatch_1", 1)
 	_t.check("floor 1 in its drop warning: hatch_1 is not reachable", mod._dropping == 1 and not mod.part_reachable("hatch_1"), "")
-	_t.check("a burrow ending inside the drop warning opens nothing and emits nothing", warned["opens"] == 0 and mod.weak_open().is_empty()
+	_t.check("a burrow ending inside the drop warning opens nothing and emits nothing", warned["end_step"] >= 0 and warned["opens"] == 0 and mod.weak_open().is_empty()
 			and mod.weak.state("hatch_1") == WeakPoints.SHUT and emitted.is_empty(), str(emitted))
 	_t.check("and no objective text or bot target for it", not mod.objective_text().contains("is open"), mod.objective_text())
 	mod._dropping = 0
@@ -435,7 +438,15 @@ func _reachable() -> void:
 	mod.phase = 2
 	_t.check("after floor 1 drops hatch_2 is reachable and hatch_3 is not", mod.part_reachable("hatch_2") and not mod.part_reachable("hatch_3") and not mod.part_reachable("hatch_1"), "")
 	mod.phase = 4
-	_t.check("the override is reachable in the pit phase only", mod.part_reachable("override"), "")
+	_t.check("the override is buried in the pit phase while a floor still stands", not mod.part_reachable("override"), "")
+	_drop_floors(mod, 3)
+	_t.check("the override is reachable in the pit phase once every floor is gone", mod.part_reachable("override"), "")
+	mod._drops.append(3)
+	_t.check("and buried again while a floor sits in the drop queue", not mod.part_reachable("override"), "")
+	mod._drops.clear()
+	mod._dropping = 3
+	_t.check("and while a floor is in its drop warning", not mod.part_reachable("override"), "")
+	mod._dropping = 0
 	mod.phase = 3
 	_t.check("and not in phase 3", not mod.part_reachable("override"), "")
 	game.free()
