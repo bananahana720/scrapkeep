@@ -862,6 +862,9 @@ func _uncount(c: Dictionary) -> void:
 	if c["counted"]:
 		weak.knock_fit(c["id"])
 		c["counted"] = false
+		# A fitter that dies or is freed while carrying leaves the plate to fall, as a knock below fit_min does.
+		if weak.state(c["id"]) == WeakPoints.OPEN and weak_part(c["id"]) != null:
+			_plate_knocked(c["id"])
 
 
 # A reel impact on a fitting fitter throws it off its plate; any other contact only shoves it (enemy.knock).
@@ -997,6 +1000,11 @@ func _step_seal_cue(delta: float) -> void:
 
 
 func _retire_crew() -> void:
+	for c in _crew:
+		if is_instance_valid(c["node"]):
+			_uncount(c)
+			c["node"].retire()
+	_crew.clear()
 	for id in _plates.keys():
 		_free_plate(id)
 	for fall in _fallen:
@@ -1006,11 +1014,6 @@ func _retire_crew() -> void:
 	_plate_latch.clear()
 	_seal_cue_left = 0.0
 	seal_cue_log.clear()
-	for c in _crew:
-		if is_instance_valid(c["node"]):
-			_uncount(c)
-			c["node"].retire()
-	_crew.clear()
 	_crew_waves = 0
 	_crew_phase = 0
 

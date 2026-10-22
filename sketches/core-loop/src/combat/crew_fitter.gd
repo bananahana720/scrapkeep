@@ -145,6 +145,7 @@ func _physics_process(delta: float) -> void:
 		if _knocked_left <= 0.0:
 			fit_state = State.INBOUND
 			_show_plate(true)
+	_update_cue(delta)
 	var desired := Vector3.ZERO
 	if _in_play() and fit_state != State.KNOCKED:
 		var to_slot := slot - global_position

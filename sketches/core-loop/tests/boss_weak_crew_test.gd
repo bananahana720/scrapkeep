@@ -39,6 +39,7 @@ func _run() -> void:
 	await _learner()
 	await _stats()
 	await _outcome_phase()
+	await _freed_without_died()
 	ChallengeDials.reset()
 	quit(_t.verdict())
 
@@ -417,7 +418,8 @@ func _stats() -> void:
 	var bot = BotDriver.new(game, "skipper", 1)
 	bot._on_boss_entered()
 	_t.check("record shape: the weak fields start null", bot.boss_note.has("weak_opened") and bot.boss_note["weak_opened"] == null and bot.boss_note["weak_sealed"] == null
-			and bot.boss_note["weak_timed_out"] == null and bot.boss_note["weak_broken"] == null and bot.boss_note["crew_waves"] == null, str(bot.boss_note.keys()))
+			and bot.boss_note["weak_timed_out"] == null and bot.boss_note["weak_broken"] == null and bot.boss_note["crew_waves"] == null
+			and bot.boss_note.has("weak_open_at_end") and bot.boss_note["weak_open_at_end"] == null, str(bot.boss_note.keys()))
 	bot._boss_weak_note(mod)
 	var n: Dictionary = bot.boss_note
 	_t.check("record: two openings, one seal, one timeout, no break, two waves, all on phase 1",
@@ -433,7 +435,7 @@ func _stats() -> void:
 	var obot = BotDriver.new(off[0], "skipper", 1)
 	obot._on_boss_entered()
 	obot._boss_weak_note(off[1])
-	_t.check("dial 0: the weak fields stay null and nothing is counted", obot.boss_note["weak_opened"] == null and obot.boss_note["crew_waves"] == null
+	_t.check("dial 0: the weak fields stay null and nothing is counted", obot.boss_note["weak_opened"] == null and obot.boss_note["crew_waves"] == null and obot.boss_note["weak_open_at_end"] == null
 			and off[1].weak_stats["opened"].is_empty(), "")
 	off[0].free()
 	await physics_frame
@@ -461,7 +463,8 @@ func _cue_and_plate() -> void:
 	_seat(two[1])
 	var last := 0.0
 	var rising := true
-	var sparked := false
+	var seen_on := false
+	var seen_off := false
 	var ticks_before: int = mod.seal_cue_log.size()
 	var until: float = mod.clock + 3.0
 	while mod.clock < until:
@@ -472,9 +475,10 @@ func _cue_and_plate() -> void:
 		var e: float = two[0].seam_energy()
 		rising = rising and e >= last - 0.0001 and e >= CrewFitter.SEAM_LIT - 0.0001
 		last = e
-		sparked = sparked or two[0].spark_visible()
-	_t.check("fitting: the seam is lit and its brightness never falls as progress rises", rising and last > CrewFitter.SEAM_LIT, "%s" % last)
-	_t.check("fitting: a weld spark flickers at the hatch contact", sparked, "")
+		seen_on = seen_on or two[0].spark_visible()
+		seen_off = seen_off or (two[0].fit_state == two[0].State.FITTING and not two[0].spark_visible())
+	_t.check("fitting: the seam is lit and its brightness never falls as progress rises", rising and last > lerpf(CrewFitter.SEAM_LIT, CrewFitter.SEAM_SEALING, 0.5), "%s" % last)
+	_t.check("fitting: a weld spark flickers at the hatch contact (seen both lit and dark)", seen_on and seen_off, "%s %s" % [seen_on, seen_off])
 	var ticks_log: Array = mod.seal_cue_log
 	var climbs := ticks_log.size() - ticks_before >= 3 and float(ticks_log[-1][1]) > float(ticks_log[ticks_before][1]) and float(ticks_log[-1][0]) > float(ticks_log[ticks_before][0])
 	_t.check("two fitting: the seal tick repeats and its pitch rises with progress", climbs, str(ticks_log.slice(ticks_before)))
@@ -496,8 +500,13 @@ func _cue_and_plate() -> void:
 	_t.check("the seal tick stops when fewer than fit_min fit", mod.seal_cue_log.size() == ticks, "%d -> %d" % [ticks, mod.seal_cue_log.size()])
 	await _step_until(mod, 0.2)
 	_t.check("the fallen plate lies still and a lone fitter does not pick up a new one", mod._fallen.size() == 1 and not mod._plates.has("hatch_1"), "")
-	await _step_until(mod, CrewFitter.KNOCK_SECONDS)
-	_t.check("after KNOCK_SECONDS the seam is lit again", two[0].seam_energy() >= CrewFitter.SEAM_LIT - 0.0001, "%s" % two[0].seam_energy())
+	var guard := 0
+	while two[0].state_name() == "knocked" and guard < 300:
+		await physics_frame
+		guard += 1
+	_t.check("the frame KNOCKED ends the seam is back at its normal lit state, not stuck dim", two[0].state_name() == "inbound"
+			and is_equal_approx(two[0].seam_energy(), CrewFitter.SEAM_LIT), "%s %s" % [two[0].state_name(), two[0].seam_energy()])
+	_t.check("after KNOCK_SECONDS the seam is back at its normal lit state, not stuck dim", two[0].state_name() != "knocked" and two[0].seam_energy() >= CrewFitter.SEAM_LIT - 0.0001, "%s %s" % [two[0].state_name(), two[0].seam_energy()])
 	_seat(two[0])
 	await _step_until(mod, 0.3)
 	_t.check("with fit_min fitters back a new plate is carried", mod._plates.has("hatch_1"), "")
@@ -562,5 +571,23 @@ func _outcome_phase() -> void:
 	_t.check("the killing blow's break is counted before the defeat", s["broken"] == {"1": 1}, str(s))
 	_t.check("opened = sealed + timed_out + broken + open_at_end at fight end", _total(s, "opened") == 2 and _total(s, "opened")
 			== _total(s, "sealed") + _total(s, "timed_out") + _total(s, "broken") + _total(s, "open_at_end") and mod.weak_open_at_end == {"1": 1}, str(s))
+	game.free()
+	await physics_frame
+
+
+# A fitter node freed without emitting died still gives its fit back, so a wave can refill; the carried plate falls
+# when fewer than fit_min remain.
+func _freed_without_died() -> void:
+	var booted = await _boot({"waking.weak_points": 1.0})
+	var game = booted[0]
+	var mod = booted[1]
+	var two := _open_two(mod)
+	await _step_until(mod, 0.3)
+	_t.check("two fitters fitting hold the plate", mod.weak.fitters("hatch_1") == 2 and mod._plates.has("hatch_1"), str(mod.weak.fitters("hatch_1")))
+	two[0].queue_free()
+	await physics_frame
+	await physics_frame
+	_t.check("freed without died: the fit count drops and the clock stops", mod.weak.fitters("hatch_1") == 1 and _fit_since(mod) < 0.0, str(mod.weak.fitters("hatch_1")))
+	_t.check("and the carried plate falls", not mod._plates.has("hatch_1") and mod._fallen.size() == 1, str(mod._fallen.size()))
 	game.free()
 	await physics_frame
