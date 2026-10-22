@@ -93,37 +93,71 @@ func _pin_floor_mean() -> void:
 	_floor_mean = mean
 
 
-# The three multipliers: board_multiplier() on the reference boards' raw sRGB patch means (park_terrain.gd's
-# comments cite the crops). The stored literals must match it within 0.003.
+# The three multipliers, re-derived here from the reference boards' raw sRGB patch means (park_terrain.gd's
+# comments cite the crops). _derive() duplicates park_terrain.gd's board_multiplier() on purpose: that
+# duplication is what makes this pin independent of the code it checks. The stored literals must match
+# within 0.003, and each target's L* must match the value the design was judged at.
 func _pin_mults() -> void:
 	var fm := _floor_mean
-	_mults = {
-		2: _board(Vector3(239, 194, 148), Vector3(243, 167, 102.5)),
-		3: _board(Vector3(245, 172, 116), Vector3(245, 172, 116)),
-		4: _board(Vector3(101, 92.5, 93), Vector3(153, 126, 111)),
+	var boards := {
+		2: [Vector3(239, 194, 148), Vector3(243, 167, 102.5), 59.5],
+		3: [Vector3(245, 172, 116), Vector3(245, 172, 116), 59.5],
+		4: [Vector3(101, 92.5, 93), Vector3(153, 126, 111), 45.1],
 	}
-	for slot in _mults:
-		var want: Color = _mults[slot]
+	_mults = {}
+	for slot in boards:
+		var b: Array = boards[slot]
+		var target := _derive(b[0], b[1], fm)
+		var want := Color(target.x / fm.r, target.y / fm.g, target.z / fm.b, 0.5)
+		_mults[slot] = want
 		var got := ParkTerrain.slot_tint(slot)
-		t.check("slot %d multiplier = board_multiplier of the raw patches %s, within 0.003" % [slot, want], absf(got.r - want.r) <= 0.003 and absf(got.g - want.g) <= 0.003 and absf(got.b - want.b) <= 0.003, "got %s" % got)
+		t.check("slot %d multiplier = the rule on the raw patches %s, within 0.003" % [slot, want], absf(got.r - want.r) <= 0.003 and absf(got.g - want.g) <= 0.003 and absf(got.b - want.b) <= 0.003, "got %s" % got)
+		t.near("slot %d target L* (the stored multiplier times the floor mean)" % slot, _lstar(Vector3(got.r * fm.r, got.g * fm.g, got.b * fm.b)), b[2], 0.3)
 		t.near("slot %d multiplier alpha is Terrain3D's default 127/255" % slot, got.a, 127.0 / 255.0, 0.0001)
 		t.check("slot %d multiplier is at most 1 per channel (a colour map cannot brighten)" % slot, got.r <= 1.0 and got.g <= 1.0 and got.b <= 1.0)
-		var target := _park_target(slot)
-		_near_color("slot %d target = multiplier * floor mean" % slot, target, Color(got.r * fm.r, got.g * fm.g, got.b * fm.b))
+		var park_target := _park_target(slot)
+		_near_color("slot %d target = multiplier * floor mean" % slot, park_target, Color(got.r * fm.r, got.g * fm.g, got.b * fm.b))
 	t.check("the tailings multiplier keeps red at 1 and darkens green and blue", ParkTerrain.slot_tint(3).r == 1.0 and ParkTerrain.slot_tint(3).g < 1.0 and ParkTerrain.slot_tint(3).b < 1.0)
 	t.check("the tailings target is much lighter than the old charcoal tint", _park_target(3).g > 0.45, str(_park_target(3)))
-	# The cap: the target never exceeds the floor mean in a channel, and at least one channel reaches it.
+	# The cap: at least one channel of each multiplier reaches 1 (tailings by its red).
 	for slot in _mults:
 		var m := ParkTerrain.slot_tint(slot)
 		t.check("slot %d: some channel of the multiplier is 1 (the cap)" % slot, m.r == 1.0 or m.g == 1.0 or m.b == 1.0, str(m))
 
 
-func _board(material: Vector3, ground: Vector3) -> Color:
-	var script: GDScript = ParkTerrain
-	if not script.get_script_method_list().any(func(m): return m.name == "board_multiplier"):
-		return Color.MAGENTA
-	var c: Color = script.call("board_multiplier", material, ground)
-	return Color(c.r, c.g, c.b, 0.5)
+# The target colour (sRGB, 0 to 1) of a material patch against the lit ground beside it: the material's
+# g/r and b/r; luminance Y = Y(floor mean) * Y(material) / Y(ground) on sRGB-decoded channels with
+# Y = 0.2126 R + 0.7152 G + 0.0722 B, red found by bisection; then scaled down until no channel exceeds
+# the floor mean's.
+func _derive(material: Vector3, ground: Vector3, floor_mean: Color) -> Vector3:
+	var m := material / 255.0
+	var g := ground / 255.0
+	var want := _luma(Vector3(floor_mean.r, floor_mean.g, floor_mean.b)) * _luma(m) / _luma(g)
+	var lo := 0.0
+	var hi := 4.0
+	for i in 60:
+		var mid := (lo + hi) * 0.5
+		if _luma(Vector3(mid, mid * m.y / m.x, mid * m.z / m.x)) < want:
+			lo = mid
+		else:
+			hi = mid
+	var target := Vector3(lo, lo * m.y / m.x, lo * m.z / m.x)
+	var worst := maxf(target.x / floor_mean.r, maxf(target.y / floor_mean.g, target.z / floor_mean.b))
+	return target / worst if worst > 1.0 else target
+
+
+func _decode(c: float) -> float:
+	return c / 12.92 if c <= 0.04045 else pow((c + 0.055) / 1.055, 2.4)
+
+
+func _luma(srgb: Vector3) -> float:
+	return 0.2126 * _decode(srgb.x) + 0.7152 * _decode(srgb.y) + 0.0722 * _decode(srgb.z)
+
+
+# CIE L* of an sRGB colour (white Y = 1).
+func _lstar(srgb: Vector3) -> float:
+	var y := _luma(srgb)
+	return 116.0 * (pow(y, 1.0 / 3.0) if y > 0.008856 else 7.787 * y + 16.0 / 116.0) - 16.0
 
 
 # park_terrain.gd's target for a slot, or magenta where it declares none (so the check fails, not parses).
@@ -247,7 +281,6 @@ func _check_park(id: String, render: Node3D, heights: PackedFloat32Array) -> voi
 	t.check(id + " colour-checked 2000+ deep or far-apron vertices", colour_checked >= 2000, str(colour_checked))
 	t.eq(id + " vertices without the auto bit", bad_auto, 0)
 	t.eq(id + " vertices with the wrong colour " + first, bad_color, 0)
-	_check_blit(id, render, surface, rng)
 	_check_blit(id, render, surface, rng)
 	_check_cells(id, render, surface, deep, rng)
 	_check_boundaries(id, render, surface, rng)
