@@ -2837,8 +2837,8 @@
    "id": "m17_mid_cart_stub",
    "template": "mid_cart_stub",
    "at": [
-    -153.72,
-    -450.83
+    -149.7,
+    -454.8
    ],
    "yaw_deg": 154.2,
    "near": "lava_channel_17: ore cart and a stub at the bank"
@@ -3057,5 +3057,5 @@
  "low_ground_rows": [
   "great_room"
  ],
- "pin": 1439281478
+ "pin": 1683370189
 }
