@@ -8,8 +8,9 @@ extends SceneTree
 # way the game fits it (fit_shell_into), posed on a vertical wall and a wall 30 degrees off vertical, and the
 # bank applied (the ring aimed four ways). The support distance along -normal of every vertex of every visible
 # MeshInstance3D under the pod is taken from the pod's centre:
-#   - banked nodes (under WeaponRing, CarrierBank or Fairlead) are measured as drawn, over the four aims, at
-#     pod yaw POD_YAW;
+#   - banked nodes (under WeaponRing, CarrierBank or Fairlead) are measured as drawn, over the four aims and 16
+#     pod yaws (the pod yaws freely against a wall; each pose settles its own bank), reporting the worst yaw and
+#     the bank angle there;
 #   - baked nodes do not bank, so the pod's yaw alone moves them; their worst case over EVERY pod yaw is exact
 #     and closed form (|n horizontal| * horizontal radius - n.y * height), and is the number reported. A
 #     posed measurement at POD_YAW cross-checks the formula.
@@ -34,6 +35,8 @@ const CLASSES := [1, 2, 3, 4, 5]
 const DT := 1.0 / 60.0
 const FRAMES := 40
 const SLACK := 0.002
+# Banked nodes are swept over this many evenly spaced pod yaws; each pose settles its own bank.
+const YAWS := 16
 const VARIANTS := ["shell_sable_felt", "shell_rivet_calibrated", "shell_kest_roost", "shell_tarn_redjaw_teeth",
 	"shell_tally_abacus", "shell_cannon_choir"]
 # A listed node may read this much above its measured value before it counts as worse.
@@ -174,7 +177,7 @@ func _measure(hook, pod: Node3D, pilot: String, cls: int) -> void:
 			_cache[mi.mesh] = verts
 		var n := verts.size()
 		var r := {"node": mi, "path": "(pod)" if mi == pod else String(pod.get_path_to(mi)), "mesh": mi.mesh.resource_name, "verts": verts,
-			"banked": _banked(pod, mi), "max": -INF, "sane": true,
+			"banked": _banked(pod, mi), "max": -INF, "yaw": 0.0, "bank": 0.0, "wall": "", "sane": true,
 			"best": [], "ang": [], "y": [], "rad": []}
 		for arr in ["best", "ang", "y", "rad"]:
 			(r[arr] as Array).resize(n)
@@ -182,32 +185,42 @@ func _measure(hook, pod: Node3D, pilot: String, cls: int) -> void:
 		recs.append(r)
 	for label in WALLS:
 		var normal: Vector3 = WALLS[label]
-		for aim_yaw in AIMS:
-			_hold(hook, pod, normal, aim_yaw)
-			var to_pod := pod.global_transform.affine_inverse()
-			var centre := pod.global_position
-			for r in recs:
-				var banked: bool = r["banked"]
-				# Baked nodes do not depend on the aim: one pose per wall is enough.
-				if not banked and aim_yaw != AIMS[0]:
-					continue
-				var xf: Transform3D = (r["node"] as Node3D).global_transform
-				var verts: PackedVector3Array = r["verts"]
-				for i in verts.size():
-					var w := xf * verts[i]
-					var p := to_pod * w
-					var reach := (w - centre).dot(-normal)
-					if not banked:
-						reach = _worst_yaw(p, normal)
-						if (w - centre).dot(-normal) > reach + 0.0005:
-							r["sane"] = false
-					if reach > (r["best"] as Array)[i]:
-						(r["best"] as Array)[i] = reach
-						(r["ang"] as Array)[i] = rad_to_deg(atan2(p.x, -p.z))
-						(r["y"] as Array)[i] = p.y
-						(r["rad"] as Array)[i] = Vector2(p.x, p.z).length()
-					r["max"] = maxf(r["max"], reach)
-	print("--- %s, heft class %d: %d visible meshes (banked nodes posed on each wall, baked nodes worst over any pod yaw)" % [pilot, cls, recs.size()])
+		for yi in range(YAWS):
+			pod.rotation.y = TAU * yi / YAWS
+			for aim_yaw in AIMS:
+				# Baked nodes need one pose per wall (their worst yaw is closed form); banked ones every pose.
+				var baked_only: bool = yi > 0 or aim_yaw != AIMS[0]
+				_hold(hook, pod, normal, aim_yaw)
+				var bank := HeroAssets.carrier_bank(pod).get_rotation_quaternion().get_angle()
+				var to_pod := pod.global_transform.affine_inverse()
+				var centre := pod.global_position
+				for r in recs:
+					var banked: bool = r["banked"]
+					if not banked and baked_only:
+						continue
+					var xf: Transform3D = (r["node"] as Node3D).global_transform
+					var verts: PackedVector3Array = r["verts"]
+					var top := -INF
+					for i in verts.size():
+						var w := xf * verts[i]
+						var reach := (w - centre).dot(-normal)
+						var p := to_pod * w
+						if not banked:
+							reach = _worst_yaw(p, normal)
+							if (w - centre).dot(-normal) > reach + 0.0005:
+								r["sane"] = false
+						top = maxf(top, reach)
+						if reach > (r["best"] as Array)[i]:
+							(r["best"] as Array)[i] = reach
+							(r["ang"] as Array)[i] = rad_to_deg(atan2(p.x, -p.z))
+							(r["y"] as Array)[i] = p.y
+							(r["rad"] as Array)[i] = Vector2(p.x, p.z).length()
+					if top > r["max"]:
+						r["max"] = top
+						r["yaw"] = rad_to_deg(pod.rotation.y)
+						r["bank"] = rad_to_deg(bank)
+						r["wall"] = label
+	print("--- %s, heft class %d: %d visible meshes (banked nodes posed on each wall at 16 pod yaws, baked nodes worst over any pod yaw)" % [pilot, cls, recs.size()])
 	var quiet := 0
 	var worst_quiet := 0.0
 	for r in recs:
@@ -218,7 +231,8 @@ func _measure(hook, pod: Node3D, pilot: String, cls: int) -> void:
 			quiet += 1
 			worst_quiet = maxf(worst_quiet, peak)
 			continue
-		print("  %-64s %-24s %s max %.4f m%s" % [r["path"], r["mesh"], "banked" if r["banked"] else "baked ", peak,
+		print("  %-64s %-24s %s max %.4f m%s%s" % [r["path"], r["mesh"], "banked" if r["banked"] else "baked ", peak,
+			("  at pod yaw %.1f deg, bank %.1f deg, %s" % [r["yaw"], r["bank"], r["wall"]]) if r["banked"] else "",
 			"  OVER" if peak > CarrierBank.LIMIT + SLACK else ""])
 		if peak > CarrierBank.LIMIT + SLACK:
 			_over += 1
