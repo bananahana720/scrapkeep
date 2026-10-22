@@ -22,6 +22,9 @@ const ClassDef := preload("res://src/core/class_def.gd")
 # priority  0 ambient (music only), 1 feedback (sound and small VFX), 2 notable (toast),
 #           3 critical (big toast, stinger on the beat).
 
+# The natural event kinds whose swap overlay hides park_rows named by hide_on (natural.gd builds their swap entry, a
+# cave_in entry is a roof that never reaches apply_swap; park_schema.gd reads this too).
+const HIDING_NATURAL_KINDS := ["collapse", "impact"]
 const GROUPS := ["movement", "combat", "economy", "flow", "event"]
 const SHAPES := ["ring", "diamond", "square", "chevron", "arrow", "burst", "bar", "star", "cross", "wave", "core", "lane", "none"]
 const FIELDS := ["group", "color", "shape", "sound", "hud", "objective", "priority"]

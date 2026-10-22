@@ -111,8 +111,11 @@ def absent(duration):
 def author_ship(root):
     remember(root)
     d = SHIP_CLIPS["idle_roll"][0]
-    # Four metres/second / .75 m radius; runtime scales playback by actual speed.
-    rows = {"Drum%s%d" % (side, k): [(0, {}), (d, {"pitch": -4 / .75 * d})]
+    # One exact turn per loop: requisition.gd:253 loops this clip, and the authored -4/.75*d
+    # (-6.4 rad) was 6.69 deg past a turn, so it hitched every 1.2 s. Rim speed is now
+    # 2*pi*.75/1.2 = 3.93 m/s against the 4 m/s intent. Presentation only: nothing in src/ scales
+    # drum playback by a speed constant (no speed_scale in src/boss).
+    rows = {"Drum%s%d" % (side, k): [(0, {}), (d, {"pitch": -2 * math.pi})]
             for side in ("L", "R") for k in range(4)}
     rows["Hull"] = [(0, {}), (.3, {"up": -.025, "pitch": .004}),
                     (.6, {}), (.9, {"up": -.025, "pitch": -.004}), (d, {})]
@@ -211,7 +214,10 @@ def author_scooter(root):
     action(root, "chase", 1, {
         "ScooterSeat": [(0, {"roll": -.05}), (.25, {"roll": -.08, "up": .012}),
                         (.5, {"roll": -.05}), (.75, {"roll": -.08, "up": .012}), (1, {"roll": -.05})],
-        "Drums": [(0, {}), (1, {"pitch": -11 / .22})]})
+        # Eight exact turns per loop (requisition.gd:321 loops it); the authored -11/.22 = -50 rad
+        # was 15.21 deg short of 8 turns. Rim speed 16*pi*.22/1.0 = 11.06 m/s against
+        # SCOOTER_SPEED 11.0 (boss_rules.gd:105); presentation only, travel stays in code.
+        "Drums": [(0, {}), (1, {"pitch": -16 * math.pi})]})
     restore(root)
 
 

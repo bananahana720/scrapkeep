@@ -11,10 +11,11 @@ const Vfx := preload("res://src/presentation/vfx.gd")
 const Bolts := preload("res://src/combat/bolts.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const Director := preload("res://src/world/director.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 
 # Dense-scene diagnostic. Synthetic attacks do not establish gameplay or human readability.
 # Does a hostile telegraph stay readable when the screen fills, and what do the effect
-# counts and frame times look like? Three scenes on stage 1 as Rivet with a stacked build:
+# counts and frame times look like? Three scenes on stage 1 (or --stage=N) as Rivet with a stacked build:
 #   S1  1 pack, no extra telegraphs (baseline)
 #   S2  3 packs, 4 committed telegraphs of each hostile type around the ball
 #   S3  6 packs, 8 of each type, and the stage's Warden moved in front and charging
@@ -66,6 +67,16 @@ var _dry := false
 var _load_slots: Array = []
 var _count_samples: Array = []
 var _errors: Array = []
+# --stage=N (1..6) runs the scenes on that stage of the launched park table and tags every
+# output file "stN-"; absent, the run is stage 1 of the default table with untagged names.
+# --timeout=<seconds> and --size=WxH (default 1920x1080) are for slow software renderers.
+var _stage := 1
+var _staged := false
+var _entered := false
+var _table := ""
+var _tag := ""
+var _timeout := HARD_TIMEOUT
+var _size := Vector2i(1920, 1080)
 
 
 func _initialize() -> void:
@@ -81,6 +92,22 @@ func _initialize() -> void:
 		quit(2)
 		return
 	_out = settings["out"]
+	var dims: PackedStringArray = String(settings.get("size", "1920x1080")).split("x")
+	if dims.size() == 2 and dims[0].is_valid_int() and dims[1].is_valid_int():
+		_size = Vector2i(int(dims[0]), int(dims[1]))
+	var timeout: String = settings.get("timeout", "")
+	_timeout = float(timeout) if timeout.is_valid_float() and float(timeout) > 0.0 else HARD_TIMEOUT
+	if settings.has("stage"):
+		var wanted: String = settings["stage"]
+		if not wanted.is_valid_int() or int(wanted) < 1 or int(wanted) > 6:
+			printerr("stress_capture: --stage must be 1..6")
+			quit(2)
+			return
+		_stage = int(wanted)
+		_staged = true
+		_tag = "st%d-" % _stage
+		_table = "park"
+	_table = settings.get("table", _table)
 	if not _out.is_absolute_path() or DirAccess.make_dir_recursive_absolute(_out) != OK:
 		printerr("stress_capture: --out must be an absolute writable directory")
 		quit(2)
@@ -88,8 +115,8 @@ func _initialize() -> void:
 	if settings.get("self-test", "0") == "1":
 		_metric_self_test()
 		return
-	root.size = Vector2i(1920, 1080)
-	root.content_scale_size = Vector2i(1920, 1080)
+	root.size = _size
+	root.content_scale_size = _size
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	_render_rid = root.get_viewport_rid()
@@ -102,6 +129,8 @@ func _initialize() -> void:
 	seed(RIVET_SEED)
 	_game = Game.new()
 	_game.test_mode = true
+	if not _table.is_empty():
+		_game.table = _table
 	root.add_child(_game)
 	_start_usec = Time.get_ticks_usec()
 
@@ -114,7 +143,7 @@ func _process(delta: float) -> bool:
 	var now := Time.get_ticks_usec()
 	var dt_ms := (now - _last_usec) / 1000.0 if _last_usec > 0 else 0.0
 	_last_usec = now
-	if _seconds_since(_start_usec) > HARD_TIMEOUT:
+	if _seconds_since(_start_usec) > _timeout:
 		_finish("timeout")
 		return false
 	if _game == null or _game.flow == null or _busy:
@@ -126,7 +155,12 @@ func _process(delta: float) -> bool:
 			_phase = "drop"
 			_phase_usec = now
 		"drop":
-			if _game.flow.in_stage() and _seconds_since(_phase_usec) > 1.5:
+			if _staged and _stage != 1 and not _entered and _game.flow.in_stage() and _seconds_since(_phase_usec) > 1.5:
+				# The start lands on stage 1; once it has settled, move the run to stage N and settle again.
+				_entered = true
+				_game.flow.enter_stage(_stage, Vector3.ZERO, false)
+				_phase_usec = now
+			elif _game.flow.in_stage() and _seconds_since(_phase_usec) > 1.5 and (not _staged or _stage == 1 or _entered):
 				_grant()
 				_phase = "warm"
 				_phase_usec = now
@@ -239,7 +273,7 @@ func _next_scene() -> void:
 	_committed = false
 	_warden_note = ""
 	var scene: Dictionary = SCENES[_scene_index]
-	var home: Vector3 = _game.ctx.terrain.beacon_point(1) + Vector3(0, 0, 22)
+	var home: Vector3 = _game.ctx.terrain.beacon_point(_stage) + Vector3(0, 0, 22)
 	_game.player.reset_to(_ground(home))
 	_game.camera.snap(Vector3.FORWARD)
 	var ball: Vector3 = _ground(home)
@@ -390,7 +424,7 @@ func _still(name: String) -> Image:
 	await RenderingServer.frame_post_draw
 	var image := root.get_texture().get_image()
 	image.convert(Image.FORMAT_RGB8)
-	if image.save_png(_out.path_join(name + ".png")) != OK:
+	if image.save_png(_out.path_join(_tag + name + ".png")) != OK:
 		_errors.append("image_write: " + name)
 	return image
 
@@ -594,7 +628,7 @@ func _coverage(imgs: Dictionary, hazard_h: float, id: String) -> Dictionary:
 			overlay.set_pixel(p % w, p / w, Color(1, 0, 1))
 		else:
 			overlay.set_pixel(p % w, p / w, Color(0, 1, 0.4))
-	if not _dry and overlay.save_png(_out.path_join(id + "-occlusion.png")) != OK:
+	if not _dry and overlay.save_png(_out.path_join(_tag + id + "-occlusion.png")) != OK:
 		_errors.append("overlay_write: " + id)
 	return {
 		"screen_pixels": pixels,
@@ -619,7 +653,7 @@ func _finish(reason: String) -> void:
 				_errors.append("load fell below target during sampling: " + result["scene"])
 				break
 	var info := {
-		"reason": reason, "dry_schema_only": _dry, "errors": _errors,
+		"reason": reason, "dry_schema_only": _dry, "stage": _stage, "time_id": WorldLook.time_id(_stage), "table": _table if not _table.is_empty() else "default", "errors": _errors,
 		"godot": Engine.get_version_info()["string"], "source_sha256": _source_hashes(),
 		"timing": "uncapped frame intervals; captures and analysis excluded; replenishment included; GPU zero means unavailable",
 		"class": _game.run.class_id() if _game != null and _game.run != null else "",
@@ -628,20 +662,20 @@ func _finish(reason: String) -> void:
 		"granted_parts": _granted, "hazard": "#ff5a3c", "hue_tol_deg": HUE_TOL, "sat_min": SAT_MIN, "val_min": VAL_MIN,
 		"wall_seconds": snappedf(_seconds_since(_start_usec), 0.1), "scenes": _results,
 	}
-	var file := FileAccess.open(_out.path_join("stress.json"), FileAccess.WRITE)
+	var file := FileAccess.open(_out.path_join("stress.json" if not _staged else "stress-st%d.json" % _stage), FileAccess.WRITE)
 	if file != null:
 		file.store_string(JSON.stringify(info, "  "))
 		file.close()
 	else:
-		printerr("stress_capture: could not write stress.json")
+		printerr("stress_capture: could not write " + ("stress.json" if not _staged else "stress-st%d.json" % _stage))
 		quit(1)
 		return
 	if reason == "done" and not _dry and OS.execute("which", ["montage"]) == 0:
 		var args: Array = []
 		for id in ["s1", "s2", "s3"]:
 			for kind in ["full", "threats-only", "no-threats"]:
-				args.append(_out.path_join("%s-%s.png" % [id, kind]))
-		args.append_array(["-tile", "3x3", "-geometry", "640x360+4+4", "-background", "#202020", _out.path_join("contact-stress.jpg")])
+				args.append(_out.path_join("%s%s-%s.png" % [_tag, id, kind]))
+		args.append_array(["-tile", "3x3", "-geometry", "640x360+4+4", "-background", "#202020", _out.path_join("contact-stress.jpg" if not _staged else "contact-stress-st%d.jpg" % _stage)])
 		OS.execute("montage", PackedStringArray(args))
 	print("stress_capture: %s, %d scenes in %s" % [reason, _results.size(), _out])
 	quit(0 if reason == "done" and _errors.is_empty() else 1)
@@ -690,7 +724,7 @@ func _edge_coverage(imgs: Dictionary, id: String) -> Dictionary:
 		if hidden:
 			lost += 1
 		overlay.set_pixel(p % width, p / width, Color.MAGENTA if hidden else Color(0, 1, 0.4))
-	if not _dry and overlay.save_png(_out.path_join(id + "-p1-occlusion.png")) != OK:
+	if not _dry and overlay.save_png(_out.path_join(_tag + id + "-p1-occlusion.png")) != OK:
 		_errors.append("p1_overlay_write: " + id)
 	return {"candidate_pixels": candidates, "lost_pixels": lost,
 		"lost_pct": 100.0 * lost / candidates if candidates > 0 else -1.0,
@@ -701,7 +735,8 @@ func _source_hashes() -> Dictionary:
 	var hashes := {}
 	for path in ["res://tools/stress_capture.gd", "res://src/combat/telegraph.gd",
 		"res://src/combat/threat_grammar.gd", "res://src/presentation/vfx.gd",
-		"res://src/presentation/juice.gd", "res://src/game.gd"]:
+		"res://src/presentation/juice.gd", "res://src/game.gd", "res://src/core/flow.gd",
+		"res://src/presentation/world_look.gd"]:
 		hashes[path] = FileAccess.get_sha256(path)
 	return hashes
 

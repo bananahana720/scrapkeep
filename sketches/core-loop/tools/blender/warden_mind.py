@@ -112,7 +112,7 @@ SIL_THUMB_RISE = 1.0
 # Section 5: name -> (length, blend) in seconds. The extras below repeat a row for the
 # finger or knuckle the loader picks.
 CLIPS = {
-    "idle": (4.0, 1.0), "pulse_warn": (2.0, 2.0), "pulse": (0.3, 0.1), "active": (0.5, 0.5),
+    "idle": (4.0, 1.0), "pulse_warn": (2.0, 0.5), "pulse": (0.3, 0.1), "active": (0.5, 0.5),
     "chunk_lost": (1.0, 0.8), "shrug": (0.4, 0.2), "quote": (1.4, 0.2), "grip_falter": (0.5, 0.5),
     "takeoff": (0.6, 0.3), "glide": (3.0, 0.3), "land": (0.5, 0.2), "knocked_down": (1.0, 0.2),
     "final_quiet": (2.0, 2.0),
