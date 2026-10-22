@@ -8,7 +8,6 @@ const Terrain := preload("res://src/world/terrain.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
-const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
 class Table:
 	const DEFS := [{"map": "park_sinkhole", "stage": 1, "world": 1}, {"map": "park_flume", "stage": 2, "world": 1}]
@@ -52,7 +51,7 @@ func _run() -> void:
 		t.check("each render node has its own asset list", nodes[0].assets != null and nodes[0].assets != nodes[1].assets)
 	quit(t.verdict())
 
-# Terrain3D's tile is 1 / (uv_scale * 0.5) at control 0 (see ParkTerrain.ground_assets).
+# Terrain3D's tile is 1 / (uv_scale * 0.5) at control 0 (see park_terrain.gd ground_assets).
 func _check_node(node: Node, want: Array, metres: Array, label: String) -> void:
 	var assets: Object = node.assets
 	t.check(label + " has assets", assets != null)
