@@ -584,7 +584,7 @@ func _meshes(node: Node3D) -> Dictionary:
 	return out
 
 
-# --telegraph=haze: a hostile fill is a thin red haze without stripes; every P1 line, the
+# --telegraph=haze: a hostile fill is a red haze without stripes; every P1 line, the
 # geometry, contains() and the drive are the classic ones. Fails if a fill draws at or above
 # a P1 line's priority, a fill carries stripes or the wrong alpha, a line changes, or a
 # hit test differs between the modes.
