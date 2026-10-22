@@ -120,7 +120,7 @@ The KF7 body exports these clips in the shape of the boss bodies' clip tables (`
 | Clip | Length, blend (s) | When | What moves |
 | --- | --- | --- | --- |
 | `idle` | 4.0, 1.0 | default loop | Fingers flex one at a time, slowly; seams breathe at 0.8; the lens cluster tracks the ball |
-| `pulse_warn` | 2.0, 2.0 | the charge (`warden.gd:375-381`) | The lens narrows; the five small lenses blink; the fingers tighten |
+| `pulse_warn` | 2.0, 0.5 | the charge (`warden.gd:375-381`) | The lens narrows; the five small lenses blink; the fingers tighten |
 | `pulse` | 0.3, 0.1 | the pulse (`warden.gd:386`) | Fingers snap open and closed once |
 | `active` | 0.5, 0.5 | stagger open (`warden.gd:526`) | Fingers splay; the lens cluster opens wide (today's 1.3 scale, `warden_kit.gd:136`); the seams blaze |
 | `chunk_lost` | 1.0, 0.8 | a chunk shatters | One finger goes dark and curls shut, little finger first, then ring, middle, index |
