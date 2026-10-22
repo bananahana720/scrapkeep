@@ -67,15 +67,33 @@ func _run() -> void:
 		var painted: Image = Dress._panorama_out.get("image")
 		var here := Dress._paint_panorama()
 		_t.check("the worker's panorama equals one painted on the main thread", painted != null and painted.get_data() == here.get_data())
+	var ahead_meshes: Array = Dress._kit_ahead.values()
 	flow.enter_boss(Vector3.ZERO)
 	var mod = Harness.module(_game, WORLD)
 	var left := paths.filter(func(p): return ResourceLoader.load_threaded_get_status(p) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE)
 	_t.check("entering the arena took every file read ahead and every kit part rebuilt ahead", left.is_empty() and Dress._kit_ahead.is_empty(), "%s, %d parts left" % [left, Dress._kit_ahead.size()])
+	var used := _dress_meshes(mod.pad.get_node_or_null(Dress.NODE_NAME) if mod != null else null)
+	var unused := ahead_meshes.filter(func(m): return not used.has(m))
+	_t.check("the dress draws every kit part rebuilt ahead (none rebuilt again at the entry)", not ahead_meshes.is_empty() and unused.is_empty(),
+		"%d of %d ahead parts not drawn" % [unused.size(), ahead_meshes.size()])
 	_t.check("entering the arena took the worker's panorama", Dress._panorama_task == -1 and Dress._panorama_out.is_empty() and Dress._sky_material != null)
 	_t.check("the arena and the Mind are dressed", mod != null and mod.pad.get_node_or_null(Dress.NODE_NAME) != null and mod._dress != null)
 	_game.queue_free()
 	await physics_frame
 	quit(_t.verdict())
+
+
+# Every mesh the dress draws, from its mesh views and its multimeshes.
+func _dress_meshes(dress: Node) -> Array:
+	var out := []
+	if dress == null:
+		return out
+	for view in dress.find_children("*", "MeshInstance3D", true, false):
+		out.append(view.mesh)
+	for view in dress.find_children("*", "MultiMeshInstance3D", true, false):
+		if view.multimesh != null:
+			out.append(view.multimesh.mesh)
+	return out
 
 
 func _ahead_paths() -> Array:

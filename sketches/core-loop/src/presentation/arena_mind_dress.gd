@@ -126,6 +126,8 @@ static func _kit_part(key: String) -> Mesh:
 	scene.free()
 	if mesh == null or not cosmetic:
 		return null
+	if key == "Rim":
+		return _rim_skirt(mesh)
 	return Finishes.aerial_mesh(mesh) if key == "Mesa" else mesh
 
 
@@ -188,7 +190,7 @@ func _build(meshes: Dictionary, radius: float) -> void:
 		var angle := TAU * k / count
 		var basis := Basis(Vector3.UP, PI * 0.5 - angle).scaled(Vector3(pitch / 4.0, 1.0, 1.0))
 		rim.append(Transform3D(basis, Vector3(cos(angle) * reach, 0.025, sin(angle) * reach)))
-	_multi("EdgeFascia", _rim_skirt(meshes["Rim"]), rim)
+	_multi("EdgeFascia", meshes["Rim"], rim)
 	var ribs: Array[Transform3D] = []
 	for k in 12:
 		var angle := TAU * k / 12.0
@@ -199,8 +201,9 @@ func _build(meshes: Dictionary, radius: float) -> void:
 
 
 # Tuck the nosing inside the real floor edge; flare only the lower skirt past the
-# stone wall so its fascia is visible rather than buried in the island slab.
-func _rim_skirt(source: Mesh) -> ArrayMesh:
+# stone wall so its fascia is visible rather than buried in the island slab. Made with the kit part
+# (_kit_part): its arrays read back from the renderer, which stalls a real GPU.
+static func _rim_skirt(source: Mesh) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
 	for surface in source.get_surface_count():
 		var arrays := source.surface_get_arrays(surface)
