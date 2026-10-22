@@ -122,13 +122,14 @@ func _fairlead(view, player) -> void:
 	_settle(view)
 	var west: Vector3 = view.cable_origin - centre
 	_t.check("FL-3 turns with the anchor", west.distance_to(Vector3(-1.06, 0.0, 0.0)) <= 0.001, "first point %s, want (-1.06, 0, 0)" % west)
-	# FL-4: the anchor flips to the far side in one step (a swing's bottom); the origin turns at a
-	# finite rate by the shorter arc instead of jumping across the collar.
-	kit.anchor = centre + Vector3(5.0, -3.0, 0.0)
+	# FL-4: a swing's bottom at 30 m/s under an anchor 8 m up: the anchor's planar side flips from
+	# west to east as the ball passes under it, and the origin turns at a finite rate by the shorter
+	# arc instead of jumping across the collar.
 	var worst := 0.0
 	var prev: Vector3 = view.cable_origin - centre
 	var steps := 0
 	for i in 40:
+		kit.anchor = centre + Vector3(clampf(-3.0 + 0.5 * i, -3.0, 3.0), 8.0, 0.0)
 		view.step(FRAME)
 		var now: Vector3 = view.cable_origin - centre
 		worst = maxf(worst, prev.angle_to(now))
@@ -148,6 +149,21 @@ func _fairlead(view, player) -> void:
 	view.step(FRAME)
 	var fresh: Vector3 = view.cable_origin - centre
 	_t.check("FL-6 a new hook starts on the anchor's side", fresh.distance_to(Vector3(-1.06, 0.0, 0.0)) <= 0.001, "first frame %s, want (-1.06, 0, 0)" % fresh)
+	# FL-7: the hook jumps to an anchor on the far side between two frames (a hand-off): the rope
+	# is drawn throughout, so only the jump marks it fresh.
+	kit.anchor = centre + Vector3(5.0, 2.0, 0.0)
+	view.step(FRAME)
+	var jumped: Vector3 = view.cable_origin - centre
+	_t.check("FL-7 a jump to another anchor starts on its side", jumped.distance_to(Vector3(1.06, 0.0, 0.0)) <= 0.001, "first frame %s, want (1.06, 0, 0)" % jumped)
+	# FL-8: a re-hook during the let-go fade (the cable is still drawn) snaps by the new-hook rule.
+	kit.hooked = false
+	view._on_line_state("let_go", null, centre + Vector3(5.0, 2.0, 0.0), "")
+	view.step(FRAME)
+	kit.hooked = true
+	kit.anchor = centre + Vector3(0.0, 2.0, 5.0)
+	view.step(FRAME)
+	var rehook: Vector3 = view.cable_origin - centre
+	_t.check("FL-8 a re-hook during the let-go fade starts on the anchor's side", rehook.distance_to(Vector3(0.0, 0.0, 1.06)) <= 0.001, "first frame %s, want (0, 0, 1.06)" % rehook)
 	kit.hooked = false
 
 

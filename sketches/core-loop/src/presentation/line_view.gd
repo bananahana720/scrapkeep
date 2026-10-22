@@ -45,6 +45,8 @@ const FAIRLEAD_RADIUS := 1.06
 # The collar is a free bearing, so the fairlead turns at a finite rate: PI / 15 = 0.21 s for a
 # half turn, fast enough to track a swing and slow enough that it never pops across the ball.
 const FAIRLEAD_TURN_RATE := 15.0
+# An anchor that moves further than this in one frame is a new bite, not a moving body.
+const ANCHOR_JUMP := 2.0
 const COLLAR_MIN := 0.9
 const COLLAR_MAX := 3.2
 const COLLAR_PER_METRE := 0.07
@@ -73,6 +75,7 @@ var cable_radius := SLACK_RADIUS
 var cable_origin := Vector3.ZERO
 var _fairlead_yaw := 0.0
 var _was_hooked := false
+var _last_anchor := Vector3.ZERO
 var brackets: MeshInstance3D
 var lock_scale := 1.0
 var barb: MeshInstance3D
@@ -268,10 +271,13 @@ func projected_px(radius: float, depth: float) -> float:
 func _draw_cable(kit, centre: Vector3, smash: bool, delta: float) -> void:
 	# The physics pulls through the centre (a free bearing); only the drawn rope starts at the collar.
 	var toward: Vector3 = kit.anchor if kit.hooked else (_gone_anchor if _broke_age >= 0.0 or _let_go_age >= 0.0 else centre + _dry_dir)
-	# A fresh rope (nothing drawn last frame, or a new hook) leaves from the anchor's side at once:
-	# turning in from a stale yaw would draw it through the lattice and the pilot.
-	var fresh: bool = not cable.visible or (kit.hooked and not _was_hooked)
+	# A fresh rope (nothing drawn last frame, a new hook, or a hook that jumped to another anchor)
+	# leaves from the anchor's side at once: turning in from a stale yaw would draw it through the
+	# lattice and the pilot. A moving body anchor travels well under ANCHOR_JUMP a frame.
+	var fresh: bool = not cable.visible or (kit.hooked and (not _was_hooked or kit.anchor.distance_to(_last_anchor) > ANCHOR_JUMP))
 	_was_hooked = kit.hooked
+	if kit.hooked:
+		_last_anchor = kit.anchor
 	_fairlead_yaw = fairlead_yaw(_fairlead_yaw, centre, toward, INF if fresh else delta)
 	var ball := fairlead_point(centre, _fairlead_yaw)
 	cable_origin = ball
