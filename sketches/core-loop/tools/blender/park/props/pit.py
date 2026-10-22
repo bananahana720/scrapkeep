@@ -19,17 +19,17 @@ from kit import C, mix, shade, tint
 
 K = kit.Kit("pit", polish_opts={"detail": 1})
 
-# Pit-local colours. Safe hues only: dusty ochre (never a stripe), rust oxide, host rock,
-# pale tailings, a muted copper-carbonate vein, dark dull glass (unlit).
-OCHRE = "a8905a"
-OCHRE_DARK = "86703f"
-OXIDE = "8a5a44"
-OXIDE_DARK = "6b4535"
+# Pit-local colours, from the Dig props board: petrol enamel machine bodies (the names OCHRE and OXIDE are kept for the call sites),
+# the board's oxide patches, host rock, pale tailings, dull dark glass (unlit). Copper b77843 only as small fittings.
+OCHRE = "365754"
+OCHRE_DARK = shade("365754", 0.8)
+OXIDE = "9b513a"
+OXIDE_DARK = shade("9b513a", 0.78)
 HOST = "7d8678"
 HOST_DARK = "5e6a60"
 TAILS = "d8d2c0"
 TAILS_DARK = "bdb7a2"
-VEIN = "4f9c92"
+VEIN = "365754"
 TYRE = "2b2f2e"
 GLASS = "2e3836"
 HEMP = "8e8060"
@@ -220,7 +220,7 @@ def haul_truck(p, v, rng):
     fy, fz = -0.8, 1.9
     uy, uz = bp(-0.8, hz - 0.1)
     for sx in (-1.4, 1.4):
-        p.rod((sx, fy, fz), (sx, uy, uz), 0.2, C["iron_light"], segs=8)
+        p.rod((sx, fy, fz), (sx, uy, uz), 0.2, "b77843", segs=8)
         p.rod((sx, fy, fz), (sx, fy + (uy - fy) * 0.45, fz + (uz - fz) * 0.45), 0.28, C["iron"], segs=8)
     # Chocks and shift-end litter.
     p.box((0.9, 0.4, 0.4), (-3.0, 0.2, 0.2), C["timber_dark"], rot=(0, 0, 0.1))
@@ -382,7 +382,7 @@ def shift_bell(p, v, rng):
         p.cyl(0.3, 1.4, (0, 0, 0.7), C["timber_dark"], segs=8, r2=0.26, style="hard")
         p.cyl(0.5, 0.2, (0, 0, 0.5), C["timber_dark"], segs=8, r2=0.3, style="hard")   # splayed foot
         p.box((0.9, 0.5, 0.2), (0, 0, 1.45), C["timber"], style="hard")                # cradle block
-        p.cyl(0.68, 0.7, (0, 0, 1.95), C["iron"], segs=14, r2=0.3, style="hard")       # the bell, mouth down
+        p.cyl(0.68, 0.7, (0, 0, 1.95), "b77843", segs=14, r2=0.3, style="hard")       # the bell, mouth down
         p.ring(0.58, 0.8, 0.12, (0, 0, 1.62), C["iron_light"], segs=14, style="hard")
         soft_ico(p, 0.2, (0, 0, 1.55), OXIDE_DARK, style="soft")                        # clapper
         p.cyl(0.14, 0.2, (0, 0, 2.38), C["iron_light"], segs=8, style="hard")
@@ -532,7 +532,7 @@ def water_tank(p, v, rng):
     p.cyl(1.3, 1.0, (0, 0, zt + 0.5), shade(OXIDE, 1.05), segs=12, rot=(0, tilt, 0), style="hard")
     p.uv(1.3, (0, 0, zt + 1.0), shade(OXIDE, 1.05), scale=(1, 1, 0.35), u=12, v=4, rot=(0, tilt, 0), style="hard")
     for z in (0.15, 0.85):
-        p.ring(1.28, 1.38, 0.1, (0, 0, zt + z), C["iron"], segs=12, style="hard", rot=(0, tilt, 0))
+        p.ring(1.28, 1.38, 0.1, (0, 0, zt + z), "b77843", segs=12, style="hard", rot=(0, tilt, 0))
     p.cyl(0.35, 0.25, (0, 0, zt + 1.42), C["iron"], segs=10, style="hard")
     p.cyl(0.14, 0.5, (1.3, 0, zt + 0.12), C["iron"], segs=8, rot=(0, math.pi / 2, 0), style="round")
     for k in range(3):
@@ -542,7 +542,7 @@ def water_tank(p, v, rng):
     p.box((0.9, 0.9, 0.6), (hx, hy, 0.3), C["timber_dark"], style="hard")
     p.cyl(0.55, 0.5, (hx, hy, 0.95), C["iron"], segs=12, rot=(0, math.pi / 2, 0), style="hard")
     for sx in (-1, 1):
-        p.cyl(0.7, 0.06, (hx + sx * 0.3, hy, 0.95), C["iron_light"], segs=12, rot=(0, math.pi / 2, 0), style="hard")
+        p.cyl(0.7, 0.06, (hx + sx * 0.3, hy, 0.95), "b77843", segs=12, rot=(0, math.pi / 2, 0), style="hard")
     p.cyl(0.66, 0.5, (hx, hy, 0.95), C["cable"], segs=12, rot=(0, math.pi / 2, 0), style="hard")
     for k in range(3):
         p.torus(0.66, 0.05, (hx - 0.15 + k * 0.15, hy, 0.95), shade(C["cable"], 1.5), rot=(0, math.pi / 2, 0), major=10, minor=3, style="flat")
@@ -673,7 +673,7 @@ def core_trays(p, v, rng):
             vein = k % 3 == 1
             xk = cx + (k - count / 2) * 0.26 * sc * math.cos(rot_z)
             yk = cy + (k - count / 2) * 0.26 * sc * math.sin(rot_z)
-            p.cyl(0.07, 0.56, (xk, yk, cz), HOST if not vein else mix(HOST, VEIN, 0.0), segs=8,
+            p.cyl(0.07, 0.56, (xk, yk, cz), HOST, segs=8,
                   rot=(math.pi / 2, 0, rot_z), style="hard")
             if vein:
                 p.box((0.04, 0.2, 0.025), (xk, yk, cz + 0.065), VEIN, rot=(0, 0, rot_z), style="flat")
