@@ -2467,7 +2467,7 @@
    "id": "s122_mid_rimstone_pool",
    "template": "mid_rimstone_pool",
    "at": [
-    -180.0,
+    -175.0,
     210.0
    ],
    "yaw_deg": -63.9,
@@ -3057,5 +3057,5 @@
  "low_ground_rows": [
   "great_room"
  ],
- "pin": 2160462734
+ "pin": 2700969323
 }
