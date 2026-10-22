@@ -25,6 +25,8 @@ const MAX_T := 16000
 # inside the 16-draw Hoberman pilot mecha cap (docs/decisions.tsv w13-PD).
 const MAX_DRAWS := 21
 const SHELL_DRAWS := 16
+# SpoolKit's charcoal paint vertices: 4 parts (rod, bracket beam, hatch box, fairlead beam) x 24 loops each.
+const SPOOL_DARK_LOOPS := 96
 const SHELL_TRIS := 6500        # hero_assets_test's world-one shell band, pilot excluded
 const LAYER_TRIS := 1500
 const CORE_LIMIT := 0.985
@@ -343,7 +345,7 @@ func _report_mask(label: String, root: Node) -> void:
 						spool_off += 1
 				elif c.a != 1.0:
 					other_off += 1
-	_report("%s spool paint mask" % label, dark > 0 and spool_off == 0,
+	_report("%s spool paint mask" % label, dark == SPOOL_DARK_LOOPS and spool_off == 0,
 		"%d SpoolKit charcoal paint vertices, %d with alpha not 0 (alpha 0 keeps them charcoal under any paint)" % [dark, spool_off])
 	_report("%s other paint alpha" % label, other_off == 0, "every other paint vertex has alpha 1 (%d off)" % other_off)
 

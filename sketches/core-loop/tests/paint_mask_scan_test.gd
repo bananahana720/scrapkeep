@@ -10,6 +10,8 @@ const ROOT := "res://assets/models"
 const MASK_BELOW := 0.05
 const WINDOWS := [0.2, 0.4, 0.6, 0.8]
 const TOL := 0.01
+const MIN_SURFACES := 40
+const MIN_VERTICES := 1000
 
 var _checks := 0
 var _failures := 0
@@ -84,7 +86,7 @@ func _planted(path: String, mesh_name: String, alpha: float) -> Array:
 
 
 func _initialize() -> void:
-	var planted := _planted("res://assets/models/world_one/shell_planted.glb", "PlantedMesh", 0.0)
+	var planted := _planted("res://assets/models/world_one/shell_sable.glb", "PlantedMesh", 0.0)
 	_report("scan flags planted mask", planted.size() == 1 and "PlantedMesh" in planted[0] and "1 stray" in planted[0],
 		"alpha-0 vertex on a non-Sable paint mesh gives %s" % [planted])
 	var spool_elsewhere := _planted("res://assets/models/world_one/shell_tally.glb", "SpoolKit", 0.0)
@@ -111,8 +113,8 @@ func _initialize() -> void:
 				spool += 1
 		root.free()
 	_report("shell GLBs scanned", files.size() >= 40 and spool == 2, "%d shell/pilot GLBs, %d SpoolKit meshes" % [files.size(), spool])
-	_report("paint scanned", seen.get("surfaces", 0) >= 40 and seen.get("vertices", 0) >= 1000,
-		"%d paint surfaces, %d paint vertices scanned (floor 40 and 1000)" % [seen.get("surfaces", 0), seen.get("vertices", 0)])
+	_report("paint scanned", seen.get("surfaces", 0) >= MIN_SURFACES and seen.get("vertices", 0) >= MIN_VERTICES,
+		"%d paint surfaces, %d paint vertices scanned (floor %d and %d)" % [seen.get("surfaces", 0), seen.get("vertices", 0), MIN_SURFACES, MIN_VERTICES])
 	_report("no stray paint mask", stray.is_empty(), "paint alpha under 0.05 only in Sable SpoolKit, else 1 or a Tally window (%s)" % [stray])
 	print("paint_mask_scan_test: %s, %d checks" % ["PASS" if _failures == 0 else "FAIL (%d)" % _failures, _checks])
 	quit(0 if _failures == 0 else 1)
