@@ -16,13 +16,14 @@ const SHELL := "res://assets/models/world_one/shell_sable.glb"
 const FELT := "res://assets/models/world_one/shell_sable_felt.glb"
 const LAYER := "res://assets/models/world_one/shell_sable_c%d.glb"
 const RIG := "res://assets/models/pilot_sable_anim.glb"
-const EXPECTED_CHECKS := 60
+const EXPECTED_CHECKS := 61
 const MAX_V := 15000
 const MAX_T := 16000
-# 2026-10-22: SpoolKit (the winch spool, copper, paint and rubber) is its own mesh so the carrier bank tilts it
-# (baked-bracket bank split, pending the coordinator's ruling on #241): shell 17 by its registry exception.
-const MAX_DRAWS := 22
-const SHELL_DRAWS := 17
+# 2026-10-22: SpoolKit (the winch spool, copper and paint, its rubber folded into paint in charcoal) is its
+# own mesh so the carrier bank tilts it (baked-bracket bank split): shell 16 by its registry exception,
+# inside the 16-draw Hoberman pilot mecha cap (docs/decisions.tsv w13-PD).
+const MAX_DRAWS := 21
+const SHELL_DRAWS := 16
 const SHELL_TRIS := 6500        # hero_assets_test's world-one shell band, pilot excluded
 const LAYER_TRIS := 1500
 const CORE_LIMIT := 0.985
@@ -259,6 +260,7 @@ func _check_machinery(shell: Node) -> void:
 	all_pod.append_array(tip)
 	# The spool is its own mesh under the Pod (SpoolKit, so the carrier bank tilts it), still part of the Pod's reach.
 	var spool := shell.find_child("SpoolKit", true, false) as MeshInstance3D
+	_report("sable spool kit parent", spool != null and spool.get_parent() == pod, "SpoolKit is a direct child of the Pod")
 	if spool != null:
 		all_pod.append_array(points(spool, shell))
 	for p in all_pod:
