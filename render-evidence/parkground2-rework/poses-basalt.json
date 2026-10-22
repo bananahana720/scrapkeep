@@ -1,0 +1,6 @@
+{"map": "park_sinkhole", "poses": [
+ {"idx": 801, "line": "basalt interior (60 m window all basalt)", "along_m": 0.0, "x": -419.0, "z": -119.0, "yaw": 0.0},
+ {"idx": 802, "line": "basalt interior", "along_m": 0.0, "x": -49.0, "z": -129.0, "yaw": 0.0},
+ {"idx": 803, "line": "basalt interior, east", "along_m": 0.0, "x": 541.0, "z": -519.0, "yaw": 0.0},
+ {"idx": 804, "line": "sandstone looking -z (yaw pi; the audit camera at yaw 0 looks +z) across the basalt edge at z 251 (feather check)", "along_m": 0.0, "x": -419.0, "z": 271.0, "yaw": 3.1416}
+]}
