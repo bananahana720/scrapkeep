@@ -1,6 +1,7 @@
 extends Node
 
 const LineView := preload("res://src/presentation/line_view.gd")
+const CarrierBank := preload("res://src/presentation/carrier_bank.gd")
 const Palette := preload("res://src/core/palette.gd")
 const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -133,6 +134,14 @@ const POD_TURN_SPEED := 1.5
 const VANE_RATE := 8.0
 # Hoberman weapon ring yaw toward the aim (PILOT-CLIPS section 5, start value).
 const WEAPON_RING_RATE := 14.0
+# Carrier bank (MOTION-SPEC row 208, start values): the contact normal is smoothed at this rate
+# (63 percent in 0.125 s), so the bank never pops on a take or a peel.
+const BANK_RATE := 8.0
+# Gap-bracket modules that ride the banked carrier (ROSTER-LOOK section 4 'bracket'). Geometry baked into
+# the Pod mesh (a seat arm, Cannon's split ports and rush ring) stays level with the pod.
+const BRACKET_PARTS := ["CoilMast", "Exhaust_L", "Exhaust_R", "VaneL", "VaneR", "ClawPivot_L", "ClawPivot_R",
+	"ClawTip_L", "ClawTip_R", "ClawLower_L", "ClawLower_R", "ClawUpper_L", "ClawUpper_R", "Flywheel_L",
+	"Flywheel_R", "FlywheelAxis_L", "FlywheelAxis_R", "SplitExit_L", "SplitExit_R", "RushContact"]
 # The shell's air-factor cue: a flat ring on the pod, in the row's colour and shape, that swells
 # out on the rise and draws in on the return (a different motion from juice.gd's shell pulse,
 # which means heft). No overlay: it is a mesh under the pod.
@@ -617,7 +626,7 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 		kest = ctx.spawner.ultimate.kest_cage_state()
 		open = float(kest["vent_angle"]) / (PI * 0.5)
 	for vane_name in ["VaneL", "VaneR"]:
-		var vane := pod.get_node_or_null(vane_name) as Node3D
+		var vane := pod.find_child(vane_name, true, false) as Node3D
 		if vane != null:
 			var side := -1.0 if vane_name == "VaneL" else 1.0
 			vane.rotation.z = lerpf(vane.rotation.z, -side * open * PI * 0.5, 1.0 - exp(-VANE_RATE * delta))
@@ -628,6 +637,9 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 	var kit = player.kit
 	if kit.get("hooked") == true:
 		steer_fairlead(pod, kit.anchor, delta)
+	# Draw only: the face under the ball, or world up in the air.
+	var face: Vector3 = player.state.get("contact_normal") if player.state.get("grounded") == true else Vector3.UP
+	player.set_meta("carrier_bank", update_carrier_bank(pod, face, delta))
 
 
 func apply_kest_state(pod: Node3D, state: Dictionary, paint_tint := Color.WHITE) -> void:
@@ -761,9 +773,10 @@ func steer_weapon_ring(pod: Node3D, aim: Vector3, delta: float) -> void:
 	if ring == null or not ring.is_inside_tree():
 		return
 	var pz := pod.global_basis.z
-	var rz := ring.global_basis.z
+	var rz := (pod.global_basis * _level(pod, ring)).z
 	var yaw := weapon_ring_yaw(atan2(rz.x, rz.z), aim, delta)
-	ring.rotation = Vector3(0.0, wrapf(yaw - atan2(pz.x, pz.z), -PI, PI), 0.0)
+	var turn := Basis(Vector3.UP, wrapf(yaw - atan2(pz.x, pz.z), -PI, PI))
+	ring.basis = _bank_local(pod) * turn
 
 
 # The Fairlead carriage (MOTION-SPEC swing row): a level carrier node on the collar that turns
@@ -791,9 +804,122 @@ func steer_fairlead(pod: Node3D, anchor: Vector3, delta: float) -> void:
 	if carriage == null:
 		return
 	var pz := pod.global_basis.z
-	var cz := carriage.global_basis.z
+	var cz := (pod.global_basis * _level(pod, carriage)).z
 	var yaw := LineView.fairlead_yaw(atan2(cz.x, cz.z), pod.global_position, anchor, delta)
-	carriage.rotation = Vector3(0.0, wrapf(yaw - atan2(pz.x, pz.z), -PI, PI), 0.0)
+	var turn := Basis(Vector3.UP, wrapf(yaw - atan2(pz.x, pz.z), -PI, PI))
+	carriage.basis = _bank_local(pod) * turn
+
+
+# --- carrier bank (MOTION-SPEC row 208) ------------------------------------------------------
+#
+# The WeaponRing, the Fairlead carriage and the bracket modules (BRACKET_PARTS, under the
+# CarrierBank holder) share one bank: Basis(UP x normal, angle) about the pod's centre, the smallest
+# angle that keeps their furthest reach along the smoothed contact normal at CarrierBank.LIMIT.
+# Order: the aim yaw (or the fairlead's) is applied first, and the bank tilts the yawed carrier,
+# so child = bank x yaw. The ring still turns to the aim on its bearing; the bank only leans it.
+# The pod, the pilot and the gimbal rings stay level (Animation drives the gimbal from
+# carrier_bank, row 207). Nothing here touches physics.
+
+# The bank last drawn, in the pod's frame; the identity until update_carrier_bank runs.
+static func _bank_local(pod: Node3D) -> Basis:
+	return pod.get_meta("bank_local", Basis.IDENTITY)
+
+
+# A carrier's basis with the drawn bank taken out: its pod-frame yaw alone.
+static func _level(pod: Node3D, carrier: Node3D) -> Basis:
+	return (_bank_local(pod).inverse() * carrier.basis).orthonormalized()
+
+
+# The carrier bank in world space: a rotation about a horizontal axis that tilts the carrier's
+# up toward the face. Identity on a floor and in the air. Read it for anything that rides the carrier.
+static func carrier_bank(pod: Node3D) -> Basis:
+	var local := _bank_local(pod)
+	if not pod.is_inside_tree():
+		return local
+	var p := pod.global_basis.orthonormalized()
+	return p * local * p.inverse()
+
+
+# Hull points of the ring (in the ring's frame, at yaw 0) and of the bracket modules (in the
+# holder's frame), taken once per pod: the convex hull holds every furthest point.
+static func _bank_hull(pod: Node3D) -> Dictionary:
+	if pod.has_meta("bank_hull"):
+		return pod.get_meta("bank_hull")
+	var ring := pod.get_node_or_null("WeaponRing") as Node3D
+	var holder := pod.get_node_or_null("CarrierBank") as Node3D
+	var hull := {
+		"ring": CarrierBank.hull(_points_under(ring, ring, false)) if ring != null else PackedVector3Array(),
+		"brackets": CarrierBank.hull(_points_under(holder, holder, true)) if holder != null else PackedVector3Array()}
+	pod.set_meta("bank_hull", hull)
+	return hull
+
+
+# Mesh vertices (and node origins when `origins`) under `node`, in `top`'s frame.
+static func _points_under(node: Node3D, top: Node3D, origins: bool, to := Transform3D.IDENTITY) -> PackedVector3Array:
+	var out := PackedVector3Array()
+	var here := to if node == top else to * node.transform
+	if node is MeshInstance3D and (node as MeshInstance3D).mesh != null:
+		var mesh: Mesh = (node as MeshInstance3D).mesh
+		for i in mesh.get_surface_count():
+			for v in mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX]:
+				out.append(here * v)
+	elif origins and node != top:
+		out.append(here.origin)
+	for child in node.get_children():
+		if child is Node3D:
+			out.append_array(_points_under(child, top, origins, here))
+	return out
+
+
+# The holder that carries the bracket modules, so one transform banks them all and their own
+# rotations (vanes, claws) stay theirs. A part a shell lacks is skipped.
+static func add_bracket_carrier(pod: Node3D) -> Node3D:
+	var holder := pod.get_node_or_null("CarrierBank") as Node3D
+	if holder != null:
+		return holder
+	holder = Node3D.new()
+	holder.name = "CarrierBank"
+	pod.add_child(holder)
+	for part_name in BRACKET_PARTS:
+		var part := pod.get_node_or_null(part_name) as Node3D
+		if part != null:
+			part.reparent(holder, false)
+	return holder
+
+
+# One frame: smooth the face normal, find the bank, and pose the ring, the fairlead carriage and
+# the bracket holder under it. `normal` is the contact normal on the ground and world up in the air.
+# Returns the world bank (carrier_bank).
+static func update_carrier_bank(pod: Node3D, normal: Vector3, delta: float) -> Basis:
+	if not pod.is_inside_tree():
+		return Basis.IDENTITY
+	var smoothed := CarrierBank.smooth(pod.get_meta("bank_normal", Vector3.UP), normal, delta, BANK_RATE)
+	pod.set_meta("bank_normal", smoothed)
+	var carriers: Array[Node3D] = []
+	for carrier_name in ["WeaponRing", "Fairlead"]:
+		var c := pod.get_node_or_null(carrier_name) as Node3D
+		if c != null:
+			carriers.append(c)
+	var ring := pod.get_node_or_null("WeaponRing") as Node3D
+	var yaw := 0.0
+	if ring != null:
+		var z := _level(pod, ring).z
+		yaw = atan2(z.x, z.z)
+	var p := pod.global_basis.orthonormalized()
+	var face := p.inverse() * smoothed
+	var hull := _bank_hull(pod)
+	var angle := CarrierBank.angle_for(hull["ring"], yaw, hull["brackets"], face)
+	var bank := CarrierBank.basis_for(face, angle)
+	var levels: Array[Basis] = []
+	for c in carriers:
+		levels.append(_level(pod, c))
+	pod.set_meta("bank_local", bank)
+	for i in carriers.size():
+		carriers[i].basis = bank * levels[i]
+	var holder := pod.get_node_or_null("CarrierBank") as Node3D
+	if holder != null:
+		holder.basis = bank
+	return p * bank * p.inverse()
 
 
 # One step of the ring's world yaw toward aim; a vertical or empty aim holds it.
@@ -1002,6 +1128,7 @@ static func _split(scene: Node) -> Dictionary:
 	pod.get_parent().remove_child(pod)
 	scene.free()
 	add_fairlead(pod)
+	add_bracket_carrier(pod)
 	return {"core": core, "pod": pod}
 
 

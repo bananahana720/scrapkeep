@@ -650,7 +650,7 @@ func _kest(t: float) -> void:
 	else:
 		ball.position = land.lerp(start, _span(t, 0.93, 1.0))
 	for vane in ["VaneL", "VaneR"]:
-		var node := _pod.get_node_or_null(vane) as Node3D
+		var node := _pod.find_child(vane, true, false) as Node3D
 		if node != null:
 			node.rotation.z = (1.0 if vane == "VaneL" else -1.0) * glide * PI * 0.5
 

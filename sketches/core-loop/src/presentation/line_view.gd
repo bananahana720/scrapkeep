@@ -162,9 +162,10 @@ static func fairlead_yaw(yaw: float, centre: Vector3, anchor: Vector3, delta: fl
 	return wrapf(yaw + clampf(gap, -most, most), -PI, PI)
 
 
-# The point on the collar the rope leaves: centre + FAIRLEAD_RADIUS x the flat direction at `yaw`.
-static func fairlead_point(centre: Vector3, yaw: float) -> Vector3:
-	return centre + Vector3(-sin(yaw), 0.0, -cos(yaw)) * FAIRLEAD_RADIUS
+# The point on the collar the rope leaves: centre + FAIRLEAD_RADIUS x the flat direction at `yaw`,
+# leaned by the carrier bank (the fairlead is banked with the carrier, MOTION-SPEC row 209).
+static func fairlead_point(centre: Vector3, yaw: float, bank := Basis.IDENTITY) -> Vector3:
+	return centre + bank * (Vector3(-sin(yaw), 0.0, -cos(yaw)) * FAIRLEAD_RADIUS)
 
 
 # One frame of the view. Tests step it with fixed deltas; the engine calls it from _process.
@@ -279,7 +280,7 @@ func _draw_cable(kit, centre: Vector3, smash: bool, delta: float) -> void:
 	if kit.hooked:
 		_last_anchor = kit.anchor
 	_fairlead_yaw = fairlead_yaw(_fairlead_yaw, centre, toward, INF if fresh else delta)
-	var ball := fairlead_point(centre, _fairlead_yaw)
+	var ball := fairlead_point(centre, _fairlead_yaw, player.get_meta("carrier_bank", Basis.IDENTITY) if player != null else Basis.IDENTITY)
 	cable_origin = ball
 	var mesh: ImmediateMesh = cable.mesh
 	mesh.clear_surfaces()
