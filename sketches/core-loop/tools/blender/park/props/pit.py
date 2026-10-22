@@ -146,7 +146,7 @@ def tyre(p, x, y, r, w, flat=False):
 @K.kind("haul_truck", hero=True, variants="abc", tags=["machine"],
         story="The last haul truck down at shift end: parked dead, a tyre flat, the bed tipped, every lamp dark.")
 def haul_truck(p, v, rng):
-    body = OCHRE if v != "c" else mix(OCHRE, OXIDE, 0.55)
+    body = OCHRE if v != "c" else mix(OCHRE, OXIDE, 0.2)
     trim = OXIDE if v != "c" else OXIDE_DARK
     # Frame rails and axles.
     for x in (-1.5, 1.5):
@@ -169,7 +169,7 @@ def haul_truck(p, v, rng):
         p.cyl(0.85, 0.2, (5.7, 1.3, 0.35), OXIDE_DARK, segs=10, style="hard")
     # Engine hood, grille, bumper (grille bars vertical slats, unlit).
     p.box((2.4, 2.8, 1.4), (-1.3, -4.0, 2.9), body, style="hard")
-    p.box((2.5, 0.35, 1.2), (-1.3, -5.5, 2.6), trim, style="hard")
+    p.box((2.5, 0.35, 1.2), (-1.3, -5.5, 2.6), "d2c5a5", style="hard")
     for k in range(7):
         p.box((0.16, 0.12, 0.9), (-2.2 + k * 0.3, -5.72, 2.65), C["charcoal"], style="fine")
     p.box((3.6, 0.6, 0.35), (-0.1, -5.9, 1.45), C["iron"], style="hard")
@@ -184,7 +184,7 @@ def haul_truck(p, v, rng):
     for dx in (-1.7, 1.7):
         for dy in (-1.7, 1.7):
             p.box((0.3, 0.3, 1.6), (-1.5 + dx, -1.9 + dy, 5.5), C["iron"], style="hard")
-    p.box((3.8, 3.8, 0.3), (-1.5, -1.9, 6.25), shade(trim, 1.1), style="hard")
+    p.box((3.8, 3.8, 0.3), (-1.5, -1.9, 6.25), shade(OCHRE, 1.1), style="hard")
     p.cyl(0.14, 1.0, (-2.6, -0.2, 3.2), C["charcoal"], segs=8, style="round")
     # A single grab handle on the cab's front pillar (no steps).
     p.rod((-3.0, -2.75, 3.1), (-3.0, -2.75, 3.6), 0.05, C["iron_light"], segs=6)
@@ -264,7 +264,7 @@ def drill_rig_wreck(p, v, rng):
     # Deck and engine house with louvres (dark, unlit).
     p.box((5.0, 6.0, 0.5), (0, 0, 1.55), C["charcoal"], style="hard")
     p.box((3.2, 2.8, 2.0), (-0.5, 1.4, 2.8), OCHRE, style="hard")
-    p.box((3.3, 2.9, 0.3), (-0.5, 1.4, 3.9), OXIDE, style="hard")
+    p.box((3.3, 2.9, 0.3), (-0.5, 1.4, 3.9), OCHRE_DARK, style="hard")
     for k in range(5):
         p.box((0.2, 0.1, 1.2), (-1.7 + k * 0.5, 2.88, 2.8), C["charcoal"], style="fine")
     p.cyl(0.2, 1.1, (0.7, 0.4, 4.4), C["charcoal"], segs=8, style="round")
@@ -272,7 +272,7 @@ def drill_rig_wreck(p, v, rng):
     p.box((1.8, 2.0, 2.0), (1.4, -1.6, 2.8), OCHRE_DARK if v == "b" else OCHRE, style="hard")
     p.box((1.6, 0.1, 0.9), (1.4, -2.65, 3.1), GLASS, style="fine")
     p.box((0.1, 1.2, 0.9), (2.3, -1.6, 3.1), GLASS, style="fine")
-    p.box((2.0, 2.2, 0.25), (1.4, -1.6, 3.9), OXIDE, style="hard")
+    p.box((2.0, 2.2, 0.25), (1.4, -1.6, 3.9), "d2c5a5", style="hard")
     # Hydraulic cylinders and a rotary head riding the lowered mast.
     p.cyl(0.35, 1.8, (-2.2, -1.6, 2.2), C["iron_light"], segs=10, style="round")
     p.cyl(0.25, 1.0, (-2.2, -1.6, 3.3), C["iron"], segs=8, style="round")
@@ -284,7 +284,7 @@ def drill_rig_wreck(p, v, rng):
         p.box((1.8, 0.45, 0.6), (0, yy, 4.15), C["timber_dark"], style="hard")
     if v == "a":
         a_pt, b_pt = (0, my0, mz), (0, my1, mz)
-        p.box((1.0, my1 - my0, 0.9), (0, (my0 + my1) / 2, mz), OXIDE, style="hard")
+        p.box((1.0, my1 - my0, 0.9), (0, (my0 + my1) / 2, mz), OCHRE, style="hard")
         for k in range(10):
             yy = my0 + 0.5 + k * 0.95
             p.box((1.15, 0.28, 1.05), (0, yy, mz), shade(OXIDE, 0.85), style="hard")
@@ -295,7 +295,7 @@ def drill_rig_wreck(p, v, rng):
         rock(p, 0.4, -5.3, 0.0, 1.0, rng, vein=True)
         pts = [(0.4, -5.2, 1.75), (0.15, -1.2, 2.45), (0.0, 3.4, 4.4)]
         for a_pt, b_pt in zip(pts, pts[1:]):
-            p.beam(a_pt, b_pt, 1.0, OXIDE, h=0.9, roll=0.0)
+            p.beam(a_pt, b_pt, 1.0, OCHRE, h=0.9, roll=0.0)
             ang = math.atan2(b_pt[2] - a_pt[2], b_pt[1] - a_pt[1])
             for k in range(5):
                 t = (k + 0.5) / 5
@@ -489,12 +489,12 @@ def ore_cart_stub(p, v, rng):
         return (cx + x * math.cos(roll) - z * math.sin(roll) * 0.6, cy + y, 0.1 + z * math.cos(roll) * 0.9 + abs(x) * 0.0)
 
     rot = (0, roll, 0)
-    body = OXIDE if v != "c" else mix(OXIDE, OCHRE, 0.4)
+    body = OCHRE if v != "c" else mix(OCHRE, OXIDE, 0.35)
     p.prism([(-0.62, 0.0), (0.62, 0.0), (0.82, 0.8), (-0.82, 0.8)], 1.5, at(0, 0, 0.3), body,
             rot=(math.pi / 2, roll, 0), style="hard")
     if v != "b":
         for sx in (-0.84, 0.84):
-            p.box((0.12, 1.62, 0.14), (sx, 0, 1.1), shade(body, 0.8), style="hard")
+            p.box((0.12, 1.62, 0.14), (sx, 0, 1.1), "d2c5a5", style="hard")
         for sy in (-0.76, 0.76):
             p.box((1.78, 0.12, 0.14), (0, sy, 1.1), shade(body, 0.8), style="hard")
     for sy in (-0.5, 0.5):
@@ -528,12 +528,12 @@ def water_tank(p, v, rng):
     p.box((2.4, 0.35, 0.28), (0, 0, 1.0 - drop * 0.4), C["timber"], rot=(0, tilt, 0), style="hard")
     p.box((0.35, 2.4, 0.28), (0, 0, 1.15 - drop * 0.4), C["timber"], rot=(0, tilt, 0), style="hard")
     zt = 1.35
-    # Tank: barrel body in oxide steel, rounded cap, banding hoops.
-    p.cyl(1.3, 1.0, (0, 0, zt + 0.5), shade(OXIDE, 1.05), segs=12, rot=(0, tilt, 0), style="hard")
-    p.uv(1.3, (0, 0, zt + 1.0), shade(OXIDE, 1.05), scale=(1, 1, 0.35), u=12, v=4, rot=(0, tilt, 0), style="hard")
+    # Tank: barrel body in petrol enamel, rounded cap, banding hoops.
+    p.cyl(1.3, 1.0, (0, 0, zt + 0.5), shade(OCHRE, 1.05), segs=12, rot=(0, tilt, 0), style="hard")
+    p.uv(1.3, (0, 0, zt + 1.0), shade(OCHRE, 1.05), scale=(1, 1, 0.35), u=12, v=4, rot=(0, tilt, 0), style="hard")
     for z in (0.15, 0.85):
         p.ring(1.28, 1.38, 0.1, (0, 0, zt + z), "b77843", segs=12, style="hard", rot=(0, tilt, 0))
-    p.cyl(0.35, 0.25, (0, 0, zt + 1.42), C["iron"], segs=10, style="hard")
+    p.cyl(0.35, 0.25, (0, 0, zt + 1.42), "d2c5a5", segs=10, style="hard")
     p.cyl(0.14, 0.5, (1.3, 0, zt + 0.12), C["iron"], segs=8, rot=(0, math.pi / 2, 0), style="round")
     for k in range(3):
         p.box((0.06, 0.05, 0.9), (-1.32, 0.0, zt + 0.5 + k * 0.0), OXIDE_DARK, rot=(0, 0, k * 0.5), style="fine")
@@ -647,7 +647,7 @@ def rock_bucket(p, v, rng):
     soft_ico(p, 1.0, (0, 0, 0.1), C["soil"], scale=(1.8, 1.4, 0.3), style="soft")
     if v == "a":
         # Half-buried bucket shell: a rounded scoop with a rim band and three stubby teeth.
-        p.cyl(0.8, 1.7, (0, 0, 0.55), shade(OXIDE, 0.95), segs=14, rot=(0, math.pi / 2, 0), style="hard")
+        p.cyl(0.8, 1.7, (0, 0, 0.55), shade(OCHRE, 0.95), segs=14, rot=(0, math.pi / 2, 0), style="hard")
         p.cyl(0.62, 1.74, (0, 0, 0.6), C["soil"], segs=12, rot=(0, math.pi / 2, 0), style="hard")
         p.box((1.9, 0.3, 0.3), (0, -0.78, 0.38), C["iron"], style="hard")
         for k in range(3):
