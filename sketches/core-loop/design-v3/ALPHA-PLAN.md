@@ -1,6 +1,8 @@
 # Scrapkeep full alpha plan
 
-Status: authorized and in progress. Waves 1 to 20 and dress waves 1 to 12 landed (wave 12 merged on smoke evidence, 10 October 2026). Wave 13 is the open wave: see "Wave 13" below. [DESIGN-V3](DESIGN-V3.md) owns the current gameplay design; [HANDOFF](HANDOFF.md) owns the live coordinator handoff. Historical unit lists below preserve planning provenance.
+> **Historical plan (1 to 10 Oct). The live plan is [project-guide/coord/GRAPH.md](../../../project-guide/coord/GRAPH.md) and [ROADMAP.md](../../../project-guide/coord/ROADMAP.md); rulings are in [project-guide/handoff/DECISIONS.md](../../../project-guide/handoff/DECISIONS.md).**
+
+Status as of 10 October 2026: waves 1 to 20 and dress waves 1 to 12 had landed. [DESIGN-V3](DESIGN-V3.md) owns the current gameplay design. [HANDOFF](HANDOFF.md) is a historical log; the live handoff is [GRAPH](../../../project-guide/coord/GRAPH.md). Historical unit lists below preserve planning provenance.
 
 ## What approving this plan authorizes
 
@@ -30,7 +32,7 @@ So the program makes one zone click first, proves it with his play, then scales 
 | --- | --- |
 | Genre | Roguelite run, action-RPG feel, zonal open stages. The pilot stays in the ball. |
 | Worlds | Spillway Works, then the Dig (underground), then the Highdraft (floating flotilla). Two big zones plus a world boss each. |
-| Run | Three worlds in fixed order; 30 to 45 minutes. One death retry per world, then death ends the run. Quit/crash replays the same zone entrance free; stable offers and spent retry facts survive reload. |
+| Run | Three worlds of two stages in fixed order; 30 to 45 minutes. No free retry (replaces "one death retry per world", 22 Oct): every run starts with zero saves, and a death sends you back to world 1 with a fast restart (same pilot, or pick another). A rare earned item can save one death (details to come, DECISIONS 22 Oct). Quit/crash replays the same zone entrance free; stable offers and spent death-save facts survive reload. |
 | Roster | Six pilots: Sable initially; Rivet by world-one rescue; Tarn by Brindle; Kest by Dig rescue; Tally by three ledger leaves returned to Moss; remembered cannon by Mind. Newly earned pilots are selectable next run; existing profile unlocks survive migration. |
 | Harpoon | Every pilot's right-click verb, soft-lock. |
 | Lab extras | All become defaults. Flags and old paths get deleted. |
@@ -193,7 +195,7 @@ Not in Track A. World two and three music, direction sheets and story arcs wait 
 - **Rarity.** Common, Rare, Relic, Evolved, with a hot-wired stripe. Scalar-only rows leave everything above Common.
 - **Meta.** Profile wired in. Rivet unlocks by a world-one rescue quest and Tarn by Brindle; Kest unlocks by the Dig rescue. Locked cards show truthful conditions. Preserve existing earned unlocks; commit new quest and boss rewards exactly once.
 - **Side content.** Combat challenges, contraption secrets and one camp per zone with a named reward.
-- **Run save.** Extend `run_state.gd` and `safe_store.gd` for versioned durable zone-entrance snapshots, per-world retry expenditure, stable offers/generation, Cogs, path and inventory, and companion assembly. Free quit/crash replay restores the entrance; unlocks settle once. Consequential review covers migrations and interrupted transitions.
+- **Run save.** Extend `run_state.gd` and `safe_store.gd` for versioned durable zone-entrance snapshots, death-save expenditure (was per-world retry, replaced 22 Oct), stable offers/generation, Cogs, path and inventory, and companion assembly. Free quit/crash replay restores the entrance; unlocks settle once. Consequential review covers migrations and interrupted transitions.
 - **Input.** Gamepad bindings, stick look with aim assist, paged settings, rebinding, fullscreen and a quality switch.
 - **Content.** World-one asset waves from the clone's 67-unit sheet at its minimum set, painted tileables, wind-up rows, zone and boss music, lore rows with word caps.
 - **Docs.** One `DESIGN-V3.md` of 400 lines or fewer, written after the verdict. The other design docs move to `archive/`.
@@ -356,10 +358,4 @@ T5 merges before the first content wave. T6 merges before the first pilot or bos
 
 ## Wave 13 (opened 10 October 2026)
 
-Branch `cand/alpha-w13`, cut from `proto/alpha` after the wave 12 merge. The approved session plan lives outside the repo at `~/.claude/plans/let-s-plan-this-session-glowing-beaver.md`; its decisions are recorded in `docs/decisions.tsv` (phase `w13-open`). Three lanes:
-
-- **Pilots.** All six pilots at one full bar: the 1-2-3 skill bar with snap-back and a Q ultimate per pilot ([SKILL-BAR](SKILL-BAR.md)), six pilot sheets ([PILOTS](PILOTS.md)), open gyro cage bodies from FLUX boards ([ROSTER-LOOK](ROSTER-LOOK.md)), a customization scaffold ([CUSTOMIZE](CUSTOMIZE.md)) and the clip set ([PILOT-CLIPS](PILOT-CLIPS.md)).
-- **Park and Wardens.** All six stages rebuilt as Arizona parks at four times today's size on Terrain3D plus recipe landforms, one hero landmark per stage, dynamic events, and three Warden kinds, one per world ([PARK](PARK.md), `adr/TADR-011`).
-- **Polish.** Small fixes beside the other lanes.
-
-Storyboards and boards go to Andrew for click approval before terrain or bodies are built. Each wave closes with the full smoke, the gate, an Opus gate read, an export with win proofs and a `uat` receipt.
+Historical. Wave 13 ran on branch `cand/alpha-w13` with three lanes: Pilots ([SKILL-BAR](SKILL-BAR.md), [PILOTS](PILOTS.md), [ROSTER-LOOK](ROSTER-LOOK.md)), Park and Wardens ([PARK](PARK.md)) and Polish. Later waves are on [GRAPH](../../../project-guide/coord/GRAPH.md).
