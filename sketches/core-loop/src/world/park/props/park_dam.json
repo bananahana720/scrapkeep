@@ -2672,7 +2672,7 @@
     80,
     40
    ],
-   "yaw_deg": 89,
+   "yaw_deg": 85,
    "near": "slot_fin_far: A mixer sunk to its axles in silt at the"
   },
   {
@@ -2682,7 +2682,7 @@
     80,
     90
    ],
-   "yaw_deg": 89,
+   "yaw_deg": 92,
    "near": "eye_fin_east: The sluice crew's wheelhouse and the odd"
   },
   {
@@ -2852,8 +2852,8 @@
     72,
     7
    ],
-   "yaw_deg": 89,
-   "near": "canyon fill, 52 m from line"
+   "yaw_deg": 70,
+   "near": "east canyon wall, south bend: a spool chocked where the crew stopped hauling"
   },
   {
    "id": "low_slump_bags_canyon_14",
@@ -2862,8 +2862,8 @@
     72,
     25
    ],
-   "yaw_deg": 89,
-   "near": "canyon fill, 53 m from line"
+   "yaw_deg": 100,
+   "near": "east canyon wall, below the fin: bags slumped into the wash after the last flood"
   },
   {
    "id": "mid_laundry_canyon_15",
@@ -2872,8 +2872,8 @@
     90,
     19
    ],
-   "yaw_deg": 89,
-   "near": "canyon fill, 70 m from line"
+   "yaw_deg": 128,
+   "near": "east canyon ledge: a washing line strung to catch the afternoon draught"
   },
   {
    "id": "low_chalk_tally_canyon_16",
@@ -2882,8 +2882,8 @@
     72,
     55
    ],
-   "yaw_deg": 89,
-   "near": "canyon fill, 53 m from line"
+   "yaw_deg": 112,
+   "near": "east canyon bank, mid reach: a tally board counting a shift no one finished"
   },
   {
    "id": "mid_hat_wall_canyon_17",
@@ -2892,8 +2892,8 @@
     78,
     73
    ],
-   "yaw_deg": 89,
-   "near": "canyon fill, 60 m from line"
+   "yaw_deg": 60,
+   "near": "canyon mouth wall: hats left on the rack facing the way the crew walked out"
   },
   {
    "id": "low_cold_fire_canyon_18",
@@ -2942,38 +2942,18 @@
     -160,
     -5
    ],
-   "yaw_deg": -69,
-   "near": "rim fill, 66 m from line"
-  },
-  {
-   "id": "mixer_graveyard_rim_23",
-   "template": "mixer_graveyard",
-   "at": [
-    -160,
-    35
-   ],
-   "yaw_deg": -69,
-   "near": "rim fill, 80 m from line"
+   "yaw_deg": -40,
+   "near": "west rim lookout over the dam face: wheelhouse yard where the crew watched the gates"
   },
   {
    "id": "crew_camp_rim_24",
    "template": "crew_camp",
    "at": [
-    -160,
-    75
+    -176,
+    72
    ],
-   "yaw_deg": -69,
-   "near": "rim fill, 94 m from line"
-  },
-  {
-   "id": "bunk_collapse_rim_25",
-   "template": "bunk_collapse",
-   "at": [
-    -160,
-    115
-   ],
-   "yaw_deg": -60,
-   "near": "rim fill, 110 m from line"
+   "yaw_deg": -95,
+   "near": "west rim hollow: a crew camp turned from the wind, looking across the canyon"
   },
   {
    "id": "low_peg_line_view_0",
@@ -3092,5 +3072,5 @@
   ],
   "seed": 11
  },
- "pin": 1202620946
+ "pin": 280859597
 }
