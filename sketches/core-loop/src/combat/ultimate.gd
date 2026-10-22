@@ -60,8 +60,12 @@ const ARC_REACH := [40.0, 47.0, 55.0, 62.0, 70.0]
 const LANDING_RADIUS := [6.0, 7.0, 8.0, 9.0, 10.0]
 const DAMAGE_TAKEN := 0.2
 # On a closed Warden guard one set piece adds at most this much posture, volleys and landing
-# together (section 12, item 7). Volleys on a Warden deal half damage; a boss takes half.
-const WARDEN_POSTURE_CAP := 45.0
+# together (section 12, item 7); 70 since Andrew's tap "Lift the ceiling" (17 Oct 22:04Z),
+# was 45. Volleys on a Warden deal half damage; a boss takes half.
+const WARDEN_POSTURE_CAP := 70.0
+# The lift is for monster builds (DECISIONS section 5: "Monster builds stagger Wardens faster ...
+# Ordinary pilots still take 45-70 s"): for any other pilot the cap is the old 45 (warden_cap).
+const WARDEN_POSTURE_CAP_ORDINARY := 45.0
 const WARDEN_VOLLEY := 0.5
 const BOSS_MULT := 0.5
 const CONTACT_GAP := 0.5
@@ -799,13 +803,24 @@ func defend(amount: float, hp: float) -> float:
 	return clampf(amount * DAMAGE_TAKEN, 0.0, maxf(0.0, hp - 1.0))
 
 
-# Posture a hit on a closed Warden guard may still add in this set piece: the 45 cap counts
+# The most one set piece adds on a closed Warden guard: 70 for a monster build (heft above the
+# fight's library top-bucket maximum, coordinator ruling (B) on #222, 21 Oct), else 45.
+static func warden_cap(monster: bool) -> float:
+	return WARDEN_POSTURE_CAP if monster else WARDEN_POSTURE_CAP_ORDINARY
+
+
+# warden_cap for a Warden node; one that cannot say reads as no monster, so 45.
+static func cap_for_warden(warden: Node) -> float:
+	return warden_cap(warden.monster_build() if warden.has_method("monster_build") else false)
+
+
+# Posture a hit on a closed Warden guard may still add in this set piece: the cap counts
 # volleys and landing together. Applies `result` (the Warden's own judge) with its gain cut
 # to what is left.
 func warden_posture(warden: Node3D, result: Dictionary) -> void:
 	var id := warden.get_instance_id()
 	var spent := float(_posture_spent.get(id, 0.0))
-	var gain := minf(float(result.get("gain", 0.0)), maxf(0.0, WARDEN_POSTURE_CAP - spent))
+	var gain := minf(float(result.get("gain", 0.0)), maxf(0.0, cap_for_warden(warden) - spent))
 	result["gain"] = gain
 	result["shatter"] = false
 	result["crack"] = false
