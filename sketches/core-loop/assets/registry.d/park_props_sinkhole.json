@@ -512,7 +512,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "echo_horn variant a LOD0 (2996 tris): A big steel-grey signal horn on a squat timber cradle, aimed at the dark to count the crew in. Deterministic; polished and baked."
+    "notes": "echo_horn variant a LOD0 (2996 tris): A big petrol-enamel signal horn with a bone rim on a squat timber cradle, aimed at the dark to count the crew in. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -540,7 +540,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "echo_horn variant a LOD1 (1498 tris): A big steel-grey signal horn on a squat timber cradle, aimed at the dark to count the crew in. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "echo_horn variant a LOD1 (1498 tris): A big petrol-enamel signal horn with a bone rim on a squat timber cradle, aimed at the dark to count the crew in. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -568,7 +568,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "echo_horn variant a LOD2 (448 tris): A big steel-grey signal horn on a squat timber cradle, aimed at the dark to count the crew in. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "echo_horn variant a LOD2 (448 tris): A big petrol-enamel signal horn with a bone rim on a squat timber cradle, aimed at the dark to count the crew in. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -596,7 +596,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "echo_horn variant b LOD0 (2660 tris): A big steel-grey signal horn on a squat timber cradle, aimed at the dark to count the crew in. Deterministic; polished and baked."
+    "notes": "echo_horn variant b LOD0 (2660 tris): A big petrol-enamel signal horn with a bone rim on a squat timber cradle, aimed at the dark to count the crew in. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -624,7 +624,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "echo_horn variant b LOD1 (1330 tris): A big steel-grey signal horn on a squat timber cradle, aimed at the dark to count the crew in. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "echo_horn variant b LOD1 (1330 tris): A big petrol-enamel signal horn with a bone rim on a squat timber cradle, aimed at the dark to count the crew in. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -652,7 +652,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_sinkhole.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/sinkhole.py",
-    "notes": "echo_horn variant b LOD2 (367 tris): A big steel-grey signal horn on a squat timber cradle, aimed at the dark to count the crew in. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "echo_horn variant b LOD2 (367 tris): A big petrol-enamel signal horn with a bone rim on a squat timber cradle, aimed at the dark to count the crew in. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -774,12 +774,12 @@
     ],
     "max": [
      1.8559,
-     1.48,
+     1.18,
      1.8072
     ],
     "size": [
      3.7118,
-     1.48,
+     1.18,
      3.6144
     ]
    }
@@ -802,12 +802,12 @@
     ],
     "max": [
      1.8478,
-     1.48,
+     1.18,
      1.8072
     ],
     "size": [
      3.7037,
-     1.48,
+     1.18,
      3.6203
     ]
    }
@@ -830,12 +830,12 @@
     ],
     "max": [
      1.8574,
-     1.4524,
+     1.1574,
      1.8039
     ],
     "size": [
      3.7018,
-     1.4524,
+     1.1574,
      3.6094
     ]
    }

@@ -123,7 +123,7 @@
    "tags": [
     "machine"
    ],
-   "story": "A big steel-grey signal horn on a squat timber cradle, aimed at the dark to count the crew in.",
+   "story": "A big petrol-enamel signal horn with a bone rim on a squat timber cradle, aimed at the dark to count the crew in.",
    "variants": {
     "a": {
      "lod": [
@@ -188,7 +188,7 @@
       194
      ],
      "radius": 2.47,
-     "height": 1.48
+     "height": 1.18
     },
     "c": {
      "lod": [

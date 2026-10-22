@@ -27,10 +27,12 @@ LIME_D = "a9a28c"
 LICHEN = "9aa284"     # dusty grey-sage lichen (never luminous, clear of mint and ancient green)
 FERN = "7b8a58"
 FERN_D = "58664a"
-STEEL = "8f9893"      # steel-grey, no brass
-STEEL_D = "5d6563"
+STEEL = "365754"      # petrol enamel (dig-props board machine bodies); no brass
+STEEL_D = shade("365754", 0.75)  # darker petrol
 BASALT = "3d4140"
 PALE_PAINT = "e0d9c3"
+OXIDE = "9b513a"      # board oxide: painted bands, cart straps
+COPPER = "b77843"     # board copper, small functional fittings only (WARN hex, never a large face)
 WET = "4a4234"        # damp timber stain
 TAU = math.tau
 FLAT = math.pi / 2
@@ -86,13 +88,13 @@ def pump_engine(p, v, rng):
         p.box((0.5, 3.0, 0.2), (x, 0, 0.6), C["timber_pale"])
     # Engine block, then three upright cylinders with piston guides.
     p.box((3.0, 2.0, 1.1), (-0.8, 0, 1.25), STEEL, style="hard_smooth")
-    p.box((3.1, 0.25, 0.3), (-0.8, -1.05, 1.5), PALE_PAINT, style="hard_smooth")  # painted band
+    p.box((3.1, 0.25, 0.3), (-0.8, -1.05, 1.5), OXIDE, style="hard_smooth")  # painted band
     for i, x in enumerate((-1.8, -0.8, 0.2)):
         p.cyl(0.55, 1.5, (x, 0.2, 2.5), STEEL_D if i % 2 else STEEL, segs=14, style="hard_smooth")
-        p.cyl(0.62, 0.18, (x, 0.2, 3.3), C["iron_light"], segs=14, style="hard_smooth")
+        p.cyl(0.62, 0.18, (x, 0.2, 3.3), C["bone"], segs=14, style="hard_smooth")
         p.cyl(0.14, 1.0 if not (run and i == 1) else 0.4, (x, 0.2, 3.9 if not (run and i == 1) else 3.6),
               STEEL, segs=8, style="round")
-        p.box((0.9, 0.3, 0.2), (x, 0.2, 4.35 if not run else 3.95), C["iron_light"], style="hard_smooth")
+        p.box((0.9, 0.3, 0.2), (x, 0.2, 4.35 if not run else 3.95), C["bone"], style="hard_smooth")
     # Piston arms out to the flywheel (laid down, parked).
     for i, x in enumerate((-1.8, -0.8, 0.2)):
         p.rod((x, -0.6, 2.0), (x + 1.7, -1.35, 1.5), 0.1, STEEL_D, segs=8)
@@ -113,10 +115,10 @@ def pump_engine(p, v, rng):
     # Pump barrel (left), flanged, with a stub pipe to the ground.
     p.cyl(0.85, 2.3, (-3.0, 0.1, 1.6), STEEL, segs=16, rot=(0, FLAT, 0), style="hard_smooth")
     for x in (-4.1, -1.9):
-        p.cyl(1.0, 0.2, (x, 0.1, 1.6), C["iron_light"], segs=16, rot=(0, FLAT, 0), style="hard_smooth")
+        p.cyl(1.0, 0.2, (x, 0.1, 1.6), C["bone"], segs=16, rot=(0, FLAT, 0), style="hard_smooth")
     p.cyl(0.35, 1.4, (-3.4, 1.0, 0.95), STEEL_D, segs=10, rot=(FLAT, 0, 0), style="hard_smooth")
-    p.cyl(0.45, 0.25, (-3.4, 1.8, 0.95), C["iron_light"], segs=10, rot=(FLAT, 0, 0), style="hard_smooth")
-    p.cyl(0.4, 0.5, (-2.2, -1.6, 0.55), STEEL_D, segs=8, style="hard_smooth")  # drain cock
+    p.cyl(0.45, 0.25, (-3.4, 1.8, 0.95), C["bone"], segs=10, rot=(FLAT, 0, 0), style="hard_smooth")
+    p.cyl(0.4, 0.5, (-2.2, -1.6, 0.55), COPPER, segs=8, style="hard_smooth")  # drain cock
     # Little brass-free oil can, and a mug on the plinth: someone was here.
     mug(p, (2.9, -1.3, 0.5))
     p.cyl(0.13, 0.25, (2.4, -1.45, 0.62), STEEL, segs=8, r2=0.07, style="hard_smooth")
@@ -215,7 +217,7 @@ def gallery_collapse(p, v, rng):
 
 # --- props ---------------------------------------------------------------------------------
 @K.kind("echo_horn", hero=False, tags=["machine"], polish_opts={"detail": 1},
-        story="A big steel-grey signal horn on a squat timber cradle, aimed at the dark to count the crew in.")
+        story="A big petrol-enamel signal horn with a bone rim on a squat timber cradle, aimed at the dark to count the crew in.")
 def echo_horn(p, v, rng):
     p.box((2.4, 1.6, 0.4), (0, 0, 0.2), C["timber_pale"])
     # Cradle: two saddle beams on the pallet, not a solid block.
@@ -230,14 +232,14 @@ def echo_horn(p, v, rng):
             tilt = math.atan2(d[2], d[0])
             mid = tuple((a[i] + b[i]) / 2 for i in range(3))
             p.cyl(ra, ln, mid, STEEL, segs=14, r2=rb, rot=(0, FLAT - tilt, 0), style="hard_smooth")
-        p.torus(0.97, 0.08, (1.55, 0, 1.87), STEEL_D, rot=(0, FLAT - 0.2, 0), major=16, minor=5)
+        p.torus(0.97, 0.08, (1.55, 0, 1.87), C["bone"], rot=(0, FLAT - 0.2, 0), major=16, minor=5)
         p.cyl(0.25, 0.4, (-0.55, 0, 1.28), STEEL_D, segs=10, rot=(0, FLAT, 0), style="hard_smooth")  # mouthpiece
         for x in (-0.1, 0.9):
             p.box((0.2, 0.8, 0.2), (x, 0, 0.98 + x * 0.1), C["iron"])
     else:
         # Knocked off its cradle, lying on its side, bell dented.
         p.cyl(0.55, 1.4, (0.9, 1.5, 0.6), STEEL, segs=14, r2=0.25, rot=(FLAT, 0.0, 0.4), style="hard_smooth", jit=0.03)
-        p.torus(0.57, 0.08, (1.1, 2.1, 0.62), STEEL_D, rot=(FLAT, 0, 0.4), major=14, minor=5)
+        p.torus(0.57, 0.08, (1.1, 2.1, 0.62), C["bone"], rot=(FLAT, 0, 0.4), major=14, minor=5)
         p.cyl(0.22, 0.4, (0.4, 0.8, 0.5), STEEL_D, segs=10, rot=(FLAT, 0, 0.4), style="hard_smooth")
         fern_tuft(p, rng, (-1.0, 1.2, 0.0), 6, 1.0, FERN_D, 0.4)
     p.ico(0.3, (-0.9, -0.9, 0.5), C["canvas"], scale=(1.1, 0.9, 0.55), subdiv=0, style="soft")
@@ -258,7 +260,7 @@ def tin_cart(p, v, rng):
         for s in (-1, 1):
             p.box((0.1, 1.2, 0.7), (s * 1.1, 0, 0.95), tint(C["timber_pale"], rng), rot=(0, s * 0.12, 0))
         for x in (-0.6, 0.6):
-            p.box((0.1, 1.5, 0.12), (x, 0, 1.28), C["iron"])
+            p.box((0.1, 1.5, 0.12), (x, 0, 1.28), OXIDE)
         for sx in (-0.75, 0.75):
             for sy in (-0.78, 0.78):
                 p.cyl(0.36, 0.14, (sx, sy, 0.38), C["timber_dark"], segs=6, rot=(FLAT, 0, 0), style="hard")
@@ -278,15 +280,16 @@ def tin_cart(p, v, rng):
         else:
             p.cyl(0.2, 0.34, (1.8, 0.8, 0.17), C["iron_light"], segs=6, r2=0.23, style="hard")  # pail on ground
     else:
-        # Tipped onto its side, one wheel off, tailings spilled.
-        p.box((2.2, 0.2, 1.3), (0, 0, 0.7), C["timber_dark"], rot=(0.0, 0, 0.0))
+        # Tipped onto its side: the bin is laid down a quarter turn about X (mouth toward -Y, no open top),
+        # so every part below is the upright bin's part with y,z -> -z,y+0.83 and its box sizes swapped.
+        p.box((2.2, 1.3, 0.2), (0, -0.7, 0.83), C["timber_dark"])  # chassis plate, now the top
         for k in range(5):
-            p.box((0.42, 0.7, 0.1), (-0.9 + k * 0.45, -0.4, 0.15 + k * 0.01), tint(C["timber_pale"], rng), rot=(0, 0, 0.1 * k))
-        p.box((0.1, 0.7, 1.1), (-1.05, -0.4, 0.55), C["timber_pale"])
-        p.box((0.1, 0.7, 1.1), (1.05, -0.4, 0.55), C["timber_pale"])
-        p.box((2.2, 0.1, 1.1), (0, -0.78, 0.55), C["timber_pale"])
+            p.box((0.42, 0.1, 0.7), (-0.9 + k * 0.45, -0.15 - k * 0.01, 0.43), tint(C["timber_pale"], rng), rot=(0, -0.1 * k, 0))
+        p.box((0.1, 1.1, 0.7), (-1.05, -0.55, 0.43), C["timber_pale"])
+        p.box((0.1, 1.1, 0.7), (1.05, -0.55, 0.43), C["timber_pale"])
+        p.box((2.2, 1.1, 0.1), (0, -0.55, 0.05), C["timber_pale"])
         for sx in (-0.75, 0.75):
-            p.cyl(0.36, 0.14, (sx, 0.15, 0.7), C["timber_dark"], segs=6, rot=(FLAT, 0, 0), style="hard")
+            p.cyl(0.36, 0.14, (sx, -0.7, 0.98), C["timber_dark"], segs=6, style="hard")
         p.cyl(0.36, 0.14, (1.9, 1.0, 0.07), C["timber_dark"], segs=6, rot=(0.1, 0, 0), style="hard")  # wheel off
         p.ico(0.9, (0.3, -1.4, 0.2), BASALT, scale=(1.5, 1.0, 0.3), subdiv=0, style="soft")
         for k, (x, y) in enumerate(((-1.3, -1.5), (1.4, -1.9))):
@@ -410,7 +413,7 @@ def hose_reel(p, v, rng):
         p.cyl(0.25, 0.9, (0, 0, zc), C["timber_dark"], segs=6, rot=(FLAT, 0, 0), style="hard_smooth")
         for k in range(5):
             p.torus(0.42 + 0.06 * (k % 2), 0.1, (0, -0.28 + k * 0.14, zc), C["cable"], rot=(FLAT, 0, 0), major=10, minor=4, style="flat")
-        p.cyl(0.07, 0.4, (0.9, 0, zc), C["iron_light"], segs=6, rot=(0, FLAT, 0))  # crank peg
+        p.cyl(0.07, 0.4, (0.9, 0, zc), COPPER, segs=6, rot=(0, FLAT, 0))  # crank peg
         p.torus(0.28, 0.06, (1.3, 0.9, 0.06), C["cable"], major=10, minor=4, style="flat")  # the loose end, coiled flat
         p.torus(0.2, 0.06, (1.3, 0.9, 0.13), C["cable"], major=10, minor=4, style="flat")
     else:
@@ -424,7 +427,7 @@ def hose_reel(p, v, rng):
             p.torus(r, 0.1, (x, y, 0.1), C["cable"], major=10, minor=4, style="flat")
             p.torus(r * 0.55, 0.1, (x, y, 0.1), C["cable"], major=8, minor=4, style="flat")
         p.ico(0.35, (-1.2, -0.9, 0.3), LICHEN, scale=(1.3, 1, 0.4), subdiv=0, style="soft")
-    p.cyl(0.14, 0.3, (1.15, -0.9, 0.2), STEEL, segs=8, r2=0.1, style="hard_smooth")  # brass-free nozzle
+    p.cyl(0.14, 0.3, (1.15, -0.9, 0.2), COPPER, segs=8, r2=0.1, style="hard_smooth")  # copper nozzle, a small fitting
 
 
 @K.kind("tally_post", hero=False, tags=["sign"], polish_opts={"detail": 1},
