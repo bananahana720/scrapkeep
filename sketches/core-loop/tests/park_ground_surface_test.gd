@@ -12,6 +12,9 @@ const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 const PARKS := ["park_pit", "park_sinkhole", "park_test"]
+# Terrain3D's control word: bit 0 auto, bit 2 hole (the addon's shader DECODE_AUTO and hole test).
+const AUTO_BIT := 1
+const HOLE_BIT := 4
 const CELLS := 800
 const REGION := 1024
 const SAMPLES := 2500
@@ -69,9 +72,16 @@ func _pin_targets() -> void:
 		basalt = d.lerp(l, 0.5)
 	var tailings := Palette.CHARCOAL.lerp(Palette.RUST, 0.4)
 	_targets = {2: concrete, 3: tailings, 4: basalt}
-	_near_color("park_terrain basalt target = mean of grit_dark and grit_light", ParkTerrain.slot_target(4), basalt)
-	_near_color("park_terrain tailings target = CHARCOAL.lerp(RUST, 0.4)", ParkTerrain.slot_target(3), tailings)
-	_near_color("park_terrain concrete target = pinned base_color", ParkTerrain.slot_target(2), concrete)
+	_near_color("park_terrain basalt target = mean of grit_dark and grit_light", _park_target(4), basalt)
+	_near_color("park_terrain tailings target = CHARCOAL.lerp(RUST, 0.4)", _park_target(3), tailings)
+	_near_color("park_terrain concrete target = pinned base_color", _park_target(2), concrete)
+
+
+# park_terrain.gd's target for a slot, or magenta where it declares none (so the check fails, not parses).
+func _park_target(slot: int) -> Color:
+	var script: GDScript = ParkTerrain
+	var has := script.get_script_method_list().any(func(m): return m.name == "slot_target")
+	return script.call("slot_target", slot) if has else Color.MAGENTA
 
 
 func _near_color(label: String, got: Color, want: Color) -> void:
@@ -134,7 +144,7 @@ func _check_park(id: String, render: Node3D) -> void:
 			var z := z0 + p.y
 			var word := control.get_data().decode_u32((p.y * REGION + p.x) * 4)
 			checked += 1
-			if word & ParkTerrain.AUTO_BIT == 0:
+			if word & AUTO_BIT == 0:
 				bad_auto += 1
 				if first.is_empty():
 					first = "no auto bit at (%d, %d)" % [x, z]
@@ -208,7 +218,7 @@ func _check_holes(id: String, render: Node3D, holes: PackedByteArray) -> void:
 		for dz in 2:
 			for dx in 2:
 				var word: int = _vertex(render, -CELLS + 2 * (k % CELLS) + dx, -CELLS + 2 * (k / CELLS) + dz)[0]
-				if word & ParkTerrain.HOLE_BIT == 0:
+				if word & HOLE_BIT == 0:
 					bad += 1
 	_hole_cells_seen += seen
 	t.eq(id + " hole vertices missing the hole bit", bad, 0)
