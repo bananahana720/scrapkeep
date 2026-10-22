@@ -2018,11 +2018,11 @@
    "id": "l050",
    "template": "net_scrap",
    "at": [
-    240.0,
-    215.0
+    248.0,
+    134.0
    ],
-   "yaw_deg": -56.0,
-   "near": "east_wing, A folded net and a scrap of patch cloth blow"
+   "yaw_deg": -86.0,
+   "near": "wing_gust_lip_e, a folded net dropped at the lookout cab (235,135)"
   },
   {
    "id": "w016",
@@ -2168,11 +2168,11 @@
    "id": "m319",
    "template": "pine_ledge",
    "at": [
-    240.0,
-    375.0
+    254.0,
+    377.0
    ],
-   "yaw_deg": 45.0,
-   "near": "east_wing, Relict pines and manzanita crowding a slickr"
+   "yaw_deg": -165.0,
+   "near": "east_wing, relict pines crowding the slickrock, facing the cairn (233,296)"
   },
   {
    "id": "w320",
@@ -2311,8 +2311,8 @@
     -25.0,
     -760.0
    ],
-   "yaw_deg": -170.0,
-   "near": "lookout_step_1, A dropped bolt of patch cloth"
+   "yaw_deg": 90.0,
+   "near": "lookout_step_1, a dropped bolt of patch cloth rolled toward the mending spot (10,-760)"
   },
   {
    "id": "w343",
@@ -2558,6 +2558,6 @@
   ],
   "seed": 5
  },
- "pin": 3526488863,
+ "pin": 251580569,
  "notes": "ground_rows steps (lookout_step_1, lookout_step_2, lookout_step_3, lookout_step_4, run_step_1, run_step_2, run_step_3, run_step_4, run_step_5, saddle_step_1, saddle_step_2, fan_step_1, fan_step_2, fan_step_3, fan_step_4, fan_step_5, fan_step_6, landing_step_1, anvil_step_1, anvil_step_2, anvil_step_3, anvil_step_4, carve_step_1, carve_step_2, carve_step_3, carve_step_4, carve_step_5, carve_step_6, carve_step_7): terrace treads, each a 32 to 50 m deep step-down of 2 to 4 m between kicker lips (park_islands.json row sizes); the tiers and kicker capsules govern them. anvil_face (a 2 m face) is never listed."
 }
