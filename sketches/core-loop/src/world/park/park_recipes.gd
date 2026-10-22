@@ -228,6 +228,12 @@ const ANCHOR_FIT_PATH := "res://src/world/park/anchors/anchor_fit.json"
 static var _anchor_fit := {}
 static var _anchor_fit_read := false
 static var _anchor_fit_lock := Mutex.new()
+# anchor_hulls() per (variant GLB, size[1]): one ConvexPolygonShape3D (or null) per fitted band, read once under _anchor_hull_lock.
+static var _anchor_hulls := {}
+static var _anchor_hull_lock := Mutex.new()
+# A band's hull points past this many are snapped to ANCHOR_HULL_SNAP_M in x and z and deduplicated (Jolt reduces hulls itself).
+const ANCHOR_HULL_CAP := 256
+const ANCHOR_HULL_SNAP_M := 0.1
 
 
 # A budget class's visibility ranges from assets/asset_budgets.json: base_end and base_margin for the base views,
@@ -1220,6 +1226,7 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 	if ANCHOR_KITS.has(recipe) and not kit:
 		push_warning("park_recipes: %s variants missing, %s stands in as grey posts" % [recipe, row.get("id", "")])
 	var fit := anchor_fit_boxes(row) if kit else []
+	var hulls := anchor_hulls(row, fit) if not fit.is_empty() else []
 	var fit_shapes := {}
 	for k in posts.size():
 		var p: Vector2 = posts[k]
@@ -1232,6 +1239,13 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 			var origin := inv * Vector3(p.x, base, p.y)
 			for i in fit.size():
 				var b: Dictionary = fit[i]
+				if i < hulls.size() and hulls[i] != null:
+					# The drawn mesh's hull in this band, in post-local space with h from the post foot; the turn is the basis.
+					var hull_part := CollisionShape3D.new()
+					hull_part.shape = hulls[i]
+					hull_part.transform = Transform3D(turn, origin)
+					body.add_child(hull_part)
+					continue
 				var key := i * 2 + (1 if odd else 0)
 				if not fit_shapes.has(key):
 					var fitted := BoxShape3D.new()
@@ -1319,6 +1333,86 @@ static func anchor_fit_boxes(row: Dictionary) -> Array:
 		if is_equal_approx(float(entry["size"]), tall):
 			return entry["boxes"]
 	return []
+
+
+# One ConvexPolygonShape3D per fitted band of the row's variant at its height: the hull of the drawn mesh inside the band
+# (triangles clipped to h in [lo, hi], so bands meet with no gap), null for a band the mesh never enters (that band keeps
+# its table box). [] when the mesh cannot be read (one push_warning; the caller keeps the boxes). Points are (x, h, z) in
+# post-local space before the turn, h metres above the ground sample. Cached per (variant GLB, size[1]).
+# Height mapping, from anchor_draws: a post is drawn at origin y = bottom + tall / ANCHOR_AUTHORED_M with bottom = base -
+# ANCHOR_SINK_M and Y scaled by s = tall / ANCHOR_AUTHORED_M, so authored y gives world y = base - SINK + s + y * s, i.e.
+# h = (y + 1) * s - SINK (authored -1 is h -SINK, authored 9 is h size[1]). x and z are unscaled.
+static func anchor_hulls(row: Dictionary, fit: Array) -> Array:
+	var path: String = anchor_paths(String(row.get("recipe", "")))[anchor_variant(row)]
+	var key := "%s|%s" % [path, str(float(row["size"][1]))]
+	_anchor_hull_lock.lock()
+	if _anchor_hulls.has(key):
+		var cached: Array = _anchor_hulls[key]
+		_anchor_hull_lock.unlock()
+		return cached
+	var out := []
+	var mesh: Mesh = _anchor_mesh(path)[0]
+	if mesh == null:
+		push_warning("park_recipes: %s has no readable render mesh, its fitted posts keep boxes" % path)
+	else:
+		var s := (float(row["size"][1]) + ANCHOR_SINK_M) / ANCHOR_AUTHORED_M
+		var tris := PackedVector3Array()
+		for si in mesh.get_surface_count():
+			var arrays := mesh.surface_get_arrays(si)
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var index = arrays[Mesh.ARRAY_INDEX]
+			var order: PackedInt32Array = index if index != null and index.size() > 0 else PackedInt32Array(range(verts.size()))
+			for n in order.size():
+				var v := verts[order[n]]
+				tris.append(Vector3(v.x, (v.y + 1.0) * s - ANCHOR_SINK_M, v.z))
+		for b: Dictionary in fit:
+			out.append(_band_hull(tris, float(b["h"][0]), float(b["h"][1])))
+	_anchor_hulls[key] = out
+	_anchor_hull_lock.unlock()
+	return out
+
+
+# The convex hull shape of triangles (a flat list of corners, y = h) inside h in [lo, hi], null with under 4 distinct points.
+static func _band_hull(tris: PackedVector3Array, lo: float, hi: float) -> ConvexPolygonShape3D:
+	var pts := PackedVector3Array()
+	for t in tris.size() / 3:
+		var poly: Array = [tris[t * 3], tris[t * 3 + 1], tris[t * 3 + 2]]
+		for plane in 2:
+			var edge := lo if plane == 0 else hi
+			var way := 1.0 if plane == 0 else -1.0
+			var next := []
+			for i in poly.size():
+				var a: Vector3 = poly[i]
+				var c: Vector3 = poly[(i + 1) % poly.size()]
+				var da := (a.y - edge) * way
+				var dc := (c.y - edge) * way
+				if da >= 0.0:
+					next.append(a)
+				if (da >= 0.0) != (dc >= 0.0):
+					var cut := a.lerp(c, da / (da - dc))
+					cut.y = edge
+					next.append(cut)
+			poly = next
+			if poly.is_empty():
+				break
+		pts.append_array(PackedVector3Array(poly))
+	if pts.size() > ANCHOR_HULL_CAP:
+		var seen := {}
+		var snapped_pts := PackedVector3Array()
+		for p in pts:
+			var q := Vector3(snappedf(p.x, ANCHOR_HULL_SNAP_M), clampf(snappedf(p.y, ANCHOR_HULL_SNAP_M), lo, hi), snappedf(p.z, ANCHOR_HULL_SNAP_M))
+			if not seen.has(q):
+				seen[q] = true
+				snapped_pts.append(q)
+		pts = snapped_pts
+	var distinct := {}
+	for p in pts:
+		distinct[p] = true
+	if distinct.size() < 4:
+		return null
+	var shape := ConvexPolygonShape3D.new()
+	shape.points = pts
+	return shape
 
 
 # The drawn posts' transforms in the node's space (node_xf the row node's transform): a kit row's posts stretched and

@@ -286,6 +286,18 @@ func _collect_boxes(posted: Array) -> Array:
 				var rec: Dictionary = _AC.box_record(shape.global_transform, (shape.shape as BoxShape3D).size, info)
 				rec["body"] = entry["body"].get_instance_id()
 				out.append(rec)
+			elif shape is CollisionShape3D and shape.shape is ConvexPolygonShape3D:
+				# A hull band (the drawn mesh's convex hull): its post-local bounding box stands in as the aim target (the
+				# old box's corners) and the bounce rule's surface; the contact point itself is read from the engine.
+				var box := AABB()
+				var pts := (shape.shape as ConvexPolygonShape3D).points
+				for n in pts.size():
+					box = AABB(pts[n], Vector3.ZERO) if n == 0 else box.expand(pts[n])
+				var xf := Transform3D(shape.global_transform.basis, shape.global_transform * box.get_center())
+				var rec: Dictionary = _AC.box_record(xf, box.size, info)
+				rec["body"] = entry["body"].get_instance_id()
+				rec["hull"] = true
+				out.append(rec)
 	return out
 
 
@@ -376,6 +388,26 @@ func _make_ball(shot: Dictionary, parent: Node3D) -> RigidBody3D:
 	return ball
 
 
+func _any_hull(list: Array) -> bool:
+	for b: Dictionary in list:
+		if b.get("hull", false):
+			return true
+	return false
+
+
+# The contact point the engine reports for a ball at `at` (the touched shape's closest point), else the fallback.
+func _engine_contact(at: Vector3, fallback: Vector3) -> Vector3:
+	var query := PhysicsShapeQueryParameters3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = Tuning.RADIUS + 0.1
+	query.shape = sphere
+	query.transform = Transform3D(Basis.IDENTITY, at)
+	query.collision_mask = 1 | 4
+	query.exclude = [_floor.get_rid()]
+	var info := _floor.get_world_3d().direct_space_state.get_rest_info(query)
+	return info["point"] if not info.is_empty() else fallback
+
+
 # Fly every shot together: fixed physics steps until each has run STOP_WINDOW_S past its contact (or MAX_TICKS).
 func _fly(shots: Array, parent: Node3D, boxes: Array, drawn: Array, mask: Dictionary) -> void:
 	var bodies := {}
@@ -413,6 +445,8 @@ func _fly(shots: Array, parent: Node3D, boxes: Array, drawn: Array, mask: Dictio
 				traversals[i].step(maxi(SpeedTier.of(arrived, _cruise), SpeedTier.CRUISE), arrived, false, false, false)
 				var hit: Dictionary = _AC.nearest_surface(at, shot["near"])
 				var cp: Vector3 = at - (hit["normal"] as Vector3) * float(hit["dist"])
+				if _any_hull(shot["near"]):
+					cp = _engine_contact(at, cp)
 				var gap := _air_gap(cp, drawn)
 				shot["gap"] = gap["air"]
 				shot["gap_row"] = gap["row"]
