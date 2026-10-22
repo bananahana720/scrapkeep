@@ -763,7 +763,7 @@ func _check_open_decisions(world: Dictionary, kit: Dictionary, c) -> void:
 	var found_pose := {}
 	for pt: Vector2 in _grid(fresh.rect, 60):
 		var pose := {"x": pt.x, "z": pt.y, "yaw": 0.0}
-		found = ParkProps.cone_legal_cells(fresh, kit, probes, 1.0, [pose], CAM_SPEC, 60.0)
+		found = ParkProps.cone_legal_cells(fresh, kit, probes, [1.0], [pose], CAM_SPEC, 60.0)
 		if not found.is_empty():
 			found_pose = pose
 			break
@@ -829,7 +829,7 @@ func _check_open_decisions(world: Dictionary, kit: Dictionary, c) -> void:
 			var normal := Vector2(-leg.y, leg.x).normalized()
 			for off in [6.5, 7.0, 7.5, 8.0, 8.5]:
 				var at: Vector2 = (line[k] + line[k + 1]) * 0.5 + normal * off
-				if fresh.rect.has_point(at) and ParkProps.probe_legal_at(fresh, pair, [{"kind": "thin_low", "v": "a"}], 1.0, at) and not ParkProps.probe_legal_at(fresh, pair, [{"kind": "wide_low", "v": "a"}], 1.0, at):
+				if fresh.rect.has_point(at) and ParkProps.probe_legal_at(fresh, pair, [{"kind": "thin_low", "v": "a"}], [1.0], at) and not ParkProps.probe_legal_at(fresh, pair, [{"kind": "wide_low", "v": "a"}], [1.0], at):
 					pocket = at
 					break
 			if pocket != Vector2.INF:
@@ -837,16 +837,16 @@ func _check_open_decisions(world: Dictionary, kit: Dictionary, c) -> void:
 		if pocket != Vector2.INF:
 			break
 	_t.check("planted: a pocket beside a line fits the thin kind and not the wide one", pocket != Vector2.INF)
-	_t.check("planted: the probe set finds that pocket legal", pocket != Vector2.INF and ParkProps.probe_legal_at(fresh, pair, set, 1.0, pocket))
+	_t.check("planted: the probe set finds that pocket legal", pocket != Vector2.INF and ParkProps.probe_legal_at(fresh, pair, set, [1.0], pocket))
 	# A mid kind thinner than every low kind fits 0.3 m inside the play rect where no low kind does.
 	var slim := Vector2.INF
 	for z in range(int(fresh.rect.position.y) + 20, int(fresh.rect.end.y) - 20, 10):
 		var at := Vector2(fresh.rect.position.x + 0.3, z)
-		if ParkProps.probe_at(fresh, pair, [{"kind": "mid_slim", "v": "a"}], 1.0, at) != "" and ParkProps.probe_at(fresh, pair, [{"kind": "thin_low", "v": "a"}, {"kind": "wide_low", "v": "a"}], 1.0, at) == "":
+		if ParkProps.probe_at(fresh, pair, [{"kind": "mid_slim", "v": "a"}], [1.0], at) != "" and ParkProps.probe_at(fresh, pair, [{"kind": "thin_low", "v": "a"}, {"kind": "wide_low", "v": "a"}], [1.0], at) == "":
 			slim = at
 			break
 	_t.check("planted: a pocket at the play-rect edge fits only the slim mid kind", slim != Vector2.INF)
-	_t.eq("planted: the probe set finds that pocket legal and names the mid kind", ParkProps.probe_at(fresh, pair, set, 1.0, slim), "mid_slim/a")
+	_t.eq("planted: the probe set finds that pocket legal and names the mid kind", ParkProps.probe_at(fresh, pair, set, [1.0], slim), "mid_slim/a@1.00")
 	# A kind whose smallest-radius variant a (mid tier) cannot stand 8 m from a line, but whose lower variant b (low tier) can.
 	var twin := kit.duplicate(true)
 	twin["kinds"] = {"twin": template.duplicate(true)}
@@ -866,7 +866,7 @@ func _check_open_decisions(world: Dictionary, kit: Dictionary, c) -> void:
 			var normal := Vector2(-leg.y, leg.x).normalized()
 			for off in [7.0, 7.5, 8.0, 8.5, 9.0]:
 				var at: Vector2 = (line[k] + line[k + 1]) * 0.5 + normal * off
-				if fresh.rect.has_point(at) and ParkProps.probe_at(fresh, twin, twin_set, 1.0, at) == "twin/b" and not ParkProps.probe_legal_at(fresh, twin, [{"kind": "twin", "v": "a"}], 1.0, at):
+				if fresh.rect.has_point(at) and ParkProps.probe_at(fresh, twin, twin_set, [1.0], at) == "twin/b@1.00" and not ParkProps.probe_legal_at(fresh, twin, [{"kind": "twin", "v": "a"}], [1.0], at):
 					twin_pocket = at
 					break
 			if twin_pocket != Vector2.INF:
@@ -874,7 +874,17 @@ func _check_open_decisions(world: Dictionary, kit: Dictionary, c) -> void:
 		if twin_pocket != Vector2.INF:
 			break
 	_t.check("planted: a pocket 7 to 9 m from a line fits only the low-tier variant b of a kind", twin_pocket != Vector2.INF)
-	_t.eq("planted: the probe set names twin/b there", ParkProps.probe_at(fresh, twin, twin_set, 1.0, twin_pocket) if twin_pocket != Vector2.INF else "", "twin/b")
+	_t.eq("planted: the probe set names twin/b there", ParkProps.probe_at(fresh, twin, twin_set, [1.0], twin_pocket) if twin_pocket != Vector2.INF else "", "twin/b@1.00")
+	# The scales a file places at: 1.0, its template scales, and the litter range's extremes, sorted and distinct.
+	var scaled := {"templates": {"t": {"props": [{"scale": 0.8}, {"scale": 1.0}, {}]}}, "litter": {}}
+	var got := ParkProps.probe_scales(scaled)
+	var want := [0.8, 0.9, 1.0, 1.15]
+	var same := got.size() == want.size()
+	for k in mini(got.size(), want.size()):
+		same = same and is_equal_approx(got[k], want[k])
+	_t.check("probe_scales: 1.0, a template scale and the litter extremes, sorted and distinct", same, str(got))
+	_t.eq("probe_scales: a file with no scales probes 1.0 only", Array(ParkProps.probe_scales({})), [1.0])
+	_t.check("probe_scales reads the litter range from the constants", ParkProps.probe_scales({"litter": {}}).has(ParkProps.LITTER_SCALE_MAX) and ParkProps.LITTER_SCALE_MIN == 0.9)
 	# open_reason applies the file's rows to a copy of the context's lists only.
 	fresh.use_ground_rows([far_row])
 	var before: Array = fresh.ground_rows.keys()

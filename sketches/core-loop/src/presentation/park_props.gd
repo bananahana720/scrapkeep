@@ -70,6 +70,9 @@ const LINE_REACH_M := 64.0
 const KICK_MARGIN_M := 8.0
 const KICK_RUNOUT_M := 40.0
 const LITTER_CHUNK_M := 160.0
+# The range a litter item's scale is drawn from (_litter), and the extremes the no_cell probe samples.
+const LITTER_SCALE_MIN := 0.9
+const LITTER_SCALE_MAX := 1.15
 const LITTER_GAP_RATIO := 0.5
 const CAMP_ACTIVITIES := ["enemy_camp"]
 # Explicit surfaces: with a file "ground_rows" list, every instance stands inside a listed row's footprint, inset at least this far
@@ -386,16 +389,23 @@ static func runout_near(c: Context, kicker_id: String, at: Vector2, within := 40
 	return "no kicker %s in the park" % kicker_id
 
 
-# The smallest scale any instance of a vignette file takes: 1.0, or lower for a template prop's own scale or the litter's
-# 0.9 to 1.15 range (expand). The probe uses it so it fits wherever the file's smallest prop could.
-static func min_scale(file: Dictionary) -> float:
-	var scale := 1.0
+# The scales a vignette file places instances at, sorted and distinct: 1.0, every template prop's own scale, and the litter's
+# LITTER_SCALE_MIN and LITTER_SCALE_MAX when the file has litter (expand draws litter scales in that range). Slope and seat
+# sample the footprint, so a probe fits or not by scale; scales between the litter min and max are not sampled.
+static func probe_scales(file: Dictionary) -> PackedFloat32Array:
+	var found := [1.0]
 	for template: Dictionary in (file.get("templates", {}) as Dictionary).values():
 		for prop: Dictionary in template.get("props", []):
-			scale = minf(scale, float(prop.get("scale", 1.0)))
+			found.append(float(prop.get("scale", 1.0)))
 	if file.get("litter") is Dictionary:
-		scale = minf(scale, 0.9)
-	return scale
+		found.append(LITTER_SCALE_MIN)
+		found.append(LITTER_SCALE_MAX)
+	found.sort()
+	var out := PackedFloat32Array()
+	for scale: float in found:
+		if out.is_empty() or not is_equal_approx(out[out.size() - 1], scale):
+			out.append(scale)
+	return out
 
 
 # The probe set for no_cell: every variant of every kind, as {kind, v}. The tier comes from each instance's own height, so a
@@ -414,18 +424,19 @@ static func probe_variants_of(kit: Dictionary) -> Array:
 	return out
 
 
-# The "kind/variant" of the first probe that passes every placement rule standing at `at` (scaled by `scale`), "" if none.
-static func probe_at(c: Context, kit: Dictionary, probes: Array, scale: float, at: Vector2) -> String:
-	for probe: Dictionary in probes:
-		var inst := _instance("probe", String(probe["kind"]), String(probe["v"]), kit, at, 0.0, scale, 0.0, c.ground, false)
-		if check_one(inst, c).is_empty():
-			return "%s/%s" % [probe["kind"], probe["v"]]
+# The "kind/variant@scale" of the first (scale, probe) that passes every placement rule standing at `at`, "" if none.
+static func probe_at(c: Context, kit: Dictionary, probes: Array, scales: Array, at: Vector2) -> String:
+	for scale: float in scales:
+		for probe: Dictionary in probes:
+			var inst := _instance("probe", String(probe["kind"]), String(probe["v"]), kit, at, 0.0, scale, 0.0, c.ground, false)
+			if check_one(inst, c).is_empty():
+				return "%s/%s@%.2f" % [probe["kind"], probe["v"], scale]
 	return ""
 
 
-# True when any probe passes every placement rule standing at `at`.
-static func probe_legal_at(c: Context, kit: Dictionary, probes: Array, scale: float, at: Vector2) -> bool:
-	return probe_at(c, kit, probes, scale, at) != ""
+# True when any (variant, scale) probe passes every placement rule standing at `at`.
+static func probe_legal_at(c: Context, kit: Dictionary, probes: Array, scales: Array, at: Vector2) -> bool:
+	return probe_at(c, kit, probes, scales, at) != ""
 
 
 # The audit's chase camera for a pose {x, z, yaw}: the anchor 1 + cam.up above the ground at the pose, the basis
@@ -452,10 +463,10 @@ static func cell_visible(view: Transform3D, cam: Dictionary, point: Vector3, ran
 
 
 # Up to `limit` cell centres (cell_m grid, scanned in x then z) inside the real view frustum of the poses, within range_m of
-# the camera, where any probe (every variant of every kind, probe_variants_of) passes every placement rule; [] when none does (the audit's no_cell --open
+# the camera, where any probe (every variant of every kind at each placement scale, probe_variants_of and probe_scales) passes every placement rule; [] when none does (the audit's no_cell --open
 # reason). Tolerance: the grid is cell_m (2.5 m), so a legal pocket narrower than about 2.5 m can be missed, which lets a
 # no_cell claim pass; the horizontal range errs safe. A pose is {x, z, yaw}; cam is {arm, pitch, up, fov_deg, aspect}.
-static func cone_legal_cells(c: Context, kit: Dictionary, probes: Array, scale: float, poses: Array, cam: Dictionary, range_m: float, cell_m := 2.5, limit := 1) -> Array:
+static func cone_legal_cells(c: Context, kit: Dictionary, probes: Array, scales: Array, poses: Array, cam: Dictionary, range_m: float, cell_m := 2.5, limit := 1) -> Array:
 	var out := []
 	if probes.is_empty():
 		return out
@@ -470,7 +481,7 @@ static func cone_legal_cells(c: Context, kit: Dictionary, probes: Array, scale: 
 				var at := Vector2((ix + 0.5) * cell_m, (iz + 0.5) * cell_m)
 				if not cell_visible(view, cam, Vector3(at.x, _height(c.ground, at), at.y), range_m):
 					continue
-				if probe_legal_at(c, kit, probes, scale, at):
+				if probe_legal_at(c, kit, probes, scales, at):
 					out.append(at)
 					if out.size() >= limit:
 						return out
@@ -504,16 +515,16 @@ static func open_reason(c: Context, kit: Dictionary, file: Dictionary, reason: S
 	var saved_low := c.low_rows
 	c.use_ground_rows(file.get("ground_rows"))
 	c.use_low_ground_rows(file.get("low_ground_rows"))
-	var scale := min_scale(file)
+	var scales := Array(probe_scales(file))
 	var probes := probe_variants_of(kit)
 	var result := {"ok": false, "why": "no kit to probe with", "cell": null}
 	if not probes.is_empty():
-		var cells := cone_legal_cells(c, kit, probes, scale, poses, cam, NEAR_RANGE_M)
-		var label := "%d probe variants at scale %.2f" % [probes.size(), scale]
+		var cells := cone_legal_cells(c, kit, probes, scales, poses, cam, NEAR_RANGE_M)
+		var label := "%d probe variants at scales %s" % [probes.size(), str(scales)]
 		if cells.is_empty():
 			result = {"ok": true, "why": label + " find no legal cell in the view frustum", "cell": null}
 		else:
-			result = {"ok": false, "why": "probe %s has a legal cell at (%.1f, %.1f) in the view frustum (%s)" % [probe_at(c, kit, probes, scale, cells[0]), cells[0].x, cells[0].y, label], "cell": [cells[0].x, cells[0].y]}
+			result = {"ok": false, "why": "probe %s has a legal cell at (%.1f, %.1f) in the view frustum (%s)" % [probe_at(c, kit, probes, scales, cells[0]), cells[0].x, cells[0].y, label], "cell": [cells[0].x, cells[0].y]}
 	c.ground_rows = saved_ground
 	c.low_rows = saved_low
 	return result
@@ -855,7 +866,7 @@ static func _litter(litter: Dictionary, id: String, kit: Dictionary, c: Context,
 				var pick := rng.randf() * total
 				var vr := rng.randi()
 				var yaw := rng.randf_range(0.0, TAU)
-				var scale := rng.randf_range(0.9, 1.15)
+				var scale := rng.randf_range(LITTER_SCALE_MIN, LITTER_SCALE_MAX)
 				var at := pts[i - 1] + dir * d + side_dir * side * lateral
 				d += spacing
 				var kind := String((kinds[0] as Dictionary)["kind"])
