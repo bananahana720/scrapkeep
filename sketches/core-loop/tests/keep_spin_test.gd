@@ -88,4 +88,90 @@ func _run() -> void:
 	_player._rigid.angular_velocity = SPIN
 	_player.set_velocity_now(Vector3(5.0, 0.0, 0.0))
 	t.check("grounded set starts no carried spin", not _player._spin_on, "spin_on=%s" % _player._spin_on)
+	await _more()
 	quit(t.verdict())
+
+
+# Turn (rad) between two bases.
+func _turn(a: Basis, b: Basis) -> float:
+	return (b * a.inverse()).get_rotation_quaternion().get_angle()
+
+
+func _airborne_spin() -> void:
+	_spawn(Vector3(0.0, 400.0, 0.0))
+	for i in 6:
+		await physics_frame
+	_player._rigid.angular_velocity = SPIN
+	for i in 3:
+		await physics_frame
+
+
+func _more() -> void:
+	# A direct body set (the rivet line haul and the reactor ride call this, not the player's).
+	await _airborne_spin()
+	_player._rigid.set_velocity_now(LAUNCH)
+	await physics_frame
+	await physics_frame
+	var direct: Dictionary = await _spin_over(10)
+	t.check("a direct body velocity set (ride tick, reel) keeps the lattice spin", absf(direct.axis.dot(Vector3.UP)) > 0.9 and direct.angle > 0.02,
+		"axis %s turned %.3f rad" % [direct.axis, direct.angle])
+
+	# A real fling.
+	await _airborne_spin()
+	_player.kit.hooked = true
+	_player.tree._knobs["grapple_fling"] = 10.0
+	var fling: float = _player.tree.knob("grapple_fling")
+	_player._fling()
+	await physics_frame
+	await physics_frame
+	var flung: Dictionary = await _spin_over(10)
+	t.check("a real _fling keeps the lattice spin", fling > 0.0 and absf(flung.axis.dot(Vector3.UP)) > 0.9 and flung.angle > 0.02,
+		"fling knob %.1f, axis %s turned %.3f rad" % [fling, flung.axis, flung.angle])
+
+	# Held ride ticks decay faster than free air, over the same step.
+	await _airborne_spin()
+	_player._keep_spin()
+	_player._drawn_basis(Basis.IDENTITY, 0.1)
+	var free: float = _player._spin_omega.length()
+	await _airborne_spin()
+	_player._keep_spin()
+	await physics_frame
+	_player._keep_spin()
+	_player._drawn_basis(Basis.IDENTITY, 0.1)
+	var held: float = _player._spin_omega.length()
+	t.check("consecutive ride ticks decay the spin faster than free air", held < free - 0.5 and _player._spin_held,
+		"held %.2f vs free %.2f rad/s" % [held, free])
+
+	# Landing: the carried orientation is far from the body's; the hand-off must not jump.
+	_spawn(Vector3(0.0, 3.0, 0.0))
+	for i in 4:
+		await physics_frame
+	_player._rigid.angular_velocity = SPIN
+	_player.set_velocity_now(Vector3(0.0, 0.0, 0.0))
+	await process_frame
+	_player._spin_basis = Basis(Vector3(1.0, 1.0, 0.0).normalized(), 2.0)
+	_player._spin_omega = Vector3.ZERO
+	var previous := _lattice()
+	var worst := 0.0
+	var landed := -1
+	for i in 400:
+		await process_frame
+		var now := _lattice()
+		var step := _turn(previous, now)
+		if landed < 0 and _player.state.grounded:
+			landed = i
+		if landed >= 0:
+			worst = maxf(worst, step)
+		previous = now
+		if landed >= 0 and i > landed + 20:
+			break
+	t.check("the ball landed", landed >= 0, "landed at frame %d" % landed)
+	t.check("landing leaves no jump in the drawn turn", worst < 0.3, "largest per-frame turn after landing %.3f rad (a 2 rad catch-up would show)" % worst)
+
+	# reset_to clears the carry and the offset.
+	await _airborne_spin()
+	_player._keep_spin()
+	_player._spin_offset = Basis(Vector3.UP, 1.0)
+	_player.reset_to(Vector3(0.0, 1.03, 0.0), Vector3.ZERO)
+	t.check("reset_to clears the carry and the offset", not _player._spin_on and _player._spin_offset.is_equal_approx(Basis.IDENTITY),
+		"on=%s" % _player._spin_on)
