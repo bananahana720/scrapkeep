@@ -48,27 +48,29 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-21 merge of stage/alpha-w18 0eb9c897 into claude/systems-b-w18 (after the plate_press removal): pins re-read from this test's own MEASURE lines (schedule0, tier0.hash), seeds 0..19.
 # 2026-10-22 merge of stage/alpha-w18 bc6d4e4b into #214 (World lane, after GPU row 24b PASS): #214's islands rows plus the
 # stage's pit swing rows; all 20 schedules moved, whole-run hashes unchanged; pins read from this test's own MEASURE lines (schedule0), --section=runtime --seed=N.
+# 2026-10-22 crown sentinel_50 and sentinel_36 moves ([-150, 420] to [-185, 398], [-135, 438] to [-156, 446]; World lane, #241 6331254683 ruling): the park row moves in the schedule
+# hash; schedules re-read from this test's own MEASURE lines (schedule0), whole-run hashes unchanged.
 const BASE_SCHEDULE := [
-	"1a4e3db30eb080dbbc0c8fbbb27756333d43752c23404f13a892699b338a8902",
-	"cedb181cc0662802cb68398c64fc5ef85e6f8df2dd9e93e7a281af5550231d9d",
-	"9b6794935e619b45eb280b7ee252abe0430901382b1dd4cd5bdc1f228083c39a",
-	"7b0d364e09c4ffe139690141376ba0be409f27f643f0d490acd2d9fd0fa724bc",
-	"ad018a85423ecc5fc5a5ec284fc3470c71b1f7346ae85fdd18f4bfda66cab84a",
-	"000efd4838b2477f8048a15317826a238e5d2b8a98ad8ba25859503247697fa0",
-	"d957fcfda1a89f0c568c042ee2e717b8208daa17b2bb7491c7aa5616380b4044",
-	"007dd05c4fe9df15cfcc5d852b64dac54033de48525646a2a0af871867fa5633",
-	"941f56cc25b4e5f22cb8fb427a93a879abafd36d89a4ed556582133168945633",
-	"f4fcb5accd6852012f2bce38009c877ee5a369d6a2e1f666064bb130d75a5393",
-	"710cc6a3ac2de6d07c43dbf7d0a18989d27c8d12c99dd8e0d44c9243a4ec47a8",
-	"5f1d4342d71da7c95cb858f4cdcf4416c3c72d8bcff06343d67dcf5eda1ab6f1",
-	"53224d6c59f9b292c557461c6f358e034a7a29188d12277bf30151016d04c9a6",
-	"d7ac60141d9a077377cc0e22ffad9f453ac4b4f2e5464d6c1008e97c353fbc5b",
-	"2307b4ef0d9aad566cb764969c3507cdf1d92c9e10251047826e3f16f798329c",
-	"960cb0824f5a734756fe16be10fa2d9a88e90e799c6f7b70bba16ffc9ad73126",
-	"16993e2b925483c70037ac89026948482e0575609a261d3fc3677b6bc10de6f5",
-	"b7a1de4aa5c8fef62cd2ccb52df1ae4ee14ec73738cd75822092211f2ebbf838",
-	"ac3bef3ab9e933ca81fa5dd93cac3053ee7b649406cf85974c7e56888ad9ff5b",
-	"74bcf766909be489a221cda435273a656d556cf57ddf9e433a460c3cc2587ccb",
+	"51f100ea71867822094b12c9cf6ef7e83a9f8f483a03bf561d51b91b569fbe68",
+	"69d1e65b084942dc78ad848bfe57dac9fdcbc0e099844bce7ab243e35c80dacc",
+	"85ce5f6224479094c1bcde3086cd28ef272745ccf96b9170a3406f5672bc3350",
+	"6e59d40195bf5f7c6c7ee767faae743596025d6319ef28635a676ff2fa2bf302",
+	"e4945da9cab372b746d7d4c47fcd709367fdb7ab8badc88970dd4fa12f152890",
+	"bc1d00ae4f062a8d8d8dcdc5531ee133a74c1aece7bb0786ac8412d68b67da74",
+	"920d8ba4ae2d5c3f59a94dd9b5b7dd97ab7c9b1da9797bcedce1124005315bd9",
+	"0127e74c541baeac78e32e541a8bb7cc30308ed907a7b140eb21f918b3c6e0ba",
+	"d5e8a776a793926b562daba3a2b10d44abf2b7ccc4391fc4ca8866ee5228c30e",
+	"f133f4944c4141893e4f3f1e587c3e621ffaae1f59bb78ca996a3e76de084252",
+	"23795a6b0dbed1fd6dec983106ef290efc4d5d57d6d0361954e1735149f83428",
+	"0dec96c7d7e88f358f12ac68f93b502b7a941f71b9215823b5e6fa99b3b75b4f",
+	"48eb6446ece26887ecc1cbb44c516f299627500c2ee61c22397564bf52abcae1",
+	"58031bfa9bf6202e1af0a74e557ed149e2b9d03a9dac915164adcb3eb040d535",
+	"a20a178668d984f46193b099f57a5233de9e3d6b4f1c4fac7187786ef7d8cbcc",
+	"f94f0f01274888fe45792e956c0ac1b22657a8662e450272a23845041ea65f1d",
+	"9c4ed28b6d2ddfa091c938ef21382777f0f1d0902143c2c7f2b7a05058e4fdb1",
+	"cb4fb90f03f919cbf06e4d84eeac1c83c79840ba8f8ae223267732302d1f4bc3",
+	"d8e88cbb0a289db8a2d27b4e39fa31c6e3bbcbaa3e1edf3af82611d9f4d341a2",
+	"430595465a490a0c2e74431ff2899b606e45feba9b46a205efdfe27e7b46938a",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.

@@ -13,6 +13,8 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # Stage -> [map, batch count, hash], from the 7dbdebae builder.
+# 2026-10-22 crown sentinel_50 re-pin: stage 6 park_crown 74019119 -> 2943158398, because sentinel_50 moved from [-150, 420] to
+# [-185, 398] (its spire stamp rebakes the ground and its scatter keep-out moves); stages 1 to 5 unchanged.
 # 2026-10-17 islands authored pass re-pin: stage 5 park_islands 3297821718 -> 3681139656 and stage 6 park_crown
 # 452118366 -> 74019119, because the new lips and nets join the scatter keep-out (park_map.gd); stages 1 to 4 unchanged.
 # 2026-10-17 crown authored pass re-pin: stage 6 park_crown 3361994924 -> 452118366, because the new lips,
@@ -34,7 +36,7 @@ const PINS := {
 	3: ["park_pit", 13, 2247843387],
 	4: ["park_sinkhole", 13, 3017710206],
 	5: ["park_islands", 13, 3681139656],
-	6: ["park_crown", 13, 74019119],
+	6: ["park_crown", 13, 2943158398],
 }
 
 var _t := T.new("park_dressing_pin_test")
