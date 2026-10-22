@@ -77,6 +77,8 @@ const LIFT_REACH_UP := 8.0
 const GUARD_RESPAWN := 10.0
 const GUARD_OFFSET := 9.0
 const GUARD_RACK_POSTURE := 25.0
+# The most posture a held Warden shows: floors to 99 on the bar, below the stagger line.
+const HOLD_CAP := BossPosture.FULL - 0.5
 const FAMILY_POINT_RADIUS := 1.3
 const FAMILY_REACH := 3.2
 const FAMILY_POINTS := {Roster.REACTOR: "core", Roster.SWARM: "queen", Roster.MIND: "lens"}
@@ -914,13 +916,12 @@ func monster_build() -> bool:
 
 
 func _apply_posture(result: Dictionary) -> void:
-	# A boss module's phase-minimum hold (stub_boss.gd hold_active): a closed Warden takes no posture.
+	# A boss module's phase-minimum hold (stub_boss.gd hold_active): the hit lands in full but the bar
+	# stops at HOLD_CAP, so no stagger starts before the hold ends. Crack and shatter need a stagger.
 	var hold = spec.get("posture_hold")
 	if hold is Callable and hold.is_valid() and not _posture.staggered and hold.call():
 		result = result.duplicate()
-		result["gain"] = 0.0
-		result["crack"] = false
-		result["shatter"] = false
+		result["gain"] = clampf(float(result.get("gain", 0.0)), 0.0, maxf(0.0, HOLD_CAP - _posture.posture))
 	var before := _posture_signature()
 	var was_staggered := _posture.staggered
 	var chunks_before: int = _posture.chunks

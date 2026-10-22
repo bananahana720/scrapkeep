@@ -522,6 +522,8 @@ func music_state() -> Dictionary:
 
 func objective_text() -> String:
 	if state == FIGHT and floors != null:
+		if hold_capped():
+			return "%s's bar is full. It breaks in %d s: keep the pressure on." % [String(_row().get("name", "The Waking")), ceili(hold_left())]
 		var text := "%s, %s" % [String(_row().get("name", "The Waking")), floors.objective()]
 		if jammed():
 			text += ". Its drill is jammed: hit it now"

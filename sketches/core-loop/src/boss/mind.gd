@@ -284,6 +284,8 @@ func objective_text() -> String:
 	if warden.staggered():
 		var braced := "nothing" if warden.braced_kinds.is_empty() else "/".join(warden.braced_kinds)
 		return "%s is staggered: hit its open lens. It braces against %s." % [who, braced]
+	if hold_capped():
+		return "%s's bar is full. It breaks in %d s: keep the pressure on." % [who, ceili(hold_left())]
 	var text := "Fill %s's bar to stagger it. %d chunks left." % [who, shown_chunks_left()]
 	if _family != "":
 		text += " Incoming: %s." % _family.replace("_", " ")

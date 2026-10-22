@@ -33,15 +33,20 @@ var warden: Node3D
 var _posture_seen: Array = []
 # The fight's PHASE_MIN_SECONDS (Brindle's, boss_rules.gd), times the dial <boss>.phase_min_by_phase
 # (a multiplier, identity 1.0): a chunk lost before its phase has lasted that many seconds holds the
-# phase, and the Warden takes no posture (warden.gd _apply_posture asks hold_active), until the minimum
-# has passed. A subclass names its dial prefix in _hold_boss() and its seconds in _hold_minimums();
-# "" turns the hold off.
+# phase, and the Warden's bar fills only to warden.gd HOLD_CAP (_apply_posture asks hold_active; every hit
+# still lands, none staggers) until the minimum has passed; the next hit then staggers. A subclass names
+# its dial prefix in _hold_boss() and its seconds in _hold_minimums(); "" turns the hold off.
 var _phase_started := 0.0
 var _phase_open_at := 0.0
 var _chunks_lost_seen := 0
 # Whether the build was a monster build when the fight began (warden.gd monster_build, latched at entry).
 # The hold's exemption reads this, not the live heft, which climbs with the scrap picked up in the fight.
 var _entry_monster := false
+# Per fight (reset at entry): seconds held, and seconds the hold was the binding constraint (from the
+# first frame of a hold with the bar at the cap to its end: the build had already earned the break).
+var hold_s := 0.0
+var hold_bound_s := 0.0
+var _hold_capped := false
 
 
 func setup(ctx_ref) -> void:
@@ -74,6 +79,9 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_phase_started = 0.0
 	_phase_open_at = 0.0
 	_chunks_lost_seen = 0
+	hold_s = 0.0
+	hold_bound_s = 0.0
+	_hold_capped = false
 	latch_monster()
 	_place_ball(center, entry_velocity)
 	ctx.flow.boss_active = true
@@ -97,6 +105,7 @@ func _physics_process(delta: float) -> void:
 	if active():
 		clock += delta
 		_hold_update()
+		_hold_meter(delta)
 		ctx.flow.boss_plating = live_plating()
 		_publish_posture()
 
@@ -125,6 +134,26 @@ func _hold_update() -> void:
 			minimum = float(minimums[clampi(lost - 1, 0, minimums.size() - 1)]) * ChallengeDials.by_phase(_hold_boss() + ".phase_min_by_phase", lost)
 		_phase_open_at = maxf(clock, _phase_started + minimum)
 		_phase_started = _phase_open_at
+
+
+func _hold_meter(delta: float) -> void:
+	if not hold_active() or not is_instance_valid(warden):
+		_hold_capped = false
+		return
+	hold_s += delta
+	_hold_capped = _hold_capped or warden.posture() >= Warden.HOLD_CAP - 0.001
+	if _hold_capped:
+		hold_bound_s += delta
+
+
+# True while held with the bar at the cap: the break waits only for the minimum.
+func hold_capped() -> bool:
+	return hold_active() and is_instance_valid(warden) and warden.posture() >= Warden.HOLD_CAP - 0.001
+
+
+# Seconds until the held phase opens (0 when not held).
+func hold_left() -> float:
+	return maxf(0.0, _phase_open_at - clock) if hold_active() else 0.0
 
 
 # Reads the build's monster status now and keeps it for the hold. Called at entry; tests call it after
