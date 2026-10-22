@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const SwingArc := preload("res://src/combat/swing_arc.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Aerial reach: a pilot latched on a line, well off the ground, is hit by the kite drone's dive
@@ -70,9 +71,16 @@ func _spawn(kind: String, offset: Vector3, height: float):
 
 # Frames until the enemy has dived or struck and is back to ROAM, the pilot left to physics when
 # latched and parked when not. Returns the first hit and the telegraph seen while it warned.
-func _until_spent(enemy, parked: bool, budget := 900) -> Dictionary:
+func _until_spent(enemy, parked: bool, release := false, budget := 900) -> Dictionary:
 	var out := {"warned": false, "aerial": false, "reach": 0.0, "warn": 0.0}
 	for frame in budget:
+		if not is_instance_valid(enemy):
+			out["died"] = true
+			break
+		out["dives"] = enemy.get("dives")
+		out["batted"] = enemy.get("batted")
+		out["hurls"] = enemy.get("hurls")
+		out["slams"] = enemy.get("slams")
 		if parked:
 			game.player.reset_to(ball)
 		if enemy.phase == enemy.Phase.WARN and not out.warned:
@@ -81,9 +89,16 @@ func _until_spent(enemy, parked: bool, budget := 900) -> Dictionary:
 			if tele != null:
 				out.aerial = tele.aerial
 				out.reach = tele.reach_up
+				out["desc"] = tele.descriptor()
+				out["flight"] = tele.has_flight
+				if release:
+					game.player.cut_line("let_go")
 		if enemy.phase == enemy.Phase.LIVE:
 			out.warn = enemy.last_warn
 			out["miss"] = _miss(enemy.telegraph())
+			if enemy.get("_t") != null and enemy._t > 0.6 and enemy.telegraph() != null:
+				var tele2 = enemy.telegraph()
+				out["goal_off"] = enemy.global_position.distance_to(tele2.center + Vector3.UP * (tele2.reach_up * 0.5 if tele2.aerial else 0.5))
 			out["covered"] = _covers(enemy.telegraph())
 		if out.warned and enemy.phase == enemy.Phase.ROAM:
 			break
@@ -108,6 +123,11 @@ func _hit_by(source: String) -> bool:
 	return game.combat.last_player_hit.get("source", "") == source
 
 
+func _drop(enemy) -> void:
+	if is_instance_valid(enemy):
+		enemy.free()
+
+
 func _run() -> void:
 	await _boot()
 
@@ -119,11 +139,13 @@ func _run() -> void:
 	var drone = _spawn("kite_drone", Vector3(9.0, 0.0, 3.0), 15.0)
 	var seen: Dictionary = await _until_spent(drone, false)
 	t.check("AR-1 planted control", game.player.kit.hooked and hung.y - game.ctx.terrain.height(hung.x, hung.z) >= 14.0 \
-		and drone.dives == 1 and _hit_by("kite_drone"),
-		"hooked %s, hung %.1f m up, dives %d, hit '%s'" % [game.player.kit.hooked, hung.y - game.ctx.terrain.height(hung.x, hung.z), drone.dives, game.combat.last_player_hit.get("source", "")])
-	t.check("AR-4 telegraph floor", seen.aerial and seen.warn >= 0.6 and seen.reach > 2.0,
-		"aerial %s, band %.1f m, warned %.2f s" % [seen.aerial, seen.reach, seen.warn])
-	drone.free()
+		and seen.dives == 1 and _hit_by("kite_drone"),
+		"hooked %s, hung %.1f m up, dives %d, hit '%s'" % [game.player.kit.hooked, hung.y - game.ctx.terrain.height(hung.x, hung.z), seen.dives, game.combat.last_player_hit.get("source", "")])
+	t.check("AR-4 telegraph floor", seen.aerial and seen.warn >= 0.6 and seen.reach > 2.0 \
+		and seen.desc.get("aerial", false) and is_equal_approx(seen.desc["reach"], seen.reach),
+		"aerial %s, band %.1f m, warned %.2f s, descriptor aerial %s" % [seen.aerial, seen.reach, seen.warn, seen.desc.get("aerial", false)])
+	t.check("AR-1b dive goal", seen.get("goal_off", 99.0) <= 0.6, "drone %.2f m from the middle of the band near the end of the dive" % seen.get("goal_off", 99.0))
+	_drop(drone)
 
 	# 2: swinging pilots. The ball falls through the arc on its rope; the lead follows the arc.
 	# A ball at cruise or faster meets the diving drone and bats it (the standing rule), so the
@@ -137,19 +159,20 @@ func _run() -> void:
 		game.combat.last_player_hit = {}
 		drone = _spawn("kite_drone", Vector3(9.0, 0.0, 3.0), 15.0)
 		seen = await _until_spent(drone, false)
-		swing_dives += drone.dives
+		swing_dives += seen.dives
 		swing_hits += 1 if _hit_by("kite_drone") else 0
 		lines.append("lean %.0f: %s, tier %d" % [lean, seen.get("miss", ""), game.player.speed_tier()])
-		drone.free()
+		_drop(drone)
 	t.check("AR-2 swinging pilot", swing_dives == 2 and swing_hits == 2,
 		"%d of %d swinging dives hit (%s)" % [swing_hits, swing_dives, "; ".join(lines)])
 	_latch(16.0, 7.0, 9.0)
 	await _frames(10)
 	drone = _spawn("kite_drone", Vector3(9.0, 0.0, 3.0), 15.0)
+	game.combat.last_player_hit = {}
 	seen = await _until_spent(drone, false)
-	t.check("AR-2b fast swing covered", drone.dives == 1 and (seen.get("covered", false) or drone.batted == 1),
-		"%s, batted %d" % [seen.get("miss", ""), drone.batted])
-	drone.free()
+	t.check("AR-2b air bat", seen.dives == 1 and seen.batted == 1 and not _hit_by("kite_drone") and game.player.speed_tier() >= 1,
+		"batted %d, hit '%s', tier %d, %s" % [seen.batted, game.combat.last_player_hit.get("source", ""), game.player.speed_tier(), seen.get("miss", "")])
+	_drop(drone)
 
 	# 3: a grounded pilot's dive is the ground mark it was, and still lands.
 	game.player.reset_to(ball)
@@ -158,10 +181,44 @@ func _run() -> void:
 	game.combat.last_player_hit = {}
 	drone = _spawn("kite_drone", Vector3(9.0, 0.0, 3.0), 6.0)
 	seen = await _until_spent(drone, true)
-	t.check("AR-3 grounded dive", seen.warned and not seen.aerial and is_equal_approx(seen.reach, drone.MARK_REACH) \
-		and drone.dives == 1 and _hit_by("kite_drone"),
-		"aerial %s, reach %.1f, dives %d, hit '%s'" % [seen.aerial, seen.reach, drone.dives, game.combat.last_player_hit.get("source", "")])
-	drone.free()
+	t.check("AR-3 grounded dive", seen.warned and not seen.aerial and is_equal_approx(seen.reach, 2.0) \
+		and seen.dives == 1 and _hit_by("kite_drone"),
+		"aerial %s, reach %.1f, dives %d, hit '%s'" % [seen.aerial, seen.reach, seen.dives, game.combat.last_player_hit.get("source", "")])
+	_drop(drone)
+
+	# 7: a pilot who lets go when the mark appears falls out of its band and is missed.
+	_latch(16.0, 8.0, 0.0)
+	await _frames(20)
+	game.combat.last_player_hit = {}
+	drone = _spawn("kite_drone", Vector3(9.0, 0.0, 3.0), 15.0)
+	seen = await _until_spent(drone, false, true)
+	t.check("AR-7 escape the dive", seen.aerial and not game.player.kit.hooked and seen.dives == 1 and not _hit_by("kite_drone"),
+		"aerial %s, hooked %s, dives %d, hit '%s', %s" % [seen.aerial, game.player.kit.hooked, seen.dives, game.combat.last_player_hit.get("source", ""), seen.get("miss", "")])
+	_drop(drone)
+
+	# 8: the forecast against the real ball: 1.5 s ahead, three swing phases, then a fast swing.
+	var worst := 0.0
+	for lean in [4.0, 6.0, 8.0]:
+		_latch(16.0, 7.0, lean)
+		await _frames(10)
+		for phase in 3:
+			await _frames(37 + phase * 11)
+			var guess: Vector3 = SwingArc.forecast(game.player, 1.5)
+			await _frames(135)
+			worst = maxf(worst, guess.distance_to(game.player.ball_position()))
+	t.check("AR-8 forecast", worst <= 0.05, "worst error %.4f m over 9 swings at 1.5 s" % worst)
+	_latch(24.0, 1.0, 14.0)
+	await _frames(10)
+	var peak := 0.0
+	var fast_worst := 0.0
+	for phase in 4:
+		await _frames(30)
+		peak = maxf(peak, game.player.state.velocity.length())
+		var guess2: Vector3 = SwingArc.forecast(game.player, 1.5)
+		await _frames(135)
+		fast_worst = maxf(fast_worst, guess2.distance_to(game.player.ball_position()))
+	t.check("AR-8b fast forecast", peak > 1.15 * game.player.tuning.f("cruise") and fast_worst <= 0.05,
+		"peak speed %.1f m/s (over-speed drag above %.1f), worst error %.3f m" % [peak, 1.15 * game.player.tuning.f("cruise"), fast_worst])
 
 	# 5: the plated brute hurls at a hung pilot, and still slams a grounded one.
 	_latch(15.0, 8.0, 0.0)
@@ -169,9 +226,25 @@ func _run() -> void:
 	game.combat.last_player_hit = {}
 	var brute = _spawn("plated_brute", Vector3(10.0, 0.0, 0.0), 1.0)
 	seen = await _until_spent(brute, false)
-	t.check("AR-5 brute hurl", game.player.kit.hooked and brute.hurls == 1 and brute.slams == 0 and seen.aerial and seen.warn >= 0.6 \
+	t.check("AR-5 brute hurl", game.player.kit.hooked and seen.hurls == 1 and seen.slams == 0 and seen.aerial and seen.flight and seen.warn >= 0.6 \
 		and _hit_by("plated_brute"),
-		"hurls %d, slams %d, aerial %s, warned %.2f s, hit '%s'" % [brute.hurls, brute.slams, seen.aerial, seen.warn, game.combat.last_player_hit.get("source", "")])
+		"hurls %d, slams %d, aerial %s, warned %.2f s, hit '%s'" % [seen.hurls, seen.slams, seen.aerial, seen.warn, game.combat.last_player_hit.get("source", "")])
+	_drop(brute)
+	_latch(15.0, 8.0, 0.0)
+	await _frames(20)
+	game.combat.last_player_hit = {}
+	brute = _spawn("plated_brute", Vector3(10.0, 0.0, 0.0), 1.0)
+	seen = await _until_spent(brute, false, true)
+	t.check("AR-9 escape the hurl", seen.aerial and seen.hurls == 1 and not _hit_by("plated_brute"),
+		"aerial %s, hurls %d, hit '%s', %s" % [seen.aerial, seen.hurls, game.combat.last_player_hit.get("source", ""), seen.get("miss", "")])
+	_drop(brute)
+	_latch(40.0, 8.0, 0.0)
+	await _frames(20)
+	game.combat.last_player_hit = {}
+	brute = _spawn("plated_brute", Vector3(10.0, 0.0, 0.0), 1.0)
+	await _frames(300)
+	t.check("AR-10 hurl cap", brute.hurls == 0 and not brute._can_hurl(Vector3(10.0, 0.0, 0.0)),
+		"hurls %d with the ball %.0f m over the brute (cap %.0f)" % [brute.hurls, game.player.ball_position().y - brute.global_position.y, brute.HURL_MAX_UP])
 	brute.free()
 	game.player.reset_to(ball)
 	game.player.immune_left = 0.0
@@ -179,7 +252,7 @@ func _run() -> void:
 	game.combat.last_player_hit = {}
 	brute = _spawn("plated_brute", Vector3(3.0, 0.0, 0.0), 1.0)
 	seen = await _until_spent(brute, true)
-	t.check("AR-6 brute slam unchanged", brute.slams == 1 and brute.hurls == 0 and not seen.aerial and _hit_by("plated_brute"),
-		"slams %d, hurls %d, aerial %s, hit '%s'" % [brute.slams, brute.hurls, seen.aerial, game.combat.last_player_hit.get("source", "")])
-	brute.free()
+	t.check("AR-6 brute slam unchanged", seen.slams == 1 and seen.hurls == 0 and not seen.aerial and _hit_by("plated_brute"),
+		"slams %d, hurls %d, aerial %s, hit '%s'" % [seen.slams, seen.hurls, seen.aerial, game.combat.last_player_hit.get("source", "")])
+	_drop(brute)
 	quit(t.verdict())

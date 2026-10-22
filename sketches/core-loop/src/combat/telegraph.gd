@@ -228,6 +228,8 @@ func descriptor() -> Dictionary:
 			d.merge({"form": "radial", "r_in": 0.0, "r_out": radius, "a0": mid - half_angle, "a1": mid + half_angle, "pull": true})
 		Shape.LANE:
 			d.merge({"form": "lane", "dir": dir, "back": 0.0, "length": length, "half_width": width * 0.5})
+	if aerial:
+		d["aerial"] = true
 	if type == Threat.Type.WAVE:
 		d["front"] = front_radius()
 	if has_flight:

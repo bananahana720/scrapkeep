@@ -222,10 +222,10 @@ func _live(_delta: float) -> bool:
 	if ring == null:
 		return false
 	if _t < DIVE:
-		global_position = _dive_from.lerp(ring.center + Vector3.UP * 0.5, _t / DIVE)
+		global_position = _dive_from.lerp(_dive_goal(ring), _t / DIVE)
 		return true
 	if not _landed:
-		global_position = ring.center + Vector3.UP * 0.5
+		global_position = _dive_goal(ring)
 		_landed = true
 		var ball := _real_ball()
 		if ring.contains(ball):

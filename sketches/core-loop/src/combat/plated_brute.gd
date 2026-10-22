@@ -24,8 +24,12 @@ const SLAM_SHOVE := 9.0
 const HP := 110.0
 const HURL_RANGE := 22.0
 const HURL_MIN := 3.0
+# A thrown plate climbs about as far as it flies on the flat (22 m out, 20 m up is a steep lob);
+# a pilot latched higher than that over the brute is out of its throw.
+const HURL_MAX_UP := 20.0
 const HURL_RADIUS := 3.0
 const HURL_BAND := 5.0
+const HURL_LOB := 4.0
 const HURL_DAMAGE := 10.0
 const HURL_SHOVE := 5.0
 
@@ -205,7 +209,8 @@ func _can_hurl(to_ball: Vector3) -> bool:
 	# to_ball is flat; the ball's own height is what the slam cannot reach.
 	var ball := _real_ball()
 	var ground: float = terrain.height(ball.x, ball.z) if terrain != null else 0.0
-	return ball.y - ground >= HURL_MIN and Vector2(to_ball.x, to_ball.z).length() <= HURL_RANGE
+	return ball.y - ground >= HURL_MIN and ball.y - global_position.y <= HURL_MAX_UP \
+		and Vector2(to_ball.x, to_ball.z).length() <= HURL_RANGE
 
 
 func is_bounty() -> bool:
@@ -258,8 +263,9 @@ func _commit(to_ball: Vector3) -> Node3D:
 		_affix_attack = false
 		var aim: Vector3 = SwingArc.forecast(_player(), warn_seconds)
 		_clear_telegraph()
-		_telegraph = Telegraph.aerial_ring(world_root, terrain, Threat.Type.INSTANT,
+		_telegraph = Telegraph.aerial_ring(world_root, terrain, Threat.Type.PROJECTILE,
 			aim - Vector3.UP * HURL_BAND * 0.5, HURL_RADIUS, HURL_BAND)
+		_telegraph.set_flight(global_position + Vector3.UP * 2.5, HURL_LOB)
 		_facts_begin(_telegraph)
 		return _telegraph
 	_affix_attack = not affix.is_empty() and _next_affix
