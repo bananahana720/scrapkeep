@@ -11,6 +11,11 @@ extends Node3D
 #             flat and strata steep, as the non-park ground does. surface.bin's concrete, tailings and
 #             basalt cells (slots 2 to 4) tint the colour map, which multiplies the albedo, so a floor
 #             cell reads near that slot's colour; the other slots stay white (net never tints it).
+#             Where a pylon can bite (pylon_bite.gd, terrain.gd's old-map rule on the same 2 m grid
+#             normals) the colour map also moves toward the pylon tint, so the concrete-grey slope
+#             reads as it does on the old maps. _load computes that from heights, for baked and
+#             unbaked parks alike; it is not stored in the bake (PARK.md says "the bake calls": this
+#             is the load step of the same data), so no bake binary changes.
 #             Terrain3D collision stays 0 (DISABLED): it never makes a second height source.
 #   collider  100 tiles of 160 m (80 by 80 cells of the 2 m grid), each a ConcavePolygonShape3D with
 #             the two triangles and winding terrain.gd uses for the old maps; a hole cell has none.
@@ -33,6 +38,7 @@ signal built
 
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PylonBite := preload("res://src/world/pylon_bite.gd")
 const GROUND_FLOOR_ID := 0
 const GROUND_STRATA_ID := 1
 # Metres per tile of the floor texture: sandstone.gdshader's floor_metres default (:9), which the
@@ -70,8 +76,11 @@ const TINT_CONCRETE := Palette.VERDIGRIS
 const TINT_BASALT := Color(0.17, 0.165, 0.1525)
 # The floor texture's mean albedo (packed-sand-floor.webp, every pixel of the base level): the
 # floor is what flat ground draws, so a tint of target / this puts a cell's mean on the target.
-# Steep ground draws strata, whose mean is slightly darker (0.731, 0.535, 0.366).
+# Steep ground draws strata, whose mean is slightly darker (see GROUND_STRATA_MEAN).
 const GROUND_FLOOR_MEAN := Color(0.7327, 0.5977, 0.4117)
+# The strata texture's mean albedo (the imported sandstone-strata texture, measured over its pixels):
+# what a fully steep vertex draws before the colour map.
+const GROUND_STRATA_MEAN := Color(0.731, 0.535, 0.366)
 # Terrain3D's default colour map is white with alpha 127/255, which leaves roughness unchanged.
 const COLOR_ALPHA_BYTE := 127
 const COLLISION_DISABLED := 0
@@ -108,6 +117,8 @@ var _hole_cells := PackedInt32Array()
 # The 2 m cells' slot tints stretched to the 1 m vertices of the play square (1600 by 1600 RGBA8),
 # or null when the park has no surface.bin.
 var _tints: Image
+# surface.bin's slot per cell (empty when the park has none), for the bite's per-cell multiplier.
+var _slots := PackedByteArray()
 var _regions: Array = []
 var _faces: Array = []
 var _task := -1
@@ -129,6 +140,22 @@ static func slot_target(slot: int) -> Color:
 		SLOT_BASALT:
 			return TINT_BASALT
 	return Color.WHITE
+
+
+# The colour-map multiplier of a vertex a pylon can bite. The colour map multiplies the albedo, and
+# the auto-shader draws strata toward floor by a = clamp(2 * n_y - 1, 0, 1) (auto_slope 1, no height
+# reduction), so the mean albedo there is D = STRATA_MEAN.lerp(FLOOR_MEAN, a). The old maps' rule is
+# final = base.lerp(tint, w) with base = D * slot_mult, hence slot_mult.lerp(tint / D, w) per channel,
+# clamped to a colour map's range. Alpha stays at the default so roughness is unchanged.
+static func bite_multiplier(slot_mult: Color, n_y: float, w: float) -> Color:
+	var a := clampf(2.0 * n_y - 1.0, 0.0, 1.0)
+	var d := GROUND_STRATA_MEAN.lerp(GROUND_FLOOR_MEAN, a)
+	var tint := PylonBite.tint()
+	return Color(
+			clampf(lerpf(slot_mult.r, tint.r / d.r, w), 0.0, 1.0),
+			clampf(lerpf(slot_mult.g, tint.g / d.g, w), 0.0, 1.0),
+			clampf(lerpf(slot_mult.b, tint.b / d.b, w), 0.0, 1.0),
+			float(COLOR_ALPHA_BYTE) / 255.0)
 
 
 # The colour-map multiplier of a surface slot: target / GROUND_FLOOR_MEAN per channel, clamped,
@@ -335,12 +362,14 @@ func _load() -> void:
 			var z := -HALF + j * STEP
 			for i in SIDE:
 				heights[j * SIDE + i] = float(_map.sample(-HALF + i * STEP, z)[0])
+	_apply_bite()
 
 
 func _load_tints(path: String) -> void:
 	var surface := FileAccess.get_file_as_bytes(path)
 	if surface.size() != CELLS * CELLS:
 		return
+	_slots = surface
 	var lookup := PackedByteArray()
 	for slot in 6:
 		var c := slot_tint(slot)
@@ -360,6 +389,81 @@ func _load_tints(path: String) -> void:
 	var image := Image.create_from_data(CELLS, CELLS, false, Image.FORMAT_RGBA8, pixels)
 	image.resize(CELLS * 2, CELLS * 2, Image.INTERPOLATE_NEAREST)
 	_tints = image
+
+
+# Patches the 1600 by 1600 vertex colours where a pylon can bite. The normal is terrain.gd's, from the
+# four neighbouring heights of each 2 m grid vertex (edges clamped); only cells with a biting corner
+# are touched. A cell's four 1 m vertices take the weight and n.y of the grid points they sit on
+# (_build_region's heights: the corner, an edge midpoint, or the b-c diagonal's midpoint, the
+# diagonal the collider's two triangles share), and the multiplier is made from those.
+func _apply_bite() -> void:
+	var weights := PackedFloat32Array()
+	var ny := PackedFloat32Array()
+	weights.resize(SIDE * SIDE)
+	ny.resize(SIDE * SIDE)
+	var h := heights
+	var any := false
+	for j in SIDE:
+		var up := SIDE if j > 0 else 0
+		var down := SIDE if j < SIDE - 1 else 0
+		for i in SIDE:
+			var idx := j * SIDE + i
+			var dx := h[idx - (1 if i > 0 else 0)] - h[idx + (1 if i < SIDE - 1 else 0)]
+			var dz := h[idx - up] - h[idx + down]
+			var y := 2.0 * STEP / sqrt(dx * dx + 4.0 * STEP * STEP + dz * dz)
+			ny[idx] = y
+			var w := PylonBite.weight(y)
+			weights[idx] = w
+			if w > 0.0:
+				any = true
+	if not any:
+		return
+	var pixels := PackedByteArray()
+	if _tints != null:
+		pixels = _tints.get_data()
+	else:
+		pixels.resize(CELLS * 2 * CELLS * 2 * 4)
+		pixels.fill(255)
+		for p in range(3, pixels.size(), 4):
+			pixels[p] = COLOR_ALPHA_BYTE
+	var white := slot_tint(0)
+	var mults: Array[Color] = []
+	for slot in 6:
+		mults.append(slot_tint(slot))
+	var row_px := CELLS * 2
+	for j in CELLS:
+		for i in CELLS:
+			var a := j * SIDE + i
+			var b := a + 1
+			var c := a + SIDE
+			if weights[a] == 0.0 and weights[b] == 0.0 and weights[c] == 0.0 and weights[c + 1] == 0.0:
+				continue
+			var mult := white
+			if not _slots.is_empty():
+				mult = mults[mini(_slots[j * CELLS + i], 5)]
+			for k in 4:
+				var w := 0.0
+				var y := 0.0
+				match k:
+					0:
+						w = weights[a]
+						y = ny[a]
+					1:
+						w = (weights[a] + weights[b]) * 0.5
+						y = (ny[a] + ny[b]) * 0.5
+					2:
+						w = (weights[a] + weights[c]) * 0.5
+						y = (ny[a] + ny[c]) * 0.5
+					3:
+						w = (weights[b] + weights[c]) * 0.5
+						y = (ny[b] + ny[c]) * 0.5
+				var m := bite_multiplier(mult, y, w)
+				var at := ((2 * j + (k >> 1)) * row_px + 2 * i + (k & 1)) * 4
+				pixels[at] = roundi(m.r * 255.0)
+				pixels[at + 1] = roundi(m.g * 255.0)
+				pixels[at + 2] = roundi(m.b * 255.0)
+				pixels[at + 3] = COLOR_ALPHA_BYTE
+	_tints = Image.create_from_data(row_px, row_px, false, Image.FORMAT_RGBA8, pixels)
 
 
 static func _read_zstd(path: String, size: int) -> PackedByteArray:

@@ -4,7 +4,8 @@ extends SceneTree
 # Terrain3D regions has the control map's auto bit (hole vertices keep the hole bit too), and the
 # colour map tints the cells of surface.bin's concrete, tailings and basalt slots by target / the
 # floor texture's mean (alpha at Terrain3D's default 127/255) while the other slots, the net and the
-# apron stay white.
+# apron stay white. Cells a pylon can bite are left to park_ground_bite_test.gd: their vertices
+# move toward the pylon tint, so this test skips them (a cell with a biting 2 m grid corner).
 # The parks are built through the real path (make_render, start, finish); the targets are pinned to
 # their sources. Headless Terrain3D draws nothing, so this reads the maps, not pixels.
 
@@ -27,6 +28,8 @@ var t := T.new("park_ground_surface_test")
 var _targets := {}
 var _floor_mean := Color.WHITE
 var _hole_cells_seen := 0
+# Per cell of the park under test: 1 where a corner of the 2 m grid has a pylon-bite weight above 0.
+var _bite := PackedByteArray()
 
 
 func _initialize() -> void:
@@ -48,7 +51,7 @@ func _run() -> void:
 		holder.add_child(ground)
 		ground.start(id, null, false, render)
 		await process_frame
-		_check_park(id, render)
+		_check_park(id, render, ground.heights)
 		ground.queue_free()
 		render.queue_free()
 		await process_frame
@@ -139,7 +142,29 @@ func _slot_at(surface: PackedByteArray, x: int, z: int) -> int:
 	return surface[((z + CELLS) >> 1) * CELLS + ((x + CELLS) >> 1)]
 
 
-func _check_park(id: String, render: Node3D) -> void:
+# Marks every cell with a corner whose normal is steeper than the pylon's face (terrain.gd's rule).
+func _mark_bite(h: PackedFloat32Array) -> void:
+	var side := CELLS + 1
+	var steep := PackedByteArray()
+	steep.resize(side * side)
+	for j in side:
+		for i in side:
+			var idx := j * side + i
+			var left: float = h[idx - (1 if i > 0 else 0)]
+			var right: float = h[idx + (1 if i < side - 1 else 0)]
+			var back: float = h[idx - (side if j > 0 else 0)]
+			var front: float = h[idx + (side if j < side - 1 else 0)]
+			if Vector3(left - right, 4.0, back - front).normalized().y < 0.866:
+				steep[idx] = 1
+	_bite.resize(CELLS * CELLS)
+	for j in CELLS:
+		for i in CELLS:
+			var a := j * side + i
+			_bite[j * CELLS + i] = 1 if steep[a] + steep[a + 1] + steep[a + side] + steep[a + side + 1] > 0 else 0
+
+
+func _check_park(id: String, render: Node3D, heights: PackedFloat32Array) -> void:
+	_mark_bite(heights)
 	var dir := "res://assets/park/" + id
 	var surface := FileAccess.get_file_as_bytes(dir + "/surface.bin")
 	var holes := FileAccess.get_file_as_bytes(dir + "/holes.bin")
@@ -180,6 +205,8 @@ func _check_park(id: String, render: Node3D) -> void:
 				if first.is_empty():
 					first = "no auto bit at (%d, %d)" % [x, z]
 			var slot := _slot_at(surface, x, z)
+			if slot >= 0 and _bite[((z + CELLS) >> 1) * CELLS + ((x + CELLS) >> 1)] == 1:
+				continue
 			var want := _tint(slot)
 			seen[slot] = true
 			if not _same(color.get_pixel(p.x, p.y), want):
@@ -214,6 +241,8 @@ func _check_cells(id: String, render: Node3D, surface: PackedByteArray, rng: Ran
 		var bad := 0
 		for n in mini(CELL_SAMPLES, cells.size()):
 			var k: int = cells[rng.randi_range(0, cells.size() - 1)]
+			if _bite[k] == 1:
+				continue
 			for dz in 2:
 				for dx in 2:
 					var v := _vertex(render, -CELLS + 2 * (k % CELLS) + dx, -CELLS + 2 * (k / CELLS) + dz)
@@ -230,7 +259,7 @@ func _check_border(id: String, render: Node3D, surface: PackedByteArray) -> void
 		var tinted := -1
 		for k in surface.size():
 			var room := k % CELLS < CELLS - 1 if axis == "x" else k / CELLS < CELLS - 1
-			if _targets.has(surface[k]) and room and surface[k + step] != surface[k]:
+			if _targets.has(surface[k]) and room and surface[k + step] != surface[k] and _bite[k] == 0 and _bite[k + step] == 0:
 				tinted = k
 				break
 		if not t.check("%s has a tinted cell beside another slot along %s" % [id, axis], tinted >= 0):
