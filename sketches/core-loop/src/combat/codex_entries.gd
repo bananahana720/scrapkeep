@@ -161,6 +161,12 @@ const ENTRIES := [
 		"clue": "a Dispatcher's mast + a kill after it has dropped a chaser",
 		"text": "Perched on a mast, it never attacks but drops a chaser at you every 8 s; reach it by grapple, vault or a long gun and the stream stops.",
 	},
+	{
+		"id": "paddle_ride", "name": "Ride the Swat",
+		"hint": "A knock is only a shove if you let it be one.",
+		"clue": "a swatter's paddle + a boost while it has you",
+		"text": "A crew figure behind a low paddle arm: the paddle never hurts, but it bats you along the sweep; boost inside the knock and the knock becomes your speed, or jump the low paddle.",
+	},
 	# 2026-10-08 (wave 10, ST4): the rest of the roster that spawns: the alpha packs' and elite's
 	# Fleet crews, and the Warden with one entry per variant whose trick differs.
 	{
@@ -350,6 +356,7 @@ const DETECTORS := {
 	"fuse_pod": {"kind": "splitter_pod", "script": "res://src/combat/splitter_pod.gd"},
 	"cup_break": {"kind": "catch_trap", "script": "res://src/combat/catch_trap.gd"},
 	"stream_cut": {"kind": "dispatcher", "script": "res://src/combat/dispatcher.gd"},
+	"paddle_ride": {"kind": "swatter", "script": "res://src/combat/swatter.gd"},
 	"ring_out": {"kind": "ballast_heavy", "script": "res://src/combat/ballast_heavy.gd"},
 	"gap_sling": {"kind": "gap_net", "script": "res://src/combat/gap_net.gd"},
 	"heavy_roll": {"kind": "mag_trapper", "script": "res://src/combat/mag_trapper.gd"},

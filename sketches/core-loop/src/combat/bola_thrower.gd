@@ -31,7 +31,8 @@ func _configure(threat: float) -> void:
 	_set_health(HP * threat)
 	scrap_value = 4
 	weight = 1.0
-	warn_seconds = 0.5
+	# At TELL_FLOOR (challenge_dials.gd): the whirl is the throw's tell.
+	warn_seconds = 0.6
 	live_seconds = FLIGHT + WRAP
 	rest_seconds = 3.2
 	attack_range = 30.0

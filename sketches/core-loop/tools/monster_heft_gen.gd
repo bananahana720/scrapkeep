@@ -55,7 +55,8 @@ static func compute(index: Array) -> Dictionary:
 		var top := 0.0
 		for i in range(first, n):
 			top = maxf(top, heft_of(float(docs[i]["mass"])))
-		out[stage] = snappedf(top, 0.001)
+		# Rounded up, never to nearest: a top-bucket build must not sit strictly above its own threshold.
+		out[stage] = ceilf(top * 1000.0) / 1000.0
 	return out
 
 

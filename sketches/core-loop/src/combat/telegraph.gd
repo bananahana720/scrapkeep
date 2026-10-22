@@ -35,6 +35,9 @@ var half_angle := 0.0
 var length := 0.0
 var width := 0.0
 var reach_up := 3.5
+# An aerial band: the ring stands at `center.y` in the air and reaches reach_up above it, a
+# fixed height band instead of the ground under the point. Drawn and hit-tested the same way.
+var aerial := false
 var terrain
 var progress := 0.0
 # WAVE: seconds since commit, the warning before the front leaves, and its speed.
@@ -71,6 +74,24 @@ static func ring(parent: Node, terrain_ref, threat_type: int, at: Vector3, ring_
 	node.radius = ring_radius
 	node.reach_up = reach
 	node.center = Vector3(at.x, ground_under(terrain_ref, at), at.z)
+	parent.add_child(node)
+	node._build()
+	return node
+
+
+# A ring hung in the air: its footprint floats at `band_bottom.y` and reaches `band_height`
+# above it. contains() tests the point against that band, so the mark shows where it hurts.
+static func aerial_ring(parent: Node, terrain_ref, threat_type: int, band_bottom: Vector3, ring_radius: float,
+		band_height: float, tint := Palette.HAZARD) -> Node3D:
+	var node: Node3D = load("res://src/combat/telegraph.gd").new()
+	node.type = threat_type
+	node.color = tint
+	node.shape = Shape.RING
+	node.terrain = terrain_ref
+	node.radius = ring_radius
+	node.reach_up = band_height
+	node.aerial = true
+	node.center = band_bottom
 	parent.add_child(node)
 	node._build()
 	return node
@@ -140,9 +161,9 @@ static func ground_under(terrain_ref, point: Vector3) -> float:
 # The hit test every attack uses. The height is measured from the ground under the
 # point, so a ring on a slope still means what it shows. A wave hurts only on its front.
 func contains(point: Vector3) -> bool:
-	var ground: float = ground_under(terrain, point) if terrain != null else center.y
+	var ground: float = center.y if aerial else (ground_under(terrain, point) if terrain != null else center.y)
 	var above := point.y - ground
-	if above > reach_up or above < -2.0:
+	if above > reach_up or above < (0.0 if aerial else -2.0):
 		return false
 	var flat := Vector3(point.x - center.x, 0.0, point.z - center.z)
 	if shape == Shape.RING:
@@ -207,6 +228,8 @@ func descriptor() -> Dictionary:
 			d.merge({"form": "radial", "r_in": 0.0, "r_out": radius, "a0": mid - half_angle, "a1": mid + half_angle, "pull": true})
 		Shape.LANE:
 			d.merge({"form": "lane", "dir": dir, "back": 0.0, "length": length, "half_width": width * 0.5})
+	if aerial:
+		d["aerial"] = true
 	if type == Threat.Type.WAVE:
 		d["front"] = front_radius()
 	if has_flight:
@@ -243,7 +266,10 @@ func _build() -> void:
 	_driven = Threat.can_drive(d)
 	_painter = Threat.Painter.new()
 	_painter.floor_y = center.y
-	if terrain != null:
+	if aerial:
+		var flat_y := center.y
+		_painter.ground = func(_point: Vector3) -> float: return flat_y
+	elif terrain != null:
 		_painter.ground = func(point: Vector3) -> float: return ground_under(terrain, point)
 	_painter.lift = LIFT
 	_painter.driven = _driven
