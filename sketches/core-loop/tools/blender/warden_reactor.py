@@ -71,7 +71,7 @@ from common import Part  # noqa: E402
 FPS = 30
 # Section 5: clip -> (length s, blend s).
 CLIPS = {
-    "idle": (4.0, 1.0), "pulse_warn": (2.0, 2.0), "pulse": (0.3, 0.1), "active": (0.5, 0.5),
+    "idle": (4.0, 1.0), "pulse_warn": (2.0, 0.5), "pulse": (0.3, 0.1), "active": (0.5, 0.5),
     "chunk_lost": (1.0, 0.8), "shrug": (0.4, 0.2), "gates_open": (0.6, 0.3), "pour": (1.0, 0.3),
     "final_quiet": (2.0, 2.0),
     "chunk_lost_1": (1.0, 0.8), "chunk_lost_2": (1.0, 0.8), "chunk_lost_3": (1.0, 0.8),

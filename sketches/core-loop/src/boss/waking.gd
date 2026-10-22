@@ -1,5 +1,6 @@
 extends "res://src/boss/stub_boss.gd"
 
+const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const WakingFloors := preload("res://src/boss/waking_floors.gd")
@@ -50,6 +51,7 @@ const LANDING_ATTACK := 1.2
 # The Warden's posture gains, scaled so the first stagger lands in the 45 to 70 s band
 # (Andrew, 19:42Z 17 Oct). Before the attacks, bots staggered it at 23 to 36 s.
 const POSTURE_GAIN := 0.565
+const HIT_CAP := 15.0
 const FAMILY_NAMES := {"burrow": "burrow lane", "cave_in": "cave-in", "bore": "bore breach"}
 
 var floors: WakingFloors
@@ -75,6 +77,8 @@ var attack_count := 0
 var phase := 1
 var _pending: Array = []
 var _attack_clock := 0.0
+# Challenge dial waking.combo: follow-up attacks still owed after the lead; -1 when none is open.
+var _combo_left := -1
 var _family := ""
 # Fight clock of the last warning this fight started, for the GAP rule.
 var _last_warn := -INF
@@ -107,6 +111,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_base_plating = warden.plating
 	phase = 1
 	_attack_clock = 0.0
+	_combo_left = -1
 	_dress = WakingDress.attach(self)
 	_arena_dress = ArenaWakingDress.attach(self)
 
@@ -169,6 +174,7 @@ func _physics_process(delta: float) -> void:
 			# floor opens on a full period.
 			_clear_attacks()
 			_attack_clock = LANDING_ATTACK
+			_combo_left = -1
 	phase = clampi(floors.shattered + 1, 1, WakingAttacks.PIT_PHASE)
 	_read_pulse()
 	_read_ball()
@@ -180,8 +186,22 @@ func _physics_process(delta: float) -> void:
 	_attack_clock -= delta
 	if _attack_clock > 0.0:
 		return
-	_attack_clock = PIT_PERIOD if phase >= WakingAttacks.PIT_PHASE else ATTACK_PERIOD
+	# A combo follow-up is queued GAP after the lead; the _warn_open() gap still spaces every warning.
+	_combo_left = ChallengeDials.combo_step("waking", _combo_left)
+	if _combo_left > 0:
+		_attack_clock = GAP
+	else:
+		_combo_left = -1
+		_attack_clock = ChallengeDials.period("waking", PIT_PERIOD if phase >= WakingAttacks.PIT_PHASE else ATTACK_PERIOD, phase)
 	_commit_attack()
+
+
+# A punish window cancels owed follow-ups and pushes the attack clock back to the normal period,
+# once: with none owed (combo 0, always) this changes nothing.
+func _end_combo() -> void:
+	if _combo_left > 0:
+		_attack_clock = ChallengeDials.period("waking", PIT_PERIOD if phase >= WakingAttacks.PIT_PHASE else ATTACK_PERIOD, phase)
+	_combo_left = -1
 
 
 # A warning may start now: none started in the last GAP seconds, and the Warden's own pulse
@@ -194,7 +214,7 @@ func _pulse_due() -> bool:
 	if not is_instance_valid(warden) or warden.staggered() or warden.state_name() == "charging":
 		return false
 	# A charge a driver holds back past its due time stops holding warnings after GAP more.
-	var due: float = Warden.PULSE_CYCLE - Warden.PULSE_TELEGRAPH
+	var due: float = Warden.pulse_cycle(warden.stage) - Warden.pulse_telegraph(warden.stage)
 	return warden._pulse_clock >= due - GAP and warden._pulse_clock < due + GAP and warden.flat_to_ball().length() <= warden.reach
 
 
@@ -277,11 +297,12 @@ func _step_attacks(delta: float) -> void:
 				if on_floor and not carving and not attack["landed"]:
 					attack["landed"] = true
 					landings.append({"id": h.attack_id, "frame": Engine.get_physics_frames()})
-					ctx.run.damage(float(WakingAttacks.DAMAGE[attack["family"]]), "waking_%s" % attack["family"])
+					ctx.run.damage(ChallengeDials.damage("waking", float(WakingAttacks.DAMAGE[attack["family"]]), phase), "waking_%s" % attack["family"])
 				elif carving:
 					_bank_ride(attack["family"], ball)
 			if h.is_live() and attack["family"] == "bore" and h.attack_id.begins_with("waking_bore_0"):
-				_jammed_until = clock + (h.warn_seconds + h.live_seconds - h.age) + BORE_JAM
+				_end_combo()  # a punish window ends any combo
+				_jammed_until = clock + (h.warn_seconds + h.live_seconds - h.age) + ChallengeDials.punish("waking", BORE_JAM)
 			if not (h.is_done() and h.age >= h.warn_seconds + h.live_seconds + 0.5):
 				done = false
 		if done:
@@ -349,8 +370,9 @@ func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 	var at: Vector3 = ctx.player.ball_position()
 	if jammed() and clock - _carved_at <= LIP_WINDOW:
 		_discover(CodexEntries.WAKING_LIP_DROP, at)
-	if clock - _dropped_at >= BREACH_WINDOW:
+	if clock - _dropped_at >= ChallengeDials.punish("waking", BREACH_WINDOW):
 		return
+	_end_combo()  # a punish window ends any combo
 	_discover(CodexEntries.WAKING_BREACH_SLAM, at)
 	_breach_floors[floors.current_floor()] = true
 	if _breach_floors.size() >= 2:
@@ -463,7 +485,14 @@ func _warden_spec() -> Dictionary:
 	numbers["smash_base"] = float(numbers.get("smash_base", BossPosture.SMASH_BASE)) * POSTURE_GAIN
 	numbers["other_base"] = float(numbers.get("other_base", BossPosture.OTHER_BASE)) * POSTURE_GAIN
 	numbers["other_base_charging"] = float(numbers.get("other_base_charging", BossPosture.OTHER_BASE_CHARGING)) * POSTURE_GAIN
+	# The Dig row's contact gain (150 over 0.55) lets one ordinary ram fill the bar from about 17
+	# (brawler seeds 1 and 3 staggered it at 9.8 s); HIT_CAP holds one ordinary hit until the first
+	# stagger. alpha-status/waking-stagger-table.md has the sweep.
+	numbers["hit_cap"] = HIT_CAP
+	numbers["hit_cap_until_stagger"] = true
 	spec["posture"] = numbers
+	# A monster build here is heft above the library's top-bucket maximum at its own entrance, stage 4 (monster_heft.gd).
+	spec["monster_heft"] = MonsterHeft.waking_threshold()
 	return spec
 
 

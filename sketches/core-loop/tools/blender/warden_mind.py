@@ -112,7 +112,7 @@ SIL_THUMB_RISE = 1.0
 # Section 5: name -> (length, blend) in seconds. The extras below repeat a row for the
 # finger or knuckle the loader picks.
 CLIPS = {
-    "idle": (4.0, 1.0), "pulse_warn": (2.0, 2.0), "pulse": (0.3, 0.1), "active": (0.5, 0.5),
+    "idle": (4.0, 1.0), "pulse_warn": (2.0, 0.5), "pulse": (0.3, 0.1), "active": (0.5, 0.5),
     "chunk_lost": (1.0, 0.8), "shrug": (0.4, 0.2), "quote": (1.4, 0.2), "grip_falter": (0.5, 0.5),
     "takeoff": (0.6, 0.3), "glide": (3.0, 0.3), "land": (0.5, 0.2), "knocked_down": (1.0, 0.2),
     "final_quiet": (2.0, 2.0),
@@ -509,7 +509,10 @@ def build_body():
     # one big lens 1.8 m across ringed by five small ones.
     lc = Vector((0, LENS_Y, 0))
     p.on("Lens", p.uv, "ancient_enamel", 1.75, 12, 8, loc=B(lc), scale=(1.0, 0.72, 1.0), color=ENAMEL)
-    p.on("Lens", p.cyl, "ancient_enamel", 0.95, 0.6, 0.6, 12, loc=B(lc + Vector((0, 0.95, 0.3))), color=IRON)
+    # The iron seat under the stalk is centred in the hull. Offset 0.3 m to the rear it stuck a dark
+    # tapered slab out of the hull's back (the 12 x 8 faceted shell is under 1.26 m deep there); it
+    # moves and swells with Lens, so centred it stays inside the shell at every turn and scale.
+    p.on("Lens", p.cyl, "ancient_enamel", 0.95, 0.6, 0.6, 12, loc=B(lc + Vector((0, 0.95, 0.0))), color=IRON)
     face = lc + Vector((0, 0, -1.22))
     face_rot = (math.pi / 2, 0, 0)
     p.on("Lens", p.cyl, "ancient_enamel", 1.12, 1.18, 0.3, 16, loc=B(face + Vector((0, 0, 0.1))), rot=face_rot,
@@ -864,6 +867,8 @@ def build():
     body = part.to_object((0, 0, 0))
     for g in groups:
         body.vertex_groups.new(name=g)
+    unblend(body)
+    bind_orphans(body)
     arm = make_rig(bones)
     arm.parent = pose_node
     body.parent = arm
@@ -873,6 +878,67 @@ def build():
     for i, (_, at) in enumerate(KNUCKLES):
         socket("Hardpoint%d" % i, arm, "Knuckle%d" % i, (at[0], at[1] - 0.2, at[2]))
     return root, arm, body
+
+
+# RigPart.on numbers a primitive's vertices by index range, so a primitive that deletes an earlier
+# one's vertices hands the shifted survivors a second bone. Each blended pair below is a known
+# stray: the vertices belong to the bone on the right and lose the other influence
+# (rigid-bind, 2026-10-19, rigs w3).
+#   {LensMount, Lens}: one corner edge of the LensMount neck (two vertices); the final_quiet turn
+#     of Lens tore a wedge out of the neck (audit COLLAPSE, area ratio 0.32).
+#   {Hand, Palm}: four vertices of the Hand wrist flare cone (near Godot (-0.51, 2.18, -1.25)).
+STRAY_OWNER = {frozenset(("LensMount", "Lens")): "LensMount", frozenset(("Hand", "Palm")): "Hand"}
+
+
+def unblend(body):
+    """Make every blended vertex rigid on its STRAY_OWNER bone; any other blend fails the build."""
+    names = {i: g.name for i, g in enumerate(body.vertex_groups)}
+    for v in body.data.vertices:
+        held = {names[g.group] for g in v.groups}
+        if len(held) < 2:
+            continue
+        owner = STRAY_OWNER[frozenset(held)]
+        for g in held - {owner}:
+            body.vertex_groups[g].remove([v.index])
+        body.vertex_groups[owner].add([v.index], 1.0, "REPLACE")
+
+
+def bind_orphans(body):
+    """RigPart.on leaves a primitive's first vertices unbound when it deletes vertices (the
+    numbering by index range misses them), and the export then parks them on a static
+    neutral_bone: 224 vertices (Lens, Palm, Knuckle0-2, Thumb_0-2, every finger segment) stretched
+    their triangles to fixed points whenever the bone turned. Each unbound vertex takes the one
+    bone of the connected mesh island (shared edges) it sits in. Fails the build if a vertex stays
+    unbound or the island holds more than one bone (rigid-bind, 2026-10-19, rigs w3)."""
+    names = {i: g.name for i, g in enumerate(body.vertex_groups)}
+    me = body.data
+    parent = list(range(len(me.vertices)))
+
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+    for e in me.edges:
+        a, b = find(e.vertices[0]), find(e.vertices[1])
+        if a != b:
+            parent[max(a, b)] = min(a, b)
+    bones, orphans = {}, {}
+    for v in me.vertices:
+        r = find(v.index)
+        if v.groups:
+            bones.setdefault(r, set()).add(names[v.groups[0].group])
+        else:
+            orphans.setdefault(r, []).append(v.index)
+    for r, idx in orphans.items():
+        held = bones.get(r, set())
+        if len(held) != 1:
+            raise SystemExit("bind_orphans: island of vertex %d holds bones %s" % (idx[0], sorted(held)))
+        body.vertex_groups[next(iter(held))].add(idx, 1.0, "REPLACE")
+    left = [v.index for v in me.vertices if not v.groups]
+    if left:
+        raise SystemExit("bind_orphans: %d vertices still unbound, first %d" % (len(left), left[0]))
+    print("CHECK bind_orphans bound %d vertices in %d islands" % (sum(map(len, orphans.values())), len(orphans)))
 
 
 def rest_points(body):
