@@ -73,6 +73,8 @@ var _errors: Array = []
 # --stage=N (1..6) runs the scenes on that stage of the launched park table and tags every
 # output file "stN-"; absent, the run is stage 1 of the default table with untagged names.
 # --timeout=<seconds> and --size=WxH (default 1920x1080) are for slow software renderers.
+# --calm=1 holds no fire and no roll, so no hit bursts or speed lines reach the frame; the
+# telegraphs, packs and light are the same. It tags outputs "calm-" (the dusk P1 split, #241).
 var _stage := 1
 var _staged := false
 var _entered := false
@@ -80,6 +82,7 @@ var _table := ""
 var _tag := ""
 var _timeout := HARD_TIMEOUT
 var _size := Vector2i(1920, 1080)
+var _calm := false
 
 
 func _initialize() -> void:
@@ -111,6 +114,9 @@ func _initialize() -> void:
 		_tag = "st%d-" % _stage
 		_table = "park"
 	_table = settings.get("table", _table)
+	_calm = settings.get("calm", "0") == "1"
+	if _calm:
+		_tag += "calm-"
 	if not _out.is_absolute_path() or DirAccess.make_dir_recursive_absolute(_out) != OK:
 		printerr("stress_capture: --out must be an absolute writable directory")
 		quit(2)
@@ -207,7 +213,7 @@ func _physics_process(_delta: float) -> bool:
 # Fire held, a slow roll forward, the camera turned toward the nearest non-Warden enemy
 # the way bot_driver._look turns it (mouse pixels through camera.look).
 func _hold_fire() -> void:
-	var hold := {"fire_held": true, "move": Vector2(0.25, 0.25)}
+	var hold := {"fire_held": not _calm, "move": Vector2.ZERO if _calm else Vector2(0.25, 0.25)}
 	_driver.source.hold = hold
 	var ball: Vector3 = _game.player.ball_position()
 	var best: Node3D = null
@@ -656,7 +662,7 @@ func _finish(reason: String) -> void:
 				_errors.append("load fell below target during sampling: " + result["scene"])
 				break
 	var info := {
-		"reason": reason, "dry_schema_only": _dry, "stage": _stage, "time_id": WorldLook.time_id(_stage), "table": _table if not _table.is_empty() else "default", "errors": _errors,
+		"reason": reason, "dry_schema_only": _dry, "stage": _stage, "time_id": WorldLook.time_id(_stage), "table": _table if not _table.is_empty() else "default", "calm": _calm, "errors": _errors,
 		"godot": Engine.get_version_info()["string"], "source_sha256": _source_hashes(),
 		"timing": "uncapped frame intervals; captures and analysis excluded; replenishment included; GPU zero means unavailable",
 		"class": _game.run.class_id() if _game != null and _game.run != null else "",
@@ -666,12 +672,12 @@ func _finish(reason: String) -> void:
 		"wall_seconds": snappedf(_seconds_since(_start_usec), 0.1), "scenes": _results,
 	}
 	info.merge(_strength(_results))
-	var file := FileAccess.open(_out.path_join("stress.json" if not _staged else "stress-st%d.json" % _stage), FileAccess.WRITE)
+	var file := FileAccess.open(_out.path_join("stress.json" if _tag.is_empty() else "stress-%s.json" % _tag.trim_suffix("-")), FileAccess.WRITE)
 	if file != null:
 		file.store_string(JSON.stringify(info, "  "))
 		file.close()
 	else:
-		printerr("stress_capture: could not write " + ("stress.json" if not _staged else "stress-st%d.json" % _stage))
+		printerr("stress_capture: could not write " + ("stress.json" if _tag.is_empty() else "stress-%s.json" % _tag.trim_suffix("-")))
 		quit(1)
 		return
 	if reason == "done" and not _dry and OS.execute("which", ["montage"]) == 0:
@@ -679,7 +685,7 @@ func _finish(reason: String) -> void:
 		for id in ["s1", "s2", "s3"]:
 			for kind in ["full", "threats-only", "no-threats"]:
 				args.append(_out.path_join("%s%s-%s.png" % [_tag, id, kind]))
-		args.append_array(["-tile", "3x3", "-geometry", "640x360+4+4", "-background", "#202020", _out.path_join("contact-stress.jpg" if not _staged else "contact-stress-st%d.jpg" % _stage)])
+		args.append_array(["-tile", "3x3", "-geometry", "640x360+4+4", "-background", "#202020", _out.path_join("contact-stress.jpg" if _tag.is_empty() else "contact-stress-%s.jpg" % _tag.trim_suffix("-"))])
 		OS.execute("montage", PackedStringArray(args))
 	print("stress_capture: %s, %d scenes in %s" % [reason, _results.size(), _out])
 	quit(0 if reason == "done" and _errors.is_empty() else 1)
