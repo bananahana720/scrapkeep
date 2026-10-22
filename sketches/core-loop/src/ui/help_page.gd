@@ -21,11 +21,20 @@ const GOAL := [
 	{"icon": "obj_launch", "kind": "world_entered", "words": "Next world"},
 ]
 
+# The word on the page button while each page shows: the page it turns to.
+const PAGE_BUTTON := {"controls": "Pictures", "pictures": "Rules", "rules": "Controls"}
+
 var back: Button
 var diagram
 var pictures := {}
 var page_button: Button
+var rules := {}
+# The run's tuning (screens.gd sets it): the F active's rule line shows only while the actives
+# option is on, as active_rack.gd racks one only then.
+var tuning
 var _mechanics: HBoxContainer
+var _rules: VBoxContainer
+var _goal: HBoxContainer
 
 
 func _init() -> void:
@@ -33,13 +42,17 @@ func _init() -> void:
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	add_theme_constant_override("separation", 26)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_goal_row())
+	_goal = _goal_row()
+	add_child(_goal)
 	diagram = ControlsDiagram.new()
 	diagram.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	add_child(diagram)
 	_mechanics = _mechanics_row()
 	_mechanics.visible = false
 	add_child(_mechanics)
+	_rules = _rules_column()
+	_rules.visible = false
+	add_child(_rules)
 	var actions := _hbox(18)
 	page_button = ChoiceButton.new("pictures", "", "Pictures")
 	page_button.pressed.connect(toggle_pictures)
@@ -51,17 +64,30 @@ func _init() -> void:
 	visibility_changed.connect(_reset_page)
 
 
+# The Help button steps Controls, Pictures, Rules and back; its label names the next page.
 func toggle_pictures() -> void:
-	_mechanics.visible = not _mechanics.visible
-	diagram.visible = not _mechanics.visible
-	page_button.text = "Controls" if _mechanics.visible else "Pictures"
+	var next := "pictures" if diagram.visible else ("rules" if _mechanics.visible else "controls")
+	_show(next)
+
+
+func _show(page: String) -> void:
+	diagram.visible = page == "controls"
+	_mechanics.visible = page == "pictures"
+	_rules.visible = page == "rules"
+	rules["active"].visible = actives_on()
+	# The rules page drops the goal row so its lines (six, five with actives off) fit the
+	# calm-screen budget.
+	_goal.visible = page != "rules"
+	page_button.text = PAGE_BUTTON[page]
+
+
+func actives_on() -> bool:
+	return tuning != null and tuning.option("actives") == "on"
 
 
 func _reset_page() -> void:
 	if not visible:
-		_mechanics.visible = false
-		diagram.visible = true
-		page_button.text = "Pictures"
+		_show("controls")
 
 
 static func key_rows() -> Array:
@@ -84,6 +110,22 @@ func _mechanics_row() -> HBoxContainer:
 		row.add_child(card)
 		pictures[id] = {"picture": picture, "caption": caption}
 	return row
+
+
+# One label per FieldNotes.FIELD_RULES line: wall grip, jam fields, cast times, the radio dial,
+# relay stakes and the F active (hidden while actives are off; see _show).
+func _rules_column() -> VBoxContainer:
+	var column := VBoxContainer.new()
+	column.name = "FieldRules"
+	column.add_theme_constant_override("separation", 12)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for rule in FieldNotes.FIELD_RULES:
+		var line := _label(rule["words"], 26, Palette.SAND)
+		line.name = "Rule_" + String(rule["id"])
+		line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		column.add_child(line)
+		rules[rule["id"]] = line
+	return column
 
 
 func _goal_row() -> HBoxContainer:

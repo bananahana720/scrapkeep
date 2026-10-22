@@ -11,7 +11,9 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # so the model's shield flips with the clip before it hides; pickup meshes unchanged.
 # Re-pinned 2026-10-18 (#94 reduce flashes): the crane warning glow pulses at FlashGuard.rate,
 # so the Reduce flashes toggle slows it; pickup meshes unchanged. Was 5f85f822.
-const BASE_LOGIC_SHA := "8ec6e239d4b20098cab8f052f04d15e05473d6283963f2f1f1fdf37cf6a92977"
+# Re-pinned 2026-10-19 (Challenge C3a dials): Brindle's damage, cadence, tell, punish and combo read
+# ChallengeDials, identical at the defaults (run_tier_test); pickup meshes unchanged. Was 8ec6e239.
+const BASE_LOGIC_SHA := "bdc7f15819345779c30c8132002050d887b6be23c6017ab23771242d47475fd0"
 
 var failures := 0
 var game
