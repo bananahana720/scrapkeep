@@ -438,11 +438,11 @@ func _fill_alpha(node: Node3D, layer: String) -> float:
 # Fills unioned in one stencil class draw once, so one class must mean one alpha (an
 # overlap shows whichever drew first, which flips with camera depth); and a live lane
 # batches after a pending one, a fill and a swept ring, so its band always wins. Under the
-# default haze every hostile fill alpha is scaled by HAZE_FILL (0.5): 0.175 pending, 0.4 live. The 8-bit vertex colour
+# default haze every hostile fill alpha is scaled by HAZE_FILL (1.0): 0.35 pending, 0.8 live. The 8-bit vertex colour
 # truncates the pending alpha by up to one step (1/255), and the live alpha is that stored value times
 # LIVE_ALPHA / RUN_ALPHA, so live may fall short of its target by that step times the ratio (0.0090) and
-# never exceeds it. Measured under haze: pending 0.1725 and live 0.3944 (0.0025 and 0.0056 short of 0.175
-# and 0.4). The classic alphas are not checked here.
+# never exceeds it. Measured under haze: pending 0.3490 and live 0.7978 (0.0010 and 0.0022 short of 0.35
+# and 0.8). The classic alphas are not checked here.
 func _check_fill_classes() -> void:
 	var ring: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, 400.0), 6.0)
 	var wedge: Node3D = Telegraph.wedge(_world, _ground, Threat.Type.LANE, Vector3(20.0, 0.0, 400.0), Vector3.FORWARD, 9.0, 30.0)

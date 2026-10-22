@@ -97,12 +97,15 @@ const RAIL_ALPHA := 0.7
 const OWNER_STEP := PI / 6.0
 const OWNER_SPACING := 4.0
 
-# --telegraph=haze (Tuning.FLAGS, default classic): a hostile floor fill becomes a
-# thin low-alpha red haze with no hazard stripes. Every fill alpha scales by the one
+# --telegraph=haze (Tuning.FLAGS, the default; classic is the other option): a hostile floor
+# fill becomes a red haze with no hazard stripes. Every fill alpha scales by the one
 # HAZE_FILL, so each stencil class still holds one alpha and the LIVE / RUN ratio the drive
 # hands the shader is unchanged; the P1 lines, their keylines, the geometry, contains() and
 # the drive clips are not touched. HAZE_SOLID is the live INSTANT slag layer's alpha.
-const HAZE_FILL := 0.5
+# HAZE_FILL is the lowest step (0.1) at which the fill clears 10 CIE76 over every ground in
+# every place on the launch table (tools/grade_probe.gd; ruling #241 6328893598): the cloud
+# sweep gave 9.5 at 0.9 and 10.4 at 1.0, and the bench run decides.
+const HAZE_FILL := 1.0
 const HAZE_SOLID := 0.4
 const TELEGRAPH_FLAG := "telegraph"
 
