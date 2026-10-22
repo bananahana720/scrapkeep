@@ -2659,7 +2659,29 @@ func _fight_posture_boss(boss, delta: float) -> void:
 		_goal = "boss wait"
 		_act(game.player.ball_position() + game.player.planar_velocity(), null, delta)
 		return
+	var part := _open_part(boss)
+	if part != null:
+		_fight_part(part, delta)
+		return
 	_fight(target, delta)
+
+
+# The physical part of the point the bot reads as open and goes for (stub_boss.gd weak_part), or null. Null at dial 0
+# (no point ever opens) and for a boss whose points are not bodies (the Mind's seats), so the fight is the Warden's.
+func _open_part(boss) -> Node3D:
+	if not _weak_go or not boss.has_method("weak_part"):
+		return null
+	var open: Array = boss.weak_open()
+	return boss.weak_part(String(open[-1])) if not open.is_empty() else null
+
+
+# An open hatch or override: roll at it, bite it with the harpoon hand and commit the haul. The hand's wait between
+# bites is waived for it the way it is for an open Warden point (_weak_warden).
+func _fight_part(part: Node3D, delta: float) -> void:
+	_goal = "part %s" % part.get("point_id")
+	_weak_warden = part
+	_harpoon_hand(part, delta)
+	_act(part.global_position, part, delta, part)
 
 
 # Whether the bot presses its harpoon-and-haul on the Warden for an open weak point: the expert always, the

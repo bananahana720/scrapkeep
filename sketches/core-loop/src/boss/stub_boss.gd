@@ -6,6 +6,8 @@ const Arena := preload("res://src/boss/arena.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const WeakPoints := preload("res://src/boss/weak_points.gd")
+const WeakPart := preload("res://src/boss/weak_part.gd")
+const Augments := preload("res://src/movement/augments.gd")
 
 # The stand-in fight for a boss whose own fight is not written yet. The Waking (waking.gd)
 # and the Mind (mind.gd) extend this file and run its fight until theirs land; test doubles
@@ -54,6 +56,15 @@ var _hold_capped := false
 var weak = WeakPoints.off()
 # The ids opened this fight, oldest first, so the most recently opened point that is still open is the one a hit counts on.
 var _weak_opened: Array = []
+# The physical parts (weak_part.gd) standing now, by point id; empty at dial 0 and for a boss with no hatches.
+var _part_nodes := {}
+# Part ids the ball was inside the reach of last tick, so a contact counts once per touch.
+var _touching := {}
+# The part whose contact is being paid right now ("" outside _on_player_struck), and the physics frame of the last such payment.
+var _paying := ""
+var _paid_frame := -1
+# Point id to the physics frame its last counted reel landed on: one reel per landing per point.
+var _reel_frame := {}
 
 
 func setup(ctx_ref) -> void:
@@ -92,8 +103,13 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	latch_monster()
 	_weak_opened.clear()
 	var parts := _weak_parts()
-	var weak_on: bool = _hold_boss() != "" and ChallengeDials.value(_hold_boss() + ".weak_points") >= 0.5
-	weak = WeakPoints.new(parts) if weak_on and not parts.is_empty() else WeakPoints.off()
+	weak = WeakPoints.new(parts) if _weak_dial_on() and not parts.is_empty() else WeakPoints.off()
+	_reel_frame.clear()
+	_touching.clear()
+	_paying = ""
+	_paid_frame = -1
+	if weak.active() and ctx.player.has_signal("struck"):
+		ctx.player.struck.connect(_on_player_struck)
 	_place_ball(center, entry_velocity)
 	ctx.flow.boss_active = true
 	ctx.flow.boss_plating = live_plating()
@@ -101,6 +117,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 
 
 func exit_arena() -> void:
+	_free_parts()
 	if is_instance_valid(warden):
 		warden.queue_free()
 	warden = null
@@ -116,6 +133,8 @@ func _physics_process(delta: float) -> void:
 	if active():
 		clock += delta
 		weak.step(clock)
+		if weak.active():
+			_step_parts()
 		_hold_update()
 		_hold_meter(delta)
 		ctx.flow.boss_plating = live_plating()
@@ -137,13 +156,36 @@ func _removed_families() -> Array:
 	return weak.removed_families()
 
 
-# A tell opens a point; true when it was shut.
-func _open_weak(id: String) -> bool:
+# Whether the dial <boss>.weak_points is on, read the one way: enter_arena builds the rule from it, and the
+# Warden's spec (built before the rule exists) reads it for the dial-1-only rows.
+func _weak_dial_on() -> bool:
+	return _hold_boss() != "" and ChallengeDials.value(_hold_boss() + ".weak_points") >= 0.5
+
+
+# Whether this fight runs with weak points: the dial is on and the boss offers some.
+func _weak_wanted() -> bool:
+	return _weak_dial_on() and not _weak_parts().is_empty()
+
+
+# A tell opens a point; true when it was shut. An open that happens shows (the part), sounds (weak_point_opened)
+# and holds at least WeakPoints.OPEN_MIN. quiet skips the event for a point whose owner announces it itself.
+func _open_weak(id: String, quiet := false) -> bool:
 	var opened: bool = weak.open(id, clock)
 	if opened:
 		_weak_opened.erase(id)
 		_weak_opened.append(id)
+		_sync_part(id)
+		if not quiet:
+			ctx.events.weak_point_opened.emit(id, _weak_position(id), weak.open_seconds)
 	return opened
+
+
+# Where a point is in the world: its part, else the Warden.
+func _weak_position(id: String) -> Vector3:
+	var part = _part_nodes.get(id)
+	if is_instance_valid(part):
+		return part.global_position
+	return warden.global_position if is_instance_valid(warden) else Vector3.ZERO
 
 
 # The ids of the weak points open now, the most recently opened last, for the bot.
@@ -151,19 +193,149 @@ func weak_open() -> Array:
 	return _weak_opened.filter(func(id): return weak.state(id) == WeakPoints.OPEN)
 
 
-# Warden.on_struck's hook: chips or keeps a hit's posture gain by the weak-point rule. Off returns the same object.
-func _weak_judge(result: Dictionary) -> Dictionary:
+# The standing part for a point id, or null.
+func weak_part(id: String) -> Node3D:
+	var part = _part_nodes.get(id)
+	return part if is_instance_valid(part) else null
+
+
+# The point id a hit lands on, "" for the Warden's body. part is what combat named for the strike; a boss whose
+# points are not bodies (the Mind's seats) overrides this to judge by where the ball is.
+func _weak_point_for(part: String, _kind: String) -> String:
+	return part if part != "" and weak.has(part) else ""
+
+
+# What a verb the boss braces is worth against an open point (the Mind's plate); 1.0 here.
+func _brace_scale(_kind: String) -> float:
+	return 1.0
+
+
+# Warden.on_struck's hook (and _apply_posture's, for a hit that did not come through on_struck): chips or keeps a
+# hit's posture gain by the weak-point rule. The point is the part the ball touched (its id, named by
+# _on_player_struck) or, for a boss that judges by position, _weak_point_for; the Warden's body is no point, so a
+# contact on it pays the chip. Off returns the same object.
+func _weak_judge(result: Dictionary, part := "", kind := "") -> Dictionary:
 	if not weak.active():
 		return result
-	var open := weak_open()
-	var hit := {"point": String(open[-1]) if not open.is_empty() else "",
-			"reel": bool(result.get("reel", false)), "punch": float(result.get("punch", 0.0)),
-			"gain": float(result.get("gain", 0.0))}
+	var frame := Engine.get_physics_frames()
+	var out := result.duplicate()
+	# A part's landing pays once, through _on_player_struck: the same landing's other contact (the SLAM push after
+	# the ram) adds nothing to the bar.
+	if _paying == "" and frame == _paid_frame and bool(result.get("contact", false)):
+		out["gain"] = 0.0
+		return out
+	var id: String = _paying if _paying != "" else _weak_point_for(part, kind)
+	var reel := bool(result.get("reel", false))
+	# One reel per landing per point: a smash landing strikes twice (the contact, then the SLAM shockwave).
+	if reel and id != "" and int(_reel_frame.get(id, -1)) == frame:
+		reel = false
+	var hit := {"point": id, "reel": reel, "punch": float(result.get("punch", 0.0)), "gain": float(result.get("gain", 0.0))}
 	var answer: Dictionary = weak.judge(hit)
 	weak.apply(answer, clock)
-	var out := result.duplicate()
-	out["gain"] = float(result.get("gain", 0.0)) * float(answer["gain_scale"])
+	var scale := float(answer["gain_scale"])
+	if scale >= 1.0:
+		if reel and id != "":
+			_reel_frame[id] = frame
+		scale *= _brace_scale(kind)
+	# The hit event is the one signal for a seal worn or broken: the event table has no separate break event.
+	if float(answer["damage"]) > 0.0 or bool(answer["broke"]):
+		ctx.events.boss_weak_point_hit.emit(id)
+		_sync_part(id)
+	out["gain"] = float(result.get("gain", 0.0)) * scale
 	return out
+
+
+# --- The parts -----------------------------------------------------------------------------
+
+# Adds a part for a point at a world position, its cover facing the way given (toward the arena).
+func _add_part(id: String, at: Vector3, facing: Vector3) -> Node3D:
+	var part := WeakPart.new()
+	part.setup(id, facing)
+	ctx.root.add_child(part)
+	part.global_position = at
+	if Vector2(facing.x, facing.z).length() > 0.01:
+		part.look_at(at + Vector3(facing.x, 0.0, facing.z), Vector3.UP)
+	part.set_state(weak.state(id))
+	_part_nodes[id] = part
+	return part
+
+
+func _free_parts() -> void:
+	for id in _part_nodes.keys():
+		_free_part(id)
+	_part_nodes.clear()
+	_touching.clear()
+	if ctx != null and ctx.player != null and ctx.player.has_signal("struck") and ctx.player.struck.is_connected(_on_player_struck):
+		ctx.player.struck.disconnect(_on_player_struck)
+
+
+func _free_part(id: String) -> void:
+	var part = _part_nodes.get(id)
+	_part_nodes.erase(id)
+	_touching.erase(id)
+	if is_instance_valid(part):
+		if ctx.player.kit.anchor_body == part:
+			ctx.player.release_grapple()
+		part.collision_layer = 0
+		if part.get_parent() != null:
+			part.get_parent().remove_child(part)
+		part.queue_free()
+
+
+# Mirrors the rule's state onto the part. A part that shuts or breaks under a latched, uncommitted line lets it go;
+# a committed haul keeps homing and lands on a closed part (and pays the chip).
+func _sync_part(id: String) -> void:
+	var part = _part_nodes.get(id)
+	if not is_instance_valid(part):
+		return
+	var now: int = weak.state(id)
+	if part.state == now:
+		return
+	part.set_state(now)
+	var kit = ctx.player.kit
+	if now != WeakPoints.OPEN and kit.hooked and kit.anchor_body == part and kit.line_state != Augments.LINE_SMASH:
+		ctx.player.release_grapple()
+
+
+# Every tick: the parts follow the rule (a re-seal needs no caller), and a ball that has just reached a part
+# touches it once, through the ball's own enemy-contact path so a committed haul lands (player_ball.gd).
+func _step_parts() -> void:
+	var ball: Vector3 = ctx.player.ball_position()
+	for id in _part_nodes.keys():
+		var part = _part_nodes[id]
+		if not is_instance_valid(part):
+			_part_nodes.erase(id)
+			continue
+		_sync_part(id)
+		var near: bool = weak.state(id) != WeakPoints.BROKEN and ball.distance_to(part.global_position) <= WeakPart.REACH
+		if near and not bool(_touching.get(id, false)) and ctx.player.has_method("_on_enemy_touched"):
+			var away := Vector3(ball.x - part.global_position.x, 0.0, ball.z - part.global_position.z)
+			ctx.player._on_enemy_touched(part, away.normalized() if away.length() > 0.01 else Vector3.UP)
+		_touching[id] = near
+
+
+# The ball's contact on a part reaches combat as a posture hit on the Warden that names the part's id, so it
+# resolves like any other contact (judge_hit, the weak rule, _apply_posture's HOLD_CAP) and pays the bar once. The
+# part takes nothing. smash_landing names the part for the length of a landing, so the redirected strike is told it
+# is a reel landing too. A staggered Warden is not struck through a part: the open core is the only target then.
+func _on_player_struck(enemy: Node3D, kind: String, force: float) -> void:
+	if state != FIGHT or not is_instance_valid(warden) or not is_instance_valid(enemy) or warden.staggered() \
+			or ctx.spawner == null or not ctx.spawner.has_method("strike"):
+		return
+	var id := ""
+	for key in _part_nodes:
+		if _part_nodes[key] == enemy:
+			id = key
+	if id == "":
+		return
+	var landing = ctx.player.smash_landing
+	_paying = id
+	if landing == enemy:
+		ctx.player.smash_landing = warden
+	ctx.spawner.strike(warden, kind, force, id)
+	ctx.player.smash_landing = landing
+	_paying = ""
+	_paid_frame = Engine.get_physics_frames()
 
 
 # The seconds each phase must last, one per chunk (the last is unused).
@@ -269,6 +441,9 @@ func _warden_spec() -> Dictionary:
 	if _hold_boss() != "":
 		spec["posture_hold"] = Callable(self, "hold_active")
 		spec["weak_judge"] = Callable(self, "_weak_judge")
+		# Dial 1: the Warden judges every posture hit (the ultimate's too), not only the ones through on_struck.
+		if _weak_wanted():
+			spec["weak_judge_all"] = true
 	spec["heft"] = func() -> float: return float(ctx.run.heft()) if ctx != null and ctx.run != null else 0.0
 	return spec
 
@@ -308,6 +483,7 @@ func _place_ball(center: Vector3, entry_velocity: Vector3) -> void:
 func _on_warden_died(_at: Vector3, _scrap: int) -> void:
 	if state != FIGHT:
 		return
+	_free_parts()
 	state = DEFEATED
 	warden = null
 	ctx.flow.boss_active = false

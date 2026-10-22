@@ -59,6 +59,16 @@ const PHASE_MIN_SECONDS := [21.0, 21.0, 21.0, 21.0]
 # Seal hp of each hatch and the override button: start value; the step 2 sweep owns it.
 const SEAL_HP := 60.0
 const FAMILY_NAMES := {"burrow": "burrow lane", "cave_in": "cave-in", "bore": "bore breach"}
+# Where the hatch parts sit (dial 1 only). Hatch k is on floor k's rim wall, on the bearing HATCH_BEARINGS[k - 1],
+# HATCH_LIFT above the top of the bank (BANK_RISE), HATCH_INSET inside the wall.
+const HATCH_BEARINGS := [0.0, TAU / 3.0, TAU * 2.0 / 3.0]
+const HATCH_LIFT := 1.2
+const HATCH_INSET := 0.5
+# The override is the pit's bore head: the drill housing the breach comes up through. The breach disc itself is laid
+# under the ball wherever it stands, so it has no place to hook; the head is a fixed spot on the pit floor, half way
+# out and clear of the Warden's body, so a ball can reach it from anywhere on the pit and a bot can plan for it.
+const BORE_HEAD_RADIUS := 20.0
+const BORE_HEAD_BEARING := PI * 0.25
 
 var floors: WakingFloors
 # Floor number to its body, while the body stands.
@@ -122,6 +132,8 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_combo_left = -1
 	_dress = WakingDress.attach(self)
 	_arena_dress = ArenaWakingDress.attach(self)
+	if weak.active():
+		_build_parts()
 
 
 func exit_arena() -> void:
@@ -175,6 +187,8 @@ func _physics_process(delta: float) -> void:
 		if _drop_left <= 0.0:
 			_free_body(_floor_bodies.get(_dropping))
 			_floor_bodies.erase(_dropping)
+			if weak.active():
+				_free_part("hatch_%d" % _dropping)
 			_dropping = 0
 			_seat_warden()
 			_dropped_at = clock
@@ -313,15 +327,38 @@ func _step_attacks(delta: float) -> void:
 			if h.is_live() and attack["family"] == "bore" and h.attack_id.begins_with("waking_bore_0"):
 				_end_combo()  # a punish window ends any combo
 				if _jammed_until <= clock:
-					_open_weak("override" if phase >= WakingAttacks.PIT_PHASE else "hatch_%d" % phase)
+					# The jam opens the third hatch (Bedrock's bore), or the override in the pit (#241 6332288729).
+					if phase >= WakingAttacks.PIT_PHASE:
+						_open_weak("override")
+					else:
+						_open_hatch(3)
 				_jammed_until = clock + (h.warn_seconds + h.live_seconds - h.age) + ChallengeDials.punish("waking", BORE_JAM)
 			if not (h.is_done() and h.age >= h.warn_seconds + h.live_seconds + 0.5):
 				done = false
+		# A burrow's surfacing and a cave-in's settling open their hatch as the attack ends: every hazard past its
+		# live seconds (hazard.gd DONE) and none still waiting for its slot. Once per attack; the bore opens on its jam.
+		if weak.active() and not waiting and attack["family"] != "bore" and not attack.get("opened", false) \
+				and not (attack["hazards"] as Array).is_empty() and _attack_ended(attack):
+			attack["opened"] = true
+			_open_hatch(WakingAttacks.FAMILIES.find(attack["family"]) + 1)
 		if done:
 			_free_hazards(attack)
 		else:
 			kept.append(attack)
 	attacks = kept
+
+
+func _attack_ended(attack: Dictionary) -> bool:
+	for h in attack["hazards"]:
+		if is_instance_valid(h) and not h.is_done():
+			return false
+	return true
+
+
+# Opens floor k's hatch while that floor stands: a dropped floor takes its hatch with it.
+func _open_hatch(k: int) -> void:
+	if _floor_bodies.has(k):
+		_open_weak("hatch_%d" % k)
 
 
 func _bank_ride(family: String, at: Vector3) -> void:
@@ -349,7 +386,7 @@ func carving_now() -> bool:
 func _open_by_lip() -> void:
 	var lip := lip_drop()
 	if lip and not _lip_seen and phase < WakingAttacks.PIT_PHASE - 1:
-		_open_weak("hatch_%d" % (phase + 1))
+		_open_hatch(phase + 1)
 	_lip_seen = lip
 
 
@@ -359,6 +396,17 @@ func _weak_parts() -> Array:
 		parts.append({"id": "hatch_%d" % (k + 1), "seal_hp": SEAL_HP, "removes": WakingAttacks.FAMILIES[k]})
 	parts.append({"id": "override", "seal_hp": SEAL_HP, "removes": "pit_spray"})
 	return parts
+
+
+# The greybox parts (dial 1): one hatch on each floor's rim wall above the bank, the override on the pit floor. A
+# hatch faces the middle of its floor; each is freed with its floor (_free_part) or at exit_arena.
+func _build_parts() -> void:
+	for k in range(1, floors.floor_count() + 1):
+		var way := Vector3(cos(HATCH_BEARINGS[k - 1]), 0.0, sin(HATCH_BEARINGS[k - 1]))
+		var at := _center + way * (PAD_RADIUS - HATCH_INSET) + Vector3.UP * (floors.floor_height(k) + BANK_RISE + HATCH_LIFT)
+		_add_part("hatch_%d" % k, at, -way)
+	var head := Vector3(cos(BORE_HEAD_BEARING), 0.0, sin(BORE_HEAD_BEARING))
+	_add_part("override", _center + head * BORE_HEAD_RADIUS + Vector3.UP * HATCH_LIFT, -head)
 
 
 func jammed() -> bool:
@@ -526,6 +574,9 @@ func _warden_spec() -> Dictionary:
 	# stagger. alpha-status/waking-stagger-table.md has the sweep.
 	numbers["hit_cap"] = HIT_CAP
 	numbers["hit_cap_until_stagger"] = true
+	# Dial 1: a contact pays the bar through the weak rule (a part, or the chip), not through the row's contact gain.
+	if _weak_wanted():
+		numbers["contact_gain_scale"] = 0.0
 	spec["posture"] = numbers
 	# A monster build here is heft above the library's top-bucket maximum at its own entrance, stage 4 (monster_heft.gd).
 	spec["monster_heft"] = MonsterHeft.waking_threshold()

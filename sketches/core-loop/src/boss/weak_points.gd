@@ -13,6 +13,8 @@ const CHIP := 0.3
 const OPEN_SECONDS := 6.0
 const FIT_SECONDS := 3.5
 const FIT_MIN := 2
+# An opened point stays open at least this long, by any re-seal path: ChallengeDials.TELL_FLOOR, so the opening reads.
+const OPEN_MIN := 0.6
 
 # The numbers this rule runs on. A caller's dictionary overrides any of them by key
 # ("chip", "open_seconds", "fit_seconds", "fit_min"); a missing key keeps the constant above.
@@ -22,7 +24,7 @@ var fit_seconds := FIT_SECONDS
 var fit_min := FIT_MIN
 var enabled := true
 
-# id -> {seal_hp, max_hp, removes, state, opened_at, fit_since, fitters}
+# id -> {seal_hp, max_hp, removes, state, opened_at, first_open, fit_since, fitters}
 var _parts := {}
 
 
@@ -36,7 +38,7 @@ func _init(parts := [], numbers := {}, on := true) -> void:
 	for part in parts:
 		var hp := float(part.get("seal_hp", 0.0))
 		_parts[String(part["id"])] = {"seal_hp": hp, "max_hp": hp, "removes": String(part.get("removes", "")),
-				"state": SHUT, "opened_at": 0.0, "fit_since": -1.0, "fitters": 0}
+				"state": SHUT, "opened_at": 0.0, "first_open": 0.0, "fit_since": -1.0, "fitters": 0}
 
 
 # The identity rule: every hit counts in full and nothing ever changes.
@@ -90,6 +92,7 @@ func open(id: String, now: float) -> bool:
 	var part: Dictionary = _parts[id]
 	part["state"] = OPEN
 	part["opened_at"] = now
+	part["first_open"] = now
 	part["fit_since"] = now if int(part["fitters"]) >= fit_min else -1.0
 	return true
 
@@ -118,7 +121,8 @@ func fitters(id: String) -> int:
 	return int(_parts[id]["fitters"]) if _parts.has(id) else 0
 
 
-# Re-seals an OPEN point whose window ran out or whose fit was held long enough.
+# Re-seals an OPEN point whose window ran out or whose fit was held long enough, never before OPEN_MIN
+# seconds after it opened.
 func step(now: float) -> void:
 	if not active():
 		return
@@ -126,10 +130,16 @@ func step(now: float) -> void:
 		var part: Dictionary = _parts[id]
 		if int(part["state"]) != OPEN:
 			continue
+		if now - float(part["first_open"]) < OPEN_MIN:
+			continue
 		var fitted: bool = float(part["fit_since"]) >= 0.0 and now - float(part["fit_since"]) >= fit_seconds
 		if fitted or now - float(part["opened_at"]) >= open_seconds:
 			part["state"] = SHUT
 			part["fit_since"] = -1.0
+
+
+func has(id: String) -> bool:
+	return _parts.has(id)
 
 
 # SHUT, OPEN or BROKEN; an unknown id (the body) reads SHUT.

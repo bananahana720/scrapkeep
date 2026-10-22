@@ -159,6 +159,8 @@ var _guard_wait := 0.0
 var _charge_len := PULSE_TELEGRAPH
 var _posture: BossPosture
 var _armed := 0.0
+# Whether on_struck has already put the result through the weak judge (see _apply_posture).
+var _judged := false
 var _guard_scatter_frame := -1
 var _guard_paid_scatters := 0
 var _slag_burn := 0.0
@@ -320,13 +322,16 @@ func contact_part(ball: Vector3, hit_kind: String) -> String:
 	return ""
 
 
-func on_struck(hit_kind: String, _part: String, result: Dictionary) -> void:
+func on_struck(hit_kind: String, part: String, result: Dictionary) -> void:
 	if variant == "choir" and family_open() and not braced_kinds.is_empty() and not hit_kind in braced_kinds and fleet != null:
 		fleet.discover("choir_switch", family_point_at())
 	var weak_judge = spec.get("weak_judge")
 	if weak_judge is Callable and weak_judge.is_valid() and not staggered():
-		result = weak_judge.call(result)
+		result = weak_judge.call(result, part, hit_kind)
+	# The judge has answered: _apply_posture must not ask it again.
+	_judged = true
 	_apply_posture(result)
+	_judged = false
 
 
 func _physics_process(delta: float) -> void:
@@ -919,6 +924,12 @@ func monster_build() -> bool:
 
 
 func _apply_posture(result: Dictionary) -> void:
+	# A boss at weak-point dial 1 (spec "weak_judge_all") judges every posture hit, including one that skips
+	# on_struck (the ultimate's set piece, ultimate.gd warden_posture). Off, this is never reached.
+	if spec.get("weak_judge_all", false) and not _judged and not _posture.staggered:
+		var weak_judge = spec.get("weak_judge")
+		if weak_judge is Callable and weak_judge.is_valid():
+			result = weak_judge.call(result, "", "")
 	# A boss module's phase-minimum hold (stub_boss.gd hold_active): the hit lands in full but the bar
 	# stops at HOLD_CAP, so no stagger starts before the hold ends. A hit that would have gained still
 	# restarts the drain clock, so a pressed bar stays full.
