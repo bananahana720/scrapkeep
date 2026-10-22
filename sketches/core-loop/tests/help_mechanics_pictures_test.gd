@@ -68,7 +68,9 @@ func _run() -> void:
 	# stakes, SPIL-9's next ram and actives each have a picture.
 	for id in ["grip", "jam", "cast", "radio", "stake", "halo"]:
 		_t.check("the refresh covers " + id, seen.has(id))
-	var radio_words: PackedStringArray = MechanicsDiagram.new("radio").drawn_words()
+	var radio_picture := MechanicsDiagram.new("radio")
+	var radio_words: PackedStringArray = radio_picture.drawn_words()
+	radio_picture.free()
 	_t.eq("the radio picture shows its four keys", radio_words, PackedStringArray([",", ".", "/", ";"]))
 	_t.check("Back fits screen", root.get_visible_rect().encloses(help.back.get_global_rect()))
 	_t.check("SPIL-9 caption says the next ram calls it in", MechanicsDiagram.CAPTIONS["companion"].contains("Next ram calls it in"))
