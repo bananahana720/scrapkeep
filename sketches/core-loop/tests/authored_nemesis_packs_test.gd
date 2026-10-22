@@ -34,6 +34,7 @@ func _initialize() -> void:
 		_kill_first()
 		_budget()
 		_control()
+		_plate_press()
 	_name = ""
 	_same_tables()
 	quit(_t.verdict())
@@ -149,3 +150,37 @@ func _control() -> void:
 	_t.check(_name + "control: stage 3 with its plating packs struck fails for Sable", not _has_contrast("pylon_engineer", stripped))
 	var oversized := ["chaser", "chaser", "chaser", "chaser", "chaser"]
 	_t.check(_name + "control: a five-chaser pack exceeds the stage cap and prices infinite", not is_finite(Cards.cost(oversized)))
+
+
+# W18-PLATEPRESS: two plated rigs and a ballast heavy press the plating axis (ENEMY-PRIORITY.md
+# section 5). The pack sits in the Highdraft only: a ninth pack in a Dig stage would drop the
+# alpha table's kill-first share under SHARE_MIN. Plating is the axis of Sable (pylon_engineer)
+# and Tally; Tarn, the Runner (spread), the Caster and the Cannon are spared by it.
+func _plate_press() -> void:
+	var pressed := ["pylon_engineer", "tally"]
+	var spared := ["tarn", "runner_gunner", "demolitions_caster", "remembered_cannon"]
+	for stage in [5, 6]:
+		var found := {}
+		for pack in _table.of(stage)["packs"]:
+			if String(pack["id"]).begins_with("plate_press"):
+				found = pack
+		_t.check(_name + "stage %d holds a plate_press pack" % stage, not found.is_empty())
+		if found.is_empty():
+			continue
+		_t.eq(_name + "stage %d plate_press kinds" % stage, found["kinds"], ["plated_brute", "swatter"])
+		for id in pressed:
+			_t.check(_name + "stage %d plate_press presses %s" % [stage, id], Nemesis.pack_presses(id, found["kinds"]))
+		for id in spared:
+			_t.check(_name + "stage %d plate_press spares %s" % [stage, id], not Nemesis.pack_presses(id, found["kinds"]))
+	# Planted negative: the stage-5 table with the pack struck no longer holds a pack of that shape
+	# that presses Sable and spares Tarn, so the same check fails.
+	var struck: Array = _table.of(5)["packs"].filter(func(p): return not String(p["id"]).begins_with("plate_press"))
+	_t.check(_name + "control: a table without the plate_press pack fails the plating-press check for Sable", not _has_press_shape(struck))
+	_t.check(_name + "the shipped stage 5 table passes that check", _has_press_shape(_table.of(5)["packs"]))
+
+
+func _has_press_shape(packs: Array) -> bool:
+	for pack in packs:
+		if pack["kinds"] == ["plated_brute", "swatter"] and Nemesis.pack_presses("pylon_engineer", pack["kinds"]) and not Nemesis.pack_presses("tarn", pack["kinds"]):
+			return true
+	return false
