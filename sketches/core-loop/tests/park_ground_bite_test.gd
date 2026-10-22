@@ -18,6 +18,8 @@ const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 
 const PARKS := ["park_pit", "park_sinkhole", "park_test"]
 const CELLS := 800
+# Cells from another slot or the edge within which the colour map is feathered (park_ground_surface_test.gd).
+const DEEP := 5
 const SIDE := 801
 const REGION := 1024
 const SAMPLES := 150
@@ -214,6 +216,28 @@ func _expect(mult: Color, n_y: float, w: float) -> Color:
 			clampf(lerpf(mult.b, tint.b / d.b, w), 0.0, 1.0), 127.0 / 255.0)
 
 
+# The feathered slot multiplier a vertex starts from is a byte-rounded mip average: within 3/255 of the
+# slot's own multiplier where the cells around are all one slot, and the bite error adds no more.
+const TOL := 3.0 / 255.0 + 0.0001
+
+
+func _near(a: Color, b: Color, tol: float) -> bool:
+	return absf(a.r - b.r) <= tol and absf(a.g - b.g) <= tol and absf(a.b - b.b) <= tol and absf(a.a - b.a) <= tol
+
+
+# True when every cell within DEEP cells of (i, j) is the same slot and the window is inside the square,
+# so the feathered colour there is that slot's multiplier.
+func _uniform(surface: PackedByteArray, i: int, j: int) -> bool:
+	if i < DEEP or j < DEEP or i >= CELLS - DEEP or j >= CELLS - DEEP:
+		return false
+	var slot := surface[j * CELLS + i]
+	for dj in range(-DEEP, DEEP + 1):
+		for di in range(-DEEP, DEEP + 1):
+			if surface[(j + dj) * CELLS + i + di] != slot:
+				return false
+	return true
+
+
 func _same(a: Color, b: Color) -> bool:
 	return absf(a.r - b.r) <= BYTE and absf(a.g - b.g) <= BYTE and absf(a.b - b.b) <= BYTE and absf(a.a - b.a) <= BYTE
 
@@ -238,7 +262,7 @@ func _cell_bad(render: Node3D, grid: Array, i: int, j: int, mult: Color) -> int:
 		var wp: float = (w[p[2]] + w[p[3]]) * 0.5
 		var yp: float = (ny[p[2]] + ny[p[3]]) * 0.5
 		var got := _pixel(render, -CELLS + 2 * i + p[0], -CELLS + 2 * j + p[1])
-		if not _same(got, _expect(mult, yp, wp)):
+		if not _near(got, _expect(mult, yp, wp), TOL):
 			bad += 1
 	return bad
 
@@ -276,18 +300,29 @@ func _check_park(id: String, ground: Node, render: Node3D) -> void:
 		if cells.is_empty():
 			print("%s: no %s cells to sample" % [id, name])
 			continue
+		# Draw seeded cells whose 11 by 11 neighbourhood is one slot (so the feathered slot multiplier is
+		# the slot's own), until SAMPLES are checked or 6000 draws are spent.
 		var bad := 0
-		var n := mini(SAMPLES, cells.size())
-		for s in n:
+		var n := 0
+		var draws := 0
+		while n < SAMPLES and draws < 6000:
+			draws += 1
 			var k := cells[rng.randi_range(0, cells.size() - 1)]
+			if not _uniform(surface, k % CELLS, k / CELLS):
+				continue
+			n += 1
 			bad += _cell_bad(render, grid, k % CELLS, k / CELLS, ParkTerrain.slot_tint(surface[k]))
+		print("%s: %s cells with a one-slot neighbourhood checked: %d of %d draws" % [id, name, n, draws])
 		t.eq("%s %s cells: %d sampled, vertices off the expected multiplier" % [id, name, n], bad, 0)
+		# park_test's concrete is thin stamps with no one-slot neighbourhood among the biting ones.
+		if id != "park_test" or name != "biting slot":
+			t.check("%s %s cells: at least 100 checked" % [id, name], n >= 100, str(n))
 	# A vertex that actually moved: the biting corner differs from the plain slot tint.
 	var moved := 0
 	for s in mini(SAMPLES, biting_cells.size()):
 		var k := biting_cells[rng.randi_range(0, biting_cells.size() - 1)]
 		var a := (k / CELLS) * SIDE + k % CELLS
-		if w[a] > 0.1 and not _same(_pixel(render, -CELLS + 2 * (k % CELLS), -CELLS + 2 * (k / CELLS)), ParkTerrain.slot_tint(surface[k])):
+		if w[a] > 0.1 and not _near(_pixel(render, -CELLS + 2 * (k % CELLS), -CELLS + 2 * (k / CELLS)), ParkTerrain.slot_tint(surface[k]), 3.0 / 255.0):
 			moved += 1
 	t.check(id + " strongly biting corners differ from the plain slot tint", moved > 0, str(moved))
 
