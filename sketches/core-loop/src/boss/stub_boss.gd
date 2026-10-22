@@ -114,10 +114,12 @@ func _hold_update() -> void:
 		_phase_started = _phase_open_at
 
 
-# True while a lost chunk's phase has not yet played its minimum: the Warden is closed.
+# True while a lost chunk's phase has not yet played its minimum: the Warden is closed. A monster
+# build (warden.gd monster_build, read now like the posture judge reads it per hit) is never held, so
+# an overpowered build still breaks the fight faster than an ordinary one.
 func hold_active() -> bool:
 	_hold_update()
-	return clock < _phase_open_at
+	return clock < _phase_open_at and not (is_instance_valid(warden) and warden.monster_build())
 
 
 # The chunks the fight reads as left: a held chunk still counts, so the phase, the floor and the

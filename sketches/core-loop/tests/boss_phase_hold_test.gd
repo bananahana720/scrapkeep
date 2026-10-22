@@ -34,6 +34,21 @@ func _run() -> void:
 		var held: Dictionary = await _fight(world, [HOLD, HOLD, HOLD, HOLD], boss)
 		ChallengeDials.reset()
 		_check(boss, base, held)
+		# The same dial: an ordinary build (threshold out of reach) is held, a monster build (heft above
+		# the threshold) is never held and its posture lands at once.
+		ChallengeDials.reset()
+		var ordinary: Dictionary = await _fight(world, [HOLD, HOLD, HOLD, HOLD], boss, INF)
+		ChallengeDials.reset()
+		var monster: Dictionary = await _fight(world, [HOLD, HOLD, HOLD, HOLD], boss, -1.0)
+		ChallengeDials.reset()
+		_t.check("%s ordinary fixture at the dial is held" % boss, ordinary["held_frames"] > 0 and ordinary["losses"][1] >= HOLD - 0.1,
+				"held frames %d, losses %s" % [ordinary["held_frames"], str(ordinary["losses"])])
+		_t.check("%s monster fixture at the dial is never held" % boss, monster["held_frames"] == 0 and monster["won"],
+				"held frames %d, won %s" % [monster["held_frames"], monster["won"]])
+		_t.check("%s monster fixture's posture lands at once" % boss, monster["losses"].size() >= 3 and monster["losses"][1] < HOLD,
+				str(monster["losses"]))
+		_t.check("%s monster fixture breaks faster than ordinary" % boss, monster["end"] < ordinary["end"],
+				"%.2f vs %.2f" % [monster["end"], ordinary["end"]])
 	ChallengeDials.reset()
 	quit(_t.verdict())
 
@@ -63,7 +78,7 @@ func _check(boss: String, base: Dictionary, held: Dictionary) -> void:
 	_t.check("%s held: no telegraph comes sooner" % boss, later, "%s vs %s" % [str(held["telegraphs"]), str(base["telegraphs"])])
 
 
-func _fight(world: int, mins, boss := "") -> Dictionary:
+func _fight(world: int, mins, boss := "", threshold := NAN) -> Dictionary:
 	var game = Game.new()
 	game.test_mode = true
 	root.add_child(game)
@@ -75,6 +90,8 @@ func _fight(world: int, mins, boss := "") -> Dictionary:
 	var seen = Harness.counter(game)
 	Harness.enter_world(game, world)
 	var mod = Harness.module(game, world)
+	if not is_nan(threshold):
+		mod.warden.spec["monster_heft"] = threshold
 	var out := {"won": false, "losses": [], "telegraphs": [], "held_frames": 0, "posture_while_held": 0.0,
 			"lost_while_held": 0, "phase_moved_while_held": 0, "end": 0.0}
 	game.ctx.events.boss_attack_telegraphed.connect(func(_id: String, _s: float): out["telegraphs"].append(mod.clock))
