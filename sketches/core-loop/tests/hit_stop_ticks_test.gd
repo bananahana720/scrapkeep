@@ -1,8 +1,9 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const SimClock := preload("res://src/core/sim_clock.gd")
 
-# A headless test's hit stop (Game.test_mode, no --fixed-fps) slows round(seconds * physics rate)
+# A headless test's hit stop (Game.test_mode, no SimClock.ticks) slows round(seconds * physics rate)
 # physics ticks and hands back the time scale that was in force before it. The count is exact
 # while a frame carries one physics tick (Godot reads the scale once per frame), so a CPU too slow
 # for that could add ticks. A played game keeps the wall-time timer; this covers the tick path only.
@@ -13,6 +14,7 @@ var _stage := 0
 var _wait := 0
 var _ticks := 0
 var _unended := 0
+var _timer_kept := false
 var _slow := 0
 var _runs: Array = []
 
@@ -45,6 +47,10 @@ func _process(_delta: float) -> bool:
 			_wait += 1
 			if _wait > 10 and _game.flow.in_play():
 				_begin(1.0, 0.06)
+			elif _ticks > 900:
+				print("[play] the game never reached play -> FAIL")
+				quit(1)
+				return true
 		2:
 			if _ended():
 				_finish_run(0.06)
@@ -58,6 +64,18 @@ func _process(_delta: float) -> bool:
 				_finish_run(0.5)
 				_stage = 5
 		5:
+			# A run on the sim clock (SimClock.ticks) keeps the wall timer: no tick counter starts.
+			SimClock.ticks = true
+			Engine.time_scale = 1.0
+			_ticks = 0
+			_game.hit_stop(0.06)
+			_timer_kept = _game._hit_stopped and _game._stop_ticks_left <= 0
+			_stage = 6
+		6:
+			if _ended():
+				SimClock.ticks = false
+				_stage = 7
+		7:
 			Engine.time_scale = 1.0
 			var expect := [5, 3, 5]
 			var scales := [1.0, 2.0, 1.0]
@@ -68,6 +86,8 @@ func _process(_delta: float) -> bool:
 				scales_ok = scales_ok and _runs[i][1] == scales[i]
 			_check("slowed ticks", counts_ok,
 				"0.06 s, 0.03 s and 0.5 s (capped at %.2f) slow %s ticks at %d ticks/s (want %s)" % [Game.HIT_STOP_MAX, [_runs[0][0], _runs[1][0], _runs[2][0]], Engine.physics_ticks_per_second, expect])
+			_check("sim clock keeps the timer", _timer_kept and Engine.time_scale == 1.0,
+				"with SimClock.ticks a stop starts with no tick counter (%s) and ends with the scale back at %s" % [_timer_kept, Engine.time_scale])
 			_check("stops end", _unended == 0, "%d stops still running 600 ticks after they began" % _unended)
 			_check("scale restored", scales_ok,
 				"scales before %s, after %s" % [scales, [_runs[0][1], _runs[1][1], _runs[2][1]]])

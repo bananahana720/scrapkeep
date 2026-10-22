@@ -60,6 +60,7 @@ const SUMMARY_GUARD := 0.75
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
 const SEED := 20260926
+const SimClock := preload("res://src/core/sim_clock.gd")
 const BOSS_PATH := "res://src/boss/boss.gd"
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
@@ -498,8 +499,7 @@ func pilot_unlocked(def) -> bool:
 
 
 func _exit_tree() -> void:
-	if _hit_stopped:
-		Engine.time_scale = _scale_before_stop
+	_end_hit_stop()
 	if not test_mode:
 		return
 	var dir := DirAccess.open(storage_dir)
@@ -589,12 +589,13 @@ func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 
 
 # A played game holds the stop for wall time (the timer ignores the time scale). A headless test
-# (test_mode without --fixed-fps) holds it for the same span in physics ticks instead. Godot reads
-# Engine.time_scale once per frame, so the count is exact only while a frame carries one tick; a
-# slow frame that runs several keeps the ticks after the counter ends slowed too. Fixed-frame runs
-# (--fixed-fps: bots, sweeps) keep the timer, which already counts fixed frames, so balance numbers
-# stay put. Juice still admits and trims stops on SimClock.msec() (wall ms unless SimClock.ticks):
-# this fixes a stop's length, not whether one is sent.
+# (test_mode) holds it for the same span in physics ticks instead. Godot reads Engine.time_scale
+# once per frame, so the count is exact only while a frame carries one tick; a slow frame that
+# runs several keeps the ticks after the counter ends slowed too. Runs on the sim clock
+# (SimClock.ticks: the bot and sweep tools, all launched at fixed fps) keep the timer, so balance
+# numbers stay put; a test that sets SimClock.ticks itself keeps it too. Juice still admits and
+# trims stops on SimClock.msec() (wall ms unless SimClock.ticks): this fixes a stop's length, not
+# whether one is sent.
 func hit_stop(seconds: float) -> void:
 	if _hit_stopped or seconds <= 0.0 or not flow.in_play():
 		return
@@ -602,7 +603,7 @@ func hit_stop(seconds: float) -> void:
 	_scale_before_stop = Engine.time_scale
 	Engine.time_scale = HIT_STOP_SCALE
 	var held := minf(seconds, HIT_STOP_MAX)
-	if test_mode and not _launch_flag("--fixed-fps"):
+	if test_mode and not SimClock.ticks:
 		_stop_ticks_left = maxi(1, roundi(held * Engine.physics_ticks_per_second))
 		return
 	var timer := get_tree().create_timer(held, true, false, true)
@@ -610,6 +611,8 @@ func hit_stop(seconds: float) -> void:
 
 
 func _end_hit_stop() -> void:
+	if not _hit_stopped:
+		return
 	Engine.time_scale = _scale_before_stop
 	_stop_ticks_left = -1
 	_hit_stopped = false
