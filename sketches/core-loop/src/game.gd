@@ -35,6 +35,7 @@ const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
+const BossPlate := preload("res://src/ui/boss_plate.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
@@ -874,6 +875,7 @@ func set_reduced_motion(on: bool) -> void:
 	HighdraftFx.preferred = on
 	AbilityBar.reduced_motion = on
 	AimReticle.reduced_motion = on
+	BossPlate.reduced_motion = on
 	WorldFx.preferred = on
 	if is_instance_valid(WorldFx.current):
 		WorldFx.current.set_quality(WorldFx.current.low, on)
