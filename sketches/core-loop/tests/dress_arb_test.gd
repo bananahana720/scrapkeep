@@ -1,5 +1,6 @@
 extends SceneTree
 # 2026-10-09 (w12 SWAP-WAVE 12-F kicker_wedge): re-pinned for the authored kicker; measured cause: the dress hides the two Kicker greybox views and places kicker_wedge recipe views at each wedge frame, so a Kicker greybox is re-materialled but hidden.
+# 2026-10-23 (world 1 unit 9, Slag Bowl to sibling parity): the Fleet yard joins the dressing. Its two melt parts glow on purpose, so they skip the muted, unlit check and are held by _check_yard instead; the surface floor rises from 23 to 39 for the yard's parts.
 
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
@@ -10,6 +11,7 @@ const Rules := preload("res://src/boss/boss_rules.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
 
 var t := T.new("dress_arb_test")
 var game
@@ -98,6 +100,8 @@ func _check_dress(arena: Node3D, dressing: Node3D) -> void:
 	var surface_count := 0
 	for view: MeshInstance3D in dressing.find_children("*", "MeshInstance3D", true, false):
 		t.check("visual mesh is visible: " + String(view.name), view.visible and view.mesh != null)
+		if String(view.name) in Dress.GLOW_PARTS:
+			continue
 		if view.mesh == null:
 			continue
 		for surface in view.mesh.get_surface_count():
@@ -115,7 +119,8 @@ func _check_dress(arena: Node3D, dressing: Node3D) -> void:
 					if srgb.v > 0.83 or srgb.s > 0.65:
 						muted = false
 				t.check("dressing stays muted: " + String(view.name), muted)
-	t.check("inspects every dressing surface", surface_count >= 23, "%d surfaces" % surface_count)
+	t.check("inspects every dressing surface", surface_count >= 39, "%d surfaces" % surface_count)
+	_check_yard(dressing)
 	var roles := {"Floor": "bowl_cast_floor", "Bank": "bowl_sandstone_bank", "RimWall": "bowl_rusted_rim",
 		"Ramp": "bowl_cast_ramps", "Kicker": "bowl_cast_ramps", "Mast": "bowl_crane_masts", "Crossbar": "bowl_crane_masts"}
 	var counts := {}
@@ -150,6 +155,54 @@ func _check_dress(arena: Node3D, dressing: Node3D) -> void:
 	for vent in vents:
 		t.check("live mint and emission unchanged", vent.material_override.albedo_color == Palette.ARC
 			and is_equal_approx(vent.material_override.emission_energy_multiplier, 0.6))
+
+
+# The Fleet yard (world 1 unit 9): every part present, nothing inside the rim wall's outer face or below its top
+# except the yard deck under the wall line, the melt glows only on its own material, the crowd sits on the tiers.
+func _check_yard(dressing: Node3D) -> void:
+	var yard := dressing.get_node_or_null("FleetYard")
+	t.check("Fleet yard exists", yard != null)
+	if yard == null:
+		return
+	for part in Dress.YARD_PARTS + Dress.GLOW_PARTS:
+		t.check("yard part exists: " + part, yard.get_node_or_null(part) is MeshInstance3D)
+	var nearest := INF
+	for view: MeshInstance3D in yard.get_children().filter(func(n): return n is MeshInstance3D):
+		for surface in view.mesh.get_surface_count():
+			for vertex: Vector3 in view.mesh.surface_get_arrays(surface)[Mesh.ARRAY_VERTEX]:
+				var point: Vector3 = view.transform * vertex
+				nearest = minf(nearest, Vector2(point.x, point.z).length())
+	t.check("the yard stands outside the rim wall", nearest >= Arena.BANK_R + Arena.WALL_THICK, "nearest %.3f m" % nearest)
+	t.check("dressing adds no bodies in the yard", yard.find_children("*", "CollisionObject3D", true, false).is_empty())
+	for part in Dress.GLOW_PARTS:
+		var view := yard.get_node(part) as MeshInstance3D
+		t.check("melt glows on the shared phase material: " + part, view.material_override == yard.melt_material
+			and yard.melt_material.emission_enabled and view.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+	var seated := 0
+	# The dummy renderer keeps no MultiMesh transforms, so the seats are read from the yard's own rest rows.
+	for c in Dress.CREW_PARTS.size():
+		var kind: String = Dress.CREW_PARTS[c]
+		var crowd := yard.get_node_or_null(kind + "s") as MultiMeshInstance3D
+		t.check("crowd exists: " + kind, crowd != null and crowd.multimesh.instance_count > 0)
+		if crowd == null:
+			continue
+		t.check("crowd casts no shadow: " + kind, crowd.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
+		t.eq("one rest row per seat: " + kind, yard.seats[c].size(), crowd.multimesh.instance_count)
+		for row: Dictionary in yard.seats[c]:
+			var at: Vector3 = row.rest.origin
+			var tier := floori((at.y - Dress.TIER_Y0 + 0.001) / Dress.TIER_DY)
+			var lift := at.y - Dress.TIER_Y0 - tier * Dress.TIER_DY
+			var on := tier >= 0 and tier < Dress.TIERS and absf(lift) < 0.001 \
+				and absf(Vector2(at.x, at.z).length() - (Dress.TIER_R0 + Dress.TIER_DR * tier - 0.3)) < 0.01
+			seated += 1 if on else 0
+	var total := 0
+	for kind in Dress.CREW_PARTS:
+		total += (yard.get_node(kind + "s") as MultiMeshInstance3D).multimesh.instance_count
+	t.check("every fan sits on a tier", seated == total and total >= 100, "%d of %d" % [seated, total])
+	t.eq("three pools of ladle light", yard.lights.size(), 3)
+	for light: OmniLight3D in yard.lights:
+		t.check("ladle light casts no shadow", not light.shadow_enabled)
+	t.check("the ledger opens on phase one", yard.ledger_line.text == Yard.LEDGER[1], yard.ledger_line.text)
 
 
 # The authored kicker stands where the collider does: per Kicker greybox view one holder at its wedge frame, the

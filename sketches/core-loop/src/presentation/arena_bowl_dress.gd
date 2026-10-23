@@ -3,14 +3,48 @@ extends RefCounted
 const Palette := preload("res://src/core/palette.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
 const ASSET_DIR := "res://assets/models/bosses"
 const SPILLWAY_DIR := "res://assets/models/world_one"
 const FOUNDRY_PARTS := ["RimRepairs", "CraneRails", "PourSpouts", "CooledSlagPools", "CastFloorSeams", "MastCollars", "BankCopperCourses"]
 const SPILLWAY_PARTS := ["rock_a", "rock_c", "slab_a", "slab_b"]
+# The Fleet yard behind the rim (tools/blender/bosses/arena_bowl_yard.py): static parts, the two melt parts that glow
+# with the phase, and the two plush crew the stands seat by MultiMesh.
+const YARD_PARTS := ["YardDeck", "FleetStands", "CupolaFurnaces", "LadleCars", "LedgerBoard", "IngotStock", "CrewYard"]
+const GLOW_PARTS := ["LadleMelt", "FurnaceGlow"]
+const CREW_PARTS := ["CrewFan", "CrewPennant"]
+# Mirrors the recipe's STANDS and tiers: sector centre and half width in degrees, then tier radius and plank top.
+const STANDS := [Vector2(95.0, 18.0), Vector2(225.0, 12.0), Vector2(300.0, 18.0)]
+const TIERS := 5
+const TIER_R0 := 69.0
+const TIER_DR := 2.4
+const TIER_Y0 := 18.0
+const TIER_DY := 2.0
+const SEAT_PITCH := 2.0
+# The crew sit at mascot scale, so a fan reads from the far side of the bowl, 140 m away.
+const CREW_SCALE := 1.35
+# Half the seats are taken, one fan in five waves a pennant; a fixed private stream, so every bowl seats the same crowd.
+const SEAT_FILL := 0.5
+const PENNANT_SHARE := 0.2
+const CROWD_SEED := 0x5b0b
+# Fur tints over the recipe's neutral fur: badger, fox, mole, otter, pack rat. Kept muted under the dressing rule.
+const CREW_TINTS := [Color(0.92, 0.92, 0.92), Color(1.0, 0.82, 0.66), Color(0.78, 0.7, 0.64), Color(0.86, 0.78, 0.66), Color(0.95, 0.9, 0.82)]
+const SPOUT_ANGLES := [15.0, 165.0, 255.0]
+const DECK_Y := 15.0
+const LEDGER_ANGLE := 180.0
+const LEDGER_R := 76.0
+# Dry crew-log signs, not reads: none of them is in the riding lane or on a telegraph.
+const SIGNS := [
+	{"name": "LedgerTitle", "angle": 180.0, "r": 75.6, "y": 28.2, "size": 140, "text": "REQUISITION LEDGER"},
+	{"name": "SafetyTally", "angle": 279.5, "r": 70.06, "y": 18.6, "size": 46, "text": "SLAG BOWL\nDAYS WITHOUT A\nREQUISITION: 0"},
+	{"name": "HiringNotice", "angle": 64.0, "r": 69.84, "y": 19.9, "size": 40, "text": "HANDS WANTED\nAPPLY WITHIN"},
+]
+const SIGN_FONT := "res://assets/fonts/NotoSans-Bold.ttf"
 const SLOTS := {
 	"foundry_steel": Vector2(0.87, 0.18), "foundry_copper": Vector2(0.76, 0.28),
 	"cooled_slag": Vector2(0.97, 0.04), "paint": Vector2(0.95, 0.0),
 	"bare_metal": Vector2(0.8, 0.15), "rubber": Vector2(0.98, 0.0),
+	"slag_glow": Vector2(0.6, 0.0),
 }
 
 # Tests can redirect either folder. Nothing is loaded or built until the bowl enters.
@@ -22,7 +56,8 @@ static func build(arena: Node3D) -> Node3D:
 	var builder := new()
 	var foundry := builder._parts(asset_dir.path_join("arena_bowl_foundry.glb"), FOUNDRY_PARTS)
 	var stone := builder._parts(spillway_dir.path_join("clutter_kit.glb"), SPILLWAY_PARTS)
-	if foundry.is_empty() or stone.is_empty():
+	var yard := builder._parts(asset_dir.path_join("arena_bowl_yard.glb"), YARD_PARTS + GLOW_PARTS + CREW_PARTS)
+	if foundry.is_empty() or stone.is_empty() or yard.is_empty():
 		push_warning("arena_bowl_dress: missing or malformed foundry/Spillway kit; Slag Bowl keeps its greybox")
 		return null
 	var dressing := Node3D.new()
@@ -40,9 +75,101 @@ static func build(arena: Node3D) -> Node3D:
 		var part: String = SPILLWAY_PARTS[i % SPILLWAY_PARTS.size()]
 		var placement := Transform3D(Basis(Vector3.UP, angle).scaled(Vector3(size, size * 0.7, size)), at)
 		builder._view(rubble, "RimStone_%d" % i, stone[part].mesh, placement * stone[part].local)
+	builder._yard(dressing, yard)
 	arena.add_child(dressing)
 	builder._surfaces(arena)
+	var events = arena.get_parent().get("events") if arena.get_parent() != null else null
+	dressing.get_node("FleetYard").bind(events)
 	return dressing
+
+
+func _yard(dressing: Node3D, parts: Dictionary) -> void:
+	var yard: Node3D = Yard.new()
+	yard.name = "FleetYard"
+	dressing.add_child(yard)
+	for part in YARD_PARTS:
+		_view(yard, part, parts[part].mesh, parts[part].local)
+		# Behind the wall a yard part's shadow falls only on the yard deck, out of the fight's sight, so only the
+		# furnaces (tall enough to throw theirs into the bowl) pay for a shadow pass.
+		if part != "CupolaFurnaces":
+			(yard.get_node(part) as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	yard.melt_material = _slot_material("slag_glow")
+	for part in GLOW_PARTS:
+		_view(yard, part, parts[part].mesh, parts[part].local)
+		var view := yard.get_node(part) as MeshInstance3D
+		view.material_override = yard.melt_material
+		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var rests := {"CrewFan": [], "CrewPennant": []}
+	var tints := {"CrewFan": [], "CrewPennant": []}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = CROWD_SEED
+	for stand: Vector2 in STANDS:
+		var lo := deg_to_rad(stand.x - stand.y)
+		var span := deg_to_rad(stand.y * 2.0)
+		for k in TIERS:
+			var r := TIER_R0 + TIER_DR * k
+			var count := floori(span * r / SEAT_PITCH)
+			for j in count:
+				var taken := rng.randf() < SEAT_FILL
+				var kind := "CrewPennant" if rng.randf() < PENNANT_SHARE else "CrewFan"
+				var turn := rng.randf_range(-0.18, 0.18)
+				var size := CREW_SCALE * rng.randf_range(0.92, 1.08)
+				var tint: Color = CREW_TINTS[rng.randi_range(0, CREW_TINTS.size() - 1)]
+				if not taken:
+					continue
+				var angle := lo + span * (j + 0.5) / count
+				var at := Vector3(cos(angle) * (r - 0.3), TIER_Y0 + TIER_DY * k, sin(angle) * (r - 0.3))
+				# The crew are built facing +X; PI - angle turns them to the bowl's centre.
+				rests[kind].append(Transform3D(Basis(Vector3.UP, PI - angle + turn).scaled(Vector3.ONE * size), at))
+				tints[kind].append(tint)
+	for kind in CREW_PARTS:
+		var multi := MultiMesh.new()
+		multi.transform_format = MultiMesh.TRANSFORM_3D
+		multi.use_colors = true
+		multi.mesh = parts[kind].mesh
+		multi.instance_count = rests[kind].size()
+		for i in multi.instance_count:
+			multi.set_instance_transform(i, rests[kind][i])
+			multi.set_instance_color(i, tints[kind][i])
+		var crowd := MultiMeshInstance3D.new()
+		crowd.name = kind + "s"
+		crowd.multimesh = multi
+		crowd.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		yard.add_child(crowd)
+		yard.seat(crowd, rests[kind])
+	for i in SPOUT_ANGLES.size():
+		var angle := deg_to_rad(SPOUT_ANGLES[i])
+		var light := OmniLight3D.new()
+		light.name = "LadleGlow%d" % i
+		light.position = Vector3(cos(angle) * 74.0, DECK_Y + 9.5, sin(angle) * 74.0)
+		light.omni_range = 18.0
+		light.shadow_enabled = false
+		yard.add_child(light)
+		yard.lights.append(light)
+	var font := load(SIGN_FONT) as Font
+	var ledger := _sign(yard, font, {"name": "LedgerLine", "angle": LEDGER_ANGLE, "r": LEDGER_R - 0.4, "y": DECK_Y + 9.0, "size": 130, "text": ""})
+	yard.ledger_line = ledger
+	for row in SIGNS:
+		_sign(yard, font, row)
+
+
+func _sign(parent: Node3D, font: Font, row: Dictionary) -> Label3D:
+	var angle := deg_to_rad(row.angle)
+	var label := Label3D.new()
+	label.name = row.name
+	label.text = row.text
+	label.font = font
+	label.font_size = row.size
+	label.pixel_size = 0.01
+	label.outline_size = 0
+	label.modulate = Palette.LEDGER.darkened(0.12)
+	label.double_sided = false
+	label.shaded = true
+	label.position = Vector3(cos(angle) * row.r, row.y, sin(angle) * row.r)
+	# A Label3D reads from +Z: turn +Z to face the bowl's centre.
+	label.basis = Basis(Vector3.UP, atan2(-cos(angle), -sin(angle)))
+	parent.add_child(label)
+	return label
 
 
 func _parts(path: String, required: Array) -> Dictionary:
@@ -102,6 +229,9 @@ func _slot_material(slot: String) -> StandardMaterial3D:
 		material.albedo_texture = Palette.look_texture("rusted-salvaged-plate-worn", true)
 		material.uv1_triplanar = true
 		material.uv1_scale = Vector3.ONE / 4.0
+	elif slot == "slag_glow":
+		# The only lit dressing: the yard sets its colour and energy by phase (arena_bowl_yard.gd MELT).
+		material.emission_enabled = true
 	return material
 
 

@@ -520,6 +520,22 @@
    "exception_why": "Unit ARB authorizes foundry arena scenery where the Spillway kit has no rails or pour spouts. One static GLB contains the complete bowl's seven visual batches, with no physics bodies."
   },
   {
+   "id": "arena_bowl_yard",
+   "path": "res://assets/models/bosses/arena_bowl_yard.glb",
+   "class": "scenery",
+   "ships": true,
+   "loader": "src/presentation/arena_bowl_dress.gd",
+   "provenance": {
+    "recipe": "tools/blender/bosses/arena_bowl_yard.py"
+   },
+   "exception": {
+    "tris": 40000,
+    "verts": 60000,
+    "draws": 22
+   },
+   "exception_why": "World 1 unit 9 (Slag Bowl to sibling parity): the Fleet yard behind the bowl's rim, one static GLB of seven yard parts, two melt parts and two plush crew that the dress seats by MultiMesh (about 150 seats, shadows off). No physics bodies. The bowl's draws were 341 against 861 to 967 for the Wardens on the 4080 (perf-s3-profile, 18 Oct)."
+  },
+  {
    "assembly": {
     "height": 0.65,
     "radius": 36,
@@ -30920,6 +30936,7 @@
   "annex_hall_detail1",
   "annex_hall_detail2",
   "arena_bowl_foundry",
+  "arena_bowl_yard",
   "arena_waking_rim_sector.glb",
   "barge",
   "barge_detail1",
