@@ -12,6 +12,7 @@ const Bolts := preload("res://src/combat/bolts.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const Director := preload("res://src/world/director.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
 # Dense-scene diagnostic. Synthetic attacks do not establish gameplay or human readability.
 # Does a hostile telegraph stay readable when the screen fills, and what do the effect
@@ -23,6 +24,9 @@ const WorldLook := preload("res://src/presentation/world_look.gd")
 # After four seconds of warmup, time 240 live frames while preserving the fixture load.
 # Then pause and save six paired images to isolate P1 edges from fills and scenery.
 # Needs imported assets and a real display; see FEEL-READABILITY.md section 6.3.
+# Options, all after `--`: --out=<dir> (required), --stage, --calm, --dry, --size, --timeout and
+# --impact=hold (forces impact-frame fires in the sample phase so impact_ms_per_fire is read
+# from real fires; opt-in, notes at --calm below).
 # --dry=1 skips readback and writes schema/control-flow evidence only, never pixels or
 # valid performance evidence. Synthetic attacks recycle and do not resolve damage.
 
@@ -41,7 +45,12 @@ const EXTRA_COPIES := ["spiral_wave", "chain_arc", "cross_split", "gatling_heart
 const HUE_TOL := 12.0
 const SAT_MIN := 0.5
 const VAL_MIN := 0.25
+# A run is strong when S3's differential mask holds at least this many candidate pixels, so the
+# P1 bar reads straight from the file (ruling #241 comment 6332468877).
+const STRONG_MIN := 50000
 const RIVET_SEED := 1
+# --impact=hold: the shortest gap between forced fires, the game's own rate limit.
+const IMPACT_HOLD_PERIOD_S := PlayerFx.FRAME_GAP_S
 
 var _out := ""
 var _game
@@ -61,6 +70,8 @@ var _last_usec := 0
 var _committed := false
 var _warden_note := ""
 var _spawned_at_start := {}
+# PlayerFx impact-frame counters when the sample window opened (see _impact_counters).
+var _impact_at_sample := [0, 0, 0, 0, 0]
 var _images := {}
 var _render_rid: RID
 var _dry := false
@@ -70,6 +81,18 @@ var _errors: Array = []
 # --stage=N (1..6) runs the scenes on that stage of the launched park table and tags every
 # output file "stN-"; absent, the run is stage 1 of the default table with untagged names.
 # --timeout=<seconds> and --size=WxH (default 1920x1080) are for slow software renderers.
+# --calm=1 holds no fire and no roll, so no hit bursts or speed lines reach the frame; the
+# telegraphs, packs and light are the same. It tags outputs "calm-" (the dusk P1 split, #241).
+# Contact hits can still fire impact frames under calm (measured: 3 and 6 fires in two scenes).
+# --impact=hold forces impact frames during the sample phase, so impact_ms_per_fire reads from
+# real fires over the scene's live warnings (the 4080 read for lighting L7, #297): each scene
+# asks PlayerFx.impact_frame (at the ball, strength 1.0) every IMPACT_HOLD_PERIOD_S of
+# sample time, the shortest gap the game itself allows (PlayerFx.FRAME_GAP_S; a gated ask
+# retries on the next frame). The scene's synthetic telegraphs are the warnings: S2 holds 16
+# and S3 32, plus the packs' own. Each result then also carries "impact_hold": forced fires,
+# the period and the fewest and most hostile marks (Threat.GROUP) standing at a fire. Opt-in:
+# absent, no fire is forced, no field is added and the output names are as before; present,
+# outputs are tagged "impact-". Meaningful only on a rendered display, like the rest of the tool.
 var _stage := 1
 var _staged := false
 var _entered := false
@@ -77,6 +100,11 @@ var _table := ""
 var _tag := ""
 var _timeout := HARD_TIMEOUT
 var _size := Vector2i(1920, 1080)
+var _calm := false
+var _impact_hold := false
+var _impact_clock := 0.0
+# Hostile marks standing at each forced fire, this scene.
+var _impact_marks: Array = []
 
 
 func _initialize() -> void:
@@ -108,6 +136,12 @@ func _initialize() -> void:
 		_tag = "st%d-" % _stage
 		_table = "park"
 	_table = settings.get("table", _table)
+	_calm = settings.get("calm", "0") == "1"
+	if _calm:
+		_tag += "calm-"
+	_impact_hold = settings.get("impact", "") == "hold"
+	if _impact_hold:
+		_tag += "impact-"
 	if not _out.is_absolute_path() or DirAccess.make_dir_recursive_absolute(_out) != OK:
 		printerr("stress_capture: --out must be an absolute writable directory")
 		quit(2)
@@ -178,11 +212,13 @@ func _process(delta: float) -> bool:
 			if t >= PLAY_SECONDS:
 				_phase = "sample"
 				_last_usec = now
+				_impact_open()
 		"sample":
 			_maintain_load()
 			_step_threats(delta)
 			_frames.append(_sample(dt_ms))
 			_count_samples.append(_counts())
+			_hold_impact(delta)
 			if _frames.size() >= SAMPLE_FRAMES:
 				_busy = true
 				_capture()
@@ -204,7 +240,7 @@ func _physics_process(_delta: float) -> bool:
 # Fire held, a slow roll forward, the camera turned toward the nearest non-Warden enemy
 # the way bot_driver._look turns it (mouse pixels through camera.look).
 func _hold_fire() -> void:
-	var hold := {"fire_held": true, "move": Vector2(0.25, 0.25)}
+	var hold := {"fire_held": not _calm, "move": Vector2.ZERO if _calm else Vector2(0.25, 0.25)}
 	_driver.source.hold = hold
 	var ball: Vector3 = _game.player.ball_position()
 	var best: Node3D = null
@@ -292,6 +328,66 @@ func _next_scene() -> void:
 	_spawned_at_start = (_vfx().spawned as Dictionary).duplicate() if _vfx() != null else {}
 	_phase = "play"
 	_phase_usec = Time.get_ticks_usec()
+
+
+# [fires, rect calls, rect usec, shape calls, shape usec] so far. A fire is rate-limited
+# (PlayerFx.FRAME_GAP_S), so fires can be fewer than the hits that asked. A rect call is one
+# refresh of a live impact frame (the source and the uniform upload), made every live frame;
+# a shape call is one build and draw of its pieces, made once per fire (ImpactFrame).
+func _impact_counters() -> Array:
+	var fx = _game.presentation.player_fx
+	if fx == null or fx._frame == null:
+		return [0, 0, 0, 0, 0]
+	var f = fx._frame
+	return [int(fx.spawned.get("impact_frame", 0)), f.rect_calls, f.rect_usec, f.shape_calls, f.shape_usec]
+
+
+# --impact=hold: asks for a fire every IMPACT_HOLD_PERIOD_S of sample time. The game's rate
+# limit and its own checks decide whether it fires; a refused ask is retried next frame.
+func _hold_impact(delta: float) -> void:
+	var fx = _game.presentation.player_fx
+	if not _impact_hold or fx == null:
+		return
+	_impact_clock += delta
+	if _impact_clock < IMPACT_HOLD_PERIOD_S:
+		return
+	var marks := get_nodes_in_group(Threat.GROUP).size()
+	if fx.impact_frame(_game.player.ball_position(), 1.0):
+		_impact_clock = 0.0
+		_impact_marks.append(marks)
+
+
+# Opens a window: the worst single call is reset so the window's max is its own.
+func _impact_open() -> void:
+	_impact_clock = 0.0
+	_impact_marks = []
+	_impact_at_sample = _impact_counters()
+	var fx = _game.presentation.player_fx
+	if fx != null and fx._frame != null:
+		fx._frame.rect_usec_max = 0
+		fx._frame.shape_usec_max = 0
+
+
+# What the impact frame did since the sample window opened: fires, the refresh and shapes
+# cost in ms per call, and ms per fire (all refreshes plus all shapes over the fires), the
+# figure the 0.2 ms bar reads.
+func _impact_window() -> Dictionary:
+	var now := _impact_counters()
+	var fires: int = now[0] - _impact_at_sample[0]
+	var rect_calls: int = now[1] - _impact_at_sample[1]
+	var rect_usec: int = now[2] - _impact_at_sample[2]
+	var shape_calls: int = now[3] - _impact_at_sample[3]
+	var shape_usec: int = now[4] - _impact_at_sample[4]
+	var rect_max := 0.0
+	var shape_max := 0.0
+	var fx = _game.presentation.player_fx
+	if fx != null and fx._frame != null:
+		rect_max = fx._frame.rect_usec_max / 1000.0
+		shape_max = fx._frame.shape_usec_max / 1000.0
+	return {"fired": fires,
+		"rect_ms": {"calls": rect_calls, "mean": snappedf(float(rect_usec) / 1000.0 / float(rect_calls), 0.0001) if rect_calls > 0 else 0.0, "max": snappedf(rect_max, 0.0001)},
+		"shapes_ms": {"calls": shape_calls, "mean": snappedf(float(shape_usec) / 1000.0 / float(shape_calls), 0.0001) if shape_calls > 0 else 0.0, "max": snappedf(shape_max, 0.0001)},
+		"ms_per_fire": snappedf(float(rect_usec + shape_usec) / 1000.0 / float(fires), 0.0001) if fires > 0 else 0.0}
 
 
 func _vfx():
@@ -434,6 +530,7 @@ func _capture() -> void:
 	var id: String = scene["id"]
 	paused = true
 	var counts := _counts()
+	var impact := _impact_window()
 	var fx := _player_fx()
 	var threats := get_nodes_in_group(Threat.GROUP)
 	var edges: Array = []
@@ -474,8 +571,11 @@ func _capture() -> void:
 	_results.append({"scene": id, "packs": scene["packs"], "telegraphs_committed": _scene_threats.size(),
 		"synthetic_per_type": scene["per_type"], "edge_nodes": edges.size(), "unsupported_threats": unsupported,
 		"warden": _warden_note, "counts": counts, "pre_capture_frames": _stats(_pre_frames),
-		"frames": _stats(_frames), "count_samples": _count_samples.duplicate(),
+		"frames": _stats(_frames), "impact_frames_fired": impact["fired"], "impact_rect_ms": impact["rect_ms"], "impact_shapes_ms": impact["shapes_ms"], "impact_ms_per_fire": impact["ms_per_fire"], "count_samples": _count_samples.duplicate(),
 		"load_valid": counts["fixture_enemies_live"] == int(scene["packs"]) * 4 and counts["synthetic_threats_live"] == int(scene["per_type"]) * 4})
+	if _impact_hold:
+		_results.back()["impact_hold"] = {"forced_fires": _impact_marks.size(), "period_s": IMPACT_HOLD_PERIOD_S,
+			"marks_min": _impact_marks.min() if not _impact_marks.is_empty() else 0, "marks_max": _impact_marks.max() if not _impact_marks.is_empty() else 0}
 	paused = false
 	_last_usec = 0
 	_busy = false
@@ -653,7 +753,7 @@ func _finish(reason: String) -> void:
 				_errors.append("load fell below target during sampling: " + result["scene"])
 				break
 	var info := {
-		"reason": reason, "dry_schema_only": _dry, "stage": _stage, "time_id": WorldLook.time_id(_stage), "table": _table if not _table.is_empty() else "default", "errors": _errors,
+		"reason": reason, "dry_schema_only": _dry, "stage": _stage, "time_id": WorldLook.time_id(_stage), "table": _table if not _table.is_empty() else "default", "calm": _calm, "errors": _errors,
 		"godot": Engine.get_version_info()["string"], "source_sha256": _source_hashes(),
 		"timing": "uncapped frame intervals; captures and analysis excluded; replenishment included; GPU zero means unavailable",
 		"class": _game.run.class_id() if _game != null and _game.run != null else "",
@@ -662,12 +762,13 @@ func _finish(reason: String) -> void:
 		"granted_parts": _granted, "hazard": "#ff5a3c", "hue_tol_deg": HUE_TOL, "sat_min": SAT_MIN, "val_min": VAL_MIN,
 		"wall_seconds": snappedf(_seconds_since(_start_usec), 0.1), "scenes": _results,
 	}
-	var file := FileAccess.open(_out.path_join("stress.json" if not _staged else "stress-st%d.json" % _stage), FileAccess.WRITE)
+	info.merge(_strength(_results))
+	var file := FileAccess.open(_out.path_join("stress.json" if _tag.is_empty() else "stress-%s.json" % _tag.trim_suffix("-")), FileAccess.WRITE)
 	if file != null:
 		file.store_string(JSON.stringify(info, "  "))
 		file.close()
 	else:
-		printerr("stress_capture: could not write " + ("stress.json" if not _staged else "stress-st%d.json" % _stage))
+		printerr("stress_capture: could not write " + ("stress.json" if _tag.is_empty() else "stress-%s.json" % _tag.trim_suffix("-")))
 		quit(1)
 		return
 	if reason == "done" and not _dry and OS.execute("which", ["montage"]) == 0:
@@ -675,7 +776,7 @@ func _finish(reason: String) -> void:
 		for id in ["s1", "s2", "s3"]:
 			for kind in ["full", "threats-only", "no-threats"]:
 				args.append(_out.path_join("%s%s-%s.png" % [_tag, id, kind]))
-		args.append_array(["-tile", "3x3", "-geometry", "640x360+4+4", "-background", "#202020", _out.path_join("contact-stress.jpg" if not _staged else "contact-stress-st%d.jpg" % _stage)])
+		args.append_array(["-tile", "3x3", "-geometry", "640x360+4+4", "-background", "#202020", _out.path_join("contact-stress.jpg" if _tag.is_empty() else "contact-stress-%s.jpg" % _tag.trim_suffix("-"))])
 		OS.execute("montage", PackedStringArray(args))
 	print("stress_capture: %s, %d scenes in %s" % [reason, _results.size(), _out])
 	quit(0 if reason == "done" and _errors.is_empty() else 1)
@@ -731,6 +832,18 @@ func _edge_coverage(imgs: Dictionary, id: String) -> Dictionary:
 		"valid": not _dry and candidates >= 100, "minimum_reference_delta": 12, "contrast_retention": 0.5}
 
 
+# s3_mask_px is S3's P1 candidate pixel count, -1 when S3 has no analysed edges. Strong also
+# needs S3's mask valid (a display run with no unsupported painters), as the bar does.
+static func _strength(results: Array) -> Dictionary:
+	var mask := -1
+	var valid := false
+	for result in results:
+		if result.get("scene", "") == "s3" and result.has("p1_edges"):
+			mask = int(result["p1_edges"]["candidate_pixels"])
+			valid = bool(result["p1_edges"].get("valid", false))
+	return {"s3_mask_px": mask, "strong": valid and mask >= STRONG_MIN}
+
+
 func _source_hashes() -> Dictionary:
 	var hashes := {}
 	for path in ["res://tools/stress_capture.gd", "res://src/combat/telegraph.gd",
@@ -755,6 +868,19 @@ func _metric_self_test() -> void:
 		"full": full, "full_no_edges": empty}, "self-test-quarter")
 	var missing := _edge_coverage({"threats": empty, "clean_no_edges": empty,
 		"full": empty, "full_no_edges": empty}, "self-test-empty")
-	var passed: bool = known["candidate_pixels"] == 400 and known["lost_pixels"] == 100 and is_equal_approx(known["lost_pct"], 25.0) and known["valid"] and not missing["valid"] and missing["lost_pct"] == -1.0 and _errors.is_empty()
-	print("stress_capture metric self-test: ", "PASS" if passed else "FAIL", " ", JSON.stringify({"quarter": known, "empty": missing}))
+	# Planted controls: a telegraph off-screen leaves S3 an empty mask and must not read strong;
+	# a valid mask of exactly STRONG_MIN pixels must, and an invalid one must not.
+	var wide := Image.create(250, 200, false, Image.FORMAT_RGB8)
+	wide.fill(Color(0.5, 0.5, 0.5))
+	var wide_empty := Image.create(250, 200, false, Image.FORMAT_RGB8)
+	wide_empty.fill(Color.BLACK)
+	var at_floor := _edge_coverage({"threats": wide, "clean_no_edges": wide_empty,
+		"full": wide, "full_no_edges": wide_empty}, "self-test-floor")
+	var off_screen := _strength([{"scene": "s3", "p1_edges": missing}])
+	var floor_run := _strength([{"scene": "s3", "p1_edges": at_floor}])
+	var below_run := _strength([{"scene": "s3", "p1_edges": {"candidate_pixels": STRONG_MIN - 1, "valid": true}}])
+	var invalid_run := _strength([{"scene": "s3", "p1_edges": {"candidate_pixels": STRONG_MIN, "valid": false}}])
+	var strength_ok: bool = off_screen == {"s3_mask_px": 0, "strong": false} and floor_run == {"s3_mask_px": STRONG_MIN, "strong": true} and not below_run["strong"] and not invalid_run["strong"] and _strength([])["s3_mask_px"] == -1
+	var passed: bool = strength_ok and known["candidate_pixels"] == 400 and known["lost_pixels"] == 100 and is_equal_approx(known["lost_pct"], 25.0) and known["valid"] and not missing["valid"] and missing["lost_pct"] == -1.0 and _errors.is_empty()
+	print("stress_capture metric self-test: ", "PASS" if passed else "FAIL", " ", JSON.stringify({"quarter": known, "empty": missing, "off_screen": off_screen, "floor": floor_run}))
 	quit(0 if passed else 1)
