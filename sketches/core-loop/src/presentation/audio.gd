@@ -384,6 +384,7 @@ func setup(ctx_ref) -> void:
 	_make_buses()
 	live_output = AudioServer.get_driver_name() != "Dummy"
 	engine = MusicEngine.new()
+	engine.warm_stingers = live_output
 	if ctx.has_method("aim_forward"):
 		engine.set_parameter_source(sample_run_parameters)
 		engine.parameter_commit.connect(_commit_band_parameters)
@@ -534,6 +535,7 @@ func _exit_tree() -> void:
 	if _rest_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_rest_task)
 		_rest_task = -1
+	MusicEngine.settle_stingers()
 	_finish_opening()
 	# Stop every player and drop the playbacks, or the polyphonic ones outlive the tree.
 	for child in get_children():
