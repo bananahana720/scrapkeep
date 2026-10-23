@@ -58,6 +58,7 @@ static func settle() -> void:
 		var path: String = dir.path_join(PARTS[key][0])
 		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 			ResourceLoader.load_threaded_get(path)
+	_kit_ahead = {}
 
 
 # Rebuilds the next kit part on the main thread, once its file has loaded: one part a call, so the
