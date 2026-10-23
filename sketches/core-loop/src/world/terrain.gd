@@ -97,6 +97,8 @@ var publish: Callable
 var _threaded: Array[bool] = []
 # Per stage index: {"tops": [Vector3], "blockers": [zone]} for perch_near, derived on the first ask.
 var _perches := {}
+# A park stage's perch lists read on a worker once its ground is built (_perch_read_ahead): {i: {task, out}}.
+var _perch_ahead := {}
 
 # A park stage left memory (_free_stage), by stage number, so a module that hung nodes on its
 # root (world.gd's contraptions) drops them.
@@ -316,6 +318,7 @@ func _on_park_built(i: int) -> void:
 	if maps[i] is ParkMap:
 		ParkRecipes.build_placed(_roots[i], maps[i].park, _park_floor_at.bind(_heights[i], _placement_holes[i], _under[i]), publish, _threaded[i])
 	Scatter.build_chunked(_roots[i], maps[i], ground_callable(i + 1), _worker_builds())
+	_perch_read_ahead(i)
 	stage_built.emit(i + 1)
 
 
@@ -403,6 +406,7 @@ func _free_stage(i: int) -> void:
 	_grounds[i] = null
 	_cave_roofs.erase(i)
 	_perches.erase(i)
+	_take_perch_ahead(i)
 	_placement_holes.erase(i)
 	_heights[i] = PackedFloat32Array()
 	_holes[i] = PackedByteArray()
@@ -458,9 +462,40 @@ func perch_near(point: Vector3, salt := 0) -> Vector3:
 		return Vector3.INF
 	var i := _index(stage)
 	if not _perches.has(i):
-		_ensure(stage)
-		_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park), "ledges": PerchPoints.ledges(m.park, height)}
+		var ahead := _take_perch_ahead(i)
+		# The worker read the bare ground; height() matches it only while no overlay or cave roof stands on it.
+		if not ahead.is_empty() and overlays.is_empty() and _cave_roofs.get(i, {}).is_empty():
+			_perches[i] = ahead
+		else:
+			_ensure(stage)
+			_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park), "ledges": PerchPoints.ledges(m.park, height)}
 	return PerchPoints.pick(_perches[i]["tops"], point, height, _perches[i]["blockers"], salt, _perches[i]["ledges"])
+
+
+# The first perch read of a stage walked every landform sample's rings through height(): 80 to 390 ms of one
+# frame by park (stage 6 about 300 ms in a played run, PR #372). Read them on a worker as soon as the ground
+# is built, over the same bare ground height() reads (_park_floor_at); perch_near takes them when nothing
+# stands on that ground yet.
+func _perch_read_ahead(i: int) -> void:
+	var m = maps[i]
+	if not (m is ParkMap) or not m.ok or _perch_ahead.has(i) or _perches.has(i):
+		return
+	var park: Dictionary = m.park
+	var ground := _park_floor_at.bind(_heights[i], _holes[i], _under[i])
+	var out := {}
+	_perch_ahead[i] = {"out": out, "task": WorkerThreadPool.add_task(func():
+		out.merge({"tops": PerchPoints.derive(park, ground), "blockers": PerchPoints.blockers(park), "ledges": PerchPoints.ledges(park, ground)}),
+		false, "perch read")}
+
+
+# Waits on a stage's worker perch read and drops it; its lists, or {} when none was read.
+func _take_perch_ahead(i: int) -> Dictionary:
+	if not _perch_ahead.has(i):
+		return {}
+	var ahead: Dictionary = _perch_ahead[i]
+	_perch_ahead.erase(i)
+	WorkerThreadPool.wait_for_task_completion(ahead.task)
+	return ahead.out
 
 
 func spawn_point(index: int) -> Vector3:
