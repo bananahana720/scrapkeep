@@ -36,6 +36,7 @@ These fail on the base too. The machine's fixes are on `scratch/base-red-w16` (`
 - Swarm `runner_gunner` "stall": cloud out-of-memory kills, not a game bug; rerun alone.
 - Swarm grown and 2x misses (base grown 51.71 s); #104 is gated on no regression against `f9f58944`.
 - Cloud-only false fails: `item_fuzz_smoke`, `park_swap`, `tree_play`, `alpha_bot_sweep`, `persistence_truncation`, `juice_budget` peak shake, `line_sound` HLs-3. `scatter_rows` hash mismatch is unresolved.
+- Oggs-present vs Oggs-absent base: the packed music Oggs are gitignored, so cloud boxes have none and the game plays the synth engine, while a PC with synced Oggs plays ACE. Music tests (`park_music_suspend_game_test`, `ace_tracks_test`, the phase music tests) can pass on one and fail on the other. Compare a head and its base with the same Ogg state, and name that state in the receipt (23 Oct, #411).
 
 ## Staging still owes
 
