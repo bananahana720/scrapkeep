@@ -58,6 +58,8 @@ test("parseArgs needs a source and checks its numbers", () => {
   assert.throws(() => parseArgs(["--run", "--jobs=0"]), PacingError);
   assert.throws(() => parseArgs(["--run", "--level=hard"]), PacingError);
   assert.throws(() => parseArgs(["--run", "--seeds=1,x"]), PacingError);
+  assert.throws(() => parseArgs(["--run", "--seeds"]), PacingError);
+  assert.throws(() => parseArgs(["--budget"]), PacingError);
   const args = parseArgs(["--run", "--seeds=1,2", "--pilots=seed", "--level=target", "--jobs=2"]);
   assert.deepEqual(args.seeds, [1, 2]);
   assert.deepEqual(args.pilots, ["seed"]);
@@ -156,4 +158,20 @@ test("buildJobs plays every policy, pilot and seed with the budget's flags", () 
   const explore = (label) => jobs.find((j) => j.label === label).args.some((a) => a.startsWith("--explore-by="));
   assert.equal(explore("skipper tarn 1"), false);
   assert.equal(explore("completionist tarn 1"), true);
+});
+
+test("a launched run that wrote no row counts against reach", () => {
+  const rows = [row(), row({ policy: "completionist", dam: 400, flume: 400, boss: 120 })];
+  assert.equal(evaluate(budget, rows, "floor").pass, true);
+  const result = evaluate(budget, rows, "floor", { skipper: 2, completionist: 1 });
+  assert.equal(result.pass, false);
+  assert.equal(result.runs.skipper.runs, 2);
+  assert.equal(result.runs.skipper.rows, 1);
+});
+
+test("readRows reads a folder named twice once", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "pacing-"));
+  mkdirSync(path.join(dir, "a"));
+  writeFileSync(path.join(dir, "a", "bots.ndjson"), `${JSON.stringify(row())}\n`);
+  assert.equal(readRows([dir, path.join(dir, "a")]).length, 1);
 });

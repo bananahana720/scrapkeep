@@ -18,7 +18,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches/core-loop");
 export const DEFAULT_BUDGET = path.join(sketch, "design-v3/pacing/world1-pacing.json");
 const recordedBinary = "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64";
-const RUN_TIMEOUT_MS = 3_000_000;
+const RUN_TIMEOUT_MS = 1_800_000;
 
 export class PacingError extends Error {}
 
@@ -26,6 +26,7 @@ export function parseArgs(argv) {
   const args = { budget: DEFAULT_BUDGET, from: [], run: false, level: "floor", jobs: 4, seeds: null, pilots: null, out: null };
   for (const arg of argv) {
     const [key, value] = arg.includes("=") ? [arg.slice(0, arg.indexOf("=")), arg.slice(arg.indexOf("=") + 1)] : [arg, null];
+    if (key !== "--run" && !value) throw new PacingError(`${key} needs a value: ${arg}`);
     if (key === "--run") args.run = true;
     else if (key === "--budget") args.budget = path.resolve(value);
     else if (key === "--from") args.from.push(path.resolve(value));
@@ -67,7 +68,10 @@ export function median(values) {
 // Every bots.ndjson in dir or one level below it (a --run output keeps one folder per job).
 export function readRows(dirs) {
   const rows = [];
+  const seen = new Set();
   const read = (file) => {
+    if (seen.has(path.resolve(file))) return;
+    seen.add(path.resolve(file));
     for (const line of readFileSync(file, "utf8").split("\n"))
       if (line.trim()) rows.push(JSON.parse(line));
   };
@@ -76,7 +80,7 @@ export function readRows(dirs) {
     if (existsSync(path.join(dir, "bots.ndjson"))) read(path.join(dir, "bots.ndjson"));
     for (const child of readdirSync(dir)) {
       const file = path.join(dir, child, "bots.ndjson");
-      if (statSync(path.join(dir, child)).isDirectory() && existsSync(file)) read(file);
+      if (existsSync(file) && statSync(file).isFile()) read(file);
     }
   }
   return rows;
@@ -121,7 +125,8 @@ function band(id, policy, value, limits, level, factor, extra = {}) {
   return { id, policy, value, ...limits, human_min: human, status, ...extra };
 }
 
-export function evaluate(budget, rows, level = "floor") {
+// expected (policy -> runs launched) makes a run that crashed or wrote no row count against reach.
+export function evaluate(budget, rows, level = "floor", expected = {}) {
   const factor = budget.human_per_bot.value;
   const parks = budget.stages.filter((s) => s.stage !== "boss");
   const checks = [];
@@ -130,9 +135,10 @@ export function evaluate(budget, rows, level = "floor") {
   for (const policy of budget.measure.policies) {
     const mine = rows.filter((r) => r.policy === policy);
     const finished = mine.filter(done);
-    const reach = mine.length ? finished.length / mine.length : 0;
-    runs[policy] = { runs: mine.length, done: finished.length, stalled: mine.filter((r) => !done(r)).map((r) => ({ seed: r.seed, class: r.class, outcome: r.outcome })) };
-    checks.push({ id: "reach", policy, value: reach, floor: budget.reach.floor, status: mine.length && reach >= budget.reach.floor ? "pass" : "fail" });
+    const launched = Math.max(mine.length, expected[policy] ?? 0);
+    const reach = launched ? finished.length / launched : 0;
+    runs[policy] = { runs: launched, rows: mine.length, done: finished.length, stalled: mine.filter((r) => !done(r)).map((r) => ({ seed: r.seed, class: r.class, outcome: r.outcome })) };
+    checks.push({ id: "reach", policy, value: reach, floor: budget.reach.floor, status: launched && reach >= budget.reach.floor ? "pass" : "fail" });
     const total = median(finished.map((r) => r.game_seconds));
     checks.push(band("run", policy, total, budget.run[policy], level, factor, {
       range: finished.length ? [Math.min(...finished.map((r) => r.game_seconds)), Math.max(...finished.map((r) => r.game_seconds))] : null,
@@ -227,6 +233,7 @@ export function buildJobs(budget, args, outDir) {
         const botArgs = [`--out=${out}`, `--policy=${policy}`, `--seeds=${seed}`, `--table=${budget.measure.table}`, `--stages=${budget.measure.stages}`, ...budget.measure.bot_args, ...(budget.measure.policy_args?.[policy] ?? [])];
         if (pilot !== "seed") botArgs.push(`--pilot=${pilot}`);
         jobs.push({
+          policy,
           label: `${policy} ${pilot} ${seed}`,
           out,
           args: ["--headless", "--fixed-fps", "90", "--path", sketch, "--script", "res://tools/bot_run.gd", "--", ...botArgs],
@@ -276,7 +283,14 @@ async function main() {
     console.error(`pacing-check: ${error.message}`);
     process.exit(2);
   }
-  const budget = loadBudget(args.budget);
+  let budget;
+  try {
+    budget = loadBudget(args.budget);
+  } catch (error) {
+    console.error(`pacing-check: ${error.message}`);
+    process.exit(2);
+  }
+  const expected = {};
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const outDir = args.out ?? path.join(root, "artifacts/local/pacing", stamp);
   mkdirSync(outDir, { recursive: true });
@@ -289,6 +303,7 @@ async function main() {
       process.exit(2);
     }
     const jobs = buildJobs(budget, args, outDir);
+    for (const job of jobs) expected[job.policy] = (expected[job.policy] ?? 0) + 1;
     console.log(`pacing: ${jobs.length} bot runs, ${args.jobs} at a time (${os.cpus().length} CPUs)`);
     jobResults = await runPool(binary, jobs, args.jobs);
     args.from.push(path.join(outDir, "bots"));
@@ -296,7 +311,7 @@ async function main() {
   }
   header.from = args.from.map((d) => path.relative(root, d) || d).join(", ");
   const rows = readRows(args.from);
-  const result = evaluate(budget, rows, args.level);
+  const result = evaluate(budget, rows, args.level, expected);
   writeFileSync(path.join(outDir, "summary.json"), `${JSON.stringify({ ...result, header, jobs: jobResults }, null, 2)}\n`);
   const report = renderMarkdown(result, header);
   writeFileSync(path.join(outDir, "report.md"), report);

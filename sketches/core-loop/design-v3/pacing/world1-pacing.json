@@ -10,9 +10,9 @@
     "pilots": ["pylon_engineer", "runner_gunner", "tarn"],
     "bot_args": ["--gate=1", "--warm-band=1"],
     "policy_args": {
-      "completionist": ["--explore-by=480"]
+      "completionist": ["--explore-by=520"]
     },
-    "about": "bot_args go to every run, policy_args to that policy's runs. --explore-by lets the completionist keep rolling optional content to stage second 480 (the default explorer leaves for the Warden at 140 s and stalls at 240 s, so it cannot show a park longer than about 4 minutes)."
+    "about": "bot_args go to every run, policy_args to that policy's runs. --explore-by lets the completionist keep rolling optional content to stage second 520 (its stall cap then sits at 620 s, above the 600 s park band) (the default explorer leaves for the Warden at 140 s and stalls at 240 s, so it cannot show a park longer than about 4 minutes)."
   },
   "human_per_bot": {
     "value": 1.75,

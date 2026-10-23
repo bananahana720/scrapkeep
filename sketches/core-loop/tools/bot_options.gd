@@ -1,5 +1,7 @@
 extends RefCounted
 
+const BotDriver := preload("res://tools/bot_driver.gd")
+
 const FAST_FLAGS := ["bot-no-mix", "bot-no-visuals", "bot-no-pilot-tracks"]
 const UNREAD_VISUALS := [
 	"res://src/presentation/warden_ring.gd",
