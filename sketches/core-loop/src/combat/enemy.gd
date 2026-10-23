@@ -854,7 +854,7 @@ func _facts_row(is_lane: bool) -> String:
 	var found: Array = []
 	for id in EventKinds.ATTACK_ROWS:
 		var row: Dictionary = EventKinds.ATTACK_ROWS[id]
-		if row["group"] == "enemy" and row["owner_kind"] == "roster" and row["owner"] == kind:
+		if row["group"] == "enemy" and row["owner_kind"] in ["roster", "rogue"] and row["owner"] == kind:
 			found.append(id)
 	if found.size() <= 1:
 		return "" if found.is_empty() else found[0]

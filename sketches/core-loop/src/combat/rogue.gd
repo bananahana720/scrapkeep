@@ -42,11 +42,11 @@ const SCALE_MAX := 1.25
 # `anthem` is its tune id (the music lane adds the TUNES row with the track); until then the
 # miniboss tune plays. Sizes are metres at scale 1.
 const ROWS := {
-	"rogue_crane": {"world": 1, "name": "Gate Crane No. 14", "crew": "14", "anthem": "anthem-gate-crane", "bpm": 140.0,
+	"rogue_crane": {"world": 1, "name": "Gate Crane No. 14", "crew": "14", "anthem": "anthem-gate-crane", "anthem_heavy": "anthem-gate-crane-heavy", "bpm": 140.0,
 		"hp": 640.0, "radius": 2.4, "half_height": 3.6, "attacks": ["sweep", "drop"]},
-	"rogue_skip": {"world": 2, "name": "Haul Skip No. 31", "crew": "31", "anthem": "anthem-haul-skip", "bpm": 145.0,
+	"rogue_skip": {"world": 2, "name": "Haul Skip No. 31", "crew": "31", "anthem": "anthem-haul-skip", "anthem_heavy": "anthem-haul-skip-heavy", "bpm": 145.0,
 		"hp": 700.0, "radius": 2.6, "half_height": 2.4, "attacks": ["haul", "dump"]},
-	"rogue_tender": {"world": 3, "name": "Cable Tender No. 7", "crew": "7", "anthem": "anthem-cable-tender", "bpm": 150.0,
+	"rogue_tender": {"world": 3, "name": "Cable Tender No. 7", "crew": "7", "anthem": "anthem-cable-tender", "anthem_heavy": "anthem-cable-tender-heavy", "bpm": 150.0,
 		"hp": 660.0, "radius": 2.3, "half_height": 3.0, "attacks": ["harpoon", "whip"]},
 }
 
@@ -60,9 +60,37 @@ const ATTACKS := {
 	"whip": {"wind": 4.0, "strike": 1.0, "shape": "ring", "radius": 9.0, "damage": 22.0, "shove": 11.0},
 }
 
+# The sculpted bodies (design-v3/rogues/BRIEFS.md): one GLB per machine on the miniboss
+# contract, <prefix>Hull/Armour/Core with slots fleet_paint/part_state/core_state, rigid pose
+# bones named <bone><Part>, -Z facing, origin at the collider centre. A missing or malformed
+# GLB falls back to the primitive body. `moving` lists the bones each machine's work drives;
+# `reach` is how far forward the hook or harpoon hangs at rest, in model metres.
+const MODELS := {
+	"rogue_crane": {"path": "res://assets/models/rogues/gate_crane.glb", "prefix": "GateCrane", "bone": "Crane",
+		"moving": ["Hook", "Leaf"], "reach": 6.9},
+	"rogue_skip": {"path": "res://assets/models/rogues/haul_skip.glb", "prefix": "HaulSkip", "bone": "Skip",
+		"moving": ["Bucket", "Wheel0", "Wheel1", "Wheel2", "Wheel3"], "reach": 0.0},
+	"rogue_tender": {"path": "res://assets/models/rogues/cable_tender.glb", "prefix": "CableTender", "bone": "Tender",
+		"moving": ["Spool", "Harpoon"], "reach": 6.0},
+}
+const MODEL_PARTS := {"Hull": "fleet_paint", "Armour": "part_state", "Core": "core_state"}
+const MODEL_BONES := ["Body", "Governor", "PlateLeft", "PlateRight"]
+const PLATE_OPEN := 1.0
+const WHEEL_RADIUS := 0.63
+const GOVERNOR_SPIN := 7.0
+
+# Phase two (Andrew 19:02Z 23 Oct: mini-bosses have two phases, and phase two ratchets up).
+# Below half health the machine winds up faster, and its first attack chains straight into
+# its second with no vented window between: the crane bats the ball into the leaf's ring,
+# the skip dumps where its haul ends, the tender whips the ball its harpoon reeled in. Its
+# anthem moves to the heavier variant id (`anthem_heavy`), which plays once it has a row.
+const PHASE_TWO_AT := 0.5
+const PHASE_TWO_WIND := 0.75
+
 enum State { STALK, WIND, STRIKE, WEAK }
 
 var row := {}
+var phase := 1
 var site_scale := 1.0
 var state := State.STALK
 var attack := ""
@@ -81,6 +109,21 @@ var _hook_rest := Vector3.ZERO
 var _core: MeshInstance3D
 var _core_material: StandardMaterial3D
 var _plates: Array = []
+var _rig: Skeleton3D
+var _bones := {}
+var _out := 0.0
+var _open := 0.0
+var _spin := 0.0
+var _roll := 0.0
+var _tip := 0.0
+var _lift := 0.0
+var _last := Vector3.ZERO
+# Each machine's lane and ring leads in seconds, read by its WindupRows row (E34 to E39):
+# a lane hurts from its strike, a ring as it fills through wind and strike.
+var wind_lane := 0.0
+var wind_ring := 0.0
+
+static var _model_warned := {}
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -94,8 +137,31 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	plating = spec.get("plating", Miniboss.DEFAULT_PLATING)
 	scrap_value = SCRAP
 	weight = WEIGHT
+	_set_leads()
 	_build_body()
 	_fit(1.0)
+
+
+func _set_leads() -> void:
+	for name in row.attacks:
+		var beats: Dictionary = ATTACKS[name]
+		if String(beats.shape) == "ring":
+			wind_ring = (float(beats.wind) * _wind_scale() + float(beats.strike)) * beat()
+		else:
+			wind_lane = float(beats.wind) * _wind_scale() * beat()
+
+
+# The phase hook: phase 2 ratchets the machine up (see PHASE_TWO_AT). Entering a phase it is
+# already in does nothing.
+func enter_phase(next: int) -> void:
+	if next <= phase:
+		return
+	phase = next
+	_set_leads()
+
+
+func _wind_scale() -> float:
+	return PHASE_TWO_WIND if phase >= 2 else 1.0
 
 
 # Scales reach and body to the site's disc, so a rogue on an islands shelf fits the shelf.
@@ -118,7 +184,7 @@ func beat() -> float:
 
 
 func anthem() -> String:
-	return String(row.anthem)
+	return String(row.anthem_heavy if phase >= 2 else row.anthem)
 
 
 func state_name() -> String:
@@ -142,6 +208,8 @@ func knock(direction: Vector3, force: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
+	if phase == 1 and hp <= max_hp * PHASE_TWO_AT:
+		enter_phase(2)
 	_pose(delta)
 	if not _in_play() or not is_instance_valid(target):
 		_move(delta, Vector3.ZERO)
@@ -164,7 +232,7 @@ func _physics_process(delta: float) -> void:
 				_fill((_seconds("wind") + _clock) / (_seconds("wind") + _seconds("strike")))
 			_strike(delta)
 			if _clock >= _seconds("strike"):
-				_open_weak_window()
+				_finish_strike()
 		State.WEAK:
 			_move(delta, Vector3.ZERO)
 			if _clock >= WEAK_BEATS * beat():
@@ -177,7 +245,17 @@ func _is_ring() -> bool:
 
 
 func _seconds(part: String) -> float:
-	return float(ATTACKS[attack][part]) * beat()
+	return float(ATTACKS[attack][part]) * beat() * (_wind_scale() if part == "wind" else 1.0)
+
+
+# In phase two the first attack chains into the second; the second always vents.
+func _finish_strike() -> void:
+	if phase >= 2 and attack == String(row.attacks[0]):
+		_clear_telegraph()
+		_out = 0.0
+		_begin_attack(_flat_to_ball() if is_instance_valid(target) else -global_basis.z)
+		return
+	_open_weak_window()
 
 
 func _size(key: String) -> float:
@@ -222,6 +300,7 @@ func _strike(delta: float) -> void:
 			_move(delta, Vector3.ZERO)
 			# Out to the lane's end and back: a pendulum, at the far end at half time.
 			var out := 1.0 - absf(1.0 - 2.0 * t)
+			_out = out
 			var hook: Vector3 = _home + shape.dir * shape.length * out
 			if _hook != null:
 				_hook.global_position = Vector3(hook.x, _hook.global_position.y, hook.z)
@@ -243,6 +322,7 @@ func _strike(delta: float) -> void:
 				_land(shape.dir * (1.0 if leg == 0 else -1.0))
 		"harpoon":
 			_move(delta, Vector3.ZERO)
+			_out = 1.0 - absf(1.0 - 2.0 * t)
 			if _hits_this_strike == 0 and shape.contains(_ball()):
 				var home := -_flat_to_ball()
 				_land(home.normalized() if home.length() > 0.1 else Vector3.ZERO)
@@ -269,6 +349,7 @@ func _open_weak_window() -> void:
 	_clear_telegraph()
 	if _hook != null:
 		_hook.position = _hook_rest
+	_out = 0.0
 	weak_windows += 1
 	_enter(State.WEAK)
 
@@ -280,8 +361,8 @@ func _fill(value: float) -> void:
 
 
 # --- Body ---------------------------------------------------------------------------
-# Primitive bodies until the sculpted ones land (briefs in design-v3/rogues/BRIEFS.md). Each
-# keeps its working silhouette, the crew number and HIRED stamp it was issued (principle 7,
+# The sculpted GLB when it loads, else a primitive body (briefs in design-v3/rogues/BRIEFS.md).
+# The primitive keeps its working silhouette, the crew number and HIRED stamp it was issued (principle 7,
 # "All hands"), the brass governor that runs it and the cut command line that freed it. The
 # core is the service hatch the work opens: the vented window.
 
@@ -295,6 +376,8 @@ func _build_body() -> void:
 	_body.name = "RogueBody"
 	_visual_parent().add_child(_body)
 	_core_material = Palette.solid(Palette.VERDIGRIS)
+	if _build_model():
+		return
 	var plate_material := _plate_material()
 	var h := float(row.half_height)
 	var r := float(row.radius)
@@ -335,6 +418,116 @@ func _build_body() -> void:
 	_cylinder(0.12, 1.4, Vector3(r * 0.6, h - 0.3, 0.9), Palette.solid(Palette.RUST))
 	_stamp("No. " + String(row.crew), Vector3(r * 0.9 + 0.05, 0.4, 0.0), 64)
 	_stamp("HIRED", Vector3(r * 0.9 + 0.05, -0.4, 0.0), 40)
+
+
+# The GLB's crew number, HIRED stamp, governor and cut line are baked into the hull, so the
+# model adds no stamps or primitive parts.
+func _build_model() -> bool:
+	var scene := _model_scene(kind)
+	if scene == null:
+		return false
+	var model: Dictionary = MODELS[kind]
+	_base_color = Color.WHITE
+	_material = Palette.solid(Color.WHITE)
+	_material.vertex_color_use_as_albedo = true
+	# No rim mask: the plates carry the plating colour on their albedo only.
+	var plate_material := _plate_material(mask_texture([Color.BLACK], 1))
+	_body.add_child(scene)
+	_rig = scene.find_child("Skeleton3D", true, false) as Skeleton3D
+	for part in MODEL_BONES + model.moving:
+		_bones[part] = _rig.find_bone(String(model.bone) + part)
+	for part in MODEL_PARTS:
+		var mi := scene.find_child(String(model.prefix) + part, true, false) as MeshInstance3D
+		match part:
+			"Hull": mi.material_override = _material
+			"Armour": mi.material_override = plate_material
+			"Core":
+				_core = mi
+				mi.material_override = _core_material
+	return true
+
+
+static func _model_scene(model_kind: String) -> Node3D:
+	var model: Dictionary = MODELS[model_kind]
+	var path := String(model.path)
+	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
+	var scene := packed.instantiate() as Node3D if packed != null else null
+	if scene != null and _model_ok(scene, model):
+		return scene
+	if scene != null:
+		scene.free()
+	if not _model_warned.has(model_kind):
+		push_warning("rogue: missing or malformed " + path + "; using primitive fallback")
+		_model_warned[model_kind] = true
+	return null
+
+
+static func _model_ok(scene: Node3D, model: Dictionary) -> bool:
+	var rig := scene.find_child("Skeleton3D", true, false) as Skeleton3D
+	if rig == null:
+		return false
+	for part in MODEL_BONES + model.moving:
+		if rig.find_bone(String(model.bone) + part) < 0:
+			return false
+	for part in MODEL_PARTS:
+		var mi := scene.find_child(String(model.prefix) + part, true, false) as MeshInstance3D
+		if mi == null or mi.mesh == null or mi.mesh.get_surface_count() != 1:
+			return false
+		var material := mi.mesh.surface_get_material(0)
+		if material == null or material.resource_name != MODEL_PARTS[part] or (part != "Core" and mi.skin == null):
+			return false
+	return true
+
+
+func _bone(part: String, offset: Vector3, turn := Quaternion.IDENTITY) -> void:
+	var index: int = _bones[part]
+	_rig.set_bone_pose_position(index, _rig.get_bone_rest(index).origin + offset)
+	_rig.set_bone_pose_rotation(index, turn)
+
+
+# The attack poses (ATTACK_ROWS E34 to E39) are this bone work: e34_hook_swing_out and
+# e38_harpoon_run_out run the hook or harpoon down its lane, e35_leaf_hoist lifts the gate
+# leaf through the wind-up and drops it, e36_skip_route_brace rolls the wheels down the haul,
+# e37_bucket_tip tips the bucket, and e39_spool_wind spins the spool up for the whip.
+# The work drives the bones: the hatch plates swing out from their outer hinges in the vented
+# window, the governor spins while it runs the job, and each machine's tool does the attack's
+# work. Visual only: the committed telegraph alone decides a hit.
+func _pose_model(delta: float, blend: float) -> void:
+	var weak := state == State.WEAK
+	_open = lerpf(_open, PLATE_OPEN if weak else 0.0, blend)
+	_bone("PlateLeft", Vector3.ZERO, Quaternion(Vector3.UP, -_open))
+	_bone("PlateRight", Vector3.ZERO, Quaternion(Vector3.UP, _open))
+	_spin = fmod(_spin + GOVERNOR_SPIN * delta * (0.3 if weak else 1.0), TAU)
+	_bone("Governor", Vector3.ZERO, Quaternion(Vector3.UP, _spin))
+	var shown := telegraph()
+	var length: float = shown.length if shown != null and shown.shape == Telegraph.Shape.LANE else 0.0
+	var reach := -maxf(0.0, _out * length / site_scale - float(MODELS[kind].reach))
+	var fill := clampf(_clock / maxf(_seconds("wind"), 0.0001), 0.0, 1.0) if state == State.WIND else 0.0
+	match kind:
+		"rogue_crane":
+			_bone("Hook", Vector3(0.0, 0.0, reach))
+			var lift := 0.0
+			if attack == "drop":
+				lift = 1.2 * fill if state == State.WIND else (-1.4 if state == State.STRIKE else 0.0)
+			_lift = lerpf(_lift, lift, blend)
+			_bone("Leaf", Vector3(0.0, _lift, 0.0))
+		"rogue_skip":
+			var moved := global_position - _last
+			moved.y = 0.0
+			_roll = fmod(_roll + moved.dot(-global_basis.z) / (WHEEL_RADIUS * site_scale), TAU)
+			for wheel in ["Wheel0", "Wheel1", "Wheel2", "Wheel3"]:
+				_bone(wheel, Vector3.ZERO, Quaternion(Vector3.RIGHT, -_roll))
+			var tipped := attack == "dump" and state != State.STALK
+			_tip = lerpf(_tip, (-0.7 * (fill if state == State.WIND else 1.0)) if tipped else 0.0, blend)
+			_bone("Bucket", Vector3.ZERO, Quaternion(Vector3.RIGHT, _tip))
+		"rogue_tender":
+			_bone("Harpoon", Vector3(0.0, 0.0, reach))
+			var reel := 3.0 if attack == "harpoon" and state == State.STRIKE else 1.0
+			if attack == "whip" and state != State.STALK and state != State.WEAK:
+				reel = 1.0 + 3.0 * (fill if state == State.WIND else 1.0)
+			_roll = fmod(_roll + GOVERNOR_SPIN * 0.4 * reel * delta, TAU)
+			_bone("Spool", Vector3.ZERO, Quaternion(Vector3.RIGHT, _roll))
+	_last = global_position
 
 
 func _box(size: Vector3, at: Vector3, material: Material) -> MeshInstance3D:
@@ -386,6 +579,8 @@ func _pose(delta: float) -> void:
 		return
 	var weak := state == State.WEAK
 	var blend := 1.0 - exp(-14.0 * delta)
+	if _rig != null:
+		_pose_model(delta, blend)
 	for entry in _plates:
 		var plate: MeshInstance3D = entry["node"]
 		var side: float = entry["side"]
@@ -398,7 +593,8 @@ func _pose(delta: float) -> void:
 	# A null or freed target leaves the facing where it is (F008).
 	if not is_instance_valid(target):
 		return
-	if state == State.STALK or state == State.WEAK or (state == State.WIND and attack != "whip"):
+	# Vented, it holds still, so the ball can roll round to the hatch.
+	if state == State.STALK or (state == State.WIND and attack != "whip"):
 		var to := _flat_to_ball()
 		var shown := telegraph()
 		if state == State.WIND and shown != null:

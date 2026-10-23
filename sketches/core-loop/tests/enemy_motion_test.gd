@@ -66,6 +66,9 @@ func _spawn(kind: String, index: int):
 # whose pose neither WindupPoses nor its body provides still fails.
 func _body_owns_pose(owner: String, pose: String) -> bool:
 	var path := String(Roster.ROWS.get(owner, {}).get("script", "res://src/combat/%s.gd" % owner))
+	# 2026-10-23: the rogue fleet machines share one script (combat/rogue.gd).
+	if owner.begins_with("rogue_"):
+		path = "res://src/combat/rogue.gd"
 	if not FileAccess.file_exists(path):
 		return false
 	var source := FileAccess.get_file_as_string(path)
@@ -86,7 +89,8 @@ func _body_owns_pose(owner: String, pose: String) -> bool:
 
 # GP6-1: the ranges are the brief's, written here and not read from EnemyMotion.
 func _rows() -> void:
-	_t.eq("every roster kind has a row", WindupRows.ROWS.size(), Roster.ROWS.size())
+	# 2026-10-23: plus one row per rogue fleet machine (combat/rogue.gd ROWS).
+	_t.eq("every roster kind has a row", WindupRows.ROWS.size(), Roster.ROWS.size() + 3)
 	for kind in WindupRows.ROWS:
 		var spec: Dictionary = WindupRows.ROWS[kind]
 		var idle = spec.get("idle")

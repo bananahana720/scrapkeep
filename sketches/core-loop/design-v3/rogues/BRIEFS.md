@@ -70,4 +70,6 @@ Ruling (19 Oct): every mini-boss gets its own high-energy, bass-heavy EDM anthem
 | `anthem-haul-skip` | Haul Skip No. 31 | 145 | E (the Dig) | A driving, rail-clatter offbeat bass. The lead is a there-and-back phrase that repeats a tone higher on the return. Twist: a Latin cowbell pattern under the drop. |
 | `anthem-cable-tender` | Cable Tender No. 7 | 150 | G (the Highdraft) | A tense, held-note lead that tightens and snaps (sustain, then a falling run). Twist: jazz-harmony pads in the break. The second drop is the whip. |
 
+**Phase two (Andrew, 19:02Z 23 Oct).** Below half health each rogue enters phase 2 (`rogue.gd` `enter_phase`): wind-ups shorten to 0.75, and the first attack chains into the second with no vented window. Its anthem moves to the heavier variant id, `<tune id>-heavy` (for example `anthem-gate-crane-heavy`): same key and tempo, a heavier drop. The music lane renders it next to the main take.
+
 **How it plays in game.** `audio.gd` gives a rogue the miniboss track and moment. It plays the rogue's own tune id once `TuneMoments.TUNES` has that row and the ACE manifest exists. Until then it plays the existing `miniboss` tune. To add a track, add the `TUNES` row with hook `"miniboss"`, then the `music_rows.gd` row and the manifest. No code change is needed.
