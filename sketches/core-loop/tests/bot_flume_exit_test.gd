@@ -11,7 +11,8 @@ const T := preload("res://tests/support/t.gd")
 # The Flume's warden exit (design-v3/park/stages/2-park_flume.md, route warden_exit; card BOT-LINE).
 # After a stage-2 break the gates stand on the ground east of the head-house drum, 13 m over its
 # floor, and the drum's east wall is a cliff. The authored way out is drum_lip_kicker: a 28 m greybox
-# wedge rising 14 m to its east lip, then a 3 m gap to the gate lip. The heights tools/bot_driver.gd
+# wedge rising 14 m to its east lip (x 270.07, flush with the drum's east face foot since 2026-10-23;
+# it was x 267 with a 5 m gap), then a 2 m notch to the gate lip. The heights tools/bot_driver.gd
 # _climb_route reads do not hold the wedge (it is a placed collider), so on 540a55a4 the route came
 # back empty and runner_gunner seed 1 sat against the wall from t=120 to the stage limit.
 # Pins, from the ball's stall point on that run, (269, -13, 462):
