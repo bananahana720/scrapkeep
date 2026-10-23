@@ -60,6 +60,12 @@ const ENTRIES := [
 		"text": "Bowl through a swarm and its drones follow you for two seconds. Lead them into another enemy and they hit it like pins. Fragment 5 reads: awaiting operator.",
 	},
 	{
+		"id": "plate_drop", "name": "Maintenance Crew",
+		"hint": "Someone is patching the machine behind your back.",
+		"clue": "a fitter at a hatch + a reel impact",
+		"text": "Those drones are the Waking's maintenance crew, still patching the Mind's excavator. Knock one off its plate and the seam stays open.",
+	},
+	{
 		"id": "what_it_learned", "name": "What It Learned",
 		"hint": "Something is keeping count.",
 		"clue": "one of the Mind's hands + your favourite move",
@@ -341,6 +347,7 @@ const DETECTORS := {
 	"tether_snap": {"kind": "hooker", "script": "res://src/combat/hooker.gd"},
 	"shield_vault": {"kind": "deflector", "script": "res://src/combat/deflector.gd"},
 	"awaiting_operator": {"kind": "swarm_remnant", "script": "res://src/combat/fleet.gd"},
+	"plate_drop": {"kind": "crew_fitter", "script": "res://src/boss/waking.gd"},
 	"what_it_learned": {"kind": "mind_hand", "script": "res://src/combat/fleet.gd"},
 	"burrow_lane": {"kind": "burrower", "script": "res://src/combat/burrower.gd"},
 	"bore_breach": {"kind": "drill_crew", "script": "res://src/combat/drill_crew.gd"},

@@ -25,6 +25,9 @@ var _done := false
 
 func _initialize() -> void:
 	SimClock.ticks = true
+	# Weak points off whatever the Waking ships on: BUDGET is a fresh-kit Sable's dial-0 fight. On dial 1 its chipped
+	# body hits run past 195 s; the dial-1 fight's pace is the band table's (challenge:bands), with each band's build.
+	ChallengeDials.set_overrides({"waking.weak_points": 0.0})
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -63,6 +66,7 @@ func _physics_process(delta: float) -> bool:
 		_t.check("posture Warden broken", _entered and _module.state == _module.DEFEATED)
 		_t.eq("world victory leaves run open", _driver.outcome, "")
 		_game.free()
+		ChallengeDials.reset()
 		quit(_t.verdict())
 		return true
 	return false

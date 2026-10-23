@@ -143,6 +143,8 @@ const TRIM_DB := {
 	# verb. The bite (line_bite, -7) is the reference: the dry tick sits 14 dB under it by RMS, the
 	# lock tick and the refusals under that, the world clunk under the bite.
 	"lock_tick": -22.0, "dry_tick": -25.0, "line_bite": -7.0, "anchor_clunk": -12.0, "smash_whistle": -9.0, "smash_crack": -3.0,
+	# The Waking crew's seal timer (waking.gd SEAL_SOUND): a dry two-click ratchet kept apart from the harpoon's FM lock tick.
+	"seal_ratchet": -16.0,
 	"dock_click": -15.0, "line_zip": -10.0, "line_twang": -9.0, "line_hum": -17.0,
 	"verb_fail_jump": -18.0, "verb_fail_fire": -18.0, "verb_fail_haul": -18.0, "verb_fail_boost": -18.0,
 	"verb_fail_special": -18.0, "verb_fail_interact": -18.0,
@@ -660,6 +662,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return crack(0)
 		"lock_tick":
 			return _fm(0.04, _hz(93), 1.0, 0.5, 80.0)
+		"seal_ratchet":
+			return _mix([[_noise(0.015, 1200.0, 700.0, 160.0), 0, 0.9], [_tone(0.04, 180.0, 130.0, "square_dark", 60.0), 0, 1.0], [_noise(0.015, 1100.0, 650.0, 160.0), Synth.seconds(0.05), 0.7], [_tone(0.04, 170.0, 125.0, "square_dark", 60.0), Synth.seconds(0.05), 0.8]])
 		"dry_tick":
 			return _mix([[_tone(0.05, 320.0, 240.0, "sine", 70.0), 0, 1.0], [_noise(0.025, 700.0, 450.0, 120.0), 0, 0.5]])
 		"anchor_clunk":
