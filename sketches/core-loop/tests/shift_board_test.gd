@@ -105,7 +105,10 @@ func _validate_controls() -> void:
 	_t.check("achievements refuse a mark for no pilot", not Achievements.validate(grants, Achievements.bus_signals(), _pilots(), Cosmetics.ids()).is_empty(), "")
 	grants = Achievements.ROWS.duplicate(true)
 	grants["brindle_mark_sable"]["reward"] = {"item": "not_an_item"}
-	_t.check("achievements refuse an item reward naming no item", not Achievements.validate(grants, Achievements.bus_signals(), _pilots(), Cosmetics.ids()).is_empty(), "")
+	_t.check("the board refuses an item reward naming no item", not ShiftBoard.validate(ShiftBoard.RUNGS, grants, TuneRows.ids()).is_empty(), "")
+	grants = Achievements.ROWS.duplicate(true)
+	grants["stray_item"] = {"name": "Stray", "text": "Nothing.", "on": "jumped", "count": 1, "reward": {"item": "fan_spread"}}
+	_t.check("the board refuses an item reward no rung reads", not ShiftBoard.validate(ShiftBoard.RUNGS, grants, TuneRows.ids()).is_empty(), "")
 
 
 # Runs 1 to 4 of a new player who flies Sable: a death on the dam, a Warden then a death in the

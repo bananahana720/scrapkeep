@@ -285,6 +285,15 @@ static func validate(rows: Dictionary, grants: Dictionary, tunes: Array) -> Arra
 			problems.append("card %s: item %s is already opened by %s" % [card.get("name", ""), item, items_seen[item]])
 		else:
 			items_seen[item] = String(card.get("name", ""))
+	for grant in grants:
+		var reward = grants[grant].get("reward", {})
+		if not (reward is Dictionary) or not reward.has("item"):
+			continue
+		var item := String(reward["item"])
+		if not Items.TABLE.has(item):
+			problems.append("%s: reward item %s is not an items.gd row" % [grant, item])
+		elif not rows.keys().any(func(r): return rows[r].get("when", {}).get("earned", "") == grant):
+			problems.append("%s: pays item %s but no rung reads it, so the item could never show" % [grant, item])
 	for item in items_seen:
 		var row: Dictionary = Items.TABLE[item]
 		if row.has("class") or row.has("needs"):

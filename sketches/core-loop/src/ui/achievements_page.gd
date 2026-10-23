@@ -64,12 +64,12 @@ func _init() -> void:
 
 
 # Rebuilds the list from the saved profile and the progress node's counters.
-func refresh(profile, progress) -> void:
+func refresh(profile, progress, sitting := false) -> void:
 	for child in _grid.get_children():
 		_grid.remove_child(child)
 		child.queue_free()
 	rows.clear()
-	_fill_board(profile)
+	_fill_board(profile, sitting)
 	for id in Achievements.ids():
 		if Secrets.shut_row(id, profile):
 			continue
@@ -96,11 +96,11 @@ static func board_lines(profile, sitting := false) -> PackedStringArray:
 	return out
 
 
-func _fill_board(profile) -> void:
+func _fill_board(profile, sitting: bool) -> void:
 	for child in _board.get_children():
 		_board.remove_child(child)
 		child.queue_free()
-	var lines := board_lines(profile)
+	var lines := board_lines(profile, sitting)
 	for i in lines.size():
 		var label := _label(lines[i], 26 if i == 0 else 18, Palette.AMBER if i == 0 else Palette.SAND)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

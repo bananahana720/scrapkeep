@@ -361,8 +361,8 @@ static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosme
 				problems.append("%s: reward world must name a world" % id)
 			elif kind == "option" and target == "":
 				problems.append("%s: reward option must name a meta_options node" % id)
-			elif kind == "item" and not load("res://src/build/items.gd").TABLE.has(target):
-				problems.append("%s: reward item %s is not an items.gd row" % [id, target])
+			elif kind == "item" and target == "":
+				problems.append("%s: reward item must name an items.gd row (shift_board.gd validate checks it)" % id)
 	return problems
 
 
