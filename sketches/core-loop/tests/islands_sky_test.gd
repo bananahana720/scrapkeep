@@ -24,7 +24,8 @@ extends SceneTree
 # time_sky.gdshader multiplies the low sky 80 or more degrees off the sun's bearing by 1 + away_lift, in the drawn background only (not the
 # radiance pass), so the floor does not rise with it. Pose 159 needs about 2.5 L* more (the coordinator's ruling on the bench row); at
 # L* about 63 that is a sky Y ratio of about 1.10, and AGX_ROOM below leaves room for the tonemap compressing it. On the cloud renderer
-# (xvfb, opengl3) away_lift 0.3 moved pose 159's haze L* +4.84 with its near-floor L* unchanged (65.64 both); 0.25 ships.
+# (xvfb, opengl3, all 11 r349 poses) away_lift 0.5 moved pose 159's haze L* +8.1 and pose 26's +7.4, every near-floor L* unchanged; 0.5 ships.
+# The modelled gain at 0.5 clears NEED_DRAWN x AGX_ROOM by 0.004, so any cut to the lift fails here.
 #
 # Controls (planted): the pre-change grade (energy 0.95) must leave poses 26 and 159 under the bar; a sky dimmer than old must read darker; a
 # doubled sun glow alone must not reach the lift pose 159 needs (the glow adds 0.017 Y there against a base of 0.34 Y).
@@ -69,7 +70,7 @@ const AWAY_LIFT := 0.5 # golden grade, see the header
 # The drawn-sky Y ratio pose 159 must get from away_lift: 1.10 for 2.5 L* at L* 63, times 1.1 room for the tonemap (a chosen tolerance).
 const AGX_ROOM := 1.1
 const NEED_DRAWN := 1.10
-const EXPECTED_CHECKS := 57
+const EXPECTED_CHECKS := 58
 
 var t := T.new("islands_sky_test")
 var _pano: Image
@@ -189,6 +190,9 @@ func _away(live: Dictionary) -> void:
 	var none := live.duplicate()
 	none["shader_parameter/away_lift"] = 0.0
 	t.check("control: with no lift pose 159's drawn sky misses the gain", _sky_y(POSES[9], none, true) / _sky_y(POSES[9], none) < NEED_DRAWN * AGX_ROOM)
+	var short := live.duplicate()
+	short["shader_parameter/away_lift"] = 0.4
+	t.check("control: a lift of 0.4 misses pose 159's gain", _sky_y(POSES[9], short, true) / _sky_y(POSES[9], short) < NEED_DRAWN * AGX_ROOM)
 
 
 # CIE L* to relative luminance Y, and back.
