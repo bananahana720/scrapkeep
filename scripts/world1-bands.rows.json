@@ -1,12 +1,16 @@
 {
   "about": "World 1 acceptance bands: the rows the Gate reads for a finished Spillway (dam, flume, Brindle). scripts/world1-bands.mjs evaluates them. status gate: a miss or a missing input fails the read. status report: measured and printed but never fails, until the units in enforced_from land and the coordinator flips it to gate. status info: shown, no threshold. Run length lives in the pacing file (source pacing) and the panel band in #398's drop sim; neither is restated here. Thresholds are the integrator ledger's (/mnt/project-files/world1/BUDGETS.md); change a number there first.",
   "bots": {
+    "measure": "the pacing file's measure block (table, stages, seeds, pilots, bot_args, policy_args) is the run recipe; the completionist needs --explore-by=480 or it cannot reach its band",
     "policies": [
       "skipper",
       "completionist"
     ],
     "seeds": 8,
-    "args": "--table=park --stages=2 --gate=1 --warm-band=1 --seeds=1,2,3,4,5,6,7,8"
+    "args": "--table=park --stages=2 --gate=1 --warm-band=1 --seeds=1,2,3,4,5,6,7,8 --panel-log=1",
+    "policy_args": {
+      "completionist": "--explore-by=480"
+    }
   },
   "pacing_file": "sketches/core-loop/design-v3/pacing/world1-pacing.json",
   "challenge_cells": [
@@ -240,7 +244,7 @@
       "area": "Wardens and bosses",
       "source": "bots",
       "label": "a rogue fight on 1 run in 2",
-      "metric": "rogue_fights",
+      "metric": "rogues_beaten",
       "stat": "share_positive",
       "min": 0.5,
       "status": "report",
@@ -254,7 +258,7 @@
       "area": "Progression across runs",
       "source": "bots",
       "label": "completionist finds a fresh-profile secret",
-      "metric": "secrets",
+      "metric": "secrets_found",
       "policy": "completionist",
       "stat": "share_positive",
       "min": 0.5,
@@ -269,7 +273,7 @@
       "area": "Progression across runs",
       "source": "bots",
       "label": "skipper never finds one",
-      "metric": "secrets",
+      "metric": "secrets_found",
       "policy": "skipper",
       "stat": "max",
       "max": 0,
@@ -298,14 +302,14 @@
       "source": "beats",
       "label": "story beats total on a repeat run",
       "check": "repeat_total",
-      "max": 30,
       "unit": "s",
       "status": "report",
-      "basis": "BUDGETS.md beats 30 s or less on repeat",
+      "basis": "BUDGETS.md and the pacing file's beats_repeat_max_s",
       "enforced_from": [
         "Spillway story beats",
         "Brindle arrival, rout and Tarn sign-on"
-      ]
+      ],
+      "max_from_pacing": "beats_repeat_max_s"
     },
     {
       "id": "beats-each-short",

@@ -67,6 +67,14 @@ const routed = ({ bot }) => {
   return isNum(boss?.defeated_s) && bot.outcome === "stages_done";
 };
 
+// A per-stage key in bots.ndjson stages[] (the pacing file's content slots): a list counts its
+// entries, a number is taken as is, true counts 1. null when no park stage carries the key.
+export function stageCount(bot, key) {
+  const parks = (bot.stages ?? []).filter((s) => s && key in s);
+  if (!parks.length) return null;
+  return parks.reduce((n, s) => n + (Array.isArray(s[key]) ? s[key].length : isNum(s[key]) ? s[key] : s[key] === true ? 1 : 0), 0);
+}
+
 export const MEASURES = {
   routed: (run) => (typeof run.bot.outcome !== "string" ? null : routed(run) ? 1 : 0),
   rout_s: (run) => (routed(run) && isNum(run.bot.boss.entered_run_s) ? run.bot.boss.entered_run_s + run.bot.boss.defeated_s : null),
@@ -84,14 +92,8 @@ export const MEASURES = {
     return stages.length ? stages[stages.length - 1].part_ids_at_exit.length : null;
   },
   panels: ({ bot }) => (Array.isArray(bot.panels) ? bot.panels.length : null),
-  rogue_fights: ({ bot, log }) => {
-    const v = bot.rogue_fights ?? log?.rogue_fights;
-    return Array.isArray(v) ? v.length : isNum(v) ? v : null;
-  },
-  secrets: ({ bot, log }) => {
-    const v = bot.secrets_found ?? log?.secrets_found;
-    return Array.isArray(v) ? v.length : isNum(v) ? v : null;
-  },
+  rogues_beaten: ({ bot }) => stageCount(bot, "rogues_beaten"),
+  secrets_found: ({ bot }) => stageCount(bot, "secrets_found"),
 };
 
 // --- Row arithmetic --------------------------------------------------------------------------
@@ -168,46 +170,63 @@ function botRow(row, runs, ctx) {
   return { measured: shown + tail, pass: within(v, row) };
 }
 
-// Pacing rows read the band from the pacing thread's file: { bands: { <band>: { min_s, max_s } } }
-// and grade the matching measure in the bot runs (pacingMeasure).
-export function pacingMeasure(band, runs) {
-  const pol = (p) => runs.filter((r) => r.bot.policy === p);
-  // Every run of the policy must carry the measure; a median over the few that do is no read.
-  const rout = (list) => {
-    const vs = list.map((r) => MEASURES.rout_s(r));
-    return list.length && vs.every(isNum) ? median(vs) : null;
-  };
-  if (band === "skipper_total") return rout(pol("skipper"));
-  if (band === "completionist_total") return rout(pol("completionist"));
-  if (band === "skipper_stage") return stageLengths(pol("skipper"));
-  if (band === "brindle_fight") return median(pol("skipper").filter(routed).map((r) => r.bot.boss.defeated_s));
-  return null;
+// Pacing rows read their bands from the pacing thread's file (schema 1, PR #403): run.<policy>,
+// stages[] {id, stage, <policy>} and reach. All bot game seconds, graded on medians over the runs.
+// Every run of the policy must carry the measure; a median over the few that do is no read.
+const allMedian = (vs) => (vs.length && vs.every(isNum) ? median(vs) : null);
+
+// A park's own clock (exit_s is per stage, not cumulative); Brindle is what the run spent after the
+// flume exit (transition, fight, beats), as the pacing file defines it, on routed runs only.
+export function stageSeconds(run, stage) {
+  const parks = (run.bot.stages ?? []).filter((s) => s?.stage === 1 || s?.stage === 2);
+  if (stage === "boss") {
+    if (!routed(run) || !isNum(run.bot.game_seconds) || parks.length !== 2 || !parks.every((s) => isNum(s.exit_s))) return null;
+    return run.bot.game_seconds - parks[0].exit_s - parks[1].exit_s;
+  }
+  const row = parks.find((s) => s.stage === stage);
+  return isNum(row?.exit_s) && row.exit_s > 0 ? row.exit_s : null;
 }
 
-// Every cleared stage's own clock (exit_s is per stage, not cumulative), as { min, max }.
-export function stageLengths(runs) {
-  if (!runs.length || runs.some((r) => !(r.bot.stages ?? []).some((s) => isNum(s?.exit_s) && s.exit_s > 0))) return null;
-  const exits = runs.flatMap((r) => (r.bot.stages ?? []).filter((s) => isNum(s?.exit_s) && s.exit_s > 0).map((s) => s.exit_s));
-  return exits.length ? { min: Math.min(...exits), max: Math.max(...exits) } : null;
+const runSeconds = (run) => (routed(run) && isNum(run.bot.game_seconds) ? run.bot.game_seconds : null);
+
+// The band names the rows file uses -> [{ what, band, value(runs) }] read from the pacing file.
+export function pacingChecks(name, pacing, runs) {
+  const pol = (p) => runs.filter((r) => r.bot.policy === p);
+  const stage = (policy, filter) =>
+    (pacing.stages ?? []).filter(filter).map((st) => ({
+      what: st.id,
+      band: pacingBand(st[policy]),
+      value: allMedian(pol(policy).map((r) => stageSeconds(r, st.stage))),
+    }));
+  if (name === "skipper_total" || name === "completionist_total") {
+    const policy = name.split("_")[0];
+    return [{ what: "run", band: pacingBand(pacing.run?.[policy]), value: allMedian(pol(policy).map(runSeconds)) }];
+  }
+  if (name === "skipper_stage") return stage("skipper", (st) => st.stage !== "boss");
+  if (name === "brindle_fight") return stage("skipper", (st) => st.stage === "boss");
+  return [];
 }
 
 // A band with no numeric bound, or a bound that is not a number, is no band: it never passes.
 export function pacingBand(spec) {
   const ok = (x) => x === undefined || isNum(x);
-  if (!spec || !ok(spec.min_s) || !ok(spec.max_s) || (spec.min_s === undefined && spec.max_s === undefined)) return null;
-  return { min: spec.min_s, max: spec.max_s };
+  if (!spec || !ok(spec.min) || !ok(spec.max) || (spec.min === undefined && spec.max === undefined)) return null;
+  return { min: spec.min, max: spec.max };
 }
 
 function pacingRow(row, runs, pacing) {
   if (!pacing) return { measured: "pacing file not on this base", pass: false, noData: true };
-  const band = pacingBand(pacing.bands?.[row.band]);
-  if (!band) return { measured: `no numeric min_s/max_s for ${row.band} in the pacing file`, pass: false, noData: true };
-  const threshold = describeBand(band, "s");
-  const v = pacingMeasure(row.band, runs);
-  if (v === null) return { measured: "no data", threshold, pass: false, noData: true };
-  if (row.band === "skipper_stage")
-    return { measured: `stages ${fmt(v.min)}-${fmt(v.max)} s`, threshold, pass: within(v.min, band) && within(v.max, band) };
-  return { measured: `median ${fmt(v)} s (${(v / 60).toFixed(1)} bot-min)`, threshold, pass: within(v, band) };
+  if (pacing.schema !== 1) return { measured: `pacing file schema ${pacing.schema}, checker reads 1`, pass: false, noData: true };
+  const checks = pacingChecks(row.band, pacing, runs);
+  if (!checks.length || checks.some((c) => !c.band)) return { measured: `no numeric min/max for ${row.band} in the pacing file`, pass: false, noData: true };
+  const threshold = checks.map((c) => `${c.what} ${describeBand(c.band, "s")}`).join("; ");
+  const missing = checks.filter((c) => c.value === null);
+  if (missing.length) return { measured: `no data: ${missing.map((c) => c.what).join(", ")} not on every run`, threshold, pass: false, noData: true };
+  return {
+    measured: checks.map((c) => `${c.what} median ${fmt(c.value)} s (${(c.value / 60).toFixed(1)} bot-min)`).join("; "),
+    threshold,
+    pass: checks.every((c) => within(c.value, c.band)),
+  };
 }
 
 // Beat entries in the run log: { id, s, full, skipped, held } (Story beats thread, shared player).
@@ -282,7 +301,13 @@ export function evaluate(spec, inputs) {
     phases: inputs.phases ?? null,
   };
   const runs = inputs.runs ?? [];
-  return spec.rows.map((row) => {
+  return spec.rows.map((specRow) => {
+    let row = specRow;
+    if (row.max_from_pacing) {
+      const max = inputs.pacing?.[row.max_from_pacing];
+      if (!isNum(max)) return { id: row.id, area: row.area, label: row.label, status: row.status, enforced_from: row.enforced_from ?? null, measured: `no ${row.max_from_pacing} in the pacing file`, threshold: "-", verdict: row.status === "info" ? "info" : "no data", blocks: row.status === "gate" };
+      row = { ...row, max };
+    }
     let result;
     if (row.cadence === "sitting" && !inputs.sitting) result = { measured: "not run (sitting cadence; pass --sitting)", pass: null, skipped: true };
     else if (row.source === "bots") result = runs.length ? botRow(row, runs, ctx) : { measured: "no bot runs given", pass: false, noData: true };

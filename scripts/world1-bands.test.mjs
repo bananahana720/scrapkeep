@@ -18,14 +18,15 @@ import {
 const SPEC = JSON.parse(readFileSync(ROWS_FILE, "utf8"));
 
 // A routed world 1 run as tools/bot_run.gd and the run log write it: bot record and log line.
-function run(policy, seed, { kills = 20, parts = 3, rout = [300, 100], phase = 4, flourishes, extra = {} } = {}) {
+function run(policy, seed, { kills = 20, parts = 3, rout = [400, 100], phase = 4, flourishes, extra = {} } = {}) {
   const bot = {
     run_id: `bot-${seed}`,
     policy,
     seed,
     outcome: rout ? "stages_done" : "stalled",
-    stages: [{ stage: 1, exit_s: 200 }, { stage: 2, exit_s: 200 }, { stage: 3, exit_s: 0 }],
+    stages: [{ stage: 1, exit_s: rout ? rout[0] / 2 : 200 }, { stage: 2, exit_s: rout ? rout[0] / 2 : 200 }, { stage: 3, exit_s: 0 }],
     boss: rout ? { entered_run_s: rout[0], defeated_s: rout[1] } : null,
+    game_seconds: rout ? rout[0] + rout[1] : 300,
     ...extra,
   };
   const log = {
@@ -40,13 +41,16 @@ function run(policy, seed, { kills = 20, parts = 3, rout = [300, 100], phase = 4
 
 const seeds = (policy, opts) => [1, 2, 3, 4, 5, 6, 7, 8].map((s) => run(policy, s, opts));
 const row = (rows, id) => rows.find((r) => r.id === id);
+const band = (min, max) => ({ min, max, floor: 0 });
 const PACING = {
-  bands: {
-    skipper_total: { min_s: 390, max_s: 510 },
-    completionist_total: { min_s: 900, max_s: 1080 },
-    skipper_stage: { min_s: 180, max_s: 300 },
-    brindle_fight: { min_s: 90, max_s: 180 },
-  },
+  schema: 1,
+  run: { skipper: band(390, 510), completionist: band(900, 1200) },
+  stages: [
+    { id: "dam", stage: 1, skipper: band(180, 300), completionist: band(420, 600) },
+    { id: "flume", stage: 2, skipper: band(180, 300), completionist: band(420, 600) },
+    { id: "brindle", stage: "boss", skipper: band(90, 180), completionist: band(90, 180) },
+  ],
+  beats_repeat_max_s: 30,
 };
 const BEATS_TEXT = SPEC.beats.map((id) => `"${id}": {}`).join("\n");
 const FULL_BEATS = SPEC.beats.map((id) => ({ id, s: 4, full: true, skipped: false, held: 0 }));
@@ -54,8 +58,8 @@ const FULL_BEATS = SPEC.beats.map((id) => ({ id, s: 4, full: true, skipped: fals
 function finished() {
   return {
     runs: [
-      ...seeds("skipper", { kills: 16, parts: 2, rout: [320, 120], flourishes: FULL_BEATS }),
-      ...seeds("completionist", { kills: 34, parts: 6, rout: [880, 120], flourishes: FULL_BEATS }),
+      ...seeds("skipper", { kills: 16, parts: 2, rout: [380, 100], flourishes: FULL_BEATS }),
+      ...seeds("completionist", { kills: 34, parts: 6, rout: [940, 120], flourishes: FULL_BEATS }),
       run("skipper", 9, { flourishes: SPEC.beats.map((id) => ({ id, s: 2, full: false })) }),
     ],
     pacing: PACING,
@@ -101,18 +105,19 @@ test("a stall or a fight short of the final phase blocks", () => {
 
 test("pacing rows grade bot seconds against the pacing file's band", () => {
   const inputs = finished();
-  inputs.pacing = { bands: { ...PACING.bands, skipper_total: { min_s: 390, max_s: 420 } } };
+  inputs.pacing = { ...PACING, run: { ...PACING.run, skipper: band(390, 420) } };
   const r = row(evaluate(SPEC, inputs), "run-length-skipper");
   assert.equal(r.verdict, "miss");
-  assert.equal(r.threshold, "390-420 s");
-  assert.match(r.measured, /median 440 s \(7.3 bot-min\)/);
+  assert.equal(r.threshold, "run 390-420 s");
+  assert.match(r.measured, /run median 480 s \(8.0 bot-min\)/);
+  assert.match(row(evaluate(SPEC, inputs), "brindle-length").measured, /brindle median 100 s/);
 });
 
 test("a field no unit has landed reads as no data, never as zero", () => {
   const rows = evaluate(SPEC, finished());
   assert.equal(row(rows, "secrets-skipper").verdict, "no data");
   const withField = finished();
-  withField.runs = withField.runs.map((r) => ({ ...r, bot: { ...r.bot, secrets_found: r.bot.policy === "completionist" ? ["wall"] : [] } }));
+  withField.runs = withField.runs.map((r) => ({ ...r, bot: { ...r.bot, stages: r.bot.stages.map((st) => ({ ...st, secrets_found: r.bot.policy === "completionist" && st.stage === 1 ? ["wall"] : [] })) } }));
   const graded = evaluate(SPEC, withField);
   assert.equal(row(graded, "secrets-skipper").verdict, "pass");
   assert.equal(row(graded, "secrets-completionist").verdict, "pass");
@@ -178,14 +183,15 @@ test("the rows file names a status and a known source on every row", () => {
   assert.equal(new Set(SPEC.rows.map((r) => r.id)).size, SPEC.rows.length);
 });
 
-test("review: a pacing band without numeric min_s/max_s never passes", () => {
-  assert.equal(pacingBand({ min: 390, max: 420 }), null);
-  assert.equal(pacingBand({ min_s: 390, max_s: null }), null);
+test("review: a pacing band without numeric min/max, or another schema, never passes", () => {
+  assert.equal(pacingBand({ min_s: 390, max_s: 420 }), null);
+  assert.equal(pacingBand({ min: 390, max: null }), null);
   const inputs = finished();
-  inputs.pacing = { bands: { ...PACING.bands, skipper_total: { min: 390, max: 420 } } };
+  inputs.pacing = { ...PACING, run: { ...PACING.run, skipper: { min_s: 390, max_s: 420 } } };
   const r = row(evaluate(SPEC, inputs), "run-length-skipper");
   assert.equal(r.verdict, "no data");
   assert.ok(r.blocks);
+  assert.equal(row(evaluate(SPEC, { ...finished(), pacing: { ...PACING, schema: 2 } }), "run-length-skipper").verdict, "no data");
 });
 
 test("review: a gate median over partly missing runs is no data, not a pass", () => {
@@ -203,12 +209,12 @@ test("review: band_from with the field present but no band file reads no data", 
   assert.equal(row(evaluate(SPEC, inputs), "panels-at-brindle").verdict, "no data");
 });
 
-test("review: each stage, not only the shortest, sits in the stage band", () => {
+test("review: each park, not only the shortest, sits in its stage band", () => {
   const inputs = finished();
-  inputs.runs[0].bot.stages = [{ stage: 1, exit_s: 200 }, { stage: 2, exit_s: 900 }];
+  inputs.runs = inputs.runs.map((r) => (r.bot.policy === "skipper" ? { ...r, bot: { ...r.bot, stages: [{ stage: 1, exit_s: 200 }, { stage: 2, exit_s: 400 }] } } : r));
   const r = row(evaluate(SPEC, inputs), "stage-length-skipper");
   assert.equal(r.verdict, "miss");
-  assert.match(r.measured, /stages 200-900 s/);
+  assert.match(r.measured, /dam median 200 s.*flume median 400 s/);
 });
 
 test("review: a repeat beat with no length is no data; seeds must be 1 to 8", () => {
@@ -228,7 +234,7 @@ test("review: CLI values are never flags, frames need a path", () => {
 
 test("review: pacing rows need every run of the policy to carry the measure", () => {
   const inputs = finished();
-  inputs.runs = inputs.runs.map((r, i) => (r.bot.policy === "skipper" && i > 0 ? { ...r, bot: { ...r.bot, boss: { defeated_s: 100 }, stages: [] } } : r));
+  inputs.runs = inputs.runs.map((r, i) => (r.bot.policy === "skipper" && i > 0 ? { ...r, bot: { ...r.bot, game_seconds: undefined, stages: [] } } : r));
   const rows = evaluate(SPEC, inputs);
   assert.equal(row(rows, "run-length-skipper").verdict, "no data");
   assert.ok(row(rows, "run-length-skipper").blocks);
