@@ -106,6 +106,70 @@ const ROWS := {
 				"Shift log: dam held. Flume drained. One badger, filed under weather.",
 				"Shift log: pumps running. Nobody clocked the overtime."]},
 		]},
+	# --- Brindle's beats (world 1 plan, unit 3). flourish_cues.gd starts them from the trigger
+	# fields on, boss, phases and earned, and runs their "world" beats in the bowl. Arrival plays
+	# inside BossRules.INTRO_SECONDS (3.0 s, no attack lands); phase panels inside the 2.0 s
+	# transition beat (fight_phases.gd); rout and sign-on share the victory window.
+	"brindle_arrival": {"priority": 3, "on": "arrival", "boss": "brindle",
+		"world": {"full": [{"kind": "rise", "at": 0.0, "seconds": 1.4}]},
+		"full": [
+			{"kind": "speed_lines", "at": 0.0, "for": 0.9},
+			{"kind": "sfx_word", "at": 0.1, "for": 1.0, "text": "HONK", "anchor": "ship"},
+			{"kind": "card", "at": 0.5, "for": 2.4, "slot": "left_top",
+				"card": ["ADMIRAL BRINDLE", "Badger · Furnace Fleet", "Height", "two paws", "Iron", "twelve hundred tons (rounded up)", "Voice", "never raised"]},
+			{"kind": "sfx_word", "at": 1.4, "for": 0.9, "text": "CHUNK", "anchor": "ship"},
+			{"kind": "caption", "at": 1.6, "for": 1.3, "slot": "left_low",
+				"text": ["The Furnace Fleet. On schedule.", "The Furnace Fleet. Early, in fact.", "The Furnace Fleet. Paperwork in order."]},
+		],
+		"short": [
+			{"kind": "sfx_word", "at": 0.0, "for": 0.9, "text": "HONK", "anchor": "ship"},
+			{"kind": "card", "at": 0.1, "for": 1.3, "slot": "left_top", "card": ["ADMIRAL BRINDLE", "Back. On schedule."]},
+		]},
+	# Phases two and three: one comic panel each, a beat shorter than the transition beat.
+	"brindle_phase_2": {"priority": 3, "on": "phase", "boss": "brindle", "phases": [2],
+		"full": [
+			{"kind": "stamp", "at": 0.0, "for": 1.5, "text": "FURNACE LIT", "colour": "AMBER"},
+			{"kind": "caption", "at": 0.2, "for": 1.3, "slot": "left_low",
+				"text": ["Brindle revises the arithmetic.", "Brindle carries the one.", "The figures were optimistic."]},
+		],
+		"short": [{"kind": "stamp", "at": 0.0, "for": 1.2, "text": "FURNACE LIT", "colour": "AMBER"}]},
+	"brindle_phase_3": {"priority": 3, "on": "phase", "boss": "brindle", "phases": [3],
+		"full": [
+			{"kind": "stamp", "at": 0.0, "for": 1.5, "text": "ARMOUR OFF", "colour": "AMBER"},
+			{"kind": "caption", "at": 0.2, "for": 1.3, "slot": "left_low",
+				"text": ["Dignity: optional.", "Brindle rounds down. Once.", "Plan C. There was no plan B."]},
+		],
+		"short": [{"kind": "stamp", "at": 0.0, "for": 1.2, "text": "ARMOUR OFF", "colour": "AMBER"}]},
+	# The catch: the scooter sails over the rim in slow motion while the crew cheer. The victory
+	# card waits for it, then stamps BRINDLE ROUTED.
+	"brindle_rout": {"priority": 3, "on": "rout", "boss": "brindle",
+		"world": {"full": [{"kind": "eject", "at": 0.0, "seconds": 1.8}], "short": [{"kind": "eject", "at": 0.0, "seconds": 1.1}]},
+		"full": [
+			{"kind": "sfx_word", "at": 0.0, "for": 0.9, "text": "FWOOMP", "anchor": "scooter"},
+			{"kind": "sfx_word", "at": 0.5, "for": 1.6, "text": ["WOOO!", "HOORAY!", "YEAH!"], "at_share": Vector2(0.40, 0.33)},
+			{"kind": "sfx_word", "at": 0.7, "for": 1.4, "text": ["SHIFT OVER!", "HOME TIME!", "CLOCK OUT!"], "at_share": Vector2(0.86, 0.50)},
+			{"kind": "stamp", "at": 0.9, "for": 1.5, "text": "ROUTED!", "colour": "HAZARD", "slot": "centre"},
+			{"kind": "caption", "at": 1.2, "for": 1.2, "slot": "left_low",
+				"text": ["A tactical withdrawal. (Rounded up.)", "Brindle: \"Noted.\"", "The Admiral departs. On schedule."]},
+		],
+		"short": [
+			{"kind": "sfx_word", "at": 0.0, "for": 0.8, "text": "FWOOMP", "anchor": "scooter"},
+			{"kind": "stamp", "at": 0.3, "for": 0.9, "text": "ROUTED!", "colour": "HAZARD", "slot": "centre"},
+		]},
+	# Tarn signs on the day Brindle falls (achievement brindle_routed pays Tarn). Plays once, over
+	# the victory card; the card is the walk-in, the stamp is the contract.
+	"tarn_sign_on": {"priority": 3, "on": "sign_on", "boss": "brindle", "earned": "brindle_routed",
+		"full": [
+			{"kind": "sfx_word", "at": 0.0, "for": 0.8, "text": "CLANK", "at_share": Vector2(0.50, 0.40)},
+			{"kind": "card", "at": 0.0, "for": 2.0, "slot": "left_top",
+				"card": ["TARN", "Tiger · claw bruiser", "Temperament", "gentle", "Machine", "is not", "Claws issued", "none"]},
+			{"kind": "stamp", "at": 0.7, "for": 1.3, "text": "HIRED", "colour": "HAZARD"},
+			{"kind": "caption", "at": 0.9, "for": 1.1, "slot": "left_low", "text": "Brought a claw nobody issued."},
+		],
+		"short": [
+			{"kind": "card", "at": 0.0, "for": 1.6, "slot": "left_top", "card": ["TARN", "Signed on"]},
+			{"kind": "stamp", "at": 0.3, "for": 1.3, "text": "HIRED", "colour": "HAZARD"},
+		]},
 }
 
 

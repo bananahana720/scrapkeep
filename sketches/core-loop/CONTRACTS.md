@@ -185,7 +185,6 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `boss_attack_telegraphed` | `attack_id: String, seconds_until: float` | E | an attack is committed and will land in seconds_until |
 | `boss_weak_point_hit` | `point_id: String` | E | a strike landed on a weak point (a magnet, a cap, the scooter) |
 | `boss_defeated` | none | E | Brindle is beaten; flow enters `victory`, then the summary |
-| `flourish_played` | `id: String, held: float, full: bool, skipped: bool` | C | an in-run flourish (`presentation/flourish_cues.gd`) finished; `held` is the seconds it held the run, `full` false for a profile's shortened repeat. The run log keeps one row each |
 
 ### The Warden, gate and launch handshake
 

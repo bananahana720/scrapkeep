@@ -20,10 +20,12 @@ const Palette := preload("res://src/core/palette.gd")
 #   sign_on  after the rout, when the row's achievement was earned during this fight
 #            (Tarn signs on the day Brindle falls). It plays over the victory card.
 #
-# A row plays in full the first time a profile sees it and in its short form after that
-# (the player keeps the seen key). Any skip cuts the hold it was paying for. The world
-# beats a row lists ("rise", "eject") are this module's: the player only draws the
-# overlay. Each finished beat is published as flourish_played for the run log.
+# A row's trigger fields: on (one of the four above), boss (Worlds.BOSSES kind), phases
+# (phase rows) and earned (sign-on rows). A row plays in full the first time a profile sees
+# it and in its short form after that (the player keeps the seen key). Any skip cuts the
+# hold it was paying for. A row's "world" {full, short} lists its world beats ("rise",
+# "eject"), which are this module's: the player only draws the overlay. The hold a beat paid
+# for is written into its entry in the run's "flourishes" meta, which the run log keeps.
 
 const HOLD_CAP := 2.0
 # The Requisition's arc over the bowl rim: it starts this far out and up from where it stands.
@@ -70,7 +72,7 @@ func _boss_id() -> String:
 
 func _on_arena_entered() -> void:
 	_earned_in_fight.clear()
-	for id in FlourishRows.matching("arrival", {"boss": _boss_id()}):
+	for id in matching("arrival", _boss_id()):
 		if _played_this_run.has(id):
 			continue
 		_played_this_run[id] = true
@@ -78,8 +80,9 @@ func _on_arena_entered() -> void:
 
 
 func _on_phase(phase: int, _name: String) -> void:
-	for id in FlourishRows.matching("phase", {"boss": _boss_id(), "phase": phase}):
-		_play(id)
+	for id in matching("phase", _boss_id()):
+		if phase in FlourishRows.row(id).get("phases", []):
+			_play(id)
 
 
 # Flow's hook at a boss's defeat, before it opens the victory window: {hold, veil}. hold
@@ -87,12 +90,12 @@ func _on_phase(phase: int, _name: String) -> void:
 # plays over the world. Starts the rout.
 func plan_victory() -> Dictionary:
 	var boss := _boss_id()
-	var routs := FlourishRows.matching("rout", {"boss": boss})
+	var routs := matching("rout", boss)
 	if routs.is_empty():
 		return {"hold": 0.0, "veil": 0.0}
 	var rout := routs[0]
 	_chain.clear()
-	for id in FlourishRows.matching("sign_on", {"boss": boss}):
+	for id in matching("sign_on", boss):
 		if _earned_in_fight.has(String(FlourishRows.row(id).get("earned", ""))):
 			_chain.append(id)
 	var base: float = ctx.flow.VICTORY_SECONDS
@@ -114,6 +117,20 @@ func plan_victory() -> Dictionary:
 	return {"hold": hold, "veil": veil}
 
 
+# The rows for a moment and a boss, in table order.
+static func matching(on: String, boss: String) -> Array[String]:
+	var out: Array[String] = []
+	for id in FlourishRows.ROWS:
+		var row: Dictionary = FlourishRows.ROWS[id]
+		if String(row.get("on", "")) == on and String(row.get("boss", "")) == boss:
+			out.append(String(id))
+	return out
+
+
+static func world_beats(id: String, short: bool) -> Array:
+	return FlourishRows.row(id).get("world", {}).get("short" if short else "full", [])
+
+
 func length_of(id: String) -> float:
 	return FlourishRows.length(id, _short(id))
 
@@ -128,7 +145,7 @@ func _play(id: String, held := 0.0) -> void:
 	if player == null or not player.play(id, _seed(), _anchors()):
 		return
 	_playing[id] = {"held": held, "full": full}
-	for beat in FlourishRows.world_beats(id, not full):
+	for beat in world_beats(id, not full):
 		_world_beat(beat)
 
 
@@ -150,6 +167,8 @@ func _anchors() -> Dictionary:
 
 
 func _on_finished(id: String, skipped: bool) -> void:
+	if not _playing.has(id):
+		return
 	var info: Dictionary = _playing.get(id, {})
 	_playing.erase(id)
 	var held := float(info.get("held", 0.0))
@@ -163,7 +182,9 @@ func _on_finished(id: String, skipped: bool) -> void:
 		if ctx.flow != null and ctx.flow.has_method("cut_victory"):
 			ctx.flow.cut_victory(owed)
 		held = 0.0
-	ctx.events.flourish_played.emit(id, held, bool(info.get("full", false)), skipped)
+	# The player's record for this row is the last it finished; it joins the run meta next.
+	if not player.played.is_empty() and String(player.played.back().get("id", "")) == id:
+		player.played.back()["held"] = snappedf(held, 0.01)
 	if not skipped and not _chain.is_empty():
 		var next: String = _chain.pop_front()
 		_play(next, float(_playing.get(next, {}).get("held", 0.0)))

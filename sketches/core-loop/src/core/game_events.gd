@@ -87,9 +87,6 @@ signal boss_phase_changed(phase: int, name: String)
 signal boss_attack_telegraphed(attack_id: String, seconds_until: float)
 signal boss_weak_point_hit(point_id: String)
 signal boss_defeated
-# An in-run flourish (presentation/flourish_cues.gd) finished: held is the seconds it held the
-# run (a boss's victory window past its own length), full false for a profile's shortened repeat.
-signal flourish_played(id: String, held: float, full: bool, skipped: bool)
 
 # v2 W3 characters: the class abilities and the shared bowling-ball contact. Movement
 # (player_ball) emits the contact, vault, sprint, blink, smash-flavour, slingshot-gauge
