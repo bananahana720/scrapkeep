@@ -174,6 +174,12 @@ func _process(_delta: float) -> bool:
 	root.add_child(boss)
 	a._on_enemy_spawned(boss, "miniboss")
 	_t.eq("a miniboss starts Heavyweight", _last(a), "miniboss")
+	var before := a.staged.size()
+	events.fight_phase_changed.emit("brindle", 2, 3)
+	_t.eq("a boss's phase leaves the mini-boss moment alone", a.staged.size(), before)
+	events.fight_phase_changed.emit("rogue_crane", 2, 2)
+	_t.check("its phase two moves to the heavy variant on the next downbeat", _last(a) == "miniboss-heavy"
+			and int(a.staged[-1][1]) == a.engine.next_bar(), str(a.staged[-1]))
 	a._on_kill("miniboss", Vector3.ZERO, 0)
 	_t.eq("its kill returns", _last(a), "")
 	boss.free()
