@@ -30127,7 +30127,11 @@
     "recipe": "tools/blender/world_one/shell_cannon.py",
     "helper": "tools/blender/shell_base.py hoberman()",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/cannon/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png"
-   }
+   },
+   "exception": {
+    "draws": 12
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the split ports are their own SplitPorts mesh (copper, rubber) so the carrier bank tilts them off a wall; 12 draws, two over the shell class cap of 10 and within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10T21:29). Baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241; recorded in docs/decisions.tsv beside w13-PD (2026-10-22T18:42)."
   },
   {
    "id": "shell_cannon_c2",
@@ -30171,7 +30175,11 @@
    "loader": "src/presentation/hero_assets.gd fit_shell_into, heft class V layer of shell_cannon",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_cannon_plates.py"
-   }
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the PortHoods part is its own mesh so the carrier bank tilts it off a wall, which adds a second draw to a layer that w13-PD (docs/decisions.tsv, 2026-10-10T21:29:13) holds to 1; 2 draws (measured 1 to 2 against the base). Documented layer exception, accepted in coordinator ruling 6348855434 on #241 (option a, after correction 6348848322); baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241; recorded in docs/decisions.tsv beside w13-PD."
   },
   {
    "id": "shell_cannon_choir",
@@ -30183,7 +30191,11 @@
     "recipe": "tools/blender/world_one/shell_cannon.py --variant choir",
     "helper": "tools/blender/shell_base.py hoberman()",
     "concept": "design-v3/CUSTOMIZE.md section 8 (Choir Barrel); pilots/cannon.md section 7"
-   }
+   },
+   "exception": {
+    "draws": 12
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the split ports are their own SplitPorts mesh (copper, rubber) so the carrier bank tilts them off a wall; 12 draws, two over the shell class cap of 10 and within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10T21:29). Baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241; recorded in docs/decisions.tsv beside w13-PD (2026-10-22T18:42)."
   },
   {
    "path": "res://assets/models/world_one/shell_kest.glb",
@@ -30360,9 +30372,9 @@
    "ships": true,
    "loader": "src/presentation/hero_assets.gd:38-40",
    "exception": {
-    "draws": 14
+    "draws": 16
    },
-   "exception_why": "PD-SABLE Hoberman mecha, 14 draws inside the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv 2026-10-10: base 10 plus machinery and the Pilot placeholder); PD-0's base takes 10 (Core 3, Pod 3, Gyro, GyroInner, WeaponRing 2), the hidden placeholder Pilot, the CoilMast tip and the WrenchRack each need their own node and the emitter coils add copper on the ring",
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the winch spool is its own SpoolKit mesh (copper, paint; its rubber folds into paint in charcoal vertex colour) so the carrier bank tilts it off a wall, two more draws than PD-SABLE's 14, 16 in all and within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10T21:29). PD-SABLE Hoberman mecha, 14 draws before the bank split (base 10 plus machinery and the Pilot placeholder); PD-0's base takes 10 (Core 3, Pod 3, Gyro, GyroInner, WeaponRing 2), the hidden placeholder Pilot, the CoilMast tip and the WrenchRack each need their own node and the emitter coils add copper on the ring. Baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241; recorded in docs/decisions.tsv beside w13-PD (2026-10-22T18:42).",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_sable.py",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -30424,9 +30436,9 @@
    "ships": true,
    "loader": "src/presentation/hero_assets.gd fit_shell_into (shell variant shell_sable_felt, CUSTOMIZE section 8 Felt Rig; layers borrow the default shell_sable_c2..c5)",
    "exception": {
-    "draws": 14
+    "draws": 16
    },
-   "exception_why": "same node set as shell_sable (see its row): 14 draws, inside the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv 2026-10-10)",
+   "exception_why": "same node set as shell_sable (see its row): 16 draws, the baked-bracket bank split of the winch spool into its own SpoolKit mesh (wave 19, MOTION-SPEC row 208) adding two to the 14, within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10T21:29). Baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241; recorded in docs/decisions.tsv beside w13-PD (2026-10-22T18:42).",
    "provenance": {
     "recipe": "tools/blender/world_one/shell_sable.py --variant felt",
     "helper": "tools/blender/shell_base.py hoberman()",
@@ -30443,7 +30455,11 @@
     "recipe": "tools/blender/shell_tally.py",
     "helper": "tools/blender/shell_base.py hoberman()",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/hero.png, chase.png, sheet.png; base/base-hero.png, mechanism.png"
-   }
+   },
+   "exception": {
+    "draws": 11
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the two drum brackets are their own DrumBrackets mesh (one paint draw, charcoal vertex colour) so the carrier bank tilts them off a wall; 11 draws, one over the shell class cap of 10 and within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10T21:29). Baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241; recorded in docs/decisions.tsv beside w13-PD (2026-10-22T18:42)."
   },
   {
    "id": "shell_tally_abacus",
@@ -30455,7 +30471,11 @@
     "recipe": "tools/blender/shell_tally.py --variant abacus",
     "helper": "tools/blender/shell_base.py hoberman()",
     "concept": "CUSTOMIZE.md section 8 (shell_tally_abacus); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png"
-   }
+   },
+   "exception": {
+    "draws": 11
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the two drum brackets are their own DrumBrackets mesh (one paint draw, charcoal vertex colour) so the carrier bank tilts them off a wall; 11 draws, one over the shell class cap of 10 and within the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD, 2026-10-10T21:29). Baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241; recorded in docs/decisions.tsv beside w13-PD (2026-10-22T18:42)."
   },
   {
    "id": "shell_tally_c2",
@@ -30492,7 +30512,11 @@
    "provenance": {
     "recipe": "tools/blender/shell_tally_plates.py",
     "concept": "pilots/tally.md section 5 (class IV drum hoods); artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png"
-   }
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the DrumHoods part is its own mesh so the carrier bank tilts it off a wall, which adds a second draw to a layer that w13-PD (docs/decisions.tsv, 2026-10-10T21:29:13) holds to 1; 2 draws (measured 1 to 2 against the base). Documented layer exception, accepted in coordinator ruling 6348855434 on #241 (option a, after correction 6348848322); baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241; recorded in docs/decisions.tsv beside w13-PD."
   },
   {
    "id": "shell_tally_c5",
@@ -30503,7 +30527,11 @@
    "provenance": {
     "recipe": "tools/blender/shell_tally_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/tally/sheet.png (heft V)"
-   }
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the HeavyDrums part is its own mesh so the carrier bank tilts it off a wall, which adds a second draw to a layer that w13-PD (docs/decisions.tsv, 2026-10-10T21:29:13) holds to 1; 2 draws (measured 1 to 2 against the base). Documented layer exception, accepted in coordinator ruling 6348855434 on #241 (option a, after correction 6348848322); baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241; recorded in docs/decisions.tsv beside w13-PD."
   },
   {
    "id": "shell_tarn",
@@ -30539,9 +30567,9 @@
    "ships": true,
    "loader": "src/presentation/hero_assets.gd (fit_shell_into, heft class III layer)",
    "exception": {
-    "draws": 2
+    "draws": 3
    },
-   "exception_why": "ROSTER-LOOK section 5: class III adds side-gap panels on the Pod and thicker tread caps on the Core, two parts at one draw each, within the class III layer cap of 2 draws (ROSTER-LOOK:250; docs/decisions.tsv 2026-10-10 w13-PD)",
+   "exception_why": "ROSTER-LOOK section 5: class III adds side-gap panels on the Pod and thicker tread caps on the Core, two parts at one draw each, which is the 2-draw class III layer cap (ROSTER-LOOK:250; docs/decisions.tsv 2026-10-10 w13-PD). Baked-bracket bank split (wave 19, MOTION-SPEC row 208): the claw hooks are their own ClawHooks mesh under Pod so the carrier bank tilts them off a wall, one draw more than that cap, so 3 draws (Pod, Core, ClawHooks). Accepted as a documented class III layer exception by the baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241 (6348497831: the claw hooks must bank); recorded in docs/decisions.tsv beside the w13-PD rows (2026-10-22T18:42).",
    "provenance": {
     "recipe": "tools/blender/shell_tarn_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
@@ -30556,7 +30584,11 @@
    "provenance": {
     "recipe": "tools/blender/shell_tarn_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
-   }
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the ClawHooks part is its own mesh so the carrier bank tilts it off a wall, which adds a second draw to a layer that w13-PD (docs/decisions.tsv, 2026-10-10T21:29:13) holds to 1; 2 draws (measured 1 to 2 against the base). Documented layer exception, accepted in coordinator ruling 6348855434 on #241 (option a, after correction 6348848322); baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241; recorded in docs/decisions.tsv beside w13-PD."
   },
   {
    "id": "shell_tarn_c5",
@@ -30567,7 +30599,11 @@
    "provenance": {
     "recipe": "tools/blender/shell_tarn_plates.py",
     "concept": "artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png"
-   }
+   },
+   "exception": {
+    "draws": 2
+   },
+   "exception_why": "baked-bracket bank split (wave 19, MOTION-SPEC row 208): the ClawHooks part is its own mesh so the carrier bank tilts it off a wall, which adds a second draw to a layer that w13-PD (docs/decisions.tsv, 2026-10-10T21:29:13) holds to 1; 2 draws (measured 1 to 2 against the base). Documented layer exception, accepted in coordinator ruling 6348855434 on #241 (option a, after correction 6348848322); baked-bracket card (MOTION-SPEC row 208, wave 19), coordinator rulings 6348145961, 6348389397 and 6348497831 on #241; recorded in docs/decisions.tsv beside w13-PD."
   },
   {
    "id": "shell_tarn_redjaw_teeth",

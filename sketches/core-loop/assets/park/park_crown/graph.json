@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "ef11063560250852853c720019efdfa62418f5b8d45d5b098ee6a8d65325c89e",
+  "bake_sha256": "5a83fd5d1b479669aaca240f306a8722257463339857ff70575288e42c4f57d1",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1006282,
-  "edges": 328316,
+  "bytes": 1005579,
+  "edges": 328314,
   "first_failed": "",
   "flags": {
     "deck": 1370,
     "door_ok": 39680,
     "line": 387,
     "open": 40828,
-    "sight_ok": 9108,
+    "sight_ok": 9107,
     "under": 0
   },
   "full_visit_m": 1779,
   "full_visit_ratio": "1.440",
-  "graph_sha256": "2b16d0bd339b163395a2ff76cea02b59781c9db0bf90c8c1532fca761f429fff",
+  "graph_sha256": "de3d524a2effa6e4454b2d044f0f164be3eee3c9051c4f499a1cfaa2eb9fadc2",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
   "nodes": 41771,
-  "park_sha256": "d81a45cb22fcba2768a36ab84841305c6924bd4e3b12ea7108e02d8782f776cf",
+  "park_sha256": "f96c018f541ffcdb541ff95b0229fbe0cf84930b6f1bf59c53d128b1da7694c0",
   "pockets": [
     {
       "clear_ring": [],
@@ -192,7 +192,7 @@
       },
       {
         "cost": 1428.0,
-        "d_landmark": 526.5,
+        "d_landmark": 528.4,
         "name": "kite_mooring_deck",
         "on_route": false,
         "rank": 2,
@@ -482,7 +482,7 @@
     "count": 72,
     "crossings": {
       "drop": 30,
-      "ride": 9,
+      "ride": 10,
       "walk": 76
     },
     "hidden": [

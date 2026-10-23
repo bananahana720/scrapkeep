@@ -191,8 +191,10 @@ func _fairlead(hook, pod: Node3D, pilot: String) -> void:
 
 
 # --- heft layers ---------------------------------------------------------------------------------
-# The shipped layer glbs bake their modules into the layer Pod mesh and carry none of BRACKET_PARTS, so
-# these use a fixture layer that does: an Exhaust_L box 1.25 m out toward the wall, in classes 2 and 3.
+# Some shipped layer glbs carry BRACKET_PARTS meshes of their own (Tally's HeavyDrums, Tarn's ClawHooks;
+# heft_slam_bank_test and baked_bracket_reach_test cover those), but the pylon layers used here bake
+# theirs into the layer Pod mesh, so these use a fixture layer that carries one: an Exhaust_L box 1.25 m
+# out toward the wall, in classes 2 and 3.
 
 func _layer_scene() -> PackedScene:
 	var layer := Node3D.new()
@@ -240,7 +242,7 @@ func _heft(_unused) -> void:
 	var with_layers := _fit(true, 3)
 	var low := _fit(true, 1)
 	var holders := HeroAssets._holders(with_layers[2].pod, false)
-	_t.check("heft fixture: layer holders found", holders.size() >= 3, "%d CarrierBank holders under the pod (base, the two fixture layers, and the shipped c4 and c5 layers, empty)" % holders.size())
+	_t.check("heft fixture: layer holders found", holders.size() >= 3, "%d CarrierBank holders under the pod (base, the two fixture layers, and the shipped c4 and c5 layers; a holder exists whether or not its layer carries banked parts)" % holders.size())
 	# 1. Heft 3: every holder is posed, and the layer brackets reach 0.99 or less.
 	var pod: Node3D = with_layers[2].pod
 	_hold(with_layers[0], pod, wall, 0.0)
