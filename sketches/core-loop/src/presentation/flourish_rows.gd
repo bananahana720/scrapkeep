@@ -20,6 +20,9 @@ extends RefCounted
 #   sfx_word     text; anchor (a name in play()'s anchors) or at: Vector2 screen share
 #   speed_lines  no fields; reduced motion drops it
 #
+# TONE-READ: world 1 stage beats (unit 4), crew-log captions and card stats; every line awaits
+# Andrew's read.
+#
 # Any text field may be an Array of variants: the run seed picks one (pick()), so a seed always
 # shows the same line and a new run may show another (principle 21).
 
@@ -36,8 +39,10 @@ const ROWS := {
 	# Stage 1 entry, first stage of a run: the pump crew's card punches in at dawn.
 	"cold_open": {"priority": 1,
 		"full": [
-			{"kind": "caption", "at": 0.0, "for": 4.0, "slot": "left_low",
+			{"kind": "caption", "at": 0.0, "for": 2.0, "slot": "left_low",
 				"text": ["Spillway Works. Dawn. Probably a Tuesday.", "Spillway Works. Dawn. Definitely a Wednesday.", "Spillway Works. Dawn. The kettle is on."]},
+			{"kind": "caption", "at": 2.0, "for": 2.0, "slot": "left_low",
+				"text": ["Moss's shift note: bring the runner back up.", "Moss's shift note: seals first. Then the runner."]},
 			{"kind": "card", "at": 0.6, "for": 4.4, "slot": "left_top",
 				"card": ["PUMP CREW", "Card 0417 · Spillway shift", "Clocked in", "06:00", "Hands on shift", "all", "Runner", "not back yet"]},
 			{"kind": "stamp", "at": 1.4, "for": 2.0, "text": "CLOCKED IN", "colour": "HAZARD"},
@@ -54,7 +59,7 @@ const ROWS := {
 		"full": [
 			{"kind": "sfx_word", "at": 0.0, "for": 1.2, "text": "KLANG!", "anchor": "cage"},
 			{"kind": "panels", "at": 0.3, "for": 5.3,
-				"texts": ["The cage. Opened from inside.", ["He measured the bars. Twice.", "Visor up. Tiny proud eyes."],
+				"texts": ["The cage. Opened from inside.", ["They measured the bars. Twice.", "Visor up. Tiny proud eyes."],
 					["Moss packed spare lenses.", "Moss packed a spare visor.", "Moss had a feeling."]]},
 			{"kind": "stamp", "at": 1.8, "for": 2.2, "text": "BACK ON SHIFT", "colour": "ARC"},
 		],
@@ -231,6 +236,8 @@ static func lines(id: String) -> Array:
 	var out: Array = []
 	for form in ["full", "short"]:
 		for piece in row(id).get(form, []):
+			for field in piece.get("card", []):
+				out.append(field)
 			for key in ["text", "texts"]:
 				if not piece.has(key):
 					continue

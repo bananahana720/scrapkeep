@@ -3,17 +3,20 @@ extends Node
 # Plays one row of flourish_rows.gd over play: name cards, inked stamps, captions, comic panels
 # and drawn sound words on a canvas layer, in the title openings' comic look
 # (title_intro_player.gd). It never stops time, never moves the camera and never eats input:
-# any fresh press after SKIP_GRACE ends the row and still reaches the ball. While the tree is
-# paused (a reward ceremony, the pause menu) the row hides and waits.
+# any fresh press (not the mouse wheel) after SKIP_GRACE ends the row and still reaches the
+# ball. While the tree is paused (a reward ceremony, the pause menu) the row hides and waits.
 #
 # Layout keeps to ScreenRegions: cards, captions, panels and stamps in the left column of the
-# play view (a stamp inks onto the right edge of the top piece), sound words at their anchor clamped inside
-# the play view. Nothing sits over the top band (the boss plate), the toast band (the world and
-# stage cards), the prompts or the bottom bar.
+# play view (a stamp inks onto the right edge of the top piece), sound words at their anchor
+# clamped inside the play view. Nothing sits over the top band (the boss plate), the toast band
+# (the world and stage cards), the prompts or the bottom bar, and nothing over a visible Control
+# in AVOID_GROUP (the stage 1 start pick card): the column narrows to its left and sound words
+# drop below it.
 #
-# A row plays in full the first time a profile sees it and in its short form after. Every
-# finished row (shown out or skipped) emits finished and joins the run's "flourishes" meta,
-# which run_log.gd writes into the run record.
+# A row plays in full until a profile has seen SEEN_SHARE of it, and in its short form after, so
+# a full beat cut early by steering plays in full again next run. A queued row older than
+# QUEUE_WAIT_MS, or whose anchor is gone, is dropped. Every finished row emits finished and joins
+# the run's "flourishes" meta, which run_log.gd writes into the run record.
 
 signal finished(id: String, skipped: bool)
 
@@ -23,8 +26,12 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 
 const LAYER := 39
-const SKIP_GRACE := 0.8
+const SKIP_GRACE := 1.5
+const SEEN_SHARE := 0.6
 const MAX_QUEUED := 3
+const QUEUE_WAIT_MS := 6000
+const AVOID_GROUP := "flourish_avoid"
+const AVOID_GAP := 12.0
 const INK := Color("17141a")
 const PAPER := Color("f3ecdc")
 const CAPTION_FILL := Color("fff6c9")
@@ -49,8 +56,10 @@ var id := ""
 var short := false
 var clock := 0.0
 var run_seed := 0
-# Every row finished since setup: {id, s, full, skipped, held}. finished is emitted before the
-# record joins the run meta, and it is the same dictionary, so a listener may set its held.
+# Every row finished since setup: {id, s, full, skipped, held, cut}. cut is "" when it showed
+# out, else "skipped" (a press), "preempted" (a higher row) or "stopped" (stop_all); skipped is
+# cut != "". finished is emitted before the record joins the run meta, and it is the same
+# dictionary, so a listener may set its held.
 var played: Array = []
 
 var _pieces: Array = []
@@ -58,6 +67,7 @@ var _started: Array[bool] = []
 var _live: Array = []
 var _anchors := {}
 var _queue: Array = []
+var _seen_key := ""
 var _layer: CanvasLayer
 var _overlay: Control
 var _lines: Control
@@ -97,9 +107,13 @@ func play(row_id: String, seed_value := -1, anchors := {}, form := "") -> bool:
 		if Rows.priority(row_id) <= Rows.priority(id):
 			if _queue.size() >= MAX_QUEUED:
 				return false
-			_queue.append([row_id, seed_value, anchors, form])
+			_queue.append([row_id, seed_value, anchors, form, Time.get_ticks_msec()])
 			return true
-		_finish(true, false)
+		_finish("preempted", false)
+		# A finished listener may have started a row of its own; this one waits behind it.
+		if playing:
+			_queue.push_front([row_id, seed_value, anchors, form, Time.get_ticks_msec()])
+			return true
 	_start(row_id, seed_value, anchors, form)
 	return true
 
@@ -110,14 +124,14 @@ func length() -> float:
 
 func skip() -> void:
 	if playing:
-		_finish(true)
+		_finish("skipped")
 
 
 # Ends the showing row and drops the queue: a screen change away from play.
 func stop_all() -> void:
 	_queue.clear()
 	if playing:
-		_finish(true, false)
+		_finish("stopped", false)
 
 
 func queued() -> Array:
@@ -139,10 +153,9 @@ func _start(row_id: String, seed_value: int, anchors: Dictionary, form: String) 
 	var profile = _profile() if form == "" else null
 	var key: String = Rows.SEEN_PREFIX + row_id
 	short = form == "short" or (profile != null and profile.is_seen(key))
-	if profile != null and not short:
-		profile.mark_seen(key)
-		if profile.get("can_save") and not profile.save():
-			push_warning("flourish: profile not saved: %s" % profile.last_error)
+	_seen_key = key if profile != null and not short else ""
+	for entry in _live.duplicate():
+		_drop(entry)
 	_pieces = Rows.resolve(row_id, short, run_seed)
 	_started.clear()
 	_started.resize(_pieces.size())
@@ -176,9 +189,12 @@ func _input(event: InputEvent) -> void:
 		skip()
 
 
+const WHEEL := [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN, MOUSE_BUTTON_WHEEL_LEFT, MOUSE_BUTTON_WHEEL_RIGHT]
+
+
 static func skips(event: InputEvent) -> bool:
 	return (event is InputEventKey and event.pressed and not event.echo) \
-		or (event is InputEventMouseButton and event.pressed) \
+		or (event is InputEventMouseButton and event.pressed and not event.button_index in WHEEL) \
 		or (event is InputEventJoypadButton and event.pressed) \
 		or (event is InputEventScreenTouch and event.pressed)
 
@@ -189,7 +205,7 @@ func advance(delta: float) -> void:
 		return
 	clock += delta
 	if clock >= length():
-		_finish(false)
+		_finish("")
 		return
 	for i in _pieces.size():
 		var piece: Dictionary = _pieces[i]
@@ -204,12 +220,18 @@ func advance(delta: float) -> void:
 			_drop(entry)
 		elif String(entry.piece.kind) == "sfx_word":
 			_place_word(entry.node, entry.piece)
+		elif String(entry.piece.kind) == "panels":
+			_reveal_panels(entry)
 	if _lines != null:
 		_lines.queue_redraw()
 
 
-func _finish(skipped: bool, next := true) -> void:
-	var record := {"id": id, "s": snappedf(minf(clock, length()), 0.01), "full": not short, "skipped": skipped, "held": 0.0}
+func _finish(cut: String, next := true) -> void:
+	var skipped := cut != ""
+	var record := {"id": id, "s": snappedf(minf(clock, length()), 0.01), "full": not short, "skipped": skipped, "held": 0.0, "cut": cut}
+	if _seen_key != "" and (not skipped or clock >= length() * SEEN_SHARE):
+		_mark_seen(_seen_key)
+	_seen_key = ""
 	played.append(record)
 	playing = false
 	set_process(false)
@@ -228,9 +250,25 @@ func _finish(skipped: bool, next := true) -> void:
 		var log: Array = ctx.run.get_meta("flourishes", [])
 		log.append(record)
 		ctx.run.set_meta("flourishes", log)
-	if next and not _queue.is_empty() and not playing:
+	while next and not _queue.is_empty() and not playing:
 		var entry: Array = _queue.pop_front()
-		_start(entry[0], entry[1], entry[2], entry[3])
+		if Time.get_ticks_msec() - int(entry[4]) <= QUEUE_WAIT_MS and _anchors_alive(entry[2]):
+			_start(entry[0], entry[1], entry[2], entry[3])
+
+
+func _anchors_alive(anchors: Dictionary) -> bool:
+	for name in anchors:
+		if not is_instance_valid(anchors[name]):
+			return false
+	return true
+
+
+func _mark_seen(key: String) -> void:
+	var profile = _profile()
+	if profile == null or not profile.mark_seen(key):
+		return
+	if profile.get("can_save") and not profile.save():
+		push_warning("flourish: profile not saved: %s" % profile.last_error)
 
 
 func _drop(entry: Dictionary) -> void:
@@ -303,7 +341,7 @@ func _label(text: String, font_size: int, color: Color, outline := 0) -> Label:
 func _wrapped(text: String, font_size: int) -> Label:
 	var label := _label(text, font_size, INK)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.custom_minimum_size.x = _screen().x * COLUMN_WIDTH - 40.0 * _scale()
+	label.custom_minimum_size.x = _column_right() - _screen().x * COLUMN_X - 40.0 * _scale()
 	return label
 
 
@@ -374,10 +412,6 @@ func _panels(texts: Array) -> Control:
 		strip.add_child(panel)
 		if i > 0 and not reduced_motion:
 			panel.modulate.a = 0.0
-			var tween := create_tween()
-			tween.tween_interval(Rows.PANEL_STEP * i)
-			tween.tween_property(panel, "modulate:a", 1.0, 0.08)
-			_tweens.append(tween)
 	_seat(strip, _column_at("left_top"))
 	return strip
 
@@ -406,6 +440,42 @@ func _stamp(text: String, colour: Color, slot: String) -> Control:
 	return label
 
 
+# Panel i shows PANEL_STEP * i seconds after the strip, on the row's own clock.
+func _reveal_panels(entry: Dictionary) -> void:
+	var strip: Control = entry.node
+	for i in strip.get_child_count():
+		if clock >= float(entry.piece.at) + Rows.PANEL_STEP * i:
+			strip.get_child(i).modulate.a = 1.0
+
+
+# Visible Controls the row keeps clear of, as screen rectangles.
+func _avoid_rects() -> Array:
+	var out: Array = []
+	if not is_inside_tree():
+		return out
+	for node in get_tree().get_nodes_in_group(AVOID_GROUP):
+		if node is Control and node.is_visible_in_tree():
+			out.append(node.get_global_rect())
+	return out
+
+
+# The column's right edge in pixels: COLUMN_WIDTH, or short of an avoided rectangle.
+func _column_right() -> float:
+	return minf(_screen().x * (COLUMN_X + COLUMN_WIDTH), _avoid_right())
+
+
+# Short of the nearest avoided rectangle that crosses the column's height, in pixels; INF if none.
+func _avoid_right() -> float:
+	var screen := _screen()
+	var right := INF
+	var top: float = screen.y * SLOT_Y.left_top
+	var band := Rect2(0.0, top, screen.x, ScreenRegions.rect("prompts", screen).position.y - top)
+	for rect in _avoid_rects():
+		if rect.intersects(band) and rect.position.x > screen.x * COLUMN_X:
+			right = minf(right, rect.position.x - AVOID_GAP * _scale())
+	return right
+
+
 # On the right edge of the column's top piece, overlapping it by STAMP_OVERLAP of the stamp's
 # width so the piece's words stay readable, and never past STAMP_RIGHT of the screen; with no
 # piece up, at the column's top slot.
@@ -419,7 +489,7 @@ func _stamp_at(label: Control) -> Vector2:
 	if top == null:
 		return _column_at("left_top")
 	var x := top.position.x + top.size.x - label.size.x * STAMP_OVERLAP
-	x = minf(x, screen.x * STAMP_RIGHT - label.size.x)
+	x = maxf(screen.x * COLUMN_X, minf(x, minf(screen.x * STAMP_RIGHT, _avoid_right()) - label.size.x))
 	return Vector2(x, top.position.y + top.size.y * 0.5 - label.size.y * 0.5)
 
 
@@ -429,14 +499,18 @@ func _place_word(label: Control, piece: Dictionary) -> void:
 	var share: Vector2 = piece.get("at_share", Vector2(0.62, 0.36))
 	var anchor = _anchors.get(String(piece.get("anchor", "")))
 	var camera := get_viewport().get_camera_3d() if is_inside_tree() else null
-	if anchor is Node3D and is_instance_valid(anchor) and anchor.is_inside_tree() and camera != null \
+	if is_instance_valid(anchor) and anchor is Node3D and anchor.is_inside_tree() and camera != null \
 			and not camera.is_position_behind(anchor.global_position):
 		share = camera.unproject_position(anchor.global_position + Vector3.UP * 2.0) / screen
 	label.reset_size()
 	var view := Rect2(PLAY_VIEW.position * screen, PLAY_VIEW.size * screen)
 	var at := share * screen - label.size * 0.5
-	label.position = Vector2(clampf(at.x, view.position.x, maxf(view.position.x, view.end.x - label.size.x)),
+	var placed := Vector2(clampf(at.x, view.position.x, maxf(view.position.x, view.end.x - label.size.x)),
 		clampf(at.y, view.position.y, maxf(view.position.y, view.end.y - label.size.y)))
+	for rect in _avoid_rects():
+		if Rect2(placed, label.size).intersects(rect):
+			placed.y = minf(rect.end.y + AVOID_GAP * _scale(), view.end.y - label.size.y)
+	label.position = placed
 
 
 # Three frames of overshoot; reduced motion just shows the piece.
