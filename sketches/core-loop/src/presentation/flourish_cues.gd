@@ -264,7 +264,7 @@ func _eject(at: float, seconds: float) -> void:
 	var scooter = boss.get("scooter") if boss != null else null
 	if not (arena is Node3D) or not is_instance_valid(arena):
 		return
-	var from: Vector3 = scooter.global_position if scooter is Node3D and is_instance_valid(scooter) else arena.global_position
+	var from: Vector3 = scooter.global_position if scooter is Node3D and is_instance_valid(scooter) else ctx.player.ball_position()
 	var prop := Node3D.new()
 	prop.name = "RoutScooter"
 	arena.add_child(prop)
@@ -279,8 +279,11 @@ func _eject(at: float, seconds: float) -> void:
 		prop.add_child(box)
 	prop.global_position = from
 	prop.visible = false
-	var out := Vector3(from.x - arena.global_position.x, 0.0, from.z - arena.global_position.z)
-	out = out.normalized() if out.length() > 0.5 else Vector3.FORWARD
+	# Away from the camera, so the sail is seen whole rather than over the player's shoulder.
+	var view = get_viewport().get_camera_3d() if is_inside_tree() else null
+	var out := -view.global_basis.z if view != null else from - arena.global_position
+	out.y = 0.0
+	out = out.normalized() if out.length() > 0.01 else Vector3.FORWARD
 	var tween := create_tween()
 	tween.tween_interval(at)
 	tween.tween_callback(func():

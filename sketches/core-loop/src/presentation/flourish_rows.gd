@@ -164,7 +164,7 @@ const ROWS := {
 			{"kind": "card", "at": 0.0, "for": 2.0, "slot": "left_top",
 				"card": ["TARN", "Tiger · claw bruiser", "Temperament", "gentle", "Machine", "is not", "Claws issued", "none"]},
 			{"kind": "stamp", "at": 0.7, "for": 1.3, "text": "HIRED", "colour": "HAZARD"},
-			{"kind": "caption", "at": 0.9, "for": 1.1, "slot": "left_low", "text": "Brought a claw nobody issued."},
+			{"kind": "caption", "at": 0.9, "for": 1.1, "slot": "left_low", "text": ["Start date: today. Claw: own.", "Paperwork: one claw, unissued.", "Shift starts now. Gloves optional."]},
 		],
 		"short": [
 			{"kind": "card", "at": 0.0, "for": 1.6, "slot": "left_top", "card": ["TARN", "Signed on"]},
