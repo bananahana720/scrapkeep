@@ -42,9 +42,9 @@ const COLUMN_WIDTH := 0.30
 const SLOT_Y := {"left_top": 0.30, "left_low": 0.50}
 # A stamp inks onto the right edge of the column's top piece (the punch card, the comic page);
 # "centre" puts it over the upper play view, for a caller that knows no threat is committed.
-const STAMP_OVERLAP := 0.25
+const STAMP_OVERLAP := 0.08
 const STAMP_RIGHT := 0.5
-const STAMP_MIN_SHARE := 0.55
+const STAMP_MIN_SHARE := 0.4
 const STAMP_CENTRE_Y := 0.40
 # Sound words stay inside the play view, between the toast band and the prompts.
 const PLAY_VIEW := Rect2(0.34, 0.30, 0.60, 0.28)

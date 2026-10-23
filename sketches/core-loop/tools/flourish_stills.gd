@@ -59,7 +59,7 @@ func _run() -> void:
 	for id in Rows.ROWS:
 		for form in ["full", "short"]:
 			player.stop_all()
-			player.play(id, SEED, {"cage": game.player, "warden": game.player}, form)
+			player.play(id, SEED, {}, form)
 			player.advance(_busiest(id, form == "short"))
 			# Software rendering under xvfb runs slow; hold the row at that moment.
 			player.set_process(false)
