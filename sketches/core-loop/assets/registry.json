@@ -8534,6 +8534,90 @@
    }
   },
   {
+   "id": "islands_keel_rib",
+   "path": "res://assets/models/park/islands_keel_rib.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh the piece of park row(s) keel_rib_w and keel_rib_e; slots enamel, steel; visibility range from the detail class)",
+   "provenance": {
+    "recipe": "tools/blender/park/islands_pieces.py",
+    "notes": "wave 20 zero-placeholder bar, park_islands: the keel rib of park rows keel_rib_w and keel_rib_e (no fit): a rusted ancient hull rib whose -col is the exact 3 x 12 x 50 m box of the greybox collider it replaces; deterministic, polish on (tools/blender/POLISH.md)"
+   },
+   "bounds": {
+    "min": [
+     -1.5,
+     0,
+     -25
+    ],
+    "max": [
+     1.5,
+     12,
+     25
+    ],
+    "size": [
+     3.0,
+     12,
+     50
+    ]
+   }
+  },
+  {
+   "id": "islands_ore_adit",
+   "path": "res://assets/models/park/islands_ore_adit.glb",
+   "class": "park_large",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh the piece of park row(s) ore_adit; slots enamel, steel, stone; visibility range from the park_large class)",
+   "provenance": {
+    "recipe": "tools/blender/park/islands_pieces.py",
+    "notes": "wave 20 zero-placeholder bar, park_islands: drape recipe of park row ore_adit: a timbered adit mouth (four timber sets, side and roof lagging) over the 30 x 14 opening, no collider (the stamped ground stays the only solid); vertices relative to the row node at its seat height; deterministic, polish on (tools/blender/POLISH.md)"
+   },
+   "bounds": {
+    "min": [
+     -8.52,
+     -4.0401,
+     -13.6
+    ],
+    "max": [
+     8.52,
+     12.4514,
+     13.6
+    ],
+    "size": [
+     17.04,
+     16.4915,
+     27.2
+    ]
+   }
+  },
+  {
+   "id": "islands_tram_head",
+   "path": "res://assets/models/park/islands_tram_head.glb",
+   "class": "landform",
+   "ships": true,
+   "loader": "src/world/park/park_recipes.gd place (the park row's recipe id; base mesh the piece of park row(s) tram_head; slots enamel, steel; visibility range from the landform class)",
+   "provenance": {
+    "recipe": "tools/blender/park/islands_pieces.py",
+    "notes": "wave 20 zero-placeholder bar, park_islands: drape recipe of park row tram_head: deck planks, kerb, rail stub and a timber buffer stop on the stamped 30 x 30 plateau, no collider; vertices relative to the row node at its seat height; deterministic, polish on (tools/blender/POLISH.md)"
+   },
+   "bounds": {
+    "min": [
+     -15.03,
+     -2.3577,
+     -15.03
+    ],
+    "max": [
+     15.03,
+     5.58,
+     15.03
+    ],
+    "size": [
+     30.06,
+     7.9377,
+     30.06
+    ]
+   }
+  },
+  {
    "id": "landmark_dam",
    "path": "res://assets/models/park/landmark_dam.glb",
    "class": "hero_landmark",
@@ -13269,6 +13353,9 @@
   "island_rim_rusted-salvaged-plate.webp",
   "island_small",
   "island_small_sandstone-strata.webp",
+  "islands_keel_rib",
+  "islands_ore_adit",
+  "islands_tram_head",
   "kicker_wedge",
   "kicker_wedge_detail1",
   "kicker_wedge_detail2",
