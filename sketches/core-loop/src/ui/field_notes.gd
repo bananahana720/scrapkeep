@@ -26,7 +26,7 @@ const TESTING := [
 	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.",
 	"Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores (the diamonds beside the objective) that raise the gate tiers.",
 	"Sable's pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
-	"Death is one key: R retries the stage from its start with the scrap, health and parts you entered with; N starts a new run as the same class. Hold R in play to retry the stage. In a boss arena, R retries the fight from its entry and T replays that world's last stage.",
+	"Death ends the run; the next one starts from world 1: N starts a new run as the same class. The one second chance is a part you earn, the Spare Frame, which leaves you at 20% health once a run. Hold R in play to abandon the run and start a new one.",
 ]
 
 const QUESTIONS := [
@@ -34,7 +34,7 @@ const QUESTIONS := [
 	"Does the loop read without instructions: where to go, what the beacon wants, what a gate gives?",
 	"Does the launch into the next stage feel like momentum carried, or like a load screen?",
 	"Is the shoulder view while mounted enough to see what you are shooting?",
-	"Is retry fast enough that dying costs you nothing but the stage?",
+	"Does dying and starting again feel quick enough that you want one more run?",
 ]
 
 const TRY_FIRST := [
@@ -42,7 +42,7 @@ const TRY_FIRST := [
 	"Roll the scrap lines on the way down: scrap is your armour and your weight, and a heavier ball hits harder.",
 	"Break the Warden: the line at the top of the screen says what it wants next. Its gates open when it breaks; roll through one to take its part.",
 	"As Sable, hit a steep face at speed, press E, fire with left mouse, then hold and release Space to slingshot off.",
-	"Get scrapped on purpose, then press R: you are back at the stage start in under a second.",
+	"Get scrapped on purpose, then hold R: a new run, the same pilot, from world 1.",
 	"Against Brindle, read the ship's plating line: hit what glows amber, slam the vent caps in phase 2, and ram or stomp the scooter when he runs.",
 ]
 
@@ -70,7 +70,7 @@ const MENU_ROWS := [
 	{"keys": "[ / ]", "does": "effects volume down / up (also in the pause menu)"},
 	{"keys": "M", "does": "mute or unmute"},
 	{"keys": "P / Esc", "does": "pause menu: resume, restart the run, field notes, music and effects volume; quit with X (hold)", "caps": ["key_p"], "short": "pause"},
-	{"keys": "R (hold)", "does": "retry the stage from its start (in the arena, the fight); release before holding again", "caps": ["key_r"], "short": "hold retry"},
+	{"keys": "R (hold)", "does": "restart the run: a new run as the same pilot, from world 1; release before holding again", "caps": ["key_r"], "short": "hold restart"},
 	{"keys": "F1", "does": "launched with --dev only: tuning panel (frees the mouse)"},
 	{"keys": "F3", "does": "launched with --dev only: physics interpolation on/off (off by default)"},
 	{"keys": "F4", "does": "launched with --dev only: save every tuning value to user://tuning-<time>.json"},
@@ -95,13 +95,10 @@ const FIELD_RULES := [
 ]
 
 const SCREEN_KEYS := [
-	{"keys": "Space", "does": "title: start; summary: choose a class (after a short beat)"},
+	{"keys": "Space", "does": "title: start; summary: choose a class (pad B on the summary)"},
 	{"keys": "H", "does": "title: how to play, and back"},
 	{"keys": "1, 2, ...", "does": "class select: one number per class card, left to right"},
-	{"keys": "R", "does": "death screen: retry the stage, or the fight in the arena"},
-	{"keys": "T", "does": "arena death screen: replay the world's last stage from its start"},
-	{"keys": "N", "does": "death or summary: new run, same class"},
-	{"keys": "C", "does": "death screen: choose a class"},
+	{"keys": "N", "does": "summary: new run, same class (pad A on the summary)"},
 ]
 
 # The key list in display order: a row per verb with its table keys and caps, then the menu keys.

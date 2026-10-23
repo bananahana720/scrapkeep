@@ -15,8 +15,8 @@ const TwoWorld := preload("res://tests/doubles/two_world_defs.gd")
 # freeing the Game with no further save, and booting a new one from the files. "Killed before the
 # write" is a store whose save or clear is dropped; "killed after the write" is the plain store.
 # For each step the resumed run must be the pre-step or the post-step entrance, never a mix:
-# stage, world, hp, max_hp, mass, cogs, parts, retries_spent and the entry pose all come from one
-# of the two documents. Also: retries_spent never decreases on disk, a profile unlock is never
+# stage, world, hp, max_hp, mass, cogs, parts, the earned-save flag and the entry pose all come from one
+# of the two documents. Also: the spent flag never goes back to unspent on disk once written, a profile unlock is never
 # lost once its save returned, nothing the run store leaves behind loads as corrupt, the file's
 # generation never goes down, and each hostile file (unreadable, newer_schema, invalid_run) is
 # named and leaves the title with New run only.
@@ -104,7 +104,7 @@ func _state(game) -> Dictionary:
 	var pose: Vector3 = run.snapshot_value("entry_position")
 	return {
 		"stage": run.stage, "world": run.world, "hp": run.hp, "max_hp": run.max_hp, "mass": run.mass,
-		"cogs": run.cogs, "parts": Array(run.parts), "spent": _spent(run.retries_spent), "pose": pose,
+		"cogs": run.cogs, "parts": Array(run.parts), "spent": _spent(run.retries_spent), "save": run.death_save_spent, "pose": pose,
 	}
 
 
@@ -113,7 +113,7 @@ func _doc_state(doc: Dictionary) -> Dictionary:
 	return {
 		"stage": int(doc["stage"]), "world": int(doc["world"]), "hp": float(doc["hp"]), "max_hp": float(doc["max_hp"]),
 		"mass": float(doc["mass"]), "cogs": int(doc.get("cogs", 0)), "parts": Array(doc["parts"]),
-		"spent": _spent(doc["retries_spent"]), "pose": Vector3(p[0], p[1], p[2]),
+		"spent": _spent(doc["retries_spent"]), "save": bool(doc.get("death_save_spent", false)), "pose": Vector3(p[0], p[1], p[2]),
 	}
 
 
@@ -127,7 +127,7 @@ func _spent(map: Dictionary) -> Dictionary:
 func _same(a: Dictionary, b: Dictionary) -> bool:
 	return a["stage"] == b["stage"] and a["world"] == b["world"] and is_equal_approx(a["hp"], b["hp"]) \
 		and is_equal_approx(a["max_hp"], b["max_hp"]) and is_equal_approx(a["mass"], b["mass"]) \
-		and a["cogs"] == b["cogs"] and a["parts"] == b["parts"] and a["spent"] == b["spent"] \
+		and a["cogs"] == b["cogs"] and a["parts"] == b["parts"] and a["spent"] == b["spent"] and a["save"] == b["save"] \
 		and (a["pose"] as Vector3).distance_to(b["pose"]) < POSE_TOLERANCE
 
 
@@ -142,8 +142,8 @@ func _raw_gen() -> int:
 	return int(parsed.get("generation", -1)) if parsed is Dictionary else -1
 
 
-func _spent_on_disk(world: int) -> int:
-	return int(_disk().get("retries_spent", {}).get(str(world), 0))
+func _save_on_disk() -> bool:
+	return bool(_disk().get("death_save_spent", false))
 
 
 func _bad_files() -> Array:
@@ -231,37 +231,41 @@ func _entrance_case(lose: bool) -> void:
 	_tear(_game)
 
 
-# (2) A death retry spends the world's one retry and saves the entrance with it. Killed before the
-# write the disk holds the unspent entrance (a lost spend, the retry is given back); killed after,
-# the spend. The count on disk never goes down, and a spend that was saved stays spent.
+# (2) The earned save spends once and saves the entrance with the flag. Killed before the write the
+# disk holds the unspent entrance (a lost spend, the save is given back); killed after, the spend.
+# The flag on disk never goes back, and a spend that was saved stays spent: the next death ends
+# the run. With the save part held, the lost spend lives on (the next death is saved again).
 func _retry_case(lose: bool) -> void:
-	var label := "retry spend, killed %s the write" % ("before" if lose else "after")
+	var label := "earned save spend, killed %s the write" % ("before" if lose else "after")
 	_wipe()
 	_game = await _boot()
 	await _begin(_game, 0)
+	_game.run.add_part("spare_frame", "test")
+	_game.flow.enter_stage(1, Vector3(0.0, 0.0, 14.0), false)
 	var pre := _doc_state(_disk())
-	var spent_pre := _spent_on_disk(1)
+	var spent_pre := _save_on_disk()
 	var gen_pre := _raw_gen()
-	_kill(_game)
-	var dead: bool = _game.flow.state_name() == "dead"
 	_game.flow.store.drop_saves = lose
-	_game.flow.retry_stage()
+	_kill(_game)
+	var alive: bool = _game.flow.state_name() == "stage" and _game.run.alive() and _game.run.death_save_spent
 	var post := _state(_game)
 	_tear(_game)
-	var spent_disk := _spent_on_disk(1)
+	var spent_disk := _save_on_disk()
 	var gen_disk := _raw_gen()
 	_game = await _boot()
 	var resumed: bool = _game.flow.resume_run()
 	var back := _state(_game)
-	var want := pre if lose else post
-	var spent_after := _spent_on_disk(1)
-	# One more death on the resumed run: spent retries are not handed back.
+	# The entrance is a checkpoint: only the flag differs from pre, whatever the hull did since.
+	var want := pre.duplicate()
+	want["save"] = not lose
+	var spent_after := _save_on_disk()
+	# One more death on the resumed run: a spent save is not handed back.
 	_kill(_game)
-	var ends_after: bool = _game.flow.state_name() == ("dead" if lose else "summary")
-	_report(label, dead and resumed and _same(back, want) and (_same(back, pre) or _same(back, post)) \
-		and spent_disk >= spent_pre and spent_after >= spent_disk and spent_disk == (0 if lose else 1) \
+	var ends_after: bool = _game.flow.state_name() == ("stage" if lose else "summary")
+	_report(label, alive and resumed and _same(back, want) and not _same(pre, post) \
+		and not spent_pre and spent_after == spent_disk and spent_disk == (not lose) \
 		and (gen_disk == gen_pre if lose else gen_disk > gen_pre) and ends_after and _loads_clean(),
-		"dead %s; spent on disk %d then %d (resume spent %s); next death flow %s; generation %d then %d" % [dead, spent_pre, spent_disk, back["spent"], _game.flow.state_name(), gen_pre, gen_disk])
+		"alive after the hit %s; spent on disk %s then %s (resume spent %s); next death flow %s; generation %d then %d" % [alive, spent_pre, spent_disk, back["save"], _game.flow.state_name(), gen_pre, gen_disk])
 	_tear(_game)
 
 
@@ -289,8 +293,6 @@ func _boss_case() -> void:
 	# The run file as the kill left it, kept before the run goes on and ends.
 	var run_bytes := FileAccess.get_file_as_bytes(PATH)
 	# The run goes on and ends: its profile saves must keep the unlock.
-	_kill(_game)
-	_game.flow.retry_stage()
 	_kill(_game)
 	var ended: bool = _game.flow.state_name() == "summary"
 	var end_bytes := FileAccess.get_file_as_bytes(live_profile)
@@ -338,16 +340,14 @@ func _boss_case() -> void:
 
 
 # (4) World 1 cleared, world 2's first entrance. Killed before the write the run resumes at the
-# stage-3 entrance with world 1's spent retry; killed after, at stage 4 in world 2 with that
-# retry still spent.
+# stage-3 entrance with the earned save already spent; killed after, at stage 4 in world 2 with
+# the save still spent.
 func _world_case(lose: bool) -> void:
 	var label := "world transition, killed %s the write" % ("before" if lose else "after")
 	_wipe()
 	_game = await _boot()
 	await _begin(_game, 0)
-	_game.flow.enter_stage(3, Vector3(0.0, 0.0, 14.0), false)
-	_kill(_game)
-	_game.flow.retry_stage()
+	_game.run.death_save_spent = true
 	_grow(_game)
 	_game.flow.enter_stage(3, Vector3(0.0, 0.0, 14.0), false)
 	var pre := _doc_state(_disk())
@@ -364,22 +364,19 @@ func _world_case(lose: bool) -> void:
 	var back := _state(_game)
 	var want := pre if lose else post
 	_report(label, resumed and pre["stage"] == 3 and post["stage"] == 4 and post["world"] == 2 and not _same(pre, post) \
-		and _same(back, want) and (_same(back, pre) or _same(back, post)) and back["spent"].get(1, 0) == 1 \
+		and _same(back, want) and (_same(back, pre) or _same(back, post)) and back["save"] \
 		and (gen_disk == gen_pre if lose else gen_disk > gen_pre) and _loads_clean(),
-		"resumed %s at stage %d world %d: %s; spent %s; generation %d then %d" % [resumed, back["stage"], back["world"], back, back["spent"], gen_pre, gen_disk])
+		"resumed %s at stage %d world %d: %s; save spent %s; generation %d then %d" % [resumed, back["stage"], back["world"], back, back["save"], gen_pre, gen_disk])
 	_tear(_game)
 
 
 # (5) The run ends: the tombstone replaces the entrance. Killed before the clear the disk still
-# holds the last entrance, with the spent retry in it (the next death ends the run, as it would
-# have); killed after, no run and the title offers none.
+# holds the last entrance (the next death ends the run, as it would have); killed after, no run and the title offers none.
 func _end_case(lose: bool) -> void:
 	var label := "run end, killed %s the tombstone" % ("before" if lose else "after")
 	_wipe()
 	_game = await _boot()
 	await _begin(_game, 0)
-	_kill(_game)
-	_game.flow.retry_stage()
 	var pre := _doc_state(_disk())
 	var gen_pre := _raw_gen()
 	_game.flow.store.drop_clear = lose
@@ -397,30 +394,31 @@ func _end_case(lose: bool) -> void:
 		var back := _state(_game)
 		_kill(_game)
 		_report(label, ended and resumed and _same(back, pre) and gen_disk == gen_pre and _game.flow.state_name() == "summary" and _loads_clean(),
-			detail + "; resumed spent %s, next death flow %s" % [back["spent"], _game.flow.state_name()])
+			detail + "; resumed save spent %s, next death flow %s" % [back["save"], _game.flow.state_name()])
 	else:
 		_report(label, ended and not resumed and doc.is_empty() and cause == "" and gen_disk > gen_pre and raw.contains("\"ended\": true") \
 			and not raw.contains("\"run\"") and _loads_clean(), detail + "; file %s" % raw.replace("\n", " "))
 	_tear(_game)
 
 
-# A crash mid-run and then New run (not Continue): the new run does not inherit the old run's
-# spent retries, and the generation keeps rising.
+# A crash mid-run after the earned save was spent and then New run (not Continue): the new run does
+# not inherit the old run's spent save, and the generation keeps rising.
 func _new_run_case() -> void:
 	_wipe()
 	_game = await _boot()
 	await _begin(_game, 0)
+	_game.run.add_part("spare_frame", "test")
+	_game.flow.enter_stage(1, Vector3(0.0, 0.0, 14.0), false)
 	_kill(_game)
-	_game.flow.retry_stage()
 	var gen_old := _raw_gen()
-	var spent_old := _spent_on_disk(1)
+	var spent_old := _save_on_disk()
 	_tear(_game)
 	_game = await _boot()
 	await _begin(_game, 0)
 	var gen_new := _raw_gen()
-	var spent_new := _spent_on_disk(1)
-	_report("crash then New run", spent_old == 1 and spent_new == 0 and gen_new > gen_old and _loads_clean(),
-		"old spent %d, new run's spent %d; generation %d then %d" % [spent_old, spent_new, gen_old, gen_new])
+	var spent_new := _save_on_disk()
+	_report("crash then New run", spent_old and not spent_new and gen_new > gen_old and _loads_clean(),
+		"old save spent %s, new run's %s; generation %d then %d" % [spent_old, spent_new, gen_old, gen_new])
 	_tear(_game)
 
 

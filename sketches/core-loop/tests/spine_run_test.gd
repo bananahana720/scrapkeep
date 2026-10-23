@@ -226,8 +226,8 @@ func _finish() -> bool:
 	var text: String = _arena.get("dead_text", "")
 	_report("arena entry momentum", _kept(_arena.get("before", 0.0), _arena.get("after", 0.0)) and _boss.entry_speeds.size() >= 1,
 		"left stage 2 at %.2f m/s horizontal, %.2f m/s in the arena" % [_arena.get("before", -1.0), _arena.get("after", -1.0)])
-	_report("boss death screen", _arena.get("dead_state", "") == "dead" and text.contains("R   retry the arena") and text.contains("T   replay stage 2")
-			and text.contains("N   new run") and text.contains("plating 120"),
+	_report("boss death screen", _arena.get("dead_state", "") == "dead" and text.contains("N   new run") and text.contains("T   replay stage 2")
+			and not text.contains("R   ") and text.contains("plating 120"),
 		"death in the arena reads \"%s\"" % text.replace("\n", " | "))
 	_report("arena retry and victory", _arena.get("retried_state", "") == "boss" and _boss.entries == 2 and _arena.get("retried_hp", 0.0) == _arena.get("hp", -1.0)
 			and _arena.get("after_defeat", "") == "victory",
