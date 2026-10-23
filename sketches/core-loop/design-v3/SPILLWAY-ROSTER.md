@@ -13,7 +13,7 @@ The Spillway teaches the master verbs (WORLD-ROSTERS.md): stay fast and fields m
 | Kind | Status | Rule | Answer | Flow twist |
 | --- | --- | --- | --- | --- |
 | Chaser | kept | Lunges along a committed lane | Ram it in the wind-up | Soaked |
-| Jolt layer (`jolt_layer`) | re-admitted | Lays a live mat; a pulse on a slow ball drops casts and jams specials for 0.5 s | FAST tier, the air or a line slips every pulse | A mat laid on standing water spreads 1.5x (`WET_SPREAD`) |
+| Jolt layer (`jolt_layer`) | re-admitted | Lays a live mat; a pulse on a slow ball drops casts and jams specials for 0.5 s | FAST tier, the air or a line slips every pulse | A mat laid on water (a live flood, or a water floor on the map) spreads 1.5x (`WET_SPREAD`) |
 | Hooker (`hooker`) | re-admitted, reworked | Harpoons you to its post and reels you in | Outrun the line, boost, or (new) bite another post: the "hook" break snaps the tether and kicks you along your new line | Soaked; hook posts are the Spillway's grapple lesson |
 | Ramp flipper as the sluice flap (`ramp_flipper`) | re-admitted, reworked | Tilts a plate under a slow ball and flings it off its line | (New) reach it at FAST tier and it launches you along your own line, 9 m/s up plus 4 m/s forward; a jump on the tilt still rides it | Soaked |
 | Boom tender (`boom_tender`, new) | sheets requested, PR 2 | Drags a five-float debris boom across your lane and pins a slow ball | Bowl through the floats at speed: they pop like pins | Soaked; its own body (Mojulo, one shell, crisp bevels) |
@@ -40,7 +40,7 @@ Rejected: the bola thrower (tests the air, the Highdraft's verb), the gyro jamme
 | Flume | flap_line | ramp flipper x2, lobber | ride the flaps under the shells |
 | Both | elite_spillway (elite) | hooker, jolt layer, plated brute | the exam: the tether pulls you into the live mat under the slab; speed answers all three |
 
-The old shared elite (plated brute, winch drone) stays declared as `ELITE` (the table fallback) and no stage names it. Packs live in `alpha_defs.gd` and its mirror `park_defs.gd`; the park files' home rows are unchanged, so dam and flume dressing threads keep their files.
+The Spillway elite keeps the pack id `elite`, so the park files' home rows (which name it in `reinforce.pack`) and their bakes are unchanged, and dam and flume dressing threads keep their files. The old shared elite (plated brute, winch drone) stays declared as `ELITE` (the table fallback) and no stage names it. Packs live in `alpha_defs.gd` and its mirror `park_defs.gd`.
 
 ## Wind-ups, codex, achievements
 

@@ -102,7 +102,7 @@ const PACKS_FLUME := [
 ]
 # The Spillway's own elite on stages 1 and 2: the tether drags you back into the live mat while
 # the brute's slab comes down. Speed snaps the line and slips the mat in one move.
-const ELITE_SPILLWAY := {"id": "elite_spillway", "kinds": ["hooker", "jolt_layer", "plated_brute"]}
+const ELITE_SPILLWAY := {"id": "elite", "kinds": ["hooker", "jolt_layer", "plated_brute"]}
 # The Dig's own elite (design-v3/WORLD-ROSTERS.md): two plated rigs and a jaw, so the floor is
 # the danger and the wall the lane. The Foreman joins it once it merges.
 const DIG_ELITE := {"id": "dig_elite", "kinds": ["drill_crew", "drill_crew", "pit_jaw"]}

@@ -66,7 +66,7 @@ func _tables() -> void:
 		var name := String(table.resource_path.get_file())
 		_t.eq("%s pack counts" % name, [table.DEFS[0]["packs"].size(), table.DEFS[1]["packs"].size()], [5, 6])
 		_t.eq("%s Spillway elite" % name, [table.DEFS[0]["elite"]["kinds"], table.DEFS[1]["elite"]["id"]],
-			[["hooker", "jolt_layer", "plated_brute"], "elite_spillway"])
+			[["hooker", "jolt_layer", "plated_brute"], "elite"])
 	_t.eq("both tables name the same Spillway packs", [AlphaDefs.PACKS_DAM, AlphaDefs.PACKS_FLUME, AlphaDefs.ELITE_SPILLWAY],
 		[ParkDefs.PACKS_DAM, ParkDefs.PACKS_FLUME, ParkDefs.ELITE_SPILLWAY])
 	var outside := []

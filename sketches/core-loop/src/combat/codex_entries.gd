@@ -100,7 +100,7 @@ const ENTRIES := [
 		"id": "mat_slip", "name": "Slip the Mat",
 		"hint": "A live mat only bites a ball that dawdles.",
 		"clue": "a jolt layer's live mat + speed, the air or a line as it pulses",
-		"text": "A jolt layer's pulse misses a fast ball, a ball in the air and a ball on a line. On standing water the mat spreads half as wide again.",
+		"text": "A jolt layer's pulse misses a fast ball, a ball in the air and a ball on a line. Laid on flood water, the mat spreads half as wide again.",
 	},
 	{
 		"id": "flap_ride", "name": "Ride the Flap",
