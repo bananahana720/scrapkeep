@@ -1,0 +1,562 @@
+{
+ "schema": "scrapkeep-park-props-kit/1",
+ "park": "pit",
+ "recipe": "tools/blender/park/props/pit.py",
+ "kinds": {
+  "ore_car": {
+   "class": "dress_hero",
+   "tags": [
+    "machine"
+   ],
+   "story": "A side-dump ore car that jumped its stub of track on the last haul and spilled across the bench.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/ore_car_a.glb",
+      "res://assets/models/park/props/pit/ore_car_a_lod1.glb",
+      "res://assets/models/park/props/pit/ore_car_a_lod2.glb"
+     ],
+     "tris": [
+      13980,
+      6990,
+      2096
+     ],
+     "radius": 4.242,
+     "height": 2.086
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/ore_car_b.glb",
+      "res://assets/models/park/props/pit/ore_car_b_lod1.glb",
+      "res://assets/models/park/props/pit/ore_car_b_lod2.glb"
+     ],
+     "tris": [
+      11564,
+      5782,
+      1734
+     ],
+     "radius": 3.52,
+     "height": 2.662
+    }
+   }
+  },
+  "change_house": {
+   "class": "dress_hero",
+   "tags": [
+    "tall"
+   ],
+   "story": "The shift change shack: tin walls, a bench out front, hard hats still on the pegs for a shift that never came.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/change_house_a.glb",
+      "res://assets/models/park/props/pit/change_house_a_lod1.glb",
+      "res://assets/models/park/props/pit/change_house_a_lod2.glb"
+     ],
+     "tris": [
+      13776,
+      6888,
+      2066
+     ],
+     "radius": 3.206,
+     "height": 3.182
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/change_house_b.glb",
+      "res://assets/models/park/props/pit/change_house_b_lod1.glb",
+      "res://assets/models/park/props/pit/change_house_b_lod2.glb"
+     ],
+     "tris": [
+      13928,
+      6964,
+      2088
+     ],
+     "radius": 4.017,
+     "height": 4.069
+    }
+   }
+  },
+  "drill_rig": {
+   "class": "dress_hero",
+   "tags": [
+    "machine",
+    "tall"
+   ],
+   "story": "The blast-hole drill, mast laid down for the move that never happened; crawler tracks caked in bench dust.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/drill_rig_a.glb",
+      "res://assets/models/park/props/pit/drill_rig_a_lod1.glb",
+      "res://assets/models/park/props/pit/drill_rig_a_lod2.glb"
+     ],
+     "tris": [
+      12620,
+      6310,
+      1892
+     ],
+     "radius": 4.599,
+     "height": 3.468
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/drill_rig_b.glb",
+      "res://assets/models/park/props/pit/drill_rig_b_lod1.glb",
+      "res://assets/models/park/props/pit/drill_rig_b_lod2.glb"
+     ],
+     "tris": [
+      12992,
+      6496,
+      1948
+     ],
+     "radius": 4.52,
+     "height": 3.468
+    }
+   }
+  },
+  "core_rack": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "Drill cores laid across two sawhorses for the geologist who never came back up to log them.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/core_rack_a.glb",
+      "res://assets/models/park/props/pit/core_rack_a_lod1.glb",
+      "res://assets/models/park/props/pit/core_rack_a_lod2.glb"
+     ],
+     "tris": [
+      2900,
+      1450,
+      434
+     ],
+     "radius": 1.389,
+     "height": 0.934
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/core_rack_b.glb",
+      "res://assets/models/park/props/pit/core_rack_b_lod1.glb",
+      "res://assets/models/park/props/pit/core_rack_b_lod2.glb"
+     ],
+     "tris": [
+      2736,
+      1368,
+      410
+     ],
+     "radius": 1.638,
+     "height": 0.934
+    }
+   }
+  },
+  "ore_heap": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "Grab samples heaped by the shovel crew: ochre and rust oxide, grey-green host rock, a streak of copper green.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/ore_heap_a.glb",
+      "res://assets/models/park/props/pit/ore_heap_a_lod1.glb",
+      "res://assets/models/park/props/pit/ore_heap_a_lod2.glb"
+     ],
+     "tris": [
+      1520,
+      760,
+      228
+     ],
+     "radius": 1.522,
+     "height": 1.281
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/ore_heap_b.glb",
+      "res://assets/models/park/props/pit/ore_heap_b_lod1.glb",
+      "res://assets/models/park/props/pit/ore_heap_b_lod2.glb"
+     ],
+     "tris": [
+      960,
+      480,
+      144
+     ],
+     "radius": 1.055,
+     "height": 0.864
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/pit/ore_heap_c.glb",
+      "res://assets/models/park/props/pit/ore_heap_c_lod1.glb",
+      "res://assets/models/park/props/pit/ore_heap_c_lod2.glb"
+     ],
+     "tris": [
+      1928,
+      964,
+      286
+     ],
+     "radius": 1.967,
+     "height": 1.578
+    }
+   }
+  },
+  "lagging_stack": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "Mine lagging cribbed in a square stack to dry; the top courses slid when the bench shook.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/lagging_stack_a.glb",
+      "res://assets/models/park/props/pit/lagging_stack_a_lod1.glb",
+      "res://assets/models/park/props/pit/lagging_stack_a_lod2.glb"
+     ],
+     "tris": [
+      1176,
+      588,
+      174
+     ],
+     "radius": 1.478,
+     "height": 1.206
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/lagging_stack_b.glb",
+      "res://assets/models/park/props/pit/lagging_stack_b_lod1.glb",
+      "res://assets/models/park/props/pit/lagging_stack_b_lod2.glb"
+     ],
+     "tris": [
+      956,
+      478,
+      142
+     ],
+     "radius": 1.942,
+     "height": 0.852
+    }
+   }
+  },
+  "hose_coil": {
+   "class": "dress_prop",
+   "tags": [
+    "machine"
+   ],
+   "story": "A driller's air hose coiled down by habit, and the jackhammer dropped beside it at the whistle.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/hose_coil_a.glb",
+      "res://assets/models/park/props/pit/hose_coil_a_lod1.glb",
+      "res://assets/models/park/props/pit/hose_coil_a_lod2.glb"
+     ],
+     "tris": [
+      1708,
+      854,
+      251
+     ],
+     "radius": 1.749,
+     "height": 0.549
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/hose_coil_b.glb",
+      "res://assets/models/park/props/pit/hose_coil_b_lod1.glb",
+      "res://assets/models/park/props/pit/hose_coil_b_lod2.glb"
+     ],
+     "tris": [
+      1860,
+      930,
+      278
+     ],
+     "radius": 1.857,
+     "height": 0.343
+    }
+   }
+  },
+  "blast_mat": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "A woven blasting mat dragged off the last shot and left slumped over the rubble it was meant to hold down.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/blast_mat_a.glb",
+      "res://assets/models/park/props/pit/blast_mat_a_lod1.glb",
+      "res://assets/models/park/props/pit/blast_mat_a_lod2.glb"
+     ],
+     "tris": [
+      1760,
+      880,
+      235
+     ],
+     "radius": 1.871,
+     "height": 0.75
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/blast_mat_b.glb",
+      "res://assets/models/park/props/pit/blast_mat_b_lod1.glb",
+      "res://assets/models/park/props/pit/blast_mat_b_lod2.glb"
+     ],
+     "tris": [
+      1448,
+      724,
+      158
+     ],
+     "radius": 1.75,
+     "height": 0.721
+    }
+   }
+  },
+  "tool_drop": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "Pick, shovel and sledge where the bench crew set them down at noon, a lunch pail between them.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/tool_drop_a.glb",
+      "res://assets/models/park/props/pit/tool_drop_a_lod1.glb",
+      "res://assets/models/park/props/pit/tool_drop_a_lod2.glb"
+     ],
+     "tris": [
+      1812,
+      906,
+      272
+     ],
+     "radius": 1.164,
+     "height": 0.368
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/tool_drop_b.glb",
+      "res://assets/models/park/props/pit/tool_drop_b_lod1.glb",
+      "res://assets/models/park/props/pit/tool_drop_b_lod2.glb"
+     ],
+     "tris": [
+      1548,
+      774,
+      232
+     ],
+     "radius": 0.975,
+     "height": 0.368
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/pit/tool_drop_c.glb",
+      "res://assets/models/park/props/pit/tool_drop_c_lod1.glb",
+      "res://assets/models/park/props/pit/tool_drop_c_lod2.glb"
+     ],
+     "tris": [
+      1468,
+      734,
+      220
+     ],
+     "radius": 1.222,
+     "height": 0.368
+    }
+   }
+  },
+  "notice_post": {
+   "class": "dress_prop",
+   "tags": [
+    "sign"
+   ],
+   "story": "A bench notice post: shift times and a blasting schedule, sun-bleached to blank boards.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/notice_post_a.glb",
+      "res://assets/models/park/props/pit/notice_post_a_lod1.glb",
+      "res://assets/models/park/props/pit/notice_post_a_lod2.glb"
+     ],
+     "tris": [
+      580,
+      290,
+      86
+     ],
+     "radius": 0.577,
+     "height": 2.244
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/notice_post_b.glb",
+      "res://assets/models/park/props/pit/notice_post_b_lod1.glb",
+      "res://assets/models/park/props/pit/notice_post_b_lod2.glb"
+     ],
+     "tris": [
+      548,
+      274,
+      82
+     ],
+     "radius": 0.763,
+     "height": 2.194
+    }
+   }
+  },
+  "saguaro_bones": {
+   "class": "dress_prop",
+   "tags": [
+    "plant"
+   ],
+   "story": "A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/saguaro_bones_a.glb",
+      "res://assets/models/park/props/pit/saguaro_bones_a_lod1.glb",
+      "res://assets/models/park/props/pit/saguaro_bones_a_lod2.glb"
+     ],
+     "tris": [
+      528,
+      264,
+      60
+     ],
+     "radius": 2.593,
+     "height": 0.704
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/saguaro_bones_b.glb",
+      "res://assets/models/park/props/pit/saguaro_bones_b_lod1.glb",
+      "res://assets/models/park/props/pit/saguaro_bones_b_lod2.glb"
+     ],
+     "tris": [
+      384,
+      192,
+      44
+     ],
+     "radius": 1.607,
+     "height": 1.085
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/pit/saguaro_bones_c.glb",
+      "res://assets/models/park/props/pit/saguaro_bones_c_lod1.glb",
+      "res://assets/models/park/props/pit/saguaro_bones_c_lod2.glb"
+     ],
+     "tris": [
+      736,
+      368,
+      96
+     ],
+     "radius": 2.051,
+     "height": 0.922
+    }
+   }
+  },
+  "prickly_pear": {
+   "class": "dress_prop",
+   "tags": [
+    "plant"
+   ],
+   "story": "Prickly pear grown up through the spoil; nobody cleared it, so the berm goes around it too.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/prickly_pear_a.glb",
+      "res://assets/models/park/props/pit/prickly_pear_a_lod1.glb",
+      "res://assets/models/park/props/pit/prickly_pear_a_lod2.glb"
+     ],
+     "tris": [
+      720,
+      360,
+      108
+     ],
+     "radius": 0.838,
+     "height": 1.789
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/prickly_pear_b.glb",
+      "res://assets/models/park/props/pit/prickly_pear_b_lod1.glb",
+      "res://assets/models/park/props/pit/prickly_pear_b_lod2.glb"
+     ],
+     "tris": [
+      1040,
+      520,
+      156
+     ],
+     "radius": 0.791,
+     "height": 1.493
+    }
+   }
+  },
+  "fire_ring": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "The old prospector's cold fire ring on the rim: stones, charred ends, a pan and a coffee pot. He was here first.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/fire_ring_a.glb",
+      "res://assets/models/park/props/pit/fire_ring_a_lod1.glb",
+      "res://assets/models/park/props/pit/fire_ring_a_lod2.glb"
+     ],
+     "tris": [
+      1688,
+      844,
+      251
+     ],
+     "radius": 1.548,
+     "height": 0.414
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/fire_ring_b.glb",
+      "res://assets/models/park/props/pit/fire_ring_b_lod1.glb",
+      "res://assets/models/park/props/pit/fire_ring_b_lod2.glb"
+     ],
+     "tris": [
+      2640,
+      1320,
+      395
+     ],
+     "radius": 1.665,
+     "height": 0.565
+    }
+   }
+  },
+  "haul_tyre": {
+   "class": "dress_prop",
+   "tags": [
+    "machine"
+   ],
+   "story": "A haul truck tyre twice a person's height, rolled off the shop pad and left where it fell.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/pit/haul_tyre_a.glb",
+      "res://assets/models/park/props/pit/haul_tyre_a_lod1.glb",
+      "res://assets/models/park/props/pit/haul_tyre_a_lod2.glb"
+     ],
+     "tris": [
+      1840,
+      920,
+      276
+     ],
+     "radius": 2.161,
+     "height": 0.923
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/pit/haul_tyre_b.glb",
+      "res://assets/models/park/props/pit/haul_tyre_b_lod1.glb",
+      "res://assets/models/park/props/pit/haul_tyre_b_lod2.glb"
+     ],
+     "tris": [
+      2488,
+      1244,
+      372
+     ],
+     "radius": 2.277,
+     "height": 1.618
+    }
+   }
+  }
+ }
+}

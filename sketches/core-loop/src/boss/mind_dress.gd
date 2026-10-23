@@ -63,6 +63,13 @@ static func prepare() -> void:
 			ResourceLoader.load_threaded_request(path)
 
 
+# Teardown: collects the files prepare() asked for that attach never took.
+static func settle() -> void:
+	for path in [base_path, kit_path]:
+		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			ResourceLoader.load_threaded_get(path)
+
+
 static func attach(owner_module):
 	preload("res://src/presentation/quiet_gun.gd").attach(owner_module)
 	# The loader thread's copies, held so load_scene's load() finds them in the cache.

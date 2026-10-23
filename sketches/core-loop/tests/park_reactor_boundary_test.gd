@@ -33,6 +33,10 @@ func _fight(heft: float, label: String) -> Dictionary:
 	game.table = "park"
 	root.add_child(game)
 	game.ctx.calm = true
+	# The checks are the sheet's solver publication and its class-scaled gain at a boundary contact. Wall grip's
+	# downforce (#61, on by default) presses the bot's first stomp 6 cm in, inside family-point reach (2.27 m against
+	# 2.30 m), so no boundary contact comes before the stagger; without it the stomp lands at 2.33 m.
+	game.player.tuning.set_option("grip", "off")
 	game.flow.force_warden = true
 	var bot = Hands.new(game, "skipper", 1)
 	bot.start()

@@ -128,17 +128,56 @@ static func snapshot() -> Dictionary:
 	}.duplicate(true)
 
 
+# Code-owned lookups (pilot ids, bus signals, reachable objective ids) do not depend on the
+# tables under validation, so one validate pass derives each once instead of once per row.
+static var _pass_depth := 0
+static var _pass := {}
+
+
+static func _begin_pass() -> void:
+	_pass_depth += 1
+
+
+static func _end_pass() -> void:
+	_pass_depth -= 1
+	if _pass_depth == 0:
+		_pass.clear()
+
+
+static func _cached(key: String, make: Callable):
+	if not _pass.has(key):
+		_pass[key] = make.call()
+	return _pass[key]
+
+
+static func _pilot_ids() -> Array:
+	return _cached("pilots", func(): return ClassDef.all().map(func(p): return p.id))
+
+
+static func _bus() -> Dictionary:
+	return _cached("bus", func(): return Achievements.bus_signals())
+
+
 static func validate(tables: Dictionary, check_hashes := true) -> Array:
+	_begin_pass()
 	var issues := []
 	for name in TABLES:
 		issues.append_array(validate_table(name, tables.get(name), tables, check_hashes))
 	for name in tables:
 		if not TABLES.has(name):
 			_issue(issues, str(name), "well_formed", "table", "unregistered table")
+	_end_pass()
 	return issues
 
 
 static func validate_table(name: String, rows, tables: Dictionary, check_hash := true) -> Array:
+	_begin_pass()
+	var issues := _validate_table(name, rows, tables, check_hash)
+	_end_pass()
+	return issues
+
+
+static func _validate_table(name: String, rows, tables: Dictionary, check_hash: bool) -> Array:
 	var issues := []
 	if not TABLES.has(name):
 		_issue(issues, name, "well_formed", "table", "unregistered table")
@@ -195,8 +234,8 @@ static func _type_matches(value, type: int) -> bool:
 
 
 static func _validate_row(name: String, id: String, row: Dictionary, kind: String, tables: Dictionary, issues: Array) -> void:
-	var pilots: Array = ClassDef.all().map(func(p): return p.id)
-	var bus := Achievements.bus_signals()
+	var pilots := _pilot_ids()
+	var bus := _bus()
 	match kind:
 		"achievements":
 			_ref(issues, name, id, "on", row.on, bus)
@@ -276,7 +315,7 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 		"objectives":
 			_ref(issues, name, id, "glyph", row.glyph, Icons.IDS)
 			_words(issues, name, id, row.words, 1, Objectives.MAX_WORDS)
-			if not _objective_ids().has(id):
+			if not _cached("objectives", func(): return _objective_ids()).has(id):
 				_issue(issues, name, "reachable", id, "chooser cannot select this id")
 		"lore":
 			_ref(issues, name, id, "kind", row.kind, ["exchange", "field_note", "intro"])
@@ -328,7 +367,7 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 
 
 static func _validate_trees(name: String, rows: Dictionary, spec: Dictionary, issues: Array) -> void:
-	var pilots: Array = ClassDef.all().map(func(p): return p.id)
+	var pilots := _pilot_ids()
 	var size: int = Trees.WORLD_ONE_SIZE if spec.kind == "world_one_trees" else Trees.SIZE
 	for pilot in rows:
 		_ref(issues, name, str(pilot), "pilot", pilot, pilots)
@@ -381,7 +420,7 @@ static func _validate_trees(name: String, rows: Dictionary, spec: Dictionary, is
 					"proc":
 						for proc in node.get(op, []):
 							if _shape(name, id, proc, {"on": TYPE_STRING, "do": TYPE_STRING}, issues):
-								_ref(issues, name, id, "proc on", proc.on, Achievements.bus_signals())
+								_ref(issues, name, id, "proc on", proc.on, _bus())
 								_ref(issues, name, id, "proc do", proc.do, Trees.ACTIONS)
 			# Both roots are selectable. Every later node needs its heap parent and stays inside the cap.
 			var parent: int = (index - 2) / 2
@@ -414,7 +453,7 @@ static func _intro_zone(issues: Array, name: String, id: String, row: Dictionary
 	if not row.has("pilot"):
 		return
 	# A pilot's threat line is the boss's, voiced only where the arena opens: the world's last zone.
-	_ref(issues, name, id, "pilot", row.pilot, ClassDef.all().map(func(p): return p.id))
+	_ref(issues, name, id, "pilot", row.pilot, _pilot_ids())
 	var last := 0
 	for stage in StageDefs.COUNT:
 		if StageDefs.world_of(stage + 1) == world:
