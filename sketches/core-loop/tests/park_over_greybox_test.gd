@@ -18,13 +18,15 @@ const Terrain := preload("res://src/world/terrain.gd")
 
 const MAP := "park_islands"
 const PIECES := {"ore_adit": "isle_adit_portal", "tram_head": "isle_tram_head", "keel_rib_w": "isle_keel_rib",
-	"keel_rib_e": "isle_keel_rib", "cloud_wash_west": "isle_ride_wash_west"}
+	"keel_rib_e": "isle_keel_rib", "cloud_wash_west": "isle_ride_wash_west", "fin_chute": "isle_ride_fin_chute"}
 # The stamped rows carry no collider of their own today: the stamped ground is their shape (place_row).
-const STAMPED := ["ore_adit", "tram_head", "cloud_wash_west"]
+const STAMPED := ["ore_adit", "tram_head", "cloud_wash_west", "fin_chute"]
 # The ride-surface sheet (tools/blender/park/isle_ride_pieces.py): the stamped ground is its whole collider, and every
 # vertex of the drawn sheet must lie between MIN_LIFT and FLUSH over it (ghost solid, #183; no z-fight), measured against
-# the game's own ground, Terrain._park_floor_at. fin_chute stays greybox (twin_fins' collapse drops its ground 8 m).
-const SHEETS := ["cloud_wash_west"]
+# the game's own ground, Terrain._park_floor_at. fin_chute lies inside twin_fins, whose collapse drops the ground 8 m, so
+# its row hides on that collapse and parks down with the fins (event_ground.gd hidden_rows).
+const SHEETS := ["cloud_wash_west", "fin_chute"]
+const HIDE_ON := {"fin_chute": "fin_rim_collapse"}
 const FLUSH := 0.12
 const MIN_LIFT := 0.03
 # The piece whose GLB carries its own uprights' collider, and the least |x| any of its faces may reach in the row frame:
@@ -48,6 +50,8 @@ func _run() -> void:
 		if PIECES.has(String(row.get("id", ""))):
 			rows[String(row["id"])] = row
 	t.eq("the collider-locked rows are in the park", rows.keys().size(), PIECES.size())
+	for id: String in HIDE_ON:
+		t.eq("%s leaves with %s" % [id, HIDE_ON[id]], String(rows.get(id, {}).get("hide_on", "")), HIDE_ON[id])
 	for recipe: String in PIECES.values():
 		t.check("%s is an over-greybox recipe" % recipe, ParkRecipes.OVER_GREYBOX.has(recipe))
 		t.check("%s's GLB has landed" % recipe, ResourceLoader.exists(ParkRecipes.paths(recipe, "landform")["base"]))
