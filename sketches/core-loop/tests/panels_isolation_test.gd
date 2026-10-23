@@ -14,7 +14,7 @@ const T := preload("res://tests/support/t.gd")
 #    spawned chaser has the same health and damage with 60 panels as with none.
 # 3. The panels act: heft rose by 60 x PANEL_MASS, the build's tuning mods carry the steps,
 #    and the ball draws the plates.
-# 4. The run keeps them: a retry restores the stage-start list, and the entrance document
+# 4. The run keeps them: a retry restores the stage-start list and pity count, and the entrance document
 #    round-trips the pickup order (a doc with an unknown panel is refused).
 # smoke: solo timeout=180s
 
@@ -104,6 +104,8 @@ func _check() -> void:
 	var empty_doc: Dictionary = RunState.new(null, 1).to_entrance_doc()
 	_t.check("a run with no panels writes no panels key", not empty_doc.has("panels"), str(empty_doc.keys().size()))
 	# A retry rewinds to the stage-start list (empty here) and the plates follow.
+	build.dropper.dry = 5
 	_game.flow.retry_stage()
+	_t.eq("retry restores the stage-start pity", build.dropper.dry, 0)
 	_t.eq("retry restores the stage-start panels", run.panels.size(), 0)
 	_t.eq("plates follow the retry", build.panel_shell.shown_count(), 0)

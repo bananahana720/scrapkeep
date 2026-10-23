@@ -75,8 +75,9 @@ func _init() -> void:
 	box.add_child(_list)
 
 
-# Reads the run: the plates and their labels, then the stat lines.
-func refresh(run, overflow := 0, class_id := "") -> void:
+# Reads the run: the plates and their labels (as held), then the stat lines (as folded, after
+# louvre overflow; `effective` empty means the held counts).
+func refresh(run, overflow := 0, class_id := "", effective := {}) -> void:
 	var held: Array = Array(run.panels) if run != null else []
 	shell.show_panels(held, run.run_seed if run != null else 0)
 	for child in _labels.get_children():
@@ -85,12 +86,14 @@ func refresh(run, overflow := 0, class_id := "") -> void:
 		child.queue_free()
 	lines.clear()
 	var counts := Panels.counts(held)
+	var folded: Dictionary = effective if not effective.is_empty() else counts
 	for id in Panels.ROWS:
+		if int(folded.get(id, 0)) > 0:
+			var line := Panels.stat_line(id, int(folded[id]))
+			lines.append(line)
+			_list.add_child(_line(line))
 		if not counts.has(id):
 			continue
-		var line := Panels.stat_line(id, int(counts[id]))
-		lines.append(line)
-		_list.add_child(_line(line))
 		var at: Vector3 = shell.centroid(id)
 		if at != Vector3.ZERO:
 			var tag := Label3D.new()

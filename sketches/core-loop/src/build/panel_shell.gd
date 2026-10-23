@@ -13,8 +13,9 @@ const Accretion := preload("res://src/build/accretion.gd")
 # Fixed outline (22 Oct): everything is visual overhang inside the hardware envelope, at most
 # MAX_OVERHANG off the radius-1.0 collider (Accretion's hardware stands up to about 1.1 m at
 # class V), and DRAW_BUDGET plates beside Accretion.MAX_PIECES. Panels past the budget still
-# count; they just draw no more plates. One MultiMesh per silhouette, so twelve draw calls at
-# most whatever the stack.
+# count; they just draw no more plates. One MultiMesh per silhouette, two surfaces each (bone
+# face, steel hardware), so 24 draw calls at most whatever the stack. The pickup pop widens
+# the face only, never its height, so a popping plate stays inside the envelope.
 #
 # The plates are tagged stand-ins (Panels.PANEL_ART_PENDING) built from primitives, one
 # silhouette per stat, crisp and bevelled. A silhouette's kit plate replaces its row in
@@ -142,7 +143,7 @@ func seat(index: int, scale_by := 1.0) -> Transform3D:
 	var slot: int = _order[index % SOCKETS]
 	var dir: Vector3 = (_twist[course % _twist.size()] as Basis) * sockets()[slot] if course > 0 else sockets()[slot]
 	var basis := _facing(dir) * Basis(Vector3.UP, float(slot) * 0.7)
-	return Transform3D(basis * Basis.from_scale(Vector3(PLATE_FACE, 1.0, PLATE_FACE) * scale_by), dir * course_radius(course))
+	return Transform3D(basis * Basis.from_scale(Vector3(PLATE_FACE * scale_by, 1.0, PLATE_FACE * scale_by)), dir * course_radius(course))
 
 
 # The mean direction of every drawn plate of this panel id, for the build read's labels;

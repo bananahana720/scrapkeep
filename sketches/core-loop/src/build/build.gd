@@ -117,8 +117,13 @@ var accretion
 var panel_shell
 var dropper = Panels.Dropper.new()
 var panel_rng := RandomNumberGenerator.new()
-# Louvres the last recompute converted into the pilot's signature stat (Panels.OVERFLOW).
+# Louvres the last recompute converted into the pilot's signature stat (Panels.OVERFLOW), and
+# the counts it folded after that conversion (what the build read's stat lines say).
 var panel_overflow := 0
+var panel_effective := {}
+# The pity count at this stage's entry: a retry puts it back, so dying never carries a dry
+# streak into the retry.
+var _stage_dry := 0
 # Stages whose missing cell data the rib read has logged.
 var _no_cells_logged := {}
 # True from stage entry until the stage's rib caches are placed (the director's graph is read
@@ -594,6 +599,7 @@ func recompute() -> void:
 # Panels fold after the parts, so the louvre cap reads the parts' fire rate (IL-01 overflow).
 func _fold_panels() -> void:
 	panel_overflow = 0
+	panel_effective = {}
 	if ctx.run.panels.is_empty():
 		return
 	var weapon_id: String = ctx.run.class_def.weapon_id if ctx.run.class_def != null else ""
@@ -601,6 +607,7 @@ func _fold_panels() -> void:
 	var room := Panels.louvre_room(rate, sheet.mod("weapon_rate")) if rate > 0.0 else -1
 	var eff: Dictionary = Panels.effective(ctx.run.panel_counts(), _class_id(), room)
 	panel_overflow = int(eff["converted"])
+	panel_effective = eff["counts"]
 	Panels.fold(sheet, eff["counts"])
 
 
@@ -992,6 +999,10 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	panel_rng.seed = hash([ctx.run.run_seed, stage, ctx.run.retries, "panels"])
 	scrap.clear_caches()
 	_caches_pending = true
+	if retry:
+		dropper.dry = _stage_dry
+	else:
+		_stage_dry = dropper.dry
 	_speed_tier = ctx.player.speed_tier()
 	scrap.lay_out(ctx.terrain, ctx.terrain.scrap_lines(stage), ctx.flow.stage_def()["scrap_density"], ctx.rng)
 	fabricators.lay_out(ctx.terrain, stage, _class_id(), ctx.rng, ctx.run.parts)

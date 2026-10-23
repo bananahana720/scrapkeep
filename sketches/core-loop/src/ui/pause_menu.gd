@@ -314,7 +314,8 @@ func _toggle_ceremony() -> void:
 
 func _show_build() -> void:
 	var build = game.get("build")
-	build_read.refresh(game.run, int(build.panel_overflow) if build != null else 0, game.run.class_id() if game.run != null else "")
+	build_read.refresh(game.run, int(build.panel_overflow) if build != null else 0, game.run.class_id() if game.run != null else "",
+		build.panel_effective if build != null else {})
 
 
 func _show_breath() -> void:
