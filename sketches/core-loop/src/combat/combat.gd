@@ -206,6 +206,9 @@ var _overdrive := 0.0
 var _since_slingshot := INF
 var _crushes: Array = []
 var _clock := 0.0
+# A reel impact's mark on a body and how long a kill after it still counts as the reel's.
+const REEL_MARK := "panel_reel_at"
+const REEL_KILL_WINDOW := 0.25
 # The strike whose facts are going out: {id, kind, force, part}, empty otherwise.
 var _pending := {}
 # Shred by enemy instance id: {amount, cap (the most plating it has shown), idle
@@ -589,6 +592,7 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 		var source: String = enemy.last_damage_source if "last_damage_source" in enemy else ""
 		# A fuse death is an enemy spent by its own blast (splitter_pod.gd): nobody killed it.
 		if source != "fuse":
+			ctx.run.kill_tags = _kill_tags(enemy, affix_id)
 			ctx.run.record_kill(kind, where, scrap, source)
 		var id := enemy.get_instance_id()
 		_primed.erase(id)
@@ -617,6 +621,14 @@ static func _reenter_space(body: CollisionObject3D) -> void:
 	PhysicsServer3D.body_set_space(rid, space)
 
 
+# What a kill was, for the panel drop (build.gd): an elite-pack member or an affixed elite,
+# and a jackpot when a reel impact or dunk struck it inside REEL_KILL_WINDOW.
+func _kill_tags(enemy: Node3D, affix_id: String) -> Dictionary:
+	var reel_at = enemy.get_meta(REEL_MARK) if enemy.has_meta(REEL_MARK) else null
+	return {"elite": bool(enemy.get_meta("elite_pack", false)) or affix_id != "",
+		"jackpot": reel_at != null and _clock - float(reel_at) <= REEL_KILL_WINDOW}
+
+
 # What the director weights reinforcement packs against (fleet.gd build_read).
 func build_read() -> Dictionary:
 	return fleet.build_read()
@@ -637,8 +649,13 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 			and enemy.has_method("staggered") and not enemy.staggered():
 		ultimate.warden_posture(enemy, resolve(enemy, kind, force, part))
 		return
+	var dunk := _dunk_bonus(enemy, kind)
+	# A reel impact or a dunk marks the body, so a kill it lands is a jackpot (grey panels).
+	if ctx != null and ctx.player != null and ctx.player.get("kit") != null and \
+			(dunk > 0.0 or is_reel_impact(kind, ctx.player.smash_landing == enemy)):
+		enemy.set_meta(REEL_MARK, _clock)
 	door.pass_hit({"enemy": enemy, "kind": kind, "force": force, "part": part, "source": source,
-		"impact": impact, "dunk": _dunk_bonus(enemy, kind)}, _strike_stages)
+		"impact": impact, "dunk": dunk}, _strike_stages)
 
 
 # --- SR1: strike()'s stages, in damage_door.gd's ORDER --------------------------------
@@ -1324,6 +1341,9 @@ func punch_of(kind: String, force: float) -> float:
 		# Winch Ram: hauling in on the rope, you hit like a sprint.
 		elif ctx != null and ctx.player.kit.hooked and ctx.player.kit.winching:
 			scale = _knob("winch_punch")
+		# Ram Bumper panels (the build's ram_force mod).
+		if kind == "ram" and ctx != null and ctx.tuning != null:
+			scale *= ctx.tuning.mod("ram_force")
 		return (row[0] + force * row[1]) * heft() * scale
 	return force
 
@@ -1468,7 +1488,10 @@ func active_weapon() -> String:
 func discharge_preview(speed: float) -> Dictionary:
 	var p: Resource = _patterns[Weapons.PYLON_TURRET]
 	var scale: float = p.damage * _damage_mod(Weapons.PYLON_TURRET) / Weapons.BASE[Weapons.PYLON_TURRET]["damage"]
-	return Weapons.burst(speed, p.burst_scale, scale)
+	var burst := Weapons.burst(speed, p.burst_scale, scale)
+	# Splash Skirt panels widen the ring the telegraph draws and the hit reads alike.
+	burst["radius"] = float(burst["radius"]) + ctx.tuning.add("area_radius")
+	return burst
 
 
 # --- The tick -----------------------------------------------------------------------

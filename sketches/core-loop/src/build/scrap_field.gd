@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const PICKUP_GLB := "res://assets/models/world_one/scrap_pickups.glb"
 const PICKUP_VARIANTS := ["BentPlate", "GearSegment", "PipeStub", "BoltCluster"]
 static var _pickup_mesh_cache: Array[Mesh] = []
@@ -70,6 +71,20 @@ const COG_LINE_SIDE := 1.5
 const COG_RING := 1.8
 # What the last step() collected as cogs, one value per gear.
 var cog_values: Array[int] = []
+# Grey panel pickups (build/panels.gd): item -> {id, jackpot}. They never fold or expire; what
+# the last step() took is in panel_takes, one {id, jackpot, at} per panel.
+var _panels := {}
+var panel_takes: Array[Dictionary] = []
+var _panel_mesh: BoxMesh
+var _panel_material: Material
+var _panel_column: CylinderMesh
+var _panel_column_material: Material
+# Rib caches (panels waiting at the end of a dead end): a tall thin column that clears the
+# route's skyline, and a two-note chime loop heard from CACHE_HEAR metres.
+var _caches := {}
+var _cache_column: CylinderMesh
+const CACHE_COLUMN := 14.0
+const CACHE_HEAR := 45.0
 
 var _value := {}
 var _age := {}
@@ -101,6 +116,22 @@ func setup() -> void:
 	_cog_mesh.bottom_radius = 0.45
 	_cog_mesh.height = 0.18
 	_cog_mesh.radial_segments = 8
+	# A grey panel on the ground: a steel plate under a short bone light column, the grey rung's
+	# read from a distance (the ladder page: "short for grey, tall for gold").
+	_panel_mesh = BoxMesh.new()
+	_panel_mesh.size = Vector3(0.9, 0.16, 0.7)
+	_panel_material = Palette.solid(Palette.SLATE, 0.9)
+	_panel_column = CylinderMesh.new()
+	_panel_column.top_radius = 0.06
+	_panel_column.bottom_radius = 0.16
+	_panel_column.height = 2.4
+	_panel_column.radial_segments = 6
+	_panel_column_material = Palette.unshaded(Palette.SAND)
+	_cache_column = CylinderMesh.new()
+	_cache_column.top_radius = 0.03
+	_cache_column.bottom_radius = 0.2
+	_cache_column.height = CACHE_COLUMN
+	_cache_column.radial_segments = 6
 	if not _pickup_meshes().is_empty():
 		_material = _pickup_material(Palette.ARC)
 		_cluster_material = _pickup_material(Palette.AMBER)
@@ -207,11 +238,63 @@ func clear() -> void:
 	_age.clear()
 	_cogs.clear()
 	_units.clear()
+	_panels.clear()
+	_caches.clear()
 
 
-# Scrap pieces and recovery clusters on the field; gears are counted apart.
+# Scrap pieces and recovery clusters on the field; gears and panels are counted apart.
 func count() -> int:
-	return _items.size() - _cogs.size()
+	return _items.size() - _cogs.size() - _panels.size()
+
+
+func panel_count() -> int:
+	return _panels.size()
+
+
+# One grey panel dropped at `at`, waiting for the ball like a gear.
+func drop_panel(at: Vector3, panel_id: String, jackpot := false, cache := false) -> void:
+	var item := _add(at + Vector3.UP * 1.2, _panel_mesh, _panel_material)
+	var column := MeshInstance3D.new()
+	column.mesh = _cache_column if cache else _panel_column
+	column.material_override = _panel_column_material
+	column.position = Vector3.UP * ((CACHE_COLUMN if cache else _panel_column.height) * 0.5 + 0.1)
+	column.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	item.add_child(column)
+	_panels[item] = {"id": panel_id, "jackpot": jackpot}
+	if cache:
+		_caches[item] = true
+		var chime := AudioStreamPlayer3D.new()
+		chime.name = "CacheChime"
+		chime.stream = SfxBank.loop_stream("panel_cache")
+		chime.bus = "SFX"
+		chime.volume_db = SfxBank.trim_db("panel_cache")
+		chime.unit_size = 10.0
+		chime.max_distance = CACHE_HEAR
+		chime.autoplay = true
+		item.add_child(chime)
+
+
+# The rib caches still waiting on the ground.
+func cache_count() -> int:
+	return _caches.size()
+
+
+# Where each waiting rib cache stands, with its panel id: [{at, id, item}].
+func caches() -> Array:
+	var out := []
+	for item in _caches:
+		out.append({"at": item.global_position, "id": _panels[item]["id"], "item": item})
+	return out
+
+
+# Takes back every rib cache still waiting (a retry places the stage's caches again).
+func clear_caches() -> void:
+	for item in _caches.keys():
+		if is_instance_valid(item):
+			_items.erase(item)
+			_forget(item)
+			item.queue_free()
+	_caches.clear()
 
 
 func cog_count() -> int:
@@ -313,6 +396,7 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 	recovered_values.clear()
 	expired_values.clear()
 	cog_values.clear()
+	panel_takes.clear()
 	var taken: Array[Vector3] = []
 	var reach := magnet_reach(ball_speed)
 	var home := (HOME_SPEED + ball_speed * HOME_OVER_BALL) * pull_scale()
@@ -336,6 +420,8 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 				recovered.emit(int(_value[item]))
 			elif _cogs.has(item):
 				cog_values.append(int(_cogs[item]))
+			elif _panels.has(item):
+				panel_takes.append((_panels[item] as Dictionary).merged({"at": item.global_position}))
 			else:
 				for _unit in 1 + int(_units.get(item, 0)):
 					taken.append(item.global_position)
@@ -352,7 +438,8 @@ func step(ball: Vector3, ball_speed: float, delta: float) -> Array[Vector3]:
 				side = side.normalized() * float(_caught[item]) if side.length() > 0.01 else Vector3.ZERO
 				item.global_position += (offset / distance + side * ARC_SIDE * far + Vector3.UP * ARC_LIFT * far) * home * delta
 				item.scale = Vector3.ONE * clampf(distance / reach, 0.45, 1.0)
-			item.rotation = Vector3(_spin * 0.7, _spin, 0.0)
+			# A panel turns upright so its light column stays a column.
+			item.rotation = Vector3(0.0 if _panels.has(item) else _spin * 0.7, _spin, 0.0)
 		i -= 1
 	return taken
 
@@ -372,11 +459,13 @@ func _forget(item: MeshInstance3D) -> void:
 	_age.erase(item)
 	_cogs.erase(item)
 	_units.erase(item)
+	_panels.erase(item)
+	_caches.erase(item)
 
 
 # Loose scrap pieces: no recovery cluster, no gear.
 func _piece_total() -> int:
-	return _items.size() - _cogs.size() - _value.size()
+	return _items.size() - _cogs.size() - _value.size() - _panels.size()
 
 
 # Folds the oldest uncaught loose pieces into the newest until the field is at the cap.
@@ -385,7 +474,7 @@ func _fold_pieces() -> void:
 	var newest: MeshInstance3D = null
 	var i := _items.size() - 1
 	while i >= 0 and newest == null:
-		if not _cogs.has(_items[i]) and not _value.has(_items[i]):
+		if not _cogs.has(_items[i]) and not _value.has(_items[i]) and not _panels.has(_items[i]):
 			newest = _items[i]
 		i -= 1
 	var j := 0
@@ -393,7 +482,7 @@ func _fold_pieces() -> void:
 		var item := _items[j]
 		if item == newest:
 			break
-		if _cogs.has(item) or _value.has(item) or _caught.has(item):
+		if _cogs.has(item) or _value.has(item) or _panels.has(item) or _caught.has(item):
 			j += 1
 			continue
 		_units[newest] = int(_units.get(newest, 0)) + 1 + int(_units.get(item, 0))
