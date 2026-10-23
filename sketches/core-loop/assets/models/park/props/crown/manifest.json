@@ -838,7 +838,7 @@
     "machine",
     "sign"
    ],
-   "story": "The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh.",
+   "story": "The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh.",
    "variants": {
     "a": {
      "lod": [
@@ -847,12 +847,12 @@
       "res://assets/models/park/props/crown/clock_post_a_lod2.glb"
      ],
      "tris": [
-      7276,
-      3638,
-      1060
+      7816,
+      3908,
+      1142
      ],
      "radius": 0.857,
-     "height": 2.626
+     "height": 2.532
     },
     "b": {
      "lod": [
@@ -861,12 +861,12 @@
       "res://assets/models/park/props/crown/clock_post_b_lod2.glb"
      ],
      "tris": [
-      6528,
-      3264,
-      948
+      7028,
+      3514,
+      1024
      ],
-     "radius": 1.174,
-     "height": 2.795
+     "radius": 1.391,
+     "height": 2.476
     }
    }
   },
@@ -886,10 +886,10 @@
      "tris": [
       1436,
       718,
-      155
+      154
      ],
-     "radius": 0.972,
-     "height": 0.545
+     "radius": 0.971,
+     "height": 0.542
     },
     "b": {
      "lod": [
@@ -902,8 +902,8 @@
       834,
       183
      ],
-     "radius": 1.056,
-     "height": 0.561
+     "radius": 1.053,
+     "height": 0.581
     },
     "c": {
      "lod": [
@@ -914,10 +914,10 @@
      "tris": [
       952,
       476,
-      108
+      105
      ],
-     "radius": 0.685,
-     "height": 0.545
+     "radius": 0.683,
+     "height": 0.542
     }
    }
   },
@@ -972,12 +972,12 @@
       "res://assets/models/park/props/crown/lost_glove_a_lod2.glb"
      ],
      "tris": [
-      384,
-      192,
-      53
+      368,
+      184,
+      49
      ],
      "radius": 0.451,
-     "height": 0.197
+     "height": 0.193
     },
     "b": {
      "lod": [
@@ -986,12 +986,12 @@
       "res://assets/models/park/props/crown/lost_glove_b_lod2.glb"
      ],
      "tris": [
-      512,
-      256,
-      66
+      480,
+      240,
+      62
      ],
      "radius": 0.592,
-     "height": 0.197
+     "height": 0.192
     }
    }
   }

@@ -11278,7 +11278,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "clock_post variant a LOD0 (7276 tris): The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; polished and baked."
+    "notes": "clock_post variant a LOD0 (7816 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -11288,12 +11288,12 @@
     ],
     "max": [
      0.8438,
-     2.6257,
+     2.5322,
      0.849
     ],
     "size": [
      1.6876,
-     2.6257,
+     2.5322,
      1.698
     ]
    }
@@ -11306,7 +11306,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "clock_post variant a LOD1 (3638 tris): The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "clock_post variant a LOD1 (3908 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -11316,12 +11316,12 @@
     ],
     "max": [
      0.8438,
-     2.6252,
+     2.5318,
      0.849
     ],
     "size": [
      1.6876,
-     2.6252,
+     2.5318,
      1.698
     ]
    }
@@ -11334,7 +11334,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "clock_post variant a LOD2 (1060 tris): The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "clock_post variant a LOD2 (1142 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -11344,13 +11344,13 @@
     ],
     "max": [
      0.8397,
-     2.6151,
-     0.8417
+     2.5234,
+     0.8485
     ],
     "size": [
      1.6839,
-     2.6151,
-     1.6861
+     2.5234,
+     1.6929
     ]
    }
   },
@@ -11362,23 +11362,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "clock_post variant b LOD0 (6528 tris): The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; polished and baked."
+    "notes": "clock_post variant b LOD0 (7028 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.9509,
+     -1.2436,
      0,
-     -0.9506
+     -1.2264
     ],
     "max": [
-     0.9509,
-     2.7947,
-     0.9506
+     1.2436,
+     2.4756,
+     1.2264
     ],
     "size": [
-     1.9018,
-     2.7947,
-     1.9012
+     2.4872,
+     2.4756,
+     2.4528
     ]
    }
   },
@@ -11390,23 +11390,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "clock_post variant b LOD1 (3264 tris): The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "clock_post variant b LOD1 (3514 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.9509,
+     -1.2436,
      0,
-     -0.9506
+     -1.2268
     ],
     "max": [
-     0.9509,
-     2.7947,
-     0.9506
+     1.2436,
+     2.4756,
+     1.2264
     ],
     "size": [
-     1.9018,
-     2.7947,
-     1.9012
+     2.4872,
+     2.4756,
+     2.4532
     ]
    }
   },
@@ -11418,23 +11418,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "clock_post variant b LOD2 (948 tris): The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "clock_post variant b LOD2 (1024 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.95,
+     -1.2468,
      0,
-     -0.9506
+     -1.227
     ],
     "max": [
-     0.9503,
-     2.7875,
-     0.9486
+     1.2428,
+     2.4678,
+     1.2263
     ],
     "size": [
-     1.9003,
-     2.7875,
-     1.8992
+     2.4896,
+     2.4678,
+     2.4533
     ]
    }
   },
@@ -11956,17 +11956,17 @@
     "min": [
      -0.9493,
      0,
-     -0.2105
+     -0.2173
     ],
     "max": [
      0.9493,
-     0.5448,
-     0.2105
+     0.5421,
+     0.2173
     ],
     "size": [
      1.8986,
-     0.5448,
-     0.421
+     0.5421,
+     0.4346
     ]
    }
   },
@@ -11984,17 +11984,17 @@
     "min": [
      -0.9493,
      0,
-     -0.2105
+     -0.2167
     ],
     "max": [
      0.9493,
-     0.5377,
-     0.2069
+     0.5358,
+     0.2137
     ],
     "size": [
      1.8986,
-     0.5377,
-     0.4174
+     0.5358,
+     0.4304
     ]
    }
   },
@@ -12006,23 +12006,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "glove_bench variant a LOD2 (155 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "glove_bench variant a LOD2 (154 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
      -0.9435,
      0,
-     -0.2073
+     -0.2154
     ],
     "max": [
      0.9364,
-     0.5459,
-     0.2165
+     0.5453,
+     0.2233
     ],
     "size": [
      1.8799,
-     0.5459,
-     0.4238
+     0.5453,
+     0.4387
     ]
    }
   },
@@ -12040,17 +12040,17 @@
     "min": [
      -0.95,
      0,
-     -0.4618
+     -0.4686
     ],
     "max": [
      0.95,
-     0.5608,
-     0.4618
+     0.5806,
+     0.4686
     ],
     "size": [
      1.9,
-     0.5608,
-     0.9236
+     0.5806,
+     0.9372
     ]
    }
   },
@@ -12068,17 +12068,17 @@
     "min": [
      -0.95,
      0,
-     -0.4618
+     -0.468
     ],
     "max": [
      0.95,
-     0.5549,
-     0.4578
+     0.5747,
+     0.4645
     ],
     "size": [
      1.9,
-     0.5549,
-     0.9196
+     0.5747,
+     0.9325
     ]
    }
   },
@@ -12096,17 +12096,17 @@
     "min": [
      -0.955,
      0,
-     -0.4527
+     -0.4664
     ],
     "max": [
      0.953,
-     0.554,
-     0.4578
+     0.574,
+     0.4645
     ],
     "size": [
      1.908,
-     0.554,
-     0.9105
+     0.574,
+     0.9309
     ]
    }
   },
@@ -12124,17 +12124,17 @@
     "min": [
      -0.6512,
      0,
-     -0.2115
+     -0.2171
     ],
     "max": [
      0.6512,
-     0.5448,
-     0.2115
+     0.5422,
+     0.2171
     ],
     "size": [
      1.3024,
-     0.5448,
-     0.423
+     0.5422,
+     0.4342
     ]
    }
   },
@@ -12152,17 +12152,17 @@
     "min": [
      -0.6512,
      0,
-     -0.2115
+     -0.2166
     ],
     "max": [
      0.6512,
-     0.5392,
-     0.2089
+     0.5365,
+     0.2146
     ],
     "size": [
      1.3024,
-     0.5392,
-     0.4204
+     0.5365,
+     0.4312
     ]
    }
   },
@@ -12174,23 +12174,23 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "glove_bench variant c LOD2 (108 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "glove_bench variant c LOD2 (105 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.645,
+     -0.6452,
      0,
-     -0.2068
+     -0.2166
     ],
     "max": [
-     0.6434,
-     0.5484,
-     0.2178
+     0.644,
+     0.5449,
+     0.2235
     ],
     "size": [
-     1.2884,
-     0.5484,
-     0.4246
+     1.2892,
+     0.5449,
+     0.4401
     ]
    }
   },
@@ -13462,7 +13462,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "lost_glove variant a LOD0 (384 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; polished and baked."
+    "notes": "lost_glove variant a LOD0 (368 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -13472,12 +13472,12 @@
     ],
     "max": [
      0.407,
-     0.1967,
+     0.1925,
      0.2749
     ],
     "size": [
      0.814,
-     0.1967,
+     0.1925,
      0.5498
     ]
    }
@@ -13490,7 +13490,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "lost_glove variant a LOD1 (192 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "lost_glove variant a LOD1 (184 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -13499,13 +13499,13 @@
      -0.2746
     ],
     "max": [
-     0.407,
-     0.1897,
+     0.4097,
+     0.1859,
      0.2681
     ],
     "size": [
-     0.8116,
-     0.1897,
+     0.8143,
+     0.1859,
      0.5427
     ]
    }
@@ -13518,7 +13518,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "lost_glove variant a LOD2 (53 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "lost_glove variant a LOD2 (49 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -13528,12 +13528,12 @@
     ],
     "max": [
      0.4119,
-     0.1862,
+     0.1576,
      0.2819
     ],
     "size": [
      0.818,
-     0.1862,
+     0.1576,
      0.5548
     ]
    }
@@ -13546,7 +13546,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "lost_glove variant b LOD0 (512 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; polished and baked."
+    "notes": "lost_glove variant b LOD0 (480 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -13556,12 +13556,12 @@
     ],
     "max": [
      0.4684,
-     0.197,
+     0.1923,
      0.43
     ],
     "size": [
      0.9368,
-     0.197,
+     0.1923,
      0.86
     ]
    }
@@ -13574,7 +13574,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "lost_glove variant b LOD1 (256 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "lost_glove variant b LOD1 (240 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -13584,12 +13584,12 @@
     ],
     "max": [
      0.4621,
-     0.1907,
+     0.1847,
      0.4313
     ],
     "size": [
      0.9312,
-     0.1907,
+     0.1847,
      0.8599
     ]
    }
@@ -13602,7 +13602,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "lost_glove variant b LOD2 (66 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "lost_glove variant b LOD2 (62 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -13612,12 +13612,12 @@
     ],
     "max": [
      0.4854,
-     0.1932,
+     0.1648,
      0.4445
     ],
     "size": [
      0.9597,
-     0.1932,
+     0.1648,
      0.8572
     ]
    }

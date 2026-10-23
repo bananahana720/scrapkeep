@@ -891,26 +891,30 @@ def glove(p, at, yaw, color, rng, curl=0.0, scale=1.0, lift=0.0):
         return (x + (dx * ca - dy * sa) * s, y + (dx * sa + dy * ca) * s, z + lift + dz * s)
 
     p.box((0.13 * s, 0.11 * s, 0.05 * s), w(-0.11, 0, 0.03), shade(color, 0.85), rot=(0, 0, yaw), style="fine")
-    p.box((0.13 * s, 0.12 * s, 0.055 * s), w(0.0, 0, 0.03), color, rot=(0, 0, yaw), style="fine")
+    p.box((0.13 * s, 0.13 * s, 0.035 * s), w(0.0, 0, 0.022), color, rot=(0, 0, yaw), style="fine")
     for k in range(4):
-        fy = -0.042 + k * 0.028
-        length = (0.075, 0.085, 0.08, 0.065)[k]
+        fy = -0.05 + k * 0.033
+        length = (0.1, 0.115, 0.11, 0.085)[k]
         bend = curl * (0.6 + 0.1 * k)
-        a = w(0.06, fy, 0.03)
-        b = w(0.06 + length * math.cos(bend), fy, 0.03 - length * math.sin(bend))
+        a = w(0.06, fy, 0.022)
+        b = w(0.06 + length * math.cos(bend), fy * (1.0 + 0.6 * length), 0.022 - length * math.sin(bend))
         p.rod(a, b, 0.014 * s, tint(color, rng, 0.04), segs=4, style="flat")
-    p.rod(w(0.0, 0.06, 0.03), w(0.05, 0.1, 0.025), 0.015 * s, color, segs=4, style="flat")
+    p.rod(w(0.0, 0.06, 0.022), w(0.06, 0.13, 0.02), 0.016 * s, color, segs=4, style="flat")
 
 
 @K.kind("clock_post", hero=True, tags=["machine", "sign"], variants="ab",
-        story="The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh.")
+        story="The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh.")
 def clock_post(p, v, rng):
     struck = v == "b"
     # Stone footing and a timber stand.
     p.cyl(0.85, 0.35, (0, 0, 0.17), HANDS["slate"], segs=12, style="hard_smooth", jit=0.02)
     p.cyl(0.6, 0.12, (0, 0, 0.4), HANDS["slate_pale"], segs=12, style="hard_smooth")
-    for x in (-0.42, 0.42):
-        p.beam((x, 0.1, 0.4), (x, 0.1, 2.3), 0.16, tint(C["timber_dark"], rng, 0.05))
+    # One round post carries the board and the hood (no two-post frame).
+    p.cyl(0.15, 2.0, (0, 0.34, 1.4), tint(C["timber_dark"], rng, 0.05), segs=10, style="round")
+    for k in range(3):
+        a = math.tau * k / 3 + 0.5
+        p.rod((0.28 * math.cos(a), 0.34 + 0.28 * math.sin(a), 0.46), (0.06 * math.cos(a), 0.34 + 0.06 * math.sin(a), 0.9),
+              0.05, C["timber_dark"], segs=6)
     p.box((1.05, 0.16, 1.4), (0, 0.18, 1.45), tint(C["timber_grey"], rng), style="hard")
     for i in range(6):
         p.box((0.17, 0.05, 1.4), (-0.43 + i * 0.172, 0.27, 1.45), tint(C["timber"], rng, 0.07), jit=0.003)
@@ -943,20 +947,22 @@ def clock_post(p, v, rng):
         for b in range(k + 1 if k < 4 else 1):
             bw = 0.012 if k < 4 else 0.1
             p.box((bw, 0.004, 0.03), (cx - 0.03 + b * 0.02 if k < 4 else cx, -0.101, 0.85), HANDS["board"], style="flat")
-    # Shingled hood; the struck variant has it blown back and scorched.
-    tilt = -0.5 if struck else 0.32
-    for r in range(4):
-        for j in range(5):
-            if struck and r == 3 and j in (1, 2):
-                continue
-            col = HANDS["scorch"] if struck and (r + j) % 3 == 0 else tint(C["timber_grey"], rng, 0.08)
-            p.box((0.26, 0.24, 0.035), (-0.5 + j * 0.25, -0.28 + r * 0.17 + (0.35 if struck else 0), 2.42 + r * 0.05 + (0.15 if struck else 0)),
-                  col, rot=(tilt, 0, rng.uniform(-0.05, 0.05)), jit=0.004)
-    p.beam((-0.66, 0.1, 2.36), (0.66, 0.1, 2.36), 0.12, C["timber_dark"])
+    # Shingled hood on a bracket from the post top, sloping forward; the struck variant has it blown off onto the ground.
+    if not struck:
+        for r in range(4):
+            for j in range(5):
+                p.box((0.26, 0.24, 0.035), (-0.5 + j * 0.25, 0.46 - r * 0.17, 2.47 - r * 0.07),
+                      tint(C["timber_grey"], rng, 0.08), rot=(0.39, 0, rng.uniform(-0.05, 0.05)), jit=0.004)
+    else:
+        p.cyl(0.16, 0.08, (0, 0.34, 2.42), HANDS["scorch"], segs=10, style="round")
+        for k in range(9):
+            a = 2.2 + rng.uniform(-0.8, 0.8)
+            r = rng.uniform(0.95, 1.6)
+            p.box((0.26, 0.24, 0.035), (r * math.cos(a), r * math.sin(a), 0.02 + 0.01 * (k % 3)),
+                  HANDS["scorch"] if k % 3 == 0 else tint(C["timber_grey"], rng, 0.08), rot=(rng.uniform(-0.1, 0.1), rng.uniform(-0.1, 0.1), rng.uniform(0, math.tau)))
     if struck:
         # Scorch star on the footing, a hood shingle on the ground, and the spare cards blown out of their tin.
         p.cyl(0.95, 0.02, (0, 0, 0.005), HANDS["scorch"], segs=12, style="flat")
-        p.box((0.3, 0.24, 0.035), (0.7, -0.75, 0.04), HANDS["scorch"], rot=(0.05, 0.1, 0.6))
         for k in range(5):
             a = rng.uniform(0, math.tau)
             p.box((0.1, 0.16, 0.008), (0.9 * math.cos(a), -0.4 + 0.5 * math.sin(a), 0.36 + 0.01 * k),
