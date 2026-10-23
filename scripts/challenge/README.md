@@ -99,3 +99,23 @@ Output: `artifacts/local/challenge/<label>/`: `meta.json` (shard, plan hash, com
 | Park cell (`world1`, 2 jobs at once) | 207 to 240 | 129 to 147 |
 
 The default table is now 1,272 jobs (boss 360, Warden 720, park 192: six parks × Novice and Learner a1 × 16 seeds; the dry run counts park jobs under `world`, their kind), about 29 hours at 4 parallel on the loaded numbers; `--cells=world` adds 96 chain jobs; `--dry-run` prints the estimate. Split it with `--shard`. These numbers were taken with the completionist Warden persona, whose w1 runs stalled at the 240 s stage cap before engaging; Warden cells now use the skipper.
+
+# Anti-kiting gates (card G-A)
+
+`npm run challenge:gates` (`scripts/challenge/gates.mjs`, rules in `gates-lib.mjs`) runs the Challenge lane's three anti-kiting gates with their controls. The rules are fixed in scrapkeep#241 comment 6367573974, written before any run; no threshold here is tuned. Gate 3 (on-beat against off-beat) is card G-B.
+
+| Gate | Real arm | PASS | Positive control (must PASS) | Held-out negative (must FAIL) |
+| --- | --- | --- | --- | --- |
+| 1 circling loses | `orbit` | on every stage all runs end `died` and the median death is within 120 s of the first hit | `orbit` with `--plant=pack_damage=4` | `orbit` with `--plant=packs_passive=1` |
+| 2 terrain beats circling | `terrain` against `orbit`, hull lost per minute alive in the 120 s after first contact | terrain lower in 24 of 30 pairs and the pooled median of terrain / orbit at 0.75 or less | `orbit` against `orbit` with `--plant=damage=2` on arm B: A must be named the winner | `orbit` against a second `orbit` sample (A/A) |
+| 4 sight-only clears | `deaf`: the Expert default driver (`skipper`, `--band=expert`) with `--bot-no-mix=1` | clear rate 85% or more on every stage | the same runs (today's stage) | `--plant=hide_pack_telegraphs=1` |
+
+If a control reads wrong, the gate is broken: the report prints `BROKEN` and withholds the real reading.
+
+Every arm plays stages 1 to 6, each entered fresh (`--from-stage=N --until=N`), seeds 1 to 5 and 3 runs a seed at `--fixed-fps 90`: 8 arms of 90 runs, 720 jobs (`--dry-run` counts them). The pilot is `seed % 6`, as in the band table; the three runs of a seed are seeds `s`, `s+6` and `s+12`, which keep the pilot and draw three stage plans (a replayed seed is exact, so three runs of one seed would be one). The A/A arm `orbit_b` draws replicates 3 to 5. Each run saves `jobs/<id>/cmd.txt`. `--resume`, `--shard=i/n`, `--merge=<dir,dir>`, `--label` and `--jobs` work as in `challenge:bands`; `--gates=1,2,4` and `--only=<arm,arm>` choose arms, `--stages` and `--seeds` shrink the plan.
+
+Instrument checks (a run that fails one is void, listed in the report and left out of the medians): an `orbit` run must spend 80% or more of its fight time circling (within 3 m of the 14 m ring); a `terrain` run must ride a line at least once per 30 s of fight, and a stage with no line within reach says so (`lines_in_reach` 0) and is void; gate 4 also needs `tools/bot_driver.gd` to read no audio or beat state (a static scan, also a unit test). A seed with fewer than 2 valid runs of 3 is void, and a gate with a void seed reads `VOID`, not `PASS`.
+
+Choices the comment left open (each is a parameter in `gates-lib.mjs`): a seed's value is the median of its valid runs; gate 1's stage value is the median of its seeds' medians; gate 2's pooled median is over the per-pair ratios, and a pair with no loss in either arm is a tie (ratio 1); gate 4's rate is over runs (13 of 15 passes), and a stage with over 10% of its runs void is incomplete.
+
+The policies are `orbit` and `terrain` in `tools/bot_kite.gd` (`--policy=orbit|terrain`); the plants are `tools/bot_plants.gd` (`--plant=name=value[,...]`): test-only, the tool layer only, and absent means no plant object exists. The stage note gains `first_contact_s` (the first tick a live enemy is within 30 m of the ball; a hit with none that close also opens it), `first_hit_s`, `hull_lost_120s`, `alive_120s`, `fight_s`, `circle_s`, `circle_share`, `line_rides`, `lines_in_reach`, `line_misses` and `telegraph_reads`; the dodge count is the existing `evasions`.
