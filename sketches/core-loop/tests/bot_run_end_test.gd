@@ -1,4 +1,7 @@
-# smoke: solo timeout=360s (split by world from RunStore entrances; one child per proof run per world, 170 s wall cap)
+# smoke: bots timeout=900s (split by world from RunStore entrances; one child per proof run per world, 300 s wall cap)
+# 2026-10-23 (bot tier reds): alone on a 4-core cloud box at stage w18 e564e2c3 the test took 423 s and the
+# world 1 children 131-132 s of run wall plus boot, close to the old 170 s cap; under the smoke wrapper the
+# test hit the 360 s solo cap (killed at 417 s), so it moves to the bots tier with a 300 s child cap.
 # 2026-10-04 (wave 9): one seed child per world in the gate since 2026-10-04; the nightly runs more seeds.
 # Two seeds ran past the 180 s smoke cap under load (killed at 189.5 s).
 extends SceneTree
@@ -12,6 +15,7 @@ const T := preload("res://tests/support/t.gd")
 const BossCodex := preload("res://src/boss/codex_entries.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Achievements := preload("res://src/core/achievements.gd")
+const CHILD_CAP_S := 300.0
 
 # The win proofs: Rivet on seed 1 (seed % roster size, no --pilot) and Tally on seed 1, the first of
 # seeds 1 to 4 she wins in bot_six_tally_test (wave 11, GP7). Their children run side by side per world.
@@ -46,7 +50,7 @@ func _run() -> void:
 			if world != StageDefs.worlds().back():
 				args.append("--until=%d" % StageDefs.last_of(world))
 			jobs.append({"script": "res://tools/bot_run.gd", "args": args})
-		var results := ChildRuns.run(jobs, 170.0)
+		var results := ChildRuns.run(jobs, CHILD_CAP_S)
 		for i in RUNS.size():
 			var result: Dictionary = results[i]
 			var errors: Array = ChildRuns.summary(result)["errors"]
