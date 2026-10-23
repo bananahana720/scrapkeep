@@ -4,6 +4,7 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const IslandEdge := preload("res://src/combat/island_edge.gd")
 const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 const SwingArc := preload("res://src/combat/swing_arc.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 # The kite drone (roster_highdraft.gd): it marks where the ball will be in DIVE + warn seconds
 # and, when the mark fills, dives onto it in DIVE seconds. A ball that meets the diving drone at
@@ -51,6 +52,8 @@ const GAP_OUT := 6.0
 const RIM_DROP := 4.0
 const DROP_KICK := 8.0
 const FLING := 4.0
+# Extra gap beyond touching, so the solver sees a contact and not an overlap.
+const BALL_CLEARANCE := 0.0
 
 var dives := 0
 var batted := 0
@@ -222,10 +225,10 @@ func _live(_delta: float) -> bool:
 	if ring == null:
 		return false
 	if _t < DIVE:
-		global_position = _dive_from.lerp(_dive_goal(ring), _t / DIVE)
+		global_position = _short_of_ball(global_position, _dive_from.lerp(_dive_goal(ring), _t / DIVE))
 		return true
 	if not _landed:
-		global_position = _dive_goal(ring)
+		global_position = _short_of_ball(global_position, _dive_goal(ring))
 		_landed = true
 		var ball := _real_ball()
 		if ring.contains(ball):
@@ -236,6 +239,43 @@ func _live(_delta: float) -> bool:
 		elif fleet != null:
 			fleet.discover("thermal_dive", ball)
 	return false
+
+
+# The dive moves the body by setting its position, so a step that ended inside the ball's collider
+# would be resolved by the solver as a depenetration impulse (two drones on one forecast launched
+# the ball past 90 m/s). Walk from `from` toward `to` and stop where the capsule touches the
+# ball's sphere. The hit test is the ring, not contact, so the dive still lands on the mark.
+func _short_of_ball(from: Vector3, to: Vector3) -> Vector3:
+	var ball := _real_ball()
+	if _touching(to, ball):
+		if _touching(from, ball):
+			return from
+		var clear := 0.0
+		var steps := 32
+		var blocked := 1.0
+		for i in range(1, steps + 1):
+			var s := float(i) / steps
+			if _touching(from.lerp(to, s), ball):
+				blocked = s
+				break
+			clear = s
+		for i in 10:
+			var mid := (clear + blocked) * 0.5
+			if _touching(from.lerp(to, mid), ball):
+				blocked = mid
+			else:
+				clear = mid
+		return from.lerp(to, clear)
+	return to
+
+
+# Whether the capsule centred at `at` is within contact distance of a ball centred at `ball`.
+func _touching(at: Vector3, ball: Vector3) -> bool:
+	var spine := maxf(half_height - radius, 0.0)
+	var offset := ball - at
+	var along := clampf(offset.y, -spine, spine)
+	var gap := Vector3(offset.x, offset.y - along, offset.z).length()
+	return gap < Tuning.RADIUS + radius + BALL_CLEARANCE
 
 
 # Where the dive ends: just above a ground ring, the middle of an aerial one's band.
