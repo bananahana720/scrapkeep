@@ -422,6 +422,10 @@ func _warden_tricks() -> void:
 		# staging lacks; tests/highdraft_roster_test.gd opens each on the stage 5 islands.
 		if id in ["ring_out", "gap_sling"]:
 			continue
+		# 2026-10-22 (weak points 2c): plate_drop needs a fitter at an open hatch mid-fight, which this staging
+		# never sets up; tests/boss_weak_crew_test.gd opens plate_drop on a reel knock-off.
+		if id == "plate_drop":
+			continue
 		# 2026-10-04 (wave 9): detector-pending entries declare a hint but no enemy fires them yet.
 		if CodexEntries.DETECTOR_PENDING.has(id):
 			pending_ok = pending_ok and not _combat.discovered.has(id)

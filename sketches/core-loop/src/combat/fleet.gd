@@ -39,6 +39,7 @@ const SCRIPTS := {
 	"reactor_relic": preload("res://src/combat/reactor_relic.gd"),
 	"swarm_remnant": preload("res://src/combat/swarm_remnant.gd"),
 	"mind_hand": preload("res://src/combat/mind_hand.gd"),
+	"crew_fitter": preload("res://src/combat/crew_fitter.gd"),
 }
 # A plated unit's plating as a share of this stage's Warden plating.
 const PLATING_SCALE := {"plated_brute": 0.6, "mind_hand": 0.5}

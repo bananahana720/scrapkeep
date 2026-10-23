@@ -1,7 +1,4 @@
-# smoke: bots timeout=900s (split by world from RunStore entrances; one child per proof run per world, 300 s wall cap)
-# 2026-10-23 (bot tier reds): alone on a 4-core cloud box at stage w18 e564e2c3 the test took 423 s and the
-# world 1 children 131-132 s of run wall plus boot, close to the old 170 s cap; under the smoke wrapper the
-# test hit the 360 s solo cap (killed at 417 s), so it moves to the bots tier with a 300 s child cap.
+# smoke: bots timeout=1500s (split by world from RunStore entrances; one child per proof run per world, 420 s wall cap, which keeps headroom over the 229 to 247 s world children of the 2026-10-15 and 10-18 heads. On a 4-core cloud box on 2026-10-23 the world 1 children took 133 to 154 s wall side by side and the whole test 453 to 493 s, past the 360 s solo ceiling, so it moved to the bot tier with alpha_posture_bands_test)
 # 2026-10-04 (wave 9): one seed child per world in the gate since 2026-10-04; the nightly runs more seeds.
 # Two seeds ran past the 180 s smoke cap under load (killed at 189.5 s).
 extends SceneTree
@@ -15,7 +12,6 @@ const T := preload("res://tests/support/t.gd")
 const BossCodex := preload("res://src/boss/codex_entries.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Achievements := preload("res://src/core/achievements.gd")
-const CHILD_CAP_S := 300.0
 
 # The win proofs: Rivet on seed 1 (seed % roster size, no --pilot) and Tally on seed 1, the first of
 # seeds 1 to 4 she wins in bot_six_tally_test (wave 11, GP7). Their children run side by side per world.
@@ -25,7 +21,8 @@ const RUNS := [{"seed": 1, "pilot": ""}, {"seed": 1, "pilot": "tally"}]
 # because a bot child's profile dies with the child; the child supplies the played-win codex only.
 # Each child plays only one world, then stops at the next world's entrance.
 # The next child resumes that RunStore document with the earned kit and build.
-# Only the final world's run_ended may produce won. This is automated native play.
+# Only the final world's run_ended may produce won, and no world may die: since #355 every death ends
+# the run (no per-world retry). This is automated native play.
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -50,7 +47,7 @@ func _run() -> void:
 			if world != StageDefs.worlds().back():
 				args.append("--until=%d" % StageDefs.last_of(world))
 			jobs.append({"script": "res://tools/bot_run.gd", "args": args})
-		var results := ChildRuns.run(jobs, CHILD_CAP_S)
+		var results := ChildRuns.run(jobs, 420.0)
 		for i in RUNS.size():
 			var result: Dictionary = results[i]
 			var errors: Array = ChildRuns.summary(result)["errors"]
@@ -81,6 +78,11 @@ func _run() -> void:
 				var entrance := RunStore.new(folders[i].path_join("entrance.json")).load()
 				t.check("%s next entrance saved" % _label(i), entrance.get("run_id") == run_ids[i]
 					and int(entrance.get("stage", 0)) == StageDefs.first_of(world + 1))
+				# One run (#355): a death ends the run, and the per-world retry it replaced is retired, so no
+				# entrance carries a spent retry. The bot ends on its first death (bot_driver.gd "died") and
+				# never rewinds a stage, so the live retry counter (run_state.gd restore()) stays at 0 too.
+				t.check("%s entrance spends no retry" % _label(i), (entrance.get("retries_spent", {}) as Dictionary).is_empty()
+					and int(entrance.get("retries", -1)) == 0, "spent %s, retries %s" % [entrance.get("retries_spent"), entrance.get("retries")])
 		if t.failures > 0:
 			break
 	for i in RUNS.size():

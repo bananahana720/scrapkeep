@@ -1,6 +1,4 @@
-# smoke: bots timeout=1500s (five bot_run children on the default table, at most one per core at once, each cut at CHILD_CAP_S)
-# 2026-10-23 (bot tier reds): on stage w18 e564e2c3 one child alone (skipper seed 1, 27000 ticks) took 276 s
-# wall on a 4-core cloud box, so the old 170 s child cap killed all five every time, alone or loaded.
+# smoke: bots timeout=1200s (five bot_run children at once on the default table; a loaded machine slows them. On a 4-core cloud box on 2026-10-23 the five children took 140 to 210 s wall side by side and the test 242 to 251 s, so the 170 s cap never fitted there; 600 s cap, moved to the bot tier with alpha_posture_bands_test)
 # Completionist seed 2 dropped after two six-child runs exceeded 150 s (170.50 s, 170.48 s).
 extends SceneTree
 
@@ -13,7 +11,6 @@ const RUNS := [
 	{"policy": "random", "seed": 1},
 	{"policy": "camper", "seed": 1},
 ]
-const CHILD_CAP_S := 600.0
 const BAD_OUTCOMES := ["stalled", "boss_stalled", "broken", "boss"]
 
 
@@ -26,7 +23,7 @@ func _initialize() -> void:
 			"--out=" + folder.path_join("%s-%d" % [run["policy"], run["seed"]]),
 			"--policy=" + run["policy"], "--seeds=%d" % run["seed"],
 			"--table=default", "--ticks=27000"]})
-	var results := ChildRuns.run(jobs, CHILD_CAP_S, mini(OS.get_processor_count(), jobs.size()))
+	var results := ChildRuns.run(jobs, 600.0)
 	for i in RUNS.size():
 		var run: Dictionary = RUNS[i]
 		var label := "%s seed %d" % [run["policy"], run["seed"]]
