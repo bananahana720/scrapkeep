@@ -727,6 +727,8 @@ func _build_region(location: Vector2i) -> Array:
 	var data := PackedFloat32Array()
 	data.resize(REGION_SIZE * REGION_SIZE)
 	var inner := int(HALF)
+	var low := INF
+	var high := -INF
 	for row in REGION_SIZE:
 		var z := z0 + row
 		var base := row * REGION_SIZE
@@ -748,6 +750,10 @@ func _build_region(location: Vector2i) -> Array:
 			else:
 				v = _outside(x, z)
 			data[base + col] = v
+			if v < low:
+				low = v
+			if v > high:
+				high = v
 	var control := PackedInt32Array()
 	control.resize(REGION_SIZE * REGION_SIZE)
 	control.fill(AUTO_BIT)
@@ -760,21 +766,32 @@ func _build_region(location: Vector2i) -> Array:
 				var cz := pz + dz
 				if cx >= 0 and cx < REGION_SIZE and cz >= 0 and cz < REGION_SIZE:
 					control[cz * REGION_SIZE + cx] = AUTO_BIT | HOLE_BIT
-	var maps := [location, Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, data.to_byte_array()),
-		Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, control.to_byte_array())]
-	if _tints != null:
-		# Cell (i, j)'s vertices are at -800 + 2i + (0, 1); the feathered image starts FEATHER_MARGIN metres before -800.
-		var color := Image.create(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RGBA8)
-		color.fill(Color(1.0, 1.0, 1.0, float(COLOR_ALPHA_BYTE) / 255.0))
-		color.blit_rect(_tints, Rect2i(Vector2i.ZERO, _tints.get_size()), Vector2i(-inner - FEATHER_MARGIN - x0, -inner - FEATHER_MARGIN - z0))
-		maps.append(color)
-	return maps
+	return [location, Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, data.to_byte_array()),
+		Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, control.to_byte_array()),
+		color_map(_tints, -inner - FEATHER_MARGIN - x0, -inner - FEATHER_MARGIN - z0), Vector2(low, high)]
 
 
-# A region's Terrain3DRegion from the worker's [location, height map, control map, color map if tinted], made on the main
-# thread: it is the addon's object (GDExtension, its source is not in this repo), so no worker makes or sets one.
-# set_height_map works out the height range itself (a calc_height_range after it cost as much again for the same range);
-# _attach_step sanitizes.
+# A region's color map as sanitize_maps leaves it (mipmapped, alpha at COLOR_ALPHA_BYTE): white, or with tints (feather()'s
+# image) blitted at (x, z) and the mipmaps made from that. Made here, on the worker, it is plain Image data; left to
+# sanitize_maps on the main thread the white map cost 37 to 88 ms a region on the cloud, and a tinted one's mipmaps as much.
+static func color_map(tints: Image = null, x := 0, z := 0) -> Image:
+	if tints == null:
+		var white := Image.create_empty(REGION_SIZE, REGION_SIZE, true, Image.FORMAT_RGBA8)
+		white.fill(Color(1.0, 1.0, 1.0, float(COLOR_ALPHA_BYTE) / 255.0))
+		return white
+	# Cell (i, j)'s vertices are at -800 + 2i + (0, 1); the feathered image starts FEATHER_MARGIN metres before -800.
+	var color := Image.create_empty(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RGBA8)
+	color.fill(Color(1.0, 1.0, 1.0, float(COLOR_ALPHA_BYTE) / 255.0))
+	color.blit_rect(tints, Rect2i(Vector2i.ZERO, tints.get_size()), Vector2i(x, z))
+	color.generate_mipmaps()
+	return color
+
+
+# A region's Terrain3DRegion from the worker's [location, height map, control map, color map, height range], made on
+# the main thread: it is the addon's object (GDExtension, its source is not in this repo), so no worker makes or sets one.
+# set_height_map always works out the height range itself (14 ms a region on the cloud, a preset range or not); set_data
+# takes the maps and the worker's range as given, the same region state the setters leave, in 0.02 ms. With the worker's
+# color map _attach_step's sanitize has nothing left to make. Maps without a range (or a color map) take the setters.
 static func _make_region(maps: Array) -> Object:
 	if not ThreadGuard.main_only("park_terrain region"):
 		return null
@@ -782,6 +799,15 @@ static func _make_region(maps: Array) -> Object:
 	region.set_region_size(REGION_SIZE)
 	region.set_vertex_spacing(VERTEX_SPACING)
 	region.set_location(maps[0])
+	if maps.size() > 4:
+		var data: Dictionary = region.get_data()
+		data["height_map"] = maps[1]
+		data["control_map"] = maps[2]
+		data["color_map"] = maps[3]
+		data["height_range"] = maps[4]
+		data["modified"] = true
+		region.set_data(data)
+		return region
 	region.set_height_map(maps[1])
 	region.set_control_map(maps[2])
 	if maps.size() > 3:
@@ -849,17 +875,14 @@ func _attach_step(deadline: int) -> void:
 		if terrain3d == null or terrain3d.data == null:
 			push_warning("park_terrain: %s has no Terrain3D render node; collider only" % map_id)
 			terrain3d = null
+			_regions.fill(null)
 			_next_region = REGION_COUNT
 			_next_map = MAP_TYPES.size()
 		if deadline >= 0:
 			return
 	if _next_region < _regions.size():
-		# A region takes two steps, a frame each: making it with its maps, then the sanitize and the add.
-		if _regions[_next_region] is Array:
-			_regions[_next_region] = _make_region(_regions[_next_region])
-			if deadline >= 0:
-				return
-		var region: Object = _regions[_next_region]
+		# A region a frame: making it with its maps, then the sanitize and the add.
+		var region: Object = _make_region(_regions[_next_region])
 		region.sanitize_maps()
 		if terrain3d.data.has_region(region.get_location()):
 			terrain3d.data.remove_regionl(region.get_location(), false)
