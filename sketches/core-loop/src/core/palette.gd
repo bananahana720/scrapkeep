@@ -297,7 +297,10 @@ static func workshop_sky() -> PanoramaSkyMaterial:
 static func workshop_sky_later() -> PanoramaSkyMaterial:
 	if _sky_texture != null:
 		return workshop_sky()
-	var material := _sky_material(null)
+	# Until the paint lands the sky is the panorama's horizon colour, not black.
+	var horizon := Image.create_empty(1, 1, false, Image.FORMAT_RGB8)
+	horizon.fill(Color("e6c898"))
+	var material := _sky_material(ImageTexture.create_from_image(horizon))
 	_sky_waiting.append(material)
 	if _sky_task < 0:
 		var out := {}
@@ -319,8 +322,7 @@ static func settle_sky_on_exit(owner: Node) -> void:
 static func _fill_waiting_skies() -> void:
 	var texture := workshop_sky().panorama
 	for material in _sky_waiting:
-		if material.panorama == null:
-			material.panorama = texture
+		material.panorama = texture
 	_sky_waiting.clear()
 
 

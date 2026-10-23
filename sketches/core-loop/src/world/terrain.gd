@@ -140,11 +140,11 @@ static func _read_parks_together(table) -> Dictionary:
 			if FileAccess.file_exists(pattern % id):
 				paths[id] = pattern % id
 				break
-	if paths.size() < 2:
-		return {}
 	# Read once on first need and marked read before they are filled: fill them here, so no worker sees one half built.
 	ParkSchema._registry()
 	ParkRecipes.origin("")
+	if paths.size() < 2:
+		return {}
 	var ids: Array = paths.keys()
 	var read := []
 	read.resize(ids.size())
@@ -462,12 +462,13 @@ func perch_near(point: Vector3, salt := 0) -> Vector3:
 		return Vector3.INF
 	var i := _index(stage)
 	if not _perches.has(i):
+		# Built first, so a stage the ask builds queues its read and this takes it.
+		_ensure(stage)
 		var ahead := _take_perch_ahead(i)
 		# The worker read the bare ground; height() matches it only while no overlay or cave roof stands on it.
 		if not ahead.is_empty() and overlays.is_empty() and _cave_roofs.get(i, {}).is_empty():
 			_perches[i] = ahead
 		else:
-			_ensure(stage)
 			_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park), "ledges": PerchPoints.ledges(m.park, height)}
 	return PerchPoints.pick(_perches[i]["tops"], point, height, _perches[i]["blockers"], salt, _perches[i]["ledges"])
 

@@ -370,6 +370,8 @@ var bot_skip_samples := false
 # meantime, so a pilot's cue in a key the bake never reached (a boss fight's lift) never renders
 # on the main thread when its beat comes.
 var warm_stingers := false
+# How often, in frames, a park cue cell held for its worker is checked again (_to_next_action).
+const LATE_CHECK := 256
 static var _stinger_tasks: Array[int] = []
 var band_muted := false
 var grid: Object = null
@@ -1545,6 +1547,9 @@ func _to_next_action() -> int:
 		var wait: int = action["at"] - clock
 		if wait > 0:
 			nearest = mini(nearest, wait)
+		elif action.get("late", false):
+			# A late cell waiting on its worker is checked every LATE_CHECK frames, so it loses little of its head.
+			nearest = mini(nearest, LATE_CHECK)
 	return nearest
 
 

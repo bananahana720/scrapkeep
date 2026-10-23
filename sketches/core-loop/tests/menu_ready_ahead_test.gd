@@ -21,13 +21,14 @@ func _initialize() -> void:
 func _check_sky() -> void:
 	var later := Palette.workshop_sky_later()
 	var second := Palette.workshop_sky_later()
-	_t.check("the boot's sky comes back before its panorama is painted", later.panorama == null)
+	_t.check("the boot's sky comes back before its panorama is painted, on a 1 px horizon colour",
+		later.panorama != null and later.panorama.get_width() == 1)
 	_t.check("a second ask while painting shares the one paint", Palette._sky_waiting.size() == 2 and Palette._sky_task >= 0)
 	for frame in 600:
 		await process_frame
-		if later.panorama != null:
+		if later.panorama.get_width() > 1:
 			break
-	_t.check("the worker's panorama fills the waiting skies", later.panorama != null and second.panorama == later.panorama)
+	_t.check("the worker's panorama fills the waiting skies", later.panorama.get_width() == 1024 and second.panorama == later.panorama)
 	var direct := Palette._paint_workshop_sky()
 	var painted: Image = later.panorama.get_image() if later.panorama != null else null
 	_t.check("the worker painted the same image a direct paint makes",

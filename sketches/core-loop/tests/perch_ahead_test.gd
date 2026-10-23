@@ -49,7 +49,13 @@ func _run() -> void:
 		_t.eq("%s: the pick is the main thread's pick" % id, pick,
 			PerchPoints.pick(main.tops, near, terrain.height, main.blockers, 7, main.ledges))
 		_t.check("%s: it found tops or ledges" % id, (main.tops as Array).size() + (main.ledges as Array).size() > 0)
-	terrain.use(3)
-	_t.check("a freed stage leaves no perch read behind", not terrain._perch_ahead.has(0))
+	# A stage built with no perch ask: its read is pending until the stage is freed, which waits on it.
+	var fresh = Terrain.new(TABLE)
+	fresh.build(holder)
+	fresh.stage = 2
+	fresh.geometry_root(2)
+	_t.check("an unasked stage holds its read", fresh._perch_ahead.has(1))
+	fresh.use(3)
+	_t.check("freeing the stages behind waits on and drops their reads", not fresh._perch_ahead.has(0) and not fresh._perch_ahead.has(1))
 	SimClock.ticks = false
 	quit(_t.verdict())
