@@ -308,6 +308,14 @@ static func workshop_sky_later() -> PanoramaSkyMaterial:
 	return material
 
 
+# A paint left unwaited when the engine quits aborts the process: the node that shows the sky (terrain.gd's
+# WorldEnvironment) finishes it as it leaves the tree, which a quit does.
+static func settle_sky_on_exit(owner: Node) -> void:
+	owner.tree_exiting.connect(func():
+		if _sky_task >= 0:
+			workshop_sky(), CONNECT_ONE_SHOT)
+
+
 static func _fill_waiting_skies() -> void:
 	var texture := workshop_sky().panorama
 	for material in _sky_waiting:

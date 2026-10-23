@@ -480,12 +480,30 @@ func _perch_read_ahead(i: int) -> void:
 	var m = maps[i]
 	if not (m is ParkMap) or not m.ok or _perch_ahead.has(i) or _perches.has(i):
 		return
-	var park: Dictionary = m.park
-	var ground := _park_floor_at.bind(_heights[i], _holes[i], _under[i])
 	var out := {}
-	_perch_ahead[i] = {"out": out, "task": WorkerThreadPool.add_task(func():
+	var ahead := {"out": out, "task": _queue_perch_read(m.park, _heights[i], _holes[i], _under[i], out)}
+	_perch_ahead[i] = ahead
+	_settle_on_exit(_roots[i], ahead)
+
+
+# Static, so the worker holds no reference to this terrain: it reads only the park and copies of the arrays.
+static func _queue_perch_read(park: Dictionary, heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array, out: Dictionary) -> int:
+	var ground := func(x: float, z: float) -> float: return _park_height(heights, holes, under, x, z)
+	return WorkerThreadPool.add_task(func():
 		out.merge({"tops": PerchPoints.derive(park, ground), "blockers": PerchPoints.blockers(park), "ledges": PerchPoints.ledges(park, ground)}),
-		false, "perch read")}
+		false, "perch read")
+
+
+# A task left unwaited when the engine quits aborts the process: the stage's root waits on its read as it
+# leaves the tree, which a quit and a teardown both do, whether or not this terrain is still referenced.
+static func _settle_on_exit(root: Node, ahead: Dictionary) -> void:
+	root.tree_exiting.connect(func(): _settle_perch_read(ahead), CONNECT_ONE_SHOT)
+
+
+static func _settle_perch_read(ahead: Dictionary) -> void:
+	if ahead.has("task"):
+		WorkerThreadPool.wait_for_task_completion(ahead.task)
+		ahead.erase("task")
 
 
 # Waits on a stage's worker perch read and drops it; its lists, or {} when none was read.
@@ -494,7 +512,7 @@ func _take_perch_ahead(i: int) -> Dictionary:
 		return {}
 	var ahead: Dictionary = _perch_ahead[i]
 	_perch_ahead.erase(i)
-	WorkerThreadPool.wait_for_task_completion(ahead.task)
+	_settle_perch_read(ahead)
 	return ahead.out
 
 
@@ -890,6 +908,7 @@ func _build_sky(parent: Node3D) -> void:
 	var world_env := WorldEnvironment.new()
 	world_env.environment = environment
 	parent.add_child(world_env)
+	Palette.settle_sky_on_exit(world_env)
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-38.0, 118.0, 0.0)
