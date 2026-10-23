@@ -1,6 +1,6 @@
 # Scrapkeep lessons and ways of working
 
-Rules this project learned the hard way, 16 to 22 Oct 2026. Each lesson is the rule, then why. Owner: local coordinator. Lesson numbers stay fixed so older receipts still match; gaps are lessons that no longer apply (git history has them). Last updated 2026-10-22.
+Rules this project learned the hard way, 16 to 23 Oct 2026. Each lesson is the rule, then why. Owner: the project coordinator (the claude.ai Scrapkeep project from 23 Oct; the PC session held it 18 to 23 Oct). Lesson numbers stay fixed so older receipts still match; gaps are lessons that no longer apply (git history has them). Last updated 2026-10-23.
 
 ## Lanes and the cloud container
 
@@ -48,3 +48,16 @@ Rules this project learned the hard way, 16 to 22 Oct 2026. Each lesson is the r
 44. **Escalation goes one step at a time.** An agent asks its lane coordinator; a lane asks the local coordinator; only the coordinator goes to Andrew, with a stakeholder pitch (what's at stake, options with tradeoffs, a recommendation, the measured number, what would change it). Keep building on the recommendation while a pitch waits.
 45. **Sync the records before splitting into worktrees.** Lanes clone main, so the rulings, the ownership table and the graph land on main first; a lane that starts from stale docs re-decides settled calls.
 46. **Cap concurrent cloud lanes and let each fan out inside its sandbox.** The cap is 7 (19 Oct) and was raised to 11 on 21 Oct. Lanes that run their own agents and workflows replace a dozen flat sessions; the dozen used up the old account in a day.
+
+## Learned 19 to 23 Oct
+
+47. **Check the current stage before you build, and claim the unit first.** A 3-day rate-limit stall left threads rebuilding work that had already landed (dam, flume, islands and sinkhole kits). Before starting, read the stage log (`git log origin/stage/alpha-w<N>`) and the open PRs for the unit, then post a claim on the Wave board. A unit with no claim has no owner.
+48. **A merge needs a lane that works before the gate passes.** The coordinator's merges were refused by the auto-mode safety check ("merge without review"), so gate-passed PRs sat. The Gate lane's stacking by `git push` of merge commits to the stage kept working; the coordinator's PR merges did not. Decide who merges, and test it on a no-op, before a promotion is due.
+49. **A gate receipt names a head, and it expires when that head moves.** Once a stage head is promoted or restacked, every receipt on the old head needs a re-gate. Check the head SHA on the receipt against the branch before you stack.
+50. **Renderer audits need a display.** Density and still audits that use the renderer read 0 when run headless without one. Run them under `xvfb-run -a` (or on the 3060), and treat a 0 as a broken instrument until a planted control reads non-zero.
+51. **Bot frame captures need the warmed band** (`--warm-band=1`, #372). Without it the first band load lands inside the capture and reads as a freeze.
+52. **Band ratios need 24-seed medians.** Ratios such as grown-against-small at a hive swing too much at 4 to 8 seeds to rule on. Use 24 seeds, run solo at `--fixed-fps 90`, before a ratio goes into a pitch.
+53. **One run of a noisy measure is not a finding.** Readability, lighting and frame numbers are the median of 3 runs on a held pose (ART-MISTAKES, 22 Oct). Report a row only from its posted receipt, never from the queue.
+54. **Name what is on the ground and in the sky before scoring a still.** Park stills were reviewed for 11 days on Terrain3D's default checkerboard because each review scored only the asked-for subject.
+55. **A handoff is a post, not a memory.** When the coordinator changes seat (account switch, new session), every lane pushes, posts `HANDOFF <lane>` on the Wave board with heads, next steps and open NEEDS, and goes idle. The next coordinator starts from those posts.
+
