@@ -144,6 +144,9 @@ func _run() -> void:
 	await _step_while(LaunchTake.HOLD)
 	await _step_while(LaunchTake.REVEAL)
 	_t.check("the gate's take ends", not _take.busy(), "")
+	var line_layer: Node = hub.get_node_or_null("CampLineLayer")
+	_t.check("the camp's line card does not follow the ball into the dam", line_layer != null and line_layer.get_child_count() == 0,
+		str(line_layer.get_child_count()) if line_layer != null else "no layer")
 	flow.show_title()
 	await _frames(2)
 

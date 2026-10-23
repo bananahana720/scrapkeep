@@ -175,6 +175,10 @@ static func attach(hub) -> void:
 			for key in ["stages_cleared", "deaths", "kills"]:
 				stats[key] = profile.stat(key)
 		show_line(layer, CampLines.line_for(store.summaries(), stats)))
+	# The line belongs to the camp: leaving the walk (K, or the gate's launch into the dam) takes it down with the hub.
+	hub.walk_left.connect(func():
+		for card in layer.get_children():
+			card.queue_free())
 
 
 # A small caption card at the bottom left that fades out after LINE_SECONDS. It ignores the
