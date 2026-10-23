@@ -67,6 +67,7 @@ func enter(next: int, now := 0.0) -> void:
 # A mini-boss's turn: phase two the first time its health share is at or under MINI_TURN.
 # Returns true on the tick it turns.
 func by_health(share: float, now := 0.0) -> bool:
+	_clock = now
 	if phase < 1:
 		enter(1, now)
 	if phase == 1 and phases >= 2 and share <= MINI_TURN:

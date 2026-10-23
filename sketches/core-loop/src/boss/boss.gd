@@ -602,15 +602,16 @@ func _step_furnace(delta: float) -> void:
 		_slag_turn += 1
 		var gap := ChallengeDials.period("brindle", Rules.SLAG_GAP, 2)
 		if _follow_ups() > 0:
-			# The reprise fills the other ring the moment this one drains.
+			# The reprise fills the other ring the moment this one drains, and the next lead opens
+			# on that same ring, so leads alternate. It is the phase's follow-up: no combo rides on it.
 			var at := clock + slag_warn + Rules.SLAG_LIVE
 			_reprise = {"at": at, "cue_at": at - FightPhases.CUE_LEAD, "cued": false, "turn": _slag_turn}
-			_slag_turn += 1
-			_next_attack = clock + _paced(slag_warn + Rules.SLAG_LIVE + FightPhases.CUED_WARN + Rules.SLAG_LIVE + gap)
+			_combo_left = -1
+			_next_attack = at + FightPhases.CUED_WARN + Rules.SLAG_LIVE + gap
 		else:
 			_next_attack = clock + _paced(slag_warn + Rules.SLAG_LIVE + gap)
 	# Drones wait for the ship to park, so a pad is never swept by the hull.
-	if parked and clock >= _next_lobber:
+	if parked and clock >= _next_lobber and not _in_transition():
 		_next_lobber = clock + Rules.LOBBER_PERIOD
 		_launch_lobber()
 
@@ -688,7 +689,7 @@ func _step_drones(delta: float) -> void:
 		var at: Vector3 = d["at"]
 		var ready: bool = marker.age >= Rules.DRONE_WARN
 		var clear: bool = ball.distance_to(at + Vector3.UP) >= Rules.DRONE_CLEAR
-		if ready and clear and state == FIGHT:
+		if ready and clear and state == FIGHT and not _in_transition():
 			_drop_drone(at)
 		elif marker.age < Rules.DRONE_WARN + Rules.DRONE_WAIT and state == FIGHT:
 			kept.append(d)
