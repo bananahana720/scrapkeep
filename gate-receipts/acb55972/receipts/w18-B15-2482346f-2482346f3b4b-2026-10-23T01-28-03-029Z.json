@@ -1,0 +1,972 @@
+{
+  "schema": "scrapkeep-fast-receipt/1",
+  "label": "w18-B15-2482346f",
+  "head": "2482346f3b4b8d3f744ea50a4a92272ca67f86f5",
+  "base": "origin/stage/alpha-w18",
+  "merge_base": "8c5679228208d08468913b54d78dfef001750abd",
+  "started_at": "2026-10-23T01:28:03.029Z",
+  "stages": [
+    {
+      "name": "tree hygiene",
+      "ok": true,
+      "ms": 62,
+      "note": "no symlink, root file or new top-level folder",
+      "findings": []
+    },
+    {
+      "name": "carried branches current",
+      "ok": true,
+      "ms": 716,
+      "note": "1 merges, none stale"
+    },
+    {
+      "name": "sketch-lint",
+      "ok": true,
+      "ms": 4671,
+      "note": "sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1, 1071ms"
+    },
+    {
+      "name": "placeholders no higher than base",
+      "ok": true,
+      "ms": 7515,
+      "note": "no group grew",
+      "grew": []
+    },
+    {
+      "name": "quarantine",
+      "ok": true,
+      "ms": 7516,
+      "note": "0 rows, none expired"
+    },
+    {
+      "name": "import",
+      "ok": true,
+      "ms": 12664,
+      "note": "exit=0"
+    },
+    {
+      "name": "boot",
+      "ok": true,
+      "ms": 28697,
+      "note": "300 frames"
+    },
+    {
+      "name": "tests",
+      "ok": true,
+      "ms": 870171,
+      "note": "63 run, 0 flaky, 0 base-red"
+    }
+  ],
+  "ok": true,
+  "diff_base": "8c5679228208d08468913b54d78dfef001750abd",
+  "pre": [],
+  "changed": 198,
+  "carried": [
+    {
+      "merge": "2482346f3b4b8d3f744ea50a4a92272ca67f86f5",
+      "carried": "a083f66b052b771b4477879db750654747664e58",
+      "prs": [
+        "246"
+      ],
+      "stale": false
+    }
+  ],
+  "selection": {
+    "hubs": [],
+    "unmapped": [],
+    "tests": {
+      "tests/unit_suite_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/park_bake_fresh_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/models/park/props/sinkhole/cave_fern_a.glb"
+      },
+      "tests/park_dressing_pin_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/models/park/props/sinkhole/cave_fern_a.glb"
+      },
+      "tests/park_graph_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/models/park/props/sinkhole/cave_fern_a.glb"
+      },
+      "tests/park_park_crown_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/models/park/props/sinkhole/cave_fern_a.glb"
+      },
+      "tests/park_park_dam_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/models/park/props/sinkhole/cave_fern_a.glb"
+      },
+      "tests/park_park_flume_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/models/park/props/sinkhole/cave_fern_a.glb"
+      },
+      "tests/park_park_islands_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/models/park/props/sinkhole/cave_fern_a.glb"
+      },
+      "tests/park_park_pit_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/models/park/props/sinkhole/cave_fern_a.glb"
+      },
+      "tests/park_park_sinkhole_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/models/park/props/sinkhole/cave_fern_a.glb"
+      },
+      "tests/park_props_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/models/park/props/sinkhole/cave_fern_a.glb"
+      },
+      "tests/ambient_palette_test.gd": {
+        "tier": 1,
+        "why": "names assets/registry.json"
+      },
+      "tests/asset_registry_test.gd": {
+        "tier": 1,
+        "why": "names assets/registry.json"
+      },
+      "tests/park_recipes_bowls_test.gd": {
+        "tier": 1,
+        "why": "names assets/registry.json"
+      },
+      "tests/pilot_cannon_asset_test.gd": {
+        "tier": 1,
+        "why": "names assets/registry.json"
+      },
+      "tests/pilot_tally_asset_test.gd": {
+        "tier": 1,
+        "why": "names assets/registry.json"
+      },
+      "tests/warden_mind_asset_test.gd": {
+        "tier": 1,
+        "why": "names assets/registry.json"
+      },
+      "tests/warden_reactor_asset_test.gd": {
+        "tier": 1,
+        "why": "names assets/registry.json"
+      },
+      "tests/warden_swarm_asset_test.gd": {
+        "tier": 1,
+        "why": "names assets/registry.json"
+      },
+      "tests/world_one_shell_rivet_test.gd": {
+        "tier": 1,
+        "why": "names assets/registry.json"
+      },
+      "tests/achievement_beat_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/achievement_fill_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/achievement_fragment_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/baked_bracket_reach_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/cannon_kit_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/cosmetic_apply_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/customization_presentation_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/customization_system_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/customize_slots_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/first_win_secrets_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/grant_grammar_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/kest_kit_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/ledger_leaf_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/meta_options_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/mind_quiet_gun_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/profile_purity_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/progress_bus_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/rivet_set_piece_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/roster_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/sable_kit_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/tally_kit_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/tally_set_piece_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/tarn_set_piece_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/ui_customize_page_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/ui_locked_card_test.gd": {
+        "tier": 2,
+        "why": "names src/core/cosmetics.gd, which names assets/registry.json"
+      },
+      "tests/ambient_homes_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/ambient_pool_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/park_events_game_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/park_music_layers_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/park_natural_projection_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/park_natural_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/park_recipes_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/park_routes_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/park_schema_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/park_seat_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/park_skill_lines_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/park_tile_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/pocket_kinds_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/traversal_measure_test.gd": {
+        "tier": 2,
+        "why": "names src/world/park/park_schema.gd, which names assets/registry.json"
+      },
+      "tests/presentation_random_lint_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/enemy_catch_trap_asset_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/codex_coverage_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/ace_tracks_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      }
+    },
+    "deferred_to_full_gate": [],
+    "bot_shards": [],
+    "shard_reasons": {},
+    "estimate_ms": 593700
+  },
+  "results": [
+    {
+      "test": "tests/pilot_cannon_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 290,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pilot_tally_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 371,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/warden_mind_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 383,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/grant_grammar_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 383,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/profile_purity_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 390,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/meta_options_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 458,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_seat_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1025,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_random_lint_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 564,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_tile_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1018,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/warden_swarm_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 736,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_sinkhole_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1577,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/customize_slots_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1406,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/warden_reactor_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1303,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/world_one_shell_rivet_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1783,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_schema_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2232,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/asset_registry_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2813,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/customization_system_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2522,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_pit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 5134,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_natural_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 3536,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_recipes_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 3632,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_routes_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 4481,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/enemy_catch_trap_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 8016,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/codex_coverage_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 8227,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_bake_fresh_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7938,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_islands_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 8476,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ace_tracks_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7763,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_dam_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7908,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/progress_bus_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 12210,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/cosmetic_apply_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 13886,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/achievement_fill_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 12494,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_crown_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 16843,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_recipes_bowls_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 14789,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/tally_set_piece_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 17324,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/sable_kit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 22260,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/tarn_set_piece_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 17441,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/customization_presentation_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 17420,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/mind_quiet_gun_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 25065,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/cannon_kit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 22344,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ledger_leaf_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 17138,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/roster_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 26566,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ui_customize_page_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 16596,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/kest_kit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 18073,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ui_locked_card_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 17234,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/achievement_beat_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 16869,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/tally_kit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 32775,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ambient_homes_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2623,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ambient_palette_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 644,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ambient_pool_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2047,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/baked_bracket_reach_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 16094,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/rivet_set_piece_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 54861,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_music_layers_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1033,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_natural_projection_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 93466,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/first_win_secrets_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 104461,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_flume_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 58500,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_skill_lines_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7550,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_props_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 62376,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_graph_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 42151,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_events_game_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 83601,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pocket_kinds_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 67506,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/traversal_measure_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 134207,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/achievement_fragment_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 169012,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/unit_suite_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 133970,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_dressing_pin_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 45019,
+      "reason": null,
+      "quarantined": false
+    }
+  ],
+  "quarantined": [],
+  "flaky": [],
+  "base_red": [],
+  "wall_ms": 870172
+}

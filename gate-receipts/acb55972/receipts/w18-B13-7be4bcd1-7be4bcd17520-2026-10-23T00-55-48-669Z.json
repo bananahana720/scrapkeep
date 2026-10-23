@@ -1,0 +1,330 @@
+{
+  "schema": "scrapkeep-fast-receipt/1",
+  "label": "w18-B13-7be4bcd1",
+  "head": "7be4bcd17520de9597e1f798748453823e6c700f",
+  "base": "origin/stage/alpha-w18",
+  "merge_base": "2b04b3f300d956efaecb7dbc3780bbb848241e77",
+  "started_at": "2026-10-23T00:55:48.669Z",
+  "stages": [
+    {
+      "name": "tree hygiene",
+      "ok": true,
+      "ms": 27,
+      "note": "no symlink, root file or new top-level folder",
+      "findings": []
+    },
+    {
+      "name": "carried branches current",
+      "ok": true,
+      "ms": 617,
+      "note": "1 merges, none stale"
+    },
+    {
+      "name": "sketch-lint",
+      "ok": true,
+      "ms": 1887,
+      "note": "sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1, 1069ms"
+    },
+    {
+      "name": "placeholders no higher than base",
+      "ok": true,
+      "ms": 4780,
+      "note": "no group grew",
+      "grew": []
+    },
+    {
+      "name": "quarantine",
+      "ok": true,
+      "ms": 4780,
+      "note": "0 rows, none expired"
+    },
+    {
+      "name": "import",
+      "ok": true,
+      "ms": 9930,
+      "note": "exit=0"
+    },
+    {
+      "name": "boot",
+      "ok": true,
+      "ms": 26095,
+      "note": "300 frames"
+    },
+    {
+      "name": "tests",
+      "ok": true,
+      "ms": 200473,
+      "note": "17 run, 0 flaky, 0 base-red"
+    }
+  ],
+  "ok": true,
+  "diff_base": "2b04b3f300d956efaecb7dbc3780bbb848241e77",
+  "pre": [],
+  "changed": 5,
+  "carried": [
+    {
+      "merge": "7be4bcd17520de9597e1f798748453823e6c700f",
+      "carried": "fd0b1a4763bac7813c149e633e2c1b7f97734530",
+      "prs": [
+        "346"
+      ],
+      "stale": false
+    }
+  ],
+  "selection": {
+    "hubs": [],
+    "unmapped": [
+      "tools/blender/shell_tally.py"
+    ],
+    "tests": {
+      "tests/unit_suite_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/paint_mask_scan_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/pilot_tally_asset_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/tally_look_test.gd": {
+        "tier": 1,
+        "why": "names assets/models/world_one/shell_tally.glb"
+      },
+      "tests/ambient_palette_test.gd": {
+        "tier": 2,
+        "why": "names assets/registry.json, which names assets/models/world_one/shell_tally.glb"
+      },
+      "tests/asset_registry_test.gd": {
+        "tier": 2,
+        "why": "names assets/registry.json, which names assets/models/world_one/shell_tally.glb"
+      },
+      "tests/park_recipes_bowls_test.gd": {
+        "tier": 2,
+        "why": "names assets/registry.json, which names assets/models/world_one/shell_tally.glb"
+      },
+      "tests/pilot_cannon_asset_test.gd": {
+        "tier": 2,
+        "why": "names assets/registry.json, which names assets/models/world_one/shell_tally.glb"
+      },
+      "tests/warden_mind_asset_test.gd": {
+        "tier": 2,
+        "why": "names assets/registry.json, which names assets/models/world_one/shell_tally.glb"
+      },
+      "tests/warden_reactor_asset_test.gd": {
+        "tier": 2,
+        "why": "names assets/registry.json, which names assets/models/world_one/shell_tally.glb"
+      },
+      "tests/warden_swarm_asset_test.gd": {
+        "tier": 2,
+        "why": "names assets/registry.json, which names assets/models/world_one/shell_tally.glb"
+      },
+      "tests/world_one_shell_rivet_test.gd": {
+        "tier": 2,
+        "why": "names assets/registry.json, which names assets/models/world_one/shell_tally.glb"
+      },
+      "tests/tally_set_piece_test.gd": {
+        "tier": 1,
+        "why": "names assets/models/world_one/shell_tally_abacus.glb"
+      },
+      "tests/presentation_random_lint_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/enemy_catch_trap_asset_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/codex_coverage_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/ace_tracks_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      }
+    },
+    "deferred_to_full_gate": [],
+    "bot_shards": [],
+    "shard_reasons": {},
+    "estimate_ms": 128200
+  },
+  "results": [
+    {
+      "test": "tests/pilot_tally_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 376,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pilot_cannon_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 292,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/warden_mind_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 398,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/paint_mask_scan_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1302,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_random_lint_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 554,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/warden_swarm_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 836,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/warden_reactor_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1303,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/world_one_shell_rivet_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1577,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/asset_registry_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2520,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/tally_look_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 3538,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/enemy_catch_trap_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7547,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/codex_coverage_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7855,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ace_tracks_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7642,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_recipes_bowls_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 14789,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ambient_palette_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 553,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/tally_set_piece_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 17136,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/unit_suite_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 136595,
+      "reason": null,
+      "quarantined": false
+    }
+  ],
+  "quarantined": [],
+  "flaky": [],
+  "base_red": [],
+  "wall_ms": 200474
+}

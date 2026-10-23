@@ -1,0 +1,672 @@
+{
+  "schema": "scrapkeep-fast-receipt/1",
+  "label": "w18-B20-ba4ac124",
+  "head": "ba4ac124079118616a9c7cfd433e21e10130160d",
+  "base": "origin/stage/alpha-w18",
+  "merge_base": "66749800d87fa950f028e522c7faed4772b90f8d",
+  "started_at": "2026-10-23T07:21:39.881Z",
+  "stages": [
+    {
+      "name": "tree hygiene",
+      "ok": true,
+      "ms": 637,
+      "note": "no symlink, root file or new top-level folder",
+      "findings": []
+    },
+    {
+      "name": "carried branches current",
+      "ok": true,
+      "ms": 4872,
+      "note": "1 merges, none stale"
+    },
+    {
+      "name": "sketch-lint",
+      "ok": true,
+      "ms": 9184,
+      "note": "sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1, 2047ms"
+    },
+    {
+      "name": "placeholders no higher than base",
+      "ok": true,
+      "ms": 57885,
+      "note": "no group grew",
+      "grew": []
+    },
+    {
+      "name": "quarantine",
+      "ok": true,
+      "ms": 57886,
+      "note": "0 rows, none expired"
+    },
+    {
+      "name": "import",
+      "ok": true,
+      "ms": 69337,
+      "note": "exit=0"
+    },
+    {
+      "name": "boot",
+      "ok": true,
+      "ms": 97427,
+      "note": "300 frames"
+    },
+    {
+      "name": "tests",
+      "ok": false,
+      "ms": 579381,
+      "note": "tests/boss_weak_parts_test.gd is the PR's red: the test was killed at the time limit or by a signal",
+      "pr_red": "tests/boss_weak_parts_test.gd"
+    }
+  ],
+  "ok": false,
+  "diff_base": "66749800d87fa950f028e522c7faed4772b90f8d",
+  "pre": [],
+  "changed": 4,
+  "carried": [
+    {
+      "merge": "ba4ac124079118616a9c7cfd433e21e10130160d",
+      "carried": "1ff9b731339f1afc4d64acedcd58d34048538650",
+      "prs": [
+        "368"
+      ],
+      "stale": false
+    }
+  ],
+  "selection": {
+    "hubs": [
+      "tools/bot_driver.gd"
+    ],
+    "unmapped": [],
+    "tests": {
+      "tests/unit_suite_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/alpha_bot_sweep_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/bot_completionist_repeat_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/bot_run_end_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/alpha_posture_bands_w23_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/audio_momentum_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/boss_weak_crew_record_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/boss_weak_crew_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/boss_weak_parts_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/boss_weak_points_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_basin_exit_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_brindle_short_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_chain_hand_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_charge_read_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_charge_recover_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_dig_breach_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_explorer_activities_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_explorer_camp_path_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_flume_exit_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_gate_leg_limit_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_hands_flag_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_harpoon_bites_count_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_highdraft_lift_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_park_stage3_break_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_plant_climb_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_posture_boss_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_relay_stake_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_skill_bar_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_sling_drop_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_stub_boss_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/bot_world_arrivals_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/char_bot_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/crown_warden_bot_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/highdraft_gate_bot_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/highdraft_warden_bot_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/kest_kit_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/late_offer_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/loop_bot_hang_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/loop_bot_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/music_params_trace_game_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/park_reactor_bot_hand_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/park_reactor_boundary_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/park_reactor_launch_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/park_reactor_prelaunch_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/park_reactor_repeat_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/park_reactor_sheet_bot_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/park_reactor_window_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/pilot_locks_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/pocket_entry_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/posture_bands_mind_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/posture_bands_reactor_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/posture_bands_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/sable_bot_hands_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/traversal_measure_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/victory_lap_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/waking_bot_fight_test.gd": {
+        "tier": 1,
+        "why": "names tools/bot_driver.gd"
+      },
+      "tests/alpha_posture_bands_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/bot_isle_stage5_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/bot_latch_arm_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/bot_park_trace_repeat_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/bot_repeat_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/bot_six_pilots_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/bot_switch_replay_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/park_reactor_fight_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/posture_bands_flume_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/posture_bands_swarm_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/seed_isolation_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/skill_band_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/stage_beats_test.gd": {
+        "tier": 2,
+        "why": "names tools/bot_run.gd, which names tools/bot_driver.gd"
+      },
+      "tests/item_fuzz_smoke_test.gd": {
+        "tier": 2,
+        "why": "names tools/item_fuzz.gd, which names tools/bot_driver.gd"
+      },
+      "tests/matchup_lab_test.gd": {
+        "tier": 2,
+        "why": "names tools/matchup_lab.gd, which names tools/bot_driver.gd"
+      },
+      "tests/arena_posture_record_test.gd": {
+        "tier": 2,
+        "why": "names tools/posture_sweep.gd, which names tools/bot_driver.gd"
+      },
+      "tests/bot_switch_defaults_test.gd": {
+        "tier": 2,
+        "why": "names tools/posture_sweep.gd, which names tools/bot_driver.gd"
+      },
+      "tests/priority_proof_test.gd": {
+        "tier": 2,
+        "why": "names tools/priority_proof.gd, which names tools/bot_driver.gd"
+      },
+      "tests/park_anchor_corner_probe_test.gd": {
+        "tier": 2,
+        "why": "names tools/traversal_line.gd, which names tools/bot_driver.gd"
+      },
+      "tests/park_park_islands_test.gd": {
+        "tier": 2,
+        "why": "names tools/traversal_line.gd, which names tools/bot_driver.gd"
+      },
+      "tests/park_skill_lines_test.gd": {
+        "tier": 2,
+        "why": "names tools/traversal_line.gd, which names tools/bot_driver.gd"
+      },
+      "tests/reach_map_test.gd": {
+        "tier": 2,
+        "why": "names tools/traversal_line.gd, which names tools/bot_driver.gd"
+      },
+      "tests/set_dressing_test.gd": {
+        "tier": 2,
+        "why": "names tools/traversal_line.gd, which names tools/bot_driver.gd"
+      },
+      "tests/trace_readonly_test.gd": {
+        "tier": 2,
+        "why": "names tools/traversal_line.gd, which names tools/bot_driver.gd"
+      },
+      "tests/presentation_random_lint_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/enemy_catch_trap_asset_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/codex_coverage_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/ace_tracks_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      }
+    },
+    "deferred_to_full_gate": [
+      "tests/highdraft_warden_bot_test.gd",
+      "tests/loop_bot_test.gd",
+      "tests/music_params_trace_game_test.gd",
+      "tests/park_reactor_bot_hand_test.gd",
+      "tests/park_reactor_boundary_test.gd",
+      "tests/park_reactor_launch_test.gd",
+      "tests/park_reactor_prelaunch_test.gd",
+      "tests/park_reactor_repeat_test.gd",
+      "tests/park_reactor_sheet_bot_test.gd",
+      "tests/park_reactor_window_test.gd",
+      "tests/posture_bands_mind_test.gd",
+      "tests/posture_bands_reactor_test.gd",
+      "tests/victory_lap_test.gd",
+      "tests/waking_bot_fight_test.gd",
+      "tests/char_bot_test.gd",
+      "tests/bot_explorer_camp_path_test.gd",
+      "tests/traversal_measure_test.gd",
+      "tests/reach_map_test.gd",
+      "tests/set_dressing_test.gd",
+      "tests/bot_latch_arm_test.gd",
+      "tests/bot_repeat_test.gd",
+      "tests/bot_switch_replay_test.gd",
+      "tests/park_anchor_corner_probe_test.gd",
+      "tests/park_skill_lines_test.gd",
+      "tests/priority_proof_test.gd",
+      "tests/seed_isolation_test.gd",
+      "tests/stage_beats_test.gd",
+      "tests/trace_readonly_test.gd",
+      "tests/arena_posture_record_test.gd",
+      "tests/item_fuzz_smoke_test.gd",
+      "tests/codex_coverage_test.gd",
+      "tests/ace_tracks_test.gd"
+    ],
+    "bot_shards": [
+      "tests/alpha_bot_sweep_test.gd",
+      "tests/alpha_posture_bands_test.gd",
+      "tests/alpha_posture_bands_w23_test.gd",
+      "tests/bot_chain_hand_test.gd",
+      "tests/bot_completionist_repeat_test.gd",
+      "tests/bot_isle_stage5_test.gd",
+      "tests/bot_park_stage3_break_test.gd",
+      "tests/bot_park_trace_repeat_test.gd",
+      "tests/bot_run_end_test.gd",
+      "tests/bot_six_pilots_test.gd",
+      "tests/bot_skill_bar_test.gd",
+      "tests/bot_world_arrivals_test.gd",
+      "tests/matchup_lab_test.gd",
+      "tests/park_reactor_fight_test.gd",
+      "tests/pocket_entry_test.gd",
+      "tests/posture_bands_flume_test.gd",
+      "tests/posture_bands_swarm_test.gd",
+      "tests/posture_bands_test.gd",
+      "tests/skill_band_test.gd"
+    ],
+    "shard_reasons": {},
+    "estimate_ms": 598250
+  },
+  "results": [
+    {
+      "test": "tests/presentation_random_lint_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 698,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bot_plant_climb_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2639,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bot_sling_drop_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2636,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bot_charge_recover_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2218,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/late_offer_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7214,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/enemy_catch_trap_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 12550,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bot_switch_defaults_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 13769,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_islands_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 13954,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pilot_locks_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 23541,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/loop_bot_hang_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 22228,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/sable_bot_hands_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 28954,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bot_harpoon_bites_count_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 30172,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/kest_kit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 28805,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bot_explorer_activities_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 42711,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/boss_weak_points_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 120119,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bot_charge_read_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2386,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bot_gate_leg_limit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2268,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bot_hands_flag_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 28048,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/boss_weak_parts_test.gd",
+      "ok": false,
+      "exit": null,
+      "signal": "SIGKILL",
+      "failing": 0,
+      "ms": 180065,
+      "reason": "the test was killed at the time limit or by a signal",
+      "quarantined": false
+    }
+  ],
+  "quarantined": [],
+  "flaky": [],
+  "base_red": [],
+  "wall_ms": 579381
+}

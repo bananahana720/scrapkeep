@@ -1,0 +1,518 @@
+{
+  "schema": "scrapkeep-fast-receipt/1",
+  "label": "w18-B11-0c35c320",
+  "head": "0c35c320e47a65535da804b2df6805ff84dc488f",
+  "base": "origin/stage/alpha-w18",
+  "merge_base": "a937e6d9376864b5c5da6dcb09c997d0dca4c2f5",
+  "started_at": "2026-10-22T23:23:48.980Z",
+  "stages": [
+    {
+      "name": "tree hygiene",
+      "ok": true,
+      "ms": 34,
+      "note": "no symlink, root file or new top-level folder",
+      "findings": []
+    },
+    {
+      "name": "carried branches current",
+      "ok": true,
+      "ms": 643,
+      "note": "1 merges, none stale"
+    },
+    {
+      "name": "sketch-lint",
+      "ok": true,
+      "ms": 1931,
+      "note": "sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1, 1017ms"
+    },
+    {
+      "name": "placeholders no higher than base",
+      "ok": true,
+      "ms": 4801,
+      "note": "no group grew",
+      "grew": []
+    },
+    {
+      "name": "quarantine",
+      "ok": true,
+      "ms": 4801,
+      "note": "0 rows, none expired"
+    },
+    {
+      "name": "import",
+      "ok": true,
+      "ms": 9569,
+      "note": "exit=0"
+    },
+    {
+      "name": "boot",
+      "ok": true,
+      "ms": 24761,
+      "note": "300 frames"
+    },
+    {
+      "name": "tests",
+      "ok": true,
+      "ms": 951996,
+      "note": "30 run, 0 flaky, 1 base-red"
+    }
+  ],
+  "ok": true,
+  "diff_base": "a937e6d9376864b5c5da6dcb09c997d0dca4c2f5",
+  "pre": [],
+  "changed": 9,
+  "carried": [
+    {
+      "merge": "0c35c320e47a65535da804b2df6805ff84dc488f",
+      "carried": "c0718ca26afb2af57d591d7c1b869d78e99a0a84",
+      "prs": [
+        "321"
+      ],
+      "stale": false
+    }
+  ],
+  "selection": {
+    "hubs": [],
+    "unmapped": [],
+    "tests": {
+      "tests/unit_suite_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/park_bake_fresh_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/park/park_crown/bake.json"
+      },
+      "tests/park_dressing_pin_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/park_graph_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/park/park_crown/bake.json"
+      },
+      "tests/park_park_crown_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/park/park_crown/bake.json"
+      },
+      "tests/park_park_dam_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/park/park_crown/bake.json"
+      },
+      "tests/park_park_flume_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/park/park_crown/bake.json"
+      },
+      "tests/park_park_islands_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/park/park_crown/bake.json"
+      },
+      "tests/park_park_pit_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/park/park_crown/bake.json"
+      },
+      "tests/park_park_sinkhole_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/park/park_crown/bake.json"
+      },
+      "tests/park_props_test.gd": {
+        "tier": 1,
+        "why": "park data: assets/park/park_crown/bake.json"
+      },
+      "tests/bake_look_test.gd": {
+        "tier": 1,
+        "why": "named after assets/park/park_crown/bake.json"
+      },
+      "tests/ground_slump_clearance_game_test.gd": {
+        "tier": 1,
+        "why": "named after assets/park/park_crown/ground.bin"
+      },
+      "tests/ground_slump_game_test.gd": {
+        "tier": 1,
+        "why": "named after assets/park/park_crown/ground.bin"
+      },
+      "tests/ground_slump_record_test.gd": {
+        "tier": 1,
+        "why": "named after assets/park/park_crown/ground.bin"
+      },
+      "tests/ground_slump_site_test.gd": {
+        "tier": 1,
+        "why": "named after assets/park/park_crown/ground.bin"
+      },
+      "tests/park_music_layers_test.gd": {
+        "tier": 1,
+        "why": "names src/world/park/park_crown.json"
+      },
+      "tests/park_recipes_kickers_test.gd": {
+        "tier": 1,
+        "why": "names src/world/park/park_crown.json"
+      },
+      "tests/run_tier_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/bot_hands_flag_test.gd": {
+        "tier": 1,
+        "why": "names tools/traversal_line.gd"
+      },
+      "tests/park_anchor_corner_probe_test.gd": {
+        "tier": 1,
+        "why": "names tools/traversal_line.gd"
+      },
+      "tests/park_skill_lines_test.gd": {
+        "tier": 1,
+        "why": "names tools/traversal_line.gd"
+      },
+      "tests/reach_map_test.gd": {
+        "tier": 1,
+        "why": "names tools/traversal_line.gd"
+      },
+      "tests/seed_isolation_test.gd": {
+        "tier": 1,
+        "why": "names tools/traversal_line.gd"
+      },
+      "tests/set_dressing_test.gd": {
+        "tier": 1,
+        "why": "names tools/traversal_line.gd"
+      },
+      "tests/trace_readonly_test.gd": {
+        "tier": 1,
+        "why": "names tools/traversal_line.gd"
+      },
+      "tests/traversal_measure_test.gd": {
+        "tier": 1,
+        "why": "names tools/traversal_line.gd"
+      },
+      "tests/presentation_random_lint_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/enemy_catch_trap_asset_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/codex_coverage_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/ace_tracks_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      }
+    },
+    "deferred_to_full_gate": [],
+    "bot_shards": [
+      "tests/run_tier_test.gd"
+    ],
+    "shard_reasons": {},
+    "estimate_ms": 435550
+  },
+  "results": [
+    {
+      "test": "tests/presentation_random_lint_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 552,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ground_slump_record_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1297,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_sinkhole_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1485,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_pit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 4558,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/enemy_catch_trap_asset_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 6890,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/codex_coverage_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 6919,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_bake_fresh_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7249,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_islands_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7663,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ace_tracks_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7166,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_dam_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7634,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/reach_map_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 15283,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_crown_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 16848,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ground_slump_site_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 24069,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ground_slump_game_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 31423,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bake_look_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 559,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/set_dressing_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 28518,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bot_hands_flag_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 17805,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_music_layers_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 927,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_anchor_corner_probe_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 39361,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_flume_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 58043,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_recipes_kickers_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 8003,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_skill_lines_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7643,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_props_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 60521,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_graph_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 41629,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ground_slump_clearance_game_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 39233,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/traversal_measure_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 132030,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_dressing_pin_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 42867,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/unit_suite_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 125346,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/seed_isolation_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 241397,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/trace_readonly_test.gd",
+      "ok": false,
+      "exit": 1,
+      "signal": null,
+      "failing": 1,
+      "ms": 22385,
+      "reason": "the test exited with code 1",
+      "quarantined": false
+    }
+  ],
+  "quarantined": [],
+  "flaky": [],
+  "base_red": [
+    "tests/trace_readonly_test.gd"
+  ],
+  "wall_ms": 951996
+}

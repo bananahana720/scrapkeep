@@ -1,0 +1,1151 @@
+{
+  "schema": "scrapkeep-fast-receipt/1",
+  "label": "w18-B14-f773e13c",
+  "head": "f773e13ce8765eeb78bff6cf8b78b86b45391d67",
+  "base": "origin/stage/alpha-w18",
+  "merge_base": "aff1340a0b476d2171c3414cd18533d05b25c67f",
+  "started_at": "2026-10-23T01:01:59.047Z",
+  "stages": [
+    {
+      "name": "tree hygiene",
+      "ok": true,
+      "ms": 46,
+      "note": "no symlink, root file or new top-level folder",
+      "findings": []
+    },
+    {
+      "name": "carried branches current",
+      "ok": true,
+      "ms": 767,
+      "note": "4 merges, none stale"
+    },
+    {
+      "name": "sketch-lint",
+      "ok": true,
+      "ms": 2539,
+      "note": "sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1, 1067ms"
+    },
+    {
+      "name": "placeholders no higher than base",
+      "ok": true,
+      "ms": 7017,
+      "note": "no group grew",
+      "grew": []
+    },
+    {
+      "name": "check:docs",
+      "ok": true,
+      "ms": 8105,
+      "note": "INFO tracking TRACKING.md:109 interim row without a BACKLOG link: PS-01 (audit rec 3, 13, 17; S0-02, S0-03)"
+    },
+    {
+      "name": "quarantine",
+      "ok": true,
+      "ms": 8106,
+      "note": "0 rows, none expired"
+    },
+    {
+      "name": "import",
+      "ok": true,
+      "ms": 13256,
+      "note": "exit=0"
+    },
+    {
+      "name": "boot",
+      "ok": true,
+      "ms": 29413,
+      "note": "300 frames"
+    },
+    {
+      "name": "tests",
+      "ok": false,
+      "ms": 619862,
+      "note": "tests/park_park_flume_test.gd is the PR's red: the test printed an error line",
+      "pr_red": "tests/park_park_flume_test.gd"
+    }
+  ],
+  "ok": false,
+  "diff_base": "aff1340a0b476d2171c3414cd18533d05b25c67f",
+  "pre": [],
+  "changed": 31,
+  "carried": [
+    {
+      "merge": "f773e13ce8765eeb78bff6cf8b78b86b45391d67",
+      "carried": "5c49892616f90884e7c552bfe7035879bd60fdb6",
+      "prs": [
+        "297"
+      ],
+      "stale": false
+    },
+    {
+      "merge": "e269b5d195b403190d83c0cc3f158f861ebddbe1",
+      "carried": "58e98e5780038247c33178419ea7e7b3ca187dbc",
+      "prs": [
+        "284"
+      ],
+      "stale": false
+    },
+    {
+      "merge": "04f2611f41a3e3226c3367960838125d49687e2f",
+      "carried": "8d3b0869f7f1f25ef5dd84e64622a94031ededf6",
+      "prs": [
+        "324"
+      ],
+      "stale": false
+    },
+    {
+      "merge": "4916c8452be6b0026d4996198e90a1cc0e3dfad1",
+      "carried": "08d22d8b497de9c7fc15666ad5641e75dd3fe734",
+      "prs": [
+        "352"
+      ],
+      "stale": false
+    }
+  ],
+  "selection": {
+    "hubs": [
+      "src/combat/threat_grammar.gd"
+    ],
+    "unmapped": [
+      "tools/haze_pose_capture.gd",
+      "tools/impact_frame_bench.gd",
+      "tools/impact_frame_render_check.gd",
+      "tools/stress_capture.gd"
+    ],
+    "tests": {
+      "tests/unit_suite_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/loop_coherence_test.gd": {
+        "tier": 1,
+        "why": "names DESIGN-NOTES.md"
+      },
+      "tests/park_bake_fresh_test.gd": {
+        "tier": 1,
+        "why": "park data: design-v3/park/DRESSING-KITS.md"
+      },
+      "tests/park_dressing_pin_test.gd": {
+        "tier": 1,
+        "why": "park data: design-v3/park/DRESSING-KITS.md"
+      },
+      "tests/park_graph_test.gd": {
+        "tier": 1,
+        "why": "park data: design-v3/park/DRESSING-KITS.md"
+      },
+      "tests/park_park_crown_test.gd": {
+        "tier": 1,
+        "why": "park data: design-v3/park/DRESSING-KITS.md"
+      },
+      "tests/park_park_dam_test.gd": {
+        "tier": 1,
+        "why": "park data: design-v3/park/DRESSING-KITS.md"
+      },
+      "tests/park_park_flume_test.gd": {
+        "tier": 1,
+        "why": "park data: design-v3/park/DRESSING-KITS.md"
+      },
+      "tests/park_park_islands_test.gd": {
+        "tier": 1,
+        "why": "park data: design-v3/park/DRESSING-KITS.md"
+      },
+      "tests/park_park_pit_test.gd": {
+        "tier": 1,
+        "why": "park data: design-v3/park/DRESSING-KITS.md"
+      },
+      "tests/park_park_sinkhole_test.gd": {
+        "tier": 1,
+        "why": "park data: design-v3/park/DRESSING-KITS.md"
+      },
+      "tests/park_props_test.gd": {
+        "tier": 1,
+        "why": "park data: design-v3/park/DRESSING-KITS.md"
+      },
+      "tests/attack_rows_test.gd": {
+        "tier": 1,
+        "why": "names design-v3/research/attack-reads/ATTACK-READS.md"
+      },
+      "tests/boss_scaling_test.gd": {
+        "tier": 1,
+        "why": "names src/boss/hazard.gd"
+      },
+      "tests/boss_telegraph_test.gd": {
+        "tier": 1,
+        "why": "names src/boss/hazard.gd"
+      },
+      "tests/bot_charge_read_test.gd": {
+        "tier": 1,
+        "why": "names src/boss/hazard.gd"
+      },
+      "tests/cannon_kit_test.gd": {
+        "tier": 1,
+        "why": "names src/boss/hazard.gd"
+      },
+      "tests/challenge_dials_brindle_test.gd": {
+        "tier": 1,
+        "why": "names src/boss/hazard.gd"
+      },
+      "tests/challenge_dials_test.gd": {
+        "tier": 1,
+        "why": "names src/boss/hazard.gd"
+      },
+      "tests/impact_frame_cost_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/mind_arena_bound_test.gd": {
+        "tier": 1,
+        "why": "names src/boss/hazard.gd"
+      },
+      "tests/mind_attack_families_test.gd": {
+        "tier": 1,
+        "why": "names src/boss/hazard.gd"
+      },
+      "tests/player_fx_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/threat_grammar_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/threat_sites_test.gd": {
+        "tier": 1,
+        "why": "names src/boss/hazard.gd"
+      },
+      "tests/threat_sound_test.gd": {
+        "tier": 1,
+        "why": "names src/boss/hazard.gd"
+      },
+      "tests/warden_mind_brace_test.gd": {
+        "tier": 1,
+        "why": "names src/boss/hazard.gd"
+      },
+      "tests/warning_bound_containment_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/warning_bound_park_ground_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/boss_pickup_asset_test.gd": {
+        "tier": 2,
+        "why": "names src/boss/boss.gd, which names src/boss/hazard.gd"
+      },
+      "tests/fua_boss_pickup_failure_test.gd": {
+        "tier": 2,
+        "why": "names src/boss/boss.gd, which names src/boss/hazard.gd"
+      },
+      "tests/fua_boss_pickup_material_test.gd": {
+        "tier": 2,
+        "why": "names src/boss/boss.gd, which names src/boss/hazard.gd"
+      },
+      "tests/spine_worlds_test.gd": {
+        "tier": 2,
+        "why": "names src/boss/boss.gd, which names src/boss/hazard.gd"
+      },
+      "tests/ui_worlds_test.gd": {
+        "tier": 2,
+        "why": "names src/boss/boss.gd, which names src/boss/hazard.gd"
+      },
+      "tests/arc_mark_test.gd": {
+        "tier": 2,
+        "why": "names src/boss/mind_attacks.gd, which names src/boss/hazard.gd"
+      },
+      "tests/cannon_ultimate_test.gd": {
+        "tier": 2,
+        "why": "names src/boss/mind_attacks.gd, which names src/boss/hazard.gd"
+      },
+      "tests/combat_bughunt_test.gd": {
+        "tier": 2,
+        "why": "names src/boss/mind_attacks.gd, which names src/boss/hazard.gd"
+      },
+      "tests/kit_cue_level_test.gd": {
+        "tier": 2,
+        "why": "names src/boss/mind_attacks.gd, which names src/boss/hazard.gd"
+      },
+      "tests/mind_escape_guarantee_test.gd": {
+        "tier": 2,
+        "why": "names src/boss/mind_attacks.gd, which names src/boss/hazard.gd"
+      },
+      "tests/mind_plate_reach_test.gd": {
+        "tier": 2,
+        "why": "names src/boss/mind_attacks.gd, which names src/boss/hazard.gd"
+      },
+      "tests/waking_attack_fight_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/waking_attacks_test.gd": {
+        "tier": 2,
+        "why": "names src/boss/mind_attacks.gd, which names src/boss/hazard.gd"
+      },
+      "tests/park_events_industrial_test.gd": {
+        "tier": 2,
+        "why": "names src/world/events/industrial.gd, which names src/boss/hazard.gd"
+      },
+      "tests/dig_highdraft_events_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/foley_audio_test.gd": {
+        "tier": 2,
+        "why": "names src/world/events/rubble_fall.gd, which names src/boss/hazard.gd"
+      },
+      "tests/attack_sheet_test.gd": {
+        "tier": 2,
+        "why": "names tools/attack_sheet_core.gd, which names src/boss/hazard.gd"
+      },
+      "tests/challenge_dials_stage_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/fleet.gd, which names src/combat/netcaster.gd"
+      },
+      "tests/challenge_dials_warden_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/fleet.gd, which names src/combat/netcaster.gd"
+      },
+      "tests/warden_counter_pulse_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/fleet.gd, which names src/combat/netcaster.gd"
+      },
+      "tests/warden_meltdown_slag_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/fleet.gd, which names src/combat/netcaster.gd"
+      },
+      "tests/warden_variants_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/fleet.gd, which names src/combat/netcaster.gd"
+      },
+      "tests/attack_facts_enemy_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/telegraph.gd"
+      },
+      "tests/combat_cap_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/telegraph.gd"
+      },
+      "tests/elite_affix_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/telegraph.gd"
+      },
+      "tests/presentation_density_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/telegraph.gd"
+      },
+      "tests/presentation_near_miss_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/telegraph.gd"
+      },
+      "tests/telegraph_slope_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/telegraph.gd"
+      },
+      "tests/telegraph_timing_pack_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/telegraph.gd"
+      },
+      "tests/telegraph_haze_test.gd": {
+        "tier": 1,
+        "why": "named after src/combat/telegraph.gd"
+      },
+      "tests/telegraph_timing_mind_test.gd": {
+        "tier": 1,
+        "why": "named after src/combat/telegraph.gd"
+      },
+      "tests/telegraph_timing_reactor_test.gd": {
+        "tier": 1,
+        "why": "named after src/combat/telegraph.gd"
+      },
+      "tests/telegraph_timing_swarm_test.gd": {
+        "tier": 1,
+        "why": "named after src/combat/telegraph.gd"
+      },
+      "tests/active_quake_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/actives/quake_knock.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/active_silo_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/actives/silo_battery.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/bake_look_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/combat_crush_veto_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/enemy.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/combat_ram_tint_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/enemy.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/combat_synergy_kind_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/enemy.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/combat_worlds_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/enemy.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/flash_comfort_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/enemy.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/plate_cue_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/enemy.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/rivet_kit_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/enemy.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/status_marks_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/enemy.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/tally_kit_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/enemy.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/tally_set_piece_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/enemy.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/tarn_set_piece_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/enemy.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/enemy_body_cues_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/projectile.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/matchup_lab_test.gd": {
+        "tier": 2,
+        "why": "names tools/matchup_lab.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/priority_proof_test.gd": {
+        "tier": 2,
+        "why": "names tools/priority_proof.gd, which names src/combat/telegraph.gd"
+      },
+      "tests/dress_material_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/enemy_counters_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/enemy_dispatcher_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/enemy_drill_crew_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/enemy_kite_drone_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/enemy_line_cutter_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/enemy_prop_crew_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/holds_priority_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/miniboss_pose_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/roster_speed_ratio_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/swarm_remnant_pose_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/tuning_flags_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/why_callout_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/world_grade_test.gd": {
+        "tier": 1,
+        "why": "names src/combat/threat_grammar.gd"
+      },
+      "tests/dig_plated_elite_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/elite_affixes.gd, which names src/combat/threat_grammar.gd"
+      },
+      "tests/holds_hook_out_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/roster_highdraft.gd, which names src/combat/threat_grammar.gd"
+      },
+      "tests/enemy_swarm_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/swarm.gd, which names src/combat/threat_grammar.gd"
+      },
+      "tests/pack_telegraph_record_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/swarm.gd, which names src/combat/threat_grammar.gd"
+      },
+      "tests/enemy_chaser_asset_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/telegraph_record.gd, which names src/combat/threat_grammar.gd"
+      },
+      "tests/on_beat_hit_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/player_fx.gd"
+      },
+      "tests/find_in_fight_test.gd": {
+        "tier": 2,
+        "why": "names src/ui/why_callout.gd, which names src/combat/threat_grammar.gd"
+      },
+      "tests/bay_map_limit_test.gd": {
+        "tier": 2,
+        "why": "names src/world/world.gd, which names src/combat/threat_grammar.gd"
+      },
+      "tests/cableway_hanger_test.gd": {
+        "tier": 2,
+        "why": "names src/world/world.gd, which names src/combat/threat_grammar.gd"
+      },
+      "tests/fua_rescue_identifier_test.gd": {
+        "tier": 2,
+        "why": "names src/world/world.gd, which names src/combat/threat_grammar.gd"
+      },
+      "tests/park_place_test.gd": {
+        "tier": 2,
+        "why": "names src/world/world.gd, which names src/combat/threat_grammar.gd"
+      },
+      "tests/park_prepare_test.gd": {
+        "tier": 2,
+        "why": "names src/world/world.gd, which names src/combat/threat_grammar.gd"
+      },
+      "tests/burden_sweep_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/presentation.gd, which names src/presentation/player_fx.gd"
+      },
+      "tests/discovery_part_card_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/presentation.gd, which names src/presentation/player_fx.gd"
+      },
+      "tests/park_wash_elbow_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/presentation_random_lint_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/enemy_catch_trap_asset_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/codex_coverage_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/ace_tracks_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      }
+    },
+    "deferred_to_full_gate": [
+      "tests/telegraph_timing_pack_test.gd",
+      "tests/telegraph_timing_reactor_test.gd",
+      "tests/waking_attack_fight_test.gd",
+      "tests/world_grade_test.gd",
+      "tests/park_graph_test.gd",
+      "tests/telegraph_haze_test.gd",
+      "tests/telegraph_timing_swarm_test.gd",
+      "tests/park_events_industrial_test.gd",
+      "tests/discovery_part_card_test.gd",
+      "tests/burden_sweep_test.gd",
+      "tests/fua_rescue_identifier_test.gd",
+      "tests/boss_pickup_asset_test.gd",
+      "tests/combat_bughunt_test.gd",
+      "tests/enemy_body_cues_test.gd",
+      "tests/mind_escape_guarantee_test.gd",
+      "tests/combat_crush_veto_test.gd",
+      "tests/warden_meltdown_slag_test.gd",
+      "tests/warden_variants_test.gd",
+      "tests/kit_cue_level_test.gd",
+      "tests/tally_set_piece_test.gd",
+      "tests/plate_cue_test.gd",
+      "tests/tarn_set_piece_test.gd",
+      "tests/enemy_chaser_asset_test.gd",
+      "tests/status_marks_test.gd",
+      "tests/enemy_swarm_test.gd",
+      "tests/rivet_kit_test.gd",
+      "tests/find_in_fight_test.gd",
+      "tests/arc_mark_test.gd",
+      "tests/pack_telegraph_record_test.gd",
+      "tests/mind_plate_reach_test.gd",
+      "tests/cannon_ultimate_test.gd",
+      "tests/combat_synergy_kind_test.gd",
+      "tests/combat_ram_tint_test.gd",
+      "tests/tally_kit_test.gd",
+      "tests/active_quake_test.gd",
+      "tests/active_silo_test.gd",
+      "tests/attack_sheet_test.gd",
+      "tests/cableway_hanger_test.gd",
+      "tests/challenge_dials_stage_test.gd",
+      "tests/challenge_dials_warden_test.gd",
+      "tests/dig_plated_elite_test.gd",
+      "tests/flash_comfort_test.gd",
+      "tests/foley_audio_test.gd",
+      "tests/holds_hook_out_test.gd",
+      "tests/park_place_test.gd",
+      "tests/park_prepare_test.gd",
+      "tests/priority_proof_test.gd",
+      "tests/waking_attacks_test.gd",
+      "tests/warden_counter_pulse_test.gd",
+      "tests/combat_worlds_test.gd",
+      "tests/spine_worlds_test.gd",
+      "tests/ui_worlds_test.gd",
+      "tests/enemy_catch_trap_asset_test.gd",
+      "tests/codex_coverage_test.gd",
+      "tests/ace_tracks_test.gd"
+    ],
+    "bot_shards": [
+      "tests/alpha_posture_bands_test.gd",
+      "tests/alpha_posture_bands_w23_test.gd",
+      "tests/matchup_lab_test.gd",
+      "tests/posture_bands_reactor_test.gd"
+    ],
+    "shard_reasons": {
+      "tests/alpha_posture_bands_test.gd": "movement, boss, posture or damage: src/boss/hazard.gd",
+      "tests/alpha_posture_bands_w23_test.gd": "movement, boss, posture or damage: src/boss/hazard.gd",
+      "tests/posture_bands_reactor_test.gd": "movement, boss, posture or damage: src/boss/hazard.gd"
+    },
+    "estimate_ms": 599250
+  },
+  "results": [
+    {
+      "test": "tests/threat_grammar_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1136,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/impact_frame_cost_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2606,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_wash_elbow_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2013,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/player_fx_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 18285,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/enemy_counters_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 27063,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/warning_bound_containment_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 3532,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/telegraph_slope_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 460,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/fua_boss_pickup_material_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 754,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/holds_priority_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 457,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/attack_rows_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 475,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/fua_boss_pickup_failure_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 812,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_random_lint_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 623,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_sinkhole_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1578,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/mind_attack_families_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1574,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/roster_speed_ratio_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1475,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/tuning_flags_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 367,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bay_map_limit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 4028,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_pit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 5623,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_bake_fresh_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 8029,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_islands_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 8533,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_dam_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7625,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/warning_bound_park_ground_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 50296,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_near_miss_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 13323,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/boss_scaling_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 13616,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/why_callout_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 14440,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/enemy_drill_crew_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 17053,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/boss_telegraph_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 16679,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_crown_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 17122,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/enemy_line_cutter_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 19985,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/threat_sites_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 20955,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/enemy_kite_drone_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 20055,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_density_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 16322,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/swarm_remnant_pose_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 17330,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/cannon_kit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 21607,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/telegraph_timing_mind_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 16853,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/miniboss_pose_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 15648,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/threat_sound_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 25799,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/attack_facts_enemy_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 21152,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/warden_mind_brace_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 26946,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/combat_cap_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 17995,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bake_look_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 552,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/bot_charge_read_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1390,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/dress_material_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 33812,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/dig_highdraft_events_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 45362,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/enemy_dispatcher_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 34914,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/enemy_prop_crew_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 23303,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/loop_coherence_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 12670,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/on_beat_hit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 23220,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_flume_test.gd",
+      "ok": false,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 58484,
+      "reason": "the test printed an error line",
+      "quarantined": false
+    },
+    {
+      "test": "tests/mind_arena_bound_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 101769,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_props_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 62762,
+      "reason": null,
+      "quarantined": false
+    }
+  ],
+  "quarantined": [],
+  "flaky": [],
+  "base_red": [],
+  "wall_ms": 619862
+}

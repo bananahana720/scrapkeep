@@ -1,0 +1,1212 @@
+{
+  "schema": "scrapkeep-fast-receipt/1",
+  "label": "w18-B18-4803446e",
+  "head": "4803446ea6c880e91673164ae0dea15e780bc820",
+  "base": "origin/stage/alpha-w18",
+  "merge_base": "e564e2c356065bd5f23cd5728de1940b375e6e59",
+  "started_at": "2026-10-23T05:55:18.982Z",
+  "stages": [
+    {
+      "name": "tree hygiene",
+      "ok": true,
+      "ms": 35,
+      "note": "no symlink, root file or new top-level folder",
+      "findings": []
+    },
+    {
+      "name": "carried branches current",
+      "ok": true,
+      "ms": 642,
+      "note": "2 merges, none stale"
+    },
+    {
+      "name": "sketch-lint",
+      "ok": true,
+      "ms": 3119,
+      "note": "sketch-lint pass: 0 findings, baseline entries L1=14 L2=2 L3=2 L4=1, 1371ms"
+    },
+    {
+      "name": "placeholders no higher than base",
+      "ok": true,
+      "ms": 23898,
+      "note": "no group grew",
+      "grew": []
+    },
+    {
+      "name": "quarantine",
+      "ok": true,
+      "ms": 23899,
+      "note": "0 rows, none expired"
+    },
+    {
+      "name": "import",
+      "ok": true,
+      "ms": 30519,
+      "note": "exit=0"
+    },
+    {
+      "name": "boot",
+      "ok": true,
+      "ms": 44154,
+      "note": "300 frames"
+    },
+    {
+      "name": "tests",
+      "ok": true,
+      "ms": 931014,
+      "note": "61 run, 0 flaky, 1 base-red"
+    }
+  ],
+  "ok": true,
+  "diff_base": "e564e2c356065bd5f23cd5728de1940b375e6e59",
+  "pre": [],
+  "changed": 9,
+  "carried": [
+    {
+      "merge": "4803446ea6c880e91673164ae0dea15e780bc820",
+      "carried": "fd5936348535c108ac05c1c55f5ee4214379d392",
+      "prs": [
+        "337"
+      ],
+      "stale": false
+    },
+    {
+      "merge": "01d473d94a7ed181c958b166e3441c63e6c8cb67",
+      "carried": "b91fe4376a983933d8cb1ac0c697564967b7cf02",
+      "prs": [
+        "325"
+      ],
+      "stale": false
+    }
+  ],
+  "selection": {
+    "hubs": [
+      "src/presentation/sfx_bank.gd"
+    ],
+    "unmapped": [],
+    "tests": {
+      "tests/unit_suite_test.gd": {
+        "tier": 0,
+        "why": "always (content pins)"
+      },
+      "tests/thread_guard_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/park_props_test.gd": {
+        "tier": 0,
+        "why": "changed"
+      },
+      "tests/stage_entry_budget_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/park_props.gd"
+      },
+      "tests/ground_slump_game_test.gd": {
+        "tier": 1,
+        "why": "names src/world/park/park_terrain.gd"
+      },
+      "tests/park_ground_bite_test.gd": {
+        "tier": 1,
+        "why": "names src/world/park/park_terrain.gd"
+      },
+      "tests/park_ground_surface_test.gd": {
+        "tier": 1,
+        "why": "names src/world/park/park_terrain.gd"
+      },
+      "tests/park_ground_texture_test.gd": {
+        "tier": 1,
+        "why": "names src/world/park/park_terrain.gd"
+      },
+      "tests/park_park_crown_test.gd": {
+        "tier": 1,
+        "why": "park data: src/presentation/park_props.gd"
+      },
+      "tests/park_recipes_dam_dressing_test.gd": {
+        "tier": 1,
+        "why": "names src/world/park/park_terrain.gd"
+      },
+      "tests/scatter_rows_test.gd": {
+        "tier": 1,
+        "why": "names src/world/park/park_terrain.gd"
+      },
+      "tests/park_bake_fresh_test.gd": {
+        "tier": 1,
+        "why": "park data: src/presentation/park_props.gd"
+      },
+      "tests/park_dressing_pin_test.gd": {
+        "tier": 1,
+        "why": "park data: src/presentation/park_props.gd"
+      },
+      "tests/park_graph_test.gd": {
+        "tier": 1,
+        "why": "park data: src/presentation/park_props.gd"
+      },
+      "tests/park_park_dam_test.gd": {
+        "tier": 1,
+        "why": "park data: src/presentation/park_props.gd"
+      },
+      "tests/park_park_flume_test.gd": {
+        "tier": 1,
+        "why": "park data: src/presentation/park_props.gd"
+      },
+      "tests/park_park_islands_test.gd": {
+        "tier": 1,
+        "why": "park data: src/presentation/park_props.gd"
+      },
+      "tests/park_park_pit_test.gd": {
+        "tier": 1,
+        "why": "park data: src/presentation/park_props.gd"
+      },
+      "tests/park_park_sinkhole_test.gd": {
+        "tier": 1,
+        "why": "park data: src/presentation/park_props.gd"
+      },
+      "tests/burden_sweep_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/presentation.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/discovery_part_card_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/presentation.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/activities_pay_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/activities_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/codex_coverage_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/park_map_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/park_schema_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/pocket_draw_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/pocket_kinds_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/pocket_library_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/reach_secret_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/relay_park_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/run_resume_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/side_content_roster_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/visible_odds_test.gd": {
+        "tier": 2,
+        "why": "names src/world/activities.gd, which names src/presentation/park_props.gd"
+      },
+      "tests/active_glass_lance_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/active_lift_pulse_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/active_quake_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/active_silo_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/active_torch_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/assist_sting_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/audio_armor_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/audio_au2_voices_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/audio_bake_cancel_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/audio_cue_resolution_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/audio_event_bank_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/audio_row_coverage_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/audio_stinger_beat_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/audio_v3_bank_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/audio_worlds_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/breach_attack_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/cannon_look_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/companion_cue_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/elite_affix_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/enemy_roster_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/highdraft_cues_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/kest_set_piece_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/kit_cue_level_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/line_sound_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/mind_quiet_gun_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/music_params_ace_game_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/music_params_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/park_cue_forms_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/park_music_cues_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/park_natural_cue_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/park_stinger_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/pilot_fallback_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/presentation_escalation_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/presentation_gems_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/presentation_motifs_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/presentation_music_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/presentation_rows_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/presentation_sfx_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/presentation_ultimate_music_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/rivet_kit_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/sable_kit_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/shot_bits_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/special_audio_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/special_cues_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/special_sfx_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/tally_kit_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/tally_look_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/tarn_look_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/threat_sites_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/warden_posture_sound_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/windup_rows_test.gd": {
+        "tier": 1,
+        "why": "names src/presentation/sfx_bank.gd"
+      },
+      "tests/enemy_body_cues_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/projectile.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/threat_grammar_test.gd": {
+        "tier": 2,
+        "why": "names src/combat/projectile.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/ace_tracks_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/music_rows.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/audio_music_rows_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/music_rows.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/audio_pick_slots_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/music_rows.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/jukebox_tunes_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/music_rows.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/lore_rows_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/music_rows.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/music_params_trace_game_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/music_rows.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/music_rows_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/music_rows.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/park_music_multi_game_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/music_rows.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/park_music_suspend_game_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/music_rows.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/phase_music_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/music_rows.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/radio_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/music_rows.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/tune_moments_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/music_rows.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/flat_pack_test.gd": {
+        "tier": 2,
+        "why": "names src/presentation/phase_music.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/natural_marks_planned_test.gd": {
+        "tier": 2,
+        "why": "names src/world/events/natural.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/park_cave_in_test.gd": {
+        "tier": 2,
+        "why": "names src/world/events/natural.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/park_natural_projection_test.gd": {
+        "tier": 2,
+        "why": "names src/world/events/natural.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/park_natural_test.gd": {
+        "tier": 2,
+        "why": "names src/world/events/natural.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/park_music_hold_game_test.gd": {
+        "tier": 2,
+        "why": "names tests/support/park_riser.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/audio_board_test.gd": {
+        "tier": 2,
+        "why": "names tools/audio_board.gd, which names src/presentation/sfx_bank.gd"
+      },
+      "tests/cableway_hanger_test.gd": {
+        "tier": 2,
+        "why": "names tests/support/park_ground.gd, which names src/world/park/park_terrain.gd"
+      },
+      "tests/park_cable_ends_test.gd": {
+        "tier": 2,
+        "why": "names tests/support/park_ground.gd, which names src/world/park/park_terrain.gd"
+      },
+      "tests/park_wash_elbow_test.gd": {
+        "tier": 2,
+        "why": "names tests/support/park_ground.gd, which names src/world/park/park_terrain.gd"
+      },
+      "tests/perch_points_test.gd": {
+        "tier": 2,
+        "why": "names tests/support/park_ground.gd, which names src/world/park/park_terrain.gd"
+      },
+      "tests/presentation_random_lint_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      },
+      "tests/enemy_catch_trap_asset_test.gd": {
+        "tier": 3,
+        "why": "canary"
+      }
+    },
+    "deferred_to_full_gate": [
+      "tests/park_ground_bite_test.gd",
+      "tests/park_ground_surface_test.gd",
+      "tests/park_ground_texture_test.gd",
+      "tests/park_park_flume_test.gd",
+      "tests/park_recipes_dam_dressing_test.gd",
+      "tests/park_stinger_test.gd",
+      "tests/presentation_music_test.gd",
+      "tests/scatter_rows_test.gd",
+      "tests/special_audio_test.gd",
+      "tests/special_cues_test.gd",
+      "tests/special_sfx_test.gd",
+      "tests/stage_entry_budget_test.gd",
+      "tests/park_graph_test.gd",
+      "tests/warden_posture_sound_test.gd",
+      "tests/park_music_cues_test.gd",
+      "tests/presentation_escalation_test.gd",
+      "tests/shot_bits_test.gd",
+      "tests/park_natural_test.gd",
+      "tests/codex_coverage_test.gd",
+      "tests/ace_tracks_test.gd",
+      "tests/side_content_roster_test.gd",
+      "tests/enemy_body_cues_test.gd",
+      "tests/park_cave_in_test.gd",
+      "tests/reach_secret_test.gd",
+      "tests/activities_pay_test.gd",
+      "tests/pocket_library_test.gd",
+      "tests/audio_pick_slots_test.gd",
+      "tests/cableway_hanger_test.gd",
+      "tests/flat_pack_test.gd",
+      "tests/jukebox_tunes_test.gd",
+      "tests/music_params_trace_game_test.gd",
+      "tests/natural_marks_planned_test.gd",
+      "tests/park_cable_ends_test.gd",
+      "tests/park_music_hold_game_test.gd",
+      "tests/park_music_suspend_game_test.gd",
+      "tests/park_natural_projection_test.gd",
+      "tests/park_wash_elbow_test.gd",
+      "tests/perch_points_test.gd",
+      "tests/phase_music_test.gd",
+      "tests/pocket_draw_test.gd",
+      "tests/radio_test.gd",
+      "tests/relay_park_test.gd",
+      "tests/tune_moments_test.gd",
+      "tests/park_music_multi_game_test.gd",
+      "tests/audio_music_rows_test.gd",
+      "tests/run_resume_test.gd",
+      "tests/pocket_kinds_test.gd",
+      "tests/audio_board_test.gd",
+      "tests/activities_test.gd",
+      "tests/visible_odds_test.gd",
+      "tests/enemy_catch_trap_asset_test.gd"
+    ],
+    "bot_shards": [],
+    "shard_reasons": {},
+    "estimate_ms": 598750
+  },
+  "results": [
+    {
+      "test": "tests/thread_guard_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 6418,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/lore_rows_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 554,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_random_lint_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 450,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_cue_forms_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 545,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/music_rows_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 731,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_sinkhole_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1389,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/threat_grammar_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 930,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_map_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1580,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_schema_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1665,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/audio_au2_voices_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1474,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/tarn_look_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 3344,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/tally_look_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2876,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/cannon_look_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 2680,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_pit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 3904,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/discovery_part_card_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 3440,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/burden_sweep_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 3808,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_bake_fresh_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 5977,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_islands_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7440,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_props_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 51333,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_dam_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 6402,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_motifs_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 7838,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/enemy_roster_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 12008,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/windup_rows_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 13890,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_sfx_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 12103,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/breach_attack_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 13877,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/audio_v3_bank_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 11545,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/kit_cue_level_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 12461,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_park_crown_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 12273,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/audio_cue_resolution_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 12856,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_natural_cue_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 13121,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/audio_armor_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 12382,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/audio_row_coverage_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 14158,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_gems_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 14625,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/threat_sites_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 17329,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/sable_kit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 19184,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/line_sound_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 19204,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/mind_quiet_gun_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 21713,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_rows_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 23559,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/pilot_fallback_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 14661,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/rivet_kit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 19685,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/presentation_ultimate_music_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 22835,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/kest_set_piece_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 13792,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/audio_worlds_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 13535,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/companion_cue_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 13512,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/ground_slump_game_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 28813,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/tally_kit_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 29617,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/active_glass_lance_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 14804,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/active_lift_pulse_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 14917,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/active_quake_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 16873,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/active_silo_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 15824,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/assist_sting_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1013,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/active_torch_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 18447,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/audio_event_bank_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1100,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/audio_stinger_beat_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 3897,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/highdraft_cues_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 1196,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/audio_bake_cancel_test.gd",
+      "ok": false,
+      "exit": 1,
+      "signal": null,
+      "failing": 1,
+      "ms": 22146,
+      "reason": "the test exited with code 1",
+      "quarantined": false
+    },
+    {
+      "test": "tests/unit_suite_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 101287,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/elite_affix_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 82470,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/music_params_ace_game_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 19755,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/music_params_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 233379,
+      "reason": null,
+      "quarantined": false
+    },
+    {
+      "test": "tests/park_dressing_pin_test.gd",
+      "ok": true,
+      "exit": 0,
+      "signal": null,
+      "failing": 0,
+      "ms": 37932,
+      "reason": null,
+      "quarantined": false
+    }
+  ],
+  "quarantined": [],
+  "flaky": [],
+  "base_red": [
+    "tests/audio_bake_cancel_test.gd"
+  ],
+  "wall_ms": 931014
+}
