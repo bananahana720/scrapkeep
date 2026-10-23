@@ -8,3 +8,13 @@ Andrew asked on 23 Oct for multi-angle reference images before anything is model
 4. Look at every sheet yourself against the boards and ART-MISTAKES before you use it. Copy the keepers into `docs/art/reference/<set>/<unit>/` as JPEG (`magick in.png -quality 84 out.jpg`), with the unit's `REVIEW.md`.
 
 Before a big batch, probe the login with `codex exec -m gpt-6-astra "Reply OK"`. The project memory note on Codex image boards covers login and tier trouble.
+
+## Keep every view at one scale
+
+Sheets drawn without a per-view scale reference drift: in the first 16-unit batch (23 Oct), every unit's REVIEW.md reported views at different scales. So every preamble now carries this rule:
+
+- Draw the 1.84 m player ball (a see-through Hoberman-lattice sphere) standing on the ground line in **every** view, not only the front.
+- Say "same scale as the front view" for each view: the ball is the same size in every panel, and the body keeps its height against it.
+- Ask for true orthographic front, side, back and top cameras, with the top looking straight down.
+
+Describe parts as plain machine parts (clamp arm, discharge chute, magnet coil, forward tube). Weapon words got two details sheets refused by the image filter (mag trapper, cannon pilot).
