@@ -462,7 +462,9 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 		record.overlay_map = overlay_map
 		return overlay_map
 	if overlay_map == null:
+		var n0 := Time.get_ticks_usec()
 		overlay_map = OverlayMap.new(current.path)
+		print("OVPROBE base %s main_us=%d f=%d" % [current.path.get_file(), Time.get_ticks_usec() - n0, Engine.get_process_frames()])
 		for property in current.get_property_list():
 			if int(property.usage) & PROPERTY_USAGE_STORAGE and property.name != "script":
 				overlay_map.set(property.name, current.get(property.name))

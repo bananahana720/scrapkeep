@@ -49,6 +49,8 @@ const SIDE := CELLS + 1
 # pylon bites a face that leans less than 60 degrees off vertical (augments.gd).
 const PYLON_FACE := PylonBite.FACE
 const PARK_DEPTH := 5000.0
+# Main-thread time a frame spends freeing released stages (Reaper).
+const REAP_BUDGET_USEC := 2000
 
 var maps: Array = []
 var stage := 1
@@ -105,6 +107,36 @@ signal stage_built(index: int)
 
 # A first stage built behind the menu (build threaded_first).
 var _threaded_first := false
+# Frees released stage roots over frames (_free_stage); made on the first release.
+var _reaper: Reaper
+
+
+# A released park stage's root goes here instead of queue_free: its placed rows ran to 20,000 nodes (stage 1), and
+# freeing them in one frame cost the stage 2 exit frame 263 ms on the cloud. It frees the tree a leaf at a time within
+# REAP_BUDGET_USEC a frame. The root waits disabled (out of physics, no processing), hidden and below the map.
+class Reaper:
+	extends Node
+	var dying: Array[Node] = []
+
+	func _process(_delta: float) -> void:
+		reap(REAP_BUDGET_USEC)
+
+	func reap(budget_usec: int) -> void:
+		var deadline := Time.get_ticks_usec() + budget_usec
+		while not dying.is_empty() and Time.get_ticks_usec() < deadline:
+			var top = dying[-1]
+			if not is_instance_valid(top):
+				dying.pop_back()
+				continue
+			var node: Node = top
+			while node.get_child_count() > 0:
+				node = node.get_child(-1)
+			if node == top:
+				dying.pop_back()
+			# Out of the tree before the free: its _exit_tree runs first, where a ground scatter still building waits for
+			# its worker jobs (scatter.gd Chunked); free() refuses an object a worker thread is still calling into.
+			node.get_parent().remove_child(node)
+			node.free()
 
 
 func _init(table = StageDefs) -> void:
@@ -361,10 +393,10 @@ func _free_stage(i: int) -> void:
 	if slot >= 0:
 		_render_owner[slot] = -1
 	# A ground still attaching must not add one more region to the render node it just gave up
-	# in the frames before queue_free lands; the stage that takes the node may already own it.
+	# in the frames before the reaper frees it; the stage that takes the node may already own it.
 	if _grounds[i] != null:
 		_grounds[i].set_process(false)
-	_roots[i].queue_free()
+	_release_root(_roots[i])
 	_roots[i] = null
 	_grounds[i] = null
 	_cave_roofs.erase(i)
@@ -374,6 +406,19 @@ func _free_stage(i: int) -> void:
 	_holes[i] = PackedByteArray()
 	_under[i] = PackedFloat32Array()
 	stage_freed.emit(i + 1)
+
+
+func _release_root(root: Node3D) -> void:
+	if _parent == null or not _parent.is_inside_tree():
+		root.queue_free()
+		return
+	if _reaper == null:
+		_reaper = Reaper.new()
+		_reaper.name = "StageReaper"
+		_parent.add_child(_reaper)
+	root.process_mode = Node.PROCESS_MODE_DISABLED
+	_park(root, true)
+	_reaper.dying.append(root)
 
 
 # The arena is not a stage: every map is hidden and its colliders leave the physics
