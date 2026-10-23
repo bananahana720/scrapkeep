@@ -461,14 +461,29 @@ static func build_ahead(path: String) -> void:
 	# before they are filled: read them here, so no worker sees one half built.
 	ParkSchema._registry()
 	ParkRecipes.origin("")
-	var out := {}
-	_ahead[path] = {"task": WorkerThreadPool.add_task(func(): out.map = OverlayMap.new(path), false, "overlay map"), "out": out}
+	var out := {"queued_f": Engine.get_process_frames(), "main": OS.get_main_thread_id()}
+	_ahead[path] = {"task": WorkerThreadPool.add_task(func(): _probe_build(path, out), false, "overlay map"), "out": out}
+
+
+static func _probe_build(path: String, out: Dictionary) -> void:
+	var t0 := Time.get_ticks_usec()
+	out.thread = OS.get_thread_caller_id()
+	out.map = OverlayMap.new(path)
+	out.build_us = Time.get_ticks_usec() - t0
+	out.done_f = Engine.get_process_frames()
 
 
 static func _overlay_map_for(path: String) -> OverlayMap:
 	if not _ahead.has(path):
-		return OverlayMap.new(path)
+		var n0 := Time.get_ticks_usec()
+		var made := OverlayMap.new(path)
+		print("OVPROBE none %s main_us=%d f=%d" % [path.get_file(), Time.get_ticks_usec() - n0, Engine.get_process_frames()])
+		return made
+	var done_before := WorkerThreadPool.is_task_completed(_ahead[path].task)
+	var w0 := Time.get_ticks_usec()
 	WorkerThreadPool.wait_for_task_completion(_ahead[path].task)
+	var po: Dictionary = _ahead[path].out
+	print("OVPROBE take %s done_before=%s wait_us=%d build_us=%d off_main=%s queued_f=%d done_f=%d now_f=%d ok=%s" % [path.get_file(), done_before, Time.get_ticks_usec() - w0, int(po.get("build_us", -1)), po.get("thread", -1) != po.main, int(po.queued_f), int(po.get("done_f", -1)), Engine.get_process_frames(), po.get("map") != null and po.map.ok])
 	var built: OverlayMap = _ahead[path].out.get("map")
 	_ahead.erase(path)
 	return built if built != null and built.ok else OverlayMap.new(path)
