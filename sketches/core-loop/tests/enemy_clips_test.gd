@@ -121,6 +121,12 @@ func _per_kind() -> void:
 			driver._physics_process(1.0 / 60.0)
 			exact = exact and driver.clip == "windup" and absf(driver.clip_time - progress * length) < 0.0001
 		_t.check("%s windup follows progress" % kind, exact, "clip time = progress x length at 0, 0.25, 0.5, 1")
+		enemy._atk = {"phase": "strike", "progress": 1.0, "tele": null}
+		driver._on_attack_phase({"phase": "strike"})
+		for i in 90:
+			driver._physics_process(1.0 / 60.0)
+		var held: bool = driver.clip == "attack" and is_equal_approx(driver.clip_time, float(driver.lib.anims.attack.length))
+		_t.check("%s long live phase holds the attack's last pose" % kind, held, "1.5 s into an open strike: %s at %.3f s" % [driver.clip, driver.clip_time])
 		enemy._atk = {}
 		driver._on_attack_phase({"phase": "strike"})
 		driver._physics_process(1.0 / 60.0)

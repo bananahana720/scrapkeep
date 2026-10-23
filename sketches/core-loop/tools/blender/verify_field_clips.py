@@ -5,8 +5,10 @@
 It reads the GLBs Godot loads. Per kind, from the JSON and binary chunks:
 
   1. a clips-only file: no mesh, one skin, exactly the six clips;
-  2. windup is the attack's lead in the enemy script within one 30 fps frame, attack is the
-     strike's live time capped at field_motion.ATTACK_CAP, and nothing is longer than 4 s;
+  2. windup is the attack's lead in the enemy script within one 30 fps frame; attack is the
+     strike's own time where it has one (chaser lunge, lobber recoil, trapper and brute live
+     phase, capped at ATTACK_CAP) or the cap itself (winch, jolt layer, whose live phase
+     holds the attack's last pose); nothing is longer than 4 s;
   3. idle and move loop: every channel's last key equals its first;
   4. windup starts at rest and hit and attack end at rest, so the hard cuts never pop;
   5. idle never out-moves the wind-up (the idle is never read as a telegraph): the idle's
@@ -102,16 +104,41 @@ def peaks(rows, rests):
     return rot, squash
 
 
+# Read the same script numbers field_motion.py reads, without bpy, so the structural checks
+# run anywhere; keep these two patterns in step with field_motion.const and .configured.
+ATTACK_CAP = 0.6
+
+
+def _number(script, pattern):
+    import re
+    found = re.search(pattern, (SKETCH / "src/combat" / (script + ".gd")).read_text(), re.M)
+    assert found, (script, pattern)
+    return float(found.group(1))
+
+
+def _const(script, name):
+    return _number(script, r"^const %s := ([0-9.]+)\s*$" % name)
+
+
+def _configured(script, field):
+    return _number(script, r"^\t%s = ([0-9.]+)\s*$" % field)
+
+
+def _snap(seconds):
+    return round(seconds * FPS) / FPS
+
+
 def leads():
-    import field_motion as fm
+    """{kind: (windup, attack or None)}: attack is checked where the strike has its own length."""
     return {
-        "chaser": (fm.snap(fm.const("chaser", "WINDUP")), fm.snap(min(fm.const("chaser", "LUNGE_TIME"), fm.ATTACK_CAP))),
-        "lobber": (fm.snap(fm.const("lobber", "TELEGRAPH")), None),
-        "mag_trapper": (fm.snap(fm.configured("mag_trapper", "warn_seconds")), None),
-        "plated_brute": (fm.snap(fm.configured("plated_brute", "warn_seconds")), None),
-        "winch_drone": (fm.snap(fm.configured("winch_drone", "warn_seconds")), None),
-        "jolt_layer": (fm.snap(fm.configured("jolt_layer", "warn_seconds")), None),
-    }, fm.ATTACK_CAP
+        "chaser": (_snap(_const("chaser", "WINDUP")), _snap(min(_const("chaser", "LUNGE_TIME"), ATTACK_CAP))),
+        "lobber": (_snap(_const("lobber", "TELEGRAPH")), _snap(_const("lobber", "POSE_RECOVERY") + 0.17)),
+        "mag_trapper": (_snap(_configured("mag_trapper", "warn_seconds")), _snap(min(_configured("mag_trapper", "live_seconds"), ATTACK_CAP))),
+        "plated_brute": (_snap(_configured("plated_brute", "warn_seconds")),
+                         _snap(min(max(_configured("plated_brute", "live_seconds"), 0.35), ATTACK_CAP))),
+        "winch_drone": (_snap(_configured("winch_drone", "warn_seconds")), ATTACK_CAP),
+        "jolt_layer": (_snap(_configured("jolt_layer", "warn_seconds")), ATTACK_CAP),
+    }, ATTACK_CAP
 
 
 def verify(kind, data, lead_table, attack_cap):

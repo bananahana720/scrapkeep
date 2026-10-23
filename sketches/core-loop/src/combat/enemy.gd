@@ -520,7 +520,8 @@ func _die() -> void:
 	collision_mask = 0
 	_clear_telegraph()
 	# A kind with a death clip plays it on its own look first; the clip then scatters it.
-	if not (is_instance_valid(_clips) and _clips.die(_death_direction())):
+	# A ring-out falls out of the world, so it scatters at once.
+	if ringed_out or not (is_instance_valid(_clips) and _clips.die(_death_direction())):
 		EnemyMotion.scatter(self, kind, _death_direction())
 	died.emit(global_position, scrap_value)
 	queue_free()

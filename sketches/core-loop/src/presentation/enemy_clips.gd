@@ -28,7 +28,7 @@ const DIR := "res://assets/models/world_one/clips/"
 const CLIPS := ["idle", "move", "windup", "attack", "hit", "death"]
 const HARD := ["windup", "attack", "hit", "death"]
 const BLEND := 0.15
-# Planar speed (m/s) above which a body plays its move loop.
+# Planar speed (m/s) above which a body starts its move loop; it keeps it down to 60% of this.
 const MOVE_MIN := 0.8
 const JOINT_PREFIX := "Clip_"
 
@@ -161,10 +161,10 @@ func _build(pivot: Node3D, row: Dictionary) -> void:
 		var offset := Vector3.ZERO
 		var up := node.get_parent() as Node3D
 		while up != null and up != pivot:
+			offset += up.position
 			if targets.has(up):
 				ancestor = targets[up]
 				break
-			offset += up.position
 			up = up.get_parent() as Node3D
 		var skeleton: Node = null
 		if node is MeshInstance3D and not (node as MeshInstance3D).skeleton.is_empty():
@@ -271,15 +271,17 @@ func _choose() -> Array:
 		var progress := float(tele.progress) if tele != null and is_instance_valid(tele) else float(atk.progress)
 		return ["windup", clampf(progress, 0.0, 1.0) * float(anims.windup.length)]
 	if _strike_age >= 0.0 and anims.has("attack"):
-		if _strike_age <= float(anims.attack.length):
-			return ["attack", _strike_age]
+		# A live phase longer than the clip (a pit, a winch) holds its last pose until it closes,
+		# so the idle never plays inside an open attack.
+		if _strike_age <= float(anims.attack.length) or not atk.is_empty():
+			return ["attack", minf(_strike_age, float(anims.attack.length))]
 		_strike_age = -1.0
 	if _hit_age >= 0.0 and anims.has("hit"):
 		if _hit_age <= float(anims.hit.length):
 			return ["hit", _hit_age]
 		_hit_age = -1.0
 	var planar := Vector2(enemy.velocity.x, enemy.velocity.z).length() if enemy is CharacterBody3D else 0.0
-	if planar > MOVE_MIN and anims.has("move"):
+	if planar > (MOVE_MIN * 0.6 if clip == "move" else MOVE_MIN) and anims.has("move"):
 		var stride := float(ROWS[kind].get("stride", 2.0))
 		return ["move", fposmod(_rolled / stride, 1.0) * float(anims.move.length)]
 	return ["idle", fposmod(_idle_clock, float(anims.idle.length)) if anims.has("idle") else 0.0]
