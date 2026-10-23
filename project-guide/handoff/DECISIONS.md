@@ -80,6 +80,7 @@ Last updated 2026-10-21 21:10Z by the local coordinator (coordinator back on the
 | Every run ends as a comic page, collected in a camp scrapbook. | 17 Oct 22:12 | typed, design questions | the plain run summary |
 | The camp reacts to the last run with one dry line. | 17 Oct 22:12 | typed, design questions |  |
 | Pilots are characters you can relate to, not just balls: each climbs out for two bars (about 3.7 s at 129 BPM), does one signature bit, hops back in. Sable balances on top while it rolls; Rivet leans on it facing the wrong way, then turns, surprised; Kest hovers too long then drops (BOOM); Tarn sits on top while the machine growls; Tally stamps it PAID three times; the Cannon rises very slowly and waves once. Plays in each pilot's title opening, on the title deck (one pilot every 11 s) and on pilot select cards at rest (every 9 s, staggered). Look closer: right-drag or right stick orbits the pilot on title deck and select card, wheel zooms, view drifts back. Bosses get no hop-out; their name card frames closer. Follow-up to PR #20 (branch claude/title-pilot-antics-2hl55w). | 17 Oct 23:38 | typed (the ask); coordinator defaults, no card: six distinct moves, both screens, lighter bosses | |
+| The Cannon pilot's silhouette (the long forward tube) is intentional and stays. The game winks at the phallic read once, deadpan, as a cartoon: one passable line that says the quiet part out loud, never explicit (landed as Brindle's intro line, PR #407). | 23 Oct 19:35 | typed | |
 
 ## 4. Music and sound
 
