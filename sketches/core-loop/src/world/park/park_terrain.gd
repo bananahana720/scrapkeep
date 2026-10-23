@@ -18,7 +18,8 @@ extends Node3D
 #             is the load step of the same data), so no bake binary changes.
 #             Each multiplier comes from one rule on a reference board's material and lit-ground
 #             patches (board_multiplier(): the material's hue, a value scaled by material over ground,
-#             capped at the floor's own, since a colour map cannot brighten). The colour map is
+#             capped at the floor's own, since a colour map cannot brighten); tailings and basalt are then
+#             darkened for the 3060 render (linear_scaled(), render_corrected()). The colour map is
 #             feathered over 8 m texels (feather()), so a slot border or the square's edge fades
 #             instead of stepping; the texel grid is fixed, so a straight border fades over 8 to 16 m
 #             by where it falls, and a stamp narrower than about 16 m loses tint by its position.
@@ -82,17 +83,35 @@ const SLOT_BASALT := 4
 # the material's (g/r, b/r); the target's luminance is the floor texture's times material / ground;
 # a target brighter than the floor in any channel is scaled down until none is, because RGBA8 caps a
 # multiplier at 1; the multiplier is target / GROUND_FLOOR_MEAN. The values below are board_multiplier()
-# of the numbers cited, stored as literals (the surface test pins each).
+# of the numbers cited, then darkened where the 3060 render asked for it (tailings by linear_scaled(),
+# basalt by render_corrected()), stored as literals (the surface test pins each).
 # Tailings: docs/art/reference/dig/dig-landmark-headframe-noon.jpg, the worked pit floor at noon.
 # Material and ground are the same floor: crops 120x40+1150+700, 120x40+880+600 and 100x30+1150+620
 # read 242,169,113, 245,172,117 and 245,172,116 (median 245,172,116). The value ratio is 1, so red
-# stays at 1 and only the hue moves toward oxide: target (0.733, 0.514, 0.347), L* 59.5.
-const MULT_TAILINGS := Color(1.0, 0.861, 0.843, float(COLOR_ALPHA_BYTE) / 255.0)
+# stays at 1 and only the hue moves toward oxide: target (0.733, 0.514, 0.347), L* 59.5, multiplier
+# (1.0, 0.861, 0.843). Ground over horizon (coordinator #241 6353059714, bar 1): the noon pit frame
+# (day_arc_capture 4-stage3-noon) reads its near floor, which is tailings (surface.bin of park_pit, the
+# cells 10 to 18 m behind the ball), at L* 66.7 against the horizon haze's 73.8, a gap of 7.1 where 10 is
+# wanted. TAILINGS_NOON_SCALE darkens the multiplier in linear light (linear_scaled(), the space
+# Terrain3D multiplies in); the cast model of artifacts/local/valcap/cast_model.py puts 0.65 at about
+# -6 to -7 L* on that floor (gap about 13). The model fits the bench poorly (chroma too high), so
+# the scale is a prediction to confirm on the 3060, not a measurement. Tailings also tints park_sinkhole
+# and park_islands; they darken with it.
+const TAILINGS_NOON_SCALE := 0.65
+const MULT_TAILINGS := Color(0.827, 0.710, 0.695, float(COLOR_ALPHA_BYTE) / 255.0)
 # Basalt: docs/art/reference/dig/dig-landmark-sinkhole-afternoon.jpg. The basalt cap, crops
 # 120x40+960+215 and 100x40+1180+210, reads 104,95,95 and 98,90,91 (mean 101,92.5,93); the lit pale
-# limestone in the same board, crop 80x60+1120+330, reads 153,126,111. Capped: target
-# (0.447, 0.410, 0.412), L* 45.1.
-const MULT_BASALT := Color(0.610, 0.685, 1.0, float(COLOR_ALPHA_BYTE) / 255.0)
+# limestone in the same board, crop 80x60+1120+330, reads 153,126,111. Capped: board_multiplier() gives
+# (0.610, 0.685, 1.0), target L* 45.1. Render-corrected (#241 6352984236, the 3060 render bench of
+# d19c9120): crop 600x200 at x 340, y 480 of a 1280x720 frame, poses 801 and 803 of park_props_audit
+# --map=park_sinkhole, read L*/a*/b* 52.49/+7.1/+12.2 and 52.27/+7.2/+12.2 against the board patch
+# (101, 93, 93), L* 40.2/+2.7/+0.7 (the bench's rounding of the crop mean above; the half byte of green
+# moves the multiplier by under 0.002): 12 L* too bright and too warm, the stage's afternoon light and haze
+# sitting between the multiplier and the pixel. render_corrected() scales the multiplier by board over
+# rendered (mean of the two poses), per channel in linear light, because Terrain3D samples _color_maps
+# with source_color and multiplies it into the albedo after decoding. One render pass, measured once on
+# the 3060; the cast is assumed multiplicative.
+const MULT_BASALT := Color(0.426, 0.535, 0.898, float(COLOR_ALPHA_BYTE) / 255.0)
 # Concrete: docs/art/reference/spillway/spillway-landmarks-flume-carry.jpg. The pale concrete ramp, crop
 # 60x14+1080+410, reads 239,194,148; the lit sand ground, crops 100x30+880+600 and 100x30+600+640,
 # read 244,167,102 and 242,167,103 (mean 243,167,102.5). Concrete is paler than the ground, which a
@@ -235,6 +254,54 @@ static func board_multiplier(material: Vector3, ground: Vector3) -> Color:
 	if worst > 1.0:
 		target /= worst
 	return Color(target.x / f.r, target.y / f.g, target.z / f.b, float(COLOR_ALPHA_BYTE) / 255.0)
+
+
+# A multiplier scaled by k in linear light (decode, multiply, encode; alpha kept, result in [0, 1]).
+static func linear_scaled(mult: Color, k: float) -> Color:
+	return Color(
+			clampf(_encode(_linear(mult.r) * k), 0.0, 1.0),
+			clampf(_encode(_linear(mult.g) * k), 0.0, 1.0),
+			clampf(_encode(_linear(mult.b) * k), 0.0, 1.0),
+			mult.a)
+
+
+# board_multiplier() corrected for what the stage renders. The shader samples _color_maps with
+# source_color (the addon's generated main shader, ALBEDO = albedo * color_map.rgb), so a multiplier is
+# sRGB-decoded and multiplied in linear light, and the correction is too:
+#   rendered  a crop's mean L*a*b* (D65), converted to linear sRGB;
+#   board     the board patch's raw sRGB bytes (0 to 255), decoded to linear;
+#   ratio     board / rendered per channel;
+#   result    encode(decode(mult) * ratio), clamped to [0, 1], alpha kept.
+# A render equal to the board returns mult; a warmer render lowers red relative to blue.
+static func render_corrected(mult: Color, rendered_lab: Vector3, board_srgb: Vector3) -> Color:
+	var rendered := _lab_to_linear(rendered_lab)
+	var board := Vector3(_linear(board_srgb.x / 255.0), _linear(board_srgb.y / 255.0), _linear(board_srgb.z / 255.0))
+	return Color(
+			clampf(_encode(_linear(mult.r) * board.x / rendered.x), 0.0, 1.0),
+			clampf(_encode(_linear(mult.g) * board.y / rendered.y), 0.0, 1.0),
+			clampf(_encode(_linear(mult.b) * board.z / rendered.z), 0.0, 1.0),
+			mult.a)
+
+
+static func _lab_to_linear(lab: Vector3) -> Vector3:
+	var fy := (lab.x + 16.0) / 116.0
+	var fx := fy + lab.y / 500.0
+	var fz := fy - lab.z / 200.0
+	var x := 0.95047 * _lab_finv(fx)
+	var y := _lab_finv(fy)
+	var z := 1.08883 * _lab_finv(fz)
+	return Vector3(
+			3.2404542 * x - 1.5371385 * y - 0.4985314 * z,
+			-0.9692660 * x + 1.8760108 * y + 0.0415560 * z,
+			0.0556434 * x - 0.2040259 * y + 1.0572252 * z)
+
+
+static func _lab_finv(t: float) -> float:
+	return t * t * t if t * t * t > 0.008856 else (t - 16.0 / 116.0) / 7.787
+
+
+static func _encode(c: float) -> float:
+	return c * 12.92 if c <= 0.0031308 else 1.055 * pow(c, 1.0 / 2.4) - 0.055
 
 
 # Luminance of sRGB-encoded channels (each 0 to 1), decoded to linear first.

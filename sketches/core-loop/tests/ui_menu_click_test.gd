@@ -64,7 +64,7 @@ func _process(delta: float) -> bool:
 		"die":
 			if _wait == 10:
 				_game.run.damage(99999.0, "test")
-				_click(_game.screens.button_for("retry"))
+				_click(_game.screens.button_for("new"))
 				_report("death guard", _game.flow.state_name() == "dead",
 					"a click in the death screen's first beat leaves the flow at %s" % _game.flow.state_name())
 				_phase = "retry"
@@ -72,10 +72,11 @@ func _process(delta: float) -> bool:
 				_clock = 0.0
 		"retry":
 			if _clock >= 0.8 and _wait > 1:
-				var retries: int = _game.run.retries
-				_click(_game.screens.button_for("retry"))
-				_report("retry click", _game.flow.in_play() and _game.run.retries == retries + 1,
-					"after the beat, clicking retry puts the flow at %s (retries %d to %d)" % [_game.flow.state_name(), retries, _game.run.retries])
+				var gone: bool = _game.screens.button_for("retry") == null
+				var before_id: String = _game.run.run_id
+				_click(_game.screens.button_for("new"))
+				_report("new run click", gone and _game.flow.in_play() and _game.run.run_id != before_id,
+					"after the beat, no retry button (%s); clicking New run puts the flow at %s (run %s to %s)" % [gone, _game.flow.state_name(), before_id, _game.run.run_id])
 				_game.run.damage(99999.0, "test")
 				_phase = "keys"
 				_wait = 0

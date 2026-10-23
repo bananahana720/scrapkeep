@@ -196,6 +196,13 @@ func _merge_case() -> void:
 	_check(got["retries_spent"] == {"1": 5, "2": 4}, "larger retries per world: %s" % [got["retries_spent"]])
 	_check(got["ended"] == true, "ended never goes back to false")
 	_check(got["worlds_cleared"].has(1) and got["worlds_cleared"].has(2), "cleared worlds kept")
+	# The earned save, once spent, stays spent: merged in both orders.
+	var spent_doc := _doc()
+	spent_doc["death_save_spent"] = true
+	var unspent_doc := _doc()
+	unspent_doc["death_save_spent"] = false
+	_check(RunStore.merge(unspent_doc, spent_doc).get("death_save_spent", false) == true, "death_save_spent: spent theirs onto unspent ours stays true")
+	_check(RunStore.merge(spent_doc, unspent_doc).get("death_save_spent", false) == true, "death_save_spent: unspent theirs onto spent ours stays true")
 	# Load meets an older document than memory: memory's gains survive.
 	var c := RunStore.new(p)
 	var held := c.load()
