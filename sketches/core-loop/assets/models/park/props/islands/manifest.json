@@ -1,0 +1,577 @@
+{
+ "schema": "scrapkeep-park-props-kit/1",
+ "park": "islands",
+ "recipe": "tools/blender/park/props/islands.py",
+ "kinds": {
+  "net_hoard": {
+   "class": "dress_hero",
+   "tags": [
+    "soft"
+   ],
+   "story": "The weavers' hoard: every net the isles ever dropped, heaped, floated and half re-strung.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/net_hoard_a.glb",
+      "res://assets/models/park/props/islands/net_hoard_a_lod1.glb",
+      "res://assets/models/park/props/islands/net_hoard_a_lod2.glb"
+     ],
+     "tris": [
+      17872,
+      8936,
+      2644
+     ],
+     "radius": 4.176,
+     "height": 1.952
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/net_hoard_b.glb",
+      "res://assets/models/park/props/islands/net_hoard_b_lod1.glb",
+      "res://assets/models/park/props/islands/net_hoard_b_lod2.glb"
+     ],
+     "tris": [
+      16760,
+      8380,
+      2433
+     ],
+     "radius": 4.226,
+     "height": 1.483
+    }
+   }
+  },
+  "moored_kite": {
+   "class": "dress_hero",
+   "tags": [
+    "soft"
+   ],
+   "story": "A Fleet cargo kite pinned nose-down for the night. The crew never came back for it. Its reel is brass.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/moored_kite_a.glb",
+      "res://assets/models/park/props/islands/moored_kite_a_lod1.glb",
+      "res://assets/models/park/props/islands/moored_kite_a_lod2.glb"
+     ],
+     "tris": [
+      9448,
+      4724,
+      1416
+     ],
+     "radius": 4.923,
+     "height": 2.033
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/moored_kite_b.glb",
+      "res://assets/models/park/props/islands/moored_kite_b_lod1.glb",
+      "res://assets/models/park/props/islands/moored_kite_b_lod2.glb"
+     ],
+     "tris": [
+      9928,
+      4964,
+      1488
+     ],
+     "radius": 5.001,
+     "height": 1.436
+    }
+   }
+  },
+  "tram_bogie": {
+   "class": "dress_hero",
+   "tags": [
+    "machine",
+    "tall"
+   ],
+   "story": "An ore tram car that ran off the end of the track and stayed. The weavers charge it rent.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/tram_bogie_a.glb",
+      "res://assets/models/park/props/islands/tram_bogie_a_lod1.glb",
+      "res://assets/models/park/props/islands/tram_bogie_a_lod2.glb"
+     ],
+     "tris": [
+      19452,
+      9726,
+      2918
+     ],
+     "radius": 4.594,
+     "height": 2.99
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/tram_bogie_b.glb",
+      "res://assets/models/park/props/islands/tram_bogie_b_lod1.glb",
+      "res://assets/models/park/props/islands/tram_bogie_b_lod2.glb"
+     ],
+     "tris": [
+      19116,
+      9558,
+      2866
+     ],
+     "radius": 3.957,
+     "height": 3.264
+    }
+   }
+  },
+  "weaver_cairn": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "A weavers' cairn: one stone per crossing. The top stone is the newest, so it is the warm one.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/weaver_cairn_a.glb",
+      "res://assets/models/park/props/islands/weaver_cairn_a_lod1.glb",
+      "res://assets/models/park/props/islands/weaver_cairn_a_lod2.glb"
+     ],
+     "tris": [
+      1856,
+      928,
+      276
+     ],
+     "radius": 0.643,
+     "height": 0.998
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/weaver_cairn_b.glb",
+      "res://assets/models/park/props/islands/weaver_cairn_b_lod1.glb",
+      "res://assets/models/park/props/islands/weaver_cairn_b_lod2.glb"
+     ],
+     "tris": [
+      2880,
+      1440,
+      432
+     ],
+     "radius": 0.799,
+     "height": 0.696
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/islands/weaver_cairn_c.glb",
+      "res://assets/models/park/props/islands/weaver_cairn_c_lod1.glb",
+      "res://assets/models/park/props/islands/weaver_cairn_c_lod2.glb"
+     ],
+     "tris": [
+      1728,
+      864,
+      258
+     ],
+     "radius": 1.088,
+     "height": 0.573
+    }
+   }
+  },
+  "float_bundle": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "Net floats strung on a loop and dropped where the last net came in.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/float_bundle_a.glb",
+      "res://assets/models/park/props/islands/float_bundle_a_lod1.glb",
+      "res://assets/models/park/props/islands/float_bundle_a_lod2.glb"
+     ],
+     "tris": [
+      1524,
+      762,
+      196
+     ],
+     "radius": 1.735,
+     "height": 0.504
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/float_bundle_b.glb",
+      "res://assets/models/park/props/islands/float_bundle_b_lod1.glb",
+      "res://assets/models/park/props/islands/float_bundle_b_lod2.glb"
+     ],
+     "tris": [
+      1248,
+      624,
+      176
+     ],
+     "radius": 1.381,
+     "height": 0.336
+    }
+   }
+  },
+  "rope_coil": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "Hawser rope coiled the weavers' way: clockwise, tight, a knot on top to say whose.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/rope_coil_a.glb",
+      "res://assets/models/park/props/islands/rope_coil_a_lod1.glb",
+      "res://assets/models/park/props/islands/rope_coil_a_lod2.glb"
+     ],
+     "tris": [
+      1240,
+      620,
+      183
+     ],
+     "radius": 1.109,
+     "height": 0.776
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/rope_coil_b.glb",
+      "res://assets/models/park/props/islands/rope_coil_b_lod1.glb",
+      "res://assets/models/park/props/islands/rope_coil_b_lod2.glb"
+     ],
+     "tris": [
+      1560,
+      780,
+      232
+     ],
+     "radius": 1.44,
+     "height": 0.95
+    }
+   }
+  },
+  "crew_bench": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "The mooring crew's bench, brass-capped. Empty. A jacket folded on it, a mug gone cold.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/crew_bench_a.glb",
+      "res://assets/models/park/props/islands/crew_bench_a_lod1.glb",
+      "res://assets/models/park/props/islands/crew_bench_a_lod2.glb"
+     ],
+     "tris": [
+      2948,
+      1474,
+      442
+     ],
+     "radius": 1.132,
+     "height": 0.722
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/crew_bench_b.glb",
+      "res://assets/models/park/props/islands/crew_bench_b_lod1.glb",
+      "res://assets/models/park/props/islands/crew_bench_b_lod2.glb"
+     ],
+     "tris": [
+      2112,
+      1056,
+      316
+     ],
+     "radius": 1.433,
+     "height": 0.572
+    }
+   }
+  },
+  "spar_bundle": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "Spare kite spars strapped in a bundle on two chocks, and a furled sail beside them.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/spar_bundle_a.glb",
+      "res://assets/models/park/props/islands/spar_bundle_a_lod1.glb",
+      "res://assets/models/park/props/islands/spar_bundle_a_lod2.glb"
+     ],
+     "tris": [
+      2280,
+      1140,
+      340
+     ],
+     "radius": 1.42,
+     "height": 0.66
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/spar_bundle_b.glb",
+      "res://assets/models/park/props/islands/spar_bundle_b_lod1.glb",
+      "res://assets/models/park/props/islands/spar_bundle_b_lod2.glb"
+     ],
+     "tris": [
+      1272,
+      636,
+      190
+     ],
+     "radius": 1.844,
+     "height": 0.404
+    }
+   }
+  },
+  "sandbag_mooring": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "A Fleet ground mooring: sandbags round a stake, a brass ring, and a tether cut short.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/sandbag_mooring_a.glb",
+      "res://assets/models/park/props/islands/sandbag_mooring_a_lod1.glb",
+      "res://assets/models/park/props/islands/sandbag_mooring_a_lod2.glb"
+     ],
+     "tris": [
+      1736,
+      868,
+      258
+     ],
+     "radius": 1.165,
+     "height": 0.771
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/sandbag_mooring_b.glb",
+      "res://assets/models/park/props/islands/sandbag_mooring_b_lod1.glb",
+      "res://assets/models/park/props/islands/sandbag_mooring_b_lod2.glb"
+     ],
+     "tris": [
+      1376,
+      688,
+      204
+     ],
+     "radius": 1.041,
+     "height": 0.771
+    }
+   }
+  },
+  "ore_spill": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "Ore the tram crew riddled and never hauled: a heap, a pick left in it, the sieve tipped over.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/ore_spill_a.glb",
+      "res://assets/models/park/props/islands/ore_spill_a_lod1.glb",
+      "res://assets/models/park/props/islands/ore_spill_a_lod2.glb"
+     ],
+     "tris": [
+      1220,
+      610,
+      181
+     ],
+     "radius": 1.219,
+     "height": 1.496
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/ore_spill_b.glb",
+      "res://assets/models/park/props/islands/ore_spill_b_lod1.glb",
+      "res://assets/models/park/props/islands/ore_spill_b_lod2.glb"
+     ],
+     "tris": [
+      1344,
+      672,
+      200
+     ],
+     "radius": 1.629,
+     "height": 0.754
+    }
+   }
+  },
+  "sleeper_stack": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "Tram sleepers stacked for track that never got laid, and one rail stub, bent.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/sleeper_stack_a.glb",
+      "res://assets/models/park/props/islands/sleeper_stack_a_lod1.glb",
+      "res://assets/models/park/props/islands/sleeper_stack_a_lod2.glb"
+     ],
+     "tris": [
+      2688,
+      1344,
+      402
+     ],
+     "radius": 1.54,
+     "height": 0.792
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/sleeper_stack_b.glb",
+      "res://assets/models/park/props/islands/sleeper_stack_b_lod1.glb",
+      "res://assets/models/park/props/islands/sleeper_stack_b_lod2.glb"
+     ],
+     "tris": [
+      1272,
+      636,
+      190
+     ],
+     "radius": 1.585,
+     "height": 0.38
+    }
+   }
+  },
+  "drying_tripod": {
+   "class": "dress_prop",
+   "tags": [],
+   "story": "Three poles lashed at the top with a net drying on them. The weavers say the net is surveying the wind.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/drying_tripod_a.glb",
+      "res://assets/models/park/props/islands/drying_tripod_a_lod1.glb",
+      "res://assets/models/park/props/islands/drying_tripod_a_lod2.glb"
+     ],
+     "tris": [
+      1540,
+      770,
+      161
+     ],
+     "radius": 1.234,
+     "height": 2.729
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/drying_tripod_b.glb",
+      "res://assets/models/park/props/islands/drying_tripod_b_lod1.glb",
+      "res://assets/models/park/props/islands/drying_tripod_b_lod2.glb"
+     ],
+     "tris": [
+      2140,
+      1070,
+      251
+     ],
+     "radius": 1.552,
+     "height": 2.729
+    }
+   }
+  },
+  "juniper_snag": {
+   "class": "dress_prop",
+   "tags": [
+    "plant"
+   ],
+   "story": "A wind-bent juniper growing through what was left lying: a tram wheel in one, a snapped kite spar in the other.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/juniper_snag_a.glb",
+      "res://assets/models/park/props/islands/juniper_snag_a_lod1.glb",
+      "res://assets/models/park/props/islands/juniper_snag_a_lod2.glb"
+     ],
+     "tris": [
+      1960,
+      980,
+      294
+     ],
+     "radius": 0.837,
+     "height": 2.059
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/juniper_snag_b.glb",
+      "res://assets/models/park/props/islands/juniper_snag_b_lod1.glb",
+      "res://assets/models/park/props/islands/juniper_snag_b_lod2.glb"
+     ],
+     "tris": [
+      1944,
+      972,
+      292
+     ],
+     "radius": 1.389,
+     "height": 2.032
+    }
+   }
+  },
+  "grass_tuft": {
+   "class": "dress_prop",
+   "tags": [
+    "plant"
+   ],
+   "story": "Dry bunchgrass, combed flat one way by the wind, round a couple of stones.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/grass_tuft_a.glb",
+      "res://assets/models/park/props/islands/grass_tuft_a_lod1.glb",
+      "res://assets/models/park/props/islands/grass_tuft_a_lod2.glb"
+     ],
+     "tris": [
+      1248,
+      624,
+      186
+     ],
+     "radius": 0.435,
+     "height": 0.599
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/grass_tuft_b.glb",
+      "res://assets/models/park/props/islands/grass_tuft_b_lod1.glb",
+      "res://assets/models/park/props/islands/grass_tuft_b_lod2.glb"
+     ],
+     "tris": [
+      768,
+      384,
+      114
+     ],
+     "radius": 0.426,
+     "height": 0.584
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/islands/grass_tuft_c.glb",
+      "res://assets/models/park/props/islands/grass_tuft_c_lod1.glb",
+      "res://assets/models/park/props/islands/grass_tuft_c_lod2.glb"
+     ],
+     "tris": [
+      1440,
+      720,
+      216
+     ],
+     "radius": 0.796,
+     "height": 0.633
+    }
+   }
+  },
+  "knot_board": {
+   "class": "dress_prop",
+   "tags": [
+    "sign"
+   ],
+   "story": "A weavers' tally board: a knot for every crossing tied along a cord. Older knots under it.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/islands/knot_board_a.glb",
+      "res://assets/models/park/props/islands/knot_board_a_lod1.glb",
+      "res://assets/models/park/props/islands/knot_board_a_lod2.glb"
+     ],
+     "tris": [
+      2624,
+      1312,
+      394
+     ],
+     "radius": 0.414,
+     "height": 1.068
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/islands/knot_board_b.glb",
+      "res://assets/models/park/props/islands/knot_board_b_lod1.glb",
+      "res://assets/models/park/props/islands/knot_board_b_lod2.glb"
+     ],
+     "tris": [
+      1192,
+      596,
+      178
+     ],
+     "radius": 0.922,
+     "height": 0.35
+    }
+   }
+  }
+ }
+}

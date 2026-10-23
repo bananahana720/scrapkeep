@@ -1,0 +1,2692 @@
+{
+ "assets": [
+  {
+   "id": "dprop_islands_net_hoard_a",
+   "path": "res://assets/models/park/props/islands/net_hoard_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "net_hoard variant a LOD0 (17872 tris): The weavers' hoard: every net the isles ever dropped, heaped, floated and half re-strung. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -3.4171,
+     0,
+     -2.4837
+    ],
+    "max": [
+     3.4171,
+     1.9516,
+     2.4837
+    ],
+    "size": [
+     6.8342,
+     1.9516,
+     4.9674
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_net_hoard_a_lod1",
+   "path": "res://assets/models/park/props/islands/net_hoard_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "net_hoard variant a LOD1 (8936 tris): The weavers' hoard: every net the isles ever dropped, heaped, floated and half re-strung. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.417,
+     0,
+     -2.4826
+    ],
+    "max": [
+     3.4165,
+     1.9516,
+     2.4837
+    ],
+    "size": [
+     6.8335,
+     1.9516,
+     4.9663
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_net_hoard_a_lod2",
+   "path": "res://assets/models/park/props/islands/net_hoard_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "net_hoard variant a LOD2 (2644 tris): The weavers' hoard: every net the isles ever dropped, heaped, floated and half re-strung. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.3991,
+     0,
+     -2.4861
+    ],
+    "max": [
+     3.4188,
+     1.9394,
+     2.4829
+    ],
+    "size": [
+     6.8179,
+     1.9394,
+     4.969
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_net_hoard_b",
+   "path": "res://assets/models/park/props/islands/net_hoard_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "net_hoard variant b LOD0 (16760 tris): The weavers' hoard: every net the isles ever dropped, heaped, floated and half re-strung. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -3.4636,
+     0,
+     -3.518
+    ],
+    "max": [
+     3.4636,
+     1.4825,
+     3.518
+    ],
+    "size": [
+     6.9272,
+     1.4825,
+     7.036
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_net_hoard_b_lod1",
+   "path": "res://assets/models/park/props/islands/net_hoard_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "net_hoard variant b LOD1 (8380 tris): The weavers' hoard: every net the isles ever dropped, heaped, floated and half re-strung. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.4636,
+     0,
+     -3.517
+    ],
+    "max": [
+     3.461,
+     1.4821,
+     3.518
+    ],
+    "size": [
+     6.9246,
+     1.4821,
+     7.035
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_net_hoard_b_lod2",
+   "path": "res://assets/models/park/props/islands/net_hoard_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "net_hoard variant b LOD2 (2433 tris): The weavers' hoard: every net the isles ever dropped, heaped, floated and half re-strung. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.4355,
+     0,
+     -3.5113
+    ],
+    "max": [
+     3.4613,
+     1.4725,
+     3.5185
+    ],
+    "size": [
+     6.8968,
+     1.4725,
+     7.0298
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_moored_kite_a",
+   "path": "res://assets/models/park/props/islands/moored_kite_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "moored_kite variant a LOD0 (9448 tris): A Fleet cargo kite pinned nose-down for the night. The crew never came back for it. Its reel is brass. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -4.1105,
+     0,
+     -4.4192
+    ],
+    "max": [
+     4.1105,
+     2.0332,
+     4.4192
+    ],
+    "size": [
+     8.221,
+     2.0332,
+     8.8384
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_moored_kite_a_lod1",
+   "path": "res://assets/models/park/props/islands/moored_kite_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "moored_kite variant a LOD1 (4724 tris): A Fleet cargo kite pinned nose-down for the night. The crew never came back for it. Its reel is brass. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -4.1105,
+     0,
+     -4.4192
+    ],
+    "max": [
+     4.1105,
+     2.0328,
+     4.4192
+    ],
+    "size": [
+     8.221,
+     2.0328,
+     8.8384
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_moored_kite_a_lod2",
+   "path": "res://assets/models/park/props/islands/moored_kite_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "moored_kite variant a LOD2 (1416 tris): A Fleet cargo kite pinned nose-down for the night. The crew never came back for it. Its reel is brass. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -4.1093,
+     0,
+     -4.4192
+    ],
+    "max": [
+     4.1093,
+     2.0373,
+     4.4209
+    ],
+    "size": [
+     8.2186,
+     2.0373,
+     8.8401
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_moored_kite_b",
+   "path": "res://assets/models/park/props/islands/moored_kite_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "moored_kite variant b LOD0 (9928 tris): A Fleet cargo kite pinned nose-down for the night. The crew never came back for it. Its reel is brass. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -3.1764,
+     0,
+     -4.2692
+    ],
+    "max": [
+     3.1764,
+     1.4355,
+     4.2692
+    ],
+    "size": [
+     6.3528,
+     1.4355,
+     8.5384
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_moored_kite_b_lod1",
+   "path": "res://assets/models/park/props/islands/moored_kite_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "moored_kite variant b LOD1 (4964 tris): A Fleet cargo kite pinned nose-down for the night. The crew never came back for it. Its reel is brass. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.1764,
+     0,
+     -4.2692
+    ],
+    "max": [
+     3.1764,
+     1.4351,
+     4.2692
+    ],
+    "size": [
+     6.3528,
+     1.4351,
+     8.5384
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_moored_kite_b_lod2",
+   "path": "res://assets/models/park/props/islands/moored_kite_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "moored_kite variant b LOD2 (1488 tris): A Fleet cargo kite pinned nose-down for the night. The crew never came back for it. Its reel is brass. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.1628,
+     0,
+     -4.2692
+    ],
+    "max": [
+     3.1751,
+     1.4389,
+     4.261
+    ],
+    "size": [
+     6.3379,
+     1.4389,
+     8.5302
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_tram_bogie_a",
+   "path": "res://assets/models/park/props/islands/tram_bogie_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "tram_bogie variant a LOD0 (19452 tris): An ore tram car that ran off the end of the track and stayed. The weavers charge it rent. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -3.2308,
+     0,
+     -3.5432
+    ],
+    "max": [
+     3.2308,
+     2.9898,
+     3.5432
+    ],
+    "size": [
+     6.4616,
+     2.9898,
+     7.0864
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_tram_bogie_a_lod1",
+   "path": "res://assets/models/park/props/islands/tram_bogie_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "tram_bogie variant a LOD1 (9726 tris): An ore tram car that ran off the end of the track and stayed. The weavers charge it rent. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.2308,
+     0,
+     -3.5443
+    ],
+    "max": [
+     3.23,
+     2.9898,
+     3.5432
+    ],
+    "size": [
+     6.4608,
+     2.9898,
+     7.0875
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_tram_bogie_a_lod2",
+   "path": "res://assets/models/park/props/islands/tram_bogie_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "tram_bogie variant a LOD2 (2918 tris): An ore tram car that ran off the end of the track and stayed. The weavers charge it rent. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.2315,
+     0,
+     -3.5434
+    ],
+    "max": [
+     3.2344,
+     2.9775,
+     3.5482
+    ],
+    "size": [
+     6.4659,
+     2.9775,
+     7.0916
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_tram_bogie_b",
+   "path": "res://assets/models/park/props/islands/tram_bogie_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "tram_bogie variant b LOD0 (19116 tris): An ore tram car that ran off the end of the track and stayed. The weavers charge it rent. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.3217,
+     0,
+     -3.3636
+    ],
+    "max": [
+     2.3217,
+     3.2638,
+     3.3636
+    ],
+    "size": [
+     4.6434,
+     3.2638,
+     6.7272
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_tram_bogie_b_lod1",
+   "path": "res://assets/models/park/props/islands/tram_bogie_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "tram_bogie variant b LOD1 (9558 tris): An ore tram car that ran off the end of the track and stayed. The weavers charge it rent. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.3219,
+     0,
+     -3.3637
+    ],
+    "max": [
+     2.3232,
+     3.2638,
+     3.3636
+    ],
+    "size": [
+     4.6451,
+     3.2638,
+     6.7273
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_tram_bogie_b_lod2",
+   "path": "res://assets/models/park/props/islands/tram_bogie_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "tram_bogie variant b LOD2 (2866 tris): An ore tram car that ran off the end of the track and stayed. The weavers charge it rent. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.3267,
+     0,
+     -3.3653
+    ],
+    "max": [
+     2.3263,
+     3.2603,
+     3.3674
+    ],
+    "size": [
+     4.653,
+     3.2603,
+     6.7327
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_weaver_cairn_a",
+   "path": "res://assets/models/park/props/islands/weaver_cairn_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "weaver_cairn variant a LOD0 (1856 tris): A weavers' cairn: one stone per crossing. The top stone is the newest, so it is the warm one. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.5822,
+     0,
+     -0.41
+    ],
+    "max": [
+     0.5822,
+     0.9984,
+     0.41
+    ],
+    "size": [
+     1.1644,
+     0.9984,
+     0.82
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_weaver_cairn_a_lod1",
+   "path": "res://assets/models/park/props/islands/weaver_cairn_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "weaver_cairn variant a LOD1 (928 tris): A weavers' cairn: one stone per crossing. The top stone is the newest, so it is the warm one. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.5822,
+     0,
+     -0.41
+    ],
+    "max": [
+     0.5808,
+     0.9976,
+     0.41
+    ],
+    "size": [
+     1.163,
+     0.9976,
+     0.82
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_weaver_cairn_a_lod2",
+   "path": "res://assets/models/park/props/islands/weaver_cairn_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "weaver_cairn variant a LOD2 (276 tris): A weavers' cairn: one stone per crossing. The top stone is the newest, so it is the warm one. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.5729,
+     0,
+     -0.3907
+    ],
+    "max": [
+     0.5778,
+     0.9911,
+     0.39
+    ],
+    "size": [
+     1.1507,
+     0.9911,
+     0.7807
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_weaver_cairn_b",
+   "path": "res://assets/models/park/props/islands/weaver_cairn_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "weaver_cairn variant b LOD0 (2880 tris): A weavers' cairn: one stone per crossing. The top stone is the newest, so it is the warm one. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.6587,
+     0,
+     -0.6334
+    ],
+    "max": [
+     0.6587,
+     0.6958,
+     0.6334
+    ],
+    "size": [
+     1.3174,
+     0.6958,
+     1.2668
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_weaver_cairn_b_lod1",
+   "path": "res://assets/models/park/props/islands/weaver_cairn_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "weaver_cairn variant b LOD1 (1440 tris): A weavers' cairn: one stone per crossing. The top stone is the newest, so it is the warm one. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.6587,
+     0,
+     -0.6334
+    ],
+    "max": [
+     0.6587,
+     0.6958,
+     0.6336
+    ],
+    "size": [
+     1.3174,
+     0.6958,
+     1.267
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_weaver_cairn_b_lod2",
+   "path": "res://assets/models/park/props/islands/weaver_cairn_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "weaver_cairn variant b LOD2 (432 tris): A weavers' cairn: one stone per crossing. The top stone is the newest, so it is the warm one. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.6519,
+     0,
+     -0.6284
+    ],
+    "max": [
+     0.6548,
+     0.6926,
+     0.638
+    ],
+    "size": [
+     1.3067,
+     0.6926,
+     1.2664
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_weaver_cairn_c",
+   "path": "res://assets/models/park/props/islands/weaver_cairn_c.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "weaver_cairn variant c LOD0 (1728 tris): A weavers' cairn: one stone per crossing. The top stone is the newest, so it is the warm one. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.0432,
+     0,
+     -0.4206
+    ],
+    "max": [
+     1.0432,
+     0.5732,
+     0.4206
+    ],
+    "size": [
+     2.0864,
+     0.5732,
+     0.8412
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_weaver_cairn_c_lod1",
+   "path": "res://assets/models/park/props/islands/weaver_cairn_c_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "weaver_cairn variant c LOD1 (864 tris): A weavers' cairn: one stone per crossing. The top stone is the newest, so it is the warm one. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.0432,
+     0,
+     -0.4241
+    ],
+    "max": [
+     1.0421,
+     0.5732,
+     0.4206
+    ],
+    "size": [
+     2.0853,
+     0.5732,
+     0.8447
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_weaver_cairn_c_lod2",
+   "path": "res://assets/models/park/props/islands/weaver_cairn_c_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "weaver_cairn variant c LOD2 (258 tris): A weavers' cairn: one stone per crossing. The top stone is the newest, so it is the warm one. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.0422,
+     0,
+     -0.4222
+    ],
+    "max": [
+     1.033,
+     0.5561,
+     0.4135
+    ],
+    "size": [
+     2.0752,
+     0.5561,
+     0.8357
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_float_bundle_a",
+   "path": "res://assets/models/park/props/islands/float_bundle_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "float_bundle variant a LOD0 (1524 tris): Net floats strung on a loop and dropped where the last net came in. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.4115,
+     0,
+     -1.0225
+    ],
+    "max": [
+     1.4115,
+     0.5042,
+     1.0225
+    ],
+    "size": [
+     2.823,
+     0.5042,
+     2.045
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_float_bundle_a_lod1",
+   "path": "res://assets/models/park/props/islands/float_bundle_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "float_bundle variant a LOD1 (762 tris): Net floats strung on a loop and dropped where the last net came in. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.4115,
+     0,
+     -1.0225
+    ],
+    "max": [
+     1.4115,
+     0.5049,
+     1.0225
+    ],
+    "size": [
+     2.823,
+     0.5049,
+     2.045
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_float_bundle_a_lod2",
+   "path": "res://assets/models/park/props/islands/float_bundle_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "float_bundle variant a LOD2 (196 tris): Net floats strung on a loop and dropped where the last net came in. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.4025,
+     0,
+     -1.0172
+    ],
+    "max": [
+     1.4099,
+     0.4964,
+     1.0135
+    ],
+    "size": [
+     2.8124,
+     0.4964,
+     2.0307
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_float_bundle_b",
+   "path": "res://assets/models/park/props/islands/float_bundle_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "float_bundle variant b LOD0 (1248 tris): Net floats strung on a loop and dropped where the last net came in. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.0904,
+     0,
+     -0.8609
+    ],
+    "max": [
+     1.0904,
+     0.336,
+     0.8609
+    ],
+    "size": [
+     2.1808,
+     0.336,
+     1.7218
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_float_bundle_b_lod1",
+   "path": "res://assets/models/park/props/islands/float_bundle_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "float_bundle variant b LOD1 (624 tris): Net floats strung on a loop and dropped where the last net came in. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.0904,
+     0,
+     -0.8609
+    ],
+    "max": [
+     1.0904,
+     0.3364,
+     0.8609
+    ],
+    "size": [
+     2.1808,
+     0.3364,
+     1.7218
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_float_bundle_b_lod2",
+   "path": "res://assets/models/park/props/islands/float_bundle_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "float_bundle variant b LOD2 (176 tris): Net floats strung on a loop and dropped where the last net came in. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.0755,
+     0,
+     -0.8557
+    ],
+    "max": [
+     1.0888,
+     0.3277,
+     0.8454
+    ],
+    "size": [
+     2.1643,
+     0.3277,
+     1.7011
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_rope_coil_a",
+   "path": "res://assets/models/park/props/islands/rope_coil_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "rope_coil variant a LOD0 (1240 tris): Hawser rope coiled the weavers' way: clockwise, tight, a knot on top to say whose. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.107,
+     0,
+     -0.6188
+    ],
+    "max": [
+     1.107,
+     0.7759,
+     0.6188
+    ],
+    "size": [
+     2.214,
+     0.7759,
+     1.2376
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_rope_coil_a_lod1",
+   "path": "res://assets/models/park/props/islands/rope_coil_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "rope_coil variant a LOD1 (620 tris): Hawser rope coiled the weavers' way: clockwise, tight, a knot on top to say whose. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.107,
+     0,
+     -0.6133
+    ],
+    "max": [
+     1.1023,
+     0.7677,
+     0.6133
+    ],
+    "size": [
+     2.2093,
+     0.7677,
+     1.2266
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_rope_coil_a_lod2",
+   "path": "res://assets/models/park/props/islands/rope_coil_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "rope_coil variant a LOD2 (183 tris): Hawser rope coiled the weavers' way: clockwise, tight, a knot on top to say whose. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.0962,
+     0,
+     -0.5767
+    ],
+    "max": [
+     1.1023,
+     0.7491,
+     0.6247
+    ],
+    "size": [
+     2.1985,
+     0.7491,
+     1.2014
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_rope_coil_b",
+   "path": "res://assets/models/park/props/islands/rope_coil_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "rope_coil variant b LOD0 (1560 tris): Hawser rope coiled the weavers' way: clockwise, tight, a knot on top to say whose. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.3402,
+     0,
+     -0.627
+    ],
+    "max": [
+     1.3402,
+     0.9495,
+     0.627
+    ],
+    "size": [
+     2.6804,
+     0.9495,
+     1.254
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_rope_coil_b_lod1",
+   "path": "res://assets/models/park/props/islands/rope_coil_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "rope_coil variant b LOD1 (780 tris): Hawser rope coiled the weavers' way: clockwise, tight, a knot on top to say whose. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.3402,
+     0,
+     -0.627
+    ],
+    "max": [
+     1.3401,
+     0.9495,
+     0.627
+    ],
+    "size": [
+     2.6803,
+     0.9495,
+     1.254
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_rope_coil_b_lod2",
+   "path": "res://assets/models/park/props/islands/rope_coil_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "rope_coil variant b LOD2 (232 tris): Hawser rope coiled the weavers' way: clockwise, tight, a knot on top to say whose. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.3481,
+     0,
+     -0.6013
+    ],
+    "max": [
+     1.3296,
+     0.9477,
+     0.606
+    ],
+    "size": [
+     2.6777,
+     0.9477,
+     1.2073
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_crew_bench_a",
+   "path": "res://assets/models/park/props/islands/crew_bench_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "crew_bench variant a LOD0 (2948 tris): The mooring crew's bench, brass-capped. Empty. A jacket folded on it, a mug gone cold. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.0591,
+     0,
+     -0.4411
+    ],
+    "max": [
+     1.0591,
+     0.7219,
+     0.4411
+    ],
+    "size": [
+     2.1182,
+     0.7219,
+     0.8822
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_crew_bench_a_lod1",
+   "path": "res://assets/models/park/props/islands/crew_bench_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "crew_bench variant a LOD1 (1474 tris): The mooring crew's bench, brass-capped. Empty. A jacket folded on it, a mug gone cold. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.0591,
+     0,
+     -0.4411
+    ],
+    "max": [
+     1.0591,
+     0.7219,
+     0.4411
+    ],
+    "size": [
+     2.1182,
+     0.7219,
+     0.8822
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_crew_bench_a_lod2",
+   "path": "res://assets/models/park/props/islands/crew_bench_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "crew_bench variant a LOD2 (442 tris): The mooring crew's bench, brass-capped. Empty. A jacket folded on it, a mug gone cold. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.0591,
+     0,
+     -0.4385
+    ],
+    "max": [
+     1.055,
+     0.7147,
+     0.4454
+    ],
+    "size": [
+     2.1141,
+     0.7147,
+     0.8839
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_crew_bench_b",
+   "path": "res://assets/models/park/props/islands/crew_bench_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "crew_bench variant b LOD0 (2112 tris): The mooring crew's bench, brass-capped. Empty. A jacket folded on it, a mug gone cold. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.356,
+     0,
+     -0.788
+    ],
+    "max": [
+     1.356,
+     0.5724,
+     0.788
+    ],
+    "size": [
+     2.712,
+     0.5724,
+     1.576
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_crew_bench_b_lod1",
+   "path": "res://assets/models/park/props/islands/crew_bench_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "crew_bench variant b LOD1 (1056 tris): The mooring crew's bench, brass-capped. Empty. A jacket folded on it, a mug gone cold. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.356,
+     0,
+     -0.788
+    ],
+    "max": [
+     1.3552,
+     0.572,
+     0.788
+    ],
+    "size": [
+     2.7112,
+     0.572,
+     1.576
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_crew_bench_b_lod2",
+   "path": "res://assets/models/park/props/islands/crew_bench_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "crew_bench variant b LOD2 (316 tris): The mooring crew's bench, brass-capped. Empty. A jacket folded on it, a mug gone cold. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.3604,
+     0,
+     -0.7975
+    ],
+    "max": [
+     1.3561,
+     0.569,
+     0.7888
+    ],
+    "size": [
+     2.7165,
+     0.569,
+     1.5863
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_spar_bundle_a",
+   "path": "res://assets/models/park/props/islands/spar_bundle_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "spar_bundle variant a LOD0 (2280 tris): Spare kite spars strapped in a bundle on two chocks, and a furled sail beside them. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.3,
+     0,
+     -0.5948
+    ],
+    "max": [
+     1.3,
+     0.66,
+     0.5948
+    ],
+    "size": [
+     2.6,
+     0.66,
+     1.1896
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_spar_bundle_a_lod1",
+   "path": "res://assets/models/park/props/islands/spar_bundle_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "spar_bundle variant a LOD1 (1140 tris): Spare kite spars strapped in a bundle on two chocks, and a furled sail beside them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.3,
+     0,
+     -0.5948
+    ],
+    "max": [
+     1.3,
+     0.66,
+     0.5948
+    ],
+    "size": [
+     2.6,
+     0.66,
+     1.1896
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_spar_bundle_a_lod2",
+   "path": "res://assets/models/park/props/islands/spar_bundle_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "spar_bundle variant a LOD2 (340 tris): Spare kite spars strapped in a bundle on two chocks, and a furled sail beside them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.3,
+     0,
+     -0.6048
+    ],
+    "max": [
+     1.3,
+     0.6422,
+     0.5928
+    ],
+    "size": [
+     2.6,
+     0.6422,
+     1.1976
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_spar_bundle_b",
+   "path": "res://assets/models/park/props/islands/spar_bundle_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "spar_bundle variant b LOD0 (1272 tris): Spare kite spars strapped in a bundle on two chocks, and a furled sail beside them. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.4964,
+     0,
+     -1.1511
+    ],
+    "max": [
+     1.4964,
+     0.4035,
+     1.1511
+    ],
+    "size": [
+     2.9928,
+     0.4035,
+     2.3022
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_spar_bundle_b_lod1",
+   "path": "res://assets/models/park/props/islands/spar_bundle_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "spar_bundle variant b LOD1 (636 tris): Spare kite spars strapped in a bundle on two chocks, and a furled sail beside them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.4963,
+     0,
+     -1.1511
+    ],
+    "max": [
+     1.4962,
+     0.4035,
+     1.1511
+    ],
+    "size": [
+     2.9925,
+     0.4035,
+     2.3022
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_spar_bundle_b_lod2",
+   "path": "res://assets/models/park/props/islands/spar_bundle_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "spar_bundle variant b LOD2 (190 tris): Spare kite spars strapped in a bundle on two chocks, and a furled sail beside them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.4962,
+     0,
+     -1.1462
+    ],
+    "max": [
+     1.4952,
+     0.4086,
+     1.151
+    ],
+    "size": [
+     2.9914,
+     0.4086,
+     2.2972
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_sandbag_mooring_a",
+   "path": "res://assets/models/park/props/islands/sandbag_mooring_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "sandbag_mooring variant a LOD0 (1736 tris): A Fleet ground mooring: sandbags round a stake, a brass ring, and a tether cut short. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.8637,
+     0,
+     -0.8269
+    ],
+    "max": [
+     0.8637,
+     0.7714,
+     0.8269
+    ],
+    "size": [
+     1.7274,
+     0.7714,
+     1.6538
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_sandbag_mooring_a_lod1",
+   "path": "res://assets/models/park/props/islands/sandbag_mooring_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "sandbag_mooring variant a LOD1 (868 tris): A Fleet ground mooring: sandbags round a stake, a brass ring, and a tether cut short. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.864,
+     0,
+     -0.823
+    ],
+    "max": [
+     0.8633,
+     0.7688,
+     0.8267
+    ],
+    "size": [
+     1.7273,
+     0.7688,
+     1.6497
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_sandbag_mooring_a_lod2",
+   "path": "res://assets/models/park/props/islands/sandbag_mooring_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "sandbag_mooring variant a LOD2 (258 tris): A Fleet ground mooring: sandbags round a stake, a brass ring, and a tether cut short. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.8639,
+     0,
+     -0.8219
+    ],
+    "max": [
+     0.8617,
+     0.7709,
+     0.8202
+    ],
+    "size": [
+     1.7256,
+     0.7709,
+     1.6421
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_sandbag_mooring_b",
+   "path": "res://assets/models/park/props/islands/sandbag_mooring_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "sandbag_mooring variant b LOD0 (1376 tris): A Fleet ground mooring: sandbags round a stake, a brass ring, and a tether cut short. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.7404,
+     0,
+     -0.9514
+    ],
+    "max": [
+     0.7404,
+     0.7714,
+     0.9514
+    ],
+    "size": [
+     1.4808,
+     0.7714,
+     1.9028
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_sandbag_mooring_b_lod1",
+   "path": "res://assets/models/park/props/islands/sandbag_mooring_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "sandbag_mooring variant b LOD1 (688 tris): A Fleet ground mooring: sandbags round a stake, a brass ring, and a tether cut short. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.7404,
+     0,
+     -0.9514
+    ],
+    "max": [
+     0.7404,
+     0.7688,
+     0.95
+    ],
+    "size": [
+     1.4808,
+     0.7688,
+     1.9014
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_sandbag_mooring_b_lod2",
+   "path": "res://assets/models/park/props/islands/sandbag_mooring_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "sandbag_mooring variant b LOD2 (204 tris): A Fleet ground mooring: sandbags round a stake, a brass ring, and a tether cut short. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.7294,
+     0,
+     -0.9399
+    ],
+    "max": [
+     0.7438,
+     0.7623,
+     0.9527
+    ],
+    "size": [
+     1.4732,
+     0.7623,
+     1.8926
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_ore_spill_a",
+   "path": "res://assets/models/park/props/islands/ore_spill_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "ore_spill variant a LOD0 (1220 tris): Ore the tram crew riddled and never hauled: a heap, a pick left in it, the sieve tipped over. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.1674,
+     0,
+     -0.6742
+    ],
+    "max": [
+     1.1674,
+     1.4959,
+     0.6742
+    ],
+    "size": [
+     2.3348,
+     1.4959,
+     1.3484
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_ore_spill_a_lod1",
+   "path": "res://assets/models/park/props/islands/ore_spill_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "ore_spill variant a LOD1 (610 tris): Ore the tram crew riddled and never hauled: a heap, a pick left in it, the sieve tipped over. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.1674,
+     0,
+     -0.668
+    ],
+    "max": [
+     1.1674,
+     1.4959,
+     0.6742
+    ],
+    "size": [
+     2.3348,
+     1.4959,
+     1.3422
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_ore_spill_a_lod2",
+   "path": "res://assets/models/park/props/islands/ore_spill_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "ore_spill variant a LOD2 (181 tris): Ore the tram crew riddled and never hauled: a heap, a pick left in it, the sieve tipped over. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.1565,
+     0,
+     -0.6689
+    ],
+    "max": [
+     1.1747,
+     1.4576,
+     0.6725
+    ],
+    "size": [
+     2.3312,
+     1.4576,
+     1.3414
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_ore_spill_b",
+   "path": "res://assets/models/park/props/islands/ore_spill_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "ore_spill variant b LOD0 (1344 tris): Ore the tram crew riddled and never hauled: a heap, a pick left in it, the sieve tipped over. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.4397,
+     0,
+     -0.7812
+    ],
+    "max": [
+     1.4397,
+     0.7538,
+     0.7812
+    ],
+    "size": [
+     2.8794,
+     0.7538,
+     1.5624
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_ore_spill_b_lod1",
+   "path": "res://assets/models/park/props/islands/ore_spill_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "ore_spill variant b LOD1 (672 tris): Ore the tram crew riddled and never hauled: a heap, a pick left in it, the sieve tipped over. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.4397,
+     0,
+     -0.7812
+    ],
+    "max": [
+     1.4396,
+     0.7507,
+     0.7775
+    ],
+    "size": [
+     2.8793,
+     0.7507,
+     1.5587
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_ore_spill_b_lod2",
+   "path": "res://assets/models/park/props/islands/ore_spill_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "ore_spill variant b LOD2 (200 tris): Ore the tram crew riddled and never hauled: a heap, a pick left in it, the sieve tipped over. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.4482,
+     0,
+     -0.7796
+    ],
+    "max": [
+     1.4346,
+     0.7407,
+     0.7573
+    ],
+    "size": [
+     2.8828,
+     0.7407,
+     1.5369
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_sleeper_stack_a",
+   "path": "res://assets/models/park/props/islands/sleeper_stack_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "sleeper_stack variant a LOD0 (2688 tris): Tram sleepers stacked for track that never got laid, and one rail stub, bent. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.076,
+     0,
+     -1.1149
+    ],
+    "max": [
+     1.076,
+     0.7917,
+     1.1149
+    ],
+    "size": [
+     2.152,
+     0.7917,
+     2.2298
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_sleeper_stack_a_lod1",
+   "path": "res://assets/models/park/props/islands/sleeper_stack_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "sleeper_stack variant a LOD1 (1344 tris): Tram sleepers stacked for track that never got laid, and one rail stub, bent. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.076,
+     0,
+     -1.1142
+    ],
+    "max": [
+     1.0764,
+     0.7919,
+     1.1149
+    ],
+    "size": [
+     2.1524,
+     0.7919,
+     2.2291
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_sleeper_stack_a_lod2",
+   "path": "res://assets/models/park/props/islands/sleeper_stack_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "sleeper_stack variant a LOD2 (402 tris): Tram sleepers stacked for track that never got laid, and one rail stub, bent. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.078,
+     0,
+     -1.1196
+    ],
+    "max": [
+     1.0788,
+     0.7904,
+     1.1179
+    ],
+    "size": [
+     2.1568,
+     0.7904,
+     2.2375
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_sleeper_stack_b",
+   "path": "res://assets/models/park/props/islands/sleeper_stack_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "sleeper_stack variant b LOD0 (1272 tris): Tram sleepers stacked for track that never got laid, and one rail stub, bent. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.4883,
+     0,
+     -1.1675
+    ],
+    "max": [
+     1.4883,
+     0.3797,
+     1.1675
+    ],
+    "size": [
+     2.9766,
+     0.3797,
+     2.335
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_sleeper_stack_b_lod1",
+   "path": "res://assets/models/park/props/islands/sleeper_stack_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "sleeper_stack variant b LOD1 (636 tris): Tram sleepers stacked for track that never got laid, and one rail stub, bent. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.4877,
+     0,
+     -1.1627
+    ],
+    "max": [
+     1.4876,
+     0.3797,
+     1.1653
+    ],
+    "size": [
+     2.9753,
+     0.3797,
+     2.328
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_sleeper_stack_b_lod2",
+   "path": "res://assets/models/park/props/islands/sleeper_stack_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "sleeper_stack variant b LOD2 (190 tris): Tram sleepers stacked for track that never got laid, and one rail stub, bent. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.4853,
+     0,
+     -1.1635
+    ],
+    "max": [
+     1.4844,
+     0.3613,
+     1.1663
+    ],
+    "size": [
+     2.9697,
+     0.3613,
+     2.3298
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_drying_tripod_a",
+   "path": "res://assets/models/park/props/islands/drying_tripod_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "drying_tripod variant a LOD0 (1540 tris): Three poles lashed at the top with a net drying on them. The weavers say the net is surveying the wind. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.1087,
+     0,
+     -0.9625
+    ],
+    "max": [
+     1.1087,
+     2.7294,
+     0.9625
+    ],
+    "size": [
+     2.2174,
+     2.7294,
+     1.925
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_drying_tripod_a_lod1",
+   "path": "res://assets/models/park/props/islands/drying_tripod_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "drying_tripod variant a LOD1 (770 tris): Three poles lashed at the top with a net drying on them. The weavers say the net is surveying the wind. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.1054,
+     0,
+     -0.961
+    ],
+    "max": [
+     1.109,
+     2.7287,
+     0.9625
+    ],
+    "size": [
+     2.2144,
+     2.7287,
+     1.9235
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_drying_tripod_a_lod2",
+   "path": "res://assets/models/park/props/islands/drying_tripod_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "drying_tripod variant a LOD2 (161 tris): Three poles lashed at the top with a net drying on them. The weavers say the net is surveying the wind. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.093,
+     0,
+     -0.961
+    ],
+    "max": [
+     1.1016,
+     2.7248,
+     0.96
+    ],
+    "size": [
+     2.1946,
+     2.7248,
+     1.921
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_drying_tripod_b",
+   "path": "res://assets/models/park/props/islands/drying_tripod_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "drying_tripod variant b LOD0 (2140 tris): Three poles lashed at the top with a net drying on them. The weavers say the net is surveying the wind. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.5122,
+     0,
+     -0.9719
+    ],
+    "max": [
+     1.5122,
+     2.7294,
+     0.9719
+    ],
+    "size": [
+     3.0244,
+     2.7294,
+     1.9438
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_drying_tripod_b_lod1",
+   "path": "res://assets/models/park/props/islands/drying_tripod_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "drying_tripod variant b LOD1 (1070 tris): Three poles lashed at the top with a net drying on them. The weavers say the net is surveying the wind. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.5122,
+     0,
+     -0.9719
+    ],
+    "max": [
+     1.5122,
+     2.7298,
+     0.9719
+    ],
+    "size": [
+     3.0244,
+     2.7298,
+     1.9438
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_drying_tripod_b_lod2",
+   "path": "res://assets/models/park/props/islands/drying_tripod_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "drying_tripod variant b LOD2 (251 tris): Three poles lashed at the top with a net drying on them. The weavers say the net is surveying the wind. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.5156,
+     0,
+     -0.9545
+    ],
+    "max": [
+     1.4963,
+     2.7317,
+     0.9694
+    ],
+    "size": [
+     3.0119,
+     2.7317,
+     1.9239
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_juniper_snag_a",
+   "path": "res://assets/models/park/props/islands/juniper_snag_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "juniper_snag variant a LOD0 (1960 tris): A wind-bent juniper growing through what was left lying: a tram wheel in one, a snapped kite spar in the other. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.834,
+     0,
+     -0.5098
+    ],
+    "max": [
+     0.834,
+     2.0594,
+     0.5098
+    ],
+    "size": [
+     1.668,
+     2.0594,
+     1.0196
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_juniper_snag_a_lod1",
+   "path": "res://assets/models/park/props/islands/juniper_snag_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "juniper_snag variant a LOD1 (980 tris): A wind-bent juniper growing through what was left lying: a tram wheel in one, a snapped kite spar in the other. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.8326,
+     0,
+     -0.5098
+    ],
+    "max": [
+     0.834,
+     2.0593,
+     0.5098
+    ],
+    "size": [
+     1.6666,
+     2.0593,
+     1.0196
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_juniper_snag_a_lod2",
+   "path": "res://assets/models/park/props/islands/juniper_snag_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "juniper_snag variant a LOD2 (294 tris): A wind-bent juniper growing through what was left lying: a tram wheel in one, a snapped kite spar in the other. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.843,
+     0,
+     -0.5032
+    ],
+    "max": [
+     0.8342,
+     2.0338,
+     0.5072
+    ],
+    "size": [
+     1.6772,
+     2.0338,
+     1.0104
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_juniper_snag_b",
+   "path": "res://assets/models/park/props/islands/juniper_snag_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "juniper_snag variant b LOD0 (1944 tris): A wind-bent juniper growing through what was left lying: a tram wheel in one, a snapped kite spar in the other. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.3527,
+     0,
+     -0.7325
+    ],
+    "max": [
+     1.3527,
+     2.0318,
+     0.7325
+    ],
+    "size": [
+     2.7054,
+     2.0318,
+     1.465
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_juniper_snag_b_lod1",
+   "path": "res://assets/models/park/props/islands/juniper_snag_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "juniper_snag variant b LOD1 (972 tris): A wind-bent juniper growing through what was left lying: a tram wheel in one, a snapped kite spar in the other. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.3534,
+     0,
+     -0.7325
+    ],
+    "max": [
+     1.3527,
+     2.0301,
+     0.7344
+    ],
+    "size": [
+     2.7061,
+     2.0301,
+     1.4669
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_juniper_snag_b_lod2",
+   "path": "res://assets/models/park/props/islands/juniper_snag_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "juniper_snag variant b LOD2 (292 tris): A wind-bent juniper growing through what was left lying: a tram wheel in one, a snapped kite spar in the other. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.3515,
+     0,
+     -0.7225
+    ],
+    "max": [
+     1.3513,
+     1.9973,
+     0.7344
+    ],
+    "size": [
+     2.7028,
+     1.9973,
+     1.4569
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_grass_tuft_a",
+   "path": "res://assets/models/park/props/islands/grass_tuft_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "grass_tuft variant a LOD0 (1248 tris): Dry bunchgrass, combed flat one way by the wind, round a couple of stones. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.2844,
+     0,
+     -0.3341
+    ],
+    "max": [
+     0.2844,
+     0.5991,
+     0.3341
+    ],
+    "size": [
+     0.5688,
+     0.5991,
+     0.6682
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_grass_tuft_a_lod1",
+   "path": "res://assets/models/park/props/islands/grass_tuft_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "grass_tuft variant a LOD1 (624 tris): Dry bunchgrass, combed flat one way by the wind, round a couple of stones. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.2844,
+     0,
+     -0.3341
+    ],
+    "max": [
+     0.2844,
+     0.5991,
+     0.3341
+    ],
+    "size": [
+     0.5688,
+     0.5991,
+     0.6682
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_grass_tuft_a_lod2",
+   "path": "res://assets/models/park/props/islands/grass_tuft_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "grass_tuft variant a LOD2 (186 tris): Dry bunchgrass, combed flat one way by the wind, round a couple of stones. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.2844,
+     0,
+     -0.3284
+    ],
+    "max": [
+     0.2788,
+     0.5939,
+     0.3368
+    ],
+    "size": [
+     0.5632,
+     0.5939,
+     0.6652
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_grass_tuft_b",
+   "path": "res://assets/models/park/props/islands/grass_tuft_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "grass_tuft variant b LOD0 (768 tris): Dry bunchgrass, combed flat one way by the wind, round a couple of stones. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.2913,
+     0,
+     -0.3228
+    ],
+    "max": [
+     0.2913,
+     0.5842,
+     0.3228
+    ],
+    "size": [
+     0.5826,
+     0.5842,
+     0.6456
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_grass_tuft_b_lod1",
+   "path": "res://assets/models/park/props/islands/grass_tuft_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "grass_tuft variant b LOD1 (384 tris): Dry bunchgrass, combed flat one way by the wind, round a couple of stones. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.2913,
+     0,
+     -0.3228
+    ],
+    "max": [
+     0.2913,
+     0.5842,
+     0.3228
+    ],
+    "size": [
+     0.5826,
+     0.5842,
+     0.6456
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_grass_tuft_b_lod2",
+   "path": "res://assets/models/park/props/islands/grass_tuft_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "grass_tuft variant b LOD2 (114 tris): Dry bunchgrass, combed flat one way by the wind, round a couple of stones. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.2913,
+     0,
+     -0.3177
+    ],
+    "max": [
+     0.2857,
+     0.5809,
+     0.3211
+    ],
+    "size": [
+     0.577,
+     0.5809,
+     0.6388
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_grass_tuft_c",
+   "path": "res://assets/models/park/props/islands/grass_tuft_c.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "grass_tuft variant c LOD0 (1440 tris): Dry bunchgrass, combed flat one way by the wind, round a couple of stones. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.6585,
+     0,
+     -0.4601
+    ],
+    "max": [
+     0.6585,
+     0.6331,
+     0.4601
+    ],
+    "size": [
+     1.317,
+     0.6331,
+     0.9202
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_grass_tuft_c_lod1",
+   "path": "res://assets/models/park/props/islands/grass_tuft_c_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "grass_tuft variant c LOD1 (720 tris): Dry bunchgrass, combed flat one way by the wind, round a couple of stones. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.6585,
+     0,
+     -0.4601
+    ],
+    "max": [
+     0.6585,
+     0.6331,
+     0.4601
+    ],
+    "size": [
+     1.317,
+     0.6331,
+     0.9202
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_grass_tuft_c_lod2",
+   "path": "res://assets/models/park/props/islands/grass_tuft_c_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "grass_tuft variant c LOD2 (216 tris): Dry bunchgrass, combed flat one way by the wind, round a couple of stones. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.6585,
+     0,
+     -0.4543
+    ],
+    "max": [
+     0.6533,
+     0.6297,
+     0.4583
+    ],
+    "size": [
+     1.3118,
+     0.6297,
+     0.9126
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_knot_board_a",
+   "path": "res://assets/models/park/props/islands/knot_board_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "knot_board variant a LOD0 (2624 tris): A weavers' tally board: a knot for every crossing tied along a cord. Older knots under it. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.4,
+     0,
+     -0.1551
+    ],
+    "max": [
+     0.4,
+     1.0676,
+     0.1551
+    ],
+    "size": [
+     0.8,
+     1.0676,
+     0.3102
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_knot_board_a_lod1",
+   "path": "res://assets/models/park/props/islands/knot_board_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "knot_board variant a LOD1 (1312 tris): A weavers' tally board: a knot for every crossing tied along a cord. Older knots under it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.4,
+     0,
+     -0.1551
+    ],
+    "max": [
+     0.4,
+     1.0676,
+     0.1549
+    ],
+    "size": [
+     0.8,
+     1.0676,
+     0.31
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_knot_board_a_lod2",
+   "path": "res://assets/models/park/props/islands/knot_board_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "knot_board variant a LOD2 (394 tris): A weavers' tally board: a knot for every crossing tied along a cord. Older knots under it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.4,
+     0,
+     -0.155
+    ],
+    "max": [
+     0.4,
+     1.0655,
+     0.1566
+    ],
+    "size": [
+     0.8,
+     1.0655,
+     0.3116
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_knot_board_b",
+   "path": "res://assets/models/park/props/islands/knot_board_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "knot_board variant b LOD0 (1192 tris): A weavers' tally board: a knot for every crossing tied along a cord. Older knots under it. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.9189,
+     0,
+     -0.6187
+    ],
+    "max": [
+     0.9189,
+     0.35,
+     0.6187
+    ],
+    "size": [
+     1.8378,
+     0.35,
+     1.2374
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_knot_board_b_lod1",
+   "path": "res://assets/models/park/props/islands/knot_board_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "knot_board variant b LOD1 (596 tris): A weavers' tally board: a knot for every crossing tied along a cord. Older knots under it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.9177,
+     0,
+     -0.6187
+    ],
+    "max": [
+     0.9189,
+     0.35,
+     0.6187
+    ],
+    "size": [
+     1.8366,
+     0.35,
+     1.2374
+    ]
+   }
+  },
+  {
+   "id": "dprop_islands_knot_board_b_lod2",
+   "path": "res://assets/models/park/props/islands/knot_board_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_islands.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/islands.py",
+    "notes": "knot_board variant b LOD2 (178 tris): A weavers' tally board: a knot for every crossing tied along a cord. Older knots under it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.9146,
+     0,
+     -0.6199
+    ],
+    "max": [
+     0.9185,
+     0.35,
+     0.6187
+    ],
+    "size": [
+     1.8331,
+     0.35,
+     1.2386
+    ]
+   }
+  }
+ ]
+}
