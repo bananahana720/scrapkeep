@@ -49,7 +49,7 @@ func _table() -> void:
 		var s: Dictionary = Specs.SPECS[id]
 		t.check("%s is played by a set, overlay or hook" % id, used.has(id))
 		t.check("%s has a known shape and attach" % id, Kit.SHAPES.has(s["shape"])
-			and ["camera", "ball", "anchor", "burst"].has(s["attach"]))
+			and ["camera", "ball", "wake", "anchor", "burst"].has(s["attach"]))
 		for c in Specs.colour_names(id):
 			t.check("%s colour %s resolves" % [id, c], Specs.KIT.has(c) or (load("res://src/core/palette.gd") as Script).get_script_constant_map().has(c))
 		var e := Kit.build(id)

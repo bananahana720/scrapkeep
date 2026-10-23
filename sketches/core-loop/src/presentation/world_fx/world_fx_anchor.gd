@@ -2,6 +2,7 @@ extends Node3D
 
 const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
 const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
+const Grain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 
 # A drop-in effect (WORLD-FX.md): one SETS row placed by dressing, a landmark, the camp or the relay.
 #   var fx := WorldFxAnchor.make("landmark_dam")   # then add_child(fx) and place it
@@ -35,7 +36,9 @@ func _ready() -> void:
 	for id in Specs.SETS.get(set_id, []):
 		var p := Kit.build(id)
 		if has_meta("tint"):
+			p.set_meta("tint", get_meta("tint"))
 			p.set_instance_shader_parameter("tint", get_meta("tint"))
+		Grain.apply(p, Grain.run_seed)
 		add_child(p)
 		emitters.append(p)
 		var imp: Dictionary = Specs.SPECS[id].get("impostor", {})
@@ -81,6 +84,22 @@ func set_quality(is_low: bool, is_reduced: bool) -> void:
 	_apply()
 
 
+# A new run's grain (Grain.run_seed) on an anchor that outlived the last run (park dressing stays built).
+func set_grain(run_seed: int) -> void:
+	for p in emitters:
+		Grain.apply(p, run_seed)
+	_apply()
+
+
+# Stretches every "fit" spec's emission box over a footprint of half extents (x, z) in the anchor's frame:
+# a flood's foam covers the water it stands on, whatever the site's size. Particle counts never change.
+func fit(half: Vector2) -> void:
+	for p in emitters:
+		if Specs.SPECS[p.get_meta("world_fx")].get("fit", false):
+			(p.process_material as ParticleProcessMaterial).emission_box_extents = Vector3(half.x, 0.05, half.y)
+			p.visibility_aabb = AABB(Vector3(-half.x - 4.0, -6.0, -half.y - 4.0), Vector3(half.x * 2.0 + 8.0, 12.0, half.y * 2.0 + 8.0))
+
+
 # Range: within lod_m and slotted it emits; past lod_m only the impostor draws.
 func set_range(distance: float, has_slot: bool) -> void:
 	slotted = has_slot and distance <= lod_m()
@@ -94,7 +113,8 @@ func _process(delta: float) -> void:
 	for p in emitters:
 		var s: Dictionary = Specs.SPECS[p.get_meta("world_fx")]
 		if s.has("pulse"):
-			var on := fmod(_clock, float(s["pulse"][0])) < float(s["pulse"][1])
+			var beat := Grain.pulse(p)
+			var on := fmod(_clock, float(beat[0])) < float(beat[1])
 			p.emitting = on and _wants(p)
 
 
@@ -105,7 +125,7 @@ func _wants(p: GPUParticles3D) -> bool:
 func _apply() -> void:
 	for p in emitters:
 		var s: Dictionary = Specs.SPECS[p.get_meta("world_fx")]
-		var share := Kit.share(s, low, reduced_motion)
+		var share := Grain.share(p, low, reduced_motion)
 		if s.get("level", false):
 			share *= lerpf(0.15, 1.0, level)
 			p.speed_scale = lerpf(0.6, 1.6, level)

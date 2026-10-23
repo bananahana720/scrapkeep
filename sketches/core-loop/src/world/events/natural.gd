@@ -18,6 +18,12 @@ const Audio := preload("res://src/presentation/audio.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
+const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
+# Flood foam (WorldFx set "spill_flood") rides the water in pieces this long along the footprint's long
+# axis, each at its own surface height, so foam follows a wash's slope; at most FOAM_PIECES a flood.
+const FOAM_SET := "spill_flood"
+const FOAM_PIECE_M := 30.0
+const FOAM_PIECES := 4
 
 const KINDS := {
 	"flood_fill": {}, "drain": {}, "cave_in": {}, "collapse": {}, "flash_flood": {},
@@ -367,6 +373,7 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 				state.depth_m = lerpf(float(state.start_depth_m), 0.0 if row.kind == "drain" else depth, fraction)
 				state.water.cycle.metres = state.depth_m
 				state.water.render()
+				_ride_foam(state, 1.0 - fraction if row.kind != "drain" else 0.0)
 			if row.kind in ["collapse", "cave_in"]:
 				var fill_s := maxf(0.0, float(row.effect.fill_s))
 				_advance_collapse(row, clampf(state.elapsed_s / fill_s, 0.0, 1.0) if fill_s > 0.0 else 1.0)
@@ -454,8 +461,46 @@ func _land_water(row: Dictionary, state: Dictionary) -> void:
 	water._lamp_mesh.visible = false
 	water.render()
 	state.water = water
+	state.foam = _foam(water, state.geometry)
 	_water_field.surfaces.append(water)
 	_water_field.refresh()
+
+
+# Foam anchors over a flood's footprint, split along its long axis (geometry.half and yaw, the
+# footprint's own frame), each fitted to its piece. Children of the water view, so they go with it.
+func _foam(water: Node3D, geometry: Dictionary) -> Array:
+	var half: Vector2 = geometry.half
+	var long_x := half.x >= half.y
+	var long_half := half.x if long_x else half.y
+	var pieces := clampi(ceili(2.0 * long_half / FOAM_PIECE_M), 1, FOAM_PIECES)
+	var turn := Basis(Vector3.UP, float(geometry.yaw))
+	var centre := Vector2(geometry.at.x, geometry.at.z)
+	var out := []
+	for k in pieces:
+		var u := lerpf(-long_half, long_half, (k + 0.5) / pieces)
+		var local := Vector3(u, 0.0, 0.0) if long_x else Vector3(0.0, 0.0, u)
+		var at := turn * local
+		var a := WorldFxAnchor.make(FOAM_SET)
+		a.name = "Foam%d" % k
+		water.add_child(a)
+		a.transform = Transform3D(turn, Vector3(centre.x + at.x, 0.0, centre.y + at.z))
+		var piece := long_half / pieces * 0.9
+		a.fit(Vector2(piece, half.y * 0.85) if long_x else Vector2(half.x * 0.85, piece))
+		out.append(a)
+	_ride_foam({"water": water, "foam": out}, 1.0)
+	return out
+
+
+# Sets each foam piece on its live surface; churn is how much of the rise is left (1 thick, 0 calm).
+static func _ride_foam(state: Dictionary, churn: float) -> void:
+	var water = state.water
+	for a: Node3D in state.get("foam", []):
+		var xz := Vector2(a.position.x, a.position.z)
+		var floor_y: float = water.surface.height(xz)
+		a.visible = floor_y > -INF
+		if a.visible:
+			a.position.y = floor_y + water.cycle.metres + 0.05
+		a.set_level(lerpf(0.35, 1.0, clampf(churn, 0.0, 1.0)))
 
 
 func _rectangle(low: Vector2, high: Vector2) -> Array:
