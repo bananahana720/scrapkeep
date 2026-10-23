@@ -2698,9 +2698,9 @@ func _open_part(boss) -> Node3D:
 
 
 # A fitter of the open hatch to hit before the hatch itself (waking.gd crew): the first one holding a plate, and only
-# while the seal clock runs (weak_points.gd fit_min or more on the hatch). One knock-off stops the clock, so the hatch
-# is the target again; a knocked fitter comes back after KNOCK_SECONDS, and chasing every one spends the window on
-# drones. An inbound one is never a target: waking.gd only knocks off a fitting one. Gated by the same go as the
+# while the seal clock runs (weak_points.gd fit_min or more on the hatch). Once knock-offs leave fewer than fit_min the
+# clock stops, so the hatch is the target again; a knocked fitter comes back after KNOCK_SECONDS, and chasing every one
+# spends the window on drones. An inbound one is never a target: waking.gd only knocks off a fitting one. Gated by the same go as the
 # part, so the expert always, the learner after its read and roll, the novice never; it draws nothing.
 func _open_fitter(boss) -> Node3D:
 	if not _weak_go or not boss.has_method("crew") or not boss.has_method("weak_open"):

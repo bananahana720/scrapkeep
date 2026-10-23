@@ -322,12 +322,16 @@ func _bot() -> void:
 	_t.check("expert: the target is a fitting fitter, not the hatch", pick in two and pick != hatch and expert.rng.state == rng_before, str(pick))
 	expert._fight_posture_boss(mod, 0.016)
 	_t.check("expert: the fight goal names the fitter", expert._goal.begins_with("fitter"), expert._goal)
-	_knock_one(mod, two[0])
-	_t.check("expert: with one knocked off the clock stops, and the hatch is the target", mod.weak.fitters("hatch_1") < mod.weak.fit_min
-			and expert._open_fitter(mod) == null and expert._open_part(mod) == hatch, "fitters %d, %s" % [mod.weak.fitters("hatch_1"), str(expert._open_fitter(mod))])
+	# Both still counted (the clock runs), so only the state can make an inbound one no target.
 	for f in two:
 		f.fit_state = f.State.INBOUND
-	_t.check("expert: an inbound fitter is no target", expert._open_fitter(mod) == null, str(expert._open_fitter(mod)))
+	_t.check("expert: an inbound fitter is no target", mod.weak.fitters("hatch_1") >= mod.weak.fit_min and expert._open_fitter(mod) == null,
+			"fitters %d, %s" % [mod.weak.fitters("hatch_1"), str(expert._open_fitter(mod))])
+	for f in two:
+		f.fit_state = f.State.FITTING
+	_knock_one(mod, two[0])
+	_t.check("expert: below fit_min the clock stops, and the hatch is the target", mod.weak.fitters("hatch_1") < mod.weak.fit_min
+			and expert._open_fitter(mod) == null and expert._open_part(mod) == hatch, "fitters %d, %s" % [mod.weak.fitters("hatch_1"), str(expert._open_fitter(mod))])
 	for f in two:
 		f.remove_for_test()
 	mod._step_crew()
