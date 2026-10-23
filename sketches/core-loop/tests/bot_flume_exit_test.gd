@@ -11,7 +11,8 @@ const T := preload("res://tests/support/t.gd")
 # The Flume's warden exit (design-v3/park/stages/2-park_flume.md, route warden_exit; card BOT-LINE).
 # After a stage-2 break the gates stand on the ground east of the head-house drum, 13 m over its
 # floor, and the drum's east wall is a cliff. The authored way out is drum_lip_kicker: a 28 m greybox
-# wedge rising 14 m to its east lip, then a 3 m gap to the gate lip. The heights tools/bot_driver.gd
+# wedge rising 14 m to its east lip (x 270.07, flush with the drum's east face foot since 2026-10-23;
+# it was x 267 with a 5 m gap), then a 2 m notch to the gate lip. The heights tools/bot_driver.gd
 # _climb_route reads do not hold the wedge (it is a placed collider), so on 540a55a4 the route came
 # back empty and runner_gunner seed 1 sat against the wall from t=120 to the stage limit.
 # Pins, from the ball's stall point on that run, (269, -13, 462):
@@ -38,7 +39,9 @@ const HEAVY_STARTS := [
 	[Vector3(252.05, -9.86, 485.64), Vector3(9.1, 4.3, -6.2)],
 ]
 const HEAVY_HEFT := 2.3
-const WALL_X := 270.0
+# Out means past the terrace edge (x 272), not just past the lip (270.07): a ball resting in the
+# 1.93 m notch between them (planted drops stop at x 271.07, y 0.37) is not out of the drum.
+const EXIT_X := 272.5
 const LIP_NEAR := 3.0
 const EXIT_S := 40.0
 const SETTLE_TICKS := 30
@@ -124,7 +127,7 @@ func _physics_process(delta: float) -> bool:
 	_seconds += delta
 	var ball: Vector3 = _game.player.ball_position()
 	_peak = maxf(_peak, ball.y)
-	if _out_at < 0.0 and ball.x > WALL_X and _game.player.state.grounded and _gate_y - ball.y <= BotDriver.LEVEL_BAND:
+	if _out_at < 0.0 and ball.x > EXIT_X and _game.player.state.grounded and _gate_y - ball.y <= BotDriver.LEVEL_BAND:
 		_out_at = _seconds
 	# The tick count and boost clock tick() runs before it acts, so the boost comes back as in a run.
 	_driver.ticks += 1
