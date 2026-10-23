@@ -68,7 +68,7 @@ static func entries(class_def) -> Dictionary:
 			continue
 		var caps: Array = row["caps"]
 		var short: String = row["short"]
-		short = short.replace("use / ride", "use/ride").replace("hold retry", "hold-retry")
+		short = short.replace("use / ride", "use/ride").replace("hold restart", "hold-restart")
 		for i in caps.size():
 			# The direction arrow carries drive; the other keys keep their action tag.
 			var label := short if i == 0 and not (short == "drive" and ARROWS.has(caps[i])) else ""
