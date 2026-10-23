@@ -502,6 +502,22 @@ static func prepare_rest() -> void:
 	_prepare_wobble(Harmony.BRINDLE_PHRYGIAN, [1], [Harmony.BOSS_STEP], ["wub"])
 	_prepare_wobble(Harmony.BRINDLE, [2], [PHASE3_STEP], ["wub"])
 	_prepare_wobble(Harmony.BRINDLE + Harmony.VICTORY, [0, 2], [Harmony.STEP], ["wub"])
+	# A boss fight plays its chords in its section's key (BOSS_SECTIONS, 0 to 2) plus the escalation's
+	# half-step lift, through the break's sinister chords and the dominant mask: every key to 3.
+	var boss_chords: Array = Harmony.BRINDLE + Harmony.BRINDLE_PHRYGIAN + Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE]
+	for shift in [0, 1, 2, 3]:
+		for chord in boss_chords:
+			if SfxBank.bake_cancel:
+				return
+			var voicing := _shift(chord["voicing"], shift)
+			Synth.organ_chord(voicing)
+			Synth.stab_chord(voicing, false)
+			Synth.stab_chord(voicing, true)
+			Synth.chord(voicing)
+			Synth.note("sub", int(chord["root"]) + shift)
+	# _start_riser's build riser, on both boss grids.
+	for step in [Harmony.BOSS_STEP, PHASE3_STEP]:
+		SfxBank.samples_at("build_riser", step)
 
 
 static func prepare_all() -> void:
