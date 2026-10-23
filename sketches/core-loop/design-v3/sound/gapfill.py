@@ -125,6 +125,36 @@ ANTHEMS = [
      "Instrumental. An arena fight with a roaring crowd. An announcer-style brass fanfare lead, stomp-stomp-clap crowd rhythm in the build, a hype alto sax hook on the drop." + ANTHEM + " Rowdy, proud, pumping."),
 ]
 
+# Phase anthems (Andrew, 23 Oct): a fight's anthem has halves. Phase 1 is intense; the next phase
+# ratchets it up by magnitudes: faster, heavier bass, a more erratic, layered and complex lead.
+# Bosses have up to three phases, mini-bosses two. Each later phase is a cover of the phase-1 pick
+# (its hook kept), 10 BPM up per phase, in the same key. Rendered with --phases into anthem-phases.json.
+RATCHET = (" Phase two of the same anthem, ratcheted up by magnitudes: the same lead hook now faster, more"
+           " erratic, layered with counter-melodies and stutter edits, a heavier distorted sub bass, harder kick.")
+FINALE = (" Final phase of the same anthem at full overdrive: the lead hook doubled in octaves and chopped into"
+          " frantic runs, a growling reese bass, rolling kicks, every layer at once, then a last huge drop.")
+P1 = {"anthem-gate-crane": "anthem-gate-crane-s4102", "anthem-haul-skip": "anthem-haul-skip-s4102",
+      "anthem-cable-tender": "anthem-cable-tender-s4101", "anthem-miniboss": "anthem-miniboss-s4202",
+      "anthem-brindle": "anthem-brindle-s4202", "anthem-waking": "anthem-waking-s4202", "anthem-champion": "anthem-champion-s4201",
+      "anthem-mind": "anthem-mind-s4304"}
+for _id, _take in P1.items():
+    PARENTS[_id] = f"gapfill/{_take}.wav"
+_SHORT = {"anthem-gate-crane": ("Gate Crane No. 14", "a rogue gate crane swinging its hook", 140, "D minor"),
+          "anthem-haul-skip": ("Haul Skip No. 31", "a runaway mine skip on its rails", 145, "E minor"),
+          "anthem-cable-tender": ("Cable Tender No. 7", "a cable machine pulling tension", 150, "G minor"),
+          "anthem-miniboss": ("Heavyweight Anthem", "a big machine in the ring", 140, "D minor"),
+          "anthem-champion": ("Champion's Lap", "a victory-lap fight against the best", 145, "D minor"),
+          "anthem-brindle": ("Brindle Goes Big", "the Spillway's foreman boiling over", 140, "D minor"),
+          "anthem-waking": ("The Waking Rises", "something huge waking under the mine", 145, "D minor"),
+          "anthem-mind": ("All Hands", "the fleet's thinking machine calling every hand", 150, "E minor")}
+PHASES = []
+for _id, (_name, _scene, _bpm, _key) in _SHORT.items():
+    PHASES.append((f"{_id}-p2", f"{_name}, Phase 2", "Phase 2: " + _scene, _id, _bpm + 10, _key, 0.6, False, False,
+                   f"Instrumental bass-heavy big-room Eurodance anthem, {_scene}." + RATCHET))
+    if _id in ("anthem-brindle", "anthem-waking", "anthem-mind"):
+        PHASES.append((f"{_id}-p3", f"{_name}, Phase 3", "Phase 3: " + _scene, _id, _bpm + 20, _key, 0.55, False, False,
+                       f"Instrumental bass-heavy big-room Eurodance anthem, {_scene}." + FINALE))
+
 
 def tempo_of(path):
     name = Path(path).stem
@@ -156,7 +186,7 @@ def source(root, tune):
 def main(argv):
     root = Path(argv[0])
     wanted = {a for a in argv[1:] if not a.startswith("--") and a != ",".join(SEEDS)}
-    table = ANTHEMS if "--anthems" in argv else TUNES
+    table = PHASES if "--phases" in argv else ANTHEMS if "--anthems" in argv else TUNES
     tunes = [t for t in table if not wanted or t[0] in wanted]
     ace_path = root / "ace.json"
     ace = json.loads(ace_path.read_text())
@@ -170,7 +200,7 @@ def main(argv):
     subprocess.run([str(HERE / "ace_lab.sh"), str(root), rnd, *SEEDS, "--mode", "final"], check=True)
     run = sorted(set((root / "renders").glob(f"lab-{rnd}-*")) - before)[-1]
     out = root / "gapfill"
-    registry_path = HERE / ("anthem-candidates.json" if table is ANTHEMS else "tunes.json")
+    registry_path = HERE / {id(PHASES): "anthem-phases.json", id(ANTHEMS): "anthem-candidates.json"}.get(id(table), "tunes.json")
     registry = {r["id"]: r for r in json.loads(registry_path.read_text())} if registry_path.exists() else {}
     for job in json.loads((run / "manifest.json").read_text()):
         tune = next((t for t in tunes if t[0] == job["name"]), None)

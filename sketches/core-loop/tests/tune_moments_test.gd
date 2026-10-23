@@ -81,7 +81,8 @@ func _pure() -> void:
 		"event-hold-relay": ["event", "hold_the_relay"], "event-flood": ["event", "flood"],
 		"event-dust-squall": ["event", "dust_squall"], "event-arena": ["activity", "round_arena"],
 		"miniboss": ["miniboss", "miniboss"], "anthem-gate-crane": ["miniboss", "rogue_crane"],
-		"anthem-haul-skip": ["miniboss", "rogue_skip"], "anthem-cable-tender": ["miniboss", "rogue_tender"], "moss-shop": ["shop", "bay"], "modifier-par": ["modifier", "par"], "modifier-curse": ["modifier", "curse"],
+		"anthem-haul-skip": ["miniboss", "rogue_skip"], "anthem-cable-tender": ["miniboss", "rogue_tender"], "anthem-gate-crane-heavy": ["miniboss", "rogue_crane_heavy"],
+		"anthem-haul-skip-heavy": ["miniboss", "rogue_skip_heavy"], "anthem-cable-tender-heavy": ["miniboss", "rogue_tender_heavy"], "miniboss-heavy": ["miniboss", "miniboss_heavy"], "moss-shop": ["shop", "bay"], "modifier-par": ["modifier", "par"], "modifier-curse": ["modifier", "curse"],
 		"fabricator": ["fabricator", "fabricator_used"],
 		"secret-lost-tape": ["find", "flume_weir_cache"], "secret-after-hours": ["jukebox", "bay_jukebox"],
 		"secret-brindle-swing": ["remix", "brindle"], "secret-chip-keepers": ["remix", "champion"],
@@ -253,7 +254,7 @@ func _process(_delta: float) -> bool:
 	_t.check("a champion on a chiptune run plays the chiptune", not a.named.is_empty() and a.named[-1][0] == "secret-chip-keepers", str(a.named))
 	elite.free()
 	a._remixes = {}
-	_t.eq("an unrolled run opens on the picked theme", a._boss_entry("brindle"), "boss-brindle")
+	_t.eq("an unrolled run opens on the fight anthem", a._boss_entry("brindle"), "anthem-brindle")
 
 	var p := _rig(func(_id): return true)
 	p.ctx.build = FakeBuild.new()
@@ -278,7 +279,7 @@ func _process(_delta: float) -> bool:
 	mb.free()
 	_t.check("missing packs never change the music", none.staged.is_empty() and none.named.is_empty(), str(none.staged))
 	none._remixes = {"3-1": "secret-highdraft-rain", "brindle": "secret-brindle-swing"}
-	_t.check("a missing remix keeps the parent", none.level_tune(zone31) == "" and none._boss_entry("brindle") == "boss-brindle")
+	_t.check("a missing remix keeps the parent", none.level_tune(zone31) == "" and none._boss_entry("brindle") == "anthem-brindle")
 
 	for node in _nodes:
 		if is_instance_valid(node):
