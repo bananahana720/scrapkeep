@@ -2,6 +2,8 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # Every Fleet counter that holds the ball, one at a time against a ball at rest (the
 # netcaster's ball is lifted into the air just before its field goes live):
@@ -93,6 +95,14 @@ func _on_held(kind: String) -> void:
 	_report(kind + " voice", _voice == "clank" and _tag == row["tag"] and _tag != "",
 		"telegraph voice %s, tag %s (row tag %s)" % [_voice, _tag, row["tag"]])
 	_report(kind + " through the door", _started > 0, "%d hold_started facts" % _started)
+	if kind == "netcaster":
+		# The net catches only in the air, so its live ring keeps off the ground scorch (ruling
+		# #241 6347013047 section 4); threat_grammar_test plants the same ring without "air".
+		var field: Dictionary = _unit.telegraph().descriptor()
+		var scorch := Color(Palette.HAZARD.lerp(Palette.CHARCOAL, Threat.LIVE_SCORCH), Threat.LIVE_SCORCH_ALPHA)
+		var tint := Threat.fill_tint(field)
+		_report("netcaster air ring", Threat.haze() and field.get("live", false) and field.get("air", false) and tint != scorch,
+			"haze %s, live %s, air %s, live fill %s (scorch %s)" % [Threat.haze(), field.get("live", false), field.get("air", false), tint, scorch])
 	_broke = ""
 	for method in OWN_ACTIONS:
 		if method in row["breaks"]:
