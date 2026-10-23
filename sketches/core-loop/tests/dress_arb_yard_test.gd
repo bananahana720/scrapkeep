@@ -37,6 +37,7 @@ func _run() -> void:
 		return
 	t.eq("arrival: the stands cheer as the ball lands", yard.cheering(), "arrival")
 	t.eq("phase one on the ledger", yard.ledger_line.text, Yard.LEDGER[1])
+	t.eq("its caption owns up to the rounding", yard.ledger_caption.text, Yard.LEDGER_CAPTIONS[1])
 	for row: Dictionary in Yard.MELT:
 		var hue: float = row.color.h * 360.0
 		t.check("melt keeps off the slag and klaxon hues: %s" % row.color.to_html(false), hue >= Yard.MELT_MIN_HUE
@@ -86,6 +87,7 @@ func _run() -> void:
 	await process_frame
 	t.eq("the rout cheers longest", yard.cheering(), "rout")
 	t.eq("the ledger never balances", yard.ledger_line.text, Yard.LEDGER[0])
+	t.eq("and says so", yard.ledger_caption.text, Yard.LEDGER_CAPTIONS[0])
 	_settle(yard)
 	t.check("the rout's cheer and cooling end", not yard.is_processing())
 	t.check("the rout cools the melt to embers", is_equal_approx(yard.melt_material.emission_energy_multiplier, Yard.MELT[0].emission))

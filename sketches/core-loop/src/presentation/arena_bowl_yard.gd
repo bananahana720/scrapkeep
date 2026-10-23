@@ -32,16 +32,14 @@ const CHEERS := {
 const WAVE_SECONDS := 0.7
 const HOP_HZ := 3.0
 # The ledger rounds up, by phase; index 0 is the rout. The sums never balance on screen (CHARACTER-BIBLE, Brindle).
-const LEDGER := [
-	"SHIFT OVER\nSUMS DO NOT BALANCE",
-	"OWED: 1,200 T\n(ROUNDED UP)",
-	"OWED: 1,300 T\n(ROUNDED UP AGAIN)",
-	"OWED: ALL OF IT\n(ROUNDED)",
-]
+# The figure is big enough to read from the fight's camera across the bowl; the caption carries the joke up close.
+const LEDGER := ["SHIFT OVER", "1,200 T", "1,300 T", "ALL OF IT"]
+const LEDGER_CAPTIONS := ["SUMS DO NOT BALANCE", "OWED (ROUNDED UP)", "OWED (ROUNDED UP AGAIN)", "OWED (ROUNDED)"]
 
 var crowds: Array[MultiMeshInstance3D] = []
 var melt_material: StandardMaterial3D
 var ledger_line: Label3D
+var ledger_caption: Label3D
 var phase := 0
 var seats := []
 var _cheer := {}
@@ -84,16 +82,22 @@ func _on_fight_phase(fight_id: String, next: int, _phases: int) -> void:
 		return
 	var first := phase == 0
 	phase = clampi(next, 1, MELT.size() - 1)
-	ledger_line.text = LEDGER[phase]
+	_ledger(phase)
 	_heat(phase)
 	cheer("arrival" if first else "phase")
 
 
 func _on_rout() -> void:
 	phase = 0
-	ledger_line.text = LEDGER[0]
+	_ledger(0)
 	_heat(0)
 	cheer("rout")
+
+
+func _ledger(index: int) -> void:
+	ledger_line.text = LEDGER[index]
+	if ledger_caption != null:
+		ledger_caption.text = LEDGER_CAPTIONS[index]
 
 
 func cheer(kind: String) -> void:

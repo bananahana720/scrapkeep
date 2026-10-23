@@ -201,6 +201,13 @@ func _check_yard(dressing: Node3D) -> void:
 	t.check("every fan sits on a tier", seated == total and total >= 100, "%d of %d" % [seated, total])
 	t.check("the yard adds no runtime light (sketch-lint L6)", yard.find_children("*", "Light3D", true, false).is_empty())
 	t.check("the ledger opens on phase one", yard.ledger_line.text == Yard.LEDGER[1], yard.ledger_line.text)
+	# The board's chalk panel is 14.8 m wide (arena_bowl_yard.py ledger): every line the fight writes fits inside it.
+	var widest := 0.0
+	for label: Label3D in [yard.ledger_line, yard.ledger_caption, yard.get_node("LedgerTitle")]:
+		var lines: Array = Yard.LEDGER if label == yard.ledger_line else Yard.LEDGER_CAPTIONS if label == yard.ledger_caption else [label.text]
+		for line: String in lines:
+			widest = maxf(widest, label.font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x * label.pixel_size)
+	t.check("every ledger line fits the board", widest > 0.0 and widest <= 14.2, "%.2f m" % widest)
 
 
 # The authored kicker stands where the collider does: per Kicker greybox view one holder at its wedge frame, the

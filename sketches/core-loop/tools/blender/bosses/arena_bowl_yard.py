@@ -165,6 +165,10 @@ def ladles(root):
             for r in (74.6, 78.4):
                 p = polar(a, r, DECK_Y + 2.0)
                 part.cyl(METAL, .55, .55, .4, 12, loc=xyz((p[0] + t.x, p[1], p[2] + t.z)), rot=(0, math.pi / 2, -a + math.pi / 2), color="383c37")
+            # The girder the bogie runs on: wheel bottoms (DECK_Y + 1.45) sit on its rail cap.
+            run = polar(a, 76.5, DECK_Y + .675)
+            box(part, (8.0, 1.35, .4), (run[0] + t.x, run[1], run[2] + t.z), "4a4e47", yaw=-a)
+            box(part, (8.2, .1, .6), (run[0] + t.x, DECK_Y + 1.4, run[2] + t.z), "383c37", yaw=-a)
             post = polar(a, 76.2, DECK_Y + 3.0)
             beam(part, (post[0] + t.x * 1.25, post[1], post[2] + t.z * 1.25), (post[0] + t.x * 1.25, post[1] + 4.6, post[2] + t.z * 1.25), .5, "5b5548")
         bottom = polar(a, 77.0, DECK_Y + 4.8)
@@ -191,7 +195,8 @@ def ledger(root):
     for dy in (-4.35, 4.35):
         box(part, (.7, .3, 16.2), polar(a, LEDGER_R - .05, y + dy), "a48f55", slot=COPPER, yaw=-a)
     # Ruled lines: the ledger's columns, chalked in.
-    for dy in (1.1, -1.0, -2.8):
+    # Clear of the dress's chalk: title above, the phase's figure between, the caption below.
+    for dy in (2.15, -1.95, -3.45):
         box(part, (.04, .06, 13.6), polar(a, LEDGER_R - .37, y + dy), "6c6a5e", slot=PAINT, yaw=-a)
     for da in (-.085, .085):
         beam(part, polar(a + da, LEDGER_R + .2, DECK_Y), polar(a + da, LEDGER_R + .2, y - 4.3), .5, "4a4e47")

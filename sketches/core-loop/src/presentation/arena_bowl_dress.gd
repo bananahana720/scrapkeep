@@ -34,7 +34,7 @@ const LEDGER_ANGLE := 180.0
 const LEDGER_R := 76.0
 # Dry crew-log signs, not reads: none of them is in the riding lane or on a telegraph.
 const SIGNS := [
-	{"name": "LedgerTitle", "angle": 180.0, "r": 75.6, "y": 28.2, "size": 140, "text": "REQUISITION LEDGER"},
+	{"name": "LedgerTitle", "angle": 180.0, "r": 75.5, "y": 28.1, "size": 116, "text": "REQUISITION LEDGER", "lit": true},
 	{"name": "SafetyTally", "angle": 279.5, "r": 70.06, "y": 18.6, "size": 46, "text": "SLAG BOWL\nDAYS WITHOUT A\nREQUISITION: 0"},
 	{"name": "HiringNotice", "angle": 64.0, "r": 69.84, "y": 19.9, "size": 40, "text": "HANDS WANTED\nAPPLY WITHIN"},
 ]
@@ -167,8 +167,11 @@ func _yard(dressing: Node3D, parts: Dictionary) -> void:
 		yard.add_child(crowd)
 		yard.seat(crowd, rests[kind])
 	var font := load(SIGN_FONT) as Font
-	var ledger := _sign(yard, font, {"name": "LedgerLine", "angle": LEDGER_ANGLE, "r": LEDGER_R - 0.4, "y": DECK_Y + 9.0, "size": 130, "text": ""})
-	yard.ledger_line = ledger
+	# The ledger's figure reads from the fight's camera across the bowl (about 100 m); the caption reads up close.
+	yard.ledger_line = _sign(yard, font, {"name": "LedgerLine", "angle": LEDGER_ANGLE, "r": LEDGER_R - 0.5, "y": DECK_Y + 10.5,
+		"size": 230, "text": "", "lit": true})
+	yard.ledger_caption = _sign(yard, font, {"name": "LedgerCaption", "angle": LEDGER_ANGLE, "r": LEDGER_R - 0.5,
+		"y": DECK_Y + 7.35, "size": 96, "text": "", "lit": true})
 	for row in SIGNS:
 		_sign(yard, font, row)
 
@@ -182,9 +185,11 @@ func _sign(parent: Node3D, font: Font, row: Dictionary) -> Label3D:
 	label.font_size = row.size
 	label.pixel_size = 0.01
 	label.outline_size = 0
-	label.modulate = Palette.LEDGER.darkened(0.12)
+	# The ledger's chalk is unshaded so the board's own shadow and the haze never sink it; the small notices take the light.
+	var lit: bool = row.get("lit", false)
+	label.modulate = Palette.LEDGER if lit else Palette.LEDGER.darkened(0.12)
 	label.double_sided = false
-	label.shaded = true
+	label.shaded = not lit
 	label.position = Vector3(cos(angle) * row.r, row.y, sin(angle) * row.r)
 	# A Label3D reads from +Z: turn +Z to face the bowl's centre.
 	label.basis = Basis(Vector3.UP, atan2(-cos(angle), -sin(angle)))

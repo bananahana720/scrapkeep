@@ -4,7 +4,10 @@ extends SceneTree
 # from a crane mast, in each of Brindle's three phases (the turns mid-cheer). Needs a rendered display:
 #
 #   xvfb-run -s "-screen 0 1920x1080x24" <godot> --path sketches/core-loop --script res://tools/arb_yard_stills.gd \
-#     -- --out=<absolute dir>
+#     -- --out=<absolute dir> [--hold]
+#
+# --hold stops Brindle's attack clock on entry, so no telegraph covers the dressing. The play_* views stand where the
+# fight's chase camera does (arm 12 m behind the ball, looking at Brindle) at eight bearings round the floor.
 
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
@@ -20,15 +23,21 @@ const VIEWS := [
 	["bank_to_stand_a", [262.0, 57.0, 16.0], [300.0, 73.0, 22.0]],
 	["ladle_close", [345.0, 55.0, 19.0], [15.0, 75.0, 21.0]],
 ]
+const PLAY_BEARINGS := [0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0]
+const PLAY_BALL_R := 26.0
+const PLAY_ARM := 12.0
 
 var game
 var out := ""
+var hold := false
 
 
 func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			out = arg.trim_prefix("--out=")
+		elif arg == "--hold":
+			hold = true
 	if out.is_empty() or DisplayServer.get_name() == "headless":
 		quit(2)
 		return
@@ -48,6 +57,9 @@ func _run() -> void:
 	game.run.set_max_hp(999999.0)
 	game.player.source = Intent.Scripted.new()
 	Harness.enter(game, Vector3(18, 0, 0))
+	if hold:
+		game.boss.set_process(false)
+		game.boss.set_physics_process(false)
 	for i in 30:
 		await physics_frame
 	for node in root.find_children("*", "CanvasLayer", true, false):
@@ -75,6 +87,16 @@ func _run() -> void:
 			var label := "p%d" % phase
 			image.save_png(out.path_join("%s_%s.png" % [label, view[0]]))
 			print("STILL %s %s cheering=%s" % [label, view[0], yard.cheering()])
+		if phase == 1:
+			camera.fov = 65.0
+			for bearing in PLAY_BEARINGS:
+				camera.global_position = _at([bearing, PLAY_BALL_R + PLAY_ARM, 4.5])
+				camera.look_at(_at([bearing, 0.0, 3.0]))
+				await process_frame
+				await process_frame
+				root.get_texture().get_image().save_png(out.path_join("p1_play_%03d.png" % int(bearing)))
+				print("STILL p1 play_%03d" % int(bearing))
+			camera.fov = 62.0
 	quit(0)
 
 
