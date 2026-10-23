@@ -13,6 +13,11 @@ const T := preload("res://tests/support/t.gd")
 #    world 1 row.
 # 3. Pity: each dry kill adds the pity step, a drop resets it, an elite always drops.
 # 4. Determinism: one seed replays the same drops.
+# Retune (when world 1's kill volume changes): re-record the streams with
+#   godot --headless --fixed-fps 90 --path . --script res://tools/bot_run.gd -- --out=<dir> \
+#     --policy=<completionist|skipper> --pilot=<id> --seeds=<n> --until=2 --table=park --gate=1 --panel-log=1
+# fold each bots.ndjson record's panel_kills (first five fields) and game_seconds into FIXTURE,
+# then move Panels.DROP_BY_WORLD[1] until RUN_BAND and EXPLORER_BAND hold. All three live here.
 # smoke: solo timeout=60s
 
 const FIXTURE := "res://tests/fixtures/panels_w1_kills.json"
