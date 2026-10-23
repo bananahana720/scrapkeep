@@ -39,8 +39,8 @@ static func derive(park: Dictionary, ground: Callable) -> Array:
 	return tops
 
 
-# The landform colliders a perch must stay out of: every built footprint of the park (the ground
-# and anchor fields excepted, and the landmark), as clear_zones() lists them.
+# The landform colliders a perch must stay out of: every built footprint of the park (the ground,
+# anchor fields and park-spanning bands excepted, and the landmark), as clear_zones() lists them.
 static func blockers(park: Dictionary) -> Array:
 	return ParkRecipes.clear_zones(park).filter(func(z: Dictionary) -> bool: return not z.has("a"))
 

@@ -32,7 +32,9 @@ the floor rule (park_stamps.gd wash profile, tools/blender/park/sinkhole_tubes.p
 floor under the old fan plus the wash's rise at that offset.
 
 Reads the original rows from git (the parent of the commit that first ran this pass) when the file has already been
-rewritten, so it is idempotent:
+rewritten, so it is idempotent. Since the pass ran, the ropes' `to` y were raised in the JSON to at least 2.35 m over
+the baked ground (the cable hang's landing clearance, tests/park_cable_ends_test.gd). This pass does not read the ground,
+so rerunning it writes the old, lower ends back and that test fails:
 
   python3 sketches/core-loop/tools/park_sinkhole_pass.py
 """

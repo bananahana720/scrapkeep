@@ -5,7 +5,8 @@ extends SceneTree
 # script again in a child with --planted, where a worker calls the park props mesh read (which instantiates a GLB)
 # and the region maker: each must fail the guard's assert, count a violation and make nothing. The region's color map,
 # made on the worker, must equal the one sanitize_maps would make on the main thread, and the worker's height range the one
-# calc_height_range works out (on park_test's baked maps, holes included), since set_data keeps it as given. The child is its own
+# calc_height_range works out (on park_test's baked maps, holes included), since set_data keeps it as given, and on park_test's
+# tinted ground the worker's color map must equal the setter path's, byte for byte (_tinted_color_maps). The child is its own
 # process because the assert prints a SCRIPT ERROR, which fails any test that prints it.
 
 const T := preload("res://tests/support/t.gd")
@@ -41,6 +42,7 @@ func _main_thread() -> void:
 	# Without a range the setters work it out (set_height_map runs calc_height_range).
 	_t.eq("the setters' region works out the height range of its height map", ParkTerrain._make_region(maps.slice(0, 4)).get_height_range(), Vector2(LOW_M, HIGH_M))
 	_worker_ranges()
+	_tinted_color_maps()
 	# The worker's color map is the one sanitize_maps makes for a region without one, so the main thread's sanitize keeps it.
 	var bare := ParkTerrain._make_region(_maps().slice(0, 3))
 	bare.sanitize_maps()
@@ -89,7 +91,8 @@ func _worker_ranges() -> void:
 	for location in ParkTerrain.REGIONS:
 		var maps: Array = park._build_region(location)
 		var control: PackedInt32Array = maps[2].get_data().to_int32_array()
-		holes += control.count(ParkTerrain.HOLE_BIT)
+		for word in control:
+			holes += 1 if word & ParkTerrain.HOLE_BIT else 0
 		var worked_out: Vector2 = ParkTerrain._make_region(maps.slice(0, 4)).get_height_range()
 		if maps.size() < 5 or maps[4] != worked_out:
 			misses.append("%s: worker %s, calc_height_range %s" % [location, str(maps[4] if maps.size() > 4 else null), worked_out])
@@ -97,6 +100,56 @@ func _worker_ranges() -> void:
 	park.free()
 	_t.check("park_test is baked, with holes in its regions", baked and holes > 0, "%d hole pixels" % holes)
 	_t.check("the worker's height range is calc_height_range's, on every region of park_test", misses.is_empty(), "; ".join(misses))
+
+
+# park_test's tinted ground (surface.bin slots and the pylon-bite slopes, feathered into _tints): each region's color map
+# made on the worker, as _attach_step keeps it after its sanitize, must equal byte for byte the one the setter path makes
+# (the white map with the tints blitted, set_color_map, sanitize_maps). The planted control is the worker's map without
+# the blit, which must differ.
+func _tinted_color_maps() -> void:
+	var park = ParkTerrain.new()
+	park.map_id = PARK
+	park.baked = ParkTerrain.has_bake(PARK)
+	park._load()
+	var tints: Image = park._tints
+	var tinted := 0
+	var misses := []
+	var planted_misses := 0
+	for location in ParkTerrain.REGIONS:
+		var maps: Array = park._build_region(location)
+		var worker := ParkTerrain._make_region(maps)
+		worker.sanitize_maps()
+		var setters := ParkTerrain._make_region(maps.slice(0, 3))
+		setters.set_color_map(_blitted(tints, location))
+		setters.sanitize_maps()
+		var got: Image = worker.get_color_map()
+		var want: Image = setters.get_color_map()
+		if got.get_format() != want.get_format() or got.has_mipmaps() != want.has_mipmaps() or got.get_data() != want.get_data():
+			misses.append("%s: %s, setters %s" % [location, str(got), str(want)])
+		if want.get_data() != ParkTerrain.color_map().get_data():
+			tinted += 1
+		var bare := ParkTerrain._make_region(maps.slice(0, 3) + [ParkTerrain.color_map()] + maps.slice(4))
+		bare.sanitize_maps()
+		if bare.get_color_map().get_data() != want.get_data():
+			planted_misses += 1
+	park.free()
+	_t.check("park_test carries tints in its regions' color maps", tints != null and tinted > 0, "%d tinted regions" % tinted)
+	_t.check("the worker's tinted color map equals the setter path's, byte for byte, on every region of park_test", tints != null
+		and misses.is_empty(), "; ".join(misses))
+	_t.check("planted: a worker map without the blit differs from the setter path's on the tinted regions", planted_misses == tinted
+		and tinted > 0, "%d of %d tinted regions differ" % [planted_misses, tinted])
+
+
+# The setter path's color map for a region: white at the default alpha with the feathered tints blitted, no mipmaps
+# (sanitize_maps makes them), as park_terrain.gd's _build_region made it on the stage before the worker took it.
+static func _blitted(tints: Image, location: Vector2i) -> Image:
+	var size := ParkTerrain.REGION_SIZE
+	var inner := int(ParkTerrain.HALF)
+	var color := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	color.fill(Color(1.0, 1.0, 1.0, float(ParkTerrain.COLOR_ALPHA_BYTE) / 255.0))
+	color.blit_rect(tints, Rect2i(Vector2i.ZERO, tints.get_size()),
+		Vector2i(-inner - ParkTerrain.FEATHER_MARGIN - location.x * size, -inner - ParkTerrain.FEATHER_MARGIN - location.y * size))
+	return color
 
 
 func _child() -> void:
