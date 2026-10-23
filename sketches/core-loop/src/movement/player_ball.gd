@@ -1352,6 +1352,11 @@ func _update_augment_visuals(at: Vector3) -> void:
 
 # The strength the bus carries for a slam that lands at `speed` m/s: 1.0 at 30 m/s, never
 # under 0.4 or over 1.6, scaled by how flat the ground was.
+# The slam's reach: the shared radius plus the build's flat area (Splash Skirt panels).
+func slam_radius() -> float:
+	return Augments.SLAM_RADIUS + tuning.add("area_radius")
+
+
 static func slam_strength(speed: float, flatness := 1.0) -> float:
 	return clampf(speed / 30.0, 0.4, 1.6) * flatness
 
@@ -1367,7 +1372,7 @@ func _on_rigid_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	var strength := slam_strength(speed, flatness)
 	if strength < 0.05:
 		return
-	dunk.store(Dunk.slam_damage(Augments.SLAM_KNOCK * strength, CombatRules.STRIKE_DAMAGE["slam"], heft()),
+	dunk.store(Dunk.slam_damage(Augments.SLAM_KNOCK * strength, CombatRules.STRIKE_DAMAGE["slam"], heft()) * tuning.mod("dunk_store"),
 		kit.smash_flavour, String(class_def.id) if class_def != null else "", class_color())
 
 
@@ -1376,7 +1381,7 @@ func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	events.slammed.emit(at, strength, flatness)
 	if strength >= 0.05:
 		shockwave.emit(at, strength)
-		var hits := _push_enemies(at, Augments.SLAM_RADIUS, Augments.SLAM_KNOCK * strength, SLAM, Contact.heft_knock(heft()))
+		var hits := _push_enemies(at, slam_radius(), Augments.SLAM_KNOCK * strength, SLAM, Contact.heft_knock(heft()))
 		if hits > 0:
 			events.drop_landed.emit(hits)
 		else:
@@ -1404,7 +1409,7 @@ func _smash_rend(at: Vector3, speed: float) -> void:
 		if enemy.has_method("is_dead") and enemy.is_dead():
 			continue
 		var inward: Vector3 = at - enemy.global_position
-		if inward.length() > Augments.SLAM_RADIUS:
+		if inward.length() > slam_radius():
 			continue
 		inward.y = 0.0
 		inward = inward.normalized() if inward.length() > 0.01 else Vector3.FORWARD
@@ -1419,7 +1424,7 @@ func _smash_stamp(at: Vector3, _speed: float) -> void:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.has_method("is_dead") and enemy.is_dead():
 			continue
-		if (enemy.global_position - at).length() <= Augments.SLAM_RADIUS:
+		if (enemy.global_position - at).length() <= slam_radius():
 			count += 1
 	if count > 0 and pressure_grant.is_valid():
 		pressure_grant.call(count)
@@ -1611,7 +1616,7 @@ func _begin_landing(enemy: Node3D) -> bool:
 	if not kit.hooked or kit.line_state != Augments.LINE_SMASH or kit.anchor_body != enemy:
 		return false
 	kit.drop_line("landed")
-	kit.rewind_left = tuning.f("harpoon_rewind")
+	kit.rewind_left = tuning.harpoon_rewind()
 	var paid: Dictionary = chain.pay()
 	_landing_mult = paid["mult"]
 	_publish_chain(paid["events"], enemy, ball_position())

@@ -46,6 +46,8 @@ const ROWS := {
 	"scrap_collected": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "scrap_tick", "hud": "", "objective": "", "priority": 1},
 	"cogs_collected": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "cog_tick", "hud": "", "objective": "", "priority": 1},
 	"part_gained": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "hud": "+ {part}", "objective": "", "priority": 2},
+	# Grey panels (build/panels.gd): worn bone, the common rung's colour; the ratchet tick under the pickup phrase.
+	"panel_gained": {"group": "economy", "color": Palette.SAND, "shape": "square", "sound": "panel_ratchet", "hud": "", "objective": "", "priority": 1},
 	"player_hit": {"group": "combat", "color": Palette.RUST, "shape": "burst", "sound": "hurt", "hud": "", "objective": "", "priority": 2},
 	# The HUD pip and chirps read run.companion, not this signal, so the row stays quiet and listed in GRAMMAR_SIGNALS.
 	"escape_window": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
@@ -415,6 +417,7 @@ const WEIGHT_EXEMPT := {
 	"near_miss": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
 	"pack_arrived": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
 	"part_gained": "Reward and economy ladders own the cue; rewards never stop time.",
+	"panel_gained": "Reward and economy ladders own the cue; rewards never stop time.",
 	"pressure_changed": "Run and stage lifecycle owns music and cleanup, not an impact.",
 	"rescue_completed": "Reward and economy ladders own the cue; rewards never stop time.",
 	"reward_chosen": "Reward and economy ladders own the cue; rewards never stop time.",

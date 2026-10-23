@@ -559,7 +559,7 @@ func _on_landed(impact: float) -> void:
 func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	if strength < 0.05:
 		return
-	glyph("slammed", at + Vector3.UP * 0.15, 1.0, Augments.SLAM_RADIUS, 0.35, player.state.contact_normal)
+	glyph("slammed", at + Vector3.UP * 0.15, 1.0, player.slam_radius() if player.has_method("slam_radius") else Augments.SLAM_RADIUS, 0.35, player.state.contact_normal)
 	play_fx("slammed", at + Vector3.UP * 0.15)
 
 

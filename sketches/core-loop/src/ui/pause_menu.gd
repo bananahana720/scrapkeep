@@ -10,6 +10,7 @@ const Screens := preload("res://src/ui/screens.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
+const BuildRead := preload("res://src/ui/build_read.gd")
 
 # The pause menu and its settings (DESIGN-V2 section 14.1). P, Esc or a pad's Start
 # opens it in play and closes it again. Each row is a ChoiceButton with its key's cap,
@@ -76,6 +77,7 @@ var _tween: Tween
 var _quit_down := false
 var _quit_held := 0.0
 var _quit_ring: Control
+var build_read
 
 
 func _init() -> void:
@@ -141,6 +143,11 @@ func setup(game_ref) -> void:
 	_quit_ring.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_quit_ring.draw.connect(_draw_quit_ring)
 	_rows["quit"].add_child(_quit_ring)
+	# The build read sits left of the column: the ball turning with its panels, and the stat lines.
+	build_read = BuildRead.new()
+	build_read.set_anchors_preset(Control.PRESET_CENTER_LEFT)
+	build_read.position = Vector2(32.0, -200.0)
+	_root.add_child(build_read)
 	_page = SettingsPages.new()
 	_page.visible = false
 	_page.setup(game, "key_esc")
@@ -202,6 +209,7 @@ func open() -> void:
 		game.toggle_pause()
 	game._capture_mouse(false)
 	_sync_levels()
+	_show_build()
 	_show_ceremony()
 	_show_radio()
 	_show_breath()
@@ -273,6 +281,7 @@ func _enter_settings() -> void:
 	_title.text = "SETTINGS"
 	for id in _order:
 		_rows[id].visible = false
+	build_read.visible = false
 	_page.refresh()
 	_page.visible = true
 	_page.focus_first()
@@ -286,6 +295,7 @@ func _leave_settings(focus_settings: bool) -> void:
 	_page.visible = false
 	for id in _order:
 		_rows[id].visible = true
+	build_read.visible = true
 	_show_breath()
 	if focus_settings:
 		_rows["settings"].grab_focus()
@@ -300,6 +310,11 @@ func _toggle_ceremony() -> void:
 		store.set_comfort(ceremony.SETTING, 0.0 if ceremony.short else 1.0)
 	_show_ceremony()
 	_rows["ceremony"].grab_focus()
+
+
+func _show_build() -> void:
+	var build = game.get("build")
+	build_read.refresh(game.run, int(build.panel_overflow) if build != null else 0, game.run.class_id() if game.run != null else "")
 
 
 func _show_breath() -> void:

@@ -25,6 +25,9 @@ signal scrap_collected(amount: int, at: Vector3, total: int)
 # A gear pickup filled the wallet (build.gd): the amount just banked and the wallet after it.
 signal cogs_collected(amount: int, total: int)
 signal part_gained(part_id: String, source: String)
+# A grey panel bolted on (build/panels.gd): its id, how many of it the run now holds, where
+# it was picked up, and whether a reel or dunk kill dropped it (the jackpot chime).
+signal panel_gained(panel_id: String, count: int, at: Vector3, jackpot: bool)
 # An evolution fires (build.gd), announced before its Evolved part is granted.
 signal evolution_fired(part_id: String)
 signal player_hit(amount: float, source: String)
