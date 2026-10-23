@@ -12,9 +12,12 @@ const JoltAudio := preload("res://src/presentation/jolt_layer_audio.gd")
 # being in the air or a harpoon line attached lets the pulse pass. It never holds or slows
 # the ball, and the weapon, the boost, the smash and Q stay open: a jolt costs a cast, not speed.
 # Q can start inside a mat, but a jolt during its wind-up recalls it with a full refund.
+# Flow (design-v3/SPILLWAY-ROSTER.md): a mat laid on standing water spreads WET_SPREAD wider,
+# because the water carries the current; slipping a pulse at speed is its codex trick.
 
 const FIELD := "static_jam"
 const HP := 45.0
+const WET_SPREAD := 1.5
 
 var field = null
 # Pulses that landed on the ball, and pulses it slipped by its own verb, for tests and the lab.
@@ -99,6 +102,8 @@ static func _parts() -> Array:
 func _commit(_to_ball: Vector3) -> Node3D:
 	var at := _ball()
 	field = AreaField.new(FIELD, at, self)
+	if _on_water(at):
+		field.spread = WET_SPREAD
 	return _commit_ring(Threat.Type.INSTANT, at, field.radius(), 4.0)
 
 
@@ -125,7 +130,13 @@ func _live(delta: float) -> bool:
 			_recall_q()
 		"speed", "air", "line":
 			slipped += 1
+			if fleet != null:
+				fleet.discover("mat_slip", _real_ball())
 	return true
+
+
+func _on_water(at: Vector3) -> bool:
+	return terrain != null and terrain.has_method("on_water") and terrain.on_water(at)
 
 
 # Q's wind-up is its cast: a jolt that lands during it recalls Q with a full refund (Andrew's

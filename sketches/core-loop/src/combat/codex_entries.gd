@@ -95,6 +95,25 @@ const ENTRIES := [
 		"clue": "a pit jaw's open ring + a slam from above",
 		"text": "A jaw in the floor that bites a ball rolling over it; carve round it on the wall, or slam it shut from above.",
 	},
+	# The Spillway roster (design-v3/SPILLWAY-ROSTER.md): each Flow kind's speed answer.
+	{
+		"id": "mat_slip", "name": "Slip the Mat",
+		"hint": "A live mat only bites a ball that dawdles.",
+		"clue": "a jolt layer's live mat + speed, the air or a line as it pulses",
+		"text": "A jolt layer's pulse misses a fast ball, a ball in the air and a ball on a line. On standing water the mat spreads half as wide again.",
+	},
+	{
+		"id": "flap_ride", "name": "Ride the Flap",
+		"hint": "A sluice flap tips over what is slow. What is fast, it launches.",
+		"clue": "a ramp flipper's tilting flap + top speed, or a jump on the tilt",
+		"text": "Reach a sluice flap fast, or jump as it tilts, and it throws you up and forward along your own line instead of off it.",
+	},
+	{
+		"id": "hook_out", "name": "Hook Out",
+		"hint": "A tether holds you to one post. Any other post will do.",
+		"clue": "a hooker's tether + a harpoon bite on a post or a wall",
+		"text": "Bite another post while a hooker holds you and its line snaps, kicking you along your own.",
+	},
 	{
 		"id": "line_cut", "name": "Under the Cutter",
 		"hint": "A spinning blade leaves room beneath its arc.",
@@ -255,6 +274,12 @@ const ENTRIES := [
 		"clue": "any hit on a plated crew",
 		"text": "Plated crews take 60% from rams, smashes and weapon fire (DENT) and 150% from arc and your abilities (ZZAP!).",
 	},
+	{
+		"id": "armour_wet", "name": "Soaked",
+		"hint": "The Spillway crews work in the water. Water carries a spark.",
+		"clue": "an arc hit on a Spillway crew",
+		"text": "Spillway crews come out of the channel soaked: arc hits them for 150% (ZZAP!). Everything else lands as normal.",
+	},
 	# --- P-C Sable entries ---
 	{"id": "bank_shot", "name": "Bank Shot", "hint": "The line can turn you as well as pull you.", "clue": "a standing line + slot 3", "text": "Pick 3 and click while a line stands: whip round the anchor and leave toward your aim, faster than you came."},
 	{"id": "cable_run", "name": "Cable Run", "hint": "Everything she drives into the air is somewhere to hook.", "clue": "a full ring + Q", "text": "Q rides a cable and drives a stake on every beat. The stakes hold a line for six seconds after landing."},
@@ -345,6 +370,9 @@ const DETECTORS := {
 	"crush_chain": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"parting_shot": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"tether_snap": {"kind": "hooker", "script": "res://src/combat/hooker.gd"},
+	"hook_out": {"kind": "hooker", "script": "res://src/combat/hooker.gd"},
+	"mat_slip": {"kind": "jolt_layer", "script": "res://src/combat/jolt_layer.gd"},
+	"flap_ride": {"kind": "ramp_flipper", "script": "res://src/combat/ramp_flipper.gd"},
 	"shield_vault": {"kind": "deflector", "script": "res://src/combat/deflector.gd"},
 	"awaiting_operator": {"kind": "swarm_remnant", "script": "res://src/combat/fleet.gd"},
 	"plate_drop": {"kind": "crew_fitter", "script": "res://src/boss/waking.gd"},
@@ -379,6 +407,7 @@ const DETECTORS := {
 	"set_piece_cash_in": {"kind": "", "script": "res://src/combat/ultimate.gd"},
 	"set_piece_breakout": {"kind": "", "script": "res://src/combat/ultimate.gd"},
 	"armour_plated": {"kind": "drill_crew", "script": "res://src/combat/combat.gd"},
+	"armour_wet": {"kind": "chaser", "script": "res://src/combat/combat.gd"},
 	# --- P-C Cannon detectors ---
 	"cannon_lane_charge": {"kind": "", "script": "res://src/combat/combat.gd"},
 	"cannon_fire_mission": {"kind": "", "script": "res://src/combat/ultimate.gd"},

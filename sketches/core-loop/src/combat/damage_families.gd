@@ -10,8 +10,9 @@ extends RefCounted
 # plating; the armour stage and its 20% chip are unchanged.
 #
 # Where armour lives is deliberate, not uniform. The Spillway's Flow conducts through water
-# (elements.gd arc:water), not armour; the Dig's Plate is this table; the Highdraft's Wind is
-# knock-offs, not armour. An enemy may name its own class with armour_class() (an elite affix).
+# (elements.gd arc:water) and through its own wet crews (the "wet" row: weak to arc, resists
+# nothing); the Dig's Plate is this table; the Highdraft's Wind is knock-offs, not armour. An
+# enemy may name its own class with armour_class() (an elite affix).
 
 const RESISTED := 0.6
 const WEAK := 1.5
@@ -29,11 +30,14 @@ const FAMILY_OF := {"arc": ARC, "electrify": ARC, "frost": FROST}
 # resist and weak list families; "ability" in weak means the special source.
 const ARMOUR := {
 	"plated": {"resist": [KINETIC], "weak": [ARC, "ability"], "word_resisted": "DENT", "word_weak": "ZZAP!"},
+	"wet": {"resist": [], "weak": [ARC], "word_resisted": "DENT", "word_weak": "ZZAP!"},
 }
 
-# The first plated kinds: the Dig's drill crew breaches with a plated bit. Elites and later
-# kinds name theirs through armour_class().
-const ARMOUR_OF := {"drill_crew": "plated"}
+# The first plated kinds: the Dig's drill crew breaches with a plated bit. The Spillway's own
+# crews work in the spillway and come out soaked (design-v3/SPILLWAY-ROSTER.md); the jolt layer
+# stands on rubber boots, so its own mat never jolts it. Elites and later kinds name theirs
+# through armour_class().
+const ARMOUR_OF := {"drill_crew": "plated", "chaser": "wet", "hooker": "wet", "ramp_flipper": "wet"}
 
 
 static func family(kind: String) -> String:

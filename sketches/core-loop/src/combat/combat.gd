@@ -727,6 +727,8 @@ func _read_armour(enemy: Node3D, hit: Dictionary, result: Dictionary) -> void:
 	match armour:
 		"plated":
 			_discover("armour_plated", enemy.global_position)
+		"wet":
+			_discover("armour_wet", enemy.global_position)
 
 
 func _door_crit(hit: Dictionary) -> void:
