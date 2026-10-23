@@ -1505,7 +1505,7 @@ func _activity_goal(delta: float) -> bool:
 		return false
 	var activities = world.activities
 	var ball: Vector3 = game.player.ball_position()
-	var s = activities.site(_activity) if _activity != "" else null
+	var s = _site_by_key(activities, _activity) if _activity != "" else null
 	if s != null and not _activity_open(s):
 		s = null
 	if s == null:
@@ -1519,12 +1519,16 @@ func _activity_goal(delta: float) -> bool:
 			# on the reach its shelf pulled the explorer off the cache into a wall it cannot pass.
 			if _site_has_authored_pack(c):
 				level -= CAMP_LAST
+			# A field find (secrets.gd FINDS) is the last stop: the explorer has learned the tells and
+			# checks the dead ends once the lit sites are done.
+			if c.has_meta("find"):
+				level -= CAMP_LAST * 2.0
 			var d := _flat(ball, c.global_position)
 			if level > best_level or (level == best_level and d < best):
 				best_level = level
 				best = d
 				s = c
-		_activity = s.id if s != null else ""
+		_activity = _site_key(s) if s != null else ""
 		_cache_phase = "runup"
 		_cache_clock = 0.0
 	if s == null:
@@ -1543,9 +1547,10 @@ func _activity_goal(delta: float) -> bool:
 	if not s.id in entered:
 		entered.append(s.id)
 		_note["activities_entered"] = entered
-	_activity_time[s.id] = float(_activity_time.get(s.id, 0.0)) + delta
-	if float(_activity_time[s.id]) > ACTIVITY_SECONDS:
-		_activity_skip[s.id] = true
+	var key := _site_key(s)
+	_activity_time[key] = float(_activity_time.get(key, 0.0)) + delta
+	if float(_activity_time[key]) > ACTIVITY_SECONDS:
+		_activity_skip[key] = true
 		_activity = ""
 		return false
 	if s.done:
@@ -1803,9 +1808,22 @@ func _activity_rushed() -> bool:
 	return game.run.stage_time > ENGAGE_BY
 
 
+# A site's key for the bot's timers and skips: its id, or "find:<id>" for a field find, so the stage's
+# finds and its ordinary cracked cache are worked one by one.
+func _site_key(s) -> String:
+	return "find:%s" % s.get_meta("find") if s.has_meta("find") else String(s.id)
+
+
+func _site_by_key(activities, key: String):
+	for c in activities.sites:
+		if is_instance_valid(c) and _site_key(c) == key:
+			return c
+	return null
+
+
 # A site the bot may still work: not given up, and either unfinished or with its pay on the ground.
 func _activity_open(s) -> bool:
-	if _activity_skip.has(s.id):
+	if _activity_skip.has(_site_key(s)):
 		return false
 	return not s.done or (s.pickup != null and not s.pickup_taken)
 
