@@ -62,6 +62,8 @@ func _pure() -> void:
 	_t.eq("nothing without packs", PhaseMusic.final_plan("brindle", func(_id): return false), {"track": "", "hype": false})
 	_t.eq("the waking's anthem takes its final phase", PhaseMusic.final_plan("waking", func(_id): return true), {"track": "anthem-waking-heavier", "hype": true})
 	_t.eq("the waking's anthem without its heavier take", PhaseMusic.final_plan("waking", func(id): return id == "anthem-waking"), {"track": "anthem-waking", "hype": true})
+	_t.eq("a missing heavier take falls back to phase 2, not phase 1", PhaseMusic.final_plan("brindle", func(id): return id in ["anthem-brindle", "anthem-brindle-heavy", "euro-brindle-p3"]), {"track": "anthem-brindle-heavy", "hype": true})
+	_t.eq("with no phase 2 or 3 take the euro beats phase 1", PhaseMusic.final_plan("mind", func(id): return id in ["anthem-mind", "euro-mind-final"]), {"track": "euro-mind-final", "hype": true})
 	_t.eq("the champion's anthem first", PhaseMusic.champion_final(func(_id): return true), "anthem-champion")
 	_t.eq("the champion's euro without its anthem", PhaseMusic.champion_final(func(id): return id == "euro-champion"), "euro-champion")
 	_t.eq("no champion final without packs", PhaseMusic.champion_final(func(_id): return false), "")

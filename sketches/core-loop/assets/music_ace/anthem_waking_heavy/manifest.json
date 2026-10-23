@@ -19,27 +19,27 @@
  "silent_db": -80.0,
  "sources": {
   "main": {
-   "take": "anthem-waking-p2-s4503.wav",
-   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/anthem-waking-p2-s4503.wav",
-   "stretched": "/home/andrew/scratch/w18/anthem-pack4/stretched/anthem_waking_heavy.wav",
-   "bpm_before": 156.25,
-   "bpm_after": 155.21,
+   "take": "anthem-waking-p2-s4502.wav",
+   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/anthem-waking-p2-s4502.wav",
+   "stretched": "/home/andrew/scratch/w18/anthem-pack6/stretched/anthem_waking_heavy.wav",
+   "bpm_before": 150.0,
+   "bpm_after": 155.0,
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w18/anthem-pack4/stems/htdemucs/anthem_waking_heavy/drums.wav",
-     "sha256": "52627ab582ff675c923a91b8f80119f6371e28275cb548308fc192f4d8091b97"
+     "path": "/home/andrew/scratch/w18/anthem-pack6/stems/htdemucs/anthem_waking_heavy/drums.wav",
+     "sha256": "4a7b88b1e1cba54bb1b8daebd972f6a64d5eeccc0f29dbc6e71d2b85871543cb"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w18/anthem-pack4/stems/htdemucs/anthem_waking_heavy/bass.wav",
-     "sha256": "870112ad2f585f9ec4c5cea7af3415a7a56489b37550d8861194c159dd79f703"
+     "path": "/home/andrew/scratch/w18/anthem-pack6/stems/htdemucs/anthem_waking_heavy/bass.wav",
+     "sha256": "5708dd3c45e3aac8c24c73940c568dbfdbabdec27302b2820bf624d66fc83c63"
     },
     "other": {
-     "path": "/home/andrew/scratch/w18/anthem-pack4/stems/htdemucs/anthem_waking_heavy/other.wav",
-     "sha256": "34d1ab3b601159b34a386c95d4abbe308679ba547ad793afac3584c3bb700f51"
+     "path": "/home/andrew/scratch/w18/anthem-pack6/stems/htdemucs/anthem_waking_heavy/other.wav",
+     "sha256": "033e4b71c32ff4a28e6b10cc0899945eab348f54fa91d4dc8886a29d8a21a0de"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w18/anthem-pack4/stems/htdemucs/anthem_waking_heavy/vocals.wav",
-     "sha256": "a351a273f4540a4800000353c1af072cc5d9413c1b898411bbea3a6502c4dcdf"
+     "path": "/home/andrew/scratch/w18/anthem-pack6/stems/htdemucs/anthem_waking_heavy/vocals.wav",
+     "sha256": "b87b217432a01e27d36d7cec0fd22a83d0aac9cceb54d789e0cb2c9ed9ee11d0"
     }
    },
    "note": "htdemucs; vocals summed into other"
@@ -49,8 +49,8 @@
   "main": {
    "parent": "single",
    "take": "anthem-waking-heavy",
-   "source_start": 279536,
-   "take_start": 279536,
+   "source_start": 284656,
+   "take_start": 284656,
    "bpm": 155,
    "beat": 17071,
    "bar": 68284,
@@ -183,10 +183,10 @@
  "cuts": "measured-beat-phase",
  "whole": false,
  "timing_verified": false,
- "gain_db": 1.6,
+ "gain_db": 2.0,
  "measured": {
   "lufs": -16.0,
-  "true_peak": -1.6,
+  "true_peak": -1.2,
   "note": "summed stems before Ogg encode"
  }
 }

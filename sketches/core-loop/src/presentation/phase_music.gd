@@ -83,14 +83,16 @@ static func entry_track(boss: String, avail: Callable) -> String:
 # What the last phase plays: {"track", "hype"}. The Eurodance track after a hype drop when its
 # pack loads, else the base final track with no drop (the drop promises the euro), else nothing.
 static func final_plan(boss: String, avail: Callable) -> Dictionary:
+	# The fight never slows at its peak: heavier, else heavy, else the euro, and phase 1's
+	# anthem only when nothing faster is on disk.
 	var phases: Array = ANTHEM_PHASES.get(boss, [])
+	var order: Array = [] if phases.is_empty() else [phases[2], phases[1]]
+	order.append(String(EURO.get(boss, "")))
 	if not phases.is_empty():
-		for anthem in [phases[2], phases[0]]:
-			if avail.call(anthem):
-				return {"track": anthem, "hype": true}
-	var euro := String(EURO.get(boss, ""))
-	if euro != "" and avail.call(euro):
-		return {"track": euro, "hype": true}
+		order.append(phases[0])
+	for track in order:
+		if track != "" and avail.call(track):
+			return {"track": track, "hype": true}
 	var base := String(FINAL.get(boss, ""))
 	if base != "" and avail.call(base):
 		return {"track": base, "hype": false}
