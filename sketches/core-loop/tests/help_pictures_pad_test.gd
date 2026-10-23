@@ -16,7 +16,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	var help = game.screens._help
-	help.page_button.grab_focus()
+	_t.check("opening Help focuses its page button, so a pad lands on it", help.page_button.has_focus())
 	Push.pad(root, JOY_BUTTON_A)
 	await process_frame
 	_t.check("gamepad A opens Pictures", help._mechanics.visible and not help.diagram.visible)
@@ -36,6 +36,7 @@ func _run() -> void:
 	Push.pad(root, JOY_BUTTON_A)
 	await process_frame
 	_t.check("gamepad A activates Back", not game.screens.help_open())
+	_t.check("closing Help gives the pad back the Help button", game.screens.button_for("help").has_focus())
 	game.screens.toggle_help()
 	Push.pad(root, JOY_BUTTON_B)
 	_t.check("gamepad B still closes Help", not game.screens.help_open())

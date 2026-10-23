@@ -486,8 +486,12 @@ func toggle_help() -> void:
 	_actions.visible = not _help.visible
 	if _help.visible:
 		_show("HOW TO PLAY", Palette.AMBER, "")
+		_help.page_button.grab_focus()
 	else:
 		_show(_title_name(), Palette.AMBER, FieldNotes.OBJECTIVE)
+		var help_button = button_for("help")
+		if help_button != null:
+			help_button.grab_focus()
 	_fade(true)
 
 

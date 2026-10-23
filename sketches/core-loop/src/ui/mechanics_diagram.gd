@@ -11,9 +11,9 @@ const CAPTIONS := {
 	"breach": "Breach · Slam the Dig's cracked plates.",
 	"lift": "Lift · Glide through Highdraft thermals.",
 	"companion": "SPIL-9 · Next ram calls it in.",
-	"grip": "Grip · At top speed, walls count as ground.",
-	"cast": "Actives · F winds up, then fires.",
-	"jam": "Jam field · A pulse cancels the wind-up.",
+	"grip": "Grip · Roll fast along walls to ride them.",
+	"cast": "Actives · Big ones wind up before firing.",
+	"jam": "Jam field · A pulse recalls Q's wind-up.",
 	"stake": "Relay stake · Hold E to raise the bet.",
 	"radio": "Radio · Change the pilot's station.",
 	"halo": "SPIL-9 · Full halo: your next ram calls it.",
@@ -22,6 +22,8 @@ const CAPTIONS := {
 const PAGES := [["breach", "lift", "companion"], ["grip", "cast", "jam"], ["stake", "radio", "halo"]]
 const RADIO_ACTIONS := ["cl_radio_prev", "cl_radio_next", "cl_radio_skip", "cl_radio_pin"]
 const PICTURE_SIZE := Vector2(410.0, 158.0)
+# The torch's 0.3 s and the battery and quake's 0.5 s (active_defs.gd); the rest fire at once.
+const CAST_TIMES := "0.3-0.5 s"
 
 var mechanic := ""
 
@@ -68,11 +70,9 @@ func drawn_words() -> PackedStringArray:
 			return words
 		"companion":
 			return PackedStringArray(["2 sockets", "Primer", "Ram", "Escape"])
-		"grip":
-			return PackedStringArray(["top speed"])
 		"cast":
 			var words := Keycap.words(Bindings.glyph("active"))
-			words.append("wind-up")
+			words.append(CAST_TIMES)
 			return words
 		"jam":
 			return PackedStringArray(["refund"])
@@ -159,26 +159,29 @@ func _companion() -> void:
 
 
 func _grip() -> void:
-	# Floor into a wall: the fast ball keeps rolling up the face instead of bouncing off it.
+	# A fast ball curves off the floor and runs up along the wall's face, speed lines trailing
+	# parallel to it; a head-on hit would still bounce, so the path meets the wall tangent.
 	_plate(Rect2(22, 124, 300, 14), Palette.VERDIGRIS)
-	_plate(Rect2(322, 18, 30, 120), Palette.SANDSTONE.darkened(0.3))
+	_plate(Rect2(322, 14, 30, 124), Palette.SANDSTONE.darkened(0.3))
 	_ball(Vector2(110, 106), 17.0)
 	for i in 3:
 		draw_line(Vector2(48 - i * 6, 96 + i * 9), Vector2(80 - i * 6, 96 + i * 9), Color(Palette.SAND, 0.7), 2.0, true)
 	draw_arc(Vector2(264, 66), 46, PI * 0.5, PI * 0.02, 18, Palette.ARC, 3.0, true)
-	_arrow(Vector2(310, 72), Vector2(310, 40), Palette.ARC)
-	_ball(Vector2(304, 30), 12.0)
-	_words("top speed", Vector2(36, 40), 16, Palette.SAND)
+	_ball(Vector2(308, 40), 13.0)
+	for i in 3:
+		draw_line(Vector2(296 + i * 6, 58 + i * 4), Vector2(296 + i * 6, 84 + i * 4), Color(Palette.SAND, 0.7), 2.0, true)
+	_arrow(Vector2(308, 24), Vector2(308, 10), Palette.ARC)
 
 
 func _cast() -> void:
-	# Press F, a ring fills round the ball (the wind-up), then the shot leaves.
+	# Press F, a ring fills round the ball (a big active's wind-up, timed underneath), then the
+	# shot leaves.
 	Keycap.draw(self, Vector2(52, 79), Bindings.glyph("active"), Palette.SAND, 26.0)
 	_arrow(Vector2(78, 79), Vector2(118, 79), Palette.SAND)
 	_ball(Vector2(172, 79), 20.0)
 	draw_arc(Vector2(172, 79), 31, -PI * 0.5, PI * 0.9, 24, Palette.ARC, 4.0, true)
 	draw_arc(Vector2(172, 79), 31, PI * 0.9, PI * 1.5, 12, Color(Palette.SAND, 0.3), 4.0, true)
-	_words("wind-up", Vector2(140, 136), 16, Palette.SAND)
+	_words(CAST_TIMES, Vector2(136, 136), 16, Palette.SAND)
 	_arrow(Vector2(212, 79), Vector2(320, 79), Palette.COPPER)
 	for i in 6:
 		var angle := TAU * i / 6.0
@@ -186,7 +189,8 @@ func _cast() -> void:
 
 
 func _jam() -> void:
-	# Inside the pulsing field a half-filled wind-up is struck through; the charge comes back.
+	# Inside the pulsing field Q's half-filled wind-up is struck through; its charge comes back
+	# (jolt_layer.gd _recall_q).
 	draw_circle(Vector2(150, 79), 64, Color(Palette.ARC, 0.12))
 	draw_arc(Vector2(150, 79), 64, 0.0, TAU, 40, Color(Palette.ARC, 0.7), 2.0, true)
 	draw_arc(Vector2(150, 79), 48, 0.0, TAU, 32, Color(Palette.ARC, 0.4), 2.0, true)
