@@ -66,15 +66,15 @@ func _build_crew() -> void:
 	_crew = _add_capsule(HULL_RADIUS, HULL_RADIUS * 2.0, Palette.RUST)
 
 
-# BODY's glb (origin on the ground under the hull) dropped to the collider's floor and turned bow first. The floats
-# and the buoy hang off a boom node that pivots at the hull centre, so the swing is one rotation.
+# BODY's glb (origin on the ground under the hull) dropped to the collider's floor. Its bow is
+# -Z, so _facing turns -Z to the ball and the body keeps the glb's frame (enemy_clips.gd maps
+# bones to parts by position only). The floats and the buoy hang off a boom node that pivots
+# at the hull centre, so the swing is one rotation.
 func _build_tool() -> void:
 	var parts := _parts()
 	var dress := Node3D.new()
 	dress.name = "BoomTenderBody"
 	dress.position = Vector3(0.0, -half_height, 0.0)
-	# The glb's bow is -Z; _facing turns +Z toward the ball.
-	dress.rotation.y = PI
 	_visual_parent().add_child(dress)
 	_boom = Node3D.new()
 	_boom.name = "Boom"
@@ -203,6 +203,12 @@ func _bowl_through(ball: Vector3) -> void:
 		strikes += 1
 		if fleet != null:
 			fleet.discover("boom_strike", ball)
+
+
+# The bow (-Z) toward the ball, where the other kinds turn +Z.
+func _facing(to_ball: Vector3) -> void:
+	if to_ball.length() > 0.5:
+		rotation.y = atan2(-to_ball.x, -to_ball.z)
 
 
 # Where float i lies along the committed lane, on the ground.
