@@ -1,50 +1,30 @@
-# Wave state (18 Oct 2026, 20:55Z, local coordinator; promotion note 21 Oct)
+# Wave state: heads, holds and base reds (23 Oct 2026, project coordinator)
 
-**21 Oct.** Wave 17 was promoted. `main` is 16df22d0, the merge of #116 at stage head f405e612, and `stage/alpha-w18` was cut from it. The heads, drops and carry-over are in [BASELINE-2026-10-20.md](../coord/BASELINE-2026-10-20.md). The sections below are the 18 Oct snapshot.
+Heads and open PRs change by the hour, so read them live (`git ls-remote origin`, the GitHub MCP tools for open PRs; cloud threads avoid `gh api`). The live board is [GRAPH.md](../coord/GRAPH.md) plus issue #241. This file keeps what a head listing cannot show. Updated 2026-10-23 19:50Z by the library sweep thread.
 
-**21 Oct, 21:15Z. Wave 18 is open.** #239 merged, so `main` = `stage/alpha-w18` = 9cd6805e. The coordinator is back on the PC. Board: issue #241 (#149 is closed). Every PR on w17 now targets w18. Six PRs conflict with w18: #137, #191, #208, #209, #225 and #237. GPU queue rows 18 to 22 are stale and were re-requested as rows 23 to 27. Live units are in GRAPH.md "Wave 18".
+**Priority (Andrew, 19:31Z).** World 1 first: a 100% finished world 1 and early progression, played at a world 1 sitting (10-15 min average run, about 30 min completionist; timing card open, recommended end of wave 19). Worlds 2 and 3 finish running work only.
 
-Coordination moved to a local Claude Code session on Andrew's PC on 18 Oct (DECISIONS.md section 2). The live board is [project-guide/coord/GRAPH.md](../coord/GRAPH.md); this file keeps the heads and base reds behind it. The 05:55Z version is in git history. Re-check every SHA with `git ls-remote origin` before relying on it.
+**Wave 18.** Promoted 23 Oct 22:10Z: `main` = a08d7463 (#415: stage a14c658a, which is acb55972 plus #401's stage 6 quit-crash fix). The promotion receipt on #415 lists three reds new this wave and owed to a fix lane: `ui_build_readout`, `ending_sequence` and `bot_repeat`. `stage/alpha-w18` now carries B21 (eight PRs plus #383), B22, #393, B24 and main's docs; the queue is in /mnt/project-files/gate/w18-stack-queue.md. The known swarm hive band (owed by the hive tuning PR) and `bot_skill_bar` (cloud time cap) stay known reds. The cautious persona found 0 blockers. The 4080 release dry run on stage + #367 + #390 (15d7ac9b) is PASS+NOTES: export exit 0, 3 Vulkan boss smokes, 4 win proofs, AppImage 903 MiB.
 
-## Where the waves stand
-
-- **main is `639c5cb4`**: wave 16 plus #132, #134, #135, #136, #138, #141 (handoff pack, cloud setup, autocompact settings).
-- **Wave 17 stacks on `stage/alpha-w17` at `102324cd`** (draft PR #116 into main), 304 commits ahead of main; main has 7 commits the stage lacks.
-- Andrew plays once, at the end of wave 21.
-
-## Open PRs (triaged 18 Oct from `gh pr list`, merge-base and gate comments)
-
-| Class | PRs | Next step |
-| --- | --- | --- |
-| In the stage already | #12, 61, 69, 93, 95, 100, 101, 103, 107, 108, 109, 111, 112, 113, 114, 115, 117, 119, 120, 121, 122, 123, 128, 130, 131, 133 | close with the promotion of #116; #95 carries an open pilot-stall note on mesa_shelf_edge and kickers |
-| Ready to stack (PASS on head) | #125 `3b9bb44a`, #127 `07b24fcc`, #129 `1389e7e5`, #139 `695bc6f3`, #140 `69512b34` | stack |
-| Re-gate (head moved past PASS) | #105 `747750cf`, #106 `faf2b345` (WIP --self-play commit past PASS on ceae93d0), #126 `677fd826`, #142, #144 | Gate lane |
-| Needs fix | #104 `cccac816` (HOLD: grown swarm 45.01 s, ratio 1.92x; Mind small 89.2 s vs pin 101.5) | Perf lane |
-| Needs GPU | #73 `083d83ca` (no receipt; stage carries its reverts de36cf11, 18811586, 8b16c4c1, 272d2eab); #137 stacks on #73 and stays parked ("Instant, 0.11 s later") | Perf lane, then GPU bench |
-| Work in progress | #143 / #124 (same head `da92b6d9`), #145, #146, #147 | owning lanes |
-| Config | #92 allow three read-only commands | Gate lane |
-| Superseded | #84 (in main); #66, #25, #52 (inside #139) | close |
+- **Post-promotion queue, in order:** #390 (export include fix, first), #380, #252, #379, #373, #375, #362, #341, #329, #334, #377, #385, #388, sinkhole flash flood, #376, #272, #228, #384, #386 (after #372). The PR that adds the boss weak-point tests must commit their five `.uid` files before it stacks.
+- **Held:** #351 (stalls the seed 6 skipper at stage 4; bare acb55972 wins; thread "Stage 4 stall on seed 6") and #374 (needs #351 fixed or another seed).
+- **Merges:** each batch needs Andrew's typed line naming the thread, the action and each PR number (LESSONS 47).
+- **New today:** draft PRs #391 (fight phases framework and Brindle, register section 7 row) and #392 (item ladder, register section 6 row).
+- **GPUs:** both run throughput work; 4080 timing only when it would otherwise idle (pause file on the PC). The timing chain: crown, islands, Reactor, Swarm, then the C16 rows, then #386 rows.
 
 ## Base reds
 
-These fail on the base too. The machine's fixes are on `scratch/base-red-w16` (`effbf2fc`).
+A fail needs a solo rerun before it counts, and a "base" red must also be red on the bare head or on main (LESSONS 51-52).
 
 - `alpha_posture_bands_w23`: time limit.
 - `bot_brindle_short`: passes on 2e247fc8 at heft 1.30, exactly at the 1.30 limit (20 Oct). #231 tips it to 1.36.
 - `park_reactor_fight`: 61.2 s against 53.7 s; one-seed chaotic, flaps solo, needs a repeat.
 - `bot_six_demolitions_caster`: Kest flake, 5 in 8.
-- Swarm `runner_gunner` "stall": cloud out-of-memory kills, not a game bug; rerun alone.
-- Swarm grown and 2x misses (base grown 51.71 s); #104 is gated on no regression against `f9f58944`.
-- Cloud-only false fails: `item_fuzz_smoke`, `park_swap`, `tree_play`, `alpha_bot_sweep`, `persistence_truncation`, `juice_budget` peak shake, `line_sound` HLs-3. `scatter_rows` hash mismatch is unresolved.
+- `posture_bands_swarm` (expected red until the hive tuning PR lands; Andrew ruled grown builds hit harder, 23 Oct 16:02Z): on w18 `e564e2c3`, 24 seeds a side, small 75.69 s, grown 40.67 s, 1.86x against the 2x floor; the ordinary first stagger is 50 s against the 60 to 85 s ruling. Tuning trials in `/mnt/project-files/gate/c10-swarm/README.md`. The camper leg is now `posture_bands_swarm_camper_test`. The old out-of-memory kills are gone with the parallel cap. #104 is still gated on no swarm regression against `f9f58944`.
+- Cloud-only false fails: `item_fuzz_smoke`, `park_swap`, `tree_play`, `persistence_truncation`, `juice_budget` peak shake, `line_sound` HLs-3. `scatter_rows` hash mismatch is unresolved. `alpha_bot_sweep` and `bot_run_end` pass in the bots tier since `ba10b7c7`.
+- `bot_skill_bar`: the cloud time cap.
+- Stage 6 teardown SIGABRT: red on the stage base too; checked against main.
 
-## Staging still owes
+## Promote-fast flow
 
-The run_tier re-record, the rebuild of 3 Warden GLBs (mantle_brood, mantle_choir, kit_mind) and the reactor-band drift.
-
-## The promote-fast flow (PR #106, ORCHESTRATOR)
-
-1. A PR passes the fast lane (`npm run sketch:fast -- --base <stage>`) plus an independent reviewer, then stacks on `stage/alpha-w<N>`.
-2. Each stage head gets the full gate and one rotating red team persona (`node scripts/redteam/run.mjs --persona=<id>`).
-3. With no new red or blocker, the coordinator merges the stage PR into main under the standing authority restated 18 Oct.
-4. The PC GPU bench checks each promoted head. A GPU red is a next-wave fix unless it crashes.
-5. A five-persona red team sweep runs at wave close. Open PRs roll into the next wave instead of blocking.
+The flow and its gates are in [ORCHESTRATOR.md](../../ORCHESTRATOR.md); the per-PR test pace is in [DECISIONS.md](DECISIONS.md) section 10.

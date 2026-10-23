@@ -1,10 +1,12 @@
-# Roadmap to the exported alpha
+# Roadmap to the exported alpha: historical milestone definitions
 
-Updated 3 October 2026 from the approved refinement of [ALPHA-PLAN](ALPHA-PLAN.md), the [owner interview](OWNER-INTERVIEW-2026-10-02.md), [LEGIBILITY](LEGIBILITY.md) and playtest entry 11. This is the current completion roadmap. The former world-one limit and alternative-loop queue below are preserved as historical direction, not assignments.
+> **Historical (3 Oct).** The live roadmap is [project-guide/coord/ROADMAP.md](../../../project-guide/coord/ROADMAP.md); rulings are in [project-guide/handoff/DECISIONS.md](../../../project-guide/handoff/DECISIONS.md).
+
+Written 3 October 2026 from the approved refinement of [ALPHA-PLAN](ALPHA-PLAN.md), the [owner interview](OWNER-INTERVIEW-2026-10-02.md), [LEGIBILITY](LEGIBILITY.md) and playtest entry 11. The former world-one limit and alternative-loop queue below are preserved as historical direction, not assignments.
 
 ## Definition of done
 
-One exported Linux alpha with Spillway Works, Dig and Highdraft in that fixed order; two zones and a world boss each; six Wardens, Brindle, Waking and Mind. Mind ends the run. Six full pilots, one assembled combat companion, a between-run camp, and a 30-to-45-minute victorious run. One death retry per world; free unfinished-zone quit/crash replay from the saved entrance. No permanent combat-stat boosts.
+One exported Linux alpha with Spillway Works, Dig and Highdraft in that fixed order; two zones and a world boss each; six Wardens, Brindle, Waking and Mind. Mind ends the run. Six full pilots, one assembled combat companion, a between-run camp, and a 30-to-45-minute victorious run. No free retry (22 Oct ruling): a death restarts at world 1, and a rare earned item can save one death (details to come, DECISIONS 22 Oct). Free unfinished-zone quit/crash replay from the saved entrance. No permanent combat-stat boosts.
 
 | Checkpoint | Delivery | Acceptance |
 | --- | --- | --- |

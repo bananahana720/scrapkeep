@@ -401,7 +401,11 @@ func _free_stage(i: int) -> void:
 	# in the frames before queue_free lands; the stage that takes the node may already own it.
 	if _grounds[i] != null:
 		_grounds[i].set_process(false)
-	_roots[i].queue_free()
+	# A bot run frees it whole, as before: removals at a load-dependent frame would move the shared physics world.
+	if _worker_builds():
+		Reaper.take(_roots[i])
+	else:
+		_roots[i].queue_free()
 	_roots[i] = null
 	_grounds[i] = null
 	_cave_roofs.erase(i)
@@ -430,6 +434,45 @@ func park_all() -> void:
 static func _park(root: Node3D, parked: bool) -> void:
 	root.visible = not parked
 	root.position = Vector3.DOWN * PARK_DEPTH if parked else Vector3.ZERO
+
+
+# A freed stage's nodes leave a few a frame, parked and hidden meanwhile: one queue_free of a whole park stage (2917
+# shapes) cost 33-50 ms in the swap frame headless (park_swap_test, artifacts/local/c9). Deepest first, a physics
+# body whole (its shapes leave the space in one go), the root last. Nothing under it processes meanwhile.
+class Reaper extends Node:
+	const BUDGET_USEC := 3000
+
+	static func take(root: Node3D) -> void:
+		# A stage built again (a new run's stage 1) takes the name back while this one empties.
+		root.name = "Freed%s" % root.name
+		root.visible = false
+		root.position = Vector3.DOWN * PARK_DEPTH
+		root.propagate_call("set_process", [false])
+		root.propagate_call("set_physics_process", [false])
+		var reaper := Reaper.new()
+		reaper.name = "Reaper"
+		reaper.process_mode = Node.PROCESS_MODE_ALWAYS
+		root.add_child(reaper)
+		root.move_child(reaper, 0)
+
+	func _process(_delta: float) -> void:
+		var root := get_parent()
+		var deadline := Time.get_ticks_usec() + BUDGET_USEC
+		while Time.get_ticks_usec() < deadline:
+			if root.get_child_count() <= 1:
+				set_process(false)
+				root.queue_free()
+				return
+			var node: Node = root.get_child(root.get_child_count() - 1)
+			while node.get_child_count() > 0 and not node is CollisionObject3D:
+				node = node.get_child(node.get_child_count() - 1)
+			# A scripted node can be locked by its own pending work (the scatter refuses free()), so it leaves the
+			# tree now and is deleted at the frame's end, as queue_free always did.
+			if node.get_script() != null:
+				node.get_parent().remove_child(node)
+				node.queue_free()
+			else:
+				node.free()
 
 
 func geometry_root(index: int) -> Node3D:

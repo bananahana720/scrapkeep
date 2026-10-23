@@ -57,27 +57,30 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-22 main_tube_upper_post_11i and lava_channel_post_13i moved off their park_sinkhole washes (World, #241 comment 6352524432): park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged; pins read from this test's own MEASURE lines (schedule0), seeds 0..19.
 # 2026-10-22 merge of stage/alpha-w18 a777720a (B11: #321) into postbanks (#350): both change park-row data; schedules re-read from MEASURE (schedule0), seeds 0..19.
 # 2026-10-23 lava_channel_12, 13 and 21 reshaped to ease the sinkhole wash elbows A and B (World, #241 6354292643 item 3): park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged; pins read from this test's own MEASURE lines (schedule0), seeds 0..19.
+# 2026-10-23 merge of stage/alpha-w18 e564e2c3 (B17: #359 sinkhole elbows) into the drum kicker move (drum_lip_kicker 3.07 m east, World, #241 6357419327): both change park-row data; schedules re-read from MEASURE (schedule0), seeds 0..19.
+# 2026-10-23 lava_channel_14 and 20 shortened to ease the sinkhole wash elbows 14>15 and 19>20 (World, #241 6356545723): park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged; pins read from this test's own MEASURE lines (schedule0), seeds 0..19.
+# 2026-10-23 merge of stage/alpha-w18 63261606 into #375 (Gate thread): schedules re-read from MEASURE (schedule0), seeds 0..19.
 const BASE_SCHEDULE := [
-	"97dfc6d4ef0710214a7ea553d969bd4e5f5859748981e04459317b968f4a00f8",
-	"b97fc1e72347d7fbbce8f81def6a6b57695fc83066a37b6e622c1b3315e680cf",
-	"982faefc431d4ce2b3f7fea143774d7e2b38527f53e0568da096e190709c48d3",
-	"2a4905b86a2a382100eb9eafc6aa58a4de95762cdde8847197d11471f89b062b",
-	"4541ee2be6555270f1c24b95b3dabf7e20a3dd218c97bd3f78a66bf2e2736040",
-	"b0a37d113db425c29e6ba71038c114b9437e07847342b39a1d62dad05711295d",
-	"0ebf2a1131e6b71be43db8eb63ed30b0f2438f2b4176670855e88f90c7e513d1",
-	"bf4a9f3223d7cd62c4e3f9de6d11ed0e3eeb210e415beb9b602b80796295b8c6",
-	"4bae46dc6b012e80c621738d57bdfc1622499fab327e886600e6ecb7d6593baf",
-	"c84cdb913932c22f88e67ff932da81d1d9d1fa037538b2e071e255cd2ed7a372",
-	"5c11ca39087dfdf6fae458329a8652847a2b89089ca119859918fe39b34d0306",
-	"4ad012cc278b2dc496f97a5f0d16be896bcce7b1f5913c59aff0d174ff0a5e3a",
-	"a14baf58bd4271b977e7ccf49ace4d8cc1ff206556ddcd7bce35bb00ff136693",
-	"97b8d88305e76be2a72cd5e4bceb203ee5b78a79703697857723e7c196117b97",
-	"066621b8b86a8fa05bbf9b433dae5ecf04c7c751954e7f8df7a41fe755cad5c4",
-	"c83b2207727b5d4b8b52431771ab156a39925eb0a6f37394e2254ad682711cbb",
-	"342b868d072ba3b2d6b8c830615e71d9028cedeb54d410b0629d99773468bd6f",
-	"28152d03dc2f59f7fb8cd468224777635032fad2622c6161321e8d790bbfc97f",
-	"2686e6a0b6a6e6b88a5fbc1b5788deb6a9c0c28dd914d7287012798f7af329ca",
-	"e322612cea30e7bca199c3331000bbeeab1d184ba26ea6498be79fca97d3365b",
+	"49c1fc5250239abae88992522e3ed1080f73ee99e268572266beffabc7994b2f",
+	"48186ff32665da85790b73dd85bf745f6ddd68f82e30a763bb98bbc62c21f8c6",
+	"a618df6c581aae20a8a9ef905375e2a55eead6c38d3d574ffe27c9a2405b8517",
+	"714496e8f56305f14b9fbc41a4d15c0fb865ce3b2cf50a5d74b2c8e314517724",
+	"41c55e1a8e3d9a661e36a108a1e4756f3e271b6f275b39451f31dc2e48531d38",
+	"d144d9a03e27ef349a0737fdc7b90320d77f8570096e720abf6c05ee63547f22",
+	"ed4b32ac029c1203254afda329ea6e190e720d230a2c4487cfe4101acd2f94bc",
+	"124bc3d53f3a8bf5953e10dcad34a74e152ede68bb0f6539f09f31c6602defed",
+	"563d7d2871f207bf1f5c397c96296cd7b1024db7ca38b0ae2e3207ec18c7205b",
+	"ee1f3f0a680f58dcca6fc7bab389eca6a8852caed66bbf42a88f314a2753755c",
+	"48d3c754353179acc4dd90acd8e7fcca576592b1fcf8ba003246097829b445b1",
+	"72cc3294dcbdf68ba6d5db2e12ca57cd2ecbfb7bef9a9cc6dd04bbc5cec6ea7b",
+	"dfdd9adeb97b1e74ce54088927006de67111f99e50a2d9ec45c8441205ddb012",
+	"5ed92fe51aad914042226eebc54ce4c8268e51762a1b2f85776c896225599cc1",
+	"e43227c080b172eab86eff483bc88bbf8a56a5b0302e745ba2f130c60bd7d575",
+	"76f813247198090a4243c93bc4a5d335a73c000cf713ef8aa945cc3563eeeb5e",
+	"9dfe96ddcf61c6be0770448cc06980694672af04fd748132f8da46d95fe4951e",
+	"ac8f749c6bc1e33989c946952085f6ee846aa03b1dca71051685e33ea2855b3f",
+	"265b9d0eede674065db8c81458bb5e7ed5313f82ce8b612c3a20f56adbbad45c",
+	"b8f477c1182f5aaabcf246eb24193dbd885746c75bb55dcf49f864a4f7f0882e",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.

@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # A Signal cache: a small antenna mast with a dish and a blinking lamp, standing at a deliberate
 # spot in a park (catalogue rows whose found rule is {"on": "cache"}). Rolling within REACH of it
@@ -118,7 +119,7 @@ static func _glow(color: Color) -> StandardMaterial3D:
 func _process(delta: float) -> void:
 	_age += delta
 	if _lamp != null:
-		_lamp.visible = fmod(_age, BLINK) < BLINK * 0.5
+		_lamp.visible = FlashGuard.blink(fmod(_age, BLINK) < BLINK * 0.5)
 	if _ring != null:
 		var pulse := fmod(_age, BLINK * 2.0) / (BLINK * 2.0)
 		_ring.scale = Vector3.ONE * lerpf(0.4, 2.2, pulse)

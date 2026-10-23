@@ -181,6 +181,7 @@ func _scene_boss() -> Node:
 
 # Teardown: a boss script still on its loader thread is collected, and a read-ahead script settles
 # what its prepare_arena started (a quit before the boss entry aborted Godot, exit 134, scrapkeep#322).
+# Brindle's arena read ahead is held outside the tree; it goes with the flow.
 func _exit_tree() -> void:
 	for path in _boss_reads:
 		var script = _boss_reads[path]
@@ -188,7 +189,6 @@ func _exit_tree() -> void:
 			script = ResourceLoader.load_threaded_get(path)
 		if script is Script and script.get_script_method_list().any(func(m): return m.name == "settle_arena"):
 			script.call("settle_arena")
-	# Brindle's arena read ahead is held outside the tree; it goes with the flow.
 	SlagBowl.drop_ahead()
 
 
