@@ -953,7 +953,7 @@
       486,
       131
      ],
-     "radius": 0.959,
+     "radius": 1.237,
      "height": 1.193
     }
    }
@@ -963,7 +963,7 @@
    "tags": [
     "soft"
    ],
-   "story": "A single work glove dropped on a flat stone, fingers half curled.",
+   "story": "A work glove dropped on a flat stone, fingers half curled; in b its pair lies beside it.",
    "variants": {
     "a": {
      "lod": [

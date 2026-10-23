@@ -29,7 +29,7 @@ The kit tells two stories. The net-weavers are non-hostile builders, so only the
 | `clock_post` | prop | 2584/2280 | 2.6/2.5 | machine,sign | The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. |
 | `glove_bench` | prop | 1436/1668/952 | 0.5/0.6/0.5 | soft | A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. |
 | `shift_board` | prop | 860/972 | 1.2/1.2 | sign | Sandwich shift board: FOREMAN column chalked MIND, the HANDS column wiped clean every morning. |
-| `lost_glove` | prop | 368/480 | 0.2/0.2 | soft | A single work glove dropped on a flat stone, fingers half curled. |
+| `lost_glove` | prop | 368/480 | 0.2/0.2 | soft | A work glove dropped on a flat stone, fingers half curled; in b its pair lies beside it. |
 
 Variants run a (in use), b (run down), c (collapsed or overgrown). Notes on swaps and reviews:
 
@@ -43,7 +43,7 @@ Variants run a (in use), b (run down), c (collapsed or overgrown). Notes on swap
 
 The Mind's through-line (DECISIONS 18 Oct: the crew were its hands, numbers 01 to 04 plus FOREMAN) had no prop in the crown. Four kinds carry it: `clock_post` (the crew's time clock on one post, five cards in the rack, FOREMAN the wide slot; b is storm-struck with the hood blown off), `glove_bench` (a fresh pair set out per shift), `shift_board` (MIND chalked under FOREMAN, the HANDS column a tally) and `lost_glove`. All four are props, not heroes: the kit already carries four hero kinds against DRESSING-KITS.md's 2 or 3. The clock post stands on one round post so it never reads as a two-post gate.
 
-Three vignettes, appended after the 156 existing spots (which are unchanged): `hands_clock_in` (24, -140) on the bajada below the signal camp, `hands_struck_clock` (-68, 260) on the west climb under the needle strikes, `hands_glove_rest` (38, 412) on the crown approach. Nothing is on `drop_ramp`. Plan `--check`: 1,047 instances, 0 violations; pin 3824932041.
+Three vignettes, appended after the 156 existing spots (which are unchanged): `hands_clock_in` (24, -140) on the bajada below the signal camp, `hands_struck_clock` (-68, 260) on the west climb under the needle strikes, `hands_glove_rest` (38, 412) on the crown approach. Nothing is on `drop_ramp`. Plan `--check`: 1,047 instances, 0 violations; pin 2080508897.
 
 ## Placement (21 October 2026, round 5)
 

@@ -947,7 +947,7 @@ def clock_post(p, v, rng):
         for b in range(k + 1 if k < 4 else 1):
             bw = 0.012 if k < 4 else 0.1
             p.box((bw, 0.004, 0.03), (cx - 0.03 + b * 0.02 if k < 4 else cx, -0.101, 0.85), HANDS["board"], style="flat")
-    # Shingled hood resting on the board, sloping forward; the struck variant has it blown off onto the ground.
+    # Shingled hood resting on the post top, sloping forward; the struck variant has it blown off onto the ground.
     if not struck:
         for r in range(3):
             for j in range(3):
@@ -971,7 +971,7 @@ def clock_post(p, v, rng):
     else:
         # The card tin on the footing, lid off, and a fresh pair of gloves on the step.
         p.cyl(0.11, 0.14, (-0.3, -0.3, 0.53), C["iron_light"], segs=8, style="hard")
-        p.cyl(0.115, 0.02, (-0.15, -0.45, 0.47), C["iron"], segs=8, style="hard")
+        p.cyl(0.115, 0.02, (-0.08, -0.5, 0.47), C["iron"], segs=8, style="hard")
         glove(p, (0.25, -0.42, 0.46), 0.3, HANDS["glove"], rng)
         glove(p, (0.42, -0.36, 0.46), 0.1, HANDS["glove"], rng, curl=0.4)
 
@@ -1025,11 +1025,11 @@ def shift_board(p, v, rng):
         p.cyl(0.012, 0.07, (0.33 + 0.02 * k, -0.55, 0.08), HANDS["chalk"], segs=6, rot=(0.3, 0.2 * k, 0))
     p.ico(0.09, (-0.3, -0.55, 0.04), C["canvas_stain"], scale=(1.4, 1.0, 0.5), style="round")
     if v == "b":
-        p.box((0.9, 0.05, 1.15), (0.6, 0.0, 0.03), C["timber_dark"], rot=(math.pi / 2, 0, 0.3), style="hard_smooth")
+        p.box((0.9, 0.05, 1.15), (-0.75, 0.55, 0.03), C["timber_dark"], rot=(math.pi / 2, 0, 0.3), style="hard_smooth")
 
 
 @K.kind("lost_glove", tags=["soft"], polish_opts={"detail": 1}, variants="ab",
-        story="A single work glove dropped on a flat stone, fingers half curled.")
+        story="A work glove dropped on a flat stone, fingers half curled; in b its pair lies beside it.")
 def lost_glove(p, v, rng):
     p.ico(0.3, (0, 0, 0.06), HANDS["slate_pale"] if v == "a" else HANDS["slate"], scale=(1.3, 1.0, 0.25), style="round", jit=0.01)
     glove(p, (0.0, 0.0, 0.1), 0.6, HANDS["glove"] if v == "a" else HANDS["glove_worn"], rng, curl=0.7, scale=1.6)

@@ -1969,7 +1969,7 @@
    ]
   },
   "struck_clock": {
-   "story": "All hands: the storm hit the clock-in. The hood is off, its shingles and the spare cards are scattered round the footing, and a panel has come off the shift board. The five cards in the rack never moved.",
+   "story": "All hands: the storm hit the clock-in. The hood is off, its shingles and the spare cards are scattered round the footing, and a loose panel lies by the shift board. The five cards in the rack never moved.",
    "props": [
     {
      "kind": "clock_post",
@@ -3675,7 +3675,7 @@
   ],
   "seed": 31
  },
- "pin": 3824932041,
+ "pin": 2080508897,
  "low_ground_rows": [
   "drop_ramp",
   "watch_butte",

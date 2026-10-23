@@ -13462,7 +13462,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "lost_glove variant a LOD0 (368 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; polished and baked."
+    "notes": "lost_glove variant a LOD0 (368 tris): A work glove dropped on a flat stone, fingers half curled; in b its pair lies beside it. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -13490,7 +13490,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "lost_glove variant a LOD1 (184 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "lost_glove variant a LOD1 (184 tris): A work glove dropped on a flat stone, fingers half curled; in b its pair lies beside it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -13518,7 +13518,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "lost_glove variant a LOD2 (49 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "lost_glove variant a LOD2 (49 tris): A work glove dropped on a flat stone, fingers half curled; in b its pair lies beside it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -13546,7 +13546,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "lost_glove variant b LOD0 (480 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; polished and baked."
+    "notes": "lost_glove variant b LOD0 (480 tris): A work glove dropped on a flat stone, fingers half curled; in b its pair lies beside it. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
@@ -13574,7 +13574,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "lost_glove variant b LOD1 (240 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "lost_glove variant b LOD1 (240 tris): A work glove dropped on a flat stone, fingers half curled; in b its pair lies beside it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -13602,7 +13602,7 @@
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "lost_glove variant b LOD2 (62 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "lost_glove variant b LOD2 (62 tris): A work glove dropped on a flat stone, fingers half curled; in b its pair lies beside it. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
@@ -14222,19 +14222,19 @@
    },
    "bounds": {
     "min": [
-     -0.8254,
+     -0.9001,
      0,
-     -0.6828
+     -0.927
     ],
     "max": [
-     0.8254,
+     0.9001,
      1.1932,
-     0.6828
+     0.927
     ],
     "size": [
-     1.6508,
+     1.8002,
      1.1932,
-     1.3656
+     1.854
     ]
    }
   },
@@ -14250,19 +14250,19 @@
    },
    "bounds": {
     "min": [
-     -0.8255,
+     -0.9001,
      0,
-     -0.6828
+     -0.927
     ],
     "max": [
-     0.8254,
+     0.8994,
      1.1931,
-     0.6828
+     0.9269
     ],
     "size": [
-     1.6509,
+     1.7995,
      1.1931,
-     1.3656
+     1.8539
     ]
    }
   },
@@ -14278,19 +14278,19 @@
    },
    "bounds": {
     "min": [
-     -0.8265,
+     -0.7542,
      0,
-     -0.5487
+     -0.7929
     ],
     "max": [
-     0.6796,
+     0.9004,
      1.196,
-     0.6097
+     0.9155
     ],
     "size": [
-     1.5061,
+     1.6546,
      1.196,
-     1.1584
+     1.7084
     ]
    }
   },
