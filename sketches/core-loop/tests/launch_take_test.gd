@@ -9,7 +9,7 @@ const T := preload("res://tests/support/t.gd")
 # The launch take (launch_take.gd, world 1 unit 17) on the real game:
 #   - not live (tests, bots, headless), a play runs its cover call at once and shows nothing;
 #   - pilot select: the pick waits under the wind, keys are swallowed, the run starts on the first fully covered frame
-#     and the panel never shows the cut, then sweeps off; the deck camera lifts during the wind;
+#     and the panel never shows the cut, then sweeps off; the deck camera rushes in during the wind;
 #   - the camp gate fires the ball up and out of the gate, then the run starts on stage 1 with the gate's pilot;
 #   - a first run (prologue due) at the gate goes to pilot select instead;
 #   - reduced motion skips the wind and keeps the panel's lines still;
@@ -79,7 +79,7 @@ func _run() -> void:
 	_t.check("a second pick under the take is swallowed", _game._screen_key(KEY_2) and flow.state_name() == "class_select", "")
 	var title_stage = _game.presentation.title_stage
 	var wind_steps: int = await _step_while(LaunchTake.WIND)
-	_t.check("the deck camera lifts during the wind", title_stage.push > 0.0, str(title_stage.push))
+	_t.check("the deck camera rushes in during the wind", title_stage.push > 0.0, str(title_stage.push))
 	await _frames(3)
 	var cover_steps: int = await _step_while(LaunchTake.COVER)
 	_t.check("the run starts under the swipe, on a fully covered frame", at_cover.size() == 1 and at_cover[0][0] == 1.0
@@ -97,7 +97,7 @@ func _run() -> void:
 	_t.check("the take lasts at most 1.3 s with the dam drawn", seconds <= 1.3, "%.2f s" % seconds)
 	_t.check("the ball is live over the dam", not _game.player.frozen()
 		and _game.player.ball_position().distance_to(_game.ctx.terrain.spawn_point(1)) < 30.0, str(_game.player.ball_position()))
-	_t.check("the deck camera lift is cleared once the run is on", title_stage.push == 0.0, str(title_stage.push))
+	_t.check("the deck camera rush is cleared once the run is on", title_stage.push == 0.0, str(title_stage.push))
 	flow.show_title()
 	await _frames(2)
 	title_stage.active = true
@@ -106,7 +106,7 @@ func _run() -> void:
 		if title_stage.push >= 1.0:
 			break
 		await process_frame
-	_t.check("launch_push lifts the deck camera", title_stage.push >= 1.0 and title_stage.camera.fov > 60.0, "%s fov %s" % [title_stage.push, title_stage.camera.fov])
+	_t.check("launch_push rushes the deck camera in", title_stage.push >= 1.0 and title_stage.camera.fov > 70.0, "%s fov %s" % [title_stage.push, title_stage.camera.fov])
 	flow.show_title()
 	await _frames(2)
 

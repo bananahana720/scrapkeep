@@ -67,13 +67,13 @@ var _look := {"yaw": 0.0, "pitch": 0.25, "dist": LOOK_DIST}
 var _look_dragging := false
 var _look_idle := LOOK_HOLD
 var _stick := Vector2.ZERO
-# The launch take (launch_take.gd) lifts the deck camera up past the pilots into the sky as pilot select hands over to
-# the dam: 0 at rest, 1 at full lift. show_flow puts it back once the title is up again.
+# The launch take (launch_take.gd) rushes the deck camera in at the pilots, widening as it goes, as pilot select hands
+# over to the dam: 0 at rest, 1 at full rush. show_flow puts it back on every state but pilot select.
 var push := 0.0
 var _push_tween: Tween
-const PUSH_RISE := Vector3(0.0, 7.5, -9.0)
-const PUSH_LOOK := Vector3(0.0, 14.0, -30.0)
-const PUSH_FOV := 18.0
+const PUSH_RISE := Vector3(-0.6, -1.5, -7.6)
+const PUSH_LOOK := Vector3(0.0, -1.4, 0.0)
+const PUSH_FOV := 24.0
 
 
 func setup(ctx) -> void:
@@ -129,8 +129,8 @@ func setup(ctx) -> void:
 
 func show_flow(state: String) -> void:
 	_flow_state = state
-	# Only pilot select's launch take holds the lift; every other state (a run, the summary) puts the camera back, so
-	# pilot select reached again from the summary or a death opens on the deck, not the sky.
+	# Only pilot select's launch take holds the rush; every other state (a run, the summary) puts the camera back, so
+	# pilot select reached again from the summary or a death opens at rest, not mid-rush.
 	if state != "class_select":
 		_set_push(0.0)
 	active = state in ["title", "class_select"] and not camp_walk
@@ -263,15 +263,15 @@ func _process(delta: float) -> void:
 
 func _frame() -> void:
 	var drift := Vector3(sin(_clock * 0.12) * 0.55, sin(_clock * 0.17) * 0.12, cos(_clock * 0.12) * 0.18)
-	var lift := push * push
-	camera.position = CAMERA_AT + drift + PUSH_RISE * lift
-	camera.look_at(LOOK + PUSH_LOOK * lift)
-	camera.fov = 48.0 + PUSH_FOV * lift
+	var rush := push * push
+	camera.position = CAMERA_AT + drift + PUSH_RISE * rush
+	camera.look_at(LOOK + PUSH_LOOK * rush)
+	camera.fov = 48.0 + PUSH_FOV * rush
 	if look_weight > 0.001 and push <= 0.0:
 		camera.transform = camera.transform.interpolate_with(_orbit(), smoothstep(0.0, 1.0, look_weight))
 
 
-# The deck camera's lift for the launch take, over seconds. Reduced motion leaves the camera where it is.
+# The deck camera's rush for the launch take, over seconds. Reduced motion leaves the camera where it is.
 func launch_push(seconds: float) -> void:
 	if not active or HighdraftFx.preferred:
 		return
