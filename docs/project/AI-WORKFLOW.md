@@ -12,9 +12,10 @@ Start a fresh session in this repository after configuration changes.
 | "Implement approved card <ID>" | `scrapkeep-task` checks authorization and prerequisites before assigning isolated work. Its numbered procedure links the ORCHESTRATOR and TRACKING sections that own each rule. |
 | "Verify this Scrapkeep change" | `scrapkeep-verify` selects checks for the actual artifact and reports evidence limits. |
 | "Add a scenario to the lab" or "gate this run against the pin" | `scrapkeep-lab` runs, extends, gates or ports the headless Godot lab and says what a gate exit means. |
+| "Block out this pocket in mojulo" or "set up mojulo in the cloud" | `scrapkeep-blockout` builds mojulo recipes, exports lit glb, proves them with the ball in headless Godot and carries the mojulo gotchas and cloud setup. |
 | "Design or evaluate a model decision inside the game loop" | `reactive-model-loop` covers controls, blind corpora, pre-registration, caching and cost fields for a fast model deciding inside a running system. It is portable and names nothing from this repository. |
 
-Claude commands are `/plan-session`, `/scrapkeep-task`, `/scrapkeep-verify`, `/scrapkeep-lab` and `/reactive-model-loop`. [The skills README](../../.agents/skills/README.md) says when a new skill is warranted and gives the template.
+Claude commands are `/plan-session`, `/scrapkeep-task`, `/scrapkeep-verify`, `/scrapkeep-lab`, `/scrapkeep-blockout` and `/reactive-model-loop`. [The skills README](../../.agents/skills/README.md) says when a new skill is warranted and gives the template.
 
 `BIBLE.md` and accepted `adr/` records own direction. `BACKLOG.md` defines tasks. `TRACKING.md` owns heavy-lane state and answers; alpha waves 17 to 21 run from [GRAPH.md](../../project-guide/coord/GRAPH.md) and GitHub issue #241. `ORCHESTRATOR.md` owns dispatch and admission. A proposed sprint or ready card is not permission to execute it. Keep one coordinator responsible for the board; handing off the coordinator does not create a second writer.
 
