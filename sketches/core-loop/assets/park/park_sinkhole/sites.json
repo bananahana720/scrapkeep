@@ -5,4 +5,4 @@
   {"id": "sinkhole_mb_mid", "at": [-312, -536], "radius_m": 40, "near": "cinder_kicker", "third": "mid", "miniboss": "swarm_remnant"},
   {"id": "sinkhole_mb_late", "at": [16, -256], "radius_m": 38, "near": "upper_tube_cap", "third": "late", "miniboss": "swarm_remnant"}],
  "risk_rows": [
-  {"id": "sinkhole_west_gallery", "route": "west_gallery", "hazards": ["cenote_drain"], "reward": "west_cenote"}]}
+  {"id": "sinkhole_west_gallery", "route": "west_gallery", "hazards": ["cenote_drain"], "reward": "west_gallery_kicker"}]}

@@ -4,5 +4,4 @@
   {"id": "flume_mb_early", "at": [-416, -496], "radius_m": 44, "near": "mesa_ramp", "third": "early", "miniboss": "reactor_relic"},
   {"id": "flume_mb_mid", "at": [-104, -96], "radius_m": 40, "near": "rim_road", "third": "mid", "miniboss": "reactor_relic"}],
  "risk_rows": [
-  {"id": "flume_trestle_hollow", "route": "trestle_ramp_line", "hazards": ["hollow_trestle_collapse"], "reward": "flume_hollow_reach"},
-  {"id": "flume_wasteway_canal", "route": "canal_lower", "hazards": ["wasteway_flash_flood"], "reward": "drum_forecourt"}]}
+  {"id": "flume_rim_bend", "route": "rim_mid", "hazards": ["bend_relic_wakes"], "reward": "rim_flow_drop"}]}

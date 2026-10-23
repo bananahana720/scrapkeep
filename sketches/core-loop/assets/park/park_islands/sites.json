@@ -5,5 +5,4 @@
   {"id": "islands_mb_mid", "at": [0, -72], "radius_m": 20, "near": "fin_nose_kicker", "third": "mid", "miniboss": "mind_hand"},
   {"id": "islands_mb_late", "at": [-168, 464], "radius_m": 40, "near": "knuckle_w", "third": "late", "miniboss": "mind_hand"}],
  "risk_rows": [
-  {"id": "islands_west_mooring", "route": "west", "hazards": ["mooring_burner_blow", "isle_shed"], "reward": "hoodoo_garden"},
-  {"id": "islands_wing_west", "route": "wing_west", "hazards": ["isle_shed"], "reward": "knuckle_w"}]}
+  {"id": "islands_west_mooring", "route": "west", "hazards": ["mooring_burner_blow"], "reward": "knuckle_w"}]}

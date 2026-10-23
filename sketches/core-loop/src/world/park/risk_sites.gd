@@ -13,8 +13,14 @@ extends RefCounted
 # landmark beacon (a reverse search), so d_spawn + d_landmark is the cost of going through it.
 #
 # A risk row names a route, the hazards on it and the reward at its end. It is an option off the
-# line everyone rides, so the route is not the park's main route and the reward (and at least one
-# hazard) sits off the shared path: the waymarks, the main route's rows, drop_in and landmark.
+# line everyone rides, so the route is not the park's main route, and the risk and the reward are
+# met only on this line. Every hazard is a telegraphed event row whose site is in the route's via,
+# and at least one sits off the shared path (the waymarks, the main route's rows, drop_in and
+# landmark); a hazard may also lie on an alternative route. The reward belongs to this line alone:
+# outside the shared path and outside every alternative route (another route with the same from
+# and to, its via and ends). Dam and flume have no main route, so for them "not main" rests on
+# the waymarks alone. A 2-row park needs two distinct lines:
+# neither row's via may sit inside the other's.
 # Skipping the line must never strand the ball, so the route needs an alternative with the same
 # from and to.
 
@@ -68,6 +74,7 @@ static func _sites(out: Array, list, park: Dictionary, graph: ParkGraph) -> void
 		kind = str(ParkSchema.WORLD_ANCIENTS.get(ctx["world"], ""))
 	var rows := _index(park.get("park_rows", []))
 	var seen := {}
+	var thirds := {}
 	for site in list:
 		if not site is Dictionary or not _has(site, ["id", "at", "radius_m", "near", "third", "miniboss"]):
 			out.append("miniboss_sites: a site lacks id, at, radius_m, near, third or miniboss")
@@ -78,6 +85,10 @@ static func _sites(out: Array, list, park: Dictionary, graph: ParkGraph) -> void
 		seen[id] = true
 		if not THIRDS.has(site["third"]):
 			out.append("%s: third %s is not early, mid or late" % [id, str(site["third"])])
+		elif thirds.has(site["third"]):
+			out.append("%s: third %s already holds %s" % [id, site["third"], thirds[site["third"]]])
+		else:
+			thirds[site["third"]] = id
 		if kind == "" or site["miniboss"] != kind:
 			out.append("%s: miniboss %s, the world's ancient is %s" % [id, str(site["miniboss"]), kind])
 		if not (site["at"] is Array and site["at"].size() == 2):
@@ -112,13 +123,15 @@ static func measure(site: Dictionary, park: Dictionary, graph: ParkGraph) -> Dic
 	var foot := footprint(park, graph)
 	var misses := []
 	var node := graph.nearest(at)
-	if not _clear(graph, node, foot):
-		misses.append("centre node %d is not open ground off the landmark footprint" % node)
+	var why := _blocked(graph, node, foot)
+	if why != "":
+		misses.append("centre node %d %s" % [node, why])
 	for k in RING_POINTS:
 		var a := TAU * k / RING_POINTS
 		var ring := graph.nearest(at + Vector2(cos(a), sin(a)) * radius * RING_SHARE)
-		if not _clear(graph, ring, foot):
-			misses.append("ring bearing %d° lands on node %d, not open ground off the footprint" % [k * 45, ring])
+		why = _blocked(graph, ring, foot)
+		if why != "":
+			misses.append("ring bearing %d° lands on node %d, which %s" % [k * 45, ring, why])
 	var out_m: float = graph.d_from[node]
 	var in_m: float = graph.d_land[node]
 	var detour := INF
@@ -126,8 +139,11 @@ static func measure(site: Dictionary, park: Dictionary, graph: ParkGraph) -> Dic
 		misses.append("not reachable from the drop-in")
 	if is_inf(in_m):
 		misses.append("the landmark is not reachable from it")
-	if not is_inf(out_m) and not is_inf(in_m):
-		detour = out_m + in_m - float(graph.d_land[graph.spawn_node])
+	var direct: float = graph.d_land[graph.spawn_node]
+	if is_inf(direct):
+		misses.append("landmark unreachable from drop-in")
+	elif not is_inf(out_m) and not is_inf(in_m):
+		detour = out_m + in_m - direct
 		if detour > DETOUR_MAX_M:
 			misses.append("detour %.0f m over %.0f" % [detour, DETOUR_MAX_M])
 	return {"node": node, "out_m": out_m, "in_m": in_m, "detour_m": detour, "misses": misses}
@@ -173,6 +189,7 @@ static func _risk_rows(out: Array, list, park: Dictionary) -> void:
 		for v in main_via:
 			shared[v] = true
 	var seen := {}
+	var vias := {}
 	for row in list:
 		if not row is Dictionary or not _has(row, ["id", "route", "hazards", "reward"]):
 			out.append("risk_rows: a row lacks id, route, hazards or reward")
@@ -186,28 +203,50 @@ static func _risk_rows(out: Array, list, park: Dictionary) -> void:
 			continue
 		var route: Dictionary = routes[row["route"]]
 		var via: Array = route["via"]
+		vias[id] = via
 		if route["id"] == "main" or (not main_via.is_empty() and via == main_via):
 			out.append("%s: route %s is the main line, a risk line is an option off it" % [id, route["id"]])
 		var alt := routes.values().filter(func(r): return r["id"] != route["id"] and r["from"] == route["from"] and r["to"] == route["to"])
 		if alt.is_empty():
 			out.append("%s: route %s has no alternative from %s to %s" % [id, route["id"], route["from"], route["to"]])
+		var taken := {}
+		for r in alt:
+			for v in r["via"] + [r["from"], r["to"]]:
+				if not taken.has(v):
+					taken[v] = r["id"]
 		if not row["hazards"] is Array or row["hazards"].is_empty():
 			out.append("%s: no hazards" % id)
 		else:
 			var off_shared := false
+			var on_route := true
+			var why := []
 			for h in row["hazards"]:
-				var ok: bool = (rows.has(h) and via.has(h)) or (events.has(h) and via.has(events[h]["site"]))
-				if not ok:
+				if not events.has(h):
+					on_route = false
+					out.append("%s: hazard %s is no event row" % [id, str(h)])
+				elif not via.has(events[h]["site"]):
+					on_route = false
 					out.append("%s: hazard %s is not on route %s" % [id, str(h), route["id"]])
-				elif not shared.has(events[h]["site"] if events.has(h) else h):
+				elif shared.has(events[h]["site"]):
+					why.append("%s is on the shared path" % h)
+				else:
 					off_shared = true
-			if not off_shared:
-				out.append("%s: every hazard sits on the shared path" % id)
+			if on_route and not off_shared:
+				out.append("%s: no hazard is off the shared path: %s" % [id, "; ".join(why)])
 		var reward = row["reward"]
-		if not ((rows.has(reward) and via.has(reward)) or (acts.has(reward) and via.has(acts[reward]["site"]))):
+		var spot: String = acts[reward]["site"] if acts.has(reward) else str(reward)
+		if not ((rows.has(reward) and via.has(reward)) or (acts.has(reward) and via.has(spot))):
 			out.append("%s: reward %s is not on route %s" % [id, str(reward), route["id"]])
-		elif shared.has(acts[reward]["site"] if acts.has(reward) else reward):
+		elif shared.has(spot):
 			out.append("%s: reward %s is on the shared path" % [id, str(reward)])
+		elif taken.has(spot):
+			out.append("%s: reward %s is also on route %s" % [id, str(reward), taken[spot]])
+	var ids := vias.keys()
+	if ids.size() == 2:
+		var first: Array = vias[ids[0]]
+		var second: Array = vias[ids[1]]
+		if first.all(func(v): return second.has(v)) or second.all(func(v): return first.has(v)):
+			out.append("%s and %s are one line: one via sits inside the other" % [ids[0], ids[1]])
 
 
 static func _index(list: Array) -> Dictionary:
@@ -232,5 +271,9 @@ static func _in_rect(p: Vector2, rect: Array) -> bool:
 	return rect.size() == 4 and p.x >= rect[0] and p.y >= rect[1] and p.x <= rect[0] + rect[2] and p.y <= rect[1] + rect[3]
 
 
-static func _clear(graph: ParkGraph, node: int, foot: Dictionary) -> bool:
-	return graph.node_flags[node] & ParkGraph.OPEN != 0 and not foot.has(node)
+static func _blocked(graph: ParkGraph, node: int, foot: Dictionary) -> String:
+	if graph.node_flags[node] & ParkGraph.OPEN == 0:
+		return "is not OPEN ground"
+	if foot.has(node):
+		return "is on the landmark footprint"
+	return ""

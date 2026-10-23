@@ -4,4 +4,4 @@
   {"id": "dam_mb_early", "at": [-32, -448], "radius_m": 42, "near": "slickrock_domes", "third": "early", "miniboss": "reactor_relic"},
   {"id": "dam_mb_mid", "at": [104, 96], "radius_m": 38, "near": "the_eye", "third": "mid", "miniboss": "reactor_relic"}],
  "risk_rows": [
-  {"id": "dam_pool_floor", "route": "pool_floor", "hazards": ["plunge_pool_flood"], "reward": "rim_cache"}]}
+  {"id": "dam_roof_ramp", "route": "roof_ramp_line", "hazards": ["powerhouse_boiler"], "reward": "powerhouse_roof_ramp"}]}

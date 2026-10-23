@@ -5,4 +5,4 @@
   {"id": "pit_mb_mid", "at": [-360, -232], "radius_m": 38, "near": "slickrock_15", "third": "mid", "miniboss": "swarm_remnant"}],
  "risk_rows": [
   {"id": "pit_east_benches", "route": "east_benches", "hazards": ["tailings_slump"], "reward": "east_dive"},
-  {"id": "pit_side_7a_east", "route": "side_7a_east", "hazards": ["deep_adit_wakes"], "reward": "adit_east"}]}
+  {"id": "pit_eruption_lip", "route": "eruption_lip", "hazards": ["deep_adit_wakes"], "reward": "eruption_lip"}]}

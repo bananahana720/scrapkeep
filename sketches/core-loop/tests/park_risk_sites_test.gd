@@ -8,6 +8,9 @@ extends SceneTree
 # landmark within DETOUR_MAX_M of the straight path, and a risk route that has an alternative with
 # the same from and to, hazards and a reward that sit on it. Each check detail prints the numbers.
 #
+# Dam and flume have no main route; their shared path is the waymarks and drop_in/landmark, and a
+# row's reward and a hazard must also sit off every alternative route's via.
+#
 # Planted: a site outside play_rect, one on a node with its OPEN bit cleared, one on the landmark
 # footprint, one whose landmark path is cut, one whose path is stretched past the detour cap, a
 # wrong ancient, a single site, an unknown near row, a radius under the floor, a risk row with no
@@ -23,7 +26,7 @@ const MAPS := ["park_dam", "park_flume", "park_pit", "park_sinkhole", "park_isla
 # World's survey candidates the rules drop, by park: [site, why the rules reject it].
 const DROPPED := {
 	"park_dam": [{"id": "dam_mb_late", "at": [240, 200], "radius_m": 36, "near": "pipeline_bridge", "third": "late", "miniboss": "reactor_relic"}, "detour"],
-	"park_flume": [{"id": "flume_mb_late", "at": [48, 208], "radius_m": 38, "near": "siphon_span", "third": "late", "miniboss": "reactor_relic"}, "not open ground"],
+	"park_flume": [{"id": "flume_mb_late", "at": [48, 208], "radius_m": 38, "near": "siphon_span", "third": "late", "miniboss": "reactor_relic"}, "is not OPEN ground"],
 	"park_pit": [{"id": "pit_mb_late", "at": [-104, 208], "radius_m": 44, "near": "hoist_house", "third": "late", "miniboss": "swarm_remnant"}, "hazard rows in the disc"],
 }
 
@@ -59,16 +62,28 @@ func _run() -> void:
 	var first: Dictionary = good["miniboss_sites"][0]
 	var mid: Dictionary = good["miniboss_sites"][1]
 
-	_red("held-out: a dam risk row copied verbatim stays green", RiskSites.validate(_with_risk(good, [good["risk_rows"][0].duplicate(true)]), park, graph), false)
+	var other_line := {"id": "dam_west_wash", "route": "west_wash_run", "hazards": ["west_wash_flash_flood"], "reward": "west_wash"}
+	_red("held-out: a different valid dam line stays green", RiskSites.validate(_with_risk(good, [other_line]), park, graph), false)
+	_red("schema mismatch turns red", RiskSites.validate(_with(good, {"schema": "scrapkeep-sites/0"}), park, graph), true, "schema:")
+	_red("map mismatch turns red", RiskSites.validate(_with(good, {"map": "park_flume"}), park, graph), true, "map:")
+	_red("invalid third turns red", RiskSites.validate(_with_site(good, 0, {"third": "dusk"}), park, graph), true, "is not early, mid or late")
+	_red("two sites in one third turn red", RiskSites.validate(_with_site(good, 1, {"third": "early"}), park, graph), true, "already holds")
+	_red("duplicate site id turns red", RiskSites.validate(_with_site(good, 1, {"id": "dam_mb_early"}), park, graph), true, "id repeats")
+	var no_path := _graph("park_dam")
+	no_path.d_from[no_path.nearest(Vector2(mid["at"][0], mid["at"][1]))] = INF
+	_red("site with no path from the drop-in turns red", RiskSites.validate(good, park, no_path), true, "not reachable from the drop-in")
+	var no_direct := _graph("park_dam")
+	no_direct.d_land[no_direct.spawn_node] = INF
+	_red("drop-in with no landmark path turns red", RiskSites.validate(good, park, no_direct), true, "landmark unreachable from drop-in")
 
 	var planted := _with_site(good, 0, {"at": [-790, -790]})
 	_red("site outside play_rect turns red", RiskSites.validate(planted, park, graph), true, "outside play_rect")
 
 	var closed := _graph("park_dam")
 	closed.node_flags[closed.nearest(Vector2(first["at"][0], first["at"][1]))] &= ~ParkGraph.OPEN
-	_red("site on a node with OPEN cleared turns red", RiskSites.validate(good, park, closed), true, "not open ground")
+	_red("site on a node with OPEN cleared turns red", RiskSites.validate(good, park, closed), true, "is not OPEN ground")
 
-	_red("site on the landmark footprint turns red", RiskSites.validate(_with_site(good, 0, {"at": park["landmark"]["at"]}), park, graph), true, "off the landmark footprint")
+	_red("site on the landmark footprint turns red", RiskSites.validate(_with_site(good, 0, {"at": park["landmark"]["at"]}), park, graph), true, "is on the landmark footprint")
 
 	var cut := _graph("park_dam")
 	cut.d_land[cut.nearest(Vector2(mid["at"][0], mid["at"][1]))] = INF
@@ -95,10 +110,23 @@ func _run() -> void:
 	_red("hazard off the route turns red", RiskSites.validate(_with_risk(sites["park_pit"], [_with(pit_good, {"hazards": ["sump_flood"]})]), pit_park, null), true, "hazard sump_flood is not on route")
 	_red("reward off the route turns red", RiskSites.validate(_with_risk(sites["park_pit"], [_with(pit_good, {"reward": "cache_lip"})]), pit_park, null), true, "reward cache_lip is not on route")
 	var isle_park: Dictionary = parks["park_islands"]
-	var isle_row: Dictionary = sites["park_islands"]["risk_rows"][1]
+	var isle_row: Dictionary = sites["park_islands"]["risk_rows"][0]
+	var flume_park: Dictionary = parks["park_flume"]
+	var junction := _with(sites["park_flume"]["risk_rows"][0], {"route": "canal_lower", "hazards": ["wasteway_flash_flood"], "reward": "drum_forecourt"})
+	_red("junction reward turns red", RiskSites.validate(_with_risk(sites["park_flume"], [junction]), flume_park, null), true, "reward drum_forecourt is also on route wasteway_wall")
+	var twin := _with(isle_row, {"id": "islands_wing_west", "route": "wing_west", "hazards": ["isle_shed"], "reward": "knuckle_w"})
+	_red("a second row on the tail of the first turns red", RiskSites.validate(_with_risk(sites["park_islands"], [isle_row, twin]), isle_park, null), true, "are one line")
 	_red("risk row on the main route turns red", RiskSites.validate(_with_risk(sites["park_islands"], [_with(isle_row, {"route": "main", "hazards": ["fin_rim_collapse"]})]), isle_park, null), true, "is the main line")
 	_red("reward on a waymark turns red", RiskSites.validate(_with_risk(sites["park_islands"], [_with(isle_row, {"reward": "camp_anvil"})]), isle_park, null), true, "reward camp_anvil is on the shared path")
-	_red("hazards all on the shared path turn red", RiskSites.validate(_with_risk(sites["park_islands"], [_with(isle_row, {"hazards": ["anvil_rock"]})]), isle_park, null), true, "every hazard sits on the shared path")
+	_red("a waymark row named as hazard turns red", RiskSites.validate(_with_risk(sites["park_islands"], [_with(isle_row, {"hazards": ["anvil_rock"]})]), isle_park, null), true, "hazard anvil_rock is no event row")
+	var crown_park: Dictionary = parks["park_crown"]
+	var crown_row: Dictionary = sites["park_crown"]["risk_rows"][0]
+	_red("park row as hazard turns red", RiskSites.validate(_with_risk(sites["park_crown"], [_with(crown_row, {"route": "gauntlet", "hazards": ["gauntlet_west"], "reward": "gauntlet_net"})]), crown_park, null), true, "hazard gauntlet_west is no event row")
+	var waymarked: Dictionary = crown_park.duplicate(true)
+	waymarked["waymarks"].append("needles")
+	_red("hazard whose site is a waymark turns red", RiskSites.validate(_with_risk(sites["park_crown"], [crown_row]), waymarked, null), true, "needle_strikes is on the shared path")
+	_red("hazard also on an alternative route stays green", RiskSites.validate(_with_risk(sites["park_islands"], [_with(isle_row, {"hazards": ["mooring_burner_blow"], "reward": "hoodoo_garden"})]), isle_park, null), false)
+	_red("reward on an alternative route turns red", RiskSites.validate(_with_risk(sites["park_islands"], [_with(isle_row, {"reward": "west_shelf"})]), isle_park, null), true, "reward west_shelf is also on route")
 	_red("risk row with no hazards turns red", RiskSites.validate(_with_risk(sites["park_pit"], [_with(pit_good, {"hazards": []})]), pit_park, null), true, "no hazards")
 
 	for map_id in DROPPED:
