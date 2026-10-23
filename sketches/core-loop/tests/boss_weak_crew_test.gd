@@ -255,6 +255,8 @@ func _real_damage() -> void:
 	_t.check("a real ram-level reel strike dislodges a fitting fitter", f.state_name() == "knocked", f.state_name())
 	_t.check("and it is still alive and valid, at full health", is_instance_valid(f) and not f.is_dead() and f.hp == f.max_hp, str(f.hp))
 	_t.check("and no kill is recorded", mod.ctx.run.kills == kills, "%d %d" % [mod.ctx.run.kills, kills])
+	_t.check("a fitter is not crushable, and combat predicts no crush on it", f.crushable() == false and mod.ctx.spawner.would_crush(f, "ram", 60.0) == false,
+			"%s %s" % [f.crushable(), mod.ctx.spawner.would_crush(f, "ram", 60.0)])
 	_t.check("and plate_drop is discovered", "plate_drop" in game.ctx.codex.discovered_this_run(), "")
 	await _step_until(mod, CrewFitter.KNOCK_SECONDS + 0.1)
 	_t.check("after KNOCK_SECONDS it is inbound again", is_instance_valid(f) and f.state_name() in ["inbound", "fitting"], f.state_name() if is_instance_valid(f) else "freed")
@@ -310,6 +312,9 @@ func _bot() -> void:
 	_t.check("expert: the target is a fitting fitter, not the hatch", pick in two and pick != hatch and expert.rng.state == rng_before, str(pick))
 	expert._fight_posture_boss(mod, 0.016)
 	_t.check("expert: the fight goal names the fitter", expert._goal.begins_with("fitter"), expert._goal)
+	for f in two:
+		f.fit_state = f.State.INBOUND
+	_t.check("expert: an inbound fitter is no target", expert._open_fitter(mod) == null, str(expert._open_fitter(mod)))
 	for f in two:
 		f.remove_for_test()
 	mod._step_crew()

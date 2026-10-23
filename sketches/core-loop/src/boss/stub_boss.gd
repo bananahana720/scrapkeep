@@ -218,8 +218,7 @@ func _brace_scale(_kind: String) -> float:
 # Warden.on_struck's hook (and _apply_posture's, for a hit that did not come through on_struck): chips or keeps a
 # hit's posture gain by the weak-point rule. The part argument is "" in production (on_struck always passes ""); the
 # point is _paying (the part's id, set by _on_player_struck) or, for a boss that judges by position, _weak_point_for;
-# the Warden's body is no point, so a contact
-# on it pays the chip. Off returns the same object.
+# the Warden's body is no point, so a contact on it pays the chip. Off returns the same object.
 func _weak_judge(result: Dictionary, part := "", kind := "") -> Dictionary:
 	if not weak.active():
 		return result

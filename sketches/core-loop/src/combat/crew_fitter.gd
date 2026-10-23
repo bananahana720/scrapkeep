@@ -114,7 +114,13 @@ func take_damage(_amount: float) -> float:
 	return 0.0
 
 
-# Test and teardown only: the swarm's ordinary death (died, then freed), for the uncount and refill cases.
+# The crush seam: a fitter is never crushed. It cannot die to the player, so a crush exception on it would pass the
+# ball through a drone that never dies; the ball bounces and the contact still dislodges it.
+func crushable() -> bool:
+	return false
+
+
+# Tests only: the swarm's ordinary death (died, then freed), for the uncount and refill cases.
 func remove_for_test() -> void:
 	super.take_damage(hp)
 

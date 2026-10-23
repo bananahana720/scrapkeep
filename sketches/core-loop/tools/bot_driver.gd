@@ -2697,9 +2697,10 @@ func _open_part(boss) -> Node3D:
 	return boss.weak_part(String(open[-1])) if not open.is_empty() else null
 
 
-# A fitter of the open hatch to hit before the hatch itself (waking.gd crew): the first one holding a plate, else the
-# first inbound. Gated by the same go as the part, so the expert always, the learner after its read and roll, the
-# novice never; it draws nothing.
+# A fitter of the open hatch to hit before the hatch itself (waking.gd crew): the first one holding a plate. Only a
+# fitting one is a target: an inbound one cannot be knocked off (waking.gd only acts on FITTING) and comes back 1.5 s
+# after a knock anyway. Gated by the same go as the part, so the expert always, the learner after its read and roll,
+# the novice never; it draws nothing.
 func _open_fitter(boss) -> Node3D:
 	if not _weak_go or not boss.has_method("crew") or not boss.has_method("weak_open"):
 		return null
@@ -2707,15 +2708,12 @@ func _open_fitter(boss) -> Node3D:
 	if open.is_empty():
 		return null
 	var id := String(open[-1])
-	var pick: Node3D = null
 	for f in boss.crew():
 		if f.point_id != id or f.is_dead():
 			continue
 		if f.fit_state == f.State.FITTING:
 			return f
-		if pick == null and f.fit_state == f.State.INBOUND:
-			pick = f
-	return pick
+	return null
 
 
 func _fight_fitter(fitter: Node3D, delta: float) -> void:
