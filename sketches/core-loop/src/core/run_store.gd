@@ -248,7 +248,7 @@ func clear() -> bool:
 
 
 # Two copies of one run as one: ours with, per world, the larger retries_spent, and the
-# terminal flags ("ended", "worlds_cleared") true when either side has them.
+# terminal flags ("ended", "worlds_cleared", "death_save_spent") true when either side has them.
 static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	var out := ours.duplicate(true)
 	var spent: Dictionary = out.get("retries_spent", {}).duplicate()
@@ -259,6 +259,9 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 		out["retries_spent"] = spent
 	if bool(theirs.get("ended", false)):
 		out["ended"] = true
+	# The earned save, once spent, stays spent in whichever copy is read.
+	if bool(theirs.get("death_save_spent", false)):
+		out["death_save_spent"] = true
 	var cleared: Array = out.get("worlds_cleared", []).duplicate()
 	for w in theirs.get("worlds_cleared", []):
 		if not cleared.has(w):

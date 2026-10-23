@@ -280,10 +280,10 @@ func _run() -> void:
 	await _frames(1)
 	var summary_camp = screens.button_for("camp")
 	_t.check("the summary has a Camp action on K", summary_camp != null and summary_camp.key == "key_k", "")
-	_game.summary_guard_left = 0.75
+	_game.summary_latched = true
 	_game._screen_key(KEY_K)
 	_t.eq("K under the summary guard stays on the summary", flow.state_name(), "summary")
-	_game.summary_guard_left = 0.0
+	_game.summary_latched = false
 	var pad_y := InputEventJoypadButton.new()
 	pad_y.button_index = JOY_BUTTON_Y
 	pad_y.pressed = true

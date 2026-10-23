@@ -14,7 +14,7 @@ const T := preload("res://tests/support/t.gd")
 #   a final win shows the page with the summary actions hidden; Space inside ENDING_HOLD
 #   neither closes it nor starts a run; Space after closes it onto RUN COMPLETE with the
 #   Mind's epitaph, still in summary, run_ended fired once;
-#   pad A just after closing does not restart within SUMMARY_GUARD;
+#   pad A just after closing, with the closing key still held, does not restart (the input latch);
 #   with bot_driven set the page closes itself after ENDING_HOLD;
 #   a loss, a Brindle win on the alpha table that ends at stage 2, and a world-1 win on the
 #   slice table show no page;
@@ -94,6 +94,7 @@ func _run() -> void:
 	_t.eq("Space inside the hold starts no run", flow.state_name(), "summary")
 	await _settle(screens.ENDING_HOLD + 0.1)
 	_t.check("the page waits for a human after the hold", screens.ending_open(), "closed with no press")
+	_hold(KEY_SPACE, true)
 	_key(KEY_SPACE)
 	await process_frame
 	_t.check("Space after the hold closes the page", not screens.ending_open(), "still open")
@@ -106,7 +107,9 @@ func _run() -> void:
 	Push.pad(root, JOY_BUTTON_A)
 	_game._screen_key(_game.pad_screen_key(_pad(JOY_BUTTON_A)))
 	await process_frame
-	_t.eq("pad A just after closing does not restart", flow.state_name(), "summary")
+	_t.eq("pad A just after closing, Space still held, does not restart", flow.state_name(), "summary")
+	_hold(KEY_SPACE, false)
+	await process_frame
 
 	# A final win with a bot driving: the page closes itself.
 	_game.bot_driven = true
@@ -166,3 +169,13 @@ func _copy_caps() -> void:
 		for field in ["victory", "epitaph"]:
 			var line := String(Worlds.BOSSES[id][field])
 			_t.check("copy: %s %s is 12 words or fewer" % [id, field], _words(line) <= 12, line)
+
+
+# Holds or releases a physical key in the Input singleton, as a finger on it would.
+func _hold(code: Key, down: bool) -> void:
+	var event := InputEventKey.new()
+	event.keycode = code
+	event.physical_keycode = code
+	event.pressed = down
+	Input.parse_input_event(event)
+	Input.flush_buffered_events()

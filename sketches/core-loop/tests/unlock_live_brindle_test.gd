@@ -15,7 +15,7 @@ const T := preload("res://tests/support/t.gd")
 # combat.strike is the catch (boss.gd _on_enemy_struck -> _defeat). The test never emits a
 # bus signal. The bus is recorded during the kill: enemy_killed("brindle") must come before
 # boss_defeated, both in world one. Victory leads to world two, where the run ends by death
-# (the world's one retry spent), the summary shows, and Space returns to class select with
+# (a death ends the run: there is no free retry), the summary shows, and Space returns to class select with
 # Tarn's card open and its key starting a Tarn run. The profile is reloaded from disk at the
 # end.
 #
@@ -189,7 +189,7 @@ func _fight_brindle() -> void:
 		"state %s on stage %d, world %d" % [flow.state_name(), game.run.stage, game.run.world])
 
 
-# The run ends the way a player loses it: a death, the world's one retry, a second death.
+# The run ends the way a player loses it: a death, with no free retry to spend.
 # Wherever the run stands (the arena if the kill failed), it ends on the summary.
 func _end_by_death() -> void:
 	var game = _game
@@ -202,7 +202,7 @@ func _end_by_death() -> void:
 		game.run.damage(99999.0, "test")
 		await _until(func(): return flow.state_name() == "dead" or flow.state_name() == "summary")
 		if flow.state_name() == "dead":
-			game._screen_key(KEY_R)
+			game._screen_key(KEY_N)
 	await _frames(5)
 	_t.eq("the run ends on the summary", flow.state_name(), "summary")
 	var screens = game.screens

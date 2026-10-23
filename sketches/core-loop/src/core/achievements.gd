@@ -26,7 +26,7 @@ extends RefCounted
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 
 const FIELDS := ["name", "text", "on", "where", "at_least", "sum", "count", "need", "min", "max", "hidden", "beat", "reward"]
-const SUMMARY_KEYS := ["class", "stages", "scrap", "mass", "heft", "parts", "kills", "events_won", "time", "retries"]
+const SUMMARY_KEYS := ["class", "stages", "scrap", "mass", "heft", "parts", "kills", "events_won", "time", "retries", "save_used"]
 const EVALUATOR_KEYS := ["class", "won", "world"]
 const REWARD_KINDS := ["pilot", "cosmetic", "world", "option"]
 const NAME_WORDS := 3
@@ -65,8 +65,8 @@ const ROWS := {
 		"count": 1000, "reward": {"cosmetic": "paint_sable_violet"}},
 	"first_win": {"name": "Run Won", "text": "Win a run.", "on": "run_ended",
 		"where": {"won": true}, "count": 1, "reward": {"cosmetic": "paint_kest_dusk"}},
-	"clean_win": {"name": "Clean Run", "text": "Win a run without retrying a stage.", "on": "run_ended",
-		"where": {"won": true}, "count": 1, "need": "retries", "max": 0, "hidden": true, "reward": {"cosmetic": "paint_any_ink"}},
+	"clean_win": {"name": "Clean Run", "text": "Win a run without using the earned save.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "need": "save_used", "max": 0, "hidden": true, "reward": {"cosmetic": "paint_any_ink"}},
 	"first_event": {"name": "Event Won", "text": "Win a world event.", "on": "milestone_won",
 		"count": 1, "reward": {"cosmetic": "paint_any_kelp"}},
 	"ten_events": {"name": "Event Regular", "text": "Win 10 world events across all your runs.", "on": "milestone_won",
