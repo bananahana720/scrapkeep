@@ -46,6 +46,20 @@ static func prepare() -> void:
 		_panorama_task = WorkerThreadPool.add_task(func(): out["image"] = _paint_panorama(), false, "mind panorama")
 
 
+# Teardown: waits for the panorama worker and collects the kit files prepare() asked for, so no
+# loader thread or worker task is still running when the game quits before the boss entry (the
+# stage 6 quit abort, exit 134, scrapkeep#322).
+static func settle() -> void:
+	if _panorama_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_panorama_task)
+		_panorama_task = -1
+		_panorama_out = {}
+	for key in PARTS:
+		var path: String = dir.path_join(PARTS[key][0])
+		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			ResourceLoader.load_threaded_get(path)
+
+
 # Rebuilds the next kit part on the main thread, once its file has loaded: one part a call, so the
 # approach's frames share the rebuild that _load_kit did in the boss-entry frame (16 to 20 ms of it
 # on the cloud, scrapkeep#322 row 30). True once every part is ready.

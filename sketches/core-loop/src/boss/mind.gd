@@ -103,6 +103,12 @@ static func prepare_arena() -> void:
 	MindDress.prepare()
 
 
+# Flow calls this on teardown when it read the script ahead: waits for what prepare_arena started.
+static func settle_arena() -> void:
+	ArenaMindDress.settle()
+	MindDress.settle()
+
+
 # A step of the arena's main-thread work ahead of the entry, a frame at a time; true once done.
 static func warm_arena() -> bool:
 	return ArenaMindDress.warm_kit()
