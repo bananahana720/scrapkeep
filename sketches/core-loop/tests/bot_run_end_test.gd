@@ -79,9 +79,10 @@ func _run() -> void:
 				t.check("%s next entrance saved" % _label(i), entrance.get("run_id") == run_ids[i]
 					and int(entrance.get("stage", 0)) == StageDefs.first_of(world + 1))
 				# One run (#355): a death ends the run, and the per-world retry it replaced is retired, so no
-				# entrance carries a spent retry. The bot ends on its first death (bot_driver.gd "died").
-				t.check("%s entrance spends no retry" % _label(i), (entrance.get("retries_spent", {}) as Dictionary).is_empty(),
-					"%s" % [entrance.get("retries_spent")])
+				# entrance carries a spent retry. The bot ends on its first death (bot_driver.gd "died") and
+				# never rewinds a stage, so the live retry counter (run_state.gd restore()) stays at 0 too.
+				t.check("%s entrance spends no retry" % _label(i), (entrance.get("retries_spent", {}) as Dictionary).is_empty()
+					and int(entrance.get("retries", -1)) == 0, "spent %s, retries %s" % [entrance.get("retries_spent"), entrance.get("retries")])
 		if t.failures > 0:
 			break
 	for i in RUNS.size():
