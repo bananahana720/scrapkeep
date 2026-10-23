@@ -79,7 +79,9 @@ static func _parts() -> Dictionary:
 func _commit(_to_ball: Vector3) -> Node3D:
 	var aim: Vector3 = _ball() + target.planar_velocity() * LEAD
 	_facing(aim - global_position)
-	return _commit_ring(Threat.Type.INSTANT, aim, FIELD_RADIUS, FIELD_TOP)
+	var ring := _commit_ring(Threat.Type.INSTANT, aim, FIELD_RADIUS, FIELD_TOP)
+	ring.air_only = true
+	return ring
 
 
 func _live(_delta: float) -> bool:
