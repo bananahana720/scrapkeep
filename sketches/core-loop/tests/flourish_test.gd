@@ -53,7 +53,7 @@ func _run() -> void:
 	_t.check("10 presentation builds the player", player is FlourishPlayer, str(player))
 	await _live(player)
 	await _sweep(player)
-	_order(player)
+	await _order(player)
 	_hooks(player)
 	_game.free()
 	await _frames(2)
@@ -77,7 +77,7 @@ func _rows() -> void:
 		var loud: Array = []
 		for form in ["full", "short"]:
 			for piece in Rows.pieces(id, form == "short"):
-				if piece.kind in ["caption", "panels"]:
+				if piece.kind in ["caption", "panels", "card"]:
 					for line in Rows.lines(id):
 						if line.contains("!") and not line in loud and _in_piece(piece, line):
 							loud.append(line)
@@ -86,7 +86,7 @@ func _rows() -> void:
 
 
 func _in_piece(piece: Dictionary, line: String) -> bool:
-	return str(piece.get("text", "")).contains(line) or str(piece.get("texts", "")).contains(line)
+	return str(piece.get("text", "")).contains(line) or str(piece.get("texts", "")).contains(line) or str(piece.get("card", "")).contains(line)
 
 
 func _seeds() -> void:
@@ -112,7 +112,7 @@ func _live(player) -> void:
 	await _frames(3)
 	_t.check("40 a fresh run's stage 1 entry plays cold_open", player.playing and player.id == "cold_open", "%s %s" % [player.playing, player.id])
 	_t.check("41 first play is the full form", not player.short, "short %s" % player.short)
-	_t.check("42 the profile marks it seen", _game.ctx.profile.is_seen(Rows.SEEN_PREFIX + "cold_open"), "")
+	_t.check("42 the profile is not marked until the row has shown", not _game.ctx.profile.is_seen(Rows.SEEN_PREFIX + "cold_open"), "")
 	player.advance(1.6)
 	await _frames(1)
 	var size: Vector2 = root.get_visible_rect().size
@@ -133,6 +133,7 @@ func _live(player) -> void:
 	paused = false
 	await _frames(1)
 	player.stop_all()
+	_t.check("42b a full row cut before SEEN_SHARE stays unseen", not _game.ctx.profile.is_seen(Rows.SEEN_PREFIX + "cold_open"), "")
 	_game.run.set_meta("flourishes", [])
 	player.play("cold_open")
 	var press := InputEventKey.new()
@@ -153,8 +154,12 @@ func _live(player) -> void:
 	_t.check("47 and the press still reaches play", heard[0], "")
 	listener.free()
 	var log: Array = _game.run.get_meta("flourishes", [])
-	_t.check("48 the run's flourishes meta records it", log.size() == 1 and log[0].id == "cold_open" and log[0].skipped and log[0].held == 0.0 and not log[0].full,
-		str(log))
+	_t.check("48 the run's flourishes meta records it", log.size() == 1 and log[0].id == "cold_open" and log[0].skipped and log[0].cut == "skipped"
+		and log[0].held == 0.0 and log[0].full, str(log))
+	player.play("cold_open")
+	_t.check("48b an early skip leaves the full form for next time", not player.short, "")
+	player.advance(Rows.length("cold_open", false) + 0.01)
+	_t.check("48c a row shown out marks the profile", _game.ctx.profile.is_seen(Rows.SEEN_PREFIX + "cold_open"), "")
 	player.play("cold_open")
 	_t.check("49 a seen row plays its short form", player.short, "")
 	player.advance(Rows.length("cold_open", true) + 0.01)
@@ -204,6 +209,45 @@ func _order(player) -> void:
 	_t.eq("63 and plays after", player.id, "spillway_clear")
 	player.stop_all()
 	_t.check("64 stop_all ends it and empties the queue", not player.playing and player.queued().is_empty(), "")
+	var chain := func(done: String, _skipped: bool):
+		if done == "cold_open":
+			player.play("bowl_handoff")
+	player.finished.connect(chain)
+	player.play("cold_open")
+	player.play("rivet_freed")
+	_t.check("65 a row a finished listener starts during a preempt keeps playing; the preempting row waits",
+		player.id == "bowl_handoff" and player.queued() == ["rivet_freed"] and player.live_kinds().all(func(k): return k in ["stamp", "caption", "sfx_word"]),
+		"%s %s %s" % [player.id, player.queued(), player.live_kinds()])
+	player.finished.disconnect(chain)
+	player.stop_all()
+	var cage := Node3D.new()
+	root.add_child(cage)
+	player.play("rivet_freed", SEED, {"cage": cage}, "full")
+	player.advance(0.1)
+	cage.free()
+	player.advance(0.2)
+	_t.check("66 a freed anchor leaves the row running", player.playing and player.id == "rivet_freed", player.id)
+	player.stop_all()
+	var blocker := Control.new()
+	blocker.add_to_group(FlourishPlayer.AVOID_GROUP)
+	var size: Vector2 = root.get_visible_rect().size
+	blocker.position = Vector2(0.25, 0.17) * size
+	blocker.size = Vector2(0.5, 0.23) * size
+	var layer := CanvasLayer.new()
+	root.add_child(layer)
+	layer.add_child(blocker)
+	var over: Array = []
+	for at in [0.7, 1.5, 4.3]:
+		player.play("cold_open", SEED, {}, "full")
+		player.advance(at)
+		# Let the three-frame overshoot settle; the rectangle is read at rest.
+		await _frames(6)
+		for node in player.live_nodes():
+			if node is Control and node.get_global_rect().intersects(blocker.get_global_rect()):
+				over.append("%s at %.1f" % [node.get_meta("flourish_kind"), at])
+		player.stop_all()
+	_t.eq("67 nothing lands on a visible avoided Control (the start pick card)", over, [])
+	layer.free()
 
 
 func _hooks(player) -> void:
@@ -230,8 +274,15 @@ func _hooks(player) -> void:
 	_t.check("75 once per run", not player.playing, player.id)
 	_game.flow.warden.free()
 	_game.flow.warden = null
+	events.beacon_unsealed.emit(last)
+	_t.check("75b the hand-off plays once per run", not player.playing, player.id)
 	events.world_entered.emit(2)
-	_t.eq("76 world 2's entry plays spillway_clear", player.id, "spillway_clear")
+	_t.check("76a world 2's entry without Brindle beaten plays nothing (a Continue)", not player.playing, player.id)
+	events.boss_defeated.emit()
+	events.world_entered.emit(2)
+	_t.eq("76 world 2's entry after Brindle's defeat plays spillway_clear", player.id, "spillway_clear")
+	events.stage_entered.emit(1, true)
+	_t.check("76b a retry ends the row", not player.playing, player.id)
 	player.play("cold_open")
 	events.flow_changed.emit("title")
 	_t.check("77 the title screen ends the row and its queue", not player.playing and player.queued().is_empty(), "")
