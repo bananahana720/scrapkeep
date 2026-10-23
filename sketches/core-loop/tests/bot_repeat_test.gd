@@ -18,32 +18,26 @@ func _initialize() -> void:
 	var t := T.new("bot_repeat_test")
 	var traces: Array[String] = []
 	var base := OS.get_user_data_dir().path_join("bot-repeat-%d" % OS.get_process_id())
-	var started := Time.get_ticks_msec()
+	var jobs := []
 	for i in 2:
-		var wall := (BUDGET_S - (Time.get_ticks_msec() - started) / 1000.0) / (2 - i)
-		var child_start := Time.get_ticks_msec()
 		var folder := base.path_join(str(i))
-		var previous := {}
+		var env := {}
 		for kind in ["DATA", "CONFIG", "CACHE"]:
-			var key: String = "XDG_%s_HOME" % kind
-			previous[key] = OS.get_environment(key)
-			OS.set_environment(key, folder.path_join(kind.to_lower()))
-		var results := ChildRuns.run([{"script": "res://tools/bot_run.gd", "args": [
+			env["XDG_%s_HOME" % kind] = folder.path_join(kind.to_lower())
+		jobs.append({"script": "res://tools/bot_run.gd", "env": env, "args": [
 			"--out=" + folder, "--policy=brawler", "--seeds=3", "--table=slice",
-			"--trace-ticks=1", "--ticks=%d" % TICKS, "--allocation-noise=%d" % i]}], wall)
-		var took := (Time.get_ticks_msec() - child_start) / 1000.0
-		for key in previous:
-			if previous[key].is_empty():
-				OS.unset_environment(key)
-			else:
-				OS.set_environment(key, previous[key])
-		var result: Dictionary = results[0]
+			"--trace-ticks=1", "--ticks=%d" % TICKS, "--allocation-noise=%d" % i]})
+	var results := ChildRuns.run_shared(jobs, BUDGET_S)
+	for i in 2:
+		var folder := base.path_join(str(i))
+		var result: Dictionary = results[i]
 		var errors: Array = ChildRuns.summary(result)["errors"]
 		for line in String(result["log"]).split("\n"):
 			if line.begins_with("FAIL"):
 				errors.append(line)
 		t.check("child %d" % i, result["code"] == 0 and not result["timed_out"] and errors.is_empty(),
-			"exit %s, timeout %s, %.1f s of a %.1f s wall, errors %s" % [result["code"], result["timed_out"], took, wall, errors])
+			"exit %s, timeout %s, %.1f s of a %.1f s wall, errors %s" % [result["code"], result["timed_out"],
+				result["seconds"], result["wall"], errors])
 		var path := folder.path_join("trace-3.ndjson")
 		var trace := FileAccess.get_file_as_string(path) if FileAccess.file_exists(path) else ""
 		traces.append(trace)

@@ -219,7 +219,7 @@ func _crater_release_checks() -> void:
 
 
 func _skip_checks() -> void:
-	# A second final win skips at elapsed zero with the actual viewport confirm action.
+	# A second final win skips at elapsed zero with a real Space press (a confirm key).
 	_game.flow.new_run()
 	_game.flow.enter_stage(StageDefs.COUNT, Vector3.ZERO, false)
 	_force_win()
@@ -227,8 +227,8 @@ func _skip_checks() -> void:
 	_game.test_mode = false
 	_t.check("END-1 second run starts", _game.screens.ending_open())
 	# The skip is a real Space press through Input, so Input reports it held. Since cb67c62d the
-	# summary's latch, not a 0.75 s time lock, keeps the held skip press from starting a run; a
-	# fresh press after the release acts at once (the input latch design, wave 19).
+	# summary's latch, not a 0.75 s time lock, keeps the held skip press from starting a run; the
+	# release reopens it for a fresh press (the input latch design, wave 19).
 	_set_space(true)
 	_t.check("END-1 confirm skips immediately", not _game.screens.ending_open() and _game.screens._actions.visible)
 	_t.eq("END-1 confirm leaves summary", _game.flow.state_name(), "summary")
