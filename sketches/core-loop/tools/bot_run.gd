@@ -51,6 +51,8 @@ const FrameSplit := preload("res://tools/frame_split.gd")
 # set_stakes) once, before it rolls into the ring, work the relay to its pay, then go on to the
 # Warden; the stage row in bots.ndjson carries relay_stakes [{stage, k, ...}]. 0 or absent leaves
 # the bot byte-identical. Only the park table builds a relay (stages 1 and 5).
+# --panel-log=1 adds panel_kills (the build's kill_log: stage, kind, elite, rib, jackpot, dropped)
+# and panels (the run's pickups in order) to the bots.ndjson row.
 # --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
 # run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the
 # same args (tuning.gd's FLAGS).
@@ -398,6 +400,11 @@ func _physics_process(delta: float) -> bool:
 	# The run-end comic page (run_moments.gd): its panel count and where it was saved.
 	record["comic_panels"] = (_game.run_moments.last_page.get("panels", []) as Array).size()
 	record["comic_page"] = _game.run_moments.saved_path()
+	# --panel-log=1: the grey panels' recorded kill stream and what the run picked up, for
+	# tests/panels_drop_sim_test.gd's fixtures.
+	if _settings.has("panel-log"):
+		record["panel_kills"] = _game.build.kill_log.duplicate()
+		record["panels"] = Array(_game.run.panels)
 	_results.append(record)
 	_game.codex.append_line(_out.path_join("bots.ndjson"), JSON.stringify(record))
 	_write_entries()

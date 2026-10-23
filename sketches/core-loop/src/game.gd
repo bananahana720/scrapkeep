@@ -299,6 +299,9 @@ func _ready() -> void:
 	panel.name = "TuningPanel"
 	add_child(panel)
 	panel.setup(tuning)
+	var drawer: CanvasLayer = load("res://src/ui/panel_drawer.gd").new()
+	add_child(drawer)
+	drawer.setup(self, panel)
 	# Tests and bots build the menu modules here; a played game builds them behind the menu, and
 	# at once if a run or a camp visit starts first.
 	if test_mode:

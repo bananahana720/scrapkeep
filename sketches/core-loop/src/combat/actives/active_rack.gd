@@ -168,7 +168,9 @@ func _physics_process(delta: float) -> void:
 			rack(ActiveDefs.STARTER)
 	_locked = maxf(0.0, _locked - delta)
 	if active_id != "":
-		_recharge(delta / float(_row(active_id)["recharge"]))
+		# Cell Bracket panels raise the recharge rate (the build's active_recharge mod).
+		var rate: float = ctx.tuning.mod("active_recharge") if ctx.tuning != null else 1.0
+		_recharge(delta * rate / float(_row(active_id)["recharge"]))
 	for id in _kinds:
 		_kinds[id].step(delta)
 	_step_dropped(delta)
