@@ -354,6 +354,7 @@ static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) ->
 		_batch(scenery, "WaterMist", puff, mist, Color("bcd4da"))
 	if not trees.is_empty():
 		_cottonwoods(stage_root, trees)
+	preload("res://src/presentation/spillway_fx.gd").place(scenery, stage_root, map, sites)
 	return scenery
 
 

@@ -4,7 +4,8 @@ The air, landmarks, events and ceremonies of Scrapkeep, as one data table and fo
 
 | File | Owns |
 | --- | --- |
-| `world_fx_specs.gd` | Every effect (`SPECS`), what each place plays (`SETS`), weather and modifier air (`OVERLAYS`), game moments (`HOOKS`), budgets |
+| `world_fx_specs.gd` | Every effect (`SPECS`), what each place plays (`SETS`), weather and modifier air (`OVERLAYS`), game moments (`HOOKS`), run grain (`GRAIN`), the Spillway's placements (`SPILL_PLACES`), budgets |
+| `world_fx_grain.gd` | Run grain: each run rolls every effect's dials once from the run seed |
 | `world_fx_kit.gd` | Builds an emitter from a spec; the one shader (soft puff, streak, paper, ring, glint, rainbow); the clear zone |
 | `world_fx.gd` | The runtime: a world's ambient air, overlays, hooks, anchor ranking |
 | `world_fx_anchor.gd` | A drop-in effect for dressing: landmarks, camp, relay, secrets |
@@ -15,10 +16,30 @@ Stills: `tools/world_fx_capture.gd` renders every set on greybox stand-ins (comm
 
 ## Rules the table keeps
 
-1. **Air never hides a threat.** Every effect that follows the camera or the ball is `ambient`: it fades out within 7 m of the ball (`CLEAR_RADIUS`) and near the lens, stays translucent, and never wears `HAZARD`, `ARC` or `ANCIENT`. The test fails any ambient spec that breaks this.
+1. **Air never hides a threat.** Every effect that follows the camera or the ball is `ambient` (the ball's `wake` is the one exception: it is the ball's own feedback, sits at the waterline and stays translucent): it fades out within 7 m of the ball (`CLEAR_RADIUS`) and near the lens, stays translucent, and never wears `HAZARD`, `ARC` or `ANCIENT`. The test fails any ambient spec that breaks this.
 2. **Soft world, inked comic.** In-world effects have no outline. Ceremony and comic effects (title slam, summaries, the modifier announce, a secret's find) carry an ink rim, so the comic book sits on top of the world (tone bible, pillar 2).
 3. **Budget.** A world's air plus its heaviest overlay stays under `AMBIENT_CEILING` (330 particles). Only the six nearest anchors inside their range emit at once. Past `lod_m` an anchor rests and shows its impostor, one soft quad that keeps a landmark's plume visible across the park for one draw call. The low preset keeps each spec's `low` share; reduced motion drops strobes and fast sparks, halves the rest, stills cables and skips words.
-4. **Deterministic.** Fixed seed, no lights, no shadows, 30 fps particle step.
+4. **Deterministic.** Fixed seed per run (the kit's seed off a run), no lights, no shadows, 30 fps particle step.
+
+## Run grain (principle 21)
+
+Every run looks a little different and replays its own look. `WorldFx` reads the run's seed on each stage entry (`set_run_seed`); `world_fx_grain.gd` rolls each spec's dials from that seed and the spec id alone, so it draws from no shared stream, and a spec added later never moves another's roll. A dial is a range in the spec's `GRAIN` row (or `GRAIN_DEFAULT`):
+
+| Dial | What changes |
+| --- | --- |
+| `amount` | share of the spec's particles that emit (at most 1, so every budget still holds) |
+| `size`, `speed` | particle size and launch speed multipliers |
+| `wind_deg` | the emitter's direction and directional gravity turn about the vertical |
+| `tint` | the emitter leans toward a named colour, up to a share |
+| `pulse` | a pulsed effect breathes faster or slower |
+
+Each rolled emitter also takes its own particle seed, so the scatter differs too. Grain never touches glow or alpha, and ceremony and comic effects (ink) take none. Seed 0 (the title and class select, captures, tests) is the authored look; a summary keeps its run's. `tests/world_fx_grain_test.gd` pins it; the Spillway's rows lean hardest (mist drifts and thins, steam breathes at its own pace, foam carries more silt).
+
+## The Spillway in its parks
+
+`spillway_fx.gd` stands world 1's anchor sets from `SPILL_PLACES` when a Spillway park's scenery builds: the powerhouse and weir gatehouse steam on their roofs (`spill_powerhouse`), the weir apron's falls (`spill_falls`), the dam's spray curtain and foot mist at its gate leaves (`landmark_dam`, once the landmark has built) and the penstock tower's vent (`landmark_penstock_tower`). They rank into `ANCHOR_SLOTS` like every anchor.
+
+Water (the Spillway only, `WAKE_WORLDS` and `natural.gd` `FOAM_PARKS`): `WorldFx` reads the terrain's material under the ball 15 times a second. Rolling through standing water throws the wake (`spill_wake`: spray thrown back off the ball, foam rings), thicker with speed; a fast entry or a drop fires `ball_splash` once. A rising flood carries foam (`spill_flood`, hung by `natural.gd` on the water in up to four pieces along its footprint, each on its own surface height), thick while it climbs and calmer once full. `tests/spillway_fx_test.gd` checks the placements in both parks; `tools/spillway_fx_capture.gd` renders stills.
 
 ## Hooks for other systems
 
@@ -31,7 +52,7 @@ WorldFx.fire("relay_full", relay_position)
 
 | Hook | Who fires it | Plays |
 | --- | --- | --- |
-| `ball_splash` | the ball entering water | crown of droplets, ring, SPLOSH |
+| `ball_splash` | the ball entering water fast (WorldFx's wake) | crown of droplets, ring, SPLOSH |
 | `relay_quarter` | the relay at 25, 50 and 75 % | a ring of light traced along the relay's ground ring, so the boundary reads |
 | `relay_stake` | each stake added (SR10) | brass ring and sparks off the mast top, RAISE |
 | `relay_full` | the relay filling | spark fountain, ground shock ring, KA-CHUNK |
@@ -61,6 +82,8 @@ Weather and modifiers lay air over the world's own: `WorldFx.lay_overlay(kind)` 
 | Set | Where it goes |
 | --- | --- |
 | `spill_falls`, `spill_pipe`, `spill_pool` | foot of a waterfall or spillway lip; a pipe mouth; still water |
+| `spill_powerhouse` | a powerhouse or gatehouse roof: pulsed steam and soot |
+| `spill_flood` | on flood water (natural.gd hangs it; `fit` stretches it over the footprint) |
 | `dig_drill`, `dig_ledge`, `dig_vent`, `dig_lamp` | a drill head (its +Z points out of the bore); a ledge edge; a floor vent; a hanging lamp (moths) |
 | `hd_cable` | mid-span of a cable run (paper scraps caught in the wind) |
 | `landmark_dam` | the dam's lip centre: spray curtain, foot mist, a rainbow in the spray |
