@@ -188,6 +188,8 @@ func _exit_tree() -> void:
 			script = ResourceLoader.load_threaded_get(path)
 		if script is Script and script.get_script_method_list().any(func(m): return m.name == "settle_arena"):
 			script.call("settle_arena")
+	# Brindle's arena read ahead is held outside the tree; it goes with the flow.
+	SlagBowl.drop_ahead()
 
 
 func _load_module(path: String) -> Node:
@@ -239,11 +241,6 @@ func _read_boss_ahead() -> void:
 	_boss_reads[path] = script if script is Script else false
 	if script is Script and script.get_script_method_list().any(func(m): return m.name == "prepare_arena"):
 		script.call("prepare_arena")
-
-
-# Brindle's arena read ahead is held outside the tree; it goes with the flow.
-func _exit_tree() -> void:
-	SlagBowl.drop_ahead()
 
 
 # The boss row that runs at the end of a world. Tests set boss_row_override[world] to stand
