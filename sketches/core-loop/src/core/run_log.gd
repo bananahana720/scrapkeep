@@ -211,7 +211,7 @@ func _on_run_started(class_id: String) -> void:
 	run.set_meta("boss_attacks", {})
 	# PE-0: the pilot clip router writes plays by clip and missing-clip refusals here (hero_assets.gd).
 	run.set_meta("pilot_clips", {"played": {}, "missing": 0})
-	# Flourish rows finished this run (flourish_player.gd): {id, s, full, skipped, held}.
+	# Flourish rows finished this run (flourish_player.gd): {id, s, full, skipped, held, cut}.
 	run.set_meta("flourishes", [])
 	_record = {"run_id": run.run_id, "class": class_id, "table": _table_id(), "outcome": "running", "brindle_phase_reached": null,
 		"bites": 0, "smashes": 0, "breaks": {}, "verb_fails": {}, "prompts_shown": 0,

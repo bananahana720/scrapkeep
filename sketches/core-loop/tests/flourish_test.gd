@@ -142,6 +142,15 @@ func _live(player) -> void:
 	root.push_input(press)
 	_t.check("45 a press inside the grace leaves the row up", player.playing, "clock %.2f" % player.clock)
 	player.advance(FlourishPlayer.SKIP_GRACE)
+	var steer := InputEventKey.new()
+	steer.keycode = KEY_W
+	steer.physical_keycode = KEY_W
+	steer.pressed = true
+	root.push_input(steer)
+	_t.check("45b steering after the grace leaves the row up", player.playing, "")
+	var steer_up := steer.duplicate()
+	steer_up.pressed = false
+	root.push_input(steer_up)
 	var heard := [false]
 	var listener := Listener.new()
 	listener.heard = heard
@@ -247,6 +256,19 @@ func _order(player) -> void:
 				over.append("%s at %.1f" % [node.get_meta("flourish_kind"), at])
 		player.stop_all()
 	_t.eq("67 nothing lands on a visible avoided Control (the start pick card)", over, [])
+	player.play("cold_open", SEED, {}, "full")
+	player.advance(1.5)
+	await _frames(6)
+	var card: Control = null
+	var stamp: Control = null
+	for node in player.live_nodes():
+		match String(node.get_meta("flourish_kind", "")):
+			"card": card = node
+			"stamp": stamp = node
+	var cover := card.get_global_rect().intersection(stamp.get_global_rect()).size.x if card != null and stamp != null else -1.0
+	_t.check("68 squeezed by the pick card, the stamp shrinks rather than cover the punch card", card != null and stamp != null
+		and cover <= stamp.size.x * FlourishPlayer.STAMP_OVERLAP + 2.0, "covers %.0f of %.0f px" % [cover, stamp.size.x if stamp else 0.0])
+	player.stop_all()
 	layer.free()
 
 
@@ -262,6 +284,7 @@ func _hooks(player) -> void:
 		last += 1
 	events.beacon_unsealed.emit(last)
 	_t.eq("72 world 1's last unseal plays bowl_handoff", player.id, "bowl_handoff")
+	player.advance(1.0)
 	player.stop_all()
 	events.beacon_unsealed.emit(1 if last != 1 else 0)
 	_t.check("73 another stage's unseal plays nothing", not player.playing, player.id)
@@ -269,11 +292,21 @@ func _hooks(player) -> void:
 	root.add_child(_game.flow.warden)
 	events.warden_engaged.emit(last)
 	_t.eq("74 the meltdown Warden's engage plays flume_warden_reveal", player.id, "flume_warden_reveal")
+	player.advance(1.0)
 	player.stop_all()
 	events.warden_engaged.emit(last)
 	_t.check("75 once per run", not player.playing, player.id)
 	_game.flow.warden.free()
 	_game.flow.warden = null
+	player.stop_all()
+	var gone := Node3D.new()
+	root.add_child(gone)
+	player.play("rivet_freed", SEED, {}, "short")
+	player.play("flume_warden_reveal", SEED, {"warden": gone})
+	gone.free()
+	player.advance(Rows.length("rivet_freed", true) + 0.01)
+	_t.check("75c a queued row whose anchor is gone is dropped and logged expired",
+		not player.playing and player.played.back().id == "flume_warden_reveal" and player.played.back().cut == "expired", str(player.played.back()))
 	events.beacon_unsealed.emit(last)
 	_t.check("75b the hand-off plays once per run", not player.playing, player.id)
 	events.world_entered.emit(2)

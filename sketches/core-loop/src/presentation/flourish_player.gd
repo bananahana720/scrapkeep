@@ -3,8 +3,8 @@ extends Node
 # Plays one row of flourish_rows.gd over play: name cards, inked stamps, captions, comic panels
 # and drawn sound words on a canvas layer, in the title openings' comic look
 # (title_intro_player.gd). It never stops time, never moves the camera and never eats input:
-# any fresh press (not the mouse wheel) after SKIP_GRACE ends the row and still reaches the
-# ball. While the tree is paused (a reward ceremony, the pause menu) the row hides and waits.
+# a fresh press after SKIP_GRACE that is not steering or a core verb (PLAY_ACTIONS) and not the
+# mouse wheel ends the row, and still reaches the ball. While the tree is paused (a reward ceremony, the pause menu) the row hides and waits.
 #
 # Layout keeps to ScreenRegions: cards, captions, panels and stamps in the left column of the
 # play view (a stamp inks onto the right edge of the top piece), sound words at their anchor
@@ -14,8 +14,8 @@ extends Node
 # drop below it.
 #
 # A row plays in full until a profile has seen SEEN_SHARE of it, and in its short form after, so
-# a full beat cut early by steering plays in full again next run. A queued row older than
-# QUEUE_WAIT_MS, or whose anchor is gone, is dropped. Every finished row emits finished and joins
+# a full beat cut early plays in full again next run. A queued row that waited QUEUE_WAIT seconds
+# of play, or whose anchor is gone, is dropped and logged with cut "expired". Every finished row emits finished and joins
 # the run's "flourishes" meta, which run_log.gd writes into the run record.
 
 signal finished(id: String, skipped: bool)
@@ -29,7 +29,8 @@ const LAYER := 39
 const SKIP_GRACE := 1.5
 const SEEN_SHARE := 0.6
 const MAX_QUEUED := 3
-const QUEUE_WAIT_MS := 6000
+const QUEUE_WAIT := 6.0
+const PLAY_ACTIONS := ["cl_forward", "cl_back", "cl_left", "cl_right", "cl_jump", "cl_boost", "cl_haul", "cl_fire", "cl_harpoon"]
 const AVOID_GROUP := "flourish_avoid"
 const AVOID_GAP := 12.0
 const INK := Color("17141a")
@@ -43,6 +44,7 @@ const SLOT_Y := {"left_top": 0.30, "left_low": 0.50}
 # "centre" puts it over the upper play view, for a caller that knows no threat is committed.
 const STAMP_OVERLAP := 0.25
 const STAMP_RIGHT := 0.5
+const STAMP_MIN_SHARE := 0.55
 const STAMP_CENTRE_Y := 0.40
 # Sound words stay inside the play view, between the toast band and the prompts.
 const PLAY_VIEW := Rect2(0.34, 0.30, 0.60, 0.28)
@@ -57,7 +59,8 @@ var short := false
 var clock := 0.0
 var run_seed := 0
 # Every row finished since setup: {id, s, full, skipped, held, cut}. cut is "" when it showed
-# out, else "skipped" (a press), "preempted" (a higher row) or "stopped" (stop_all); skipped is
+# out, else "skipped" (a press), "preempted" (a higher row), "stopped" (stop_all) or "expired"
+# (dropped from the queue unshown); skipped is
 # cut != "". finished is emitted before the record joins the run meta, and it is the same
 # dictionary, so a listener may set its held.
 var played: Array = []
@@ -97,7 +100,7 @@ func setup(ctx_ref) -> void:
 
 
 # Starts a row, or queues it behind a row of equal or higher priority. A higher row ends the
-# one showing (as skipped). seed_value < 0 reads the run's seed. anchors: name -> Node3D for
+# one showing (cut "preempted"). seed_value < 0 reads the run's seed. anchors: name -> Node3D for
 # sound words. form "full" or "short" overrides the seen rule (stills, tests) and marks nothing.
 # False for an unknown row or a full queue.
 func play(row_id: String, seed_value := -1, anchors := {}, form := "") -> bool:
@@ -105,14 +108,15 @@ func play(row_id: String, seed_value := -1, anchors := {}, form := "") -> bool:
 		return false
 	if playing:
 		if Rows.priority(row_id) <= Rows.priority(id):
+			_expire_queue()
 			if _queue.size() >= MAX_QUEUED:
 				return false
-			_queue.append([row_id, seed_value, anchors, form, Time.get_ticks_msec()])
+			_queue.append([row_id, seed_value, anchors, form, 0.0])
 			return true
 		_finish("preempted", false)
 		# A finished listener may have started a row of its own; this one waits behind it.
 		if playing:
-			_queue.push_front([row_id, seed_value, anchors, form, Time.get_ticks_msec()])
+			_queue.push_front([row_id, seed_value, anchors, form, 0.0])
 			return true
 	_start(row_id, seed_value, anchors, form)
 	return true
@@ -185,8 +189,17 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if playing and clock >= SKIP_GRACE and not get_tree().paused and skips(event):
+	if playing and clock >= SKIP_GRACE and not get_tree().paused and skips(event) and not _play_verb(event):
 		skip()
+
+
+# Steering and the verbs a player presses all through play never skip a row: only a press with
+# nothing to do in play (or E, Q, the bay keys, Esc) does, so a first-time beat is read in full.
+func _play_verb(event: InputEvent) -> bool:
+	for action in PLAY_ACTIONS:
+		if InputMap.has_action(action) and InputMap.event_is_action(event, action):
+			return true
+	return false
 
 
 const WHEEL := [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN, MOUSE_BUTTON_WHEEL_LEFT, MOUSE_BUTTON_WHEEL_RIGHT]
@@ -204,6 +217,8 @@ func advance(delta: float) -> void:
 	if not playing:
 		return
 	clock += delta
+	for entry in _queue:
+		entry[4] = float(entry[4]) + delta
 	if clock >= length():
 		_finish("")
 		return
@@ -246,14 +261,31 @@ func _finish(cut: String, next := true) -> void:
 	id = ""
 	_anchors = {}
 	finished.emit(done, skipped)
+	_log(record)
+	if next:
+		_expire_queue()
+	if next and not _queue.is_empty() and not playing:
+		var entry: Array = _queue.pop_front()
+		_start(entry[0], entry[1], entry[2], entry[3])
+
+
+# Drops queued rows that waited QUEUE_WAIT seconds of play or lost an anchor, each logged with
+# cut "expired" (s 0) and announced by finished, so a caller's once-per-run flag can tell.
+func _expire_queue() -> void:
+	for entry in _queue.duplicate():
+		if float(entry[4]) > QUEUE_WAIT or not _anchors_alive(entry[2]):
+			_queue.erase(entry)
+			var record := {"id": entry[0], "s": 0.0, "full": false, "skipped": true, "held": 0.0, "cut": "expired"}
+			played.append(record)
+			finished.emit(entry[0], true)
+			_log(record)
+
+
+func _log(record: Dictionary) -> void:
 	if ctx != null and ctx.get("run") != null:
 		var log: Array = ctx.run.get_meta("flourishes", [])
 		log.append(record)
 		ctx.run.set_meta("flourishes", log)
-	while next and not _queue.is_empty() and not playing:
-		var entry: Array = _queue.pop_front()
-		if Time.get_ticks_msec() - int(entry[4]) <= QUEUE_WAIT_MS and _anchors_alive(entry[2]):
-			_start(entry[0], entry[1], entry[2], entry[3])
 
 
 func _anchors_alive(anchors: Dictionary) -> bool:
@@ -488,8 +520,16 @@ func _stamp_at(label: Control) -> Vector2:
 				top = entry.node
 	if top == null:
 		return _column_at("left_top")
-	var x := top.position.x + top.size.x - label.size.x * STAMP_OVERLAP
-	x = maxf(screen.x * COLUMN_X, minf(x, minf(screen.x * STAMP_RIGHT, _avoid_right()) - label.size.x))
+	var start := top.position.x + top.size.x
+	var limit := minf(screen.x * STAMP_RIGHT, _avoid_right())
+	# Too little room beside the piece: the stamp's type shrinks (to STAMP_MIN_SHARE) rather than
+	# cover more of the piece's words.
+	var room := limit - start
+	if label.size.x * (1.0 - STAMP_OVERLAP) > room:
+		var share := clampf(room / (label.size.x * (1.0 - STAMP_OVERLAP)), STAMP_MIN_SHARE, 1.0)
+		label.add_theme_font_size_override("font_size", int(label.get_theme_font_size("font_size") * share))
+		label.reset_size()
+	var x := maxf(screen.x * COLUMN_X, minf(start - label.size.x * STAMP_OVERLAP, limit - label.size.x))
 	return Vector2(x, top.position.y + top.size.y * 0.5 - label.size.y * 0.5)
 
 

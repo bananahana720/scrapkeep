@@ -19,6 +19,7 @@ extends Node
 const Worlds := preload("res://src/core/worlds.gd")
 
 const WORLD := 1
+const SHOWN_SECONDS := 0.5
 const STOP_SCREENS := ["title", "class_select", "dead", "summary"]
 
 var ctx
@@ -26,6 +27,8 @@ var player
 var _revealed := false
 var _handed_off := false
 var _brindle_beaten := false
+# Once-per-run rows this file asked for that have not finished yet.
+var _asked := {}
 
 
 func setup(ctx_ref, flourish_player) -> void:
@@ -40,6 +43,7 @@ func setup(ctx_ref, flourish_player) -> void:
 	events.warden_engaged.connect(_on_warden_engaged)
 	events.beacon_unsealed.connect(_on_beacon_unsealed)
 	events.world_entered.connect(_on_world_entered)
+	player.finished.connect(_on_finished)
 	events.flow_changed.connect(func(state: String):
 		if state in STOP_SCREENS:
 			player.stop_all())
@@ -49,6 +53,7 @@ func _on_run_started(_class_id: String) -> void:
 	_revealed = false
 	_handed_off = false
 	_brindle_beaten = false
+	_asked.clear()
 
 
 func _on_boss_defeated() -> void:
@@ -93,13 +98,14 @@ func _on_warden_engaged(stage: int) -> void:
 	var variant = warden.get("variant")
 	if not variant is String or variant != "meltdown":
 		return
-	_revealed = true
-	player.play("flume_warden_reveal", -1, {"warden": warden})
+	if not _pending("flume_warden_reveal"):
+		_asked["flume_warden_reveal"] = true
+		player.play("flume_warden_reveal", -1, {"warden": warden})
 
 
 func _on_beacon_unsealed(stage: int) -> void:
-	if not _handed_off and _in_world_one(stage) and _stages().is_world_last(stage) and _boss_built():
-		_handed_off = true
+	if not _handed_off and not _pending("bowl_handoff") and _in_world_one(stage) and _stages().is_world_last(stage) and _boss_built():
+		_asked["bowl_handoff"] = true
 		player.play("bowl_handoff")
 
 
@@ -107,6 +113,25 @@ func _on_world_entered(world: int) -> void:
 	if world == WORLD + 1 and _brindle_beaten:
 		_brindle_beaten = false
 		player.play("spillway_clear")
+
+
+# A once-per-run row counts as played once it reached the screen; one that expired in the queue,
+# or was stopped within SHOWN_SECONDS, may play on the next trigger.
+func _on_finished(id: String, _skipped: bool) -> void:
+	if not _asked.erase(id):
+		return
+	var record: Dictionary = player.played.back() if not player.played.is_empty() else {}
+	var cut := String(record.get("cut", ""))
+	if cut == "expired" or (cut == "stopped" and float(record.get("s", 0.0)) < SHOWN_SECONDS):
+		return
+	if id == "flume_warden_reveal":
+		_revealed = true
+	elif id == "bowl_handoff":
+		_handed_off = true
+
+
+func _pending(id: String) -> bool:
+	return player.id == id or id in player.queued()
 
 
 func _boss_built() -> bool:
