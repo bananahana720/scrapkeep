@@ -318,6 +318,9 @@ const PAY_BACKOFF := 6.0
 const LEVEL_BAND := 8.0
 const PLATE_REACH := 30.0
 const CAMP_LAST := 1000.0
+# A field find is worked only once the ball is this near it: the explorer checks the dead ends its
+# route passes, the way a player follows a drip or a tune, not every one on the map.
+const FIND_NOTICE_M := 150.0
 # A site more than LEVEL_BAND above the ball is not rolled at straight: the cliff under its shelf
 # wedges the ball (the Reach camp stands 22 m over the trough). The way up is planned once on the
 # ground's heights, a CLIMB_STEP grid within CLIMB_PAD of both ends that never rises steeper than
@@ -1522,6 +1525,8 @@ func _activity_goal(delta: float) -> bool:
 			# A field find (secrets.gd FINDS) is the last stop: the explorer has learned the tells and
 			# checks the dead ends once the lit sites are done.
 			if c.has_meta("find"):
+				if _flat(ball, c.global_position) > FIND_NOTICE_M:
+					continue
 				level -= CAMP_LAST * 2.0
 			var d := _flat(ball, c.global_position)
 			if level > best_level or (level == best_level and d < best):

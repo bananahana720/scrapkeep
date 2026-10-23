@@ -117,6 +117,10 @@ func _placement() -> void:
 					anchor = a
 			_t.check("%s stands in a dead-end zone off every line" % label, not anchor.is_empty() and anchor["rank"] > 0, str(anchor))
 			_t.eq("%s zone is its site row" % label, g.zones()[zone]["row"], spot["site"])
+			var face := Vector2(float(spot["face"][0]), float(spot["face"][1])).normalized()
+			var out_node: int = g.nearest(at + face * 16.0)
+			_t.check("%s faces out of its dead end" % label, g.d_spawn_node(out_node) < g.d_spawn_node(node),
+				"%.0f m out vs %.0f m in" % [g.d_spawn_node(out_node), g.d_spawn_node(node)])
 			var far := -1
 			var far_d := -1.0
 			for n in g.zone_door_nodes(zone):

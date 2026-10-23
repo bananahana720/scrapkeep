@@ -70,7 +70,8 @@ const ROOM_PAY := {"rarities": ["rare"]}
 #   radio  a crew radio plays through the wall (heard at RADIO_HEAR_M; the lost tape on the find)
 # A find pays the world's top ordinary rung (green, `rare`) every run; the first find also files
 # its codex row, so the camp counts it. Spots stand on graph door nodes that are not the zone's
-# far end, where grey panels' rib caches wait (IL-01).
+# far end, where grey panels' rib caches wait (IL-01). A spot's `face` is the way its cracked face
+# looks: out of the dead end, toward the drop-in, so the run-up to ram it is the way in.
 const FIND_KINDS := ["crack", "radio"]
 const DRIP_HEAR_M := 22.0
 const RADIO_HEAR_M := 40.0
@@ -79,7 +80,7 @@ const FIND_PAY := {"rarities": ["rare"]}
 const FINDS := {
 	"dam_turbine_hall": {
 		"world": 1, "map": "park_dam", "kind": "crack",
-		"spots": [{"site": "powerhouse", "at": [120, 536]}, {"site": "west_rim_bench", "at": [-232, 296]}],
+		"spots": [{"site": "west_rim_bench", "at": [-236, 192], "face": [-1, -1]}, {"site": "east_rim_bench", "at": [236, 184], "face": [1, -1]}],
 		"name": "Turbine Hall Seep",
 		"log": "Maintenance note: the old turbine hall was bricked up after the flood. The bricks were not asked. Water found the way first.",
 		"codex": {"id": "spillway_turbine_seep", "category": "world", "name": "Where the Water Got In",
@@ -89,7 +90,7 @@ const FINDS := {
 	},
 	"dam_shift_radio": {
 		"world": 1, "map": "park_dam", "kind": "radio",
-		"spots": [{"site": "shelf_sag_corner_3", "at": [-648, 192]}, {"site": "shelf_sag_corner_4", "at": [648, 192]}],
+		"spots": [{"site": "shelf_sag_corner_3", "at": [-448, -12], "face": [0, -1]}, {"site": "shelf_sag_corner_4", "at": [448, -12], "face": [0, -1]}],
 		"name": "Night Shift Radio",
 		"log": "Night shift: radio left on in the spare room so the dam has company. Station went off air years ago. Radio did not.",
 		"codex": {"id": "spillway_shift_radio", "category": "world", "name": "Still On Air",
@@ -99,7 +100,7 @@ const FINDS := {
 	},
 	"flume_trestle_seep": {
 		"world": 1, "map": "park_flume", "kind": "crack",
-		"spots": [{"site": "mesa_spill", "at": [-576, -520]}, {"site": "bluff_wash_3", "at": [264, 720]}],
+		"spots": [{"site": "mesa_spill", "at": [-512, -528], "face": [0, -1]}, {"site": "field_bank_4", "at": [-528, -304], "face": [1, -1]}],
 		"name": "Spill Cellar",
 		"log": "Flume log: cellar under the spill flooded twice, sealed once. Crew kept the key. Lock was never fitted.",
 		"codex": {"id": "spillway_flume_seep", "category": "world", "name": "Spill Cellar",
@@ -109,7 +110,7 @@ const FINDS := {
 	},
 	"flume_crew_radio": {
 		"world": 1, "map": "park_flume", "kind": "radio",
-		"spots": [{"site": "weir_pond", "at": [-648, -688]}, {"site": "canal_wash_6", "at": [224, -440]}],
+		"spots": [{"site": "weir_pond", "at": [-576, -664], "face": [1, 0]}, {"site": "canal_wash_1", "at": [-104, -708], "face": [-1, 1]}],
 		"name": "Pond Shift Wireless",
 		"log": "Pond shift: the wireless stays tuned to the dance hour. Requests are taken. None played since the Mind clocked in.",
 		"codex": {"id": "spillway_crew_radio", "category": "world", "name": "Requests Taken",
@@ -187,7 +188,8 @@ static func find_sites(map_id: String, seed: int) -> Array:
 			continue
 		var spot: Dictionary = find_spot(id, seed)
 		out.append({"id": "cracked_cache", "row": id, "site": spot["site"], "find": id, "kind": f["kind"],
-			"at": Vector2(float(spot["at"][0]), float(spot["at"][1])), "pay": FIND_PAY.duplicate(true)})
+			"at": Vector2(float(spot["at"][0]), float(spot["at"][1])), "pay": FIND_PAY.duplicate(true),
+			"face": Vector2(float(spot["face"][0]), float(spot["face"][1])).normalized()})
 	return out
 
 

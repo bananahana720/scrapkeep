@@ -530,6 +530,9 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	for key in ["rarities", "named"]:
 		if spec_pay.has(key):
 			s.rule["pay"][key] = spec_pay[key]
+	# A field find faces out of its dead end (secrets.gd FINDS spots).
+	if spec.has("face"):
+		s.rule["face"] = spec["face"]
 	s.name = "Activity_" + id
 	add_child(s)
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
