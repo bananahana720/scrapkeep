@@ -218,6 +218,8 @@ var _park_pcm := {}
 # Park cue cells rendered on a worker before their beat, by signature.
 static var _park_warm := {}
 static var _park_warm_lock := Mutex.new()
+# The worker task rendering each booked cell, by signature, until its beat takes it.
+static var _park_tasks := {}
 
 var clock := 0
 var bar_origin := 0
@@ -1387,6 +1389,13 @@ func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
 	var signature := _park_signature(action, live_key, step_len)
 	if _park_pcm.has(signature):
 		return _park_pcm[signature]
+	# A cell still rendering on its worker is waited for: what is left of it costs less than a
+	# second render here.
+	var task: int = _park_tasks.get(signature, -1)
+	_park_tasks.erase(signature)
+	if task >= 0 and _stinger_tasks.has(task):
+		_stinger_tasks.erase(task)
+		WorkerThreadPool.wait_for_task_completion(task)
 	_park_warm_lock.lock()
 	var buf: PackedFloat32Array = _park_warm.get(signature, PackedFloat32Array())
 	_park_warm.erase(signature)
@@ -1399,8 +1408,12 @@ func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
 	return buf
 
 
+# A synth cell does not depend on the grid's step, so a tempo change between its booking and its
+# beat keeps its buffer; a cell that plays a baked sound does.
 static func _park_signature(action: Dictionary, live_key: int, step: int) -> String:
-	return str([action.row, action.cell, action.length, action.progress, live_key, step])
+	var row: Dictionary = action.row
+	var stepped: bool = row.get("stinger", false) or row.has("sound")
+	return str([row, action.cell, action.length, action.progress, live_key, step if stepped else 0, int(action.get("skip", 0))])
 
 
 static func _render_park(row: Dictionary, cell: int, length: int, progress: float, skip: int, live_key: int, step: int, theme_now: int) -> PackedFloat32Array:
@@ -1495,7 +1508,8 @@ func _add_action(at: int, action: Dictionary) -> void:
 
 # Like _warm_stinger: render the cell on a worker so its beat only plays it.
 func _warm_park(action: Dictionary, at: int) -> void:
-	if not warm_stingers:
+	# A cell due now plays before a worker could finish it.
+	if not warm_stingers or at <= clock:
 		return
 	var shift: int = key if grid == null else grid.key_at(at)
 	var signature := _park_signature(action, shift, step_len)
@@ -1509,13 +1523,16 @@ func _warm_park(action: Dictionary, at: int) -> void:
 	var step := step_len
 	var theme_now := theme
 	_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
-	_stinger_tasks.append(WorkerThreadPool.add_task(func():
+	if _park_tasks.size() >= 64:
+		_park_tasks.clear()
+	_park_tasks[signature] = WorkerThreadPool.add_task(func():
 		var buf := _render_park(row, cell, length, progress, skip, shift, step, theme_now)
 		_park_warm_lock.lock()
 		if _park_warm.size() >= 64:
 			_park_warm.clear()
 		_park_warm[signature] = buf
-		_park_warm_lock.unlock(), false, "park cue warm"))
+		_park_warm_lock.unlock(), false, "park cue warm")
+	_stinger_tasks.append(_park_tasks[signature])
 
 
 func _to_next_action() -> int:
