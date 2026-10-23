@@ -1,6 +1,6 @@
 # Scrapkeep lessons and ways of working
 
-How this project actually runs, learned the hard way on 16-18 Oct 2026. Each lesson is the rule, then why. Read this before starting a thread, posting a card or running a gate. Andrew's readable copy is the Claude Doc [Scrapkeep lessons and ways of working](https://claude.ai/code/artifact/95d92907-5cfe-4290-b303-d465baccedde); this file is the copy threads read. Owner: the "Project library and lessons learned" thread. Last updated 2026-10-18 05:15Z.
+How this project actually runs, learned the hard way on 16-23 Oct 2026. Each lesson is the rule, then why. Read this before starting a thread, posting a card or running a gate. Andrew's readable copy is the Claude Doc [Scrapkeep lessons and ways of working](https://claude.ai/code/artifact/95d92907-5cfe-4290-b303-d465baccedde); this file (repo project-guide/handoff/LESSONS.md, shared copy /mnt/project-files/project-guide/LESSONS.md) is the copy threads read. Owner: the project coordinator, since 23 Oct. Lesson numbers stay fixed so older receipts still match. Last updated 2026-10-23 by the library sweep thread.
 
 ## Getting Andrew's word
 
@@ -54,7 +54,7 @@ How this project actually runs, learned the hard way on 16-18 Oct 2026. Each les
 
 ## Library and records
 
-28. **One register for decisions.** Check `project-guide/handoff/DECISIONS.md` before proposing anything that might already be decided; he dislikes re-deciding and the tokens spent rediscovering old calls (19:46Z 17 Oct).
+28. **One register for decisions.** Check `project-guide/DECISIONS.md` (repo: `project-guide/handoff/DECISIONS.md`) before proposing anything that might already be decided; he dislikes re-deciding and the tokens spent rediscovering old calls (19:46Z 17 Oct).
 29. **Every idea he gives is a motif.** Brief design threads with the motifs that touch their area (world enemy themes, single-skill areas, damage-type armour, buff/debuff zones, cast times).
 30. **The Custom view tab strips colour, opacity and positioning.** Use `currentColor`, no hard-coded colours (dark mode).
 31. **Memory sync to his PC is one-way.** A snapshot goes to `docs/project/PROJECT-MEMORY.md` only on request.
@@ -88,10 +88,21 @@ He said he won't dictate anything but direction (19:55Z 17 Oct), so the filing i
 41. **Claude Docs edit grammar.** `target {"kind":"blocks","ids":[...]}`, `source {"as":"blocks","from":{"kind":"inline","content":[rows]}}`; a table row can't be replaced, so insert the new row after it and `delete` the old one with its `ifHash`.
 42. **Artifacts and Claude Docs are private to the account that made them.** For a move to another account, carry the content as files in the repo (project-guide/handoff/) or share the pages with the new account.
 
-## Moving coordination to the PC, 18 Oct
+
+## Coordination from the PC, 18-23 Oct (history; the coordinator is back in the project, so lessons 1-13 apply again)
 
 43. **GitHub is the bus for cloud lanes.** Claude Code cloud sessions cannot message other sessions. A lane posts a receipt comment on each PR (verdict, head SHA, commands, nonzero test counts) and raises a hand on the wave's "Wave board" issue. The local coordinator reads both at every check-in, at least every 30 minutes. Local sessions message the coordinator directly.
 44. **Escalation goes one step at a time.** An agent asks its lane coordinator; a lane asks the local coordinator; only the coordinator goes to Andrew, with a stakeholder pitch (what's at stake, options with tradeoffs, a recommendation, the measured number, what would change it). Keep building on the recommendation while a pitch waits.
 45. **Sync the records before splitting into worktrees.** Lanes clone main, so the rulings, the ownership table and the graph land on main first; a lane that starts from stale docs re-decides settled calls.
-46. **Cap concurrent cloud lanes and let each fan out inside its sandbox.** Four lane sessions that run their own agents and workflows replace a dozen flat threads; the dozen used up the old account in a day.
+46. **Cap concurrent cloud lanes and let each fan out inside its sandbox.** The cap is 7 (19 Oct) and was raised to 11 on 21 Oct. Lanes that run their own agents and workflows replace a dozen flat sessions; the dozen used up the old account in a day.
 
+## Back in the project, 23 Oct
+
+47. **The merge safety check reads a typed line as covering only the PRs it names.** Andrew's 17:27Z line landed #383, but #385, held in the queue it described, was refused. Ask for one line per batch that names the thread, the action and each PR number, and attach it with `context_message_ids`.
+48. **Remote Control sessions cannot receive `send_message`.** Reach an RC session through `message_thread` on its thread; other threads route through the coordinator.
+49. **The image service filter refuses some reference-sheet prompts.** The mag trapper and the Cannon close-ups were refused on PR #387, so those units are incomplete. Word prompts as machinery and tools, not weapons or traps, keep the approved board as image 1, and rerun only the refused views. Sheets are review drafts: check the 1.84 m ball for scale drift before a modeller traces them.
+50. **Run the export include check whenever code starts reading a new file type.** Park ground step 2 made `park_terrain` read each park's `surface.bin`, but no `include_filter` pattern shipped it. Every headless test passed; only the 23 Oct release dry run caught it. #390 adds the pattern to both Linux presets and a seeded control test that drops it.
+51. **A fix that passes the fast lane can still change a run.** #351 (free a released stage over frames) stalled the seed 6 skipper at stage 4, while the bare stage head won to stage 6. Before calling a bot red "base", run the same seed on the bare head; hold the PR and anything stacked on it (#374) until it is fixed.
+52. **A new crash is one that is green on the last promoted main.** The stage 6 quit crash was red on the stage but green on main, so it holds promotion and gets a bisect; a red that is also red on main does not.
+53. **Timing captures need an idle 4080.** Both GPUs run throughput work; a frame-time capture runs only when the card would otherwise idle, and is void if another process touched the card during it (use the PC's pause file).
+54. **Dictated card answers come as letters and fragments.** "colours a, deals ..., scope a" maps to the card's options in order; record the typed explanation over the card text, and if a message stops mid-sentence, say so and wait for the rest.
