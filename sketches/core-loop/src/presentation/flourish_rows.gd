@@ -3,7 +3,8 @@ extends RefCounted
 # The in-run flourishes (world 1 plan, units 3 and 4): short comic beats laid over play, each a
 # row of timed pieces that flourish_player.gd draws. Nothing here touches a node.
 #
-# A row plays in full once per profile (seen key SEEN_PREFIX + id) and in its short form after.
+# A row plays in full until a profile has seen most of it (seen key SEEN_PREFIX + id;
+# flourish_player.gd SEEN_SHARE) and in its short form after.
 # It never stops time and never takes the camera: play goes on under it (TONE-BIBLE guardrails),
 # so `held` stays 0 unless a caller holds the run itself.
 #
