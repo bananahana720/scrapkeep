@@ -67,6 +67,17 @@ func _run() -> void:
 	rule.step(100.0)
 	_t.eq("a broken point stays broken", rule.state("vent"), WeakPoints.BROKEN)
 
+	# Bare only with no point open: a break while another point stands open keeps the body chipped.
+	rule = WeakPoints.new(_parts())
+	rule.open("vent", 0.0)
+	rule.open("eye", 0.0)
+	_land(rule, _hit("vent", true, 99.0), 1.0)
+	var bare_open := rule.bare()
+	_t.near("a break with another point open: the body is still chipped", _land(rule, _hit("", true), 1.5)["gain_scale"], WeakPoints.CHIP)
+	rule.step(7.0)
+	_t.check("that point re-seals: the body stands bare and pays full", bare_open and rule.open_points().is_empty()
+			and is_equal_approx(_land(rule, _hit("", true), 7.5)["gain_scale"], 1.0), "open %s" % [rule.open_points()])
+
 	# Re-seal clock.
 	rule = WeakPoints.new(_parts())
 	rule.open("vent", 0.0)

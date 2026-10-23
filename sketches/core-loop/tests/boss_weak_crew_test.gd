@@ -1,4 +1,4 @@
-# smoke: solo timeout=240s (eleven boots of the Waking arena; 153 s on a 4-core cloud box on 2026-10-23 with the record half running beside it)
+# smoke: solo timeout=240s (twenty boots of the Waking arena; 153 s on a 4-core cloud box on 2026-10-23 with the record half running beside it)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")

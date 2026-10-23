@@ -3,8 +3,9 @@ extends RefCounted
 # A boss's named weak points as one rule object with no scene access (challenge lane, #241).
 # A point is SHUT until a tell opens it; a reel impact on an OPEN point lands at full posture
 # gain and wears its seal, and a broken seal removes that point's attack family. Every other hit
-# is chipped, except while the body stands bare: from a break until a tell opens a point again. judge() answers what a hit would do and changes nothing, apply() is the one place
-# a hit changes state, step() runs the re-seal clock and the crew's fit clock.
+# is chipped, except while the body stands bare: from a break, with no point open, until a tell
+# opens one again. judge() answers what a hit would do and changes nothing, apply() is the one
+# place a hit changes state, step() runs the re-seal clock and the crew's fit clock.
 # Off (no parts, or enabled false) is the identity: judge() scales nothing and no state moves.
 
 enum { SHUT, OPEN, BROKEN }
@@ -68,7 +69,8 @@ func judge(hit: Dictionary) -> Dictionary:
 		result["broke"] = punch >= float(part["seal_hp"])
 		result["removes"] = part["removes"] if result["broke"] else ""
 		return result
-	result["gain_scale"] = 1.0 if _bare else chip
+	# A point still open is the place to hit, so the body stays chipped until none is.
+	result["gain_scale"] = 1.0 if _bare and open_points().is_empty() else chip
 	return result
 
 
