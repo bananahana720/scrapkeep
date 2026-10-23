@@ -1068,6 +1068,8 @@ func _close_note() -> void:
 	_note["hp_lost"] = snappedf(float(_note["hp_lost"]), 0.1)
 	_note["hull_lost"] = snappedf(float(_note.get("hull_lost", 0.0)), 0.1)
 	_note["punch_short_s"] = snappedf(float(_note["punch_short_s"]), 0.01)
+	if not _note.has("secrets_found"):
+		_note["secrets_found"] = []
 	stage_notes.append(_note)
 	_note = {}
 
@@ -1528,10 +1530,15 @@ func _activity_goal(delta: float) -> bool:
 	if s == null:
 		return false
 	var finished: Array = []
+	var secrets: Array = []
 	for c in activities.sites:
 		if is_instance_valid(c) and c.done:
 			finished.append(c.id)
+			if c.has_meta("find"):
+				secrets.append(String(c.get_meta("find")))
 	_note["activities_finished"] = finished
+	# The field finds (secrets.gd FINDS) this stage opened, for the world 1 pacing check.
+	_note["secrets_found"] = secrets
 	var entered: Array = _note.get("activities_entered", [])
 	if not s.id in entered:
 		entered.append(s.id)
