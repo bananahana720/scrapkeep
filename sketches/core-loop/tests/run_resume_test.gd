@@ -7,9 +7,9 @@ const TwoWorld := preload("res://tests/doubles/two_world_defs.gd")
 
 # RS3: the run store wired into flow, on the two-world table.
 #   (a) a run entered at a zone entrance and quit resumes in a new Game at that entrance with
-#       the same hp, mass, cogs, parts and tree picks, and no retry spent by the Continue;
-#   (b) the first death in a world spends its one retry, the second ends the run on the
-#       summary, and a new world has a fresh retry;
+#       the same hp, mass, cogs, parts and tree picks, and nothing refunded by the Continue;
+#   (b) there is no free retry: a death with no earned save ends the run on the summary, in
+#       any world, and a new run starts with no save spent;
 #   (c) a crash after the entrance write replays the same activity offers (_roll's part ids);
 #   (d) the ended run leaves a tombstone, so the store holds no run.
 
@@ -80,15 +80,12 @@ func _kill(game) -> void:
 
 
 func _run() -> void:
-	# (a) Game one: a death retry in world one, a tree pick and some growth, then stage 2's entrance.
+	# (a) Game one: a tree pick and some growth, then stage 2's entrance.
 	_game = _boot()
 	await _frames(2)
 	_game.flow.press_start()
 	_game.flow.choose_class(1)
 	await _frames(5)
-	_kill(_game)
-	var first_dead: bool = _game.flow.state_name() == "dead"
-	_game.flow.retry_stage()
 	var tree = _game.player.tree
 	var offer: Array = tree.offered(tree.class_id, tree.picks.size() + 1)
 	var picked: bool = tree.pending() and not offer.is_empty() and tree.pick(offer[0]["id"])
@@ -100,8 +97,8 @@ func _run() -> void:
 	var grown: float = _game.run.mass
 	_game.flow.enter_stage(2, Vector3(0.0, 0.0, 14.0), false)
 	var saved := _state(_game)
-	_report("first death spends", first_dead and saved["spent"] == {1: 1} and int(_disk().get("retries_spent", {}).get("1", 0)) == 1,
-		"died in world 1 (dead screen %s), retried; spent %s, on disk %s" % [first_dead, saved["spent"], _disk().get("retries_spent")])
+	_report("no retry is ever written", saved["spent"].is_empty() and _disk().get("retries_spent", {}).is_empty() and not _disk().get("death_save_spent", false),
+		"spent %s, on disk %s, save flag on disk %s" % [saved["spent"], _disk().get("retries_spent"), _disk().get("death_save_spent")])
 	# Play on past the entrance, then quit: none of this is saved.
 	_game.run.add_scrap(50, Vector3.ZERO)
 	_game.run.damage(20.0, "test")
@@ -121,34 +118,31 @@ func _run() -> void:
 		"continue offered %s, resumed %s: %s against saved %s (mass before entry %.0f), ball %.3f m from the entry" % [offered, resumed, back, saved, grown, pose_gap])
 	_report("resume reconciles the settled ledger", _game.ctx.profile.is_settled("resume_marker") and _game.run.settled.has("resume_marker"),
 		"run settled %s, profile settled %s" % [_game.run.settled, _game.ctx.profile.settled_ids()])
-	_report("continue spends nothing", back["spent"] == {1: 1} and int(_disk().get("retries_spent", {}).get("1", 0)) == 1,
-		"retries_spent after the continue %s, on disk %s" % [back["spent"], _disk().get("retries_spent")])
+	_report("continue refunds nothing", back["spent"].is_empty() and _disk().get("retries_spent", {}).is_empty() and not _game.run.death_save_spent,
+		"retries_spent after the continue %s, on disk %s, save spent %s" % [back["spent"], _disk().get("retries_spent"), _game.run.death_save_spent])
 
-	# (b) + (d): the second death in world one ends the run, and the store keeps a tombstone.
+	# (b) + (d): a death in world one ends the run, and the store keeps a tombstone.
 	var ended := [false, true]
 	_game.events.run_ended.connect(func(won: bool):
 		ended[0] = true
 		ended[1] = won)
 	_kill(_game)
 	var raw := FileAccess.get_file_as_string(PATH)
-	_report("second death ends the run", _game.flow.state_name() == "summary" and ended[0] and not ended[1],
+	_report("a death ends the run", _game.flow.state_name() == "summary" and ended[0] and not ended[1],
 		"flow %s, run_ended %s won %s" % [_game.flow.state_name(), ended[0], ended[1]])
 	_report("run end leaves no run", _disk().is_empty() and raw.contains("\"ended\": true") and not raw.contains("\"run\""),
 		"store loads %s; file %s" % [_disk(), raw.replace("\n", " ")])
 
-	# A new run: world one's retry is fresh again, then stage 4 (world two) is entered and
+	# A new run starts with no save spent, then stage 4 (world two) is entered and
 	# the game crashes right after the entrance write.
 	_game.flow.new_run()
 	await _frames(2)
-	_kill(_game)
-	var fresh_dead: bool = _game.flow.state_name() == "dead"
-	_game.flow.retry_stage()
 	_game.flow.enter_stage(4, Vector3(0.0, 0.0, 14.0), false)
 	await _frames(2)
 	var rolls_before := _rolls(_game)
 	var run_id: String = _game.run.run_id
-	_report("new run has a fresh retry", fresh_dead and _game.run.retries_spent == {1: 1},
-		"new run's first death showed the dead screen %s; spent %s" % [fresh_dead, _game.run.retries_spent])
+	_report("new run has no save spent", _game.run.retries_spent.is_empty() and not _game.run.death_save_spent and _game.flow.state_name() == "stage",
+		"new run: spent %s, save spent %s, flow %s" % [_game.run.retries_spent, _game.run.death_save_spent, _game.flow.state_name()])
 	_game.free()
 
 	# (c) the replay after the crash rolls the same offers.
@@ -161,14 +155,10 @@ func _run() -> void:
 	_report("crash replay offers", replayed and _game.run.stage == 4 and _game.run.run_id == run_id and rolls_after == rolls_before and not rolls_before.is_empty(),
 		"stage %d run %s: offers %s, before the crash %s" % [_game.run.stage, _game.run.run_id, rolls_after, rolls_before])
 
-	# (b) world two has its own retry; its second death ends the run.
+	# (b) world two gives no retry either; its first death ends the run.
 	_kill(_game)
-	var world_two_dead: bool = _game.flow.state_name() == "dead"
-	_game.flow.retry_stage()
-	var spent_two: Dictionary = _game.run.retries_spent.duplicate()
-	_kill(_game)
-	_report("new world fresh retry", world_two_dead and spent_two == {1: 1, 2: 1} and _game.flow.state_name() == "summary" and _disk().is_empty(),
-		"world 2 first death dead screen %s, spent %s, second death flow %s" % [world_two_dead, spent_two, _game.flow.state_name()])
+	_report("world two death ends the run", _game.run.retries_spent.is_empty() and _game.flow.state_name() == "summary" and _disk().is_empty(),
+		"world 2 first death: spent %s, flow %s" % [_game.run.retries_spent, _game.flow.state_name()])
 
 	# (e) a save this build never owned survives a lost run's end byte for byte.
 	_game.free()
@@ -183,8 +173,6 @@ func _run() -> void:
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	await _frames(5)
-	_kill(_game)
-	_game.flow.retry_stage()
 	_kill(_game)
 	var kept := FileAccess.get_file_as_bytes(PATH)
 	_report("newer-schema save survives a lost run", _game.flow.state_name() == "summary" and kept == future,

@@ -334,7 +334,7 @@ func open_companion() -> bool:
 	var screens = game.screens
 	if screens != null and (screens.overlay_open() or screens.settings_open()):
 		return false
-	if game.summary_guard_left > 0.0:
+	if game.summary_shut():
 		return false
 	if _outside_run() and game.ctx.profile != null:
 		game.run.companion = game.ctx.profile.companion()

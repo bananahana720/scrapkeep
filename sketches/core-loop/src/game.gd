@@ -56,7 +56,6 @@ const MENU_MODULES_FRAMES_APART := 2
 # and the tuning dump. Modules never reach past the context; see CONTRACTS.md.
 
 const RESTART_HOLD := 0.5
-const SUMMARY_GUARD := 0.75
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
 const SEED := 20260926
@@ -142,9 +141,12 @@ var _pause_toggled := false
 var _notes_held := false
 var _restart_held := 0.0
 var _restart_latched := false
-# Seconds before the summary takes a key: the victory beat ends while the player may
-# still be pressing Space to jump, and the run's only summary must stay readable.
-var summary_guard_left := 0.0
+# The summary's input latch: it opens with the summary and stays shut while any input that was
+# held then (a key, mouse button, pad button or trigger) is still held, and while the ending page
+# is up. The victory beat and a death end with the player on Space or the fire button, and a
+# held input must not skip the summary or start a run. A fresh press after the release takes it,
+# with no time lock (wave 19).
+var summary_latched := false
 var _hit_stopped := false
 # The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
 var last_device := "kbm"
@@ -164,7 +166,7 @@ func _ready() -> void:
 	add_child(events)
 	events.flow_changed.connect(func(state: String):
 		if state == "summary":
-			summary_guard_left = SUMMARY_GUARD)
+			arm_summary_latch())
 	run = RunState.new(events, _session_seed)
 	tuning = Tuning.new()
 	tuning.apply_cmdline("launch")
@@ -524,7 +526,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
-	summary_guard_left = maxf(0.0, summary_guard_left - delta)
+	step_summary_latch()
 	if test_mode:
 		return
 	_step_menu_modules_later()
@@ -550,20 +552,34 @@ func apply_look() -> void:
 	camera.apply_look_settings(settings_store())
 
 
-# Hold R in play to retry. One retry per press: after any retry, from the hold or from
-# the death screen's R, the hold waits for R to come up before it counts again, so a
-# held R never retries twice.
+# Hold R in play to restart. One restart per press: after one, or when R was already down
+# outside play (the death screen), the hold waits for R to come up before it counts, so a
+# held R never restarts twice.
 func step_restart_hold(delta: float, r_down: bool) -> void:
 	if not r_down:
 		_restart_latched = false
+	# An R held through a death (or any frame outside play) must be released before it counts:
+	# the retry or new run that follows would otherwise restart again at once.
+	if r_down and not flow.in_play():
+		_restart_latched = true
 	if not flow.in_play() or not r_down or _restart_latched:
+		_restart_held = 0.0
+		return
+	# The victory lap is not a stage to restart: with a store, R never abandons the credits.
+	if flow.store != null and flow.state == flow.LAP:
 		_restart_held = 0.0
 		return
 	_restart_held += delta
 	if _restart_held >= RESTART_HOLD:
 		_restart_held = 0.0
 		_restart_latched = true
-		flow.retry_stage()
+		# With a run store (the real game) a held R is a restart of the run: a new run as the same
+		# pilot, the open one logged as abandoned, never as a death. A store-less flow (tests,
+		# bots) keeps the stage retry.
+		if flow.store != null:
+			flow.new_run()
+		else:
+			flow.retry_stage()
 
 
 func restart_hold_fraction() -> float:
@@ -687,6 +703,49 @@ func walk_input(live: bool) -> void:
 		keyboard.enabled = live
 		keyboard.walk = live
 	_capture_mouse(live)
+
+
+# Latches the summary against whatever is held right now.
+func arm_summary_latch() -> void:
+	summary_latched = input_held()
+
+
+# True while the summary takes no key: an input held at its opening, or the ending page over it.
+func summary_shut() -> bool:
+	return summary_latched or (screens != null and screens.ending_open())
+
+
+# Releases the latch once nothing is held and the ending page is down.
+func step_summary_latch() -> void:
+	if summary_latched and not (screens != null and screens.ending_open()) and not input_held():
+		summary_latched = false
+
+
+# True while a key, mouse button, pad button or trigger bound to any action is down. Sticks and
+# mouse motion do not count: a drifting stick must not lock a menu.
+func input_held() -> bool:
+	var pads := Input.get_connected_joypads()
+	var table := Bindings.actions()
+	for action in table:
+		var record: Dictionary = table[action]
+		for key in record.get("keys", []):
+			if Input.is_physical_key_pressed(key):
+				return true
+		if record.has("button") and Input.is_mouse_button_pressed(record["button"]):
+			return true
+		if record.has("pad"):
+			for device in pads:
+				if Input.is_joy_button_pressed(device, record["pad"]):
+					return true
+		if record.has("axis") and record["axis"][0] in [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]:
+			for device in pads:
+				if Input.get_joy_axis(device, record["axis"][0]) > 0.5:
+					return true
+	for ui_action in Bindings.UI_PAD:
+		for device in pads:
+			if Input.is_joy_button_pressed(device, Bindings.UI_PAD[ui_action]):
+				return true
+	return false
 
 
 func _register_actions() -> void:
@@ -841,8 +900,8 @@ func set_fullscreen(on: bool) -> void:
 
 
 # The key a pad press stands for on the title, death and summary screens, or KEY_NONE: A is
-# the screen's primary key (Space; R on death), B on the death screen is N, Y there opens class
-# select and X replays, B on the summary starts a new run. On the title a focused Control or an
+# the screen's primary key (Space on the title; N on death and on the summary), B on the death
+# screen is N, Y there opens class select and X replays, B on the summary opens class select. On the title a focused Control or an
 # open overlay keeps A for the GUI (ui_accept presses the focused button; an overlay swallows it).
 func pad_screen_key(event: InputEvent) -> int:
 	if not (event is InputEventJoypadButton) or not event.pressed:
@@ -860,12 +919,12 @@ func pad_screen_key(event: InputEvent) -> int:
 			if get_viewport().gui_get_focus_owner() != null:
 				return KEY_NONE
 			return KEY_SPACE
+		if state == "summary" or state == "dead":
+			return KEY_N
+	elif event.button_index == JOY_BUTTON_B:
 		if state == "summary":
 			return KEY_SPACE
 		if state == "dead":
-			return KEY_R
-	elif event.button_index == JOY_BUTTON_B:
-		if state == "dead" or state == "summary":
 			return KEY_N
 	elif event.button_index == JOY_BUTTON_Y and state == "dead":
 		return KEY_C
@@ -1011,10 +1070,6 @@ func _screen_key(key: int) -> bool:
 					flow.choose_class(key - KEY_1)
 				return true
 		"dead":
-			if key == KEY_R:
-				_restart_latched = true
-				flow.retry_stage()
-				return true
 			if key == KEY_N:
 				flow.new_run()
 				return true
@@ -1025,7 +1080,7 @@ func _screen_key(key: int) -> bool:
 				flow.replay_stage(flow.final_stage())
 				return true
 		"summary":
-			if summary_guard_left > 0.0:
+			if summary_shut():
 				return true
 			if key == KEY_K:
 				screens.open_camp_from_summary()
