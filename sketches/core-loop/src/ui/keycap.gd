@@ -12,7 +12,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const MOUSE := ["key_lmb", "key_rmb"]
 const LABELS := {"key_ctrl": "Ctrl", "key_space": "Space", "key_shift": "Shift", "key_tab": "Tab",
 	"pad_a": "A", "pad_b": "B", "pad_x": "X", "pad_y": "Y", "pad_lb": "LB", "pad_rb": "RB",
-	"pad_lt": "LT", "pad_rt": "RT", "pad_ls": "L", "pad_rs": "R", "pad_start": "Start"}
+	"pad_lt": "LT", "pad_rt": "RT", "pad_ls": "L", "pad_rs": "R", "pad_start": "Start",
+	"key_comma": ",", "key_period": ".", "key_slash": "/", "key_semicolon": ";"}
 # Pad caps drawn round: the face buttons and the sticks. The shoulders, triggers and Start
 # are rounded caps like the keys.
 const PAD_ROUND := ["pad_a", "pad_b", "pad_x", "pad_y", "pad_ls", "pad_rs"]
