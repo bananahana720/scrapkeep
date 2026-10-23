@@ -24,10 +24,14 @@ const BallState := preload("res://src/movement/ball_state.gd")
 # 2026-10-19, Gate lane: stage 2 re-captured after #126's flume park rewrite (04eb0d00), and stages 5 and 6
 # re-captured because #139's pins already missed the stage it landed on (ecf6f629 draws these same bytes).
 # Stage 6 re-captured again after #170's crown park change (3b7a26f0), on 240520a3.
+# 2026-10-23, World: stage 4 re-captured after #350 moved two park_sinkhole anchor posts and rebaked its graph
+# (B12 2b04b3f3; its parent a777720a still draws d2f652ab..., B12 and f7dbb78c draw fc4abcc4...).
+# 2026-10-23, World: stage 4 re-captured after the wash elbow easing reshaped lava_channel_12, 13 and 21 and rebaked
+# park_sinkhole (fc4abcc4... -> 4b43cd95...; every other check line unchanged).
 const GOLDEN := {
 	2: "209b49bfdd24edda935316265e6d40ca5aca0eb7e3ccf6427b25662aaa468a20",
 	3: "6b2244ea5e2df73b4330ccec611c17a05b250afc9cf711233641ac960dcc9f02",
-	4: "d2f652ab46ed826448f4b83d7724e4c1b4cd8e73d79c3216e9f0ca399110c59e",
+	4: "4b43cd95da75858b39a2bba258bfa3b58425a8287b09723f1fba6ae9bcac67ed",
 	5: "d89a37e5291457fa67873501141f4c03c635f6bfb93d2c17a527dcfe70b02589",
 	6: "01459ce08dba749e56913f45ceed8f45dc24e6977891e1f81ed222f0313479d1",
 }
