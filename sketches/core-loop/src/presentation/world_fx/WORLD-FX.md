@@ -33,13 +33,13 @@ Every run looks a little different and replays its own look. `WorldFx` reads the
 | `tint` | the emitter leans toward a named colour, up to a share |
 | `pulse` | a pulsed effect breathes faster or slower |
 
-Each rolled emitter also takes its own particle seed, so the scatter differs too. Grain never touches glow or alpha, and ceremony and comic effects (ink) take none. Seed 0 (title, captures, tests) is the authored look. `tests/world_fx_grain_test.gd` pins it; the Spillway's rows lean hardest (mist drifts and thins, steam breathes at its own pace, foam carries more silt).
+Each rolled emitter also takes its own particle seed, so the scatter differs too. Grain never touches glow or alpha, and ceremony and comic effects (ink) take none. Seed 0 (the title and class select, captures, tests) is the authored look; a summary keeps its run's. `tests/world_fx_grain_test.gd` pins it; the Spillway's rows lean hardest (mist drifts and thins, steam breathes at its own pace, foam carries more silt).
 
 ## The Spillway in its parks
 
 `spillway_fx.gd` stands world 1's anchor sets from `SPILL_PLACES` when a Spillway park's scenery builds: the powerhouse and weir gatehouse steam on their roofs (`spill_powerhouse`), the weir apron's falls (`spill_falls`), the dam's spray curtain and foot mist at its gate leaves (`landmark_dam`, once the landmark has built) and the penstock tower's vent (`landmark_penstock_tower`). They rank into `ANCHOR_SLOTS` like every anchor.
 
-Water: `WorldFx` reads the terrain's material under the ball 15 times a second. Rolling through standing water throws the wake (`spill_wake`: spray thrown back off the ball, foam rings), thicker with speed; a fast entry or a drop fires `ball_splash` once. A rising flood carries foam (`spill_flood`, hung by `natural.gd` on the water in up to four pieces along its footprint, each on its own surface height), thick while it climbs and calmer once full. `tests/spillway_fx_test.gd` checks the placements in both parks; `tools/spillway_fx_capture.gd` renders stills.
+Water (the Spillway only, `WAKE_WORLDS` and `natural.gd` `FOAM_PARKS`): `WorldFx` reads the terrain's material under the ball 15 times a second. Rolling through standing water throws the wake (`spill_wake`: spray thrown back off the ball, foam rings), thicker with speed; a fast entry or a drop fires `ball_splash` once. A rising flood carries foam (`spill_flood`, hung by `natural.gd` on the water in up to four pieces along its footprint, each on its own surface height), thick while it climbs and calmer once full. `tests/spillway_fx_test.gd` checks the placements in both parks; `tools/spillway_fx_capture.gd` renders stills.
 
 ## Hooks for other systems
 

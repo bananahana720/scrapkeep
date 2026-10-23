@@ -85,9 +85,9 @@ func set_quality(is_low: bool, is_reduced: bool) -> void:
 
 
 # A new run's grain (Grain.run_seed) on an anchor that outlived the last run (park dressing stays built).
-func set_grain(run_seed: int) -> void:
+func set_grain(seed: int) -> void:
 	for p in emitters:
-		Grain.apply(p, run_seed)
+		Grain.apply(p, seed)
 	_apply()
 
 

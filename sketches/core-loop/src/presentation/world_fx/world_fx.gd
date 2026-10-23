@@ -23,6 +23,8 @@ const RESTING := ["title", "class_select", "summary", "dead", "victory"]
 # the surface the ball's centre still rides in it, and the speeds that start the wake, fill it, and
 # splash on entry (a fast roll in or a drop).
 const WAKE_SET := "spill_wake"
+# The worlds whose water throws the wake (the Spillway's); the others keep their air budget whole.
+const WAKE_WORLDS := [1]
 const WAKE_EVERY := 1.0 / 15.0
 const WAKE_RIDE_M := 1.6
 const WAKE_SPEED := 3.0
@@ -127,6 +129,7 @@ func enter_world(world_index: int) -> void:
 
 func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	_ctx = ctx
+	_last_ball = Vector3.INF
 	set_run_seed(int(ctx.run.run_seed) if ctx.get("run") != null else 0)
 	enter_world(ctx.stages.world_of(stage))
 	set_overlay("")
@@ -139,20 +142,23 @@ func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 
 func _on_flow_changed(state: String) -> void:
 	set_resting(RESTING.has(state))
+	# Off a run (title, class select) the effects wear their authored look; a summary keeps its run's.
+	if state in ["title", "class_select"]:
+		set_run_seed(0)
 
 
 # A run's grain (world_fx_grain.gd): every emitter this WorldFx owns and every live anchor re-rolls its
 # dials from the new seed; the same seed again changes nothing.
-func set_run_seed(run_seed: int) -> void:
-	if run_seed == Grain.run_seed:
+func set_run_seed(seed: int) -> void:
+	if seed == Grain.run_seed:
 		return
-	Grain.run_seed = run_seed
+	Grain.run_seed = seed
 	for p in _owned():
-		Grain.apply(p, run_seed)
+		Grain.apply(p, seed)
 	for ref in Anchor.live:
 		var a = ref.get_ref()
 		if a != null:
-			a.set_grain(run_seed)
+			a.set_grain(seed)
 	_sync()
 
 
@@ -176,6 +182,7 @@ func set_resting(on: bool) -> void:
 		for p in wake:
 			p.emitting = false
 		wet = false
+		_last_ball = Vector3.INF
 
 
 # GraphicsPreset calls this on bind and on every preset change.
@@ -286,7 +293,7 @@ func play(hook: String, at: Vector3, tint := Color.TRANSPARENT, size := 1.0) -> 
 # Live particles this WorldFx can hold at once: ambient plus overlay plus the slotted anchors.
 func live_ceiling() -> int:
 	var total := 0
-	for p in ambient + overlay:
+	for p in ambient + overlay + (wake if WAKE_WORLDS.has(world) else []):
 		total += Kit.cost(p.get_meta("world_fx"), low, reduced_motion)
 	return total
 
@@ -364,7 +371,8 @@ func _rank() -> void:
 	var rows: Array = []
 	for ref in Anchor.live:
 		var a: Node3D = ref.get_ref()
-		if a.is_inside_tree():
+		# A hidden anchor (foam over drained water, a parked stage) draws nothing, so it takes no slot.
+		if a.is_visible_in_tree():
 			rows.append([a.global_position.distance_to(eye), a])
 	rows.sort_custom(func(x, y): return x[0] < y[0])
 	var slots := Specs.ANCHOR_SLOTS
@@ -387,6 +395,7 @@ func _step_wake(delta: float) -> void:
 	var dt := WAKE_EVERY - _wake_wait
 	_wake_wait = WAKE_EVERY
 	if resting or not is_instance_valid(_ball) or _ctx == null or _ctx.get("terrain") == null or not _ctx.terrain.has_method("material_at"):
+		_last_ball = Vector3.INF
 		return
 	var ball: Vector3 = _ball.ball_position() if _ball.has_method("ball_position") else _ball.global_position
 	var under: Dictionary = _ctx.terrain.material_at(ball)
@@ -402,10 +411,10 @@ func _step_wake(delta: float) -> void:
 # One wake step: water is the surface height under the ball, NAN where it is dry.
 func steer_wake(ball: Vector3, water: float, velocity: Vector3) -> void:
 	var was := wet
-	wet = not is_nan(water) and ball.y - water <= WAKE_RIDE_M
+	wet = WAKE_WORLDS.has(world) and not is_nan(water) and ball.y - water <= WAKE_RIDE_M
 	var planar := Vector3(velocity.x, 0.0, velocity.z)
 	var speed := planar.length()
-	if wet and not was and _splash_cool <= 0.0 and (speed >= SPLASH_SPEED or velocity.y <= -SPLASH_DROP):
+	if wet and not was and not resting and _splash_cool <= 0.0 and (speed >= SPLASH_SPEED or velocity.y <= -SPLASH_DROP):
 		_splash_cool = SPLASH_COOL
 		play("ball_splash", Vector3(ball.x, water, ball.z), Color.TRANSPARENT, clampf(maxf(speed, -velocity.y) / WAKE_FULL, 0.6, 1.3))
 	var on := wet and speed >= WAKE_SPEED and not resting

@@ -92,7 +92,8 @@ func _readability() -> void:
 
 func _ambient_cost(world: int, low: bool, reduced := false) -> int:
 	var total := 0
-	for id in Specs.SETS[Specs.WORLD_SETS[world]]:
+	# The ball's wake rides beside the air in the worlds whose water throws it.
+	for id in Specs.SETS[Specs.WORLD_SETS[world]] + (Specs.SETS[WorldFx.WAKE_SET] if WorldFx.WAKE_WORLDS.has(world) else []):
 		total += Kit.cost(id, low, reduced)
 	var worst := 0
 	for kind in Specs.OVERLAYS:

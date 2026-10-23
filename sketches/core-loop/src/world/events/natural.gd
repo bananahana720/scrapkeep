@@ -22,8 +22,11 @@ const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.
 # Flood foam (WorldFx set "spill_flood") rides the water in pieces this long along the footprint's long
 # axis, each at its own surface height, so foam follows a wash's slope; at most FOAM_PIECES a flood.
 const FOAM_SET := "spill_flood"
+# The parks whose floods foam: the Spillway's own water (the Dig and the Highdraft keep plain water).
+const FOAM_PARKS := ["park_dam", "park_flume"]
 const FOAM_PIECE_M := 30.0
 const FOAM_PIECES := 4
+const FOAM_DRY_M := 0.05
 
 const KINDS := {
 	"flood_fill": {}, "drain": {}, "cave_in": {}, "collapse": {}, "flash_flood": {},
@@ -461,7 +464,8 @@ func _land_water(row: Dictionary, state: Dictionary) -> void:
 	water._lamp_mesh.visible = false
 	water.render()
 	state.water = water
-	state.foam = _foam(water, state.geometry)
+	if FOAM_PARKS.has(String(_original_map.park.get("map", ""))):
+		state.foam = _foam(water, state.geometry)
 	_water_field.surfaces.append(water)
 	_water_field.refresh()
 
@@ -492,12 +496,13 @@ func _foam(water: Node3D, geometry: Dictionary) -> Array:
 
 
 # Sets each foam piece on its live surface; churn is how much of the rise is left (1 thick, 0 calm).
+# A piece over no surface, or on water drained to nothing, hides (and so takes no anchor slot).
 static func _ride_foam(state: Dictionary, churn: float) -> void:
 	var water = state.water
 	for a: Node3D in state.get("foam", []):
 		var xz := Vector2(a.position.x, a.position.z)
 		var floor_y: float = water.surface.height(xz)
-		a.visible = floor_y > -INF
+		a.visible = floor_y > -INF and float(water.cycle.metres) > FOAM_DRY_M
 		if a.visible:
 			a.position.y = floor_y + water.cycle.metres + 0.05
 		a.set_level(lerpf(0.35, 1.0, clampf(churn, 0.0, 1.0)))

@@ -11,6 +11,7 @@ const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const Grain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const Anchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
+const Natural := preload("res://src/world/events/natural.gd")
 
 const SEEDS := 24
 
@@ -26,6 +27,7 @@ func _run() -> void:
 	_apply()
 	await _runtime()
 	await _wake()
+	await _foam()
 	Grain.run_seed = 0
 	quit(t.verdict())
 
@@ -123,6 +125,10 @@ func _wake() -> void:
 	t.eq("the wake is the Spillway wake set", fx.wake.map(func(p): return p.get_meta("world_fx")), Specs.SETS[WorldFx.WAKE_SET])
 	fx.steer_wake(Vector3(0, 1, 0), NAN, Vector3(12, 0, 0))
 	t.check("dry ground throws no spray", fx.wake.all(func(p): return not p.emitting) and not fx.wet)
+	fx.world = 2
+	fx.steer_wake(Vector3(0, 0.9, 0), 0.0, Vector3(12, 0, 0))
+	t.check("the Dig's water throws no Spillway wake", fx.wake.all(func(p): return not p.emitting) and not fx.wet)
+	fx.world = 1
 	fx.steer_wake(Vector3(0, 0.9, 0), 0.0, Vector3(12, 0, 0))
 	t.check("a fast roll into water splashes", fx._bursts.has("spill_splash_crown") and fx._bursts["spill_splash_crown"].any(func(p): return p.emitting))
 	t.check("rolling through water throws the wake", fx.wet and fx.wake.all(func(p): return p.emitting))
@@ -145,7 +151,59 @@ func _wake() -> void:
 	t.check("reduced motion halves the wake", is_equal_approx(spray.amount_ratio, Grain.share(spray, false, true)) and Grain.share(spray, false, true) <= 0.5)
 	fx.set_resting(true)
 	t.check("a menu rests the wake", fx.wake.all(func(p): return not p.emitting) and not fx.wet)
+	fx._splash_cool = 0.0
+	for p in fx._bursts["spill_splash_crown"]:
+		p.emitting = false
 	fx.steer_wake(Vector3(0, 0.9, 0), 0.0, Vector3(16, 0, 0))
-	t.check("and it stays rested", fx.wake.all(func(p): return not p.emitting))
+	t.check("and it stays rested, no splash either", fx.wake.all(func(p): return not p.emitting)
+		and fx._bursts["spill_splash_crown"].all(func(p): return not p.emitting))
+	fx.set_run_seed(77)
+	fx._on_flow_changed("title")
+	t.eq("the title wears the authored look", Grain.run_seed, 0)
 	stage.queue_free()
 	await process_frame
+
+
+class FakeSurface:
+	# A wash falling 0.1 m per metre east, with nothing west of x = -60.
+	func height(p: Vector2) -> float:
+		return -INF if p.x < -60.0 else -0.1 * p.x
+
+
+class FakeClock:
+	var metres := 1.2
+
+
+# Flood foam (natural.gd): pieces along the footprint's long axis, each on its own surface height,
+# fitted to its piece, thick while the water climbs, hidden over no surface and on drained water.
+func _foam() -> void:
+	var natural: Node3D = Natural.new()
+	root.add_child(natural)
+	var holder := _FakeWater.new()
+	holder.surface = FakeSurface.new()
+	holder.cycle = FakeClock.new()
+	natural.add_child(holder)
+	var pieces: Array = natural._foam(holder, {"half": Vector2(50.0, 8.0), "yaw": 0.0, "at": Vector3(0, 0, 0)})
+	t.eq("a 100 m flood foams in four pieces", pieces.size(), Natural.FOAM_PIECES)
+	t.check("each piece stands on its own surface height", pieces.all(func(a): return is_equal_approx(a.position.y, -0.1 * a.position.x + 1.2 + 0.05)))
+	t.check("the pieces run along the long axis", pieces.all(func(a): return is_zero_approx(a.position.z)) and pieces[0].position.x < pieces[3].position.x)
+	var box: Vector3 = (pieces[0].emitters[0].process_material as ParticleProcessMaterial).emission_box_extents
+	t.check("each piece's foam covers its own stretch of water", is_equal_approx(box.x, 12.5 * 0.9) and is_equal_approx(box.z, 8.0 * 0.85), str(box))
+	Natural._ride_foam({"water": holder, "foam": pieces}, 1.0)
+	var thick: float = pieces[1].emitters[0].amount_ratio
+	Natural._ride_foam({"water": holder, "foam": pieces}, 0.0)
+	t.check("foam calms once the water is up", pieces[1].emitters[0].amount_ratio < thick)
+	var west: Array = natural._foam(holder, {"half": Vector2(90.0, 8.0), "yaw": 0.0, "at": Vector3(0, 0, 0)})
+	t.check("a piece over no surface hides", not west[0].visible and west[3].visible)
+	holder.cycle.metres = 0.0
+	Natural._ride_foam({"water": holder, "foam": pieces}, 0.0)
+	t.check("drained water carries no foam", pieces.all(func(a): return not a.visible))
+	var turned: Array = natural._foam(holder, {"half": Vector2(50.0, 8.0), "yaw": PI / 2.0, "at": Vector3(0, 0, 0)})
+	t.check("a turned footprint turns its foam", absf(turned[0].position.z) > 30.0 and absf(turned[0].position.x) < 0.01)
+	natural.free()
+	await process_frame
+
+
+class _FakeWater extends Node3D:
+	var surface
+	var cycle

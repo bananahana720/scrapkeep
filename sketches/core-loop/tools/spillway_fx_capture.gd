@@ -79,6 +79,12 @@ func _shoot(a: Node3D, label: String) -> void:
 
 
 func _frame(eye: Vector3, target: Vector3, each: Callable, label: String) -> void:
+	# The chase camera and the game's own wake step stand down while a shot holds the view.
+	var rig: Node = _game.ctx.camera
+	rig.process_mode = Node.PROCESS_MODE_DISABLED
+	var fx = WorldFx.current
+	var ctx = fx._ctx
+	fx._ctx = null
 	var cam := Camera3D.new()
 	cam.far = 4000.0
 	cam.fov = 60.0
@@ -95,6 +101,8 @@ func _frame(eye: Vector3, target: Vector3, each: Callable, label: String) -> voi
 	image.save_png(_out.path_join(label + ".png"))
 	print("spillway_fx_capture: %s eye %s target %s" % [label, eye, target])
 	cam.queue_free()
+	fx._ctx = ctx
+	rig.process_mode = Node.PROCESS_MODE_INHERIT
 	await process_frame
 
 

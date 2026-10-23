@@ -30,33 +30,33 @@ static func place(parent: Node3D, stage_root_ref: Node3D, map, sites: ParkSites)
 	var rows := {}
 	for row in map.park["park_rows"]:
 		rows[String(row["id"])] = row
-	for place in Specs.SPILL_PLACES:
-		for id in place.get("rows", []):
+	for row_place in Specs.SPILL_PLACES:
+		for id in row_place.get("rows", []):
 			if rows.has(id):
-				fx._stand(place, rows[id], sites)
+				fx._stand(row_place, rows[id], sites)
 	fx.set_process(fx._landmark_place() != {})
 	return fx
 
 
-func _stand(place: Dictionary, row: Dictionary, sites: ParkSites) -> void:
+func _stand(spot: Dictionary, row: Dictionary, sites: ParkSites) -> void:
 	var f := ParkSites.frame(row)
 	var at: Vector2 = f["at"]
-	if place.get("foot", false):
+	if spot.get("foot", false):
 		at += f["run"] * float(f["half_length"])
 	var base := float(row["y"]) if row.get("y") != null else sites.height(at)
-	var top := base + (0.0 if place.get("foot", false) else float(row["size"][1]))
-	var a := Anchor.make(String(place["set"]))
-	a.name = "WorldFx_%s_%s" % [place["set"], row["id"]]
+	var top := base + (0.0 if spot.get("foot", false) else float(row["size"][1]))
+	var a := Anchor.make(String(spot["set"]))
+	a.name = "WorldFx_%s_%s" % [spot["set"], row["id"]]
 	# The sets' directions point down +Z: turn +Z along the row's run.
-	a.transform = Transform3D(Basis(Vector3.UP, ParkSites.yaw_toward(-f["run"])), Vector3(at.x, top + float(place.get("lift", 0.0)), at.y))
+	a.transform = Transform3D(Basis(Vector3.UP, ParkSites.yaw_toward(-f["run"])), Vector3(at.x, top + float(spot.get("lift", 0.0)), at.y))
 	add_child(a)
 	placed.append(a)
 
 
 func _landmark_place() -> Dictionary:
-	for place in Specs.SPILL_PLACES:
-		if String(place.get("landmark", "")) == landmark_kind and landmark_kind != "":
-			return place
+	for spot in Specs.SPILL_PLACES:
+		if String(spot.get("landmark", "")) == landmark_kind and landmark_kind != "":
+			return spot
 	return {}
 
 
@@ -65,8 +65,9 @@ func _process(delta: float) -> void:
 	if _wait > 0.0:
 		return
 	_wait = SEEK_EVERY
-	if _rows == null:
-		_rows = stage_root.find_child("ParkRows", true, false) if is_instance_valid(stage_root) else null
+	if not is_instance_valid(_rows):
+		# The park's Placer hangs directly under the stage root (terrain.gd reads it the same way).
+		_rows = stage_root.get_node_or_null("ParkRows") if is_instance_valid(stage_root) else null
 		if _rows == null:
 			return
 	var landmark = _rows.get("landmark")
@@ -81,19 +82,19 @@ func _process(delta: float) -> void:
 # Stands the park's landmark set in the landmark node's frame: at the mean of the named GLB nodes when
 # all exist (the dam's gate leaves), else at the row's `local` point; then `offset`.
 func stand_on_landmark(landmark: Node3D) -> Node3D:
-	var place := _landmark_place()
-	if place.is_empty():
+	var spot := _landmark_place()
+	if spot.is_empty():
 		return null
-	var local: Vector3 = place["local"]
-	var nodes: Array = place.get("nodes", [])
+	var local: Vector3 = spot["local"]
+	var nodes: Array = spot.get("nodes", [])
 	var found := nodes.map(func(n): return landmark.get_node_or_null(String(n))).filter(func(n): return n is Node3D)
 	if not nodes.is_empty() and found.size() == nodes.size():
 		local = Vector3.ZERO
 		for n: Node3D in found:
 			local += n.position
 		local /= float(found.size())
-	var a := Anchor.make(String(place["set"]))
-	a.position = local + (place["offset"] as Vector3)
+	var a := Anchor.make(String(spot["set"]))
+	a.position = local + (spot["offset"] as Vector3)
 	landmark.add_child(a)
 	placed.append(a)
 	return a

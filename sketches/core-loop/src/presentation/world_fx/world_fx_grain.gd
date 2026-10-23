@@ -14,14 +14,14 @@ static var run_seed := 0
 
 
 # The spec's dials for this run: {"amount", "size", "speed", "yaw", "tint_share", "pulse", "seed"}.
-static func roll(run_seed: int, id: String) -> Dictionary:
+static func roll(seed: int, id: String) -> Dictionary:
 	var out := {"amount": 1.0, "size": 1.0, "speed": 1.0, "yaw": 0.0, "tint_share": 0.0, "pulse": 1.0, "seed": Kit.SEED}
 	var s: Dictionary = Specs.SPECS.get(id, {})
-	if run_seed == 0 or s.is_empty() or float(s.get("ink", 0.0)) > 0.0:
+	if seed == 0 or s.is_empty() or float(s.get("ink", 0.0)) > 0.0:
 		return out
 	var row: Dictionary = Specs.GRAIN.get(id, Specs.GRAIN_DEFAULT)
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash("%d:%s" % [run_seed, id])
+	rng.seed = hash("%d:%s" % [seed, id])
 	# Every dial is drawn in a fixed order whether or not the row has it, so adding a dial to a row
 	# changes that dial alone.
 	var draws := {}
@@ -52,12 +52,12 @@ static func tint(id: String, dials: Dictionary, base := Color.WHITE) -> Color:
 # Applies a roll to an emitter the kit built: its own process material is re-read from the spec and
 # scaled, so applying twice (a new run on a kept emitter) never compounds. Stores the dials on the
 # emitter (meta "grain") for share() and pulsed anchors.
-static func apply(p: GPUParticles3D, run_seed: int) -> Dictionary:
+static func apply(p: GPUParticles3D, seed: int) -> Dictionary:
 	var id := String(p.get_meta("world_fx", ""))
 	var s: Dictionary = Specs.SPECS.get(id, {})
 	if s.is_empty():
 		return {}
-	var dials := roll(run_seed, id)
+	var dials := roll(seed, id)
 	var pm := p.process_material as ParticleProcessMaterial
 	pm.scale_min = float(s["size"][0]) * dials["size"]
 	pm.scale_max = float(s["size"][1]) * dials["size"]
