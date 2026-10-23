@@ -165,6 +165,8 @@ func setup(events_ref, run_ref, player_ref, codex_ref, dir: String) -> void:
 	events.player_died.connect(_on_player_died)
 	events.run_ended.connect(_on_run_ended)
 	events.boss_phase_changed.connect(_on_boss_phase)
+	if events.has_signal("flourish_played"):
+		events.flourish_played.connect(_on_flourish)
 	events.stage_content_cleared.connect(_on_stage_content_cleared)
 	events.line_state_changed.connect(_on_line_state)
 	events.enemy_struck.connect(_on_enemy_struck)
@@ -217,7 +219,8 @@ func _on_run_started(class_id: String) -> void:
 		"bites": 0, "smashes": 0, "breaks": {}, "verb_fails": {}, "prompts_shown": 0,
 		"chains": [], "best_combo": 0, "misses": 0, "smash_damage": 0.0, "smash_damage_by_fight": [],
 		"slot_casts": {"special": 0, "line": 0}, "snaps": {}, "picks": 0,
-		"line_skill": {"on_line": 0, "loaded": 0, "load_bitten": 0, "load_expired": 0, "bank_gain_mps": 0.0}, "ultimates": []}
+		"line_skill": {"on_line": 0, "loaded": 0, "load_bitten": 0, "load_expired": 0, "bank_gain_mps": 0.0}, "ultimates": [],
+		"flourishes": []}
 	_line_waiting = false
 	_fight_open = false
 	_smash_base = -1.0
@@ -523,6 +526,14 @@ func _on_boss_phase(phase: int, _name: String) -> void:
 	_phase = phase
 	var reached = _record.get("brindle_phase_reached")
 	_record["brindle_phase_reached"] = maxi(phase, int(reached)) if reached != null else phase
+
+
+# One row per flourish played (World 1 budgets: beats total 30 s or less on a repeat run).
+func _on_flourish(id: String, held: float, full: bool, skipped: bool) -> void:
+	if _record.is_empty():
+		return
+	(_record["flourishes"] as Array).append({"id": id, "s": snappedf(held, 0.01), "full": full, "skipped": skipped})
+	_dirty = true
 
 
 func _on_run_ended(won: bool) -> void:

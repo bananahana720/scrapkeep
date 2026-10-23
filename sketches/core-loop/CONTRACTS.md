@@ -185,6 +185,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `boss_attack_telegraphed` | `attack_id: String, seconds_until: float` | E | an attack is committed and will land in seconds_until |
 | `boss_weak_point_hit` | `point_id: String` | E | a strike landed on a weak point (a magnet, a cap, the scooter) |
 | `boss_defeated` | none | E | Brindle is beaten; flow enters `victory`, then the summary |
+| `flourish_played` | `id: String, held: float, full: bool, skipped: bool` | C | an in-run flourish (`presentation/flourish_cues.gd`) finished; `held` is the seconds it held the run, `full` false for a profile's shortened repeat. The run log keeps one row each |
 
 ### The Warden, gate and launch handshake
 
@@ -291,7 +292,7 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
 - `force_warden` is a test knob: it seals calm stages.
 - **The boss flow.**
   - **Arena entry.** After stage 3's launch flight, flow emits `stage_cleared(3)`. If `ctx.boss` exists it then enters `boss`, calls `ctx.boss.enter_arena(entry_velocity)` with the ball's velocity, and keeps an arena-entry checkpoint (the stage-3-end snapshot) once the call returns. The boss module builds its arena under `ctx.root`, places the ball keeping that velocity (entry must keep speed within 15%), and emits `boss_arena_entered`. The world's terrain API and the stage fall rescue are not used in the arena; the arena rescue (E's `floor_y()` and `rescue_point()`, below) is.
-  - **Win.** `boss_defeated` in `boss` leads to `victory` for 2.5 s, then the summary and `run_ended(true)`.
+  - **Win.** `boss_defeated` in `boss` leads to `victory` for 2.5 s (plus the boss's rout and sign-on flourishes' hold, at most 2.0 s more, from `flow.victory_plan`; the victory card waits over the world while the rout plays), then the summary and `run_ended(true)`.
   - **Death.** A death in `boss` leads to `dead` only in a storeless flow (tests and bots); a store-bearing game ends the run on the summary. In a storeless flow, holding R in play restores the arena-entry checkpoint and calls `enter_arena` again; on the storeless death screen R does nothing, T calls `replay_stage(3)` and restores the first stage-3 start the run kept, and N starts a new run.
   - **Boss seams.** The boss module sets `ctx.flow.boss_active` and `ctx.flow.boss_plating` (hull plating 120) on entry. The storeless death screen reads them for its gap line and for offering T. `flow.in_arena` is read-only.
   - **Live boss reads (owner: E).** The boss module implements `live_plating() -> float`, the plating of whatever stands in the way right now (150 in a charge, 0 in a stun, the scooter's in the chase), and `objective_text() -> String`, the objective for the current phase ("" to use the standing one). Flow reads both through `boss_plating_now()` for the objective line and the death gap line; the gap line keeps the plating live at the moment of death. Without them flow falls back to `boss_plating` and the standing objective.

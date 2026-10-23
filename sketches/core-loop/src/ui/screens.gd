@@ -71,6 +71,7 @@ const PRIMARY_HEIGHT := 60.0
 
 var game
 var _victory_boss := {}
+var _veil_wait := 0.0
 
 var _veil: ColorRect
 var _content: VBoxContainer
@@ -373,8 +374,33 @@ func _on_flow_changed(state: String) -> void:
 			_action("camp", "key_k", "Camp")
 			if ending:
 				_open_ending()
-	_fade(state in MENU_STATES)
+	_veil_wait = game.flow.victory_veil if state == "victory" and "victory_veil" in game.flow else 0.0
+	if _veil_wait > 0.0:
+		_hide_for_rout()
+	else:
+		_fade(state in MENU_STATES)
 	_update_enabled()
+
+
+# The victory card waits while a boss's rout plays over the world (flourish_cues.gd); flow
+# zeroes victory_veil when the rout is skipped.
+func _hide_for_rout() -> void:
+	if _tween != null:
+		_tween.kill()
+	_veil.modulate.a = 0.0
+	_content.modulate.a = 0.0
+	visible = false
+
+
+func _step_veil_wait(delta: float) -> void:
+	if _veil_wait <= 0.0:
+		return
+	_veil_wait -= delta
+	if _veil_wait <= 0.0 or game.flow.victory_veil <= 0.0 or _state != "victory":
+		_veil_wait = 0.0
+		if _state == "victory":
+			_fade(true)
+			_stamp()
 
 
 # The sentence a refused saved run gives: game.continue_refusal() when the build has it, else
@@ -1327,6 +1353,7 @@ func _screen() -> Vector2:
 
 func _process(delta: float) -> void:
 	_guard = maxf(0.0, _guard - delta)
+	_step_veil_wait(delta)
 	if ending_open():
 		_ending_left = maxf(0.0, _ending_left - delta)
 		if game.bot_driven and _ending_left <= 0.0:
