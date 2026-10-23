@@ -1,5 +1,6 @@
 # smoke: bots timeout=1800s (48 bot runs on stage 3, small and grown, in child processes, as many at once as memory and cores allow, each cut at RUN_CAP_S)
 # 2026-10-23: 24 seeds per arm took 1322 s alone on a 4-core, 15 GB cloud sandbox (8 at once), under the 1800 s bot ceiling; with the camper's 8 it took 2070 s, so the camper moved to posture_bands_swarm_camper_test.
+# 1800 s is the bot ceiling, so the margin is 1.31x, not the usual 1.5x; a slower box needs fewer seeds a run, not a higher cap.
 # 2026-10-18: with the parallel cap (8 at once on a 4-core, 16 GB cloud sandbox) the sweep took 1096 s alone; 1.5x is 1644 s; the gate box, loaded, ran past 1208 s, so it takes the bot ceiling, 1800 s.
 # 2026-10-12, W13 smoke triage: completed in 510.708 s alone with its fixed bands still red; 1.5x rounded up to 10 s is 770 s, beyond the ordinary 360 s cap.
 # 2026-10-13 WT-BANDS: paired record gain 100 -> 150; measured small 104.78 -> 104.78 s, grown 46.40 -> 38.77 s.
@@ -192,7 +193,7 @@ func _sweep(t, folder: String) -> Dictionary:
 # The band on small and grown. EXPECTED RED until Andrew answers the swarm hive card (posted 23 Oct):
 # on stage w18 small/grown is 1.86x against SMALL_FACTOR, the ordinary first stagger 50 s against
 # FIRST_STAGGER_BAND_S, and small 75.69 s against EXPECT_SMALL_S. These checks stay as they are until
-# his answer re-tunes the hive or restates the band; tuning trials in gate/c10-swarm/README.md.
+# his answer re-tunes the hive or restates the band; tuning trials in /mnt/project-files/gate/c10-swarm/README.md.
 func _judge(t, sweep: Dictionary) -> void:
 	var fights: Dictionary = sweep["fights"]
 	var low_staggers: Dictionary = sweep["low_staggers"]
