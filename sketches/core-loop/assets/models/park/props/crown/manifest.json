@@ -831,6 +831,169 @@
     }
    },
    "line_clear_m": 30.0
+  },
+  "clock_post": {
+   "class": "dress_hero",
+   "tags": [
+    "machine",
+    "sign"
+   ],
+   "story": "The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/crown/clock_post_a.glb",
+      "res://assets/models/park/props/crown/clock_post_a_lod1.glb",
+      "res://assets/models/park/props/crown/clock_post_a_lod2.glb"
+     ],
+     "tris": [
+      7276,
+      3638,
+      1060
+     ],
+     "radius": 0.857,
+     "height": 2.626
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/crown/clock_post_b.glb",
+      "res://assets/models/park/props/crown/clock_post_b_lod1.glb",
+      "res://assets/models/park/props/crown/clock_post_b_lod2.glb"
+     ],
+     "tris": [
+      6528,
+      3264,
+      948
+     ],
+     "radius": 1.174,
+     "height": 2.795
+    }
+   }
+  },
+  "glove_bench": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/crown/glove_bench_a.glb",
+      "res://assets/models/park/props/crown/glove_bench_a_lod1.glb",
+      "res://assets/models/park/props/crown/glove_bench_a_lod2.glb"
+     ],
+     "tris": [
+      1436,
+      718,
+      155
+     ],
+     "radius": 0.972,
+     "height": 0.545
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/crown/glove_bench_b.glb",
+      "res://assets/models/park/props/crown/glove_bench_b_lod1.glb",
+      "res://assets/models/park/props/crown/glove_bench_b_lod2.glb"
+     ],
+     "tris": [
+      1668,
+      834,
+      183
+     ],
+     "radius": 1.056,
+     "height": 0.561
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/crown/glove_bench_c.glb",
+      "res://assets/models/park/props/crown/glove_bench_c_lod1.glb",
+      "res://assets/models/park/props/crown/glove_bench_c_lod2.glb"
+     ],
+     "tris": [
+      952,
+      476,
+      108
+     ],
+     "radius": 0.685,
+     "height": 0.545
+    }
+   }
+  },
+  "shift_board": {
+   "class": "dress_prop",
+   "tags": [
+    "sign"
+   ],
+   "story": "Sandwich shift board: FOREMAN column chalked MIND, the HANDS column wiped clean every morning.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/crown/shift_board_a.glb",
+      "res://assets/models/park/props/crown/shift_board_a_lod1.glb",
+      "res://assets/models/park/props/crown/shift_board_a_lod2.glb"
+     ],
+     "tris": [
+      860,
+      430,
+      113
+     ],
+     "radius": 0.652,
+     "height": 1.193
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/crown/shift_board_b.glb",
+      "res://assets/models/park/props/crown/shift_board_b_lod1.glb",
+      "res://assets/models/park/props/crown/shift_board_b_lod2.glb"
+     ],
+     "tris": [
+      972,
+      486,
+      131
+     ],
+     "radius": 0.959,
+     "height": 1.193
+    }
+   }
+  },
+  "lost_glove": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "A single work glove dropped on a flat stone, fingers half curled.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/crown/lost_glove_a.glb",
+      "res://assets/models/park/props/crown/lost_glove_a_lod1.glb",
+      "res://assets/models/park/props/crown/lost_glove_a_lod2.glb"
+     ],
+     "tris": [
+      384,
+      192,
+      53
+     ],
+     "radius": 0.451,
+     "height": 0.197
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/crown/lost_glove_b.glb",
+      "res://assets/models/park/props/crown/lost_glove_b_lod1.glb",
+      "res://assets/models/park/props/crown/lost_glove_b_lod2.glb"
+     ],
+     "tris": [
+      512,
+      256,
+      66
+     ],
+     "radius": 0.592,
+     "height": 0.197
+    }
+   }
   }
  }
 }

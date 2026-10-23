@@ -4031,6 +4031,762 @@
      1.4036
     ]
    }
+  },
+  {
+   "id": "dprop_crown_clock_post_a",
+   "path": "res://assets/models/park/props/crown/clock_post_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "clock_post variant a LOD0 (7276 tris): The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.8438,
+     0,
+     -0.849
+    ],
+    "max": [
+     0.8438,
+     2.6257,
+     0.849
+    ],
+    "size": [
+     1.6876,
+     2.6257,
+     1.698
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_clock_post_a_lod1",
+   "path": "res://assets/models/park/props/crown/clock_post_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "clock_post variant a LOD1 (3638 tris): The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.8438,
+     0,
+     -0.849
+    ],
+    "max": [
+     0.8438,
+     2.6252,
+     0.849
+    ],
+    "size": [
+     1.6876,
+     2.6252,
+     1.698
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_clock_post_a_lod2",
+   "path": "res://assets/models/park/props/crown/clock_post_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "clock_post variant a LOD2 (1060 tris): The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.8442,
+     0,
+     -0.8444
+    ],
+    "max": [
+     0.8397,
+     2.6151,
+     0.8417
+    ],
+    "size": [
+     1.6839,
+     2.6151,
+     1.6861
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_clock_post_b",
+   "path": "res://assets/models/park/props/crown/clock_post_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "clock_post variant b LOD0 (6528 tris): The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.9509,
+     0,
+     -0.9506
+    ],
+    "max": [
+     0.9509,
+     2.7947,
+     0.9506
+    ],
+    "size": [
+     1.9018,
+     2.7947,
+     1.9012
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_clock_post_b_lod1",
+   "path": "res://assets/models/park/props/crown/clock_post_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "clock_post variant b LOD1 (3264 tris): The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.9509,
+     0,
+     -0.9506
+    ],
+    "max": [
+     0.9509,
+     2.7947,
+     0.9506
+    ],
+    "size": [
+     1.9018,
+     2.7947,
+     1.9012
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_clock_post_b_lod2",
+   "path": "res://assets/models/park/props/crown/clock_post_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "clock_post variant b LOD2 (948 tris): The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.95,
+     0,
+     -0.9506
+    ],
+    "max": [
+     0.9503,
+     2.7875,
+     0.9486
+    ],
+    "size": [
+     1.9003,
+     2.7875,
+     1.8992
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_glove_bench_a",
+   "path": "res://assets/models/park/props/crown/glove_bench_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "glove_bench variant a LOD0 (1436 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.9493,
+     0,
+     -0.2105
+    ],
+    "max": [
+     0.9493,
+     0.5448,
+     0.2105
+    ],
+    "size": [
+     1.8986,
+     0.5448,
+     0.421
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_glove_bench_a_lod1",
+   "path": "res://assets/models/park/props/crown/glove_bench_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "glove_bench variant a LOD1 (718 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.9493,
+     0,
+     -0.2105
+    ],
+    "max": [
+     0.9493,
+     0.5377,
+     0.2069
+    ],
+    "size": [
+     1.8986,
+     0.5377,
+     0.4174
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_glove_bench_a_lod2",
+   "path": "res://assets/models/park/props/crown/glove_bench_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "glove_bench variant a LOD2 (155 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.9435,
+     0,
+     -0.2073
+    ],
+    "max": [
+     0.9364,
+     0.5459,
+     0.2165
+    ],
+    "size": [
+     1.8799,
+     0.5459,
+     0.4238
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_glove_bench_b",
+   "path": "res://assets/models/park/props/crown/glove_bench_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "glove_bench variant b LOD0 (1668 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.95,
+     0,
+     -0.4618
+    ],
+    "max": [
+     0.95,
+     0.5608,
+     0.4618
+    ],
+    "size": [
+     1.9,
+     0.5608,
+     0.9236
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_glove_bench_b_lod1",
+   "path": "res://assets/models/park/props/crown/glove_bench_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "glove_bench variant b LOD1 (834 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.95,
+     0,
+     -0.4618
+    ],
+    "max": [
+     0.95,
+     0.5549,
+     0.4578
+    ],
+    "size": [
+     1.9,
+     0.5549,
+     0.9196
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_glove_bench_b_lod2",
+   "path": "res://assets/models/park/props/crown/glove_bench_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "glove_bench variant b LOD2 (183 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.955,
+     0,
+     -0.4527
+    ],
+    "max": [
+     0.953,
+     0.554,
+     0.4578
+    ],
+    "size": [
+     1.908,
+     0.554,
+     0.9105
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_glove_bench_c",
+   "path": "res://assets/models/park/props/crown/glove_bench_c.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "glove_bench variant c LOD0 (952 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.6512,
+     0,
+     -0.2115
+    ],
+    "max": [
+     0.6512,
+     0.5448,
+     0.2115
+    ],
+    "size": [
+     1.3024,
+     0.5448,
+     0.423
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_glove_bench_c_lod1",
+   "path": "res://assets/models/park/props/crown/glove_bench_c_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "glove_bench variant c LOD1 (476 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.6512,
+     0,
+     -0.2115
+    ],
+    "max": [
+     0.6512,
+     0.5392,
+     0.2089
+    ],
+    "size": [
+     1.3024,
+     0.5392,
+     0.4204
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_glove_bench_c_lod2",
+   "path": "res://assets/models/park/props/crown/glove_bench_c_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "glove_bench variant c LOD2 (108 tris): A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.645,
+     0,
+     -0.2068
+    ],
+    "max": [
+     0.6434,
+     0.5484,
+     0.2178
+    ],
+    "size": [
+     1.2884,
+     0.5484,
+     0.4246
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_shift_board_a",
+   "path": "res://assets/models/park/props/crown/shift_board_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "shift_board variant a LOD0 (860 tris): Sandwich shift board: FOREMAN column chalked MIND, the HANDS column wiped clean every morning. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.4507,
+     0,
+     -0.4948
+    ],
+    "max": [
+     0.4507,
+     1.1934,
+     0.4948
+    ],
+    "size": [
+     0.9014,
+     1.1934,
+     0.9896
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_shift_board_a_lod1",
+   "path": "res://assets/models/park/props/crown/shift_board_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "shift_board variant a LOD1 (430 tris): Sandwich shift board: FOREMAN column chalked MIND, the HANDS column wiped clean every morning. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.4504,
+     0,
+     -0.4948
+    ],
+    "max": [
+     0.451,
+     1.1936,
+     0.4947
+    ],
+    "size": [
+     0.9014,
+     1.1936,
+     0.9895
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_shift_board_a_lod2",
+   "path": "res://assets/models/park/props/crown/shift_board_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "shift_board variant a LOD2 (113 tris): Sandwich shift board: FOREMAN column chalked MIND, the HANDS column wiped clean every morning. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.4508,
+     0,
+     -0.4948
+    ],
+    "max": [
+     0.452,
+     1.1873,
+     0.4967
+    ],
+    "size": [
+     0.9028,
+     1.1873,
+     0.9915
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_shift_board_b",
+   "path": "res://assets/models/park/props/crown/shift_board_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "shift_board variant b LOD0 (972 tris): Sandwich shift board: FOREMAN column chalked MIND, the HANDS column wiped clean every morning. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.8254,
+     0,
+     -0.6828
+    ],
+    "max": [
+     0.8254,
+     1.1932,
+     0.6828
+    ],
+    "size": [
+     1.6508,
+     1.1932,
+     1.3656
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_shift_board_b_lod1",
+   "path": "res://assets/models/park/props/crown/shift_board_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "shift_board variant b LOD1 (486 tris): Sandwich shift board: FOREMAN column chalked MIND, the HANDS column wiped clean every morning. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.8255,
+     0,
+     -0.6828
+    ],
+    "max": [
+     0.8254,
+     1.1931,
+     0.6828
+    ],
+    "size": [
+     1.6509,
+     1.1931,
+     1.3656
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_shift_board_b_lod2",
+   "path": "res://assets/models/park/props/crown/shift_board_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "shift_board variant b LOD2 (131 tris): Sandwich shift board: FOREMAN column chalked MIND, the HANDS column wiped clean every morning. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.8265,
+     0,
+     -0.5487
+    ],
+    "max": [
+     0.6796,
+     1.196,
+     0.6097
+    ],
+    "size": [
+     1.5061,
+     1.196,
+     1.1584
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lost_glove_a",
+   "path": "res://assets/models/park/props/crown/lost_glove_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lost_glove variant a LOD0 (384 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.407,
+     0,
+     -0.2749
+    ],
+    "max": [
+     0.407,
+     0.1967,
+     0.2749
+    ],
+    "size": [
+     0.814,
+     0.1967,
+     0.5498
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lost_glove_a_lod1",
+   "path": "res://assets/models/park/props/crown/lost_glove_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lost_glove variant a LOD1 (192 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.4046,
+     0,
+     -0.2746
+    ],
+    "max": [
+     0.407,
+     0.1897,
+     0.2681
+    ],
+    "size": [
+     0.8116,
+     0.1897,
+     0.5427
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lost_glove_a_lod2",
+   "path": "res://assets/models/park/props/crown/lost_glove_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lost_glove variant a LOD2 (53 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.4061,
+     0,
+     -0.2729
+    ],
+    "max": [
+     0.4119,
+     0.1862,
+     0.2819
+    ],
+    "size": [
+     0.818,
+     0.1862,
+     0.5548
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lost_glove_b",
+   "path": "res://assets/models/park/props/crown/lost_glove_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lost_glove variant b LOD0 (512 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.4684,
+     0,
+     -0.43
+    ],
+    "max": [
+     0.4684,
+     0.197,
+     0.43
+    ],
+    "size": [
+     0.9368,
+     0.197,
+     0.86
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lost_glove_b_lod1",
+   "path": "res://assets/models/park/props/crown/lost_glove_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lost_glove variant b LOD1 (256 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.4691,
+     0,
+     -0.4286
+    ],
+    "max": [
+     0.4621,
+     0.1907,
+     0.4313
+    ],
+    "size": [
+     0.9312,
+     0.1907,
+     0.8599
+    ]
+   }
+  },
+  {
+   "id": "dprop_crown_lost_glove_b_lod2",
+   "path": "res://assets/models/park/props/crown/lost_glove_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/crown.py",
+    "notes": "lost_glove variant b LOD2 (66 tris): A single work glove dropped on a flat stone, fingers half curled. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.4743,
+     0,
+     -0.4127
+    ],
+    "max": [
+     0.4854,
+     0.1932,
+     0.4445
+    ],
+    "size": [
+     0.9597,
+     0.1932,
+     0.8572
+    ]
+   }
   }
  ]
 }

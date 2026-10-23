@@ -872,5 +872,160 @@ def kite_pennant(p, v, rng):
         p.box((0.45, 0.05, 0.12), (0.34, 0.0, H - 0.35), C["sage_dark"], style="fine")
 
 
+# --- All hands (DECISIONS 18 Oct): the storm-watch crew were the Mind's hands. Their clock-in still stands, every
+# card in the rack (01 to 04 and FOREMAN), with a fresh pair of gloves set out per shift that nobody draws.
+HANDS = {
+    "slate": "6e7378", "slate_dark": "4d5257", "slate_pale": "93979a",
+    "glove": "b59a6a", "glove_worn": "9c8458", "card": "e2dccb", "chalk": "e8e6dc",
+    "board": "33393a", "scorch": "302a26",
+}
+
+
+def glove(p, at, yaw, color, rng, curl=0.0, scale=1.0, lift=0.0):
+    """A chunky work glove lying palm down: cuff, palm, four fingers and a thumb. `curl` bends the fingers under."""
+    x, y, z = at
+    s = scale
+    ca, sa = math.cos(yaw), math.sin(yaw)
+
+    def w(dx, dy, dz=0.0):
+        return (x + (dx * ca - dy * sa) * s, y + (dx * sa + dy * ca) * s, z + lift + dz * s)
+
+    p.box((0.13 * s, 0.11 * s, 0.05 * s), w(-0.11, 0, 0.03), shade(color, 0.85), rot=(0, 0, yaw), style="fine")
+    p.box((0.13 * s, 0.12 * s, 0.055 * s), w(0.0, 0, 0.03), color, rot=(0, 0, yaw), style="fine")
+    for k in range(4):
+        fy = -0.042 + k * 0.028
+        length = (0.075, 0.085, 0.08, 0.065)[k]
+        bend = curl * (0.6 + 0.1 * k)
+        a = w(0.06, fy, 0.03)
+        b = w(0.06 + length * math.cos(bend), fy, 0.03 - length * math.sin(bend))
+        p.rod(a, b, 0.014 * s, tint(color, rng, 0.04), segs=4, style="flat")
+    p.rod(w(0.0, 0.06, 0.03), w(0.05, 0.1, 0.025), 0.015 * s, color, segs=4, style="flat")
+
+
+@K.kind("clock_post", hero=True, tags=["machine", "sign"], variants="ab",
+        story="The watch crew's time clock under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh.")
+def clock_post(p, v, rng):
+    struck = v == "b"
+    # Stone footing and a timber stand.
+    p.cyl(0.85, 0.35, (0, 0, 0.17), HANDS["slate"], segs=12, style="hard_smooth", jit=0.02)
+    p.cyl(0.6, 0.12, (0, 0, 0.4), HANDS["slate_pale"], segs=12, style="hard_smooth")
+    for x in (-0.42, 0.42):
+        p.beam((x, 0.1, 0.4), (x, 0.1, 2.3), 0.16, tint(C["timber_dark"], rng, 0.05))
+    p.box((1.05, 0.16, 1.4), (0, 0.18, 1.45), tint(C["timber_grey"], rng), style="hard")
+    for i in range(6):
+        p.box((0.17, 0.05, 1.4), (-0.43 + i * 0.172, 0.27, 1.45), tint(C["timber"], rng, 0.07), jit=0.003)
+    # The clock: a round iron case, an unlit cream face, two hands stopped at the shift change.
+    p.cyl(0.26, 0.2, (0, -0.02, 1.85), C["iron"], segs=16, rot=(math.pi / 2, 0, 0), style="round")
+    p.torus(0.25, 0.03, (0, -0.12, 1.85), C["iron_light"], rot=(math.pi / 2, 0, 0), major=16, minor=6)
+    p.cyl(0.22, 0.02, (0, -0.125, 1.85), HANDS["card"], segs=16, rot=(math.pi / 2, 0, 0), style="flat")
+    for k in range(12):
+        a = math.tau * k / 12
+        p.box((0.02, 0.01, 0.045 if k % 3 else 0.07), (0.18 * math.sin(a), -0.14, 1.85 + 0.18 * math.cos(a)),
+              HANDS["board"], rot=(0, a, 0), style="flat")
+    p.beam((0, -0.145, 1.85), (0.0, -0.145, 1.99), 0.025, HANDS["board"], style="fine")
+    p.beam((0, -0.145, 1.85), (0.11, -0.145, 1.85), 0.025, HANDS["board"], style="fine")
+    p.uv(0.025, (0, -0.15, 1.85), C["iron"], u=8, v=4)
+    # Punch slot and the lever beneath the clock.
+    p.box((0.34, 0.16, 0.16), (0, -0.04, 1.47), C["iron"], style="hard_smooth")
+    p.box((0.18, 0.03, 0.025), (0, -0.125, 1.5), C["charcoal"], style="flat")
+    p.rod((0.2, -0.08, 1.47), (0.36, -0.2, 1.36), 0.022, C["iron_light"], segs=6)
+    p.uv(0.045, (0.36, -0.2, 1.36), C["timber_dark"], u=8, v=6)
+    # Card rack: five slots side by side, every card in. FOREMAN is the wide thumb slot on the right.
+    widths = (0.11, 0.11, 0.11, 0.11, 0.16)
+    xs = (-0.36, -0.235, -0.11, 0.015, 0.175)
+    for k, (cx, wd) in enumerate(zip(xs, widths)):
+        p.box((wd + 0.02, 0.06, 0.2), (cx, -0.06, 1.0), C["iron"], style="hard")
+        p.box((wd, 0.012, 0.24), (cx, -0.095, 1.06), tint(HANDS["card"], rng, 0.03), style="flat")
+        for r in range(1 + k % 2):
+            p.box((wd * 0.7, 0.004, 0.012), (cx, -0.102, 1.13 - r * 0.03), HANDS["board"], style="flat")
+        # The stencilled number plate under each slot: bars for 01-04, a long bar for FOREMAN.
+        p.box((wd, 0.01, 0.05), (cx, -0.095, 0.85), HANDS["chalk"] if k < 4 else C["bone"], style="flat")
+        for b in range(k + 1 if k < 4 else 1):
+            bw = 0.012 if k < 4 else 0.1
+            p.box((bw, 0.004, 0.03), (cx - 0.03 + b * 0.02 if k < 4 else cx, -0.101, 0.85), HANDS["board"], style="flat")
+    # Shingled hood; the struck variant has it blown back and scorched.
+    tilt = -0.5 if struck else 0.32
+    for r in range(4):
+        for j in range(5):
+            if struck and r == 3 and j in (1, 2):
+                continue
+            col = HANDS["scorch"] if struck and (r + j) % 3 == 0 else tint(C["timber_grey"], rng, 0.08)
+            p.box((0.26, 0.24, 0.035), (-0.5 + j * 0.25, -0.28 + r * 0.17 + (0.35 if struck else 0), 2.42 + r * 0.05 + (0.15 if struck else 0)),
+                  col, rot=(tilt, 0, rng.uniform(-0.05, 0.05)), jit=0.004)
+    p.beam((-0.66, 0.1, 2.36), (0.66, 0.1, 2.36), 0.12, C["timber_dark"])
+    if struck:
+        # Scorch star on the footing, a hood shingle on the ground, and the spare cards blown out of their tin.
+        p.cyl(0.95, 0.02, (0, 0, 0.005), HANDS["scorch"], segs=12, style="flat")
+        p.box((0.3, 0.24, 0.035), (0.7, -0.75, 0.04), HANDS["scorch"], rot=(0.05, 0.1, 0.6))
+        for k in range(5):
+            a = rng.uniform(0, math.tau)
+            p.box((0.1, 0.16, 0.008), (0.9 * math.cos(a), -0.4 + 0.5 * math.sin(a), 0.36 + 0.01 * k),
+                  HANDS["card"], rot=(0, 0, a), style="flat")
+    else:
+        # The card tin on the footing, lid off, and a fresh pair of gloves on the step.
+        p.cyl(0.11, 0.14, (-0.45, -0.45, 0.53), C["iron_light"], segs=10, style="hard_smooth")
+        p.cyl(0.115, 0.02, (-0.3, -0.62, 0.47), C["iron"], segs=10, rot=(0.2, 0.3, 0), style="hard_smooth")
+        glove(p, (0.25, -0.42, 0.46), 0.3, HANDS["glove"], rng)
+        glove(p, (0.42, -0.36, 0.46), 0.1, HANDS["glove"], rng, curl=0.4)
+
+
+@K.kind("glove_bench", tags=["soft"], polish_opts={"detail": 1}, variants="abc",
+        story="A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them.")
+def glove_bench(p, v, rng):
+    length = 1.9 if v != "c" else 1.3
+    p.box((length, 0.38, 0.07), (0, 0, 0.45), tint(C["timber_grey"], rng), style="hard_smooth", jit=0.003)
+    for x in (-length / 2 + 0.15, length / 2 - 0.15):
+        p.box((0.08, 0.32, 0.42), (x, 0, 0.21), C["timber_dark"], style="hard")
+    p.beam((-length / 2 + 0.15, 0, 0.12), (length / 2 - 0.15, 0, 0.12), 0.05, C["timber_dark"])
+    pairs = 5 if v != "c" else 3
+    for k in range(pairs):
+        x = -length / 2 + 0.2 + k * (length - 0.4) / max(1, pairs - 1)
+        col = HANDS["glove"] if (v == "a" or k != 2) else HANDS["glove_worn"]
+        glove(p, (x - 0.04, -0.05, 0.485), math.pi / 2 + 0.1, col, rng)
+        glove(p, (x + 0.05, 0.03, 0.485), math.pi / 2 - 0.1, col, rng, curl=0.2)
+        p.box((0.06, 0.012, 0.04), (x, -0.19, 0.42), HANDS["card"], style="flat")
+    if v == "b":
+        # One pair fallen to the ground, palms up, as if someone was about to pick them up.
+        glove(p, (0.4, -0.45, 0.0), 0.8, HANDS["glove"], rng, curl=0.6)
+        glove(p, (0.55, -0.55, 0.0), 1.4, HANDS["glove"], rng)
+
+
+@K.kind("shift_board", tags=["sign"], polish_opts={"detail": 1}, variants="ab",
+        story="Sandwich shift board: FOREMAN column chalked MIND, the HANDS column wiped clean every morning.")
+def shift_board(p, v, rng):
+    lean = 0.22
+    for s in (-1, 1):
+        p.box((0.9, 0.05, 1.15), (0, s * 0.22, 0.6), C["timber_dark"], rot=(s * lean, 0, 0), style="hard_smooth")
+        p.box((0.78, 0.02, 0.95), (0, s * 0.255, 0.62), HANDS["board"], rot=(s * lean, 0, 0), style="flat")
+        # Two columns of chalk: rows of strokes on the left, the right column a wiped smear.
+        for r in range(5):
+            w = rng.uniform(0.14, 0.26)
+            z = 0.95 - r * 0.15
+            yoff = s * (0.27 + (1.15 - z) * 0.0)
+            p.box((w, 0.006, 0.03), (-0.2, s * 0.27 + s * math.sin(lean) * (0.6 - z) * -1, z), HANDS["chalk"], rot=(s * lean, 0, 0), style="flat")
+        p.box((0.04, 0.006, 0.85), (0.0, s * 0.27, 0.62), HANDS["chalk"], rot=(s * lean, 0, 0), style="flat")
+        p.box((0.26, 0.006, 0.32), (0.22, s * 0.27 + s * 0.04, 0.4 if v == "a" else 0.7), mix(HANDS["board"], HANDS["chalk"], 0.25),
+              rot=(s * lean, 0, 0), style="flat")
+    p.rod((-0.42, -0.1, 1.17), (-0.42, 0.1, 1.17), 0.025, C["iron"], segs=6)
+    p.rod((0.42, -0.1, 1.17), (0.42, 0.1, 1.17), 0.025, C["iron"], segs=6)
+    # A chalk tin and a rag at the foot.
+    p.cyl(0.07, 0.07, (0.35, -0.55, 0.035), C["iron_light"], segs=10, style="round")
+    for k in range(3):
+        p.cyl(0.012, 0.07, (0.33 + 0.02 * k, -0.55, 0.08), HANDS["chalk"], segs=6, rot=(0.3, 0.2 * k, 0))
+    p.ico(0.09, (-0.3, -0.55, 0.04), C["canvas_stain"], scale=(1.4, 1.0, 0.5), style="round")
+    if v == "b":
+        p.box((0.9, 0.05, 1.15), (0.6, 0.0, 0.03), C["timber_dark"], rot=(math.pi / 2, 0, 0.3), style="hard_smooth")
+
+
+@K.kind("lost_glove", tags=["soft"], polish_opts={"detail": 1}, variants="ab",
+        story="A single work glove dropped on a flat stone, fingers half curled.")
+def lost_glove(p, v, rng):
+    p.ico(0.3, (0, 0, 0.06), HANDS["slate_pale"] if v == "a" else HANDS["slate"], scale=(1.3, 1.0, 0.25), style="round", jit=0.01)
+    glove(p, (0.0, 0.0, 0.1), 0.6, HANDS["glove"] if v == "a" else HANDS["glove_worn"], rng, curl=0.7, scale=1.6)
+    p.ico(0.12, (-0.35, 0.2, 0.04), HANDS["slate_dark"], scale=(1.3, 1.0, 0.45), style="round")
+    if v == "b":
+        glove(p, (0.2, -0.32, 0.0), 2.4, HANDS["glove_worn"], rng, scale=1.6)
+
+
 if __name__ == "__main__":
     K.main()
