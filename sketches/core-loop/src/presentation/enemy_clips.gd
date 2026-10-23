@@ -49,7 +49,8 @@ const ROWS := {
 	"jolt_layer": {"stride": 1.8, "parts": {"body": ["JoltBody"], "coil": ["JoltCoil"]}},
 }
 
-# Tests opt in; a headless run otherwise plays nothing, as EnemyMotion's idle.
+# Tests opt in; a headless run otherwise plays nothing. This is its own switch, not
+# EnemyMotion.headless_idle, so the idle tests keep their immediate scatter and rest poses.
 static var headless := false
 static var _libraries := {}
 
@@ -75,7 +76,7 @@ var _holder: Node3D
 
 
 static func active() -> bool:
-	return headless or EnemyMotion.active()
+	return headless or DisplayServer.get_name() != "headless"
 
 
 static func path_for(kind_name: String) -> String:
