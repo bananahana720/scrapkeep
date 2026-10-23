@@ -29,6 +29,7 @@ const DRAIN_DELAY := 3.0
 const DRAIN_RATE := 12.0
 const STAGGER_SECONDS := 4.0
 const CHUNKS := 4
+const HEAVY_CHUNKS := 2
 const SHATTER_TIER := 2
 const FULL := 100.0
 
@@ -56,6 +57,12 @@ var contact_gain_scale := 0.0
 var contact_gain_floor := 0.0
 var hit_cap := FULL
 var hit_cap_until_stagger := false
+# A row's "heavy_ratio": a stagger opened by a ram whose punch met at least this times the plating is
+# heavy, and a smashing ram that shatters its core takes HEAVY_CHUNKS chunks (the stage 3 hive, Andrew's
+# option 1, 23 Oct: a grown build bowls through it harder). A stagger opened any other way, a slam, stomp
+# or other smash, and a crack paying off in a later stagger take one. Without the key (0) every shatter
+# takes one chunk.
+var heavy_ratio := 0.0
 
 var posture := 0.0
 var staggered := false
@@ -71,6 +78,7 @@ var shatter_frame := -1
 var gain_frame := -1
 var gain_in_frame := 0.0
 var staggers := 0
+var heavy_stagger := false
 var glances := 0
 
 
@@ -94,6 +102,7 @@ func _init(numbers := {}) -> void:
 	contact_gain_floor = float(numbers.get("contact_gain_floor", 0.0))
 	hit_cap = float(numbers.get("hit_cap", FULL))
 	hit_cap_until_stagger = bool(numbers.get("hit_cap_until_stagger", false))
+	heavy_ratio = float(numbers.get("heavy_ratio", 0.0))
 
 
 # The ceiling an ordinary pilot meets: the row's, but never past ORDINARY_RATIO.
@@ -118,7 +127,7 @@ func judge(hit: Dictionary) -> Dictionary:
 	var contact := base.has(kind)
 	var ratio := punch / plating if plating > 0.0 else mult_max
 	var glance := ratio <= mult_min
-	var result := {"punch": punch, "plating": plating, "full": not glance, "dealt": 0.0, "part": "", "shred": false,
+	var result := {"kind": kind, "punch": punch, "plating": plating, "full": not glance, "dealt": 0.0, "part": "", "shred": false,
 			"gain": 0.0, "glance": glance, "shatter": false, "crack": false, "contact": contact}
 	if staggered:
 		if contact and frame > stagger_frame:
@@ -156,8 +165,10 @@ func _judge_core(result: Dictionary, hit: Dictionary) -> void:
 	var fast_ram := ram_shatters and String(hit.get("kind", "")) == "ram" and int(hit.get("tier", 0)) >= shatter_tier
 	if smash or fast_ram or (cracked and crack_stagger < staggers):
 		var max_hp := float(hit.get("max_hp", 0.0))
+		var take := mini(chunks, HEAVY_CHUNKS) if heavy_stagger and String(hit.get("kind", "")) == "ram" and (smash or fast_ram) else 1
 		result["shatter"] = true
-		result["dealt"] = maxf(0.0, float(hit.get("hp", 0.0)) - max_hp * (chunks - 1) / CHUNKS)
+		result["take"] = take
+		result["dealt"] = maxf(0.0, float(hit.get("hp", 0.0)) - max_hp * (chunks - take) / CHUNKS)
 	else:
 		result["crack"] = true
 
@@ -167,7 +178,7 @@ func apply(result: Dictionary, frame: int) -> void:
 		glances += 1
 	if staggered:
 		if result.get("shatter", false):
-			chunks = maxi(0, chunks - 1)
+			chunks = maxi(0, chunks - int(result.get("take", 1)))
 			cracked = false
 			shattered_this_stagger = true
 			shatter_frame = frame
@@ -189,6 +200,9 @@ func apply(result: Dictionary, frame: int) -> void:
 		stagger_left = stagger_seconds
 		stagger_frame = frame
 		shattered_this_stagger = false
+		var plating := float(result.get("plating", 0.0))
+		heavy_stagger = heavy_ratio > 0.0 and result.get("kind", "") == "ram" and plating > 0.0 \
+				and float(result.get("punch", 0.0)) / plating >= heavy_ratio
 		staggers += 1
 
 
