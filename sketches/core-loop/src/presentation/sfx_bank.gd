@@ -519,16 +519,19 @@ static func hum_stream() -> AudioStreamWAV:
 static func samples(id: String) -> PackedFloat32Array:
 	if _cache_has(_samples, id):
 		return _cache_get(_samples, id)
-	return _cache_put(_samples, id, Synth.normalize(_bake(id), 0.9))
+	# A keyed bake on a worker sets the shared key and theme; the plain bake waits it out.
+	_lock.lock()
+	var buf: PackedFloat32Array = _cache_get(_samples, id) if _cache_has(_samples, id) else _cache_put(_samples, id, Synth.normalize(_bake(id), 0.9))
+	_lock.unlock()
+	return buf
 
 
 # A grid stinger baked on another tempo's grid, for the boss tempo. Cues that are not
 # written on the grid are the same at any tempo.
 static func samples_at(id: String, step: int, shift := 0, theme := 0) -> PackedFloat32Array:
-	var themed := id in THEMED
-	if (step == Harmony.STEP or not STINGER_BEATS.has(id)) and shift == 0 and (not themed or theme == 0):
+	if _plain(id, step, shift, theme):
 		return samples(id)
-	var key := "%s@%d@%d@%d" % [id, step if STINGER_BEATS.has(id) else Harmony.STEP, shift, theme if themed else 0]
+	var key := _key_at(id, step, shift, theme)
 	if _cache_has(_samples, key):
 		return _cache_get(_samples, key)
 	# A worker warms keyed variants while the band may ask for one: one bake at a time.
@@ -556,6 +559,19 @@ static func samples_at(id: String, step: int, shift := 0, theme := 0) -> PackedF
 		_theme = 0
 	_lock.unlock()
 	return _cache_get(_samples, key)
+
+
+# True when samples_at would return without a bake: the startup bank's own variant, or one already made.
+static func baked_at(id: String, step: int, shift := 0, theme := 0) -> bool:
+	return _plain(id, step, shift, theme) or _cache_has(_samples, _key_at(id, step, shift, theme))
+
+
+static func _plain(id: String, step: int, shift: int, theme: int) -> bool:
+	return (step == Harmony.STEP or not STINGER_BEATS.has(id)) and shift == 0 and (not id in THEMED or theme == 0)
+
+
+static func _key_at(id: String, step: int, shift: int, theme: int) -> String:
+	return "%s@%d@%d@%d" % [id, step if STINGER_BEATS.has(id) else Harmony.STEP, shift, theme if id in THEMED else 0]
 
 
 # Every tonal recipe reads pitches through these, so a keyed bake transposes it whole.

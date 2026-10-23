@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const BowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
+const Requisition := preload("res://src/boss/requisition.gd")
 
 # The Slag Bowl: a foundry bowl about 124 m across, built above stage 3's beacon when
 # the fight starts and freed when it ends. A flat inner floor with two slag channels,
@@ -79,6 +80,35 @@ static func _inside(terrain, flat: Vector2, reach: float) -> bool:
 		var a := TAU * k / 8.0
 		if not terrain.contains(Vector3(flat.x + cos(a) * reach, 0.0, flat.y + sin(a) * reach)):
 			return false
+	return true
+
+
+# The bowl's greybox checkers, drawn ahead by boss.gd's warm_arena; Palette keeps one of each.
+const CHECKERS := [[Palette.CHARCOAL, Color("30302c")], [Palette.SANDSTONE, Palette.COPPER],
+	[Palette.RUST, Palette.CHARCOAL], [Palette.AMBER, Palette.CHARCOAL]]
+
+
+static var _looks_warm := false
+
+
+# Flow calls this a physics tick at a time while Brindle's world's last stage runs: a step a call
+# of the Requisition's models, the bowl's kits and its checkers, off the boss-entry frame. True once done.
+static func warm_ahead() -> bool:
+	return Requisition.warm() and BowlDress.warm() and warm_looks()
+
+
+static func drop_ahead() -> void:
+	Requisition.drop_ahead()
+	BowlDress.drop_ahead()
+	Palette.drop_checkers()
+	_looks_warm = false
+
+
+static func warm_looks() -> bool:
+	if not _looks_warm:
+		for pair in CHECKERS:
+			Palette.checker_texture(pair[0], pair[1], 4, 64)
+		_looks_warm = true
 	return true
 
 
@@ -256,9 +286,9 @@ func _bowl(body: StaticBody3D) -> void:
 		_quad(wall_st, _flat(a0, BANK_R, hi), _flat(a1, BANK_R, hi), _flat(a1, outer, hi), _flat(a0, outer, hi))
 		_quad(wall_st, _flat(a0, outer, hi), _flat(a1, outer, hi), _flat(a1, outer, lo - 2.0), _flat(a0, outer, lo - 2.0))
 	var parts := [
-		[floor_st, Palette.striped(Palette.CHARCOAL, Color("30302c")), "Floor"],
-		[bank_st, Palette.striped(Palette.SANDSTONE, Palette.COPPER), "Bank"],
-		[wall_st, Palette.striped(Palette.RUST, Palette.CHARCOAL), "RimWall"],
+		[floor_st, Palette.striped(CHECKERS[0][0], CHECKERS[0][1]), "Floor"],
+		[bank_st, Palette.striped(CHECKERS[1][0], CHECKERS[1][1]), "Bank"],
+		[wall_st, Palette.striped(CHECKERS[2][0], CHECKERS[2][1]), "RimWall"],
 	]
 	for part in parts:
 		var node := _mesh_node(part[0], part[1], part[2])
@@ -331,7 +361,7 @@ func _wedge(body: StaticBody3D, foot: Vector3, forward: Vector3, length: float, 
 	_quad(st, points[4], points[5], points[3], points[2])
 	for p in [points[0], points[4], points[2], points[1], points[3], points[5]]:
 		st.add_vertex(p)
-	var node := _mesh_node(st, Palette.striped(Palette.AMBER, Palette.CHARCOAL), label)
+	var node := _mesh_node(st, Palette.striped(CHECKERS[3][0], CHECKERS[3][1]), label)
 	# The wedge's own frame (origin at the foot centre on the floor, +Z up the slope), the one point the dress places a recipe at.
 	node.set_meta(WEDGE_FRAME, Transform3D(Basis(Vector3.UP.cross(f), Vector3.UP, f), foot))
 
