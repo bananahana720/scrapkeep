@@ -21,24 +21,29 @@ const T := preload("res://tests/support/t.gd")
 # with the highest offset the hive reached, so a run whose hoist never moved fails here.
 # hoist.json also lists the hive's height (the driver's height) on each tick a stagger opens.
 # The arms are tools/posture_sweep.gd's: small and grown are the skipper at 0 and 540 start
-# mass, the camper only shoots from range. Eight seeds per arm (swarm.md section 7), the pilot
-# seed % 3 as the sweep plays it. A fight's seconds are the stage clock at the break less the
-# bot's turn to the Warden; a run is cut TURN_S past RUN_CAP_S of stage time (--ticks), and a fight
-# that has not broken by RUN_CAP_S counts at RUN_CAP_S. The cap sits above the measured fights, so
-# the medians and the pins compare real fight lengths, not the cap.
+# mass, the camper only shoots from range. Small and grown run SEED_COUNT seeds each, the camper
+# CAMPER_SEEDS (swarm.md section 7 asked for eight per arm; eight seeds left the small/grown ratio
+# chaotic across commits, 23 Oct), the pilot seed % 3 as the sweep plays it. A fight's seconds are
+# the stage clock at the break less the bot's turn to the Warden; a run is cut TURN_S past
+# RUN_CAP_S of stage time (--ticks), and a fight that has not broken by RUN_CAP_S counts at RUN_CAP_S.
+# The cap sits above the measured fights, so the medians and the pins compare real fight lengths, not the cap.
 # The band (the common contract): grown median 25 to 45 s, small median at least twice grown,
 # the camper never breaks it. swarm.md section 7's mechanism check rides with it: at least half
 # the grown seeds land a stagger during a low dwell (the hive under LOW_DWELL_M). Its second check,
 # one finish from a latch, is on since the bot's latch arm (KF-BOT, 2026-10-11; tools/bot_driver.gd
 # _anchor_fight): at least one grown seed takes a chunk with a haul from a line on a hardpoint inside a
 # stagger (the stage note's latch_chunks).
+# The ordinary pilot's first stagger (the small arm's median, from its turn to the Warden) falls in
+# FIRST_STAGGER_BAND_S, the "Per Warden" ruling for the stage 3 hive (DECISIONS, 17 Oct 22:32).
 
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster"]
-const SEED_COUNT := 8
+const SEED_COUNT := 24
+const CAMPER_SEEDS := 8
 const ARM_ROWS := {"small": {"policy": "skipper", "mass": 0}, "grown": {"policy": "skipper", "mass": 540},
 	"camper": {"policy": "camper", "mass": 0}}
 const STAGE := 3
 const GROWN_BAND_S := Vector2(25.0, 45.0)
+const FIRST_STAGGER_BAND_S := Vector2(60.0, 85.0)
 const SMALL_FACTOR := 2.0
 const HOIST_TOP := 29.0
 const RUN_CAP_S := 300.0
@@ -95,6 +100,7 @@ var _hoist_top := 0.0
 var _swarm_driver = null
 var _was_staggered := false
 var _staggers := []
+var _first_stagger_s := -1.0
 
 
 func _initialize() -> void:
@@ -108,7 +114,7 @@ func _initialize() -> void:
 	var jobs := []
 	var names := []
 	for arm in ARM_ROWS:
-		for run_seed in SEED_COUNT:
+		for run_seed in (CAMPER_SEEDS if arm == "camper" else SEED_COUNT):
 			var out := folder.path_join("%s-%d" % [arm, run_seed])
 			var args := ["--swarm-hoist=1", "--out=" + out, "--policy=" + String(ARM_ROWS[arm]["policy"]), "--seeds=%d" % run_seed,
 				"--pilot=" + String(PILOTS[run_seed % PILOTS.size()]), "--table=alpha", "--from-stage=%d" % STAGE, "--until=%d" % STAGE,
@@ -124,6 +130,7 @@ func _initialize() -> void:
 	var fights := {}
 	var low_staggers := {}
 	var latch_finishes := {}
+	var first_staggers := {}
 	var unrecorded := []
 	for i in results.size():
 		var arm: String = names[i][0]
@@ -148,6 +155,9 @@ func _initialize() -> void:
 			fights[arm] = []
 		if not record.is_empty():
 			fights[arm].append(_fight(record))
+			if not first_staggers.has(arm):
+				first_staggers[arm] = []
+			first_staggers[arm].append(_first_stagger(record, hoist))
 		var heights: Array = hoist.get("staggers", []) if hoist is Dictionary else []
 		if not low_staggers.has(arm):
 			low_staggers[arm] = []
@@ -169,8 +179,10 @@ func _initialize() -> void:
 	print("swarm runs with no record (left out of the medians): %s" % [unrecorded])
 	print("swarm low-dwell staggers per seed: small %s, grown %s, camper %s" % [low_staggers.get("small", []),
 		low_staggers.get("grown", []), low_staggers.get("camper", [])])
-	t.eq("each arm ran eight seeds", [fights.get("small", []).size(), fights.get("grown", []).size(), fights.get("camper", []).size()],
-		[SEED_COUNT, SEED_COUNT, SEED_COUNT])
+	var first_small: float = _median(first_staggers.get("small", []))
+	print("swarm first stagger: small %.2f s of %s, grown %s" % [first_small, first_staggers.get("small", []), first_staggers.get("grown", [])])
+	t.eq("each arm ran its seeds", [fights.get("small", []).size(), fights.get("grown", []).size(), fights.get("camper", []).size()],
+		[SEED_COUNT, SEED_COUNT, CAMPER_SEEDS])
 	t.check("half the grown seeds stagger the hive in a low dwell", grown_low * 2 >= SEED_COUNT,
 		"%d of %d grown seeds, per seed %s" % [grown_low, SEED_COUNT, low_staggers.get("grown", [])])
 	print("swarm finishes from a latch per seed: small %s, grown %s, camper %s" % [latch_finishes.get("small", []),
@@ -181,6 +193,8 @@ func _initialize() -> void:
 	t.check("grown breaks the hive in 25 to 45 s", grown >= GROWN_BAND_S.x and grown <= GROWN_BAND_S.y, "grown median %.2f s" % grown)
 	t.check("small takes at least twice grown's time", grown > 0.0 and small >= SMALL_FACTOR * grown, "small %.2f s, grown %.2f s" % [small, grown])
 	t.eq("the camper never breaks it", camper_broke, 0)
+	t.check("an ordinary pilot first staggers the hive in 60 to 85 s", first_small >= FIRST_STAGGER_BAND_S.x
+		and first_small <= FIRST_STAGGER_BAND_S.y, "small first-stagger median %.2f s" % first_small)
 	t.check("small and grown medians are measured under the run cap", small < RUN_CAP_S and grown < RUN_CAP_S,
 		"small %.2f s, grown %.2f s, cap %.0f s" % [small, grown, RUN_CAP_S])
 	t.check("small median within 10 percent of the pin", EXPECT_SMALL_S > 0.0 and absf(small - EXPECT_SMALL_S) <= TOLERANCE * EXPECT_SMALL_S,
@@ -219,6 +233,8 @@ func _hoist_live() -> void:
 	var staggered: bool = warden.staggered()
 	if staggered and not _was_staggered:
 		_staggers.append(float(_swarm_driver.height))
+		if _first_stagger_s < 0.0:
+			_first_stagger_s = float(_game.run.stage_time)
 		_write_hoist()
 	_was_staggered = staggered
 	var top: float = warden.global_position.y - warden.home.y
@@ -230,7 +246,8 @@ func _hoist_live() -> void:
 func _write_hoist() -> void:
 	var file := FileAccess.open(_out.path_join("hoist.json"), FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify({"driver": DRIVER_PATH, "top": _hoist_top, "staggers": _staggers}))
+		file.store_string(JSON.stringify({"driver": DRIVER_PATH, "top": _hoist_top, "staggers": _staggers,
+			"first_stagger_s": _first_stagger_s}))
 
 
 func _record(out: String) -> Dictionary:
@@ -258,13 +275,25 @@ func _stage_note(record: Dictionary) -> Dictionary:
 func _fight(record: Dictionary) -> float:
 	for note in record.get("stages", []):
 		if int(note.get("stage", 0)) == STAGE and note.get("warden_broken_s") != null:
-			# A camper never turns to the Warden, so its note has no warden_fight_s; its fight starts at
-			# the engagement (bot_driver.gd fight_start_of), not at 0, which read a 140 s break as 0 s.
-			var start = note.get("warden_fight_s")
-			if start == null:
-				start = BotDriver.fight_start_of(note)
-			return minf(RUN_CAP_S, float(note["warden_broken_s"]) - float(start if start != null else 0.0))
+			return minf(RUN_CAP_S, float(note["warden_broken_s"]) - _fight_start(note))
 	return RUN_CAP_S
+
+
+# Seconds from the turn to the Warden to the hive's first stagger (hoist.json); RUN_CAP_S if it never staggered.
+func _first_stagger(record: Dictionary, hoist) -> float:
+	var at: float = float(hoist.get("first_stagger_s", -1.0)) if hoist is Dictionary else -1.0
+	if at < 0.0:
+		return RUN_CAP_S
+	return minf(RUN_CAP_S, at - _fight_start(_stage_note(record)))
+
+
+# A camper never turns to the Warden, so its note has no warden_fight_s; its fight starts at
+# the engagement (bot_driver.gd fight_start_of), not at 0, which read a 140 s break as 0 s.
+func _fight_start(note: Dictionary) -> float:
+	var start = note.get("warden_fight_s")
+	if start == null:
+		start = BotDriver.fight_start_of(note)
+	return float(start if start != null else 0.0)
 
 
 # The children that fit at once: all of them on a big machine, fewer where memory or cores are short.
