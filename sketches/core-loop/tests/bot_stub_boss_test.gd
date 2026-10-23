@@ -25,7 +25,7 @@ var _done := false
 
 func _initialize() -> void:
 	SimClock.ticks = true
-	# Weak points off, though the Waking ships on 1: BUDGET is a fresh-kit Sable's dial-0 fight. On dial 1 its chipped
+	# Weak points off whatever the Waking ships on: BUDGET is a fresh-kit Sable's dial-0 fight. On dial 1 its chipped
 	# body hits run past 195 s; the dial-1 fight's pace is the band table's (challenge:bands), with each band's build.
 	ChallengeDials.set_overrides({"waking.weak_points": 0.0})
 	_game = Game.new()
