@@ -16,7 +16,7 @@ npm run sketch:pacing -- --from=<dir> --level=target           # read bots.ndjso
 - `--level=target` is the sitting acceptance. It also checks each band's `min` and `max`, and each content slot.
 - Output: `artifacts/local/pacing/<stamp>/summary.json` and `report.md`. Exit 0 pass, 1 fail, 2 nothing measured.
 
-The completionist runs with `--explore-by=520`. The default explorer goes to the Warden at stage second 140 and stalls at 240, so it cannot show a park longer than about 4 minutes. The flag moves both limits for this measure only; without it the bot is unchanged.
+The completionist runs with `--explore-by=520`. The default explorer goes to the Warden at stage second 140 and stalls at 240, so it cannot show a park longer than about 4 minutes. The flag moves both limits for this measure only; each activity keeps its default 40 s of patience, so a site the bot cannot finish adds no more time than it does today. Without the flag the bot is unchanged.
 
 ## Content slots
 

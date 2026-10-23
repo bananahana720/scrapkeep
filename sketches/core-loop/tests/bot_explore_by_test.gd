@@ -6,11 +6,11 @@ const T := preload("res://tests/support/t.gd")
 
 # The pacing lab's switch (bot_run --explore-by=<s>, scripts/pacing-check.mjs).
 # (a) the setting parses a number above ENGAGE_BY, reads an absent flag as 0, and rejects the rest;
-# (b) without it the driver keeps ENGAGE_BY, ACTIVITY_SECONDS and the stall cap it had on every
+# (b) without it the driver keeps ENGAGE_BY and the stall cap it had on every
 #     stage, before and after a Warden break, the Mind's crown included;
 # (c) with it the cap stretches by exactly (s - ENGAGE_BY).
 
-const EXPECTED_CHECKS := 17
+const EXPECTED_CHECKS := 16
 
 var _t := T.new("bot_explore_by_test")
 
@@ -44,7 +44,6 @@ func _caps() -> void:
 	var spy := SpyGame.new()
 	var driver := BotDriver.new(spy, "completionist", 3)
 	_t.eq("engage_by defaults to ENGAGE_BY", driver.engage_by, BotDriver.ENGAGE_BY)
-	_t.eq("activity_seconds defaults to ACTIVITY_SECONDS", driver.activity_seconds, BotDriver.ACTIVITY_SECONDS)
 	# The caps the driver had before the switch, written out from its constants.
 	_t.eq("default cap, park stage", driver._stage_cap(), BotDriver.STAGE_LIMIT)
 	spy.run.stage = 6

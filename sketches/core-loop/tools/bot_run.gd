@@ -303,7 +303,6 @@ func _physics_process(delta: float) -> bool:
 		var explore_by := BotOptions.explore_by(_settings)
 		if explore_by > 0.0:
 			_driver.engage_by = explore_by
-			_driver.activity_seconds = maxf(BotDriver.ACTIVITY_SECONDS, explore_by / 4.0)
 		_driver.chain_hand_enabled = String(_settings.get("chain-hand", "1")) != "0"
 		if _settings.has("late-offer"):
 			var late := String(_settings["late-offer"])

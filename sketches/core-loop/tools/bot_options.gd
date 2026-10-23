@@ -39,8 +39,8 @@ static func relay_stake(settings: Dictionary) -> int:
 
 
 # --explore-by=<s> (pacing lab): the stage second the completionist leaves its optional rolling for
-# the Warden, in place of BotDriver.ENGAGE_BY; one activity may then hold it a quarter of that, at least
-# ACTIVITY_SECONDS. 0 when absent, -1 when not a number above ENGAGE_BY.
+# the Warden, in place of BotDriver.ENGAGE_BY. Each activity keeps its ACTIVITY_SECONDS, so a site the bot
+# cannot finish costs what it costs by default, not more. 0 when absent, -1 when not a number above ENGAGE_BY.
 static func explore_by(settings: Dictionary) -> float:
 	if not settings.has("explore-by"):
 		return 0.0

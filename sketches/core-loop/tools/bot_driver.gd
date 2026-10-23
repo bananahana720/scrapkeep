@@ -390,10 +390,8 @@ var late_offer_policy := ""
 # 0 leaves every code path below untouched.
 var relay_stake := 0
 # The pacing lab's switch (bot_run --explore-by=<s>, scripts/pacing-check.mjs): the stage second the
-# completionist stops its optional rolling for the Warden, and how long one activity may hold it.
-# Left at ENGAGE_BY and ACTIVITY_SECONDS unless the flag is given, so every other read is unchanged.
+# completionist stops its optional rolling for the Warden. Left at ENGAGE_BY unless the flag is given.
 var engage_by := ENGAGE_BY
-var activity_seconds := ACTIVITY_SECONDS
 const RELAY_ARM_SECONDS := 150.0
 var _relay_clock := 0.0
 var _relay_closed := {}
@@ -1542,7 +1540,7 @@ func _activity_goal(delta: float) -> bool:
 		entered.append(s.id)
 		_note["activities_entered"] = entered
 	_activity_time[s.id] = float(_activity_time.get(s.id, 0.0)) + delta
-	if float(_activity_time[s.id]) > activity_seconds:
+	if float(_activity_time[s.id]) > ACTIVITY_SECONDS:
 		_activity_skip[s.id] = true
 		_activity = ""
 		return false
