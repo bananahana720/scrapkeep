@@ -294,6 +294,10 @@ func _run() -> void:
 	t.check("planted: the lower_3>4 excess at kink 0 does not flag", not flag(0.0, a["excess"]))
 	t.check("planted: the lower_3>4 kink at excess 0 does not flag", not flag(a["kink"], 0.0))
 	t.check("planted: the lower_3>4 kink and excess flag", flag(a["kink"], a["excess"]))
+	# Planted at the bounds: a bank notch just over both flags; one just under either does not.
+	t.check("planted: kink 18.5 and excess 1.30 flag", flag(18.5, 1.30))
+	t.check("planted: kink 17.5 and excess 1.30 do not flag", not flag(17.5, 1.30))
+	t.check("planted: kink 18.5 and excess 1.20 do not flag", not flag(18.5, 1.20))
 
 	# Pin.
 	var missing: Array = FLAGGED.filter(func(n): return not flagged.has(n))
