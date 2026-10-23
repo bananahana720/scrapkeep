@@ -3,7 +3,7 @@ extends RefCounted
 # A boss's named weak points as one rule object with no scene access (challenge lane, #241).
 # A point is SHUT until a tell opens it; a reel impact on an OPEN point lands at full posture
 # gain and wears its seal, and a broken seal removes that point's attack family. Every other hit
-# is chipped. judge() answers what a hit would do and changes nothing, apply() is the one place
+# is chipped, except while the body stands bare: from a break until a tell opens a point again. judge() answers what a hit would do and changes nothing, apply() is the one place
 # a hit changes state, step() runs the re-seal clock and the crew's fit clock.
 # Off (no parts, or enabled false) is the identity: judge() scales nothing and no state moves.
 
@@ -26,6 +26,10 @@ var enabled := true
 
 # id -> {seal_hp, max_hp, removes, state, opened_at, first_open, fit_since, fitters, fit_seals}
 var _parts := {}
+# Set by a break, cleared by the next open. A break removes the family whose tell opened the point, so in a
+# phase with no other family nothing could open again, and a chipped body made the skipper's world 2
+# Waking (bot_posture_boss_test) a 170 s first phase it lost.
+var _bare := false
 
 
 # parts: [{id, seal_hp, removes}]. An empty list is the off rule.
@@ -64,7 +68,7 @@ func judge(hit: Dictionary) -> Dictionary:
 		result["broke"] = punch >= float(part["seal_hp"])
 		result["removes"] = part["removes"] if result["broke"] else ""
 		return result
-	result["gain_scale"] = chip
+	result["gain_scale"] = 1.0 if _bare else chip
 	return result
 
 
@@ -83,6 +87,7 @@ func apply(answer: Dictionary, now: float) -> void:
 		part["seal_hp"] = 0.0
 		part["state"] = BROKEN
 		part["fit_since"] = -1.0
+		_bare = true
 
 
 # A tell opens a SHUT point. False when the id is unknown, the point is not SHUT, or the rule is off.
@@ -93,6 +98,7 @@ func open(id: String, now: float) -> bool:
 	part["state"] = OPEN
 	part["opened_at"] = now
 	part["first_open"] = now
+	_bare = false
 	part["fit_since"] = now if int(part["fitters"]) >= fit_min else -1.0
 	return true
 
@@ -150,6 +156,11 @@ func fit_progress(id: String, now: float) -> float:
 	if not _parts.has(id) or float(_parts[id]["fit_since"]) < 0.0 or fit_seconds <= 0.0:
 		return 0.0
 	return clampf((now - float(_parts[id]["fit_since"])) / fit_seconds, 0.0, 1.0)
+
+
+# True from a break until the next open: every hit counts in full.
+func bare() -> bool:
+	return _bare
 
 
 func has(id: String) -> bool:

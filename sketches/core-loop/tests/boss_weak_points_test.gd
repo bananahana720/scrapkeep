@@ -40,6 +40,7 @@ func _run() -> void:
 	await _hold()
 	await _mind()
 	_open_min()
+	_bare()
 	_go_table()
 	ChallengeDials.reset()
 	quit(_t.verdict())
@@ -237,11 +238,15 @@ func _waking() -> void:
 			and mod._removed_families() == ["bore"] and WakingAttacks.exposed(3, mod._removed_families()) == ["burrow", "cave_in"], str(mod._removed_families()))
 	_t.check("waking: a family is never removed to nothing", WakingAttacks.exposed(1, mod._removed_families()) == ["burrow"], "")
 	_t.check("waking: a broken hatch stays out of the way", mod.weak_open().is_empty() and not mod.objective_text().contains("is open"), "")
+	await physics_frame
+	_t.near("waking: after a break the body stands bare and pays full", mod._weak_judge({"gain": 10.0, "punch": 20.0, "reel": false})["gain"], 10.0)
 	# The pit: the override, once the last floor is gone.
 	_drop_floors(mod, 3)
 	_bore(mod, 4)
 	_t.check("waking: a bore jam in the pit opens the override", mod.weak_open() == ["override"], str(mod.weak_open()))
 	_t.check("waking: the objective names the override button", mod.objective_text().contains("override button is open"), mod.objective_text())
+	await physics_frame
+	_t.near("waking: the next open covers it again: the body pays the chip", mod._weak_judge({"gain": 10.0, "punch": 20.0, "reel": false})["gain"], 3.0)
 	var center := Vector3.ZERO
 	var full := WakingAttacks.bore(5, Vector3(10, 0, 0), center, 4, 36.0, mod._removed_families())
 	_t.check("waking: with the override whole the pit sprays three lanes", full.size() == 4, str(full.size()))
@@ -460,6 +465,23 @@ func _go_table() -> void:
 
 
 # An opened point stays open at least OPEN_MIN, whatever closes it: the window running out or a crew fit.
+# From a break until the next open the body stands bare: a re-seal by time or by the crew does not cover it.
+func _bare() -> void:
+	var rule := WeakPoints.new([{"id": "a", "seal_hp": 10.0, "removes": "x"}, {"id": "b", "seal_hp": 10.0, "removes": "y"}])
+	_t.near("bare: before any break the body pays the chip", rule.judge({"punch": 5.0})["gain_scale"], WeakPoints.CHIP)
+	rule.open("a", 1.0)
+	rule.apply(rule.judge({"point": "a", "reel": true, "punch": 50.0}), 1.1)
+	_t.check("bare: a break leaves the body bare", rule.state("a") == WeakPoints.BROKEN and rule.bare(), "")
+	_t.near("bare: and every hit then pays full", rule.judge({"punch": 5.0})["gain_scale"], 1.0)
+	rule.step(100.0)
+	_t.check("bare: the clock alone does not cover it", rule.bare(), "")
+	rule.open("b", 101.0)
+	_t.check("bare: the next open does", not rule.bare() and is_equal_approx(rule.judge({"punch": 5.0})["gain_scale"], WeakPoints.CHIP), "")
+	rule.step(200.0)
+	_t.check("bare: a re-seal without a break keeps the chip", rule.state("b") == WeakPoints.SHUT and not rule.bare(), "")
+	_t.check("bare: the off rule is never bare", not WeakPoints.off().bare(), "")
+
+
 func _open_min() -> void:
 	_t.near("OPEN_MIN is the tell floor", WeakPoints.OPEN_MIN, ChallengeDials.TELL_FLOOR)
 	var parts := [{"id": "a", "seal_hp": 60.0, "removes": "x"}]

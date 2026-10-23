@@ -1,3 +1,4 @@
+# smoke: solo timeout=240s (eleven boots of the Waking arena; 153 s on a 4-core cloud box on 2026-10-23 with the record half running beside it)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -35,13 +36,17 @@ func _run() -> void:
 	await _cue_and_plate()
 	await _retire()
 	await _death_on_the_sealing_tick()
-	await _record_survives()
 	await _plain_shove()
 	await _bot()
 	await _learner()
-	await _stats()
 	await _outcome_phase()
 	await _freed_without_died()
+	_finish()
+
+
+# Two sections (_record_survives and _stats, together about 160 s of the one-file run on 2026-10-23) live in boss_weak_crew_record_test.gd, which
+# extends this file, so neither file nears the fast lane's per-test limit.
+func _finish() -> void:
 	ChallengeDials.reset()
 	quit(_t.verdict())
 
