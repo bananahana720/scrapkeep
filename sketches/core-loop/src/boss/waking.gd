@@ -56,7 +56,46 @@ const HIT_CAP := 15.0
 # last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps on
 # scratch/challenge-tune-btC-1/-2.
 const PHASE_MIN_SECONDS := [21.0, 21.0, 21.0, 21.0]
+# Seal hp of each hatch and the override button: start value; the step 2 sweep owns it.
+const SEAL_HP := 60.0
 const FAMILY_NAMES := {"burrow": "burrow lane", "cave_in": "cave-in", "bore": "bore breach"}
+# Where the hatch parts sit (dial 1 only). Hatch k is on floor k's rim wall, on the bearing HATCH_BEARINGS[k - 1],
+# HATCH_LIFT above the top of the bank (BANK_RISE), HATCH_INSET inside the wall.
+const HATCH_BEARINGS := [0.0, TAU / 3.0, TAU * 2.0 / 3.0]
+const HATCH_LIFT := 1.2
+const HATCH_INSET := 0.5
+# The override is the pit's bore head: the drill housing the breach comes up through. The breach disc itself is laid
+# under the ball wherever it stands, so it has no place to hook; the head is a fixed spot on the pit floor, half way
+# out and clear of the Warden's body, so a ball can reach it from anywhere on the pit and a bot can plan for it.
+const BORE_HEAD_RADIUS := 20.0
+const BORE_HEAD_BEARING := PI * 0.25
+
+# The crew (dial 1 only): an opening calls one wave of fitters (crew_fitter.gd), CREW_WAVE of them but never more than
+# CREW_CAP alive, and at most CREW_WAVES_PER_PHASE waves per floor phase (the pit override is its own phase).
+# They spawn CREW_SPAWN_ARC off the hatch's bearing at CREW_SPAWN_RADIUS, alternating sides, so the player has travel time.
+const CREW_WAVE := 3
+const CREW_CAP := 6
+const CREW_WAVES_PER_PHASE := 3
+const CREW_SPAWN_ARC := TAU * 110.0 / 360.0
+const CREW_SPAWN_RADIUS := 30.0
+const CREW_SPAWN_SPACING := 1.8
+const CREW_SLOT_SPACING := 2.4
+const CREW_SLOT_INSET := 2.0
+# The seam plate (step 2c): held clear of the hatch face while fitters fit, nearer as the seal fills; a dropped plate
+# falls at PLATE_FALL_SPEED for at most PLATE_FALL_SECONDS and lies where it lands.
+const PLATE_HELD_CLEAR := 1.6
+const PLATE_FITTED_CLEAR := 0.7
+const PLATE_FALL_SPEED := 9.0
+const PLATE_FALL_SECONDS := 1.2
+const PLATE_REST_TILT := 0.35
+# The seal sound: an existing non-hostile row (the ancient weak_point_opened row) with its own baked two-click ratchet,
+# repeated faster and higher as the seal fills.
+const SEAL_CUE_KIND := "weak_point_opened"
+const SEAL_SOUND := "seal_ratchet"
+const SEAL_GAP_SLOW := 0.55
+const SEAL_GAP_FAST := 0.14
+const SEAL_PITCH_LOW := 0.85
+const SEAL_PITCH_HIGH := 1.6
 
 var floors: WakingFloors
 # Floor number to its body, while the body stands.
@@ -91,10 +130,39 @@ var warnings: Array = []
 var _taught := {}
 var _jammed_until := -INF
 var _carved_at := -INF
+# Whether a lip drop was read last frame, so each drop opens a hatch once.
+var _lip_seen := false
 var _base_plating := 0.0
 # Families ridden out while carving, for the Wall Is Home find.
 var _banked := {}
 var _pulse_charging := false
+# The crew: [{node, id, counted}], counted when the weak rule holds this fitter's fit. Empty at dial 0.
+var _crew: Array = []
+var _crew_waves := 0
+var _crew_phase := 0
+# The seam plates carried at a hatch, by hatch id. A plate a knock dropped moves to _fallen as {node, id, fall_left}, and
+# its hatch is latched (_plate_latch) until fit_min fitters are on it again. All empty at dial 0, and no node exists
+# until a crew does.
+var _plates := {}
+var _plate_latch := {}
+var _fallen: Array = []
+# The seal sound's record: [progress, pitch] per tick of the cue, kept whether or not an audio director answers.
+var seal_cue_log: Array = []
+var _seal_cue_left := 0.0
+# Every hatch the crew's fit sealed: [{id, phase, at}], at on the fight clock. The sweep reads the seal rate per floor phase.
+# This record and weak_stats live until the next fight's enter_arena, not until the crew retires or the Warden dies.
+var weak_sealed: Array = []
+# Per floor phase ("1" to "4") counts for the sweep's seal rate, each {phase: count}: opened (each hatch or override
+# opening), sealed (the crew's fit sealed it), timed_out (the window ran out), broken (a reel broke its seal) and
+# crew_waves (waves of fitters called). Empty at dial 0.
+var weak_stats := {"opened": {}, "sealed": {}, "timed_out": {}, "broken": {}, "crew_waves": {}, "open_at_end": {}}
+# Hatches and the override open right now, {phase: count} by the phase they opened in (the same dictionary as
+# weak_stats["open_at_end"]). opened = sealed + timed_out + broken + weak_open_at_end holds once _note_weak has run.
+var weak_open_at_end: Dictionary = weak_stats["open_at_end"]
+# The floor phase each currently counted opening happened in; the outcome is filed under it, not under the live phase.
+var _weak_open_phase := {}
+var _seals_seen := {}
+var _weak_last := {}
 
 
 func setup(ctx_ref) -> void:
@@ -104,6 +172,7 @@ func setup(ctx_ref) -> void:
 
 
 func enter_arena(entry_velocity: Vector3) -> void:
+	_reset_weak_record()
 	super(entry_velocity)
 	_center = pad.global_position + Vector3.UP * PAD_THICK * 0.5
 	_add_bank(pad)
@@ -118,6 +187,8 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_combo_left = -1
 	_dress = WakingDress.attach(self)
 	_arena_dress = ArenaWakingDress.attach(self)
+	if weak.active():
+		_build_parts()
 
 
 func exit_arena() -> void:
@@ -148,6 +219,7 @@ func exit_arena() -> void:
 	_taught.clear()
 	_jammed_until = -INF
 	_carved_at = -INF
+	_lip_seen = false
 	_banked.clear()
 	_pulse_charging = false
 	super()
@@ -170,6 +242,8 @@ func _physics_process(delta: float) -> void:
 		if _drop_left <= 0.0:
 			_free_body(_floor_bodies.get(_dropping))
 			_floor_bodies.erase(_dropping)
+			if weak.active():
+				_free_part("hatch_%d" % _dropping)
 			_dropping = 0
 			_seat_warden()
 			_dropped_at = clock
@@ -180,8 +254,14 @@ func _physics_process(delta: float) -> void:
 			_attack_clock = LANDING_ATTACK
 			_combo_left = -1
 	phase = clampi(floors.shattered + 1, 1, WakingAttacks.PIT_PHASE)
+	if weak.active():
+		_note_weak()
+		_step_crew()
+		_step_plates(delta)
+		_step_seal_cue(delta)
 	_read_pulse()
 	_read_ball()
+	_open_by_lip()
 	_step_attacks(delta)
 	_lay_pending()
 	_set_plating()
@@ -245,12 +325,12 @@ func _commit_attack(family := "") -> void:
 	attack_count += 1
 	var seed: int = attack_count * 7919 + ctx.run.stage
 	if family == "":
-		family = WakingAttacks.newest(phase)
+		family = WakingAttacks.newest(phase, weak.removed_families())
 		if _taught.has(phase):
-			family = WakingAttacks.choose(seed, phase)
+			family = WakingAttacks.choose(seed, phase, weak.removed_families())
 		_taught[phase] = true
 	var safe := WakingAttacks.commit_safe(family, seed, ball, ctx.player.body().linear_velocity, center, phase, ctx.tuning.f("cruise"),
-			PAD_RADIUS)
+			PAD_RADIUS, weak.removed_families())
 	if WakingAttacks.FALLBACK_PATHS.has(safe["path"]):
 		push_warning("waking: attack %d had no escape; fell back to %s" % [attack_count, safe["path"]])
 	var descriptors: Array = safe["descriptors"]
@@ -306,14 +386,85 @@ func _step_attacks(delta: float) -> void:
 					_bank_ride(attack["family"], ball)
 			if h.is_live() and attack["family"] == "bore" and h.attack_id.begins_with("waking_bore_0"):
 				_end_combo()  # a punish window ends any combo
+				# The bore opens the third hatch (Bedrock's), or the override in the pit (#241 6332288729), once per
+				# attack, apart from the punish guard below: a jam renewed while the part was buried must not keep
+				# the first reachable bore from opening it. A buried part retries on a later live frame.
+				if weak.active() and not attack.get("opened", false) and _open_bore_part():
+					attack["opened"] = true
 				_jammed_until = clock + (h.warn_seconds + h.live_seconds - h.age) + ChallengeDials.punish("waking", BORE_JAM)
 			if not (h.is_done() and h.age >= h.warn_seconds + h.live_seconds + 0.5):
 				done = false
+		# A burrow's surfacing and a cave-in's settling open their hatch as the attack ends: every hazard past its
+		# live seconds (hazard.gd DONE) and none still waiting for its slot. Once per attack; the bore opens on its jam.
+		if weak.active() and not waiting and attack["family"] != "bore" and not attack.get("opened", false) \
+				and not (attack["hazards"] as Array).is_empty() and _attack_ended(attack):
+			attack["opened"] = true
+			_open_hatch(WakingAttacks.FAMILIES.find(attack["family"]) + 1)
 		if done:
 			_free_hazards(attack)
 		else:
 			kept.append(attack)
 	attacks = kept
+
+
+func _attack_ended(attack: Dictionary) -> bool:
+	for h in attack["hazards"]:
+		if is_instance_valid(h) and not h.is_done():
+			return false
+	return true
+
+
+# Whether the ball could get at a part now (dial 1). Hatch k sits on floor k's rim at the pad radius, so floor k hides
+# it until every floor above it is gone: it is reachable only when floor k stands, no floor below k still stands, and
+# floor k is not in the drop pipeline (its warning, or queued behind another drop). That is stricter than k == phase:
+# phase moves to k + 1 the moment chunk k is lost, while floor k still stands through its drop wait and warning, so
+# in that gap nothing is reachable. The override sits on the pit floor and is buried until the pit phase AND the last
+# floor is gone: phase reaches the pit the frame chunk 3 shatters, while floor 3 still stands through its queue and warning.
+func part_reachable(id: String) -> bool:
+	if id == "override":
+		return phase >= WakingAttacks.PIT_PHASE and _floor_bodies.is_empty() and _drops.is_empty() and _dropping == 0
+	if not id.begins_with("hatch_"):
+		return true
+	var k := int(id.substr(6))
+	if not _floor_bodies.has(k) or _dropping == k or _drops.has(k):
+		return false
+	for j in range(1, k):
+		if _floor_bodies.has(j):
+			return false
+	return true
+
+
+func _part_reachable(id: String) -> bool:
+	return part_reachable(id)
+
+
+# Opens floor k's hatch only while it is reachable; a refused open changes nothing and says nothing.
+func _open_hatch(k: int) -> void:
+	if part_reachable("hatch_%d" % k):
+		_open_point("hatch_%d" % k)
+
+
+# The one place a point opens: the open calls its crew.
+func _open_point(id: String) -> void:
+	if _open_weak(id):
+		_weak_open_phase[id] = phase
+		_tally("opened", phase)
+		_weak_last[id] = WeakPoints.OPEN
+		_call_crew(id)
+
+
+func _open_override() -> void:
+	if part_reachable("override"):
+		_open_point("override")
+
+
+# A live bore's open: true once the part is reachable (opened now, or already open or broken), false while buried.
+func _open_bore_part() -> bool:
+	var id := "override" if phase >= WakingAttacks.PIT_PHASE else "hatch_3"
+	if not part_reachable(id):
+		return false
+	_open_point(id)
+	return true
 
 
 func _bank_ride(family: String, at: Vector3) -> void:
@@ -335,6 +486,34 @@ func carving_now() -> bool:
 	if "carving" in state:
 		return bool(state.carving)
 	return state.grounded and state.tier >= SpeedTier.FAST and not FloorRule.on_floor(state)
+
+
+# A lip drop opens the current floor's hatch, once per drop, in the phases before the pit. The floor below is always
+# buried under the current one, so only the hatch the ball can reach is worth opening (part_reachable decides).
+func _open_by_lip() -> void:
+	var lip := lip_drop()
+	if lip and not _lip_seen and phase < WakingAttacks.PIT_PHASE:
+		_open_hatch(phase)
+	_lip_seen = lip
+
+
+func _weak_parts() -> Array:
+	var parts := []
+	for k in WakingAttacks.FAMILIES.size():
+		parts.append({"id": "hatch_%d" % (k + 1), "seal_hp": SEAL_HP, "removes": WakingAttacks.FAMILIES[k]})
+	parts.append({"id": "override", "seal_hp": SEAL_HP, "removes": "pit_spray"})
+	return parts
+
+
+# The greybox parts (dial 1): one hatch on each floor's rim wall above the bank, the override on the pit floor. A
+# hatch faces the middle of its floor; each is freed with its floor (_free_part) or at exit_arena.
+func _build_parts() -> void:
+	for k in range(1, floors.floor_count() + 1):
+		var way := Vector3(cos(HATCH_BEARINGS[k - 1]), 0.0, sin(HATCH_BEARINGS[k - 1]))
+		var at := _center + way * (PAD_RADIUS - HATCH_INSET) + Vector3.UP * (floors.floor_height(k) + BANK_RISE + HATCH_LIFT)
+		_add_part("hatch_%d" % k, at, -way)
+	var head := Vector3(cos(BORE_HEAD_BEARING), 0.0, sin(BORE_HEAD_BEARING))
+	_add_part("override", _center + head * BORE_HEAD_RADIUS + Vector3.UP * HATCH_LIFT, -head)
 
 
 func jammed() -> bool:
@@ -369,6 +548,8 @@ func _free_hazards(attack: Dictionary) -> void:
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
+	if not _crew.is_empty():
+		_crew_struck(enemy, kind)
 	if state != FIGHT or enemy != warden or kind != "slam":
 		return
 	var at: Vector3 = ctx.player.ball_position()
@@ -386,6 +567,9 @@ func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 # Every natural death is in the pit: the chunk before the last has already dropped the
 # lowest floor (waking_floors.gd live()), so the final-floor row is the kill itself.
 func _on_warden_died(at: Vector3, scrap: int) -> void:
+	# The killing blow's outcome (a reel that breaks a part and kills the Warden) is filed before the defeat.
+	if weak.active():
+		_note_weak()
 	if state == FIGHT:
 		_discover(CodexEntries.WAKING_FINAL_FLOOR, ctx.player.ball_position())
 	_clear_attacks()
@@ -502,6 +686,9 @@ func _warden_spec() -> Dictionary:
 	# stagger. alpha-status/waking-stagger-table.md has the sweep.
 	numbers["hit_cap"] = HIT_CAP
 	numbers["hit_cap_until_stagger"] = true
+	# Dial 1: a contact pays the bar through the weak rule (a part, or the chip), not through the row's contact gain.
+	if _weak_wanted():
+		numbers["contact_gain_scale"] = 0.0
 	spec["posture"] = numbers
 	# A monster build here is heft above the library's top-bucket maximum at its own entrance, stage 4 (monster_heft.gd).
 	spec["monster_heft"] = MonsterHeft.waking_threshold()
@@ -530,5 +717,307 @@ func objective_text() -> String:
 			text += ". Its drill is jammed: hit it now"
 		elif _family != "":
 			text += ". Incoming: %s" % FAMILY_NAMES.get(_family, _family)
+		var open := weak_open()
+		if not open.is_empty():
+			text += ". Its %s is open: hook it and haul in" % ("override button" if open[-1] == "override" else "hatch")
 		return text
 	return super()
+
+
+# --- The crew ----------------------------------------------------------------------------------
+
+func crew() -> Array:
+	return _crew.filter(func(c): return is_instance_valid(c["node"])).map(func(c): return c["node"])
+
+
+func _crew_alive() -> int:
+	var n := 0
+	for c in _crew:
+		if is_instance_valid(c["node"]) and not c["node"].is_dead():
+			n += 1
+	return n
+
+
+# One wave for an opening: min(CREW_WAVE, CREW_CAP - alive) fitters, none past the phase's wave count.
+func _call_crew(id: String) -> void:
+	if not weak.active() or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+		return
+	if phase != _crew_phase:
+		_crew_phase = phase
+		_crew_waves = 0
+	var count := mini(CREW_WAVE, CREW_CAP - _crew_alive())
+	if count <= 0 or _crew_waves >= CREW_WAVES_PER_PHASE:
+		return
+	_crew_waves += 1
+	_tally("crew_waves")
+	var part = weak_part(id)
+	var hatch: Vector3 = part.global_position if part != null else _weak_position(id)
+	var out := Vector3(hatch.x - _center.x, 0.0, hatch.z - _center.z)
+	var bearing := atan2(out.z, out.x) + CREW_SPAWN_ARC * (1.0 if _crew_waves % 2 == 1 else -1.0)
+	var way := Vector3(cos(bearing), 0.0, sin(bearing))
+	var side := Vector3.UP.cross(way)
+	var base := Vector3(_center.x, _top() + 1.0, _center.z) + way * CREW_SPAWN_RADIUS
+	for i in count:
+		var at := base + side * (float(i) - float(count - 1) * 0.5) * CREW_SPAWN_SPACING
+		var fitter = ctx.spawner.spawn_enemy("crew_fitter", at)
+		if fitter == null:
+			continue
+		var slot_index := _free_slot(id)
+		fitter.assign(id, _slot_at(id, hatch, slot_index), _plate_at(id, 0.0))
+		var entry := {"node": fitter, "id": id, "counted": false, "slot": slot_index}
+		_crew.append(entry)
+		# A fitter that dies gives its fit back at once: weak.step runs before _step_crew, so a death on the sealing
+		# tick must not still count. _uncount is once per entry, so _step_crew and retire do not take it twice.
+		fitter.died.connect(func(_at: Vector3, _scrap: int): _uncount(entry))
+
+
+func _free_slot(id: String) -> int:
+	var held := []
+	for c in _crew:
+		if c["id"] == id and is_instance_valid(c["node"]):
+			held.append(int(c["slot"]))
+	var k := 0
+	while held.has(k):
+		k += 1
+	return k
+
+
+# Fitter slots sit across the hatch's face, a second row further in.
+func _slot_at(_id: String, hatch: Vector3, k: int) -> Vector3:
+	var in_way := Vector3(_center.x - hatch.x, 0.0, _center.z - hatch.z).normalized()
+	var side := Vector3.UP.cross(in_way)
+	return hatch + in_way * (CREW_SLOT_INSET + float(k / 3) * CREW_SLOT_INSET) + side * (float(k % 3) - 1.0) * CREW_SLOT_SPACING
+
+
+# Every tick: fitters that arrived book their fit, a dead one gives its fit back, and a closed hatch retires its crew.
+func _step_crew() -> void:
+	var kept: Array = []
+	for c in _crew:
+		var f = c["node"]
+		if not is_instance_valid(f):
+			_uncount(c)
+			continue
+		var id: String = c["id"]
+		if f.is_dead():
+			_uncount(c)
+			continue
+		if weak.state(id) != WeakPoints.OPEN or not part_reachable(id):
+			_uncount(c)
+			f.retire()
+			continue
+		if f.fit_state == f.State.INBOUND and f.arrived():
+			f.start_fit()
+			weak.begin_fit(id, clock)
+			c["counted"] = true
+		f.seal_progress = weak.fit_progress(id, clock)
+		kept.append(c)
+	_crew = kept
+
+
+# Records what the rule did to each hatch since the last look (the weak_point_opened pattern, as a record: the event
+# table is shared and has no sealed row): a seal by the crew's fit, a timeout, or a broken seal, on the floor phase.
+func _note_weak() -> void:
+	for p in _weak_parts():
+		var id: String = p["id"]
+		var n: int = weak.fit_seals(id)
+		var sealed: int = n - int(_seals_seen.get(id, 0))
+		var opened_in: int = int(_weak_open_phase.get(id, phase))
+		for i in sealed:
+			weak_sealed.append({"id": id, "phase": opened_in, "at": clock})
+			_tally("sealed", opened_in)
+		_seals_seen[id] = n
+		var now: int = weak.state(id)
+		if int(_weak_last.get(id, WeakPoints.SHUT)) == WeakPoints.OPEN and now != WeakPoints.OPEN:
+			if now == WeakPoints.BROKEN:
+				_tally("broken", opened_in)
+			# A hatch still OPEN when its floor drops (_free_part) files as timed_out too.
+			elif sealed <= 0:
+				_tally("timed_out", opened_in)
+		if now != WeakPoints.OPEN:
+			_weak_open_phase.erase(id)
+		_weak_last[id] = now
+	weak_open_at_end.clear()
+	for id in _weak_open_phase:
+		if weak.state(id) == WeakPoints.OPEN:
+			var key := str(_weak_open_phase[id])
+			weak_open_at_end[key] = int(weak_open_at_end.get(key, 0)) + 1
+
+
+func _tally(key: String, at_phase := -1) -> void:
+	var by_phase: Dictionary = weak_stats[key]
+	var k := str(at_phase if at_phase >= 0 else phase)
+	by_phase[k] = int(by_phase.get(k, 0)) + 1
+
+
+# The sweep's record of the last fight is kept until the next one starts.
+func _reset_weak_record() -> void:
+	weak_sealed.clear()
+	_seals_seen.clear()
+	_weak_last.clear()
+	_weak_open_phase.clear()
+	for key in weak_stats:
+		(weak_stats[key] as Dictionary).clear()
+
+
+func _uncount(c: Dictionary) -> void:
+	if c["counted"]:
+		weak.knock_fit(c["id"])
+		c["counted"] = false
+		# A fitter that dies or is freed while carrying leaves the plate to fall, as a knock below fit_min does.
+		if weak.state(c["id"]) == WeakPoints.OPEN and weak_part(c["id"]) != null:
+			_plate_knocked(c["id"])
+
+
+# A reel impact on a fitting fitter throws it off its plate; any other contact only shoves it (enemy.knock).
+func _crew_struck(f: Node3D, kind: String) -> void:
+	for c in _crew:
+		if c["node"] != f:
+			continue
+		if state != FIGHT or f.fit_state != f.State.FITTING or not kind in Rules.CONTACT_KINDS:
+			return
+		var smash: bool = ctx.player.smash_landing == f
+		var reel: bool = ctx.spawner.is_reel_impact(kind, smash) if ctx.spawner != null and ctx.spawner.has_method("is_reel_impact") \
+				else smash or (ctx.player.kit.hooked and ctx.player.kit.winching)
+		if not reel:
+			return
+		_uncount(c)
+		f.dislodge(f.global_position - ctx.player.ball_position())
+		_discover("plate_drop", f.global_position)
+		return
+
+
+# --- The seam plate and the seal sound ---------------------------------------------------------
+
+# The plate's place at a hatch: its face (the way the part looks) pushed out by clear.
+func _plate_at(id: String, clear: float) -> Vector3:
+	var part = weak_part(id)
+	if part == null:
+		return _weak_position(id)
+	return part.global_position - part.global_transform.basis.z * (WeakPart.SIZE.z * 0.5 + clear)
+
+
+func _fitting_count(id: String) -> int:
+	var n := 0
+	for c in _crew:
+		if c["id"] == id and c["counted"] and is_instance_valid(c["node"]) and c["node"].fit_state == c["node"].State.FITTING:
+			n += 1
+	return n
+
+
+# Held while any fitter fits and no knock has dropped it; it comes closer as the seal fills.
+func _step_plates(delta: float) -> void:
+	for id in _plates.keys():
+		if weak.state(id) != WeakPoints.OPEN or weak_part(id) == null:
+			# Sealed (the plate is fitted: the hatch's own cover shows), timed out or broken: no plate at the hatch.
+			_free_plate(id)
+	for id in _plate_latch.keys():
+		if weak.state(id) != WeakPoints.OPEN:
+			_plate_latch.erase(id)
+	for c in _crew:
+		var id: String = c["id"]
+		var f = c["node"]
+		if not is_instance_valid(f) or f.fit_state != f.State.FITTING or weak.state(id) != WeakPoints.OPEN:
+			continue
+		if _fitting_count(id) >= weak.fit_min:
+			_plate_latch.erase(id)
+		var part = weak_part(id)
+		if _plate_latch.has(id) or part == null:
+			continue
+		if not _plates.has(id):
+			var made := WeakPart.make_plate()
+			made.name = "SeamPlate_%s" % id
+			ctx.root.add_child(made)
+			_plates[id] = made
+		var node: Node3D = _plates[id]
+		node.global_transform = Transform3D(part.global_transform.basis,
+				_plate_at(id, lerpf(PLATE_HELD_CLEAR, PLATE_FITTED_CLEAR, f.seal_progress)))
+	var rest: Array = []
+	for fall in _fallen:
+		var node: Node3D = fall["node"]
+		if not is_instance_valid(node):
+			continue
+		if fall["fall_left"] > 0.0:
+			fall["fall_left"] = float(fall["fall_left"]) - delta
+			var p := node.global_position
+			var ground := ground_height_at(p)
+			p.y -= PLATE_FALL_SPEED * delta
+			if is_finite(ground) and p.y <= ground + 0.1:
+				p.y = ground + 0.1
+				fall["fall_left"] = 0.0
+			node.global_position = p
+			if fall["fall_left"] <= 0.0:
+				node.rotation.x += PLATE_REST_TILT
+		rest.append(fall)
+	_fallen = rest
+
+
+# A fitter was struck off: if that leaves the hatch with fewer than fit_min fitting, the carried plate falls.
+func _plate_knocked(id: String) -> void:
+	if _fitting_count(id) >= weak.fit_min:
+		return
+	_plate_latch[id] = true
+	var node = _plates.get(id)
+	_plates.erase(id)
+	if node == null or not is_instance_valid(node):
+		return
+	# One fallen plate per hatch: an older one is cleared away.
+	_fallen = _fallen.filter(func(fall):
+		var keep: bool = fall["id"] != id
+		if not keep and is_instance_valid(fall["node"]):
+			fall["node"].queue_free()
+		return keep)
+	_fallen.append({"node": node, "id": id, "fall_left": PLATE_FALL_SECONDS})
+
+
+func _free_plate(id: String) -> void:
+	var node = _plates.get(id)
+	if node != null and is_instance_valid(node):
+		node.queue_free()
+	_plates.erase(id)
+
+
+# The seal sound: a tick at a rate and pitch that rise with the fit clock, only while fit_min or more are fitting.
+func _step_seal_cue(delta: float) -> void:
+	var progress := -1.0
+	for c in _crew:
+		var id: String = c["id"]
+		if is_instance_valid(c["node"]) and c["node"].fit_state == c["node"].State.FITTING \
+				and _fitting_count(id) >= weak.fit_min and weak.state(id) == WeakPoints.OPEN:
+			progress = maxf(progress, float(c["node"].seal_progress))
+	if progress < 0.0:
+		_seal_cue_left = 0.0
+		return
+	_seal_cue_left -= delta
+	if _seal_cue_left > 0.0:
+		return
+	_seal_cue_left = lerpf(SEAL_GAP_SLOW, SEAL_GAP_FAST, progress)
+	var pitch := lerpf(SEAL_PITCH_LOW, SEAL_PITCH_HIGH, progress)
+	seal_cue_log.append([progress, pitch])
+	var presentation = ctx.root.get("presentation") if ctx != null and ctx.root != null else null
+	var audio = presentation.audio if presentation != null else null
+	if audio != null:
+		audio.play(SEAL_CUE_KIND, -6.0, pitch, "SFX", SEAL_SOUND)
+
+
+func _retire_crew() -> void:
+	for c in _crew:
+		if is_instance_valid(c["node"]):
+			_uncount(c)
+			c["node"].retire()
+	_crew.clear()
+	for id in _plates.keys():
+		_free_plate(id)
+	for fall in _fallen:
+		if is_instance_valid(fall["node"]):
+			fall["node"].queue_free()
+	_fallen.clear()
+	_plate_latch.clear()
+	_seal_cue_left = 0.0
+	seal_cue_log.clear()
+	_crew_waves = 0
+	_crew_phase = 0
+
+
+func _free_parts() -> void:
+	_retire_crew()
+	super()

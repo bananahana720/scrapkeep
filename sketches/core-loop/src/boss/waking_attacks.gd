@@ -56,28 +56,31 @@ const SEARCH_STEP := 0.5
 const SEARCH_BEARINGS := 72
 
 
-static func exposed(phase: int) -> Array:
-	return FAMILIES.slice(0, clampi(phase, 1, FAMILIES.size()))
+# removed: families a broken weak point took away (weak_points.gd); never all of them.
+static func exposed(phase: int, removed := []) -> Array:
+	var open := FAMILIES.slice(0, clampi(phase, 1, FAMILIES.size()))
+	var kept := open.filter(func(f): return not removed.has(f))
+	return kept if not kept.is_empty() else open
 
 
 # The family a phase introduces, the one it teaches first.
-static func newest(phase: int) -> String:
-	return exposed(phase)[-1]
+static func newest(phase: int, removed := []) -> String:
+	return exposed(phase, removed)[-1]
 
 
-static func choose(seed: int, phase: int) -> String:
-	var open := exposed(phase)
+static func choose(seed: int, phase: int, removed := []) -> String:
+	var open := exposed(phase, removed)
 	return open[_rng(seed).randi() % open.size()]
 
 
-static func commit(family: String, seed: int, ball: Vector3, velocity: Vector3, center: Vector3, phase: int, radius: float) -> Array:
+static func commit(family: String, seed: int, ball: Vector3, velocity: Vector3, center: Vector3, phase: int, radius: float, removed := []) -> Array:
 	match family:
 		"burrow":
 			return burrow(seed, ball, center, phase, radius)
 		"cave_in":
 			return cave_in(seed, ball, velocity, center, phase, radius)
 		"bore":
-			return bore(seed, ball, center, phase, radius)
+			return bore(seed, ball, center, phase, radius, removed)
 	push_error("waking_attacks: unknown family %s" % family)
 	return []
 
@@ -85,10 +88,10 @@ static func commit(family: String, seed: int, ball: Vector3, velocity: Vector3, 
 # The set laid always leaves escape_point non-null: a set with none is recommitted on other
 # seeds, then trimmed from the last descriptor, else nothing is laid ("none").
 static func commit_safe(family: String, seed: int, ball: Vector3, velocity: Vector3, center: Vector3, phase: int, cruise_speed: float,
-		radius: float) -> Dictionary:
+		radius: float, removed := []) -> Dictionary:
 	var first: Array = []
 	for k in RECOMMITS + 1:
-		var descs := commit(family, seed + k * RECOMMIT_STRIDE, ball, velocity, center, phase, radius)
+		var descs := commit(family, seed + k * RECOMMIT_STRIDE, ball, velocity, center, phase, radius, removed)
 		if k == 0:
 			first = descs
 		if escape_point(descs, ball, cruise_speed, center, radius) != null:
@@ -132,11 +135,11 @@ static func cave_in(seed: int, ball: Vector3, velocity: Vector3, center: Vector3
 
 
 # The drill up through the floor under the ball. In the pit, lanes spray out of the hole.
-static func bore(seed: int, ball: Vector3, center: Vector3, phase: int, radius: float) -> Array:
+static func bore(seed: int, ball: Vector3, center: Vector3, phase: int, radius: float, removed := []) -> Array:
 	var rng := _rng(seed)
 	var at := _inside(_flat(ball), center, radius - BORE_R)
 	var out := [_disc("bore", 0, at, BORE_R, _warn(BORE_WARN, phase), BORE_LIVE)]
-	if phase >= PIT_PHASE:
+	if phase >= PIT_PHASE and not removed.has("pit_spray"):
 		var start := rng.randf() * TAU
 		for i in PIT_SPRAY:
 			var lane := _lane("burrow", i, at, start + TAU * i / PIT_SPRAY, _warn(BURROW_WARN, phase), radius)

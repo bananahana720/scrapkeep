@@ -13,7 +13,9 @@ const T := preload("res://tests/support/t.gd")
 
 # Posts per park at b12fd171 (clear_zones without the span rule; islands was 0), unchanged at 74682daf.
 const ISLANDS_POSTS := 1229
-const PINNED := {"dam": 6059, "flume": 20, "pit": 85, "sinkhole": 1281, "crown": 5618}
+# Re-pinned 2026-10-23 (#241 gate, comment 6357833993): sinkhole 1281 -> 1282 at B12 #350 (main_tube_upper_post_11i moved
+# to (-27.3, -120.2) and now keeps a post); crown 5618 -> 5620 at B11 #321 (sentinel_36 and sentinel_50 moved and each now keeps a post).
+const PINNED := {"dam": 6059, "flume": 20, "pit": 85, "sinkhole": 1282, "crown": 5620}
 
 var _t := T.new("park_anchor_span_test")
 
