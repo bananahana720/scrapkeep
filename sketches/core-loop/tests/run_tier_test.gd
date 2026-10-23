@@ -58,27 +58,28 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-22 merge of stage/alpha-w18 a777720a (B11: #321) into postbanks (#350): both change park-row data; schedules re-read from MEASURE (schedule0), seeds 0..19.
 # 2026-10-23 lava_channel_12, 13 and 21 reshaped to ease the sinkhole wash elbows A and B (World, #241 6354292643 item 3): park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged; pins read from this test's own MEASURE lines (schedule0), seeds 0..19.
 # 2026-10-23 merge of stage/alpha-w18 e564e2c3 (B17: #359 sinkhole elbows) into the drum kicker move (drum_lip_kicker 3.07 m east, World, #241 6357419327): both change park-row data; schedules re-read from MEASURE (schedule0), seeds 0..19.
+# 2026-10-23 drum_lip_fill, a greybox ground row closing the drum lip notch (World, #241 6367170045 item 5): a park-row datum in the schedule hash; all 20 moved, whole-run hashes unchanged; pins read from this test's own MEASURE lines (schedule0), seeds 0..19.
 const BASE_SCHEDULE := [
-	"e6fa40544a839386d8324407a05e6f7dc6eda33906e56b6a697e9dc0a1802004",
-	"d5cbdc23bd5aa6d390824526ad8c4b442ca318e2886e5051aee7a09307a75be9",
-	"0625ff54fa0c89d2f38faf02a22ccd563cb83cd39479f001c6737859e147947d",
-	"4ecb48900ae91cd48442e35a7494efd4137d10fd8714c759ee23cbd83bd5a35e",
-	"277127226bcc744d5e924597c73a5df64f8838873bdcee3ffc204166a3a1054c",
-	"4e857b8d2246020706ee35c580a5ab27d37841dfc8c9cb12d4ce14f1efdc82b3",
-	"9857db5939bcba0855c3367cd11b1397e5188fecff42821179709e62a818bf2e",
-	"75ce9da4b1db69454dd568574532d41ef68f745805f0f5471660b1d60a35c6d9",
-	"d622c51371e4b4c5649ea98718f29f1dda98bf2f08d75a5aad5dc99bb8a7499c",
-	"833913766bf2f31acbfdfe95e736d3e9d3490dc96137ad209a180696c306faef",
-	"5355433adec5be846533104761c7c5eea459161291231ebe72281ebcb855a72d",
-	"8e4f105bf6082a06b828e86f566b0fc9b301f98ce3f097570e5503df1c2bea16",
-	"ec65326be53fc5f810dabd932fb3a18a5f7d9632a9c8bfdcae3cdefd7b0cee41",
-	"f5fa732543bd2dd5ee9b47e47bbf650ca697e9ba2b71fb0a27adaa9d6ffc78bf",
-	"1c6ca784070bfd788432ffca0de736ab6475ebc0663b4ba305326fad110349bd",
-	"0dc5435019e09b8de9b3db0796aeb4978358f694d509b3157d5e7dd524fc517b",
-	"459780585d8f8dbe66d679cdcd1797c51bd41b3c16501d407dc825650e50772b",
-	"e8e4275494f86b697764a561de2680e5c6666f24e3b46c29c034aaf53fc66f90",
-	"a5c6e37ef8aa3a2543b6b81b25cdfbfcbdc846063c6bde0cfde760bcd888b8d9",
-	"58ca6e3c92721132dc986e653ca71f0243f61d53962398c8e87690a9cfb676e8",
+	"273626c0c2966c479f8a982a66ad276ebe608444135164edb6e029f6bc9f4228",
+	"9ed76c80e4d03897fc03a4d27a49a296b1341d14c39b13307a7a18962754eda5",
+	"9a30cccc64c1ecd07e6017eaa25b4037dacadf221929c69e255176e0fdacbb7c",
+	"8342fdced29e8bf19abd347c9de799d013115974fc0d9ae0c0e48a8ccf1f1814",
+	"52732c05466a239c75d50c278e01a6cc4e817be85b9925590e2b4405e10b4e5c",
+	"7d379dd62eff83d14caa2cd57328e6b063f5d0b03ce5bd6c08d1c936c2833cd2",
+	"505a02e5204fcf900b2bb4fab8a5b6c8a00dfd2f49bb4eb19e591de6bd0eb487",
+	"bc427a936b8642b47995bf0fda318d15ed0e89ac68e79e043f0dcab900bc7fc6",
+	"e40c7616dddd6e313dba05573cd1a9d0c24e9cbd2dd1cdcf846f3f0f5732ed9e",
+	"58c3bcfbe4c8e2063b4a4e9361889f7f51283384a14580ab563e12fc9a6b9b6d",
+	"c66f03ef9a18b38956d7a9e6147bcd547bb8890b1b54690f95c7f10776129ec2",
+	"8f12123f592e5ecff48f927888bd42ddddaa3e7831929ea1fdcb413e1fb9c12c",
+	"9cd4a3cdb83ea306fe93b994b9ba1099daea5050e10616b772483db72fb1ca30",
+	"882b68995b41b10e3fa69f725f683376de647fa5a67ca19be5758778b43879d5",
+	"e5f1a98e4475f3d855dff5a7cf03c6d652ce7c6ade1bfadafd945a617f834568",
+	"7715819534367be4f6ae2b212e073d174e059fe6d5a74a8c0769088a0d759bee",
+	"497f2bf6838a1c767575c49a7a676b9fc63f51645bb0927afe0b5fd5ba730ffd",
+	"367676b2280828541a4a309981a1990146b3f6afde2fb05d3afcc948126525e1",
+	"7b520afe01ae5272db7562afc0bd79a9dcd783a33aaee1e800128b0894a48f9b",
+	"7be80cac9fef525c80069433e33a2d64cbd5b2dbf93cd5bcbec1065f90747bf3",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
