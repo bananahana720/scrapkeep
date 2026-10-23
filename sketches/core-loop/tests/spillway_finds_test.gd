@@ -185,13 +185,15 @@ func _game() -> void:
 		game.flow.enter_stage(index + 1, Vector3.ZERO, false)
 		await physics_frame
 		await physics_frame
+		_run_seed_moves(game, map_id)
+		var want_seed := hash([game.ctx.rng.seed, game.run.run_seed, "field_finds"])
 		var finds: Array = game.world.activities.sites.filter(func(s): return is_instance_valid(s) and s.has_meta("find"))
-		var want := Secrets.find_sites(map_id, int(game.ctx.rng.seed)).map(func(s): return String(s["find"]))
+		var want := Secrets.find_sites(map_id, want_seed).map(func(s): return String(s["find"]))
 		_t.eq("fresh: %s builds its two finds" % map_id, finds.map(func(s): return String(s.get_meta("find"))), want)
 		for s in finds:
 			var id := String(s.get_meta("find"))
 			var f: Dictionary = Secrets.FINDS[id]
-			var spot := Secrets.find_spot(id, int(game.ctx.rng.seed))
+			var spot := Secrets.find_spot(id, want_seed)
 			var planar := Vector2(s.global_position.x - float(spot["at"][0]), s.global_position.z - float(spot["at"][1])).length()
 			_t.check("%s stands at its drawn spot" % id, planar <= 12.0, "%.1f m" % planar)
 			_t.check("%s stands on flat ground" % id, _rise(game, s) <= FLAT_RISE_M, "%.2f m" % _rise(game, s))
@@ -205,11 +207,16 @@ func _game() -> void:
 				_t.check("%s raises its aerial" % id, s.get_node_or_null("FindAerial") != null)
 			else:
 				_t.check("%s seeps down its face" % id, s.wall.get_node_or_null("FindSeep0") != null and s.wall.get_node_or_null("FindGlint") != null)
+			_t.check("%s shows no beacon" % id, not s.view.lit() and not s.view.word.visible)
+			_t.check("%s is no marked activity" % id, not game.hud.edge_markers.unfinished_sites().has(s) if _has_markers(game) else true)
 			_t.check("%s is declared before it is found" % id, game.ctx.codex.status(String(f["codex"]["id"])) == "unencountered")
 			game.world.activities._break_wall(s)
 			broken += 1
 			_t.check("%s opens when its face breaks" % id, s.done and not s.wall.visible)
 			_t.check("%s files its codex row" % id, game.ctx.codex.known(String(f["codex"]["id"])))
+			_t.check("%s hushes its tell once open" % id, tell.is_queued_for_deletion())
+			var luck: String = game.world.activities._luck_id(s)
+			_t.eq("%s rolls on its own stream" % id, luck, "cracked_cache:" + id)
 	var after: Dictionary = CampMenu.reading(game)["secrets"][0]
 	_t.eq("the camp counts every find broken", after["found"], broken)
 	_t.check("the camp shows the count", (CampMenu.reading(game)["lines"] as PackedStringArray).has("Spillway secrets: %d of %d found" % [broken, Secrets.WORLD_CODEX[1].size()]))
@@ -221,6 +228,21 @@ func _game() -> void:
 	disk.queue_free()
 	game.queue_free()
 	await process_frame
+
+
+func _has_markers(game) -> bool:
+	return game.get("hud") != null and game.hud.get("edge_markers") != null
+
+
+# Two runs that differ only in their run seed can stand a find on different spots; the same run
+# seed always stands it on the same one.
+func _run_seed_moves(game, map_id: String) -> void:
+	var picks := {}
+	for run_seed in range(1, 33):
+		var mixed := hash([game.ctx.rng.seed, run_seed, "field_finds"])
+		for spec in Secrets.find_sites(map_id, mixed):
+			picks[spec["site"]] = true
+	_t.check("%s finds move with the run seed" % map_id, picks.size() == 4, str(picks.keys()))
 
 
 func _rise(game, s) -> float:

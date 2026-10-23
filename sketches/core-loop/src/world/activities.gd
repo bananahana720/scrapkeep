@@ -160,6 +160,8 @@ const CACHE_FIRED_GLOW := {"energy": 0.8}
 # A field find's tells: seep streaks on the cracked face (x, y, width in metres) and the radio aerial.
 const FIND_SEEP_STREAKS := [Vector3(-2.6, 0.4, 0.5), Vector3(-1.9, 0.1, 0.3), Vector3(2.2, 0.6, 0.4)]
 const FIND_AERIAL_M := 3.2
+# One wet material for every seep streak.
+static var _find_wet: StandardMaterial3D
 
 var ctx
 var sites: Array = []
@@ -426,9 +428,12 @@ func _enter_stage(retry: bool) -> void:
 			var room := _build("cracked_cache", room_spec["at"], room_spec)
 			_hang_room_log(room, String(room_spec["secret"]))
 			sites.append(room)
-		for find_spec in Secrets.find_sites(_graph_map, int(ctx.rng.seed)):
+		# The run's own seed picks the spots, so the next run moves them and a replay keeps them.
+		for find_spec in Secrets.find_sites(_graph_map, hash([ctx.rng.seed, ctx.run.run_seed, "field_finds"])):
 			var found := _build("cracked_cache", find_spec["at"], find_spec)
+			var dressed := Time.get_ticks_usec()
 			_dress_find(found, String(find_spec["find"]))
+			last_entry_steps.append("find %s %.1f" % [find_spec["find"], (Time.get_ticks_usec() - dressed) / 1000.0])
 			sites.append(found)
 	if _graph != null:
 		var pool: PackedInt32Array = entry_data.pool
@@ -678,6 +683,8 @@ func _dress_find(s: Site, find_id: String) -> void:
 	var f: Dictionary = Secrets.FINDS[find_id]
 	_hang_board(s, "Find_" + find_id, String(f["name"]), String(f["log"]))
 	s.set_meta("find", find_id)
+	# A secret shows no beacon column, glyph, ring or word: its tell is what gives it away.
+	s.view.finish()
 	if ctx.get("codex") != null:
 		ctx.codex.declare(f["codex"])
 	if f["kind"] == "radio":
@@ -689,7 +696,9 @@ func _dress_find(s: Site, find_id: String) -> void:
 # The crack's tell: a dark wet streak down the cracked face under a slow glint, and a drip heard
 # from Secrets.DRIP_HEAR_M. Both go with the face when it breaks.
 func _seep_tell(s: Site) -> void:
-	var wet := Palette.solid(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.35))
+	if _find_wet == null:
+		_find_wet = Palette.solid(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.35))
+	var wet := _find_wet
 	for k in FIND_SEEP_STREAKS.size():
 		var streak: Vector3 = FIND_SEEP_STREAKS[k]
 		var mark := _mesh_box(s.wall, Vector3(streak.z, WALL_HEIGHT * 0.8, 0.04), Vector3(streak.x, streak.y, 0.52), wet)
@@ -728,6 +737,7 @@ func _find_sound(id: String, reach: float) -> AudioStreamPlayer3D:
 func _hang_room_log(s: Site, room_id: String) -> void:
 	var room: Dictionary = Secrets.ROOMS[room_id]
 	_hang_board(s, "Secret_" + room_id, String(room["name"]), String(room["log"]))
+	s.set_meta("room", room_id)
 	_chalk_tally(s.wall)
 	_hang_glove(s)
 
@@ -1454,6 +1464,9 @@ func _break_wall(s: Site) -> void:
 # own burst and the find tune; synergy_discovered carries it to audio.gd).
 func _found(s: Site) -> void:
 	var f: Dictionary = Secrets.FINDS[String(s.get_meta("find"))]
+	var tell: Node = s.wall.get_node_or_null("FindTell")
+	if tell != null:
+		tell.queue_free()
 	WorldFx.fire("secret_found", s.pedestal + Vector3.UP)
 	if ctx.get("codex") != null:
 		ctx.codex.mark_discovered(String(f["codex"]["id"]), s.pedestal)
@@ -1554,7 +1567,7 @@ func _finish(s: Site, at: Vector3) -> void:
 			s.pickup_parts = _roll_many(s.id, table["rarities"], s.relay.rewards())
 			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
 		else:
-			s.pickup_part = _roll(s.id, table["rarities"])
+			s.pickup_part = _roll(_luck_id(s), table["rarities"])
 	if s.pickup_part != "":
 		s.pickup = ActivityView.gem(String(s.rule.cue.view) if s.rule.has("bundle") else s.id)
 		s.add_child(s.pickup)
@@ -1584,6 +1597,16 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 	if amount > 0:
 		ctx.run.add_scrap(amount, at)
 		ctx.run.add_cogs(amount)
+
+
+# A field find or a first-win room rolls on its own stream, so it never pays the part the stage's
+# ordinary cracked cache pays; every other site keeps its id, and so its rolls.
+func _luck_id(s: Site) -> String:
+	if s.has_meta("find"):
+		return "%s:%s" % [s.id, s.get_meta("find")]
+	if s.has_meta("room"):
+		return "%s:%s" % [s.id, s.get_meta("room")]
+	return s.id
 
 
 func _roll(id: String, rarities: Array) -> String:
