@@ -16,6 +16,8 @@ const TitleStage := preload("res://src/presentation/title_stage.gd")
 const WardenRing := preload("res://src/presentation/warden_ring.gd")
 const WardenScript := preload("res://src/combat/warden.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
+const FlourishPlayer := preload("res://src/presentation/flourish_player.gd")
+const SpillwayStory := preload("res://src/presentation/spillway_story.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
@@ -49,6 +51,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 #   hero_assets    the V3 models dressed over the greybox shell, chunks and gates
 #   warden_ring    a posture Warden's health as four arcs on the ground round its foot
 #   reward_ceremony  how a part find is presented, from a rarity tick to the crate (v3 W13)
+#   flourish_player  the in-run comic beats (flourish_rows.gd); spillway_story starts world 1's rows
 
 var ctx
 var audio
@@ -62,6 +65,8 @@ var armour_marks
 var banner
 var hero_assets
 var ceremony
+var flourish
+var spillway_story
 var set_dressing: Node3D
 var park_props: Node3D
 var ambient_life: Node3D
@@ -128,6 +133,12 @@ func setup(ctx_ref) -> void:
 	ceremony = RewardCeremony.new()
 	add_child(ceremony)
 	ceremony.setup(ctx, audio, juice, vfx)
+	flourish = FlourishPlayer.new()
+	add_child(flourish)
+	flourish.setup(ctx)
+	spillway_story = SpillwayStory.new()
+	add_child(spillway_story)
+	spillway_story.setup(ctx, flourish)
 	wire_optional()
 	GraphicsPreset.register_dressing_host(self)
 	if not get_tree().node_added.is_connected(_on_node_added):

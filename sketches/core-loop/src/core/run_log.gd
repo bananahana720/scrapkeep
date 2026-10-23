@@ -211,6 +211,8 @@ func _on_run_started(class_id: String) -> void:
 	run.set_meta("boss_attacks", {})
 	# PE-0: the pilot clip router writes plays by clip and missing-clip refusals here (hero_assets.gd).
 	run.set_meta("pilot_clips", {"played": {}, "missing": 0})
+	# Flourish rows finished this run (flourish_player.gd): {id, s, full, skipped, held}.
+	run.set_meta("flourishes", [])
 	_record = {"run_id": run.run_id, "class": class_id, "table": _table_id(), "outcome": "running", "brindle_phase_reached": null,
 		"bites": 0, "smashes": 0, "breaks": {}, "verb_fails": {}, "prompts_shown": 0,
 		"chains": [], "best_combo": 0, "misses": 0, "smash_damage": 0.0, "smash_damage_by_fight": [],
@@ -572,6 +574,7 @@ func _write(outcome: String) -> void:
 	# PE-0 (PILOT-CLIPS section 7.3): clips the pilot played by name, and refusals for a clip the
 	# GLB lacks. PE-INT's bot run expects smash and drop_land played and missing at 0.
 	line["pilot_clips"] = (run.get_meta("pilot_clips", {"played": {}, "missing": 0}) as Dictionary).duplicate(true)
+	line["flourishes"] = (run.get_meta("flourishes", []) as Array).duplicate(true)
 	# The ultimate meter's points by source this run (SKILL-BAR section 7, meter_points).
 	var meter = player.abilities.get("meter") if player != null and player.get("abilities") != null else null
 	line["meter_points"] = (meter.sources as Dictionary).duplicate() if meter != null else {}
