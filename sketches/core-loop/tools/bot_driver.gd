@@ -1537,6 +1537,12 @@ func _activity_goal(delta: float) -> bool:
 				_activity_skip[s.id] = true
 				_activity = ""
 				return false
+		_:
+			# A site with no hand here is passed over at once. hold_the_relay is _relay_arm's, armed by a stake; held, it
+			# stood the explorer still for ACTIVITY_SECONDS at the park's first stage, and its heft never rose there.
+			_activity_skip[s.id] = true
+			_activity = ""
+			return false
 	return true
 
 
