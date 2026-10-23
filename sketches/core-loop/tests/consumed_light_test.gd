@@ -56,7 +56,9 @@ const MIN_GAP := 25.0
 const MOLTEN := Color("ff7a2e")  # src/boss/hazard.gd MOLTEN, a const on a Node script, copied.
 # Pinned from a real run (as tests/park_day_light_test.gd pins its count): 6 stages x 3 worlds, 6 park maps, waking, mind, camp.
 const EXPECTED_LOOKS := 27
-const EXPECTED_CHECKS := 700
+const EXPECTED_CHECKS := 702
+# Two held gates per cell (113 cells) when WorldLook.CONSUMED_HOLDS_HUE is on.
+const EXPECTED_HELD_CHECKS := 226
 
 var _t := T.new("consumed_light_test")
 
@@ -72,13 +74,16 @@ func _run() -> void:
 	_t.eq("every light look was read", looks.size(), EXPECTED_LOOKS)
 	_t.check("life colours were read", life.size() > 0, "%d in-band life colours" % life.size())
 	_controls()
+	_hold_controls(looks)
 	var cells := 0
 	for entry in looks:
 		for n in entry.rig.normals.size():
 			_real(entry.label, entry.rig, n, life)
+			if WorldLook.CONSUMED_HOLDS_HUE:
+				_held(entry.label, entry.rig, n)
 			cells += 1
 	print("consumed_light_test: %d looks, %d cells, %d life colours" % [looks.size(), cells, life.size()])
-	_t.eq("every check ran", _t.checks, EXPECTED_CHECKS)
+	_t.eq("every check ran", _t.checks, EXPECTED_CHECKS + (EXPECTED_HELD_CHECKS if WorldLook.CONSUMED_HOLDS_HUE else 0))
 
 
 func _real(label: String, rig: Dictionary, n: int, life: Array) -> void:
@@ -110,6 +115,32 @@ func _real(label: String, rig: Dictionary, n: int, life: Array) -> void:
 	var gaps := warning_gaps(CONSUMED, rig, n)
 	for name in gaps:
 		_t.check("consumed lit is %.0f CIE76 from %s lit: %s" % [MIN_GAP, name, where], gap_ok(gaps[name]), "gap %.1f" % gaps[name])
+
+
+# WorldLook.CONSUMED_HOLDS_HUE (the sunset-purple switch): the sample as consumed_material dresses it must read in the band lit
+# under every look, and never inside the life region.
+func _held(label: String, rig: Dictionary, n: int) -> void:
+	var where := "%s / %s" % [label, rig.normals[n].name]
+	var hs := held_hs(CONSUMED, rig, n)
+	_t.check("held consumed lit is hue 300-330 sat >= 0.6: " + where, in_consumed_band(hs.x, hs.y), "lit hue %.1f sat %.3f" % [hs.x, hs.y])
+	_t.check("held consumed lit never inside the life region: " + where, not in_life_region(hs.x, hs.y), "lit hue %.1f sat %.3f" % [hs.x, hs.y])
+
+
+# The switch's controls: the material matches the model, and the band gate fails without the glow.
+func _hold_controls(looks: Array) -> void:
+	var m := WorldLook.consumed_material(CONSUMED)
+	var k: float = WorldLook.CONSUMED_GLOW.albedo_scale if WorldLook.CONSUMED_HOLDS_HUE else 1.0
+	_t.check("consumed_material dresses albedo and glow as held_linear models them",
+		m.albedo_color.is_equal_approx(Color(CONSUMED.r * k, CONSUMED.g * k, CONSUMED.b * k)) and m.emission_enabled == WorldLook.CONSUMED_HOLDS_HUE
+		and (not m.emission_enabled or (m.emission.is_equal_approx(WorldLook.CONSUMED_GLOW.color) and is_equal_approx(m.emission_energy_multiplier, WorldLook.CONSUMED_GLOW.energy))),
+		"albedo %s emission %s x%.2f" % [m.albedo_color.to_html(false), m.emission.to_html(false), m.emission_energy_multiplier])
+	var bare_out := 0
+	for entry in looks:
+		for n in entry.rig.normals.size():
+			var hs := lit_hs(CONSUMED, entry.rig, n)
+			if not in_consumed_band(hs.x, hs.y):
+				bare_out += 1
+	_t.check("control hold: without the glow the same gate fails somewhere (sunset or shade)", bare_out > 0, "%d bare cells out of band, as planted" % bare_out)
 
 
 # Planted controls run the same functions as the real checks, so a pass above means the check could have failed.
@@ -276,6 +307,20 @@ static func lit_linear(albedo: Color, rig: Dictionary, n: int) -> Color:
 	return Color(a.r * light.r, a.g * light.g, a.b * light.b)
 
 
+# The lit linear colour of an albedo as WorldLook.consumed_material dresses it with the switch on: the scaled albedo lit, plus
+# the glow (emission is added after lighting, in linear light).
+static func held_linear(albedo: Color, rig: Dictionary, n: int) -> Color:
+	var k: float = WorldLook.CONSUMED_GLOW.albedo_scale
+	var lit := lit_linear(Color(albedo.r * k, albedo.g * k, albedo.b * k), rig, n)
+	var e: Color = WorldLook.CONSUMED_GLOW.color.srgb_to_linear()
+	var g: float = WorldLook.CONSUMED_GLOW.energy
+	return Color(lit.r + e.r * g, lit.g + e.g * g, lit.b + e.b * g)
+
+
+static func held_hs(albedo: Color, rig: Dictionary, n: int) -> Vector2:
+	return _hs_of(held_linear(albedo, rig, n))
+
+
 # True when an albedo's lit channel exceeds the cell's shared scale and so clamps at 1 in lit_scaled.
 static func clamps(albedo: Color, rig: Dictionary, n: int) -> bool:
 	return _peak(lit_linear(albedo, rig, n)) > cell_scale(rig, n) * (1.0 + 1e-6)  # float tolerance
@@ -291,7 +336,10 @@ static func _peak(c: Color) -> float:
 
 # Hue in degrees and saturation of the lit colour, normalised by its largest channel.
 static func lit_hs(albedo: Color, rig: Dictionary, n: int) -> Vector2:
-	var lin := lit_linear(albedo, rig, n)
+	return _hs_of(lit_linear(albedo, rig, n))
+
+
+static func _hs_of(lin: Color) -> Vector2:
 	var peak := _peak(lin)
 	if peak <= 0.0:
 		return Vector2.ZERO

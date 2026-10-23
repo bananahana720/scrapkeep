@@ -146,6 +146,29 @@ const WEATHER_SKY := {
 	"dust": {"cloud": 0.1, "tint": Color("c9a36b")},
 	"storm_build": {"cloud": 0.6, "tint": Color("6b7480")},
 }
+# The Mind's consumed purple under the day's light (card: "Should the Mind's purple stay purple at
+# sunset?", not yet asked; this is the recommended default). True: a consumed surface holds hue 300
+# to 330 under every look, golden hour and dusk included, because it carries its own purple glow and
+# lets the light tint only a dimmed albedo. False: the sun tints it like any other surface (sunset
+# reads hot pink to 346, shade reads blue-violet to 280). tests/consumed_light_test.gd gates the band
+# lit when true and reports the drift when false.
+const CONSUMED_HOLDS_HUE := true
+# Band centre (hue 315, sat 0.75). The three values are the sweep's pick: albedo x0.6 with glow 1.5
+# keeps every look at lit hue 304 to 323; glow 1.0 leaves 1 degree to spare and x1.0 albedo fails the Waking pit.
+const CONSUMED_GLOW := {"color": Color("d936b0"), "energy": 1.5, "albedo_scale": 0.6}
+
+
+# A material for a consumed surface of the given albedo, dressed per CONSUMED_HOLDS_HUE.
+static func consumed_material(albedo: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = albedo
+	if CONSUMED_HOLDS_HUE:
+		var k: float = CONSUMED_GLOW.albedo_scale
+		material.albedo_color = Color(albedo.r * k, albedo.g * k, albedo.b * k, albedo.a)
+		material.emission_enabled = true
+		material.emission = CONSUMED_GLOW.color
+		material.emission_energy_multiplier = CONSUMED_GLOW.energy
+	return material
 
 
 static func row(world: int) -> Dictionary:
