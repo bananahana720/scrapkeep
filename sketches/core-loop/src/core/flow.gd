@@ -559,7 +559,7 @@ func replay_stage(index: int) -> bool:
 
 # After stage 3's launch the run enters the arena instead of the summary. The boss
 # module places the ball; flow then keeps the arena-entry checkpoint (the stage-3-end
-# snapshot), which R restores on the boss death screen.
+# snapshot), which holding R in play restores (storeless flows only; the death screen has no R).
 func enter_boss(carried: Vector3) -> void:
 	var boss := _boss_module()
 	# Combat's arena ground and the music read ctx.boss, so it names the module whose

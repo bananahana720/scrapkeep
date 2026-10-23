@@ -26,7 +26,8 @@ const PHRASES := [
 	"retries once",
 	"\\br to retry\\b",
 	"death screen: choose a class",
-	"death screen: replay",
+	"(death|dead) screen: (replay|retry)",
+	"\\bR, T and N\\b",
 	"death screen offers",
 	"(?<!no )\\bretry the stage\\b",
 ]
@@ -52,6 +53,9 @@ const KNOWN_BAD := [
 	"| T | death screen: replay the world's last stage |",
 	"The death screen offers R, T and N.",
 	"Press N to retry the stage.",
+	"| R | death screen: retry the stage, or the fight in the arena |",
+	"dead screen: retry the fight",
+	"Serves 2 (R, T and N on one screen)",
 ]
 
 const KNOWN_GOOD := [
