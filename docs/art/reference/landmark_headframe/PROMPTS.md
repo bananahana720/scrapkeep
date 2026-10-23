@@ -1,47 +1,80 @@
-# landmark_headframe: turnaround prompts
+# Image generation record
 
-Multi-angle reference set for the mine headframe landmark (the hoist tower with its sheave wheels and winding gear). The modeler works only from this set and the approved boards.
+Generated with the built-in image_gen tool. Prompts below are verbatim. Correction passes used the preceding generated image plus the approved board. Final files are byte-for-byte copies of the selected generated PNGs.
 
-**Inputs (both required, in this order):**
-1. Image 1: [`dig/dig-landmark-headframe-noon.jpg`](../dig/dig-landmark-headframe-noon.jpg), the approved board.
-2. Image 2: [`style/style-shape-moodboard.jpg`](../style/style-shape-moodboard.jpg), the shape language.
+# landmark_headframe-turnaround.png
 
-**Local run:** Qwen-Image-Edit-2511 (Q4_K_M GGUF transformer, NF4 encoder) on the 4080, 1024x1024, 30 steps, true CFG 4.0, seed 23, one image per view. In ChatGPT: attach both images, then send one prompt per view.
+## Initial generation
+References in order: approved headframe board, palette board, shape board, materials board.
 
-Purpose: give the modeler every side of the body before modelling, so no part is guessed. Check each view against image 1; where they differ, image 1 wins.
+Use case: stylized-concept. Create ONE high-resolution landscape 3D modeller reference sheet named landmark_headframe-turnaround.png.
+REFERENCE AUTHORITY: Input 1 is the approved Scrapkeep mine headframe board. Copy the actual central hoist tower AND its connected winding-house/tipple assembly exactly, removing the environment. Inputs 2-4 govern finish ONLY. Do not borrow their robots, weapons, logos, markings, ancient technology or vehicles. This is an industrial architectural landmark, not a creature or a robot.
+LAYOUT: Flat light grey background, neutral even studio lighting. Five separate fully visible views, ALL at identical pixels-per-metre: FRONT orthographic, RIGHT SIDE orthographic, BACK orthographic, THREE-QUARTER FRONT orthographic axonometric, TOP orthographic. Arrange generously on a large landscape sheet; captions small. The front is the broad face seen in input 1. The winding house lies to the front-view right, as in that board. Align construction and repeat the identical assembly in every view, including cables, foundations and winding house. No perspective convergence in elevations or top. No scenery, people, trucks, workshop tent or canyon.
+DESIGN LOCK: Very tall tapered headframe with thick solid charcoal/petrol steel A-frame legs, broad foot spacing and narrow crown. Legs are solid bevelled plate girders with worn oxide patches, NOT an open lattice truss. Central straight open vertical shaft/guide structure with dark upright rails, fine ladder, small landings; do not fill shaft with a solid wall. Major horizontal crossmember in lower third, small offset service landings on tower right at middle and low levels, slim brass rails. Broad railed crown deck. Exactly TWO large exposed upright spoked sheave wheels at crown, copper/oxide rims, charcoal grooves, axle hubs, each on its own visible pedestal; replicate reference offsets and scale, no third wheel. Behind/above wheels: the chunky two-upright overhead rectangular crossbeam with bolts and two small unlit finials shown on board, not a beacon. Dark taut cables slope from sheaves toward low offset winding gear house at board right; cables descend through shaft as shown. Preserve leftward cable traces from crown using the simplest continuation to rear structure, label uncertainty only in notes, no new remote structure.
+Ground assembly: squat long petrol winding/tipple building at right, rusty chamfered upper casing, low connecting railed gallery, plain rectangular panels, low roof equipment visible in reference. Tower feet on separate square sandstone/bone foundation blocks with anchor fixings. Several plain adjacent rectangular utility housings and low shaft perimeter rails as reference. Keep approach and central shaft clear. No decorative additions.
+SCALE: The tower overall height is 120 m from foundation base to highest finial. Add thin vertical dimension '120 m'. The board notes say '40 m tipple'; annotate near winding/tipple assembly '40 m tipple — extent to confirm', do not invent a precise endpoint dimension for it. Add a tiny 1.84 m diameter Hoberman-lattice pilot ball on the ground beside front view at the SAME SCALE: its diameter is precisely 1/65.217 of tower height. Label 'Pilot ball Ø 1.84 m'. Do not enlarge it for visibility. Add a 0–20 m scale bar. Other dimensions unconfirmed; no invented exact measurements.
+FINISH: friendly chunky industrial silhouette, crisp modest bevels, utilitarian panel seams and bolts, old enamel not glossy toy plastic. Base colour targets petrol #365754, oxide #9b513a, sandstone #c6a274 wear, charcoal #242a28, brass #d9b44a rail details, copper #b77843 wheels, bone #d2c5a5. No mint anywhere on headframe because reference shows no weak point. No ancient green. No hazard coral body paint. No invented numbers, gloves, HIRED stamps, faction symbols or text on body: none are legible on this landmark in input 1.
+Small footer 'HIDDEN FACES INFERRED • VERIFY AGAINST APPROVED BOARD'. Prioritize the exact shared part inventory and alignment across all five views over ornament or drama.
 
-## front
+## Correction pass 1
+References in order: initial turnaround, approved headframe board.
 
-```text
-Draw the mine headframe landmark (the hoist tower with its sheave wheels and winding gear) from image 1 as a straight-on front orthographic view. Keep the exact same design, proportions, parts, colours and markings as image 1. Render it as a clean 3D game model reference: soft toy look, machines crisp with bevelled edges, the shape language of image 2. Isolated on a plain light grey background, even studio light, no text, no labels, no scenery, no other characters.
-```
+Use case: precise-object-edit. Correct the supplied turnaround sheet, using approved reference board input 2 as the design authority. Input 1 is the sheet to fix. Produce a fresh large landscape model sheet, flat light grey, even studio light.
+Fix these specific failures: ALL five views must use identical world scale. Front, side, back and three-quarter towers must have exactly the same image height from base to highest finial. Use a two-row grid with THREE equally tall elevations FRONT, RIGHT SIDE, BACK across the top row; bottom row THREE-QUARTER FRONT on left and TOP on right. Reserve equal-height tall cells. Do not shrink the back or top to fill space. For top the tower footprint width must equal front footprint width at identical metres-per-pixel.
+Exactly TWO sheaves total, each one wheel with a single grooved thick rim. Top view shows exactly TWO narrow parallel wheel rectangles, not four separated wheels or multiple drums. Keep sheave centre positions consistent with front and rear.
+The right-side view must be a true 90-degree rotation of the FRONT assembly, including building and ropes. Wheel disks become edge-on. The winding house is to front-view RIGHT, so in right-side projection it lies along viewing depth, overlapping the tower base rather than sitting beside it. Do not repeat the front-facing building profile in right side. Back view mirrors the overall lateral arrangement so house is on left.
+Remove floating cut-off cable stubs. On the hidden side, use the simplest continuous return path into central shaft behind crown, without adding pylons. Exactly two cable circuits from TWO crown sheaves to winding house, with the visible parallel runs of board. No loose diagonal stubs in any view.
+Preserve existing solid tapered A-frame legs, clear central guide shaft and ladder, horizontal lower crossmember, offset right service landings, crown balcony, two uprights and overhead bar with two short unlit finials, concrete foot blocks, winding-house chamfered petrol shell and connected low railed gallery. Reference board 2 must govern their proportions and position. Do not add a third wheel, beacon, machinery, labels or invented insignia.
+Scale height 120 m. A lattice pilot ball next to front must be diameter 1.84/120 of tower height. Label 'Pilot ball Ø 1.84 m'. Thin height dimension '120 m', highest finial to foundation bottom. Remove the misleading tipple endpoint dimension; replace with plain caption 'Tipple: 40 m in brief; axis unconfirmed'. Remove inaccurate previous scale bar; if adding one use uniformly spaced 0, 10, 20 m ticks at the actual common scale.
+Match approved board broad charcoal and petrol plate girders, restrained oxide rust patches and sandstone edge wear. Brass slender rails, copper wheel rims, no mint, no ancient green, no coral body paint. Smaller natural wear patches than previous sheet. No new text on the body. All views complete, uncropped. Small view captions and footer 'HIDDEN FACES INFERRED'. Accuracy matters more than decoration.
 
-## side
+## Correction pass 2
+References in order: corrected turnaround, approved headframe board. This produced the saved image.
 
-```text
-Draw the mine headframe landmark (the hoist tower with its sheave wheels and winding gear) from image 1 as a straight-on right side orthographic view. Keep the exact same design, proportions, parts, colours and markings as image 1. Render it as a clean 3D game model reference: soft toy look, machines crisp with bevelled edges, the shape language of image 2. Isolated on a plain light grey background, even studio light, no text, no labels, no scenery, no other characters.
-```
+Use case: precise-object-edit. Edit input 1 model turnaround. Input 2 is original approved design and remains authority. Keep all five views and arrangement, flat grey studio background. Make ONLY these corrections:
+1. TOP view, lower right: replace the four small copper ribbed blocks surrounding the middle crossbeam with exactly TWO continuous narrow copper/charcoal rectangular sheave profiles, one left and one right of centre. Each continuous profile runs from front to rear, with one central axle hub crossing it. Do not split either profile into two apparent drums. No horizontal new sheaves. It is the top projection of the two vertical disks in FRONT.
+2. Remove the bottom left scale bar entirely. It is wrong.
+3. The top-row towers have height about 425 pixels at this resolution. In bottom-left THREE-QUARTER FRONT, enlarge only the assembly uniformly to match that exact 425-pixel height from highest finial to bottom of lowest foundation; keep it uncropped. All views at identical metre scale.
+4. Pilot ball at far left of FRONT must be a tiny visible petrol lattice sphere exactly 6.5 pixels in diameter when tower is 425 pixels tall, not a solid brown ball. Keep the 'Pilot ball Ø 1.84 m' label. Do not enlarge for readability.
+5. Height dimension 120 m endpoint must reach the TOP of finial and BOTTOM of concrete, not stop at crossbeam.
+6. Preserve the reference two-spoked-wheel crown, four solid splayed main legs, open shaft, ladder, crown bar and two unlit finials, winding house and low gallery, side landings, base rails. Keep exactly same architecture as input 1; DO NOT simplify or add mechanical components.
+7. Small footer 'Unseen construction inferred; dimensions require modeller verification'. Keep 'Tipple: 40 m in brief; axis unconfirmed'.
+The sheave profiles in top are the critical correction. No invented logos or marks. No mint/green/coral. Keep broad dark petrol/charcoal areas and oxide wear, matte enamel finish.
 
-## back
+# landmark_headframe-details.png
 
-```text
-Draw the mine headframe landmark (the hoist tower with its sheave wheels and winding gear) from image 1 as a straight-on back orthographic view. Keep the exact same design, proportions, parts, colours and markings as image 1. Render it as a clean 3D game model reference: soft toy look, machines crisp with bevelled edges, the shape language of image 2. Isolated on a plain light grey background, even studio light, no text, no labels, no scenery, no other characters.
-```
+## Initial generation
+References in order: approved headframe board, palette board, shape board, materials board.
 
-## three_quarter
+Use case: stylized-concept. Create ONE high-resolution landscape model detail reference sheet for Scrapkeep's mine headframe landmark, filename landmark_headframe-details.png.
+INPUT AUTHORITY: Image 1 is approved design. Images 2-4 specify finish ONLY. Copy the headframe and attached winding house seen in image 1, no features imported from other bodies. Sheet flat light grey, even neutral studio light, isolated close-ups, crisp bevelled industrial shapes with chunky proportions. Small clear captions, generous spacing. No canyon, vehicles, fox, creature, workshop, dramatic lighting or invented technology.
+Six panels in a three-column by two-row grid:
+A. 'CROWN / TWIN SHEAVES' — faithful close-up of the board's complete crown: exactly TWO exposed spoked copper/oxide sheaves, charcoal cable grooves and central axle hubs, dark supporting pedestals, slim brass-railed front service balcony, stout two-post rectangular crossbar above/behind with two small unlit finials. Preserve wheel offset and sizes as perceived in board. Show functional black cables wrapping sheaves. No extra wheels, powered emitters or beacon.
+B. 'SHAFT / SERVICE LANDINGS' — tall close-up of central dark vertical guide rails and straight ladder, through an OPEN shaft between solid tapered petrol/charcoal plate legs. Board's small offset brass-railed right-hand service balcony, lower horizontal tie beam and single diagonal side brace. Show the board's actual placement; no dense new truss or extra towers.
+C. 'WINDING HOUSE / CABLE ENTRY' — board's low long petrol enclosure to tower right, chamfered top end, rusty oxide wear, copper-edged structural strips, black ropes entering upper surface, adjacent low railed gallery and plain rectangular utility cabinet. External shell only; no exposed giant motors invented outside it. Preserve housing silhouette, mounting pads and seam pattern seen on board.
+D. 'LEG FOOT / ANCHORS' — thick solid splayed bevelled plate leg on plain square sandstone/bone concrete block, simple steel base plate and anchor fixings. Include a small inset of bolted plate joint on the leg, no hinge or movable limb. Caption additionally 'Anchor detail inferred'.
+E. 'SERVICE PANEL / CLOSED + OPEN (INFERRED)' — two equal-sized views of SAME plain rectangular access panel within winding-house lower side. Closed: flush petrol rectangular panel with four corner fasteners, no symbol or number. Open: that same removable cover lifted aside, shallow dark maintenance recess, only a plain bearing housing and cable inspection opening. This interior is a modest explicitly provisional assumption, not visible in source. No mint weak point, no glowing electronics. Caption 'Proposed access only; source interior unseen'.
+F. 'SURFACE / NO LEGIBLE MARKINGS' — close-up of actual plain petrol/charcoal leg enamel and oxide rust edge wear from reference, with ordinary fastener heads and sharp modest bevel. Do NOT add HIRED, crew numbers, gloves, logos, company names, hazard stripes or lore marks, because none are legible on this body in approved board. Include small flat colour chips with exact labels: 'Petrol #365754', 'Oxide #9b513a', 'Charcoal #242a28', 'Sandstone #c6a274', 'Copper #b77843', 'Brass #d9b44a', 'Bone #d2c5a5'.
+Exact finish targets as listed. Wear modest with broad underlying dark enamel visible, not uniform rust camouflage. No hazard coral body paint, ancient green or mint. Mint is reserved for weak points and this landmark has none established by the board.
+Use thin leader lines for part labels, avoid fabricated engineering measurements. Footer '120 m overall headframe • 40 m tipple extent unconfirmed • close-ups at independent scales'. Preserve every source-visible distinguishing feature. Hidden mechanics are labelled inferred. Original game design only, no artist/studio imitation.
 
-```text
-Draw the mine headframe landmark (the hoist tower with its sheave wheels and winding gear) from image 1 as a three-quarter front view from slightly above. Keep the exact same design, proportions, parts, colours and markings as image 1. Render it as a clean 3D game model reference: soft toy look, machines crisp with bevelled edges, the shape language of image 2. Isolated on a plain light grey background, even studio light, no text, no labels, no scenery, no other characters.
-```
+## Correction pass
+References in order: initial detail sheet, approved headframe board. This produced the saved image.
 
-## top
+Use case: precise-object-edit. Correct the supplied Scrapkeep headframe DETAILS sheet only, using approved board image 2 for design authority. Preserve the six-panel grid, all shown reference mechanisms, exact two crown sheaves, central shaft/ladder, main bevelled legs, low winding-house shell, neutral lighting and flat grey background.
+Critical corrections:
+Panel E beneath closed service panel MUST read 'Closed (inferred)' instead of 'Closed (as seen)'. Its header remains 'SERVICE PANEL / CLOSED + OPEN (INFERRED)'. Both closed and open are a provisional proposed access detail absent from source. Preserve 'Proposed access only; source interior unseen'. Open and closed cover must be same dimensions and four identical bolt holes. The interior remains plain dark bearing and cable access, no glow or electronics.
+Panel C correct garbled enclosure caption to exactly 'Winding house enclosure'. No extra words. Do not change its design.
+Panel D remove the added triangular buttress gussets around the foot. Reference shows simple solid leg entering square concrete socket, not an elaborate ribbed plinth. Show solid tapered leg into plain rectangular steel foot sleeve on square bone/sandstone foundation, simple corner anchors. Keep caption 'Anchor detail inferred'.
+All panels: decrease fine rust speckle density substantially; reference has large mostly dark petrol/charcoal plates with a few broad oxide patches. Preserve reference colours petrol #365754, oxide #9b513a, sandstone #c6a274 edge wear, charcoal #242a28, brass #d9b44a, copper #b77843, bone #d2c5a5. Keep existing accurately labelled colour swatches.
+No additional parts or body markings. No invented crew numbers, HIRED, glove, faction or company marks. No mint weak point or ancient beacon. The service cover is the ONLY proposed new mechanism and is clearly labelled inferred. Do not change the required panel captions except the text fixes listed. Original game design, accurate modeller detail sheet.
 
-```text
-Draw the mine headframe landmark (the hoist tower with its sheave wheels and winding gear) from image 1 as a top-down orthographic view looking straight down. Keep the exact same design, proportions, parts, colours and markings as image 1. Render it as a clean 3D game model reference: soft toy look, machines crisp with bevelled edges, the shape language of image 2. Isolated on a plain light grey background, even studio light, no text, no labels, no scenery, no other characters.
-```
+# landmark_headframe-variant-1.png
 
-## closeup
+References: approved headframe board only. This produced the saved image.
 
-```text
-Draw the mine headframe landmark (the hoist tower with its sheave wheels and winding gear) from image 1 as a close-up detail study of its most distinguishing parts (mechanisms, joints, markings). Keep the exact same design, proportions, parts, colours and markings as image 1. Render it as a clean 3D game model reference: soft toy look, machines crisp with bevelled edges, the shape language of image 2. Isolated on a plain light grey background, even studio light, no text, no labels, no scenery, no other characters.
-```
+Use case: stylized-concept. Produce a single supplementary model-reference image landmark_headframe-variant-1.png. This is an explicitly UNAPPROVED alternative reading of one ambiguous feature in the supplied approved Scrapkeep mine headframe board. Use only the landmark tower and connected winding house design in the reference, never redesign it.
+Flat light grey background, even neutral studio light, two panels. Left large full assembly three-quarter front view of same tower with exactly TWO copper-rimmed spoked crown sheaves, chunky solid tapered petrol/charcoal A-legs, open central shaft/ladder, brass-railed crown and right side landings, overhead rectangular crossbar and two short unlit finials, square concrete footings, long low chamfered winding house and railed connecting gallery on viewer right. Right panel close-up of crown showing attachment hypothesis.
+The ONE variable is the short diagonal dark lines leading down-left from the crown in approved board. Here interpret them as TWO static backstay cables attached to the crown support frame BEHIND the sheaves, terminating in TWO simple square ground anchors on the far/rear-left of tower. These endpoints are NOT shown by source and must be drawn in pale grey dashed outline with thin leader caption 'UNSEEN ANCHORS — HYPOTHESIS ONLY'. Do not add any pulleys, motors, new buildings or a third sheave. Keep the established rightward hoist ropes to winding house unchanged. Make the distinction between backstays fixed to frame and moving ropes over wheel rims visible in the crown close-up.
+Title 'ALTERNATE READING / LEFTWARD CABLES'. Captions 'Possible static backstays' and 'Frame attachment inferred'. Footer 'NOT APPROVED: board does not show cable endpoints. Main sheets assume shaft return routing. Confirm before modelling.' This is an ambiguity diagram, not permission to alter canon. No invented exact dimensions. Optional single height label 120 m only. Preserve original proportions and all core parts, not a miniature machine. No scenery, trucks, pilot, logos, crew numbers, HIRED, gloves, mint, hazard coral or ancient beacon.
+Palette old enamel petrol #365754, charcoal #242a28, oxide #9b513a rust patches, sandstone #c6a274 edge wear, copper #b77843 rims, brass #d9b44a rails, bone #d2c5a5 foundation. Broad enamel fields with restrained wear. Small engineering captions, no decorative graphics.
