@@ -335,6 +335,11 @@ class Chunked extends Node3D:
 	var slowest_step := ""
 	# start()'s own main-thread cost (mesh sources, glb load), also folded into slowest_usec.
 	var start_usec := 0
+	# The deterministic part of start(): the group loops and _launch() when it runs inside start(). Wall-clock
+	# start_usec also counts any time the OS takes the core away; this does not exclude it, but it is what the
+	# test caps, next to slowest_chunk_usec (the longest _process step, START left out).
+	var start_work_usec := 0
+	var slowest_chunk_usec := 0
 	# The park's lane mask and what it cost, made by the first chunk job (_ensure_lane_mask).
 	var lane_mask := {}
 	var lane_mask_usec := 0
@@ -373,6 +378,7 @@ class Chunked extends Node3D:
 		_map = map
 		_ground = ground
 		_threaded = threaded
+		var work0 := Time.get_ticks_usec()
 		var by_kind := {}
 		for row: Dictionary in rows:
 			var kind := String(row["kind"])
@@ -402,6 +408,7 @@ class Chunked extends Node3D:
 				phase = Phase.LOADING
 			else:
 				_launch()
+			start_work_usec = Time.get_ticks_usec() - work0
 			start_usec = Time.get_ticks_usec() - t0
 			_meter(start_usec, "START")
 			set_process(true)
@@ -505,6 +512,8 @@ class Chunked extends Node3D:
 		_meter(Time.get_ticks_usec() - t0, "%s chunk %d" % [Phase.keys()[was], _next])
 
 	func _meter(spent: int, step: String) -> void:
+		if step != "START" and spent > slowest_chunk_usec:
+			slowest_chunk_usec = spent
 		if spent > slowest_usec:
 			slowest_usec = spent
 			slowest_step = step

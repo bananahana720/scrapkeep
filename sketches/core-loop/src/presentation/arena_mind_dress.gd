@@ -22,6 +22,8 @@ static var _sky_material: ShaderMaterial
 # The panorama painted ahead on a worker by prepare(): its task (-1 for none) and {image}.
 static var _panorama_task := -1
 static var _panorama_out := {}
+# Kit meshes rebuilt ahead by warm_kit (a part a frame, on the main thread), by file path, until _load_kit takes them.
+static var _kit_ahead := {}
 
 var _saved := {}
 var _greybox: Array[Dictionary] = []
@@ -29,16 +31,34 @@ var _greybox: Array[Dictionary] = []
 
 # Reads the kit ahead on loader threads and paints the sky panorama on a worker, while the
 # approach to the arena runs (flow, through mind.gd's prepare_arena): loading the kit and painting
-# the panorama took 80 to 150 ms of the boss-entry frame on the cloud (scrapkeep#241).
+# the panorama took 80 to 150 ms of the boss-entry frame on the cloud (scrapkeep#241). Headless,
+# the kit loads on the main thread in warm_kit instead: the dummy rasterizer's mesh RIDs are not
+# thread-safe (park_recipes.gd's placer and ending_sequence.gd's crater keep the same gate).
 static func prepare() -> void:
 	for key in PARTS:
 		var path: String = dir.path_join(PARTS[key][0])
-		if ResourceLoader.exists(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+		if DisplayServer.get_name() != "headless" and ResourceLoader.exists(path) \
+				and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 			ResourceLoader.load_threaded_request(path)
 	if _sky_material == null and _panorama_task < 0:
 		var out := {}
 		_panorama_out = out
 		_panorama_task = WorkerThreadPool.add_task(func(): out["image"] = _paint_panorama(), false, "mind panorama")
+
+
+# Rebuilds the next kit part on the main thread, once its file has loaded: one part a call, so the
+# approach's frames share the rebuild that _load_kit did in the boss-entry frame (16 to 20 ms of it
+# on the cloud, scrapkeep#322 row 30). True once every part is ready.
+static func warm_kit() -> bool:
+	for key in PARTS:
+		var path: String = dir.path_join(PARTS[key][0])
+		if _kit_ahead.has(path):
+			continue
+		if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			return false
+		_kit_ahead[path] = _kit_part(key)
+		return false
+	return true
 
 
 # A kit file: the loader thread's copy when prepare() asked for it (waiting if it is still
@@ -70,36 +90,48 @@ static func attach(module):
 
 
 # Validate the complete kit before changing the floor or the environment. Imported
-# materials only supply slots and textures; vertex colour owns each surface's finish.
+# materials only supply slots and textures; vertex colour owns each surface's finish. A part
+# warm_kit rebuilt ahead is taken from it.
 func _load_kit() -> Dictionary:
 	var meshes := {}
+	var ahead := _kit_ahead
+	_kit_ahead = {}
 	for key in PARTS:
 		var path: String = dir.path_join(PARTS[key][0])
-		if not ResourceLoader.exists(path):
+		var mesh: Mesh = ahead[path] if ahead.has(path) else _kit_part(key)
+		if mesh == null:
 			return {}
-		var packed := _take(path) as PackedScene
-		if packed == null:
-			return {}
-		var instance := packed.instantiate()
-		if not instance is Node3D:
-			if instance != null:
-				instance.free()
-			return {}
-		var scene := instance as Node3D
-		var view := scene.find_child(PARTS[key][1], true, false) as MeshInstance3D
-		var mesh := _rebuild_mesh(view.mesh) if view != null and view.transform.is_equal_approx(Transform3D.IDENTITY) else null
-		var cosmetic := scene.find_children("*", "CollisionObject3D", true, false).is_empty() \
-			and scene.find_children("*", "CollisionShape3D", true, false).is_empty()
-		scene.free()
-		if mesh == null or not cosmetic:
-			return {}
-		if key == "Mesa":
-			mesh = Finishes.aerial_mesh(mesh)
 		meshes[key] = mesh
 	return meshes
 
 
-func _rebuild_mesh(source: Mesh) -> ArrayMesh:
+# One kit part's rebuilt mesh, or null when its file is missing or malformed.
+static func _kit_part(key: String) -> Mesh:
+	var path: String = dir.path_join(PARTS[key][0])
+	if not ResourceLoader.exists(path):
+		return null
+	var packed := _take(path) as PackedScene
+	if packed == null:
+		return null
+	var instance := packed.instantiate()
+	if not instance is Node3D:
+		if instance != null:
+			instance.free()
+		return null
+	var scene := instance as Node3D
+	var view := scene.find_child(PARTS[key][1], true, false) as MeshInstance3D
+	var mesh := _rebuild_mesh(view.mesh) if view != null and view.transform.is_equal_approx(Transform3D.IDENTITY) else null
+	var cosmetic := scene.find_children("*", "CollisionObject3D", true, false).is_empty() \
+		and scene.find_children("*", "CollisionShape3D", true, false).is_empty()
+	scene.free()
+	if mesh == null or not cosmetic:
+		return null
+	if key == "Rim":
+		return _rim_skirt(mesh)
+	return Finishes.aerial_mesh(mesh) if key == "Mesa" else mesh
+
+
+static func _rebuild_mesh(source: Mesh) -> ArrayMesh:
 	if source == null or source.get_surface_count() == 0:
 		return null
 	var mesh := ArrayMesh.new()
@@ -127,7 +159,7 @@ func _rebuild_mesh(source: Mesh) -> ArrayMesh:
 	return mesh
 
 
-func _slot_material(slot: String, texture: Texture2D) -> StandardMaterial3D:
+static func _slot_material(slot: String, texture: Texture2D) -> StandardMaterial3D:
 	if slot not in ["stone", "M1_stone", "steel", "glass"]:
 		return null
 	var material := StandardMaterial3D.new()
@@ -158,7 +190,7 @@ func _build(meshes: Dictionary, radius: float) -> void:
 		var angle := TAU * k / count
 		var basis := Basis(Vector3.UP, PI * 0.5 - angle).scaled(Vector3(pitch / 4.0, 1.0, 1.0))
 		rim.append(Transform3D(basis, Vector3(cos(angle) * reach, 0.025, sin(angle) * reach)))
-	_multi("EdgeFascia", _rim_skirt(meshes["Rim"]), rim)
+	_multi("EdgeFascia", meshes["Rim"], rim)
 	var ribs: Array[Transform3D] = []
 	for k in 12:
 		var angle := TAU * k / 12.0
@@ -169,8 +201,9 @@ func _build(meshes: Dictionary, radius: float) -> void:
 
 
 # Tuck the nosing inside the real floor edge; flare only the lower skirt past the
-# stone wall so its fascia is visible rather than buried in the island slab.
-func _rim_skirt(source: Mesh) -> ArrayMesh:
+# stone wall so its fascia is visible rather than buried in the island slab. Made with the kit part
+# (_kit_part): its arrays read back from the renderer, which stalls a real GPU.
+static func _rim_skirt(source: Mesh) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
 	for surface in source.get_surface_count():
 		var arrays := source.surface_get_arrays(surface)

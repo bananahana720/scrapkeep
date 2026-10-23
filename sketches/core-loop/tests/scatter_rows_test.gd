@@ -5,6 +5,8 @@ const T := preload("res://tests/support/t.gd")
 const ScatterRows := preload("res://src/world/scatter_rows.gd")
 const Scatter := preload("res://src/world/scatter.gd")
 const Palette := preload("res://src/core/palette.gd")
+# The sanctioned clock: the wall clock unless a bot run sets SimClock.ticks; this test never sets it.
+const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
@@ -41,7 +43,9 @@ const OLD_MAPS_HASHES := [
 const OLD_MAPS_ROWS := 12
 const PARK_TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}]}
 const FRAME_CAP_USEC := 8000
-const BUILD_FRAMES_MAX := 6000
+# The wait for a threaded build is a wall-clock deadline, not a frame count: on a loaded box the workers starve
+# while frames come fast and empty, so a frame cap runs out before the build does. A real hang still fails, after 120 s.
+const BUILD_WAIT_MSEC := 120000
 # The P-ADDON probe's unmerged scatter: Proton Scatter chunks of 15 m, one node per row per chunk
 # (artifacts/local/alpha/push/w12/probes/addon/REPORT.md:71), the shape that read draws 2.06 times.
 const PROBE_CHUNK_M := 15.0
@@ -280,15 +284,18 @@ func _park_chunks() -> void:
 		return
 	t.check("the chunked build starts on worker threads", not chunks.is_ready())
 	var frames := 0
-	while chunks != null and not chunks.is_ready() and frames < BUILD_FRAMES_MAX:
+	var wait0 := SimClock.msec()
+	var deadline := wait0 + BUILD_WAIT_MSEC
+	while chunks != null and not chunks.is_ready() and SimClock.msec() < deadline:
 		await process_frame
 		frames += 1
 	if not t.check("the park scatter finished building", chunks != null and chunks.is_ready(), "%d frames" % frames):
 		holder.free()
 		return
-	var slowest_ms: float = chunks.slowest_usec / 1000.0
-	print("scatter_rows_test: park scatter built over %d frames, %d chunks on worker threads, start() %.2f ms, slowest main-thread step %.2f ms at %s, worst frame %.2f ms"
-		% [frames, chunks.worker_chunks, chunks.start_usec / 1000.0, slowest_ms, chunks.slowest_step, chunks.frame_usec_max / 1000.0])
+	var slowest_ms: float = chunks.slowest_chunk_usec / 1000.0
+	print("scatter_rows_test: park scatter build wall %d ms (deadline %d ms)" % [SimClock.msec() - wait0, BUILD_WAIT_MSEC])
+	print("scatter_rows_test: park scatter built over %d frames, %d chunks on worker threads, start() work %.2f ms (wall-clock %.2f ms), slowest main-thread chunk step %.2f ms, worst frame %.2f ms"
+		% [frames, chunks.worker_chunks, chunks.start_work_usec / 1000.0, chunks.start_usec / 1000.0, slowest_ms, chunks.frame_usec_max / 1000.0])
 	t.check("the build spanned frames", frames > 1, "%d frames" % frames)
 	t.eq("every chunk was built off the main thread", chunks.worker_chunks, ParkTerrain.TILE_COUNT)
 	t.eq("the stage root holds all 100 chunks", chunks.get_child_count(), ParkTerrain.TILE_COUNT)
@@ -311,7 +318,10 @@ func _park_chunks() -> void:
 			if glb_kinds.has(view.get_meta("kind")) and view.multimesh.mesh != null:
 				glb_views += 1
 		t.check("headless, the glb sources still load (main thread) and their kinds are scattered", not glb_kinds.is_empty() and glb_views > 0, "%d batches of %s" % [glb_views, glb_kinds])
-	t.check("no main-thread scatter step over 8 ms during the build, start() included", chunks.slowest_usec > 0 and chunks.slowest_usec < FRAME_CAP_USEC, "%.2f ms" % slowest_ms)
+	# start_work_usec is the groups loop and launch, timed on the wall clock apart from start_usec; a heavily
+	# preempted main thread can still read it high, so it is the first (guarded) build's figure alone.
+	t.check("start()'s own work (groups loop and launch, not its wall-clock) is under 8 ms", chunks.start_work_usec > 0 and chunks.start_work_usec < FRAME_CAP_USEC, "%.2f ms work, %.2f ms wall-clock" % [chunks.start_work_usec / 1000.0, chunks.start_usec / 1000.0])
+	t.check("no main-thread scatter chunk step over 8 ms during the build (start() excluded)", chunks.slowest_chunk_usec > 0 and chunks.slowest_chunk_usec < FRAME_CAP_USEC, "%.2f ms" % slowest_ms)
 
 	# One MultiMesh per kind per chunk; no node for a kind a chunk has none of; each chunk sits in
 	# its collider tile; every piece stands on height().
@@ -676,9 +686,12 @@ func _lane_threads() -> void:
 	var main_node: Node3D = Scatter.build_chunked(holder, map, flat, false)
 	var thread_node: Node3D = Scatter.build_chunked(holder, map, flat, true)
 	var frames := 0
-	while not thread_node.is_ready() and frames < BUILD_FRAMES_MAX:
+	var wait0 := SimClock.msec()
+	var deadline := wait0 + BUILD_WAIT_MSEC
+	while not thread_node.is_ready() and SimClock.msec() < deadline:
 		await process_frame
 		frames += 1
+	print("scatter_rows_test: park_sinkhole threaded build wall %d ms over %d frames (deadline %d ms)" % [SimClock.msec() - wait0, frames, BUILD_WAIT_MSEC])
 	var differ := 0
 	var batches := 0
 	for chunk: Node in main_node.get_children():
