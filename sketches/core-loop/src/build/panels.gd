@@ -95,10 +95,11 @@ const OVERFLOW_DEFAULT := "hull_tile"
 # reset on a drop. elite: an elite-pack kill. rib: kills in an off-spine dead end. jackpot: a
 # reel impact or dunk kill. lean: the nemesis-answer weight against 1.0.
 const DROP := {"chance": 0.07, "pity": 0.015, "elite": 1.0, "rib": 2.5, "jackpot": 2.0, "lean": 1.5}
-# Per-world chance and pity over the row. World 1 gives 5 to 14 kills a stage (recorded bot
+# Per-world chance and pity over the row. World 1 gives 3 to 18 kills a stage (recorded bot
 # streams, tests/fixtures/panels_w1_kills.json), so the card's 7% left about two panels a
 # stage; tuned there by tests/panels_drop_sim_test.gd. Worlds 2 and 3 keep the row, untuned.
-const DROP_BY_WORLD := {1: {"chance": 0.4, "pity": 0.08}}
+# 2026-10-23 Spillway roster (more packs, more kills): 0.32 and 0.06 on sixteen runs; was 0.4, 0.08.
+const DROP_BY_WORLD := {1: {"chance": 0.32, "pity": 0.06}}
 # Rib caches (coordinator ruling 23 Oct, "exploring pays"): panels waiting at the end of this
 # many off-route dead ends a stage, each with a tall column and a chime heard from the route.
 const RIB_CACHES := 3
