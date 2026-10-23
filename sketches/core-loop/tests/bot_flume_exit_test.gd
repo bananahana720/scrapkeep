@@ -39,7 +39,9 @@ const HEAVY_STARTS := [
 	[Vector3(252.05, -9.86, 485.64), Vector3(9.1, 4.3, -6.2)],
 ]
 const HEAVY_HEFT := 2.3
-const WALL_X := 270.0
+# Out means past the terrace edge (x 272), not just past the lip (270.07): a ball resting in the
+# 1.93 m notch between them (planted drops stop at x 271.07, y 0.37) is not out of the drum.
+const EXIT_X := 272.5
 const LIP_NEAR := 3.0
 const EXIT_S := 40.0
 const SETTLE_TICKS := 30
@@ -125,7 +127,7 @@ func _physics_process(delta: float) -> bool:
 	_seconds += delta
 	var ball: Vector3 = _game.player.ball_position()
 	_peak = maxf(_peak, ball.y)
-	if _out_at < 0.0 and ball.x > WALL_X and _game.player.state.grounded and _gate_y - ball.y <= BotDriver.LEVEL_BAND:
+	if _out_at < 0.0 and ball.x > EXIT_X and _game.player.state.grounded and _gate_y - ball.y <= BotDriver.LEVEL_BAND:
 		_out_at = _seconds
 	# The tick count and boost clock tick() runs before it acts, so the boost comes back as in a run.
 	_driver.ticks += 1
