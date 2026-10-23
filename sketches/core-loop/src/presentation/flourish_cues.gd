@@ -281,7 +281,7 @@ func _eject(at: float, seconds: float) -> void:
 	prop.visible = false
 	# Away from the camera, so the sail is seen whole rather than over the player's shoulder.
 	var view = get_viewport().get_camera_3d() if is_inside_tree() else null
-	var out := -view.global_basis.z if view != null else from - arena.global_position
+	var out: Vector3 = -view.global_basis.z if view != null else from - arena.global_position
 	out.y = 0.0
 	out = out.normalized() if out.length() > 0.01 else Vector3.FORWARD
 	var tween := create_tween()
