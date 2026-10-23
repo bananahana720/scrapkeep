@@ -8,6 +8,9 @@ extends SceneTree
 # row (id, society, element, landform) so a writer can fit a story to it. Exit 0.
 # With --check it validates the map's vignette file (schema, kit names, then every expanded instance) and prints every
 # violation as a JSON line (--file checks another vignette file, a fixture, for the map); exit 1 on any violation or schema error, 2 on bad input.
+# --check also fails (rule "row" or "yaw", park_props.gd spot_pattern_errors) a file whose spots form a mechanical row or share one yaw, and
+# (rule "pin") a file whose "pin" differs from the expansion's fingerprint, or has none (a --file fixture without a pin is only noted).
+# Label lint rows (level "lint", label_lint) print but do not fail. The summary's "violations" counts every failing row.
 # "ground_rows" (the explicit surfaces, DRESSING-KITS.md) in the file applies to --check, and to the spot finder, which also takes --ground-rows=a,b,c.
 # "low_ground_rows" (low clutter in area rows, opt-in) likewise; the spot finder takes --low-ground-rows=a,b with --tier=low (its probe is 1.0 m tall).
 
@@ -88,12 +91,12 @@ func _initialize() -> void:
 	if bench:
 		quit(_bench(map_id, map, world))
 		return
-	quit(_check(map_id, map, world, c) if check else _plan(map_id, map, world, c, line_key))
+	quit(_check(map_id, map, world, c, not file_arg.is_empty()) if check else _plan(map_id, map, world, c, line_key))
 
 
 # --bench: the vignette file's spots repeated to BENCH_VIGNETTES vignettes, timed in stages (cold meshes, then warm). The
-# context, expansion and mesh warm run on a worker in the game (park_props.gd prepare); the node build is the main-thread
-# cost, spread over frames at BUILD_SLICE_USEC a frame.
+# context and expansion run on a worker in the game (park_props.gd prepare); the mesh reads and the node build are the
+# main-thread cost, spread over frames at BUILD_SLICE_USEC a frame.
 func _bench(map_id: String, map, world: Dictionary) -> int:
 	var file := ParkProps.load_json(ParkProps.file_path(map_id))
 	var kit := ParkProps.load_json(String(file.get("kit", "")))
@@ -111,7 +114,8 @@ func _bench(map_id: String, map, world: Dictionary) -> int:
 	var t1 := Time.get_ticks_usec()
 	var list := ParkProps.expand(file, kit, map, world["ground"], c)
 	var t2 := Time.get_ticks_usec()
-	ParkProps.warm(list, kit, false)
+	for path: String in ParkProps.mesh_paths(list, kit, false):
+		ParkProps._mesh(path)
 	var t3 := Time.get_ticks_usec()
 	var built := ParkProps.build_nodes(list, kit)
 	var t4 := Time.get_ticks_usec()
@@ -120,9 +124,9 @@ func _bench(map_id: String, map, world: Dictionary) -> int:
 		var started := Time.get_ticks_usec()
 		ParkProps.build_job(built, job, kit, false)
 		worst = maxf(worst, (Time.get_ticks_usec() - started) / 1000.0)
-	print("park_props_bench: %d vignettes, %d instances, %d views: context %.1f ms, expand %.1f ms, mesh warm %.1f ms (worker side %.1f ms); node build %.1f ms on the main thread, worst single job %.1f ms" % [
+	print("park_props_bench: %d vignettes, %d instances, %d views: context %.1f ms, expand %.1f ms, mesh reads %.1f ms (worker side %.1f ms); node build %.1f ms on the main thread, worst single job %.1f ms" % [
 		BENCH_VIGNETTES, list.size(), built.find_children("*", "GeometryInstance3D", true, false).size(), (t1 - t0) / 1000.0,
-		(t2 - t1) / 1000.0, (t3 - t2) / 1000.0, (t3 - t0) / 1000.0, (t4 - t3) / 1000.0, worst])
+		(t2 - t1) / 1000.0, (t3 - t2) / 1000.0, (t2 - t0) / 1000.0, (t4 - t3) / 1000.0, worst])
 	var floating := 0.0
 	for inst: Dictionary in list:
 		floating = maxf(floating, inst["float_m"])
@@ -131,7 +135,7 @@ func _bench(map_id: String, map, world: Dictionary) -> int:
 	return 0
 
 
-func _check(map_id: String, map, world: Dictionary, c) -> int:
+func _check(map_id: String, map, world: Dictionary, c, has_file_arg := false) -> int:
 	var path := ParkProps.file_path(map_id)
 	var file := ParkProps.load_json(path)
 	if file.is_empty():
@@ -149,8 +153,24 @@ func _check(map_id: String, map, world: Dictionary, c) -> int:
 		print(JSON.stringify({"map": map_id, "vignette": v["vignette"], "kind": v["kind"], "at": [snappedf(v["pos"].x, 0.1), snappedf(v["pos"].z, 0.1)],
 			"rule": v["rule"], "detail": v["detail"]}))
 	var litter := list.filter(func(i: Dictionary) -> bool: return i["litter"]).size()
-	print("park_props_plan: %s %d instances (%d litter), %d violations, fingerprint %d" % [map_id, list.size(), litter, violations.size(), ParkProps.fingerprint(list)])
-	return 1 if not violations.is_empty() else 0
+	var fingerprint := ParkProps.fingerprint(list)
+	var patterns := ParkProps.spot_pattern_errors(file)
+	for row: Dictionary in patterns:
+		print(JSON.stringify({"map": map_id, "rule": row["rule"], "spots": row["spots"], "detail": row["detail"]}))
+	var pins := 0
+	var pin_text := ParkProps.pin_error(file, fingerprint)
+	if not pin_text.is_empty():
+		if file.has("pin") or not has_file_arg:
+			pins = 1
+			print(JSON.stringify({"map": map_id, "rule": "pin", "detail": pin_text}))
+		else:
+			print(JSON.stringify({"map": map_id, "level": "note", "detail": "no pin"}))
+	var lints := ParkProps.label_lint(file)
+	for row: Dictionary in lints:
+		print(JSON.stringify({"map": map_id, "level": "lint", "rule": row["rule"], "spot": row["spot"], "detail": row["detail"]}))
+	var failing := violations.size() + patterns.size() + pins
+	print("park_props_plan: %s %d instances (%d litter), %d violations, fingerprint %d, %d pattern, %d pin, %d lint" % [map_id, list.size(), litter, failing, fingerprint, patterns.size(), pins, lints.size()])
+	return 1 if failing > 0 else 0
 
 
 func _plan(map_id: String, map, world: Dictionary, c, line_key: String) -> int:

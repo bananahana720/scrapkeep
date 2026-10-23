@@ -13,6 +13,9 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # Stage -> [map, batch count, hash], from the 7dbdebae builder.
+# 2026-10-22 crown sentinel re-pin: stage 6 park_crown 74019119 -> 2943158398, because sentinel_50 moved from [-150, 420] to
+# [-185, 398] (its spire stamp rebakes the ground) and sentinel_50 and sentinel_36 ([-135, 438] -> [-156, 446]) both move their
+# scatter keep-outs; stages 1 to 5 unchanged.
 # 2026-10-17 islands authored pass re-pin: stage 5 park_islands 3297821718 -> 3681139656 and stage 6 park_crown
 # 452118366 -> 74019119, because the new lips and nets join the scatter keep-out (park_map.gd); stages 1 to 4 unchanged.
 # 2026-10-17 crown authored pass re-pin: stage 6 park_crown 3361994924 -> 452118366, because the new lips,
@@ -28,13 +31,15 @@ const Intent := preload("res://src/movement/intent.gd")
 # 2026-10-17 flume authored pass re-pin: stage 2 park_flume 1284262125 -> 1448453723, because siphon_camp moved from
 # [-28, 176] to [-26, 174] (inside the 12 m reach of the momentum line on the flume) and its 11 m activity keep-out
 # moves with it; with the camp at its old spot the 1284262125 pin still holds. The others unchanged.
+# 2026-10-23 sinkhole elbow re-pin (#359): stage 4 park_sinkhole 3017710206 -> 2334293701, because #359 reshapes
+# lava_channel_12, 13 and 21 and rebakes the sinkhole ground; no dressing spot moves. The others unchanged.
 const PINS := {
 	1: ["park_dam", 13, 2427938025],
 	2: ["park_flume", 13, 1448453723],
 	3: ["park_pit", 13, 2247843387],
-	4: ["park_sinkhole", 13, 3017710206],
+	4: ["park_sinkhole", 13, 2334293701],
 	5: ["park_islands", 13, 3681139656],
-	6: ["park_crown", 13, 74019119],
+	6: ["park_crown", 13, 2943158398],
 }
 
 var _t := T.new("park_dressing_pin_test")

@@ -163,7 +163,7 @@ func _five_checks() -> void:
 	_t.eq("W6-2 stage 5 of the double: the second is current", status.stage, 2)
 	_game.screens._on_flow_changed("dead")
 	var text: String = _game.screens.body_text()
-	_t.check("W6-3 dead screen at stage 5 reads Retry stage 2", text.contains("R   retry stage 2"), text.replace("\n", " | "))
+	_t.check("W6-3 dead screen offers a new run and no retry", text.contains("N   new run") and not text.contains("retry"), text.replace("\n", " | "))
 	_game.screens._on_flow_changed(_game.flow.state_name())
 
 

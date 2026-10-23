@@ -7,6 +7,22 @@ extends Node3D
 #             Inside the play square a vertex is the 2 m grid's two-triangle surface (the 1 m points
 #             fall on grid vertices, edge midpoints and the b-c diagonal's midpoint, so the view lies
 #             on the collider); outside it is apron.bin. Hole cells mark their four 1 m vertices.
+#             Every vertex has the control map's auto bit, so Terrain3D's auto-shader draws sand floor
+#             flat and strata steep, as the non-park ground does. surface.bin's concrete, tailings and
+#             basalt cells (slots 2 to 4) tint the colour map, which multiplies the albedo, so a floor
+#             cell reads near that slot's colour; the other slots stay white (net never tints it).
+#             Where a pylon can bite (pylon_bite.gd, terrain.gd's old-map rule on the same 2 m grid
+#             normals) the colour map also moves toward the pylon tint, so the concrete-grey slope
+#             reads as it does on the old maps. _load computes that from heights, for baked and
+#             unbaked parks alike; it is not stored in the bake (PARK.md says "the bake calls": this
+#             is the load step of the same data), so no bake binary changes.
+#             Each multiplier comes from one rule on a reference board's material and lit-ground
+#             patches (board_multiplier(): the material's hue, a value scaled by material over ground,
+#             capped at the floor's own, since a colour map cannot brighten); tailings and basalt are then
+#             darkened for the 3060 render (linear_scaled(), render_corrected()). The colour map is
+#             feathered over 8 m texels (feather()), so a slot border or the square's edge fades
+#             instead of stepping; the texel grid is fixed, so a straight border fades over 8 to 16 m
+#             by where it falls, and a stamp narrower than about 16 m loses tint by its position.
 #             Terrain3D collision stays 0 (DISABLED): it never makes a second height source.
 #   collider  100 tiles of 160 m (80 by 80 cells of the 2 m grid), each a ConcavePolygonShape3D with
 #             the two triangles and winding terrain.gd uses for the old maps; a hole cell has none.
@@ -27,6 +43,16 @@ extends Node3D
 
 signal built
 
+const MaterialSlots := preload("res://src/presentation/material_slots.gd")
+const Palette := preload("res://src/core/palette.gd")
+const PylonBite := preload("res://src/world/pylon_bite.gd")
+const ParkStamps := preload("res://src/world/park/park_stamps.gd")
+const ThreadGuard := preload("res://src/core/thread_guard.gd")
+const GROUND_FLOOR_ID := 0
+const GROUND_STRATA_ID := 1
+# Metres per tile of the floor texture: sandstone.gdshader's floor_metres default (:9), which the
+# `ground` slot leaves alone (palette.gd sets only strata_metres, from triplanar_scale).
+const GROUND_FLOOR_METRES := 5.0
 const HALF := 800.0
 const STEP := 2.0
 const CELLS := 800
@@ -46,6 +72,75 @@ const TILES_PER_FRAME := 5
 const ATTACH_BUDGET_USEC := 8000
 # Terrain3D's control map: bit 2 is the hole bit (Terrain3DUtil.enc_hole).
 const HOLE_BIT := 4
+# Bit 0 is the auto bit: the auto-shader picks the base or overlay texture by slope.
+const AUTO_BIT := 1
+# surface.bin slots (park_stamps.gd SURFACE_SLOTS) that tint the colour map. Slots 0, 1 and 5 (net) stay white.
+const SLOT_CONCRETE := 2
+const SLOT_TAILINGS := 3
+const SLOT_BASALT := 4
+# Each tinted slot's colour-map multiplier comes from board_multiplier() on two patches of one
+# reference board: the material and the lit ground beside it (sRGB box means, ImageMagick
+# `convert <board> -crop WxH+X+Y -resize 1x1!`, each crop checked by eye). The rule: chromaticity is
+# the material's (g/r, b/r); the target's luminance is the floor texture's times material / ground;
+# a target brighter than the floor in any channel is scaled down until none is, because RGBA8 caps a
+# multiplier at 1; the multiplier is target / GROUND_FLOOR_MEAN. The values below are board_multiplier()
+# of the numbers cited, then darkened where the 3060 render asked for it (tailings by linear_scaled(),
+# basalt by render_corrected()), stored as literals (the surface test pins each).
+# Tailings: docs/art/reference/dig/dig-landmark-headframe-noon.jpg, the worked pit floor at noon.
+# Material and ground are the same floor: crops 120x40+1150+700, 120x40+880+600 and 100x30+1150+620
+# read 242,169,113, 245,172,117 and 245,172,116 (median 245,172,116). The value ratio is 1, so red
+# stays at 1 and only the hue moves toward oxide: target (0.733, 0.514, 0.347), L* 59.5, multiplier
+# (1.0, 0.861, 0.843). Ground over horizon (coordinator #241 6353059714, bar 1): the noon pit frame
+# (day_arc_capture 4-stage3-noon) reads its near floor, which is tailings (surface.bin of park_pit, the
+# cells 10 to 18 m behind the ball), at L* 66.7 against the horizon haze's 73.8, a gap of 7.1 where 10 is
+# wanted. TAILINGS_NOON_SCALE darkens the multiplier in linear light (linear_scaled(), the space
+# Terrain3D multiplies in); the cast model of artifacts/local/valcap/cast_model.py puts 0.65 at about
+# -6 to -7 L* on that floor (gap about 13). The model fits the bench poorly (chroma too high), so
+# the scale is a prediction to confirm on the 3060, not a measurement. Tailings also tints park_sinkhole
+# and park_islands; they darken with it.
+const TAILINGS_NOON_SCALE := 0.65
+const MULT_TAILINGS := Color(0.827, 0.710, 0.695, float(COLOR_ALPHA_BYTE) / 255.0)
+# Basalt: docs/art/reference/dig/dig-landmark-sinkhole-afternoon.jpg. The basalt cap, crops
+# 120x40+960+215 and 100x40+1180+210, reads 104,95,95 and 98,90,91 (mean 101,92.5,93); the lit pale
+# limestone in the same board, crop 80x60+1120+330, reads 153,126,111. Capped: board_multiplier() gives
+# (0.610, 0.685, 1.0), target L* 45.1. Render-corrected (#241 6352984236, the 3060 render bench of
+# d19c9120): crop 600x200 at x 340, y 480 of a 1280x720 frame, poses 801 and 803 of park_props_audit
+# --map=park_sinkhole, read L*/a*/b* 52.49/+7.1/+12.2 and 52.27/+7.2/+12.2 against the board patch
+# (101, 93, 93), L* 40.2/+2.7/+0.7 (the bench's rounding of the crop mean above; the half byte of green
+# moves the multiplier by under 0.002): 12 L* too bright and too warm, the stage's afternoon light and haze
+# sitting between the multiplier and the pixel. render_corrected() scales the multiplier by board over
+# rendered (mean of the two poses), per channel in linear light, because Terrain3D samples _color_maps
+# with source_color and multiplies it into the albedo after decoding. One render pass, measured once on
+# the 3060; the cast is assumed multiplicative.
+const MULT_BASALT := Color(0.426, 0.535, 0.898, float(COLOR_ALPHA_BYTE) / 255.0)
+# Concrete: docs/art/reference/spillway/spillway-landmarks-flume-carry.jpg. The pale concrete ramp, crop
+# 60x14+1080+410, reads 239,194,148; the lit sand ground, crops 100x30+880+600 and 100x30+600+640,
+# read 244,167,102 and 242,167,103 (mean 243,167,102.5). Concrete is paler than the ground, which a
+# multiplier cannot show: only blue reaches the floor's value, so concrete draws as a less orange sand,
+# target (0.665, 0.540, 0.412), L* 59.5, about 5.6 below the sand around it. Pale concrete (L* 71)
+# cannot be shown: desaturating the orange floor under a cap of 1 must lower its luminance. A concrete
+# texture is the real fix.
+const MULT_CONCRETE := Color(0.907, 0.903, 1.0, float(COLOR_ALPHA_BYTE) / 255.0)
+# The floor texture's mean albedo (packed-sand-floor.webp, every pixel of the base level): the
+# floor is what flat ground draws, so a multiplier times this is the colour a cell's mean lands on.
+# Steep ground draws strata, whose mean is slightly darker (see GROUND_STRATA_MEAN).
+const GROUND_FLOOR_MEAN := Color(0.7327, 0.5977, 0.4117)
+# The strata texture's mean albedo (the imported sandstone-strata texture, measured over its pixels):
+# what a fully steep vertex draws before the colour map.
+const GROUND_STRATA_MEAN := Color(0.731, 0.535, 0.366)
+# The colour map is feathered over 8 m: the per-cell multipliers are padded with FEATHER_PAD white
+# cells (so a tint at the play square's edge fades toward the apron), box-filtered to 8 m texels (mip
+# level FEATHER_LEVEL) and bilinearly stretched back to 1 m vertices. The texel grid is fixed, so a
+# straight border fades over 8 to 16 m depending on where it falls, and a stamp narrower than about
+# 16 m loses tint depending on its position.
+const FEATHER_PAD := 4
+const FEATHER_LEVEL := 2
+# One-metre pixels of padding on each side of feather()'s image: vertex m is at pixel m + this.
+const FEATHER_MARGIN := 2 * FEATHER_PAD
+# Terrain3D's default colour map is white with alpha 127/255, which leaves roughness unchanged.
+const COLOR_ALPHA_BYTE := 127
+# n.y < FACE exactly when dx^2 + dz^2 > (2 STEP)^2 * (1 / FACE^2 - 1), n = (dx, 2 STEP, dz) normalised.
+const BITE_G2 := 4.0 * STEP * STEP * (1.0 / (PylonBite.FACE * PylonBite.FACE) - 1.0)
 const COLLISION_DISABLED := 0
 const MESH_LODS := 7
 const MESH_SIZE := 48
@@ -57,6 +152,11 @@ enum Phase { IDLE, LOADING, BUILDING, ATTACHING, READY }
 var map_id := ""
 var baked := false
 var heights := PackedFloat32Array()
+# PylonBite.BERM_ROWS (map id -> row ids whose footprint the bite tint skips); a test sets {} to disable it before start().
+var berm_rows: Dictionary = PylonBite.BERM_ROWS
+# Grid vertices the berm rows' footprints exclude from the bite tint, and the 0/1 mask itself (empty when no rows apply).
+var bite_masked := 0
+var _bite_mask := PackedByteArray()
 var holes := PackedByteArray()
 var under := PackedFloat32Array()
 var terrain3d: Node3D
@@ -77,6 +177,9 @@ var _map: RefCounted
 var _apron := PackedFloat32Array()
 var _apron_rows := PackedInt32Array()
 var _hole_cells := PackedInt32Array()
+# The 2 m cells' slot multipliers feathered onto 1 m vertices (feather(): the play square plus an 8 m margin, 1616 square RGBA8),
+# or null when the park has no surface.bin.
+var _tints: Image
 var _regions: Array = []
 var _faces: Array = []
 var _task := -1
@@ -86,6 +189,149 @@ var _next_region := 0
 var _next_map := 0
 var _next_tile := 0
 var _tiles_root: Node3D
+
+
+# The colour a tinted surface slot's cell lands on: its multiplier times the floor texture's mean.
+static func slot_target(slot: int) -> Color:
+	var m := slot_tint(slot)
+	return Color(m.r * GROUND_FLOOR_MEAN.r, m.g * GROUND_FLOOR_MEAN.g, m.b * GROUND_FLOOR_MEAN.b)
+
+
+# The colour-map multiplier of a surface slot (alpha at the default, so roughness is unchanged);
+# white for slots that do not tint.
+static func slot_tint(slot: int) -> Color:
+	match slot:
+		SLOT_CONCRETE:
+			return MULT_CONCRETE
+		SLOT_TAILINGS:
+			return MULT_TAILINGS
+		SLOT_BASALT:
+			return MULT_BASALT
+	return Color(1.0, 1.0, 1.0, float(COLOR_ALPHA_BYTE) / 255.0)
+
+
+# The colour-map multiplier of a vertex a pylon can bite. The colour map multiplies the albedo, and
+# the auto-shader draws strata toward floor by a = clamp(2 * n_y - 1, 0, 1) (auto_slope 1, no height
+# reduction), so the mean albedo there is D = STRATA_MEAN.lerp(FLOOR_MEAN, a). The old maps' rule is
+# final = base.lerp(tint, w) with base = D * slot_mult, hence slot_mult.lerp(tint / D, w) per channel,
+# clamped to a colour map's range. Alpha stays at the default so roughness is unchanged.
+static func bite_multiplier(slot_mult: Color, n_y: float, w: float) -> Color:
+	var a := clampf(2.0 * n_y - 1.0, 0.0, 1.0)
+	var d := GROUND_STRATA_MEAN.lerp(GROUND_FLOOR_MEAN, a)
+	var tint := PylonBite.tint()
+	return Color(
+			clampf(lerpf(slot_mult.r, tint.r / d.r, w), 0.0, 1.0),
+			clampf(lerpf(slot_mult.g, tint.g / d.g, w), 0.0, 1.0),
+			clampf(lerpf(slot_mult.b, tint.b / d.b, w), 0.0, 1.0),
+			float(COLOR_ALPHA_BYTE) / 255.0)
+
+
+# The colour-map multiplier of a surface material from two patches of one reference board, given as raw
+# sRGB bytes (0 to 255, may be fractional): the material, and the lit ground beside it.
+#   chromaticity  the material's g/r and b/r;
+#   value         target luminance Y = Y(GROUND_FLOOR_MEAN) * Y(material) / Y(ground), with
+#                 Y = 0.2126 R + 0.7152 G + 0.0722 B on sRGB-decoded channels, solved for the red that
+#                 gives it at that chromaticity;
+#   cap           if a target channel exceeds the floor's, scale the target down until the largest
+#                 channel ratio is 1 (a colour map cannot brighten);
+#   multiplier    target / GROUND_FLOOR_MEAN, alpha at the default.
+static func board_multiplier(material: Vector3, ground: Vector3) -> Color:
+	var m := material / 255.0
+	var g := ground / 255.0
+	var want := _luma(GROUND_FLOOR_MEAN.r, GROUND_FLOOR_MEAN.g, GROUND_FLOOR_MEAN.b) * _luma(m.x, m.y, m.z) / _luma(g.x, g.y, g.z)
+	var gr := m.y / m.x
+	var br := m.z / m.x
+	var lo := 0.0
+	var hi := 4.0
+	for i in 60:
+		var mid := (lo + hi) * 0.5
+		if _luma(mid, mid * gr, mid * br) < want:
+			lo = mid
+		else:
+			hi = mid
+	var target := Vector3(lo, lo * gr, lo * br)
+	var f := GROUND_FLOOR_MEAN
+	var worst := maxf(target.x / f.r, maxf(target.y / f.g, target.z / f.b))
+	if worst > 1.0:
+		target /= worst
+	return Color(target.x / f.r, target.y / f.g, target.z / f.b, float(COLOR_ALPHA_BYTE) / 255.0)
+
+
+# A multiplier scaled by k in linear light (decode, multiply, encode; alpha kept, result in [0, 1]).
+static func linear_scaled(mult: Color, k: float) -> Color:
+	return Color(
+			clampf(_encode(_linear(mult.r) * k), 0.0, 1.0),
+			clampf(_encode(_linear(mult.g) * k), 0.0, 1.0),
+			clampf(_encode(_linear(mult.b) * k), 0.0, 1.0),
+			mult.a)
+
+
+# board_multiplier() corrected for what the stage renders. The shader samples _color_maps with
+# source_color (the addon's generated main shader, ALBEDO = albedo * color_map.rgb), so a multiplier is
+# sRGB-decoded and multiplied in linear light, and the correction is too:
+#   rendered  a crop's mean L*a*b* (D65), converted to linear sRGB;
+#   board     the board patch's raw sRGB bytes (0 to 255), decoded to linear;
+#   ratio     board / rendered per channel;
+#   result    encode(decode(mult) * ratio), clamped to [0, 1], alpha kept.
+# A render equal to the board returns mult; a warmer render lowers red relative to blue.
+static func render_corrected(mult: Color, rendered_lab: Vector3, board_srgb: Vector3) -> Color:
+	var rendered := _lab_to_linear(rendered_lab)
+	var board := Vector3(_linear(board_srgb.x / 255.0), _linear(board_srgb.y / 255.0), _linear(board_srgb.z / 255.0))
+	return Color(
+			clampf(_encode(_linear(mult.r) * board.x / rendered.x), 0.0, 1.0),
+			clampf(_encode(_linear(mult.g) * board.y / rendered.y), 0.0, 1.0),
+			clampf(_encode(_linear(mult.b) * board.z / rendered.z), 0.0, 1.0),
+			mult.a)
+
+
+static func _lab_to_linear(lab: Vector3) -> Vector3:
+	var fy := (lab.x + 16.0) / 116.0
+	var fx := fy + lab.y / 500.0
+	var fz := fy - lab.z / 200.0
+	var x := 0.95047 * _lab_finv(fx)
+	var y := _lab_finv(fy)
+	var z := 1.08883 * _lab_finv(fz)
+	return Vector3(
+			3.2404542 * x - 1.5371385 * y - 0.4985314 * z,
+			-0.9692660 * x + 1.8760108 * y + 0.0415560 * z,
+			0.0556434 * x - 0.2040259 * y + 1.0572252 * z)
+
+
+static func _lab_finv(t: float) -> float:
+	return t * t * t if t * t * t > 0.008856 else (t - 16.0 / 116.0) / 7.787
+
+
+static func _encode(c: float) -> float:
+	return c * 12.92 if c <= 0.0031308 else 1.055 * pow(c, 1.0 / 2.4) - 0.055
+
+
+# Luminance of sRGB-encoded channels (each 0 to 1), decoded to linear first.
+static func _luma(r: float, g: float, b: float) -> float:
+	return 0.2126 * _linear(r) + 0.7152 * _linear(g) + 0.0722 * _linear(b)
+
+
+static func _linear(c: float) -> float:
+	return c / 12.92 if c <= 0.04045 else pow((c + 0.055) / 1.055, 2.4)
+
+
+# The 800 by 800 per-cell multiplier image as a one-metre-vertex image, feathered over 8 m: pad with
+# white, box-filter to 8 m texels, bilinear back up. The result is 1616 square: it keeps the padding, so
+# a tint at the square's edge fades to white over the apron's first 8 m instead of stepping. Padded
+# pixel p covers metres 2 (p - FEATHER_PAD) from the square's edge, a texel covers 8 m, and bilinear
+# resize maps a destination pixel's area onto the same metres (checked: a block of cells fades
+# symmetrically about its centre), so vertex m (the 1 m pixel from -800 + m) is pixel m + FEATHER_MARGIN.
+static func feather(cells: Image) -> Image:
+	var side := CELLS + 2 * FEATHER_PAD
+	var padded := Image.create(side, side, false, Image.FORMAT_RGBA8)
+	padded.fill(Color(1.0, 1.0, 1.0, float(COLOR_ALPHA_BYTE) / 255.0))
+	padded.blit_rect(cells, Rect2i(0, 0, CELLS, CELLS), Vector2i(FEATHER_PAD, FEATHER_PAD))
+	padded.generate_mipmaps()
+	var texels := side >> FEATHER_LEVEL
+	var from := padded.get_mipmap_offset(FEATHER_LEVEL)
+	var level := Image.create_from_data(texels, texels, false, Image.FORMAT_RGBA8, padded.get_data().slice(from, from + texels * texels * 4))
+	# An 8 m texel is 8 one-metre pixels.
+	level.resize(texels * 8, texels * 8, Image.INTERPOLATE_BILINEAR)
+	return level
 
 
 static func bake_dir(id: String) -> String:
@@ -113,7 +359,39 @@ static func make_render(parent: Node, label: String) -> Node3D:
 	node.collision.mode = COLLISION_DISABLED
 	node.region_size = REGION_SIZE
 	node.vertex_spacing = VERTEX_SPACING
+	node.assets = ground_assets()
+	var material: Object = node.material
+	# The regions' control maps carry the auto bit everywhere (_build_region), so the auto-shader
+	# picks the texture: the overlay (flat) is the floor, the base (steep) the strata. auto_slope 1.0
+	# puts the half-way blend at normal.y 0.75, near the middle (0.755) of sandstone.gdshader's
+	# strata ramp smoothstep(0.58, 0.93, normal.y). Height reduction is off.
+	material.auto_shader = true
+	material.set_shader_param("auto_base_texture", GROUND_STRATA_ID)
+	material.set_shader_param("auto_overlay_texture", GROUND_FLOOR_ID)
+	material.set_shader_param("auto_slope", 1.0)
+	material.set_shader_param("auto_height_reduction", 0.0)
 	return node
+
+
+# A Terrain3DAssets for one park render node, from the `ground` slot so the park and the non-park
+# ground draw the same two textures at the same near-layer tile sizes (the non-park shader's far
+# layers, macro tint and ruts are not matched): texture 0 is the slot's floor_map every
+# GROUND_FLOOR_METRES, texture 1 its strata_map every triplanar_scale metres. Terrain3D samples a
+# texture at world xz * uv_scale * the control map's scale, which is 0.5 at control 0 (DECODE_SCALE
+# in the addon's shader; lightweight.gdshader:313 writes the same * 0.5), so uv_scale is 2 / metres.
+# Each node gets its own list (an asset list keeps one terrain back-pointer); the textures are shared.
+static func ground_assets() -> Object:
+	var row: Dictionary = MaterialSlots.row("ground")
+	var assets: Object = ClassDB.instantiate("Terrain3DAssets")
+	var ids: Array = [row.textures.floor_map, row.textures.strata_map]
+	var metres: Array = [GROUND_FLOOR_METRES, float(row.triplanar_scale)]
+	for i in ids.size():
+		var asset: Object = ClassDB.instantiate("Terrain3DTextureAsset")
+		asset.name = ids[i]
+		asset.albedo_texture = Palette.look_texture(ids[i])
+		asset.uv_scale = 2.0 / float(metres[i])
+		assets.set_texture(i, asset)
+	return assets
 
 
 # render: the Terrain3D node this stage draws into (make_render), or null to collide only.
@@ -237,6 +515,7 @@ func _load() -> void:
 				under[k] = floors[n]
 				_hole_cells.append(k)
 				n += 1
+		_load_tints(dir + "/surface.bin")
 		_apron_rows.resize(APRON_SIDE)
 		var at := 0
 		for j in APRON_SIDE:
@@ -248,6 +527,176 @@ func _load() -> void:
 			var z := -HALF + j * STEP
 			for i in SIDE:
 				heights[j * SIDE + i] = float(_map.sample(-HALF + i * STEP, z)[0])
+	_apply_bite()
+
+
+func _load_tints(path: String) -> void:
+	var surface := FileAccess.get_file_as_bytes(path)
+	if surface.size() != CELLS * CELLS:
+		return
+	var lookup := PackedByteArray()
+	for slot in 6:
+		var c := slot_tint(slot)
+		lookup.append_array(PackedByteArray([roundi(c.r * 255.0), roundi(c.g * 255.0), roundi(c.b * 255.0), COLOR_ALPHA_BYTE]))
+	var pixels := PackedByteArray()
+	pixels.resize(CELLS * CELLS * 4)
+	pixels.fill(255)
+	for k in surface.size():
+		var slot := surface[k]
+		pixels[k * 4 + 3] = COLOR_ALPHA_BYTE
+		if slot >= SLOT_CONCRETE and slot <= SLOT_BASALT:
+			var at := k * 4
+			var from := slot * 4
+			pixels[at] = lookup[from]
+			pixels[at + 1] = lookup[from + 1]
+			pixels[at + 2] = lookup[from + 2]
+	var image := Image.create_from_data(CELLS, CELLS, false, Image.FORMAT_RGBA8, pixels)
+	_tints = feather(image)
+
+
+# The normal y of grid vertex (i, j) from its four neighbours' heights (edges clamped), as terrain.gd.
+func _normal_y(i: int, j: int) -> float:
+	var idx := j * SIDE + i
+	var dx := heights[idx - (1 if i > 0 else 0)] - heights[idx + (1 if i < SIDE - 1 else 0)]
+	var dz := heights[idx - (SIDE if j > 0 else 0)] - heights[idx + (SIDE if j < SIDE - 1 else 0)]
+	return 2.0 * STEP / sqrt(dx * dx + 4.0 * STEP * STEP + dz * dz)
+
+
+# The 0/1 mask over the grid of the footprints of this map's PylonBite.BERM_ROWS (park_stamps.gd's frame, padded by
+# PylonBite.BERM_PAD_M); empty when the map names none, so every other park skips it. Rows are read from the park's
+# own JSON.
+func _berm_mask() -> PackedByteArray:
+	bite_masked = 0
+	var ids: Array = berm_rows.get(map_id, [])
+	if ids.is_empty():
+		return PackedByteArray()
+	var data = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/%s.json" % map_id))
+	var mask := PackedByteArray()
+	if not data is Dictionary:
+		return mask
+	mask.resize(SIDE * SIDE)
+	for row: Dictionary in data.get("park_rows", []):
+		if not ids.has(String(row["id"])):
+			continue
+		var f := ParkStamps.frame(row)
+		var box := ParkStamps.bounds(f)
+		var pad := PylonBite.BERM_PAD_M
+		# A pad on a yawed footprint reaches up to pad * (|sin| + |cos|) <= pad * sqrt(2) past the unpadded bounds per axis.
+		var reach := pad * sqrt(2.0)
+		var i0 := maxi(floori((box[0] - reach + HALF) / STEP), 0)
+		var i1 := mini(ceili((box[2] + reach + HALF) / STEP), SIDE - 1)
+		var j0 := maxi(floori((box[1] - reach + HALF) / STEP), 0)
+		var j1 := mini(ceili((box[3] + reach + HALF) / STEP), SIDE - 1)
+		var rel_x: float = f["length"] * 0.5 + pad
+		var rel_z: float = f["width"] * 0.5 + pad
+		for j in range(j0, j1 + 1):
+			for i in range(i0, i1 + 1):
+				var d: Vector2 = Vector2(-HALF + i * STEP, -HALF + j * STEP) - (f["at"] as Vector2)
+				if absf(d.dot(f["along"])) <= rel_x and absf(d.dot(f["across"])) <= rel_z and mask[j * SIDE + i] == 0:
+					mask[j * SIDE + i] = 1
+					bite_masked += 1
+	return mask
+
+
+# A grid vertex past BITE_G2: store its n.y and weight and flag the (up to four) cells that touch it.
+func _mark(i: int, j: int, dx: float, dz: float, weights: PackedFloat32Array, ny: PackedFloat32Array, flagged: PackedByteArray, cells: PackedInt32Array) -> void:
+	if not _bite_mask.is_empty() and _bite_mask[j * SIDE + i] == 1:
+		return
+	var y := 2.0 * STEP / sqrt(dx * dx + 4.0 * STEP * STEP + dz * dz)
+	ny[j * SIDE + i] = y
+	weights[j * SIDE + i] = PylonBite.weight(y)
+	for cj in range(maxi(j - 1, 0), mini(j, CELLS - 1) + 1):
+		for ci in range(maxi(i - 1, 0), mini(i, CELLS - 1) + 1):
+			var k := cj * CELLS + ci
+			if flagged[k] == 0:
+				flagged[k] = 1
+				cells.append(k)
+
+
+# Patches the colour image's vertices (feather()'s layout) where a pylon can bite, except inside the pit berm rows'
+# footprints (PylonBite.BERM_ROWS: a look rule, those flanks stay bitable but untinted). The normal is terrain.gd's, from the
+# four neighbouring heights of each 2 m grid vertex (edges clamped); only cells with a biting corner
+# are touched. A cell's four 1 m vertices take the weight and n.y of the grid points they sit on
+# (_build_region's heights: the corner, an edge midpoint, or the b-c diagonal's midpoint, the
+# diagonal the collider's two triangles share), and the multiplier is made from those.
+# Most vertices are flat, so pass 1 only compares the squared slope with BITE_G2 and does the sqrt and
+# the weight for the few past it; pass 2 visits just the cells those touch. Each vertex's slot
+# multiplier is the feathered pixel already in the image.
+func _apply_bite() -> void:
+	_bite_mask = _berm_mask()
+	var weights := PackedFloat32Array()
+	var ny := PackedFloat32Array()
+	weights.resize(SIDE * SIDE)
+	ny.resize(SIDE * SIDE)
+	var flagged := PackedByteArray()
+	flagged.resize(CELLS * CELLS)
+	var cells := PackedInt32Array()
+	var h := heights
+	for j in SIDE:
+		var up := SIDE if j > 0 else 0
+		var down := SIDE if j < SIDE - 1 else 0
+		var row := j * SIDE
+		# Columns 1 to SIDE - 2 need no edge clamp; columns 0 and SIDE - 1 clamp their x neighbour in the
+		# second loop. Both call _mark for a vertex past the threshold.
+		for i in range(1, SIDE - 1):
+			var idx := row + i
+			var dx := h[idx - 1] - h[idx + 1]
+			var dz := h[idx - up] - h[idx + down]
+			if dx * dx + dz * dz > BITE_G2:
+				_mark(i, j, dx, dz, weights, ny, flagged, cells)
+		for i: int in [0, SIDE - 1]:
+			var idx := row + i
+			var dx := h[idx - (1 if i > 0 else 0)] - h[idx + (1 if i < SIDE - 1 else 0)]
+			var dz := h[idx - up] - h[idx + down]
+			if dx * dx + dz * dz > BITE_G2:
+				_mark(i, j, dx, dz, weights, ny, flagged, cells)
+	_bite_mask = PackedByteArray()
+	if cells.is_empty():
+		return
+	var pixels := PackedByteArray()
+	if _tints != null:
+		pixels = _tints.get_data()
+	else:
+		pixels.resize((CELLS * 2 + 2 * FEATHER_MARGIN) * (CELLS * 2 + 2 * FEATHER_MARGIN) * 4)
+		pixels.fill(255)
+		for p in range(3, pixels.size(), 4):
+			pixels[p] = COLOR_ALPHA_BYTE
+	var row_px := CELLS * 2 + 2 * FEATHER_MARGIN
+	for k in cells:
+		var i := k % CELLS
+		var j := k / CELLS
+		var a := j * SIDE + i
+		var b := a + 1
+		var c := a + SIDE
+		# A corner that never passed the threshold has weight 0 and no stored n.y: compute it here.
+		var ya := ny[a] if weights[a] > 0.0 else _normal_y(i, j)
+		var yb := ny[b] if weights[b] > 0.0 else _normal_y(i + 1, j)
+		var yc := ny[c] if weights[c] > 0.0 else _normal_y(i, j + 1)
+		for q in 4:
+			var w := 0.0
+			var y := 0.0
+			match q:
+				0:
+					w = weights[a]
+					y = ya
+				1:
+					w = (weights[a] + weights[b]) * 0.5
+					y = (ya + yb) * 0.5
+				2:
+					w = (weights[a] + weights[c]) * 0.5
+					y = (ya + yc) * 0.5
+				3:
+					w = (weights[b] + weights[c]) * 0.5
+					y = (yb + yc) * 0.5
+			# The slot multiplier is the feathered pixel already there (byte / 255), so the bite composes
+			# with the feather and no step appears at a slot border.
+			var at := ((2 * j + (q >> 1) + FEATHER_MARGIN) * row_px + 2 * i + (q & 1) + FEATHER_MARGIN) * 4
+			var m := bite_multiplier(Color(pixels[at] / 255.0, pixels[at + 1] / 255.0, pixels[at + 2] / 255.0), y, w)
+			pixels[at] = roundi(m.r * 255.0)
+			pixels[at + 1] = roundi(m.g * 255.0)
+			pixels[at + 2] = roundi(m.b * 255.0)
+			pixels[at + 3] = COLOR_ALPHA_BYTE
+	_tints = Image.create_from_data(row_px, row_px, false, Image.FORMAT_RGBA8, pixels)
 
 
 static func _read_zstd(path: String, size: int) -> PackedByteArray:
@@ -271,13 +720,15 @@ func _build_piece(p: int) -> void:
 		_lock.unlock()
 
 
-func _build_region(location: Vector2i) -> Object:
+func _build_region(location: Vector2i) -> Array:
 	var x0 := location.x * REGION_SIZE
 	var z0 := location.y * REGION_SIZE
 	var h := heights
 	var data := PackedFloat32Array()
 	data.resize(REGION_SIZE * REGION_SIZE)
 	var inner := int(HALF)
+	var low := INF
+	var high := -INF
 	for row in REGION_SIZE:
 		var z := z0 + row
 		var base := row * REGION_SIZE
@@ -299,8 +750,13 @@ func _build_region(location: Vector2i) -> Object:
 			else:
 				v = _outside(x, z)
 			data[base + col] = v
+			if v < low:
+				low = v
+			if v > high:
+				high = v
 	var control := PackedInt32Array()
 	control.resize(REGION_SIZE * REGION_SIZE)
+	control.fill(AUTO_BIT)
 	for k in _hole_cells:
 		var px := -inner + 2 * (k % CELLS) - x0
 		var pz := -inner + 2 * (k / CELLS) - z0
@@ -309,15 +765,53 @@ func _build_region(location: Vector2i) -> Object:
 				var cx := px + dx
 				var cz := pz + dz
 				if cx >= 0 and cx < REGION_SIZE and cz >= 0 and cz < REGION_SIZE:
-					control[cz * REGION_SIZE + cx] = HOLE_BIT
+					control[cz * REGION_SIZE + cx] = AUTO_BIT | HOLE_BIT
+	return [location, Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, data.to_byte_array()),
+		Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, control.to_byte_array()),
+		color_map(_tints, -inner - FEATHER_MARGIN - x0, -inner - FEATHER_MARGIN - z0), Vector2(low, high)]
+
+
+# A region's color map as sanitize_maps leaves it (mipmapped, alpha at COLOR_ALPHA_BYTE): white, or with tints (feather()'s
+# image) blitted at (x, z) and the mipmaps made from that. Made here, on the worker, it is plain Image data; left to
+# sanitize_maps on the main thread the white map cost 37 to 88 ms a region on the cloud, and a tinted one's mipmaps as much.
+static func color_map(tints: Image = null, x := 0, z := 0) -> Image:
+	if tints == null:
+		var white := Image.create_empty(REGION_SIZE, REGION_SIZE, true, Image.FORMAT_RGBA8)
+		white.fill(Color(1.0, 1.0, 1.0, float(COLOR_ALPHA_BYTE) / 255.0))
+		return white
+	# Cell (i, j)'s vertices are at -800 + 2i + (0, 1); the feathered image starts FEATHER_MARGIN metres before -800.
+	var color := Image.create_empty(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RGBA8)
+	color.fill(Color(1.0, 1.0, 1.0, float(COLOR_ALPHA_BYTE) / 255.0))
+	color.blit_rect(tints, Rect2i(Vector2i.ZERO, tints.get_size()), Vector2i(x, z))
+	color.generate_mipmaps()
+	return color
+
+
+# A region's Terrain3DRegion from the worker's [location, height map, control map, color map, height range], made on
+# the main thread: it is the addon's object (GDExtension, its source is not in this repo), so no worker makes or sets one.
+# set_height_map always works out the height range itself (14 ms a region on the cloud, a preset range or not); set_data
+# takes the maps and the worker's range as given, the same region state the setters leave, in 0.02 ms. With the worker's
+# color map _attach_step's sanitize has nothing left to make. Maps without a range (or a color map) take the setters.
+static func _make_region(maps: Array) -> Object:
+	if not ThreadGuard.main_only("park_terrain region"):
+		return null
 	var region: Object = ClassDB.instantiate("Terrain3DRegion")
 	region.set_region_size(REGION_SIZE)
 	region.set_vertex_spacing(VERTEX_SPACING)
-	region.set_location(location)
-	region.set_height_map(Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, data.to_byte_array()))
-	region.set_control_map(Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, control.to_byte_array()))
-	region.sanitize_maps()
-	region.calc_height_range()
+	region.set_location(maps[0])
+	if maps.size() > 4:
+		var data: Dictionary = region.get_data()
+		data["height_map"] = maps[1]
+		data["control_map"] = maps[2]
+		data["color_map"] = maps[3]
+		data["height_range"] = maps[4]
+		data["modified"] = true
+		region.set_data(data)
+		return region
+	region.set_height_map(maps[1])
+	region.set_control_map(maps[2])
+	if maps.size() > 3:
+		region.set_color_map(maps[3])
 	return region
 
 
@@ -381,12 +875,15 @@ func _attach_step(deadline: int) -> void:
 		if terrain3d == null or terrain3d.data == null:
 			push_warning("park_terrain: %s has no Terrain3D render node; collider only" % map_id)
 			terrain3d = null
+			_regions.fill(null)
 			_next_region = REGION_COUNT
 			_next_map = MAP_TYPES.size()
 		if deadline >= 0:
 			return
 	if _next_region < _regions.size():
-		var region: Object = _regions[_next_region]
+		# A region a frame: making it with its maps, then the sanitize and the add.
+		var region: Object = _make_region(_regions[_next_region])
+		region.sanitize_maps()
 		if terrain3d.data.has_region(region.get_location()):
 			terrain3d.data.remove_regionl(region.get_location(), false)
 		terrain3d.data.add_region(region, false)

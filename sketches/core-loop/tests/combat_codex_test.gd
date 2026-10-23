@@ -347,7 +347,25 @@ func _w10_pack_tricks(home: Vector3) -> void:
 	_combat.strike(linker, "bolt", 5.0, "cable")
 	_report("cable_cut", _combat.discovered.has("cable_cut") and linker.cut and linker.cut_by == "struck",
 		"a bolt on a Linker's cable cut it (cut %s by %s)" % [linker.cut, linker.cut_by])
-	for node in [trap, brute, drone, jaw, linker]:
+	# 2026-10-21 (Systems B, wave 18): the catch trap and Dispatcher are reachable now, so their rows open here.
+	# A player break of the cup (a boost, a smash, a hook out) opens cup_break.
+	var cup: Node3D = _w9_spawn("catch_trap", home + Vector3(-12.0, 0.0, 10.0))
+	cup._on_hold_released(cup.get_instance_id(), "cup", "boost")
+	_report("cup_break", _combat.discovered.has("cup_break") and cup.broken_by == "boost",
+		"a boost out of a catch trap's cup broke its hold (broken_by %s)" % cup.broken_by)
+	# 2026-10-21: the swatter is reachable (plate_press packs); a boost out of its bat opens paddle_ride.
+	var swatter: Node3D = _w9_spawn("swatter", home + Vector3(-14.0, 0.0, 10.0))
+	swatter._on_hold_released(swatter.get_instance_id(), "paddle_bat", "boost")
+	_report("paddle_ride", _combat.discovered.has("paddle_ride") and swatter.broken_by == "boost",
+		"a boost out of a swatter's bat broke its hold (broken_by %s)" % swatter.broken_by)
+	# A Dispatcher killed after at least one drop cuts its stream.
+	var dispatcher: Node3D = _w9_spawn("dispatcher", home + Vector3(14.0, 0.0, 10.0))
+	dispatcher._go_live()
+	var dropped: int = dispatcher.drops
+	_combat.strike(dispatcher, "slam", 100000.0)
+	_report("stream_cut", _combat.discovered.has("stream_cut") and dropped > 0,
+		"a Dispatcher that dropped %d chaser(s) was killed" % dropped)
+	for node in [trap, brute, drone, jaw, linker, cup, swatter, dispatcher]:
 		if is_instance_valid(node):
 			node.queue_free()
 
@@ -403,6 +421,10 @@ func _warden_tricks() -> void:
 		# 2026-10-17 (Highdraft roster): a ring-out needs a rim and a gap sling a gap, which this flat
 		# staging lacks; tests/highdraft_roster_test.gd opens each on the stage 5 islands.
 		if id in ["ring_out", "gap_sling"]:
+			continue
+		# 2026-10-22 (weak points 2c): plate_drop needs a fitter at an open hatch mid-fight, which this staging
+		# never sets up; tests/boss_weak_crew_test.gd opens plate_drop on a reel knock-off.
+		if id == "plate_drop":
 			continue
 		# 2026-10-04 (wave 9): detector-pending entries declare a hint but no enemy fires them yet.
 		if CodexEntries.DETECTOR_PENDING.has(id):

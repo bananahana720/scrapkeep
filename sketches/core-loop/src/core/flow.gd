@@ -76,6 +76,14 @@ var boss_row_override := {}
 # another.
 const SCENE_BOSS := "res://src/boss/boss.gd"
 var _row_modules := {}
+# Boss module scripts read ahead on a loader thread while the world's last stage is in its beacon,
+# gates or launch: path -> null while loading, the Script once loaded, false when it failed. The
+# stage exit compiled mind.gd (89 ms on the cloud) and the arena's dress loaded and painted in the
+# same frame, the 4080's 254 to 274 ms boss-entry freeze (scrapkeep#241).
+var _boss_reads := {}
+# By boss script path: whether its warm_arena still has work, the arena's main-thread steps ahead of
+# the entry (a step a physics tick until it returns true; false for a script without one).
+var _boss_warms := {}
 var _home_boss: Node = null
 var _world := 0
 var _launched := false
@@ -83,9 +91,9 @@ var _flight := 0.0
 var _last_percent := -1
 
 # Run saves (RS3): game hands flow a RunStore in play. Every zone entrance is written to it,
-# a death in a world may be retried once, and the second death there ends the run. A flow
-# with no store (the tests and bots that do not opt in) keeps unlimited death retries.
-const WORLD_RETRIES := 1
+# a death ends the run (there is no free retry; the earned save, a part, is the only second
+# chance and run_state spends it before player_died). A flow with no store (the tests and bots
+# that do not opt in) keeps the dead screen and unlimited stage retries.
 var store = null
 # The cause the last store write was refused with ("" when it saved); the run plays on.
 var store_error := ""
@@ -100,7 +108,7 @@ var run_won := false
 var victory_lap := true
 var lap: Node3D = null
 var lap_stats := {}
-# The entrance doc last written, kept so a spent retry rewrites the entrance, never the arena.
+# The entrance doc last written, kept so the earned save's spend rewrites the entrance, never the arena.
 var _entrance := {}
 
 
@@ -117,6 +125,7 @@ func setup(ctx_ref, beacon_ref) -> void:
 	start_card.reroll_requested.connect(reroll_start_pick)
 	start_card.tier_requested.connect(choose_run_tier)
 	ctx.events.player_died.connect(_on_player_died)
+	ctx.run.death_saved.connect(func(_hp: float): _on_death_saved())
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
 	ctx.events.launched.connect(_on_launched)
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
@@ -169,14 +178,60 @@ func _scene_boss() -> Node:
 	return boss if boss != null and boss.has_method("enter_arena") else null
 
 
+# Teardown: a boss script still on its loader thread is collected, and a read-ahead script settles
+# what its prepare_arena started (a quit before the boss entry aborted Godot, exit 134, scrapkeep#322).
+func _exit_tree() -> void:
+	for path in _boss_reads:
+		var script = _boss_reads[path]
+		if script == null and ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			script = ResourceLoader.load_threaded_get(path)
+		if script is Script and script.get_script_method_list().any(func(m): return m.name == "settle_arena"):
+			script.call("settle_arena")
+
+
 func _load_module(path: String) -> Node:
 	if not ResourceLoader.exists(path):
 		warn_once("boss_script_" + path, "flow: boss script %s does not exist" % path)
 		return null
-	var module: Node = load(path).new()
+	var script = _boss_reads.get(path)
+	if not script is Script:
+		script = ResourceLoader.load_threaded_get(path) if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE else null
+	if not script is Script:
+		script = load(path)
+	var module: Node = script.new()
 	add_child(module)
 	module.setup(ctx)
 	return module
+
+
+# On the world's last stage, reads its boss module's script on a loader thread, then lets the
+# script prepare its arena (a static prepare_arena) before the stage exit makes the module.
+func _read_boss_ahead() -> void:
+	if ctx.stages.BOSS == "" or not ctx.stages.is_world_last(ctx.run.stage):
+		return
+	var row: Dictionary = boss_row(ctx.stages.world_of(ctx.run.stage))
+	var path := String(row.get("script", SCENE_BOSS))
+	if not bool(row.get("built", false)) or path == SCENE_BOSS or _row_modules.has(path):
+		return
+	if not _boss_reads.has(path):
+		_boss_reads[path] = null
+		if not ResourceLoader.exists(path) or ResourceLoader.load_threaded_request(path) != OK:
+			_boss_reads[path] = false
+		return
+	if _boss_reads[path] != null:
+		if _boss_reads[path] is Script:
+			if not _boss_warms.has(path):
+				_boss_warms[path] = _boss_reads[path].get_script_method_list().any(func(m): return m.name == "warm_arena")
+			if _boss_warms[path] and _boss_reads[path].call("warm_arena"):
+				_boss_warms[path] = false
+		return
+	var status := ResourceLoader.load_threaded_get_status(path)
+	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		return
+	var script = ResourceLoader.load_threaded_get(path) if status == ResourceLoader.THREAD_LOAD_LOADED else null
+	_boss_reads[path] = script if script is Script else false
+	if script is Script and script.get_script_method_list().any(func(m): return m.name == "prepare_arena"):
+		script.call("prepare_arena")
 
 
 # The boss row that runs at the end of a world. Tests set boss_row_override[world] to stand
@@ -423,16 +478,12 @@ func _apply_tree_picks() -> void:
 		tree.allowed = maxi(allowed, tree.picks.size())
 
 
-# A retry after a death spends the world's one retry; the entrance is saved again with it.
-func _spend_world_retry() -> void:
-	if store == null:
+# The earned save fired: the entrance on disk carries the spent flag, so a quit and Continue
+# cannot hand the save back.
+func _on_death_saved() -> void:
+	if store == null or _entrance.is_empty():
 		return
-	var world: int = ctx.run.world
-	ctx.run.retries_spent[world] = int(ctx.run.retries_spent.get(world, 0)) + 1
-	if _entrance.is_empty():
-		return
-	var spent: Dictionary = _entrance["retries_spent"]
-	spent[str(world)] = int(ctx.run.retries_spent[world])
+	_entrance["death_save_spent"] = true
 	_save(_entrance)
 
 
@@ -498,8 +549,6 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 func retry_stage() -> void:
 	if not ctx.run.has_snapshot() or state == TITLE or state == CLASS_SELECT or state == SUMMARY or state == VICTORY or state == LAP:
 		return
-	if state == DEAD:
-		_spend_world_retry()
 	if in_arena:
 		_retry_arena()
 		return
@@ -529,7 +578,7 @@ func replay_stage(index: int) -> bool:
 
 # After stage 3's launch the run enters the arena instead of the summary. The boss
 # module places the ball; flow then keeps the arena-entry checkpoint (the stage-3-end
-# snapshot), which R restores on the boss death screen.
+# snapshot), which holding R in play restores (storeless flows only; the death screen has no R).
 func enter_boss(carried: Vector3) -> void:
 	var boss := _boss_module()
 	# Combat's arena ground and the music read ctx.boss, so it names the module whose
@@ -715,6 +764,8 @@ func physics_step(delta: float) -> void:
 	if not in_play():
 		return
 	ctx.run.advance(delta)
+	if state == BEACON or state == GATES or state == LAUNCH:
+		_read_boss_ahead()
 	var ball: Vector3 = ctx.player.ball_position()
 	match state:
 		STAGE, BEACON:
@@ -937,7 +988,7 @@ func _on_player_died() -> void:
 		return
 	_death_plating = boss_plating_now() if state == BOSS else -1.0
 	ctx.player.set_frozen(true)
-	if store != null and int(ctx.run.retries_spent.get(ctx.run.world, 0)) >= WORLD_RETRIES:
+	if store != null:
 		_end_run(false)
 		return
 	_set_state(DEAD)

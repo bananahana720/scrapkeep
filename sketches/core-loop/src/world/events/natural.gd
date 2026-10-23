@@ -111,7 +111,7 @@ func setup(world_ref) -> void:
 		var record := {"site": entry.site, "at": entry.at, "geometry": entry.geometry.duplicate(), "overlay": null, "marks": entry.get("marks", {})}
 		if entry.has("water"):
 			record.water_surface = entry.water
-		if row.kind in ["cave_in", "collapse", "impact"]:
+		if row.kind == "cave_in" or row.kind in Kinds.HIDING_NATURAL_KINDS:
 			_prepare_overlay(row, record, entry)
 		_prepared[row.id] = record
 	_plan_marks(planned)
@@ -162,8 +162,10 @@ static func plan(world, park: Dictionary) -> Dictionary:
 
 
 # Each natural row's telegraph and landing marks, projected from its planned geometry (up to about
-# 1 s each for a flash flood's wash, so never on the main thread in play). A landed collapse or
-# impact sits on its own overlay, so its landing mark is always projected live. Pure like plan().
+# 1 s each for a flash flood's wash, so never on the main thread in play). A landed impact sits on
+# its own overlay, so its landing mark is always projected live. A landed collapse's mark sits on
+# its target surface (planned[id].target), which the worker reads like the live _mark does (the
+# flume's hollow trestle took 437 ms on the cloud to project live on its landing tick). Pure like plan().
 static func plan_marks(world, park: Dictionary, planned: Dictionary) -> Dictionary:
 	var out := {}
 	for row in park.event_rows:
@@ -171,7 +173,11 @@ static func plan_marks(world, park: Dictionary, planned: Dictionary) -> Dictiona
 			continue
 		var geometry: Dictionary = planned[row.id].geometry
 		out[row.id] = {"telegraph": _mark_surfaces(world, row, geometry, false, null, true)}
-		if not row.kind in ["collapse", "impact"]:
+		if row.kind == "collapse" and planned[row.id].has("target"):
+			var landed := geometry.duplicate()
+			landed.marker_surface = planned[row.id].target
+			out[row.id].land = _mark_surfaces(world, row, landed, true, null, true)
+		elif row.kind != "impact" and row.kind != "collapse":
 			out[row.id].land = _mark_surfaces(world, row, geometry, true, null, true)
 	return out
 
@@ -228,6 +234,9 @@ func _plan_marks(planned: Dictionary) -> void:
 		if copy.has("marker_surface"):
 			copy.marker_surface = copy.marker_surface.copy()
 		geometry[id] = {"geometry": copy}
+		var record: Dictionary = _prepared[id]
+		if record.get("overlay_map") != null and record.overlay_map.swaps[record.swap].get("target") != null:
+			geometry[id].target = record.overlay_map.swaps[record.swap].target.copy()
 	var out := {}
 	_marks_job = {"key": key, "out": out, "task": WorkerThreadPool.add_task(func(): out.merge(plan_marks(snapshot, park, geometry)), false, "natural marks")}
 
@@ -526,7 +535,9 @@ func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 
 func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	var surfaces: Dictionary = _prepared[row.id].marks.get("land" if landed else "telegraph", {}) if _prepared.has(row.id) else {}
-	if surfaces.is_empty() or not _ground_as_planned():
+	# A landed collapse's own overlay is down by now, and its planned mark already sits on its target.
+	var own: String = _prepared[row.id].get("swap", "") + "_after" if landed and row.kind == "collapse" and _prepared.has(row.id) else ""
+	if surfaces.is_empty() or not _ground_as_planned(surfaces, own):
 		if landed and row.kind == "collapse":
 			geometry = geometry.duplicate()
 			geometry.marker_surface = _overlay_map.swaps[_prepared[row.id].swap].target
@@ -559,19 +570,52 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	return mark
 
 
-# True while the stage's ground is the one the plan projected on: no cave roof lowered and no
-# overlay down that reshapes the ground, so a planned mark matches one projected now.
-func _ground_as_planned() -> bool:
+# True while the ground under a planned mark is the one the plan projected on: no lowered cave roof
+# and no overlay down near it, so the planned mark matches one projected now. A mark reads the ground
+# only in the cells its faces cover and their neighbours (EventGround.project_surface, Surface.height),
+# and a roof or overlay changes it only in its own surface's cells, so a change two cells clear of the
+# mark leaves it as planned. Projecting a mark live costs up to about 250 ms (a flash flood's), and
+# once any roof or overlay was down every later mark of the stage was projected live (scrapkeep#241).
+func _ground_as_planned(surfaces: Dictionary, own := "") -> bool:
+	var changed := []
 	var terrain = world.terrain
-	if "_cave_roofs" in terrain and not EventGround.pristine(terrain, terrain.stage):
-		return false
+	if "_cave_roofs" in terrain:
+		for roof in terrain._cave_roofs.get(terrain.stage - 1, {}).values():
+			if roof.surface != roof.baseline:
+				changed.append(roof.baseline)
 	# The live map, not this handler's: another family's swap (a boiler burst) installs its own.
 	var m = terrain.map()
 	if m is OverlayMap:
 		for id in terrain.overlays:
-			if m.profiles.has(id):
-				return false
+			if m.profiles.has(id) and id != own:
+				changed.append(m.profiles[id].surface)
+	if changed.is_empty():
+		return true
+	var reach := Rect2i()
+	for surface in surfaces.values():
+		reach = _merge_cells(reach, surface)
+	if reach.size == Vector2i.ZERO:
+		return false
+	reach = reach.grow(MARK_GROUND_CELLS)
+	for surface in changed:
+		var cells := _merge_cells(Rect2i(), surface)
+		if cells.size == Vector2i.ZERO or cells.intersects(reach):
+			return false
 	return true
+
+
+# The cells the mark reads beyond its own (the neighbours Surface.height looks in, and one more).
+const MARK_GROUND_CELLS := 2
+
+
+# rect grown to hold every cell of surface (one past its last, so a single cell has size 1).
+static func _merge_cells(rect: Rect2i, surface) -> Rect2i:
+	if surface == null:
+		return rect
+	for cell: Vector2i in surface.cells:
+		var one := Rect2i(cell, Vector2i.ONE)
+		rect = one if rect.size == Vector2i.ZERO else rect.merge(one)
+	return rect
 
 
 # A mark's projected surfaces by node name: Style, CrawlingCrack for a dust crack and Footprint for

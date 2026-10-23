@@ -43,9 +43,18 @@ const DEFAULTS := {
 	"waking.damage_mult": 1.0, "waking.damage_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"waking.period_mult": 1.0, "waking.period_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"waking.tell_mult": 1.0, "waking.punish_mult": 1.0, "waking.combo": 0.0,
+	# phase_min_by_phase: a multiplier on the fight's PHASE_MIN_SECONDS (waking.gd, mind.gd; Brindle's
+	# pattern), the seconds a phase must last before a chunk lost in it opens the next. Until then the bar
+	# fills only to warden.gd HOLD_CAP. One entry per chunk; the last is unused. 0 removes the hold.
+	"waking.phase_min_by_phase": [1.0, 1.0, 1.0, 1.0],
+	# weak_points (stub_boss.gd, weak_points.gd; #241): 0 = off, the fight without it; 1 = the weak-point rule.
+	# Both ship on 0 for wave 18 (#241 6355894644, option b): on 1 the skipper lost the world 2 Waking
+	# (bot_posture_boss_test) and the Expert's median stood near 113 s. Tuning dial 1 is a wave 19 card with the Mind's.
+	"waking.weak_points": 0.0, "mind.weak_points": 0.0,
 	"mind.damage_mult": 1.0, "mind.damage_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"mind.period_mult": 1.0, "mind.period_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"mind.tell_mult": 1.0, "mind.punish_mult": 1.0, "mind.combo": 0.0,
+	"mind.phase_min_by_phase": [1.0, 1.0, 1.0, 1.0],
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
 	"warden.pulse_damage_by_stage": ONES6, "warden.pulse_cycle_by_stage": ONES6, "warden.slag_damage_by_stage": ONES6,

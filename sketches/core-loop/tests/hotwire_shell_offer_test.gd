@@ -112,7 +112,11 @@ func _loot_parity() -> void:
 	# 2026-10-15 SQ19b re-pin: Tally's winch_pawl adds one id and one row (99 and 99); a diff of
 	# this digest's input at base and head shows only the size line and the id list move, with
 	# winch_pawl the one new id, and the five sable pools and 50 rolls unchanged. Was 7bb9a5f9 (PC-POOL).
-	_check("loot parity", digest == "4f7ed07d870028fd06c757379c94bbcb457ae792ea7cd06b48a0c41019d6a8fb", "digest matches the SQ19b pin (2026-10-15: winch_pawl id and row; PC-POOL pin was 7bb9a5f9, SR9 pin was f45eadc3, GP5 pin was a443c521, RR1 pin was e65c5020)")
+	# 2026-10-22 W19 re-pin: the earned save's spare_frame adds one id and one row (100 and 100). It is
+	# rare_plus, so it joins the relic and rare-plus pools and no seeded roll moves. Removing
+	# spare_frame from the id list and those two pools and setting both counts to 99 reproduces
+	# 4f7ed07d byte for byte. Was 4f7ed07d (SQ19b).
+	_check("loot parity", digest == "afb3d540d0f96e945174cb2d8e40662bae4acdac1d9c88ad3e3f0e9e9422fdef", "digest matches the W19 pin (2026-10-22: spare_frame id and row; SQ19b pin was 4f7ed07d, PC-POOL pin was 7bb9a5f9, SR9 pin was f45eadc3, GP5 pin was a443c521, RR1 pin was e65c5020)")
 
 
 func _preview() -> void:

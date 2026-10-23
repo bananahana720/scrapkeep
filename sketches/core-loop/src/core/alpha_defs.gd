@@ -137,6 +137,10 @@ const DEFS := [
 			{"id": "dig_linked", "kinds": ["linker", "drill_crew", "burrower"]},
 			{"id": "dig_shift", "kinds": ["foreman", "drill_crew", "drill_crew", "burrower"]},
 			{"id": "dig_jaws", "kinds": ["pit_jaw", "pit_jaw", "burrower"]},
+			# w18 nemesis packs: a plated rig over a catch cup (plating, cc) and a Dispatcher beside a
+			# mortar (spread, range, fuse), so Sable, Tally, Rivet and Tarn each meet a lean here.
+			{"id": "dig_rig", "kinds": ["plated_brute", "catch_trap", "splitter"]},
+			{"id": "dig_dispatch", "kinds": ["dispatcher", "lobber", "burrower"]},
 		], "elite": DIG_ELITE, "warden_variant": ""},
 	{"stage": 4, "world": 2, "music": {"theme": 1, "ace": "dig_deep"}, "warden_family": "swarm", "name": "Dig: the deep works", "map": "dig_deep", "threat": 1.2,
 		"unlock_base": 4, "ancient": "swarm_remnant",
@@ -150,6 +154,8 @@ const DEFS := [
 			{"id": "deep_linked", "kinds": ["linker", "drill_crew", "lamp_swarm"]},
 			{"id": "deep_shift", "kinds": ["foreman", "drill_crew", "drill_crew", "burrower"]},
 			{"id": "deep_jaws", "kinds": ["pit_jaw", "pit_jaw", "drill_crew", "burrower"]},
+			{"id": "deep_guard", "kinds": ["deflector", "mag_trapper", "dispatcher"]},
+			{"id": "deep_haul", "kinds": ["winch_drone", "splitter", "lamp_swarm"]},
 		], "elite": DIG_ELITE, "warden_variant": "brood"},
 	{"stage": 5, "world": 3, "music": {"theme": 2, "ace": "highdraft"}, "warden_family": "mind", "name": "Highdraft", "map": "highdraft", "threat": 1.3,
 		"unlock_base": 2, "ancient": "mind_hand",
@@ -161,6 +167,11 @@ const DEFS := [
 			{"id": "draft_anchor", "kinds": ["ballast_heavy", "line_cutter"]},
 			{"id": "draft_kites", "kinds": ["kite_drone", "kite_drone", "gap_net"]},
 			{"id": "draft_linked", "kinds": ["linker", "ballast_heavy", "kite_drone"]},
+			# w18: the Highdraft's non-range nemesis packs (anchor_crew stays out: highdraft_roster_test HD-0).
+			{"id": "draft_plate", "kinds": ["foreman", "plated_brute", "catch_trap"]},
+			{"id": "draft_dispatch", "kinds": ["dispatcher", "gap_net", "ballast_heavy"]},
+			# w18: presses the plating axis (Sable, Tally). The Dig cannot take it: its kill-first share would fall under 0.25.
+			{"id": "plate_press_draft", "kinds": ["plated_brute", "swatter"]},
 		], "elite": ELITE_HIGHDRAFT, "warden_variant": ""},
 	{"stage": 6, "world": 3, "music": {"theme": 2, "ace": "highdraft_crown"}, "warden_family": "mind", "name": "Highdraft: the crown", "map": "highdraft_crown", "threat": 1.4,
 		"unlock_base": 4, "ancient": "mind_hand",
@@ -172,6 +183,9 @@ const DEFS := [
 			{"id": "crown_anchor", "kinds": ["ballast_heavy", "ballast_heavy", "line_cutter"]},
 			{"id": "crown_kites", "kinds": ["kite_drone", "kite_drone", "gap_net", "ballast_heavy"]},
 			{"id": "crown_linked", "kinds": ["linker", "ballast_heavy", "line_cutter", "kite_drone"]},
+			{"id": "crown_guard", "kinds": ["dispatcher", "deflector", "gap_net"]},
+			{"id": "crown_trap", "kinds": ["foreman", "mag_trapper", "mag_trapper", "ballast_heavy"]},
+			{"id": "plate_press_crown", "kinds": ["plated_brute", "swatter"]},
 		], "elite": ELITE_HIGHDRAFT, "warden_variant": "choir"},
 ]
 

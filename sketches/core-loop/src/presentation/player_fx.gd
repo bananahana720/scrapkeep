@@ -6,6 +6,7 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Density := preload("res://src/presentation/density.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
 # The player-side effects vfx.gd does not draw (PLAYER-FX.md). Everything here answers a
 # committed fact or the ball's own motion and never decides an outcome (TADR-008).
@@ -23,7 +24,8 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 #   carve      grinding sparks while the ball rides banked ground at speed
 #   column     a rising brass column for a heft class up or a fusion
 #   frame      a 3-frame ink focus-line impact frame on the biggest hits; edge band only,
-#              so the centre and every telegraph stay clear
+#              so the centre stays clear, and it skips every wedge and wash piece that
+#              would cross a hostile warning's screen rect (enemy warnings draw on top)
 # Colour carries the meaning: the pilot's colour is "you did this", brass is growth,
 # the heat ramp is overdrive, element colours are the build.
 
@@ -104,6 +106,9 @@ const SMASH_FRAME_MPS := [32.0, 18.0]
 # An impact frame holds for rendered frames, not seconds: 3 frames is 50 ms at 60 fps.
 const FRAME_FRAMES := 3
 const FRAME_GAP_S := 0.6
+# A warning's box is clipped this far (m) past the camera's near plane, so every crossing
+# point is in front of the lens and projects.
+const NEAR_EPSILON := 0.01
 
 # GPU particle ceilings: pool x max, pinned by player_fx_test.
 const FLECKS := 96
@@ -161,6 +166,9 @@ var _might_wait := 0.0
 var _pin_times: Array = []
 
 
+var _dunk_glow: MeshInstance3D
+
+
 func setup(ctx_ref, vfx_ref = null) -> void:
 	ctx = ctx_ref
 	vfx = vfx_ref
@@ -176,6 +184,7 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	for i in WORD_POOL:
 		_words.append(_make_word())
 	_build_aura()
+	_build_dunk_glow()
 	_build_rim()
 	_flecks = _emitter(_flecks_material(), _box(Vector3(0.12, 0.12, 0.55)), FLECKS, 0.35, "add", false)
 	_flecks.name = "OverdriveFlecks"
@@ -196,8 +205,55 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	layer.layer = 3
 	add_child(layer)
 	_frame = ImpactFrame.new()
+	_frame.rect_source = func() -> Array[Rect2]:
+		return warning_rects(get_tree(), camera.cam if camera != null else null, 0.0)
 	layer.add_child(_frame)
 	_wire()
+
+
+# --- Dunk charge --------------------------------------------------------------------------
+# A placeholder glow while the ball holds a dunk charge (dunk.gd): a soft shell in the pilot's
+# class colour from the charge record, pulsing faster as the window runs out. Effects owns the
+# collar look; this reads the same record, so the restyle swaps the drawing and nothing else.
+
+func _build_dunk_glow() -> void:
+	var mesh := SphereMesh.new()
+	mesh.radius = 1.0
+	mesh.height = 2.0
+	mesh.radial_segments = 12
+	mesh.rings = 6
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mesh.material = mat
+	_dunk_glow = MeshInstance3D.new()
+	_dunk_glow.name = "DunkGlow"
+	_dunk_glow.mesh = mesh
+	_dunk_glow.top_level = true
+	_dunk_glow.visible = false
+	_dunk_glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(_dunk_glow)
+
+
+func dunk_glow_shown() -> bool:
+	return _dunk_glow != null and _dunk_glow.visible
+
+
+func _draw_dunk_glow() -> void:
+	var dunk = player.get("dunk")
+	if _dunk_glow == null or dunk == null or not dunk.held():
+		if _dunk_glow != null:
+			_dunk_glow.visible = false
+		return
+	var record: Dictionary = dunk.charge
+	var urgency := 1.0 - clampf(dunk.left() / dunk.WINDOW, 0.0, 1.0)
+	var pulse := 0.5 + 0.5 * sin(_clock * (6.0 + 10.0 * urgency))
+	var colour: Color = record["color"]
+	colour.a = 0.18 + 0.22 * pulse
+	(_dunk_glow.mesh.material as StandardMaterial3D).albedo_color = colour
+	_dunk_glow.global_transform = Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * (1.25 + 0.12 * pulse)), player.shown_position())
+	_dunk_glow.visible = true
 
 
 # --- Might -------------------------------------------------------------------------------
@@ -631,25 +687,195 @@ func impact_frame(at: Vector3, strength: float) -> bool:
 	return true
 
 
+# The screen rect of every hostile warning, grown by `margin` px: the warning's world box,
+# clipped at the camera's near plane and projected through `cam` (see _project_box); a warning
+# with every corner behind is skipped. The box is the node's own screen_bound_box() when it
+# has one and it is not empty: Telegraph and Hazard cut one at commit from their committed
+# geometry (WarningBound), conservative over everything their painter draws at any progress,
+# so a refresh projects 8 corners per warning and a telegraph walks no meshes; a hostile hazard
+# stepped since its last read walks its own painter's meshes once on the read (lighting L7,
+# #297). A node
+# without one, or whose box is empty (a mark carried off its commit, a finished hazard), falls
+# back to the mesh walk: its visual meshes' world boxes merged into one (see _merge_meshes).
+# `use_bounds` false forces the walk, for the bench and the tests. Reusable by any 2D layer
+# that must not cover warnings. The nodes come from Threat.GROUP, which every hostile mark
+# joins (Telegraph._build for combat telegraphs, Hazard._ready for boss and world-event
+# hazards) and no neutral or owned mark does (a Silo amber ring, a Warden lift).
+static func warning_rects(tree: SceneTree, cam: Camera3D, margin: float, use_bounds := true) -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if tree == null or cam == null:
+		return out
+	for node in tree.get_nodes_in_group(Threat.GROUP):
+		if not (node is Node3D) or not node.is_visible_in_tree():
+			continue
+		var span := [Vector2(INF, INF), Vector2(-INF, -INF)]
+		var cached := AABB()
+		if use_bounds and node.has_method("screen_bound_box"):
+			cached = node.screen_bound_box()
+		if cached.size != Vector3.ZERO:
+			_project_box(cached, cam, span)
+		else:
+			var merged := [AABB(), false]
+			_merge_meshes(node, merged)
+			if merged[1]:
+				_project_box(merged[0], cam, span)
+		if span[0].x <= span[1].x:
+			out.append(Rect2(span[0], span[1] - span[0]).grow(margin))
+	return out
+
+
+# Grows `merged` ([box, any]) by the world box of every visible mesh under `node`. One box
+# per warning means 8 projections instead of 8 per mesh. The merged box holds every mesh's
+# box, so its screen rect is conservative: with the near-plane clip in _project_box it covers
+# the whole on-screen footprint of every mesh, and a warning stays protected.
+static func _merge_meshes(node: Node, merged: Array) -> void:
+	for child in node.get_children():
+		if child is Node3D and not child.visible:
+			continue
+		if child is VisualInstance3D:
+			var box: AABB = child.get_aabb()
+			if box.size != Vector3.ZERO:
+				var world: AABB = child.global_transform * box
+				merged[0] = world.merge(merged[0]) if merged[1] else world
+				merged[1] = true
+		_merge_meshes(child, merged)
+
+
+# Grows span (low, high) by the screen footprint of `box`: the 8 corners in front of the
+# camera, and where each of the 12 edges crosses a plane just beyond the near plane. A box
+# that crosses the near plane reaches the screen edge nearest the camera (the bottom, where
+# the frame's band draws), and the crossing points are what put that part in the rect. A
+# box with every corner behind adds nothing.
+static func _project_box(box: AABB, cam: Camera3D, span: Array) -> void:
+	var forward := -cam.global_transform.basis.z
+	var origin := cam.global_transform.origin
+	var plane := cam.near + NEAR_EPSILON
+	var corners: Array[Vector3] = []
+	var depths: Array[float] = []
+	var in_front := 0
+	for c in 8:
+		var corner: Vector3 = box.position + box.size * Vector3(c & 1, (c >> 1) & 1, (c >> 2) & 1)
+		corners.append(corner)
+		depths.append((corner - origin).dot(forward))
+		if depths[c] > plane:
+			in_front += 1
+			_grow_span(span, cam.unproject_position(corner))
+	# Edges only cross the plane when some corners are in front and some are not; a box wholly
+	# in front (the common case) or wholly behind has no crossing to add.
+	if in_front == 0 or in_front == 8:
+		return
+	# The edges join corners that differ in one bit.
+	for c in 8:
+		for bit in [1, 2, 4]:
+			var other: int = c | bit
+			if other == c or (depths[c] > plane) == (depths[other] > plane):
+				continue
+			var t: float = (plane - depths[c]) / (depths[other] - depths[c])
+			_grow_span(span, cam.unproject_position(corners[c].lerp(corners[other], t)))
+
+
+static func _grow_span(span: Array, at: Vector2) -> void:
+	span[0] = span[0].min(at)
+	span[1] = span[1].max(at)
+
+
 # Manga focus lines: ink wedges pointing at the hit from the screen edge, only in the outer
-# BAND of the screen, so the hit, the ball and every telegraph inside stay readable.
+# BAND of the screen, so the hit, the ball and every telegraph inside stay readable. The
+# frame also yields at the edge: a pixel inside a live telegraph's screen rect, grown by
+# YIELD_MARGIN_PX, is discarded by the frame's shader, because enemy warnings always draw on
+# top of player effects (Andrew, 17 Oct 16:36Z; RENDER_PRIORITY above). The frame is a 2D
+# layer that no 3D render priority can sort under, so it steps out of the way on the GPU:
+# the CPU draws every wedge and wash quad and uploads only the rects.
 class ImpactFrame:
 	extends Control
 
 	const LINES := 56
 	# Lines live only in this share of the screen's short side, measured in from the edge.
 	const BAND := 0.2
+	# A wedge's half-width in px runs 5 to 16 at full strength (before the strength scale).
+	const WEDGE_WIDTH_MIN := 5.0
+	const WEDGE_WIDTH_MAX := 16.0
+	# The room left around a warning is the widest wedge half-width, so no wedge edge sits
+	# closer to a warning than the wedge is wide.
+	const YIELD_MARGIN_PX := WEDGE_WIDTH_MAX
+	# The shader's rect array. More live warnings than this and the frame cannot promise to
+	# stay off all of them, so it draws nothing for that refresh (overflow_hides).
+	const MAX_RECTS := 64
+	# The rects arrive in the Control's local px: the Control is full-rect at the origin of a
+	# CanvasLayer with an identity transform, and Camera3D.unproject_position answers in the
+	# viewport's own px, the same space get_viewport_rect() sizes the Control in, so the
+	# canvas_items content scale applies to both alike. The varying carries the local VERTEX,
+	# not FRAGCOORD, so the window's y origin and scale do not matter.
+	const YIELD_SHADER := """
+shader_type canvas_item;
+uniform vec4 rects[64];
+uniform int rect_count = 0;
+uniform float margin = 0.0;
+varying vec2 local;
 
+void vertex() {
+	local = VERTEX;
+}
+
+void fragment() {
+	for (int i = 0; i < rect_count; i++) {
+		vec4 r = rects[i];
+		if (local.x > r.x - margin && local.x < r.x + r.z + margin && local.y > r.y - margin && local.y < r.y + r.w + margin) {
+			discard;
+		}
+	}
+}
+"""
 	var _focus := Vector2.ZERO
 	var _strength := 0.0
 	var _heat := 0.0
 	var _left := 0
 	var _seed := 0
+	# Answers with the live warning rects, ungrown (PlayerFx.warning_rects on the game camera
+	# with margin 0; the shader grows them); set by the owner: a bare warning_rects() call
+	# from in here is a parse error ("not found in base self"), so the outer class hands the
+	# function in.
+	var rect_source := Callable()
+	var _rects: Array[Rect2] = []
+	var _uniform_rects := PackedVector4Array()
+	var _material: ShaderMaterial
+	# Pieces drawn by the last draw, for tests; a refresh past MAX_RECTS draws none.
+	var drawn := 0
+	var overflow_hides := 0
+	var _overflowed := false
+	# What a live frame costs, for the stress capture and the tests, in microseconds summed and
+	# worst. A rect call is one refresh (the source and the uniform upload), made on every
+	# live frame; a shape call is one build and draw of the pieces, made once per fire. A
+	# frame that is not alive never refreshes or draws, so these stay put
+	# (impact_frame_cost_test).
+	var rect_calls := 0
+	var rect_usec := 0
+	var rect_usec_max := 0
+	var shape_calls := 0
+	var shape_usec := 0
+	var shape_usec_max := 0
+	# The viewport size the pieces were drawn for.
+	var _drawn_size := Vector2.ZERO
 
 	func _ready() -> void:
 		set_anchors_preset(Control.PRESET_FULL_RECT)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		visible = false
+		_ensure_material()
+
+	# Built once per frame, here or on the first rects, so a frame never in a tree can be fed.
+	func _ensure_material() -> void:
+		if _material != null:
+			return
+		var shader := Shader.new()
+		shader.code = YIELD_SHADER
+		_uniform_rects.resize(MAX_RECTS)
+		_material = ShaderMaterial.new()
+		_material.shader = shader
+		_material.set_shader_parameter("margin", YIELD_MARGIN_PX)
+		_material.set_shader_parameter("rect_count", 0)
+		_material.set_shader_parameter("rects", _uniform_rects)
+		material = _material
 
 	func fire(focus: Vector2, strength: float, seed_value: int, heat_value := 0.0) -> void:
 		_focus = focus
@@ -660,6 +886,7 @@ class ImpactFrame:
 		position = Vector2.ZERO
 		size = get_viewport_rect().size
 		visible = true
+		_refresh_rects()
 		queue_redraw()
 
 	func hide_now() -> void:
@@ -675,15 +902,83 @@ class ImpactFrame:
 		_left -= 1
 		if _left <= 0:
 			visible = false
+		else:
+			# Warnings and the camera move while the frame lives, so the rects are sent again.
+			# The pieces depend only on what fire() set and the viewport size, so the canvas
+			# keeps its draw commands; a resized viewport redraws (checked per frame).
+			_refresh_rects()
+			if get_viewport_rect().size != _drawn_size:
+				size = get_viewport_rect().size
+				queue_redraw()
+
+	func _refresh_rects() -> void:
+		var began := Time.get_ticks_usec()
+		apply_rects(rect_source.call() if rect_source.is_valid() and is_inside_tree() else ([] as Array[Rect2]))
+		var cost := Time.get_ticks_usec() - began
+		rect_calls += 1
+		rect_usec += cost
+		rect_usec_max = maxi(rect_usec_max, cost)
+
+	# Takes the warning rects: keeps them and writes them to the shader. More than MAX_RECTS
+	# cannot be written whole, so the frame hides itself while they overflow, and draws
+	# again (a redraw, since an overflowed fire drew nothing) once they fit.
+	func apply_rects(found: Array) -> void:
+		_ensure_material()
+		var was_overflowed := _overflowed
+		_overflowed = found.size() > MAX_RECTS
+		if _overflowed:
+			overflow_hides += 1
+			_rects = []
+			_material.set_shader_parameter("rect_count", 0)
+			visible = false
+			return
+		if _left > 0:
+			visible = true
+			if was_overflowed:
+				queue_redraw()
+		_rects.assign(found)
+		for k in found.size():
+			var r: Rect2 = found[k]
+			_uniform_rects[k] = Vector4(r.position.x, r.position.y, r.size.x, r.size.y)
+		_material.set_shader_parameter("rects", _uniform_rects)
+		_material.set_shader_parameter("rect_count", found.size())
+
+	# The shader's test in GDScript, for the tests: whether a local px point is discarded by
+	# the first `count` rects grown by `margin`. A point exactly on the grown edge stays.
+	static func _yields(point: Vector2, rects: Array, count: int, margin: float) -> bool:
+		for k in mini(count, rects.size()):
+			var r: Rect2 = rects[k]
+			if point.x > r.position.x - margin and point.x < r.end.x + margin and point.y > r.position.y - margin and point.y < r.end.y + margin:
+				return true
+		return false
 
 	func _draw() -> void:
-		var rect := get_viewport_rect().size
+		drawn = 0
+		if _overflowed:
+			return
+		var began := Time.get_ticks_usec()
+		_drawn_size = get_viewport_rect().size
+		for shape in _shapes(_drawn_size):
+			drawn += 1
+			if shape.has("colors"):
+				draw_polygon(shape["poly"], shape["colors"])
+			else:
+				draw_colored_polygon(shape["poly"], shape["color"])
+		var cost := Time.get_ticks_usec() - began
+		shape_calls += 1
+		shape_usec += cost
+		shape_usec_max = maxi(shape_usec_max, cost)
+
+	# Every piece the frame is made of, in draw order: {poly, colors} for the wash and
+	# {poly, color} for a wedge.
+	func _shapes(rect: Vector2) -> Array:
+		var out := []
 		var band := minf(rect.x, rect.y) * BAND
 		var focus := _focus.clamp(Vector2.ZERO, rect)
 		var rng := RandomNumberGenerator.new()
 		rng.seed = _seed
 		if _heat > 0.0:
-			_draw_wash(rect, band)
+			_wash_shapes(out, rect, band)
 		for i in int(LINES * _strength):
 			var angle := TAU * (float(i) + rng.randf() * 0.8) / float(LINES * _strength)
 			var dir := Vector2(cos(angle), sin(angle))
@@ -700,7 +995,7 @@ class ImpactFrame:
 			if exit == INF or exit < 1.0:
 				continue
 			var inner := maxf(0.0, exit - band * rng.randf_range(0.5, 1.0))
-			var width := rng.randf_range(5.0, 16.0) * (0.6 + 0.4 * _strength)
+			var width := rng.randf_range(WEDGE_WIDTH_MIN, WEDGE_WIDTH_MAX) * (0.6 + 0.4 * _strength)
 			var side := Vector2(-dir.y, dir.x) * width
 			var tip := focus + dir * inner
 			var outer := focus + dir * (exit + width * 2.0)
@@ -711,25 +1006,28 @@ class ImpactFrame:
 			if accent:
 				ink = Color(1, 1, 1, 0.5).lerp(Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.9), _heat)
 				ink.a = FlashGuard.alpha(ink.a)
-			draw_colored_polygon(PackedVector2Array([tip, outer + side, outer - side]), ink)
+			out.append({"poly": PackedVector2Array([tip, outer + side, outer - side]), "color": ink})
+		return out
 
 	# A hot build's edge wash: the screen edge dips dark, glows heat orange halfway in and
 	# fades to nothing before the middle, so the build's heat and weight read on every grown
 	# hit and the centre stays clear.
-	func _draw_wash(rect: Vector2, band: float) -> void:
+	func _wash_shapes(out: Array, rect: Vector2, band: float) -> void:
 		var dark := Color(INK.r, INK.g, INK.b, 0.8 * _heat)
 		var hot := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, FlashGuard.alpha(0.4 * _heat))
 		var clear := Color(hot.r, hot.g, hot.b, 0.0)
-		_ring(rect, 0.0, band * 0.6, dark, hot)
-		_ring(rect, band * 0.6, band, hot, clear)
+		_ring_shapes(out, rect, 0.0, band * 0.6, dark, hot)
+		_ring_shapes(out, rect, band * 0.6, band, hot, clear)
 
 	# A screen-edge ring from `outer` to `inner` pixels in, shaded from one colour to the other.
-	func _ring(rect: Vector2, outer: float, inner: float, from: Color, to: Color) -> void:
+	# Each side is one trapezoid keeping the side's four vertex colours.
+	func _ring_shapes(out: Array, rect: Vector2, outer: float, inner: float, from: Color, to: Color) -> void:
 		var o := [Vector2(outer, outer), Vector2(rect.x - outer, outer), rect - Vector2(outer, outer), Vector2(outer, rect.y - outer)]
 		var i := [Vector2(inner, inner), Vector2(rect.x - inner, inner), rect - Vector2(inner, inner), Vector2(inner, rect.y - inner)]
+		var colors := PackedColorArray([from, from, to, to])
 		for k in 4:
 			var n := (k + 1) % 4
-			draw_polygon(PackedVector2Array([o[k], o[n], i[n], i[k]]), PackedColorArray([from, from, to, to]))
+			out.append({"poly": PackedVector2Array([o[k], o[n], i[n], i[k]]), "colors": colors})
 
 
 # --- Aura --------------------------------------------------------------------------------
@@ -1106,5 +1404,6 @@ func _process(delta: float) -> void:
 		else:
 			_draw_word(w)
 	_draw_aura(delta)
+	_draw_dunk_glow()
 	_draw_overdrive(delta)
 	_draw_carve()

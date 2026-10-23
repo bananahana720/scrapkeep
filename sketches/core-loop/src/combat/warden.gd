@@ -7,6 +7,7 @@ const Habits := preload("res://src/combat/habits.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 
 # The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
 # it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
@@ -76,6 +77,8 @@ const LIFT_REACH_UP := 8.0
 const GUARD_RESPAWN := 10.0
 const GUARD_OFFSET := 9.0
 const GUARD_RACK_POSTURE := 25.0
+# The most posture a held Warden shows: floors to 99 on the bar, below the stagger line.
+const HOLD_CAP := BossPosture.FULL - 0.5
 const FAMILY_POINT_RADIUS := 1.3
 const FAMILY_REACH := 3.2
 const FAMILY_POINTS := {Roster.REACTOR: "core", Roster.SWARM: "queen", Roster.MIND: "lens"}
@@ -156,6 +159,9 @@ var _guard_wait := 0.0
 var _charge_len := PULSE_TELEGRAPH
 var _posture: BossPosture
 var _armed := 0.0
+# How many on_struck calls are inside _apply_posture with a judged result (see _apply_posture). A depth, not a
+# flag, so a strike nested inside another strike's posture cannot clear the outer one's mark.
+var _judged := 0
 var _guard_scatter_frame := -1
 var _guard_paid_scatters := 0
 var _slag_burn := 0.0
@@ -317,10 +323,16 @@ func contact_part(ball: Vector3, hit_kind: String) -> String:
 	return ""
 
 
-func on_struck(hit_kind: String, _part: String, result: Dictionary) -> void:
+func on_struck(hit_kind: String, part: String, result: Dictionary) -> void:
 	if variant == "choir" and family_open() and not braced_kinds.is_empty() and not hit_kind in braced_kinds and fleet != null:
 		fleet.discover("choir_switch", family_point_at())
+	var weak_judge = spec.get("weak_judge")
+	if weak_judge is Callable and weak_judge.is_valid() and not staggered():
+		result = weak_judge.call(result, part, hit_kind)
+	# The judge has answered: _apply_posture must not ask it again.
+	_judged += 1
 	_apply_posture(result)
+	_judged -= 1
 
 
 func _physics_process(delta: float) -> void:
@@ -870,6 +882,7 @@ func chunk_cracked() -> bool:
 # What the rule says a hit does. The judge meets the plating this kind and part meet
 # (plating_for: the choir brace, the open point), so combat.resolve passes the part (F004).
 func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "") -> Dictionary:
+	_posture.set_monster(monster_build())
 	var result := _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating_for(hit_kind, part), "smash": smash, "tier": tier,
 			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp, "point": family_point()})
 	if hit_kind == "guard_rack":
@@ -881,7 +894,54 @@ func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "
 	return result
 
 
+# The run's heft: from the fleet's run, else from a spec "heft" Callable (an arena Warden has no
+# fleet: the stub boss hands one in), else 0.0, so a Warden with no heft source is never a monster.
+func pilot_heft() -> float:
+	var run = fleet.ctx.run if fleet != null and fleet.ctx != null else null
+	if run != null and run.has_method("heft"):
+		return float(run.heft())
+	var source = spec.get("heft")
+	if source is Callable and source.is_valid():
+		return float(source.call())
+	return 0.0
+
+
+# The heft a pilot must be strictly above to be a monster build here: the spec's "monster_heft", else
+# the library's top-bucket maximum for this fight's stage (MonsterHeft), else INF (never a monster).
+func monster_threshold() -> float:
+	var given = spec.get("monster_heft")
+	if given is float or given is int:
+		return float(given)
+	var run = fleet.ctx.run if fleet != null and fleet.ctx != null else null
+	if run != null and "stage" in run:
+		return MonsterHeft.threshold_for_stage(int(run.stage))
+	if spec.has("stage"):
+		return MonsterHeft.threshold_for_stage(int(spec["stage"]))
+	return INF
+
+
+func monster_build() -> bool:
+	return pilot_heft() > monster_threshold()
+
+
 func _apply_posture(result: Dictionary) -> void:
+	# A boss at weak-point dial 1 (spec "weak_judge_all") judges every posture hit, including one that skips
+	# on_struck (the ultimate's set piece, ultimate.gd warden_posture). Off, this is never reached.
+	if spec.get("weak_judge_all", false) and _judged == 0 and not _posture.staggered:
+		var weak_judge = spec.get("weak_judge")
+		if weak_judge is Callable and weak_judge.is_valid():
+			result = weak_judge.call(result, "", "")
+	# A boss module's phase-minimum hold (stub_boss.gd hold_active): the hit lands in full but the bar
+	# stops at HOLD_CAP, so no stagger starts before the hold ends. A hit that would have gained still
+	# restarts the drain clock, so a pressed bar stays full.
+	var hold = spec.get("posture_hold")
+	if hold is Callable and hold.is_valid() and not _posture.staggered and hold.call():
+		result = result.duplicate()
+		if float(result.get("gain", 0.0)) > 0.0:
+			_posture.idle = 0.0
+		result["gain"] = clampf(float(result.get("gain", 0.0)), 0.0, maxf(0.0, HOLD_CAP - _posture.posture))
+		result["crack"] = false
+		result["shatter"] = false
 	var before := _posture_signature()
 	var was_staggered := _posture.staggered
 	var chunks_before: int = _posture.chunks

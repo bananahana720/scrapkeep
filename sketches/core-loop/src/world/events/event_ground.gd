@@ -10,6 +10,8 @@ class Surface:
 	extends RefCounted
 	var mesh: ArrayMesh
 	var vertices := PackedVector3Array()
+	# The normals the mesh was built with, kept so lowering a roof never reads them back.
+	var normals := PackedVector3Array()
 	var cells := {}
 	# A surface a worker projected carries its mesh arrays here until finish() builds the mesh on
 	# the main thread (no worker touches the rendering server).
@@ -25,6 +27,7 @@ class Surface:
 	func copy() -> Surface:
 		var out := Surface.new()
 		out.vertices = vertices.duplicate()
+		out.normals = normals.duplicate()
 		out.cells = cells.duplicate(true)
 		return out
 	func height(point: Vector2) -> float:
@@ -61,6 +64,12 @@ class OverlayMap:
 		if is_instance_valid(entry.before):
 			entry.before.position = entry.before_home + Vector3.DOWN * Gorge.SWAP_PARK if changed else entry.before_home
 			entry.before.visible = false if changed else entry.before_visible
+		# Rows that declared hide_on for this swap's event leave the way the site row does: parked down with their
+		# own collider (the StaticBody3D is a child of the Park_ node), then home again on revert.
+		for hidden in entry.get("hidden", []):
+			if is_instance_valid(hidden.node):
+				hidden.node.position = hidden.home + Vector3.DOWN * Gorge.SWAP_PARK if changed else hidden.home
+				hidden.node.visible = false if changed else hidden.visible
 	func cave_height(x: float, z: float) -> float:
 		for entry in swaps.values():
 			if entry.get("cave", false):
@@ -250,6 +259,7 @@ static func project_surface(world, geometry: Dictionary, shapes: Array, offset :
 
 static func mesh_surface(surface: Surface, normals: PackedVector3Array, mesh: ArrayMesh = null, deferred := false) -> Surface:
 	var vertices := surface.vertices
+	surface.normals = normals
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
@@ -367,16 +377,35 @@ static func roof_body(owner: Node, surface: Surface, single_collider := true) ->
 	body.add_child(view)
 	if single_collider:
 		var collider := CollisionShape3D.new()
-		collider.shape = surface.mesh.create_trimesh_shape()
+		collider.shape = trimesh(surface)
 		body.add_child(collider)
 	owner.add_child(body)
 	return {"body": body, "baseline": surface, "surface": surface}
 
 
+# The collider a surface's mesh would give (Mesh.create_trimesh_shape), built from the vertices it
+# was made from (mesh_surface indexes them in order as a triangle list), snapped to 0.1 mm as the
+# engine's triangle mesh snaps them (equal on 30,000 random vertices). Reading a mesh back stalls a
+# real GPU until every frame in flight is done (the headless renderer copies it for free), and a
+# collapse fill or a cave-in drop made one every physics tick.
+const TRIMESH_SNAP := Vector3(0.0001, 0.0001, 0.0001)
+
+static func trimesh(surface: Surface) -> ConcavePolygonShape3D:
+	if surface.vertices.is_empty():
+		return null
+	var faces := PackedVector3Array()
+	faces.resize(surface.vertices.size())
+	for k in surface.vertices.size():
+		faces[k] = surface.vertices[k].snapped(TRIMESH_SNAP)
+	var shape := ConcavePolygonShape3D.new()
+	shape.set_faces(faces)
+	return shape
+
+
 static func lower_roof(roof: Dictionary, drop: float) -> void:
 	var surface := Surface.new()
 	surface.cells = roof.baseline.cells
-	var normals: PackedVector3Array = roof.baseline.mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
+	var normals: PackedVector3Array = roof.baseline.normals
 	for vertex: Vector3 in roof.baseline.vertices:
 		surface.vertices.append(vertex + Vector3.DOWN * drop)
 	roof.surface = mesh_surface(surface, normals)
@@ -386,7 +415,36 @@ static func lower_roof(roof: Dictionary, drop: float) -> void:
 			if collider.has_meta("home"):
 				collider.position = collider.get_meta("home") + (Vector3.ZERO if collider.has_meta("retained") else Vector3.DOWN * drop)
 			else:
-				collider.shape = surface.mesh.create_trimesh_shape()
+				collider.shape = trimesh(surface)
+
+
+# The placed nodes of every park row that names this event in hide_on, found once here and kept on the swap entry.
+static func hidden_rows(world, event_id: String) -> Array:
+	var out := []
+	var park = world.terrain.map().get("park")
+	if not park is Dictionary or not world.terrain.has_method("geometry_root"):
+		return out
+	var root: Node = world.terrain.geometry_root(world.terrain.stage)
+	for park_row in park.get("park_rows", []):
+		if String(park_row.get("hide_on", "")) != event_id:
+			continue
+		var node := root.find_child("Park_" + str(park_row.id), true, false) as Node3D
+		if node != null:
+			out.append({"node": node, "home": node.position, "visible": node.visible})
+	return out
+
+
+# A second event on a live swap key adds its hide_on nodes only while the swap is idle, and never the same node twice:
+# a node added mid-swap would record its parked home and stay hidden after the last revert.
+static func _share_hidden(entry: Dictionary, found: Array, id: String) -> void:
+	if not entry.has("hidden") or found.is_empty():
+		return
+	if not entry.owners.is_empty():
+		push_warning("event_ground: swap %s is live, so its new hide_on rows are skipped" % id)
+		return
+	for item in found:
+		if not entry.hidden.any(func(have): return have.node == item.node):
+			entry.hidden.append(item)
 
 
 # prepared holds surfaces the caller projected ahead (natural.gd plan: "surface", "target") and the
@@ -398,6 +456,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	var current = world.terrain.map()
 	var overlay_map: OverlayMap = current if current is OverlayMap else null
 	if overlay_map != null and overlay_map.swaps.has(id):
+		_share_hidden(overlay_map.swaps[id], hidden_rows(world, str(row.id)), id)
 		record.overlay = overlay_map.swaps[id].body
 		record.swap = id
 		record.overlay_map = overlay_map
@@ -447,7 +506,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	view.mesh = surface.mesh
 	view.material_override = Palette.ground_material()
 	var collider := CollisionShape3D.new()
-	collider.shape = prepared.get("shape", null) if prepared.has("shape") else surface.mesh.create_trimesh_shape()
+	collider.shape = prepared.get("shape", null) if prepared.has("shape") else trimesh(surface)
 	if not prepared.is_empty():
 		prepared["shape"] = collider.shape
 	body.add_child(view)
@@ -459,6 +518,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	overlay_map.swaps[id] = {"body": body, "home": body.position, "before": before,
 		"before_home": before.position if is_instance_valid(before) else Vector3.ZERO,
 		"before_visible": before.visible if is_instance_valid(before) else false, "owners": {},
+		"hidden": hidden_rows(world, str(row.id)),
 		"baseline": surface, "geometry": geometry, "progress": 0.0, "collapse": kind == "collapse"}
 	if kind == "collapse":
 		overlay_map.swaps[id].target = prepared.target if prepared.has("target") else collapse_target.call(row, geometry, surface)
@@ -494,7 +554,7 @@ static func overlay_surface(world, kind: String, geometry: Dictionary, deferred 
 static func install_surface(overlay_map: OverlayMap, id: String, surface: Surface) -> void:
 	var body: StaticBody3D = overlay_map.swaps[id].body
 	body.get_child(0).mesh = surface.mesh
-	body.get_child(1).shape = surface.mesh.create_trimesh_shape()
+	body.get_child(1).shape = trimesh(surface)
 	overlay_map.profiles[id + "_after"].surface = surface
 
 
@@ -518,6 +578,10 @@ static func set_overlay(world, row: Dictionary, record: Dictionary, changed: boo
 			if is_instance_valid(entry.before):
 				entry.before_home = entry.before.position
 				entry.before_visible = entry.before.visible
+			for hidden in entry.get("hidden", []):
+				if is_instance_valid(hidden.node):
+					hidden.home = hidden.node.position
+					hidden.visible = hidden.node.visible
 			overlay_map.apply_swap(id, true)
 			overlays.erase(id + "_before")
 			if not entry.had_after:

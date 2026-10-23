@@ -104,6 +104,7 @@ Every number there is a starting value; tuning edits `stage_defs.gd`, the heft c
 These fields and methods are readable:
 
 - `class_def`, a `ClassDef` resource with `id`, `display_name`, `weapon_id`, `special_id`, `color` and `pitch`.
+- `death_save_hook` (Callable() -> the hull to live on at, or 0.0 when no earned save is held; run once per lethal hit before `player_died`), the `death_saved(hp)` signal it raises and the `death_save_spent` run-doc field (once per run, survives a save and Continue, never goes back to false), like `ward_hook` and `deflect_hook` beside it in `run_state.gd`.
 - `run_id`, `stage`, `hp`, `max_hp`, `cogs` (the spend wallet), `scrap` (the old wallet, now a tally nothing in build spends), `mass`, `parts` (an array of part ids, one entry per stack), `bonus_cores`, `kills`, `events_won`, `run_time`, `stage_time` and `retries`.
 - `heft()`, which is `1 + mass * HEFT_PER_MASS + HEFT_PER_PART * parts.size()`, currently `1 + mass/450 + 0.2 * parts.size()`.
 - `heft_class()`, which returns 1 to 5 (classes start at heft 1.0, 1.5, 2.2, 3.2 and 4.6), and `heft_progress()`, the share of the way to the next class.
@@ -127,6 +128,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `stage_entered` | `stage: int, retry: bool` | spine flow | a stage began or was retried; reset stage content now |
 | `stage_cleared` | `stage: int` | spine flow | the launch flight ended and the stage is done |
 | `run_ended` | `won: bool` | spine flow | the run finished (summary) |
+| `death_saved` | `hp: float` | `run_state` | the earned save caught a lethal hit; flow writes `death_save_spent` to the entrance doc (`_on_death_saved`) |
 | `beacon_charge_changed` | `fraction: float` | spine flow | beacon charge, 0 to 1; while sealed, the share of the Warden broken; exactly `1.0` once per stage when the gates open |
 | `beacon_unsealed` | `stage: int` | spine flow | the Warden broke; the gates open wherever the ball is |
 | `warden_engaged` | `stage: int` | spine flow | first sealed ring entry or first strike on the Warden, once per stage attempt |
@@ -266,12 +268,14 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
 ## Ball hooks (`src/movement/player_ball.gd`)
 
 - `juice_node() -> Node3D` belongs to presentation. It follows the ball and never rotates. Scale it for squash and stretch, and parent trails or speed lines to it. The spine never writes it.
-- `roll_node() -> Node3D` rolls with the ball's surface. Parent anything that should stick to the ball there, such as accreted scrap (B). The shell may grow visually; the collider never does.
+- `pod_mount() -> Node3D` sits beside the juice node and takes only its position, never its basis. The cockpit pod parents here, so squash, stretch and heft never scale the pilot (MOTION-SPEC row 204).
+- `roll_node() -> Node3D` rolls with the ball's surface. Parent anything that should stick to the ball there, such as accreted scrap (B). The drawn outline stays the collider's size at every heft class (DECISIONS, 22 Oct, fixed outline).
 - `pylon_node() -> Node3D` is the drawn pylon, for plant and eject animation.
 - `builtin_squash: bool` is the spine's landing squash. Presentation sets it false when it draws its own.
 - `speed_tier() -> int` (0 walk, 1 cruise, 2 fast, 3 blazing), `speed_fraction() -> float`, `shown_position()`, `planar_velocity()`, `ball_position()`.
 - `state` (`BallState`: `velocity`, `grounded`, `contact_normal`, `impact`, `tier`) and `kit` (`AugmentKit`: `mounted`, `mount_banked`, `mount_point`, `mount_normal`, `hooked`, `gliding`, `slamming`) are read-only.
 - `intent` holds this tick's input. Combat reads `fire_pressed`, `fire_held` and `special_pressed`. The spine fills it.
+- `touch_body(body, normal = Vector3.ZERO)` reports a contact the ball's own `enemy_touched` never sees, such as a boss weak part outside the `enemy` group, and runs the ordinary contact. `normal` points from the body to the ball, full 3D; omitted or zero, it is derived as RigidBall derives it, so a drop from above stomps; a given normal is normalized. A freed body is ignored.
 - `add_external_accel(accel)` adds a push in m/s², accumulated per physics tick and spent once. It does nothing while the ball is planted, mounted or frozen, and `set_frozen(true)` and `reset_to` drop any push already handed over, so a killing blow's shove never reaches the retry. Its users:
   - the world, for the flood;
   - combat, for the shove of a committed, telegraphed hit;
@@ -288,8 +292,8 @@ Juice follows the player's actions and must never hide the next threat. Keep pun
 - **The boss flow.**
   - **Arena entry.** After stage 3's launch flight, flow emits `stage_cleared(3)`. If `ctx.boss` exists it then enters `boss`, calls `ctx.boss.enter_arena(entry_velocity)` with the ball's velocity, and keeps an arena-entry checkpoint (the stage-3-end snapshot) once the call returns. The boss module builds its arena under `ctx.root`, places the ball keeping that velocity (entry must keep speed within 15%), and emits `boss_arena_entered`. The world's terrain API and the stage fall rescue are not used in the arena; the arena rescue (E's `floor_y()` and `rescue_point()`, below) is.
   - **Win.** `boss_defeated` in `boss` leads to `victory` for 2.5 s, then the summary and `run_ended(true)`.
-  - **Death.** A death in `boss` leads to `dead`. There, R (or holding R in play) restores the arena-entry checkpoint and calls `enter_arena` again, T calls `replay_stage(3)` and restores the first stage-3 start the run kept, and N starts a new run.
-  - **Boss seams.** The boss module sets `ctx.flow.boss_active` and `ctx.flow.boss_plating` (hull plating 120) on entry. The death screen reads them for its gap line and for offering T. `flow.in_arena` is read-only.
+  - **Death.** A death in `boss` leads to `dead` only in a storeless flow (tests and bots); a store-bearing game ends the run on the summary. In a storeless flow, holding R in play restores the arena-entry checkpoint and calls `enter_arena` again; on the storeless death screen R does nothing, T calls `replay_stage(3)` and restores the first stage-3 start the run kept, and N starts a new run.
+  - **Boss seams.** The boss module sets `ctx.flow.boss_active` and `ctx.flow.boss_plating` (hull plating 120) on entry. The storeless death screen reads them for its gap line and for offering T. `flow.in_arena` is read-only.
   - **Live boss reads (owner: E).** The boss module implements `live_plating() -> float`, the plating of whatever stands in the way right now (150 in a charge, 0 in a stun, the scooter's in the chase), and `objective_text() -> String`, the objective for the current phase ("" to use the standing one). Flow reads both through `boss_plating_now()` for the objective line and the death gap line; the gap line keeps the plating live at the moment of death. Without them flow falls back to `boss_plating` and the standing objective.
   - **Arena fall rescue (owner: E, the boss module).** The boss module implements `floor_y() -> float` and `rescue_point() -> Vector3`. Every tick in `boss`, flow checks the ball against `floor_y()`. Below it, flow puts the ball at `rescue_point()` keeping its horizontal speed, with no damage, like the stage rescue. If the boss module lacks either method, flow warns once and uses 40 m below the arena-entry checkpoint as the floor and the entry position as the landing.
 - `discovery_burst(at)` grants 20 scrap times the stage at a discovery. The codex calls it, once per entry per run.
@@ -652,19 +656,20 @@ A slot's charge cap and cooldown scale take two layers: upgrade-tree picks chang
 
 | Owner | What the hook reads | What it adds |
 | --- | --- | --- |
-| `movement/player_ball.gd` | `class_def`, `class_color()`, `state.velocity`, `kit.gliding`, `roll_node()` (whose parent is the rolling mesh), `juice_node()` | `HeroCore` under the rolling mesh, `HeroPod` under the juice node; the greybox ball mesh is hidden |
+| `movement/player_ball.gd` | `class_def`, `class_color()`, `state.velocity`, `kit.gliding`, `roll_node()` (whose parent is the rolling mesh), `juice_node()`, `pod_mount()` | `HeroCore` under the rolling mesh, `HeroPod` under the pod mount (`pod_mount()`); the greybox ball mesh is hidden |
 | `build/accretion.gd` | Each direct `MeshInstance3D` child is a chunk; its slot index is read back from `position` (`_slot(i, MAX_CHUNKS) * 1.02`) | `HeroChunk` under each chunk; the box is hidden |
 | `build/reward_gates.gd` | Each child `Node3D` is a gate; its offer is the `offers` row whose `at` matches its position; `Topper`, `Glyph<i>` sprites, `rarity_color()` | `HeroArch`, `Topper/HeroTopper`, one `HeroPlate<i>` per glyph; posts, bar, topper and heart are hidden |
 
 - **Hidden means hidden.** A placeholder keeps its node, script and transform, with `layers = 0` and shadows off. Anything that animates it (the topper's spin and pulse, the chunk pop and fling, the squash) still drives the hero child.
 - **Slots to colours.** `SLOTS` in the hook is the one table from section 9 slot names to palette roles. glb surfaces are named for their slot. Change a colour there or in `palette.gd`, never in a recipe.
 - **Shell nodes.** Each `shell_<class>.glb` is `Shell<Name>` > `Core`, `Pod` > `Dome` > `Pilot`, plus `RopeExit` (Sable) and `VaneL`/`VaneR` (Kest, hinged about Godot Z). The glbs use Godot axes, +Y up and -Z forward.
+- **Carrier bank (MOTION-SPEC row 208, draw only).** `HeroAssets.carrier_bank(pod)` returns the world `Basis` of the bank the carrier wears now: a tilt about the horizontal axis `UP x normal` that leans the carrier's up toward the smoothed contact normal, the smallest angle that keeps `WeaponRing` and the bracket modules within 0.99 m along it (`carrier_bank.gd`; identity on floors and in the air). The `WeaponRing`, the `Fairlead` carriage and every part named in `HeroAssets.BRACKET_PARTS`, which `_split` moves under a `Pod > CarrierBank` holder, wear it as `bank * yaw`; the pod, the pilot and the Gyro rings stay level. Row 207's gimbal drive reads `carrier_bank(pod)` and leaves `counter_tilt` alone. `LineView.fairlead_point` takes the bank, read from the player's `carrier_bank` meta.
 
 **Not wired (for the coordinator after W7 merges).** `warden_clamp_base.glb` is `WardenClampBase` > `Housing`, `Tower` > `KitMount`, `JawL`, `JawR`. The beacon stands at the origin. The jaw origins sit on the vertical hinge axis at x 2.2, so rotating them about Y opens the clamp, and closed is the modelled pose. `warden_kit_{reactor,hive,mind}.glb` roots sit at `KitMount`. Each has a `WeakPoint` node, plus `Vent0..2` (reactor), `Drone0..5` (hive), and `ArmL`, `ArmR` and `Shutter0..5` (mind). Their slots are `ancient_enamel`, `ancient_light`, `bare_metal` and `rubber` (the charcoal grooves). The hook's `paint(node, {})` dresses them with no tint.
 
 **Requested seams (not blocking).**
 
-1. **`player_ball.gd`.** Start the grapple rope at `HeroPod/RopeExit` when it exists, so the rope leaves the spool's fairlead.
+1. **`player_ball.gd`.** Done (MOTION-SPEC swing row): `RopeExit` rides the `Fairlead` carriage on `HeroPod`, 1.06 m out on the anchor's planar side, and `line_view.gd` draws the rope from that fairlead. Physics still pulls through the centre.
 2. **An ability-active fact per class.** Would let `class_accent` brighten only while its device works (section 9, "emissive only at the working device").
 3. **`palette.gd`.** Add `ANCIENT` (W7's delta). The hook then drops its local candidate-A constant.
 
@@ -811,8 +816,8 @@ Rows 3 to 6 carry their own `packs`; rows 1 and 2 use the table's `PACKS`.
 - **File.** `{"schema": 1, "generation": n, "run": <entrance doc>}`, written through `SafeStore.write_atomic`. `MIGRATIONS` maps a schema to its step (`0` rewrites v0's `[world, count]` retry pairs into the string-keyed map). A migrated file is kept as `run.json.v0` on the next save.
 - **Calls.** `load() -> Dictionary` (`{}` for no run), `save(doc) -> String` (`""` saved, else a named cause: `newer_schema`, `quarantine_failed`, `changed_on_disk`, `backup_failed`, `write_failed`; `last_error` has the sentence), `clear() -> bool`, `generation()`, and the cause `run_ended`, and static `merge(ours, theirs)`.
 - **Failure rules.** An unreadable file moves to `run.json.bad` with its bytes and loads as no run; the next save proceeds. A newer schema is left untouched, `load` returns `{}` and `save` refuses with `newer_schema` until `clear()`. `clear()` over a readable file writes a tombstone `{schema, generation: N+1, ended: true}` instead of deleting it; `load` treats it as no run, and a `save` from a store holding an older generation is refused with `run_ended`, so a second instance cannot resurrect an ended run. A missing, unreadable or newer-schema file is removed as before.
-- **Merge.** A save whose file has a higher generation than the one we hold, and a load of a lower generation than the doc held in memory, merge: per world `retries_spent` takes the larger, and the run doc's extra keys `ended` (bool) and `worlds_cleared` (world ints) never go back (true stays true, lists union). A caller that sets those flags writes them into the doc it saves.
-- **Caller (RS3).** `load()` once when continuing, `save(doc)` at each zone entrance and when a retry is spent, `clear()` when the run ends for good (set `ended` first if a save must precede it). Test: `run_store_test`.
+- **Merge.** A save whose file has a higher generation than the one we hold, and a load of a lower generation than the doc held in memory, merge: per world `retries_spent` takes the larger, and the run doc's extra keys `ended` (bool), `death_save_spent` (bool) and `worlds_cleared` (world ints) never go back (true stays true, lists union; a stale copy never hands a spent earned save back). A caller that sets those flags writes them into the doc it saves.
+- **Caller (RS3).** `load()` once when continuing, `save(doc)` at each zone entrance and when the earned save is spent (flow's `_on_death_saved`, on `death_saved`, writes the entrance doc with `death_save_spent` true), `clear()` when the run ends for good (set `ended` first if a save must precede it). Test: `run_store_test`.
 
 ## Profile (`src/core/profile.gd`, META-7 and RS4)
 

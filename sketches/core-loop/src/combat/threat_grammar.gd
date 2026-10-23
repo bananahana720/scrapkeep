@@ -40,6 +40,7 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 #             while arming
 #   launch, bump   PROJECTILE: flight_point() from launch to centre
 #   tone, live_tone, pull (a wedge that pulls toward its apex), owner (a rim tick colour)
+#   air       true when only a ball in the air can be caught (the netcaster); drawing only
 
 enum Type { INSTANT, WAVE, PROJECTILE, LANE }
 
@@ -97,13 +98,38 @@ const RAIL_ALPHA := 0.7
 const OWNER_STEP := PI / 6.0
 const OWNER_SPACING := 4.0
 
-# --telegraph=haze (Tuning.FLAGS, default classic): a hostile floor fill becomes a
-# thin low-alpha red haze with no hazard stripes. Every fill alpha scales by the one
+# --telegraph=haze (Tuning.FLAGS, the default; classic is the other option): a hostile floor
+# fill becomes a red haze with no hazard stripes. Every fill alpha scales by the one
 # HAZE_FILL, so each stencil class still holds one alpha and the LIVE / RUN ratio the drive
 # hands the shader is unchanged; the P1 lines, their keylines, the geometry, contains() and
-# the drive clips are not touched. HAZE_SOLID is the live INSTANT slag layer's alpha.
-const HAZE_FILL := 0.5
-const HAZE_SOLID := 0.4
+# the drive clips are not touched. LIVE_SCORCH is the live INSTANT slag layer's tone.
+# HAZE_FILL is the first 0.05 step at which the fill clears every place by at least 0.5 over the
+# 10 CIE76 floor (tools/grade_probe.gd; rulings #241 6328893598 and 6331787112). On the 3060
+# (#241 comment 6331769617) the lowest gap, camp ledger, was 8.65 at 1.0, 10.03 at 1.1 and 10.72
+# at 1.15.
+# Above 1.25 the live alpha (LIVE_ALPHA x HAZE_FILL) passes 1.0.
+# LIVE_SCORCH / LIVE_SCORCH_ALPHA: the live slag is drawn over the pending fill, which stays on
+# (p = 1 once live), and live must read clearly different from pending at chase distance
+# (ATTACK-READS.md:27: "Clear live/pending distinctions and safe holes survive haze."). More
+# HAZARD cannot add value contrast: ff5a3c is L* 60.7 and the pale floors are L* 64 to 67, so on
+# the 3060 live minus pending was -1.2 L* at stage 2 and +0.3 in the arena (#241 6342833117).
+# So the live slag is a dark scorched core, HAZARD.lerp(CHARCOAL, LIVE_SCORCH) at
+# LIVE_SCORCH_ALPHA, under the unchanged HAZARD edge and keyline. Linear-light model over grey
+# L* 67: pending 64.2, live about 48 at (0.4, 0.8), a 16 L* step. The 3060 sweep at 512b636f
+# (#241 6345835130) measured live 13.0 L* under pending in stage 2 and 11.4 in the arena, and the
+# coordinator kept 0.4 / 0.8 (#241 6345854759); haze_pose_capture --scorch / --live-alpha sweeps
+# the candidates either side.
+# AIR_LIVE_ALPHA: an air-only mark (the netcaster's net, which catches the ball only in the air)
+# must not wear the scorch, which reads as the strongest ground hit and sends the player off the
+# ground. It keeps the pre-scorch look at this fill: HAZARD at 0.61, the HAZE_SOLID that cf302195
+# paired with HAZE_FILL 1.15 (ruling #241 6331787112; the stage's 0.4 would sit level with the
+# 0.4025 pending fill). Rulings #241 6347013047 section 4 and 6347979378. On the 3060 this tint
+# read -1.2 / +0.3 L* live minus pending (6342833117), so E07's live cue belongs in the air band
+# (the wave 19 card), not in this fill.
+const HAZE_FILL := 1.15
+const LIVE_SCORCH := 0.4
+const LIVE_SCORCH_ALPHA := 0.8
+const AIR_LIVE_ALPHA := 0.61
 const TELEGRAPH_FLAG := "telegraph"
 
 
@@ -215,8 +241,12 @@ static func front_angle(d: Dictionary) -> float:
 static func fill_tint(d: Dictionary) -> Color:
 	if int(d["type"]) != Type.INSTANT or not d.get("live", false):
 		return Color(0.0, 0.0, 0.0, 0.0)
+	if haze() and stance(d["tone"]) == "hostile":
+		if d.get("air", false):
+			return Color(d.get("live_tone", d["tone"]), AIR_LIVE_ALPHA)
+		return Color(Palette.HAZARD.lerp(Palette.CHARCOAL, LIVE_SCORCH), LIVE_SCORCH_ALPHA)
 	var live_tone: Color = d.get("live_tone", d["tone"])
-	return Color(live_tone, HAZE_SOLID if haze() and stance(d["tone"]) == "hostile" else LIVE_ALPHA)
+	return Color(live_tone, LIVE_ALPHA)
 
 
 # Every mark a descriptor draws, static (drawn once) or motion (redrawn as it runs).

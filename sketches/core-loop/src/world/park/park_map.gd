@@ -8,7 +8,12 @@ extends "res://src/world/stage_map.gd"
 
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const ParkGraph := preload("res://src/world/park/park_graph.gd")
 
+# The line half-width the graph bakes (tools/park_graph.gd LINE_M), the reach of the lane mask.
+const LANE_REACH_M := 8.0
+# A footprint is linear, a lane rather than an area, when its long side is at least this many times its short side.
+const LANE_LINEAR_ASPECT := 2.0
 const FIXTURE := "res://src/world/park/park_test.json"
 # Andrew's "Ride lips only" ruling (2026-10-17 06:16Z): a plain bank, drop, ground shelf or sky island whose height
 # stamp is its whole shape is terrain, not a placeholder, so scatter lands on it as on the open ground. The same rows
@@ -16,7 +21,9 @@ const FIXTURE := "res://src/world/park/park_test.json"
 const PLAIN_SLOPES := ["bank", "drop", "ground", "sky_island"]
 # Andrew's "Edges are ground" (2026-10-17 22:29Z): a stamped kicker that spans the whole play rect across its facing
 # (the Highdraft's mesa step lips, 18 rows and 28.8 km on park_islands) is a mesa edge, ground like a plain slope.
-const MESA_EDGE := "kicker"
+# Extended to every element by World NEEDS #149 6325353865, coordinator ruling (a) 2026-10-21, Andrew's veto list: a
+# stamped greybox row of any element whose cross size spans the rect (a 1,600 m ride band) is ground too, because no
+# over-greybox piece can honestly dress it. Same as scripts/placeholder-gate.mjs isMesaEdge.
 
 var path := ""
 var ok := false
@@ -100,23 +107,127 @@ func _fill() -> void:
 	scatter = scatter.duplicate(true)
 	var keep_out := []
 	for row in park["park_rows"]:
-		if row["element"] == "ground" or row["recipe"] == ParkRecipes.SCATTER_DRESSED or plain_slope(row) or mesa_edge(row, play_rect):
+		if open_to_scatter(row, play_rect) != "":
 			continue
 		keep_out.append(_footprint(row))
 	keep_out.append(_footprint(mark))
 	scatter["keep_out"] = keep_out
-	# Coordinator ruling 5, 2026-10-19 (issue #149): a scatter-dressed row a route names in from, to or via is
-	# ridden, so the kit pieces taller than the ghost-solid band are sunk to the band there (scatter.gd, LANE_BAND_M);
-	# the flat ones keep landing there unchanged, as does everything off the routes.
+	# Coordinator ruling 5, 2026-10-19 (issue #149) and the #241 ruling, option (c): the kit pieces taller than the
+	# ghost-solid band (#183) are sunk to the band along the park's line (scatter.gd, LANE_BAND_M), not across whole
+	# row footprints. Nothing is read or built here: scatter.gd's chunked build makes the mask on a worker, in the first
+	# of its chunk jobs (lane_mask_for), so a ParkMap stays cheap to make and the boot path never touches the graph.
+
+
+# The res:// path of a park file's baked graph.
+static func graph_path_for(park_json: String) -> String:
+	return "res://assets/park/%s/graph.bin" % park_json.get_file().get_basename()
+
+
+# A park's lane mask from its own baked graph, read here privately (the graph is read-only data and a search writes its own
+# heap, so a worker may read one: activities.gd does the same). Pure and thread-safe: no static state, nothing shared.
+# scatter.gd's chunked build calls it from the first of its worker jobs.
+static func lane_mask_for(park_json: String, park_data: Dictionary) -> Dictionary:
+	var graph_path := graph_path_for(park_json)
+	var graph = ParkGraph.read(graph_path) if FileAccess.file_exists(graph_path) else null
+	return build_lane_mask(graph, park_data, graph_path)
+
+
+# The lane mask for a park, from its read graph and its parsed file: {"cells": PackedByteArray SIDE x SIDE, row-major
+# (z, then x), 1 where the ground lattice cell is on the line; "side", "step", "half"} of park_graph.gd's lattice, {}
+# (with a warning) when there is no graph. Pure, with no static state: scatter.gd's chunked build calls it once, on a
+# worker, behind a lock before any chunk job reads it (lane_mask_for); the chunk jobs only read it. The line is the union of
+#   - every ground node the graph flags LINE (within LINE_M of the shortest path spawn -> waymarks -> beacon);
+#   - the ride edges of the rows a route names in from, to or via: a grind row's chord from end to end (the rider rides
+#     along it), and a kicker's, launcher's, cable's or lift's two ends (the rest of that edge is flight). The graph
+#     holds ride edges for grind, kicker, glide and contraption rows only;
+#   - the long-axis centre chord of a routed row with no ride edge and a linear footprint (see LANE_LINEAR_ASPECT).
+# One rule for every component, in node space: a node is marked when it lies within LANE_REACH_M (the graph's LINE_M,
+# 8 m, its own half-width of the line; the rider's ball is Tuning.RADIUS 1.0, well inside it) of the waymark path, of a
+# routed ride edge or of a routed chord. The LINE flags come from the graph already so marked; the edges and chords are
+# marked the same way here. A piece is sunk when its nearest node is marked, and that node is at most STEP/sqrt(2)
+# (5.66 m) from it, so the guarantee is only that a piece within LANE_REACH_M - STEP/sqrt(2) (about 2.34 m) of the line
+# is sunk, and a piece up to LANE_REACH_M + STEP/sqrt(2) (about 13.66 m) away may be; the same for every component.
+static func build_lane_mask(graph, park_data: Dictionary, graph_label := "") -> Dictionary:
+	if graph == null:
+		push_warning("park_map: %s has no readable graph.bin, so no lane mask: tall scatter is not sunk along its line" % graph_label)
+		return {}
+	var side := ParkGraph.SIDE
+	var cells := PackedByteArray()
+	cells.resize(side * side)
+	for n in cells.size():
+		if graph.node_flags[n] & ParkGraph.LINE != 0:
+			cells[n] = 1
 	var routed := {}
-	for route: Dictionary in park.get("routes", []):
+	for route: Dictionary in park_data.get("routes", []):
 		for id in [route.get("from", "")] + Array(route.get("via", [])) + [route.get("to", "")]:
 			routed[String(id)] = true
-	var lane_out := []
-	for row in park["park_rows"]:
-		if row["recipe"] == ParkRecipes.SCATTER_DRESSED and routed.has(String(row["id"])):
-			lane_out.append(_footprint(row))
-	scatter["lane_out"] = lane_out
+	var edged := {}
+	var grinds := {}
+	for row: Dictionary in park_data.get("park_rows", []):
+		if row["verb"] == "grind" or row["element"] == "grind_line" or row["element"] == "rail":
+			grinds[String(row["id"])] = true
+	for a in graph.node_count():
+		for e in range(graph.off[a], graph.off[a + 1]):
+			if graph.ride[e] < 0:
+				continue
+			var row_id: String = graph.names[graph.ride[e]]
+			if not routed.has(row_id):
+				continue
+			edged[row_id] = true
+			var b: int = graph.to[e]
+			var pa := Vector2(graph.px[a], graph.pz[a])
+			var pb := Vector2(graph.px[b], graph.pz[b])
+			if grinds.has(row_id) and a < side * side and b < side * side:
+				_mark_near(cells, pa, pb)
+			else:
+				if a < side * side:
+					_mark_near(cells, pa, pa)
+				if b < side * side:
+					_mark_near(cells, pb, pb)
+	# Issue #241 comment 6327153207: a routed row with no ride edge and a linear footprint (long side at least
+	# LANE_LINEAR_ASPECT times the short) is ridden along its length, so its long-axis centre chord is a lane too. A
+	# squarish area row (a bowl, a deck, a wide ground row) adds nothing: there is no lane in it to protect.
+	for row: Dictionary in park_data.get("park_rows", []):
+		if not routed.has(String(row["id"])) or edged.has(String(row["id"])):
+			continue
+		var f := _footprint(row)
+		var size := Vector2(absf((f["size"] as Vector2).x), absf((f["size"] as Vector2).y))
+		if minf(size.x, size.y) <= 0.0 or maxf(size.x, size.y) < LANE_LINEAR_ASPECT * minf(size.x, size.y):
+			continue
+		var facing := Vector2(sin(f["yaw"]), cos(f["yaw"]))
+		var along := facing if size.x >= size.y else Vector2(facing.y, -facing.x)
+		var half_len := maxf(size.x, size.y) * 0.5
+		_mark_near(cells, (f["at"] as Vector2) - along * half_len, (f["at"] as Vector2) + along * half_len)
+	return {"cells": cells, "side": side, "step": ParkGraph.STEP_M, "half": ParkGraph.HALF_M}
+
+
+# Marks every lattice cell whose node lies within LANE_REACH_M of the segment p-q on the ground plane.
+static func _mark_near(cells: PackedByteArray, p: Vector2, q: Vector2) -> void:
+	var side := ParkGraph.SIDE
+	var step := ParkGraph.STEP_M
+	var half := ParkGraph.HALF_M
+	var reach := LANE_REACH_M
+	var lo := Vector2(minf(p.x, q.x) - reach, minf(p.y, q.y) - reach)
+	var hi := Vector2(maxf(p.x, q.x) + reach, maxf(p.y, q.y) + reach)
+	for j in range(maxi(0, ceili((lo.y + half) / step)), mini(side - 1, floori((hi.y + half) / step)) + 1):
+		for i in range(maxi(0, ceili((lo.x + half) / step)), mini(side - 1, floori((hi.x + half) / step)) + 1):
+			var c := Vector2(-half + step * i, -half + step * j)
+			if Geometry2D.get_closest_point_to_segment(c, p, q).distance_to(c) <= reach:
+				cells[j * side + i] = 1
+
+
+# Why keep_out leaves a row to the scatter: "ground", "scatter" (a row the scatter itself dresses), "plain_slope" or
+# "mesa_edge"; "" for a built row, which the scatter keeps out of. keep_out reads this.
+static func open_to_scatter(row: Dictionary, rect: Rect2) -> String:
+	if row["element"] == "ground":
+		return "ground"
+	if row["recipe"] == ParkRecipes.SCATTER_DRESSED:
+		return "scatter"
+	if plain_slope(row):
+		return "plain_slope"
+	if mesa_edge(row, rect):
+		return "mesa_edge"
+	return ""
 
 
 # A stamped plain slope: a PLAIN_SLOPES greybox whose stamp shapes the ground and that has no absolute y, so
@@ -127,10 +238,11 @@ static func plain_slope(row: Dictionary) -> bool:
 		and String(row.get("stamp", "")) != "" and row.get("y") == null
 
 
-# A mesa edge: a stamped MESA_EDGE greybox (stamp_replaces, as plain_slope) whose cross size reaches across the
-# whole of rect, measured along the row's cross axis.
+# A mesa edge: a stamped greybox (stamp_replaces, as plain_slope) of any element or greybox recipe (isle_apron is element
+# terrace on greybox:ground) whose cross size reaches across the whole of rect, measured along the row's cross axis. Per
+# World NEEDS #149 6325353865, coordinator ruling (a) 2026-10-21, Andrew's veto list.
 static func mesa_edge(row: Dictionary, rect: Rect2) -> bool:
-	if String(row.get("element", "")) != MESA_EDGE or String(row.get("recipe", "")) != ParkRecipes.GREYBOX + MESA_EDGE \
+	if not String(row.get("recipe", "")).begins_with(ParkRecipes.GREYBOX) \
 			or String(row.get("stamp", "")) == "" or row.get("y") != null:
 		return false
 	var dir := _dir(float(row["yaw_deg"]))

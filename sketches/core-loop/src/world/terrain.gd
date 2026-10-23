@@ -3,6 +3,7 @@ extends RefCounted
 const EventGround := preload("res://src/world/events/event_ground.gd")
 
 const Palette := preload("res://src/core/palette.gd")
+const PylonBite := preload("res://src/world/pylon_bite.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const Reach := preload("res://src/world/map_reach.gd")
@@ -15,6 +16,7 @@ const Scatter := preload("res://src/world/scatter.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const PerchPoints := preload("res://src/world/perch_points.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 
 # A park map id (`--table=park`, park_defs.gd) reads its park file: src/world/park/<id>.json once a
@@ -43,9 +45,9 @@ const HALF := 200.0
 const STEP := 2.0
 const CELLS := int(2.0 * HALF / STEP)
 const SIDE := CELLS + 1
-# A face steeper than this (the normal's y below it) takes the pylon tint: the ball's
+# Steeper than PylonBite.FACE (the normal's y below it) takes the pylon tint: the ball's
 # pylon bites a face that leans less than 60 degrees off vertical (augments.gd).
-const PYLON_FACE := 0.866
+const PYLON_FACE := PylonBite.FACE
 const PARK_DEPTH := 5000.0
 
 var maps: Array = []
@@ -92,6 +94,8 @@ const SWAP_METER_FRAMES := 120
 var publish: Callable
 # Per global stage: whether its park ground builds on worker threads, so its rows place the same way (KB9).
 var _threaded: Array[bool] = []
+# Per stage index: {"tops": [Vector3], "blockers": [zone]} for perch_near, derived on the first ask.
+var _perches := {}
 
 # A park stage left memory (_free_stage), by stage number, so a module that hung nodes on its
 # root (world.gd's contraptions) drops them.
@@ -364,6 +368,7 @@ func _free_stage(i: int) -> void:
 	_roots[i] = null
 	_grounds[i] = null
 	_cave_roofs.erase(i)
+	_perches.erase(i)
 	_placement_holes.erase(i)
 	_heights[i] = PackedFloat32Array()
 	_holes[i] = PackedByteArray()
@@ -408,6 +413,20 @@ func height(x: float, z: float) -> float:
 
 func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
+
+
+# A perch top for the Dispatcher within PerchPoints.RANGE_M of `point`: a park post top or a landform
+# top, 6 to 10 m up and clear of colliders (perch_points.gd); Vector3.INF when the stage has none,
+# and the Dispatcher builds its own mast. `salt` varies the pick; one salt always picks the same.
+func perch_near(point: Vector3, salt := 0) -> Vector3:
+	var m = map()
+	if not (m is ParkMap) or not m.ok:
+		return Vector3.INF
+	var i := _index(stage)
+	if not _perches.has(i):
+		_ensure(stage)
+		_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park), "ledges": PerchPoints.ledges(m.park, height)}
+	return PerchPoints.pick(_perches[i]["tops"], point, height, _perches[i]["blockers"], salt, _perches[i]["ledges"])
 
 
 func spawn_point(index: int) -> Vector3:
@@ -653,7 +672,7 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 			uvs[idx] = Vector2(x, z) * 0.1
 			colors[idx] = s[1]
 
-	var pylon_tint := Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.25)
+	var pylon_tint := PylonBite.tint()
 	var normals := PackedVector3Array()
 	normals.resize(SIDE * SIDE)
 	for j in SIDE:
@@ -667,7 +686,7 @@ func _build_ground(parent: Node3D, m: RefCounted) -> PackedFloat32Array:
 			normals[idx] = n
 			# Form mirrors function: any face a pylon can bite reads as concrete.
 			if n.y < PYLON_FACE:
-				colors[idx] = colors[idx].lerp(pylon_tint, clampf((PYLON_FACE - n.y) * 6.0, 0.0, 0.8))
+				colors[idx] = colors[idx].lerp(pylon_tint, PylonBite.weight(n.y))
 
 	var indices := PackedInt32Array()
 	indices.resize(CELLS * CELLS * 6)

@@ -69,15 +69,18 @@ func _rules() -> void:
 			for x in d:
 				ident = ident and (float(x) == 1.0 or key.contains("counter"))
 		else:
-			ident = float(d) == 1.0 or key == "brindle.combo" or key.ends_with(".combo")
+			ident = float(d) == 1.0 or key == "brindle.combo" or key.ends_with(".combo") or key.ends_with(".weak_points")
 		if not ident:
 			_t.check("identity default " + key, false)
+	_t.eq("weak points ship off on both bosses for wave 18", [ChallengeDials.value("waking.weak_points"), ChallengeDials.value("mind.weak_points")], [0.0, 0.0])
 	_t.near("default tell is the base", ChallengeDials.tell("brindle", Rules.CRANE_WARN), Rules.CRANE_WARN, 0.0)
 
 	var parsed := ChallengeDials.parse("mind.damage_mult=1.5,waking.damage_by_phase=1/1.25/1.5/2,brindle.combo=2")
 	_t.eq("parse floats", parsed["mind.damage_mult"], 1.5)
 	_t.eq("parse _by_phase arrays", parsed["waking.damage_by_phase"], [1.0, 1.25, 1.5, 2.0])
 	_t.eq("parse the combo", parsed["brindle.combo"], 2.0)
+	_t.eq("phase_min_by_phase parses as a list", ChallengeDials.parse("waking.phase_min_by_phase=0/0.5/1/2")["waking.phase_min_by_phase"], [0.0, 0.5, 1.0, 2.0])
+	_t.eq("phase_min_by_phase defaults to the identity multiplier", ChallengeDials.value("mind.phase_min_by_phase"), [1.0, 1.0, 1.0, 1.0])
 	ChallengeDials.quiet = true
 	_t.eq("parse drops an unknown key", ChallengeDials.parse("nope.nothing=3").size(), 0)
 	_t.eq("the unknown key is recorded as refused", ChallengeDials.rejected, ["challenge_dials: unknown dial 'nope.nothing' ignored"])

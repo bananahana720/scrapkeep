@@ -233,6 +233,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_park_warden_chunks = 4
 	launch.stop()
 	ride = null
+	_show_ride()
 	bay.undock()
 	_bay_calm = false
 	terrain.use(stage)
@@ -295,6 +296,7 @@ func _on_stage_content_cleared(_reason: String) -> void:
 	launch.stop()
 	launch.clear_landing()
 	ride = null
+	_show_ride()
 	bay.undock()
 	_bay_calm = false
 	terrain_view.clear()
@@ -367,6 +369,8 @@ func _physics_process(delta: float) -> void:
 		for fact in contraptions[ctx.flow.stage()].step(delta, ball, velocity, player.kit, ride != null or launch.flying(), steering):
 			_contraption_fact(fact)
 		_step_cinder(delta, ball)
+	# After the contraption step, so a ride that boarded this tick has its hanger on the boarding frame.
+	_show_ride()
 	if bay.in_yard(ball):
 		_free_cooldowns()
 	_watch_ground(delta, ball)
@@ -579,7 +583,14 @@ func _step_director(delta: float) -> void:
 		if ctx.calm or ctx.spawner == null:
 			continue
 		var at: Vector2 = spawn["at"]
-		var enemy: Node3D = ctx.spawner.spawn_enemy(Director.KIND_NAMES[spawn["kind"]], terrain.drop_point(at.x, at.y, 2.4), String(spawn.get("affix", "")))
+		var kind_name: String = Director.KIND_NAMES[spawn["kind"]]
+		var enemy: Node3D
+		if kind_name == "dispatcher":
+			# The Dispatcher perches on a park post near its pack, 6 to 10 m up; none within 40 m, it brings its mast.
+			var perch: Vector3 = terrain.perch_near(Vector3(at.x, 0.0, at.y), ctx.flow.stage())
+			enemy = ctx.spawner.spawn_enemy(kind_name, terrain.drop_point(at.x, at.y, 2.4), String(spawn.get("affix", "")), perch)
+		else:
+			enemy = ctx.spawner.spawn_enemy(kind_name, terrain.drop_point(at.x, at.y, 2.4), String(spawn.get("affix", "")))
 		# The attacker budget reads one pack of one kind as one threat (attack_budget.gd).
 		if enemy != null:
 			enemy.set_meta("pack_seq", int(spawn.get("pack", -1)))
@@ -617,6 +628,13 @@ func _hold_ride(delta: float) -> void:
 		return
 	ctx.player.set_velocity_now(ride.release_velocity())
 	ride = null
+
+
+# The line view draws the cable ride's hanger from the ride the ball is on; null clears it.
+func _show_ride() -> void:
+	var presentation = ctx.root.get("presentation") if ctx.root != null else null
+	if presentation != null and presentation.get("line_view") != null:
+		presentation.line_view.set_ride(ride)
 
 
 func _contraption_fact(fact: Dictionary) -> void:
