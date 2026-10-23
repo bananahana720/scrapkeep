@@ -80,14 +80,25 @@ const WHEEL_RADIUS := 0.63
 const GOVERNOR_SPIN := 7.0
 
 # Phase two (Andrew 19:02Z 23 Oct: mini-bosses have two phases, and phase two ratchets up).
-# Below half health the machine winds up faster, and its first attack chains straight into
-# its second with no vented window between: the crane bats the ball into the leaf's ring,
-# the skip dumps where its haul ends, the tender whips the ball its harpoon reeled in. Its
-# anthem moves to the heavier variant id (`anthem_heavy`), which plays once it has a row.
+# Below half health the machine turns: for TURN_SECONDS it shakes its governor up to speed,
+# takes no damage and commits nothing (the transition beat, Andrew 19:11Z). Then it winds up
+# faster, never under ChallengeDials.TELL_FLOOR, and its first attack chains into its second
+# with no vented window: the crane bats the ball into the leaf's ring, the skip dumps where
+# its haul ends, the tender whips the ball its harpoon reeled in. The chained attack is
+# sound-cued: attack_cued sounds CUE_LEAD before its geometry commits. The turn publishes
+# fight_phase_changed, and the anthem moves to the heavier variant id (`anthem_heavy`) on the
+# next downbeat once that pack exists. These numbers mirror the shared fight-phase framework
+# (combat/fight_phases.gd: MINI_TURN, TRANSITION_SECONDS, CUE_LEAD, CUED_TOTAL); the bus
+# signals are guarded until it lands.
 const PHASE_TWO_AT := 0.5
 const PHASE_TWO_WIND := 0.75
+const TURN_SECONDS := 2.0
+const CUE_LEAD := 0.5
+const CUED_TOTAL := CUE_LEAD + ChallengeDials.TELL_FLOOR
+# Each attack's ATTACK_ROWS id, for the cue.
+const ATTACK_IDS := {"sweep": "E34", "drop": "E35", "haul": "E36", "dump": "E37", "harpoon": "E38", "whip": "E39"}
 
-enum State { STALK, WIND, STRIKE, WEAK }
+enum State { STALK, WIND, STRIKE, WEAK, TURN, CUE }
 
 var row := {}
 var phase := 1
@@ -148,10 +159,13 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 func _set_leads() -> void:
 	for name in row.attacks:
 		var beats: Dictionary = ATTACKS[name]
+		var wind := float(beats.wind) * beat()
+		if phase >= 2:
+			wind = maxf(ChallengeDials.TELL_FLOOR, wind * PHASE_TWO_WIND)
 		if String(beats.shape) == "ring":
-			wind_ring = (float(beats.wind) * _wind_scale() + float(beats.strike)) * beat()
+			wind_ring = wind + float(beats.strike) * beat()
 		else:
-			wind_lane = float(beats.wind) * _wind_scale() * beat()
+			wind_lane = wind
 
 
 # The phase hook: phase 2 ratchets the machine up (see PHASE_TWO_AT). Entering a phase it is
@@ -161,6 +175,23 @@ func enter_phase(next: int) -> void:
 		return
 	phase = next
 	_set_leads()
+	_clear_telegraph()
+	_out = 0.0
+	if _hook != null:
+		_hook.position = _hook_rest
+	_enter(State.TURN)
+	if is_instance_valid(_reaction_bus) and _reaction_bus.has_signal("fight_phase_changed"):
+		_reaction_bus.fight_phase_changed.emit(kind, phase, 2)
+
+
+# The turn takes no damage; the hit that crosses half health turns it.
+func take_damage(amount: float) -> float:
+	if state == State.TURN:
+		return 0.0
+	var removed := super.take_damage(amount)
+	if not _dead and phase == 1 and hp <= max_hp * PHASE_TWO_AT:
+		enter_phase(2)
+	return removed
 
 
 func _wind_scale() -> float:
@@ -191,7 +222,7 @@ func anthem() -> String:
 
 
 func state_name() -> String:
-	return ["stalk", "wind", "strike", "weak"][state]
+	return ["stalk", "wind", "strike", "weak", "turn", "cue"][state]
 
 
 func is_weak() -> bool:
@@ -211,8 +242,6 @@ func knock(direction: Vector3, force: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
-	if phase == 1 and hp <= max_hp * PHASE_TWO_AT:
-		enter_phase(2)
 	_pose(delta)
 	if not _in_play() or not is_instance_valid(target):
 		_move(delta, Vector3.ZERO)
@@ -240,6 +269,14 @@ func _physics_process(delta: float) -> void:
 			_move(delta, Vector3.ZERO)
 			if _clock >= WEAK_BEATS * beat():
 				_enter(State.STALK)
+		State.TURN:
+			_move(delta, Vector3.ZERO)
+			if _clock >= TURN_SECONDS:
+				_enter(State.STALK)
+		State.CUE:
+			_move(delta, Vector3.ZERO)
+			if _clock >= CUE_LEAD:
+				_begin_attack(to_ball)
 
 
 # A ring fills through its wind-up and strike and lands as it fills, as the miniboss's slam does.
@@ -248,7 +285,10 @@ func _is_ring() -> bool:
 
 
 func _seconds(part: String) -> float:
-	return float(ATTACKS[attack][part]) * beat() * (_attack_wind if part == "wind" else 1.0)
+	var seconds := float(ATTACKS[attack][part]) * beat()
+	if part == "wind" and _attack_wind < 1.0:
+		seconds = maxf(ChallengeDials.TELL_FLOOR, seconds * _attack_wind)
+	return seconds
 
 
 # In phase two the first attack chains into the second; the second always vents.
@@ -258,7 +298,10 @@ func _finish_strike() -> void:
 		_out = 0.0
 		if _hook != null:
 			_hook.position = _hook_rest
-		_begin_attack(_flat_to_ball() if is_instance_valid(target) else -global_basis.z)
+		var next := String(row.attacks[_next])
+		if is_instance_valid(_reaction_bus) and _reaction_bus.has_signal("attack_cued"):
+			_reaction_bus.attack_cued.emit(kind, ATTACK_IDS[next], CUED_TOTAL)
+		_enter(State.CUE)
 		return
 	_open_weak_window()
 
@@ -503,7 +546,13 @@ func _pose_model(delta: float, blend: float) -> void:
 	_open = lerpf(_open, PLATE_OPEN if weak else 0.0, blend)
 	_bone("PlateLeft", Vector3.ZERO, Quaternion(Vector3.UP, -_open))
 	_bone("PlateRight", Vector3.ZERO, Quaternion(Vector3.UP, _open))
-	_spin = fmod(_spin + GOVERNOR_SPIN * delta * (0.3 if weak else 1.0), TAU)
+	# The turn: the governor races and the hatch rattles as the machine takes its new pace.
+	var turning := state == State.TURN
+	if turning:
+		_open = 0.25 + 0.15 * sin(_clock * 40.0)
+		_bone("PlateLeft", Vector3.ZERO, Quaternion(Vector3.UP, -_open))
+		_bone("PlateRight", Vector3.ZERO, Quaternion(Vector3.UP, _open))
+	_spin = fmod(_spin + GOVERNOR_SPIN * delta * (0.3 if weak else (4.0 if turning else 1.0)), TAU)
 	_bone("Governor", Vector3.ZERO, Quaternion(Vector3.UP, _spin))
 	var shown := telegraph()
 	var length: float = shown.length if shown != null and shown.shape == Telegraph.Shape.LANE else 0.0
