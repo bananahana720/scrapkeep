@@ -2734,6 +2734,14 @@ func _on_boss_defeated() -> void:
 	engine.victory()
 
 
+# A live miniboss other than the one dying on this kill (enemy.gd marks it dead first).
+func _miniboss_survivor() -> Node3D:
+	for enemy in get_tree().get_nodes_in_group("enemy") if is_inside_tree() else []:
+		if is_instance_valid(enemy) and is_miniboss(String(enemy.get("kind"))) and not enemy.is_dead():
+			return enemy
+	return null
+
+
 # The surge miniboss and the rogue fleet machines share the miniboss track and moment.
 static func is_miniboss(kind: String) -> bool:
 	return kind == "miniboss" or Rogue.ROWS.has(kind)
@@ -2747,6 +2755,11 @@ static func miniboss_tune(kind: String) -> String:
 
 
 func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
+	# A rogue and a surge miniboss can share a stage: while another one still fights, the
+	# track holds and the music follows the survivor (each moment ends with its own body).
+	if is_miniboss(_kind) and _miniboss_survivor() != null:
+		_miniboss = _miniboss_survivor()
+		_kind = ""
 	if is_miniboss(_kind) and is_instance_valid(_miniboss):
 		var key := str(_miniboss.get_instance_id())
 		end_moment("miniboss", key)

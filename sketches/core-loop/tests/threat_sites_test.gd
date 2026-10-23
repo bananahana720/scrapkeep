@@ -59,6 +59,8 @@ const AUDIT := {
 	# 2026-10-17 Highdraft roster: the ballast heavy and the gap net, one telegraph each.
 	"res://src/combat/ballast_heavy.gd": ["INSTANT"],
 	"res://src/combat/gap_net.gd": ["LANE"],
+	# 2026-10-23 rogue fleet mini-bosses (#385): sweep, haul and harpoon lanes; drop and dump rings; the whip ring.
+	"res://src/combat/rogue.gd": ["LANE", "PROJECTILE", "PROJECTILE", "INSTANT"],
 	# alpha w7 Mind: build() lays each descriptor's own type; DESCRIPTORS audits where it is named.
 	"res://src/boss/mind_attacks.gd": ["descriptor", "descriptor", "descriptor"],
 }

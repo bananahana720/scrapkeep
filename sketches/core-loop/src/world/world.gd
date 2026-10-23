@@ -33,6 +33,8 @@ const RogueDirector := preload("res://src/world/rogue_director.gd")
 const PRESSURE_STEP := 0.05
 const MINIBOSS_KIND := "miniboss"
 const MINIBOSS_FALLBACK := "chaser"
+# Above the tallest rogue's half height at its largest site scale (3.6 m x 1.25).
+const ROGUE_CLEARANCE := 4.8
 const VAULT_KIND := "vault"
 const TAILWIND := 0.7
 const SAIL_WIND := 0.5
@@ -383,7 +385,8 @@ func _physics_process(delta: float) -> void:
 	if bay.in_yard(ball):
 		_free_cooldowns()
 	_watch_ground(delta, ball)
-	_watch_rogue(ball)
+	if not calm_bay and not riding:
+		_watch_rogue(ball)
 	_watch_layer(delta, ball)
 	flood.render()
 	if not ctx.calm and not calm_bay:
@@ -460,8 +463,8 @@ func _spawn_miniboss(at: Vector2) -> void:
 		ctx.spawner.spawn_enemy(MINIBOSS_FALLBACK, last_miniboss_at)
 
 
-# The rogue wakes once, when the ball first nears its site; it lands on the site's centre,
-# sized to the site's disc.
+# The rogue wakes once, when the ball first nears its site, never in the calm bay or on a
+# ride or launch; it lands on the site's centre inside the playable floor, sized to the disc.
 func _watch_rogue(ball: Vector3) -> void:
 	if not RogueDirector.wakes(rogue_plan, ball):
 		return
@@ -469,8 +472,10 @@ func _watch_rogue(ball: Vector3) -> void:
 	rogue_plan = {}
 	if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
 		return
-	var at: Vector2 = plan.at
-	rogue = ctx.spawner.spawn_enemy(String(plan.kind), terrain.drop_point(at.x, at.y, 3.0))
+	var rect: Rect2 = terrain.map().play_rect
+	var x := clampf(float(plan.at.x), rect.position.x, rect.end.x)
+	var z := clampf(float(plan.at.y), rect.position.y, rect.end.y)
+	rogue = ctx.spawner.spawn_enemy(String(plan.kind), terrain.drop_point(x, z, ROGUE_CLEARANCE))
 	if rogue != null and rogue.has_method("fit_site"):
 		rogue.fit_site(float(plan.radius_m))
 

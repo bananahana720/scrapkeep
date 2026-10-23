@@ -77,6 +77,7 @@ var _hits_this_strike := 0
 var _shape: CollisionShape3D
 var _body: Node3D
 var _hook: Node3D
+var _hook_rest := Vector3.ZERO
 var _core: MeshInstance3D
 var _core_material: StandardMaterial3D
 var _plates: Array = []
@@ -133,7 +134,8 @@ func plating_now() -> float:
 
 
 func knock(direction: Vector3, force: float) -> void:
-	if state == State.STRIKE and attack == "haul":
+	# A haul runs the lane it committed: it cannot be knocked off it between commit and return.
+	if attack == "haul" and (state == State.WIND or state == State.STRIKE):
 		return
 	super.knock(direction, force)
 
@@ -141,7 +143,7 @@ func knock(direction: Vector3, force: float) -> void:
 func _physics_process(delta: float) -> void:
 	_update_flash(delta)
 	_pose(delta)
-	if not _in_play() or target == null:
+	if not _in_play() or not is_instance_valid(target):
 		_move(delta, Vector3.ZERO)
 		return
 	_clock += delta
@@ -153,12 +155,13 @@ func _physics_process(delta: float) -> void:
 				_begin_attack(to_ball)
 		State.WIND:
 			_move(delta, Vector3.ZERO)
-			_fill(_clock / _seconds("wind"))
+			_fill(_clock / (_seconds("wind") + (_seconds("strike") if _is_ring() else 0.0)))
 			if _clock >= _seconds("wind"):
 				_enter(State.STRIKE)
-				_home = global_position
 				_hits_this_strike = 0
 		State.STRIKE:
+			if _is_ring():
+				_fill((_seconds("wind") + _clock) / (_seconds("wind") + _seconds("strike")))
 			_strike(delta)
 			if _clock >= _seconds("strike"):
 				_open_weak_window()
@@ -166,6 +169,11 @@ func _physics_process(delta: float) -> void:
 			_move(delta, Vector3.ZERO)
 			if _clock >= WEAK_BEATS * beat():
 				_enter(State.STALK)
+
+
+# A ring fills through its wind-up and strike and lands as it fills, as the miniboss's slam does.
+func _is_ring() -> bool:
+	return String(ATTACKS[attack].shape) == "ring"
 
 
 func _seconds(part: String) -> float:
@@ -187,6 +195,7 @@ func _begin_attack(to_ball: Vector3) -> void:
 	_next = (_next + 1) % row.attacks.size()
 	var heading := to_ball if to_ball.length() > 0.5 else -global_basis.z
 	heading = heading.normalized()
+	_home = global_position
 	var ball := _ball()
 	var reach := 4.0
 	match attack:
@@ -198,7 +207,7 @@ func _begin_attack(to_ball: Vector3) -> void:
 			var ahead := minf(_size("ahead"), to_ball.length())
 			_commit_ring(Threat.Type.PROJECTILE, global_position + heading * ahead, _size("radius"), reach)
 		"whip":
-			_commit_ring(Threat.Type.WAVE, global_position, _size("radius"), reach)
+			_commit_ring(Threat.Type.INSTANT, global_position, _size("radius"), reach)
 	_enter(State.WIND)
 
 
@@ -258,6 +267,8 @@ func _land(direction: Vector3) -> void:
 
 func _open_weak_window() -> void:
 	_clear_telegraph()
+	if _hook != null:
+		_hook.position = _hook_rest
 	weak_windows += 1
 	_enter(State.WEAK)
 
@@ -293,6 +304,7 @@ func _build_body() -> void:
 			_cylinder(0.45, h * 1.8, Vector3(0.0, 0.0, 0.0), _material)
 			_box(Vector3(0.7, 0.6, 7.0), Vector3(0.0, h - 0.3, -2.6), _material)
 			_hook = _box(Vector3(1.4, 1.2, 1.4), Vector3(0.0, h - 2.6, -5.6), Palette.solid(Palette.CHARCOAL))
+			_hook_rest = _hook.position
 			_cylinder(0.06, 1.8, Vector3(0.0, h - 1.3, -5.6), Palette.solid(Palette.CABLE))
 			_core = _sphere(0.9, Vector3(0.0, h - 0.6, 1.6))
 		"rogue_skip":
@@ -383,10 +395,15 @@ func _pose(delta: float) -> void:
 	var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.018) if weak else 1.0
 	_core.scale = Vector3.ONE * (1.5 * pulse if weak else 1.0)
 	_core.material_override = _weak_material() if weak else _core_material
-	if state == State.STALK or state == State.WEAK or (state == State.WIND and not attack in ["whip"]):
+	# A null or freed target leaves the facing where it is (F008).
+	if not is_instance_valid(target):
+		return
+	if state == State.STALK or state == State.WEAK or (state == State.WIND and attack != "whip"):
 		var to := _flat_to_ball()
-		if state == State.WIND and telegraph() != null and "dir" in telegraph():
-			to = telegraph().dir
+		var shown := telegraph()
+		if state == State.WIND and shown != null:
+			to = shown.dir if shown.shape == Telegraph.Shape.LANE else shown.global_position - global_position
+			to.y = 0.0
 		if to.length() > 0.5:
 			rotation.y = lerp_angle(rotation.y, atan2(-to.x, -to.z), 1.0 - exp(-8.0 * delta))
 

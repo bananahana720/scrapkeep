@@ -8,7 +8,8 @@ const Audio := preload("res://src/presentation/audio.gd")
 # The three rogue fleet machines (combat/rogue.gd), each spawned through
 # ctx.spawner.spawn_enemy(kind, at) with the ball held 14 m ahead of it. For both of its
 # attacks: the shape is committed before it can hurt, and the strike hits the ball exactly
-# when the committed shape contains it (damage reads the telegraph's geometry only); every
+# when the committed shape contains it (damage reads the telegraph's geometry only). The ball
+# steps inside the whip's ring and out of the dump's, so each ring outcome is seen; every
 # strike opens a vented window where plating is 0, so a small punch lands in full instead of
 # chipping 20%. Then each dies with its scrap. Last, the world's rogue director wakes a
 # planned rogue when the ball nears its site, and fits it to the site's disc.
@@ -26,6 +27,7 @@ var _kinds: Array = Rogue.ROWS.keys()
 var _kind := ""
 var _boss: Node3D
 var _anchor := Vector3.ZERO
+var _start := Vector3.ZERO
 var _spawned := []
 var _hits := []
 var _kills := []
@@ -59,9 +61,17 @@ func _physics_process(delta: float) -> bool:
 		"await_wind":
 			if state == "wind":
 				var shape: Node3D = _boss.telegraph()
-				_inside = shape != null and shape.contains(_game.player.ball_position())
+				# Both ring outcomes are exercised: the ball steps into the whip's ring and out
+				# of the dump's.
+				if _boss.attack == "whip":
+					_hold(_boss.global_position + (_anchor - _boss.global_position).normalized() * 5.0)
+				elif _boss.attack == "dump":
+					_hold(_anchor + (_anchor - _boss.global_position).normalized() * 20.0)
+				_inside = shape != null and shape.contains(_anchor)
 				_hits_before = _hits.size()
-				_report("%s %s committed" % [_kind, _boss.attack], shape != null and _hits.size() == _hits_before,
+				# Where the ball is held, every shape but the dump's must cover it: a ring that only
+				# hurts at its rim, or a lane that misses the ball it aimed at, fails here.
+				_report("%s %s committed" % [_kind, _boss.attack], shape != null and _inside == (_boss.attack != "dump"),
 					"%s shape committed before its strike, ball inside %s" % [_boss.attack, _inside])
 				_next("await_weak")
 		"await_weak":
@@ -133,6 +143,7 @@ func _setup() -> void:
 	_game.run.set_max_hp(99999.0)
 	var spawn: Vector3 = ctx.terrain.spawn_point(1)
 	_anchor = Vector3(spawn.x, ctx.terrain.height(spawn.x, spawn.z) + 1.05, spawn.z)
+	_start = _anchor
 	_game.player.reset_to(_anchor)
 	_game.player.body().global_position = _anchor
 	_game.camera.snap(ctx.terrain.entry_heading(1), -0.1)
@@ -142,6 +153,7 @@ func _setup() -> void:
 func _spawn_next() -> void:
 	var ctx = _game.ctx
 	_kind = String(_kinds.pop_front())
+	_hold(_start)
 	_seen.clear()
 	_spawned.clear()
 	var ahead: Vector3 = _anchor + ctx.terrain.entry_heading(1) * AHEAD
@@ -149,6 +161,12 @@ func _spawn_next() -> void:
 	_report("%s spawn" % _kind, _spawned == [_kind] and _boss.kind == _kind and _boss.hp > 0.0 and _boss.plating > 0.0,
 		"spawn_enemy published %s with %.0f hp, plating %.0f" % [_spawned, _boss.hp, _boss.plating])
 	_next("await_wind")
+
+
+func _hold(at: Vector3) -> void:
+	at.y = _game.ctx.terrain.height(at.x, at.z) + 1.05
+	_anchor = at
+	_game.player.reset_to(_anchor)
 
 
 func _director() -> void:
