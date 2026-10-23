@@ -1,8 +1,9 @@
 extends "res://src/combat/enemy.gd"
 
 # A rogue fleet machine (Q-P25, Andrew 23 Oct: "fleet machines gone rogue"): one working
-# machine per world that the Mind's reach has turned. It still runs its job on a loop, and
-# the loop is the fight. The rogue director (world/rogue_director.gd) drops one into each
+# machine per world that runs outside the Mind's reach (DECISIONS, "The Mind's reach"). Its
+# command line is cut, and a local governor still runs its old job on a loop; the loop is
+# the fight (docs/art/reference/hierarchy, "Off the foreman's books"). The rogue director (world/rogue_director.gd) drops one into each
 # stage at a mini-boss site; fit_site() scales its reach and body to that ground.
 #
 #   stalk -> attack A -> vented window -> stalk -> attack B -> vented window -> ...
@@ -36,8 +37,6 @@ const WALK := 5.0
 const SITE_FULL_M := 40.0
 const SCALE_MIN := 0.6
 const SCALE_MAX := 1.25
-# Consumed by the Mind: one uniform purple in the 300-330 degree band (veto pass, 23 Oct).
-const CONSUMED := Color(0.78, 0.22, 0.86)
 
 # One row per rogue. `attacks` alternate in order.
 # `anthem` is its tune id (the music lane adds the TUNES row with the track); until then the
@@ -272,7 +271,8 @@ func _fill(value: float) -> void:
 # --- Body ---------------------------------------------------------------------------
 # Primitive bodies until the sculpted ones land (briefs in design-v3/rogues/BRIEFS.md). Each
 # keeps its working silhouette, the crew number and HIRED stamp it was issued (principle 7,
-# "All hands"), and the consumed purple in its seams.
+# "All hands"), the brass governor that runs it and the cut command line that freed it. The
+# core is the service hatch the work opens: the vented window.
 
 func _build_body() -> void:
 	_shape = CollisionShape3D.new()
@@ -283,7 +283,7 @@ func _build_body() -> void:
 	_body = Node3D.new()
 	_body.name = "RogueBody"
 	_visual_parent().add_child(_body)
-	_core_material = Palette.solid(CONSUMED, 1.4)
+	_core_material = Palette.solid(Palette.VERDIGRIS)
 	var plate_material := _plate_material()
 	var h := float(row.half_height)
 	var r := float(row.radius)
@@ -312,9 +312,15 @@ func _build_body() -> void:
 	for side in [-1.0, 1.0]:
 		var plate := _box(Vector3(r * 0.9, h * 0.9, 0.3), _core.position + Vector3(side * 0.7, 0.0, -0.6 if kind != "rogue_crane" else 0.6), plate_material)
 		_plates.append({"node": plate, "side": side, "rest": plate.position})
-	# The seams the Mind got into.
-	for i in 3:
-		_box(Vector3(r * 1.5, 0.08, 0.08), Vector3(0.0, -h * 0.4 + i * h * 0.4, -r * 0.82), _core_material)
+	# The governor's flyballs on top, and the command line's cut end hanging beside them.
+	var brass := Palette.solid(Palette.BRASS)
+	for side in [-1.0, 1.0]:
+		var flyball := SphereMesh.new()
+		flyball.radius = 0.3
+		flyball.height = 0.6
+		_part(flyball, Vector3(side * 0.45, h + 0.5, 0.6), brass)
+	_cylinder(0.08, 0.9, Vector3(0.0, h + 0.3, 0.6), brass)
+	_cylinder(0.12, 1.4, Vector3(r * 0.6, h - 0.3, 0.9), Palette.solid(Palette.RUST))
 	_stamp("No. " + String(row.crew), Vector3(r * 0.9 + 0.05, 0.4, 0.0), 64)
 	_stamp("HIRED", Vector3(r * 0.9 + 0.05, -0.4, 0.0), 40)
 
