@@ -6,6 +6,8 @@ import {
   constBand,
   evaluate,
   joinRuns,
+  pacingBand,
+  parseArgs,
   passed,
   phaseCount,
   renderTable,
@@ -69,7 +71,7 @@ function finished() {
 test("a finished world 1 passes every row", () => {
   const rows = evaluate(SPEC, finished());
   const off = rows.filter((r) => !["pass", "info"].includes(r.verdict));
-  // Panels read their band from #398's test file, which this input does not carry.
+  // No run carries the panels, rogue or secrets fields yet, and the panel band file is not in the input.
   assert.deepEqual(off.map((r) => r.id), ["panels-at-brindle", "rogue-reached", "secrets-completionist", "secrets-skipper"]);
   assert.ok(off.every((r) => r.status === "report" && !r.blocks));
   assert.equal(passed(rows), true);
@@ -174,4 +176,52 @@ test("the rows file names a status and a known source on every row", () => {
     if (r.status === "report") assert.ok(Array.isArray(r.enforced_from) && r.enforced_from.length, r.id);
   }
   assert.equal(new Set(SPEC.rows.map((r) => r.id)).size, SPEC.rows.length);
+});
+
+test("review: a pacing band without numeric min_s/max_s never passes", () => {
+  assert.equal(pacingBand({ min: 390, max: 420 }), null);
+  assert.equal(pacingBand({ min_s: 390, max_s: null }), null);
+  const inputs = finished();
+  inputs.pacing = { bands: { ...PACING.bands, skipper_total: { min: 390, max: 420 } } };
+  const r = row(evaluate(SPEC, inputs), "run-length-skipper");
+  assert.equal(r.verdict, "no data");
+  assert.ok(r.blocks);
+});
+
+test("review: a gate median over partly missing runs is no data, not a pass", () => {
+  const inputs = finished();
+  inputs.runs = inputs.runs.map((r, i) => (r.bot.policy === "skipper" && i > 0 ? { ...r, log: { ...r.log, stages: [] } } : r));
+  const rows = evaluate(SPEC, inputs);
+  assert.equal(row(rows, "drops-skipper").verdict, "no data");
+  assert.ok(row(rows, "drops-skipper").blocks);
+  assert.equal(row(rows, "drops-explore-pays").verdict, "no data");
+});
+
+test("review: band_from with the field present but no band file reads no data", () => {
+  const inputs = finished();
+  inputs.runs = inputs.runs.map((r) => ({ ...r, bot: { ...r.bot, panels: [] } }));
+  assert.equal(row(evaluate(SPEC, inputs), "panels-at-brindle").verdict, "no data");
+});
+
+test("review: each stage, not only the shortest, sits in the stage band", () => {
+  const inputs = finished();
+  inputs.runs[0].bot.stages = [{ stage: 1, exit_s: 200 }, { stage: 2, exit_s: 900 }];
+  const r = row(evaluate(SPEC, inputs), "stage-length-skipper");
+  assert.equal(r.verdict, "miss");
+  assert.match(r.measured, /stages 200-900 s/);
+});
+
+test("review: a repeat beat with no length is no data; seeds must be 1 to 8", () => {
+  const inputs = finished();
+  inputs.runs[16].log.flourishes = SPEC.beats.map((id) => ({ id, full: false }));
+  assert.equal(row(evaluate(SPEC, inputs), "beats-repeat-length").verdict, "no data");
+  const stray = finished();
+  stray.runs[7] = run("skipper", 99, { flourishes: FULL_BEATS });
+  assert.equal(row(evaluate(SPEC, stray), "runs-complete").verdict, "miss");
+});
+
+test("review: CLI values are never flags, frames need a path", () => {
+  assert.throws(() => parseArgs(["--bots", "--json"]), /needs a value/);
+  assert.throws(() => parseArgs(["--frames", "dam="]), /--frames takes/);
+  assert.equal(parseArgs(["--frames", "dam=a.json", "--sitting"]).frames.dam, "a.json");
 });

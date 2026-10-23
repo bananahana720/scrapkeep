@@ -54,7 +54,7 @@ export function phaseCount(text) {
 
 // `const NAME := [a, b]` in a GDScript file: a band another owner keeps.
 export function constBand(text, name) {
-  const found = new RegExp(`const\\s+${name}\\s*:?=\\s*\\[\\s*([\\d.]+)\\s*,\\s*([\\d.]+)\\s*\\]`).exec(text ?? "");
+  const found = new RegExp(`const\\s+${name}\\s*(?::\\s*[\\w\\[\\]]+\\s*)?:?=\\s*\\[\\s*([\\d.]+)\\s*,\\s*([\\d.]+)\\s*\\]`).exec(text ?? "");
   return found ? { min: Number(found[1]), max: Number(found[2]) } : null;
 }
 
@@ -68,13 +68,14 @@ const routed = ({ bot }) => {
 };
 
 export const MEASURES = {
-  routed: (run) => (routed(run) ? 1 : 0),
+  routed: (run) => (typeof run.bot.outcome !== "string" ? null : routed(run) ? 1 : 0),
   rout_s: (run) => (routed(run) && isNum(run.bot.boss.entered_run_s) ? run.bot.boss.entered_run_s + run.bot.boss.defeated_s : null),
   brindle_phase: ({ log }) => (isNum(log?.brindle_phase_reached) ? log.brindle_phase_reached : null),
   brindle_final_phase: (run, ctx) => {
+    if (!isNum(ctx.phases)) return null;
+    if (!routed(run)) return 0;
     const reached = run.log?.brindle_phase_reached;
-    if (!isNum(reached) || !isNum(ctx.phases)) return null;
-    return routed(run) && reached >= ctx.phases ? 1 : 0;
+    return isNum(reached) ? (reached >= ctx.phases ? 1 : 0) : null;
   },
   kills: ({ log }) => (isNum(log?.tallies?.kills) ? log.tallies.kills : null),
   // Parts held at Brindle: the last stage row that carries part_ids_at_exit.
@@ -117,25 +118,44 @@ const fmt = (v) => (v === null ? "n/a" : Number.isInteger(v) ? String(v) : v.toF
 function botRow(row, runs, ctx) {
   const byPolicy = (policy) => runs.filter((r) => r.bot.policy === policy);
   if (row.stat === "each_policy") {
-    const counts = ctx.policies.map((p) => [p, new Set(byPolicy(p).map((r) => r.bot.seed)).size]);
+    // Seeds 1 to min, each present: a stray seed number never stands in for a missing one.
+    const counts = ctx.policies.map((p) => {
+      const got = new Set(byPolicy(p).map((r) => r.bot.seed));
+      let n = 0;
+      while (got.has(n + 1)) n++;
+      return [p, n];
+    });
     return {
-      measured: counts.map(([p, n]) => `${p} ${n}`).join(", "),
+      measured: counts.map(([p, n]) => `${p} seeds 1-${n}`).join(", "),
       pass: counts.every(([, n]) => within(n, row)),
     };
   }
   const measure = MEASURES[row.metric];
   if (!measure) return { measured: `unknown metric ${row.metric}`, pass: false };
   const values = (list) => list.map((r) => measure(r, ctx));
+  // A row grades only when every run it reads carries the field: a median over the few runs that do is no read.
+  const lacking = (list, all) => {
+    const gaps = all.filter((v) => !isNum(v)).length;
+    if (!list.length) return `no ${row.policy ?? ""} runs`.replace("  ", " ");
+    return gaps ? `no data: ${gaps} of ${list.length} runs lack the field` : null;
+  };
   if (row.stat === "median_gap") {
-    const [a, b] = ["completionist", "skipper"].map((p) => median(values(byPolicy(p))));
-    const gap = a === null || b === null ? null : a - b;
+    const sides = ["completionist", "skipper"].map((p) => {
+      const list = byPolicy(p);
+      const all = values(list);
+      return { p, why: lacking(list, all), m: median(all) };
+    });
+    const bad = sides.find((x) => x.why);
+    if (bad) return { measured: `${bad.p}: ${bad.why}`, pass: false, noData: true };
+    const [a, b] = sides.map((x) => x.m);
+    const gap = a - b;
     return { measured: `completionist ${fmt(a)}, skipper ${fmt(b)} (gap ${fmt(gap)})`, pass: within(gap, row) };
   }
   const list = row.policy ? byPolicy(row.policy) : runs;
   const all = values(list);
   const vs = all.filter(isNum);
-  if (!list.length) return { measured: `no ${row.policy ?? ""} runs`.replace("  ", " "), pass: false, noData: true };
-  if (!vs.length) return { measured: `no data in ${list.length} runs (field not in the record)`, pass: false, noData: true };
+  const why = lacking(list, all);
+  if (why) return { measured: why, pass: false, noData: true };
   let v = null;
   if (row.stat === "median") v = median(vs);
   else if (row.stat === "min") v = Math.min(...vs);
@@ -143,7 +163,7 @@ function botRow(row, runs, ctx) {
   else if (row.stat === "share") v = vs.reduce((s, x) => s + x, 0) / all.length;
   else if (row.stat === "share_positive") v = vs.filter((x) => x > 0).length / all.length;
   else return { measured: `unknown stat ${row.stat}`, pass: false };
-  const tail = vs.length < all.length ? ` (${all.length - vs.length} of ${all.length} without the field)` : "";
+  const tail = "";
   const shown = row.stat.startsWith("share") ? `${Math.round(v * 100)}% of ${all.length}` : `${fmt(v)}${row.unit ? " " + row.unit : ""} over ${vs.length}`;
   return { measured: shown + tail, pass: within(v, row) };
 }
@@ -155,22 +175,34 @@ export function pacingMeasure(band, runs) {
   const rout = (list) => median(list.map((r) => MEASURES.rout_s(r)));
   if (band === "skipper_total") return rout(pol("skipper"));
   if (band === "completionist_total") return rout(pol("completionist"));
-  if (band === "skipper_stage") {
-    const exits = pol("skipper").flatMap((r) => (r.bot.stages ?? []).filter((s) => isNum(s?.exit_s) && s.exit_s > 0).map((s) => s.exit_s));
-    return exits.length ? Math.min(...exits) : null;
-  }
+  if (band === "skipper_stage") return stageLengths(pol("skipper"));
   if (band === "brindle_fight") return median(pol("skipper").filter(routed).map((r) => r.bot.boss.defeated_s));
   return null;
 }
 
+// Every cleared stage's own clock (exit_s is per stage, not cumulative), as { min, max }.
+export function stageLengths(runs) {
+  const exits = runs.flatMap((r) => (r.bot.stages ?? []).filter((s) => isNum(s?.exit_s) && s.exit_s > 0).map((s) => s.exit_s));
+  return exits.length ? { min: Math.min(...exits), max: Math.max(...exits) } : null;
+}
+
+// A band with no numeric bound, or a bound that is not a number, is no band: it never passes.
+export function pacingBand(spec) {
+  const ok = (x) => x === undefined || isNum(x);
+  if (!spec || !ok(spec.min_s) || !ok(spec.max_s) || (spec.min_s === undefined && spec.max_s === undefined)) return null;
+  return { min: spec.min_s, max: spec.max_s };
+}
+
 function pacingRow(row, runs, pacing) {
-  const spec = pacing?.bands?.[row.band];
-  if (!spec) return { measured: pacing ? `no band ${row.band} in the pacing file` : "pacing file not on this base", pass: false, noData: true };
-  const band = { min: spec.min_s, max: spec.max_s };
+  if (!pacing) return { measured: "pacing file not on this base", pass: false, noData: true };
+  const band = pacingBand(pacing.bands?.[row.band]);
+  if (!band) return { measured: `no numeric min_s/max_s for ${row.band} in the pacing file`, pass: false, noData: true };
+  const threshold = describeBand(band, "s");
   const v = pacingMeasure(row.band, runs);
-  const minutes = v === null ? "" : ` (${(v / 60).toFixed(1)} bot-min)`;
-  const what = row.band === "skipper_stage" ? "shortest stage" : "median";
-  return { measured: `${what} ${fmt(v)} s${minutes}`, threshold: describeBand(band, "s"), pass: within(v, band), noData: v === null };
+  if (v === null) return { measured: "no data", threshold, pass: false, noData: true };
+  if (row.band === "skipper_stage")
+    return { measured: `stages ${fmt(v.min)}-${fmt(v.max)} s`, threshold, pass: within(v.min, band) && within(v.max, band) };
+  return { measured: `median ${fmt(v)} s (${(v / 60).toFixed(1)} bot-min)`, threshold, pass: within(v, band) };
 }
 
 // Beat entries in the run log: { id, s, full, skipped, held } (Story beats thread, shared player).
@@ -190,13 +222,15 @@ function beatRow(row, runs, ctx) {
   if (row.check === "each_max") {
     const full = entries.filter((e) => e.full !== false && isNum(e.s));
     const worst = full.sort((a, b) => b.s - a.s)[0];
-    return { measured: worst ? `longest ${worst.id} ${fmt(worst.s)} s` : "no full-length beat", pass: worst ? within(worst.s, row) : false };
+    if (!worst) return { measured: "no full-length beat with a length", pass: false, noData: true };
+    return { measured: `longest ${worst.id} ${fmt(worst.s)} s`, pass: within(worst.s, row) };
   }
   if (row.check === "repeat_total") {
     // A repeat run is one whose every beat played shortened (full false).
     const repeats = runs.filter((r) => Array.isArray(r.log?.flourishes) && r.log.flourishes.length && r.log.flourishes.every((f) => f.full === false));
     if (!repeats.length) return { measured: "no repeat-profile run in the inputs", pass: false, noData: true };
-    const totals = repeats.map((r) => r.log.flourishes.reduce((s, f) => s + (isNum(f.s) ? f.s : 0), 0));
+    if (repeats.some((r) => r.log.flourishes.some((f) => !isNum(f.s)))) return { measured: "a repeat run's beat has no length", pass: false, noData: true };
+    const totals = repeats.map((r) => r.log.flourishes.reduce((s, f) => s + f.s, 0));
     const worst = Math.max(...totals);
     return { measured: `worst repeat run ${fmt(worst)} s over ${repeats.length}`, pass: within(worst, row) };
   }
@@ -225,7 +259,7 @@ function frameRow(row, frames, scenes) {
 function challengeRow(row, table, cells) {
   if (!table) return { measured: "no challenge table given", pass: false, noData: true };
   const byCell = new Map((table.table ?? []).map((c) => [c.cell, c]));
-  const verdicts = cells.map((id) => [id, byCell.has(id) ? cellVerdict(byCell.get(id)) : "missing"]);
+  const verdicts = cells.map((id) => [id, !byCell.has(id) ? "missing" : byCell.get(id).columns ? cellVerdict(byCell.get(id)) : "no columns"]);
   return {
     measured: verdicts.map(([id, v]) => `${id} ${v}`).join(", ") + (table.commit ? ` (table at ${String(table.commit).slice(0, 8)})` : ""),
     pass: verdicts.every(([, v]) => v === "pass"),
@@ -260,7 +294,7 @@ export function evaluate(spec, inputs) {
         result = { ...again, threshold: `${describeBand(band)} (${path.basename(row.band_from.file)} ${row.band_from.const})` };
       } else if (!band) {
         const where = inputs.bandTexts?.[row.band_from.file] ? `${row.band_from.const} not found in` : "band file not on this base:";
-        result = { ...result, threshold: `${where} ${path.basename(row.band_from.file)}` };
+        result = { measured: result.measured, threshold: `${where} ${path.basename(row.band_from.file)}`, pass: false, noData: true };
       }
     }
     const threshold = result.threshold ?? (row.status === "info" ? "-" : describeBand(row));
@@ -298,8 +332,9 @@ export function renderTable(rows, meta = {}) {
 export function parseArgs(argv) {
   const args = { bots: [], challenge: null, frames: {}, sitting: false, json: false, out: null, rows: ROWS_FILE, project: path.join(root, "sketches/core-loop") };
   const value = (i, name) => {
-    if (i + 1 >= argv.length) throw new Error(`${name} needs a value`);
-    return argv[i + 1];
+    const v = argv[i + 1];
+    if (v === undefined || v === "" || v.startsWith("--")) throw new Error(`${name} needs a value`);
+    return v;
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -308,12 +343,13 @@ export function parseArgs(argv) {
     else if (a === "--frames") {
       const v = value(i++, a);
       const eq = v.indexOf("=");
-      if (eq < 1) throw new Error(`--frames takes <scene>=<summary.json>: ${v}`);
+      if (eq < 1 || eq === v.length - 1) throw new Error(`--frames takes <scene>=<summary.json>: ${v}`);
       args.frames[v.slice(0, eq)] = v.slice(eq + 1);
     } else if (a === "--sitting") args.sitting = true;
     else if (a === "--json") args.json = true;
     else if (a === "--out") args.out = value(i++, a);
-    else if (a === "--rows") args.rows = value(i++, a);
+    else if (a === "--rows") args.rows = path.resolve(value(i++, a));
+    else if (a === "--project") args.project = path.resolve(value(i++, a));
     else throw new Error(`unknown argument: ${a}`);
   }
   return args;
