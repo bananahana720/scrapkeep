@@ -57,6 +57,7 @@ const SOCKETS := {
 }
 # Window k of a drum face carries vertex alpha WINDOW_ALPHA[k] (shell_tally.py header).
 const WINDOW_ALPHA := [0.2, 0.4, 0.6, 0.8]
+const BRACKET_VERTICES := 136
 const CORE_LIMIT := 0.985
 const REACH := 1.25
 
@@ -264,6 +265,30 @@ func _shell(shell: Node, document: Dictionary) -> void:
 		and brackets.mesh.get_surface_count() == 1
 		and brackets.mesh.surface_get_material(0).resource_name == "paint",
 		"surfaces %d" % (brackets.mesh.get_surface_count() if brackets != null else -1))
+	# Paint take mask (PAINT_SHADER step(0.05, alpha)): the brackets' charcoal paint vertices carry alpha 0 so
+	# paint never tints them; every other paint vertex is 1 or a window index, exactly as before.
+	var masked := 0
+	var bracket_alpha_ok := brackets != null
+	var other_ok := true
+	var other_bad := 0
+	for mi in _meshes(shell):
+		for i in mi.mesh.get_surface_count():
+			var mat: Material = mi.mesh.surface_get_material(i)
+			if mat == null or mat.resource_name != "paint":
+				continue
+			var cols = mi.mesh.surface_get_arrays(i)[Mesh.ARRAY_COLOR]
+			for c in Array(cols if cols != null else []):
+				if String(mi.name) == "DrumBrackets":
+					masked += 1
+					if c.a != 0.0:
+						bracket_alpha_ok = false
+				elif absf(c.a - 1.0) > 0.001 and not WINDOW_ALPHA.any(func(w): return absf(c.a - w) < 0.01):
+					other_ok = false
+					other_bad += 1
+	_check("DrumBrackets paint vertices have alpha 0", bracket_alpha_ok and masked == BRACKET_VERTICES,
+		"%d masked vertices, expected %d, all alpha exactly 0" % [masked, BRACKET_VERTICES])
+	_check("other Tally paint alpha is 1 or a window", other_ok, "%d stray vertices" % other_bad)
+	_check("shell draws unchanged", _counts(shell).draws == 11, "%d draws, expected 11" % _counts(shell).draws)
 	_check("shell has no skeleton", document.get("skins", []).is_empty())
 	_check("no duplicate pilot", shell.find_child("Pilot", true, false) == null)
 	var source_names: Array = document.get("nodes", []).map(func(n): return n.get("name", ""))
@@ -321,7 +346,8 @@ func _shell(shell: Node, document: Dictionary) -> void:
 		var keys := found.keys()
 		keys.sort()
 		_check("drum windows", wheel.mesh.get_surface_count() == 1 and keys.size() == 4
-			and keys.all(func(a): return WINDOW_ALPHA.any(func(w): return absf(a - w) < 0.01)),
+			and keys.all(func(a): return WINDOW_ALPHA.any(func(w): return absf(a - w) < 0.01))
+			and WINDOW_ALPHA.all(func(w): return keys.any(func(a): return absf(a - w) < 0.01)),
 			"%d surface(s); window alphas %s" % [wheel.mesh.get_surface_count(), keys])
 
 
