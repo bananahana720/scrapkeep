@@ -62,6 +62,7 @@ func _run() -> void:
 	_check_ground_rows(kit)
 	_check_low_ground(kit)
 	_check_long_stamped(kit)
+	_check_scan(file, kit, world)
 	_check_synthetic(file, kit, world)
 	_check_prepare(file, kit, world, list)
 	await _check_game()
@@ -710,6 +711,94 @@ func _check_kind_line_clear(kit: Dictionary, c, ground: Callable) -> void:
 		broken["kinds"]["fix_bench"]["line_clear_m"] = bad
 		var errors := ParkProps.kit_errors(broken)
 		_t.check("kit_errors rejects line_clear_m %s and names the kind" % str(bad), errors.size() == 1 and String(errors[0]).contains("fix_bench"), str(errors))
+
+
+# Seeded spot files for the pattern scan: {id, at, yaw_deg} rows only.
+func _spots(rows: Array) -> Dictionary:
+	var spots := []
+	for row: Array in rows:
+		spots.append({"id": row[0], "template": "t", "at": [row[1], row[2]], "yaw_deg": row[3]})
+	return {"spots": spots}
+
+
+# Dressing card (b): the row/yaw scan, the label lint, the pin guard and the filled:<cell> open reason, each with a planted control.
+func _check_scan(file: Dictionary, kit: Dictionary, world: Dictionary) -> void:
+	var row := ParkProps.spot_pattern_errors(_spots([["a", 0, 0, 10], ["b", 20, 0.5, 50], ["c", 40, 0, 90]]))
+	_t.check("planted 3-spot row: exactly one row naming a, b, c", row.size() == 1 and row[0]["rule"] == "row" and row[0]["spots"] == ["a", "b", "c"], str(row))
+	var yaw := ParkProps.spot_pattern_errors(_spots([["a", 0, 0, 30], ["b", 15, 5, 30], ["c", 5, 18, 30]]))
+	_t.check("planted shared-yaw trio: exactly one yaw group", yaw.size() == 1 and yaw[0]["rule"] == "yaw" and yaw[0]["spots"] == ["a", "b", "c"], str(yaw))
+	var moved := ParkProps.spot_pattern_errors(_spots([["a", 0, 0, 30], ["b", 15, 5, 33], ["c", 5, 18, 30]]))
+	_t.check("moving one trio spot to yaw 33 clears the yaw group", moved.is_empty(), str(moved))
+	var wrap := ParkProps.spot_pattern_errors(_spots([["a", 0, 0, 359.5], ["b", 15, 5, 0.0], ["c", 5, 18, 0.4]]))
+	_t.check("yaw links wrap at 360", wrap.size() == 1 and wrap[0]["rule"] == "yaw", str(wrap))
+	var wide := ParkProps.spot_pattern_errors(_spots([["a", 0, 0, 10], ["b", 33, 1.4, 50], ["c", 67, 0, 90]]))
+	_t.check("planted 67 m row (gaps 33 and 34 m, middle 1.4 m off): only the outer pair's line holds it, and it fires", wide.size() == 1 and wide[0]["rule"] == "row" and wide[0]["spots"] == ["a", "b", "c"], str(wide))
+	var loose := ParkProps.spot_pattern_errors(_spots([["a", 0, 0, 10], ["b", 20, 0, 50], ["c", 52, 0, 90]]))
+	_t.check("negative: a line with gaps 20 and 32 m (CV over 0.1) and distinct yaws passes", loose.is_empty(), str(loose))
+	var far := ParkProps.spot_pattern_errors(_spots([["a", 0, 0, 10], ["b", 50, 0, 10], ["c", 100, 0, 10]]))
+	_t.check("negative: gaps over 40 m and links over 24 m do not fire", far.is_empty(), str(far))
+	var own := ParkProps.spot_pattern_errors(file)
+	_t.check("the fixture's own spots return no pattern rows", own.is_empty(), str(own))
+
+	var story_file := {"templates": {"t": {"story": "A compressor wall where the crew hung every tool."}}, "spots": [
+		{"id": "cut", "template": "t", "near": "dome_4: A compressor wall wh"},
+		{"id": "full", "template": "t", "near": "dome_4: A compressor wall where the crew hung every tool."},
+		{"id": "short", "template": "t", "near": "dome_4: A compressor wall"},
+		{"id": "pad", "template": "t", "near": "dome_4 "}]}
+	var lint := ParkProps.label_lint(story_file)
+	var ids := lint.map(func(r: Dictionary) -> String: return r["spot"])
+	_t.check("label lint flags the planted mid-word cut and the padded label only", ids == ["cut", "pad"] and lint.all(func(r: Dictionary) -> bool: return r["rule"] == "label"), str(lint))
+	_t.check("label lint cites the cut length", String(lint[0]["detail"]).contains("cut mid-word at 20 characters"), str(lint))
+
+	_t.eq("pin guard: a matching pin passes", ParkProps.pin_error({"pin": 77}, 77), "")
+	_t.check("pin guard: a wrong pin names both values", ParkProps.pin_error({"pin": 76}, 77) == "fingerprint 77, file pins 76")
+	_t.check("pin guard: a missing pin says which value to pin", ParkProps.pin_error({}, 77) == "no pin: pin 77")
+
+	_check_filled(kit, world)
+
+
+func _check_filled(kit: Dictionary, world: Dictionary) -> void:
+	var map = world["map"]
+	var fresh := ParkProps.context(map, world["ground"], world["stage"])
+	var probes := ParkProps.probe_variants_of(kit)
+	var pose := {}
+	var cells := []
+	for pt: Vector2 in _grid(fresh.rect, 60):
+		var candidate := {"x": pt.x, "z": pt.y, "yaw": 0.0}
+		cells = ParkProps.cone_legal_cells(fresh, kit, probes, [1.0], [candidate], CAM_SPEC, ParkProps.NEAR_RANGE_M, 2.5, ParkProps.FILLED_CELL_LIMIT)
+		if not cells.is_empty() and cells.size() <= 64:
+			pose = candidate
+			break
+	_t.check("filled: a fixture pose with a small legal set exists", not pose.is_empty() and cells.size() <= 64, "%d cells" % cells.size())
+	if pose.is_empty():
+		return
+	var placed := []
+	for cell: Vector2 in cells:
+		placed.append({"pos": Vector3(cell.x, 0.0, cell.y), "radius": 0.5})
+	var at := Vector2(pose["x"], pose["z"])
+	var named: Vector2 = cells[0]
+	var named_text := "filled:%s:%s" % [named.x, named.y]
+	_t.check("parse_open accepts filled:x:z and rejects a half cell", ParkProps.parse_open("1:2:30:" + named_text).has("spaces") and ParkProps.parse_open("1:2:30:filled:1").has("error") and ParkProps.parse_open("1:2:30:filled:a:b").has("error"))
+	var held := ParkProps.open_reason(fresh, kit, {}, named_text, at, [pose], CAM_SPEC, placed)
+	_t.check("planted true filled: an instance on every legal cell (%d, the pose's whole set) holds" % cells.size(), held["ok"], str(held))
+	var one_less := placed.duplicate()
+	one_less.remove_at(one_less.size() - 1)
+	var dropped := ParkProps.open_reason(fresh, kit, {}, named_text, at, [pose], CAM_SPEC, one_less)
+	_t.check("planted false filled: one instance removed leaves a free cell and is rejected", not dropped["ok"] and dropped["cell"] != null and String(dropped["why"]).begins_with("free legal cell"), str(dropped))
+	var elsewhere := ParkProps.open_reason(fresh, kit, {}, "filled:%s:%s" % [named.x + 500.0, named.y], at, [pose], CAM_SPEC, placed)
+	_t.check("filled: a named cell far from every taken legal cell is rejected", not elsewhere["ok"] and String(elsewhere["why"]).contains("not a legal filled cell"), str(elsewhere))
+	var edge := {"x": fresh.rect.position.x - 80.0, "z": fresh.rect.get_center().y, "yaw": PI * 0.5}
+	var none := ParkProps.open_reason(fresh, kit, {}, named_text, Vector2(edge["x"], edge["z"]), [edge], CAM_SPEC, placed)
+	_t.check("filled: a window with no legal cell is told to use no_cell", not none["ok"] and String(none["why"]) == "no legal cell: use no_cell", str(none))
+	var capped := []
+	for i in ParkProps.FILLED_CELL_LIMIT:
+		capped.append(Vector2(i * 2.5, 0.0))
+	var at_cap := ParkProps._filled_verdict(capped, Vector2.ZERO, [])
+	_t.check("filled: a cone list that hit the cell cap never holds", not at_cap["ok"] and String(at_cap["why"]).contains("stopped at"), str(at_cap["why"]))
+	var twice := ParkProps._filled_verdict([Vector2(1, 1), Vector2(1, 1)], Vector2(1, 1), [{"pos": Vector3(1, 0, 1), "radius": 1.0}])
+	_t.check("filled: a cell seen by two poses counts once", twice["ok"] and String(twice["why"]).begins_with("1 legal cells"), str(twice["why"]))
+	var by_litter := ParkProps._filled_verdict([Vector2(1, 1)], Vector2(1, 1), [{"pos": Vector3(1, 0, 1), "radius": 1.0, "litter": true}])
+	_t.check("filled: litter on a cell does not fill it", not by_litter["ok"] and String(by_litter["why"]).begins_with("free legal cell"), str(by_litter["why"]))
 
 
 # The audit's checked --open reasons (coordinator ruling #241 6329579296): runout:<kicker> and no_cell.

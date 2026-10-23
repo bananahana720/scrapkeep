@@ -4,7 +4,7 @@ extends SceneTree
 # Forced-contact probe for the fitted anchor posts (coordinator ruling 6331254683 on #241, item 1). "0 stops near a corner"
 # in a bot run proves nothing when the ball never touched a corner, so this test aims scripted balls at them.
 #
-# Setup per park (dam, pit, sinkhole, crown; islands places no kit post on this base): the park's own rows through
+# Setup per park (dam, pit, sinkhole, islands, crown; islands' posts return with clear_zones' spans_park): the park's own rows through
 # ParkRecipes.place_row on a flat ground at y 0 (the posts' turns and box splits do not depend on the ground), with
 # ParkRecipes.clear_zones as the Placer passes them. Targets: up to POSTS_PER_PARK fitted posts, over_limit rows first, then
 # the shortest sizes, then the rest, ride-line posts first within a row. "Fitted" is read from anchor_fit.json directly
@@ -43,7 +43,7 @@ const RunLog := preload("res://src/core/run_log.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
-const PARKS := ["dam", "pit", "sinkhole", "crown"]
+const PARKS := ["dam", "pit", "sinkhole", "islands", "crown"]
 const FIT_PATH := "res://src/world/park/anchors/anchor_fit.json"
 const POSTS_PER_PARK := 24
 const MIN_POSTS := 20

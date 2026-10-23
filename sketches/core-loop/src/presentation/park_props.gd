@@ -514,26 +514,38 @@ static func cone_legal_cells(c: Context, kit: Dictionary, probes: Array, scales:
 
 
 # "--open=" argument text (x:z:r:<reason>,...) to {spaces: [[Vector2 centre, radius, reason]]} or {error}. The reason is
-# everything after the third colon: no_cell, or runout:<kicker> with a non-empty kicker.
+# everything after the third colon: no_cell, runout:<kicker> with a non-empty kicker, or filled:<cx>:<cz> (two numbers, the
+# centre of the one legal cell the window's placed props already cover; open_reason checks it).
 static func parse_open(arg: String) -> Dictionary:
 	var spaces := []
 	for part in arg.split(",", false):
 		var f := part.split(":", true, 3)
 		var reason := String(f[3]) if f.size() == 4 else ""
-		if f.size() != 4 or not (reason == "no_cell" or (reason.begins_with("runout:") and reason.length() > 7)):
-			return {"error": "--open entry '%s' wants x:z:r:no_cell or x:z:r:runout:<kicker>" % part}
+		if f.size() != 4 or not (reason == "no_cell" or (reason.begins_with("runout:") and reason.length() > 7) or _filled_cell(reason) != Vector2.INF):
+			return {"error": "--open entry '%s' wants x:z:r:no_cell, x:z:r:runout:<kicker> or x:z:r:filled:<cx>:<cz>" % part}
 		spaces.append([Vector2(float(f[0]), float(f[1])), float(f[2]), reason])
 	return {"spaces": spaces}
 
 
+# The cell named by a "filled:<cx>:<cz>" reason, or Vector2.INF when the text is not that form.
+static func _filled_cell(reason: String) -> Vector2:
+	var f := reason.split(":")
+	if f.size() != 3 or f[0] != "filled" or not String(f[1]).is_valid_float() or not String(f[2]).is_valid_float():
+		return Vector2.INF
+	return Vector2(float(f[1]), float(f[2]))
+
+
 # The audit's decision for one --open window: {ok, why, cell}. ok is true when the reason holds. `file` is the park's
 # vignette file ({} when it has none): its ground_rows and low_ground_rows apply to the probe as expand applies them, and
-# its smallest scale sizes the probes. `at` is the window midpoint and `poses` every sample pose in the window.
-static func open_reason(c: Context, kit: Dictionary, file: Dictionary, reason: String, at: Vector2, poses: Array, cam: Dictionary) -> Dictionary:
+# its smallest scale sizes the probes. `at` is the window midpoint and `poses` every sample pose in the window. `placed` is the
+# file's expanded instances: filled:<cx>:<cz> holds when every legal cell in the frustum lies within an instance's radius (plus half
+# a cell) of its centre, and the named cell is within one cell of such a cell.
+static func open_reason(c: Context, kit: Dictionary, file: Dictionary, reason: String, at: Vector2, poses: Array, cam: Dictionary, placed: Array = []) -> Dictionary:
 	if reason.begins_with("runout:"):
 		var why := runout_near(c, reason.trim_prefix("runout:"), at)
 		return {"ok": why == "", "why": why, "cell": null}
-	if reason != "no_cell":
+	var filled := _filled_cell(reason)
+	if reason != "no_cell" and filled == Vector2.INF:
 		return {"ok": false, "why": "unknown reason %s" % reason, "cell": null}
 	# The file's rows apply for this probe only: the caller's lists come back untouched.
 	var saved_ground := c.ground_rows
@@ -543,7 +555,9 @@ static func open_reason(c: Context, kit: Dictionary, file: Dictionary, reason: S
 	var scales := Array(probe_scales(file))
 	var probes := probe_variants_of(kit)
 	var result := {"ok": false, "why": "no kit to probe with", "cell": null}
-	if not probes.is_empty():
+	if not probes.is_empty() and filled != Vector2.INF:
+		result = _filled_verdict(cone_legal_cells(c, kit, probes, scales, poses, cam, NEAR_RANGE_M, FILLED_CELL_M, FILLED_CELL_LIMIT), filled, placed)
+	elif not probes.is_empty():
 		var cells := cone_legal_cells(c, kit, probes, scales, poses, cam, NEAR_RANGE_M)
 		var label := "%d probe variants at scales %s" % [probes.size(), str(scales)]
 		if cells.is_empty():
@@ -553,6 +567,44 @@ static func open_reason(c: Context, kit: Dictionary, file: Dictionary, reason: S
 	c.ground_rows = saved_ground
 	c.low_rows = saved_low
 	return result
+
+
+const FILLED_CELL_M := 2.5
+const FILLED_CELL_LIMIT := 4096
+
+
+# The filled:<cx>:<cz> decision over the frustum's legal `cells`: {ok, why, cell}. A cell is taken when its centre lies within an
+# instance's radius plus half a cell of the instance (xz distance). The cone lists a cell once per pose that sees it, so cells are
+# deduplicated; a list that reached FILLED_CELL_LIMIT may have stopped before a free cell, so it never holds. Litter fills
+# nothing: validate() skips it, so a vignette prop must stand there.
+static func _filled_verdict(cells: Array, named: Vector2, placed: Array) -> Dictionary:
+	if cells.is_empty():
+		return {"ok": false, "why": "no legal cell: use no_cell", "cell": null}
+	if cells.size() >= FILLED_CELL_LIMIT:
+		return {"ok": false, "why": "the cone scan stopped at %d legal cells, so free cells may be unseen" % FILLED_CELL_LIMIT, "cell": null}
+	var unique := []
+	for cell: Vector2 in cells:
+		if not unique.has(cell):
+			unique.append(cell)
+	cells = unique
+	var taken := []
+	for cell: Vector2 in cells:
+		var is_taken := false
+		for inst: Dictionary in placed:
+			if inst.get("litter", false):
+				continue
+			var pos: Vector3 = inst["pos"]
+			if Vector2(pos.x, pos.z).distance_to(cell) <= float(inst["radius"]) + FILLED_CELL_M * 0.5:
+				is_taken = true
+				break
+		if is_taken:
+			taken.append(cell)
+		else:
+			return {"ok": false, "why": "free legal cell at (%.1f, %.1f)" % [cell.x, cell.y], "cell": [cell.x, cell.y]}
+	for cell: Vector2 in taken:
+		if cell.distance_to(named) <= FILLED_CELL_M:
+			return {"ok": true, "why": "%d legal cells in the view frustum, all covered by placed props" % cells.size(), "cell": null}
+	return {"ok": false, "why": "named cell (%.1f, %.1f) is not a legal filled cell" % [named.x, named.y], "cell": null}
 
 
 static func _pair(value) -> Vector2:
@@ -656,6 +708,176 @@ static func file_errors(file: Dictionary, kit: Dictionary, park_map = null) -> A
 			if id is String and (file["low_ground_rows"] as Array).has(id):
 				errors.append("row %s is in both ground_rows and low_ground_rows; a ground row has no height cap, so list it in one" % id)
 	return errors
+
+
+# Pattern rows {rule, spots: [ids], detail} for a vignette file's spots (reads id, at, yaw_deg only). A spot layout that reads as
+# a mechanical row or as one stamped heading fails the dressing check.
+#   row  3 or more spots lie within ROW_BAND_M of one line through two spots, and 3 consecutive ones along it have gaps with a
+#        coefficient of variation (population sd / mean) under ROW_CV. Gaps count between ROW_GAP_MIN_M and ROW_GAP_MAX_M. The
+#        two spots that define the line may be up to two gaps apart (2 x ROW_GAP_MAX_M): for 3 spots at 33 m gaps, only the
+#        outer pair's line can hold the middle one inside the band.
+#   yaw  3 or more spots linked into one group, a link being two spots at most YAW_LINK_M apart whose yaws differ by at most 1 degree.
+# Numbers: 3 spots, 1.5 m and CV 0.1 are Dressing card 1 (#241); the 40 m gap cap is the lane scan's (scan_strict.py, the #241 LANE
+# DONE table); 24 m is two tall-tier vignette radii (park_props_plan.gd TIERS tall radius 12 m), so the discs touch.
+# Output is sorted by rule, then by first id.
+const ROW_BAND_M := 1.5
+const ROW_CV := 0.1
+const ROW_GAP_MIN_M := 0.5
+const ROW_GAP_MAX_M := 40.0
+const YAW_LINK_M := 24.0
+const YAW_LINK_DEG := 1.0
+
+static func spot_pattern_errors(file: Dictionary) -> Array:
+	var ids: Array = []
+	var pts: Array = []
+	var yaws: Array = []
+	for spot in file.get("spots", []):
+		if spot is Dictionary and _pair(spot.get("at")) != Vector2.INF:
+			ids.append(String(spot.get("id", "")))
+			pts.append(_pair(spot["at"]))
+			yaws.append(float(spot.get("yaw_deg", 0.0)))
+	var n := ids.size()
+	var out := []
+	# Rows: hits are sets of spot indices; hits that share a spot merge.
+	var parent := []
+	for i in n:
+		parent.append(i)
+	var in_row := {}
+	var cvs := {}
+	for i in n:
+		for j in range(i + 1, n):
+			var dir: Vector2 = pts[j] - pts[i]
+			var span := dir.length()
+			if span <= ROW_GAP_MIN_M or span > 2.0 * ROW_GAP_MAX_M:
+				continue
+			dir /= span
+			var on := []
+			for k in n:
+				var rel: Vector2 = pts[k] - pts[i]
+				if absf(rel.cross(dir)) <= ROW_BAND_M:
+					on.append([rel.dot(dir), k])
+			if on.size() < 3:
+				continue
+			on.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+			for w in range(0, on.size() - 2):
+				var g1: float = on[w + 1][0] - on[w][0]
+				var g2: float = on[w + 2][0] - on[w + 1][0]
+				if g1 <= ROW_GAP_MIN_M or g1 > ROW_GAP_MAX_M or g2 <= ROW_GAP_MIN_M or g2 > ROW_GAP_MAX_M:
+					continue
+				var mean := (g1 + g2) * 0.5
+				var cv := sqrt(((g1 - mean) * (g1 - mean) + (g2 - mean) * (g2 - mean)) * 0.5) / mean
+				if cv >= ROW_CV:
+					continue
+				var a: int = on[w][1]
+				var b: int = on[w + 1][1]
+				var d: int = on[w + 2][1]
+				for k in [a, b, d]:
+					in_row[k] = true
+					cvs[k] = minf(float(cvs.get(k, INF)), cv)
+				parent[_find(parent, b)] = _find(parent, a)
+				parent[_find(parent, d)] = _find(parent, a)
+	var groups := {}
+	for k in in_row:
+		var root := _find(parent, k)
+		if not groups.has(root):
+			groups[root] = []
+		groups[root].append(k)
+	for root in groups:
+		var members: Array = groups[root]
+		var names := members.map(func(k: int) -> String: return ids[k])
+		names.sort()
+		var best := INF
+		for k in members:
+			best = minf(best, float(cvs[k]))
+		out.append({"rule": "row", "spots": names, "detail": "%d spots lie within %.1f m of a line with gap CV %.3f (under %.1f)" % [names.size(), ROW_BAND_M, best, ROW_CV]})
+	# Yaw groups.
+	var yparent := []
+	for i in n:
+		yparent.append(i)
+	for i in n:
+		for j in range(i + 1, n):
+			var diff := fposmod(float(yaws[i]) - float(yaws[j]) + 180.0, 360.0) - 180.0
+			if absf(diff) <= YAW_LINK_DEG and (pts[i] as Vector2).distance_to(pts[j]) <= YAW_LINK_M:
+				yparent[_find(yparent, j)] = _find(yparent, i)
+	var ygroups := {}
+	for i in n:
+		var root := _find(yparent, i)
+		if not ygroups.has(root):
+			ygroups[root] = []
+		ygroups[root].append(i)
+	for root in ygroups:
+		var members: Array = ygroups[root]
+		if members.size() < 3:
+			continue
+		var names := members.map(func(k: int) -> String: return ids[k])
+		names.sort()
+		out.append({"rule": "yaw", "spots": names, "detail": "%d spots within %.0f m chain share yaw %.0f degrees (within %.0f)" % [names.size(), YAW_LINK_M, float(yaws[members[0]]), YAW_LINK_DEG]})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if a["rule"] != b["rule"]:
+			return a["rule"] < b["rule"]
+		return a["spots"][0] < b["spots"][0])
+	return out
+
+
+static func _find(parent: Array, i: int) -> int:
+	while parent[i] != i:
+		parent[i] = parent[parent[i]]
+		i = parent[i]
+	return i
+
+
+# Lint rows {rule: "label", spot, detail} for spots whose `near` has stray whitespace, or ends with the first characters of the
+# template's story cut in the middle of a word (a label generator that caps its length). Lint does not fail a file.
+static func label_lint(file: Dictionary) -> Array:
+	var out := []
+	var templates: Dictionary = file.get("templates", {}) if file.get("templates") is Dictionary else {}
+	for spot in file.get("spots", []):
+		if not spot is Dictionary or not spot.get("near") is String:
+			continue
+		var near := String(spot["near"])
+		var id := String(spot.get("id", ""))
+		if near != near.strip_edges():
+			out.append({"rule": "label", "spot": id, "detail": "near has leading or trailing whitespace"})
+		var template = templates.get(spot.get("template", ""))
+		var story := String(template.get("story", "")) if template is Dictionary else ""
+		if story.is_empty():
+			continue
+		var cut := _story_cut(near, story)
+		if cut > 0:
+			out.append({"rule": "label", "spot": id, "detail": "near is the template story cut mid-word at %d characters" % cut})
+	return out
+
+
+# The length of a tail of `near` (after ": " or ", ") that is a strict prefix of `story` ending in the middle of a word, else 0.
+static func _story_cut(near: String, story: String) -> int:
+	var lower_story := story.to_lower()
+	for sep in [": ", ", "]:
+		var from := 0
+		while true:
+			var at := near.find(sep, from)
+			if at < 0:
+				break
+			from = at + 1
+			var tail := near.substr(at + sep.length()).to_lower()
+			if tail.is_empty() or tail.length() >= lower_story.length() or not lower_story.begins_with(tail):
+				continue
+			if _is_word_char(tail[tail.length() - 1]) and _is_word_char(lower_story[tail.length()]):
+				return tail.length()
+	return 0
+
+
+static func _is_word_char(ch: String) -> bool:
+	return ch.to_lower() != ch.to_upper() or (ch >= "0" and ch <= "9")
+
+
+# "" when the file's pin equals the expansion's fingerprint; else the text for the mismatch, or "no pin: pin <fingerprint>" when the
+# file has none (the plan check fails that for a map's file and only notes it for a --file fixture).
+static func pin_error(file: Dictionary, fingerprint_value: int) -> String:
+	if not file.has("pin"):
+		return "no pin: pin %d" % fingerprint_value
+	if int(file["pin"]) != fingerprint_value:
+		return "fingerprint %d, file pins %d" % [fingerprint_value, int(file["pin"])]
+	return ""
 
 
 # Rows of text for a low_ground_rows list: every entry a park row that is eligible (see LOW_GROUND_ELEMENTS). Without a park_map

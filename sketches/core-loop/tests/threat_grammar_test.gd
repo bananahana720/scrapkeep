@@ -47,6 +47,23 @@ func _process(_delta: float) -> bool:
 	_check_stances()
 	_check_wave()
 	_check_sweep()
+	# The netcaster catches only in the air, so its live ring must not wear the ground scorch
+	# (ruling #241 6347013047 section 4). Built the way netcaster._commit builds it; the planted
+	# control is the same descriptor without "air", which must still get the scorch.
+	var net: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, 400.0), 6.0)
+	net.air_only = true
+	net.set_progress(1.0)
+	var air_d: Dictionary = net.descriptor()
+	var ground_d: Dictionary = air_d.duplicate()
+	ground_d.erase("air")
+	var scorch := Color(Palette.HAZARD.lerp(Palette.CHARCOAL, Threat.LIVE_SCORCH), Threat.LIVE_SCORCH_ALPHA)
+	var air_tint := Threat.fill_tint(air_d)
+	var ground_tint := Threat.fill_tint(ground_d)
+	_report("air net keeps off the live scorch", Threat.haze() and air_d.get("live", false) and air_d.get("air", false)
+			and air_tint != scorch and air_tint == Color(Palette.HAZARD, Threat.AIR_LIVE_ALPHA) and ground_tint == scorch,
+		"air live fill %s is not the scorch %s and is HAZARD at %.2f; the planted control without air gives %s"
+			% [air_tint, scorch, Threat.AIR_LIVE_ALPHA, ground_tint])
+	net.free()
 	_check_projectile()
 	_check_driven()
 	_check_drive_layers()
@@ -438,11 +455,12 @@ func _fill_alpha(node: Node3D, layer: String) -> float:
 # Fills unioned in one stencil class draw once, so one class must mean one alpha (an
 # overlap shows whichever drew first, which flips with camera depth); and a live lane
 # batches after a pending one, a fill and a swept ring, so its band always wins. Under the
-# default haze every hostile fill alpha is scaled by HAZE_FILL (0.5): 0.175 pending, 0.4 live. The 8-bit vertex colour
+# default haze every hostile fill alpha is scaled by HAZE_FILL (1.15): 0.4025 pending, 0.92 live. The 8-bit vertex colour
 # truncates the pending alpha by up to one step (1/255), and the live alpha is that stored value times
 # LIVE_ALPHA / RUN_ALPHA, so live may fall short of its target by that step times the ratio (0.0090) and
-# never exceeds it. Measured under haze: pending 0.1725 and live 0.3944 (0.0025 and 0.0056 short of 0.175
-# and 0.4). The classic alphas are not checked here.
+# never exceeds it. Measured under haze (Godot 4.7.2 headless): pending 0.4000 and live 0.9143 (0.0025 and 0.0057 short of
+# 0.4025 and 0.92). The pending INSTANT fill measures 0.4000 too, the live slag is a dark scorched core, whose L* step
+# under pending is checked below against ATTACK-READS.md:27 (ruling 6343230462). The classic alphas are not checked here.
 func _check_fill_classes() -> void:
 	var ring: Node3D = Telegraph.ring(_world, _ground, Threat.Type.INSTANT, Vector3(0.0, 0.0, 400.0), 6.0)
 	var wedge: Node3D = Telegraph.wedge(_world, _ground, Threat.Type.LANE, Vector3(20.0, 0.0, 400.0), Vector3.FORWARD, 9.0, 30.0)
@@ -484,6 +502,19 @@ func _check_fill_classes() -> void:
 		and live_priority > Threat.PRIORITY
 	lane.set_progress(0.5)
 	var back_to_run: bool = _stencil(lane, "stripe_motion") == pending_class
+	# The live slag is a dark scorched core over the pending area and fill: a modeled L* step over a
+	# pale floor (L* 67.04, the 3060 stage 2 ground box, #241 6342833117), composed in linear light.
+	# The old tint (HAZARD at HAZE_SOLID 0.61) is the planted miss: it must fail the same bar.
+	var instant_pending := _fill_alpha(ring, "stripe_motion")
+	var live_tint := Threat.fill_tint(_live_desc())
+	var pending_l := _model_lstar(PALE_L, [Color(Palette.HAZARD, Threat.AREA_ALPHA * Threat.HAZE_FILL), Color(Palette.HAZARD, Threat.FILL_ALPHA * Threat.HAZE_FILL)])
+	var live_l := _model_lstar(PALE_L, [Color(Palette.HAZARD, Threat.AREA_ALPHA * Threat.HAZE_FILL), Color(Palette.HAZARD, Threat.FILL_ALPHA * Threat.HAZE_FILL), live_tint])
+	var old_l := _model_lstar(PALE_L, [Color(Palette.HAZARD, Threat.AREA_ALPHA * Threat.HAZE_FILL), Color(Palette.HAZARD, Threat.FILL_ALPHA * Threat.HAZE_FILL), Color(Palette.HAZARD, 0.61)])
+	var slag_step: float = pending_l - live_l
+	var old_step: float = pending_l - old_l
+	_report("live slag over pending fill", Threat.haze() and instant_pending > 0.39 and slag_step >= LIVE_STEP and old_step < LIVE_STEP,
+		"modeled over L* %.2f: pending %.1f, live %.1f, step %.1f (at least %.0f; model; the 3060 sweep measured 13.0 L* in stage 2 and 11.4 in the arena, #241 6345835130; ATTACK-READS.md:27); the old HAZARD tint at 0.61 gives live %.1f, step %.1f and fails"
+			% [PALE_L, pending_l, live_l, slag_step, LIVE_STEP, old_l, old_step])
 	var step := 1.0 / 255.0
 	var pending_target: float = Threat.RUN_ALPHA * Threat.HAZE_FILL
 	var live_target: float = Threat.LIVE_ALPHA * Threat.HAZE_FILL
@@ -584,7 +615,7 @@ func _meshes(node: Node3D) -> Dictionary:
 	return out
 
 
-# --telegraph=haze: a hostile fill is a thin red haze without stripes; every P1 line, the
+# --telegraph=haze: a hostile fill is a red haze without stripes; every P1 line, the
 # geometry, contains() and the drive are the classic ones. Fails if a fill draws at or above
 # a P1 line's priority, a fill carries stripes or the wrong alpha, a line changes, or a
 # hit test differs between the modes.
@@ -612,6 +643,27 @@ func _hit_map(nodes: Array, progress: float) -> String:
 			for iz in range(-16, 17):
 				out += "1" if node.contains(c + Vector3(ix * 0.75, 0.0, iz * 0.75)) else "0"
 	return out
+
+
+const PALE_L := 67.04
+const LIVE_STEP := 10.0
+
+
+func _live_desc() -> Dictionary:
+	var d := _descriptor_for(Threat.Type.INSTANT)
+	d["live"] = true
+	return d
+
+
+# L* of a stack of alpha layers over a grey of L* `ground`, blended in linear light.
+func _model_lstar(ground: float, layers: Array) -> float:
+	var y := pow((ground + 16.0) / 116.0, 3.0)
+	var lin := Color(y, y, y)
+	for c in layers:
+		var l: Color = c.srgb_to_linear()
+		lin = Color(lerpf(lin.r, l.r, c.a), lerpf(lin.g, l.g, c.a), lerpf(lin.b, l.b, c.a))
+	var lum := lin.r * 0.2126729 + lin.g * 0.7151522 + lin.b * 0.0721750
+	return 116.0 * pow(lum, 1.0 / 3.0) - 16.0
 
 
 func _check_haze() -> void:
@@ -669,12 +721,10 @@ func _check_haze() -> void:
 					and m["tris"] == was["tris"]
 			else:
 				lines_same = lines_same and m["tone"] == was["tone"] and m["tris"] == was["tris"] and m["layer"] == was["layer"]
-	var live_desc := _descriptor_for(Threat.Type.INSTANT)
-	live_desc["live"] = true
-	var solid_alpha := Threat.fill_tint(live_desc).a
+	var solid_alpha := Threat.fill_tint(_live_desc()).a
 	var drive_same: bool = Threat.drive(_descriptor_for(Threat.Type.LANE)) == classic_drive
 	_report("haze look", hits_same and lines_same and fills_red and fills_seen >= 8 and no_stripes and lines_above and alive
-			and absf(solid_alpha - Threat.HAZE_SOLID) < 0.001 and drive_same,
+			and absf(solid_alpha - Threat.LIVE_SCORCH_ALPHA) < 0.001 and drive_same,
 		"contains() over 5 telegraphs x 3 progress samples equals classic (%s); every P1 line mark is unchanged (%s); every fill is HAZARD at %.2f of its classic alpha with the same tris (%s, %d fill layers seen); no fill layer carries stripes (%s); every fill renders under every P1 line (%s); each fill draws visibly at 25/50/95%% (%s); live slag alpha %.2f"
 			% [hits_same, lines_same, Threat.HAZE_FILL, fills_red, fills_seen, no_stripes, lines_above, alive, solid_alpha])
 	for node in nodes:

@@ -10,6 +10,11 @@ extends SceneTree
 #   row 1  the same grounds under a hostile fill as threat_grammar paints it (fill()): under the
 #          default haze look HAZARD at FILL_ALPHA * HAZE_FILL; under classic the HAZARD stripe
 #          of the striped fill, HAZARD at FILL_ALPHA (unshaded, alpha)
+#          plus a small live plate on each fill, the live INSTANT slag layer (live_fill()) over it:
+#          the "live~pending:" value is the L* step, pending L* minus live L*, of that live colour
+#          against the pending fill beside it (live is a dark scorched core), reported and not gated (ATTACK-READS.md:27, live and pending must stay distinct under haze). The
+#          plate stacks slag over the fill; the game also draws the footprint's AREA_ALPHA base
+#          under both, which the plate leaves out.
 #   row 2  the meaning colours at EDGE_ALPHA over threat_grammar's charcoal under-band at
 #          UNDERLAY_ALPHA, both unshaded, on lit sandstone
 # It reads the pixels back and reports the graded colours and their CIE76 gaps. Needs a display:
@@ -91,7 +96,14 @@ static func gaps(seen: Dictionary) -> Dictionary:
 		result["edge:%s~%s" % pair] = DefenceBars.cie76(seen["edge_" + pair[0]], seen["edge_" + pair[1]])
 	for ground in GROUND:
 		result["fill:hazard~" + ground] = DefenceBars.cie76(seen["fill_" + ground], seen[ground])
+		result["live~pending:" + ground] = lstar_step(seen["fill_" + ground], seen["live_" + ground])
 	return result
+
+
+# The L* step the live slag leaves under the pending fill: pending L* minus live L*, signed (a
+# positive step means live reads darker). Report-only; the bar is 10 on the 3060 (#241 6343230462).
+static func lstar_step(pending: Color, live: Color) -> float:
+	return DefenceBars._lab(pending).x - DefenceBars._lab(live).x
 
 
 static func gated(pair: String) -> bool:
@@ -103,6 +115,11 @@ static func gated(pair: String) -> bool:
 static func fill() -> Color:
 	var tone: Color = ThreatGrammar._area_tone({"tone": Palette.HAZARD}, ThreatGrammar.FILL_ALPHA)
 	return tone if ThreatGrammar.haze() else Color(Palette.HAZARD, tone.a)
+
+
+# A live hostile INSTANT's slag layer as fill_tint paints it, drawn over the pending fill.
+static func live_fill() -> Color:
+	return ThreatGrammar.fill_tint({"type": ThreatGrammar.Type.INSTANT, "live": true, "tone": Palette.HAZARD})
 
 
 # The keyline band under every line.
@@ -117,6 +134,7 @@ static func raw() -> Dictionary:
 	for id in GROUND:
 		seen[id] = GROUND[id]
 		seen["fill_" + id] = over.call(GROUND[id], fill())
+		seen["live_" + id] = over.call(seen["fill_" + id], live_fill())
 	var keyline: Color = over.call(Palette.SANDSTONE, band())
 	for id in MEANING:
 		seen["edge_" + id] = over.call(keyline, Color(MEANING[id], ThreatGrammar.EDGE_ALPHA))
@@ -191,6 +209,8 @@ func _build_grid() -> void:
 		cells[id] = _plate(GROUND[id], 1.0, false, Vector2(column, 0), 0)
 		_plate(GROUND[id], 1.0, false, Vector2(column, 1), 0)
 		cells["fill_" + id] = _plate(fill(), fill().a, true, Vector2(column, 1), 1)
+		# Off the fill's centre sample, inside the fill plate (0.6 wide), 30 px for the 21 px sample.
+		cells["live_" + id] = _plate(live_fill(), live_fill().a, true, Vector2(column + 0.2, 1.2), 2, 0.15)
 		column += 1
 	column = 0
 	for id in MEANING:
@@ -268,7 +288,7 @@ func _probe(id: String) -> void:
 		if gated(pair) and pairs[pair] < GAP:
 			red.append("%s %s %.1f" % [id, pair, pairs[pair]])
 	report.places.append(row)
-	print("place %s hazard~amber %.1f fill~sandstone %.1f reach %.1f" % [id, pairs["edge:hazard~amber"], pairs["fill:hazard~sandstone"], reach])
+	print("place %s hazard~amber %.1f fill~sandstone %.1f live~pending:sandstone %.1f reach %.1f" % [id, pairs["edge:hazard~amber"], pairs["fill:hazard~sandstone"], pairs["live~pending:sandstone"], reach])
 
 
 # The mean of a 21 px square at a cell's centre.
