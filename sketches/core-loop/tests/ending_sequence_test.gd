@@ -165,6 +165,15 @@ func _frames(count: int) -> void:
 		await physics_frame
 
 
+func _set_space(down: bool) -> void:
+	var event := InputEventKey.new()
+	event.keycode = KEY_SPACE
+	event.physical_keycode = KEY_SPACE
+	event.pressed = down
+	Input.parse_input_event(event)
+	Input.flush_buffered_events()
+
+
 func _force_win() -> void:
 	_game.flow._set_state(_game.flow.BOSS)
 	_game.events.boss_defeated.emit()
@@ -217,14 +226,17 @@ func _skip_checks() -> void:
 	# Exercise game._input too, so its summary keys cannot steal or duplicate a skip.
 	_game.test_mode = false
 	_t.check("END-1 second run starts", _game.screens.ending_open())
-	var event := InputEventAction.new()
-	event.action = "ui_accept"
-	event.pressed = true
-	root.push_input(event, true)
+	# The skip is a real Space press through Input, so Input reports it held. Since cb67c62d the
+	# summary's latch, not a 0.75 s time lock, keeps the held skip press from starting a run; a
+	# fresh press after the release acts at once (the input latch design, wave 19).
+	_set_space(true)
 	_t.check("END-1 confirm skips immediately", not _game.screens.ending_open() and _game.screens._actions.visible)
 	_t.eq("END-1 confirm leaves summary", _game.flow.state_name(), "summary")
 	_game._screen_key(KEY_SPACE)
 	_t.eq("skip press cannot start another run", _game.flow.state_name(), "summary")
+	_set_space(false)
+	_game.step_summary_latch()
+	_t.check("skip release opens the summary latch", not _game.summary_latched)
 	for time in [0.0, 4.0, Sequence.WORLD_SECONDS * 3.0 + 2.0]:
 		_force_win()
 		_game.screens.ending_sequence.advance(time)
