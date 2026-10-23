@@ -61,6 +61,14 @@ TUNES = [
     # Fights and shops.
     ("miniboss", "Heavyweight", "Mini-boss fights", "combat-hype", 135, "D minor", 0.6, False, False,
      "Instrumental heavy industrial electro house with jazz bite, a big machine stepping up. Hammering pistons and anvil hits as percussion, a distorted electro bass riff, brass stabs and a desperate alto sax. Heavy, aggressive, hype."),
+    # The rogue fleet mini-bosses' anthems (design-v3/rogues/BRIEFS.md): each a singable lead hook,
+    # a big-room build, a drop and a second, bigger drop; kick and bass carry the weight, the lead on top.
+    ("anthem-gate-crane", "Gate Crane No. 14", "Rogue mini-boss: the Spillway's gate crane", "combat-hype", 140, "D minor", 0.5, False, False,
+     "Instrumental bass-heavy big-room Eurodance anthem, a rogue gate crane swinging its hook. A bright singable synth-brass lead hook that swings up an octave and back down a fifth like a pendulum, leading over everything. Four-on-the-floor kick and a pumping sidechained sub bass carry the weight under it. A muted brass stab on every clang of the steel gate leaf. A long riser build, a huge drop, then a second, bigger drop. Heavy, triumphant, hype."),
+    ("anthem-haul-skip", "Haul Skip No. 31", "Rogue mini-boss: the Dig's haul skip", "roam-dig", 145, "E minor", 0.5, False, False,
+     "Instrumental bass-heavy big-room Eurodance anthem, a runaway mine skip on its rails. A driving offbeat rolling bass that clatters like rail wheels, and a singable synth lead on top: a there-and-back phrase that repeats one tone higher on the return. Punchy kick, a Latin cowbell pattern under the drop. A long riser build, a huge drop, then a second, bigger drop. Gritty, driving, hype."),
+    ("anthem-cable-tender", "Cable Tender No. 7", "Rogue mini-boss: the Highdraft's cable tender", "roam-highdraft", 150, "G minor", 0.5, False, False,
+     "Instrumental bass-heavy big-room Eurodance anthem, a cable machine that never stops pulling tension. A tense held-note synth lead that tightens and then snaps into a fast falling run, always on top of the mix. Hard kick and a thick sidechained sub bass under it. Jazz-harmony electric piano pads in the break. A long riser build, a big drop, then a second drop that cracks like a whip. Tense, soaring, hype."),
     ("moss-shop", "Moss's Counter", "Moss's shop", "camp", 112, "D minor", 0.55, True, False,
      "Instrumental warm bossa-nova lounge with jazz chords, a cosy junk shop. Brushed drums, upright bass, a mellow electric piano, a breathy tenor sax, a cash-register ding and ticking clocks. Relaxed, friendly, a little sly."),
     ("fabricator", "The Fabricator", "The fabricator", "title-b", 120, "D minor", 0.55, False, False,
@@ -85,6 +93,36 @@ TUNES = [
      "Instrumental slow jazz with light rain on a canvas sail, a clear night high in the sky. Crisp brushes and ride cymbal, bright vibraphone melody, a soprano sax lead up front. Calm, dreamy, lonely, open and airy."),
     ("secret-dig-dub", "Deep Works Dub", "Hidden: a rare remix", "dig-loop", 140, "E minor", 0.6, False, True,
      "Instrumental heavy dubstep-jazz from deep underground. Huge half-time drums, a growling wobble bass, pickaxe clinks, a baritone sax through a dub echo. Dark, heavy, swaggering."),
+]
+
+# Anthem candidates (ruling 19 Oct: every boss, mini-boss and intense event gets a bass-heavy EDM
+# anthem). Rendered with --anthems into anthem-candidates.json, not tunes.json: they are takes for
+# Andrew to pick from, and a pick replaces the slot's current track. Boss finals sit at 140 to 150.
+ANTHEM = (" Bass-heavy big-room Eurodance anthem: a singable synth lead hook on top, a hard kick and pumping"
+          " sub bass under it, a riser build, a huge drop, then a bigger second drop.")
+ANTHEMS = [
+    ("anthem-brindle", "Brindle Goes Big", "Boss: Brindle, the Spillway's foreman", "boss-brindle", 140, "D minor", 0.5, False, False,
+     "Instrumental. A boiling flume boss that requisitions, stokes its furnace and scuttles. Brass-stab lead answered by an alto sax, furnace whoosh and steam-valve shrieks in the build." + ANTHEM + " Hot, proud, unstoppable."),
+    ("anthem-waking", "The Waking Rises", "Boss: the Waking, under the Dig", "boss-waking", 145, "D minor", 0.5, False, False,
+     "Instrumental. Something huge waking under the mine. A low growling lead that climbs a step each bar, rumbling stone and chain rattles in the build, baritone sax under the second drop." + ANTHEM + " Dark, colossal, driving."),
+    ("anthem-mind", "All Hands", "Boss: the Mind, the foreman of the fleet", "boss-mind", 150, "E minor", 0.5, False, False,
+     "Instrumental. The fleet's thinking machine calls every hand at once. A cold arpeggiated lead that turns into a soaring human-sounding synth melody, relay clicks and servo whirs in the build, a wordless choir pad on the second drop." + ANTHEM + " Epic, eerie, triumphant."),
+    ("anthem-champion", "Champion's Lap", "Boss: the champion", "combat-hype", 145, "D minor", 0.5, False, False,
+     "Instrumental. A victory-lap fight against the best. A bright stadium synth-brass lead, crowd stomp-clap in the build, an alto sax shout over the second drop." + ANTHEM + " Cocky, bright, hype."),
+    ("anthem-miniboss", "Heavyweight Anthem", "Mini-boss: the surge mini-boss", "combat-hype", 140, "D minor", 0.5, False, False,
+     "Instrumental. A big machine steps into the ring. A punchy two-note synth hook, hammering pistons and anvil hits in the build, brass stabs on the drop." + ANTHEM + " Heavy, aggressive, hype."),
+    ("anthem-scrap-stampede", "Stampede Anthem", "Event: scrap stampede", "combat-hype", 150, "D minor", 0.5, False, False,
+     "Instrumental. A stampede of scrap. A galloping synth lead, clattering junk percussion in the build, honking baritone sax riffs on the drop." + ANTHEM + " Chaotic, breathless, fun."),
+    ("anthem-surge-run", "Surge Anthem", "Event: surge run", "roam-spillway", 150, "D minor", 0.5, False, False,
+     "Instrumental. A race against the clock. A fast chasing synth lead, a ticking stopwatch and rev-up whirs in the build, synth-brass hits on the drop." + ANTHEM + " Urgent, thrilling."),
+    ("anthem-hold-relay", "Hold the Line", "Event: hold the relay", "boss-brindle", 140, "D minor", 0.5, False, False,
+     "Instrumental. Holding a position under fire. A stubborn repeating synth lead, a relay clicking like a metronome and electric crackle in the build, a muted trumpet call over the drop." + ANTHEM + " Stubborn, tense, rising."),
+    ("anthem-flood", "Floodgate Anthem", "Event: flood", "spillway-loop", 140, "D minor", 0.5, False, False,
+     "Instrumental. The stage floods. A rising synth lead that swells like water, rushing water and gurgling pipes in the build, a filter sweep that bursts open on the drop." + ANTHEM + " Rising, swirling, huge."),
+    ("anthem-dust-squall", "Squall Anthem", "Event: dust squall", "roam-dig", 145, "E minor", 0.5, False, False,
+     "Instrumental. A dust storm rolls in. A twanging baritone-guitar hook doubled by a synth lead, howling wind and sand hiss in the build, a growling sax on the second drop." + ANTHEM + " Dusty, wild, driving."),
+    ("anthem-arena", "Arena Anthem", "Event and camp: the arena", "combat-hype", 145, "D minor", 0.5, False, False,
+     "Instrumental. An arena fight with a roaring crowd. An announcer-style brass fanfare lead, stomp-stomp-clap crowd rhythm in the build, a hype alto sax hook on the drop." + ANTHEM + " Rowdy, proud, pumping."),
 ]
 
 
@@ -117,8 +155,9 @@ def source(root, tune):
 
 def main(argv):
     root = Path(argv[0])
-    wanted = {a for a in argv[1:] if not a.startswith("--") and a not in SEEDS}
-    tunes = [t for t in TUNES if not wanted or t[0] in wanted]
+    wanted = {a for a in argv[1:] if not a.startswith("--") and a != ",".join(SEEDS)}
+    table = ANTHEMS if "--anthems" in argv else TUNES
+    tunes = [t for t in table if not wanted or t[0] in wanted]
     ace_path = root / "ace.json"
     ace = json.loads(ace_path.read_text())
     rnd = "gapfill"
@@ -131,7 +170,7 @@ def main(argv):
     subprocess.run([str(HERE / "ace_lab.sh"), str(root), rnd, *SEEDS, "--mode", "final"], check=True)
     run = sorted(set((root / "renders").glob(f"lab-{rnd}-*")) - before)[-1]
     out = root / "gapfill"
-    registry_path = HERE / "tunes.json"
+    registry_path = HERE / ("anthem-candidates.json" if table is ANTHEMS else "tunes.json")
     registry = {r["id"]: r for r in json.loads(registry_path.read_text())} if registry_path.exists() else {}
     for job in json.loads((run / "manifest.json").read_text()):
         tune = next((t for t in tunes if t[0] == job["name"]), None)
@@ -152,7 +191,7 @@ def main(argv):
         registry[tune[0]] = dict(id=tune[0], display_name=tune[1], place=tune[2], parent=tune[3], bpm=tune[4], key=tune[5],
                                  hidden=tune[8], takes=takes, pick=None)
         print(tune[0], len(takes), flush=True)
-    registry_path.write_text(json.dumps([registry[t[0]] for t in TUNES if t[0] in registry], indent=1) + "\n")
+    registry_path.write_text(json.dumps([registry[t[0]] for t in table if t[0] in registry], indent=1) + "\n")
 
 
 if __name__ == "__main__":

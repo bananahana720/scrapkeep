@@ -39,6 +39,10 @@ const TUNES := {
 	"event-dust-squall": {"hook": "event", "key": "dust_squall", "bpm": 160},
 	"event-arena": {"hook": "activity", "keys": ["arena", "round_arena"], "bpm": 129},
 	"miniboss": {"hook": "miniboss", "key": "miniboss", "bpm": 135},
+	# The rogue fleet machines' own anthems, keyed by rogue kind (audio.gd picks them by Rogue.ROWS).
+	"anthem-gate-crane": {"hook": "miniboss", "key": "rogue_crane", "bpm": 140},
+	"anthem-haul-skip": {"hook": "miniboss", "key": "rogue_skip", "bpm": 145},
+	"anthem-cable-tender": {"hook": "miniboss", "key": "rogue_tender", "bpm": 150},
 	"moss-shop": {"hook": "shop", "key": "bay", "bpm": 112},
 	"fabricator": {"hook": "fabricator", "key": "fabricator_used", "bpm": 120},
 	"camp-course": {"hook": "", "bpm": 172},
