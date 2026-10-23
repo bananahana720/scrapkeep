@@ -1,0 +1,70 @@
+{
+ "assets": [
+  {
+   "id": "chaser_clips",
+   "path": "res://assets/models/world_one/clips/chaser_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "lobber_clips",
+   "path": "res://assets/models/world_one/clips/lobber_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "mag_trapper_clips",
+   "path": "res://assets/models/world_one/clips/mag_trapper_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "plated_brute_clips",
+   "path": "res://assets/models/world_one/clips/plated_brute_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "winch_drone_clips",
+   "path": "res://assets/models/world_one/clips/winch_drone_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "jolt_layer_clips",
+   "path": "res://assets/models/world_one/clips/jolt_layer_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  }
+ ]
+}
