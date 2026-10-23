@@ -67,6 +67,13 @@ var _look := {"yaw": 0.0, "pitch": 0.25, "dist": LOOK_DIST}
 var _look_dragging := false
 var _look_idle := LOOK_HOLD
 var _stick := Vector2.ZERO
+# The launch take (launch_take.gd) lifts the deck camera up past the pilots into the sky as pilot select hands over to
+# the dam: 0 at rest, 1 at full lift. show_flow puts it back once the title is up again.
+var push := 0.0
+var _push_tween: Tween
+const PUSH_RISE := Vector3(0.0, 7.5, -9.0)
+const PUSH_LOOK := Vector3(0.0, 14.0, -30.0)
+const PUSH_FOV := 18.0
 
 
 func setup(ctx) -> void:
@@ -122,6 +129,8 @@ func setup(ctx) -> void:
 
 func show_flow(state: String) -> void:
 	_flow_state = state
+	if state == "title":
+		_set_push(0.0)
 	active = state in ["title", "class_select"] and not camp_walk
 	_layer.visible = active
 	stage.visible = active
@@ -252,10 +261,32 @@ func _process(delta: float) -> void:
 
 func _frame() -> void:
 	var drift := Vector3(sin(_clock * 0.12) * 0.55, sin(_clock * 0.17) * 0.12, cos(_clock * 0.12) * 0.18)
-	camera.position = CAMERA_AT + drift
-	camera.look_at(LOOK)
-	if look_weight > 0.001:
+	var lift := push * push
+	camera.position = CAMERA_AT + drift + PUSH_RISE * lift
+	camera.look_at(LOOK + PUSH_LOOK * lift)
+	camera.fov = 48.0 + PUSH_FOV * lift
+	if look_weight > 0.001 and push <= 0.0:
 		camera.transform = camera.transform.interpolate_with(_orbit(), smoothstep(0.0, 1.0, look_weight))
+
+
+# The deck camera's lift for the launch take, over seconds. Reduced motion leaves the camera where it is.
+func launch_push(seconds: float) -> void:
+	if not active or HighdraftFx.preferred:
+		return
+	if _push_tween != null:
+		_push_tween.kill()
+	look_weight = 0.0
+	_push_tween = create_tween()
+	_push_tween.tween_method(_set_push, 0.0, 1.0, seconds).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+
+
+func _set_push(value: float) -> void:
+	if value <= 0.0 and _push_tween != null:
+		_push_tween.kill()
+		_push_tween = null
+	push = value
+	if camera != null:
+		_frame()
 
 
 func _step_antics() -> void:

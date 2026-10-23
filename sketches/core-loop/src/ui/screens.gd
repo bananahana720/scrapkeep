@@ -395,6 +395,16 @@ func refusal_text() -> String:
 	return _refusal.text if _refusal.visible else ""
 
 
+# The camp gate asks: a first run goes by pilot select, where the prologue plays.
+func prologue_due() -> bool:
+	return _prologue_due()
+
+
+# The launch take's wind (launch_take.gd): pilot select fades off the deck so its camera lift shows.
+func fade_for_launch() -> void:
+	_fade(false)
+
+
 # The UI profile records the prologue as a seen callout; see REPORT ST5 for why not the codex.
 func _prologue_due() -> bool:
 	if not prologue_enabled:
@@ -593,6 +603,11 @@ func _stop_walk() -> void:
 
 func walking() -> bool:
 	return _walking
+
+
+# The gate's launch ends the walk before the run starts, so leaving the camp never lands after the run has placed the ball.
+func stop_walk_for_launch() -> void:
+	_stop_walk()
 
 
 # The walk is live when it shows no page: the ball rolls, the zones answer their keys and the prompts show.

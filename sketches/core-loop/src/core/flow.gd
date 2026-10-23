@@ -300,6 +300,15 @@ func choose_class(index: int) -> void:
 	_begin_run(classes[index])
 
 
+# The camp's launch gate: a run with the given pilot straight from the title, with no pilot select between
+# (game.launch_from_gate; launch_take.gd hides the cut into the dam).
+func launch_from_title(chosen: Resource) -> bool:
+	if state != TITLE or chosen == null:
+		return false
+	_begin_run(chosen)
+	return true
+
+
 # The death screen's second key: a fresh run with the same class, straight in.
 func new_run() -> void:
 	if ctx.run.class_def == null:
@@ -359,6 +368,9 @@ func _begin_run(chosen: Resource) -> void:
 	if ctx.profile != null and ctx.profile.settle_previous_run_tallies() and ctx.profile.can_save and not ctx.profile.save():
 		warn_once("profile_tally_save", "flow: earlier run tallies not saved: %s" % ctx.profile.last_error)
 	run_won = false
+	# The gate launches this pilot next time (game.gate_pilot); saved with the profile's next save.
+	if ctx.profile != null:
+		ctx.profile.set_last_pilot(chosen.id)
 	ctx.run.begin(chosen)
 	_seed_companion()
 	ctx.events.run_started.emit(chosen.id)
