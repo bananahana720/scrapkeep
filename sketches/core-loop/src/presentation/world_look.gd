@@ -153,8 +153,10 @@ const WEATHER_SKY := {
 # reads hot pink to 346, shade reads blue-violet to 280). tests/consumed_light_test.gd gates the band
 # lit when true and reports the drift when false.
 const CONSUMED_HOLDS_HUE := true
-# Band centre (hue 315, sat 0.75). The three values are the sweep's pick: albedo x0.6 with glow 1.5
-# keeps every look at lit hue 304 to 323; glow 1.0 leaves 1 degree to spare and x1.0 albedo fails the Waking pit.
+# Band centre (hue 315, sat 0.75). The three values are the sweep's pick: albedo x0.6 (sRGB, about
+# x0.35 in linear light) with glow 1.5 keeps every look at lit hue 304 to 323. Glow 1.0 leaves 1 degree
+# to spare; albedo x1.0 fails the Waking pit (295-299) and golden hour sun-facing (331). The gate's
+# model has no tonemap; tools/consumed_swatch_capture.gd reads the on-screen hue under AgX.
 const CONSUMED_GLOW := {"color": Color("d936b0"), "energy": 1.5, "albedo_scale": 0.6}
 
 

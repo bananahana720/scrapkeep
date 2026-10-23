@@ -57,8 +57,8 @@ const MOLTEN := Color("ff7a2e")  # src/boss/hazard.gd MOLTEN, a const on a Node 
 # Pinned from a real run (as tests/park_day_light_test.gd pins its count): 6 stages x 3 worlds, 6 park maps, waking, mind, camp.
 const EXPECTED_LOOKS := 27
 const EXPECTED_CHECKS := 702
-# Two held gates per cell (113 cells) when WorldLook.CONSUMED_HOLDS_HUE is on.
-const EXPECTED_HELD_CHECKS := 226
+# Five held gates per cell (113 cells) when WorldLook.CONSUMED_HOLDS_HUE is on: band, life region, three warning gaps.
+const EXPECTED_HELD_CHECKS := 565
 
 var _t := T.new("consumed_light_test")
 
@@ -124,6 +124,9 @@ func _held(label: String, rig: Dictionary, n: int) -> void:
 	var hs := held_hs(CONSUMED, rig, n)
 	_t.check("held consumed lit is hue 300-330 sat >= 0.6: " + where, in_consumed_band(hs.x, hs.y), "lit hue %.1f sat %.3f" % [hs.x, hs.y])
 	_t.check("held consumed lit never inside the life region: " + where, not in_life_region(hs.x, hs.y), "lit hue %.1f sat %.3f" % [hs.x, hs.y])
+	var gaps := held_warning_gaps(rig, n)
+	for name in gaps:
+		_t.check("held consumed lit is %.0f CIE76 from %s lit: %s" % [MIN_GAP, name, where], gap_ok(gaps[name]), "gap %.1f" % gaps[name])
 
 
 # The switch's controls: the material matches the model, and the band gate fails without the glow.
@@ -319,6 +322,25 @@ static func held_linear(albedo: Color, rig: Dictionary, n: int) -> Color:
 
 static func held_hs(albedo: Color, rig: Dictionary, n: int) -> Vector2:
 	return _hs_of(held_linear(albedo, rig, n))
+
+
+# CIE76 from the held sample to HAZARD, AMBER and MOLTEN lit in the same cell, on one shared scale (the largest lit channel
+# among the four, as lit_group): {name: gap}.
+static func held_warning_gaps(rig: Dictionary, n: int) -> Dictionary:
+	var lin := {"sample": held_linear(CONSUMED, rig, n)}
+	for name in ["HAZARD", "AMBER", "MOLTEN"]:
+		lin[name] = lit_linear({"HAZARD": Palette.HAZARD, "AMBER": Palette.AMBER, "MOLTEN": MOLTEN}[name], rig, n)
+	var peak := 0.0
+	for name in lin:
+		peak = maxf(peak, _peak(lin[name]))
+	var srgb := {}
+	for name in lin:
+		var c: Color = lin[name]
+		srgb[name] = Color(c.r / peak, c.g / peak, c.b / peak).linear_to_srgb()
+	var gaps := {}
+	for name in ["HAZARD", "AMBER", "MOLTEN"]:
+		gaps[name] = cie76(srgb.sample, srgb[name])
+	return gaps
 
 
 # True when an albedo's lit channel exceeds the cell's shared scale and so clamps at 1 in lit_scaled.
