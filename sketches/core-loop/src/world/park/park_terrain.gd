@@ -47,6 +47,7 @@ const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const Palette := preload("res://src/core/palette.gd")
 const PylonBite := preload("res://src/world/pylon_bite.gd")
 const ParkStamps := preload("res://src/world/park/park_stamps.gd")
+const ThreadGuard := preload("res://src/core/thread_guard.gd")
 const GROUND_FLOOR_ID := 0
 const GROUND_STRATA_ID := 1
 # Metres per tile of the floor texture: sandstone.gdshader's floor_metres default (:9), which the
@@ -719,7 +720,7 @@ func _build_piece(p: int) -> void:
 		_lock.unlock()
 
 
-func _build_region(location: Vector2i) -> Object:
+func _build_region(location: Vector2i) -> Array:
 	var x0 := location.x * REGION_SIZE
 	var z0 := location.y * REGION_SIZE
 	var h := heights
@@ -759,20 +760,32 @@ func _build_region(location: Vector2i) -> Object:
 				var cz := pz + dz
 				if cx >= 0 and cx < REGION_SIZE and cz >= 0 and cz < REGION_SIZE:
 					control[cz * REGION_SIZE + cx] = AUTO_BIT | HOLE_BIT
-	var region: Object = ClassDB.instantiate("Terrain3DRegion")
-	region.set_region_size(REGION_SIZE)
-	region.set_vertex_spacing(VERTEX_SPACING)
-	region.set_location(location)
-	region.set_height_map(Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, data.to_byte_array()))
-	region.set_control_map(Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, control.to_byte_array()))
+	var maps := [location, Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, data.to_byte_array()),
+		Image.create_from_data(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RF, control.to_byte_array())]
 	if _tints != null:
 		# Cell (i, j)'s vertices are at -800 + 2i + (0, 1); the feathered image starts FEATHER_MARGIN metres before -800.
 		var color := Image.create(REGION_SIZE, REGION_SIZE, false, Image.FORMAT_RGBA8)
 		color.fill(Color(1.0, 1.0, 1.0, float(COLOR_ALPHA_BYTE) / 255.0))
 		color.blit_rect(_tints, Rect2i(Vector2i.ZERO, _tints.get_size()), Vector2i(-inner - FEATHER_MARGIN - x0, -inner - FEATHER_MARGIN - z0))
-		region.set_color_map(color)
-	region.sanitize_maps()
-	region.calc_height_range()
+		maps.append(color)
+	return maps
+
+
+# A region's Terrain3DRegion from the worker's [location, height map, control map, color map if tinted], made on the main
+# thread: it is the addon's object (GDExtension, its source is not in this repo), so no worker makes or sets one.
+# set_height_map works out the height range itself (a calc_height_range after it cost as much again for the same range);
+# _attach_step sanitizes.
+static func _make_region(maps: Array) -> Object:
+	if not ThreadGuard.main_only("park_terrain region"):
+		return null
+	var region: Object = ClassDB.instantiate("Terrain3DRegion")
+	region.set_region_size(REGION_SIZE)
+	region.set_vertex_spacing(VERTEX_SPACING)
+	region.set_location(maps[0])
+	region.set_height_map(maps[1])
+	region.set_control_map(maps[2])
+	if maps.size() > 3:
+		region.set_color_map(maps[3])
 	return region
 
 
@@ -841,7 +854,13 @@ func _attach_step(deadline: int) -> void:
 		if deadline >= 0:
 			return
 	if _next_region < _regions.size():
+		# A region takes two steps, a frame each: making it with its maps, then the sanitize and the add.
+		if _regions[_next_region] is Array:
+			_regions[_next_region] = _make_region(_regions[_next_region])
+			if deadline >= 0:
+				return
 		var region: Object = _regions[_next_region]
+		region.sanitize_maps()
 		if terrain3d.data.has_region(region.get_location()):
 			terrain3d.data.remove_regionl(region.get_location(), false)
 		terrain3d.data.add_region(region, false)
