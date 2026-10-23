@@ -57,27 +57,28 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-22 main_tube_upper_post_11i and lava_channel_post_13i moved off their park_sinkhole washes (World, #241 comment 6352524432): park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged; pins read from this test's own MEASURE lines (schedule0), seeds 0..19.
 # 2026-10-22 merge of stage/alpha-w18 a777720a (B11: #321) into postbanks (#350): both change park-row data; schedules re-read from MEASURE (schedule0), seeds 0..19.
 # 2026-10-23 lava_channel_12, 13 and 21 reshaped to ease the sinkhole wash elbows A and B (World, #241 6354292643 item 3): park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged; pins read from this test's own MEASURE lines (schedule0), seeds 0..19.
+# 2026-10-23 lava_channel_14 and 20 shortened to ease the sinkhole wash elbows 14>15 and 19>20 (World, #241 6356545723): park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged; pins read from this test's own MEASURE lines (schedule0), seeds 0..19.
 const BASE_SCHEDULE := [
-	"97dfc6d4ef0710214a7ea553d969bd4e5f5859748981e04459317b968f4a00f8",
-	"b97fc1e72347d7fbbce8f81def6a6b57695fc83066a37b6e622c1b3315e680cf",
-	"982faefc431d4ce2b3f7fea143774d7e2b38527f53e0568da096e190709c48d3",
-	"2a4905b86a2a382100eb9eafc6aa58a4de95762cdde8847197d11471f89b062b",
-	"4541ee2be6555270f1c24b95b3dabf7e20a3dd218c97bd3f78a66bf2e2736040",
-	"b0a37d113db425c29e6ba71038c114b9437e07847342b39a1d62dad05711295d",
-	"0ebf2a1131e6b71be43db8eb63ed30b0f2438f2b4176670855e88f90c7e513d1",
-	"bf4a9f3223d7cd62c4e3f9de6d11ed0e3eeb210e415beb9b602b80796295b8c6",
-	"4bae46dc6b012e80c621738d57bdfc1622499fab327e886600e6ecb7d6593baf",
-	"c84cdb913932c22f88e67ff932da81d1d9d1fa037538b2e071e255cd2ed7a372",
-	"5c11ca39087dfdf6fae458329a8652847a2b89089ca119859918fe39b34d0306",
-	"4ad012cc278b2dc496f97a5f0d16be896bcce7b1f5913c59aff0d174ff0a5e3a",
-	"a14baf58bd4271b977e7ccf49ace4d8cc1ff206556ddcd7bce35bb00ff136693",
-	"97b8d88305e76be2a72cd5e4bceb203ee5b78a79703697857723e7c196117b97",
-	"066621b8b86a8fa05bbf9b433dae5ecf04c7c751954e7f8df7a41fe755cad5c4",
-	"c83b2207727b5d4b8b52431771ab156a39925eb0a6f37394e2254ad682711cbb",
-	"342b868d072ba3b2d6b8c830615e71d9028cedeb54d410b0629d99773468bd6f",
-	"28152d03dc2f59f7fb8cd468224777635032fad2622c6161321e8d790bbfc97f",
-	"2686e6a0b6a6e6b88a5fbc1b5788deb6a9c0c28dd914d7287012798f7af329ca",
-	"e322612cea30e7bca199c3331000bbeeab1d184ba26ea6498be79fca97d3365b",
+	"14923df344135a38525208be47cff2dba63edbe48d5ffb977e3e365add877f11",
+	"79c6c106efa2df151ade123fa09a56b1765938d732ba716346a445256143762f",
+	"21df65df381fd221dd5bc35329166b9224f913ac6934cffa816f2bd794857c66",
+	"3c14ef1239eedca57d00a7d6b992c90d4a5316abac62060f03c62a0ac606a54f",
+	"b95f0ccc3a5a033ce98f1d1cb85ec273a5d5f49bf374f9174815ba444b832b47",
+	"79ba48fd7c0b2bbbd67e0a72578a8682554faea76939020bd82e96164e59b066",
+	"8aad6cfdd8288fb751ff7ff08755e8ba293b5e245a706954818ba21e7dfe3c1f",
+	"6bc119e3d47649e13873f7c817061a11de0bde59359914b527e09bd10363a0e9",
+	"a5b220679331551d80bfe6c80c7381495330c20b93417df41087ff4634ec443e",
+	"22bdf5c2d54cb11f46c772872ab9967b9cba2bdfbd4c3f2146742a1835b8d726",
+	"ec01be80b22aa4ffff0c5a05ee77a38c6ad5669c6af4cfdd5b5f806b9d3f6bb2",
+	"93d46bd10f9c52f189cff7c80e1b4558bc79e66b262ba09c693ca3348a27fc21",
+	"68ee100a20a631d7a69ecbe85446b992827f141b4deb7d4860967b3c7d73424e",
+	"97fc0b95b116b90dac4d6cf22a411ca90445fdd57e9ee2e053b9d97cfe95f5e9",
+	"d1aec798a4204bced348dd1a777562394a3286ca8f0d2ffb2f30557b6f7e746f",
+	"215b76adb09207fce177ceb11e01ba4f1449b27a1f6c0cd3dbff73c606784ce7",
+	"a0df7af535610a8da8ec8818ebc6f007ae04b11431a171418a99a57d642da4a7",
+	"4659262ae61a0f80472f0040158f311ca20dc34effb6dc380692f807cf785d8a",
+	"ac81318caba02c9ee4fd235e288a9241daab0f404f3c3b9dda379b8b93ad23bc",
+	"e3c347fb507be5e7302f402247e71b7250d5d930e1e91a40585413d3572a48d3",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
