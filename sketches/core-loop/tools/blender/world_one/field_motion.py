@@ -395,8 +395,117 @@ def jolt_layer(root):
     return rig
 
 
+def hooker(root):
+    windup = snap(configured("hooker", "warn_seconds"))
+    attack = snap(ATTACK_CAP)
+    rig = Rig(root, "HookerMotion", [
+        ("body", (0, -1.1, 0), None),
+        ("harpoon", (0.9, 3.1, 0), "body"),
+    ])
+    # A crew animal at its post: it shifts its weight on the beat and the harpoon cradle ticks.
+    rig.clip("idle", BAR2, {
+        "body": [(0, {}), (2 * BEAT, {"rot": (0, 0, 1.2)}), (4 * BEAT, {}), (6 * BEAT, {"rot": (0, 0, -1.2)}), (BAR2, {})],
+        "harpoon": beat_tics([3 * BEAT, 7 * BEAT], {"rot": (-6, 0, 0)}, fall=5 * F),
+    })
+    rig.clip("move", MOVE, {
+        "body": gait(MOVE, 2.0, 0.05),
+        "harpoon": [(0, {"rot": (3, 0, 0)}), (MOVE / 2, {"rot": (-3, 0, 0)}), (MOVE, {"rot": (3, 0, 0)})],
+    })
+    # hooker.gd cocks the harpoon back along its axis (the cock); the clip sets the crew's feet
+    # against the post and draws the barrel taut on the release frame.
+    rig.clip("windup", windup, {
+        "body": windup_build(windup, (1.04, 0.95, 1.04), shudder=1.4, lean=(0, 0, -3)),
+        "harpoon": merge([(0, {})], shake(windup * 0.5, windup - 3 * F, 3, period=2 * F, axis=1),
+                         [(windup - 3 * F, {"scale": (1.0, 0.95, 1.08)}), (windup, {"scale": (1.0, 0.95, 1.08)})]),
+    })
+    rig.clip("attack", attack, {
+        "body": [(0, {"rot": (0, 0, 4), "scale": (0.97, 1.04, 0.97)}), (3 * F, {"rot": (0, 0, 2)}), (attack, {})],
+        "harpoon": [(0, {"rot": (6, 0, 0)}), (3 * F, {"rot": (-3, 0, 0)}), (attack * 0.6, {"rot": (1, 0, 0)}), (attack, {})],
+    })
+    rig.clip("hit", HIT, {"body": flinch()})
+    # Downed: the crew sits back against its post and the harpoon droops off its cradle.
+    rig.clip("death", DEATH, {
+        "body": [(0, {}), (4 * F, {"loc": (0, -0.12, 0), "scale": (1.08, 0.86, 1.08)}), (DEATH, {"loc": (0, -0.2, 0), "rot": (0, 0, 9)})],
+        "harpoon": [(0, {}), (5 * F, {"rot": (-24, 0, 0)}), (0.3, {"rot": (-40, 0, 6)}), (DEATH, {"rot": (-36, 0, 6)})],
+    })
+    return rig
+
+
+def ramp_flipper(root):
+    windup = snap(configured("ramp_flipper", "warn_seconds"))
+    attack = snap(min(const("ramp_flipper", "TILT") + 0.05, ATTACK_CAP))
+    rig = Rig(root, "RampMotion", [
+        ("body", (0, -1.1, 0), None),
+    ])
+    # A crew animal hauling its flap cart: it rocks on the two wheels and leans into the haul.
+    # The plate is ramp_flipper.gd's own (it leaves the cart, tilts and comes back), so only the
+    # crew and cart move here.
+    rig.clip("idle", BAR2, {
+        "body": merge(throb(BAR2, 0.01)[:-1], [(5 * BEAT, {}), (5 * BEAT + 3 * F, {"rot": (0, 0, 2.5)}),
+                                             (5.6 * BEAT, {"rot": (0, 0, -1.5)}), (6.2 * BEAT, {}), (BAR2, {})]),
+    })
+    rig.clip("move", MOVE, {"body": gait(MOVE, 3.0, 0.05)})
+    # The flap drops and tilts on the ring (the code's pose); the crew heaves on its hinge rope.
+    rig.clip("windup", windup, {"body": windup_build(windup, (1.05, 0.94, 1.05), shudder=1.6, lean=(-6, 0, 0))})
+    rig.clip("attack", attack, {"body": strike(attack, (0.95, 1.08, 0.95), settle={"rot": (3, 0, 0)})})
+    rig.clip("hit", HIT, {"body": flinch()})
+    # Downed: the cart tips onto one wheel and the crew slides off the high side.
+    rig.clip("death", DEATH, {
+        "body": [(0, {}), (4 * F, {"rot": (0, 0, 10), "scale": (1.06, 0.9, 1.06)}), (0.3, {"rot": (0, 0, 22), "loc": (0, -0.1, 0)}),
+                 (DEATH, {"rot": (0, 0, 20), "loc": (0, -0.14, 0)})],
+    })
+    return rig
+
+
+def boom_tender(root):
+    windup = snap(configured("boom_tender", "warn_seconds"))
+    attack = snap(const("boom_tender", "SWEEP"))
+    rig = Rig(root, "BoomMotion", [
+        ("hull", (0, -1.3, 0), None),
+        ("reel", (0, 0.2, 0.5), "hull"),
+        ("boom", (0, -1.8, 0), None),
+    ])
+    # A tug idling at its mooring: the engine chugs on every beat, the hull rolls on the swell
+    # and the boom rides it a beat behind.
+    rig.clip("idle", BAR2, {
+        "hull": merge(throb(BAR2, 0.008)[:-1], [(0, {}), (2 * BEAT, {"rot": (0, 0, 1.5)}), (4 * BEAT, {}),
+                                              (6 * BEAT, {"rot": (0, 0, -1.5)}), (BAR2, {})]),
+        "reel": beat_tics([1.5 * BEAT, 5.5 * BEAT], {"rot": (-8, 0, 0)}, fall=4 * F),
+        "boom": [(0, {}), (3 * BEAT, {"rot": (0, 2, 0)}), (5 * BEAT, {}), (7 * BEAT, {"rot": (0, -2, 0)}), (BAR2, {})],
+    })
+    # Tracking: the hull pitches on its tracks and the boom drags a little behind.
+    rig.clip("move", MOVE, {
+        "hull": gait(MOVE, 1.5, 0.03),
+        "boom": [(0, {"rot": (0, 1.5, 0)}), (MOVE / 2, {"rot": (0, -1.5, 0)}), (MOVE, {"rot": (0, 1.5, 0)})],
+    })
+    # boom_tender.gd stows the boom to one side and winds the reel back (e40_reel_ratchet); the
+    # clip squats the hull against the load, ratchets the reel in five clicks, one per lamp.
+    clicks = []
+    for k in range(5):
+        t = windup * (0.1 + 0.16 * k)
+        clicks += [(t, {"rot": (-6 * k, 0, 0)}), (t + 2 * F, {"rot": (-6 * (k + 1), 0, 0), "scale": 1.04}), (t + 4 * F, {"rot": (-6 * (k + 1), 0, 0)})]
+    rig.clip("windup", windup, {
+        "hull": windup_build(windup, (1.04, 0.95, 1.04), shudder=1.0, lean=(3, 0, 0)),
+        "reel": [(0, {})] + clicks + [(windup, {"rot": (-30, 0, 0)})],
+    })
+    rig.clip("attack", attack, {
+        "hull": [(0, {"rot": (-4, 0, 0), "scale": (0.97, 1.03, 0.97)}), (4 * F, {"rot": (-2, 0, 0)}), (attack, {})],
+        "reel": [(0, {"rot": (-30, 0, 0)}), (attack * 0.7, {"rot": (6, 0, 0)}), (attack, {})],
+        "boom": [(0, {"scale": (1.0, 1.0, 1.03)}), (attack * 0.5, {"scale": (1.0, 1.0, 1.0)}), (attack, {})],
+    })
+    rig.clip("hit", HIT, {"hull": flinch((1.05, 0.92, 1.05), (0.98, 1.03, 0.98))})
+    # Downed: the tug lists to port, the reel free-spools, and the boom drifts off slack.
+    rig.clip("death", DEATH, {
+        "hull": [(0, {}), (4 * F, {"rot": (0, 0, -8), "scale": (1.05, 0.9, 1.05)}), (DEATH, {"rot": (-4, 0, -14), "loc": (0, -0.15, 0)})],
+        "reel": [(0, {}), (0.25, {"rot": (120, 0, 0)}), (DEATH, {"rot": (240, 0, 0)})],
+        "boom": [(0, {}), (0.3, {"rot": (0, 14, 0), "loc": (0, -0.05, 0)}), (DEATH, {"rot": (0, 20, 0), "loc": (0, -0.08, 0)})],
+    })
+    return rig
+
+
 KINDS = {"chaser": chaser, "lobber": lobber, "mag_trapper": mag_trapper, "plated_brute": plated_brute,
-         "winch_drone": winch_drone, "jolt_layer": jolt_layer}
+         "winch_drone": winch_drone, "jolt_layer": jolt_layer, "hooker": hooker, "ramp_flipper": ramp_flipper,
+         "boom_tender": boom_tender}
 
 
 # --- Export -----------------------------------------------------------------------------

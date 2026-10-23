@@ -29788,6 +29788,17 @@
    "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
   },
   {
+   "id": "boom_tender_clips",
+   "path": "res://assets/models/world_one/clips/boom_tender_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13 clips for the Spillway roster (design-v3/SPILLWAY-ROSTER.md)"
+   }
+  },
+  {
    "id": "chaser_clips",
    "path": "res://assets/models/world_one/clips/chaser_clips.glb",
    "class": "enemy",
@@ -29796,6 +29807,17 @@
    "provenance": {
     "recipe": "tools/blender/world_one/field_motion.py",
     "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "hooker_clips",
+   "path": "res://assets/models/world_one/clips/hooker_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13 clips for the Spillway roster (design-v3/SPILLWAY-ROSTER.md)"
    }
   },
   {
@@ -29840,6 +29862,17 @@
    "provenance": {
     "recipe": "tools/blender/world_one/field_motion.py",
     "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "ramp_flipper_clips",
+   "path": "res://assets/models/world_one/clips/ramp_flipper_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13 clips for the Spillway roster (design-v3/SPILLWAY-ROSTER.md)"
    }
   },
   {
@@ -31012,6 +31045,7 @@
   "bench_coping_detail1",
   "bench_coping_detail2",
   "bet_crate",
+  "boom_tender_clips",
   "boss_brindle",
   "boss_brindle_scooter",
   "boss_mind_base",
@@ -32004,6 +32038,7 @@
   "haulage_bed",
   "haulage_bed_detail1",
   "haulage_bed_detail2",
+  "hooker_clips",
   "impeller_hub",
   "impeller_rim_sector",
   "impeller_vane",
@@ -32312,6 +32347,7 @@
   "ram_spring__escape_vent",
   "ram_spring__primer_coil",
   "ram_spring__primer_mesh",
+  "ramp_flipper_clips",
   "relay_mast",
   "relay_stake_post",
   "res://assets/models/world_one/shell_rivet.glb",

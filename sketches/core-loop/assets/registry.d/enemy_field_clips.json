@@ -65,6 +65,39 @@
     "recipe": "tools/blender/world_one/field_motion.py",
     "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
    }
+  },
+  {
+   "id": "hooker_clips",
+   "path": "res://assets/models/world_one/clips/hooker_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13 clips for the Spillway roster (design-v3/SPILLWAY-ROSTER.md)"
+   }
+  },
+  {
+   "id": "ramp_flipper_clips",
+   "path": "res://assets/models/world_one/clips/ramp_flipper_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13 clips for the Spillway roster (design-v3/SPILLWAY-ROSTER.md)"
+   }
+  },
+  {
+   "id": "boom_tender_clips",
+   "path": "res://assets/models/world_one/clips/boom_tender_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13 clips for the Spillway roster (design-v3/SPILLWAY-ROSTER.md)"
+   }
   }
  ]
 }

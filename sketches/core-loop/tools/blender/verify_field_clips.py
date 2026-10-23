@@ -36,7 +36,8 @@ SKETCH = HERE.parents[1]
 CLIP_DIR = SKETCH / "assets/models/world_one/clips"
 FPS = 30
 CLIPS = ("idle", "move", "windup", "attack", "hit", "death")
-KINDS = ("chaser", "lobber", "mag_trapper", "plated_brute", "winch_drone", "jolt_layer")
+KINDS = ("chaser", "lobber", "mag_trapper", "plated_brute", "winch_drone", "jolt_layer", "hooker", "ramp_flipper",
+         "boom_tender")
 SIZE_CAP = 64 * 1024
 TOL = 1e-4
 IDLE_ROT_CAP = 20.0
@@ -138,6 +139,9 @@ def leads():
                          _snap(min(max(_configured("plated_brute", "live_seconds"), 0.35), ATTACK_CAP))),
         "winch_drone": (_snap(_configured("winch_drone", "warn_seconds")), ATTACK_CAP),
         "jolt_layer": (_snap(_configured("jolt_layer", "warn_seconds")), ATTACK_CAP),
+        "hooker": (_snap(_configured("hooker", "warn_seconds")), ATTACK_CAP),
+        "ramp_flipper": (_snap(_configured("ramp_flipper", "warn_seconds")), _snap(min(_const("ramp_flipper", "TILT") + 0.05, ATTACK_CAP))),
+        "boom_tender": (_snap(_configured("boom_tender", "warn_seconds")), _snap(_const("boom_tender", "SWEEP"))),
     }, ATTACK_CAP
 
 

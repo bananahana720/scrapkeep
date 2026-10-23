@@ -47,6 +47,12 @@ const ROWS := {
 			"pad_r": ["Skeleton3D", "SlamPadRight", "rs"]}},
 	"winch_drone": {"stride": 2.4, "parts": {"body": ["WinchBody"], "drum": ["WinchBody/WinchDrum"], "rotor": ["WinchBody/WinchRotor"]}},
 	"jolt_layer": {"stride": 1.8, "parts": {"body": ["JoltBody"], "coil": ["JoltCoil"]}},
+	# The Spillway roster (design-v3/SPILLWAY-ROSTER.md). The flap's plate is ramp_flipper.gd's own
+	# (it leaves the cart while it tilts), so only the crew and cart take the clip.
+	"hooker": {"stride": 1.8, "parts": {"body": ["HookerBody/Body"], "harpoon": ["HookerBody/HookerHarpoon"]}},
+	"ramp_flipper": {"stride": 1.8, "parts": {"body": ["RampBody"]}},
+	"boom_tender": {"stride": 2.4, "parts": {"hull": ["BoomTenderBody/TenderHull"], "reel": ["BoomTenderBody/TenderReel"],
+		"boom": ["BoomTenderBody/Boom"]}},
 }
 
 # Tests opt in; a headless run otherwise plays nothing. This is its own switch, not

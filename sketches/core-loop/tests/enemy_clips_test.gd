@@ -12,7 +12,8 @@ const T := preload("res://tests/support/t.gd")
 # own progress, the joints leave the parts and their code poses where they were, a death plays
 # its clip and then breaks up, and a headless run seats nothing.
 
-const KINDS := ["chaser", "lobber", "mag_trapper", "plated_brute", "winch_drone", "jolt_layer"]
+const KINDS := ["chaser", "lobber", "mag_trapper", "plated_brute", "winch_drone", "jolt_layer", "hooker", "ramp_flipper",
+	"boom_tender"]
 const FRAME := 1.0 / 30.0
 var _game
 var _t := T.new("enemy_clips_test")
