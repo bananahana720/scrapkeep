@@ -7,7 +7,7 @@ extends Node
 # paused (a reward ceremony, the pause menu) the row hides and waits.
 #
 # Layout keeps to ScreenRegions: cards, captions, panels and stamps in the left column of the
-# play view (a stamp inks across the piece above it), sound words at their anchor clamped inside
+# play view (a stamp inks onto the right edge of the top piece), sound words at their anchor clamped inside
 # the play view. Nothing sits over the top band (the boss plate), the toast band (the world and
 # stage cards), the prompts or the bottom bar.
 #
@@ -32,10 +32,10 @@ const SFX_FILL := Color("ffd23f")
 const COLUMN_X := 0.03
 const COLUMN_WIDTH := 0.30
 const SLOT_Y := {"left_top": 0.30, "left_low": 0.50}
-# A stamp inks across the column's top piece (the punch card, the comic page); "centre" puts it
-# over the upper play view, for a caller that knows no threat is committed.
-const STAMP_INSET := 0.05
-const STAMP_DROP := 0.09
+# A stamp inks onto the right edge of the column's top piece (the punch card, the comic page);
+# "centre" puts it over the upper play view, for a caller that knows no threat is committed.
+const STAMP_OVERLAP := 0.25
+const STAMP_RIGHT := 0.5
 const STAMP_CENTRE_Y := 0.40
 # Sound words stay inside the play view, between the toast band and the prompts.
 const PLAY_VIEW := Rect2(0.34, 0.30, 0.60, 0.28)
@@ -49,7 +49,8 @@ var id := ""
 var short := false
 var clock := 0.0
 var run_seed := 0
-# Every row finished since setup: {id, s, full, skipped, held}.
+# Every row finished since setup: {id, s, full, skipped, held}. finished is emitted before the
+# record joins the run meta, and it is the same dictionary, so a listener may set its held.
 var played: Array = []
 
 var _pieces: Array = []
@@ -400,9 +401,26 @@ func _stamp(text: String, colour: Color, slot: String) -> Control:
 		var screen := _screen()
 		label.position = Vector2(0.5, STAMP_CENTRE_Y) * screen - label.size * 0.5
 	else:
-		_seat(label, _column_at("left_top") + Vector2(STAMP_INSET, STAMP_DROP) * _screen())
+		_seat(label, _stamp_at(label))
 	_pop(label, 1.4)
 	return label
+
+
+# On the right edge of the column's top piece, overlapping it by STAMP_OVERLAP of the stamp's
+# width so the piece's words stay readable, and never past STAMP_RIGHT of the screen; with no
+# piece up, at the column's top slot.
+func _stamp_at(label: Control) -> Vector2:
+	var screen := _screen()
+	var top: Control = null
+	for entry in _live:
+		if String(entry.piece.kind) in ["card", "caption", "panels"] and is_instance_valid(entry.node):
+			if top == null or entry.node.position.y < top.position.y:
+				top = entry.node
+	if top == null:
+		return _column_at("left_top")
+	var x := top.position.x + top.size.x - label.size.x * STAMP_OVERLAP
+	x = minf(x, screen.x * STAMP_RIGHT - label.size.x)
+	return Vector2(x, top.position.y + top.size.y * 0.5 - label.size.y * 0.5)
 
 
 # A sound word sits at its anchor's screen point, or at its at_share, clamped in the play view.
