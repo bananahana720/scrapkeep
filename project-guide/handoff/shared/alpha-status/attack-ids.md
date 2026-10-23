@@ -1,13 +1,12 @@
 # Attack ids (E-numbers) registry
 
-Owner: thread "World 2 and 3 enemy identity". One E-number per attack kind, in
+Owner: local coordinator. One E-number per attack kind, in
 `src/combat/telegraph_record.gd`, `src/core/event_kinds.gd` and the design-v3/LEGIBILITY.md
-section 2 table. Claim a number here BEFORE you add it to a branch, and tell the owner thread
-through the coordinator. Rule for collisions: the earliest commit that added the id keeps it; later
-claims renumber to the next free id.
+section 2 table. Claim a number here BEFORE you add it to a branch, and post the claim on the Wave board issue (#241). Rule for collisions: the earliest commit that added the id keeps it; later
+claims renumber to the next free id. The Gate lane re-folds the registry when it stacks PRs and renumbers any collision.
 
-**Cloud gate placeholder rule (22:12Z 17 Oct):** a PR that adds an E-row fills every field before
-it goes to the Cloud gate: pose, warn, release and floor set (floor is L, H, B or none), never
+**Gate placeholder rule (22:12Z 17 Oct):** a PR that adds an E-row fills every field before
+it goes to the Gate lane: pose, warn, release and floor set (floor is L, H, B or none), never
 `EventKinds.PLACEHOLDER`, and its `open` list empty. Re-pin `event_kinds.ATTACK_ROWS` in
 content_registry.gd with a dated note in the same commit.
 

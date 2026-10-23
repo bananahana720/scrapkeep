@@ -1,0 +1,2272 @@
+{
+ "schema": "scrapkeep-park-props/1",
+ "map": "park_pit",
+ "kit": "res://assets/models/park/props/pit/manifest.json",
+ "templates": {
+  "last_haul": {
+   "story": "The last haul: an ore car off its stub of track, the spill nobody shovelled back, the crew's tools set down at the noon whistle.",
+   "props": [
+    {
+     "kind": "ore_car",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_heap",
+     "v": "*",
+     "at": [
+      6,
+      3
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "*",
+     "at": [
+      -5,
+      4
+     ],
+     "yaw_deg": 120,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "notice_post",
+     "v": "*",
+     "at": [
+      4,
+      -6
+     ],
+     "yaw_deg": 200,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_coil",
+     "v": "a",
+     "at": [
+      -6,
+      -3
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "change_shack": {
+   "story": "The change shack: hats on the pegs, a lunch pail on the bench, a shift that never clocked in.",
+   "props": [
+    {
+     "kind": "change_house",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "haul_tyre",
+     "v": "a",
+     "at": [
+      7,
+      2
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "*",
+     "at": [
+      -3,
+      -6
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "prickly_pear",
+     "v": "*",
+     "at": [
+      -7,
+      3
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lagging_stack",
+     "v": "b",
+     "at": [
+      5,
+      -6
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "drill_pad": {
+   "story": "The drill pad: mast laid down for a move, the next round's cores racked, the blasting mat dragged off the last shot.",
+   "props": [
+    {
+     "kind": "drill_rig",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "core_rack",
+     "v": "*",
+     "at": [
+      6,
+      -4
+     ],
+     "yaw_deg": 80,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "blast_mat",
+     "v": "*",
+     "at": [
+      -6,
+      4
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_coil",
+     "v": "*",
+     "at": [
+      -4,
+      -5
+     ],
+     "yaw_deg": 140,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_heap",
+     "v": "b",
+     "at": [
+      7,
+      4
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "core_shed": {
+   "story": "Where the geologist laid out the cores in the sun and walked off to lunch.",
+   "props": [
+    {
+     "kind": "core_rack",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "core_rack",
+     "v": "b",
+     "at": [
+      0,
+      2.6
+     ],
+     "yaw_deg": 4,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lagging_stack",
+     "v": "a",
+     "at": [
+      -4,
+      -2
+     ],
+     "yaw_deg": 15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "notice_post",
+     "v": "a",
+     "at": [
+      3,
+      -3
+     ],
+     "yaw_deg": 190,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_heap",
+     "v": "c",
+     "at": [
+      4,
+      3
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "powder_line": {
+   "story": "The powder crew's last setup: mat, hose and hammer, the shot never fired.",
+   "props": [
+    {
+     "kind": "blast_mat",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_coil",
+     "v": "*",
+     "at": [
+      3,
+      -2
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "*",
+     "at": [
+      -3,
+      1.5
+     ],
+     "yaw_deg": 200,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_heap",
+     "v": "b",
+     "at": [
+      2,
+      3
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "prospector": {
+   "story": "The old prospector's camp on the rim: cold fire, coffee pot, a hat with the widest brim in the Dig. He was here before the pit.",
+   "props": [
+    {
+     "kind": "fire_ring",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "prickly_pear",
+     "v": "*",
+     "at": [
+      -3,
+      2.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_heap",
+     "v": "b",
+     "at": [
+      3,
+      2
+     ],
+     "yaw_deg": 90,
+     "scale": 0.8,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "c",
+     "at": [
+      2.5,
+      -2.5
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "tyre_yard": {
+   "story": "The haul shop's spare tyres, rolled out of the way and forgotten.",
+   "props": [
+    {
+     "kind": "haul_tyre",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "haul_tyre",
+     "v": "a",
+     "at": [
+      4,
+      -2
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lagging_stack",
+     "v": "*",
+     "at": [
+      -4,
+      2
+     ],
+     "yaw_deg": 50,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_coil",
+     "v": "b",
+     "at": [
+      2,
+      3
+     ],
+     "yaw_deg": 200,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "prickly_pear",
+     "v": "a",
+     "at": [
+      -3,
+      -3
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "saguaro_bones": {
+   "story": "Saguaro skeletons that died before the pit opened, their ribs bleached on the rim.",
+   "props": [
+    {
+     "kind": "saguaro_bones",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saguaro_bones",
+     "v": "*",
+     "at": [
+      6,
+      4
+     ],
+     "yaw_deg": 140,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saguaro_bones",
+     "v": "c",
+     "at": [
+      -5,
+      5
+     ],
+     "yaw_deg": 250,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "prickly_pear",
+     "v": "*",
+     "at": [
+      3,
+      -4
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "prickly_pear",
+     "v": "*",
+     "at": [
+      -4,
+      -3
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "core_pallet": {
+   "story": "Sample cores and the grab-sample heap they came from, logged by nobody.",
+   "props": [
+    {
+     "kind": "core_rack",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_heap",
+     "v": "b",
+     "at": [
+      3.5,
+      2
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "*",
+     "at": [
+      -3,
+      1.5
+     ],
+     "yaw_deg": 80,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "shift_lunch": {
+   "story": "Where a bench crew ate lunch on a dead tyre and left the hose coiled for later.",
+   "props": [
+    {
+     "kind": "haul_tyre",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "c",
+     "at": [
+      3.5,
+      -1.5
+     ],
+     "yaw_deg": 140,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_coil",
+     "v": "b",
+     "at": [
+      -3.5,
+      1
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_heap",
+     "v": "a",
+     "at": [
+      1,
+      3.5
+     ],
+     "yaw_deg": 0,
+     "scale": 0.8,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "shift_break": {
+   "story": "Lagging stacked for the next set of the bench face, and the timber gang's tools laid on top where the foreman could count them.",
+   "props": [
+    {
+     "kind": "lagging_stack",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "*",
+     "at": [
+      3.5,
+      1.5
+     ],
+     "yaw_deg": 60,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_coil",
+     "v": "*",
+     "at": [
+      -3.5,
+      1.0
+     ],
+     "yaw_deg": 200,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "prickly_pear",
+     "v": "*",
+     "at": [
+      1.0,
+      -3.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "tyre_garden": {
+   "story": "A dead haul tyre somebody filled with dirt and a cutting of prickly pear. It took.",
+   "props": [
+    {
+     "kind": "haul_tyre",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "prickly_pear",
+     "v": "*",
+     "at": [
+      3.5,
+      1.5
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "prickly_pear",
+     "v": "*",
+     "at": [
+      -3.0,
+      2.5
+     ],
+     "yaw_deg": 0,
+     "scale": 0.8,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_heap",
+     "v": "b",
+     "at": [
+      2.0,
+      -3.5
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "mat_stack": {
+   "story": "Spare blasting mats dragged into a heap for the next round, the powder crew's hose on top.",
+   "props": [
+    {
+     "kind": "blast_mat",
+     "v": "*",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "blast_mat",
+     "v": "*",
+     "at": [
+      1.5,
+      2.5
+     ],
+     "yaw_deg": 70,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lagging_stack",
+     "v": "b",
+     "at": [
+      -3.5,
+      -1.0
+     ],
+     "yaw_deg": 15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_coil",
+     "v": "*",
+     "at": [
+      3.0,
+      -2.5
+     ],
+     "yaw_deg": 120,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "spill_pile": {
+   "story": "Grab samples nobody bagged: three heaps by grade, a shovel left in the richest one.",
+   "props": [
+    {
+     "kind": "ore_heap",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_heap",
+     "v": "b",
+     "at": [
+      3.5,
+      1.0
+     ],
+     "yaw_deg": 50,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "ore_heap",
+     "v": "c",
+     "at": [
+      -3.0,
+      2.5
+     ],
+     "yaw_deg": 120,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "*",
+     "at": [
+      1.5,
+      -3.0
+     ],
+     "yaw_deg": 210,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "drill_steel": {
+   "story": "Drill steel and cores laid out by length, the bit-sharpener's tools beside them.",
+   "props": [
+    {
+     "kind": "core_rack",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "hose_coil",
+     "v": "a",
+     "at": [
+      3.5,
+      1.0
+     ],
+     "yaw_deg": 30,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "a",
+     "at": [
+      -3.0,
+      1.5
+     ],
+     "yaw_deg": 160,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  },
+  "notice_board": {
+   "story": "The bench notice posts: shift times, a blast schedule, a lost-hat notice, all bleached blank.",
+   "props": [
+    {
+     "kind": "notice_post",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "notice_post",
+     "v": "b",
+     "at": [
+      2.5,
+      1.5
+     ],
+     "yaw_deg": 25,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "lagging_stack",
+     "v": "a",
+     "at": [
+      -3.5,
+      -1.0
+     ],
+     "yaw_deg": 80,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_drop",
+     "v": "*",
+     "at": [
+      2.0,
+      -3.0
+     ],
+     "yaw_deg": 300,
+     "scale": 1.0,
+     "tilt_deg": 0
+    }
+   ]
+  }
+ },
+ "spots": [
+  {
+   "id": "rim_bones",
+   "template": "saguaro_bones",
+   "at": [
+    -610,
+    -770
+   ],
+   "yaw_deg": 20,
+   "near": "spoil_dump"
+  },
+  {
+   "id": "dump_tyres",
+   "template": "tyre_yard",
+   "at": [
+    -510,
+    -720
+   ],
+   "yaw_deg": -30,
+   "near": "dump_berm_east"
+  },
+  {
+   "id": "arroyo_prospector",
+   "template": "prospector",
+   "at": [
+    -540,
+    -530
+   ],
+   "yaw_deg": 70,
+   "near": "dump_wash_1"
+  },
+  {
+   "id": "dump_wash_bones",
+   "template": "saguaro_bones",
+   "at": [
+    -360,
+    -560
+   ],
+   "yaw_deg": 200,
+   "near": "dump_wash_2"
+  },
+  {
+   "id": "rim_change_shack",
+   "template": "change_shack",
+   "at": [
+    -320,
+    -390
+   ],
+   "yaw_deg": 110,
+   "near": "slickrock_15"
+  },
+  {
+   "id": "ramp_last_haul",
+   "template": "last_haul",
+   "at": [
+    -280,
+    -340
+   ],
+   "yaw_deg": 160,
+   "near": "rim_haul_ramp"
+  },
+  {
+   "id": "west_drill_pad",
+   "template": "drill_pad",
+   "at": [
+    -220,
+    -140
+   ],
+   "yaw_deg": 80,
+   "near": "west_dive_windrow_2"
+  },
+  {
+   "id": "north_powder",
+   "template": "powder_line",
+   "at": [
+    -120,
+    -210
+   ],
+   "yaw_deg": 15,
+   "near": "north_dive_windrow_1"
+  },
+  {
+   "id": "rim_core_shed",
+   "template": "core_shed",
+   "at": [
+    -60,
+    -340
+   ],
+   "yaw_deg": 190,
+   "near": "rim_road_lane_2"
+  },
+  {
+   "id": "portal_last_haul",
+   "template": "last_haul",
+   "at": [
+    100,
+    -310
+   ],
+   "yaw_deg": 250,
+   "near": "back_door_portal"
+  },
+  {
+   "id": "camp_drill_pad",
+   "template": "drill_pad",
+   "at": [
+    210,
+    -220
+   ],
+   "yaw_deg": 300,
+   "near": "camp_dive_windrow_3"
+  },
+  {
+   "id": "bench2_tyres",
+   "template": "tyre_yard",
+   "at": [
+    340,
+    -160
+   ],
+   "yaw_deg": 120,
+   "near": "bench2_camp_lane"
+  },
+  {
+   "id": "bench2_change_shack",
+   "template": "change_shack",
+   "at": [
+    390,
+    -20
+   ],
+   "yaw_deg": 260,
+   "near": "bench2_east_bank"
+  },
+  {
+   "id": "bench3_powder",
+   "template": "powder_line",
+   "at": [
+    130,
+    -70
+   ],
+   "yaw_deg": 45,
+   "near": "bench3_dive_windrow_2"
+  },
+  {
+   "id": "floor_drill_pad",
+   "template": "drill_pad",
+   "at": [
+    160,
+    40
+   ],
+   "yaw_deg": 200,
+   "near": "floor_dive_windrow_1"
+  },
+  {
+   "id": "ore_bin_last_haul",
+   "template": "last_haul",
+   "at": [
+    -110,
+    0
+   ],
+   "yaw_deg": 20,
+   "near": "bench4_ore_bin"
+  },
+  {
+   "id": "ore_pile_core_shed",
+   "template": "core_shed",
+   "at": [
+    100,
+    150
+   ],
+   "yaw_deg": 330,
+   "near": "ore_pile_mid"
+  },
+  {
+   "id": "pit_lunch",
+   "template": "shift_lunch",
+   "at": [
+    20,
+    170
+   ],
+   "yaw_deg": 60,
+   "near": "pit"
+  },
+  {
+   "id": "ore_pile_cores",
+   "template": "core_pallet",
+   "at": [
+    70,
+    200
+   ],
+   "yaw_deg": 210,
+   "near": "ore_pile_mid"
+  },
+  {
+   "id": "bench2_lunch",
+   "template": "shift_lunch",
+   "at": [
+    20,
+    -140
+   ],
+   "yaw_deg": 120,
+   "near": "bench2_north_lane"
+  },
+  {
+   "id": "west_windrow_cores",
+   "template": "core_pallet",
+   "at": [
+    -120,
+    -130
+   ],
+   "yaw_deg": 30,
+   "near": "west_dive_windrow_1"
+  },
+  {
+   "id": "rim_road_powder",
+   "template": "powder_line",
+   "at": [
+    20,
+    -320
+   ],
+   "yaw_deg": 250,
+   "near": "rim_road_lane_2"
+  },
+  {
+   "id": "camp_windrow_cores",
+   "template": "core_pallet",
+   "at": [
+    100,
+    -210
+   ],
+   "yaw_deg": 120,
+   "near": "camp_dive_windrow_2"
+  },
+  {
+   "id": "camp_lunch",
+   "template": "shift_lunch",
+   "at": [
+    210,
+    -180
+   ],
+   "yaw_deg": 190,
+   "near": "camp_dive_windrow_3"
+  },
+  {
+   "id": "camp_road_cores",
+   "template": "core_pallet",
+   "at": [
+    235,
+    -180
+   ],
+   "yaw_deg": 260,
+   "near": "camp_dive_windrow_1"
+  },
+  {
+   "id": "bench3_powder_b",
+   "template": "powder_line",
+   "at": [
+    140,
+    -140
+   ],
+   "yaw_deg": 330,
+   "near": "bench3_dive_windrow_2"
+  },
+  {
+   "id": "dump_berm_west_1",
+   "template": "saguaro_bones",
+   "at": [
+    -588.7,
+    -711.1
+   ],
+   "yaw_deg": 99,
+   "near": "dump_berm_west"
+  },
+  {
+   "id": "wash_berm_1",
+   "template": "saguaro_bones",
+   "at": [
+    -532.4,
+    -490.3
+   ],
+   "yaw_deg": 305,
+   "near": "wash_berm"
+  },
+  {
+   "id": "dump_wash_2_1",
+   "template": "saguaro_bones",
+   "at": [
+    -408.8,
+    -479.5
+   ],
+   "yaw_deg": 110,
+   "near": "dump_wash_2"
+  },
+  {
+   "id": "slickrock_8_1",
+   "template": "saguaro_bones",
+   "at": [
+    -258.0,
+    -481.2
+   ],
+   "yaw_deg": 295,
+   "near": "slickrock_8"
+  },
+  {
+   "id": "haul_ramp_berm_1",
+   "template": "saguaro_bones",
+   "at": [
+    -202.1,
+    -311.1
+   ],
+   "yaw_deg": 261,
+   "near": "haul_ramp_berm"
+  },
+  {
+   "id": "rim_haul_ramp_1",
+   "template": "saguaro_bones",
+   "at": [
+    -290.5,
+    -261.7
+   ],
+   "yaw_deg": 248,
+   "near": "rim_haul_ramp"
+  },
+  {
+   "id": "rim_road_lane_2_1",
+   "template": "spill_pile",
+   "at": [
+    -28.2,
+    -342.3
+   ],
+   "yaw_deg": 230,
+   "near": "rim_road_lane_2"
+  },
+  {
+   "id": "north_dive_windrow_2_1",
+   "template": "notice_board",
+   "at": [
+    -197.7,
+    -181.6
+   ],
+   "yaw_deg": 208,
+   "near": "north_dive_windrow_2"
+  },
+  {
+   "id": "bench4_ore_bin_1",
+   "template": "shift_break",
+   "at": [
+    -181.5,
+    -1.1
+   ],
+   "yaw_deg": 167,
+   "near": "bench4_ore_bin"
+  },
+  {
+   "id": "bench4_ore_bin_2",
+   "template": "tyre_garden",
+   "at": [
+    -190.5,
+    68.3
+   ],
+   "yaw_deg": 106,
+   "near": "bench4_ore_bin"
+  },
+  {
+   "id": "west_dive_windrow_1_1",
+   "template": "spill_pile",
+   "at": [
+    -120.1,
+    -61.3
+   ],
+   "yaw_deg": 62,
+   "near": "west_dive_windrow_1"
+  },
+  {
+   "id": "bench2_north_lane_1",
+   "template": "notice_board",
+   "at": [
+    -8.7,
+    -90.4
+   ],
+   "yaw_deg": 343,
+   "near": "bench2_north_lane"
+  },
+  {
+   "id": "floor_dive_windrow_2_1",
+   "template": "shift_break",
+   "at": [
+    18.5,
+    18.9
+   ],
+   "yaw_deg": 211,
+   "near": "floor_dive_windrow_2"
+  },
+  {
+   "id": "rim_road_lane_2_2",
+   "template": "tyre_garden",
+   "at": [
+    29.9,
+    -347.5
+   ],
+   "yaw_deg": 139,
+   "near": "rim_road_lane_2"
+  },
+  {
+   "id": "bench4_dive_windrow_2_1",
+   "template": "change_shack",
+   "at": [
+    52.4,
+    -88.5
+   ],
+   "yaw_deg": 191,
+   "near": "bench4_dive_windrow_2"
+  },
+  {
+   "id": "camp_ore_bin_1",
+   "template": "tyre_yard",
+   "at": [
+    150.9,
+    -250.7
+   ],
+   "yaw_deg": 270,
+   "near": "camp_ore_bin"
+  },
+  {
+   "id": "bench4_dive_windrow_1_1",
+   "template": "core_shed",
+   "at": [
+    168.6,
+    -11.4
+   ],
+   "yaw_deg": 137,
+   "near": "bench4_dive_windrow_1"
+  },
+  {
+   "id": "camp_dive_windrow_1_1",
+   "template": "spill_pile",
+   "at": [
+    270.6,
+    -207.9
+   ],
+   "yaw_deg": 53,
+   "near": "camp_dive_windrow_1"
+  },
+  {
+   "id": "bench3_dive_windrow_1_1",
+   "template": "notice_board",
+   "at": [
+    270.0,
+    -120.4
+   ],
+   "yaw_deg": 118,
+   "near": "bench3_dive_windrow_1"
+  },
+  {
+   "id": "camp_dive_windrow_1_2",
+   "template": "shift_break",
+   "at": [
+    332.5,
+    -199.4
+   ],
+   "yaw_deg": 107,
+   "near": "camp_dive_windrow_1"
+  },
+  {
+   "id": "bench2_east_bank_1",
+   "template": "tyre_garden",
+   "at": [
+    401.0,
+    -149.8
+   ],
+   "yaw_deg": 163,
+   "near": "bench2_east_bank"
+  },
+  {
+   "id": "bench2_east_bank_2",
+   "template": "last_haul",
+   "at": [
+    387.6,
+    -70.4
+   ],
+   "yaw_deg": 43,
+   "near": "bench2_east_bank"
+  },
+  {
+   "id": "east_dive_2_windrow_1_1",
+   "template": "change_shack",
+   "at": [
+    247.5,
+    202.4
+   ],
+   "yaw_deg": 245,
+   "near": "east_dive_2_windrow_1"
+  },
+  {
+   "id": "east_dive_3_windrow_2_1",
+   "template": "drill_pad",
+   "at": [
+    171.9,
+    109.1
+   ],
+   "yaw_deg": 332,
+   "near": "east_dive_3_windrow_2"
+  },
+  {
+   "id": "east_dive_3_windrow_1_1",
+   "template": "tyre_yard",
+   "at": [
+    188.1,
+    210.8
+   ],
+   "yaw_deg": 57,
+   "near": "east_dive_3_windrow_1"
+  },
+  {
+   "id": "east_dive_3_windrow_2_2",
+   "template": "core_shed",
+   "at": [
+    108.5,
+    122.2
+   ],
+   "yaw_deg": 186,
+   "near": "east_dive_3_windrow_2"
+  },
+  {
+   "id": "east_dive_3_windrow_1_2",
+   "template": "spill_pile",
+   "at": [
+    128.6,
+    228.9
+   ],
+   "yaw_deg": 186,
+   "near": "east_dive_3_windrow_1"
+  },
+  {
+   "id": "floor_dive_windrow_2_2",
+   "template": "notice_board",
+   "at": [
+    19.6,
+    79.5
+   ],
+   "yaw_deg": 237,
+   "near": "floor_dive_windrow_2"
+  },
+  {
+   "id": "ore_pile_west_1",
+   "template": "shift_break",
+   "at": [
+    -40.4,
+    102.3
+   ],
+   "yaw_deg": 342,
+   "near": "ore_pile_west"
+  },
+  {
+   "id": "rim_haul_ramp_2",
+   "template": "tyre_garden",
+   "at": [
+    -299.0,
+    -307.8
+   ],
+   "yaw_deg": 336,
+   "near": "rim_haul_ramp"
+  },
+  {
+   "id": "north_dive_windrow_2_2",
+   "template": "last_haul",
+   "at": [
+    -258.2,
+    -231.0
+   ],
+   "yaw_deg": 301,
+   "near": "north_dive_windrow_2"
+  },
+  {
+   "id": "bench3_west_berm_1",
+   "template": "change_shack",
+   "at": [
+    -208.2,
+    -50.3
+   ],
+   "yaw_deg": 256,
+   "near": "bench3_west_berm"
+  },
+  {
+   "id": "bench3_dive_windrow_2_1",
+   "template": "drill_pad",
+   "at": [
+    102.3,
+    -89.2
+   ],
+   "yaw_deg": 338,
+   "near": "bench3_dive_windrow_2"
+  },
+  {
+   "id": "bench4_dive_windrow_2_2",
+   "template": "tyre_yard",
+   "at": [
+    59.0,
+    -10.6
+   ],
+   "yaw_deg": 257,
+   "near": "bench4_dive_windrow_2"
+  },
+  {
+   "id": "bench4_ore_bin_3",
+   "template": "core_shed",
+   "at": [
+    -161.1,
+    72.0
+   ],
+   "yaw_deg": 182,
+   "near": "bench4_ore_bin"
+  },
+  {
+   "id": "west_dive_windrow_1_2",
+   "template": "spill_pile",
+   "at": [
+    -79.0,
+    -90.1
+   ],
+   "yaw_deg": 43,
+   "near": "west_dive_windrow_1"
+  },
+  {
+   "id": "bench4_dive_windrow_2_3",
+   "template": "notice_board",
+   "at": [
+    61.8,
+    -41.9
+   ],
+   "yaw_deg": 55,
+   "near": "bench4_dive_windrow_2"
+  },
+  {
+   "id": "floor_dive_1",
+   "template": "shift_break",
+   "at": [
+    50.1,
+    21.9
+   ],
+   "yaw_deg": 329,
+   "near": "floor_dive"
+  },
+  {
+   "id": "bench4_ore_bin_4",
+   "template": "tyre_garden",
+   "at": [
+    -190.3,
+    40.1
+   ],
+   "yaw_deg": 267,
+   "near": "bench4_ore_bin"
+  },
+  {
+   "id": "bench4_ore_bin_5",
+   "template": "last_haul",
+   "at": [
+    -180.5,
+    109.1
+   ],
+   "yaw_deg": 138,
+   "near": "bench4_ore_bin"
+  },
+  {
+   "id": "dump_wash_1_1",
+   "template": "core_shed",
+   "at": [
+    -481.9,
+    -601.9
+   ],
+   "yaw_deg": 117,
+   "near": "dump_wash_1"
+  },
+  {
+   "id": "slickrock_8_2",
+   "template": "tyre_yard",
+   "at": [
+    -257.9,
+    -451.5
+   ],
+   "yaw_deg": 125,
+   "near": "slickrock_8"
+  },
+  {
+   "id": "rim_haul_ramp_3",
+   "template": "shift_break",
+   "at": [
+    -278.7,
+    -381.7
+   ],
+   "yaw_deg": 198,
+   "near": "rim_haul_ramp"
+  },
+  {
+   "id": "rim_haul_ramp_4",
+   "template": "spill_pile",
+   "at": [
+    -210.2,
+    -409.2
+   ],
+   "yaw_deg": 52,
+   "near": "rim_haul_ramp"
+  },
+  {
+   "id": "rim_road_lane_1_1",
+   "template": "notice_board",
+   "at": [
+    -151.2,
+    -377.8
+   ],
+   "yaw_deg": 106,
+   "near": "rim_road_lane_1"
+  },
+  {
+   "id": "haul_ramp_berm_2",
+   "template": "tyre_garden",
+   "at": [
+    -207.5,
+    -351.9
+   ],
+   "yaw_deg": 161,
+   "near": "haul_ramp_berm"
+  },
+  {
+   "id": "north_dive_windrow_2_3",
+   "template": "core_shed",
+   "at": [
+    -218.0,
+    -220.8
+   ],
+   "yaw_deg": 183,
+   "near": "north_dive_windrow_2"
+  },
+  {
+   "id": "rim_road_lane_1_2",
+   "template": "tyre_yard",
+   "at": [
+    -169.3,
+    -302.4
+   ],
+   "yaw_deg": 50,
+   "near": "rim_road_lane_1"
+  },
+  {
+   "id": "rim_road_berm_1",
+   "template": "shift_break",
+   "at": [
+    -91.3,
+    -321.3
+   ],
+   "yaw_deg": 215,
+   "near": "rim_road_berm"
+  },
+  {
+   "id": "rim_road_berm_2",
+   "template": "spill_pile",
+   "at": [
+    -101.5,
+    -262.3
+   ],
+   "yaw_deg": 266,
+   "near": "rim_road_berm"
+  },
+  {
+   "id": "west_dive_windrow_2_1",
+   "template": "notice_board",
+   "at": [
+    -188.4,
+    -129.5
+   ],
+   "yaw_deg": 271,
+   "near": "west_dive_windrow_2"
+  },
+  {
+   "id": "ore_pile_nw_1",
+   "template": "tyre_garden",
+   "at": [
+    -102.1,
+    51.1
+   ],
+   "yaw_deg": 322,
+   "near": "ore_pile_nw"
+  },
+  {
+   "id": "north_dive_windrow_1_1",
+   "template": "core_shed",
+   "at": [
+    -60.3,
+    -207.7
+   ],
+   "yaw_deg": 230,
+   "near": "north_dive_windrow_1"
+  },
+  {
+   "id": "winze_north_1",
+   "template": "tyre_yard",
+   "at": [
+    -40.3,
+    -128.1
+   ],
+   "yaw_deg": 173,
+   "near": "winze_north"
+  },
+  {
+   "id": "bench1_haul_lane_1",
+   "template": "shift_break",
+   "at": [
+    0.9,
+    -219.9
+   ],
+   "yaw_deg": 270,
+   "near": "bench1_haul_lane"
+  },
+  {
+   "id": "camp_dive_windrow_2_1",
+   "template": "spill_pile",
+   "at": [
+    48.2,
+    -262.4
+   ],
+   "yaw_deg": 277,
+   "near": "camp_dive_windrow_2"
+  },
+  {
+   "id": "bench4_dive_windrow_2_4",
+   "template": "notice_board",
+   "at": [
+    81.9,
+    -58.4
+   ],
+   "yaw_deg": 292,
+   "near": "bench4_dive_windrow_2"
+  },
+  {
+   "id": "bench3_dive_windrow_2_2",
+   "template": "tyre_garden",
+   "at": [
+    81.9,
+    -120.2
+   ],
+   "yaw_deg": 227,
+   "near": "bench3_dive_windrow_2"
+  },
+  {
+   "id": "camp_dive_windrow_3_1",
+   "template": "core_shed",
+   "at": [
+    180.1,
+    -208.7
+   ],
+   "yaw_deg": 189,
+   "near": "camp_dive_windrow_3"
+  },
+  {
+   "id": "bench4_dive_windrow_1_3",
+   "template": "tyre_yard",
+   "at": [
+    200.6,
+    -49.5
+   ],
+   "yaw_deg": 62,
+   "near": "bench4_dive_windrow_1"
+  },
+  {
+   "id": "bench3_dive_windrow_1_2",
+   "template": "shift_break",
+   "at": [
+    231.0,
+    -130.3
+   ],
+   "yaw_deg": 250,
+   "near": "bench3_dive_windrow_1"
+  },
+  {
+   "id": "bench2_east_bank_4",
+   "template": "spill_pile",
+   "at": [
+    361.3,
+    -111.3
+   ],
+   "yaw_deg": 48,
+   "near": "bench2_east_bank"
+  },
+  {
+   "id": "bench2_east_bank_5",
+   "template": "notice_board",
+   "at": [
+    319.7,
+    -59.8
+   ],
+   "yaw_deg": 127,
+   "near": "bench2_east_bank"
+  },
+  {
+   "id": "bench2_east_bank_6",
+   "template": "tyre_garden",
+   "at": [
+    360.6,
+    -9.8
+   ],
+   "yaw_deg": 283,
+   "near": "bench2_east_bank"
+  },
+  {
+   "id": "east_dive_2_windrow_1_2",
+   "template": "core_shed",
+   "at": [
+    250.4,
+    168.8
+   ],
+   "yaw_deg": 129,
+   "near": "east_dive_2_windrow_1"
+  },
+  {
+   "id": "east_dive_3_1",
+   "template": "tyre_yard",
+   "at": [
+    189.5,
+    178.7
+   ],
+   "yaw_deg": 118,
+   "near": "east_dive_3"
+  },
+  {
+   "id": "ore_pile_east_1",
+   "template": "shift_break",
+   "at": [
+    77.9,
+    228.3
+   ],
+   "yaw_deg": 273,
+   "near": "ore_pile_east"
+  },
+  {
+   "id": "ore_pile_north_1",
+   "template": "spill_pile",
+   "at": [
+    19.0,
+    142.2
+   ],
+   "yaw_deg": 135,
+   "near": "ore_pile_north"
+  },
+  {
+   "id": "collar_dish_1",
+   "template": "notice_board",
+   "at": [
+    0.3,
+    300.9
+   ],
+   "yaw_deg": 178,
+   "near": "collar_dish"
+  },
+  {
+   "id": "bench3_west_berm_2",
+   "template": "tyre_garden",
+   "at": [
+    -199.1,
+    -79.2
+   ],
+   "yaw_deg": 168,
+   "near": "bench3_west_berm"
+  },
+  {
+   "id": "back_door_portal_1",
+   "template": "core_shed",
+   "at": [
+    70.7,
+    -340.7
+   ],
+   "yaw_deg": 359,
+   "near": "back_door_portal"
+  },
+  {
+   "id": "camp_ore_bin_2",
+   "template": "tyre_yard",
+   "at": [
+    122.1,
+    -259.5
+   ],
+   "yaw_deg": 227,
+   "near": "camp_ore_bin"
+  },
+  {
+   "id": "camp_dive_windrow_1_4",
+   "template": "shift_break",
+   "at": [
+    309.2,
+    -178.2
+   ],
+   "yaw_deg": 279,
+   "near": "camp_dive_windrow_1"
+  },
+  {
+   "id": "bench3_dive_windrow_1_3",
+   "template": "spill_pile",
+   "at": [
+    228.0,
+    -62.4
+   ],
+   "yaw_deg": 148,
+   "near": "bench3_dive_windrow_1"
+  },
+  {
+   "id": "bench2_east_bank_7",
+   "template": "notice_board",
+   "at": [
+    360.0,
+    -80.1
+   ],
+   "yaw_deg": 57,
+   "near": "bench2_east_bank"
+  },
+  {
+   "id": "floor_dive_windrow_2_3",
+   "template": "tyre_garden",
+   "at": [
+    32.3,
+    42.1
+   ],
+   "yaw_deg": 188,
+   "near": "floor_dive_windrow_2"
+  },
+  {
+   "id": "floor_dive_windrow_1_1",
+   "template": "core_shed",
+   "at": [
+    111.9,
+    77.6
+   ],
+   "yaw_deg": 142,
+   "near": "floor_dive_windrow_1"
+  },
+  {
+   "id": "bench4_ore_bin_6",
+   "template": "tyre_yard",
+   "at": [
+    -148.1,
+    47.5
+   ],
+   "yaw_deg": 162,
+   "near": "bench4_ore_bin"
+  },
+  {
+   "id": "camp_ore_bin_3",
+   "template": "shift_break",
+   "at": [
+    120.3,
+    -288.0
+   ],
+   "yaw_deg": 36,
+   "near": "camp_ore_bin"
+  },
+  {
+   "id": "ore_pile_west_2",
+   "template": "spill_pile",
+   "at": [
+    -41.7,
+    137.8
+   ],
+   "yaw_deg": 262,
+   "near": "ore_pile_west"
+  },
+  {
+   "id": "pit_bench_4_1",
+   "template": "notice_board",
+   "at": [
+    39.8,
+    207.5
+   ],
+   "yaw_deg": 353,
+   "near": "pit_bench_4"
+  },
+  {
+   "id": "north_dive_windrow_2_4",
+   "template": "tyre_garden",
+   "at": [
+    -187.9,
+    -219.9
+   ],
+   "yaw_deg": 235,
+   "near": "north_dive_windrow_2"
+  },
+  {
+   "id": "rim_road_berm_3",
+   "template": "core_shed",
+   "at": [
+    -140.0,
+    -262.2
+   ],
+   "yaw_deg": 104,
+   "near": "rim_road_berm"
+  },
+  {
+   "id": "bench2_north_lane_2",
+   "template": "tyre_yard",
+   "at": [
+    21.6,
+    -200.9
+   ],
+   "yaw_deg": 59,
+   "near": "bench2_north_lane"
+  },
+  {
+   "id": "bench2_east_bank_8",
+   "template": "shift_break",
+   "at": [
+    357.8,
+    -40.1
+   ],
+   "yaw_deg": 253,
+   "near": "bench2_east_bank"
+  },
+  {
+   "id": "bench2_east_bank_9",
+   "template": "spill_pile",
+   "at": [
+    308.6,
+    0.7
+   ],
+   "yaw_deg": 49,
+   "near": "bench2_east_bank"
+  },
+  {
+   "id": "floor_dive_windrow_1_2",
+   "template": "notice_board",
+   "at": [
+    127.7,
+    39.8
+   ],
+   "yaw_deg": 23,
+   "near": "floor_dive_windrow_1"
+  },
+  {
+   "id": "ore_pile_north_2",
+   "template": "tyre_garden",
+   "at": [
+    -19.4,
+    121.6
+   ],
+   "yaw_deg": 350,
+   "near": "ore_pile_north"
+  },
+  {
+   "id": "camp_dive_windrow_2_2",
+   "template": "core_shed",
+   "at": [
+    70.4,
+    -210.2
+   ],
+   "yaw_deg": 195,
+   "near": "camp_dive_windrow_2"
+  },
+  {
+   "id": "dump_wash_1_3",
+   "template": "mat_stack",
+   "at": [
+    -468.0,
+    -560.6
+   ],
+   "yaw_deg": 48,
+   "near": "dump_wash_1"
+  },
+  {
+   "id": "rim_haul_ramp_5",
+   "template": "drill_steel",
+   "at": [
+    -259.9,
+    -259.9
+   ],
+   "yaw_deg": 29,
+   "near": "rim_haul_ramp"
+  },
+  {
+   "id": "haul_ramp_berm_3",
+   "template": "mat_stack",
+   "at": [
+    -198.3,
+    -268.1
+   ],
+   "yaw_deg": 113,
+   "near": "haul_ramp_berm"
+  },
+  {
+   "id": "north_dive_1",
+   "template": "drill_steel",
+   "at": [
+    -141.9,
+    -227.8
+   ],
+   "yaw_deg": 138,
+   "near": "north_dive"
+  },
+  {
+   "id": "bench3_west_berm_3",
+   "template": "mat_stack",
+   "at": [
+    -171.5,
+    -51.5
+   ],
+   "yaw_deg": 316,
+   "near": "bench3_west_berm"
+  },
+  {
+   "id": "bench4_ore_bin_7",
+   "template": "drill_steel",
+   "at": [
+    -151.3,
+    19.8
+   ],
+   "yaw_deg": 326,
+   "near": "bench4_ore_bin"
+  },
+  {
+   "id": "north_dive_windrow_1_2",
+   "template": "shift_lunch",
+   "at": [
+    -82.1,
+    -181.2
+   ],
+   "yaw_deg": 237,
+   "near": "north_dive_windrow_1"
+  },
+  {
+   "id": "bench1_haul_lane_2",
+   "template": "mat_stack",
+   "at": [
+    -30.6,
+    -220.5
+   ],
+   "yaw_deg": 137,
+   "near": "bench1_haul_lane"
+  },
+  {
+   "id": "bench2_north_lane_3",
+   "template": "drill_steel",
+   "at": [
+    1.2,
+    -118.2
+   ],
+   "yaw_deg": 118,
+   "near": "bench2_north_lane"
+  },
+  {
+   "id": "rim_road_lane_2_3",
+   "template": "powder_line",
+   "at": [
+    52.4,
+    -320.3
+   ],
+   "yaw_deg": 255,
+   "near": "rim_road_lane_2"
+  },
+  {
+   "id": "bench2_east_bank_10",
+   "template": "core_pallet",
+   "at": [
+    310.5,
+    -31.8
+   ],
+   "yaw_deg": 227,
+   "near": "bench2_east_bank"
+  },
+  {
+   "id": "haul_road_west_5_1",
+   "template": "shift_lunch",
+   "at": [
+    -118.0,
+    160.5
+   ],
+   "yaw_deg": 63,
+   "near": "haul_road_west_5"
+  },
+  {
+   "id": "bench1_haul_lane_4",
+   "template": "mat_stack",
+   "at": [
+    -21.7,
+    -268.8
+   ],
+   "yaw_deg": 342,
+   "near": "bench1_haul_lane"
+  },
+  {
+   "id": "camp_dive_windrow_2_4",
+   "template": "drill_steel",
+   "at": [
+    69.5,
+    -181.1
+   ],
+   "yaw_deg": 26,
+   "near": "camp_dive_windrow_2"
+  },
+  {
+   "id": "haul_ramp_berm_4",
+   "template": "powder_line",
+   "at": [
+    -178.7,
+    -379.1
+   ],
+   "yaw_deg": 210,
+   "near": "haul_ramp_berm"
+  },
+  {
+   "id": "bench2_east_bank_11",
+   "template": "core_pallet",
+   "at": [
+    328.4,
+    -122.1
+   ],
+   "yaw_deg": 319,
+   "near": "bench2_east_bank"
+  },
+  {
+   "id": "west_dive_windrow_1_3",
+   "template": "shift_lunch",
+   "at": [
+    -88.8,
+    -128.2
+   ],
+   "yaw_deg": 128,
+   "near": "west_dive_windrow_1"
+  },
+  {
+   "id": "west_dive_1",
+   "template": "mat_stack",
+   "at": [
+    -160.9,
+    -140.2
+   ],
+   "yaw_deg": 263,
+   "near": "west_dive"
+  },
+  {
+   "id": "ore_pile_mid_1",
+   "template": "drill_steel",
+   "at": [
+    67.7,
+    142.3
+   ],
+   "yaw_deg": 315,
+   "near": "ore_pile_mid"
+  },
+  {
+   "id": "ore_pile_sw_2",
+   "template": "powder_line",
+   "at": [
+    -27.7,
+    209.8
+   ],
+   "yaw_deg": 121,
+   "near": "ore_pile_sw"
+  },
+  {
+   "id": "ore_pile_east_2",
+   "template": "core_pallet",
+   "at": [
+    108.3,
+    208.9
+   ],
+   "yaw_deg": 183,
+   "near": "ore_pile_east"
+  },
+  {
+   "id": "headframe_leg_swing_e_1",
+   "template": "shift_lunch",
+   "at": [
+    50.8,
+    259.7
+   ],
+   "yaw_deg": 27,
+   "near": "headframe_leg_swing_e"
+  },
+  {
+   "id": "dump_berm_west_5",
+   "template": "mat_stack",
+   "at": [
+    -541.4,
+    -589.3
+   ],
+   "yaw_deg": 113,
+   "near": "dump_berm_west"
+  },
+  {
+   "id": "rim_road_lane_1_4",
+   "template": "drill_steel",
+   "at": [
+    -120.3,
+    -330.7
+   ],
+   "yaw_deg": 236,
+   "near": "rim_road_lane_1"
+  },
+  {
+   "id": "north_dive_windrow_1_3",
+   "template": "powder_line",
+   "at": [
+    -111.5,
+    -181.1
+   ],
+   "yaw_deg": 123,
+   "near": "north_dive_windrow_1"
+  }
+ ],
+ "litter": {
+  "kinds": [
+   {
+    "kind": "ore_heap",
+    "weight": 4
+   },
+   {
+    "kind": "prickly_pear",
+    "weight": 2
+   },
+   {
+    "kind": "tool_drop",
+    "weight": 1
+   },
+   {
+    "kind": "lagging_stack",
+    "weight": 1
+   },
+   {
+    "kind": "hose_coil",
+    "weight": 1
+   },
+   {
+    "kind": "haul_tyre",
+    "weight": 1
+   }
+  ],
+  "spacing_m": 45,
+  "band_m": [
+   8,
+   40
+  ],
+  "seed": 3
+ },
+ "pin": 2304434680
+}

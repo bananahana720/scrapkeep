@@ -74,8 +74,13 @@ export const WIN_PROOFS = [
   // export (2026-10-17) then won 1 of 3 on one pack, so it passes on its first win in 3 tries.
   // 2026-10-19 (Systems B w18): seed 2, not 1. The proof checks packaging, not balance, and the new
   // Highdraft plating pack draft_plate puts Sable's nemesis on seed 1 (it stalls at stage 5).
-  { label: "win proof (park)", seed: PARK_SEED, pilot: PARK_PILOT, table: "park", dir: "park", tries: 3 },
+  // 2026-10-23 (C17 dry run): the w18 park run is about 92,000 ticks, twice a world run, and won
+  // in 1060 s wall on a cloud box, past the 900 s every proof had; headless at --fixed-fps 90 runs
+  // near real time, so a faster GPU does not shorten it.
+  { label: "win proof (park)", seed: PARK_SEED, pilot: PARK_PILOT, table: "park", dir: "park", tries: 3, timeoutS: 1800 },
 ];
+export const WIN_PROOF_TIMEOUT_S = 900;
+export const winProofTimeoutMs = (proof) => (proof.timeoutS ?? WIN_PROOF_TIMEOUT_S) * 1000;
 const errorLine = /^(SCRIPT ERROR|ERROR)\b/m;
 export const BOSS_SMOKE = ["bowl", "waking", "mind"];
 export const BOSS_SMOKE_QUEUE_WAIT_S = 600;
@@ -749,7 +754,7 @@ async function playWinProof(base, pack, proof) {
     ],
     {
       cwd: path.dirname(pack),
-      timeout: 900_000,
+      timeout: winProofTimeoutMs(proof),
       env: {
         ...process.env,
         XDG_DATA_HOME: path.join(state, "data"),

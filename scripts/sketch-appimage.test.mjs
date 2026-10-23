@@ -76,6 +76,14 @@ test("the desktop entry groups the window: StartupWMClass is the project name Go
   assert.match(project, /^config\/custom_user_dir_name="godot\/app_userdata\/core-loop"$/m);
 });
 
+// alpha:rc reads SCRAPKEEP_TITLE_INTERACTIVE and SCRAPKEEP_MENU_READY from a pipe. A release build
+// leaves stdout block-buffered there unless this is set, so a cold launch that reached the menu in
+// 6 s still read as "no line within 5 s" (C17 dry run, 23 Oct).
+test("the release build flushes each printed line, so the cold launch check sees the menu lines", () => {
+  const project = readFileSync(new URL("../sketches/core-loop/project.godot", import.meta.url), "utf8");
+  assert.match(project, /^run\/flush_stdout_on_print=true$/m);
+});
+
 test("the project icon is the AppImage icon, byte for byte", () => {
   const a = readFileSync(new URL("../sketches/core-loop/assets/app/scrapkeep_icon.svg", import.meta.url));
   const b = readFileSync(new URL("./appimage/scrapkeep.svg", import.meta.url));
