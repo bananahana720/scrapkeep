@@ -5,7 +5,7 @@ const Relics := preload("res://src/build/relics.gd")
 
 # Maker sets (design page "Makers and Actives", 17 Oct 2026; Andrew tapped "Core now": the set
 # bonuses on the existing items land before the sitting, the 5-piece transformations after it).
-# Every find was made by someone for another job (Bible 5.3): each of the 61 items, Moss's cells,
+# Every find was made by someone for another job (Bible 5.3): each of the 62 items, Moss's cells,
 # every relic and every active names its maker in its own row ("maker"). Holding SETS[maker]
 # ["pieces"] distinct pieces of one maker turns its bonus on for the rest of the run; maker_
 # bonuses.gd does what each bonus does. A copy of a piece already held is not a second piece:
@@ -119,6 +119,6 @@ static func validate() -> Array:
 	return bad
 
 
-# The 61 items (items.gd's table and the three catalogue pattern parts) and Moss's cells.
+# The 62 items (items.gd's table and the three catalogue pattern parts) and Moss's cells.
 static func _is_item(part_id: String) -> bool:
 	return Parts.Items.TABLE.has(part_id) or Parts.Items.CELLS.has(part_id) or part_id in Parts.PATTERN_PARTS

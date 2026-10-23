@@ -6,7 +6,7 @@ const Items := preload("res://src/build/items.gd")
 const Relics := preload("res://src/build/relics.gd")
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 
-# Maker sets (maker_sets.gd): every one of the 61 items names a known maker, the counts take
+# Maker sets (maker_sets.gd): every one of the 62 items names a known maker, the counts take
 # distinct pieces from parts, relics and the racked active, a set turns its bonus on at its piece
 # count, and the offer nudge leans 1.5x toward a maker once two of its pieces are held.
 
@@ -14,7 +14,7 @@ const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 func run(t) -> void:
 	t.eq("maker fields are sound", MakerSets.validate(), [])
 	var items: Array = Items.TABLE.keys() + Parts.PATTERN_PARTS
-	t.eq("61 items", items.size(), 61)
+	t.eq("62 items", items.size(), 62)
 	t.check("every item has a maker", items.all(func(id): return MakerSets.SETS.has(MakerSets.maker_of(id))))
 	t.check("every active has a maker", ActiveDefs.ROWS.keys().all(func(id): return MakerSets.SETS.has(String(ActiveDefs.row(id).get("maker", "")))))
 	t.eq("a generated recipe has no maker", MakerSets.maker_of("gen:weapon:rare:arc:on_hit"), "")

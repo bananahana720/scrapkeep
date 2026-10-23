@@ -72,8 +72,8 @@ func _check_words() -> void:
 	_report("objective taught", title.contains(FieldNotes.OBJECTIVE) and FieldNotes.OBJECTIVE.contains("Warden")
 			and FieldNotes.OBJECTIVE.contains("plating") and FieldNotes.OBJECTIVE.contains("Brindle")
 			and not title.contains("Charge each beacon") and notes.contains("Brindle") and not notes.contains("a summary after stage 3")
-			and notes.contains("T replays that world's last stage") and "T" in keys,
-		"title reads \"%s\"; notes name Brindle %s and the arena's T %s; screen keys %s"
+			and "N" in keys and not ("T" in keys) and not notes.contains("T replays that world's last stage"),
+		"title reads \"%s\"; notes name Brindle %s and teach the arena's T %s; screen keys %s (N expected, T not)"
 			% [title.replace("\n", " / "), notes.contains("Brindle"), notes.contains("T replays that world's last stage"), keys])
 	var build_card := FieldNotes.hint_card_text("◆", "Chain Arc + something that splits", "something that splits")
 	var enemy_card := FieldNotes.hint_card_text("×", "Lobbers hate their own mail.", "a lobber's shell + a bat")

@@ -10,7 +10,8 @@ const Game := preload("res://src/game.gd")
 #   (a) for the first stage of world 2 and of world 3: enter it, free the Game, boot a new one
 #       on the same path; Continue is offered and resume_run() lands on that stage with
 #       world == world_of(stage), the stage's world built, the ball at the saved entry pose
-#       just above the ground, and hp, parts, relics, tree picks and retries_spent as saved.
+#       just above the ground, and hp, parts, relics, tree picks, the spent earned-save flag and
+#       retries_spent (a dead field since wave 19, still read so an old save loads) as saved.
 #       Both entrance docs validate.
 #   (b) the profile (worlds, pilots, settled ids) and the run doc's worlds_cleared survive the
 #       save and the reload, and the next entrance save still carries worlds_cleared;
@@ -83,13 +84,13 @@ func _state() -> Dictionary:
 	return {
 		"stage": run.stage, "world": run.world, "hp": run.hp, "parts": Array(run.parts.duplicate()),
 		"relics": run.relics.duplicate(), "picks": Array(_game.player.tree.picks.duplicate()),
-		"spent": run.retries_spent.duplicate(),
+		"spent": run.retries_spent.duplicate(), "save": run.death_save_spent,
 	}
 
 
 func _same(a: Dictionary, b: Dictionary) -> bool:
 	return a["stage"] == b["stage"] and is_equal_approx(a["hp"], b["hp"]) and a["parts"] == b["parts"] \
-		and a["relics"] == b["relics"] and a["picks"] == b["picks"] and a["spent"] == b["spent"]
+		and a["relics"] == b["relics"] and a["picks"] == b["picks"] and a["spent"] == b["spent"] and a["save"] == b["save"]
 
 
 # Picks the tree's first offer when one is owed; true when a pick landed.
@@ -186,6 +187,7 @@ func _run() -> void:
 	_game.run.add_part("boost_coil", "test")
 	_game.run.damage(5.0, "test")
 	_game.run.retries_spent[2] = 1
+	_game.run.death_save_spent = true
 	_game.flow.enter_stage(w3, v, false)
 	var saved3 := _state()
 	var doc3 := _disk()

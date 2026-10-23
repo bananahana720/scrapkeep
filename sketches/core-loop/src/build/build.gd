@@ -250,6 +250,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.run_started.connect(_on_run_started)
 	ctx.events.scrap_lost.connect(_on_scrap_lost)
 	ctx.run.armor_hit.connect(_on_armor_hit)
+	ctx.run.death_save_hook = effects.death_save_hull
 	_sync_scrap_flags()
 	ctx.events.heft_class_changed.connect(func(_c: int, _h: float): _redraw())
 	_connect_triggers()

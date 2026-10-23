@@ -92,7 +92,10 @@ func _physics_process(_delta: float) -> bool:
 			_s["gap"] = flow.gap_line()
 			_s["arena_deaths"] = (_game.run_log._record.get("arena", {}).get("deaths", []) as Array).size()
 			_s["stage3_deaths"] = (_game.run_log._stages[3]["deaths"] as Array).size()
-			_game._screen_key(KEY_R)
+			# R is still down from the moment of death: the frame on the death screen sees it, and the
+			# retry that follows (the store-less flow's stage retry) leaves it latched until release.
+			_game.step_restart_hold(0.1, true)
+			flow.retry_stage()
 			_s["after_r"] = flow.state_name()
 			_s["scrap_after_r"] = run.scrap
 			_game.step_restart_hold(0.6, true)
@@ -111,18 +114,27 @@ func _physics_process(_delta: float) -> bool:
 			_report_arena()
 			flow.enter_boss(Vector3(15.0, 0.0, 0.0))
 			_boss.defeat()
+			var held := InputEventKey.new()
+			held.keycode = KEY_SPACE
+			held.physical_keycode = KEY_SPACE
+			held.pressed = true
+			Input.parse_input_event(held)
+			Input.flush_buffered_events()
 			_phase = "victory"
 			_wait = 0
 		"victory":
 			if flow.state_name() == "summary" and not _s.has("summary_first"):
 				_s["summary_first"] = _game._screen_key(KEY_SPACE)
 				_s["after_early_space"] = flow.state_name()
-				_game.summary_guard_left = 0.0
+				held_release()
+				if _game.screens.ending_open():
+					_game.screens._close_ending()
+				_game.summary_latched = false
 				_game._screen_key(KEY_SPACE)
 				_s["after_late_space"] = flow.state_name()
 				_report("summary guard", _s["after_early_space"] == "summary" and _s["after_late_space"] == "class_select",
-					"Space the moment the summary appeared left flow in %s; after the %.2f s guard Space went to %s"
-						% [_s["after_early_space"], _game.SUMMARY_GUARD, _s["after_late_space"]])
+					"Space the moment the summary appeared left flow in %s; after the latch opened Space went to %s"
+						% [_s["after_early_space"], _s["after_late_space"]])
 				print("spine_arena_retry_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 				quit(0 if _failures == 0 else 1)
 				return true
@@ -149,5 +161,14 @@ func _report_arena() -> void:
 	_report("arena run log", _s["arena_deaths"] == 1 and _s["stage3_deaths"] == 0,
 		"an arena death went to the arena record (%d) and not to stage 3's deaths (%d)" % [_s["arena_deaths"], _s["stage3_deaths"]])
 	_report("one retry per held R", _s["after_r"] == "boss" and _s["clears_while_held"] == 2 and _s["clears_after_release"] == 3,
-		"R on the death screen put flow in %s; holding R 0.6 s after it made %d clears in all (needs 2); release and hold again made %d (needs 3)"
+		"a stage retry with R held since the death put flow in %s; holding R 0.6 s after it made %d clears in all (needs 2); release and hold again made %d (needs 3)"
 			% [_s["after_r"], _s["clears_while_held"], _s["clears_after_release"]])
+
+
+func held_release() -> void:
+	var up := InputEventKey.new()
+	up.keycode = KEY_SPACE
+	up.physical_keycode = KEY_SPACE
+	up.pressed = false
+	Input.parse_input_event(up)
+	Input.flush_buffered_events()

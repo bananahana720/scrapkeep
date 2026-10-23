@@ -48,6 +48,9 @@ signal armor_hit(removed: float, spill: int, source: String)
 # Rolling wear took `removed` whole units of mass (wear_step only, --wear=on). Read-only; Rivet's
 # Run and Gun trail reads it (world_one_rtree_test).
 signal wear_taken(removed: float)
+# The earned save held a killing hit: the run lives on at `hp`. Flow rewrites the entrance with
+# the spent flag; the HUD can say it.
+signal death_saved(hp: float)
 
 var events
 var class_def: Resource
@@ -96,6 +99,12 @@ var brace_hook := Callable()
 # overflow, returns the hull to hold instead. Both run inside the one damage order.
 var deflect_hook := Callable()
 var ward_hook := Callable()
+# The earned save: Callable() -> the hull to live on at, or 0.0 when no save is held. It runs
+# once per hit that would kill, before player_died, in both damage paths. death_save_spent is
+# the run-doc flag: the save works once per run, survives a save and a Continue, and a stage
+# retry never hands it back.
+var death_save_hook := Callable()
+var death_save_spent := false
 # The set piece's defence (SKILL-BAR section 4): Callable(amount, hp) -> the amount to take,
 # x0.2 and never below 1 health; ride_hook answers whether a set piece rides, when no scrap
 # is knocked loose. The one choke point every hit passes, so a boss's direct hit obeys it too.
@@ -227,6 +236,7 @@ func begin(chosen_class: Resource) -> void:
 	settled.clear()
 	escape_window_left = 0.0
 	retries_spent = {}
+	death_save_spent = false
 	extra = {}
 	_loaded_class_id = ""
 	tree_picks.clear()
@@ -544,6 +554,7 @@ func damage(amount: float, source: String) -> void:
 		_damage_armored(amount, source)
 		return
 	hp = _after_hit(amount)
+	_try_death_save()
 	since_damage = 0.0
 	_try_escape_window()
 	events.player_hit.emit(amount, source)
@@ -598,10 +609,23 @@ func _damage_armored(amount: float, source: String) -> void:
 			after = maxf(after, float(ward_hook.call(after)))
 		metrics["hull_damage"] += hp - after
 		hp = after
+	_try_death_save()
 	_try_escape_window()
 	events.player_hit.emit(amount, source)
 	if hp <= 0.0:
 		events.player_died.emit()
+
+
+# A hit that took the hull to zero is held at the save's hull, once, when the run holds the save.
+func _try_death_save() -> void:
+	if hp > 0.0 or death_save_spent or not death_save_hook.is_valid():
+		return
+	var saved: float = float(death_save_hook.call())
+	if saved <= 0.0:
+		return
+	death_save_spent = true
+	hp = minf(max_hp, saved)
+	death_saved.emit(hp)
 
 
 func _try_escape_window() -> void:
@@ -859,6 +883,7 @@ func summary() -> Dictionary:
 		"events_won": events_won.size(),
 		"time": run_time,
 		"retries": retries,
+		"save_used": 1 if death_save_spent else 0,
 		"tallies": tallies(),
 		"trade_pockets": (trade_memory.seen as Array).duplicate(true),
 	}
@@ -878,7 +903,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -928,6 +953,7 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"tree_picks": Array(tree_picks),
 		"tree_allowed": tree_allowed,
 		"tree_late_skipped": tree_late_skipped,
+		"death_save_spent": death_save_spent,
 		"retries_spent": spent,
 		"cogs": cogs,
 		"companion": companion.duplicate(true),
@@ -1076,6 +1102,7 @@ func from_entrance_doc(doc) -> bool:
 	tree_picks.assign(doc["tree_picks"])
 	tree_allowed = int(doc["tree_allowed"])
 	tree_late_skipped = bool(doc.get("tree_late_skipped", false))
+	death_save_spent = bool(doc.get("death_save_spent", false))
 	retries_spent = {}
 	for w in doc["retries_spent"]:
 		retries_spent[int(str(w))] = int(doc["retries_spent"][w])
