@@ -18,10 +18,34 @@ static var asset_dir := ASSET_DIR
 static var spillway_dir := SPILLWAY_DIR
 
 
+# Each kit's parts read ahead by warm(), by file path until build takes them.
+static var _ahead := {}
+
+
+# Reads one kit's parts a call, on the main thread, while the world's last stage runs (boss.gd's
+# warm_arena); true once both are read. Reading them took 10 ms of the boss-entry frame.
+static func warm() -> bool:
+	for kit in _kits():
+		if not _ahead.has(kit[0]):
+			_ahead[kit[0]] = new()._parts(kit[0], kit[1])
+			return false
+	return true
+
+
+static func drop_ahead() -> void:
+	_ahead.clear()
+
+
+static func _kits() -> Array:
+	return [[asset_dir.path_join("arena_bowl_foundry.glb"), FOUNDRY_PARTS], [spillway_dir.path_join("clutter_kit.glb"), SPILLWAY_PARTS]]
+
+
 static func build(arena: Node3D) -> Node3D:
 	var builder := new()
-	var foundry := builder._parts(asset_dir.path_join("arena_bowl_foundry.glb"), FOUNDRY_PARTS)
-	var stone := builder._parts(spillway_dir.path_join("clutter_kit.glb"), SPILLWAY_PARTS)
+	var kits := _kits()
+	var foundry: Dictionary = _ahead[kits[0][0]] if _ahead.has(kits[0][0]) else builder._parts(kits[0][0], kits[0][1])
+	var stone: Dictionary = _ahead[kits[1][0]] if _ahead.has(kits[1][0]) else builder._parts(kits[1][0], kits[1][1])
+	_ahead.clear()
 	if foundry.is_empty() or stone.is_empty():
 		push_warning("arena_bowl_dress: missing or malformed foundry/Spillway kit; Slag Bowl keeps its greybox")
 		return null

@@ -31,7 +31,18 @@ static func live(_class_def = null) -> Color:
 	return ARC
 
 
+# One shared texture per checker: drawing one pixel by pixel cost 4 ms of the boss-entry frame.
+static var _checkers := {}
+
+
+static func drop_checkers() -> void:
+	_checkers.clear()
+
+
 static func checker_texture(a: Color, b: Color, cells := 8, size := 128) -> ImageTexture:
+	var key := [a, b, cells, size]
+	if _checkers.has(key):
+		return _checkers[key]
 	var image := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
 	var cell := size / cells
 	for y in size:
@@ -39,7 +50,8 @@ static func checker_texture(a: Color, b: Color, cells := 8, size := 128) -> Imag
 			var on := ((x / cell) + (y / cell)) % 2 == 0
 			image.set_pixel(x, y, a if on else b)
 	image.generate_mipmaps()
-	return ImageTexture.create_from_image(image)
+	_checkers[key] = ImageTexture.create_from_image(image)
+	return _checkers[key]
 
 
 # Neutral painted value variation multiplies the existing surface-role vertex tint.
