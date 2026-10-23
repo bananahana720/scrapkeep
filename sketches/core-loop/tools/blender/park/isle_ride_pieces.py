@@ -8,10 +8,13 @@ ground (assets/park/park_islands/ground.bin) stays the only thing the ball rolls
                         overlay (west_wing, x -270..-150, z 100..420: the game builds it over the whole site footprint,
                         natural.gd:146-150, event_ground.gd:477-491), which only raises ground (event_ground.gd:236), so
                         where the crater rim rises the sheet is buried under the raised ground and never floats.
+  isle_ride_fin_chute   fin_chute (half_pipe, plateau 240 x 0.01 x 56): the whole chute footprint, x -28..28, z -340..-100,
+                        wholly inside twin_fins, where fin_rim_collapse drops the ground 8 m. The row declares
+                        "hide_on": "fin_rim_collapse", so the collapse parks Park_fin_chute down with Park_twin_fins
+                        (event_ground.gd hidden_rows, apply_swap) and the sheet never hangs over the dropped ground
+                        (ghost solid, #183); it comes home on revert. That event is the one keep-out the piece skips.
 
 Not dressed, and why:
-  fin_chute    lies wholly inside twin_fins' footprint, where fin_rim_collapse drops the ground 8 m and hides only
-               Park_twin_fins, so a sheet on it would hang in the air after the collapse (ghost solid, #183).
   slickrock_run, fan_band, net_carve, isle_apron   full-rect stamped bands, 1,600 m across the whole play rect. At the
                bake's 2 m cells a full sheet is 136k to 283k triangles against the landform class's 8,000, so no
                OVER_GREYBOX piece can honestly dress them (a 2 to 4 % window would only clear the placeholder gate). They
@@ -70,6 +73,8 @@ SAGE = "9aa273"
 PIECES = {
     "isle_ride_wash_west": {"row": "cloud_wash_west", "raise": "full", "windows": [(-226, -194, 110, 410)],
                             "flat": (SILT, SAND, STONE), "cliff": (STONE_DK, VARNISH), "stroke": BONE, "seed": 4141},
+    "isle_ride_fin_chute": {"row": "fin_chute", "raise": "full", "windows": [(-28, 28, -340, -100)], "hide_on": "fin_rim_collapse",
+                            "flat": (OCHRE, SAND_LT, SAND_DK), "cliff": (VARNISH, VARNISH_LT), "stroke": BONE, "seed": 5252},
 }
 BUDGET_CLASS = "landform"
 
@@ -149,30 +154,35 @@ def footprint(site):
     return (x - hx, x + hx, z - hz, z + hz)
 
 
-def keep_out():
+def keep_out(spec):
     """The ground the islands' events lower, swap or open, as (x0, x1, z0, z1, why), a margin of 8 m round each. No vertex of
     any piece may stand inside them. A collapse or other ground swap uses its whole site footprint (as natural.gd and
     event_ground.gd do) and cloud_cannon_west's mouth uses its radius. An impact is NOT here: its overlay only raises ground
     (event_ground.gd:236, `y += maxf(0.0, offset)`; the crater profile is clamped at zero), so a sheet inside it is buried
-    where the rim rises, never left floating. raise_only() names the one such overlap the sheet may have."""
+    where the rim rises, never left floating. raise_only() names the overlaps the sheet may have. The piece's own hide_on
+    event is skipped too: the row leaves with that swap, so the sheet is never seen over the ground it lowers."""
     margin = 8.0
     sites = {r["id"]: r for r in PARK["park_rows"]}
     out = []
     for ev in PARK["event_rows"]:
         if ev["kind"] == "impact" or not (ev["kind"] == "collapse" or ev["effect"].get("swap")):
             continue
+        if ev["id"] == spec.get("hide_on"):
+            continue
         x0, x1, z0, z1 = footprint(sites[ev["site"]])
         out.append((x0 - margin, x1 + margin, z0 - margin, z1 + margin, ev["id"]))
     for row in PARK.get("contraption_rows", []):
-        if row.get("site") == "cloud_wash_west" and "at" in row:
+        if row.get("site") == spec["row"] and "at" in row:
             x, z, r = float(row["at"][0]), float(row["at"][1]), float(row.get("radius", 4.0)) + 4.0
             out.append((x - r, x + r, z - r, z + r, row["id"]))
     return out
 
 
-def raise_only(window_boxes):
-    """Assert the only event whose real footprint overlaps the sheet is a raise-only impact overlay (isle_shed on west_wing,
-    event_ground.gd:236) and return its id. Any other overlapping event, one that lowers or swaps ground, fails the build."""
+def raise_only(spec):
+    """Assert every event whose real footprint overlaps the sheet is a raise-only impact overlay (isle_shed on west_wing,
+    event_ground.gd:236) or the piece's own hide_on event, and that the row really declares that hide_on. Return the ids.
+    Any other overlapping event, one that lowers or swaps ground, fails the build."""
+    window_boxes = spec["windows"]
     sites = {r["id"]: r for r in PARK["park_rows"]}
     hits = []
     for ev in PARK["event_rows"]:
@@ -184,8 +194,12 @@ def raise_only(window_boxes):
                 hits.append(ev)
                 break
     ids = [e["id"] for e in hits]
-    assert ids == ["isle_shed"] and hits[0]["kind"] == "impact", ("the sheet overlaps events that are not a raise-only impact", ids)
-    return ids[0]
+    hide = spec.get("hide_on")
+    if hide:
+        assert row_of(spec["row"]).get("hide_on") == hide, (spec["row"], "does not declare hide_on", hide)
+    bad = [e["id"] for e in hits if e["kind"] != "impact" and e["id"] != hide]
+    assert ids and not bad, ("the sheet overlaps events that are neither a raise-only impact nor its hide_on", ids)
+    return ids
 
 
 def inside(x, z, box):
@@ -207,8 +221,8 @@ def build_mesh(rid, spec):
     """(verts [(x, y, z) Godot local], tris [(a, b, c)], colours per triangle) for the piece's windows."""
     ny = node_y(spec)
     ax, az = row_of(spec["row"])["at"]
-    ev = keep_out()
-    raise_only(spec["windows"])
+    ev = keep_out(spec)
+    raise_only(spec)
     verts, tris, cols, index = [], [], [], {}
 
     def vert(ix, iz):
@@ -311,8 +325,8 @@ def check(rid, out_dir):
     idx_acc = doc["accessors"][prim["indices"]]
     fmt = {5121: "<B", 5123: "<H", 5125: "<I"}[idx_acc["componentType"]]
     ids = [t[0] for t in accessor(doc, binary, prim["indices"], fmt, 1)]
-    ev = keep_out()
-    raise_only(spec["windows"])
+    ev = keep_out(spec)
+    raise_only(spec)
     lo, hi = math.inf, -math.inf
     worst_down = 0.0
 
@@ -344,6 +358,12 @@ def check(rid, out_dir):
     return fails, report
 
 
+NOTES = {
+    "isle_ride_wash_west": "cloud_wash_west's flush ground sheet, conformed to the park_islands bake (park_islands placeholder burn-down); every vertex 0.04 to 0.08 m over ground.bin; none inside a collapse or swap footprint or the cannon mouth; the sheet lies inside isle_shed's impact overlay, which only raises ground; built by this script, no external mesh",
+    "isle_ride_fin_chute": "fin_chute's flush ground sheet, conformed to the park_islands bake (park_islands placeholder burn-down); every vertex 0.04 to 0.08 m over ground.bin; the row hides on fin_rim_collapse, so the sheet parks down with twin_fins when the fins collapse and never hangs over the dropped ground; built by this script, no external mesh",
+}
+
+
 def registry():
     out = []
     for rid, spec in PIECES.items():
@@ -351,7 +371,7 @@ def registry():
             "id": rid, "path": "res://assets/models/park/%s.glb" % rid, "class": BUDGET_CLASS, "origin": "centre", "ships": True,
             "loader": "src/world/park/park_recipes.gd (place_over_greybox: drawn over its row's stamped ground, which stays the only collider; no -col mesh)",
             "provenance": {"recipe": "tools/blender/park/isle_ride_pieces.py",
-                           "notes": "%s's flush ground sheet, conformed to the park_islands bake (park_islands placeholder burn-down); every vertex 0.04 to 0.08 m over ground.bin; none inside a collapse or swap footprint or the cannon mouth; the sheet lies inside isle_shed's impact overlay, which only raises ground; built by this script, no external mesh" % spec["row"]},
+                           "notes": NOTES[rid]},
         })
     return {"assets": out}
 

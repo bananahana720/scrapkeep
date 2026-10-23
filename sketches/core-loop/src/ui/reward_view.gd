@@ -31,6 +31,9 @@ const CRATE_SCALE := 1.4
 const RAYS := 14
 const BITS := 32
 
+# Reduced motion (Game.set_reduced_motion keeps it current): the crate holds still.
+static var reduced_motion := false
+
 var now := 0
 # The card showing, or {}: name, verb, stamp, icon, element_icon, tint, heart, partner_icon,
 # link ("" none, "lit" a completed synergy, "hint" the partner to look for), class_color,
@@ -312,13 +315,13 @@ func _draw_ceremony(screen: Vector2) -> void:
 func _draw_crate(centre: Vector2, t: float, p: float, landed: float, alpha: float) -> void:
 	var yours: Color = ceremony.get("class_color", Palette.SAND)
 	var tint: Color = ceremony.get("tint", Palette.AMBER)
-	var amp := 1.5 + 11.0 * p * p
+	var amp := (1.5 + 11.0 * p * p) * (0.0 if reduced_motion else 1.0)
 	var w := 30.0 + 55.0 * p
 	var shake := Vector2(sin(t * w), cos(t * w * 1.37)) * amp
 	var origin := centre + shake + Vector2(0.0, -_screen().y * 0.35 * (1.0 - _ease(landed)))
 	for ring in 4:
 		draw_circle(centre, (150.0 + 70.0 * ring) * (0.6 + 0.6 * p), Color(yours, (0.16 - 0.035 * ring) * p * alpha))
-	draw_set_transform(origin, sin(t * w * 0.8) * 0.06 * p, Vector2.ONE * CRATE_SCALE)
+	draw_set_transform(origin, sin(t * w * 0.8) * 0.06 * p * (0.0 if reduced_motion else 1.0), Vector2.ONE * CRATE_SCALE)
 	var body := Rect2(-CRATE * 0.5, CRATE)
 	draw_rect(body.grow(4.0), _faded(Color(Palette.CHARCOAL, 0.8), alpha))
 	draw_rect(body, _faded(Palette.COPPER.darkened(0.4), alpha))

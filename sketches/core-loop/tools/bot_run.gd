@@ -6,11 +6,13 @@ const BotProfile := preload("res://tools/bot_profile.gd")
 const BotAudit := preload("res://tools/bot_audit.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
 const BotOptions := preload("res://tools/bot_options.gd")
+const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
 const SignalTimer := preload("res://tools/signal_timer.gd")
 const PhysicsProbe := preload("res://tools/physics_probe.gd")
+const FrameSplit := preload("res://tools/frame_split.gd")
 
 # Headless bot runs for the design feedback loop (DEMO-SPEC). Each seed plays one full
 # demo run through a fresh Game.new() with one policy (tools/bot_driver.gd), in play
@@ -61,6 +63,11 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 # --threaded-stages=1 builds park stages on worker threads as --wall-clock=1 does, but keeps the
 # hit-stop clock on physics ticks: for frame captures, where the next stage's one-frame build on
 # the engage frame is a bot artifact. The seed no longer replays exactly.
+# --warm-band=1 renders the band's other themes, keys and boss tracks (MusicEngine.prepare_rest) before
+# the run, as a played run does on a worker behind stage 1. Without it each chord, note and riser
+# renders on the main thread the first time a bar asks, 60 to 300 ms a frame that play never has.
+# It also renders each queued stinger on a worker before its beat, as a played run does. Use it
+# for frame captures and hitch hunts; the seed still replays exactly.
 # --frame-log=1 writes frames-<seed>.ndjson: each frame's wall ms, stage and flow state; that ms split
 # into idle_ms (the scene's _process), draw_ms (the RenderingServer's draw) and tick_ms (the physics
 # ticks after it, ticks of them), timed per frame; Performance's process and physics times, which are
@@ -75,6 +82,17 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 # frame (tools/signal_timer.gd), signals under 5 ms a frame dropped. It slows the run about 2.5x.
 # --physics-probe=1 writes physics-<seed>.ndjson: for each physics tick over 100 ms, the Game
 # children (and --probe-under=<child,...>'s children) that spent it (tools/physics_probe.gd).
+# --frame-split=1 adds the parts of each --frame-log row's ms (tools/frame_split.gd): node physics
+# and node _process time, the bot driver's own tick (bot_ms) and net_ms, the frame without that tick.
+# The rest of the ms is the engine's own work. =2 also keeps a bracket-by-bracket events list with
+# on-CPU time on frames over 40 ms. The bot's climb planner is bot_ms: 60 to 85 ms every 6 s
+# while a stalled bot sits below its gate, which is the 6 s GATES hitch; read GATES frames by net_ms.
+# --physics-hz=N sets the physics tick rate (the project's 90 stays when absent): a hitch whose period
+# follows the tick count moves with it, one on a wall clock does not.
+# --inject-ms=N sleeps N ms every 6 s of wall time outside the driver's tick: a planted frame cost
+# for the net_ms read of a --frame-split frame log (the control that a game-side hitch still shows).
+# --unshaded=1 draws the root viewport unshaded, so a render cost can be told apart from the lights
+# and shadows (for frame captures: it changes the picture).
 # The game runs in test mode (no keyboard, no mouse capture) and its codex and run log
 # are pointed at --out, the way test mode points them at a per-process folder; --out may
 # be an absolute path or a user:// path. Next to the spine's two logs the runner writes:
@@ -121,6 +139,9 @@ var _draw_ended := 0
 var _frame_index := 0
 var _signal_timer
 var _physics_probe
+var _frame_split
+var _inject_ms := 0
+var _inject_at := 0
 
 
 func _initialize() -> void:
@@ -303,6 +324,9 @@ func _physics_process(delta: float) -> bool:
 			_driver.late_offer_policy = late
 			_driver.tree_policy = "random"
 		_game.presentation.audio.bake_opening_now()
+		if _settings.get("warm-band", "0") == "1":
+			MusicEngine.prepare_rest()
+			_game.presentation.audio.engine.warm_stingers = true
 		_game.run.run_seed_override = _seeds[_index]
 		_started_msec = Time.get_ticks_msec()
 		var resume := false
@@ -320,6 +344,14 @@ func _physics_process(delta: float) -> bool:
 			for row in _game.events.get_script().get_script_signal_list():
 				names.append(row.name)
 			_signal_timer.time_signals(_game.events, names)
+		if _settings.has("physics-hz"):
+			Engine.physics_ticks_per_second = int(_settings["physics-hz"])
+		if _settings.get("unshaded", "0") == "1":
+			root.debug_draw = Viewport.DEBUG_DRAW_UNSHADED
+		if _settings.get("frame-split", "0") in ["1", "2"]:
+			_frame_split = FrameSplit.new()
+			_frame_split.watch(self, _settings["frame-split"] == "2")
+		_inject_ms = int(_settings.get("inject-ms", "0"))
 		if _settings.get("physics-probe", "0") == "1":
 			_physics_probe = PhysicsProbe.new()
 			var parents := [_game]
@@ -335,7 +367,13 @@ func _physics_process(delta: float) -> bool:
 	if _tick_trace != null:
 		_tick_trace.store_line(JSON.stringify(_snapshot(delta)))
 	_beats.step()
+	var tick_start := Time.get_ticks_usec()
 	var over: bool = _driver.tick(delta)
+	if _frame_split != null:
+		_frame_split.add_bot(Time.get_ticks_usec() - tick_start)
+	if _inject_ms > 0 and Time.get_ticks_msec() - _inject_at >= 6000:
+		_inject_at = Time.get_ticks_msec()
+		OS.delay_msec(_inject_ms)
 	if not over and _settings.has("ticks") and _driver.ticks >= int(_settings["ticks"]):
 		_driver._end("ticks_done")
 		over = true
@@ -470,7 +508,7 @@ func _process(_delta: float) -> bool:
 			# The row's ms runs from the last _process to this one: that idle step, the draw after it, then this frame's
 			# physics ticks. A headless run draws nothing, so there the idle and draw split is null.
 			var drew := _draw_began > _frame_usec and _draw_ended >= _draw_began
-			_frame_log.store_line(JSON.stringify({"f": _frame_index, "ms": (now - _frame_usec) / 1000.0, "stage": _game.run.stage, "state": _game.flow.state,
+			var row := {"f": _frame_index, "ms": (now - _frame_usec) / 1000.0, "stage": _game.run.stage, "state": _game.flow.state,
 				"idle_ms": (_draw_began - _frame_usec) / 1000.0 if drew else null, "draw_ms": (_draw_ended - _draw_began) / 1000.0 if drew else null,
 				"tick_ms": (now - (_draw_ended if drew else _frame_usec)) / 1000.0, "ticks": _ticks,
 				"process_ms": Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, "physics_ms": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
@@ -481,7 +519,14 @@ func _process(_delta: float) -> bool:
 				"buffer_mb": Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) / 1048576.0,
 				"pipelines": [Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_CANVAS), Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_MESH),
 					Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_SURFACE), Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_DRAW),
-					Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_SPECIALIZATION)]}))
+					Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_SPECIALIZATION)]}
+			if _frame_split != null:
+				row.merge(_frame_split.take(row["ms"]))
+				var ball = _game.player.body() if _game.player != null else null
+				if ball != null:
+					var at: Vector3 = ball.global_position
+					row["ball"] = [snappedf(at.x, 0.1), snappedf(at.y, 0.1), snappedf(at.z, 0.1), snappedf(ball.linear_velocity.length(), 0.1)]
+			_frame_log.store_line(JSON.stringify(row))
 		_frame_usec = now
 		_frame_index += 1
 		_ticks = 0

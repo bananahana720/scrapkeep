@@ -1,0 +1,2608 @@
+{
+ "assets": [
+  {
+   "id": "dprop_pit_ore_car_a",
+   "path": "res://assets/models/park/props/pit/ore_car_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_car variant a LOD0 (13980 tris): A side-dump ore car that jumped its stub of track on the last haul and spilled across the bench. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.9299,
+     0,
+     -3.4705
+    ],
+    "max": [
+     2.9299,
+     2.0863,
+     3.4705
+    ],
+    "size": [
+     5.8598,
+     2.0863,
+     6.941
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_car_a_lod1",
+   "path": "res://assets/models/park/props/pit/ore_car_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_car variant a LOD1 (6990 tris): A side-dump ore car that jumped its stub of track on the last haul and spilled across the bench. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.9299,
+     0,
+     -3.4727
+    ],
+    "max": [
+     2.9299,
+     2.0848,
+     3.4705
+    ],
+    "size": [
+     5.8598,
+     2.0848,
+     6.9432
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_car_a_lod2",
+   "path": "res://assets/models/park/props/pit/ore_car_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_car variant a LOD2 (2096 tris): A side-dump ore car that jumped its stub of track on the last haul and spilled across the bench. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.9154,
+     0,
+     -3.4718
+    ],
+    "max": [
+     2.9185,
+     2.0771,
+     3.4699
+    ],
+    "size": [
+     5.8339,
+     2.0771,
+     6.9417
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_car_b",
+   "path": "res://assets/models/park/props/pit/ore_car_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_car variant b LOD0 (11564 tris): A side-dump ore car that jumped its stub of track on the last haul and spilled across the bench. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -3.0145,
+     0,
+     -2.4677
+    ],
+    "max": [
+     3.0145,
+     2.6616,
+     2.4677
+    ],
+    "size": [
+     6.029,
+     2.6616,
+     4.9354
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_car_b_lod1",
+   "path": "res://assets/models/park/props/pit/ore_car_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_car variant b LOD1 (5782 tris): A side-dump ore car that jumped its stub of track on the last haul and spilled across the bench. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.0145,
+     0,
+     -2.4677
+    ],
+    "max": [
+     3.0145,
+     2.6578,
+     2.471
+    ],
+    "size": [
+     6.029,
+     2.6578,
+     4.9387
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_car_b_lod2",
+   "path": "res://assets/models/park/props/pit/ore_car_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_car variant b LOD2 (1734 tris): A side-dump ore car that jumped its stub of track on the last haul and spilled across the bench. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.0126,
+     0,
+     -2.4642
+    ],
+    "max": [
+     3.023,
+     2.6489,
+     2.461
+    ],
+    "size": [
+     6.0356,
+     2.6489,
+     4.9252
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_change_house_a",
+   "path": "res://assets/models/park/props/pit/change_house_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "change_house variant a LOD0 (13776 tris): The shift change shack: tin walls, a bench out front, hard hats still on the pegs for a shift that never came. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.4338,
+     0,
+     -2.1875
+    ],
+    "max": [
+     2.4338,
+     3.1818,
+     2.1875
+    ],
+    "size": [
+     4.8676,
+     3.1818,
+     4.375
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_change_house_a_lod1",
+   "path": "res://assets/models/park/props/pit/change_house_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "change_house variant a LOD1 (6888 tris): The shift change shack: tin walls, a bench out front, hard hats still on the pegs for a shift that never came. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.4338,
+     0,
+     -2.1875
+    ],
+    "max": [
+     2.4327,
+     3.1818,
+     2.1875
+    ],
+    "size": [
+     4.8665,
+     3.1818,
+     4.375
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_change_house_a_lod2",
+   "path": "res://assets/models/park/props/pit/change_house_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "change_house variant a LOD2 (2066 tris): The shift change shack: tin walls, a bench out front, hard hats still on the pegs for a shift that never came. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.4338,
+     0,
+     -2.1851
+    ],
+    "max": [
+     2.4344,
+     3.1672,
+     2.1798
+    ],
+    "size": [
+     4.8682,
+     3.1672,
+     4.3649
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_change_house_b",
+   "path": "res://assets/models/park/props/pit/change_house_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "change_house variant b LOD0 (13928 tris): The shift change shack: tin walls, a bench out front, hard hats still on the pegs for a shift that never came. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -3.5164,
+     0,
+     -2.2796
+    ],
+    "max": [
+     3.5164,
+     4.0685,
+     2.2796
+    ],
+    "size": [
+     7.0328,
+     4.0685,
+     4.5592
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_change_house_b_lod1",
+   "path": "res://assets/models/park/props/pit/change_house_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "change_house variant b LOD1 (6964 tris): The shift change shack: tin walls, a bench out front, hard hats still on the pegs for a shift that never came. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.5164,
+     0,
+     -2.2796
+    ],
+    "max": [
+     3.5164,
+     4.0685,
+     2.2796
+    ],
+    "size": [
+     7.0328,
+     4.0685,
+     4.5592
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_change_house_b_lod2",
+   "path": "res://assets/models/park/props/pit/change_house_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "change_house variant b LOD2 (2088 tris): The shift change shack: tin walls, a bench out front, hard hats still on the pegs for a shift that never came. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -3.5164,
+     0,
+     -2.274
+    ],
+    "max": [
+     3.5131,
+     4.0663,
+     2.2719
+    ],
+    "size": [
+     7.0295,
+     4.0663,
+     4.5459
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_drill_rig_a",
+   "path": "res://assets/models/park/props/pit/drill_rig_a.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "drill_rig variant a LOD0 (12620 tris): The blast-hole drill, mast laid down for the move that never happened; crawler tracks caked in bench dust. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -4.1765,
+     0,
+     -1.9393
+    ],
+    "max": [
+     4.1765,
+     3.4678,
+     1.9393
+    ],
+    "size": [
+     8.353,
+     3.4678,
+     3.8786
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_drill_rig_a_lod1",
+   "path": "res://assets/models/park/props/pit/drill_rig_a_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "drill_rig variant a LOD1 (6310 tris): The blast-hole drill, mast laid down for the move that never happened; crawler tracks caked in bench dust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -4.1765,
+     0,
+     -1.9393
+    ],
+    "max": [
+     4.1765,
+     3.4677,
+     1.9395
+    ],
+    "size": [
+     8.353,
+     3.4677,
+     3.8788
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_drill_rig_a_lod2",
+   "path": "res://assets/models/park/props/pit/drill_rig_a_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "drill_rig variant a LOD2 (1892 tris): The blast-hole drill, mast laid down for the move that never happened; crawler tracks caked in bench dust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -4.1762,
+     0,
+     -1.9393
+    ],
+    "max": [
+     4.1611,
+     3.477,
+     1.9395
+    ],
+    "size": [
+     8.3373,
+     3.477,
+     3.8788
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_drill_rig_b",
+   "path": "res://assets/models/park/props/pit/drill_rig_b.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "drill_rig variant b LOD0 (12992 tris): The blast-hole drill, mast laid down for the move that never happened; crawler tracks caked in bench dust. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -4.0614,
+     0,
+     -1.9968
+    ],
+    "max": [
+     4.0614,
+     3.4678,
+     1.9968
+    ],
+    "size": [
+     8.1228,
+     3.4678,
+     3.9936
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_drill_rig_b_lod1",
+   "path": "res://assets/models/park/props/pit/drill_rig_b_lod1.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "drill_rig variant b LOD1 (6496 tris): The blast-hole drill, mast laid down for the move that never happened; crawler tracks caked in bench dust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -4.0614,
+     0,
+     -1.9968
+    ],
+    "max": [
+     4.0613,
+     3.4693,
+     1.996
+    ],
+    "size": [
+     8.1227,
+     3.4693,
+     3.9928
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_drill_rig_b_lod2",
+   "path": "res://assets/models/park/props/pit/drill_rig_b_lod2.glb",
+   "class": "dress_hero",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "drill_rig variant b LOD2 (1948 tris): The blast-hole drill, mast laid down for the move that never happened; crawler tracks caked in bench dust. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -4.0614,
+     0,
+     -1.996
+    ],
+    "max": [
+     4.0612,
+     3.4686,
+     2.0
+    ],
+    "size": [
+     8.1226,
+     3.4686,
+     3.996
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_core_rack_a",
+   "path": "res://assets/models/park/props/pit/core_rack_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "core_rack variant a LOD0 (2900 tris): Drill cores laid across two sawhorses for the geologist who never came back up to log them. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.296,
+     0,
+     -0.5
+    ],
+    "max": [
+     1.296,
+     0.9338,
+     0.5
+    ],
+    "size": [
+     2.592,
+     0.9338,
+     1.0
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_core_rack_a_lod1",
+   "path": "res://assets/models/park/props/pit/core_rack_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "core_rack variant a LOD1 (1450 tris): Drill cores laid across two sawhorses for the geologist who never came back up to log them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.296,
+     0,
+     -0.5
+    ],
+    "max": [
+     1.296,
+     0.9339,
+     0.5
+    ],
+    "size": [
+     2.592,
+     0.9339,
+     1.0
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_core_rack_a_lod2",
+   "path": "res://assets/models/park/props/pit/core_rack_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "core_rack variant a LOD2 (434 tris): Drill cores laid across two sawhorses for the geologist who never came back up to log them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.301,
+     0,
+     -0.505
+    ],
+    "max": [
+     1.296,
+     0.9383,
+     0.505
+    ],
+    "size": [
+     2.597,
+     0.9383,
+     1.01
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_core_rack_b",
+   "path": "res://assets/models/park/props/pit/core_rack_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "core_rack variant b LOD0 (2736 tris): Drill cores laid across two sawhorses for the geologist who never came back up to log them. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.4252,
+     0,
+     -0.8072
+    ],
+    "max": [
+     1.4252,
+     0.9338,
+     0.8072
+    ],
+    "size": [
+     2.8504,
+     0.9338,
+     1.6144
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_core_rack_b_lod1",
+   "path": "res://assets/models/park/props/pit/core_rack_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "core_rack variant b LOD1 (1368 tris): Drill cores laid across two sawhorses for the geologist who never came back up to log them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.4252,
+     0,
+     -0.8069
+    ],
+    "max": [
+     1.4252,
+     0.9339,
+     0.8072
+    ],
+    "size": [
+     2.8504,
+     0.9339,
+     1.6141
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_core_rack_b_lod2",
+   "path": "res://assets/models/park/props/pit/core_rack_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "core_rack variant b LOD2 (410 tris): Drill cores laid across two sawhorses for the geologist who never came back up to log them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.4302,
+     0,
+     -0.8084
+    ],
+    "max": [
+     1.4257,
+     0.9422,
+     0.8122
+    ],
+    "size": [
+     2.8559,
+     0.9422,
+     1.6206
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_heap_a",
+   "path": "res://assets/models/park/props/pit/ore_heap_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_heap variant a LOD0 (1520 tris): Grab samples heaped by the shovel crew: ochre and rust oxide, grey-green host rock, a streak of copper green. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.4178,
+     0,
+     -1.4026
+    ],
+    "max": [
+     1.4178,
+     1.281,
+     1.4026
+    ],
+    "size": [
+     2.8356,
+     1.281,
+     2.8052
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_heap_a_lod1",
+   "path": "res://assets/models/park/props/pit/ore_heap_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_heap variant a LOD1 (760 tris): Grab samples heaped by the shovel crew: ochre and rust oxide, grey-green host rock, a streak of copper green. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.4178,
+     0,
+     -1.4026
+    ],
+    "max": [
+     1.4178,
+     1.2846,
+     1.3994
+    ],
+    "size": [
+     2.8356,
+     1.2846,
+     2.802
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_heap_a_lod2",
+   "path": "res://assets/models/park/props/pit/ore_heap_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_heap variant a LOD2 (228 tris): Grab samples heaped by the shovel crew: ochre and rust oxide, grey-green host rock, a streak of copper green. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.4189,
+     0,
+     -1.3934
+    ],
+    "max": [
+     1.4314,
+     1.3068,
+     1.4078
+    ],
+    "size": [
+     2.8503,
+     1.3068,
+     2.8012
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_heap_b",
+   "path": "res://assets/models/park/props/pit/ore_heap_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_heap variant b LOD0 (960 tris): Grab samples heaped by the shovel crew: ochre and rust oxide, grey-green host rock, a streak of copper green. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.0326,
+     0,
+     -0.8352
+    ],
+    "max": [
+     1.0326,
+     0.8638,
+     0.8352
+    ],
+    "size": [
+     2.0652,
+     0.8638,
+     1.6704
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_heap_b_lod1",
+   "path": "res://assets/models/park/props/pit/ore_heap_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_heap variant b LOD1 (480 tris): Grab samples heaped by the shovel crew: ochre and rust oxide, grey-green host rock, a streak of copper green. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.0357,
+     0,
+     -0.8304
+    ],
+    "max": [
+     1.0326,
+     0.8639,
+     0.8352
+    ],
+    "size": [
+     2.0683,
+     0.8639,
+     1.6656
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_heap_b_lod2",
+   "path": "res://assets/models/park/props/pit/ore_heap_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_heap variant b LOD2 (144 tris): Grab samples heaped by the shovel crew: ochre and rust oxide, grey-green host rock, a streak of copper green. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.0615,
+     0,
+     -0.8251
+    ],
+    "max": [
+     1.022,
+     0.8531,
+     0.8352
+    ],
+    "size": [
+     2.0835,
+     0.8531,
+     1.6603
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_heap_c",
+   "path": "res://assets/models/park/props/pit/ore_heap_c.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_heap variant c LOD0 (1928 tris): Grab samples heaped by the shovel crew: ochre and rust oxide, grey-green host rock, a streak of copper green. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.8948,
+     0,
+     -1.6449
+    ],
+    "max": [
+     1.8948,
+     1.5779,
+     1.6449
+    ],
+    "size": [
+     3.7896,
+     1.5779,
+     3.2898
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_heap_c_lod1",
+   "path": "res://assets/models/park/props/pit/ore_heap_c_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_heap variant c LOD1 (964 tris): Grab samples heaped by the shovel crew: ochre and rust oxide, grey-green host rock, a streak of copper green. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.8948,
+     0,
+     -1.6449
+    ],
+    "max": [
+     1.8973,
+     1.5868,
+     1.6449
+    ],
+    "size": [
+     3.7921,
+     1.5868,
+     3.2898
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_ore_heap_c_lod2",
+   "path": "res://assets/models/park/props/pit/ore_heap_c_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "ore_heap variant c LOD2 (286 tris): Grab samples heaped by the shovel crew: ochre and rust oxide, grey-green host rock, a streak of copper green. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.848,
+     0,
+     -1.6166
+    ],
+    "max": [
+     1.8973,
+     1.6176,
+     1.6421
+    ],
+    "size": [
+     3.7453,
+     1.6176,
+     3.2587
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_lagging_stack_a",
+   "path": "res://assets/models/park/props/pit/lagging_stack_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "lagging_stack variant a LOD0 (1176 tris): Mine lagging cribbed in a square stack to dry; the top courses slid when the bench shook. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.1192,
+     0,
+     -1.0857
+    ],
+    "max": [
+     1.1192,
+     1.2065,
+     1.0857
+    ],
+    "size": [
+     2.2384,
+     1.2065,
+     2.1714
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_lagging_stack_a_lod1",
+   "path": "res://assets/models/park/props/pit/lagging_stack_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "lagging_stack variant a LOD1 (588 tris): Mine lagging cribbed in a square stack to dry; the top courses slid when the bench shook. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.1192,
+     0,
+     -1.0852
+    ],
+    "max": [
+     1.1192,
+     1.2015,
+     1.0819
+    ],
+    "size": [
+     2.2384,
+     1.2015,
+     2.1671
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_lagging_stack_a_lod2",
+   "path": "res://assets/models/park/props/pit/lagging_stack_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "lagging_stack variant a LOD2 (174 tris): Mine lagging cribbed in a square stack to dry; the top courses slid when the bench shook. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.1184,
+     0,
+     -1.109
+    ],
+    "max": [
+     1.1245,
+     1.2166,
+     1.0939
+    ],
+    "size": [
+     2.2429,
+     1.2166,
+     2.2029
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_lagging_stack_b",
+   "path": "res://assets/models/park/props/pit/lagging_stack_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "lagging_stack variant b LOD0 (956 tris): Mine lagging cribbed in a square stack to dry; the top courses slid when the bench shook. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.7401,
+     0,
+     -1.2424
+    ],
+    "max": [
+     1.7401,
+     0.8516,
+     1.2424
+    ],
+    "size": [
+     3.4802,
+     0.8516,
+     2.4848
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_lagging_stack_b_lod1",
+   "path": "res://assets/models/park/props/pit/lagging_stack_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "lagging_stack variant b LOD1 (478 tris): Mine lagging cribbed in a square stack to dry; the top courses slid when the bench shook. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.7401,
+     0,
+     -1.2416
+    ],
+    "max": [
+     1.7353,
+     0.8507,
+     1.2401
+    ],
+    "size": [
+     3.4754,
+     0.8507,
+     2.4817
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_lagging_stack_b_lod2",
+   "path": "res://assets/models/park/props/pit/lagging_stack_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "lagging_stack variant b LOD2 (142 tris): Mine lagging cribbed in a square stack to dry; the top courses slid when the bench shook. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.7156,
+     0,
+     -1.2474
+    ],
+    "max": [
+     1.7253,
+     0.8417,
+     1.2327
+    ],
+    "size": [
+     3.4409,
+     0.8417,
+     2.4801
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_hose_coil_a",
+   "path": "res://assets/models/park/props/pit/hose_coil_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "hose_coil variant a LOD0 (1708 tris): A driller's air hose coiled down by habit, and the jackhammer dropped beside it at the whistle. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.7048,
+     0,
+     -0.6
+    ],
+    "max": [
+     1.7048,
+     0.5486,
+     0.6
+    ],
+    "size": [
+     3.4096,
+     0.5486,
+     1.2
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_hose_coil_a_lod1",
+   "path": "res://assets/models/park/props/pit/hose_coil_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "hose_coil variant a LOD1 (854 tris): A driller's air hose coiled down by habit, and the jackhammer dropped beside it at the whistle. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.7048,
+     0,
+     -0.6
+    ],
+    "max": [
+     1.7057,
+     0.5486,
+     0.6
+    ],
+    "size": [
+     3.4105,
+     0.5486,
+     1.2
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_hose_coil_a_lod2",
+   "path": "res://assets/models/park/props/pit/hose_coil_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "hose_coil variant a LOD2 (251 tris): A driller's air hose coiled down by habit, and the jackhammer dropped beside it at the whistle. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.6991,
+     0,
+     -0.6031
+    ],
+    "max": [
+     1.7027,
+     0.5546,
+     0.6211
+    ],
+    "size": [
+     3.4018,
+     0.5546,
+     1.2242
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_hose_coil_b",
+   "path": "res://assets/models/park/props/pit/hose_coil_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "hose_coil variant b LOD0 (1860 tris): A driller's air hose coiled down by habit, and the jackhammer dropped beside it at the whistle. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.6418,
+     0,
+     -0.9326
+    ],
+    "max": [
+     1.6418,
+     0.3435,
+     0.9326
+    ],
+    "size": [
+     3.2836,
+     0.3435,
+     1.8652
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_hose_coil_b_lod1",
+   "path": "res://assets/models/park/props/pit/hose_coil_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "hose_coil variant b LOD1 (930 tris): A driller's air hose coiled down by habit, and the jackhammer dropped beside it at the whistle. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.6418,
+     0,
+     -0.9319
+    ],
+    "max": [
+     1.6466,
+     0.3435,
+     0.9328
+    ],
+    "size": [
+     3.2884,
+     0.3435,
+     1.8647
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_hose_coil_b_lod2",
+   "path": "res://assets/models/park/props/pit/hose_coil_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "hose_coil variant b LOD2 (278 tris): A driller's air hose coiled down by habit, and the jackhammer dropped beside it at the whistle. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.6324,
+     0,
+     -0.9207
+    ],
+    "max": [
+     1.6466,
+     0.3492,
+     0.9361
+    ],
+    "size": [
+     3.279,
+     0.3492,
+     1.8568
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_blast_mat_a",
+   "path": "res://assets/models/park/props/pit/blast_mat_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "blast_mat variant a LOD0 (1760 tris): A woven blasting mat dragged off the last shot and left slumped over the rubble it was meant to hold down. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.7061,
+     0,
+     -0.9049
+    ],
+    "max": [
+     1.7061,
+     0.7498,
+     0.9049
+    ],
+    "size": [
+     3.4122,
+     0.7498,
+     1.8098
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_blast_mat_a_lod1",
+   "path": "res://assets/models/park/props/pit/blast_mat_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "blast_mat variant a LOD1 (880 tris): A woven blasting mat dragged off the last shot and left slumped over the rubble it was meant to hold down. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.7061,
+     0,
+     -0.9049
+    ],
+    "max": [
+     1.6991,
+     0.7546,
+     0.8918
+    ],
+    "size": [
+     3.4052,
+     0.7546,
+     1.7967
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_blast_mat_a_lod2",
+   "path": "res://assets/models/park/props/pit/blast_mat_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "blast_mat variant a LOD2 (235 tris): A woven blasting mat dragged off the last shot and left slumped over the rubble it was meant to hold down. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.6912,
+     0,
+     -0.8631
+    ],
+    "max": [
+     1.6991,
+     0.6928,
+     0.986
+    ],
+    "size": [
+     3.3903,
+     0.6928,
+     1.8491
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_blast_mat_b",
+   "path": "res://assets/models/park/props/pit/blast_mat_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "blast_mat variant b LOD0 (1448 tris): A woven blasting mat dragged off the last shot and left slumped over the rubble it was meant to hold down. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.5453,
+     0,
+     -0.8766
+    ],
+    "max": [
+     1.5453,
+     0.721,
+     0.8766
+    ],
+    "size": [
+     3.0906,
+     0.721,
+     1.7532
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_blast_mat_b_lod1",
+   "path": "res://assets/models/park/props/pit/blast_mat_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "blast_mat variant b LOD1 (724 tris): A woven blasting mat dragged off the last shot and left slumped over the rubble it was meant to hold down. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.5521,
+     0,
+     -0.8766
+    ],
+    "max": [
+     1.5453,
+     0.7258,
+     0.8847
+    ],
+    "size": [
+     3.0974,
+     0.7258,
+     1.7613
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_blast_mat_b_lod2",
+   "path": "res://assets/models/park/props/pit/blast_mat_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "blast_mat variant b LOD2 (158 tris): A woven blasting mat dragged off the last shot and left slumped over the rubble it was meant to hold down. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.5619,
+     0,
+     -0.8612
+    ],
+    "max": [
+     1.5342,
+     0.7115,
+     0.8709
+    ],
+    "size": [
+     3.0961,
+     0.7115,
+     1.7321
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_tool_drop_a",
+   "path": "res://assets/models/park/props/pit/tool_drop_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "tool_drop variant a LOD0 (1812 tris): Pick, shovel and sledge where the bench crew set them down at noon, a lunch pail between them. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.674,
+     0,
+     -1.12
+    ],
+    "max": [
+     0.674,
+     0.3684,
+     1.12
+    ],
+    "size": [
+     1.348,
+     0.3684,
+     2.24
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_tool_drop_a_lod1",
+   "path": "res://assets/models/park/props/pit/tool_drop_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "tool_drop variant a LOD1 (906 tris): Pick, shovel and sledge where the bench crew set them down at noon, a lunch pail between them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.6743,
+     0,
+     -1.12
+    ],
+    "max": [
+     0.674,
+     0.3687,
+     1.1197
+    ],
+    "size": [
+     1.3483,
+     0.3687,
+     2.2397
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_tool_drop_a_lod2",
+   "path": "res://assets/models/park/props/pit/tool_drop_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "tool_drop variant a LOD2 (272 tris): Pick, shovel and sledge where the bench crew set them down at noon, a lunch pail between them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.6795,
+     0,
+     -1.069
+    ],
+    "max": [
+     0.679,
+     0.3714,
+     1.1188
+    ],
+    "size": [
+     1.3585,
+     0.3714,
+     2.1878
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_tool_drop_b",
+   "path": "res://assets/models/park/props/pit/tool_drop_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "tool_drop variant b LOD0 (1548 tris): Pick, shovel and sledge where the bench crew set them down at noon, a lunch pail between them. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.7441,
+     0,
+     -0.6425
+    ],
+    "max": [
+     0.7441,
+     0.3684,
+     0.6425
+    ],
+    "size": [
+     1.4882,
+     0.3684,
+     1.285
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_tool_drop_b_lod1",
+   "path": "res://assets/models/park/props/pit/tool_drop_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "tool_drop variant b LOD1 (774 tris): Pick, shovel and sledge where the bench crew set them down at noon, a lunch pail between them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.7441,
+     0,
+     -0.6425
+    ],
+    "max": [
+     0.7441,
+     0.3687,
+     0.6419
+    ],
+    "size": [
+     1.4882,
+     0.3687,
+     1.2844
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_tool_drop_b_lod2",
+   "path": "res://assets/models/park/props/pit/tool_drop_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "tool_drop variant b LOD2 (232 tris): Pick, shovel and sledge where the bench crew set them down at noon, a lunch pail between them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.7359,
+     0,
+     -0.6342
+    ],
+    "max": [
+     0.7421,
+     0.3714,
+     0.6436
+    ],
+    "size": [
+     1.478,
+     0.3714,
+     1.2778
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_tool_drop_c",
+   "path": "res://assets/models/park/props/pit/tool_drop_c.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "tool_drop variant c LOD0 (1468 tris): Pick, shovel and sledge where the bench crew set them down at noon, a lunch pail between them. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.9322,
+     0,
+     -1.1482
+    ],
+    "max": [
+     0.9322,
+     0.3684,
+     1.1482
+    ],
+    "size": [
+     1.8644,
+     0.3684,
+     2.2964
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_tool_drop_c_lod1",
+   "path": "res://assets/models/park/props/pit/tool_drop_c_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "tool_drop variant c LOD1 (734 tris): Pick, shovel and sledge where the bench crew set them down at noon, a lunch pail between them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.9323,
+     0,
+     -1.1482
+    ],
+    "max": [
+     0.9322,
+     0.3687,
+     1.1479
+    ],
+    "size": [
+     1.8645,
+     0.3687,
+     2.2961
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_tool_drop_c_lod2",
+   "path": "res://assets/models/park/props/pit/tool_drop_c_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "tool_drop variant c LOD2 (220 tris): Pick, shovel and sledge where the bench crew set them down at noon, a lunch pail between them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.9323,
+     0,
+     -1.1379
+    ],
+    "max": [
+     0.9349,
+     0.3618,
+     1.1446
+    ],
+    "size": [
+     1.8672,
+     0.3618,
+     2.2825
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_notice_post_a",
+   "path": "res://assets/models/park/props/pit/notice_post_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "notice_post variant a LOD0 (580 tris): A bench notice post: shift times and a blasting schedule, sun-bleached to blank boards. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.5646,
+     0,
+     -0.4453
+    ],
+    "max": [
+     0.5646,
+     2.2439,
+     0.4453
+    ],
+    "size": [
+     1.1292,
+     2.2439,
+     0.8906
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_notice_post_a_lod1",
+   "path": "res://assets/models/park/props/pit/notice_post_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "notice_post variant a LOD1 (290 tris): A bench notice post: shift times and a blasting schedule, sun-bleached to blank boards. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.5501,
+     0,
+     -0.4453
+    ],
+    "max": [
+     0.5501,
+     2.2429,
+     0.4534
+    ],
+    "size": [
+     1.1002,
+     2.2429,
+     0.8987
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_notice_post_a_lod2",
+   "path": "res://assets/models/park/props/pit/notice_post_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "notice_post variant a LOD2 (86 tris): A bench notice post: shift times and a blasting schedule, sun-bleached to blank boards. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.5522,
+     0,
+     -0.4747
+    ],
+    "max": [
+     0.5522,
+     2.2463,
+     0.4584
+    ],
+    "size": [
+     1.1044,
+     2.2463,
+     0.9331
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_notice_post_b",
+   "path": "res://assets/models/park/props/pit/notice_post_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "notice_post variant b LOD0 (548 tris): A bench notice post: shift times and a blasting schedule, sun-bleached to blank boards. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.6276,
+     0,
+     -0.5517
+    ],
+    "max": [
+     0.6276,
+     2.1941,
+     0.5517
+    ],
+    "size": [
+     1.2552,
+     2.1941,
+     1.1034
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_notice_post_b_lod1",
+   "path": "res://assets/models/park/props/pit/notice_post_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "notice_post variant b LOD1 (274 tris): A bench notice post: shift times and a blasting schedule, sun-bleached to blank boards. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.6289,
+     0,
+     -0.5497
+    ],
+    "max": [
+     0.62,
+     2.1953,
+     0.5517
+    ],
+    "size": [
+     1.2489,
+     2.1953,
+     1.1014
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_notice_post_b_lod2",
+   "path": "res://assets/models/park/props/pit/notice_post_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "notice_post variant b LOD2 (82 tris): A bench notice post: shift times and a blasting schedule, sun-bleached to blank boards. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.6414,
+     0,
+     -0.5603
+    ],
+    "max": [
+     0.6348,
+     2.182,
+     0.5517
+    ],
+    "size": [
+     1.2762,
+     2.182,
+     1.112
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_saguaro_bones_a",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "saguaro_bones variant a LOD0 (528 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.4961,
+     0,
+     -1.1035
+    ],
+    "max": [
+     2.4961,
+     0.7036,
+     1.1035
+    ],
+    "size": [
+     4.9922,
+     0.7036,
+     2.207
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_saguaro_bones_a_lod1",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "saguaro_bones variant a LOD1 (264 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.4961,
+     0,
+     -1.0969
+    ],
+    "max": [
+     2.4941,
+     0.7035,
+     1.099
+    ],
+    "size": [
+     4.9902,
+     0.7035,
+     2.1959
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_saguaro_bones_a_lod2",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "saguaro_bones variant a LOD2 (60 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.5013,
+     0,
+     -1.1007
+    ],
+    "max": [
+     2.4941,
+     0.693,
+     1.1113
+    ],
+    "size": [
+     4.9954,
+     0.693,
+     2.212
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_saguaro_bones_b",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "saguaro_bones variant b LOD0 (384 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.5916,
+     0,
+     -0.6004
+    ],
+    "max": [
+     1.5916,
+     1.0854,
+     0.6004
+    ],
+    "size": [
+     3.1832,
+     1.0854,
+     1.2008
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_saguaro_bones_b_lod1",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "saguaro_bones variant b LOD1 (192 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.5916,
+     0,
+     -0.6001
+    ],
+    "max": [
+     1.5916,
+     1.09,
+     0.6055
+    ],
+    "size": [
+     3.1832,
+     1.09,
+     1.2056
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_saguaro_bones_b_lod2",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "saguaro_bones variant b LOD2 (44 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.6212,
+     0,
+     -0.6112
+    ],
+    "max": [
+     1.5928,
+     1.0871,
+     0.5918
+    ],
+    "size": [
+     3.214,
+     1.0871,
+     1.203
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_saguaro_bones_c",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_c.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "saguaro_bones variant c LOD0 (736 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.9641,
+     0,
+     -1.052
+    ],
+    "max": [
+     1.9641,
+     0.9224,
+     1.052
+    ],
+    "size": [
+     3.9282,
+     0.9224,
+     2.104
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_saguaro_bones_c_lod1",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_c_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "saguaro_bones variant c LOD1 (368 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.9641,
+     0,
+     -1.0453
+    ],
+    "max": [
+     1.9643,
+     0.9224,
+     1.0571
+    ],
+    "size": [
+     3.9284,
+     0.9224,
+     2.1024
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_saguaro_bones_c_lod2",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_c_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "saguaro_bones variant c LOD2 (96 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.9683,
+     0,
+     -1.0346
+    ],
+    "max": [
+     1.9643,
+     0.9237,
+     1.0518
+    ],
+    "size": [
+     3.9326,
+     0.9237,
+     2.0864
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_prickly_pear_a",
+   "path": "res://assets/models/park/props/pit/prickly_pear_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "prickly_pear variant a LOD0 (720 tris): Prickly pear grown up through the spoil; nobody cleared it, so the berm goes around it too. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.7515,
+     0,
+     -0.6558
+    ],
+    "max": [
+     0.7515,
+     1.7886,
+     0.6558
+    ],
+    "size": [
+     1.503,
+     1.7886,
+     1.3116
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_prickly_pear_a_lod1",
+   "path": "res://assets/models/park/props/pit/prickly_pear_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "prickly_pear variant a LOD1 (360 tris): Prickly pear grown up through the spoil; nobody cleared it, so the berm goes around it too. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.7515,
+     0,
+     -0.658
+    ],
+    "max": [
+     0.7508,
+     1.7863,
+     0.6558
+    ],
+    "size": [
+     1.5023,
+     1.7863,
+     1.3138
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_prickly_pear_a_lod2",
+   "path": "res://assets/models/park/props/pit/prickly_pear_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "prickly_pear variant a LOD2 (108 tris): Prickly pear grown up through the spoil; nobody cleared it, so the berm goes around it too. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.7518,
+     0,
+     -0.654
+    ],
+    "max": [
+     0.7508,
+     1.7733,
+     0.6326
+    ],
+    "size": [
+     1.5026,
+     1.7733,
+     1.2866
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_prickly_pear_b",
+   "path": "res://assets/models/park/props/pit/prickly_pear_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "prickly_pear variant b LOD0 (1040 tris): Prickly pear grown up through the spoil; nobody cleared it, so the berm goes around it too. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -0.7632,
+     0,
+     -0.6269
+    ],
+    "max": [
+     0.7632,
+     1.4928,
+     0.6269
+    ],
+    "size": [
+     1.5264,
+     1.4928,
+     1.2538
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_prickly_pear_b_lod1",
+   "path": "res://assets/models/park/props/pit/prickly_pear_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "prickly_pear variant b LOD1 (520 tris): Prickly pear grown up through the spoil; nobody cleared it, so the berm goes around it too. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.7652,
+     0,
+     -0.6269
+    ],
+    "max": [
+     0.7668,
+     1.49,
+     0.6269
+    ],
+    "size": [
+     1.532,
+     1.49,
+     1.2538
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_prickly_pear_b_lod2",
+   "path": "res://assets/models/park/props/pit/prickly_pear_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "prickly_pear variant b LOD2 (156 tris): Prickly pear grown up through the spoil; nobody cleared it, so the berm goes around it too. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -0.7692,
+     0,
+     -0.6297
+    ],
+    "max": [
+     0.7668,
+     1.4825,
+     0.6311
+    ],
+    "size": [
+     1.536,
+     1.4825,
+     1.2608
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_fire_ring_a",
+   "path": "res://assets/models/park/props/pit/fire_ring_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "fire_ring variant a LOD0 (1688 tris): The old prospector's cold fire ring on the rim: stones, charred ends, a pan and a coffee pot. He was here first. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.3728,
+     0,
+     -1.1506
+    ],
+    "max": [
+     1.3728,
+     0.4138,
+     1.1506
+    ],
+    "size": [
+     2.7456,
+     0.4138,
+     2.3012
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_fire_ring_a_lod1",
+   "path": "res://assets/models/park/props/pit/fire_ring_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "fire_ring variant a LOD1 (844 tris): The old prospector's cold fire ring on the rim: stones, charred ends, a pan and a coffee pot. He was here first. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.3829,
+     0,
+     -1.1501
+    ],
+    "max": [
+     1.3607,
+     0.4147,
+     1.1506
+    ],
+    "size": [
+     2.7436,
+     0.4147,
+     2.3007
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_fire_ring_a_lod2",
+   "path": "res://assets/models/park/props/pit/fire_ring_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "fire_ring variant a LOD2 (251 tris): The old prospector's cold fire ring on the rim: stones, charred ends, a pan and a coffee pot. He was here first. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.3829,
+     0,
+     -1.1485
+    ],
+    "max": [
+     1.355,
+     0.4079,
+     1.1622
+    ],
+    "size": [
+     2.7379,
+     0.4079,
+     2.3107
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_fire_ring_b",
+   "path": "res://assets/models/park/props/pit/fire_ring_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "fire_ring variant b LOD0 (2640 tris): The old prospector's cold fire ring on the rim: stones, charred ends, a pan and a coffee pot. He was here first. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -1.3728,
+     0,
+     -1.2948
+    ],
+    "max": [
+     1.3728,
+     0.5654,
+     1.2948
+    ],
+    "size": [
+     2.7456,
+     0.5654,
+     2.5896
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_fire_ring_b_lod1",
+   "path": "res://assets/models/park/props/pit/fire_ring_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "fire_ring variant b LOD1 (1320 tris): The old prospector's cold fire ring on the rim: stones, charred ends, a pan and a coffee pot. He was here first. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.3773,
+     0,
+     -1.2924
+    ],
+    "max": [
+     1.3728,
+     0.5654,
+     1.2948
+    ],
+    "size": [
+     2.7501,
+     0.5654,
+     2.5872
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_fire_ring_b_lod2",
+   "path": "res://assets/models/park/props/pit/fire_ring_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "fire_ring variant b LOD2 (395 tris): The old prospector's cold fire ring on the rim: stones, charred ends, a pan and a coffee pot. He was here first. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -1.3725,
+     0,
+     -1.2571
+    ],
+    "max": [
+     1.355,
+     0.5538,
+     1.2905
+    ],
+    "size": [
+     2.7275,
+     0.5538,
+     2.5476
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_haul_tyre_a",
+   "path": "res://assets/models/park/props/pit/haul_tyre_a.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "haul_tyre variant a LOD0 (1840 tris): A haul truck tyre twice a person's height, rolled off the shop pad and left where it fell. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.16,
+     0,
+     -2.16
+    ],
+    "max": [
+     2.16,
+     0.9227,
+     2.16
+    ],
+    "size": [
+     4.32,
+     0.9227,
+     4.32
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_haul_tyre_a_lod1",
+   "path": "res://assets/models/park/props/pit/haul_tyre_a_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "haul_tyre variant a LOD1 (920 tris): A haul truck tyre twice a person's height, rolled off the shop pad and left where it fell. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.1537,
+     0,
+     -2.1537
+    ],
+    "max": [
+     2.1542,
+     0.9229,
+     2.1537
+    ],
+    "size": [
+     4.3079,
+     0.9229,
+     4.3074
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_haul_tyre_a_lod2",
+   "path": "res://assets/models/park/props/pit/haul_tyre_a_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "haul_tyre variant a LOD2 (276 tris): A haul truck tyre twice a person's height, rolled off the shop pad and left where it fell. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.1787,
+     0,
+     -2.1788
+    ],
+    "max": [
+     2.1788,
+     0.941,
+     2.1788
+    ],
+    "size": [
+     4.3575,
+     0.941,
+     4.3576
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_haul_tyre_b",
+   "path": "res://assets/models/park/props/pit/haul_tyre_b.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "haul_tyre variant b LOD0 (2488 tris): A haul truck tyre twice a person's height, rolled off the shop pad and left where it fell. Deterministic; polished and baked."
+   },
+   "bounds": {
+    "min": [
+     -2.25,
+     0,
+     -2.175
+    ],
+    "max": [
+     2.25,
+     1.6184,
+     2.175
+    ],
+    "size": [
+     4.5,
+     1.6184,
+     4.35
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_haul_tyre_b_lod1",
+   "path": "res://assets/models/park/props/pit/haul_tyre_b_lod1.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "haul_tyre variant b LOD1 (1244 tris): A haul truck tyre twice a person's height, rolled off the shop pad and left where it fell. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.2438,
+     0,
+     -2.1688
+    ],
+    "max": [
+     2.2442,
+     1.6185,
+     2.1688
+    ],
+    "size": [
+     4.488,
+     1.6185,
+     4.3376
+    ]
+   }
+  },
+  {
+   "id": "dprop_pit_haul_tyre_b_lod2",
+   "path": "res://assets/models/park/props/pit/haul_tyre_b_lod2.glb",
+   "class": "dress_prop",
+   "ships": true,
+   "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
+   "provenance": {
+    "recipe": "tools/blender/park/props/pit.py",
+    "notes": "haul_tyre variant b LOD2 (372 tris): A haul truck tyre twice a person's height, rolled off the shop pad and left where it fell. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+   },
+   "bounds": {
+    "min": [
+     -2.2656,
+     0,
+     -2.1906
+    ],
+    "max": [
+     2.2656,
+     1.6653,
+     2.1906
+    ],
+    "size": [
+     4.5312,
+     1.6653,
+     4.3812
+    ]
+   }
+  }
+ ]
+}
