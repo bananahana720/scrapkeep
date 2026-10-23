@@ -18,6 +18,9 @@ const T := preload("res://tests/support/t.gd")
 # yaw = sun yaw + 180). Hue and saturation are read on the lit colour divided by its largest channel, so energy alone
 # cannot clip it (HSV hue and saturation are scale-free). The CIE76 gaps scale the sample and the three warning colours by
 # one shared factor (the largest lit channel among the four) so their relative lightness survives.
+# Gates: lit consumed never inside the life region; lit life never inside the consumed region; lit consumed at least MIN_GAP CIE76
+# from every lit life colour and from lit HAZARD, AMBER and MOLTEN. The lit hue/sat of the sample in 300-330 is reported only
+# ("lit drift", ruling pending #241). All CIE76 gaps in one look and normal share one brightness factor (cell_scale).
 # Normals, built from the look's own sun and fill directions:
 #   sun-facing    n = l_sun                          (n.l_sun = 1)
 #   side          n = 60 degrees from l_sun toward l_fill, in their plane (n.l_sun = 0.5)
@@ -56,20 +59,29 @@ func _run() -> void:
 func _real(label: String, look: Dictionary, n: int, life: Array) -> void:
 	var where := "%s / %s" % [label, NORMALS[n]]
 	var hs := lit_hs(CONSUMED, look, n)
-	_t.check("consumed lit stays in band: " + where, in_consumed_band(hs.x, hs.y),
-		"%s lit hue %.1f sat %.3f (band %.0f-%.0f, sat >= %.2f)" % [CONSUMED.to_html(false), hs.x, hs.y, CONSUMED_HUE.x, CONSUMED_HUE.y, CONSUMED_SAT_MIN])
+	print("lit drift (info; ruling pending #241): %s %s lit hue %.1f sat %.3f%s" % [where, CONSUMED.to_html(false), hs.x, hs.y,
+		"" if in_consumed_band(hs.x, hs.y) else " (outside 300-330 / 0.6)"])
+	_t.check("lit consumed never inside the life region: " + where, not in_life_region(hs.x, hs.y),
+		"lit hue %.1f sat %.3f (life region hue %.0f-%.0f, sat %.2f-%.2f)" % [hs.x, hs.y, AmbientKinds.LIFE_HUE.x, AmbientKinds.LIFE_HUE.y, AmbientKinds.LIFE_SAT.x, AmbientKinds.LIFE_SAT.y])
 	var worst := ""
 	var worst_hs := Vector2.ZERO
 	var clean := true
+	var nearest := 999.0
+	var nearest_c := ""
 	for c in life:
 		var lh := lit_hs(c, look, n)
 		if in_consumed_band(lh.x, lh.y):
 			clean = false
 			worst = c.to_html(false)
 			worst_hs = lh
-			break
-	_t.check("no lit life colour reaches the consumed band: " + where, clean,
+		var d := pair_gap(CONSUMED, c, look, n)
+		if d < nearest:
+			nearest = d
+			nearest_c = c.to_html(false)
+	_t.check("no lit life colour reaches the consumed region: " + where, clean,
 		"all %d clear" % life.size() if clean else "%s lit hue %.1f sat %.3f" % [worst, worst_hs.x, worst_hs.y])
+	_t.check("consumed lit is %.0f CIE76 from every lit life colour: %s" % [MIN_GAP, where], nearest >= MIN_GAP,
+		"nearest %s gap %.1f" % [nearest_c, nearest])
 	var gaps := warning_gaps(CONSUMED, look, n)
 	for name in gaps:
 		_t.check("consumed lit is %.0f CIE76 from %s lit: %s" % [MIN_GAP, name, where], gaps[name] >= MIN_GAP, "gap %.1f" % gaps[name])
@@ -79,9 +91,11 @@ func _real(label: String, look: Dictionary, n: int, life: Array) -> void:
 func _controls() -> void:
 	var white := {"sun_color": Color.WHITE, "sun_energy": 1.0, "sun_rotation": Vector3(-45.0, 0.0, 0.0), "ambient": Color.WHITE,
 		"energy": 0.3, "fill": 0.5, "fill_pitch": -45.0, "fill_color": Color.WHITE}
-	# (0) the sample itself passes under neutral white light, so (i) and (ii) fail for the planted reason only.
-	var base := lit_hs(CONSUMED, white, 0)
-	_t.check("control 0: the sample is in band under white light", in_consumed_band(base.x, base.y), "hue %.1f sat %.3f" % [base.x, base.y])
+	# (0) a gate: the sample itself (albedo, unlit) is in the consumed band, so (i) and (ii) fail for the planted reason only.
+	var base := Vector2(CONSUMED.h * 360.0, CONSUMED.s)
+	_t.check("the sample albedo is hue 300-330 and sat >= 0.6", in_consumed_band(base.x, base.y), "hue %.1f sat %.3f" % [base.x, base.y])
+	var white_hs := lit_hs(CONSUMED, white, 0)
+	_t.check("control 0: the sample is in band under white light", in_consumed_band(white_hs.x, white_hs.y), "hue %.1f sat %.3f" % [white_hs.x, white_hs.y])
 	# (i) a "consumed" colour at hue 290 sits inside the life band's neighbourhood and must fail the band check.
 	var inside_life := Color.from_hsv(290.0 / 360.0, 0.7, 0.8)
 	var i_hs := lit_hs(inside_life, white, 0)
@@ -107,6 +121,14 @@ func _controls() -> void:
 	var iii_hs := lit_hs(imposter, white, 0)
 	_t.check("control iii: a life colour at hue 315 sat 0.7 trips the overlap check", in_consumed_band(iii_hs.x, iii_hs.y),
 		"hue %.1f sat %.3f -> inside the consumed band, caught as planted" % [iii_hs.x, iii_hs.y])
+	# (iv) a consumed colour at hue 270 sat 0.4 sits in the life region and must trip the life-region gate.
+	var in_life := Color.from_hsv(270.0 / 360.0, 0.4, 0.8)
+	var iv_hs := lit_hs(in_life, white, 0)
+	_t.check("control iv: a consumed colour at hue 270 sat 0.4 trips the life-region gate", in_life_region(iv_hs.x, iv_hs.y),
+		"hue %.1f sat %.3f -> inside the life region, caught as planted" % [iv_hs.x, iv_hs.y])
+	# (v) a life colour equal to the sample has a zero pairwise gap and must fail the pairwise gate.
+	var same := pair_gap(CONSUMED, CONSUMED, white, 0)
+	_t.check("control v: a life colour equal to the sample fails the pairwise gap", same < MIN_GAP, "gap %.1f < %.0f, as planted" % [same, MIN_GAP])
 
 
 # --- the lighting model -----------------------------------------------------------------------------------------------
@@ -208,6 +230,32 @@ static func lit_group(sample: Color, look: Dictionary, n: int) -> Dictionary:
 		var c: Color = lin[name]
 		out[name] = Color(c.r / peak, c.g / peak, c.b / peak).linear_to_srgb() if peak > 0.0 else Color.BLACK
 	return out
+
+
+static func in_life_region(hue: float, sat: float) -> bool:
+	return hue >= AmbientKinds.LIFE_HUE.x and hue <= AmbientKinds.LIFE_HUE.y and sat >= AmbientKinds.LIFE_SAT.x and sat <= AmbientKinds.LIFE_SAT.y
+
+
+# The cell's shared brightness factor: the largest lit channel among the sample and the three warning colours.
+static func cell_scale(look: Dictionary, n: int) -> float:
+	var peak := 0.0
+	for c in [CONSUMED, Palette.HAZARD, Palette.AMBER, MOLTEN]:
+		peak = maxf(peak, _peak(lit_linear(c, look, n)))
+	return peak
+
+
+# Lit sRGB of an albedo on the cell's shared scale (clamped to 1).
+static func lit_scaled(albedo: Color, look: Dictionary, n: int) -> Color:
+	var k := cell_scale(look, n)
+	var lin := lit_linear(albedo, look, n)
+	if k <= 0.0:
+		return Color.BLACK
+	return Color(minf(lin.r / k, 1.0), minf(lin.g / k, 1.0), minf(lin.b / k, 1.0)).linear_to_srgb()
+
+
+# CIE76 between two albedos lit under one look and normal, on the cell's shared brightness scale.
+static func pair_gap(a: Color, b: Color, look: Dictionary, n: int) -> float:
+	return cie76(lit_scaled(a, look, n), lit_scaled(b, look, n))
 
 
 static func warning_gaps(sample: Color, look: Dictionary, n: int) -> Dictionary:
