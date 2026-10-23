@@ -187,6 +187,17 @@ const ANCHOR_RUNOUT_M := 10.0
 const ANCHOR_SIDE_M := 6.0
 const ROUTE_LANE_HALF_M := 20.0
 const ANCHOR_EDGE_STEP_M := 12.0
+# A natural stand (a hoodoo field or a saguaro stand) is not a lattice from above: each lattice post moves up to
+# ANCHOR_STAND_JITTER_M (less within a pitch of the field's edge) in a direction and distance drawn from the row id,
+# and keeps its lattice spot when the moved spot leaves the field or meets a lane or footprint (so a field keeps its
+# post count) or when a lane or footprint took one of its lattice neighbours. Lane edge posts never move: a 2 m slide
+# along a pit lane already left one lane point past 40 m. A field narrower than ANCHOR_STAND_MIN_M either way (an
+# authored post or a short row of them) keeps its lattice. park_anchor_stand_test holds the moved fields to the 40 m band.
+const NATURAL_STANDS := ["hoodoo_field", "saguaro_stand"]
+const ANCHOR_STAND_JITTER_M := 7.0
+const ANCHOR_STAND_MIN_M := 60.0
+# Two moved posts (ANCHOR_POST_M across) keep this far apart centre to centre: two ball widths of floor between them.
+const ANCHOR_STAND_GAP_M := 12.0
 # An anchor field dressed with the anchors kit (tools/blender/park/anchors.py): a row whose recipe is one of
 # ANCHOR_KITS lays out the same posts and box colliders as a greybox anchor field and draws each post as one of the
 # family's three variants (<recipe>_a/_b/_c.glb), one variant per row picked by a hash of the row id (so a field is one
@@ -1170,18 +1181,43 @@ static func anchor_posts(row: Dictionary, zones: Array = [], pitch := ANCHOR_PIT
 	var footprints := zones.filter(func(z: Dictionary) -> bool: return not z.has("a"))
 	var r := ANCHOR_POST_M * 0.5
 	var clear := func(p: Vector2) -> bool: return not in_clear(lanes, p, r) and not in_clear(footprints, p, r + ANCHOR_RUNOUT_M, r + ANCHOR_SIDE_M)
-	for j in rows + 1:
-		var lz := -rows * pitch * 0.5 + j * pitch
-		var lx := -cols * pitch * 0.5 + (pitch * 0.5 if j % 2 == 1 else 0.0)
-		while lx <= half_w + 0.001:
-			var p := at + across * lx + along * lz
-			if clear.call(p):
-				out.append(p)
-			lx += pitch
-	# The lane edges: a post every ANCHOR_EDGE_STEP_M just outside each lane, on both sides, where it lands in the field.
 	var inside := func(p: Vector2) -> bool:
 		var d := p - at
 		return absf(d.dot(along)) <= half_l and absf(d.dot(across)) <= half_w
+	var stand := NATURAL_STANDS.has(String(row.get("landform", ""))) and minf(2.0 * half_l, 2.0 * half_w) >= ANCHOR_STAND_MIN_M
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(String(row.get("id", "")) + ":stand")
+	# The lattice spots, keyed (row, column), each clear or not, so a stand post moves only among kept neighbours.
+	var spots := {}
+	var order: Array[Vector2i] = []
+	for j in rows + 1:
+		var lz := -rows * pitch * 0.5 + j * pitch
+		var lx := -cols * pitch * 0.5 + (pitch * 0.5 if j % 2 == 1 else 0.0)
+		var c := 0
+		while lx <= half_w + 0.001:
+			var p := at + across * lx + along * lz
+			spots[Vector2i(j, c)] = [p, clear.call(p), minf(half_l - absf(lz), half_w - absf(lx))]
+			order.append(Vector2i(j, c))
+			lx += pitch
+			c += 1
+	# Lattice posts kept so far, by ANCHOR_STAND_GAP_M cell, so a moved post keeps its gap to its neighbours.
+	var placed := {}
+	for key: Vector2i in order:
+		var spot: Array = spots[key]
+		var p: Vector2 = spot[0]
+		# Both draws are taken for every lattice spot, so one post's fallback never moves the next post.
+		var turn := rng.randf() * TAU
+		# A post near the field's edge moves less, so the edge's points keep their nearest post.
+		var reach := sqrt(rng.randf()) * ANCHOR_STAND_JITTER_M * clampf(float(spot[2]) / pitch, 0.0, 1.0)
+		if not spot[1]:
+			continue
+		var moved := p + Vector2(cos(turn), sin(turn)) * reach
+		var kept := moved if stand and _stand_neighbours(spots, key) and inside.call(moved) and clear.call(moved) and _stand_room(placed, moved) else p
+		out.append(kept)
+		if stand:
+			var cell := Vector2i(floori(kept.x / ANCHOR_STAND_GAP_M), floori(kept.y / ANCHOR_STAND_GAP_M))
+			placed[cell] = (placed.get(cell, []) as Array) + [kept]
+	# The lane edges: a post every ANCHOR_EDGE_STEP_M just outside each lane, on both sides, where it lands in the field.
 	for lane: Dictionary in lanes:
 		var a: Vector2 = lane["a"]
 		var ab: Vector2 = (lane["b"] as Vector2) - a
@@ -1201,6 +1237,28 @@ static func anchor_posts(row: Dictionary, zones: Array = [], pitch := ANCHOR_PIT
 					out.append(p)
 			s += ANCHOR_EDGE_STEP_M
 	return out
+
+
+# Whether every lattice neighbour of spot key that lies in the field is clear: a post beside a gap a lane or footprint
+# cut stays on the lattice, since its neighbours cannot cover for it (staggered rows: odd rows sit half a pitch on).
+static func _stand_neighbours(spots: Dictionary, key: Vector2i) -> bool:
+	var shift := 0 if key.x % 2 == 1 else -1
+	for n: Vector2i in [Vector2i(key.x, key.y - 1), Vector2i(key.x, key.y + 1), Vector2i(key.x - 1, key.y + shift),
+			Vector2i(key.x - 1, key.y + shift + 1), Vector2i(key.x + 1, key.y + shift), Vector2i(key.x + 1, key.y + shift + 1)]:
+		if spots.has(n) and not spots[n][1]:
+			return false
+	return true
+
+
+# Whether p stands at least ANCHOR_STAND_GAP_M from every post in placed (posts by ANCHOR_STAND_GAP_M cell).
+static func _stand_room(placed: Dictionary, p: Vector2) -> bool:
+	var cell := Vector2i(floori(p.x / ANCHOR_STAND_GAP_M), floori(p.y / ANCHOR_STAND_GAP_M))
+	for dj in range(-1, 2):
+		for di in range(-1, 2):
+			for q: Vector2 in placed.get(cell + Vector2i(di, dj), []):
+				if q.distance_to(p) < ANCHOR_STAND_GAP_M:
+					return false
+	return true
 
 
 # Whether a row is an anchor field placed by place_anchor_field: greybox:anchor_field or an anchors kit recipe.
