@@ -1,4 +1,5 @@
-# smoke: bots timeout=1800s (24 bot runs on stage 3 in child processes, as many at once as memory and cores allow, each cut at RUN_CAP_S)
+# smoke: bots timeout=1800s (48 bot runs on stage 3, small and grown, in child processes, as many at once as memory and cores allow, each cut at RUN_CAP_S)
+# 2026-10-23: 24 seeds per arm took 1322 s alone on a 4-core, 15 GB cloud sandbox (8 at once), under the 1800 s bot ceiling; with the camper's 8 it took 2070 s, so the camper moved to posture_bands_swarm_camper_test.
 # 2026-10-18: with the parallel cap (8 at once on a 4-core, 16 GB cloud sandbox) the sweep took 1096 s alone; 1.5x is 1644 s; the gate box, loaded, ran past 1208 s, so it takes the bot ceiling, 1800 s.
 # 2026-10-12, W13 smoke triage: completed in 510.708 s alone with its fixed bands still red; 1.5x rounded up to 10 s is 770 s, beyond the ordinary 360 s cap.
 # 2026-10-13 WT-BANDS: paired record gain 100 -> 150; measured small 104.78 -> 104.78 s, grown 46.40 -> 38.77 s.
@@ -28,7 +29,7 @@ const T := preload("res://tests/support/t.gd")
 # RUN_CAP_S of stage time (--ticks), and a fight that has not broken by RUN_CAP_S counts at RUN_CAP_S.
 # The cap sits above the measured fights, so the medians and the pins compare real fight lengths, not the cap.
 # The band (the common contract): grown median 25 to 45 s, small median at least twice grown,
-# the camper never breaks it. swarm.md section 7's mechanism check rides with it: at least half
+# the camper never breaks it (posture_bands_swarm_camper_test). swarm.md section 7's mechanism check rides with it: at least half
 # the grown seeds land a stagger during a low dwell (the hive under LOW_DWELL_M). Its second check,
 # one finish from a latch, is on since the bot's latch arm (KF-BOT, 2026-10-11; tools/bot_driver.gd
 # _anchor_fight): at least one grown seed takes a chunk with a haul from a line on a hardpoint inside a
@@ -108,13 +109,34 @@ func _initialize() -> void:
 		_child = true
 		super._initialize()
 		return
-	var t := T.new("posture_bands_swarm_test")
+	var t := T.new(_suite())
 	var folder := OS.get_user_data_dir().path_join("posture-bands-swarm-%d" % OS.get_process_id())
 	DirAccess.make_dir_recursive_absolute(folder)
+	var sweep := _sweep(t, folder)
+	_judge(t, sweep)
+	if t.failures == 0:
+		_remove_tree(folder)
+	quit(t.verdict())
+
+
+# The sweep a parent runs, arm to seed count. The camper runs in posture_bands_swarm_camper_test,
+# so neither parent passes the bot tier's 1800 s ceiling (23 Oct: small and grown alone took 1322 s).
+func _arm_seeds() -> Dictionary:
+	return {"small": SEED_COUNT, "grown": SEED_COUNT}
+
+
+func _suite() -> String:
+	return "posture_bands_swarm_test"
+
+
+# Runs the arms' children and checks each seed; returns per-arm lists keyed by fights, low_staggers,
+# latch_finishes and first_staggers.
+func _sweep(t, folder: String) -> Dictionary:
+	var arms := _arm_seeds()
 	var jobs := []
 	var names := []
-	for arm in ARM_ROWS:
-		for run_seed in (CAMPER_SEEDS if arm == "camper" else SEED_COUNT):
+	for arm in arms:
+		for run_seed in int(arms[arm]):
 			var out := folder.path_join("%s-%d" % [arm, run_seed])
 			var args := ["--swarm-hoist=1", "--out=" + out, "--policy=" + String(ARM_ROWS[arm]["policy"]), "--seeds=%d" % run_seed,
 				"--pilot=" + String(PILOTS[run_seed % PILOTS.size()]), "--table=alpha", "--from-stage=%d" % STAGE, "--until=%d" % STAGE,
@@ -127,10 +149,10 @@ func _initialize() -> void:
 	var parallel := _parallel(jobs.size())
 	print("swarm sweep: %d children, %d at once" % [jobs.size(), parallel])
 	var results := ChildRuns.run(jobs, 900.0, parallel)
-	var fights := {}
-	var low_staggers := {}
-	var latch_finishes := {}
-	var first_staggers := {}
+	var sweep := {"fights": {}, "low_staggers": {}, "latch_finishes": {}, "first_staggers": {}}
+	for key in sweep:
+		for arm in arms:
+			sweep[key][arm] = []
 	var unrecorded := []
 	for i in results.size():
 		var arm: String = names[i][0]
@@ -151,48 +173,45 @@ func _initialize() -> void:
 		var top: float = float(hoist.get("top", 0.0)) if hoist is Dictionary else 0.0
 		t.check("%s seed %d fought the live hoist" % [arm, run_seed], hoist is Dictionary and hoist.get("driver", "") == DRIVER_PATH
 				and top >= HOIST_TOP, "hoist %s" % [hoist])
-		if not fights.has(arm):
-			fights[arm] = []
 		if not record.is_empty():
-			fights[arm].append(_fight(record))
-			if not first_staggers.has(arm):
-				first_staggers[arm] = []
-			first_staggers[arm].append(_first_stagger(record, hoist))
+			sweep["fights"][arm].append(_fight(record))
+			sweep["first_staggers"][arm].append(_first_stagger(record, hoist))
 		var heights: Array = hoist.get("staggers", []) if hoist is Dictionary else []
-		if not low_staggers.has(arm):
-			low_staggers[arm] = []
-		low_staggers[arm].append(heights.filter(func(h): return float(h) < LOW_DWELL_M).size())
-		if not latch_finishes.has(arm):
-			latch_finishes[arm] = []
-		latch_finishes[arm].append(_latch_chunks(record))
+		sweep["low_staggers"][arm].append(heights.filter(func(h): return float(h) < LOW_DWELL_M).size())
+		sweep["latch_finishes"][arm].append(_latch_chunks(record))
 		var note := _stage_note(record)
 		print("swarm latch arm %s seed %d: latches %d, ride %.1f s, shots from the line %d, hauls %d, chunks from a haul %d, drop hauls %d, drop chunks %d, drop break %s, fight %.2f s" % [
 			arm, run_seed, int(note.get("latch_bites", 0)), float(note.get("latch_ride_s", 0.0)), int(note.get("latch_shots", 0)),
 			int(note.get("latch_hauls", 0)), int(note.get("latch_chunks", 0)), int(note.get("drop_hauls", 0)), int(note.get("drop_chunks", 0)),
 			note.get("drop_break", false) == true, _fight(record)])
-	var grown: float = _median(fights.get("grown", []))
-	var small: float = _median(fights.get("small", []))
-	var camper_broke: int = fights.get("camper", []).filter(func(s): return s < RUN_CAP_S).size()
-	var grown_low: int = low_staggers.get("grown", []).filter(func(n): return n > 0).size()
-	print("swarm band stage %d: small %.2f s of %s, grown %.2f s of %s, camper %s" % [STAGE, small, fights.get("small", []),
-		grown, fights.get("grown", []), fights.get("camper", [])])
 	print("swarm runs with no record (left out of the medians): %s" % [unrecorded])
-	print("swarm low-dwell staggers per seed: small %s, grown %s, camper %s" % [low_staggers.get("small", []),
-		low_staggers.get("grown", []), low_staggers.get("camper", [])])
-	var first_small: float = _median(first_staggers.get("small", []))
-	print("swarm first stagger: small %.2f s of %s, grown %s" % [first_small, first_staggers.get("small", []), first_staggers.get("grown", [])])
-	t.eq("each arm ran its seeds", [fights.get("small", []).size(), fights.get("grown", []).size(), fights.get("camper", []).size()],
-		[SEED_COUNT, SEED_COUNT, CAMPER_SEEDS])
+	t.eq("each arm ran its seeds", arms.keys().map(func(arm): return sweep["fights"][arm].size()), arms.values())
+	return sweep
+
+
+# The band on small and grown. EXPECTED RED until Andrew answers the swarm hive card (posted 23 Oct):
+# on stage w18 small/grown is 1.86x against SMALL_FACTOR, the ordinary first stagger 50 s against
+# FIRST_STAGGER_BAND_S, and small 75.69 s against EXPECT_SMALL_S. These checks stay as they are until
+# his answer re-tunes the hive or restates the band; tuning trials in gate/c10-swarm/README.md.
+func _judge(t, sweep: Dictionary) -> void:
+	var fights: Dictionary = sweep["fights"]
+	var low_staggers: Dictionary = sweep["low_staggers"]
+	var latch_finishes: Dictionary = sweep["latch_finishes"]
+	var grown: float = _median(fights["grown"])
+	var small: float = _median(fights["small"])
+	var grown_low: int = low_staggers["grown"].filter(func(n): return n > 0).size()
+	print("swarm band stage %d: small %.2f s of %s, grown %.2f s of %s" % [STAGE, small, fights["small"], grown, fights["grown"]])
+	print("swarm low-dwell staggers per seed: small %s, grown %s" % [low_staggers["small"], low_staggers["grown"]])
+	var first_small: float = _median(sweep["first_staggers"]["small"])
+	print("swarm first stagger: small %.2f s of %s, grown %s" % [first_small, sweep["first_staggers"]["small"], sweep["first_staggers"]["grown"]])
 	t.check("half the grown seeds stagger the hive in a low dwell", grown_low * 2 >= SEED_COUNT,
-		"%d of %d grown seeds, per seed %s" % [grown_low, SEED_COUNT, low_staggers.get("grown", [])])
-	print("swarm finishes from a latch per seed: small %s, grown %s, camper %s" % [latch_finishes.get("small", []),
-		latch_finishes.get("grown", []), latch_finishes.get("camper", [])])
-	var grown_latched: int = latch_finishes.get("grown", []).filter(func(n): return n > 0).size()
+		"%d of %d grown seeds, per seed %s" % [grown_low, SEED_COUNT, low_staggers["grown"]])
+	print("swarm finishes from a latch per seed: small %s, grown %s" % [latch_finishes["small"], latch_finishes["grown"]])
+	var grown_latched: int = latch_finishes["grown"].filter(func(n): return n > 0).size()
 	t.check("one finish from a latch", grown_latched >= 1,
-		"%d of %d grown seeds took a chunk with a haul from a latch, per seed %s" % [grown_latched, SEED_COUNT, latch_finishes.get("grown", [])])
+		"%d of %d grown seeds took a chunk with a haul from a latch, per seed %s" % [grown_latched, SEED_COUNT, latch_finishes["grown"]])
 	t.check("grown breaks the hive in 25 to 45 s", grown >= GROWN_BAND_S.x and grown <= GROWN_BAND_S.y, "grown median %.2f s" % grown)
 	t.check("small takes at least twice grown's time", grown > 0.0 and small >= SMALL_FACTOR * grown, "small %.2f s, grown %.2f s" % [small, grown])
-	t.eq("the camper never breaks it", camper_broke, 0)
 	t.check("an ordinary pilot first staggers the hive in 60 to 85 s", first_small >= FIRST_STAGGER_BAND_S.x
 		and first_small <= FIRST_STAGGER_BAND_S.y, "small first-stagger median %.2f s" % first_small)
 	t.check("small and grown medians are measured under the run cap", small < RUN_CAP_S and grown < RUN_CAP_S,
@@ -201,9 +220,6 @@ func _initialize() -> void:
 		"small %.2f s, pin %.2f s" % [small, EXPECT_SMALL_S])
 	t.check("grown median within 10 percent of the pin", EXPECT_GROWN_S > 0.0 and absf(grown - EXPECT_GROWN_S) <= TOLERANCE * EXPECT_GROWN_S,
 		"grown %.2f s, pin %.2f s" % [grown, EXPECT_GROWN_S])
-	if t.failures == 0:
-		_remove_tree(folder)
-	quit(t.verdict())
 
 
 # The child: bot_run, plus the hoist on the stage's Warden.

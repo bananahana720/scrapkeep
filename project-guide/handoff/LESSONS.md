@@ -37,9 +37,11 @@ How this project actually runs, learned the hard way on 16-18 Oct 2026. Each les
 
 19. **No thread grades its own work.** A game change is done only when a tool check passes (smoke, lab gate, placeholder gate) and an independent reviewer agrees.
 20. **The cloud gate thread is the gate of record, except GPU checks.** It builds one integration commit from main plus the draft PRs, and sibling threads run bot shards from `gate/BOT-SHARDS.md`. Pass tests by base name (`--test bot_six_tally_test`), not `res://` path. Shards don't push, comment or fix.
-21. **Known cloud-only false fails (not the PR's fault):** `item_fuzz_smoke` (CPU contention), `park_swap` (frame budgets), `tree_play`, `alpha_bot_sweep` and `alpha_posture_bands_w23` (child timeouts), `persistence_truncation` (runs as root, chmod ignored). `scatter_rows` hash mismatch is unresolved. The gate thread judges these, not the shard.
+21. **Known cloud-only false fails (not the PR's fault):** `item_fuzz_smoke` (CPU contention), `park_swap` (frame budgets), `tree_play`, `alpha_posture_bands_w23` (child timeouts), `persistence_truncation` (runs as root, chmod ignored). `scatter_rows` hash mismatch is unresolved. The gate thread judges these, not the shard.
 22. **"Flake" is not a cause.** The effects RNG test failed on and off for a day; the real cause was a 65 s limit on a busy machine (now 180 s). Find the cause before re-running.
 23. **Red team every wave, carrying the last findings.** Camper stalls without a Warden break and traversal stalls are by design. A hitch counts only when it lands at the same run moment across seeds.
+23a. **A child cap is a measurement, not a guess.** `alpha_bot_sweep` was listed as a "cloud false fail" because its 170 s child cap sat under a 276 s child; time one child alone, then size the cap and the tier from it (#371).
+23b. **Eight seeds can't judge a chaotic median.** Per-seed fight times are fixed on one commit but reshuffle with any gameplay change, so on w18 the 8-seed swarm ratio read 1.77x where 24 seeds read 1.86x. Judge medians on 24 seeds (standard error about 4 s) before calling a band moved.
 24. **When fourteen tunings don't fix a design goal, it's a design question.** The Dispatcher stayed cheap to ignore through 14 tunings; one card ("Escalate") settled it.
 
 ## Permission prompts
