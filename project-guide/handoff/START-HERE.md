@@ -1,15 +1,12 @@
-# Start here: taking over Scrapkeep in a new project
+# Start here
 
-> **18 Oct update:** coordination now runs from a local Claude Code session on Andrew's PC with up to 4 cloud lanes. Start at [project-guide/coord/GRAPH.md](../coord/GRAPH.md); a lane starts from [LANE-BRIEF.md](../coord/LANE-BRIEF.md). The steps below were for a new claude.ai project and stay as reference.
+Coordination runs from the claude.ai project "Scrapkeep" on Andrew's main account (since 23 Oct 2026). The project coordinator talks to Andrew in the project chat; cloud threads are the lanes; Remote Control sessions on his PC run GPU work. A fresh coordinator or thread reads these in order:
 
-You are the coordinator of a fresh Scrapkeep project on Andrew's other account. The old project's threads, cards, pages, memory and Remote Control sessions don't carry over. This folder does. Read it before you act.
+1. The project instructions (in the project settings): goal, mission statement, direction principles 1-22, how work flows, standing approval.
+2. [DECISIONS.md](DECISIONS.md): Andrew's rulings. Newest wins. Don't re-ask one. His readable copy is the Claude Doc https://claude.ai/code/artifact/e209a132-0f39-416d-a116-3be4e9df8de9; threads also read /mnt/project-files/project-guide/DECISIONS.md. All three change together.
+3. [LESSONS.md](LESSONS.md): how this project works (lessons 1-54).
+4. [STATE.md](STATE.md): where the wave stands and what holds it.
+5. The shared folder map /mnt/project-files/INDEX.md and the phone start page https://claude.ai/artifact/LQF6h696vYdtJee3soD2Pi (every page marked Current, Reference or Out of date).
+6. A lane then reads [GRAPH.md](../coord/GRAPH.md), the wave's board issue (#241 for wave 18) and its own brief, and posts a claim before building.
 
-1. Read these, in this folder, in order: [STATE.md](STATE.md) (wave, open PRs with heads, base reds, the promote-fast flow), [THREADS.md](THREADS.md) (roles and live work at the move), [DEVICES.md](DEVICES.md) (the PC and what the cloud can't do), [DECISIONS.md](DECISIONS.md) (every ruling) and [LESSONS.md](LESSONS.md) (ways of working).
-2. Treat DECISIONS.md as Andrew's rulings. Newest wins. Don't re-ask anything in it.
-3. If project memory is empty, copy [NEW-MEMORY.md](NEW-MEMORY.md) into it. If the project instructions are empty, ask Andrew to paste [NEW-INSTRUCTIONS.md](NEW-INSTRUCTIONS.md). The project name and goal are in [NEW-GOAL.md](NEW-GOAL.md).
-4. His standing authority from the old project still holds, but its message ids don't resolve here. Ask him once, in one line, to restate it so safety checks can cite a local message: merge gate-passed PRs including to main, git housekeeping, "allow for all", full parallel authority, promote fast, keep checking in.
-5. Restart the standing roles in THREADS.md first (cloud gate, staging, red team, fast loops, library, and the two PC sessions). Then pick up the open work from the PR heads in STATE.md.
-6. Rebuild the phone pages he still uses (Library start page, Sitting Kit, design questions) from the repo copies. The old page list is in [LIBRARY.md](LIBRARY.md).
-7. From now on, keep the register and lessons in this folder.
-
-Andrew's own setup steps, the full file table and what wasn't carried over are in [README.md](README.md). Reference copies of shared-folder files threads rely on are in [shared/](shared/). Cloud environment setup for the new project is in [tools/cloud/CLOUD-SETUP.md](../../tools/cloud/CLOUD-SETUP.md), which lands through its own PR.
+What matters most right now: world 1 first. All effort goes to a 100% finished world 1 and early progression; worlds 2 and 3 finish what is running and start nothing new (register section 1).
