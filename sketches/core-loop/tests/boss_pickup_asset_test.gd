@@ -13,7 +13,9 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # so the Reduce flashes toggle slows it; pickup meshes unchanged. Was 5f85f822.
 # Re-pinned 2026-10-19 (Challenge C3a dials): Brindle's damage, cadence, tell, punish and combo read
 # ChallengeDials, identical at the defaults (run_tier_test); pickup meshes unchanged. Was 8ec6e239.
-const BASE_LOGIC_SHA := "bdc7f15819345779c30c8132002050d887b6be23c6017ab23771242d47475fd0"
+# Re-pinned 2026-10-23 (boss phases, #391): the Furnace reprise, the Scuttle hook turn and the transition
+# beat (fight_phases.gd); pickup meshes unchanged. Was bdc7f158.
+const BASE_LOGIC_SHA := "3b589a48978e2d15737269185a3e8f206e7906f9040fb492552c90410e6509cb"
 
 var failures := 0
 var game
