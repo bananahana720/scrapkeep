@@ -317,6 +317,16 @@
     "lufs": -16.0,
     "samples": 41024
    },
+   "drop_flash_flood": {
+    "bar": 3,
+    "beat": 3,
+    "beats": 2,
+    "clip": "open",
+    "dbtp": -1.0,
+    "kind": "drop",
+    "lufs": -16.0,
+    "samples": 41024
+   },
    "drop_fleet": {
     "bar": 4,
     "beat": 1,

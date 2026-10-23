@@ -205,7 +205,7 @@ def write_wav(path, x):
 TAKEN = {}
 
 
-def cut_stage(zone, pack, park, packs_dir, out_dir):
+def cut_stage(zone, pack, park, packs_dir, out_dir, prev=None):
     drops, risers = park_cues(park)
     import highdraft_stingers  # imported here: it reuses this module's finish and level
     if zone.split("-")[0] == highdraft_stingers.WORLD:
@@ -248,11 +248,16 @@ def cut_stage(zone, pack, park, packs_dir, out_dir):
                 cands.append({"clip": clip, "bar": bar_i + 1, "beat": beat_i + 1, "start": start, "f": features(full)})
     keys = ("low", "bright", "onset", "level")
     stat = {k: (np.mean([c["f"][k] for c in cands]), np.std([c["f"][k] for c in cands]) + 1e-9) for k in keys}
-    used = set()
-    for cue in sorted(drops):
+    # A cue already in the manifest keeps its window, so adding a cue never re-cuts the others.
+    kept = {cue: (r["clip"], r["bar"], r["beat"]) for cue, r in (prev or {}).items() if cue in drops and "clip" in r}
+    used = set(kept.values())
+    for cue in sorted(drops, key=lambda c: (c not in kept, c)):
         spec = DROPS[cue]
+        if cue in kept:
+            used.discard(kept[cue])
         ranked = sorted((c for c in cands if (c["clip"], c["bar"], c["beat"]) not in used and c["clip"] in spec["clips"]),
-                        key=lambda c: -sum(w * (c["f"][k] - stat[k][0]) / stat[k][1] for k, w in spec["rank"].items()))
+                        key=lambda c: (cue in kept and (c["clip"], c["bar"], c["beat"]) != kept[cue],
+                                       -sum(w * (c["f"][k] - stat[k][0]) / stat[k][1] for k, w in spec["rank"].items())))
         # Two stages can cut from one source track, so the same hit can rank first in both; each
         # stage keeps its own sound by skipping a window another stage already took for this cue.
         for best in ranked:
@@ -277,9 +282,12 @@ def main():
     ap.add_argument("--packs", type=Path, default=DEFAULT_PACKS)
     ap.add_argument("--out", type=Path, default=PROJECT / "assets/audio/stingers")
     args = ap.parse_args()
+    old = args.out / "manifest.json"
+    old = json.loads(old.read_text()) if old.exists() else {}
     summary = {}
     for zone, pack, park in stage_rows():
-        summary[zone.replace("-", "_")] = cut_stage(zone, pack, park, args.packs, args.out)
+        key = zone.replace("-", "_")
+        summary[key] = cut_stage(zone, pack, park, args.packs, args.out, old.get(key, {}).get("cues"))
     import highdraft_stingers
     for zone, rows in highdraft_stingers.design(args.out).items():
         summary[zone]["cues"].update(rows)
