@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
-  ARMS, MIN_VALID, NOISE_OFFSET, ROSTER, RULES, SEEDS, STAGES, driverAudioReads, evaluateGates, gate1, gate2, gate4, gateBotArgs, groupByArm,
-  instrumentVoid, planGateJobs, replicateSeed, stripComments, summarizeRun, withControls,
+  ARMS, MIN_VALID, RULES, SEEDS, STAGES, driverAudioReads, evaluateGates, gate1, gate2, gate4, gateBotArgs, groupByArm,
+  instrumentVoid, planGateJobs, stripComments, summarizeRun, withControls,
 } from "./gates-lib.mjs";
 
 // --- synthetic runs: summaries as summarizeRun returns them ---
@@ -24,13 +24,14 @@ test("the rule numbers are the comment's, and the plan is 8 arms of 90 runs", ()
   assert.equal(new Set(jobs.map((j) => j.id)).size, jobs.length);
 });
 
-test("three runs of a seed keep its pilot and differ in seed; the A/A arm draws its own replicates", () => {
-  assert.deepEqual([0, 1, 2].map((r) => replicateSeed(4, r)), [4, 10, 16]);
-  for (const j of planGateJobs({ arms: ["orbit", "orbit_b"], stages: [2] })) assert.equal(j.runSeed % ROSTER, j.seed % ROSTER);
-  const a = planGateJobs({ arms: ["orbit"], stages: [2], seeds: [3] }).map((j) => j.runSeed);
-  const b = planGateJobs({ arms: ["orbit_b"], stages: [2], seeds: [3] }).map((j) => j.runSeed);
-  assert.deepEqual(a, [3, 9, 15]);
-  assert.deepEqual(b, [3 + ROSTER * NOISE_OFFSET, 3 + ROSTER * (NOISE_OFFSET + 1), 3 + ROSTER * (NOISE_OFFSET + 2)]);
+test("three runs of a seed are the same seed, told apart by repeat; the A/A arm runs the same seeds", () => {
+  const a = planGateJobs({ arms: ["orbit"], stages: [2], seeds: [3] });
+  const b = planGateJobs({ arms: ["orbit_b"], stages: [2], seeds: [3] });
+  assert.deepEqual(a.map((j) => j.runSeed), [3, 3, 3]);
+  assert.deepEqual(b.map((j) => j.runSeed), [3, 3, 3]);
+  assert.equal(new Set(a.map((j) => j.id)).size, 3);
+  assert.deepEqual(a.map((j) => j.rep), [0, 1, 2]);
+  assert.ok(gateBotArgs(a[0], "/o").includes("--seeds=3"));
 });
 
 test("every run is fresh at --fixed-fps 90 and carries its plant", () => {
@@ -61,15 +62,16 @@ test("summarizeRun reads the stage note and applies the instrument check", () =>
   assert.match(summarizeRun({ outcome: "died", stages: [{ ...note, circle_share: 0.5 }] }, job).void, /circle_share/);
 });
 
-test("instrument checks: orbit circle_share 0.8, terrain one ride per 30 s of fight, no line in reach is void", () => {
-  assert.equal(instrumentVoid({ fight_s: 100, circle_s: 80, circle_share: 0.8 }, "orbit"), null);
-  assert.match(instrumentVoid({ fight_s: 100, circle_s: 79, circle_share: 0.79 }, "orbit"), /circle_share/);
-  assert.match(instrumentVoid({ fight_s: 0, circle_s: 0, circle_share: null }, "orbit"), /no fight/);
-  assert.equal(instrumentVoid({ fight_s: 60, line_rides: 2, lines_in_reach: 1 }, "terrain"), null);
-  assert.match(instrumentVoid({ fight_s: 61, line_rides: 2, lines_in_reach: 1 }, "terrain"), /need 2\.0/);
-  assert.match(instrumentVoid({ fight_s: 10, line_rides: 0, lines_in_reach: 1 }, "terrain"), /need 1\.0/);
-  assert.match(instrumentVoid({ fight_s: 60, line_rides: 0, lines_in_reach: 0 }, "terrain"), /no line within reach/);
-  assert.equal(instrumentVoid({ fight_s: 0 }, "deaf"), null);
+test("instrument checks: orbit circle_share 0.8 of the window, terrain one ride per 30 s of window, no line in reach is void", () => {
+  assert.equal(instrumentVoid({ alive_120s: 100, circle_s: 80, circle_share: 0.8 }, "orbit"), null);
+  assert.match(instrumentVoid({ alive_120s: 100, circle_s: 79, circle_share: 0.79 }, "orbit"), /circle_share/);
+  assert.match(instrumentVoid({ alive_120s: 0, circle_s: 0, circle_share: null }, "orbit"), /no contact window/);
+  assert.equal(instrumentVoid({ alive_120s: 60, line_rides: 2, lines_in_reach: 1 }, "terrain"), null);
+  assert.equal(instrumentVoid({ alive_120s: 54.86, line_rides: 3, lines_in_reach: 1 }, "terrain"), null); // 3 rides in 54.9 s: one per 18 s
+  assert.match(instrumentVoid({ alive_120s: 61, line_rides: 2, lines_in_reach: 1 }, "terrain"), /need 2\.0/);
+  assert.match(instrumentVoid({ alive_120s: 10, line_rides: 0, lines_in_reach: 1 }, "terrain"), /need 1\.0/);
+  assert.match(instrumentVoid({ alive_120s: 60, line_rides: 0, lines_in_reach: 0 }, "terrain"), /no line within reach/);
+  assert.equal(instrumentVoid({ alive_120s: 0 }, "deaf"), null);
 });
 
 // --- gate 1 ---

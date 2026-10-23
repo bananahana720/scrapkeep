@@ -4030,8 +4030,9 @@ func _close_contact() -> void:
 	_note["circle_s"] = snappedf(float(_note["circle_s"]), 0.01)
 	if _note["first_contact_s"] != null:
 		_note["alive_120s"] = snappedf(clampf(float(_note["exit_s"]) - float(_note["first_contact_s"]), 0.0, CONTACT_WINDOW_S), 0.01)
-	if float(_note["fight_s"]) > 0.0:
-		_note["circle_share"] = snappedf(float(_note["circle_s"]) / float(_note["fight_s"]), 0.001)
+	# circle_share: seconds on the ring over the window (first contact to its end or death), the anchor policies' measure.
+	if _note["alive_120s"] != null and float(_note["alive_120s"]) > 0.0:
+		_note["circle_share"] = snappedf(float(_note["circle_s"]) / float(_note["alive_120s"]), 0.001)
 
 
 # The test-only hide_pack_telegraphs plant: the committed telegraphs of every enemy but the Warden, and the shells a

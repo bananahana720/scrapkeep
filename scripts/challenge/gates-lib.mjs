@@ -13,11 +13,10 @@ import { median } from "./lib.mjs";
 export const STAGES = [1, 2, 3, 4, 5, 6];
 export const SEEDS = [1, 2, 3, 4, 5];
 export const RUNS_PER_SEED = 3;
-// pilot = seed % roster size (bot_driver.gd class_index_for), and the roster is these six classes. A run's seed is
-// seed + 6 * replicate, so the three runs of a seed keep its pilot and draw three different stage plans (a seed
-// replayed at --fixed-fps 90 is exact, so three runs of one seed would be one run).
-export const ROSTER = 6;
-export const NOISE_OFFSET = RUNS_PER_SEED; // replicates 3..5: the A/A control's second sample
+// The ruling (6356590453) is 3 runs of the SAME seed, to expose run-to-run splits (the audio landing fallback can split
+// at fixed fps): a seed's three runs are identical commands, told apart by their repeat index in the job id and out dir.
+// The pilot is seed % roster size, as in the band table. The A/A arm orbit_b runs the same seeds as orbit, so on
+// identical seeds the two must tie, and the rule must read FAIL.
 
 // --- the numbers, from comment 6367573974 ---
 export const RULES = {
@@ -32,8 +31,6 @@ export const MIN_VALID = 2;
 // (the band harness's rule, lib.mjs INCOMPLETE_SHARE).
 export const INCOMPLETE_SHARE = 0.1;
 
-export const replicateSeed = (seed, rep) => seed + ROSTER * rep;
-
 // Arms: each is a policy, extra bot flags and the first replicate it draws. `shared` arms serve several gates.
 export const ARMS = {
   orbit: { policy: "orbit", args: [], rep0: 0, gates: ["g1", "g2"], instrument: "orbit" },
@@ -41,7 +38,7 @@ export const ARMS = {
   orbit_passive: { policy: "orbit", args: ["--plant=packs_passive=1"], rep0: 0, gates: ["g1"], instrument: "orbit" },
   terrain: { policy: "terrain", args: [], rep0: 0, gates: ["g2"], instrument: "terrain" },
   orbit_dmg2: { policy: "orbit", args: ["--plant=damage=2"], rep0: 0, gates: ["g2"], instrument: "orbit" },
-  orbit_b: { policy: "orbit", args: [], rep0: NOISE_OFFSET, gates: ["g2"], instrument: "orbit" },
+  orbit_b: { policy: "orbit", args: [], rep0: 0, gates: ["g2"], instrument: "orbit" },
   deaf: { policy: "skipper", args: ["--band=expert", "--attempt=1", "--bot-no-mix=1"], rep0: 0, gates: ["g4"], instrument: "deaf" },
   deaf_hidden: { policy: "skipper", args: ["--band=expert", "--attempt=1", "--bot-no-mix=1", "--plant=hide_pack_telegraphs=1"], rep0: 0, gates: ["g4"], instrument: "deaf" },
 };
@@ -65,7 +62,7 @@ export function planGateJobs({ arms = Object.keys(ARMS), stages = STAGES, seeds 
       for (const seed of seeds) {
         for (let r = 0; r < runs; r++) {
           const rep = def.rep0 + r;
-          const runSeed = replicateSeed(seed, rep);
+          const runSeed = seed;
           const args = [...def.args, "--cell=gate-" + arm];
           if (stage !== 1) args.push("--from-stage=" + stage);
           args.push("--until=" + stage, "--fight-limit=" + FIGHT_LIMIT_S, "--stage-limit=" + STAGE_LIMIT_S, "--ticks=" + TICKS);
@@ -115,14 +112,14 @@ export function summarizeRun(row, job) {
 // The instrument checks: an arm must show it did its behaviour, or that run is void.
 export function instrumentVoid(s, kind) {
   if (kind === "orbit") {
-    if (!(s.fight_s > 0)) return "orbit: no fight time recorded";
-    const share = s.circle_share ?? s.circle_s / s.fight_s;
+    if (!(s.alive_120s > 0)) return "orbit: no contact window recorded";
+    const share = s.circle_share ?? s.circle_s / s.alive_120s;
     if (share < RULES.instrument.circleShareMin) return `orbit: circle_share ${share.toFixed(2)} < ${RULES.instrument.circleShareMin}`;
   } else if (kind === "terrain") {
     if (s.lines_in_reach === 0) return "terrain: no line within reach on this stage (instrument void)";
-    if (!(s.fight_s > 0)) return "terrain: no fight time recorded";
-    const need = Math.max(1, s.fight_s / RULES.instrument.ridePerS);
-    if (s.line_rides < need) return `terrain: ${s.line_rides} line rides in ${s.fight_s.toFixed(0)} s of fight, need ${need.toFixed(1)}`;
+    if (!(s.alive_120s > 0)) return "terrain: no contact window recorded";
+    const need = Math.max(1, s.alive_120s / RULES.instrument.ridePerS);
+    if (s.line_rides < need) return `terrain: ${s.line_rides} line rides in a ${s.alive_120s.toFixed(0)} s window, need ${need.toFixed(1)}`;
   }
   return null;
 }
