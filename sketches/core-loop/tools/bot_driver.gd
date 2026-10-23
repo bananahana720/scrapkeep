@@ -336,6 +336,10 @@ const SLOPE_SLACK := 0.001
 const KICKER_LAUNCH := 8.0
 const KICKER_JUMP_AT := 3.0
 const CLIMB_REACHED := 6.0
+# A cable takes a ball whose centre comes within its radius of the cable's high end (contraptions.gd) and rides it
+# down. A climb cell whose rolling centre is within CABLE_CLEAR more is closed: on the park's first stage the way up
+# to the domes camp passed under domes_zip's end, and each pass rode the explorer 58 m back down to the deck.
+const CABLE_CLEAR := 2.0
 # A fight target on a shelf more than LEVEL_BAND above the ball is climbed to the same way, the
 # route replanned every FIGHT_CLIMB_REPLAN seconds while the ball stays below: on the Highdraft
 # crown the deck under the beacon's cliff lies off the dogleg bridges, and the way up is a
@@ -497,6 +501,14 @@ var _warden_hp_at := -1.0
 var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
 var _harpoon_held := false
+# Weak points (stub_boss.gd weak_open, #241): the point being read, how long it has been open, the
+# learner's one roll for it, whether a go is on, and the Warden it was read on: a go waives the harpoon hand's
+# wait between bites (_harpoon_hand) on that Warden only, so it bites again at once and the hand commits the haul.
+var _weak_seen := ""
+var _weak_age := 0.0
+var _weak_roll := 0.0
+var _weak_go := false
+var _weak_warden: Node3D = null
 var _harpoon_commit := false
 # Only the explorer changes hands: jump clear, bite, release at the apex, bite again, haul.
 # chain_hand_enabled = false keeps the one-bite hand, the control for the two-hook one.
@@ -1076,6 +1088,8 @@ func _on_boss_entered() -> void:
 		"entry_parts": game.run.parts.size(), "phases": [], "weak_point_hits": {}, "hp_lost": 0.0, "hits": 0,
 		"evasions": 0, "plants": 0, "slingshots": 0, "specials": 0, "stolen": 0, "defeated_s": null,
 		"hold_s": null, "hold_bound_s": null,
+		"weak_opened": null, "weak_sealed": null, "weak_timed_out": null, "weak_broken": null, "weak_open_at_end": null,
+		"crew_waves": null,
 		"charge_reads": 0, "charge_sidesteps": 0, "charge_hits": 0, "clash_tries": 0}
 
 
@@ -1086,6 +1100,21 @@ func _boss_hold_note() -> void:
 		return
 	_boss_set("hold_s", snappedf(boss.hold_s, 0.01))
 	_boss_set("hold_bound_s", snappedf(boss.hold_bound_s, 0.01))
+	_boss_weak_note(boss)
+
+
+# The Waking's per floor phase weak-point counts, each {phase: count}, for the sweep's seal rate. Left null unless the
+# fight ran with weak points (dial 1), so a dial 0 record keeps its shape and its values.
+func _boss_weak_note(boss) -> void:
+	if not "weak_stats" in boss or not boss.weak.active():
+		return
+	var stats: Dictionary = boss.weak_stats
+	_boss_set("weak_opened", (stats["opened"] as Dictionary).duplicate())
+	_boss_set("weak_sealed", (stats["sealed"] as Dictionary).duplicate())
+	_boss_set("weak_timed_out", (stats["timed_out"] as Dictionary).duplicate())
+	_boss_set("weak_broken", (stats["broken"] as Dictionary).duplicate())
+	_boss_set("weak_open_at_end", (stats["open_at_end"] as Dictionary).duplicate())
+	_boss_set("crew_waves", (stats["crew_waves"] as Dictionary).duplicate())
 
 
 func _on_boss_phase(phase: int, phase_name: String) -> void:
@@ -1537,6 +1566,12 @@ func _activity_goal(delta: float) -> bool:
 				_activity_skip[s.id] = true
 				_activity = ""
 				return false
+		_:
+			# A site with no hand here is passed over at once. hold_the_relay is _relay_arm's, armed by a stake; held, it
+			# stood the explorer still for ACTIVITY_SECONDS at the park's first stage, and its heft never rose there.
+			_activity_skip[s.id] = true
+			_activity = ""
+			return false
 	return true
 
 
@@ -1659,7 +1694,18 @@ func _climb_route(from: Vector3, to: Vector3, slope := CLIMB_SLOPE) -> Array[Vec
 				var to_land := c.distance_to(land2)
 				if to_land <= CLIMB_STEP * 1.5 and absf(hc - land_y) <= slope * maxf(to_land, 0.01):
 					graph.connect_points(land_id, j * nx + i)
-	var ids := graph.get_id_path(graph.get_closest_point(Vector2(from.x, from.z)), graph.get_closest_point(Vector2(to.x, to.z)))
+	var start := graph.get_closest_point(Vector2(from.x, from.z))
+	var goal := graph.get_closest_point(Vector2(to.x, to.z))
+	for mouth in _cable_mouths():
+		var reach: float = mouth["radius"] + CABLE_CLEAR
+		var top: Vector3 = mouth["at"]
+		for j in range(maxi(0, floori((top.z - reach - lo.y) / CLIMB_STEP)), mini(nz, ceili((top.z + reach - lo.y) / CLIMB_STEP) + 1)):
+			for i in range(maxi(0, floori((top.x - reach - lo.x) / CLIMB_STEP)), mini(nx, ceili((top.x + reach - lo.x) / CLIMB_STEP) + 1)):
+				var id := j * nx + i
+				var c := lo + Vector2(i, j) * CLIMB_STEP
+				if id != start and id != goal and Vector3(c.x, half[2 * j * hx + 2 * i] + 1.0, c.y).distance_to(top) <= reach:
+					graph.set_point_disabled(id)
+	var ids := graph.get_id_path(start, goal)
 	var out: Array[Vector3] = []
 	_route_lips.clear()
 	# Every cell on a ramp and the one before it is kept: cut between kept cells, the line from the
@@ -1677,6 +1723,18 @@ func _climb_route(from: Vector3, to: Vector3, slope := CLIMB_SLOPE) -> Array[Vec
 				_route_lips.append(out.back())
 		elif k % 2 == 1 or ramp[k] or (k + 1 < ids.size() and ramp[k + 1]):
 			out.append(_ground_point(at.x, at.y))
+	return out
+
+
+# Each cable's high end on this stage's map and its catch radius.
+func _cable_mouths() -> Array:
+	var out := []
+	var map = game.ctx.terrain.map()
+	if map == null or not "contraptions" in map:
+		return out
+	for spec in map.contraptions:
+		if spec["kind"] == "cable":
+			out.append({"at": spec["from"], "radius": float(spec["radius"])})
 	return out
 
 
@@ -2255,7 +2313,7 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 	if special != null and special.charging:
 		swallowed = true
 	if not swallowed and kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
-			and _off_line > DROP_MEMORY and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
+			and (_off_line > DROP_MEMORY or (_weak_go and is_instance_valid(_weak_warden) and target == _weak_warden)) and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
 		# A movement exit waits for the haul; other line skills load on the bite.
 		if not bank_shot:
 			_cast(3)
@@ -2646,12 +2704,99 @@ func _boss():
 # A boss without a ship is the stub's one posture Warden on a flat pad (stub_boss.gd, its
 # `warden` field). The bot fights it with the routine it uses on a stage Warden.
 func _fight_posture_boss(boss, delta: float) -> void:
+	_read_weak_points(boss, delta)
 	var target = boss.get("warden")
 	if not boss.has_method("active") or not boss.active() or not is_instance_valid(target) or not target is Node3D:
 		_goal = "boss wait"
 		_act(game.player.ball_position() + game.player.planar_velocity(), null, delta)
 		return
+	var fitter := _open_fitter(boss)
+	if fitter != null:
+		_fight_fitter(fitter, delta)
+		return
+	var part := _open_part(boss)
+	if part != null:
+		_fight_part(part, delta)
+		return
 	_fight(target, delta)
+
+
+# The physical part of the point the bot reads as open and goes for (stub_boss.gd weak_part), or null. Null at dial 0
+# (no point ever opens) and for a boss whose points are not bodies (the Mind's seats), so the fight is the Warden's.
+func _open_part(boss) -> Node3D:
+	if not _weak_go or not boss.has_method("weak_part"):
+		return null
+	var open: Array = boss.weak_open()
+	return boss.weak_part(String(open[-1])) if not open.is_empty() else null
+
+
+# A fitter of the open hatch to hit before the hatch itself (waking.gd crew): the first one holding a plate, and only
+# while the seal clock runs (weak_points.gd fit_min or more on the hatch). Once knock-offs leave fewer than fit_min the
+# clock stops, so the hatch is the target again; a knocked fitter comes back after KNOCK_SECONDS, and chasing every one
+# spends the window on drones. An inbound one is never a target: waking.gd only knocks off a fitting one. Gated by the same go as the
+# part, so the expert always, the learner after its read and roll, the novice never; it draws nothing.
+func _open_fitter(boss) -> Node3D:
+	if not _weak_go or not boss.has_method("crew") or not boss.has_method("weak_open"):
+		return null
+	var open: Array = boss.weak_open()
+	if open.is_empty():
+		return null
+	var id := String(open[-1])
+	var weak = boss.get("weak")
+	if weak != null and weak.fitters(id) < weak.fit_min:
+		return null
+	for f in boss.crew():
+		if f.point_id != id or f.is_dead():
+			continue
+		if f.fit_state == f.State.FITTING:
+			return f
+	return null
+
+
+func _fight_fitter(fitter: Node3D, delta: float) -> void:
+	_goal = "fitter %s" % fitter.point_id
+	_weak_warden = fitter
+	_harpoon_hand(fitter, delta)
+	_act(fitter.global_position, fitter, delta, fitter)
+
+
+# An open hatch or override: roll at it, bite it with the harpoon hand and commit the haul. The hand's wait between
+# bites is waived for it the way it is for an open Warden point (_weak_warden).
+func _fight_part(part: Node3D, delta: float) -> void:
+	_goal = "part %s" % part.get("point_id")
+	_weak_warden = part
+	_harpoon_hand(part, delta)
+	_act(part.global_position, part, delta, part)
+
+
+# Whether the bot presses its harpoon-and-haul on the Warden for an open weak point: the expert always, the
+# learner once the point has been open 0.6 s and its one roll for the opening is under 0.5, the novice never.
+static func weak_point_go(band_name: String, opened_age: float, roll: float) -> bool:
+	match band_name:
+		"expert":
+			return true
+		"learner":
+			return opened_age >= 0.6 and roll < 0.5
+	return false
+
+
+# With no point open (always, at dial 0) this draws nothing and leaves the fight as it was. A learner draws
+# one roll per opening; the go waives the harpoon hand's wait between bites (_harpoon_hand).
+func _read_weak_points(boss, delta: float) -> void:
+	_weak_go = false
+	var open: Array = boss.weak_open() if boss.has_method("weak_open") else []
+	if open.is_empty():
+		_weak_seen = ""
+		_weak_warden = null
+		return
+	var id := String(open[-1])
+	if id != _weak_seen:
+		_weak_seen = id
+		_weak_age = 0.0
+		_weak_roll = rng.randf() if band != null and band.name == "learner" else 0.0
+	_weak_age += delta
+	_weak_go = weak_point_go(band.name if band != null else "expert", _weak_age, _weak_roll)
+	_weak_warden = boss.get("warden") if _weak_go else null
 
 
 # Phase 1: guns on the live crane magnets from the orbit, chasing any stolen scrap.

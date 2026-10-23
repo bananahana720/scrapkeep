@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "73cb8a1d2c54f4b1fb6b3ce5b6dc3caeacfa027d06407fd0007f216ae7b32bd7",
+  "bake_sha256": "4963b48ee562307436ec8a65c7df8b7d7c9df8c30ae7649d93213ec04286b793",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 946759,
-  "edges": 314844,
+  "bytes": 946405,
+  "edges": 314846,
   "first_failed": "",
   "flags": {
     "deck": 37,
     "door_ok": 39877,
     "line": 404,
     "open": 40420,
-    "sight_ok": 9661,
+    "sight_ok": 9662,
     "under": 18
   },
   "full_visit_m": 1913,
   "full_visit_ratio": "1.361",
-  "graph_sha256": "0b5e9dcb288b84a2458ce43fa22bec93da1e1bc66d789323a92da611a63f3b00",
+  "graph_sha256": "967560408fdfff88a6153148c91c4d3bfd3ba0b65987f3ce659d3360353353c1",
   "line_errors": [],
   "line_path_nodes": 175,
   "longest_est_m": 2038,
   "map": "park_sinkhole",
   "nodes": 40438,
-  "park_sha256": "da3f0ffcdd451b138df55cd3358d7d9ebb171ef16d251ca91e4ddc75728fac65",
+  "park_sha256": "b781cf964354df1449b1f2615687ea763e969a7186ca7891d706005e312f57fd",
   "pockets": [
     {
       "clear_ring": [],
@@ -239,11 +239,19 @@
         "on_route": false,
         "rank": 0,
         "viable": false
+      },
+      {
+        "cost": 581.6,
+        "d_landmark": 1001.4,
+        "name": "crater_breach",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
       }
     ],
     "count": 185,
     "crossings": {
-      "drop": 33,
+      "drop": 32,
       "ride": 41,
       "walk": 460
     },

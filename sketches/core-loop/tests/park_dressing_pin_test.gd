@@ -31,11 +31,13 @@ const Intent := preload("res://src/movement/intent.gd")
 # 2026-10-17 flume authored pass re-pin: stage 2 park_flume 1284262125 -> 1448453723, because siphon_camp moved from
 # [-28, 176] to [-26, 174] (inside the 12 m reach of the momentum line on the flume) and its 11 m activity keep-out
 # moves with it; with the camp at its old spot the 1284262125 pin still holds. The others unchanged.
+# 2026-10-23 sinkhole elbow re-pin (#359): stage 4 park_sinkhole 3017710206 -> 2334293701, because #359 reshapes
+# lava_channel_12, 13 and 21 and rebakes the sinkhole ground; no dressing spot moves. The others unchanged.
 const PINS := {
 	1: ["park_dam", 13, 2427938025],
 	2: ["park_flume", 13, 1448453723],
 	3: ["park_pit", 13, 2247843387],
-	4: ["park_sinkhole", 13, 3017710206],
+	4: ["park_sinkhole", 13, 2334293701],
 	5: ["park_islands", 13, 3681139656],
 	6: ["park_crown", 13, 2943158398],
 }

@@ -54,6 +54,10 @@ func _initialize() -> void:
 		return
 	SimClock.ticks = true
 	seed(1)
+	# Weak points off whatever the Waking ships on: the first stagger is read off weak_point_opened, which on dial 1
+	# fires when a hatch opens on a tell (5.1 s on skipper seed 1), and a broken seal removes a family by design. The
+	# dial-1 fight's pace is the band table's (challenge:bands); boss_weak_points_test owns the open and break rules.
+	ChallengeDials.set_overrides({"waking.weak_points": 0.0})
 	var spec := OS.get_environment("WAKING_BOT_RUNS")
 	if spec != "":
 		_runs = []

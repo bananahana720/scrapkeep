@@ -81,6 +81,9 @@ var _row_modules := {}
 # stage exit compiled mind.gd (89 ms on the cloud) and the arena's dress loaded and painted in the
 # same frame, the 4080's 254 to 274 ms boss-entry freeze (scrapkeep#241).
 var _boss_reads := {}
+# By boss script path: whether its warm_arena still has work, the arena's main-thread steps ahead of
+# the entry (a step a physics tick until it returns true; false for a script without one).
+var _boss_warms := {}
 var _home_boss: Node = null
 var _world := 0
 var _launched := false
@@ -205,6 +208,11 @@ func _read_boss_ahead() -> void:
 			_boss_reads[path] = false
 		return
 	if _boss_reads[path] != null:
+		if _boss_reads[path] is Script:
+			if not _boss_warms.has(path):
+				_boss_warms[path] = _boss_reads[path].get_script_method_list().any(func(m): return m.name == "warm_arena")
+			if _boss_warms[path] and _boss_reads[path].call("warm_arena"):
+				_boss_warms[path] = false
 		return
 	var status := ResourceLoader.load_threaded_get_status(path)
 	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
