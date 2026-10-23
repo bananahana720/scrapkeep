@@ -79,9 +79,12 @@ func _run() -> void:
 	_t.check("a second pick under the take is swallowed", _game._screen_key(KEY_2) and flow.state_name() == "class_select", "")
 	var title_stage = _game.presentation.title_stage
 	var wind_steps: int = await _step_while(LaunchTake.WIND)
+	_t.check("the deck camera lifts during the wind", title_stage.push > 0.0, str(title_stage.push))
 	await _frames(3)
 	var cover_steps: int = await _step_while(LaunchTake.COVER)
-	_t.check("the run starts under the swipe, on a fully covered frame", at_cover.size() == 1 and at_cover[0][0] == 1.0, str(at_cover))
+	_t.check("the run starts under the swipe, on a fully covered frame", at_cover.size() == 1 and at_cover[0][0] == 1.0
+		and at_cover[0][1] != "class_select", str(at_cover))
+	_t.check("the start-pick card waits for the panel to go", not _game.flow.start_card.visible, "")
 	_t.check("the run is on stage 1 with the picked pilot", flow.in_stage() and _game.run.stage == 1
 		and _game.run.class_def == flow.classes[0], flow.state_name())
 	_t.check("the panel holds over the dam with the word stamped", _take.covering() and _take.progress() == 1.0 and _take._word.visible, "")
@@ -94,9 +97,9 @@ func _run() -> void:
 	_t.check("the take lasts at most 1.3 s with the dam drawn", seconds <= 1.3, "%.2f s" % seconds)
 	_t.check("the ball is live over the dam", not _game.player.frozen()
 		and _game.player.ball_position().distance_to(_game.ctx.terrain.spawn_point(1)) < 30.0, str(_game.player.ball_position()))
+	_t.check("the deck camera lift is cleared once the run is on", title_stage.push == 0.0, str(title_stage.push))
 	flow.show_title()
 	await _frames(2)
-	_t.check("the deck camera lift is cleared on the title", title_stage.push == 0.0, str(title_stage.push))
 	title_stage.active = true
 	title_stage.launch_push(0.05)
 	for i in 600:
@@ -125,6 +128,11 @@ func _run() -> void:
 	_game._screen_key(KEY_SPACE)
 	_take.set_process(false)
 	_t.check("the gate starts the take on the title", _take.phase == LaunchTake.WIND and flow.state_name() == "title", flow.state_name())
+	var esc := InputEventKey.new()
+	esc.physical_keycode = KEY_ESCAPE
+	esc.pressed = true
+	_game.screens._input(esc)
+	_t.check("Esc under the gate's wind does not leave the camp", _game.screens.walking() and hub.walking, "")
 	await _physics(2)
 	_t.check("the gate fires the ball up", _game.player.state.velocity.y > 5.0, str(_game.player.state.velocity))
 	await _step_while(LaunchTake.WIND)

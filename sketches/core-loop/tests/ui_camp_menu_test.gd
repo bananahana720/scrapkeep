@@ -170,7 +170,7 @@ func _run() -> void:
 	_t.eq("pad A in the gate's zone is Launch", _game.pad_screen_key(pad_a), KEY_SPACE)
 	_game._screen_key(_game.pad_screen_key(pad_a))
 	await _frames(2)
-	_t.eq("pad A at the gate goes to class select", flow.state_name(), "class_select")
+	_t.check("pad A at the gate launches into stage 1", flow.in_stage() and _game.run.stage == 1, flow.state_name())
 	flow.show_title()
 	await _frames(1)
 
@@ -263,7 +263,7 @@ func _run() -> void:
 	await _put_in("gate")
 	_game._screen_key(KEY_SPACE)
 	await _frames(1)
-	_t.eq("Space at the gate goes to class select", flow.state_name(), "class_select")
+	_t.check("Space at the gate launches into stage 1", flow.in_stage() and _game.run.stage == 1, flow.state_name())
 	flow.show_title()
 	await _frames(1)
 

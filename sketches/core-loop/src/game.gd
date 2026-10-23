@@ -291,6 +291,7 @@ func _ready() -> void:
 	radio_deck.setup(self)
 	launch_take = LaunchTake.new()
 	add_child(launch_take)
+	launch_take.finished.connect(_on_take_finished)
 	notes = FieldNotes.new()
 	notes.name = "FieldNotes"
 	add_child(notes)
@@ -694,10 +695,8 @@ func _apply_pause() -> void:
 
 func _on_flow_changed(_state: String) -> void:
 	var playing: bool = flow.in_play()
-	# The release check's line for cold launch to first control (world 1 unit 17: under 20 s on the 4080 export).
-	if playing and not _first_control_said and not test_mode:
-		_first_control_said = true
-		print("SCRAPKEEP_FIRST_CONTROL ms=%d" % Time.get_ticks_msec())
+	if playing and not launch_take.busy():
+		_say_first_control()
 	if keyboard != null:
 		keyboard.enabled = playing
 		keyboard.walk = false
@@ -764,6 +763,8 @@ func launch_from_gate() -> void:
 		return
 	launch_take.live = _take_live()
 	launch_take.play(func():
+		if flow.state_name() != "title":
+			return
 		screens.stop_walk_for_launch()
 		flow.launch_from_title(def), _fire_gate, _dam_drawn)
 
@@ -789,6 +790,22 @@ func _launch_whoosh() -> void:
 # The swipe holds until the run's stage has its ground built (the title builds the dam's first, world.gd).
 func _dam_drawn() -> bool:
 	return not flow.in_play() or ctx.terrain.is_ready(run.stage)
+
+
+# The release check's line for cold launch to first control (world 1 unit 17: under 20 s on the 4080 export): the first
+# frame of play with the launch take's panel gone. Bots and tests never print it.
+func _say_first_control() -> void:
+	if _first_control_said or bot_driven or not flow.in_play():
+		return
+	_first_control_said = true
+	print("SCRAPKEEP_FIRST_CONTROL ms=%d" % Time.get_ticks_msec())
+
+
+# The take is gone: the start-pick card it kept hidden shows, and first control is said.
+func _on_take_finished() -> void:
+	if flow.in_stage():
+		flow.show_start_card()
+	_say_first_control()
 
 
 # Latches the summary against whatever is held right now.

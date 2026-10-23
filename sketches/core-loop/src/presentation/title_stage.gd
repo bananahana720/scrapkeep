@@ -129,7 +129,9 @@ func setup(ctx) -> void:
 
 func show_flow(state: String) -> void:
 	_flow_state = state
-	if state == "title":
+	# Only pilot select's launch take holds the lift; every other state (a run, the summary) puts the camera back, so
+	# pilot select reached again from the summary or a death opens on the deck, not the sky.
+	if state != "class_select":
 		_set_push(0.0)
 	active = state in ["title", "class_select"] and not camp_walk
 	_layer.visible = active

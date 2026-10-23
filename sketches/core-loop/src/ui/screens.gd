@@ -1058,6 +1058,10 @@ func _ending_closes(event: InputEvent) -> bool:
 
 
 func _input(event: InputEvent) -> void:
+	# The launch take (launch_take.gd) owns input until the dam shows: Esc or pad Start must not leave the camp under it.
+	if game.launch_take != null and game.launch_take.busy():
+		get_viewport().set_input_as_handled()
+		return
 	if is_instance_valid(ending_sequence) and ending_sequence.active:
 		ending_sequence.handle(event)
 		get_viewport().set_input_as_handled()

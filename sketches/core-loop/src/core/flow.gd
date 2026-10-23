@@ -318,7 +318,9 @@ func new_run() -> void:
 
 
 func show_start_card() -> void:
-	var interactive: bool = not ctx.root.bot_driven
+	# Under the launch take's panel the card stays hidden; game shows it when the panel has gone.
+	var take = ctx.root.get("launch_take")
+	var interactive: bool = not ctx.root.bot_driven and not (take != null and take.busy())
 	start_card.set_interactive(interactive)
 	start_card.show_picks(ctx.run, ctx.profile)
 	start_card.position = Vector2((get_viewport().get_visible_rect().size.x - start_card.size.x) * 0.5, 160.0)

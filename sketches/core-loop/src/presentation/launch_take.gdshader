@@ -9,13 +9,14 @@ uniform float lines = 1.0;
 uniform vec4 base : source_color = vec4(0.824, 0.773, 0.647, 1.0);
 uniform vec4 streak : source_color = vec4(0.898, 0.627, 0.267, 1.0);
 uniform vec4 ink : source_color = vec4(0.141, 0.165, 0.157, 1.0);
-const float SLANT = 0.08;
+// How far past the screen each edge travels, so a full cover and a full reveal leave no sliver.
+const float OVERSHOOT = 0.08;
 const float EDGE = 0.012;
 
 void fragment() {
 	float d = (UV.x + 1.0 - UV.y) * 0.5;
-	float front = clamp(progress, 0.0, 1.0) * (1.0 + 2.0 * SLANT + EDGE) - SLANT;
-	float tail = clamp(progress - 1.0, 0.0, 1.0) * (1.0 + 2.0 * SLANT + EDGE) - SLANT;
+	float front = clamp(progress, 0.0, 1.0) * (1.0 + 2.0 * OVERSHOOT + EDGE) - OVERSHOOT;
+	float tail = clamp(progress - 1.0, 0.0, 1.0) * (1.0 + 2.0 * OVERSHOOT + EDGE) - OVERSHOOT;
 	float covered = step(d, front) * step(tail, d);
 	float edge = max(step(abs(d - front), EDGE) * step(0.001, front), step(abs(d - tail), EDGE) * step(0.001, tail));
 	vec2 p = vec2((UV.x - 0.5) * aspect, UV.y - 0.5);
