@@ -21,7 +21,8 @@ const RUNS := [{"seed": 1, "pilot": ""}, {"seed": 1, "pilot": "tally"}]
 # because a bot child's profile dies with the child; the child supplies the played-win codex only.
 # Each child plays only one world, then stops at the next world's entrance.
 # The next child resumes that RunStore document with the earned kit and build.
-# Only the final world's run_ended may produce won. This is automated native play.
+# Only the final world's run_ended may produce won, and no world may die: since #355 every death ends
+# the run (no per-world retry). This is automated native play.
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -77,6 +78,10 @@ func _run() -> void:
 				var entrance := RunStore.new(folders[i].path_join("entrance.json")).load()
 				t.check("%s next entrance saved" % _label(i), entrance.get("run_id") == run_ids[i]
 					and int(entrance.get("stage", 0)) == StageDefs.first_of(world + 1))
+				# One run (#355): a death ends the run, and the per-world retry it replaced is retired, so no
+				# entrance carries a spent retry. The bot ends on its first death (bot_driver.gd "died").
+				t.check("%s entrance spends no retry" % _label(i), (entrance.get("retries_spent", {}) as Dictionary).is_empty(),
+					"%s" % [entrance.get("retries_spent")])
 		if t.failures > 0:
 			break
 	for i in RUNS.size():
