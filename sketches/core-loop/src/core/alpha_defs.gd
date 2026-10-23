@@ -97,7 +97,7 @@ const PACKS_FLUME := [
 	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
 	{"id": "shift_crew", "kinds": ["foreman", "plated_brute", "chaser", "chaser"]},
 	{"id": "crossed_wires", "kinds": ["jolt_layer", "jolt_layer", "boom_tender"]},
-	{"id": "weir_strung", "kinds": ["hooker", "plated_brute", "chaser"]},
+	{"id": "weir_strung", "kinds": ["dispatcher", "hooker", "chaser"]},
 	{"id": "flap_line", "kinds": ["ramp_flipper", "ramp_flipper", "lobber"]},
 ]
 # The Spillway's own elite on stages 1 and 2: the tether drags you back into the live mat while
