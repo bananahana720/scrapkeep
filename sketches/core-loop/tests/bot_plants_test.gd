@@ -19,6 +19,9 @@ class FakeGame extends Node:
 
 
 var _t := T.new("bot_plants_test")
+# Every run this file makes: their hooks are dropped at the end, or the closures keep them (and their class
+# resources) alive past exit.
+var _runs: Array = []
 
 
 func _initialize() -> void:
@@ -29,11 +32,16 @@ func _initialize() -> void:
 	_dials()
 	_damage()
 	ChallengeDials.reset()
+	for run in _runs:
+		run.defend_hook = Callable()
+		run.events.free()
+	_runs.clear()
 	quit(_t.verdict())
 
 
 func _parse() -> void:
 	_t.eq("pack_damage parses", BotPlants.parse("pack_damage=4"), {"pack_damage": 4.0})
+	_t.eq("rut parses", BotPlants.parse("rut=1"), {"rut": 1.0})
 	_t.eq("two plants", BotPlants.parse("damage=2,hide_pack_telegraphs=1"), {"damage": 2.0, "hide_pack_telegraphs": 1.0})
 	_t.check("an unknown name is refused", BotPlants.parse("nope=1").has("error"))
 	_t.check("a bad number is refused", BotPlants.parse("damage=x").has("error"))
@@ -68,6 +76,7 @@ func _fake() -> FakeGame:
 func _run_state() -> RunState:
 	var run := RunState.new(GameEvents.new())
 	run.begin(ClassDef.new())
+	_runs.append(run)
 	return run
 
 

@@ -34,7 +34,7 @@ export const INCOMPLETE_SHARE = 0.1;
 // Arms: each is a policy, extra bot flags and the first replicate it draws. `shared` arms serve several gates.
 export const ARMS = {
   orbit: { policy: "orbit", args: [], rep0: 0, gates: ["g1", "g2"], instrument: "orbit" },
-  orbit_pack4: { policy: "orbit", args: ["--plant=pack_damage=4"], rep0: 0, gates: ["g1"], instrument: "orbit" },
+  orbit_rut: { policy: "orbit", args: ["--plant=rut=1"], rep0: 0, gates: ["g1"], instrument: "orbit" },
   orbit_passive: { policy: "orbit", args: ["--plant=packs_passive=1"], rep0: 0, gates: ["g1"], instrument: "orbit" },
   terrain: { policy: "terrain", args: [], rep0: 0, gates: ["g2"], instrument: "terrain" },
   orbit_dmg2: { policy: "orbit", args: ["--plant=damage=2"], rep0: 0, gates: ["g2"], instrument: "orbit" },
@@ -43,7 +43,7 @@ export const ARMS = {
   deaf_hidden: { policy: "skipper", args: ["--band=expert", "--attempt=1", "--bot-no-mix=1", "--plant=hide_pack_telegraphs=1"], rep0: 0, gates: ["g4"], instrument: "deaf" },
 };
 export const GATE_ARMS = {
-  g1: { real: "orbit", positive: "orbit_pack4", negative: "orbit_passive" },
+  g1: { real: "orbit", positive: "orbit_rut", negative: "orbit_passive" },
   g2: { real: ["terrain", "orbit"], positive: ["orbit", "orbit_dmg2"], negative: ["orbit", "orbit_b"] },
   g4: { real: "deaf", positive: "deaf", negative: "deaf_hidden" },
 };
@@ -294,7 +294,7 @@ export function withControls(real, positive, negative, { positiveWant = "PASS", 
 export function evaluateGates(byArm, { auditFree = true, stages = STAGES, seeds = SEEDS } = {}) {
   const arm = (name) => byArm[name] ?? [];
   const opt = { stages, seeds };
-  const g1 = withControls(gate1(arm("orbit"), opt), gate1(arm("orbit_pack4"), opt), gate1(arm("orbit_passive"), opt));
+  const g1 = withControls(gate1(arm("orbit"), opt), gate1(arm("orbit_rut"), opt), gate1(arm("orbit_passive"), opt));
   const g2 = withControls(gate2(arm("terrain"), arm("orbit"), opt), gate2(arm("orbit"), arm("orbit_dmg2"), opt), gate2(arm("orbit"), arm("orbit_b"), opt));
   const deaf = gate4(arm("deaf"), { ...opt, auditFree });
   // The real arm and the positive control are the same runs: today's stage, the Expert default driver.
@@ -325,7 +325,7 @@ export function renderGates(ev, meta = {}) {
     for (const r of g.stages) L.push(`| ${r.stage} | ${cols.map((c) => c[1](r)).join(" | ")} | ${r.status} |`);
     L.push("");
   };
-  for (const [label, g] of [["Gate 1, real (orbit)", ev.gate1.real], ["Gate 1, positive (orbit, pack damage x4)", ev.gate1.positive], ["Gate 1, negative (orbit, packs passive)", ev.gate1.negative]]) {
+  for (const [label, g] of [["Gate 1, real (orbit)", ev.gate1.real], ["Gate 1, positive (orbit, rut plant)", ev.gate1.positive], ["Gate 1, negative (orbit, packs passive)", ev.gate1.negative]]) {
     stageTable(label, g, [["Valid runs", (r) => r.runs], ["Not died", (r) => `${r.notDied} ${r.notDiedOutcomes.join("/")}`], ["Median death after first hit (s)", (r) => f1(r.medianDeathAfterHitS)], ["Void seeds", (r) => r.voidCells]]);
   }
   L.push("## Gate 2", "");

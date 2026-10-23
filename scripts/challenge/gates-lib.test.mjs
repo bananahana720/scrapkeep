@@ -37,9 +37,9 @@ test("three runs of a seed are the same seed, told apart by repeat; the A/A arm 
 test("every run is fresh at --fixed-fps 90 and carries its plant", () => {
   const jobs = planGateJobs({ stages: [1, 4], seeds: [1], runs: 1 });
   const j1 = jobs.find((j) => j.arm === "orbit" && j.stage === 1);
-  const j4 = jobs.find((j) => j.arm === "orbit_pack4" && j.stage === 4);
+  const j4 = jobs.find((j) => j.arm === "orbit_rut" && j.stage === 4);
   assert.ok(!j1.args.some((a) => a.startsWith("--from-stage")));
-  assert.ok(j4.args.includes("--from-stage=4") && j4.args.includes("--until=4") && j4.args.includes("--plant=pack_damage=4"));
+  assert.ok(j4.args.includes("--from-stage=4") && j4.args.includes("--until=4") && j4.args.includes("--plant=rut=1"));
   const argv = gateBotArgs(j4, "/o");
   assert.deepEqual(argv.slice(0, 3), ["--headless", "--fixed-fps", "90"]);
   assert.ok(argv.includes("--policy=orbit") && argv.includes("--table=park"));
@@ -99,7 +99,7 @@ test("gate 1: the median is 120 s at most (120 passes, 121 fails), taken over se
 });
 
 test("gate 1 control expectations: planted x4 packs reads PASS, passive packs reads FAIL", () => {
-  const positive = gate1(arm("orbit_pack4", () => diedAt(25)));
+  const positive = gate1(arm("orbit_rut", () => diedAt(25)));
   const negative = gate1(arm("orbit_passive", () => stalled));
   assert.equal(positive.verdict, "PASS");
   assert.equal(negative.verdict, "FAIL");
@@ -240,7 +240,7 @@ test("a control reading wrong withholds the reading", () => {
 test("evaluateGates runs all three gates with their controls from per-arm runs", () => {
   const runs = [
     ...arm("orbit", () => diedAt(70)),
-    ...arm("orbit_pack4", () => diedAt(20)),
+    ...arm("orbit_rut", () => diedAt(20)),
     ...arm("orbit_passive", () => stalled),
     ...arm("terrain", () => hull(30)),
     ...arm("orbit", () => hull(100)).map((r) => ({ ...r, id: r.id + "~", ...hull(100) })),
@@ -248,7 +248,7 @@ test("evaluateGates runs all three gates with their controls from per-arm runs",
   // the orbit arm needs both death and hull fields: merge
   const orbit = arm("orbit", () => ({ ...diedAt(70), ...hull(100) }));
   const byArm = groupByArm([
-    ...orbit, ...arm("orbit_pack4", () => diedAt(20)), ...arm("orbit_passive", () => stalled),
+    ...orbit, ...arm("orbit_rut", () => diedAt(20)), ...arm("orbit_passive", () => stalled),
     ...arm("terrain", () => hull(30)), ...arm("orbit_dmg2", () => hull(200)), ...arm("orbit_b", (st, sd) => hull(100 + (idx(st, sd) % 2 ? 4 : -4))),
     ...arm("deaf", () => ({ cleared: true })), ...arm("deaf_hidden", () => ({ cleared: false })),
   ]);
@@ -265,7 +265,7 @@ test("evaluateGates runs all three gates with their controls from per-arm runs",
 
 test("every arm in the table is planned, and each gate's arms exist", () => {
   for (const g of Object.values(ARMS)) assert.ok(g.policy && g.gates.length);
-  const names = ["orbit", "orbit_pack4", "orbit_passive", "terrain", "orbit_dmg2", "orbit_b", "deaf", "deaf_hidden"];
+  const names = ["orbit", "orbit_rut", "orbit_passive", "terrain", "orbit_dmg2", "orbit_b", "deaf", "deaf_hidden"];
   assert.deepEqual(Object.keys(ARMS), names);
 });
 

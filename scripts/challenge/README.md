@@ -106,7 +106,7 @@ The default table is now 1,272 jobs (boss 360, Warden 720, park 192: six parks �
 
 | Gate | Real arm | PASS | Positive control (must PASS) | Held-out negative (must FAIL) |
 | --- | --- | --- | --- | --- |
-| 1 circling loses | `orbit`: circles a fixed anchor (the live pack's centroid within 30 m at first contact, never re-anchored) | on every stage all runs end `died` and the median death is within 120 s of the first hit | `orbit` with `--plant=pack_damage=4` | `orbit` with `--plant=packs_passive=1` |
+| 1 circling loses | `orbit`: circles a fixed anchor at cruise (at first contact, the nearest point to the live pack's centroid within 30 m whose 14 ± 3 m band rises under 3 m; never re-anchored) | on every stage all runs end `died` and the median death is within 120 s of the first hit | `orbit` with `--plant=rut=1` (a stand-in rut meter: 5% of max hull a second while the ball has travelled under 36 m net in 10 s; pack damage ×4 never killed the circling arm) | `orbit` with `--plant=packs_passive=1` |
 | 2 terrain beats circling | `terrain` against `orbit`, hull lost per minute alive in the 120 s after first contact | terrain lower in 24 of 30 pairs and the pooled median of terrain / orbit at 0.75 or less | `orbit` against `orbit` with `--plant=damage=2` on arm B: A must be named the winner | `orbit` against a second `orbit` sample (A/A) |
 | 4 sight-only clears | `deaf`: the Expert default driver (`skipper`, `--band=expert`) with `--bot-no-mix=1` | clear rate 85% or more on every stage | the same runs (today's stage) | `--plant=hide_pack_telegraphs=1` |
 
