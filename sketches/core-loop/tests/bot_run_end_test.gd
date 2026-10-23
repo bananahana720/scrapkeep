@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (split by world from RunStore entrances; one child per proof run per world, 170 s wall cap)
+# smoke: bots timeout=1500s (split by world from RunStore entrances; one child per proof run per world, 420 s wall cap. On a 4-core cloud box on 2026-10-23 the world 1 child alone took 209 s wall, and 229 to 247 s on the 2026-10-15 and 10-18 heads, so the 170 s cap and 360 s solo ceiling never fitted there; moved to the bot tier with alpha_posture_bands_test)
 # 2026-10-04 (wave 9): one seed child per world in the gate since 2026-10-04; the nightly runs more seeds.
 # Two seeds ran past the 180 s smoke cap under load (killed at 189.5 s).
 extends SceneTree
@@ -46,7 +46,7 @@ func _run() -> void:
 			if world != StageDefs.worlds().back():
 				args.append("--until=%d" % StageDefs.last_of(world))
 			jobs.append({"script": "res://tools/bot_run.gd", "args": args})
-		var results := ChildRuns.run(jobs, 170.0)
+		var results := ChildRuns.run(jobs, 420.0)
 		for i in RUNS.size():
 			var result: Dictionary = results[i]
 			var errors: Array = ChildRuns.summary(result)["errors"]

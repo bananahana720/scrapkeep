@@ -1,4 +1,4 @@
-# smoke: solo (five bot_run children at once on the default table; a loaded machine slows them)
+# smoke: bots timeout=1200s (five bot_run children at once on the default table; a loaded machine slows them. Each 27000-tick child needs about 300 s wall alone on a 4-core cloud box (2026-10-23, from 0.9 wall s per game second), so the 170 s cap never fitted there; 600 s cap, moved to the bot tier with alpha_posture_bands_test)
 # Completionist seed 2 dropped after two six-child runs exceeded 150 s (170.50 s, 170.48 s).
 extends SceneTree
 
@@ -23,7 +23,7 @@ func _initialize() -> void:
 			"--out=" + folder.path_join("%s-%d" % [run["policy"], run["seed"]]),
 			"--policy=" + run["policy"], "--seeds=%d" % run["seed"],
 			"--table=default", "--ticks=27000"]})
-	var results := ChildRuns.run(jobs, 170.0)
+	var results := ChildRuns.run(jobs, 600.0)
 	for i in RUNS.size():
 		var run: Dictionary = RUNS[i]
 		var label := "%s seed %d" % [run["policy"], run["seed"]]
