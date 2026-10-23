@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const BowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
+const Requisition := preload("res://src/boss/requisition.gd")
 
 # The Slag Bowl: a foundry bowl about 124 m across, built above stage 3's beacon when
 # the fight starts and freed when it ends. A flat inner floor with two slag channels,
@@ -88,6 +89,12 @@ const CHECKERS := [[Palette.CHARCOAL, Color("30302c")], [Palette.SANDSTONE, Pale
 
 
 static var _looks_warm := false
+
+
+# Flow calls this a physics tick at a time while Brindle's world's last stage runs: a step a call
+# of the Requisition's models, the bowl's kits and its checkers, off the boss-entry frame. True once done.
+static func warm_ahead() -> bool:
+	return Requisition.warm() and BowlDress.warm() and warm_looks()
 
 
 static func warm_looks() -> bool:

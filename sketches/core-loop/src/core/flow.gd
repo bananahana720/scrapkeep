@@ -9,6 +9,7 @@ const RunStore := preload("res://src/core/run_store.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const VictoryLap := preload("res://src/world/victory_lap.gd")
+const SlagBowl := preload("res://src/boss/arena.gd")
 
 # The run as one state machine: title, class select, then per stage roam, beacon,
 # gates and launch, and a summary after stage 3. Death is its own state with a
@@ -195,7 +196,7 @@ func _load_module(path: String) -> Node:
 
 # On the world's last stage, reads its boss module's script on a loader thread, then lets the
 # script prepare its arena (a static prepare_arena) before the stage exit makes the module.
-# The scene's own module (Brindle) only runs its warm_arena.
+# The scene's own module (Brindle) only warms its Slag Bowl.
 func _read_boss_ahead() -> void:
 	if ctx.stages.BOSS == "" or not ctx.stages.is_world_last(ctx.run.stage):
 		return
@@ -204,10 +205,9 @@ func _read_boss_ahead() -> void:
 	if not bool(row.get("built", false)) or _row_modules.has(path):
 		return
 	if path == SCENE_BOSS:
-		# The scene's own module is loaded already; only its arena warms ahead.
-		var home := _scene_boss()
-		if home != null and home.has_method("warm_arena"):
-			home.warm_arena()
+		# The scene's own module is loaded already; only its Slag Bowl warms ahead.
+		if _scene_boss() != null:
+			SlagBowl.warm_ahead()
 		return
 	if not _boss_reads.has(path):
 		_boss_reads[path] = null

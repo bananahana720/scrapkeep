@@ -116,12 +116,6 @@ func active() -> bool:
 # Builds the Slag Bowl, puts the ball on it keeping its horizontal speed (raised to
 # cruise if it arrives slower, a gift), and starts phase 1. Calling it again, as the
 # arena retry does, tears the old fight down first.
-# Flow calls this a physics tick at a time while the world's last stage runs: a step a call of
-# the Requisition's models, the bowl's kits and its checkers, off the boss-entry frame. True once done.
-static func warm_arena() -> bool:
-	return Requisition.warm() and Arena.BowlDress.warm() and Arena.warm_looks()
-
-
 func enter_arena(entry_velocity: Vector3) -> void:
 	exit_arena()
 	arena = Arena.new()
