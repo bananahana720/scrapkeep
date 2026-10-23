@@ -242,7 +242,8 @@ func _rise(at: float, seconds: float) -> void:
 	if not (ship is Node3D) or not is_instance_valid(ship) or ship.get("model") == null or not (arena is Node3D):
 		return
 	var model: Node3D = ship.model
-	var tween := create_tween()
+	# Bound to the model, so an arena freed mid-arc (a death, a retry) takes its tween along.
+	var tween := model.create_tween()
 	tween.tween_interval(at)
 	tween.tween_method(func(f: float):
 		if not is_instance_valid(model) or not is_instance_valid(ship) or not is_instance_valid(arena):
@@ -284,7 +285,7 @@ func _eject(at: float, seconds: float) -> void:
 	var out: Vector3 = -view.global_basis.z if view != null else from - arena.global_position
 	out.y = 0.0
 	out = out.normalized() if out.length() > 0.01 else Vector3.FORWARD
-	var tween := create_tween()
+	var tween := prop.create_tween()
 	tween.tween_interval(at)
 	tween.tween_callback(func():
 		if is_instance_valid(prop):

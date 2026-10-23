@@ -120,15 +120,15 @@ const ROWS := {
 		"full": [
 			{"kind": "speed_lines", "at": 0.0, "for": 0.9},
 			{"kind": "sfx_word", "at": 0.1, "for": 1.0, "text": "HONK", "anchor": "ship"},
-			{"kind": "card", "at": 0.5, "for": 2.4, "slot": "left_top",
+			# left_low: Moss's bubble carries Brindle's per-pilot threat line in the column's top
+			# at the same moment (moss_bubble.gd, lore_rows intro), and the card sits under it.
+			{"kind": "card", "at": 0.5, "for": 2.4, "slot": "left_low",
 				"card": ["ADMIRAL BRINDLE", "Badger · Furnace Fleet", "Height", "two paws", "Iron", "twelve hundred tons (rounded up)", "Voice", "never raised"]},
 			{"kind": "sfx_word", "at": 1.4, "for": 0.9, "text": "CHUNK", "anchor": "ship"},
-			{"kind": "caption", "at": 1.6, "for": 1.3, "slot": "left_low",
-				"text": ["The Furnace Fleet. On schedule.", "The Furnace Fleet. Early, in fact.", "The Furnace Fleet. Paperwork in order."]},
 		],
 		"short": [
 			{"kind": "sfx_word", "at": 0.0, "for": 0.9, "text": "HONK", "anchor": "ship"},
-			{"kind": "card", "at": 0.1, "for": 1.3, "slot": "left_top", "card": ["ADMIRAL BRINDLE", "Back. On schedule."]},
+			{"kind": "card", "at": 0.1, "for": 1.3, "slot": "left_low", "card": ["ADMIRAL BRINDLE", "Back. On schedule."]},
 		]},
 	# Phases two and three: one comic panel each, a beat shorter than the transition beat.
 	"brindle_phase_2": {"priority": 3, "on": "phase", "boss": "brindle", "phases": [2],
