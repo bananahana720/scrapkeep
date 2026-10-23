@@ -36,6 +36,18 @@ static func relay_stake(settings: Dictionary) -> int:
 	return k if k >= 0 and k <= 4 else -1
 
 
+# --explore-by=<s> (pacing lab): the stage second the completionist leaves its optional rolling for
+# the Warden, in place of BotDriver.ENGAGE_BY; one activity may then hold it a quarter of that, at least
+# ACTIVITY_SECONDS. 0 when absent, -1 when not a number above ENGAGE_BY.
+static func explore_by(settings: Dictionary) -> float:
+	if not settings.has("explore-by"):
+		return 0.0
+	var text := String(settings["explore-by"])
+	if not text.is_valid_float() or float(text) <= BotDriver.ENGAGE_BY:
+		return -1.0
+	return float(text)
+
+
 func apply_audio(audio: Node) -> void:
 	if _enabled("bot-no-mix"):
 		audio.engine.bot_skip_samples = true
