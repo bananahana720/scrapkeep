@@ -39,7 +39,8 @@ const PENDING_PILOTS := []
 # 2026-10-11 (PC-SABLE): preserve the twelve pre-wave lifetime grants; new grants fit one run.
 # Rows that carry no reward on purpose: a record of a content family (achievement_fill_test F1 skips them).
 const RECORD_ONLY := ["ach_w20_kill_first", "ach_w20_signal_cache", "ach_w20_legend_take", "ach_w20_relay_stake",
-	"ach_w20_maker_set", "ach_w20_overflow", "ach_w19_mat_slip", "ach_w19_flap_ride", "ach_w19_hook_out", "ach_w19_soaked"]
+	"ach_w20_maker_set", "ach_w20_overflow", "ach_w19_mat_slip", "ach_w19_flap_ride", "ach_w19_hook_out", "ach_w19_soaked",
+	"ach_w19_boom_strike"]
 const GRANDFATHERED := ["kills_100", "kills_1000", "ach_d7_ink_stitch", "ach_d7_plum_curl",
 	"ach_d7_forge_chips", "ach_d7_snail_shell", "ach_d7_thimble", "ach_d7_paw", "ach_d7_seashell",
 	"ach_d7_forge_blue", "ach_d7_ember_plum", "ach_d7_dusk_pink"]
@@ -137,6 +138,8 @@ const ROWS := {
 		"where": {"synergy_id": "hook_out"}, "count": 1, "reward": {}},
 	"ach_w19_soaked": {"name": "Soaked", "text": "Hit a soaked Spillway crew with arc.", "on": "synergy_discovered",
 		"where": {"synergy_id": "armour_wet"}, "count": 1, "reward": {}},
+	"ach_w19_boom_strike": {"name": "Strike!", "text": "Burst all five of a boom tender's floats in one sweep.", "on": "synergy_discovered",
+		"where": {"synergy_id": "boom_strike"}, "count": 1, "reward": {}},
 	"ach_w20_kill_first": {"name": "Kill First", "text": "Break three kill-first specials across your runs.", "on": "special_broken",
 		"count": 3, "reward": {}},
 	# radio_take_found carries the found rule's "on"; a Signal cache is source "cache".

@@ -77,6 +77,8 @@ const ROWS := {
 	# registers its jolt_layer_* cues, so the tell is its wind-up sound.
 	"jolt_layer": {"color_role": "hazard", "shape": "ring", "sound": "jolt_layer_tell", "attacks": {"E27": ["warn_seconds"]},
 		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
+	"boom_tender": {"color_role": "hazard", "shape": "bar", "sound": "warn_reel", "attacks": {"E40": ["warn_seconds"]},
+		"idle": {"style": "bob", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "scatter", "parts": 7, "seconds": 0.6}},
 	"ballast_heavy": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E32": ["warn_seconds"]},
 		"idle": {"style": "breathe", "amplitude": 0.02, "beats": 3.0}, "death": {"style": "collapse", "parts": 8, "seconds": 0.7}},
 	"gap_net": {"color_role": "hazard", "shape": "star", "sound": "none", "attacks": {"E33": ["warn_seconds"]},

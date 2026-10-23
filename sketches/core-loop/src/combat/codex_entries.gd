@@ -115,6 +115,18 @@ const ENTRIES := [
 		"text": "Bite another post while a hooker holds you and its line snaps, kicking you along your own.",
 	},
 	{
+		"id": "boom_pop", "name": "Bowl Through",
+		"hint": "A boom pins what is slow. What is fast goes through it.",
+		"clue": "a boom tender's sweep + top speed through its floats",
+		"text": "Cross a boom tender's sweep at top speed and every float you touch bursts and pays scrap; slower, and the boom pins you to its hull.",
+	},
+	{
+		"id": "boom_strike", "name": "Strike!",
+		"hint": "Five floats in a row, like pins.",
+		"clue": "a boom tender's fresh boom + all five floats in one pass",
+		"text": "Burst all five of a boom tender's floats in one sweep. The tug never refloats them.",
+	},
+	{
 		"id": "line_cut", "name": "Under the Cutter",
 		"hint": "A spinning blade leaves room beneath its arc.",
 		"clue": "a cutter crossing your line over a gap + a glide under it, or a fresh bite at once",
@@ -373,6 +385,8 @@ const DETECTORS := {
 	"hook_out": {"kind": "hooker", "script": "res://src/combat/hooker.gd"},
 	"mat_slip": {"kind": "jolt_layer", "script": "res://src/combat/jolt_layer.gd"},
 	"flap_ride": {"kind": "ramp_flipper", "script": "res://src/combat/ramp_flipper.gd"},
+	"boom_pop": {"kind": "boom_tender", "script": "res://src/combat/boom_tender.gd"},
+	"boom_strike": {"kind": "boom_tender", "script": "res://src/combat/boom_tender.gd"},
 	"shield_vault": {"kind": "deflector", "script": "res://src/combat/deflector.gd"},
 	"awaiting_operator": {"kind": "swarm_remnant", "script": "res://src/combat/fleet.gd"},
 	"plate_drop": {"kind": "crew_fitter", "script": "res://src/boss/waking.gd"},

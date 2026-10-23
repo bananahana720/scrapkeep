@@ -88,7 +88,7 @@ const PACKS_DAM := [
 	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
 	{"id": "live_wire", "kinds": ["jolt_layer", "chaser", "chaser"]},
 	{"id": "sluice_line", "kinds": ["hooker", "chaser", "lobber"]},
-	{"id": "flap_run", "kinds": ["ramp_flipper", "chaser", "chaser"]},
+	{"id": "flap_run", "kinds": ["ramp_flipper", "boom_tender", "chaser"]},
 ]
 # The flume: two mats to thread at speed, a tether in front of the brute's slam, two flaps under
 # a lobber's shells, and the Foreman's shift crew.
@@ -96,7 +96,7 @@ const PACKS_FLUME := [
 	{"id": "run_down", "kinds": ["chaser", "chaser", "chaser", "lobber"]},
 	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
 	{"id": "shift_crew", "kinds": ["foreman", "plated_brute", "chaser", "chaser"]},
-	{"id": "crossed_wires", "kinds": ["jolt_layer", "jolt_layer", "chaser"]},
+	{"id": "crossed_wires", "kinds": ["jolt_layer", "jolt_layer", "boom_tender"]},
 	{"id": "weir_strung", "kinds": ["hooker", "plated_brute", "chaser"]},
 	{"id": "flap_line", "kinds": ["ramp_flipper", "ramp_flipper", "lobber"]},
 ]

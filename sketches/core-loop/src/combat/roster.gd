@@ -124,6 +124,10 @@ const BASE_ROWS := {
 	"ramp_flipper": {"faction": FLEET, "role": "controller", "mechanic": "tilt_fling", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump"], "tag": "vault_rise", "tag_next": "tag_ramp_creak", "hold": "", "tests": "steer", "world": 1,
 		"line": "A sluice flap that tilts to fling a slow ball off course; hit it fast, or jump the tilt, and it launches you instead."},
+	# Boom Tender No. 22 (design-v3/SPILLWAY-ROSTER.md): the Spillway's own body, a bowling exam.
+	"boom_tender": {"faction": FLEET, "role": "controller", "mechanic": "boom_pin", "telegraph": T_LANE, "holds": true,
+		"breaks": ["boost", "jump", "hook"], "tag": "", "hold": "", "tests": "speed", "script": "res://src/combat/boom_tender.gd", "world": 1,
+		"line": "Swings a debris boom of five floats across your lane and pins a slow ball to its hull; bowl through fast and the floats pop like pins."},
 	"catch_trap": {"faction": FLEET, "role": "controller", "mechanic": "cup_hold", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["boost", "smash", "hook"], "tag": "ice_form", "tag_next": "tag_cup_snap", "hold": "ice_form", "tests": "speed",
 		"line": "A cup that closes over a ball rolling onto it and holds it dead still; boost or smash out, or break it first."},
@@ -198,6 +202,7 @@ const CHASSIS := {
 	"splitter": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Three welded pods whose seams flare white as one buds off"},
 	"splitter_pod": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Lit seams blinking faster as the fuse burns"},
 	"jolt_layer": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cable spool under a coil that swells before each jolt"},
+	"boom_tender": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Float lamps lighting one by one out along the boom"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.

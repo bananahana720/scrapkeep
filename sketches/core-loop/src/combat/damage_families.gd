@@ -37,7 +37,7 @@ const ARMOUR := {
 # crews work in the spillway and come out soaked (design-v3/SPILLWAY-ROSTER.md); the jolt layer
 # stands on rubber boots, so its own mat never jolts it. Elites and later kinds name theirs
 # through armour_class().
-const ARMOUR_OF := {"drill_crew": "plated", "chaser": "wet", "hooker": "wet", "ramp_flipper": "wet"}
+const ARMOUR_OF := {"drill_crew": "plated", "chaser": "wet", "hooker": "wet", "ramp_flipper": "wet", "boom_tender": "wet"}
 
 
 static func family(kind: String) -> String:

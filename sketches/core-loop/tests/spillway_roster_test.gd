@@ -21,9 +21,11 @@ const T := preload("res://tests/support/t.gd")
 # - wind-ups: each re-admitted kind's row names a sound SfxBank can play;
 # - live: a sluice flap launches a FAST ball along its line and flings a slow one; a hooker's
 #   tether snaps on a harpoon bite on world geometry ("hook"); a jolt layer's mat laid on
-#   standing water spreads WET_SPREAD wider. Each discovers its codex entry.
+#   standing water spreads WET_SPREAD wider; a boom tender pins a cruising ball in its lane, and
+#   a FAST ball bursts its floats instead, all five a strike. Each discovers its codex entry.
 
-const SPILLWAY := ["jolt_layer", "hooker", "ramp_flipper"]
+const SPILLWAY := ["jolt_layer", "hooker", "ramp_flipper", "boom_tender"]
+const NEAR := Vector3(5.0, 0.0, 2.0)
 const OFFSET := Vector3(9.0, 0.0, 3.0)
 const LIMIT := 6.0
 
@@ -84,11 +86,11 @@ func _tables() -> void:
 			if not is_finite(DirectorCards.cost(pack["kinds"])):
 				outside.append([row["stage"], pack["id"], "cost"])
 	_t.eq("every re-admitted kind is on both Spillway stages and nowhere else", [stages, outside],
-		[{"jolt_layer": 2, "hooker": 2, "ramp_flipper": 2}, []])
+		[{"jolt_layer": 2, "hooker": 2, "ramp_flipper": 2, "boom_tender": 2}, []])
 	var wired := []
 	for kind in SPILLWAY:
 		wired.append([Roster.built(kind), int(Roster.row(kind).get("world", 0)), Director.KIND_NAMES.has(kind), DirectorCards.CARDS.has(kind)])
-	_t.eq("each is a built world 1 kind with a director card", wired, [[true, 1, true, true], [true, 1, true, true], [true, 1, true, true]])
+	_t.eq("each is a built world 1 kind with a director card", wired, [[true, 1, true, true], [true, 1, true, true], [true, 1, true, true], [true, 1, true, true]])
 	_t.check("the hooker breaks on a hook", "hook" in Roster.row("hooker")["breaks"], str(Roster.row("hooker")["breaks"]))
 
 
@@ -97,9 +99,9 @@ func _soaked() -> void:
 		[DamageFamilies.mult("wet", "arc", ""), DamageFamilies.mult("wet", "ram", ""), DamageFamilies.mult("wet", "frost", ""),
 			DamageFamilies.mult("wet", "ram", DamageFamilies.ABILITY)], [1.5, 1.0, 1.0, 1.0])
 	var kinds := {}
-	for kind in ["chaser", "hooker", "ramp_flipper", "jolt_layer", "lobber"]:
+	for kind in ["chaser", "hooker", "ramp_flipper", "boom_tender", "jolt_layer", "lobber"]:
 		kinds[kind] = String(DamageFamilies.ARMOUR_OF.get(kind, ""))
-	_t.eq("the soaked crews", kinds, {"chaser": "wet", "hooker": "wet", "ramp_flipper": "wet", "jolt_layer": "", "lobber": ""})
+	_t.eq("the soaked crews", kinds, {"chaser": "wet", "hooker": "wet", "ramp_flipper": "wet", "boom_tender": "wet", "jolt_layer": "", "lobber": ""})
 
 
 func _windups() -> void:
@@ -109,7 +111,8 @@ func _windups() -> void:
 		var playable := id != "none" and (SfxBank.samples(id).size() > 0 or SfxBank.rendered(id) != null)
 		sounds[kind] = [id, playable]
 	_t.eq("each wind-up names a playable sound", sounds,
-		{"jolt_layer": ["jolt_layer_tell", true], "hooker": ["warn_tether", true], "ramp_flipper": ["warn_flap", true]})
+		{"jolt_layer": ["jolt_layer_tell", true], "hooker": ["warn_tether", true], "ramp_flipper": ["warn_flap", true],
+			"boom_tender": ["warn_reel", true]})
 
 
 func _physics_process(delta: float) -> bool:
@@ -124,6 +127,7 @@ func _physics_process(delta: float) -> bool:
 		if _game.player.state.on_floor() or _clock > LIMIT:
 			_flaps()
 			_wet_mat()
+			_boom()
 			_ball_at = _game.player.ball_position()
 			_hooker = _spawn("hooker")
 			_clock = 0.0
@@ -149,9 +153,9 @@ func _setup() -> void:
 	_game.player.reset_to(_ball_at)
 
 
-func _spawn(kind: String) -> Node3D:
+func _spawn(kind: String, offset := OFFSET) -> Node3D:
 	var ctx = _game.ctx
-	var at: Vector3 = _ball_at + OFFSET
+	var at: Vector3 = _ball_at + offset
 	var unit: Node3D = ctx.spawner.spawn_enemy(kind, ctx.terrain.drop_point(at.x, at.z, 1.8))
 	unit._rest = 0.3
 	return unit
@@ -196,6 +200,40 @@ func _wet_mat() -> void:
 	var wet_radius: float = wet.field.radius()
 	wet.queue_free()
 	_t.eq("a mat laid on water spreads half as wide again", [dry_radius, wet_radius], [6.0, 6.0 * wet.WET_SPREAD])
+
+
+# The boom tender's live tick, called directly with its lane committed on the grounded ball.
+func _boom_live(tier: int) -> Node3D:
+	var player = _game.player
+	var unit := _spawn("boom_tender", NEAR)
+	_fleet.holds.clear()
+	unit.target = player
+	unit._warn((player.ball_position() - unit.global_position))
+	player.state.tier = tier
+	unit.phase = unit.Phase.LIVE
+	unit._t = 0.0
+	unit._live(1.0 / 60.0)
+	return unit
+
+
+func _boom() -> void:
+	var slow := _boom_live(SpeedTier.CRUISE)
+	_t.eq("a cruising ball in the lane is pinned", [slow.pinned, slow.pops, _fleet.holds.held(slow)], [1, 0, true])
+	_fleet.holds.clear()
+	slow.queue_free()
+	var fast := _boom_live(SpeedTier.FAST)
+	_t.check("a FAST ball bursts the floats it touches and is never pinned",
+		fast.pops >= 1 and fast.pinned == 0 and not _fleet.holds.held(fast), "pops %d pinned %d" % [fast.pops, fast.pinned])
+	_t.check("bursting a float discovers its codex entry", _combat.discovered.has("boom_pop"), str(_combat.discovered.keys()))
+	fast.queue_free()
+	var bowl := _boom_live(SpeedTier.FAST)
+	bowl.popped = [false, false, false, false, false]
+	bowl._pops_live = 0
+	for i in bowl.FLOAT_OUT.size():
+		bowl._bowl_through(bowl.float_position(i))
+	_t.eq("five floats in one pass is a strike", [bowl.popped, bowl.strikes], [[true, true, true, true, true], 1])
+	_t.check("the strike discovers its codex entry", _combat.discovered.has("boom_strike"), str(_combat.discovered.keys()))
+	bowl.queue_free()
 
 
 func _hook_out() -> bool:

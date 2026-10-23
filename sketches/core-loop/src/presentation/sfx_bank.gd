@@ -95,7 +95,7 @@ const TRIM_DB := {
 	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0,
 	"warn_burrow": -7.0, "warn_bore": -7.0, "warn_lure": -7.0,
 	"warn_cut": -7.0, "warn_winch": -7.0, "warn_dive": -7.0,
-	"warn_tether": -7.0, "warn_flap": -7.0,
+	"warn_tether": -7.0, "warn_flap": -7.0, "warn_reel": -7.0,
 	"breach_crack": -4.0,
 	# v2 W5: the leitmotifs, the crowd-control holds, the ancients and Moss's bench.
 	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0, "tarn_latch_tear": -3.0, "tally_balance_due": -3.0, "cannon_recall": -3.0,
@@ -934,6 +934,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _warn_tether()
 		"warn_flap":
 			return _warn_flap()
+		"warn_reel":
+			return _warn_reel()
 		"breach_crack":
 			return _breach_crack()
 		"sable_arpeggio":
@@ -1760,6 +1762,16 @@ static func _warn_flap() -> PackedFloat32Array:
 	return _mix([[_tone(0.42, _hz(51), _hz(56), "saw_dark", 2.5), 0, 0.7],
 		[_fm(0.42, _hz(63), 2.1, 1.5, 3.0, 5.0), 0, 0.35],
 		[_noise(0.4, 600.0, 1600.0, 3.0, 0.12), Synth.seconds(0.05), 0.6]])
+
+
+# Reel: the boom tender's reel ratcheting five clicks up, one per float lamp, over a low
+# tug-engine chug, and a small brass lamp ping on the last.
+static func _warn_reel() -> PackedFloat32Array:
+	var parts := [[_tone(0.7, _hz(39), _hz(41), "saw_dark", 3.0), 0, 0.5]]
+	for i in 5:
+		parts.append([_noise(0.025, 1800.0 + 350.0 * i, 900.0, 90.0), Synth.seconds(0.11 * i), 0.55 + 0.05 * i])
+	parts.append([_fm(0.3, _hz(70), 2.0, 1.2, 4.0, 6.0), Synth.seconds(0.5), 0.45])
+	return _mix(parts)
 
 
 # --- The leitmotifs (SOUND-STORY.md section 2) ------------------------------------------
