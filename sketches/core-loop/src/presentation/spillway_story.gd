@@ -69,7 +69,10 @@ func _on_warden_engaged(stage: int) -> void:
 	if _revealed or not _in_world_one(stage) or ctx.flow == null:
 		return
 	var warden = ctx.flow.warden
-	if not is_instance_valid(warden) or String(warden.get("variant")) != "meltdown":
+	if not is_instance_valid(warden):
+		return
+	var variant = warden.get("variant")
+	if not variant is String or variant != "meltdown":
 		return
 	_revealed = true
 	player.play("flume_warden_reveal", -1, {"warden": warden})

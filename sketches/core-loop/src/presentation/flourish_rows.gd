@@ -79,7 +79,7 @@ const ROWS := {
 	"bowl_handoff": {"priority": 1,
 		"full": [
 			{"kind": "stamp", "at": 0.0, "for": 1.6, "text": "GATES OPEN", "colour": "ARC"},
-			{"kind": "caption", "at": 0.4, "for": 4.2, "slot": "left_top", "text": "Next stop: the Slag Bowl. Noon."},
+			{"kind": "caption", "at": 0.4, "for": 2.0, "slot": "left_low", "text": "Next stop: the Slag Bowl. Noon."},
 			{"kind": "sfx_word", "at": 2.0, "for": 1.4, "text": "HONK", "at_share": Vector2(0.70, 0.32)},
 			{"kind": "caption", "at": 2.4, "for": 2.2, "slot": "left_low",
 				"text": ["Brindle is on the clock. He rounded it up.", "Somewhere, a badger clears his throat.", "The Fleet is on schedule. Early, in fact."]},
@@ -91,9 +91,9 @@ const ROWS := {
 	# After Brindle's rout (boss_defeated in world 1); waits behind the rout's own row.
 	"spillway_clear": {"priority": 0,
 		"full": [
-			{"kind": "stamp", "at": 0.0, "for": 2.6, "text": "SHIFT COMPLETE", "colour": "HAZARD"},
-			{"kind": "card", "at": 0.6, "for": 4.2, "slot": "left_top",
+			{"kind": "card", "at": 0.0, "for": 4.2, "slot": "left_top",
 				"card": ["SPILLWAY WORKS", "World one · shift log", "Pumps", "running", "Admiral", "routed (politely)", "Overtime", "logged, not paid"]},
+			{"kind": "stamp", "at": 0.4, "for": 2.4, "text": "SHIFT COMPLETE", "colour": "HAZARD"},
 			{"kind": "caption", "at": 2.4, "for": 3.0, "slot": "left_low", "text": [
 				"Shift log: seals checked. Admiral routed. Kettle still warm.",
 				"Shift log: dam held. Flume drained. One badger, filed under weather.",
