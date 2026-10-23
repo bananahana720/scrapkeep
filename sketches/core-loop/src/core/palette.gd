@@ -275,37 +275,79 @@ static func unshaded(color: Color) -> StandardMaterial3D:
 
 
 static var _sky_texture: ImageTexture
+static var _sky_task := -1
+static var _sky_out := {}
+static var _sky_waiting: Array[PanoramaSkyMaterial] = []
 
+# The painted panorama: the ending's sky, and the sky every stage shows until its look sets its own.
+# Painting it takes 0.4 to 0.5 s of GDScript (cloud, exported build), so the boot (terrain.gd
+# _build_sky) asks for it with paint_later: the material comes back bare and the worker's image
+# fills it on the main thread when done. workshop_sky waits for a paint already running.
 static func workshop_sky() -> PanoramaSkyMaterial:
 	if _sky_texture == null:
-		var image := Image.create_empty(1024, 512, false, Image.FORMAT_RGB8)
-		var noise := FastNoiseLite.new()
-		noise.seed = 280928
-		noise.frequency = 1.0
-		noise.fractal_octaves = 3
-		for y in 512:
-			var elevation := (0.5 - float(y) / 511.0) * PI
-			for x in 1024:
-				var angle := float(x) / 1024.0 * TAU
-				var direction := Vector3(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation))
-				var color := Color("e6c898").lerp(Color("4a78a8"), clampf(elevation * 1.6, 0.0, 1.0))
-				var ridge := 0.035 + 0.065 * noise.get_noise_2d(cos(angle) * 4.0, sin(angle) * 4.0)
-				var far_ridge := ridge + 0.045 + 0.035 * noise.get_noise_2d(cos(angle) * 11.0, sin(angle) * 11.0)
-				if elevation < far_ridge:
-					color = Color("93aecb")
-				if elevation < ridge:
-					color = Color("7d9dc0")
-				if elevation > 0.12:
-					var cloud := noise.get_noise_3d(direction.x * 7.0, direction.y * 16.0, direction.z * 7.0)
-					var coverage := smoothstep(0.22, 0.5, cloud) * smoothstep(0.14, 0.34, elevation)
-					color = color.lerp(Color("ebe1cb"), coverage * 0.8)
-				image.set_pixel(x, y, color)
-		image.generate_mipmaps()
-		_sky_texture = ImageTexture.create_from_image(image)
+		if _sky_task >= 0:
+			WorkerThreadPool.wait_for_task_completion(_sky_task)
+			_sky_task = -1
+			_sky_texture = ImageTexture.create_from_image(_sky_out["image"])
+		else:
+			_sky_texture = ImageTexture.create_from_image(_paint_workshop_sky())
+	return _sky_material(_sky_texture)
+
+
+static func workshop_sky_later() -> PanoramaSkyMaterial:
+	if _sky_texture != null:
+		return workshop_sky()
+	var material := _sky_material(null)
+	_sky_waiting.append(material)
+	if _sky_task < 0:
+		var out := {}
+		_sky_out = out
+		_sky_task = WorkerThreadPool.add_task(func():
+			out["image"] = _paint_workshop_sky()
+			_fill_waiting_skies.call_deferred(), false, "workshop sky")
+	return material
+
+
+static func _fill_waiting_skies() -> void:
+	var texture := workshop_sky().panorama
+	for material in _sky_waiting:
+		if material.panorama == null:
+			material.panorama = texture
+	_sky_waiting.clear()
+
+
+static func _sky_material(texture: Texture2D) -> PanoramaSkyMaterial:
 	var material := PanoramaSkyMaterial.new()
-	material.panorama = _sky_texture
+	material.panorama = texture
 	material.energy_multiplier = 1.0
 	return material
+
+
+static func _paint_workshop_sky() -> Image:
+	var image := Image.create_empty(1024, 512, false, Image.FORMAT_RGB8)
+	var noise := FastNoiseLite.new()
+	noise.seed = 280928
+	noise.frequency = 1.0
+	noise.fractal_octaves = 3
+	for y in 512:
+		var elevation := (0.5 - float(y) / 511.0) * PI
+		for x in 1024:
+			var angle := float(x) / 1024.0 * TAU
+			var direction := Vector3(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation))
+			var color := Color("e6c898").lerp(Color("4a78a8"), clampf(elevation * 1.6, 0.0, 1.0))
+			var ridge := 0.035 + 0.065 * noise.get_noise_2d(cos(angle) * 4.0, sin(angle) * 4.0)
+			var far_ridge := ridge + 0.045 + 0.035 * noise.get_noise_2d(cos(angle) * 11.0, sin(angle) * 11.0)
+			if elevation < far_ridge:
+				color = Color("93aecb")
+			if elevation < ridge:
+				color = Color("7d9dc0")
+			if elevation > 0.12:
+				var cloud := noise.get_noise_3d(direction.x * 7.0, direction.y * 16.0, direction.z * 7.0)
+				var coverage := smoothstep(0.22, 0.5, cloud) * smoothstep(0.14, 0.34, elevation)
+				color = color.lerp(Color("ebe1cb"), coverage * 0.8)
+			image.set_pixel(x, y, color)
+	image.generate_mipmaps()
+	return image
 
 
 const HDRI_SKY := "res://assets/sky/kloofendal_48d_partly_cloudy_puresky_2k.hdr"

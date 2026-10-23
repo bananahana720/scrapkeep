@@ -14,6 +14,7 @@ const HighdraftCrown := preload("res://src/world/map_highdraft_crown.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Scatter := preload("res://src/world/scatter.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
+const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const PerchPoints := preload("res://src/world/perch_points.gd")
@@ -108,9 +109,12 @@ var _threaded_first := false
 
 
 func _init(table = StageDefs) -> void:
+	var parks := _read_parks_together(table)
 	for row in table.DEFS:
 		var id := String(row["map"])
-		maps.append(map_named(id, int(row["stage"])))
+		# A park id that repeats in the table gets its own map past the first, as before.
+		maps.append(parks.get(id) if parks.has(id) else map_named(id, int(row["stage"])))
+		parks.erase(id)
 		_is_park.append(maps[-1] is ParkMap)
 		_worlds.append(int(row.get("world", 1)))
 		_roots.append(null)
@@ -119,6 +123,36 @@ func _init(table = StageDefs) -> void:
 		_holes.append(PackedByteArray())
 		_under.append(PackedFloat32Array())
 		_threaded.append(false)
+
+
+# MENU-READY: the park table's six park files are read and checked at setup, 105 to 185 ms one after
+# another on the cloud. Read them on worker threads at once instead; a park that fails its schema is
+# left to map_named, which reports it as before.
+static func _read_parks_together(table) -> Dictionary:
+	var paths := {}
+	for row in table.DEFS:
+		var id := String(row["map"])
+		if not id.begins_with("park_") or paths.has(id):
+			continue
+		for pattern in PARK_FILES:
+			if FileAccess.file_exists(pattern % id):
+				paths[id] = pattern % id
+				break
+	if paths.size() < 2:
+		return {}
+	# Read once on first need and marked read before they are filled: fill them here, so no worker sees one half built.
+	ParkSchema._registry()
+	ParkRecipes.origin("")
+	var ids: Array = paths.keys()
+	var read := []
+	read.resize(ids.size())
+	var task := WorkerThreadPool.add_group_task(func(n: int): read[n] = ParkMap.new(paths[ids[n]]), ids.size(), -1, true, "park files")
+	WorkerThreadPool.wait_for_group_task_completion(task)
+	var parks := {}
+	for n in ids.size():
+		if read[n] != null and read[n].ok:
+			parks[ids[n]] = read[n]
+	return parks
 
 
 static func map_named(id: String, stage_number: int) -> RefCounted:
@@ -807,7 +841,7 @@ static func _relief_mesh(row: Dictionary, heights: PackedFloat32Array, coarse: P
 
 
 func _build_sky(parent: Node3D) -> void:
-	var sky_material := Palette.workshop_sky()
+	var sky_material := Palette.workshop_sky_later()
 	var sky := Sky.new()
 	sky.sky_material = sky_material
 	environment = Environment.new()
