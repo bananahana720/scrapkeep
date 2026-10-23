@@ -2,6 +2,7 @@
 extends SceneTree
 
 const Lab := preload("res://tools/matchup_lab.gd")
+const PocketArena := preload("res://tools/pocket_arena.gd")
 
 # tools/matchup_lab.gd: the pure table, hard-cell and gate logic on synthetic tables (with a
 # planted control), then a small real table run through the tool itself.
@@ -15,6 +16,7 @@ var _failures := 0
 
 func _initialize() -> void:
 	_synthetic()
+	_pocket_pure()
 	_lookup()
 	_real_run()
 	_damage_control()
@@ -101,6 +103,118 @@ func _synthetic() -> void:
 	for line in heat.slice(2):
 		star_count += line.count("*")
 	_check("the heatmap stars exactly the hard cells", star_count == (every["hard"] as Array).size())
+
+
+# ---- Pocket sweep: pure cell and verdict logic on synthetic rows -----------------------------------------------
+
+func _pocket_row(shape: String, enemy: String, outcome: String, hull_lost: float, max_hull := 100.0) -> Dictionary:
+	return {"kind": Lab.pocket_key(shape, enemy), "pocket": shape, "enemy": enemy, "outcome": outcome, "hull_lost": hull_lost,
+			"real_max_hull": max_hull, "ttk_s": 10.0 if outcome == "killed" else -1.0}
+
+
+func _pocket_rows(shape: String, enemy: String, wins: int, losses: int) -> Array:
+	var rows := []
+	for i in wins:
+		rows.append(_pocket_row(shape, enemy, "killed", 30.0))
+	for i in losses:
+		rows.append(_pocket_row(shape, enemy, "capped", 30.0))
+	return rows
+
+
+func _pocket_pure() -> void:
+	# Winner: killed with the hull under the class's real max hull; every other end is the enemy's; no result is void.
+	_check("pocket winner: a kill under the real max hull is the pilot's", Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "killed", 99.9)) == "pilot")
+	_check("pocket winner: a kill with hull lost at the real max hull is the enemy's", Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "killed", 100.0)) == "enemy")
+	_check("pocket winner: hull_out, capped and died are the enemy's", Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "hull_out", 100.0)) == "enemy"
+		and Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "capped", 0.0)) == "enemy" and Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "died", 100.0)) == "enemy")
+	_check("pocket winner: the class's own max hull decides (the same loss wins for a 130 hull and loses for a 115)", Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "killed", 120.0, 130.0)) == "pilot"
+		and Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "killed", 120.0, 115.0)) == "enemy")
+	_check("pocket winner: no_result, a wall timeout, a stage change and a missing real max hull are void", Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "no_result", 0.0)) == "void"
+		and Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "wall_timeout", 0.0)) == "void" and Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "stage_changed", 0.0)) == "void"
+		and Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "killed", 0.0, -1.0)) == "void")
+	# Cell: win rate over runs that measured something; 0% and 100% are flagged, anything between is not.
+	var all_win := Lab.pocket_cell(_pocket_rows("half_pipe", "chaser", 15, 0))
+	var all_lose := Lab.pocket_cell(_pocket_rows("half_pipe", "chaser", 0, 15))
+	var mid := Lab.pocket_cell(_pocket_rows("half_pipe", "chaser", 7, 8))
+	var near_win := Lab.pocket_cell(_pocket_rows("half_pipe", "chaser", 14, 1))
+	var near_lose := Lab.pocket_cell(_pocket_rows("half_pipe", "chaser", 1, 14))
+	_check("pocket cell: 15 of 15 is 100%, flagged high", is_equal_approx(all_win["win_rate"], 1.0) and all_win["n"] == 15 and all_win["flag"] and all_win["flag_kind"] == "high")
+	_check("pocket cell: 0 of 15 is 0%, flagged low", is_equal_approx(all_lose["win_rate"], 0.0) and all_lose["n"] == 15 and all_lose["flag"] and all_lose["flag_kind"] == "low")
+	_check("pocket cell: 7 of 15 is not flagged", mid["n"] == 15 and mid["wins"] == 7 and not mid["flag"] and mid["flag_kind"] == "")
+	_check("pocket cell: 14 of 15 and 1 of 15 are not flagged (only the extremes retune)", not near_win["flag"] and not near_lose["flag"])
+	var with_void := _pocket_rows("half_pipe", "chaser", 5, 0)
+	with_void.append(_pocket_row("half_pipe", "chaser", "no_result", 0.0))
+	var voided := Lab.pocket_cell(with_void)
+	_check("pocket cell: a void run is counted apart and not in n (5 of 5 wins, void 1)", voided["n"] == 5 and voided["void"] == 1 and voided["runs"] == 6 and voided["flag_kind"] == "high")
+	var empty := Lab.pocket_cell([_pocket_row("half_pipe", "chaser", "no_result", 0.0)])
+	_check("pocket cell: all-void has no rate and no flag", empty["n"] == 0 and not empty["flag"] and empty["win_rate"] < 0.0)
+	# Table: 5 shapes by 4 columns, hop an explicit n/a, a flyer column carrying its two sub-rows.
+	var rows := []
+	for shape in PocketArena.SHAPES:
+		rows.append_array(_pocket_rows(shape, "chaser", 8, 7))
+		rows.append_array(_pocket_rows(shape, "kite_drone", 8, 7))
+		rows.append_array(_pocket_rows(shape, "winch_drone", 8, 7))
+		rows.append_array(_pocket_rows(shape, "burrower", 8, 7))
+	rows = rows.filter(func(r): return not (r["pocket"] == "crevice" and r["enemy"] == "winch_drone"))
+	rows.append_array(_pocket_rows("crevice", "winch_drone", 0, 15))
+	var table := Lab.pocket_table(rows, PocketArena.SHAPES)
+	_check("pocket table: five shapes by four columns", table["shapes"].size() == 5 and table["columns"] == ["ground", "flyer", "burrower", "hop"] and table["cells"]["rail_grove"].size() == 4)
+	_check("pocket table: hop is an explicit n/a cell with a reason and no runs", table["cells"]["half_pipe"]["hop"]["na"] and String(table["cells"]["half_pipe"]["hop"]["reason"]) != "" and table["cells"]["half_pipe"]["hop"]["n"] == 0)
+	_check("pocket table: a flyer column flags when one sub-row is at 0%", table["cells"]["crevice"]["flyer"]["flag"] and table["cells"]["crevice"]["flyer"]["flag_kind"] == "low"
+		and table["cells"]["crevice"]["flyer"]["flagged_rows"] == ["winch_drone low"] and not table["cells"]["half_pipe"]["flyer"]["flag"])
+	_check("pocket table: the flyer column keeps both sub-rows at n=15 each", table["cells"]["half_pipe"]["flyer"]["rows"].size() == 2 and table["cells"]["half_pipe"]["flyer"]["rows"]["kite_drone"]["n"] == 15
+		and table["cells"]["half_pipe"]["flyer"]["n"] == 30)
+	var md := "\n".join(Lab.pocket_markdown(table))
+	_check("pocket markdown: a header with the four columns, five shape rows, n/a for hop and the flag text", md.contains("| pocket | ground | flyer | burrower | hop |") and md.contains("| half_pipe |")
+		and md.contains("n/a") and md.contains("FLAG retune (0%)") and md.contains("(n=15)"))
+	_check("pocket table survives JSON", JSON.parse_string(JSON.stringify(table)) is Dictionary)
+	# Jobs: shapes x (1 + 2 + 1) rows x 5 seeds x 3 runs, hop queues nothing; pilots rotate by seed and step by run.
+	var roster: Array = ["p0", "p1", "p2", "p3", "p4", "p5"]
+	var jobs := Lab.pocket_jobs(PocketArena.SHAPES, ["ground", "flyer", "burrower", "hop"], [1, 2, 3, 4, 5], 3, roster)
+	_check("pocket jobs: 5 shapes x 4 enemy rows x 5 seeds x 3 runs = 300", jobs.size() == 300)
+	_check("pocket jobs: hop alone queues nothing", Lab.pocket_jobs(["half_pipe"], ["hop"], [1, 2, 3, 4, 5], 3, roster).is_empty())
+	var seed1 := jobs.filter(func(j): return j["kind"] == Lab.pocket_key("half_pipe", "chaser") and j["base_seed"] == 1)
+	_check("pocket jobs: the first run of seed 1 is the plain seed on the rotation's class, the repeats step pilot and rng seed", seed1.size() == 3 and seed1[0]["seed"] == 1 and seed1[0]["pilot"] == "p1"
+		and seed1[1]["pilot"] == "p2" and seed1[2]["pilot"] == "p3" and seed1[0]["seed"] != seed1[1]["seed"] and seed1[1]["seed"] != seed1[2]["seed"])
+	var keys := {}
+	for j in jobs:
+		keys["%s|%d|%d" % [j["kind"], j["base_seed"], j["run"]]] = true
+	_check("pocket jobs: every job is a distinct (row, seed, run)", keys.size() == jobs.size())
+	_check("pocket key round trips and rejects strangers", Lab.pocket_parts(Lab.pocket_key("crevice", "kite_drone")) == {"shape": "crevice", "enemy": "kite_drone"}
+		and Lab.pocket_parts("pocket:nowhere/chaser").is_empty() and Lab.pocket_parts("pack:run_down").is_empty() and Lab.pocket_parts("chaser").is_empty())
+	_check("pocket columns: ground is the chaser, flyer the two drones, burrower the burrower", Lab.pocket_column_of("chaser") == "ground" and Lab.pocket_column_of("winch_drone") == "flyer"
+		and Lab.pocket_column_of("burrower") == "burrower" and Lab.pocket_column_of("lobber") == "")
+	# Plants (the controls): absent is the identity; pack_damage drives a cell to 0%, packs_passive to 100%.
+	var none := Lab.pocket_plant("")
+	var damage := Lab.pocket_plant("pack_damage=4")
+	var passive := Lab.pocket_plant("packs_passive=1")
+	_check("plant: absent is the identity (no dial, no expectation)", none["ok"] and none["dials"].is_empty() and none["expect"] == "")
+	_check("plant: pack_damage=4 multiplies the mobs damage dial and expects 0%", damage["ok"] and damage["dials"] == {Lab.PLANT_DIAL: 4.0} and damage["expect"] == "low")
+	_check("plant: packs_passive=1 zeroes the mobs damage dial and expects 100%", passive["ok"] and passive["dials"] == {Lab.PLANT_DIAL: 0.0} and passive["expect"] == "high")
+	_check("plant: bad specs are refused", not Lab.pocket_plant("pack_damage=1")["ok"] and not Lab.pocket_plant("packs_passive=2")["ok"] and not Lab.pocket_plant("nothing=1")["ok"] and not Lab.pocket_plant("pack_damage")["ok"])
+	# Control expectation, on synthetic planted cells: a 4x damage cell has the hull run out in every run, a passive cell
+	# kills in every run; an unplanted mixed cell reads neither, and each plant fails the other's expectation.
+	var planted_low := []
+	var planted_high := []
+	for i in 15:
+		planted_low.append(_pocket_row("hazard_field", "chaser", "hull_out", 100.0))
+		planted_high.append(_pocket_row("hazard_field", "chaser", "killed", 0.0))
+	var low_cell := Lab.pocket_cell(planted_low)
+	var high_cell := Lab.pocket_cell(planted_high)
+	_check("control: a pack_damage=4 cell with the hull out in all 15 runs reads 0% and the control passes", low_cell["flag_kind"] == "low" and Lab.pocket_control_ok(damage, low_cell))
+	_check("control: a packs_passive=1 cell with every pack killed reads 100% and the control passes", high_cell["flag_kind"] == "high" and Lab.pocket_control_ok(passive, high_cell))
+	_check("control: planted negative, each plant fails the other's expectation and an unplanted mixed cell fails both", not Lab.pocket_control_ok(damage, high_cell)
+		and not Lab.pocket_control_ok(passive, low_cell) and not Lab.pocket_control_ok(damage, mid) and not Lab.pocket_control_ok(passive, mid) and not Lab.pocket_control_ok(none, low_cell))
+	# Child args: a pocket child carries its run index, base seed and plant; every other child's args are untouched.
+	var pocket_args := Lab.child_args(seed1[1], 40.0, {"plant": "pack_damage=4"}, "park", "/h", "/p")
+	_check("child args: a pocket child gets --base-seed, --run and --plant", "--base-seed=1" in pocket_args and "--run=1" in pocket_args and "--plant=pack_damage=4" in pocket_args
+		and "--run-seed=%d" % seed1[1]["seed"] in pocket_args)
+	var kind_args := Lab.child_args({"pilot": "tarn", "kind": "lobber", "seed": 1, "give": "", "n": 0}, 40.0, {"plant": "pack_damage=4"}, "park", "/h", "/p")
+	var kind_flags := false
+	for a in kind_args:
+		kind_flags = kind_flags or a.begins_with("--base-seed") or a.begins_with("--run=") or a.begins_with("--plant")
+	_check("child args: a kind child never gets the pocket flags", not kind_flags)
+
 
 
 func _lookup() -> void:
