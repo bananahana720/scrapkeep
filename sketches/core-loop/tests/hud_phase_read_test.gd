@@ -21,10 +21,13 @@ const T := preload("res://tests/support/t.gd")
 #       jump_to_phase with a crack, and at 1280x720 and 1920x1080 it sits top-centre inside
 #       the top band, the diamonds clear of the objective plate under it;
 #   R1  the pause build read with all twelve panels held (a long list) sits on screen, left of
-#       the pause column and clear of it, at 1280x720 and 1920x1080, and so does the empty read.
+#       the pause column and clear of it, at 1280x720 and 1920x1080, and so does the empty read;
+#       on a short screen the turning view shrinks (to VIEW_MIN at least) and the read stays on screen.
 # The plate's clock is stepped by hand, never read from the wall.
 
 const SIZES := [Vector2(1280.0, 720.0), Vector2(1920.0, 1080.0)]
+# A short screen the twelve-panel list cannot fit at full view height, so the view shrinks.
+const SHORT := Vector2(1280.0, 560.0)
 
 var _t := T.new("hud_phase_read_test")
 var _game
@@ -100,6 +103,12 @@ func _unit_checks() -> void:
 	plate.advance(0.016)
 	_t.eq("P3 turn to two: spent, live, ahead", plate.phase_pips(), ["spent", "live", "ahead"])
 	_t.check("P3 the crack starts at the turn", plate.turn_age() >= 0.0 and plate.turn_age() < 0.05, "turn age %s" % plate.turn_age())
+	plate.advance(0.1)
+	_t.check("P3 mid-crack the spent diamond pops and the lit one grows in", plate.diamond_scale(0) > 1.05 and plate.diamond_scale(1) < 1.0 and plate.diamond_scale(2) == 1.0,
+		"%s %s %s" % [plate.diamond_scale(0), plate.diamond_scale(1), plate.diamond_scale(2)])
+	BossPlate.reduced_motion = true
+	_t.check("P3 reduced motion: no pop, no grow", plate.diamond_scale(0) == 1.0 and plate.diamond_scale(1) == 1.0)
+	BossPlate.reduced_motion = false
 	for i in int(ceil(BossPlate.CRACK_SECONDS / 0.1)) + 1:
 		plate.advance(0.1)
 	_t.check("P3 the crack ends after CRACK_SECONDS", plate.turn_age() < 0.0, "turn age %s" % plate.turn_age())
@@ -167,3 +176,9 @@ func _pause_checks() -> void:
 			_t.check("R1 %s inside the screen" % tag, Rect2(Vector2.ZERO, size).encloses(rect), str(rect))
 			_t.check("R1 %s left of the pause column, clear of it" % tag, rect.end.x <= column_left - 8.0, "read %s column from x %s" % [rect, column_left])
 			_t.check("R1 %s ball view at least VIEW_MIN tall" % tag, read._frame.custom_minimum_size.y >= BuildRead.VIEW.y * BuildRead.VIEW_MIN - 0.5, str(read._frame.custom_minimum_size))
+		if held.size() > 0:
+			menu.lay_build(SHORT)
+			var rect := Rect2(read.position, read.size)
+			var view_y: float = read._frame.custom_minimum_size.y
+			_t.check("R1 short screen: the view shrinks, not below VIEW_MIN", view_y < BuildRead.VIEW.y and view_y >= BuildRead.VIEW.y * BuildRead.VIEW_MIN - 0.5, str(view_y))
+			_t.check("R1 short screen: the read stays on screen", Rect2(Vector2.ZERO, SHORT).encloses(rect), str(rect))

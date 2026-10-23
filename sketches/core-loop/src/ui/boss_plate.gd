@@ -275,6 +275,18 @@ static func phase_color() -> Color:
 	return EventKinds.color("boss_phase_changed")
 
 
+# Diamond i's drawn scale: the spent one pops while it cracks, the newly lit one grows in;
+# 1 at rest and always 1 under reduced motion.
+func diamond_scale(i: int) -> float:
+	if reduced_motion or _turn_age < 0.0:
+		return 1.0
+	if i == phase() - 2:
+		return 1.0 + CRACK_POP * sin(PI * clampf(_turn_age / CRACK_SECONDS * 3.0, 0.0, 1.0))
+	if i == phase() - 1:
+		return clampf(_turn_age / LIGHT_SECONDS, 0.25, 1.0)
+	return 1.0
+
+
 func _draw_phases() -> void:
 	var pips := phase_pips()
 	if pips.is_empty():
@@ -288,13 +300,7 @@ func _draw_phases() -> void:
 		var c := Vector2(x + i * (PHASE + PHASE_GAP), SIZE.y)
 		var state: String = pips[i]
 		var just_spent := cracking and i == phase() - 2
-		var just_lit := cracking and i == phase() - 1
-		var scale := 1.0
-		if just_spent and not reduced_motion:
-			scale = 1.0 + CRACK_POP * sin(PI * clampf(t * 3.0, 0.0, 1.0))
-		elif just_lit and not reduced_motion:
-			scale = clampf(_turn_age / LIGHT_SECONDS, 0.25, 1.0)
-		var half := PHASE * 0.5 * scale
+		var half := PHASE * 0.5 * diamond_scale(i)
 		var shape := PackedVector2Array([c + Vector2(0.0, -half), c + Vector2(half, 0.0), c + Vector2(0.0, half), c + Vector2(-half, 0.0)])
 		var ring := shape.duplicate()
 		ring.append(shape[0])
