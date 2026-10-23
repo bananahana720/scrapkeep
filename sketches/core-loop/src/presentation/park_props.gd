@@ -25,6 +25,7 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
+const ThreadGuard := preload("res://src/core/thread_guard.gd")
 const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 
@@ -108,10 +109,11 @@ const BUILD_SLICE_USEC := 3000
 const MERGE_CHUNK := 4
 
 static var file_overrides := {}
+# Main thread only (_mesh): a GLB loaded or instantiated on a worker races the headless renderer's mesh RIDs.
 static var _meshes := {}
-# Guards _meshes: warm() fills it on a worker while release_shared() and _take() can clear it on the main thread.
-static var _mesh_lock := Mutex.new()
 static var _cache_owner := ""
+# GLBs asked of the loader thread (real renderers only), by path, until _mesh takes them.
+static var _requested := {}
 # _far_source's reads, by path, and how many it has made (a test reads it).
 static var _far_sources := {}
 static var far_reads := 0
@@ -127,23 +129,27 @@ var last_entry_usec := 0
 # The main-thread time of _process in the frame it last ran (Engine.get_process_frames), for stage_entry_budget_test.
 var last_process_usec := 0
 var last_process_frame := -1
-# The steps that frame's _slice ran, each "kind ms" (job_steps' kinds), so the test can name what a slow frame built.
+# The steps that frame ran, each "kind ms" (job_steps' kinds, or "mesh" for _read_meshes), so the test can name what a slow
+# frame built.
 var last_steps := PackedStringArray()
 var _built_for := []
 var _pending := false
 var _task := -1
 var _out := {}
 var _jobs: Array = []
+# The meshes the stage's jobs read, not yet cached: read on the main thread before the first job builds.
+var _reads: Array = []
 # The job _slice is building: its holder and the steps left.
 var _holder: Node3D
 var _steps: Array = []
 var _kit := {}
 var _low := false
 # The next stage's plan, started on a worker once that stage's ground is ready (as natural.gd and set_dressing.gd start theirs),
-# with the far sources its build will read. A far read blocks until the GPU has drawn every frame in flight, and in the frames
-# after a stage entry that is the entry frame's 200 ms or so: one read step cost the 4080 18 to 44 ms there (scrapkeep#235,
-# row 26c). So the reads go one a frame while the stage before still plays, and the entry's read steps find them cached.
+# with the meshes and far sources its build will read. A far read blocks until the GPU has drawn every frame in flight, and in
+# the frames after a stage entry that is the entry frame's 200 ms or so: one read step cost the 4080 18 to 44 ms there
+# (scrapkeep#235, row 26c). So the reads go one a frame while the stage before still plays, and the entry finds them cached.
 var _next := {}
+var _next_meshes: Array = []
 var _next_reads: Array = []
 
 
@@ -1337,16 +1343,19 @@ static func job_steps(job: Dictionary, kit: Dictionary, low: bool) -> Array:
 	return steps
 
 
-# Loads every mesh a list needs into the cache (safe on a worker: the node reads it only after the worker is done).
-static func warm(list: Array, kit: Dictionary, low: bool) -> void:
+# Every mesh path a list's jobs read, each once, in first-use order. Pure, so the worker draws it; the main thread
+# reads the meshes (_read_meshes).
+static func mesh_paths(list: Array, kit: Dictionary, low: bool) -> Array:
+	var paths := []
+	var seen := {}
 	for inst: Dictionary in list:
 		var lods := _lod_paths(kit, inst)
-		if inst["litter"]:
-			if not low:
-				_mesh(lods[1])
-			continue
-		for path in lods:
-			_mesh(path)
+		var wanted: Array = ([] if low else [lods[1]]) if inst["litter"] else lods
+		for path: String in wanted:
+			if not seen.has(path):
+				seen[path] = true
+				paths.append(path)
+	return paths
 
 
 # Everything a stage needs before it can build nodes, pure so a worker can draw it: the file, its kit, the schema
@@ -1360,8 +1369,7 @@ static func prepare(id: String, park_map, ground: Callable, stage: int, low: boo
 	if not errors.is_empty():
 		return {"errors": errors}
 	var list := expand(file, kit, park_map, ground, context(park_map, ground, stage))
-	warm(list, kit, low)
-	return {"kit": kit, "list": list, "errors": []}
+	return {"kit": kit, "list": list, "paths": mesh_paths(list, kit, low), "errors": []}
 
 
 # The lowest preset halves LOD0 and LOD1; LOD2 begins where the halved LOD1 ends, so no gap opens.
@@ -1548,16 +1556,15 @@ static func _transform(inst: Dictionary) -> Transform3D:
 	return Transform3D((inst["basis"] as Basis).scaled_local(Vector3.ONE * float(inst["scale"])), inst["pos"])
 
 
-# A GLB's one mesh, read once per path.
+# A GLB's one mesh, read once per path on the main thread; a path asked of the loader thread is taken from it.
 static func _mesh(path: String) -> Mesh:
-	_mesh_lock.lock()
-	var hit: bool = _meshes.has(path)
-	var cached: Mesh = _meshes[path] if hit else null
-	_mesh_lock.unlock()
-	if hit:
-		return cached
+	if not ThreadGuard.main_only("park_props mesh " + path):
+		return null
+	if _meshes.has(path):
+		return _meshes[path]
 	var mesh: Mesh = null
-	var packed = load(path)
+	var packed = ResourceLoader.load_threaded_get(path) if _requested.has(path) else load(path)
+	_requested.erase(path)
 	if packed is PackedScene:
 		var scene: Node = (packed as PackedScene).instantiate()
 		var view: MeshInstance3D = scene as MeshInstance3D
@@ -1567,16 +1574,14 @@ static func _mesh(path: String) -> Mesh:
 		if view != null:
 			mesh = view.mesh
 		scene.free()
-	_mesh_lock.lock()
 	_meshes[path] = mesh
-	_mesh_lock.unlock()
 	return mesh
 
 
 # The kit GLBs carry linear COLOR_0 and no texture, but Godot imports them with an albedo-white material that ignores it, so every
 # prop would render flat white. Every view gets one shared vertex-colour material as its material_override: vertex_color_use_as_albedo
-# on, linear data, roughness 0.8, metallic 0, no emission. The imported mesh stays as it is and the worker never touches the renderer
-# (copying a mesh reads its surfaces back, which blocks a worker while the main thread waits on it).
+# on, linear data, roughness 0.8, metallic 0, no emission. The imported mesh stays as it is (copying a mesh reads its surfaces back,
+# which waits on the renderer).
 static func style_view(view: GeometryInstance3D) -> void:
 	view.material_override = _vertex_material()
 
@@ -1609,9 +1614,10 @@ static func _vertex_material() -> StandardMaterial3D:
 
 # Teardown: the cached meshes go with the park, and with the Game (activities.gd _exit_tree calls this).
 static func release_shared() -> void:
-	_mesh_lock.lock()
+	for path: String in _requested:
+		ResourceLoader.load_threaded_get(path)
+	_requested.clear()
 	_meshes.clear()
-	_mesh_lock.unlock()
 	_far_sources.clear()
 	_material = null
 	_cache_owner = ""
@@ -1619,8 +1625,9 @@ static func release_shared() -> void:
 
 # --- Node lifecycle ---------------------------------------------------------------------------------
 
-# A stage's file, kit and instances are drawn on a worker (prepare) and its nodes are built a step at a time
-# (job_steps) within BUILD_SLICE_USEC a frame, so entering a park hitches on neither. finish() does both at once, for tests.
+# A stage's file, kit and instances are drawn on a worker (prepare), then its meshes are read and its nodes built a step at
+# a time (job_steps) on the main thread, each within BUILD_SLICE_USEC a frame, so entering a park hitches on none of them.
+# finish() does it all at once, for tests.
 
 func setup(context_in) -> void:
 	ctx = context_in
@@ -1640,7 +1647,9 @@ func _process(_delta: float) -> void:
 		_build_stage()
 	if _task >= 0 and WorkerThreadPool.is_task_completed(_task):
 		_take()
-	if not _jobs.is_empty():
+	if not _reads.is_empty():
+		_read_meshes(BUILD_SLICE_USEC)
+	elif not _jobs.is_empty():
 		_slice(BUILD_SLICE_USEC)
 	elif _task < 0 and not _pending:
 		_prepare_next()
@@ -1650,7 +1659,7 @@ func _process(_delta: float) -> void:
 
 # True once the stage's nodes are all built (or it has none).
 func is_built() -> bool:
-	return _task < 0 and _jobs.is_empty() and not _pending
+	return _task < 0 and _reads.is_empty() and _jobs.is_empty() and not _pending
 
 
 # Waits for the worker and builds every remaining job.
@@ -1659,6 +1668,8 @@ func finish() -> void:
 		_build_stage()
 	if _task >= 0:
 		_take()
+	while not _reads.is_empty():
+		_mesh(_reads.pop_front())
 	_slice(1 << 40)
 
 
@@ -1677,6 +1688,7 @@ func _exit_tree() -> void:
 	if not _next.is_empty():
 		WorkerThreadPool.wait_for_task_completion(_next.task)
 		_next = {}
+	_next_meshes = []
 	_next_reads = []
 
 
@@ -1685,6 +1697,7 @@ func _free_views() -> void:
 		WorkerThreadPool.wait_for_task_completion(_task)
 		_task = -1
 	_out = {}
+	_reads = []
 	_jobs = []
 	_holder = null
 	_steps = []
@@ -1717,6 +1730,7 @@ func _build_stage() -> void:
 		_task = _next.task
 		_out = _next.out
 		_next = {}
+		_next_meshes = []
 		_next_reads = []
 		return
 	var out := {}
@@ -1741,6 +1755,35 @@ func _take() -> void:
 	_keep_cached(instances, _kit, next_out)
 	_cache_owner = map_id
 	_jobs = jobs(instances, _low)
+	_reads = _uncached(out["paths"])
+
+
+# The paths not in the mesh cache yet. The headless renderer's mesh RIDs are not thread-safe, so there _mesh loads them
+# on the main thread (park_recipes.gd's placer and ending_sequence.gd's crater keep the same gate); a real renderer
+# loads them on the loader thread first.
+static func _uncached(paths: Array) -> Array:
+	var out := paths.filter(func(path: String): return not _meshes.has(path))
+	if DisplayServer.get_name() != "headless":
+		for path: String in out:
+			if not _requested.has(path) and ResourceLoader.load_threaded_request(path) == OK:
+				_requested[path] = true
+	return out
+
+
+# The stage's meshes, read within budget_usec a frame (at least one) and in order, ahead of the first job. A read
+# the loader thread has not finished waits for a later frame.
+func _read_meshes(budget_usec: int) -> void:
+	var started := Time.get_ticks_usec()
+	while not _reads.is_empty():
+		var path: String = _reads[0]
+		if _requested.has(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			return
+		_reads.pop_front()
+		var read_started := Time.get_ticks_usec()
+		_mesh(path)
+		last_steps.append("mesh %.1f" % ((Time.get_ticks_usec() - read_started) / 1000.0))
+		if Time.get_ticks_usec() - started >= budget_usec:
+			return
 
 
 # A pure function of the park, its ground and the preset: the same key keeps what is built (retries), and a plan made
@@ -1763,12 +1806,22 @@ func _next_key() -> Array:
 	return _key(next)
 
 
-# Idle frames only (no build running): plans the next stage on a worker, then reads its far sources one a frame.
-# A plan no stage can take any more (a new run, a preset change) is dropped once its worker is done.
+# Idle frames only (no build running): plans the next stage on a worker, then reads its meshes and far sources one a frame
+# (a mesh the loader thread has not finished waits). A plan no stage can take any more (a new run, a preset change) is
+# dropped once its worker is done.
 func _prepare_next() -> void:
 	var key := _next_key()
 	if _next.is_empty() or _next.key != key:
+		_next_meshes = []
 		_next_reads = []
+	if not _next_meshes.is_empty():
+		var path: String = _next_meshes[0]
+		if _requested.has(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			return
+		var started := Time.get_ticks_usec()
+		_mesh(_next_meshes.pop_front())
+		last_steps.append("mesh %.1f" % ((Time.get_ticks_usec() - started) / 1000.0))
+		return
 	if not _next_reads.is_empty():
 		var started := Time.get_ticks_usec()
 		_far_source(_next_reads.pop_back())
@@ -1783,6 +1836,7 @@ func _prepare_next() -> void:
 			_next.listed = true
 			var planned: Dictionary = _next.out
 			if not planned.is_empty() and planned["errors"].is_empty():
+				_next_meshes = _uncached(planned["paths"])
 				_next_reads = far_paths(planned["list"], planned["kit"])
 		return
 	if key.is_empty() or key == _built_for:
@@ -1799,7 +1853,7 @@ func _prepare_next() -> void:
 
 # True once the next stage (stage) is planned and its far sources are read: what the stage's entry would otherwise read.
 func next_read(stage: int) -> bool:
-	return not _next.is_empty() and int(_next.key[0]) == stage and _next.listed and _next_reads.is_empty()
+	return not _next.is_empty() and int(_next.key[0]) == stage and _next.listed and _next_meshes.is_empty() and _next_reads.is_empty()
 
 
 # The LOD2 paths a list's far merges read (job_steps' read steps), each once.
@@ -1812,7 +1866,7 @@ static func far_paths(list: Array, kit: Dictionary) -> Array:
 
 
 # The cache keeps what this list builds from and lets the last park's meshes and far sources go. The next stage's plan
-# warms its own meshes and reads its far sources into the same cache before the exit, so nothing is cleared at an entry.
+# reads its own meshes and far sources into the same cache before the exit, so nothing is cleared at an entry.
 static func _keep_cached(list: Array, kit: Dictionary, next_out: Dictionary) -> void:
 	var keep := {}
 	for inst: Dictionary in list:
@@ -1822,11 +1876,9 @@ static func _keep_cached(list: Array, kit: Dictionary, next_out: Dictionary) -> 
 		for inst: Dictionary in next_out["list"]:
 			for path in _lod_paths(next_out["kit"], inst):
 				keep[path] = true
-	_mesh_lock.lock()
 	for path in _meshes.keys():
 		if not keep.has(path):
 			_meshes.erase(path)
-	_mesh_lock.unlock()
 	for path in _far_sources.keys():
 		if not keep.has(path):
 			_far_sources.erase(path)
