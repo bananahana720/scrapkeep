@@ -20,7 +20,8 @@ extends SceneTree
 # Eased 2026-10-23 (wave 19, ruling #241 item 3): the sinkhole's lava_channel_12, 13 and 21 rows moved (yaw, at, length)
 # so A reads kink 18.3 excess 1.08, B kink 19.2 excess 0.95, and 11>12 (32.1 deg, 1.00) and 13>14 (32.2 deg, 1.07) fall
 # under the excess bound too. The positive controls are now the still-flagged lava_channel_14>15 (33.3 deg, 1.38) and
-# 19>20 (36.1 deg, 1.49).
+# 19>20 (36.1 deg, 1.49). They sit only 0.13 m and 0.24 m over EXCESS_MIN_M, inside the 20 percent margin the
+# bounds were set with, and are the next easing targets: the PR that eases either one moves the positive control.
 # FLAGGED pins the flagged set: a later easing PR shrinks it; a new or vanished entry fails with the diff.
 
 const T := preload("res://tests/support/t.gd")
