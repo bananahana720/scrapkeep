@@ -2,6 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
@@ -456,9 +457,10 @@ static var _ahead := {}
 static func build_ahead(path: String) -> void:
 	if path == "" or _ahead.has(path):
 		return
-	# The schema reads its asset registry once, on first need, and marks it read before filling it: read it here,
-	# so no worker sees it half built and fails the park.
+	# The schema's asset registry and the recipes' registry origins are read once, on first need, and marked read
+	# before they are filled: read them here, so no worker sees one half built.
 	ParkSchema._registry()
+	ParkRecipes.origin("")
 	var out := {}
 	_ahead[path] = {"task": WorkerThreadPool.add_task(func(): out.map = OverlayMap.new(path), false, "overlay map"), "out": out}
 
@@ -469,7 +471,7 @@ static func _overlay_map_for(path: String) -> OverlayMap:
 	WorkerThreadPool.wait_for_task_completion(_ahead[path].task)
 	var built: OverlayMap = _ahead[path].out.get("map")
 	_ahead.erase(path)
-	return built if built != null else OverlayMap.new(path)
+	return built if built != null and built.ok else OverlayMap.new(path)
 
 
 # Teardown: waits on every build and drops the maps.
