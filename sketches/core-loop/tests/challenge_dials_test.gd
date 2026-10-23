@@ -72,7 +72,7 @@ func _rules() -> void:
 			ident = float(d) == 1.0 or key == "brindle.combo" or key.ends_with(".combo") or key.ends_with(".weak_points")
 		if not ident:
 			_t.check("identity default " + key, false)
-	_t.eq("weak points default off", [ChallengeDials.value("waking.weak_points"), ChallengeDials.value("mind.weak_points")], [0.0, 0.0])
+	_t.eq("weak points ship on the Waking, off on the Mind", [ChallengeDials.value("waking.weak_points"), ChallengeDials.value("mind.weak_points")], [1.0, 0.0])
 	_t.near("default tell is the base", ChallengeDials.tell("brindle", Rules.CRANE_WARN), Rules.CRANE_WARN, 0.0)
 
 	var parsed := ChallengeDials.parse("mind.damage_mult=1.5,waking.damage_by_phase=1/1.25/1.5/2,brindle.combo=2")

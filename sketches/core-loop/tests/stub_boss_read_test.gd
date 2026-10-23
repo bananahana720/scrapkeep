@@ -23,6 +23,9 @@ var _ticks := 0
 
 
 func _initialize() -> void:
+	# Weak points off, though the Waking ships on 1: these strikes stand in for body contacts, which the rule
+	# chips, so no stagger would come; the weak-point read is boss_weak_visuals_test's.
+	ChallengeDials.set_overrides({"waking.weak_points": 0.0})
 	_game = SpineWorlds.ThreeWorldGame.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -54,6 +57,7 @@ func _strike(warden) -> void:
 
 func _finish(failed := false) -> void:
 	_game.free()
+	ChallengeDials.reset()
 	quit(1 if failed else _t.verdict())
 
 

@@ -38,8 +38,12 @@ func _run() -> void:
 		var runs := {}
 		for name in ["default", "zero", "monster", "rising", "idle"]:
 			ChallengeDials.reset()
+			# Weak points off, though the Waking ships on 1: a TARGET smash is no hatch contact, so the rule only
+			# shifts chunk times; the hold with weak points on is boss_weak_points_test's.
+			var dials := {boss + ".weak_points": 0.0}
 			match name:
-				"zero": ChallengeDials.set_overrides({key: [0.0, 0.0, 0.0, 0.0]})
+				"zero": dials[key] = [0.0, 0.0, 0.0, 0.0]
+			ChallengeDials.set_overrides(dials)
 			var threshold := NAN
 			if name in ["default", "rising", "idle"]:
 				threshold = INF

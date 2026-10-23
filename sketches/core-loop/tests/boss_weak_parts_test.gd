@@ -798,7 +798,7 @@ func _bot() -> void:
 	_t.check("the bot's enemy scan never returns a part", nearest == null or nearest.get_script() != WeakPart, "")
 	game.free()
 	await physics_frame
-	var off = await _boot(2, {})
+	var off = await _boot(2, {"waking.weak_points": 0.0})
 	var mod0 = off[1]
 	var bot0 = BotDriver.new(off[0], "skipper", 1)
 	var state_before: int = bot0.rng.state

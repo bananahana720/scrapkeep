@@ -63,7 +63,7 @@ func _boot(world: int, overrides: Dictionary):
 
 
 func _off(boss: String, world: int) -> void:
-	var booted = await _boot(world, {})
+	var booted = await _boot(world, {"%s.weak_points" % boss: 0.0})
 	var game = booted[0]
 	var mod = booted[1]
 	var reel := {"gain": 10.0, "punch": 500.0, "reel": true}

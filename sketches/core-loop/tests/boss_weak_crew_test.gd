@@ -93,7 +93,7 @@ func _step_until(mod, seconds: float) -> void:
 
 
 func _dial_zero() -> void:
-	var booted = await _boot({})
+	var booted = await _boot({"waking.weak_points": 0.0})
 	var game = booted[0]
 	var mod = booted[1]
 	mod._open_hatch(1)
@@ -160,6 +160,16 @@ func _waves() -> void:
 	_t.check("with one dead the next wave is 6 - alive = 1", _fitters(cmod).size() == 6 and cmod._crew_alive() == 6, str(_fitters(cmod).size()))
 	capped[0].free()
 	await physics_frame
+
+
+# A ram-level reel strike on a fitter through the real damage path, as _real_damage: it knocks a fitting one off.
+func _knock_one(mod, f) -> void:
+	var kit = mod.ctx.player.kit
+	kit.hooked = true
+	kit.winching = true
+	mod.ctx.spawner.strike(f, "ram", 60.0)
+	kit.hooked = false
+	kit.winching = false
 
 
 func _open_two(mod) -> Array:
@@ -312,6 +322,9 @@ func _bot() -> void:
 	_t.check("expert: the target is a fitting fitter, not the hatch", pick in two and pick != hatch and expert.rng.state == rng_before, str(pick))
 	expert._fight_posture_boss(mod, 0.016)
 	_t.check("expert: the fight goal names the fitter", expert._goal.begins_with("fitter"), expert._goal)
+	_knock_one(mod, two[0])
+	_t.check("expert: with one knocked off the clock stops, and the hatch is the target", mod.weak.fitters("hatch_1") < mod.weak.fit_min
+			and expert._open_fitter(mod) == null and expert._open_part(mod) == hatch, "fitters %d, %s" % [mod.weak.fitters("hatch_1"), str(expert._open_fitter(mod))])
 	for f in two:
 		f.fit_state = f.State.INBOUND
 	_t.check("expert: an inbound fitter is no target", expert._open_fitter(mod) == null, str(expert._open_fitter(mod)))
@@ -464,7 +477,7 @@ func _stats() -> void:
 	_t.check("record: a broken seal counts as broken, not as a timeout", mod.weak_stats["broken"] == {"1": 1} and mod.weak_stats["timed_out"] == {"1": 1}, str(mod.weak_stats))
 	game.free()
 	await physics_frame
-	var off = await _boot({})
+	var off = await _boot({"waking.weak_points": 0.0})
 	var obot = BotDriver.new(off[0], "skipper", 1)
 	obot._on_boss_entered()
 	obot._boss_weak_note(off[1])
