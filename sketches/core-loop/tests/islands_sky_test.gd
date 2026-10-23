@@ -18,6 +18,14 @@ extends SceneTree
 # with the boxes tool run on acb55972, mid camera (arm 9, fov 72.5, pitch -0.30 as tools/park_props_audit.gd CAMERAS and CAM_PITCH); pose 69
 # is invalid (camera under the heightfield). Sky samples: every 16th column, rows skyline-12 to skyline-2 every 2 (the tool's band).
 #
+# The 3060 bench (23 Oct, scratch merge e6d06658 of c957ab6c, /mnt/project-files/3060-bench-results.md) read the energy lift short: pose 26
+# -12.15 (passes), pose 159 -8.45 against -7.33 on the base, so 1.316x the sky moved pose 159 only 1.1 L*. The energy also feeds the sky's
+# ambient and reflections, so the floor rose with the sky; the "floor held" premise above did not hold. The fix that remains is away_lift:
+# time_sky.gdshader multiplies the low sky 80 or more degrees off the sun's bearing by 1 + away_lift, in the drawn background only (not the
+# radiance pass), so the floor does not rise with it. Pose 159 needs about 2.5 L* more (the coordinator's ruling on the bench row); at
+# L* about 63 that is a sky Y ratio of about 1.10, and AGX_ROOM below leaves room for the tonemap compressing it. On the cloud renderer
+# (xvfb, opengl3) away_lift 0.3 moved pose 159's haze L* +4.84 with its near-floor L* unchanged (65.64 both); 0.25 ships.
+#
 # Controls (planted): the pre-change grade (energy 0.95) must leave poses 26 and 159 under the bar; a sky dimmer than old must read darker; a
 # doubled sun glow alone must not reach the lift pose 159 needs (the glow adds 0.017 Y there against a base of 0.34 Y).
 
@@ -57,7 +65,11 @@ const FIT_WORST := 4.3 # L*, pose 159, which the fit reads high
 const CAM_PITCH := -0.30
 const FOV := 72.5
 const SIZE := Vector2(1280.0, 720.0)
-const EXPECTED_CHECKS := 50
+const AWAY_LIFT := 0.5 # golden grade, see the header
+# The drawn-sky Y ratio pose 159 must get from away_lift: 1.10 for 2.5 L* at L* 63, times 1.1 room for the tonemap (a chosen tolerance).
+const AGX_ROOM := 1.1
+const NEED_DRAWN := 1.10
+const EXPECTED_CHECKS := 57
 
 var t := T.new("islands_sky_test")
 var _pano: Image
@@ -95,7 +107,7 @@ func _run() -> void:
 	t.near("golden recolor is the base", float(grade.recolor), BASE_RECOLOR)
 	t.near("golden highlight cap is the base", float(grade.highlight), BASE_HIGHLIGHT)
 	t.eq("golden glow is the base", grade.glow, BASE_GLOW)
-	t.check("the live grade differs from the old one in energy only", _only_energy_differs(live, old))
+	t.check("the live grade differs from the old one in energy only (away_lift is checked on its own)", _only_energy_differs(live, old))
 
 	# Model agrees with itself: the old grade reproduces the measured sky (ratio 1), and the model ranks the anti-sun views as World saw.
 	var y_old := {}
@@ -152,8 +164,31 @@ func _run() -> void:
 	glow["shader_parameter/glow"] = ((old["shader_parameter/glow"] as Color).srgb_to_linear() * 2.0).linear_to_srgb() # twice the linear light
 	t.check("control: doubling the glow alone falls short of the lift pose 159 needs", _sky_y(POSES[9], glow) / float(y_old[159]) < need159, "%.3f vs %.3f" % [_sky_y(POSES[9], glow) / float(y_old[159]), need159])
 	t.check("worst live gap is under the bar and the old worst is over it", worst_live <= -(BAR + MARGIN) and worst_old > -BAR, "%.2f / %.2f" % [worst_live, worst_old])
+	_away(live)
 	t.eq("every check ran", t.checks, EXPECTED_CHECKS)
 	quit(t.verdict())
+
+
+# away_lift: pinned on golden and absent elsewhere, drawn-only, aimed at the anti-sun views, and big enough for pose 159 with room.
+func _away(live: Dictionary) -> void:
+	t.near("golden away_lift is %.2f" % AWAY_LIFT, float(live["shader_parameter/away_lift"]), AWAY_LIFT)
+	var others := 0
+	for id in WorldLook.TIME_ROWS:
+		if id != "golden" and float(WorldLook.grade(WorldLook.TIME_ROWS[id])["shader_parameter/away_lift"]) != 0.0:
+			others += 1
+	t.eq("no other time row lifts its anti-sun sky", others, 0)
+	var shader: String = load("res://src/presentation/time_sky.gdshader").code
+	t.check("the lift skips the radiance pass, so the floor's sky light does not rise", shader.contains("!AT_CUBEMAP_PASS && away_lift"))
+	var gain159 := _sky_y(POSES[9], live, true) / _sky_y(POSES[9], live)
+	var gain26 := _sky_y(POSES[1], live, true) / _sky_y(POSES[1], live)
+	t.check("pose 159's drawn sky gains at least %.3f (%.3f)" % [NEED_DRAWN * AGX_ROOM, gain159], gain159 >= NEED_DRAWN * AGX_ROOM)
+	t.check("pose 26's drawn sky gains too (%.3f)" % gain26, gain26 > 1.05)
+	var sun: Vector3 = live["shader_parameter/sun_dir"]
+	var at_sun := Vector3(sun.x, 0.05, sun.z).normalized()
+	t.near("a view at the sun's bearing gets no lift", _sky(at_sun, live, true).r / _sky(at_sun, live).r, 1.0, 1e-6)
+	var none := live.duplicate()
+	none["shader_parameter/away_lift"] = 0.0
+	t.check("control: with no lift pose 159's drawn sky misses the gain", _sky_y(POSES[9], none, true) / _sky_y(POSES[9], none) < NEED_DRAWN * AGX_ROOM)
 
 
 # CIE L* to relative luminance Y, and back.
@@ -173,8 +208,9 @@ func _gap(pose: Array, y_new_pose: float, y_old_pose: float) -> float:
 	return float(pose[3]) - sky
 
 
-# Mean modelled sky luminance of a pose's haze band under the grade values (the keys WorldLook.grade returns).
-func _sky_y(pose: Array, g: Dictionary) -> float:
+# Mean modelled sky luminance of a pose's haze band under the grade values (the keys WorldLook.grade returns). drawn adds away_lift, which
+# the drawn background has and the radiance pass does not.
+func _sky_y(pose: Array, g: Dictionary, drawn := false) -> float:
 	var basis := Basis(Vector3.UP, float(pose[1])) * Basis(Vector3.RIGHT, CAM_PITCH)
 	var th := tan(deg_to_rad(FOV) * 0.5)
 	var total := 0.0
@@ -185,7 +221,7 @@ func _sky_y(pose: Array, g: Dictionary) -> float:
 			if py < 0:
 				continue
 			var d := Vector3((2.0 * (float(px) + 0.5) / SIZE.x - 1.0) * th * SIZE.x / SIZE.y, (1.0 - 2.0 * (float(py) + 0.5) / SIZE.y) * th, -1.0)
-			var c := _sky(basis * d.normalized(), g)
+			var c := _sky(basis * d.normalized(), g, drawn)
 			total += c.r * 0.2126729 + c.g * 0.7151522 + c.b * 0.072175
 			n += 1
 	return total / float(n)
@@ -206,7 +242,7 @@ func _furthest_from_sun(g: Dictionary) -> Array:
 
 
 # time_sky.gdshader's sky(), for a unit eye direction. The panorama is read as the engine does: u = atan(x, -z) wrapped to [0, 2 pi) over 2 pi.
-func _sky(eye: Vector3, g: Dictionary) -> Color:
+func _sky(eye: Vector3, g: Dictionary, drawn := false) -> Color:
 	var u := fposmod(atan2(eye.x, -eye.z) / TAU, 1.0)
 	var v := acos(clampf(eye.y, -1.0, 1.0)) / PI
 	var w := _pano.get_width()
@@ -228,12 +264,17 @@ func _sky(eye: Vector3, g: Dictionary) -> Color:
 	var glow := (g["shader_parameter/glow"] as Color).srgb_to_linear()
 	var add := pow(toward, 4.0) * low + pow(toward, 48.0)
 	c += Vector3(glow.r, glow.g, glow.b) * add
+	var lift := float(g.get("shader_parameter/away_lift", 0.0))
+	if drawn and lift > 0.0:
+		var a := clampf((Vector2(eye.x, eye.z).normalized().dot(Vector2(g["shader_parameter/sun_dir"].x, g["shader_parameter/sun_dir"].z).normalized()) - 0.17) / 0.43, 0.0, 1.0)
+		var b := clampf(eye.y / 0.8, 0.0, 1.0)
+		c *= 1.0 + lift * (1.0 - a * a * (3.0 - 2.0 * a)) * (1.0 - b * b * (3.0 - 2.0 * b))
 	c *= float(g["shader_parameter/energy"])
 	return Color(c.x, c.y, c.z)
 
 
 func _only_energy_differs(a: Dictionary, b: Dictionary) -> bool:
 	for key in a:
-		if key != "shader_parameter/energy" and a[key] != b[key]:
+		if key != "shader_parameter/energy" and key != "shader_parameter/away_lift" and a[key] != b[key]:
 			return false
 	return a["shader_parameter/energy"] != b["shader_parameter/energy"]

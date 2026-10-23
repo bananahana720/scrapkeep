@@ -140,10 +140,13 @@ const TIME_ROWS := {
 	# 1.258x modelled Y at zero margin (pose 26's 1.54 is 1.150x). The test keeps 0.25 L* over the bar, which puts the floor at energy
 	# 0.95 x 1.287 = about 1.22; 1.25 (a 1.316x sky) is the round value above it. Energy scales the base and the glow alike, keeps the horizon hue and moves
 	# no sun value; it cannot darken any pose's sky. Sun colour, sun energy and rotation stay as they were.
+	# away_lift 0.5 (time_sky.gdshader): the 3060 read the energy lift short on pose 159 (-8.45 against the 10 bar, 23 Oct) because the
+	# sky's ambient raised the floor too. The lift brightens only the drawn sky 80+ degrees off the sun, so the floor stays; on the cloud
+	# renderer it moved pose 159's sky +8.1 L* and pose 26's +7.4 with every near floor unchanged (tests/islands_sky_test.gd).
 	"golden": {"sun_rotation": Vector3(-16.0, 20.0, 0.0), "sun_color": Color("ffa35c"), "sun_energy": 1.9,
 		"ambient": Color("e0b58a"), "energy": 0.25, "fog_tint": Color("f0b886"),
 		"grade": {"top": Color("c9c2c8"), "horizon": Color("ffb47a"), "recolor": 0.45, "highlight": 2.0,
-			"glow": Color("c8652a"), "energy": 1.25}},
+			"glow": Color("c8652a"), "energy": 1.25, "away_lift": 0.5}},
 	"dusk": {"sun_rotation": Vector3(-6.0, 60.0, 0.0), "sun_color": Color("e06f4a"), "sun_energy": 1.1,
 		"ambient": Color("5d6b86"), "energy": 0.16, "fog_tint": Color("8a7a9e"),
 		"grade": {"top": Color("4c5290"), "horizon": Color("e88a6a"), "recolor": 0.6, "highlight": 1.0,
@@ -264,7 +267,7 @@ static func grade(look: Dictionary) -> Dictionary:
 	return {"shader_parameter/top_tint": spec.top, "shader_parameter/horizon_tint": spec.horizon,
 		"shader_parameter/recolor": spec.recolor, "shader_parameter/highlight": spec.highlight,
 		"shader_parameter/glow": spec.glow, "shader_parameter/sun_dir": toward_sun,
-		"shader_parameter/energy": spec.energy}
+		"shader_parameter/energy": spec.energy, "shader_parameter/away_lift": spec.get("away_lift", 0.0)}
 
 
 # The shared HDRI sky's grade as a set_lighting row, so the sky leaves with the stage's look. The
