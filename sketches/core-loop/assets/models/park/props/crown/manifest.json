@@ -833,7 +833,7 @@
    "line_clear_m": 30.0
   },
   "clock_post": {
-   "class": "dress_hero",
+   "class": "dress_prop",
    "tags": [
     "machine",
     "sign"
@@ -847,12 +847,12 @@
       "res://assets/models/park/props/crown/clock_post_a_lod2.glb"
      ],
      "tris": [
-      7816,
-      3908,
-      1142
+      2584,
+      1275,
+      340
      ],
-     "radius": 0.857,
-     "height": 2.532
+     "radius": 0.854,
+     "height": 2.559
     },
     "b": {
      "lod": [
@@ -861,12 +861,12 @@
       "res://assets/models/park/props/crown/clock_post_b_lod2.glb"
      ],
      "tris": [
-      7028,
-      3514,
-      1024
+      2280,
+      1124,
+      297
      ],
-     "radius": 1.391,
-     "height": 2.476
+     "radius": 1.656,
+     "height": 2.48
     }
    }
   },

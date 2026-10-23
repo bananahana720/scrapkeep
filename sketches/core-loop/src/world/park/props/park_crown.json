@@ -1969,7 +1969,7 @@
    ]
   },
   "struck_clock": {
-   "story": "All hands: the storm hit the clock-in. The hood is blown back, the spare cards are scattered and the shift board is knocked flat. The five cards in the rack never moved.",
+   "story": "All hands: the storm hit the clock-in. The hood is off, its shingles and the spare cards are scattered round the footing, and a panel has come off the shift board. The five cards in the rack never moved.",
    "props": [
     {
      "kind": "clock_post",
@@ -2010,7 +2010,7 @@
    ]
   },
   "glove_rest": {
-   "story": "All hands: a crew rest on the climb. Gloves are left to dry on a bench by a stool, and one pair has dropped where somebody was about to pick it up.",
+   "story": "All hands: a crew rest on the climb. Gloves are left to dry on a bench by a stool, and two pairs have dropped where somebody was about to pick them up.",
    "props": [
     {
      "kind": "glove_bench",
@@ -3675,7 +3675,7 @@
   ],
   "seed": 31
  },
- "pin": 1677204776,
+ "pin": 3824932041,
  "low_ground_rows": [
   "drop_ramp",
   "watch_butte",

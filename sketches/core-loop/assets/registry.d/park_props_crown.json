@@ -4035,168 +4035,168 @@
   {
    "id": "dprop_crown_clock_post_a",
    "path": "res://assets/models/park/props/crown/clock_post_a.glb",
-   "class": "dress_hero",
+   "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "clock_post variant a LOD0 (7816 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; polished and baked."
+    "notes": "clock_post variant a LOD0 (2584 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.8438,
+     -0.8181,
      0,
-     -0.849
+     -0.8465
     ],
     "max": [
-     0.8438,
-     2.5322,
-     0.849
+     0.8181,
+     2.5587,
+     0.8465
     ],
     "size": [
-     1.6876,
-     2.5322,
-     1.698
+     1.6362,
+     2.5587,
+     1.693
     ]
    }
   },
   {
    "id": "dprop_crown_clock_post_a_lod1",
    "path": "res://assets/models/park/props/crown/clock_post_a_lod1.glb",
-   "class": "dress_hero",
+   "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "clock_post variant a LOD1 (3908 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "clock_post variant a LOD1 (1275 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.8438,
+     -0.8123,
      0,
-     -0.849
+     -0.8465
     ],
     "max": [
-     0.8438,
-     2.5318,
-     0.849
+     0.8181,
+     2.5585,
+     0.8508
     ],
     "size": [
-     1.6876,
-     2.5318,
-     1.698
+     1.6304,
+     2.5585,
+     1.6973
     ]
    }
   },
   {
    "id": "dprop_crown_clock_post_a_lod2",
    "path": "res://assets/models/park/props/crown/clock_post_a_lod2.glb",
-   "class": "dress_hero",
+   "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "clock_post variant a LOD2 (1142 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "clock_post variant a LOD2 (340 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.8442,
+     -0.8033,
      0,
-     -0.8444
+     -0.8418
     ],
     "max": [
-     0.8397,
-     2.5234,
-     0.8485
+     0.8047,
+     2.531,
+     0.8437
     ],
     "size": [
-     1.6839,
-     2.5234,
-     1.6929
+     1.608,
+     2.531,
+     1.6855
     ]
    }
   },
   {
    "id": "dprop_crown_clock_post_b",
    "path": "res://assets/models/park/props/crown/clock_post_b.glb",
-   "class": "dress_hero",
+   "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "clock_post variant b LOD0 (7028 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; polished and baked."
+    "notes": "clock_post variant b LOD0 (2280 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -1.2436,
+     -1.2052,
      0,
-     -1.2264
+     -1.386
     ],
     "max": [
-     1.2436,
-     2.4756,
-     1.2264
+     1.2052,
+     2.48,
+     1.386
     ],
     "size": [
-     2.4872,
-     2.4756,
-     2.4528
+     2.4104,
+     2.48,
+     2.772
     ]
    }
   },
   {
    "id": "dprop_crown_clock_post_b_lod1",
    "path": "res://assets/models/park/props/crown/clock_post_b_lod1.glb",
-   "class": "dress_hero",
+   "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "clock_post variant b LOD1 (3514 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "clock_post variant b LOD1 (1124 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.2436,
+     -1.2049,
      0,
-     -1.2268
+     -1.3857
     ],
     "max": [
-     1.2436,
-     2.4756,
-     1.2264
+     1.2043,
+     2.48,
+     1.3848
     ],
     "size": [
-     2.4872,
-     2.4756,
-     2.4532
+     2.4092,
+     2.48,
+     2.7705
     ]
    }
   },
   {
    "id": "dprop_crown_clock_post_b_lod2",
    "path": "res://assets/models/park/props/crown/clock_post_b_lod2.glb",
-   "class": "dress_hero",
+   "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_crown.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/crown.py",
-    "notes": "clock_post variant b LOD2 (1024 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "clock_post variant b LOD2 (297 tris): The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -1.2468,
+     -1.179,
      0,
-     -1.227
+     -1.3882
     ],
     "max": [
-     1.2428,
-     2.4678,
-     1.2263
+     1.2043,
+     2.4613,
+     1.3588
     ],
     "size": [
-     2.4896,
-     2.4678,
-     2.4533
+     2.3833,
+     2.4613,
+     2.747
     ]
    }
   },
