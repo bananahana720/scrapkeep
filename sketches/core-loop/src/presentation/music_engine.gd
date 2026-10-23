@@ -1528,6 +1528,9 @@ func _warm_park(action: Dictionary, at: int) -> void:
 	var skip := int(action.get("skip", 0))
 	var step := step_len
 	var theme_now := theme
+	# A cell due within a second goes ahead of the band's low-priority renders: behind them a late cell lost up
+	# to its whole length, and the next cells held the main thread 0.2 to 0.5 s (cloud, stage 6 risers).
+	var urgent := at - clock < Harmony.RATE
 	_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
 	if _park_tasks.size() >= 64:
 		_park_tasks.clear()
@@ -1537,7 +1540,7 @@ func _warm_park(action: Dictionary, at: int) -> void:
 		if _park_warm.size() >= 64:
 			_park_warm.clear()
 		_park_warm[signature] = buf
-		_park_warm_lock.unlock(), false, "park cue warm")
+		_park_warm_lock.unlock(), urgent, "park cue warm")
 	_stinger_tasks.append(_park_tasks[signature])
 
 

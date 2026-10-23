@@ -492,7 +492,7 @@ static func _queue_perch_read(park: Dictionary, heights: PackedFloat32Array, hol
 	var ground := func(x: float, z: float) -> float: return _park_height(heights, holes, under, x, z)
 	return WorkerThreadPool.add_task(func():
 		out.merge({"tops": PerchPoints.derive(park, ground), "blockers": PerchPoints.blockers(park), "ledges": PerchPoints.ledges(park, ground)}),
-		false, "perch read")
+		true, "perch read")
 
 
 # A task left unwaited when the engine quits aborts the process: the stage's root waits on its read as it

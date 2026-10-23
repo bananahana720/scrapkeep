@@ -305,9 +305,10 @@ static func workshop_sky_later() -> PanoramaSkyMaterial:
 	if _sky_task < 0:
 		var out := {}
 		_sky_out = out
+		# High priority: queued behind the band's renders it landed seconds into play (PR #386, 4080).
 		_sky_task = WorkerThreadPool.add_task(func():
 			out["image"] = _paint_workshop_sky()
-			_fill_waiting_skies.call_deferred(), false, "workshop sky")
+			_fill_waiting_skies.call_deferred(), true, "workshop sky")
 	return material
 
 
