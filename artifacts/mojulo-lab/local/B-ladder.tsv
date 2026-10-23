@@ -25,3 +25,7 @@ B4 H=40 fn=128	mint+export_model	2000x2000x20mm plate, 40x40=1600 holes, $fn=128
 B1 bores=64 seg=128	mint_solid+export_model	exact sphere r500cm minus 8x8 bores, segments=128	ok	mint 1791 / export 2624	mint 2.9 / export 3.5 / total 6.4	41686	3106272	
 B1 bores=64 seg=256	mint_solid+export_model	exact sphere r500cm minus 8x8 bores, segments=256	ok	mint 5365 / export 12579	mint 6.3 / export 13.5 / total 19.8	98150	8496428	
 B1 bores=512 seg=48	mint_solid+export_model	exact sphere r500cm minus 32x16 bores, segments=48	ok	mint 2883 / export 12066	mint 3.8 / export 13.0 / total 16.7	106006	6905956	
+B1 bores=4096 seg=48	mint+export_model	64x64 bores, segments=48	not run					stopped at close-out
+B1 bores=512 seg=192	mint+export_model	32x16 bores, segments=192	not run					stopped at close-out
+B3 N=20000	mint+export_model	code kind, 20000 boxes	not run					stopped at close-out
+B4 H=100	mint+export_model	100x100 holes, fn 32 and 128	not run					stopped at close-out
