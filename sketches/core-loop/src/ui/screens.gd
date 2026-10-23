@@ -338,7 +338,6 @@ func _on_flow_changed(state: String) -> void:
 				_begin_prologue()
 		"dead":
 			_show("SCRAPPED", EventKinds.color("player_died"), game.flow.gap_line())
-			_action("retry", "key_r", "Retry the arena" if game.flow.in_arena else "Retry stage %d" % game.ctx.stages.local(game.run.stage))
 			_action("new", "key_n", "New run")
 			_action("class", "key_c", "Choose class")
 			if not game.run.companion.is_empty():
@@ -971,7 +970,6 @@ func start_ending_sequence() -> void:
 	if game.hud != null:
 		game.hud.clear_achievement_toasts()
 	_ending_left = ENDING_HOLD
-	game.summary_guard_left = game.SUMMARY_GUARD
 	ending_sequence = EndingSequence.new()
 	add_child(ending_sequence)
 	ending_sequence.finished.connect(_close_ending)
@@ -1015,7 +1013,7 @@ func _open_ending() -> void:
 		node.visible = false
 
 
-# The summary beneath takes over with its key guard fresh, so the press that closed the page
+# The summary beneath takes over with its input latch fresh, so the press that closed the page
 # cannot also start a run.
 func _close_ending() -> void:
 	if is_instance_valid(ending_sequence):
@@ -1030,7 +1028,7 @@ func _close_ending() -> void:
 	_stats.visible = true
 	_comic_row.visible = true
 	_actions.visible = true
-	game.summary_guard_left = game.SUMMARY_GUARD
+	game.arm_summary_latch()
 	_fade(true)
 	_update_enabled()
 
@@ -1216,7 +1214,7 @@ func comic_page() -> Control:
 
 
 # The summary as icons and numbers: time, stages, cogs (the cog), scrap taken as mass (the heap), parts, kills, events won and
-# retries, each on its own icon.
+# the earned save used (0 or 1), each on its own icon.
 func _summary_stats() -> void:
 	var s: Dictionary = game.run.summary()
 	var chips := [
@@ -1227,7 +1225,7 @@ func _summary_stats() -> void:
 		["cat_transform", str((s["parts"] as Array).size())],
 		["thr_instant", str(s["kills"])],
 		["obj_event", str(s["events_won"])],
-		["key_r", str(s["retries"])],
+		["res_health", str(s["save_used"])],
 	]
 	for chip in chips:
 		var row := _row(8)
@@ -1330,7 +1328,6 @@ func _screen() -> Vector2:
 func _process(delta: float) -> void:
 	_guard = maxf(0.0, _guard - delta)
 	if ending_open():
-		game.summary_guard_left = maxf(game.summary_guard_left, game.SUMMARY_GUARD)
 		_ending_left = maxf(0.0, _ending_left - delta)
 		if game.bot_driven and _ending_left <= 0.0:
 			if is_instance_valid(ending_sequence):
@@ -1341,10 +1338,10 @@ func _process(delta: float) -> void:
 
 
 # Buttons take clicks only on a live screen, after its guard, and never while the
-# summary still holds its keys (game.summary_guard_left).
+# summary still holds its keys (game.summary_shut()).
 func _update_enabled() -> void:
 	var live := _state in MENU_STATES and _state != "victory" and _guard <= 0.0
-	if _state == "summary" and game != null and game.summary_guard_left > 0.0:
+	if _state == "summary" and game != null and game.summary_shut():
 		live = false
 	for row in [_choices, _actions]:
 		for child in row.get_children():

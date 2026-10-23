@@ -469,6 +469,20 @@ func ward_floor_for(hp_after: float) -> float:
 	return hp_after
 
 
+# The earned save: the hull a killing hit leaves, or 0.0 when no spare frame is held or it is
+# spent. run_state keeps the once-per-run flag; this only says what the frame is worth.
+func death_save_hull() -> float:
+	if not perks.has("death_save") or build.ctx.run.death_save_spent:
+		return 0.0
+	var floor_share := 0.2
+	for part_id in copies:
+		var d: Resource = Parts.def(part_id)
+		if d != null and d.effect.get("perk", "") == "death_save":
+			floor_share = float(d.effect.get("floor", 0.2))
+			_count(part_id)
+	return maxf(1.0, build.ctx.run.max_hp * floor_share)
+
+
 func _soften(c) -> void:
 	var ctx = build.ctx
 	if not ctx.run.alive():

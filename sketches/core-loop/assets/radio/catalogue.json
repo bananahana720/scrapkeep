@@ -2776,7 +2776,7 @@
      "id": "clean_win"
     }
    },
-   "where": "Win a run without retrying a stage.",
+   "where": "Win a run without using the earned save.",
    "sleeve": "Every part greased, every part on time. Rare footage.",
    "bpm": 172,
    "key": "D minor",

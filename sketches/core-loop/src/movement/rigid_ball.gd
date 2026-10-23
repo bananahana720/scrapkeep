@@ -3,6 +3,7 @@ extends RigidBody3D
 const Tuning := preload("res://src/movement/tuning.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const Contact := preload("res://src/movement/contact.gd")
 
 signal enemy_touched(enemy: Node3D, normal: Vector3)
 signal slammed(at: Vector3, speed: float, flatness: float)
@@ -17,6 +18,11 @@ signal landed(impact: float)
 var tuning
 var state
 var drive_basis := Basis.IDENTITY
+# Draw-side hooks (MOTION-SPEC row 210). Emitted before the body takes a velocity set, and
+# before a teleport, so the drawn lattice can keep its spin through the forced floor roll the
+# set applies below. Nothing here reads or changes the body.
+signal velocity_setting
+signal teleporting
 var intent
 var kit
 # Pushes from the world (the flood's drag and current), an acceleration in m/s^2. The
@@ -77,11 +83,13 @@ func set_active(active: bool) -> void:
 
 
 func set_velocity_now(new_velocity: Vector3) -> void:
+	velocity_setting.emit()
 	_pending_velocity = new_velocity
 	state.velocity = new_velocity
 
 
 func teleport(to: Vector3, new_velocity: Vector3) -> void:
+	teleporting.emit()
 	_pending_position = to
 	_pending_velocity = new_velocity
 	state.velocity = new_velocity
@@ -226,5 +234,4 @@ func _publish_kit(body_state: PhysicsDirectBodyState3D) -> void:
 
 func _on_body_entered(body: Node) -> void:
 	if _active and body.is_in_group("enemy"):
-		var normal: Vector3 = global_position - body.global_position
-		enemy_touched.emit(body, normal.normalized() if normal.length() > 0.01 else Vector3.UP)
+		enemy_touched.emit(body, Contact.normal_between(global_position, body.global_position))

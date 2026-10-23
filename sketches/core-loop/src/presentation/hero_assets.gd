@@ -138,10 +138,13 @@ const WEAPON_RING_RATE := 14.0
 # (63 percent in 0.125 s), so the bank never pops on a take or a peel.
 const BANK_RATE := 8.0
 # Gap-bracket modules that ride the banked carrier (ROSTER-LOOK section 4 'bracket'). Geometry baked into
-# the Pod mesh (a seat arm, Cannon's split ports and rush ring) stays level with the pod.
+# the Pod mesh (a seat arm, Cannon's rush ring) stays level with the pod. Cannon's split ports and class V
+# hoods are their own meshes (SplitPorts, PortHoods) so they bank, as are Sable's SpoolKit, Tally's
+# DrumBrackets, DrumHoods and HeavyDrums, and Tarn's heft-layer claw hooks (ClawHooks).
 const BRACKET_PARTS := ["CoilMast", "Exhaust_L", "Exhaust_R", "VaneL", "VaneR", "ClawPivot_L", "ClawPivot_R",
 	"ClawTip_L", "ClawTip_R", "ClawLower_L", "ClawLower_R", "ClawUpper_L", "ClawUpper_R", "Flywheel_L",
-	"Flywheel_R", "FlywheelAxis_L", "FlywheelAxis_R", "SplitExit_L", "SplitExit_R", "RushContact"]
+	"Flywheel_R", "FlywheelAxis_L", "FlywheelAxis_R", "SplitExit_L", "SplitExit_R", "RushContact",
+	"SplitPorts", "PortHoods", "SpoolKit", "DrumBrackets", "DrumHoods", "HeavyDrums", "ClawHooks"]
 # The shell's air-factor cue: a flat ring on the pod, in the row's colour and shape, that swells
 # out on the rise and draws in on the return (a different motion from juice.gd's shell pulse,
 # which means heft). No overlay: it is a mesh under the pod.
@@ -155,6 +158,7 @@ const AIR_CUE_NAME := "AirCue"
 # An equipped paint lerps the paint surfaces' baked vertex colour this far toward its tint,
 # so a dark lattice takes the hue instead of only darkening (PAINT-TRACE card A2, start value).
 const PAINT_TAKE := 0.6
+# Vertex alpha 0 keeps a part's baked colour under any paint; alpha at or above 0.05 takes full paint, so Tally's window-index alphas (0.2 to 0.8) are unchanged.
 # Plate maps average darker than the old neutral value noise; the paint slot lifts once.
 const PAINT_LIFT := 1.2
 const PAINT_SHADER := """shader_type spatial;
@@ -169,14 +173,14 @@ void vertex() {
 	local_pos = VERTEX;
 	local_normal = NORMAL;
 }
-vec3 painted(vec3 vertex_color, vec3 pos, vec3 normal) {
+vec3 painted(vec3 vertex_color, float mask, vec3 pos, vec3 normal) {
 	vec3 weights = abs(normalize(normal));
 	weights /= max(weights.x + weights.y + weights.z, 0.001);
 	vec3 p = pos / 1.5;
 	vec3 plate = texture(plate_texture, p.yz).rgb * weights.x
 		+ texture(plate_texture, p.xz).rgb * weights.y
 		+ texture(plate_texture, p.xy).rgb * weights.z;
-	return mix(vertex_color * lift.rgb, paint_tint.rgb, paint_take) * plate;
+	return mix(vertex_color * lift.rgb, paint_tint.rgb, paint_take * step(0.05, mask)) * plate;
 }
 """
 
@@ -313,7 +317,7 @@ void fragment() {
 	if slot == "paint" and tint != Color.WHITE:
 		var painted := ShaderMaterial.new()
 		painted.shader = _paint_shader("paint", PAINT_SHADER + """void fragment() {
-	ALBEDO = painted(COLOR.rgb, local_pos, local_normal);
+	ALBEDO = painted(COLOR.rgb, COLOR.a, local_pos, local_normal);
 	ROUGHNESS = 0.8;
 }
 """)
@@ -679,7 +683,7 @@ instance uniform int lit_count = 0;
 instance uniform int heft_class = 1;
 void fragment() {
 	if (UV2.y > float(heft_class) + 0.1) { discard; }
-	ALBEDO = painted(COLOR.rgb, local_pos, local_normal);
+	ALBEDO = painted(COLOR.rgb, COLOR.a, local_pos, local_normal);
 	ROUGHNESS = 0.8;
 	if (UV2.x > 0.5) {
 		bool lit = UV2.x <= float(lit_count) + 0.1;
@@ -867,9 +871,18 @@ static func _frame_in(pod: Node3D, node: Node3D) -> Transform3D:
 	var frame := Transform3D.IDENTITY
 	var at := node.get_parent() as Node3D
 	while at != null and at != pod:
-		frame = at.transform * frame
+		frame = _rest_transform(at) * frame
 		at = at.get_parent() as Node3D
 	return frame
+
+
+# A node's transform with its `heft_rest` position in place of where a slam or fling has it now. The
+# layer's own Pod mesh slams too (rest 0, so it moves up), and it is the parent of the layer's holder.
+static func _rest_transform(node: Node3D) -> Transform3D:
+	var local := node.transform
+	if node.has_meta("heft_rest"):
+		local.origin = node.get_meta("heft_rest")
+	return local
 
 
 # Which heft layers show now: the hull below is only valid for one such state.
@@ -908,9 +921,11 @@ static func _bank_hull(pod: Node3D, visible_only := true) -> Dictionary:
 
 # Mesh vertices (and node origins when `origins`) under `node`, in `top`'s frame; a hidden
 # child's subtree is left out when `visible_only`.
+# A heft layer's mesh is read at its `heft_rest` position, not where a slam or fling has it now, so
+# a hull built mid-tween (and cached until the next visibility change) still holds the settled shape.
 static func _points_under(node: Node3D, top: Node3D, origins: bool, visible_only := true, to := Transform3D.IDENTITY) -> PackedVector3Array:
 	var out := PackedVector3Array()
-	var here := to if node == top else to * node.transform
+	var here := to if node == top else to * _rest_transform(node)
 	if node is MeshInstance3D and (node as MeshInstance3D).mesh != null:
 		var mesh: Mesh = (node as MeshInstance3D).mesh
 		for i in mesh.get_surface_count():

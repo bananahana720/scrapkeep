@@ -1,8 +1,8 @@
 extends RefCounted
 
-# The v2 item pool (I2 section 3, accepted by DESIGN-V2 section 7): 61 items in six
+# The v2 item pool (I2 section 3, accepted by DESIGN-V2 section 7): 62 items in six
 # families. Cross Split, Spiral Wave and Chain Arc already live in parts.gd's catalogue,
-# so this table holds the other 58. Each row is compact on purpose: the generator
+# so this table holds the other 59. Each row is compact on purpose: the generator
 # (item_gen.gd) fills in the name, the tier, the icon category, the tags it lacks and
 # the word-count discipline, the same way it builds a procedural item, so an authored
 # row and a generated one are the same shape.
@@ -156,7 +156,7 @@ const TABLE := {
 	"low_rider": {"maker": "highdraft_roosts", "base": "mobility", "rarity": "common", "stack": "linear", "cap": 5, "tags": ["speed", "mass"],
 		"verb": "Ride low", "text": "+5% cruise speed", "mods": {"cruise": 1.05}},
 
-	# Defense (8).
+	# Defense (9).
 	"rivet_seam": {"maker": "fleet_surplus", "touches": "roll", "base": "defense", "rarity": "common", "stack": "linear", "cap": 6, "tags": ["mass"],
 		"verb": "Seam the hull", "text": "+15 max health", "max_hp_bonus": 15.0},
 	"shock_liner": {"maker": "spillway_works", "base": "defense", "rarity": "uncommon", "trigger": "on_damage_taken", "element": "arc", "stack": "capped",
@@ -179,6 +179,11 @@ const TABLE := {
 	"warden_ward": {"maker": "fleet_surplus", "base": "defense", "rarity": "rare_plus", "trigger": "on_damage_taken", "stack": "capped", "cap": 1,
 		"tags": ["mass", "anchor"], "verb": "Ward off the worst", "text": "Once a stage, hold health at 20%",
 		"effect": {"do": "floor_hp", "floor": 0.2}},
+	# The earned save (wave 19, "No free retry"): a killing hit leaves you at 20% health, once a run.
+	# The flag lives in the run doc (run_state death_save_spent); the hook is build's death_save_hull.
+	"spare_frame": {"maker": "fleet_surplus", "base": "defense", "rarity": "rare_plus", "stack": "capped", "cap": 1,
+		"tags": ["mass", "anchor"], "verb": "Keep a spare frame", "text": "Once a run, a killing hit leaves you at 20%",
+		"effect": {"do": "perk", "perk": "death_save", "floor": 0.2}},
 
 	# Utility (8).
 	"magnet_coil": {"maker": "fleet_surplus", "base": "utility", "rarity": "common", "stack": "linear", "cap": 4, "tags": ["mass", "anchor"],
