@@ -140,6 +140,8 @@ func _run() -> void:
 	t.check("no main-thread frame over 33 ms with the rows placing", row_frame_ms < FRAME_CAP_MS, "%.2f ms" % row_frame_ms)
 	t.check("no row placement step over 8 ms", row_step_ms < 8.0, "%.2f ms at %s" % [row_step_ms, rows.slowest_step if rows != null else ""])
 	t.check("stage 1 left memory (only the active and next stage stay)", terrain.park_ground(1) == null and holder.get_node_or_null("Stage1") == null)
+	# terrain.gd's Reaper frees a swapped-out stage over frames, under a new name; it must finish.
+	t.check("stage 1's freed nodes are all gone", _freed_left(holder).is_empty(), str(_freed_left(holder)))
 	var at := ball.global_position
 	var floor_y: float = terrain.height(at.x, at.z)
 	t.check("the ball rests on stage 2's ground", landed_frames > 30 and absf(at.y - 0.5 - floor_y) < 0.05, "ball %s, ground %.3f" % [str(at), floor_y])
@@ -177,12 +179,8 @@ func _run() -> void:
 	t.eq("one render node shows on the new run", shown, 1)
 
 	# The swap while a stage's rows are still placing (KB9): stage 3 builds, and use(3) lands the frame its ground is
-	# ready, before its rows have all attached; the swap stays under the cap and the rows finish on their own. The run
-	# plays stage 2 first, as a game does (world.gd prepares only the next stage), so use(3) frees one stage, stage 2,
-	# and stage 1's free lands before stage 3 builds; a skip from stage 1 to 3 would free two in one frame.
-	terrain.use(2)
-	for n in 3:
-		await process_frame
+	# ready, before its rows have all attached; the swap stays under the cap and the rows finish on their own. use(3)
+	# frees stages 1 and 2 in the one swap, as a new run's use(1) can, so two freed stages empty at once.
 	terrain.prepare(3)
 	var ground_frames := 0
 	while not terrain.is_ready(3) and ground_frames < BUILD_FRAMES_MAX:
@@ -206,8 +204,18 @@ func _run() -> void:
 	t.check("no row placement step over 8 ms across the swap", placing_step_ms < 8.0, "%.2f ms" % placing_step_ms)
 	t.check("no main-thread frame over 33 ms while rows place across the swap", placing != null and placing.frame_usec_max / 1000.0 < FRAME_CAP_MS,
 		"%.2f ms" % (placing.frame_usec_max / 1000.0 if placing != null else -1.0))
+	var reap_frames := 0
+	while not _freed_left(holder).is_empty() and reap_frames < BUILD_FRAMES_MAX:
+		await process_frame
+		reap_frames += 1
+	t.check("the stages freed across the swap are all gone", _freed_left(holder).is_empty(), "%s after %d frames" % [_freed_left(holder), reap_frames])
 	for n in 3:
 		await process_frame
 	holder.queue_free()
 	await process_frame
 	quit(t.verdict())
+
+
+# The freed stage roots still under holder (terrain.gd Reaper names them Freed<name> until they are gone).
+func _freed_left(holder: Node) -> Array:
+	return holder.get_children().filter(func(n: Node) -> bool: return String(n.name).begins_with("Freed")).map(func(n: Node) -> String: return String(n.name))

@@ -1768,8 +1768,8 @@ class Placer extends Node3D:
 		var added := 0
 		var last := 0
 		while _next < _rows.size():
-			# Stop before a row that would likely end past the deadline: as dear as the last row or the dearest so far.
-			if deadline >= 0 and added > 0 and Time.get_ticks_usec() + maxi(last, row_usec_max) > deadline:
+			# Stop before a row that would likely end past the deadline (rows of one park cost alike).
+			if deadline >= 0 and added > 0 and Time.get_ticks_usec() + last > deadline:
 				return
 			var r0 := Time.get_ticks_usec()
 			# Built outside the tree, then added once.

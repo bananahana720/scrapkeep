@@ -364,7 +364,11 @@ func _free_stage(i: int) -> void:
 	# in the frames before queue_free lands; the stage that takes the node may already own it.
 	if _grounds[i] != null:
 		_grounds[i].set_process(false)
-	Reaper.take(_roots[i])
+	# A bot run frees it whole, as before: removals at a load-dependent frame would move the shared physics world.
+	if _worker_builds():
+		Reaper.take(_roots[i])
+	else:
+		_roots[i].queue_free()
 	_roots[i] = null
 	_grounds[i] = null
 	_cave_roofs.erase(i)
@@ -396,7 +400,7 @@ static func _park(root: Node3D, parked: bool) -> void:
 
 # A freed stage's nodes leave a few a frame, parked and hidden meanwhile: one queue_free of a whole park stage (2917
 # shapes) cost 33-50 ms in the swap frame headless (park_swap_test, artifacts/local/c9). Deepest first, a physics
-# body whole (its shapes leave the space in one go), the root last.
+# body whole (its shapes leave the space in one go), the root last. Nothing under it processes meanwhile.
 class Reaper extends Node:
 	const BUDGET_USEC := 3000
 
@@ -405,9 +409,8 @@ class Reaper extends Node:
 		root.name = "Freed%s" % root.name
 		root.visible = false
 		root.position = Vector3.DOWN * PARK_DEPTH
-		for child in root.get_children():
-			child.set_process(false)
-			child.set_physics_process(false)
+		root.propagate_call("set_process", [false])
+		root.propagate_call("set_physics_process", [false])
 		var reaper := Reaper.new()
 		reaper.name = "Reaper"
 		reaper.process_mode = Node.PROCESS_MODE_ALWAYS
