@@ -13,8 +13,9 @@ extends RefCounted
 #   terrain  the same anchor and ring with the driver's default dodging, but it breaks the circle onto the nearest
 #            line within TERRAIN_LINE_REACH and rides it when a read telegraph would hit, or after CIRCLE_BREAK_S of
 #            continuous circling, then returns to the ring. A line is a cable contraption on the map, a park grind
-#            line (a row whose ride fact is ride_grapple_line), or a world anchor the driver's swing hand
-#            (_swing_hand) can bite. It never perches: the perch field does not exist yet.
+#            line (a row whose ride fact is ride_grapple_line), an anchor post (an anchor_field row) it swings past, or
+#            a world anchor the driver's swing hand (_swing_hand) can bite. It takes only lines that end within
+#            LINE_HOME of the anchor. It never perches: the perch field does not exist yet.
 #
 # Stage-note fields both write (the gates read them): fight_s, circle_s, circle_share, line_rides, lines_in_reach,
 # line_misses. The contact fields (first_contact_s, first_hit_s, hull_lost_120s, alive_120s, telegraph_reads) are kept
@@ -29,10 +30,20 @@ const ORBIT_RADIUS := 14.0
 const ORBIT_BAND := 3.0
 # How far round the ring (radians) the steering point leads the ball.
 const ORBIT_LEAD := 0.5
+# The anchor search (_make_anchor): candidate spacing, the band's largest height range, samples per radius, rings of
+# candidates.
+const ANCHOR_STEP := 7.0
+const RING_RISE := 3.0
+const RING_SAMPLES := 24
+const ANCHOR_RINGS := 4
 const CIRCLE_BREAK_S := 6.0
 # A ball out of the band for this long no longer counts as circling continuously.
 const CIRCLE_GAP_S := 1.0
 const TERRAIN_LINE_REACH := 60.0
+# A line the terrain arm takes must end (a cable) or stand (a park line) within this of the anchor.
+const LINE_HOME := 45.0
+# How close the terrain arm rolls to an anchor post before it swings past it.
+const POST_SWING_AT := 18.0
 # The line a break heads for is given this long to take the ball, the swing hand this long to bite.
 const LINE_TRY_S := 8.0
 const SWING_TRY_S := 1.5
@@ -41,7 +52,6 @@ const RIDE_REST_S := 3.0
 # The cable fact and the park's grind-line fact: both are a line ride.
 const LINE_FACTS := ["ride_grapple_line"]
 const PARK_LINE_ELEMENTS := ["grind_line", "elevated_line", "flow_line", "rail"]
-const COAST_ABOVE := 1.05
 
 var driver
 var _target: Node3D = null
@@ -54,6 +64,9 @@ var _circle_clock := 0.0
 var _circle_gap := 0.0
 var _line_gap := 0.0
 var _line_goal := Vector3.INF
+var _line_kind := ""
+# The anchor post a swing heads past (INF: swing outward from the ring).
+var _swing_toward := Vector3.INF
 var _hook_counted := false
 var _swung := false
 var _park_lines: Array = []
@@ -123,8 +136,12 @@ func step(delta: float, terrain: bool) -> void:
 	_circle(delta, at, radial, d, terrain)
 
 
-# The anchor, fixed at first contact for the rest of the stage: the centroid of the live pack units within the contact
-# radius of the ball at that tick, else the nearest live enemy's position (a hit from further off opened the contact).
+# The anchor, fixed at first contact for the rest of the stage. Its ring must be open ground a ball at cruise can
+# hold: a pack often stands on a mound, and a 14 m ring round it climbs 10 m or more, which the coasting ball cannot
+# roll (stage 1 seed 1: circle_share 0.05). The wanted centre is the centroid of the live pack units within the
+# contact radius of the ball at that tick, else the nearest live enemy. Candidates are that centre, the ball's own
+# position and points ANCHOR_STEP apart on ANCHOR_RINGS rings round both; the first, nearest the wanted centre, whose
+# band rises less than RING_RISE wins, else the flattest. The band is sampled at RING_SAMPLES points on three radii.
 func _make_anchor(ball: Vector3) -> Vector3:
 	var sum := Vector3.ZERO
 	var n := 0
@@ -136,10 +153,48 @@ func _make_anchor(ball: Vector3) -> Vector3:
 		if ball.distance_to(node.global_position) <= driver.CONTACT_RADIUS:
 			sum += node.global_position
 			n += 1
+	var want := ball
 	if n > 0:
-		return sum / n
-	var near := _pick(ball)
-	return near.global_position if near != null else ball
+		want = sum / n
+	else:
+		var near := _pick(ball)
+		if near != null:
+			want = near.global_position
+	var candidates: Array = []
+	for centre in [want, ball]:
+		candidates.append(centre)
+		for ring in range(1, ANCHOR_RINGS + 1):
+			for i in 8:
+				var a := TAU * i / 8.0
+				candidates.append(centre + Vector3(sin(a), 0.0, cos(a)) * ANCHOR_STEP * ring)
+	candidates.sort_custom(func(p: Vector3, q: Vector3) -> bool: return driver._flat(p, want) < driver._flat(q, want))
+	var best: Vector3 = want
+	var best_rise := INF
+	for c in candidates:
+		var rise := _ring_rise(c)
+		if rise < best_rise:
+			best = c
+			best_rise = rise
+		if rise < RING_RISE:
+			break
+	driver._note["anchor_rise"] = snappedf(best_rise, 0.1)
+	driver._note["anchor_off"] = snappedf(driver._flat(best, want), 0.1)
+	return driver._ground_point(best.x, best.z)
+
+
+# The height range of the terrain under the band ORBIT_RADIUS +- ORBIT_BAND round `at` (a ledge just off the ring
+# drops a coasting ball off it: stage 5 seed 1 rolled off its plateau and 200 m downhill).
+func _ring_rise(at: Vector3) -> float:
+	var terrain = driver.game.ctx.terrain
+	var lo := INF
+	var hi := -INF
+	for radius in [ORBIT_RADIUS - ORBIT_BAND, ORBIT_RADIUS, ORBIT_RADIUS + ORBIT_BAND]:
+		for i in RING_SAMPLES:
+			var a := TAU * i / RING_SAMPLES
+			var h: float = terrain.height(at.x + sin(a) * radius, at.z + cos(a) * radius)
+			lo = minf(lo, h)
+			hi = maxf(hi, h)
+	return hi - lo
 
 
 # The circle: a steering point a little ahead round the ring, the gun on the nearest enemy, boost off and the stick held to cruise.
@@ -165,17 +220,19 @@ func _terrain(delta: float, ball: Vector3, at: Vector3) -> bool:
 			if not line.is_empty():
 				driver._note["lines_in_reach"] = maxi(int(driver._note["lines_in_reach"]), 1)
 				_line_goal = line["at"]
+				_line_kind = line["kind"]
 				_state = "line"
 				_state_clock = LINE_TRY_S
 				return false
-			_state = "swing"
-			_state_clock = SWING_TRY_S
-			_hook_counted = false
-			_swung = false
+			_start_swing(Vector3.INF)
 			return false
 		"line":
 			if _state_clock <= 0.0:
 				_miss()
+				return false
+			# An anchor post is not ridden but swung round: close in, then bite it on the way past.
+			if _line_kind == "post" and driver._flat(ball, _line_goal) <= POST_SWING_AT:
+				_start_swing(_line_goal)
 				return false
 			driver._goal = "line"
 			driver._act(_line_goal, _target, delta, null, true)
@@ -207,6 +264,8 @@ func _terrain(delta: float, ball: Vector3, at: Vector3) -> bool:
 					_miss()
 				return false
 			var away := Vector3(ball.x - at.x, 0.0, ball.z - at.z)
+			if _swing_toward != Vector3.INF:
+				away = Vector3(_swing_toward.x - ball.x, 0.0, _swing_toward.z - ball.z)
 			away = away.normalized() if away.length() > 0.5 else Vector3.FORWARD
 			var way: Vector3 = ball + away * 30.0
 			var aim = driver._swing_hand(ball, way, delta)
@@ -216,6 +275,14 @@ func _terrain(delta: float, ball: Vector3, at: Vector3) -> bool:
 			driver._act(way, aim if aim != null else _target, delta, null, true)
 			return true
 	return false
+
+
+func _start_swing(toward: Vector3) -> void:
+	_state = "swing"
+	_state_clock = SWING_TRY_S
+	_swing_toward = toward
+	_hook_counted = false
+	_swung = false
 
 
 func _miss() -> void:
@@ -241,25 +308,39 @@ func _pick(ball: Vector3) -> Node3D:
 	return best
 
 
-# The nearest cable's high end or park grind line within TERRAIN_LINE_REACH. {} when there is none.
+# The nearest cable's high end or park grind line within TERRAIN_LINE_REACH whose ride ends within LINE_HOME of the
+# anchor. {} when there is none. A cable is a held path to its far end, so one that ends far off carries the arm away
+# from the ground it was circling (islands seed 1: a 240 m ride, then no way back to the ring).
 func _nearest_line(ball: Vector3) -> Dictionary:
 	var best := {}
 	var best_d := TERRAIN_LINE_REACH
-	for mouth in driver._cable_mouths():
-		var p: Vector3 = mouth["at"]
-		var d: float = driver._flat(ball, p)
-		if d <= best_d and absf(p.y - ball.y) <= TERRAIN_LINE_REACH:
-			best_d = d
-			best = {"at": p, "kind": "cable"}
-	for p in _lines_of_park():
+	var map = driver.game.ctx.terrain.map()
+	if map != null and "contraptions" in map:
+		for spec in map.contraptions:
+			if spec["kind"] != "cable":
+				continue
+			var p: Vector3 = spec["from"]
+			var end: Vector3 = spec["to"]
+			if driver._flat(end, _anchor) > LINE_HOME:
+				continue
+			var d: float = driver._flat(ball, p)
+			if d <= best_d and absf(p.y - ball.y) <= TERRAIN_LINE_REACH:
+				best_d = d
+				best = {"at": p, "kind": "cable"}
+	for line in _lines_of_park():
+		# A park line rides its whole length: its far end must be home too.
+		var p: Vector3 = line["at"]
+		if driver._flat(p, _anchor) + float(line["half"]) > LINE_HOME:
+			continue
 		var d: float = driver._flat(ball, p)
 		if d <= best_d:
 			best_d = d
-			best = {"at": p, "kind": "park"}
+			best = {"at": p, "kind": line["kind"]}
 	return best
 
 
-# Ground points of this stage's park grind lines (rows whose ride fact is a cable ride).
+# This stage's park grind lines and anchor posts (rows whose ride fact is a cable ride): {at: ground point, half: half the
+# longer side (0 for a post, which is swung round, not ridden), kind: park or post}.
 func _lines_of_park() -> Array:
 	var game = driver.game
 	if _park_lines_stage == game.run.stage:
@@ -270,7 +351,10 @@ func _lines_of_park() -> Array:
 	if map == null or not "park" in map:
 		return _park_lines
 	for row in map.park.get("park_rows", []):
-		if row.get("element") in PARK_LINE_ELEMENTS and row.get("ride_fact") in LINE_FACTS:
+		var post: bool = row.get("element") == "anchor_field"
+		if (post or row.get("element") in PARK_LINE_ELEMENTS) and row.get("ride_fact") in LINE_FACTS:
 			var at: Array = row["at"]
-			_park_lines.append(driver._ground_point(float(at[0]), float(at[1])))
+			var size: Array = row.get("size", [0.0, 0.0, 0.0])
+			var half := 0.0 if post else maxf(float(size[0]), float(size[2])) * 0.5
+			_park_lines.append({"at": driver._ground_point(float(at[0]), float(at[1])), "half": half, "kind": "post" if post else "park"})
 	return _park_lines

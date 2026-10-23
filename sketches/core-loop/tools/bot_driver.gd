@@ -3814,10 +3814,14 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		var v: Vector3 = player.planar_velocity()
 		v.y = 0.0
 		var change := dir * maxf(v.length(), 12.0) - v
+		# The circling policies hold cruise speed: they aim the velocity at cruise along dir, so above cruise the stick
+		# turns and slows the ball (a released stick let a downhill ring roll the ball 600 m off it, crown seed 1).
+		if _cruise_hold:
+			change = dir * player.tuning.f("cruise") - v
 		var want := dir if change.length() < 0.5 else change.normalized()
 		hold["move"] = Vector2(want.dot(right), want.dot(forward)).normalized()
-		# The circling policies hold cruise speed: the stick comes off while the ball is faster, and it coasts.
-		if _cruise_hold and speed > player.tuning.f("cruise") * BotKite.COAST_ABOVE:
+		# At cruise the stick comes off, so the ball coasts at it instead of accelerating past.
+		if _cruise_hold and change.length() < 0.5:
 			hold["move"] = Vector2.ZERO
 		var lined: float = v.normalized().dot(dir) if v.length() > 0.5 else 1.0
 		# No brake-carving: brake is also the slam key, and a carve held over a bump
