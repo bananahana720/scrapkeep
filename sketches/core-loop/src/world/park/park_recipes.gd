@@ -1625,8 +1625,11 @@ class Placer extends Node3D:
 	var _pending: Array = []
 	# Loaded resources held for the build, so its load() calls find them cached.
 	var _held: Array = []
-	# Headless, a threaded build's paths, loaded on the main thread one a frame while LOADING (_poll_loading).
+	# Headless, a threaded build's paths, loaded on the main thread one a frame while LOADING (_poll_loading), and the
+	# longest of those frames' steps.
 	var _main_loads: Array = []
+	var _headless_loads := false
+	var main_load_usec_max := 0
 	var _next := 0
 	var _threaded := false
 	# Anchor-field post centres by row index, worked out on a worker (pure arithmetic, no server resources).
@@ -1672,6 +1675,7 @@ class Placer extends Node3D:
 				threaded_loads += 1
 		if threaded and headless:
 			_main_loads = wanted.duplicate()
+			_headless_loads = true
 		if threaded:
 			_task = WorkerThreadPool.add_task(_work_posts, false, "park anchor posts")
 		else:
@@ -1727,7 +1731,11 @@ class Placer extends Node3D:
 				if _task == -1 or WorkerThreadPool.is_task_completed(_task):
 					_wait_posts()
 					_build_step(t0 + BUILD_BUDGET_USEC)
-		_meter(Time.get_ticks_usec() - t0, "%s row %d" % [Phase.keys()[was], _next])
+		# A headless load on the main thread stands in for the loader thread's, so it is metered on its own.
+		if was == Phase.LOADING and _headless_loads:
+			main_load_usec_max = maxi(main_load_usec_max, Time.get_ticks_usec() - t0)
+		else:
+			_meter(Time.get_ticks_usec() - t0, "%s row %d" % [Phase.keys()[was], _next])
 
 	func _meter(spent: int, step: String) -> void:
 		if spent > slowest_usec:
@@ -1760,8 +1768,8 @@ class Placer extends Node3D:
 		var added := 0
 		var last := 0
 		while _next < _rows.size():
-			# Stop before a row that would likely end past the deadline (rows of one park cost alike).
-			if deadline >= 0 and added > 0 and Time.get_ticks_usec() + last > deadline:
+			# Stop before a row that would likely end past the deadline: as dear as the last row or the dearest so far.
+			if deadline >= 0 and added > 0 and Time.get_ticks_usec() + maxi(last, row_usec_max) > deadline:
 				return
 			var r0 := Time.get_ticks_usec()
 			# Built outside the tree, then added once.

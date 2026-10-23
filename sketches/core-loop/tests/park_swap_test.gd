@@ -197,8 +197,9 @@ func _run() -> void:
 		await process_frame
 		tail += 1
 	var placing_step_ms: float = placing.slowest_usec / 1000.0 if placing != null else INF
-	print("park_swap_test: use(3) with its rows placing %s: %.2f ms; rows done %d frames later, worst frame %.2f ms, slowest step %.2f ms at %s"
-		% [placing_at_swap, placing_swap_ms, tail, placing.frame_usec_max / 1000.0 if placing != null else -1.0, placing_step_ms, placing.slowest_step if placing != null else ""])
+	print("park_swap_test: use(3) with its rows placing %s: %.2f ms; rows done %d frames later, worst frame %.2f ms, slowest step %.2f ms at %s, slowest headless load %.2f ms"
+		% [placing_at_swap, placing_swap_ms, tail, placing.frame_usec_max / 1000.0 if placing != null else -1.0, placing_step_ms, placing.slowest_step if placing != null else "",
+		placing.main_load_usec_max / 1000.0 if placing != null else -1.0])
 	t.check("the swap lands while the stage's rows are still placing", placing_at_swap)
 	t.check("the swap with rows placing is under 33 ms", placing_swap_ms < FRAME_CAP_MS, "%.2f ms" % placing_swap_ms)
 	t.check("the rows finish placing after the swap", placing != null and placing.is_ready(), "%d frames" % tail)
