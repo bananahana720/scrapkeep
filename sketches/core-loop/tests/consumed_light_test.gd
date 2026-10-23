@@ -28,13 +28,13 @@ const T := preload("res://tests/support/t.gd")
 #   ambient only  n perpendicular to l_sun and l_fill (the bare ambient term)       fill-facing  n = l_fill
 # The Waking pit (rig_waking) is NOT lit by its row's sun: that row has sun_visible false and arena_waking_dress.gd hides every
 # DirectionalLight3D (:192-193). The game draws CoreKey, a SpotLight3D (colour WorldLook.ARENAS.waking.key, energy
-# ArenaWakingDress.LIGHTS.core_key.energy, placed at core + (10, 18, 12) and aimed at the core, :340-341), and ReactorBounce,
-# an OmniLight3D at the core (colour Color("91b4ce") at arena_waking_dress.gd:169, energy LIGHTS.reactor.energy), over the
-# row's ambient. No sun and no fill. Each is treated as a directional term at its energy. The key direction is its offset
-# normalised. The reactor sits at the core, so a surface's direction to it varies with where it stands: a stand-in
-# direction is used, horizontal and opposite the key's side (-10, 0, -12), the wall across the core from the key.
-#   key-facing   n = l_key       reactor-facing  n = l_reactor      floor  n = up (key 0.77, reactor 0 by the stand-in)
-#   ambient only n perpendicular to both (no light reaches it)
+# ArenaWakingDress.LIGHTS.core_key.energy), and ReactorBounce, an OmniLight3D (colour Color("91b4ce") at
+# arena_waking_dress.gd:169, energy LIGHTS.reactor.energy), over the row's ambient. No sun and no fill. Falloff is ignored.
+# _follow_reactor (arena_waking_dress.gd:336-339) puts ReactorBounce at warden.family_point_at(), which is the Warden position
+# plus point_offset(), by default Vector3.UP * 4.0 (src/combat/warden.gd:264-265). The reactor hangs above the Warden, so the
+# floor sees both lights, and a surface's direction to each light depends on where it stands. So no direction is assumed:
+# the Waking cells are an envelope, every (key n.l, reactor n.l) pair with each weight in {0, 0.5, 1}, over the ambient
+# (9 cells; (0, 0) is ambient only). That bounds the mix of the two lights on any surface at those weights.
 # Hue and saturation are read on the lit colour divided by its largest channel, so energy alone cannot clip it (HSV hue and
 # saturation are scale-free). All CIE76 gaps in one rig and normal (one "cell") share one brightness factor, cell_scale: the
 # largest lit channel among the sample and the three warning colours; life colours are scaled by it and clamped at 1.
@@ -51,7 +51,7 @@ const MIN_GAP := 25.0
 const MOLTEN := Color("ff7a2e")  # src/boss/hazard.gd MOLTEN, a const on a Node script, copied.
 # Pinned from a real run (as tests/park_day_light_test.gd pins its count): 6 stages x 3 worlds, 6 park maps, waking, mind, camp.
 const EXPECTED_LOOKS := 27
-const EXPECTED_CHECKS := 668
+const EXPECTED_CHECKS := 698
 
 var _t := T.new("consumed_light_test")
 
@@ -153,6 +153,7 @@ func _controls() -> void:
 	_t.check("control v: a life colour equal to the sample fails the pairwise gap", not gap_ok(same), "gap %.1f < %.0f, as planted" % [same, MIN_GAP])
 	# (vi) the thresholds themselves: inclusive edges, asserted once so a change of > to >= shows. Hue 300 is the one degree the
 	# two hue ranges share; the saturation ranges (life up to 0.55, consumed from 0.6) keep the regions apart there.
+	# The literal edge values below (300, 330, 0.6, 0.55) are intentional change detectors on the band values.
 	_t.check("edge: hue 300 sat 0.6 is consumed", in_consumed_band(300.0, 0.6), "inclusive on both hue 300 and sat 0.6")
 	_t.check("edge: hue 330 sat 0.6 is consumed", in_consumed_band(330.0, 0.6), "inclusive on hue 330")
 	_t.check("edge: hue 299.99 and 330.01 are not consumed", not in_consumed_band(299.99, 0.9) and not in_consumed_band(330.01, 0.9), "outside the hue range")
@@ -168,6 +169,7 @@ func _controls() -> void:
 	var grey_lo := Color(_grey_for_lstar(50.0), _grey_for_lstar(50.0), _grey_for_lstar(50.0))
 	var grey_hi := Color(_grey_for_lstar(75.0), _grey_for_lstar(75.0), _grey_for_lstar(75.0))
 	var grey_gap := cie76(grey_lo, grey_hi)
+	# 0.05 below is a float tolerance on the constructed pair, not a band value.
 	_t.check("edge: two greys 25 L* apart measure about 25 CIE76", absf(grey_gap - 25.0) < 0.05, "gap %.4f" % grey_gap)
 
 
@@ -228,26 +230,30 @@ static func rig_of_look(look: Dictionary) -> Dictionary:
 			{"name": "fill-facing", "n": l_fill}]}
 
 
-# The Waking pit as the game lights it (see the header): CoreKey and ReactorBounce over the row's ambient.
+# The Waking pit as the game lights it (see the header): CoreKey and ReactorBounce over the row's ambient, as a weight envelope.
+# A normal here carries "w", the n.l weight per light, instead of a vector; lit_linear uses it directly.
 static func rig_waking() -> Dictionary:
 	var row: Dictionary = WorldLook.ARENAS.waking
-	var l_key := Vector3(10.0, 18.0, 12.0).normalized()
-	var l_reactor := Vector3(-10.0, 0.0, -12.0).normalized()
+	var normals := []
+	for k in [0.0, 0.5, 1.0]:
+		for r in [0.0, 0.5, 1.0]:
+			normals.append({"name": "key %.1f reactor %.1f" % [k, r], "w": [k, r]})
 	return {"ambient": row.ambient, "energy": row.energy,
-		"lights": [{"color": row.key, "energy": ArenaWakingDress.LIGHTS.core_key.energy, "dir": l_key},
-			{"color": Color("91b4ce"), "energy": ArenaWakingDress.LIGHTS.reactor.energy, "dir": l_reactor}],
-		"normals": [{"name": "key-facing", "n": l_key}, {"name": "reactor-facing", "n": l_reactor},
-			{"name": "floor", "n": Vector3.UP}, {"name": "ambient only", "n": l_key.cross(l_reactor).normalized()}]}
+		"lights": [{"color": row.key, "energy": ArenaWakingDress.LIGHTS.core_key.energy, "dir": Vector3.ZERO},
+			{"color": Color("91b4ce"), "energy": ArenaWakingDress.LIGHTS.reactor.energy, "dir": Vector3.ZERO}],
+		"normals": normals}
 
 
 # The lit linear colour (unclipped) of an sRGB albedo under a rig at normal index n.
 static func lit_linear(albedo: Color, rig: Dictionary, n: int) -> Color:
-	var normal: Vector3 = rig.normals[n].n
+	var spec: Dictionary = rig.normals[n]
 	var amb: Color = rig.ambient.srgb_to_linear()
 	var light := Color(amb.r * rig.energy, amb.g * rig.energy, amb.b * rig.energy)
-	for l in rig.lights:
+	for i in rig.lights.size():
+		var l: Dictionary = rig.lights[i]
 		var c: Color = l.color.srgb_to_linear()
-		var k: float = l.energy * maxf(0.0, normal.dot(l.dir))
+		var weight: float = float(spec.w[i]) if spec.has("w") else maxf(0.0, spec.n.dot(l.dir))
+		var k: float = l.energy * weight
 		light = Color(light.r + c.r * k, light.g + c.g * k, light.b + c.b * k)
 	var a := albedo.srgb_to_linear()
 	return Color(a.r * light.r, a.g * light.g, a.b * light.b)
@@ -255,7 +261,7 @@ static func lit_linear(albedo: Color, rig: Dictionary, n: int) -> Color:
 
 # True when an albedo's lit channel exceeds the cell's shared scale and so clamps at 1 in lit_scaled.
 static func clamps(albedo: Color, rig: Dictionary, n: int) -> bool:
-	return _peak(lit_linear(albedo, rig, n)) > cell_scale(rig, n) * (1.0 + 1e-6)
+	return _peak(lit_linear(albedo, rig, n)) > cell_scale(rig, n) * (1.0 + 1e-6)  # float tolerance
 
 
 static func gap_ok(gap: float) -> bool:
