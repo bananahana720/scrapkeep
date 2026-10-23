@@ -319,6 +319,7 @@ func _prepare_next() -> void:
 	var park: Dictionary = map.park.duplicate(true)
 	var out := {}
 	_plans[key] = {"task": WorkerThreadPool.add_task(func(): out.merge(plan(snapshot, park)), false, "natural plan"), "out": out, "rows": _rows_hash(map.park)}
+	EventGround.build_ahead(map.path)
 
 
 # A handler leaves on every stage change, so a plan still running is left for the handler that
@@ -333,6 +334,7 @@ static func settle_plans() -> void:
 static func release_plans() -> void:
 	settle_plans()
 	_plans.clear()
+	EventGround.release_ahead()
 
 
 func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:

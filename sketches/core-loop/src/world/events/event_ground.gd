@@ -2,6 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
+const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 
@@ -447,6 +448,37 @@ static func _share_hidden(entry: Dictionary, found: Array, id: String) -> void:
 			entry.hidden.append(item)
 
 
+# A stage's OverlayMap starts as a fresh ParkMap of its file, which reads and checks the park file again: 18 to
+# 30 ms of a stage entry. natural.gd builds the next stage's on a worker with its plan; an entry takes it here.
+static var _ahead := {}
+
+
+static func build_ahead(path: String) -> void:
+	if path == "" or _ahead.has(path):
+		return
+	# The schema reads its asset registry once, on first need, and marks it read before filling it: read it here,
+	# so no worker sees it half built and fails the park.
+	ParkSchema._registry()
+	var out := {}
+	_ahead[path] = {"task": WorkerThreadPool.add_task(func(): out.map = OverlayMap.new(path), false, "overlay map"), "out": out}
+
+
+static func _overlay_map_for(path: String) -> OverlayMap:
+	if not _ahead.has(path):
+		return OverlayMap.new(path)
+	WorkerThreadPool.wait_for_task_completion(_ahead[path].task)
+	var built: OverlayMap = _ahead[path].out.get("map")
+	_ahead.erase(path)
+	return built if built != null else OverlayMap.new(path)
+
+
+# Teardown: waits on every build and drops the maps.
+static func release_ahead() -> void:
+	for path in _ahead:
+		WorkerThreadPool.wait_for_task_completion(_ahead[path].task)
+	_ahead.clear()
+
+
 # prepared holds surfaces the caller projected ahead (natural.gd plan: "surface", "target") and the
 # collider shape a previous entry made ("shape", written back here), so a stage entry skips them.
 static func prepare_overlay(world, owner: Node, row: Dictionary, record: Dictionary, collapse_target := Callable(), prepared := {}) -> OverlayMap:
@@ -462,7 +494,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 		record.overlay_map = overlay_map
 		return overlay_map
 	if overlay_map == null:
-		overlay_map = OverlayMap.new(current.path)
+		overlay_map = _overlay_map_for(current.path)
 		for property in current.get_property_list():
 			if int(property.usage) & PROPERTY_USAGE_STORAGE and property.name != "script":
 				overlay_map.set(property.name, current.get(property.name))
