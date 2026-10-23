@@ -241,7 +241,9 @@ func _fight_to_the_end() -> void:
 		"the admiral's crest rides on the ball's roll node (%s) and the run holds %s" % [crest != null and crest.get_parent() == _game.player.roll_node(), Rules.CREST_PART])
 	_report("scooter pace", _boss.scooter_speed() < _game.tuning.f("cruise"),
 		"the scooter runs the ring at %.1f m/s, under cruise %.1f, so a ball at cruise closes on it" % [Rules.SCOOTER_SPEED, _game.tuning.f("cruise")])
-	for _tick in int(3.0 / DT):
+	# The victory window is VICTORY_SECONDS plus the rout and sign-on flourishes' hold
+	# (flourish_cues.gd, at most HOLD_CAP on a profile's first rout).
+	for _tick in int((flow.VICTORY_SECONDS + preload("res://src/presentation/flourish_cues.gd").HOLD_CAP + 0.5) / DT):
 		flow.physics_step(DT)
 	var tail: Array[String] = []
 	for s in _states:
