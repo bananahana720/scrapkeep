@@ -1,0 +1,177 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { test } from "node:test";
+
+import {
+  constBand,
+  evaluate,
+  joinRuns,
+  passed,
+  phaseCount,
+  renderTable,
+  ROWS_FILE,
+  world1Placeholders,
+} from "./world1-bands.mjs";
+
+const SPEC = JSON.parse(readFileSync(ROWS_FILE, "utf8"));
+
+// A routed world 1 run as tools/bot_run.gd and the run log write it: bot record and log line.
+function run(policy, seed, { kills = 20, parts = 3, rout = [300, 100], phase = 4, flourishes, extra = {} } = {}) {
+  const bot = {
+    run_id: `bot-${seed}`,
+    policy,
+    seed,
+    outcome: rout ? "stages_done" : "stalled",
+    stages: [{ stage: 1, exit_s: 200 }, { stage: 2, exit_s: 200 }, { stage: 3, exit_s: 0 }],
+    boss: rout ? { entered_run_s: rout[0], defeated_s: rout[1] } : null,
+    ...extra,
+  };
+  const log = {
+    run_id: `bot-${seed}`,
+    tallies: { kills },
+    brindle_phase_reached: phase,
+    stages: [{ part_ids_at_exit: ["a"] }, { part_ids_at_exit: Array.from({ length: parts }, (_, i) => `p${i}`) }, null],
+  };
+  if (flourishes) log.flourishes = flourishes;
+  return { bot, log };
+}
+
+const seeds = (policy, opts) => [1, 2, 3, 4, 5, 6, 7, 8].map((s) => run(policy, s, opts));
+const row = (rows, id) => rows.find((r) => r.id === id);
+const PACING = {
+  bands: {
+    skipper_total: { min_s: 390, max_s: 510 },
+    completionist_total: { min_s: 900, max_s: 1080 },
+    skipper_stage: { min_s: 180, max_s: 300 },
+    brindle_fight: { min_s: 90, max_s: 180 },
+  },
+};
+const BEATS_TEXT = SPEC.beats.map((id) => `"${id}": {}`).join("\n");
+const FULL_BEATS = SPEC.beats.map((id) => ({ id, s: 4, full: true, skipped: false, held: 0 }));
+
+function finished() {
+  return {
+    runs: [
+      ...seeds("skipper", { kills: 16, parts: 2, rout: [320, 120], flourishes: FULL_BEATS }),
+      ...seeds("completionist", { kills: 34, parts: 6, rout: [880, 120], flourishes: FULL_BEATS }),
+      run("skipper", 9, { flourishes: SPEC.beats.map((id) => ({ id, s: 2, full: false })) }),
+    ],
+    pacing: PACING,
+    findings: [],
+    beatRowsText: BEATS_TEXT,
+    phases: 3,
+    frames: Object.fromEntries(SPEC.frame_scenes.map((s) => [s, { pass: true, p99_ms: 12, over_hitch: 0, budget: { hitch_ms: 33 } }])),
+    challenge: { table: SPEC.challenge_cells.map((cell) => ({ cell, columns: { expert: { ok: true } } })) },
+    sitting: true,
+  };
+}
+
+test("a finished world 1 passes every row", () => {
+  const rows = evaluate(SPEC, finished());
+  const off = rows.filter((r) => !["pass", "info"].includes(r.verdict));
+  // Panels read their band from #398's test file, which this input does not carry.
+  assert.deepEqual(off.map((r) => r.id), ["panels-at-brindle", "rogue-reached", "secrets-completionist", "secrets-skipper"]);
+  assert.ok(off.every((r) => r.status === "report" && !r.blocks));
+  assert.equal(passed(rows), true);
+  assert.match(renderTable(rows), /READY \(every gate row passes\)/);
+});
+
+test("today's world 1 shape: missing pacing file and a short seed list block, report rows do not", () => {
+  const inputs = { ...finished(), pacing: null, sitting: false };
+  inputs.runs = [...seeds("skipper", { kills: 13, parts: 2 }), ...seeds("completionist", { kills: 19, parts: 5 }).slice(0, 6)];
+  const rows = evaluate(SPEC, inputs);
+  assert.deepEqual(rows.filter((r) => r.blocks).map((r) => r.id), ["runs-complete", "run-length-skipper", "brindle-length"]);
+  assert.equal(row(rows, "kills-skipper").verdict, "miss");
+  assert.equal(row(rows, "kills-skipper").blocks, false);
+  assert.equal(row(rows, "difficulty").verdict, "not run");
+  assert.equal(passed(rows), false);
+});
+
+test("a stall or a fight short of the final phase blocks", () => {
+  const inputs = finished();
+  inputs.runs = [...inputs.runs.slice(0, 15), run("completionist", 8, { rout: null })];
+  inputs.runs[0] = run("skipper", 1, { phase: 2, flourishes: FULL_BEATS });
+  const rows = evaluate(SPEC, inputs);
+  assert.equal(row(rows, "brindle-routed").verdict, "miss");
+  assert.equal(row(rows, "brindle-phases").verdict, "miss");
+  assert.ok(row(rows, "brindle-routed").blocks);
+});
+
+test("pacing rows grade bot seconds against the pacing file's band", () => {
+  const inputs = finished();
+  inputs.pacing = { bands: { ...PACING.bands, skipper_total: { min_s: 390, max_s: 420 } } };
+  const r = row(evaluate(SPEC, inputs), "run-length-skipper");
+  assert.equal(r.verdict, "miss");
+  assert.equal(r.threshold, "390-420 s");
+  assert.match(r.measured, /median 440 s \(7.3 bot-min\)/);
+});
+
+test("a field no unit has landed reads as no data, never as zero", () => {
+  const rows = evaluate(SPEC, finished());
+  assert.equal(row(rows, "secrets-skipper").verdict, "no data");
+  const withField = finished();
+  withField.runs = withField.runs.map((r) => ({ ...r, bot: { ...r.bot, secrets_found: r.bot.policy === "completionist" ? ["wall"] : [] } }));
+  const graded = evaluate(SPEC, withField);
+  assert.equal(row(graded, "secrets-skipper").verdict, "pass");
+  assert.equal(row(graded, "secrets-completionist").verdict, "pass");
+});
+
+test("panels read RUN_BAND from the drop sim test", () => {
+  const inputs = finished();
+  inputs.runs = inputs.runs.map((r) => ({ ...r, bot: { ...r.bot, panels: Array(4).fill("rib") } }));
+  inputs.bandTexts = { [SPEC.rows.find((r) => r.id === "panels-at-brindle").band_from.file]: "const RUN_BAND := [5.0, 14.0]\n" };
+  const r = row(evaluate(SPEC, inputs), "panels-at-brindle");
+  assert.equal(r.verdict, "miss");
+  assert.match(r.threshold, /^5-14 \(panels_drop_sim_test.gd RUN_BAND\)/);
+});
+
+test("beats: a missing row, a long beat and a long repeat run each miss", () => {
+  const inputs = finished();
+  inputs.beatRowsText = BEATS_TEXT.replace('"tarn_sign_on"', '"tarn"');
+  inputs.runs[0].log.flourishes = FULL_BEATS.map((b) => (b.id === "brindle_rout" ? { ...b, s: 7.5 } : b));
+  inputs.runs[16].log.flourishes = SPEC.beats.map((id) => ({ id, s: 4, full: false }));
+  const rows = evaluate(SPEC, inputs);
+  assert.match(row(rows, "beats-present").measured, /no row: tarn_sign_on/);
+  assert.match(row(rows, "beats-each-short").measured, /brindle_rout 7.50 s/);
+  assert.equal(row(rows, "beats-repeat-length").verdict, "miss");
+});
+
+test("frames and the challenge table need every world 1 scene and cell", () => {
+  const inputs = finished();
+  delete inputs.frames.slag_bowl;
+  inputs.challenge.table = inputs.challenge.table.filter((c) => c.cell !== "park2");
+  const rows = evaluate(SPEC, inputs);
+  assert.match(row(rows, "frames").measured, /slag_bowl missing/);
+  assert.match(row(rows, "difficulty").measured, /park2 missing/);
+  assert.ok(row(rows, "difficulty").blocks);
+});
+
+test("placeholders count world 1 parks and everything shared, not other worlds' parks", () => {
+  const findings = [
+    { kind: "park", where: "park_islands", what: "1 greybox" },
+    { kind: "park", where: "park_flume", what: "1 greybox", count: 2 },
+    { kind: "icon", where: "x", what: "glyph" },
+  ];
+  assert.equal(world1Placeholders(findings).length, 2);
+  const r = row(evaluate(SPEC, { ...finished(), findings }), "placeholders");
+  assert.match(r.measured, /^3 /);
+  assert.ok(r.blocks);
+});
+
+test("helpers: phase count, const band, run join", () => {
+  assert.equal(phaseCount('const PHASE_NAMES := ["Requisition", "Furnace", "Scuttle"]'), 3);
+  assert.equal(phaseCount("nothing"), null);
+  assert.deepEqual(constBand("const RUN_BAND := [5.0, 14.0]", "RUN_BAND"), { min: 5, max: 14 });
+  const joined = joinRuns('{"run_id":"bot-1","policy":"skipper"}\n', '{"run_id":"bot-1","tallies":{"kills":1}}\n{"run_id":"bot-1","tallies":{"kills":3}}\n');
+  assert.equal(joined.length, 1);
+  assert.equal(joined[0].log.tallies.kills, 3);
+});
+
+test("the rows file names a status and a known source on every row", () => {
+  for (const r of SPEC.rows) {
+    assert.ok(["gate", "report", "info"].includes(r.status), r.id);
+    assert.ok(["bots", "pacing", "beats", "placeholders", "frames", "challenge"].includes(r.source), r.id);
+    if (r.status === "report") assert.ok(Array.isArray(r.enforced_from) && r.enforced_from.length, r.id);
+  }
+  assert.equal(new Set(SPEC.rows.map((r) => r.id)).size, SPEC.rows.length);
+});
