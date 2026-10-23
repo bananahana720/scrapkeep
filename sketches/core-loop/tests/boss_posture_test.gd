@@ -141,6 +141,13 @@ func _run() -> void:
 		"chunk broken at phase 1: held %s, a ram moved the bar to %.1f; phase 1 at %.1f s %s, then phases %s"
 			% [held, held_posture, Rules.PHASE_MIN_SECONDS[0] - 0.5, still_one, _phases])
 
+	# Phase 2 opens with the transition beat (fight_phases.gd): the bar takes nothing until it ends.
+	_combat.strike(hull, "arc", 1.0e6)
+	var beat_posture: float = _boss.posture()
+	_advance(FightPhases.TRANSITION_SECONDS + 0.05)
+	_report("transition beat holds the bar", beat_posture == 0.0 and not _boss._in_transition(),
+		"a 1e6 shot in the beat moved the bar to %.1f; beat over %s" % [beat_posture, not _boss._in_transition()])
+
 	# Guns press the bar to a stagger, but never crack the core.
 	var shots := 0
 	while not _boss.staggered() and shots < 200:
