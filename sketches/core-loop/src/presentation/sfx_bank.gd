@@ -143,6 +143,8 @@ const TRIM_DB := {
 	# verb. The bite (line_bite, -7) is the reference: the dry tick sits 14 dB under it by RMS, the
 	# lock tick and the refusals under that, the world clunk under the bite.
 	"lock_tick": -22.0, "dry_tick": -25.0, "line_bite": -7.0, "anchor_clunk": -12.0, "smash_whistle": -9.0, "smash_crack": -3.0,
+	# The Waking crew's seal timer (waking.gd SEAL_SOUND): a dry two-click ratchet kept apart from the harpoon's FM lock tick.
+	"seal_ratchet": -16.0,
 	"dock_click": -15.0, "line_zip": -10.0, "line_twang": -9.0, "line_hum": -17.0,
 	"verb_fail_jump": -18.0, "verb_fail_fire": -18.0, "verb_fail_haul": -18.0, "verb_fail_boost": -18.0,
 	"verb_fail_special": -18.0, "verb_fail_interact": -18.0,
@@ -238,6 +240,10 @@ static var _streams := {}
 # in RENDERED_DIR, and the cue that wants it plays without it until then.
 const RENDERED_DIR := "res://assets/audio/sfx/"
 static var _rendered := {}
+# Guards _samples, _streams, _file_present and _rendered: the startup bake fills them on a worker while the main thread
+# reads and fills them too. It is held only to look up or store, never across a bake, so neither thread waits on the
+# other's bake (when both bake one id, the first one stored is kept).
+static var _cache_lock := Mutex.new()
 # Set on the main thread to abandon a startup bake; the worker checks it between ids.
 static var bake_cancel := false
 
@@ -297,9 +303,33 @@ static var _file_present := {}
 
 
 static func _has_file(id: String) -> bool:
-	if not _file_present.has(id):
-		_file_present[id] = ResourceLoader.exists(event_path(id))
-	return _file_present[id]
+	if not _cache_has(_file_present, id):
+		_cache_put(_file_present, id, ResourceLoader.exists(event_path(id)))
+	return _cache_get(_file_present, id)
+
+
+static func _cache_has(cache: Dictionary, key: String) -> bool:
+	_cache_lock.lock()
+	var hit := cache.has(key)
+	_cache_lock.unlock()
+	return hit
+
+
+static func _cache_get(cache: Dictionary, key: String) -> Variant:
+	_cache_lock.lock()
+	var value = cache.get(key)
+	_cache_lock.unlock()
+	return value
+
+
+# Stores value unless the key is already there, and returns what the cache holds.
+static func _cache_put(cache: Dictionary, key: String, value: Variant) -> Variant:
+	_cache_lock.lock()
+	if not cache.has(key):
+		cache[key] = value
+	var held = cache[key]
+	_cache_lock.unlock()
+	return held
 
 
 # The pentatonic rung whose ratio is nearest this pitch ratio.
@@ -466,30 +496,30 @@ static func _pcm16(data: PackedByteArray, stereo: bool) -> PackedFloat32Array:
 # A presence loop: the file as a forward-looping stream, whole file as the loop.
 static func loop_stream(id: String) -> AudioStreamWAV:
 	var key := id + "@loop"
-	if not _streams.has(key):
-		var wav := Synth.to_wav(samples(id))
-		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		wav.loop_begin = 0
-		wav.loop_end = wav.data.size() / 2
-		_streams[key] = wav
-	return _streams[key]
+	if _cache_has(_streams, key):
+		return _cache_get(_streams, key)
+	var wav := Synth.to_wav(samples(id))
+	wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	wav.loop_begin = 0
+	wav.loop_end = wav.data.size() / 2
+	return _cache_put(_streams, key, wav)
 
 
 # The hum is the one looping cue: a whole number of cycles in its buffer, so it tiles.
 static func hum_stream() -> AudioStreamWAV:
-	if not _streams.has("line_hum"):
-		var wav := Synth.to_wav(samples("line_hum"))
-		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		wav.loop_begin = 0
-		wav.loop_end = wav.data.size() / 2
-		_streams["line_hum"] = wav
-	return _streams["line_hum"]
+	if _cache_has(_streams, "line_hum"):
+		return _cache_get(_streams, "line_hum")
+	var wav := Synth.to_wav(samples("line_hum"))
+	wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	wav.loop_begin = 0
+	wav.loop_end = wav.data.size() / 2
+	return _cache_put(_streams, "line_hum", wav)
 
 
 static func samples(id: String) -> PackedFloat32Array:
-	if not _samples.has(id):
-		_samples[id] = Synth.normalize(_bake(id), 0.9)
-	return _samples[id]
+	if _cache_has(_samples, id):
+		return _cache_get(_samples, id)
+	return _cache_put(_samples, id, Synth.normalize(_bake(id), 0.9))
 
 
 # A grid stinger baked on another tempo's grid, for the boss tempo. Cues that are not
@@ -499,33 +529,33 @@ static func samples_at(id: String, step: int, shift := 0, theme := 0) -> PackedF
 	if (step == Harmony.STEP or not STINGER_BEATS.has(id)) and shift == 0 and (not themed or theme == 0):
 		return samples(id)
 	var key := "%s@%d@%d@%d" % [id, step if STINGER_BEATS.has(id) else Harmony.STEP, shift, theme if themed else 0]
-	if _samples.has(key):
-		return _samples[key]
+	if _cache_has(_samples, key):
+		return _cache_get(_samples, key)
 	# A worker warms keyed variants while the band may ask for one: one bake at a time.
 	_lock.lock()
 	# A recorded event cue is the same file at any grid step or theme (_bake ignores both), so
 	# its variants share one resample per key shift.
-	if not _samples.has(key) and id in EVENT_CUES and not FILE_SOUNDS.has(id) and not id.begins_with(STINGER_PREFIX):
+	if not _cache_has(_samples, key) and id in EVENT_CUES and not FILE_SOUNDS.has(id) and not id.begins_with(STINGER_PREFIX):
 		var shared := "%s@file@%d" % [id, shift]
-		if not _samples.has(shared):
+		if not _cache_has(_samples, shared):
 			var recorded := file_samples(id, shift)
 			if not recorded.is_empty():
-				_samples[shared] = Synth.normalize(recorded, 0.9)
-		if _samples.has(shared):
-			_samples[key] = _samples[shared]
-	if not _samples.has(key):
+				_cache_put(_samples, shared, Synth.normalize(recorded, 0.9))
+		if _cache_has(_samples, shared):
+			_cache_put(_samples, key, _cache_get(_samples, shared))
+	if not _cache_has(_samples, key):
 		if STINGER_BEATS.has(id):
 			Synth.score_step = step
 		Synth.score_transpose = shift
 		_shift = shift
 		_theme = theme
-		_samples[key] = Synth.normalize(_bake(id), 0.9)
+		_cache_put(_samples, key, Synth.normalize(_bake(id), 0.9))
 		Synth.score_step = Harmony.STEP
 		Synth.score_transpose = 0
 		_shift = 0
 		_theme = 0
 	_lock.unlock()
-	return _samples[key]
+	return _cache_get(_samples, key)
 
 
 # Every tonal recipe reads pitches through these, so a keyed bake transposes it whole.
@@ -540,17 +570,17 @@ static func _n(instrument: String, midi: int) -> PackedFloat32Array:
 static func stream(id: String) -> AudioStreamWAV:
 	if id == "line_hum":
 		return hum_stream()
-	if not _streams.has(id):
-		_streams[id] = Synth.to_wav(samples(id))
-	return _streams[id]
+	if _cache_has(_streams, id):
+		return _cache_get(_streams, id)
+	return _cache_put(_streams, id, Synth.to_wav(samples(id)))
 
 
 # A rendered sound's stream, or null while its file is not there yet.
 static func rendered(id: String) -> AudioStream:
-	if not _rendered.has(id):
-		var path := RENDERED_DIR + id + ".wav"
-		_rendered[id] = load(path) if ResourceLoader.exists(path) else null
-	return _rendered[id]
+	if _cache_has(_rendered, id):
+		return _cache_get(_rendered, id)
+	var path := RENDERED_DIR + id + ".wav"
+	return _cache_put(_rendered, id, load(path) if ResourceLoader.exists(path) else null)
 
 
 # True when a bake of this id resamples a recorded file.
@@ -632,6 +662,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return crack(0)
 		"lock_tick":
 			return _fm(0.04, _hz(93), 1.0, 0.5, 80.0)
+		"seal_ratchet":
+			return _mix([[_noise(0.015, 1200.0, 700.0, 160.0), 0, 0.9], [_tone(0.04, 180.0, 130.0, "square_dark", 60.0), 0, 1.0], [_noise(0.015, 1100.0, 650.0, 160.0), Synth.seconds(0.05), 0.7], [_tone(0.04, 170.0, 125.0, "square_dark", 60.0), Synth.seconds(0.05), 0.8]])
 		"dry_tick":
 			return _mix([[_tone(0.05, 320.0, 240.0, "sine", 70.0), 0, 1.0], [_noise(0.025, 700.0, 450.0, 120.0), 0, 0.5]])
 		"anchor_clunk":

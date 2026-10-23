@@ -95,8 +95,8 @@ func _initialize() -> void:
 
 
 # --bench: the vignette file's spots repeated to BENCH_VIGNETTES vignettes, timed in stages (cold meshes, then warm). The
-# context, expansion and mesh warm run on a worker in the game (park_props.gd prepare); the node build is the main-thread
-# cost, spread over frames at BUILD_SLICE_USEC a frame.
+# context and expansion run on a worker in the game (park_props.gd prepare); the mesh reads and the node build are the
+# main-thread cost, spread over frames at BUILD_SLICE_USEC a frame.
 func _bench(map_id: String, map, world: Dictionary) -> int:
 	var file := ParkProps.load_json(ParkProps.file_path(map_id))
 	var kit := ParkProps.load_json(String(file.get("kit", "")))
@@ -114,7 +114,8 @@ func _bench(map_id: String, map, world: Dictionary) -> int:
 	var t1 := Time.get_ticks_usec()
 	var list := ParkProps.expand(file, kit, map, world["ground"], c)
 	var t2 := Time.get_ticks_usec()
-	ParkProps.warm(list, kit, false)
+	for path: String in ParkProps.mesh_paths(list, kit, false):
+		ParkProps._mesh(path)
 	var t3 := Time.get_ticks_usec()
 	var built := ParkProps.build_nodes(list, kit)
 	var t4 := Time.get_ticks_usec()
@@ -123,9 +124,9 @@ func _bench(map_id: String, map, world: Dictionary) -> int:
 		var started := Time.get_ticks_usec()
 		ParkProps.build_job(built, job, kit, false)
 		worst = maxf(worst, (Time.get_ticks_usec() - started) / 1000.0)
-	print("park_props_bench: %d vignettes, %d instances, %d views: context %.1f ms, expand %.1f ms, mesh warm %.1f ms (worker side %.1f ms); node build %.1f ms on the main thread, worst single job %.1f ms" % [
+	print("park_props_bench: %d vignettes, %d instances, %d views: context %.1f ms, expand %.1f ms, mesh reads %.1f ms (worker side %.1f ms); node build %.1f ms on the main thread, worst single job %.1f ms" % [
 		BENCH_VIGNETTES, list.size(), built.find_children("*", "GeometryInstance3D", true, false).size(), (t1 - t0) / 1000.0,
-		(t2 - t1) / 1000.0, (t3 - t2) / 1000.0, (t3 - t0) / 1000.0, (t4 - t3) / 1000.0, worst])
+		(t2 - t1) / 1000.0, (t3 - t2) / 1000.0, (t2 - t0) / 1000.0, (t4 - t3) / 1000.0, worst])
 	var floating := 0.0
 	for inst: Dictionary in list:
 		floating = maxf(floating, inst["float_m"])
