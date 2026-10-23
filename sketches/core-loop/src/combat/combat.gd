@@ -1264,6 +1264,8 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "", dunk := 0.0)
 		var judged: Dictionary = enemy.judge_hit(kind, punch, smash, tier, part) \
 				if enemy.get_method_argument_count("judge_hit") >= 5 else enemy.judge_hit(kind, punch, smash, tier)
 		if not judged.is_empty():
+			# A reel impact, by the one reel test the dunk charge also reads (is_reel_impact).
+			judged["reel"] = is_reel_impact(kind, smash)
 			return judged
 	var guard := guard_of(enemy)
 	if guard != null and guard.blocks(kind):
