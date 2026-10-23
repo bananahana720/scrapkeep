@@ -231,12 +231,12 @@ const GATE_SWITCH_FALLS := 2
 # A gate still untaken after GATE_SWITCH_SECONDS is given up for the next offer the same way:
 # the cache's walls can hold a bot that keeps rounding them on the beacon top.
 const GATE_SWITCH_SECONDS := 40.0
-# A ball within GATE_LEVEL of its gate's height is on the gate's level, whatever the ground's heights say under it
-# (the run-up's own 3 m test): the climb route is planned on those heights, and on a ramp prop they lie far below. On
+# A ball no more than GATE_LEVEL below its gate is on the gate's level, whatever the ground's heights say under it
+# (the run-up's own test): the climb route is planned on those heights, and on a ramp prop they lie far below. On
 # park stage 2 a charge that crested the ramp to the gate at (300, 0, 466) took the route's next point, 11 m down,
 # and the skipper rode that loop to the stage's stall limit (seeds 1 and 2, #241).
 const GATE_LEVEL := 3.0
-# A gate whose run-up has started GATE_RUNUP_TRIES times without the ball taking it is given up for the next offer,
+# A gate whose run-up starts more than GATE_RUNUP_TRIES times without the ball taking it is given up for the next offer,
 # on any map: under that park stage 2 gate a ball can wedge at the ramp's foot, or crest it and fall off its side,
 # for the whole stage (skipper seed 2).
 const GATE_RUNUP_TRIES := 4
@@ -2994,6 +2994,8 @@ func _to_gate(delta: float) -> void:
 		_gate_on_top = true
 		_fight_climb.clear()
 		_fight_climb_clock = 0.0
+		# Level with the gate but still on a kicker the climb route crossed: jump at its lip as the climb would.
+		_kicker_jump(ball_at)
 	if rel.length() < GATE_PROBE_NEAR:
 		target = _gate_round_props(ball_at, target, delta)
 	else:
@@ -3056,7 +3058,7 @@ func _switch_gate() -> void:
 # line, "charge" rolls the line at speed; each phase gives up after its seconds and the other
 # takes over, so a stalled charge is a fresh run-up.
 func _gate_runup(at: Vector3, facing: Vector3, rel: Vector3, ball: Vector3, target: Vector3, delta: float) -> Vector3:
-	if _gate_time < GATE_RUNUP_AFTER or rel.y > -3.0:
+	if _gate_time < GATE_RUNUP_AFTER or rel.y > -GATE_LEVEL:
 		_gate_run = ""
 		return target
 	var start := at - facing * GATE_RUNUP_BACK
