@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const WarningBound := preload("res://src/combat/warning_bound.gd")
 
 # A committed telegraph: the one piece of geometry an enemy attack both draws and
 # damages with. The attack decides its shape and its attack type once, at commit, and
@@ -61,9 +62,19 @@ var mechanic_tag := ""
 
 var _painter
 var _flashed := false
-# Driven: the motion marks were built once and each frame only moves them (E1).
+# Driven: the motion marks were built once and each frame only moves them (E1). Every type
+# except a wave is driven; a wave is driven only when it is full and its area layer is not
+# "motion" (Threat.can_drive), so a partial wave or a motion wave is repainted instead.
 var _driven := false
 var _fill_tint := Color(-1.0, -1.0, -1.0, -1.0)
+# The world box of everything the painter can draw, at any progress (WarningBound), and the
+# centre it was cut for. Computed in _build and again when the flight is set.
+var _bound := AABB()
+var _bound_centre := Vector3.ZERO
+# A non-driven repaint since the box last took the meshes in (a partial wave or a motion
+# wave, the marks Threat.can_drive leaves undriven); bound_merges counts the mesh walks that took.
+var _bound_stale := false
+var bound_merges := 0
 
 
 static func ring(parent: Node, terrain_ref, threat_type: int, at: Vector3, ring_radius: float, reach := 3.5,
@@ -209,6 +220,7 @@ func set_flight(from: Vector3, arc_bump: float) -> void:
 	has_flight = true
 	_paint_motion()
 	_repaint()
+	_cut_bound()
 
 
 func set_progress(value: float) -> void:
@@ -258,6 +270,33 @@ func painter():
 	return _painter
 
 
+# The conservative world box of everything this mark's painter draws at any progress: the
+# footprint at progress 1, the fence up to reach_up, the lift, a wave's final extent and a
+# projectile's flight trace (WarningBound). It is cut at commit. A read after a non-driven
+# repaint also takes the painter's current meshes in, so the cache only grows. The box is
+# empty (AABB()) when it cannot promise: nothing is built, or the mark was carried off its
+# committed centre (the Warden's mounting moves a pulse ring's center after commit). The
+# caller then walks the meshes.
+func screen_bound_box() -> AABB:
+	if _painter == null or center != _bound_centre:
+		return AABB()
+	if _bound_stale:
+		_bound_stale = false
+		bound_merges += 1
+		_bound = _bound.merge(WarningBound.mesh_box(_painter))
+	return _bound
+
+
+# Only a hostile mark joins Threat.GROUP, so only a hostile mark is read by warning_rects and
+# gets a box; the others keep an empty one. The y range reads the painter's meshes, which are
+# all built by now (static layers, driven layers at full extent).
+func _cut_bound() -> void:
+	if _painter == null or not is_hostile():
+		return
+	_bound_centre = center
+	_bound = WarningBound.box(descriptor(), WarningBound.mesh_box(_painter))
+
+
 func _build() -> void:
 	add_to_group("telegraph")
 	if is_hostile():
@@ -285,6 +324,7 @@ func _build() -> void:
 	_painter.paint(Threat.marks(d, false), Threat.STATIC_LAYERS)
 	_paint_motion()
 	_repaint()
+	_cut_bound()
 
 
 # A driven telegraph builds its motion marks here, at commit and when its flight is set;
@@ -302,6 +342,9 @@ func _repaint() -> void:
 		_painter.drive(Threat.drive(d))
 	else:
 		_painter.paint(Threat.marks(d, true), Threat.MOTION_LAYERS)
+		# Repainted marks stand on ground the build did not sample; screen_bound_box() takes
+		# their meshes in when it is read.
+		_bound_stale = _bound_stale or _bound.size != Vector3.ZERO
 	var fill := Threat.fill_tint(d)
 	if fill != _fill_tint:
 		_fill_tint = fill

@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const WarningBound := preload("res://src/combat/warning_bound.gd")
 
 # One committed attack area: a crane's sweep, a slag ring or a charge lane. It is laid
 # once, when the attack commits, and the drawing and every hit test read the same
@@ -61,6 +62,17 @@ var prev_fraction := 0.0
 var _painter
 # ANNULUS: which of its drawn segments are open (quenched) right now.
 var _open: Array[bool] = []
+# The world box of everything the painter can draw (WarningBound), cut once, right after the
+# first FULL paint: in _ready, or, for an annulus that starts with spans quenched, on the first
+# step that leaves none quenched (later quenches only remove drawn spans, so the full paint's
+# meshes hold every later one). Empty until then, so warning_rects walks the meshes. Only a
+# hostile hazard gets one; the first read after a repainting step grows it (_grow_bound). The
+# committed numbers never change after commit and nothing moves a hazard, so it is never recut.
+var _bound := AABB()
+# A step repainted since the box last took the meshes in; bound_merges counts the mesh walks
+# that took (tests/warning_bound_containment_test.gd: idle steps cost none).
+var _bound_stale := false
+var bound_merges := 0
 
 
 func commit_sector(id: String, threat_type: int, at: Vector3, band: Vector2, from_angle: float, to_angle: float, height: float,
@@ -123,6 +135,7 @@ func _ready() -> void:
 	if shape == Shape.ANNULUS:
 		_open = _open_segments()
 	_paint(true)
+	_cut_bound()
 
 
 func step(delta: float) -> void:
@@ -139,6 +152,9 @@ func step(delta: float) -> void:
 			_open = open
 			reshaped = true
 	_paint(reshaped)
+	if reshaped:
+		_cut_bound()
+	_grow_bound()
 
 
 # ANNULUS: whether the drawing covers a point. A quenched span is left undrawn, so the
@@ -283,6 +299,38 @@ func threat_at() -> Vector3:
 
 func painter():
 	return _painter
+
+
+# The conservative world box of everything this hazard's painter draws at any progress: the
+# full footprint, the fence up to `reach`, the lift, a sweep's chevrons ahead of its front
+# (WarningBound). It is cut in _ready. A read after a step also takes the painter's current
+# meshes in (see _grow_bound), so the cache only grows. The box is empty (AABB()) before the
+# painter is built and once the hazard is DONE. finish() sets DONE without a repaint, so the
+# painter is hidden only on the next step; until then the caller's mesh walk still finds its
+# meshes, which is conservative.
+func screen_bound_box() -> AABB:
+	if _painter == null or state == DONE:
+		return AABB()
+	if _bound_stale and not WarningBound.test_skip_hazard_merge:
+		_bound_stale = false
+		bound_merges += 1
+		_bound = _bound.merge(WarningBound.mesh_box(_painter))
+	return _bound
+
+
+# The motion marks are repainted every step, on ground the first paint did not sample (a fill
+# ring's inner edge, a sweep's spoke and chevrons, a lane's run strip). A step only marks the
+# box stale; screen_bound_box() takes the meshes' box in when it is read, so the box holds every
+# mesh drawn up to the read and a step that nobody reads after costs nothing.
+func _grow_bound() -> void:
+	if _bound.size != Vector3.ZERO:
+		_bound_stale = true
+
+
+func _cut_bound() -> void:
+	if _bound.size != Vector3.ZERO or _painter == null or not is_hostile() or _open.has(true):
+		return
+	_bound = WarningBound.box(descriptor(), WarningBound.mesh_box(_painter))
 
 
 # Static layers redraw only when the shape changes (a quench opens or closes a span);
