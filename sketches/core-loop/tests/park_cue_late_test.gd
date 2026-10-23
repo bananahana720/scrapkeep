@@ -15,6 +15,10 @@ var _t := T.new("park_cue_late_test")
 
 
 func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _run() -> void:
 	var cold := _engine(false)
 	cold.park_cue("riser_ancient", LEAD, -1, {"ancient": "reactor"})
 	_t.check("with warming off a cell due now is not marked late", not cold._actions[0].get("late", false))
@@ -29,10 +33,10 @@ func _initialize() -> void:
 	var task: int = MusicEngine._park_tasks.get(signature, -1)
 	_t.check("the cell due now renders on a worker", task >= 0)
 	_t.check("it waits while its worker runs", e._late_cell_waits(first) == (task >= 0 and not WorkerThreadPool.is_task_completed(task)))
-	var spins := 0
-	while task >= 0 and not WorkerThreadPool.is_task_completed(task) and spins < 2000:
-		OS.delay_msec(1)
-		spins += 1
+	for frame in 600:
+		if task < 0 or WorkerThreadPool.is_task_completed(task):
+			break
+		await process_frame
 	_t.check("a late cell with its worker done does not wait", not e._late_cell_waits(first))
 	_t.check("the worker's buffer is ready", MusicEngine._park_warm.has(signature))
 	e.clock = LATE
