@@ -63,7 +63,7 @@ func _run() -> void:
 	var broke := _land(rule, _hit("vent", true, 8.0), 2.0)
 	_t.check("reel on open: a big enough punch breaks it", broke["broke"] and broke["removes"] == "slag" and broke["damage"] == 7.0
 			and rule.state("vent") == WeakPoints.BROKEN and rule.removed_families() == ["slag"], "families %s" % [rule.removed_families()])
-	_t.near("after a break a hit there is chip", _land(rule, _hit("vent", true, 5.0), 3.0)["gain_scale"], WeakPoints.CHIP)
+	_t.near("after a break a hit there pays full: the body stands bare until the next open", _land(rule, _hit("vent", true, 5.0), 3.0)["gain_scale"], 1.0)
 	rule.step(100.0)
 	_t.eq("a broken point stays broken", rule.state("vent"), WeakPoints.BROKEN)
 
