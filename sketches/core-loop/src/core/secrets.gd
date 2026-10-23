@@ -61,6 +61,69 @@ const PAINT_ROWS := {
 # Hidden rooms pay as the far pocket of the pay ladder (park_placement.gd PAY_FAR): rare only.
 const ROOM_PAY := {"rarities": ["rare"]}
 
+# Field finds (world 1 unit 15, Isaac's secret rooms as the baseline): two per Spillway park on
+# every profile, fresh or won. Each is a cracked room in a dead-end zone of its park's graph, off
+# every line, so the skipper never passes one. The rule is what you learn, not the spot: each find
+# draws one of its `spots` per run from the run seed, so a run replays by seed and the next run
+# moves it. Two families, two tells:
+#   crack  a wet seep runs down a cracked face and drips (seen, and heard at DRIP_HEAR_M)
+#   radio  a crew radio plays through the wall (heard at RADIO_HEAR_M; the lost tape on the find)
+# A find pays the world's top ordinary rung (green, `rare`) every run; the first find also files
+# its codex row, so the camp counts it. Spots stand on graph door nodes that are not the zone's
+# far end, where grey panels' rib caches wait (IL-01).
+const FIND_KINDS := ["crack", "radio"]
+const DRIP_HEAR_M := 22.0
+const RADIO_HEAR_M := 40.0
+const FIND_PAY := {"rarities": ["rare"]}
+
+const FINDS := {
+	"dam_turbine_hall": {
+		"world": 1, "map": "park_dam", "kind": "crack",
+		"spots": [{"site": "powerhouse", "at": [120, 536]}, {"site": "west_rim_bench", "at": [-232, 296]}],
+		"name": "Turbine Hall Seep",
+		"log": "Maintenance note: the old turbine hall was bricked up after the flood. The bricks were not asked. Water found the way first.",
+		"codex": {"id": "spillway_turbine_seep", "category": "world", "name": "Where the Water Got In",
+			"hint": "A wet streak on dry rock. Water knows where the walls are thin.",
+			"clue": "A seeping, dripping cracked face off the main lines + a ram at speed",
+			"text": "Follow the seep. Behind the dam's cracked faces the crew walled up rooms the flood had already found."},
+	},
+	"dam_shift_radio": {
+		"world": 1, "map": "park_dam", "kind": "radio",
+		"spots": [{"site": "shelf_sag_corner_3", "at": [-648, 192]}, {"site": "shelf_sag_corner_4", "at": [648, 192]}],
+		"name": "Night Shift Radio",
+		"log": "Night shift: radio left on in the spare room so the dam has company. Station went off air years ago. Radio did not.",
+		"codex": {"id": "spillway_shift_radio", "category": "world", "name": "Still On Air",
+			"hint": "Music where nobody works any more. Roll toward it.",
+			"clue": "A tune through a cracked wall at the shelf's far corners + a ram at speed",
+			"text": "The pump crews walled their radios in with the spares. Some of them are still playing the lost tape."},
+	},
+	"flume_trestle_seep": {
+		"world": 1, "map": "park_flume", "kind": "crack",
+		"spots": [{"site": "mesa_spill", "at": [-576, -520]}, {"site": "bluff_wash_3", "at": [264, 720]}],
+		"name": "Spill Cellar",
+		"log": "Flume log: cellar under the spill flooded twice, sealed once. Crew kept the key. Lock was never fitted.",
+		"codex": {"id": "spillway_flume_seep", "category": "world", "name": "Spill Cellar",
+			"hint": "A dripping face where the flume runs over. Something is under the spill.",
+			"clue": "A seeping, dripping cracked face off the flume's lines + a ram at speed",
+			"text": "The flume leaks into the cellars it was built over. A cracked face that drips is a door."},
+	},
+	"flume_crew_radio": {
+		"world": 1, "map": "park_flume", "kind": "radio",
+		"spots": [{"site": "weir_pond", "at": [-648, -688]}, {"site": "canal_wash_6", "at": [224, -440]}],
+		"name": "Pond Shift Wireless",
+		"log": "Pond shift: the wireless stays tuned to the dance hour. Requests are taken. None played since the Mind clocked in.",
+		"codex": {"id": "spillway_crew_radio", "category": "world", "name": "Requests Taken",
+			"hint": "A dance tune from inside the rock, off the canal's lines.",
+			"clue": "A tune through a cracked wall by the weir pond or down the canal wash + a ram at speed",
+			"text": "The flume crew listened while they worked. Their wireless is still behind the wall, still taking requests."},
+	},
+}
+# The world codex rows each world's camp count reads: its field finds, then the parks' authored
+# secret caches (the contraption rows that carry a codex id).
+const WORLD_CODEX := {1: ["spillway_turbine_seep", "spillway_shift_radio", "spillway_flume_seep", "spillway_crew_radio",
+	"spillway_gallery_cache", "flume_weir_cache"]}
+const WORLD_NAMES := {1: "Spillway"}
+
 
 # A secret paint the profile does not own, or a secret row it has not earned: the customize page,
 # the achievements page and the camp's count leave these out, so a fresh profile sees no hint.
@@ -112,3 +175,36 @@ static func open_for_sitting(profile) -> void:
 		return
 	for pilot in PAINTS:
 		profile.unlock_cosmetic(PAINTS[pilot])
+
+
+# The field finds a park map holds this run, as activity site specs (room_sites' shape, plus
+# `find`, the find id, and `kind`). Every profile gets them; `seed` picks each one's spot.
+static func find_sites(map_id: String, seed: int) -> Array:
+	var out := []
+	for id in FINDS:
+		var f: Dictionary = FINDS[id]
+		if f["map"] != map_id:
+			continue
+		var spot: Dictionary = find_spot(id, seed)
+		out.append({"id": "cracked_cache", "row": id, "site": spot["site"], "find": id, "kind": f["kind"],
+			"at": Vector2(float(spot["at"][0]), float(spot["at"][1])), "pay": FIND_PAY.duplicate(true)})
+	return out
+
+
+# The spot a find stands on for a run seed: the same seed, the same spot.
+static func find_spot(id: String, seed: int) -> Dictionary:
+	var spots: Array = FINDS[id]["spots"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("%s:%d" % [id, seed])
+	return spots[rng.randi_range(0, spots.size() - 1)]
+
+
+# A world's secret count for the camp: how many of its WORLD_CODEX rows `known` (a codex id ->
+# bool callable, the codex's own known()) says the profile has found.
+static func world_count(world: int, known: Callable) -> Dictionary:
+	var ids: Array = WORLD_CODEX.get(world, [])
+	var got := 0
+	for id in ids:
+		if known.call(id):
+			got += 1
+	return {"world": world, "name": WORLD_NAMES.get(world, "World %d" % world), "found": got, "total": ids.size()}

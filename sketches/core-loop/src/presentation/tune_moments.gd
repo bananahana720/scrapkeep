@@ -44,7 +44,7 @@ const TUNES := {
 	"camp-course": {"hook": "", "bpm": 172},
 	"modifier-curse": {"hook": "modifier", "key": "curse", "bpm": 100},
 	"modifier-par": {"hook": "modifier", "key": "par", "bpm": 176},
-	"secret-lost-tape": {"hook": "find", "keys": ["reach_pressure_cache", "flume_weir_cache"], "bpm": 90},
+	"secret-lost-tape": {"hook": "find", "keys": ["reach_pressure_cache", "flume_weir_cache", "spillway_shift_radio", "spillway_crew_radio"], "bpm": 90},
 	"secret-after-hours": {"hook": "jukebox", "key": "bay_jukebox", "bpm": 96},
 	"secret-brindle-swing": {"hook": "remix", "key": "brindle", "bpm": 160},
 	"secret-chip-keepers": {"hook": "remix", "key": "champion", "bpm": 150},
