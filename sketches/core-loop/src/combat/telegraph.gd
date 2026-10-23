@@ -48,6 +48,8 @@ var speed := 0.0
 var launch := Vector3.ZERO
 var bump := 0.0
 var has_flight := false
+# Only the air can answer this mark (the netcaster's net); haze keeps it off the live ground scorch.
+var air_only := false
 # HAZARD for every enemy threat. A ring the player owns (a batted shell) draws in AMBER,
 # and a harmless field (the Warden's lift) in bone, Palette.SAND (Threat.stance).
 var color := Palette.HAZARD
@@ -235,6 +237,8 @@ func descriptor() -> Dictionary:
 	if has_flight:
 		d["launch"] = launch
 		d["bump"] = bump
+	if air_only:
+		d["air"] = true
 	return d
 
 
