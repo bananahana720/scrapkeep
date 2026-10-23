@@ -97,6 +97,7 @@ const MIN_STAMP_M := 4.0
 # A row longer than this is sampled along its rim only, BELT_M inside it, every BELT_STEP_M.
 const SMALL_M := 90.0
 const BELT_M := 6.0
+const ZONE_CELL_M := 32.0
 const BELT_STEP_M := 16.0
 # Landform tops closer than this keep only the first, so the list stays short and the pick varies.
 const SPACING_M := 14.0
@@ -149,19 +150,49 @@ static func _zone_list(zones: Array, own := "") -> Array:
 	return hit
 
 
+# The zones by ZONE_CELL_M cell, each in every cell its reach (a disc r wide around it) touches, so
+# in_clear on a point's cell answers as on the whole list: the stage's first perch read tested every
+# zone at every sample, 150 ms of a 460 ms freeze on the cloud.
+static func _zone_grid(zones: Array, r: float) -> Dictionary:
+	var grid := {}
+	for z: Dictionary in zones:
+		var c: Vector2
+		var reach: float
+		if z.has("a"):
+			var a: Vector2 = z["a"]
+			var b: Vector2 = z["b"]
+			c = (a + b) * 0.5
+			reach = a.distance_to(b) * 0.5 + float(z["half"]) + r
+		else:
+			c = z["at"]
+			# A box test grows each half side by r, so its far corner is within r * sqrt(2) more.
+			reach = (z["size"] as Vector2).length() * 0.5 + r * 1.5
+		for x in range(floori((c.x - reach) / ZONE_CELL_M), floori((c.x + reach) / ZONE_CELL_M) + 1):
+			for y in range(floori((c.y - reach) / ZONE_CELL_M), floori((c.y + reach) / ZONE_CELL_M) + 1):
+				var cell := Vector2i(x, y)
+				if not grid.has(cell):
+					grid[cell] = []
+				grid[cell].append(z)
+	return grid
+
+
+static func _zone_cell(p: Vector2) -> Vector2i:
+	return Vector2i(floori(p.x / ZONE_CELL_M), floori(p.y / ZONE_CELL_M))
+
+
 # Every landform top of a park, sorted by x then z: [Vector4].
 static func ledges(park: Dictionary, ground: Callable) -> Array:
 	var zones := ledge_zones(park)
 	var r: Array = park.get("play_rect", [-100000.0, -100000.0, 200000.0, 200000.0])
 	var play := Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3])).grow(-PLAY_INSET_M)
 	var found: Array = []
-	var all_zones := _zone_list(zones)
+	var near := _zone_grid(_zone_list(zones), DECK_CLEAR)
 	for row: Dictionary in park.get("park_rows", []):
 		if String(row.get("stamp", "")) != "":
 			if absf(float(row["size"][1])) < MIN_STAMP_M:
 				continue
 			for p: Vector2 in _samples(row):
-				if play.has_point(p) and not ParkRecipes.in_clear(all_zones, p, DECK_CLEAR):
+				if play.has_point(p) and not ParkRecipes.in_clear(near.get(_zone_cell(p), []), p, DECK_CLEAR):
 					var top := _ring_top(p, ground)
 					if top.x != INF:
 						found.append(top)
