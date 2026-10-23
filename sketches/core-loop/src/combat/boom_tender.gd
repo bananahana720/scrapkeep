@@ -16,6 +16,8 @@ const HULL_RADIUS := 1.3
 const LANE_LENGTH := 8.4
 const LANE_WIDTH := 3.0
 const SWING := 1.1
+# The boom crosses the lane in SWEEP seconds; a pin it makes then holds up to PIN.
+const SWEEP := 0.6
 const POP_TIER := SpeedTier.FAST
 const POP_REACH := 1.6
 const FLOAT_SCRAP := 1
@@ -25,10 +27,12 @@ const PIN_DAMP := 2.5
 const STING_DAMAGE := 5.0
 const SHOVE := 6.0
 const HP := 60.0
-# The floats' distances out from the hull centre, the glb's BoomFloat0..4 (-Z forward).
+# The floats' distances out from the hull centre (-Z forward); the glb's BoomFloat sits at the first.
 const FLOAT_OUT := [2.07, 3.37, 4.67, 5.97, 7.27]
 const LAMP_ON := 2.4
 const BOOM_DROP := 0.5
+const BUOY_OUT := 7.88
+const BUOY_SCALE := 0.5
 
 var pinned := 0
 var pops := 0
@@ -36,6 +40,7 @@ var strikes := 0
 var popped := [false, false, false, false, false]
 
 var _heading := Vector3.FORWARD
+var _origin := Vector3.ZERO
 var _side := 1.0
 var _pops_live := 0
 var _boom: Node3D
@@ -52,7 +57,7 @@ func _configure(threat: float) -> void:
 	scrap_value = 5
 	weight = 2.0
 	warn_seconds = 1.1
-	live_seconds = 0.6
+	live_seconds = SWEEP + PIN
 	rest_seconds = 4.0
 	attack_range = LANE_LENGTH + 1.0
 	keep_near = 5.0
@@ -93,26 +98,41 @@ func _build_tool() -> void:
 	_material.albedo_color = _base_color
 	_material.vertex_color_use_as_albedo = true
 	for part in parts:
+		var name := String(part.name)
+		if name == "BoomFloat":
+			_lay_boom(part)
+			continue
 		var mi := MeshInstance3D.new()
-		mi.name = part.name
+		mi.name = name
 		mi.mesh = part.mesh
 		mi.transform = part.xform
 		if part.flash >= 0:
 			mi.set_surface_override_material(part.flash, _material)
-		var name := String(part.name)
-		if name.begins_with("BoomFloat") or name == "BoomBuoy":
-			_boom.add_child(mi)
-			if name != "BoomBuoy":
-				_floats.append(mi)
-		else:
-			dress.add_child(mi)
+		dress.add_child(mi)
 		if name == "TenderReel":
 			_reel = mi
-	_floats.sort_custom(func(a, b): return String(a.name) < String(b.name))
 	for f in _floats:
 		var lamp := _box(Vector3(0.14, 0.12, 0.14), Palette.BRASS, Vector3(0.0, 0.34, 0.0), 0.0, f)
 		lamp.name = "Lamp"
 		_lamps.append(lamp)
+
+
+# The glb's one float, laid at each FLOAT_OUT and once small as the end buoy: one mesh, one draw.
+func _lay_boom(part: Dictionary) -> void:
+	var at: Vector3 = (part.xform as Transform3D).origin
+	for i in FLOAT_OUT.size():
+		var mi := MeshInstance3D.new()
+		mi.name = "BoomFloat%d" % i
+		mi.mesh = part.mesh
+		mi.position = Vector3(at.x, at.y, -float(FLOAT_OUT[i]))
+		_boom.add_child(mi)
+		_floats.append(mi)
+	var buoy := MeshInstance3D.new()
+	buoy.name = "BoomBuoy"
+	buoy.mesh = part.mesh
+	buoy.position = Vector3(at.x, at.y, -BUOY_OUT)
+	buoy.scale = Vector3.ONE * BUOY_SCALE
+	_boom.add_child(buoy)
 
 
 static func _parts() -> Array:
@@ -154,6 +174,7 @@ func _commit(to_ball: Vector3) -> Node3D:
 		_heading = -global_transform.basis.z
 	_facing(to_ball)
 	_side = _strafe
+	_origin = global_position
 	_pops_live = 0
 	return _commit_lane(Threat.Type.LANE, global_position, _heading, LANE_LENGTH, LANE_WIDTH)
 
@@ -165,18 +186,22 @@ func _live(_delta: float) -> bool:
 		return false
 	var ball := _real_ball()
 	if _holding():
-		var to_hull := global_position - ball
+		var to_hull := _origin - ball
 		to_hull.y = 0.0
 		_pull(to_hull.normalized() * PIN_PULL * minf(to_hull.length(), 6.0) - player.planar_velocity() * PIN_DAMP)
 		return true
-	if caught_live > 0 or not lane.contains(ball):
+	# Past the sweep the boom has crossed; only a pin it made keeps the attack open.
+	if caught_live > 0 or _t > SWEEP:
+		return false
+	if not lane.contains(ball):
 		return true
 	if player.speed_tier() >= POP_TIER:
 		_bowl_through(ball)
 		return true
-	var shove := (global_position - ball).normalized() * SHOVE
+	var shove := global_position - ball
 	shove.y = 0.0
-	if _catch(PIN, shove):
+	shove = shove.normalized() * SHOVE
+	if _catch(PIN):
 		pinned += 1
 		hit_player.emit(STING_DAMAGE, shove)
 	return true
@@ -211,9 +236,9 @@ func _facing(to_ball: Vector3) -> void:
 		rotation.y = atan2(-to_ball.x, -to_ball.z)
 
 
-# Where float i lies along the committed lane, on the ground.
+# Where float i lies along the committed lane (from where the hull stood at the commit).
 func float_position(i: int) -> Vector3:
-	return global_position + _heading * float(FLOAT_OUT[i])
+	return _origin + _heading * float(FLOAT_OUT[i])
 
 
 func _pay(at: Vector3) -> void:
@@ -242,7 +267,7 @@ func _pose() -> void:
 			reel = -TAU * t
 			_lamp(int(floor(t * float(_lamps.size()))))
 		Phase.LIVE:
-			swing = SWING * _side * (1.0 - clampf(_t / live_seconds, 0.0, 1.0) * 2.0)
+			swing = SWING * _side * (1.0 - clampf(_t / SWEEP, 0.0, 1.0) * 2.0)
 			_lamp(_lamps.size())
 		_:
 			swing = lerpf(_boom.rotation.y, 0.0, 1.0 - exp(-6.0 * get_physics_process_delta_time()))

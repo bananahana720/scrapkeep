@@ -10,10 +10,10 @@
 # Refs: docs/art/reference/enemies/boom_tender/ (branch claude/boom-tender-refs).
 #
 # Meshes, each with its origin at its pivot, under the BoomTender root (ground under hull centre):
-#   TenderHull     hull shell (fleet_paint, the flash surface) + tracks, stack, fittings (paint).
+#   TenderHull     hull shell, tracks, stack, fairlead and fittings on fleet_paint (the flash surface).
 #   TenderReel     spins about its transverse axle; origin on the axle (0, 1.5, 0.5 in Godot).
-#   TenderFairlead swivels about vertical; origin at its turntable pivot.
-#   BoomFloat0..4, BoomBuoy  origin at each one's own centre.
+#   BoomFloat      one float at float 0's place, origin at its centre; the runtime lays the five and
+#                  the end buoy from it. Three meshes, one surface each: the enemy class's 3 draws.
 # Blender +Y is forward (Godot -Z), +Z up. Vertex colours are the albedo on every slot.
 # Provenance: mojulo SDF shell plus procedural bmesh, no external mesh or texture.
 #
@@ -52,7 +52,7 @@ BUOY_R = 0.16
 FLOATS = [BOOM_START + FLOAT_LEN / 2 + i * (FLOAT_LEN + GAP) for i in range(5)]
 BUOY_Y = FLOATS[-1] + FLOAT_LEN / 2 + 0.06 + BUOY_R   # tip at 8.10
 HULL_TRIS, TRACK_TRIS, REEL_TRIS = 2700, 700, 1600
-BUDGET = 12000
+BUDGET = 10000
 
 
 # --- shell helpers, adapted from the rogue kit -------------------------------------------
@@ -226,37 +226,60 @@ for obj in imported:
 # --- TenderHull ---------------------------------------------------------------------------
 hull = Part("TenderHull")
 add_shell(hull, shells["Hull"], "fleet_paint", hull_paint)
-add_shell(hull, shells["Track"], "paint", track_paint)
+add_shell(hull, shells["Track"], "fleet_paint", track_paint)
 for s in (-1, 1):
     # Grouser ribs and road-wheel hubs on the outer face of each track pod (unbevelled: budget).
     with hull.region(bevel=0, subsurf=0, detail=1):
         for k in range(12):
             y = -1.27 + k * 0.23
-            hull.box("paint", (0.03, 0.05, 0.36), loc=(s * 1.185, y, 0.24), color=WORN)
+            hull.box("fleet_paint", (0.03, 0.05, 0.36), loc=(s * 1.185, y, 0.24), color=WORN)
         for y in (-1.0, -0.33, 0.33, 1.0):
-            hull.cyl("paint", 0.12, 0.12, 0.04, segs=10, loc=(s * 1.195, y, 0.24), rot=(0, math.pi / 2, 0),
+            hull.cyl("fleet_paint", 0.12, 0.12, 0.04, segs=10, loc=(s * 1.195, y, 0.24), rot=(0, math.pi / 2, 0),
                      color="charcoal")
-            hull.cyl("paint", 0.045, 0.045, 0.03, segs=6, loc=(s * 1.225, y, 0.24), rot=(0, math.pi / 2, 0),
+            hull.cyl("fleet_paint", 0.045, 0.045, 0.03, segs=6, loc=(s * 1.225, y, 0.24), rot=(0, math.pi / 2, 0),
                      color="brass")
     # Brass bearing caps on the reel pedestals, deck bollards.
-    hull.cyl("paint", 0.13, 0.11, 0.04, segs=12, loc=(s * 0.88, AXLE.y, AXLE.z), rot=(0, math.pi / 2, 0),
+    hull.cyl("fleet_paint", 0.13, 0.11, 0.04, segs=12, loc=(s * 0.88, AXLE.y, AXLE.z), rot=(0, math.pi / 2, 0),
              color="brass")
     for y in (1.2, -0.95):
-        hull.cyl("paint", 0.06, 0.06, 0.12, segs=8, loc=(s * 1.0, y, 1.39), color="brass")
-        hull.cyl("paint", 0.085, 0.085, 0.025, segs=8, loc=(s * 1.0, y, 1.46), color="brass")
+        hull.cyl("fleet_paint", 0.06, 0.06, 0.12, segs=8, loc=(s * 1.0, y, 1.39), color="brass")
+        hull.cyl("fleet_paint", 0.085, 0.085, 0.025, segs=8, loc=(s * 1.0, y, 1.46), color="brass")
 # Stack collar, crew number both sides, one HIRED by the 22 (left) and one on the reel housing.
-hull.cyl("paint", 0.125, 0.125, 0.05, segs=10, loc=(-0.92, -1.35, 1.62), color="brass")
+hull.cyl("fleet_paint", 0.125, 0.125, 0.05, segs=10, loc=(-0.92, -1.35, 1.62), color="brass")
 for s in (-1, 1):
-    stencil(hull, "paint", "22", (s * 1.2, 0.3, 0.8), (s, 0, 0), 0.42, "bone", resolution=1)
-stencil(hull, "paint", "HIRED", (-1.2, 0.95, 0.8), (-1, 0, 0), 0.09, "bone", resolution=1)
-stencil(hull, "paint", "HIRED", (-0.85, AXLE.y + 0.32, AXLE.z - 0.12), (-1, 0, 0), 0.05, "bone", resolution=1)
+    stencil(hull, "fleet_paint", "22", (s * 1.2, 0.3, 0.8), (s, 0, 0), 0.42, "bone", resolution=1)
+stencil(hull, "fleet_paint", "HIRED", (-1.2, 0.95, 0.8), (-1, 0, 0), 0.09, "bone", resolution=1)
+stencil(hull, "fleet_paint", "HIRED", (-0.85, AXLE.y + 0.32, AXLE.z - 0.12), (-1, 0, 0), 0.05, "bone", resolution=1)
 # Paid-out cable from the drum's upper tangent to the fairlead's rear rollers.
 feed = Vector((0, 1.27, LINE_Z))
 d = AXLE - feed
 ang = math.atan2(d.z, d.y) - math.asin(WOUND / d.length)   # the upper tangent line's heading from the feed
 tangent = AXLE + Vector((0, math.sin(ang), -math.cos(ang))) * WOUND
-hull.rod("paint", tuple(tangent), tuple(feed), 0.03, segs=6, color=CABLE)
+hull.rod("fleet_paint", tuple(tangent), tuple(feed), 0.03, segs=6, color=CABLE)
 clear = tangent.z + (feed.z - tangent.z) * (0.57 - tangent.y) / (feed.y - tangent.y)
+# Fairlead turntable on the bow gully floor (fixed; the boom swings at the runtime pivot).
+fair = hull  # the fairlead rides the hull: one draw
+fair.bevel = 0.0
+p = PIVOT
+TOP = 1.46                         # cheek tops stand proud of the 1.3 m deck so the fairlead reads
+fair.cyl("fleet_paint", 0.19, 0.19, 0.05, segs=14, loc=(0, p.y, p.z + 0.025), color="brass")
+fair.cyl("fleet_paint", 0.15, 0.15, 0.03, segs=12, loc=(0, p.y, p.z + 0.065), color="charcoal")
+for s in (-1, 1):
+    fair.box("fleet_paint", (0.035, 0.30, TOP - p.z - 0.08), loc=(s * 0.13, p.y, (TOP + p.z + 0.08) / 2), color="charcoal")
+    fair.box("fleet_paint", (0.04, 0.31, 0.03), loc=(s * 0.13, p.y, TOP), color="brass")
+    for dz in (0.075, -0.075):
+        fair.cyl("fleet_paint", 0.035, 0.035, 0.02, segs=8, loc=(s * 0.155, p.y - 0.09, LINE_Z + dz),
+                 rot=(0, math.pi / 2, 0), color="brass")
+    # Vertical guide rollers at the mouth.
+    fair.cyl("fleet_paint", 0.035, 0.035, TOP - p.z - 0.12, segs=8, loc=(s * 0.068, p.y + 0.11, (TOP + p.z + 0.08) / 2),
+             color="charcoal")
+    fair.cyl("fleet_paint", 0.045, 0.045, 0.025, segs=8, loc=(s * 0.068, p.y + 0.11, TOP - 0.02), color="brass")
+for dz in (0.075, -0.075):
+    fair.cyl("fleet_paint", 0.035, 0.035, 0.23, segs=8, loc=(0, p.y - 0.09, LINE_Z + dz), rot=(0, math.pi / 2, 0),
+             color=WORN)
+fair.box("fleet_paint", (0.3, 0.05, 0.035), loc=(0, p.y + 0.11, TOP), color="charcoal")
+fair.rod("fleet_paint", (0, p.y - 0.13, LINE_Z), (0, BOOM_START, LINE_Z), 0.03, segs=6, color=CABLE)
+
 bmesh.ops.recalc_face_normals(hull.bm, faces=hull.bm.faces[:])
 hull_obj = hull.to_object(parent=root)
 
@@ -272,65 +295,28 @@ for s in (-1, 1):
                  rot=(0, math.pi / 2, 0), color="brass")
 reel_obj = reel.to_object(origin=tuple(AXLE), parent=root)
 
-# --- TenderFairlead -----------------------------------------------------------------------
-fair = Part("TenderFairlead")
-fair.bevel = 0.0
-p = PIVOT
-TOP = 1.46                         # cheek tops stand proud of the 1.3 m deck so the fairlead reads
-fair.cyl("paint", 0.19, 0.19, 0.05, segs=14, loc=(0, p.y, p.z + 0.025), color="brass")
-fair.cyl("paint", 0.15, 0.15, 0.03, segs=12, loc=(0, p.y, p.z + 0.065), color="charcoal")
-for s in (-1, 1):
-    fair.box("paint", (0.035, 0.30, TOP - p.z - 0.08), loc=(s * 0.13, p.y, (TOP + p.z + 0.08) / 2), color="charcoal")
-    fair.box("paint", (0.04, 0.31, 0.03), loc=(s * 0.13, p.y, TOP), color="brass")
-    for dz in (0.075, -0.075):
-        fair.cyl("paint", 0.035, 0.035, 0.02, segs=8, loc=(s * 0.155, p.y - 0.09, LINE_Z + dz),
-                 rot=(0, math.pi / 2, 0), color="brass")
-    # Vertical guide rollers at the mouth.
-    fair.cyl("paint", 0.035, 0.035, TOP - p.z - 0.12, segs=8, loc=(s * 0.068, p.y + 0.11, (TOP + p.z + 0.08) / 2),
-             color="charcoal")
-    fair.cyl("paint", 0.045, 0.045, 0.025, segs=8, loc=(s * 0.068, p.y + 0.11, TOP - 0.02), color="brass")
-for dz in (0.075, -0.075):
-    fair.cyl("paint", 0.035, 0.035, 0.23, segs=8, loc=(0, p.y - 0.09, LINE_Z + dz), rot=(0, math.pi / 2, 0),
-             color=WORN)
-fair.box("paint", (0.3, 0.05, 0.035), loc=(0, p.y + 0.11, TOP), color="charcoal")
-fair.rod("paint", (0, p.y - 0.13, LINE_Z), (0, BOOM_START, LINE_Z), 0.03, segs=6, color=CABLE)
-fair_obj = fair.to_object(origin=tuple(PIVOT), parent=root)
-
-# --- BoomFloat0..4 and BoomBuoy -----------------------------------------------------------
+# --- BoomFloat -----------------------------------------------------------------------------
+# One float, at float 0's place, with cable stubs to half the gap each side: boom_tender.gd lays
+# five copies along the boom and a small one as the end buoy, so the boom is one draw.
 L2 = FLOAT_LEN / 2
 FLOAT_PROFILE = [(-L2, 0.0), (-L2 + 0.012, 0.1), (-L2 + 0.04, 0.19), (-L2 + 0.09, 0.26), (-L2 + 0.15, FLOAT_R),
                  (L2 - 0.15, FLOAT_R), (L2 - 0.09, 0.26), (L2 - 0.04, 0.19), (L2 - 0.012, 0.1), (L2, 0.0)]
-floats = []
-for i, y in enumerate(FLOATS):
-    f = Part("BoomFloat%d" % i)
-    f.bevel = 0.0
-    c = Vector((0, y, LINE_Z))
-    lathe(f, "paint", FLOAT_PROFILE, c, segs=14, color="oxide")
-    f.ring("paint", FLOAT_R - 0.02, FLOAT_R + 0.014, 0.16, segs=14, loc=tuple(c), rot=(math.pi / 2, 0, 0),
-           color="hazard")
-    f.cyl("paint", 0.055, 0.045, 0.05, segs=8, loc=tuple(c + Vector((0, 0, FLOAT_R + 0.035))), color="brass")
-    f.uv("paint", 0.05, u=6, v=4, loc=tuple(c + Vector((0, 0, FLOAT_R + 0.09))), color="brass")
-    for sgn in (-1, 1):
-        tip = c + Vector((0, sgn * (L2 + 0.03), 0))
-        f.ring("paint", 0.025, 0.055, 0.025, segs=6, loc=tuple(tip), rot=(0, math.pi / 2, 0), color="charcoal")
-        reach = GAP / 2 if (sgn > 0 and i < 4) or (sgn < 0 and i > 0) else 0.0
-        if reach:
-            f.rod("paint", tuple(tip), tuple(c + Vector((0, sgn * (L2 + reach), 0))), 0.025, segs=6, color=CABLE)
-    floats.append(f.to_object(origin=tuple(c), parent=root))
-
-buoy = Part("BoomBuoy")
-buoy.bevel = 0.0
-bc = Vector((0, BUOY_Y, LINE_Z))
-buoy.uv("paint", BUOY_R, u=12, v=8, loc=tuple(bc), color="oxide")
-buoy.ring("paint", BUOY_R - 0.02, BUOY_R + 0.01, 0.05, segs=12, loc=tuple(bc), rot=(math.pi / 2, 0, 0), color="hazard")
-buoy.ring("paint", 0.02, 0.045, 0.02, segs=8, loc=tuple(bc - Vector((0, BUOY_R + 0.025, 0))), rot=(0, math.pi / 2, 0),
-          color="charcoal")
-buoy.cyl("paint", 0.03, 0.03, 0.05, segs=6, loc=tuple(bc + Vector((0, 0, BUOY_R + 0.02))), color="brass")
-buoy.uv("paint", 0.035, u=6, v=4, loc=tuple(bc + Vector((0, 0, BUOY_R + 0.06))), color="brass")
-buoy_obj = buoy.to_object(origin=tuple(bc), parent=root)
+f = Part("BoomFloat")
+f.bevel = 0.0
+c = Vector((0, FLOATS[0], LINE_Z))
+lathe(f, "paint", FLOAT_PROFILE, c, segs=14, color="oxide")
+f.ring("paint", FLOAT_R - 0.02, FLOAT_R + 0.014, 0.16, segs=14, loc=tuple(c), rot=(math.pi / 2, 0, 0),
+       color="hazard")
+f.cyl("paint", 0.055, 0.045, 0.05, segs=8, loc=tuple(c + Vector((0, 0, FLOAT_R + 0.035))), color="brass")
+f.uv("paint", 0.05, u=6, v=4, loc=tuple(c + Vector((0, 0, FLOAT_R + 0.09))), color="brass")
+for sgn in (-1, 1):
+    tip = c + Vector((0, sgn * (L2 + 0.03), 0))
+    f.ring("paint", 0.025, 0.055, 0.025, segs=6, loc=tuple(tip), rot=(0, math.pi / 2, 0), color="charcoal")
+    f.rod("paint", tuple(tip), tuple(c + Vector((0, sgn * (L2 + GAP / 2), 0))), 0.025, segs=6, color=CABLE)
+float_obj = f.to_object(origin=tuple(c), parent=root)
 
 bpy.context.view_layer.update()
-meshes = [hull_obj, reel_obj, fair_obj] + floats + [buoy_obj]
+meshes = [hull_obj, reel_obj, float_obj]
 tris = common.tri_total(root)
 print("BOOM_TENDER", tris, "T", {o.name: common.tris(o) for o in meshes})
 print("BOOM_TENDER cable clearance at gully mouth z %.3f, tangent %s" % (clear, tuple(round(v, 3) for v in tangent)))

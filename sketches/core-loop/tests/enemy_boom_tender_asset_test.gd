@@ -1,21 +1,18 @@
 extends SceneTree
 
 # Boom Tender No. 22 asset contract (tools/blender/world_one/enemy_boom_tender.py), static: the
-# game-side loader follows the hooker pattern (meshes by node name, the fleet_paint surface is the
-# flash surface, vertex colours are the albedo) and is not written yet, so nothing spawns here.
+# loader (src/combat/boom_tender.gd) reads meshes by node name, the fleet_paint surface is the flash
+# surface, vertex colours are the albedo, and it lays the one float five times plus a small buoy.
+# Three meshes of one surface each: the enemy budget class's 3 draws (assets/asset_budgets.json).
 # Godot axes: forward is -Z, the origin is the ground under the hull centre.
 
 const PATH := "res://assets/models/world_one/enemy_boom_tender.glb"
-const CEILING_T := 12000
-const MESHES := ["TenderHull", "TenderReel", "TenderFairlead", "BoomFloat0", "BoomFloat1", "BoomFloat2",
-	"BoomFloat3", "BoomFloat4", "BoomBuoy"]
-# Pivots: the reel axle runs across the hull width; the fairlead turntable sits on the bow gully floor;
-# floats are 0.9 m long with 0.4 m gaps from just past the hull front; the buoy tip reaches z -8.1.
-const PIVOTS := {
-	"TenderHull": Vector3.ZERO, "TenderReel": Vector3(0, 1.5, 0.5), "TenderFairlead": Vector3(0, 0.7, -1.4),
-	"BoomFloat0": Vector3(0, 0.85, -2.07), "BoomFloat1": Vector3(0, 0.85, -3.37), "BoomFloat2": Vector3(0, 0.85, -4.67),
-	"BoomFloat3": Vector3(0, 0.85, -5.97), "BoomFloat4": Vector3(0, 0.85, -7.27), "BoomBuoy": Vector3(0, 0.85, -7.94),
-}
+const CEILING_T := 10000
+const CEILING_D := 3
+const MESHES := ["TenderHull", "TenderReel", "BoomFloat"]
+# Pivots: the reel axle runs across the hull width; the one float sits at float 0's place, 0.9 m
+# long, just past the hull front (boom_tender.gd FLOAT_OUT lays the rest 1.3 m apart).
+const PIVOTS := {"TenderHull": Vector3.ZERO, "TenderReel": Vector3(0, 1.5, 0.5), "BoomFloat": Vector3(0, 0.85, -2.07)}
 var failures := 0
 
 
@@ -63,6 +60,7 @@ func _run() -> void:
 				hi = hi.max(p)
 	print("asset: %d T, %d D, bounds x %.2f..%.2f y %.2f..%.2f z %.2f..%.2f" % [tris, draws, lo.x, hi.x, lo.y, hi.y, lo.z, hi.z])
 	_check(tris > 0 and tris <= CEILING_T, "asset triangles %d <= %d" % [tris, CEILING_T])
+	_check(draws <= CEILING_D, "asset draws %d <= %d" % [draws, CEILING_D])
 	_check(opaque, "every surface is opaque")
 	_check(coloured, "every surface carries vertex colours (the albedo)")
 	for name in MESHES:
@@ -95,7 +93,7 @@ func _run() -> void:
 	_check(absf(hi.y - 2.3) < 0.03, "reel top 2.3 m above ground (%.3f)" % hi.y)
 	_check(absf(hi.x - 1.2) < 0.06 and absf(lo.x + 1.2) < 0.06, "2.4 m wide (x %.2f..%.2f)" % [lo.x, hi.x])
 	_check(absf(hi.z - 1.6) < 0.03, "hull stern at z 1.6 (3.2 m hull about the origin, %.3f)" % hi.z)
-	_check(absf(lo.z + 8.1) < 0.03, "boom reaches 6.5 m past the hull front (z min %.3f)" % lo.z)
+	_check(absf(lo.z + 2.72) < 0.03, "the float's cable stub ends half a gap past it (z min %.3f)" % lo.z)
 	var reel_mi := found.get("TenderReel") as MeshInstance3D
 	if reel_mi != null:
 		var aabb := reel_mi.mesh.get_aabb()
