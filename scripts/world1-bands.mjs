@@ -172,7 +172,11 @@ function botRow(row, runs, ctx) {
 // and grade the matching measure in the bot runs (pacingMeasure).
 export function pacingMeasure(band, runs) {
   const pol = (p) => runs.filter((r) => r.bot.policy === p);
-  const rout = (list) => median(list.map((r) => MEASURES.rout_s(r)));
+  // Every run of the policy must carry the measure; a median over the few that do is no read.
+  const rout = (list) => {
+    const vs = list.map((r) => MEASURES.rout_s(r));
+    return list.length && vs.every(isNum) ? median(vs) : null;
+  };
   if (band === "skipper_total") return rout(pol("skipper"));
   if (band === "completionist_total") return rout(pol("completionist"));
   if (band === "skipper_stage") return stageLengths(pol("skipper"));
@@ -182,6 +186,7 @@ export function pacingMeasure(band, runs) {
 
 // Every cleared stage's own clock (exit_s is per stage, not cumulative), as { min, max }.
 export function stageLengths(runs) {
+  if (!runs.length || runs.some((r) => !(r.bot.stages ?? []).some((s) => isNum(s?.exit_s) && s.exit_s > 0))) return null;
   const exits = runs.flatMap((r) => (r.bot.stages ?? []).filter((s) => isNum(s?.exit_s) && s.exit_s > 0).map((s) => s.exit_s));
   return exits.length ? { min: Math.min(...exits), max: Math.max(...exits) } : null;
 }

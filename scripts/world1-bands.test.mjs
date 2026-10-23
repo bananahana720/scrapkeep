@@ -225,3 +225,12 @@ test("review: CLI values are never flags, frames need a path", () => {
   assert.throws(() => parseArgs(["--frames", "dam="]), /--frames takes/);
   assert.equal(parseArgs(["--frames", "dam=a.json", "--sitting"]).frames.dam, "a.json");
 });
+
+test("review: pacing rows need every run of the policy to carry the measure", () => {
+  const inputs = finished();
+  inputs.runs = inputs.runs.map((r, i) => (r.bot.policy === "skipper" && i > 0 ? { ...r, bot: { ...r.bot, boss: { defeated_s: 100 }, stages: [] } } : r));
+  const rows = evaluate(SPEC, inputs);
+  assert.equal(row(rows, "run-length-skipper").verdict, "no data");
+  assert.ok(row(rows, "run-length-skipper").blocks);
+  assert.equal(row(rows, "stage-length-skipper").verdict, "no data");
+});
