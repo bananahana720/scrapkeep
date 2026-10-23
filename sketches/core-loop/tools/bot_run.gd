@@ -65,7 +65,8 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 # --warm-band=1 renders the band's other themes, keys and boss tracks (MusicEngine.prepare_rest) before
 # the run, as a played run does on a worker behind stage 1. Without it each chord, note and riser
 # renders on the main thread the first time a bar asks, 60 to 300 ms a frame that play never has.
-# Use it for frame captures and hitch hunts; the seed still replays exactly.
+# It also renders each queued stinger on a worker before its beat, as a played run does. Use it
+# for frame captures and hitch hunts; the seed still replays exactly.
 # --frame-log=1 writes frames-<seed>.ndjson: each frame's wall ms, stage and flow state; that ms split
 # into idle_ms (the scene's _process), draw_ms (the RenderingServer's draw) and tick_ms (the physics
 # ticks after it, ticks of them), timed per frame; Performance's process and physics times, which are
@@ -310,6 +311,7 @@ func _physics_process(delta: float) -> bool:
 		_game.presentation.audio.bake_opening_now()
 		if _settings.get("warm-band", "0") == "1":
 			MusicEngine.prepare_rest()
+			_game.presentation.audio.engine.warm_stingers = true
 		_game.run.run_seed_override = _seeds[_index]
 		_started_msec = Time.get_ticks_msec()
 		var resume := false

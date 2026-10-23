@@ -215,6 +215,9 @@ class Voice:
 
 var park_cue_log: Array[Dictionary] = []
 var _park_pcm := {}
+# Park cue cells rendered on a worker before their beat, by signature.
+static var _park_warm := {}
+static var _park_warm_lock := Mutex.new()
 
 var clock := 0
 var bar_origin := 0
@@ -361,6 +364,11 @@ var _class_counter: Array = []
 # nothing, and stingers land on the ACE beat in its key (grid is the sequencer, which
 # answers next_beat() and key_at() in this engine's transport samples).
 var bot_skip_samples := false
+# A played run sets it (Audio): a stinger queued for the next beat renders on a worker in the
+# meantime, so a pilot's cue in a key the bake never reached (a boss fight's lift) never renders
+# on the main thread when its beat comes.
+var warm_stingers := false
+static var _stinger_tasks: Array[int] = []
 var band_muted := false
 var grid: Object = null
 
@@ -515,8 +523,23 @@ static func prepare_rest() -> void:
 			Synth.stab_chord(voicing, true)
 			Synth.chord(voicing)
 			Synth.note("sub", int(chord["root"]) + shift)
+	# The Mind's victory resolves in its own key (BOSS_SECTIONS), through _trigger_victory's voices.
+	for chord in Harmony.VICTORY:
+		if SfxBank.bake_cancel:
+			return
+		var voicing := _shift(chord["voicing"], int(BOSS_SECTIONS.mind.victory.key))
+		Synth.chord(voicing)
+		Synth.stab_chord(voicing, true)
+		Synth.pad_chord(voicing)
+		var root := int(chord["root"]) + int(BOSS_SECTIONS.mind.victory.key)
+		Synth.note("sub", root)
+		Synth.note("reese", root + 12)
+		Synth.note("fbass", root)
+		Synth.note("fbass", root + 12)
 	# _start_riser's build riser, on both boss grids.
 	for step in [Harmony.BOSS_STEP, PHASE3_STEP]:
+		if SfxBank.bake_cancel:
+			return
 		SfxBank.samples_at("build_riser", step)
 
 
@@ -719,11 +742,38 @@ func schedule_stinger(id: String, db := 0.0, lane := false, repeats := 1) -> int
 		lane_free_at = start + SfxBank.STINGER_BEATS.get(id, 1) * beat_len() + (repeats - 1) * 2 * step_len
 	for i in repeats:
 		_add_action(start + i * 2 * step_len, {"type": "stinger", "id": id, "db": db - 2.0 * i, "music": false})
+	_warm_stinger(id, start)
 	return start
 
 
 func schedule_stinger_at(id: String, at: int, db := 0.0) -> void:
 	_add_action(at, {"type": "stinger", "id": id, "db": db, "music": false})
+	_warm_stinger(id, at)
+
+
+# The variant _run's "stinger" will ask for at `at`, on a worker, unless it is made already.
+func _warm_stinger(id: String, at: int) -> void:
+	if not warm_stingers:
+		return
+	var shift: int = key if grid == null else grid.key_at(at)
+	var step := step_len
+	var theme_now := theme
+	if SfxBank.baked_at(id, step, shift, theme_now):
+		return
+	_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
+	_stinger_tasks.append(WorkerThreadPool.add_task(func(): SfxBank.samples_at(id, step, shift, theme_now), false, "stinger warm"))
+
+
+static func _settle_task(task: int) -> bool:
+	WorkerThreadPool.wait_for_task_completion(task)
+	return false
+
+
+# Teardown: waits on every stinger still rendering.
+static func settle_stingers() -> void:
+	for task in _stinger_tasks:
+		WorkerThreadPool.wait_for_task_completion(task)
+	_stinger_tasks.clear()
 
 
 static func stage_theme(stage = "default") -> int:
@@ -1334,20 +1384,36 @@ func cancel_park_drop(owner: String) -> void:
 
 
 func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
-	var row: Dictionary = action.row
-	var signature := str([row, action.cell, action.length, action.progress, live_key, step_len])
+	var signature := _park_signature(action, live_key, step_len)
 	if _park_pcm.has(signature):
 		return _park_pcm[signature]
+	_park_warm_lock.lock()
+	var buf: PackedFloat32Array = _park_warm.get(signature, PackedFloat32Array())
+	_park_warm.erase(signature)
+	_park_warm_lock.unlock()
+	if buf.is_empty():
+		buf = _render_park(action.row, action.cell, action.length, action.progress, int(action.get("skip", 0)), live_key, step_len, theme)
+	if _park_pcm.size() >= 64:
+		_park_pcm.clear()
+	_park_pcm[signature] = buf
+	return buf
+
+
+static func _park_signature(action: Dictionary, live_key: int, step: int) -> String:
+	return str([action.row, action.cell, action.length, action.progress, live_key, step])
+
+
+static func _render_park(row: Dictionary, cell: int, length: int, progress: float, skip: int, live_key: int, step: int, theme_now: int) -> PackedFloat32Array:
 	var buf: PackedFloat32Array
 	if row.get("stinger", false):
-		buf = SfxBank.samples_at(row.sound, step_len, 0, theme)
-		if int(action.get("skip", 0)) > 0:
-			buf = Synth.declick(buf.slice(int(action.skip)))
+		buf = SfxBank.samples_at(row.sound, step, 0, theme_now)
+		if skip > 0:
+			buf = Synth.declick(buf.slice(skip))
 	elif row.has("sound"):
-		buf = SfxBank.samples_at(row.sound, step_len, live_key, theme)
+		buf = SfxBank.samples_at(row.sound, step, live_key, theme_now)
 	else:
-		var n: int = action.length
-		var midi: int = row.notes[action.cell] + live_key
+		var n: int = length
+		var midi: int = row.notes[cell] + live_key
 		match row.voice:
 			"lead": buf = Synth.lead(midi, n)
 			"brass": buf = Synth.brass(midi, n)
@@ -1370,11 +1436,8 @@ func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
 		buf = Synth.normalize(buf)
 		if row.rise:
 			for i in buf.size():
-				buf[i] *= lerpf(0.25, 1.0, float(action.progress) + float(i) / maxi(1, buf.size()) / row.notes.size())
+				buf[i] *= lerpf(0.25, 1.0, progress + float(i) / maxi(1, buf.size()) / row.notes.size())
 		buf = Synth.declick(buf)
-	if _park_pcm.size() >= 64:
-		_park_pcm.clear()
-	_park_pcm[signature] = buf
 	return buf
 
 
@@ -1425,6 +1488,33 @@ func render(frames: int) -> void:
 func _add_action(at: int, action: Dictionary) -> void:
 	action["at"] = at
 	_actions.append(action)
+	if action["type"] == "park_cue":
+		_warm_park(action, at)
+
+
+# Like _warm_stinger: render the cell on a worker so its beat only plays it.
+func _warm_park(action: Dictionary, at: int) -> void:
+	if not warm_stingers:
+		return
+	var shift: int = key if grid == null else grid.key_at(at)
+	var signature := _park_signature(action, shift, step_len)
+	if _park_pcm.has(signature):
+		return
+	var row: Dictionary = action.row.duplicate(true)
+	var cell: int = action.cell
+	var length: int = action.length
+	var progress: float = action.progress
+	var skip := int(action.get("skip", 0))
+	var step := step_len
+	var theme_now := theme
+	_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
+	_stinger_tasks.append(WorkerThreadPool.add_task(func():
+		var buf := _render_park(row, cell, length, progress, skip, shift, step, theme_now)
+		_park_warm_lock.lock()
+		if _park_warm.size() >= 64:
+			_park_warm.clear()
+		_park_warm[signature] = buf
+		_park_warm_lock.unlock(), false, "park cue warm"))
 
 
 func _to_next_action() -> int:
