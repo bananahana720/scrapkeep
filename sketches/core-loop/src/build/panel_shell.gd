@@ -204,7 +204,6 @@ func _view(silhouette: String) -> MultiMeshInstance3D:
 	mm.use_colors = true
 	mm.mesh = plate_mesh(silhouette)
 	view.multimesh = mm
-	view.set_meta("placeholder", "panel_plate:" + silhouette)
 	add_child(view)
 	_multimeshes[silhouette] = view
 	return view
