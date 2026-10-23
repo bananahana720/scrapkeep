@@ -64,7 +64,7 @@ const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker"
 	"deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap", "reactor_relic",
 	"swarm_remnant", "mind_hand", "burrower", "drill_crew", "lamp_swarm", "line_cutter", "anchor_crew",
 	"kite_drone", "linker", "foreman", "prop_crew", "pit_jaw", "splitter", "ballast_heavy", "gap_net",
-	"dispatcher"]
+	"dispatcher", "jolt_layer", "boom_tender"]
 const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster", "deflector", "winch_drone",
 	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
 const FAMILY_ANCIENT := ["reactor_relic", "swarm_remnant", "mind_hand"]

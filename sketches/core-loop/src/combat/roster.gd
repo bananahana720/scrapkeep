@@ -88,9 +88,11 @@ const BASE_ROWS := {
 	"mag_trapper": {"faction": FLEET, "role": "controller", "mechanic": "mag_pit", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump", "smash", "hook"], "tag": "hold_pit", "tag_next": "tag_mag_pit", "hold": "hold_pit", "tests": "heft",
 		"line": "Throws a magnetic pit disc that drags a ball lighter than its rating; heft rolls through it."},
+	# The Spillway's own crew (design-v3/SPILLWAY-ROSTER.md): re-admitted in wave 19, reworked around Flow.
 	"hooker": {"faction": FLEET, "role": "controller", "mechanic": "anchor_tether", "telegraph": T_LANE, "holds": true,
-		"breaks": ["boost", "speed"], "tag": "hold_tether", "tag_next": "tag_tether_crack", "hold": "hold_tether", "tests": "speed",
-		"line": "Harpoons you to its anchor post; outrun the line's rating or boost and it snaps and slings you."},
+		"breaks": ["boost", "speed", "hook"], "tag": "hold_tether", "tag_next": "tag_tether_crack", "hold": "hold_tether", "tests": "speed",
+		"world": 1,
+		"line": "Harpoons you to its anchor post; outrun the line, boost, or bite another post and it snaps and slings you."},
 	"netcaster": {"faction": FLEET, "role": "controller", "mechanic": "air_net", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump", "glide", "smash"], "tag": "hold_net", "tag_next": "tag_net_crackle", "hold": "zap_hum", "tests": "air",
 		"line": "Raises an electric net that grabs only an airborne ball; double jump, glide or smash tears it."},
@@ -111,8 +113,8 @@ const BASE_ROWS := {
 	"gyro_jammer": {"faction": FLEET, "role": "controller", "mechanic": "gyro_drift", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["jump", "boost", "smash", "hook"], "tag": "hold_riser", "tag_next": "tag_gyro_warble", "hold": "hold_riser", "tests": "steer",
 		"line": "Throws your gyroscope off inside its field: steering drifts side to side until you move out or break it."},
-	# The Spillway's field crew (design-v3/FIELDS-AND-CASTS.md section 2.3): spawnable by name, in
-	# no director pack until wave 19.
+	# The Spillway's field crew (design-v3/FIELDS-AND-CASTS.md section 2.3), in Spillway packs from
+	# wave 19 (design-v3/SPILLWAY-ROSTER.md).
 	"jolt_layer": {"faction": FLEET, "role": "controller", "mechanic": "static_jam", "telegraph": T_INSTANT, "holds": false,
 		"breaks": ["speed", "jump"], "tag": "", "tests": "speed", "script": "res://src/combat/jolt_layer.gd", "world": 1,
 		"line": "Unrolls a live cable mat that jolts a slow ball: charges and casts drop and specials jam; roll fast, jump or hook out."},
@@ -120,8 +122,12 @@ const BASE_ROWS := {
 		"breaks": ["jump", "boost"], "tag": "hit_thwack", "tag_next": "tag_paddle_swat", "hold": "", "tests": "steer",
 		"line": "Swings a low paddle arm that bats you along its sweep; jump the paddle, or boost to ride the knock."},
 	"ramp_flipper": {"faction": FLEET, "role": "controller", "mechanic": "tilt_fling", "telegraph": T_INSTANT, "holds": true,
-		"breaks": ["jump"], "tag": "vault_rise", "tag_next": "tag_ramp_creak", "hold": "", "tests": "steer",
-		"line": "A floor plate that tilts to fling a grounded ball up and off course; jump on the tilt to ride it as a ramp."},
+		"breaks": ["jump"], "tag": "vault_rise", "tag_next": "tag_ramp_creak", "hold": "", "tests": "steer", "world": 1,
+		"line": "A sluice flap that tilts to fling a slow ball off course; hit it fast, or jump the tilt, and it launches you instead."},
+	# Boom Tender No. 22 (design-v3/SPILLWAY-ROSTER.md): the Spillway's own body, a bowling exam.
+	"boom_tender": {"faction": FLEET, "role": "controller", "mechanic": "boom_pin", "telegraph": T_LANE, "holds": true,
+		"breaks": ["boost", "jump", "hook"], "tag": "", "hold": "", "tests": "speed", "script": "res://src/combat/boom_tender.gd", "world": 1,
+		"line": "Swings a debris boom of five floats across your lane and pins a slow ball to its hull; bowl through fast and the floats pop like pins."},
 	"catch_trap": {"faction": FLEET, "role": "controller", "mechanic": "cup_hold", "telegraph": T_INSTANT, "holds": true,
 		"breaks": ["boost", "smash", "hook"], "tag": "ice_form", "tag_next": "tag_cup_snap", "hold": "ice_form", "tests": "speed",
 		"line": "A cup that closes over a ball rolling onto it and holds it dead still; boost or smash out, or break it first."},
@@ -196,6 +202,7 @@ const CHASSIS := {
 	"splitter": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Three welded pods whose seams flare white as one buds off"},
 	"splitter_pod": {"chassis": "crawler", "move_class": "ground", "threat_feature": "Lit seams blinking faster as the fuse burns"},
 	"jolt_layer": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Cable spool under a coil that swells before each jolt"},
+	"boom_tender": {"chassis": "emplacement", "move_class": "fixed", "threat_feature": "Float lamps lighting one by one out along the boom"},
 }
 
 # The Fleet counters in the order the director unlocks them, and the ancients.

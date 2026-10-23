@@ -141,7 +141,8 @@ func _check_rows() -> void:
 				not kinds.has("anchor_crew") and kinds.has("ballast_heavy") and kinds.has("gap_net"), str(kinds))
 			t.check("HD-0 stage %d elite is the Highdraft's (%s)" % [stage, table.resource_path.get_file()],
 				row["elite"]["kinds"] == ["ballast_heavy", "kite_drone", "kite_drone"], str(row["elite"]))
-		t.check("HD-0 Spillway elite unchanged (%s)" % table.resource_path.get_file(), table.of(1)["elite"]["kinds"] == ["plated_brute", "winch_drone"])
+		# w19: the Spillway has its own elite (design-v3/SPILLWAY-ROSTER.md); the Highdraft's stays out of it.
+		t.check("HD-0 Spillway elite is its own (%s)" % table.resource_path.get_file(), table.of(1)["elite"]["kinds"] == ["hooker", "jolt_layer", "plated_brute"])
 
 
 func _ballast() -> void:
