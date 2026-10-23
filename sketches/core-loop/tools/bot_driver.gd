@@ -231,15 +231,6 @@ const GATE_SWITCH_FALLS := 2
 # A gate still untaken after GATE_SWITCH_SECONDS is given up for the next offer the same way:
 # the cache's walls can hold a bot that keeps rounding them on the beacon top.
 const GATE_SWITCH_SECONDS := 40.0
-# A ball no more than GATE_LEVEL below its gate is on the gate's level, whatever the ground's heights say under it
-# (the run-up's own test): the climb route is planned on those heights, and on a ramp prop they lie far below. On
-# park stage 2 a charge that crested the ramp to the gate at (300, 0, 466) took the route's next point, 11 m down,
-# and the skipper rode that loop to the stage's stall limit (seeds 1 and 2, #241).
-const GATE_LEVEL := 3.0
-# A gate whose run-up starts more than GATE_RUNUP_TRIES times without the ball taking it is given up for the next offer,
-# on any map: under that park stage 2 gate a ball can wedge at the ramp's foot, or crest it and fall off its side,
-# for the whole stage (skipper seed 2).
-const GATE_RUNUP_TRIES := 4
 # Level with a gate and within GATE_CALM_RANGE of it, the bot rolls in without boosting and brakes
 # above GATE_CALM_SPEED, as a player eases up near a rim: the crown's gates stand 5 m in from a
 # 25 m drop, and a heavy ball boosted at its run-in point overshoots it off the beacon top.
@@ -431,7 +422,6 @@ var _gate_on_top := false
 # 25 m over the deck). The climb-back, calm, back-out and gate-switch rules apply only there.
 var _island_gates := false
 var _gate_falls := 0
-var _gate_runups := 0
 var _stage := 0
 var _fight_phase := "charge"
 var _fight_target: Node3D = null
@@ -2936,7 +2926,6 @@ func _on_offers(offers: Array) -> void:
 	_gate_run_clock = 0.0
 	_gate_on_top = false
 	_gate_falls = 0
-	_gate_runups = 0
 	var map = game.ctx.terrain.map_for(game.run.stage)
 	_island_gates = map != null and map.has_method("_islands")
 	if _island_gates:
@@ -2982,7 +2971,7 @@ func _to_gate(delta: float) -> void:
 		target = at + facing * 10.0
 	# Off the gates' island (a Highdraft beacon top), the straight line meets its cliff: climb back.
 	var ball_at: Vector3 = game.player.ball_position()
-	if _climbing(ball_at, at) and rel.y < -GATE_LEVEL:
+	if _climbing(ball_at, at):
 		if _gate_on_top and _island_gates:
 			_gate_on_top = false
 			_gate_falls += 1
@@ -2994,8 +2983,6 @@ func _to_gate(delta: float) -> void:
 		_gate_on_top = true
 		_fight_climb.clear()
 		_fight_climb_clock = 0.0
-		# Level with the gate but still on a kicker the climb route crossed: jump at its lip as the climb would.
-		_kicker_jump(ball_at)
 	if rel.length() < GATE_PROBE_NEAR:
 		target = _gate_round_props(ball_at, target, delta)
 	else:
@@ -3011,8 +2998,6 @@ func _to_gate(delta: float) -> void:
 	_gate_time += delta
 	_gate_hop -= delta
 	if _gate_time > GATE_SWITCH_SECONDS and _gate_on_top and _island_gates:
-		_switch_gate()
-	elif _gate_runups > GATE_RUNUP_TRIES:
 		_switch_gate()
 	if _gate_time > GATE_HOP_SECONDS and _gate_hop <= 0.0 and game.player.state.grounded and along < 0.0 and along > -14.0:
 		_gate_hop = GATE_HOP_EVERY
@@ -3045,7 +3030,6 @@ func _to_gate(delta: float) -> void:
 # Gives up the picked gate for the next offer, with a fresh clock, run-up and detour.
 func _switch_gate() -> void:
 	_gate_falls = 0
-	_gate_runups = 0
 	_gate_time = 0.0
 	_gate_run = ""
 	_gate_detour_left = 0.0
@@ -3058,7 +3042,7 @@ func _switch_gate() -> void:
 # line, "charge" rolls the line at speed; each phase gives up after its seconds and the other
 # takes over, so a stalled charge is a fresh run-up.
 func _gate_runup(at: Vector3, facing: Vector3, rel: Vector3, ball: Vector3, target: Vector3, delta: float) -> Vector3:
-	if _gate_time < GATE_RUNUP_AFTER or rel.y > -GATE_LEVEL:
+	if _gate_time < GATE_RUNUP_AFTER or rel.y > -3.0:
 		_gate_run = ""
 		return target
 	var start := at - facing * GATE_RUNUP_BACK
@@ -3066,7 +3050,6 @@ func _gate_runup(at: Vector3, facing: Vector3, rel: Vector3, ball: Vector3, targ
 	if _gate_run == "":
 		_gate_run = "runup"
 		_gate_run_clock = 0.0
-		_gate_runups += 1
 		_count("gate_runups")
 	_gate_run_clock += delta
 	if _gate_run == "runup" and (_flat(ball, start) < 8.0 or _gate_run_clock > GATE_RUNUP_SECONDS):
@@ -3075,7 +3058,6 @@ func _gate_runup(at: Vector3, facing: Vector3, rel: Vector3, ball: Vector3, targ
 	elif _gate_run == "charge" and _gate_run_clock > GATE_CHARGE_SECONDS:
 		_gate_run = "runup"
 		_gate_run_clock = 0.0
-		_gate_runups += 1
 		_count("gate_runups")
 	_goal += " " + _gate_run
 	if _gate_run == "runup":
