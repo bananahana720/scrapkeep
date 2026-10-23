@@ -1,0 +1,257 @@
+extends "res://src/combat/counter.gd"
+
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
+
+# The boom tender (Boom Tender No. 22, design-v3/SPILLWAY-ROSTER.md; world 1): a low tug on
+# tracks paying out a debris boom of five floats and an end buoy. It stows the boom to one side
+# and the warning is a lane from the hull toward the ball, the boom's whole reach; through the
+# warn the reel ratchets and the float lamps light one by one out along the lane. Live, the
+# boom swings into the lane. A ball in the lane below FAST tier is pinned: stung, shoved and
+# hauled toward the hull. A ball at FAST tier bowls through instead: every float within
+# POP_REACH of it bursts like a pin, pays FLOAT_SCRAP, and stays burst for the tender's life.
+# All five in one pass is a strike. Boost, jump or hook out of a pin. Speed beats Flow.
+
+const BODY := "res://assets/models/world_one/enemy_boom_tender.glb"
+const HULL_RADIUS := 1.3
+const LANE_LENGTH := 8.4
+const LANE_WIDTH := 3.0
+const SWING := 1.1
+const POP_TIER := SpeedTier.FAST
+const POP_REACH := 1.6
+const FLOAT_SCRAP := 1
+const PIN := 1.0
+const PIN_PULL := 6.0
+const PIN_DAMP := 2.5
+const STING_DAMAGE := 5.0
+const SHOVE := 6.0
+const HP := 60.0
+# The floats' distances out from the hull centre, the glb's BoomFloat0..4 (-Z forward).
+const FLOAT_OUT := [2.07, 3.37, 4.67, 5.97, 7.27]
+const LAMP_ON := 2.4
+const BOOM_DROP := 0.5
+
+var pinned := 0
+var pops := 0
+var strikes := 0
+var popped := [false, false, false, false, false]
+
+var _heading := Vector3.FORWARD
+var _side := 1.0
+var _pops_live := 0
+var _boom: Node3D
+var _floats: Array = []
+var _reel: Node3D
+var _lamps: Array = []
+
+static var _warned_asset := false
+static var _shared: Array = []
+
+
+func _configure(threat: float) -> void:
+	_set_health(HP * threat)
+	scrap_value = 5
+	weight = 2.0
+	warn_seconds = 1.1
+	live_seconds = 0.6
+	rest_seconds = 4.0
+	attack_range = LANE_LENGTH + 1.0
+	keep_near = 5.0
+	impact_resist = 1.2
+
+
+# A squat collider for the hull instead of the crew capsule.
+func _build_crew() -> void:
+	radius = HULL_RADIUS
+	half_height = HULL_RADIUS
+	_crew = _add_capsule(HULL_RADIUS, HULL_RADIUS * 2.0, Palette.RUST)
+
+
+# BODY's glb (origin on the ground under the hull) dropped to the collider's floor and turned bow first. The floats
+# and the buoy hang off a boom node that pivots at the hull centre, so the swing is one rotation.
+func _build_tool() -> void:
+	var parts := _parts()
+	var dress := Node3D.new()
+	dress.name = "BoomTenderBody"
+	dress.position = Vector3(0.0, -half_height, 0.0)
+	# The glb's bow is -Z; _facing turns +Z toward the ball.
+	dress.rotation.y = PI
+	_visual_parent().add_child(dress)
+	_boom = Node3D.new()
+	_boom.name = "Boom"
+	# The glb lays the boom straight out at fairlead height; in play the floats ride the floor.
+	_boom.position.y = -BOOM_DROP
+	dress.add_child(_boom)
+	if parts.is_empty():
+		for out in FLOAT_OUT:
+			var f := _cylinder(0.3, 0.9, Palette.RUST, Vector3(0.0, 0.85, -out), 0.0, _boom)
+			f.rotation.x = PI * 0.5
+			_floats.append(f)
+		return
+	_crew.free()
+	_crew = null
+	_base_color = Color.WHITE
+	_material.albedo_color = _base_color
+	_material.vertex_color_use_as_albedo = true
+	for part in parts:
+		var mi := MeshInstance3D.new()
+		mi.name = part.name
+		mi.mesh = part.mesh
+		mi.transform = part.xform
+		if part.flash >= 0:
+			mi.set_surface_override_material(part.flash, _material)
+		var name := String(part.name)
+		if name.begins_with("BoomFloat") or name == "BoomBuoy":
+			_boom.add_child(mi)
+			if name != "BoomBuoy":
+				_floats.append(mi)
+		else:
+			dress.add_child(mi)
+		if name == "TenderReel":
+			_reel = mi
+	_floats.sort_custom(func(a, b): return String(a.name) < String(b.name))
+	for f in _floats:
+		var lamp := _box(Vector3(0.14, 0.12, 0.14), Palette.BRASS, Vector3(0.0, 0.34, 0.0), 0.0, f)
+		lamp.name = "Lamp"
+		_lamps.append(lamp)
+
+
+static func _parts() -> Array:
+	if not _shared.is_empty():
+		return _shared
+	if not ResourceLoader.exists(BODY):
+		return []
+	var packed := load(BODY) as PackedScene
+	if packed == null:
+		return []
+	var scene := packed.instantiate()
+	var painted := Palette.solid(Color.WHITE)
+	painted.vertex_color_use_as_albedo = true
+	for node in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		var mesh: Mesh = mi.mesh.duplicate()
+		var flash := -1
+		for i in mesh.get_surface_count():
+			var surface_material := mesh.surface_get_material(i)
+			if surface_material == null and not _warned_asset:
+				_warned_asset = true
+				push_warning("boom_tender: surface has no material; using default finish")
+			if surface_material != null and surface_material.resource_name == "fleet_paint":
+				flash = i
+			mesh.surface_set_material(i, painted)
+		var xform := mi.transform
+		var parent := mi.get_parent() as Node3D
+		while parent != null and parent != scene:
+			xform = parent.transform * xform
+			parent = parent.get_parent() as Node3D
+		_shared.append({"name": mi.name, "mesh": mesh, "xform": xform, "flash": flash})
+	scene.free()
+	return _shared
+
+
+func _commit(to_ball: Vector3) -> Node3D:
+	_heading = Vector3(to_ball.x, 0.0, to_ball.z).normalized()
+	if _heading.length() < 0.5:
+		_heading = -global_transform.basis.z
+	_facing(to_ball)
+	_side = _strafe
+	_pops_live = 0
+	return _commit_lane(Threat.Type.LANE, global_position, _heading, LANE_LENGTH, LANE_WIDTH)
+
+
+func _live(_delta: float) -> bool:
+	var lane := telegraph()
+	var player = _player()
+	if lane == null or player == null:
+		return false
+	var ball := _real_ball()
+	if _holding():
+		var to_hull := global_position - ball
+		to_hull.y = 0.0
+		_pull(to_hull.normalized() * PIN_PULL * minf(to_hull.length(), 6.0) - player.planar_velocity() * PIN_DAMP)
+		return true
+	if caught_live > 0 or not lane.contains(ball):
+		return true
+	if player.speed_tier() >= POP_TIER:
+		_bowl_through(ball)
+		return true
+	var shove := (global_position - ball).normalized() * SHOVE
+	shove.y = 0.0
+	if _catch(PIN, shove):
+		pinned += 1
+		hit_player.emit(STING_DAMAGE, shove)
+	return true
+
+
+# A fast ball bursts every standing float within POP_REACH of it.
+func _bowl_through(ball: Vector3) -> void:
+	for i in FLOAT_OUT.size():
+		if popped[i]:
+			continue
+		var at := float_position(i)
+		if Vector2(at.x - ball.x, at.z - ball.z).length() > POP_REACH:
+			continue
+		popped[i] = true
+		pops += 1
+		_pops_live += 1
+		if i < _floats.size():
+			(_floats[i] as Node3D).visible = false
+		_pay(at)
+		if fleet != null:
+			fleet.discover("boom_pop", at)
+	if _pops_live == FLOAT_OUT.size():
+		_pops_live = 0
+		strikes += 1
+		if fleet != null:
+			fleet.discover("boom_strike", ball)
+
+
+# Where float i lies along the committed lane, on the ground.
+func float_position(i: int) -> Vector3:
+	return global_position + _heading * float(FLOAT_OUT[i])
+
+
+func _pay(at: Vector3) -> void:
+	var ctx = fleet.ctx if fleet != null else null
+	var build = ctx.build if ctx != null and "build" in ctx else null
+	if build != null and build.scrap != null:
+		build.scrap.drop(at, FLOAT_SCRAP, build.loot_rng)
+
+
+func _on_end() -> void:
+	_lamp(-1)
+
+
+# E40's pose, e40_reel_ratchet: the boom stows SWING to one side and the reel winds back
+# through the warn while the lamps light out along the lane; live, the boom swings into the
+# lane. The lane, the pin and the pops read the committed heading, never this pose.
+func _pose() -> void:
+	if _boom == null:
+		return
+	var swing := 0.0
+	var reel := 0.0
+	match phase:
+		Phase.WARN:
+			var t := clampf(_warn_progress(), 0.0, 1.0)
+			swing = SWING * _side * t * t * (3.0 - 2.0 * t)
+			reel = -TAU * t
+			_lamp(int(floor(t * float(_lamps.size()))))
+		Phase.LIVE:
+			swing = SWING * _side * (1.0 - clampf(_t / live_seconds, 0.0, 1.0) * 2.0)
+			_lamp(_lamps.size())
+		_:
+			swing = lerpf(_boom.rotation.y, 0.0, 1.0 - exp(-6.0 * get_physics_process_delta_time()))
+	_boom.rotation.y = swing
+	if _reel != null:
+		_reel.rotation.x = reel
+
+
+# Lights the first `count` standing floats' lamps; -1 puts them all out.
+func _lamp(count: int) -> void:
+	for i in _lamps.size():
+		var mat := (_lamps[i] as MeshInstance3D).material_override as StandardMaterial3D
+		if mat == null:
+			continue
+		var on := i < count
+		mat.emission_enabled = on
+		mat.emission = Palette.BRASS
+		mat.emission_energy_multiplier = LAMP_ON if on else 0.0

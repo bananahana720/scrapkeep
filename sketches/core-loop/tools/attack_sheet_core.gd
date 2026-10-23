@@ -53,7 +53,7 @@ const MOB_TYPE := {
 	"bola_thrower": "PROJECTILE", "dispatcher": "PROJECTILE", "splitter_pod": "INSTANT", "ballast_heavy": "INSTANT",
 	"hooker": "LANE", "mag_trapper": "INSTANT", "netcaster": "INSTANT", "winch_drone": "LANE", "gyro_jammer": "INSTANT",
 	"deflector": "LANE", "ramp_flipper": "INSTANT", "catch_trap": "INSTANT", "anchor_crew": "LANE", "gap_net": "LANE",
-	"jolt_layer": "INSTANT",
+	"jolt_layer": "INSTANT", "boom_tender": "LANE",
 }
 # Units that extend enemy.gd, not counter.gd, and set no owner_voice or mechanic_tag.
 const NO_VOICE := ["chaser", "lobber"]
@@ -158,6 +158,7 @@ static func rows() -> Array:
 		["anchor_crew", "E23", "winch", null, "zero", null, null, "A hold: it winches the ball; no direct damage."],
 		["gap_net", "E33", "net charge", null, "zero", null, null, "A net that holds; no direct damage."],
 		["jolt_layer", "E27", "mat", null, "zero", null, null, "A static jam field; no direct damage."],
+		["boom_tender", "E40", "boom sweep", null, ["boom_tender", "STING_DAMAGE"], null, null, "A hold: the pin stings once; a FAST ball pops the floats instead."],
 		["linker", "", "link", null, "zero", null, null, "No attack row and no telegraph: a cable relay with no direct damage."],
 		["foreman", "", "wipe horn", null, "zero", null, null, "No attack row: a horn that wipes the field on the beat; no direct damage."],
 	]

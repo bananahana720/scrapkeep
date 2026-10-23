@@ -6,6 +6,9 @@ extends "res://src/combat/counter.gd"
 # and reels in: roll away and it pulls you back toward the anchor. It snaps when you
 # boost, when you outrun it (planar speed at SNAP_SPEED), or at once when your heft is
 # at or above its rating. A snap slings you forward: growth and speed are the counter.
+# Flow (design-v3/SPILLWAY-ROSTER.md): the Spillway's grapple lesson is hook posts, so a
+# harpoon bite on any post or wall also snaps the tether (the "hook" break, holds.gd kicks you
+# along your new line). Being caught is a pendulum you can choose to leave by your own line.
 
 const LANE_LENGTH := 24.0
 const LANE_WIDTH := 2.4
@@ -162,9 +165,13 @@ func _live(delta: float) -> bool:
 
 
 func _on_broken(method: String) -> void:
-	if method == "boost":
+	if method == "boost" or method == "hook":
 		snaps += 1
-	if fleet != null:
+	if fleet == null:
+		return
+	if method == "hook":
+		fleet.discover("hook_out", _real_ball())
+	else:
 		fleet.discover("tether_snap", _real_ball())
 
 

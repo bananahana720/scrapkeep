@@ -100,6 +100,7 @@ The pattern cue carries the class for a colour-blind player. At the 150 m read d
 | E30 | `pit_jaw` | circle | area_burst | 1.00 | logged: a hold | 0.75 |
 | E32 | `ballast_heavy` | circle | area_burst | 1.10 | logged: the brace is the ram window | 0.75 |
 | E33 | `gap_net` | line | ray | 1.00 | in band | 0.75 |
+| E40 | `boom_tender` | line | ray | 1.10 | in band | 0.75 |
 
 ## 3. The harpoon
 

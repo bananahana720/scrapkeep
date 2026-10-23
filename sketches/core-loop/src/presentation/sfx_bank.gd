@@ -95,6 +95,7 @@ const TRIM_DB := {
 	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0,
 	"warn_burrow": -7.0, "warn_bore": -7.0, "warn_lure": -7.0,
 	"warn_cut": -7.0, "warn_winch": -7.0, "warn_dive": -7.0,
+	"warn_tether": -7.0, "warn_flap": -7.0, "warn_reel": -7.0,
 	"breach_crack": -4.0,
 	# v2 W5: the leitmotifs, the crowd-control holds, the ancients and Moss's bench.
 	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0, "tarn_latch_tear": -3.0, "tally_balance_due": -3.0, "cannon_recall": -3.0,
@@ -115,6 +116,9 @@ const TRIM_DB := {
 	# v3 W13 reward ceremony: the rarity tick and bell, the card's plate, the crate's build
 	# and the burst's resolve.
 	"rarity_tick": -9.0, "rarity_bell": -5.0, "reveal_clank": -4.0, "ceremony_build": -3.0, "ceremony_resolve": -1.0,
+	# IL-01 grey panels: the ratchet tick a panel bolts on with, the phrase note a pickup streak
+	# climbs (keyed, pitched by the caller), and the pinball jackpot over a reel or dunk drop.
+	"panel_ratchet": -9.0, "panel_note": -8.0, "panel_jackpot": -5.0, "panel_cache": -16.0,
 	# v3 AU2 bank: bets, secrets, allies, opt-in fights, the escalation's ladder and the
 	# ride's return (design-v3/AUDIO-V3.md sections 4, 5, 8, 11).
 	"bet_roll": -7.0, "bet_clunk": -4.0, "bet_crack": -2.0, "bet_refusal": -6.0,
@@ -776,6 +780,19 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_cut(_n("bell", 74), 0.16), 0, 1.0], [_cut(_n("brass", 62), 0.09), 0, 0.45], [_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.15]])
 		"part_get":
 			return _arpeggio([74, 77, 81, 86], 0.05, "bell", 0.8)
+		"panel_ratchet":
+			# Three pawl clicks over a short steel ring: a socket wrench seating a plate.
+			return _mix([[_noise(0.012, 5200.0, 5200.0, 260.0), 0, 0.7], [_noise(0.012, 4600.0, 4600.0, 260.0), Synth.seconds(0.035), 0.6],
+				[_noise(0.012, 4000.0, 4000.0, 260.0), Synth.seconds(0.07), 0.5], [_cut(_n("mallet", 86), 0.08), Synth.seconds(0.07), 0.35]])
+		"panel_note":
+			return _cut(_n("mallet", 74), 0.22)
+		"panel_jackpot":
+			return _arpeggio([74, 81, 86, 93], 0.04, "bell", 0.9)
+		"panel_cache":
+			# A rib cache's call: two high bell notes, then rest, one 1.86 s bar at 129 BPM, looped.
+			var chime := _mix([[_cut(_n("bell", 86), 0.3), 0, 0.8], [_cut(_n("bell", 93), 0.4), Synth.seconds(0.233), 0.6]])
+			chime.resize(Synth.seconds(1.86))
+			return chime
 		"beacon_hum":
 			return _hum()
 		"gate_through":
@@ -913,6 +930,12 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _warn_winch()
 		"warn_dive":
 			return _warn_dive()
+		"warn_tether":
+			return _warn_tether()
+		"warn_flap":
+			return _warn_flap()
+		"warn_reel":
+			return _warn_reel()
 		"breach_crack":
 			return _breach_crack()
 		"sable_arpeggio":
@@ -1724,6 +1747,31 @@ static func _warn_winch() -> PackedFloat32Array:
 static func _warn_dive() -> PackedFloat32Array:
 	return _mix([[_noise(0.56, 1800.0, 350.0, 4.0, 0.06), 0, 0.45],
 		[_tone(0.56, _hz(58), _hz(51), "sine", 1.8), 0, 1.0]])
+
+
+# Tether: the harpoon's spring cocking in two rising Bb ratchet clicks, then a taut wet twang.
+static func _warn_tether() -> PackedFloat32Array:
+	return _mix([[_noise(0.03, 2600.0, 1200.0, 90.0), 0, 0.6],
+		[_noise(0.03, 3200.0, 1500.0, 90.0), Synth.seconds(0.12), 0.7],
+		[_fm(0.32, _hz(58), 1.5, 3.0, 7.0, 4.0), Synth.seconds(0.2), 1.0],
+		[_noise(0.2, 700.0, 300.0, 9.0, 0.03), Synth.seconds(0.2), 0.35]])
+
+
+# Flap: a sluice hinge creaking up from Eb to Ab, with a gush of water under it.
+static func _warn_flap() -> PackedFloat32Array:
+	return _mix([[_tone(0.42, _hz(51), _hz(56), "saw_dark", 2.5), 0, 0.7],
+		[_fm(0.42, _hz(63), 2.1, 1.5, 3.0, 5.0), 0, 0.35],
+		[_noise(0.4, 600.0, 1600.0, 3.0, 0.12), Synth.seconds(0.05), 0.6]])
+
+
+# Reel: the boom tender's reel ratcheting five clicks up, one per float lamp, over a low
+# tug-engine chug, and a small brass lamp ping on the last.
+static func _warn_reel() -> PackedFloat32Array:
+	var parts := [[_tone(0.7, _hz(39), _hz(41), "saw_dark", 3.0), 0, 0.5]]
+	for i in 5:
+		parts.append([_noise(0.025, 1800.0 + 350.0 * i, 900.0, 90.0), Synth.seconds(0.11 * i), 0.55 + 0.05 * i])
+	parts.append([_fm(0.3, _hz(70), 2.0, 1.2, 4.0, 6.0), Synth.seconds(0.5), 0.45])
+	return _mix(parts)
 
 
 # --- The leitmotifs (SOUND-STORY.md section 2) ------------------------------------------
