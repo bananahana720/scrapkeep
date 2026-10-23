@@ -26,11 +26,10 @@ The Mind ends the run.
 A winning run targets 30 to 45 minutes; a longer sitting can include several runs.
 The camp is between runs only.
 A zone's workshop intermission is distinct from the camp.
-The first death in each world spends its one retry and restarts the current zone.
-A second death in that world ends the run.
+There is no free retry (DECISIONS, 22 Oct). A death ends the run and starts a new one at world 1, unless the player holds the rare earned Spare Frame, which once per run leaves a killing hit at 20% hull.
 Quit or crash during an unfinished zone replays its saved entrance free.
 Stable offers and seed choices survive reload.
-Spent retries, terminal outcomes and settled permanent rewards cannot roll back.
+A spent Spare Frame, terminal outcomes and settled permanent rewards cannot roll back.
 Transient zone acquisitions rewind to the entrance snapshot.
 These are the target rules in decision rows 173 and 176 and [ALPHA-PLAN's run rulings](ALPHA-PLAN.md#rulings-andrew-2026-10-01).
 Durable run continuity remains planned at this base.
@@ -59,8 +58,8 @@ Without a line, haul brakes on the ground and slams in the air.
 A held body line reels the ball toward its target before haul commits the smash.
 State priority is body line, world line, charging, mounted, air, then ground.
 The current bindings retain right-mouse charge cancellation; the older cut list is stale.
-Pause and retry are separate system actions outside the nine verbs.
-P or Escape pauses; holding R requests retry.
+Pause and restart are separate system actions outside the nine verbs.
+P or Escape pauses; holding R starts a new run at world 1 with the same pilot, at the same cost as a death.
 Start and right bumper provide their gamepad counterparts.
 
 ## The harpoon and the hook chain
@@ -173,7 +172,7 @@ The slice currently cuts bonus-core activities; their full-alpha reward role is 
 No permanent combat-stat boosts survive a run.
 Discoveries, learned recipes and earned options persist as knowledge and unlocks.
 Prices, Cog drop rates and final reward pacing are undecided; the coordinator tunes them before rewards freeze and Andrew judges play.
-Retries cannot award another pick for a rewarded growth step; decision row 146 controls the current retry behavior.
+Reloads cannot award another pick for a rewarded growth step.
 
 | Required pilot | Alpha unlock | Kit direction |
 | --- | --- | --- |

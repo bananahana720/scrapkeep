@@ -50,6 +50,8 @@ The eight AD-02 colours carry every role. Three extensions already live in code 
 | ANCIENT | `#9dff3c` (candidate B, chosen by Andrew 2026-10-09; seams carry the pattern cue) | Light seams on awakened ancient machines, the focal landmark's beacon | The Fleet, the player, rewards, danger areas |
 | Life lilac (extension, proposed 2026-10-19) | hue 250°–300°, saturation 0.15–0.55, for example `#8f84b3` | Ambient critters and locals: harmless and alive. Measured: no enemy, Warden or boss GLB has a saturated colour in 240°–330° (`tests/ambient_palette_test.gd` re-measures every run). See [AMBIENT-LIFE.md](AMBIENT-LIFE.md) | Enemy parts, telegraphs, rewards, pickups, targets, any emissive light |
 
+**Cannon exception (22 Oct, DECISIONS section 10).** The Cannon's relic part alone carries dashed ANCIENT seams and four barrel bands, from the Cannon board Andrew kept. No other player part may carry ANCIENT green.
+
 **ANCIENT candidates.** Ancient machines need a light no other fact uses. Andrew rejected violet on 2026-09-27 as overused. Three alternatives were measured with the same method as above: WCAG contrast, and the smallest Machado CIELAB ΔE against all eleven palette colours (the AD-02 eight plus HAZARD, BRASS and ICE) under each vision type.
 
 | Candidate | Hex | Meaning | Contrast on charcoal / sandstone / petrol | Closest collision, normal / deutan / protan / tritan | Redundancy cue it needs |

@@ -1,6 +1,6 @@
 # Every-park intentionality check: method
 
-Owner of the method: thread "Every-park intentionality check" (17 Oct 2026). The red team re-runs it every wave on the wave candidate and adds a dated results file here.
+Owner of the method: local coordinator (written 17 Oct 2026). The red team re-runs it every wave on the wave candidate and adds a dated results file here.
 
 **Why it exists.** Andrew (19:54Z 17 Oct): games, and AI-built games most of all, front-load effort into the first world as trailer bait. Every level, moment and place gets deliberate intent. This check catches the Dig or the Highdraft falling behind the Spillway, and any one park going thin, before the sitting.
 
@@ -9,9 +9,9 @@ Owner of the method: thread "Every-park intentionality check" (17 Oct 2026). The
 ```sh
 git -C <checkout> fetch origin <wave candidate, e.g. cand/alpha-w16>
 git -C <checkout> worktree add <dir> origin/<wave candidate>
-python3 -I /mnt/project-files/alpha-status/intent-check/scorecard.py --repo <dir> \
-  --json /mnt/project-files/alpha-status/intent-check/results/w<N>-<sha>.json \
-  --md   /mnt/project-files/alpha-status/intent-check/results/w<N>-<sha>.md
+python3 -I project-guide/handoff/shared/alpha-status/intent-check/scorecard.py --repo <dir> \
+  --json project-guide/handoff/shared/alpha-status/intent-check/results/w<N>-<sha>.json \
+  --md   project-guide/handoff/shared/alpha-status/intent-check/results/w<N>-<sha>.md
 ```
 
 It needs python3 and node (it runs `scripts/placeholder-gate.mjs --json`). It reads the park table (`src/core/park_defs.gd`), the six park files (`src/world/park/park_*.json`, not `park_test`), the rosters, `lore_rows.gd`, `music_rows.gd`, the `assets/music_ace` manifests, `fx_library.gd` and the boss files.
@@ -42,7 +42,7 @@ It needs python3 and node (it runs `scripts/placeholder-gate.mjs --json`). It re
 1. **Front-loading flag.** The script prints a flag when a later world totals under 70% of the Spillway on authored rows, events, discoverables, story fragments, field notes, music sections or society share, or has fewer own-world enemy kinds or unique events. It also flags any park under half the park median of authored rows.
 2. **Thin is not the same as worse.** A low count is a question, not a verdict. Read the stage page (`design-v3/park/stages/N-<park>.md`) and the journey board (`design-v3/park/journeys/`) before calling it a gap.
 3. **Motif coverage** (Andrew's rule, 19:37Z): world theme (own-world enemies and one master verb), skill-test areas (top verb share at least 0.4), damage types against armour, auras, cast times. Read the last three from the "Enemy auras and pilot cast times" design (`FIELDS-AND-CASTS.md`). Count them only once they are in `src/`. At w16, `aura` appears 0 times in src and there are no damage families.
-4. **Enemy rosters belong to the "World 2 and 3 enemy identity" thread.** Use its numbers and page; do not re-audit.
+4. **Enemy rosters are in `sketches/core-loop/design-v3/WORLD-ROSTERS.md`.** Use its numbers; do not re-audit.
 5. **The qualitative read.** For each park, write one memorable moment and one filler stretch in a sentence each. Take them from the stage page and the journey board, and from the red team's own runs. Automated play does not judge feel.
 6. **Manual checks the script can't do.**
    - Which table does the app-menu launch use? At w16 the default is the legacy maps (`game.gd _chosen_table`, no `--table` passed by AppRun).
