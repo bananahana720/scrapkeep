@@ -200,26 +200,26 @@ func choose_placement(ball: Vector3, heading: Vector3) -> Dictionary:
 
 
 # A map with gate slots stands its gates there whatever the ball does. With fewer gates
-# than slots the outermost slots are used, and a single gate takes the middle one; more
-# gates than slots stand in a row along the slots, centred on them, at least 2 * SPREAD apart.
-# The pit and the sinkhole author one slot, and a two-gate offer there once fell back to the
-# ordinary placement: in the sinkhole's bowl every candidate climbs, so the gates stood on the
-# rim 4 m up a bank from a ball at the bottom (seed 6 skipper stalled in "gates", #351).
+# than slots the outermost slots are used, and a single gate takes the middle one. A map
+# with one slot (the pit, the sinkhole) stands more gates in a row centred on it, across its
+# facing, 2 * SPREAD apart: the ordinary placement put the sinkhole's two gates on its bowl's
+# rim, 4 m up a bank from a ball at the bottom. More gates than several slots fall back to
+# the ordinary placement, which keeps them off a Highdraft island's edge.
 func _slot_plan(count: int) -> Dictionary:
 	var m = _terrain.map() if _terrain.has_method("map") else null
 	if m == null or not "gate_slots" in m or (m.gate_slots as Array).is_empty():
 		return {}
 	var slots: Array = m.gate_slots
+	if count > slots.size() and slots.size() > 1:
+		return {}
 	var facing: Vector3 = slots[0]["facing"]
 	var spots: Array[Vector3] = []
 	if count > slots.size():
-		var first: Vector2 = slots[0]["at"]
-		var last: Vector2 = slots[-1]["at"]
+		var centre: Vector2 = slots[0]["at"]
 		var across := facing.cross(Vector3.UP)
 		var side := Vector2(across.x, across.z).normalized()
-		var gap := maxf(2.0 * SPREAD, first.distance_to(last) / maxf(1.0, slots.size() - 1.0))
 		for i in count:
-			var at := (first + last) * 0.5 + side * (float(i) - (count - 1) * 0.5) * gap
+			var at := centre + side * (float(i) - (count - 1) * 0.5) * 2.0 * SPREAD
 			spots.append(_terrain.drop_point(at.x, at.y, 0.0))
 		return {"facing": facing, "spots": spots, "climb": 0.0, "distance": 0.0, "blocked": false, "fixed": true}
 	for i in count:

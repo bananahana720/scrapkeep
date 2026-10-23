@@ -1,11 +1,12 @@
 extends SceneTree
 
-# A park with fewer gate slots than gates stands the gates in a row along its slots (reward_gates.gd
+# A park with one gate slot stands more gates in a row centred on it, across its facing (reward_gates.gd
 # _slot_plan), not at the ordinary placement. The pit and the sinkhole author one slot; a two-gate
 # offer there once used the ordinary placement, and in the sinkhole's bowl every candidate climbs,
 # so seed 6 skipper (row 31's run, #351) got gates on the rim 4 m up a bank and stalled in "gates".
-# Checked on the real park files: that ball in the bowl gets the slot row; one gate keeps the slot;
-# the pit's row lies along its slot; a three-slot park keeps its slots for three gates.
+# Checked on the real park files, from that ball in the bowl (a fixed plan ignores the ball): two and
+# three gates get the slot row; one gate keeps the slot; the pit's row lies across its slot; a
+# three-slot park keeps its slots for three gates and the ordinary placement for four.
 
 const T := preload("res://tests/support/t.gd")
 const Terrain := preload("res://src/world/terrain.gd")
@@ -70,6 +71,11 @@ func _run() -> void:
 	for i in dam_slots.size():
 		on_slots = on_slots and _flat(dam["spots"][i]).distance_to(dam_slots[i]["at"]) < 0.01
 	t.check("three gates on a three-slot park keep its slots", on_slots, str(dam.get("spots")))
+	# Four gates on several slots keep the ordinary placement (a row past a Highdraft island's slots
+	# would leave its edge).
+	var four := _plan(gates, 4, Vector3(0.0, 0.0, 500.0), Vector3.FORWARD)
+	t.check("four gates on a three-slot park use the ordinary placement", not four.get("fixed", false)
+		and four.get("spots", []).size() == 4, str(four.get("spots")))
 
 	holder.queue_free()
 	await process_frame
