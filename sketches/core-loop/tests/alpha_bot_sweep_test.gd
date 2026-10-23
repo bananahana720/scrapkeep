@@ -1,4 +1,4 @@
-# smoke: bots timeout=1200s (five bot_run children at once on the default table; a loaded machine slows them. Each 27000-tick child needs about 300 s wall alone on a 4-core cloud box (2026-10-23, from 0.9 wall s per game second), so the 170 s cap never fitted there; 600 s cap, moved to the bot tier with alpha_posture_bands_test)
+# smoke: bots timeout=1200s (five bot_run children at once on the default table; a loaded machine slows them. On a 4-core cloud box on 2026-10-23 the five children took 140 to 210 s wall side by side and the test 242 to 251 s, so the 170 s cap never fitted there; 600 s cap, moved to the bot tier with alpha_posture_bands_test)
 # Completionist seed 2 dropped after two six-child runs exceeded 150 s (170.50 s, 170.48 s).
 extends SceneTree
 
