@@ -38,6 +38,7 @@ Last updated 2026-10-21 21:10Z by the local coordinator (coordinator back on the
 | Verdicts are recorded on the Sitting Kit page, not typed into the playbook. | 17 Oct 16:41 | built by thread | playbook table |
 | Build all six never-started systems before the sitting (adds about a wave). | 16 Oct 21:41 | tap "All six" | |
 | Camp is back in scope; AppImage plus app-menu entry; gamepad optional. | 16 Oct | grill-me | wave 18 camp cut |
+| World 1 sitting first: Andrew plays a 100% done world 1 (title, camp, dam, flume, the Brindle fight) with every animation, story beat, anthem phase, item panel, rogue mini-boss and day-cycle in, soft-toy polish, no placeholders. An average run to Brindle's rout takes 10 to 15 min; a completionist finds about 30 min of content; it repeats through seeded variation, secrets and drops. All effort goes to world 1 and the first part of progression until it is done; layered variants (stage states, run modifiers, unlock gating) come after the core, with Isaac as the baseline to study and twist from documented sources only. Placement (coordinator, working): end of wave 19; the full 11-area sitting stays at the end of wave 21. Plan: [Spillway Sitting Plan](https://claude.ai/artifact/GzjpkrydUYjV787yaYhVor). | 23 Oct 19:29, 19:31, 19:33 | typed | one playtest only, at the end of wave 21 (18 Oct) |
 
 ## 2. How Andrew is involved (working rules)
 
@@ -54,7 +55,7 @@ Last updated 2026-10-21 21:10Z by the local coordinator (coordinator back on the
 | Every idea he gives is a design motif to carry through the game deliberately, not a one-off. | 17 Oct 19:37 | typed | |
 | Overnight, maximise compute: 4080 for gate and music renders, cloud for CPU work. | 17 Oct 03:34 | typed | |
 | Allow-list routine, reversible commands in Remote Control sessions. | 17 Oct 03:36, 16:30 | typed | |
-| One full playtest at the end of wave 21, the alpha release; no wave 19 feel check and no per-wave play asks. | 18 Oct | typed, local coordinator session | wave 19 feel check (17 Oct 22:12) |
+| No per-wave play asks; the full playtest is at the end of wave 21, with the world 1 sitting before it (section 1). | 18 Oct; 23 Oct 19:29 | typed | wave 19 feel check (17 Oct 22:12) |
 | Coordination moves to a local Claude Code session on his PC. Heavy work runs in Claude Code cloud sessions that act as lane sub-coordinators and fan out their own agents and workflows; at most 4 cloud lanes at once (Gate + staging, Systems, World, Perf). The coordinator keeps the workflow graph (project-guide/coord/GRAPH.md) and test dependencies in sync. Hardware must never be the bottleneck. | 18 Oct | typed + structured answer "4 lanes" | claude.ai project threads (other account) |
 | Standing authority restated for the local coordinator: merge gate-passed PRs into the stage, merge the stage PR into main, push stage/cand/scratch branches, git housekeeping, without asking. | 18 Oct | structured answer "Yes, all of it" | continues 17 Oct 19:41 |
 | For the 20 Oct baseline only, a cloud session holds the coordinator role: it stacks gate-passed PRs onto `stage/alpha-w17`, promotes #116 to main, closes PRs already in the stage and cuts `stage/alpha-w18` (project-guide/coord/BASELINE-2026-10-20.md). The PC coordinator resumes after. Spend about $20 to $30 of credits now and hold the rest for lanes after the 22 Oct weekly reset; Sonnet wherever possible, Opus only on the promotion gate. | 20 Oct | structured answers in the baseline session | |
@@ -327,6 +328,7 @@ Watch-outs for live design work: the new "electrical field that interrupts" moti
 | Meteor Crater ends on a camera shot (park veto 6, 10 Oct) | A 60 s free roll (design questions) | 17 Oct 22:12 |
 | Models are low-poly, chunky, flat colour | Chunky, bevelled, smooth (Soft toy) | 18 Oct 00:40 |
 | Andrew first plays at a wave 19 feel check, ahead of the sitting (17 Oct 22:12) | One full playtest at the end of wave 21 | 18 Oct |
+| One playtest only, at the end of wave 21 (18 Oct) | A world 1 sitting on a 100% done Spillway first; the full sitting stays at wave 21 | 23 Oct 19:29 |
 | claude.ai project threads coordinate; PC runs only GPU checks and music through Remote Control | Local coordinator on the PC; up to 4 Claude Code cloud lanes; GPU bench and music as local sessions | 18 Oct |
 | Writer model "Opus writers" (decisions.tsv:852, 14 Oct) | Sonnet 5.5 writers, Opus 5.5 gate, Fable 5.1 consequential review, as AGENTS.md pins (coordinator call, RECONCILE.md model pins) | 18 Oct |
 
