@@ -21,6 +21,7 @@ const Augments := preload("res://src/movement/augments.gd")
 # tells an ancient from the Fleet.
 const ClassDef := preload("res://src/core/class_def.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const Rogue := preload("res://src/combat/rogue.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 const Companion := preload("res://src/core/companion.gd")
@@ -2347,7 +2348,7 @@ func _on_enemy_spawned(enemy: Node3D, kind: String) -> void:
 		return
 	if enemy != null and enemy.get("affix") is Dictionary and not (enemy.get("affix") as Dictionary).is_empty():
 		_champion_joined(enemy)
-	var boss := kind == "miniboss"
+	var boss := is_miniboss(kind)
 	if not Roster.is_ancient(Roster.faction_of(kind)):
 		play("enemy_spawned", 3.0 if boss else 0.0, Harmony.ratio(-5.0) if boss else 1.0)
 	if boss:
@@ -2357,7 +2358,7 @@ func _on_enemy_spawned(enemy: Node3D, kind: String) -> void:
 	if boss and enemy != null:
 		var key := str(enemy.get_instance_id())
 		enemy.tree_exiting.connect(end_moment.bind("miniboss", key), CONNECT_ONE_SHOT)
-		begin_moment("miniboss", key, "miniboss")
+		begin_moment("miniboss", key, miniboss_tune(kind))
 
 
 # --- The kill-first specials (INTEGRATION.md section 7, item 5) ----------------------
@@ -2733,11 +2734,23 @@ func _on_boss_defeated() -> void:
 	engine.victory()
 
 
+# The surge miniboss and the rogue fleet machines share the miniboss track and moment.
+static func is_miniboss(kind: String) -> bool:
+	return kind == "miniboss" or Rogue.ROWS.has(kind)
+
+
+# A rogue plays its own anthem once its TUNES row exists (the music lane adds it with the
+# track); until then, and for the surge miniboss, the miniboss tune.
+static func miniboss_tune(kind: String) -> String:
+	var anthem := String(Rogue.ROWS.get(kind, {}).get("anthem", ""))
+	return anthem if TuneMoments.TUNES.has(anthem) else "miniboss"
+
+
 func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
-	if _kind == "miniboss" and is_instance_valid(_miniboss):
+	if is_miniboss(_kind) and is_instance_valid(_miniboss):
 		var key := str(_miniboss.get_instance_id())
 		end_moment("miniboss", key)
-	if _kind == "miniboss" and engine.track == "miniboss":
+	if is_miniboss(_kind) and engine.track == "miniboss":
 		# The payoff on the kill: the drop home on the next beat, then the cadence.
 		engine.miniboss_drop()
 		_miniboss = null

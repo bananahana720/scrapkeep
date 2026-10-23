@@ -39,7 +39,7 @@ const RING_OUT_DROP := 6.0
 # (WORLD-ROSTERS.md); the mama splitter cannot. Flyers (kite and winch drones) hover and
 # move on their own _move, so a knock never drops them.
 const RING_OUT_KEPT := ["warden", "vault", "miniboss", "reactor_relic", "swarm_remnant", "mind_hand",
-	"foreman", "dispatcher", "splitter", "linker"]
+	"foreman", "dispatcher", "splitter", "linker", "rogue_crane", "rogue_skip", "rogue_tender"]
 # The plating dress reads the colour law (LEGIBILITY, STATE_ROWS): "breaks now" is a rim and
 # an open-crack glyph in the live colour, pulsing; "not yet" is a steady slate rim and no
 # crack. The tint_state names ("amber" for will break, "slate" for glances) stay as combat
