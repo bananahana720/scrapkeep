@@ -33,9 +33,8 @@ These fail on the base too. The machine's fixes are on `scratch/base-red-w16` (`
 - `bot_brindle_short`: passes on 2e247fc8 at heft 1.30, exactly at the 1.30 limit (20 Oct). #231 tips it to 1.36.
 - `park_reactor_fight`: 61.2 s against 53.7 s; one-seed chaotic, flaps solo, needs a repeat.
 - `bot_six_demolitions_caster`: Kest flake, 5 in 8.
-- Swarm `runner_gunner` "stall": cloud out-of-memory kills, not a game bug; rerun alone.
-- Swarm grown and 2x misses (base grown 51.71 s); #104 is gated on no regression against `f9f58944`.
-- Cloud-only false fails: `item_fuzz_smoke`, `park_swap`, `tree_play`, `alpha_bot_sweep`, `persistence_truncation`, `juice_budget` peak shake, `line_sound` HLs-3. `scatter_rows` hash mismatch is unresolved.
+- `posture_bands_swarm` (expected red until Andrew answers the swarm hive card, 23 Oct): on w18 `e564e2c3`, 24 seeds a side, small 75.69 s, grown 40.67 s, 1.86x against the 2x floor; the ordinary first stagger is 50 s against the 60 to 85 s ruling. Tuning trials in `/mnt/project-files/gate/c10-swarm/README.md`. The camper leg is now `posture_bands_swarm_camper_test`. The old out-of-memory kills are gone with the parallel cap. #104 is still gated on no swarm regression against `f9f58944`.
+- Cloud-only false fails: `item_fuzz_smoke`, `park_swap`, `tree_play`, `persistence_truncation`, `juice_budget` peak shake, `line_sound` HLs-3. `scatter_rows` hash mismatch is unresolved. `alpha_bot_sweep` and `bot_run_end` pass in the bots tier since `ba10b7c7`.
 
 ## Staging still owes
 
