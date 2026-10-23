@@ -20,7 +20,7 @@ const T := preload("res://tests/support/t.gd")
 # one shared factor (the largest lit channel among the four) so their relative lightness survives.
 # Gates: lit consumed never inside the life region; lit life never inside the consumed region; lit consumed at least MIN_GAP CIE76
 # from every lit life colour and from lit HAZARD, AMBER and MOLTEN. The lit hue/sat of the sample in 300-330 is reported only
-# ("lit drift", ruling pending #241). All CIE76 gaps in one look and normal share one brightness factor (cell_scale).
+# ("lit drift", per #241 ruling 6367828092). All CIE76 gaps in one look and normal share one brightness factor (cell_scale).
 # Normals, built from the look's own sun and fill directions:
 #   sun-facing    n = l_sun                          (n.l_sun = 1)
 #   side          n = 60 degrees from l_sun toward l_fill, in their plane (n.l_sun = 0.5)
@@ -59,7 +59,7 @@ func _run() -> void:
 func _real(label: String, look: Dictionary, n: int, life: Array) -> void:
 	var where := "%s / %s" % [label, NORMALS[n]]
 	var hs := lit_hs(CONSUMED, look, n)
-	print("lit drift (info; ruling pending #241): %s %s lit hue %.1f sat %.3f%s" % [where, CONSUMED.to_html(false), hs.x, hs.y,
+	print("lit drift (info; per #241 ruling 6367828092): %s %s lit hue %.1f sat %.3f%s" % [where, CONSUMED.to_html(false), hs.x, hs.y,
 		"" if in_consumed_band(hs.x, hs.y) else " (outside 300-330 / 0.6)"])
 	_t.check("lit consumed never inside the life region: " + where, not in_life_region(hs.x, hs.y),
 		"lit hue %.1f sat %.3f (life region hue %.0f-%.0f, sat %.2f-%.2f)" % [hs.x, hs.y, AmbientKinds.LIFE_HUE.x, AmbientKinds.LIFE_HUE.y, AmbientKinds.LIFE_SAT.x, AmbientKinds.LIFE_SAT.y])

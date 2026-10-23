@@ -5,7 +5,7 @@ extends SceneTree
 # the same look. Same model as tests/consumed_light_test.gd, which this reads; run it for the reviewer and for the 3060 bench:
 #   godot --headless --path sketches/core-loop --script res://tools/consumed_light_sweep.gd
 # Columns: look | normal | colour | lit hex | hue | sat | L* | gap HAZARD | gap AMBER | gap MOLTEN
-# Hue, sat and the in-band column are "lit drift (info; ruling pending #241)": reported, not gated; the gates are in the test.
+# Hue, sat and the in-band column are "lit drift (info; per #241 ruling 6367828092)": reported, not gated; the gates are in the test.
 # Lit hex is the colour divided by its largest channel (hue and saturation are scale-free); a gap is on a shared scale.
 
 const Model := preload("res://tests/consumed_light_test.gd")
@@ -14,7 +14,7 @@ const Model := preload("res://tests/consumed_light_test.gd")
 func _initialize() -> void:
 	print("# consumed sample %s, band hue %.0f-%.0f sat >= %.2f, gap floor %.0f CIE76" % [Model.CONSUMED.to_html(false),
 		Model.CONSUMED_HUE.x, Model.CONSUMED_HUE.y, Model.CONSUMED_SAT_MIN, Model.MIN_GAP])
-	print("look | normal | colour | lit hex | hue | sat | L* | gap HAZARD | gap AMBER | gap MOLTEN | lit drift (info; ruling pending #241): in 300-330 / 0.6 | nearest lit life gap")
+	print("look | normal | colour | lit hex | hue | sat | L* | gap HAZARD | gap AMBER | gap MOLTEN | lit drift (info; per #241 ruling 6367828092): in 300-330 / 0.6 | nearest lit life gap")
 	var life := Model.life_colours()
 	for entry in Model.looks_all():
 		for n in Model.NORMALS.size():
