@@ -5,17 +5,17 @@ const Intent := preload("res://src/movement/intent.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
 
-# Kite drones that dive onto one forecast must not be placed inside the ball. The dive's own effect
-# is hit_player(DIVE_DAMAGE, dir * 6 + up * 3), a knock of sqrt(6^2 + 3^2) = 6.7 m/s at most. The
-# solver's depenetration of a drone teleported into the ball launched it from 44 to 97 m/s in a tick.
-# Only a stationary ball is driven: a rolling ball was tried and cannot discriminate. At cruise or
-# faster it bats the unfixed drones away before they land; below cruise (7 m/s) the unfixed run stays
-# under this bound too (measured once: one-tick change 7.0, rise 3.4 against 9.7).
-# The bound below allows that knock plus 3 m/s for friction, gravity and the ball's own contact with
-# the ground over the landing window; the unfixed code exceeds it by a wide margin.
+# Kite drones that dive onto one forecast must not be placed inside the ball. The solver's depenetration
+# of a drone teleported into the ball launched it from 44 to 97 m/s in a tick (16.5 m/s one-tick change
+# with one drone, 18.3 with two, on a stationary ball). The test runs with ctx.calm, so the dive's own
+# knock (hit_player's shove, 6.7 m/s at most) never reaches the ball: combat.gd _on_player_hit returns
+# before crowd_control when calm. Any one-tick change above BOUND is the dive pushing the ball physically.
+# Only a stationary ball is driven: a rolling ball was tried and cannot discriminate (at cruise or faster
+# it bats the unfixed drones away before they land).
+# The bound allows 3 m/s for friction, gravity and the ball's own ground contact over the landing window;
+# the fixed code measured 0.81 m/s.
 
-const KNOCK := 6.7
-const BOUND := KNOCK + 3.0
+const BOUND := 3.0
 
 var game
 var t := T.new("kite_dive_stack_test")

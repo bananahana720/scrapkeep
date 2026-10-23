@@ -149,7 +149,7 @@ func _run() -> void:
 		"aerial %s, band %.1f m, warned %.2f s, descriptor aerial %s" % [seen.aerial, seen.reach, seen.warn, seen.desc.get("aerial", false)])
 	# A dive never ends inside the ball (a stacked dive's depenetration launched it past 90 m/s):
 	# at the band middle when the ball is clear of it, at contact distance (ball 1.0 + drone 0.8) when the ball occupies it.
-	var goal_clear: bool = seen.get("goal_ball", 0.0) > 2.0
+	var goal_clear: bool = seen.get("goal_ball", 0.0) > 1.9
 	var goal_ok: bool = seen.get("goal_off", 99.0) <= 0.6 if goal_clear else absf(seen.get("ball_gap", 99.0) - 1.8) <= 0.1
 	t.check("AR-1b dive goal", goal_ok, "drone %.2f m from the middle of the band, %.2f m from the ball (goal %.2f m from the ball, %s) near the end of the dive" % [seen.get("goal_off", 99.0), seen.get("ball_gap", 99.0), seen.get("goal_ball", 99.0), "clear" if goal_clear else "occupied"])
 	_drop(drone)
@@ -194,8 +194,10 @@ func _run() -> void:
 	drone = _spawn("kite_drone", Vector3(9.0, 0.0, 3.0), 15.0)
 	game.combat.last_player_hit = {}
 	seen = await _until_spent(drone, false)
-	t.check("AR-2b skim is no meeting", seen.dives == 1 and seen.batted == 0 and game.player.speed_tier() >= 1,
-		"batted %d, dives %d, tier %d, drone %.2f m from the ball" % [seen.batted, seen.dives, game.player.speed_tier(), seen.get("ball_gap", 99.0)])
+	# The ring decides the hit, not contact: a ball inside the ring takes the dive even at cruise.
+	t.check("AR-2b skim is no meeting", seen.dives == 1 and seen.batted == 0 and game.player.speed_tier() >= 1 \
+		and _hit_by("kite_drone") == seen.get("covered", false),
+		"batted %d, dives %d, tier %d, hit %s, ring covered %s, drone %.2f m from the ball" % [seen.batted, seen.dives, game.player.speed_tier(), _hit_by("kite_drone"), seen.get("covered", false), seen.get("ball_gap", 99.0)])
 	_drop(drone)
 
 	# 3: a grounded pilot's dive is the ground mark it was, and still lands.

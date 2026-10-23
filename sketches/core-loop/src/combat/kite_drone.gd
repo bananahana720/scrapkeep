@@ -52,8 +52,6 @@ const GAP_OUT := 6.0
 const RIM_DROP := 4.0
 const DROP_KICK := 8.0
 const FLING := 4.0
-# Extra gap beyond touching, so the solver sees a contact and not an overlap.
-const BALL_CLEARANCE := 0.0
 
 var dives := 0
 var batted := 0
@@ -275,7 +273,7 @@ func _touching(at: Vector3, ball: Vector3) -> bool:
 	var offset := ball - at
 	var along := clampf(offset.y, -spine, spine)
 	var gap := Vector3(offset.x, offset.y - along, offset.z).length()
-	return gap < Tuning.RADIUS + radius + BALL_CLEARANCE
+	return gap < Tuning.RADIUS + radius
 
 
 # Where the dive ends: just above a ground ring, the middle of an aerial one's band.
