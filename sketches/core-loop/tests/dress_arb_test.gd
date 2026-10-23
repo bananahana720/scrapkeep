@@ -199,9 +199,7 @@ func _check_yard(dressing: Node3D) -> void:
 	for kind in Dress.CREW_PARTS:
 		total += (yard.get_node(kind + "s") as MultiMeshInstance3D).multimesh.instance_count
 	t.check("every fan sits on a tier", seated == total and total >= 100, "%d of %d" % [seated, total])
-	t.eq("three pools of ladle light", yard.lights.size(), 3)
-	for light: OmniLight3D in yard.lights:
-		t.check("ladle light casts no shadow", not light.shadow_enabled)
+	t.check("the yard adds no runtime light (sketch-lint L6)", yard.find_children("*", "Light3D", true, false).is_empty())
 	t.check("the ledger opens on phase one", yard.ledger_line.text == Yard.LEDGER[1], yard.ledger_line.text)
 
 

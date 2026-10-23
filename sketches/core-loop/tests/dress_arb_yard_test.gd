@@ -35,7 +35,7 @@ func _run() -> void:
 		return
 	t.eq("arrival: the stands cheer as the ball lands", yard.cheering(), "arrival")
 	t.eq("phase one on the ledger", yard.ledger_line.text, Yard.LEDGER[1])
-	await _settle(yard)
+	_settle(yard)
 	t.check("idle, the yard does no per-frame work", not yard.is_processing())
 	var cool: float = yard.melt_material.emission_energy_multiplier
 	t.check("phase one melt is an ember", is_equal_approx(cool, Yard.MELT[1].emission), "%.3f" % cool)
@@ -49,15 +49,15 @@ func _run() -> void:
 	t.eq("the turn into phase two cheers", yard.cheering(), "phase")
 	t.eq("the ledger rounds up", yard.ledger_line.text, Yard.LEDGER[2])
 	var beat := FightPhases.boss("brindle").transition()
-	await create_timer(beat * 0.5).timeout
+	_step(yard, beat * 0.5)
 	t.eq("the cheer holds through the transition beat", yard.cheering(), "phase")
 	game.events.boss_weak_point_hit.emit("hatch")
 	await process_frame
 	t.eq("a small hop never cuts a phase cheer short", yard.cheering(), "phase")
-	await _settle(yard)
+	_settle(yard)
 	var hot: float = yard.melt_material.emission_energy_multiplier
 	t.check("phase two melt runs hotter", is_equal_approx(hot, Yard.MELT[2].emission) and hot > cool, "%.3f" % hot)
-	t.check("the ladle lights follow the melt", yard.lights.all(func(l): return is_equal_approx(l.light_energy, Yard.MELT[2].light)))
+	t.check("the melt glows by its own emission, no runtime light", yard.find_children("*", "Light3D", true, false).is_empty())
 
 	game.events.boss_weak_point_hit.emit("hatch")
 	await process_frame
@@ -66,26 +66,31 @@ func _run() -> void:
 	game.boss.jump_to_phase(3)
 	await process_frame
 	t.eq("phase three: all of them", yard.ledger_line.text, Yard.LEDGER[3])
-	await _settle(yard)
+	_settle(yard)
 	t.check("phase three melt is white-gold", is_equal_approx(yard.melt_material.emission_energy_multiplier, Yard.MELT[3].emission))
 
 	game.events.boss_defeated.emit()
 	await process_frame
 	t.eq("the rout cheers longest", yard.cheering(), "rout")
 	t.eq("the ledger never balances", yard.ledger_line.text, Yard.LEDGER[0])
-	# The rout hands the run on to the next world, so the yard is stepped by hand from here, not by waiting.
-	for i in 60:
-		yard._process(0.1)
+	_settle(yard)
 	t.check("the rout's cheer and cooling end", not yard.is_processing())
 	t.check("the rout cools the melt to embers", is_equal_approx(yard.melt_material.emission_energy_multiplier, Yard.MELT[0].emission))
 	_finish()
 
 
+# The yard is stepped by hand on a fixed 60 Hz clock, never by waiting: no frame runs in between, so no wall clock
+# leaks in, and the rout's hand-off to the next world never gets a frame to start.
+func _step(yard, seconds: float) -> void:
+	for i in roundi(seconds * 60.0):
+		yard._process(1.0 / 60.0)
+
+
 func _settle(yard) -> void:
-	var waited := 0.0
-	while yard.is_processing() and waited < 8.0:
-		await create_timer(0.1).timeout
-		waited += 0.1
+	for i in 600:
+		if not yard.is_processing():
+			return
+		yard._process(1.0 / 60.0)
 
 
 func _finish() -> void:

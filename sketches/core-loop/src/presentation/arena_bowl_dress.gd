@@ -29,7 +29,6 @@ const PENNANT_SHARE := 0.2
 const CROWD_SEED := 0x5b0b
 # Fur tints over the recipe's neutral fur: badger, fox, mole, otter, pack rat. Kept muted under the dressing rule.
 const CREW_TINTS := [Color(0.92, 0.92, 0.92), Color(1.0, 0.82, 0.66), Color(0.78, 0.7, 0.64), Color(0.86, 0.78, 0.66), Color(0.95, 0.9, 0.82)]
-const SPOUT_ANGLES := [15.0, 165.0, 255.0]
 const DECK_Y := 15.0
 const LEDGER_ANGLE := 180.0
 const LEDGER_R := 76.0
@@ -137,15 +136,6 @@ func _yard(dressing: Node3D, parts: Dictionary) -> void:
 		crowd.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		yard.add_child(crowd)
 		yard.seat(crowd, rests[kind])
-	for i in SPOUT_ANGLES.size():
-		var angle := deg_to_rad(SPOUT_ANGLES[i])
-		var light := OmniLight3D.new()
-		light.name = "LadleGlow%d" % i
-		light.position = Vector3(cos(angle) * 74.0, DECK_Y + 9.5, sin(angle) * 74.0)
-		light.omni_range = 18.0
-		light.shadow_enabled = false
-		yard.add_child(light)
-		yard.lights.append(light)
 	var font := load(SIGN_FONT) as Font
 	var ledger := _sign(yard, font, {"name": "LedgerLine", "angle": LEDGER_ANGLE, "r": LEDGER_R - 0.4, "y": DECK_Y + 9.0, "size": 130, "text": ""})
 	yard.ledger_line = ledger

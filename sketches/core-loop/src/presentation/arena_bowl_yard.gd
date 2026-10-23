@@ -7,16 +7,16 @@ extends Node3D
 # Everything here stands behind the rim wall, so nothing it moves can cross a telegraph. Idle, it does no work.
 
 const FightPhases := preload("res://src/combat/fight_phases.gd")
-const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 
 const FIGHT_ID := "brindle"
-# Melt by phase, index 0 the rout: emission energy, light energy and colour. Deep ember to white-gold, and never the
+# Melt by phase, index 0 the rout: emission energy and colour. The glow is the melt's own emission, never a runtime
+# light: a light freed with the arena crashes Forward+ (sketch-lint L6). Deep ember to white-gold, and never the
 # live slag's MOLTEN (hazard.gd), which is only ever drawn on the floor.
 const MELT := [
-	{"emission": 0.35, "light": 0.0, "color": Color("6a2a12")},
-	{"emission": 0.9, "light": 0.8, "color": Color("8c3414")},
-	{"emission": 1.8, "light": 1.6, "color": Color("d0601c")},
-	{"emission": 3.0, "light": 2.6, "color": Color("ffcf6e")},
+	{"emission": 0.35, "color": Color("6a2a12")},
+	{"emission": 0.9, "color": Color("8c3414")},
+	{"emission": 1.8, "color": Color("d0601c")},
+	{"emission": 3.0, "color": Color("ffcf6e")},
 ]
 # Seconds the melt takes to reach its phase's heat; the turn's beat is 2 s, so it lands inside it.
 const MELT_SECONDS := 1.6
@@ -40,7 +40,6 @@ const LEDGER := [
 
 var crowds: Array[MultiMeshInstance3D] = []
 var melt_material: StandardMaterial3D
-var lights: Array[OmniLight3D] = []
 var ledger_line: Label3D
 var phase := 0
 var seats := []
@@ -57,7 +56,6 @@ func bind(events) -> void:
 	_set_melt(MELT[1])
 	_melt_from = 1.0
 	_melt_to = 1.0
-	GraphicsPreset.register_dressing_host(self)
 	if events == null:
 		return
 	if events.has_signal("fight_phase_changed"):
@@ -76,12 +74,6 @@ func seat(crowd: MultiMeshInstance3D, rests: Array) -> void:
 		var angle := fposmod(atan2(xf.origin.z, xf.origin.x), TAU)
 		row.append({"rest": xf, "delay": angle / TAU * WAVE_SECONDS})
 	seats.append(row)
-
-
-# Low keeps the melt's glow and drops its three pools of light.
-func _sync_dressing() -> void:
-	for light in lights:
-		light.visible = GraphicsPreset.current != "low"
 
 
 func _on_fight_phase(fight_id: String, next: int, _phases: int) -> void:
@@ -152,7 +144,7 @@ func _process(delta: float) -> void:
 
 
 func _mix(a: Dictionary, b: Dictionary, t: float) -> Dictionary:
-	return {"emission": lerpf(a.emission, b.emission, t), "light": lerpf(a.light, b.light, t), "color": a.color.lerp(b.color, t)}
+	return {"emission": lerpf(a.emission, b.emission, t), "color": a.color.lerp(b.color, t)}
 
 
 func _set_melt(row: Dictionary) -> void:
@@ -160,6 +152,3 @@ func _set_melt(row: Dictionary) -> void:
 		melt_material.emission = row.color
 		melt_material.albedo_color = row.color.darkened(0.35)
 		melt_material.emission_energy_multiplier = row.emission
-	for light in lights:
-		light.light_color = row.color
-		light.light_energy = row.light
