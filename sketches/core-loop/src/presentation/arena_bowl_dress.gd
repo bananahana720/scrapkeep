@@ -56,7 +56,7 @@ static func build(arena: Node3D) -> Node3D:
 	var foundry := builder._parts(asset_dir.path_join("arena_bowl_foundry.glb"), FOUNDRY_PARTS)
 	var stone := builder._parts(spillway_dir.path_join("clutter_kit.glb"), SPILLWAY_PARTS)
 	var yard := builder._parts(asset_dir.path_join("arena_bowl_yard.glb"), YARD_PARTS + GLOW_PARTS + CREW_PARTS)
-	if foundry.is_empty() or stone.is_empty() or yard.is_empty():
+	if foundry.is_empty() or stone.is_empty():
 		push_warning("arena_bowl_dress: missing or malformed foundry/Spillway kit; Slag Bowl keeps its greybox")
 		return null
 	var dressing := Node3D.new()
@@ -74,11 +74,16 @@ static func build(arena: Node3D) -> Node3D:
 		var part: String = SPILLWAY_PARTS[i % SPILLWAY_PARTS.size()]
 		var placement := Transform3D(Basis(Vector3.UP, angle).scaled(Vector3(size, size * 0.7, size)), at)
 		builder._view(rubble, "RimStone_%d" % i, stone[part].mesh, placement * stone[part].local)
-	builder._yard(dressing, yard)
+	# The yard is its own kit: without it the foundry dressing still stands, the rim just has no crowd.
+	if yard.is_empty():
+		push_warning("arena_bowl_dress: missing or malformed arena_bowl_yard.glb; Slag Bowl dresses without its Fleet yard")
+	else:
+		builder._yard(dressing, yard)
 	arena.add_child(dressing)
 	builder._surfaces(arena)
-	var events = arena.get_parent().get("events") if arena.get_parent() != null else null
-	dressing.get_node("FleetYard").bind(events)
+	if not yard.is_empty():
+		var events = arena.get_parent().get("events") if arena.get_parent() != null else null
+		dressing.get_node("FleetYard").bind(events)
 	return dressing
 
 

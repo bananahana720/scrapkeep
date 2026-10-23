@@ -9,6 +9,8 @@ const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
 const FightPhases := preload("res://src/combat/fight_phases.gd")
 const T := preload("res://tests/support/t.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 var t := T.new("dress_arb_yard_test")
 var game
@@ -35,6 +37,10 @@ func _run() -> void:
 		return
 	t.eq("arrival: the stands cheer as the ball lands", yard.cheering(), "arrival")
 	t.eq("phase one on the ledger", yard.ledger_line.text, Yard.LEDGER[1])
+	for row: Dictionary in Yard.MELT:
+		var hue: float = row.color.h * 360.0
+		t.check("melt keeps off the slag and klaxon hues: %s" % row.color.to_html(false), hue >= Yard.MELT_MIN_HUE
+			and hue - Hazard.MOLTEN.h * 360.0 >= 10.0 and hue - Palette.HAZARD.h * 360.0 >= 10.0, "%.1f deg" % hue)
 	_settle(yard)
 	t.check("idle, the yard does no per-frame work", not yard.is_processing())
 	var cool: float = yard.melt_material.emission_energy_multiplier
@@ -63,7 +69,14 @@ func _run() -> void:
 	await process_frame
 	t.eq("a weak-point hit gets its own hop", yard.cheering(), "weak_point")
 
+	# A turn that lands mid-blend starts from the heat on show: no pop (a short transition_mult can do this).
+	yard._on_fight_phase("brindle", 1, 3)
+	_step(yard, 0.5)
+	var shown: float = yard.melt_material.emission_energy_multiplier
 	game.boss.jump_to_phase(3)
+	yard._process(1.0 / 600.0)
+	t.check("a turn mid-blend never pops the glow", absf(yard.melt_material.emission_energy_multiplier - shown) < 0.05,
+		"%.3f -> %.3f" % [shown, yard.melt_material.emission_energy_multiplier])
 	await process_frame
 	t.eq("phase three: all of them", yard.ledger_line.text, Yard.LEDGER[3])
 	_settle(yard)

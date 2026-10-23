@@ -10,14 +10,15 @@ const FightPhases := preload("res://src/combat/fight_phases.gd")
 
 const FIGHT_ID := "brindle"
 # Melt by phase, index 0 the rout: emission energy and colour. The glow is the melt's own emission, never a runtime
-# light: a light freed with the arena crashes Forward+ (sketch-lint L6). Deep ember to white-gold, and never the
-# live slag's MOLTEN (hazard.gd), which is only ever drawn on the floor.
+# light: a light freed with the arena crashes Forward+ (sketch-lint L6). Banked ember to white-gold, every step on the
+# gold side of MELT_MIN_HUE: the live slag (hazard.gd MOLTEN, about 22 degrees) and HAZARD (about 8) keep the red-orange.
 const MELT := [
-	{"emission": 0.35, "color": Color("6a2a12")},
-	{"emission": 0.9, "color": Color("8c3414")},
-	{"emission": 1.8, "color": Color("d0601c")},
-	{"emission": 3.0, "color": Color("ffcf6e")},
+	{"emission": 0.35, "color": Color("504028")},
+	{"emission": 0.9, "color": Color("8a6024")},
+	{"emission": 1.8, "color": Color("e09a2a")},
+	{"emission": 3.0, "color": Color("ffd98a")},
 ]
+const MELT_MIN_HUE := 32.0
 # Seconds the melt takes to reach its phase's heat; the turn's beat is 2 s, so it lands inside it.
 const MELT_SECONDS := 1.6
 # Cheers: strength (hop metres) and seconds; a phase turn lasts the fight's transition beat.
@@ -46,6 +47,8 @@ var seats := []
 var _cheer := {}
 var _melt_from := 0.0
 var _melt_to := 0.0
+# The heat on show, so a turn that lands mid-blend starts from what the eye sees.
+var _melt_now := 1.0
 var _melt_t := 1.0
 var _clock := 0.0
 
@@ -108,7 +111,7 @@ func cheering() -> String:
 
 
 func _heat(index: int) -> void:
-	_melt_from = lerpf(_melt_from, _melt_to, clampf(_melt_t, 0.0, 1.0))
+	_melt_from = _melt_now
 	_melt_to = float(index)
 	_melt_t = 0.0
 	set_process(true)
@@ -119,6 +122,7 @@ func _process(delta: float) -> void:
 	if _melt_t < 1.0:
 		_melt_t = minf(_melt_t + delta / MELT_SECONDS, 1.0)
 		var at := lerpf(_melt_from, _melt_to, smoothstep(0.0, 1.0, _melt_t))
+		_melt_now = at
 		var lo := clampi(floori(at), 0, MELT.size() - 1)
 		var hi := clampi(lo + 1, 0, MELT.size() - 1)
 		_set_melt(_mix(MELT[lo], MELT[hi], at - lo))
