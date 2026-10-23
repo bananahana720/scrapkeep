@@ -336,6 +336,10 @@ const SLOPE_SLACK := 0.001
 const KICKER_LAUNCH := 8.0
 const KICKER_JUMP_AT := 3.0
 const CLIMB_REACHED := 6.0
+# A cable takes a ball whose centre comes within its radius of the cable's high end (contraptions.gd) and rides it
+# down. A climb cell whose rolling centre is within CABLE_CLEAR more is closed: on the park's first stage the way up
+# to the domes camp passed under domes_zip's end, and each pass rode the explorer 58 m back down to the deck.
+const CABLE_CLEAR := 2.0
 # A fight target on a shelf more than LEVEL_BAND above the ball is climbed to the same way, the
 # route replanned every FIGHT_CLIMB_REPLAN seconds while the ball stays below: on the Highdraft
 # crown the deck under the beacon's cliff lies off the dogleg bridges, and the way up is a
@@ -1562,6 +1566,12 @@ func _activity_goal(delta: float) -> bool:
 				_activity_skip[s.id] = true
 				_activity = ""
 				return false
+		_:
+			# A site with no hand here is passed over at once. hold_the_relay is _relay_arm's, armed by a stake; held, it
+			# stood the explorer still for ACTIVITY_SECONDS at the park's first stage, and its heft never rose there.
+			_activity_skip[s.id] = true
+			_activity = ""
+			return false
 	return true
 
 
@@ -1684,7 +1694,18 @@ func _climb_route(from: Vector3, to: Vector3, slope := CLIMB_SLOPE) -> Array[Vec
 				var to_land := c.distance_to(land2)
 				if to_land <= CLIMB_STEP * 1.5 and absf(hc - land_y) <= slope * maxf(to_land, 0.01):
 					graph.connect_points(land_id, j * nx + i)
-	var ids := graph.get_id_path(graph.get_closest_point(Vector2(from.x, from.z)), graph.get_closest_point(Vector2(to.x, to.z)))
+	var start := graph.get_closest_point(Vector2(from.x, from.z))
+	var goal := graph.get_closest_point(Vector2(to.x, to.z))
+	for mouth in _cable_mouths():
+		var reach: float = mouth["radius"] + CABLE_CLEAR
+		var top: Vector3 = mouth["at"]
+		for j in range(maxi(0, floori((top.z - reach - lo.y) / CLIMB_STEP)), mini(nz, ceili((top.z + reach - lo.y) / CLIMB_STEP) + 1)):
+			for i in range(maxi(0, floori((top.x - reach - lo.x) / CLIMB_STEP)), mini(nx, ceili((top.x + reach - lo.x) / CLIMB_STEP) + 1)):
+				var id := j * nx + i
+				var c := lo + Vector2(i, j) * CLIMB_STEP
+				if id != start and id != goal and Vector3(c.x, half[2 * j * hx + 2 * i] + 1.0, c.y).distance_to(top) <= reach:
+					graph.set_point_disabled(id)
+	var ids := graph.get_id_path(start, goal)
 	var out: Array[Vector3] = []
 	_route_lips.clear()
 	# Every cell on a ramp and the one before it is kept: cut between kept cells, the line from the
@@ -1702,6 +1723,18 @@ func _climb_route(from: Vector3, to: Vector3, slope := CLIMB_SLOPE) -> Array[Vec
 				_route_lips.append(out.back())
 		elif k % 2 == 1 or ramp[k] or (k + 1 < ids.size() and ramp[k + 1]):
 			out.append(_ground_point(at.x, at.y))
+	return out
+
+
+# Each cable's high end on this stage's map and its catch radius.
+func _cable_mouths() -> Array:
+	var out := []
+	var map = game.ctx.terrain.map()
+	if map == null or not "contraptions" in map:
+		return out
+	for spec in map.contraptions:
+		if spec["kind"] == "cable":
+			out.append({"at": spec["from"], "radius": float(spec["radius"])})
 	return out
 
 

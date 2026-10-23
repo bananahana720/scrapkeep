@@ -1,4 +1,4 @@
-# smoke: solo timeout=300s (two separate completionist processes through the first park events)
+# smoke: bots timeout=900s (two separate completionist processes through the first park events; each child 157 s wall alone on a 4-core cloud box on 2026-10-23, 134 to 160 s on the 2026-10-15 and 10-18 heads too, so the 140 s child cap and the 300 s solo ceiling never fitted there; child cap 300 s, moved to the bot tier with alpha_posture_bands_test)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -20,7 +20,7 @@ func _initialize() -> void:
 		var child: Dictionary = ChildRuns.run([{"script": "res://tools/bot_run.gd", "args": [
 			"--out=" + folder, "--policy=completionist", "--seeds=2", "--table=park",
 			"--from-stage=1", "--stages=1", "--trace-ticks=1", "--ticks=%d" % TICKS,
-			"--allocation-noise=%d" % i]}], 140.0)[0]
+			"--allocation-noise=%d" % i]}], 300.0)[0]
 		for key in previous:
 			if previous[key].is_empty():
 				OS.unset_environment(key)
