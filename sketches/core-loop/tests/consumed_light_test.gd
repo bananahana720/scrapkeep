@@ -30,11 +30,16 @@ const T := preload("res://tests/support/t.gd")
 # DirectionalLight3D (:192-193). The game draws CoreKey, a SpotLight3D (colour WorldLook.ARENAS.waking.key, energy
 # ArenaWakingDress.LIGHTS.core_key.energy), and ReactorBounce, an OmniLight3D (colour Color("91b4ce") at
 # arena_waking_dress.gd:169, energy LIGHTS.reactor.energy), over the row's ambient. No sun and no fill. Falloff is ignored.
+# Not modelled: the Waking RimPools, amber floor lights (ARENAS.waking.floor_accent = Palette.AMBER, LIGHTS.rim_pool.energy 1.0,
+# arena_waking_dress.gd:22 and :265-267). Warm light moves the sample toward the warning side, which gate (d) covers; Waking's
+# tightest warning gap is 88.6.
 # _follow_reactor (arena_waking_dress.gd:336-339) puts ReactorBounce at warden.family_point_at(), which is the Warden position
 # plus point_offset(), by default Vector3.UP * 4.0 (src/combat/warden.gd:264-265). The reactor hangs above the Warden, so the
 # floor sees both lights, and a surface's direction to each light depends on where it stands. So no direction is assumed:
 # the Waking cells are an envelope, every (key n.l, reactor n.l) pair with each weight in {0, 0.5, 1}, over the ambient
-# (9 cells; (0, 0) is ambient only). That bounds the mix of the two lights on any surface at those weights.
+# (9 cells; (0, 0) is ambient only). The grid step is 0.5, so it samples the mix and is not a continuous bound; the minimum
+# lit saturation sits at the ambient-only corner (0, 0), where neither light adds its hue. That bounds the mix of the two
+# lights on any surface at those weights.
 # Hue and saturation are read on the lit colour divided by its largest channel, so energy alone cannot clip it (HSV hue and
 # saturation are scale-free). All CIE76 gaps in one rig and normal (one "cell") share one brightness factor, cell_scale: the
 # largest lit channel among the sample and the three warning colours; life colours are scaled by it and clamped at 1.
@@ -51,7 +56,7 @@ const MIN_GAP := 25.0
 const MOLTEN := Color("ff7a2e")  # src/boss/hazard.gd MOLTEN, a const on a Node script, copied.
 # Pinned from a real run (as tests/park_day_light_test.gd pins its count): 6 stages x 3 worlds, 6 park maps, waking, mind, camp.
 const EXPECTED_LOOKS := 27
-const EXPECTED_CHECKS := 698
+const EXPECTED_CHECKS := 700
 
 var _t := T.new("consumed_light_test")
 
@@ -151,6 +156,18 @@ func _controls() -> void:
 	# (v) a life colour equal to the sample has a zero pairwise gap and must fail the pairwise gate.
 	var same := pair_gap(CONSUMED, CONSUMED, white, 0)
 	_t.check("control v: a life colour equal to the sample fails the pairwise gap", not gap_ok(same), "gap %.1f < %.0f, as planted" % [same, MIN_GAP])
+	# (vii) the weight-envelope branch of lit_linear ("w"): every control above uses the white rig, so plant two here.
+	var env := {"ambient": Color.WHITE, "energy": 0.3, "lights": [{"color": Palette.HAZARD, "energy": 2.0, "dir": Vector3.ZERO}],
+		"normals": [{"name": "key 1.0", "w": [1.0]}, {"name": "key 0.0", "w": [0.0]}]}
+	var vii_hs := lit_hs(CONSUMED, env, 0)
+	_t.check("control vii: key weight 1 under a HAZARD key pushes the sample out of band", not in_consumed_band(vii_hs.x, vii_hs.y),
+		"hue %.1f sat %.3f -> out of band, as planted" % [vii_hs.x, vii_hs.y])
+	var amb_only := lit_linear(CONSUMED, {"ambient": Color.WHITE, "energy": 0.3, "lights": [], "normals": [{"name": "none", "w": []}]}, 0)
+	var w0 := lit_linear(CONSUMED, env, 1)
+	var w1 := lit_linear(CONSUMED, env, 0)
+	_t.check("control vii: key weight 0 equals ambient only and weight 1 differs (a branch that ignores w fails)",
+		absf(w0.r - amb_only.r) + absf(w0.g - amb_only.g) + absf(w0.b - amb_only.b) < 1e-6 and absf(w1.r - w0.r) > 0.01,  # 1e-6 and 0.01: float tolerances
+		"weight 0 matches ambient, weight 1 red %.4f vs %.4f" % [w1.r, w0.r])
 	# (vi) the thresholds themselves: inclusive edges, asserted once so a change of > to >= shows. Hue 300 is the one degree the
 	# two hue ranges share; the saturation ranges (life up to 0.55, consumed from 0.6) keep the regions apart there.
 	# The literal edge values below (300, 330, 0.6, 0.55) are intentional change detectors on the band values.
