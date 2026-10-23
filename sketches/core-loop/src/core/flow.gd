@@ -195,12 +195,19 @@ func _load_module(path: String) -> Node:
 
 # On the world's last stage, reads its boss module's script on a loader thread, then lets the
 # script prepare its arena (a static prepare_arena) before the stage exit makes the module.
+# The scene's own module (Brindle) only runs its warm_arena.
 func _read_boss_ahead() -> void:
 	if ctx.stages.BOSS == "" or not ctx.stages.is_world_last(ctx.run.stage):
 		return
 	var row: Dictionary = boss_row(ctx.stages.world_of(ctx.run.stage))
 	var path := String(row.get("script", SCENE_BOSS))
-	if not bool(row.get("built", false)) or path == SCENE_BOSS or _row_modules.has(path):
+	if not bool(row.get("built", false)) or _row_modules.has(path):
+		return
+	if path == SCENE_BOSS:
+		# The scene's own module is loaded already; only its arena warms ahead.
+		var home := _scene_boss()
+		if home != null and home.has_method("warm_arena"):
+			home.warm_arena()
 		return
 	if not _boss_reads.has(path):
 		_boss_reads[path] = null

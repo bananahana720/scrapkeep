@@ -235,7 +235,7 @@ func set_readout(text: String, color: Color, anchor: Node3D = null, lift := PLAT
 # Loads the fortress GLB over the primitives. Any missing part drops the model, so a broken
 # or older GLB leaves the primitive fortress exactly as it was.
 func _dress() -> void:
-	var loaded := BossModel.load_scene(model_path)
+	var loaded := _take_ahead(model_path)
 	if loaded == null:
 		return
 	for part in MODEL_PARTS:
@@ -249,7 +249,6 @@ func _dress() -> void:
 		BossModel.hide_primitive(mesh)
 	_anim = BossModel.player_of(model)
 	if _anim != null:
-		BossModel.own_clips(_anim)
 		BossModel.loop_clip(_anim, "idle_roll")
 		_anim.animation_finished.connect(_flush_hides.bind(true))
 		_anim.animation_started.connect(_flush_hides.bind(false))
@@ -310,16 +309,66 @@ func cue_phase(phase: int) -> void:
 
 # The scooter that leaves the hull. Null when the model is missing: the caller keeps its box.
 static func dress_scooter(parent: Node3D) -> AnimationPlayer:
-	var loaded := BossModel.load_scene(scooter_path)
+	var loaded := _take_ahead(scooter_path)
 	if loaded == null:
 		return null
 	loaded.name = "ScooterModel"
 	parent.add_child(loaded)
 	var player := BossModel.player_of(loaded)
 	if player != null:
-		BossModel.own_clips(player)
 		BossModel.loop_clip(player, "chase")
 	return player
+
+
+# The fortress and the scooter, read and instanced ahead by warm(), by file path until _dress or
+# dress_scooter takes them: loading and dressing the fortress took 31 ms of the boss-entry
+# frame on the cloud. Each instance already owns its clips.
+static var _ahead := {}
+static var _ahead_reads := {}
+
+
+# A step of that work a call, while the world's last stage runs (boss.gd's warm_arena); true
+# once both are ready. A played game reads the files on a loader thread; headless reads them
+# here, since the dummy rasterizer's mesh RIDs are not thread-safe (as mind_dress.gd).
+static func warm() -> bool:
+	for path in [model_path, scooter_path]:
+		if _ahead.has(path):
+			continue
+		if not _ahead_reads.has(path):
+			if not ResourceLoader.exists(path):
+				_ahead_reads[path] = null
+			elif DisplayServer.get_name() == "headless":
+				_ahead_reads[path] = load(path)
+			else:
+				var status := ResourceLoader.load_threaded_get_status(path)
+				if status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+					ResourceLoader.load_threaded_request(path)
+					return false
+				if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+					return false
+				_ahead_reads[path] = ResourceLoader.load_threaded_get(path) if status == ResourceLoader.THREAD_LOAD_LOADED else null
+			return false
+		_ahead[path] = _instance(path)
+		return false
+	return true
+
+
+static func _take_ahead(path: String) -> Node3D:
+	if not _ahead.has(path):
+		return _instance(path)
+	var scene: Node3D = _ahead[path]
+	_ahead.erase(path)
+	_ahead_reads.erase(path)
+	return scene
+
+
+static func _instance(path: String) -> Node3D:
+	var scene := BossModel.load_scene(path)
+	if scene != null:
+		var player := BossModel.player_of(scene)
+		if player != null:
+			BossModel.own_clips(player)
+	return scene
 
 
 func _box(parent: Node3D, size: Vector3, mat: Material, at: Vector3) -> MeshInstance3D:

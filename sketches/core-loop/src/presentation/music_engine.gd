@@ -1424,11 +1424,12 @@ static func _render_park(row: Dictionary, cell: int, length: int, progress: floa
 			"steam_whistle":
 				buf = Synth.buffer(n)
 				var phase := 0.0
-				var hz := Harmony.hz(midi)
+				var step_hz := TAU * Harmony.hz(midi) / Harmony.RATE
+				var bend := Harmony.ratio(2)
 				var rng := RandomNumberGenerator.new()
 				rng.seed = 0x57EA
 				for i in n:
-					phase += TAU * hz * lerpf(1.0, Harmony.ratio(2), float(i) / n) / Harmony.RATE
+					phase += step_hz * lerpf(1.0, bend, float(i) / n)
 					buf[i] = sin(phase) + 0.12 * rng.randf_range(-1.0, 1.0)
 			_: buf = Synth.note(row.voice, midi).slice(0, n)
 		if row.has("accent"):

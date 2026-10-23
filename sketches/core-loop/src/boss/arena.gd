@@ -82,6 +82,22 @@ static func _inside(terrain, flat: Vector2, reach: float) -> bool:
 	return true
 
 
+# The bowl's greybox checkers, drawn ahead by boss.gd's warm_arena; Palette keeps one of each.
+const CHECKERS := [[Palette.CHARCOAL, Color("30302c")], [Palette.SANDSTONE, Palette.COPPER],
+	[Palette.RUST, Palette.CHARCOAL], [Palette.AMBER, Palette.CHARCOAL]]
+
+
+static var _looks_warm := false
+
+
+static func warm_looks() -> bool:
+	if not _looks_warm:
+		for pair in CHECKERS:
+			Palette.checker_texture(pair[0], pair[1], 4, 64)
+		_looks_warm = true
+	return true
+
+
 static func surface_height(r: float) -> float:
 	if r <= FLOOR_R:
 		return 0.0
@@ -256,9 +272,9 @@ func _bowl(body: StaticBody3D) -> void:
 		_quad(wall_st, _flat(a0, BANK_R, hi), _flat(a1, BANK_R, hi), _flat(a1, outer, hi), _flat(a0, outer, hi))
 		_quad(wall_st, _flat(a0, outer, hi), _flat(a1, outer, hi), _flat(a1, outer, lo - 2.0), _flat(a0, outer, lo - 2.0))
 	var parts := [
-		[floor_st, Palette.striped(Palette.CHARCOAL, Color("30302c")), "Floor"],
-		[bank_st, Palette.striped(Palette.SANDSTONE, Palette.COPPER), "Bank"],
-		[wall_st, Palette.striped(Palette.RUST, Palette.CHARCOAL), "RimWall"],
+		[floor_st, Palette.striped(CHECKERS[0][0], CHECKERS[0][1]), "Floor"],
+		[bank_st, Palette.striped(CHECKERS[1][0], CHECKERS[1][1]), "Bank"],
+		[wall_st, Palette.striped(CHECKERS[2][0], CHECKERS[2][1]), "RimWall"],
 	]
 	for part in parts:
 		var node := _mesh_node(part[0], part[1], part[2])
@@ -331,7 +347,7 @@ func _wedge(body: StaticBody3D, foot: Vector3, forward: Vector3, length: float, 
 	_quad(st, points[4], points[5], points[3], points[2])
 	for p in [points[0], points[4], points[2], points[1], points[3], points[5]]:
 		st.add_vertex(p)
-	var node := _mesh_node(st, Palette.striped(Palette.AMBER, Palette.CHARCOAL), label)
+	var node := _mesh_node(st, Palette.striped(CHECKERS[3][0], CHECKERS[3][1]), label)
 	# The wedge's own frame (origin at the foot centre on the floor, +Z up the slope), the one point the dress places a recipe at.
 	node.set_meta(WEDGE_FRAME, Transform3D(Basis(Vector3.UP.cross(f), Vector3.UP, f), foot))
 
