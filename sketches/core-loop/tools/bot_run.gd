@@ -6,6 +6,7 @@ const BotProfile := preload("res://tools/bot_profile.gd")
 const BotAudit := preload("res://tools/bot_audit.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
 const BotOptions := preload("res://tools/bot_options.gd")
+const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
@@ -61,6 +62,10 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 # --threaded-stages=1 builds park stages on worker threads as --wall-clock=1 does, but keeps the
 # hit-stop clock on physics ticks: for frame captures, where the next stage's one-frame build on
 # the engage frame is a bot artifact. The seed no longer replays exactly.
+# --warm-band=1 renders the band's other themes, keys and boss tracks (MusicEngine.prepare_rest) before
+# the run, as a played run does on a worker behind stage 1. Without it each chord, note and riser
+# renders on the main thread the first time a bar asks, 60 to 300 ms a frame that play never has.
+# Use it for frame captures and hitch hunts; the seed still replays exactly.
 # --frame-log=1 writes frames-<seed>.ndjson: each frame's wall ms, stage and flow state; that ms split
 # into idle_ms (the scene's _process), draw_ms (the RenderingServer's draw) and tick_ms (the physics
 # ticks after it, ticks of them), timed per frame; Performance's process and physics times, which are
@@ -303,6 +308,8 @@ func _physics_process(delta: float) -> bool:
 			_driver.late_offer_policy = late
 			_driver.tree_policy = "random"
 		_game.presentation.audio.bake_opening_now()
+		if _settings.get("warm-band", "0") == "1":
+			MusicEngine.prepare_rest()
 		_game.run.run_seed_override = _seeds[_index]
 		_started_msec = Time.get_ticks_msec()
 		var resume := false
