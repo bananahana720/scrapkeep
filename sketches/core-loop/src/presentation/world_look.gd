@@ -130,14 +130,15 @@ const TIME_ROWS := {
 		"ambient": Color("c9c0a8"), "energy": 0.29, "fog_tint": Color("e6dcc8"),
 		"grade": {"top": Color("fbf6ee"), "horizon": Color("ffe6c4"), "recolor": 0.1, "highlight": 8.0,
 			"glow": Color("2c1e0e"), "energy": 1.0}},
-	# golden grade energy 0.95 -> 1.25 (#241 comments 6355922548, 6356177813, 6367471497; tests/islands_sky_test.gd). On the 3060
+	# golden grade energy 0.95 -> 1.25 (#241: purpose 6367471497, the 10 L* bar 6355922548, World's measured gaps 6356177813; tests/islands_sky_test.gd). On the 3060
 	# (e9484509, World's fitted haze boxes) islands poses 26 and 159 read ground over horizon -8.46 and -7.52 against the 10 L* bar:
 	# their floors are about 55 L*, their sky 63.82 and 61.84. They look 82 and 79 degrees off the sun's bearing (yaw 20), so the
 	# shader's sun glow (pow(toward, 4) low + pow(toward, 48)) adds 0.017 Y there against 0.03 to 0.10 for the other nine,
 	# and the horizon base (panorama x horizon tint, 0.34 Y) is nearly all of what they see. Across the 11 valid poses the shader
-	# model picks the same five darkest skies as the 3060 (Spearman 0.79). The 3060 sky L* goes as 0.528 x Y^0.421 (11-pose fit,
-	# 0.36 to 0.46 leaving one out; 10 poses land within 1.5 L*, pose 159 reads 3.5 under it), so the 2.48 L* pose 159
-	# needs is a 1.25x sky and pose 26's 1.54 is 1.15x. Energy scales the base and the glow alike, keeps the horizon hue and moves
+	# model picks the same five darkest skies as the 3060 (Spearman 0.79). The 3060 sky L* goes as 0.510 x Y^0.410 over the test's own
+	# modelled Y (9 of 11 poses within 1.6 L*, pose 159 reads 4.2 under it; tests/islands_sky_test.gd), so the 2.48 L* pose 159 needs is a
+	# 1.258x modelled Y at zero margin (pose 26's 1.54 is 1.150x). The test keeps 0.25 L* over the bar, which puts the floor at energy
+	# 0.95 x 1.287 = about 1.22; 1.25 (a 1.316x sky) is the round value above it. Energy scales the base and the glow alike, keeps the horizon hue and moves
 	# no sun value; it cannot darken any pose's sky. Sun colour, sun energy and rotation stay as they were.
 	"golden": {"sun_rotation": Vector3(-16.0, 20.0, 0.0), "sun_color": Color("ffa35c"), "sun_energy": 1.9,
 		"ambient": Color("e0b58a"), "energy": 0.25, "fog_tint": Color("f0b886"),
