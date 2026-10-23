@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Secrets := preload("res://src/core/secrets.gd")
+const ShiftBoard := preload("res://src/core/shift_board.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -13,6 +14,8 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 # earned. A first-win secret row (secrets.gd PAINT_ROWS) is left out until it is earned, so a
 # fresh profile sees no hint of it. A row with a count shows how far along it is, from Progress.count_of. Nothing
 # is written twice: every word is a table row. Back presses A, as A opened it.
+# Above the list stands the shift board (shift_board.gd): how many stamps, the next rung and what it
+# opens, and the time card's holes, so the wall always names one thing to go and do next.
 
 const COLUMNS := 2
 const ROW_WIDTH := 600.0
@@ -24,6 +27,7 @@ var rows := {}
 
 var _grid: GridContainer
 var _scroll: ScrollContainer
+var _board: VBoxContainer
 
 
 func _init() -> void:
@@ -32,6 +36,12 @@ func _init() -> void:
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_theme_constant_override("separation", 22)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_board = VBoxContainer.new()
+	_board.name = "ShiftBoard"
+	_board.add_theme_constant_override("separation", 2)
+	_board.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_board.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_board)
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -59,6 +69,7 @@ func refresh(profile, progress) -> void:
 		_grid.remove_child(child)
 		child.queue_free()
 	rows.clear()
+	_fill_board(profile)
 	for id in Achievements.ids():
 		if Secrets.shut_row(id, profile):
 			continue
@@ -66,6 +77,35 @@ func refresh(profile, progress) -> void:
 		_grid.add_child(row)
 		rows[id] = row
 	_focus_first.call_deferred()
+
+
+# The board's three lines, for a test and for the strip: the stamp count, the next rung, the card.
+static func board_lines(profile, sitting := false) -> PackedStringArray:
+	var read := ShiftBoard.reading(profile, sitting)
+	var out := PackedStringArray()
+	out.append("SHIFT BOARD  %d of %d stamped" % [read["stamped"], read["shown"]])
+	if read["next"] != "":
+		out.append("Next: %s. %s %s." % [read["next_name"], read["next_text"], read["next_pays"]])
+	else:
+		out.append("Board full. Moss wants a bigger board.")
+	var holes := "".join(range(int(read["holes_max"])).map(func(i): return "●" if i < int(read["holes"]) else "○"))
+	if read["card_next"] != "":
+		out.append("Time card %s  Full card opens %s" % [holes, read["card_next"]])
+	else:
+		out.append("Time card %s  Every card paid" % holes)
+	return out
+
+
+func _fill_board(profile) -> void:
+	for child in _board.get_children():
+		_board.remove_child(child)
+		child.queue_free()
+	var lines := board_lines(profile)
+	for i in lines.size():
+		var label := _label(lines[i], 26 if i == 0 else 18, Palette.AMBER if i == 0 else Palette.SAND)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.name = ["Count", "Next", "Card"][i]
+		_board.add_child(label)
 
 
 func _focus_first() -> void:

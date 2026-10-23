@@ -364,6 +364,9 @@ func _on_flow_changed(state: String) -> void:
 			var ending: bool = game.flow.won_final() and not _victory_boss.is_empty()
 			if not ending:
 				_victory_boss = {}
+			var board := _board_line()
+			if board != "":
+				body += "\n" + board
 			_show("RUN COMPLETE" if game.flow.run_won else "RUN OVER", EventKinds.color("run_ended"), body)
 			_summary_stats()
 			_action("again", "key_n", "Run again")
@@ -1211,6 +1214,25 @@ func _show_comic_page(page: Dictionary) -> void:
 
 func comic_page() -> Control:
 	return _comic_row.get_child(0) if _comic_row.get_child_count() > 0 else null
+
+
+# What the run did to the shift board (progress.gd board_line). A lost run's summary is built before
+# run_ended reaches progress, so the line is added once progress has closed the shift.
+func _board_line() -> String:
+	var progress = game.get("progress")
+	if progress == null:
+		return ""
+	if String(progress.board_line) == "" and not game.events.run_ended.is_connected(_on_run_ended_board):
+		game.events.run_ended.connect(_on_run_ended_board, CONNECT_ONE_SHOT | CONNECT_DEFERRED)
+	return String(progress.board_line)
+
+
+func _on_run_ended_board(_won: bool) -> void:
+	var progress = game.get("progress")
+	if _state != "summary" or progress == null or String(progress.board_line) == "":
+		return
+	if not _body.text.contains(String(progress.board_line)):
+		_body.text += "\n" + String(progress.board_line)
 
 
 # The summary as icons and numbers: time, stages, cogs (the cog), scrap taken as mass (the heap), parts, kills, events won and
