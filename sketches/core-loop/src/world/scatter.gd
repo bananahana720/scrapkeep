@@ -24,11 +24,6 @@ const FLOATS := 12
 const LANE_BAND_M := 0.12
 
 
-# Wall-clock milliseconds, for a test's hang deadline on a threaded build (tests/scatter_rows_test.gd): the workers'
-# progress is real time, so a frame count cannot bound the wait on a loaded box.
-static func now_msec() -> int:
-	return Time.get_ticks_msec()
-
 # ground: (x, z, clearance) -> Vector3 on the drawn ground (terrain.gd _relief_at or _ground_at).
 static func build(parent: Node3D, map, ground: Callable) -> Node3D:
 	var holder := Node3D.new()
