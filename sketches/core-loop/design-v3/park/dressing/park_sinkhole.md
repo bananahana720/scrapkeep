@@ -253,3 +253,7 @@ Pin 1439281478 to 1683370189. Plan check: 1419 instances (229 litter), 0 violati
 #350 moves `main_tube_upper_post_11i` to (-27.3, -120.2) and `lava_channel_post_13i` to (-307.1, -582.2). The litter fill re-seeds around the new post footprints: `coat_hooks` at (-27.9, -116.9) and `drill_steels` at (-310.3, -577.2) drop, and one `cave_fern` moves from (-26.6, -123.1) to (-316.4, -581.7). The drop stays: both are fill litter, not vignette props, and density does not change. The merge had no conflicts; `fold_registry`: PASS, 1533 assets, no change.
 
 Pin 1683370189 to 933495370. Plan check: 1417 instances (227 litter), 0 violations, 0 pattern, 0 pin, 0 lint. Density audit (default run, mid camera, step 25 m) on the pre-check tree with the same expansion: 52 pass, 11 exempt (all arena), 1 fail, the kest 900 m window (ruled open, 6329171089), unchanged; props-only primitive delta median 61,569, max 171,935.
+
+## w18p #359 elbow re-pin
+
+World's #359 reshapes `lava_channel_12`, `13` and `21` and rebakes the sinkhole ground; no dressing spot moves. The litter fill gains one `cave_fern` at (-264.0, -631.6). Pin 933495370 to 506677904; `park_dressing_pin_test` stage 4 3017710206 to 2334293701. Plan check: 1418 instances (228 litter), 0 violations, 0 pattern, 0 pin, 0 lint.
