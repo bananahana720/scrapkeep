@@ -10,8 +10,8 @@ extends SceneTree
 # excess = rise - designed.
 # Flag = kink >= KINK_MIN_DEG (18) and excess >= EXCESS_MIN_M (1.25). Set from the two seen traps and the clean
 # controls (measured 2026-10-23 on the baked grounds): A lava_channel_12>13 kink 28.2 excess 1.55 and B
-# lava_channel_20>21 kink 20.2 excess 1.64 must flag. Each bound sits about 20 percent under the weaker control
-# (B's kink, A's excess), so a rebake near an elbow does not unflag a control; bounds set just under A and B
+# lava_channel_20>21 kink 20.2 excess 1.64 must flag. The bounds sit about 10 percent under B's kink and 20 percent
+# under A's excess, so a rebake near an elbow does not unflag a control; bounds set just under A and B
 # (20, 1.5) would also have passed lava_channel_19>20 (36.1 deg, 1.49), 13>14 and 14>15 (30+ deg, 1.38) on
 # hundredths of a metre. The controls pin each term: the straight mid-run of lava_channel_12 reads about its
 # designed rise (excess 0.39) and is not flagged; east_haulage_6>7 (kink 27.9, excess 0.18) and pit
@@ -132,18 +132,13 @@ static func kink_deg(fa: Dictionary, fb: Dictionary) -> float:
 	return rad_to_deg(acos(clampf(c, 0.0, 1.0)))
 
 
-# The centre-line ends of both rows: [end index of a, end index of b] of the closest pair.
+# The junction ends, in route order: a's exit is the end facing b's centre, b's entry the end facing a's.
+# (The closest pair of end points picks the far end when a short row sits over the other's end.)
 static func junction_ends(fa: Dictionary, fb: Dictionary) -> Array:
-	var best := INF
-	var out := [0, 0]
-	for i in 2:
-		for j in 2:
-			var pa: Vector2 = (fa["at"] as Vector2) + (fa["along"] as Vector2) * float(fa["length"]) * 0.5 * (1.0 if i == 1 else -1.0)
-			var pb: Vector2 = (fb["at"] as Vector2) + (fb["along"] as Vector2) * float(fb["length"]) * 0.5 * (1.0 if j == 1 else -1.0)
-			if pa.distance_to(pb) < best:
-				best = pa.distance_to(pb)
-				out = [i, j]
-	return out
+	var ab: Vector2 = (fb["at"] as Vector2) - (fa["at"] as Vector2)
+	var i := 1 if (fa["along"] as Vector2).dot(ab) >= 0.0 else 0
+	var j := 1 if (fb["along"] as Vector2).dot(-ab) >= 0.0 else 0
+	return [i, j]
 
 
 # One row's bank-toe rise near the junction. other_dir: the other row's direction away from the junction.
@@ -196,10 +191,14 @@ static func measure(fa: Dictionary, fb: Dictionary, ground: Callable) -> Diction
 	var db: Vector2 = (fb["along"] as Vector2) * -sb
 	var ra := row_rise(fa, ends[0], db, ground)
 	var rb := row_rise(fb, ends[1], da, ground)
-	var rise: Dictionary = ra if ra["rise"] >= rb["rise"] else rb
-	var des := designed(fa) if ra["rise"] >= rb["rise"] else designed(fb)
+	var ea := float(ra["rise"]) - designed(fa)
+	var eb := float(rb["rise"]) - designed(fb)
+	var rise: Dictionary = ra if ea >= eb else rb
+	var des := designed(fa) if ea >= eb else designed(fb)
 	var k := kink_deg(fa, fb)
-	return {"kink": k, "rise": rise["rise"], "at": rise["at"], "inside": rise["inside"], "designed": des, "excess": float(rise["rise"]) - des, "flagged": flag(k, float(rise["rise"]) - des)}
+	# The travel turn: in along a towards the junction (-da), out along b (db). Above 90 deg the axis kink folds.
+	var turn := rad_to_deg(acos(clampf((-da).dot(db), -1.0, 1.0)))
+	return {"kink": k, "turn": turn, "rise": rise["rise"], "at": rise["at"], "inside": rise["inside"], "designed": des, "excess": float(rise["rise"]) - des, "flagged": flag(k, float(rise["rise"]) - des)}
 
 
 func _run() -> void:
@@ -242,13 +241,13 @@ func _run() -> void:
 			m["routes"] = ",".join(PackedStringArray(p["routes"]))
 			m["gap"] = g
 			table.append(m)
-	print("park:pair | routes | gap | kink | rise | designed | excess | where (x,z,side) | flagged")
+	print("park:pair | routes | gap | kink | turn | rise | designed | excess | where (x,z,side) | flagged")
 	var flagged: Array = []
 	var by_name := {}
 	for m in table:
 		by_name[m["name"]] = m
 		var at: Vector2 = m["at"]
-		print("%s | %s | %.1f | %.1f | %.2f | %.2f | %.2f | (%.1f,%.1f,%s) | %s" % [m["name"], m["routes"], m["gap"], m["kink"], m["rise"], m["designed"], m["excess"], at.x, at.y, "inside" if m["inside"] else "outside", m["flagged"]])
+		print("%s | %s | %.1f | %.1f | %.1f | %.2f | %.2f | %.2f | (%.1f,%.1f,%s) | %s" % [m["name"], m["routes"], m["gap"], m["kink"], m["turn"], m["rise"], m["designed"], m["excess"], at.x, at.y, "inside" if m["inside"] else "outside", m["flagged"]])
 		if m["flagged"]:
 			flagged.append(m["name"])
 	var ex: Array = table.map(func(m): return float(m["excess"]))
@@ -258,6 +257,8 @@ func _run() -> void:
 	if not ex.is_empty():
 		print("elbows %d, flagged %d; excess min %.2f median %.2f max %.2f; kink min %.1f median %.1f max %.1f" % [table.size(), flagged.size(), ex[0], ex[ex.size() / 2], ex[-1], ks[0], ks[ks.size() / 2], ks[-1]])
 	t.check("the walk found elbows (%d)" % table.size(), table.size() >= 10)
+	var hairpins := table.filter(func(m): return float(m["turn"]) > 90.0)
+	t.check("no elbow turns past 90 deg, where the axis kink would read acute (%d)" % hairpins.size(), hairpins.is_empty())
 
 	# Positive controls.
 	for name in ["park_sinkhole:lava_channel_12>lava_channel_13", "park_sinkhole:lava_channel_20>lava_channel_21"]:
