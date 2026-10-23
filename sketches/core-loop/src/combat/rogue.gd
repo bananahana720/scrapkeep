@@ -91,6 +91,9 @@ enum State { STALK, WIND, STRIKE, WEAK }
 
 var row := {}
 var phase := 1
+# The wind scale the current attack committed with: a phase change mid-wind-up waits for the
+# next attack, so a committed wind-up never shortens.
+var _attack_wind := 1.0
 var site_scale := 1.0
 var state := State.STALK
 var attack := ""
@@ -117,7 +120,7 @@ var _spin := 0.0
 var _roll := 0.0
 var _tip := 0.0
 var _lift := 0.0
-var _last := Vector3.ZERO
+var _last := Vector3.INF
 # Each machine's lane and ring leads in seconds, read by its WindupRows row (E34 to E39):
 # a lane hurts from its strike, a ring as it fills through wind and strike.
 var wind_lane := 0.0
@@ -245,7 +248,7 @@ func _is_ring() -> bool:
 
 
 func _seconds(part: String) -> float:
-	return float(ATTACKS[attack][part]) * beat() * (_wind_scale() if part == "wind" else 1.0)
+	return float(ATTACKS[attack][part]) * beat() * (_attack_wind if part == "wind" else 1.0)
 
 
 # In phase two the first attack chains into the second; the second always vents.
@@ -253,6 +256,8 @@ func _finish_strike() -> void:
 	if phase >= 2 and attack == String(row.attacks[0]):
 		_clear_telegraph()
 		_out = 0.0
+		if _hook != null:
+			_hook.position = _hook_rest
 		_begin_attack(_flat_to_ball() if is_instance_valid(target) else -global_basis.z)
 		return
 	_open_weak_window()
@@ -274,6 +279,7 @@ func _begin_attack(to_ball: Vector3) -> void:
 	var heading := to_ball if to_ball.length() > 0.5 else -global_basis.z
 	heading = heading.normalized()
 	_home = global_position
+	_attack_wind = _wind_scale()
 	var ball := _ball()
 	var reach := 4.0
 	match attack:
@@ -512,7 +518,7 @@ func _pose_model(delta: float, blend: float) -> void:
 			_lift = lerpf(_lift, lift, blend)
 			_bone("Leaf", Vector3(0.0, _lift, 0.0))
 		"rogue_skip":
-			var moved := global_position - _last
+			var moved := global_position - _last if _last.is_finite() else Vector3.ZERO
 			moved.y = 0.0
 			_roll = fmod(_roll + moved.dot(-global_basis.z) / (WHEEL_RADIUS * site_scale), TAU)
 			for wheel in ["Wheel0", "Wheel1", "Wheel2", "Wheel3"]:

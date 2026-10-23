@@ -35,6 +35,15 @@ func _run() -> void:
 		var first := String(row.attacks[0])
 		var second := String(row.attacks[1])
 		var lane_before: float = rogue.wind_lane
+		# A wind-up committed in phase 1 keeps its length when phase 2 starts mid-wind.
+		rogue._begin_attack(Vector3(0, 0, -10))
+		var committed: float = rogue._seconds("wind")
+		rogue.enter_phase(2)
+		_check(is_equal_approx(rogue._seconds("wind"), committed), kind + " a committed wind-up keeps its length into phase 2")
+		rogue._clear_telegraph()
+		rogue.phase = 1
+		rogue._set_leads()
+		rogue._next = 0
 		_check(rogue.phase == 1 and rogue.anthem() == row.anthem, kind + " starts in phase 1 on its anthem")
 		rogue.hp = rogue.max_hp * 0.4
 		rogue._clock = 0.0
