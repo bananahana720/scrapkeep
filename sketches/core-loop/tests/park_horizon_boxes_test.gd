@@ -2,8 +2,11 @@ extends SceneTree
 
 # Rule: tools/park_horizon_boxes.gd finds each pose's skyline from rays over the ground, so its helpers must agree with the pinhole
 # geometry. Synthetic ground only, no park boot. Controls: a flat plane at y 0 with the camera H m up and pitched down P; the
-# centre column's skyline row is the far-plane crossing at depression d = asin(H / far) along the ray, row = h / 2 - f tan(P - d)
-# (f = h / 2 / tan(fov / 2)), and the geometric horizon row is h / 2 - f tan(P); both within 1 px, at two yaws. Planted: a wall of
+# centre column's skyline row is where the far clip, at view depth far, meets the plane: a ray with camera-space (x, v, -1) reaches the
+# plane at depth h / (sin P - v cos P), so it hits within far when v <= (sin P - h / far) / cos P, row = h / 2 (1 - v / tan(fov / 2))
+# (the same row for every column at a pure pitch), and the geometric horizon row is h / 2 - f tan(P) (f = h / 2 / tan(fov / 2));
+# both within 1 px, at two yaws. A physics hit is clipped by the same depth rule: a wall just beyond far in ray length but inside it
+# in depth at an edge column is hit, and one beyond the depth far is missed. Planted: a wall of
 # height 30 m at 100 m ahead across the columns left of centre moves those columns to the row where its top projects (found by projecting
 # the wall-top points, a different path from the ray code), and the median follows the majority either way. Negative: no ground, no hit.
 
@@ -33,12 +36,12 @@ static func nothing(_x: float, _z: float) -> float:
 
 
 # A wall in the plane z = -WALL_D, from the ground to WALL_H, covering world x < 0 (columns left of centre at yaw 0) or x < x_max.
-static func wall_hit(origin: Vector3, dir: Vector3, x_max: float, dist := WALL_D) -> float:
+static func wall_hit(origin: Vector3, dir: Vector3, x_max: float, dist := WALL_D, reach := INF) -> float:
 	if dir.z >= 0.0:
 		return INF
 	var d := (-dist - origin.z) / dir.z
 	var p := origin + dir * d
-	return d if d > 0.0 and p.x < x_max and p.y >= 0.0 and p.y <= WALL_H else INF
+	return d if d > 0.0 and d <= reach and p.x < x_max and p.y >= 0.0 and p.y <= WALL_H else INF
 
 
 # Pixel row of a camera-relative world point (projection, not ray casting).
@@ -68,8 +71,8 @@ static func wall_top_row(xf: Transform3D, fov: float, size: Vector2, px: float) 
 func _run() -> void:
 	var size := Vector2(1280.0, 720.0)
 	var f := Boxes.focal_px(FOV, size.y)
-	var depression := asin(CAM_H / FAR)
-	var want_sky := size.y * 0.5 - f * tan(PITCH - depression)
+	var th0 := tan(deg_to_rad(FOV) * 0.5)
+	var want_sky := size.y * 0.5 * (1.0 - ((sin(PITCH) - CAM_H / FAR) / cos(PITCH)) / th0)
 	var want_hor := size.y * 0.5 - f * tan(PITCH)
 	var ground := Callable(self, "flat")
 	var none_world := Callable()
@@ -94,6 +97,19 @@ func _run() -> void:
 	var edge_row: float = float(mp["skyline_cols"][0])
 	t.check("depth far: edge column skyline %.0f within 1 px of the depth-based analytic row %.0f (centre %s)" % [edge_row, depth_row, str(mp["skyline_cols"][16])], absf(edge_row - depth_row) <= 1.0 and absf(float(mp["skyline_cols"][32]) - depth_row) <= 1.0)
 
+	# A physics hit is clipped by view depth, not ray length: at the left edge, mid row, a hit at ray length L is inside the far plane
+	# when L cos(theta) <= far. L = (far - 100) / cos is beyond far in ray length but 600 deep: hit; L = (far + 100) / cos is 800 deep: missed.
+	var edge_dir := Boxes.ray_dir(xfp, FOV, size, 0.5, 360.0)
+	var cos_t := edge_dir.dot(-xfp.basis.z)
+	var len_in := (FAR - 100.0) / cos_t
+	var len_out := (FAR + 100.0) / cos_t
+	var at_in := func(_o: Vector3, _d: Vector3, r: float) -> float: return len_in if len_in <= r else INF
+	var at_out := func(_o: Vector3, _d: Vector3, r: float) -> float: return len_out if len_out <= r else INF
+	var d_in := Boxes.hit_dist(xfp, edge_dir, Callable(self, "nothing"), at_in, FAR)
+	var d_out := Boxes.hit_dist(xfp, edge_dir, Callable(self, "nothing"), at_out, FAR)
+	t.check("depth far: a physics hit at ray length %.0f (> far), depth %.0f, is hit at the edge column" % [len_in, len_in * cos_t], len_in > FAR and is_finite(d_in))
+	t.check("depth far: a physics hit at depth %.0f (> far) is missed" % (len_out * cos_t), not is_finite(d_out))
+
 	# Columns and rays: the centre ray is the camera's forward; the frame corner follows the vertical fov and the 16:9 aspect.
 	var level := Transform3D(Basis.IDENTITY, Vector3.ZERO)
 	var c := Boxes.ray_dir(level, FOV, size, 640.0, 360.0)
@@ -105,7 +121,7 @@ func _run() -> void:
 
 	# Planted wall.
 	var xf0 := Transform3D(Basis(Vector3.RIGHT, -PITCH), Vector3(0.0, CAM_H, 0.0))
-	var left_wall := func(o: Vector3, d: Vector3, _r: float) -> float: return wall_hit(o, d, 0.0)
+	var left_wall := func(o: Vector3, d: Vector3, r: float) -> float: return wall_hit(o, d, 0.0, WALL_D, r)
 	var m1 := Boxes.measure(xf0, FOV, size, ground, left_wall, FAR)
 	var cols: Array = m1["skyline_cols"]
 	var worst := 0.0
@@ -120,7 +136,7 @@ func _run() -> void:
 		moved += 0 if cols[i] == (m0["skyline_cols"] as Array)[i] else 1
 	t.check("planted: the 17 clear columns stay where the flat plane puts them (%d moved)" % moved, moved == 0 and absf(float(cols[16]) - want_sky) <= 1.0)
 	t.check("planted: the median follows the clear majority (%s)" % str(m1["skyline_y"]), absf(float(m1["skyline_y"]) - want_sky) <= 1.0)
-	var big_wall := func(o: Vector3, d: Vector3, _r: float) -> float: return wall_hit(o, d, 1.0e6)
+	var big_wall := func(o: Vector3, d: Vector3, r: float) -> float: return wall_hit(o, d, 1.0e6, WALL_D, r)
 	var m2 := Boxes.measure(xf0, FOV, size, ground, big_wall, FAR)
 	var sorted: Array = (m2["skyline_cols"] as Array).duplicate()
 	sorted.sort()
@@ -145,7 +161,7 @@ func _run() -> void:
 			on_wall += 1
 	t.check("sky: columns behind a 100 m wall keep sky above its top (%d left), not wall" % on_wall, on_wall > 0 and all_sky)
 	# A physics box at 400 m: none on the box; ground in front of it is not sky either.
-	var far_wall := func(o: Vector3, d: Vector3, _r: float) -> float: return wall_hit(o, d, 0.0, 400.0)
+	var far_wall := func(o: Vector3, d: Vector3, r: float) -> float: return wall_hit(o, d, 0.0, 400.0, r)
 	var m4 := Boxes.measure(xf0, FOV, size, ground, far_wall, FAR)
 	var on_box := 0
 	for q in m4["haze_samples"]:
