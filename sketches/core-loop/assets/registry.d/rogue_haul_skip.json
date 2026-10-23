@@ -1,0 +1,18 @@
+{
+ "assets": [
+  {
+   "id": "rogue_haul_skip",
+   "path": "res://assets/models/rogues/haul_skip.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "pending: src/combat/rogue.gd loads it in the Rogue fleet mini-bosses PR (#385); flip ships there",
+   "provenance": {
+    "recipe": "tools/blender/rogues/haul_skip.py",
+    "shell": "tools/blender/rogues/haul_skip.mojulo.json",
+    "design": "design-v3/rogues/BRIEFS.md",
+    "reference": "docs/art/reference/rogues/haul_skip/",
+    "note": "Haul Skip No. 31, Dig rogue (BRIEFS.md section 2). One-piece mojulo shells finished in Blender on the miniboss GLB contract: Hull/Armour/Core, rigid pose bones, collider-centre origin, -Z facing."
+   }
+  }
+ ]
+}

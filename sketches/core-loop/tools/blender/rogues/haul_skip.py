@@ -94,7 +94,7 @@ kit.cut_line(hull, SLOT, [at(-2.45, -2.2, 2.33), at(-2.55, -2.1, 1.95), at(-2.62
 bind(0)
 kit.add_shell(hull, meshes["Bucket"], SLOT, bucket_paint)
 for side in (-1, 1):
-    kit.stencil(hull, SLOT, "31", at(side * 1.63, 0.2, 2.05), (side, 0, 0.18), 1.0, "bone")
+    kit.stencil(hull, SLOT, "31", at(side * 1.64, 0.2, 2.05), (side, 0, -0.2), 1.0, "bone")
 bind(1)
 for i in range(4):
     kit.add_shell(hull, meshes["Wheel%d" % i], SLOT, wheel_paint)

@@ -53,6 +53,42 @@ for m in bpy.data.materials:
         nt.links.new(attr.outputs["Color"], gamma.inputs["Color"])
         nt.links.new(gamma.outputs["Color"], bsdf.inputs["Base Color"])
 
+if "--open" in argv:
+    # The weak window: both hatch plates swing 70 degrees outward about their hinge bones
+    # and the core grows and lights mint, as the runtime pose does.
+    from mathutils import Matrix
+    arm = next(o for o in scene.objects if o.type == "ARMATURE")
+    core = next(o for o in meshes if o.name.endswith("Core"))
+    centre_xy = Vector((centre.x, centre.y, 0))
+    core_w = core.matrix_world.translation
+    out_n = Vector((core_w.x, core_w.y, 0)) - centre_xy
+    out_n.normalize()
+    up = arm.matrix_world.inverted().to_3x3() @ Vector((0, 0, 1))
+    for pb in arm.pose.bones:
+        if "Plate" not in pb.name:
+            continue
+        head = pb.bone.head_local
+        best = None
+        for sign in (1, -1):
+            rot = Matrix.Translation(head) @ Matrix.Rotation(sign * math.radians(70), 4, up) @ Matrix.Translation(-head)
+            plate = next(o for o in meshes if o.name.endswith("Armour"))
+            group = plate.vertex_groups[pb.name].index
+            pts = [arm.matrix_world @ rot @ arm.matrix_world.inverted() @ (plate.matrix_world @ v.co)
+                   for v in plate.data.vertices if any(g.group == group and g.weight > 0.5 for g in v.groups)]
+            reach = sum(p.dot(out_n) for p in pts)
+            if best is None or reach > best[0]:
+                best = (reach, rot)
+        pb.matrix = best[1] @ pb.bone.matrix_local
+        bpy.context.view_layer.update()
+    core.scale = core.scale * 1.6
+    glow = bpy.data.materials.new("core open")
+    glow.use_nodes = True
+    b = glow.node_tree.nodes["Principled BSDF"]
+    b.inputs["Base Color"].default_value = (0.26, 0.87, 0.65, 1)
+    b.inputs["Emission Color"].default_value = (0.26, 0.87, 0.65, 1)
+    b.inputs["Emission Strength"].default_value = 2.0
+    core.data.materials[0] = glow
+
 scene.render.engine = "CYCLES"
 scene.cycles.device = "CPU"
 scene.cycles.samples = 24
@@ -105,6 +141,7 @@ for view in views.split(","):
     d = Vector(dirs[view]).normalized()
     cam.location = centre + d * (extent * 3)
     cam.rotation_euler = (-d).to_track_quat("-Z", "Y").to_euler()
-    scene.render.filepath = os.path.join(out, "%s-%s.jpg" % (base, view))
+    tag = "-open" if "--open" in argv else ""
+    scene.render.filepath = os.path.join(out, "%s-%s%s.jpg" % (base, view, tag))
     bpy.ops.render.render(write_still=True)
 print("STILLS", base, views, "extent %.2f m" % extent, "size", [round(v, 2) for v in (hi - lo)])
