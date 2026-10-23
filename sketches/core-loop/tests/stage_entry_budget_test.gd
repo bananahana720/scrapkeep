@@ -181,6 +181,8 @@ func _run() -> void:
 	for i in CATCH_UP_SPIN:
 		spun += i
 	await physics_frame
+	# Stage 2's reads all count from here: none may start before it.
+	_t.check("stage 2 was not prepared before its far reads are counted", not terrain.is_ready(2))
 	var reads_before: int = ParkProps.far_reads
 	terrain.prepare(2)
 	var waited := 0
