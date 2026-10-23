@@ -35,6 +35,10 @@ static func live(_class_def = null) -> Color:
 static var _checkers := {}
 
 
+static func drop_checkers() -> void:
+	_checkers.clear()
+
+
 static func checker_texture(a: Color, b: Color, cells := 8, size := 128) -> ImageTexture:
 	var key := [a, b, cells, size]
 	if _checkers.has(key):

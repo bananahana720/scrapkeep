@@ -353,6 +353,15 @@ static func warm() -> bool:
 	return true
 
 
+# Frees what warm() holds outside the tree, when the run that read it goes.
+static func drop_ahead() -> void:
+	for scene in _ahead.values():
+		if scene != null:
+			scene.free()
+	_ahead.clear()
+	_ahead_reads.clear()
+
+
 static func _take_ahead(path: String) -> Node3D:
 	if not _ahead.has(path):
 		return _instance(path)

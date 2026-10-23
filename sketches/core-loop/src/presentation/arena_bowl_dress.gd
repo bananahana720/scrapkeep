@@ -32,6 +32,10 @@ static func warm() -> bool:
 	return true
 
 
+static func drop_ahead() -> void:
+	_ahead.clear()
+
+
 static func _kits() -> Array:
 	return [[asset_dir.path_join("arena_bowl_foundry.glb"), FOUNDRY_PARTS], [spillway_dir.path_join("clutter_kit.glb"), SPILLWAY_PARTS]]
 

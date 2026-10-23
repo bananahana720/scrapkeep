@@ -230,6 +230,11 @@ func _read_boss_ahead() -> void:
 		script.call("prepare_arena")
 
 
+# Brindle's arena read ahead is held outside the tree; it goes with the flow.
+func _exit_tree() -> void:
+	SlagBowl.drop_ahead()
+
+
 # The boss row that runs at the end of a world. Tests set boss_row_override[world] to stand
 # in for a row; the screens and the HUD read this same row.
 func boss_row(world: int) -> Dictionary:

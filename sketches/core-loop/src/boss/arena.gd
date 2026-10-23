@@ -97,6 +97,13 @@ static func warm_ahead() -> bool:
 	return Requisition.warm() and BowlDress.warm() and warm_looks()
 
 
+static func drop_ahead() -> void:
+	Requisition.drop_ahead()
+	BowlDress.drop_ahead()
+	Palette.drop_checkers()
+	_looks_warm = false
+
+
 static func warm_looks() -> bool:
 	if not _looks_warm:
 		for pair in CHECKERS:
