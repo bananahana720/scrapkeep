@@ -111,8 +111,8 @@ func _first_run() -> void:
 	player.advance(TRANSITION_SECONDS)
 	boss.jump_to_phase(3)
 	_t.check("15 phase three gets its panel", player.playing and player.id == "brindle_phase_3", player.id)
-	player.advance(TRANSITION_SECONDS)
 
+	# The catch lands while phase three's panel still shows: the rout takes over at once.
 	Harness.defeat(_game)
 	var flow = _game.flow
 	var screens = _game.get("screens")
@@ -147,8 +147,12 @@ func _repeat_run() -> void:
 	_to_arena()
 	_t.check("30 a second run's arrival is the short form", player.playing and player.id == "brindle_arrival" and player.short, "%s short %s" % [player.id, player.short])
 	player.advance(Rules.INTRO_SECONDS)
+	_game.camera.reduced_motion = true
 	Harness.defeat(_game)
+	_game.camera.reduced_motion = false
 	var flow = _game.flow
+	var prop = _game.boss.arena.find_child("RoutScooter", true, false) if _game.boss.arena != null else null
+	_t.check("33 reduced motion keeps the overlay and drops the world beat", player.id == "brindle_rout" and prop == null, "")
 	_t.check("31 the repeat rout is short and holds nothing", player.id == "brindle_rout" and player.short and flow._victory_hold == 0.0 and is_equal_approx(flow._victory_left, Flow.VICTORY_SECONDS),
 		"%s short %s hold %.2f" % [player.id, player.short, flow._victory_hold])
 	player.advance(Rows.length("brindle_rout", true) + 0.01)

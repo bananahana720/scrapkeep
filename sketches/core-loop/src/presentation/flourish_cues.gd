@@ -12,7 +12,7 @@ const Palette := preload("res://src/core/palette.gd")
 #            nothing: TONE-BIBLE, never replays on retry). It plays inside the boss's
 #            BossRules.INTRO_SECONDS, when no attack can land, so it holds nothing.
 #   phase    boss_phase_changed to one of the row's phases. It fits inside the 2.0 s
-#            transition beat a later phase opens with (fight_phases.gd, #391).
+#            transition beat a later phase opens with (fight_phases.gd on #391).
 #   rout     boss_defeated for the row's boss. Flow asks plan_victory() before it opens
 #            the victory window, so the world stays in view for the rout's length and
 #            the window grows by what the rout and a sign-on need past its own 2.5 s,
@@ -42,6 +42,9 @@ var player
 var _played_this_run := {}
 var _earned_in_fight := {}
 var _chain: Array[String] = []
+# The victory's rows (the rout and its chain), and the row whose own finish starts the next.
+var _victory_ids := {}
+var _chain_from := ""
 # Per playing id: the seconds of the victory hold it is paying for and whether it is full.
 var _playing := {}
 var _world := []
@@ -95,9 +98,12 @@ func plan_victory() -> Dictionary:
 		return {"hold": 0.0, "veil": 0.0}
 	var rout := routs[0]
 	_chain.clear()
+	_victory_ids = {rout: true}
+	_chain_from = rout
 	for id in matching("sign_on", boss):
 		if _earned_in_fight.has(String(FlourishRows.row(id).get("earned", ""))):
 			_chain.append(id)
+			_victory_ids[id] = true
 	var base: float = ctx.flow.VICTORY_SECONDS
 	var veil := length_of(rout)
 	var total := veil
@@ -111,6 +117,10 @@ func plan_victory() -> Dictionary:
 		var end := start + length_of(id)
 		paid[id] = clampf(minf(end, base + hold) - maxf(start, base), 0.0, hold)
 		start = end
+	# The rout starts now, over whatever was showing (a phase panel at most), so the veil
+	# counts the same seconds the rout plays.
+	if player != null:
+		player.stop_all()
 	_play(rout, paid[rout])
 	for id in _chain:
 		_playing[id] = {"held": paid[id]}
@@ -172,27 +182,34 @@ func _on_finished(id: String, skipped: bool) -> void:
 	var info: Dictionary = _playing.get(id, {})
 	_playing.erase(id)
 	var held := float(info.get("held", 0.0))
-	if skipped:
+	if skipped and _victory_ids.has(id):
 		# A skipped beat gives back its hold and every hold the chain still owed.
 		var owed := held
 		for later in _chain:
 			owed += float(_playing.get(later, {}).get("held", 0.0))
 			_playing.erase(later)
 		_chain.clear()
+		_victory_ids.clear()
 		if ctx.flow != null and ctx.flow.has_method("cut_victory"):
 			ctx.flow.cut_victory(owed)
 		held = 0.0
 	# The player's record for this row is the last it finished; it joins the run meta next.
 	if not player.played.is_empty() and String(player.played.back().get("id", "")) == id:
 		player.played.back()["held"] = snappedf(held, 0.01)
-	if not skipped and not _chain.is_empty():
+	elif skipped:
+		held = 0.0
+	if not skipped and id == _chain_from and not _chain.is_empty():
 		var next: String = _chain.pop_front()
+		_chain_from = next
 		_play(next, float(_playing.get(next, {}).get("held", 0.0)))
 
 
 func _on_flow_changed(state: String) -> void:
 	if state in ["title", "class_select", "summary", "dead"]:
 		_chain.clear()
+		_victory_ids.clear()
+		_chain_from = ""
+		_playing.clear()
 		for node in _world:
 			if is_instance_valid(node):
 				node.queue_free()
@@ -252,7 +269,8 @@ func _eject(at: float, seconds: float) -> void:
 	prop.name = "RoutScooter"
 	arena.add_child(prop)
 	_world.append(prop)
-	if Requisition.dress_scooter(prop) == null:
+	Requisition.dress_scooter(prop)
+	if prop.get_child_count() == 0:
 		var box := MeshInstance3D.new()
 		var mesh := BoxMesh.new()
 		mesh.size = Vector3(2.0, 1.0, 2.8)
@@ -265,7 +283,9 @@ func _eject(at: float, seconds: float) -> void:
 	out = out.normalized() if out.length() > 0.5 else Vector3.FORWARD
 	var tween := create_tween()
 	tween.tween_interval(at)
-	tween.tween_callback(func(): prop.visible = true)
+	tween.tween_callback(func():
+		if is_instance_valid(prop):
+			prop.visible = true)
 	tween.tween_method(func(t: float):
 		if not is_instance_valid(prop):
 			return

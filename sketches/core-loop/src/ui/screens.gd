@@ -393,7 +393,7 @@ func _hide_for_rout() -> void:
 
 
 func _step_veil_wait(delta: float) -> void:
-	if _veil_wait <= 0.0:
+	if _veil_wait <= 0.0 or get_tree().paused:
 		return
 	_veil_wait -= delta
 	if _veil_wait <= 0.0 or game.flow.victory_veil <= 0.0 or _state != "victory":
