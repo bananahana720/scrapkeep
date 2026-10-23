@@ -69,6 +69,7 @@ def ore_car(p, v, rng):
         # Roll the car 80 degrees off the -Y rail about its lower bed edge, and slew it a little.
         m = Matrix.Translation((0.25, -1.3, 0.0)) @ Matrix.Rotation(0.2, 4, "Z") @ Matrix.Rotation(-math.radians(80), 4, "X") \
             @ Matrix.Translation((0, 0.75, -0.2))
+        # The kit primitives return live BMesh faces, so the built car can be rolled in place before polish.
         verts = {vv for f in car for vv in f.verts}
         for vert in verts:
             vert.co = m @ vert.co
@@ -166,7 +167,7 @@ def change_house(p, v, rng):
     p.cyl(0.16, 0.22, (-1.2, -d / 2 - 0.85, 0.7), P["tin_dark"], segs=12, style="round")
     p.torus(0.12, 0.015, (-1.2, -d / 2 - 0.85, 0.86), C["iron"], rot=(math.pi / 2, 0, 0), major=10, minor=4)
     p.cyl(0.07, 0.34, (-0.3, -d / 2 - 0.85, 0.76), C["verdigris"], segs=10, style="round")
-    # A rain barrel-free water bag hung on the corner, and a boot pair on the step.
+    # A canvas water bag hung on the corner, and a pair of boots on the step.
     p.ico(0.25, (w / 2 + 0.18, -d / 2 + 0.3, 1.7), C["canvas"], scale=(0.8, 0.7, 1.2), style="round")
     for k in range(2):
         p.ico(0.13, (0.55 + k * 0.22, -d / 2 - 0.45, 0.42), C["soil"], scale=(1.0, 2.0, 1.1), style="round")
@@ -288,7 +289,7 @@ def lagging_stack(p, v, rng):
         along_x = L % 2 == 0
         z = 0.1 + L * 0.2
         slip = 0.0 if L < layers - 2 or v == "a" else rng.uniform(0.2, 0.5)
-        for k in range(4 if along_x else 4):
+        for k in range(4):
             o = -0.75 + k * 0.5
             if along_x:
                 p.box((2.0, 0.2, 0.2), (slip, o, z), tint(C["timber"], rng, 0.08), rot=(0, 0, rng.uniform(-0.04, 0.04)), jit=0.005)
@@ -393,27 +394,42 @@ def notice_post(p, v, rng):
         p.box((0.33, 0.015, 0.42), (0.6, -0.4, 0.02), C["canvas_stain"], rot=(math.pi / 2, 0, 0.6), style="flat")  # a notice blown down
 
 
-@K.kind("saguaro", tags=["plant", "tall"], variants="abc", polish_opts={"detail": 1},
-        story="Saguaros on the plateau, older than the pit; the haul road goes around them.")
-def saguaro(p, v, rng):
-    h = {"a": 4.6, "b": 5.6, "c": 3.4}[v]
-    green = mix(C["leaf"], C["leaf_dark"], 0.35)
-    p.cyl(0.32, h, (0, 0, h / 2), green, segs=10, r2=0.28, style="round", jit=0.01)
-    p.uv(0.29, (0, 0, h), green, scale=(1, 1, 0.8), u=10, v=5, style="round")
-    for k in range(8):  # ribs
-        a = math.tau * k / 8
-        p.rod((0.31 * math.cos(a), 0.31 * math.sin(a), 0.1), (0.28 * math.cos(a), 0.28 * math.sin(a), h - 0.1), 0.035, C["leaf_dark"], segs=4, style="flat")
-    arms = {"a": [(1.6, 0.0, 1.1), (2.2, math.pi, 0.9)], "b": [(2.0, 0.6, 1.4), (2.6, 3.6, 1.1), (3.4, 2.0, 0.8)], "c": [(1.5, 1.2, 0.8)]}[v]
-    for z, ang, up in arms:
-        ox, oy = math.cos(ang), math.sin(ang)
-        elbow = (ox * 0.75, oy * 0.75, z + 0.15)
-        p.rod((ox * 0.2, oy * 0.2, z), elbow, 0.2, green, segs=8)
-        p.uv(0.2, elbow, green, u=8, v=4, style="round")
-        p.rod(elbow, (ox * 0.78, oy * 0.78, z + 0.15 + up), 0.2, green, segs=8, r2=0.18)
-        p.uv(0.18, (ox * 0.78, oy * 0.78, z + 0.15 + up), green, scale=(1, 1, 0.8), u=8, v=4, style="round")
-    p.ico(0.5, (0, 0, 0.05), C["soil"], scale=(1.2, 1.2, 0.25), style="round")
-    if v == "b":
-        p.uv(0.12, (0.1, 0.05, h + 0.2), C["bone"], scale=(1, 1, 0.6), u=8, v=4, style="round")  # a dried bloom
+@K.kind("saguaro_bones", tags=["plant"], variants="abc", polish_opts={"detail": 1},
+        story="A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. "
+              "Never upright and never tall, so it cannot read as the park's living saguaro anchors.")
+def saguaro_bones(p, v, rng):
+    rib = mix(C["timber_pale"], C["bone"], 0.4)
+    rib_dark = mix(C["timber_grey"], C["bone"], 0.2)
+    # The fallen trunk: a loose bundle of ribs lying along +X, sagging apart toward the top end.
+    length = {"a": 4.2, "b": 2.6, "c": 3.4}[v]
+    for k in range(8):
+        a = math.tau * k / 8 + rng.uniform(-0.1, 0.1)
+        spread = 0.24 + rng.uniform(0, 0.08)
+        y0, z0 = math.cos(a) * 0.2, 0.22 + math.sin(a) * 0.18
+        y1, z1 = math.cos(a) * spread * 1.6, max(0.05, 0.2 + math.sin(a) * spread)
+        if rng.random() < 0.25:
+            continue  # a rib that has already gone to the wind
+        p.rod((0.0, y0, z0), (length * rng.uniform(0.8, 1.0), y1, z1), 0.05, rib if k % 2 else rib_dark, segs=5, style="flat", jit=0.015)
+    # The boot: the woody socket where the trunk snapped, and the root flare it left standing.
+    stump_h = {"a": 0.6, "b": 0.95, "c": 0.8}[v]
+    for k in range(9):
+        a = math.tau * k / 9
+        lean = rng.uniform(0.0, 0.12)
+        p.rod((-0.25 + 0.26 * math.cos(a), 0.26 * math.sin(a), 0.0),
+              (-0.25 + (0.24 + lean) * math.cos(a), (0.24 + lean) * math.sin(a), stump_h * rng.uniform(0.7, 1.0)),
+              0.04, rib, segs=5, style="flat")
+    p.ico(0.45, (-0.25, 0, 0.0), C["soil"], scale=(1.3, 1.2, 0.25), subdiv=2, style="flat", jit=0.04)
+    if v != "b":
+        # A collapsed arm lying beside the trunk, and the woody cross-hatch where the skin dried.
+        p.rod((1.2, 0.5, 0.12), (2.0, 1.3, 0.1), 0.03, rib_dark, segs=5, style="flat")
+        p.rod((1.25, 0.6, 0.14), (1.9, 1.45, 0.12), 0.03, rib, segs=5, style="flat")
+    if v == "c":
+        # A cactus wren's old nest boot, the hollow woody cup that outlasts the plant.
+        p.uv(0.16, (length * 0.6, -0.3, 0.14), C["timber_dark"], scale=(1.0, 0.8, 0.7), u=8, v=5, style="round")
+    # Young prickly pear coming up in the shade of the old trunk.
+    for k in range(2 if v == "a" else 1):
+        x = 0.8 + k * 1.4
+        p.ico(0.2, (x, -0.55, 0.22), tint(C["leaf"], rng, 0.05), scale=(1.0, 0.22, 1.2), rot=(0, 0, 0.4 + k), subdiv=2, style="flat")
 
 
 @K.kind("prickly_pear", tags=["plant"], variants="ab", polish_opts={"detail": 1},

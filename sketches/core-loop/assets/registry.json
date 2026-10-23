@@ -28155,254 +28155,254 @@
    }
   },
   {
-   "id": "dprop_pit_saguaro_a",
-   "path": "res://assets/models/park/props/pit/saguaro_a.glb",
+   "id": "dprop_pit_saguaro_bones_a",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_a.glb",
    "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "saguaro variant a LOD0 (1976 tris): Saguaros on the plateau, older than the pit; the haul road goes around them. Deterministic; polished and baked."
+    "notes": "saguaro_bones variant a LOD0 (528 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.9467,
+     -2.4961,
      0,
-     -0.5104
+     -1.1035
     ],
     "max": [
-     0.9467,
-     4.8766,
-     0.5104
+     2.4961,
+     0.7036,
+     1.1035
     ],
     "size": [
-     1.8934,
-     4.8766,
-     1.0208
+     4.9922,
+     0.7036,
+     2.207
     ]
    }
   },
   {
-   "id": "dprop_pit_saguaro_a_lod1",
-   "path": "res://assets/models/park/props/pit/saguaro_a_lod1.glb",
+   "id": "dprop_pit_saguaro_bones_a_lod1",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_a_lod1.glb",
    "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "saguaro variant a LOD1 (988 tris): Saguaros on the plateau, older than the pit; the haul road goes around them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "saguaro_bones variant a LOD1 (264 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.9467,
+     -2.4961,
      0,
-     -0.5104
+     -1.0969
     ],
     "max": [
-     0.9467,
-     4.8766,
-     0.5104
+     2.4941,
+     0.7035,
+     1.099
     ],
     "size": [
-     1.8934,
-     4.8766,
-     1.0208
+     4.9902,
+     0.7035,
+     2.1959
     ]
    }
   },
   {
-   "id": "dprop_pit_saguaro_a_lod2",
-   "path": "res://assets/models/park/props/pit/saguaro_a_lod2.glb",
+   "id": "dprop_pit_saguaro_bones_a_lod2",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_a_lod2.glb",
    "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "saguaro variant a LOD2 (288 tris): Saguaros on the plateau, older than the pit; the haul road goes around them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "saguaro_bones variant a LOD2 (60 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.9488,
+     -2.5013,
      0,
-     -0.5111
+     -1.1007
     ],
     "max": [
-     0.9537,
-     4.8615,
-     0.5006
+     2.4941,
+     0.693,
+     1.1113
     ],
     "size": [
-     1.9025,
-     4.8615,
-     1.0117
+     4.9954,
+     0.693,
+     2.212
     ]
    }
   },
   {
-   "id": "dprop_pit_saguaro_b",
-   "path": "res://assets/models/park/props/pit/saguaro_b.glb",
+   "id": "dprop_pit_saguaro_bones_b",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_b.glb",
    "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "saguaro variant b LOD0 (2840 tris): Saguaros on the plateau, older than the pit; the haul road goes around them. Deterministic; polished and baked."
+    "notes": "saguaro_bones variant b LOD0 (384 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.8384,
+     -1.5916,
      0,
-     -0.6966
+     -0.6004
     ],
     "max": [
-     0.8384,
-     5.9196,
-     0.6966
+     1.5916,
+     1.0854,
+     0.6004
     ],
     "size": [
-     1.6768,
-     5.9196,
-     1.3932
+     3.1832,
+     1.0854,
+     1.2008
     ]
    }
   },
   {
-   "id": "dprop_pit_saguaro_b_lod1",
-   "path": "res://assets/models/park/props/pit/saguaro_b_lod1.glb",
+   "id": "dprop_pit_saguaro_bones_b_lod1",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_b_lod1.glb",
    "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "saguaro variant b LOD1 (1420 tris): Saguaros on the plateau, older than the pit; the haul road goes around them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "saguaro_bones variant b LOD1 (192 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.8384,
+     -1.5916,
      0,
-     -0.6966
+     -0.6001
     ],
     "max": [
-     0.8384,
-     5.9196,
-     0.6947
+     1.5916,
+     1.09,
+     0.6055
     ],
     "size": [
-     1.6768,
-     5.9196,
-     1.3913
+     3.1832,
+     1.09,
+     1.2056
     ]
    }
   },
   {
-   "id": "dprop_pit_saguaro_b_lod2",
-   "path": "res://assets/models/park/props/pit/saguaro_b_lod2.glb",
+   "id": "dprop_pit_saguaro_bones_b_lod2",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_b_lod2.glb",
    "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "saguaro variant b LOD2 (418 tris): Saguaros on the plateau, older than the pit; the haul road goes around them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "saguaro_bones variant b LOD2 (44 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.8334,
+     -1.6212,
      0,
-     -0.6916
+     -0.6112
     ],
     "max": [
-     0.8457,
-     5.9075,
-     0.6915
+     1.5928,
+     1.0871,
+     0.5918
     ],
     "size": [
-     1.6791,
-     5.9075,
-     1.3831
+     3.214,
+     1.0871,
+     1.203
     ]
    }
   },
   {
-   "id": "dprop_pit_saguaro_c",
-   "path": "res://assets/models/park/props/pit/saguaro_c.glb",
+   "id": "dprop_pit_saguaro_bones_c",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_c.glb",
    "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "saguaro variant c LOD0 (1336 tris): Saguaros on the plateau, older than the pit; the haul road goes around them. Deterministic; polished and baked."
+    "notes": "saguaro_bones variant c LOD0 (736 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; polished and baked."
    },
    "bounds": {
     "min": [
-     -0.511,
+     -1.9641,
      0,
-     -0.702
+     -1.052
     ],
     "max": [
-     0.511,
-     3.6766,
-     0.702
+     1.9641,
+     0.9224,
+     1.052
     ],
     "size": [
-     1.022,
-     3.6766,
-     1.404
+     3.9282,
+     0.9224,
+     2.104
     ]
    }
   },
   {
-   "id": "dprop_pit_saguaro_c_lod1",
-   "path": "res://assets/models/park/props/pit/saguaro_c_lod1.glb",
+   "id": "dprop_pit_saguaro_bones_c_lod1",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_c_lod1.glb",
    "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "saguaro variant c LOD1 (668 tris): Saguaros on the plateau, older than the pit; the haul road goes around them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "saguaro_bones variant c LOD1 (368 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.511,
+     -1.9641,
      0,
-     -0.702
+     -1.0453
     ],
     "max": [
-     0.511,
-     3.6766,
-     0.702
+     1.9643,
+     0.9224,
+     1.0571
     ],
     "size": [
-     1.022,
-     3.6766,
-     1.404
+     3.9284,
+     0.9224,
+     2.1024
     ]
    }
   },
   {
-   "id": "dprop_pit_saguaro_c_lod2",
-   "path": "res://assets/models/park/props/pit/saguaro_c_lod2.glb",
+   "id": "dprop_pit_saguaro_bones_c_lod2",
+   "path": "res://assets/models/park/props/pit/saguaro_bones_c_lod2.glb",
    "class": "dress_prop",
    "ships": true,
    "loader": "src/presentation/park_props.gd (vignette file src/world/park/props/park_pit.json)",
    "provenance": {
     "recipe": "tools/blender/park/props/pit.py",
-    "notes": "saguaro variant c LOD2 (192 tris): Saguaros on the plateau, older than the pit; the haul road goes around them. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
+    "notes": "saguaro_bones variant c LOD2 (96 tris): A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors. Deterministic; Decimate (collapse) copy of the polished, baked LOD0."
    },
    "bounds": {
     "min": [
-     -0.5144,
+     -1.9683,
      0,
-     -0.697
+     -1.0346
     ],
     "max": [
-     0.5144,
-     3.6696,
-     0.6923
+     1.9643,
+     0.9237,
+     1.0518
     ],
     "size": [
-     1.0288,
-     3.6696,
-     1.3893
+     3.9326,
+     0.9237,
+     2.0864
     ]
    }
   },
@@ -34411,15 +34411,15 @@
   "dprop_pit_prickly_pear_b",
   "dprop_pit_prickly_pear_b_lod1",
   "dprop_pit_prickly_pear_b_lod2",
-  "dprop_pit_saguaro_a",
-  "dprop_pit_saguaro_a_lod1",
-  "dprop_pit_saguaro_a_lod2",
-  "dprop_pit_saguaro_b",
-  "dprop_pit_saguaro_b_lod1",
-  "dprop_pit_saguaro_b_lod2",
-  "dprop_pit_saguaro_c",
-  "dprop_pit_saguaro_c_lod1",
-  "dprop_pit_saguaro_c_lod2",
+  "dprop_pit_saguaro_bones_a",
+  "dprop_pit_saguaro_bones_a_lod1",
+  "dprop_pit_saguaro_bones_a_lod2",
+  "dprop_pit_saguaro_bones_b",
+  "dprop_pit_saguaro_bones_b_lod1",
+  "dprop_pit_saguaro_bones_b_lod2",
+  "dprop_pit_saguaro_bones_c",
+  "dprop_pit_saguaro_bones_c_lod1",
+  "dprop_pit_saguaro_bones_c_lod2",
   "dprop_pit_tool_drop_a",
   "dprop_pit_tool_drop_a_lod1",
   "dprop_pit_tool_drop_a_lod2",

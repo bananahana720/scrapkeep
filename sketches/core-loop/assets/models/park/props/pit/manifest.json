@@ -396,55 +396,54 @@
     }
    }
   },
-  "saguaro": {
+  "saguaro_bones": {
    "class": "dress_prop",
    "tags": [
-    "plant",
-    "tall"
+    "plant"
    ],
-   "story": "Saguaros on the plateau, older than the pit; the haul road goes around them.",
+   "story": "A saguaro that died before the pit opened: the flesh long gone, its woody ribs bleached and fallen. Never upright and never tall, so it cannot read as the park's living saguaro anchors.",
    "variants": {
     "a": {
      "lod": [
-      "res://assets/models/park/props/pit/saguaro_a.glb",
-      "res://assets/models/park/props/pit/saguaro_a_lod1.glb",
-      "res://assets/models/park/props/pit/saguaro_a_lod2.glb"
+      "res://assets/models/park/props/pit/saguaro_bones_a.glb",
+      "res://assets/models/park/props/pit/saguaro_bones_a_lod1.glb",
+      "res://assets/models/park/props/pit/saguaro_bones_a_lod2.glb"
      ],
      "tris": [
-      1976,
-      988,
-      288
+      528,
+      264,
+      60
      ],
-     "radius": 0.947,
-     "height": 4.877
+     "radius": 2.593,
+     "height": 0.704
     },
     "b": {
      "lod": [
-      "res://assets/models/park/props/pit/saguaro_b.glb",
-      "res://assets/models/park/props/pit/saguaro_b_lod1.glb",
-      "res://assets/models/park/props/pit/saguaro_b_lod2.glb"
+      "res://assets/models/park/props/pit/saguaro_bones_b.glb",
+      "res://assets/models/park/props/pit/saguaro_bones_b_lod1.glb",
+      "res://assets/models/park/props/pit/saguaro_bones_b_lod2.glb"
      ],
      "tris": [
-      2840,
-      1420,
-      418
+      384,
+      192,
+      44
      ],
-     "radius": 1.018,
-     "height": 5.92
+     "radius": 1.607,
+     "height": 1.085
     },
     "c": {
      "lod": [
-      "res://assets/models/park/props/pit/saguaro_c.glb",
-      "res://assets/models/park/props/pit/saguaro_c_lod1.glb",
-      "res://assets/models/park/props/pit/saguaro_c_lod2.glb"
+      "res://assets/models/park/props/pit/saguaro_bones_c.glb",
+      "res://assets/models/park/props/pit/saguaro_bones_c_lod1.glb",
+      "res://assets/models/park/props/pit/saguaro_bones_c_lod2.glb"
      ],
      "tris": [
-      1336,
-      668,
-      192
+      736,
+      368,
+      96
      ],
-     "radius": 0.771,
-     "height": 3.677
+     "radius": 2.051,
+     "height": 0.922
     }
    }
   },

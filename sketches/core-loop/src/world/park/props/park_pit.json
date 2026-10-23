@@ -401,12 +401,12 @@
     }
    ]
   },
-  "saguaro_stand": {
-   "story": "Saguaros older than the pit; the haul road bends around them.",
+  "saguaro_bones": {
+   "story": "Saguaro skeletons that died before the pit opened, their ribs bleached on the rim.",
    "props": [
     {
-     "kind": "saguaro",
-     "v": "b",
+     "kind": "saguaro_bones",
+     "v": "a",
      "at": [
       0,
       0
@@ -416,7 +416,7 @@
      "tilt_deg": 0
     },
     {
-     "kind": "saguaro",
+     "kind": "saguaro_bones",
      "v": "*",
      "at": [
       6,
@@ -427,7 +427,7 @@
      "tilt_deg": 0
     },
     {
-     "kind": "saguaro",
+     "kind": "saguaro_bones",
      "v": "c",
      "at": [
       -5,
@@ -551,8 +551,8 @@
  },
  "spots": [
   {
-   "id": "rim_saguaros",
-   "template": "saguaro_stand",
+   "id": "rim_bones",
+   "template": "saguaro_bones",
    "at": [
     -610,
     -770
@@ -581,8 +581,8 @@
    "near": "dump_wash_1"
   },
   {
-   "id": "canal_saguaros",
-   "template": "saguaro_stand",
+   "id": "dump_wash_bones",
+   "template": "saguaro_bones",
    "at": [
     -360,
     -560
@@ -845,5 +845,5 @@
   ],
   "seed": 3
  },
- "pin": 1647117355
+ "pin": 495459358
 }

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://bq7j6ox444ttf"
-path="res://.godot/imported/saguaro_b.glb-6026e11a9caffe009f82cd6d40c27e9b.scn"
+uid="uid://yemxt02p6w5p"
+path="res://.godot/imported/saguaro_bones_c_lod1.glb-8af993a233ba0e7397488c301dd15e6f.scn"
 
 [deps]
 
-source_file="res://assets/models/park/props/pit/saguaro_b.glb"
-dest_files=["res://.godot/imported/saguaro_b.glb-6026e11a9caffe009f82cd6d40c27e9b.scn"]
+source_file="res://assets/models/park/props/pit/saguaro_bones_c_lod1.glb"
+dest_files=["res://.godot/imported/saguaro_bones_c_lod1.glb-8af993a233ba0e7397488c301dd15e6f.scn"]
 
 [params]
 
@@ -24,7 +24,7 @@ nodes/import_as_skeleton_bones=false
 nodes/use_name_suffixes=true
 nodes/use_node_type_suffixes=true
 meshes/ensure_tangents=true
-meshes/generate_lods=true
+meshes/generate_lods=false
 meshes/create_shadow_meshes=true
 meshes/light_baking=1
 meshes/lightmap_texel_size=0.2
@@ -42,4 +42,4 @@ materials/extract_path=""
 _subresources={}
 gltf/naming_version=2
 gltf/embedded_image_handling=1
-gltf/texture_map_mode=1
+gltf/texture_map_mode=0
