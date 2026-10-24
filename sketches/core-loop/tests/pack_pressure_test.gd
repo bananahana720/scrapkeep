@@ -53,6 +53,10 @@ class FakeFlow:
 	var warden_engaged := false
 	var beacon: Node3D = null
 	var warden: Node3D = null
+	var state := "stage"
+
+	func state_name() -> String:
+		return state
 
 	func in_play() -> bool:
 		return true
@@ -290,6 +294,8 @@ func _boils() -> void:
 	_t.eq("26f a crew dragged off its site is", _loop_boils(boils, ctx, enemy, func(): pass), 1)
 	world.activities.sites = []
 	_t.eq("26d a roaming pack still is", _loop_boils(boils, ctx, enemy, func(): pass), 1)
+	_t.eq("26g the exit run (gates, launch) never boils", _loop_boils(boils, ctx, enemy, func(): ctx.flow.state = "gates"), 0)
+	ctx.flow.state = "stage"
 	ChallengeDials.set_overrides({})
 	ctx.root.queue_free()
 	await process_frame

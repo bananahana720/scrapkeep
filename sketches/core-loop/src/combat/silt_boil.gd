@@ -17,7 +17,8 @@ const Roster := preload("res://src/combat/roster.gd")
 # The silt prices kiting, not the loops the game asks for: nothing boils inside the ring of an engaged,
 # standing Warden (the fight holds the ball there), and an activity's own crew (an event pack, a camp
 # brute, a relay's minibosses) is no fight while it stays within SITE_LEASH of its site. Only roaming packs,
-# or a crew dragged off its site, start a boil.
+# or a crew dragged off its site, start a boil, and only while the stage is in play before its exit: the
+# gates and the launch are a course to run, so the silt lies still from the Warden's break.
 
 const FIGHT_RADIUS := 30.0
 const LOOP_WINDOW := 10.0
@@ -35,6 +36,8 @@ const JITTER := 2.0
 # Beyond the Warden's ring radius the ball is out of its fight; past this from its site a crew is roaming.
 const RING_MARGIN := 10.0
 const SITE_LEASH := 40.0
+# Flow states the silt boils in (flow.gd NAMES): roaming and the Warden's ring, never the exit run.
+const BOIL_STATES := ["stage", "beacon"]
 
 signal rumbled(at: Vector3, seconds_until: float)
 signal erupted(at: Vector3, hit_ball: bool, enemies: int)
@@ -104,7 +107,7 @@ func step(delta: float, enemies: Array) -> void:
 			_erupt(k, enemies)
 		return
 	_rest -= delta
-	if _rest > 0.0 or _in_warden_ring(ball) or not _looping() or not _fighting(ball, enemies):
+	if _rest > 0.0 or not _ctx.flow.state_name() in BOIL_STATES or _in_warden_ring(ball) or not _looping() or not _fighting(ball, enemies):
 		return
 	var at := PackPressure.predict(_ctx.player, WARN)
 	_ring = Telegraph.ring(_ctx.root, _terrain, Threat.Type.INSTANT, at, RADIUS)
