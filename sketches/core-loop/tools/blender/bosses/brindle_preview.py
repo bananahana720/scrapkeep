@@ -16,6 +16,7 @@ from mathutils import Matrix, Quaternion, Vector
 HERE = Path(__file__).resolve().parent
 sys.path[:0] = [str(HERE), str(HERE.parent)]
 import common
+import cycles_device
 import brindle_model as model
 import brindle_animation as anim
 
@@ -23,7 +24,7 @@ import brindle_animation as anim
 def studio():
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 12
     scene.cycles.use_denoising = True
     scene.render.resolution_x, scene.render.resolution_y = 960, 720
@@ -134,7 +135,7 @@ def preview_files(directory=model.MODELS):
             render_one(view, yaw)
         for clip, (_duration, key) in clips.items():
             render_one(clip, 35, clip, key)
-    manifest = {"engine": "Blender " + bpy.app.version_string, "render": "Cycles CPU",
+    manifest = {"engine": "Blender " + bpy.app.version_string, "render": "Cycles " + bpy.context.scene.cycles.device,
                 "samples": 12, "dimensions": [960, 720], "fps": 30, "preview_recipe_sha256": recipe_hash,
                 "glb_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                                for p in directory.glob("boss_brindle*.glb")}, "images": rows}

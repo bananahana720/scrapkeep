@@ -14,6 +14,7 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import cycles_device
 import polish
 from common import Part
 
@@ -227,7 +228,7 @@ def preview_pose(state):
 def render_previews(directory):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 24
     scene.cycles.use_denoising = True
     scene.render.threads_mode = "FIXED"
@@ -268,7 +269,7 @@ def render_previews(directory):
         root.rotation_euler.z = yaw
         scene.render.filepath = os.path.join(directory, label + ".png")
         bpy.ops.render.render(write_still=True)
-    print("PMB_PREVIEWS Cycles CPU / 24 samples / five views / reference ball diameter 2 m")
+    print("PMB_PREVIEWS Cycles", bpy.context.scene.cycles.device, "/ 24 samples / five views / reference ball diameter 2 m")
 
 
 if opts["render"]:

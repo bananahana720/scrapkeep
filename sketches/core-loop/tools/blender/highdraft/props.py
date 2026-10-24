@@ -21,6 +21,7 @@ from mathutils import Matrix, Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import common
+import cycles_device
 import polish
 
 PETROL = "53686d"
@@ -456,7 +457,7 @@ def preview(paths, folder, asset=None):
         high = Vector(tuple(max(p[k] for p in points) for k in range(3)))
         # The reference ball is beside the prop along view-right in every view.
         scene.render.engine = "CYCLES"
-        scene.cycles.device = "CPU"
+        cycles_device.use(scene)
         scene.cycles.samples = 12
         scene.cycles.use_denoising = True
         scene.render.threads_mode = "FIXED"
@@ -506,7 +507,7 @@ def preview(paths, folder, asset=None):
             cam.data.ortho_scale = max(width, height * 640 / 480) * 1.2
             scene.render.filepath = str(folder / (name + "_" + label + ".png"))
             bpy.ops.render.render(write_still=True)
-            print("MHP_PREVIEW", name, label, "Cycles CPU 12 samples", flush=True)
+            print("MHP_PREVIEW", name, label, "Cycles", bpy.context.scene.cycles.device, "12 samples", flush=True)
 
 
 def main():

@@ -12,6 +12,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import cycles_device
 import polish
 from common import Part
 
@@ -175,7 +176,7 @@ common.export(root, opts["out"] or os.path.join(common.MODELS, "world_three", "e
 def previews(outdir):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 16
     scene.cycles.use_denoising = True
     scene.render.resolution_x, scene.render.resolution_y = 1000, 800

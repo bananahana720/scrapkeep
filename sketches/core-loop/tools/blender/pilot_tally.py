@@ -23,6 +23,7 @@ from mathutils.bvhtree import BVHTree
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import common
+import cycles_device
 import polish
 import rig_pilot
 import anim_rivet_drop as arm_solver
@@ -615,7 +616,7 @@ def verify_motion(arm,obj,actions):
 def studio():
     cam=rig_pilot.studio()
     scene=bpy.context.scene
-    scene.cycles.device="CPU"
+    cycles_device.use(scene)
     scene.cycles.samples=8
     scene.render.resolution_x=720
     scene.render.resolution_y=720
@@ -678,13 +679,13 @@ def previews(arm,obj,actions,tag):
     scene.render.filepath=str(PREVIEW/(tag+"ledger-detail.png"))
     bpy.ops.render.render(write_still=True)
     paths.append(Path(scene.render.filepath))
-    manifest={"engine":"Cycles","device":"CPU","samples":scene.cycles.samples,
+    manifest={"engine":"Cycles","device":bpy.context.scene.cycles.device,"samples":scene.cycles.samples,
         "threads":scene.render.threads,"size":[scene.render.resolution_x,scene.render.resolution_y],
         "pilot_glb":glb_counts(PILOT_OUT),"shell_glb":glb_counts(shell_tally.OUT),
         "clip_key_frames":KEY_POSES,"ledger_detail_pose":"big_cheer" if arm else "neutral",
         "images":{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}}
     (PREVIEW/("preview-manifest-"+tag.rstrip("-")+".json")).write_text(json.dumps(manifest,indent=2)+"\n")
-    print("PTL_PREVIEW: PASS",len(paths),"PNGs; Cycles CPU; 8 samples; 2 threads")
+    print("PTL_PREVIEW: PASS",len(paths),"PNGs; Cycles",bpy.context.scene.cycles.device+"; 8 samples; 2 threads")
 
 
 def glb_counts(path):

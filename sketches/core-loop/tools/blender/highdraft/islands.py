@@ -24,6 +24,7 @@ from mathutils import Vector
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import common
+import cycles_device
 import polish
 
 SKETCH = Path(common.SKETCH)
@@ -311,7 +312,7 @@ def preview(path, outdir, samples):
     extent = high - low
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
     scene.cycles.seed = 20261006

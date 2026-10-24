@@ -17,6 +17,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))
 import common
+import cycles_device
 import rig_space
 from build_outfits import ITEMS, SKETCH
 
@@ -60,7 +61,7 @@ def wear(rig_glb, outfit_glb, pose=None):
 def light_and_render(target, shots, out, samples):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
     scene.view_settings.view_transform = "AgX"

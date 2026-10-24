@@ -17,6 +17,7 @@ from mathutils import Vector
 
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 import waking
+import cycles_device
 
 
 def all_nodes(root):
@@ -69,7 +70,7 @@ def render(models,out,results=None,reuse_static=None):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene=bpy.context.scene
     scene.render.engine="CYCLES"
-    scene.cycles.device="CPU"
+    cycles_device.use(scene)
     scene.cycles.samples=8
     scene.cycles.use_denoising=True
     scene.cycles.seed=17
@@ -117,7 +118,7 @@ def render(models,out,results=None,reuse_static=None):
     cached={}
     if reuse_static:
         previous=json.loads((reuse_static/"manifest.json").read_text())
-        assert previous["renderer"]=="Blender Cycles CPU" and previous["samples"]==8 and previous["resolution"]==[720,900]
+        assert previous["renderer"]=="Blender Cycles "+bpy.context.scene.cycles.device and previous["samples"]==8 and previous["resolution"]==[720,900]
         for record in previous["models"]:
             assert hashlib.sha256((models/record["file"]).read_bytes()).hexdigest()==record["sha256"]
         cached={f["image"]:f for f in previous["frames"] if f["clip"] is None and "floor_metres" not in f}
@@ -198,7 +199,7 @@ def render(models,out,results=None,reuse_static=None):
         ball.location.z=1+floor
         if floor==0: sample(roots,"core_open",.4)
         write("floor_%dm"%floor,filenames,extra={"floor_metres":floor,"core_height_metres":floor+6.8})
-    manifest={"renderer":"Blender Cycles CPU","samples":8,"threads":2,"resolution":[720,900],
+    manifest={"renderer":"Blender Cycles "+bpy.context.scene.cycles.device,"samples":8,"threads":2,"resolution":[720,900],
               "orthographic_metres":29,"arena_radius_metres":36,"reference_ball_diameter_metres":2,
               "floor_pose_note":"Floor-pose frames stage actor and ball at the real socket heights; raised floor bodies are omitted from this asset-only inspection.",
               "models":[{"file":name,"sha256":hashlib.sha256((models/name).read_bytes()).hexdigest()} for name in filenames],
