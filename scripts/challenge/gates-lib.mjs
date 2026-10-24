@@ -185,10 +185,10 @@ function roll(statuses) {
 
 // --- gate 2: terrain use beats circling ---
 // Metric: hull lost per minute alive over the first 120 s after first contact, paired by stage and seed (each arm's
-// value for a pair is the median of its valid runs). PASS needs both: A lower in at least 80% of the pairs (24 of 30),
-// and the pooled median of A / B at 0.75 or less. A is the arm expected to win (terrain in the real gate).
-// A pair with B at 0 hull lost is a tie at best: A / B = 1 when A is also 0, and infinite when it is not, so the
-// ratio never rewards a pair where nothing was lost. The pooled median is taken over the per-pair ratios.
+// value for a pair is the median of its valid runs). Only contested pairs count (the arms lost different hull; most
+// windows lose none, so 0 against 0 says nothing): PASS needs at least 10, A lower in 80% of them, and the pooled median
+// of A / B at 0.75 or less. A is the arm expected to win (terrain in the real gate). A pair where the other arm lost
+// nothing is the worst ratio for that arm. Ruling: scrapkeep#241, 24 Oct.
 export function gate2(a, b, { stages = STAGES, seeds = SEEDS } = {}) {
   const ca = cells(a, stages, seeds);
   const cb = cells(b, stages, seeds);
