@@ -22,7 +22,7 @@ const PARK := "res://src/world/park/park_flume.json"
 const H := 1.0 / 60.0
 const FAR := Vector3(1000.0, 1.0, 1000.0)
 const BAR_S := 240.0 / 172.0
-const RING := Vector2(-418.0, -583.0)
+const RING := Vector2(-427.0, -563.0)
 # The weir reach's top (its y 104.4 plus its 5 m height); the gap reach's top stands well below it.
 const UPPER_Y := 109.4
 const EXPECTED_CHECKS := 20
