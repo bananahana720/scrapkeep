@@ -215,6 +215,11 @@ class Voice:
 
 var park_cue_log: Array[Dictionary] = []
 var _park_pcm := {}
+# Park cue cells rendered on a worker before their beat, by signature.
+static var _park_warm := {}
+static var _park_warm_lock := Mutex.new()
+# The worker task rendering each booked cell, by signature, until its beat takes it.
+static var _park_tasks := {}
 
 var clock := 0
 var bar_origin := 0
@@ -361,6 +366,13 @@ var _class_counter: Array = []
 # nothing, and stingers land on the ACE beat in its key (grid is the sequencer, which
 # answers next_beat() and key_at() in this engine's transport samples).
 var bot_skip_samples := false
+# A played run sets it (Audio): a stinger queued for the next beat renders on a worker in the
+# meantime, so a pilot's cue in a key the bake never reached (a boss fight's lift) never renders
+# on the main thread when its beat comes.
+var warm_stingers := false
+# How often, in frames, a park cue cell held for its worker is checked again (_to_next_action).
+const LATE_CHECK := 256
+static var _stinger_tasks: Array[int] = []
 var band_muted := false
 var grid: Object = null
 
@@ -502,6 +514,37 @@ static func prepare_rest() -> void:
 	_prepare_wobble(Harmony.BRINDLE_PHRYGIAN, [1], [Harmony.BOSS_STEP], ["wub"])
 	_prepare_wobble(Harmony.BRINDLE, [2], [PHASE3_STEP], ["wub"])
 	_prepare_wobble(Harmony.BRINDLE + Harmony.VICTORY, [0, 2], [Harmony.STEP], ["wub"])
+	# A boss fight plays its chords in its section's key (BOSS_SECTIONS, 0 to 2) plus the escalation's
+	# half-step lift, through the break's sinister chords and the dominant mask: every key to 3.
+	var boss_chords: Array = Harmony.BRINDLE + Harmony.BRINDLE_PHRYGIAN + Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE]
+	for shift in [0, 1, 2, 3]:
+		for chord in boss_chords:
+			if SfxBank.bake_cancel:
+				return
+			var voicing := _shift(chord["voicing"], shift)
+			Synth.organ_chord(voicing)
+			Synth.stab_chord(voicing, false)
+			Synth.stab_chord(voicing, true)
+			Synth.chord(voicing)
+			Synth.note("sub", int(chord["root"]) + shift)
+	# The Mind's victory resolves in its own key (BOSS_SECTIONS), through _trigger_victory's voices.
+	for chord in Harmony.VICTORY:
+		if SfxBank.bake_cancel:
+			return
+		var voicing := _shift(chord["voicing"], int(BOSS_SECTIONS.mind.victory.key))
+		Synth.chord(voicing)
+		Synth.stab_chord(voicing, true)
+		Synth.pad_chord(voicing)
+		var root := int(chord["root"]) + int(BOSS_SECTIONS.mind.victory.key)
+		Synth.note("sub", root)
+		Synth.note("reese", root + 12)
+		Synth.note("fbass", root)
+		Synth.note("fbass", root + 12)
+	# _start_riser's build riser, on both boss grids.
+	for step in [Harmony.BOSS_STEP, PHASE3_STEP]:
+		if SfxBank.bake_cancel:
+			return
+		SfxBank.samples_at("build_riser", step)
 
 
 static func prepare_all() -> void:
@@ -703,11 +746,38 @@ func schedule_stinger(id: String, db := 0.0, lane := false, repeats := 1) -> int
 		lane_free_at = start + SfxBank.STINGER_BEATS.get(id, 1) * beat_len() + (repeats - 1) * 2 * step_len
 	for i in repeats:
 		_add_action(start + i * 2 * step_len, {"type": "stinger", "id": id, "db": db - 2.0 * i, "music": false})
+	_warm_stinger(id, start)
 	return start
 
 
 func schedule_stinger_at(id: String, at: int, db := 0.0) -> void:
 	_add_action(at, {"type": "stinger", "id": id, "db": db, "music": false})
+	_warm_stinger(id, at)
+
+
+# The variant _run's "stinger" will ask for at `at`, on a worker, unless it is made already.
+func _warm_stinger(id: String, at: int) -> void:
+	if not warm_stingers:
+		return
+	var shift: int = key if grid == null else grid.key_at(at)
+	var step := step_len
+	var theme_now := theme
+	if SfxBank.baked_at(id, step, shift, theme_now):
+		return
+	_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
+	_stinger_tasks.append(WorkerThreadPool.add_task(func(): SfxBank.samples_at(id, step, shift, theme_now), false, "stinger warm"))
+
+
+static func _settle_task(task: int) -> bool:
+	WorkerThreadPool.wait_for_task_completion(task)
+	return false
+
+
+# Teardown: waits on every stinger still rendering.
+static func settle_stingers() -> void:
+	for task in _stinger_tasks:
+		WorkerThreadPool.wait_for_task_completion(task)
+	_stinger_tasks.clear()
 
 
 static func stage_theme(stage = "default") -> int:
@@ -1318,20 +1388,47 @@ func cancel_park_drop(owner: String) -> void:
 
 
 func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
-	var row: Dictionary = action.row
-	var signature := str([row, action.cell, action.length, action.progress, live_key, step_len])
+	var signature := _park_signature(action, live_key, step_len)
 	if _park_pcm.has(signature):
 		return _park_pcm[signature]
+	# A cell still rendering on its worker is waited for: what is left of it costs less than a
+	# second render here.
+	var task: int = _park_tasks.get(signature, -1)
+	_park_tasks.erase(signature)
+	if task >= 0 and _stinger_tasks.has(task):
+		_stinger_tasks.erase(task)
+		WorkerThreadPool.wait_for_task_completion(task)
+	_park_warm_lock.lock()
+	var buf: PackedFloat32Array = _park_warm.get(signature, PackedFloat32Array())
+	_park_warm.erase(signature)
+	_park_warm_lock.unlock()
+	if buf.is_empty():
+		buf = _render_park(action.row, action.cell, action.length, action.progress, int(action.get("skip", 0)), live_key, step_len, theme)
+	if _park_pcm.size() >= 64:
+		_park_pcm.clear()
+	_park_pcm[signature] = buf
+	return buf
+
+
+# A synth cell does not depend on the grid's step, so a tempo change between its booking and its
+# beat keeps its buffer; a cell that plays a baked sound does.
+static func _park_signature(action: Dictionary, live_key: int, step: int) -> String:
+	var row: Dictionary = action.row
+	var stepped: bool = row.get("stinger", false) or row.has("sound")
+	return str([row, action.cell, action.length, action.progress, live_key, step if stepped else 0, int(action.get("skip", 0))])
+
+
+static func _render_park(row: Dictionary, cell: int, length: int, progress: float, skip: int, live_key: int, step: int, theme_now: int) -> PackedFloat32Array:
 	var buf: PackedFloat32Array
 	if row.get("stinger", false):
-		buf = SfxBank.samples_at(row.sound, step_len, 0, theme)
-		if int(action.get("skip", 0)) > 0:
-			buf = Synth.declick(buf.slice(int(action.skip)))
+		buf = SfxBank.samples_at(row.sound, step, 0, theme_now)
+		if skip > 0:
+			buf = Synth.declick(buf.slice(skip))
 	elif row.has("sound"):
-		buf = SfxBank.samples_at(row.sound, step_len, live_key, theme)
+		buf = SfxBank.samples_at(row.sound, step, live_key, theme_now)
 	else:
-		var n: int = action.length
-		var midi: int = row.notes[action.cell] + live_key
+		var n: int = length
+		var midi: int = row.notes[cell] + live_key
 		match row.voice:
 			"lead": buf = Synth.lead(midi, n)
 			"brass": buf = Synth.brass(midi, n)
@@ -1342,11 +1439,12 @@ func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
 			"steam_whistle":
 				buf = Synth.buffer(n)
 				var phase := 0.0
-				var hz := Harmony.hz(midi)
+				var step_hz := TAU * Harmony.hz(midi) / Harmony.RATE
+				var bend := Harmony.ratio(2)
 				var rng := RandomNumberGenerator.new()
 				rng.seed = 0x57EA
 				for i in n:
-					phase += TAU * hz * lerpf(1.0, Harmony.ratio(2), float(i) / n) / Harmony.RATE
+					phase += step_hz * lerpf(1.0, bend, float(i) / n)
 					buf[i] = sin(phase) + 0.12 * rng.randf_range(-1.0, 1.0)
 			_: buf = Synth.note(row.voice, midi).slice(0, n)
 		if row.has("accent"):
@@ -1354,11 +1452,8 @@ func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
 		buf = Synth.normalize(buf)
 		if row.rise:
 			for i in buf.size():
-				buf[i] *= lerpf(0.25, 1.0, float(action.progress) + float(i) / maxi(1, buf.size()) / row.notes.size())
+				buf[i] *= lerpf(0.25, 1.0, progress + float(i) / maxi(1, buf.size()) / row.notes.size())
 		buf = Synth.declick(buf)
-	if _park_pcm.size() >= 64:
-		_park_pcm.clear()
-	_park_pcm[signature] = buf
 	return buf
 
 
@@ -1409,6 +1504,44 @@ func render(frames: int) -> void:
 func _add_action(at: int, action: Dictionary) -> void:
 	action["at"] = at
 	_actions.append(action)
+	if action["type"] == "park_cue":
+		_warm_park(action, at)
+
+
+# Like _warm_stinger: render the cell on a worker so its beat only plays it. A cell due now (a riser's
+# first, booked as its event is announced) renders there too and starts late, at the frame it would have
+# reached (_late_cell_waits): stage 6 announces six events at once, and their first cells rendered in one
+# frame took 13 to 73 ms each on the main thread (PR #372).
+func _warm_park(action: Dictionary, at: int) -> void:
+	if not warm_stingers:
+		return
+	if at <= clock:
+		action["late"] = true
+	var shift: int = key if grid == null else grid.key_at(at)
+	var signature := _park_signature(action, shift, step_len)
+	if _park_pcm.has(signature):
+		return
+	var row: Dictionary = action.row.duplicate(true)
+	var cell: int = action.cell
+	var length: int = action.length
+	var progress: float = action.progress
+	var skip := int(action.get("skip", 0))
+	var step := step_len
+	var theme_now := theme
+	# A cell due within a second goes ahead of the band's low-priority renders: behind them a late cell lost up
+	# to its whole length, and the next cells held the main thread 0.2 to 0.5 s (cloud, stage 6 risers).
+	var urgent := at - clock < Harmony.RATE
+	_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
+	if _park_tasks.size() >= 64:
+		_park_tasks.clear()
+	_park_tasks[signature] = WorkerThreadPool.add_task(func():
+		var buf := _render_park(row, cell, length, progress, skip, shift, step, theme_now)
+		_park_warm_lock.lock()
+		if _park_warm.size() >= 64:
+			_park_warm.clear()
+		_park_warm[signature] = buf
+		_park_warm_lock.unlock(), urgent, "park cue warm")
+	_stinger_tasks.append(_park_tasks[signature])
 
 
 func _to_next_action() -> int:
@@ -1417,6 +1550,9 @@ func _to_next_action() -> int:
 		var wait: int = action["at"] - clock
 		if wait > 0:
 			nearest = mini(nearest, wait)
+		elif action.get("late", false):
+			# A late cell waiting on its worker is checked every LATE_CHECK frames, so it loses little of its head.
+			nearest = mini(nearest, LATE_CHECK)
 	return nearest
 
 
@@ -1427,10 +1563,23 @@ func _run_due() -> void:
 			# Keyed cues on a step boundary hear the committed bar key.
 			if action["type"] in ["door_tick", "park_cue"] and _step_clock != clock and posmod(clock - grid_origin, step_len) == 0:
 				continue
+			if action.get("late", false) and _late_cell_waits(action):
+				continue
 			due.append(action)
 	for action in due:
 		_actions.erase(action)
 		_run(action)
+
+
+# A cell booked late waits for its worker while the worker is still on it and the cell has frames left to
+# play; past that, or with no worker for the key it now plays in, it renders here as before.
+func _late_cell_waits(action: Dictionary) -> bool:
+	if clock - int(action.at) >= int(action.length):
+		return false
+	var live_key: int = key if grid == null else grid.key_at(clock)
+	var task: int = _park_tasks.get(_park_signature(action, live_key, step_len), -1)
+	# A task no longer in _stinger_tasks has been waited on (_settle_task), and its ID is spent.
+	return task >= 0 and _stinger_tasks.has(task) and not WorkerThreadPool.is_task_completed(task)
 
 
 func _on_step() -> void:
@@ -1554,6 +1703,9 @@ func _run(action: Dictionary) -> void:
 			var row: Dictionary = action.row
 			var db := SfxBank.trim_db(row.trim_sound) + float(action.priority_db)
 			var voice := _start(buf, buf.size(), -1, db_to_linear(db), 0.0, true)
+			# A cell that waited for its worker plays from where it would be by now, so the cells after it still land.
+			if action.get("late", false):
+				voice.pos = clampi(clock - int(action.at), 0, voice.end)
 			voice.park_owned = true
 			voice.park_owner = action.owner
 			voice.park_rise = row.rise

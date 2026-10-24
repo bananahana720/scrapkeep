@@ -3,7 +3,7 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { WIN_PROOFS, playProofTries, proofLibraries, releaseGateFailures, winProofBotArgs, winProofFailures, winProofLine } from "../sketch-export.mjs";
+import { WIN_PROOFS, playProofTries, proofLibraries, releaseGateFailures, winProofBotArgs, winProofFailures, winProofLine, winProofTimeoutMs } from "../sketch-export.mjs";
 
 // node scripts/cloud/export-headless.mjs [--win-proof]: the part of npm run sketch:export a cloud
 // container can run. It imports, runs the release gate, exports the "Linux x64" preset, boots it
@@ -90,7 +90,7 @@ if (winProof) {
       ],
       {
         cwd: proofDir,
-        timeout: 900_000,
+        timeout: winProofTimeoutMs(proof),
         env: {
           ...process.env,
           XDG_DATA_HOME: path.join(state, "data"),

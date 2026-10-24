@@ -115,6 +115,9 @@ const TRIM_DB := {
 	# v3 W13 reward ceremony: the rarity tick and bell, the card's plate, the crate's build
 	# and the burst's resolve.
 	"rarity_tick": -9.0, "rarity_bell": -5.0, "reveal_clank": -4.0, "ceremony_build": -3.0, "ceremony_resolve": -1.0,
+	# IL-01 grey panels: the ratchet tick a panel bolts on with, the phrase note a pickup streak
+	# climbs (keyed, pitched by the caller), and the pinball jackpot over a reel or dunk drop.
+	"panel_ratchet": -9.0, "panel_note": -8.0, "panel_jackpot": -5.0, "panel_cache": -16.0,
 	# v3 AU2 bank: bets, secrets, allies, opt-in fights, the escalation's ladder and the
 	# ride's return (design-v3/AUDIO-V3.md sections 4, 5, 8, 11).
 	"bet_roll": -7.0, "bet_clunk": -4.0, "bet_crack": -2.0, "bet_refusal": -6.0,
@@ -519,16 +522,19 @@ static func hum_stream() -> AudioStreamWAV:
 static func samples(id: String) -> PackedFloat32Array:
 	if _cache_has(_samples, id):
 		return _cache_get(_samples, id)
-	return _cache_put(_samples, id, Synth.normalize(_bake(id), 0.9))
+	# A keyed bake on a worker sets the shared key and theme; the plain bake waits it out.
+	_lock.lock()
+	var buf: PackedFloat32Array = _cache_get(_samples, id) if _cache_has(_samples, id) else _cache_put(_samples, id, Synth.normalize(_bake(id), 0.9))
+	_lock.unlock()
+	return buf
 
 
 # A grid stinger baked on another tempo's grid, for the boss tempo. Cues that are not
 # written on the grid are the same at any tempo.
 static func samples_at(id: String, step: int, shift := 0, theme := 0) -> PackedFloat32Array:
-	var themed := id in THEMED
-	if (step == Harmony.STEP or not STINGER_BEATS.has(id)) and shift == 0 and (not themed or theme == 0):
+	if _plain(id, step, shift, theme):
 		return samples(id)
-	var key := "%s@%d@%d@%d" % [id, step if STINGER_BEATS.has(id) else Harmony.STEP, shift, theme if themed else 0]
+	var key := _key_at(id, step, shift, theme)
 	if _cache_has(_samples, key):
 		return _cache_get(_samples, key)
 	# A worker warms keyed variants while the band may ask for one: one bake at a time.
@@ -556,6 +562,19 @@ static func samples_at(id: String, step: int, shift := 0, theme := 0) -> PackedF
 		_theme = 0
 	_lock.unlock()
 	return _cache_get(_samples, key)
+
+
+# True when samples_at would return without a bake: the startup bank's own variant, or one already made.
+static func baked_at(id: String, step: int, shift := 0, theme := 0) -> bool:
+	return _plain(id, step, shift, theme) or _cache_has(_samples, _key_at(id, step, shift, theme))
+
+
+static func _plain(id: String, step: int, shift: int, theme: int) -> bool:
+	return (step == Harmony.STEP or not STINGER_BEATS.has(id)) and shift == 0 and (not id in THEMED or theme == 0)
+
+
+static func _key_at(id: String, step: int, shift: int, theme: int) -> String:
+	return "%s@%d@%d@%d" % [id, step if STINGER_BEATS.has(id) else Harmony.STEP, shift, theme if id in THEMED else 0]
 
 
 # Every tonal recipe reads pitches through these, so a keyed bake transposes it whole.
@@ -780,6 +799,19 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_cut(_n("bell", 74), 0.16), 0, 1.0], [_cut(_n("brass", 62), 0.09), 0, 0.45], [_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.15]])
 		"part_get":
 			return _arpeggio([74, 77, 81, 86], 0.05, "bell", 0.8)
+		"panel_ratchet":
+			# Three pawl clicks over a short steel ring: a socket wrench seating a plate.
+			return _mix([[_noise(0.012, 5200.0, 5200.0, 260.0), 0, 0.7], [_noise(0.012, 4600.0, 4600.0, 260.0), Synth.seconds(0.035), 0.6],
+				[_noise(0.012, 4000.0, 4000.0, 260.0), Synth.seconds(0.07), 0.5], [_cut(_n("mallet", 86), 0.08), Synth.seconds(0.07), 0.35]])
+		"panel_note":
+			return _cut(_n("mallet", 74), 0.22)
+		"panel_jackpot":
+			return _arpeggio([74, 81, 86, 93], 0.04, "bell", 0.9)
+		"panel_cache":
+			# A rib cache's call: two high bell notes, then rest, one 1.86 s bar at 129 BPM, looped.
+			var chime := _mix([[_cut(_n("bell", 86), 0.3), 0, 0.8], [_cut(_n("bell", 93), 0.4), Synth.seconds(0.233), 0.6]])
+			chime.resize(Synth.seconds(1.86))
+			return chime
 		"beacon_hum":
 			return _hum()
 		"gate_through":

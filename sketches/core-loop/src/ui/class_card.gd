@@ -93,6 +93,9 @@ class Swatch extends Control:
 			clicked.emit()
 			accept_event()
 
+# Reduced motion (Game.set_reduced_motion keeps it current): a locked card no longer shakes.
+static var reduced_motion := false
+
 var def: Resource
 var key := ""
 # How open the card is, 0 to 1, eased toward has_focus().
@@ -675,7 +678,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	_shake = maxf(0.0, _shake - delta)
-	rotation = sin(_shake * 70.0) * 0.035 * (_shake / SHAKE)
+	rotation = 0.0 if reduced_motion else sin(_shake * 70.0) * 0.035 * (_shake / SHAKE)
 	openness = move_toward(openness, 1.0 if is_open() else 0.0, delta * RATE * (0.35 + openness))
 	if _swatch != null:
 		_swatch.mouse_filter = Control.MOUSE_FILTER_STOP if openness > 0.5 else Control.MOUSE_FILTER_IGNORE

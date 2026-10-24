@@ -19,27 +19,27 @@
  "silent_db": -80.0,
  "sources": {
   "main": {
-   "take": "event-arena-s4101.wav",
-   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/event-arena-s4101.wav",
-   "stretched": "/home/andrew/scratch/w16/tunes/stretched/event_arena.wav",
-   "bpm_before": 129.01,
-   "bpm_after": 129.0,
+   "take": "anthem-arena-s4203.wav",
+   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/anthem-arena-s4203.wav",
+   "stretched": "/home/andrew/scratch/w18/anthem-pack2/stretched/event_arena.wav",
+   "bpm_before": 145.01,
+   "bpm_after": 145.0,
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/event_arena/drums.wav",
-     "sha256": "7fdec6836a1e00d013749597c2c35501b8fac418c87da497bb24adaa4cb110a1"
+     "path": "/home/andrew/scratch/w18/anthem-pack2/stems/htdemucs/event_arena/drums.wav",
+     "sha256": "618d286c91de180898855d04330987a86ac29a3fd22a26065c24578722efcc88"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/event_arena/bass.wav",
-     "sha256": "c5073a9c9941793e9fc2b04d99495f3b1ab550a32a9ae3e120afabb52f0ca412"
+     "path": "/home/andrew/scratch/w18/anthem-pack2/stems/htdemucs/event_arena/bass.wav",
+     "sha256": "c0c27e1e53f19a721b5eaf9e9df2bb29901484d01105496b745ae95f3d8e7ef0"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/event_arena/other.wav",
-     "sha256": "676216f0f1a0d50666ebfbb96c664bb9ce904b75a7277b43a14fb89fbafee1f4"
+     "path": "/home/andrew/scratch/w18/anthem-pack2/stems/htdemucs/event_arena/other.wav",
+     "sha256": "4a1bd810ac00c4d1712a3ba1f5954d3b0407ceb1e0181ff9016dcf74776013ac"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/event_arena/vocals.wav",
-     "sha256": "af8c76fb8b3e5f851e25cf7a75c49185bbff5c71476af6eb88b76f3df7617c65"
+     "path": "/home/andrew/scratch/w18/anthem-pack2/stems/htdemucs/event_arena/vocals.wav",
+     "sha256": "5e6f2a0f1d99cac5505f7d932521897df88856f0e9b526a34fc804261fa1379d"
     }
    },
    "note": "htdemucs; vocals summed into other"
@@ -49,19 +49,19 @@
   "main": {
    "parent": "single",
    "take": "event-arena",
-   "source_start": 328192,
-   "take_start": 328192,
-   "bpm": 129,
-   "beat": 20512,
-   "bar": 82048,
+   "source_start": 310144,
+   "take_start": 310144,
+   "bpm": 145,
+   "beat": 18248,
+   "bar": 72992,
    "beats_per_bar": 4,
    "bars": 16,
    "entry": 4096,
-   "exit": 1316864,
+   "exit": 1171968,
    "loop": true,
    "loop_offset": 4096,
    "loop_to_bar": 1,
-   "sample_count": 1316864,
+   "sample_count": 1171968,
    "key": "D",
    "key_offset": 0,
    "files": {
@@ -181,11 +181,12 @@
  },
  "breath_default": "hard",
  "cuts": "measured-beat-phase",
+ "whole": false,
  "timing_verified": false,
  "gain_db": 0.2,
  "measured": {
   "lufs": -16.0,
-  "true_peak": -1.7,
+  "true_peak": -1.2,
   "note": "summed stems before Ogg encode"
  }
 }

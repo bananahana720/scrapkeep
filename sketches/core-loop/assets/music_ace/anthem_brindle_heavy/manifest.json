@@ -1,0 +1,192 @@
+{
+ "format": 1,
+ "theme": "anthem_brindle_heavy",
+ "bank": "single",
+ "flat": true,
+ "rate": 44100,
+ "key": "D",
+ "key_offset": 0,
+ "stems": [
+  "drums",
+  "bass",
+  "other"
+ ],
+ "level_db": 0.0,
+ "pre_roll": 4096,
+ "post_roll": 1024,
+ "loop_join": 441,
+ "join_ms": 10.0,
+ "silent_db": -80.0,
+ "sources": {
+  "main": {
+   "take": "anthem-brindle-p2-s4401.wav",
+   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/anthem-brindle-p2-s4401.wav",
+   "stretched": "/home/andrew/scratch/w18/anthem-pack3/stretched/anthem_brindle_heavy.wav",
+   "bpm_before": 150.0,
+   "bpm_after": 150.0,
+   "stems": {
+    "drums": {
+     "path": "/home/andrew/scratch/w18/anthem-pack3/stems/htdemucs/anthem_brindle_heavy/drums.wav",
+     "sha256": "9251f89244c0da5775a3d25f6057e604ab157b00ccb24e6d189986f316dad32b"
+    },
+    "bass": {
+     "path": "/home/andrew/scratch/w18/anthem-pack3/stems/htdemucs/anthem_brindle_heavy/bass.wav",
+     "sha256": "93d50c587aa88828775d63684ae0243b9b3db933cbfa803fe35c24ee42698fd5"
+    },
+    "other": {
+     "path": "/home/andrew/scratch/w18/anthem-pack3/stems/htdemucs/anthem_brindle_heavy/other.wav",
+     "sha256": "60f01338f88ad2b4290fe63285bc9ce5e95d2ec894c865f362b8ab6a5bfde60b"
+    },
+    "vocals": {
+     "path": "/home/andrew/scratch/w18/anthem-pack3/stems/htdemucs/anthem_brindle_heavy/vocals.wav",
+     "sha256": "613260aad7974867806dc2085546dcc66600083a5cdcce25947454210ab61c5d"
+    }
+   },
+   "note": "htdemucs; vocals summed into other"
+  }
+ },
+ "clips": {
+  "main": {
+   "parent": "single",
+   "take": "anthem-brindle-heavy",
+   "source_start": 294336,
+   "take_start": 294336,
+   "bpm": 150,
+   "beat": 17640,
+   "bar": 70560,
+   "beats_per_bar": 4,
+   "bars": 16,
+   "entry": 4096,
+   "exit": 1133056,
+   "loop": true,
+   "loop_offset": 4096,
+   "loop_to_bar": 1,
+   "sample_count": 1133056,
+   "key": "D",
+   "key_offset": 0,
+   "files": {
+    "drums": "main.drums.ogg",
+    "bass": "main.bass.ogg",
+    "other": "main.other.ogg"
+   }
+  }
+ },
+ "sections": {
+  "main": {
+   "clip": "main",
+   "game": "anthem-brindle-heavy",
+   "enter": "bar",
+   "phase": "start",
+   "profile": "full"
+  }
+ },
+ "set_piece": [],
+ "profiles": {
+  "full": {
+   "drums": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   },
+   "bass": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   },
+   "other": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   }
+  },
+  "lounge": {
+   "drums": {
+    "volume_db": -12.0,
+    "lowpass_hz": null
+   },
+   "bass": {
+    "volume_db": -4.0,
+    "lowpass_hz": null
+   },
+   "other": {
+    "volume_db": 0.0,
+    "lowpass_hz": null
+   }
+  }
+ },
+ "breath": {
+  "raw": {
+   "stems": {
+    "drums": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "bass": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    }
+   },
+   "ramp_in_ms": 8.0,
+   "ramp_out_ms": 8.0,
+   "source": "the take as ACE played it: every stem at 0 dB"
+  },
+  "hard": {
+   "stems": {
+    "drums": {
+     "volume_db": -80.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "bass": {
+     "volume_db": -80.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": -8.0,
+     "lowpass_hz": 900,
+     "lowpass_order": 2
+    }
+   },
+   "ramp_in_ms": 8.0,
+   "ramp_out_ms": 8.0,
+   "source": "round2/automation/open.json"
+  },
+  "gentle": {
+   "stems": {
+    "drums": {
+     "volume_db": -12.0,
+     "lowpass_hz": 2000,
+     "lowpass_order": 2
+    },
+    "bass": {
+     "volume_db": -6.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    },
+    "other": {
+     "volume_db": 0.0,
+     "lowpass_hz": null,
+     "lowpass_order": null
+    }
+   },
+   "ramp_in_ms": 60.0,
+   "ramp_out_ms": 20.0,
+   "source": "round2/automation/open-gentle.json"
+  }
+ },
+ "breath_default": "hard",
+ "cuts": "measured-beat-phase",
+ "whole": false,
+ "timing_verified": false,
+ "gain_db": 0.4,
+ "measured": {
+  "lufs": -16.0,
+  "true_peak": -1.6,
+  "note": "summed stems before Ogg encode"
+ }
+}

@@ -4,6 +4,7 @@ const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
 const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const Anchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const Word := preload("res://src/presentation/world_fx/world_fx_word.gd")
+const Grain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 
 # World and event effects (WORLD-FX.md): the runtime. The game installs one (hook) that swaps its
 # air to each stage's world on stage entry and rests it on the title, summary and death screens.
@@ -18,6 +19,19 @@ const RANK_SECONDS := 0.25
 const BURST_POOL := 2
 # Flow states with no stage on screen: the air rests there.
 const RESTING := ["title", "class_select", "summary", "dead", "victory"]
+# The ball's wake (Specs set "spill_wake"): how often it reads the water under the ball, how high over
+# the surface the ball's centre still rides in it, and the speeds that start the wake, fill it, and
+# splash on entry (a fast roll in or a drop).
+const WAKE_SET := "spill_wake"
+# The worlds whose water throws the wake (the Spillway's); the others keep their air budget whole.
+const WAKE_WORLDS := [1]
+const WAKE_EVERY := 1.0 / 15.0
+const WAKE_RIDE_M := 1.6
+const WAKE_SPEED := 3.0
+const WAKE_FULL := 16.0
+const SPLASH_SPEED := 7.0
+const SPLASH_DROP := 4.0
+const SPLASH_COOL := 0.5
 
 static var current: Node3D
 # The saved reduced-motion setting, read on install; Game.set_reduced_motion keeps it current.
@@ -37,6 +51,12 @@ var _next := {}
 var _rank_wait := 0.0
 var _relay: Node3D
 var _relay_quarters := 0
+var wake: Array[GPUParticles3D] = []
+var wet := false
+var _ctx
+var _wake_wait := 0.0
+var _last_ball := Vector3.INF
+var _splash_cool := 0.0
 
 
 static func install(parent: Node, world_index: int, is_low := false, is_reduced := false) -> Node3D:
@@ -84,6 +104,8 @@ func _exit_tree() -> void:
 
 func _ready() -> void:
 	_build_ambient()
+	for id in Specs.SETS[WAKE_SET]:
+		wake.append(_add(id))
 
 
 func _build_ambient() -> void:
@@ -106,6 +128,9 @@ func enter_world(world_index: int) -> void:
 
 
 func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
+	_ctx = ctx
+	_last_ball = Vector3.INF
+	set_run_seed(int(ctx.run.run_seed) if ctx.get("run") != null else 0)
 	enter_world(ctx.stages.world_of(stage))
 	set_overlay("")
 	if is_instance_valid(_relay):
@@ -117,6 +142,34 @@ func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 
 func _on_flow_changed(state: String) -> void:
 	set_resting(RESTING.has(state))
+	# Off a run (title, class select) the effects wear their authored look; a summary keeps its run's.
+	if state in ["title", "class_select"]:
+		set_run_seed(0)
+
+
+# A run's grain (world_fx_grain.gd): every emitter this WorldFx owns and every live anchor re-rolls its
+# dials from the new seed; the same seed again changes nothing.
+func set_run_seed(seed: int) -> void:
+	if seed == Grain.run_seed:
+		return
+	Grain.run_seed = seed
+	for p in _owned():
+		Grain.apply(p, seed)
+	for ref in Anchor.live:
+		var a = ref.get_ref()
+		if a != null:
+			a.set_grain(seed)
+	_sync()
+
+
+func _owned() -> Array[GPUParticles3D]:
+	var out: Array[GPUParticles3D] = []
+	out.append_array(ambient)
+	out.append_array(overlay)
+	out.append_array(wake)
+	for id in _bursts:
+		out.append_array(_bursts[id])
+	return out
 
 
 # Resting stops new air and hides what is in it, so a menu never shows a stage's dust.
@@ -125,6 +178,11 @@ func set_resting(on: bool) -> void:
 	visible = not on
 	for p in ambient + overlay:
 		p.emitting = not on and p.amount_ratio > 0.0
+	if on:
+		for p in wake:
+			p.emitting = false
+		wet = false
+		_last_ball = Vector3.INF
 
 
 # GraphicsPreset calls this on bind and on every preset change.
@@ -220,12 +278,12 @@ func play(hook: String, at: Vector3, tint := Color.TRANSPARENT, size := 1.0) -> 
 		return
 	for id in row["effects"]:
 		var p := _burst(id)
-		var share := Kit.share(Specs.SPECS[id], low, reduced_motion)
+		var share := Grain.share(p, low, reduced_motion)
 		if share <= 0.0:
 			continue
 		p.amount_ratio = share
 		p.global_transform = Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * size), at)
-		p.set_instance_shader_parameter("tint", tint if tint.a > 0.0 else Color.WHITE)
+		p.set_instance_shader_parameter("tint", tint if tint.a > 0.0 else Grain.tint(id, p.get_meta("grain", {})))
 		p.restart()
 		p.emitting = true
 	if row["word"] != "" and not reduced_motion:
@@ -235,13 +293,14 @@ func play(hook: String, at: Vector3, tint := Color.TRANSPARENT, size := 1.0) -> 
 # Live particles this WorldFx can hold at once: ambient plus overlay plus the slotted anchors.
 func live_ceiling() -> int:
 	var total := 0
-	for p in ambient + overlay:
+	for p in ambient + overlay + (wake if WAKE_WORLDS.has(world) else []):
 		total += Kit.cost(p.get_meta("world_fx"), low, reduced_motion)
 	return total
 
 
 func _add(id: String) -> GPUParticles3D:
 	var p := Kit.build(id)
+	Grain.apply(p, Grain.run_seed)
 	add_child(p)
 	return p
 
@@ -260,7 +319,7 @@ func _burst(id: String) -> GPUParticles3D:
 
 func _sync() -> void:
 	for p in ambient + overlay:
-		p.amount_ratio = Kit.share(Specs.SPECS[p.get_meta("world_fx")], low, reduced_motion)
+		p.amount_ratio = Grain.share(p, low, reduced_motion)
 		p.emitting = p.amount_ratio > 0.0 and not resting
 	for ref in Anchor.live:
 		var a = ref.get_ref()
@@ -270,6 +329,7 @@ func _sync() -> void:
 
 func _process(delta: float) -> void:
 	_follow()
+	_step_wake(delta)
 	_rank_wait -= delta
 	if _rank_wait <= 0.0:
 		_rank_wait = RANK_SECONDS
@@ -311,7 +371,8 @@ func _rank() -> void:
 	var rows: Array = []
 	for ref in Anchor.live:
 		var a: Node3D = ref.get_ref()
-		if a.is_inside_tree():
+		# A hidden anchor (foam over drained water, a parked stage) draws nothing, so it takes no slot.
+		if a.is_visible_in_tree():
 			rows.append([a.global_position.distance_to(eye), a])
 	rows.sort_custom(func(x, y): return x[0] < y[0])
 	var slots := Specs.ANCHOR_SLOTS
@@ -321,3 +382,46 @@ func _rank() -> void:
 		a.set_range(row[0], within and slots > 0)
 		if within:
 			slots -= 1
+
+
+# The ball's wake, read WAKE_EVERY from the terrain's material under the ball (water where a flood
+# stands over the ground). A roll through water throws spray back off the ball and leaves foam rings;
+# a fast entry or a drop into it splashes once (the ball_splash hook: crown, ring, SPLOSH).
+func _step_wake(delta: float) -> void:
+	_splash_cool -= delta
+	_wake_wait -= delta
+	if _wake_wait > 0.0:
+		return
+	var dt := WAKE_EVERY - _wake_wait
+	_wake_wait = WAKE_EVERY
+	if resting or not is_instance_valid(_ball) or _ctx == null or _ctx.get("terrain") == null or not _ctx.terrain.has_method("material_at"):
+		_last_ball = Vector3.INF
+		return
+	var ball: Vector3 = _ball.ball_position() if _ball.has_method("ball_position") else _ball.global_position
+	var under: Dictionary = _ctx.terrain.material_at(ball)
+	var water := float(under["surface_y"]) if under.get("material", "") == "water" else NAN
+	var velocity := Vector3.ZERO
+	# A respawn or a stage swap is a jump, not a speed.
+	if _last_ball != Vector3.INF and dt > 0.0 and ball.distance_to(_last_ball) < 30.0:
+		velocity = (ball - _last_ball) / dt
+	_last_ball = ball
+	steer_wake(ball, water, velocity)
+
+
+# One wake step: water is the surface height under the ball, NAN where it is dry.
+func steer_wake(ball: Vector3, water: float, velocity: Vector3) -> void:
+	var was := wet
+	wet = WAKE_WORLDS.has(world) and not is_nan(water) and ball.y - water <= WAKE_RIDE_M
+	var planar := Vector3(velocity.x, 0.0, velocity.z)
+	var speed := planar.length()
+	if wet and not was and not resting and _splash_cool <= 0.0 and (speed >= SPLASH_SPEED or velocity.y <= -SPLASH_DROP):
+		_splash_cool = SPLASH_COOL
+		play("ball_splash", Vector3(ball.x, water, ball.z), Color.TRANSPARENT, clampf(maxf(speed, -velocity.y) / WAKE_FULL, 0.6, 1.3))
+	var on := wet and speed >= WAKE_SPEED and not resting
+	for p in wake:
+		if on:
+			p.global_transform = Transform3D(Basis.IDENTITY, Vector3(ball.x, water + 0.1, ball.z))
+			var back := -planar / speed
+			(p.process_material as ParticleProcessMaterial).direction = (back + Vector3.UP * 0.8).normalized()
+			p.amount_ratio = Grain.share(p, low, reduced_motion) * clampf(speed / WAKE_FULL, 0.3, 1.0)
+		p.emitting = on and p.amount_ratio > 0.0

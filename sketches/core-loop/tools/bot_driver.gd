@@ -397,6 +397,9 @@ var late_offer_policy := ""
 # the game's own set_stakes before it rolls in, works it to its pay, then goes on to the Warden.
 # 0 leaves every code path below untouched.
 var relay_stake := 0
+# The pacing lab's switch (bot_run --explore-by=<s>, scripts/pacing-check.mjs): the stage second the
+# completionist stops its optional rolling for the Warden. Left at ENGAGE_BY unless the flag is given.
+var engage_by := ENGAGE_BY
 const RELAY_ARM_SECONDS := 150.0
 var _relay_clock := 0.0
 var _relay_closed := {}
@@ -831,7 +834,7 @@ func _lap_roll() -> void:
 
 
 # The stall limit now. A sweep's own stage_limit is kept; the default one stretches for the
-# Mind's crown and for the gates after a break.
+# Mind's crown, for the gates after a break, and by however far --explore-by moved engage_by.
 func _stage_cap() -> float:
 	if stage_limit != STAGE_LIMIT:
 		return stage_limit
@@ -841,7 +844,7 @@ func _stage_cap() -> float:
 	var broken = _note.get("warden_broken_s")
 	if broken != null:
 		cap = maxf(stage_limit, float(broken) + GATE_LIMIT)
-	return cap
+	return cap + maxf(0.0, engage_by - ENGAGE_BY)
 
 
 # A pending hot-wire offer is answered the tick it is seen, by one rule: the completionist
@@ -1832,7 +1835,7 @@ func _activity_rushed() -> bool:
 	var world = game.world
 	if world == null or world.activities == null or world.activities.sites.is_empty():
 		return false
-	return game.run.stage_time > ENGAGE_BY
+	return game.run.stage_time > engage_by
 
 
 # A site's key for the bot's timers and skips: its id, or "find:<id>" for a field find, so the stage's
@@ -2718,6 +2721,21 @@ func _climbing(ball: Vector3, at: Vector3) -> bool:
 	return not _fight_climb.is_empty() and _ground_point(at.x, at.z).y - _ground_point(ball.x, ball.z).y > CLIMB_LEVEL
 
 
+# Whether the straight line from the ball to a point drops more than LEVEL_BAND below the ground at
+# both ends: a ball rolled across falls in and may not climb out, so it takes the climb route, which
+# goes round a trough whose walls are steeper than it climbs.
+# The sinkhole's gate slot stands across its 20 m bowl from the Warden (seed 20 skipper, #397).
+func _dips(ball: Vector3, at: Vector3) -> bool:
+	var terrain = game.ctx.terrain
+	var low := minf(terrain.height(ball.x, ball.z), terrain.height(at.x, at.z)) - LEVEL_BAND
+	var steps := int(_flat(ball, at) / CLIMB_STEP)
+	for k in range(1, steps):
+		var p := ball.lerp(at, float(k) / steps)
+		if terrain.height(p.x, p.z) < low:
+			return true
+	return false
+
+
 # The next point on the climb to a fight target above the ball, or the target when no way up is found.
 func _fight_way_up(ball: Vector3, at: Vector3, delta: float) -> Vector3:
 	if _fight_climb_tick != ticks:
@@ -3190,8 +3208,9 @@ func _to_gate(delta: float) -> void:
 	if side < 2.5 and along < 1.0:
 		target = at + facing * 10.0
 	# Off the gates' island (a Highdraft beacon top), the straight line meets its cliff: climb back.
+	# Off the islands, a straight line across a trough takes the same way round (_dips).
 	var ball_at: Vector3 = game.player.ball_position()
-	if _climbing(ball_at, at):
+	if _climbing(ball_at, at) or (not _island_gates and _dips(ball_at, at)):
 		if _gate_on_top and _island_gates:
 			_gate_on_top = false
 			_gate_falls += 1
