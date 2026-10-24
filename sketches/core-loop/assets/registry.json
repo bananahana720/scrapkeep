@@ -29788,6 +29788,72 @@
    "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
   },
   {
+   "id": "chaser_clips",
+   "path": "res://assets/models/world_one/clips/chaser_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "jolt_layer_clips",
+   "path": "res://assets/models/world_one/clips/jolt_layer_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "lobber_clips",
+   "path": "res://assets/models/world_one/clips/lobber_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "mag_trapper_clips",
+   "path": "res://assets/models/world_one/clips/mag_trapper_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "plated_brute_clips",
+   "path": "res://assets/models/world_one/clips/plated_brute_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "winch_drone_clips",
+   "path": "res://assets/models/world_one/clips/winch_drone_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
    "path": "res://assets/models/world_one/clutter_kit.glb",
    "class": "clutter",
    "ships": true,
@@ -31021,6 +31087,7 @@
   "cenote_pool",
   "cenote_pool_detail1",
   "cenote_pool_detail2",
+  "chaser_clips",
   "cliff_dwelling_row",
   "cliff_dwelling_row_detail1",
   "cliff_dwelling_row_detail2",
@@ -31958,6 +32025,7 @@
   "isle_keel_rib",
   "isle_ride_wash_west",
   "isle_tram_head",
+  "jolt_layer_clips",
   "kicker_wedge",
   "kicker_wedge_detail1",
   "kicker_wedge_detail2",
@@ -32070,6 +32138,8 @@
   "liner_west_wash",
   "liner_west_wash_detail1",
   "liner_west_wash_detail2",
+  "lobber_clips",
+  "mag_trapper_clips",
   "mesa_lip_kicker",
   "mesa_lip_kicker_12x4x300",
   "mesa_lip_kicker_12x4x300_detail1",
@@ -32210,6 +32280,7 @@
   "plate_kicker_8x3x20",
   "plate_kicker_8x3x20_detail1",
   "plate_kicker_8x3x20_detail2",
+  "plated_brute_clips",
   "primer_coil",
   "primer_coil__escape_rail",
   "primer_coil__escape_vent",
@@ -32389,6 +32460,7 @@
   "weir_apron_detail2",
   "weir_gatehouse",
   "weir_gatehouse_detail1",
-  "weir_gatehouse_detail2"
+  "weir_gatehouse_detail2",
+  "winch_drone_clips"
  ]
 }
