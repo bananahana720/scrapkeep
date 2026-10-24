@@ -5,6 +5,7 @@ const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const ChurnGround := preload("res://src/combat/churn_ground.gd")
 const SiltBoil := preload("res://src/combat/silt_boil.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const Director := preload("res://src/world/director.gd")
 const T := preload("res://tests/support/t.gd")
 
 # src/combat/pack_pressure.gd and its two ground systems. Without --pack-pressure every dial reads its
@@ -48,6 +49,9 @@ class FakeFlow:
 	func in_play() -> bool:
 		return true
 
+	func in_stage() -> bool:
+		return true
+
 
 class FakeTerrain:
 	func height(_x: float, _z: float) -> float:
@@ -70,6 +74,7 @@ class FakeCtx:
 
 class FakeEnemy extends Node3D:
 	var kind := "chaser"
+	var last_damage_source := ""
 	var half_height := 1.5
 	var knocked := 0
 	var taken := 0.0
@@ -93,6 +98,7 @@ func _initialize() -> void:
 	ChallengeDials.reset()
 	_identity()
 	_presets()
+	_extras()
 	await _lead()
 	_churn()
 	await _boils()
@@ -112,13 +118,30 @@ func _presets() -> void:
 	var spec := PackPressure.tune_spec("a+d+Q", unknown)
 	_t.eq("04 an unknown letter is reported", unknown, ["Q"])
 	var parsed := ChallengeDials.parse(spec)
-	_t.eq("05 A+D names the lead and churn dials", parsed.keys().size(), 2)
+	_t.eq("05 A+D names the lead and churn dials", parsed.keys(), ["pack.lead_by_stage", "ground.churn_by_stage"])
 	_t.eq("06 the lead fills world 1 only", parsed["pack.lead_by_stage"], [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
 	ChallengeDials.set_overrides(ChallengeDials.parse(PackPressure.tune_spec("B")))
 	_t.eq("07 B adds one chaser on the dam", PackPressure.crew_extra(1), 1)
 	_t.eq("08 B adds none in the Dig", PackPressure.crew_extra(3), 0)
 	_t.near("09 B halves the re-engage gap on the flume", PackPressure.crew_row(2).rest, 0.5)
 	_t.near("10 B leaves the Dig's gap alone", PackPressure.crew_row(3).rest, 1.0)
+	ChallengeDials.set_overrides({})
+
+
+# B's extra chasers join a crew last and only inside the room the caller checked: one with room, none
+# without it, none for a lone spawn, and none at all without the dial.
+func _extras() -> void:
+	var queued := func(room: int, kinds: Array) -> Array:
+		var d := Director.new(71)
+		d.set_run_tier_reader(func(): return 0)
+		d.dial_stage = 1
+		var n := d._place_pack(Vector2(40.0, 0.0), kinds, Vector2.ZERO, false, room)
+		return [n, d.extras_placed]
+	_t.eq("27 no dial: the crew as authored", queued.call(5, ["chaser", "lobber"]), [2, 0])
+	ChallengeDials.set_overrides(ChallengeDials.parse(PackPressure.tune_spec("B")))
+	_t.eq("28 B with room: one more chaser", queued.call(5, ["chaser", "lobber"]), [3, 1])
+	_t.eq("29 B with no spare room: none", queued.call(2, ["chaser", "lobber"]), [2, 0])
+	_t.eq("30 B never pads a lone spawn", queued.call(5, ["chaser"]), [1, 0])
 	ChallengeDials.set_overrides({})
 
 
@@ -133,7 +156,7 @@ func _lead() -> void:
 		angle += w / float(Engine.physics_ticks_per_second)
 		player.at = Vector3(cos(angle), 0.0, sin(angle)) * RING
 		player.v = Vector3(-sin(angle), 0.0, cos(angle)) * CRUISE
-		PackPressure.predict(player, 0.0)
+		PackPressure.observe(player.planar_velocity())
 	var truth := Vector3(cos(angle + w), 0.0, sin(angle + w)) * RING
 	var led := PackPressure.predict(player, 1.0)
 	_t.near("11 the turn rate read is the ring's", PackPressure.turn_rate(), w, 0.05)
@@ -186,6 +209,7 @@ func _boils() -> void:
 	enemy.global_position = Vector3(0.0, 1.5, 0.0)
 	var boils := SiltBoil.new()
 	boils.setup(ctx, ctx.terrain)
+	boils.reset(true)
 	var dealt := []
 	boils.deal = func(amount: float, _shove: Vector3): dealt.append(amount)
 	var dt := 1.0 / 90.0
@@ -203,13 +227,20 @@ func _boils() -> void:
 		steps += 1
 	_t.eq("20 a loop in a fight raises a boil", boils.boils, 1)
 	_t.check("21 not before the loop window", steps * dt >= SiltBoil.LOOP_WINDOW - 0.5, "%.1f s" % (steps * dt))
+	_t.check("21b the ring warns at least the tell floor", SiltBoil.WARN >= ChallengeDials.TELL_FLOOR)
 	ctx.player.at = boils._ring.center
 	enemy.global_position = boils._ring.center + Vector3(1.0, 1.5, 0.0)
-	for i in int(SiltBoil.WARN * 90.0) + 2:
+	for i in int(ChallengeDials.TELL_FLOOR * 90.0):
+		boils.step(dt, [enemy])
+	_t.eq("21c nothing erupts inside the tell floor", boils.ball_hits, 0)
+	for i in int((SiltBoil.WARN - ChallengeDials.TELL_FLOOR) * 90.0) + 2:
 		boils.step(dt, [enemy])
 	_t.eq("22 the eruption hits the ball inside", boils.ball_hits, 1)
 	_t.eq("23 it deals the boil's damage", dealt, [SiltBoil.DAMAGE])
 	_t.eq("24 it tosses the crew inside", enemy.knocked, 1)
+	_t.eq("25 a crew it kills is the silt's", enemy.get("last_damage_source"), "silt_boil")
+	boils.reset(true)
+	_t.eq("26 a stage entry clears the counts and any ring", [boils.boils, boils._ring], [0, null])
 	ChallengeDials.set_overrides({})
 	ctx.root.queue_free()
 	await process_frame

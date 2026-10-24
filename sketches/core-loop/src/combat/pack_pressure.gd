@@ -72,12 +72,11 @@ static func crew_extra(stage: int) -> int:
 	return maxi(0, int(round(ChallengeDials.by_stage_or("pack.crew_extra_by_stage", stage, 0.0))))
 
 
-# Where the ball will be in `seconds`, carried along its present curve: the turn rate is read once a physics
-# tick from the target's planar velocity, so a ball holding a ring is led round the ring, not off it.
+# Where the ball will be in `seconds`, carried along its present curve (the turn rate observe() read this
+# tick), so a ball holding a ring is led round the ring, not off it.
 static func predict(target, seconds: float) -> Vector3:
 	var at: Vector3 = target.ball_position()
 	var v: Vector3 = target.planar_velocity()
-	_read_turn(v)
 	var t := clampf(seconds, 0.0, MAX_LEAD_S)
 	var w := _turn
 	if absf(w) < 0.05:
@@ -93,7 +92,9 @@ static func turn_rate() -> float:
 	return _turn
 
 
-static func _read_turn(v: Vector3) -> void:
+# Combat calls this once a physics tick with the player's own planar velocity (never a Sight's, which a
+# cloak blanks), so every crew reads the same turn rate.
+static func observe(v: Vector3) -> void:
 	var frame := Engine.get_physics_frames()
 	if frame == _frame:
 		return

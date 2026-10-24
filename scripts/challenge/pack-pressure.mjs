@@ -75,8 +75,9 @@ function argsFor(job, out) {
     ...extra, ...flag(job.variant)];
 }
 
-if (opts.report) report(opts.report);
-else await run();
+const main = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (main && opts.report) report(opts.report);
+else if (main) await run();
 
 async function run() {
   const jobs = shardJobs(planJobs(opts.variants, opts.seeds, opts.botSeeds), opts.shard);
@@ -143,13 +144,13 @@ function report(dirs) {
   const rows = dedupeBy(dirs.flatMap((d) => parseNdjson(read(path.join(path.resolve(d), "runs.ndjson")))), "id");
   const variants = [...new Set(rows.map((r) => r.variant))];
   const f = (x, d = 1) => (x == null ? "-" : x.toFixed(d));
-  const L = ["| Variant | Orbit deaths s1 / s2 | Death after first hit (s) | Hull lost in the 120 s window, median s1 / s2 | Windows with no loss | Skipper min | Skipper deaths | Completionist min | Completionist deaths |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"];
+  const L = ["| Variant | Orbit deaths s1 / s2 | Death after first hit (s) | Hull lost in the 120 s window, median s1 / s2 | Windows with no loss | Skipper min | Skipper deaths | Skipper hull lost | Skipper kills s1 / s2 | Completionist min | Completionist deaths | Completionist hull lost |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"];
   const all = {};
   for (const v of variants) {
     const s = summarize(rows.filter((r) => r.variant === v));
     all[v] = s;
     const o = s.orbit;
-    L.push(`| ${v} | ${o[1].died}/${o[1].valid} · ${o[2].died}/${o[2].valid} | ${f(o[1].medianDeathAfterHitS, 0)} · ${f(o[2].medianDeathAfterHitS, 0)} | ${f(o[1].hull120, 0)} · ${f(o[2].hull120, 0)} | ${o[1].zeroLoss + o[2].zeroLoss}/${o[1].runs + o[2].runs} | ${f(s.bots.skipper.minutes, 2)} | ${s.bots.skipper.deaths}/${s.bots.skipper.runs} | ${f(s.bots.completionist.minutes, 2)} | ${s.bots.completionist.deaths}/${s.bots.completionist.runs} |`);
+    L.push(`| ${v} | ${o[1].died}/${o[1].valid} · ${o[2].died}/${o[2].valid} | ${f(o[1].medianDeathAfterHitS, 0)} · ${f(o[2].medianDeathAfterHitS, 0)} | ${f(o[1].hull120, 0)} · ${f(o[2].hull120, 0)} | ${o[1].zeroLoss + o[2].zeroLoss}/${o[1].runs + o[2].runs} | ${f(s.bots.skipper.minutes, 2)} | ${s.bots.skipper.deaths}/${s.bots.skipper.runs} | ${f(s.bots.skipper.hull, 0)} | ${f(s.bots.skipper.kills[0], 0)} · ${f(s.bots.skipper.kills[1], 0)} | ${f(s.bots.completionist.minutes, 2)} | ${s.bots.completionist.deaths}/${s.bots.completionist.runs} | ${f(s.bots.completionist.hull, 0)} |`);
   }
   const md = L.join("\n") + "\n";
   console.log(md);

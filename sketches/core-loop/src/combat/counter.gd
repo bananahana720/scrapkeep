@@ -189,7 +189,8 @@ func _pose() -> void:
 
 
 # Pack pressure lead (pack_pressure.gd; identity without --pack-pressure): roam toward and size up the ball's
-# roll SEEK_LEAD_S ahead along its curve, scaled by the spec's lead. Each kind's own warn aim is unchanged.
+# roll SEEK_LEAD_S ahead along its curve, scaled by the spec's lead. A kind that aims its warn from the offset
+# it is handed (the hooker, boom tender, deflector, anchor crew) lays it toward that roll; it is committed as ever.
 const SEEK_LEAD_S := 1.0
 
 

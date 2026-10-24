@@ -162,7 +162,11 @@ func _physics_process(delta: float) -> void:
 			if _knocked_speed() >= INTERRUPT:
 				_end_attack(State.RECOVER)
 			elif _clock >= PackPressure.PRESSURE_CUE_S:
-				_begin_windup(_led_aim(1.0))
+				# Called but not ready (in the air, still sliding off a knock): the call is spent, no lane.
+				if is_on_floor() and _knocked_speed() < 1.0:
+					_begin_windup(_led_aim(1.0))
+				else:
+					_end_attack(State.RECOVER)
 		State.WINDUP:
 			_move(delta, Vector3.ZERO)
 			var lane := telegraph()

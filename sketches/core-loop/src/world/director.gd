@@ -150,6 +150,8 @@ var world := 1
 # The run stage (1 to 6) of the row given to use_row(), for the per-stage challenge dials; 0 before
 # a row, which reads every by_stage dial as 1.0.
 var dial_stage := 0
+# Pack pressure B: how many extra chasers the last _place_pack queued (combat/pack_pressure.gd).
+var extras_placed := 0
 var dial_steps := StageDefs.RUN_TIER_DIAL_STEPS
 # From run.heft_class(): a heavier ball earns a bigger crowd to roll through.
 var heft_class := 1
@@ -328,7 +330,7 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 			else:
 				_place_pack(at, [KIND_NAMES[kind]], ball)
 			continue
-		_place_pack(at, pack, ball)
+		_place_pack(at, pack, ball, false, room)
 	return due
 
 
@@ -365,13 +367,13 @@ func _credit_advance(delta: float, alive_count: int, ball: Vector2, velocity: Ve
 		if at == Vector2.INF:
 			return
 		var first := arrivals.size()
-		var queued := _place_pack(at, kinds, ball, is_elite)
+		var queued := _place_pack(at, kinds, ball, is_elite, room)
 		if queued == 0:
 			return
 		var placed := []
 		for arrival in arrivals.slice(first):
 			placed.append(KIND_NAMES[arrival.kind])
-		var spent := credit_pack_cost(placed, is_elite)
+		var spent := credit_pack_cost(placed.slice(0, placed.size() - extras_placed), is_elite)
 		credits -= spent
 		credits_spent += spent
 		packs.append({"id": _next_pack.id, "kinds": placed, "tests": _next_pack.get("tests", "")})
@@ -424,13 +426,18 @@ func _draw_credit() -> Dictionary:
 
 
 # One pack's members side by side across the line from the ball, on one ring timer.
-func _place_pack(at: Vector2, kinds: Array, ball: Vector2, is_elite := false) -> int:
-	# Pack pressure B (pack_pressure.gd; 0 without --pack-pressure): extra chasers join every crew.
-	var extra := PackPressure.crew_extra(dial_stage)
+# room: the cap's room the caller checked the pack against; pack pressure B's extra chasers fit inside it.
+func _place_pack(at: Vector2, kinds: Array, ball: Vector2, is_elite := false, room := 0) -> int:
+	# Pack pressure B (pack_pressure.gd; 0 without --pack-pressure): extra chasers join a crew, last, as far as
+	# the room allows. extras_placed tells the credit path not to charge for them.
+	extras_placed = 0
+	var extra := mini(PackPressure.crew_extra(dial_stage), room - kinds.size())
 	if extra > 0 and kinds.size() >= 2:
 		kinds = kinds.duplicate()
 		for _i in extra:
 			kinds.append("chaser")
+	else:
+		extra = 0
 	var queued := 0
 	var affixed := false
 	var heading := (at - ball).normalized() if at.distance_to(ball) > 0.1 else Vector2.RIGHT
@@ -472,6 +479,8 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2, is_elite := false) ->
 		arrivals.append(arrival)
 		assigned.append(spot)
 		queued += 1
+		if extra > 0 and i >= kinds.size() - extra:
+			extras_placed += 1
 	if _park_map == null or queued > 0:
 		_pack_seq += 1
 	if affixed:
@@ -503,7 +512,7 @@ func _authored_arrival(room: int, ball: Vector2, velocity: Vector2, forward: Vec
 	var at := spawn_spot(ball, velocity, forward)
 	if at == Vector2.INF:
 		return
-	var queued := _place_pack(at, kinds, ball, _next_pack == elite)
+	var queued := _place_pack(at, kinds, ball, _next_pack == elite, room)
 	if _park_map != null and queued == 0:
 		return
 	packs.append({"id": _next_pack["id"], "kinds": kinds.duplicate(), "tests": ""})

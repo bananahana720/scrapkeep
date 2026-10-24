@@ -24,7 +24,6 @@ var churned_cells := 0
 var _ctx
 var _clock := 0.0
 var _settle_clock := 0.0
-var _stage := -1
 var _cells := {}
 var _last := Vector2i(1 << 30, 1 << 30)
 var _discs := {}
@@ -48,13 +47,20 @@ func level_at(at: Vector3) -> int:
 	return mini(int(rec.passes) - 1, MAX_LEVEL)
 
 
+# Combat calls this on every stage entry (retries included) and, with counts, on a run start: no churn
+# or disc outlives the attempt that made it.
+func reset(counts := false) -> void:
+	_clear()
+	if counts:
+		drag_s = 0.0
+		churned_cells = 0
+
+
+# Stage play only: the boss arena and the camp never churn.
 func step(delta: float) -> void:
 	var k := strength()
-	if k <= 0.0 or not _ctx.flow.in_play():
+	if k <= 0.0 or not _ctx.flow.in_stage():
 		return
-	if int(_ctx.run.stage) != _stage:
-		_stage = int(_ctx.run.stage)
-		_clear()
 	_clock += delta
 	var player = _ctx.player
 	var ball: Vector3 = player.ball_position()
@@ -109,9 +115,10 @@ func _paint(cell: Vector2i, ball: Vector3) -> void:
 	if level <= 0:
 		return
 	if not _discs.has(cell):
-		if _discs.size() >= MAX_DISCS:
-			return
 		churned_cells += 1
+		# Past MAX_DISCS the oldest disc goes, so every dragging cell shows.
+		if _discs.size() >= MAX_DISCS:
+			_drop_disc(_discs.keys()[0])
 		var disc := MeshInstance3D.new()
 		var mesh := CylinderMesh.new()
 		mesh.top_radius = CELL * 0.62

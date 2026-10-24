@@ -491,6 +491,8 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_content_cleared.connect(_on_stage_content_cleared)
 	ctx.events.run_ended.connect(func(_won: bool): _clear_devices())
 	ctx.events.run_started.connect(func(_class_id: String):
+		churn.reset(true)
+		boils.reset(true)
 		_armour_known = {}
 		discovered = {}
 		discovery_log = []
@@ -592,7 +594,7 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 				enemy_spec["affix"] = affix_id
 				enemy_spec["affix_world"] = director.world
 		var pressure := PackPressure.crew_row(int(ctx.run.stage))
-		if pressure.lead > 0.0 or pressure.rest != 1.0 or pressure.flank > 0.0:
+		if ctx.flow.in_stage() and (pressure.lead > 0.0 or pressure.rest != 1.0 or pressure.flank > 0.0):
 			if kind == "chaser" and pressure.flank > 0.0:
 				_pressure_chasers += 1
 				pressure["flanker"] = _pressure_chasers % 2 == 0
@@ -1563,6 +1565,7 @@ func _physics_process(delta: float) -> void:
 		_detonate(charge)
 	_step_devices(delta)
 	wear_trail.step(delta, enemies)
+	PackPressure.observe(ctx.player.planar_velocity())
 	churn.step(delta)
 	boils.step(delta, enemies)
 	_pin_step(enemies)
@@ -4154,6 +4157,9 @@ func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
 # restored part list, so a retry restores the build exactly.
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	_start_attempt()
+	churn.reset()
+	boils.reset()
+	_pressure_chasers = 0
 	_line_load = {}
 	_escape = {}
 	escape_lane = {}
