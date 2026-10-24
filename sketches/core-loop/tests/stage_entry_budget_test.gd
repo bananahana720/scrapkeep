@@ -12,7 +12,7 @@ extends SceneTree
 # still misses. At f0d5cecb activities spent 230 to 930 ms an entry (graph read about 50 ms,
 # trade-pocket candidates about 180 ms, pocket-draw layout about 710 ms past stage 1) and the set
 # dressing 250 to 600 ms rebuilding the stage it already had. Now a worker started on the previous
-# entry hands activities that data, so its handler is left with the site nodes: about 6 ms a retry,
+# entry hands activities that data, so its handler is left with the site nodes: about 6 ms a retry then (11 to 19 ms since the field finds, see RETRY_MS),
 # and up to about 95 ms on a first entry that builds a trade interior, whose first-use materials
 # were outside that unit (see SWAP-HITCH-2 below). Budgets: activities RETRY_MS on a retry
 # and FIRST_MS on the exit into stage 2, the set dressing DRESSING_MS on a stage it already dressed.
@@ -61,7 +61,11 @@ const SLICE_FRAMES_MIN := 2
 const NATURAL_PATH := "res://src/world/events/natural.gd"
 const DIRECTOR_PATH := "res://src/world/director.gd"
 
-const RETRY_MS := 20.0
+# 2026-10-24 re-pin (stage 62cb1248): was 20 ms on a basis of about 6 ms a retry. The field finds (bf5710ed) and the
+# Spillway secrets add cracked_cache and find steps on every park stage, so a retry now costs 11 to 19 ms solo on an
+# idle 4-core cloud box (9 samples); 1.5x the worst rounded up is 30 ms, judged on the median of RETRY_SAMPLES retries.
+const RETRY_MS := 30.0
+const RETRY_SAMPLES := 3
 const FIRST_MS := 50.0
 const DRESSING_MS := 4.0
 const NEW_DRESSING_MS := 15.0
@@ -157,9 +161,7 @@ func _run() -> void:
 	_report("first entry, stage 1", first)
 	_t.check("first entry of stage 1: the set dressing keeps its setup build", first.get("set_dressing", INF) <= DRESSING_MS, _ms(first, "set_dressing"))
 
-	_game.flow.retry_stage()
-	var retry_1 := _times()
-	_report("retry, stage 1", retry_1)
+	var retry_1: Dictionary = await _retry_median("retry, stage 1")
 	_t.check("retry of stage 1: activities within %.0f ms" % RETRY_MS, retry_1.get("activities", INF) <= RETRY_MS, _ms(retry_1, "activities"))
 	_t.check("retry of stage 1: set dressing within %.0f ms" % DRESSING_MS, retry_1.get("set_dressing", INF) <= DRESSING_MS, _ms(retry_1, "set_dressing"))
 	await _ticks(SETTLE_TICKS)
@@ -242,9 +244,7 @@ func _run() -> void:
 	await _ticks(SETTLE_TICKS)
 	_check_caches_survive_exit(stage_1_helper)
 
-	_game.flow.retry_stage()
-	var retry_2 := _times()
-	_report("retry, stage 2", retry_2)
+	var retry_2: Dictionary = await _retry_median("retry, stage 2")
 	_t.check("retry of stage 2: activities within %.0f ms" % RETRY_MS, retry_2.get("activities", INF) <= RETRY_MS, _ms(retry_2, "activities"))
 	_t.check("retry of stage 2: set dressing within %.0f ms" % DRESSING_MS, retry_2.get("set_dressing", INF) <= DRESSING_MS, _ms(retry_2, "set_dressing"))
 	_check_natural_fresh("retry of stage 2")
@@ -574,6 +574,29 @@ func _check_slow_plan_control() -> void:
 	_t.check("planted slow plan: the dressing completes in a later frame, after the worker", complete.done and complete.frames >= 1, "%d frames" % complete.frames)
 	_check_frames("quick exit (planted slow plan)", watch, true)
 	_check_dressing_fresh("planted slow plan")
+
+
+# A retry's handler times as the median of RETRY_SAMPLES retries, settled between: a retry costs about 6 ms
+# against RETRY_MS, and one sample on a loaded cloud box read 22 to 26 ms (w18 gate, passes solo). Noisy
+# measures are medians of 3 (LESSONS). The last retry leaves the stage as the checks after it read it.
+func _retry_median(label: String) -> Dictionary:
+	var samples := {}
+	for i in RETRY_SAMPLES:
+		if i > 0:
+			await _ticks(SETTLE_TICKS)
+		_game.flow.retry_stage()
+		var times := _times()
+		_report("%s (sample %d)" % [label, i + 1], times)
+		for key in times:
+			if not samples.has(key):
+				samples[key] = []
+			samples[key].append(times[key])
+	var out := {}
+	for key in samples:
+		var row: Array = samples[key]
+		row.sort()
+		out[key] = row[row.size() / 2]
+	return out
 
 
 # Each handler's recorded time of the last stage entry, in ms; a handler that records none is absent.
