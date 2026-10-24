@@ -14,6 +14,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import cycles_device
 import polish
 from common import Part
 
@@ -160,7 +161,7 @@ print("EDC EXPORT: %d T / %d V / 3 D" % (common.tri_total(root), vertices))
 def preview(outdir):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 12
     scene.cycles.use_denoising = True
     scene.render.threads_mode = "FIXED"
@@ -208,7 +209,7 @@ def preview(outdir):
         bpy.ops.render.render(write_still=True)
     bit.location = Vector(g(0, 0.5, 2.4))
     with open(os.path.join(outdir, "preview.json"), "w") as handle:
-        json.dump({"engine": "Cycles", "device": "CPU", "samples": 12, "reference_ball_diameter_m": 2,
+        json.dump({"engine": "Cycles", "device": bpy.context.scene.cycles.device, "samples": 12, "reference_ball_diameter_m": 2,
                    "views": ["front", "side", "three-quarter", "wind-up"], "windup_withdrawal_m": 0.25}, handle, indent=2)
 
 

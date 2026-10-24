@@ -30,6 +30,7 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
+import cycles_device
 import polish
 from common import Part
 
@@ -300,7 +301,7 @@ def render(root, name, outdir):
     """Cycles CPU stills (the cloud box has no EGL for Eevee): face, three-quarter and edge."""
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 16
     scene.view_settings.view_transform = "Standard"
     scene.render.resolution_x, scene.render.resolution_y = 420, 320

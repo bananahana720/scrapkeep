@@ -21,6 +21,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))
 import common  # noqa: E402
+import cycles_device  # noqa: E402
 import layout as L  # noqa: E402
 
 SKETCH = HERE.parents[2]
@@ -92,7 +93,7 @@ def import_glb(path, loc=(0, 0, 0), yaw=0.0, scale=1.0):
 def world_setup(samples, size, sky=True):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
     scene.render.resolution_x, scene.render.resolution_y = (int(v) for v in size.split("x"))
