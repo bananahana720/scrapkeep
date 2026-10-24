@@ -81,11 +81,13 @@ func _rows() -> void:
 		var row: Dictionary = LockRows.row(map)
 		_t.check("%s has a gate and a lock" % map, row.has("gate") and row.has("lock"))
 		_t.check("%s gate wants packs" % map, int(row["gate"]["packs"]) >= 1)
-		for kind in row["lock"]["kinds"]:
-			_t.check("%s lock kind %s is a director kind" % [map, kind], kind in preload("res://src/world/director.gd").KIND_NAMES)
-		_t.check("%s keeps the boom tender out of the ring" % map, not "boom_tender" in row["lock"]["kinds"])
+		_t.check("%s lock lands in waves" % map, (row["lock"]["waves"] as Array).size() >= 2)
+		for wave in row["lock"]["waves"]:
+			for kind in wave:
+				_t.check("%s lock kind %s is a director kind" % [map, kind], kind in preload("res://src/world/director.gd").KIND_NAMES)
+			_t.check("%s keeps the boom tender out of the ring" % map, not "boom_tender" in wave)
 	_t.check("other parks have no row", LockRows.row("park_pit").is_empty() and LockRows.row("park_test").is_empty())
-	for kind in ["arena_locked", "arena_unlocked", "warden_gate_pip", "warden_gate_refused", "warden_gate_opened"]:
+	for kind in ["arena_locked", "arena_wave", "arena_unlocked", "warden_gate_pip", "warden_gate_refused", "warden_gate_opened"]:
 		var entry: Dictionary = EventKinds.world_row(kind)
 		_t.check("%s has a WORLD_ROWS row" % kind, not entry.is_empty())
 		var next := String(entry.get("sound_next", ""))
@@ -180,8 +182,9 @@ func _lock() -> void:
 		waited += 1
 	_t.eq("the yard shuts once the ball is grounded inside the circle", locks.lock_state, "locked")
 	_t.eq("the slam plays", _count("arena_locked"), 1)
+	var waves: Array = row["waves"]
 	var crew: Array = locks.crew_alive()
-	_t.eq("the crew lands", crew.size(), (row["kinds"] as Array).size())
+	_t.eq("the first wave lands", crew.size(), (waves[0] as Array).size())
 	_t.check("the wall stands", locks.get_node_or_null("ArenaLockWall") != null)
 	_t.check("objective names the yard", game.flow.objective_text().contains("Yard locked"), game.flow.objective_text())
 	_t.check("the bot hand goes for the crew", locks.foe_for(game.player.ball_position()) in crew)
@@ -193,10 +196,19 @@ func _lock() -> void:
 	for i in 3:
 		await physics_frame
 	_t.check("an escaping ball is sent back in", game.player.state.velocity.x < 0.0, str(game.player.state.velocity))
-	for enemy in crew:
-		_kill(enemy)
-	for i in 3:
-		await physics_frame
+	for w in waves.size():
+		for enemy in crew:
+			_kill(enemy)
+		for i in 3:
+			await physics_frame
+		if w + 1 < waves.size():
+			_t.eq("wave %d down: the yard holds" % (w + 1), locks.lock_state, "locked")
+			_t.eq("wave %d down: the next whistles in" % (w + 1), _count("arena_wave"), w + 1)
+			var gap := int(ceil(float(row["wave_gap_s"]) * 90.0)) + 3
+			for i in gap:
+				await physics_frame
+			crew = locks.crew_alive()
+			_t.eq("wave %d lands" % (w + 2), crew.size(), (waves[w + 1] as Array).size())
 	_t.eq("the last crew down opens the yard", locks.lock_state, "spent")
 	_t.check("won", locks.lock_won)
 	_t.eq("the bells play", _count("arena_unlocked"), 1)

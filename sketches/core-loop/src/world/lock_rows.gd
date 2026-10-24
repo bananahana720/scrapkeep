@@ -8,19 +8,21 @@ extends RefCounted
 #   Isaac's locked boss door: the Warden asks for the verbs before the fight. `max_s` after the Warden
 #   is first engaged the clamp lets go anyway, so a dry spawner can never hold a run.
 # lock: the first time the ball comes within `within_m` of the beacon on the ground, the yard
-#   ring-locks round it (`radius_m`, centred `ahead_m` toward the beacon) and its crew (`kinds`) lands
-#   round the ring. All of them down opens it, or `max_s`. Every route crosses the circle, so the lock
-#   sits on whichever line the ball takes. The crew counts as one of the gate's packs.
+#   ring-locks round it (`radius_m`, centred `ahead_m` toward the beacon) and its crew lands round the
+#   ring in `waves`, each `wave_gap_s` after the last is down (Isaac's room waves: a world 1 pack dies
+#   in seconds, so the minutes are in the waves, never in health). The last wave down opens it, or
+#   `max_s`. Every route crosses the circle, so the lock sits on whichever line the ball takes. The
+#   whole crew counts as one of the gate's packs.
 const ROWS := {
 	"park_dam": {
-		"gate": {"packs": 2, "also": ["enemy_camp"], "max_s": 120.0},
-		"lock": {"id": "apron_crew", "within_m": 200.0, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 60.0,
-			"kinds": ["chaser", "chaser", "lobber", "mag_trapper"]},
+		"gate": {"packs": 2, "also": ["enemy_camp"], "max_s": 75.0},
+		"lock": {"id": "apron_crew", "within_m": 200.0, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 75.0, "wave_gap_s": 1.5,
+			"waves": [["chaser", "chaser", "lobber"], ["mag_trapper", "lobber", "chaser"], ["chaser", "chaser", "chaser", "lobber"]]},
 	},
 	"park_flume": {
-		"gate": {"packs": 2, "also": ["enemy_camp"], "max_s": 120.0},
-		"lock": {"id": "forecourt_crew", "within_m": 210.0, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 60.0,
-			"kinds": ["plated_brute", "chaser", "chaser", "lobber"]},
+		"gate": {"packs": 2, "also": ["enemy_camp"], "max_s": 75.0},
+		"lock": {"id": "forecourt_crew", "within_m": 210.0, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 75.0, "wave_gap_s": 1.5,
+			"waves": [["chaser", "chaser", "lobber"], ["plated_brute", "chaser"], ["mag_trapper", "lobber", "lobber", "chaser"]]},
 	},
 }
 

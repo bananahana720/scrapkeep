@@ -17,9 +17,10 @@ const Palette := preload("res://src/core/palette.gd")
 #
 # The lock. Once, on the ground and inside the row's circle round the beacon, the yard shuts:
 # a hazard wall rises round the ball with a slam that falls (arena_locked), the crew lands
-# ahead on the ring, and the wall springs a ball back that tries to leave. The last crew
-# member down, or the row's max_s, opens it on climbing bells (arena_unlocked). The Warden
-# already awake skips it, so the lock never lands in its fight.
+# ahead on the ring, and the wall springs a ball back that tries to leave. A wave down, the next
+# whistles in (arena_wave) from further round the ring; the last wave down, or the row's max_s,
+# opens it on climbing bells (arena_unlocked), and the whole crew counts as one of the gate's
+# packs. The Warden already awake skips it, so the lock never lands in its fight.
 #
 # StageLocks.active = false (bot_run --locks=0) turns both off for a base measure on one binary.
 
@@ -36,6 +37,7 @@ const WALL_BOUNCE := 1.6
 const WALL_ACCEL_CAP := 120.0
 const CREW_RING := 0.6
 const CREW_SPREAD := 0.45 * PI
+const WAVE_TURN := 0.6 * PI
 const REFUSE_GAP := 0.6
 const COLLAR_RADIUS := 5.0
 const PIP_HEIGHT := 9.0
@@ -52,6 +54,9 @@ var lock_left := 0.0
 var lock_won := false
 var _packs := {}
 var _crew: Array = []
+var _wave := 0
+var _wave_wait := -1.0
+var _facing := 0.0
 var _also_done := false
 var _engaged_s := -1.0
 var _clock := 0.0
@@ -134,7 +139,7 @@ func objective() -> String:
 	return ""
 
 
-# Every director arrival that came as a pack (world.gd _step_director), and the yard's crew.
+# Every director arrival that came as a pack (world.gd _step_director).
 func note_member(enemy: Node3D, seq: int) -> void:
 	if seq < 0 or enemy == null or row.is_empty():
 		return
@@ -260,10 +265,19 @@ func _step_lock(delta: float) -> void:
 			if _wall != null and _wall_rise < 1.0:
 				_wall_rise = minf(1.0, _wall_rise + delta / WALL_RISE)
 				_wall.scale = Vector3(1.0, maxf(0.01, _wall_rise), 1.0)
-			if crew_alive().is_empty():
-				_unlock(true)
-			elif lock_left <= 0.0:
+			if lock_left <= 0.0:
 				_unlock(false)
+			elif crew_alive().is_empty() and _wave_wait < 0.0:
+				if _wave + 1 >= _waves().size():
+					_unlock(true)
+				else:
+					_wave_wait = float(lock_row().get("wave_gap_s", 1.5))
+					ctx.events.world_fact.emit("arena_wave", lock_centre)
+			elif _wave_wait >= 0.0:
+				_wave_wait -= delta
+				if _wave_wait < 0.0:
+					_wave += 1
+					_land_wave()
 
 
 func _lock(ball: Vector3, beacon: Vector3) -> void:
@@ -276,9 +290,23 @@ func _lock(ball: Vector3, beacon: Vector3) -> void:
 	lock_state = "locked"
 	_build_wall(radius)
 	ctx.events.world_fact.emit("arena_locked", lock_centre)
-	var kinds: Array = lock.get("kinds", [])
+	_facing = atan2(toward.z, toward.x)
+	_wave = 0
+	_wave_wait = -1.0
+	_land_wave()
+
+
+func _waves() -> Array:
+	return lock_row().get("waves", [])
+
+
+# One wave of the crew on the ring: the first ahead, each later one turned WAVE_TURN further
+# round, so the yard keeps the ball turning. The whole crew is one pack id for the attack budget.
+func _land_wave() -> void:
+	var kinds: Array = _waves()[_wave] if _wave < _waves().size() else []
+	var radius := float(lock_row().get("radius_m", 26.0))
+	var facing := _facing + WAVE_TURN * _wave
 	var seq := LOCK_SEQ + int(ctx.run.stage)
-	var facing := atan2(toward.z, toward.x)
 	if ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
 		return
 	for i in kinds.size():
@@ -287,7 +315,6 @@ func _lock(ball: Vector3, beacon: Vector3) -> void:
 		var enemy = ctx.spawner.spawn_enemy(String(kinds[i]), ctx.terrain.drop_point(spot.x, spot.z, 2.4))
 		if enemy is Node3D:
 			enemy.set_meta("pack_seq", seq)
-			note_member(enemy, seq)
 			_crew.append(weakref(enemy))
 
 
@@ -296,6 +323,10 @@ func _unlock(won: bool) -> void:
 	lock_won = won
 	ctx.events.world_fact.emit("arena_unlocked", lock_centre)
 	_drop_wall()
+	# The whole crew broken is one of the clamp's packs.
+	if won and not gate_open:
+		cleared += 1
+		ctx.events.world_fact.emit("warden_gate_pip", ctx.player.ball_position())
 
 
 # The wall springs a ball back once it is past the ring, harder the further and faster it goes;

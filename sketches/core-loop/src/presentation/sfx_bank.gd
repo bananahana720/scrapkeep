@@ -132,7 +132,7 @@ const TRIM_DB := {
 	"return_launch_arpeggio": -4.0, "lift_hiss": -9.0, "crater_hold": -12.0,
 	# The Spillway's arena locks and Warden gates (src/world/stage_locks.gd): the yard slams shut,
 	# springs open, the Warden's clamp counts a crew, refuses a hit, and lets go.
-	"arena_lock_slam": -2.0, "arena_unlock_bells": -4.0, "warden_gate_pip": -7.0,
+	"arena_lock_slam": -2.0, "arena_wave_whistle": -6.0, "arena_unlock_bells": -4.0, "warden_gate_pip": -7.0,
 	"warden_gate_clunk": -10.0, "warden_gate_release": -3.0,
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
@@ -1065,6 +1065,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return hold("crater", Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
 		"arena_lock_slam":
 			return _arena_lock_slam()
+		"arena_wave_whistle":
+			return _arena_wave_whistle()
 		"arena_unlock_bells":
 			return _arena_unlock_bells()
 		"warden_gate_pip":
@@ -2293,6 +2295,13 @@ static func _arena_lock_slam() -> PackedFloat32Array:
 		[_tone(0.18, _hz(62), 0.0, "square_dark", 9.0), Synth.seconds(0.06), 0.45],
 		[_tone(0.36, _hz(59), 0.0, "square_dark", 6.0), Synth.seconds(0.22), 0.5],
 		[_noise(0.06, 3200.0, 1800.0, 60.0), Synth.seconds(0.02), 0.35]], true)
+
+
+# The next wave is coming: a pure whistle falls an octave over a low tick, the same fall the
+# hazard warnings use, so the 1.5 s before it lands reads as "incoming".
+static func _arena_wave_whistle() -> PackedFloat32Array:
+	return _mix([[_tone(0.9, _hz(86), _hz(74), "sine", 2.0), 0, 0.8],
+		[_noise(0.04, 1400.0, 900.0, 60.0), 0, 0.4], [_noise(0.04, 1400.0, 900.0, 60.0), Synth.seconds(0.45), 0.4]])
 
 
 # The yard opens: a latch clicks, then three bells climb the pentatonic to the home D, the
