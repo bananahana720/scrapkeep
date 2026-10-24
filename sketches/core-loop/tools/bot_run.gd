@@ -65,9 +65,10 @@ const FrameSplit := preload("res://tools/frame_split.gd")
 # passes --table=park, which a launched game plays):
 # --wall-clock=1 leaves SimClock on the wall clock, as in a played game: park stages build on
 # worker threads and hit-stop reads real time, so the seed no longer replays exactly.
-# --threaded-stages=1 builds park stages on worker threads as --wall-clock=1 does, but keeps the
-# hit-stop clock on physics ticks: for frame captures, where the next stage's one-frame build on
-# the engage frame is a bot artifact. The seed no longer replays exactly.
+# --threaded-stages=1 builds park stages on worker threads as --wall-clock=1 does, frees a left stage
+# over the next frames, and reads later-world enemy scripts on the loader thread at stage entry, as a
+# played game does, but keeps the hit-stop clock on physics ticks: for frame captures, where the next
+# stage's one-frame build on the engage frame is a bot artifact. The seed no longer replays exactly.
 # --warm-band=1 renders the band's other themes, keys and boss tracks (MusicEngine.prepare_rest) before
 # the run, as a played run does on a worker behind stage 1. Without it each chord, note and riser
 # renders on the main thread the first time a bar asks, 60 to 300 ms a frame that play never has.

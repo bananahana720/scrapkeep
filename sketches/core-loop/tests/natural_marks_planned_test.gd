@@ -23,6 +23,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Natural := preload("res://src/world/events/natural.gd")
+const EventGround := preload("res://src/world/events/event_ground.gd")
 
 const SETTLE_TICKS := 30
 const WAIT_TICKS_MAX := 3600
@@ -64,17 +65,55 @@ func _run() -> void:
 	# The natural plan for stage 2 starts on a later poll once its ground is ready.
 	await _ticks(SETTLE_TICKS)
 	Natural.settle_plans()
+	var key := Natural._root_key(terrain, 2)
+	var ahead: Dictionary = Natural._plans.get(key, {})
+	_check_ahead(terrain, ahead)
 	_game.player.reset_to(terrain.spawn_point(1) + Vector3.UP * 2.0, Vector3(0.0, 0.0, 6.0))
 	await _ticks(2)
 	_game.flow._finish_stage()
 	await _ticks(2)
 	_t.check("the exit entered park stage 2", _game.flow.stage() == 2 and _natural() != null, "stage %d" % _game.flow.stage())
+	_check_span_entry(ahead)
+	_t.check("the entry handed the planned snapshot to the marks worker", not Natural._plans.get(key, {}).has("snapshot"))
 	await _until_marks()
 	_check_stage("stage 2")
 	_t.check("stage 2's collapse landing was checked with its own overlay down", _collapses_checked > 0, str(_collapses_checked))
 	_game.queue_free()
 	await physics_frame
 	quit(_t.verdict())
+
+
+# Stage 2 planned ahead (STAGE-ENTRY, scrapkeep#241): its worker copied the cave roofs off the
+# main thread and planned the flume trestle's deck and dropped deck, 85 ms and 69 ms of the cloud's
+# stage 2 entry before.
+func _check_ahead(terrain, ahead: Dictionary) -> void:
+	var snapshot = ahead.get("snapshot")
+	var live: Array = terrain._cave_roofs.get(1, {}).values().map(func(roof): return roof.surface)
+	_t.check("stage 2's plan keeps the snapshot its worker planned from, roofs copied there",
+		snapshot != null and snapshot._copied and snapshot.terrain._roofs.size() == live.size()
+		and not snapshot.terrain._roofs.any(func(roof): return live.has(roof)), "%d roofs" % live.size())
+	var spans: Array = terrain.map_for(2).park.event_rows.filter(func(row): return EventGround.kind_of_span(row))
+	_t.check("stage 2 has a span collapse", not spans.is_empty())
+	for row in spans:
+		var entry: Dictionary = ahead.get("plan", {}).get(row.id, {})
+		var site := EventGround.span_site(terrain.map_for(2).park, entry.get("site", {}))
+		_t.check("%s: planned deck and dropped deck equal the live span surfaces" % row.id,
+			entry.has("span") and entry.has("target") and entry.span.mesh != null
+			and entry.span.vertices == EventGround.span_surface(site, 0.0).vertices
+			and entry.target.vertices == EventGround.span_surface(site, maxf(0.0, float(row.effect.depth_m))).vertices)
+
+
+func _check_span_entry(ahead: Dictionary) -> void:
+	var natural = _natural()
+	for id in natural._prepared:
+		var row: Dictionary = natural._original_map.park.event_rows.filter(func(r): return r.id == id)[0]
+		if not EventGround.kind_of_span(row):
+			continue
+		var record: Dictionary = natural._prepared[id]
+		var swap: Dictionary = record.overlay_map.swaps[record.swap]
+		var entry: Dictionary = ahead.get("plan", {}).get(id, {})
+		_t.check("%s: the entry builds its overlay on the planned decks" % id,
+			swap.baseline == entry.get("span") and swap.target == entry.get("target"))
 
 
 func _natural():

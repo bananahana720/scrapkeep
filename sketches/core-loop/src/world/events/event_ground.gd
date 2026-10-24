@@ -120,21 +120,31 @@ class Ground:
 class Snapshot:
 	extends RefCounted
 	var terrain: Ground
+	var _copied := true
+	# The worker's first step for a snapshot taken with copy_now false.
+	func copy_roofs() -> void:
+		if _copied:
+			return
+		terrain._roofs = terrain._roofs.map(func(roof: Surface) -> Surface: return roof.copy())
+		_copied = true
 
 
 # A built park stage's ground for a worker: the stage's grids (copy on write, never written after the
-# build) and private copies of its cave roofs. Main thread only.
-static func snapshot(terrain, index: int) -> Snapshot:
+# build) and private copies of its cave roofs. Main thread only. copy_now false leaves the roof copies
+# (85 ms on the flume, on the cloud) to the worker's copy_roofs, for a stage that is not the active one:
+# nothing lowers its roofs until it is entered, and the entry waits on the worker first.
+static func snapshot(terrain, index: int, copy_now := true) -> Snapshot:
 	var i := index - 1
 	var ground := Ground.new()
 	ground._heights = [terrain._heights[i]]
 	ground._holes = [terrain._holes[i]]
 	ground._under = [terrain._under[i]]
 	for roof in terrain._cave_roofs.get(i, {}).values():
-		ground._roofs.append(roof.surface.copy())
+		ground._roofs.append(roof.surface.copy() if copy_now else roof.surface)
 	ground._terrain = terrain.get_script()
 	var out := Snapshot.new()
 	out.terrain = ground
+	out._copied = copy_now
 	return out
 
 
@@ -481,10 +491,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	var geometry: Dictionary = record.geometry
 	var site: Dictionary = record.site
 	if kind_of_span(row):
-		var span: Dictionary = current.park.park_rows.filter(func(r): return r.id == "flume_hollow_reach")[0]
-		site = record.site.duplicate(true)
-		site.id = span.id
-		site.y = float(span.y) + float(span.size[1])
+		site = span_site(current.park, record.site)
 		geometry = record.geometry.duplicate()
 		geometry.site = site
 		geometry.at = Vector3(float(site.at[0]), float(site.y), float(site.at[1]))
@@ -494,7 +501,7 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 	var kind: String = row.kind
 	var surface: Surface
 	if geometry.get("span", false):
-		surface = span_surface(site, 0.0)
+		surface = prepared.span if prepared.has("span") else span_surface(site, 0.0)
 		geometry.marker_surface = surface
 	elif prepared.has("surface"):
 		surface = prepared.surface
@@ -617,7 +624,17 @@ static func kind_of_span(row: Dictionary) -> bool:
 	return row.kind == "collapse" and row.effect.get("swap", "") == "trestle_ramp"
 
 
-static func span_surface(site: Dictionary, depth_m: float) -> Surface:
+# A span collapse's site: the event's footprint at the deck height of the reach it spans.
+static func span_site(park: Dictionary, event_site: Dictionary) -> Dictionary:
+	var span: Dictionary = park.park_rows.filter(func(r): return r.id == "flume_hollow_reach")[0]
+	var site := event_site.duplicate(true)
+	site.id = span.id
+	site.y = float(span.y) + float(span.size[1])
+	return site
+
+
+# deferred leaves the mesh to Surface.finish, for a worker (natural.gd plan).
+static func span_surface(site: Dictionary, depth_m: float, deferred := false) -> Surface:
 	var surface := Surface.new()
 	var half := ParkMap.footprint_half_extents(site)
 	var centre := Vector2(float(site.at[0]), float(site.at[1]))
@@ -641,4 +658,4 @@ static func span_surface(site: Dictionary, depth_m: float) -> Surface:
 	for j in range(floori(low.y / ParkTerrain.STEP), floori(high.y / ParkTerrain.STEP) + 1):
 		for i in range(floori(low.x / ParkTerrain.STEP), floori(high.x / ParkTerrain.STEP) + 1):
 			surface.cells[Vector2i(i, j)] = [0, 3]
-	return mesh_surface(surface, normals)
+	return mesh_surface(surface, normals, null, deferred)
