@@ -131,6 +131,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `death_saved` | `hp: float` | `run_state` | the earned save caught a lethal hit; flow writes `death_save_spent` to the entrance doc (`_on_death_saved`) |
 | `beacon_charge_changed` | `fraction: float` | spine flow | beacon charge, 0 to 1; while sealed, the share of the Warden broken; exactly `1.0` once per stage when the gates open |
 | `beacon_unsealed` | `stage: int` | spine flow | the Warden broke; the gates open wherever the ball is |
+| `warden_sighted` | `stage: int` | spine flow | the ball first comes within `SIGHT_SHARE` (3.5) times the beacon ring's radius of the sealed Warden, before any engagement, once per stage attempt; intro lines and reveal cards play here and clear at `warden_engaged` |
 | `warden_engaged` | `stage: int` | spine flow | first sealed ring entry or first strike on the Warden, once per stage attempt |
 | `stage_content_cleared` | `reason: String` | spine flow | stage content must stand down now (reason `arena` on entering the boss arena, `arena_retry` on retrying it); quiet, priority 0 |
 | `scrap_collected` | `amount: int, at: Vector3, total: int` | `run.add_scrap` | scrap taken |
