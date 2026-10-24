@@ -1634,8 +1634,13 @@ func _activity_goal(delta: float) -> bool:
 			# on the reach its shelf pulled the explorer off the cache into a wall it cannot pass.
 			if _site_has_authored_pack(c):
 				level -= CAMP_LAST
-			# A field find (secrets.gd FINDS) is the last stop: the explorer has learned the tells and
-			# checks the dead ends once the lit sites are done, unless it rolls within earshot of one.
+			# A field find (secrets.gd FINDS) is the explorer's (--explore-by): the default completionist
+			# keeps its ENGAGE_BY clock and its stall limit, so a find run out at the rush left it across
+			# the dam from the sheet, wedged on the canyon rim (seed 6 on 0f56e5ce, Stack #413).
+			if c.has_meta("find") and engage_by <= ENGAGE_BY:
+				continue
+			# The last stop: the explorer has learned the tells and checks the dead ends once the lit
+			# sites are done, unless it rolls within earshot of one.
 			if c.has_meta("find") and _flat(ball, c.global_position) > FIND_NEAR_M:
 				level -= CAMP_LAST * 2.0
 			var d := _flat(ball, c.global_position)
