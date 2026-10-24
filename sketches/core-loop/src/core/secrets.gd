@@ -119,10 +119,28 @@ const FINDS := {
 			"text": "The flume crew listened while they worked. Their wireless is still behind the wall, still taking requests."},
 	},
 }
+# The timed door (world 1 unit 15, Isaac's timed boss doors): rout Brindle with the run clock under
+# DOOR["under_s"] and the next run finds the Shift Clock Door by the dam's drop-in, a cracked room
+# that pays the green rung and files its codex row. It is earned, not hidden, so it keeps the beacon.
+# Every ended run counts in DOOR_RUNS; the rout writes the count the next run will see into DOOR_FOR,
+# so the door is open for exactly that run, and a quit and Continue keeps it.
+const DOOR := {
+	"boss": "brindle", "under_s": 720.0, "world": 1, "map": "park_dam", "site": "top_shelf_deck",
+	"at": [-208, -720], "face": [2, 1],
+	"name": "Shift Clock Door",
+	"log": "Foreman's note: crews who clock Brindle out before the whistle get the side door. Do not tell the slow shift.",
+	"codex": {"id": "spillway_clock_door", "category": "world", "name": "Before the Whistle",
+		"hint": "Some doors only open for a fast shift.",
+		"clue": "Rout Brindle in under 12 minutes; the next run finds a clock door by the drop-in",
+		"text": "The Spillway crews kept a side door for the shift that beat the whistle. Clock Brindle out early and it is unlocked next run."},
+}
+const DOOR_RUNS := "door.runs_ended"
+const DOOR_FOR := "door.brindle_clock_run"
+
 # The world codex rows each world's camp count reads: its field finds, then the parks' authored
 # secret caches (the contraption rows that carry a codex id).
 const WORLD_CODEX := {1: ["spillway_turbine_seep", "spillway_shift_radio", "spillway_flume_seep", "spillway_crew_radio",
-	"spillway_gallery_cache", "flume_weir_cache"]}
+	"spillway_gallery_cache", "flume_weir_cache", "spillway_clock_door"]}
 const WORLD_NAMES := {1: "Spillway"}
 
 
@@ -210,3 +228,31 @@ static func world_count(world: int, known: Callable) -> Dictionary:
 		if known.call(id):
 			got += 1
 	return {"world": world, "name": WORLD_NAMES.get(world, "World %d" % world), "found": got, "total": ids.size()}
+
+
+# A boss rout: under the clock, the profile holds the door for the run after this one. True when
+# it marked it. Both stats only ever rise, as profile.gd's save merge keeps the larger value.
+static func note_rout(profile, boss: String, run_time: float) -> bool:
+	if profile == null or boss != DOOR["boss"] or run_time >= float(DOOR["under_s"]):
+		return false
+	profile.set_stat(DOOR_FOR, profile.stat(DOOR_RUNS) + 1.0)
+	return true
+
+
+# A run ended: the next run is the one a rout in this run opened the door for.
+static func roll_door(profile) -> void:
+	if profile != null:
+		profile.add_stat(DOOR_RUNS)
+
+
+static func door_open(profile) -> bool:
+	return profile != null and profile.stat(DOOR_FOR) >= 1.0 and profile.stat(DOOR_FOR) == profile.stat(DOOR_RUNS)
+
+
+# The timed door a park map holds this run, as an activity site spec (find_sites' shape, with `door`).
+static func door_sites(map_id: String, profile) -> Array:
+	if DOOR["map"] != map_id or not door_open(profile):
+		return []
+	return [{"id": "cracked_cache", "row": "timed_door", "site": DOOR["site"], "door": true,
+		"at": Vector2(float(DOOR["at"][0]), float(DOOR["at"][1])), "pay": FIND_PAY.duplicate(true),
+		"face": Vector2(float(DOOR["face"][0]), float(DOOR["face"][1])).normalized()}]
