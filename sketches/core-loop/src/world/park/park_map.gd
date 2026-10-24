@@ -44,8 +44,12 @@ var time_of_day := ""
 var rescue_sites: Array = []
 
 
+# An empty path reads nothing (ok stays false): event_ground.gd's OverlayMap copies a loaded map's
+# fields instead, where reading the park file again took 36 ms of an event's telegraph frame.
 func _init(park_path := FIXTURE) -> void:
 	path = park_path
+	if park_path == "":
+		return
 	var read := ParkSchema.load_park(path)
 	errors = read["errors"]
 	if not errors.is_empty():

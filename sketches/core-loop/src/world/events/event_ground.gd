@@ -98,11 +98,17 @@ class Ground:
 	var _holes: Array = []
 	var _under: Array = []
 	var _roofs: Array = []
+	# Overlays down on this ground, {site, surface} each, read as terrain.height reads OverlayMap.overlay_height.
+	var _profiles: Array = []
 	var _terrain: Script
 	func map() -> RefCounted:
 		return null
 	func height(x: float, z: float) -> float:
-		return _floor(0, x, z)
+		var h := _floor(0, x, z)
+		for profile: Dictionary in _profiles:
+			if ParkMap.footprint_contains(profile.site, Vector2(x, z)):
+				h = maxf(h, profile.surface.height(Vector2(x, z)))
+		return h
 	func _ensure(_index: int) -> int:
 		return 0
 	func _grid_height(heights: PackedFloat32Array, x: float, z: float) -> float:
@@ -127,6 +133,19 @@ class Snapshot:
 			return
 		terrain._roofs = terrain._roofs.map(func(roof: Surface) -> Surface: return roof.copy())
 		_copied = true
+	# This ground with one more overlay down (an OverlayMap profile: {site, surface}), sharing its arrays.
+	func with_profile(profile: Dictionary) -> Snapshot:
+		var ground := Ground.new()
+		ground._heights = terrain._heights
+		ground._holes = terrain._holes
+		ground._under = terrain._under
+		ground._roofs = terrain._roofs
+		ground._profiles = terrain._profiles + [profile]
+		ground._terrain = terrain._terrain
+		var out := Snapshot.new()
+		out.terrain = ground
+		out._copied = _copied
+		return out
 
 
 # A built park stage's ground for a worker: the stage's grids (copy on write, never written after the
@@ -472,10 +491,12 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 		record.overlay_map = overlay_map
 		return overlay_map
 	if overlay_map == null:
-		overlay_map = OverlayMap.new(current.path)
+		# A copy of the loaded map's fields (deep, as the park file's own read gave), not a second read of it.
+		overlay_map = OverlayMap.new("")
 		for property in current.get_property_list():
-			if int(property.usage) & PROPERTY_USAGE_STORAGE and property.name != "script":
-				overlay_map.set(property.name, current.get(property.name))
+			if int(property.usage) & (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_SCRIPT_VARIABLE) and property.name != "script":
+				var value = current.get(property.name)
+				overlay_map.set(property.name, value.duplicate(true) if value is Dictionary or value is Array else value)
 		overlay_map.source = current
 		world.terrain.maps[world.terrain.stage - 1] = overlay_map
 	if row.kind == "cave_in":
@@ -556,6 +577,50 @@ static func overlay_surface(world, kind: String, geometry: Dictionary, deferred 
 	return project_surface(world, geometry, [_rectangle(-half, half)],
 		Callable() if kind == "collapse" else func(local, base): return float(height.call(local.x, local.y)) - base,
 		false, null, null, null, deferred)
+
+
+# A stage's industrial or ancient swap overlays, projected on a worker from its ground as entered:
+# each was projected on the main thread at its row's telegraph or landing, 450-500 ms on the islands
+# on the cloud (scrapkeep#241). items: [{id, kind, geometry}] keyed by row id. A stage entered with
+# an overlay down, or not a built park stage, plans nothing.
+static func plan_overlays(world, items: Array) -> Dictionary:
+	var terrain = world.terrain
+	if items.is_empty() or not "_cave_roofs" in terrain or not terrain.overlays.is_empty():
+		return {}
+	var stage: int = terrain.stage
+	if not terrain._is_park[stage - 1] or terrain._heights[stage - 1].is_empty():
+		return {}
+	var ground := snapshot(terrain, stage, false)
+	var out := {}
+	var work := func() -> void:
+		for item: Dictionary in items:
+			out[item.id] = overlay_surface(ground, item.kind, item.geometry, true)
+	return {"task": WorkerThreadPool.add_task(work, true, "event overlays"), "out": out, "stage": stage,
+		"roofs": terrain._cave_roofs.get(stage - 1, {}).values().map(func(roof): return roof.surface)}
+
+
+# prepare_overlay's prepared for row id from plan: its surface while the ground is still the one it
+# was planned on (the same stage, no overlay down, no cave roof lowered since), else {} and the caller
+# projects it live. Waits on the worker if it is still running.
+static func planned_overlay(world, plan: Dictionary, id: String) -> Dictionary:
+	var terrain = world.terrain
+	if plan.is_empty() or terrain.stage != plan.stage or not terrain.overlays.is_empty():
+		return {}
+	if terrain._cave_roofs.get(plan.stage - 1, {}).values().map(func(roof): return roof.surface) != plan.roofs:
+		return {}
+	settle_overlays(plan)
+	if not plan.out.has(id):
+		return {}
+	var surface: Surface = plan.out[id]
+	if surface.mesh == null:
+		surface.finish()
+	return {"surface": surface}
+
+
+static func settle_overlays(plan: Dictionary) -> void:
+	if plan.get("task", -1) >= 0:
+		WorkerThreadPool.wait_for_task_completion(plan.task)
+		plan.task = -1
 
 
 static func install_surface(overlay_map: OverlayMap, id: String, surface: Surface) -> void:

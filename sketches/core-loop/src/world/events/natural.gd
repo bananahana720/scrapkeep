@@ -177,7 +177,8 @@ static func plan(world, park: Dictionary) -> Dictionary:
 
 # Each natural row's telegraph and landing marks, projected from its planned geometry (up to about
 # 1 s each for a flash flood's wash, so never on the main thread in play). A landed impact sits on
-# its own overlay, so its landing mark is always projected live. A landed collapse's mark sits on
+# its own overlay (planned[id].landed, its profile), which the worker lays on the snapshot's ground:
+# the islands' isle_shed projected it live on its landing tick, 1.18 s on the cloud. A landed collapse's mark sits on
 # its target surface (planned[id].target), which the worker reads like the live _mark does (the
 # flume's hollow trestle took 437 ms on the cloud to project live on its landing tick). Pure like plan().
 static func plan_marks(world, park: Dictionary, planned: Dictionary) -> Dictionary:
@@ -191,6 +192,13 @@ static func plan_marks(world, park: Dictionary, planned: Dictionary) -> Dictiona
 			var landed := geometry.duplicate()
 			landed.marker_surface = planned[row.id].target
 			out[row.id].land = _mark_surfaces(world, row, landed, true, null, true)
+		elif row.kind == "impact" and planned[row.id].has("landed") and world is EventGround.Snapshot:
+			# The live mark reads the overlay through terrain.height and again, unclipped, through the
+			# overlay map; the marker surface stands in for the second read.
+			var profile: Dictionary = planned[row.id].landed
+			var landed := geometry.duplicate()
+			landed.marker_surface = profile.surface
+			out[row.id].land = _mark_surfaces(world.with_profile(profile), row, landed, true, null, true)
 		elif row.kind != "impact" and row.kind != "collapse":
 			out[row.id].land = _mark_surfaces(world, row, geometry, true, null, true)
 	return out
@@ -255,6 +263,8 @@ func _plan_marks(planned: Dictionary) -> void:
 		var record: Dictionary = _prepared[id]
 		if record.get("overlay_map") != null and record.overlay_map.swaps[record.swap].get("target") != null:
 			geometry[id].target = record.overlay_map.swaps[record.swap].target
+		if record.get("overlay_map") != null and record.overlay_map.profiles.has(record.swap + "_after") and not record.overlay_map.swaps[record.swap].get("cave", false):
+			geometry[id].landed = record.overlay_map.profiles[record.swap + "_after"]
 	var out := {}
 	_marks_job = {"key": key, "out": out, "task": WorkerThreadPool.add_task(func(): out.merge(plan_marks(snapshot, park, geometry)), false, "natural marks")}
 
@@ -597,8 +607,8 @@ func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 
 func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	var surfaces: Dictionary = _prepared[row.id].marks.get("land" if landed else "telegraph", {}) if _prepared.has(row.id) else {}
-	# A landed collapse's own overlay is down by now, and its planned mark already sits on its target.
-	var own: String = _prepared[row.id].get("swap", "") + "_after" if landed and row.kind == "collapse" and _prepared.has(row.id) else ""
+	# A landed collapse's or impact's own overlay is down by now, and its planned mark already sits on it.
+	var own: String = _prepared[row.id].get("swap", "") + "_after" if landed and row.kind in ["collapse", "impact"] and _prepared.has(row.id) else ""
 	if surfaces.is_empty() or not _ground_as_planned(surfaces, own):
 		if landed and row.kind == "collapse":
 			geometry = geometry.duplicate()
