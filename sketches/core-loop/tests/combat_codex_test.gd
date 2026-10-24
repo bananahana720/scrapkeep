@@ -6,6 +6,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const PilotBlocks := preload("res://tests/support/pilot_blocks.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 # Combat's "enemy" codex entries: complete as data (id, category, name, hint, clue,
 # text, owner, participants), and each one detected by combat's own code when the
@@ -262,6 +263,7 @@ func _w9_tricks() -> void:
 	mate.set_physics_process(false)
 	_roof_fall = shoring.knock_prop()
 	_w10_pack_tricks(home)
+	_spillway_tricks(home)
 
 	var burrower: Node3D = _w9_spawn("burrower", home + Vector3(8.0, 0.0, 0.0))
 	burrower._warn(_w9_to(burrower))
@@ -366,6 +368,72 @@ func _w10_pack_tricks(home: Vector3) -> void:
 	_report("stream_cut", _combat.discovered.has("stream_cut") and dropped > 0,
 		"a Dispatcher that dropped %d chaser(s) was killed" % dropped)
 	for node in [trap, brute, drone, jaw, linker, cup, swatter, dispatcher]:
+		if is_instance_valid(node):
+			node.queue_free()
+
+
+# 2026-10-24 (Spillway roster, #402): the four world 1 crews and the soaked armour, each
+# through its own detector with the ball parked grounded at home. The FAST rows set the tier
+# the unit reads on that one call and put it back after.
+func _spillway_tricks(home: Vector3) -> void:
+	var fleet = _combat.fleet
+	var player = _game.player
+	var tier: int = player.state.tier
+
+	var layer: Node3D = _w9_spawn("jolt_layer", home + Vector3(6.0, 0.0, 6.0))
+	layer.target = player
+	layer._warn(_w9_to(layer))
+	layer.phase = layer.Phase.LIVE
+	player.state.tier = SpeedTier.FAST
+	layer._live(layer.field.until_pulse() + 0.01)
+	player.state.tier = tier
+	_report("mat_slip", _combat.discovered.has("mat_slip") and layer.slipped == 1 and layer.jolts == 0,
+		"a FAST ball on a jolt layer's mat slipped its pulse (slipped %d, jolts %d)" % [layer.slipped, layer.jolts])
+
+	fleet.holds.clear()
+	var flap: Node3D = _w9_spawn("ramp_flipper", home + Vector3(-6.0, 0.0, 6.0))
+	flap.target = player
+	flap._warn(_w9_to(flap))
+	player.state.tier = SpeedTier.FAST
+	flap.phase = flap.Phase.LIVE
+	flap._t = 0.0
+	flap._go_live()
+	player.state.tier = tier
+	_report("flap_ride", _combat.discovered.has("flap_ride") and flap.rides == 1 and not fleet.holds.held(flap),
+		"a FAST ball rode a sluice flap, never held (rides %d)" % flap.rides)
+
+	fleet.holds.clear()
+	fleet.holds.immune_left = 0.0
+	var hooker: Node3D = _w9_spawn("hooker", home + Vector3(8.0, 0.0, -2.0))
+	hooker._catch(0.0, Vector3.ZERO, hooker.anchor())
+	var tethered: bool = fleet.holds.held(hooker)
+	player.kit.anchor_body = null
+	_game.events.grapple_fired.emit(player.ball_position() + Vector3(0.0, 4.0, 6.0))
+	_report("hook_out", _combat.discovered.has("hook_out") and tethered and hooker.broken_by == "hook",
+		"a harpoon bite on a post snapped a hooker's tether (held %s, broken by %s)" % [tethered, hooker.broken_by])
+
+	fleet.holds.clear()
+	var boom: Node3D = _w9_spawn("boom_tender", home + Vector3(5.0, 0.0, 2.0))
+	boom.target = player
+	boom._warn(_w9_to(boom))
+	player.state.tier = SpeedTier.FAST
+	boom.phase = boom.Phase.LIVE
+	boom._t = 0.0
+	boom._live(1.0 / 60.0)
+	player.state.tier = tier
+	var touched: int = boom.pops
+	_report("boom_pop", _combat.discovered.has("boom_pop") and touched >= 1 and boom.pinned == 0,
+		"a FAST ball in a boom tender's lane burst %d float(s), never pinned" % touched)
+	for i in boom.FLOAT_OUT.size():
+		boom._bowl_through(boom.float_position(i))
+	_report("boom_strike", _combat.discovered.has("boom_strike") and boom.strikes == 1,
+		"the ball went through all five floats in one sweep (strikes %d)" % boom.strikes)
+
+	var soaked := _chaser(-14.0, 500.0)
+	_combat.strike(soaked, "arc", 20.0, "", "weapon")
+	_report("armour_wet", _combat.discovered.has("armour_wet"), "a full arc hit on a soaked chaser reads it")
+	fleet.holds.clear()
+	for node in [layer, flap, hooker, boom, soaked]:
 		if is_instance_valid(node):
 			node.queue_free()
 
