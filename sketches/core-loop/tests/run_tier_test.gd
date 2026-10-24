@@ -60,27 +60,30 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-23 merge of stage/alpha-w18 e564e2c3 (B17: #359 sinkhole elbows) into the drum kicker move (drum_lip_kicker 3.07 m east, World, #241 6357419327): both change park-row data; schedules re-read from MEASURE (schedule0), seeds 0..19.
 # 2026-10-23 lava_channel_14 and 20 shortened to ease the sinkhole wash elbows 14>15 and 19>20 (World, #241 6356545723): park-row data in the schedule hash; all 20 moved, whole-run hashes unchanged; pins read from this test's own MEASURE lines (schedule0), seeds 0..19.
 # 2026-10-23 merge of stage/alpha-w18 63261606 into #375 (Gate thread): schedules re-read from MEASURE (schedule0), seeds 0..19.
+# 2026-10-24 stage/alpha-w18 re-pin at 7eff47b0 (Gate thread, coordinator ruling): the w18 stack since c0763e81 (#385 rogue fleet, #391 boss
+# phases, #389 tunes, #402 roster, #406 first hour, #407 Cannon, #413 secrets, #416 Slag Bowl, #417, #418 and the rest) moves the
+# schedule and the default run on all 20 seeds; no bisect (ruling d). Pins read from this test's own MEASURE lines (schedule0, tier0.hash).
 const BASE_SCHEDULE := [
-	"49c1fc5250239abae88992522e3ed1080f73ee99e268572266beffabc7994b2f",
-	"48186ff32665da85790b73dd85bf745f6ddd68f82e30a763bb98bbc62c21f8c6",
-	"a618df6c581aae20a8a9ef905375e2a55eead6c38d3d574ffe27c9a2405b8517",
-	"714496e8f56305f14b9fbc41a4d15c0fb865ce3b2cf50a5d74b2c8e314517724",
-	"41c55e1a8e3d9a661e36a108a1e4756f3e271b6f275b39451f31dc2e48531d38",
-	"d144d9a03e27ef349a0737fdc7b90320d77f8570096e720abf6c05ee63547f22",
-	"ed4b32ac029c1203254afda329ea6e190e720d230a2c4487cfe4101acd2f94bc",
-	"124bc3d53f3a8bf5953e10dcad34a74e152ede68bb0f6539f09f31c6602defed",
-	"563d7d2871f207bf1f5c397c96296cd7b1024db7ca38b0ae2e3207ec18c7205b",
-	"ee1f3f0a680f58dcca6fc7bab389eca6a8852caed66bbf42a88f314a2753755c",
-	"48d3c754353179acc4dd90acd8e7fcca576592b1fcf8ba003246097829b445b1",
-	"72cc3294dcbdf68ba6d5db2e12ca57cd2ecbfb7bef9a9cc6dd04bbc5cec6ea7b",
-	"dfdd9adeb97b1e74ce54088927006de67111f99e50a2d9ec45c8441205ddb012",
-	"5ed92fe51aad914042226eebc54ce4c8268e51762a1b2f85776c896225599cc1",
-	"e43227c080b172eab86eff483bc88bbf8a56a5b0302e745ba2f130c60bd7d575",
-	"76f813247198090a4243c93bc4a5d335a73c000cf713ef8aa945cc3563eeeb5e",
-	"9dfe96ddcf61c6be0770448cc06980694672af04fd748132f8da46d95fe4951e",
-	"ac8f749c6bc1e33989c946952085f6ee846aa03b1dca71051685e33ea2855b3f",
-	"265b9d0eede674065db8c81458bb5e7ed5313f82ce8b612c3a20f56adbbad45c",
-	"b8f477c1182f5aaabcf246eb24193dbd885746c75bb55dcf49f864a4f7f0882e",
+	"d76200ab111e742993f79ac1cd8bf2989e1cc93fe551e6e4688dc525dc60db56",
+	"b8474181885816d0830380574d1d8552d25248508f84664cfe28f8d8fde695cc",
+	"23eb00a1f1c5bb96b1af3c4adefccf3f8c59cb045cd275d2d1513e761f840bee",
+	"4a8d18208f534a82074ecc5b5825580323ccb407723aca278d5098d15aa172d4",
+	"70aedb213efd64146da38915f4464f8f6baaa902efea9e7eff90a4a96273259e",
+	"b10be2c9c5f41cdb8d7c4da25b7eaf35f03d5bcae66d829c1ce633ca33eccae3",
+	"8a85e9e6d03d7950e962dd6bd383521a0d2da7bbbc7c907a5155e26321494d22",
+	"38433392ee3d254ea2a8b6311e805fd658ff3c241c1f673d35061fb7bd511d20",
+	"1e24804d4a310685f4012254e5ef022d8a4154f29125bf4f584a8eb0b6a07cd2",
+	"214a98cb13163370fb5601d0a796c9fd4b725f39a787e276387436b5b57c51ff",
+	"02ec4d1602fbaa27f0b8e952c39e16af895ce160f8b86fd3b3fa99983a4889fb",
+	"1bb01fc4e705580b6dbf330f5942e2be1dd75edd58d07f9b1e2ecb5acef96c33",
+	"32babcd0e5f25f59c3266b5e0eecbad383787be6524793e52c3b4e4288bc5065",
+	"b380eb2256f632f30cf16ce2bf4787865bb7ac5bcc805124196a2503fbfcc925",
+	"7c8c37d6ba7040054b3f3afdd950d9d8bc43c71e2eaaac757d7ef783598a2520",
+	"adad4c5620f10dbcc6dacdc26e528e18eab1f56b8937bc938d8ad2e4a6c88ab6",
+	"4060b194e26b5ae6e07a9e268d2292dfcefea0885b5d87a2a751e5ed83375337",
+	"83200fbe378d325ffc11bc36a1b8fcfd87a0040c2fdb4351f8dd2a77b79fa2da",
+	"568b863b295a05e8ad98be822eaf65e3184e49e5c277080ddb66afe48f7e9712",
+	"44ac234bbd05e81abd4cc948e549720bb250a3c605e828cb5adabdc0d46f0cd9",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
@@ -88,27 +91,28 @@ const BASE_SCHEDULE := [
 # unchanged; recorded with BASE_SCHEDULE above.
 # 2026-10-19 answer weighting (Systems, #149: OFFER_WEIGHT 1.5 on the pilot's nemesis answers) merged with stage/alpha-w17
 # 1a7a7299: whole runs moved on all 20 seeds, schedules unchanged; recorded with --record-base --section=runtime, one seed at a time.
+# 2026-10-24 stage/alpha-w18 re-pin at 7eff47b0: whole runs moved on all 20 seeds with the schedules above; read from MEASURE (tier0.hash).
 const BASE_RUN := [
-	"71de2789ab03d4cd06f46a747f7ce08e8c78551fdfa3a76ad613046637d86050",
-	"4120552c94ce5ca0fcdcebee37b6a0005caccdac9eeffe7ad8f8a393bb469bc9",
-	"2855a498b8b952979e21d6d101c5938f03843b0c947e9a984ae581c23dba866a",
-	"c182076d9694177180b5526c01d547531d77e45dcc239d6e6c44f9a9d00ec145",
-	"e10aea8dad285913d0baa60ec61a010aaed967787e2e1aa70886f74ddb599321",
-	"30408bbddb8a5ea5535121b7601bdae780b586260b9a60ba897af2b4b8e837fb",
-	"c80f68a6feb09861a16542ac71e83960ae9d7c890637008487e71d93ff3ce43a",
-	"aabe223a1867a4aa0ebb355c9d3522db0cddccfcc40d41abab1a5e777327f1e5",
-	"88e95d8c4142e89aa515b21cba4dbeaa1a41650dd64e394d3e6f73539529a550",
-	"f3d14656815d2bb3c3903e0c4cde3e527a6ad56c1804f856eaa9829b35458164",
-	"96fe034018697cc78cd3f17f6ed7a8eedee49ccdcd32a6fe83fb7af62ee24667",
-	"67960ebd7f62591f787d0f6051f883230951cb5acc39fc383df8ce2199b2f996",
-	"8f0754b4a041ad197faaab47ae623eb678304a5c560d9b305e5656df3bd94179",
-	"3a0fbea5a1aa7c820830efc8b462a1d4da28f5f6c2dfcd1972172fc06713afc9",
-	"4c5ac980948916e937b062cf42fed0d05d0d3a39dee8d9c187beb2c74146b392",
-	"785fc224a19f9d04b62d273ed1419a8bbb2115c784ca0f119c0d7bd654ae7185",
-	"a8bba4131e81b87e6ede6cb2a89016e04165c7a0fcff5e36c3b0d5d42504f364",
-	"babf3cf19c0f14fb4a9798ad3165f0e3d79a5803d4bd912e268ab441a4e7024f",
-	"1113717552601c818871bc470a8bd60f651130a73bc0be331d0d61db3b29555b",
-	"ea70b26302b537ca8ccc22543e35d4561044a4fb3d6a3f65443afb64f107fc31",
+	"66b1ae05eb54957fbacfff760cfa7ea41daa6e59660d6d554593f8a7d887f200",
+	"ddb464a68aee2fd5a6c707b78aab8dfe6c0f2d814b15a5ddae71ec41042e0a25",
+	"224254c650f292d53eca657f7b2ef681ab0ab92d3b2c2eef884ef4737a8a2255",
+	"a3287a83556e1c9c40192d82c2a2ee51530a47bf5395deddb034b0eb03462426",
+	"5acf6577d8ac7103ed30217b9f14e7b22d099c9f43bc98bfa96dbb5f75c0516b",
+	"ac39187e8691770074948f25d10f41019e7141a16038b0ee9ea33f59e37b00e4",
+	"8e08c5368f60aa5c3ed492537223ec24ffe39b459306ef51913045075c5ec1c8",
+	"e1b2c2cfa73ee39f0b197d6d51e82aafe0543132798b8d79d17e7cd50ad0e167",
+	"fbe567976e84370d6720b01b2611ebf9e0b255f24108cf040e0adb754f898f09",
+	"d26d23c6d438411e9f23a35118d7778ccc38328ff96a01e1ceffd22e3bac00a5",
+	"8af7c3f5beaca8d6dd9ce4988894843d7c8454bac0dc70b3d0604ebfaccebb38",
+	"10b66c0fd0bbdcb926b8244dfd6d95faf412a07637db6ebf6c02e979920c0b7b",
+	"313ddae0d18e8d410ba279ae48daff7363346b6b092eaf6db48ba4280669a8e2",
+	"b3a0bf9c756647bec57d29f5e8dbac343202c2b49d35deaf8c41d0d7f4eda7ae",
+	"a0167b6522afb64f660c978d57853255bb24bbceda8e02c3176cbc9ab2f1f9df",
+	"901c1177c8a0af0740f613c6d711d12079fbb7e067668787584d527c1614327a",
+	"2d24a20e0cb70994c35e055f1c65fe975bf1ebf101c9b3577c4b584c3b671557",
+	"3610212e2fc816eef9fa29d1d917ead2798b781f6fccf013419c6d4bc51994d3",
+	"80fff60dc0c0ce74452e61a3749e10972f6a529fdd1fc20ccb8853a5c8cf1425",
+	"d130a13708977a18ce4be2dafec381e73da137e27ca30d0e2af1b53f84c02712",
 ]
 const SEEDS := 20
 const DRAWS := 400
