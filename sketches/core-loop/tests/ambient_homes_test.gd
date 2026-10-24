@@ -50,6 +50,7 @@ func _run() -> void:
 					bad.append("%s %s blocked by %s" % [home["kind"], home["at"] + offset, what])
 		_t.check(map_id + " %d homes, %d positions clear" % [homes.size(), positions], bad.is_empty(), str(bad.slice(0, 3)))
 		_direct(map_id, park, homes)
+		_check_grid(map_id, park, keep)
 		for kind in kinds:
 			var count := homes.filter(func(h): return h["kind"] == kind).size()
 			var spec: Dictionary = AmbientKinds.row(kind)["homes"]
@@ -71,6 +72,32 @@ func _run() -> void:
 	var keep := AmbientHomes.keepouts(park)
 	_t.check("spawn is blocked", AmbientHomes.blocked(keep, Vector2(float(park["spawn"]["at"][0]), float(park["spawn"]["at"][1]))) != "")
 	_t.check("beacon is blocked", AmbientHomes.blocked(keep, Vector2(float(park["landmark"]["beacon"][0]), float(park["landmark"]["beacon"][1]))) != "")
+
+
+# The plan asks blocked() through a cell grid of the keepouts (_blocked_near): it must answer as blocked() does,
+# keepout name and all, at points all over the park and on keepout edges, where a cell boundary would show.
+func _check_grid(map_id: String, park: Dictionary, keep: Array) -> void:
+	var near := AmbientHomes._keep_grid(keep)
+	var rect := AmbientHomes._rect(park)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SEED
+	var points: Array[Vector2] = []
+	for i in 4000:
+		points.append(Vector2(rng.randf_range(rect.position.x, rect.end.x), rng.randf_range(rect.position.y, rect.end.y)))
+	for k in keep:
+		var centre: Vector2 = k["points"][0] if k["shape"] == "line" else k["centre"]
+		var r: float = float(k.get("radius", k.get("reach", 0.0)))
+		for a in 16:
+			points.append(centre + Vector2.from_angle(TAU * a / 16.0) * r * rng.randf_range(0.97, 1.03))
+	var differ := []
+	var held := 0
+	for p in points:
+		var want := AmbientHomes.blocked(keep, p)
+		held += 1 if want != "" else 0
+		if AmbientHomes._blocked_near(near, p) != want:
+			differ.append("%s: %s / %s" % [p, AmbientHomes._blocked_near(near, p), want])
+	_t.check("%s the keepout grid answers as blocked() at %d points (%d blocked)" % [map_id, points.size(), held],
+		differ.is_empty() and held > 0, str(differ.slice(0, 3)))
 
 
 # A second reading that skips the planner's keepout list: each position measured straight from the park file
