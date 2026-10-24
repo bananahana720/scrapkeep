@@ -1018,6 +1018,16 @@ func _press_harpoon() -> void:
 	_fail("harpoon", reason)
 
 
+# Why Ctrl cannot commit the haul on this latched body line: a flail hangs behind the ball, a
+# stake only holds the rope, and a Warden opens to the haul only inside its stagger.
+func _haul_refusal() -> String:
+	if kit.grip == "flail":
+		return "flail"
+	if is_instance_valid(kit.anchor_body) and kit.anchor_body.is_in_group(Augments.STAKE_GROUP):
+		return "stake"
+	return "unstaggered"
+
+
 # Ctrl hauls the line in. On a latched body it commits the smash; on the world it winches
 # while held. While any line stands it is neither the brake nor the slam, until it is let
 # go: a haul can never plant or brake inside the crowd it flew into.
@@ -1030,7 +1040,7 @@ func _read_ctrl() -> void:
 		if on_body and kit.line_state == Augments.LINE_LATCHED and Augments.haul_open(kit):
 			Augments.commit_smash(kit, tuning, _rigid.linear_velocity)
 		elif on_body and kit.line_state == Augments.LINE_LATCHED:
-			_fail("haul", "flail" if kit.grip == "flail" else "unstaggered")
+			_fail("haul", _haul_refusal())
 		elif on_body:
 			_fail("haul", "committed")
 	if kit.hooked:
