@@ -15,18 +15,22 @@ const T := preload("res://tests/support/t.gd")
 # the same, at (292, 460)). Nothing on the lip stops the ball: the bot drove its heavy ball at the
 # run-in point at full speed, overshot it, turned and overshot it again. The fix eases up near any
 # gate still untaken after GATE_HOP_SECONDS (GATE_CALM_SPEED), as the bot already did on the
-# islands' beacon tops; without it the north-turn start below is still swinging at THROUGH_S. Pins:
+# islands' beacon tops, and near the run-in point but off the line steers for the line ahead of
+# the ball (GATE_LINE_LEAD) instead of the point. On 26b1e3f4 the first two swing starts below are
+# still swinging at THROUGH_S. The legs drive _to_gate against one hand-built offer with the game's
+# tick bookkeeping (ticks, boost clock), not a full gates flow, and "through" is the test's own
+# 2.5 m line, stricter than reward_gates' take. Pins:
 #   clear   from the run-in point, lined up, a straight roll east takes the gate (no collider in
 #           the arch or on its line);
 #   swing   from each of SWING_STARTS (seed 10's own ball on the lip: position, velocity and the
-#           leg's clock), a ball of heft HEAVY_HEFT driven by _to_gate itself rolls through the gate
+#           leg's clock), a ball of that run's heft driven by _to_gate itself rolls through the gate
 #           inside THROUGH_S.
 
 const HEAVY_HEFT := 3.7
 const SEED6_HEFT := 4.6
 # [position, velocity, seconds into the gates leg, gate slot]: from a seed 10 debug trace on
 # 26b1e3f4, the north turn, the south turn and mid-swing at gate 0, each a grounded tick of the
-# swing; then completionist seed 6 (pylon_engineer, heft 4.6) parked on gate 1's run-in point 4 m
+# swing; then completionist seed 6 (pylon_engineer, heft 4.6) parked on gate 1's run-in point 4-5 m
 # off its line, rocking side to side, once the bot eased up near the gate but still steered for the point.
 const SWING_STARTS := [
 	[Vector3(289.92, 1.0, 469.91), Vector3(4.79, 0.0, -17.38), 20.6, 0],

@@ -241,10 +241,13 @@ const GATE_SWITCH_SECONDS := 40.0
 # side to side, and never lines up to roll through.
 const GATE_CALM_RANGE := 25.0
 const GATE_CALM_SPEED := 12.0
-# Within GATE_LINE_SIDE of a gate's line and GATE_LINE_BACK behind it, the bot steers for the line
-# GATE_LINE_LEAD metres ahead of the ball instead of the run-in point.
+# Within GATE_LINE_SIDE of a gate's line, between GATE_LINE_BACK and GATE_LINE_NEAR behind it, the
+# bot steers for the line GATE_LINE_LEAD metres ahead of the ball instead of the run-in point. From
+# GATE_LINE_NEAR out, a ball 6 m off the line crosses the arch inside reward_gates' 5 m take
+# (WIDTH / 2 + 1), so it never takes a neighbour 10 m along (the Highdraft and crown gates).
 const GATE_LINE_SIDE := 6.0
 const GATE_LINE_BACK := 14.0
+const GATE_LINE_NEAR := 2.0
 const GATE_LINE_LEAD := 6.0
 const VAULT_SECONDS := 45.0
 const EVENT_PURSUIT_SECONDS := 40.0
@@ -3132,10 +3135,10 @@ func _to_gate(delta: float) -> void:
 	var target := at - facing * 9.0
 	if side < 2.5 and along < 1.0:
 		target = at + facing * 10.0
-	elif side < GATE_LINE_SIDE and along > -GATE_LINE_BACK and along < 1.0:
+	elif side < GATE_LINE_SIDE and along > -GATE_LINE_BACK and along < -GATE_LINE_NEAR:
 		# Near the run-in point but off the line: steer for the line GATE_LINE_LEAD ahead, so the ball
-		# merges onto it rolling forward; a point target here is orbited (the Flume's gate lip, seed 6).
-		target = at + facing * minf(along + GATE_LINE_LEAD, 10.0)
+		# merges onto it rolling forward; a point target here is orbited (the Flume's gate 1, seed 6).
+		target = at + facing * (along + GATE_LINE_LEAD)
 	# Off the gates' island (a Highdraft beacon top), the straight line meets its cliff: climb back.
 	# Off the islands, a straight line across a trough takes the same way round (_dips).
 	var ball_at: Vector3 = game.player.ball_position()
