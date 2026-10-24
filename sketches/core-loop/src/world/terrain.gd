@@ -545,7 +545,8 @@ func _perch_read_ahead(i: int) -> void:
 	if not (m is ParkMap) or not m.ok or _perch_ahead.has(i) or _perches.has(i):
 		return
 	var out := {}
-	var ahead := {"out": out, "task": _queue_perch_read(m.park, EventGround.snapshot(self, i + 1).terrain, out)}
+	# The next stage is not active, so its roofs are copied on the worker (see EventGround.snapshot).
+	var ahead := {"out": out, "task": _queue_perch_read(m.park, EventGround.snapshot(self, i + 1, false), out)}
 	_perch_ahead[i] = ahead
 	_settle_on_exit(_roots[i], ahead)
 
@@ -553,8 +554,9 @@ func _perch_read_ahead(i: int) -> void:
 # Static, so the worker holds no reference to this terrain: it reads only the park and the floor snapshot (copies of the roofs).
 static func _queue_perch_read(park: Dictionary, floor_snapshot: RefCounted, out: Dictionary) -> int:
 	# A lambda holds the snapshot; a bound method would not keep it alive.
-	var ground := func(x: float, z: float) -> float: return floor_snapshot.height(x, z)
+	var ground := func(x: float, z: float) -> float: return floor_snapshot.terrain.height(x, z)
 	return WorkerThreadPool.add_task(func():
+		floor_snapshot.copy_roofs()
 		var found := PerchPoints.found(park, ground)
 		out.merge({"tops": PerchPoints.derive(park, ground), "blockers": PerchPoints.blockers(park), "found": found, "ledges": PerchPoints.thin(found)}),
 		true, "perch read")
