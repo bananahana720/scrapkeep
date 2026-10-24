@@ -135,7 +135,8 @@ const HUM_DB := 0.0
 # Danger sounds pull the bass down so the low end never masks a warning.
 const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "klaxon", "threat_up", "death",
 	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
-# A launch whose landing never comes (a fall into the next stage's rail) still drops.
+# A launch whose landing never comes (a fall into the next stage's rail) still drops. Timed on
+# SimClock: the drop restarts the band and so the bar grid that park events land on.
 const LANDING_FALLBACK_MS := 2000
 # Expected launch-to-landing time, for the pace of the build's sweep.
 const LAUNCH_BUILD_SECONDS := 1.6
@@ -646,7 +647,7 @@ func _process(delta: float) -> void:
 	_follow_warden()
 	_follow_escalation()
 	_tend_ear(delta)
-	if _launch_armed and _landing_theme >= 0 and Time.get_ticks_msec() - _entered_ms > LANDING_FALLBACK_MS:
+	if _launch_armed and _landing_theme >= 0 and SimClock.msec() - _entered_ms > LANDING_FALLBACK_MS:
 		_land_drop()
 	_pump()
 	if _overlay != null and _overlay.visible and Time.get_ticks_msec() > _overlay_until:
@@ -2241,7 +2242,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	elif _launch_armed:
 		# The stage the launch was flying to: its theme arrives with the landing drop.
 		_landing_theme = _stage_theme(stage)
-		_entered_ms = Time.get_ticks_msec()
+		_entered_ms = SimClock.msec()
 		_launch_stage = true
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
