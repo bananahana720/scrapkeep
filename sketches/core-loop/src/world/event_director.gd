@@ -395,14 +395,18 @@ func notify_activity(row_id: String) -> void:
 			state.pending += 1
 
 
-# The activity a row opens on is over (a surge course won or lost): its live rows end now, as finish_row ends them.
+# The activity a row opens on is over (a surge course won or lost): its live rows end now, as finish_row ends them,
+# and a row still announced or held ends too, so it never lands on a course that is already over.
 func finish_activity(row_id: String) -> Array:
 	var facts := []
 	for state in _park_states:
 		var trigger: Dictionary = state.row.trigger
 		if trigger.get("on") == "activity" and trigger.get("value") == row_id:
 			state.pending = 0
-			facts.append_array(finish_row(state.row.id))
+			if state.phase == ANNOUNCED:
+				_park_end(state, facts)
+			else:
+				facts.append_array(finish_row(state.row.id))
 	return facts
 
 

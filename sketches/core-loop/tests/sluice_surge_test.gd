@@ -5,7 +5,7 @@ extends SceneTree
 #     sluice that opens on anything but its activity, a trigger naming no activity row, and a course with no route;
 # (b) the sluice's two forms have WORLD_ROWS records in the water colour, never the hazard one, and the land fact maps;
 # (c) the director never opens the sluice unasked; notify_activity announces it on the bar after its lead, it lands
-#     with sluice_landed and goes live, and finish_activity ends it early;
+#     with sluice_landed and goes live, and finish_activity ends it early, or before it lands when the course ends first;
 # (d) the course runs down flume_upper's grind rows from the head nearest the ring, six gates on their own rows' tops
 #     (the weir reach's deck above the gap reach's);
 # (e) a ball on the ground under the deck takes no gate and gets no push; on the deck it takes the gate, and the front
@@ -25,7 +25,7 @@ const BAR_S := 240.0 / 172.0
 const RING := Vector2(-418.0, -583.0)
 # The weir reach's top (its y 104.4 plus its 5 m height); the gap reach's top stands well below it.
 const UPPER_Y := 109.4
-const EXPECTED_CHECKS := 19
+const EXPECTED_CHECKS := 20
 
 var _t := preload("res://tests/support/t.gd").new("sluice_surge_test")
 var _checks := 0
@@ -130,6 +130,12 @@ func _director(park: Dictionary) -> void:
 	_check("(c) lands on the bar with sluice_landed", not landed.is_empty() and landed[0].fact == "sluice_landed"
 		and minf(phase, BAR_S - phase) < H * 1.5, "bar phase %.3f" % phase)
 	_check("(c) finish_activity ends it before live_s", ended.size() == 1 and ended[0].time_s < 1200 * H + H, str(ended))
+	# The course is over (fallback started it and it ended) while the sluice is still announced: it ends, never lands.
+	var early = Director.new(7, {}, map, 14.0, func(_x, _z): return 0.0)
+	var cut := _run(early, 1800, 60, 120).filter(func(f): return f.id == "head_gate_sluice")
+	_check("(c) a sluice still announced ends with its course and never lands",
+		cut.filter(func(f): return f.kind == "announced").size() == 1 and cut.filter(func(f): return f.kind == "ended").size() == 1
+		and cut.filter(func(f): return f.kind == "world" and f.get("phase", "") == "land").is_empty(), str(cut.map(func(f): return f.kind)))
 
 
 func _course(park: Dictionary) -> void:
