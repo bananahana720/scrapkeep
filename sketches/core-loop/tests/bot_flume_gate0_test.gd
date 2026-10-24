@@ -6,6 +6,7 @@ const Game := preload("res://src/game.gd")
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
+const RewardGates := preload("res://src/build/reward_gates.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The Flume's gate 0 on its lip (park_flume gate_slots[0] at (300, 466), facing east; the gate_lip
@@ -16,10 +17,12 @@ const T := preload("res://tests/support/t.gd")
 # run-in point at full speed, overshot it, turned and overshot it again. The fix eases up near any
 # gate still untaken after GATE_HOP_SECONDS (GATE_CALM_SPEED), as the bot already did on the
 # islands' beacon tops, and near the run-in point but off the line steers for the line ahead of
-# the ball (GATE_LINE_LEAD) instead of the point. On 26b1e3f4 the first two swing starts below are
-# still swinging at THROUGH_S. The legs drive _to_gate against one hand-built offer with the game's
-# tick bookkeeping (ticks, boost clock), not a full gates flow, and "through" is the test's own
-# 2.5 m line, stricter than reward_gates' take. Pins:
+# the ball (GATE_LINE_LEAD) instead of the point. These replays do not hold the whole run (items,
+# kit, director), so judged by reward_gates' take the stage driver also gets through from each of
+# them; the 24-seed sweeps on #437 are the evidence, and this test guards the steering. The legs drive _to_gate against one hand-built offer with the game's
+# tick bookkeeping (ticks, boost clock), not a full gates flow; "through" is reward_gates' own take
+# (step(): the along sign flips inside WIDTH / 2 + 1 of the line and HEIGHT + 4 of the gate's
+# ground, the offer standing on drop_point as _fixed_spots places it). Pins:
 #   clear   from the run-in point, lined up, a straight roll east takes the gate (no collider in
 #           the arch or on its line);
 #   swing   from each of SWING_STARTS (seed 10's own ball on the lip: position, velocity and the
@@ -39,7 +42,6 @@ const SWING_STARTS := [
 	[Vector3(291.0, 1.0, 475.3), Vector3(0.0, 0.0, 7.0), 30.0, 1],
 ]
 const THROUGH_S := 30.0
-const THROUGH_SIDE := 2.5
 const SETTLE_TICKS := 30
 
 var _t := T.new("bot_flume_gate0_test")
@@ -51,6 +53,7 @@ var _leg := -1
 var _gate_at := Vector3.ZERO
 var _gate_facing := Vector3.ZERO
 var _through_at := -1.0
+var _last_along := 0.0
 var _done := false
 
 
@@ -98,8 +101,10 @@ func _physics_process(delta: float) -> bool:
 	var rel := ball - _gate_at
 	var along := rel.dot(_gate_facing)
 	var side := (rel - _gate_facing * along).length()
-	if _through_at < 0.0 and along > 1.0 and side < THROUGH_SIDE:
+	if _through_at < 0.0 and _last_along < 0.0 and along >= 0.0 and side <= RewardGates.WIDTH * 0.5 + 1.0 \
+			and absf(rel.y) < RewardGates.HEIGHT + 4.0:
 		_through_at = _seconds
+	_last_along = along
 	_driver.ticks += 1
 	_driver._boost_clock -= delta
 	if _leg == 0:
@@ -130,13 +135,14 @@ func _physics_process(delta: float) -> bool:
 func _aim(slot_index: int) -> void:
 	var slot: Dictionary = _game.ctx.terrain.map().gate_slots[slot_index]
 	_gate_facing = slot["facing"]
-	_gate_at = Vector3(slot["at"].x, 0.0, slot["at"].y)
+	_gate_at = _game.ctx.terrain.drop_point(slot["at"].x, slot["at"].y, 0.0)
 
 
 func _start_leg(leg: int) -> void:
 	_leg = leg
 	_seconds = 0.0
 	_through_at = -1.0
+	_last_along = -INF
 	_driver._fight_climb.clear()
 	_driver._fight_climb_clock = 0.0
 	_driver._offers = [{"at": _gate_at, "facing": _gate_facing}]
