@@ -54,6 +54,8 @@ const AUDIT := {
 	"res://src/combat/boom_tender.gd": ["LANE"],
 	# 2026-10-17 (wave 18): the Splitter's fuse blast.
 	"res://src/combat/splitter_pod.gd": ["INSTANT"],
+	# 2026-10-24 (pack pressure E, flag only): the silt boil ring.
+	"res://src/combat/silt_boil.gd": ["INSTANT"],
 	# 2026-10-17 (stage/alpha-w16): the Dispatcher's tube drop (#59) and the jolt layer's mat (#65).
 	"res://src/combat/dispatcher.gd": ["PROJECTILE"],
 	"res://src/combat/jolt_layer.gd": ["INSTANT"],

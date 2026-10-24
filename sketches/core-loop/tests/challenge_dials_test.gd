@@ -11,6 +11,7 @@ const Hazard := preload("res://src/boss/hazard.gd")
 const Director := preload("res://src/world/director.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const PRESSURE_ZERO := ["pack.lead_by_stage", "pack.crew_extra_by_stage", "pack.flank_by_stage", "ground.churn_by_stage", "hazard.boil_by_stage"]
 const T := preload("res://tests/support/t.gd")
 
 # The difficulty dials (src/core/challenge_dials.gd): defaults, parsing, the 0.6 s tell floor, damage
@@ -63,13 +64,15 @@ func _rules() -> void:
 	for key in ChallengeDials.DEFAULTS:
 		# The tuned lists, and the fight-phase follow-up counts (a count, not a multiplier; Andrew's
 		# 23 Oct phase ruling sets them, fight_phases.gd).
-		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "brindle.follow_ups_by_phase"]:
+		# The silt boils ship on world 1 (pack pressure E, 24 Oct).
+		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "brindle.follow_ups_by_phase", "hazard.boil_by_stage"]:
 			continue
 		var d: Variant = ChallengeDials.DEFAULTS[key]
 		var ident: bool = true
 		if d is Array:
 			for x in d:
-				ident = ident and (float(x) == 1.0 or key.contains("counter"))
+				# The counter-pulse and the pack pressure dials are absolute values whose identity is 0 (off).
+				ident = ident and (float(x) == 1.0 or key.contains("counter") or (key in PRESSURE_ZERO and float(x) == 0.0))
 		else:
 			ident = float(d) == 1.0 or key == "brindle.combo" or key.ends_with(".combo") or key.ends_with(".weak_points")
 		if not ident:

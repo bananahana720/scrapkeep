@@ -28,6 +28,10 @@ const TELL_FLOOR := 0.6
 const WARN_GAP := 0.2
 
 const ONES6 := [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+const ZEROS6 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+# Silt boils ship on world 1 at strength 2 (pack pressure E, 24 Oct ruling; DECISIONS section 5).
+const SILT_W1 := [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]
+const PackPressure := preload("res://src/combat/pack_pressure.gd")
 
 const DEFAULTS := {
 	# Per boss: hazard damage to the pilot, attack cadence, warn seconds, punish windows,
@@ -76,6 +80,12 @@ const DEFAULTS := {
 	# caps and Director.HARD_CAP stay hard ceilings.
 	"mobs.damage_mult": 1.0, "mobs.pack_scale_mult": 1.0, "mobs.interval_scale_mult": 1.0, "mobs.elite_rate_mult": 1.0,
 	"mobs.damage_by_stage": ONES6, "mobs.pack_scale_by_stage": ONES6, "mobs.interval_scale_by_stage": ONES6, "mobs.elite_rate_by_stage": ONES6,
+	# Pack pressure, the world 1 kiting experiments (combat/pack_pressure.gd; --pack-pressure=A|B|C|D|E presets).
+	# Absolute per-stage values, identity at defaults: lead 0 to 1 of the ball's predicted roll that crews steer
+	# and aim at; extra chasers per crew; a multiplier on the re-engage gap; 1 makes every second chaser a
+	# flanker; churned-silt drag strength (churn_ground.gd); silt boil damage, 0 off (silt_boil.gd).
+	"pack.lead_by_stage": ZEROS6, "pack.crew_extra_by_stage": ZEROS6, "pack.rest_by_stage": ONES6,
+	"pack.flank_by_stage": ZEROS6, "ground.churn_by_stage": ZEROS6, "hazard.boil_by_stage": SILT_W1,
 	# NOT ALLOWED LEVERS YET. Plumbed only: a ruling is needed before any non-default value ships.
 	"pilot.regen_delay_mult": 1.0, "pilot.regen_rate_mult": 1.0,
 }
@@ -175,6 +185,14 @@ static func _load_cli() -> void:
 	if _cli_loaded:
 		return
 	_cli_loaded = true
+	# A --pack-pressure preset first, so an explicit --tune of the same key wins.
+	for args in [OS.get_cmdline_args(), OS.get_cmdline_user_args()]:
+		for arg in args:
+			if String(arg).begins_with("--pack-pressure="):
+				var unknown := []
+				_cli.merge(parse(PackPressure.tune_spec(String(arg).trim_prefix("--pack-pressure="), unknown)), true)
+				for letter in unknown:
+					_refuse("pack-pressure " + letter, "challenge_dials: --pack-pressure variant '%s' ignored (A, B, C, D or E)" % letter)
 	for args in [OS.get_cmdline_args(), OS.get_cmdline_user_args()]:
 		for arg in args:
 			if String(arg).begins_with("--tune="):

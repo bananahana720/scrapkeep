@@ -46,6 +46,7 @@
     "redteam": "node scripts/redteam/run.mjs",
     "challenge:bands": "node scripts/challenge/run.mjs",
     "challenge:gates": "node scripts/challenge/gates.mjs",
+    "challenge:gates": "node scripts/challenge/gates.mjs",
     "jev:score": "node tools/jev-player/score.mjs",
     "probe:balance": "node tests/balance.mjs",
     "playtest:agent": "node scripts/agent-playtest.mjs",

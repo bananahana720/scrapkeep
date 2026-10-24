@@ -109,7 +109,8 @@ static func _cancel_attack(node: Node3D) -> void:
 	var phase = node.get("phase")
 	if phase != null and int(phase) != 0 and node.has_method("_stagger"):
 		node._stagger()
-	elif node.has_method("_end_attack") and node.get("state") != null and int(node.get("state")) in [1, 2]:
+	elif node.has_method("_end_attack") and node.get("state") != null and (int(node.get("state")) in [1, 2] \
+			or (node.has_method("state_name") and node.state_name() == "call")):
 		node._end_attack(0)
 	elif node.has_method("_clear_telegraph"):
 		node._clear_telegraph()

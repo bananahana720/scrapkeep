@@ -172,6 +172,9 @@ func _on_node_added(node: Node) -> void:
 		_read_windups.call_deferred(node)
 
 
+var _boils_wired := false
+
+
 func _read_windups(enemy) -> void:
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
 		return
@@ -181,6 +184,16 @@ func _read_windups(enemy) -> void:
 	if not enemy.is_connected("attack_phase", listener):
 		enemy.connect("attack_phase", listener)
 		_on_windup_phase(enemy.attack_facts(), enemy)
+	if enemy.has_signal("pressure_cue") and not enemy.is_connected("pressure_cue", _on_pressure_cue):
+		enemy.connect("pressure_cue", _on_pressure_cue)
+
+
+# Pack pressure cues (combat/pack_pressure.gd, world 1 experiments): a flanker's whistle and a silt boil's
+# rumble, each sounding before its committed telegraph, with a chevron over the caller.
+func _on_pressure_cue(cue: String, at: Vector3, seconds_until: float) -> void:
+	vfx.glyph("enemy_spawned", at + Vector3.UP * 2.5, 1.0, 1.0, seconds_until, Vector3.ZERO,
+		"chevron", EventKinds.role_color("hazard"), "P1")
+	audio.play("threat_projectile", 0.0, 1.0, "SFX", cue)
 
 
 func _on_windup_phase(facts: Dictionary, enemy: Node) -> void:
@@ -206,6 +219,9 @@ func _physics_process(_delta: float) -> void:
 	if ctx == null or not ctx.flow.in_play():
 		_windup_states.clear()
 		return
+	if not _boils_wired and ctx.spawner != null and ctx.spawner.get("boils") != null:
+		_boils_wired = true
+		ctx.spawner.boils.rumbled.connect(func(at: Vector3, seconds_until: float): _on_pressure_cue("boil_rumble", at, seconds_until))
 	var active := {}
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.get("kind") not in ["warden", "swarm_remnant"] or not enemy.has_method("is_dead") or enemy.is_dead():

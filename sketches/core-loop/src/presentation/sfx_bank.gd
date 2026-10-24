@@ -96,6 +96,8 @@ const TRIM_DB := {
 	"warn_burrow": -7.0, "warn_bore": -7.0, "warn_lure": -7.0,
 	"warn_cut": -7.0, "warn_winch": -7.0, "warn_dive": -7.0,
 	"warn_tether": -7.0, "warn_flap": -7.0, "warn_reel": -7.0,
+	# Pack pressure cues (combat/pack_pressure.gd): the flanker's whistle and the silt boil's rumble.
+	"flank_call": -6.0, "boil_rumble": -5.0,
 	"breach_crack": -4.0,
 	# v2 W5: the leitmotifs, the crowd-control holds, the ancients and Moss's bench.
 	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0, "tarn_latch_tear": -3.0, "tally_balance_due": -3.0, "cannon_recall": -3.0,
@@ -962,6 +964,10 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _warn_flap()
 		"warn_reel":
 			return _warn_reel()
+		"flank_call":
+			return _flank_call()
+		"boil_rumble":
+			return _boil_rumble()
 		"breach_crack":
 			return _breach_crack()
 		"sable_arpeggio":
@@ -1850,6 +1856,22 @@ static func _warn_reel() -> PackedFloat32Array:
 		parts.append([_noise(0.025, 1800.0 + 350.0 * i, 900.0, 90.0), Synth.seconds(0.11 * i), 0.55 + 0.05 * i])
 	parts.append([_fm(0.3, _hz(70), 2.0, 1.2, 4.0, 6.0), Synth.seconds(0.5), 0.45])
 	return _mix(parts)
+
+
+# Flank call: a crew hand's two-finger whistle, up a fifth and down a step (A to E, then D): someone is
+# cutting across your line.
+static func _flank_call() -> PackedFloat32Array:
+	return _mix([[_tone(0.16, _hz(81), _hz(88), "sine", 4.0), 0, 0.8],
+		[_tone(0.2, _hz(88), _hz(86), "sine", 7.0), Synth.seconds(0.15), 0.85],
+		[_noise(0.3, 5200.0, 4400.0, 9.0, 0.01), 0, 0.12]])
+
+
+# Boil rumble: the silt belching up from below, a low wobble rising under a wet gurgle.
+static func _boil_rumble() -> PackedFloat32Array:
+	return _mix([[_fm(0.9, _hz(31), 1.5, 2.5, 2.0, 3.0), 0, 0.9],
+		[_noise(0.8, 300.0, 900.0, 2.5, 0.08), Synth.seconds(0.1), 0.5],
+		[_noise(0.06, 1400.0, 700.0, 40.0), Synth.seconds(0.5), 0.35],
+		[_noise(0.06, 1700.0, 800.0, 40.0), Synth.seconds(0.72), 0.3]])
 
 
 # --- The leitmotifs (SOUND-STORY.md section 2) ------------------------------------------
