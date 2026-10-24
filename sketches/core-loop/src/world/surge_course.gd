@@ -154,10 +154,16 @@ func show_live(live: bool, pulse: float) -> void:
 
 # A point `ahead` metres down the line from where the ball is, on the deck: a rider who aims here stays on the
 # line's centre between gates (the bot's target; aiming straight at a gate far down a bent line walks off the deck).
+# Behind the head, the line runs on back along its first heading, so a rider coming in from the side lines up before
+# the deck (the flume's trough is entered from its end).
 func lead_point(ball: Vector3, ahead: float) -> Vector3:
-	var d: float = model.route.project(Vector2(ball.x, ball.z)).x + ahead
-	var p: Vector2 = model.route.at(d)
-	return Vector3(p.x, model.deck_height(d), p.y)
+	var flat := Vector2(ball.x, ball.z)
+	var head: Vector2 = model.route.points[0]
+	var t0: Vector2 = model.route.tangent(0.0)
+	var behind := (flat - head).dot(t0)
+	var d: float = (behind if behind < 0.0 else model.route.project(flat).x) + ahead
+	var p: Vector2 = head + t0 * d if d < 0.0 else model.route.at(d)
+	return Vector3(p.x, model.deck_height(maxf(d, 0.0)), p.y)
 
 
 # The next gate, where a ball on the course aims.

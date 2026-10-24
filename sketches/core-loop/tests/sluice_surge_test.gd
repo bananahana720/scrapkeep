@@ -1,7 +1,7 @@
 extends SceneTree
 
 # The flume's surge course (activities.gd surge_run, surge_course.gd) and its sluice (the park's sluice_surge event row).
-# (a) the flume park with the course row and the sluice row validates with no new errors, and the schema names a
+# (a) the flume park carries the course row and the sluice row and validates, and the schema names a
 #     sluice that opens on anything but its activity, a trigger naming no activity row, and a course with no route;
 # (b) the sluice's two forms have WORLD_ROWS records in the water colour, never the hazard one, and the land fact maps;
 # (c) the director never opens the sluice unasked; notify_activity announces it on the bar after its lead, it lands
@@ -22,17 +22,10 @@ const PARK := "res://src/world/park/park_flume.json"
 const H := 1.0 / 60.0
 const FAR := Vector3(1000.0, 1.0, 1000.0)
 const BAR_S := 240.0 / 172.0
-const RING := Vector2(-384.0, -612.0)
-const COURSE := {"id": "weir_surge", "activity": "surge_run", "site": "weir_intake", "at": [-384, -612], "pack": [],
-	"pay": {"rarities": ["common", "rare"]}, "route": "flume_upper"}
-const SLUICE := {"id": "head_gate_sluice", "kind": "sluice_surge", "family": "industrial", "site": "weir_intake",
-	"trigger": {"on": "activity", "value": "weir_surge"}, "weight": 1.0,
-	"telegraph": {"lead_s": 4.0, "form": "sluice_siren", "on_bar": true}, "live_s": 45.0, "effect": {},
-	"route_change": {"closes": [], "opens": []}, "hold_clear_m": 0.0, "cooldown_s": 0.0, "once": false,
-	"music_cue": {"telegraph": "riser_industrial", "land": "drop_industrial"}}
+const RING := Vector2(-418.0, -583.0)
 # The weir reach's top (its y 104.4 plus its 5 m height); the gap reach's top stands well below it.
 const UPPER_Y := 109.4
-const EXPECTED_CHECKS := 18
+const EXPECTED_CHECKS := 19
 
 var _t := preload("res://tests/support/t.gd").new("sluice_surge_test")
 var _checks := 0
@@ -43,8 +36,15 @@ class Map:
 	var park := {}
 
 
+var _course_row := {}
+var _sluice_row := {}
+
+
 func _initialize() -> void:
 	var park: Dictionary = ParkSchema.read_file(PARK).data
+	_course_row = _row(park.activity_rows, "weir_surge")
+	_sluice_row = _row(park.event_rows, "head_gate_sluice")
+	_check("(a) the flume carries the course and the sluice", not _course_row.is_empty() and not _sluice_row.is_empty())
 	_schema(park)
 	_records()
 	_director(park)
@@ -58,8 +58,18 @@ func _check(label: String, ok: bool, detail := "") -> void:
 	_t.check(label, ok, detail)
 
 
+func _row(rows: Array, id: String) -> Dictionary:
+	for r in rows:
+		if String(r.id) == id:
+			return r
+	return {}
+
+
+# The park with its course and sluice rows swapped for these (a planted variant).
 func _with(park: Dictionary, course: Dictionary, sluice: Dictionary) -> Dictionary:
 	var out := park.duplicate(true)
+	out.activity_rows = out.activity_rows.filter(func(r): return r.id != course.id)
+	out.event_rows = out.event_rows.filter(func(r): return r.id != sluice.id)
 	out.activity_rows.append(course.duplicate(true))
 	out.event_rows.append(sluice.duplicate(true))
 	return out
@@ -70,19 +80,17 @@ func _errors_for(park: Dictionary, ids: Array) -> Array:
 
 
 func _schema(park: Dictionary) -> void:
-	var before := ParkSchema.validate(park).size()
-	var good := _with(park, COURSE, SLUICE)
-	var errors := ParkSchema.validate(good)
-	_check("(a) the course and the sluice add no errors", errors.size() == before, ParkSchema.describe(errors))
-	var clock := SLUICE.duplicate(true)
+	var errors := ParkSchema.validate(park)
+	_check("(a) the flume validates with them", errors.is_empty(), ParkSchema.describe(errors))
+	var clock := _sluice_row.duplicate(true)
 	clock.trigger = {"on": "clock_tier", "value": 1}
-	_check("(a) a sluice on the clock is named", not _errors_for(_with(park, COURSE, clock), ["head_gate_sluice"]).is_empty())
-	var stray := SLUICE.duplicate(true)
+	_check("(a) a sluice on the clock is named", not _errors_for(_with(park, _course_row, clock), ["head_gate_sluice"]).is_empty())
+	var stray := _sluice_row.duplicate(true)
 	stray.trigger = {"on": "activity", "value": "no_such_course"}
-	_check("(a) a trigger naming no activity row is named", not _errors_for(_with(park, COURSE, stray), ["head_gate_sluice"]).is_empty())
-	var lost := COURSE.duplicate(true)
+	_check("(a) a trigger naming no activity row is named", not _errors_for(_with(park, _course_row, stray), ["head_gate_sluice"]).is_empty())
+	var lost := _course_row.duplicate(true)
 	lost.erase("route")
-	_check("(a) a course with no route is named", not _errors_for(_with(park, lost, SLUICE), ["weir_surge"]).is_empty())
+	_check("(a) a course with no route is named", not _errors_for(_with(park, lost, _sluice_row), ["weir_surge"]).is_empty())
 
 
 func _records() -> void:
@@ -107,7 +115,7 @@ func _run(d, ticks: int, notify_at := -1, finish_at := -1) -> Array:
 
 func _director(park: Dictionary) -> void:
 	var map := Map.new()
-	map.park = _with(park, COURSE, SLUICE)
+	map.park = park
 	var quiet = Director.new(7, {}, map, 14.0, func(_x, _z): return 0.0)
 	var unasked := _run(quiet, 3600).filter(func(f): return f.id == "head_gate_sluice")
 	_check("(c) never opens unasked", unasked.is_empty(), str(unasked.size()))

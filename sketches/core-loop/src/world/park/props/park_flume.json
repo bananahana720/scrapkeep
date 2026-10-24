@@ -1441,6 +1441,88 @@
     }
    ]
   },
+  "shift_tally": {
+   "story": "A shift board nailed to a milepost: names, a tally of days, and the last line left blank.",
+   "props": [
+    {
+     "kind": "milepost",
+     "v": "*",
+     "at": [
+      0.0,
+      0.0
+     ],
+     "yaw_deg": 10,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "*",
+     "at": [
+      1.8,
+      1.2
+     ],
+     "yaw_deg": 75,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_peg",
+     "v": "*",
+     "at": [
+      -3.0,
+      2.5
+     ],
+     "yaw_deg": 160,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "c",
+     "at": [
+      3.5,
+      -2.5
+     ],
+     "yaw_deg": 40,
+     "scale": 0.85,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_ties",
+     "v": "a",
+     "at": [
+      -4.5,
+      -3.0
+     ],
+     "yaw_deg": 95,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      6.0,
+      2.0
+     ],
+     "yaw_deg": 20,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "reed_clump",
+     "v": "*",
+     "at": [
+      -6.5,
+      1.0
+     ],
+     "yaw_deg": 140,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
   "mini_cup": {
    "story": "A cold cup of tea left by the siphon verge.",
    "props": [
@@ -2380,11 +2462,711 @@
    "id": "flume_c01",
    "template": "head_gate_crew",
    "at": [
-    -398.0,
-    -652.0
+    -386.0,
+    -550.0
    ],
-   "yaw_deg": 40.0,
+   "yaw_deg": 0.0,
    "near": "weir_intake: The head-gate crew's post beside the sluice ring"
+  },
+  {
+   "id": "flume_p001",
+   "template": "mini_mixed",
+   "at": [
+    94.6,
+    222.1
+   ],
+   "yaw_deg": -58.2,
+   "near": "verge of the line: Odd scraps by the siphon verge: a milepost stub, ties, a"
+  },
+  {
+   "id": "flume_p002",
+   "template": "washday",
+   "at": [
+    211.7,
+    -405.8
+   ],
+   "yaw_deg": 150.2,
+   "near": "canal_wash_3: Laundry day by the trestles: a tub, a slack line, a cot"
+  },
+  {
+   "id": "flume_p003",
+   "template": "mini_mixed",
+   "at": [
+    -75.4,
+    414.2
+   ],
+   "yaw_deg": 142.8,
+   "near": "verge of the line: Odd scraps by the siphon verge: a milepost stub, ties, a"
+  },
+  {
+   "id": "flume_p004",
+   "template": "survey_marker",
+   "at": [
+    -302.1,
+    -414.3
+   ],
+   "yaw_deg": 29.1,
+   "near": "flume_gap_reach: A depth milepost, crossed out and painted deeper, with"
+  },
+  {
+   "id": "flume_p005",
+   "template": "survey_marker",
+   "at": [
+    -299.0,
+    -692.2
+   ],
+   "yaw_deg": -122.4,
+   "near": "spill_butte: A depth milepost, crossed out and painted deeper, with"
+  },
+  {
+   "id": "flume_p006",
+   "template": "seep_edge",
+   "at": [
+    -28.0,
+    -240.4
+   ],
+   "yaw_deg": -157.6,
+   "near": "canal_wash_5: Saltbush and a split plank where the canal seeps, left"
+  },
+  {
+   "id": "flume_p007",
+   "template": "shift_tally",
+   "at": [
+    -40.3,
+    531.0
+   ],
+   "yaw_deg": 131.8,
+   "near": "bench_lip_bank: A shift board nailed to a milepost: names, a tally of days"
+  },
+  {
+   "id": "flume_p008",
+   "template": "survey_marker",
+   "at": [
+    293.7,
+    336.5
+   ],
+   "yaw_deg": -61.6,
+   "near": "bluff_ride_pier_20: A depth milepost, crossed out and painted deeper, with"
+  },
+  {
+   "id": "flume_p009",
+   "template": "camp_corner",
+   "at": [
+    128.7,
+    197.0
+   ],
+   "yaw_deg": 20.6,
+   "near": "bluff_ride_pier_7: A crew camp corner: cots, a cold hearth, a washtub and the"
+  },
+  {
+   "id": "flume_p010",
+   "template": "bent_debris",
+   "at": [
+    -323.0,
+    -741.6
+   ],
+   "yaw_deg": -25.3,
+   "near": "spill_butte: Fallen numbered bent planks, counted off by one, grass"
+  },
+  {
+   "id": "flume_p011",
+   "template": "washday",
+   "at": [
+    -345.0,
+    -472.6
+   ],
+   "yaw_deg": 136.6,
+   "near": "flume_ride_pier_7: Laundry day by the trestles: a tub, a slack line, a cot"
+  },
+  {
+   "id": "flume_p012",
+   "template": "seep_edge",
+   "at": [
+    -113.8,
+    -357.4
+   ],
+   "yaw_deg": -52.8,
+   "near": "pad_bank_4: Saltbush and a split plank where the canal seeps, left"
+  },
+  {
+   "id": "flume_p013",
+   "template": "seep_edge",
+   "at": [
+    -652.4,
+    91.5
+   ],
+   "yaw_deg": 173.5,
+   "near": "canal_wash_9: Saltbush and a split plank where the canal seeps, left"
+  },
+  {
+   "id": "flume_p014",
+   "template": "crane_yard",
+   "at": [
+    241.2,
+    289.1
+   ],
+   "yaw_deg": -74.0,
+   "near": "bluff_ride_pier_16: Boom 3 on its blocks beside the winch cab, the lock still"
+  },
+  {
+   "id": "flume_p015",
+   "template": "tie_yard",
+   "at": [
+    -545.6,
+    456.7
+   ],
+   "yaw_deg": 109.9,
+   "near": "bench_wash_3: A yard of spare ties and pipe, bundled and left where the"
+  },
+  {
+   "id": "flume_p016",
+   "template": "sluice_station",
+   "at": [
+    -168.2,
+    -285.8
+   ],
+   "yaw_deg": -100.1,
+   "near": "flume_ride_pier_32: The sluice shed with its wheel, a gauge hut and a depth"
+  },
+  {
+   "id": "flume_p017",
+   "template": "shift_tally",
+   "at": [
+    -614.6,
+    56.9
+   ],
+   "yaw_deg": 41.8,
+   "near": "bench_wash_1: A shift board nailed to a milepost: names, a tally of days"
+  },
+  {
+   "id": "flume_p018",
+   "template": "mini_hearth",
+   "at": [
+    -62.5,
+    -153.1
+   ],
+   "yaw_deg": 150.3,
+   "near": "verge of the line: A cold hearth, one cup and a cot left out."
+  },
+  {
+   "id": "flume_p019",
+   "template": "shift_tally",
+   "at": [
+    -631.5,
+    -484.4
+   ],
+   "yaw_deg": 117.0,
+   "near": "mesa_spill: A shift board nailed to a milepost: names, a tally of days"
+  },
+  {
+   "id": "flume_p020",
+   "template": "crane_yard",
+   "at": [
+    -164.5,
+    -327.6
+   ],
+   "yaw_deg": -186.4,
+   "near": "flume_ride_pier_26: Boom 3 on its blocks beside the winch cab, the lock still"
+  },
+  {
+   "id": "flume_p021",
+   "template": "crane_yard",
+   "at": [
+    -601.0,
+    -581.2
+   ],
+   "yaw_deg": 1.8,
+   "near": "mesa_spill: Boom 3 on its blocks beside the winch cab, the lock still"
+  },
+  {
+   "id": "flume_p022",
+   "template": "shift_tally",
+   "at": [
+    -385.9,
+    202.7
+   ],
+   "yaw_deg": -12.0,
+   "near": "bench_wash_2: A shift board nailed to a milepost: names, a tally of days"
+  },
+  {
+   "id": "flume_p023",
+   "template": "cold_hearth",
+   "at": [
+    231.8,
+    385.9
+   ],
+   "yaw_deg": 138.3,
+   "near": "bluff_ride_pier_20: A cold hearth and a dragged-out cot: the crew went up the"
+  },
+  {
+   "id": "flume_p024",
+   "template": "crane_yard",
+   "at": [
+    19.3,
+    -234.3
+   ],
+   "yaw_deg": -1.2,
+   "near": "bend_zip_pier_12: Boom 3 on its blocks beside the winch cab, the lock still"
+  },
+  {
+   "id": "flume_p025",
+   "template": "mini_cup",
+   "at": [
+    -251.6,
+    -240.8
+   ],
+   "yaw_deg": -38.8,
+   "near": "verge of the line: A cold cup of tea left by the siphon verge."
+  },
+  {
+   "id": "flume_p026",
+   "template": "crane_yard",
+   "at": [
+    -54.7,
+    -221.3
+   ],
+   "yaw_deg": -39.1,
+   "near": "bend_zip_pier_5: Boom 3 on its blocks beside the winch cab, the lock still"
+  },
+  {
+   "id": "flume_p027",
+   "template": "shift_tally",
+   "at": [
+    179.6,
+    464.9
+   ],
+   "yaw_deg": 114.2,
+   "near": "pour_channel: A shift board nailed to a milepost: names, a tally of days"
+  },
+  {
+   "id": "flume_p028",
+   "template": "shift_tally",
+   "at": [
+    -22.7,
+    355.8
+   ],
+   "yaw_deg": -123.7,
+   "near": "bench_exit_grade: A shift board nailed to a milepost: names, a tally of days"
+  },
+  {
+   "id": "flume_p029",
+   "template": "camp_corner",
+   "at": [
+    402.1,
+    384.6
+   ],
+   "yaw_deg": 144.1,
+   "near": "bluff_wash_1: A crew camp corner: cots, a cold hearth, a washtub and the"
+  },
+  {
+   "id": "flume_p030",
+   "template": "shift_tally",
+   "at": [
+    -453.0,
+    279.8
+   ],
+   "yaw_deg": 8.7,
+   "near": "bench_wash_3: A shift board nailed to a milepost: names, a tally of days"
+  },
+  {
+   "id": "flume_p031",
+   "template": "shift_tally",
+   "at": [
+    -344.9,
+    -656.4
+   ],
+   "yaw_deg": 21.5,
+   "near": "weir_chute: A shift board nailed to a milepost: names, a tally of days"
+  },
+  {
+   "id": "flume_p032",
+   "template": "washday",
+   "at": [
+    159.3,
+    -587.7
+   ],
+   "yaw_deg": 42.4,
+   "near": "canal_wash_6: Laundry day by the trestles: a tub, a slack line, a cot"
+  },
+  {
+   "id": "flume_p033",
+   "template": "washday",
+   "at": [
+    -581.9,
+    -215.7
+   ],
+   "yaw_deg": 73.8,
+   "near": "field_bank_4: Laundry day by the trestles: a tub, a slack line, a cot"
+  },
+  {
+   "id": "flume_p034",
+   "template": "tie_yard",
+   "at": [
+    -141.4,
+    248.2
+   ],
+   "yaw_deg": 64.6,
+   "near": "bench_run_wash: A yard of spare ties and pipe, bundled and left where the"
+  },
+  {
+   "id": "flume_p035",
+   "template": "survey_marker",
+   "at": [
+    -189.7,
+    -607.7
+   ],
+   "yaw_deg": -59.6,
+   "near": "flume_weir_reach: A depth milepost, crossed out and painted deeper, with"
+  },
+  {
+   "id": "flume_p036",
+   "template": "washday",
+   "at": [
+    323.3,
+    -170.9
+   ],
+   "yaw_deg": 73.1,
+   "near": "bend_wash_1: Laundry day by the trestles: a tub, a slack line, a cot"
+  },
+  {
+   "id": "flume_p037",
+   "template": "washday",
+   "at": [
+    -534.8,
+    146.2
+   ],
+   "yaw_deg": -40.3,
+   "near": "fields_wash_2: Laundry day by the trestles: a tub, a slack line, a cot"
+  },
+  {
+   "id": "flume_p038",
+   "template": "survey_marker",
+   "at": [
+    -277.5,
+    -465.5
+   ],
+   "yaw_deg": -187.8,
+   "near": "flume_ride_pier_9: A depth milepost, crossed out and painted deeper, with"
+  },
+  {
+   "id": "flume_p039",
+   "template": "shift_tally",
+   "at": [
+    -234.5,
+    -641.8
+   ],
+   "yaw_deg": -47.7,
+   "near": "weir_chute: A shift board nailed to a milepost: names, a tally of days"
+  },
+  {
+   "id": "flume_p040",
+   "template": "survey_marker",
+   "at": [
+    -670.4,
+    533.1
+   ],
+   "yaw_deg": -71.6,
+   "near": "bench_wash_4: A depth milepost, crossed out and painted deeper, with"
+  },
+  {
+   "id": "flume_p041",
+   "template": "seep_edge",
+   "at": [
+    -443.5,
+    -203.5
+   ],
+   "yaw_deg": 155.2,
+   "near": "main_canal: Saltbush and a split plank where the canal seeps, left"
+  },
+  {
+   "id": "flume_p042",
+   "template": "washday",
+   "at": [
+    432.5,
+    -556.9
+   ],
+   "yaw_deg": -144.1,
+   "near": "canal_wash_1: Laundry day by the trestles: a tub, a slack line, a cot"
+  },
+  {
+   "id": "flume_p043",
+   "template": "tie_yard",
+   "at": [
+    -428.8,
+    -686.8
+   ],
+   "yaw_deg": -176.7,
+   "near": "mesa_wash_1: A yard of spare ties and pipe, bundled and left where the"
+  },
+  {
+   "id": "flume_p044",
+   "template": "camp_corner",
+   "at": [
+    322.1,
+    364.6
+   ],
+   "yaw_deg": -91.1,
+   "near": "bluff_ride_pier_23: A crew camp corner: cots, a cold hearth, a washtub and the"
+  },
+  {
+   "id": "flume_p045",
+   "template": "survey_marker",
+   "at": [
+    -619.0,
+    589.2
+   ],
+   "yaw_deg": 76.1,
+   "near": "bench_wash_7: A depth milepost, crossed out and painted deeper, with"
+  },
+  {
+   "id": "flume_p046",
+   "template": "camp_corner",
+   "at": [
+    -588.7,
+    -365.4
+   ],
+   "yaw_deg": -177.8,
+   "near": "crew_ledges: A crew camp corner: cots, a cold hearth, a washtub and the"
+  },
+  {
+   "id": "flume_p047",
+   "template": "camp_corner",
+   "at": [
+    -102.2,
+    -234.6
+   ],
+   "yaw_deg": -32.3,
+   "near": "bend_zip_pier_1: A crew camp corner: cots, a cold hearth, a washtub and the"
+  },
+  {
+   "id": "flume_p048",
+   "template": "tie_yard",
+   "at": [
+    330.7,
+    -753.9
+   ],
+   "yaw_deg": 10.3,
+   "near": "canal_wash_4: A yard of spare ties and pipe, bundled and left where the"
+  },
+  {
+   "id": "flume_p049",
+   "template": "camp_corner",
+   "at": [
+    347.3,
+    332.5
+   ],
+   "yaw_deg": -118.2,
+   "near": "pad_bank_5: A crew camp corner: cots, a cold hearth, a washtub and the"
+  },
+  {
+   "id": "flume_p050",
+   "template": "survey_marker",
+   "at": [
+    -122.7,
+    -281.1
+   ],
+   "yaw_deg": 23.3,
+   "near": "rim_flow_drop: A depth milepost, crossed out and painted deeper, with"
+  },
+  {
+   "id": "flume_p051",
+   "template": "seep_edge",
+   "at": [
+    437.8,
+    -64.0
+   ],
+   "yaw_deg": 60.3,
+   "near": "bend_wash_2: Saltbush and a split plank where the canal seeps, left"
+  },
+  {
+   "id": "flume_p052",
+   "template": "washday",
+   "at": [
+    57.6,
+    163.4
+   ],
+   "yaw_deg": -53.2,
+   "near": "siphon_span: Laundry day by the trestles: a tub, a slack line, a cot"
+  },
+  {
+   "id": "flume_p053",
+   "template": "washday",
+   "at": [
+    143.1,
+    -277.4
+   ],
+   "yaw_deg": -133.3,
+   "near": "canal_wash_8: Laundry day by the trestles: a tub, a slack line, a cot"
+  },
+  {
+   "id": "flume_p054",
+   "template": "mini_planks",
+   "at": [
+    -105.6,
+    140.0
+   ],
+   "yaw_deg": -46.6,
+   "near": "verge of the line: A few fallen bent planks and a short stack of ties."
+  },
+  {
+   "id": "flume_p055",
+   "template": "canal_seep",
+   "at": [
+    -383.8,
+    76.4
+   ],
+   "yaw_deg": 97.7,
+   "near": "lateral_canal: Reeds and saltbush where the canal seeps; only a spare"
+  },
+  {
+   "id": "flume_p056",
+   "template": "survey_marker",
+   "at": [
+    -241.1,
+    -437.7
+   ],
+   "yaw_deg": 124.8,
+   "near": "flume_ride_pier_15: A depth milepost, crossed out and painted deeper, with"
+  },
+  {
+   "id": "flume_p057",
+   "template": "tie_yard",
+   "at": [
+    -555.1,
+    263.0
+   ],
+   "yaw_deg": -152.7,
+   "near": "fields_wash_2: A yard of spare ties and pipe, bundled and left where the"
+  },
+  {
+   "id": "flume_p058",
+   "template": "mini_hearth",
+   "at": [
+    -78.4,
+    209.3
+   ],
+   "yaw_deg": 142.3,
+   "near": "verge of the line: A cold hearth, one cup and a cot left out."
+  },
+  {
+   "id": "flume_p059",
+   "template": "survey_marker",
+   "at": [
+    -55.4,
+    -299.3
+   ],
+   "yaw_deg": -27.4,
+   "near": "rim_road: A depth milepost, crossed out and painted deeper, with"
+  },
+  {
+   "id": "flume_p060",
+   "template": "camp_corner",
+   "at": [
+    -103.4,
+    -415.0
+   ],
+   "yaw_deg": -80.6,
+   "near": "flume_ride_pier_22: A crew camp corner: cots, a cold hearth, a washtub and the"
+  },
+  {
+   "id": "flume_p061",
+   "template": "mini_scrub",
+   "at": [
+    259.0,
+    407.7
+   ],
+   "yaw_deg": 119.3,
+   "near": "verge of the line: Saltbush and a split plank by the verge, left to grow."
+  },
+  {
+   "id": "flume_p062",
+   "template": "camp_corner",
+   "at": [
+    -312.8,
+    -465.3
+   ],
+   "yaw_deg": 137.3,
+   "near": "flume_ride_pier_9: A crew camp corner: cots, a cold hearth, a washtub and the"
+  },
+  {
+   "id": "flume_p063",
+   "template": "tie_yard",
+   "at": [
+    83.6,
+    -486.6
+   ],
+   "yaw_deg": 125.0,
+   "near": "canal_wash_3: A yard of spare ties and pipe, bundled and left where the"
+  },
+  {
+   "id": "flume_p064",
+   "template": "crane_yard",
+   "at": [
+    24.3,
+    10.8
+   ],
+   "yaw_deg": -72.1,
+   "near": "flume_hollow_reach: Boom 3 on its blocks beside the winch cab, the lock still"
+  },
+  {
+   "id": "flume_p065",
+   "template": "mini_cup",
+   "at": [
+    -441.5,
+    -320.0
+   ],
+   "yaw_deg": -45.4,
+   "near": "verge of the line: A cold cup of tea left by the siphon verge."
+  },
+  {
+   "id": "flume_p066",
+   "template": "shift_tally",
+   "at": [
+    -1.0,
+    -268.2
+   ],
+   "yaw_deg": -41.7,
+   "near": "rim_flow_drop: A shift board nailed to a milepost: names, a tally of days"
+  },
+  {
+   "id": "flume_p067",
+   "template": "survey_marker",
+   "at": [
+    -579.8,
+    -487.9
+   ],
+   "yaw_deg": -5.9,
+   "near": "crew_ledges: A depth milepost, crossed out and painted deeper, with"
+  },
+  {
+   "id": "flume_p068",
+   "template": "seep_edge",
+   "at": [
+    183.5,
+    126.0
+   ],
+   "yaw_deg": -97.8,
+   "near": "pad_bank_7: Saltbush and a split plank where the canal seeps, left"
+  },
+  {
+   "id": "flume_p069",
+   "template": "crane_yard",
+   "at": [
+    -525.8,
+    -565.2
+   ],
+   "yaw_deg": -38.7,
+   "near": "mesa_spill: Boom 3 on its blocks beside the winch cab, the lock still"
+  },
+  {
+   "id": "flume_p070",
+   "template": "tie_yard",
+   "at": [
+    361.7,
+    243.9
+   ],
+   "yaw_deg": -50.9,
+   "near": "pad_bank_5: A yard of spare ties and pipe, bundled and left where the"
   }
  ],
  "litter": {
@@ -2413,5 +3195,5 @@
   ],
   "seed": 1021
  },
- "pin": 3456431764
+ "pin": 1028913767
 }

@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "529df132d80e1bdd22f022ab99e247c1546921922e8a736918d6b5542602628e",
+  "bake_sha256": "720bb0492002da3b14b37369f57d1662678a40f4811732d245be8e8df31de7d0",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1104511,
-  "edges": 320196,
+  "bytes": 1104594,
+  "edges": 320240,
   "first_failed": "",
   "flags": {
-    "deck": 792,
-    "door_ok": 40318,
+    "deck": 796,
+    "door_ok": 40322,
     "line": 322,
-    "open": 40956,
-    "sight_ok": 10691,
+    "open": 40960,
+    "sight_ok": 10695,
     "under": 0
   },
-  "full_visit_m": 1768,
-  "full_visit_ratio": "1.264",
-  "graph_sha256": "ffee89086fbc6592829bc84655dc4cd39006439b4cb324c39260f60048c5b9f3",
+  "full_visit_m": 2046,
+  "full_visit_ratio": "1.462",
+  "graph_sha256": "251832487fe091a63aaf92908b1fdbbb778214555a84c2450557dd4a7c13496f",
   "line_errors": [],
   "line_path_nodes": 125,
   "longest_est_m": 2495,
   "map": "park_flume",
-  "nodes": 41193,
-  "park_sha256": "f30ac37fac8c9918d054da5eaa82bd8a17dfe285c253c891fc412d74259d7954",
+  "nodes": 41197,
+  "park_sha256": "812a46d0d1606ebcd16e64cbbea3453e4fadbd41db7153685763b6a058dd4d1e",
   "pockets": [
     {
       "clear_ring": [],
@@ -107,6 +107,62 @@
     },
     {
       "clear_ring": [],
+      "d_landmark": 1319,
+      "d_spawn": 81,
+      "detour_m": 32,
+      "door_at": [
+        -416,
+        -584
+      ],
+      "door_m": 32,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "weir_surge",
+      "kind": "surge_run",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "event",
+      "sight_ok": true,
+      "site": "weir_mesa"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 1015,
+      "d_spawn": 462,
+      "detour_m": 194,
+      "door_at": [
+        -472,
+        -208
+      ],
+      "door_m": 194,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "canal_altar",
+      "kind": "ambush_altar",
+      "nearest_door": 337,
+      "nearest_door_id": "weir_valve",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "risk",
+      "sight_ok": true,
+      "site": "main_canal"
+    },
+    {
+      "clear_ring": [],
       "d_landmark": 906,
       "d_spawn": 555,
       "detour_m": 99,
@@ -131,7 +187,7 @@
       "site": "butte_gap"
     }
   ],
-  "reward_ratio": "0.537",
+  "reward_ratio": "0.467",
   "ride_edges": 148,
   "routes": {
     "annex_ramp_line": [],
@@ -170,16 +226,16 @@
       "name": "reward_ratio",
       "ok": false,
       "target": "at least 1.5",
-      "value": 0.537
+      "value": 0.467
     },
     {
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.264
+      "value": 1.462
     }
   ],
-  "tool_sha256": "4be45ebc44a1a1499a264ba2fb9704747f6d84ab3a32187bc6e98a37c6fb4473",
+  "tool_sha256": "10aa994f5f9c489ee068bc45f30b0d621ccba7e490e189d59d8f9491f98a44db",
   "zones": {
     "anchors": [
       {
@@ -711,6 +767,14 @@
         "viable": true
       },
       {
+        "cost": 83.9,
+        "d_landmark": 1420.9,
+        "name": "spill_leap_kicker",
+        "on_route": false,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 33.9,
         "d_landmark": 1385.3,
         "name": "weir_gatehouse",
@@ -727,11 +791,11 @@
         "viable": false
       }
     ],
-    "count": 160,
+    "count": 162,
     "crossings": {
-      "drop": 61,
+      "drop": 62,
       "ride": 77,
-      "walk": 234
+      "walk": 235
     },
     "hidden": [
       {
