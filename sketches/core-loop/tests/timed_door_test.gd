@@ -5,10 +5,11 @@ extends SceneTree
 #
 #   rule       a slow rout, another boss or no profile marks nothing; a fast rout opens the door for the
 #              run after this one, which outlasts a save and load (a quit and Continue) and closes when
-#              that run ends.
+#              the next run starts; the door survives the save merge with a newer copy on disk.
 #   placement  the spot is reachable, a door_ok node near the drop-in, clear of the dam's activities,
 #              contraptions and finds, and its face looks back toward the drop-in.
-#   game       flow marks the door on a fast Brindle rout and rolls it at the run's end; with the door
+#   game       flow marks the door on a fast Brindle rout and rolls it as a new run starts (a restart
+#              counts, so a restart from the door's run closes it); with the door
 #              open the dam builds it on flat ground, lit, with its clock and board, and its codex row
 #              is declared; breaking it files the row and pays on its own luck stream. A shut door builds
 #              nothing.
@@ -62,9 +63,20 @@ func _rule() -> void:
 	_t.check("a quit and Continue keeps the door", Secrets.door_open(again))
 	Secrets.roll_door(again)
 	_t.check("the run after closes it", not Secrets.door_open(again))
+	_t.check("the profile saves again", again.save(), again.last_error)
+	# A second copy saves a newer generation first; the next save merges by max, so the door's
+	# stats come through as this copy wrote them.
+	var other := Profile.new(path)
+	other.load_profile()
+	other.set_stat("door.test_other", 1.0)
+	_t.check("another copy saves first", other.save(), other.last_error)
 	_t.check("a second fast rout opens it again", Secrets.note_rout(again, "brindle", 300.0))
 	Secrets.roll_door(again)
 	_t.check("for the run after that one", Secrets.door_open(again))
+	_t.check("the merged save keeps it", again.save(), again.last_error)
+	var merged := Profile.new(path)
+	merged.load_profile()
+	_t.check("the door survives the merge with a newer copy", Secrets.door_open(merged) and merged.stat("door.test_other") == 1.0)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
@@ -115,13 +127,13 @@ func _game() -> void:
 	game.flow.enter_stage(dam + 1, Vector3.ZERO, false)
 	await physics_frame
 	_t.check("a shut door builds nothing", _door(game) == null)
-	# Flow: a fast rout of world 1's boss marks the door, and the run's end opens it.
+	# Flow: a fast rout of world 1's boss marks the door, and the next new run opens it.
 	game.flow.state = game.flow.BOSS
 	game.run.run_time = 600.0
 	game.flow._on_boss_defeated()
 	_t.check("flow marks the door on a fast Brindle rout", profile.stat(Secrets.DOOR_FOR) >= 1.0 and not Secrets.door_open(profile))
-	game.flow._record_end(true)
-	_t.check("flow opens it at the run's end", Secrets.door_open(profile))
+	game.flow.new_run()
+	_t.check("the next run opens it", Secrets.door_open(profile))
 	game.flow.enter_stage(dam + 1, Vector3.ZERO, false)
 	await physics_frame
 	await physics_frame
@@ -145,6 +157,8 @@ func _game() -> void:
 	_t.check("the door opens when its face breaks", s.done and not s.wall.visible)
 	_t.check("the door files its codex row", game.ctx.codex.known(codex_id))
 	_t.check("the camp counts the door", Secrets.WORLD_CODEX[1].has(codex_id))
+	game.flow.new_run()
+	_t.check("a restart from the door's run closes it", not Secrets.door_open(profile))
 	game.queue_free()
 	await process_frame
 

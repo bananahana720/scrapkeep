@@ -380,6 +380,9 @@ func _begin_run(chosen: Resource) -> void:
 	if ctx.profile != null and ctx.profile.settle_previous_run_tallies() and ctx.profile.can_save and not ctx.profile.save():
 		warn_once("profile_tally_save", "flow: earlier run tallies not saved: %s" % ctx.profile.last_error)
 	run_won = false
+	# A new run, never a Continue: the timed door opens for exactly the run after a fast rout.
+	Secrets.roll_door(ctx.profile)
+	_save_profile("profile_door_save")
 	ctx.run.begin(chosen)
 	_seed_companion()
 	ctx.events.run_started.emit(chosen.id)
@@ -935,8 +938,6 @@ func _record_end(won: bool) -> void:
 	ctx.player.set_frozen(true)
 	_entrance = {}
 	_persist_companion()
-	Secrets.roll_door(ctx.profile)
-	_save_profile("profile_door_save")
 	# A save this build never owned (store refused it: newer_schema) is not ours to delete.
 	if store != null and store.refusal == "" and not store.clear():
 		store_error = "clear_failed"

@@ -122,8 +122,9 @@ const FINDS := {
 # The timed door (world 1 unit 15, Isaac's timed boss doors): rout Brindle with the run clock under
 # DOOR["under_s"] and the next run finds the Shift Clock Door by the dam's drop-in, a cracked room
 # that pays the green rung and files its codex row. It is earned, not hidden, so it keeps the beacon.
-# Every ended run counts in DOOR_RUNS; the rout writes the count the next run will see into DOOR_FOR,
-# so the door is open for exactly that run, and a quit and Continue keeps it.
+# Every new run counts in DOOR_RUNS as it starts (a restart or an abandoned run too; a Continue does
+# not); the rout writes the count the next run will see into DOOR_FOR, so the door is open for exactly
+# that run, and a quit and Continue keeps it.
 const DOOR := {
 	"boss": "brindle", "under_s": 720.0, "world": 1, "map": "park_dam", "site": "top_shelf_deck",
 	"at": [-208, -720], "face": [2, 1],
@@ -134,7 +135,7 @@ const DOOR := {
 		"clue": "Rout Brindle in under 12 minutes; the next run finds a clock door by the drop-in",
 		"text": "The Spillway crews kept a side door for the shift that beat the whistle. Clock Brindle out early and it is unlocked next run."},
 }
-const DOOR_RUNS := "door.runs_ended"
+const DOOR_RUNS := "door.runs_started"
 const DOOR_FOR := "door.brindle_clock_run"
 
 # The world codex rows each world's camp count reads: its field finds, then the parks' authored
@@ -239,7 +240,7 @@ static func note_rout(profile, boss: String, run_time: float) -> bool:
 	return true
 
 
-# A run ended: the next run is the one a rout in this run opened the door for.
+# A new run started: it is the one a rout in the run before opened the door for.
 static func roll_door(profile) -> void:
 	if profile != null:
 		profile.add_stat(DOOR_RUNS)

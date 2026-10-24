@@ -723,8 +723,6 @@ func _seep_tell(s: Site) -> void:
 	s.wall.add_child(_find_sound("find_drip", Secrets.DRIP_HEAR_M))
 
 
-# The radio's tell: a short whip aerial over the roof line and the tune through the wall, heard from
-# Secrets.RADIO_HEAR_M. The aerial stays; the sound goes with the face.
 # The timed door: the foreman's board inside and a brass punch clock on the face, stopped short of
 # the whistle. It keeps its beacon, since it was earned; its codex row is declared here.
 func _dress_door(s: Site) -> void:
@@ -749,6 +747,8 @@ func _dress_door(s: Site) -> void:
 	_mesh_box(minute, Vector3(0.07, DOOR_CLOCK_M * 0.42, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.21, 0.0), ink)
 
 
+# The radio's tell: a short whip aerial over the roof line and the tune through the wall, heard from
+# Secrets.RADIO_HEAR_M. The aerial stays; the sound goes with the face.
 func _radio_tell(s: Site) -> void:
 	var aerial := _mesh_box(s, Vector3(0.12, FIND_AERIAL_M, 0.12), Vector3(WALL_HALF_W - 1.0, WALL_HEIGHT + FIND_AERIAL_M * 0.5, -1.0),
 		Palette.solid(Palette.BRASS))
