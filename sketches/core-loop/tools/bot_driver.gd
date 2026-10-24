@@ -892,7 +892,8 @@ func _lap_roll() -> void:
 
 
 # The stall limit now. A sweep's own stage_limit is kept; the default one stretches for the
-# Mind's crown, for the gates after a break, and by however far --explore-by moved engage_by.
+# Mind's crown, for the gates after a break, by however far --explore-by moved engage_by, and by
+# the time the Spillway's locks held the run (ruling t).
 func _stage_cap() -> float:
 	if stage_limit != STAGE_LIMIT:
 		return stage_limit
@@ -902,7 +903,33 @@ func _stage_cap() -> float:
 	var broken = _note.get("warden_broken_s")
 	if broken != null:
 		cap = maxf(stage_limit, float(broken) + GATE_LIMIT)
-	return cap + maxf(0.0, engage_by - ENGAGE_BY)
+	return cap + maxf(0.0, engage_by - ENGAGE_BY) + _lock_held_s()
+
+
+# The seconds the Spillway's locks (#420, src/world/stage_locks.gd) held this stage on purpose:
+# the yard's lock from its slam to its bells, and the Warden's clamp from the first engage until
+# it opens, each still counting while it stands and each at most its row's max_s, so a lock the
+# bot never sees open cannot grow the cap with the clock (seed 16 ran 97 min on 97bcc2c0).
+# STAGE_LIMIT is a harness fit (ruling t), so a run the locks delay is not called stalled for it.
+# With --locks=0 there are no notes and nothing is added.
+func _lock_held_s() -> float:
+	var lock_at = _note.get("lock_s")
+	var engaged = _note.get("warden_engaged_s")
+	if lock_at == null and engaged == null:
+		return 0.0
+	var gate = game.flow.get("gate")
+	if gate == null:
+		return 0.0
+	var held := 0.0
+	if lock_at != null:
+		var unlock_at = _note.get("unlock_s")
+		var until := float(unlock_at) if unlock_at != null else float(game.run.stage_time)
+		held += clampf(until - float(lock_at), 0.0, float(gate.lock_row().get("max_s", 0.0)))
+	if engaged != null and gate.has_gate():
+		var open_at = _note.get("gate_open_s")
+		var until := float(open_at) if open_at != null else float(game.run.stage_time)
+		held += clampf(until - float(engaged), 0.0, float(gate.gate_row().get("max_s", 0.0)))
+	return held
 
 
 # A pending hot-wire offer is answered the tick it is seen, by one rule: the completionist
@@ -1645,8 +1672,13 @@ func _activity_goal(delta: float) -> bool:
 			# on the reach its shelf pulled the explorer off the cache into a wall it cannot pass.
 			if _site_has_authored_pack(c):
 				level -= CAMP_LAST
-			# A field find (secrets.gd FINDS) is the last stop: the explorer has learned the tells and
-			# checks the dead ends once the lit sites are done, unless it rolls within earshot of one.
+			# A field find (secrets.gd FINDS) is the explorer's (--explore-by): the default completionist
+			# keeps its ENGAGE_BY clock and its stall limit, so a find run out at the rush left it across
+			# the dam from the sheet, wedged on the canyon rim (seed 6 on 0f56e5ce, Stack #413).
+			if c.has_meta("find") and engage_by <= ENGAGE_BY:
+				continue
+			# The last stop: the explorer has learned the tells and checks the dead ends once the lit
+			# sites are done, unless it rolls within earshot of one.
 			if c.has_meta("find") and _flat(ball, c.global_position) > FIND_NEAR_M:
 				level -= CAMP_LAST * 2.0
 			var d := _flat(ball, c.global_position)
