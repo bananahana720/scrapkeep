@@ -506,6 +506,9 @@ class StandInPlayer extends Node3D:
 
 # No run: no stage is in play, so the world modules' per-frame steps stand idle.
 class StandInFlow extends Node:
+	# StageLocks.setup (#420) hands itself to the flow as its gate.
+	var gate = null
+
 	func in_stage() -> bool:
 		return false
 
