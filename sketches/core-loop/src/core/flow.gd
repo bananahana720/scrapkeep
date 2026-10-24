@@ -58,6 +58,11 @@ var in_arena := false
 # The plating that stood in the way when the ball died in the arena, for the gap line.
 var _death_plating := -1.0
 var _victory_left := 0.0
+# The boss's flourishes (flourish_cues.gd) size the victory window: plan() returns {hold, veil},
+# the seconds added to VICTORY_SECONDS and how long the victory card waits over the world.
+var victory_plan := Callable()
+var victory_veil := 0.0
+var _victory_hold := 0.0
 # warden_engaged fires once per stage attempt: on the first sealed ring entry or the
 # first strike on the Warden, whichever comes first (the music's cue to bring its theme in).
 var _engaged := false
@@ -846,7 +851,24 @@ func _on_boss_defeated() -> void:
 	boss_active = false
 	in_arena = false
 	_victory_left = VICTORY_SECONDS
+	_victory_hold = 0.0
+	victory_veil = 0.0
+	if victory_plan.is_valid():
+		var plan: Dictionary = victory_plan.call()
+		_victory_hold = maxf(0.0, float(plan.get("hold", 0.0)))
+		_victory_left += _victory_hold
+		victory_veil = maxf(0.0, float(plan.get("veil", 0.0)))
 	_set_state(VICTORY)
+
+
+# A skipped flourish gives back the hold it was paying for, and the card shows at once.
+func cut_victory(seconds: float) -> void:
+	if state != VICTORY:
+		return
+	var back := clampf(seconds, 0.0, _victory_hold)
+	_victory_hold -= back
+	_victory_left = maxf(0.0, _victory_left - back)
+	victory_veil = 0.0
 
 
 func _end_run_won() -> void:
