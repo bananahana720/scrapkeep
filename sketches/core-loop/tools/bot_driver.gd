@@ -66,6 +66,8 @@ const Requisition := preload("res://src/boss/requisition.gd")
 # fight_limit) and "broken" (the Warden broke; it ends the run there).
 
 const POLICIES := ["skipper", "completionist", "random", "camper", "traversal"]
+# How far the bot looks for a crew to break when the Warden's clamp is shut (_gate_foe).
+const GATE_HUNT := 140.0
 const PROFILES := {"brawler": "completionist", "camper": "camper", "skipper": "skipper"}
 const CAMP_RANGE := 30.0
 const TRAVERSE_REACTION := 0.15
@@ -1169,6 +1171,11 @@ func _roam(delta: float) -> void:
 		_settle_warden_damage(float(warden.get("hp")))
 	if warden != null:
 		_note["magnet_stuns"] = maxi(int(_note.get("magnet_stuns", 0)), int(warden.get("magnet_stuns") if warden.get("magnet_stuns") != null else 0))
+	var crew := _gate_foe()
+	if crew != null:
+		_goal = "gate crew"
+		_fight(crew, delta)
+		return
 	match policy:
 		"skipper":
 			if relay_stake > 0 and _relay_arm(delta):
@@ -1182,6 +1189,27 @@ func _roam(delta: float) -> void:
 			_traverse(delta)
 		_:
 			_random(warden, delta)
+
+
+# The Spillway's locks (src/world/stage_locks.gd) read as a person reads them: a shut yard's
+# crew comes first, and once the Warden is awake behind a shut clamp, the nearest enemy inside
+# GATE_HUNT. The traversal pilot only rides.
+func _gate_foe() -> Node3D:
+	var gate = game.flow.get("gate")
+	if gate == null or policy == "traversal":
+		return null
+	if gate.lock_active() and _note.get("lock_s") == null:
+		_note_set("lock_s", snappedf(game.run.stage_time, 0.01))
+	if not gate.lock_active() and _note.get("lock_s") != null and _note.get("unlock_s") == null:
+		_note_set("unlock_s", snappedf(game.run.stage_time, 0.01))
+	if gate.has_gate() and not gate.locked() and _note.get("gate_open_s") == null:
+		_note_set("gate_open_s", snappedf(game.run.stage_time, 0.01))
+	var ball: Vector3 = game.player.ball_position()
+	if gate.lock_active():
+		return gate.foe_for(ball)
+	if gate.locked() and game.flow.engaged():
+		return gate.foe_for(ball, GATE_HUNT)
+	return null
 
 
 # --- the traversal pilot -----------------------------------------------------------------

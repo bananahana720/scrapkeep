@@ -15,6 +15,7 @@ const Bay := preload("res://src/world/bay.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Interact := preload("res://src/world/interact.gd")
 const Activities := preload("res://src/world/activities.gd")
+const StageLocks := preload("res://src/world/stage_locks.gd")
 const RescueSites := preload("res://src/world/rescue_site.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -62,6 +63,8 @@ var bay
 var ride
 # v3: the interact key's system and the stage's interactables (interact.gd).
 var interact
+# The Spillway's Warden gate and arena lock (stage_locks.gd).
+var locks
 # The map's standing activities (activities.gd).
 var activities
 # The map's world rescue (rescue_site.gd).
@@ -164,6 +167,9 @@ func setup(ctx_ref) -> void:
 	rescue = RescueSites.new()
 	ctx.root.add_child(rescue)
 	rescue.setup(ctx, interact)
+	locks = StageLocks.new()
+	ctx.root.add_child(locks)
+	locks.setup(ctx)
 
 
 func _setup_gorge() -> void:
@@ -594,6 +600,7 @@ func _step_director(delta: float) -> void:
 		# The attacker budget reads one pack of one kind as one threat (attack_budget.gd).
 		if enemy != null:
 			enemy.set_meta("pack_seq", int(spawn.get("pack", -1)))
+			locks.note_member(enemy, int(spawn.get("pack", -1)))
 		# SG2: every elite-pack member follows the elite rules (elements.gd elite_rules).
 		if spawn.get("elite", false) and enemy != null:
 			enemy.set_meta("elite_pack", true)

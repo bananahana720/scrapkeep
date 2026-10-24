@@ -47,6 +47,8 @@ var beacon_seconds_override := -1.0
 var force_warden := false
 var sealed := false
 var warden: Node3D = null
+# The park Warden's gate and the yard's arena lock (world/stage_locks.gd), when the world has one.
+var gate = null
 # Seam for wave 4: the boss flow sets boss_active when it enters its "boss" state and
 # boss_plating to the hull's plating. The death screen then shows the boss gap line and
 # offers T, which replays stage 3 from the start the run kept.
@@ -1034,6 +1036,9 @@ func objective_text() -> String:
 	match state:
 		STAGE, BEACON:
 			if sealed:
+				var held: String = gate.objective() if gate != null else ""
+				if held != "":
+					return held
 				return EventKinds.objective("stage_entered" if state == STAGE else "beacon_charge_changed", fight)
 			var text := EventKinds.objective("beacon_unsealed", fight)
 			if not beacon.in_ring(ball):

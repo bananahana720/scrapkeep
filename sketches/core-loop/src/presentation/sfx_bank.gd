@@ -130,6 +130,10 @@ const TRIM_DB := {
 	"pilot_unlocked_tarn": -9.0, "pilot_unlocked_tally": -9.0, "pilot_unlocked_cannon": -9.0,
 	"kill_chain_tier": -5.0, "drop_landing": -3.0, "door_tick": -9.0,
 	"return_launch_arpeggio": -4.0, "lift_hiss": -9.0, "crater_hold": -12.0,
+	# The Spillway's arena locks and Warden gates (src/world/stage_locks.gd): the yard slams shut,
+	# springs open, the Warden's clamp counts a crew, refuses a hit, and lets go.
+	"arena_lock_slam": -2.0, "arena_unlock_bells": -4.0, "warden_gate_pip": -7.0,
+	"warden_gate_clunk": -10.0, "warden_gate_release": -3.0,
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
 	"armor_deflect": -10.0,
@@ -1059,6 +1063,16 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _lift_hiss()
 		"crater_hold":
 			return hold("crater", Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
+		"arena_lock_slam":
+			return _arena_lock_slam()
+		"arena_unlock_bells":
+			return _arena_unlock_bells()
+		"warden_gate_pip":
+			return _warden_gate_pip()
+		"warden_gate_clunk":
+			return _warden_gate_clunk()
+		"warden_gate_release":
+			return _warden_gate_release()
 	if id.begins_with(CAUSE_NOTE):
 		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
 	if _assist_parts(id).size() > 0:
@@ -2270,6 +2284,46 @@ static func _return_launch_arpeggio() -> PackedFloat32Array:
 
 # The bone gauge's pressure hiss, rising through the cycle: noise only, so it never
 # competes with a pitched cue for the ear.
+# --- Arena locks and Warden gates (src/world/stage_locks.gd) ---------------------------
+# The yard shuts: an iron gate drops on a sub boom, and a square falls a minor third, D to B,
+# so the room reads "closed" before the crew lands.
+static func _arena_lock_slam() -> PackedFloat32Array:
+	return _mix([[_noise(0.5, 180.0, 60.0, 7.0), 0, 1.0],
+		[_tone(0.7, _hz(38), _hz(31), "sine", 4.0), 0, 0.9],
+		[_tone(0.18, _hz(62), 0.0, "square_dark", 9.0), Synth.seconds(0.06), 0.45],
+		[_tone(0.36, _hz(59), 0.0, "square_dark", 6.0), Synth.seconds(0.22), 0.5],
+		[_noise(0.06, 3200.0, 1800.0, 60.0), Synth.seconds(0.02), 0.35]], true)
+
+
+# The yard opens: a latch clicks, then three bells climb the pentatonic to the home D, the
+# same walk up as the ceremony's, short.
+static func _arena_unlock_bells() -> PackedFloat32Array:
+	var score := [[0, 69, 1, "mallet", 0.6], [1, 72, 1, "mallet", 0.65], [2, 74, 4, "bell", 0.8], [2, 86, 4, "bell", 0.3]]
+	return _mix([[_noise(0.04, 2800.0, 1400.0, 80.0), 0, 0.5],
+		[Synth.render_score(score, 0.05), Synth.seconds(0.04), 1.0]])
+
+
+# One crew counted on the Warden's clamp: a single bright brass ping that climbs with the
+# count (the caller pitches it), small enough to stack in a fight.
+static func _warden_gate_pip() -> PackedFloat32Array:
+	return _mix([[_fm(0.32, _hz(74), 2.0, 1.4, 9.0), 0, 1.0], [_noise(0.03, 3600.0, 2400.0, 90.0), 0, 0.3]])
+
+
+# A hit on a gated Warden: a dull clank on the clamp, no ring, so it never sounds like progress.
+static func _warden_gate_clunk() -> PackedFloat32Array:
+	return _mix([[_noise(0.12, 420.0, 260.0, 30.0), 0, 1.0], [_tone(0.14, _hz(45), _hz(43), "square_dark", 22.0), 0, 0.6]])
+
+
+# The clamp lets go: a chain rattles off and a D major chord blooms, the fight is on.
+static func _warden_gate_release() -> PackedFloat32Array:
+	var parts := []
+	for i in 6:
+		parts.append([_noise(0.03, 2200.0 + 300.0 * i, 1200.0, 80.0), Synth.seconds(0.05 * i), 0.5])
+	var chord := [[0, 62, 6, "keys", 0.45], [0, 66, 6, "keys", 0.4], [0, 69, 6, "keys", 0.4], [0, 74, 6, "bell", 0.6], [0, 38, 6, "sub", 0.6]]
+	parts.append([Synth.render_score(chord, 0.05), Synth.seconds(0.3), 1.0])
+	return _mix(parts)
+
+
 static func _lift_hiss() -> PackedFloat32Array:
 	var hiss := _noise(1.2, 500.0, 3200.0, 0.0, 0.05)
 	var n := hiss.size()

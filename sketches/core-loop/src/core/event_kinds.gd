@@ -1176,6 +1176,14 @@ const WORLD_ROWS := {
 	"breach_opened": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "breach_crack", "sound_next": "plate_crack_rubble_fall", "hud": "", "objective": "", "priority": 1},
 	# Alpha wave 14: Moss takes a ledger leaf (progress.gd return_leaves).
 	"ledger_returned": {"group": "event", "color": Palette.SAND, "shape": "star", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
+	# The Spillway's arena locks and Warden gates (src/world/stage_locks.gd, lock_rows.gd). Sound is the fairness
+	# channel: the yard shutting falls (hazard), opening climbs; the clamp counts a crew with a ping, answers a hit
+	# while gated with a dull clank that never sounds like progress, and lets go on a chord.
+	"arena_locked": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "slam_boom", "sound_next": "arena_lock_slam", "hud": "", "objective": "", "priority": 2},
+	"arena_unlocked": {"group": "event", "color": Palette.SANDSTONE, "shape": "ring", "sound": "found_chime", "sound_next": "arena_unlock_bells", "hud": "", "objective": "", "priority": 2},
+	"warden_gate_pip": {"group": "event", "color": Palette.BRASS, "shape": "square", "sound": "found_chime", "sound_next": "warden_gate_pip", "hud": "", "objective": "", "priority": 1},
+	"warden_gate_refused": {"group": "event", "color": Palette.HAZARD, "shape": "square", "sound": "clank", "sound_next": "warden_gate_clunk", "hud": "", "objective": "", "priority": 1},
+	"warden_gate_opened": {"group": "event", "color": Palette.BRASS, "shape": "burst", "sound": "found_chime", "sound_next": "warden_gate_release", "hud": "", "objective": "", "priority": 2},
 }
 
 
