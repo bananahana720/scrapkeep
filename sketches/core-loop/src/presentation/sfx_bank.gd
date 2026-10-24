@@ -1775,11 +1775,15 @@ static func _threat_whistle() -> PackedFloat32Array:
 		[_tone(0.65, _hz(82), _hz(75), "sine", 1.2), Synth.seconds(0.08), 0.8], [_noise(0.65, 2200.0, 1300.0, 2.5, 0.05), Synth.seconds(0.08), 0.15]])
 
 
-# Lane: a charge hum on Ab when the lane is declared. The tear is its own one-shot,
-# played on the frame the lane goes live, because the tear means fire (SOUND-STORY
-# section 7) and a warning's length varies (1.4 s charge, 0.6 s cued hook turn).
+# Lane: a charge hum on Ab from the frame the lane is declared. It holds for
+# THREAT_HUM_HOLD, longer than any lane's warning, and audio.gd cuts it on the frame the
+# lane goes live, where the tear plays: the tear is its own one-shot because it means fire
+# (SOUND-STORY section 7) and a warning's length varies (1.4 s charge, 0.6 s hook turn).
+const THREAT_HUM_HOLD := 3.0
+
 static func _threat_hum() -> PackedFloat32Array:
-	return _mix([[_tone(0.45, _hz(44), _hz(44), "saw_dark", 0.4), 0, 0.8], [_tone(0.45, _hz(56), _hz(56), "square_dark", 0.6), 0, 0.5]], true)
+	return _mix([[_tone(THREAT_HUM_HOLD, _hz(44), _hz(44), "saw_dark", 0.15), 0, 0.8],
+		[_tone(THREAT_HUM_HOLD, _hz(56), _hz(56), "square_dark", 0.2), 0, 0.5]], true)
 
 
 # Lane release: the tearing buzz, sliding Ab down to F.

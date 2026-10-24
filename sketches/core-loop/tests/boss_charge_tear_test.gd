@@ -4,9 +4,12 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
+const Rules := preload("res://src/boss/boss_rules.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 
-# Brindle's charge is a lane threat: its hum sounds on the frame the lane is drawn and its
-# tear on the frame the lane goes live, which is the tick the hull starts to run. The tear
+# Brindle's charge is a lane threat: its hum sounds on the frame the lane is drawn and holds,
+# and its tear plays on the frame the lane goes live, which is the tick the hull starts to
+# run; the held hum stops there, so there is no silent gap between hum and tear. The tear
 # means fire (SOUND-STORY section 7), so its offset from the charge is zero for the full
 # tell (CHARGE_WARN) and for the cued hook turn (FightPhases.CUED_WARN) alike. Before this
 # test the tear sat 0.42 s into a one-shot hum: about 1 s early on a full charge and 0.18 s
@@ -22,7 +25,8 @@ var _boss
 var _audio
 var _failures := 0
 var _started := false
-# hazard id -> {"drawn": clock, "warn": s, "cued": bool, "hum": clock, "tear": clock, "live": clock, "run": bool}
+# hazard id -> {"drawn": clock, "warn": s, "cued": bool, "hum": clock, "tear": clock, "live": clock, "run": bool,
+#   "held": the hum was still held on the tick before live, "cut": it stopped on the live tick}
 var _charges := {}
 
 
@@ -50,6 +54,10 @@ func _sounds(sound: String) -> int:
 	return _audio.cue_log.filter(func(c): return c[0] == "threat_lane" and c[1] == sound and c[2] == "now").size()
 
 
+func _stops() -> int:
+	return _audio.cue_log.filter(func(c): return c[0] == "threat_lane" and c[1] == "threat_hum" and c[2] == "stop").size()
+
+
 func _drive() -> void:
 	Harness.install(_game)
 	_boss = _game.boss
@@ -64,10 +72,13 @@ func _drive() -> void:
 	var until: float = _boss.clock + SECONDS
 	while _boss.clock < until:
 		var hums := _sounds("threat_hum")
+		var stops := _stops()
 		var tears := _sounds("threat_tear")
 		var before := {}
+		var held := {}
 		for h in _boss.active_hazards():
 			before[h.get_instance_id()] = h.state
+			held[h.get_instance_id()] = _audio.lane_hums.has(h.get_instance_id())
 		Harness.put_ball(_game, _boss.arena.point_at(0.0, 30.0, 1.0))
 		_boss.advance(DT)
 		_game.run.heal(1000.0)
@@ -80,11 +91,13 @@ func _drive() -> void:
 				continue
 			var id: int = h.get_instance_id()
 			if not _charges.has(id):
-				_charges[id] = {"drawn": _boss.clock, "warn": h.warn_seconds, "cued": h.cued, "hum": -1.0, "tear": -1.0, "live": -1.0, "run": false}
+				_charges[id] = {"drawn": _boss.clock, "warn": h.warn_seconds, "cued": h.cued, "hum": -1.0, "tear": -1.0, "live": -1.0, "run": false, "held": false, "cut": false}
 			if h.is_live() and before.get(id, Hazard.WARN) == Hazard.WARN:
 				went_live += 1
 				_charges[id]["live"] = _boss.clock
 				_charges[id]["run"] = _boss._charge.get("hazard") == h and _boss._charge.get("state") == "run"
+				_charges[id]["held"] = held.get(id, false)
+				_charges[id]["cut"] = not _audio.lane_hums.has(id) and _stops() == stops + 1
 				if torn > 0:
 					_charges[id]["tear"] = _boss.clock
 		if torn != went_live:
@@ -113,9 +126,13 @@ func _finish() -> void:
 		else:
 			full += 1
 		var hum_lead: float = c["tear"] - c["hum"]
-		if c["tear"] != c["live"] or not c["run"] or c["hum"] != c["drawn"] or absf(hum_lead - c["warn"]) > DT + 1e-4:
+		if c["tear"] != c["live"] or not c["run"] or c["hum"] != c["drawn"] or absf(hum_lead - c["warn"]) > DT + 1e-4 \
+				or not c["held"] or not c["cut"]:
 			bad.append(c)
 	_report("charges seen", full >= 2 and cued >= 1,
 		"%d full charges and %d cued hook turns went live in %.0f s of phase 3" % [full, cued, SECONDS])
 	_report("tear is fire time", bad.is_empty(),
-		"every charge's hum sounded on its draw tick and its tear on the tick the lane went live and the hull ran, one tell apart; mismatches=%s" % [bad])
+		"every charge's hum sounded on its draw tick and held to the tick the lane went live and the hull ran, where it stopped and the tear played, one tell apart; mismatches=%s" % [bad])
+	var hold: float = SfxBank.samples("threat_hum").size() / float(SfxBank.RATE)
+	_report("hum outlasts the longest charge tell", hold > Rules.CHARGE_WARN + 0.5,
+		"threat_hum holds %.2f s; Brindle's full tell is %.2f s at tell_mult 1" % [hold, Rules.CHARGE_WARN])

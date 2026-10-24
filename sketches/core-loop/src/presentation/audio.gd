@@ -282,6 +282,8 @@ var _stinger_player: AudioStreamPlayer
 var _music_pb: AudioStreamGeneratorPlayback
 var _stinger_pb: AudioStreamGeneratorPlayback
 var _sfx: AudioStreamPlaybackPolyphonic
+# Lane threat instance id -> its held hum voice (-1 without live output), until the lane goes live or leaves.
+var lane_hums := {}
 var _ui: AudioStreamPlaybackPolyphonic
 var _sfx_player: AudioStreamPlayer
 var _ui_player: AudioStreamPlayer
@@ -1441,22 +1443,39 @@ func _warn_threat(node: Node) -> void:
 	if row.is_empty():
 		return
 	var db: float = PRIORITY_DB[int(row["priority"])] - PRIORITY_DB[Rows.priority(kind)] - _threat_distance_db(node)
-	play(kind, db, 1.0, "SFX", row["sound"])
+	var sounded := play(kind, db, 1.0, "SFX", row["sound"])
 	for layer in [node.get("owner_voice"), node.get("mechanic_tag")]:
 		if layer is String and layer != "":
 			play(kind, db, 1.0, "SFX", layer)
 	if int(row["priority"]) >= 2:
 		engine.duck(0.55, 0.35)
 	if kind in THREAT_RELEASE and node.has_signal("went_live"):
+		if sounded:
+			var voices: Array = _voices.get(row["sound"], [])
+			lane_hums[node.get_instance_id()] = voices.back() if not voices.is_empty() else -1
 		node.went_live.connect(_release_threat.bind(node, kind), CONNECT_ONE_SHOT)
+		node.tree_exiting.connect(_end_hum.bind(node.get_instance_id()), CONNECT_ONE_SHOT)
 
 
-# The release half of a threat's grammar on the frame it goes live: the lane's tear is fire time.
+# The release half of a threat's grammar on the frame it goes live: the held hum stops and
+# the lane's tear plays, because the tear is fire time.
 func _release_threat(node: Node, kind: String) -> void:
+	_end_hum(node.get_instance_id())
 	if not is_instance_valid(node) or not node.is_inside_tree():
 		return
 	var row: Dictionary = EventKinds.THREAT_ROWS[kind]
 	play(kind, PRIORITY_DB[int(row["priority"])] - PRIORITY_DB[Rows.priority(kind)] - _threat_distance_db(node), 1.0, "SFX", THREAT_RELEASE[kind])
+
+
+# Stops a lane's held hum: at its tear, or when the lane leaves before it goes live.
+func _end_hum(node_id: int) -> void:
+	if not lane_hums.has(node_id):
+		return
+	var id: int = lane_hums[node_id]
+	lane_hums.erase(node_id)
+	if id >= 0 and _sfx != null and _sfx.is_stream_playing(id):
+		_sfx.stop_stream(id)
+	cue_log.append(["threat_lane", EventKinds.THREAT_ROWS["threat_lane"]["sound"], "stop", engine.clock, 1.0])
 
 
 # Cues here are not positional, so a far threat is only quieter: full within 20 m,

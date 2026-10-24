@@ -447,9 +447,11 @@ Every enemy threat is a committed telegraph (`src/combat/telegraph.gd`) or boss 
 | INSTANT | a sharp edge; a striped fill closing in from the edge over the warning; a solid flash on landing | the whole area, at once | `threat_instant`: `ring`, `threat_tick` |
 | WAVE | a faint dashed reach; a bright front at speed x elapsed, chevrons, a curtain as tall as its height band; 15% stripes on the swept ground | only the front band, `WAVE_EDGE` (1 m) either side | `threat_wave`: `wave`, `threat_whoosh` |
 | PROJECTILE | a dotted flight trace to the landing point; a reticle whose brackets close on the blast edge | the blast ring, when the shell lands | `threat_projectile`: `cross`, `threat_whistle` |
-| LANE | rails and a far cap; a striped fill running from the source | the strip, where the body or beam is | `threat_lane`: `bar`, `threat_hum` |
+| LANE | rails and a far cap; a striped fill running from the source | the strip, where the body or beam is | `threat_lane`: `bar`, `threat_hum` held from the draw, cut by `threat_tear` on the frame it goes live |
 
 Instant, projectile and lane also draw their height band as posts and a rail at `reach`.
+
+Every type's warning sound plays on the frame the threat is declared (`audio.gd` `_warn_threat`). A LANE also has a release half: both nodes emit `went_live` when the warning ends (`Hazard.step` reaching `warn_seconds`, `Telegraph.set_progress` reaching 1), and on that frame the held hum stops and `threat_tear` plays. The tear is fire time (SOUND-STORY section 7), so it lands on the tick the charge, lunge or beam starts, at any warning length.
 
 The type is a required argument everywhere; no factory defaults it, and a node committed without one pushes an error.
 
