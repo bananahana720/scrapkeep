@@ -81,6 +81,10 @@ async function runGates() {
   console.log(`${jobs.length} jobs (${arms.map((a) => `${a} ${jobs.filter((j) => j.arm === a).length}`).join(", ")}) at --fixed-fps 90, ${opts.jobs} parallel`);
   if (opts.dryRun) return;
   if (!godot || !existsSync(godot)) die("set GODOT_BIN to the Godot 4.7.2 editor");
+  // Without an import the class_name globals (ChallengeDials) never resolve: each job spams errors into a log of
+  // hundreds of MB and node runs out of memory with no row written.
+  if (!existsSync(path.join(root, "sketches/core-loop/.godot/global_script_class_cache.cfg")))
+    die("this worktree was never imported; run $GODOT_BIN --headless --path sketches/core-loop --import first");
   const label = opts.label ?? "gates-" + stamp;
   const outDir = path.join(outRoot, label);
   const runsFile = path.join(outDir, "runs.ndjson");

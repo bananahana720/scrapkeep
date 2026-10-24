@@ -88,6 +88,11 @@ export function gateBotArgs(job, out) {
 
 const num = (x) => (typeof x === "number" && Number.isFinite(x) ? x : null);
 
+// A death on a saved run ends the run lost before the driver hears player_died (flow.gd _on_player_died), so the
+// driver writes "lost"; "died" is a death with no save store. Stage 6 cleared with --until=6 is the run won.
+export const DEATHS = ["died", "lost"];
+export const CLEARS = ["until", "won"];
+
 // row: the bots.ndjson line (null when the process left none). Reads the stage note of job.stage.
 // A summary has void: null, or the reason its run does not count. Void runs are reported, never graded.
 export function summarizeRun(row, job) {
@@ -96,7 +101,7 @@ export function summarizeRun(row, job) {
   const note = (row.stages ?? []).find((s) => s.stage === job.stage) ?? null;
   if (!note) return { ...base, outcome: row.outcome ?? null, void: "no stage note for stage " + job.stage };
   const out = {
-    ...base, outcome: row.outcome, died: row.outcome === "died", cleared: row.outcome === "until",
+    ...base, outcome: row.outcome, died: DEATHS.includes(row.outcome), cleared: CLEARS.includes(row.outcome),
     first_contact_s: num(note.first_contact_s), first_hit_s: num(note.first_hit_s), exit_s: num(note.exit_s),
     hull_lost_120s: num(note.hull_lost_120s), alive_120s: num(note.alive_120s),
     fight_s: num(note.fight_s) ?? 0, circle_s: num(note.circle_s) ?? 0, circle_share: num(note.circle_share),

@@ -59,6 +59,10 @@ test("summarizeRun reads the stage note and applies the instrument check", () =>
   assert.equal(s.dodges, 3);
   assert.match(summarizeRun(null, job).void, /no record/);
   assert.match(summarizeRun({ outcome: "died", stages: [] }, job).void, /no stage note/);
+  // the driver's outcome for a death on a saved run is "lost" (gate rows on f6707e70), and stage 6 cleared is "won"
+  assert.equal(summarizeRun({ outcome: "lost", stages: [{ stage: 1 }, note] }, job).died, true);
+  assert.equal(summarizeRun({ outcome: "won", stages: [{ stage: 1 }, note] }, job).cleared, true);
+  assert.equal(summarizeRun({ outcome: "stalled", stages: [{ stage: 1 }, note] }, job).died, false);
   assert.match(summarizeRun({ outcome: "died", stages: [{ ...note, circle_share: 0.5 }] }, job).void, /circle_share/);
 });
 
