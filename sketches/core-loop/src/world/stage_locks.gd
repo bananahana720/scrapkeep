@@ -13,7 +13,10 @@ const Palette := preload("res://src/core/palette.gd")
 # collar round the Warden and one pip per pack it asks for, lit brass as each pack goes down,
 # and a hit on a shut clamp answers with a dull clank (warden_gate_refused) that never sounds
 # like progress. A pack counts once every member it arrived with is dead; a member that left
-# alive (a despawn) spoils it, and a lone arrival is not a pack.
+# alive (a despawn) spoils it, and a lone arrival is not a pack. A rider (a member with no home
+# in the window that came with a housed crew, director.gd _home_pack_spots) neither holds nor
+# spoils the count: the crew counts once its housed members are dead (ruling w, 24 Oct), while
+# the rider still fights and drops. A pack of riders alone counts like any other.
 #
 # The lock. Once, on the ground and inside the row's circle round the beacon, the yard shuts:
 # a hazard wall rises round the ball with a slam that falls (arena_locked), the crew lands
@@ -42,6 +45,7 @@ const REFUSE_GAP := 0.6
 const COLLAR_RADIUS := 5.0
 const PIP_HEIGHT := 9.0
 const PIP_GAP := 2.0
+const CREW_MEMBER_M := 30.0
 
 var ctx
 var row := {}
@@ -113,13 +117,54 @@ func crew_alive() -> Array:
 	return _crew.map(func(ref: WeakRef): return ref.get_ref()).filter(func(enemy): return _alive(enemy))
 
 
-# What a hand that reads the tells goes for: the yard's crew while it is shut, else the nearest
-# enemy inside reach while the clamp is shut, else null.
+# What a hand that reads the tells goes for: the yard's crew while it is shut; while the clamp is
+# shut, the crew inside reach nearest to lighting a pip (each living member it still needs costs
+# CREW_MEMBER_M of distance), as a player reads the pips and finishes a crew rather than hitting
+# whatever is nearest; with no crew that can still count, the nearest enemy inside reach; else null.
 func foe_for(ball: Vector3, reach := INF) -> Node3D:
-	var pool: Array = crew_alive() if lock_active() else []
-	if pool.is_empty() and locked():
-		pool = get_tree().get_nodes_in_group("enemy").filter(func(enemy): return enemy != ctx.flow.warden and _alive(enemy) \
-				and String(enemy.get("kind")) not in ["warden", "vault", ""])
+	if lock_active():
+		return _nearest(crew_alive(), ball, reach)
+	if not locked():
+		return null
+	var best: Node3D = null
+	var cost := INF
+	for living: Array in _open_crews():
+		var foe := _nearest(living, ball, reach)
+		if foe != null and _flat(foe.global_position, ball) + CREW_MEMBER_M * (living.size() - 1) < cost:
+			cost = _flat(foe.global_position, ball) + CREW_MEMBER_M * (living.size() - 1)
+			best = foe
+	if best != null:
+		return best
+	return _nearest(get_tree().get_nodes_in_group("enemy").filter(func(enemy): return enemy != ctx.flow.warden and _alive(enemy) \
+			and String(enemy.get("kind")) not in ["warden", "vault", ""]), ball, reach)
+
+
+# The living housed members of every director pack that can still light a pip: not counted,
+# not spoiled, of MIN_PACK or more, with someone left standing.
+func _open_crews() -> Array:
+	var out := []
+	for seq in _packs:
+		var pack: Dictionary = _packs[seq]
+		if pack["counted"] or pack["spoiled"] or pack["members"].size() < MIN_PACK:
+			continue
+		var living := []
+		var housed := _housed(pack)
+		for member: Dictionary in pack["members"]:
+			var enemy = member["ref"].get_ref()
+			if not (member["rider"] and housed) and not member["dead"] and _alive(enemy):
+				living.append(enemy)
+		if not living.is_empty():
+			out.append(living)
+	return out
+
+
+# Whether the pack has a housed member, so its riders stand aside from the count; a pack of
+# riders alone counts like any other.
+static func _housed(pack: Dictionary) -> bool:
+	return pack["members"].any(func(member: Dictionary) -> bool: return not member["rider"])
+
+
+static func _nearest(pool: Array, ball: Vector3, reach: float) -> Node3D:
 	var best: Node3D = null
 	var near := reach
 	for enemy: Node3D in pool:
@@ -140,12 +185,12 @@ func objective() -> String:
 
 
 # Every director arrival that came as a pack (world.gd _step_director).
-func note_member(enemy: Node3D, seq: int) -> void:
+func note_member(enemy: Node3D, seq: int, rider := false) -> void:
 	if seq < 0 or enemy == null or row.is_empty():
 		return
 	if not _packs.has(seq):
 		_packs[seq] = {"members": [], "counted": false, "spoiled": false}
-	var member := {"ref": weakref(enemy), "dead": false}
+	var member := {"ref": weakref(enemy), "dead": false, "rider": rider}
 	_packs[seq]["members"].append(member)
 	# Marked on the death itself: _die frees the body the same frame, so a kill that lands after
 	# this module's tick would read as a despawn by the next one.
@@ -219,7 +264,10 @@ func _count_packs() -> void:
 		if pack["counted"] or pack["spoiled"]:
 			continue
 		var all_down := true
+		var housed := _housed(pack)
 		for member: Dictionary in pack["members"]:
+			if member["rider"] and housed:
+				continue
 			var enemy = member["ref"].get_ref()
 			if enemy != null and enemy.is_dead():
 				member["dead"] = true

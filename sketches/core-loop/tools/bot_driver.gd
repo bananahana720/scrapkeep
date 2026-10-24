@@ -4093,7 +4093,11 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		steer = Vector3(centre.x, ball.y, centre.y)
 	var thermal := _inside_thermal(ball)
 	var speed: float = player.planar_velocity().length()
-	if speed < STUCK_SPEED and player.state.grounded:
+	# A ball wedged against a wall or a lip, off the ground and off any line, is as stuck as one
+	# on the ground (flume seed 1 sat 100 s at (271, 0, 473) after #442 with no detour).
+	var wedged: bool = not player.state.grounded and not player.kit.hooked and not player.frozen() \
+			and absf(player.state.velocity.y) < STUCK_SPEED
+	if speed < STUCK_SPEED and (player.state.grounded or wedged):
 		_slow_time += delta
 	else:
 		_slow_time = 0.0

@@ -637,7 +637,7 @@ func _step_director(delta: float) -> void:
 		# The attacker budget reads one pack of one kind as one threat (attack_budget.gd).
 		if enemy != null:
 			enemy.set_meta("pack_seq", int(spawn.get("pack", -1)))
-			locks.note_member(enemy, int(spawn.get("pack", -1)))
+			locks.note_member(enemy, int(spawn.get("pack", -1)), spawn.get("rider", false))
 		# SG2: every elite-pack member follows the elite rules (elements.gd elite_rules).
 		if spawn.get("elite", false) and enemy != null:
 			enemy.set_meta("elite_pack", true)
