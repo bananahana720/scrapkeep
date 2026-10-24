@@ -4,6 +4,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const Worlds := preload("res://src/core/worlds.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -47,6 +48,8 @@ var beacon_seconds_override := -1.0
 var force_warden := false
 var sealed := false
 var warden: Node3D = null
+# The park Warden's gate and the yard's arena lock (world/stage_locks.gd), when the world has one.
+var gate = null
 # Seam for wave 4: the boss flow sets boss_active when it enters its "boss" state and
 # boss_plating to the hull's plating. The death screen then shows the boss gap line and
 # offers T, which replays stage 3 from the start the run kept.
@@ -66,6 +69,11 @@ var _victory_hold := 0.0
 # warden_engaged fires once per stage attempt: on the first sealed ring entry or the
 # first strike on the Warden, whichever comes first (the music's cue to bring its theme in).
 var _engaged := false
+# warden_sighted fires once per stage attempt, before warden_engaged, when the ball first comes
+# within SIGHT_SHARE times the beacon ring's radius of the sealed Warden (flat distance); an
+# engagement that comes first skips it. Intro lines and reveal cards play here, never in the fight.
+var _sighted := false
+const SIGHT_SHARE := 3.5
 # Where this stage's Warden stands; it is immobile, so a warden kill reported far from
 # here belongs to some other warden and does not unseal this beacon.
 var _warden_at := Vector3.ZERO
@@ -398,6 +406,9 @@ func _begin_run(chosen: Resource) -> void:
 	# The gate launches this pilot next time (game.gate_pilot); saved with the profile's next save.
 	if ctx.profile != null:
 		ctx.profile.set_last_pilot(chosen.id)
+	# A new run, never a Continue: the timed door opens for exactly the run after a fast rout.
+	Secrets.roll_door(ctx.profile)
+	_save_profile("profile_door_save")
 	ctx.run.begin(chosen)
 	_seed_companion()
 	ctx.events.run_started.emit(chosen.id)
@@ -528,6 +539,11 @@ func _persist_companion() -> void:
 	ctx.profile.set_companion(ctx.run.companion)
 	if ctx.profile.can_save and not ctx.profile.save():
 		warn_once("profile_companion_save", "flow: companion not saved to the profile: %s" % ctx.profile.last_error)
+
+
+func _save_profile(warn_id: String) -> void:
+	if ctx.profile != null and ctx.profile.can_save and not ctx.profile.save():
+		warn_once(warn_id, "flow: profile not saved: %s" % ctx.profile.last_error)
 
 
 func _save(doc: Dictionary) -> void:
@@ -730,6 +746,7 @@ func _place_beacon() -> void:
 	if is_instance_valid(warden):
 		warden.queue_free()
 	_engaged = false
+	_sighted = false
 	sealed = (not ctx.calm) or force_warden
 	warden = _spawn_warden() if sealed else null
 	_warden_at = warden.global_position if warden != null else Vector3.ZERO
@@ -806,6 +823,8 @@ func physics_step(delta: float) -> void:
 				beacon.show_progress(beacon.duration * minf(SEALED_CAP, charge))
 				if beacon.phase != Beacon.IDLE:
 					_engage()
+				else:
+					_read_sighting(ball)
 			if state == STAGE and beacon.phase != Beacon.IDLE:
 				_set_state(BEACON)
 			var percent := int(beacon.fraction() * 100.0)
@@ -858,6 +877,10 @@ func _on_boss_defeated() -> void:
 		_victory_hold = maxf(0.0, float(plan.get("hold", 0.0)))
 		_victory_left += _victory_hold
 		victory_veil = maxf(0.0, float(plan.get("veil", 0.0)))
+	# A fast rout opens the timed door for the next run (secrets.gd DOOR).
+	var boss := String(Worlds.row(ctx.stages.world_of(ctx.run.stage)).get("boss", ""))
+	if Secrets.note_rout(ctx.profile, boss, ctx.run.run_time):
+		_save_profile("profile_door_save")
 	_set_state(VICTORY)
 
 
@@ -1021,10 +1044,20 @@ func _on_enemy_struck(enemy: Node3D, _kind: String, _force: float) -> void:
 		_engage()
 
 
+func _read_sighting(ball: Vector3) -> void:
+	if _sighted or _engaged:
+		return
+	var flat := Vector2(ball.x - _warden_at.x, ball.z - _warden_at.z)
+	if flat.length() <= beacon.radius * SIGHT_SHARE:
+		_sighted = true
+		ctx.events.warden_sighted.emit(ctx.run.stage)
+
+
 func _engage() -> void:
 	if _engaged:
 		return
 	_engaged = true
+	_sighted = true
 	ctx.events.warden_engaged.emit(ctx.run.stage)
 
 
@@ -1070,6 +1103,9 @@ func objective_text() -> String:
 	match state:
 		STAGE, BEACON:
 			if sealed:
+				var held: String = gate.objective() if gate != null else ""
+				if held != "":
+					return held
 				return EventKinds.objective("stage_entered" if state == STAGE else "beacon_charge_changed", fight)
 			var text := EventKinds.objective("beacon_unsealed", fight)
 			if not beacon.in_ring(ball):

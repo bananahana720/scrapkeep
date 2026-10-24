@@ -166,13 +166,19 @@ static func plan(world, park: Dictionary) -> Dictionary:
 			entry.surface = EventGround.overlay_surface(world, row.kind, geometry, true)
 			if row.kind == "collapse":
 				entry.target = _collapse_surface(world, row, geometry, entry.surface, true)
+		elif EventGround.kind_of_span(row):
+			# The flume's hollow trestle: its deck and its dropped deck (69 ms of the stage entry on the cloud).
+			var span_site := EventGround.span_site(park, site)
+			entry.span = EventGround.span_surface(span_site, 0.0, true)
+			entry.target = EventGround.span_surface(span_site, maxf(0.0, float(row.effect.depth_m)), true)
 		out[row.id] = entry
 	return out
 
 
 # Each natural row's telegraph and landing marks, projected from its planned geometry (up to about
 # 1 s each for a flash flood's wash, so never on the main thread in play). A landed impact sits on
-# its own overlay, so its landing mark is always projected live. A landed collapse's mark sits on
+# its own overlay (planned[id].landed, its profile), which the worker lays on the snapshot's ground:
+# the islands' isle_shed projected it live on its landing tick, 1.18 s on the cloud. A landed collapse's mark sits on
 # its target surface (planned[id].target), which the worker reads like the live _mark does (the
 # flume's hollow trestle took 437 ms on the cloud to project live on its landing tick). Pure like plan().
 static func plan_marks(world, park: Dictionary, planned: Dictionary) -> Dictionary:
@@ -186,6 +192,13 @@ static func plan_marks(world, park: Dictionary, planned: Dictionary) -> Dictiona
 			var landed := geometry.duplicate()
 			landed.marker_surface = planned[row.id].target
 			out[row.id].land = _mark_surfaces(world, row, landed, true, null, true)
+		elif row.kind == "impact" and planned[row.id].has("landed") and world is EventGround.Snapshot:
+			# The live mark reads the overlay through terrain.height and again, unclipped, through the
+			# overlay map; the marker surface stands in for the second read.
+			var profile: Dictionary = planned[row.id].landed
+			var landed := geometry.duplicate()
+			landed.marker_surface = profile.surface
+			out[row.id].land = _mark_surfaces(world.with_profile(profile), row, landed, true, null, true)
 		elif row.kind != "impact" and row.kind != "collapse":
 			out[row.id].land = _mark_surfaces(world, row, geometry, true, null, true)
 	return out
@@ -193,7 +206,7 @@ static func plan_marks(world, park: Dictionary, planned: Dictionary) -> Dictiona
 
 static func _finish(planned: Dictionary) -> void:
 	for entry in planned.values():
-		for key in ["water", "surface", "target"]:
+		for key in ["water", "surface", "target", "span"]:
 			if entry.has(key):
 				entry[key].finish()
 		_finish_marks(entry.get("marks", {}))
@@ -234,18 +247,24 @@ func _plan_marks(planned: Dictionary) -> void:
 	if planned.values().any(func(entry): return entry.has("marks")) or _marks_job.get("key", 0) == key:
 		return
 	_settle_marks()
-	var snapshot := EventGround.snapshot(world.terrain, world.terrain.stage)
+	# The snapshot the stage was planned from, as it was entered (pristine), else one taken now.
+	var snapshot: EventGround.Snapshot = _plans[key].get("snapshot")
+	_plans[key].erase("snapshot")
+	if snapshot == null:
+		snapshot = EventGround.snapshot(world.terrain, world.terrain.stage)
 	var park: Dictionary = _original_map.park.duplicate(true)
-	# The prepared geometry, which the overlay setup may have given a span's marker surface.
+	# The prepared geometry, which the overlay setup may have given a span's marker surface. The worker
+	# shares the marker and target surfaces: nothing writes a surface once it is built (a collapse's
+	# progress and a lowered roof make new ones), and copying the trestle's two took 85 ms of the
+	# flume's entry on the cloud.
 	var geometry := {}
 	for id in _prepared:
-		var copy: Dictionary = _prepared[id].geometry.duplicate(true)
-		if copy.has("marker_surface"):
-			copy.marker_surface = copy.marker_surface.copy()
-		geometry[id] = {"geometry": copy}
+		geometry[id] = {"geometry": _prepared[id].geometry.duplicate(true)}
 		var record: Dictionary = _prepared[id]
 		if record.get("overlay_map") != null and record.overlay_map.swaps[record.swap].get("target") != null:
-			geometry[id].target = record.overlay_map.swaps[record.swap].target.copy()
+			geometry[id].target = record.overlay_map.swaps[record.swap].target
+		if record.get("overlay_map") != null and record.overlay_map.profiles.has(record.swap + "_after") and not record.overlay_map.swaps[record.swap].get("cave", false):
+			geometry[id].landed = record.overlay_map.profiles[record.swap + "_after"]
 	var out := {}
 	_marks_job = {"key": key, "out": out, "task": WorkerThreadPool.add_task(func(): out.merge(plan_marks(snapshot, park, geometry)), false, "natural marks")}
 
@@ -302,7 +321,7 @@ static func _settle(key: int) -> void:
 	WorkerThreadPool.wait_for_task_completion(_plans[key].task)
 	var planned: Dictionary = _plans[key].out
 	_finish(planned)
-	_plans[key] = {"plan": planned, "rows": _plans[key].rows, "worker": true}
+	_plans[key] = {"plan": planned, "rows": _plans[key].rows, "worker": true, "snapshot": _plans[key].get("snapshot")}
 
 
 # Once the next stage's ground is built (world.gd starts it when the Warden wakes), its plan runs on
@@ -324,10 +343,13 @@ func _prepare_next() -> void:
 		if not is_instance_id_valid(old) and (not _plans[old].has("task") or WorkerThreadPool.is_task_completed(_plans[old].task)):
 			_settle(old)
 			_plans.erase(old)
-	var snapshot := EventGround.snapshot(terrain, next)
+	var snapshot := EventGround.snapshot(terrain, next, false)
 	var park: Dictionary = map.park.duplicate(true)
 	var out := {}
-	_plans[key] = {"task": WorkerThreadPool.add_task(func(): out.merge(plan(snapshot, park)), false, "natural plan"), "out": out, "rows": _rows_hash(map.park)}
+	var work := func() -> void:
+		snapshot.copy_roofs()
+		out.merge(plan(snapshot, park))
+	_plans[key] = {"task": WorkerThreadPool.add_task(work, false, "natural plan"), "out": out, "rows": _rows_hash(map.park), "snapshot": snapshot}
 
 
 # A handler leaves on every stage change, so a plan still running is left for the handler that
@@ -585,8 +607,8 @@ func _hazard(row: Dictionary, state: Dictionary, ctx: Dictionary) -> void:
 
 func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 	var surfaces: Dictionary = _prepared[row.id].marks.get("land" if landed else "telegraph", {}) if _prepared.has(row.id) else {}
-	# A landed collapse's own overlay is down by now, and its planned mark already sits on its target.
-	var own: String = _prepared[row.id].get("swap", "") + "_after" if landed and row.kind == "collapse" and _prepared.has(row.id) else ""
+	# A landed collapse's or impact's own overlay is down by now, and its planned mark already sits on it.
+	var own: String = _prepared[row.id].get("swap", "") + "_after" if landed and row.kind in ["collapse", "impact"] and _prepared.has(row.id) else ""
 	if surfaces.is_empty() or not _ground_as_planned(surfaces, own):
 		if landed and row.kind == "collapse":
 			geometry = geometry.duplicate()

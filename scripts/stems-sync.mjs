@@ -5,7 +5,8 @@
 //   node scripts/stems-sync.mjs [--to <music_ace dir>] [--from <dir> ...]
 //
 // The target defaults to this checkout's sketches/core-loop/assets/music_ace; the sources default to the
-// main checkout's copy and ~/scratch/w17/music_ace-full. Every file listed in the target's STEMS.sha256 is
+// main checkout's copy, ~/scratch/w18/music_ace-full (the wave 18 set, with the boss anthems) and
+// ~/scratch/w17/music_ace-full. Every file listed in the target's STEMS.sha256 is
 // either present with the listed hash (left alone), absent and copied from the first source whose copy has
 // the listed hash, or reported. A file whose hash differs, in the target or in every source, is never
 // overwritten: it is named as mismatched, and so is a listed file no source holds. The exit is 1 when any
@@ -65,7 +66,8 @@ export function sync(to, sources) {
 function defaultSources(repo) {
   const common = execFileSync("git", ["-C", repo, "rev-parse", "--git-common-dir"], { encoding: "utf8" }).trim();
   const main = path.resolve(repo, common, "..");
-  return [path.join(main, MUSIC), path.join(os.homedir(), "scratch", "w17", "music_ace-full")];
+  const scratch = path.join(os.homedir(), "scratch");
+  return [path.join(main, MUSIC), path.join(scratch, "w18", "music_ace-full"), path.join(scratch, "w17", "music_ace-full")];
 }
 
 function main(argv) {

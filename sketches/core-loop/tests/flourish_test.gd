@@ -290,11 +290,13 @@ func _hooks(player) -> void:
 	_t.check("73 another stage's unseal plays nothing", not player.playing, player.id)
 	_game.flow.warden = VariantStub.new("meltdown")
 	root.add_child(_game.flow.warden)
-	events.warden_engaged.emit(last)
-	_t.eq("74 the meltdown Warden's engage plays flume_warden_reveal", player.id, "flume_warden_reveal")
+	events.warden_sighted.emit(last)
+	_t.eq("74 the meltdown Warden's sighting plays flume_warden_reveal", player.id, "flume_warden_reveal")
 	player.advance(1.0)
-	player.stop_all()
 	events.warden_engaged.emit(last)
+	_t.check("74b the Warden's engagement ends the reveal: no card inside a fight", not player.playing and player.played.back().id == "flume_warden_reveal"
+		and player.played.back().cut == "stopped", str(player.played.back()))
+	events.warden_sighted.emit(last)
 	_t.check("75 once per run", not player.playing, player.id)
 	_game.flow.warden.free()
 	_game.flow.warden = null
@@ -319,6 +321,22 @@ func _hooks(player) -> void:
 	player.play("cold_open")
 	events.flow_changed.emit("title")
 	_t.check("77 the title screen ends the row and its queue", not player.playing and player.queued().is_empty(), "")
+	player.play("cold_open")
+	player.advance(1.0)
+	events.warden_engaged.emit(1)
+	_t.check("78 a Warden's engagement ends the cold open: no card inside a fight", not player.playing and player.played.back().id == "cold_open"
+		and player.played.back().cut == "stopped", str(player.played.back()))
+	var was_engaged: bool = _game.flow._engaged
+	var was_sealed: bool = _game.flow.sealed
+	_game.flow._engaged = true
+	_game.flow.sealed = true
+	events.rescue_completed.emit("rivet")
+	_t.check("79 a beat that lands inside a Warden fight waits", not player.playing, player.id)
+	_game.flow._engaged = was_engaged
+	_game.flow.sealed = was_sealed
+	events.beacon_unsealed.emit(1 if last != 1 else 0)
+	_t.eq("79b it plays on the unseal", player.id, "rivet_freed")
+	player.stop_all()
 
 
 class VariantStub extends Node3D:

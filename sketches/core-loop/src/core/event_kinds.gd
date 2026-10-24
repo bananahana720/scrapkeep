@@ -40,6 +40,8 @@ const ROWS := {
 	"stage_cleared": {"group": "flow", "color": Palette.AMBER, "shape": "star", "sound": "stinger_clear", "hud": "Stage {stage} clear", "objective": "", "priority": 3},
 	"run_ended": {"group": "flow", "color": Palette.AMBER, "shape": "star", "sound": "stinger_run_end", "hud": "Run complete", "objective": "", "priority": 3},
 	"beacon_charge_changed": {"group": "flow", "color": Palette.ARC, "shape": "ring", "sound": "beacon_hum", "hud": "", "objective": "Warden {percent}% broken. Punch {punch} / plating {plating}. {hint}", "priority": 1},
+	# Silent and unprinted: Moss's Warden line and the flume reveal card are the cue (flow.gd).
+	"warden_sighted": {"group": "flow", "color": Palette.HAZARD, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"warden_engaged": {"group": "flow", "color": Palette.HAZARD, "shape": "cross", "sound": "warden_theme_in", "hud": "The Warden wakes", "objective": "", "priority": 2},
 	"stage_content_cleared": {"group": "flow", "color": Palette.SAND, "shape": "none", "sound": "stage_fade", "hud": "", "objective": "", "priority": 0},
 	"beacon_unsealed": {"group": "flow", "color": Palette.AMBER, "shape": "star", "sound": "stinger_unseal", "hud": "Warden broken: gates open", "objective": "Charge the beacon", "priority": 3},
@@ -452,6 +454,7 @@ const WEIGHT_EXEMPT := {
 	"vent_erupted": "Hostile floor eruption owns its danger geometry and reactor cue; it never shakes, kicks or stops the screen.",
 	"verb_failed": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"warden_engaged": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"warden_sighted": "Run and stage lifecycle owns music and cleanup, not an impact.",
 	"weak_point_opened": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
 	"world_entered": "Run and stage lifecycle owns music and cleanup, not an impact.",
 	"world_fact": "World, interaction and activity rows own their contextual glyph and sound.",
@@ -1194,6 +1197,15 @@ const WORLD_ROWS := {
 	"breach_opened": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "breach_crack", "sound_next": "plate_crack_rubble_fall", "hud": "", "objective": "", "priority": 1},
 	# Alpha wave 14: Moss takes a ledger leaf (progress.gd return_leaves).
 	"ledger_returned": {"group": "event", "color": Palette.SAND, "shape": "star", "sound": "found_chime", "hud": "", "objective": "", "priority": 1},
+	# The Spillway's arena locks and Warden gates (src/world/stage_locks.gd, lock_rows.gd). Sound is the fairness
+	# channel: the yard shutting falls (hazard), opening climbs; the clamp counts a crew with a ping, answers a hit
+	# while gated with a dull clank that never sounds like progress, and lets go on a chord.
+	"arena_locked": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "slam_boom", "sound_next": "arena_lock_slam", "hud": "", "objective": "", "priority": 2},
+	"arena_wave": {"group": "event", "color": Palette.HAZARD, "shape": "cross", "sound": "threat_whistle", "sound_next": "arena_wave_whistle", "hud": "", "objective": "", "priority": 2},
+	"arena_unlocked": {"group": "event", "color": Palette.SANDSTONE, "shape": "ring", "sound": "found_chime", "sound_next": "arena_unlock_bells", "hud": "", "objective": "", "priority": 2},
+	"warden_gate_pip": {"group": "event", "color": Palette.BRASS, "shape": "square", "sound": "found_chime", "sound_next": "warden_gate_pip", "hud": "", "objective": "", "priority": 1},
+	"warden_gate_refused": {"group": "event", "color": Palette.HAZARD, "shape": "square", "sound": "clank", "sound_next": "warden_gate_clunk", "hud": "", "objective": "", "priority": 1},
+	"warden_gate_opened": {"group": "event", "color": Palette.BRASS, "shape": "burst", "sound": "found_chime", "sound_next": "warden_gate_release", "hud": "", "objective": "", "priority": 2},
 }
 
 

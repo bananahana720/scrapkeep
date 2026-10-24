@@ -7,6 +7,12 @@ static var _rows: Array = []
 
 
 static func rows() -> Array:
+	return _loaded().duplicate(true)
+
+
+# The parsed rows themselves, read once; callers copy what they hand out (a whole deep copy per site lookup cost about
+# 1 ms each on a stage entry).
+static func _loaded() -> Array:
 	if _rows.is_empty():
 		var files := DirAccess.get_files_at(ROOT)
 		files.sort()
@@ -15,14 +21,14 @@ static func rows() -> Array:
 				var parsed = JSON.parse_string(FileAccess.get_file_as_string(ROOT + file))
 				assert(parsed is Dictionary, "invalid pocket: " + file)
 				_rows.append(parsed)
-	return _rows.duplicate(true)
+	return _rows
 
 
 static func for_site(map_id: String, row_id: String) -> Dictionary:
-	for entry in rows():
+	for entry in _loaded():
 		var assigned: Dictionary = entry.get("assigned", {})
 		if assigned.get("map", "") == map_id and assigned.get("row", "") == row_id and entry.kind != "trade":
-			return entry
+			return entry.duplicate(true)
 	return {}
 
 
@@ -34,7 +40,7 @@ static func site_spec(entry: Dictionary) -> Dictionary:
 
 
 static func trade(id: String) -> Dictionary:
-	for entry in rows():
+	for entry in _loaded():
 		if entry.kind == "trade" and entry.id == id:
-			return entry
+			return entry.duplicate(true)
 	return {}

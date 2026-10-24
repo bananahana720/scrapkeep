@@ -40,6 +40,7 @@ func run(t) -> void:
 	_defaults_unchanged(t)
 	_curve(t)
 	_ram_shatters(t)
+	_heavy(t)
 	_row_numbers(t)
 	_base_override(t)
 	_sweep_record(t)
@@ -315,6 +316,60 @@ func _ram_shatters(t) -> void:
 	_stagger(rule)
 	var second := _hit("ram", PLATING, rule, {"tier": 3})
 	t.check("with ram_shatters false the crack still pays off in the next stagger", second["shatter"] and rule.chunks == 3, "result %s" % second)
+
+
+
+# The stage 3 hive's heavy stagger (heavy_ratio): a stagger a ram opens at or above the ratio lets a
+# smashing ram take two chunks; any other opener, a lighter ram, another smash, a crack payoff or the
+# last chunk takes one.
+func _heavy(t) -> void:
+	var rule := Posture.new({"heavy_ratio": 0.7})
+	_stagger(rule)
+	t.check("a ram at 1x the plating opens a heavy stagger", rule.heavy_stagger, "heavy %s" % rule.heavy_stagger)
+	var smash := _hit("ram", PLATING, rule, {"smash": true})
+	t.check("a smashing ram in a heavy stagger takes two chunks", smash["shatter"] and rule.chunks == 2, "chunks %d result %s" % [rule.chunks, smash])
+	t.near("the heavy shatter deals two chunks", smash["dealt"], HP / 2.0)
+	var slammed := Posture.new({"heavy_ratio": 0.7})
+	_stagger(slammed)
+	_hit("slam", PLATING, slammed, {"smash": true})
+	t.eq("a smashing slam in a heavy stagger takes one chunk", slammed.chunks, 3)
+	var stomped := Posture.new({"heavy_ratio": 0.7})
+	while not stomped.staggered:
+		_hit("stomp", PLATING, stomped)
+	_frame += 1
+	_hit("ram", PLATING, stomped, {"smash": true})
+	t.eq("a stagger a stomp opens is not heavy: one chunk", stomped.chunks, 3)
+	var light := Posture.new({"heavy_ratio": 0.7})
+	while not light.staggered:
+		_hit("ram", PLATING * 0.5, light)
+	_frame += 1
+	_hit("ram", PLATING, light, {"smash": true})
+	t.eq("a stagger a ram under the ratio opens is not heavy: one chunk", light.chunks, 3)
+	var crack := Posture.new({"heavy_ratio": 0.7})
+	_stagger(crack)
+	_hit("ram", PLATING, crack, {"tier": 1})
+	crack.step(Posture.STAGGER_SECONDS + 0.1)
+	_stagger(crack)
+	var paid := _hit("ram", PLATING, crack, {"tier": 1})
+	t.check("a crack paying off in a heavy stagger takes one chunk", paid["shatter"] and crack.chunks == 3, "chunks %d result %s" % [crack.chunks, paid])
+	var last := Posture.new({"heavy_ratio": 0.7})
+	last.chunks = 1
+	_stagger(last)
+	_hit("ram", PLATING, last, {"smash": true})
+	t.eq("a heavy smash on the last chunk takes only that one", last.chunks, 0)
+	var after := Posture.new({"heavy_ratio": 0.7})
+	_stagger(after)
+	_hit("ram", PLATING, after, {"smash": true})
+	while not after.staggered:
+		_hit("stomp", PLATING, after)
+	_frame += 1
+	_hit("ram", PLATING, after, {"smash": true})
+	t.check("a later stagger a stomp opens is not heavy after a heavy one", not after.heavy_stagger and after.chunks == 1,
+		"heavy %s chunks %d" % [after.heavy_stagger, after.chunks])
+	var plain := Posture.new()
+	_stagger(plain)
+	_hit("ram", PLATING, plain, {"smash": true})
+	t.eq("without heavy_ratio a heavy ram's smash takes one chunk", plain.chunks, 3)
 
 
 func _row_numbers(t) -> void:
