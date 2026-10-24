@@ -942,6 +942,14 @@ func _apply_posture(result: Dictionary) -> void:
 		result["gain"] = clampf(float(result.get("gain", 0.0)), 0.0, maxf(0.0, HOLD_CAP - _posture.posture))
 		result["crack"] = false
 		result["shatter"] = false
+	# A park Warden's clamp (world/stage_locks.gd): shut, a hit lands and gains nothing, so the bar
+	# stays where it is and no stagger opens the core until the clamp lets go.
+	var gate = spec.get("posture_gate")
+	if gate is Callable and gate.is_valid() and not _posture.staggered and gate.call():
+		result = result.duplicate()
+		result["gain"] = 0.0
+		result["crack"] = false
+		result["shatter"] = false
 	var before := _posture_signature()
 	var was_staggered := _posture.staggered
 	var chunks_before: int = _posture.chunks

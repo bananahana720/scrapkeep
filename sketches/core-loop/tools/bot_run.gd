@@ -9,6 +9,7 @@ const BotOptions := preload("res://tools/bot_options.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
+const StageLocks := preload("res://src/world/stage_locks.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
 const SignalTimer := preload("res://tools/signal_timer.gd")
 const PhysicsProbe := preload("res://tools/physics_probe.gd")
@@ -97,6 +98,8 @@ const FrameSplit := preload("res://tools/frame_split.gd")
 # follows the tick count moves with it, one on a wall clock does not.
 # --inject-ms=N sleeps N ms every 6 s of wall time outside the driver's tick: a planted frame cost
 # for the net_ms read of a --frame-split frame log (the control that a game-side hitch still shows).
+# --locks=0 turns off the Spillway's Warden gate and arena lock (src/world/stage_locks.gd), so one
+# binary measures the pacing they add.
 # --unshaded=1 draws the root viewport unshaded, so a render cost can be told apart from the lights
 # and shadows (for frame captures: it changes the picture).
 # The game runs in test mode (no keyboard, no mouse capture) and its codex and run log
@@ -154,6 +157,7 @@ func _initialize() -> void:
 	_settings = _parse(OS.get_cmdline_user_args())
 	SimClock.ticks = _settings.get("wall-clock", "0") != "1"
 	Terrain.threaded_in_bot_runs = _settings.get("threaded-stages", "0") == "1"
+	StageLocks.active = _settings.get("locks", "1") != "0"
 	_bot_options = BotOptions.new(_settings, self)
 	BotProfile.enabled = _settings.get("bot-profile", "0") == "1"
 	if BotProfile.enabled:
