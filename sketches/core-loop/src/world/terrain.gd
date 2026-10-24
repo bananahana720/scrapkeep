@@ -14,6 +14,7 @@ const HighdraftCrown := preload("res://src/world/map_highdraft_crown.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Scatter := preload("res://src/world/scatter.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
+const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const PerchPoints := preload("res://src/world/perch_points.gd")
@@ -96,6 +97,8 @@ var publish: Callable
 var _threaded: Array[bool] = []
 # Per stage index: {"tops": [Vector3], "blockers": [zone]} for perch_near, derived on the first ask.
 var _perches := {}
+# A park stage's perch lists read on a worker once its ground is built (_perch_read_ahead): {i: {task, out}}.
+var _perch_ahead := {}
 
 # A park stage left memory (_free_stage), by stage number, so a module that hung nodes on its
 # root (world.gd's contraptions) drops them.
@@ -108,9 +111,12 @@ var _threaded_first := false
 
 
 func _init(table = StageDefs) -> void:
+	var parks := _read_parks_together(table)
 	for row in table.DEFS:
 		var id := String(row["map"])
-		maps.append(map_named(id, int(row["stage"])))
+		# A park id that repeats in the table gets its own map past the first, as before.
+		maps.append(parks.get(id) if parks.has(id) else map_named(id, int(row["stage"])))
+		parks.erase(id)
 		_is_park.append(maps[-1] is ParkMap)
 		_worlds.append(int(row.get("world", 1)))
 		_roots.append(null)
@@ -119,6 +125,36 @@ func _init(table = StageDefs) -> void:
 		_holes.append(PackedByteArray())
 		_under.append(PackedFloat32Array())
 		_threaded.append(false)
+
+
+# MENU-READY: the park table's six park files are read and checked at setup, 105 to 185 ms one after
+# another on the cloud. Read them on worker threads at once instead; a park that fails its schema is
+# left to map_named, which reports it as before.
+static func _read_parks_together(table) -> Dictionary:
+	var paths := {}
+	for row in table.DEFS:
+		var id := String(row["map"])
+		if not id.begins_with("park_") or paths.has(id):
+			continue
+		for pattern in PARK_FILES:
+			if FileAccess.file_exists(pattern % id):
+				paths[id] = pattern % id
+				break
+	# Read once on first need and marked read before they are filled: fill them here, so no worker sees one half built.
+	ParkSchema._registry()
+	ParkRecipes.origin("")
+	if paths.size() < 2:
+		return {}
+	var ids: Array = paths.keys()
+	var read := []
+	read.resize(ids.size())
+	var task := WorkerThreadPool.add_group_task(func(n: int): read[n] = ParkMap.new(paths[ids[n]]), ids.size(), -1, true, "park files")
+	WorkerThreadPool.wait_for_group_task_completion(task)
+	var parks := {}
+	for n in ids.size():
+		if read[n] != null and read[n].ok:
+			parks[ids[n]] = read[n]
+	return parks
 
 
 static func map_named(id: String, stage_number: int) -> RefCounted:
@@ -282,6 +318,7 @@ func _on_park_built(i: int) -> void:
 	if maps[i] is ParkMap:
 		ParkRecipes.build_placed(_roots[i], maps[i].park, _park_floor_at.bind(_heights[i], _placement_holes[i], _under[i]), publish, _threaded[i])
 	Scatter.build_chunked(_roots[i], maps[i], ground_callable(i + 1), _worker_builds())
+	_perch_read_ahead(i)
 	stage_built.emit(i + 1)
 
 
@@ -373,6 +410,7 @@ func _free_stage(i: int) -> void:
 	_grounds[i] = null
 	_cave_roofs.erase(i)
 	_perches.erase(i)
+	_take_perch_ahead(i)
 	_placement_holes.erase(i)
 	_heights[i] = PackedFloat32Array()
 	_holes[i] = PackedByteArray()
@@ -467,9 +505,59 @@ func perch_near(point: Vector3, salt := 0) -> Vector3:
 		return Vector3.INF
 	var i := _index(stage)
 	if not _perches.has(i):
+		# Built first, so a stage the ask builds queues its read and this takes it.
 		_ensure(stage)
-		_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park), "ledges": PerchPoints.ledges(m.park, height)}
+		var ahead := _take_perch_ahead(i)
+		# The worker read the bare ground; height() matches it only while no overlay or cave roof stands on it.
+		if not ahead.is_empty() and overlays.is_empty() and _cave_roofs.get(i, {}).is_empty():
+			_perches[i] = ahead
+		else:
+			_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park), "ledges": PerchPoints.ledges(m.park, height)}
 	return PerchPoints.pick(_perches[i]["tops"], point, height, _perches[i]["blockers"], salt, _perches[i]["ledges"])
+
+
+# The first perch read of a stage walked every landform sample's rings through height(): 80 to 390 ms of one
+# frame by park (stage 6 about 300 ms in a played run, PR #372). Read them on a worker as soon as the ground
+# is built, over the same bare ground height() reads (_park_floor_at); perch_near takes them when nothing
+# stands on that ground yet.
+func _perch_read_ahead(i: int) -> void:
+	var m = maps[i]
+	if not (m is ParkMap) or not m.ok or _perch_ahead.has(i) or _perches.has(i):
+		return
+	var out := {}
+	var ahead := {"out": out, "task": _queue_perch_read(m.park, _heights[i], _holes[i], _under[i], out)}
+	_perch_ahead[i] = ahead
+	_settle_on_exit(_roots[i], ahead)
+
+
+# Static, so the worker holds no reference to this terrain: it reads only the park and copies of the arrays.
+static func _queue_perch_read(park: Dictionary, heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array, out: Dictionary) -> int:
+	var ground := func(x: float, z: float) -> float: return _park_height(heights, holes, under, x, z)
+	return WorkerThreadPool.add_task(func():
+		out.merge({"tops": PerchPoints.derive(park, ground), "blockers": PerchPoints.blockers(park), "ledges": PerchPoints.ledges(park, ground)}),
+		true, "perch read")
+
+
+# A task left unwaited when the engine quits aborts the process: the stage's root waits on its read as it
+# leaves the tree, which a quit and a teardown both do, whether or not this terrain is still referenced.
+static func _settle_on_exit(root: Node, ahead: Dictionary) -> void:
+	root.tree_exiting.connect(func(): _settle_perch_read(ahead), CONNECT_ONE_SHOT)
+
+
+static func _settle_perch_read(ahead: Dictionary) -> void:
+	if ahead.has("task"):
+		WorkerThreadPool.wait_for_task_completion(ahead.task)
+		ahead.erase("task")
+
+
+# Waits on a stage's worker perch read and drops it; its lists, or {} when none was read.
+func _take_perch_ahead(i: int) -> Dictionary:
+	if not _perch_ahead.has(i):
+		return {}
+	var ahead: Dictionary = _perch_ahead[i]
+	_perch_ahead.erase(i)
+	_settle_perch_read(ahead)
+	return ahead.out
 
 
 func spawn_point(index: int) -> Vector3:
@@ -850,7 +938,7 @@ static func _relief_mesh(row: Dictionary, heights: PackedFloat32Array, coarse: P
 
 
 func _build_sky(parent: Node3D) -> void:
-	var sky_material := Palette.workshop_sky()
+	var sky_material := Palette.workshop_sky_later()
 	var sky := Sky.new()
 	sky.sky_material = sky_material
 	environment = Environment.new()
@@ -864,6 +952,7 @@ func _build_sky(parent: Node3D) -> void:
 	var world_env := WorldEnvironment.new()
 	world_env.environment = environment
 	parent.add_child(world_env)
+	Palette.settle_sky_on_exit(world_env)
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-38.0, 118.0, 0.0)

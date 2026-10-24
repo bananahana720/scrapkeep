@@ -7,7 +7,9 @@ const WarningBound := preload("res://src/combat/warning_bound.gd")
 # One committed attack area: a crane's sweep, a slag ring or a charge lane. It is laid
 # once, when the attack commits, and the drawing and every hit test read the same
 # numbers, so what the player sees is what can hit them (TADR-008). WARN lasts at
-# least 1.0 s; a hit is possible only while LIVE and only where contains() is true.
+# least 1.0 s, or warn_floor for a cued follow-up (fight_phases.gd: its ratchet cue
+# sounded CUE_LEAD earlier); a hit is possible only while LIVE and only where contains()
+# is true.
 #
 # Its attack type draws it in the grammar combat's telegraphs share (threat_grammar.gd):
 # a crane's sweep is a WAVE whose front stands at the magnet's real bearing, a slag ring
@@ -28,6 +30,9 @@ var shape := Shape.ANNULUS
 var state := WARN
 var age := 0.0
 var warn_seconds := MIN_WARN
+# Set before commit: a cued follow-up lowers it to FightPhases.CUED_WARN and sets cued.
+var warn_floor := MIN_WARN
+var cued := false
 var live_seconds := 1.0
 # SECTOR and ANNULUS: the floor centre. LANE: where the lane starts.
 var centre := Vector3.ZERO
@@ -113,7 +118,7 @@ func commit_lane(id: String, threat_type: int, from: Vector3, dir: Vector3, behi
 
 func _times(threat_type: int, warn: float, live: float) -> void:
 	type = threat_type
-	warn_seconds = maxf(MIN_WARN, warn)
+	warn_seconds = maxf(warn_floor, warn)
 	live_seconds = live
 	name = "Hazard_%s" % attack_id
 

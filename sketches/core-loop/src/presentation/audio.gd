@@ -133,9 +133,10 @@ const HUM_FAR := 45.0
 const HUM_NEAR := 3.0
 const HUM_DB := 0.0
 # Danger sounds pull the bass down so the low end never masks a warning.
-const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "klaxon", "threat_up", "death",
+const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
 	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
-# A launch whose landing never comes (a fall into the next stage's rail) still drops.
+# A launch whose landing never comes (a fall into the next stage's rail) still drops. Timed on
+# SimClock: the drop restarts the band and so the bar grid that park events land on.
 const LANDING_FALLBACK_MS := 2000
 # Expected launch-to-landing time, for the pace of the build's sweep.
 const LAUNCH_BUILD_SECONDS := 1.6
@@ -646,7 +647,7 @@ func _process(delta: float) -> void:
 	_follow_warden()
 	_follow_escalation()
 	_tend_ear(delta)
-	if _launch_armed and _landing_theme >= 0 and Time.get_ticks_msec() - _entered_ms > LANDING_FALLBACK_MS:
+	if _launch_armed and _landing_theme >= 0 and SimClock.msec() - _entered_ms > LANDING_FALLBACK_MS:
 		_land_drop()
 	_pump()
 	if _overlay != null and _overlay.visible and Time.get_ticks_msec() > _overlay_until:
@@ -1649,6 +1650,8 @@ func wire_optional() -> void:
 		_listen_optional(events, "boss_phase_changed", _on_boss_phase, true)
 	_listen_optional(events, "boss_defeated", func(): _on_boss_defeated(), true)
 	_listen_optional(events, "boss_attack_telegraphed", _on_boss_telegraph)
+	_listen_optional(events, "attack_cued", _on_attack_cued)
+	_listen_optional(events, "fight_phase_changed", _on_fight_phase)
 	_listen_optional(events, "boss_weak_point_hit", _on_weak_point)
 	_listen_optional(events, "event_progress", _on_event_progress)
 	# The stage's content leaves before the arena: a soft fade, and any launch build
@@ -2241,7 +2244,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	elif _launch_armed:
 		# The stage the launch was flying to: its theme arrives with the landing drop.
 		_landing_theme = _stage_theme(stage)
-		_entered_ms = Time.get_ticks_msec()
+		_entered_ms = SimClock.msec()
 		_launch_stage = true
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
@@ -3269,6 +3272,28 @@ func _on_boss_telegraph(_attack_id: String, seconds_until: float) -> void:
 	if engine.track == "warden":
 		engine.parameter_danger("boss_attack_telegraphed")
 	play("boss_attack_telegraphed", 0.0, Harmony.ratio(lerpf(3.0, 0.0, clampf(seconds_until / 1.5, 0.0, 1.0))))
+
+
+# A mini-boss's later phase (fight_phases.gd): its live anthem moment moves to the phase
+# variant, "<tune>-heavy", on the next downbeat, when that tune's pack is on disk. Bosses
+# follow boss_phase_changed (phase_music) instead.
+func _on_fight_phase(fight_id: String, phase: int, _phases: int) -> void:
+	if phase < 2 or PhaseMusic.BOSS_SYNTH_THEME.has(fight_id):
+		return
+	var moved := false
+	for m in _moments:
+		if m.kind == "miniboss" and not String(m.id).ends_with(PhaseMusic.HEAVY):
+			var heavy := String(m.id) + PhaseMusic.HEAVY
+			if tune_available.call(heavy):
+				m.id = heavy
+				moved = true
+	if moved:
+		_refresh_moment()
+
+
+# A cued follow-up's ratchet: never quantized, it is the warning the short tell leans on.
+func _on_attack_cued(_fight_id: String, _attack_id: String, _seconds_until: float) -> void:
+	play("attack_cued")
 
 
 # Weak-point hits climb the pentatonic like a combo, so a string of them sings.

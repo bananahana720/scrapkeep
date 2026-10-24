@@ -192,6 +192,7 @@ Last updated 2026-10-23 19:50Z by the library sweep thread (today's rulings: wor
 | An ordinary build at the Waking and the Mind is a library build as it arrives (heft class V). The fights reach 50 to 90 s through pattern and read-gated evasion, never by cutting the player's build. The Miniboss's fist keeps its visible elbow at the end of the slam crouch. | 19 Oct 19:00 | coordinator call, on the veto list | |
 | #222 (Overpowered pays) is admitted against the 50 to 90 s Waking and Mind target as base-red and improved (Waking 21 to 31 s, Mind 17 s unchanged). The target stays. Boss fight length is Challenge's unit U4, its own PR with its own band table, using only pattern and read-gated evasion levers plus fixes for verified misconfiguration (for example a Waking gain inherited from the stage-4 row). No player-build cut, no enemy health change. | 21 Oct | coordinator, creative charge (veto list) | |
 | Why the Mind is a hand: "All hands". The crew called it the Mind because it did the thinking, and they were its hands. With the crew gone, it grew its own hands to keep their jobs going. Shown through gloves and crew numbers 04-01 plus FOREMAN on its fingers, one finger curling shut per phase, a glove set by the empty place on defeat, a HIRED stamp on its victory screen, and crew-log plants from the Spillway onward. Page: https://claude.ai/artifact/Trhb9ecLx1cDN3NYzFisJc | 18 Oct 00:16 | tap "All hands" (not picked: Hand signs, Maker's hand) | PR #113; mesh by "Smoother, more detailed models" |
+| Fights and anthems come in phases: bosses up to three, mini-bosses two. A later phase ratchets up, by a faster tempo, attack modifiers or an added combo that takes practice to dodge, and its anthem goes harder (faster, heavier bass, more erratic and layered melody). Sound is a fair telegraph: once a cue is learnable, a tightened attack may give less reaction time. Each phase turn opens with a short in-game transition beat that adds flair and lets the player reset. Built as: a 2 s invulnerable beat (one bar at 129 BPM, the anthem swaps on its downbeat); a ratchet cue 0.5 s before each tightened attack, whose drawn tell may then drop to the 0.6 s floor (1.1 s cue to hit); mini-bosses turn at half health. Design: https://claude.ai/artifact/RndjnYZXk1ajbZnAXYsfBe | 23 Oct 19:02Z, 19:11Z | typed (music thread, project chat) | "Wardens and earlier boss phases stay at 129 BPM" (phase covers run +10 and +20 BPM) |
 
 ## 8. Parks, landmarks, camp and art
 
@@ -311,7 +312,6 @@ Rulings from 8 Sep to 16 Oct that nothing has replaced, found by the reconcile p
 | Music never freezes: pause and the calm bay keep the band playing. | Oct | tsv 764, 777 |
 | Scrapped-together HUD: roughness on the frame, never on the information. | 28 Sep | ROADMAP |
 | Main menu: Play, Camp, Settings, Help, Achievements. | 16 Oct | tsv 957 |
-| Wardens and earlier boss phases stay at 129 BPM; Eurodance at 140-150 is the final phase only. | 16-17 Oct | R-22 veto list; card |
 | The speed soft cap is a deliberate exception to "momentum is sacred". | 17 Oct 07:17 | tsv 119, 251; card |
 | Hive defenders skipping the 0.2 s gap is a deliberate exception to "Gap wins". | 17 Oct 21:19 | card "All at hives" |
 | Growth grows the shell's presence, not the collider; the 1.5-2x area means the aura. | Sep; 17 Oct 17:28 | Bible; card |
@@ -324,6 +324,7 @@ Watch-outs for live design work: the new "electrical field that interrupts" moti
 
 | Old ruling | Replaced by | When |
 | --- | --- | --- |
+| Wardens and earlier boss phases stay at 129 BPM; Eurodance at 140-150 is the final phase only (16-17 Oct, R-22 veto list) | Boss phases ratchet: phase covers at +10 BPM (phase 2) and +20 BPM (phase 3); the Eurodance final phase stays | 23 Oct 19:02Z |
 | Codex (GPT) standing lane beside each Claude wave; "use GPT heavily" (2, 12, 14 Oct) | Retired: Claude cloud threads do all the work (tap "Retire it") | 17 Oct 20:02 |
 | Camp recreation cut (W18-R1) | Camp back in, hub ring | 16 Oct |
 | Cosmetics as tints; bespoke pilot models cut | Trails, decals, companion paint; 18 cosmetics | 16 Oct |

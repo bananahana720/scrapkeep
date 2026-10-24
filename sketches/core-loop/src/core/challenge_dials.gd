@@ -42,6 +42,13 @@ const DEFAULTS := {
 	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.0, 2.0, 1.3, 1.0],
 	"brindle.period_mult": 1.0, "brindle.period_by_phase": [0.6, 0.5, 1.0, 1.0],
 	"brindle.tell_mult": 1.0, "brindle.punish_mult": 1.0, "brindle.combo": 0.0,
+	# Fight phases (fight_phases.gd, Andrew 23 Oct 19:02Z): cued follow-ups after each lead attack, per
+	# phase. Brindle's Furnace answers a slag ring with the other ring, his Scuttle answers a charge with a
+	# hook turn; both sound the ratchet cue first. Untuned: no band sweep yet (wave 19 challenge card).
+	"brindle.follow_ups_by_phase": [0.0, 1.0, 1.0, 0.0],
+	# The transition beat that opens each later phase (FightPhases.TRANSITION_SECONDS x this). Not a
+	# stagger or posture timing: it holds the boss between phases, before the next bar fills.
+	"brindle.transition_mult": 1.0,
 	"waking.damage_mult": 1.0, "waking.damage_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"waking.period_mult": 1.0, "waking.period_by_phase": [1.0, 1.0, 1.0, 1.0],
 	"waking.tell_mult": 1.0, "waking.punish_mult": 1.0, "waking.combo": 0.0,

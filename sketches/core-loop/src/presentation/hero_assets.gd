@@ -215,6 +215,8 @@ const SLOTS := {
 }
 
 var ctx
+# Frames left before the Warden stroke prewarm, once the boot card is gone; -1 when it is done or not owed.
+var _prewarm_wait := -1
 # The profile whose equipped paint colours the player's shell; null means no paint anywhere.
 var profile = null
 var _materials := {}
@@ -244,7 +246,7 @@ func setup(ctx_ref) -> void:
 	name = "HeroAssets"
 	_connect_pilot_events()
 	_connect_shell_events()
-	_prewarm_warden_strokes()
+	_prewarm_strokes_in_time()
 	_dress_bay.call_deferred()
 	if ctx != null and ctx.player != null:
 		attach_player(ctx.player)
@@ -547,6 +549,8 @@ func _fit(rec: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
+	if _prewarm_wait >= 0:
+		_step_prewarm()
 	_reaction_clock += delta
 	for key in _players.keys():
 		var rec: Dictionary = _players[key]
@@ -2743,6 +2747,25 @@ func _split_queen_hatch(weak: MeshInstance3D, rec: Dictionary) -> void:
 	shutter.position = -hinge.position
 	hinge.add_child(shutter)
 	rec.queen_hatch = hinge
+
+
+# A played game prewarms behind the title, a frame after the boot card is gone (_process): in setup it
+# held the menu for 80 to 85 ms (MENU-READY, cloud exported build). Tests, bots and a scene without a
+# game root prewarm here, as before. The first Warden is stages away from the title either way.
+func _prewarm_strokes_in_time() -> void:
+	var root = ctx.get("root") if ctx != null else null
+	if root == null or root.get("test_mode") != false:
+		_prewarm_warden_strokes()
+		return
+	_prewarm_wait = 1
+
+
+func _step_prewarm() -> void:
+	if get_tree().root.get_node_or_null("Boot") != null:
+		return
+	_prewarm_wait -= 1
+	if _prewarm_wait < 0:
+		_prewarm_warden_strokes()
 
 
 func _prewarm_warden_strokes() -> void:
