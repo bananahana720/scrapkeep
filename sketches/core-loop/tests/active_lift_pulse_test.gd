@@ -8,7 +8,7 @@ const Pulse := preload("res://src/combat/actives/lift_pulse.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The Lift Pulse active (Highdraft Roosts; design page "Makers and Actives", 17 Oct 2026). A real
-# Game with the first pilot. Covers: --actives off by default; on, the pulse racks with a valid
+# Game with the first pilot. Covers: --actives on by default; on, the pulse racks with a valid
 # chip on F and its own launch sound; a press fires on the press (no wind-up) and shoves only the
 # machines inside the committed cone, straight away from the ball, while machines behind, to the
 # side or past its reach take nothing; the knock grows per heft class, so a heavy flies further
@@ -105,6 +105,9 @@ func _run() -> void:
 	_game.ctx.calm = true
 	_player = _game.player
 	_player.source = _source
+	# Actives are on by default (24 Oct); the off checks below run with --actives=off.
+	_t.eq("01 --actives defaults on", _game.tuning.option("actives"), "on")
+	_game.tuning.set_option("actives", "off")
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	_combat = _game.combat
@@ -122,7 +125,6 @@ func _run() -> void:
 			_struck.append(enemy_node))
 
 	# --- Off by default; on, it racks -----------------------------------------------------
-	_t.eq("01 --actives defaults off", _game.tuning.option("actives"), "off")
 	_game.tuning.set_option("actives", "on")
 	await _sim(0.1)
 	_t.check("02 the pulse racks full", _rack.rack("lift_pulse") and _rack.charges == int(row["max_charges"]))

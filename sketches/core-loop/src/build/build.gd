@@ -310,6 +310,11 @@ func punch_bonus() -> float:
 	return sheet.punch
 
 
+# Flat damage Punch Rivet panels add to every weapon hit and ball contact (combat.gd).
+func panel_punch() -> float:
+	return sheet.panel_punch
+
+
 func active_synergies() -> Array:
 	return sheet.synergies.duplicate()
 

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Worlds := preload("res://src/core/worlds.gd")
+const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 
 # The park table (`--table=park`, PARK.md section 10, unit KD0): the alpha rows with the six park map
 # ids (park_dam, park_flume, park_pit, park_sinkhole, park_islands, park_crown) in place of the old
@@ -23,20 +24,17 @@ const COUNT := 6
 # The named synergies this table keeps. Any other synergy and every unnamed tag rule is out.
 const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod"]
 
-# The eighteen parts every source on this table offers, and the only ones. The five shown
-# parts of the kept synergies, one carrier of each hidden tag they need (kinetic, speed, mass;
-# arc comes from arc_coil, and the class mods carry it for the pylon pilot), the two class
-# mods, and three heavy hitters so the shelf has a rare tier. Wave 11 GP2 adds one part per
-# verb the pool barely touched (roll, harpoon, boost, special, jump, haul); Live Line and Drop
-# Weight are the second ingredients of the Storm Mast and Grounding Spike evolutions. A
-# synergy completes from this list for every pilot. Generated recipes and milestone parts are out.
-const PARTS := [
-	"double_feed", "focus_lens", "spiral_wave", "cross_split", "arc_coil",
-	"hot_rivets", "loose_trigger", "rivet_plating",
-	"pylon_capacitor", "runner_overclock",
-	"sunforged_core", "gatling_heart",
-	"grip_tread", "live_line", "vent_baffle", "spare_cell", "spring_shims", "drop_weight",
-]
+# The parts every source on this table offers, and the only ones: the alpha table's 45 (its
+# SQ19b kit lean, the five maker sets complete from them, alpha_defs.gd says why each is
+# there) and its burden parts, which no pool offers but a pocket's pay can name. This was an
+# eighteen-part wave 11 list until 24 Oct (Codex world 1 review, design #2): on it 27 of the
+# 45 never dropped and three maker sets could not complete.
+const PARTS := AlphaDefs.PARTS
+const BURDEN_PARTS := AlphaDefs.BURDEN_PARTS
+# Earned parts this table offers beside the alpha list. Spare Frame is the earned save ("No
+# free retry", 22 Oct: "a rare earned item ... can save one death"); its rare_plus row is a
+# relic, so it drops where a relic does (a source's relic weight, an overcharged gate).
+const EARNED_PARTS := ["spare_frame"]
 
 # A rise to a heft class the run has not been rewarded for opens one upgrade tree pick.
 const PICK_ON_CLASS_UP := true
@@ -218,7 +216,7 @@ static func synergy_in_play(synergy_id: String) -> bool:
 
 
 static func part_in_play(part_id: String) -> bool:
-	return part_id in PARTS
+	return part_id in PARTS or part_id in BURDEN_PARTS or part_id in EARNED_PARTS
 
 
 # True when part_in_play restricts what sources offer (the pool, the generated share and
