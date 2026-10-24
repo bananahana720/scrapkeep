@@ -1,0 +1,1 @@
+{"schema": "scrapkeep-sites/1", "map": "park_flume", "miniboss_sites": [{"id": "weir_flats_rogue", "at": [-170, -350], "radius_m": 20}, {"id": "plain_rogue", "at": [-120, 250], "radius_m": 20}]}

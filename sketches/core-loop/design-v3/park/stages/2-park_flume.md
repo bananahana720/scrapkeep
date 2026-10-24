@@ -51,6 +51,29 @@ Andrew's ruling (2026-10-17 22:12Z, "one skill per park"): the flume tests momen
 **Scorecard** (intent-check, this branch): 0 flume placeholders, 161 authored rows, 20 story fragments, society share 0.66, ride-fact share 0.94. The top verb is `swing` (0.5) because the 65 piers are swing anchors. The scorecard counts verbs per row, so a park whose skill is one long line reads as its anchors. The line itself is the test.
 
 <!-- flume-current-table -->
+## Flume pass two: the head-gate surge (unit 11, 2026-10-24)
+
+World 1 unit 11 gives the completionist something to do on the flume beyond the enemy camp. Nothing here adds an enemy kind or a pack, and the main line is unchanged: the six pilot lines still ride the weir chute.
+
+- **Sluice Surge** (`weir_surge`, activity `surge_run`, site `weir_mesa`, ring [-418, -583], route `flume_upper`). An opt-in race: open the head gate and a water front follows you down the weir reach, the gap work deck and the 40 m drop into the canal country. The gates stand on the riding surface (row top, then a downward ray once the colliders are up), and the front starts 40 m behind you at your cruise speed. Pay common or rare. Its event row `head_gate_sluice` (industrial `sluice_surge`, 4 s `sluice_siren` on the bar, 45 s live) is what you hear: the siren is the warning, as sound is the fairness channel. The graph gives it the event role beside hold_the_relay (PARK.md 2.12).
+- **The head-gate crew** (props spot flume_c01, 34 m from the ring). Their lines are the ring's word: "Head gate: wheel turning. Stay ahead of the water." on opening, "Head gate log: wheel shut. One ball through, flume dry." on a win, "Head gate: winding the wheel back." on a loss.
+- **Canal altar** (`canal_altar`, `ambush_altar`, site `main_canal`, [-475, -206]), the card 2 extra activity and the park's second risk pocket. Detour 194 m; every distance rule holds.
+- **Spill leap** (`spill_leap_kicker` on the mesa rim at [-388, -700], and `spill_butte` at [-342, -700]). A second skill pocket off the grind line: at 22 m/s or more the kicker lands you on the butte top (97 m); at 18 to 20 m/s you stay on the mesa.
+- **Dressing**: vignette parity with the Dig, 166 spots (the Dig 167); see the dressing page.
+- **Rogue sites** for the roster's miniboss (`assets/park/park_flume/sites.json`, `weir_flats_rogue` and `plain_rogue`), read once the roster's loader stacks.
+
+Measured on this branch against its base (the #413 merge, a20f09c6), park table, stage 2, seeds 1-4, medians:
+
+| Measure | Base | Head |
+| --- | --- | --- |
+| Completionist, explorer bot (`--explore-by=520`) | 284 bot-s, 1-2 activities | 355 bot-s (+71), 2-3 activities; surge won on 3 of 4 seeds |
+| Completionist, default bot | 211 bot-s | 219 bot-s (+8); surge won on 3 of 4 |
+| Traversal, six pilots × 4 seeds | | 24 of 24 reach the Warden, no dead stops, every band inside |
+| Draws, five fixed views (software GL) | 445 / 417 / 383 / 347 / 208 | 426 / 422 / 387 / 348 / 210 |
+| Tower sight share | | 0.885 (floor 0.85) |
+
+The explorer park is still under the 420-600 bot-s band; the gap is about 65 s at the floor.
+
 ## Current measurements and qualification, round 9
 
 <!-- flume-current-receipts
