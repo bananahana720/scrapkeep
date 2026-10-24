@@ -140,7 +140,7 @@ const LANDING_FALLBACK_MS := 2000
 # Expected launch-to-landing time, for the pace of the build's sweep.
 const LAUNCH_BUILD_SECONDS := 1.6
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
-const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
+const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
 	"rivet_line_punch", "rivet_line_arrive",
 	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
 	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
@@ -384,6 +384,7 @@ func setup(ctx_ref) -> void:
 	_make_buses()
 	live_output = AudioServer.get_driver_name() != "Dummy"
 	engine = MusicEngine.new()
+	engine.warm_stingers = live_output
 	if ctx.has_method("aim_forward"):
 		engine.set_parameter_source(sample_run_parameters)
 		engine.parameter_commit.connect(_commit_band_parameters)
@@ -534,6 +535,7 @@ func _exit_tree() -> void:
 	if _rest_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_rest_task)
 		_rest_task = -1
+	MusicEngine.settle_stingers()
 	_finish_opening()
 	# Stop every player and drop the playbacks, or the polyphonic ones outlive the tree.
 	for child in get_children():
@@ -2533,7 +2535,7 @@ func phase_music(phase: int) -> Dictionary:
 		_ace_named(plan["track"], int(when["drop"]), true)
 		cue_log.append(["boss_phase_music", plan["track"], "bar", int(when["drop"]), 1.0])
 		return {"track": plan["track"], "hype": plan["hype"], "at": when["drop"]}
-	var track := PhaseMusic.track_for_phase(boss, phase)
+	var track := PhaseMusic.track_for_phase(boss, phase, pack_available)
 	if track == "" or not pack_available.call(track):
 		return {}
 	var at := engine.next_bar()
@@ -2704,7 +2706,8 @@ func _landmark_id() -> String:
 
 
 func _tend_champions() -> void:
-	if not _champion_hyped or not pack_available.call(PhaseMusic.EURO_CHAMPION):
+	var final_track := PhaseMusic.champion_final(pack_available)
+	if not _champion_hyped or final_track == "":
 		return
 	for id in _champions.keys():
 		var enemy = _champions[id]
@@ -2714,8 +2717,8 @@ func _tend_champions() -> void:
 			_champion_euro[id] = true
 			var when := PhaseMusic.drop_plan(engine.clock, engine.next_bar(), engine.bar_len(), Harmony.RATE)
 			engine.schedule_stinger_at("hype_drop", int(when["start"]))
-			_ace_named(PhaseMusic.EURO_CHAMPION, int(when["drop"]), true)
-			cue_log.append(["champion_final", PhaseMusic.EURO_CHAMPION, "bar", int(when["drop"]), 1.0])
+			_ace_named(final_track, int(when["drop"]), true)
+			cue_log.append(["champion_final", final_track, "bar", int(when["drop"]), 1.0])
 			return
 
 

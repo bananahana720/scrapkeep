@@ -77,7 +77,7 @@ const TABLES := {
 const GOLDEN_HASHES := {
 	"achievements.ROWS": "0330f5ead413e5016e2edaa4830daefaeea55e2159d63cc9996cb2b8f142f218",  # 2026-10-22 w19 earned save: clean_win reads save_used (text and need only); was 79601502, 2026-10-19 w20 ACHIEVEMENTS-REFRESH: six reward-free content-family rows (RECORD_ONLY); was 2955fb5f, 2026-10-17 stage/alpha-w16 combined re-pin (crown pass, first-win secrets, maker sets); was 149d3873, 2026-10-16 pilot paint (Andrew cut the Rigger Harness): Homecoming pays paint_kest_rigger; was 56113e7f, 2026-10-12 PC-RIVET merge (Rivet's kit rows); was a29cefb2, 2026-10-12, PC-TALLY merge 80634ba: Tally's achievements, cosmetics, tree, world-one cards and codex rows; event_kinds.WORLD_ROWS moved at the KE1 merge 61eaef0 (12 event kinds added), re-pinned here; was 570a2db4, 2026-10-12 W13 coordinator: Tarn's Hold Still grant drops its story beat (beats are pilot-unlock rows only; the quip stays in its codex hint); was 965c2d1a, 2026-10-12 W13 coordinator: PC-SABLE round 7 (0ad68fa) merged onto Kest and the Cannon; was a75de886, 2026-10-12 W13 coordinator: PC-KEST round 4 (ef725b8) merged onto the Cannon kit; was 78c3807d, 2026-10-12 PC-CANNON merge (5e18183): Cannon kit rows; was d584902d, 2026-10-11 (w13 PC-TARN round 3): Tarn's kit, tree depths, codex, starter cosmetics and grant rows; was 9f88aba2, 2026-10-11 (w13 SG12 sg12-meta-options): four ach_meta_* grant rows paying {"option": <node>}; was 028b78af, 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): the skill bar's three shared grant rows on named discoveries; was d50e7ffc, 2026-10-08 (wave 10 ST5): one story beat per pilot unlock
 	"cosmetics.ROWS": "f56ad3fa2544710b365d2fa48e94d93d1e970b0d175cfa8e72909f129f064ba7",  # 2026-10-17 stage/alpha-w16 combined re-pin (crown pass, first-win secrets, maker sets); was b55fa30d, 2026-10-16 pilot paint (Andrew cut the Rigger Harness): outfit_kest_rigger out, paint_kest_rigger "Rigger Blue" in; was 710377a7, 2026-10-12 PC-RIVET merge (Rivet's kit rows); was 7af1d998, 2026-10-12, PC-TALLY merge 80634ba: Tally's achievements, cosmetics, tree, world-one cards and codex rows; event_kinds.WORLD_ROWS moved at the KE1 merge 61eaef0 (12 event kinds added), re-pinned here; was 2e0409f8, 2026-10-12 W13 coordinator: PC-SABLE round 7 (0ad68fa) merged onto Kest and the Cannon; was f3f9a84a, 2026-10-12 W13 coordinator: PC-KEST round 4 (ef725b8) merged onto the Cannon kit; was 0f1a4488, 2026-10-12 PC-CANNON merge (5e18183): Cannon kit rows; was 1148576f, 2026-10-11 (w13 PC-TARN round 3): Tarn's kit, tree depths, codex, starter cosmetics and grant rows; was 26e34e89, 2026-10-10 (w13 B5, CUSTOMIZE.md section 8): Downbeat trail, Curtain Call decal tile 9, Till Bell companion skin, all pending art; was c0f10ab8, P-R7: delivered decal mask ids, trails and SPIL-9 paints
-	"event_kinds.ROWS": "b73430a9947f70a7a798aea40d9bb0990b5b080e9d4fc00b8e5645100b21050b",  # 2026-10-19 w20 ACHIEVEMENTS-REFRESH: five quiet achievement-fact rows; was b503b02c. 2026-10-18 enemy_ringed_out row (Highdraft ring-outs, sound_next ring_out_fall) on stage/alpha-w17; was 28cc0b87. 2026-10-17 stage/alpha-w16 combined re-pin (active_heat row for the Cutting Torch's heat tick); was 4ad8bbdd, 2026-10-17 stage/alpha-w16 combined re-pin (actives' active_fired row); was 469030a8, 2026-10-12 (w13 WEIGHT-1 c4e428c): authored core_slam on slammed, ultimate_land on ultimate_landed, vault and harpoon cue rows, re-pinned by the coordinator at merge; was c374e259, 2026-10-11 (w13 skill-bar step 1, 7b7e2aa): ultimate_* rows, re-pinned by the coordinator at the systems wave A merge; was 1326ff10, 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 3e903494, 2026-10-08 (wave 10 MOT1): drop_landed, missed_drop, evolution_fired rows; was 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
+	"event_kinds.ROWS": "bf16cf5f71ba2a38d4b16aef4dfb003d3d7c4bf5e947de9bd637251efb460347",  # 2026-10-23 IL-01 grey panels: the panel_gained row (sound panel_ratchet); was b73430a9. 2026-10-19 w20 ACHIEVEMENTS-REFRESH: five quiet achievement-fact rows; was b503b02c. 2026-10-18 enemy_ringed_out row (Highdraft ring-outs, sound_next ring_out_fall) on stage/alpha-w17; was 28cc0b87. 2026-10-17 stage/alpha-w16 combined re-pin (active_heat row for the Cutting Torch's heat tick); was 4ad8bbdd, 2026-10-17 stage/alpha-w16 combined re-pin (actives' active_fired row); was 469030a8, 2026-10-12 (w13 WEIGHT-1 c4e428c): authored core_slam on slammed, ultimate_land on ultimate_landed, vault and harpoon cue rows, re-pinned by the coordinator at merge; was c374e259, 2026-10-11 (w13 skill-bar step 1, 7b7e2aa): ultimate_* rows, re-pinned by the coordinator at the systems wave A merge; was 1326ff10, 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 3e903494, 2026-10-08 (wave 10 MOT1): drop_landed, missed_drop, evolution_fired rows; was 2026-10-05 (wave 11 gate 2): world_entered row hears stinger_world and reads "World {world}"
 	"event_kinds.LINE_ROWS": "f4a74391a5a9053d404b6ed61a11599d0eace6ae64fd4156611bdbd5daf8d15f",
 	"event_kinds.STATE_ROWS": "0b6b061bd12a30016b4d875b1b3e20b65117d7bda826307c27cbff8923c66403",  # 2026-10-17 damage families (PR #65): dented, zzapped and plated rows; was 46bbae44
 	"event_kinds.CAUSE_ROWS": "9d20bee7f3e2a23dd09db3c08ab99e3fa0aab0f99d4373ef3398fff8601e0812",
@@ -92,7 +92,7 @@ const GOLDEN_HASHES := {
 	"event_kinds.CODEX_CATEGORIES": "4a61092895a1a12b1981249a32217abfacddc1bdec293c03948ca9f245700016",
 	"objectives.ROWS": "0d4800f67f2ddff5d3586f055ede841f130edff315217ae9cc4dd41f79201f89",
 	"lore_rows.ROWS": "54163c4a352ff7c88563900bdaa602075234fc7321bb3cd82d0cdcdab846f784",  # 2026-10-18 All hands: six Mind crew-log notes (Andrew's pick); was 3c06c629, 2026-10-17 stage/alpha-w16 final combined re-pin (lore port plus the specials' rows); was 58031908, 2026-10-17 (wave 20 lore port, LORE-REPLACE): park rows lead each zone, 14+ notes each; was e19ddad3, 2026-10-08 (wave 10 ST6): Dig and Highdraft lore take the approved sample lines; was 2026-10-04 (wave 11): world 2 and 3 lore final
-	"music_rows.ROWS": "6b11ddc45ac5f77eaa9d509b5e5542aea440d951c365f4ab6497d0ff1636afac",  # 2026-10-17 stage/alpha-w16 combined re-pin (wave 17: dam, pit, sinkhole and crown layers; #105 picks wiring); was 605ef0ab, 2026-10-17 stage/alpha-w16 combined re-pin (all admitted PRs together); was f9e1cca7
+	"music_rows.ROWS": "6ae91061fe62a58b8935f508c4b253ffc8c8bb1cbe2d9167eddbb7c3c3126329",  # 2026-10-23 default and phase anthem rows (#411); was cd1c5296, 2026-10-23 rogue and boss anthem rows (#389); was 6b11ddc4, 2026-10-17 stage/alpha-w16 combined re-pin (wave 17: dam, pit, sinkhole and crown layers; #105 picks wiring); was 605ef0ab, 2026-10-17 stage/alpha-w16 combined re-pin (all admitted PRs together); was f9e1cca7
 	"windup_rows.ROWS": "1850f9d81e2725e28fdd80b877c63ffb5c3816bcf41826f3f3f83d4f69024201",  # 2026-10-17 stage/alpha-w16 final combined re-pin (specials plus ballast_heavy and gap_net); was bcedc4f9, 2026-10-17 stage/alpha-w16 combined re-pin (all admitted PRs together); was 10034808, 2026-10-17 (wave 18 Dispatcher): dispatcher row on E26 (attack-ids registry); was a38f788e, 2026-10-08 (wave 10 GP6 and AU2): idle, death and wind-up cue fields per kind
 	"upgrade_tree.TREES": "e6b7f8d5b9484ad01af835ee32846a5c40f9c1f153a257dced7c727b57b31279",  # 2026-10-12 PC-RIVET merge (Rivet's kit rows); was 9d9d5f89, 2026-10-12, PC-TALLY merge 80634ba: Tally's achievements, cosmetics, tree, world-one cards and codex rows; event_kinds.WORLD_ROWS moved at the KE1 merge 61eaef0 (12 event kinds added), re-pinned here; was 034688e2, 2026-10-12 W13 coordinator: PC-SABLE round 7 (0ad68fa) merged onto Kest and the Cannon; was 41980464, 2026-10-12 W13 coordinator: PC-KEST round 4 (ef725b8) merged onto the Cannon kit; was ac75dc7b, 2026-10-12 PC-CANNON merge (5e18183): Cannon kit rows; was 10a325b3, 2026-10-11 (w13 PC-TARN round 3): Tarn's kit, tree depths, codex, starter cosmetics and grant rows; was 55786d60, 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
 	"upgrade_tree.WORLD_ONE_NODES": "ea265fc406c8c617c1b10ba542deb9033051c92cefbc42e2b39150f7943633e4",  # 2026-10-12, PC-TALLY merge 80634ba: Tally's achievements, cosmetics, tree, world-one cards and codex rows; event_kinds.WORLD_ROWS moved at the KE1 merge 61eaef0 (12 event kinds added), re-pinned here; was d649afcb, 2026-10-05 (alpha wave 16 cannon-look): cannon tree icons on ab_cannon_*
@@ -128,17 +128,56 @@ static func snapshot() -> Dictionary:
 	}.duplicate(true)
 
 
+# Code-owned lookups (pilot ids, bus signals, reachable objective ids) do not depend on the
+# tables under validation, so one validate pass derives each once instead of once per row.
+static var _pass_depth := 0
+static var _pass := {}
+
+
+static func _begin_pass() -> void:
+	_pass_depth += 1
+
+
+static func _end_pass() -> void:
+	_pass_depth -= 1
+	if _pass_depth == 0:
+		_pass.clear()
+
+
+static func _cached(key: String, make: Callable):
+	if not _pass.has(key):
+		_pass[key] = make.call()
+	return _pass[key]
+
+
+static func _pilot_ids() -> Array:
+	return _cached("pilots", func(): return ClassDef.all().map(func(p): return p.id))
+
+
+static func _bus() -> Dictionary:
+	return _cached("bus", func(): return Achievements.bus_signals())
+
+
 static func validate(tables: Dictionary, check_hashes := true) -> Array:
+	_begin_pass()
 	var issues := []
 	for name in TABLES:
 		issues.append_array(validate_table(name, tables.get(name), tables, check_hashes))
 	for name in tables:
 		if not TABLES.has(name):
 			_issue(issues, str(name), "well_formed", "table", "unregistered table")
+	_end_pass()
 	return issues
 
 
 static func validate_table(name: String, rows, tables: Dictionary, check_hash := true) -> Array:
+	_begin_pass()
+	var issues := _validate_table(name, rows, tables, check_hash)
+	_end_pass()
+	return issues
+
+
+static func _validate_table(name: String, rows, tables: Dictionary, check_hash: bool) -> Array:
 	var issues := []
 	if not TABLES.has(name):
 		_issue(issues, name, "well_formed", "table", "unregistered table")
@@ -195,8 +234,8 @@ static func _type_matches(value, type: int) -> bool:
 
 
 static func _validate_row(name: String, id: String, row: Dictionary, kind: String, tables: Dictionary, issues: Array) -> void:
-	var pilots: Array = ClassDef.all().map(func(p): return p.id)
-	var bus := Achievements.bus_signals()
+	var pilots := _pilot_ids()
+	var bus := _bus()
 	match kind:
 		"achievements":
 			_ref(issues, name, id, "on", row.on, bus)
@@ -276,7 +315,7 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 		"objectives":
 			_ref(issues, name, id, "glyph", row.glyph, Icons.IDS)
 			_words(issues, name, id, row.words, 1, Objectives.MAX_WORDS)
-			if not _objective_ids().has(id):
+			if not _cached("objectives", func(): return _objective_ids()).has(id):
 				_issue(issues, name, "reachable", id, "chooser cannot select this id")
 		"lore":
 			_ref(issues, name, id, "kind", row.kind, ["exchange", "field_note", "intro"])
@@ -328,7 +367,7 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 
 
 static func _validate_trees(name: String, rows: Dictionary, spec: Dictionary, issues: Array) -> void:
-	var pilots: Array = ClassDef.all().map(func(p): return p.id)
+	var pilots := _pilot_ids()
 	var size: int = Trees.WORLD_ONE_SIZE if spec.kind == "world_one_trees" else Trees.SIZE
 	for pilot in rows:
 		_ref(issues, name, str(pilot), "pilot", pilot, pilots)
@@ -381,7 +420,7 @@ static func _validate_trees(name: String, rows: Dictionary, spec: Dictionary, is
 					"proc":
 						for proc in node.get(op, []):
 							if _shape(name, id, proc, {"on": TYPE_STRING, "do": TYPE_STRING}, issues):
-								_ref(issues, name, id, "proc on", proc.on, Achievements.bus_signals())
+								_ref(issues, name, id, "proc on", proc.on, _bus())
 								_ref(issues, name, id, "proc do", proc.do, Trees.ACTIONS)
 			# Both roots are selectable. Every later node needs its heap parent and stays inside the cap.
 			var parent: int = (index - 2) / 2
@@ -414,7 +453,7 @@ static func _intro_zone(issues: Array, name: String, id: String, row: Dictionary
 	if not row.has("pilot"):
 		return
 	# A pilot's threat line is the boss's, voiced only where the arena opens: the world's last zone.
-	_ref(issues, name, id, "pilot", row.pilot, ClassDef.all().map(func(p): return p.id))
+	_ref(issues, name, id, "pilot", row.pilot, _pilot_ids())
 	var last := 0
 	for stage in StageDefs.COUNT:
 		if StageDefs.world_of(stage + 1) == world:

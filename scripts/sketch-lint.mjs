@@ -154,6 +154,7 @@ export const LIGHT_OWNERS = {
   "src/presentation/world_look.gd": { sites: 1, owner: "the Dig's LampPool under its stage geometry root, kept across stage changes" },
   "src/presentation/title_stage.gd": { sites: 3, owner: "presentation's title stage, session-lived" },
   "src/ui/class_preview.gd": { sites: 2, owner: "class select screen, directional, closes before any stage" },
+  "src/ui/build_read.gd": { sites: 1, owner: "pause menu's build read, its own-world SubViewport under the session-lived pause menu" },
   "src/ui/ending_sequence.gd": { sites: 1, owner: "ending screen, directional, after the last stage" },
   "src/world/flood.gd": { sites: 1, owner: "world.gd Flood, session-lived and reconfigured per stage" },
   "src/world/map_gorge.gd": { sites: 1, owner: "landmark under its stage geometry root, kept across stage changes" },

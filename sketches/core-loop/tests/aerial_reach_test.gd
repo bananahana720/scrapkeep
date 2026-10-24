@@ -48,9 +48,9 @@ func _boot() -> void:
 
 
 # Latches the ball `height` m above the ground: the anchor `lift` m over it and `side` m to the
-# +z side, the rope the straight distance, so side 0 hangs and side > 0 swings.
-func _latch(height: float, lift: float, side: float) -> void:
-	var at := ball + Vector3(0.0, height, side)
+# `along` side (+z by default), the rope the straight distance, so side 0 hangs and side > 0 swings.
+func _latch(height: float, lift: float, side: float, along := Vector3(0.0, 0.0, 1.0)) -> void:
+	var at := ball + Vector3(0.0, height, 0.0) + along * side
 	game.player.reset_to(at)
 	game.player.immune_left = 0.0
 	var anchor := ball + Vector3(0.0, height + lift, 0.0)
@@ -98,7 +98,10 @@ func _until_spent(enemy, parked: bool, release := false, budget := 900) -> Dicti
 			out["miss"] = _miss(enemy.telegraph())
 			if enemy.get("_t") != null and enemy._t > 0.6 and enemy.telegraph() != null:
 				var tele2 = enemy.telegraph()
-				out["goal_off"] = enemy.global_position.distance_to(tele2.center + Vector3.UP * (tele2.reach_up * 0.5 if tele2.aerial else 0.5))
+				var goal: Vector3 = tele2.center + Vector3.UP * (tele2.reach_up * 0.5 if tele2.aerial else 0.5)
+				out["goal_off"] = enemy.global_position.distance_to(goal)
+				out["goal_ball"] = goal.distance_to(game.player.ball_position())
+				out["ball_gap"] = enemy.global_position.distance_to(game.player.ball_position())
 			out["covered"] = _covers(enemy.telegraph())
 		if out.warned and enemy.phase == enemy.Phase.ROAM:
 			break
@@ -144,7 +147,11 @@ func _run() -> void:
 	t.check("AR-4 telegraph floor", seen.aerial and seen.warn >= 0.6 and seen.reach > 2.0 \
 		and seen.desc.get("aerial", false) and is_equal_approx(seen.desc["reach"], seen.reach),
 		"aerial %s, band %.1f m, warned %.2f s, descriptor aerial %s" % [seen.aerial, seen.reach, seen.warn, seen.desc.get("aerial", false)])
-	t.check("AR-1b dive goal", seen.get("goal_off", 99.0) <= 0.6, "drone %.2f m from the middle of the band near the end of the dive" % seen.get("goal_off", 99.0))
+	# A dive never ends inside the ball (a stacked dive's depenetration launched it past 90 m/s):
+	# at the band middle when the ball is clear of it, at contact distance (ball 1.0 + drone 0.8) when the ball occupies it.
+	var goal_clear: bool = seen.get("goal_ball", 0.0) > 1.9
+	var goal_ok: bool = seen.get("goal_off", 99.0) <= 0.6 if goal_clear else absf(seen.get("ball_gap", 99.0) - 1.8) <= 0.1
+	t.check("AR-1b dive goal", goal_ok, "drone %.2f m from the middle of the band, %.2f m from the ball (goal %.2f m from the ball, %s) near the end of the dive" % [seen.get("goal_off", 99.0), seen.get("ball_gap", 99.0), seen.get("goal_ball", 99.0), "clear" if goal_clear else "occupied"])
 	_drop(drone)
 
 	# 2: swinging pilots. The ball falls through the arc on its rope; the lead follows the arc.
@@ -165,13 +172,32 @@ func _run() -> void:
 		_drop(drone)
 	t.check("AR-2 swinging pilot", swing_dives == 2 and swing_hits == 2,
 		"%d of %d swinging dives hit (%s)" % [swing_hits, swing_dives, "; ".join(lines)])
+	# 2b: the bat needs the ball to meet the diving drone. The ball swings along x toward the side the
+	# drone dives from, so its line of travel runs through the drone at the landing.
+	var meets := []
+	for lean in [9.0, 3.0]:
+		_latch(16.0, 7.0, lean, Vector3.RIGHT)
+		await _frames(10)
+		drone = _spawn("kite_drone", Vector3(-9.0, 0.0, 3.0), 15.0)
+		game.combat.last_player_hit = {}
+		seen = await _until_spent(drone, false)
+		meets.append({"batted": seen.batted, "dives": seen.dives, "tier": game.player.speed_tier(), "hit": _hit_by("kite_drone"), "gap": seen.get("ball_gap", 99.0)})
+		_drop(drone)
+	t.check("AR-2b air bat (meet at cruise)", meets[0].dives == 1 and meets[0].batted == 1 and not meets[0].hit,
+		"batted %d (the drone itself requires cruise or faster), dives %d, hit %s" % [meets[0].batted, meets[0].dives, meets[0].hit])
+	t.check("AR-2b meet below cruise", meets[1].dives == 1 and meets[1].batted == 0,
+		"batted %d, dives %d, tier %d, hit %s" % [meets[1].batted, meets[1].dives, meets[1].tier, meets[1].hit])
+	# The old skim: the ball swings across the dive, 1.6 m beside the landing, and never touches the drone. Base
+	# batted it only because the dive teleported the drone into the ball (the stacked-dive launch's cause).
 	_latch(16.0, 7.0, 9.0)
 	await _frames(10)
 	drone = _spawn("kite_drone", Vector3(9.0, 0.0, 3.0), 15.0)
 	game.combat.last_player_hit = {}
 	seen = await _until_spent(drone, false)
-	t.check("AR-2b air bat", seen.dives == 1 and seen.batted == 1 and not _hit_by("kite_drone") and game.player.speed_tier() >= 1,
-		"batted %d, hit '%s', tier %d, %s" % [seen.batted, game.combat.last_player_hit.get("source", ""), game.player.speed_tier(), seen.get("miss", "")])
+	# The ring decides the hit, not contact: a ball inside the ring takes the dive even at cruise.
+	t.check("AR-2b skim is no meeting", seen.dives == 1 and seen.batted == 0 and game.player.speed_tier() >= 1 \
+		and _hit_by("kite_drone") == seen.get("covered", false),
+		"batted %d, dives %d, tier %d, hit %s, ring covered %s, drone %.2f m from the ball" % [seen.batted, seen.dives, game.player.speed_tier(), _hit_by("kite_drone"), seen.get("covered", false), seen.get("ball_gap", 99.0)])
 	_drop(drone)
 
 	# 3: a grounded pilot's dive is the ground mark it was, and still lands.

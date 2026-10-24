@@ -4,7 +4,7 @@ Owner: the local coordinator. Written 2026-10-19 from Andrew's requests in the c
 
 ## What Andrew asked for, in his words (19 Oct)
 
-- Hardware is never the bottleneck. Sessions are their own coordinators and divide and conquer; the coordinator keeps the graph, the test dependencies and the waves in sync.
+- Hardware is never the bottleneck. CPU-only work runs in the cloud by default (22 Oct), and the PC keeps 4080 timing, 3060 renders and local-state checks. Sessions are their own coordinators and divide and conquer; the coordinator keeps the graph, the test dependencies and the waves in sync.
 - One full playtest, at the end of wave 21, of the full alpha.
 - Parks that are lived in or run down, with far more variety, a natural look, and critters or people. Detail up to about 20,000 triangles.
 - Hard but fair, Souls-like. Bosses you learn and beat with your kit. A cracked build earns its steamroll, but skill still counts. Parks, mobs and events go up a notch, and the rest goes into a replay ladder.

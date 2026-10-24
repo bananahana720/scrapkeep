@@ -31,7 +31,9 @@ import {
   winProofFailures,
   winProofLine,
   WIN_PROOFS,
+  WIN_PROOF_TIMEOUT_S,
   winProofBotArgs,
+  winProofTimeoutMs,
   proofLibraries,
   selfPlayPresetText,
 } from "./sketch-export.mjs";
@@ -316,6 +318,14 @@ test("WIN_PROOFS plays Rivet's seed 1 first, then the cannon, Tally and the park
     ],
   );
   assert.equal(new Set(WIN_PROOFS.map((proof) => proof.dir)).size, WIN_PROOFS.length);
+});
+
+test("each world proof gets 900 s and the park proof, twice as long a run, gets 1800 s", () => {
+  assert.equal(WIN_PROOF_TIMEOUT_S, 900);
+  assert.deepEqual(
+    WIN_PROOFS.map((proof) => [proof.dir, winProofTimeoutMs(proof)]),
+    [["", 900_000], ["cannon", 900_000], ["tally", 900_000], ["park", 1_800_000]],
+  );
 });
 
 test("winProofLine formats the cannon proof with its pilot", () => {

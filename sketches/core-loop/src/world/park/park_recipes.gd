@@ -200,7 +200,7 @@ const ANCHOR_VARIANTS := ["a", "b", "c"]
 # collider, or none where its stamp replaces the box) and draws its GLB's views in place of the grey box. The row's
 # Collider stays the greybox's own; a GLB's -col (the adit portal's posts) is a separate PieceCollider
 # (tests/park_over_greybox_test.gd).
-const OVER_GREYBOX := ["isle_adit_portal", "isle_tram_head", "isle_keel_rib", "isle_ride_wash_west"]
+const OVER_GREYBOX := ["isle_adit_portal", "isle_tram_head", "isle_keel_rib", "isle_ride_wash_west", "isle_ride_fin_chute"]
 const ANCHOR_AUTHORED_M := 10.0
 # The waymark names that are no row: the spawn and the landmark (park_schema.gd DROP_IN and LANDMARK).
 const DROP_IN := "drop_in"
@@ -1625,6 +1625,11 @@ class Placer extends Node3D:
 	var _pending: Array = []
 	# Loaded resources held for the build, so its load() calls find them cached.
 	var _held: Array = []
+	# Headless, a threaded build's paths, loaded on the main thread one a frame while LOADING (_poll_loading), and the
+	# longest of those frames' steps.
+	var _main_loads: Array = []
+	var _headless_loads := false
+	var main_load_usec_max := 0
 	var _next := 0
 	var _threaded := false
 	# Anchor-field post centres by row index, worked out on a worker (pure arithmetic, no server resources).
@@ -1662,10 +1667,15 @@ class Placer extends Node3D:
 		# Headless, a threaded build loads on the main thread too: the dummy rasterizer's mesh RID owner is not
 		# thread-safe, and these loader-thread loads raced the scatter's kit meshes and the indicator's mesh in the
 		# frames they were in flight (13 of 30 headless boots). ending_sequence.gd's _build_crater has the same gate.
-		for path: String in (wanted if threaded and DisplayServer.get_name() != "headless" else []):
+		# Those loads take a frame each before the rows place, as the loader's would, so no row step carries one.
+		var headless := DisplayServer.get_name() == "headless"
+		for path: String in (wanted if threaded and not headless else []):
 			if ResourceLoader.load_threaded_request(path) == OK:
 				_pending.append(path)
 				threaded_loads += 1
+		if threaded and headless:
+			_main_loads = wanted.duplicate()
+			_headless_loads = true
 		if threaded:
 			_task = WorkerThreadPool.add_task(_work_posts, false, "park anchor posts")
 		else:
@@ -1705,6 +1715,7 @@ class Placer extends Node3D:
 		for path: String in _pending:
 			ResourceLoader.load_threaded_get(path)
 		_pending.clear()
+		_main_loads.clear()
 		_held.clear()
 
 	func _process(_delta: float) -> void:
@@ -1720,7 +1731,11 @@ class Placer extends Node3D:
 				if _task == -1 or WorkerThreadPool.is_task_completed(_task):
 					_wait_posts()
 					_build_step(t0 + BUILD_BUDGET_USEC)
-		_meter(Time.get_ticks_usec() - t0, "%s row %d" % [Phase.keys()[was], _next])
+		# A headless load on the main thread stands in for the loader thread's, so it is metered on its own.
+		if was == Phase.LOADING and _headless_loads:
+			main_load_usec_max = maxi(main_load_usec_max, Time.get_ticks_usec() - t0)
+		else:
+			_meter(Time.get_ticks_usec() - t0, "%s row %d" % [Phase.keys()[was], _next])
 
 	func _meter(spent: int, step: String) -> void:
 		if spent > slowest_usec:
@@ -1728,6 +1743,12 @@ class Placer extends Node3D:
 			slowest_step = step
 
 	func _poll_loading(block: bool) -> void:
+		while not _main_loads.is_empty():
+			var loaded := load(String(_main_loads.pop_front()))
+			if loaded != null:
+				_held.append(loaded)
+			if not block and not _main_loads.is_empty():
+				return
 		var still := []
 		for path: String in _pending:
 			var status := ResourceLoader.load_threaded_get_status(path)
