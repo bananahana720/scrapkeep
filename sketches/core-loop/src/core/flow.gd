@@ -4,6 +4,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const Worlds := preload("res://src/core/worlds.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -400,6 +401,9 @@ func _begin_run(chosen: Resource) -> void:
 	# The gate launches this pilot next time (game.gate_pilot); saved with the profile's next save.
 	if ctx.profile != null:
 		ctx.profile.set_last_pilot(chosen.id)
+	# A new run, never a Continue: the timed door opens for exactly the run after a fast rout.
+	Secrets.roll_door(ctx.profile)
+	_save_profile("profile_door_save")
 	ctx.run.begin(chosen)
 	_seed_companion()
 	ctx.events.run_started.emit(chosen.id)
@@ -530,6 +534,11 @@ func _persist_companion() -> void:
 	ctx.profile.set_companion(ctx.run.companion)
 	if ctx.profile.can_save and not ctx.profile.save():
 		warn_once("profile_companion_save", "flow: companion not saved to the profile: %s" % ctx.profile.last_error)
+
+
+func _save_profile(warn_id: String) -> void:
+	if ctx.profile != null and ctx.profile.can_save and not ctx.profile.save():
+		warn_once(warn_id, "flow: profile not saved: %s" % ctx.profile.last_error)
 
 
 func _save(doc: Dictionary) -> void:
@@ -860,6 +869,10 @@ func _on_boss_defeated() -> void:
 		_victory_hold = maxf(0.0, float(plan.get("hold", 0.0)))
 		_victory_left += _victory_hold
 		victory_veil = maxf(0.0, float(plan.get("veil", 0.0)))
+	# A fast rout opens the timed door for the next run (secrets.gd DOOR).
+	var boss := String(Worlds.row(ctx.stages.world_of(ctx.run.stage)).get("boss", ""))
+	if Secrets.note_rout(ctx.profile, boss, ctx.run.run_time):
+		_save_profile("profile_door_save")
 	_set_state(VICTORY)
 
 
