@@ -62,6 +62,7 @@ const PARK_LAND_FACTS := {
 	"cave_in_crumble": "cave_in_swap", "impact_incoming": "impact_swap",
 	"crust_crack": "crust_crack_landed", "drain_gurgle": "drain_landed", "trestle_groan": "trestle_landed",
 	"lightning_mark": "lightning_mark_landed", "reactor_overload": "reactor_landed",
+	"sluice_siren": "sluice_landed",
 }
 
 var rng := RandomNumberGenerator.new()
@@ -386,6 +387,29 @@ func notify_warden_phase(phase: String) -> void:
 			state.pending += 1
 
 
+# An activity row's ring was rolled into: a row it triggers is queued once, like a fight phase.
+func notify_activity(row_id: String) -> void:
+	for state in _park_states:
+		var trigger: Dictionary = state.row.trigger
+		if trigger.get("on") == "activity" and trigger.get("value") == row_id:
+			state.pending += 1
+
+
+# The activity a row opens on is over (a surge course won or lost): its live rows end now, as finish_row ends them,
+# and a row still announced or held ends too, so it never lands on a course that is already over.
+func finish_activity(row_id: String) -> Array:
+	var facts := []
+	for state in _park_states:
+		var trigger: Dictionary = state.row.trigger
+		if trigger.get("on") == "activity" and trigger.get("value") == row_id:
+			state.pending = 0
+			if state.phase == ANNOUNCED:
+				_park_end(state, facts)
+			else:
+				facts.append_array(finish_row(state.row.id))
+	return facts
+
+
 func finish_row(id: String) -> Array:
 	var facts := []
 	for state in _park_states:
@@ -486,7 +510,7 @@ func _park_triggered(state: Dictionary) -> bool:
 	match state.row.trigger.on:
 		"always": return true
 		"clock_tier": return _park_tier >= int(state.row.trigger.value)
-		"warden_phase": return state.pending > 0
+		"warden_phase", "activity": return state.pending > 0
 	return false
 
 

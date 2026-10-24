@@ -1126,6 +1126,11 @@ const WORLD_ROWS := {
 	"lightning_mark_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "lightning_strike", "hud": "", "objective": "", "priority": 2},
 	"reactor_overload": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "threat_whistle", "sound_next": "boiler_falling_pure", "hud": "", "objective": "", "priority": 2},
 	"reactor_landed": {"group": "event", "color": Palette.HAZARD, "shape": "burst", "sound": "slam_boom", "sound_next": "crater_crump_sub_boom", "hud": "", "objective": "", "priority": 2},
+	# The flume's head gate (the surge course, activities.gd): the sluice siren winds up on the bar, then the gate
+	# opens and the water comes. It chases you but never hurts you, so it rises in water verdigris on the chevron of
+	# motion, never the hazard family; the landed gush is a whoosh, the tailwind you are about to ride.
+	"sluice_siren": {"group": "event", "color": Palette.VERDIGRIS, "shape": "chevron", "sound": "beacon_hum", "sound_next": "sluice_siren_two_tone", "hud": "", "objective": "", "priority": 2},
+	"sluice_landed": {"group": "event", "color": Palette.VERDIGRIS, "shape": "chevron", "sound": "boost_whoosh", "sound_next": "sluice_gush_roar", "hud": "", "objective": "", "priority": 2},
 	# The shell's resolved air factor moved (Build.shell_air_changed): one fact for S4, K5 and R6. The ring on the
 	# hero pod, its colour and the released-spring sound read this row; direction is the ring's motion and the pitch.
 	"shell_air_shift": {"group": "movement", "color": Palette.AMBER, "shape": "ring", "sound": "shell_spring", "hud": "", "objective": "", "priority": 1},

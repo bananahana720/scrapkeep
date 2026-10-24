@@ -99,6 +99,8 @@ func _fill() -> void:
 			site["pack"] = row["pack"].duplicate()
 		if not (row["pay"] as Dictionary).is_empty():
 			site["pay"] = row["pay"].duplicate(true)
+		if row.has("route"):
+			site["route"] = String(row["route"])
 		# Optional: the way a cracked_cache's open face looks; without it, the rule's (north).
 		if row.has("face"):
 			site["face"] = _v2(row["face"]).normalized()
