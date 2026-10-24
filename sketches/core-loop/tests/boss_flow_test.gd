@@ -18,6 +18,8 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 
 const DT := 1.0 / 90.0
 const LIMIT := 200.0
+# The longest a phase takes infinite damage to break with no floor (8.3 s measured, 24 Oct).
+const NATURAL_MAX := 10.0
 
 # The legacy final-stage rule runs on a three-stage double using surviving maps.
 # 2026-10-04: retire with F6 the local plating cases; keep the flow regression.
@@ -234,18 +236,22 @@ func _fight_to_the_end() -> void:
 			break
 	var order: Array = _phases.map(func(p): return p["phase"])
 	var on_tick: bool = _phases.all(func(p): return p["live_phase"] == p["phase"] and p["phase_clock"] == 0.0)
-	# Each of phases 1 to 3 lasts at least its flourish (the 3 s intro, then the 2 s transition beat)
-	# and less than the set piece it used to wait out.
+	# Each of phases 1 to 3 lasts at least its floor (the longer of its flourish, the 3 s intro then the
+	# 2 s transition beat, and its base-tier row), and ends within a breath of it once infinite damage has
+	# broken the chunk.
 	var lengths: Array = []
 	for i in mini(_phases.size() - 1, 3):
 		lengths.append(float(_phases[i + 1]["clock"]) - float(_phases[i]["clock"]))
 	var flourish := [Rules.INTRO_SECONDS, FightPhases.TRANSITION_SECONDS, FightPhases.TRANSITION_SECONDS]
+	var floors: Array = []
+	for i in 3:
+		floors.append(maxf(flourish[i], float(Rules.PHASE_MIN_BY_TIER[0][i])))
 	var floors_ok: bool = lengths.size() == 3
 	for i in lengths.size():
-		floors_ok = floors_ok and lengths[i] >= flourish[i] and lengths[i] < Rules.SET_PIECE_SECONDS[i]
-	_report("phases turn at the flourish", defeated_at > 0.0 and floors_ok and order == [1, 2, 3, 4] and on_tick and _phases[3]["name"] == "chase",
-		"with infinite damage every tick boss_defeated came %.1f s after arena entry (76.5 s with the set-piece floors); phases %s at %s s, lengths %s against flourishes %s and old set pieces %s; each published on the tick it began: %s"
-			% [defeated_at, str(order), str(_phases.map(func(p): return snappedf(p["clock"], 0.1))), str(lengths.map(func(v): return snappedf(v, 0.1))), flourish, Rules.SET_PIECE_SECONDS, on_tick])
+		floors_ok = floors_ok and lengths[i] >= floors[i] - DT and lengths[i] <= maxf(floors[i], NATURAL_MAX) + 0.5
+	_report("phases turn at their floor", defeated_at > 0.0 and floors_ok and order == [1, 2, 3, 4] and on_tick and _phases[3]["name"] == "chase",
+		"with infinite damage every tick boss_defeated came %.1f s after arena entry (76.5 s with the set-piece floors); phases %s at %s s, lengths %s against floors %s (flourishes %s, old set pieces %s); each published on the tick it began: %s"
+			% [defeated_at, str(order), str(_phases.map(func(p): return snappedf(p["clock"], 0.1))), str(lengths.map(func(v): return snappedf(v, 0.1))), floors, flourish, Rules.SET_PIECE_SECONDS, on_tick])
 	var breaks: Array = _phases.slice(1).map(func(p): return p["spilled"])
 	_report("phase breaks pay scrap", breaks.size() == 3 and breaks.all(func(v): return v >= Rules.BREAK_SPILL),
 		"each phase break spilled scrap to roll up around the ship: %s (at least %d each)" % [str(breaks), Rules.BREAK_SPILL])

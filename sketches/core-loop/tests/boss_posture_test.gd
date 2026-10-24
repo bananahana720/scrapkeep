@@ -136,7 +136,7 @@ func _run() -> void:
 		"cockpit closed after the stagger %s; the crack paid off in the next opening: %d chunks, hp %.0f, stagger over %s, published %s"
 			% [closed, _boss.chunks_left(), _boss.hp, not _boss.staggered(), _weak])
 
-	# The floor is the flourish on the base tier (Brindle phase floors card, 24 Oct), read per run tier.
+	# The floor is the longer of the flourish and the run tier's row (Brindle phase floors card, 24 Oct).
 	var floor_one: float = _boss.phase_floor()
 	_game.run.run_tier = 1
 	var hard_one: float = _boss.phase_floor()
@@ -144,7 +144,7 @@ func _run() -> void:
 	var rows_ok: bool = (Rules.PHASE_MIN_BY_TIER.has(0) and Rules.PHASE_MIN_BY_TIER.has(1)
 		and Rules.PHASE_MIN_BY_TIER[0].size() == 3 and Rules.PHASE_MIN_BY_TIER[1].size() == 3
 		and Rules.SET_PIECE_SECONDS == [28.0, 24.0, 22.0])
-	_report("floor is the flourish", rows_ok and is_equal_approx(floor_one, Rules.INTRO_SECONDS)
+	_report("floor reads the tier row", rows_ok and is_equal_approx(floor_one, maxf(Rules.INTRO_SECONDS, float(Rules.PHASE_MIN_BY_TIER[0][0])))
 			and is_equal_approx(hard_one, maxf(Rules.INTRO_SECONDS, float(Rules.PHASE_MIN_BY_TIER[1][0]))),
 		"phase 1 floor %.2f s base, %.2f s HARD (intro %.1f s); rows %s, set pieces kept %s"
 			% [floor_one, hard_one, Rules.INTRO_SECONDS, Rules.PHASE_MIN_BY_TIER, Rules.SET_PIECE_SECONDS])
@@ -188,7 +188,8 @@ func _run() -> void:
 	_report("smash shatters", _boss.chunks_left() == 2 and not _boss.staggered(),
 		"a smash on the open core left %d chunks" % _boss.chunks_left())
 
-	# Phase 3, its chunk, then the eject. Past the transition beat, a broken chunk turns the phase at once.
+	# Phase 3, its chunk, then the eject. Past its floor, a broken chunk turns the phase at once.
+	_advance(maxf(floor_two - _boss.phase_clock, 0.0))
 	var broke_two: float = _boss.clock
 	_advance(0.1)
 	var into_three: bool = _boss.phase == 3
@@ -201,7 +202,7 @@ func _run() -> void:
 	var after_three: int = _boss.chunks_left()
 	_advance(maxf(_boss.phase_floor() - _boss.phase_clock, 0.0) + 0.1)
 	_report("three chunks to the eject", into_three and after_three == 1 and _boss.state_name() == "eject" and _phases == [1, 2, 3, 4]
-			and is_equal_approx(floor_two, FightPhases.TRANSITION_SECONDS) and waited_two <= 0.1 + DT,
+			and is_equal_approx(floor_two, maxf(FightPhases.TRANSITION_SECONDS, float(Rules.PHASE_MIN_BY_TIER[0][1]))) and waited_two <= 0.1 + DT,
 		"phase 2 floor %.2f s (beat %.1f s), turned %.2f s after its chunk; phase 3 %s; chunks after its opening %d; state %s, phases %s"
 			% [floor_two, FightPhases.TRANSITION_SECONDS, waited_two, into_three, after_three, _boss.state_name(), _phases])
 

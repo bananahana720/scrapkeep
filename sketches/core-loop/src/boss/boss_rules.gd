@@ -23,10 +23,14 @@ const PHASE_NAMES := ["Requisition", "Furnace", "Scuttle"]
 # card, option 1: overpowered pays); kept here so either other option is one row.
 const SET_PIECE_SECONDS := [28.0, 24.0, 22.0]
 # Seconds each phase must run before a broken chunk turns it, per run tier (run_tier.gd BASE 0,
-# HARD 1). 0 leaves only the flourish. Floors on HARD only: 1: SET_PIECE_SECONDS.
+# HARD 1). 0 leaves only the flourish.
+# 2026-10-24 fit (Brindle phase floors card, coordinator default): a fit to the Brindle band, not a
+# design value. The smallest scale of the SET_PIECE_SECONDS shape that puts the skipper's Brindle row
+# median in 90-100 s (BUDGETS.md 1.5-3 min). Fit on the 24 skipper runs at cd0276f6 (flourish only,
+# median 58.5 s): a phase lasts max(its natural length, its floor); x1.00 predicts 90.0 s, x1.05 93.7 s.
 const PHASE_MIN_BY_TIER := {
-	0: [0.0, 0.0, 0.0],
-	1: [0.0, 0.0, 0.0],
+	0: [29.5, 25.0, 23.0],
+	1: [29.5, 25.0, 23.0],
 }
 # No attack lands before this, so the entry and the hull readout are free to read.
 const INTRO_SECONDS := 3.0
