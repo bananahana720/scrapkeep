@@ -9,7 +9,8 @@ const T := preload("res://tests/support/t.gd")
 # Measured by entering every alpha and default-table stage on 560d177 before the fix.
 # Both tables produced these same six rows. The spec omits the fleet's object references.
 # Re-pinned 2026-10-13: stages 3 to 6 carry WT-BANDS's contact-gain posture tuning (907bfef), which the park
-# table mirrors; every other field is unchanged.
+# table mirrors; every other field is unchanged. 2026-10-23: stage 3's hive takes HIVE_HEAVY_RATIO
+# 0.7 (swarm hive option 1, alpha_defs.gd).
 const UNCHANGED := [
   {
     "harpoon_anchor": false,
@@ -57,6 +58,7 @@ const UNCHANGED := [
         "contact_gain_floor": 0.55,
         "contact_gain_scale": 150.0,
         "curve": 2.1,
+        "heavy_ratio": 0.7,
         "ram_shatters": false
       },
       "reach": 30.0,
