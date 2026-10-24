@@ -13,9 +13,8 @@ extends RefCounted
 #   terrain  the same anchor and ring with the driver's default dodging, but it breaks the circle onto the nearest
 #            line within TERRAIN_LINE_REACH and rides it when a read telegraph would hit, or after CIRCLE_BREAK_S of
 #            continuous circling, then returns to the ring. A line is a cable contraption on the map, a park grind
-#            line (a row whose ride fact is ride_grapple_line), an anchor post (an anchor_field row) it swings past, or
-#            a world anchor the driver's swing hand (_swing_hand) can bite. It takes only lines that end within
-#            LINE_HOME of the anchor. It never perches: the perch field does not exist yet.
+#            line (a row whose ride fact is ride_grapple_line), or an anchor post (an anchor_field row) it swings past.
+#            It takes only lines that end within LINE_HOME of the anchor; with none it keeps circling. It never perches: the perch field does not exist yet.
 #
 # Stage-note fields both write (the gates read them): fight_s, circle_s, circle_share, line_rides, lines_in_reach,
 # line_misses. The contact fields (first_contact_s, first_hit_s, hull_lost_120s, alive_120s, telegraph_reads) are kept
@@ -65,8 +64,8 @@ var _circle_gap := 0.0
 var _line_gap := 0.0
 var _line_goal := Vector3.INF
 var _line_kind := ""
-# The anchor post a swing heads past (INF: swing outward from the ring).
-var _swing_toward := Vector3.INF
+# The anchor post a swing heads past.
+var _swing_toward := Vector3.ZERO
 var _hook_counted := false
 var _swung := false
 var _park_lines: Array = []
@@ -231,7 +230,9 @@ func _terrain(delta: float, ball: Vector3, at: Vector3) -> bool:
 				_state = "line"
 				_state_clock = LINE_TRY_S
 				return false
-			_start_swing(Vector3.INF)
+			# No line home: keep circling. A swing outward from the ring finds open ground or carries the ball
+			# 100 m off (stage 1 seed 1), which measures the swing, not terrain against circling.
+			_line_gap = LINE_GAP_S
 			return false
 		"line":
 			if _state_clock <= 0.0:
@@ -270,14 +271,10 @@ func _terrain(delta: float, ball: Vector3, at: Vector3) -> bool:
 				else:
 					_miss()
 				return false
-			var away := Vector3(ball.x - at.x, 0.0, ball.z - at.z)
-			if _swing_toward != Vector3.INF:
-				away = Vector3(_swing_toward.x - ball.x, 0.0, _swing_toward.z - ball.z)
+			var away := Vector3(_swing_toward.x - ball.x, 0.0, _swing_toward.z - ball.z)
 			away = away.normalized() if away.length() > 0.5 else Vector3.FORWARD
 			var way: Vector3 = ball + away * 30.0
 			var aim = driver._swing_hand(ball, way, delta)
-			if aim != null:
-				driver._note["lines_in_reach"] = maxi(int(driver._note["lines_in_reach"]), 1)
 			driver._goal = "swing"
 			driver._act(way, aim if aim != null else _target, delta, null, true)
 			return true
