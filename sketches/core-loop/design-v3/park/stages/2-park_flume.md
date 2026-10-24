@@ -1052,7 +1052,7 @@ The park file, verbatim (park_schema_test reads this block):
  ],
  "activity_rows": [
   {"id": "siphon_camp", "activity": "enemy_camp", "site": "the_siphon", "at": [-28, 176], "pack": ["lobber", "lobber", "lobber"], "pay": {"named": "loose_trigger", "rarities": ["common"]}},
-  {"id": "bend_cache", "activity": "cracked_cache", "site": "bend_rim_ledge", "at": [42, -142], "pack": [], "pay": {"rarities": ["rare"]}},
+  {"id": "bend_cache", "activity": "cracked_cache", "site": "bend_rim_ledge", "at": [42, -142], "face": [0, 1], "pack": [], "pay": {"rarities": ["rare"]}},
   {"id": "bench_bounty", "activity": "hauler_bounty", "site": "south_bench", "at": [-119, 332], "pack": [], "pay": {"rarities": ["common", "rare"]}}
  ]
 }
