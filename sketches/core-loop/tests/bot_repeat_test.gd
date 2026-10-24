@@ -1,39 +1,43 @@
-# smoke: solo timeout=240s (two separate bot children; at most 90 seconds each)
+# smoke: solo timeout=360s (two separate bot children share the harness budget)
 # 2026-10-14 DET-HEFT: full-field traces take 35-37 s directly; the 40 s harness cap
 # cut both isolated children short. Only the wall budget changes, not the 6000-tick comparison.
+# 2026-10-23 (w18 gate): a child now takes about 60 s on an idle 4-core cloud box and about 108 s
+# on a loaded one (child 0 stopped at tick 4992 of 6000 at the old fixed 90 s wall). The wall is a
+# hang guard, not a speed check: each child gets an equal share of what is left of BUDGET_S, so a
+# slow box spends more of the fixed harness cap and a hung child is still killed before it.
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const T := preload("res://tests/support/t.gd")
 const TICKS := 6000
+# The 360 s harness cap less a margin for boot, the trace compare and cleanup.
+const BUDGET_S := 330.0
 
 
 func _initialize() -> void:
 	var t := T.new("bot_repeat_test")
 	var traces: Array[String] = []
 	var base := OS.get_user_data_dir().path_join("bot-repeat-%d" % OS.get_process_id())
+	var jobs := []
 	for i in 2:
 		var folder := base.path_join(str(i))
-		var previous := {}
+		var env := {}
 		for kind in ["DATA", "CONFIG", "CACHE"]:
-			var key: String = "XDG_%s_HOME" % kind
-			previous[key] = OS.get_environment(key)
-			OS.set_environment(key, folder.path_join(kind.to_lower()))
-		var results := ChildRuns.run([{"script": "res://tools/bot_run.gd", "args": [
+			env["XDG_%s_HOME" % kind] = folder.path_join(kind.to_lower())
+		jobs.append({"script": "res://tools/bot_run.gd", "env": env, "args": [
 			"--out=" + folder, "--policy=brawler", "--seeds=3", "--table=slice",
-			"--trace-ticks=1", "--ticks=%d" % TICKS, "--allocation-noise=%d" % i]}], 90.0)
-		for key in previous:
-			if previous[key].is_empty():
-				OS.unset_environment(key)
-			else:
-				OS.set_environment(key, previous[key])
-		var result: Dictionary = results[0]
+			"--trace-ticks=1", "--ticks=%d" % TICKS, "--allocation-noise=%d" % i]})
+	var results := ChildRuns.run_shared(jobs, BUDGET_S)
+	for i in 2:
+		var folder := base.path_join(str(i))
+		var result: Dictionary = results[i]
 		var errors: Array = ChildRuns.summary(result)["errors"]
 		for line in String(result["log"]).split("\n"):
 			if line.begins_with("FAIL"):
 				errors.append(line)
 		t.check("child %d" % i, result["code"] == 0 and not result["timed_out"] and errors.is_empty(),
-			"exit %s, timeout %s, errors %s" % [result["code"], result["timed_out"], errors])
+			"exit %s, timeout %s, %.1f s of a %.1f s wall, errors %s" % [result["code"], result["timed_out"],
+				result["seconds"], result["wall"], errors])
 		var path := folder.path_join("trace-3.ndjson")
 		var trace := FileAccess.get_file_as_string(path) if FileAccess.file_exists(path) else ""
 		traces.append(trace)

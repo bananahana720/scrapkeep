@@ -49,6 +49,8 @@ const EXPECTED_LAYERS := {
 	"rivet_seam": "global", "shock_liner": "global", "crush_guard": "global",
 	"deflect_plate": "global", "brace_frame": "global", "scrap_armor": "global",
 	"rebound_skin": "global", "warden_ward": "global", "magnet_coil": "global",
+	# 2026-10-22 earned save (19fb8d79): spare_frame is a death_save perk on the hull, player-global.
+	"spare_frame": "global",
 	"cache_key": "global", "beacon_lamp": "global", "fast_hands": "global",
 	"echo_locator": "global", "synergy_lens": "global", "salvage_drone": "global",
 	"par_chip": "global", "cell_weapon": "global", "cell_movement": "global",
