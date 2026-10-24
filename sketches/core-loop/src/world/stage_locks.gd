@@ -33,6 +33,7 @@ const WALL_SPRING := 60.0
 const WALL_DAMP := 8.0
 const WALL_SLACK := 4.0
 const WALL_BOUNCE := 1.6
+const WALL_ACCEL_CAP := 120.0
 const CREW_RING := 0.6
 const CREW_SPREAD := 0.45 * PI
 const REFUSE_GAP := 0.6
@@ -112,7 +113,8 @@ func crew_alive() -> Array:
 func foe_for(ball: Vector3, reach := INF) -> Node3D:
 	var pool: Array = crew_alive() if lock_active() else []
 	if pool.is_empty() and locked():
-		pool = get_tree().get_nodes_in_group("enemy").filter(func(enemy): return enemy != ctx.flow.warden and _alive(enemy))
+		pool = get_tree().get_nodes_in_group("enemy").filter(func(enemy): return enemy != ctx.flow.warden and _alive(enemy) \
+				and String(enemy.get("kind")) not in ["warden", "vault", ""])
 	var best: Node3D = null
 	var near := reach
 	for enemy: Node3D in pool:
@@ -127,7 +129,7 @@ func foe_for(ball: Vector3, reach := INF) -> Node3D:
 func objective() -> String:
 	if lock_active():
 		return "Yard locked: break its crew."
-	if locked():
+	if locked() and _engaged_s >= 0.0:
 		return "The Warden's clamp is shut: break %d crews (%d of %d)." % [packs_wanted(), cleared, packs_wanted()]
 	return ""
 
@@ -138,7 +140,12 @@ func note_member(enemy: Node3D, seq: int) -> void:
 		return
 	if not _packs.has(seq):
 		_packs[seq] = {"members": [], "counted": false, "spoiled": false}
-	_packs[seq]["members"].append({"ref": weakref(enemy), "dead": false})
+	var member := {"ref": weakref(enemy), "dead": false}
+	_packs[seq]["members"].append(member)
+	# Marked on the death itself: _die frees the body the same frame, so a kill that lands after
+	# this module's tick would read as a despawn by the next one.
+	if enemy.has_signal("died"):
+		enemy.died.connect(func(_at: Vector3, _scrap: int): member["dead"] = true, CONNECT_ONE_SHOT)
 
 
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
@@ -172,7 +179,8 @@ func _clear() -> void:
 func _on_flow_changed(state: String) -> void:
 	if state in ["gates", "launch", "summary", "title", "victory"]:
 		if lock_active():
-			_unlock(false)
+			lock_state = "spent"
+			_drop_wall()
 		_drop_collar()
 
 
@@ -305,7 +313,7 @@ func _hold_ball() -> void:
 	if dist > radius + WALL_SLACK and outward > 0.0:
 		ctx.player.set_velocity_now(v - n * outward * WALL_BOUNCE, "arena_wall")
 		return
-	ctx.player.add_external_accel(-n * (WALL_SPRING * (dist - radius) + WALL_DAMP * maxf(outward, 0.0)))
+	ctx.player.add_external_accel(-n * minf(WALL_ACCEL_CAP, WALL_SPRING * (dist - radius) + WALL_DAMP * maxf(outward, 0.0)))
 
 
 func _build_wall(radius: float) -> void:

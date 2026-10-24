@@ -23,6 +23,21 @@ const T := preload("res://tests/support/t.gd")
 #   toward the gate; the Warden already awake leaves it unfired;
 # - StageLocks.active = false (bot_run --locks=0) leaves the stage with neither.
 
+# Kills inside the physics step, after every other node: a kill that lands after the locks' tick
+# (fleet, combat, a pilot kit) still counts once its body is freed.
+class LateKiller extends Node:
+	var targets: Array = []
+
+	func _init() -> void:
+		process_physics_priority = 1000
+
+	func _physics_process(_delta: float) -> void:
+		for enemy in targets:
+			if is_instance_valid(enemy) and not enemy.is_dead():
+				enemy._die()
+		targets.clear()
+
+
 var _t := T.new("stage_locks_test")
 var _facts: Array = []
 
@@ -100,6 +115,7 @@ func _gate() -> void:
 	_t.check("flow.gate is the world's locks", locks != null and locks == game.world.locks)
 	_t.eq("stage 1 is park_dam", String(game.ctx.terrain.map().title), "park_dam")
 	_t.check("gate shut on entry", locks.locked())
+	_t.check("the clamp keeps quiet before the Warden wakes", not game.flow.objective_text().contains("clamp"), game.flow.objective_text())
 	var warden = game.flow.warden
 	_t.check("park Warden spec carries the gate", is_instance_valid(warden) and warden.spec.get("posture_gate") is Callable)
 	var before: float = warden._posture.posture
@@ -107,7 +123,7 @@ func _gate() -> void:
 	await physics_frame
 	_t.eq("shut clamp: a hit gains no posture", warden._posture.posture, before)
 	_t.eq("shut clamp answers a hit", _count("warden_gate_refused"), 1)
-	_t.check("objective names the clamp", game.flow.objective_text().contains("clamp"), game.flow.objective_text())
+	_t.check("objective names the clamp once it is awake", game.flow.objective_text().contains("clamp"), game.flow.objective_text())
 	var at: Vector3 = warden.global_position
 	# A lone arrival is no pack; a pack with a member gone alive is spoiled.
 	var lone := _spawn_pack(game, ["chaser"], 101, at)
@@ -133,10 +149,12 @@ func _gate() -> void:
 	_t.check("the collar holds one pip per wanted pack", locks._pips.size() == locks.packs_wanted())
 	_t.check("first pip lit, second dark", locks._pips[0].material_override == locks._pip_lit and locks._pips[1].material_override == locks._pip_dark)
 	var second := _spawn_pack(game, ["mag_trapper", "lobber"], 104, at)
-	for enemy in second:
-		_kill(enemy)
-	for i in 2:
+	var late := LateKiller.new()
+	root.add_child(late)
+	late.targets = second.duplicate()
+	for i in 3:
 		await physics_frame
+	late.queue_free()
 	_t.check("two packs open the clamp", not locks.locked(), "cleared %d" % locks.cleared)
 	_t.eq("the release plays once", _count("warden_gate_opened"), 1)
 	_t.check("the collar goes", locks._collar == null)
