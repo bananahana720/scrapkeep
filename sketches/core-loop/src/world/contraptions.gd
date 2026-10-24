@@ -452,20 +452,26 @@ static func _skin_views(spec: Dictionary, recipe: String, parent: Node3D, xform:
 			return out
 	var ranges := ParkRecipes.ranges(String(row["budget"]))
 	for entry: Array in files:
-		for source: Dictionary in RecipeProps.mesh_sources(SKIN_DIR + String(entry[0]) + ".glb"):
+		var packed := load(SKIN_DIR + String(entry[0]) + ".glb") as PackedScene
+		if packed == null:
+			continue
+		var scene := packed.instantiate()
+		for source: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+			if source.mesh == null:
+				continue
 			var view := MeshInstance3D.new()
 			view.name = "Skin_%s_%s" % [recipe, source.name]
 			view.mesh = source.mesh
-			var slots: PackedStringArray = source.slots
-			for i in slots.size():
-				var material := RecipeProps.slot_material(slots[i])
+			for i in source.mesh.get_surface_count():
+				var original := source.mesh.surface_get_material(i)
+				var material := RecipeProps.slot_material(String(original.resource_name) if original != null else "")
 				if material != null:
 					view.set_surface_override_material(i, material)
 			view.set_meta(SKIN_META, recipe)
 			view.set_meta(SKIN_ID_META, String(spec.get("id", "")))
 			view.set_meta(RecipeProps.META_FADE, true)
 			parent.add_child(view)
-			view.transform = xform * source.xform
+			view.transform = xform * _node_in(source, scene)
 			var shell_index: int = int(entry[1])
 			if shell_index == 0:
 				view.visibility_range_end = float(ranges.get("base_end", 0.0))
@@ -479,7 +485,18 @@ static func _skin_views(spec: Dictionary, recipe: String, parent: Node3D, xform:
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 			out.append(view)
+		scene.free()
 	return out
+
+
+static func _node_in(node: Node3D, top: Node) -> Transform3D:
+	var xf := Transform3D.IDENTITY
+	var walk: Node = node
+	while walk != null and walk != top:
+		if walk is Node3D:
+			xf = (walk as Node3D).transform * xf
+		walk = walk.get_parent()
+	return xf
 
 
 # Turns the GLB's +Z onto a launcher's aim.
