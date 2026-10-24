@@ -1,0 +1,361 @@
+{
+  "about": "World 1 acceptance bands: the rows the Gate reads for a finished Spillway (dam, flume, Brindle). scripts/world1-bands.mjs evaluates them. status gate: a miss or a missing input fails the read. status report: measured and printed but never fails, until the units in enforced_from land and the coordinator flips it to gate. status info: shown, no threshold. Run length lives in the pacing file (source pacing) and the panel band in #398's drop sim; neither is restated here. Thresholds are the integrator ledger's (/mnt/project-files/world1/BUDGETS.md); change a number there first.",
+  "bots": {
+    "measure": "the pacing file's measure block (table, stages, seeds, pilots, bot_args, policy_args) is the run recipe; the completionist needs --explore-by=480 or it cannot reach its band",
+    "policies": [
+      "skipper",
+      "completionist"
+    ],
+    "seeds": 8,
+    "args": "--table=park --stages=2 --gate=1 --warm-band=1 --seeds=1,2,3,4,5,6,7,8 --panel-log=1",
+    "policy_args": {
+      "completionist": "--explore-by=480"
+    }
+  },
+  "pacing_file": "sketches/core-loop/design-v3/pacing/world1-pacing.json",
+  "challenge_cells": [
+    "w1",
+    "w2",
+    "brindle",
+    "park1",
+    "park2"
+  ],
+  "frame_scenes": [
+    "dam",
+    "flume",
+    "slag_bowl"
+  ],
+  "beats": [
+    "cold_open",
+    "rivet_freed",
+    "flume_warden_reveal",
+    "bowl_handoff",
+    "spillway_clear",
+    "brindle_arrival",
+    "brindle_phase",
+    "brindle_rout",
+    "tarn_sign_on"
+  ],
+  "rows": [
+    {
+      "id": "runs-complete",
+      "area": "Stability",
+      "source": "bots",
+      "label": "every policy ran every seed",
+      "metric": "seeds",
+      "stat": "each_policy",
+      "min": 8,
+      "status": "gate",
+      "basis": "unit 7 acceptance: seeds 1 to 8 of both bots"
+    },
+    {
+      "id": "brindle-routed",
+      "area": "Stability",
+      "source": "bots",
+      "label": "every run routs Brindle",
+      "metric": "routed",
+      "stat": "share",
+      "min": 1,
+      "status": "gate",
+      "basis": "unit 7: no flume exit stall; a stalled run is a blocker bug"
+    },
+    {
+      "id": "brindle-phases",
+      "area": "Wardens and bosses",
+      "source": "bots",
+      "label": "Brindle reaches its final phase in every rout",
+      "metric": "brindle_final_phase",
+      "stat": "share",
+      "min": 1,
+      "status": "gate",
+      "basis": "principle 18; phase count from boss_rules.gd PHASE_NAMES (#391 may change it)"
+    },
+    {
+      "id": "run-length-skipper",
+      "area": "Difficulty and pacing",
+      "source": "pacing",
+      "label": "skipper world 1 total",
+      "band": "skipper_total",
+      "status": "gate",
+      "basis": "BUDGETS.md skipper total",
+      "owner": "Run length and pacing"
+    },
+    {
+      "id": "run-length-completionist",
+      "area": "Difficulty and pacing",
+      "source": "pacing",
+      "label": "completionist world 1 total",
+      "band": "completionist_total",
+      "status": "report",
+      "basis": "BUDGETS.md completionist total",
+      "owner": "Run length and pacing",
+      "enforced_from": [
+        "Spillway enemy roster",
+        "Rogue fleet mini-bosses",
+        "Spillway secrets",
+        "Flume lived-in pass two"
+      ]
+    },
+    {
+      "id": "stage-length-skipper",
+      "area": "Difficulty and pacing",
+      "source": "pacing",
+      "label": "each stage, skipper",
+      "band": "skipper_stage",
+      "status": "report",
+      "basis": "BUDGETS.md any one stage 3-5 min",
+      "owner": "Run length and pacing",
+      "enforced_from": [
+        "Spillway enemy roster"
+      ]
+    },
+    {
+      "id": "brindle-length",
+      "area": "Wardens and bosses",
+      "source": "pacing",
+      "label": "Brindle fight, skipper",
+      "band": "brindle_fight",
+      "status": "gate",
+      "basis": "BUDGETS.md Brindle 1.5-3 min",
+      "owner": "Run length and pacing"
+    },
+    {
+      "id": "rout-seen-skipper",
+      "area": "Difficulty and pacing",
+      "source": "bots",
+      "label": "skipper rout time (shown, not graded here)",
+      "metric": "rout_s",
+      "policy": "skipper",
+      "stat": "median",
+      "status": "info",
+      "unit": "s"
+    },
+    {
+      "id": "rout-seen-completionist",
+      "area": "Difficulty and pacing",
+      "source": "bots",
+      "label": "completionist rout time (shown, not graded here)",
+      "metric": "rout_s",
+      "policy": "completionist",
+      "stat": "median",
+      "status": "info",
+      "unit": "s"
+    },
+    {
+      "id": "kills-skipper",
+      "area": "Difficulty and pacing",
+      "source": "bots",
+      "label": "skipper kills to the rout",
+      "metric": "kills",
+      "policy": "skipper",
+      "stat": "median",
+      "min": 15,
+      "status": "report",
+      "basis": "today 13 on 2-3 packs a park; the roster unit takes packs to 5 and 6; number to be replaced by the roster thread's",
+      "enforced_from": [
+        "Spillway enemy roster"
+      ]
+    },
+    {
+      "id": "kills-completionist",
+      "area": "Difficulty and pacing",
+      "source": "bots",
+      "label": "completionist kills to the rout",
+      "metric": "kills",
+      "policy": "completionist",
+      "stat": "median",
+      "min": 30,
+      "status": "report",
+      "basis": "today 19; roster packs plus rogues and activities; number to be replaced by the roster thread's",
+      "enforced_from": [
+        "Spillway enemy roster",
+        "Rogue fleet mini-bosses",
+        "Spillway secrets"
+      ]
+    },
+    {
+      "id": "kills-explore-pays",
+      "area": "In-run growth",
+      "source": "bots",
+      "label": "completionist kills above skipper",
+      "metric": "kills",
+      "stat": "median_gap",
+      "min": 1,
+      "status": "report",
+      "basis": "principle 4: more play, more fights; number to be replaced by the roster thread's",
+      "enforced_from": [
+        "Spillway enemy roster"
+      ]
+    },
+    {
+      "id": "drops-skipper",
+      "area": "In-run growth",
+      "source": "bots",
+      "label": "skipper parts at Brindle",
+      "metric": "parts",
+      "policy": "skipper",
+      "stat": "median",
+      "min": 2,
+      "status": "gate",
+      "basis": "one part a stage on the beeline (today 2)"
+    },
+    {
+      "id": "drops-completionist",
+      "area": "In-run growth",
+      "source": "bots",
+      "label": "completionist parts at Brindle",
+      "metric": "parts",
+      "policy": "completionist",
+      "stat": "median",
+      "min": 4,
+      "status": "gate",
+      "basis": "today 5; exploring pays"
+    },
+    {
+      "id": "drops-explore-pays",
+      "area": "In-run growth",
+      "source": "bots",
+      "label": "completionist parts above skipper",
+      "metric": "parts",
+      "stat": "median_gap",
+      "min": 1,
+      "status": "gate",
+      "basis": "principle 5 and 6: exploring and collecting pay"
+    },
+    {
+      "id": "panels-at-brindle",
+      "area": "In-run growth",
+      "source": "bots",
+      "label": "grey panels picked by Brindle",
+      "metric": "panels",
+      "stat": "median",
+      "status": "report",
+      "basis": "#398's drop sim owns the band; bots need --panel-log=1",
+      "band_from": {
+        "file": "sketches/core-loop/tests/panels_drop_sim_test.gd",
+        "const": "RUN_BAND"
+      },
+      "enforced_from": [
+        "Grey item panels on the ball (#398)"
+      ]
+    },
+    {
+      "id": "rogue-reached",
+      "area": "Wardens and bosses",
+      "source": "bots",
+      "label": "a rogue fight on 1 run in 2",
+      "metric": "rogues_beaten",
+      "stat": "share_positive",
+      "min": 0.5,
+      "status": "report",
+      "basis": "unit 8 acceptance",
+      "enforced_from": [
+        "Rogue fleet mini-bosses"
+      ]
+    },
+    {
+      "id": "secrets-completionist",
+      "area": "Progression across runs",
+      "source": "bots",
+      "label": "completionist finds a fresh-profile secret",
+      "metric": "secrets_found",
+      "policy": "completionist",
+      "stat": "share_positive",
+      "min": 0.5,
+      "status": "report",
+      "basis": "unit 15: 4 of 8 seeds",
+      "enforced_from": [
+        "Spillway secrets"
+      ]
+    },
+    {
+      "id": "secrets-skipper",
+      "area": "Progression across runs",
+      "source": "bots",
+      "label": "skipper never finds one",
+      "metric": "secrets_found",
+      "policy": "skipper",
+      "stat": "max",
+      "max": 0,
+      "status": "report",
+      "basis": "unit 15",
+      "enforced_from": [
+        "Spillway secrets"
+      ]
+    },
+    {
+      "id": "beats-present",
+      "area": "Pilots",
+      "source": "beats",
+      "label": "every story beat played on a fresh profile",
+      "check": "present",
+      "status": "report",
+      "basis": "units 3 and 4",
+      "enforced_from": [
+        "Spillway story beats",
+        "Brindle arrival, rout and Tarn sign-on"
+      ]
+    },
+    {
+      "id": "beats-repeat-length",
+      "area": "Pilots",
+      "source": "beats",
+      "label": "story beats total on a repeat run",
+      "check": "repeat_total",
+      "unit": "s",
+      "status": "report",
+      "basis": "BUDGETS.md and the pacing file's beats_repeat_max_s",
+      "enforced_from": [
+        "Spillway story beats",
+        "Brindle arrival, rout and Tarn sign-on"
+      ],
+      "max_from_pacing": "beats_repeat_max_s"
+    },
+    {
+      "id": "beats-each-short",
+      "area": "Pilots",
+      "source": "beats",
+      "label": "each beat under 6 s",
+      "check": "each_max",
+      "max": 6,
+      "unit": "s",
+      "status": "report",
+      "basis": "units 3 and 4: each under 6 s and skippable",
+      "enforced_from": [
+        "Spillway story beats",
+        "Brindle arrival, rout and Tarn sign-on"
+      ]
+    },
+    {
+      "id": "placeholders",
+      "area": "Zero placeholders",
+      "source": "placeholders",
+      "label": "placeholders a world 1 run can show",
+      "max": 0,
+      "status": "gate",
+      "basis": "goal: zero placeholders; other worlds' park rows are left out"
+    },
+    {
+      "id": "frames",
+      "area": "Frames in budget",
+      "source": "frames",
+      "label": "dam, flume and Slag Bowl inside the frame budget",
+      "status": "report",
+      "basis": "BUG-BAR budget via frametime-check summary.json",
+      "enforced_from": [
+        "World 1 frame times (4080)"
+      ]
+    },
+    {
+      "id": "difficulty",
+      "area": "Difficulty and pacing",
+      "source": "challenge",
+      "label": "Novice, Learner, Expert on w1, w2, Brindle, park1, park2",
+      "status": "gate",
+      "cadence": "sitting",
+      "basis": "DECISIONS section 5, 19 Oct 01:58; 24 seeds"
+    }
+  ],
+  "beat_rows_file": "sketches/core-loop/src/presentation/flourish_rows.gd",
+  "brindle_phase_names_file": "sketches/core-loop/src/boss/boss_rules.gd"
+}
