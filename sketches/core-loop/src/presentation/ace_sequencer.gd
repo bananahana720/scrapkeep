@@ -168,11 +168,10 @@ func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 	stems = manifest["stems"]
 	level = db_to_linear(float(manifest.get("level_db", 0.0)))
 	breath = String(manifest.get("breath_default", "hard"))
-	var dir := path.get_base_dir()
 	for id in clips:
 		var clip: Dictionary = clips[id]
 		for stem in stems:
-			var file := dir.path_join(String(clip["files"][stem]))
+			var file := MusicRows.stem_file(path, String(clip["files"][stem]))
 			if not FileAccess.file_exists(file):
 				missing = file
 				_report()

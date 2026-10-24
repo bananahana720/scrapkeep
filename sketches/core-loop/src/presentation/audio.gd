@@ -223,6 +223,8 @@ var camp_open := false
 # (a test's missing package) keeps its pick across stage entries (fix round D, 2026-10-04).
 var _ace_row_manifest := ""
 var _ace_from := ""
+# The transport sample the block engine.render is rendering began at, -1 outside a render.
+var _render_from := -1
 # The file a failed load named, "" when the package loaded or was never asked for.
 var ace_missing := ""
 var _ace_failed := false
@@ -712,7 +714,9 @@ func _transport_usec() -> int:
 func _render_music(frames: int, ace_live: bool) -> void:
 	var from := engine.clock
 	_unmute_for_handover(frames)
+	_render_from = from
 	engine.render(frames)
+	_render_from = -1
 	var music := _ace_render(frames, ace_live)
 	_fade_in_band(from, frames, engine.out_landmark)
 	if not ace_live:
@@ -863,7 +867,9 @@ func ace_ready() -> bool:
 		loaded.fading.append_array(ace.fading)
 	ace = loaded
 	_ace_from = ace_manifest
-	ace.clock = engine.clock
+	# A package swapped in from inside engine.render (a commit's landmark tune) has not
+	# rendered this block yet: it starts where the block did, or it runs ahead of the transport.
+	ace.clock = _render_from if _render_from >= 0 else engine.clock
 	ace.set_breath(breath())
 	ace.ultimate_lift = _ult_lift
 	_prime_band_parameters()

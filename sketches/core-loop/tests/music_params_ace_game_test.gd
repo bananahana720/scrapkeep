@@ -9,6 +9,7 @@ const Rows := preload("res://src/presentation/music_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const T := preload("res://tests/support/t.gd")
+const AceStub := preload("res://tests/support/ace_stub.gd")
 
 var t := T.new("music_params_ace_game_test")
 
@@ -20,6 +21,11 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
+	# Without the gitignored Oggs (a cloud checkout), the stub stem tree stands in so the ACE
+	# parameter path still runs.
+	if not Array(DirAccess.get_files_at("res://assets/music_ace/spillway")).any(func(name): return name.ends_with(".ogg")):
+		AceStub.install()
+		print("ACE stems: stub tone tree (no Oggs in this checkout)")
 	var game := Game.new()
 	game.test_mode = true
 	game.table = "park"
@@ -34,8 +40,7 @@ func _run() -> void:
 	audio.set_process(false)
 	audio._flush_flow()
 	var engine = audio.engine
-	var present: bool = Array(DirAccess.get_files_at("res://assets/music_ace/spillway")).any(func(name): return name.ends_with(".ogg"))
-	if not present:
+	if not Rows.pack_on_disk(audio.ace_manifest):
 		t.check("absent ACE stems retain audible synth fallback", not audio.ace_playing() and not engine.band_muted)
 		_pump_to(audio, engine.clock + Harmony.BAR)
 		t.check("fallback pump produces music", Array(audio.out_music).any(func(v): return v.length_squared() > 0.0))
@@ -102,6 +107,9 @@ func _run() -> void:
 	game.player.reset_to(graph.position(graph.beacon_node))
 	enemy.global_position = game.player.ball_position() + game.ctx.aim_forward() * 0.1
 	_pump_to(audio, boundary + phrase + 8192)
+	# Full approach is the dam's reach: its landmark tune replaces the stage pack.
+	t.check("committed approach swaps in the landmark package on the transport clock", audio.ace != ace and audio._ace_from.contains("landmark_spillway_dam") and audio.ace.clock == engine.clock)
+	ace = audio.ace
 	t.eq("ACE approach uses committed graph feed", float(ace.parameters.get("approach", -1.0)), 1.0)
 	t.check("record-selected landmark hum survives handover", engine.band_muted and engine.landmark_hum_sound == String(EventKinds.world_row("landmark_hum").sound) and Array(engine.out_landmark).any(func(v): return v.length_squared() > 0.0))
 	t.check("audible handover mix includes landmark hum", _hum_in_mix(audio))
@@ -118,9 +126,11 @@ func _run() -> void:
 	game.run.mass = 20.0
 	_pump_to(audio, boundary + phrase * 2 - 8192)
 	t.check("ACE armour waits for phrase", _other_target(ace) > 0.0)
+	# Drums ride rolling speed (the frozen ball's is 0), so armour is judged by what it moves.
+	var kit := _targets(ace, ["drums", "bass"])
 	_pump_to(audio, boundary + phrase * 2 + 8192)
 	t.eq("low armour strips ACE other stem", _other_target(ace), 0.0)
-	t.check("low armour retains recorded drums and bass", ace.voices.filter(func(v): return v.stem in ["drums", "bass"]).all(func(v): return v.target > 0.0))
+	t.check("low armour retains recorded drums and bass", _targets(ace, ["drums", "bass"]) == kit and kit[1].all(func(g): return g > 0.0), str(kit))
 	t.eq("low armour releases audible landmark hum", engine.layer_target(engine.LANDMARK_HUM), 0.0)
 	game.run.mass = 100.0
 	_pump_to(audio, boundary + phrase * 3 + 8192)
@@ -163,6 +173,10 @@ func _other_target(ace) -> float:
 		if voice.stem == "other":
 			return voice.target
 	return -1.0
+
+func _targets(ace, stems: Array) -> Array:
+	return stems.map(func(stem): return ace.voices.filter(func(v): return v.stem == stem).map(func(v): return v.target))
+
 
 func _profile_other(ace) -> float:
 	var row: Dictionary = ace.manifest.profiles[ace.sections[ace.section].profile].other
