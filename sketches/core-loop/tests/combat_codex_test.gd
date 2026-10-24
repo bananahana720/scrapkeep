@@ -372,7 +372,7 @@ func _w10_pack_tricks(home: Vector3) -> void:
 			node.queue_free()
 
 
-# 2026-10-24 (Spillway roster, #402): the four world 1 crews and the soaked armour, each
+# 2026-10-24 (Spillway roster, PR #402): the four world 1 crews and the soaked armour, each
 # through its own detector with the ball parked grounded at home. The FAST rows set the tier
 # the unit reads on that one call and put it back after.
 func _spillway_tricks(home: Vector3) -> void:
@@ -387,8 +387,8 @@ func _spillway_tricks(home: Vector3) -> void:
 	player.state.tier = SpeedTier.FAST
 	layer._live(layer.field.until_pulse() + 0.01)
 	player.state.tier = tier
-	_report("mat_slip", _combat.discovered.has("mat_slip") and layer.slipped == 1 and layer.jolts == 0,
-		"a FAST ball on a jolt layer's mat slipped its pulse (slipped %d, jolts %d)" % [layer.slipped, layer.jolts])
+	_report("mat_slip", _combat.discovered.has("mat_slip") and layer.field.outcomes == ["speed"] and layer.jolts == 0,
+		"a FAST ball on a jolt layer's mat slipped its pulse by speed (outcomes %s, jolts %d)" % [layer.field.outcomes, layer.jolts])
 
 	fleet.holds.clear()
 	var flap: Node3D = _w9_spawn("ramp_flipper", home + Vector3(-6.0, 0.0, 6.0))
@@ -399,8 +399,8 @@ func _spillway_tricks(home: Vector3) -> void:
 	flap._t = 0.0
 	flap._go_live()
 	player.state.tier = tier
-	_report("flap_ride", _combat.discovered.has("flap_ride") and flap.rides == 1 and not fleet.holds.held(flap),
-		"a FAST ball rode a sluice flap, never held (rides %d)" % flap.rides)
+	_report("flap_ride", _combat.discovered.has("flap_ride") and flap.rides == 1 and flap.broken_by == "speed" and not fleet.holds.held(flap),
+		"a FAST ball rode a sluice flap, never held (rides %d, broken by %s)" % [flap.rides, flap.broken_by])
 
 	fleet.holds.clear()
 	fleet.holds.immune_left = 0.0
@@ -424,6 +424,8 @@ func _spillway_tricks(home: Vector3) -> void:
 	var touched: int = boom.pops
 	_report("boom_pop", _combat.discovered.has("boom_pop") and touched >= 1 and boom.pinned == 0,
 		"a FAST ball in a boom tender's lane burst %d float(s), never pinned" % touched)
+	# The ball stands in at each float in turn, the pass a full FAST sweep down the lane makes;
+	# the lane, tier and SWEEP gates are the boom_pop row's above.
 	for i in boom.FLOAT_OUT.size():
 		boom._bowl_through(boom.float_position(i))
 	_report("boom_strike", _combat.discovered.has("boom_strike") and boom.strikes == 1,
