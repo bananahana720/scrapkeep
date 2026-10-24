@@ -19,7 +19,9 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 # the LMB glyph has no letters). The fight-case budget stays 25 (LEGIBILITY.md:114).
 # Re-pinned 11 -> 16 on 2026-10-17 (FIRST-TIMER audit): a fresh profile's first frame now shows
 # the drive lesson (ui/first_steps.gd), the four drive keycaps and DRIVE at the ball.
-const HUD_WORDS := 16
+# Re-pinned 16 -> 17 on 2026-10-24 (#445, actives on by default): the racked active's F chip
+# adds its keycap word. The fight-case budget stays 25 (ruling l).
+const HUD_WORDS := 17
 
 var _game
 var _frames := 0

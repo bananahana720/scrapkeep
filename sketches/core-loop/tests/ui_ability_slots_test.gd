@@ -30,6 +30,9 @@ const PILOTS := ["sable", "rivet", "kest"]
 # and 3 on the number keys, then the Shift and Ctrl chips; the movement chip reads Shift for
 # every pilot, Sable included (her chip is her boost). Was LMB, RMB or Shift, F, Ctrl.
 const KEYS := ["key_1", "key_2", "key_3", "key_shift", "key_ctrl"]
+# Re-pinned 2026-10-24 (#445, actives on by default): a run opens with the starter active racked,
+# so its F chip follows the five class slots (active_rack.gd slot_record).
+const ACTIVE_CHIP := {"id": "active_scrap_rocket", "icon": "cat_damage", "key": "key_f"}
 const CHARGE_TICKS := 45
 
 var _game
@@ -75,8 +78,11 @@ func _physics_process(_delta: float) -> bool:
 				var distinct := {}
 				for id in want:
 					distinct[id] = true
-				_report("%s slots" % pilot, AbilitySlots.valid(list) and distinct.size() == 5 and _field(list, "icon") == want and _field(list, "key") == KEYS
-						and _field(list, "slot") == ["weapon", "special", "line", "movement", "smash"] and _field(list, "number") == [1, 2, 3, 0, 0]
+				var chip: Dictionary = list[5] if list.size() == 6 else {}
+				var own: Array = list.slice(0, 5)
+				_report("%s slots" % pilot, AbilitySlots.valid(list) and distinct.size() == 5 and _field(own, "icon") == want and _field(own, "key") == KEYS
+						and _field(own, "slot") == ["weapon", "special", "line", "movement", "smash"] and _field(own, "number") == [1, 2, 3, 0, 0]
+						and ACTIVE_CHIP.keys().all(func(k): return chip.get(k) == ACTIVE_CHIP[k])
 						and want.all(func(id): return Icons.has(id) or Icons.EXTRA.has(id)),
 					"ids %s icons %s keys %s states %s" % [_field(list, "id"), _field(list, "icon"), _field(list, "key"), _field(list, "state")])
 				_class += 1
