@@ -50,7 +50,8 @@ const median = (xs) => {
   const m = Math.floor(s.length / 2);
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
-// A variant is "base" (no flag), a preset ("A", "A+D"), or a --tune payload ("hazard.boil_by_stage=2/2/0/0/0/0").
+// A variant is "base" (no flag: the shipped dials, silt boils on), a preset ("A", "A+D"), or a --tune payload
+// ("hazard.boil_by_stage=0/0/0/0/0/0" turns the boils off).
 const flag = (variant) => (variant === "base" ? [] : variant.includes("=") ? ["--tune=" + variant] : ["--pack-pressure=" + variant]);
 const slug = (variant) => variant.replace(/[^A-Za-z0-9-]+/g, "_");
 

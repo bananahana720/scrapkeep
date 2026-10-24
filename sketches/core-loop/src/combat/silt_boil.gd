@@ -14,9 +14,10 @@ const Roster := preload("res://src/combat/roster.gd")
 # (bait a crew into it). After a boil the silt rests REST plus a seeded 0 to JITTER seconds. Seeded per run
 # and stage, so a seed replays the same boils for the same rolling.
 #
-# The silt prices kiting, not the loops the game asks for: once the stage's Warden is engaged (its ring
-# holds the ball there) nothing boils, and an activity's own crew (an event pack, a camp brute, a relay's
-# minibosses) never counts as a fight. Only roaming packs do.
+# The silt prices kiting, not the loops the game asks for: nothing boils inside the ring of an engaged,
+# standing Warden (the fight holds the ball there), and an activity's own crew (an event pack, a camp
+# brute, a relay's minibosses) is no fight while it stays within SITE_LEASH of its site. Only roaming packs,
+# or a crew dragged off its site, start a boil.
 
 const FIGHT_RADIUS := 30.0
 const LOOP_WINDOW := 10.0
@@ -31,6 +32,9 @@ const ENEMY_DAMAGE := 25.0
 const ENEMY_TOSS := 14.0
 const REST := 4.0
 const JITTER := 2.0
+# Beyond the Warden's ring radius the ball is out of its fight; past this from its site a crew is roaming.
+const RING_MARGIN := 10.0
+const SITE_LEASH := 40.0
 
 signal rumbled(at: Vector3, seconds_until: float)
 signal erupted(at: Vector3, hit_ball: bool, enemies: int)
@@ -100,7 +104,7 @@ func step(delta: float, enemies: Array) -> void:
 			_erupt(k, enemies)
 		return
 	_rest -= delta
-	if _rest > 0.0 or _ctx.flow.engaged() or not _looping() or not _fighting(ball, enemies):
+	if _rest > 0.0 or _in_warden_ring(ball) or not _looping() or not _fighting(ball, enemies):
 		return
 	var at := PackPressure.predict(_ctx.player, WARN)
 	_ring = Telegraph.ring(_ctx.root, _terrain, Threat.Type.INSTANT, at, RADIUS)
@@ -118,19 +122,33 @@ func _looping() -> bool:
 	return path >= LOOP_PATH and _flat(_samples[-1] - _samples[0]).length() < LOOP_NET
 
 
+func _in_warden_ring(ball: Vector3) -> bool:
+	var flow = _ctx.flow
+	if not flow.engaged():
+		return false
+	var beacon = flow.get("beacon")
+	var warden = flow.get("warden")
+	if beacon == null or warden == null or not is_instance_valid(warden):
+		return false
+	return _flat(beacon.global_position - ball).length() <= float(beacon.radius) + RING_MARGIN
+
+
 func _fighting(ball: Vector3, enemies: Array) -> bool:
-	var crews := _activity_crews()
+	var crews = null
 	for enemy in enemies:
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
-		if _set_piece(enemy) or crews.has(enemy):
+		if _set_piece(enemy) or _flat(enemy.global_position - ball).length() > FIGHT_RADIUS:
 			continue
-		if _flat(enemy.global_position - ball).length() <= FIGHT_RADIUS:
-			return true
+		if crews == null:
+			crews = _activity_crews()
+		if crews.has(enemy) and _flat(enemy.global_position - crews[enemy]).length() <= SITE_LEASH:
+			continue
+		return true
 	return false
 
 
-# Every enemy an activity site holds: its pack, its brute and its minibosses.
+# Every enemy an activity site holds (its pack, its brute and its minibosses), to its site's position.
 func _activity_crews() -> Dictionary:
 	var out := {}
 	var world = _ctx.root.get_node_or_null("World") if _ctx.root != null else null
@@ -142,7 +160,7 @@ func _activity_crews() -> Dictionary:
 			continue
 		for enemy in site.pack + site.minibosses + [site.brute]:
 			if enemy != null and is_instance_valid(enemy):
-				out[enemy] = true
+				out[enemy] = site.global_position
 	return out
 
 

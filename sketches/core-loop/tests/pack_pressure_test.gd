@@ -45,8 +45,14 @@ class FakeTuning:
 		return CRUISE
 
 
+class FakeBeacon extends Node3D:
+	var radius := 30.0
+
+
 class FakeFlow:
 	var warden_engaged := false
+	var beacon: Node3D = null
+	var warden: Node3D = null
 
 	func in_play() -> bool:
 		return true
@@ -77,7 +83,7 @@ class FakeCtx:
 	var root: Node3D
 
 
-class FakeSite:
+class FakeSite extends Node3D:
 	var pack: Array = []
 	var minibosses: Array = []
 	var brute = null
@@ -262,15 +268,26 @@ func _boils() -> void:
 	_t.eq("25 a crew it kills is the silt's", enemy.get("last_damage_source"), "silt_boil")
 	boils.reset(true)
 	_t.eq("26 a stage entry clears the counts and any ring", [boils.boils, boils._ring], [0, null])
-	_t.eq("26b an engaged Warden's fight never boils", _loop_boils(boils, ctx, enemy, func(): ctx.flow.warden_engaged = true), 0)
+	var beacon := FakeBeacon.new()
+	var warden := Node3D.new()
+	ctx.root.add_child(beacon)
+	ctx.root.add_child(warden)
+	ctx.flow.beacon = beacon
+	ctx.flow.warden = warden
+	_t.eq("26b a loop inside an engaged Warden's ring never boils", _loop_boils(boils, ctx, enemy, func(): ctx.flow.warden_engaged = true), 0)
+	beacon.position = Vector3(200.0, 0.0, 0.0)
+	_t.eq("26e kiting a roaming pack away from the engaged Warden still boils", _loop_boils(boils, ctx, enemy, func(): pass), 1)
 	ctx.flow.warden_engaged = false
 	var world := FakeWorld.new()
 	world.name = "World"
 	ctx.root.add_child(world)
 	var site := FakeSite.new()
+	ctx.root.add_child(site)
 	site.pack = [enemy]
 	world.activities.sites = [site]
-	_t.eq("26c an activity's own crew is not a fight to boil", _loop_boils(boils, ctx, enemy, func(): pass), 0)
+	_t.eq("26c an activity's own crew on its site is not a fight to boil", _loop_boils(boils, ctx, enemy, func(): pass), 0)
+	site.position = Vector3(0.0, 0.0, 150.0)
+	_t.eq("26f a crew dragged off its site is", _loop_boils(boils, ctx, enemy, func(): pass), 1)
 	world.activities.sites = []
 	_t.eq("26d a roaming pack still is", _loop_boils(boils, ctx, enemy, func(): pass), 1)
 	ChallengeDials.set_overrides({})

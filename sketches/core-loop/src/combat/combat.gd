@@ -346,7 +346,7 @@ var _actions := {}
 # declared order and then its hooks; the primer mesh and the companion ram ride as "hit" hooks.
 var door := DamageDoor.new()
 # The world 1 pack pressure experiments (pack_pressure.gd): chasers spawned under a flank dial, every second
-# one a flanker; the churned silt and silt boils, idle at their identity dials.
+# one a flanker; the churned silt (idle at its identity dial) and the silt boils (on in world 1).
 var _pressure_chasers := 0
 var churn
 var boils
