@@ -68,9 +68,10 @@ static func team_of_source(source: String) -> String:
 
 
 # The one crit rule, read by juice.gd for the stop, shake and burst and by the number: a
-# part softer than the body plating (a weak point) or a dealt figure above the punch.
+# part softer than the body plating (a weak point) or a dealt figure above the punch, read
+# before the strike and armour multipliers (base_dealt), which are not crits on their own.
 static func is_crit(result: Dictionary, body_plating: float) -> bool:
-	var dealt := float(result.get("dealt", 0.0))
+	var dealt := float(result.get("base_dealt", result.get("dealt", 0.0)))
 	var weak := String(result.get("part", "")) != "" and float(result.get("plating", 0.0)) < body_plating
 	return weak or dealt > float(result.get("punch", dealt)) * 1.01
 

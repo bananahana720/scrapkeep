@@ -160,6 +160,12 @@ func on_struck(kind_hit: String, _part: String, result: Dictionary) -> void:
 		_end()
 
 
+# True when on_struck will pop a plate for this hit, so it removes nothing (combat marks the
+# result "absorbed" before the hit is announced, and no damage number rises for it).
+func absorbs_hit(result: Dictionary) -> bool:
+	return bool(result.get("full", false)) and plates > 0
+
+
 # The popped plate took that hit whole: the body is untouched this once.
 func take_damage(amount: float) -> float:
 	if _absorb:

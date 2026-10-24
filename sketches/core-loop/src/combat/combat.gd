@@ -671,7 +671,8 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 	# closed Warden guard, volleys and landing together (SKILL-BAR section 12, item 7).
 	if ultimate != null and ultimate.active() and kind in CONTACT_KINDS and enemy.has_method("_apply_posture") \
 			and enemy.has_method("staggered") and not enemy.staggered():
-		ultimate.warden_posture(enemy, resolve(enemy, kind, force, part))
+		ultimate.warden_posture(enemy, resolve(enemy, kind, force, part, 0.0,
+			panel_punch(kind, _classify_source(kind, source if source != "" else _forced_source))))
 		return
 	var dunk := _dunk_bonus(enemy, kind)
 	# A reel impact or a dunk marks the body, so a kill it lands is a jackpot (grey panels).
@@ -700,8 +701,13 @@ func _door_armour(hit: Dictionary) -> void:
 func _door_caps(hit: Dictionary) -> void:
 	var enemy: Node3D = hit["enemy"]
 	var result: Dictionary = hit["result"]
+	# The plating rule's figure before the multipliers: the crit read compares this to the punch,
+	# so an arc mark or a weak armour read alone is not a crit (damage_numbers.gd is_crit).
+	result["base_dealt"] = float(result["dealt"])
 	result["dealt"] = float(result["dealt"]) * _strike_mult(enemy, hit["kind"], hit["cls"])
 	_read_armour(enemy, hit, result)
+	if enemy.has_method("absorbs_hit") and enemy.absorbs_hit(result):
+		result["absorbed"] = true
 	if hit["kind"] in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()) \
 			and float(_exposed[enemy.get_instance_id()]["until"]) <= _clock:
 		_exposed.erase(enemy.get_instance_id())
@@ -1385,10 +1391,11 @@ func punch_of(kind: String, force: float) -> float:
 
 
 # Punch Rivet panels' flat damage (build.panel_punch) for a hit of this kind and source class:
-# a weapon hit or a ball contact (the panel's "+damage per hit"); 0 for procs, specials and
-# actives, which read the build's punch_bonus themselves.
+# a weapon hit or the ball's own contact (the panel's "+damage per hit"); 0 for procs, for
+# specials (an ultimate's punches strike as "ram" with source "special") and for actives,
+# which read the build's punch_bonus themselves.
 func panel_punch(kind: String, cls: String) -> float:
-	if not (cls == "weapon" or kind in CONTACT_KINDS):
+	if not (cls == "weapon" or (kind in CONTACT_KINDS and cls in ["ram_or_contact", "drop_or_slam"])):
 		return 0.0
 	var build = ctx.build if ctx != null else null
 	if build == null or not build.has_method("panel_punch"):
@@ -1417,9 +1424,10 @@ func punch_now() -> float:
 # The tier reads base cruise like resolve()'s ram tier (tier_cruise), so a cruise up never
 # drops the preview below CRUISE (coordinator ruling 24 Oct, principle 5).
 func ram_punch_now() -> float:
-	if SpeedTier.of(ctx.player.state.velocity.length(), ctx.player.tuning.tier_cruise()) < SpeedTier.CRUISE:
+	var planar: float = ctx.player.planar_velocity().length()
+	if SpeedTier.of(planar, ctx.player.tuning.tier_cruise()) < SpeedTier.CRUISE:
 		return 0.0
-	return punch_of("ram", ctx.player.planar_velocity().length()) + panel_punch("ram", "ram_or_contact")
+	return punch_of("ram", planar) + panel_punch("ram", "ram_or_contact")
 
 
 # Build owns tuning mods (CONTRACTS). Combat reads its weapon keys live, at the moment
@@ -1471,8 +1479,8 @@ func would_crush(enemy: Node3D, kind: String, force: float) -> bool:
 		return false
 	if enemy.has_method("crushable") and not enemy.crushable():
 		return false
-	var result := resolve(enemy, kind, force)
 	var cls := _classify_source(kind, _forced_source)
+	var result := resolve(enemy, kind, force, "", 0.0, panel_punch(kind, cls))
 	var dealt: float = float(result["dealt"]) * _strike_mult(enemy, kind, cls)
 	# The armour read the strike will apply (_read_armour), asked without recording it (F005).
 	if bool(result.get("full", false)):

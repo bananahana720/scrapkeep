@@ -9,6 +9,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const T := preload("res://tests/support/t.gd")
 
 # World 1 items and progression (Codex world 1 review on main d561e6eb, 24 Oct; design #2, #3,
@@ -134,13 +135,31 @@ func _check_punch_rivet() -> void:
 	_t.check("rivets add to a weapon hit", bolt_r - bolt >= RIVETS - 0.001, "%.2f -> %.2f" % [bolt, bolt_r])
 	_t.check("rivets add to a ram", ram_r - ram >= RIVETS - 0.001, "%.2f -> %.2f" % [ram, ram_r])
 	_t.near("rivets leave a proc alone", proc_r, proc, 0.001)
+	# A special striking as "ram" keeps the panels' heft (their mass) but not their punch.
+	var special_r := _loss("ram", 20.0, "special")
+	_t.near("rivets leave a special's ram alone", special_r, ram_r - RIVETS, 0.001)
+	_set_rivets(0)
+	# would_crush asks the same punch the strike lands: a chaser between the bare ram and the
+	# riveted ram is crushed, so the ball rolls through the kill instead of bouncing off it.
+	_set_rivets(RIVETS)
+	var enemy := _chaser(-8.0)
+	enemy.hp = ram + RIVETS * 0.5
+	var crush: bool = _game.combat.would_crush(enemy, "ram", 20.0)
+	_game.combat.strike(enemy, "ram", 20.0)
+	var killed: bool = not is_instance_valid(enemy) or enemy.is_dead()
+	_t.check("would_crush matches a riveted ram's kill", crush and killed, "would_crush %s, killed %s" % [crush, killed])
+	if is_instance_valid(enemy):
+		enemy.queue_free()
 	_set_rivets(0)
 
 
 func _check_shown_damage() -> void:
 	var shown := []
+	var results := []
 	var listen := func(enemy: Node3D, kind: String, force: float):
-		shown.append(float(_game.combat.resolve(enemy, kind, force)["dealt"]))
+		var result: Dictionary = _game.combat.resolve(enemy, kind, force)
+		results.append(result)
+		shown.append(float(result["dealt"]))
 	_game.ctx.events.enemy_struck.connect(listen)
 	var enemy := _chaser(8.0)
 	var before: float = enemy.hp
@@ -151,7 +170,25 @@ func _check_shown_damage() -> void:
 		"lost %.2f of %.1f, read %s" % [lost, PUNCH, enemy.get_meta("armour_read", "")])
 	_t.check("the shown damage is the damage removed", shown.size() == 1 and absf(float(shown[0]) - lost) < 0.001,
 		"shown %s, removed %.2f" % [shown, lost])
+	_t.check("a weak armour read alone is no crit", results.size() == 1 and not DamageNumbers.is_crit(results[0], 0.0),
+		"%s" % [results])
 	enemy.queue_free()
+	# A drill crew's plate takes the first breaking hit whole: the hit is marked absorbed, so no
+	# number rises for the 0 it removes.
+	results.clear()
+	_game.ctx.events.enemy_struck.connect(listen)
+	var terrain = _game.ctx.terrain
+	var at: Vector3 = terrain.spawn_point(1) + Vector3(-16.0, 0.0, 14.0)
+	var crew: Node3D = _game.ctx.spawner.spawn_enemy("drill_crew", terrain.drop_point(at.x, at.z, 1.5))
+	crew.set_process(false)
+	crew.set_physics_process(false)
+	var hp_before: float = crew.hp
+	_game.combat.strike(crew, "arc", 200.0)
+	_game.ctx.events.enemy_struck.disconnect(listen)
+	_t.check("a plate-absorbed hit is marked and removes nothing",
+		results.size() == 1 and bool(results[0].get("absorbed", false)) and is_equal_approx(float(crew.hp), hp_before),
+		"absorbed %s, hp %.1f -> %.1f" % [results[0].get("absorbed", false) if results.size() > 0 else "-", hp_before, crew.hp])
+	crew.queue_free()
 
 
 func _check_ram_preview() -> void:
