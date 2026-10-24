@@ -32,11 +32,8 @@ const PAGE_WORDS := {"display": "Display", "controls": "Controls", "look": "Look
 const TRIGGER_VERBS := ["fire", "harpoon"]
 const TRIGGER_PULL := 0.6
 # Stick clicks are bindable on top of the glyphed buttons; the table has no pad glyph for
-# them, so the row draws a plain L3 or R3 cap. The d-pad's left, up and right are the pick's
-# defaults (SKILL-BAR section 6), so they bind too, drawn as plain D-LEFT, D-UP and D-RIGHT caps;
-# its down and Back stay with the menus.
-const PAD_EXTRA := {JOY_BUTTON_LEFT_STICK: "key_l3", JOY_BUTTON_RIGHT_STICK: "key_r3",
-	JOY_BUTTON_DPAD_LEFT: "key_d-left", JOY_BUTTON_DPAD_UP: "key_d-up", JOY_BUTTON_DPAD_RIGHT: "key_d-right"}
+# them, so the row draws a plain L3 or R3 cap. The d-pad has its own glyphs (Glyphs.PAD_BUTTONS).
+const PAD_EXTRA := {JOY_BUTTON_LEFT_STICK: "key_l3", JOY_BUTTON_RIGHT_STICK: "key_r3"}
 # The look rows: the setting each steps, its words, its values low to high, and what a shown
 # percent is measured against (0 shows on/off).
 const LOOK := [

@@ -13,11 +13,14 @@ const MOUSE := ["key_lmb", "key_rmb"]
 const LABELS := {"key_ctrl": "Ctrl", "key_space": "Space", "key_shift": "Shift", "key_tab": "Tab",
 	"pad_a": "A", "pad_b": "B", "pad_x": "X", "pad_y": "Y", "pad_lb": "LB", "pad_rb": "RB",
 	"pad_lt": "LT", "pad_rt": "RT", "pad_ls": "L", "pad_rs": "R", "pad_start": "Start",
-	"key_comma": ",", "key_period": ".", "key_slash": "/", "key_semicolon": ";"}
+	"key_comma": ",", "key_period": ".", "key_slash": "/", "key_semicolon": ";",
+	"pad_dl": "D-pad left", "pad_du": "D-pad up", "pad_dr": "D-pad right", "pad_dd": "D-pad down"}
 # Pad caps drawn round: the face buttons and the sticks. The shoulders, triggers and Start
 # are rounded caps like the keys.
 const PAD_ROUND := ["pad_a", "pad_b", "pad_x", "pad_y", "pad_ls", "pad_rs"]
 const PAD := 7.0
+# D-pad caps are a picture, not letters: a dim cross with the pressed arm lit, pointing its way.
+const DPAD := {"pad_dl": Vector2.LEFT, "pad_du": Vector2.UP, "pad_dr": Vector2.RIGHT, "pad_dd": Vector2.DOWN}
 
 
 static func is_mouse(key: String) -> bool:
@@ -40,7 +43,7 @@ static func font_size(height: float) -> int:
 static func size_of(key: String, height := 24.0) -> Vector2:
 	if is_mouse(key):
 		return Vector2(height * 0.8, height)
-	if key in PAD_ROUND:
+	if key in PAD_ROUND or DPAD.has(key):
 		return Vector2(height, height)
 	var w := UiFonts.width(label(key), font_size(height))
 	return Vector2(maxf(height, w + PAD * 2.0), height)
@@ -64,6 +67,9 @@ static func draw(canvas: CanvasItem, at: Vector2, key: String, color: Color, hei
 	box.border_width_bottom = 4
 	box.set_corner_radius_all(int(height * 0.5) if key in PAD_ROUND else int(height * 0.2))
 	canvas.draw_style_box(box, rect)
+	if DPAD.has(key):
+		_draw_dpad(canvas, at, DPAD[key], color, height)
+		return rect
 	var fs := font_size(height)
 	var text := label(key)
 	var font := UiFonts.bold()
@@ -72,6 +78,17 @@ static func draw(canvas: CanvasItem, at: Vector2, key: String, color: Color, hei
 	return rect
 
 
-# What a player reads off the key: its label, or nothing for a mouse glyph.
+static func _draw_dpad(canvas: CanvasItem, at: Vector2, lit: Vector2, color: Color, height: float) -> void:
+	var arm := height * 0.26
+	var reach := height * 0.36
+	var dim := Color(color, 0.25)
+	canvas.draw_rect(Rect2(at - Vector2(reach, arm * 0.5), Vector2(reach * 2.0, arm)), dim)
+	canvas.draw_rect(Rect2(at - Vector2(arm * 0.5, reach), Vector2(arm, reach * 2.0)), dim)
+	var tip := at + lit * reach
+	var across := Vector2(lit.y, lit.x).abs()
+	canvas.draw_rect(Rect2(at.min(tip) - across * arm * 0.5, lit.abs() * reach + across * arm), color)
+
+
+# What a player reads off the key: its label, or nothing for a mouse glyph or a D-pad picture.
 static func words(key: String) -> PackedStringArray:
-	return PackedStringArray() if is_mouse(key) else PackedStringArray([label(key)])
+	return PackedStringArray() if is_mouse(key) or DPAD.has(key) else PackedStringArray([label(key)])

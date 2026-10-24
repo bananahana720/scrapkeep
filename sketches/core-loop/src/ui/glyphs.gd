@@ -12,6 +12,8 @@ static var device := "kbm"
 const PAD_BUTTONS := {
 	JOY_BUTTON_A: "pad_a", JOY_BUTTON_B: "pad_b", JOY_BUTTON_X: "pad_x", JOY_BUTTON_Y: "pad_y",
 	JOY_BUTTON_LEFT_SHOULDER: "pad_lb", JOY_BUTTON_RIGHT_SHOULDER: "pad_rb", JOY_BUTTON_START: "pad_start",
+	JOY_BUTTON_DPAD_LEFT: "pad_dl", JOY_BUTTON_DPAD_UP: "pad_du", JOY_BUTTON_DPAD_RIGHT: "pad_dr",
+	JOY_BUTTON_DPAD_DOWN: "pad_dd",
 }
 const PAD_TRIGGERS := {JOY_AXIS_TRIGGER_LEFT: "pad_lt", JOY_AXIS_TRIGGER_RIGHT: "pad_rt"}
 # The sticks stand for the roll and look verbs; on the keyboard these keep their table glyph.
