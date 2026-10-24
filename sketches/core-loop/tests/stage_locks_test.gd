@@ -18,6 +18,9 @@ const T := preload("res://tests/support/t.gd")
 #   counts only when every member is dead (a despawned member spoils it, a lone arrival is no
 #   pack), each counted pack lights a pip and plays warden_gate_pip, and the wanted count opens it
 #   (warden_gate_opened), after which a hit gains posture again;
+# - riders (ruling w): a crew's homeless rider (director.gd _home_pack_spots) neither holds nor
+#   spoils its count, a crew of riders alone counts as a plain pack, and the bot hand goes for the
+#   crew's housed members, the crew nearest to a pip first;
 # - lock: on the ground inside within_m of the beacon the yard shuts round the ball with its crew,
 #   the wall turns an escaping ball back, the last crew member down opens it, and the crew counts
 #   toward the gate; the Warden already awake leaves it unfired;
@@ -50,6 +53,7 @@ func _run() -> void:
 	seed(1)
 	_rows()
 	await _gate()
+	await _riders()
 	await _lock()
 	await _skipped_when_engaged()
 	await _off()
@@ -101,13 +105,13 @@ func _kill(enemy) -> void:
 		enemy._die()
 
 
-func _spawn_pack(game, kinds: Array, seq: int, near: Vector3) -> Array:
+func _spawn_pack(game, kinds: Array, seq: int, near: Vector3, riders := []) -> Array:
 	var out := []
 	for i in kinds.size():
 		var spot: Vector3 = near + Vector3(8.0 * i - 8.0, 0.0, -30.0)
 		var enemy = game.ctx.spawner.spawn_enemy(kinds[i], game.ctx.terrain.drop_point(spot.x, spot.z, 2.4))
 		enemy.set_meta("pack_seq", seq)
-		game.world.locks.note_member(enemy, seq)
+		game.world.locks.note_member(enemy, seq, i in riders)
 		out.append(enemy)
 	return out
 
@@ -164,6 +168,55 @@ func _gate() -> void:
 	game.ctx.spawner.strike(warden, "ram", 400.0)
 	await physics_frame
 	_t.check("open clamp: a hit gains posture", warden._posture.posture > before or warden._posture.staggered, "%s" % warden._posture.posture)
+	game.free()
+	await process_frame
+
+
+func _riders() -> void:
+	var game = await _game()
+	var locks = game.flow.gate
+	var warden = game.flow.warden
+	game.ctx.spawner.strike(warden, "ram", 400.0)
+	await physics_frame
+	var at: Vector3 = warden.global_position
+	# Two crews in reach: one housed member and a rider left, and two housed members.
+	var crew := _spawn_pack(game, ["chaser", "chaser", "lobber"], 201, at, [2])
+	var fresh := _spawn_pack(game, ["chaser", "chaser"], 202, at + Vector3(0.0, 0.0, 6.0))
+	_kill(crew[0])
+	await physics_frame
+	var ball: Vector3 = crew[1].global_position + Vector3(40.0, 0.0, 0.0)
+	_t.check("the hand finishes the crew nearest a pip, not its rider", locks.foe_for(ball) == crew[1], "%s" % locks.foe_for(ball))
+	_kill(crew[1])
+	for i in 2:
+		await physics_frame
+	_t.check("the rider still stands", is_instance_valid(crew[2]) and not crew[2].is_dead())
+	_t.eq("a crew with a live rider counts once its housed members are dead", locks.cleared, 1)
+	_t.eq("its pip plays", _count("warden_gate_pip"), 1)
+	_t.check("the hand leaves a counted crew's rider for the next crew", locks.foe_for(ball) in fresh, "%s" % locks.foe_for(ball))
+	crew[2].queue_free()
+	for f in fresh:
+		f.queue_free()
+	# A rider leaving alive spoils nothing; a crew of riders alone counts as a plain pack.
+	var gone := _spawn_pack(game, ["chaser", "lobber"], 203, at, [1])
+	gone[1].queue_free()
+	await physics_frame
+	_kill(gone[0])
+	for i in 2:
+		await physics_frame
+	_t.check("a rider gone alive spoils nothing: the clamp opens", not locks.locked(), "cleared %d" % locks.cleared)
+	game.free()
+	await process_frame
+	game = await _game()
+	locks = game.flow.gate
+	at = game.flow.warden.global_position
+	var only := _spawn_pack(game, ["chaser", "lobber"], 204, at, [0, 1])
+	_kill(only[0])
+	await physics_frame
+	_t.eq("a crew of riders waits for every member", locks.cleared, 0)
+	_kill(only[1])
+	for i in 2:
+		await physics_frame
+	_t.eq("a crew of riders counts like a plain pack", locks.cleared, 1)
 	game.free()
 	await process_frame
 
