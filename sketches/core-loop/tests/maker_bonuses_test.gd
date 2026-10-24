@@ -179,6 +179,29 @@ func _run() -> void:
 		"result": {"dealt": 10.0, "punch": 10.0, "plating": 0.0, "part": "", "full": true}})
 	await _sim(0.5)
 	_t.eq("20 a plain hit leaves no splinter", int(_build.makers.fires.get("noticed", 0)), 1)
+	# Rounded Up is live too (02). A crew fitter, which no player hit hurts, wakes neither bonus.
+	var rounds := int(_build.makers.fires.get("rounded_up", 0))
+	var fitter: Node3D = _combat.spawn_enemy("crew_fitter", _ground(-5.0, 0.0))
+	await _sim(0.05)
+	_build.makers._on_door_hit({"enemy": fitter, "kind": "ram", "killed": false,
+		"result": {"dealt": 23.0, "punch": 10.0, "plating": 0.0, "part": "", "full": true, "absorbed": true}})
+	_t.check("20b a crew fitter wakes neither Noticed nor Rounded Up",
+		_build.makers._splinters.is_empty() and int(_build.makers.fires.get("rounded_up", 0)) == rounds,
+		"splinters %d, rounded_up %d -> %d" % [_build.makers._splinters.size(), rounds, int(_build.makers.fires.get("rounded_up", 0))])
+	fitter.queue_free()
+	# A drill crew's plate takes a breaking hit whole, but Rounded Up's top-up still lands through it.
+	var crew: Node3D = _combat.spawn_enemy("drill_crew", _ground(0.0, 6.0))
+	if "live" in crew:
+		crew.live = Callable(self, "_never")
+	await _sim(0.05)
+	var crew_hp: float = crew.hp
+	_combat.strike(crew, "arc", 203.0)
+	var topped: float = crew_hp - float(crew.hp)
+	_t.check("20c a plate pop keeps Rounded Up's top-up",
+		int(_build.makers.fires.get("rounded_up", 0)) == rounds + 1 and topped > 0.0 and topped < 5.0,
+		"rounded_up %d -> %d, hp %.2f -> %.2f" % [rounds, int(_build.makers.fires.get("rounded_up", 0)), crew_hp, crew.hp])
+	_build.makers._splinters.clear()
+	crew.queue_free()
 	glass.queue_free()
 
 	# --- Bench Teeth (Redjaw Workshops) -----------------------------------------------------
