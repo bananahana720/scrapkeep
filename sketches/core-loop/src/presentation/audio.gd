@@ -670,7 +670,7 @@ func _pump(virtual_frames := -1) -> void:
 		_ace_arrival_at = -1
 		_ace_stage(stage, engine.next_bar())
 	if ace != null:
-		ace.set_boss_floor(_ace_boss_floor())
+		ace.set_fight_floor(_ace_fight_floor())
 	var ace_live := ace != null and ace.active()
 	_hand_over_band()
 	_release_grid()
@@ -870,14 +870,21 @@ func ace_ready() -> bool:
 	return true
 
 
-# The stems follow the band engine's boss layering: in a boss fight the melody is held at the
-# engine's section floor (brindle 0.8, 0.9, 1.0), whatever the threat feed says.
-func _ace_boss_floor() -> float:
-	return engine._floor() if engine.mode == MusicEngine.PLAY and engine.track in MusicEngine.BOSS_TRACKS else 0.0
+# The stems follow the band engine's fight layering: in a Warden, miniboss or boss fight the
+# melody is held at the engine's section floor (warden 0.55 to 1.0, miniboss 0.8, brindle 0.8
+# to 1.0), whatever the threat feed says. The Warden's open window is the held breath: the
+# engine's OPEN_GAINS drop every melodic layer there (outside a cadence), so the stems get no
+# floor either.
+func _ace_fight_floor() -> float:
+	if engine.mode != MusicEngine.PLAY or engine.track == "level":
+		return 0.0
+	if engine.track == "warden" and engine.section == "open" and engine._cadence_bar < 0:
+		return 0.0
+	return engine._floor()
 
 
 func _prime_band_parameters() -> void:
-	ace.set_boss_floor(_ace_boss_floor())
+	ace.set_fight_floor(_ace_fight_floor())
 	ace.parameter_enabled = engine.parameter_source.is_valid()
 	if ace.parameter_enabled:
 		ace.parameters = engine.parameter_committed_values.duplicate()
