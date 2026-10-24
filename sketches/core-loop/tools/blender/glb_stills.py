@@ -6,15 +6,18 @@ three-quarter, and renders each with Cycles on the CPU at a low sample count:
 
   blender -b -t 2 -P sketches/core-loop/tools/blender/glb_stills.py -- \
       --glb path/to/model.glb --out DIR [--size 960] [--samples 24] [--views front,side,three-quarter]
-      [--mount mantle.glb[,mantle.glb]] [--name label]
+      [--adaptive on|off] [--mount mantle.glb[,mantle.glb]] [--name label]
 
 --mount seats each mantle's Mount<Name> groups on the model's <Name> nodes with an identity
 transform, as hero_assets.gd mounts a Warden mantle on its kit (MANTLE_MOUNTS).
-Writes DIR/<name or glb base name>-<view>.png and prints STILL <path> per frame.
+--adaptive sets Cycles' adaptive sampling (left at Blender's default, on, when absent).
+Writes DIR/<name or glb base name>-<view>.png and prints RENDER_S <seconds> and STILL <path> per
+frame.
 """
 import math
 import os
 import sys
+import time
 
 import bpy
 from mathutils import Vector
@@ -28,7 +31,7 @@ VIEWS = {"front": 0.0, "side": 90.0, "three-quarter": 35.0, "rear": 180.0}
 def args():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     a = {"glb": "", "out": "", "size": 960, "samples": 24, "views": "front,side,three-quarter",
-         "mount": "", "name": ""}
+         "mount": "", "name": "", "adaptive": ""}
     if len(argv) % 2:
         raise SystemExit("glb_stills: every flag takes one value")
     for flag, value in zip(argv[::2], argv[1::2]):
@@ -39,6 +42,8 @@ def args():
     unknown = set(a["views"].split(",")) - set(VIEWS)
     if unknown:
         raise SystemExit("glb_stills: unknown views " + ", ".join(sorted(unknown)))
+    if a["adaptive"] not in ("", "on", "off"):
+        raise SystemExit("glb_stills: --adaptive takes on or off")
     if not a["glb"] or not a["out"]:
         raise SystemExit("glb_stills: --glb and --out are required")
     return a
@@ -112,6 +117,8 @@ def main():
     cycles_device.use(scene)
     scene.cycles.samples = a["samples"]
     scene.cycles.use_denoising = False
+    if a["adaptive"]:
+        scene.cycles.use_adaptive_sampling = a["adaptive"] == "on"
     scene.render.resolution_x = a["size"]
     scene.render.resolution_y = int(a["size"] * 0.75)
     scene.render.film_transparent = False
@@ -145,7 +152,9 @@ def main():
         cam.rotation_euler = (centre - eye).to_track_quat("-Z", "Y").to_euler()
         path = os.path.join(a["out"], "%s-%s.png" % (base, view))
         scene.render.filepath = path
+        start = time.monotonic()
         bpy.ops.render.render(write_still=True)
+        print("RENDER_S %.3f" % (time.monotonic() - start))
         print("STILL", path)
 
 

@@ -6,8 +6,8 @@ device exists and leaves it on the CPU otherwise (cloud containers have no GPU).
 any read_factory_settings or open_mainfile, since both reset the device choice.
 
 SCRAPKEEP_CYCLES picks the cards:
-  auto (default)  the 4080 alone, or every OptiX card in tandem for a render of at least
-                  TANDEM_MIN sample-pixels that fits the smallest card's free memory.
+  auto (default)  both cards when the render has adaptive sampling off and fits the smallest
+                  card's free memory; else the 4080 alone.
   all             every OptiX card, without the size or fit check.
   <name>          the one card whose name holds it, e.g. 3060. Frame-time captures need an idle
                   4080, so bakes run with SCRAPKEEP_CYCLES=3060 while a capture is on.
@@ -17,11 +17,15 @@ bakes keep GPU speed and the 4080 stays idle. A capture is on when SCRAPKEEP_CAP
 or another process holds an exclusive flock on SCRAPKEEP_CAPTURE_LOCK (defaults: capture-active and
 timing.lock in SCRAPKEEP_CAPTURE_DIR, the PC capture lane's gates folder; move it with the wave).
 Any other SCRAPKEEP_CYCLES value overrides that.
-Tandem has not yet won on a repo scene. PC medians of 3 on warden_swarm.glb, 4 views, against
-the 4080 alone: 1920x1440 at 256 samples (7.1e8 sample-pixels a view) 13.07 s vs 11.36 s (#447);
-3840x2880 at 512 (5.7e9) 47.1 s vs 43.2 s (#452). The machine notice's own render gained (26.3 s
-vs 32.5 s), scene unknown. TANDEM_MIN (SCRAPKEEP_CYCLES_TANDEM_MIN) sits at 2e10, above both
-losses, until cycles_tandem_probe.py rows show where tandem starts to win; re-fit it from those.
+Adaptive sampling decides whether tandem pays, not size. PC medians of 3 on warden_swarm.glb, both
+cards against the 4080 alone. With adaptive sampling on (Blender's default), tandem lost at every
+size: by sample-pixels a view, 7.1e8 13.07 s vs 11.36 s (#447), 5.7e9 47.1 vs 43.2 s (#452),
+1.1e10 14.00 vs 12.46 s, 4.5e10 21.23 vs 18.93 s, 9.1e10 46.27 vs 46.68 s (#459), and render-only
+2.8e9 3.45 vs 3.18 s, 1.1e10 13.63 vs 11.87 s (#464). With it off, tandem won render-only: 2.8e9
+13.22 vs 17.19 s, 1.1e10 53.56 vs 67.06 s, and Andrew's bench scene (63 glass and metal monkeys,
+1920x1080, 1024 spp) 27.91 vs 34.95 s (#464). Adaptive on with the 4080 alone is still the fastest
+still (3.18 s against 17.19 s off). SCRAPKEEP_CYCLES_TANDEM_MIN sets a sample-pixel floor under
+tandem (none by default); SCRAPKEEP_CYCLES=all forces tandem.
 The fit check compares free VRAM (nvidia-smi; 12 GiB per card when it can't answer) with
 fit_bytes(): the scene's triangles and images, plus HEADROOM for Cycles' kernels and buffers.
 use() decides once and arms a render_pre handler that decides again before every Cycles render
@@ -40,7 +44,7 @@ CAPTURE_FILE = os.environ.get("SCRAPKEEP_CAPTURE_FILE", os.path.join(CAPTURE_DIR
 CAPTURE_LOCK = os.environ.get("SCRAPKEEP_CAPTURE_LOCK", os.path.join(CAPTURE_DIR, "timing.lock"))
 CAPTURE_CARD = "3060"
 BIG = "4080"
-TANDEM_MIN = float(os.environ.get("SCRAPKEEP_CYCLES_TANDEM_MIN", "2e10"))
+TANDEM_MIN = float(os.environ.get("SCRAPKEEP_CYCLES_TANDEM_MIN", "0"))
 GIB = 1 << 30
 HEADROOM = 2 * GIB
 CARD_BYTES = 12 * GIB
@@ -122,7 +126,7 @@ def pick(devices, mode, scene, need, free_of):
     if mode != "auto":
         return [d for d in devices if mode in d.name.lower()][:1]
     big = ([d for d in devices if BIG in d.name] or list(devices))[:1]
-    if len(devices) < 2 or work(scene) < TANDEM_MIN:
+    if len(devices) < 2 or getattr(scene.cycles, "use_adaptive_sampling", True) or work(scene) < TANDEM_MIN:
         return big
     free = free_of()
     missing = [d.name for d in devices if free and d.name not in free]
