@@ -79,14 +79,16 @@ static func draw(canvas: CanvasItem, at: Vector2, key: String, color: Color, hei
 
 
 static func _draw_dpad(canvas: CanvasItem, at: Vector2, lit: Vector2, color: Color, height: float) -> void:
-	var arm := height * 0.26
-	var reach := height * 0.36
-	var dim := Color(color, 0.25)
+	# A thin, faint cross and one wide, full-ink arm, so the lit way reads at the bar's small caps.
+	var arm := height * 0.18
+	var lit_arm := height * 0.32
+	var reach := height * 0.38
+	var dim := Color(color, 0.18)
 	canvas.draw_rect(Rect2(at - Vector2(reach, arm * 0.5), Vector2(reach * 2.0, arm)), dim)
 	canvas.draw_rect(Rect2(at - Vector2(arm * 0.5, reach), Vector2(arm, reach * 2.0)), dim)
 	var tip := at + lit * reach
 	var across := Vector2(lit.y, lit.x).abs()
-	canvas.draw_rect(Rect2(at.min(tip) - across * arm * 0.5, lit.abs() * reach + across * arm), color)
+	canvas.draw_rect(Rect2(at.min(tip) - across * lit_arm * 0.5, lit.abs() * reach + across * lit_arm), color)
 
 
 # What a player reads off the key: its label, or nothing for a mouse glyph or a D-pad picture.
