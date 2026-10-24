@@ -119,6 +119,12 @@ func _pose() -> void:
 	_bit.position = _bit_rest - Vector3(0.0, 0.0, 0.25 * withdrawal)
 
 
+# True when on_struck will pop a plate for this hit, so it removes nothing (combat marks the
+# result "absorbed" before the hit is announced, and no damage number rises for it).
+func absorbs_hit(result: Dictionary) -> bool:
+	return bool(result.get("full", false)) and plates > 0
+
+
 func _on_end() -> void:
 	if _bit != null:
 		_bit.position = _bit_rest
@@ -158,12 +164,6 @@ func on_struck(kind_hit: String, _part: String, result: Dictionary) -> void:
 		if fleet != null:
 			fleet.discover("bore_breach", _real_ball())
 		_end()
-
-
-# True when on_struck will pop a plate for this hit, so it removes nothing (combat marks the
-# result "absorbed" before the hit is announced, and no damage number rises for it).
-func absorbs_hit(result: Dictionary) -> bool:
-	return bool(result.get("full", false)) and plates > 0
 
 
 # The popped plate took that hit whole: the body is untouched this once.
