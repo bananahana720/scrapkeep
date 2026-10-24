@@ -100,7 +100,7 @@ func _physics_process(_delta: float) -> bool:
 			queued_kinds.append(Director.KIND_NAMES[arrival.kind])
 			_check_corridor(arrival.at)
 		_check("retained elite schedules on corridor-safe ring fallback",
-			queued_kinds == ["plated_brute", "winch_drone"] and d.packs.size() == 1
+			queued_kinds == ["hooker", "jolt_layer", "plated_brute"] and d.packs.size() == 1
 			and d.packs[0].id == "elite" and d._arrivals_made == _held.arrivals_made + 1
 			and d._pack_seq == _held.pack_seq + 1 and d._next_pack.is_empty()
 			and d._last_was_elite and d._last_pack_id == _held.last_pack_id, str(queued_kinds))

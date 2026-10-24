@@ -622,6 +622,8 @@ const ATTACK_ROWS := {
 		"pose": "e32_claws_brace", "warn": "atk_e32_warn", "release": "atk_e32_release", "floor": "B", "open": []},
 	"E33": {"label": "Gap net charge", "group": "enemy", "owner_kind": "roster", "owner": "gap_net", "allegiance": "hostile", "threat": "threat_lane", "glyph": "star", "color": Palette.HAZARD,
 		"pose": "e33_net_crackle", "warn": "atk_e33_warn", "release": "atk_e33_release", "floor": "L", "open": []},
+	"E40": {"label": "Boom tender boom sweep", "group": "enemy", "owner_kind": "roster", "owner": "boom_tender", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e40_reel_ratchet", "warn": "atk_e40_warn", "release": "atk_e40_release", "floor": "L", "open": []},
 	"W01": {"label": "Reactor Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
 		"pose": "w01_vents_lift", "warn": "atk_w01_warn", "release": "atk_w01_release", "floor": "B", "open": []},
 	"W02": {"label": "Hive Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "swarm", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,

@@ -311,9 +311,13 @@ func _mounted_cc() -> Dictionary:
 	_player.kit.mounted = true
 	var landed: bool = _player.crowd_control("knock", Vector3.ZERO)
 	var hp_before: float = _game.run.hp
+	# Scrap the test's kills left on the ball would soak the hit before the hull sees it.
+	var mass_before: float = _game.run.mass
+	_game.run.mass = 0.0
 	_game.run.damage(1.0, "stree_test")
 	var hurt: bool = _game.run.hp < hp_before
 	_game.run.hp = hp_before
+	_game.run.mass = mass_before
 	_player.kit.mounted = false
 	return {"landed": landed, "hurt": hurt}
 
