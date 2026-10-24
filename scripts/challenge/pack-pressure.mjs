@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// node scripts/challenge/pack-pressure.mjs --variants=base,A,B,C,D,E,A+D [--seeds=1,2,3,4,5] [--bot-seeds=1,2,3,4]
+// node scripts/challenge/pack-pressure.mjs --variants=base,A,B,C,D,E,A+D (a variant may also be one --tune key=value) [--seeds=1,2,3,4,5] [--bot-seeds=1,2,3,4]
 //     [--jobs=4] [--label=<name>] [--shard=i/n] [--resume] [--dry-run]
 // node scripts/challenge/pack-pressure.mjs --report=<dir,dir> [--out=<file.md>]
 //
@@ -49,8 +49,9 @@ const median = (xs) => {
   const m = Math.floor(s.length / 2);
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
-const flag = (variant) => (variant === "base" ? [] : ["--pack-pressure=" + variant]);
-const slug = (variant) => variant.replace(/\+/g, "_");
+// A variant is "base" (no flag), a preset ("A", "A+D"), or a --tune payload ("hazard.boil_by_stage=2/2/0/0/0/0").
+const flag = (variant) => (variant === "base" ? [] : variant.includes("=") ? ["--tune=" + variant] : ["--pack-pressure=" + variant]);
+const slug = (variant) => variant.replace(/[^A-Za-z0-9-]+/g, "_");
 
 export function planJobs(variants, seeds, botSeeds) {
   const jobs = [];
