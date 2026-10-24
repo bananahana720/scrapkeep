@@ -85,7 +85,8 @@ func _rows() -> void:
 		for wave in row["lock"]["waves"]:
 			for kind in wave:
 				_t.check("%s lock kind %s is a director kind" % [map, kind], kind in preload("res://src/world/director.gd").KIND_NAMES)
-			_t.check("%s keeps the boom tender out of the ring" % map, not "boom_tender" in wave)
+			for kept_out in ["boom_tender", "mag_trapper", "plated_brute"]:
+				_t.check("%s keeps %s out of the ring" % [map, kept_out], not kept_out in wave)
 	_t.check("other parks have no row", LockRows.row("park_pit").is_empty() and LockRows.row("park_test").is_empty())
 	for kind in ["arena_locked", "arena_wave", "arena_unlocked", "warden_gate_pip", "warden_gate_refused", "warden_gate_opened"]:
 		var entry: Dictionary = EventKinds.world_row(kind)
