@@ -576,9 +576,9 @@ func _check_slow_plan_control() -> void:
 	_check_dressing_fresh("planted slow plan")
 
 
-# A retry's handler times as the median of RETRY_SAMPLES retries, settled between: a retry costs about 6 ms
-# against RETRY_MS, and one sample on a loaded cloud box read 22 to 26 ms (w18 gate, passes solo). Noisy
-# measures are medians of 3 (LESSONS). The last retry leaves the stage as the checks after it read it.
+# A retry's handler times as the median of RETRY_SAMPLES retries, settled between: a retry costs 11 to 19 ms
+# idle against RETRY_MS, and one sample on a loaded cloud box read 22 to 35 ms (w18 gate, passes solo). Noisy
+# measures are medians of 3 (project rule). The last retry leaves the stage as the checks after it read it.
 func _retry_median(label: String) -> Dictionary:
 	var samples := {}
 	for i in RETRY_SAMPLES:
