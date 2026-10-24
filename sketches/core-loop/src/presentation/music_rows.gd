@@ -245,6 +245,18 @@ static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String
 	return ""
 
 
+# Where a pack's stems are read: next to its manifest, unless stem_dir is set. Tests point
+# stem_dir at a stub stem tree (tests/support/ace_stub.gd: <stem_dir>/<pack>/<file>), because
+# the Oggs are gitignored and a cloud checkout has none.
+static var stem_dir := ""
+
+
+static func stem_file(manifest_file: String, file: String) -> String:
+	if stem_dir != "":
+		return stem_dir.path_join(manifest_file.get_base_dir().get_file()).path_join(file)
+	return manifest_file.get_base_dir().path_join(file)
+
+
 # A pack is playable only when its manifest resolves and every stem file it names is on disk:
 # the Oggs are gitignored, so a checkout can hold manifests with no audio.
 static func pack_on_disk(manifest_path: String, sidecar_dir := "") -> bool:
@@ -256,6 +268,6 @@ static func pack_on_disk(manifest_path: String, sidecar_dir := "") -> bool:
 		return false
 	for clip in m["clips"].values():
 		for file in (clip.get("files", {}) as Dictionary).values():
-			if not FileAccess.file_exists(path.get_base_dir().path_join(String(file))):
+			if not FileAccess.file_exists(stem_file(path, String(file))):
 				return false
 	return true
