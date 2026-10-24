@@ -911,17 +911,16 @@ func _stage_cap() -> float:
 # it opens, each still counting while it stands. STAGE_LIMIT is a harness fit (ruling t), so a run
 # the locks delay is not called stalled for it. With --locks=0 there are no notes and nothing is added.
 func _lock_held_s() -> float:
-	var now: float = game.run.stage_time
 	var held := 0.0
 	var lock_at = _note.get("lock_s")
 	if lock_at != null:
 		var unlock_at = _note.get("unlock_s")
-		held += (float(unlock_at) if unlock_at != null else now) - float(lock_at)
+		held += (float(unlock_at) if unlock_at != null else float(game.run.stage_time)) - float(lock_at)
 	var engaged = _note.get("warden_engaged_s")
-	var gate = game.flow.get("gate")
-	if engaged != null and gate != null and gate.has_gate():
+	var gate = game.flow.get("gate") if engaged != null else null
+	if gate != null and gate.has_gate():
 		var open_at = _note.get("gate_open_s")
-		held += maxf(0.0, (float(open_at) if open_at != null else now) - float(engaged))
+		held += maxf(0.0, (float(open_at) if open_at != null else float(game.run.stage_time)) - float(engaged))
 	return held
 
 
