@@ -129,7 +129,7 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, _cause: String
 
 # One minus the rewind left over the rewind time, from the kit.
 func harpoon_readiness() -> float:
-	var total: float = player.tuning.f("harpoon_rewind") if player.get("tuning") != null else 0.0
+	var total: float = player.tuning.harpoon_rewind() if player.get("tuning") != null else 0.0
 	if total <= 0.0:
 		return 1.0
 	return clampf(1.0 - player.kit.rewind_left / total, 0.0, 1.0)

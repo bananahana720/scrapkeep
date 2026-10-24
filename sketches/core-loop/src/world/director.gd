@@ -64,7 +64,7 @@ const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker"
 	"deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap", "reactor_relic",
 	"swarm_remnant", "mind_hand", "burrower", "drill_crew", "lamp_swarm", "line_cutter", "anchor_crew",
 	"kite_drone", "linker", "foreman", "prop_crew", "pit_jaw", "splitter", "ballast_heavy", "gap_net",
-	"dispatcher"]
+	"dispatcher", "jolt_layer", "boom_tender"]
 const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster", "deflector", "winch_drone",
 	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
 const FAMILY_ANCIENT := ["reactor_relic", "swarm_remnant", "mind_hand"]
@@ -643,11 +643,61 @@ static func release_parks() -> void:
 	_parks.clear()
 
 
+var _rib_graph = null
+var _rib_zones := {}
+
+
 func _graph():
 	if _park_graph == null and _graph_path != "":
 		_park_graph = load("res://src/world/activities.gd").shared_graph(_graph_path)
 		_graph_path = ""
 	return _park_graph
+
+
+# Grey panels' rib read (IL-01, the map veto pass's ribs and pockets): 1 where `at` stands
+# in an off-spine dead end, a graph anchor zone (one way in) that holds no line or Warden
+# node; 0 elsewhere; -1 when the stage has no zone data (no graph, or a version 1 graph), so
+# the caller pays the plain rate and logs the case rather than guessing.
+func off_spine(at: Vector3) -> int:
+	var graph = _graph()
+	if graph == null or graph.zone_count() == 0:
+		return -1
+	if not is_same(_rib_graph, graph):
+		_rib_graph = graph
+		_rib_zones = {}
+		for anchor in graph.anchors():
+			if not anchor["on_route"]:
+				_rib_zones[int(anchor["zone"])] = true
+	return 1 if _rib_zones.has(graph.zone_of(graph.nearest(at))) else 0
+
+
+# Grey panels' rib caches (IL-01, coordinator ruling 23 Oct: exploring pays): up to `count`
+# spots, one per off-route dead end with door ground (anchors() rank > 0), drawn without
+# repeats from a stream seeded by `seed`. Each spot is the zone's door node furthest from the
+# spawn: the end of the dead end. Empty where the map has no graph.
+func rib_cache_spots(count: int, seed: int) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	var graph = _graph()
+	if graph == null or graph.zone_count() == 0:
+		return out
+	var pool := []
+	for anchor in graph.anchors():
+		if int(anchor["rank"]) > 0:
+			pool.append(int(anchor["zone"]))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	while out.size() < count and not pool.is_empty():
+		var zone: int = pool.pop_at(rng.randi_range(0, pool.size() - 1))
+		var best := -1
+		var best_d := -1.0
+		for node in graph.zone_door_nodes(zone):
+			var d: float = graph.d_spawn_node(node)
+			if is_finite(d) and d > best_d:
+				best_d = d
+				best = node
+		if best >= 0:
+			out.append(graph.position(best))
+	return out
 
 
 func home_live(id: String) -> bool:

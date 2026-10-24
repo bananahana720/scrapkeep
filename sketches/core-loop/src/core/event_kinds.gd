@@ -46,6 +46,8 @@ const ROWS := {
 	"scrap_collected": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "scrap_tick", "hud": "", "objective": "", "priority": 1},
 	"cogs_collected": {"group": "economy", "color": Palette.AMBER, "shape": "square", "sound": "cog_tick", "hud": "", "objective": "", "priority": 1},
 	"part_gained": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "part_get", "hud": "+ {part}", "objective": "", "priority": 2},
+	# Grey panels (build/panels.gd): worn bone, the common rung's colour; the ratchet tick under the pickup phrase.
+	"panel_gained": {"group": "economy", "color": Palette.SAND, "shape": "square", "sound": "panel_ratchet", "hud": "", "objective": "", "priority": 1},
 	"player_hit": {"group": "combat", "color": Palette.RUST, "shape": "burst", "sound": "hurt", "hud": "", "objective": "", "priority": 2},
 	# The HUD pip and chirps read run.companion, not this signal, so the row stays quiet and listed in GRAMMAR_SIGNALS.
 	"escape_window": {"group": "combat", "color": Palette.SAND, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
@@ -413,6 +415,7 @@ const WEIGHT_EXEMPT := {
 	"near_miss": "Ball motion preserves momentum; its existing camera and cue profile owns it.",
 	"pack_arrived": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
 	"part_gained": "Reward and economy ladders own the cue; rewards never stop time.",
+	"panel_gained": "Reward and economy ladders own the cue; rewards never stop time.",
 	"pressure_changed": "Run and stage lifecycle owns music and cleanup, not an impact.",
 	"rescue_completed": "Reward and economy ladders own the cue; rewards never stop time.",
 	"reward_chosen": "Reward and economy ladders own the cue; rewards never stop time.",
@@ -619,6 +622,8 @@ const ATTACK_ROWS := {
 		"pose": "e32_claws_brace", "warn": "atk_e32_warn", "release": "atk_e32_release", "floor": "B", "open": []},
 	"E33": {"label": "Gap net charge", "group": "enemy", "owner_kind": "roster", "owner": "gap_net", "allegiance": "hostile", "threat": "threat_lane", "glyph": "star", "color": Palette.HAZARD,
 		"pose": "e33_net_crackle", "warn": "atk_e33_warn", "release": "atk_e33_release", "floor": "L", "open": []},
+	"E40": {"label": "Boom tender boom sweep", "group": "enemy", "owner_kind": "roster", "owner": "boom_tender", "allegiance": "hostile", "threat": "threat_lane", "glyph": "bar", "color": Palette.HAZARD,
+		"pose": "e40_reel_ratchet", "warn": "atk_e40_warn", "release": "atk_e40_release", "floor": "L", "open": []},
 	"W01": {"label": "Reactor Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "reactor", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
 		"pose": "w01_vents_lift", "warn": "atk_w01_warn", "release": "atk_w01_release", "floor": "B", "open": []},
 	"W02": {"label": "Hive Warden pulse", "group": "warden", "owner_kind": "faction", "owner": "swarm", "allegiance": "hostile", "threat": "threat_instant", "glyph": "ring", "color": Palette.HAZARD,
