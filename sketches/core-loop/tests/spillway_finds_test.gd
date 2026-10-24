@@ -190,6 +190,7 @@ func _game() -> void:
 		await physics_frame
 		await physics_frame
 		_run_seed_moves(game, map_id)
+		_every_spot_flat(game, map_id)
 		var want_seed := hash([game.ctx.rng.seed, game.run.run_seed, "field_finds"])
 		var finds: Array = game.world.activities.sites.filter(func(s): return is_instance_valid(s) and s.has_meta("find"))
 		var want := Secrets.find_sites(map_id, want_seed).map(func(s): return String(s["find"]))
@@ -247,6 +248,27 @@ func _run_seed_moves(game, map_id: String) -> void:
 		for spec in Secrets.find_sites(map_id, mixed):
 			picks[spec["site"]] = true
 	_t.check("%s finds move with the run seed" % map_id, picks.size() == 4, str(picks.keys()))
+
+
+# Every spot, not only the ones this run drew: the shell's ground (it stands CACHE_LANE_OFFSET out
+# along its face, the back wall WALL_DEPTH behind) rises no more than FLAT_RISE_M.
+func _every_spot_flat(game, map_id: String) -> void:
+	for id in Secrets.FINDS:
+		if Secrets.FINDS[id]["map"] != map_id:
+			continue
+		for spot in Secrets.FINDS[id]["spots"]:
+			var face := Vector2(float(spot["face"][0]), float(spot["face"][1])).normalized()
+			var side := Vector2(-face.y, face.x)
+			var front := Vector2(float(spot["at"][0]), float(spot["at"][1])) + face * Activities.CACHE_LANE_OFFSET
+			var lo := INF
+			var hi := -INF
+			for dx in [-Activities.WALL_HALF_W, 0.0, Activities.WALL_HALF_W]:
+				for dz in [0.0, -Activities.WALL_DEPTH * 0.5, -Activities.WALL_DEPTH]:
+					var p: Vector2 = front + side * dx + face * dz
+					var y: float = game.ctx.terrain.height(p.x, p.y)
+					lo = minf(lo, y)
+					hi = maxf(hi, y)
+			_t.check("%s at %s stands on flat ground" % [id, spot["site"]], hi - lo <= FLAT_RISE_M, "%.2f m" % (hi - lo))
 
 
 func _rise(game, s) -> float:
