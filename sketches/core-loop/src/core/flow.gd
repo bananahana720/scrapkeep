@@ -70,7 +70,7 @@ var _engaged := false
 # within SIGHT_SHARE times the beacon ring's radius of the sealed Warden (flat distance); an
 # engagement that comes first skips it. Intro lines and reveal cards play here, never in the fight.
 var _sighted := false
-const SIGHT_SHARE := 2.5
+const SIGHT_SHARE := 3.5
 # Where this stage's Warden stands; it is immobile, so a warden kill reported far from
 # here belongs to some other warden and does not unseal this beacon.
 var _warden_at := Vector3.ZERO
