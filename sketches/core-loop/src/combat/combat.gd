@@ -671,7 +671,8 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 	# closed Warden guard, volleys and landing together (SKILL-BAR section 12, item 7).
 	if ultimate != null and ultimate.active() and kind in CONTACT_KINDS and enemy.has_method("_apply_posture") \
 			and enemy.has_method("staggered") and not enemy.staggered():
-		ultimate.warden_posture(enemy, resolve(enemy, kind, force, part))
+		ultimate.warden_posture(enemy, resolve(enemy, kind, force, part, 0.0,
+			panel_punch(kind, _classify_source(kind, source if source != "" else _forced_source))))
 		return
 	var dunk := _dunk_bonus(enemy, kind)
 	# A reel impact or a dunk marks the body, so a kill it lands is a jackpot (grey panels).
@@ -685,22 +686,28 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 # --- SR1: strike()'s stages, in damage_door.gd's ORDER --------------------------------
 
 func _door_armour(hit: Dictionary) -> void:
-	hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"], hit["dunk"])
+	hit["cls"] = _classify_source(hit["kind"], hit["source"] if hit["source"] != "" else _forced_source)
+	hit["bonus"] = panel_punch(hit["kind"], hit["cls"])
+	hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"], hit["dunk"], hit["bonus"])
 	if hit["dunk"] > 0.0:
 		if bool(hit["result"].get("guarded", false)):
 			hit["dunk"] = 0.0
-			hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"])
+			hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"], 0.0, hit["bonus"])
 		else:
 			ctx.player.dunk.spend(hit["enemy"])
 			hit["result"]["dunk"] = hit["dunk"]
-	hit["cls"] = _classify_source(hit["kind"], hit["source"] if hit["source"] != "" else _forced_source)
 
 
 func _door_caps(hit: Dictionary) -> void:
 	var enemy: Node3D = hit["enemy"]
 	var result: Dictionary = hit["result"]
+	# The plating rule's figure before the multipliers: the crit read compares this to the punch,
+	# so an arc mark or a weak armour read alone is not a crit (damage_numbers.gd is_crit).
+	result["base_dealt"] = float(result["dealt"])
 	result["dealt"] = float(result["dealt"]) * _strike_mult(enemy, hit["kind"], hit["cls"])
 	_read_armour(enemy, hit, result)
+	if enemy.has_method("absorbs_hit") and enemy.absorbs_hit(result):
+		result["absorbed"] = true
 	if hit["kind"] in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()) \
 			and float(_exposed[enemy.get_instance_id()]["until"]) <= _clock:
 		_exposed.erase(enemy.get_instance_id())
@@ -773,7 +780,8 @@ func _door_announce(hit: Dictionary) -> void:
 	hit["id"] = enemy.get_instance_id()
 	_detect_before(enemy, kind, result)
 	var outer := _pending
-	_pending = {"id": enemy.get_instance_id(), "kind": kind, "force": force, "part": result["part"], "dunk": hit["dunk"]}
+	_pending = {"id": enemy.get_instance_id(), "kind": kind, "force": force, "part": result["part"], "dunk": hit["dunk"],
+		"bonus": hit["bonus"], "result": result}
 	hit["hp_before"] = _hp_of(enemy)
 	var outer_impact := last_impact
 	last_impact = {"key": hit["impact"], "enemy": enemy.get_instance_id()} if hit["impact"] != "" else {}
@@ -1288,19 +1296,25 @@ func delivered_damage() -> Dictionary:
 # The one plating rule. Returns {punch, plating, full, dealt, part}. Asked from an
 # enemy_struck or strike_deflected handler with that strike's enemy, kind and force, it
 # answers with the strike's own part, so the handler sees the plating the hit meets.
-func resolve(enemy: Node3D, kind: String, force: float, part := "", dunk := 0.0) -> Dictionary:
+func resolve(enemy: Node3D, kind: String, force: float, part := "", dunk := 0.0, bonus := 0.0) -> Dictionary:
 	if not _pending.is_empty() and _pending["id"] == enemy.get_instance_id() \
 			and _pending["kind"] == kind and _pending["force"] == force:
+		# Inside the strike's own announce the hit is settled: answer with its result after the
+		# caps (strike multiplier, armour), so a damage number shows what the hit removes.
+		if _pending.has("result") and (part == "" or part == _pending["part"]):
+			return (_pending["result"] as Dictionary).duplicate()
 		if part == "":
 			part = _pending["part"]
 		if dunk == 0.0:
 			dunk = _pending["dunk"]
+		bonus = maxf(bonus, float(_pending.get("bonus", 0.0)))
 	if part == "" and kind in CONTACT_KINDS and enemy.has_method("contact_part"):
 		part = enemy.contact_part(ctx.player.ball_position(), kind)
 	if kind == SYNERGY:
 		part = ""
-	# The dunk's stored slam rides the punch, so every rule below treats it as part of the reel.
-	var punch := punch_of(kind, force) + dunk
+	# The dunk's stored slam rides the punch, so every rule below treats it as part of the reel,
+	# and so does a weapon hit's or a contact's panel punch (bonus, panel_punch).
+	var punch := punch_of(kind, force) + dunk + bonus
 	if enemy.has_method("fight") and enemy.fight() == "posture":
 		var tier: int = SpeedTier.of(force, ctx.player.tuning.tier_cruise()) if kind == "ram" else 0
 		var smash: bool = ctx.player.smash_landing == enemy
@@ -1376,6 +1390,19 @@ func punch_of(kind: String, force: float) -> float:
 	return force
 
 
+# Punch Rivet panels' flat damage (build.panel_punch) for a hit of this kind and source class:
+# a weapon hit or the ball's own contact (the panel's "+damage per hit"); 0 for procs, for
+# specials (an ultimate's punches strike as "ram" with source "special") and for actives,
+# which read the build's punch_bonus themselves.
+func panel_punch(kind: String, cls: String) -> float:
+	if not (cls == "weapon" or (kind in CONTACT_KINDS and cls in ["ram_or_contact", "drop_or_slam"])):
+		return 0.0
+	var build = ctx.build if ctx != null else null
+	if build == null or not build.has_method("panel_punch"):
+		return 0.0
+	return float(build.panel_punch())
+
+
 func heft() -> float:
 	if heft_override >= 0.0:
 		return heft_override
@@ -1388,16 +1415,19 @@ func heft() -> float:
 # hit of the weapon in your hands. The HUD's "Punch 48 / plating 60" reads this.
 func punch_now() -> float:
 	var weapon := active_weapon()
-	var shot: float = _patterns[weapon].damage * _damage_mod(weapon) if _patterns.has(weapon) else 0.0
+	var shot: float = _patterns[weapon].damage * _damage_mod(weapon) + panel_punch("", "weapon") if _patterns.has(weapon) else 0.0
 	return maxf(ram_punch_now(), shot)
 
 
 # A ram at your planar speed, from CRUISE up; 0 below it. No weapon term: for a target
 # only a ram can beat (a clash), this is the whole punch.
+# The tier reads base cruise like resolve()'s ram tier (tier_cruise), so a cruise up never
+# drops the preview below CRUISE (coordinator ruling 24 Oct, principle 5).
 func ram_punch_now() -> float:
-	if ctx.player.speed_tier() < SpeedTier.CRUISE:
+	var planar: float = ctx.player.planar_velocity().length()
+	if SpeedTier.of(planar, ctx.player.tuning.tier_cruise()) < SpeedTier.CRUISE:
 		return 0.0
-	return punch_of("ram", ctx.player.planar_velocity().length())
+	return punch_of("ram", planar) + panel_punch("ram", "ram_or_contact")
 
 
 # Build owns tuning mods (CONTRACTS). Combat reads its weapon keys live, at the moment
@@ -1449,8 +1479,8 @@ func would_crush(enemy: Node3D, kind: String, force: float) -> bool:
 		return false
 	if enemy.has_method("crushable") and not enemy.crushable():
 		return false
-	var result := resolve(enemy, kind, force)
 	var cls := _classify_source(kind, _forced_source)
+	var result := resolve(enemy, kind, force, "", 0.0, panel_punch(kind, cls))
 	var dealt: float = float(result["dealt"]) * _strike_mult(enemy, kind, cls)
 	# The armour read the strike will apply (_read_armour), asked without recording it (F005).
 	if bool(result.get("full", false)):

@@ -34,7 +34,7 @@ const Weapons := preload("res://src/combat/weapons.gd")
 # id: one stamped plate. stat: what it moves. step: per panel. kind:
 #   pct    a tuning mod key; steps add into one sum, then multiply (sheet.mods)
 #   add    a flat amount in its unit, through tuning.add (metres for area_radius)
-#   punch  flat damage per hit (sheet.punch)
+#   punch  flat damage per weapon hit and ball contact (sheet.panel_punch, read by combat.gd)
 #   hp     flat max health (sheet.max_hp_bonus)
 # silhouette: the kit plate panel_shell.gd draws (assets/models/item_panels/panel_<silhouette>.glb).
 # sound: the pickup voice, ratchet for every grey (the ladder page: "grey is a short ratchet
@@ -163,6 +163,7 @@ static func fold(sheet, effective_counts: Dictionary) -> void:
 				sheet.adds[r["stat"]] = sheet.adds.get(r["stat"], 0.0) + amount
 			"punch":
 				sheet.punch += amount
+				sheet.panel_punch += amount
 			"hp":
 				sheet.max_hp_bonus += amount
 
