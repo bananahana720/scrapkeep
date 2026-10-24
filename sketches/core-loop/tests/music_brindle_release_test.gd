@@ -53,7 +53,7 @@ func _audible(engine, label: String) -> void:
 		t.check("%s: ACE stems follow the release" % label, not ace.parameter_released and ace.parameter_gain("other") > 0.0,
 			"released=%s other_gain=%.2f manifest=%s" % [ace.parameter_released, ace.parameter_gain("other"), _audio._ace_from])
 	else:
-		print("SKIP %s: ACE stems follow the release (PC-only: no Oggs for this pack)" % label)
+		t.skip("%s: ACE stems follow the release" % label, "PC-only: no Oggs for this pack")
 
 
 func _run() -> void:

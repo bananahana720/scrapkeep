@@ -117,6 +117,9 @@ var parameters := {}
 var parameter_released := false
 var parameter_layer_log: Array = []
 var _parameter_danger_floor := 0.0
+# The band engine's boss floor (music_engine PRESSURE_FLOOR, brindle:1..3), set by audio.gd
+# while a boss track plays: the melody stem stays up through the fight, not only under threat.
+var boss_floor := 0.0
 var threat := 0
 var in_bay := false
 var built := false
@@ -302,6 +305,15 @@ func commit_parameters(at: int, values: Dictionary, released: bool, lift: bool, 
 	_add({"at": maxi(at, clock), "type": "parameters", "values": values.duplicate(), "released": released, "lift": lift, "reason": reason, "timing": timing.duplicate()})
 
 
+# A change of boss floor reopens or settles the live melody stem over STOP_RAMP.
+func set_boss_floor(value: float) -> void:
+	if value == boss_floor:
+		return
+	boss_floor = value
+	if section != "":
+		_retarget(STOP_RAMP)
+
+
 # The arena clears a Warden break's release at once (audio.gd stage_content_cleared): the
 # queued commits stop carrying it, and the live stems reopen over STOP_RAMP.
 func clear_release() -> void:
@@ -329,7 +341,7 @@ func parameter_gain(stem: String) -> float:
 		return 1.0
 	if parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3):
 		return 0.0
-	var open := maxf(maxf(pressure + (ULTIMATE_STEP if ultimate_lift else 0.0), _parameter_danger_floor), float(parameters.get("approach", 0.0)))
+	var open := maxf(maxf(pressure + (ULTIMATE_STEP if ultimate_lift else 0.0), maxf(_parameter_danger_floor, boss_floor)), float(parameters.get("approach", 0.0)))
 	return clampf(maxf(open, float(parameters.get("chain", 0.0))), 0.0, 1.0)
 
 

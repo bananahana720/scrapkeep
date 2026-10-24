@@ -15,9 +15,12 @@ const T := preload("res://tests/support/t.gd")
 # The Oggs are gitignored, so this test builds a stub pack in user://: Brindle's anthem
 # manifest with one committed 2 s tone (tests/fixtures/ace_stub/tone.ogg) as every stem.
 # It installs that player as the live ACE band at the flume, breaks the Warden, queues a
-# release commit, then enters the arena through flow.enter_boss and retries it.
+# release commit, then enters the arena through flow.enter_boss, walks phases 2 and 3 and
+# retries it. The arena is calm (threat 0), as on the PC run where the melody stem sat at
+# 0 with the release cleared: the stems must hold the band engine's boss floor.
 
 const MANIFEST := "res://assets/music_ace/anthem_brindle/manifest.json"
+# Made with: ffmpeg -f lavfi -i "sine=frequency=440:sample_rate=44100:duration=2" -ac 2 -c:a libvorbis -q:a 0 tone.ogg
 const TONE := "res://tests/fixtures/ace_stub/tone.ogg"
 
 var t := T.new("ace_arena_release_test")
@@ -46,6 +49,17 @@ func _pump(audio, frames: int) -> void:
 	var until: int = audio.engine.clock + frames
 	while audio.engine.clock < until:
 		audio._pump(mini(4096, until - audio.engine.clock))
+
+
+# The calm arena (threat 0, no approach or chain): the melody stem still sits at or above the
+# band engine's boss floor, as the synth band's melodic layers do (music_brindle_release_test).
+func _melody_up(audio, ace, label: String) -> void:
+	var engine = audio.engine
+	var floor_now: float = engine._floor()
+	t.check("%s: calm arena (control)" % label, ace.pressure == 0.0 and engine.track in ["brindle"],
+		"pressure=%.2f track=%s section=%s" % [ace.pressure, engine.track, engine.section])
+	t.check("%s: melody stem at the boss floor" % label, floor_now > 0.0 and ace.parameter_gain("other") >= floor_now - 1e-6,
+		"other_gain=%.2f band floor=%.2f released=%s" % [ace.parameter_gain("other"), floor_now, ace.parameter_released])
 
 
 func _queued_release(ace) -> bool:
@@ -100,6 +114,13 @@ func _run() -> void:
 	audio.ace = stub
 	_pump(audio, phrase * 2)
 	t.check("stems stay open past the queued commit", not stub.parameter_released and stub.parameter_layer_log.all(func(e): return e["at"] < engine.clock - phrase * 2 or not e["released"]))
+	_melody_up(audio, stub, "phase 1")
+	for phase in [2, 3]:
+		game.boss.jump_to_phase(phase)
+		audio._flush_flow()
+		audio.ace = stub
+		_pump(audio, phrase * 2)
+		_melody_up(audio, stub, "phase %d" % phase)
 	# Brindle's own pack, when it loads after the arena opens, is primed from the engine.
 	audio._prime_band_parameters()
 	t.check("a newly primed ACE band starts open", not stub.parameter_released)
@@ -110,6 +131,10 @@ func _run() -> void:
 	stub.commit_parameters(stub.clock + phrase, stub.parameters, true, false, "")
 	game.flow._retry_arena()
 	t.check("arena retry clears the stems' release and voids the queued one", not stub.parameter_released and not _queued_release(stub))
+	audio._flush_flow()
+	audio.ace = stub
+	_pump(audio, phrase * 2)
+	_melody_up(audio, stub, "after retry")
 
 	game.queue_free()
 	await process_frame
