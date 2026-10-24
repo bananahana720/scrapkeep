@@ -322,6 +322,10 @@ const PLATE_REACH := 30.0
 const CAMP_LAST := 1000.0
 # The spacing of the waypoints on a field find's graph path.
 const FIND_LEG_M := 24.0
+# A find within this many metres is taken before the lit sites, as a player hearing its tell would.
+const FIND_NEAR_M := 120.0
+# A find's path that gains no waypoint in this many game seconds is given up: the ball is stuck.
+const FIND_LEG_SECONDS := 10.0
 # A site more than LEVEL_BAND above the ball is not rolled at straight: the cliff under its shelf
 # wedges the ball (the Reach camp stands 22 m over the trough). The way up is planned once on the
 # ground's heights, a CLIMB_STEP grid within CLIMB_PAD of both ends that never rises steeper than
@@ -448,6 +452,7 @@ var _waypoints: Array[Vector3] = []
 var _find_route: Array[Vector3] = []
 var _find_route_for := ""
 var _find_exit := Vector3.INF
+var _find_leg_clock := 0.0
 var _waypoint_time := 0.0
 var _vault_time := 0.0
 var _vault_done := false
@@ -1542,8 +1547,8 @@ func _activity_goal(delta: float) -> bool:
 			if _site_has_authored_pack(c):
 				level -= CAMP_LAST
 			# A field find (secrets.gd FINDS) is the last stop: the explorer has learned the tells and
-			# checks the dead ends once the lit sites are done.
-			if c.has_meta("find"):
+			# checks the dead ends once the lit sites are done, unless it rolls within earshot of one.
+			if c.has_meta("find") and _flat(ball, c.global_position) > FIND_NEAR_M:
 				level -= CAMP_LAST * 2.0
 			var d := _flat(ball, c.global_position)
 			if level > best_level or (level == best_level and d < best):
@@ -1913,10 +1918,18 @@ func _find_leg(s, ball: Vector3, point: Vector3, delta: float) -> bool:
 	if _find_route_for != key:
 		_find_route_for = key
 		_find_route = _graph_path(ball, point)
+		_find_leg_clock = 0.0
 	while not _find_route.is_empty() and _flat(ball, _find_route[0]) < WAYPOINT_REACHED:
 		_find_route.pop_front()
+		_find_leg_clock = 0.0
 	if _find_route.is_empty():
 		return false
+	_find_leg_clock += delta
+	if _find_leg_clock > FIND_LEG_SECONDS:
+		_activity_skip[key] = true
+		_activity = ""
+		_find_route = []
+		return true
 	_cache_clock = 0.0
 	_goal = "activity %s path %d" % [s.id, _find_route.size()]
 	_act(_find_route[0], _nearest_enemy(), delta)
