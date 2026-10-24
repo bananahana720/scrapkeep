@@ -13,6 +13,8 @@ const RunMoments := preload("res://src/core/run_moments.gd")
 const Profile := preload("res://src/core/profile.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
 const Progress := preload("res://src/core/progress.gd")
+const ShiftBoard := preload("res://src/core/shift_board.gd")
+const Parts := preload("res://src/build/parts.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
@@ -239,6 +241,8 @@ func _ready() -> void:
 	progress.name = "Progress"
 	add_child(progress)
 	ctx.progress = progress
+	# Before any module hears run_started, so the run's first offer already sees the board's items.
+	events.run_started.connect(func(_class_id: String): open_board_items())
 
 	_boot("modules")
 	world = _module(World)
@@ -502,6 +506,16 @@ func sitting_save_guard() -> void:
 		ctx.profile._refuse("sitting profile: this session does not save")
 		# The sitting opens every first-win secret, as it opens every pilot (secrets.gd).
 		Secrets.open_for_sitting(ctx.profile)
+
+
+# The items the shift board opened for this profile join the offer pool for the run about to start
+# (shift_board.gd). A bot or a test keeps the table's own list, so its runs replay as before.
+func open_board_items() -> void:
+	Parts.opened_items = {}
+	if bot_driven or ctx.profile == null:
+		return
+	for id in ShiftBoard.opened_items(ctx.profile):
+		Parts.opened_items[id] = true
 
 
 func pilot_unlocked(def) -> bool:

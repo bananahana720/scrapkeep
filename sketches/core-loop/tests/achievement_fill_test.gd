@@ -73,9 +73,9 @@ func _tables() -> void:
 	# six hidden secret_paint_* rows and their six paints join the shared rows; with the crown pass's
 	# isles_rescued (Tally's sky-islands rescue) that makes 50 and 47 (43 and 41 before).
 	# 2026-10-19 (w20 ACHIEVEMENTS-REFRESH): six reward-free content-family records (RECORD_ONLY); was 50.
-	# 2026-10-23 (w19 Spillway roster): five reward-free records (mat slip, flap ride, hook out, soaked,
-	# boom strike); was 56.
-	_t.eq("F1 sixty-one achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 61)
+	# 2026-10-24 merge of #406 (world 1 unit 16, shift board: six brindle_mark_* rows, each paying
+	# one item) onto the w19 Spillway roster (five reward-free records): 56 + 5 + 6.
+	_t.eq("F1 sixty-seven achievements", PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 67)
 	_t.eq("F1 forty-seven cosmetics", PilotBlocks.shared(Cosmetics.ids(), "res://src/core/cosmetics.gd").size(), 47)
 	# A pilot's "or" rule row (class_def.gd unlock) pays that pilot through the class row, so its own reward is empty.
 	var or_rows := ClassDef.all().filter(func(d): return d.unlock.has("or")).map(func(d): return ClassDef.unlock_row(String(d.unlock["or"])))
