@@ -55,7 +55,10 @@ func run(t) -> void:
 	t.check("every rule has a row", orphan_rules.is_empty(), "rules without a row: %s" % [orphan_rules])
 	t.check("surge_run has a row and no site", EventKinds.ACTIVITY_ROWS.has("surge_run") and not site_ids.has("surge_run"),
 		"row %s, sites %s" % [EventKinds.ACTIVITY_ROWS.has("surge_run"), site_ids])
-	t.check("surge_run has no rule, so it is never built", not Activities.RULES.has("surge_run"), "rules: %s" % [Activities.RULES.keys()])
+	# Flume pass two: surge_run is built only where a park activity row names it with a route (surge_course.gd).
+	t.check("surge_run's rule is the park surge course: a ring start and a surge finish",
+		Activities.RULES.get("surge_run", {}).get("starts") == "ring" and Activities.RULES.get("surge_run", {}).get("finishes") == "surge",
+		"rule %s" % [Activities.RULES.get("surge_run", {})])
 	t.check("the default stage map stands none", (StageMap.new()).activity_sites.is_empty(), "base map sites")
 
 	var literals: Array = []
