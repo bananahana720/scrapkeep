@@ -36,7 +36,7 @@ const Weapons := preload("res://src/combat/weapons.gd")
 #   add    a flat amount in its unit, through tuning.add (metres for area_radius)
 #   punch  flat damage per hit (sheet.punch)
 #   hp     flat max health (sheet.max_hp_bonus)
-# silhouette: the stand-in plate shape (panel_shell.gd) until its kit plate lands.
+# silhouette: the kit plate panel_shell.gd draws (assets/models/item_panels/panel_<silhouette>.glb).
 # sound: the pickup voice, ratchet for every grey (the ladder page: "grey is a short ratchet
 # tick"). answers: Nemesis axes the stat answers, for the drop lean. words: the build read's
 # plain-words stat and the pickup pop's noun.
@@ -66,11 +66,6 @@ const ROWS := {
 	"cell_bracket": {"name": "Cell Bracket", "stat": "active_recharge", "kind": "pct", "step": 0.04, "silhouette": "bracket",
 		"sound": "panel_ratchet", "answers": [], "words": "Active recharge", "noun": "bracket"},
 }
-
-# The stand-in plates the placeholder gate counts (scripts/placeholder-gate.mjs "pending").
-# A silhouette leaves this list when its kit plate lands from the reference sheet set
-# (docs/art/reference/item_panels/) and panel_shell.gd loads it.
-const PANEL_ART_PENDING := ["louvre", "rivet", "skirt", "sight", "fin", "drum", "collar", "spool", "tank", "bumper", "tile", "bracket"]
 
 # Mass-equivalent heft per panel: a panel weighs what PANEL_MASS scrap weighs, in both scrap
 # modes, and a hit never knocks it off. 6 makes 55 panels (the crown target) 0.73 heft, about

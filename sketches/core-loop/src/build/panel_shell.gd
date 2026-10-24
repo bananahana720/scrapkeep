@@ -17,9 +17,7 @@ const Accretion := preload("res://src/build/accretion.gd")
 # face, steel hardware), so 24 draw calls at most whatever the stack. The pickup pop widens
 # the face only, never its height, so a popping plate stays inside the envelope.
 #
-# The plates are tagged stand-ins (Panels.PANEL_ART_PENDING) built from primitives, one
-# silhouette per stat, crisp and bevelled. A silhouette's kit plate replaces its row in
-# _plate_mesh when the reference sheet set lands (docs/art/reference/item_panels/).
+# Each silhouette is a kit plate (plate_mesh) built from its reference sheet, one per stat.
 #
 # This node lives under the ball's roll_node() beside Accretion and rolls with the surface.
 # It never scales with heft class: the courses are the growth read.
@@ -31,16 +29,14 @@ const DRAW_BUDGET := 128
 const COURSE_RADIUS := [1.03, 1.11]
 const PLATE_COURSE_FROM := 1.19
 const PLATE_COURSE_STEP := 0.07
-# The tallest stand-in feature above its socket radius (the fin), for the envelope check.
+# The tallest plate feature above its socket radius (the fin, 0.24 m), for the envelope check.
 const PLATE_HEIGHT := 0.3
 const MAX_OVERHANG := 0.6
 # The face is drawn PLATE_FACE times the sheets' 0.45 m across (height unchanged): at the
 # sheets' size three to five plates did not read from the gameplay camera (panel_capture.gd).
 const PLATE_FACE := 1.5
-# The sheets' grey-tier two tones (bone face, steel hardware), and the patina's value spread
-# either side of white, multiplied over both.
-const BONE := Color("d2c5a5")
-const STEEL := Color("9aa0a6")
+const PLATE_GLB := "res://assets/models/item_panels/panel_%s.glb"
+# The patina's value spread either side of white, multiplied over the plates' baked tones.
 const PATINA := 0.14
 const POP_SCALE := 1.8
 const POP_RATE := 12.0
@@ -218,154 +214,39 @@ static func _facing(dir: Vector3) -> Basis:
 	return Basis(side, up, side.cross(up))
 
 
-# The stand-in plate for a silhouette, drawn from its reference sheet's details view
-# (docs/art/reference/item_panels/<panel>/, 23 Oct): a 0.45 m bone hex plate with a steel rim
-# and four bolts, and the stat's hardware in steel on its face. Two surfaces, bone then steel,
-# so the plate reads as the sheets' two-tone fleet stamp. Range Sight has no sheet (the image
-# filter refused it); its plate is derived from its siblings: the same hex, a ring sight on a
-# post and a short barrel. Cached per silhouette.
+# The kit plate for a silhouette: assets/models/item_panels/panel_<silhouette>.glb, built by
+# tools/blender/item_panels.py from its reference sheet (docs/art/reference/item_panels/; Range
+# Sight from its written spec). Two vertex-colour surfaces, `panel_face` (bone, rope, rubber) and
+# `panel_hardware` (steel and charcoal fittings); the patina multiplies over both. Cached per
+# silhouette; a missing plate is an error, never a stand-in.
 static func plate_mesh(silhouette: String) -> Mesh:
 	if _meshes.has(silhouette):
 		return _meshes[silhouette]
-	var bone := SurfaceTool.new()
-	bone.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var steel := SurfaceTool.new()
-	steel.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var flat := Basis(Vector3.UP, PI / 6.0)
-	# The hex: a steel rim slab under a slightly smaller bone face.
-	_part(steel, _cylinder(0.225, 0.225, 0.035, 6), Transform3D(flat, Vector3(0, 0.0175, 0)))
-	_part(bone, _cylinder(0.2, 0.205, 0.03, 6), Transform3D(flat, Vector3(0, 0.045, 0)))
-	for k in 4:
-		var a := PI * 0.25 + k * PI * 0.5
-		_part(steel, _cylinder(0.022, 0.026, 0.03, 6), Transform3D(Basis.IDENTITY, Vector3(cos(a) * 0.15, 0.065, sin(a) * 0.15)))
-	var lie := Basis(Vector3.FORWARD, PI * 0.5)
-	match silhouette:
-		"louvre":
-			# Slats across the face, opened 35 degrees.
-			for k in 4:
-				_part(steel, _box(Vector3(0.28, 0.02, 0.065)), Transform3D(Basis(Vector3.RIGHT, 0.6), Vector3(0, 0.09, -0.105 + 0.07 * k)))
-			_part(steel, _box(Vector3(0.3, 0.06, 0.02)), Transform3D(Basis.IDENTITY, Vector3(0, 0.08, -0.15)))
-			_part(steel, _box(Vector3(0.3, 0.06, 0.02)), Transform3D(Basis.IDENTITY, Vector3(0, 0.08, 0.15)))
-		"rivet":
-			# One big domed head on a boss: the punch.
-			_part(steel, _cylinder(0.075, 0.09, 0.05, 10), Transform3D(Basis.IDENTITY, Vector3(0, 0.085, 0)))
-			_part(steel, _sphere(0.08), Transform3D(Basis.IDENTITY, Vector3(0, 0.12, 0)))
-		"skirt":
-			# Three lip segments fanned 35 degrees off one edge, on a hinge bar.
-			_part(steel, _cylinder(0.018, 0.018, 0.4, 8), Transform3D(lie, Vector3(0, 0.07, 0.17)))
-			for k in 3:
-				_part(bone, _box(Vector3(0.13, 0.025, 0.16)), Transform3D(Basis(Vector3.UP, (k - 1) * 0.3) * Basis(Vector3.RIGHT, 0.6), Vector3((k - 1) * 0.14, 0.11, 0.24)))
-		"sight":
-			_part(steel, _cylinder(0.02, 0.025, 0.1, 8), Transform3D(Basis.IDENTITY, Vector3(0, 0.11, 0)))
-			_part(steel, _torus(0.06, 0.09), Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(0, 0.19, 0)))
-			_part(steel, _cylinder(0.025, 0.025, 0.24, 8), Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(0, 0.09, 0.02)))
-		"fin":
-			# A swept fin on a root, raked back like the sheet's side view.
-			_part(bone, _box(Vector3(0.03, 0.2, 0.24)), Transform3D(Basis(Vector3.RIGHT, -0.45), Vector3(0, 0.15, 0.03)))
-			_part(steel, _box(Vector3(0.06, 0.04, 0.3)), Transform3D(Basis.IDENTITY, Vector3(0, 0.08, 0)))
-		"drum":
-			# A roped drum on its axle between two cheeks.
-			_part(bone, _cylinder(0.075, 0.075, 0.22, 12), Transform3D(lie, Vector3(0, 0.13, 0)))
-			for side in [-1.0, 1.0]:
-				_part(steel, _cylinder(0.1, 0.1, 0.025, 12), Transform3D(lie, Vector3(0.125 * side, 0.13, 0)))
-		"collar":
-			# The ratchet wheel: a toothed disc and its pawl.
-			_part(steel, _cylinder(0.12, 0.12, 0.04, 12), Transform3D(Basis.IDENTITY, Vector3(0, 0.08, 0)))
-			for k in 12:
-				var a := k * TAU / 12.0
-				_part(steel, _box(Vector3(0.04, 0.04, 0.05)), Transform3D(Basis(Vector3.UP, -a), Vector3(cos(a) * 0.14, 0.08, sin(a) * 0.14)))
-			_part(steel, _cylinder(0.04, 0.04, 0.05, 8), Transform3D(Basis.IDENTITY, Vector3(0, 0.11, 0)))
-		"spool":
-			# An upright spool of rope with two flanges.
-			_part(bone, _cylinder(0.06, 0.06, 0.16, 12), Transform3D(Basis.IDENTITY, Vector3(0, 0.14, 0)))
-			_part(steel, _cylinder(0.11, 0.11, 0.02, 12), Transform3D(Basis.IDENTITY, Vector3(0, 0.07, 0)))
-			_part(steel, _cylinder(0.11, 0.11, 0.02, 12), Transform3D(Basis.IDENTITY, Vector3(0, 0.23, 0)))
-		"tank":
-			# A strapped tank lying across with its gauge.
-			_part(bone, _capsule(0.07, 0.3), Transform3D(lie, Vector3(0, 0.13, -0.02)))
-			_part(steel, _cylinder(0.075, 0.075, 0.02, 12), Transform3D(lie, Vector3(-0.07, 0.13, -0.02)))
-			_part(steel, _cylinder(0.075, 0.075, 0.02, 12), Transform3D(lie, Vector3(0.07, 0.13, -0.02)))
-			_part(steel, _cylinder(0.05, 0.05, 0.02, 12), Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(0, 0.16, 0.08)))
-		"bumper":
-			# A black-capped bar standing out on two pistons.
-			for side in [-1.0, 1.0]:
-				_part(steel, _cylinder(0.02, 0.02, 0.14, 8), Transform3D(Basis.IDENTITY, Vector3(0.1 * side, 0.12, 0)))
-			_part(steel, _box(Vector3(0.36, 0.06, 0.08)), Transform3D(Basis.IDENTITY, Vector3(0, 0.2, 0)))
-		"tile":
-			# Armour: a thicker bone face with a raised cross.
-			_part(bone, _cylinder(0.18, 0.19, 0.03, 6), Transform3D(flat, Vector3(0, 0.075, 0)))
-			_part(bone, _box(Vector3(0.3, 0.03, 0.06)), Transform3D(Basis.IDENTITY, Vector3(0, 0.1, 0)))
-			_part(bone, _box(Vector3(0.06, 0.03, 0.3)), Transform3D(Basis.IDENTITY, Vector3(0, 0.1, 0)))
-		"bracket":
-			# Three capped cells side by side under a retaining bar.
-			for k in 3:
-				_part(bone, _cylinder(0.045, 0.045, 0.2, 10), Transform3D(lie, Vector3(0, 0.1, -0.1 + 0.1 * k)))
-				_part(steel, _cylinder(0.05, 0.05, 0.03, 10), Transform3D(lie, Vector3(0.11, 0.1, -0.1 + 0.1 * k)))
-			_part(steel, _box(Vector3(0.03, 0.03, 0.32)), Transform3D(Basis.IDENTITY, Vector3(-0.02, 0.15, 0)))
-	bone.generate_normals()
-	steel.generate_normals()
-	var mesh := bone.commit()
-	steel.commit(mesh)
-	mesh.surface_set_material(0, _plate_material(BONE, 0.0, 0.7))
-	mesh.surface_set_material(1, _plate_material(STEEL, 0.7, 0.4))
+	var path := PLATE_GLB % silhouette
+	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
+	if packed == null:
+		push_error("panel_shell: kit plate %s does not load" % path)
+		return null
+	var scene := packed.instantiate()
+	var found := scene.find_children("*", "MeshInstance3D", true, false)
+	var mesh: ArrayMesh = (found[0] as MeshInstance3D).mesh.duplicate() if found.size() == 1 else null
+	scene.free()
+	if mesh == null:
+		push_error("panel_shell: %s holds %d meshes, want one" % [path, found.size()])
+		return null
+	for surface in mesh.get_surface_count():
+		var hardware := String(mesh.surface_get_material(surface).resource_name) == "panel_hardware"
+		mesh.surface_set_material(surface, _plate_material(0.7 if hardware else 0.0, 0.42 if hardware else 0.72))
 	_meshes[silhouette] = mesh
 	return mesh
 
 
-static func _plate_material(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
+static func _plate_material(metallic: float, roughness: float) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
 	mat.vertex_color_use_as_albedo = true
 	mat.metallic = metallic
 	mat.roughness = roughness
 	return mat
-
-
-static func _part(st: SurfaceTool, mesh: Mesh, xf: Transform3D) -> void:
-	st.append_from(mesh, 0, xf)
-
-
-static func _box(size: Vector3) -> Mesh:
-	var m := BoxMesh.new()
-	m.size = size
-	return m
-
-
-static func _sphere(r: float) -> Mesh:
-	var m := SphereMesh.new()
-	m.radius = r
-	m.height = r * 2.0
-	m.radial_segments = 8
-	m.rings = 4
-	return m
-
-
-static func _cylinder(top: float, bottom: float, height: float, sides := 10) -> Mesh:
-	var m := CylinderMesh.new()
-	m.top_radius = top
-	m.bottom_radius = bottom
-	m.height = height
-	m.radial_segments = sides
-	m.rings = 1
-	return m
-
-
-static func _torus(inner: float, outer: float) -> Mesh:
-	var m := TorusMesh.new()
-	m.inner_radius = inner
-	m.outer_radius = outer
-	m.rings = 12
-	m.ring_segments = 6
-	return m
-
-
-static func _capsule(r: float, height: float) -> Mesh:
-	var m := CapsuleMesh.new()
-	m.radius = r
-	m.height = height
-	m.radial_segments = 8
-	m.rings = 2
-	return m
 
 
 func _process(delta: float) -> void:
