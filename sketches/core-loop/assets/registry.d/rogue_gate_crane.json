@@ -4,8 +4,8 @@
    "id": "rogue_gate_crane",
    "path": "res://assets/models/rogues/gate_crane.glb",
    "class": "enemy",
-   "ships": false,
-   "loader": "pending: src/combat/rogue.gd loads it in the Rogue fleet mini-bosses PR (#385); flip ships there",
+   "ships": true,
+   "loader": "src/combat/rogue.gd (MODELS, load of this path)",
    "provenance": {
     "recipe": "tools/blender/rogues/gate_crane.py",
     "shell": "tools/blender/rogues/gate_crane.mojulo.json",

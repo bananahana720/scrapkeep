@@ -83,6 +83,14 @@ const ROWS := {
 		"idle": {"style": "breathe", "amplitude": 0.02, "beats": 3.0}, "death": {"style": "collapse", "parts": 8, "seconds": 0.7}},
 	"gap_net": {"color_role": "hazard", "shape": "star", "sound": "none", "attacks": {"E33": ["warn_seconds"]},
 		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
+	# The rogue fleet machines (combat/rogue.gd): each has one lane and one ring attack, so
+	# wind_lane and wind_ring are the selected attack's lead (a ring hurts as it fills).
+	"rogue_crane": {"color_role": "hazard", "shape": "wave", "sound": "none", "attacks": {"E34": ["wind_lane"], "E35": ["wind_ring"]},
+		"idle": {"style": "tick", "amplitude": 0.02, "beats": 4.0}, "death": {"style": "spin_down", "parts": 8, "seconds": 0.7}},
+	"rogue_skip": {"color_role": "hazard", "shape": "arrow", "sound": "none", "attacks": {"E36": ["wind_lane"], "E37": ["wind_ring"]},
+		"idle": {"style": "tick", "amplitude": 0.02, "beats": 4.0}, "death": {"style": "collapse", "parts": 8, "seconds": 0.7}},
+	"rogue_tender": {"color_role": "hazard", "shape": "bar", "sound": "none", "attacks": {"E38": ["wind_lane"], "E39": ["wind_ring"]},
+		"idle": {"style": "tick", "amplitude": 0.02, "beats": 4.0}, "death": {"style": "spin_down", "parts": 8, "seconds": 0.7}},
 }
 
 

@@ -40,7 +40,7 @@ const RING_OUT_DROP := 6.0
 # (WORLD-ROSTERS.md); the mama splitter cannot. Flyers (kite and winch drones) hover and
 # move on their own _move, so a knock never drops them.
 const RING_OUT_KEPT := ["warden", "vault", "miniboss", "reactor_relic", "swarm_remnant", "mind_hand",
-	"foreman", "dispatcher", "splitter", "linker"]
+	"foreman", "dispatcher", "splitter", "linker", "rogue_crane", "rogue_skip", "rogue_tender"]
 # The plating dress reads the colour law (LEGIBILITY, STATE_ROWS): "breaks now" is a rim and
 # an open-crack glyph in the live colour, pulsing; "not yet" is a steady slate rim and no
 # crack. The tint_state names ("amber" for will break, "slate" for glances) stay as combat
@@ -189,7 +189,7 @@ func _visual_parent() -> Node3D:
 
 
 func _ordinary_reaction() -> bool:
-	return kind not in ["warden", "vault", "miniboss"] and not preload("res://src/combat/roster.gd").is_boss_piece(kind)
+	return kind not in ["warden", "vault", "miniboss", "rogue_crane", "rogue_skip", "rogue_tender"] and not preload("res://src/combat/roster.gd").is_boss_piece(kind)
 
 
 func react(reaction: String, direction: Vector3, handed := false) -> void:
@@ -867,7 +867,7 @@ func _facts_row(is_lane: bool) -> String:
 	var found: Array = []
 	for id in EventKinds.ATTACK_ROWS:
 		var row: Dictionary = EventKinds.ATTACK_ROWS[id]
-		if row["group"] == "enemy" and row["owner_kind"] == "roster" and row["owner"] == kind:
+		if row["group"] == "enemy" and row["owner_kind"] in ["roster", "rogue"] and row["owner"] == kind:
 			found.append(id)
 	if found.size() <= 1:
 		return "" if found.is_empty() else found[0]
