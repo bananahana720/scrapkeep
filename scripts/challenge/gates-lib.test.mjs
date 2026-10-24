@@ -308,3 +308,12 @@ test("tools/bot_driver.gd makes no audio or beat reads", () => {
   const kite = readFileSync(new URL("../../sketches/core-loop/tools/bot_kite.gd", import.meta.url), "utf8");
   assert.deepEqual(driverAudioReads(kite), []);
 });
+
+test("gate 4 sizes a stage by the runs a seed was given, and is parked", () => {
+  const runs = [];
+  for (const seed of SEEDS) for (let rep = 0; rep < 2; rep++) runs.push({ stage: 1, seed, rep, cleared: true });
+  const ev = evaluateGates({ deaf: runs, deaf_hidden: runs }, { stages: [1], runs: 2 });
+  assert.equal(ev.gate4.real.stages[0].status, "pass");
+  assert.equal(ev.gate4.parked, true);
+  assert.equal(ev.gate1.parked, undefined);
+});

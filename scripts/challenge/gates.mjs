@@ -141,13 +141,14 @@ function finish(runs, outDir, meta) {
   const summaries = runs.map((r) => summarizeRun(r.row, jobById(r)));
   const byArm = groupByArm(summaries);
   const audio = driverAudioReads(readFileSync(DRIVER, "utf8"));
-  const ev = evaluateGates(byArm, { auditFree: audio.length === 0, stages: meta.stages ?? STAGES, seeds: meta.seeds ?? SEEDS });
+  const ev = evaluateGates(byArm, { auditFree: audio.length === 0, stages: meta.stages ?? STAGES, seeds: meta.seeds ?? SEEDS, runs: meta.runs ?? RUNS_PER_SEED });
   const voidByArm = Object.fromEntries(Object.entries(byArm).map(([a, s]) => [a, s.filter((x) => x.void).map((x) => ({ id: x.id, why: x.void }))]));
   const md = renderGates(ev, { when: new Date().toISOString().slice(0, 16) + "Z", commit: meta.commit, voidByArm }) + (audio.length ? "\nAudio reads found in the driver:\n" + audio.map((h) => `- line ${h.line}: ${h.text}`).join("\n") + "\n" : "");
   writeFileSync(path.join(outDir, "gates.md"), md);
   writeFileSync(path.join(outDir, "gates.json"), JSON.stringify({ ...meta, runs: runs.length, evaluation: ev, summaries }, null, 1) + "\n");
   console.log(md);
   console.log(`gates written to ${path.join(outDir, "gates.md")}`);
-  const bad = Object.values(ev).some((g) => g.broken || g.real.verdict !== "PASS");
+  // --strict counts only the gates this run chose and the board has not parked.
+  const bad = opts.gates.map((g) => ev["gate" + g]).filter((g) => !g.parked).some((g) => g.broken || g.real.verdict !== "PASS");
   if (opts.strict && bad) process.exit(1);
 }

@@ -114,6 +114,14 @@ If a control reads wrong, the gate is broken: the report prints `BROKEN` and wit
 
 Rulings after the first sweep (24 Oct, scrapkeep#241 comment 6378906601). Gate 2 scores contested pairs only: most windows lose no hull, so 0 against 0 pairs made the old 24-of-30 count unreachable and said nothing about either arm. A pair where only one arm lost hull is the worst ratio for that arm, not dropped. Gate 4's absolute 85% check is parked until packs threaten: Expert cleared as well with telegraphs hidden, so the check cannot show that it reads them. Re-run it then as paired telegraph-on against hidden.
 
+Measuring a game variant (the pack pressure experiments): put the variant behind a `ChallengeDials` key (`src/core/challenge_dials.gd`, default = today's game) and pass it with `--tune`, which every arm receives. A quick world 1 read of the real arms, about 60 jobs:
+
+```
+node scripts/challenge/gates.mjs --gates=1,2 --only=orbit,terrain --stages=1,2 --tune=<key>=<value> --label=<variant>-quick
+```
+
+The controls do not run, so the reading prints `BROKEN`; read the real rows (gate 1 deaths, gate 2 contested pairs and ratio) against the same command without `--tune`. A full read drops `--only` (540 jobs over 6 arms; split with `--shard=i/n` and join with `--merge`). In a fresh worktree, import once first: `"$GODOT_BIN" --headless --path sketches/core-loop --import`.
+
 Every arm plays stages 1 to 6, each entered fresh (`--from-stage=N --until=N`), seeds 1 to 5 and 3 runs a seed at `--fixed-fps 90`: 8 arms of 90 runs, 720 jobs (`--dry-run` counts them). The pilot is `seed % 6`, as in the band table. The three runs of a seed are the same seed run three times (ruling 6356590453, to expose run-to-run splits), told apart by the repeat index in the job id and out dir. The A/A arm `orbit_b` runs the same seeds as `orbit`, so on identical seeds it must tie and read FAIL. Each run saves `jobs/<id>/cmd.txt`. `--resume`, `--shard=i/n`, `--merge=<dir,dir>`, `--label` and `--jobs` work as in `challenge:bands`; `--gates=1,2,4` and `--only=<arm,arm>` choose arms, `--stages` and `--seeds` shrink the plan.
 
 Instrument checks (a run that fails one is void, listed in the report and left out of the medians): an `orbit` run must spend 80% or more of its window circling (within 3 m of the 14 m ring around its fixed anchor; the window runs from first contact to 120 s or death, `alive_120s`); a `terrain` run must ride a line at least once per 30 s of that window, and a stage with no line within reach says so (`lines_in_reach` 0) and is void; gate 4 also needs `tools/bot_driver.gd` to read no audio or beat state (a static scan, also a unit test). A seed with fewer than 2 valid runs of 3 is void, and a gate with a void seed reads `VOID`, not `PASS`.
