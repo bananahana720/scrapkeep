@@ -54,6 +54,7 @@ const Nemesis := preload("res://src/combat/nemesis.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Cards := preload("res://src/world/director_cards.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
+const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 const IslandEdge := preload("res://src/combat/island_edge.gd")
 const BallastHeavy := preload("res://src/combat/ballast_heavy.gd")
@@ -424,6 +425,12 @@ func _draw_credit() -> Dictionary:
 
 # One pack's members side by side across the line from the ball, on one ring timer.
 func _place_pack(at: Vector2, kinds: Array, ball: Vector2, is_elite := false) -> int:
+	# Pack pressure B (pack_pressure.gd; 0 without --pack-pressure): extra chasers join every crew.
+	var extra := PackPressure.crew_extra(dial_stage)
+	if extra > 0 and kinds.size() >= 2:
+		kinds = kinds.duplicate()
+		for _i in extra:
+			kinds.append("chaser")
 	var queued := 0
 	var affixed := false
 	var heading := (at - ball).normalized() if at.distance_to(ball) > 0.1 else Vector2.RIGHT

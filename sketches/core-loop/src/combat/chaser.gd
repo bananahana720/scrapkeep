@@ -2,6 +2,7 @@ extends "res://src/combat/enemy.gd"
 
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
+const PackPressure := preload("res://src/combat/pack_pressure.gd")
 
 # The chaser runs you down and lunges. The lunge is committed: at wind-up it lays a
 # lane on the ground from where it stands toward where you are, and only that lane
@@ -34,7 +35,20 @@ const ACCENT := Color("ffb070")
 const REAR_SHIFT := Vector3(0.0, 0.3, 0.7)
 const REAR_PITCH := 42.0
 
-enum State { CHASE, WINDUP, LUNGE, RECOVER }
+enum State { CHASE, WINDUP, LUNGE, RECOVER, CALL }
+
+# Pack pressure (pack_pressure.gd, world 1 experiments; {} without --pack-pressure): "lead" 0 to 1 of the
+# ball's predicted roll this chaser steers at and lays its lane toward, "rest" scales REST, "flanker" runs
+# ahead of the ball's line, calls, and lunges across it.
+var pressure := {}
+# A flanker's call: it sounds PRESSURE_CUE_S before the wind-up, then the lane is committed as ever.
+signal pressure_cue(cue: String, at: Vector3, seconds_until: float)
+const LUNGE_SPEED := LUNGE_LENGTH / LUNGE_TIME
+# A flanker heads for the ball's line this far ahead (seconds) and this far to its own side (m), and calls
+# once the ball's next FLANK_CALL_S of roll comes within LUNGE_RANGE.
+const FLANK_AHEAD_S := 1.6
+const FLANK_SIDE := 5.0
+const FLANK_CALL_S := 1.1
 
 var state := State.CHASE
 var lunges := 0
@@ -65,6 +79,7 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	weight = 1.0
 	radius = 1.0
 	half_height = 1.5
+	pressure = spec_ref.get("pressure", {})
 	# _add_capsule still lays the collider and the flashing material; its capsule mesh is
 	# replaced by the C10 wedge (enemy_chaser.glb): plough wedge, shoulder shield, raked fin
 	# and braced haunches, with the lit visor as the glb's brass surface.
@@ -114,7 +129,7 @@ static func _parts() -> Array:
 
 
 func state_name() -> String:
-	return ["chase", "windup", "lunge", "recover"][state]
+	return ["chase", "windup", "lunge", "recover", "call"][state]
 
 
 func _physics_process(delta: float) -> void:
@@ -128,15 +143,26 @@ func _physics_process(delta: float) -> void:
 	var to_ball := _flat_to_ball()
 	match state:
 		State.CHASE:
-			var desired := Vector3.ZERO
-			if to_ball.length() > radius + 1.4:
-				desired = to_ball.normalized() * SPEED
-			_move(delta, desired)
-			if _rest <= 0.0 and to_ball.length() < LUNGE_RANGE and is_on_floor() and _knocked_speed() < 1.0:
-				if AttackBudget.ask(self):
-					_begin_windup(to_ball)
+			if pressure.get("flanker", false):
+				_flank(delta, to_ball)
+			elif float(pressure.get("lead", 0.0)) > 0.0:
+				_lead_chase(delta, to_ball, float(pressure.lead))
 			else:
-				AttackBudget.withdraw(self)
+				var desired := Vector3.ZERO
+				if to_ball.length() > radius + 1.4:
+					desired = to_ball.normalized() * SPEED
+				_move(delta, desired)
+				if _rest <= 0.0 and to_ball.length() < LUNGE_RANGE and is_on_floor() and _knocked_speed() < 1.0:
+					if AttackBudget.ask(self):
+						_begin_windup(to_ball)
+				else:
+					AttackBudget.withdraw(self)
+		State.CALL:
+			_move(delta, _toward(_flat(_flank_point() - global_position)))
+			if _knocked_speed() >= INTERRUPT:
+				_end_attack(State.RECOVER)
+			elif _clock >= PackPressure.PRESSURE_CUE_S:
+				_begin_windup(_led_aim(1.0))
 		State.WINDUP:
 			_move(delta, Vector3.ZERO)
 			var lane := telegraph()
@@ -168,6 +194,76 @@ func _physics_process(delta: float) -> void:
 	_paint_cue()
 
 
+# Lead: steer at the earliest point of the ball's predicted roll this chaser can reach lunge range of,
+# and wind up when the lane's led end is in range. The lane is still committed at wind-up and only it hurts.
+func _lead_chase(delta: float, to_ball: Vector3, lead: float) -> void:
+	_move(delta, _toward(_intercept(lead)))
+	var aim := _led_aim(lead)
+	if _rest <= 0.0 and aim.length() < LUNGE_RANGE and is_on_floor() and _knocked_speed() < 1.0:
+		if AttackBudget.ask(self):
+			_begin_windup(aim)
+	else:
+		AttackBudget.withdraw(self)
+
+
+# Flank: run for a point beside the ball's line ahead of it, then call and lunge across the line.
+func _flank(delta: float, to_ball: Vector3) -> void:
+	_move(delta, _toward(_flat(_flank_point() - global_position)))
+	var ahead := _flat(PackPressure.predict(target, FLANK_CALL_S) - global_position)
+	var coming: bool = target.planar_velocity().dot(-to_ball) > 0.0
+	if _rest <= 0.0 and ahead.length() < LUNGE_RANGE and coming and is_on_floor() and _knocked_speed() < 1.0:
+		if AttackBudget.ask(self):
+			state = State.CALL
+			_clock = 0.0
+			pressure_cue.emit("flank_call", global_position, PackPressure.PRESSURE_CUE_S + WINDUP)
+	else:
+		AttackBudget.withdraw(self)
+
+
+func _flank_point() -> Vector3:
+	var ahead := PackPressure.predict(target, FLANK_AHEAD_S)
+	var v: Vector3 = target.planar_velocity()
+	if v.length() < 1.0:
+		return ahead
+	var side := Vector3(-v.z, 0.0, v.x).normalized()
+	if side.dot(global_position - ahead) < 0.0:
+		side = -side
+	return ahead + side * FLANK_SIDE
+
+
+# Flat offset from this chaser to the ball's predicted roll at the time a lane laid now would land:
+# the wind-up plus the lunge's travel, iterated twice. lead blends the ball's present spot (0) and that point (1).
+func _led_aim(lead: float) -> Vector3:
+	var now := _ball()
+	var t := WINDUP + _flat(now - global_position).length() / LUNGE_SPEED
+	var at := PackPressure.predict(target, t)
+	t = WINDUP + _flat(at - global_position).length() / LUNGE_SPEED
+	at = PackPressure.predict(target, t)
+	return _flat(now.lerp(at, lead) - global_position)
+
+
+# The earliest point of the ball's predicted roll (within MAX_LEAD_S) this chaser can get within lunge
+# range of at SPEED; the farthest look when none.
+func _intercept(lead: float) -> Vector3:
+	var steps := 10
+	var best := PackPressure.predict(target, PackPressure.MAX_LEAD_S * lead)
+	for i in range(steps + 1):
+		var t := PackPressure.MAX_LEAD_S * lead * float(i) / steps
+		var at := PackPressure.predict(target, t)
+		if _flat(at - global_position).length() - SPEED * t <= LUNGE_RANGE * 0.8:
+			best = at
+			break
+	return _flat(best - global_position)
+
+
+static func _flat(v: Vector3) -> Vector3:
+	return Vector3(v.x, 0.0, v.z)
+
+
+func _toward(offset: Vector3) -> Vector3:
+	return offset.normalized() * SPEED if offset.length() > radius + 1.4 else Vector3.ZERO
+
+
 func _begin_windup(to_ball: Vector3) -> void:
 	state = State.WINDUP
 	_clock = 0.0
@@ -193,7 +289,7 @@ func _end_attack(next: int) -> void:
 		lunges += 1
 	state = next
 	_clock = 0.0
-	_rest = REST
+	_rest = REST * float(pressure.get("rest", 1.0))
 	_clear_telegraph()
 	AttackBudget.release(self)
 

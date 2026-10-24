@@ -1,0 +1,215 @@
+# smoke: solo (the world 1 pack pressure experiments: presets, identity defaults, the curved lead, churned silt, silt boils)
+extends SceneTree
+
+const PackPressure := preload("res://src/combat/pack_pressure.gd")
+const ChurnGround := preload("res://src/combat/churn_ground.gd")
+const SiltBoil := preload("res://src/combat/silt_boil.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const T := preload("res://tests/support/t.gd")
+
+# src/combat/pack_pressure.gd and its two ground systems. Without --pack-pressure every dial reads its
+# identity, so nothing here changes the shipped game; a preset fills only world 1's stages. The curved lead
+# must land a ball holding a ring near where it really goes, where a straight-line lead misses by metres.
+# The churn and the boils run against a fake context: no game is started.
+
+const CRUISE := 14.0
+const RING := 14.0
+
+
+class FakeState:
+	var floor := true
+
+	func on_floor() -> bool:
+		return floor
+
+
+class FakePlayer:
+	var at := Vector3.ZERO
+	var v := Vector3.ZERO
+	var state := FakeState.new()
+	var pushed := Vector3.ZERO
+
+	func ball_position() -> Vector3:
+		return at
+
+	func planar_velocity() -> Vector3:
+		return Vector3(v.x, 0.0, v.z)
+
+	func add_external_accel(accel: Vector3) -> void:
+		pushed += accel
+
+
+class FakeTuning:
+	func f(_key: String) -> float:
+		return CRUISE
+
+
+class FakeFlow:
+	func in_play() -> bool:
+		return true
+
+
+class FakeTerrain:
+	func height(_x: float, _z: float) -> float:
+		return 0.0
+
+
+class FakeRun:
+	var stage := 1
+	var run_seed := 7
+
+
+class FakeCtx:
+	var run := FakeRun.new()
+	var flow := FakeFlow.new()
+	var player := FakePlayer.new()
+	var tuning := FakeTuning.new()
+	var terrain := FakeTerrain.new()
+	var root: Node3D
+
+
+class FakeEnemy extends Node3D:
+	var kind := "chaser"
+	var half_height := 1.5
+	var knocked := 0
+	var taken := 0.0
+
+	func is_dead() -> bool:
+		return false
+
+	func knock(_d: Vector3, _f: float) -> void:
+		knocked += 1
+
+	func take_damage(amount: float) -> float:
+		taken += amount
+		return amount
+
+
+var _t := T.new("pack_pressure_test")
+
+
+func _initialize() -> void:
+	await process_frame
+	ChallengeDials.reset()
+	_identity()
+	_presets()
+	await _lead()
+	_churn()
+	await _boils()
+	ChallengeDials.reset()
+	quit(_t.verdict())
+
+
+func _identity() -> void:
+	for key in ["pack.lead_by_stage", "pack.crew_extra_by_stage", "pack.rest_by_stage", "pack.flank_by_stage", "ground.churn_by_stage", "hazard.boil_by_stage"]:
+		_t.eq("01 %s is at its default with no flag" % key, ChallengeDials.value(key), ChallengeDials.DEFAULTS[key])
+	_t.eq("02 a crew reads the identity row", PackPressure.crew_row(1), {"lead": 0.0, "rest": 1.0, "flank": 0.0})
+	_t.eq("03 no extra chasers", PackPressure.crew_extra(1), 0)
+
+
+func _presets() -> void:
+	var unknown := []
+	var spec := PackPressure.tune_spec("a+d+Q", unknown)
+	_t.eq("04 an unknown letter is reported", unknown, ["Q"])
+	var parsed := ChallengeDials.parse(spec)
+	_t.eq("05 A+D names the lead and churn dials", parsed.keys().size(), 2)
+	_t.eq("06 the lead fills world 1 only", parsed["pack.lead_by_stage"], [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
+	ChallengeDials.set_overrides(ChallengeDials.parse(PackPressure.tune_spec("B")))
+	_t.eq("07 B adds one chaser on the dam", PackPressure.crew_extra(1), 1)
+	_t.eq("08 B adds none in the Dig", PackPressure.crew_extra(3), 0)
+	_t.near("09 B halves the re-engage gap on the flume", PackPressure.crew_row(2).rest, 0.5)
+	_t.near("10 B leaves the Dig's gap alone", PackPressure.crew_row(3).rest, 1.0)
+	ChallengeDials.set_overrides({})
+
+
+# A ball on a 14 m ring at cruise, sampled each physics tick: the lead 1 s ahead lands within a metre of the
+# ring's true point; the straight-line lead is more than 5 m off.
+func _lead() -> void:
+	var player := FakePlayer.new()
+	var w := CRUISE / RING
+	var angle := 0.0
+	for i in 150:
+		await physics_frame
+		angle += w / float(Engine.physics_ticks_per_second)
+		player.at = Vector3(cos(angle), 0.0, sin(angle)) * RING
+		player.v = Vector3(-sin(angle), 0.0, cos(angle)) * CRUISE
+		PackPressure.predict(player, 0.0)
+	var truth := Vector3(cos(angle + w), 0.0, sin(angle + w)) * RING
+	var led := PackPressure.predict(player, 1.0)
+	_t.near("11 the turn rate read is the ring's", PackPressure.turn_rate(), w, 0.05)
+	_t.check("12 the curved lead lands within 1 m", led.distance_to(truth) < 1.0, "%.2f m" % led.distance_to(truth))
+	_t.check("13 a straight lead would miss by over 5 m", (player.at + player.v).distance_to(truth) > 5.0)
+
+
+func _churn() -> void:
+	var ctx := FakeCtx.new()
+	ctx.root = Node3D.new()
+	root.add_child(ctx.root)
+	var churn := ChurnGround.new()
+	churn.setup(ctx)
+	var dt := 1.0 / 90.0
+	ctx.player.v = Vector3(10.0, 0.0, 0.0)
+	churn.step(dt)
+	_t.eq("14 off with no dial: nothing churns", churn.churned_cells, 0)
+	ChallengeDials.set_overrides(ChallengeDials.parse(PackPressure.tune_spec("D")))
+	var a := Vector3(1.0, 0.0, 1.0)
+	var b := Vector3(20.0, 0.0, 1.0)
+	for pass_i in 2:
+		ctx.player.at = a
+		for i in 10:
+			churn.step(dt)
+		ctx.player.at = b
+		for i in 180:
+			churn.step(dt)
+	ctx.player.at = a
+	ctx.player.pushed = Vector3.ZERO
+	churn.step(dt)
+	_t.eq("15 the third pass over a cell is churned twice", churn.level_at(a), 2)
+	_t.check("16 a cruise ball is dragged back", ctx.player.pushed.x < 0.0)
+	ctx.player.pushed = Vector3.ZERO
+	ctx.player.v = Vector3(CRUISE * SpeedTier.MULTIPLES[SpeedTier.FAST] + 0.5, 0.0, 0.0)
+	churn.step(dt)
+	_t.eq("17 a FAST ball skims churned silt", ctx.player.pushed, Vector3.ZERO)
+	_t.eq("18 fresh ground is not churned", churn.level_at(Vector3(60.0, 0.0, 60.0)), 0)
+	ChallengeDials.set_overrides({})
+	ctx.root.queue_free()
+
+
+# A ball looping a 14 m ring with a crew 10 m off: a ring is committed once the loop is read, it erupts
+# after its warning, and it hits a ball (and tosses a crew) inside it.
+func _boils() -> void:
+	var ctx := FakeCtx.new()
+	ctx.root = Node3D.new()
+	root.add_child(ctx.root)
+	var enemy := FakeEnemy.new()
+	ctx.root.add_child(enemy)
+	enemy.global_position = Vector3(0.0, 1.5, 0.0)
+	var boils := SiltBoil.new()
+	boils.setup(ctx, ctx.terrain)
+	var dealt := []
+	boils.deal = func(amount: float, _shove: Vector3): dealt.append(amount)
+	var dt := 1.0 / 90.0
+	boils.step(dt, [enemy])
+	_t.eq("19 off with no dial: no boil", boils.boils, 0)
+	ChallengeDials.set_overrides(ChallengeDials.parse(PackPressure.tune_spec("E")))
+	var w := CRUISE / RING
+	var angle := 0.0
+	var steps := 0
+	while boils.boils == 0 and steps < 90 * 20:
+		angle += w * dt
+		ctx.player.at = Vector3(cos(angle), 0.0, sin(angle)) * RING
+		ctx.player.v = Vector3(-sin(angle), 0.0, cos(angle)) * CRUISE
+		boils.step(dt, [enemy])
+		steps += 1
+	_t.eq("20 a loop in a fight raises a boil", boils.boils, 1)
+	_t.check("21 not before the loop window", steps * dt >= SiltBoil.LOOP_WINDOW - 0.5, "%.1f s" % (steps * dt))
+	ctx.player.at = boils._ring.center
+	enemy.global_position = boils._ring.center + Vector3(1.0, 1.5, 0.0)
+	for i in int(SiltBoil.WARN * 90.0) + 2:
+		boils.step(dt, [enemy])
+	_t.eq("22 the eruption hits the ball inside", boils.ball_hits, 1)
+	_t.eq("23 it deals the boil's damage", dealt, [SiltBoil.DAMAGE])
+	_t.eq("24 it tosses the crew inside", enemy.knocked, 1)
+	ChallengeDials.set_overrides({})
+	ctx.root.queue_free()
+	await process_frame

@@ -41,6 +41,9 @@ const SpecialCues := preload("res://src/combat/special_cues.gd")
 const Companion := preload("res://src/core/companion.gd")
 const DamageFamilies := preload("res://src/combat/damage_families.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
+const PackPressure := preload("res://src/combat/pack_pressure.gd")
+const ChurnGround := preload("res://src/combat/churn_ground.gd")
+const SiltBoil := preload("res://src/combat/silt_boil.gd")
 
 # Writer A's module: the two class kits, the pattern system parts transform, enemies
 # with committed telegraphs, the miniboss, damage and drops, and the shoulder view
@@ -342,6 +345,11 @@ var _actions := {}
 # SR1: every strike passes this door (damage_door.gd), which runs the stages below in its
 # declared order and then its hooks; the primer mesh and the companion ram ride as "hit" hooks.
 var door := DamageDoor.new()
+# The world 1 pack pressure experiments (pack_pressure.gd): chasers spawned under a flank dial, every second
+# one a flanker; the churned silt and silt boils, idle at their identity dials.
+var _pressure_chasers := 0
+var churn
+var boils
 var _strike_stages := {}
 
 
@@ -383,6 +391,11 @@ func setup(ctx_ref) -> void:
 	wear_trail = WearTrail.new()
 	wear_trail.setup(ctx, effects, _floor_at)
 	wear_trail.deal = _trail_deal
+	churn = ChurnGround.new()
+	churn.setup(ctx)
+	boils = SiltBoil.new()
+	boils.setup(ctx, ground)
+	boils.deal = func(amount: float, shove: Vector3): _on_player_hit(amount, shove, "silt_boil")
 	near_miss = NearMiss.new()
 	add_child(near_miss)
 	flail = Flail.new()
@@ -578,6 +591,12 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 				enemy_spec.merge(RunTier.row(director.run_tier()).elite_stats, true)
 				enemy_spec["affix"] = affix_id
 				enemy_spec["affix_world"] = director.world
+		var pressure := PackPressure.crew_row(int(ctx.run.stage))
+		if pressure.lead > 0.0 or pressure.rest != 1.0 or pressure.flank > 0.0:
+			if kind == "chaser" and pressure.flank > 0.0:
+				_pressure_chasers += 1
+				pressure["flanker"] = _pressure_chasers % 2 == 0
+			enemy_spec["pressure"] = pressure
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
 	# The vault and the Warden settle onto the ground or their landmark anchor in setup.
 	if enemy is CollisionObject3D and not enemy.global_position.is_equal_approx(at):
@@ -1544,6 +1563,8 @@ func _physics_process(delta: float) -> void:
 		_detonate(charge)
 	_step_devices(delta)
 	wear_trail.step(delta, enemies)
+	churn.step(delta)
+	boils.step(delta, enemies)
 	_pin_step(enemies)
 	_hulk_step(enemies, delta)
 	_bat_by_ball(shells)
