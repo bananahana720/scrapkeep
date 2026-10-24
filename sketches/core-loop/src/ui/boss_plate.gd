@@ -10,6 +10,12 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 # chunks, the guard bar and one state glyph. It draws itself and reads one posture body (a
 # Warden, or Brindle's hull); it draws nothing for one that is gone or fights on the plating rule. Every colour is a
 # STATE_ROWS row or a role, and no number is drawn.
+#
+# A fight with phases (combat/fight_phases.gd, Andrew 23 Oct) also sets one diamond per phase
+# in the plate's bottom rim: the live phase lit in the phase row's brass, spent phases
+# cracked and dim, phases to come dark. At each turn the spent diamond cracks with a pop and
+# two shards over the transition beat, and the next one lights. A fight without phases shows
+# no diamonds, so a stage Warden's plate is unchanged.
 
 const SIZE := Vector2(420.0, 44.0)
 const GLANCE_SECONDS := 0.6
@@ -25,10 +31,24 @@ const BAR_HEIGHT := 12.0
 const GLYPH := 26.0
 const GAP := 10.0
 const EMPTY_ALPHA := 0.35
+const PHASE := 18.0
+const PHASE_GAP := 16.0
+# How far the phase diamonds hang below the panel: half a diamond, so they sit on the rim.
+const PHASE_DROP := PHASE * 0.5
+# The crack plays over the opening of the transition beat: the pop, then the shards fade.
+const CRACK_SECONDS := 0.9
+const CRACK_POP := 0.5
+const LIGHT_SECONDS := 0.4
+# Reduced motion (Game.set_reduced_motion keeps it current): the crack shows at once, no pop or shards.
+static var reduced_motion := false
 
 var _warden: Node3D
 var _events
 var _glance_left := 0.0
+# The fight's phases (a FightPhases, or anything with phase and phases), or null.
+var _phases
+var _seen_phase := 0
+var _turn_age := -1.0
 
 
 func _init() -> void:
@@ -37,10 +57,14 @@ func _init() -> void:
 	size = SIZE
 
 
-func bind(warden: Node3D) -> void:
+func bind(warden: Node3D, phases = null) -> void:
 	unbind()
 	_warden = warden
 	_glance_left = 0.0
+	_phases = phases
+	_seen_phase = phase()
+	_turn_age = -1.0
+	_fit()
 	var fleet = warden.get("fleet") if is_instance_valid(warden) else null
 	if fleet != null:
 		_events = fleet.events()
@@ -54,6 +78,10 @@ func unbind() -> void:
 	_events = null
 	_warden = null
 	_glance_left = 0.0
+	_phases = null
+	_seen_phase = 0
+	_turn_age = -1.0
+	_fit()
 	queue_redraw()
 
 
@@ -149,8 +177,53 @@ func glyph_color() -> Color:
 	return EventKinds.state_color(glyph_id()) if active() else EventKinds.role_color("neutral")
 
 
+# The phase count and the live phase; 1 and 0 for a fight without phases.
+func phase_count() -> int:
+	return int(_phases.phases) if _phases != null else 1
+
+
+func phase() -> int:
+	return int(_phases.phase) if _phases != null else 0
+
+
+# Whether the plate sets phase diamonds: a fight of two or more phases.
+func phased() -> bool:
+	return active() and phase_count() > 1
+
+
+# One diamond per phase: "spent" (cracked), "live" or "ahead"; empty for a fight without phases.
+func phase_pips() -> Array:
+	var list: Array = []
+	if not phased():
+		return list
+	var now := phase()
+	for i in phase_count():
+		list.append("spent" if i + 1 < now else ("live" if i + 1 == now else "ahead"))
+	return list
+
+
+# Seconds since the last turn while its crack still plays, else -1.
+func turn_age() -> float:
+	return _turn_age
+
+
 func advance(delta: float) -> void:
 	_glance_left = maxf(0.0, _glance_left - delta)
+	if _turn_age >= 0.0:
+		_turn_age += delta
+		if _turn_age >= CRACK_SECONDS:
+			_turn_age = -1.0
+	var now := phase()
+	if now > _seen_phase and now >= 2:
+		_turn_age = 0.0
+	_seen_phase = now
+
+
+# The plate grows by the diamonds' drop only while it sets them.
+func _fit() -> void:
+	var want := SIZE + (Vector2(0.0, PHASE_DROP) if _phases != null and phase_count() > 1 else Vector2.ZERO)
+	custom_minimum_size = want
+	size = want
 
 
 func _on_deflected(enemy: Node3D, _kind: String, _punch: float, _plating: float) -> void:
@@ -178,8 +251,8 @@ func _draw() -> void:
 	if not active():
 		return
 	var neutral := EventKinds.role_color("neutral")
-	UiDraw.panel(self, Rect2(Vector2.ZERO, size))
-	var mid := size.y * 0.5
+	UiDraw.panel(self, Rect2(Vector2.ZERO, SIZE))
+	var mid := SIZE.y * 0.5
 	UiDraw.text(self, MARGIN, mid, plate_name(), FONT, neutral)
 	var x := MARGIN + NAME_WIDTH
 	for pip in pips():
@@ -194,6 +267,62 @@ func _draw() -> void:
 	var row := EventKinds.state_row(glyph_id())
 	var rect := Rect2(Vector2(size.x - MARGIN - GLYPH, mid - GLYPH * 0.5), Vector2(GLYPH, GLYPH))
 	draw_texture_rect(Icons.shape(String(row.get("shape", "none"))), rect, false, glyph_color())
+	_draw_phases()
+
+
+# The live phase's colour: the boss_phase_changed row's brass.
+static func phase_color() -> Color:
+	return EventKinds.color("boss_phase_changed")
+
+
+# Diamond i's drawn scale: the spent one pops while it cracks, the newly lit one grows in;
+# 1 at rest and always 1 under reduced motion.
+func diamond_scale(i: int) -> float:
+	if reduced_motion or _turn_age < 0.0:
+		return 1.0
+	if i == phase() - 2:
+		return 1.0 + CRACK_POP * sin(PI * clampf(_turn_age / CRACK_SECONDS * 3.0, 0.0, 1.0))
+	if i == phase() - 1:
+		return clampf(_turn_age / LIGHT_SECONDS, 0.25, 1.0)
+	return 1.0
+
+
+func _draw_phases() -> void:
+	var pips := phase_pips()
+	if pips.is_empty():
+		return
+	var span := pips.size() * PHASE + (pips.size() - 1) * PHASE_GAP
+	var x := (SIZE.x - span) * 0.5 + PHASE * 0.5
+	var neutral := EventKinds.role_color("neutral")
+	var cracking := _turn_age >= 0.0
+	var t := _turn_age / CRACK_SECONDS if cracking else 1.0
+	for i in pips.size():
+		var c := Vector2(x + i * (PHASE + PHASE_GAP), SIZE.y)
+		var state: String = pips[i]
+		var just_spent := cracking and i == phase() - 2
+		var half := PHASE * 0.5 * diamond_scale(i)
+		var shape := PackedVector2Array([c + Vector2(0.0, -half), c + Vector2(half, 0.0), c + Vector2(0.0, half), c + Vector2(-half, 0.0)])
+		var ring := shape.duplicate()
+		ring.append(shape[0])
+		match state:
+			"live":
+				draw_colored_polygon(shape, phase_color())
+				draw_polyline(ring, crack_backing(), 2.0)
+			"spent":
+				draw_colored_polygon(shape, crack_backing())
+				draw_polyline(ring, _fade(neutral, EMPTY_ALPHA), 2.0)
+				var crack := PackedVector2Array([c + Vector2(-1.5, -half), c + Vector2(1.5, -1.0), c + Vector2(-1.5, 1.0), c + Vector2(1.5, half)])
+				draw_polyline(crack, crack_backing(), 3.5)
+				draw_polyline(crack, phase_color() if just_spent else neutral, 1.5)
+			_:
+				draw_colored_polygon(shape, crack_backing())
+				draw_polyline(ring, neutral, 2.0)
+		if just_spent and not reduced_motion:
+			# Two shards fly off and fade over the crack.
+			var shard_color := _fade(phase_color(), 1.0 - t)
+			for side in [-1.0, 1.0]:
+				var at := c + Vector2(side * (half + 10.0 * t), -6.0 * t + 14.0 * t * t)
+				draw_colored_polygon(PackedVector2Array([at + Vector2(0.0, -3.0), at + Vector2(side * 3.0, 1.0), at + Vector2(-side * 1.0, 2.0)]), shard_color)
 
 
 func _draw_pip(rect: Rect2, pip: Dictionary, _color: Color) -> void:

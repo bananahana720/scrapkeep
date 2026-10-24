@@ -203,6 +203,10 @@ static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB,
 	rng.seed = ("%s/%d_%d" % [row["seed"], ci, cj]).hash()
 	var count := int(float(row["density"]) * rect.get_area() / 100.0)
 	var scale_range: Vector2 = row["scale"]
+	var clump: Dictionary = CLUMPS.get(String(map.get("title") if map.get("title") != null else ""), {})
+	var field := _clump_field(clump)
+	if not clump.is_empty():
+		count = int(count / float(clump["keep"]))
 	for i in count:
 		var x := rng.randf_range(rect.position.x, rect.end.x)
 		var z := rng.randf_range(rect.position.y, rect.end.y)
@@ -211,6 +215,8 @@ static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB,
 		var tilt := rng.randf_range(-0.25, 0.25)
 		# The far edges belong to the next chunk.
 		if x >= rect.end.x or z >= rect.end.y:
+			continue
+		if field != null and rng.randf() > _clump_keep(clump, field, x, z):
 			continue
 		if _kept_clear(keeps, Vector2(x, z)) or _kept_out(keep_out, Vector2(x, z)):
 			continue
@@ -221,6 +227,33 @@ static func chunk_transforms(row: Dictionary, map, ground: Callable, aabb: AABB,
 		if tall and out.size() > placed and _in_lane(lane_mask, out[placed].origin.x, out[placed].origin.z):
 			out[placed] = _sunk_to_band(out[placed], ground, aabb)
 	return out
+
+
+# A park in CLUMPS gathers its scatter into debris patches (4080 park stills, acb55972: an even sprinkle on flat
+# sand reads as nothing): a candidate is kept with a chance that follows a low-frequency noise field, and the row
+# draws 1 / keep times its candidates. The chance is clamped to 0..2 keep, symmetric about keep, so over the centred
+# noise its mean is keep and the expected count, the vertex budget and the draws stay as they were. gain sharpens
+# the patch edges.
+const CLUMPS := {
+	"park_dam": {"seed": 1871, "frequency": 1.0 / 70.0, "keep": 0.36, "gain": 1.6},
+}
+
+
+static func _clump_field(clump: Dictionary) -> FastNoiseLite:
+	if clump.is_empty():
+		return null
+	var noise := FastNoiseLite.new()
+	noise.seed = int(clump["seed"])
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	noise.frequency = float(clump["frequency"])
+	noise.fractal_octaves = 2
+	return noise
+
+
+# The keep chance at (x, z): the field centred on keep, scaled by gain, clamped to 0..2 keep (keep is under 0.5).
+static func _clump_keep(clump: Dictionary, field: FastNoiseLite, x: float, z: float) -> float:
+	var keep := float(clump["keep"])
+	return clampf(keep + field.get_noise_2d(x, z) * float(clump["gain"]), 0.0, 2.0 * keep)
 
 
 # Whether (x, z) falls in the cell of a LINE node of park_map.gd's lane mask (its nearest lattice node).

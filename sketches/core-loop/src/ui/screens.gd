@@ -71,6 +71,7 @@ const PRIMARY_HEIGHT := 60.0
 
 var game
 var _victory_boss := {}
+var _veil_wait := 0.0
 
 var _veil: ColorRect
 var _content: VBoxContainer
@@ -364,6 +365,9 @@ func _on_flow_changed(state: String) -> void:
 			var ending: bool = game.flow.won_final() and not _victory_boss.is_empty()
 			if not ending:
 				_victory_boss = {}
+			var board := _board_line()
+			if board != "":
+				body += "\n" + board
 			_show("RUN COMPLETE" if game.flow.run_won else "RUN OVER", EventKinds.color("run_ended"), body)
 			_summary_stats()
 			_action("again", "key_n", "Run again")
@@ -373,8 +377,33 @@ func _on_flow_changed(state: String) -> void:
 			_action("camp", "key_k", "Camp")
 			if ending:
 				_open_ending()
-	_fade(state in MENU_STATES)
+	_veil_wait = game.flow.victory_veil if state == "victory" and "victory_veil" in game.flow else 0.0
+	if _veil_wait > 0.0:
+		_hide_for_rout()
+	else:
+		_fade(state in MENU_STATES)
 	_update_enabled()
+
+
+# The victory card waits while a boss's rout plays over the world (flourish_cues.gd); flow
+# zeroes victory_veil when the rout is skipped.
+func _hide_for_rout() -> void:
+	if _tween != null:
+		_tween.kill()
+	_veil.modulate.a = 0.0
+	_content.modulate.a = 0.0
+	visible = false
+
+
+func _step_veil_wait(delta: float) -> void:
+	if _veil_wait <= 0.0 or get_tree().paused:
+		return
+	_veil_wait -= delta
+	if _veil_wait <= 0.0 or game.flow.victory_veil <= 0.0 or _state != "victory":
+		_veil_wait = 0.0
+		if _state == "victory":
+			_fade(true)
+			_stamp()
 
 
 # The sentence a refused saved run gives: game.continue_refusal() when the build has it, else
@@ -393,6 +422,16 @@ func continue_refusal() -> String:
 
 func refusal_text() -> String:
 	return _refusal.text if _refusal.visible else ""
+
+
+# The camp gate asks: a first run goes by pilot select, where the prologue plays.
+func prologue_due() -> bool:
+	return _prologue_due()
+
+
+# The launch take's wind (launch_take.gd): pilot select fades off the deck so its camera lift shows.
+func fade_for_launch() -> void:
+	_fade(false)
 
 
 # The UI profile records the prologue as a seen callout; see REPORT ST5 for why not the codex.
@@ -506,7 +545,7 @@ func toggle_achievements() -> void:
 	_achievements.visible = not _achievements.visible
 	_actions.visible = not _achievements.visible
 	if _achievements.visible:
-		_achievements.refresh(game.ctx.profile, game.progress)
+		_achievements.refresh(game.ctx.profile, game.progress, game.tuning != null and game.tuning.sitting())
 		# Over the camp walk A is the trophy wall's key, so Back shows the Esc that closes it.
 		_achievements.back.set_key("key_esc" if walking() else "key_a")
 		_show("ACHIEVEMENTS", Palette.AMBER, "")
@@ -597,6 +636,11 @@ func _stop_walk() -> void:
 
 func walking() -> bool:
 	return _walking
+
+
+# The gate's launch ends the walk before the run starts, so leaving the camp never lands after the run has placed the ball.
+func stop_walk_for_launch() -> void:
+	_stop_walk()
 
 
 # The walk is live when it shows no page: the ball rolls, the zones answer their keys and the prompts show.
@@ -1047,6 +1091,10 @@ func _ending_closes(event: InputEvent) -> bool:
 
 
 func _input(event: InputEvent) -> void:
+	# The launch take (launch_take.gd) owns input until the dam shows: Esc or pad Start must not leave the camp under it.
+	if game.launch_take != null and game.launch_take.busy():
+		get_viewport().set_input_as_handled()
+		return
 	if is_instance_valid(ending_sequence) and ending_sequence.active:
 		ending_sequence.handle(event)
 		get_viewport().set_input_as_handled()
@@ -1217,6 +1265,25 @@ func comic_page() -> Control:
 	return _comic_row.get_child(0) if _comic_row.get_child_count() > 0 else null
 
 
+# What the run did to the shift board (progress.gd board_line). A lost run's summary is built before
+# run_ended reaches progress, so the line is added once progress has closed the shift.
+func _board_line() -> String:
+	var progress = game.get("progress")
+	if progress == null:
+		return ""
+	if String(progress.board_line) == "" and not game.events.run_ended.is_connected(_on_run_ended_board):
+		game.events.run_ended.connect(_on_run_ended_board, CONNECT_ONE_SHOT | CONNECT_DEFERRED)
+	return String(progress.board_line)
+
+
+func _on_run_ended_board(_won: bool) -> void:
+	var progress = game.get("progress")
+	if _state != "summary" or progress == null or String(progress.board_line) == "":
+		return
+	if not _body.text.contains(String(progress.board_line)):
+		_body.text += "\n" + String(progress.board_line)
+
+
 # The summary as icons and numbers: time, stages, cogs (the cog), scrap taken as mass (the heap), parts, kills, events won and
 # the earned save used (0 or 1), each on its own icon.
 func _summary_stats() -> void:
@@ -1331,6 +1398,7 @@ func _screen() -> Vector2:
 
 func _process(delta: float) -> void:
 	_guard = maxf(0.0, _guard - delta)
+	_step_veil_wait(delta)
 	if ending_open():
 		_ending_left = maxf(0.0, _ending_left - delta)
 		if game.bot_driven and _ending_left <= 0.0:

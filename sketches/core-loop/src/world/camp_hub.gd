@@ -133,6 +133,14 @@ func add_station(id: String, at: Vector3, label: String, key: String, radius: fl
 	_zones[id] = {"label": label, "key": key, "on_press": on_press, "area": _make_zone(id, at, radius), "enter": Callable()}
 
 
+# A station's prompt word, changed after it is built (the gate names the pilot it launches).
+func set_label(id: String, label: String) -> void:
+	if not _zones.has(id) or _zones[id]["label"] == label:
+		return
+	_zones[id]["label"] = label
+	_refresh_prompts()
+
+
 # A zone with no prompt: it only reports the ball coming and going.
 func add_zone(id: String, at: Vector3, radius: float, on_enter := Callable(), on_exit := Callable()) -> void:
 	_zones[id] = {"label": "", "key": "", "on_press": Callable(), "area": _make_zone(id, at, radius), "enter": on_enter, "exit": on_exit}
@@ -213,6 +221,8 @@ func enter_walk() -> void:
 	add_child(_look_owner)
 	GraphicsPreset.enter_world(_look_owner, game.ctx.terrain.environment, WorldLook.CAMP, "camp")
 	_place_ball()
+	if game.has_method("gate_label"):
+		set_label("gate", game.gate_label())
 	_prompts.visible = true
 	walk_entered.emit()
 
@@ -466,7 +476,7 @@ func _build_lights() -> void:
 func _build_stations() -> void:
 	var screens = game.screens
 	var lift := Vector3(0.0, 0.0, 0.0)
-	_station("gate", "camp_launch_gate", "launch_trigger", "Launch", "key_space", 3.0, lift, func(): game.flow.press_start())
+	_station("gate", "camp_launch_gate", "launch_trigger", "Launch", "key_space", 3.0, lift, func(): game.launch_from_gate())
 	_station("lockers", "camp_lockers", "interact", "Customize", "key_c", ZONE_RADIUS, lift, func(): screens.walk_customize())
 	_station("moss", "camp_moss_stall", "interact", "Companion", "key_m", ZONE_RADIUS, lift, func(): screens.walk_companion())
 	_station("settings", "camp_settings_console", "interact", "Settings", "key_s", ZONE_RADIUS, lift, func(): screens.toggle_settings())

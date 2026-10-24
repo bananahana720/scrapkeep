@@ -19,16 +19,18 @@ extends RefCounted
 # hidden   optional: the card shows no text until it is earned
 # beat     a pilot reward row's story line, BEAT_WORDS or fewer, crew voice: the earned toast's
 #          second line and the line under a locked pilot card's condition
+# pilot    optional: a ClassDef id; the fact counts only while the run flies that pilot
 # reward   {} for none, else exactly one of {"pilot": id}, {"cosmetic": id}, {"world": id},
-#          {"option": id}; a pilot id is a ClassDef id or a PENDING_PILOTS id; an option id is a
-#          meta_options.gd node row (MetaOptions.validate checks both directions)
+#          {"option": id}, {"item": id}; a pilot id is a ClassDef id or a PENDING_PILOTS id; an option id is a
+#          meta_options.gd node row (MetaOptions.validate checks both directions); an item id is an
+#          items.gd row the shift board opens into the offer pool (shift_board.gd reads it from the earn)
 
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 
-const FIELDS := ["name", "text", "on", "where", "at_least", "sum", "count", "need", "min", "max", "hidden", "beat", "reward"]
+const FIELDS := ["name", "text", "on", "where", "at_least", "sum", "count", "need", "min", "max", "hidden", "beat", "pilot", "reward"]
 const SUMMARY_KEYS := ["class", "stages", "scrap", "mass", "heft", "parts", "kills", "events_won", "time", "retries", "save_used"]
 const EVALUATOR_KEYS := ["class", "won", "world"]
-const REWARD_KINDS := ["pilot", "cosmetic", "world", "option"]
+const REWARD_KINDS := ["pilot", "cosmetic", "world", "option", "item"]
 const NAME_WORDS := 3
 const TEXT_WORDS := 12
 const BEAT_WORDS := 14
@@ -39,7 +41,8 @@ const PENDING_PILOTS := []
 # 2026-10-11 (PC-SABLE): preserve the twelve pre-wave lifetime grants; new grants fit one run.
 # Rows that carry no reward on purpose: a record of a content family (achievement_fill_test F1 skips them).
 const RECORD_ONLY := ["ach_w20_kill_first", "ach_w20_signal_cache", "ach_w20_legend_take", "ach_w20_relay_stake",
-	"ach_w20_maker_set", "ach_w20_overflow"]
+	"ach_w20_maker_set", "ach_w20_overflow", "ach_w19_mat_slip", "ach_w19_flap_ride", "ach_w19_hook_out", "ach_w19_soaked",
+	"ach_w19_boom_strike"]
 const GRANDFATHERED := ["kills_100", "kills_1000", "ach_d7_ink_stitch", "ach_d7_plum_curl",
 	"ach_d7_forge_chips", "ach_d7_snail_shell", "ach_d7_thimble", "ach_d7_paw", "ach_d7_seashell",
 	"ach_d7_forge_blue", "ach_d7_ember_plum", "ach_d7_dusk_pink"]
@@ -71,6 +74,20 @@ const ROWS := {
 		"count": 1, "reward": {"cosmetic": "paint_any_kelp"}},
 	"ten_events": {"name": "Event Regular", "text": "Win 10 world events across all your runs.", "on": "milestone_won",
 		"count": 10, "reward": {"cosmetic": "paint_any_cobalt"}},
+	# Shift board marks (shift_board.gd): routing Brindle with each pilot opens one item into the pools,
+	# from the next run. pilot keeps the count to runs flown with that pilot.
+	"brindle_mark_sable": {"name": "Sable's Mark", "text": "Rout Brindle flying Sable.", "on": "enemy_killed",
+		"where": {"kind": "brindle"}, "pilot": "pylon_engineer", "count": 1, "reward": {"item": "strike_pocket"}},
+	"brindle_mark_rivet": {"name": "Rivet's Mark", "text": "Rout Brindle flying Rivet.", "on": "enemy_killed",
+		"where": {"kind": "brindle"}, "pilot": "runner_gunner", "count": 1, "reward": {"item": "clean_break"}},
+	"brindle_mark_tarn": {"name": "Tarn's Mark", "text": "Rout Brindle flying Tarn.", "on": "enemy_killed",
+		"where": {"kind": "brindle"}, "pilot": "tarn", "count": 1, "reward": {"item": "warhead_slug"}},
+	"brindle_mark_kest": {"name": "Kest's Mark", "text": "Rout Brindle flying Kest.", "on": "enemy_killed",
+		"where": {"kind": "brindle"}, "pilot": "demolitions_caster", "count": 1, "reward": {"item": "ring_wave"}},
+	"brindle_mark_tally": {"name": "Tally's Mark", "text": "Rout Brindle flying Tally.", "on": "enemy_killed",
+		"where": {"kind": "brindle"}, "pilot": "tally", "count": 1, "reward": {"item": "salvage_drone"}},
+	"brindle_mark_cannon": {"name": "Cannon's Mark", "text": "Rout Brindle flying the Cannon.", "on": "enemy_killed",
+		"where": {"kind": "brindle"}, "pilot": "remembered_cannon", "count": 1, "reward": {"item": "scrap_geyser"}},
 	# Beating the Mind remembers the cannon (ROADMAP:27); remembered_cannon is pending until its kit lands.
 	"mind_quieted": {"name": "Mind Quieted", "text": "Quiet the Mind. An old cannon in the Highdraft remembers.",
 		"on": "boss_defeated", "count": 1, "need": "world", "min": 3, "max": 3, "beat": "The Mind's guns went quiet. One turned up at the gate, cleaned.", "reward": {"pilot": "remembered_cannon"}},
@@ -128,6 +145,17 @@ const ROWS := {
 		"where": {"first_time": true}, "count": 3, "reward": {"option": "pocket_tint"}},
 	# w20 content-family records (WHATS-LEFT row 9): reward {} and RECORD_ONLY, so no paint or art is owed.
 	# special_broken: a kill-first special (Foreman, Dispatcher, Splitter, Linker) fell.
+	# w19 Spillway roster records (design-v3/SPILLWAY-ROSTER.md): one per Flow kind's speed answer, plus the wet read.
+	"ach_w19_mat_slip": {"name": "Slip the Mat", "text": "Slip a jolt layer's pulse.", "on": "synergy_discovered",
+		"where": {"synergy_id": "mat_slip"}, "count": 1, "reward": {}},
+	"ach_w19_flap_ride": {"name": "Ride the Flap", "text": "Ride a sluice flap instead of tumbling.", "on": "synergy_discovered",
+		"where": {"synergy_id": "flap_ride"}, "count": 1, "reward": {}},
+	"ach_w19_hook_out": {"name": "Hook Out", "text": "Snap a hooker's tether by biting another post.", "on": "synergy_discovered",
+		"where": {"synergy_id": "hook_out"}, "count": 1, "reward": {}},
+	"ach_w19_soaked": {"name": "Soaked", "text": "Hit a soaked Spillway crew with arc.", "on": "synergy_discovered",
+		"where": {"synergy_id": "armour_wet"}, "count": 1, "reward": {}},
+	"ach_w19_boom_strike": {"name": "Strike!", "text": "Burst all five of a boom tender's floats in one sweep.", "on": "synergy_discovered",
+		"where": {"synergy_id": "boom_strike"}, "count": 1, "reward": {}},
 	"ach_w20_kill_first": {"name": "Kill First", "text": "Break three kill-first specials across your runs.", "on": "special_broken",
 		"count": 3, "reward": {}},
 	# radio_take_found carries the found rule's "on"; a Signal cache is source "cache".
@@ -316,6 +344,8 @@ static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosme
 					problems.append("%s: %s must be a number" % [id, bound])
 				elif not r.has("need"):
 					problems.append("%s: %s needs a need key to compare" % [id, bound])
+		if r.has("pilot") and not pilots.has(str(r["pilot"])):
+			problems.append("%s: pilot %s is not a ClassDef id" % [id, r["pilot"]])
 		if r.has("hidden") and not (r["hidden"] is bool):
 			problems.append("%s: hidden must be a bool" % id)
 		var reward = r.get("reward")
@@ -343,6 +373,8 @@ static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosme
 				problems.append("%s: reward world must name a world" % id)
 			elif kind == "option" and target == "":
 				problems.append("%s: reward option must name a meta_options node" % id)
+			elif kind == "item" and target == "":
+				problems.append("%s: reward item must name an items.gd row (shift_board.gd validate checks it)" % id)
 	return problems
 
 

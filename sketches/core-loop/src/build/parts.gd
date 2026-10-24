@@ -417,6 +417,10 @@ static var _rows := {}
 # Seams other modules offer ("spawner.extend_cloak"). A row whose needs is not here is
 # never offered; build fills this at setup from what the live modules answer.
 static var seams := {}
+# Rows the shift board opened for this profile (shift_board.gd opened_items), id -> true. They
+# join a listed table's pool beside its own list; game.gd sets them at run_started, never for a
+# bot or a test, so an empty map leaves every pool as the table lists it.
+static var opened_items := {}
 
 
 # Every authored row: the catalogue above, the v2 item table and Moss's cells, finished
@@ -787,7 +791,7 @@ static func offer_pool(class_id: String, rarities: Array) -> Array:
 	var listed := listed_only()
 	for key in all:
 		var r: Dictionary = all[key]
-		if listed and not Synergies.table.part_in_play(key):
+		if listed and not Synergies.table.part_in_play(key) and not opened_items.has(key):
 			continue
 		if is_burden(key):
 			continue

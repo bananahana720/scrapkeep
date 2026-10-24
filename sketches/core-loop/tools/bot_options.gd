@@ -1,5 +1,7 @@
 extends RefCounted
 
+const BotDriver := preload("res://tools/bot_driver.gd")
+
 const FAST_FLAGS := ["bot-no-mix", "bot-no-visuals", "bot-no-pilot-tracks"]
 const UNREAD_VISUALS := [
 	"res://src/presentation/warden_ring.gd",
@@ -34,6 +36,18 @@ static func relay_stake(settings: Dictionary) -> int:
 		return -1
 	var k := int(text)
 	return k if k >= 0 and k <= 4 else -1
+
+
+# --explore-by=<s> (pacing lab): the stage second the completionist leaves its optional rolling for
+# the Warden, in place of BotDriver.ENGAGE_BY. Each activity keeps its ACTIVITY_SECONDS, so a site the bot
+# cannot finish costs what it costs by default, not more. 0 when absent, -1 when not a number above ENGAGE_BY.
+static func explore_by(settings: Dictionary) -> float:
+	if not settings.has("explore-by"):
+		return 0.0
+	var text := String(settings["explore-by"])
+	if not text.is_valid_float() or float(text) <= BotDriver.ENGAGE_BY:
+		return -1.0
+	return float(text)
 
 
 func apply_audio(audio: Node) -> void:

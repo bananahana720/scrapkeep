@@ -9,6 +9,10 @@ const Hazard := preload("res://src/boss/hazard.gd")
 # inside the geometry it drew. The ball is put inside each new threat the moment it is
 # committed, so a hit that came early or outside its drawing would show up. Covers the
 # crane sweeps, the slag rings and the charges. Driven tick by tick.
+#
+# A cued follow-up (fight_phases.gd: the Furnace reprise, the Scuttle hook turn) draws a
+# short tell, at least FightPhases.CUED_WARN, after its ratchet cue; its 1.0 s is counted
+# from the cue, which is announced on attack_cued.
 
 const DT := 1.0 / 90.0
 const MIN_WARN := 1.0
@@ -22,6 +26,10 @@ var _started := false
 var _hits := {"crane": [], "slag": [], "charge": []}
 var _announced: Array = []
 var _seen := {}
+# attack id -> [boss clock at the cue, seconds it announced]; cued -> the follow-ups seen.
+var _cues := {}
+var _cued := {"slag": 0, "charge": 0}
+var _short_cued := 0
 
 
 func _initialize() -> void:
@@ -46,7 +54,8 @@ func _physics_process(_delta: float) -> bool:
 	_game.player.source = Intent.Scripted.new()
 	_game.events.player_hit.connect(func(_a: float, source: String): _record(source))
 	_game.events.scrap_lost.connect(func(_a: int, _at: Vector3, _t: int, cause: String): _record(cause))
-	_game.events.boss_attack_telegraphed.connect(func(id: String, s: float): _announced.append([id, s]))
+	_game.events.attack_cued.connect(func(_fight: String, id: String, s: float): _cues[id] = [_boss.clock, s])
+	_game.events.boss_attack_telegraphed.connect(func(id: String, s: float): _announced.append([id, _ahead(id, s)]))
 	Harness.start_run(_game)
 	Harness.enter(_game, Vector3(18.0, 0.0, 0.0))
 	for phase in 3:
@@ -70,6 +79,10 @@ func _physics_process(_delta: float) -> bool:
 func _expose() -> void:
 	var newest = null
 	for h in _boss.active_hazards():
+		if h.cued and not _seen.has(h.get_instance_id()):
+			_cued["slag" if h.attack_id.begins_with("slag") else "charge"] += 1
+			if h.warn_seconds < FightPhases.CUED_WARN - 1e-6:
+				_short_cued += 1
 		_seen[h.get_instance_id()] = h.attack_id
 		if newest == null or h.age < newest.age:
 			newest = h
@@ -99,11 +112,24 @@ func _record(source: String) -> void:
 	var drawn := -1.0
 	for h in _boss.active_hazards():
 		if h.attack_id.begins_with(family) and h.is_live() and h.contains(ball):
-			drawn = maxf(drawn, h.warn_seconds)
+			drawn = maxf(drawn, h.warn_seconds + (FightPhases.CUE_LEAD if h.cued else 0.0))
 	_hits[family].append(drawn)
 
 
+# Seconds from the first warning to the hit: the bus's own, or, for a follow-up its cue
+# announced within CUE_LEAD, the cue's own lead.
+func _ahead(id: String, seconds: float) -> float:
+	for key in _cues:
+		var since: float = _boss.clock - float(_cues[key][0])
+		if id.begins_with(String(key)) and since <= FightPhases.CUE_LEAD + 0.02:
+			return maxf(seconds, float(_cues[key][1]))
+	return seconds
+
+
 func _finish() -> void:
+	_report("cued follow-ups", _cued["slag"] >= 1 and _cued["charge"] >= 1 and _short_cued == 0,
+		"%d Furnace reprises and %d Scuttle hook turns, %d drawn under %.1f s"
+			% [_cued["slag"], _cued["charge"], _short_cued, FightPhases.CUED_WARN])
 	for family in ["crane", "slag", "charge"]:
 		var hits: Array = _hits[family]
 		var early: Array = hits.filter(func(w): return w < MIN_WARN)

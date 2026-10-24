@@ -43,8 +43,9 @@ func _run() -> void:
 		counts.append(_held())
 		waited += 1
 	var steps := range(1, counts.size()).map(func(i): return counts[i] - counts[i - 1])
-	_t.check("the gates instance both models and read both kits, at most one step a tick",
-		Requisition._ahead.size() == 2 and BowlDress._ahead.size() == 2 and steps.all(func(d): return d <= 1),
+	# 2026-10-24 (#416 Slag Bowl dressing): the yard is a third kit, so every kit in _kits() is read ahead.
+	_t.check("the gates instance both models and read every kit, at most one step a tick",
+		Requisition._ahead.size() == 2 and BowlDress._ahead.size() == BowlDress._kits().size() and steps.all(func(d): return d <= 1),
 		"%d ticks, counts %s" % [waited, counts.slice(-8)])
 	_t.check("every model and kit read ahead is whole", not Requisition._ahead.values().has(null)
 		and BowlDress._ahead.values().all(func(parts): return not parts.is_empty()))

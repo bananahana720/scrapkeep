@@ -58,6 +58,11 @@ var in_arena := false
 # The plating that stood in the way when the ball died in the arena, for the gap line.
 var _death_plating := -1.0
 var _victory_left := 0.0
+# The boss's flourishes (flourish_cues.gd) size the victory window: plan() returns {hold, veil},
+# the seconds added to VICTORY_SECONDS and how long the victory card waits over the world.
+var victory_plan := Callable()
+var victory_veil := 0.0
+var _victory_hold := 0.0
 # warden_engaged fires once per stage attempt: on the first sealed ring entry or the
 # first strike on the Warden, whichever comes first (the music's cue to bring its theme in).
 var _engaged := false
@@ -320,6 +325,15 @@ func choose_class(index: int) -> void:
 	_begin_run(classes[index])
 
 
+# The camp's launch gate: a run with the given pilot straight from the title, with no pilot select between
+# (game.launch_from_gate; launch_take.gd hides the cut into the dam).
+func launch_from_title(chosen: Resource) -> bool:
+	if state != TITLE or chosen == null:
+		return false
+	_begin_run(chosen)
+	return true
+
+
 # The death screen's second key: a fresh run with the same class, straight in.
 func new_run() -> void:
 	if ctx.run.class_def == null:
@@ -329,7 +343,9 @@ func new_run() -> void:
 
 
 func show_start_card() -> void:
-	var interactive: bool = not ctx.root.bot_driven
+	# Under the launch take's panel the card stays hidden; game shows it when the panel has gone.
+	var take = ctx.root.get("launch_take")
+	var interactive: bool = not ctx.root.bot_driven and not (take != null and take.busy())
 	start_card.set_interactive(interactive)
 	start_card.show_picks(ctx.run, ctx.profile)
 	start_card.position = Vector2((get_viewport().get_visible_rect().size.x - start_card.size.x) * 0.5, 160.0)
@@ -379,6 +395,9 @@ func _begin_run(chosen: Resource) -> void:
 	if ctx.profile != null and ctx.profile.settle_previous_run_tallies() and ctx.profile.can_save and not ctx.profile.save():
 		warn_once("profile_tally_save", "flow: earlier run tallies not saved: %s" % ctx.profile.last_error)
 	run_won = false
+	# The gate launches this pilot next time (game.gate_pilot); saved with the profile's next save.
+	if ctx.profile != null:
+		ctx.profile.set_last_pilot(chosen.id)
 	ctx.run.begin(chosen)
 	_seed_companion()
 	ctx.events.run_started.emit(chosen.id)
@@ -832,7 +851,24 @@ func _on_boss_defeated() -> void:
 	boss_active = false
 	in_arena = false
 	_victory_left = VICTORY_SECONDS
+	_victory_hold = 0.0
+	victory_veil = 0.0
+	if victory_plan.is_valid():
+		var plan: Dictionary = victory_plan.call()
+		_victory_hold = maxf(0.0, float(plan.get("hold", 0.0)))
+		_victory_left += _victory_hold
+		victory_veil = maxf(0.0, float(plan.get("veil", 0.0)))
 	_set_state(VICTORY)
+
+
+# A skipped flourish gives back the hold it was paying for, and the card shows at once.
+func cut_victory(seconds: float) -> void:
+	if state != VICTORY:
+		return
+	var back := clampf(seconds, 0.0, _victory_hold)
+	_victory_hold -= back
+	_victory_left = maxf(0.0, _victory_left - back)
+	victory_veil = 0.0
 
 
 func _end_run_won() -> void:

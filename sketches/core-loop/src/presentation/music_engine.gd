@@ -370,6 +370,8 @@ var bot_skip_samples := false
 # meantime, so a pilot's cue in a key the bake never reached (a boss fight's lift) never renders
 # on the main thread when its beat comes.
 var warm_stingers := false
+# How often, in frames, a park cue cell held for its worker is checked again (_to_next_action).
+const LATE_CHECK := 256
 static var _stinger_tasks: Array[int] = []
 var band_muted := false
 var grid: Object = null
@@ -1506,11 +1508,15 @@ func _add_action(at: int, action: Dictionary) -> void:
 		_warm_park(action, at)
 
 
-# Like _warm_stinger: render the cell on a worker so its beat only plays it.
+# Like _warm_stinger: render the cell on a worker so its beat only plays it. A cell due now (a riser's
+# first, booked as its event is announced) renders there too and starts late, at the frame it would have
+# reached (_late_cell_waits): stage 6 announces six events at once, and their first cells rendered in one
+# frame took 13 to 73 ms each on the main thread (PR #372).
 func _warm_park(action: Dictionary, at: int) -> void:
-	# A cell due now plays before a worker could finish it.
-	if not warm_stingers or at <= clock:
+	if not warm_stingers:
 		return
+	if at <= clock:
+		action["late"] = true
 	var shift: int = key if grid == null else grid.key_at(at)
 	var signature := _park_signature(action, shift, step_len)
 	if _park_pcm.has(signature):
@@ -1522,6 +1528,9 @@ func _warm_park(action: Dictionary, at: int) -> void:
 	var skip := int(action.get("skip", 0))
 	var step := step_len
 	var theme_now := theme
+	# A cell due within a second goes ahead of the band's low-priority renders: behind them a late cell lost up
+	# to its whole length, and the next cells held the main thread 0.2 to 0.5 s (cloud, stage 6 risers).
+	var urgent := at - clock < Harmony.RATE
 	_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
 	if _park_tasks.size() >= 64:
 		_park_tasks.clear()
@@ -1531,7 +1540,7 @@ func _warm_park(action: Dictionary, at: int) -> void:
 		if _park_warm.size() >= 64:
 			_park_warm.clear()
 		_park_warm[signature] = buf
-		_park_warm_lock.unlock(), false, "park cue warm")
+		_park_warm_lock.unlock(), urgent, "park cue warm")
 	_stinger_tasks.append(_park_tasks[signature])
 
 
@@ -1541,6 +1550,9 @@ func _to_next_action() -> int:
 		var wait: int = action["at"] - clock
 		if wait > 0:
 			nearest = mini(nearest, wait)
+		elif action.get("late", false):
+			# A late cell waiting on its worker is checked every LATE_CHECK frames, so it loses little of its head.
+			nearest = mini(nearest, LATE_CHECK)
 	return nearest
 
 
@@ -1551,10 +1563,23 @@ func _run_due() -> void:
 			# Keyed cues on a step boundary hear the committed bar key.
 			if action["type"] in ["door_tick", "park_cue"] and _step_clock != clock and posmod(clock - grid_origin, step_len) == 0:
 				continue
+			if action.get("late", false) and _late_cell_waits(action):
+				continue
 			due.append(action)
 	for action in due:
 		_actions.erase(action)
 		_run(action)
+
+
+# A cell booked late waits for its worker while the worker is still on it and the cell has frames left to
+# play; past that, or with no worker for the key it now plays in, it renders here as before.
+func _late_cell_waits(action: Dictionary) -> bool:
+	if clock - int(action.at) >= int(action.length):
+		return false
+	var live_key: int = key if grid == null else grid.key_at(clock)
+	var task: int = _park_tasks.get(_park_signature(action, live_key, step_len), -1)
+	# A task no longer in _stinger_tasks has been waited on (_settle_task), and its ID is spent.
+	return task >= 0 and _stinger_tasks.has(task) and not WorkerThreadPool.is_task_completed(task)
 
 
 func _on_step() -> void:
@@ -1678,6 +1703,9 @@ func _run(action: Dictionary) -> void:
 			var row: Dictionary = action.row
 			var db := SfxBank.trim_db(row.trim_sound) + float(action.priority_db)
 			var voice := _start(buf, buf.size(), -1, db_to_linear(db), 0.0, true)
+			# A cell that waited for its worker plays from where it would be by now, so the cells after it still land.
+			if action.get("late", false):
+				voice.pos = clampi(clock - int(action.at), 0, voice.end)
 			voice.park_owned = true
 			voice.park_owner = action.owner
 			voice.park_rise = row.rise

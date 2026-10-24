@@ -57,4 +57,4 @@ Use this shape for intros, boss arrivals, the run summary and the ending. Each b
 
 ## Guardrails
 
-Readability beats style. No decoration crosses a telegraph, a hit read or the HUD, and gameplay frames stay within the 60 fps budget. Every cinematic is skippable with any input and never replays on retry. Everyone is a worker or a keeper, nobody is evil, and every gag is kind.
+Readability beats style. No decoration crosses a telegraph, a hit read or the HUD, and gameplay frames stay within the 60 fps budget. Every cinematic is skippable with any input and never replays on retry. In-play overlays (the in-run flourishes: cards, stamps and captions laid over live play) are the one exception: steering and the core verbs (move, jump, boost, haul, fire, harpoon) never skip them, any other press does, because play goes on under them (coordinator call, 23 Oct, PR #410). Everyone is a worker or a keeper, nobody is evil, and every gag is kind.

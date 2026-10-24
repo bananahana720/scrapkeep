@@ -238,7 +238,7 @@ func _claim() -> void:
 func _crewable(other: Node) -> bool:
 	if not is_instance_valid(other) or not other.has_method("is_dead") or other.is_dead():
 		return false
-	return String(other.get("kind")) not in ["foreman", "warden", "vault", "miniboss"]
+	return String(other.get("kind")) not in ["foreman", "warden", "vault", "miniboss", "rogue_crane", "rogue_skip", "rogue_tender"]
 
 
 func _hire(other: Node3D) -> void:
