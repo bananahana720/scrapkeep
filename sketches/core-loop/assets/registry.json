@@ -36100,6 +36100,105 @@
    "exception_why": "Opt-in device with independently controlled state parts; existing prop class covers one small static mesh. Limits asserted by device_props_asset_test."
   },
   {
+   "id": "boom_tender_clips",
+   "path": "res://assets/models/world_one/clips/boom_tender_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13 clips for the Spillway roster (design-v3/SPILLWAY-ROSTER.md)"
+   }
+  },
+  {
+   "id": "chaser_clips",
+   "path": "res://assets/models/world_one/clips/chaser_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "hooker_clips",
+   "path": "res://assets/models/world_one/clips/hooker_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13 clips for the Spillway roster (design-v3/SPILLWAY-ROSTER.md)"
+   }
+  },
+  {
+   "id": "jolt_layer_clips",
+   "path": "res://assets/models/world_one/clips/jolt_layer_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "lobber_clips",
+   "path": "res://assets/models/world_one/clips/lobber_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "mag_trapper_clips",
+   "path": "res://assets/models/world_one/clips/mag_trapper_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "plated_brute_clips",
+   "path": "res://assets/models/world_one/clips/plated_brute_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
+   "id": "ramp_flipper_clips",
+   "path": "res://assets/models/world_one/clips/ramp_flipper_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13 clips for the Spillway roster (design-v3/SPILLWAY-ROSTER.md)"
+   }
+  },
+  {
+   "id": "winch_drone_clips",
+   "path": "res://assets/models/world_one/clips/winch_drone_clips.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/presentation/enemy_clips.gd",
+   "provenance": {
+    "recipe": "tools/blender/world_one/field_motion.py",
+    "build_spec": "world 1 unit 13, Spillway enemy clips (/mnt/project-files/world1/UNITS.md)"
+   }
+  },
+  {
    "path": "res://assets/models/world_one/clutter_kit.glb",
    "class": "clutter",
    "ships": true,
@@ -36139,6 +36238,17 @@
    "class": "enemy",
    "ships": true,
    "loader": "src/combat/bola_thrower.gd (load of this path)"
+  },
+  {
+   "id": "enemy_boom_tender",
+   "path": "res://assets/models/world_one/enemy_boom_tender.glb",
+   "class": "enemy",
+   "ships": true,
+   "loader": "src/combat/boom_tender.gd:123",
+   "provenance": {
+    "recipe": "tools/blender/world_one/enemy_boom_tender.py",
+    "build_spec": "sketches/core-loop/design-v3/SPILLWAY-ROSTER.md, the boom tender; sheets docs/art/reference/enemies/boom_tender/"
+   }
   },
   {
    "id": "enemy_catch_trap",
@@ -37247,6 +37357,7 @@
   "bench_coping_detail1",
   "bench_coping_detail2",
   "bet_crate",
+  "boom_tender_clips",
   "boss_brindle",
   "boss_brindle_scooter",
   "boss_mind_base",
@@ -37322,6 +37433,7 @@
   "cenote_pool",
   "cenote_pool_detail1",
   "cenote_pool_detail2",
+  "chaser_clips",
   "cliff_dwelling_row",
   "cliff_dwelling_row_detail1",
   "cliff_dwelling_row_detail2",
@@ -38373,6 +38485,7 @@
   "dry_wash_1500x4x60_detail2",
   "enemy_anchor_crew",
   "enemy_ballast_heavy",
+  "enemy_boom_tender",
   "enemy_burrower",
   "enemy_catch_trap",
   "enemy_dispatcher",
@@ -38462,6 +38575,7 @@
   "haulage_bed",
   "haulage_bed_detail1",
   "haulage_bed_detail2",
+  "hooker_clips",
   "impeller_hub",
   "impeller_rim_sector",
   "impeller_vane",
@@ -38484,6 +38598,7 @@
   "isle_ride_fin_chute",
   "isle_ride_wash_west",
   "isle_tram_head",
+  "jolt_layer_clips",
   "kicker_wedge",
   "kicker_wedge_detail1",
   "kicker_wedge_detail2",
@@ -38596,6 +38711,8 @@
   "liner_west_wash",
   "liner_west_wash_detail1",
   "liner_west_wash_detail2",
+  "lobber_clips",
+  "mag_trapper_clips",
   "mesa_lip_kicker",
   "mesa_lip_kicker_12x4x300",
   "mesa_lip_kicker_12x4x300_detail1",
@@ -38736,6 +38853,7 @@
   "plate_kicker_8x3x20",
   "plate_kicker_8x3x20_detail1",
   "plate_kicker_8x3x20_detail2",
+  "plated_brute_clips",
   "primer_coil",
   "primer_coil__escape_rail",
   "primer_coil__escape_vent",
@@ -38767,6 +38885,7 @@
   "ram_spring__escape_vent",
   "ram_spring__primer_coil",
   "ram_spring__primer_mesh",
+  "ramp_flipper_clips",
   "relay_mast",
   "relay_stake_post",
   "res://assets/models/world_one/shell_rivet.glb",
@@ -38915,6 +39034,7 @@
   "weir_apron_detail2",
   "weir_gatehouse",
   "weir_gatehouse_detail1",
-  "weir_gatehouse_detail2"
+  "weir_gatehouse_detail2",
+  "winch_drone_clips"
  ]
 }

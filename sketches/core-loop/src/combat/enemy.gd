@@ -6,6 +6,7 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WindupPoses := preload("res://src/presentation/windup_poses.gd")
@@ -173,6 +174,10 @@ var _posed_instance := -1
 var _release_age := -1.0
 var _idle_clock := -1.0
 var _idle_period := 0.0
+# The kind's baked clips (EnemyClips), seated on the first physics tick once the body is built;
+# null for a kind with none and in headless runs.
+var _clips: Node
+var _clips_tried := false
 
 
 func _visual_parent() -> Node3D:
@@ -196,6 +201,8 @@ func react(reaction: String, direction: Vector3, handed := false) -> void:
 	_react_direction = Vector3(direction.x, 0.0, direction.z).normalized()
 	_react_speed = _knocked_speed()
 	_react_time = 0.0
+	if is_instance_valid(_clips):
+		_clips.hit()
 	_react_duration = float(_react_row["rise"]) + float(_react_row["hold"]) + float(_react_row["recover"])
 	if float(_react_row["tumble"]) > 0.0:
 		_react_duration = minf(float(_react_row["limit"]), maxf(_react_duration, _react_speed / KNOCK_DECAY + float(_react_row["recover"])))
@@ -512,7 +519,10 @@ func _die() -> void:
 	collision_layer = 0
 	collision_mask = 0
 	_clear_telegraph()
-	EnemyMotion.scatter(self, kind, _death_direction())
+	# A kind with a death clip plays it on its own look first; the clip then scatters it.
+	# A ring-out falls out of the world, so it scatters at once.
+	if ringed_out or not (is_instance_valid(_clips) and _clips.die(_death_direction())):
+		EnemyMotion.scatter(self, kind, _death_direction())
 	died.emit(global_position, scrap_value)
 	queue_free()
 
@@ -803,6 +813,9 @@ func _notification(what: int) -> void:
 		# Spawners add the enemy, then build its body in setup() the same frame.
 		_dress_bake.call_deferred()
 	elif what == NOTIFICATION_PHYSICS_PROCESS:
+		if not _clips_tried:
+			_clips_tried = true
+			_clips = EnemyClips.seat(self)
 		_update_reaction(get_physics_process_delta_time())
 		_facts_poll()
 		if tint_state == "amber" and _pulses():

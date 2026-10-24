@@ -40,7 +40,7 @@ const ANSWER_AXIS := {
 	"swarm_remnant": "spread", "lamp_swarm": "spread", "drill_crew": "spread", "prop_crew": "spread",
 	"chaser": "fuse", "burrower": "fuse", "splitter": "fuse",
 	"mag_trapper": "cc", "catch_trap": "cc", "anchor_crew": "cc", "hooker": "cc", "netcaster": "cc",
-	"bola_thrower": "cc", "gyro_jammer": "cc", "ramp_flipper": "cc", "swatter": "cc", "pit_jaw": "cc", "gap_net": "cc",
+	"bola_thrower": "cc", "gyro_jammer": "cc", "ramp_flipper": "cc", "swatter": "cc", "pit_jaw": "cc", "gap_net": "cc", "boom_tender": "cc",
 	"kite_drone": "air", "winch_drone": "air",
 }
 const AXES := ["range", "spread", "fuse", "cc", "air", "plating"]
