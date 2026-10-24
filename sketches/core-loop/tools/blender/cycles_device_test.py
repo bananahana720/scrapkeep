@@ -127,5 +127,18 @@ class UseTest(unittest.TestCase):
         self.assertEqual((got, prefs.compute_device_type, used), ("CPU", "NONE", []))
 
 
+class FreeBytesTest(unittest.TestCase):
+    def test_parses_nvidia_smi_rows(self):
+        done = types.SimpleNamespace(stdout=R4080 + ", 15000\n" + R3060 + ", 11000\n")
+        with patch.object(cycles_device.subprocess, "run", lambda *a, **k: done):
+            self.assertEqual(cycles_device.free_bytes(), {R4080: 15000 << 20, R3060: 11000 << 20})
+
+    def test_missing_nvidia_smi_answers_nothing(self):
+        def missing(*a, **k):
+            raise FileNotFoundError("nvidia-smi")
+        with patch.object(cycles_device.subprocess, "run", missing):
+            self.assertEqual(cycles_device.free_bytes(), {})
+
+
 if __name__ == "__main__":
     unittest.main()

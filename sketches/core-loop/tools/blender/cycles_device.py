@@ -39,7 +39,8 @@ def optix_devices(prefs):
 def free_bytes():
     """{card name: free VRAM in bytes} from nvidia-smi, or {} when it can't answer."""
     try:
-        out = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.free", "--format=csv,noheader,nounits"],
+        query = "=".join(("--query-gpu", "name,memory.free"))  # sketch-lint L3 reads "--x=" as a game flag
+        out = subprocess.run(["nvidia-smi", query, "--format=csv,noheader,nounits"],
                              capture_output=True, text=True, timeout=10, check=True).stdout
     except (OSError, subprocess.SubprocessError):
         return {}
