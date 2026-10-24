@@ -17,11 +17,11 @@ bakes keep GPU speed and the 4080 stays idle. A capture is on when SCRAPKEEP_CAP
 or another process holds an exclusive flock on SCRAPKEEP_CAPTURE_LOCK (defaults: capture-active and
 timing.lock in SCRAPKEEP_CAPTURE_DIR, the PC capture lane's gates folder; move it with the wave).
 Any other SCRAPKEEP_CYCLES value overrides that.
-Tandem only pays on long renders: each card sets up OptiX per render. On the PC (#447 receipts),
-warden_swarm.glb at 1920x1440, 256 samples, 4 views took 13.07 s in tandem against 11.36 s on the
-4080 alone (7.1e8 sample-pixels a view), while the machine notice's longer render took 26.3 s
-against 32.5 s. A linear fit of the two puts the break-even near 1e9 sample-pixels a render;
-TANDEM_MIN (SCRAPKEEP_CYCLES_TANDEM_MIN) sits at twice that.
+Tandem has not yet won on a repo scene. PC medians of 3 on warden_swarm.glb, 4 views, against
+the 4080 alone: 1920x1440 at 256 samples (7.1e8 sample-pixels a view) 13.07 s vs 11.36 s (#447);
+3840x2880 at 512 (5.7e9) 47.1 s vs 43.2 s (#452). The machine notice's own render gained (26.3 s
+vs 32.5 s), scene unknown. TANDEM_MIN (SCRAPKEEP_CYCLES_TANDEM_MIN) sits at 2e10, above both
+losses, until cycles_tandem_probe.py rows show where tandem starts to win; re-fit it from those.
 The fit check compares free VRAM (nvidia-smi; 12 GiB per card when it can't answer) with
 fit_bytes(): the scene's triangles and images, plus HEADROOM for Cycles' kernels and buffers.
 use() decides once and arms a render_pre handler that decides again before every Cycles render
@@ -40,7 +40,7 @@ CAPTURE_FILE = os.environ.get("SCRAPKEEP_CAPTURE_FILE", os.path.join(CAPTURE_DIR
 CAPTURE_LOCK = os.environ.get("SCRAPKEEP_CAPTURE_LOCK", os.path.join(CAPTURE_DIR, "timing.lock"))
 CAPTURE_CARD = "3060"
 BIG = "4080"
-TANDEM_MIN = float(os.environ.get("SCRAPKEEP_CYCLES_TANDEM_MIN", "2e9"))
+TANDEM_MIN = float(os.environ.get("SCRAPKEEP_CYCLES_TANDEM_MIN", "2e10"))
 GIB = 1 << 30
 HEADROOM = 2 * GIB
 CARD_BYTES = 12 * GIB

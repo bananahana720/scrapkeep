@@ -51,7 +51,7 @@ def mesh(triangles):
                                                                          polygons=[0] * triangles))
 
 
-LONG = 4096  # samples: 1920 x 1080 x 4096 = 8.5e9 sample-pixels, over TANDEM_MIN
+LONG = 16384  # samples: 1920 x 1080 x 16384 = 3.4e10 sample-pixels, over TANDEM_MIN
 SHORT = 256  # 1920 x 1080 x 256 = 5.3e8, under it
 
 
@@ -188,6 +188,14 @@ class UseTest(unittest.TestCase):
     def test_short_render_takes_the_4080_alone_even_when_it_fits(self):
         got, _, used = self.run_use(BOTH, free={R3060: 11 * GIB, R4080: 15 * GIB})
         self.assertEqual((got, used), ("GPU", [R4080]))
+
+    def test_measured_tandem_losses_stay_on_the_4080(self):
+        for size, samples in ((1920, 256), (3840, 512)):
+            def at(bpy, scene, size=size, samples=samples):
+                scene.render.resolution_x, scene.render.resolution_y = size, size * 3 // 4
+                scene.cycles.samples = samples
+            got, _, used = self.run_use(BOTH, free={R3060: 11 * GIB, R4080: 15 * GIB}, then=at)
+            self.assertEqual((got, used), ("GPU", [R4080]), (size, samples))
 
     def test_threshold_is_tunable(self):
         with patch.object(cycles_device, "TANDEM_MIN", 1e8):
