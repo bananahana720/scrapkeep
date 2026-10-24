@@ -19,6 +19,9 @@ const WarningBound := preload("res://src/combat/warning_bound.gd")
 enum Shape { SECTOR, ANNULUS, LANE }
 enum { WARN, LIVE, DONE }
 
+# On the step the warning ends and the hazard starts to hurt: the lane's tear plays here.
+signal went_live
+
 const MIN_WARN := 1.0
 const DRAW_LIFT := 0.08
 const MOLTEN := Color("ff7a2e")
@@ -148,6 +151,7 @@ func step(delta: float) -> void:
 	age += delta
 	if state == WARN and age >= warn_seconds:
 		state = LIVE
+		went_live.emit()
 	if state == LIVE and age >= warn_seconds + live_seconds:
 		state = DONE
 	var reshaped := false
