@@ -21,29 +21,25 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
+	# The synth fallback first: an empty stem dir is a checkout with manifests and no Oggs.
+	Rows.stem_dir = "user://ace_stem_none"
+	var bare := _start_game()
+	var bare_audio = bare.presentation.audio
+	t.check("absent ACE stems retain audible synth fallback", not Rows.pack_on_disk(bare_audio.ace_manifest) and not bare_audio.ace_playing() and not bare_audio.engine.band_muted)
+	_pump_to(bare_audio, bare_audio.engine.clock + Harmony.BAR)
+	t.check("fallback pump produces music", Array(bare_audio.out_music).any(func(v): return v.length_squared() > 0.0))
+	bare.queue_free()
+	await process_frame
+	Rows.stem_dir = ""
 	# Without the gitignored Oggs (a cloud checkout), the stub stem tree stands in so the ACE
 	# parameter path still runs.
 	if not Array(DirAccess.get_files_at("res://assets/music_ace/spillway")).any(func(name): return name.ends_with(".ogg")):
 		AceStub.install()
 		print("ACE stems: stub tone tree (no Oggs in this checkout)")
-	var game := Game.new()
-	game.test_mode = true
-	game.table = "park"
-	root.add_child(game)
-	game.ctx.calm = true
-	game.flow.press_start()
-	game.flow.choose_class(0)
-	game.run.mass = 100.0
-	game.player.set_frozen(true)
+	var game := _start_game()
 	var audio = game.presentation.audio
-	audio.bake_now()
-	audio.set_process(false)
-	audio._flush_flow()
 	var engine = audio.engine
-	if not Rows.pack_on_disk(audio.ace_manifest):
-		t.check("absent ACE stems retain audible synth fallback", not audio.ace_playing() and not engine.band_muted)
-		_pump_to(audio, engine.clock + Harmony.BAR)
-		t.check("fallback pump produces music", Array(audio.out_music).any(func(v): return v.length_squared() > 0.0))
+	if not t.check("ACE stems or their stub are on disk", Rows.pack_on_disk(audio.ace_manifest)):
 		game.queue_free()
 		await process_frame
 		quit(t.verdict())
@@ -162,6 +158,22 @@ func _run() -> void:
 	game.queue_free()
 	await process_frame
 	quit(t.verdict())
+
+func _start_game() -> Node:
+	var game := Game.new()
+	game.test_mode = true
+	game.table = "park"
+	root.add_child(game)
+	game.ctx.calm = true
+	game.flow.press_start()
+	game.flow.choose_class(0)
+	game.run.mass = 100.0
+	game.player.set_frozen(true)
+	var audio = game.presentation.audio
+	audio.bake_now()
+	audio.set_process(false)
+	audio._flush_flow()
+	return game
 
 func _pump_to(audio, until: int) -> void:
 	while audio.engine.clock < until:
