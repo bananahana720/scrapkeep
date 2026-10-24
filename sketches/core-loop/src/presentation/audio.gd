@@ -873,11 +873,12 @@ func ace_ready() -> bool:
 # The stems follow the band engine's fight layering: in a Warden, miniboss or boss fight the
 # melody is held at the engine's section floor (warden 0.55 to 1.0, miniboss 0.8, brindle 0.8
 # to 1.0), whatever the threat feed says. The Warden's open window is the held breath: the
-# engine's OPEN_GAINS drop every melodic layer there, so the stems get no floor either.
+# engine's OPEN_GAINS drop every melodic layer there (outside a cadence), so the stems get no
+# floor either.
 func _ace_fight_floor() -> float:
 	if engine.mode != MusicEngine.PLAY or engine.track == "level":
 		return 0.0
-	if engine.track == "warden" and engine.section == "open":
+	if engine.track == "warden" and engine.section == "open" and engine._cadence_bar < 0:
 		return 0.0
 	return engine._floor()
 
