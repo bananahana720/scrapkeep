@@ -14,13 +14,22 @@ const Intent := preload("res://src/movement/intent.gd")
 # capture lane, not here.
 
 const SETTLE := 120
+# Hiding nodes changes the next frame's draws; no emitters need to warm up.
+const HIDDEN_SETTLE := 10
 const SAMPLES := 60
+# The whole probe's cap, under a caller's usual 300 s timeout, and how long the exit may take before
+# the process is killed. Software GL in the cloud renders about one frame a second, so the full probe
+# takes ~250 s there.
+const CAP_S := 285.0
+const EXIT_GRACE_MS := 15000
 
 var _stage := 1
 var _seed := 31
 var _dist := 120.0
 var _at := Vector3(0, 41, -3)
 var _game
+var _done := false
+var _backstop := Thread.new()
 
 
 func _initialize() -> void:
@@ -35,6 +44,10 @@ func _initialize() -> void:
 		elif arg.begins_with("--at="):
 			var p := v.split(",")
 			_at = Vector3(float(p[0]), float(p[1]), float(p[2]))
+	create_timer(CAP_S, true, false, true).timeout.connect(func():
+		if not _done:
+			print("draw_probe: timed out after %d s" % int(CAP_S))
+			_finish(2))
 	_run.call_deferred()
 
 
@@ -63,7 +76,7 @@ func _run() -> void:
 		await process_frame
 	if landmark == null:
 		print("draw_probe: no landmark on stage %d" % _stage)
-		quit(1)
+		_finish(1)
 		return
 	for i in 30:
 		await process_frame
@@ -83,8 +96,21 @@ func _run() -> void:
 		fx.visible = false
 		for a: Node3D in fx.placed:
 			a.visible = false
-		_report("spillway_fx_hidden", await _sample(cam))
-	quit(0)
+		_report("spillway_fx_hidden", await _sample(cam, HIDDEN_SETTLE))
+	_finish(0)
+
+
+# Quits once; a backstop thread kills the process if the exit itself hangs.
+func _finish(code: int) -> void:
+	if _done:
+		return
+	_done = true
+	_backstop.start(func():
+		OS.delay_msec(EXIT_GRACE_MS)
+		OS.kill(OS.get_process_id()))
+	if is_instance_valid(_game):
+		_game.queue_free()
+	quit(code)
 
 
 func _report(label: String, sample: Dictionary) -> void:
@@ -93,13 +119,13 @@ func _report(label: String, sample: Dictionary) -> void:
 
 
 # The camera is re-made current each frame: the chase rig is stopped, but others may claim the view.
-func _sample(cam: Camera3D) -> Dictionary:
+func _sample(cam: Camera3D, settle := SETTLE) -> Dictionary:
 	var draws: Array = []
 	var objects: Array = []
-	for i in SETTLE + SAMPLES:
+	for i in settle + SAMPLES:
 		cam.make_current()
 		await process_frame
-		if i >= SETTLE:
+		if i >= settle:
 			draws.append(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
 			objects.append(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME))
 	draws.sort()
