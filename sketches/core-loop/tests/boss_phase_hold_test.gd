@@ -6,7 +6,7 @@ const Harness := preload("res://tests/doubles/module_harness.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The phase-minimum hold (PHASE_MIN_SECONDS in waking.gd and mind.gd times the dial <boss>.phase_min_by_phase, stub_boss.gd hold_active), on the
-# Waking (world 2) and the Mind (world 3). Brindle's PHASE_MIN_SECONDS semantics: a chunk lost before its
+# Waking (world 2) and the Mind (world 3). Brindle's old set-piece floor semantics: a chunk lost before its
 # phase has lasted the minimum holds the phase, and the Warden's bar fills only to its cap (hits still land,
 # none staggers), until the minimum has passed; then the next hit staggers. A zero multiplier holds nothing. Hits are the module harness's TARGET smash, one per HIT_EVERY frames.
 #

@@ -23,7 +23,7 @@ const HAND_CAP := 2
 const SEAL_HP := 60.0
 # What the first and second broken seats remove; the third removes nothing (#241 6332176012 option (a)).
 const SEAT_REMOVES := ["split_lane", "rush"]
-# Seconds each phase lasts before a chunk lost in it opens the next (Brindle's PHASE_MIN_SECONDS); the
+# Seconds each phase lasts before a chunk lost in it opens the next (Brindle's old set-piece floors); the
 # last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps on
 # scratch/challenge-tune-btC-1/-2.
 const PHASE_MIN_SECONDS := [22.0, 22.0, 22.0, 22.0]

@@ -34,7 +34,7 @@ var pad: StaticBody3D
 var warden: Node3D
 # The Warden's posture as last published; the stub has no fleet to publish it for the Warden.
 var _posture_seen: Array = []
-# The fight's PHASE_MIN_SECONDS (Brindle's, boss_rules.gd), times the dial <boss>.phase_min_by_phase
+# The fight's PHASE_MIN_SECONDS (waking.gd, mind.gd), times the dial <boss>.phase_min_by_phase
 # (a multiplier, identity 1.0): a chunk lost before its phase has lasted that many seconds holds the
 # phase, and the Warden's bar fills only to warden.gd HOLD_CAP (_apply_posture asks hold_active; every hit
 # still lands, none staggers) until the minimum has passed; the next contact then staggers (a bolt, or a bar

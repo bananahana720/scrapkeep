@@ -52,7 +52,7 @@ const LANDING_ATTACK := 1.2
 # (Andrew, 19:42Z 17 Oct). Before the attacks, bots staggered it at 23 to 36 s.
 const POSTURE_GAIN := 0.565
 const HIT_CAP := 15.0
-# Seconds each phase lasts before a chunk lost in it opens the next (Brindle's PHASE_MIN_SECONDS); the
+# Seconds each phase lasts before a chunk lost in it opens the next (Brindle's old set-piece floors); the
 # last entry is unused. DECISIONS:178 (50 to 90 s through pattern, not by cutting the build); Expert ordinary 8-seed sweeps on
 # scratch/challenge-tune-btC-1/-2.
 const PHASE_MIN_SECONDS := [21.0, 21.0, 21.0, 21.0]
