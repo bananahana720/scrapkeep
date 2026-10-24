@@ -120,6 +120,12 @@ func crushable() -> bool:
 	return false
 
 
+# No player hit hurts a fitter (take_damage above), so build bonuses that answer a hit, such as Rounded Up and Noticed,
+# skip it (maker_bonuses.gd).
+func takes_no_damage() -> bool:
+	return true
+
+
 # Tests only: the swarm's ordinary death (died, then freed), for the uncount and refill cases.
 func remove_for_test() -> void:
 	super.take_damage(hp)
