@@ -66,6 +66,11 @@ var _victory_hold := 0.0
 # warden_engaged fires once per stage attempt: on the first sealed ring entry or the
 # first strike on the Warden, whichever comes first (the music's cue to bring its theme in).
 var _engaged := false
+# warden_sighted fires once per stage attempt, before warden_engaged, when the ball first comes
+# within SIGHT_SHARE times the beacon ring's radius of the sealed Warden (flat distance); an
+# engagement that comes first skips it. Intro lines and reveal cards play here, never in the fight.
+var _sighted := false
+const SIGHT_SHARE := 2.5
 # Where this stage's Warden stands; it is immobile, so a warden kill reported far from
 # here belongs to some other warden and does not unseal this beacon.
 var _warden_at := Vector3.ZERO
@@ -730,6 +735,7 @@ func _place_beacon() -> void:
 	if is_instance_valid(warden):
 		warden.queue_free()
 	_engaged = false
+	_sighted = false
 	sealed = (not ctx.calm) or force_warden
 	warden = _spawn_warden() if sealed else null
 	_warden_at = warden.global_position if warden != null else Vector3.ZERO
@@ -806,6 +812,8 @@ func physics_step(delta: float) -> void:
 				beacon.show_progress(beacon.duration * minf(SEALED_CAP, charge))
 				if beacon.phase != Beacon.IDLE:
 					_engage()
+				else:
+					_read_sighting(ball)
 			if state == STAGE and beacon.phase != Beacon.IDLE:
 				_set_state(BEACON)
 			var percent := int(beacon.fraction() * 100.0)
@@ -1021,10 +1029,20 @@ func _on_enemy_struck(enemy: Node3D, _kind: String, _force: float) -> void:
 		_engage()
 
 
+func _read_sighting(ball: Vector3) -> void:
+	if _sighted or _engaged:
+		return
+	var flat := Vector2(ball.x - _warden_at.x, ball.z - _warden_at.z)
+	if flat.length() <= beacon.radius * SIGHT_SHARE:
+		_sighted = true
+		ctx.events.warden_sighted.emit(ctx.run.stage)
+
+
 func _engage() -> void:
 	if _engaged:
 		return
 	_engaged = true
+	_sighted = true
 	ctx.events.warden_engaged.emit(ctx.run.stage)
 
 

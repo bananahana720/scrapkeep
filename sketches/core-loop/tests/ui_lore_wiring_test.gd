@@ -120,17 +120,29 @@ func _physics_process(_delta: float) -> bool:
 		"new_run":
 			_report("new run restores exchange", _said(spillway[0]), _bubble.text)
 			_report("note survives new run", _game.notes.note_entries()[0]["known"], "saved codex id remains known")
-			_game.flow._engage()
 			var warden_intro: Dictionary = _lines("1-1", "intro")[0]
-			_report("Warden engagement shows the Warden intro, not an exchange", _bubble.visible and _bubble.text == String(warden_intro["text"]), _bubble.text)
-			_press("cl_interact")
-			_game.flow.enter_stage(2, Vector3.ZERO, false)
+			_game.flow._read_sighting(_game.flow._warden_at)
+			_report("a Warden sighted during the entry exchange waits it out", _said(spillway[0]), _bubble.text)
+			_bubble.dismiss_exchange()
+			_report("Warden sighting shows the Warden intro before the fight", _bubble.visible and _bubble.text == String(warden_intro["text"]), _bubble.text)
 			_game.flow._engage()
+			_report("Warden engagement clears the intro: no intro inside a fight", not _bubble.visible and _bubble.text == "", _bubble.text)
+			_game.flow.enter_stage(2, Vector3.ZERO, false)
 			_next("fight")
 		"fight":
 			var reach_intro: Dictionary = _lines("1-2", "intro")[0]
-			_report("stage-2 engagement shows that zone's Warden intro", _bubble.text == String(reach_intro["text"]), _bubble.text)
+			_bubble.dismiss_exchange()
+			_game.flow._read_sighting(_game.flow._warden_at)
+			_report("stage-2 sighting shows that zone's Warden intro", _bubble.text == String(reach_intro["text"]), _bubble.text)
+			_game.flow._engage()
+			_report("stage-2 engagement clears it", not _bubble.visible and _bubble.text == "", _bubble.text)
 			_report("no exchange during Warden fight", not _said(_lines("1-2", "exchange")[0]) and not _said(spillway[0]), "advance and entry signal cannot resume an exchange")
+			_game.flow.enter_stage(2, Vector3.ZERO, true)
+			_next("retry_after_fight")
+		"retry_after_fight":
+			_bubble.dismiss_exchange()
+			_game.flow._read_sighting(_game.flow._warden_at)
+			_report("a Warden intro already shown stays silent on a retry", not _bubble.visible, _bubble.text)
 			print("ui_lore_wiring_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 			quit(0 if _failures == 0 else 1)
 			return true
