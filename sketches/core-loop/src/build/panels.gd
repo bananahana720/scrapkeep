@@ -244,7 +244,7 @@ class Dropper:
 	# scaled by the rib and jackpot multipliers and the debug drawer's scale.
 	func chance(elite: bool, rib: float, jackpot: bool) -> float:
 		if elite:
-			return float(DROP["elite"])
+			return clampf(float(DROP["elite"]) * scale, 0.0, 1.0)
 		var row: Dictionary = DROP_BY_WORLD.get(world, DROP)
 		var p: float = (float(row["chance"]) + float(row["pity"]) * dry) * rib * (float(DROP["jackpot"]) if jackpot else 1.0)
 		return clampf(p * scale, 0.0, 1.0)

@@ -1587,7 +1587,7 @@ func _on_enemy_touched(enemy: Node3D, normal: Vector3) -> void:
 		struck.emit(enemy, STOMP, _landing_force(STOMP, -before.y))
 	elif _rebounds_off(enemy) and before.dot(normal) < -Contact.MIN_CLOSING:
 		_rebound(enemy, normal, before, planar, away)
-	elif SpeedTier.of(planar, tuning.f("cruise")) >= SpeedTier.CRUISE:
+	elif SpeedTier.of(planar, tuning.tier_cruise()) >= SpeedTier.CRUISE:
 		# Swarm drones keep the plain shove: the rack's scatter and refold timing sets the hive's posture pace.
 		var shove: float = Augments.RAM_KNOCK * _landing_mult if enemy.get("swarm") != null else Contact.ram_knock(Augments.RAM_KNOCK, planar, heft(), _landing_mult)
 		enemy.knock(away + Vector3.UP * 0.35, shove)
@@ -1669,7 +1669,7 @@ func _rebound(enemy: Node3D, normal: Vector3, before: Vector3, planar: float, aw
 	enemy.knock(away + Vector3.UP * 0.2, 6.0 * _landing_mult)
 	enemy.flash()
 	shockwave.emit(enemy.global_position, 0.8)
-	if SpeedTier.of(planar, tuning.f("cruise")) >= SpeedTier.CRUISE:
+	if SpeedTier.of(planar, tuning.tier_cruise()) >= SpeedTier.CRUISE:
 		struck.emit(enemy, RAM, _landing_force(RAM, planar))
 		_bowl_if_killed(enemy, away, Contact.ram_knock(Augments.RAM_KNOCK, planar, heft(), _landing_mult))
 	events.enemy_rebounded.emit(enemy, out.length())

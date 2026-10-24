@@ -266,6 +266,14 @@ func base(key: String) -> float:
 	return _values[key]
 
 
+# The cruise speed hit-strength reads measure against (the ram tier, a Warden's tier gate, the
+# flail's scale, whether a contact rams): the slider value without build mods, so a cruise
+# up (Fin Plate, cruise items) makes the ball faster and never drops it a hit tier (Coordinator
+# ruling 24 Oct, principle 5 "overpowered pays").
+func tier_cruise() -> float:
+	return base("cruise")
+
+
 func set_mod(key: String, multiplier: float) -> void:
 	_mods[key] = multiplier
 

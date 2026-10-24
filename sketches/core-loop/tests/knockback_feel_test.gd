@@ -75,6 +75,8 @@ func _run() -> void:
 	var juice = _game.presentation.juice
 	juice.hit_stop_sink = func(seconds: float) -> void: _stops.append(seconds * 1000.0)
 	_game.run.set_max_hp(99999.0)
+	# Kills here would roll grey panel drops (IL-01), and a Ram Bumper scales the punch: no drops.
+	_game.build.dropper.scale = 0.0
 	_game.events.harpoon_smashed.connect(func(_e: Node3D, _at: Vector3, speed: float): _closing = speed)
 	_base = _game.ctx.terrain.spawn_point(1) + Vector3(20.0, 0.0, 40.0)
 	for heft in HEFTS + [3.2]:
