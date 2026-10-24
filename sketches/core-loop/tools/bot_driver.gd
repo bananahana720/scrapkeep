@@ -1539,6 +1539,7 @@ func _activity_goal(delta: float) -> bool:
 			# Under --explore-by a cache off every park route is passed over: the Flume's bend_cache on
 			# bend_rim_ledge, which no route reaches, held its ram in a pocket at y 30 for the rest of the stage.
 			if engage_by > ENGAGE_BY and c.id == "cracked_cache" and _route_to(c, ball).is_empty():
+				_activity_skip[c.id] = true
 				continue
 			var level := roundf(c.global_position.y / LEVEL_BAND)
 			# The alpha maps' camp comes after the slice's standing sites, wherever it stands:
@@ -1555,6 +1556,10 @@ func _activity_goal(delta: float) -> bool:
 		_cache_clock = 0.0
 	if s == null:
 		return false
+	# A deferred site picked again is retried to the end: the give-up point stops closing it, or the
+	# way back in, which passes near that point, dropped it again before it was reached.
+	if _activity_deferred.get(s.id) is Vector3:
+		_activity_deferred[s.id] = true
 	var finished: Array = []
 	for c in activities.sites:
 		if is_instance_valid(c) and c.done:
@@ -1564,7 +1569,9 @@ func _activity_goal(delta: float) -> bool:
 	if not s.id in entered:
 		entered.append(s.id)
 		_note["activities_entered"] = entered
-	if engage_by > ENGAGE_BY and _flat(ball, s.global_position) > ACTIVITY_NEAR:
+	# A cache's doubled run-up point stands past ACTIVITY_NEAR, so its ram cycle counts as near work.
+	var near: float = ACTIVITY_NEAR + (CACHE_RUNUP if s.id == "cracked_cache" else 0.0)
+	if engage_by > ENGAGE_BY and _flat(ball, s.global_position) > near:
 		if not _activity_travel_cap.has(s.id):
 			_activity_travel_cap[s.id] = ACTIVITY_TRAVEL_SECONDS + _flat(ball, s.global_position) / ACTIVITY_TRAVEL_SPEED
 		_activity_travel[s.id] = float(_activity_travel.get(s.id, 0.0)) + delta
