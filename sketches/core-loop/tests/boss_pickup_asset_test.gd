@@ -15,7 +15,9 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # ChallengeDials, identical at the defaults (run_tier_test); pickup meshes unchanged. Was 8ec6e239.
 # Re-pinned 2026-10-23 (boss phases, #391): the Furnace reprise, the Scuttle hook turn and the transition
 # beat (fight_phases.gd); pickup meshes unchanged. Was bdc7f158.
-const BASE_LOGIC_SHA := "3b589a48978e2d15737269185a3e8f206e7906f9040fb492552c90410e6509cb"
+# Re-pinned 2026-10-24 (Brindle phase floors card): phase_floor() replaces the set-piece floors; pickup
+# meshes unchanged. Was 3b589a48.
+const BASE_LOGIC_SHA := "e7c7fd2391438be97c1d40c82efa3abebb5ec89f7cf6f66146f35051c7c4f2a1"
 
 var failures := 0
 var game
