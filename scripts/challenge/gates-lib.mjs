@@ -305,16 +305,23 @@ export function withControls(real, positive, negative, { positiveWant = "PASS", 
   return { real, positive, negative, controls, broken, reading: broken ? "BROKEN (a control read wrong; fix the gate before reading the arms)" : real.verdict };
 }
 
+// Gates the board parked: still graded and printed, never counted by --strict. Gate 4's absolute 85% check waits until
+// packs threaten (ruling, scrapkeep#241, 24 Oct), then returns as paired telegraph-on against hidden.
+export const PARKED = ["gate4"];
+
 // All three gates from the runs' summaries (grouped by arm).
-export function evaluateGates(byArm, { auditFree = true, stages = STAGES, seeds = SEEDS } = {}) {
+export function evaluateGates(byArm, { auditFree = true, stages = STAGES, seeds = SEEDS, runs = RUNS_PER_SEED } = {}) {
   const arm = (name) => byArm[name] ?? [];
   const opt = { stages, seeds };
   const g1 = withControls(gate1(arm("orbit"), opt), gate1(arm("orbit_rut"), opt), gate1(arm("orbit_passive"), opt));
   const g2 = withControls(gate2(arm("terrain"), arm("orbit"), opt), gate2(arm("orbit"), arm("orbit_dmg2"), opt), gate2(arm("orbit"), arm("orbit_b"), opt));
-  const deaf = gate4(arm("deaf"), { ...opt, auditFree });
+  const g4opt = { ...opt, perStage: seeds.length * runs, auditFree };
+  const deaf = gate4(arm("deaf"), g4opt);
   // The real arm and the positive control are the same runs: today's stage, the Expert default driver.
-  const g4 = withControls(deaf, deaf, gate4(arm("deaf_hidden"), { ...opt, auditFree }));
-  return { gate1: g1, gate2: g2, gate4: g4 };
+  const g4 = withControls(deaf, deaf, gate4(arm("deaf_hidden"), g4opt));
+  const ev = { gate1: g1, gate2: g2, gate4: g4 };
+  for (const g of PARKED) ev[g].parked = true;
+  return ev;
 }
 
 export function groupByArm(summaries) {
@@ -329,7 +336,7 @@ const f2 = (x) => (x == null ? "-" : Number.isFinite(x) ? x.toFixed(2) : String(
 
 export function renderGates(ev, meta = {}) {
   const L = ["# Anti-kiting gates (G-A)", "", `Rules: board comment 6367573974. ${meta.when ?? ""} ${meta.commit ? "commit " + meta.commit.slice(0, 8) : ""}`.trim(), ""];
-  const line = (name, c) => L.push(`| ${name} | ${c.real.verdict} | ${c.controls.positive.got} (want ${c.controls.positive.want}) | ${c.controls.negative.got} (want ${c.controls.negative.want}) | ${c.reading} |`);
+  const line = (name, c) => L.push(`| ${name} | ${c.real.verdict} | ${c.controls.positive.got} (want ${c.controls.positive.want}) | ${c.controls.negative.got} (want ${c.controls.negative.want}) | ${c.reading}${c.parked ? " (PARKED)" : ""} |`);
   L.push("| Gate | Real arm | Positive control | Negative control | Reading |", "| --- | --- | --- | --- | --- |");
   line("1 circling loses", ev.gate1);
   line("2 terrain beats circling", ev.gate2);

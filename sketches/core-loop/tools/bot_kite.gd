@@ -78,11 +78,18 @@ func _init(driver_ref) -> void:
 	_dir = 1.0 if int(driver.seed_value) % 2 == 0 else -1.0
 
 
+# The instrument check asks for a ride per 30 s of the contact window, so only rides inside it count.
+func _count_ride() -> void:
+	var first_contact = driver._note.get("first_contact_s")
+	if first_contact != null and float(driver.game.run.stage_time) - float(first_contact) <= driver.CONTACT_WINDOW_S:
+		driver._count("line_rides")
+
+
 # A line ride happened (a world_fact the driver forwards): count it, and rest the break.
 func on_ride_fact(fact: String) -> void:
 	if fact not in LINE_FACTS:
 		return
-	driver._count("line_rides")
+	_count_ride()
 	if _state == "line":
 		_state = "ride"
 		_state_clock = RIDE_REST_S
@@ -251,7 +258,7 @@ func _terrain(delta: float, ball: Vector3, at: Vector3) -> bool:
 				if not _hook_counted:
 					_hook_counted = true
 					_swung = true
-					driver._count("line_rides")
+					_count_ride()
 					driver._note["lines_in_reach"] = maxi(int(driver._note["lines_in_reach"]), 1)
 			else:
 				_hook_counted = false
