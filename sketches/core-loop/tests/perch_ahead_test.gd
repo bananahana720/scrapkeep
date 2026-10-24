@@ -49,6 +49,7 @@ func _run() -> void:
 		_t.eq("%s: the pick is the main thread's pick" % id, pick,
 			PerchPoints.pick(main.tops, near, terrain.height, main.blockers, 7, main.ledges))
 		_t.check("%s: it found tops or ledges" % id, (main.tops as Array).size() + (main.ledges as Array).size() > 0)
+		_check_patched(id, park, terrain, taken)
 	# A stage built with no perch ask: its read is pending until the stage is freed, which waits on it.
 	var fresh = Terrain.new(TABLE)
 	fresh.build(holder)
@@ -59,3 +60,23 @@ func _run() -> void:
 	_t.check("freeing the stages behind waits on and drops their reads", not fresh._perch_ahead.has(0) and not fresh._perch_ahead.has(1))
 	SimClock.ticks = false
 	quit(_t.verdict())
+
+
+# With overlays down, perch_near reads the ledges again only near them (PerchPoints.patched_ledges). A raised
+# disc stands in for a landed overlay: the patched list must be the whole read over the raised ground.
+func _check_patched(id: String, park: Dictionary, terrain, taken: Dictionary) -> void:
+	_t.check("%s: the worker kept its unthinned tops" % id, taken.has("found"))
+	var bare: Array = taken.get("found", [])
+	if bare.is_empty():
+		return
+	var mid: Vector4 = bare[bare.size() / 2]
+	var disc := Vector3(mid.x, mid.z, 18.0)
+	var raised := func(x: float, z: float) -> float:
+		var y: float = terrain.height(x, z)
+		return y + 7.0 if Vector2(x, z).distance_to(Vector2(disc.x, disc.y)) <= disc.z else y
+	var whole := PerchPoints.ledges(park, raised)
+	var patched := PerchPoints.patched_ledges(park, raised, bare, [disc])
+	_t.check("%s: patched ledges are the whole read over the raised ground" % id, str(patched) == str(whole),
+		"%d / %d" % [patched.size(), whole.size()])
+	_t.check("%s: the raised disc changed the ledges (the check bites)" % id, str(whole) != str(taken.ledges))
+

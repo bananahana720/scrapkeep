@@ -182,6 +182,30 @@ static func _zone_cell(p: Vector2) -> Vector2i:
 
 # Every landform top of a park, sorted by x then z: [Vector4].
 static func ledges(park: Dictionary, ground: Callable) -> Array:
+	return thin(found(park, ground))
+
+
+# The tops of a bare-ground found() that no overlay could have changed, plus the tops read again over `ground`
+# near each overlay. A disc is Vector3(x, z, radius) around an overlay's footprint. A sample reads ground out to
+# REACH_M (the last RINGS circle, or a deck corner), so one farther than that past every disc reads only ground
+# the overlays leave alone, and this equals ledges(park, ground) while every disc covers its overlay.
+const REACH_M := 24.0 + DECK_HALF * 1.5
+
+
+static func patched_ledges(park: Dictionary, ground: Callable, bare_found: Array, discs: Array) -> Array:
+	var near := func(p: Vector2) -> bool:
+		for disc: Vector3 in discs:
+			if p.distance_to(Vector2(disc.x, disc.y)) <= disc.z + REACH_M:
+				return true
+		return false
+	var out := bare_found.filter(func(top: Vector4) -> bool: return not near.call(Vector2(top.x, top.z)))
+	out.append_array(found(park, ground, func(p: Vector2) -> bool: return not near.call(p)))
+	return thin(out)
+
+
+# Every landform top before thin(): each rim sample or ledge box that passes, unsorted. skip(p: Vector2) -> bool
+# leaves a sample or a box centre unread.
+static func found(park: Dictionary, ground: Callable, skip := Callable()) -> Array:
 	var zones := ledge_zones(park)
 	var r: Array = park.get("play_rect", [-100000.0, -100000.0, 200000.0, 200000.0])
 	var play := Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3])).grow(-PLAY_INSET_M)
@@ -192,6 +216,8 @@ static func ledges(park: Dictionary, ground: Callable) -> Array:
 			if absf(float(row["size"][1])) < MIN_STAMP_M:
 				continue
 			for p: Vector2 in _samples(row):
+				if skip.is_valid() and skip.call(p):
+					continue
 				if play.has_point(p) and not ParkRecipes.in_clear(near.get(_zone_cell(p), []), p, DECK_CLEAR):
 					var top := _ring_top(p, ground)
 					if top.x != INF:
@@ -200,10 +226,18 @@ static func ledges(park: Dictionary, ground: Callable) -> Array:
 			var size: Array = row["size"]
 			var rise := float(size[1])
 			var at := Vector2(float(row["at"][0]), float(row["at"][1]))
+			if skip.is_valid() and skip.call(at):
+				continue
 			if rise >= PERCH_MIN and rise <= PERCH_MAX and minf(float(size[0]), float(size[2])) >= LEDGE_FIT_M \
 					and play.has_point(at) and ledge_clear(zones, at, String(row["id"])):
 				var base := float(ground.call(at.x, at.y))
 				found.append(Vector4(at.x, base + rise, at.y, base))
+	return found
+
+
+# found()'s tops sorted by x then z and thinned to SPACING_M, the first in that order winning.
+static func thin(found: Array) -> Array:
+	found = found.duplicate()
 	found.sort_custom(func(a: Vector4, b: Vector4) -> bool: return a.x < b.x or (a.x == b.x and a.z < b.z))
 	# Thin to SPACING_M, first in x then z order wins, by a grid of SPACING_M cells.
 	var kept: Array = []
