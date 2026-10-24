@@ -51,7 +51,7 @@ const TRY_FIRST := [
 # controls diagram (Tab's Keys page and the title's Help page), as its keycaps and those one
 # or two words. The F special retired into slot 2 (design-v3/SKILL-BAR.md section 5).
 const VERB_ROWS := [
-	["roll", "drive, relative to where the camera looks", "drive"],
+	["roll", "drive, relative to where the camera looks. At top speed walls and overhang lips count as ground", "drive"],
 	["look", "look", "look"],
 	["jump", "jump and double jump. Sable: vault kick at a steep face in the air; mounted, hold and release to slingshot. Kest: hold falling to glide; hold in your own blast to rocket jump", "jump"],
 	["fire", "left click fires the picked slot: the weapon unless you picked 2 or 3. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw. A special fills while held and fires on release", "fire"],
@@ -60,7 +60,7 @@ const VERB_ROWS := [
 	["haul", "haul the line in: a smash on a body, a winch on the world. With no line: the brake on the ground, the slam in the air", "haul"],
 	["boost", "your go verb: Sable's boost, Rivet's sprint (hold), Kest's smoke blink", "boost"],
 	["ultimate", "Q when the ring round the crosshair is full: ride a line or a launch to where you aim; your tech fires on the way. Space bails out", "ultimate"],
-	["interact", "interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet, press it for a cache; inside an amber lane it arms the ride. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; again to drop off", "use / ride"],
+	["interact", "interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet, press it for a cache; at a relay post each hold raises the stake one step (up to x4, one more clears it) until you roll into its ring; inside an amber lane it arms the ride. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; again to drop off", "use / ride"],
 ]
 const MENU_ROWS := [
 	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "caps": ["key_tab"], "short": "notes"},

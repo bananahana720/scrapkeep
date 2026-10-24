@@ -9,6 +9,7 @@ const RunStore := preload("res://src/core/run_store.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const VictoryLap := preload("res://src/world/victory_lap.gd")
+const SlagBowl := preload("res://src/boss/arena.gd")
 
 # The run as one state machine: title, class select, then per stage roam, beacon,
 # gates and launch, and a summary after stage 3. Death is its own state with a
@@ -180,6 +181,7 @@ func _scene_boss() -> Node:
 
 # Teardown: a boss script still on its loader thread is collected, and a read-ahead script settles
 # what its prepare_arena started (a quit before the boss entry aborted Godot, exit 134, scrapkeep#322).
+# Brindle's arena read ahead is held outside the tree; it goes with the flow.
 func _exit_tree() -> void:
 	for path in _boss_reads:
 		var script = _boss_reads[path]
@@ -187,6 +189,7 @@ func _exit_tree() -> void:
 			script = ResourceLoader.load_threaded_get(path)
 		if script is Script and script.get_script_method_list().any(func(m): return m.name == "settle_arena"):
 			script.call("settle_arena")
+	SlagBowl.drop_ahead()
 
 
 func _load_module(path: String) -> Node:
@@ -206,12 +209,18 @@ func _load_module(path: String) -> Node:
 
 # On the world's last stage, reads its boss module's script on a loader thread, then lets the
 # script prepare its arena (a static prepare_arena) before the stage exit makes the module.
+# The scene's own module (Brindle) only warms its Slag Bowl.
 func _read_boss_ahead() -> void:
 	if ctx.stages.BOSS == "" or not ctx.stages.is_world_last(ctx.run.stage):
 		return
 	var row: Dictionary = boss_row(ctx.stages.world_of(ctx.run.stage))
 	var path := String(row.get("script", SCENE_BOSS))
-	if not bool(row.get("built", false)) or path == SCENE_BOSS or _row_modules.has(path):
+	if not bool(row.get("built", false)) or _row_modules.has(path):
+		return
+	if path == SCENE_BOSS:
+		# The scene's own module is loaded already; only its Slag Bowl warms ahead.
+		if _scene_boss() != null:
+			SlagBowl.warm_ahead()
 		return
 	if not _boss_reads.has(path):
 		_boss_reads[path] = null

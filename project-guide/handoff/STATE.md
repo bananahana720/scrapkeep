@@ -1,27 +1,31 @@
-# Wave state: heads, holds and base reds (22 Oct 2026, local coordinator)
+# Wave state: heads, holds and base reds (23 Oct 2026, project coordinator)
 
-Heads and open PRs change by the hour, so read them live: `git ls-remote origin` for branch heads and `gh pr list` for open PRs. The live board is [GRAPH.md](../coord/GRAPH.md). This file keeps what a head listing cannot show.
+Heads and open PRs change by the hour, so read them live (`git ls-remote origin`, the GitHub MCP tools for open PRs; cloud threads avoid `gh api`). The live board is [GRAPH.md](../coord/GRAPH.md) plus issue #241. This file keeps what a head listing cannot show. Updated 2026-10-23 19:50Z by the library sweep thread.
 
-**State on 22 Oct, 16:15Z.** The first wave 18 promotion is done: `main` = d7878a1b (#326, candidate 3eb3f12f, Gate PASS+NOTES), and #328 and #339 landed after it. `stage/alpha-w18` was 9acc1a89 after batches B2 (Systems motion fixes) and B3. B3 stacked the older #235 head, so Gate must restack #235 at 4b22b5fd, the head that passed row 26d at 3.6 ms. The next promotion needs #235 at 4b22b5fd, #325 (worker races), #322 (Mind freezes) and four follow-ups: the swarm camper check (Challenge), warden_reactor ownership (Systems), a 10-run replay of the crashing seed on main (Gate), and the slow bot tier on the PC.
+**Priority (Andrew, 19:31Z).** World 1 first: a 100% finished world 1 and early progression, played at a world 1 sitting (10-15 min average run, about 30 min completionist; timing card open, recommended end of wave 19). Worlds 2 and 3 finish running work only.
 
-- **Held:** the six park kits (#246, #251, #252, #306, #309, #313) wait on their 4080 cost rows and on row and yaw fixes. #317 and #327 wait on World's lava-bend fix. #314 waits on the drainage-ridge tint, #284 on the dark live core, and #297 on its box-path cost. #307 lands, re-measured after #270.
-- **Benches:** the 4080 times one row at a time on CCD0. The 3060 and CCD1 take stills and correctness runs in parallel (ruling 6345030303). An isolation check (dam kit, 3 runs alone against 3 with CCD1 busy, 0.5 ms bar) decides whether that holds.
-- **Orphan:** #228 is being revived by a PC session. Close it at wave 18 close if that fails.
-- **Playtest watch list:** the one-off headless crash, cockpit parts poking past the ball on wall rides, camp props at speed (islands is 78% bare), and any stage-change or periodic stutter still open. The standing list is `project-guide/handoff/shared/alpha-status/sitting-watch-list.md`.
+**Wave 18.** Promoted 23 Oct 22:10Z: `main` = a08d7463 (#415: stage a14c658a, which is acb55972 plus #401's stage 6 quit-crash fix). The promotion receipt on #415 lists three reds new this wave and owed to a fix lane: `ui_build_readout`, `ending_sequence` and `bot_repeat`. `stage/alpha-w18` now carries B21 (eight PRs plus #383), B22, #393, B24 and main's docs; the queue is in /mnt/project-files/gate/w18-stack-queue.md. The known swarm hive band (owed by the hive tuning PR) and `bot_skill_bar` (cloud time cap) stay known reds. The cautious persona found 0 blockers. The 4080 release dry run on stage + #367 + #390 (15d7ac9b) is PASS+NOTES: export exit 0, 3 Vulkan boss smokes, 4 win proofs, AppImage 903 MiB.
+
+- **Post-promotion queue, in order:** #390 (export include fix, first), #380, #252, #379, #373, #375, #362, #341, #329, #334, #377, #385, #388, sinkhole flash flood, #376, #272, #228, #384, #386 (after #372). The PR that adds the boss weak-point tests must commit their five `.uid` files before it stacks.
+- **Held:** #351 (stalls the seed 6 skipper at stage 4; bare acb55972 wins; thread "Stage 4 stall on seed 6") and #374 (needs #351 fixed or another seed).
+- **Merges:** each batch needs Andrew's typed line naming the thread, the action and each PR number (LESSONS 47).
+- **New today:** draft PRs #391 (fight phases framework and Brindle, register section 7 row) and #392 (item ladder, register section 6 row).
+- **GPUs:** both run throughput work; 4080 timing only when it would otherwise idle (pause file on the PC). The timing chain: crown, islands, Reactor, Swarm, then the C16 rows, then #386 rows.
 
 ## Base reds
 
-These fail on the base too. The machine's fixes are on `scratch/base-red-w16` (`effbf2fc`).
+A fail needs a solo rerun before it counts, and a "base" red must also be red on the bare head or on main (LESSONS 51-52).
 
 - `alpha_posture_bands_w23`: time limit.
+- `bot_brindle_short`: passes on 2e247fc8 at heft 1.30, exactly at the 1.30 limit (20 Oct). #231 tips it to 1.36.
 - `park_reactor_fight`: 61.2 s against 53.7 s; one-seed chaotic, flaps solo, needs a repeat.
 - `bot_six_demolitions_caster`: Kest flake, 5 in 8.
-- Swarm `runner_gunner` "stall": cloud out-of-memory kills, not a game bug; rerun alone.
-- Swarm grown and 2x misses (base grown 51.71 s). Overpowered pays work is gated on no regression against `f9f58944`.
-- Cloud-only false fails: `item_fuzz_smoke`, `park_swap`, `tree_play`, `alpha_bot_sweep`, `persistence_truncation`, `juice_budget` peak shake, `line_sound` HLs-3. `scatter_rows` hash mismatch is unresolved.
-
-A fail needs a solo rerun before it counts.
+- `posture_bands_swarm` (expected red until the hive tuning PR lands; Andrew ruled grown builds hit harder, 23 Oct 16:02Z): on w18 `e564e2c3`, 24 seeds a side, small 75.69 s, grown 40.67 s, 1.86x against the 2x floor; the ordinary first stagger is 50 s against the 60 to 85 s ruling. Tuning trials in `/mnt/project-files/gate/c10-swarm/README.md`. The camper leg is now `posture_bands_swarm_camper_test`. The old out-of-memory kills are gone with the parallel cap. #104 is still gated on no swarm regression against `f9f58944`.
+- Cloud-only false fails: `item_fuzz_smoke`, `park_swap`, `tree_play`, `persistence_truncation`, `juice_budget` peak shake, `line_sound` HLs-3. `scatter_rows` hash mismatch is unresolved. `alpha_bot_sweep` and `bot_run_end` pass in the bots tier since `ba10b7c7`.
+- `bot_skill_bar`: the cloud time cap.
+- Stage 6 teardown SIGABRT: red on the stage base too; checked against main.
+- Oggs-present vs Oggs-absent base: the packed music Oggs are gitignored, so cloud boxes have none and the game plays the synth engine, while a PC with synced Oggs plays ACE. Music tests (`park_music_suspend_game_test`, `ace_tracks_test`, the phase music tests) can pass on one and fail on the other. Compare a head and its base with the same Ogg state, and name that state in the receipt (23 Oct, #411).
 
 ## Promote-fast flow
 
-The flow and its gates are in [ORCHESTRATOR.md](../../ORCHESTRATOR.md) and the per-PR test pace is in [DECISIONS.md](DECISIONS.md) section 10.
+The flow and its gates are in [ORCHESTRATOR.md](../../ORCHESTRATOR.md); the per-PR test pace is in [DECISIONS.md](DECISIONS.md) section 10.

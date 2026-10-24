@@ -10,6 +10,7 @@ const Interact := preload("res://src/world/interact.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const OddsReadout := preload("res://src/ui/odds_readout.gd")
 const Palette := preload("res://src/core/palette.gd")
+const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const PocketFog := preload("res://src/world/events/pocket_fog.gd")
@@ -274,6 +275,8 @@ func setup(ctx_ref) -> void:
 	# The trade devices' plate finish neutralises its texture pixel by pixel on first use (about
 	# 55 ms, SWAP-HITCH-2); Palette caches it, so it is made here rather than on a stage entry.
 	Palette.look_texture("rusted-salvaged-plate-worn", true)
+	# The polish bake's shade ramp is drawn pixel by pixel too, on the first enemy spawn's frame.
+	BakeLook.ramp()
 	_prepare_stage(1)
 
 

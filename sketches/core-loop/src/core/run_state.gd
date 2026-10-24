@@ -11,6 +11,7 @@ const StartPicks := preload("res://src/core/start_picks.gd")
 const Profile := preload("res://src/core/profile.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const Panels := preload("res://src/build/panels.gd")
 const MAX_HP := 100.0
 # A hit that would kill from full health leaves 1.0 instead (coordinator ruling, 19 Oct 02:29Z:
 # at base tier no single hit kills from full). Applies at every tier; the ladder's top step may
@@ -69,6 +70,9 @@ var _pocket_draw_entrance_doc := {}
 var trade_memory := preload("res://src/world/trade_pockets.gd").memory()
 var run_id := ""
 var parts: Array[String] = []
+# Grey panels (build/panels.gd), in pickup order: mass, never parts, so maker sets, the shop
+# and the parts digest never see them. The order seats them on the ball (panel_shell.gd).
+var panels: Array[String] = []
 # RL2: the relic held in each kit slot, slot name to relic id. One per slot (Relics.can_hold).
 var relics := {}
 var kills := 0
@@ -207,6 +211,7 @@ func begin(chosen_class: Resource) -> void:
 	scrap = 0
 	mass = 0.0
 	bonus_cores = 0
+	panels.clear()
 	_heft_class = 1
 	class_rewarded = 1
 	_stage_starts = {}
@@ -321,9 +326,10 @@ func reset_metrics() -> void:
 
 # Heft in armour mode comes from scrap alone; the base formula is untouched otherwise.
 func heft() -> float:
+	var panel_heft := panels.size() * Panels.PANEL_MASS * HEFT_PER_MASS
 	if armor_mode:
-		return 1.0 + mass * HEFT_PER_MASS
-	return 1.0 + mass * HEFT_PER_MASS + HEFT_PER_PART * parts.size()
+		return 1.0 + mass * HEFT_PER_MASS + panel_heft
+	return 1.0 + mass * HEFT_PER_MASS + HEFT_PER_PART * parts.size() + panel_heft
 
 
 # The class heft reaches with no memory: the highest threshold it has crossed.
@@ -463,6 +469,21 @@ func add_part(part_id: String, source: String) -> void:
 	parts.append(part_id)
 	events.part_gained.emit(part_id, source)
 	_publish_heft_class()
+
+
+# A grey panel bolts on: it counts as PANEL_MASS of heft and publishes panel_gained with
+# its new stack count. jackpot marks a reel or dunk kill's drop for the chime.
+func add_panel(panel_id: String, at: Vector3, jackpot := false) -> void:
+	if not Panels.ROWS.has(panel_id):
+		return
+	panels.append(panel_id)
+	if events != null:
+		events.panel_gained.emit(panel_id, panels.count(panel_id), at, jackpot)
+	_publish_heft_class()
+
+
+func panel_counts() -> Dictionary:
+	return Panels.counts(panels)
 
 
 # RL2: holds a relic in its slot and announces it as a relic-rarity find. False, and
@@ -706,6 +727,9 @@ func grant_start_mass(amount: float) -> void:
 # True only while enemy_killed is emitting for a kill a wear spark landed: the item and tree
 # consumers skip it, the bookkeeping ones do not.
 var last_kill_from_spark := false
+# What combat knew about the kill being recorded (elite, jackpot), read by enemy_killed
+# listeners during the emit and cleared after it.
+var kill_tags := {}
 
 
 func record_kill(kind: String, at: Vector3, scrap_value: int, source := "") -> void:
@@ -714,6 +738,7 @@ func record_kill(kind: String, at: Vector3, scrap_value: int, source := "") -> v
 	events.enemy_killed.emit(kind, at, scrap_value)
 	if kind in Roster.SPECIALS: events.special_broken.emit(kind)
 	last_kill_from_spark = false
+	kill_tags = {}
 
 
 func note_anomaly(kind: String) -> void:
@@ -763,6 +788,7 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"wear_accum": _wear_accum,
 		"bonus_cores": bonus_cores,
 		"parts": parts.duplicate(),
+		"panels": panels.duplicate(),
 		"relics": relics.duplicate(),
 		"kills": kills,
 		"events_won": events_won.duplicate(),
@@ -830,6 +856,7 @@ func restore() -> void:
 	mass = _snapshot["mass"]
 	bonus_cores = _snapshot["bonus_cores"]
 	parts.assign(_snapshot["parts"])
+	panels.assign(_snapshot.get("panels", []))
 	relics = (_snapshot.get("relics", {}) as Dictionary).duplicate()
 	kills = _snapshot["kills"]
 	events_won.assign(_snapshot["events_won"])
@@ -903,7 +930,7 @@ const ENTRANCE_KEYS := {
 	"entry_position": "vec3", "entry_velocity": "vec3", "camera_yaw": "num",
 	"tree_picks": "strs", "tree_allowed": "int", "retries_spent": "dict",
 }
-const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool"}
+const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs"}
 
 
 # `tree` is optional: when given, its picks and allowed count are read the way world.gd
@@ -967,6 +994,9 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"pocket_draw_cache": _pocket_draw_entrance_doc,
 		"trade_memory": preload("res://src/world/trade_pockets.gd").to_doc(_snapshot.get("trade_memory", trade_memory)),
 	}, true)
+	# Written only once a panel is held, so a run with none keeps its old document bytes.
+	if not panels.is_empty():
+		doc["panels"] = Array(panels)
 	if run_tier == 0:
 		doc.erase("run_tier")
 		doc.erase("event_core_grants")
@@ -1039,6 +1069,9 @@ static func validate_entrance_doc(doc) -> String:
 	for part_id in doc["parts"]:
 		if RunTier.is_variant_id(part_id):
 			return "part versions must share the base id"
+	for panel_id in doc.get("panels", []):
+		if not Panels.ROWS.has(panel_id):
+			return "unknown panel: %s" % panel_id
 	for w in doc["retries_spent"]:
 		if not str(w).is_valid_int():
 			return "retries_spent key %s is not a world id" % str(w)
@@ -1087,6 +1120,7 @@ func from_entrance_doc(doc) -> bool:
 	bonus_cores = int(doc["bonus_cores"])
 	class_rewarded = int(doc["class_rewarded"])
 	parts.assign(doc["parts"])
+	panels.assign(doc.get("panels", []))
 	relics = (doc["relics"] as Dictionary).duplicate() if doc.has("relics") else {}
 	kills = int(doc["kills"])
 	events_won.assign(doc["events_won"])

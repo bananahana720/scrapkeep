@@ -14,6 +14,8 @@ The baseline carry-over is on the wave 18 lane rows in [GRAPH.md](GRAPH.md), and
 
 ## Waves
 
+**World 1 first (Andrew, 23 Oct 19:29-19:31Z; DECISIONS.md section 1).** All effort goes to a 100% finished world 1 (Spillway: dam and flume) and early progression, played at a world 1 sitting: a 10-15 min average run, about 30 min for a completionist, repeatable. The sitting's timing is a card (recommended: end of wave 19, in place of the dropped feel check). Worlds 2 and 3 finish the work already running and start nothing new until world 1 is done. Afterwards the game scales out with layered, repeatable variety (stage variants, run modifiers) as design seeds of our own. Read the table below in that order: its world 1 units come first, and its worlds 2 and 3 units wait. Wave 19 also carries the fight phases (#391), the rogue crane (#385, #388) and the item panel core (#392); wave 20 the item rung table and cobalt guarantees.
+
 Wave 19 leads with gameplay, map and music (DECISIONS.md section 10, 22 Oct). In-flight wave 18 park kits and dressing finish first. Asset work happens only where a gameplay unit needs it.
 
 | Wave | Must land | Lanes (Sonnet writers) | Gate extra |

@@ -66,8 +66,27 @@ func bind_context(ctx, stage: int) -> void:
 		_player = ctx.player
 		ctx.events.world_fact.connect(_on_world_fact)
 		ctx.events.stage_entered.connect(_on_stage_entered)
-		ctx.events.stage_content_cleared.connect(func(_reason: String): _deactivate())
+		ctx.events.stage_content_cleared.connect(_on_content_cleared)
+		ctx.terrain.stage_freed.connect(_on_stage_freed)
 	_on_stage_entered(stage, false)
+
+
+# A freed park stage leaves a few nodes a frame (terrain's Reaper), so the lamp views and grit can
+# be gone frames before this node is. It lets go of the run's signals the moment its stage is freed;
+# a later entry builds a new DigFx on the rebuilt stage root.
+func _on_stage_freed(stage: int) -> void:
+	if stage != _stage:
+		return
+	for row in [[_ctx.events.world_fact, _on_world_fact], [_ctx.events.stage_entered, _on_stage_entered],
+			[_ctx.events.stage_content_cleared, _on_content_cleared], [_ctx.terrain.stage_freed, _on_stage_freed]]:
+		if row[0].is_connected(row[1]):
+			row[0].disconnect(row[1])
+	active = false
+	set_process(false)
+
+
+func _on_content_cleared(_reason: String) -> void:
+	_deactivate()
 
 
 func _on_stage_entered(stage: int, _retry: bool) -> void:
@@ -84,6 +103,8 @@ func _deactivate() -> void:
 
 func _sync_dressing() -> void:
 	_ambient = available and active and Preset.current != "low"
+	lamp_views = lamp_views.filter(is_instance_valid)
+	grit = grit.filter(is_instance_valid)
 	for view in lamp_views:
 		view.set_instance_shader_parameter("motion_enabled", _ambient)
 	for p in grit:
@@ -249,11 +270,13 @@ func freeze_rupture(seconds: float = 0.18) -> void:
 
 func clear() -> void:
 	for row in ruptures + bursts:
-		row["node"].free()
+		if is_instance_valid(row["node"]):
+			row["node"].free()
 	ruptures.clear()
 	bursts.clear()
 	_played.clear()
 	_frozen = false
+	grit = grit.filter(is_instance_valid)
 	for p in grit:
 		p.emitting = false
 		p.speed_scale = 1.0

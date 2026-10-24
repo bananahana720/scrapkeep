@@ -171,6 +171,18 @@ func _run() -> void:
 	fx._on_stage_entered(99, false)
 	t.check("inactive stage stops all ambient work", not fx.active and not fx.is_processing()
 		and fx.grit.all(func(p): return not p.emitting))
+	# 2026-10-23 (w18 gate, run_tier): a freed park stage leaves a few nodes a frame, so its lamp
+	# views can go before this node. Freeing the stage lets go of the run's signals at once, and a
+	# later entry or content clear never reaches the freed views.
+	game.ctx.terrain.stage_freed.emit(1)
+	fx.lamp_views[0].free()
+	fx.grit[0].free()
+	t.check("freed stage unhooks from the run's signals", not game.events.stage_entered.is_connected(fx._on_stage_entered)
+		and not game.events.world_fact.is_connected(fx._on_world_fact)
+		and not game.events.stage_content_cleared.is_connected(fx._on_content_cleared)
+		and not game.ctx.terrain.stage_freed.is_connected(fx._on_stage_freed))
+	fx._deactivate()
+	t.check("a sync after the views go skips the freed nodes", fx.lamp_views.all(is_instance_valid) and fx.grit.all(is_instance_valid))
 	game.free()
 
 	# Missing shader: real break retains the old instant swap, one warning for the host.

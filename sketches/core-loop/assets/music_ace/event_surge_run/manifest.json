@@ -19,27 +19,27 @@
  "silent_db": -80.0,
  "sources": {
   "main": {
-   "take": "event-surge-run-s4102.wav",
-   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/event-surge-run-s4102.wav",
-   "stretched": "/home/andrew/scratch/w16/tunes/stretched/event_surge_run.wav",
-   "bpm_before": 180.0,
-   "bpm_after": 180.0,
+   "take": "anthem-surge-run-s4201.wav",
+   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/anthem-surge-run-s4201.wav",
+   "stretched": "/home/andrew/scratch/w18/anthem-surge/stretched/event_surge_run.wav",
+   "bpm_before": 150.07,
+   "bpm_after": 150.0,
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/event_surge_run/drums.wav",
-     "sha256": "3a90eb047609375ec48c8f808c0a12104ca9467c9acaac650b64a6e67328e1d9"
+     "path": "/home/andrew/scratch/w18/anthem-surge/stems/htdemucs/event_surge_run/drums.wav",
+     "sha256": "65f4ed718ef9842b95344ae5c7d8943a63eb60cb0b7782fcce47c6925530d804"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/event_surge_run/bass.wav",
-     "sha256": "fb5e7a8d2b3fa4b43f9d0d049f7c96c8e6982b8670ab812f4415cdc5f5a349b8"
+     "path": "/home/andrew/scratch/w18/anthem-surge/stems/htdemucs/event_surge_run/bass.wav",
+     "sha256": "99b17aee185c004931cf09689fb3271de1a8a23e67836655b652ef84433f1816"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/event_surge_run/other.wav",
-     "sha256": "72ed1963ba1dd58f9a9c43d7998d3db2f5b6c5a97ef707a7ece9b582e18ca609"
+     "path": "/home/andrew/scratch/w18/anthem-surge/stems/htdemucs/event_surge_run/other.wav",
+     "sha256": "11ef9d361a5a307dda1f0a18bca42c44f041d2607deff6b08da4093cc65ccda0"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/event_surge_run/vocals.wav",
-     "sha256": "d7e3ac727a41ff342c9b7cbba26461b0bc4612132434dea273fdd1f58d7b13de"
+     "path": "/home/andrew/scratch/w18/anthem-surge/stems/htdemucs/event_surge_run/vocals.wav",
+     "sha256": "e57c3039ddeeabdab8e02a4c1deeeffd86d1d9eeabbde782b017c81732482d69"
     }
    },
    "note": "htdemucs; vocals summed into other"
@@ -49,19 +49,19 @@
   "main": {
    "parent": "single",
    "take": "event-surge-run",
-   "source_start": 249792,
-   "take_start": 249792,
-   "bpm": 180,
-   "beat": 14700,
-   "bar": 58800,
+   "source_start": 144512,
+   "take_start": 144512,
+   "bpm": 150,
+   "beat": 17640,
+   "bar": 70560,
    "beats_per_bar": 4,
    "bars": 16,
    "entry": 4096,
-   "exit": 944896,
+   "exit": 1133056,
    "loop": true,
    "loop_offset": 4096,
    "loop_to_bar": 1,
-   "sample_count": 944896,
+   "sample_count": 1133056,
    "key": "D",
    "key_offset": 0,
    "files": {
@@ -181,8 +181,9 @@
  },
  "breath_default": "hard",
  "cuts": "measured-beat-phase",
+ "whole": false,
  "timing_verified": false,
- "gain_db": 0.3,
+ "gain_db": 0.6,
  "measured": {
   "lufs": -16.0,
   "true_peak": -1.8,

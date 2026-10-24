@@ -25,6 +25,8 @@ const Relics := preload("res://src/build/relics.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 const MakerBonuses := preload("res://src/build/maker_bonuses.gd")
+const Panels := preload("res://src/build/panels.gd")
+const PanelShell := preload("res://src/build/panel_shell.gd")
 
 # Writer B's module: build and growth. Scrap magnetizes to the ball and sticks to it;
 # drive-through fabricators turn scrap into parts on the roll; the reward gates after
@@ -110,6 +112,27 @@ var gates
 var fabricators
 var field
 var accretion
+# Grey panels (IL-01): the plates on the ball, the kill-drop roller with its pity, and the
+# drop stream, seeded per stage from the run seed so a replay drops the same panels.
+var panel_shell
+var dropper = Panels.Dropper.new()
+var panel_rng := RandomNumberGenerator.new()
+# Louvres the last recompute converted into the pilot's signature stat (Panels.OVERFLOW), and
+# the counts it folded after that conversion (what the build read's stat lines say).
+var panel_overflow := 0
+var panel_effective := {}
+# The pity count at this stage's entry: a retry puts it back, so dying never carries a dry
+# streak into the retry.
+var _stage_dry := 0
+# Stages whose missing cell data the rib read has logged.
+var _no_cells_logged := {}
+# True from stage entry until the stage's rib caches are placed (the director's graph is read
+# by the first in-stage tick).
+var _caches_pending := false
+# Every in-stage kill this run as the drop saw it, [stage, kind, elite, rib, jackpot, dropped],
+# for the drop simulation's recorded streams (tools/bot_run.gd --panel-log=1).
+var kill_log: Array = []
+const KILL_LOG_CAP := 4000
 # SI6: the complete sets' tell on the ball, and the sets this run has completed (a respec
 # that breaks a set keeps it here and in the codex's Found list).
 var set_tell
@@ -223,6 +246,8 @@ func setup(ctx_ref) -> void:
 	accretion = Accretion.new()
 	ctx.player.roll_node().add_child(accretion)
 	accretion.setup()
+	panel_shell = PanelShell.new()
+	ctx.player.roll_node().add_child(panel_shell)
 	set_tell = SetTell.new()
 	set_tell.name = "SetTell"
 	ctx.player.roll_node().add_child(set_tell)
@@ -240,6 +265,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.flow_changed.connect(_on_flow_changed)
 	ctx.events.part_gained.connect(_on_part_gained)
 	ctx.events.part_gained.connect(_on_relic_gained)
+	ctx.events.panel_gained.connect(func(_id: String, _count: int, _at: Vector3, _jackpot: bool): recompute())
 	ctx.events.scrap_collected.connect(_on_scrap_collected)
 	ctx.events.milestone_won.connect(_on_milestone_won)
 	ctx.events.dashed.connect(_on_dashed)
@@ -540,6 +566,7 @@ func _step_loot(delta: float) -> void:
 func recompute() -> void:
 	_sync_scrap_flags()
 	sheet = stat_cache.sync(ctx.run.parts)
+	_fold_panels()
 	effects.refresh(ctx.run.parts)
 	var mass_hp: float = effects.mass_health(ctx.run.mass)
 	# Armour mode: mass lost to hits or wear never lowers the hull ceiling, so the
@@ -567,6 +594,21 @@ func recompute() -> void:
 	for set_id in set_ledger.note(sheet.sets):
 		_note_found("set:" + set_id, "%s: %s" % [PartSets.SETS[set_id]["name"], PartSets.SETS[set_id]["text"]])
 	_redraw()
+
+
+# Panels fold after the parts, so the louvre cap reads the parts' fire rate (IL-01 overflow).
+func _fold_panels() -> void:
+	panel_overflow = 0
+	panel_effective = {}
+	if ctx.run.panels.is_empty():
+		return
+	var weapon_id: String = ctx.run.class_def.weapon_id if ctx.run.class_def != null else ""
+	var rate := Panels.weapon_rate(weapon_id, ctx.run.parts)
+	var room := Panels.louvre_room(rate, sheet.mod("weapon_rate")) if rate > 0.0 else -1
+	var eff: Dictionary = Panels.effective(ctx.run.panel_counts(), _class_id(), room)
+	panel_overflow = int(eff["converted"])
+	panel_effective = eff["counts"]
+	Panels.fold(sheet, eff["counts"])
 
 
 func shell_fitted() -> bool:
@@ -789,6 +831,7 @@ func _apply_shell() -> void:
 
 func _redraw() -> void:
 	accretion.show_build(ctx.run.mass, ctx.run.parts, sheet.synergies + sheet.consumed, ctx.run.heft_class())
+	panel_shell.show_panels(ctx.run.panels, ctx.run.run_seed)
 	set_tell.show_sets(sheet.sets)
 
 
@@ -925,6 +968,9 @@ func _on_run_started(_class_id_value: String) -> void:
 	_grant_companion_stub()
 	shop.reset_run()
 	lanes.reset()
+	dropper.reset()
+	kill_log.clear()
+	_no_cells_logged.clear()
 	recompute()
 
 
@@ -950,6 +996,13 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	lanes.reset()
 	_offered = {}
 	loot_rng.seed = LOOT_SEED + stage * 7919 + ctx.run.retries
+	panel_rng.seed = hash([ctx.run.run_seed, stage, ctx.run.retries, "panels"])
+	scrap.clear_caches()
+	_caches_pending = true
+	if retry:
+		dropper.dry = _stage_dry
+	else:
+		_stage_dry = dropper.dry
 	_speed_tier = ctx.player.speed_tier()
 	scrap.lay_out(ctx.terrain, ctx.terrain.scrap_lines(stage), ctx.flow.stage_def()["scrap_density"], ctx.rng)
 	fabricators.lay_out(ctx.terrain, stage, _class_id(), ctx.rng, ctx.run.parts)
@@ -987,6 +1040,7 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 	else:
 		scrap.drop(at, amount, ctx.rng)
 		scrap.drop_cogs(at, amount)
+	_drop_panel(kind, at)
 	# A vault pays out a rare part and a bonus core (DEMO-SPEC engagement tiers).
 	if kind == "vault":
 		var picks: Array = Parts.roll(ctx.rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
@@ -996,6 +1050,63 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 		var active := active_offer("vault", Parts.SOURCE_RARITIES["vault"], ctx.rng)
 		if active != "" and not scrapless():
 			active_rack().take(active, ctx.player.ball_position())
+
+
+# A kill may drop a grey panel (IL-01 card section 3): elite kills always, an ordinary kill
+# at the drop row's chance plus pity, raised in off-spine ribs and on reel or dunk kills. The
+# stat leans toward the pilot's nemesis answers. Draws only from panel_rng, so no other
+# stream moves.
+func _drop_panel(kind: String, at: Vector3) -> void:
+	if kind in Panels.NO_DROP_KINDS or scrapless():
+		return
+	var tags: Dictionary = ctx.run.kill_tags
+	var jackpot := bool(tags.get("jackpot", false))
+	var elite := bool(tags.get("elite", false))
+	var rib := _rib_mult(at)
+	dropper.world = ctx.stages.world_of(ctx.flow.stage()) if ctx.stages != null else 1
+	var dropped: bool = dropper.roll(panel_rng, elite, rib, jackpot)
+	if kill_log.size() < KILL_LOG_CAP:
+		kill_log.append([ctx.flow.stage(), kind, elite, rib, jackpot, dropped])
+	if dropped:
+		scrap.drop_panel(at, Panels.draw(panel_rng, _class_id()), jackpot)
+
+
+# The rib multiplier at a kill: DROP.rib in an off-spine dead end, else 1.0. A stage with no
+# cell data pays 1.0 and says so once.
+func _rib_mult(at: Vector3) -> float:
+	var world = ctx.root.get_node_or_null("World")
+	var director = world.get("director") if world != null else null
+	var cell: int = director.off_spine(at) if director != null and director.has_method("off_spine") else -1
+	if cell < 0:
+		var stage: int = ctx.flow.stage()
+		if not _no_cells_logged.has(stage):
+			_no_cells_logged[stage] = true
+			print("panels: stage %d has no cell data, rib drops pay 1.0" % stage)
+		return 1.0
+	return float(Panels.DROP["rib"]) if cell == 1 else 1.0
+
+
+# The stage's rib caches: Panels.RIB_CACHES panels, each at the end of a seeded off-route dead
+# end. Their own stream (run seed and stage, not retries) puts a retry's caches back where
+# they were, with the same panels.
+func _place_rib_caches() -> void:
+	_caches_pending = false
+	if scrapless():
+		return
+	var world = ctx.root.get_node_or_null("World")
+	var director = world.get("director") if world != null else null
+	if director == null or not director.has_method("rib_cache_spots"):
+		return
+	var stage: int = ctx.flow.stage()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([ctx.run.run_seed, stage, "rib_caches"])
+	for at in director.rib_cache_spots(Panels.RIB_CACHES, rng.randi()):
+		scrap.drop_panel(at, Panels.draw(rng, _class_id()), false, true)
+
+
+# Debug drawer (dev only): grant a panel at the ball.
+func grant_panel(panel_id: String) -> void:
+	ctx.run.add_panel(panel_id, ctx.player.ball_position())
 
 
 # The active rack (src/combat/actives) while --actives is on, else null.
@@ -1218,6 +1329,8 @@ func _physics_process(delta: float) -> void:
 	clock.advance(delta, ctx.run.run_time, ctx.flow.in_stage())
 	_own_strikes += 1
 	if ctx.flow.in_stage():
+		if _caches_pending:
+			_place_rib_caches()
 		if not scrapless():
 			for at in scrap.step(ball, speed, delta):
 				ctx.run.add_scrap(1, at)
@@ -1228,6 +1341,8 @@ func _physics_process(delta: float) -> void:
 			for value in scrap.cog_values:
 				ctx.run.add_cogs(value)
 				ctx.events.cogs_collected.emit(value, ctx.run.cogs)
+			for take in scrap.panel_takes:
+				ctx.run.add_panel(String(take["id"]), take["at"], bool(take["jackpot"]))
 			_step_fabricators(ball, delta)
 		if ctx.run.armor_mode:
 			_step_armor(ball, delta)

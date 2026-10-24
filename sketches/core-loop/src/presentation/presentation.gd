@@ -24,6 +24,7 @@ const AmbientLife := preload("res://src/presentation/ambient_life.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const PanelFx := preload("res://src/presentation/panel_fx.gd")
 
 # Writer C's module: how every committed fact looks, feels and sounds. It reads the
 # GameEvents bus, the event_kinds table and the spine's camera and ball hooks, and
@@ -49,6 +50,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 #   hero_assets    the V3 models dressed over the greybox shell, chunks and gates
 #   warden_ring    a posture Warden's health as four arcs on the ground round its foot
 #   reward_ceremony  how a part find is presented, from a rarity tick to the crate (v3 W13)
+#   panel_fx       a grey panel pickup: the word at the ball, the ratchet and the run's phrase
 
 var ctx
 var audio
@@ -62,6 +64,7 @@ var armour_marks
 var banner
 var hero_assets
 var ceremony
+var panel_fx
 var set_dressing: Node3D
 var park_props: Node3D
 var ambient_life: Node3D
@@ -128,6 +131,9 @@ func setup(ctx_ref) -> void:
 	ceremony = RewardCeremony.new()
 	add_child(ceremony)
 	ceremony.setup(ctx, audio, juice, vfx)
+	panel_fx = PanelFx.new()
+	add_child(panel_fx)
+	panel_fx.setup(ctx, audio, machine_fx)
 	wire_optional()
 	GraphicsPreset.register_dressing_host(self)
 	if not get_tree().node_added.is_connected(_on_node_added):

@@ -19,27 +19,27 @@
  "silent_db": -80.0,
  "sources": {
   "main": {
-   "take": "event-dust-squall-s4101.wav",
-   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/event-dust-squall-s4101.wav",
-   "stretched": "/home/andrew/scratch/w16/tunes/stretched/event_dust_squall.wav",
-   "bpm_before": 160.01,
-   "bpm_after": 160.0,
+   "take": "anthem-dust-squall-s4201.wav",
+   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/anthem-dust-squall-s4201.wav",
+   "stretched": "/home/andrew/scratch/w18/anthem-pack2/stretched/event_dust_squall.wav",
+   "bpm_before": 145.0,
+   "bpm_after": 145.0,
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/event_dust_squall/drums.wav",
-     "sha256": "bb27de85fb65e66d8321aa13a9a91283d1a39bfe73354a98f2457338020ed77f"
+     "path": "/home/andrew/scratch/w18/anthem-pack2/stems/htdemucs/event_dust_squall/drums.wav",
+     "sha256": "54650a1b34895c03f2e74ed2b6c4ff33f20a7156bcf6bb1a0f1d37c32fe53e88"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/event_dust_squall/bass.wav",
-     "sha256": "f1ec7f2b715ba8abf7c97c37c35f47a61a7e41cfefd45ceb0d8eda2632f08ba5"
+     "path": "/home/andrew/scratch/w18/anthem-pack2/stems/htdemucs/event_dust_squall/bass.wav",
+     "sha256": "23fdfb3aaf2ab4d8a5ee74eb197c017f21a54d5ea8dc357c7709e86ca5bfd16b"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/event_dust_squall/other.wav",
-     "sha256": "0bbfad40d427bf859392f79c1bd1975c149c84b7c0df94291337e0e9011c6847"
+     "path": "/home/andrew/scratch/w18/anthem-pack2/stems/htdemucs/event_dust_squall/other.wav",
+     "sha256": "667d91a82e16901ba76da69b7705ed31296672ed61f3929e22af27cdd1e1690f"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/event_dust_squall/vocals.wav",
-     "sha256": "3a88f9982253b47a66bc76eb6fed028a8f087da093ad96a91a57f78d7a8535ca"
+     "path": "/home/andrew/scratch/w18/anthem-pack2/stems/htdemucs/event_dust_squall/vocals.wav",
+     "sha256": "58e08cb92e00e12cfd80371cced315938387af547b4fb346e0b21e6d49e38659"
     }
    },
    "note": "htdemucs; vocals summed into other"
@@ -49,19 +49,19 @@
   "main": {
    "parent": "single",
    "take": "event-dust-squall",
-   "source_start": 264608,
-   "take_start": 264608,
-   "bpm": 160,
-   "beat": 16538,
-   "bar": 66152,
+   "source_start": 291968,
+   "take_start": 291968,
+   "bpm": 145,
+   "beat": 18248,
+   "bar": 72992,
    "beats_per_bar": 4,
    "bars": 16,
    "entry": 4096,
-   "exit": 1062528,
+   "exit": 1171968,
    "loop": true,
    "loop_offset": 4096,
    "loop_to_bar": 1,
-   "sample_count": 1062528,
+   "sample_count": 1171968,
    "key": "E",
    "key_offset": 2,
    "files": {
@@ -181,11 +181,12 @@
  },
  "breath_default": "hard",
  "cuts": "measured-beat-phase",
+ "whole": false,
  "timing_verified": false,
- "gain_db": 1.8,
+ "gain_db": 0.6,
  "measured": {
   "lufs": -16.0,
-  "true_peak": -1.4,
+  "true_peak": -1.8,
   "note": "summed stems before Ogg encode"
  }
 }

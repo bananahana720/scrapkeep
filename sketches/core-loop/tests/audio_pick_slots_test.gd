@@ -108,7 +108,8 @@ func _bosses() -> void:
 		var m := _manifest(row)
 		_t.check("%s's pick sits on the 129 combat grid" % boss, _bpms(m) == [129])
 	_t.eq("brindle's later phases still follow the pick", PhaseMusic.track_for_phase("brindle", 2), "brindle-p2-furnace")
-	_t.eq("the final phase is still the euro track", PhaseMusic.final_plan("brindle", func(_id): return true)["track"], "euro-brindle-p3")
+	_t.eq("the final phase plays the fight anthem", PhaseMusic.final_plan("brindle", func(_id): return true)["track"], "anthem-brindle-heavier")
+	_t.eq("without the anthem the final phase is still the euro track", PhaseMusic.final_plan("brindle", func(id): return not id.begins_with("anthem-"))["track"], "euro-brindle-p3")
 
 
 func _shelf_rows() -> void:
