@@ -514,6 +514,14 @@ func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: fl
 	return slot
 
 
+# Ends a glyph glyph() returned early, unless its pooled slot has since moved on to another glyph.
+func end_glyph(slot: Dictionary, at: Vector3) -> void:
+	if slot.is_empty() or slot["t"] >= 1.0 or not slot["node"].global_position.is_equal_approx(at):
+		return
+	slot["t"] = 1.0
+	slot["node"].visible = false
+
+
 func _facing_basis(silhouette: String, facing: Vector3) -> Basis:
 	if facing.length_squared() < 0.0001:
 		# Flat glyphs lie on the ground; the rest face the camera.
