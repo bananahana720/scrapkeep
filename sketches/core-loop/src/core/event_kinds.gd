@@ -40,6 +40,8 @@ const ROWS := {
 	"stage_cleared": {"group": "flow", "color": Palette.AMBER, "shape": "star", "sound": "stinger_clear", "hud": "Stage {stage} clear", "objective": "", "priority": 3},
 	"run_ended": {"group": "flow", "color": Palette.AMBER, "shape": "star", "sound": "stinger_run_end", "hud": "Run complete", "objective": "", "priority": 3},
 	"beacon_charge_changed": {"group": "flow", "color": Palette.ARC, "shape": "ring", "sound": "beacon_hum", "hud": "", "objective": "Warden {percent}% broken. Punch {punch} / plating {plating}. {hint}", "priority": 1},
+	# Silent and unprinted: Moss's Warden line and the flume reveal card are the cue (flow.gd).
+	"warden_sighted": {"group": "flow", "color": Palette.HAZARD, "shape": "none", "sound": "ui_tick", "hud": "", "objective": "", "priority": 0},
 	"warden_engaged": {"group": "flow", "color": Palette.HAZARD, "shape": "cross", "sound": "warden_theme_in", "hud": "The Warden wakes", "objective": "", "priority": 2},
 	"stage_content_cleared": {"group": "flow", "color": Palette.SAND, "shape": "none", "sound": "stage_fade", "hud": "", "objective": "", "priority": 0},
 	"beacon_unsealed": {"group": "flow", "color": Palette.AMBER, "shape": "star", "sound": "stinger_unseal", "hud": "Warden broken: gates open", "objective": "Charge the beacon", "priority": 3},
@@ -452,6 +454,7 @@ const WEIGHT_EXEMPT := {
 	"vent_erupted": "Hostile floor eruption owns its danger geometry and reactor cue; it never shakes, kicks or stops the screen.",
 	"verb_failed": "The verb or ability grammar owns this cue; its landed strike is enemy_struck.",
 	"warden_engaged": "Run and stage lifecycle owns music and cleanup, not an impact.",
+	"warden_sighted": "Run and stage lifecycle owns music and cleanup, not an impact.",
 	"weak_point_opened": "Threat, windup and floor cues keep their committed geometry and sound; impact must not restyle them.",
 	"world_entered": "Run and stage lifecycle owns music and cleanup, not an impact.",
 	"world_fact": "World, interaction and activity rows own their contextual glyph and sound.",
