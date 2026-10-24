@@ -88,27 +88,55 @@ static func steel_views(views: Array[GeometryInstance3D]) -> Array[GeometryInsta
 # mapped through slot_material by its GLB material resource_name, placed at xform times the node's transform in the GLB.
 static func _place(path: String, parent: Node3D, xform: Transform3D, prefix: String) -> Array[MeshInstance3D]:
 	var out: Array[MeshInstance3D] = []
+	var sources := mesh_sources(path)
+	if sources.is_empty():
+		return out
+	for source: Dictionary in sources:
+		var view := MeshInstance3D.new()
+		view.name = prefix + source.name
+		view.mesh = source.mesh
+		var slots: PackedStringArray = source.slots
+		for i in slots.size():
+			var material := slot_material(slots[i])
+			if material != null:
+				view.set_surface_override_material(i, material)
+		parent.add_child(view)
+		view.transform = xform * source.xform
+		out.append(view)
+	return out
+
+
+# A GLB's mesh nodes as {name, mesh, slots (each surface's GLB material name), xform (in the GLB)}, read once a path:
+# instancing the scene for every placement cost about 0.3 ms a shell, 56 shells on a Spillway stage entry. Main thread
+# only, like every caller (contraptions' skins read them too). A GLB that cannot load is warned about once a call and gives [].
+static var _source_cache := {}
+
+
+# Teardown: the cached meshes go with the Game (activities.gd _exit_tree).
+static func release_shared() -> void:
+	_source_cache.clear()
+
+
+static func mesh_sources(path: String) -> Array:
+	if _source_cache.has(path):
+		return _source_cache[path]
 	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
 	if packed == null:
 		push_warning("recipe_props: %s missing, it stays out" % path)
-		return out
+		return []
+	var sources := []
 	var scene := packed.instantiate()
 	for source: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 		if source.mesh == null:
 			continue
-		var view := MeshInstance3D.new()
-		view.name = prefix + source.name
-		view.mesh = source.mesh
+		var slots := PackedStringArray()
 		for i in source.mesh.get_surface_count():
 			var original := source.mesh.surface_get_material(i)
-			var material := slot_material(String(original.resource_name) if original != null else "")
-			if material != null:
-				view.set_surface_override_material(i, material)
-		parent.add_child(view)
-		view.transform = xform * _relative(source, scene)
-		out.append(view)
+			slots.append(String(original.resource_name) if original != null else "")
+		sources.append({"name": String(source.name), "mesh": source.mesh, "slots": slots, "xform": _relative(source, scene)})
 	scene.free()
-	return out
+	_source_cache[path] = sources
+	return sources
 
 
 static func _relative(node: Node3D, top: Node) -> Transform3D:

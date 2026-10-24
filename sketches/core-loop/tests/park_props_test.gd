@@ -1288,6 +1288,19 @@ func _check_game() -> void:
 	_t.check("stage 1 builds the park's views", props.map_id == FIXTURE_MAP and props.views.size() > 0 and props.instances.size() > 0, "%d views" % props.views.size())
 	_t.check("the stage's views are grouped", props.views.all(func(v: GeometryInstance3D) -> bool: return v.is_in_group(ParkProps.GROUP)))
 	_t.check("the live node has no collision", props.find_children("*", "CollisionObject3D", true, false).is_empty())
+	# A rebuild (the next stage) hides and stops the old holders at once and frees them a few nodes a frame (_reap).
+	var held: int = props.get_child_count()
+	props._built_for = []
+	props._build_stage()
+	var dying: Array = props.get_children().filter(func(n: Node) -> bool: return String(n.name).begins_with("Freed"))
+	_t.check("a rebuild hides and stops the old holders at once", held > 0 and dying.size() == held \
+		and dying.all(func(n: Node3D) -> bool: return not n.visible and n.process_mode == Node.PROCESS_MODE_DISABLED), "%d of %d" % [dying.size(), held])
+	for n in 600:
+		if props._dying.is_empty():
+			break
+		await process_frame
+	_t.check("the old holders are freed over frames", props._dying.is_empty() and dying.all(func(n) -> bool: return not is_instance_valid(n)), "%d left" % props._dying.size())
+	props.finish()
 	game.ctx.events.stage_content_cleared.emit("test")
 	_t.check("stage_content_cleared hides the props", not props.visible)
 	Preset.apply("low")

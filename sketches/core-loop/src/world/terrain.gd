@@ -437,8 +437,8 @@ static func _park(root: Node3D, parked: bool) -> void:
 
 
 # A freed stage's nodes leave a few a frame, parked and hidden meanwhile: one queue_free of a whole park stage (2917
-# shapes) cost 33-50 ms in the swap frame headless (park_swap_test, artifacts/local/c9). Deepest first, a physics
-# body whole (its shapes leave the space in one go), the root last. Nothing under it processes meanwhile.
+# shapes) cost 33-50 ms in the swap frame headless (park_swap_test, artifacts/local/c9). take() disables the root, so
+# nothing under it processes and its bodies leave the space at once; then deepest first, a physics body whole, the root last.
 class Reaper extends Node:
 	const BUDGET_USEC := 3000
 
@@ -447,8 +447,9 @@ class Reaper extends Node:
 		root.name = "Freed%s" % root.name
 		root.visible = false
 		root.position = Vector3.DOWN * PARK_DEPTH
-		root.propagate_call("set_process", [false])
-		root.propagate_call("set_physics_process", [false])
+		# One switch stops the whole stage (its bodies leave the space with it): two propagate_calls over a park
+		# stage's ~20k nodes cost 29 ms in the swap frame, this 9.5 (bot run, stage 1 to 2). The Reaper runs ALWAYS.
+		root.process_mode = Node.PROCESS_MODE_DISABLED
 		var reaper := Reaper.new()
 		reaper.name = "Reaper"
 		reaper.process_mode = Node.PROCESS_MODE_ALWAYS

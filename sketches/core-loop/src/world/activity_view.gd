@@ -146,9 +146,14 @@ static func _box(size: Vector3, mat: Material) -> MeshInstance3D:
 static func _ring(radius: float, color: Color) -> Node3D:
 	var out := Node3D.new()
 	var mat := Palette.solid(color, COLUMN_ENERGY)
+	# Every dash is the same box, so they share one mesh.
+	var dash_mesh := BoxMesh.new()
+	dash_mesh.size = Vector3(0.45, 0.1, radius * TAU / float(RING_DASHES * 2))
 	for k in RING_DASHES:
 		var a := TAU * k / float(RING_DASHES)
-		var dash := _box(Vector3(0.45, 0.1, radius * TAU / float(RING_DASHES * 2)), mat)
+		var dash := MeshInstance3D.new()
+		dash.mesh = dash_mesh
+		dash.material_override = mat
 		dash.position = Vector3(cos(a), 0.06, sin(a)) * radius
 		dash.rotation.y = -a
 		out.add_child(dash)

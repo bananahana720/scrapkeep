@@ -298,6 +298,7 @@ func _exit_tree() -> void:
 	load("res://src/world/events/natural.gd").release_plans()
 	load("res://src/presentation/set_dressing.gd").release_shared()
 	load("res://src/presentation/park_props.gd").release_shared()
+	load("res://src/presentation/recipe_props.gd").release_shared()
 	_interior_block = null
 	_wall = null
 
