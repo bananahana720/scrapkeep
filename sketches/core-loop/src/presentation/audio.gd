@@ -133,9 +133,11 @@ const HUM_STATES := ["latched_world", "latched_body", "smash_committed"]
 const HUM_FAR := 45.0
 const HUM_NEAR := 3.0
 const HUM_DB := 0.0
+# A threat kind whose warning has a release half, played when the threat goes live.
+const THREAT_RELEASE := {"threat_lane": "threat_tear"}
 # Danger sounds pull the bass down so the low end never masks a warning.
 const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
-	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
+	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
 # A launch whose landing never comes (a fall into the next stage's rail) still drops. Timed on
 # SimClock: the drop restarts the band and so the bar grid that park events land on.
 const LANDING_FALLBACK_MS := 2000
@@ -1445,6 +1447,16 @@ func _warn_threat(node: Node) -> void:
 			play(kind, db, 1.0, "SFX", layer)
 	if int(row["priority"]) >= 2:
 		engine.duck(0.55, 0.35)
+	if kind in THREAT_RELEASE and node.has_signal("went_live"):
+		node.went_live.connect(_release_threat.bind(node, kind), CONNECT_ONE_SHOT)
+
+
+# The release half of a threat's grammar on the frame it goes live: the lane's tear is fire time.
+func _release_threat(node: Node, kind: String) -> void:
+	if not is_instance_valid(node) or not node.is_inside_tree():
+		return
+	var row: Dictionary = EventKinds.THREAT_ROWS[kind]
+	play(kind, PRIORITY_DB[int(row["priority"])] - PRIORITY_DB[Rows.priority(kind)] - _threat_distance_db(node), 1.0, "SFX", THREAT_RELEASE[kind])
 
 
 # Cues here are not positional, so a far threat is only quieter: full within 20 m,
@@ -1661,6 +1673,9 @@ func wire_optional() -> void:
 		_disarm_launch()
 		_event_id = ""
 		_chase_lead0 = -1.0
+		# Arena entry and retry are the fight's stage entry: a flume Warden's break no longer strips the band.
+		if reason in ["arena", "arena_retry"]:
+			engine.parameters_stage_entered()
 		if reason == "arena_retry" and sound_ready:
 			# R in the arena: Brindle's music from phase 1, out of DEAD mode, with a pickup.
 			engine.cancel_pending()
