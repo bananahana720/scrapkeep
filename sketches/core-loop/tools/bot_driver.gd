@@ -12,6 +12,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
+const BotKite := preload("res://tools/bot_kite.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -38,6 +39,9 @@ const Requisition := preload("res://src/boss/requisition.gd")
 #                  its whole stick and every press go out TRAVERSE_REACTION seconds after
 #                  they were decided, with at most one verb per TRAVERSE_PRESS_GAP seconds.
 #   camper         holds the gun on the Warden from CAMP_RANGE and never closes.
+#   orbit          the anti-kiting gates' circling arm (bot_kite.gd): circles the nearest live pack unit or Warden
+#                  at 14 m at cruise speed, never rams, never dodges.
+#   terrain        orbit with the default dodging that breaks the circle onto the nearest line (bot_kite.gd).
 # The fight profiles for the Warden bands, by name: brawler is the completionist (it
 # fights with every verb it has), skipper is the skipper, camper is the camper.
 # All of them fight the boss module's posture target or Brindle's parts (see _boss).
@@ -65,7 +69,7 @@ const Requisition := preload("res://src/boss/requisition.gd")
 # The sweep adds "fight_capped" (the fight ran past
 # fight_limit) and "broken" (the Warden broke; it ends the run there).
 
-const POLICIES := ["skipper", "completionist", "random", "camper", "traversal"]
+const POLICIES := ["skipper", "completionist", "random", "camper", "traversal", "orbit", "terrain"]
 # How far the bot looks for a crew to break when the Warden's clamp is shut (_gate_foe).
 const GATE_HUNT := 140.0
 const PROFILES := {"brawler": "completionist", "camper": "camper", "skipper": "skipper"}
@@ -247,6 +251,11 @@ const WANDER_COMMIT_DISTANCE := 45.0
 const WANDER_COMMIT_TIME := 45.0
 # Telegraph reading.
 const REACTION := 0.25
+# The anti-kiting gates' contact rule (the same for every policy): a stage's first contact is the first tick a live enemy
+# stands within CONTACT_RADIUS of the ball; a hit taken with none that close (a shell, a lane) also opens it. The
+# gates read the hull lost, and the seconds alive, in the CONTACT_WINDOW_S after it.
+const CONTACT_RADIUS := 30.0
+const CONTACT_WINDOW_S := 120.0
 const PREDICT := 0.35
 const FIELD_RADIUS := 20.0
 const ESCAPE_DIRECTIONS := 16
@@ -493,6 +502,8 @@ var band = null
 # The lowest hull the run reached, for the record; it steers nothing.
 var _min_hp := INF
 var _evaded := {}
+# Telegraph ids already counted as a read (the gates' reads per hit), pruned with _seen.
+var _read := {}
 # Brindle charge lanes (hazard instance id) already counted as read, sidestepped, clash-tried, and the clash taken.
 var _charge_read := {}
 var _charge_stepped := {}
@@ -527,6 +538,11 @@ var _weak_roll := 0.0
 var _weak_go := false
 var _weak_warden: Node3D = null
 var _harpoon_commit := false
+# The anti-kiting gates (bot_kite.gd): the policy object, whether the stick coasts above cruise speed with boost off (orbit
+# and terrain circling), and the test-only plants (tools/bot_plants.gd; both false/empty without --plant=).
+var kite
+var _cruise_hold := false
+var hide_pack_telegraphs := false
 # Only the explorer changes hands: jump clear, bite, release at the apex, bite again, haul.
 # chain_hand_enabled = false keeps the one-bite hand, the control for the two-hook one.
 var chain_hand_enabled := true
@@ -663,7 +679,9 @@ func start(resume := false) -> void:
 	_connect_optional("ultimate_ready", func(_id: String): _on_ultimate_ready())
 	events.world_fact.connect(func(fact: String, _at: Vector3):
 		if fact == "thermal_ride" and game.flow.in_stage():
-			_count("thermal_rides"))
+			_count("thermal_rides")
+		if kite != null and game.flow.in_stage():
+			kite.on_ride_fact(fact))
 	events.slammed.connect(func(at: Vector3, _strength: float, _flatness: float):
 		if not _plate_hand.is_empty() and game.flow.in_stage() and _plate_contains(_plate_hand, at):
 			_count("plate_slams"))
@@ -782,6 +800,8 @@ func tick(delta: float) -> bool:
 	_ult_wait -= delta
 	_harpoon_held = false
 	_harpoon_commit = false
+	_cruise_hold = false
+	_contact_scan()
 	_plant_cool -= delta
 	_punch_seen = maxf(float(flow.punch_now()), _punch_seen - PUNCH_FADE * delta)
 	if trace and ticks % (Engine.physics_ticks_per_second * 2) == 0:
@@ -948,7 +968,9 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_note = {"stage": stage, "warden_engaged_s": null, "warden_fight_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [],
 		"cores": [], "parts": [], "vault_tried": false, "waypoints": 0, "stuck_detours": 0, "hp_lost": 0.0, "hits": 0,
 		"max_hp": game.run.max_hp, "evasions": 0, "cap_hits": 0, "magnet_stuns": 0, "plants": 0, "slingshots": 0,
-		"specials": 0, "punch_short_s": 0.0, "plate_slams": 0, "thermal_rides": 0}
+		"specials": 0, "punch_short_s": 0.0, "plate_slams": 0, "thermal_rides": 0,
+		"first_contact_s": null, "first_hit_s": null, "hull_lost_120s": 0.0, "alive_120s": null, "fight_s": 0.0, "circle_s": 0.0,
+		"circle_share": null, "line_rides": 0, "lines_in_reach": null, "line_misses": 0, "telegraph_reads": 0}
 
 
 func _note_set(key: String, value) -> void:
@@ -1026,6 +1048,7 @@ func _on_player_hit(amount: float, source_id: String) -> void:
 	_count("hp_lost", amount)
 	_count("hull_lost", hull)
 	_count("hits")
+	_note_contact_hit(hull)
 	if source_id == "brindle_charge":
 		_count("charge_hits")
 	var in_boss := _in_boss()
@@ -1090,6 +1113,7 @@ func _close_note() -> void:
 	_note["punch_short_s"] = snappedf(float(_note["punch_short_s"]), 0.01)
 	if not _note.has("secrets_found"):
 		_note["secrets_found"] = []
+	_close_contact()
 	stage_notes.append(_note)
 	_note = {}
 
@@ -1207,6 +1231,10 @@ func _roam(delta: float) -> void:
 			_camper(warden, delta)
 		"traversal":
 			_traverse(delta)
+		"orbit", "terrain":
+			if kite == null:
+				kite = BotKite.new(self)
+			kite.step(delta, policy == "terrain")
 		_:
 			_random(warden, delta)
 
@@ -3491,12 +3519,16 @@ func _threats() -> Array:
 			continue
 		if _welcome_ring_at != Vector3.INF and h.get("center") != null and _flat(h.center, _welcome_ring_at) < 1.0:
 			continue
+		if not _read.has(id):
+			_read[id] = true
+			_count("telegraph_reads")
 		if h.contains(ball) or h.contains(ahead):
 			out.append(h)
 	if _seen.size() > 64:
 		for id in _seen.keys():
 			if not live.has(id):
 				_seen.erase(id)
+				_read.erase(id)
 	if band != null:
 		band.forget(live)
 	return out
@@ -3521,12 +3553,15 @@ func _kit(verb: String) -> bool:
 # the player's own amber ones, not fields wider than FIELD_RADIUS) and the boss's hazards.
 func _hazards() -> Array:
 	var out: Array = []
+	var pack_telegraphs := _pack_telegraphs() if hide_pack_telegraphs else {}
 	for child in game.get_children():
 		if child.get_script() != TelegraphScript or child.is_queued_for_deletion():
 			continue
 		if child.color == Palette.AMBER:
 			continue
 		if child.shape == TelegraphScript.Shape.RING and child.radius > FIELD_RADIUS:
+			continue
+		if hide_pack_telegraphs and pack_telegraphs.has(child):
 			continue
 		out.append(child)
 	var boss = _boss() if game.flow.state_name() == "boss" else null
@@ -3934,12 +3969,19 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		var v: Vector3 = player.planar_velocity()
 		v.y = 0.0
 		var change := dir * maxf(v.length(), 12.0) - v
+		# The circling policies hold cruise speed: they aim the velocity at cruise along dir, so above cruise the stick
+		# turns and slows the ball (a released stick let a downhill ring roll the ball 600 m off it, crown seed 1).
+		if _cruise_hold:
+			change = dir * player.tuning.f("cruise") - v
 		var want := dir if change.length() < 0.5 else change.normalized()
 		hold["move"] = Vector2(want.dot(right), want.dot(forward)).normalized()
+		# At cruise the stick comes off, so the ball coasts at it instead of accelerating past.
+		if _cruise_hold and change.length() < 0.5:
+			hold["move"] = Vector2.ZERO
 		var lined: float = v.normalized().dot(dir) if v.length() > 0.5 else 1.0
 		# No brake-carving: brake is also the slam key, and a carve held over a bump
 		# becomes a slam that plants the ball (seen on the Slag Bowl's bank).
-		if _boost_clock <= 0.0 and lined > 0.9 and player.state.grounded and player.verb_ready("boost"):
+		if _boost_clock <= 0.0 and lined > 0.9 and player.state.grounded and player.verb_ready("boost") and not _cruise_hold:
 			_boost_clock = BOOST_GAP
 			_shift_left = SHIFT_HOLD
 			source.press["shift_pressed"] = true
@@ -4109,6 +4151,65 @@ func _aim_point(aim) -> Vector3:
 		return aim["at"]
 	var target: Node3D = aim
 	return target.global_position + Vector3.UP * 1.2
+
+
+# --- the anti-kiting gates' contact record (every policy) ---------------------------------
+
+# Opens the stage's contact the first tick a live enemy is within CONTACT_RADIUS of the ball. Reads only; it moves nothing.
+func _contact_scan() -> void:
+	if _note.is_empty() or _note.get("first_contact_s") != null or not game.flow.in_stage():
+		return
+	var ball: Vector3 = game.player.ball_position()
+	for node in game.get_tree().get_nodes_in_group("enemy"):
+		if not node is Node3D or not is_instance_valid(node):
+			continue
+		if node.has_method("is_dead") and node.is_dead():
+			continue
+		if ball.distance_to(node.global_position) <= CONTACT_RADIUS:
+			_note["first_contact_s"] = snappedf(game.run.stage_time, 0.01)
+			return
+
+
+# A hit on the stage: its first, and the hull it cost inside the contact window.
+func _note_contact_hit(hull: float) -> void:
+	if _in_boss() or _note.is_empty():
+		return
+	var now := float(game.run.stage_time)
+	if _note.get("first_hit_s") == null:
+		_note["first_hit_s"] = snappedf(now, 0.01)
+	if _note.get("first_contact_s") == null:
+		_note["first_contact_s"] = snappedf(now, 0.01)
+	if now - float(_note["first_contact_s"]) <= CONTACT_WINDOW_S:
+		_note["hull_lost_120s"] = float(_note["hull_lost_120s"]) + hull
+
+
+func _close_contact() -> void:
+	_note["hull_lost_120s"] = snappedf(float(_note["hull_lost_120s"]), 0.1)
+	_note["fight_s"] = snappedf(float(_note["fight_s"]), 0.01)
+	_note["circle_s"] = snappedf(float(_note["circle_s"]), 0.01)
+	if _note["first_contact_s"] != null:
+		_note["alive_120s"] = snappedf(clampf(float(_note["exit_s"]) - float(_note["first_contact_s"]), 0.0, CONTACT_WINDOW_S), 0.01)
+	# circle_share: seconds on the ring over the window (first contact to its end or death), the anchor policies' measure.
+	if _note["alive_120s"] != null and float(_note["alive_120s"]) > 0.0:
+		_note["circle_share"] = snappedf(float(_note["circle_s"]) / float(_note["alive_120s"]), 0.001)
+
+
+# The test-only hide_pack_telegraphs plant: the committed telegraphs of every enemy but the Warden, and the shells a
+# lobber fired. The game still draws them; only this driver does not see them.
+func _pack_telegraphs() -> Dictionary:
+	var out := {}
+	for node in game.get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(node) or node == game.flow.warden:
+			continue
+		var t = node.get("_telegraph")
+		if t != null and is_instance_valid(t):
+			out[t] = true
+	for child in game.get_children():
+		if child.get_script() != null and String(child.get_script().resource_path).ends_with("projectile.gd"):
+			var ring = child.get("ring")
+			if ring != null and is_instance_valid(ring) and child.get("lobber") != game.flow.warden:
+				out[ring] = true
+	return out
 
 
 func _nearest_enemy() -> Node3D:

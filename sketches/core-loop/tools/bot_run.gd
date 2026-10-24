@@ -14,6 +14,7 @@ const StageBeats := preload("res://src/core/stage_beats.gd")
 const SignalTimer := preload("res://tools/signal_timer.gd")
 const PhysicsProbe := preload("res://tools/physics_probe.gd")
 const FrameSplit := preload("res://tools/frame_split.gd")
+const BotPlants := preload("res://tools/bot_plants.gd")
 
 # Headless bot runs for the design feedback loop (DEMO-SPEC). Each seed plays one full
 # demo run through a fresh Game.new() with one policy (tools/bot_driver.gd), in play
@@ -43,6 +44,8 @@ const FrameSplit := preload("res://tools/frame_split.gd")
 # --bot-no-pilot-tracks=1 skips pilot bone sampling, retaining playback and signals.
 # --bot-no-visuals=1 skips selected unread idle callbacks only
 # on the headless display. Camera, HUD, hit-stop and collision work remain active.
+# --plant=name=value[,name=value] (test only, the anti-kiting gates' controls): pack_damage=K, damage=K, packs_passive=1,
+# hide_pack_telegraphs=1 (tools/bot_plants.gd). Absent, the run is unchanged. --policy=orbit|terrain are the gates' arms (bot_kite.gd).
 # --gate=1 enables all three switches, unless individually overridden with =0.
 # --chain-hand=0 turns off the explorer's two-hook hand (bot_driver's control switch).
 # --late-offer=take|skip (SG8) turns the tree's late_offer on, has the bot take a random branch at
@@ -151,6 +154,8 @@ var _physics_probe
 var _frame_split
 var _inject_ms := 0
 var _inject_at := 0
+# The test-only plants of --plant= (tools/bot_plants.gd); null, and untouched, without the flag.
+var _plants
 
 
 func _initialize() -> void:
@@ -188,6 +193,10 @@ func _initialize() -> void:
 		return
 	if _settings.has("attempt") and int(_settings["attempt"]) < 1:
 		printerr("bot_run: --attempt must be 1 or more")
+		quit(2)
+		return
+	if _settings.has("plant") and BotPlants.parse(String(_settings["plant"])).has("error"):
+		printerr("bot_run: --plant: %s" % BotPlants.parse(String(_settings["plant"]))["error"])
 		quit(2)
 		return
 	_out = _absolute(_settings["out"])
@@ -340,6 +349,9 @@ func _physics_process(delta: float) -> bool:
 				return true
 			_driver.late_offer_policy = late
 			_driver.tree_policy = "random"
+		if _settings.has("plant"):
+			_plants = BotPlants.new()
+			_plants.attach(_game, _driver, BotPlants.parse(String(_settings["plant"])))
 		_game.presentation.audio.bake_opening_now()
 		if _settings.get("warm-band", "0") == "1":
 			MusicEngine.prepare_rest()
@@ -384,6 +396,8 @@ func _physics_process(delta: float) -> bool:
 	if _tick_trace != null:
 		_tick_trace.store_line(JSON.stringify(_snapshot(delta)))
 	_beats.step()
+	if _plants != null:
+		_plants.step()
 	var tick_start := Time.get_ticks_usec()
 	var over: bool = _driver.tick(delta)
 	if _frame_split != null:
@@ -420,6 +434,8 @@ func _physics_process(delta: float) -> bool:
 	if _settings.has("panel-log"):
 		record["panel_kills"] = _game.build.kill_log.duplicate()
 		record["panels"] = Array(_game.run.panels)
+	if _settings.has("plant"):
+		record["plant"] = String(_settings["plant"])
 	_results.append(record)
 	_game.codex.append_line(_out.path_join("bots.ndjson"), JSON.stringify(record))
 	_write_entries()
@@ -445,6 +461,7 @@ func _physics_process(delta: float) -> bool:
 	if _settings.get("bot-no-pilot-tracks", "0") == "1":
 		print("bot_run: %d cosmetic pilot tracks disabled; playback retained" % _bot_options.pilot_tracks_skipped)
 	_game = null
+	_plants = null
 	_tick_trace = null
 	_frame_log = null
 	# Match a fresh process: start the driver before the new camera's first render update.
