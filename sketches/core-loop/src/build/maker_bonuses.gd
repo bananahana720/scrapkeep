@@ -200,7 +200,8 @@ func _on_door_hit(hit: Dictionary) -> void:
 	if not is_instance_valid(enemy) or result.is_empty():
 		return
 	var dealt := float(result.get("dealt", 0.0))
-	if dealt <= 0.0:
+	# An absorbed hit (a crew fitter, a plate taking it whole) removes nothing, so neither bonus answers it.
+	if dealt <= 0.0 or bool(result.get("absorbed", false)):
 		return
 	if has("noticed") and String(hit.get("kind", "")) != "synergy" and _is_crit(enemy, result) \
 			and _splinter_budget >= 1.0:

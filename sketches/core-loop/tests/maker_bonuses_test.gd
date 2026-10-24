@@ -179,6 +179,13 @@ func _run() -> void:
 		"result": {"dealt": 10.0, "punch": 10.0, "plating": 0.0, "part": "", "full": true}})
 	await _sim(0.5)
 	_t.eq("20 a plain hit leaves no splinter", int(_build.makers.fires.get("noticed", 0)), 1)
+	# Rounded Up is live too (02): an absorbed crit, which removes nothing, wakes neither bonus.
+	var rounds := int(_build.makers.fires.get("rounded_up", 0))
+	_build.makers._on_door_hit({"enemy": glass, "kind": "ram", "killed": false,
+		"result": {"dealt": 23.0, "punch": 10.0, "plating": 0.0, "part": "", "full": true, "absorbed": true}})
+	_t.check("20b an absorbed hit wakes neither Noticed nor Rounded Up",
+		_build.makers._splinters.is_empty() and int(_build.makers.fires.get("rounded_up", 0)) == rounds,
+		"splinters %d, rounded_up %d -> %d" % [_build.makers._splinters.size(), rounds, int(_build.makers.fires.get("rounded_up", 0))])
 	glass.queue_free()
 
 	# --- Bench Teeth (Redjaw Workshops) -----------------------------------------------------
