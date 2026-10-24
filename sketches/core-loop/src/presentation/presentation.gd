@@ -173,6 +173,7 @@ func _on_node_added(node: Node) -> void:
 
 
 var _boils_wired := false
+var _boil_marker := {}
 
 
 func _read_windups(enemy) -> void:
@@ -190,10 +191,18 @@ func _read_windups(enemy) -> void:
 
 # Pack pressure cues (combat/pack_pressure.gd, world 1 experiments): a flanker's whistle and a silt boil's
 # rumble, each sounding before its committed telegraph, with a chevron over the caller.
-func _on_pressure_cue(cue: String, at: Vector3, seconds_until: float) -> void:
-	vfx.glyph("enemy_spawned", at + Vector3.UP * 2.5, 1.0, 1.0, seconds_until, Vector3.ZERO,
+func _on_pressure_cue(cue: String, at: Vector3, seconds_until: float) -> Dictionary:
+	var marker: Dictionary = vfx.glyph("enemy_spawned", at + Vector3.UP * 2.5, 1.0, 1.0, seconds_until, Vector3.ZERO,
 		"chevron", EventKinds.role_color("hazard"), "P1")
 	audio.play("threat_projectile", 0.0, 1.0, "SFX", cue)
+	return marker
+
+
+# A rumbling boil the stage exempted (silt_boil._quell) takes its chevron and its rumble with it.
+func _on_boil_quelled(at: Vector3) -> void:
+	vfx.end_glyph(_boil_marker, at + Vector3.UP * 2.5)
+	_boil_marker = {}
+	audio.stop("boil_rumble")
 
 
 func _on_windup_phase(facts: Dictionary, enemy: Node) -> void:
@@ -221,7 +230,8 @@ func _physics_process(_delta: float) -> void:
 		return
 	if not _boils_wired and ctx.spawner != null and ctx.spawner.get("boils") != null:
 		_boils_wired = true
-		ctx.spawner.boils.rumbled.connect(func(at: Vector3, seconds_until: float): _on_pressure_cue("boil_rumble", at, seconds_until))
+		ctx.spawner.boils.rumbled.connect(func(at: Vector3, seconds_until: float): _boil_marker = _on_pressure_cue("boil_rumble", at, seconds_until))
+		ctx.spawner.boils.quelled.connect(_on_boil_quelled)
 	var active := {}
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.get("kind") not in ["warden", "swarm_remnant"] or not enemy.has_method("is_dead") or enemy.is_dead():

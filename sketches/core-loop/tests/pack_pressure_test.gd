@@ -296,6 +296,7 @@ func _boils() -> void:
 	_t.eq("26d a roaming pack still is", _loop_boils(boils, ctx, enemy, func(): pass), 1)
 	_t.eq("26g the exit run (gates, launch) never boils", _loop_boils(boils, ctx, enemy, func(): ctx.flow.state = "gates"), 0)
 	ctx.flow.state = "stage"
+	_quelled(boils, ctx, enemy, dealt, beacon)
 	ChallengeDials.set_overrides({})
 	ctx.root.queue_free()
 	await process_frame
@@ -318,3 +319,51 @@ func _loop_boils(boils, ctx, enemy, arrange: Callable) -> int:
 		if boils.boils > 0:
 			break
 	return boils.boils
+
+
+# A ring already rumbling when an exemption turns true never erupts: the Warden breaks (the exit run starts)
+# or the ball rolls into an engaged Warden's ring inside the warning. The ball sits on the ring's centre, so
+# an eruption would hit it; the ring, its marker and its rumble are quelled instead.
+func _quelled(boils, ctx, enemy, dealt: Array, beacon: Node3D) -> void:
+	var heard := []
+	boils.quelled.connect(func(at: Vector3): heard.append(at))
+	var exemptions := [
+		["26h a rumbling ring quells when the Warden breaks (gates)", func(): ctx.flow.state = "gates"],
+		["26i a rumbling ring quells when the launch run starts", func(): ctx.flow.state = "launch"],
+		["26j a rumbling ring quells when the ball enters an engaged Warden's ring", _enter_warden_ring.bind(ctx, beacon)],
+	]
+	var dt := 1.0 / 90.0
+	for row in exemptions:
+		var label: String = row[0]
+		beacon.position = Vector3(200.0, 0.0, 0.0)
+		ctx.flow.warden_engaged = false
+		ctx.flow.state = "stage"
+		_t.eq(label + ": armed", _loop_boils(boils, ctx, enemy, func(): pass), 1)
+		var ring = boils._ring
+		var center: Vector3 = ring.center
+		ctx.player.at = center
+		enemy.global_position = center + Vector3(1.0, 1.5, 0.0)
+		dealt.clear()
+		enemy.knocked = 0
+		heard.clear()
+		for i in int(SiltBoil.WARN * 0.5 * 90.0):
+			boils.step(dt, [enemy])
+		row[1].call()
+		for i in int(SiltBoil.WARN * 90.0) + 10:
+			boils.step(dt, [enemy])
+		_t.eq(label + ": no eruption, no damage, no toss", [boils.ball_hits, dealt, enemy.knocked], [0, [], 0])
+		_t.eq(label + ": the ring and its cue go", [boils._ring, boils.quells, heard], [null, 1, [center]])
+		_t.check(label + ": the ring node is freed", ring.is_queued_for_deletion())
+	beacon.position = Vector3(200.0, 0.0, 0.0)
+	ctx.flow.warden_engaged = false
+	ctx.flow.state = "stage"
+	_t.eq("26k with no exemption the same ring still erupts", _loop_boils(boils, ctx, enemy, func(): pass), 1)
+	ctx.player.at = boils._ring.center
+	for i in int(SiltBoil.WARN * 90.0) + 2:
+		boils.step(dt, [enemy])
+	_t.eq("26l and hits the ball", [boils.ball_hits, boils.quells], [1, 0])
+
+
+func _enter_warden_ring(ctx, beacon: Node3D) -> void:
+	beacon.position = Vector3(ctx.player.at.x, 0.0, ctx.player.at.z)
+	ctx.flow.warden_engaged = true
