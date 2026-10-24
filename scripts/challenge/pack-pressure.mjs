@@ -132,7 +132,7 @@ export function summarize(rows) {
       deaths: rs.filter((r) => ["died", "lost"].includes(r.row.outcome)).length,
       outcomes: rs.map((r) => r.row.outcome),
       hull: median(rs.map((r) => (stageNote(r, 1).hull_lost ?? 0) + (stageNote(r, 2).hull_lost ?? 0))),
-      kills: [1, 2].map((n) => median(rs.map((r) => (r.row.panel_kills ?? []).filter((k) => k[0] === n && !k[3]).length))),
+      kills: [1, 2].map((n) => median(rs.map((r) => (r.row.panel_kills ?? []).filter((k) => k[0] === n).length))),
       reached2: rs.filter((r) => (r.row.stage_reached ?? 0) >= 2).length,
     };
   }
