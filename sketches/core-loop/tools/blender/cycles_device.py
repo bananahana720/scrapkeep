@@ -14,8 +14,9 @@ SCRAPKEEP_CYCLES picks the cards:
   cpu             the CPU, whatever is installed.
 While a 4080 frame-time capture runs, auto runs the 3060 alone (the CPU when there is no 3060), so
 bakes keep GPU speed and the 4080 stays idle. A capture is on when SCRAPKEEP_CAPTURE_FILE exists
-or another process holds an flock on SCRAPKEEP_CAPTURE_LOCK (defaults: the PC's capture lane's
-capture-active and timing.lock). Any other SCRAPKEEP_CYCLES value overrides that.
+or another process holds an exclusive flock on SCRAPKEEP_CAPTURE_LOCK (defaults: capture-active and
+timing.lock in SCRAPKEEP_CAPTURE_DIR, the PC capture lane's gates folder; move it with the wave).
+Any other SCRAPKEEP_CYCLES value overrides that. The check runs once, when use() is called.
 The fit check compares free VRAM (nvidia-smi; 12 GiB per card when it can't answer) with
 fit_bytes(): the scene as built when use() runs, plus HEADROOM for Cycles' kernels and buffers.
 Samples, materials and outputs are the recipe's own; only the device changes.
@@ -27,8 +28,9 @@ import sys
 
 NVIDIA_DRIVER = "/proc/driver/nvidia/version"
 MODE_ENV = "SCRAPKEEP_CYCLES"
-CAPTURE_FILE = os.environ.get("SCRAPKEEP_CAPTURE_FILE", "/home/andrew/scratch/w18/gates/capture-active")
-CAPTURE_LOCK = os.environ.get("SCRAPKEEP_CAPTURE_LOCK", "/home/andrew/scratch/w18/gates/timing.lock")
+CAPTURE_DIR = os.environ.get("SCRAPKEEP_CAPTURE_DIR", "/home/andrew/scratch/w18/gates")
+CAPTURE_FILE = os.environ.get("SCRAPKEEP_CAPTURE_FILE", os.path.join(CAPTURE_DIR, "capture-active"))
+CAPTURE_LOCK = os.environ.get("SCRAPKEEP_CAPTURE_LOCK", os.path.join(CAPTURE_DIR, "timing.lock"))
 CAPTURE_CARD = "3060"
 BIG = "4080"
 GIB = 1 << 30
