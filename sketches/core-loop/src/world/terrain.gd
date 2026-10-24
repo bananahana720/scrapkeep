@@ -99,6 +99,8 @@ var _threaded: Array[bool] = []
 var _perches := {}
 # A park stage's perch lists read on a worker once its ground is built (_perch_read_ahead): {i: {task, out}}.
 var _perch_ahead := {}
+# A park stage's map copied on a worker for its first overlay (EventGround.queue_overlay_map): {i: {task, out, source}}.
+var _overlay_ahead := {}
 
 # A park stage left memory (_free_stage), by stage number, so a module that hung nodes on its
 # root (world.gd's contraptions) drops them.
@@ -319,6 +321,7 @@ func _on_park_built(i: int) -> void:
 		ParkRecipes.build_placed(_roots[i], maps[i].park, _park_floor_at.bind(_heights[i], _placement_holes[i], _under[i]), publish, _threaded[i])
 	Scatter.build_chunked(_roots[i], maps[i], ground_callable(i + 1), _worker_builds())
 	_perch_read_ahead(i)
+	_overlay_read_ahead(i)
 	stage_built.emit(i + 1)
 
 
@@ -411,6 +414,9 @@ func _free_stage(i: int) -> void:
 	_cave_roofs.erase(i)
 	_perches.erase(i)
 	_take_perch_ahead(i)
+	if _overlay_ahead.has(i):
+		_settle_perch_read(_overlay_ahead[i])
+		_overlay_ahead.erase(i)
 	_placement_holes.erase(i)
 	_heights[i] = PackedFloat32Array()
 	_holes[i] = PackedByteArray()
@@ -529,6 +535,26 @@ func _perch_read_ahead(i: int) -> void:
 	var ahead := {"out": out, "task": _queue_perch_read(m.park, _heights[i], _holes[i], _under[i], out)}
 	_perch_ahead[i] = ahead
 	_settle_on_exit(_roots[i], ahead)
+
+
+func _overlay_read_ahead(i: int) -> void:
+	var m = maps[i]
+	if not (m is ParkMap) or m is EventGround.OverlayMap or not m.ok or m.park.get("event_rows", []).is_empty() or _overlay_ahead.has(i) or _roots[i] == null:
+		return
+	_overlay_ahead[i] = EventGround.queue_overlay_map(m)
+	_settle_on_exit(_roots[i], _overlay_ahead[i])
+
+
+# The active stage's worker copy of source for an OverlayMap, or null. Another copy is queued at once, so a
+# retry, which restores the park map and makes its overlay again, also finds one fresh.
+func take_overlay_map(source) -> RefCounted:
+	var i := stage - 1
+	if not _overlay_ahead.has(i):
+		return null
+	var overlay_map = EventGround.take_overlay_map(_overlay_ahead[i], source)
+	_overlay_ahead.erase(i)
+	_overlay_read_ahead(i)
+	return overlay_map
 
 
 # Static, so the worker holds no reference to this terrain: it reads only the park and copies of the arrays.

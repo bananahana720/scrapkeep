@@ -476,6 +476,35 @@ static func _share_hidden(entry: Dictionary, found: Array, id: String) -> void:
 			entry.hidden.append(item)
 
 
+# A copy of the loaded map's fields (deep, as the park file's own read gave), not a second read of it.
+static func copy_map(current) -> OverlayMap:
+	var overlay_map := OverlayMap.new("")
+	for property in current.get_property_list():
+		if int(property.usage) & (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_SCRIPT_VARIABLE) and property.name != "script":
+			var value = current.get(property.name)
+			overlay_map.set(property.name, value.duplicate(true) if value is Dictionary or value is Array else value)
+	overlay_map.source = current
+	return overlay_map
+
+
+# copy_map on a worker, queued once a park stage is built (terrain.gd _overlay_read_ahead): made at the
+# first overlay it was 42 ms of the islands' entry frame on the cloud. Nothing writes a loaded park map's
+# fields (the perch read and scatter jobs already read it on workers), so the worker reads it unguarded.
+static func queue_overlay_map(source) -> Dictionary:
+	var out := {}
+	return {"task": WorkerThreadPool.add_task(func(): out.map = copy_map(source), true, "overlay map"), "out": out, "source": source}
+
+
+# The queued copy, once: a second take, or a take for another source, gets null. Waits on the worker if it is still running.
+static func take_overlay_map(ahead: Dictionary, source) -> OverlayMap:
+	if ahead.has("task"):
+		WorkerThreadPool.wait_for_task_completion(ahead.task)
+		ahead.erase("task")
+	var overlay_map: OverlayMap = ahead.out.get("map")
+	ahead.out.erase("map")
+	return overlay_map if ahead.source == source else null
+
+
 # prepared holds surfaces the caller projected ahead (natural.gd plan: "surface", "target") and the
 # collider shape a previous entry made ("shape", written back here), so a stage entry skips them.
 static func prepare_overlay(world, owner: Node, row: Dictionary, record: Dictionary, collapse_target := Callable(), prepared := {}) -> OverlayMap:
@@ -491,13 +520,9 @@ static func prepare_overlay(world, owner: Node, row: Dictionary, record: Diction
 		record.overlay_map = overlay_map
 		return overlay_map
 	if overlay_map == null:
-		# A copy of the loaded map's fields (deep, as the park file's own read gave), not a second read of it.
-		overlay_map = OverlayMap.new("")
-		for property in current.get_property_list():
-			if int(property.usage) & (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_SCRIPT_VARIABLE) and property.name != "script":
-				var value = current.get(property.name)
-				overlay_map.set(property.name, value.duplicate(true) if value is Dictionary or value is Array else value)
-		overlay_map.source = current
+		overlay_map = world.terrain.take_overlay_map(current) if world.terrain.has_method("take_overlay_map") else null
+		if overlay_map == null:
+			overlay_map = copy_map(current)
 		world.terrain.maps[world.terrain.stage - 1] = overlay_map
 	if row.kind == "cave_in":
 		var roof: Dictionary = world.terrain.cave_roof(row.id) if world.terrain.has_method("cave_roof") else {}
