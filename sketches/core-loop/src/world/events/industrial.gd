@@ -34,6 +34,9 @@ func setup(world_ref) -> void:
 
 
 func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
+	# The sluice commits no hazard: its water is the surge course's front (activities.gd), which never hurts.
+	if row.kind == "sluice_surge":
+		return
 	match action:
 		"telegraph":
 			_telegraph(row)

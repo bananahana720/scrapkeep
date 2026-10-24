@@ -161,6 +161,13 @@ func setup(ctx_ref) -> void:
 	activities = Activities.new()
 	ctx.root.add_child(activities)
 	activities.setup(ctx)
+	# A surge course opens the park's sluice row and, won or lost, ends it.
+	activities.sluice_opened.connect(func(row_id: String):
+		if events != null:
+			events.notify_activity(row_id))
+	activities.sluice_closed.connect(func(row_id: String):
+		if events != null:
+			_publish(events.finish_activity(row_id)))
 	rescue = RescueSites.new()
 	ctx.root.add_child(rescue)
 	rescue.setup(ctx, interact)

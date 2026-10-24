@@ -16,6 +16,8 @@ const PUSH_BEHIND := 6.0
 const PUSH_AHEAD := 14.0
 const PUSH_WIDTH := 16.0
 const GRACE := 2.0
+# A park course's gates stand on a line's deck, so a ball on the ground under it takes none (activities.gd).
+const GATE_HEIGHT := 8.0
 
 var id := "surge_run"
 var ring := Vector2.ZERO
@@ -29,6 +31,8 @@ var front_speed := 16.0
 var elapsed := 0.0
 # Fraction of the run at which a miniboss arrives; below zero for none.
 var miniboss_at := -1.0
+# Each gate's deck height, or empty for the ground-level Reach, where only the plan counts.
+var gate_heights: Array[float] = []
 
 
 func _init(site: Dictionary, cruise: float) -> void:
@@ -54,7 +58,8 @@ func begin() -> void:
 func step(delta: float, ball: Vector3, _velocity: Vector3) -> String:
 	elapsed += delta
 	front += front_speed * delta
-	if next_gate < gates.size() and Vector2(ball.x, ball.z).distance_to(gates[next_gate]) <= GATE_RADIUS:
+	if next_gate < gates.size() and Vector2(ball.x, ball.z).distance_to(gates[next_gate]) <= GATE_RADIUS \
+			and (gate_heights.is_empty() or absf(ball.y - gate_heights[next_gate]) <= GATE_HEIGHT):
 		next_gate += 1
 		if next_gate == gates.size():
 			return "won"
@@ -68,12 +73,26 @@ func push(ball: Vector3, velocity: Vector3) -> Vector3:
 	var p: Vector2 = route.project(Vector2(ball.x, ball.z))
 	if p.y > PUSH_WIDTH or p.x < front - PUSH_BEHIND or p.x > front + PUSH_AHEAD:
 		return Vector3.ZERO
+	if not gate_heights.is_empty() and absf(ball.y - deck_height(p.x)) > GATE_HEIGHT:
+		return Vector3.ZERO
 	var t: Vector2 = route.tangent(p.x)
 	var along := Vector3(t.x, 0.0, t.y)
 	var flat := Vector3(velocity.x, 0.0, velocity.z)
 	if flat.length() > front_speed * 1.6 and flat.normalized().dot(along) > 0.9:
 		return Vector3.ZERO
 	return along * PUSH
+
+
+# The deck's height this far along, between the gates' heights (the first and last hold past the ends).
+func deck_height(distance: float) -> float:
+	if gate_heights.is_empty():
+		return 0.0
+	for i in range(1, gate_distances.size()):
+		if distance <= gate_distances[i]:
+			var span := gate_distances[i] - gate_distances[i - 1]
+			var t := clampf((distance - gate_distances[i - 1]) / span, 0.0, 1.0) if span > 0.0 else 0.0
+			return lerpf(gate_heights[i - 1], gate_heights[i], t)
+	return gate_heights[gate_heights.size() - 1]
 
 
 func progress() -> float:

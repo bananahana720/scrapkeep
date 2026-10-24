@@ -38,10 +38,10 @@ const EVENT_FAMILY := {
 	"flood_fill": "natural", "drain": "natural", "cave_in": "natural", "collapse": "natural",
 	"impact": "natural", "flash_flood": "natural", "lightning": "natural",
 	"fleet_landing": "fleet", "lift_cage": "fleet", "zipline_drop": "fleet", "machine_eruption": "ancient",
-	"boiler_burst": "industrial", "reactor_blow": "industrial",
+	"boiler_burst": "industrial", "reactor_blow": "industrial", "sluice_surge": "industrial",
 }
 const EVENT_KINDS := ["flood_fill", "drain", "cave_in", "collapse", "impact", "flash_flood", "lightning",
-	"fleet_landing", "machine_eruption", "boiler_burst", "reactor_blow", "lift_cage", "zipline_drop"]
+	"fleet_landing", "machine_eruption", "boiler_burst", "reactor_blow", "lift_cage", "zipline_drop", "sluice_surge"]
 const FAMILIES := ["natural", "fleet", "ancient", "industrial"]
 # Telegraph floors (section 5 rule 1): a hazard with no ground change, a ground change, and a
 # Fleet landing or an ancient eruption. A row changes the ground when its kind reshapes the
@@ -287,7 +287,7 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 	for id in rows:
 		_park_row(out, id, rows[id], homes, routes, events)
 	for id in events:
-		_event_row(out, id, events[id], rows, homes, routes)
+		_event_row(out, id, events[id], rows, homes, routes, activities)
 	for id in homes:
 		_home_row(out, id, homes[id], rows, ctx)
 	for id in contraptions:
@@ -300,6 +300,9 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 		_weather_row(out, id, weather[id], events)
 	for id in activities:
 		_site(out, id, activities[id], rows)
+		# A surge course runs down a park route's rows (activities.gd surge_path).
+		if activities[id]["activity"] == "surge_run" and not routes.has(activities[id].get("route")):
+			_add(out, id, "reference", "a surge_run names a park route, not %s" % str(activities[id].get("route")))
 	for id in rescues:
 		_site(out, id, rescues[id], rows)
 		if String(rescues[id]["quest"]) == "":
@@ -441,12 +444,17 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 			_add(out, id, "guardrail", "a %s row carries only ref_ fragments (%s)" % [row["society"], row["fragment"]])
 
 
-static func _event_row(out: Array, id: String, row: Dictionary, rows: Dictionary, homes: Dictionary, routes: Dictionary) -> void:
+static func _event_row(out: Array, id: String, row: Dictionary, rows: Dictionary, homes: Dictionary, routes: Dictionary, activities := {}) -> void:
 	var site := _site(out, id, row, rows)
 	var kind: String = row["kind"]
 	if EVENT_FAMILY[kind] != row["family"]:
 		_add(out, id, "family", "%s is %s, not %s" % [kind, EVENT_FAMILY[kind], row["family"]])
 	_trigger(out, id, row["trigger"], false)
+	if row["trigger"].get("on") == "activity" and not activities.has(row["trigger"].get("value")):
+		_add(out, id, "reference", "trigger activity %s is no activity row" % str(row["trigger"].get("value")))
+	# The sluice is the surge course's water (activities.gd): it opens only when that course's ring is rolled into.
+	if kind == "sluice_surge" and row["trigger"].get("on") != "activity":
+		_add(out, id, "trigger", "a sluice_surge opens on its surge_run activity, not on %s" % str(row["trigger"].get("on")))
 	if _fields(out, id, row["telegraph"], TELEGRAPH_FIELDS):
 		var floor_s := _lead_floor(row)
 		if float(row["telegraph"]["lead_s"]) < floor_s:
@@ -518,6 +526,9 @@ static func _trigger(out: Array, id: String, trigger: Dictionary, weather: bool)
 	elif on == "warden_phase":
 		if not PHASES.has(trigger.get("value")):
 			_add(out, id, "enum", "warden_phase value %s is not one of %s" % [str(trigger.get("value")), str(PHASES)])
+	elif not weather and on == "activity":
+		if not trigger.get("value") is String or String(trigger.get("value")) == "":
+			_add(out, id, "enum", "activity value %s names no activity row" % str(trigger.get("value")))
 	else:
 		_add(out, id, "enum", "trigger.on %s is not a trigger kind" % str(on))
 

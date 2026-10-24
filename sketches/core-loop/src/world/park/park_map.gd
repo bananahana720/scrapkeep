@@ -95,6 +95,8 @@ func _fill() -> void:
 			site["pack"] = row["pack"].duplicate()
 		if not (row["pay"] as Dictionary).is_empty():
 			site["pay"] = row["pay"].duplicate(true)
+		if row.has("route"):
+			site["route"] = String(row["route"])
 		activity_sites.append(site)
 
 	rescue_sites = []

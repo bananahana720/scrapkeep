@@ -20,6 +20,13 @@ const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 const StageModifier := preload("res://src/world/events/stage_modifier.gd")
+const SurgeCourse := preload("res://src/world/surge_course.gd")
+const EventDirector := preload("res://src/world/event_director.gd")
+
+# A surge course's ring was rolled into (its row id): the world opens the park's sluice row on it.
+signal sluice_opened(row_id: String)
+# The course was won or lost: the world ends the sluice row early.
+signal sluice_closed(row_id: String)
 
 # The standing activities (LEGIBILITY sections 7 and 9, wave R3): optional things on a map that
 # stand lit from the stage's first frame, finish on an action the player already knows and pay
@@ -107,6 +114,15 @@ const RULES := {
 		"waves": 3, "wave_s": 6.0, "pack_gap_s": 0.5, "miniboss_at": 0.35, "miniboss_step": 0.12,
 		"post_out": 26.0, "retry_s": 12.0, "budget": {"start": 6, "per_class": 1, "per_world": 2, "cap": 12},
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_relay", "where": "relay"},
+	},
+	# The surge course in a park (surge_course.gd): rolling into the ring by the head of the activity row's `route`
+	# opens the sluice (the park's sluice_surge event row, triggered on this row), and when the gate lands the water
+	# chases the ball down the route's grind rows through the gates. A ring with no sluice heard opens anyway after
+	# `fallback_s`. Taking every gate before the front pays one part into the ball's path; a loss re-arms after
+	# `retry_s`. The front only ever pushes the ball on (EventDirector.never_brake) and never hurts it.
+	"surge_run": {
+		"starts": "ring", "ring": 7.0, "finishes": "surge", "fallback_s": 10.0, "retry_s": 12.0,
+		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_surge", "where": "ball"},
 	},
 	"hauler_bounty": {
 		"starts": "near_or_hit", "ring": 4.0, "wake": 30.0, "leash": 40.0, "return_speed": 9.0, "kind": "plated_brute",
@@ -258,6 +274,11 @@ class Site extends Node3D:
 	var relay_cooldown := 0.0
 	var minibosses_sent := 0
 	var minibosses: Array = []
+	var course
+	var surge_row := ""
+	var surge_live := false
+	var surge_wait := 0.0
+	var surge_shown := -1.0
 
 	func _exit_tree() -> void:
 		for enemy in pack + minibosses:
@@ -272,6 +293,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(func(_reason: String): clear())
 	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
+	ctx.events.world_fact.connect(_on_world_fact)
 	# The trade devices' plate finish neutralises its texture pixel by pixel on first use (about
 	# 55 ms, SWAP-HITCH-2); Palette caches it, so it is made here rather than on a stage entry.
 	Palette.look_texture("rusted-salvaged-plate-worn", true)
@@ -535,6 +557,8 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	match id:
 		"hold_the_relay":
 			_build_relay(s)
+		"surge_run":
+			_build_surge(s, spec)
 		"ambush_altar":
 			_build_altar(s)
 		"cracked_cache":
@@ -808,6 +832,8 @@ func _physics_process(delta: float) -> void:
 			match String(s.rule["finishes"]):
 				"relay":
 					_watch_relay(s, delta, ball)
+				"surge":
+					_watch_surge(s, delta, ball)
 				"pack_dead":
 					_watch_ambush(s, ball)
 				"wall_broken":
@@ -1318,6 +1344,79 @@ func _watch_relay(s: Site, delta: float, ball: Vector3) -> void:
 		ctx.events.event_ended.emit(s.id, "lost")
 		s.started = false
 		s.relay_cooldown = float(s.rule["retry_s"])
+
+
+func _build_surge(s: Site, spec: Dictionary) -> void:
+	var map = ctx.terrain.map()
+	if not "park" in map or map.park.is_empty() or String(spec.get("route", "")) == "":
+		return
+	var course := SurgeCourse.new()
+	s.add_child(course)
+	var ring := Vector2(s.global_position.x, s.global_position.z)
+	course.setup({"ring": ring, "route": spec.route}, ctx.tuning.f("cruise"), _graph, map.park, Callable(ctx.terrain, "height"))
+	if course.model.route.points.size() < 2:
+		course.queue_free()
+		return
+	s.course = course
+	s.surge_row = String(spec.get("row", s.id))
+
+
+# The sluice's gate landed on the bar (the park row's land fact): every course still waiting goes live.
+func _on_world_fact(kind: String, _at: Vector3) -> void:
+	if kind != "sluice_landed":
+		return
+	for s in sites:
+		if is_instance_valid(s) and s.course != null and s.started and not s.surge_live and not s.done:
+			_surge_begin(s)
+
+
+func _surge_begin(s: Site) -> void:
+	s.surge_live = true
+	s.surge_shown = -1.0
+	s.course.model.begin()
+	ctx.events.event_started.emit(s.id)
+
+
+func _watch_surge(s: Site, delta: float, ball: Vector3) -> void:
+	if s.course == null:
+		return
+	var model = s.course.model
+	if not s.started:
+		s.relay_cooldown -= delta
+		if s.relay_cooldown > 0.0 or _planar(ball, s.global_position) > float(s.rule["ring"]) or absf(ball.y - s.global_position.y) > RING_HEIGHT:
+			return
+		s.started = true
+		s.surge_wait = float(s.rule["fallback_s"])
+		s.view.word.text = "Sluice opening. Beat the water down!"
+		sluice_opened.emit(s.surge_row)
+		return
+	if not s.surge_live:
+		s.surge_wait -= delta
+		if s.surge_wait <= 0.0:
+			_surge_begin(s)
+		return
+	var velocity: Vector3 = ctx.player.state.velocity
+	var outcome: String = model.step(delta, ball, velocity)
+	ctx.player.add_external_accel(EventDirector.never_brake(model.push(ball, velocity), velocity))
+	s.course.show_live(outcome == "", fmod(model.elapsed * 2.0, 1.0))
+	s.view.word.text = model.status()
+	if model.progress() - s.surge_shown >= RELAY_PROGRESS_STEP:
+		s.surge_shown = model.progress()
+		ctx.events.event_progress.emit(s.id, s.surge_shown)
+	if outcome == "won":
+		s.surge_live = false
+		ctx.events.event_ended.emit(s.id, "won")
+		sluice_closed.emit(s.surge_row)
+		_finish(s, ball)
+		# The course pays into the ball's path: the pickup sits where the ball is, so it is taken on the next frame.
+		s.inside_pickup = false
+	elif outcome == "lost":
+		s.surge_live = false
+		s.started = false
+		s.relay_cooldown = float(s.rule["retry_s"])
+		s.course.show_live(false, 0.0)
+		ctx.events.event_ended.emit(s.id, "lost")
+		sluice_closed.emit(s.surge_row)
 
 
 func _relay_pack(s: Site, ball: Vector3) -> void:
