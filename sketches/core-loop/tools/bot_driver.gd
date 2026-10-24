@@ -881,7 +881,8 @@ func _lap_roll() -> void:
 
 
 # The stall limit now. A sweep's own stage_limit is kept; the default one stretches for the
-# Mind's crown, for the gates after a break, and by however far --explore-by moved engage_by.
+# Mind's crown, for the gates after a break, by however far --explore-by moved engage_by, and by
+# the time the Spillway's locks held the run (ruling t).
 func _stage_cap() -> float:
 	if stage_limit != STAGE_LIMIT:
 		return stage_limit
@@ -891,7 +892,26 @@ func _stage_cap() -> float:
 	var broken = _note.get("warden_broken_s")
 	if broken != null:
 		cap = maxf(stage_limit, float(broken) + GATE_LIMIT)
-	return cap + maxf(0.0, engage_by - ENGAGE_BY)
+	return cap + maxf(0.0, engage_by - ENGAGE_BY) + _lock_held_s()
+
+
+# The seconds the Spillway's locks (#420, src/world/stage_locks.gd) held this stage on purpose:
+# the yard's lock from its slam to its bells, and the Warden's clamp from the first engage until
+# it opens, each still counting while it stands. STAGE_LIMIT is a harness fit (ruling t), so a run
+# the locks delay is not called stalled for it. With --locks=0 there are no notes and nothing is added.
+func _lock_held_s() -> float:
+	var now: float = game.run.stage_time
+	var held := 0.0
+	var lock_at = _note.get("lock_s")
+	if lock_at != null:
+		var unlock_at = _note.get("unlock_s")
+		held += (float(unlock_at) if unlock_at != null else now) - float(lock_at)
+	var engaged = _note.get("warden_engaged_s")
+	var gate = game.flow.get("gate")
+	if engaged != null and gate != null and gate.has_gate():
+		var open_at = _note.get("gate_open_s")
+		held += maxf(0.0, (float(open_at) if open_at != null else now) - float(engaged))
+	return held
 
 
 # A pending hot-wire offer is answered the tick it is seen, by one rule: the completionist
