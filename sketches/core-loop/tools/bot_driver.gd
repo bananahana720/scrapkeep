@@ -235,9 +235,17 @@ const GATE_SWITCH_FALLS := 2
 const GATE_SWITCH_SECONDS := 40.0
 # Level with a gate and within GATE_CALM_RANGE of it, the bot rolls in without boosting and brakes
 # above GATE_CALM_SPEED, as a player eases up near a rim: the crown's gates stand 5 m in from a
-# 25 m drop, and a heavy ball boosted at its run-in point overshoots it off the beacon top.
+# 25 m drop, and a heavy ball boosted at its run-in point overshoots it off the beacon top. Any
+# other gate still untaken after GATE_HOP_SECONDS gets the same easing: a heavy ball that comes up
+# beside a gate at speed (the Flume's gate lip from its drum lip) swings across its run-in point,
+# side to side, and never lines up to roll through.
 const GATE_CALM_RANGE := 25.0
 const GATE_CALM_SPEED := 12.0
+# Within GATE_LINE_SIDE of a gate's line and GATE_LINE_BACK behind it, the bot steers for the line
+# GATE_LINE_LEAD metres ahead of the ball instead of the run-in point.
+const GATE_LINE_SIDE := 6.0
+const GATE_LINE_BACK := 14.0
+const GATE_LINE_LEAD := 6.0
 const VAULT_SECONDS := 45.0
 const EVENT_PURSUIT_SECONDS := 40.0
 const EVENT_LATEST := 150.0
@@ -3124,6 +3132,10 @@ func _to_gate(delta: float) -> void:
 	var target := at - facing * 9.0
 	if side < 2.5 and along < 1.0:
 		target = at + facing * 10.0
+	elif side < GATE_LINE_SIDE and along > -GATE_LINE_BACK and along < 1.0:
+		# Near the run-in point but off the line: steer for the line GATE_LINE_LEAD ahead, so the ball
+		# merges onto it rolling forward; a point target here is orbited (the Flume's gate lip, seed 6).
+		target = at + facing * minf(along + GATE_LINE_LEAD, 10.0)
 	# Off the gates' island (a Highdraft beacon top), the straight line meets its cliff: climb back.
 	# Off the islands, a straight line across a trough takes the same way round (_dips).
 	var ball_at: Vector3 = game.player.ball_position()
@@ -3171,7 +3183,8 @@ func _to_gate(delta: float) -> void:
 		print("    gate %d at=(%.1f, %.1f, %.1f) facing=(%.2f, %.2f, %.2f) ball=(%.1f, %.1f, %.1f) along=%.1f side=%.1f dy=%.1f ground=%.1f target=(%.1f, %.1f, %.1f)"
 			% [_gate_pick, at.x, at.y, at.z, facing.x, facing.y, facing.z, ball.x, ball.y, ball.z, along, side, rel.y,
 				game.ctx.terrain.height(ball.x, ball.z), target.x, target.y, target.z])
-	var calm: bool = _island_gates and _gate_on_top and _gate_run == "" and absf(rel.y) < 3.0 and rel.length() < GATE_CALM_RANGE
+	var calm: bool = (_island_gates or _gate_time > GATE_HOP_SECONDS) and _gate_on_top and _gate_run == "" \
+		and absf(rel.y) < 3.0 and rel.length() < GATE_CALM_RANGE
 	if not calm:
 		_act(target, null, delta)
 		return
