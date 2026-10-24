@@ -1,5 +1,5 @@
 {
-  "bake_sha256": "529df132d80e1bdd22f022ab99e247c1546921922e8a736918d6b5542602628e",
+  "bake_sha256": "4cf10bc69451ede726b0fffea08bd755a348bbf24fa4bffd279e10a82b46c1f6",
   "beacon_ok": true,
   "breaches": [],
   "bytes": 1104511,
@@ -13,15 +13,15 @@
     "sight_ok": 10691,
     "under": 0
   },
-  "full_visit_m": 1768,
-  "full_visit_ratio": "1.264",
+  "full_visit_m": 1740,
+  "full_visit_ratio": "1.244",
   "graph_sha256": "ffee89086fbc6592829bc84655dc4cd39006439b4cb324c39260f60048c5b9f3",
   "line_errors": [],
   "line_path_nodes": 125,
   "longest_est_m": 2495,
   "map": "park_flume",
   "nodes": 41193,
-  "park_sha256": "f30ac37fac8c9918d054da5eaa82bd8a17dfe285c253c891fc412d74259d7954",
+  "park_sha256": "a4b5bd10f790893cd55f9576620f78682d213cb32b653e50649eb5156b2dbe17",
   "pockets": [
     {
       "clear_ring": [],
@@ -52,14 +52,14 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 713,
-      "d_spawn": 751,
-      "detour_m": 225,
+      "d_landmark": 667,
+      "d_spawn": 794,
+      "detour_m": 205,
       "door_at": [
         40,
-        -144
+        -96
       ],
-      "door_m": 225,
+      "door_m": 205,
       "flags": [
         "open",
         "door_ok",
@@ -67,7 +67,7 @@
       ],
       "id": "bend_cache",
       "kind": "cracked_cache",
-      "nearest_door": 243,
+      "nearest_door": 263,
       "nearest_door_id": "weir_valve",
       "pay_named": "",
       "pay_rarities": [
@@ -94,7 +94,7 @@
       ],
       "id": "bench_bounty",
       "kind": "hauler_bounty",
-      "nearest_door": 554,
+      "nearest_door": 506,
       "nearest_door_id": "bend_cache",
       "pay_named": "",
       "pay_rarities": [
@@ -122,7 +122,7 @@
       ],
       "id": "weir_valve",
       "kind": "valve",
-      "nearest_door": 243,
+      "nearest_door": 263,
       "nearest_door_id": "bend_cache",
       "pay_named": "",
       "pay_rarities": [],
@@ -131,7 +131,7 @@
       "site": "butte_gap"
     }
   ],
-  "reward_ratio": "0.537",
+  "reward_ratio": "0.568",
   "ride_edges": 148,
   "routes": {
     "annex_ramp_line": [],
@@ -170,13 +170,13 @@
       "name": "reward_ratio",
       "ok": false,
       "target": "at least 1.5",
-      "value": 0.537
+      "value": 0.568
     },
     {
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.264
+      "value": 1.244
     }
   ],
   "tool_sha256": "4be45ebc44a1a1499a264ba2fb9704747f6d84ab3a32187bc6e98a37c6fb4473",
