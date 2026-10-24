@@ -7,8 +7,8 @@ extends SceneTree
 # pool fill, so play froze mid-stage. A worker now projects every stage's marks from a snapshot of
 # its ground as entered, started by the natural setup, so the entry itself does not grow.
 #
-# Checked on stage 1 and stage 2, whose span collapse sits on its overlay's marker surface: every
-# natural row has planned telegraph marks, and a landing mark unless it is an impact;
+# Checked on stage 1, stage 2, whose span collapse sits on its overlay's marker surface, and stage 5,
+# whose impact lands on its own crater overlay: every natural row has planned telegraph and landing marks;
 # each planned surface equals a live projection on the stage's ground vertex for vertex (a
 # collapse's landing mark on its overlay's target surface); a telegraph mark built while the
 # ground is as planned uses the planned meshes instead of projecting them. With an overlay down on
@@ -16,7 +16,7 @@ extends SceneTree
 # planned equals a live projection with it down (dense fights, wave 18: once any overlay was down,
 # every later mark of the stage was projected live). A collapse landing with its own overlay down
 # uses its planned landing mark, which equals a live projection then (the flume's hollow trestle
-# projected it live on its landing tick, 437 ms on the cloud).
+# projected it live on its landing tick, 437 ms on the cloud), and so does an impact landing.
 
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
@@ -29,8 +29,8 @@ const SETTLE_TICKS := 30
 const WAIT_TICKS_MAX := 3600
 
 var _game
-# Collapse rows whose landing mark _check_stage built with their own overlay down.
-var _collapses_checked := 0
+# Collapse and impact rows whose landing mark _check_stage built with their own overlay down, by kind.
+var _landings_checked := {}
 var _t := T.new("natural_marks_planned_test")
 
 
@@ -77,7 +77,15 @@ func _run() -> void:
 	_t.check("the entry handed the planned snapshot to the marks worker", not Natural._plans.get(key, {}).has("snapshot"))
 	await _until_marks()
 	_check_stage("stage 2")
-	_t.check("stage 2's collapse landing was checked with its own overlay down", _collapses_checked > 0, str(_collapses_checked))
+	_t.check("stage 2's collapse landing was checked with its own overlay down", _landings_checked.get("collapse", 0) > 0, str(_landings_checked))
+	# Stage 5, the islands, holds the table's one impact (isle_shed): its landing mark projected live on
+	# its landing tick, 1.18 s on the cloud (scrapkeep#241).
+	_game.flow.enter_stage(5, Vector3.ZERO, false)
+	await _ticks(SETTLE_TICKS)
+	_t.check("the jump entered park stage 5", _game.flow.stage() == 5 and _natural() != null, "stage %d" % _game.flow.stage())
+	await _until_marks()
+	_check_stage("stage 5")
+	_t.check("stage 5's impact landing was checked with its own overlay down", _landings_checked.get("impact", 0) > 0, str(_landings_checked))
 	_game.queue_free()
 	await physics_frame
 	quit(_t.verdict())
@@ -136,8 +144,11 @@ func _check_stage(label: String) -> void:
 	for row in rows:
 		var marks: Dictionary = natural._prepared[row.id].marks
 		_t.check("%s %s: planned telegraph mark" % [label, row.id], marks.has("telegraph"), str(marks.keys()))
-		_t.check("%s %s: planned landing mark unless an impact" % [label, row.id], marks.has("land") != (row.kind == "impact"), str(marks.keys()))
+		_t.check("%s %s: planned landing mark" % [label, row.id], marks.has("land"), str(marks.keys()))
 		for phase in marks:
+			# An impact's landing mark is planned on its own overlay down; it is checked below with it down.
+			if phase == "land" and row.kind == "impact":
+				continue
 			var live: Dictionary = _live(natural, row, phase == "land")
 			var planned: Dictionary = marks[phase]
 			var same: bool = live.keys() == planned.keys()
@@ -159,6 +170,8 @@ func _check_stage(label: String) -> void:
 		var differ := []
 		for each in rows:
 			for phase in natural._prepared[each.id].marks:
+				if phase == "land" and each.kind == "impact":
+					continue
 				var planned: Dictionary = natural._prepared[each.id].marks[phase]
 				if not natural._ground_as_planned(planned):
 					near.append("%s %s" % [each.id, phase])
@@ -172,7 +185,7 @@ func _check_stage(label: String) -> void:
 		_t.check("%s: overlay %s down sends the marks near it back to live projection" % [label, id], not near.is_empty(), "near %s, clear %s" % [near, clear])
 		_t.check("%s: every mark overlay %s leaves as planned equals a live projection with it down" % [label, id], not clear.is_empty() and differ.is_empty(),
 			"clear %s, differ %s" % [clear, differ])
-	for fall in rows.filter(func(r): return r.kind == "collapse"):
+	for fall in rows.filter(func(r): return r.kind == "collapse" or r.kind == "impact"):
 		var landing: Dictionary = natural._prepared[fall.id].marks.get("land", {})
 		natural._set_overlay(fall, true)
 		var own_down: bool = terrain.overlays.has(natural._prepared[fall.id].swap + "_after")
@@ -185,7 +198,7 @@ func _check_stage(label: String) -> void:
 			same_landing = same_landing and landing.has(part) and landing[part].vertices == live_landing[part].vertices
 		landed_mark.free()
 		natural._set_overlay(fall, false)
-		_collapses_checked += 1
+		_landings_checked[fall.kind] = _landings_checked.get(fall.kind, 0) + 1
 		_t.check("%s %s: the landing mark with its own overlay down uses the planned mesh" % [label, fall.id],
 			own_down and landed_mesh != null and not landing.is_empty() and landed_mesh == landing.Style.mesh, "down %s, planned %s" % [own_down, landing.keys()])
 		_t.check("%s %s: the planned landing mark equals a live projection with its own overlay down" % [label, fall.id], same_landing, str(landing.keys()))

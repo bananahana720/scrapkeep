@@ -1566,6 +1566,11 @@ func _run_due() -> void:
 				continue
 			if action.get("late", false) and _late_cell_waits(action):
 				continue
+			# A cell booked ahead whose worker is still on it at its beat waits the same way: rendering it here held
+			# the crown's spire telegraph frame 300 ms on the cloud (scrapkeep#241).
+			if action["type"] == "park_cue" and _late_cell_waits(action):
+				action["late"] = true
+				continue
 			due.append(action)
 	for action in due:
 		_actions.erase(action)
