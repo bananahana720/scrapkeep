@@ -316,6 +316,8 @@ const SURGE_LEAD_M := 18.0
 const SURGE_GATE_AIM_M := 35.0
 # While the siren winds, it waits this far back from the head, on the line.
 const SURGE_RUNUP_M := 14.0
+# A field find's limit: the walk into its dead end comes on top of the ram.
+const FIND_SECONDS := 60.0
 const CACHE_RUNUP := 24.0
 const CACHE_RUNUP_SECONDS := 5.0
 const CACHE_RAM_SECONDS := 3.0
@@ -326,6 +328,12 @@ const PAY_BACKOFF := 6.0
 const LEVEL_BAND := 8.0
 const PLATE_REACH := 30.0
 const CAMP_LAST := 1000.0
+# The spacing of the waypoints on a field find's graph path.
+const FIND_LEG_M := 24.0
+# A find within this many metres is taken before the lit sites, as a player hearing its tell would.
+const FIND_NEAR_M := 120.0
+# A find's path that gains no waypoint in this many game seconds is given up: the ball is stuck.
+const FIND_LEG_SECONDS := 10.0
 # A site more than LEVEL_BAND above the ball is not rolled at straight: the cliff under its shelf
 # wedges the ball (the Reach camp stands 22 m over the trough). The way up is planned once on the
 # ground's heights, a CLIMB_STEP grid within CLIMB_PAD of both ends that never rises steeper than
@@ -452,6 +460,10 @@ var _boost_clock := 0.0
 var _card_press_tick := -1000000
 var _shift_left := 0.0
 var _waypoints: Array[Vector3] = []
+var _find_route: Array[Vector3] = []
+var _find_route_for := ""
+var _find_exit := Vector3.INF
+var _find_leg_clock := 0.0
 var _waypoint_time := 0.0
 var _vault_time := 0.0
 var _vault_done := false
@@ -907,6 +919,9 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_slow_time = 0.0
 	_detour_time = 0.0
 	_waypoints = []
+	_find_route = []
+	_find_route_for = ""
+	_find_exit = Vector3.INF
 	_waypoint_time = 0.0
 	_vault_time = 0.0
 	_vault_done = false
@@ -1079,6 +1094,8 @@ func _close_note() -> void:
 	_note["hp_lost"] = snappedf(float(_note["hp_lost"]), 0.1)
 	_note["hull_lost"] = snappedf(float(_note.get("hull_lost", 0.0)), 0.1)
 	_note["punch_short_s"] = snappedf(float(_note["punch_short_s"]), 0.01)
+	if not _note.has("secrets_found"):
+		_note["secrets_found"] = []
 	stage_notes.append(_note)
 	_note = {}
 
@@ -1514,9 +1531,21 @@ func _activity_goal(delta: float) -> bool:
 		return false
 	var activities = world.activities
 	var ball: Vector3 = game.player.ball_position()
-	var s = activities.site(_activity) if _activity != "" else null
+	var s = _site_by_key(activities, _activity) if _activity != "" else null
 	if s != null and not _activity_open(s):
+		# A field find's room is a dead end inside a dead end: leave by its open face, the way in.
+		if s.has_meta("find"):
+			var out: Vector2 = Vector2(s.rule.get("face", Vector2(0.0, -1.0))).normalized() * CACHE_RUNUP * 1.5
+			_find_exit = _ground_point(s.global_position.x + out.x, s.global_position.z + out.y)
 		s = null
+		_activity = ""
+	if _find_exit != Vector3.INF:
+		if _flat(ball, _find_exit) < WAYPOINT_REACHED or _activity_rushed():
+			_find_exit = Vector3.INF
+		else:
+			_goal = "activity find exit"
+			_act(_find_exit, _nearest_enemy(), delta)
+			return true
 	if s == null:
 		var best_level := -INF
 		var best := INF
@@ -1528,28 +1557,39 @@ func _activity_goal(delta: float) -> bool:
 			# on the reach its shelf pulled the explorer off the cache into a wall it cannot pass.
 			if _site_has_authored_pack(c):
 				level -= CAMP_LAST
+			# A field find (secrets.gd FINDS) is the last stop: the explorer has learned the tells and
+			# checks the dead ends once the lit sites are done, unless it rolls within earshot of one.
+			if c.has_meta("find") and _flat(ball, c.global_position) > FIND_NEAR_M:
+				level -= CAMP_LAST * 2.0
 			var d := _flat(ball, c.global_position)
 			if level > best_level or (level == best_level and d < best):
 				best_level = level
 				best = d
 				s = c
-		_activity = s.id if s != null else ""
+		_activity = _site_key(s) if s != null else ""
 		_cache_phase = "runup"
 		_cache_clock = 0.0
 	if s == null:
 		return false
 	var finished: Array = []
+	var secrets: Array = []
 	for c in activities.sites:
 		if is_instance_valid(c) and c.done:
 			finished.append(c.id)
+			if c.has_meta("find"):
+				secrets.append(String(c.get_meta("find")))
 	_note["activities_finished"] = finished
+	# The field finds (secrets.gd FINDS) this stage opened, for the world 1 pacing check.
+	_note["secrets_found"] = secrets
 	var entered: Array = _note.get("activities_entered", [])
 	if not s.id in entered:
 		entered.append(s.id)
 		_note["activities_entered"] = entered
-	_activity_time[s.id] = float(_activity_time.get(s.id, 0.0)) + delta
-	if float(_activity_time[s.id]) > (SURGE_SECONDS if s.id == "surge_run" else ACTIVITY_SECONDS):
-		_activity_skip[s.id] = true
+	var key := _site_key(s)
+	_activity_time[key] = float(_activity_time.get(key, 0.0)) + delta
+	var limit := FIND_SECONDS if s.has_meta("find") else (SURGE_SECONDS if s.id == "surge_run" else ACTIVITY_SECONDS)
+	if float(_activity_time[key]) > limit:
+		_activity_skip[key] = true
 		_activity = ""
 		return false
 	if s.done:
@@ -1831,9 +1871,22 @@ func _activity_rushed() -> bool:
 	return game.run.stage_time > engage_by
 
 
+# A site's key for the bot's timers and skips: its id, or "find:<id>" for a field find, so the stage's
+# finds and its ordinary cracked cache are worked one by one.
+func _site_key(s) -> String:
+	return "find:%s" % s.get_meta("find") if s.has_meta("find") else String(s.id)
+
+
+func _site_by_key(activities, key: String):
+	for c in activities.sites:
+		if is_instance_valid(c) and _site_key(c) == key:
+			return c
+	return null
+
+
 # A site the bot may still work: not given up, and either unfinished or with its pay on the ground.
 func _activity_open(s) -> bool:
-	if _activity_skip.has(s.id):
+	if _activity_skip.has(_site_key(s)):
 		return false
 	return not s.done or (s.pickup != null and not s.pickup_taken)
 
@@ -1871,6 +1924,10 @@ func _cache_ram(s, ball: Vector3, delta: float) -> void:
 	if _cache_phase == "runup":
 		var point: Vector3 = _ground_point(s.global_position.x + out.x * CACHE_RUNUP, s.global_position.z + out.z * CACHE_RUNUP)
 		_goal = "activity %s runup" % s.id
+		# A field find stands at the end of a dead end, so the line there is the park graph's path,
+		# not a straight heading across the slopes between.
+		if s.has_meta("find") and _find_leg(s, ball, point, delta):
+			return
 		# From far off, square along the ball's own latitude first, so the line to the run-up
 		# does not cut across the shelf's edge.
 		var heading := point
@@ -1888,6 +1945,58 @@ func _cache_ram(s, ball: Vector3, delta: float) -> void:
 	if _cache_clock > CACHE_RAM_SECONDS:
 		_cache_phase = "runup"
 		_cache_clock = 0.0
+
+
+# Follows the park graph's path from the ball to a field find's run-up point, a waypoint every
+# FIND_LEG_M. True while a waypoint is still ahead; the run-up takes over from the last one.
+func _find_leg(s, ball: Vector3, point: Vector3, delta: float) -> bool:
+	var key := _site_key(s)
+	if _find_route_for != key:
+		_find_route_for = key
+		_find_route = _graph_path(ball, point)
+		_find_leg_clock = 0.0
+	while not _find_route.is_empty() and _flat(ball, _find_route[0]) < WAYPOINT_REACHED:
+		_find_route.pop_front()
+		_find_leg_clock = 0.0
+	if _find_route.is_empty():
+		return false
+	_find_leg_clock += delta
+	if _find_leg_clock > FIND_LEG_SECONDS:
+		_activity_skip[key] = true
+		_activity = ""
+		_find_route = []
+		return true
+	_cache_clock = 0.0
+	_goal = "activity %s path %d" % [s.id, _find_route.size()]
+	_act(_find_route[0], _nearest_enemy(), delta)
+	return true
+
+
+func _graph_path(from: Vector3, to: Vector3) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	var graph = game.world.activities.get("_graph") if game.world != null and game.world.activities != null else null
+	if graph == null:
+		return out
+	var start: int = graph.nearest(Vector2(from.x, from.z))
+	var goal: int = graph.nearest(Vector2(to.x, to.z))
+	var prev: PackedInt32Array = graph.search_prev(start)["prev"]
+	var nodes: Array[int] = []
+	var at := goal
+	while at != -1 and at != start and nodes.size() < 4096:
+		nodes.push_front(at)
+		at = prev[at]
+	if at != start:
+		return out
+	var since := 0.0
+	var last: Vector3 = graph.position(start)
+	for node in nodes:
+		var p: Vector3 = graph.position(node)
+		since += _flat(last, p)
+		last = p
+		if since >= FIND_LEG_M:
+			out.append(p)
+			since = 0.0
+	return out
 
 
 # The stage's participatory event, when the completionist should be on it: its ring

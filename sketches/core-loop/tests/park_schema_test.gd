@@ -83,6 +83,9 @@ func _planted_rows() -> void:
 		func(p): _row(p, "event_rows", "bench_dropship")["effect"]["home"] = "no_home")
 	_plant("unknown route_change id", "pool_flood", "reference",
 		func(p): _row(p, "event_rows", "pool_flood")["route_change"]["closes"] = ["no_route"])
+	# An activity row's optional face is a nonzero [x, z].
+	_plant("zero activity face", "wash_camp", "type", func(p): p["activity_rows"][0]["face"] = [0, 0])
+	_plant("activity face not a pair", "wash_camp", "type", func(p): p["activity_rows"][0]["face"] = "south")
 	# The mounting is not one of the stage's Warden kind's two.
 	_plant("mounting of another kind", "test_dam", "mounting", func(p): p["landmark"]["warden"]["mounting"] = "headframe")
 	# A home's pack is not one of its world's packs.

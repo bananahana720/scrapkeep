@@ -150,8 +150,15 @@ static func reading(game) -> Dictionary:
 		lines.append(NO_PIECES)
 	lines.append(PAINT)
 	lines.append("Achievements: %d of %d earned" % [earned, ids.size()])
+	# Each world's secret count (secrets.gd WORLD_CODEX), read from the saved codex.
+	var codex = game.ctx.get("codex")
+	var secrets: Array = []
+	for world in Secrets.WORLD_CODEX:
+		var count := Secrets.world_count(world, func(id): return codex != null and codex.known(id))
+		secrets.append(count)
+		lines.append("%s secrets: %d of %d found" % [count["name"], count["found"], count["total"]])
 	return {"pilots": pilots, "pieces": pieces, "piece_total": Companion.PIECES.size(),
-		"seated": seated, "earned": earned, "achievement_total": ids.size(), "lines": lines}
+		"seated": seated, "earned": earned, "achievement_total": ids.size(), "secrets": secrets, "lines": lines}
 
 
 func refresh(game) -> void:
