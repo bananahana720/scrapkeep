@@ -1028,6 +1028,7 @@ func set_reduced_motion(on: bool) -> void:
 	PilotAntics.reduced_motion = on
 	ClassPreview.reduced_motion = on
 	WorldFx.preferred = on
+	preload("res://src/presentation/flourish_player.gd").reduced_motion = on
 	if is_instance_valid(WorldFx.current):
 		WorldFx.current.set_quality(WorldFx.current.low, on)
 	if presentation != null and presentation.get("juice") != null:

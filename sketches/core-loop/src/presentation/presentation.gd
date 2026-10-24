@@ -16,6 +16,8 @@ const TitleStage := preload("res://src/presentation/title_stage.gd")
 const WardenRing := preload("res://src/presentation/warden_ring.gd")
 const WardenScript := preload("res://src/combat/warden.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
+const FlourishPlayer := preload("res://src/presentation/flourish_player.gd")
+const SpillwayStory := preload("res://src/presentation/spillway_story.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
@@ -51,6 +53,7 @@ const PanelFx := preload("res://src/presentation/panel_fx.gd")
 #   warden_ring    a posture Warden's health as four arcs on the ground round its foot
 #   reward_ceremony  how a part find is presented, from a rarity tick to the crate (v3 W13)
 #   panel_fx       a grey panel pickup: the word at the ball, the ratchet and the run's phrase
+#   flourish_player  the in-run comic beats (flourish_rows.gd); spillway_story starts world 1's rows
 
 var ctx
 var audio
@@ -65,6 +68,8 @@ var banner
 var hero_assets
 var ceremony
 var panel_fx
+var flourish
+var spillway_story
 var set_dressing: Node3D
 var park_props: Node3D
 var ambient_life: Node3D
@@ -134,6 +139,12 @@ func setup(ctx_ref) -> void:
 	panel_fx = PanelFx.new()
 	add_child(panel_fx)
 	panel_fx.setup(ctx, audio, machine_fx)
+	flourish = FlourishPlayer.new()
+	add_child(flourish)
+	flourish.setup(ctx)
+	spillway_story = SpillwayStory.new()
+	add_child(spillway_story)
+	spillway_story.setup(ctx, flourish)
 	wire_optional()
 	GraphicsPreset.register_dressing_host(self)
 	if not get_tree().node_added.is_connected(_on_node_added):
