@@ -37,6 +37,7 @@ const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
+const BossPlate := preload("res://src/ui/boss_plate.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const RewardView := preload("res://src/ui/reward_view.gd")
 const MossBubble := preload("res://src/ui/moss_bubble.gd")
@@ -1027,6 +1028,7 @@ func set_reduced_motion(on: bool) -> void:
 	ClassCard.reduced_motion = on
 	PilotAntics.reduced_motion = on
 	ClassPreview.reduced_motion = on
+	BossPlate.reduced_motion = on
 	WorldFx.preferred = on
 	preload("res://src/presentation/flourish_player.gd").reduced_motion = on
 	if is_instance_valid(WorldFx.current):
