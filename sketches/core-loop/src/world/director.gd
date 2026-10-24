@@ -301,6 +301,8 @@ func advance(delta: float, alive_count: int, ball := Vector2.ZERO, velocity := V
 				if a.has("affix"):
 					spawn["affix"] = a["affix"]
 				spawn["pack"] = int(a.get("pack", -1))
+				if a.has("rider"):
+					spawn["rider"] = true
 				if a.has("elite"):
 					spawn["elite"] = true
 				due.append(spawn)
@@ -442,7 +444,8 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2, is_elite := false, ro
 	var affixed := false
 	var heading := (at - ball).normalized() if at.distance_to(ball) > 0.1 else Vector2.RIGHT
 	var side := Vector2(-heading.y, heading.x)
-	var home_spots := _home_pack_spots(kinds, ball, side) if _park_map != null and not _forward_homes.is_empty() else {}
+	var riders := {}
+	var home_spots := _home_pack_spots(kinds, ball, side, riders) if _park_map != null and not _forward_homes.is_empty() else {}
 	var assigned: Array[Vector2] = []
 	for i in kinds.size():
 		var kind := KIND_NAMES.find(kinds[i])
@@ -471,6 +474,8 @@ func _place_pack(at: Vector2, kinds: Array, ball: Vector2, is_elite := false, ro
 		var arrival := {"kind": kind, "at": spot, "left": ARRIVAL, "pack": _pack_seq}
 		if is_elite:
 			arrival["elite"] = true
+		if riders.has(i):
+			arrival["rider"] = true
 		if is_elite and run_tier() >= RunTier.HARD and kinds[i] == "plated_brute":
 			arrival["affix"] = EliteAffixes.for_arrival(_elite_packs_made)
 			affixed = true
@@ -771,7 +776,9 @@ func _window_homes(ball: Vector2) -> Array[Dictionary]:
 
 
 
-func _home_pack_spots(kinds: Array, ball: Vector2, side: Vector2) -> Dictionary:
+# `riders` gains each member placed only because it rides with a housed crew (no home of its
+# own in the window); the Warden clamp counts that crew without them (stage_locks.gd).
+func _home_pack_spots(kinds: Array, ball: Vector2, side: Vector2, riders := {}) -> Dictionary:
 	var spots := {}
 	var assigned: Array[Vector2] = []
 	var crew_home := {}
@@ -814,7 +821,8 @@ func _home_pack_spots(kinds: Array, ball: Vector2, side: Vector2) -> Dictionary:
 			crew_home = home
 	# A member whose kind has no home in the window rides with the crew from the crew's home
 	# (the first window home when the whole pack is homeless), never stripped from it.
-	if crew_home.is_empty():
+	var housed_crew := not crew_home.is_empty()
+	if not housed_crew:
 		crew_home = _forward_homes[0]
 	var housed := {}
 	for home in _forward_homes:
@@ -828,6 +836,8 @@ func _home_pack_spots(kinds: Array, ball: Vector2, side: Vector2) -> Dictionary:
 		if spot != Vector2.INF:
 			spots[i] = spot
 			assigned.append(spot)
+			if housed_crew:
+				riders[i] = true
 	return spots
 
 

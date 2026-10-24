@@ -11,9 +11,12 @@ const T := preload("res://tests/support/t.gd")
 # tools/posture_sweep.gd's (small: skipper from mass 0; grown: skipper from 540; camper: shoots from
 # range), each a tools/bot_run.gd child on --table=park entering stage 2 directly (--from-stage=2,
 # --stages=2), seeds 0 to 4, the seed's own pilot. A fight is warden_broken_s less
-# warden_engaged_s (engage to break); a run that never breaks counts as the CAP. Bands: grown median
-# 25 to 45 s, small median at least twice grown's, the camper never breaks it; the live medians stay
-# within 10 percent of the pins below.
+# warden_engaged_s (engage to break); a run that never breaks counts as the CAP. Since the Warden
+# clamp (#420, stage_locks.gd) the fight opens with the clamp's wait for two broken crews, which sets
+# its floor for every arm alike (DECISIONS, 24 Oct, ruling w), so the grown band reads the fight after
+# the clamp opens (warden_broken_s less gate_open_s, or less engage when the clamp opened first).
+# Bands: grown post-clamp median 15 to 35 s, small median at least grown's, the camper never breaks it;
+# the live medians stay within 10 percent of the pins below.
 
 const SEEDS := [0, 1, 2, 3, 4]
 const ARMS := ["small", "grown", "camper"]
@@ -50,8 +53,15 @@ const WALL_S := 1100.0
 # re-bites less (pylon_engineer 31 to 18 bites, 70.9 to 47.7 s on the line) and the bar drains less;
 # tarn and tally move under 4 s. The faster line is the card's intended change, not skipped content.
 # Every design band holds; grown sits 1.3 s over its 25 s floor.
-const EXPECT_SMALL_S := 60.0
-const EXPECT_GROWN_S := 26.3
+# 2026-10-24 (#461 on stage/alpha-w18 fcddfe10, ruling w): re-read after #420's clamp and #442's whole
+# packs, with a crew's homeless riders standing aside from its pip. One run of this test: small [58.1,
+# 61.5, 98.6, 52.1, 16.6] median 58.1, grown [54.1, 46.8, 30.0, 52.2, 55.0] median 52.1, grown after the
+# clamp [17.3, 21.8, 14.3, 23.1, 27.6] median 21.8 (parent db275fb6 19 to 27), ratio 1.12, campers never
+# broke. The clamp's wait (grown median 27.4 s after engage) is most of the fight for both arms, so the
+# old 2x ratio cannot hold; its floor is re-read to 1x.
+const EXPECT_SMALL_S := 58.1
+const EXPECT_GROWN_S := 52.1
+const EXPECT_GROWN_OPEN_S := 21.8
 const TOLERANCE := 0.10
 
 
@@ -70,6 +80,7 @@ func _initialize() -> void:
 	# Eight at a time: fifteen children at once overrun a 4-core box (LESSONS 39).
 	var results := ChildRuns.run(jobs, WALL_S, 8)
 	var fights := {}
+	var opened := []
 	var broke := {}
 	var pilots := {}
 	for i in jobs.size():
@@ -85,6 +96,10 @@ func _initialize() -> void:
 		var fight := CAP
 		if engaged != null and broken != null:
 			fight = minf(CAP, float(broken) - float(engaged))
+		if arm == "grown":
+			var gate_open = note.get("gate_open_s")
+			var from := maxf(float(engaged), float(gate_open)) if engaged != null and gate_open != null else float(engaged if engaged != null else 0.0)
+			opened.append(minf(CAP, float(broken) - from) if broken != null and engaged != null else CAP)
 		if not fights.has(arm):
 			fights[arm] = []
 			broke[arm] = 0
@@ -95,17 +110,21 @@ func _initialize() -> void:
 			broke[arm] += 1
 	var small := PostureSweep.median(fights.get("small", [CAP]))
 	var grown := PostureSweep.median(fights.get("grown", [CAP]))
+	var grown_open := PostureSweep.median(opened if not opened.is_empty() else [CAP])
 	print("[report] medians small %.1f s, grown %.1f s, ratio %.2f; small %s, grown %s, camper %s; pilots %s" % [small, grown,
 		small / grown if grown > 0.0 else 0.0, fights.get("small", []), fights.get("grown", []), fights.get("camper", []),
 		pilots.get("small", [])])
-	print("[report] small broke it in %d of %d runs, grown in %d" % [broke.get("small", 0), SEEDS.size(), broke.get("grown", 0)])
-	t.check("grown breaks it in 25 to 45 s", grown >= 25.0 and grown <= 45.0, "grown median %.1f s" % grown)
-	t.check("small takes at least twice grown's time", grown > 0.0 and small >= 2.0 * grown, "small %.1f s, grown %.1f s" % [small, grown])
+	print("[report] small broke it in %d of %d runs, grown in %d; grown after the clamp %s" % [broke.get("small", 0), SEEDS.size(),
+		broke.get("grown", 0), opened])
+	t.check("grown breaks it 15 to 35 s after the clamp opens", grown_open >= 15.0 and grown_open <= 35.0, "grown post-clamp median %.1f s" % grown_open)
+	t.check("small takes at least grown's time", grown > 0.0 and small >= grown, "small %.1f s, grown %.1f s" % [small, grown])
 	t.eq("the camper never breaks it", broke.get("camper", -1), 0)
 	t.check("small median within 10 percent of the pin", absf(small - EXPECT_SMALL_S) <= TOLERANCE * EXPECT_SMALL_S,
 		"small %.1f s, pin %.1f s" % [small, EXPECT_SMALL_S])
 	t.check("grown median within 10 percent of the pin", absf(grown - EXPECT_GROWN_S) <= TOLERANCE * EXPECT_GROWN_S,
 		"grown %.1f s, pin %.1f s" % [grown, EXPECT_GROWN_S])
+	t.check("grown post-clamp median within 10 percent of the pin", absf(grown_open - EXPECT_GROWN_OPEN_S) <= TOLERANCE * EXPECT_GROWN_OPEN_S,
+		"grown post-clamp %.1f s, pin %.1f s" % [grown_open, EXPECT_GROWN_OPEN_S])
 	if t.failures == 0:
 		PostureSweep._remove_tree(folder)
 	quit(t.verdict())
