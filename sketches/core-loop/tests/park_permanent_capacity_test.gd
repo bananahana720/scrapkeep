@@ -22,6 +22,7 @@ func _run() -> void:
 	game.player.source = Intent.Scripted.new()
 	game.flow.press_start()
 	game.flow.choose_class(1)
+	game.ctx.terrain.drop_overlay_map(1)
 	var park: Dictionary = game.ctx.terrain.maps[0].park
 	var template: Dictionary = park.event_rows.filter(func(row): return row.kind == "flood_fill")[0].duplicate(true)
 	fill_s = float(template.effect.fill_s)

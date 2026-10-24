@@ -202,6 +202,7 @@ func _run() -> void:
 	game.flow.force_warden = false
 	game.player.source = Intent.Scripted.new()
 	game.flow.press_start()
+	game.ctx.terrain.drop_overlay_map(1)
 	var park: Dictionary = game.ctx.terrain.maps[0].park
 	var fixture_row: Dictionary = park.event_rows[0].duplicate(true)
 	fixture_row.merge({"id": "projection_slump", "kind": "collapse", "trigger": {"on": "clock_tier", "value": 4},

@@ -414,9 +414,7 @@ func _free_stage(i: int) -> void:
 	_cave_roofs.erase(i)
 	_perches.erase(i)
 	_take_perch_ahead(i)
-	if _overlay_ahead.has(i):
-		_settle_perch_read(_overlay_ahead[i])
-		_overlay_ahead.erase(i)
+	drop_overlay_map(i + 1)
 	_placement_holes.erase(i)
 	_heights[i] = PackedFloat32Array()
 	_holes[i] = PackedByteArray()
@@ -543,6 +541,15 @@ func _overlay_read_ahead(i: int) -> void:
 		return
 	_overlay_ahead[i] = EventGround.queue_overlay_map(m)
 	_settle_on_exit(_roots[i], _overlay_ahead[i])
+
+
+# Waits on a stage's worker map copy and drops it. A test that edits a built stage's park map calls it first,
+# so the edit does not race the worker and the stage's overlay copies the edited map.
+func drop_overlay_map(index: int) -> void:
+	var i := _index(index)
+	if _overlay_ahead.has(i):
+		_settle_perch_read(_overlay_ahead[i])
+		_overlay_ahead.erase(i)
 
 
 # The active stage's worker copy of source for an OverlayMap, or null. Another copy is queued at once, so a

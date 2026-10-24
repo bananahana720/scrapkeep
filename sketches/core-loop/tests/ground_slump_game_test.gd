@@ -55,6 +55,7 @@ func _run() -> void:
 	if has_pit:
 		row = park.event_rows.filter(func(r): return r.id == "tailings_slump")[0]
 	else:
+		terrain.drop_overlay_map(index + 1)
 		row = park.event_rows[0].duplicate(true)
 		row.merge({"id": "tailings_slump", "kind": "collapse", "family": "natural", "site": "bench_fixture",
 			"trigger": {"on": "clock_tier", "value": 0}, "telegraph": {"lead_s": 6.0, "form": "ground_slump", "on_bar": true},
