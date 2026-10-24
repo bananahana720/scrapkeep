@@ -363,6 +363,7 @@ const SLOPE_SLACK := 0.001
 const KICKER_LAUNCH := 8.0
 const KICKER_JUMP_AT := 3.0
 const CLIMB_REACHED := 6.0
+const ROUTE_REACHED := 15.0
 # A cable takes a ball whose centre comes within its radius of the cable's high end (contraptions.gd) and rides it
 # down. A climb cell whose rolling centre is within CABLE_CLEAR more is closed: on the park's first stage the way up
 # to the domes camp passed under domes_zip's end, and each pass rode the explorer 58 m back down to the deck.
@@ -419,6 +420,20 @@ var relay_stake := 0
 # The pacing lab's switch (bot_run --explore-by=<s>, scripts/pacing-check.mjs): the stage second the
 # completionist stops its optional rolling for the Warden. Left at ENGAGE_BY unless the flag is given.
 var engage_by := ENGAGE_BY
+# Under --explore-by an activity's ACTIVITY_SECONDS run only while the ball is within ACTIVITY_NEAR of
+# the site; the roll there has its own ACTIVITY_TRAVEL_SECONDS. The default clock counts the roll too, and
+# on the park dam it ran out on the way to the altar and the camp (trace, seed 3, 24 Oct).
+const ACTIVITY_NEAR := 40.0
+const ACTIVITY_TRAVEL_SECONDS := 60.0
+# The roll gets ACTIVITY_TRAVEL_SECONDS plus a second for every ACTIVITY_TRAVEL_SPEED metres it starts away.
+const ACTIVITY_TRAVEL_SPEED := 8.0
+var _activity_travel := {}
+var _activity_travel_cap := {}
+# A site the roll could not reach in its cap is put off, not dropped, until the ball has moved
+# ACTIVITY_RETRY_MOVE from where it gave up, once: on the park dam the rim cache and the bench altar
+# lie past the crest, and the way down is the spillway sheet the explorer takes later anyway.
+const ACTIVITY_RETRY_MOVE := 150.0
+var _activity_deferred := {}
 const RELAY_ARM_SECONDS := 150.0
 var _relay_clock := 0.0
 var _relay_closed := {}
@@ -493,6 +508,8 @@ var _cache_phase := "runup"
 var _cache_clock := 0.0
 var _climb: Array[Vector3] = []
 var _climb_for := ""
+# Under --explore-by: the park route's row centres between the ball and a site's row, walked before the climb.
+var _route: Array[Vector3] = []
 var _fight_climb: Array[Vector3] = []
 var _fight_climb_clock := 0.0
 var _fight_climb_held := 0.0
@@ -951,6 +968,9 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_event_skip = {}
 	_activity = ""
 	_activity_time = {}
+	_activity_travel = {}
+	_activity_travel_cap = {}
+	_activity_deferred = {}
 	_activity_skip = {}
 	_relay_clock = 0.0
 	_relay_closed = {}
@@ -959,6 +979,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_climb = []
 	_route_lips.clear()
 	_climb_for = ""
+	_route.clear()
 	_fight_climb = []
 	_fight_climb_clock = 0.0
 	_fight_climb_held = 0.0
@@ -1627,6 +1648,10 @@ func _activity_goal(delta: float) -> bool:
 		_cache_clock = 0.0
 	if s == null:
 		return false
+	# A deferred site picked again is retried to the end: the give-up point stops closing it, or the
+	# way back in, which passes near that point, dropped it again before it was reached.
+	if _activity_deferred.get(_site_key(s)) is Vector3:
+		_activity_deferred[_site_key(s)] = true
 	var finished: Array = []
 	var secrets: Array = []
 	for c in activities.sites:
@@ -1642,9 +1667,25 @@ func _activity_goal(delta: float) -> bool:
 		entered.append(s.id)
 		_note["activities_entered"] = entered
 	var key := _site_key(s)
-	_activity_time[key] = float(_activity_time.get(key, 0.0)) + delta
-	var limit := FIND_SECONDS if s.has_meta("find") else (SURGE_SECONDS if s.id == "surge_run" else ACTIVITY_SECONDS)
-	if float(_activity_time[key]) > limit:
+	# A cache's doubled run-up point stands past ACTIVITY_NEAR, so its ram cycle counts as near work.
+	var near: float = ACTIVITY_NEAR + (CACHE_RUNUP if s.id == "cracked_cache" else 0.0)
+	if engage_by > ENGAGE_BY and _flat(ball, s.global_position) > near:
+		if not _activity_travel_cap.has(key):
+			# A retried site gets the flat cap only: the dam's rim cache, which the explorer cannot break,
+			# spent a second distance-scaled cap and left the camp undone.
+			var leg: float = 0.0 if _activity_deferred.has(key) else _flat(ball, s.global_position) / ACTIVITY_TRAVEL_SPEED
+			_activity_travel_cap[key] = ACTIVITY_TRAVEL_SECONDS + leg
+		_activity_travel[key] = float(_activity_travel.get(key, 0.0)) + delta
+	else:
+		_activity_time[key] = float(_activity_time.get(key, 0.0)) + delta
+	if float(_activity_travel.get(key, 0.0)) > float(_activity_travel_cap.get(key, INF)) and not _activity_deferred.has(key):
+		_activity_deferred[key] = ball
+		_activity_travel.erase(key)
+		_activity_travel_cap.erase(key)
+		_activity = ""
+		return false
+	if float(_activity_time.get(key, 0.0)) > (FIND_SECONDS if s.has_meta("find") else (SURGE_SECONDS if s.id == "surge_run" else ACTIVITY_SECONDS)) \
+			or float(_activity_travel.get(key, 0.0)) > float(_activity_travel_cap.get(key, INF)):
 		_activity_skip[key] = true
 		_activity = ""
 		return false
@@ -1725,12 +1766,65 @@ func _approach(s, ball: Vector3) -> Vector3:
 	if _climb_for != s.id:
 		_climb_for = s.id
 		_climb.clear()
-		if at.y - ball.y > LEVEL_BAND:
+		_route = _route_to(s, ball) if engage_by > ENGAGE_BY else ([] as Array[Vector3])
+		if _route.is_empty() and at.y - ball.y > LEVEL_BAND:
+			_climb = _climb_route_any(ball, at)
+	while not _route.is_empty() and _flat(ball, _route[0]) < ROUTE_REACHED:
+		_route.pop_front()
+		if _route.is_empty() and at.y - ball.y > LEVEL_BAND:
 			_climb = _climb_route_any(ball, at)
 	while not _climb.is_empty() and _flat(ball, _climb[0]) < CLIMB_REACHED:
 		_climb.pop_front()
 	_kicker_jump(ball)
+	if not _route.is_empty():
+		return _route[0]
 	return at if _climb.is_empty() else _climb[0]
+
+
+# The park's authored way to a site: the first route through the site's row, from its start to
+# that row, entered at the point nearest the ball. The dam's rim cache stands on west_rim_bench,
+# which only the routes out of the_eye reach; rolled to straight, the explorer hung on the deck's
+# western edge above the pool. Empty for a field find, which walks the park graph (_find_leg), and when the map has no route through the row.
+func _route_to(s, ball: Vector3) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	var map = game.ctx.terrain.map()
+	if s.has_meta("find") or not "park" in map:
+		return out
+	# A live site carries its activity's name, so its row is the nearest row of that activity.
+	var site_row := ""
+	var site_d := INF
+	for spec in map.park.get("activity_rows", []):
+		var spot: Array = spec.get("at", [])
+		if String(spec.get("activity", "")) != s.id or spot.size() < 2:
+			continue
+		var d := Vector2(float(spot[0]), float(spot[1])).distance_to(Vector2(s.global_position.x, s.global_position.z))
+		if d < site_d:
+			site_d = d
+			site_row = String(spec.get("site", ""))
+	if site_row == "":
+		return out
+	var rows := {}
+	for r in map.park.get("park_rows", []):
+		rows[String(r.get("id", ""))] = r
+	for route in map.park.get("routes", []):
+		var ids: Array = [route.get("from", "")]
+		ids.append_array(route.get("via", []))
+		var end := ids.find(site_row)
+		if end < 0:
+			continue
+		for i in end + 1:
+			var r = rows.get(String(ids[i]))
+			if r == null or not r.has("at"):
+				continue
+			var p: Vector3 = _ground_point(float(r.at[0]), float(r.at[1]))
+			if out.is_empty() or _flat(out[-1], p) > ROUTE_REACHED:
+				out.append(p)
+		break
+	var nearest := 0
+	for i in out.size():
+		if _flat(ball, out[i]) < _flat(ball, out[nearest]):
+			nearest = i
+	return out.slice(nearest)
 
 
 # A grid path over the terrain's heights from the ball to the site that never climbs a step
@@ -1946,6 +2040,9 @@ func _site_by_key(activities, key: String):
 func _activity_open(s) -> bool:
 	if _activity_skip.has(_site_key(s)):
 		return false
+	var put_off = _activity_deferred.get(_site_key(s))
+	if put_off is Vector3 and _flat(game.player.ball_position(), put_off) < ACTIVITY_RETRY_MOVE:
+		return false
 	return not s.done or (s.pickup != null and not s.pickup_taken)
 
 
@@ -1978,9 +2075,18 @@ func _cache_ram(s, ball: Vector3, delta: float) -> void:
 	var out: Vector3 = s.global_basis.z
 	out.y = 0.0
 	out = out.normalized()
+	# Under --explore-by a far cache is rolled to first: the run-up and ram cycle crept the explorer
+	# about 30 m a cycle toward the dam's rim cache, 1,075 m from the drop, and never reached it.
+	# A field find has its own graph leg (_find_leg) in the run-up.
+	if engage_by > ENGAGE_BY and not s.has_meta("find") and _flat(ball, s.global_position) > ACTIVITY_NEAR + CACHE_RUNUP:
+		_goal = "activity %s approach" % s.id
+		_act(_approach(s, ball), _nearest_enemy(), delta)
+		return
 	_cache_clock += delta
 	if _cache_phase == "runup":
-		var point: Vector3 = _ground_point(s.global_position.x + out.x * CACHE_RUNUP, s.global_position.z + out.z * CACHE_RUNUP)
+		# Under --explore-by the run-up is twice as long: from 24 m the rim cache's uphill ram met its wall at about 9 m/s.
+		var runup: float = CACHE_RUNUP * (2.0 if engage_by > ENGAGE_BY else 1.0)
+		var point: Vector3 = _ground_point(s.global_position.x + out.x * runup, s.global_position.z + out.z * runup)
 		_goal = "activity %s runup" % s.id
 		# A field find stands at the end of a dead end, so the line there is the park graph's path,
 		# not a straight heading across the slopes between.
@@ -2072,7 +2178,7 @@ func _event_goal(delta: float) -> Dictionary:
 		if phase == EventDirector.LIVE:
 			return {"goal": "live " + id, "steer": _live_target(id, model), "aim": _nearest_enemy()}
 		if phase == EventDirector.ANNOUNCED or phase == EventDirector.ARMED:
-			if game.run.stage_time > EVENT_LATEST:
+			if game.run.stage_time > EVENT_LATEST + maxf(0.0, engage_by - ENGAGE_BY):
 				continue
 			_event_time[id] = float(_event_time.get(id, 0.0)) + delta
 			if _event_time[id] > EVENT_PURSUIT_SECONDS:
