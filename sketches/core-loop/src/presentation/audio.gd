@@ -140,7 +140,7 @@ const LANDING_FALLBACK_MS := 2000
 # Expected launch-to-landing time, for the pace of the build's sweep.
 const LAUNCH_BUILD_SECONDS := 1.6
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
-const KEYED_SOUNDS := ["line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
+const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
 	"rivet_line_punch", "rivet_line_arrive",
 	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
 	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
@@ -384,6 +384,7 @@ func setup(ctx_ref) -> void:
 	_make_buses()
 	live_output = AudioServer.get_driver_name() != "Dummy"
 	engine = MusicEngine.new()
+	engine.warm_stingers = live_output
 	if ctx.has_method("aim_forward"):
 		engine.set_parameter_source(sample_run_parameters)
 		engine.parameter_commit.connect(_commit_band_parameters)
@@ -534,6 +535,7 @@ func _exit_tree() -> void:
 	if _rest_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_rest_task)
 		_rest_task = -1
+	MusicEngine.settle_stingers()
 	_finish_opening()
 	# Stop every player and drop the playbacks, or the polyphonic ones outlive the tree.
 	for child in get_children():

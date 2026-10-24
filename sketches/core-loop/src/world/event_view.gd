@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 # Draws the stage's events from the director's models and nothing else, so what you
 # see is the state the rules use. A participatory event stands a beam over its start
@@ -301,7 +302,7 @@ func _update_offer(entry: Dictionary, pulse: float) -> void:
 	if not shown:
 		return
 	var armed := phase == EventDirector.ARMED
-	entry["ring_mat"].emission_energy_multiplier = 0.4 + (pulse * 2.4 if armed else 0.0)
+	entry["ring_mat"].emission_energy_multiplier = FlashGuard.spike(0.4, 0.4 + (pulse * 2.4 if armed else 0.0))
 	entry["sign"].visible = phase != EventDirector.LIVE
 	var status: Label3D = entry["status"]
 	status.visible = phase == EventDirector.LIVE
@@ -311,7 +312,7 @@ func _update_offer(entry: Dictionary, pulse: float) -> void:
 		"surge_run":
 			_update_surge(entry, model, phase == EventDirector.LIVE, pulse)
 		"hold_the_relay":
-			entry["coil_mat"].emission_energy_multiplier = 0.3 + model.progress() * 4.0 * (0.6 + 0.4 * pulse)
+			entry["coil_mat"].emission_energy_multiplier = FlashGuard.spike(0.3 + model.progress() * 2.4, 0.3 + model.progress() * 4.0 * (0.6 + 0.4 * pulse))
 			status.position = _ground(model.relay) + Vector3.UP * 22.0
 		"scrap_stampede":
 			var hauler: Node3D = entry["hauler"]
@@ -334,7 +335,7 @@ func _update_surge(entry: Dictionary, model, live: bool, pulse: float) -> void:
 			var mat: StandardMaterial3D = g.material_override
 			mat.albedo_color = EventKinds.color("event_started") if next else Palette.SAND
 			mat.emission = mat.albedo_color
-			mat.emission_energy_multiplier = (1.2 + pulse * 2.0) if next else 0.4
+			mat.emission_energy_multiplier = FlashGuard.spike(1.2, 1.2 + pulse * 2.0) if next else 0.4
 	var front: MeshInstance3D = entry["front"]
 	front.visible = live and model.front > 0.0
 	if front.visible:

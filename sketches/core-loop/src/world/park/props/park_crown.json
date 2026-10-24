@@ -1926,6 +1926,129 @@
      "tilt_deg": 0
     }
    ]
+  },
+  "clock_in": {
+   "story": "All hands: the crew's clock-in. Every card is in the rack, 01 to 04 and FOREMAN, and a fresh pair of gloves is set out on the bench for each of them. The shift board has MIND chalked under FOREMAN.",
+   "props": [
+    {
+     "kind": "clock_post",
+     "v": "a",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0
+    },
+    {
+     "kind": "glove_bench",
+     "v": "a",
+     "at": [
+      3.2,
+      -1.6
+     ],
+     "yaw_deg": -20
+    },
+    {
+     "kind": "shift_board",
+     "v": "a",
+     "at": [
+      -3.0,
+      -1.4
+     ],
+     "yaw_deg": 25
+    },
+    {
+     "kind": "lost_glove",
+     "v": "a",
+     "at": [
+      1.2,
+      -3.6
+     ],
+     "yaw_deg": 40
+    }
+   ]
+  },
+  "struck_clock": {
+   "story": "All hands: the storm hit the clock-in. The hood is off, its shingles and the spare cards are scattered round the footing, and a loose panel lies by the shift board. The five cards in the rack never moved.",
+   "props": [
+    {
+     "kind": "clock_post",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0
+    },
+    {
+     "kind": "shift_board",
+     "v": "b",
+     "at": [
+      -3.2,
+      -1.0
+     ],
+     "yaw_deg": -30
+    },
+    {
+     "kind": "glove_bench",
+     "v": "c",
+     "at": [
+      3.0,
+      1.2
+     ],
+     "yaw_deg": 70
+    },
+    {
+     "kind": "fulgurite",
+     "v": "*",
+     "at": [
+      2.0,
+      -3.4
+     ],
+     "yaw_deg": 60
+    }
+   ]
+  },
+  "glove_rest": {
+   "story": "All hands: a crew rest on the climb. Gloves are left to dry on a bench by a stool, and two pairs have dropped where somebody was about to pick them up.",
+   "props": [
+    {
+     "kind": "glove_bench",
+     "v": "b",
+     "at": [
+      0,
+      0
+     ],
+     "yaw_deg": 0
+    },
+    {
+     "kind": "watch_stool",
+     "v": "*",
+     "at": [
+      -2.4,
+      0.8
+     ],
+     "yaw_deg": 0
+    },
+    {
+     "kind": "lost_glove",
+     "v": "b",
+     "at": [
+      2.2,
+      -1.6
+     ],
+     "yaw_deg": 30
+    },
+    {
+     "kind": "rabbitbrush",
+     "v": "*",
+     "at": [
+      0.6,
+      2.6
+     ],
+     "yaw_deg": 0
+    }
+   ]
   }
  },
  "spots": [
@@ -3482,6 +3605,36 @@
    ],
    "yaw_deg": 90,
    "near": "floor line, net-weaver gear"
+  },
+  {
+   "id": "hands_clock_in",
+   "template": "clock_in",
+   "at": [
+    24.0,
+    -140.0
+   ],
+   "yaw_deg": 0,
+   "near": "bajada, below the signal camp"
+  },
+  {
+   "id": "hands_struck_clock",
+   "template": "struck_clock",
+   "at": [
+    -68.0,
+    260.0
+   ],
+   "yaw_deg": 0,
+   "near": "west climb, under the needle strikes"
+  },
+  {
+   "id": "hands_glove_rest",
+   "template": "glove_rest",
+   "at": [
+    38.0,
+    412.0
+   ],
+   "yaw_deg": 270,
+   "near": "crown approach"
   }
  ],
  "litter": {
@@ -3522,7 +3675,7 @@
   ],
   "seed": 31
  },
- "pin": 2071410145,
+ "pin": 2080508897,
  "low_ground_rows": [
   "drop_ramp",
   "watch_butte",

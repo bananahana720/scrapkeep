@@ -26,6 +26,10 @@ The kit tells two stories. The net-weavers are non-hostile builders, so only the
 | `rabbitbrush` | prop | 2736/1812/2944 | 1.7/1.0/1.6 | plant | Dusk-flowering rabbitbrush, a sage-green clump with dusty yellow plumes; in c it has grown up through a fallen iron wheel. |
 | `yucca` | prop | 2644/824/2994 | 2.4/1.6/2.1 | plant | A yucca rosette with a tall cream flower stalk; the dry one is winter-bare, the third grows through a flat gear plate. |
 | `kite_pennant` | prop | 2088/2088/1492 | 1.8/1.5/0.6 | - | A crew pennant on a thick stake in a cairn: out in the wind, slack, or on the ground after the gale. |
+| `clock_post` | prop | 2584/2280 | 2.6/2.5 | machine,sign | The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh. |
+| `glove_bench` | prop | 1436/1668/952 | 0.5/0.6/0.5 | soft | A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them. |
+| `shift_board` | prop | 860/972 | 1.2/1.2 | sign | Sandwich shift board: FOREMAN column chalked MIND, the HANDS column wiped clean every morning. |
+| `lost_glove` | prop | 368/480 | 0.2/0.2 | soft | A work glove dropped on a flat stone, fingers half curled; in b its pair lies beside it. |
 
 Variants run a (in use), b (run down), c (collapsed or overgrown). Notes on swaps and reviews:
 
@@ -34,6 +38,12 @@ Variants run a (in use), b (run down), c (collapsed or overgrown). Notes on swap
 - `fulgurite` is irregular branching pale-glass tubes in a sand scar with a short bent rod beside them: no radial symmetry, no disc, no knobbed stake (those read as a trap or mine).
 - `loom_frame` leans back and carries an awning so it does not read as a two-post gate. Plants-through-scrap are `rabbitbrush_c` (iron wheel) and `yucca_c` (gear plate). Crew warmth: hammock blanket, thermos on a stool, mug and laundry at the booth, steaming dish stone.
 - Keep `kite_pennant` 30 m from lines.
+
+## All hands (23 October 2026)
+
+The Mind's through-line (DECISIONS 18 Oct: the crew were its hands, numbers 01 to 04 plus FOREMAN) had no prop in the crown. Four kinds carry it: `clock_post` (the crew's time clock on one post, five cards in the rack, FOREMAN the wide slot; b is storm-struck with the hood blown off), `glove_bench` (a fresh pair set out per shift), `shift_board` (MIND chalked under FOREMAN, the HANDS column a tally) and `lost_glove`. All four are props, not heroes: the kit already carries four hero kinds against DRESSING-KITS.md's 2 or 3. The clock post stands on one round post so it never reads as a two-post gate.
+
+Three vignettes, appended after the 156 existing spots (which are unchanged): `hands_clock_in` (24, -140) on the bajada below the signal camp, `hands_struck_clock` (-68, 260) on the west climb under the needle strikes, `hands_glove_rest` (38, 412) on the crown approach. Nothing is on `drop_ramp`. Plan `--check`: 1,047 instances, 0 violations; pin 2080508897.
 
 ## Placement (21 October 2026, round 5)
 

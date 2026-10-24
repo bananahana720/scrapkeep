@@ -153,6 +153,9 @@ var _values := {}
 # Parts scale knobs through mods rather than by moving the sliders, so the F1 panel
 # keeps showing the base value and a recompute from the part list is idempotent.
 var _mods := {}
+# Flat amounts the build adds in a key's own unit (grey panels' area_radius, metres); like
+# _mods they never move a slider. Cleared with the mods.
+var _adds := {}
 # Parts shorten the shared boost cooldown; a constant, not a slider row.
 var boost_cooldown_scale := 1.0
 # What the command line set, key to value: reset() returns to how this launch started, so
@@ -273,7 +276,22 @@ func mod(key: String) -> float:
 
 func clear_mods() -> void:
 	_mods.clear()
+	_adds.clear()
 	boost_cooldown_scale = 1.0
+
+
+func set_add(key: String, amount: float) -> void:
+	_adds[key] = amount
+
+
+func add(key: String) -> float:
+	return _adds.get(key, 0.0)
+
+
+# The harpoon's rewind after a landing, in seconds: the slider over the build's recovery rate
+# (Ratchet Collar adds rate, so a stack shortens the wait and never reaches zero).
+func harpoon_rewind() -> float:
+	return f("harpoon_rewind") / maxf(mod("harpoon_recovery"), 0.001)
 
 
 func boost_cooldown() -> float:

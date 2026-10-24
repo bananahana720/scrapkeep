@@ -66,6 +66,16 @@ test("dropping the ground.bin pattern fails the check", () => {
   assert.ok(problems.every((line) => line.includes("/ground.bin ")));
 });
 
+// surface.bin joined the game's reads with park ground step 2 (6485944c) and missed the preset until
+// the 23 Oct release dry run; the same seeded control keeps it covered.
+test("dropping the surface.bin pattern fails the check for every park's surface", () => {
+  const broken = presetText.replaceAll("assets/park/*/surface.bin, ", "");
+  assert.notEqual(broken, presetText);
+  const { problems } = checkPreset({ sketch, presetText: broken, presetName: "Linux x64" });
+  assert.ok(problems.length >= 6);
+  assert.ok(problems.every((line) => line.includes("/surface.bin ")));
+});
+
 test("an empty include filter fails for every park file", () => {
   const broken = presetText.replace(/^include_filter=.*$/gm, 'include_filter=""');
   const { problems } = checkPreset({ sketch, presetText: broken, presetName: "Linux x64" });

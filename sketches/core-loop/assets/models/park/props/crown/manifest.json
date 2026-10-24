@@ -831,6 +831,169 @@
     }
    },
    "line_clear_m": 30.0
+  },
+  "clock_post": {
+   "class": "dress_prop",
+   "tags": [
+    "machine",
+    "sign"
+   ],
+   "story": "The watch crew's time clock on one post under a shingled hood; the card rack is full, 01 to 04 and FOREMAN, every card fresh.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/crown/clock_post_a.glb",
+      "res://assets/models/park/props/crown/clock_post_a_lod1.glb",
+      "res://assets/models/park/props/crown/clock_post_a_lod2.glb"
+     ],
+     "tris": [
+      2584,
+      1275,
+      340
+     ],
+     "radius": 0.854,
+     "height": 2.559
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/crown/clock_post_b.glb",
+      "res://assets/models/park/props/crown/clock_post_b_lod1.glb",
+      "res://assets/models/park/props/crown/clock_post_b_lod2.glb"
+     ],
+     "tris": [
+      2280,
+      1124,
+      297
+     ],
+     "radius": 1.656,
+     "height": 2.48
+    }
+   }
+  },
+  "glove_bench": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "A crew bench with a fresh pair of work gloves set out for every shift; nobody draws them.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/crown/glove_bench_a.glb",
+      "res://assets/models/park/props/crown/glove_bench_a_lod1.glb",
+      "res://assets/models/park/props/crown/glove_bench_a_lod2.glb"
+     ],
+     "tris": [
+      1436,
+      718,
+      154
+     ],
+     "radius": 0.971,
+     "height": 0.542
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/crown/glove_bench_b.glb",
+      "res://assets/models/park/props/crown/glove_bench_b_lod1.glb",
+      "res://assets/models/park/props/crown/glove_bench_b_lod2.glb"
+     ],
+     "tris": [
+      1668,
+      834,
+      183
+     ],
+     "radius": 1.053,
+     "height": 0.581
+    },
+    "c": {
+     "lod": [
+      "res://assets/models/park/props/crown/glove_bench_c.glb",
+      "res://assets/models/park/props/crown/glove_bench_c_lod1.glb",
+      "res://assets/models/park/props/crown/glove_bench_c_lod2.glb"
+     ],
+     "tris": [
+      952,
+      476,
+      105
+     ],
+     "radius": 0.683,
+     "height": 0.542
+    }
+   }
+  },
+  "shift_board": {
+   "class": "dress_prop",
+   "tags": [
+    "sign"
+   ],
+   "story": "Sandwich shift board: FOREMAN column chalked MIND, the HANDS column wiped clean every morning.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/crown/shift_board_a.glb",
+      "res://assets/models/park/props/crown/shift_board_a_lod1.glb",
+      "res://assets/models/park/props/crown/shift_board_a_lod2.glb"
+     ],
+     "tris": [
+      860,
+      430,
+      113
+     ],
+     "radius": 0.652,
+     "height": 1.193
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/crown/shift_board_b.glb",
+      "res://assets/models/park/props/crown/shift_board_b_lod1.glb",
+      "res://assets/models/park/props/crown/shift_board_b_lod2.glb"
+     ],
+     "tris": [
+      972,
+      486,
+      131
+     ],
+     "radius": 1.237,
+     "height": 1.193
+    }
+   }
+  },
+  "lost_glove": {
+   "class": "dress_prop",
+   "tags": [
+    "soft"
+   ],
+   "story": "A work glove dropped on a flat stone, fingers half curled; in b its pair lies beside it.",
+   "variants": {
+    "a": {
+     "lod": [
+      "res://assets/models/park/props/crown/lost_glove_a.glb",
+      "res://assets/models/park/props/crown/lost_glove_a_lod1.glb",
+      "res://assets/models/park/props/crown/lost_glove_a_lod2.glb"
+     ],
+     "tris": [
+      368,
+      184,
+      49
+     ],
+     "radius": 0.451,
+     "height": 0.193
+    },
+    "b": {
+     "lod": [
+      "res://assets/models/park/props/crown/lost_glove_b.glb",
+      "res://assets/models/park/props/crown/lost_glove_b_lod1.glb",
+      "res://assets/models/park/props/crown/lost_glove_b_lod2.glb"
+     ],
+     "tris": [
+      480,
+      240,
+      62
+     ],
+     "radius": 0.592,
+     "height": 0.192
+    }
+   }
   }
  }
 }

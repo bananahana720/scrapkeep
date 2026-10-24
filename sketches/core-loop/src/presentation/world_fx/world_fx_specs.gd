@@ -74,6 +74,35 @@ const SPECS := {
 	"spill_splash_ring": {"set": "spillway", "attach": "burst", "shape": "ring", "blend": "mix",
 		"max": 2, "life": 0.8, "speed": [0.0, 0.0], "spread": 0.0, "explosive": 0.6,
 		"size": [6.3, 7.2], "colour": "FOAM", "alpha": 0.7, "grow": "grow"},
+	# The ball's wake: a rooster tail of spray thrown back off the ball and foam rings left on the
+	# water while it rolls through standing water (WorldFx steers it; "wake" is the ball's own feedback,
+	# not air, so it skips the clear zone, sits at the waterline and stays translucent).
+	"spill_wake_spray": {"set": "spillway", "attach": "wake", "shape": "streak", "blend": "mix", "width": 0.14,
+		"max": 40, "life": 0.55, "speed": [3.5, 7.0], "dir": Vector3(0, 0.8, 1), "spread": 22.0, "gravity": -11.0,
+		"size": [0.45, 0.9], "emit": {"sphere": 0.5}, "colour": "FOAM", "alpha": 0.7, "low": 0.5},
+	"spill_wake_foam": {"set": "spillway", "attach": "wake", "shape": "ring", "blend": "mix",
+		"max": 10, "life": 1.4, "speed": [0.0, 0.2], "spread": 180.0,
+		"size": [1.4, 2.4], "emit": {"sphere": 0.4}, "colour": "FOAM", "alpha": 0.45, "grow": "grow", "low": 0.5},
+	# The powerhouse and the weir gatehouse breathe: a pulsed steam plume off the roof and thin soot.
+	"spill_powerhouse_steam": {"set": "spill_powerhouse", "attach": "anchor", "shape": "dot", "blend": "mix", "pulse": [3.4, 1.6],
+		"max": 22, "life": 3.2, "speed": [2.5, 4.0], "dir": Vector3(0.2, 1, 0), "spread": 12.0, "gravity": 0.5,
+		"damping": [0.6, 1.0], "turb": [0.8, 0.5], "size": [1.6, 4.8], "emit": {"sphere": 0.5}, "colour": ["STEAM", "SMOKE"],
+		"alpha": 0.6, "grow": "grow", "near_m": 4.0, "lod_m": 260.0, "low": 0.5,
+		"impostor": {"size": 10.0, "alpha": 0.16, "colour": "STEAM", "lift": 5.0}},
+	"spill_powerhouse_soot": {"set": "spill_powerhouse", "attach": "anchor", "shape": "dot", "blend": "mix",
+		"max": 10, "life": 5.0, "speed": [0.8, 1.4], "dir": Vector3(0.3, 1, 0.1), "spread": 15.0, "gravity": 0.25,
+		"turb": [0.5, 0.4], "size": [0.9, 2.6], "emit": {"sphere": 0.4}, "colour": ["SOOT", "SMOKE"],
+		"alpha": 0.3, "grow": "grow", "lod_m": 160.0, "low": 0.0},
+	# Flood foam: churned rings and flecks on a rising flood, thickest while it climbs (level-driven).
+	# "fit" stretches the emission box over the water's footprint (WorldFxAnchor.fit).
+	"spill_flood_foam": {"set": "spill_flood", "attach": "anchor", "shape": "ring", "blend": "mix", "level": true, "fit": true,
+		"max": 24, "life": 2.6, "speed": [0.0, 0.4], "spread": 180.0,
+		"size": [1.6, 3.2], "emit": {"box": Vector3(4, 0.05, 4)}, "colour": "FOAM", "alpha": 0.55, "grow": "grow",
+		"lod_m": 160.0, "low": 0.5, "aabb": AABB(Vector3(-80, -6, -80), Vector3(160, 12, 160))},
+	"spill_flood_flecks": {"set": "spill_flood", "attach": "anchor", "shape": "dot", "blend": "mix", "level": true, "fit": true,
+		"max": 20, "life": 1.6, "speed": [0.3, 1.2], "dir": Vector3.UP, "spread": 60.0, "gravity": -3.0,
+		"size": [0.25, 0.6], "emit": {"box": Vector3(4, 0.05, 4)}, "colour": ["FOAM", "SPRAY"], "pick": "random",
+		"alpha": 0.8, "lod_m": 120.0, "low": 0.5, "aabb": AABB(Vector3(-80, -6, -80), Vector3(160, 12, 160))},
 
 	# --- The Dig: dust and drill grit ---------------------------------------------------------
 	"dig_haze": {"set": "dig", "attach": "camera", "shape": "dot", "blend": "mix", "ambient": true,
@@ -303,6 +332,9 @@ const SETS := {
 	"spill_falls": ["spill_falls_spray", "spill_falls_mist"],
 	"spill_pipe": ["spill_pipe_drip"],
 	"spill_pool": ["spill_ripples"],
+	"spill_wake": ["spill_wake_spray", "spill_wake_foam"],
+	"spill_powerhouse": ["spill_powerhouse_steam", "spill_powerhouse_soot"],
+	"spill_flood": ["spill_flood_foam", "spill_flood_flecks"],
 	"dig_drill": ["dig_drill_grit", "dig_drill_sparks"],
 	"dig_ledge": ["dig_rockfall", "dig_rockfall_dust"],
 	"dig_vent": ["dig_vent_steam"],
@@ -352,6 +384,46 @@ const HOOKS := {
 	"title_slam": {"effects": ["title_slam_lines", "title_slam_puffs"], "word": ""},
 	"summary_win": {"effects": ["summary_win_popper", "summary_win_sparks"], "word": "PAID"},
 }
+
+# Run grain (world_fx_grain.gd, principle 21): each run rolls every spec's dials once from the run seed,
+# so the same seed always looks the same and the next run looks a little different. A dial is a
+# [min, max] range rolled uniformly; a spec with no row takes GRAIN_DEFAULT, and ceremony and comic
+# effects (ink) take none, so the comic book never changes between runs.
+#   amount   share of the spec's particles that emit (never over 1: the budgets above still hold)
+#   size     particle size multiplier
+#   speed    initial speed multiplier (gravity, damping and life are left alone, so arcs stay readable)
+#   wind_deg yaw turn of the emitter's direction and directional gravity, in degrees either way
+#   tint     [palette or kit colour, max share]: the emitter's tint leans that far toward the colour
+#   pulse    multiplier on a pulsed spec's period (the powerhouse breathes at its own pace each run)
+# Grain never touches glow or alpha, so FlashGuard and the readability rules see the authored spec.
+const GRAIN_DEFAULT := {"amount": [0.85, 1.0], "size": [0.92, 1.08], "speed": [0.92, 1.08]}
+const GRAIN := {
+	"spill_mist": {"amount": [0.55, 1.0], "size": [0.8, 1.25], "speed": [0.6, 1.5], "wind_deg": 40.0, "tint": ["SPRAY", 0.5]},
+	"spill_midges": {"amount": [0.3, 1.0], "size": [0.85, 1.2], "speed": [0.7, 1.4]},
+	"spill_falls_spray": {"amount": [0.75, 1.0], "size": [0.85, 1.2], "speed": [0.85, 1.2], "tint": ["SPRAY", 0.4]},
+	"spill_falls_mist": {"amount": [0.6, 1.0], "size": [0.8, 1.25], "wind_deg": 30.0, "tint": ["SPRAY", 0.4]},
+	"lm_dam_curtain": {"amount": [0.7, 1.0], "size": [0.9, 1.15], "speed": [0.8, 1.25], "tint": ["SPRAY", 0.35]},
+	"lm_dam_foot_mist": {"amount": [0.55, 1.0], "size": [0.8, 1.3], "wind_deg": 35.0, "tint": ["SPRAY", 0.4]},
+	"lm_penstock_vent": {"amount": [0.7, 1.0], "size": [0.85, 1.2], "speed": [0.8, 1.2], "wind_deg": 25.0, "pulse": [0.75, 1.35]},
+	"spill_wake_spray": {"amount": [0.8, 1.0], "size": [0.85, 1.2], "speed": [0.85, 1.2], "tint": ["SPRAY", 0.3]},
+	"spill_wake_foam": {"amount": [0.7, 1.0], "size": [0.8, 1.25]},
+	"spill_powerhouse_steam": {"amount": [0.65, 1.0], "size": [0.8, 1.3], "speed": [0.8, 1.25], "wind_deg": 35.0,
+		"tint": ["SMOKE", 0.35], "pulse": [0.7, 1.4]},
+	"spill_powerhouse_soot": {"amount": [0.3, 1.0], "size": [0.8, 1.3], "wind_deg": 45.0},
+	"spill_flood_foam": {"amount": [0.7, 1.0], "size": [0.8, 1.25], "tint": ["SANDSTONE", 0.25]},
+	"spill_flood_flecks": {"amount": [0.6, 1.0], "size": [0.85, 1.2], "speed": [0.8, 1.3], "tint": ["SANDSTONE", 0.3]},
+}
+
+# Where the Spillway parks drop their anchor sets (spillway_fx.gd). A row names park rows by id (the
+# set stands on the row's top, lifted lift metres), or a landmark kind (the set stands in the landmark
+# node's own frame: at the mean of the named GLB nodes when they exist, else at `local`, then
+# `offset`). A park without the named row simply places nothing for it.
+const SPILL_PLACES := [
+	{"set": "spill_powerhouse", "rows": ["powerhouse", "weir_gatehouse"], "lift": 0.5},
+	{"set": "spill_falls", "rows": ["weir_deck"], "lift": 0.0, "foot": true},
+	{"set": "landmark_dam", "landmark": "dam", "nodes": ["gate_l", "gate_r"], "local": Vector3(0, 44, -8), "offset": Vector3(0, -3, 5)},
+	{"set": "landmark_penstock_tower", "landmark": "penstock_tower", "nodes": [], "local": Vector3(0, 74, 58), "offset": Vector3.ZERO},
+]
 
 # Live-particle ceilings at the high preset: a world's ambient air plus its worst overlay, and the
 # anchors WorldFx keeps emitting at once near the camera (world_fx_test pins both). The anchor

@@ -2613,6 +2613,21 @@ func _climbing(ball: Vector3, at: Vector3) -> bool:
 	return not _fight_climb.is_empty() and _ground_point(at.x, at.z).y - _ground_point(ball.x, ball.z).y > CLIMB_LEVEL
 
 
+# Whether the straight line from the ball to a point drops more than LEVEL_BAND below the ground at
+# both ends: a ball rolled across falls in and may not climb out, so it takes the climb route, which
+# goes round a trough whose walls are steeper than it climbs.
+# The sinkhole's gate slot stands across its 20 m bowl from the Warden (seed 20 skipper, #397).
+func _dips(ball: Vector3, at: Vector3) -> bool:
+	var terrain = game.ctx.terrain
+	var low := minf(terrain.height(ball.x, ball.z), terrain.height(at.x, at.z)) - LEVEL_BAND
+	var steps := int(_flat(ball, at) / CLIMB_STEP)
+	for k in range(1, steps):
+		var p := ball.lerp(at, float(k) / steps)
+		if terrain.height(p.x, p.z) < low:
+			return true
+	return false
+
+
 # The next point on the climb to a fight target above the ball, or the target when no way up is found.
 func _fight_way_up(ball: Vector3, at: Vector3, delta: float) -> Vector3:
 	if _fight_climb_tick != ticks:
@@ -3085,8 +3100,9 @@ func _to_gate(delta: float) -> void:
 	if side < 2.5 and along < 1.0:
 		target = at + facing * 10.0
 	# Off the gates' island (a Highdraft beacon top), the straight line meets its cliff: climb back.
+	# Off the islands, a straight line across a trough takes the same way round (_dips).
 	var ball_at: Vector3 = game.player.ball_position()
-	if _climbing(ball_at, at):
+	if _climbing(ball_at, at) or (not _island_gates and _dips(ball_at, at)):
 		if _gate_on_top and _island_gates:
 			_gate_on_top = false
 			_gate_falls += 1

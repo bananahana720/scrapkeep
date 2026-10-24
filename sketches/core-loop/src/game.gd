@@ -36,6 +36,11 @@ const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const RewardView := preload("res://src/ui/reward_view.gd")
+const MossBubble := preload("res://src/ui/moss_bubble.gd")
+const ClassCard := preload("res://src/ui/class_card.gd")
+const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
+const ClassPreview := preload("res://src/ui/class_preview.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
@@ -59,6 +64,7 @@ const RESTART_HOLD := 0.5
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
 const SEED := 20260926
+const SimClock := preload("res://src/core/sim_clock.gd")
 const BOSS_PATH := "res://src/boss/boss.gd"
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
@@ -148,6 +154,9 @@ var _restart_latched := false
 # with no time lock (wave 19).
 var summary_latched := false
 var _hit_stopped := false
+# A headless test's stop counts physics ticks, not wall time; -1 is a wall-time stop.
+var _stop_ticks_left := -1
+var _scale_before_stop := 1.0
 # The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
 var last_device := "kbm"
 # Loaded at run time only when the pack carries tools/, never preloaded (lint L7 allows this line).
@@ -290,6 +299,9 @@ func _ready() -> void:
 	panel.name = "TuningPanel"
 	add_child(panel)
 	panel.setup(tuning)
+	var drawer: CanvasLayer = load("res://src/ui/panel_drawer.gd").new()
+	add_child(drawer)
+	drawer.setup(self, panel)
 	# Tests and bots build the menu modules here; a played game builds them behind the menu, and
 	# at once if a run or a camp visit starts first.
 	if test_mode:
@@ -497,6 +509,7 @@ func pilot_unlocked(def) -> bool:
 
 
 func _exit_tree() -> void:
+	_end_hit_stop()
 	if not test_mode:
 		return
 	var dir := DirAccess.open(storage_dir)
@@ -519,6 +532,10 @@ func _physics_process(delta: float) -> void:
 	if not _progress_ready:
 		_progress_ready = true
 		progress.setup(events, run, ctx.profile, Callable(), codex)
+	if _stop_ticks_left > 0:
+		_stop_ticks_left -= 1
+		if _stop_ticks_left == 0:
+			_end_hit_stop()
 	player.drive_basis = camera.yaw_basis()
 	flow.physics_step(delta)
 	if flow.in_play():
@@ -595,17 +612,34 @@ func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 	return player.kit.aim
 
 
+# A played game holds the stop for wall time (the timer ignores the time scale). A headless test
+# (test_mode) holds it for the same span in physics ticks instead, floored: the wall timer usually
+# ends the stop on the next tick after it expires, so floor matches its usual count. Godot reads Engine.time_scale
+# once per frame, so the count is exact only while a frame carries one tick; a slow frame that
+# runs several keeps the ticks after the counter ends slowed too. Runs on the sim clock
+# (SimClock.ticks: the bot and sweep tools, all launched at fixed fps) keep the timer, so balance
+# numbers stay put; a test that sets SimClock.ticks itself keeps it too. Juice still admits and
+# trims stops on SimClock.msec() (wall ms unless SimClock.ticks): this fixes a stop's length, not
+# whether one is sent.
 func hit_stop(seconds: float) -> void:
 	if _hit_stopped or seconds <= 0.0 or not flow.in_play():
 		return
 	_hit_stopped = true
+	_scale_before_stop = Engine.time_scale
 	Engine.time_scale = HIT_STOP_SCALE
-	var timer := get_tree().create_timer(minf(seconds, HIT_STOP_MAX), true, false, true)
+	var held := minf(seconds, HIT_STOP_MAX)
+	if test_mode and not SimClock.ticks:
+		_stop_ticks_left = maxi(1, floori(held * Engine.physics_ticks_per_second))
+		return
+	var timer := get_tree().create_timer(held, true, false, true)
 	timer.timeout.connect(_end_hit_stop)
 
 
 func _end_hit_stop() -> void:
-	Engine.time_scale = 1.0
+	if not _hit_stopped:
+		return
+	Engine.time_scale = _scale_before_stop
+	_stop_ticks_left = -1
 	_hit_stopped = false
 
 
@@ -871,6 +905,11 @@ func set_reduced_motion(on: bool) -> void:
 	HighdraftFx.preferred = on
 	AbilityBar.reduced_motion = on
 	AimReticle.reduced_motion = on
+	RewardView.reduced_motion = on
+	MossBubble.reduced_motion = on
+	ClassCard.reduced_motion = on
+	PilotAntics.reduced_motion = on
+	ClassPreview.reduced_motion = on
 	WorldFx.preferred = on
 	if is_instance_valid(WorldFx.current):
 		WorldFx.current.set_quality(WorldFx.current.low, on)

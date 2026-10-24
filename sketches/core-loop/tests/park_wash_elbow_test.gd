@@ -19,9 +19,14 @@ extends SceneTree
 # neighbouring lava_channel elbows, so this is a positional screen, not a stop predictor.
 # Eased 2026-10-23 (wave 19, ruling #241 item 3): the sinkhole's lava_channel_12, 13 and 21 rows moved (yaw, at, length)
 # so A reads kink 18.3 excess 1.08, B kink 19.2 excess 0.95, and 11>12 (32.1 deg, 1.00) and 13>14 (32.2 deg, 1.07) fall
-# under the excess bound too. The positive controls are now the still-flagged lava_channel_14>15 (33.3 deg, 1.38) and
-# 19>20 (36.1 deg, 1.49). They sit only 0.13 m and 0.24 m over EXCESS_MIN_M, inside the 20 percent margin the
-# bounds were set with, and are the next easing targets: the PR that eases either one moves the positive control.
+# under the excess bound too. Their positive controls were the then-flagged lava_channel_14>15 (33.3 deg, 1.38) and
+# 19>20 (36.1 deg, 1.49), 0.13 m and 0.24 m over EXCESS_MIN_M.
+# Eased 2026-10-23 (wave 19, ruling #241 item 3, second pass): lava_channel_14 shortened (58.51 to 56.5 m) and
+# lava_channel_20 shortened (59.4 to 55.0 m), at and yaw unchanged, so 14>15 reads kink 33.3 excess 1.00 and 19>20
+# kink 36.1 excess 1.12, both under the excess bound, and 13>14 (0.91) and 20>21 (19.2 deg, 0.53) stay unflagged. The
+# positive controls move to the two still-flagged elbows with the widest margin over both bounds: main_tube_lower_3>4
+# (48.7 deg, 15.40 m) and main_tube_upper_7>8 (39.2 deg, 7.42 m). The remaining lava_channel elbow 6>7 (24.3 deg, 2.13)
+# is the next sinkhole wash easing target; its margin is smaller than the chosen controls'.
 # FLAGGED pins the flagged set: a later easing PR shrinks it; a new or vanished entry fails with the diff.
 
 const T := preload("res://tests/support/t.gd")
@@ -36,8 +41,6 @@ const KINK_MIN_DEG := 18.0
 const EXCESS_MIN_M := 1.25
 const FLAGGED: Array = [
 	"park_sinkhole:lava_channel_6>lava_channel_7",
-	"park_sinkhole:lava_channel_14>lava_channel_15",
-	"park_sinkhole:lava_channel_19>lava_channel_20",
 	"park_sinkhole:main_tube_upper_5>main_tube_upper_6",
 	"park_sinkhole:main_tube_upper_7>main_tube_upper_8",
 	"park_sinkhole:main_tube_lower_3>main_tube_lower_4",
@@ -262,7 +265,7 @@ func _run() -> void:
 	t.check("no elbow turns past 90 deg, where the axis kink would read acute (%d)" % hairpins.size(), hairpins.is_empty())
 
 	# Positive controls.
-	for name in ["park_sinkhole:lava_channel_14>lava_channel_15", "park_sinkhole:lava_channel_19>lava_channel_20"]:
+	for name in ["park_sinkhole:main_tube_lower_3>main_tube_lower_4", "park_sinkhole:main_tube_upper_7>main_tube_upper_8"]:
 		var present: bool = by_name.has(name)
 		t.check("positive control %s is an elbow" % name, present)
 		if present:
@@ -287,10 +290,14 @@ func _run() -> void:
 		if present:
 			t.check("negative control %s not flagged (kink %.1f, excess %.2f)" % [name, by_name[name]["kink"], by_name[name]["excess"]], not by_name[name]["flagged"])
 	# Planted: a flagged elbow's numbers with the kink set to 0 must not flag; its kink with no excess must not flag either.
-	var a: Dictionary = by_name.get("park_sinkhole:lava_channel_14>lava_channel_15", {"kink": 33.3, "excess": 4.0})
-	t.check("planted: the 14>15 excess at kink 0 does not flag", not flag(0.0, a["excess"]))
-	t.check("planted: the 14>15 kink at excess 0 does not flag", not flag(a["kink"], 0.0))
-	t.check("planted: the 14>15 kink and excess flag", flag(a["kink"], a["excess"]))
+	var a: Dictionary = by_name.get("park_sinkhole:main_tube_lower_3>main_tube_lower_4", {"kink": 48.7, "excess": 15.4})
+	t.check("planted: the lower_3>4 excess at kink 0 does not flag", not flag(0.0, a["excess"]))
+	t.check("planted: the lower_3>4 kink at excess 0 does not flag", not flag(a["kink"], 0.0))
+	t.check("planted: the lower_3>4 kink and excess flag", flag(a["kink"], a["excess"]))
+	# Planted at the bounds: a bank notch just over both flags; one just under either does not.
+	t.check("planted: kink 18.5 and excess 1.30 flag", flag(18.5, 1.30))
+	t.check("planted: kink 17.5 and excess 1.30 do not flag", not flag(17.5, 1.30))
+	t.check("planted: kink 18.5 and excess 1.20 do not flag", not flag(18.5, 1.20))
 
 	# Pin.
 	var missing: Array = FLAGGED.filter(func(n): return not flagged.has(n))
