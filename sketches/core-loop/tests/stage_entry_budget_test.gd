@@ -163,6 +163,13 @@ func _run() -> void:
 	_t.check("retry of stage 1: activities within %.0f ms" % RETRY_MS, retry_1.get("activities", INF) <= RETRY_MS, _ms(retry_1, "activities"))
 	_t.check("retry of stage 1: set dressing within %.0f ms" % DRESSING_MS, retry_1.get("set_dressing", INF) <= DRESSING_MS, _ms(retry_1, "set_dressing"))
 	await _ticks(SETTLE_TICKS)
+	# The retry rebuilds stage 1's park props a slice a frame, and the slices read stage 1's far meshes. In play they are
+	# done long before the exit; here the last ones could land after reads_before below and count as stage 2's.
+	var props_frames := 0
+	while not _game.presentation.park_props.is_built() and props_frames < WAIT_TICKS_MAX:
+		await process_frame
+		props_frames += 1
+	_t.check("stage 1's park props were built before stage 2's plan", _game.presentation.park_props.is_built(), "%d frames" % props_frames)
 
 	# The next stage builds before the exit, as in play (world.gd starts it when the Warden wakes).
 	# Under SimClock.ticks (set above) prepare() builds it whole inside the call (terrain.gd
@@ -183,6 +190,8 @@ func _run() -> void:
 	for i in CATCH_UP_SPIN:
 		spun += i
 	await physics_frame
+	# Stage 2's reads all count from here: none may start before it.
+	_t.check("stage 2 was not prepared before its far reads are counted", not terrain.is_ready(2))
 	var reads_before: int = ParkProps.far_reads
 	terrain.prepare(2)
 	var waited := 0
