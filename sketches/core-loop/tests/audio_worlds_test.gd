@@ -220,8 +220,8 @@ func _fight_checks() -> void:
 	var boss = _game.boss
 	# Repointed 2026-10-04 (F2a fix round): Brindle's health is posture chunks, so
 	# music_state follows the posture bar and the held chunk, not HP floors.
-	_t.check("W5-5 the boss has the rules music_state reads", BossRules.PHASE_MIN_SECONDS.size() == 3 and BossRules.POSTURE.has("curve"),
-		"phase minimums %s, posture %s" % [BossRules.PHASE_MIN_SECONDS, BossRules.POSTURE])
+	_t.check("W5-5 the boss has the rules music_state reads", BossRules.PHASE_MIN_BY_TIER[0].size() == 3 and BossRules.POSTURE.has("curve"),
+		"phase floors by tier %s, posture %s" % [BossRules.PHASE_MIN_BY_TIER, BossRules.POSTURE])
 	_compare("phase 1 start", boss)
 	boss.jump_to_phase(2)
 	boss._posture.posture = 50.0
@@ -233,14 +233,14 @@ func _fight_checks() -> void:
 
 
 # What music_state must say: the bar's share toward this phase's stagger, 1 and held
-# once the phase's chunk is broken, and the share of the phase's minimum time run.
+# once the phase's chunk is broken, and the share of the phase's floor run.
 func _compare(label: String, boss) -> void:
 	var phase: int = boss.phase
 	var held: bool = BossPosture.CHUNKS - boss.chunks_left() >= phase
 	var want := {
 		"in_phase": 1.0 if held else clampf(boss.posture() / BossPosture.FULL, 0.0, 1.0),
 		"held": held,
-		"phase_seconds": boss.phase_clock / float(BossRules.PHASE_MIN_SECONDS[phase - 1]),
+		"phase_seconds": boss.phase_clock / maxf(boss.phase_floor(), 1.0),
 	}
 	var got: Dictionary = boss.music_state()
 	_t.check("W5-5 %s: music_state matches the reflection" % label,

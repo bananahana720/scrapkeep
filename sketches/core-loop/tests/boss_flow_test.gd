@@ -6,16 +6,17 @@ const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 
 # The fight's shape through the real flow: the run leaves stage 3 into the arena, the
-# arena publishes its facts on time, the clash threshold sits at 150, set pieces hold
-# the fight to 75 s even against infinite damage, the win hangs the crest on the ball
+# arena publishes its facts on time, the clash threshold sits at 150, infinite damage
+# turns each phase no sooner than its flourish and never waits out the old set pieces
+# (Brindle phase floors card, 24 Oct: 76.5 s before), the win hangs the crest on the ball
 # and leads to victory and the summary, and the death screen's T and R both work.
 # Driven tick by tick. Repointed 2026-10-04 (F2a fix round): Brindle is a posture body,
 # so the fight is driven by staggers and contacts, not by gun damage on an HP pool.
 
 const DT := 1.0 / 90.0
-const MIN_FIGHT := 75.0
 const LIMIT := 200.0
 
 # The legacy final-stage rule runs on a three-stage double using surviving maps.
@@ -148,6 +149,9 @@ func _clash_checks() -> void:
 
 
 func _quench_checks() -> void:
+	# The clash checks jumped to phase 3 (two chunks lost); give back the Furnace's chunk, or the
+	# Furnace is held on a broken chunk and turns to the Scuttle once its 2 s flourish has run.
+	_boss._posture.chunks = BossPosture.CHUNKS - 1
 	_boss.jump_to_phase(2)
 	var ring = null
 	for _tick in int(8.0 / DT):
@@ -230,9 +234,18 @@ func _fight_to_the_end() -> void:
 			break
 	var order: Array = _phases.map(func(p): return p["phase"])
 	var on_tick: bool = _phases.all(func(p): return p["live_phase"] == p["phase"] and p["phase_clock"] == 0.0)
-	_report("fight lasts 75 s", defeated_at >= MIN_FIGHT and order == [1, 2, 3, 4] and on_tick and _phases[3]["name"] == "chase",
-		"with infinite damage every tick boss_defeated came %.1f s after arena entry; phases %s at %s s, each published on the tick it began: %s"
-			% [defeated_at, str(order), str(_phases.map(func(p): return snappedf(p["clock"], 0.1))), on_tick])
+	# Each of phases 1 to 3 lasts at least its flourish (the 3 s intro, then the 2 s transition beat)
+	# and less than the set piece it used to wait out.
+	var lengths: Array = []
+	for i in mini(_phases.size() - 1, 3):
+		lengths.append(float(_phases[i + 1]["clock"]) - float(_phases[i]["clock"]))
+	var flourish := [Rules.INTRO_SECONDS, FightPhases.TRANSITION_SECONDS, FightPhases.TRANSITION_SECONDS]
+	var floors_ok: bool = lengths.size() == 3
+	for i in lengths.size():
+		floors_ok = floors_ok and lengths[i] >= flourish[i] and lengths[i] < Rules.SET_PIECE_SECONDS[i]
+	_report("phases turn at the flourish", defeated_at > 0.0 and floors_ok and order == [1, 2, 3, 4] and on_tick and _phases[3]["name"] == "chase",
+		"with infinite damage every tick boss_defeated came %.1f s after arena entry (76.5 s with the set-piece floors); phases %s at %s s, lengths %s against flourishes %s and old set pieces %s; each published on the tick it began: %s"
+			% [defeated_at, str(order), str(_phases.map(func(p): return snappedf(p["clock"], 0.1))), str(lengths.map(func(v): return snappedf(v, 0.1))), flourish, Rules.SET_PIECE_SECONDS, on_tick])
 	var breaks: Array = _phases.slice(1).map(func(p): return p["spilled"])
 	_report("phase breaks pay scrap", breaks.size() == 3 and breaks.all(func(v): return v >= Rules.BREAK_SPILL),
 		"each phase break spilled scrap to roll up around the ship: %s (at least %d each)" % [str(breaks), Rules.BREAK_SPILL])

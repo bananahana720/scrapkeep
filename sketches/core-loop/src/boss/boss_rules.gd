@@ -13,10 +13,21 @@ const POSTURE := {"curve": 2.0, "ram_shatters": false, "mult_max": 1.5}
 # the hull end Requisition, Furnace and Scuttle, and the fourth is the scooter, taken by
 # the catch. hp reads the chunks left, so MAX_HP is the chunk count.
 const MAX_HP := 4.0
-# A phase ends when its chunk is shattered and its set piece has played for its minimum
-# time; a chunk lost earlier holds the phase, and the hull takes no posture, until then.
+# A phase ends when its chunk is shattered and its floor has run; a chunk lost earlier holds
+# the phase, and the hull takes no posture, until then. The floor is the phase's opening
+# flourish (INTRO_SECONDS for the Requisition, the transition beat for the Furnace and the
+# Scuttle, fight_phases.gd) or the run tier's row below, whichever is longer.
 const PHASE_NAMES := ["Requisition", "Furnace", "Scuttle"]
-const PHASE_MIN_SECONDS := [28.0, 24.0, 22.0]
+# The old set-piece floors (DESIGN-NOTES boss note 1): a grown ball routed him but could not
+# skip a set piece, so the fight lasted at least 76.5 s. Cut on 24 Oct (Brindle phase floors
+# card, option 1: overpowered pays); kept here so either other option is one row.
+const SET_PIECE_SECONDS := [28.0, 24.0, 22.0]
+# Seconds each phase must run before a broken chunk turns it, per run tier (run_tier.gd BASE 0,
+# HARD 1). 0 leaves only the flourish. Floors on HARD only: 1: SET_PIECE_SECONDS.
+const PHASE_MIN_BY_TIER := {
+	0: [0.0, 0.0, 0.0],
+	1: [0.0, 0.0, 0.0],
+}
 # No attack lands before this, so the entry and the hull readout are free to read.
 const INTRO_SECONDS := 3.0
 

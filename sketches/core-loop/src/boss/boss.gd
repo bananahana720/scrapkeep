@@ -21,10 +21,10 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # shatters, one of four chunks. Each weak point opens to one verb and adds to the bar,
 # and every attack is a committed hazard that is drawn before it can hit.
 #
-# Each shattered chunk ends a phase, but never before its set piece has played, so the
-# fight lasts at least 75 s however hard the ball hits. A chunk lost early holds the
-# phase until its set piece ends: a grown ball routs him, it does not skip him. The
-# fourth chunk is the scooter, taken by the catch.
+# Each shattered chunk ends a phase, but never before the phase's floor (phase_floor()):
+# its opening flourish, or the run tier's row in Rules.PHASE_MIN_BY_TIER. A strong build
+# breaks him as fast as it can stagger him; the anthem change and the transition beat
+# still play. The fourth chunk is the scooter, taken by the catch.
 #
 # Phases ratchet (fight_phases.gd, Andrew 23 Oct): from the Furnace on, a lead attack is
 # answered by a cued follow-up. The Furnace's reprise fills the other slag ring as the
@@ -236,12 +236,20 @@ func advance(delta: float) -> void:
 
 
 func _maybe_turn_phase() -> void:
-	if state != FIGHT or _chunks_lost() < phase or phase_clock < Rules.PHASE_MIN_SECONDS[phase - 1]:
+	if state != FIGHT or _chunks_lost() < phase or phase_clock < phase_floor():
 		return
 	if phase < 3:
 		_enter_phase(phase + 1)
 	else:
 		_begin_eject()
+
+
+# Seconds this phase must run before its broken chunk turns it: the opening flourish (the
+# no-attack intro in phase 1, the transition beat after), or the run tier's row if longer.
+func phase_floor() -> float:
+	var flourish: float = Rules.INTRO_SECONDS if phase <= 1 else (_phases.transition() if _phases != null else FightPhases.TRANSITION_SECONDS)
+	var row: Array = Rules.PHASE_MIN_BY_TIER.get(ctx.run.selected_run_tier(), Rules.PHASE_MIN_BY_TIER[0])
+	return maxf(flourish, float(row[clampi(phase - 1, 0, row.size() - 1)]))
 
 
 # What the music follows in the fight: how full the posture bar is toward the stagger
@@ -255,7 +263,7 @@ func music_state() -> Dictionary:
 	return {
 		"in_phase": 1.0 if held else clampf(_posture.posture / BossPosture.FULL, 0.0, 1.0),
 		"held": held,
-		"phase_seconds": phase_clock / maxf(float(Rules.PHASE_MIN_SECONDS[phase - 1]), 1.0),
+		"phase_seconds": phase_clock / maxf(phase_floor(), 1.0),
 	}
 
 
