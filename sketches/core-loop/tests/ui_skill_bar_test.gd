@@ -140,20 +140,24 @@ func _bar() -> AbilityBar:
 func _check_layout() -> void:
 	var bar = _bar()
 	var rects: Dictionary = bar.slot_rects()
-	var order: Array = bar.slots.map(func(e): return e["slot"])
+	var order: Array = bar.slots.map(func(e): return e.get("slot", ""))
 	var w: Rect2 = rects.get("weapon", Rect2())
 	var s: Rect2 = rects.get("special", Rect2())
 	var l: Rect2 = rects.get("line", Rect2())
 	var m: Rect2 = rects.get("movement", Rect2())
 	var k: Rect2 = rects.get("smash", Rect2())
+	# Re-pinned 2026-10-24 (#445, actives on by default): the racked active's chip follows the
+	# Ctrl chip, one more chip at the bar's end, keyed by its id.
+	var f: Rect2 = rects.get("active_scrap_rocket", Rect2())
 	var chip := AbilityBar.SLOT * AbilityBar.CHIP_SCALE
-	var size_ok: bool = absf(AbilityBar.bar_size(5).x - k.end.x) < 0.5
-	_report("bar shape", order == ["weapon", "special", "line", "movement", "smash"] and w.size.x == AbilityBar.SLOT
+	var size_ok: bool = absf(AbilityBar.bar_size(6).x - f.end.x) < 0.5 and is_equal_approx(f.size.x, chip) and f.position.x > k.end.x
+	_report("bar shape", order.slice(0, 5) == ["weapon", "special", "line", "movement", "smash"] and bar.slots.size() == 6
+			and String(bar.slots[5].get("id", "")) == "active_scrap_rocket" and w.size.x == AbilityBar.SLOT
 			and l.size.x == AbilityBar.SLOT and is_equal_approx(m.size.x, chip) and is_equal_approx(k.size.x, chip)
 			and absf(m.position.x - l.end.x - AbilityBar.CHIP_GAP) < 0.5 and w.end.x < s.position.x and s.end.x < l.position.x
 			and size_ok,
 		"order %s; slot %.0f px, chip %.0f px, chip gap %.0f px, bar width %.0f vs last chip edge %.0f"
-			% [order, w.size.x, m.size.x, m.position.x - l.end.x, AbilityBar.bar_size(5).x, k.end.x])
+			% [order, w.size.x, m.size.x, m.position.x - l.end.x, AbilityBar.bar_size(6).x, f.end.x])
 	var keys: Array = bar.slots.map(func(e): return e["key"])
 	# A prompt on screen (the boost's Shift at the drop) hides its key on the bar; read it bare.
 	var none: Array[String] = []
@@ -166,12 +170,12 @@ func _check_layout() -> void:
 		return shift
 	var hidden: PackedStringArray = bar.drawn_words()
 	bar.hidden_source = source
-	_report("bar keys", keys == ["key_1", "key_2", "key_3", "key_shift", "key_ctrl"] and bare == PackedStringArray(["1", "2", "3", "Shift", "Ctrl"])
-			and hidden == PackedStringArray(["1", "2", "3", "Ctrl"]),
+	_report("bar keys", keys == ["key_1", "key_2", "key_3", "key_shift", "key_ctrl", "key_f"]
+			and bare == PackedStringArray(["1", "2", "3", "Shift", "Ctrl", "F"]) and hidden == PackedStringArray(["1", "2", "3", "Ctrl", "F"]),
 		"keys %s, words %s, with a live Shift prompt %s" % [keys, bare, hidden])
 	var chain: Control = _game.hud.chain_counter
-	_report("chain right of chips", chain.position.x >= bar.position.x + k.end.x,
-		"chain at x %.0f, last chip ends at %.0f" % [chain.position.x, bar.position.x + k.end.x])
+	_report("chain right of chips", chain.position.x >= bar.position.x + f.end.x,
+		"chain at x %.0f, last chip ends at %.0f" % [chain.position.x, bar.position.x + f.end.x])
 
 
 func _check_glyph() -> void:

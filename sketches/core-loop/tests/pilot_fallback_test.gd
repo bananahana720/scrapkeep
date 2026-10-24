@@ -93,7 +93,10 @@ func _run() -> void:
 	_game.hud.ability_bar.update_slots(slots, probe.color, probe.shape)
 	# Re-pinned 4 -> 5 on 2026-10-10 (wave 13 unit B2): the skill bar publishes three numbered
 	# slots and two chips (design-v3/SKILL-BAR.md section 1).
-	_t.check("ability bar takes the probe's slots", slots.size() == 5 and AbilitySlots.valid(slots) and _game.hud.ability_bar.slots.size() == 5,
+	# Re-pinned 5 -> 6 on 2026-10-24 (#445, actives on by default): the racked active's F chip
+	# follows them.
+	_t.check("ability bar takes the probe's slots", slots.size() == 6 and AbilitySlots.valid(slots) and _game.hud.ability_bar.slots.size() == 6
+		and String(slots[5].get("key", "")) == "key_f",
 		"%d published slots, %d on the bar" % [slots.size(), _game.hud.ability_bar.slots.size()])
 	var keys: Array = ClassKit.card_keys(probe)
 	_t.check("class card row", keys.size() >= 4 and ClassKit.fantasy(probe) != "" and ClassKit.difficulty(probe) > 0,
