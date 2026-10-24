@@ -1621,12 +1621,6 @@ func _activity_goal(delta: float) -> bool:
 		for c in activities.sites:
 			if not is_instance_valid(c) or not _activity_open(c):
 				continue
-			# Under --explore-by a cache off every park route is passed over: on stage 768e9e81 the Flume's
-			# bend_cache (bend_rim_ledge, on no route) still held Rivet's run-up at z -138, 4 m out of the
-			# room and 44 m short of its run-up point, for the rest of the stage, the Warden latch included.
-			if engage_by > ENGAGE_BY and c.id == "cracked_cache" and not c.has_meta("find") and _route_to(c, ball).is_empty():
-				_activity_skip[_site_key(c)] = true
-				continue
 			var level := roundf(c.global_position.y / LEVEL_BAND)
 			# The alpha maps' camp comes after the slice's standing sites, wherever it stands:
 			# on the reach its shelf pulled the explorer off the cache into a wall it cannot pass.
