@@ -72,7 +72,7 @@ def capture_on():
 
 def optix_devices(prefs):
     try:
-        if prefs.compute_device_type != "OPTIX":
+        if prefs.compute_device_type != "OPTIX" or not any(d.type == "OPTIX" for d in prefs.devices):
             prefs.compute_device_type = "OPTIX"
             prefs.refresh_devices()
     except (AttributeError, TypeError, ValueError):
