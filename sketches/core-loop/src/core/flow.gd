@@ -320,6 +320,15 @@ func choose_class(index: int) -> void:
 	_begin_run(classes[index])
 
 
+# The camp's launch gate: a run with the given pilot straight from the title, with no pilot select between
+# (game.launch_from_gate; launch_take.gd hides the cut into the dam).
+func launch_from_title(chosen: Resource) -> bool:
+	if state != TITLE or chosen == null:
+		return false
+	_begin_run(chosen)
+	return true
+
+
 # The death screen's second key: a fresh run with the same class, straight in.
 func new_run() -> void:
 	if ctx.run.class_def == null:
@@ -329,7 +338,9 @@ func new_run() -> void:
 
 
 func show_start_card() -> void:
-	var interactive: bool = not ctx.root.bot_driven
+	# Under the launch take's panel the card stays hidden; game shows it when the panel has gone.
+	var take = ctx.root.get("launch_take")
+	var interactive: bool = not ctx.root.bot_driven and not (take != null and take.busy())
 	start_card.set_interactive(interactive)
 	start_card.show_picks(ctx.run, ctx.profile)
 	start_card.position = Vector2((get_viewport().get_visible_rect().size.x - start_card.size.x) * 0.5, 160.0)
@@ -379,6 +390,9 @@ func _begin_run(chosen: Resource) -> void:
 	if ctx.profile != null and ctx.profile.settle_previous_run_tallies() and ctx.profile.can_save and not ctx.profile.save():
 		warn_once("profile_tally_save", "flow: earlier run tallies not saved: %s" % ctx.profile.last_error)
 	run_won = false
+	# The gate launches this pilot next time (game.gate_pilot); saved with the profile's next save.
+	if ctx.profile != null:
+		ctx.profile.set_last_pilot(chosen.id)
 	ctx.run.begin(chosen)
 	_seed_companion()
 	ctx.events.run_started.emit(chosen.id)
