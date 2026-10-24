@@ -51,7 +51,8 @@ def mesh(triangles):
                                                                          polygons=[0] * triangles))
 
 
-LONG = 16384  # samples: 1920 x 1080 x 16384 = 3.4e10 sample-pixels, over TANDEM_MIN
+TANDEM_AT = 2e10  # the tandem tests switch the size check on at this; the default is off
+LONG = 16384  # samples: 1920 x 1080 x 16384 = 3.4e10 sample-pixels, over TANDEM_AT
 SHORT = 256  # 1920 x 1080 x 256 = 5.3e8, under it
 
 
@@ -76,6 +77,7 @@ class UseTest(unittest.TestCase):
         self.lock = tempfile.NamedTemporaryFile()
         self.addCleanup(self.lock.close)
         self.marker = self.lock.name + ".active"
+        self.tandem_min = TANDEM_AT
 
     def run_use(self, gpus, env=None, driver=True, refuse=False, free=None, triangles=0, images=(), samples=SHORT,
                 then=None):
@@ -85,6 +87,7 @@ class UseTest(unittest.TestCase):
         path = self.driver.name if driver else self.driver.name + ".missing"
         with patch.dict(sys.modules, {"bpy": bpy}), patch.dict(os.environ, env or {}, clear=True), \
                 patch.object(cycles_device, "_warned", set()), \
+                patch.object(cycles_device, "TANDEM_MIN", self.tandem_min), \
                 patch.object(cycles_device, "NVIDIA_DRIVER", path), \
                 patch.object(cycles_device, "free_bytes", lambda: dict(free or {})), \
                 patch.object(cycles_device, "CAPTURE_FILE", self.marker), \
@@ -189,8 +192,18 @@ class UseTest(unittest.TestCase):
         got, _, used = self.run_use(BOTH, free={R3060: 11 * GIB, R4080: 15 * GIB})
         self.assertEqual((got, used), ("GPU", [R4080]))
 
+    def test_default_never_picks_tandem(self):
+        self.assertEqual(cycles_device.TANDEM_MIN, float("inf"))
+        self.tandem_min = cycles_device.TANDEM_MIN
+        def huge(bpy, scene):
+            scene.render.resolution_x, scene.render.resolution_y = 7680, 5760
+            scene.cycles.samples = 65536
+        got, _, used = self.run_use(BOTH, free={R3060: 11 * GIB, R4080: 15 * GIB}, then=huge)
+        self.assertEqual((got, used), ("GPU", [R4080]))
+
     def test_measured_tandem_losses_stay_on_the_4080(self):
-        for size, samples in ((1920, 256), (3840, 512)):
+        self.tandem_min = cycles_device.TANDEM_MIN
+        for size, samples in ((1920, 256), (3840, 512), (3840, 1024), (3840, 4096), (7680, 2048)):
             def at(bpy, scene, size=size, samples=samples):
                 scene.render.resolution_x, scene.render.resolution_y = size, size * 3 // 4
                 scene.cycles.samples = samples
@@ -198,8 +211,8 @@ class UseTest(unittest.TestCase):
             self.assertEqual((got, used), ("GPU", [R4080]), (size, samples))
 
     def test_threshold_is_tunable(self):
-        with patch.object(cycles_device, "TANDEM_MIN", 1e8):
-            got, _, used = self.run_use(BOTH, free={R3060: 11 * GIB, R4080: 15 * GIB})
+        self.tandem_min = 1e8
+        got, _, used = self.run_use(BOTH, free={R3060: 11 * GIB, R4080: 15 * GIB})
         self.assertEqual((got, used), ("GPU", BOTH))
 
     def test_render_pre_redecides_from_the_final_samples(self):

@@ -7,8 +7,9 @@ any run while cycles_device.capture_on() is true.
       SIZExSAMPLES [SIZExSAMPLES ...]
 
 Each run times SCRAPKEEP_CYCLES=all and =4080, swapping which goes first, so a warm cache favours
-neither. Columns: glb, width, height, samples, views, sample_px_view, mode, run, wall_s. Wall is the whole Blender process, start to exit,
-so it includes Blender's start and the GLB import (the same in both modes).
+neither. Columns: glb, width, height, samples, views, sample_px_view, mode, run, wall_s. Wall is
+the whole Blender process, start to exit, so it includes Blender's start and the GLB import (the
+same in both modes).
 """
 import argparse
 import os
