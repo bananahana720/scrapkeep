@@ -79,13 +79,14 @@ func targets() -> Array[Dictionary]:
 	return out
 
 
-# The activity sites still standing: built, valid and not done.
+# The activity sites still standing: built, valid and not done. Field finds (secrets.gd FINDS)
+# are left out, so neither a marker nor the HUD's count gives a secret away.
 func unfinished_sites() -> Array:
 	var out: Array = []
 	if game == null or game.world == null or game.world.activities == null:
 		return out
 	for site in game.world.activities.sites:
-		if is_instance_valid(site) and not site.done:
+		if is_instance_valid(site) and not site.done and not site.has_meta("find"):
 			out.append(site)
 	return out
 

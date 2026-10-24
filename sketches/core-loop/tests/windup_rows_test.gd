@@ -9,6 +9,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const Rogue := preload("res://src/combat/rogue.gd")
 
 var _game
 var _failures := 0
@@ -32,12 +33,16 @@ func _expected(enemy, attack: String) -> float:
 		"miniboss": return enemy.SLAM_CROUCH + enemy.SLAM_LEAP if attack == "E03" else enemy.CHARGE_BRACE
 		"warden": return enemy.PULSE_TELEGRAPH
 		"swarm_remnant": return enemy.swarm.LOCK_WARN
+		"rogue_crane", "rogue_skip", "rogue_tender":
+			return enemy.wind_lane if EventKinds.attack_threat(attack) == "threat_lane" else enemy.wind_ring
 	return enemy.warn_seconds
 
 
 func _walk() -> void:
-	_report("total roster", WindupRows.ROWS.size() == Roster.ROWS.size(), "%d roster kinds, %d rows" % [Roster.ROWS.size(), WindupRows.ROWS.size()])
-	for kind in Roster.ROWS:
+	# 2026-10-23: the three rogue fleet machines (combat/rogue.gd) carry rows beside the roster's.
+	var kinds: Array = Roster.ROWS.keys() + Rogue.ROWS.keys()
+	_report("total roster", WindupRows.ROWS.size() == kinds.size(), "%d roster and rogue kinds, %d rows" % [kinds.size(), WindupRows.ROWS.size()])
+	for kind in kinds:
 		var present := WindupRows.ROWS.has(kind)
 		_report("row " + kind, present, "every roster kind is explicit")
 		if not present:
@@ -71,7 +76,7 @@ func _walk() -> void:
 					and cue.shape == EventKinds.attack_glyph(attack) and expected > 0.0, "existing attack glyph, hazard role and positive enemy timing")
 		for attack in EventKinds.ATTACK_ROWS:
 			var attack_row: Dictionary = EventKinds.ATTACK_ROWS[attack]
-			if attack_row.owner_kind == "roster" and attack_row.owner == kind:
+			if attack_row.owner_kind in ["roster", "rogue"] and attack_row.owner == kind:
 				_report("coverage " + attack, spec.attacks.has(attack), "every attack owned by this roster kind is mapped")
 		if kind == "swarm_remnant":
 			for drone in enemy.swarm.alive():

@@ -300,6 +300,8 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 		_weather_row(out, id, weather[id], events)
 	for id in activities:
 		_site(out, id, activities[id], rows)
+		if activities[id].has("face") and not (_typed(activities[id]["face"], "v2") and _v2_len(activities[id]["face"]) > 0.0):
+			_add(out, id, "type", "face %s is not a nonzero [x, z]" % str(activities[id]["face"]))
 	for id in rescues:
 		_site(out, id, rescues[id], rows)
 		if String(rescues[id]["quest"]) == "":
@@ -640,3 +642,7 @@ static func _add(out: Array, id: String, rule: String, detail: String) -> void:
 
 static func _error(id: String, rule: String, detail: String) -> Dictionary:
 	return {"id": id, "rule": rule, "detail": detail}
+
+
+static func _v2_len(value: Array) -> float:
+	return Vector2(float(value[0]), float(value[1])).length()

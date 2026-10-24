@@ -88,6 +88,11 @@ signal threat_rose(tier: int)
 signal boss_arena_entered
 signal boss_phase_changed(phase: int, name: String)
 signal boss_attack_telegraphed(attack_id: String, seconds_until: float)
+# Fight phases (combat/fight_phases.gd): any boss or mini-boss fight entering phase `phase` of
+# `phases`. The music swaps that fight's anthem on the next downbeat.
+signal fight_phase_changed(fight_id: String, phase: int, phases: int)
+# A cued follow-up: its hazard is drawn in FightPhases.CUE_LEAD and lands seconds_until from now.
+signal attack_cued(fight_id: String, attack_id: String, seconds_until: float)
 signal boss_weak_point_hit(point_id: String)
 signal boss_defeated
 

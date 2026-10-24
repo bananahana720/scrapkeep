@@ -27,6 +27,8 @@ const ANTHEM_PHASES := {
 const ANTHEM_CHAMPION := "anthem-champion"
 const CHAMPION_FINAL_THIRD := 1.0 / 3.0
 const BOSS_SYNTH_THEME := {"brindle": 0, "waking": 1, "mind": 2}
+# A mini-boss anthem's phase-two variant is its tune id plus this (anthem-gate-crane-heavy).
+const HEAVY := "-heavy"
 # The sound bible's picked boss themes (SOUND-INT), one 129 BPM take per boss.
 const PICKED := {"brindle": "boss-brindle", "waking": "boss-waking", "mind": "boss-mind"}
 # Every id with a pack of its own, for MusicRows.
