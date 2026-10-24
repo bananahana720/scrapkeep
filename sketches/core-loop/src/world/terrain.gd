@@ -510,11 +510,29 @@ func perch_near(point: Vector3, salt := 0) -> Vector3:
 		_ensure(stage)
 		var ahead := _take_perch_ahead(i)
 		# The worker read the bare ground; height() matches it only while no overlay or cave roof stands on it.
-		if not ahead.is_empty() and overlays.is_empty() and _cave_roofs.get(i, {}).is_empty():
+		# With overlays down (a landed slide or lip), only the ledges near them are read again: the whole read
+		# on the main thread was an 870 ms frame on the cloud at the Dig's first Dispatcher.
+		var discs = _overlay_discs(m) if not ahead.is_empty() and _cave_roofs.get(i, {}).is_empty() else null
+		if discs != null and (discs as Array).is_empty():
 			_perches[i] = ahead
+		elif discs != null:
+			_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": ahead.blockers,
+				"ledges": PerchPoints.patched_ledges(m.park, height, ahead.found, discs)}
 		else:
 			_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park), "ledges": PerchPoints.ledges(m.park, height)}
 	return PerchPoints.pick(_perches[i]["tops"], point, height, _perches[i]["blockers"], salt, _perches[i]["ledges"])
+
+
+# A disc (Vector3 x, z, radius) around each overlay down, for PerchPoints.patched_ledges; null when an
+# overlay's footprint is unknown (not an OverlayMap profile), and the whole read runs again.
+func _overlay_discs(m) -> Variant:
+	var discs: Array = []
+	for id in overlays:
+		if not (m is EventGround.OverlayMap) or not m.profiles.has(id):
+			return null
+		var site: Dictionary = m.profiles[id].site
+		discs.append(Vector3(float(site.at[0]), float(site.at[1]), ParkMap.footprint_half_extents(site).length()))
+	return discs
 
 
 # The first perch read of a stage walked every landform sample's rings through height(): 80 to 390 ms of one
@@ -535,7 +553,8 @@ func _perch_read_ahead(i: int) -> void:
 static func _queue_perch_read(park: Dictionary, heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array, out: Dictionary) -> int:
 	var ground := func(x: float, z: float) -> float: return _park_height(heights, holes, under, x, z)
 	return WorkerThreadPool.add_task(func():
-		out.merge({"tops": PerchPoints.derive(park, ground), "blockers": PerchPoints.blockers(park), "ledges": PerchPoints.ledges(park, ground)}),
+		var found := PerchPoints.found(park, ground)
+		out.merge({"tops": PerchPoints.derive(park, ground), "blockers": PerchPoints.blockers(park), "found": found, "ledges": PerchPoints.thin(found)}),
 		true, "perch read")
 
 
