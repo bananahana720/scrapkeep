@@ -80,9 +80,15 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # ball (small 57.5 -> 52.4 s over seeds 0 to 7; grown 27.1 -> 27.9 s, seven of eight seeds unchanged). Andrew
 # tapped "Gap wins" at 20:11:31Z 17 Oct: the gap stays everywhere, the first Warden's growth target is
 # GROWTH (1.85x), and hives keep 2x (posture_bands_swarm_test.gd).
+# 2026-10-24 (IL-01 grey panels, #398): re-pinned to the measured medians 62.7 / 28.3 on stage/alpha-w18 3d466be2
+# (bisected to Stack #398, deterministic). Attributed at level 4 on that tree: with the Fin Plate's cruise step at 0
+# small measures 52.3 s; with no panel drops 56.6; with panels weightless 55.7. Fin Plates raise cruise, the divisor of
+# the speed-tier reads (ram tier, Warden tier gate, flail scale), so a small ball that picks them up rams a tier lower
+# (cruise items share this coupling). Bands hold: small/grown 2.2x over the 1.85x floor, grown inside 25 to 45 s;
+# the slice row and the sweep table are unchanged; was 52.7 / 27.1.
 const GROWTH := 1.85
-const EXPECT_SMALL_S := 52.7
-const EXPECT_GROWN_S := 27.1
+const EXPECT_SMALL_S := 62.7
+const EXPECT_GROWN_S := 28.3
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 
