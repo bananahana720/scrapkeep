@@ -3638,7 +3638,7 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 			if not _evaded.has(h.get_instance_id()):
 				_evaded[h.get_instance_id()] = true
 				_count("evasions")
-		var escape := _escape(threats, steer)
+		var escape := _escape(threats, steer, fight if policy == "camper" else null)
 		_plant_state = "idle" if _plant_state == "seek" else _plant_state
 		_specials(fight, true)
 		_drive(escape, aim, delta)
@@ -3730,11 +3730,18 @@ func _hazards() -> Array:
 
 
 # The nearest spot outside every threat, preferring the ball's line and the goal.
-func _escape(threats: Array, steer: Vector3) -> Vector3:
+# away: the camper's Warden. A camper holding its range steers at its own ball, so with no goal and no
+# line every direction scored 0 and the first (+z) won; on the stage 3 hive that heading ran the ball
+# under the collar, where its contacts cracked and shattered the core (camper seed 5 broke the hive at
+# fcddfe10). Inside CAMP_RANGE its escape scores only the heading away from the Warden, so a dodge never closes.
+func _escape(threats: Array, steer: Vector3, away: Node3D = null) -> Vector3:
 	var ball: Vector3 = game.player.ball_position()
 	var v: Vector3 = game.player.planar_velocity()
 	var line := Vector3(v.x, 0.0, v.z).normalized() if v.length() > 1.0 else Vector3.ZERO
 	var goal := Vector3(steer.x - ball.x, 0.0, steer.z - ball.z).normalized()
+	if away != null and is_instance_valid(away) and _flat(ball, away.global_position) <= CAMP_RANGE:
+		goal = Vector3(ball.x - away.global_position.x, 0.0, ball.z - away.global_position.z).normalized()
+		line = Vector3.ZERO
 	for reach in ESCAPE_REACH:
 		var best := Vector3.INF
 		var best_score := -INF
