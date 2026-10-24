@@ -86,8 +86,11 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # the speed-tier reads (ram tier, Warden tier gate, flail scale), so a small ball that picks them up rams a tier lower
 # (cruise items share this coupling). Bands hold: small/grown 2.2x over the 1.85x floor, grown inside 25 to 45 s;
 # the slice row and the sweep table are unchanged; was 52.7 / 27.1.
+# 2026-10-24 (base-cruise ruling, #424): speed-tier reads now use base cruise (tuning.tier_cruise), so a cruise
+# up never drops a hit tier. Re-pinned to the measured medians 56.4 / 28.3; was 62.7 / 28.3. Over 24 seeds
+# (tools/posture_sweep.gd --seeds=0..23, the picked cell) small 51.3 s, grown 27.8 s, ratio 1.85, at the 1.85x floor.
 const GROWTH := 1.85
-const EXPECT_SMALL_S := 62.7
+const EXPECT_SMALL_S := 56.4
 const EXPECT_GROWN_S := 28.3
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10

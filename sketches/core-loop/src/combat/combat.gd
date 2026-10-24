@@ -1274,7 +1274,7 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "", dunk := 0.0)
 	# The dunk's stored slam rides the punch, so every rule below treats it as part of the reel.
 	var punch := punch_of(kind, force) + dunk
 	if enemy.has_method("fight") and enemy.fight() == "posture":
-		var tier: int = SpeedTier.of(force, ctx.player.tuning.f("cruise")) if kind == "ram" else 0
+		var tier: int = SpeedTier.of(force, ctx.player.tuning.tier_cruise()) if kind == "ram" else 0
 		var smash: bool = ctx.player.smash_landing == enemy
 		# A judge that takes the part (warden.gd) meets plating_for(kind, part) (F004);
 		# BossContract's judge_hit is four arguments, so a boss piece gets four.

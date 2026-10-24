@@ -285,7 +285,7 @@ func _on_guard_struck(enemy: Node3D, hit_kind: String, force: float) -> void:
 	if enemy.get("swarm") != guard or not guard.following() \
 			or _guard_scatter_frame != Engine.get_physics_frames() or guard.scatters <= _guard_paid_scatters:
 		return
-	if SpeedTier.of(force, target.tuning.f("cruise")) < SpeedTier.CRUISE:
+	if SpeedTier.of(force, target.tuning.tier_cruise()) < SpeedTier.CRUISE:
 		return
 	_guard_paid_scatters = guard.scatters
 	_apply_posture(judge_hit("guard_rack", 0.0, false, 0))
