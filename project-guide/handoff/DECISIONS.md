@@ -337,7 +337,7 @@ Watch-outs for live design work: the new "electrical field that interrupts" moti
 
 | Old ruling | Replaced by | When |
 | --- | --- | --- |
-| Wardens and earlier boss phases stay at 129 BPM; Eurodance at 140-150 is the final phase only (16-17 Oct, R-22 veto list) | Boss phases ratchet: phase covers at +10 BPM (phase 2) and +20 BPM (phase 3); the Eurodance final phase stays | 23 Oct 19:02Z |
+| Wardens and earlier boss phases stay at 129 BPM; Eurodance at 140-150 is the final phase only (16-17 Oct, R-22 veto list) | Boss phases ratchet: phase covers at +10 BPM (phase 2) and +20 BPM (phase 3); the Eurodance final phase stays, and where 140-150 and the +20 cover differ, the cover wins | 23 Oct 19:02Z |
 | Codex (GPT) standing lane beside each Claude wave; "use GPT heavily" (2, 12, 14 Oct) | Retired: Claude cloud threads do all the work (tap "Retire it") | 17 Oct 20:02 |
 | Camp recreation cut (W18-R1) | Camp back in, hub ring | 16 Oct |
 | Cosmetics as tints; bespoke pilot models cut | Trails, decals, companion paint; 18 cosmetics | 16 Oct |
