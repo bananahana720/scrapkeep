@@ -1,3 +1,4 @@
+# smoke: timeout=300s (179.1 s on stage/alpha-w18 fcddfe10 on 2026-10-24, killed at the 180 s default cap in full-gate shard D)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
