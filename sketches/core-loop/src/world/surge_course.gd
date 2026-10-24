@@ -98,7 +98,10 @@ static func heights(model_ref, rows: PackedStringArray, park: Dictionary, ground
 
 func setup(site: Dictionary, cruise: float, park: Dictionary, ground: Callable) -> void:
 	name = "SurgeCourse"
+	# The course hangs under its ring's site but draws in world space: a node made top_level keeps the global
+	# transform it had (the site's), so it is reset, as the pocket hazards are (activities.gd).
 	top_level = true
+	transform = Transform3D.IDENTITY
 	var ring: Vector2 = site.ring
 	var line := path(park, String(site.route), ring)
 	model = SurgeRun.new({"ring": ring, "route": line.points}, cruise)
