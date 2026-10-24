@@ -45,7 +45,7 @@ const LOOK := Finishes.LOOK
 static var dir := DIR
 static var _sky: PanoramaSkyMaterial
 static var _cloud: StandardMaterial3D
-static var _cloud_image: Image
+static var _cloud_out: Array
 static var _cloud_task := -1
 static var _warned := {}
 static var _coloured := {}
@@ -974,8 +974,8 @@ static func _cloud_material() -> StandardMaterial3D:
 	WorkerThreadPool.wait_for_task_completion(_cloud_task)
 	_cloud_task = -1
 	_cloud = StandardMaterial3D.new()
-	_cloud.albedo_texture = ImageTexture.create_from_image(_cloud_image)
-	_cloud_image = null
+	_cloud.albedo_texture = ImageTexture.create_from_image(_cloud_out[0])
+	_cloud_out = []
 	_cloud.uv1_scale = Vector3(6.0, 6.0, 1.0)
 	_cloud.roughness = 1.0
 	_cloud.metallic_specular = 0.0
@@ -984,11 +984,14 @@ static func _cloud_material() -> StandardMaterial3D:
 
 static func _start_cloud() -> void:
 	if _cloud == null and _cloud_task < 0:
-		_cloud_task = WorkerThreadPool.add_task(_bake_cloud, false, "Highdraft cloud deck")
+		# The worker fills its own array, not a static of this script.
+		var out := []
+		_cloud_out = out
+		_cloud_task = WorkerThreadPool.add_task(func(): out.append(_bake_cloud()), false, "Highdraft cloud deck")
 
 
 # Image and noise only, so it is safe off the main thread; the texture is made on the main thread.
-static func _bake_cloud() -> void:
+static func _bake_cloud() -> Image:
 	var noise := FastNoiseLite.new()
 	noise.seed = 7_310_032
 	noise.frequency = 0.012
@@ -1001,7 +1004,7 @@ static func _bake_cloud() -> void:
 		for x in image.get_width():
 			image.set_pixel(x, y, shade.lerp(cream, smoothstep(0.3, 0.7, image.get_pixel(x, y).r)))
 	image.generate_mipmaps()
-	_cloud_image = image
+	return image
 
 
 static func _landmark(parent: Node3D, file: String, hull: String, label: String, degrees: float, reach: float, base_y: float, scale: float) -> void:
