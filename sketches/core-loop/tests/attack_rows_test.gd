@@ -7,6 +7,7 @@ const Palette := preload("res://src/core/palette.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const Rogue := preload("res://src/combat/rogue.gd")
 
 # The attack rows of ATTACK-READS.md (prerequisite A) are a frozen contract: one row per
 # attack ID the document names, all eight fields, an allegiance colour from the runtime
@@ -27,7 +28,7 @@ const FIELDS_HASH := 4081964357
 # 2026-10-04: re-pinned again for the cogs_collected row (CG2, alpha wave 5 fix round).
 # 2026-10-04: re-pinned for the achievement_earned and rescue_completed rows hearing their own cues (alpha wave 7, snd-achievement-rescue).
 # 2026-10-04: re-pinned for the world_entered row hearing the world stinger at priority 3 (alpha wave 11 fix, zone-entry cue).
-const ROWS_HASH := 394211231  # 2026-10-19 (ACHIEVEMENTS-REFRESH): five quiet rows for the new achievement signals (special_broken, radio_take_found, relay_stake_paid, maker_set_completed, overflow_cashed); existing rows unchanged; was 766403076. 2026-10-18 (Highdraft ring-outs, merged onto stage/alpha-w17): the enemy_ringed_out row hearing ring_out_fall; was 1463771709. 2026-10-17 (item tiers and actives): the active_fired row; was 997489691. 2026-10-09 (wave 12 VX-SURF): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value of weak_point_opened, landmark_hum and reactor_vented; rows otherwise unchanged (restoring the old colour restores the old hash); was 1079977938
+const ROWS_HASH := 3961079298  # 2026-10-24 merge of #391 (boss phases: attack_cued, fight_phase_changed) onto IL-01 grey panels (panel_gained); was 1309837529 (panels) and 1222827016 (#391). 2026-10-23 (IL-01 grey panels): the panel_gained row hearing panel_ratchet; existing rows unchanged; was 394211231. 2026-10-19 (ACHIEVEMENTS-REFRESH): five quiet rows for the new achievement signals (special_broken, radio_take_found, relay_stake_paid, maker_set_completed, overflow_cashed); existing rows unchanged; was 766403076. 2026-10-18 (Highdraft ring-outs, merged onto stage/alpha-w17): the enemy_ringed_out row hearing ring_out_fall; was 1463771709. 2026-10-17 (item tiers and actives): the active_fired row; was 997489691. 2026-10-09 (wave 12 VX-SURF): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value of weak_point_opened, landmark_hum and reactor_vented; rows otherwise unchanged (restoring the old colour restores the old hash); was 1079977938
 # E04 is the one enemy row whose committed lane differs from its roster row's telegraph
 # (the roster names the miniboss's leap, INSTANT).
 const ROSTER_TELEGRAPH_EXEMPT := ["E04"]
@@ -105,6 +106,10 @@ func _check_ids() -> void:
 func _reserved(id: String) -> bool:
 	var row := EventKinds.attack_row(id)
 	var owner := Roster.row(String(row["owner"]))
+	# 2026-10-23 (rogue fleet mini-bosses, Q-P25): E34 to E39 are owned by the rogue rows
+	# (combat/rogue.gd), which sit outside the roster and the document.
+	if row["owner_kind"] == "rogue":
+		return Rogue.ROWS.has(String(row["owner"]))
 	return row["owner_kind"] == "roster" and (owner.has("world") or owner.has("priority"))
 
 
@@ -171,6 +176,9 @@ func _check_references() -> void:
 					bad.append("%s roster %s" % [id, owner])
 				elif id not in ROSTER_TELEGRAPH_EXEMPT and Roster.row(owner)["telegraph"] != _threat_type(row["threat"]):
 					bad.append("%s threat vs roster telegraph" % id)
+			"rogue":
+				if not Rogue.ROWS.has(owner):
+					bad.append("%s rogue %s" % [id, owner])
 			"faction":
 				if not Roster.FACTIONS.has(owner) or not owner in Roster.WARDEN_FAMILIES:
 					bad.append("%s faction %s" % [id, owner])
@@ -188,12 +196,31 @@ func _check_references() -> void:
 					bad.append("%s pilot_any %s" % [id, owner])
 			_:
 				bad.append("%s owner_kind %s" % [id, row["owner_kind"]])
+	# enemy._facts_row tells a rogue's two rows apart by lane: each rogue has one lane attack,
+	# so it owns one lane row and one row for its ring.
+	for owner in Rogue.ROWS:
+		var lanes := 0
+		var rings := 0
+		for id in EventKinds.ATTACK_ROWS:
+			var row := EventKinds.attack_row(id)
+			if row["owner_kind"] == "rogue" and row["owner"] == owner:
+				lanes += 1 if row["threat"] == "threat_lane" else 0
+				rings += 0 if row["threat"] == "threat_lane" else 1
+		if lanes != _rogue_lanes(owner) or lanes + rings != Rogue.ROWS[owner].attacks.size():
+			bad.append("%s rows: %d lane, %d ring" % [owner, lanes, rings])
 	_report("voices by reference", bad.is_empty(), "%d rows whose owner does not resolve to the roster or class rows %s" % [bad.size(), bad])
 	var groups_ok := true
 	for id in EventKinds.attack_ids():
 		var prefix: String = {"E": "enemy", "W": "warden", "B": "brindle", "P": "pilot"}[id.substr(0, 1)]
 		groups_ok = groups_ok and EventKinds.attack_row(id)["group"] == prefix
 	_report("group matches id", groups_ok, "E, W, B and P rows sit in enemy, warden, brindle and pilot")
+
+
+func _rogue_lanes(owner: String) -> int:
+	var lanes := 0
+	for name in Rogue.ROWS[owner].attacks:
+		lanes += 1 if String(Rogue.ATTACKS[name].shape) == "lane" else 0
+	return lanes
 
 
 func _threat_type(key: String) -> int:

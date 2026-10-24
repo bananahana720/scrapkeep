@@ -738,6 +738,12 @@ class Builder:
 			var f := Stamps.frame(row)
 			var lip: Vector2 = f["at"] + f["along"] * (f["length"] * 0.5)
 			var takeoff := door_node([lip.x, lip.y], String(row["id"]))
+			# A lip snapped up a face the graph cannot climb (> CLIMB_M) takes off from the kicker's own node.
+			var own := row_nodes(k)
+			if not own.is_empty() and not own.has(takeoff):
+				var near := g.nearest_in(own, Vector3(lip.x, g.position(takeoff).y, lip.y))
+				if near >= 0 and g.py[takeoff] - g.py[near] > CLIMB_M:
+					takeoff = near
 			var landed := PackedInt32Array()
 			for route in park["routes"]:
 				var seq := ParkGraph.route_sequence(route)

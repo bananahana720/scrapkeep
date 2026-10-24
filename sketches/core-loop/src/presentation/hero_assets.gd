@@ -215,6 +215,8 @@ const SLOTS := {
 }
 
 var ctx
+# Frames left before the Warden stroke prewarm, once the boot card is gone; -1 when it is done or not owed.
+var _prewarm_wait := -1
 # The profile whose equipped paint colours the player's shell; null means no paint anywhere.
 var profile = null
 var _materials := {}
@@ -244,7 +246,7 @@ func setup(ctx_ref) -> void:
 	name = "HeroAssets"
 	_connect_pilot_events()
 	_connect_shell_events()
-	_prewarm_warden_strokes()
+	_prewarm_strokes_in_time()
 	_dress_bay.call_deferred()
 	if ctx != null and ctx.player != null:
 		attach_player(ctx.player)
@@ -547,6 +549,8 @@ func _fit(rec: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
+	if _prewarm_wait >= 0:
+		_step_prewarm()
 	_reaction_clock += delta
 	for key in _players.keys():
 		var rec: Dictionary = _players[key]
@@ -976,7 +980,15 @@ static func update_carrier_bank(pod: Node3D, normal: Vector3, delta: float) -> B
 	var p := pod.global_basis.orthonormalized()
 	var face := p.inverse() * smoothed
 	var hull := _bank_hull(pod)
-	var angle := CarrierBank.angle_for(hull["ring"], yaw, hull["brackets"], face)
+	var solved := CarrierBank.solve(hull["ring"], yaw, hull["brackets"], face)
+	var angle: float = solved["angle"]
+	var residual := 0.0 if solved["clears"] else maxf(0.0, float(solved["reach"]) - CarrierBank.LIMIT)
+	pod.set_meta("bank_residual", residual)
+	if residual <= 0.0:
+		pod.remove_meta("bank_warned")
+	elif CarrierBank.UP.cross(face).length() >= CarrierBank.FLAT and (not pod.has_meta("bank_warned") or pod.get_meta("bank_warned") != hull["key"]):
+		pod.set_meta("bank_warned", hull["key"])
+		push_warning("hero_assets: no carrier bank clears the %.2f m limit (%.3f m over) for hull %s" % [CarrierBank.LIMIT, residual, hull["key"]])
 	var bank := CarrierBank.basis_for(face, angle)
 	var levels: Array[Basis] = []
 	for c in carriers:
@@ -2735,6 +2747,25 @@ func _split_queen_hatch(weak: MeshInstance3D, rec: Dictionary) -> void:
 	shutter.position = -hinge.position
 	hinge.add_child(shutter)
 	rec.queen_hatch = hinge
+
+
+# A played game prewarms behind the title, a frame after the boot card is gone (_process): in setup it
+# held the menu for 80 to 85 ms (MENU-READY, cloud exported build). Tests, bots and a scene without a
+# game root prewarm here, as before. The first Warden is stages away from the title either way.
+func _prewarm_strokes_in_time() -> void:
+	var root = ctx.get("root") if ctx != null else null
+	if root == null or root.get("test_mode") != false:
+		_prewarm_warden_strokes()
+		return
+	_prewarm_wait = 1
+
+
+func _step_prewarm() -> void:
+	if get_tree().root.get_node_or_null("Boot") != null:
+		return
+	_prewarm_wait -= 1
+	if _prewarm_wait < 0:
+		_prewarm_warden_strokes()
 
 
 func _prewarm_warden_strokes() -> void:

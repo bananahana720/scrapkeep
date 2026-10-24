@@ -40,6 +40,9 @@ var rules: Array = []
 var sets: Array = []
 # Flat per-hit weapon damage from parts, before the weapon multipliers.
 var punch := 0.0
+# Flat amounts in their own unit, by tuning key (grey panels: area_radius in metres). They
+# reach the readers through tuning.add(key).
+var adds := {}
 
 
 static func from_parts(held: Array) -> RefCounted:
@@ -115,6 +118,8 @@ func apply(tuning, run) -> void:
 	tuning.clear_mods()
 	for knob in mods:
 		tuning.set_mod(knob, mods[knob])
+	for key in adds:
+		tuning.set_add(key, adds[key])
 	tuning.boost_cooldown_scale = cooldown_scale
 	if run != null and not is_equal_approx(run.max_hp, run.base_max_hp() + max_hp_bonus):
 		run.set_max_hp(run.base_max_hp() + max_hp_bonus)

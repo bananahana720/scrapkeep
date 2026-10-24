@@ -82,7 +82,9 @@ func _run() -> void:
 	# 2026-10-12 (W13 coordinator): the pin holds the shared rows; P-C kit rows sit in marked blocks.
 	# 2026-10-17 (crown authored pass): isles_rescued, Tally's sky-islands rescue, 43 + 1.
 	# 2026-10-19 (w20 ACHIEVEMENTS-REFRESH): six reward-free content-family rows; was 44.
-	_t.eq("P3-3 fifty rows today", PilotBlocks.shared(rows.keys(), "res://src/core/achievements.gd").size(), 50)
+	# 2026-10-24 (#402 Spillway roster): five record-only ach_w19_* rows (mat_slip, flap_ride,
+	# hook_out, armour_wet, boom_strike), 50 + 5.
+	_t.eq("P3-3 fifty-five rows today", PilotBlocks.shared(rows.keys(), "res://src/core/achievements.gd").size(), 55)
 	await _frames(2)
 	_t.check("Back stays visible during page entry", root.get_visible_rect().encloses(page.back.get_global_rect()))
 	await _reach_rows(page)

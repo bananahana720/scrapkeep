@@ -20,7 +20,7 @@ const WORD_FONT := 72
 const ICON_HEIGHT := 3.1
 const ICON_SIZE := 0.32
 const READ_STATES := {"resisted": "dented", "weak": "zzapped"}
-const CODEX_OF := {"plated": "armour_plated"}
+const CODEX_OF := {"plated": "armour_plated", "wet": "armour_wet"}
 
 var ctx
 var words: Array = []

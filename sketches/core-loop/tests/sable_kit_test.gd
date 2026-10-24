@@ -5,6 +5,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const DamageFamilies := preload("res://src/combat/damage_families.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -155,7 +156,9 @@ func _run() -> void:
 	enemy._knock = Vector3.ZERO
 	var exit: Dictionary = _player.bank_geometry()
 	_cast()
-	_t.near("body pivot damage scales by chain", hp - enemy.hp, 10.0 * mult, 0.01)
+	# The chaser is a soaked Spillway crew (design-v3/SPILLWAY-ROSTER.md): arc lands at its wet multiplier.
+	var soaked := DamageFamilies.mult(String(DamageFamilies.ARMOUR_OF.get("chaser", "")), "arc", "")
+	_t.near("body pivot damage scales by chain", hp - enemy.hp, 10.0 * mult * soaked, 0.01)
 	_t.near("body exit", _player.state.velocity.length(), 29.0, 0.01)
 	var knock: Vector3 = Vector3(enemy._knock.x, 0.0, enemy._knock.z)
 	var away: Vector3 = -(exit["dir"] as Vector3)
@@ -185,7 +188,7 @@ func _run() -> void:
 	Augments.commit_smash(_player.kit, _player.tuning, _player.state.velocity)
 	hp = enemy.hp
 	_cast()
-	_t.near("smash pivot arc is immediate", hp - enemy.hp, 10.0, 0.01)
+	_t.near("smash pivot arc is immediate", hp - enemy.hp, 10.0 * soaked, 0.01)
 	_t.check("redirect waits for paid smash", not _player._bank_pending.is_empty() and _player.kit.line_state == Augments.LINE_SMASH)
 	_t.near("smash keeps incoming velocity until contact", _player.state.velocity.length(), 20.0, 0.01)
 	_player._begin_landing(enemy)

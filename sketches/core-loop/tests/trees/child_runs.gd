@@ -41,6 +41,32 @@ static func run(jobs: Array, timeout_s: float, parallel := 0) -> Array:
 	return out
 
 
+# Runs jobs one at a time inside a shared wall budget. Each child's hang guard is an equal share
+# of what is left, so a slow box spends more of the budget and a hung child is still killed inside
+# it. A job's optional "env" is set for its child only. Each result also carries "seconds" and "wall".
+static func run_shared(jobs: Array, budget_s: float) -> Array:
+	var started := Time.get_ticks_msec()
+	var out := []
+	for i in jobs.size():
+		var job: Dictionary = jobs[i]
+		var wall := (budget_s - (Time.get_ticks_msec() - started) / 1000.0) / (jobs.size() - i)
+		var previous := {}
+		for key in job.get("env", {}):
+			previous[key] = OS.get_environment(key)
+			OS.set_environment(key, job["env"][key])
+		var child_start := Time.get_ticks_msec()
+		var result: Dictionary = run([job], wall)[0]
+		result["seconds"] = (Time.get_ticks_msec() - child_start) / 1000.0
+		result["wall"] = wall
+		for key in previous:
+			if previous[key].is_empty():
+				OS.unset_environment(key)
+			else:
+				OS.set_environment(key, previous[key])
+		out.append(result)
+	return out
+
+
 static func _start(job: Dictionary, log_path: String, project: String) -> Dictionary:
 	var args: Array = ["--headless", "--fixed-fps", "90", "--log-file", log_path, "--path", project,
 		"--script", job["script"], "--"] + job.get("args", [])

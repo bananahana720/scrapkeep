@@ -1,11 +1,16 @@
 extends "res://src/combat/counter.gd"
 
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
+
 # The ramp-flipper (DESIGN-V2 section 15.4): a crew figure hauling a hinged floor plate.
 # It drops the plate where the ball will roll and the warning is an instant ring over
 # it; the plate is drawn tilting up over the warning, so the fling is shown before it
 # happens. Live, a grounded ball on the plate is flung up and off its line, sideways,
 # for TILT seconds. Jump while it tilts and you ride it as a ramp instead: the fling
 # turns into lift along your own line, with the break refund.
+# Flow (design-v3/SPILLWAY-ROSTER.md): in the Spillway it is a sluice flap, and speed is the
+# other answer. A ball that reaches the plate at FAST tier or above is never caught: it rides
+# the plate as a launch ramp along its own line, RIDE_UP lift plus a RIDE_KICK shove forward.
 
 const PLATE_RADIUS := 3.6
 const LEAD := 0.9
@@ -13,6 +18,8 @@ const TILT := 0.35
 const FLING_UP := 30.0
 const FLING_SIDE := 22.0
 const RIDE_UP := 9.0
+const RIDE_KICK := 4.0
+const RIDE_TIER := SpeedTier.FAST
 const HP := 45.0
 
 var flings := 0
@@ -114,6 +121,10 @@ func _go_live() -> void:
 	if ring == null or not ring.contains(_real_ball()) or not player.state.on_floor():
 		broken_by = "missed"
 		return
+	if player.speed_tier() >= RIDE_TIER:
+		broken_by = "speed"
+		_ride(player.planar_velocity().normalized() * RIDE_KICK)
+		return
 	if _catch(TILT):
 		flings += 1
 
@@ -126,12 +137,17 @@ func _live(_delta: float) -> bool:
 
 
 func _on_broken(method: String) -> void:
-	if method != "jump":
-		return
+	if method == "jump":
+		_ride(Vector3.ZERO)
+
+
+func _ride(kick: Vector3) -> void:
 	rides += 1
 	var step := get_physics_process_delta_time()
 	if step > 0.0:
-		_player().add_external_accel(Vector3.UP * RIDE_UP / step)
+		_player().add_external_accel((Vector3.UP * RIDE_UP + kick) / step)
+	if fleet != null:
+		fleet.discover("flap_ride", _real_ball())
 
 
 func _on_end() -> void:

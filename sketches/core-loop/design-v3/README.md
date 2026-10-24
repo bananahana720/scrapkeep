@@ -1,19 +1,19 @@
 # Core-loop design documents
 
-[DESIGN-V3](DESIGN-V3.md) owns current gameplay direction. [ALPHA-PLAN](ALPHA-PLAN.md) owns the program; [HANDOFF](HANDOFF.md) owns the live coordinator handoff. D1 marks historical sources for archival, but this unit keeps every externally referenced file and preserves the storyboard package because its non-Markdown references cannot be repaired inside this fence.
+[DESIGN-V3](DESIGN-V3.md) owns current gameplay direction. The live plan and handoff are [GRAPH](../../../project-guide/coord/GRAPH.md) and [ROADMAP](../../../project-guide/coord/ROADMAP.md); rulings are in [DECISIONS](../../../project-guide/handoff/DECISIONS.md). [ALPHA-PLAN](ALPHA-PLAN.md) and [HANDOFF](HANDOFF.md) are historical (1 to 10 Oct). D1 marks historical sources for archival, but this unit keeps every externally referenced file and preserves the storyboard package because its non-Markdown references cannot be repaired inside this fence.
 
 ## Current documents
 
-- [ALPHA-PLAN.md](ALPHA-PLAN.md): Authorized scope and milestone definitions; waves 1 to 4 landed.
+- [ALPHA-PLAN.md](ALPHA-PLAN.md): Historical plan (1 to 10 Oct): authorized scope and milestone definitions.
 - [DESIGN-V3.md](DESIGN-V3.md): Single current gameplay design and D1 disposition table.
-- [HANDOFF.md](HANDOFF.md): Live coordinator handoff, updated each wave.
+- [HANDOFF.md](HANDOFF.md): Historical handoff log (3 to 10 Oct). The live handoff is [GRAPH](../../../project-guide/coord/GRAPH.md).
 - [HOOK-CHAIN.md](HOOK-CHAIN.md): Detailed chain contract and acceptance work.
 - [POLES-FLAILS.md](POLES-FLAILS.md): Wave 20 proposal for poles and flails on the harpoon.
 - [LEGIBILITY.md](LEGIBILITY.md): Accepted presentation grammar and measurement references.
 - [MACHINE-VFX.md](MACHINE-VFX.md): Enemy and boss effects, the specials' tell contract and their budget.
 - [TRAVERSAL.md](TRAVERSAL.md): Traversal measurements and definitions consumed by code and tests.
 - [TESTING.md](TESTING.md): Test method and historical runner measurements.
-- [ROADMAP.md](ROADMAP.md): Completion checkpoints and unlock sequence.
+- [ROADMAP.md](ROADMAP.md): Historical milestone definitions. The live roadmap is [project-guide/coord/ROADMAP.md](../../../project-guide/coord/ROADMAP.md).
 - [OWNER-INTERVIEW-2026-10-02.md](OWNER-INTERVIEW-2026-10-02.md): Accepted owner answers and provenance.
 - [LORE-TONE-SAMPLE.md](LORE-TONE-SAMPLE.md): Lore tone sample retained by the unit instruction.
 

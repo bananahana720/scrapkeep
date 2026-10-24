@@ -163,17 +163,35 @@ func _run() -> void:
 	_t.check("retry of stage 1: activities within %.0f ms" % RETRY_MS, retry_1.get("activities", INF) <= RETRY_MS, _ms(retry_1, "activities"))
 	_t.check("retry of stage 1: set dressing within %.0f ms" % DRESSING_MS, retry_1.get("set_dressing", INF) <= DRESSING_MS, _ms(retry_1, "set_dressing"))
 	await _ticks(SETTLE_TICKS)
+	# The retry rebuilds stage 1's park props a slice a frame, and the slices read stage 1's far meshes. In play they are
+	# done long before the exit; here the last ones could land after reads_before below and count as stage 2's.
+	var props_frames := 0
+	while not _game.presentation.park_props.is_built() and props_frames < WAIT_TICKS_MAX:
+		await process_frame
+		props_frames += 1
+	_t.check("stage 1's park props were built before stage 2's plan", _game.presentation.park_props.is_built(), "%d frames" % props_frames)
 
 	# The next stage builds before the exit, as in play (world.gd starts it when the Warden wakes).
 	# Under SimClock.ticks (set above) prepare() builds it whole inside the call (terrain.gd
 	# _worker_builds), so the wait loop below ends at once; the entry handlers timed here run after it.
 	var terrain = _game.ctx.terrain
+	# Stage 1's own ParkProps build slices its far reads over frames by wall time (32 reads); on a loaded box it runs
+	# past the settle ticks and its reads landed in stage 2's count below (7 to 37 against 5, w18 gate). In play the
+	# stage is long built before the Warden wakes, so wait for it.
+	var stage_props = _game.presentation.park_props
+	var built_wait := 0
+	while not stage_props.is_built() and built_wait < WAIT_TICKS_MAX:
+		await process_frame
+		built_wait += 1
+	_t.check("stage 1's park props finished building before stage 2's plan", stage_props.is_built(), "%d frames" % built_wait)
 	# A slow frame just before the build (a spin of 0.1 s or more), so the frames after it step physics several times
 	# before any _process (the 4080's case in row 26b): the wait below must still see both plans started.
 	var spun := 0
 	for i in CATCH_UP_SPIN:
 		spun += i
 	await physics_frame
+	# Stage 2's reads all count from here: none may start before it.
+	_t.check("stage 2 was not prepared before its far reads are counted", not terrain.is_ready(2))
 	var reads_before: int = ParkProps.far_reads
 	terrain.prepare(2)
 	var waited := 0

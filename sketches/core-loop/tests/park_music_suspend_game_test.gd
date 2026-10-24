@@ -52,8 +52,12 @@ func _suspension(in_bay: bool, aligned := false) -> void:
 	game.events.event_started.connect(func(id):
 		if id == "plunge_pool_flood":
 			var e = audio.engine
-			starts.append({"stage": game.world.events.stage_time, "sample": e.clock,
-				"origin": e.bar_origin, "bar": e.step_len * Harmony.STEPS_PER_BAR}))
+			# The next downbeat as the engine books it: the ACE grid when a track plays, else the synth bar.
+			var bar: int = e.step_len * Harmony.STEPS_PER_BAR
+			var next: int = e.bar_origin + ceili(float(e.clock - e.bar_origin) / bar) * bar
+			if e.grid != null:
+				next = e.grid.next_bar(e.clock)
+			starts.append({"stage": game.world.events.stage_time, "sample": e.clock, "next": next}))
 	game.world.director.stage_time = game.world.director.TIER_SECONDS
 	for frame in 120:
 		await physics_frame
@@ -142,12 +146,12 @@ func _suspension(in_bay: bool, aligned := false) -> void:
 		await physics_frame
 		if starts.is_empty(): continue
 		if after_fact:
-			expected = starts[0].origin + ceili(float(starts[0].sample - starts[0].origin) / starts[0].bar) * starts[0].bar
+			expected = starts[0].next
 		if audio.engine.clock > expected + audio.engine.beat_len(): break
 	var drops: Array = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == "drop_flood")
 	t.check(label + " unchanged director landing", float(flood.due_s) == float(announcement[0].stage), str([flood.due_s, announcement[0].stage]))
 	t.check(label + " exactly one resumed director drop", starts.size() == 1 and drops.size() == 1 and drops[0].at == expected
-		and posmod(expected - resume.get("origin", 0), resume.get("bar", 1)) == 0, str([starts, drops.map(func(a): return a.at), expected, resume]))
+		and (after_fact or posmod(expected - resume.get("origin", 0), resume.get("bar", 1)) == 0), str([starts, drops.map(func(a): return a.at), expected, resume]))
 	heard = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == "riser_natural")
 	t.check(label + " resume never replays riser", heard.map(func(a): return a.at) == expected_warning, str(heard.map(func(a): return a.at)))
 	probe.queue_free()

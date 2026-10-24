@@ -1,17 +1,32 @@
-# Lanes and sessions (18 Oct 2026, local coordinator)
+# Lanes and sessions (22 Oct 2026, local coordinator)
 
-The claude.ai project threads on the old account are closed; their roles are now the lanes below. Ownership, units and test gates are in [GRAPH.md](../coord/GRAPH.md); lane briefs follow [LANE-BRIEF.md](../coord/LANE-BRIEF.md). The 05:55Z roster is in git history.
+This file lists the session behind each lane. [GRAPH.md](../coord/GRAPH.md) owns what each lane works on now, who owns which files and the test gates. Lane briefs follow [LANE-BRIEF.md](../coord/LANE-BRIEF.md). The live board is issue #241. Every ruling is posted there as a `COORDINATOR:` comment, and the lane that owns it also gets a direct message.
 
-## Roles
+**Cloud lanes are one-way.** They take a direct message but can't reply to it, and they read the board only when they page it. A ruling can reach a lane late (Gate, World and Lighting each missed one on 22 Oct by 1 to 4 hours), so restate the head SHA in every message.
 
-| Role | Where | Owns | Replaces (old thread) |
-| --- | --- | --- | --- |
-| Coordinator | Claude Code session on the PC | the graph, admission to main, records (DECISIONS, LESSONS, STATE, GRAPH), escalations to Andrew, check-ins | Coordinator (project chat); Project library and lessons learned |
-| Gate + staging | Cloud lane | `stage/alpha-w<N>`: re-gates, stacking, full gate shards, row pins, one red team persona per stage head, five at wave close | Cloud gate; Cloud staging candidate; Bot shards 6 and 7; Faster test and red team loops; Per-wave red team |
-| Systems | Cloud lane | gameplay and systems units, launch shell, title intros, help and achievements, bot behaviour | World 2 and 3 enemy identity; Reward overpowered builds; Wire picked themes; actives threads |
-| World | Cloud lane | Blender models, landmarks, dressing, park authored passes, placeholders | Polish threads (models, enemies, bosses, props); park authored passes; camp hub |
-| Perf | Cloud lane | freezes and frame cost: Rivet carve, stage entry, boss spawn, dense fights, SWAP-HITCH-6 | Stage entry freeze; Runner Gunner ultimate freeze; Boss spawn freeze; Dense fight frame cost |
-| GPU bench | Local session on the PC | the 4080 queue `~/scratch/w17/gpu-queue.md` | PC machine session (Remote Control) |
-| Music | Local session on the PC | `scripts/music/mx`: radio takes, camp split, renders | PC music session (Remote Control) |
+## Sessions (cloud lanes as listed in GRAPH.md; cap 11, ROADMAP plan 21 Oct)
 
-At most 4 cloud lanes run at once (Andrew, 18 Oct). Session links and live state are on the wave's Wave board issue.
+| Role | Where | Session |
+| --- | --- | --- |
+| Coordinator | Claude Code on the PC | "Wave 18-21 roadmap and PR closes" |
+| Gate + staging | cloud | "Scrapkeep w17: Gate + staging lane" |
+| Systems | cloud | "Scrapkeep w17: Systems lane" |
+| World | cloud | "Scrapkeep w17: World lane, restart" |
+| Perf | cloud | "Scrapkeep w17: Perf lane" |
+| Challenge | cloud | "Scrapkeep: Challenge lane, Souls-like difficulty" |
+| Dressing | cloud | "Scrapkeep: Dressing lane, lived-in parks" |
+| Lighting | cloud | "Scrapkeep w18: Lighting lane" |
+| Systems B | Claude Code on the PC | "Scrapkeep w18: Systems B lane (PC)" |
+| GPU bench | Claude Code on the PC | "Scrapkeep w18: GPU bench (4080 …)" |
+| Render bench | Claude Code on the PC | "Scrapkeep w18: Render bench (RTX 3060)" |
+| revive-228 | Claude Code on the PC | "Scrapkeep w18: revive #228 help and motion pack" |
+
+The GPU bench pins to CCD0 (`taskset -c 0-7,16-23`). The render bench pins correctness jobs to CCD1 (`nice -n 10 taskset -c 8-15,24-31`).
+
+## Paused until wave 19 (kept, not archived)
+
+Animation, Grading, Effects, Challenge B (stages 4 to 6 and the replay ladder), Modeling and Ambient life. These are cloud lanes, reused in wave 19 by direct message.
+
+## Finished, safe to archive (cloud, from the Claude Code session list)
+
+Challenge B band shards 1 to 8, every "Challenge worker: …" row (baselines, sweeps, libraries, fast lanes), "Challenge writer: #104 grown posture reds" (#104 closed), "Challenge full gate bt5 head", "Scrapkeep Gate shard runner: wave 17 rest shard" and "Scrapkeep cloud environment setup". The coordinator can't archive cloud sessions from the PC, so Andrew does it from the sidebar.
