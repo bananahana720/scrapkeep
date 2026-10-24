@@ -694,6 +694,13 @@ func parameters_stage_entered() -> void:
 	_parameter_danger_floor = 0.0
 
 
+# An arena has no landing phrase to wait for: the fight's band starts with the melody, so
+# the committed release clears now as well, and the ACE player (audio.gd) is told the same.
+func parameters_arena_entered() -> void:
+	parameters_stage_entered()
+	parameter_committed_released = false
+
+
 func _riser_into(bar: int) -> void:
 	if bar - beat_len() > clock and bar - _last_riser >= RISER_SPACING:
 		_last_riser = bar

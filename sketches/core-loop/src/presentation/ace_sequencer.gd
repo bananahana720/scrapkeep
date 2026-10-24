@@ -302,6 +302,16 @@ func commit_parameters(at: int, values: Dictionary, released: bool, lift: bool, 
 	_add({"at": maxi(at, clock), "type": "parameters", "values": values.duplicate(), "released": released, "lift": lift, "reason": reason, "timing": timing.duplicate()})
 
 
+# The arena clears a Warden break's release at once (audio.gd stage_content_cleared): the
+# queued commits stop carrying it, and the live stems reopen over STOP_RAMP.
+func clear_release() -> void:
+	for action in actions:
+		if action["type"] == "parameters":
+			action["released"] = false
+	if parameter_released:
+		_run({"type": "parameters", "values": parameters, "released": false, "lift": ultimate_lift, "reason": "arena", "timing": {}})
+
+
 # Demucs's other stem carries the melodic roles; drums and bass retain their profiles.
 # At full threat/approach the recorded mix is unchanged. Armour and release remove other.
 # Two momentum faders ride on top when the feed carries them (INTEGRATION section 2):

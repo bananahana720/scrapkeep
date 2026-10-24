@@ -1692,9 +1692,12 @@ func wire_optional() -> void:
 		_disarm_launch()
 		_event_id = ""
 		_chase_lead0 = -1.0
-		# Arena entry and retry are the fight's stage entry: a flume Warden's break no longer strips the band.
+		# Arena entry and retry are the fight's stage entry: a flume Warden's break no longer
+		# strips the band, synth or ACE stems, and a Warden-break commit still queued is void.
 		if reason in ["arena", "arena_retry"]:
-			engine.parameters_stage_entered()
+			engine.parameters_arena_entered()
+			if ace != null:
+				ace.clear_release()
 		if reason == "arena_retry" and sound_ready:
 			# R in the arena: Brindle's music from phase 1, out of DEAD mode, with a pickup.
 			engine.cancel_pending()
