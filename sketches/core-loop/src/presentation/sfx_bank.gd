@@ -92,7 +92,7 @@ const TRIM_DB := {
 	"stinger_boss_defeated": -1.0,
 	"womp": -8.0, "build_riser": -4.0, "stage_fade": -12.0,
 	"vault_rise": -6.0, "vault_drop": -2.0, "synergy_hit": -10.0,
-	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0,
+	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0, "threat_tear": -7.0,
 	"warn_burrow": -7.0, "warn_bore": -7.0, "warn_lure": -7.0,
 	"warn_cut": -7.0, "warn_winch": -7.0, "warn_dive": -7.0,
 	"warn_tether": -7.0, "warn_flap": -7.0, "warn_reel": -7.0,
@@ -946,6 +946,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _threat_whistle()
 		"threat_hum":
 			return _threat_hum()
+		"threat_tear":
+			return _threat_tear()
 		"warn_burrow":
 			return _warn_burrow()
 		"warn_bore":
@@ -1773,11 +1775,20 @@ static func _threat_whistle() -> PackedFloat32Array:
 		[_tone(0.65, _hz(82), _hz(75), "sine", 1.2), Synth.seconds(0.08), 0.8], [_noise(0.65, 2200.0, 1300.0, 2.5, 0.05), Synth.seconds(0.08), 0.15]])
 
 
-# Lane: a charge hum held on Ab, then the tearing buzz of the release.
+# Lane: a charge hum on Ab from the frame the lane is declared. It holds for
+# THREAT_HUM_HOLD, longer than any lane's warning, and audio.gd cuts it on the frame the
+# lane goes live, where the tear plays: the tear is its own one-shot because it means fire
+# (SOUND-STORY section 7) and a warning's length varies (1.4 s charge, 0.6 s hook turn).
+const THREAT_HUM_HOLD := 3.0
+
 static func _threat_hum() -> PackedFloat32Array:
-	var tear := Synth.seconds(0.42)
-	return _mix([[_tone(0.45, _hz(44), _hz(44), "saw_dark", 0.4), 0, 0.8], [_tone(0.45, _hz(56), _hz(56), "square_dark", 0.6), 0, 0.5],
-		[_noise(0.18, 1800.0, 5200.0, 10.0), tear, 0.9], [_tone(0.18, _hz(56), _hz(51), "saw", 12.0), tear, 0.6]], true)
+	return _mix([[_tone(THREAT_HUM_HOLD, _hz(44), _hz(44), "saw_dark", 0.15), 0, 0.8],
+		[_tone(THREAT_HUM_HOLD, _hz(56), _hz(56), "square_dark", 0.2), 0, 0.5]], true)
+
+
+# Lane release: the tearing buzz, sliding Ab down to F.
+static func _threat_tear() -> PackedFloat32Array:
+	return _mix([[_noise(0.18, 1800.0, 5200.0, 10.0), 0, 0.9], [_tone(0.18, _hz(56), _hz(51), "saw", 12.0), 0, 0.6]], true)
 
 
 # Burrow: a low Eb rumble with two muffled knocks under the floor.

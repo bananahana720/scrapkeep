@@ -11,6 +11,7 @@ Heads and open PRs change by the hour, so read them live (`git ls-remote origin`
 - **Merges:** each batch needs Andrew's typed line naming the thread, the action and each PR number (LESSONS 47).
 - **New today:** draft PRs #391 (fight phases framework and Brindle, register section 7 row) and #392 (item ladder, register section 6 row).
 - **GPUs:** both run throughput work; 4080 timing only when it would otherwise idle (pause file on the PC). The timing chain: crown, islands, Reactor, Swarm, then the C16 rows, then #386 rows.
+- **Capture label (24 Oct, #446, SKL-37):** 4080 frame-time captures before 24 Oct 17:05Z ran with the live wallpaper on the GPU (about 1.3 GB VRAM), including the d561e6eb rows; compare them with newer captures only under the "wallpaper running" label. The wallpaper pauses only for a process named exactly `godot` (`pgrep -x`), so launch captures through a `godot` link (`~/scratch/w18/gpu4080/bin/godot`), never the versioned binary, and count `mpvpaper` as a foreign process.
 
 ## Base reds
 

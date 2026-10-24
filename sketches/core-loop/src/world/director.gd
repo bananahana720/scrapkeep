@@ -774,6 +774,7 @@ func _window_homes(ball: Vector2) -> Array[Dictionary]:
 func _home_pack_spots(kinds: Array, ball: Vector2, side: Vector2) -> Dictionary:
 	var spots := {}
 	var assigned: Array[Vector2] = []
+	var crew_home := {}
 	for home in _forward_homes:
 		var indices: Array[int] = []
 		for i in kinds.size():
@@ -809,6 +810,24 @@ func _home_pack_spots(kinds: Array, ball: Vector2, side: Vector2) -> Dictionary:
 				if spot != Vector2.INF:
 					spots[i] = spot
 					assigned.append(spot)
+		if crew_home.is_empty() and indices.any(func(i: int) -> bool: return spots.has(i)):
+			crew_home = home
+	# A member whose kind has no home in the window rides with the crew from the crew's home
+	# (the first window home when the whole pack is homeless), never stripped from it.
+	if crew_home.is_empty():
+		crew_home = _forward_homes[0]
+	var housed := {}
+	for home in _forward_homes:
+		housed[home.enemy] = true
+	for i in kinds.size():
+		var kind := KIND_NAMES.find(kinds[i])
+		if spots.has(i) or housed.has(kinds[i]) or kind < 0 or not Roster.built(kinds[i]) or _kind_stopped(kind):
+			continue
+		var offset := side * PACK_SPREAD * (i - (kinds.size() - 1) * 0.5)
+		var spot := _home_spot(crew_home, ball, offset, assigned)
+		if spot != Vector2.INF:
+			spots[i] = spot
+			assigned.append(spot)
 	return spots
 
 

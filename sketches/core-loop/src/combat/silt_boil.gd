@@ -18,7 +18,9 @@ const Roster := preload("res://src/combat/roster.gd")
 # standing Warden (the fight holds the ball there), and an activity's own crew (an event pack, a camp
 # brute, a relay's minibosses) is no fight while it stays within SITE_LEASH of its site. Only roaming packs,
 # or a crew dragged off its site, start a boil, and only while the stage is in play before its exit: the
-# gates and the launch are a course to run, so the silt lies still from the Warden's break.
+# gates and the launch are a course to run, so the silt lies still from the Warden's break. The rules hold for
+# a ring already rumbling too: the moment one turns true (the Warden breaks, or the ball enters an engaged
+# Warden's ring) the pending ring is quelled, its ring, marker and rumble cut, and it never erupts.
 
 const FIGHT_RADIUS := 30.0
 const LOOP_WINDOW := 10.0
@@ -41,10 +43,12 @@ const BOIL_STATES := ["stage", "beacon"]
 
 signal rumbled(at: Vector3, seconds_until: float)
 signal erupted(at: Vector3, hit_ball: bool, enemies: int)
+signal quelled(at: Vector3)
 
 var boils := 0
 var ball_hits := 0
 var enemy_tosses := 0
+var quells := 0
 # Set by combat: lands a hit on the pilot as every other hazard does (combat._on_player_hit).
 var deal: Callable
 
@@ -76,19 +80,32 @@ func reset(counts := false) -> void:
 	_samples.clear()
 	_sample_clock = 0.0
 	_rest = REST
+	if _ring != null:
+		quelled.emit(_ring.center if is_instance_valid(_ring) else Vector3.ZERO)
 	_drop_ring()
 	if counts:
 		boils = 0
 		ball_hits = 0
 		enemy_tosses = 0
+		quells = 0
 
 
 # Stage play only: the boss arena never boils.
 func step(delta: float, enemies: Array) -> void:
 	var k := strength()
 	if k <= 0.0 or not _ctx.flow.in_stage():
+		if _ring != null:
+			_quell()
 		return
 	var ball: Vector3 = _ctx.player.ball_position()
+	# Exempt (the exit run, an engaged Warden's ring): a pending ring is quelled, and the loop read waits
+	# for the exemption to end, so leaving a long one cannot arm a ring on its first tick.
+	if _exempt(ball):
+		if _ring != null:
+			_quell()
+		_samples.clear()
+		_sample_clock = 0.0
+		return
 	_sample_clock += delta
 	if _sample_clock >= SAMPLE_S:
 		_sample_clock = 0.0
@@ -100,6 +117,7 @@ func step(delta: float, enemies: Array) -> void:
 		if not is_instance_valid(_ring):
 			_drop_ring()
 			_rest = REST
+			quelled.emit(Vector3.ZERO)
 			return
 		_ring_age += delta
 		_ring.set_progress(_ring_age / WARN)
@@ -107,7 +125,7 @@ func step(delta: float, enemies: Array) -> void:
 			_erupt(k, enemies)
 		return
 	_rest -= delta
-	if _rest > 0.0 or not _ctx.flow.state_name() in BOIL_STATES or _in_warden_ring(ball) or not _looping() or not _fighting(ball, enemies):
+	if _rest > 0.0 or not _looping() or not _fighting(ball, enemies):
 		return
 	var at := PackPressure.predict(_ctx.player, WARN)
 	_ring = Telegraph.ring(_ctx.root, _terrain, Threat.Type.INSTANT, at, RADIUS)
@@ -123,6 +141,11 @@ func _looping() -> bool:
 	for i in range(1, _samples.size()):
 		path += _flat(_samples[i] - _samples[i - 1]).length()
 	return path >= LOOP_PATH and _flat(_samples[-1] - _samples[0]).length() < LOOP_NET
+
+
+# The exit run (gates, launch) and an engaged, standing Warden's ring: no boil arms there, and none pending erupts.
+func _exempt(ball: Vector3) -> bool:
+	return not _ctx.flow.state_name() in BOIL_STATES or _in_warden_ring(ball)
 
 
 func _in_warden_ring(ball: Vector3) -> bool:
@@ -193,6 +216,15 @@ func _erupt(k: float, enemies: Array) -> void:
 	erupted.emit(at, hit, tossed)
 	_drop_ring()
 	_rest = REST + _rng.randf() * JITTER
+
+
+# A pending ring the stage exempted: no eruption, no damage, and the silt rests as after a boil.
+func _quell() -> void:
+	var at: Vector3 = _ring.center if is_instance_valid(_ring) else Vector3.ZERO
+	_drop_ring()
+	_rest = REST
+	quells += 1
+	quelled.emit(at)
 
 
 func _drop_ring() -> void:

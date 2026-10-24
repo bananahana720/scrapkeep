@@ -38,6 +38,12 @@ static func valid(row: Dictionary) -> bool:
 	return true
 
 
+# The authored sites a stage's draw counts against. A card 2 extra (PARK.md 2.12: the completionist card's added
+# activities) stands beside the draw, not in place of it, so it is not counted.
+static func authored(map) -> int:
+	return map.activity_sites.filter(func(s: Dictionary) -> bool: return s.get("extra", "") != "card_2").size()
+
+
 # The drawn slots a stage has before any modifier (pocket_draw.gd draw: 3 to 5 rising one a stage).
 static func base_slots(stage: int, authored: int) -> int:
 	return maxi(0, mini(CAP, stage + 2) - authored)
@@ -89,7 +95,7 @@ static func for_stage(run, terrain, stage: int) -> Dictionary:
 	var map = terrain.map_for(stage)
 	if map == null or not "park" in map or map.park.is_empty() or not "activity_sites" in map:
 		return {}
-	return pick(int(run.run_seed), stage, map.activity_sites.size())
+	return pick(int(run.run_seed), stage, authored(map))
 
 
 # The farthest anchors a Far Haul draw may use, farthest first.
