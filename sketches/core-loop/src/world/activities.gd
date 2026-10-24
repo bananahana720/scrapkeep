@@ -215,6 +215,13 @@ const MARK_SPACING_M := 80.0
 const MARK_POOL_SIZE := 16
 # A charging relay reports its progress when it has moved this far (event_director's step).
 const RELAY_PROGRESS_STEP := 0.01
+# The head-gate crew's lines on the ring's word, in the crew-log voice (design-v3/TONE-BIBLE.md: deadpan words, no
+# jokes about the rider; the siren and the water carry the noise). Their post stands beside the ring (props flume_c01).
+const SURGE_WORDS := {
+	"open": "Head gate: wheel turning. Stay ahead of the water.",
+	"won": "Head gate log: wheel shut. One ball through, flume dry.",
+	"lost": "Head gate: winding the wheel back.",
+}
 
 
 # One standing activity: its rule, its look, its state and, once it has finished, its pay.
@@ -1388,7 +1395,7 @@ func _watch_surge(s: Site, delta: float, ball: Vector3) -> void:
 			return
 		s.started = true
 		s.surge_wait = float(s.rule["fallback_s"])
-		s.view.word.text = "Sluice opening. Beat the water down!"
+		s.view.word.text = SURGE_WORDS.open
 		sluice_opened.emit(s.surge_row)
 		return
 	if not s.surge_live:
@@ -1409,6 +1416,7 @@ func _watch_surge(s: Site, delta: float, ball: Vector3) -> void:
 		ctx.events.event_ended.emit(s.id, "won")
 		sluice_closed.emit(s.surge_row)
 		_finish(s, ball)
+		s.view.word.text = SURGE_WORDS.won
 		# The course pays into the ball's path: the pickup sits where the ball is, so it is taken on the next frame.
 		s.inside_pickup = false
 	elif outcome == "lost":
@@ -1416,6 +1424,7 @@ func _watch_surge(s: Site, delta: float, ball: Vector3) -> void:
 		s.started = false
 		s.relay_cooldown = float(s.rule["retry_s"])
 		s.course.show_live(false, 0.0)
+		s.view.word.text = SURGE_WORDS.lost
 		ctx.events.event_ended.emit(s.id, "lost")
 		sluice_closed.emit(s.surge_row)
 

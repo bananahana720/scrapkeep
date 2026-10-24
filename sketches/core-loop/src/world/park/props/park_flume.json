@@ -1337,6 +1337,110 @@
     }
    ]
   },
+  "head_gate_crew": {
+   "story": "The head-gate crew's post: the wheel chalked OPEN, three cups on the rail, a cot pulled up to the gauge window so nobody sleeps through the siren.",
+   "props": [
+    {
+     "kind": "gauge_dial_shed",
+     "v": "*",
+     "at": [
+      0.0,
+      6.0
+     ],
+     "yaw_deg": 180,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bunk_cots",
+     "v": "a",
+     "at": [
+      -4.5,
+      2.5
+     ],
+     "yaw_deg": 75,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tea_hearth",
+     "v": "b",
+     "at": [
+      3.0,
+      1.0
+     ],
+     "yaw_deg": 20,
+     "scale": 0.9,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "tool_peg",
+     "v": "*",
+     "at": [
+      5.5,
+      5.0
+     ],
+     "yaw_deg": 200,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "milepost",
+     "v": "*",
+     "at": [
+      -6.0,
+      -3.0
+     ],
+     "yaw_deg": 15,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "bent_numbers",
+     "v": "*",
+     "at": [
+      1.5,
+      -3.5
+     ],
+     "yaw_deg": 40,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "timber_ties",
+     "v": "b",
+     "at": [
+      6.0,
+      -5.0
+     ],
+     "yaw_deg": 80,
+     "scale": 0.95,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      8.0,
+      -1.0
+     ],
+     "yaw_deg": 110,
+     "scale": 1.0,
+     "tilt_deg": 0
+    },
+    {
+     "kind": "saltbush",
+     "v": "*",
+     "at": [
+      -8.5,
+      4.0
+     ],
+     "yaw_deg": 30,
+     "scale": 0.9,
+     "tilt_deg": 0
+    }
+   ]
+  },
   "mini_cup": {
    "story": "A cold cup of tea left by the siphon verge.",
    "props": [
@@ -2271,6 +2375,16 @@
    "at": [-248.0, -103.1],
    "yaw_deg": -66.0,
    "near": "hollow_intake: Laundry day by the trestles"
+  },
+  {
+   "id": "flume_c01",
+   "template": "head_gate_crew",
+   "at": [
+    -398.0,
+    -652.0
+   ],
+   "yaw_deg": 40.0,
+   "near": "weir_intake: The head-gate crew's post beside the sluice ring"
   }
  ],
  "litter": {
@@ -2299,5 +2413,5 @@
   ],
   "seed": 1021
  },
- "pin": 633467776
+ "pin": 3456431764
 }
