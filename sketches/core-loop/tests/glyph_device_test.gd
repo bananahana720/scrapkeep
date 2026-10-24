@@ -24,8 +24,8 @@ const T := preload("res://tests/support/t.gd")
 # order, the numbered slots 1, 2, 3 and then the Shift and Ctrl chips. The number caps read the
 # select actions' keys, which stay key_1..key_3 on the pad (no D-pad glyph yet).
 # Re-pinned 2026-10-24 (#445, actives on by default): the racked active's F chip is the sixth
-# cap. It reads key_f on the pad too: its pad button is D-pad down and Glyphs has no D-pad
-# picture yet (the same gap as the number caps above).
+# cap. Re-pinned 2026-10-24 (D-pad glyphs): Glyphs draws the D-pad, so on the pad the number
+# caps read D-pad left, up and right and the active's chip D-pad down.
 
 var _t := T.new("glyph_device_test")
 var _game
@@ -80,6 +80,10 @@ func _caps() -> void:
 	for pair in [["pad_a", "A"], ["pad_lb", "LB"], ["pad_rt", "RT"], ["pad_ls", "L"], ["key_space", "Space"], ["key_f", "F"]]:
 		_t.eq("S4-5 label %s" % pair[0], Keycap.label(pair[0]), pair[1])
 		_t.eq("S4-5 words %s" % pair[0], Array(Keycap.words(pair[0])), [pair[1]])
+	# A D-pad cap is a picture (a cross with its arm lit): square, and no word on the HUD.
+	for key in ["pad_dl", "pad_du", "pad_dr", "pad_dd"]:
+		_t.check("S4-5 %s is a square picture" % key, Keycap.words(key).is_empty() and Keycap.size_of(key, 24.0) == Vector2(24.0, 24.0),
+			"words %s size %s" % [Keycap.words(key), Keycap.size_of(key, 24.0)])
 
 
 func _defaults_and_pad() -> void:
@@ -161,7 +165,7 @@ func _device_switch() -> void:
 	_game.note_device(_key_event())
 	_t.eq("S4-4 bar on the keyboard", _bar_keys(), ["key_1", "key_2", "key_3", "key_shift", "key_ctrl", "key_f"])
 	_game.note_device(_pad_event())
-	_t.eq("S4-4 bar on the pad", _bar_keys(), ["key_1", "key_2", "key_3", "pad_b", "pad_x", "key_f"])
+	_t.eq("S4-4 bar on the pad", _bar_keys(), ["pad_dl", "pad_du", "pad_dr", "pad_b", "pad_x", "pad_dd"])
 	glyphs.new_run()
 	glyphs.step(0.016, _view(point))
 	glyphs._process(0.0)
