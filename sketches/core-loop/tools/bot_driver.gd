@@ -308,6 +308,14 @@ const CAP_REACH := 2.6
 # from the first frame it is the target and including the roll onto its pay; past that it is
 # abandoned and the bot moves on. The cache's run-up point lies this far out from its face.
 const ACTIVITY_SECONDS := 40.0
+# The surge course is a ring, a siren and then a run down a whole line, so it gets longer than a standing site.
+const SURGE_SECONDS := 80.0
+# Down the line, it aims this far ahead of itself on the deck's centre.
+const SURGE_LEAD_M := 18.0
+# Inside this of the next gate it aims at the gate.
+const SURGE_GATE_AIM_M := 35.0
+# While the siren winds, it waits this far back from the head, on the line.
+const SURGE_RUNUP_M := 14.0
 const CACHE_RUNUP := 24.0
 const CACHE_RUNUP_SECONDS := 5.0
 const CACHE_RAM_SECONDS := 3.0
@@ -1540,7 +1548,7 @@ func _activity_goal(delta: float) -> bool:
 		entered.append(s.id)
 		_note["activities_entered"] = entered
 	_activity_time[s.id] = float(_activity_time.get(s.id, 0.0)) + delta
-	if float(_activity_time[s.id]) > ACTIVITY_SECONDS:
+	if float(_activity_time[s.id]) > (SURGE_SECONDS if s.id == "surge_run" else ACTIVITY_SECONDS):
 		_activity_skip[s.id] = true
 		_activity = ""
 		return false
@@ -1561,6 +1569,30 @@ func _activity_goal(delta: float) -> bool:
 	match s.id:
 		"cracked_cache":
 			_cache_ram(s, ball, delta)
+		"surge_run":
+			# Into the ring, up to the head while the siren winds, then gate to gate ahead of the water. A lost
+			# course is not chased round again, as a lost event is not.
+			var course = s.course
+			if course == null or (not s.started and s.relay_cooldown > 0.0):
+				_activity_skip[s.id] = true
+				_activity = ""
+				return false
+			if s.surge_live:
+				_goal = "activity surge_run gate %d" % course.model.next_gate
+				# Close to a gate it aims at the gate itself: past a bend, where the line drops off the weir deck onto
+				# the gap reach, a point down the line is round the corner from the gate it must take.
+				var gate: Vector3 = course.next_gate_point()
+				var close := Vector2(gate.x - ball.x, gate.z - ball.z).length() < SURGE_GATE_AIM_M
+				_act(gate if close else course.lead_point(ball, SURGE_LEAD_M), _nearest_enemy(), delta)
+			elif s.started:
+				# Back from the head on the line's centre, so the run starts straight down the deck (a deck as narrow as
+				# the flume's trough is not entered from the side).
+				_goal = "activity surge_run head"
+				var head: Vector2 = course.model.route.points[0] - course.model.route.tangent(0.0) * SURGE_RUNUP_M
+				_act(Vector3(head.x, ball.y, head.y), _nearest_enemy(), delta)
+			else:
+				_goal = "activity surge_run ring"
+				_act(_approach(s, ball), _nearest_enemy(), delta)
 		"hauler_bounty":
 			if s.brute != null and is_instance_valid(s.brute) and not s.brute.is_dead():
 				_goal = "activity %s fight" % s.id

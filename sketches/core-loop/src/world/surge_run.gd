@@ -27,6 +27,8 @@ var gates: Array[Vector2] = []
 var gate_distances: Array[float] = []
 var next_gate := 0
 var front := FRONT_START
+# Where the front starts, behind the head (a park course starts it further back: surge_course.gd).
+var front_start := FRONT_START
 var front_speed := 16.0
 var elapsed := 0.0
 # Fraction of the run at which a miniboss arrives; below zero for none.
@@ -51,7 +53,7 @@ func _init(site: Dictionary, cruise: float) -> void:
 
 func begin() -> void:
 	next_gate = 0
-	front = FRONT_START
+	front = front_start
 	elapsed = 0.0
 
 

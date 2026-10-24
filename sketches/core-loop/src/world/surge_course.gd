@@ -13,11 +13,21 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 # chases the ball down the line through the gates. What is drawn is the model: the next gate glows,
 # the rest stand in sand, and the front is a wall of water the width of the line.
 
-# A gate's height comes from the nearest graph node of its row within this reach.
-const NODE_REACH_M := 24.0
+# A gate's deck is found by a ray from this far above its row's top to this far below it.
+const RAY_ABOVE_M := 3.0
+const RAY_BELOW_M := 60.0
 const FRONT_SIZE := Vector3(12.0, 4.0, 3.0)
+# The ring stands off the head, so the water opens further back than the Reach's: a ball that rolls from the ring to the
+# head while the siren winds starts the deck ahead of the front, with room to reach cruise before it closes.
+const FRONT_START := -40.0
+# And it runs at cruise, not the Reach's 1.15 cruise: the line drops 40 m off the weir deck's end onto the gap reach and
+# turns 85 degrees there, which costs a rider seconds the flat Reach never asks for.
+const FRONT_SPEED := 1.0
 
 var model
+var _rows := PackedStringArray()
+var _park := {}
+var _ground := Callable()
 var _gates: Array[MeshInstance3D] = []
 var _front: MeshInstance3D
 
@@ -58,47 +68,46 @@ static func path(park: Dictionary, route_id: String, start: Vector2) -> Dictiona
 	return {"points": points, "rows": names}
 
 
-# Each gate's deck height: the nearest graph node of the row its stretch of the route runs on, so a gate where two
-# decks cross in plan takes its own deck's height. With no node near, the ground there.
-static func heights(model_ref, rows: PackedStringArray, graph, ground: Callable) -> Array[float]:
-	var nodes := {}
-	if graph != null:
-		var wanted := {}
-		for id in rows:
-			wanted[id] = true
-		for n in graph.node_count():
-			var row: String = graph.node_row(n)
-			if wanted.has(row):
-				if not nodes.has(row):
-					nodes[row] = []
-				nodes[row].append(graph.position(n))
+# Each gate's deck height, from the row its stretch of the route runs on, so a gate where two decks cross in plan takes
+# its own deck's height. The row's top (its y plus its height; a raised row's graph nodes stand at its base, and a work
+# deck's top slopes) is where a ray looks down from; what it hits is the deck. With no world to ray, the row's top; with
+# no y on the row, the ground there.
+static func heights(model_ref, rows: PackedStringArray, park: Dictionary, ground: Callable, space: PhysicsDirectSpaceState3D = null) -> Array[float]:
+	var tops := {}
+	for row in park.get("park_rows", []):
+		if row.get("y") != null:
+			tops[String(row.id)] = float(row.y) + float(row.size[1])
 	var out: Array[float] = []
 	var route = model_ref.route
 	for i in model_ref.gates.size():
 		var g: Vector2 = model_ref.gates[i]
-		var y := float(ground.call(g.x, g.y)) if ground.is_valid() else 0.0
 		var segment := 0
 		for k in range(1, route.lengths.size()):
 			segment = k - 1
 			if model_ref.gate_distances[i] <= route.lengths[k]:
 				break
-		var best := NODE_REACH_M
-		for p in nodes.get(rows[segment] if segment < rows.size() else "", []):
-			var d := Vector2(p.x, p.z).distance_to(g)
-			if d <= best:
-				best = d
-				y = p.y
+		var id: String = rows[segment] if segment < rows.size() else ""
+		var y: float = tops[id] if tops.has(id) else (float(ground.call(g.x, g.y)) if ground.is_valid() else 0.0)
+		if space != null:
+			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(g.x, y + RAY_ABOVE_M, g.y), Vector3(g.x, y - RAY_BELOW_M, g.y)))
+			if not hit.is_empty():
+				y = hit.position.y
 		out.append(y)
 	return out
 
 
-func setup(site: Dictionary, cruise: float, graph, park: Dictionary, ground: Callable) -> void:
+func setup(site: Dictionary, cruise: float, park: Dictionary, ground: Callable) -> void:
 	name = "SurgeCourse"
 	top_level = true
 	var ring: Vector2 = site.ring
 	var line := path(park, String(site.route), ring)
 	model = SurgeRun.new({"ring": ring, "route": line.points}, cruise)
-	model.gate_heights = heights(model, line.rows, graph, ground)
+	model.front_start = FRONT_START
+	model.front_speed = cruise * FRONT_SPEED
+	_rows = line.rows
+	_park = park
+	_ground = ground
+	model.gate_heights = heights(model, _rows, _park, _ground)
 	for i in model.gates.size():
 		var at := Vector3(model.gates[i].x, model.gate_heights[i], model.gates[i].y)
 		var g := EventView.gate_ring(at, model.route.tangent(model.gate_distances[i]))
@@ -112,6 +121,16 @@ func setup(site: Dictionary, cruise: float, graph, park: Dictionary, ground: Cal
 	_front.material_override = Palette.water(Palette.VERDIGRIS.lerp(Palette.ARC, 0.5))
 	_front.visible = false
 	add_child(_front)
+
+
+# The gates onto the decks themselves, by ray, once the stage's colliders stand (the course is built with the stage, on
+# its rows' tops; activities.gd calls this as the course goes live).
+func settle() -> void:
+	if not is_inside_tree():
+		return
+	model.gate_heights = heights(model, _rows, _park, _ground, get_world_3d().direct_space_state)
+	for i in _gates.size():
+		_gates[i].position.y = model.gate_heights[i] + EventView.GATE_RADIUS - 1.0
 
 
 func show_live(live: bool, pulse: float) -> void:
@@ -133,7 +152,15 @@ func show_live(live: bool, pulse: float) -> void:
 		_front.basis = Basis.looking_at(Vector3(t.x, 0.0, t.y), Vector3.UP)
 
 
-# The next gate, where a ball on the course aims (the bot's target).
+# A point `ahead` metres down the line from where the ball is, on the deck: a rider who aims here stays on the
+# line's centre between gates (the bot's target; aiming straight at a gate far down a bent line walks off the deck).
+func lead_point(ball: Vector3, ahead: float) -> Vector3:
+	var d: float = model.route.project(Vector2(ball.x, ball.z)).x + ahead
+	var p: Vector2 = model.route.at(d)
+	return Vector3(p.x, model.deck_height(d), p.y)
+
+
+# The next gate, where a ball on the course aims.
 func next_gate_point() -> Vector3:
 	var i: int = clampi(model.next_gate, 0, model.gates.size() - 1)
 	return Vector3(model.gates[i].x, model.gate_heights[i], model.gates[i].y)

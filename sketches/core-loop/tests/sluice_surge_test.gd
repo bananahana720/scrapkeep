@@ -6,8 +6,8 @@ extends SceneTree
 # (b) the sluice's two forms have WORLD_ROWS records in the water colour, never the hazard one, and the land fact maps;
 # (c) the director never opens the sluice unasked; notify_activity announces it on the bar after its lead, it lands
 #     with sluice_landed and goes live, and finish_activity ends it early;
-# (d) the course runs down flume_upper's grind rows from the head nearest the ring, six gates on the decks' own
-#     heights (the weir reach above the gap reach where they cross in plan);
+# (d) the course runs down flume_upper's grind rows from the head nearest the ring, six gates on their own rows' tops
+#     (the weir reach's deck above the gap reach's);
 # (e) a ball on the ground under the deck takes no gate and gets no push; on the deck it takes the gate, and the front
 #     only ever pushes it on.
 
@@ -17,10 +17,8 @@ const Kinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const SurgeCourse := preload("res://src/world/surge_course.gd")
 const SurgeRun := preload("res://src/world/surge_run.gd")
-const ParkGraph := preload("res://src/world/park/park_graph.gd")
 
 const PARK := "res://src/world/park/park_flume.json"
-const GRAPH := "res://assets/park/park_flume/graph.bin"
 const H := 1.0 / 60.0
 const FAR := Vector3(1000.0, 1.0, 1000.0)
 const BAR_S := 240.0 / 172.0
@@ -32,9 +30,8 @@ const SLUICE := {"id": "head_gate_sluice", "kind": "sluice_surge", "family": "in
 	"telegraph": {"lead_s": 4.0, "form": "sluice_siren", "on_bar": true}, "live_s": 45.0, "effect": {},
 	"route_change": {"closes": [], "opens": []}, "hold_clear_m": 0.0, "cooldown_s": 0.0, "once": false,
 	"music_cue": {"telegraph": "riser_industrial", "land": "drop_industrial"}}
-# The weir reach's deck and the gap reach's deck below it (the baked graph's deck nodes).
-const UPPER_Y := 104.4
-const LOWER_Y := 61.0
+# The weir reach's top (its y 104.4 plus its 5 m height); the gap reach's top stands well below it.
+const UPPER_Y := 109.4
 const EXPECTED_CHECKS := 18
 
 var _t := preload("res://tests/support/t.gd").new("sluice_surge_test")
@@ -128,16 +125,15 @@ func _director(park: Dictionary) -> void:
 
 
 func _course(park: Dictionary) -> void:
-	var graph = ParkGraph.read(GRAPH)
 	var course := SurgeCourse.new()
-	course.setup({"ring": RING, "route": "flume_upper"}, 14.0, graph, park, func(_x, _z): return 0.0)
+	course.setup({"ring": RING, "route": "flume_upper"}, 14.0, park, func(_x, _z): return 0.0)
 	var model = course.model
 	var head: Vector2 = model.route.points[0]
 	_check("(d) the course starts at the head nearest the ring", head.distance_to(RING) < 60.0, str(head))
 	_check("(d) six gates down two rows", model.gates.size() == SurgeRun.GATE_COUNT and model.route.total > 400.0, "%d gates over %.0f m" % [model.gates.size(), model.route.total])
 	var first: float = model.gate_heights[0]
 	var last: float = model.gate_heights[model.gate_heights.size() - 1]
-	_check("(d) gates stand on their own decks", absf(first - UPPER_Y) < 3.0 and absf(last - LOWER_Y) < 3.0, str(model.gate_heights))
+	_check("(d) gates stand on their own decks", absf(first - UPPER_Y) < 0.1 and last < UPPER_Y - 10.0, str(model.gate_heights))
 	model.begin()
 	var g: Vector2 = model.gates[0]
 	var under := Vector3(g.x, model.gate_heights[0] - 40.0, g.y)

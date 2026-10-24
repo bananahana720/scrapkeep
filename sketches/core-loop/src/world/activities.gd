@@ -1353,7 +1353,7 @@ func _build_surge(s: Site, spec: Dictionary) -> void:
 	var course := SurgeCourse.new()
 	s.add_child(course)
 	var ring := Vector2(s.global_position.x, s.global_position.z)
-	course.setup({"ring": ring, "route": spec.route}, ctx.tuning.f("cruise"), _graph, map.park, Callable(ctx.terrain, "height"))
+	course.setup({"ring": ring, "route": spec.route}, ctx.tuning.f("cruise"), map.park, Callable(ctx.terrain, "height"))
 	if course.model.route.points.size() < 2:
 		course.queue_free()
 		return
@@ -1373,6 +1373,7 @@ func _on_world_fact(kind: String, _at: Vector3) -> void:
 func _surge_begin(s: Site) -> void:
 	s.surge_live = true
 	s.surge_shown = -1.0
+	s.course.settle()
 	s.course.model.begin()
 	ctx.events.event_started.emit(s.id)
 

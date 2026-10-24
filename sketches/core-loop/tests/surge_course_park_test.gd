@@ -6,7 +6,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 
 # The flume's surge course in the running game (activities.gd surge_run, the park's sluice_surge row).
-# (a) the flume builds the course on flume_upper with six gates;
+# (a) the flume builds the course on flume_upper with six gates on the decks' surfaces;
 # (b) rolling into the ring opens the sluice: the park row is announced, then lands, and only then does the course
 #     go live (the front is behind the head);
 # (c) taking the gates in order wins it: one progress step per gate, the course's own event ends won, the sluice
@@ -23,10 +23,14 @@ const SLUICE := {"id": "head_gate_sluice", "kind": "sluice_surge", "family": "in
 	"telegraph": {"lead_s": 4.0, "form": "sluice_siren", "on_bar": true}, "live_s": 45.0, "effect": {},
 	"route_change": {"closes": [], "opens": []}, "hold_clear_m": 0.0, "cooldown_s": 0.0, "once": false,
 	"music_cue": {"telegraph": "riser_industrial", "land": "drop_industrial"}}
+# The weir reach's floor between its walls; the gap reach's work deck stands above the ground beneath it.
+const WEIR_TOP := 109.4
+const GAP_LOW := 66.0
+const GAP_START := 69.0
 const OPEN_SECONDS := 12.0
 const GATE_FRAMES := 30
 const LOSE_SECONDS := 60.0
-const EXPECTED_CHECKS := 11
+const EXPECTED_CHECKS := 12
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("surge_course_park_test")
@@ -115,6 +119,10 @@ func _win() -> void:
 	if s == null or s.course == null:
 		return
 	var live := await _open(s)
+	# Live, the gates stand on the decks found by ray: the gap reach's work deck starts on the ground and climbs.
+	var h: Array = s.course.model.gate_heights
+	_t.check("(a) its gates stand on the decks' surfaces", absf(h[0] - WEIR_TOP) < 0.5 and h[3] < GAP_START + 1.0 and h[5] > GAP_LOW
+		and h[5] < WEIR_TOP - 10.0, str(h))
 	var announced := _seen("event_announced", SLUICE.id)
 	var started := _seen("event_started", "surge_run")
 	_t.check("(b) the ring opens the sluice, and the course goes live when it lands", live and announced.size() == 1
