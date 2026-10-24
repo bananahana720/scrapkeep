@@ -166,11 +166,18 @@ func _charge_check() -> void:
 	_hits.clear()
 	var hit_tick := -1
 	var lane = null
+	var lane_geo := {}
 	var fastest := 0.0
-	for i in int(6.0 * 90):
+	# Scuttle opens with the transition beat (fight_phases.gd), so the first charge comes that much later.
+	for i in int((6.0 + FightPhases.TRANSITION_SECONDS) * 90):
+		# The ball rests at the rim until the charge commits, through the beat too.
+		if _boss._charge.get("state", "") == "rest":
+			Harness.put_ball(_game, spot)
 		await physics_frame
-		if _boss._charge.has("hazard"):
+		if _boss._charge.has("hazard") and is_instance_valid(_boss._charge["hazard"]):
 			lane = _boss._charge["hazard"]
+			# The lane's committed numbers, kept past the hazard's free after a wall stun.
+			lane_geo = {"centre": lane.centre, "side": lane.side(), "half": lane.half_width, "reach": lane.reach}
 		if hit_tick < 0 and _hits.any(func(h): return h["source"] == "brindle_charge"):
 			hit_tick = i
 		if hit_tick >= 0:
@@ -181,10 +188,11 @@ func _charge_check() -> void:
 	var local: Vector3 = _boss.ship.hull.to_local(ball)
 	var half := Requisition.HULL * 0.5
 	var inside_hull: bool = absf(local.x) < half.x + 0.9 and absf(local.y) < half.y + 0.9 and absf(local.z) < half.z + 0.9
-	var out_of_lane: bool = lane != null and (absf(lane.lane_lateral(ball)) > lane.half_width or ball.y - _boss.arena.ground(ball) > lane.reach)
+	var lateral: float = absf(Vector3(ball.x - lane_geo["centre"].x, 0.0, ball.z - lane_geo["centre"].z).dot(lane_geo["side"])) if not lane_geo.is_empty() else -1.0
+	var out_of_lane: bool = not lane_geo.is_empty() and (lateral > lane_geo["half"] or ball.y - _boss.arena.ground(ball) > lane_geo["reach"])
 	_report("charge never pins", hit_tick >= 0 and not inside_hull and out_of_lane and fastest > 6.0 and _boss.stunned() and _game.codex.known(CodexEntries.WALL_BAIT),
 		"a ball resting at the rim in the lane was hit, shoved to %.1f m/s, and 1.5 s later sat %.1f m off the lane centre (half width %.1f), clear of the hull %s; the ship hit the wall and is stunned %s (codex %s)"
-			% [fastest, absf(lane.lane_lateral(ball)) if lane != null else -1.0, lane.half_width if lane != null else -1.0, not inside_hull, _boss.stunned(), _game.codex.known(CodexEntries.WALL_BAIT)])
+			% [fastest, lateral, lane_geo.get("half", -1.0), not inside_hull, _boss.stunned(), _game.codex.known(CodexEntries.WALL_BAIT)])
 	_game.run.heal(1000.0)
 
 

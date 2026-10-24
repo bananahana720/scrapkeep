@@ -22,6 +22,7 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 const Breach := preload("res://src/world/breach.gd")
 const EventFamilies := preload("res://src/world/events/families.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
+const RogueDirector := preload("res://src/world/rogue_director.gd")
 
 # Writer D's module: the stage geometry, the event director, stage events and the
 # launch (see CONTRACTS.md). Each tick it steps the event director and the spawn
@@ -32,6 +33,8 @@ const RunTier := preload("res://src/core/run_tier.gd")
 const PRESSURE_STEP := 0.05
 const MINIBOSS_KIND := "miniboss"
 const MINIBOSS_FALLBACK := "chaser"
+# Above the tallest rogue's half height at its largest site scale (3.6 m x 1.25).
+const ROGUE_CLEARANCE := 4.8
 const VAULT_KIND := "vault"
 const TAILWIND := 0.7
 const SAIL_WIND := 0.5
@@ -48,6 +51,10 @@ var view
 var launch
 # Where the last miniboss was asked for, for tests and the field notes.
 var last_miniboss_at := Vector3.INF
+# This attempt's rogue fleet machine (rogue_director.gd): the plan until it wakes, then the
+# machine it spawned.
+var rogue_plan := {}
+var rogue: Node3D
 # The stage's plated vault while it stands, else null.
 var vault: Node3D
 var codex_world := CodexWorld.new()
@@ -255,6 +262,9 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	events = EventDirector.new(_stage_seed, def, map, ctx.tuning.f("cruise"), Callable(terrain, "height"))
 	event_families = EventFamilies.build(self, events)
 	director = Director.new(_stage_seed ^ 0x5eed)
+	var map_id := String(map.park.get("map", "")) if "park" in map else ""
+	rogue_plan = RogueDirector.plan(_stage_seed ^ 0x706e, ctx.stages.world_of(stage), RogueDirector.read_sites(map_id))
+	rogue = null
 	_author_director(def)
 	director.use_row(def, ctx.tuning.option(Director.Tuning.BREATH_KEY) if ctx.tuning != null else "", Callable(ctx.run, "selected_run_tier"))
 	director.threat = def["threat"]
@@ -291,6 +301,7 @@ func _on_stage_content_cleared(_reason: String) -> void:
 		_publish(events.end_all())
 	EventFamilies.release(events, event_families)
 	events = null
+	rogue_plan = {}
 	flood.cycle = null
 	flood.configure({}, 0.0, Vector3.ZERO)
 	launch.stop()
@@ -374,6 +385,8 @@ func _physics_process(delta: float) -> void:
 	if bay.in_yard(ball):
 		_free_cooldowns()
 	_watch_ground(delta, ball)
+	if not calm_bay and not riding:
+		_watch_rogue(ball)
 	_watch_layer(delta, ball)
 	flood.render()
 	if not ctx.calm and not calm_bay:
@@ -448,6 +461,23 @@ func _spawn_miniboss(at: Vector2) -> void:
 	var enemy = ctx.spawner.spawn_enemy(MINIBOSS_KIND, last_miniboss_at)
 	if enemy == null:
 		ctx.spawner.spawn_enemy(MINIBOSS_FALLBACK, last_miniboss_at)
+
+
+# The rogue wakes once, when the ball first nears its site, never in the calm bay or on a
+# ride or launch; it lands on the site's centre inside the playable floor, sized to the disc.
+func _watch_rogue(ball: Vector3) -> void:
+	if not RogueDirector.wakes(rogue_plan, ball):
+		return
+	var plan: Dictionary = rogue_plan
+	rogue_plan = {}
+	if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+		return
+	var rect: Rect2 = terrain.map().play_rect
+	var x := clampf(float(plan.at.x), rect.position.x, rect.end.x)
+	var z := clampf(float(plan.at.y), rect.position.y, rect.end.y)
+	rogue = ctx.spawner.spawn_enemy(String(plan.kind), terrain.drop_point(x, z, ROGUE_CLEARANCE))
+	if rogue != null and rogue.has_method("fit_site"):
+		rogue.fit_site(float(plan.radius_m))
 
 
 # The world codex: read what just happened against the ground and the ball, hand it

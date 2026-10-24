@@ -659,7 +659,7 @@ const ROWS := [
 	{
 		"id": "lore.reach.intro.brindle.remembered_cannon", "kind": "intro", "zone": "1-2",
 		"subject": "brindle", "pilot": "remembered_cannon",
-		"text": "Brindle: Ancient ordnance, unregistered. I'll log you as a gift.",
+		"text": "Brindle: Ancient ordnance. Yes, I see the shape. Log it as artillery.",
 	},
 	{
 		"id": "lore.dig_depths.intro.waking.pylon_engineer", "kind": "intro", "zone": "2-2",

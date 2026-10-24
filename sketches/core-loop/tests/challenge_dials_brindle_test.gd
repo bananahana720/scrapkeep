@@ -65,7 +65,8 @@ func _run() -> void:
 
 	# Tell: the committed hazards never drop under Hazard.MIN_WARN at tell_mult 0.1, and the slag's
 	# next attack is scheduled on that same warn.
-	ChallengeDials.set_overrides({"brindle.tell_mult": 0.1})
+	# The phase ratchet's reprise is off here: it reschedules the next ring (fight_phases_test).
+	ChallengeDials.set_overrides({"brindle.tell_mult": 0.1, "brindle.follow_ups_by_phase": [0.0, 0.0, 0.0, 0.0]})
 	_boss._enter_phase(1)
 	_boss._commit_crane(0, ball)
 	var crane = _boss._cranes[0].get("hazard")
@@ -74,6 +75,7 @@ func _run() -> void:
 	_boss._cancel_hazards()
 	_boss._enter_phase(2)
 	_boss.clock = 50.0
+	_boss._phases.tick(_boss.clock)
 	_boss._next_attack = 0.0
 	_boss._step_furnace(1.0 / 90.0)
 	var slag = _boss.hazards.back() if not _boss.hazards.is_empty() else null

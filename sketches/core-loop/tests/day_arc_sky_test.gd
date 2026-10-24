@@ -56,7 +56,7 @@ func _rows() -> void:
 			and grade.get("glow") is Color and grade.get("recolor") is float and grade.get("energy") is float
 			and row.get("fog_tint") is Color)
 		energy[id] = float(grade.get("energy", 0.0))
-	_t.check("the sky is brightest at noon and dimmest at dusk", energy.noon >= energy.morning
+	_t.check("noon is at least morning, and dusk is below golden, dawn and morning, with dawn below morning", energy.noon >= energy.morning
 		and energy.dusk < energy.golden and energy.dusk < energy.dawn and energy.dawn < energy.morning, str(energy))
 	var dusk: Color = WorldLook.TIME_ROWS.dusk.grade.top
 	var noon: Color = WorldLook.TIME_ROWS.noon.grade.top

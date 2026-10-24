@@ -40,6 +40,8 @@ func _init() -> void:
 	visible = false
 	set_process_input(false)
 	set_process_unhandled_input(false)
+	# In-run flourishes keep clear of the card while it shows (flourish_player.gd AVOID_GROUP).
+	add_to_group("flourish_avoid")
 
 
 func set_interactive(enabled: bool) -> void:

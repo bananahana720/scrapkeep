@@ -25,6 +25,14 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # fight lasts at least 75 s however hard the ball hits. A chunk lost early holds the
 # phase until its set piece ends: a grown ball routs him, it does not skip him. The
 # fourth chunk is the scooter, taken by the catch.
+#
+# Phases ratchet (fight_phases.gd, Andrew 23 Oct): from the Furnace on, a lead attack is
+# answered by a cued follow-up. The Furnace's reprise fills the other slag ring as the
+# first drains; the Scuttle's hook turn re-aims a charge that ended short of the rim. Each
+# sounds the ratchet cue first and then draws a short tell. A wall stun ends a hook turn
+# like any combo, so baiting the second charge into the bank is the practised answer.
+# Phases two and three open with a transition beat: the turn animation plays, the hull
+# takes no posture and no attack commits until it ends (FightPhases.in_transition).
 
 enum { IDLE, FIGHT, EJECT, DEFEATED }
 const STATE_NAMES := ["idle", "fight", "eject", "defeated"]
@@ -78,6 +86,9 @@ var _drones: Array = []
 # the bow can touch it again.
 var _ghost_until := -1.0
 var _posture := BossPosture.new(Rules.POSTURE)
+var _phases: FightPhases
+# The Furnace's owed reprise ring: {at, cue_at, cued, turn}; empty when none is owed.
+var _reprise := {}
 
 
 func setup(ctx_ref) -> void:
@@ -126,6 +137,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	ship.build(self)
 	state = FIGHT
 	_posture = BossPosture.new(Rules.POSTURE)
+	_phases = FightPhases.boss("brindle", ctx.events)
 	hp = Rules.MAX_HP
 	max_hp = Rules.MAX_HP
 	clock = 0.0
@@ -197,6 +209,8 @@ func advance(delta: float) -> void:
 	_delta = maxf(delta, 0.0001)
 	clock += delta
 	phase_clock += delta
+	if _phases != null:
+		_phases.tick(clock)
 	var ball: Vector3 = ctx.player.ball_position()
 	_rescue(ball)
 	arena.step(clock)
@@ -279,6 +293,8 @@ func _enter_phase(next: int) -> void:
 			_charge = {"state": "rest", "timer": ChallengeDials.period("brindle", Rules.CHARGE_REST, 3)}
 	ship.cue_phase(next)
 	_publish("boss_phase_changed", [next, Rules.PHASE_NAMES[next - 1]])
+	if _phases != null:
+		_phases.enter(next, clock)
 
 
 # Test and dev hook: the fight as if the earlier phases had just been won.
@@ -580,22 +596,62 @@ func _step_furnace(delta: float) -> void:
 		var move := minf(to_centre.length(), Rules.CIRCLE_SPEED * delta)
 		var at := here + to_centre.normalized() * move
 		ship.move_to(Vector3(at.x, arena.ground(at), at.z), ship.heading)
-	if clock >= _next_attack:
-		var band: Vector2 = Arena.RING_A if _slag_turn % 2 == 0 else Arena.RING_B
-		var id := "slag_ring_a" if _slag_turn % 2 == 0 else "slag_ring_b"
-		var h = _new_hazard()
-		var slag_warn := ChallengeDials.tell("brindle", Rules.SLAG_WARN, Hazard.MIN_WARN)
-		h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position, band, Rules.SLAG_REACH, slag_warn, Rules.SLAG_LIVE)
-		h.excluded = func(point: Vector3) -> bool: return arena.is_quenched(point, clock)
-		_add_hazard(h)
-		ship.cue("slag_warn", _slag_turn)
+	_step_reprise()
+	if clock >= _next_attack and not _in_transition():
+		var slag_warn := _commit_slag(_slag_turn, false)
 		_slag_turn += 1
-		_next_attack = clock + _paced(slag_warn + Rules.SLAG_LIVE + ChallengeDials.period("brindle", Rules.SLAG_GAP, 2))
-		_publish("boss_attack_telegraphed", [id, h.warn_seconds])
+		var gap := ChallengeDials.period("brindle", Rules.SLAG_GAP, 2)
+		if _follow_ups() > 0:
+			# The reprise fills the other ring the moment this one drains, and the next lead opens
+			# on that same ring, so leads alternate. It is the phase's follow-up: no combo rides on it.
+			var at := clock + slag_warn + Rules.SLAG_LIVE
+			_reprise = {"at": at, "cue_at": at - FightPhases.CUE_LEAD, "cued": false, "turn": _slag_turn}
+			_combo_left = -1
+			_next_attack = at + FightPhases.CUED_WARN + Rules.SLAG_LIVE + gap
+		else:
+			_next_attack = clock + _paced(slag_warn + Rules.SLAG_LIVE + gap)
 	# Drones wait for the ship to park, so a pad is never swept by the hull.
-	if parked and clock >= _next_lobber:
+	if parked and clock >= _next_lobber and not _in_transition():
 		_next_lobber = clock + Rules.LOBBER_PERIOD
 		_launch_lobber()
+
+
+# Commits slag ring `turn` (even turns ring A, odd ring B) and returns its warn. A cued ring
+# draws the short tell its ratchet cue paid for.
+func _commit_slag(turn: int, cued: bool) -> float:
+	var band: Vector2 = Arena.RING_A if turn % 2 == 0 else Arena.RING_B
+	var id := "slag_ring_a" if turn % 2 == 0 else "slag_ring_b"
+	var h = _new_hazard()
+	var slag_warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.SLAG_WARN, Hazard.MIN_WARN)
+	if cued:
+		h.warn_floor = FightPhases.CUED_WARN
+		h.cued = true
+	h.commit_annulus(id, Hazard.Threat.Type.INSTANT, arena.global_position, band, Rules.SLAG_REACH, slag_warn, Rules.SLAG_LIVE)
+	h.excluded = func(point: Vector3) -> bool: return arena.is_quenched(point, clock)
+	_add_hazard(h)
+	ship.cue("slag_warn", turn)
+	_publish("boss_attack_telegraphed", [id, h.warn_seconds])
+	return h.warn_seconds
+
+
+func _in_transition() -> bool:
+	return _phases != null and _phases.in_transition()
+
+
+func _follow_ups() -> int:
+	return _phases.follow_ups() if _phases != null else 0
+
+
+func _step_reprise() -> void:
+	if _reprise.is_empty():
+		return
+	if not _reprise["cued"] and clock >= _reprise["cue_at"]:
+		_reprise["cued"] = true
+		_phases.cue("slag_ring_a" if int(_reprise["turn"]) % 2 == 0 else "slag_ring_b")
+	if clock >= _reprise["at"]:
+		var turn: int = _reprise["turn"]
+		_reprise = {}
+		_commit_slag(turn, true)
 
 
 # Lobber drones drop off the deck onto a pad marked DRONE_WARN ahead, off the hull's side
@@ -633,7 +689,7 @@ func _step_drones(delta: float) -> void:
 		var at: Vector3 = d["at"]
 		var ready: bool = marker.age >= Rules.DRONE_WARN
 		var clear: bool = ball.distance_to(at + Vector3.UP) >= Rules.DRONE_CLEAR
-		if ready and clear and state == FIGHT:
+		if ready and clear and state == FIGHT and not _in_transition():
 			_drop_drone(at)
 		elif marker.age < Rules.DRONE_WARN + Rules.DRONE_WAIT and state == FIGHT:
 			kept.append(d)
@@ -709,11 +765,15 @@ func _clear_arc(from: Vector3, launch: Vector3) -> bool:
 
 func _step_charges(delta: float, ball: Vector3) -> void:
 	match _charge.get("state", "rest"):
-		"rest", "recover", "stun":
+		"rest", "recover", "stun", "hook":
 			_charge["timer"] -= delta
 			if _charge["timer"] <= 0.0:
 				if _charge["state"] == "rest":
+					if _in_transition():
+						return
 					_commit_charge(ball)
+				elif _charge["state"] == "hook":
+					_commit_charge(ball, true)
 				else:
 					_charge = {"state": "rest", "timer": _rest_time()}
 		"brace":
@@ -723,8 +783,11 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 			_run_charge(delta, ball)
 
 
-func _commit_charge(ball: Vector3) -> void:
-	_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
+# A cued charge is the Scuttle's hook turn: its ratchet cue sounded CUE_LEAD ago, so it
+# draws the short tell, and it never leads a combo or a second hook turn.
+func _commit_charge(ball: Vector3, cued := false) -> void:
+	if not cued:
+		_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
 	var from: Vector3 = ship.global_position
 	var to_ball := Vector3(ball.x - from.x, 0.0, ball.z - from.z)
 	var heading: Vector3 = to_ball.normalized() if to_ball.length() > 2.0 else ship.heading
@@ -734,13 +797,17 @@ func _commit_charge(ball: Vector3) -> void:
 	var length := minf(wanted, to_wall)
 	var half := Requisition.HULL.z * 0.5
 	var h = _new_hazard()
+	if cued:
+		h.warn_floor = FightPhases.CUED_WARN
+		h.cued = true
+	var warn := FightPhases.CUED_WARN if cued else ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN)
 	h.commit_lane("charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
-		Requisition.HULL.y + 0.5, ChallengeDials.tell("brindle", Rules.CHARGE_WARN, Hazard.MIN_WARN), length / Rules.CHARGE_SPEED + 0.2)
+		Requisition.HULL.y + 0.5, warn, length / Rules.CHARGE_SPEED + 0.2)
 	_add_hazard(h)
 	ship.move_to(from, heading)
 	ship.cue("charge_warn", h.get_instance_id())
 	_charge = {"state": "brace", "hazard": h, "from": from, "heading": heading, "length": length,
-		"into_wall": into_wall, "travelled": 0.0}
+		"into_wall": into_wall, "travelled": 0.0, "cued": cued}
 	_publish("boss_attack_telegraphed", ["charge_wall" if into_wall else "charge", h.warn_seconds])
 
 
@@ -771,6 +838,10 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 		if _charge["into_wall"]:
 			_stun(ChallengeDials.punish("brindle", Rules.WALL_STUN))
 			_discover(CodexEntries.WALL_BAIT, ship.global_position)
+		elif not _charge.get("cued", false) and _follow_ups() > 0:
+			# The hook turn: the cue sounds as the hull digs in, the lane draws CUE_LEAD later.
+			_phases.cue("charge")
+			_charge = {"state": "hook", "timer": FightPhases.CUE_LEAD}
 		else:
 			_charge = {"state": "recover", "timer": Rules.CHARGE_RECOVER}
 
@@ -981,6 +1052,7 @@ func _cancel_hazards() -> void:
 		if is_instance_valid(h):
 			h.queue_free()
 	hazards.clear()
+	_reprise = {}
 	for c in _cranes:
 		if c.has("hazard"):
 			c.erase("hazard")
@@ -1219,7 +1291,7 @@ func judge_hit(target, kind: String, punch: float, smash: bool, tier: int) -> Di
 			"tier": tier, "charging": charging(), "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp})
 	if part != "":
 		result["part"] = part
-	if _held():
+	if _held() or _in_transition():
 		result["gain"] = 0.0
 		result["crack"] = false
 		result["shatter"] = false
@@ -1230,7 +1302,7 @@ func judge_hit(target, kind: String, punch: float, smash: bool, tier: int) -> Di
 # A weak point's full hit adds to the hull's bar as the rule would weigh it on a body of
 # that plating. It never touches the open cockpit: only a contact on the hull does.
 func _pressure(kind: String, result: Dictionary) -> void:
-	if _posture.staggered or _held() or not bool(result.get("full", false)):
+	if _posture.staggered or _held() or _in_transition() or not bool(result.get("full", false)):
 		return
 	_apply_posture(_posture.judge({"kind": kind, "punch": float(result.get("punch", 0.0)),
 			"plating": float(result.get("plating", 0.0)), "charging": charging(), "frame": Engine.get_physics_frames()}))

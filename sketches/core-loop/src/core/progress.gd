@@ -14,6 +14,7 @@ extends Node
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Secrets := preload("res://src/core/secrets.gd")
+const ShiftBoard := preload("res://src/core/shift_board.gd")
 
 const STAT_PREFIX := "ach."
 const SAVE_POINTS := ["player_died", "run_ended"]
@@ -29,6 +30,9 @@ var rows: Dictionary = Achievements.ROWS
 
 # Earns whose save failed, for a test or a screen that wants to say so.
 var warnings := 0
+# What the last finished run did to the shift board (ShiftBoard.run_line), for the summary;
+# "" from run_started until the run ends.
+var board_line := ""
 
 var _events
 var _run
@@ -38,6 +42,7 @@ var _world := 0
 var _won := false
 var _rows_on := {}
 var _codex
+var _board_before: Array = []
 
 
 func setup(events, run, profile, now := Callable(), codex = null) -> void:
@@ -46,6 +51,7 @@ func setup(events, run, profile, now := Callable(), codex = null) -> void:
 	_profile = profile
 	_codex = codex
 	_now = now if now.is_valid() else Callable(Time, "get_unix_time_from_system")
+	_board_before = ShiftBoard.stamped_ids(profile)
 	_rows_on.clear()
 	for id in rows:
 		var on := String(rows[id].get("on", ""))
@@ -184,6 +190,9 @@ func grant_once(id: String, kind: String, target: String) -> bool:
 			_profile.unlock_cosmetic(target)
 		"world":
 			_profile.unlock_world(target)
+		# An item opens from the earned row itself (ShiftBoard.opened_items), so the settle is the grant.
+		"item":
+			pass
 	if _profile.can_save and not _profile.save():
 		warnings += 1
 		push_warning("progress: %s granted but not saved: %s" % [id, _profile.last_error])
@@ -267,12 +276,16 @@ func _fact(signal_name: String, names: Array, values: Array) -> void:
 		_world = int(fact.get("world", 0))
 	elif signal_name == "run_started":
 		_won = false
+		_board_before = ShiftBoard.stamped_ids(_profile)
+		board_line = ""
 	elif signal_name == "run_ended":
 		_won = bool(fact.get("won", false))
 	elif signal_name == "boss_defeated" and _world >= 1 and _world <= LEDGER_WORLDS:
 		settle(LEDGER_FOUND % _world)
 	for id in _rows_on.get(signal_name, []):
 		_evaluate(id, fact)
+	if signal_name == "run_ended":
+		_close_shift()
 	if SAVE_POINTS.has(signal_name) and _profile.can_save:
 		_profile.save()
 	if signal_name == "run_ended":
@@ -292,6 +305,8 @@ func _evaluate(id: String, fact: Dictionary) -> void:
 		var value = fact.get(key)
 		if not (value is int or value is float) or float(value) < float(at_least[key]):
 			return
+	if row.has("pilot") and (_run == null or _run.class_id() != String(row["pilot"])):
+		return
 	var amount := 1.0
 	if row.has("sum"):
 		amount = float(fact.get(row["sum"], 0))
@@ -301,6 +316,21 @@ func _evaluate(id: String, fact: Dictionary) -> void:
 	if row.has("need") and not _need_met(row):
 		return
 	_earn(id, row)
+
+
+# The time card (ShiftBoard.TIME_CARD): a finished run that stamped no rung and broke enough
+# machines punches one hole. Runs after the run's own earns, so a stamp landed on run_ended counts.
+func _close_shift() -> void:
+	if _profile == null:
+		return
+	var fresh := ShiftBoard.stamped_ids(_profile).any(func(id): return not id in _board_before)
+	var kills := int(_run.summary().get("kills", 0)) if _run != null else 0
+	var punched := false
+	if not fresh and kills >= int(ShiftBoard.TIME_CARD["min_kills"]):
+		_profile.add_stat(ShiftBoard.PUNCH_STAT, 1.0)
+		punched = true
+	board_line = ShiftBoard.run_line(_board_before, _profile, punched)
+	_board_before = ShiftBoard.stamped_ids(_profile)
 
 
 func _need_met(row: Dictionary) -> bool:

@@ -145,9 +145,8 @@ func setup(game_ref) -> void:
 	_rows["quit"].add_child(_quit_ring)
 	# The build read sits left of the column: the ball turning with its panels, and the stat lines.
 	build_read = BuildRead.new()
-	build_read.set_anchors_preset(Control.PRESET_CENTER_LEFT)
-	build_read.position = Vector2(32.0, -200.0)
 	_root.add_child(build_read)
+	_root.resized.connect(_lay_build)
 	_page = SettingsPages.new()
 	_page.visible = false
 	_page.setup(game, "key_esc")
@@ -316,6 +315,24 @@ func _show_build() -> void:
 	var build = game.get("build")
 	build_read.refresh(game.run, int(build.panel_overflow) if build != null else 0, game.run.class_id() if game.run != null else "",
 		build.panel_effective if build != null else {})
+	_lay_build()
+
+
+# The build read takes the gutter left of the centred column at the screen's own size.
+func _lay_build() -> void:
+	lay_build(_root.size if _root.size != Vector2.ZERO else _root.get_viewport_rect().size)
+
+
+func lay_build(screen: Vector2) -> void:
+	build_read.layout(screen, (screen.x - column_width()) * 0.5)
+
+
+# The widest row of the centred column.
+func column_width() -> float:
+	var width := WIDTH
+	for id in _order:
+		width = maxf(width, _rows[id].get_combined_minimum_size().x)
+	return width
 
 
 func _show_breath() -> void:
