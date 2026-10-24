@@ -908,19 +908,27 @@ func _stage_cap() -> float:
 
 # The seconds the Spillway's locks (#420, src/world/stage_locks.gd) held this stage on purpose:
 # the yard's lock from its slam to its bells, and the Warden's clamp from the first engage until
-# it opens, each still counting while it stands. STAGE_LIMIT is a harness fit (ruling t), so a run
-# the locks delay is not called stalled for it. With --locks=0 there are no notes and nothing is added.
+# it opens, each still counting while it stands and each at most its row's max_s, so a lock the
+# bot never sees open cannot grow the cap with the clock (seed 16 ran 97 min on 97bcc2c0).
+# STAGE_LIMIT is a harness fit (ruling t), so a run the locks delay is not called stalled for it.
+# With --locks=0 there are no notes and nothing is added.
 func _lock_held_s() -> float:
-	var held := 0.0
 	var lock_at = _note.get("lock_s")
+	var engaged = _note.get("warden_engaged_s")
+	if lock_at == null and engaged == null:
+		return 0.0
+	var gate = game.flow.get("gate")
+	if gate == null:
+		return 0.0
+	var held := 0.0
 	if lock_at != null:
 		var unlock_at = _note.get("unlock_s")
-		held += (float(unlock_at) if unlock_at != null else float(game.run.stage_time)) - float(lock_at)
-	var engaged = _note.get("warden_engaged_s")
-	var gate = game.flow.get("gate") if engaged != null else null
-	if gate != null and gate.has_gate():
+		var until := float(unlock_at) if unlock_at != null else float(game.run.stage_time)
+		held += clampf(until - float(lock_at), 0.0, float(gate.lock_row().get("max_s", 0.0)))
+	if engaged != null and gate.has_gate():
 		var open_at = _note.get("gate_open_s")
-		held += maxf(0.0, (float(open_at) if open_at != null else float(game.run.stage_time)) - float(engaged))
+		var until := float(open_at) if open_at != null else float(game.run.stage_time)
+		held += clampf(until - float(engaged), 0.0, float(gate.gate_row().get("max_s", 0.0)))
 	return held
 
 
