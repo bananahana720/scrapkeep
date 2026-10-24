@@ -424,3 +424,35 @@ Picks are the best rubric overall per take with a drum share under the bar; the 
 Each pick's seed, caption, strength and arm are in `radio_renders.json` under `remade`. Previous renders are untouched, so a pick can be swapped back by removing `remade` and repacking. Motif detection by pitch tracking found no exact hits in any take, old or new, so whether the written hooks are audible is an open question for the ear.
 
 Open items: The Mind, Overclock is still PERC_HEAVY (drums 0.55 of the mix) and is the weakest remake; no seed of either arm cleared the bar, so its pick is the least bad. Melody dropped slightly on Top Shelf, Heavyweight, Brindle and Highdraft while drums fell; Andrew's ear decides whether the trade is right. Flags are from the stem-sum view; the overall column uses the master.wav view, and the shipped packs pass the audio gate (below).
+
+## Rogue mini-boss anthems (2026-10-23)
+
+`gapfill.py anthem-gate-crane anthem-haul-skip anthem-cable-tender` on the RTX 3060 (`ACE_GPU=1`), run `lab-gapfill-4`, seeds 4101 and 4102, cover strength 0.5 of the world's parent, captions from `design-v3/rogues/BRIEFS.md`. Measured with `measure_variants.py`'s chroma match against the parent and an other-family control. The pick is the take whose tempo reads on its row, then the larger margin.
+
+| Take | Asked | Tempo read | Parent | Control | Margin | Longest quiet | Pick |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| anthem-gate-crane-s4101 | 140 | 140.0 | 0.17 | 0.18 (take-heavyweight-drum-corps-135.wav) | -0.01 | 0.1 s |  |
+| anthem-gate-crane-s4102 | 140 | 140.0 | 0.22 | 0.19 (take-heavyweight-drum-corps-135.wav) | 0.02 | 0.0 s | yes |
+| anthem-haul-skip-s4101 | 145 | 165.7 | 0.30 | 0.14 (take-sinkhole-drain-dub-88.wav) | 0.16 | 0.2 s |  |
+| anthem-haul-skip-s4102 | 145 | 145.0 | 0.29 | 0.22 (take-sinkhole-drain-dub-88.wav) | 0.07 | 0.2 s | yes |
+| anthem-cable-tender-s4101 | 150 | 136.3 (149.65 narrow) | 0.58 | 0.25 (take-sinkhole-drain-dub-88.wav) | 0.33 | 0.1 s | yes |
+| anthem-cable-tender-s4102 | 150 | 128.5 | 0.40 | 0.34 (take-sinkhole-drain-dub-88.wav) | 0.06 | 0.1 s |  |
+
+The gate crane takes barely keep combat-hype's harmony (margin 0.02): at strength 0.5 the anthem caption won, so its hook is new rather than a twist. Andrew's ear decides whether that is right.
+
+Packed with `package_phase_tracks.py stretch --tunes` (the three rows only) then `pack --ceiling -2.2`, stems split with htdemucs on the CPU. `scripts/audio-gate.mjs`: every anthem pack passes; the one finding is the 238 clips with no local Oggs in this checkout.
+
+| Pack | Seconds | LUFS | True peak | Seam wrap / p99.9 |
+| --- | --- | --- | --- | --- |
+| anthem_gate_crane/main | 27.5 | -16.1 | -1.4 | 0.2108 / 0.3243 |
+| anthem_haul_skip/main | 26.6 | -16.0 | -1.9 | 0.0065 / 0.277 |
+| anthem_cable_tender/main | 25.7 | -16.0 | -1.8 | 0.0091 / 0.2064 |
+
+```text
+48882e10d4be1b5fe0a9cffa0104168f50a0e863a6a1099cdf7a7a5524828ec8  renders/lab-gapfill-4/anthem-gate-crane-s4101.mp3
+4421c89918138066b8e6d4d8cf3363bc730d0b0676f0012c6ea05ef1d92015d2  renders/lab-gapfill-4/anthem-gate-crane-s4102.mp3
+65a23acfb552c12d3b46b0edc4093ab3a5a0dece4d185c583a59083659795788  renders/lab-gapfill-4/anthem-haul-skip-s4101.mp3
+55575ca907dfd6b262542f9e4d01d6ea32d83f63119eb91acd5bc1e1ebc6dfb2  renders/lab-gapfill-4/anthem-haul-skip-s4102.mp3
+dc8f988499fb71e453113032297f2a9bfd5926709e2a88b4a750354ad95741dc  renders/lab-gapfill-4/anthem-cable-tender-s4101.mp3
+9a7fefacc7fba18767e9b466a945548b38ff9a8d111cc4dd3606bffa7ed4d91a  renders/lab-gapfill-4/anthem-cable-tender-s4102.mp3
+```

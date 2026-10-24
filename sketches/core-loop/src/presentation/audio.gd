@@ -2535,7 +2535,7 @@ func phase_music(phase: int) -> Dictionary:
 		_ace_named(plan["track"], int(when["drop"]), true)
 		cue_log.append(["boss_phase_music", plan["track"], "bar", int(when["drop"]), 1.0])
 		return {"track": plan["track"], "hype": plan["hype"], "at": when["drop"]}
-	var track := PhaseMusic.track_for_phase(boss, phase)
+	var track := PhaseMusic.track_for_phase(boss, phase, pack_available)
 	if track == "" or not pack_available.call(track):
 		return {}
 	var at := engine.next_bar()
@@ -2706,7 +2706,8 @@ func _landmark_id() -> String:
 
 
 func _tend_champions() -> void:
-	if not _champion_hyped or not pack_available.call(PhaseMusic.EURO_CHAMPION):
+	var final_track := PhaseMusic.champion_final(pack_available)
+	if not _champion_hyped or final_track == "":
 		return
 	for id in _champions.keys():
 		var enemy = _champions[id]
@@ -2716,8 +2717,8 @@ func _tend_champions() -> void:
 			_champion_euro[id] = true
 			var when := PhaseMusic.drop_plan(engine.clock, engine.next_bar(), engine.bar_len(), Harmony.RATE)
 			engine.schedule_stinger_at("hype_drop", int(when["start"]))
-			_ace_named(PhaseMusic.EURO_CHAMPION, int(when["drop"]), true)
-			cue_log.append(["champion_final", PhaseMusic.EURO_CHAMPION, "bar", int(when["drop"]), 1.0])
+			_ace_named(final_track, int(when["drop"]), true)
+			cue_log.append(["champion_final", final_track, "bar", int(when["drop"]), 1.0])
 			return
 
 
