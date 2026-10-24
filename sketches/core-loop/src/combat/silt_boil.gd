@@ -13,6 +13,10 @@ const Roster := preload("res://src/combat/roster.gd")
 # inside takes DAMAGE times the dial and a kick up, and every enemy inside is tossed and takes ENEMY_DAMAGE
 # (bait a crew into it). After a boil the silt rests REST plus a seeded 0 to JITTER seconds. Seeded per run
 # and stage, so a seed replays the same boils for the same rolling.
+#
+# The silt prices kiting, not the loops the game asks for: once the stage's Warden is engaged (its ring
+# holds the ball there) nothing boils, and an activity's own crew (an event pack, a camp brute, a relay's
+# minibosses) never counts as a fight. Only roaming packs do.
 
 const FIGHT_RADIUS := 30.0
 const LOOP_WINDOW := 10.0
@@ -96,7 +100,7 @@ func step(delta: float, enemies: Array) -> void:
 			_erupt(k, enemies)
 		return
 	_rest -= delta
-	if _rest > 0.0 or not _looping() or not _fighting(ball, enemies):
+	if _rest > 0.0 or _ctx.flow.engaged() or not _looping() or not _fighting(ball, enemies):
 		return
 	var at := PackPressure.predict(_ctx.player, WARN)
 	_ring = Telegraph.ring(_ctx.root, _terrain, Threat.Type.INSTANT, at, RADIUS)
@@ -115,14 +119,31 @@ func _looping() -> bool:
 
 
 func _fighting(ball: Vector3, enemies: Array) -> bool:
+	var crews := _activity_crews()
 	for enemy in enemies:
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
-		if _set_piece(enemy):
+		if _set_piece(enemy) or crews.has(enemy):
 			continue
 		if _flat(enemy.global_position - ball).length() <= FIGHT_RADIUS:
 			return true
 	return false
+
+
+# Every enemy an activity site holds: its pack, its brute and its minibosses.
+func _activity_crews() -> Dictionary:
+	var out := {}
+	var world = _ctx.root.get_node_or_null("World") if _ctx.root != null else null
+	var activities = world.get("activities") if world != null else null
+	if activities == null:
+		return out
+	for site in activities.sites:
+		if not is_instance_valid(site):
+			continue
+		for enemy in site.pack + site.minibosses + [site.brute]:
+			if enemy != null and is_instance_valid(enemy):
+				out[enemy] = true
+	return out
 
 
 func _erupt(k: float, enemies: Array) -> void:

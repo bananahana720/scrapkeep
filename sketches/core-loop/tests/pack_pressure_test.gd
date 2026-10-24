@@ -46,8 +46,13 @@ class FakeTuning:
 
 
 class FakeFlow:
+	var warden_engaged := false
+
 	func in_play() -> bool:
 		return true
+
+	func engaged() -> bool:
+		return warden_engaged
 
 	func in_stage() -> bool:
 		return true
@@ -70,6 +75,20 @@ class FakeCtx:
 	var tuning := FakeTuning.new()
 	var terrain := FakeTerrain.new()
 	var root: Node3D
+
+
+class FakeSite:
+	var pack: Array = []
+	var minibosses: Array = []
+	var brute = null
+
+
+class FakeActivities:
+	var sites: Array = []
+
+
+class FakeWorld extends Node3D:
+	var activities := FakeActivities.new()
 
 
 class FakeEnemy extends Node3D:
@@ -109,6 +128,7 @@ func _initialize() -> void:
 func _identity() -> void:
 	for key in ["pack.lead_by_stage", "pack.crew_extra_by_stage", "pack.rest_by_stage", "pack.flank_by_stage", "ground.churn_by_stage", "hazard.boil_by_stage"]:
 		_t.eq("01 %s is at its default with no flag" % key, ChallengeDials.value(key), ChallengeDials.DEFAULTS[key])
+	_t.eq("01b silt boils ship on world 1 at strength 2, nowhere else", ChallengeDials.value("hazard.boil_by_stage"), [2.0, 2.0, 0.0, 0.0, 0.0, 0.0])
 	_t.eq("02 a crew reads the identity row", PackPressure.crew_row(1), {"lead": 0.0, "rest": 1.0, "flank": 0.0})
 	_t.eq("03 no extra chasers", PackPressure.crew_extra(1), 0)
 
@@ -213,8 +233,9 @@ func _boils() -> void:
 	var dealt := []
 	boils.deal = func(amount: float, _shove: Vector3): dealt.append(amount)
 	var dt := 1.0 / 90.0
+	ChallengeDials.set_overrides(ChallengeDials.parse("hazard.boil_by_stage=0/0/0/0/0/0"))
 	boils.step(dt, [enemy])
-	_t.eq("19 off with no dial: no boil", boils.boils, 0)
+	_t.eq("19 off with the dial at 0: no boil", boils.boils, 0)
 	ChallengeDials.set_overrides(ChallengeDials.parse(PackPressure.tune_spec("E")))
 	var w := CRUISE / RING
 	var angle := 0.0
@@ -236,11 +257,41 @@ func _boils() -> void:
 	for i in int((SiltBoil.WARN - ChallengeDials.TELL_FLOOR) * 90.0) + 2:
 		boils.step(dt, [enemy])
 	_t.eq("22 the eruption hits the ball inside", boils.ball_hits, 1)
-	_t.eq("23 it deals the boil's damage", dealt, [SiltBoil.DAMAGE])
+	_t.eq("23 it deals the boil's damage times the strength", dealt, [SiltBoil.DAMAGE * 2.0])
 	_t.eq("24 it tosses the crew inside", enemy.knocked, 1)
 	_t.eq("25 a crew it kills is the silt's", enemy.get("last_damage_source"), "silt_boil")
 	boils.reset(true)
 	_t.eq("26 a stage entry clears the counts and any ring", [boils.boils, boils._ring], [0, null])
+	_t.eq("26b an engaged Warden's fight never boils", _loop_boils(boils, ctx, enemy, func(): ctx.flow.warden_engaged = true), 0)
+	ctx.flow.warden_engaged = false
+	var world := FakeWorld.new()
+	world.name = "World"
+	ctx.root.add_child(world)
+	var site := FakeSite.new()
+	site.pack = [enemy]
+	world.activities.sites = [site]
+	_t.eq("26c an activity's own crew is not a fight to boil", _loop_boils(boils, ctx, enemy, func(): pass), 0)
+	world.activities.sites = []
+	_t.eq("26d a roaming pack still is", _loop_boils(boils, ctx, enemy, func(): pass), 1)
 	ChallengeDials.set_overrides({})
 	ctx.root.queue_free()
 	await process_frame
+
+
+# Loops the ball on a 14 m ring around `enemy` for up to 20 s after `arrange`, from a fresh stage entry;
+# the boils raised.
+func _loop_boils(boils, ctx, enemy, arrange: Callable) -> int:
+	boils.reset(true)
+	enemy.global_position = Vector3(0.0, 1.5, 0.0)
+	arrange.call()
+	var dt := 1.0 / 90.0
+	var w := CRUISE / RING
+	var angle := 0.0
+	for i in 90 * 20:
+		angle += w * dt
+		ctx.player.at = Vector3(cos(angle), 0.0, sin(angle)) * RING
+		ctx.player.v = Vector3(-sin(angle), 0.0, cos(angle)) * CRUISE
+		boils.step(dt, [enemy])
+		if boils.boils > 0:
+			break
+	return boils.boils

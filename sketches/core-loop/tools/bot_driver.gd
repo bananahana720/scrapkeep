@@ -4130,10 +4130,11 @@ func record(wall_seconds: float) -> Dictionary:
 	var dials := ChallengeDials.describe()
 	if not dials.is_empty():
 		row["dials"] = dials
-		# The pack pressure experiments' own counts (combat/pack_pressure.gd), only when a dial is moved.
-		var spawner = game.ctx.spawner
-		var pressure_dials := dials.keys().any(func(k: String) -> bool: return k.begins_with("pack.") or k.begins_with("ground.") or k.begins_with("hazard."))
-		if pressure_dials and spawner != null and spawner.get("churn") != null:
-			row["pressure"] = {"churn_drag_s": snappedf(spawner.churn.drag_s, 0.01), "churned_cells": spawner.churn.churned_cells,
-				"boils": spawner.boils.boils, "boil_hits": spawner.boils.ball_hits, "boil_tosses": spawner.boils.enemy_tosses}
+	# The pack pressure counts (combat/pack_pressure.gd): when a pressure dial is moved, or the shipped
+	# silt boils fired.
+	var spawner = game.ctx.spawner
+	var pressure_dials := dials.keys().any(func(k: String) -> bool: return k.begins_with("pack.") or k.begins_with("ground.") or k.begins_with("hazard."))
+	if spawner != null and spawner.get("churn") != null and (pressure_dials or spawner.boils.boils > 0):
+		row["pressure"] = {"churn_drag_s": snappedf(spawner.churn.drag_s, 0.01), "churned_cells": spawner.churn.churned_cells,
+			"boils": spawner.boils.boils, "boil_hits": spawner.boils.ball_hits, "boil_tosses": spawner.boils.enemy_tosses}
 	return row

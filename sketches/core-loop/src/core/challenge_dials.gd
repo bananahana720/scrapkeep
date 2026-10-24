@@ -29,6 +29,8 @@ const WARN_GAP := 0.2
 
 const ONES6 := [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 const ZEROS6 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+# Silt boils ship on world 1 at strength 2 (pack pressure E, 24 Oct ruling; DECISIONS section 5).
+const SILT_W1 := [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 
 const DEFAULTS := {
@@ -83,7 +85,7 @@ const DEFAULTS := {
 	# and aim at; extra chasers per crew; a multiplier on the re-engage gap; 1 makes every second chaser a
 	# flanker; churned-silt drag strength (churn_ground.gd); silt boil damage, 0 off (silt_boil.gd).
 	"pack.lead_by_stage": ZEROS6, "pack.crew_extra_by_stage": ZEROS6, "pack.rest_by_stage": ONES6,
-	"pack.flank_by_stage": ZEROS6, "ground.churn_by_stage": ZEROS6, "hazard.boil_by_stage": ZEROS6,
+	"pack.flank_by_stage": ZEROS6, "ground.churn_by_stage": ZEROS6, "hazard.boil_by_stage": SILT_W1,
 	# NOT ALLOWED LEVERS YET. Plumbed only: a ruling is needed before any non-default value ships.
 	"pilot.regen_delay_mult": 1.0, "pilot.regen_rate_mult": 1.0,
 }

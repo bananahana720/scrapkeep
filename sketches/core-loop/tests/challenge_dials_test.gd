@@ -64,7 +64,8 @@ func _rules() -> void:
 	for key in ChallengeDials.DEFAULTS:
 		# The tuned lists, and the fight-phase follow-up counts (a count, not a multiplier; Andrew's
 		# 23 Oct phase ruling sets them, fight_phases.gd).
-		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "brindle.follow_ups_by_phase"]:
+		# The silt boils ship on world 1 (pack pressure E, 24 Oct).
+		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "brindle.follow_ups_by_phase", "hazard.boil_by_stage"]:
 			continue
 		var d: Variant = ChallengeDials.DEFAULTS[key]
 		var ident: bool = true

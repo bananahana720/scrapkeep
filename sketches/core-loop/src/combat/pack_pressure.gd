@@ -3,7 +3,7 @@ extends RefCounted
 # Pack pressure experiments, world 1 (the kiting sweep, scrapkeep#241 comment 6378906601: circling a pack
 # costs nothing on every stage). Five variants, each only a preset of ChallengeDials rows, chosen on the
 # command line with --pack-pressure=A, or a combination such as --pack-pressure=A+D. Without the flag every
-# dial reads its identity and the game is unchanged. An explicit --tune of the same key wins over a preset.
+# dial but E's reads its identity. An explicit --tune of the same key wins over a preset.
 #
 #   A  aim: crews lead the ball's roll, along its curve, when they steer and when they lay a lunge lane.
 #   B  numbers: one more chaser per crew and half the re-engage gap.
@@ -11,7 +11,9 @@ extends RefCounted
 #      its wind-up) and lunges across the line.
 #   D  churned silt (churn_ground.gd): ground the ball rolls over again within CHURN_WINDOW drags it below
 #      FAST tier. Fast balls skim it.
-#   E  silt boils (silt_boil.gd): where the ball loiters in a fight the silt boils up under a telegraphed ring.
+#   E  silt boils (silt_boil.gd): where the ball loops round a roaming pack the silt boils up under a
+#      telegraphed ring. E ships on: the dial defaults to strength 2 on world 1, and the preset names that
+#      default. --tune=hazard.boil_by_stage=0/0/0/0/0/0 turns it off.
 #
 # World 1 only: each preset fills the stage 1 and 2 entries of a per-stage dial and leaves the rest at
 # identity.
@@ -24,7 +26,7 @@ const PRESETS := {
 	"B": {"pack.crew_extra_by_stage": W1, "pack.rest_by_stage": HALF_W1},
 	"C": {"pack.flank_by_stage": W1},
 	"D": {"ground.churn_by_stage": W1},
-	"E": {"hazard.boil_by_stage": W1},
+	"E": {"hazard.boil_by_stage": [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]},
 }
 
 # The flanker's call: the whistle sounds this long before its wind-up opens (the phase-signal spec's 0.5 s
