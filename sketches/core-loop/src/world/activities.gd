@@ -177,6 +177,8 @@ const CACHE_FIRED_GLOW := {"energy": 0.8}
 # A field find's tells: seep streaks on the cracked face (x, y, width in metres) and the radio aerial.
 const FIND_SEEP_STREAKS := [Vector3(-2.6, 0.4, 0.5), Vector3(-1.9, 0.1, 0.3), Vector3(2.2, 0.6, 0.4)]
 const FIND_AERIAL_M := 3.2
+# The timed door's punch clock plate, square, on the cracked face.
+const DOOR_CLOCK_M := 1.6
 # One wet material for every seep streak.
 static var _find_wet: StandardMaterial3D
 
@@ -467,6 +469,11 @@ func _enter_stage(retry: bool) -> void:
 			_dress_find(found, String(find_spec["find"]))
 			last_entry_steps.append("find %s %.1f" % [find_spec["find"], (Time.get_ticks_usec() - dressed) / 1000.0])
 			sites.append(found)
+		# A fast Brindle rout last run: the timed door stands open this run (secrets.gd DOOR).
+		for door_spec in Secrets.door_sites(_graph_map, ctx.get("profile")):
+			var door := _build("cracked_cache", door_spec["at"], door_spec)
+			_dress_door(door)
+			sites.append(door)
 	if _graph != null:
 		var pool: PackedInt32Array = entry_data.pool
 		var trade_spec := TradePockets.stage_site(_graph, map, ctx.run, ctx.rng.seed, pool)
@@ -745,6 +752,30 @@ func _seep_tell(s: Site) -> void:
 	glint.position = Vector3(0.0, WALL_HEIGHT * 0.6, 1.2)
 	s.wall.add_child(glint)
 	s.wall.add_child(_find_sound("find_drip", Secrets.DRIP_HEAR_M))
+
+
+# The timed door: the foreman's board inside and a brass punch clock on the face, stopped short of
+# the whistle. It keeps its beacon, since it was earned; its codex row is declared here.
+func _dress_door(s: Site) -> void:
+	_hang_board(s, "Door_clock", String(Secrets.DOOR["name"]), String(Secrets.DOOR["log"]))
+	s.set_meta("door", true)
+	if ctx.get("codex") != null:
+		ctx.codex.declare(Secrets.DOOR["codex"])
+	var clock := Node3D.new()
+	clock.name = "DoorClock"
+	clock.position = Vector3(0.0, 1.3, 0.52)
+	s.wall.add_child(clock)
+	_mesh_box(clock, Vector3(DOOR_CLOCK_M, DOOR_CLOCK_M, 0.1), Vector3.ZERO, Palette.solid(Palette.BRASS))
+	_mesh_box(clock, Vector3(DOOR_CLOCK_M - 0.3, DOOR_CLOCK_M - 0.3, 0.06), Vector3(0.0, 0.0, 0.06), Palette.solid(Palette.LEDGER))
+	var ink := Palette.solid(Palette.CHARCOAL)
+	# Hands at five to twelve: the hour hand straight up, the minute hand a little short of it.
+	var hour := _mesh_box(clock, Vector3(0.1, DOOR_CLOCK_M * 0.3, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.15, 0.1), ink)
+	hour.name = "HourHand"
+	var minute := Node3D.new()
+	minute.position = Vector3(0.0, 0.0, 0.12)
+	minute.rotation.z = deg_to_rad(30.0)
+	clock.add_child(minute)
+	_mesh_box(minute, Vector3(0.07, DOOR_CLOCK_M * 0.42, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.21, 0.0), ink)
 
 
 # The radio's tell: a short whip aerial over the roof line and the tune through the wall, heard from
@@ -1572,6 +1603,8 @@ func _break_wall(s: Site) -> void:
 	ctx.events.world_fact.emit("wall_crumbled", s.global_position)
 	if s.has_meta("find"):
 		_found(s)
+	elif s.has_meta("door") and ctx.get("codex") != null:
+		ctx.codex.mark_discovered(String(Secrets.DOOR["codex"]["id"]), s.pedestal)
 	_finish(s, s.pedestal)
 
 
@@ -1714,13 +1747,15 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 		ctx.run.add_cogs(amount)
 
 
-# A field find or a first-win room rolls on its own stream, so it never pays the part the stage's
+# A field find, a first-win room or the timed door rolls on its own stream, so it never pays the part the stage's
 # ordinary cracked cache pays; every other site keeps its id, and so its rolls.
 func _luck_id(s: Site) -> String:
 	if s.has_meta("find"):
 		return "%s:%s" % [s.id, s.get_meta("find")]
 	if s.has_meta("room"):
 		return "%s:%s" % [s.id, s.get_meta("room")]
+	if s.has_meta("door"):
+		return "%s:timed_door" % s.id
 	return s.id
 
 

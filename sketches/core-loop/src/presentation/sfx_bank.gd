@@ -88,7 +88,7 @@ const TRIM_DB := {
 	"stinger_unseal": -3.0, "class_up": -3.0, "clank": -6.0, "scrap_rip": -4.0, "threat_up": -6.0,
 	"core_socket": -3.0, "synergy_fanfare": 0.0, "found_chime": -6.0, "achievement_chime": -6.0, "rescue_fanfare": -3.0, "element_resolved": -8.0,
 	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0, "warden_theme_in": -6.0, "class_down": -6.0,
-	"boss_arena_in": -3.0, "boss_phase": -4.0, "boss_telegraph": -4.0, "boss_weak_hit": -7.0,
+	"boss_arena_in": -3.0, "boss_phase": -4.0, "boss_telegraph": -4.0, "ratchet_cue": -4.0, "boss_weak_hit": -7.0,
 	"stinger_boss_defeated": -1.0,
 	"womp": -8.0, "build_riser": -4.0, "stage_fade": -12.0,
 	"vault_rise": -6.0, "vault_drop": -2.0, "synergy_hit": -10.0,
@@ -914,6 +914,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 				[6, 0, 1, "anvil", 0.8], [6, 62, 2, "brass", 0.6], [6, 74, 2, "brass", 0.45]], 0.6)
 		"boss_telegraph":
 			return _boss_telegraph()
+		"ratchet_cue":
+			return _ratchet_cue()
 		"boss_weak_hit":
 			return _mix([[_fm(0.28, _hz(79), 3.5, 3.0, 13.0), 0, 0.9], [_tone(0.1, 180.0, 90.0, "sine", 30.0), 0, 0.6],
 				[_noise(0.03, 4500.0, 2500.0, 120.0), 0, 0.4]])
@@ -1684,6 +1686,15 @@ static func _boss_telegraph() -> PackedFloat32Array:
 	return _mix([[_tone(0.12, _hz(50), _hz(50), "square_dark", 10.0), 0, 0.9],
 		[_tone(0.18, _hz(51), _hz(52), "square_dark", 8.0), Synth.seconds(0.13), 1.0],
 		[_noise(0.35, 600.0, 3000.0, 3.0, 0.2), 0, 0.35]], true)
+
+
+# A cued follow-up is coming (fight_phases.gd): three ratchet clicks climbing D, F, A and a
+# high bell on D, all inside CUE_LEAD, so the ear has the warning before the eye's short tell.
+static func _ratchet_cue() -> PackedFloat32Array:
+	return _mix([[_tone(0.05, _hz(62), _hz(62), "square_dark", 30.0), 0, 0.8],
+		[_tone(0.05, _hz(65), _hz(65), "square_dark", 30.0), Synth.seconds(0.11), 0.85],
+		[_tone(0.05, _hz(69), _hz(69), "square_dark", 30.0), Synth.seconds(0.22), 0.9],
+		[_cut(_n("bell", 86), 0.3), Synth.seconds(0.33), 0.7]], true)
 
 
 # Brindle routed: the brass fanfare in D major, a bell run to the top, and the

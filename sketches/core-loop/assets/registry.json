@@ -35769,6 +35769,48 @@
    "loader": "src/presentation/hero_assets.gd:44"
   },
   {
+   "id": "rogue_cable_tender",
+   "path": "res://assets/models/rogues/cable_tender.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "pending: src/combat/rogue.gd loads it in the Rogue fleet mini-bosses PR (#385); flip ships there",
+   "provenance": {
+    "recipe": "tools/blender/rogues/cable_tender.py",
+    "shell": "tools/blender/rogues/cable_tender.mojulo.json",
+    "design": "design-v3/rogues/BRIEFS.md",
+    "reference": "docs/art/reference/rogues/cable_tender/",
+    "note": "Cable Tender No. 7, Highdraft rogue (BRIEFS.md section 3). One-piece mojulo shells finished in Blender on the miniboss GLB contract: Hull/Armour/Core, rigid pose bones, collider-centre origin, -Z facing."
+   }
+  },
+  {
+   "id": "rogue_gate_crane",
+   "path": "res://assets/models/rogues/gate_crane.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "pending: src/combat/rogue.gd loads it in the Rogue fleet mini-bosses PR (#385); flip ships there",
+   "provenance": {
+    "recipe": "tools/blender/rogues/gate_crane.py",
+    "shell": "tools/blender/rogues/gate_crane.mojulo.json",
+    "design": "design-v3/rogues/BRIEFS.md",
+    "reference": "docs/art/reference/rogues/gate_crane/",
+    "note": "Gate Crane No. 14, Spillway rogue (BRIEFS.md section 1). One-piece mojulo shells finished in Blender on the miniboss GLB contract: Hull/Armour/Core, rigid pose bones, collider-centre origin, -Z facing."
+   }
+  },
+  {
+   "id": "rogue_haul_skip",
+   "path": "res://assets/models/rogues/haul_skip.glb",
+   "class": "enemy",
+   "ships": false,
+   "loader": "pending: src/combat/rogue.gd loads it in the Rogue fleet mini-bosses PR (#385); flip ships there",
+   "provenance": {
+    "recipe": "tools/blender/rogues/haul_skip.py",
+    "shell": "tools/blender/rogues/haul_skip.mojulo.json",
+    "design": "design-v3/rogues/BRIEFS.md",
+    "reference": "docs/art/reference/rogues/haul_skip/",
+    "note": "Haul Skip No. 31, Dig rogue (BRIEFS.md section 2). One-piece mojulo shells finished in Blender on the miniboss GLB contract: Hull/Armour/Core, rigid pose bones, collider-centre origin, -Z facing."
+   }
+  },
+  {
    "class": "prop",
    "id": "scrap_crate",
    "loader": "asset-forge pipeline proof; not game content",
@@ -38895,6 +38937,9 @@
   "rim_road",
   "rim_road_detail1",
   "rim_road_detail2",
+  "rogue_cable_tender",
+  "rogue_gate_crane",
+  "rogue_haul_skip",
   "rubble_cluster",
   "sand_ground_albedo",
   "sand_ground_ao",

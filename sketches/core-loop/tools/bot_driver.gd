@@ -1871,10 +1871,12 @@ func _activity_rushed() -> bool:
 	return game.run.stage_time > engage_by
 
 
-# A site's key for the bot's timers and skips: its id, or "find:<id>" for a field find, so the stage's
-# finds and its ordinary cracked cache are worked one by one.
+# A site's key for the bot's timers and skips: its id, "find:<id>" for a field find, or "door:<id>"
+# for the timed door, so the stage's finds, door and ordinary cracked cache are worked one by one.
 func _site_key(s) -> String:
-	return "find:%s" % s.get_meta("find") if s.has_meta("find") else String(s.id)
+	if s.has_meta("find"):
+		return "find:%s" % s.get_meta("find")
+	return "door:%s" % s.id if s.has_meta("door") else String(s.id)
 
 
 func _site_by_key(activities, key: String):
