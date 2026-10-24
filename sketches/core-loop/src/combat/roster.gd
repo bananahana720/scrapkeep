@@ -257,6 +257,11 @@ static func world_kinds(world: int) -> Array:
 	return kinds
 
 
+# A world's own kind: a row the director composes into that world's authored packs.
+static func is_world_kind(id: String) -> bool:
+	return int(row(id).get("world", 0)) >= 1
+
+
 static func has(id: String) -> bool:
 	return ROWS.has(id)
 

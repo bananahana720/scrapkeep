@@ -1218,7 +1218,9 @@ func _target_class_of_kind(kind: String) -> String:
 	# neither is a real gap (a KINDS or SCRIPTS addition this unit missed), so it still
 	# counts under "adds" but is warned once rather than counted silently.
 	# A special's spawn (roster_specials.gd "spawned") is an add, but not a reinforcement.
-	if not Roster.is_reinforcement(kind) and not Roster.row(kind).has("priority"):
+	# So is a world's own kind (a row with "world", e.g. drill_crew, boom_tender): the
+	# director composes it into authored packs, never the reinforcement clock.
+	if not Roster.is_reinforcement(kind) and not Roster.row(kind).has("priority") and not Roster.is_world_kind(kind):
 		push_warning("_target_class_of_kind: '%s' is neither a v1 kind nor a Fleet reinforcement; counting it under 'adds'" % kind)
 	return "adds"
 

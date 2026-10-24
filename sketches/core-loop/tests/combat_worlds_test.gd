@@ -85,6 +85,16 @@ func _pieces() -> void:
 		if Roster.is_boss_piece(kind) or combat._target_class_of_kind(kind) == "boss":
 			claimed.append(kind)
 	_t.check("no roster enemy kind reads as a boss piece", claimed.is_empty(), "claimed %s" % [claimed])
+	# Every roster kind that lands in "adds" is a named one, so _target_class_of_kind never
+	# warns for it (the stage 4 dry run warned on drill_crew, a world 2 kind, 23 Oct).
+	var unnamed: Array = []
+	for kind in Roster.ROWS:
+		if combat._target_class_of_kind(kind) == "adds" and not (Roster.is_reinforcement(kind)
+				or Roster.row(kind).has("priority") or Roster.is_world_kind(kind)):
+			unnamed.append(kind)
+	_t.check("every roster kind classed as adds is a reinforcement, special spawn or world kind", unnamed.is_empty(), "unnamed %s" % [unnamed])
+	for kind in ["drill_crew", "boom_tender", "jolt_layer"]:
+		_t.check("%s is a world kind" % kind, Roster.is_world_kind(kind), kind)
 	var hand = load("res://src/combat/enemy.gd").new()
 	hand.kind = "mind_hand"
 	_t.check("mind_hand is an ordinary reaction", hand._ordinary_reaction(), "mind_hand")
