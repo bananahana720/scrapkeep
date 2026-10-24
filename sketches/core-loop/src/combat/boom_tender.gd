@@ -44,9 +44,9 @@ var _origin := Vector3.ZERO
 var _side := 1.0
 var _pops_live := 0
 var _boom: Node3D
-var _floats: Array = []
+var _floats: MultiMeshInstance3D
 var _reel: Node3D
-var _lamps: Array = []
+var _lamps: MultiMeshInstance3D
 
 static var _warned_asset := false
 static var _shared: Array = []
@@ -87,10 +87,12 @@ func _build_tool() -> void:
 	_boom.position.y = -BOOM_DROP
 	dress.add_child(_boom)
 	if parts.is_empty():
-		for out in FLOAT_OUT:
-			var f := _cylinder(0.3, 0.9, Palette.RUST, Vector3(0.0, 0.85, -out), 0.0, _boom)
-			f.rotation.x = PI * 0.5
-			_floats.append(f)
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.3
+		cyl.bottom_radius = 0.3
+		cyl.height = 0.9
+		cyl.material = Palette.solid(Palette.RUST)
+		_lay_boom(cyl, Vector3(0.0, 0.85, 0.0), Basis(Vector3.RIGHT, PI * 0.5))
 		return
 	_crew.free()
 	_crew = null
@@ -100,7 +102,7 @@ func _build_tool() -> void:
 	for part in parts:
 		var name := String(part.name)
 		if name == "BoomFloat":
-			_lay_boom(part)
+			_lay_boom(part.mesh, (part.xform as Transform3D).origin, Basis.IDENTITY)
 			continue
 		var mi := MeshInstance3D.new()
 		mi.name = name
@@ -111,28 +113,50 @@ func _build_tool() -> void:
 		dress.add_child(mi)
 		if name == "TenderReel":
 			_reel = mi
-	for f in _floats:
-		var lamp := _box(Vector3(0.14, 0.12, 0.14), Palette.BRASS, Vector3(0.0, 0.34, 0.0), 0.0, f)
-		lamp.name = "Lamp"
-		_lamps.append(lamp)
 
 
-# The glb's one float, laid at each FLOAT_OUT and once small as the end buoy: one mesh, one draw.
-func _lay_boom(part: Dictionary) -> void:
-	var at: Vector3 = (part.xform as Transform3D).origin
+# The one float laid at each FLOAT_OUT and once small as the end buoy, and a brass lamp on each
+# float: two multimeshes, so the boom is two draws however many floats stand (the dam's draw
+# split, 23 Oct: thirteen meshes a tender were +194 p99 draws with the pack cap). A popped float
+# and its lamp collapse to a zero basis; the lamps light by instance colour, unshaded.
+func _lay_boom(mesh: Mesh, at: Vector3, turn: Basis) -> void:
+	_floats = _multimesh("BoomFloats", mesh, FLOAT_OUT.size() + 1, false)
 	for i in FLOAT_OUT.size():
-		var mi := MeshInstance3D.new()
-		mi.name = "BoomFloat%d" % i
-		mi.mesh = part.mesh
-		mi.position = Vector3(at.x, at.y, -float(FLOAT_OUT[i]))
-		_boom.add_child(mi)
-		_floats.append(mi)
-	var buoy := MeshInstance3D.new()
-	buoy.name = "BoomBuoy"
-	buoy.mesh = part.mesh
-	buoy.position = Vector3(at.x, at.y, -BUOY_OUT)
-	buoy.scale = Vector3.ONE * BUOY_SCALE
-	_boom.add_child(buoy)
+		_floats.multimesh.set_instance_transform(i, Transform3D(turn, Vector3(at.x, at.y, -float(FLOAT_OUT[i]))))
+	_floats.multimesh.set_instance_transform(FLOAT_OUT.size(),
+			Transform3D(turn.scaled(Vector3.ONE * BUOY_SCALE), Vector3(at.x, at.y, -BUOY_OUT)))
+	var lamp := BoxMesh.new()
+	lamp.size = Vector3(0.14, 0.12, 0.14)
+	var glow := StandardMaterial3D.new()
+	glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	glow.vertex_color_use_as_albedo = true
+	lamp.material = glow
+	_lamps = _multimesh("BoomLamps", lamp, FLOAT_OUT.size(), true)
+	_lamps.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for i in FLOAT_OUT.size():
+		_lamps.multimesh.set_instance_transform(i, Transform3D(Basis.IDENTITY, Vector3(at.x, at.y + 0.34, -float(FLOAT_OUT[i]))))
+	_lamp(-1)
+
+
+func _multimesh(node_name: String, mesh: Mesh, count: int, colours: bool) -> MultiMeshInstance3D:
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = colours
+	mm.mesh = mesh
+	mm.instance_count = count
+	var node := MultiMeshInstance3D.new()
+	node.name = node_name
+	node.multimesh = mm
+	_boom.add_child(node)
+	return node
+
+
+func _pop_float(i: int) -> void:
+	for node in [_floats, _lamps]:
+		if node != null:
+			var mm: MultiMesh = (node as MultiMeshInstance3D).multimesh
+			var xf := mm.get_instance_transform(i)
+			mm.set_instance_transform(i, Transform3D(Basis().scaled(Vector3.ZERO), xf.origin))
 
 
 static func _parts() -> Array:
@@ -218,8 +242,7 @@ func _bowl_through(ball: Vector3) -> void:
 		popped[i] = true
 		pops += 1
 		_pops_live += 1
-		if i < _floats.size():
-			(_floats[i] as Node3D).visible = false
+		_pop_float(i)
 		_pay(at)
 		if fleet != null:
 			fleet.discover("boom_pop", at)
@@ -265,10 +288,10 @@ func _pose() -> void:
 			var t := clampf(_warn_progress(), 0.0, 1.0)
 			swing = SWING * _side * t * t * (3.0 - 2.0 * t)
 			reel = -TAU * t
-			_lamp(int(floor(t * float(_lamps.size()))))
+			_lamp(int(floor(t * float(FLOAT_OUT.size()))))
 		Phase.LIVE:
 			swing = SWING * _side * (1.0 - clampf(_t / SWEEP, 0.0, 1.0) * 2.0)
-			_lamp(_lamps.size())
+			_lamp(FLOAT_OUT.size())
 		_:
 			swing = lerpf(_boom.rotation.y, 0.0, 1.0 - exp(-6.0 * get_physics_process_delta_time()))
 	_boom.rotation.y = swing
@@ -278,11 +301,9 @@ func _pose() -> void:
 
 # Lights the first `count` standing floats' lamps; -1 puts them all out.
 func _lamp(count: int) -> void:
-	for i in _lamps.size():
-		var mat := (_lamps[i] as MeshInstance3D).material_override as StandardMaterial3D
-		if mat == null:
-			continue
-		var on := i < count
-		mat.emission_enabled = on
-		mat.emission = Palette.BRASS
-		mat.emission_energy_multiplier = LAMP_ON if on else 0.0
+	if _lamps == null:
+		return
+	var lit := Palette.BRASS * LAMP_ON
+	lit.a = 1.0
+	for i in FLOAT_OUT.size():
+		_lamps.multimesh.set_instance_color(i, lit if i < count else Palette.BRASS.darkened(0.6))
