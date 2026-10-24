@@ -398,6 +398,9 @@ var late_offer_policy := ""
 # the game's own set_stakes before it rolls in, works it to its pay, then goes on to the Warden.
 # 0 leaves every code path below untouched.
 var relay_stake := 0
+# The pacing lab's switch (bot_run --explore-by=<s>, scripts/pacing-check.mjs): the stage second the
+# completionist stops its optional rolling for the Warden. Left at ENGAGE_BY unless the flag is given.
+var engage_by := ENGAGE_BY
 const RELAY_ARM_SECONDS := 150.0
 var _relay_clock := 0.0
 var _relay_closed := {}
@@ -839,7 +842,7 @@ func _lap_roll() -> void:
 
 
 # The stall limit now. A sweep's own stage_limit is kept; the default one stretches for the
-# Mind's crown and for the gates after a break.
+# Mind's crown, for the gates after a break, and by however far --explore-by moved engage_by.
 func _stage_cap() -> float:
 	if stage_limit != STAGE_LIMIT:
 		return stage_limit
@@ -849,7 +852,7 @@ func _stage_cap() -> float:
 	var broken = _note.get("warden_broken_s")
 	if broken != null:
 		cap = maxf(stage_limit, float(broken) + GATE_LIMIT)
-	return cap
+	return cap + maxf(0.0, engage_by - ENGAGE_BY)
 
 
 # A pending hot-wire offer is answered the tick it is seen, by one rule: the completionist
@@ -1821,7 +1824,7 @@ func _activity_rushed() -> bool:
 	var world = game.world
 	if world == null or world.activities == null or world.activities.sites.is_empty():
 		return false
-	return game.run.stage_time > ENGAGE_BY
+	return game.run.stage_time > engage_by
 
 
 # A site the bot may still work: not given up, and either unfinished or with its pay on the ground.

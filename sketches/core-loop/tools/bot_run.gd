@@ -54,6 +54,9 @@ const BotPlants := preload("res://tools/bot_plants.gd")
 # set_stakes) once, before it rolls into the ring, work the relay to its pay, then go on to the
 # Warden; the stage row in bots.ndjson carries relay_stakes [{stage, k, ...}]. 0 or absent leaves
 # the bot byte-identical. Only the park table builds a relay (stages 1 and 5).
+# --explore-by=<s> (pacing lab, scripts/pacing-check.mjs) lets the completionist roll optional content
+# until stage second s instead of ENGAGE_BY (140), and stretches the stall cap by the same amount, so
+# a park can be measured longer than the default explorer stays. Absent, the bot is unchanged.
 # --panel-log=1 adds panel_kills (the build's kill_log: stage, kind, elite, rib, jackpot, dropped)
 # and panels (the run's pickups in order) to the bots.ndjson row.
 # --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
@@ -173,6 +176,10 @@ func _initialize() -> void:
 		return
 	if BotOptions.relay_stake(_settings) < 0:
 		printerr("bot_run: --relay-stake=%s is out of range; use a whole number 0 to 4" % _settings["relay-stake"])
+		quit(2)
+		return
+	if BotOptions.explore_by(_settings) < 0.0:
+		printerr("bot_run: --explore-by=%s must be a number of seconds above %d" % [_settings["explore-by"], int(BotDriver.ENGAGE_BY)])
 		quit(2)
 		return
 	if _settings.has("band") and String(_settings["band"]) not in SkillBand.BANDS:
@@ -325,6 +332,9 @@ func _physics_process(delta: float) -> bool:
 		if _driver.trace:
 			_game.events.world_entered.connect(func(world: int): print("  trace world %d entered" % world))
 		_driver.relay_stake = BotOptions.relay_stake(_settings)
+		var explore_by := BotOptions.explore_by(_settings)
+		if explore_by > 0.0:
+			_driver.engage_by = explore_by
 		_driver.chain_hand_enabled = String(_settings.get("chain-hand", "1")) != "0"
 		if _settings.has("late-offer"):
 			var late := String(_settings["late-offer"])
