@@ -5,6 +5,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Secrets := preload("res://src/core/secrets.gd")
+const Companion := preload("res://src/core/companion.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
@@ -145,6 +146,9 @@ func setup(ctx_ref, beacon_ref) -> void:
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
 	ctx.events.enemy_struck.connect(_on_enemy_struck)
 	ctx.events.boss_defeated.connect(_on_boss_defeated)
+	# A stage's piece pays with its activity; it reaches the profile then, so a restart or a quit
+	# before the next stage entry cannot lose it.
+	ctx.events.activity_done.connect(func(_id: String, _at: Vector3): _persist_companion())
 
 
 func state_name() -> String:
@@ -477,6 +481,7 @@ func resume_run() -> bool:
 	ctx.run.begin(chosen)
 	ctx.events.run_started.emit(chosen.id)
 	ctx.run.from_entrance_doc(doc)
+	_keep_found_pieces()
 	# The run document's settled ids and the profile's become one set again.
 	if ctx.progress != null:
 		ctx.progress.reconcile_settled()
@@ -532,8 +537,20 @@ func _seed_companion() -> void:
 		ctx.run.companion = ctx.profile.companion()
 
 
+# A Continue rolls the run back to its last zone entrance, whose companion can predate a piece
+# the profile already holds: the piece stays found, and no persist writes the older companion
+# over the profile.
+func _keep_found_pieces() -> void:
+	if ctx.profile == null:
+		return
+	for id in ctx.profile.companion().get("owned", []):
+		if not ctx.run.companion.get("owned", []).has(id):
+			ctx.run.companion = Companion.with_piece(ctx.run.companion, String(id))
+
+
 # Writes the run's companion to the profile when it has one and the profile's differs.
 func _persist_companion() -> void:
+	_keep_found_pieces()
 	if ctx.profile == null or ctx.run.companion.is_empty() or ctx.profile.companion() == ctx.run.companion:
 		return
 	ctx.profile.set_companion(ctx.run.companion)

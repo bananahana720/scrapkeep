@@ -957,7 +957,7 @@ func _fail(verb: String, reason: String) -> void:
 
 
 # Whether pressing the verb would succeed on this tick: "harpoon" bites, "haul" commits a
-# smash or winches, "boost" is Shift's verb for this pilot, "interact" is E where it would mount
+# smash (on a Warden line only inside its stagger) or winches, "boost" is Shift's verb for this pilot, "interact" is E where it would mount
 # the pylon or an interactable would take the press, "jump" is Space where it would jump,
 # air-jump or launch the slingshot.
 func verb_ready(verb: String) -> bool:
@@ -979,7 +979,7 @@ func verb_ready(verb: String) -> bool:
 			return not Augments.holding(kit) and (state.grounded or state.coyote > 0.0 or state.air_actions > 0)
 		"haul":
 			return not _frozen and not Augments.holding(kit) and kit.hooked \
-					and (not kit.on_body or kit.line_state == Augments.LINE_LATCHED)
+					and (not kit.on_body or (kit.line_state == Augments.LINE_LATCHED and Augments.haul_open(kit)))
 		"boost":
 			if _burst_pilot():
 				return Harpoon.burst_ready(kit)
@@ -1018,6 +1018,16 @@ func _press_harpoon() -> void:
 	_fail("harpoon", reason)
 
 
+# Why Ctrl cannot commit the haul on this latched body line: a flail hangs behind the ball, a
+# stake only holds the rope, and a Warden opens to the haul only inside its stagger.
+func _haul_refusal() -> String:
+	if kit.grip == "flail":
+		return "flail"
+	if is_instance_valid(kit.anchor_body) and kit.anchor_body.is_in_group(Augments.STAKE_GROUP):
+		return "stake"
+	return "unstaggered"
+
+
 # Ctrl hauls the line in. On a latched body it commits the smash; on the world it winches
 # while held. While any line stands it is neither the brake nor the slam, until it is let
 # go: a haul can never plant or brake inside the crowd it flew into.
@@ -1027,8 +1037,10 @@ func _read_ctrl() -> void:
 	var on_body: bool = kit.hooked and kit.on_body
 	kit.winching = kit.hooked and not on_body and intent.brake_held
 	if edge and not _frozen:
-		if on_body and kit.line_state == Augments.LINE_LATCHED:
+		if on_body and kit.line_state == Augments.LINE_LATCHED and Augments.haul_open(kit):
 			Augments.commit_smash(kit, tuning, _rigid.linear_velocity)
+		elif on_body and kit.line_state == Augments.LINE_LATCHED:
+			_fail("haul", _haul_refusal())
 		elif on_body:
 			_fail("haul", "committed")
 	if kit.hooked:
