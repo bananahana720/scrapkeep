@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// node scripts/challenge/pack-pressure.mjs --variants=base,A,B,C,D,E,A+D (a variant may also be one --tune key=value) [--seeds=1,2,3,4,5] [--bot-seeds=1,2,3,4]
+// node scripts/challenge/pack-pressure.mjs --variants=base,A,B,C,D,E,A+D (a variant may also be one --tune key=value) [--seeds=1,2,3,4,5] [--bot-seeds=1,2,3,4] [--explore-by=520]
 //     [--jobs=4] [--label=<name>] [--shard=i/n] [--resume] [--dry-run]
 // node scripts/challenge/pack-pressure.mjs --report=<dir,dir> [--out=<file.md>]
 //
@@ -22,7 +22,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const outRoot = path.join(root, "artifacts/local/pack-pressure");
 const TIMEOUT_MS = 45 * 60_000;
 
-const opts = { variants: ["base"], seeds: [1, 2, 3, 4, 5], botSeeds: [1, 2, 3, 4], jobs: 4, label: null, shard: null, resume: false, dryRun: false, report: null, out: null };
+const opts = { variants: ["base"], seeds: [1, 2, 3, 4, 5], botSeeds: [1, 2, 3, 4], exploreBy: 520, jobs: 4, label: null, shard: null, resume: false, dryRun: false, report: null, out: null };
 for (const arg of process.argv.slice(2)) {
   const [k, ...rest] = arg.replace(/^--/, "").split("=");
   const v = rest.join("=");
@@ -30,6 +30,7 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "seeds") opts.seeds = v.split(",").map(Number);
   else if (k === "bot-seeds") opts.botSeeds = v.split(",").map(Number);
   else if (k === "jobs") opts.jobs = Number(v);
+  else if (k === "explore-by") opts.exploreBy = Number(v);
   else if (k === "label") opts.label = v;
   else if (k === "shard") opts.shard = v;
   else if (k === "report") opts.report = v.split(",");
@@ -70,7 +71,7 @@ export function planJobs(variants, seeds, botSeeds) {
 
 function argsFor(job, out) {
   if (job.kind === "orbit") return [...gateBotArgs(job.gate, out), ...flag(job.variant)];
-  const extra = job.kind === "completionist" ? ["--explore-by=520"] : [];
+  const extra = job.kind === "completionist" ? ["--explore-by=" + opts.exploreBy] : [];
   return ["--headless", "--fixed-fps", "90", "--path", "sketches/core-loop", "--script", "res://tools/bot_run.gd", "--",
     "--out=" + out, "--policy=" + job.kind, "--seeds=" + job.seed, "--table=park", "--stages=2", "--gate=1", "--panel-log=1",
     ...extra, ...flag(job.variant)];
