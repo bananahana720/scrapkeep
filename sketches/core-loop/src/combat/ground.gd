@@ -28,6 +28,14 @@ func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
 
 
+# Whether a point stands in water: the flood's basin or a water floor on the stage map
+# (terrain.material_at). An arena floor is never water.
+func on_water(point: Vector3) -> bool:
+	if ctx.flow != null and ctx.flow.in_arena:
+		return false
+	return String(ctx.terrain.material_at(point).get("material", "")) == "water"
+
+
 # The stage's world, for the Highdraft's ring-outs (enemy.gd). An arena reads 0: its floor
 # is the boss module's, so nothing there rings out.
 func world() -> int:

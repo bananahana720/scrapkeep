@@ -51,6 +51,7 @@ const AUDIT := {
 	"res://src/combat/lamp_swarm.gd": ["WAVE"],
 	"res://src/combat/line_cutter.gd": ["PROJECTILE"],
 	"res://src/combat/pit_jaw.gd": ["INSTANT"],
+	"res://src/combat/boom_tender.gd": ["LANE"],
 	# 2026-10-17 (wave 18): the Splitter's fuse blast.
 	"res://src/combat/splitter_pod.gd": ["INSTANT"],
 	# 2026-10-17 (stage/alpha-w16): the Dispatcher's tube drop (#59) and the jolt layer's mat (#65).

@@ -4,7 +4,9 @@ extends SceneTree
 
 const Palette := preload("res://src/core/palette.gd")
 const GLB := "res://assets/models/world_one/enemy_ramp_flipper.glb"
-const BASE_MECHANIC_SHA := "f81182dc76a0d07f3d50b1ac083e67d90b0a64ddaaa85f105217348d8d4a949d"
+# 2026-10-23 w19 Spillway roster: the sluice flap's speed ride (RIDE_KICK, RIDE_TIER, _ride) and its
+# codex discovery, design-v3/SPILLWAY-ROSTER.md; was f81182dc.
+const BASE_MECHANIC_SHA := "494ee927447c73bfebbf5280eed9022831eebd0060327c5801826ffdc5cc0c84"
 const BASE_CONSTS := {"PLATE_RADIUS": 3.6, "LEAD": .9, "TILT": .35, "FLING_UP": 30.0,
 	"FLING_SIDE": 22.0, "RIDE_UP": 9.0, "HP": 45.0}
 const BASE_VALUES := {"radius": .8, "half_height": 1.1, "weight": 1.2, "scrap_value": 4,

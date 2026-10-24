@@ -168,6 +168,15 @@ func _run() -> void:
 	# Under SimClock.ticks (set above) prepare() builds it whole inside the call (terrain.gd
 	# _worker_builds), so the wait loop below ends at once; the entry handlers timed here run after it.
 	var terrain = _game.ctx.terrain
+	# Stage 1's own ParkProps build slices its far reads over frames by wall time (32 reads); on a loaded box it runs
+	# past the settle ticks and its reads landed in stage 2's count below (7 to 37 against 5, w18 gate). In play the
+	# stage is long built before the Warden wakes, so wait for it.
+	var stage_props = _game.presentation.park_props
+	var built_wait := 0
+	while not stage_props.is_built() and built_wait < WAIT_TICKS_MAX:
+		await process_frame
+		built_wait += 1
+	_t.check("stage 1's park props finished building before stage 2's plan", stage_props.is_built(), "%d frames" % built_wait)
 	# A slow frame just before the build (a spin of 0.1 s or more), so the frames after it step physics several times
 	# before any _process (the 4080's case in row 26b): the wait below must still see both plans started.
 	var spun := 0
