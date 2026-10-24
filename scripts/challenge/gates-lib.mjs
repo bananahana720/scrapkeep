@@ -21,7 +21,7 @@ export const RUNS_PER_SEED = 3;
 // --- the numbers, from comment 6367573974 ---
 export const RULES = {
   gate1: { deathWithinS: 120 },
-  gate2: { windowS: 120, lowerShare: 0.8, ratioMax: 0.75 },
+  gate2: { windowS: 120, lowerShare: 0.8, ratioMax: 0.75, minContested: 10 },
   gate4: { clearMin: 0.85 },
   instrument: { circleShareMin: 0.8, ridePerS: 30 },
 };
@@ -202,19 +202,29 @@ export function gate2(a, b, { stages = STAGES, seeds = SEEDS } = {}) {
     if (va == null || vb == null) return void voidPairs++;
     pairs.push({ stage: x.stage, seed: x.seed, a: va, b: vb });
   });
+  // A tied pair (usually 0 hull against 0: packs never landed a hit on either arm in the window) is no contest and is
+  // left out of the count and the ratio (board ruling pending, posted with the f6707e70 sweep: 16 of the positive
+  // control's 28 pairs tied at 0 and it could never name the unplanted arm). A winner needs MIN_CONTESTED pairs.
+  const contested = pairs.filter((p) => p.a !== p.b);
   const decide = (lo, hi) => {
-    const lower = pairs.filter((p) => p[lo] < p[hi]).length;
-    const ratios = pairs.map((p) => (p[hi] === 0 ? (p[lo] === 0 ? 1 : Infinity) : p[lo] / p[hi]));
-    const need = Math.ceil(RULES.gate2.lowerShare * pairs.length - 1e-9);
+    const lower = contested.filter((p) => p[lo] < p[hi]).length;
+    // A pair the other arm lost nothing in is the worst ratio; lib.mjs median drops Infinity, so it is MAX_VALUE.
+    const ratios = contested.map((p) => (p[hi] === 0 ? Number.MAX_VALUE : p[lo] / p[hi]));
+    const need = Math.ceil(RULES.gate2.lowerShare * contested.length - 1e-9);
     const ratio = median(ratios);
-    return { lower, need, pooledMedianRatio: ratio, wins: pairs.length > 0 && lower >= need && ratio <= RULES.gate2.ratioMax };
+    const wins = contested.length >= RULES.gate2.minContested && lower >= need && ratio <= RULES.gate2.ratioMax;
+    // Could the void pairs still make it a win, were each of them a contested pair this arm won?
+    const reachable = lower + voidPairs >= Math.ceil(RULES.gate2.lowerShare * (contested.length + voidPairs) - 1e-9)
+      && contested.length + voidPairs >= RULES.gate2.minContested;
+    return { lower, need, pooledMedianRatio: ratio, wins, reachable };
   };
   const forA = decide("a", "b");
   const forB = decide("b", "a");
   const winner = forA.wins ? "A" : forB.wins ? "B" : "none";
   const full = voidPairs === 0 && pairs.length === stages.length * seeds.length;
   return {
-    gate: "gate2", verdict: forA.wins ? "PASS" : full ? "FAIL" : "VOID", winner, pairs: pairs.length, voidPairs,
+    gate: "gate2", verdict: forA.wins ? "PASS" : full || !forA.reachable ? "FAIL" : "VOID", winner, pairs: pairs.length,
+    contested: contested.length, ties: pairs.length - contested.length, voidPairs,
     A: forA, B: forB, voided: voidList([...a, ...b]),
     // Information: the ratio of the pooled medians of the two arms, the other way to read "pooled median".
     ratioOfMedians: median(pairs.map((p) => p.a)) != null && median(pairs.map((p) => p.b)) ? median(pairs.map((p) => p.a)) / median(pairs.map((p) => p.b)) : null,
@@ -222,7 +232,7 @@ export function gate2(a, b, { stages = STAGES, seeds = SEEDS } = {}) {
 }
 
 // A decisive FAIL needs every pair present, or A to have lost on what is there regardless of the voids.
-// (gate2 reads VOID, not FAIL, when voids leave the pairs short and A has not won.)
+// (gate2 reads VOID, not FAIL, when voids leave the pairs short and could still make A the winner.)
 
 // --- gate 4: sight-only clears ---
 // PASS: the clear rate on every stage is 85% or more (the Expert band). A clear is a run that ended "until": it left the

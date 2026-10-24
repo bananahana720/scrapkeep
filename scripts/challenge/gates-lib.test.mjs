@@ -16,7 +16,7 @@ const hull = (v) => ({ hull_per_min: v });
 
 test("the rule numbers are the comment's, and the plan is 8 arms of 90 runs", () => {
   assert.equal(RULES.gate1.deathWithinS, 120);
-  assert.deepEqual(RULES.gate2, { windowS: 120, lowerShare: 0.8, ratioMax: 0.75 });
+  assert.deepEqual(RULES.gate2, { windowS: 120, lowerShare: 0.8, ratioMax: 0.75, minContested: 10 });
   assert.equal(RULES.gate4.clearMin, 0.85);
   assert.deepEqual(RULES.instrument, { circleShareMin: 0.8, ridePerS: 30 });
   const jobs = planGateJobs();
@@ -159,11 +159,26 @@ test("gate 2 pairs by stage and seed, and each arm's value is the median of its 
 test("gate 2 ties and zero-loss pairs never read as a win", () => {
   const zero = gate2(...pairs2(() => 0, () => 0));
   assert.equal(zero.A.lower, 0);
-  assert.equal(zero.A.pooledMedianRatio, 1);
+  assert.equal(zero.contested, 0);
   assert.equal(zero.verdict, "FAIL");
   const noLoss = gate2(...pairs2(() => 5, () => 0));
   assert.equal(noLoss.verdict, "FAIL");
   assert.equal(noLoss.winner, "B");
+});
+
+test("gate 2 leaves tied pairs out, and needs 10 contested pairs to name a winner", () => {
+  // 16 pairs tie at 0, 14 are contested and A is lower in all of them: a win over the contested pairs
+  const [t, o] = pairs2((st, sd) => (idx(st, sd) < 16 ? 0 : 20), (st, sd) => (idx(st, sd) < 16 ? 0 : 50));
+  const r = gate2(t, o);
+  assert.equal(r.ties, 16);
+  assert.equal(r.contested, 14);
+  assert.equal(r.A.need, 12);
+  assert.equal(r.A.pooledMedianRatio, 0.4);
+  assert.equal(r.verdict, "PASS");
+  // 9 contested pairs are too few to name anyone
+  const [t2, o2] = pairs2((st, sd) => (idx(st, sd) < 21 ? 0 : 20), (st, sd) => (idx(st, sd) < 21 ? 0 : 50));
+  assert.equal(gate2(t2, o2).verdict, "FAIL");
+  assert.equal(gate2(t2, o2).winner, "none");
 });
 
 test("gate 2 control expectations: damage x2 on arm B names A the winner; A/A names nobody", () => {
@@ -190,8 +205,14 @@ test("gate 2 with voided pairs is VOID unless A has already won", () => {
   const r = gate2(t, o);
   assert.equal(r.voidPairs, 1);
   assert.equal(r.verdict, "PASS"); // 29 pairs: 29 lower, ratio 0.1, A has won on what is there
+  // all ties with one void pair: no void pair could make a win, so it is a decisive FAIL
   const flat = gate2(arm("T", (st, sd, r) => ({ ...hull(100), void: st === 1 && sd === 1 && r < 2 ? "x" : null })), o);
-  assert.equal(flat.verdict, "VOID");
+  assert.equal(flat.verdict, "FAIL");
+  // 10 void pairs, A lower in 15 of the 20 contested: short of 16, but the voids could still reach 24 of 30
+  const short = gate2(arm("T", (st, sd, r) => ({ ...hull(idx(st, sd) < 15 ? 10 : 130), void: idx(st, sd) >= 20 && r < 2 ? "x" : null })), o);
+  assert.equal(short.voidPairs, 10);
+  assert.equal(short.A.lower, 15);
+  assert.equal(short.verdict, "VOID");
 });
 
 // --- gate 4 ---
