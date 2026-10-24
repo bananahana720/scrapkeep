@@ -18,6 +18,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))
 import common
+import cycles_device
 from stone_surface import BEDS
 
 SKETCH = HERE.parents[2]
@@ -143,7 +144,7 @@ def stage(name, samples, outdir):
         obj.data.materials.append(mat)
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
     scene.cycles.denoising_use_gpu = False
@@ -213,8 +214,8 @@ def stage(name, samples, outdir):
         bpy.ops.render.render(write_still=True)
         png = Path(scene.render.filepath)
         files.append({"view": label, "file": png.name, "sha256": hashlib.sha256(png.read_bytes()).hexdigest()})
-        print("MDS_PREVIEW %s %s: Cycles CPU, %d samples, 2 m ball" % (name, label, samples), flush=True)
-    return {"asset": path.name, "glb_sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "renderer": "Cycles CPU", "threads": 2, "samples": samples, "reference_ball_diameter_m": 2, "views": files}
+        print("MDS_PREVIEW %s %s: Cycles %s, %d samples, 2 m ball" % (name, label, bpy.context.scene.cycles.device, samples), flush=True)
+    return {"asset": path.name, "glb_sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "renderer": "Cycles " + bpy.context.scene.cycles.device, "threads": 2, "samples": samples, "reference_ball_diameter_m": 2, "views": files}
 
 
 def main():

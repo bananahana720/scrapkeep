@@ -70,7 +70,7 @@ func _run() -> void:
 			var specs: Array = model.stage_sites(graph, map, run, 78000, trade, prepared)
 			t.eq("trade placement and memory unchanged", run.trade_memory, trade_before)
 			t.eq("authored sites unchanged", map.activity_sites, authored)
-			var expected_slots := maxi(0, mini(8, stage + 2) - authored.size())
+			var expected_slots := maxi(0, mini(8, stage + 2) - authored.filter(func(s): return s.get("extra", "") != "card_2").size())
 			t.check("D2 extra slot cap", specs.size() <= expected_slots)
 			t.check("stage 1 exempt; later stages draw", specs.is_empty() if stage == 1 else not specs.is_empty())
 			_audit(graph, map, specs, trade, from_line)

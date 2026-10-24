@@ -100,7 +100,7 @@ def main():
             print("WAK_FIXTURE",variant,target)
     if args.previews:
         manifest=json.loads((args.previews/"manifest.json").read_text())
-        assert manifest["renderer"]=="Blender Cycles CPU" and manifest["samples"]==8
+        assert manifest["renderer"] in ("Blender Cycles CPU","Blender Cycles GPU") and manifest["samples"]==8
         assert manifest["reference_ball_diameter_metres"]==2 and manifest["arena_radius_metres"]==36
         for record in manifest["models"]:
             assert hashlib.sha256((args.models/record["file"]).read_bytes()).hexdigest()==record["sha256"]

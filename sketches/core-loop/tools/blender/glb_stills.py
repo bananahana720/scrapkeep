@@ -19,6 +19,9 @@ import sys
 import bpy
 from mathutils import Vector
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import cycles_device  # noqa: E402
+
 VIEWS = {"front": 0.0, "side": 90.0, "three-quarter": 35.0, "rear": 180.0}
 
 
@@ -106,7 +109,7 @@ def main():
     radius = max((hi - lo).length / 2, 0.1)
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = a["samples"]
     scene.cycles.use_denoising = False
     scene.render.resolution_x = a["size"]

@@ -15,6 +15,7 @@ import bpy
 from mathutils import Vector
 
 import common
+import cycles_device
 
 GROUNDS = {"dig": ("a7865c", (0.22, 0.2, 0.19)), "highdraft": ("9aa7a0", (0.48, 0.62, 0.78))}
 
@@ -23,7 +24,7 @@ def _scene(floor, ground):
     tint, sky = GROUNDS[ground]
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 16
     scene.cycles.use_denoising = True
     scene.render.threads_mode = "FIXED"

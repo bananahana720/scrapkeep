@@ -4,6 +4,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
+const EventView := preload("res://src/world/event_view.gd")
 
 # The flume's surge course in the running game (activities.gd surge_run, the park's sluice_surge row).
 # (a) the flume builds the course on flume_upper with six gates on the decks' surfaces;
@@ -23,7 +24,7 @@ const GAP_START := 69.0
 const OPEN_SECONDS := 12.0
 const GATE_FRAMES := 30
 const LOSE_SECONDS := 60.0
-const EXPECTED_CHECKS := 12
+const EXPECTED_CHECKS := 13
 
 var _game
 var _t := preload("res://tests/support/t.gd").new("surge_course_park_test")
@@ -105,6 +106,16 @@ func _win() -> void:
 	_t.check("(b) the ring opens the sluice, and the course goes live when it lands", live and announced.size() == 1
 		and started.size() == 1 and _log.find(announced[0]) < _log.find(started[0]), str(_log))
 	_t.check("(b) the front starts behind the head", s.course.model.front < 0.0, str(s.course.model.front))
+	# What the player sees is what counts: each drawn gate stands on its route point in the world, and the course
+	# (the front's parent) adds no offset of the site it hangs under.
+	var off := []
+	for i in s.course.model.gates.size():
+		var g: Vector3 = s.course._gates[i].global_position
+		var want: Vector2 = s.course.model.gates[i]
+		if Vector2(g.x, g.z).distance_to(want) > 0.1 or absf(g.y - (s.course.model.gate_heights[i] + EventView.GATE_RADIUS - 1.0)) > 0.1:
+			off.append([i, g, want])
+	_t.check("(a) every drawn gate stands on its route point", off.is_empty() and s.course.global_transform.is_equal_approx(Transform3D.IDENTITY),
+		"off %s, course origin %s" % [off, s.course.global_transform.origin])
 	var parts_before: int = _game.run.parts.size()
 	for gate in s.course.model.gates.size():
 		for frame in GATE_FRAMES:

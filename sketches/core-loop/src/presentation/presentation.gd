@@ -174,6 +174,7 @@ func _on_node_added(node: Node) -> void:
 
 var _boils_wired := false
 var _boil_marker := {}
+var _boil_marker_at := Vector3.ZERO
 
 
 func _read_windups(enemy) -> void:
@@ -198,9 +199,15 @@ func _on_pressure_cue(cue: String, at: Vector3, seconds_until: float) -> Diction
 	return marker
 
 
-# A rumbling boil the stage exempted (silt_boil._quell) takes its chevron and its rumble with it.
-func _on_boil_quelled(at: Vector3) -> void:
-	vfx.end_glyph(_boil_marker, at + Vector3.UP * 2.5)
+func _on_boil_rumbled(at: Vector3, seconds_until: float) -> void:
+	_boil_marker = _on_pressure_cue("boil_rumble", at, seconds_until)
+	_boil_marker_at = at + Vector3.UP * 2.5
+
+
+# A rumbling boil that never erupts (silt_boil._quell, a stage entry, a freed ring) takes its chevron and
+# its rumble with it. The chevron is found where it was drawn: the ring's centre is snapped to the ground.
+func _on_boil_quelled(_at: Vector3) -> void:
+	vfx.end_glyph(_boil_marker, _boil_marker_at)
 	_boil_marker = {}
 	audio.stop("boil_rumble")
 
@@ -230,7 +237,7 @@ func _physics_process(_delta: float) -> void:
 		return
 	if not _boils_wired and ctx.spawner != null and ctx.spawner.get("boils") != null:
 		_boils_wired = true
-		ctx.spawner.boils.rumbled.connect(func(at: Vector3, seconds_until: float): _boil_marker = _on_pressure_cue("boil_rumble", at, seconds_until))
+		ctx.spawner.boils.rumbled.connect(_on_boil_rumbled)
 		ctx.spawner.boils.quelled.connect(_on_boil_quelled)
 	var active := {}
 	for enemy in get_tree().get_nodes_in_group("enemy"):

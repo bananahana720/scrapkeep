@@ -669,6 +669,8 @@ func _pump(virtual_frames := -1) -> void:
 		_ace_arrival_stage = 0
 		_ace_arrival_at = -1
 		_ace_stage(stage, engine.next_bar())
+	if ace != null:
+		ace.set_boss_floor(_ace_boss_floor())
 	var ace_live := ace != null and ace.active()
 	_hand_over_band()
 	_release_grid()
@@ -868,7 +870,14 @@ func ace_ready() -> bool:
 	return true
 
 
+# The stems follow the band engine's boss layering: in a boss fight the melody is held at the
+# engine's section floor (brindle 0.8, 0.9, 1.0), whatever the threat feed says.
+func _ace_boss_floor() -> float:
+	return engine._floor() if engine.mode == MusicEngine.PLAY and engine.track in MusicEngine.BOSS_TRACKS else 0.0
+
+
 func _prime_band_parameters() -> void:
+	ace.set_boss_floor(_ace_boss_floor())
 	ace.parameter_enabled = engine.parameter_source.is_valid()
 	if ace.parameter_enabled:
 		ace.parameters = engine.parameter_committed_values.duplicate()
@@ -1692,9 +1701,12 @@ func wire_optional() -> void:
 		_disarm_launch()
 		_event_id = ""
 		_chase_lead0 = -1.0
-		# Arena entry and retry are the fight's stage entry: a flume Warden's break no longer strips the band.
+		# Arena entry and retry are the fight's stage entry: a flume Warden's break no longer
+		# strips the band, synth or ACE stems, and a Warden-break commit still queued is void.
 		if reason in ["arena", "arena_retry"]:
-			engine.parameters_stage_entered()
+			engine.parameters_arena_entered()
+			if ace != null:
+				ace.clear_release()
 		if reason == "arena_retry" and sound_ready:
 			# R in the arena: Brindle's music from phase 1, out of DEAD mode, with a pickup.
 			engine.cancel_pending()

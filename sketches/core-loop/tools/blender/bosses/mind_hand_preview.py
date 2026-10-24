@@ -17,6 +17,7 @@ from mathutils import Vector
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import mind_hand as hand
+import cycles_device
 
 
 def plain(name, color, roughness=0.7, metal=0):
@@ -43,7 +44,7 @@ def main():
              for name in hand.CLIPS}
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 12
     scene.cycles.use_denoising = True
     scene.cycles.seed = 17
@@ -120,7 +121,7 @@ def main():
     for clip, seconds in hand.KEY_POSES.items():
         render("mind_hand-clip-" + clip, 25 if clip == "quote_warn" else 10, clip, seconds)
     manifest = {"asset": str(args.glb), "asset_sha256": hashlib.sha256(args.glb.read_bytes()).hexdigest(),
-                "engine": "Cycles", "device": "CPU", "samples": 12, "threads": 2,
+                "engine": "Cycles", "device": bpy.context.scene.cycles.device, "samples": 12, "threads": 2,
                 "resolution": [960, 640], "vertical_fov_degrees": 65,
                 "camera_horizontal_distance_m": 13, "frames": records}
     (args.out / "preview-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")

@@ -13,8 +13,12 @@ const T := preload("res://tests/support/t.gd")
 # Arena entry and arena retry now reset the release like a stage entry does.
 #
 # Driven through the real seams: flow.enter_stage(2), flow._unseal (beacon_unsealed),
-# flow.enter_boss, then Brindle's phases 2 and 3 and an arena retry, rendering the engine
-# two phrases after each step so the phrase commit has run.
+# flow.enter_boss, then Brindle's phases 2 and 3 and an arena retry, pumping the real mix
+# (audio._pump: synth band and ACE stems) two phrases after each step.
+#
+# The "ACE stems follow the release" checks need the gitignored Oggs, so they run on the PC
+# checkout only and print a SKIP line elsewhere; ace_arena_release_test covers the same seam
+# in the cloud with a stub stem pack.
 
 var t := T.new("music_brindle_release_test")
 
@@ -23,10 +27,13 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
+var _audio
+
+
 func _render_phrases(engine, phrases: int) -> void:
 	var deadline: int = engine.clock + engine.step_len * Harmony.STEPS_PER_BAR * Harmony.PHRASE_BARS * phrases
 	while engine.clock <= deadline:
-		engine.render(mini(4096, deadline + 1 - engine.clock))
+		_audio._pump(mini(4096, deadline + 1 - engine.clock))
 
 
 func _melodic(engine) -> Dictionary:
@@ -41,11 +48,12 @@ func _audible(engine, label: String) -> void:
 	t.check("%s: release is off" % label, not engine.parameter_committed_released, "track=%s section=%s" % [engine.track, engine.section])
 	t.check("%s: melodic layers audible" % label, targets.values().any(func(v): return v > 0.0) and engine.layer_target(Music.LEAD) > 0.0,
 		"track=%s section=%s mode=%d targets=%s" % [engine.track, engine.section, engine.mode, targets])
-	if _ace != null:
-		t.check("%s: ACE stems follow the release" % label, not _ace.parameter_released)
-
-
-var _ace = null
+	var ace = _audio.ace if _audio.ace_playing() else null
+	if ace != null:
+		t.check("%s: ACE stems follow the release" % label, not ace.parameter_released and ace.parameter_gain("other") > 0.0,
+			"released=%s other_gain=%.2f manifest=%s" % [ace.parameter_released, ace.parameter_gain("other"), _audio._ace_from])
+	else:
+		t.skip("%s: ACE stems follow the release" % label, "PC-only: no Oggs for this pack")
 
 
 func _run() -> void:
@@ -54,6 +62,7 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame
 	var audio = game.presentation.audio
+	_audio = audio
 	audio.bake_now()
 	audio.set_process(false)
 	var engine = audio.engine
@@ -78,7 +87,6 @@ func _run() -> void:
 	game.boss.set_physics_process(false)
 	t.check("boss entry clears the release", not engine._parameter_released)
 	_render_phrases(engine, 2)
-	_ace = audio.ace if audio.ace_playing() else null
 	t.check("arena plays Brindle's band", engine.track in Music.BOSS_TRACKS, "track=%s" % engine.track)
 	_audible(engine, "phase 1")
 	for phase in [2, 3]:

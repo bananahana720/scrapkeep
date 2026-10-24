@@ -89,3 +89,4 @@ From the [motion spec](../../docs/art/reference/MOTION-SPEC.md). Each fix keeps 
 
 - 21 Oct, about 21:00Z. Wave 18 lanes started.
 - End of wave 21. Andrew's one sitting.
+- Both sittings: play fullscreen on the ultrawide (DP-1). VRR is on there only for fullscreen windows, which matches players' adaptive-sync screens; the HDMI monitor has no VRR.

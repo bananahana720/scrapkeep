@@ -90,7 +90,7 @@ def main():
         assert len(receipt) == 8
         for row in manifest["assets"]:
             preview = next(p for p in receipt if p["asset"] == row["file"])
-            assert preview["renderer"] == "Cycles CPU" and preview["reference_ball_diameter_m"] == 2
+            assert preview["renderer"] in ("Cycles CPU", "Cycles GPU") and preview["reference_ball_diameter_m"] == 2
             assert preview["glb_sha256"] == row["sha256"]
             assert {p["view"] for p in preview["views"]} == {"front", "side", "three-quarter"}
             for view in preview["views"]:

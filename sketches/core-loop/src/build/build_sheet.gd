@@ -40,6 +40,9 @@ var rules: Array = []
 var sets: Array = []
 # Flat per-hit weapon damage from parts, before the weapon multipliers.
 var punch := 0.0
+# Flat per-hit damage from Punch Rivet panels (panels.gd fold), which a weapon hit and a ball
+# contact add to their punch (combat.gd panel_punch). Also counted in punch above.
+var panel_punch := 0.0
 # Flat amounts in their own unit, by tuning key (grey panels: area_radius in metres). They
 # reach the readers through tuning.add(key).
 var adds := {}

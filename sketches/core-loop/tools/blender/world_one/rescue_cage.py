@@ -8,6 +8,7 @@ import bmesh
 import bpy
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import cycles_device
 from common import Part
 common.reset()
 common.SLOTS["cage_steel"] = {"vc": True, "rough": 0.72, "metal": 0.25}
@@ -88,7 +89,7 @@ if opts["render"]:
     from mathutils import Vector
     scene=bpy.context.scene
     scene.render.engine="CYCLES"
-    scene.cycles.device="CPU"
+    cycles_device.use(scene)
     scene.cycles.samples=16
     scene.cycles.use_denoising=True
     scene.render.threads_mode="FIXED"

@@ -24,6 +24,7 @@ from mathutils import Vector
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import common
+import cycles_device
 import polish
 
 ASSETS = ("sky_cloud", "sky_mesa", "sky_cradle", "sky_loom", "sky_blades")
@@ -271,7 +272,7 @@ def preview(path, directory):
     hi = Vector(tuple(max(p[a] for p in bounds) for a in range(3)))
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 12
     scene.cycles.use_denoising = True
     scene.cycles.seed = 20261006
@@ -328,7 +329,7 @@ def preview(path, directory):
         text.rotation_euler = camera.rotation_euler
         scene.render.filepath = str(directory / (path.stem + "_" + label + ".png"))
         bpy.ops.render.render(write_still=True)
-        print("MHS_PREVIEW", path.stem, label, "Cycles CPU 12 samples", flush=True)
+        print("MHS_PREVIEW", path.stem, label, "Cycles", bpy.context.scene.cycles.device, "12 samples", flush=True)
 
 
 def main():

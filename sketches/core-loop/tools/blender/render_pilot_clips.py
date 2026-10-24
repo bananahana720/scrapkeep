@@ -1,6 +1,6 @@
 """Strip evidence per pilot clip (design-v3/PILOT-CLIPS.md section 7.1).
 
-  blender --background --python-exit-code 1 --python render_pilot_clips.py -- <pilot> [--clip <name>] [--device CPU|CUDA]
+  blender --background --python-exit-code 1 --python render_pilot_clips.py -- <pilot> [--clip <name>] [--device auto|CPU|CUDA]
 
 Imports the shipped pilot GLB and the pilot's shell GLB (paths from
 src/presentation/clips/roster.json), seats the pilot at identity under the shell's Pod, and
@@ -31,6 +31,7 @@ SKETCH = HERE.parents[1]
 ROOT = HERE.parents[3]
 sys.path.insert(0, str(HERE))
 import common
+import cycles_device
 
 ROSTER = SKETCH / 'src/presentation/clips/roster.json'
 TABLES = SKETCH / 'src/presentation/clips'
@@ -45,7 +46,7 @@ def args():
     parser = argparse.ArgumentParser()
     parser.add_argument('pilot')
     parser.add_argument('--clip')
-    parser.add_argument('--device', default='CPU', choices=['CPU', 'CUDA'])
+    parser.add_argument('--device', default='auto', choices=['auto', 'CPU', 'CUDA'])
     parser.add_argument('--samples', type=int, default=16)
     parser.add_argument('--out')
     return parser.parse_args(argv)
@@ -74,6 +75,8 @@ def setup(device, samples):
         for dev in prefs.devices:
             dev.use = dev.type == 'CUDA'
         scene.cycles.device = 'GPU'
+    elif device == 'auto':
+        cycles_device.use(scene)
     else:
         scene.cycles.device = 'CPU'
     scene.render.threads_mode = 'FIXED'
@@ -289,7 +292,7 @@ def main():
         raise SystemExit('render_pilot_clips: no clip rendered')
     rows = [sheet[i:i + SHEET_COLUMNS] for i in range(0, len(sheet), SHEET_COLUMNS)]
     save(out / 'sheet.png', rows)
-    receipt = {'pilot': a.pilot, 'device': a.device, 'samples': a.samples,
+    receipt = {'pilot': a.pilot, 'device': bpy.context.scene.cycles.device if a.device == 'auto' else a.device, 'samples': a.samples,
                'pilot_glb_sha256': hashlib.sha256(pilot_glb.read_bytes()).hexdigest(),
                'shell_glb_sha256': hashlib.sha256(shell_glb.read_bytes()).hexdigest(),
                'strips': written, 'sheet': str(out / 'sheet.png')}

@@ -61,6 +61,7 @@ import bpy  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
 import common  # noqa: E402
+import cycles_device  # noqa: E402
 import polish  # noqa: E402
 
 # Cast relic: 4 cm chamfers on real corners, doubled curves, baked AO (POLISH.md). No edge
@@ -1364,7 +1365,7 @@ def look_frames(root, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 24
     scene.cycles.use_denoising = True
     scene.cycles.seed = 1979

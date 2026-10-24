@@ -15,6 +15,7 @@ from mathutils import Euler, Matrix, Vector
 HERE=Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
 import kit
+import cycles_device
 
 OUT=kit.SKETCH.parents[1]/"artifacts/local/dress-preview/MDM"
 
@@ -78,7 +79,7 @@ def render(name,manifest):
     bpy.context.object.data.materials.append(matte("preview_floor","8b8980"))
     scene=bpy.context.scene
     scene.render.engine="CYCLES"
-    scene.cycles.device="CPU"
+    cycles_device.use(scene)
     scene.cycles.samples=12
     scene.cycles.use_denoising=True
     scene.cycles.denoising_use_gpu=False
@@ -147,7 +148,7 @@ def main():
     for name in subjects:
         render(name,manifest)
     OUT.mkdir(parents=True,exist_ok=True)
-    metadata={"blender":bpy.app.version_string,"engine":"Cycles","device":"CPU","denoising_use_gpu":False,"samples":12,"threads":2,"views":["front","side","three-quarter"],"reference_ball_diameter_m":2,
+    metadata={"blender":bpy.app.version_string,"engine":"Cycles","device":bpy.context.scene.cycles.device,"denoising_use_gpu":False,"samples":12,"threads":2,"views":["front","side","three-quarter"],"reference_ball_diameter_m":2,
               "subjects":subjects,"glb_sha256":{n:r["sha256"] for n,r in manifest["assets"].items()},"manifest_sha256":hashlib.sha256((kit.MODELS/"manifest.json").read_bytes()).hexdigest()}
     (OUT/"preview-receipt.json").write_text(json.dumps(metadata,indent=2,sort_keys=True)+"\n")
 

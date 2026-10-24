@@ -80,6 +80,8 @@ func reset(counts := false) -> void:
 	_samples.clear()
 	_sample_clock = 0.0
 	_rest = REST
+	if _ring != null:
+		quelled.emit(_ring.center if is_instance_valid(_ring) else Vector3.ZERO)
 	_drop_ring()
 	if counts:
 		boils = 0
@@ -96,6 +98,14 @@ func step(delta: float, enemies: Array) -> void:
 			_quell()
 		return
 	var ball: Vector3 = _ctx.player.ball_position()
+	# Exempt (the exit run, an engaged Warden's ring): a pending ring is quelled, and the loop read waits
+	# for the exemption to end, so leaving a long one cannot arm a ring on its first tick.
+	if _exempt(ball):
+		if _ring != null:
+			_quell()
+		_samples.clear()
+		_sample_clock = 0.0
+		return
 	_sample_clock += delta
 	if _sample_clock >= SAMPLE_S:
 		_sample_clock = 0.0
@@ -107,9 +117,7 @@ func step(delta: float, enemies: Array) -> void:
 		if not is_instance_valid(_ring):
 			_drop_ring()
 			_rest = REST
-			return
-		if _exempt(ball):
-			_quell()
+			quelled.emit(Vector3.ZERO)
 			return
 		_ring_age += delta
 		_ring.set_progress(_ring_age / WARN)
@@ -117,7 +125,7 @@ func step(delta: float, enemies: Array) -> void:
 			_erupt(k, enemies)
 		return
 	_rest -= delta
-	if _rest > 0.0 or _exempt(ball) or not _looping() or not _fighting(ball, enemies):
+	if _rest > 0.0 or not _looping() or not _fighting(ball, enemies):
 		return
 	var at := PackPressure.predict(_ctx.player, WARN)
 	_ring = Telegraph.ring(_ctx.root, _terrain, Threat.Type.INSTANT, at, RADIUS)

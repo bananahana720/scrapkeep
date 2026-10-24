@@ -8,8 +8,8 @@ const Rockets := preload("res://src/combat/actives/scrap_rockets.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The active slot on F and its first active, the Scrap Rocket Rack (design page "Makers and
-# Actives", 17 Oct 2026). A real Game with the first pilot. Covers: --actives is off by default
-# and an F press then does nothing; on, a run opens racked with full charges and a valid bar chip
+# Actives", 17 Oct 2026). A real Game with the first pilot. Covers: --actives is on by default;
+# off, an F press does nothing; on, a run opens racked with full charges and a valid bar chip
 # on F; a press fires four homing rockets that strike machines as "rocket" and all burst; the
 # charges spend and a dry press is refused "cooling"; a Jam lock refuses "jammed"; kills pay
 # charge and, with the ultimate meter full, bank overflow rockets; weapon damage mods scale the
@@ -78,6 +78,9 @@ func _run() -> void:
 	_game.ctx.calm = true
 	_player = _game.player
 	_player.source = _source
+	# Actives are on by default (24 Oct); the off checks below run with --actives=off.
+	_t.eq("01 --actives defaults on", _game.tuning.option("actives"), "on")
+	_game.tuning.set_option("actives", "off")
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	_combat = _game.combat
@@ -97,7 +100,6 @@ func _run() -> void:
 			_struck.append(kind))
 
 	# --- Off by default ----------------------------------------------------------------
-	_t.eq("01 --actives defaults off", _game.tuning.option("actives"), "off")
 	await _press()
 	_t.check("02 off: nothing is racked, F fires nothing and plays no refusal",
 		_rack.active_id == "" and _fired.is_empty() and _fails.is_empty() and _rack.slot_record().is_empty(),

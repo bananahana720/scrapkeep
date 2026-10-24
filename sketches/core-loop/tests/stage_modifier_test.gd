@@ -30,8 +30,10 @@ const BallState := preload("res://src/movement/ball_state.gd")
 # park_sinkhole (fc4abcc4... -> 4b43cd95...; every other check line unchanged).
 # 2026-10-23, World: stage 4 re-captured after the second wash elbow easing (lava_channel_14 and lava_channel_20
 # shortened) and the park_sinkhole rebake (4b43cd95... -> e6afadaa...; every other check line unchanged).
+# 2026-10-24, flume pass two: stage 2 re-captured after #432's flume rows and rebake, with its card 2 extras standing
+# beside the draw (209b49bf... -> 2422257f...; every other check line unchanged).
 const GOLDEN := {
-	2: "209b49bfdd24edda935316265e6d40ca5aca0eb7e3ccf6427b25662aaa468a20",
+	2: "2422257f1d81c241dd0e68b931d25752ebe89497753d694e93cf44fc41f318cb",
 	3: "6b2244ea5e2df73b4330ccec611c17a05b250afc9cf711233641ac960dcc9f02",
 	4: "e6afadaa02d60bb800fb1033b0d9e84c141838f91f4108088c7abaaceb1f951d",
 	5: "d89a37e5291457fa67873501141f4c03c635f6bfb93d2c17a527dcfe70b02589",
@@ -132,7 +134,7 @@ func _draws(stage: int) -> void:
 		return
 	var prepared: Dictionary = PocketDraw.prepare(graph, map)
 	var trade_pool := Trade.candidates(graph, map)
-	var authored: int = map.activity_sites.size()
+	var authored: int = Modifier.authored(map)
 	var Run = load("res://src/core/run_state.gd")
 	var identical := true
 	var sight_same := true

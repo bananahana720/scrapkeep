@@ -1,9 +1,10 @@
-"""Cycles CPU stills of a rogue glb (a raw shell or a finished asset) for review pages.
+"""Cycles stills of a rogue glb (a raw shell or a finished asset) for review pages.
 
 blender -b --factory-startup -P stills.py -- <in.glb> <out_dir> [--shell] [--views front,side,...]
 Origin conventions: a finished asset has its collider centre at the origin, a raw shell
 has its ground at z = 0 (--shell). Forward is +Y (Godot -Z). A 1.84 m ball stands beside
-it for scale. CPU only, so it never touches the GPUs.
+it for scale. Cycles runs on OptiX when present (cycles_device.py; SCRAPKEEP_CYCLES=cpu keeps
+it off the GPUs; SCRAPKEEP_CYCLES=3060 keeps it off the 4080).
 """
 import math
 import os
@@ -11,6 +12,9 @@ import sys
 
 import bpy
 from mathutils import Vector
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import cycles_device  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 src, out = argv[0], argv[1]
@@ -90,7 +94,7 @@ if "--open" in argv:
     core.data.materials[0] = glow
 
 scene.render.engine = "CYCLES"
-scene.cycles.device = "CPU"
+cycles_device.use(scene)
 scene.cycles.samples = 24
 scene.cycles.use_denoising = True
 scene.render.threads_mode = "FIXED"

@@ -15,6 +15,7 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import common  # noqa: E402
+import cycles_device  # noqa: E402
 
 FAMILIES = ("hoodoo", "basalt", "timber", "saguaro", "cairn")
 SPACING = 11.0
@@ -91,7 +92,7 @@ def main():
     scene.camera = cam
 
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = args.samples
     scene.cycles.use_denoising = False
     scene.cycles.max_bounces = 4
