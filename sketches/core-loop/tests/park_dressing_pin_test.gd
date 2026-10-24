@@ -33,9 +33,12 @@ const Intent := preload("res://src/movement/intent.gd")
 # moves with it; with the camp at its old spot the 1284262125 pin still holds. The others unchanged.
 # 2026-10-23 sinkhole elbow re-pin (#359): stage 4 park_sinkhole 3017710206 -> 2334293701, because #359 reshapes
 # lava_channel_12, 13 and 21 and rebakes the sinkhole ground; no dressing spot moves. The others unchanged.
+# 2026-10-24 flume pass two re-pin (#432, which carries #431): stage 2 park_flume 1448453723 -> 1001921675, because
+# the new activity rows (weir_surge, canal_altar), the spill-leap kicker and butte, and bend_cache's move to [42, -96]
+# move their keep-outs and the rebaked ground. The others unchanged.
 const PINS := {
 	1: ["park_dam", 13, 2427938025],
-	2: ["park_flume", 13, 1448453723],
+	2: ["park_flume", 13, 1001921675],
 	3: ["park_pit", 13, 2247843387],
 	4: ["park_sinkhole", 13, 2334293701],
 	5: ["park_islands", 13, 3681139656],
