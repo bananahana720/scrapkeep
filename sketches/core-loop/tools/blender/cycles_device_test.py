@@ -2,6 +2,9 @@
 
   python3 sketches/core-loop/tools/blender/cycles_device_test.py
 """
+import contextlib
+import fcntl
+import io
 import os
 import sys
 import tempfile
@@ -60,6 +63,9 @@ class UseTest(unittest.TestCase):
     def setUp(self):
         self.driver = tempfile.NamedTemporaryFile()
         self.addCleanup(self.driver.close)
+        self.lock = tempfile.NamedTemporaryFile()
+        self.addCleanup(self.lock.close)
+        self.marker = self.lock.name + ".active"
 
     def run_use(self, gpus, env=None, driver=True, refuse=False, free=None, triangles=0, images=()):
         prefs = Prefs(gpus, refuse)
@@ -67,8 +73,12 @@ class UseTest(unittest.TestCase):
         path = self.driver.name if driver else self.driver.name + ".missing"
         with patch.dict(sys.modules, {"bpy": bpy}), patch.dict(os.environ, env or {}, clear=True), \
                 patch.object(cycles_device, "NVIDIA_DRIVER", path), \
-                patch.object(cycles_device, "free_bytes", lambda: dict(free or {})):
+                patch.object(cycles_device, "free_bytes", lambda: dict(free or {})), \
+                patch.object(cycles_device, "CAPTURE_FILE", self.marker), \
+                patch.object(cycles_device, "CAPTURE_LOCK", self.lock.name), \
+                contextlib.redirect_stderr(io.StringIO()) as err:
             got = cycles_device.use(scene)
+        self.stderr = err.getvalue()
         self.assertEqual(got, scene.cycles.device)
         return got, prefs, [d.name for d in prefs.devices if d.use and d.type == "OPTIX"]
 
@@ -122,6 +132,41 @@ class UseTest(unittest.TestCase):
         got, _, used = self.run_use(["NVIDIA RTX A4000"])
         self.assertEqual((got, used), ("GPU", ["NVIDIA RTX A4000"]))
 
+    def test_unlisted_card_counts_as_full_once_nvidia_smi_answers(self):
+        got, _, used = self.run_use(BOTH, free={R4080: 15 * GIB})
+        self.assertEqual((got, used), ("GPU", [R4080]))
+        self.assertIn("lists no " + R3060, self.stderr)
+
+    def test_held_timing_lock_runs_the_3060_alone(self):
+        with open(self.lock.name) as held:
+            fcntl.flock(held, fcntl.LOCK_EX)
+            got, _, used = self.run_use(BOTH, free={R3060: 11 * GIB, R4080: 15 * GIB})
+        self.assertEqual((got, used), ("GPU", [R3060]))
+        self.assertIn("capture running", self.stderr)
+
+    def test_free_timing_lock_keeps_tandem(self):
+        got, _, used = self.run_use(BOTH, free={R3060: 11 * GIB, R4080: 15 * GIB})
+        self.assertEqual((got, used), ("GPU", BOTH))
+
+    def test_capture_marker_runs_the_3060_alone(self):
+        open(self.marker, "w").close()
+        self.addCleanup(os.remove, self.marker)
+        got, _, used = self.run_use(BOTH)
+        self.assertEqual((got, used), ("GPU", [R3060]))
+
+    def test_capture_without_a_3060_never_touches_the_4080(self):
+        open(self.marker, "w").close()
+        self.addCleanup(os.remove, self.marker)
+        got, _, used = self.run_use([R4080])
+        self.assertEqual((got, used), ("CPU", []))
+        self.assertIn("rendering on the CPU", self.stderr)
+
+    def test_explicit_mode_overrides_a_capture(self):
+        open(self.marker, "w").close()
+        self.addCleanup(os.remove, self.marker)
+        got, _, used = self.run_use(BOTH, {"SCRAPKEEP_CYCLES": "all"})
+        self.assertEqual((got, used), ("GPU", BOTH))
+
     def test_cpu_mode_forces_cpu(self):
         got, prefs, used = self.run_use(BOTH, {"SCRAPKEEP_CYCLES": "cpu"})
         self.assertEqual((got, prefs.compute_device_type, used), ("CPU", "NONE", []))
@@ -136,8 +181,9 @@ class FreeBytesTest(unittest.TestCase):
     def test_missing_nvidia_smi_answers_nothing(self):
         def missing(*a, **k):
             raise FileNotFoundError("nvidia-smi")
-        with patch.object(cycles_device.subprocess, "run", missing):
+        with patch.object(cycles_device.subprocess, "run", missing), contextlib.redirect_stderr(io.StringIO()) as err:
             self.assertEqual(cycles_device.free_bytes(), {})
+        self.assertIn("assuming 12 GiB", err.getvalue())
 
 
 if __name__ == "__main__":

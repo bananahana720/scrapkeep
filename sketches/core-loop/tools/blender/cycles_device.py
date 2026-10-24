@@ -12,19 +12,47 @@ SCRAPKEEP_CYCLES picks the cards:
   <name>          the one card whose name holds it, e.g. 3060. Frame-time captures need an idle
                   4080, so bakes run with SCRAPKEEP_CYCLES=3060 while a capture is on.
   cpu             the CPU, whatever is installed.
+While a 4080 frame-time capture runs, auto runs the 3060 alone (the CPU when there is no 3060), so
+bakes keep GPU speed and the 4080 stays idle. A capture is on when SCRAPKEEP_CAPTURE_FILE exists
+or another process holds an flock on SCRAPKEEP_CAPTURE_LOCK (defaults: the PC's capture lane's
+capture-active and timing.lock). Any other SCRAPKEEP_CYCLES value overrides that.
 The fit check compares free VRAM (nvidia-smi; 12 GiB per card when it can't answer) with
 fit_bytes(): the scene as built when use() runs, plus HEADROOM for Cycles' kernels and buffers.
 Samples, materials and outputs are the recipe's own; only the device changes.
 """
+import fcntl
 import os
 import subprocess
+import sys
 
 NVIDIA_DRIVER = "/proc/driver/nvidia/version"
 MODE_ENV = "SCRAPKEEP_CYCLES"
+CAPTURE_FILE = os.environ.get("SCRAPKEEP_CAPTURE_FILE", "/home/andrew/scratch/w18/gates/capture-active")
+CAPTURE_LOCK = os.environ.get("SCRAPKEEP_CAPTURE_LOCK", "/home/andrew/scratch/w18/gates/timing.lock")
+CAPTURE_CARD = "3060"
 BIG = "4080"
 GIB = 1 << 30
 HEADROOM = 2 * GIB
 CARD_BYTES = 12 * GIB
+
+
+def warn(text):
+    print("cycles_device: " + text, file=sys.stderr, flush=True)
+
+
+def capture_on():
+    if os.path.exists(CAPTURE_FILE):
+        return True
+    try:
+        with open(CAPTURE_LOCK) as f:
+            try:
+                fcntl.flock(f, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return True
+            fcntl.flock(f, fcntl.LOCK_UN)
+    except OSError:
+        pass
+    return False
 
 
 def optix_devices(prefs):
@@ -43,6 +71,7 @@ def free_bytes():
         out = subprocess.run(["nvidia-smi", query, "--format=csv,noheader,nounits"],
                              capture_output=True, text=True, timeout=10, check=True).stdout
     except (OSError, subprocess.SubprocessError):
+        warn("nvidia-smi gave no free memory; assuming 12 GiB per card")
         return {}
     free = {}
     for line in out.splitlines():
@@ -70,7 +99,10 @@ def pick(devices, mode, need, free):
         return list(devices)
     if mode != "auto":
         return [d for d in devices if mode in d.name.lower()][:1]
-    if len(devices) > 1 and all(free.get(d.name, CARD_BYTES) >= need for d in devices):
+    missing = [d.name for d in devices if free and d.name not in free]
+    if missing:
+        warn("nvidia-smi lists no %s; treating it as full" % ", ".join(missing))
+    if len(devices) > 1 and all(free.get(d.name, 0 if free else CARD_BYTES) >= need for d in devices):
         return list(devices)
     return ([d for d in devices if BIG in d.name] or list(devices))[:1]
 
@@ -85,12 +117,16 @@ def use(scene):
 
     prefs = bpy.context.preferences.addons["cycles"].preferences
     devices = optix_devices(prefs)
+    if mode == "auto" and capture_on():
+        mode = CAPTURE_CARD
+        warn("4080 capture running; rendering on the %s alone" % CAPTURE_CARD)
     chosen = pick(devices, mode, fit_bytes(bpy, scene), free_bytes() if mode == "auto" else {})
     ids = {d.id for d in chosen}
     for d in prefs.devices:
         d.use = d.id in ids
     if not chosen:
         prefs.compute_device_type = "NONE"
+        warn("no OptiX device for SCRAPKEEP_CYCLES=%s; rendering on the CPU" % mode)
         return "CPU"
     scene.cycles.device = "GPU"
     return "GPU"
