@@ -49,11 +49,10 @@ export const GATE_ARMS = {
 };
 
 const FIGHT_LIMIT_S = 240;
-const STAGE_LIMIT_S = 600;
-const TICKS = (STAGE_LIMIT_S + 100) * 90;
+export const STAGE_LIMIT_S = 600;
 
 // Every job of the chosen arms: stages 1 to 6 each entered fresh, seeds 1 to 5, three runs a seed.
-export function planGateJobs({ arms = Object.keys(ARMS), stages = STAGES, seeds = SEEDS, runs = RUNS_PER_SEED, tune = "" } = {}) {
+export function planGateJobs({ arms = Object.keys(ARMS), stages = STAGES, seeds = SEEDS, runs = RUNS_PER_SEED, tune = "", stageLimit = STAGE_LIMIT_S } = {}) {
   const jobs = [];
   for (const arm of arms) {
     const def = ARMS[arm];
@@ -65,7 +64,7 @@ export function planGateJobs({ arms = Object.keys(ARMS), stages = STAGES, seeds 
           const runSeed = seed;
           const args = [...def.args, "--cell=gate-" + arm];
           if (stage !== 1) args.push("--from-stage=" + stage);
-          args.push("--until=" + stage, "--fight-limit=" + FIGHT_LIMIT_S, "--stage-limit=" + STAGE_LIMIT_S, "--ticks=" + TICKS);
+          args.push("--until=" + stage, "--fight-limit=" + FIGHT_LIMIT_S, "--stage-limit=" + stageLimit, "--ticks=" + (stageLimit + 100) * 90);
           if (tune) args.push("--tune=" + tune);
           jobs.push({ id: `${arm}-s${stage}-seed${seed}-r${rep}`, arm, stage, seed, rep, runSeed, policy: def.policy, args });
         }

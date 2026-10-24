@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // node scripts/challenge/gates.mjs [--gates=1,2,4] [--only=<arm,arm>] [--stages=1,2] [--seeds=1,2] [--runs=3]
-//     [--jobs=4] [--label=<name>] [--shard=i/n] [--resume] [--dry-run] [--tune=k=v,k=v] [--strict]
+//     [--jobs=4] [--label=<name>] [--shard=i/n] [--resume] [--dry-run] [--tune=k=v,k=v] [--stage-limit=600] [--strict]
 // node scripts/challenge/gates.mjs --merge=<dir,dir> [--label=<name>]
 //
 // The anti-kiting gates (card G-A, rules in board comment 6367573974): the orbit and terrain bots, gates 1, 2 and 4
@@ -13,7 +13,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFil
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { dedupeBy, hashString, parseNdjson, shardJobs } from "./lib.mjs";
-import { ARMS, GATE_ARMS, RUNS_PER_SEED, SEEDS, STAGES, driverAudioReads, evaluateGates, gateBotArgs, groupByArm, planGateJobs, renderGates, summarizeRun } from "./gates-lib.mjs";
+import { ARMS, GATE_ARMS, RUNS_PER_SEED, SEEDS, STAGES, STAGE_LIMIT_S, driverAudioReads, evaluateGates, gateBotArgs, groupByArm, planGateJobs, renderGates, summarizeRun } from "./gates-lib.mjs";
 import { pool, runProcess, stateEnv } from "./proc.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -22,7 +22,7 @@ const outRoot = path.join(root, "artifacts/local/challenge");
 const KIND_TIMEOUT_MS = 40 * 60_000;
 const DRIVER = path.join(root, "sketches/core-loop/tools/bot_driver.gd");
 
-const opts = { gates: ["1", "2", "4"], only: null, stages: STAGES, seeds: SEEDS, runs: RUNS_PER_SEED, jobs: 4, label: null, shard: null, merge: null, resume: false, dryRun: false, strict: false, tune: "" };
+const opts = { gates: ["1", "2", "4"], only: null, stages: STAGES, seeds: SEEDS, runs: RUNS_PER_SEED, jobs: 4, label: null, shard: null, merge: null, resume: false, dryRun: false, strict: false, tune: "", stageLimit: STAGE_LIMIT_S };
 for (const arg of process.argv.slice(2)) {
   const [k, v] = arg.replace(/^--/, "").split("=");
   if (k === "gates") opts.gates = v.split(",");
@@ -35,6 +35,7 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "shard") opts.shard = v;
   else if (k === "merge") opts.merge = v.split(",");
   else if (k === "tune") opts.tune = arg.slice(7);
+  else if (k === "stage-limit") opts.stageLimit = Number(v);
   else if (k === "resume") opts.resume = true;
   else if (k === "dry-run") opts.dryRun = true;
   else if (k === "strict") opts.strict = true;
@@ -52,6 +53,7 @@ const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
 const read = (file) => (existsSync(file) ? readFileSync(file, "utf8") : "");
 
 if (opts.jobs < 1 || opts.jobs > 6) die("--jobs takes 1 to 6");
+if (!(opts.stageLimit >= 150)) die("--stage-limit takes 150 s or more (contact plus the 120 s window)");
 for (const g of opts.gates) if (!["1", "2", "4"].includes(g)) die(`--gates: ${g} is not 1, 2 or 4 (gate 3 is card G-B)`);
 
 // The arms the chosen gates need, the shared ones once.
@@ -76,7 +78,7 @@ if (opts.merge) {
 
 async function runGates() {
   const arms = armsFor();
-  let jobs = planGateJobs({ arms, stages: opts.stages, seeds: opts.seeds, runs: opts.runs, tune: opts.tune });
+  let jobs = planGateJobs({ arms, stages: opts.stages, seeds: opts.seeds, runs: opts.runs, tune: opts.tune, stageLimit: opts.stageLimit });
   jobs = shardJobs(jobs, opts.shard);
   console.log(`${jobs.length} jobs (${arms.map((a) => `${a} ${jobs.filter((j) => j.arm === a).length}`).join(", ")}) at --fixed-fps 90, ${opts.jobs} parallel`);
   if (opts.dryRun) return;
@@ -89,8 +91,8 @@ async function runGates() {
   const outDir = path.join(outRoot, label);
   const runsFile = path.join(outDir, "runs.ndjson");
   const commit = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
-  const plan = hashString(JSON.stringify([arms, opts.stages, opts.seeds, opts.runs, opts.tune]));
-  const meta = { label, shard: opts.shard, plan_hash: plan, commit, arms, stages: opts.stages, seeds: opts.seeds, runs: opts.runs, tune: opts.tune, jobs: jobs.length };
+  const plan = hashString(JSON.stringify([arms, opts.stages, opts.seeds, opts.runs, opts.tune, opts.stageLimit]));
+  const meta = { label, shard: opts.shard, plan_hash: plan, commit, arms, stages: opts.stages, seeds: opts.seeds, runs: opts.runs, tune: opts.tune, stage_limit: opts.stageLimit, jobs: jobs.length };
   if (existsSync(runsFile) || existsSync(path.join(outDir, "meta.json"))) {
     if (!opts.resume) die(`label ${label} already has results; pick a new --label or pass --resume to continue the same plan`);
     const old = existsSync(path.join(outDir, "meta.json")) ? JSON.parse(read(path.join(outDir, "meta.json"))) : null;
