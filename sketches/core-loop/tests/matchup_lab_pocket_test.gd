@@ -122,6 +122,9 @@ func _check_shape(shape: String) -> void:
 
 
 # The rail grove's rails block bodies but not the height question: under a rail the height is the floor, not the rail.
+const RAIL_GRID := 24
+
+
 func _check_rail_grove() -> void:
 	var stood := await _stand("rail_grove")
 	var arena = stood["arena"]
@@ -129,21 +132,22 @@ func _check_rail_grove() -> void:
 	var space := (arena.root.get_world_3d() as World3D).direct_space_state
 	var checked := 0
 	var under_all := true
-	var blocks_all := true
 	for mi in arena.overhead_meshes:
 		if not String(mi.name).begins_with("rail") or String(mi.name).begins_with("rail_post"):
 			continue
+		# The rails may share one mesh (rail_pbr), whose box centre falls between them: sample a grid over the box.
 		var box: AABB = (mi as MeshInstance3D).global_transform * (mi as MeshInstance3D).mesh.get_aabb()
-		var x := box.get_center().x
-		var z := box.get_center().z
-		var full := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(x, arena.origin.y + 50.0, z), Vector3(x, arena.origin.y - 50.0, z), 1 << (Arena.WORLD_LAYER - 1)))
-		if full.is_empty() or full["position"].y < arena.origin.y + 3.0:
-			continue
-		checked += 1
-		blocks_all = blocks_all and full["position"].y > arena.origin.y + 3.0
-		under_all = under_all and arena.height(x, z) < arena.origin.y + 0.5
-	_t.check("rail_grove: at least one rail was sampled", checked > 0)
-	_t.check("rail_grove: a full-world ray hits the rail over 3 m up while terrain.height reads the floor under it (%d rails)" % checked, blocks_all and under_all and checked > 0)
+		for i in RAIL_GRID:
+			for j in RAIL_GRID:
+				var x := box.position.x + box.size.x * (i + 0.5) / RAIL_GRID
+				var z := box.position.z + box.size.z * (j + 0.5) / RAIL_GRID
+				var full := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(x, arena.origin.y + 50.0, z), Vector3(x, arena.origin.y - 50.0, z), 1 << (Arena.WORLD_LAYER - 1)))
+				if full.is_empty() or full["position"].y < arena.origin.y + 3.0:
+					continue
+				checked += 1
+				under_all = under_all and arena.height(x, z) < arena.origin.y + 0.5
+	_t.check("rail_grove: at least one rail sample hit", checked > 0)
+	_t.check("rail_grove: a full-world ray hits the rail over 3 m up while terrain.height reads the floor under it (%d samples)" % checked, under_all and checked > 0)
 	stood["holder"].free()
 
 

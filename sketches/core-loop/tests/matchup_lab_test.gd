@@ -184,15 +184,18 @@ func _pocket_pure() -> void:
 		and Lab.pocket_parts("pocket:nowhere/chaser").is_empty() and Lab.pocket_parts("pack:run_down").is_empty() and Lab.pocket_parts("chaser").is_empty())
 	_check("pocket columns: ground is the chaser, flyer the two drones, burrower the burrower", Lab.pocket_column_of("chaser") == "ground" and Lab.pocket_column_of("winch_drone") == "flyer"
 		and Lab.pocket_column_of("burrower") == "burrower" and Lab.pocket_column_of("lobber") == "")
-	# Plants (the controls): absent is the identity; pack_damage drives a cell to 0%, packs_passive to 100%.
+	# Plants (the controls): absent is the identity; pilot_helpless drives a cell to 0%, packs_passive to 100%; pack_damage is
+	# a probe with no expectation.
 	var none := Lab.pocket_plant("")
+	var helpless := Lab.pocket_plant("pilot_helpless=1")
 	var damage := Lab.pocket_plant("pack_damage=4")
 	var passive := Lab.pocket_plant("packs_passive=1")
 	_check("plant: absent is the identity (no dial, no expectation)", none["ok"] and none["dials"].is_empty() and none["expect"] == "")
-	_check("plant: pack_damage=4 multiplies the mobs damage dial and expects 0%", damage["ok"] and damage["dials"] == {Lab.PLANT_DIAL: 4.0} and damage["expect"] == "low")
+	_check("plant: pilot_helpless=1 makes enemy hits lethal and expects 0%", helpless["ok"] and helpless["dials"] == {Lab.PLANT_DIAL: Lab.HELPLESS_DAMAGE} and helpless["expect"] == "low")
+	_check("plant: pack_damage=4 multiplies the mobs damage dial and expects nothing", damage["ok"] and damage["dials"] == {Lab.PLANT_DIAL: 4.0} and damage["expect"] == "")
 	_check("plant: packs_passive=1 zeroes the mobs damage dial and expects 100%", passive["ok"] and passive["dials"] == {Lab.PLANT_DIAL: 0.0} and passive["expect"] == "high")
-	_check("plant: bad specs are refused", not Lab.pocket_plant("pack_damage=1")["ok"] and not Lab.pocket_plant("packs_passive=2")["ok"] and not Lab.pocket_plant("nothing=1")["ok"] and not Lab.pocket_plant("pack_damage")["ok"])
-	# Control expectation, on synthetic planted cells: a 4x damage cell has the hull run out in every run, a passive cell
+	_check("plant: bad specs are refused", not Lab.pocket_plant("pack_damage=1")["ok"] and not Lab.pocket_plant("packs_passive=2")["ok"] and not Lab.pocket_plant("pilot_helpless=0")["ok"] and not Lab.pocket_plant("nothing=1")["ok"] and not Lab.pocket_plant("pack_damage")["ok"])
+	# Control expectation, on synthetic planted cells: a helpless pilot loses every run, a passive cell
 	# kills in every run; an unplanted mixed cell reads neither, and each plant fails the other's expectation.
 	var planted_low := []
 	var planted_high := []
@@ -201,10 +204,11 @@ func _pocket_pure() -> void:
 		planted_high.append(_pocket_row("hazard_field", "chaser", "killed", 0.0))
 	var low_cell := Lab.pocket_cell(planted_low)
 	var high_cell := Lab.pocket_cell(planted_high)
-	_check("control: a pack_damage=4 cell with the hull out in all 15 runs reads 0% and the control passes", low_cell["flag_kind"] == "low" and Lab.pocket_control_ok(damage, low_cell))
+	_check("control: a pilot_helpless=1 cell with the hull out in all 15 runs reads 0% and the control passes", low_cell["flag_kind"] == "low" and Lab.pocket_control_ok(helpless, low_cell))
+	_check("control: pack_damage is a probe, never a passing control", not Lab.pocket_control_ok(damage, low_cell))
 	_check("control: a packs_passive=1 cell with every pack killed reads 100% and the control passes", high_cell["flag_kind"] == "high" and Lab.pocket_control_ok(passive, high_cell))
-	_check("control: planted negative, each plant fails the other's expectation and an unplanted mixed cell fails both", not Lab.pocket_control_ok(damage, high_cell)
-		and not Lab.pocket_control_ok(passive, low_cell) and not Lab.pocket_control_ok(damage, mid) and not Lab.pocket_control_ok(passive, mid) and not Lab.pocket_control_ok(none, low_cell))
+	_check("control: planted negative, each plant fails the other's expectation and an unplanted mixed cell fails both", not Lab.pocket_control_ok(helpless, high_cell)
+		and not Lab.pocket_control_ok(passive, low_cell) and not Lab.pocket_control_ok(helpless, mid) and not Lab.pocket_control_ok(passive, mid) and not Lab.pocket_control_ok(none, low_cell))
 	# Child args: a pocket child carries its run index, base seed and plant; every other child's args are untouched.
 	var pocket_args := Lab.child_args(seed1[1], 40.0, {"plant": "pack_damage=4"}, "park", "/h", "/p")
 	_check("child args: a pocket child gets --base-seed, --run and --plant", "--base-seed=1" in pocket_args and "--run=1" in pocket_args and "--plant=pack_damage=4" in pocket_args

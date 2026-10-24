@@ -30,7 +30,7 @@ const PocketTerrain := preload("res://tools/pocket_terrain.gd")
 #   pack mode: -- --out=<abs ndjson> --packs=<id,id|all> [--table=park|alpha] [--range=12] ...
 #   perched duel: -- --out=<abs ndjson> --kinds=dispatcher --perched=park,mast [--range=15] ...
 #   pocket sweep: -- --out=<abs ndjson> --pocket=<half_pipe|rolling_wall|crevice|hazard_field|rail_grove|all>
-#     [--mobility=ground,flyer,burrower,hop] [--seeds=1,2,3,4,5] [--runs=3] [--plant=pack_damage=4|packs_passive=1] ...
+#     [--mobility=ground,flyer,burrower,hop] [--seeds=1,2,3,4,5] [--runs=3] [--plant=pilot_helpless=1|packs_passive=1|pack_damage=4] ...
 #   or: -- --from=<a.ndjson,b.ndjson> [--out=<heatmap txt>]   re-render saved rows
 #
 # Each duel is its own process (a bot run repeats exactly only in a fresh one). The harness is
@@ -108,10 +108,14 @@ const POCKET_COLUMNS := [
 	{"id": "burrower", "enemies": ["burrower"], "na": ""},
 	{"id": "hop", "enemies": [], "na": "no enemy kind hops (roster MOVE_CLASSES: fixed, ground, airborne)"},
 ]
-# Test-only plants (the controls): `pack_damage=<k>` multiplies every enemy hit through the mobs.damage dial and must
-# drive a cell to a 0% flag; `packs_passive=1` zeroes it (the packs still attack but cannot hurt) and must drive a
-# cell to 100%. Absent, the dial is untouched.
+# Test-only plants (the controls): `pilot_helpless=1` stands the pilot still (the --idle duel) and makes every enemy hit
+# HELPLESS_DAMAGE times as hard, so the first hit runs the hull out and the cell must read a 0% flag (idle alone is not
+# enough: a chaser pack blows itself up on a still ball, half_pipe 15 of 15 kills); `packs_passive=1` zeroes the mobs.damage dial (the packs still attack but cannot hurt) and
+# must drive a cell to 100%. `pack_damage=<k>` multiplies every enemy hit through that dial; it is kept as a probe, not
+# a control: pilots kill a pack of three in 1 to 7 s and take 0 or 1 hits, so x4 cannot reach 0%. Absent, nothing
+# changes.
 const PLANT_DIAL := "mobs.damage_mult"
+const HELPLESS_DAMAGE := 50.0
 const PENDING := "answer: pending (no answers tags on this base)"
 
 
@@ -689,12 +693,16 @@ static func pocket_plant(spec: String) -> Dictionary:
 		"pack_damage":
 			if value <= 1.0:
 				return {"ok": false, "name": name, "value": value, "dials": {}, "expect": "", "error": "--plant=pack_damage needs a factor over 1"}
-			return {"ok": true, "name": name, "value": value, "dials": {PLANT_DIAL: value}, "expect": "low", "error": ""}
+			return {"ok": true, "name": name, "value": value, "dials": {PLANT_DIAL: value}, "expect": "", "error": ""}
+		"pilot_helpless":
+			if value != 1.0:
+				return {"ok": false, "name": name, "value": value, "dials": {}, "expect": "", "error": "--plant=pilot_helpless takes 1"}
+			return {"ok": true, "name": name, "value": value, "dials": {PLANT_DIAL: HELPLESS_DAMAGE}, "expect": "low", "error": ""}
 		"packs_passive":
 			if value != 1.0:
 				return {"ok": false, "name": name, "value": value, "dials": {}, "expect": "", "error": "--plant=packs_passive takes 1"}
 			return {"ok": true, "name": name, "value": value, "dials": {PLANT_DIAL: 0.0}, "expect": "high", "error": ""}
-	return {"ok": false, "name": name, "value": value, "dials": {}, "expect": "", "error": "unknown --plant %s (pack_damage=<k>, packs_passive=1)" % name}
+	return {"ok": false, "name": name, "value": value, "dials": {}, "expect": "", "error": "unknown --plant %s (pilot_helpless=1, packs_passive=1, pack_damage=<k>)" % name}
 
 
 # The control's reading: the planted cell must carry the plant's expected flag (0% for pack_damage, 100% for packs_passive).
@@ -1260,7 +1268,7 @@ func _physics_process(delta: float) -> bool:
 		_driver = DuelDriver.new(_game, "brawler", _run_seed)
 		_driver.class_index = BotDriver.class_index_for(0, _pilot)
 		_driver.dodge = float(_settings.get("dodge", str(DODGE)))
-		_driver.idle = String(_settings.get("idle", "0")) == "1"
+		_driver.idle = String(_settings.get("idle", "0")) == "1" or String(_plant.get("name", "")) == "pilot_helpless"
 		_driver._dodge_rng.seed = hash(["dodge", _run_seed])
 		_driver.stage_limit = INF
 		# The calm map's beacon charges from the start (the ball begins in its ring; ctx.calm does not
