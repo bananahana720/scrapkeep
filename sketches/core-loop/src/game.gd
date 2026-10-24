@@ -13,6 +13,8 @@ const RunMoments := preload("res://src/core/run_moments.gd")
 const Profile := preload("res://src/core/profile.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
 const Progress := preload("res://src/core/progress.gd")
+const ShiftBoard := preload("res://src/core/shift_board.gd")
+const Parts := preload("res://src/build/parts.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
@@ -35,6 +37,7 @@ const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
+const BossPlate := preload("res://src/ui/boss_plate.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const RewardView := preload("res://src/ui/reward_view.gd")
 const MossBubble := preload("res://src/ui/moss_bubble.gd")
@@ -45,6 +48,7 @@ const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
+const LaunchTake := preload("res://src/presentation/launch_take.gd")
 # The camp, the workshop, the pause menu and the met-enemy watch are not on the title's path, so they
 # are loaded when first needed (menu_modules); a played game builds them a few frames after the menu.
 const MENU_PATHS := [
@@ -61,6 +65,9 @@ const MENU_MODULES_FRAMES_APART := 2
 # and the tuning dump. Modules never reach past the context; see CONTRACTS.md.
 
 const RESTART_HOLD := 0.5
+# The camp gate's shot (launch_from_gate), m/s: out through the arch and up, so the chase camera rises with it.
+const GATE_OUT := 9.0
+const GATE_UP := 15.0
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
 const SEED := 20260926
@@ -118,6 +125,9 @@ var hud
 var screens
 # The pilot radio (radio_deck.gd): the HUD dial, the takes a run finds, the playlists.
 var radio_deck
+# The comic swipe that hides the cut from pilot select or the camp gate into the dam (launch_take.gd).
+var launch_take
+var _first_control_said := false
 # The walkable camp (camp_hub.gd). Reading it builds the menu modules if they are not up yet.
 var camp_hub:
 	get:
@@ -239,6 +249,8 @@ func _ready() -> void:
 	progress.name = "Progress"
 	add_child(progress)
 	ctx.progress = progress
+	# Before any module hears run_started, so the run's first offer already sees the board's items.
+	events.run_started.connect(func(_class_id: String): open_board_items())
 
 	_boot("modules")
 	world = _module(World)
@@ -291,6 +303,9 @@ func _ready() -> void:
 	radio_deck.name = "RadioDeck"
 	add_child(radio_deck)
 	radio_deck.setup(self)
+	launch_take = LaunchTake.new()
+	add_child(launch_take)
+	launch_take.finished.connect(_on_take_finished)
 	notes = FieldNotes.new()
 	notes.name = "FieldNotes"
 	add_child(notes)
@@ -502,6 +517,16 @@ func sitting_save_guard() -> void:
 		ctx.profile._refuse("sitting profile: this session does not save")
 		# The sitting opens every first-win secret, as it opens every pilot (secrets.gd).
 		Secrets.open_for_sitting(ctx.profile)
+
+
+# The items the shift board opened for this profile join the offer pool for the run about to start
+# (shift_board.gd). A bot or a test keeps the table's own list, so its runs replay as before.
+func open_board_items() -> void:
+	Parts.opened_items = {}
+	if bot_driven or ctx.profile == null:
+		return
+	for id in ShiftBoard.opened_items(ctx.profile):
+		Parts.opened_items[id] = true
 
 
 func pilot_unlocked(def) -> bool:
@@ -719,6 +744,8 @@ func _apply_pause() -> void:
 
 func _on_flow_changed(_state: String) -> void:
 	var playing: bool = flow.in_play()
+	if playing and not launch_take.busy():
+		_say_first_control()
 	if keyboard != null:
 		keyboard.enabled = playing
 		keyboard.walk = false
@@ -737,6 +764,97 @@ func walk_input(live: bool) -> void:
 		keyboard.enabled = live
 		keyboard.walk = live
 	_capture_mouse(live)
+
+
+# --- the launch take (launch_take.gd): pilot select or the camp gate into the dam as one take ---
+
+# Only a played game shows the take; bots, tests and headless runs start the run at once.
+func _take_live() -> bool:
+	return launch_take.force_live or (not test_mode and not bot_driven and DisplayServer.get_name() != "headless")
+
+
+# A pilot picked on pilot select: the deck camera lifts, the swipe covers, the run starts under it.
+func pick_pilot(index: int) -> void:
+	launch_take.live = _take_live()
+	launch_take.play(func(): flow.choose_class(index), func():
+		screens.fade_for_launch()
+		_launch_whoosh()
+		var title_stage = presentation.get("title_stage") if presentation != null else null
+		if title_stage != null:
+			title_stage.launch_push(LaunchTake.WIND_S + LaunchTake.COVER_S), _dam_drawn)
+
+
+# The pilot the camp gate launches: the last one flown, else the first one open (Sable on a fresh profile).
+func gate_pilot() -> Resource:
+	var last: String = ctx.profile.last_pilot() if ctx.profile != null else ""
+	var first: Resource = null
+	for def in flow.classes:
+		if not pilot_unlocked(def):
+			continue
+		if def.id == last:
+			return def
+		if first == null:
+			first = def
+	return first
+
+
+func gate_label() -> String:
+	var def := gate_pilot()
+	return "Launch as %s" % def.display_name if def != null and def.display_name != "" else "Launch"
+
+
+# Space at the camp's launch gate: the gate fires the ball and the swipe carries it into the dam with the gate's pilot,
+# no pilot select between. A first run (the prologue still due) goes by pilot select as before.
+func launch_from_gate() -> void:
+	var def := gate_pilot()
+	if def == null or screens.prologue_due():
+		flow.press_start()
+		return
+	launch_take.live = _take_live()
+	launch_take.play(func():
+		if flow.state_name() != "title":
+			return
+		screens.stop_walk_for_launch()
+		flow.launch_from_title(def), _fire_gate, _dam_drawn)
+
+
+# The wind of a gate launch: the walk's keys let go and the ball leaves the gate up and out, the chase camera after it.
+func _fire_gate() -> void:
+	walk_input(false)
+	camp_hub.set_prompts_visible(false)
+	var out: Vector3 = camp_hub.zone_position("gate") - camp_hub.root.global_position
+	out.y = 0.0
+	out = out.normalized() if out.length() > 0.01 else Vector3.FORWARD
+	player.set_frozen(false)
+	player.set_velocity_now(out * GATE_OUT + Vector3.UP * GATE_UP)
+	_launch_whoosh()
+
+
+func _launch_whoosh() -> void:
+	var audio = presentation.get("audio") if presentation != null else null
+	if audio != null:
+		audio.play("launched")
+
+
+# The swipe holds until the run's stage has its ground built (the title builds the dam's first, world.gd).
+func _dam_drawn() -> bool:
+	return not flow.in_play() or ctx.terrain.is_ready(run.stage)
+
+
+# The release check's line for cold launch to first control (world 1 unit 17: under 20 s on the 4080 export): the first
+# frame of play with the launch take's panel gone. Bots and tests never print it.
+func _say_first_control() -> void:
+	if _first_control_said or bot_driven or not flow.in_play():
+		return
+	_first_control_said = true
+	print("SCRAPKEEP_FIRST_CONTROL ms=%d" % Time.get_ticks_msec())
+
+
+# The take is gone: the start-pick card it kept hidden shows, and first control is said.
+func _on_take_finished() -> void:
+	if flow.in_stage():
+		flow.show_start_card()
+	_say_first_control()
 
 
 # Latches the summary against whatever is held right now.
@@ -910,7 +1028,9 @@ func set_reduced_motion(on: bool) -> void:
 	ClassCard.reduced_motion = on
 	PilotAntics.reduced_motion = on
 	ClassPreview.reduced_motion = on
+	BossPlate.reduced_motion = on
 	WorldFx.preferred = on
+	preload("res://src/presentation/flourish_player.gd").reduced_motion = on
 	if is_instance_valid(WorldFx.current):
 		WorldFx.current.set_quality(WorldFx.current.low, on)
 	if presentation != null and presentation.get("juice") != null:
@@ -1068,6 +1188,9 @@ static func _launch_flag(flag: String) -> bool:
 # One key per choice on every screen outside play. The screens' buttons press these
 # same keys, so a click and a key always do the same thing.
 func _screen_key(key: int) -> bool:
+	# The launch take owns every key until the dam shows: no second pick, no menu under the swipe.
+	if launch_take != null and launch_take.busy():
+		return true
 	match flow.state_name():
 		"title":
 			if screens.jukebox_open():
@@ -1106,7 +1229,7 @@ func _screen_key(key: int) -> bool:
 		"class_select":
 			if key >= KEY_1 and key < KEY_1 + mini(flow.classes.size(), 9):
 				if pilot_unlocked(flow.classes[key - KEY_1]):
-					flow.choose_class(key - KEY_1)
+					pick_pilot(key - KEY_1)
 				return true
 		"dead":
 			if key == KEY_N:

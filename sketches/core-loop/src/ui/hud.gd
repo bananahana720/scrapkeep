@@ -576,7 +576,7 @@ func _seat_boss_plate() -> void:
 	if is_instance_valid(warden) and warden.has_method("fight") and warden.fight() == "posture":
 		if boss_plate == null:
 			boss_plate = BossPlate.new()
-		boss_plate.bind(warden)
+		boss_plate.bind(warden, null if _engaged else _arena_phases())
 		mount_plate(boss_plate)
 	elif boss_plate != null:
 		if _plate == boss_plate:
@@ -597,6 +597,14 @@ func _brindle_hull():
 		return boss.ship.hull
 	var stub_warden = boss.get("warden")
 	return stub_warden if is_instance_valid(stub_warden) else null
+
+
+# The live arena fight's phases (a FightPhases, Brindle's _phases), for the plate's diamonds,
+# or null for a boss without them. Read, never written: the fight owns it.
+func _arena_phases():
+	var boss = game.ctx.boss
+	var phases = boss.get("_phases") if boss != null else null
+	return phases if phases is FightPhases else null
 
 
 func _exit_tree() -> void:

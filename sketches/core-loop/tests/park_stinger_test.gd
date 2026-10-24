@@ -48,6 +48,8 @@ func _initialize() -> void:
 
 	_fallback_checks()
 	_riser_landing_checks()
+	_unfinished_warm_checks()
+	_late_cell_checks()
 	quit(_t.verdict())
 
 
@@ -120,3 +122,80 @@ func _riser_landing_checks() -> void:
 			_t.eq("lead %d: the trim is the overhang" % lead, int(file.get("skip", 0)), riser_length - lead)
 		var buf: PackedFloat32Array = e.park_cue_samples(file, 0)
 		_t.eq("lead %d: the rendered riser length is the action length" % lead, buf.size(), int(file.length))
+
+
+# A cell whose warm task is still queued or rendering when its beat comes renders on the spot: at the
+# Warden's engage the next stage's preparation held a park cue's warm for 1 s on the cloud, and the
+# beat waited on it (scrapkeep#241, the 4080 stage 1 spikes).
+func _unfinished_warm_checks() -> void:
+	var options := {"stage": "1-1", "theme": 0, "ancient": "reactor", "motif": "sable"}
+	var e = MusicEngine.new()
+	e.band_muted = true
+	e.park_cue("drop_fleet_anvil", 0, 100000, options, 0.0, "ev")
+	var actions := _active(e)
+	if actions.is_empty():
+		_t.check("a park cue is booked", false)
+		return
+	var cell: Dictionary = actions[0]
+	var signature := MusicEngine._park_signature(cell, 0, e.step_len)
+	var plain = MusicEngine.new()
+	plain.band_muted = true
+	var want: PackedFloat32Array = plain.park_cue_samples(cell, 0)
+	# The held warm finishes only when released below, so a render that waited on it would never return.
+	var gate := Semaphore.new()
+	var held := WorkerThreadPool.add_task(func(): gate.wait(), true, "park_stinger_test held warm")
+	e._park_pcm.clear()
+	e._park_tasks[signature] = held
+	MusicEngine._stinger_tasks.append(held)
+	var buf: PackedFloat32Array = e.park_cue_samples(cell, 0)
+	_t.check("an unfinished warm is not waited for; the cell renders on the spot",
+		not WorkerThreadPool.is_task_completed(held) and buf == want)
+	_t.check("the unfinished warm stays listed for teardown", MusicEngine._stinger_tasks.has(held))
+	gate.post()
+	MusicEngine.settle_stingers()
+
+
+# A cell booked ahead whose worker is still rendering at its beat waits for it like a late cell (the crown's
+# spire telegraph held a frame 300 ms on the cloud, scrapkeep#241), then plays from where it would be by now.
+func _late_cell_checks() -> void:
+	var options := {"stage": "1-1", "theme": 0, "ancient": "reactor", "motif": "sable"}
+	var e = MusicEngine.new()
+	e.band_muted = true
+	e.park_cue("drop_fleet_anvil", 0, 100000, options, 0.0, "ev")
+	var actions := _active(e)
+	if actions.is_empty():
+		_t.check("a park cue is booked", false)
+		return
+	var cell: Dictionary = actions[0]
+	e._actions.clear()
+	var signature := MusicEngine._park_signature(cell, 0, e.step_len)
+	var plain = MusicEngine.new()
+	plain.band_muted = true
+	var want: PackedFloat32Array = plain.park_cue_samples(cell, 0)
+	var gate := Semaphore.new()
+	var held := WorkerThreadPool.add_task(func(): gate.wait(), true, "park_stinger_test late cell")
+	e._park_pcm.clear()
+	e._park_tasks[signature] = held
+	MusicEngine._stinger_tasks.append(held)
+	var booked := int(cell.at)
+	e.clock = booked
+	e._step_clock = e.clock
+	e._actions.append(cell)
+	e._run_due()
+	var waiting := _active(e)
+	_t.check("a due cell whose worker is rendering waits and plays nothing yet",
+		waiting.size() == 1 and waiting[0].get("late", false) and e.park_cue_log.is_empty(), str(waiting))
+	gate.post()
+	while not WorkerThreadPool.is_task_completed(held):
+		pass
+	e._park_warm_lock.lock()
+	e._park_warm[signature] = want
+	e._park_warm_lock.unlock()
+	var waited := 512
+	e.clock += waited
+	e._step_clock = e.clock
+	e._run_due()
+	var log: Dictionary = e.park_cue_log.back() if not e.park_cue_log.is_empty() else {}
+	_t.check("once rendered it plays from where it would be by now, logged at its booked time",
+		_active(e).is_empty() and not log.is_empty() and int(log.at) == booked + waited and int(log.end) - int(log.at) == want.size() and int(log.scheduled) == booked,
+		str(log))

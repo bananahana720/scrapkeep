@@ -90,6 +90,11 @@ const ELITE_ARRIVAL := 3
 # stage from the Spillway to the crown; the default Breath plays them as written and gentle eases
 # them (director.gd BREATH).
 const POSTURE_CURVE := 2.0
+# The stage 3 hive (Andrew's option 1 on the swarm hive card, 23 Oct: grown builds hit it harder,
+# ordinary pilots stay at about 75 s): a heavy stagger. In one a ram opened at 0.7x the plating or more,
+# a smashing ram takes two chunks (boss_posture.gd heavy_ratio). 24 seeds a side on stage w18: small
+# 72.89 s, grown 33.95 s, 2.15x (was 75.69 / 40.67, 1.86x); posture_bands_swarm_test holds it.
+const HIVE_HEAVY_RATIO := 0.7
 const PRESSURE := [
 	{"pack_scale": 1.03, "interval_scale": 0.95, "elite_rate": 0.60, "posture_curve": 1.00, "boss_phase_scale": 1.00},
 	{"pack_scale": 1.04, "interval_scale": 0.92, "elite_rate": 0.80, "posture_curve": 1.00, "boss_phase_scale": 1.10},
@@ -116,7 +121,7 @@ const DEFS := [
 		"unlock_base": 2, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 130.0, "warden_hp": 950.0, "warden_lesson": "",
-		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55, "heavy_ratio": HIVE_HEAVY_RATIO}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
 		"packs": [
 			{"id": "dig_shallow", "kinds": ["burrower", "burrower", "lamp_swarm"]},
 			{"id": "dig_bore", "kinds": ["drill_crew", "burrower", "prop_crew"]},

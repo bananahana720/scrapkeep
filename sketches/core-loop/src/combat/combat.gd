@@ -4060,6 +4060,8 @@ func _spec_for(kind: String) -> Dictionary:
 					w.merge(map.warden_spec(), true)
 					w["reach"] = map.reach_m
 					w["park_landmark"] = true
+					if ctx.flow.gate != null and ctx.flow.gate.has_gate():
+						w["posture_gate"] = Callable(ctx.flow.gate, "locked")
 			return w
 		"miniboss":
 			return {"plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}

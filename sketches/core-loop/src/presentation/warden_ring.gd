@@ -32,6 +32,11 @@ const CRACK_MARK := 0.2
 const OUTLINE := 0.2
 const CRACK_AT := [0.08, 0.5, 0.92]
 const PRIORITY := -3
+# A moving Warden's ring is rebuilt on the ground at most every REBUILD_FRAMES frames, or at once past
+# REBUILD_M (a slide that far off a slope stays within a lift or two): the Mind moves all fight, and a build reads the ground at about 670 points (3.5 ms a
+# frame of crown play on the cloud, scrapkeep#241).
+const REBUILD_FRAMES := 6
+const REBUILD_M := 0.5
 
 var _warden: Node3D
 var _arc_meshes: Array[MeshInstance3D] = []
@@ -46,6 +51,7 @@ var _mark_material: StandardMaterial3D
 var _built_at := Vector3.INF
 var _crack_index := -1
 var _points := {}
+var _since_build := 0
 
 
 func bind(warden: Node3D) -> void:
@@ -169,8 +175,12 @@ func _sync() -> void:
 	if not visible:
 		return
 	var foot := _centre()
-	if _built_at.distance_to(foot) > 0.05:
+	_since_build += 1
+	if _built_at.distance_to(foot) > REBUILD_M or (_since_build >= REBUILD_FRAMES and _built_at.distance_to(foot) > 0.05):
 		_build(foot)
+	elif global_position != foot:
+		# Between builds a moving ring slides with its Warden; its ground fit is at most one build old.
+		global_position = foot
 	_backing_material.albedo_color = crack_backing()
 	for i in ARCS:
 		_arc_materials[i].albedo_color = arc_color(i)
@@ -245,6 +255,7 @@ func _span(i: int) -> Vector2:
 
 func _build(foot: Vector3) -> void:
 	_built_at = foot
+	_since_build = 0
 	_points.clear()
 	global_position = foot
 	var mid := _radius()

@@ -118,7 +118,7 @@ func _run() -> void:
 		_t.check("%s: its key opens a page or starts an activity" % id, left or paged or activity != "",
 			"state %s, page %s, activity '%s'" % [flow.state_name(), paged, activity])
 		if left:
-			_t.eq("%s: Launch reaches class select" % id, flow.state_name(), "class_select")
+			_t.check("%s: Launch starts the run on stage 1" % id, flow.in_stage() and _game.run.stage == 1, flow.state_name())
 			_t.check("%s: the walk has ended" % id, not _screens.walking() and not _hub.walking, "")
 			flow.show_title()
 			await _frames(3)
