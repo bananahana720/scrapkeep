@@ -145,6 +145,9 @@ func setup(ctx_ref, beacon_ref) -> void:
 	ctx.events.enemy_killed.connect(_on_enemy_killed)
 	ctx.events.enemy_struck.connect(_on_enemy_struck)
 	ctx.events.boss_defeated.connect(_on_boss_defeated)
+	# A stage's piece pays with its activity; it reaches the profile then, so a restart or a quit
+	# before the next stage entry cannot lose it.
+	ctx.events.activity_done.connect(func(_id: String, _at: Vector3): _persist_companion())
 
 
 func state_name() -> String:

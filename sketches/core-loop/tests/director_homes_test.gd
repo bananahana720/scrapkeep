@@ -74,6 +74,10 @@ func _physics_process(_delta: float) -> bool:
 		d._timer = 0.0
 		_held = {"arrivals_made": d.elite_arrival - 1, "pack_seq": 0,
 			"last_pack_id": "held-history", "last_was_elite": false}
+		# Homeless members ride with the crew, so an elite is unavailable only when none of its
+		# kinds may arrive: every one is stopped here, and released before the fallback phase.
+		for kind in d.elite.kinds:
+			d._stopped_kinds[kind] = true
 		_phase = 5
 		_ticks = 0
 		return false
@@ -87,6 +91,7 @@ func _physics_process(_delta: float) -> bool:
 			and d._last_pack_id == _held.last_pack_id and d._last_was_elite == _held.last_was_elite
 			and d._next_pack == d.elite,
 			"queued=%d packs=%d arrivals_made=%d seq=%d next=%s" % [d.arrivals.size(), d.packs.size(), d._arrivals_made, d._pack_seq, d._next_pack])
+		d._stopped_kinds.clear()
 		_ball = _game.ctx.terrain.map().beacon
 		_place_ball()
 		d._rng.seed = 913
@@ -238,9 +243,15 @@ func _window_ball(site: Dictionary) -> Vector2:
 	return Vector2.INF
 
 
+# An arrival comes from a live window home of its own kind; a kind with no live home in the
+# window rides with the crew from any live window home.
 func _from_live_home(arrival: Dictionary, homes: Array) -> bool:
+	var kind: String = Director.KIND_NAMES[arrival.kind]
+	var housed := false
 	for home in homes:
-		if home.dormant or home.enemy != Director.KIND_NAMES[arrival.kind]:
+		housed = housed or (not home.dormant and home.enemy == kind and _window_home(home))
+	for home in homes:
+		if home.dormant or (housed and home.enemy != kind):
 			continue
 		var site: Dictionary = _sites[home.site]
 		var ahead: float = _graph.d_landmark(_ball) - _graph.d_landmark(_at(site))
@@ -248,6 +259,11 @@ func _from_live_home(arrival: Dictionary, homes: Array) -> bool:
 		if ahead >= 60.0 and ahead <= 250.0 and ParkMap.footprint_contains(site, arrival.at) and point_ahead >= 60.0 and point_ahead <= 250.0:
 			return true
 	return false
+
+
+func _window_home(home: Dictionary) -> bool:
+	var ahead: float = _graph.d_landmark(_ball) - _graph.d_landmark(_at(_sites[home.site]))
+	return ahead >= 60.0 and ahead <= 250.0
 
 
 func _check_corridor(at: Vector2) -> void:

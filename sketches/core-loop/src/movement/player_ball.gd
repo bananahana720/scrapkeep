@@ -957,7 +957,7 @@ func _fail(verb: String, reason: String) -> void:
 
 
 # Whether pressing the verb would succeed on this tick: "harpoon" bites, "haul" commits a
-# smash or winches, "boost" is Shift's verb for this pilot, "interact" is E where it would mount
+# smash (on a Warden line only inside its stagger) or winches, "boost" is Shift's verb for this pilot, "interact" is E where it would mount
 # the pylon or an interactable would take the press, "jump" is Space where it would jump,
 # air-jump or launch the slingshot.
 func verb_ready(verb: String) -> bool:
@@ -979,7 +979,7 @@ func verb_ready(verb: String) -> bool:
 			return not Augments.holding(kit) and (state.grounded or state.coyote > 0.0 or state.air_actions > 0)
 		"haul":
 			return not _frozen and not Augments.holding(kit) and kit.hooked \
-					and (not kit.on_body or kit.line_state == Augments.LINE_LATCHED)
+					and (not kit.on_body or (kit.line_state == Augments.LINE_LATCHED and Augments.haul_open(kit)))
 		"boost":
 			if _burst_pilot():
 				return Harpoon.burst_ready(kit)
@@ -1027,8 +1027,10 @@ func _read_ctrl() -> void:
 	var on_body: bool = kit.hooked and kit.on_body
 	kit.winching = kit.hooked and not on_body and intent.brake_held
 	if edge and not _frozen:
-		if on_body and kit.line_state == Augments.LINE_LATCHED:
+		if on_body and kit.line_state == Augments.LINE_LATCHED and Augments.haul_open(kit):
 			Augments.commit_smash(kit, tuning, _rigid.linear_velocity)
+		elif on_body and kit.line_state == Augments.LINE_LATCHED:
+			_fail("haul", "flail" if kit.grip == "flail" else "unstaggered")
 		elif on_body:
 			_fail("haul", "committed")
 	if kit.hooked:
