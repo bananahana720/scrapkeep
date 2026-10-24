@@ -16,7 +16,7 @@ const T := preload("res://tests/support/t.gd")
 #   - the pet hops and chirps when the ball rolls into its pen;
 #   - a scripted roll from the spawn moves more than 20 m and stays on the plaza;
 #   - K leaves to the title with the ball frozen and the hub hidden;
-#   - Space in the gate's zone leaves the walk for class select.
+#   - Space in the gate's zone launches the last-flown pilot straight into stage 1 (no pilot select).
 
 const STATIONS := [
 	{"id": "lockers", "key": KEY_C, "label": "Customize"},
@@ -370,19 +370,23 @@ func _run() -> void:
 		str(player.ball_position()))
 	_t.check("no zone is left inside", _hub.inside_ids().is_empty(), "")
 
-	# Re-entering reuses the hub; Space at the gate goes to class select.
+	# Re-entering reuses the hub; Space at the gate launches the gate's pilot straight into stage 1 (launch_take.gd).
 	var root_before = _hub.root
 	_game._screen_key(KEY_K)
 	await _frames(3)
 	_t.check("a second walk reuses the hub", _hub.root == root_before and _screens.walking(), "")
 	await _put_in("gate")
-	_t.check("the gate prompt reads Launch", _hub.card_for("gate") != null and _hub.card_for("gate").text == "Launch", "")
+	var gate_pilot = _game.gate_pilot()
+	_t.check("the gate prompt names the pilot it launches", _hub.card_for("gate") != null
+		and _hub.card_for("gate").text == "Launch as %s" % gate_pilot.display_name, _hub.card_for("gate").text if _hub.card_for("gate") != null else "")
 	_game._screen_key(KEY_SPACE)
 	await _frames(3)
-	_t.eq("Space at the gate reaches class select", flow.state_name(), "class_select")
+	_t.check("Space at the gate starts the run on stage 1, no pilot select", flow.in_stage() and _game.run.stage == 1, flow.state_name())
+	_t.eq("the gate's pilot flies", _game.run.class_def.id, gate_pilot.id)
 	_t.check("the walk has ended", not _screens.walking() and not _hub.walking and not _hub.root.visible, "")
-	_t.check("the ball is frozen for class select", player.frozen(), "")
-	_t.check("class select shows its title picture", title_stage._layer.visible, "")
+	_t.check("the ball is live over the dam", not player.frozen()
+		and player.ball_position().distance_to(_game.ctx.terrain.spawn_point(1)) < 30.0, str(player.ball_position()))
+	_t.check("the title picture stays down", not title_stage._layer.visible, "")
 	flow.show_title()
 	await _frames(2)
 	_t.check("the title after Launch is the plain title", not _screens.camp_open() and _screens._actions.visible, "")

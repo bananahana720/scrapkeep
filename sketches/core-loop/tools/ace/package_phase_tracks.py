@@ -40,7 +40,7 @@ SOUND = SKETCH / 'design-v3/sound'
 BARS = 16
 START_BAR = 4
 # Takes whose loop clicks when cut from START_BAR (scripts/audio-gate.mjs seam), cut earlier.
-START_BARS = {'landmark-penstock': 2}
+START_BARS = {'landmark-penstock': 2, 'event-surge-run': 2}
 TARGET_LUFS = -16.0
 MAX_TP = -1.2
 

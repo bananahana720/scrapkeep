@@ -41,21 +41,38 @@ const PARTS := [
 # A rise to a heft class the run has not been rewarded for opens one upgrade tree pick.
 const PICK_ON_CLASS_UP := true
 
-# World 1's packs (stages 1 and 2 use them). KF0 2026-10-10: the deflector's `rebound` pack left
+# World 1's first two packs, the table's fallback (packs()); stages 1 and 2 name their own below. KF0 2026-10-10: the deflector's `rebound` pack left
 # world 1, so harpoon-spam answers enter from world 2 (decisions.tsv, "The deflector's rebound pack
 # leaves world 1"; PARK.md section 13 item 2).
 const PACKS := [
 	{"id": "run_down", "kinds": ["chaser", "chaser", "chaser", "lobber"]},
 	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
 ]
-# Stage 2 adds the Foreman's shift crew (foreman.gd): its horn closes the brute's cracked plating
-# every 5 s until it is knocked out first. None in stage 1 (ENEMY-PRIORITY.md 6).
-const PACKS_SHIFT := [
+const ELITE := {"id": "elite", "kinds": ["plated_brute", "winch_drone"]}
+# The Spillway's own roster (design-v3/SPILLWAY-ROSTER.md, wave 19): five packs on the dam and
+# six on the flume, each Flow lesson taught on the dam and remixed harder on the flume. Speed is
+# the answer the world teaches: the jolt layer's mat misses a fast ball, the hooker's tether
+# snaps on speed, a boost or a bite on another post, and a sluice flap launches a fast ball.
+const PACKS_DAM := [
+	{"id": "run_down", "kinds": ["chaser", "chaser", "chaser", "lobber"]},
+	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
+	{"id": "live_wire", "kinds": ["jolt_layer", "chaser", "chaser"]},
+	{"id": "sluice_line", "kinds": ["hooker", "chaser", "lobber"]},
+	{"id": "flap_run", "kinds": ["ramp_flipper", "boom_tender", "chaser"]},
+]
+# The flume: two mats to thread at speed, a tether in front of the brute's slam, two flaps under
+# a lobber's shells, and the Foreman's shift crew.
+const PACKS_FLUME := [
 	{"id": "run_down", "kinds": ["chaser", "chaser", "chaser", "lobber"]},
 	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
 	{"id": "shift_crew", "kinds": ["foreman", "plated_brute", "chaser", "chaser"]},
+	{"id": "crossed_wires", "kinds": ["jolt_layer", "jolt_layer", "boom_tender"]},
+	{"id": "weir_strung", "kinds": ["dispatcher", "hooker", "chaser"]},
+	{"id": "flap_line", "kinds": ["ramp_flipper", "ramp_flipper", "lobber"]},
 ]
-const ELITE := {"id": "elite", "kinds": ["plated_brute", "winch_drone"]}
+# The Spillway's own elite on stages 1 and 2: the tether drags you back into the live mat while
+# the brute's slab comes down. Speed snaps the line and slips the mat in one move.
+const ELITE_SPILLWAY := {"id": "elite", "kinds": ["hooker", "jolt_layer", "plated_brute"]}
 # The Dig's own elite (design-v3/WORLD-ROSTERS.md): two plated rigs and a jaw, so the floor is
 # the danger and the wall the lane. The Foreman joins it once it merges.
 const DIG_ELITE := {"id": "dig_elite", "kinds": ["drill_crew", "drill_crew", "pit_jaw"]}
@@ -73,6 +90,11 @@ const ELITE_ARRIVAL := 3
 # stage from the Spillway to the crown; the default Breath plays them as written and gentle eases
 # them (director.gd BREATH).
 const POSTURE_CURVE := 2.0
+# The stage 3 hive (Andrew's option 1 on the swarm hive card, 23 Oct: grown builds hit it harder,
+# ordinary pilots stay at about 75 s): a heavy stagger. In one a ram opened at 0.7x the plating or more,
+# a smashing ram takes two chunks (boss_posture.gd heavy_ratio). 24 seeds a side on stage w18: small
+# 72.89 s, grown 33.95 s, 2.15x (was 75.69 / 40.67, 1.86x); posture_bands_swarm_test holds it.
+const HIVE_HEAVY_RATIO := 0.7
 const PRESSURE := [
 	{"pack_scale": 1.03, "interval_scale": 0.95, "elite_rate": 0.60, "posture_curve": 1.00, "boss_phase_scale": 1.00},
 	{"pack_scale": 1.04, "interval_scale": 0.92, "elite_rate": 0.80, "posture_curve": 1.00, "boss_phase_scale": 1.10},
@@ -88,18 +110,18 @@ const DEFS := [
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 90.0, "warden_hp": 650.0, "warden_lesson": "",
 		"posture": {"curve": POSTURE_CURVE * PRESSURE[0]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[0], "warden_hint": "Break its guard, then smash the core.",
-		"packs": PACKS, "elite": ELITE, "warden_variant": ""},
+		"packs": PACKS_DAM, "elite": ELITE_SPILLWAY, "warden_variant": ""},
 	{"stage": 2, "world": 1, "music": {"theme": 1, "ace": "cable_reach"}, "warden_family": "reactor", "name": "The Cable Reach", "map": "park_flume", "threat": 1.0,
 		"unlock_base": 4, "ancient": "reactor_relic",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.0, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 110.0, "warden_hp": 800.0, "warden_lesson": "",
 		"posture": {"curve": POSTURE_CURVE * PRESSURE[1]["posture_curve"], "ram_shatters": false}, "pressure": PRESSURE[1], "warden_hint": "Break its guard, then smash the core.",
-		"packs": PACKS_SHIFT, "elite": ELITE, "warden_variant": "meltdown"},
+		"packs": PACKS_FLUME, "elite": ELITE_SPILLWAY, "warden_variant": "meltdown"},
 	{"stage": 3, "world": 2, "music": {"theme": 1, "ace": "dig_upper"}, "warden_family": "swarm", "name": "Dig: the upper bench", "map": "park_pit", "threat": 1.1,
 		"unlock_base": 2, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 130.0, "warden_hp": 950.0, "warden_lesson": "",
-		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55, "heavy_ratio": HIVE_HEAVY_RATIO}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
 		"packs": [
 			{"id": "dig_shallow", "kinds": ["burrower", "burrower", "lamp_swarm"]},
 			{"id": "dig_bore", "kinds": ["drill_crew", "burrower", "prop_crew"]},

@@ -13,6 +13,10 @@ uniform float highlight = 65504.0;
 uniform vec3 glow : source_color = vec3(0.0);
 uniform vec3 sun_dir = vec3(0.0, 1.0, 0.0);
 uniform float energy = 1.0;
+// Lifts the low sky on the side away from the sun (full from 80 degrees off its bearing, fading out by 53; full at the horizon, half at
+// about 24 degrees up, none by 53), in the drawn
+// background only: the radiance pass skips it, so the ambient and reflections the ground takes from the sky do not rise with it.
+uniform float away_lift = 0.0;
 
 void sky() {
 	vec3 c = min(texture(panorama, SKY_COORDS).rgb, vec3(highlight));
@@ -22,5 +26,11 @@ void sky() {
 	float toward = max(dot(EYEDIR, normalize(sun_dir)), 0.0);
 	float low = 1.0 - smoothstep(0.0, 0.45, EYEDIR.y);
 	c += glow * (pow(toward, 4.0) * low + pow(toward, 48.0));
+	if (!AT_CUBEMAP_PASS && away_lift > 0.0) {
+		vec2 eye_h = EYEDIR.xz / max(length(EYEDIR.xz), 1e-4);
+		vec2 sun_h = sun_dir.xz / max(length(sun_dir.xz), 1e-4);
+		float away = 1.0 - smoothstep(0.17, 0.6, dot(eye_h, sun_h));
+		c *= 1.0 + away_lift * away * (1.0 - smoothstep(0.0, 0.8, EYEDIR.y));
+	}
 	COLOR = c * energy;
 }

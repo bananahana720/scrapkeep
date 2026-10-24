@@ -21,6 +21,7 @@ const Augments := preload("res://src/movement/augments.gd")
 # tells an ancient from the Fleet.
 const ClassDef := preload("res://src/core/class_def.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const Rogue := preload("res://src/combat/rogue.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 const Companion := preload("res://src/core/companion.gd")
@@ -133,9 +134,10 @@ const HUM_FAR := 45.0
 const HUM_NEAR := 3.0
 const HUM_DB := 0.0
 # Danger sounds pull the bass down so the low end never masks a warning.
-const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "klaxon", "threat_up", "death",
+const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
 	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
-# A launch whose landing never comes (a fall into the next stage's rail) still drops.
+# A launch whose landing never comes (a fall into the next stage's rail) still drops. Timed on
+# SimClock: the drop restarts the band and so the bar grid that park events land on.
 const LANDING_FALLBACK_MS := 2000
 # Expected launch-to-landing time, for the pace of the build's sweep.
 const LAUNCH_BUILD_SECONDS := 1.6
@@ -646,7 +648,7 @@ func _process(delta: float) -> void:
 	_follow_warden()
 	_follow_escalation()
 	_tend_ear(delta)
-	if _launch_armed and _landing_theme >= 0 and Time.get_ticks_msec() - _entered_ms > LANDING_FALLBACK_MS:
+	if _launch_armed and _landing_theme >= 0 and SimClock.msec() - _entered_ms > LANDING_FALLBACK_MS:
 		_land_drop()
 	_pump()
 	if _overlay != null and _overlay.visible and Time.get_ticks_msec() > _overlay_until:
@@ -1649,6 +1651,8 @@ func wire_optional() -> void:
 		_listen_optional(events, "boss_phase_changed", _on_boss_phase, true)
 	_listen_optional(events, "boss_defeated", func(): _on_boss_defeated(), true)
 	_listen_optional(events, "boss_attack_telegraphed", _on_boss_telegraph)
+	_listen_optional(events, "attack_cued", _on_attack_cued)
+	_listen_optional(events, "fight_phase_changed", _on_fight_phase)
 	_listen_optional(events, "boss_weak_point_hit", _on_weak_point)
 	_listen_optional(events, "event_progress", _on_event_progress)
 	# The stage's content leaves before the arena: a soft fade, and any launch build
@@ -2241,7 +2245,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	elif _launch_armed:
 		# The stage the launch was flying to: its theme arrives with the landing drop.
 		_landing_theme = _stage_theme(stage)
-		_entered_ms = Time.get_ticks_msec()
+		_entered_ms = SimClock.msec()
 		_launch_stage = true
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
@@ -2349,7 +2353,7 @@ func _on_enemy_spawned(enemy: Node3D, kind: String) -> void:
 		return
 	if enemy != null and enemy.get("affix") is Dictionary and not (enemy.get("affix") as Dictionary).is_empty():
 		_champion_joined(enemy)
-	var boss := kind == "miniboss"
+	var boss := is_miniboss(kind)
 	if not Roster.is_ancient(Roster.faction_of(kind)):
 		play("enemy_spawned", 3.0 if boss else 0.0, Harmony.ratio(-5.0) if boss else 1.0)
 	if boss:
@@ -2359,7 +2363,7 @@ func _on_enemy_spawned(enemy: Node3D, kind: String) -> void:
 	if boss and enemy != null:
 		var key := str(enemy.get_instance_id())
 		enemy.tree_exiting.connect(end_moment.bind("miniboss", key), CONNECT_ONE_SHOT)
-		begin_moment("miniboss", key, "miniboss")
+		begin_moment("miniboss", key, miniboss_tune(kind))
 
 
 # --- The kill-first specials (INTEGRATION.md section 7, item 5) ----------------------
@@ -2535,7 +2539,7 @@ func phase_music(phase: int) -> Dictionary:
 		_ace_named(plan["track"], int(when["drop"]), true)
 		cue_log.append(["boss_phase_music", plan["track"], "bar", int(when["drop"]), 1.0])
 		return {"track": plan["track"], "hype": plan["hype"], "at": when["drop"]}
-	var track := PhaseMusic.track_for_phase(boss, phase)
+	var track := PhaseMusic.track_for_phase(boss, phase, pack_available)
 	if track == "" or not pack_available.call(track):
 		return {}
 	var at := engine.next_bar()
@@ -2706,7 +2710,8 @@ func _landmark_id() -> String:
 
 
 func _tend_champions() -> void:
-	if not _champion_hyped or not pack_available.call(PhaseMusic.EURO_CHAMPION):
+	var final_track := PhaseMusic.champion_final(pack_available)
+	if not _champion_hyped or final_track == "":
 		return
 	for id in _champions.keys():
 		var enemy = _champions[id]
@@ -2716,8 +2721,8 @@ func _tend_champions() -> void:
 			_champion_euro[id] = true
 			var when := PhaseMusic.drop_plan(engine.clock, engine.next_bar(), engine.bar_len(), Harmony.RATE)
 			engine.schedule_stinger_at("hype_drop", int(when["start"]))
-			_ace_named(PhaseMusic.EURO_CHAMPION, int(when["drop"]), true)
-			cue_log.append(["champion_final", PhaseMusic.EURO_CHAMPION, "bar", int(when["drop"]), 1.0])
+			_ace_named(final_track, int(when["drop"]), true)
+			cue_log.append(["champion_final", final_track, "bar", int(when["drop"]), 1.0])
 			return
 
 
@@ -2735,11 +2740,36 @@ func _on_boss_defeated() -> void:
 	engine.victory()
 
 
+# A live miniboss other than the one dying on this kill (enemy.gd marks it dead first).
+func _miniboss_survivor() -> Node3D:
+	for enemy in get_tree().get_nodes_in_group("enemy") if is_inside_tree() else []:
+		if is_instance_valid(enemy) and is_miniboss(String(enemy.get("kind"))) and not enemy.is_dead():
+			return enemy
+	return null
+
+
+# The surge miniboss and the rogue fleet machines share the miniboss track and moment.
+static func is_miniboss(kind: String) -> bool:
+	return kind == "miniboss" or Rogue.ROWS.has(kind)
+
+
+# A rogue plays its own anthem once its TUNES row exists (the music lane adds it with the
+# track); until then, and for the surge miniboss, the miniboss tune.
+static func miniboss_tune(kind: String) -> String:
+	var anthem := String(Rogue.ROWS.get(kind, {}).get("anthem", ""))
+	return anthem if TuneMoments.TUNES.has(anthem) else "miniboss"
+
+
 func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
-	if _kind == "miniboss" and is_instance_valid(_miniboss):
+	# A rogue and a surge miniboss can share a stage: while another one still fights, the
+	# track holds and the music follows the survivor (each moment ends with its own body).
+	if is_miniboss(_kind) and _miniboss_survivor() != null:
+		_miniboss = _miniboss_survivor()
+		_kind = ""
+	if is_miniboss(_kind) and is_instance_valid(_miniboss):
 		var key := str(_miniboss.get_instance_id())
 		end_moment("miniboss", key)
-	if _kind == "miniboss" and engine.track == "miniboss":
+	if is_miniboss(_kind) and engine.track == "miniboss":
 		# The payoff on the kill: the drop home on the next beat, then the cadence.
 		engine.miniboss_drop()
 		_miniboss = null
@@ -3268,6 +3298,28 @@ func _on_boss_telegraph(_attack_id: String, seconds_until: float) -> void:
 	if engine.track == "warden":
 		engine.parameter_danger("boss_attack_telegraphed")
 	play("boss_attack_telegraphed", 0.0, Harmony.ratio(lerpf(3.0, 0.0, clampf(seconds_until / 1.5, 0.0, 1.0))))
+
+
+# A mini-boss's later phase (fight_phases.gd): its live anthem moment moves to the phase
+# variant, "<tune>-heavy", on the next downbeat, when that tune's pack is on disk. Bosses
+# follow boss_phase_changed (phase_music) instead.
+func _on_fight_phase(fight_id: String, phase: int, _phases: int) -> void:
+	if phase < 2 or PhaseMusic.BOSS_SYNTH_THEME.has(fight_id):
+		return
+	var moved := false
+	for m in _moments:
+		if m.kind == "miniboss" and not String(m.id).ends_with(PhaseMusic.HEAVY):
+			var heavy := String(m.id) + PhaseMusic.HEAVY
+			if tune_available.call(heavy):
+				m.id = heavy
+				moved = true
+	if moved:
+		_refresh_moment()
+
+
+# A cued follow-up's ratchet: never quantized, it is the warning the short tell leans on.
+func _on_attack_cued(_fight_id: String, _attack_id: String, _seconds_until: float) -> void:
+	play("attack_cued")
 
 
 # Weak-point hits climb the pentatonic like a combo, so a string of them sings.

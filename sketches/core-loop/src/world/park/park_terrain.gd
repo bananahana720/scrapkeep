@@ -370,7 +370,48 @@ static func make_render(parent: Node, label: String) -> Node3D:
 	material.set_shader_param("auto_overlay_texture", GROUND_FLOOR_ID)
 	material.set_shader_param("auto_slope", 1.0)
 	material.set_shader_param("auto_height_reduction", 0.0)
+	material.set_shader_param("noise_texture", patch_noise())
+	dress_floor(node, "")
 	return node
+
+
+# Floor patches (4080 park stills, acb55972: the dam read as flat sand from above): Terrain3D's macro variation
+# multiplies the albedo by two noise reads at two scales, so a park in FLOOR_PATCHES gets wind-scoured and
+# wash-stained patches of tens of metres, weighted by the ground's normal y (macro_variation_slope 0), so flat floor
+# takes the full tint, a strata slope part of it and a sheer face none.
+# Every other park keeps white multipliers, which draw exactly as before. The shader runs it either way: no draw,
+# no vertex and no texture slot is added.
+const FLOOR_PATCHES := {
+	"park_dam": {"scour": Color(0.72, 0.64, 0.57), "stain": Color(0.88, 0.76, 0.64), "scour_scale": 0.05, "stain_scale": 0.11},
+}
+const PATCH_NOISE_PX := 256
+static var _patch_noise: Texture2D
+
+
+# The macro noise every park render node shares: one seamless 256 px simplex tile, made once at setup.
+static func patch_noise() -> Texture2D:
+	if _patch_noise == null:
+		var noise := FastNoiseLite.new()
+		noise.seed = 1871
+		noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		noise.frequency = 0.012
+		noise.fractal_octaves = 3
+		var image := noise.get_seamless_image(PATCH_NOISE_PX, PATCH_NOISE_PX)
+		image.generate_mipmaps()
+		_patch_noise = ImageTexture.create_from_image(image)
+	return _patch_noise
+
+
+# Sets render's floor patches for park id (FLOOR_PATCHES), or white multipliers for a park without a row.
+static func dress_floor(render: Node3D, id: String) -> void:
+	var row: Dictionary = FLOOR_PATCHES.get(id, {})
+	var material: Object = render.material
+	material.set_shader_param("enable_macro_variation", not row.is_empty())
+	material.set_shader_param("macro_variation1", row.get("scour", Color.WHITE))
+	material.set_shader_param("macro_variation2", row.get("stain", Color.WHITE))
+	material.set_shader_param("noise1_scale", float(row.get("scour_scale", 0.04)))
+	material.set_shader_param("noise2_scale", float(row.get("stain_scale", 0.076)))
+	material.set_shader_param("macro_variation_slope", 0.0)
 
 
 # A Terrain3DAssets for one park render node, from the `ground` slot so the park and the non-park
@@ -399,6 +440,8 @@ func start(id: String, map: RefCounted, threaded: bool, render: Node3D = null) -
 	map_id = id
 	_map = map
 	terrain3d = render
+	if render != null:
+		dress_floor(render, id)
 	baked = has_bake(id)
 	name = "Ground"
 	_regions.resize(REGION_COUNT)

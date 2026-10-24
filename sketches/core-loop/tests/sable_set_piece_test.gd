@@ -5,6 +5,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const DamageFamilies := preload("res://src/combat/damage_families.gd")
 const Harpoon := preload("res://src/movement/harpoon.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
@@ -128,7 +129,9 @@ func _run() -> void:
 	var before: float = enemy.hp
 	var mult := 1.6
 	var result: Array = _ult._sable_landing(enemy.global_position, 1.3, mult)
-	_t.near("landing damage is heft times paid chain", before - enemy.hp, 60.0 * 1.3 * mult, 0.01)
+	# The chaser is a soaked Spillway crew (design-v3/SPILLWAY-ROSTER.md): the arc landing reads its wet multiplier.
+	var soaked := DamageFamilies.mult(String(DamageFamilies.ARMOUR_OF.get("chaser", "")), "arc", "")
+	_t.near("landing damage is heft times paid chain", before - enemy.hp, 60.0 * 1.3 * mult * soaked, 0.01)
 	_t.eq("landing reports hits", int(result[0]), 1)
 	_t.eq("heft-I landing radius", _ult.landing_radius(), 6.0)
 	for i in 14:

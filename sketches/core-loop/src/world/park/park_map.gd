@@ -44,8 +44,12 @@ var time_of_day := ""
 var rescue_sites: Array = []
 
 
+# An empty path reads nothing (ok stays false): event_ground.gd's OverlayMap copies a loaded map's
+# fields instead, where reading the park file again took 36 ms of an event's telegraph frame.
 func _init(park_path := FIXTURE) -> void:
 	path = park_path
+	if park_path == "":
+		return
 	var read := ParkSchema.load_park(path)
 	errors = read["errors"]
 	if not errors.is_empty():
@@ -95,6 +99,9 @@ func _fill() -> void:
 			site["pack"] = row["pack"].duplicate()
 		if not (row["pay"] as Dictionary).is_empty():
 			site["pay"] = row["pay"].duplicate(true)
+		# Optional: the way a cracked_cache's open face looks; without it, the rule's (north).
+		if row.has("face"):
+			site["face"] = _v2(row["face"]).normalized()
 		activity_sites.append(site)
 
 	rescue_sites = []

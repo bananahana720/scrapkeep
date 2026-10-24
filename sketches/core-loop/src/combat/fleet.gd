@@ -7,6 +7,7 @@ const Swarm := preload("res://src/combat/swarm.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
+const Terrain := preload("res://src/world/terrain.gd")
 
 # The v2 W7 enemies inside combat (DESIGN-V2 sections 10, 11 and 15). Combat owns it and
 # hands it three things: the spawner asks it for the units it knows (make), for their
@@ -134,9 +135,11 @@ func make(kind: String) -> Node3D:
 # so the first spawn of a kind mid-fight does not load (and compile) its script then. A bot
 # run (SimClock.ticks) skips it: a spawn that finds its load still in flight joins it, the
 # wait can run the message queue mid-frame, and when that happens depends on CPU load, so a
-# seed would stop replaying. A played game keeps the warm-up.
+# seed would stop replaying. A played game keeps the warm-up, and so does a frame-capture bot
+# run (--threaded-stages=1), which has already given up exact replay to time frames as play does:
+# without it the first stage-3 spawn read its script on the tick, a 420 ms frame on the 4080.
 func _warm_scripts() -> void:
-	if SimClock.ticks:
+	if SimClock.ticks and not Terrain.threaded_in_bot_runs:
 		return
 	for kind in Roster.ROWS.keys():
 		if _loaded.has(kind) or SCRIPTS.has(kind) or not Roster.row(kind).has("script") or not Roster.built(kind):

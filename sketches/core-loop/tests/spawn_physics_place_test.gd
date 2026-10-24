@@ -14,7 +14,7 @@ const T := preload("res://tests/support/t.gd")
 
 const BASE_KINDS := ["chaser", "lobber", "miniboss", "vault", "warden"]
 # Kinds fleet makes from a roster row's script rather than its SCRIPTS table.
-const ROSTER_KINDS := ["jolt_layer", "linker"]
+const ROSTER_KINDS := ["jolt_layer", "linker", "boom_tender"]
 const FAR := Vector3(37.0, 0.0, -41.0)
 
 var _t := T.new("spawn_physics_place_test")

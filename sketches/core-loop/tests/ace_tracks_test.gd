@@ -86,7 +86,8 @@ func _physics_process(_delta: float) -> bool:
 		audio._flush_flow()
 		_game.flow.enter_boss(Vector3.ZERO)
 		_selected(audio, _theme(PhaseMusic.entry_track(["brindle", "waking", "mind"][world - 1], PhaseMusic.available)))
-		_check("boss entry schedules the pivot", audio.ace != null and audio.ace.mode == "warden" and audio.ace.section == "pivot")
+		# A one-clip anthem has no pivot: it enters on its main loop.
+		_check("boss entry schedules the pivot", audio.ace != null and audio.ace.mode == "warden" and audio.ace.section == ("main" if audio.ace.flat else "pivot"))
 	_game.events.run_ended.emit(true)
 	audio._flush_flow()
 	_selected(audio, _theme(audio.summary_row(true)))

@@ -28,7 +28,11 @@ const TURN_S := 30.0
 # 7 latches instead of 52 s after 19, and seed 0 (pylon_engineer) rides 2.7 s, every run. With the
 # packs ablated it rides 10.8 s and passes. The floor checks that the arm works, not pacing; the
 # planted controls below keep a 0 s ride or no latch failing. Wave 19: a fixed pack for this test.
-const RIDE_MIN_S := 2.5
+# 2026-10-24 (coordinator ruling, #427): 2.5 -> 2.0 s. The hive's heavy stagger (a grown build's smashing ram
+# takes two chunks, alpha_defs.gd HIVE_HEAVY_RATIO) ends seed 0's fight sooner by design: broken at 34.96 s
+# after 5 latches and a 2.0 s ride, three solo runs identical, against 38.47 s, 7 latches and 2.7 s on the
+# base. Not lowered a third time: if the grown fight shortens again, this check becomes a ride-to-fight ratio.
+const RIDE_MIN_S := 2.0
 const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
 
 var _child := false

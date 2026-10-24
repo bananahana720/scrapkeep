@@ -13,6 +13,10 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const PerchPoints := preload("res://src/world/perch_points.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
+const Dials := preload("res://src/core/challenge_dials.gd")
+const PocketArena := preload("res://tools/pocket_arena.gd")
+const PocketTerrain := preload("res://tools/pocket_terrain.gd")
 
 # MATCHUP LAB (design-v3/ENEMY-PRIORITY.md lever 7; usage and definitions in tools/matchup_lab.md).
 # A headless duel table: each pilot alone against each enemy kind, N seeds, recording time to
@@ -25,6 +29,8 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 #     [--pilots=a,b] [--kinds=a,b] [--answer=1] [--give=<part id>] [--range=18] [--idle=0]
 #   pack mode: -- --out=<abs ndjson> --packs=<id,id|all> [--table=park|alpha] [--range=12] ...
 #   perched duel: -- --out=<abs ndjson> --kinds=dispatcher --perched=park,mast [--range=15] ...
+#   pocket sweep: -- --out=<abs ndjson> --pocket=<half_pipe|rolling_wall|crevice|hazard_field|rail_grove|all>
+#     [--mobility=ground,flyer,burrower,hop] [--seeds=1,2,3,4,5] [--runs=3] [--plant=pilot_helpless=1|packs_passive=1|pack_damage=4] ...
 #   or: -- --from=<a.ndjson,b.ndjson> [--out=<heatmap txt>]   re-render saved rows
 #
 # Each duel is its own process (a bot run repeats exactly only in a fresh one). The harness is
@@ -40,7 +46,7 @@ const ANSWER_AXIS := {
 	"swarm_remnant": "spread", "lamp_swarm": "spread", "drill_crew": "spread", "prop_crew": "spread",
 	"chaser": "fuse", "burrower": "fuse", "splitter": "fuse",
 	"mag_trapper": "cc", "catch_trap": "cc", "anchor_crew": "cc", "hooker": "cc", "netcaster": "cc",
-	"bola_thrower": "cc", "gyro_jammer": "cc", "ramp_flipper": "cc", "swatter": "cc", "pit_jaw": "cc", "gap_net": "cc",
+	"bola_thrower": "cc", "gyro_jammer": "cc", "ramp_flipper": "cc", "swatter": "cc", "pit_jaw": "cc", "gap_net": "cc", "boom_tender": "cc",
 	"kite_drone": "air", "winch_drone": "air",
 }
 const AXES := ["range", "spread", "fuse", "cc", "air", "plating"]
@@ -85,6 +91,31 @@ const HULL_POOL := 99999.0
 const WALL_LIMIT_S := 600.0
 # Outcomes that measured nothing: left out of the table and the answer arm.
 const NO_RESULT := ["no_result", "wall_timeout", "stage_changed", "no_perch", "not_perched"]
+# Pocket sweep (--pocket): a lab pocket (tools/lab_pockets) is the arena, a pack of three of one enemy kind is the
+# opponent, and the verdict per cell is the pilot's win rate. The row key is `pocket:<shape>/<enemy>`.
+const POCKET_PREFIX := "pocket:"
+const POCKET_SEP := "/"
+const POCKET_PACK := 3
+const POCKET_SEEDS := [1, 2, 3, 4, 5]
+const POCKET_RUNS := 3
+# A repeat run of one seed reseeds the run stream by this much per run index, so the three runs of a seed differ.
+const POCKET_RUN_STRIDE := 1000
+# The page's mobility kinds. Hop is "my grouping, not a code field": roster.gd MOVE_CLASSES lists only fixed, ground and
+# airborne, so no enemy kind hops and its cells are an explicit n/a.
+const POCKET_COLUMNS := [
+	{"id": "ground", "enemies": ["chaser"], "na": ""},
+	{"id": "flyer", "enemies": ["kite_drone", "winch_drone"], "na": ""},
+	{"id": "burrower", "enemies": ["burrower"], "na": ""},
+	{"id": "hop", "enemies": [], "na": "no enemy kind hops (roster MOVE_CLASSES: fixed, ground, airborne)"},
+]
+# Test-only plants (the controls): `pilot_helpless=1` stands the pilot still (the --idle duel) and makes every enemy hit
+# HELPLESS_DAMAGE times as hard, so the first hit runs the hull out and the cell must read a 0% flag (idle alone is not
+# enough: a chaser pack blows itself up on a still ball, half_pipe 15 of 15 kills); `packs_passive=1` zeroes the mobs.damage dial (the packs still attack but cannot hurt) and
+# must drive a cell to 100%. `pack_damage=<k>` multiplies every enemy hit through that dial; it is kept as a probe, not
+# a control: pilots kill a pack of three in 1 to 7 s and take 0 or 1 hits, so x4 cannot reach 0%. Absent, nothing
+# changes.
+const PLANT_DIAL := "mobs.damage_mult"
+const HELPLESS_DAMAGE := 50.0
 const PENDING := "answer: pending (no answers tags on this base)"
 
 
@@ -215,6 +246,23 @@ var _perch_rise := -1.0
 var _mast_built := false
 var _snap := {}
 var _dispatcher_down_s := -1.0
+# Pocket duel state (child).
+var _pocket := ""
+var _pocket_enemy := ""
+var _arena
+var _real_max_hull := -1.0
+var _plant := {}
+var _pocket_slots: Array = []
+var _kill_order: Array = []
+var _hull_out := false
+var _base_seed := 0
+var _run_index := 0
+var _pocket_spots: Array = []
+# Pocket sweep state (parent).
+var _pocket_mode := false
+var _pocket_shapes: Array = []
+var _pocket_columns: Array = []
+var _pocket_runs := POCKET_RUNS
 
 
 func _initialize() -> void:
@@ -231,6 +279,9 @@ func _initialize() -> void:
 	if not _settings.has("out"):
 		printerr("matchup_lab: usage: -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65] [--pilots=a,b] [--kinds=a,b | --packs=a,b|all --table=park|alpha | --kinds=dispatcher --perched=park,mast] [--answer=1]")
 		quit(2)
+		return
+	if _settings.has("pocket"):
+		_begin_pocket_parent()
 		return
 	for part in String(_settings.get("seeds", "1,2,3,4,5,6,7,8")).split(",", false):
 		_seeds.append(int(part))
@@ -289,6 +340,19 @@ func _render_from() -> void:
 			var parsed = JSON.parse_string(line)
 			if parsed is Dictionary and String(parsed.get("give", "")) == "":
 				rows.append(parsed)
+	var pocket_rows := rows.filter(func(r): return String(r.get("kind", "")).begins_with(POCKET_PREFIX))
+	if not pocket_rows.is_empty():
+		# A control shard pooled with a real shard would read as one cell: refuse a mix of plants.
+		var plants := {}
+		for r in pocket_rows:
+			plants[String(r.get("plant", ""))] = true
+		if plants.size() > 1:
+			printerr("matchup_lab: --from mixes pocket rows with different plants %s; merge each plant apart" % [plants.keys()])
+			quit(2)
+			return
+		_write_pocket(pocket_rows, [])
+		quit(0)
+		return
 	var pilots := []
 	for p in PILOTS:
 		for r in rows:
@@ -453,6 +517,289 @@ static func perched_plan(modes_text: String, kinds: Array, packs: bool) -> Dicti
 	return {"ok": true, "kinds": keys, "error": ""}
 
 
+# ---- Pocket sweep: pure parts ------------------------------------------------------------
+
+# The row key of one pocket x enemy duel: `pocket:half_pipe/chaser`.
+static func pocket_key(shape: String, enemy: String) -> String:
+	return POCKET_PREFIX + shape + POCKET_SEP + enemy
+
+
+# {shape, enemy} of a row key, or {} for any other kind or an unknown shape.
+static func pocket_parts(key: String) -> Dictionary:
+	if not key.begins_with(POCKET_PREFIX) or POCKET_SEP not in key:
+		return {}
+	var parts := key.substr(POCKET_PREFIX.length()).split(POCKET_SEP)
+	if parts.size() != 2 or not PocketArena.valid(parts[0]) or parts[1] == "":
+		return {}
+	return {"shape": parts[0], "enemy": parts[1]}
+
+
+# The column an enemy kind sits in ("" when none lists it).
+static func pocket_column_of(enemy: String) -> String:
+	for column in POCKET_COLUMNS:
+		if enemy in column["enemies"]:
+			return String(column["id"])
+	return ""
+
+
+# The pilot of run `run` of seed `seed_value`: the band harness's seed rotation (class index = seed modulo the roster),
+# stepped one class per repeat, so the three runs of a seed are three classes, not one run three times.
+static func pocket_pilot(seed_value: int, run: int, roster: Array) -> String:
+	return String(roster[(seed_value + run) % roster.size()])
+
+
+# The rng seed of a run: the seed itself for the first run (so a seed's first run is the plain seed), then stepped.
+static func pocket_rng_seed(seed_value: int, run: int) -> int:
+	return seed_value + POCKET_RUN_STRIDE * run
+
+
+# Every duel job of a sweep, in shape, column, enemy, seed, run order. Hop (no enemies) queues nothing.
+static func pocket_jobs(shapes: Array, columns: Array, seeds: Array, runs: int, roster: Array) -> Array:
+	var jobs := []
+	for shape in shapes:
+		for column in POCKET_COLUMNS:
+			if String(column["id"]) not in columns:
+				continue
+			for enemy in column["enemies"]:
+				for seed_value in seeds:
+					for run in runs:
+						jobs.append({"n": jobs.size(), "pilot": pocket_pilot(int(seed_value), run, roster), "kind": pocket_key(shape, enemy),
+								"seed": pocket_rng_seed(int(seed_value), run), "base_seed": int(seed_value), "run": run, "give": ""})
+	return jobs
+
+
+# Who won a pocket duel. The pilot wins iff it killed the whole pack and its hull_lost stayed under the class's real max
+# hull; anything else the enemy wins (the hull ran out first, the cap passed, the pilot died). "void" is a run that
+# measured nothing (no result, wall timeout, stage change, or no real max hull to compare to).
+static func pocket_winner(row: Dictionary) -> String:
+	var outcome := String(row.get("outcome", "no_result"))
+	var cap_hull := float(row.get("real_max_hull", -1.0))
+	if outcome in NO_RESULT or cap_hull <= 0.0:
+		return "void"
+	# A pack that did not spawn whole measured a smaller fight than the cell's.
+	if row.has("spawned") and int(row["spawned"]) != POCKET_PACK:
+		return "void"
+	if outcome == "killed" and float(row.get("hull_lost", 0.0)) < cap_hull:
+		return "pilot"
+	return "enemy"
+
+
+# One cell from its rows: the pilot's win rate over the runs that measured something, and the retune flag
+# (0% or 100%, the map page's rule). `flag_kind` is "low" at 0%, "high" at 100%, else "". `wins`, `n` (non-void),
+# `void` and `runs` are counts.
+static func pocket_cell(rows: Array) -> Dictionary:
+	var wins := 0
+	var n := 0
+	var voided := 0
+	for r in rows:
+		match pocket_winner(r):
+			"pilot":
+				wins += 1
+				n += 1
+			"enemy":
+				n += 1
+			_:
+				voided += 1
+	var rate := float(wins) / float(n) if n > 0 else -1.0
+	var kind := ""
+	if n > 0 and wins == 0:
+		kind = "low"
+	elif n > 0 and wins == n:
+		kind = "high"
+	return {"na": false, "win_rate": rate, "wins": wins, "n": n, "void": voided, "runs": rows.size(), "flag": kind != "", "flag_kind": kind}
+
+
+# The table: shapes x columns. A column with no enemy kind is an explicit n/a cell (`na` true, with the reason). A
+# column with several (flyer) carries its sub-rows in `rows`, each its own cell; the column's cell pools them and
+# is flagged when any sub-row is.
+static func pocket_table(rows: Array, shapes: Array, columns: Array = []) -> Dictionary:
+	var out := {"shapes": shapes.duplicate(), "columns": [], "cells": {}}
+	for column in POCKET_COLUMNS:
+		if columns.is_empty() or String(column["id"]) in columns:
+			out["columns"].append(String(column["id"]))
+	for shape in shapes:
+		out["cells"][shape] = {}
+		for column in POCKET_COLUMNS:
+			var id := String(column["id"])
+			if id not in out["columns"]:
+				continue
+			if (column["enemies"] as Array).is_empty():
+				out["cells"][shape][id] = {"na": true, "reason": String(column["na"]), "win_rate": -1.0, "wins": 0, "n": 0, "void": 0, "runs": 0, "flag": false, "flag_kind": "", "rows": {}}
+				continue
+			var pooled := []
+			var subs := {}
+			for enemy in column["enemies"]:
+				var sub_rows := rows.filter(func(r): return String(r.get("kind", "")) == pocket_key(shape, enemy))
+				subs[enemy] = pocket_cell(sub_rows)
+				pooled.append_array(sub_rows)
+			var cell := pocket_cell(pooled)
+			var flagged := []
+			var kinds := []
+			for enemy in subs:
+				if subs[enemy]["flag"]:
+					flagged.append("%s %s" % [enemy, subs[enemy]["flag_kind"]])
+					if subs[enemy]["flag_kind"] not in kinds:
+						kinds.append(subs[enemy]["flag_kind"])
+			cell["flag"] = not flagged.is_empty()
+			cell["flag_kind"] = "" if kinds.is_empty() else (kinds[0] if kinds.size() == 1 else "mixed")
+			cell["flagged_rows"] = flagged
+			cell["rows"] = subs
+			out["cells"][shape][id] = cell
+	return out
+
+
+static func _cell_text(cell: Dictionary) -> String:
+	if cell["na"]:
+		return "n/a"
+	var rows: Dictionary = cell.get("rows", {})
+	if rows.size() > 1:
+		var parts := []
+		for enemy in rows:
+			parts.append("%s %s" % [enemy, _rate_text(rows[enemy])])
+		return " / ".join(parts)
+	return _rate_text(cell)
+
+
+static func _rate_text(cell: Dictionary) -> String:
+	if int(cell["n"]) == 0:
+		return "- (n=0, void %d)" % int(cell["void"])
+	var text := "%d%% (n=%d)" % [int(round(float(cell["win_rate"]) * 100.0)), int(cell["n"])]
+	if int(cell["void"]) > 0:
+		text += " void %d" % int(cell["void"])
+	if cell["flag"]:
+		text += " FLAG retune (%s)" % ("0%" if cell["flag_kind"] == "low" else "100%")
+	return text
+
+
+# The table as markdown lines: pilot win rate per cell, n, and the retune flag.
+static func pocket_markdown(table: Dictionary) -> Array:
+	var lines := ["Pilot win rate per cell (the pilot kills the whole pack of %d inside the cap with hull lost under the class's real max hull). n counts runs that measured something. FLAG marks a 0%% or 100%% cell (retune)." % POCKET_PACK, ""]
+	var head := "| pocket |"
+	var rule := "|---|"
+	for id in table["columns"]:
+		head += " %s |" % id
+		rule += "---|"
+	lines.append(head)
+	lines.append(rule)
+	for shape in table["shapes"]:
+		var line := "| %s |" % shape
+		for id in table["columns"]:
+			line += " %s |" % _cell_text(table["cells"][shape][id])
+		lines.append(line)
+	return lines
+
+
+# Parses --plant=<name>=<value>. {ok, name, value, dials (the ChallengeDials override), expect ("low" or "high" for the
+# canonical control values, else ""), error}. No spec is the identity: no dial, no expectation.
+static func pocket_plant(spec: String) -> Dictionary:
+	if spec == "":
+		return {"ok": true, "name": "", "value": 0.0, "dials": {}, "expect": "", "error": ""}
+	var eq := spec.find("=")
+	var name := spec.substr(0, eq) if eq > 0 else spec
+	var raw := spec.substr(eq + 1) if eq > 0 else ""
+	if not raw.is_valid_float():
+		return {"ok": false, "name": name, "value": 0.0, "dials": {}, "expect": "", "error": "--plant needs <name>=<number>, got '%s'" % spec}
+	var value := float(raw)
+	match name:
+		"pack_damage":
+			if value <= 1.0:
+				return {"ok": false, "name": name, "value": value, "dials": {}, "expect": "", "error": "--plant=pack_damage needs a factor over 1"}
+			return {"ok": true, "name": name, "value": value, "dials": {PLANT_DIAL: value}, "expect": "", "error": ""}
+		"pilot_helpless":
+			if value != 1.0:
+				return {"ok": false, "name": name, "value": value, "dials": {}, "expect": "", "error": "--plant=pilot_helpless takes 1"}
+			return {"ok": true, "name": name, "value": value, "dials": {PLANT_DIAL: HELPLESS_DAMAGE}, "expect": "low", "error": ""}
+		"packs_passive":
+			if value != 1.0:
+				return {"ok": false, "name": name, "value": value, "dials": {}, "expect": "", "error": "--plant=packs_passive takes 1"}
+			return {"ok": true, "name": name, "value": value, "dials": {PLANT_DIAL: 0.0}, "expect": "high", "error": ""}
+	return {"ok": false, "name": name, "value": value, "dials": {}, "expect": "", "error": "unknown --plant %s (pilot_helpless=1, packs_passive=1, pack_damage=<k>)" % name}
+
+
+# The control's reading: the planted cell must carry the plant's expected flag (0% for pack_damage, 100% for packs_passive).
+static func pocket_control_ok(plant: Dictionary, cell: Dictionary) -> bool:
+	return String(plant.get("expect", "")) != "" and not bool(cell.get("na", false)) and String(cell["flag_kind"]) == String(plant["expect"])
+
+
+# ---- Pocket sweep: parent ----------------------------------------------------------------
+
+func _begin_pocket_parent() -> void:
+	var shapes := PocketArena.SHAPES.duplicate() if String(_settings["pocket"]) == "all" else Array(String(_settings["pocket"]).split(",", false))
+	for shape in shapes:
+		if not PocketArena.valid(shape):
+			printerr("matchup_lab: unknown --pocket %s (%s or all)" % [shape, "|".join(PocketArena.SHAPES)])
+			quit(2)
+			return
+	var columns := []
+	for id in String(_settings.get("mobility", "ground,flyer,burrower,hop")).split(",", false):
+		var known := POCKET_COLUMNS.any(func(c): return String(c["id"]) == id)
+		if not known:
+			printerr("matchup_lab: unknown --mobility %s (ground, flyer, burrower, hop)" % id)
+			quit(2)
+			return
+		columns.append(id)
+	var plant := pocket_plant(String(_settings.get("plant", "")))
+	if not plant["ok"]:
+		printerr("matchup_lab: %s" % plant["error"])
+		quit(2)
+		return
+	var seeds := []
+	for part in String(_settings.get("seeds", ",".join(POCKET_SEEDS.map(func(v): return str(v))))).split(",", false):
+		seeds.append(int(part))
+	_pocket_runs = maxi(1, int(_settings.get("runs", str(POCKET_RUNS))))
+	_pocket_shapes = shapes
+	_pocket_columns = columns
+	var roster: Array = ClassDef.all().map(func(c): return String(c.id))
+	_queue = pocket_jobs(shapes, columns, seeds, _pocket_runs, roster)
+	_total = _queue.size()
+	_procs = clampi(int(_settings.get("procs", "4")), 1, 8)
+	_sweep_dir = OS.get_user_data_dir().path_join("matchup_lab").path_join("p%d" % OS.get_process_id())
+	DirAccess.make_dir_recursive_absolute(_sweep_dir)
+	_pocket_mode = true
+	_parent = true
+
+
+# Writes the pocket table beside the rows (markdown and JSON) and prints it. `rows` is every pocket row.
+func _write_pocket(rows: Array, columns: Array) -> void:
+	var shapes := []
+	for shape in PocketArena.SHAPES:
+		if rows.any(func(r): return String(r.get("kind", "")).begins_with(POCKET_PREFIX + shape + POCKET_SEP)) or shape in _pocket_shapes:
+			shapes.append(shape)
+	var table := pocket_table(rows, shapes, columns)
+	var plant := pocket_plant(String(_settings.get("plant", "")))
+	table["plant"] = _settings.get("plant", "")
+	table["cap_s"] = _cap
+	table["pack"] = POCKET_PACK
+	var lines := pocket_markdown(table)
+	if plant["ok"] and plant["expect"] != "":
+		var verdicts := []
+		for shape in shapes:
+			for id in table["columns"]:
+				var cell: Dictionary = table["cells"][shape][id]
+				if not cell["na"]:
+					verdicts.append("%s/%s %s" % [shape, id, "control reads %s" % ("PASS" if pocket_control_ok(plant, cell) else "FAIL")])
+		lines.append("")
+		lines.append("Plant %s expects a %s flag: %s" % [_settings["plant"], "0%" if plant["expect"] == "low" else "100%", "; ".join(verdicts)])
+	for line in lines:
+		print(line)
+	if not _settings.has("out"):
+		return
+	var path := String(_settings["out"])
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	if _parent:
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		for r in rows:
+			file.store_line(JSON.stringify(r))
+		file.close()
+	var md := FileAccess.open(path.get_basename() + ".pocket.md", FileAccess.WRITE)
+	for line in lines:
+		md.store_line(line)
+	md.close()
+	var js := FileAccess.open(path.get_basename() + ".pocket.json", FileAccess.WRITE)
+	js.store_string(JSON.stringify(table, "  ") + "\n")
+	js.close()
+
+
 # ---- Answer lookup ----------------------------------------------------------------------
 
 # The `answers` tags of a part row, as an array; empty when the field is absent.
@@ -528,8 +875,16 @@ static func child_args(job: Dictionary, cap: float, settings: Dictionary, table_
 		args.append("--range=%s" % settings["range"])
 	if settings.has("idle"):
 		args.append("--idle=%s" % settings["idle"])
+	# A game variant behind a ChallengeDials key (the pack pressure experiments): every duel plays it.
+	if settings.has("tune"):
+		args.append("--tune=%s" % settings["tune"])
 	if String(job["kind"]).begins_with(PACK_PREFIX):
 		args.append("--pack-table=" + table_id)
+	if String(job["kind"]).begins_with(POCKET_PREFIX):
+		args.append("--base-seed=%d" % int(job.get("base_seed", job["seed"])))
+		args.append("--run=%d" % int(job.get("run", 0)))
+		if settings.has("plant"):
+			args.append("--plant=%s" % settings["plant"])
 	if perched_mode(String(job["kind"])) != "":
 		args.append("--perched=" + perched_mode(String(job["kind"])))
 	for key in BotOptions.FAST_FLAGS:
@@ -600,6 +955,8 @@ static func _remove_tree(path: String) -> void:
 # base's part rows (or no row for a cell's axis) the cell is reported pending and nothing runs.
 func _begin_answer_phase() -> bool:
 	_phase = 2
+	if _pocket_mode:
+		return false
 	if String(_settings.get("answer", "1")) != "1":
 		return false
 	var table := build_table(_results, _pilots, _kinds, _cap)
@@ -622,6 +979,11 @@ func _row_members(kind: String) -> Array:
 
 
 func _finish() -> void:
+	if _pocket_mode:
+		_write_pocket(_results, _pocket_columns)
+		_remove_tree(_sweep_dir)
+		quit(0)
+		return
 	var table := build_table(_results, _pilots, _kinds, _cap)
 	var answers := grade_answers(table, _answer_results, _answer_plan, _cap, _seeds.size(), _settings.get("answer", "1") == "1")
 	var path := String(_settings["out"])
@@ -858,7 +1220,26 @@ func _begin_child() -> void:
 			printerr("matchup_lab: a perched child needs --kind=dispatcher@park|mast and a matching --perched")
 			quit(2)
 			return
-	if _kind.begins_with(PACK_PREFIX):
+	if _kind.begins_with(POCKET_PREFIX):
+		var parts := pocket_parts(_kind)
+		_plant = pocket_plant(String(_settings.get("plant", "")))
+		if parts.is_empty() or not _plant["ok"] or not Roster.ROWS.has(parts["enemy"]) or not Roster.built(parts["enemy"]):
+			printerr("matchup_lab: a pocket child needs --kind=pocket:<shape>/<built enemy kind> and a valid --plant (%s)" % _plant.get("error", ""))
+			quit(2)
+			return
+		_pocket = parts["shape"]
+		_pocket_enemy = parts["enemy"]
+		_base_seed = int(_settings.get("base-seed", str(_run_seed)))
+		_run_index = int(_settings.get("run", "0"))
+		# A pocket duel is a pack duel of three of one kind on the pocket's far side: the pack bookkeeping is shared.
+		_pack_mode = true
+		_pack_id = _kind
+		_pack_members = []
+		for i in POCKET_PACK:
+			_pack_members.append(_pocket_enemy)
+		if not _plant["dials"].is_empty():
+			Dials.set_overrides(_plant["dials"])
+	elif _kind.begins_with(PACK_PREFIX):
 		_pack_mode = true
 		_pack_id = _kind.substr(PACK_PREFIX.length())
 		_table_id = String(_settings.get("pack-table", "park"))
@@ -901,7 +1282,7 @@ func _physics_process(delta: float) -> bool:
 		_driver = DuelDriver.new(_game, "brawler", _run_seed)
 		_driver.class_index = BotDriver.class_index_for(0, _pilot)
 		_driver.dodge = float(_settings.get("dodge", str(DODGE)))
-		_driver.idle = String(_settings.get("idle", "0")) == "1"
+		_driver.idle = String(_settings.get("idle", "0")) == "1" or String(_plant.get("name", "")) == "pilot_helpless"
 		_driver._dodge_rng.seed = hash(["dodge", _run_seed])
 		_driver.stage_limit = INF
 		# The calm map's beacon charges from the start (the ball begins in its ring; ctx.calm does not
@@ -917,9 +1298,16 @@ func _physics_process(delta: float) -> bool:
 				_taken += amount)
 		_game.ctx.events.enemy_spawned.connect(_on_enemy_spawned)
 		_game.run.run_seed_override = _run_seed
+		if _pocket != "":
+			_install_pocket()
 		_driver.start()
 		return false
 	if not _spawned:
+		if _pocket != "" and _game.flow.in_stage():
+			# Pocket duel: the pilot starts at rest at the entry whatever the pocket's slope (the half pipe's floor falls 3%
+			# and the drop-in's speed would carry the ball down the channel): hold it still until the spawn.
+			_game.player.set_velocity_now(Vector3.ZERO, "matchup_lab")
+			_held = true
 		if _relocated:
 			# Perched duel: hold the relocated ball at its standoff (no level spot exists near the tops), zeroing
 			# its velocity every frame with the player's own set_velocity_now until the spawn.
@@ -964,8 +1352,15 @@ func _physics_process(delta: float) -> bool:
 		_stage_changed = true
 		_driver._end("stage_changed")
 		over = true
+	if not over and _pocket != "" and _spawned and _real_max_hull > 0.0 and _hull_lost() >= _real_max_hull:
+		# The pilot's real hull would have run out: the enemy won. The row says so and the duel ends.
+		_hull_out = true
+		_driver._end("hull_out")
+		over = true
 	# A freed object compares equal to null, so the duel's own flag says the enemy was ever set.
 	if _pack_mode:
+		if _pocket != "":
+			_track_kills(t)
 		if _first_down_s < 0.0 and _enemy_set:
 			for m in _driver.members:
 				if not DuelDriver.alive(m):
@@ -1035,6 +1430,8 @@ func _spawn_duel() -> void:
 	# always calls run.damage). Turning it off here let director packs join and swamp the duel
 	# (joined 12 to 27 in a 40 s duel), so it stays on and the enemy under test attacks under the
 	# game's own rules. The hull is deep enough to measure a lost duel.
+	# A pocket duel judges the hull against what the pilot class really has, read before the pool replaces it.
+	_real_max_hull = float(_game.run.max_hp)
 	_game.run.set_max_hp(HULL_POOL)
 	if _settings.has("give"):
 		_game.run.add_part(String(_settings["give"]), "matchup_lab")
@@ -1044,6 +1441,9 @@ func _spawn_duel() -> void:
 	if forward.length() < 0.5:
 		forward = Vector3.FORWARD
 	var flat: Vector3 = ball + forward * float(_settings.get("range", str(PACK_RANGE if _pack_mode else DUEL_RANGE)))
+	if _pocket != "":
+		_spawn_pocket_pack()
+		return
 	if _pack_mode:
 		_spawn_pack(flat, forward)
 		return
@@ -1227,6 +1627,58 @@ func _spawn_pack(center: Vector3, forward: Vector3) -> void:
 	_enemy_set = true
 
 
+# ---- Pocket duel (child) ----------------------------------------------------------------
+
+# Stands the lab pocket up as the arena before the run starts: the pocket's colliders over the legacy map, the legacy
+# colliders off, and the live Terrain instance re-scripted (its variables carried across) so every holder of
+# ctx.terrain, and every enemy handed it, reads the pocket for height, drop_point, spawn_point and entry_heading.
+func _install_pocket() -> void:
+	_arena = PocketArena.new()
+	if not _arena.build(_game.ctx.root, _pocket, Vector3(0.0, PocketArena.LIFT, 0.0)):
+		printerr("matchup_lab: the %s pocket glb will not load" % _pocket)
+		quit(2)
+		return
+	var legacy: Node3D = _game.ctx.terrain.geometry_root(1)
+	for body in legacy.find_children("*", "CollisionObject3D", true, false):
+		(body as CollisionObject3D).collision_layer = 0
+	var live = _game.ctx.terrain
+	# set_script drops the instance's variables, so the live Terrain's are carried across by hand.
+	var kept := {}
+	for prop in live.get_property_list():
+		if int(prop["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			kept[prop["name"]] = live.get(prop["name"])
+	live.set_script(PocketTerrain)
+	for name in kept:
+		live.set(name, kept[name])
+	live.arena = _arena
+
+
+# The pack of three on the pocket's far side, each dropped with terrain.drop_point like a pack duel's members.
+func _spawn_pocket_pack() -> void:
+	_collecting = true
+	_pocket_spots = _arena.pack_spots(POCKET_PACK, Director.PACK_SPREAD)
+	for spot in _pocket_spots:
+		var enemy = _game.combat.spawn_enemy(_pocket_enemy, _game.ctx.terrain.drop_point(spot.x, spot.z, 1.8))
+		if enemy != null:
+			_pack_spawned += 1
+			if enemy not in _driver.members:
+				_driver.members.append(enemy)
+	_collecting = false
+	_enemy_set = true
+	_pocket_slots = _driver.members.duplicate()
+
+
+func _hull_lost() -> float:
+	return float(_game.run.metrics["hull_damage"]) - _hull_start
+
+
+# Kill order: the slot (spawn order, left to right across the line) of each pack member as it falls.
+func _track_kills(t: float) -> void:
+	for i in _pocket_slots.size():
+		if not DuelDriver.alive(_pocket_slots[i]) and not _kill_order.any(func(k): return k["slot"] == i):
+			_kill_order.append({"slot": i, "kind": _pocket_enemy, "t": snappedf(t, 0.01)})
+
+
 func _record() -> void:
 	var lost: float = float(_game.run.metrics["hull_damage"]) - _hull_start if _spawned else 0.0
 	var outcome: String = _early if _early != "" else (pack_outcome(_pack_spawned, _driver.outcome) if _pack_mode else _driver.outcome)
@@ -1256,7 +1708,24 @@ func _record() -> void:
 		row["held"] = _held
 		row["perched_under"] = _perched_under
 		row["perch_over_ball_m"] = snappedf(_perch_over_ball, 0.01)
-	if _pack_mode:
+	if _pocket != "":
+		row["seed"] = _base_seed
+		row["run"] = _run_index
+		row["rng_seed"] = _run_seed
+		row["pocket"] = _pocket
+		row["enemy"] = _pocket_enemy
+		row["column"] = pocket_column_of(_pocket_enemy)
+		row["members"] = _pack_members
+		row["spawned"] = _pack_spawned
+		row["first_down_s"] = snappedf(-1.0 if _stage_changed else _first_down_s, 0.01)
+		row["real_max_hull"] = snappedf(_real_max_hull, 0.1)
+		row["kill_order"] = _kill_order
+		row["hull_out"] = _hull_out
+		row["rescues"] = _arena.rescues if _arena != null else 0
+		row["spots"] = _pocket_spots.map(func(v): return [snappedf(v.x, 0.1), snappedf(v.y, 0.1), snappedf(v.z, 0.1)])
+		row["plant"] = String(_settings.get("plant", ""))
+		row["winner"] = pocket_winner(row)
+	elif _pack_mode:
 		row["pack"] = _pack_id
 		row["members"] = _pack_members
 		row["table"] = _table_id

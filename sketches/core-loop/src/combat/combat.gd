@@ -4,6 +4,7 @@ const Chaser := preload("res://src/combat/chaser.gd")
 const EnemyBase := preload("res://src/combat/enemy.gd")
 const Lobber := preload("res://src/combat/lobber.gd")
 const Miniboss := preload("res://src/combat/miniboss.gd")
+const Rogue := preload("res://src/combat/rogue.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const Vault := preload("res://src/combat/vault.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
@@ -541,6 +542,8 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 			enemy = Vault.new()
 		"chaser":
 			enemy = Chaser.new()
+		_ when Rogue.ROWS.has(kind):
+			enemy = Rogue.new()
 		_ when fleet.makes(kind):
 			enemy = fleet.make(kind)
 		_:
@@ -727,6 +730,8 @@ func _read_armour(enemy: Node3D, hit: Dictionary, result: Dictionary) -> void:
 	match armour:
 		"plated":
 			_discover("armour_plated", enemy.global_position)
+		"wet":
+			_discover("armour_wet", enemy.global_position)
 
 
 func _door_crit(hit: Dictionary) -> void:
@@ -1199,7 +1204,7 @@ func _target_class_of_kind(kind: String) -> String:
 	# its own class rather than inflating "enemy" (finding 3, fix round 1).
 	if kind == "vault":
 		return "cache"
-	if kind in KINDS:
+	if kind in KINDS or Rogue.ROWS.has(kind):
 		return "enemy"
 	# review finding 3, fix round 2 (confidence 0.6, evidence a director-composed
 	# mag_trapper landing in "adds"): rejected as a bug, kept as a deliberate reading,
@@ -1216,7 +1221,9 @@ func _target_class_of_kind(kind: String) -> String:
 	# neither is a real gap (a KINDS or SCRIPTS addition this unit missed), so it still
 	# counts under "adds" but is warned once rather than counted silently.
 	# A special's spawn (roster_specials.gd "spawned") is an add, but not a reinforcement.
-	if not Roster.is_reinforcement(kind) and not Roster.row(kind).has("priority"):
+	# So is a world's own kind (a row with "world", e.g. drill_crew, boom_tender): the
+	# director composes it into authored packs, never the reinforcement clock.
+	if not Roster.is_reinforcement(kind) and not Roster.row(kind).has("priority") and not Roster.is_world_kind(kind):
 		push_warning("_target_class_of_kind: '%s' is neither a v1 kind nor a Fleet reinforcement; counting it under 'adds'" % kind)
 	return "adds"
 
@@ -4058,6 +4065,8 @@ func _spec_for(kind: String) -> Dictionary:
 			return w
 		"miniboss":
 			return {"plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}
+		_ when Rogue.ROWS.has(kind):
+			return {"kind": kind, "plating": float(roundi(MINIBOSS_PLATING_SCALE * warden_spec(stage)["plating"]))}
 		"vault":
 			var next_plating: float = roundf(VAULT_TOP_SCALE * warden_spec(stage)["plating"]) if ctx.stages.is_last(stage) \
 					else warden_spec(stage + 1)["plating"]

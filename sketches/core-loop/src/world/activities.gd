@@ -19,6 +19,9 @@ const StakeDevices := preload("res://src/world/stake_devices.gd")
 const PocketDraw := preload("res://src/world/pockets/pocket_draw.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 const Secrets := preload("res://src/core/secrets.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
+const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 
 # The standing activities (LEGIBILITY sections 7 and 9, wave R3): optional things on a map that
@@ -155,6 +158,13 @@ const ROOM_GLOVE_SCALE := 1.6
 # a stage change made Godot 4.7.2 Forward+ segfault on the next boss entry (GPU only), as the
 # wave 9 cage light did.
 const CACHE_FIRED_GLOW := {"energy": 0.8}
+# A field find's tells: seep streaks on the cracked face (x, y, width in metres) and the radio aerial.
+const FIND_SEEP_STREAKS := [Vector3(-2.6, 0.4, 0.5), Vector3(-1.9, 0.1, 0.3), Vector3(2.2, 0.6, 0.4)]
+const FIND_AERIAL_M := 3.2
+# The timed door's punch clock plate, square, on the cracked face.
+const DOOR_CLOCK_M := 1.6
+# One wet material for every seep streak.
+static var _find_wet: StandardMaterial3D
 
 var ctx
 var sites: Array = []
@@ -423,6 +433,18 @@ func _enter_stage(retry: bool) -> void:
 			var room := _build("cracked_cache", room_spec["at"], room_spec)
 			_hang_room_log(room, String(room_spec["secret"]))
 			sites.append(room)
+		# The run's own seed picks the spots, so the next run moves them and a replay keeps them.
+		for find_spec in Secrets.find_sites(_graph_map, hash([ctx.rng.seed, ctx.run.run_seed, "field_finds"])):
+			var found := _build("cracked_cache", find_spec["at"], find_spec)
+			var dressed := Time.get_ticks_usec()
+			_dress_find(found, String(find_spec["find"]))
+			last_entry_steps.append("find %s %.1f" % [find_spec["find"], (Time.get_ticks_usec() - dressed) / 1000.0])
+			sites.append(found)
+		# A fast Brindle rout last run: the timed door stands open this run (secrets.gd DOOR).
+		for door_spec in Secrets.door_sites(_graph_map, ctx.get("profile")):
+			var door := _build("cracked_cache", door_spec["at"], door_spec)
+			_dress_door(door)
+			sites.append(door)
 	if _graph != null:
 		var pool: PackedInt32Array = entry_data.pool
 		var trade_spec := TradePockets.stage_site(_graph, map, ctx.run, ctx.rng.seed, pool)
@@ -518,6 +540,9 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	for key in ["rarities", "named"]:
 		if spec_pay.has(key):
 			s.rule["pay"][key] = spec_pay[key]
+	# A field find faces out of its dead end (secrets.gd FINDS spots); a park row may set its own face.
+	if spec.has("face"):
+		s.rule["face"] = spec["face"]
 	s.name = "Activity_" + id
 	add_child(s)
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
@@ -665,11 +690,97 @@ func _build_cache(s: Site) -> void:
 	(back.get_child(1) as GeometryInstance3D).material_overlay = s.fired_glow
 
 
+# A field find (secrets.gd FINDS): the crew board inside, and its family's tell on the face. Its
+# codex row is declared here, so the logbook knows it before the first find.
+func _dress_find(s: Site, find_id: String) -> void:
+	var f: Dictionary = Secrets.FINDS[find_id]
+	_hang_board(s, "Find_" + find_id, String(f["name"]), String(f["log"]))
+	s.set_meta("find", find_id)
+	# A secret shows no beacon column, glyph, ring or word: its tell is what gives it away.
+	s.view.finish()
+	if ctx.get("codex") != null:
+		ctx.codex.declare(f["codex"])
+	if f["kind"] == "radio":
+		_radio_tell(s)
+	else:
+		_seep_tell(s)
+
+
+# The crack's tell: a dark wet streak down the cracked face under a slow glint, and a drip heard
+# from Secrets.DRIP_HEAR_M. Both go with the face when it breaks.
+func _seep_tell(s: Site) -> void:
+	if _find_wet == null:
+		_find_wet = Palette.solid(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.35))
+	var wet := _find_wet
+	for k in FIND_SEEP_STREAKS.size():
+		var streak: Vector3 = FIND_SEEP_STREAKS[k]
+		var mark := _mesh_box(s.wall, Vector3(streak.z, WALL_HEIGHT * 0.8, 0.04), Vector3(streak.x, streak.y, 0.52), wet)
+		mark.name = "FindSeep%d" % k
+	var glint: Node3D = WorldFxAnchor.make("secret")
+	glint.name = "FindGlint"
+	glint.position = Vector3(0.0, WALL_HEIGHT * 0.6, 1.2)
+	s.wall.add_child(glint)
+	s.wall.add_child(_find_sound("find_drip", Secrets.DRIP_HEAR_M))
+
+
+# The timed door: the foreman's board inside and a brass punch clock on the face, stopped short of
+# the whistle. It keeps its beacon, since it was earned; its codex row is declared here.
+func _dress_door(s: Site) -> void:
+	_hang_board(s, "Door_clock", String(Secrets.DOOR["name"]), String(Secrets.DOOR["log"]))
+	s.set_meta("door", true)
+	if ctx.get("codex") != null:
+		ctx.codex.declare(Secrets.DOOR["codex"])
+	var clock := Node3D.new()
+	clock.name = "DoorClock"
+	clock.position = Vector3(0.0, 1.3, 0.52)
+	s.wall.add_child(clock)
+	_mesh_box(clock, Vector3(DOOR_CLOCK_M, DOOR_CLOCK_M, 0.1), Vector3.ZERO, Palette.solid(Palette.BRASS))
+	_mesh_box(clock, Vector3(DOOR_CLOCK_M - 0.3, DOOR_CLOCK_M - 0.3, 0.06), Vector3(0.0, 0.0, 0.06), Palette.solid(Palette.LEDGER))
+	var ink := Palette.solid(Palette.CHARCOAL)
+	# Hands at five to twelve: the hour hand straight up, the minute hand a little short of it.
+	var hour := _mesh_box(clock, Vector3(0.1, DOOR_CLOCK_M * 0.3, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.15, 0.1), ink)
+	hour.name = "HourHand"
+	var minute := Node3D.new()
+	minute.position = Vector3(0.0, 0.0, 0.12)
+	minute.rotation.z = deg_to_rad(30.0)
+	clock.add_child(minute)
+	_mesh_box(minute, Vector3(0.07, DOOR_CLOCK_M * 0.42, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.21, 0.0), ink)
+
+
+# The radio's tell: a short whip aerial over the roof line and the tune through the wall, heard from
+# Secrets.RADIO_HEAR_M. The aerial stays; the sound goes with the face.
+func _radio_tell(s: Site) -> void:
+	var aerial := _mesh_box(s, Vector3(0.12, FIND_AERIAL_M, 0.12), Vector3(WALL_HALF_W - 1.0, WALL_HEIGHT + FIND_AERIAL_M * 0.5, -1.0),
+		Palette.solid(Palette.BRASS))
+	aerial.name = "FindAerial"
+	s.wall.add_child(_find_sound("find_radio", Secrets.RADIO_HEAR_M))
+
+
+func _find_sound(id: String, reach: float) -> AudioStreamPlayer3D:
+	var p := AudioStreamPlayer3D.new()
+	p.name = "FindTell"
+	p.stream = SfxBank.loop_stream(id)
+	p.bus = "SFX"
+	p.volume_db = SfxBank.trim_db(id)
+	p.unit_size = reach * 0.25
+	p.max_distance = reach
+	p.position = Vector3(0.0, 2.0, 0.6)
+	p.autoplay = true
+	return p
+
+
 # A first-win room's crew-log line (secrets.gd ROOMS), on a crew board fixed inside its back wall, so it
 # reads only once the cracked face is down and the ball is in the room; and its two quiet tells outside.
 func _hang_room_log(s: Site, room_id: String) -> void:
 	var room: Dictionary = Secrets.ROOMS[room_id]
-	s.name = "Secret_" + room_id
+	_hang_board(s, "Secret_" + room_id, String(room["name"]), String(room["log"]))
+	s.set_meta("room", room_id)
+	_chalk_tally(s.wall)
+	_hang_glove(s)
+
+
+func _hang_board(s: Site, site_name: String, title: String, text: String) -> void:
+	s.name = site_name
 	var board_z := -WALL_DEPTH + 0.06
 	var frame := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x + 0.3, ROOM_BOARD_SIZE.y + 0.3, 0.08),
 		Vector3(0.0, ROOM_LOG_HEIGHT, board_z), Palette.solid(Palette.BRASS))
@@ -679,7 +790,7 @@ func _hang_room_log(s: Site, room_id: String) -> void:
 	board.name = "RoomBoard"
 	var label := Label3D.new()
 	label.name = "RoomLog"
-	label.text = "%s\n%s" % [String(room["name"]).to_upper(), room["log"]]
+	label.text = "%s\n%s" % [title.to_upper(), text]
 	label.position = Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.1)
 	label.font_size = 40
 	label.outline_size = 4
@@ -690,8 +801,6 @@ func _hang_room_log(s: Site, room_id: String) -> void:
 	label.render_priority = 2
 	label.outline_render_priority = 1
 	s.add_child(label)
-	_chalk_tally(s.wall)
-	_hang_glove(s)
 
 
 # Four strokes and the bar through them, chalked on the cracked face: the crew's count of a shift
@@ -1383,7 +1492,23 @@ func _break_wall(s: Site) -> void:
 		s.fired_glow.emission = Palette.SAND
 		s.fired_glow.emission_energy_multiplier = CACHE_FIRED_GLOW.energy
 	ctx.events.world_fact.emit("wall_crumbled", s.global_position)
+	if s.has_meta("find"):
+		_found(s)
+	elif s.has_meta("door") and ctx.get("codex") != null:
+		ctx.codex.mark_discovered(String(Secrets.DOOR["codex"]["id"]), s.pedestal)
 	_finish(s, s.pedestal)
+
+
+# A field find opened: the OOH burst at the room, and its codex row (the first time, the logbook's
+# own burst and the find tune; synergy_discovered carries it to audio.gd).
+func _found(s: Site) -> void:
+	var f: Dictionary = Secrets.FINDS[String(s.get_meta("find"))]
+	var tell: Node = s.wall.get_node_or_null("FindTell")
+	if tell != null:
+		tell.queue_free()
+	WorldFx.fire("secret_found", s.pedestal + Vector3.UP)
+	if ctx.get("codex") != null:
+		ctx.codex.mark_discovered(String(f["codex"]["id"]), s.pedestal)
 
 
 # ---- The bounty ----
@@ -1481,7 +1606,7 @@ func _finish(s: Site, at: Vector3) -> void:
 			s.pickup_parts = _roll_many(s.id, table["rarities"], s.relay.rewards())
 			s.pickup_part = String(s.pickup_parts[0]) if not s.pickup_parts.is_empty() else ""
 		else:
-			s.pickup_part = _roll(s.id, table["rarities"])
+			s.pickup_part = _roll(_luck_id(s), table["rarities"])
 	if s.pickup_part != "":
 		s.pickup = ActivityView.gem(String(s.rule.cue.view) if s.rule.has("bundle") else s.id)
 		s.add_child(s.pickup)
@@ -1511,6 +1636,18 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 	if amount > 0:
 		ctx.run.add_scrap(amount, at)
 		ctx.run.add_cogs(amount)
+
+
+# A field find, a first-win room or the timed door rolls on its own stream, so it never pays the part the stage's
+# ordinary cracked cache pays; every other site keeps its id, and so its rolls.
+func _luck_id(s: Site) -> String:
+	if s.has_meta("find"):
+		return "%s:%s" % [s.id, s.get_meta("find")]
+	if s.has_meta("room"):
+		return "%s:%s" % [s.id, s.get_meta("room")]
+	if s.has_meta("door"):
+		return "%s:timed_door" % s.id
+	return s.id
 
 
 func _roll(id: String, rarities: Array) -> String:

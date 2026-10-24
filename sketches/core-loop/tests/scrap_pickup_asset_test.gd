@@ -8,7 +8,8 @@ const NAMES := ["BentPlate", "GearSegment", "PipeStub", "BoltCluster"]
 # Re-pinned 2026-10-13 (IDENTITY-DET): a caught piece's swirl side now comes from the bot's sign or the
 # field's catch serial instead of its object id; layout, magnet, collection, value and timing unchanged.
 # Re-pinned 2026-10-16 (SCRAP-LEAK): drops fold the oldest loose piece past a cap into the newest; layout, magnet, collection, value and timing unchanged.
-const LOGIC_SHA := "d001aa5e62f990fdce8378c9fdbf6577d39d19d3e45f77c901cd598c5287dbe9"
+# Re-pinned 2026-10-24 (IL-01 grey panels, #398): step() and clear() also take and clear panel pickups and rib caches; layout, magnet, collection, value and timing unchanged.
+const LOGIC_SHA := "5500e474c702d193b2a93fd53ef73c16e789898f09e2b0848ba7fce5f0a77d7c"
 
 var failures: Array[String] = []
 var game

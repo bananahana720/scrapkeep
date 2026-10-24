@@ -34,6 +34,18 @@ const SIDE := 801
 const APRON_HALF := 1024
 const APRON_SIDE := 2048
 const OUTPUTS := ["ground.bin", "apron.bin", "holes.bin", "under.bin", "surface.bin"]
+# A park whose square stands high on a mesa (park_dam's floor is 100 to 150 m at the square's edge, over a 0 m apron)
+# gets a rim in its apron instead of a straight 150 m wall: the square's edge height carries out level to a lip whose
+# distance (lip_m) wanders along the edge and across it (warp_m), then falls over fall_m as a cliff and talus to the
+# apron's own floor (its stamps, faded in over the fall); low dunes (dune_m) break the level shelf, and a few buttes
+# stand off the foot of the fall. The apron is drawn, never collided (park_terrain.gd), so no line or post feels it.
+# Seeded, so a rebake is byte-identical.
+# lip_m and fall_m together stay inside the 224 m between the square and the region's edge, so the floor meets the
+# Terrain3D flat background at 0 m.
+const APRON_RIMS := {
+	"park_dam": {"seed": 1871, "lip_m": [6.0, 100.0], "fall_m": [55.0, 95.0], "warp_m": 34.0, "dune_m": 2.5,
+		"buttes": 11, "butte_r_m": [24.0, 48.0], "butte_h_m": [22.0, 70.0]},
+}
 
 
 func _initialize() -> void:
@@ -75,6 +87,8 @@ static func bake(park_path: String, out_dir: String) -> Dictionary:
 		var box := Stamps.bounds(f)
 		_stamp_ground(ground, f, box)
 		_stamp_apron(apron, f, box)
+	if APRON_RIMS.has(String(park["map"])):
+		_rim_apron(apron, ground, APRON_RIMS[String(park["map"])])
 
 	var holes := PackedByteArray()
 	holes.resize(CELLS * CELLS)
@@ -240,3 +254,89 @@ static func _write(path: String, bytes: PackedByteArray, compressed: bool) -> Ar
 	file.store_buffer(bytes)
 	file.close()
 	return []
+
+
+# Shapes the apron ring of a mesa park (APRON_RIMS). A ring point d metres outside the square (to the nearest square
+# point, whose ground height e it carries) stands at e out to the lip and falls to the floor over the fall; the
+# stamps' own offsets fade in over the fall, since e already holds them at the edge. Lip and fall widths come from
+# noise read at the nearest square point, so they wander along the edge; a second noise warps d itself, so bays and
+# spurs cut across the lip.
+static func _rim_apron(apron: PackedFloat32Array, ground: PackedFloat32Array, rim: Dictionary) -> void:
+	var seed := int(rim["seed"])
+	var along := _rim_noise(seed, 1.0 / 220.0)
+	var wide := _rim_noise(seed + 1, 1.0 / 90.0)
+	var warp := _rim_noise(seed + 2, 1.0 / 75.0)
+	var dune := _rim_noise(seed + 3, 1.0 / 38.0)
+	var lip: Array = rim["lip_m"]
+	var fall: Array = rim["fall_m"]
+	var warp_m := float(rim["warp_m"])
+	var dune_m := float(rim["dune_m"])
+	var buttes := _rim_buttes(rim)
+	for j in APRON_SIDE:
+		var z := float(j - APRON_HALF)
+		for i in APRON_SIDE:
+			var x := float(i - APRON_HALF)
+			if absf(x) <= HALF and absf(z) <= HALF:
+				continue
+			var cx := clampf(x, -HALF, HALF)
+			var cz := clampf(z, -HALF, HALF)
+			var e := _edge_height(ground, cx, cz)
+			var d := Vector2(x - cx, z - cz).length()
+			var bend := smoothstep(0.0, 30.0, d)
+			var dw := d + warp_m * warp.get_noise_2d(x, z) * bend
+			var l := lerpf(float(lip[0]), float(lip[1]), along.get_noise_2d(cx, cz) * 0.5 + 0.5)
+			var w := lerpf(float(fall[0]), float(fall[1]), wide.get_noise_2d(cx, cz) * 0.5 + 0.5)
+			var t := clampf((dw - l) / w, 0.0, 1.0)
+			# A cliff at the lip easing to a talus foot: steep first (the strata texture), level last.
+			var h := e * pow(1.0 - t, 1.7)
+			h += dune_m * dune.get_noise_2d(x, z) * bend * (1.0 - t)
+			for b: Dictionary in buttes:
+				var r := Vector2(x, z).distance_to(b["at"])
+				h = maxf(h, float(b["h"]) * (1.0 - smoothstep(float(b["r"]) * 0.55, float(b["r"]), r)))
+			# e already holds the stamps at the edge, so a stamp's own apron offset comes in only as the rim falls away.
+			var k := j * APRON_SIDE + i
+			apron[k] = h + apron[k] * t
+
+
+static func _rim_noise(seed: int, frequency: float) -> FastNoiseLite:
+	var n := FastNoiseLite.new()
+	n.seed = seed
+	n.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	n.frequency = frequency
+	n.fractal_octaves = 3
+	return n
+
+
+# The square's ground at (x, z) on its edge, read bilinearly from the 2 m grid.
+static func _edge_height(ground: PackedFloat32Array, x: float, z: float) -> float:
+	var fi := clampf((x + HALF) / STEP, 0.0, float(CELLS))
+	var fj := clampf((z + HALF) / STEP, 0.0, float(CELLS))
+	var i0 := mini(int(fi), CELLS - 1)
+	var j0 := mini(int(fj), CELLS - 1)
+	var u := fi - i0
+	var v := fj - j0
+	var a := lerpf(ground[j0 * SIDE + i0], ground[j0 * SIDE + i0 + 1], u)
+	var b := lerpf(ground[(j0 + 1) * SIDE + i0], ground[(j0 + 1) * SIDE + i0 + 1], u)
+	return lerpf(a, b, v)
+
+
+# Buttes off the foot of the fall: centres at least 100 m out from the square, each wholly inside the region's edge,
+# from the rim's seed; each a rounded mesa, full height over its inner 55 percent.
+static func _rim_buttes(rim: Dictionary) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(rim["seed"])
+	var r_range: Array = rim["butte_r_m"]
+	var h_range: Array = rim["butte_h_m"]
+	var out := []
+	for k in int(rim["buttes"]):
+		var r := rng.randf_range(float(r_range[0]), float(r_range[1]))
+		var side := rng.randi() % 4
+		var run := rng.randf_range(-HALF - 120.0, HALF + 120.0)
+		var out_m := rng.randf_range(HALF + 100.0, APRON_HALF - r - 4.0)
+		var at := Vector2(run, out_m)
+		match side:
+			1: at = Vector2(run, -out_m)
+			2: at = Vector2(out_m, run)
+			3: at = Vector2(-out_m, run)
+		out.append({"at": at, "r": r, "h": rng.randf_range(float(h_range[0]), float(h_range[1]))})
+	return out

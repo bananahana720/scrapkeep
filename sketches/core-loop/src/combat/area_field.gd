@@ -27,6 +27,8 @@ const BREAK_TIER := SpeedTier.FAST
 
 var id := ""
 var row := {}
+# A multiplier on the row's radius for this one field (the jolt layer's mat laid on water).
+var spread := 1.0
 var centre := Vector3.ZERO
 var pulses := 0
 # Pulses that found the ball inside, and how each ended: "landed", "ignored" (the door shut,
@@ -46,7 +48,8 @@ func _init(row_id: String, at: Vector3, source: Node3D = null) -> void:
 
 
 func radius() -> float:
-	return float(row.get("radius", 0.0))
+	return float(row.get("radius", 0.0)) * spread
+
 
 
 # Where the circle is now: an emitter's source while it lives, else the committed centre.

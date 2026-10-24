@@ -18,7 +18,7 @@ const ROWS := {
 		"idle": {"style": "breathe", "amplitude": 0.02, "beats": 2.0}, "death": {"style": "spin_down", "parts": 8, "seconds": 0.7}},
 	"mag_trapper": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E05": ["warn_seconds"]},
 		"idle": {"style": "sway", "amplitude": 0.05, "beats": 2.5}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
-	"hooker": {"color_role": "hazard", "shape": "bar", "sound": "none", "attacks": {"E06": ["warn_seconds"]},
+	"hooker": {"color_role": "hazard", "shape": "bar", "sound": "warn_tether", "attacks": {"E06": ["warn_seconds"]},
 		"idle": {"style": "sway", "amplitude": 0.05, "beats": 2.5}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
 	"netcaster": {"color_role": "hazard", "shape": "star", "sound": "none", "attacks": {"E07": ["warn_seconds"]},
 		"idle": {"style": "sway", "amplitude": 0.05, "beats": 2.0}, "death": {"style": "scatter", "parts": 4, "seconds": 0.5}},
@@ -34,7 +34,7 @@ const ROWS := {
 		"idle": {"style": "hover", "amplitude": 0.06, "beats": 2.0}, "death": {"style": "spin_down", "parts": 4, "seconds": 0.5}},
 	"swatter": {"color_role": "hazard", "shape": "chevron", "sound": "none", "attacks": {"E13": ["warn_seconds"]},
 		"idle": {"style": "sway", "amplitude": 0.05, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.55}},
-	"ramp_flipper": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E14": ["warn_seconds"]},
+	"ramp_flipper": {"color_role": "hazard", "shape": "ring", "sound": "warn_flap", "attacks": {"E14": ["warn_seconds"]},
 		"idle": {"style": "bob", "amplitude": 0.05, "beats": 2.5}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
 	"linker": {"color_role": "neutral", "shape": "none", "sound": "none", "attacks": {"none": []},
 		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
@@ -73,14 +73,24 @@ const ROWS := {
 		"idle": {"style": "breathe", "amplitude": 0.05, "beats": 2.0}, "death": {"style": "pop", "parts": 3, "seconds": 0.4}},
 	"splitter_pod": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E25": ["warn_seconds"]},
 		"idle": {"style": "bob", "amplitude": 0.05, "beats": 1.5}, "death": {"style": "pop", "parts": 1, "seconds": 0.3}},
-	# The jolt layer's voice is file-backed (src/presentation/jolt_layer_audio.gd, load if
-	# present); its sound names this row once SfxBank registers the jolt_layer_* cues (PR #12).
-	"jolt_layer": {"color_role": "hazard", "shape": "ring", "sound": "none", "attacks": {"E27": ["warn_seconds"]},
+	# The jolt layer's voice is file-backed (src/presentation/jolt_layer_audio.gd); SfxBank
+	# registers its jolt_layer_* cues, so the tell is its wind-up sound.
+	"jolt_layer": {"color_role": "hazard", "shape": "ring", "sound": "jolt_layer_tell", "attacks": {"E27": ["warn_seconds"]},
 		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
+	"boom_tender": {"color_role": "hazard", "shape": "bar", "sound": "warn_reel", "attacks": {"E40": ["warn_seconds"]},
+		"idle": {"style": "bob", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "scatter", "parts": 7, "seconds": 0.6}},
 	"ballast_heavy": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E32": ["warn_seconds"]},
 		"idle": {"style": "breathe", "amplitude": 0.02, "beats": 3.0}, "death": {"style": "collapse", "parts": 8, "seconds": 0.7}},
 	"gap_net": {"color_role": "hazard", "shape": "star", "sound": "none", "attacks": {"E33": ["warn_seconds"]},
 		"idle": {"style": "sway", "amplitude": 0.04, "beats": 3.0}, "death": {"style": "scatter", "parts": 5, "seconds": 0.5}},
+	# The rogue fleet machines (combat/rogue.gd): each has one lane and one ring attack, so
+	# wind_lane and wind_ring are the selected attack's lead (a ring hurts as it fills).
+	"rogue_crane": {"color_role": "hazard", "shape": "wave", "sound": "none", "attacks": {"E34": ["wind_lane"], "E35": ["wind_ring"]},
+		"idle": {"style": "tick", "amplitude": 0.02, "beats": 4.0}, "death": {"style": "spin_down", "parts": 8, "seconds": 0.7}},
+	"rogue_skip": {"color_role": "hazard", "shape": "arrow", "sound": "none", "attacks": {"E36": ["wind_lane"], "E37": ["wind_ring"]},
+		"idle": {"style": "tick", "amplitude": 0.02, "beats": 4.0}, "death": {"style": "collapse", "parts": 8, "seconds": 0.7}},
+	"rogue_tender": {"color_role": "hazard", "shape": "bar", "sound": "none", "attacks": {"E38": ["wind_lane"], "E39": ["wind_ring"]},
+		"idle": {"style": "tick", "amplitude": 0.02, "beats": 4.0}, "death": {"style": "spin_down", "parts": 8, "seconds": 0.7}},
 }
 
 

@@ -88,13 +88,14 @@ const TRIM_DB := {
 	"stinger_unseal": -3.0, "class_up": -3.0, "clank": -6.0, "scrap_rip": -4.0, "threat_up": -6.0,
 	"core_socket": -3.0, "synergy_fanfare": 0.0, "found_chime": -6.0, "achievement_chime": -6.0, "rescue_fanfare": -3.0, "element_resolved": -8.0,
 	"ice_form": -7.0, "zap_hum": -8.0, "shatter": -5.0, "warden_theme_in": -6.0, "class_down": -6.0,
-	"boss_arena_in": -3.0, "boss_phase": -4.0, "boss_telegraph": -4.0, "boss_weak_hit": -7.0,
+	"boss_arena_in": -3.0, "boss_phase": -4.0, "boss_telegraph": -4.0, "ratchet_cue": -4.0, "boss_weak_hit": -7.0,
 	"stinger_boss_defeated": -1.0,
 	"womp": -8.0, "build_riser": -4.0, "stage_fade": -12.0,
 	"vault_rise": -6.0, "vault_drop": -2.0, "synergy_hit": -10.0,
 	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0,
 	"warn_burrow": -7.0, "warn_bore": -7.0, "warn_lure": -7.0,
 	"warn_cut": -7.0, "warn_winch": -7.0, "warn_dive": -7.0,
+	"warn_tether": -7.0, "warn_flap": -7.0, "warn_reel": -7.0,
 	"breach_crack": -4.0,
 	# v2 W5: the leitmotifs, the crowd-control holds, the ancients and Moss's bench.
 	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0, "tarn_latch_tear": -3.0, "tally_balance_due": -3.0, "cannon_recall": -3.0,
@@ -152,7 +153,7 @@ const TRIM_DB := {
 	"lock_tick": -22.0, "dry_tick": -25.0, "line_bite": -7.0, "anchor_clunk": -12.0, "smash_whistle": -9.0, "smash_crack": -3.0,
 	# The Waking crew's seal timer (waking.gd SEAL_SOUND): a dry two-click ratchet kept apart from the harpoon's FM lock tick.
 	"seal_ratchet": -16.0,
-	"dock_click": -15.0, "line_zip": -10.0, "line_twang": -9.0, "line_hum": -17.0,
+	"dock_click": -15.0, "line_zip": -10.0, "line_twang": -9.0, "line_hum": -17.0, "find_drip": -14.0, "find_radio": -12.0,
 	"verb_fail_jump": -18.0, "verb_fail_fire": -18.0, "verb_fail_haul": -18.0, "verb_fail_boost": -18.0,
 	"verb_fail_special": -18.0, "verb_fail_interact": -18.0,
 	# The skill bar's refusals (SKILL-BAR section 2): a refused pick and a refused Q, each a dull
@@ -701,6 +702,10 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return twang()
 		"line_hum":
 			return _line_hum()
+		"find_drip":
+			return _find_drip()
+		"find_radio":
+			return _find_radio()
 		"verb_fail_jump":
 			return _mix([[_tone(0.06, _hz(70), _hz(70), "sine", 40.0), 0, 1.0], [_tone(0.08, _hz(65), _hz(64), "sine", 35.0), Synth.seconds(0.07), 0.9]])
 		"verb_fail_fire":
@@ -913,6 +918,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 				[6, 0, 1, "anvil", 0.8], [6, 62, 2, "brass", 0.6], [6, 74, 2, "brass", 0.45]], 0.6)
 		"boss_telegraph":
 			return _boss_telegraph()
+		"ratchet_cue":
+			return _ratchet_cue()
 		"boss_weak_hit":
 			return _mix([[_fm(0.28, _hz(79), 3.5, 3.0, 13.0), 0, 0.9], [_tone(0.1, 180.0, 90.0, "sine", 30.0), 0, 0.6],
 				[_noise(0.03, 4500.0, 2500.0, 120.0), 0, 0.4]])
@@ -949,6 +956,12 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _warn_winch()
 		"warn_dive":
 			return _warn_dive()
+		"warn_tether":
+			return _warn_tether()
+		"warn_flap":
+			return _warn_flap()
+		"warn_reel":
+			return _warn_reel()
 		"breach_crack":
 			return _breach_crack()
 		"sable_arpeggio":
@@ -1178,6 +1191,37 @@ static func _line_hum() -> PackedFloat32Array:
 	for i in n:
 		var t := i * Synth.INV_RATE
 		buf[i] = (sin(TAU * f * t) + 0.5 * sin(TAU * 2.0 * f * t) + 0.3 * sin(TAU * 3.0 * f * t)) * (0.85 + 0.15 * sin(TAU * 10.0 * t))
+	return buf
+
+
+# A field find's crack tell (secrets.gd): two drips off a wet face and the quiet between, one loop.
+static func _find_drip() -> PackedFloat32Array:
+	var length := 1.8
+	return _mix([[Synth.buffer(Synth.seconds(length)), 0, 0.0],
+		[_tone(0.14, _hz(97), _hz(90), "sine", 38.0), 0, 1.0],
+		[_tone(0.1, _hz(94), _hz(88), "sine", 46.0), Synth.seconds(1.05), 0.6]])
+
+
+# A field find's radio tell: two bars of the dance hour in D minor (the lost tape's key), keys under
+# a lead, heard through a wall: a slow wobble and crackle over it. Trimmed to the bars and faded at
+# both ends, so the loop's seam is a breath, not a click.
+static func _find_radio() -> PackedFloat32Array:
+	var score := [[0, 62, 16, "keys", 0.3], [0, 65, 16, "keys", 0.3], [0, 69, 16, "keys", 0.3], [0, 72, 16, "keys", 0.3],
+		[16, 55, 16, "keys", 0.3], [16, 58, 16, "keys", 0.3], [16, 62, 16, "keys", 0.3], [16, 65, 16, "keys", 0.3],
+		[0, 74, 2, "lead", 0.6], [2, 77, 2, "lead", 0.6], [4, 81, 3, "lead", 0.65], [7, 79, 1, "lead", 0.55],
+		[8, 77, 4, "lead", 0.6], [12, 76, 2, "lead", 0.55], [14, 74, 2, "lead", 0.55], [16, 72, 3, "lead", 0.6],
+		[19, 70, 1, "lead", 0.5], [20, 69, 4, "lead", 0.6], [24, 67, 2, "lead", 0.55], [26, 69, 2, "lead", 0.55],
+		[28, 62, 4, "lead", 0.5], [4, 0, 1, "brush", 0.3], [12, 0, 1, "brush", 0.3], [20, 0, 1, "brush", 0.3], [28, 0, 1, "brush", 0.3]]
+	var music := Synth.render_score(score, 0.0)
+	var n := 32 * Synth.score_step
+	var buf := Synth.buffer(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var fade := Synth.seconds(0.04)
+	for i in mini(n, music.size()):
+		var t := i * Synth.INV_RATE
+		var crackle := rng.randf_range(-1.0, 1.0) * (0.5 if rng.randf() < 0.002 else 0.04)
+		buf[i] = (music[i] * (0.8 + 0.2 * sin(TAU * 2.5 * t)) + crackle) * minf(1.0, minf(i, n - 1 - i) / float(fade))
 	return buf
 
 
@@ -1660,6 +1704,15 @@ static func _boss_telegraph() -> PackedFloat32Array:
 		[_noise(0.35, 600.0, 3000.0, 3.0, 0.2), 0, 0.35]], true)
 
 
+# A cued follow-up is coming (fight_phases.gd): three ratchet clicks climbing D, F, A and a
+# high bell on D, all inside CUE_LEAD, so the ear has the warning before the eye's short tell.
+static func _ratchet_cue() -> PackedFloat32Array:
+	return _mix([[_tone(0.05, _hz(62), _hz(62), "square_dark", 30.0), 0, 0.8],
+		[_tone(0.05, _hz(65), _hz(65), "square_dark", 30.0), Synth.seconds(0.11), 0.85],
+		[_tone(0.05, _hz(69), _hz(69), "square_dark", 30.0), Synth.seconds(0.22), 0.9],
+		[_cut(_n("bell", 86), 0.3), Synth.seconds(0.33), 0.7]], true)
+
+
 # Brindle routed: the brass fanfare in D major, a bell run to the top, and the
 # rice-cooker resolution on high D over a held D major chord.
 static func _boss_defeated() -> PackedFloat32Array:
@@ -1772,6 +1825,31 @@ static func _warn_winch() -> PackedFloat32Array:
 static func _warn_dive() -> PackedFloat32Array:
 	return _mix([[_noise(0.56, 1800.0, 350.0, 4.0, 0.06), 0, 0.45],
 		[_tone(0.56, _hz(58), _hz(51), "sine", 1.8), 0, 1.0]])
+
+
+# Tether: the harpoon's spring cocking in two rising Bb ratchet clicks, then a taut wet twang.
+static func _warn_tether() -> PackedFloat32Array:
+	return _mix([[_noise(0.03, 2600.0, 1200.0, 90.0), 0, 0.6],
+		[_noise(0.03, 3200.0, 1500.0, 90.0), Synth.seconds(0.12), 0.7],
+		[_fm(0.32, _hz(58), 1.5, 3.0, 7.0, 4.0), Synth.seconds(0.2), 1.0],
+		[_noise(0.2, 700.0, 300.0, 9.0, 0.03), Synth.seconds(0.2), 0.35]])
+
+
+# Flap: a sluice hinge creaking up from Eb to Ab, with a gush of water under it.
+static func _warn_flap() -> PackedFloat32Array:
+	return _mix([[_tone(0.42, _hz(51), _hz(56), "saw_dark", 2.5), 0, 0.7],
+		[_fm(0.42, _hz(63), 2.1, 1.5, 3.0, 5.0), 0, 0.35],
+		[_noise(0.4, 600.0, 1600.0, 3.0, 0.12), Synth.seconds(0.05), 0.6]])
+
+
+# Reel: the boom tender's reel ratcheting five clicks up, one per float lamp, over a low
+# tug-engine chug, and a small brass lamp ping on the last.
+static func _warn_reel() -> PackedFloat32Array:
+	var parts := [[_tone(0.7, _hz(39), _hz(41), "saw_dark", 3.0), 0, 0.5]]
+	for i in 5:
+		parts.append([_noise(0.025, 1800.0 + 350.0 * i, 900.0, 90.0), Synth.seconds(0.11 * i), 0.55 + 0.05 * i])
+	parts.append([_fm(0.3, _hz(70), 2.0, 1.2, 4.0, 6.0), Synth.seconds(0.5), 0.45])
+	return _mix(parts)
 
 
 # --- The leitmotifs (SOUND-STORY.md section 2) ------------------------------------------

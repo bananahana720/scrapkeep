@@ -19,27 +19,27 @@
  "silent_db": -80.0,
  "sources": {
   "main": {
-   "take": "miniboss-s4102.wav",
-   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/miniboss-s4102.wav",
-   "stretched": "/home/andrew/scratch/w16/tunes/stretched/miniboss.wav",
-   "bpm_before": 135.01,
-   "bpm_after": 135.0,
+   "take": "anthem-miniboss-s4202.wav",
+   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/anthem-miniboss-s4202.wav",
+   "stretched": "/home/andrew/scratch/w18/anthem-pack2/stretched/miniboss.wav",
+   "bpm_before": 140.01,
+   "bpm_after": 139.99,
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/miniboss/drums.wav",
-     "sha256": "519948d2c12aa6e6d3a700919fca671312c010118bce559e01569f0001d008cc"
+     "path": "/home/andrew/scratch/w18/anthem-pack2/stems/htdemucs/miniboss/drums.wav",
+     "sha256": "5e4b3f2e6873d6c2f48ca04b8270575a0a135384084121d8a2c590a05f0cc9b2"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/miniboss/bass.wav",
-     "sha256": "33dab304e44fd6fbb3d16ef343ab81c1d203166b89469510ec038d749a8197e7"
+     "path": "/home/andrew/scratch/w18/anthem-pack2/stems/htdemucs/miniboss/bass.wav",
+     "sha256": "e189452fcf33e50c3f9c8e7e44978e9aab52c9bf4f7a70b69abaa506345dcda4"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/miniboss/other.wav",
-     "sha256": "2209fc5cd9ff3539cd78966ea8898f5565cf7f708e5a0c15882c6d7a962d485a"
+     "path": "/home/andrew/scratch/w18/anthem-pack2/stems/htdemucs/miniboss/other.wav",
+     "sha256": "c17a853b51dd190bf39f67aef9efa600eb815729821602f61f00ee4c517ad417"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/tunes/stems/htdemucs/miniboss/vocals.wav",
-     "sha256": "216b6248f621068463f1329f15fd5be54f990a81c67e90725a485b5ecaf31c6b"
+     "path": "/home/andrew/scratch/w18/anthem-pack2/stems/htdemucs/miniboss/vocals.wav",
+     "sha256": "11278798c83d53fcd686764617fbb2968426ce44ccff5bea042e7997a85e6460"
     }
    },
    "note": "htdemucs; vocals summed into other"
@@ -49,19 +49,19 @@
   "main": {
    "parent": "single",
    "take": "miniboss",
-   "source_start": 323392,
-   "take_start": 323392,
-   "bpm": 135,
-   "beat": 19600,
-   "bar": 78400,
+   "source_start": 302400,
+   "take_start": 302400,
+   "bpm": 140,
+   "beat": 18900,
+   "bar": 75600,
    "beats_per_bar": 4,
    "bars": 16,
    "entry": 4096,
-   "exit": 1258496,
+   "exit": 1213696,
    "loop": true,
    "loop_offset": 4096,
    "loop_to_bar": 1,
-   "sample_count": 1258496,
+   "sample_count": 1213696,
    "key": "D",
    "key_offset": 0,
    "files": {
@@ -181,11 +181,12 @@
  },
  "breath_default": "hard",
  "cuts": "measured-beat-phase",
+ "whole": false,
  "timing_verified": false,
- "gain_db": 1.2,
+ "gain_db": 1.7,
  "measured": {
   "lufs": -16.0,
-  "true_peak": -1.8,
+  "true_peak": -1.6,
   "note": "summed stems before Ogg encode"
  }
 }

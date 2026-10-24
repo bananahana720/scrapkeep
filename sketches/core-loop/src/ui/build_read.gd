@@ -15,6 +15,10 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const VIEW := Vector2i(300, 240)
 const TURN := 0.6
 const LABEL_LIFT := 1.75
+# Clearance from the screen's edge and from the pause column's left side (layout()).
+const MARGIN := 24.0
+# The view shrinks no smaller than this share of VIEW when a long list needs the height.
+const VIEW_MIN := 0.6
 
 var shell
 var lines: Array[String] = []
@@ -22,6 +26,7 @@ var _pivot: Node3D
 var _labels: Node3D
 var _list: VBoxContainer
 var _ball: MeshInstance3D
+var _frame: SubViewportContainer
 
 
 func _init() -> void:
@@ -43,6 +48,7 @@ func _init() -> void:
 	frame.stretch = true
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(frame)
+	_frame = frame
 	var view := SubViewport.new()
 	view.size = VIEW
 	view.own_world_3d = true
@@ -82,8 +88,10 @@ func refresh(run, overflow := 0, class_id := "", effective := {}) -> void:
 	shell.show_panels(held, run.run_seed if run != null else 0)
 	for child in _labels.get_children():
 		child.queue_free()
+	# Freed now, not queued, so layout() measures the new list in the same frame.
 	for child in _list.get_children():
-		child.queue_free()
+		_list.remove_child(child)
+		child.free()
 	lines.clear()
 	var counts := Panels.counts(held)
 	var folded: Dictionary = effective if not effective.is_empty() else counts
@@ -114,6 +122,21 @@ func refresh(run, overflow := 0, class_id := "", effective := {}) -> void:
 		var line := "No panels yet. Machines drop them."
 		lines.append(line)
 		_list.add_child(_line(line))
+
+
+# Seats the read in the screen's left gutter, centred on its height, clear of the pause
+# column (its left edge at column_left). A list too tall for the screen shrinks the turning
+# view (to VIEW_MIN of its height at the least) before anything leaves the screen.
+func layout(screen: Vector2, column_left: float) -> void:
+	_frame.custom_minimum_size = Vector2(VIEW)
+	var room := screen.y - MARGIN * 2.0
+	var over := get_combined_minimum_size().y - room
+	if over > 0.0:
+		_frame.custom_minimum_size.y = maxf(VIEW.y * VIEW_MIN, VIEW.y - over)
+	var want := get_combined_minimum_size()
+	size = want
+	var x := clampf((column_left - want.x) * 0.5, MARGIN, maxf(MARGIN, column_left - MARGIN - want.x))
+	position = Vector2(x, maxf(MARGIN, (screen.y - want.y) * 0.5))
 
 
 func _line(text: String) -> Label:

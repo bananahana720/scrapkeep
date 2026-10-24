@@ -111,6 +111,9 @@ const ROWS := {
 		"recovery_before": 0.0, "reason": "The brace is the answer window: 1.1 s with the slab up, light enough that a cruise ram throws it off the rim."},
 	"E33": {"kind": "gap_net", "pre_shoot": 1.0, "cooldown": 1.25, "radius": 0.6, "length": 14.0, "marker": "line", "band": "ray",
 		"recovery_before": 0.0, "reason": "A net that charges for 1.0 s and holds 3.5 s, then hangs slack for 2.0 s: cross in the slack or faster than it holds."},
+	# E34 to E39 are the rogue mini-bosses' (#385); E40 is the Spillway's boom tender.
+	"E40": {"kind": "boom_tender", "pre_shoot": 1.1, "cooldown": 3.25, "radius": 1.5, "length": 8.4, "marker": "line", "band": "ray",
+		"recovery_before": 0.0, "reason": "The lamps light out along the boom for 1.1 s, then it swings through the lane for 0.6 s: leave the lane, or bowl through it at FAST tier and pop the floats."},
 }
 
 # Pack attacks the player starts and the unit never repeats: no cycle to measure, so the
