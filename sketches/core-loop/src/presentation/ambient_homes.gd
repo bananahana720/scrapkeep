@@ -37,7 +37,7 @@ const EDGE_M := 20.0
 # under a structure).
 static func plan(park: Dictionary, kind_ids: Array, seed_number: int, veto := Callable()) -> Array:
 	var homes := []
-	var keep := keepouts(park)
+	var keep := _keep_grid(keepouts(park))
 	var rows: Array = park["park_rows"]
 	var rect := _rect(park)
 	var routes := _route_lines(park)
@@ -76,14 +76,14 @@ static func _matches(row: Dictionary, spec: Dictionary) -> bool:
 		or (spec["societies"] as Array).has(row["society"])
 
 
-static func _find_home(rng: RandomNumberGenerator, matching: Array, keep: Array, rect: Rect2, routes: Array, spec: Dictionary,
+static func _find_home(rng: RandomNumberGenerator, matching: Array, keep: Dictionary, rect: Rect2, routes: Array, spec: Dictionary,
 		kind: Dictionary, placed: Array[Vector2], veto := Callable()) -> Dictionary:
 	var valid := []
 	var perch := String(spec["perch"])
 	for attempt in ATTEMPTS:
 		var row: Dictionary = matching[rng.randi() % matching.size()]
 		var at := _sample(rng, row)
-		if not rect.grow(-EDGE_M).has_point(at) or blocked(keep, at) != "" or _crowded(at, placed):
+		if not rect.grow(-EDGE_M).has_point(at) or _blocked_near(keep, at) != "" or _crowded(at, placed):
 			continue
 		if veto.is_valid() and veto.call(at, perch):
 			continue
@@ -100,12 +100,12 @@ static func _find_home(rng: RandomNumberGenerator, matching: Array, keep: Array,
 
 
 # The first member stands on the home; the rest are drawn round it and kept only where they are clear too.
-static func _members(rng: RandomNumberGenerator, at: Vector2, keep: Array, count: int, veto := Callable(), perch := "") -> Array[Vector2]:
+static func _members(rng: RandomNumberGenerator, at: Vector2, keep: Dictionary, count: int, veto := Callable(), perch := "") -> Array[Vector2]:
 	var offsets: Array[Vector2] = [Vector2.ZERO]
 	for i in range(1, count):
 		for attempt in 8:
 			var offset := Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(0.6, GROUP_RADIUS_M)
-			if blocked(keep, at + offset) == "" and not (veto.is_valid() and veto.call(at + offset, perch)):
+			if _blocked_near(keep, at + offset) == "" and not (veto.is_valid() and veto.call(at + offset, perch)):
 				offsets.append(offset)
 				break
 	return offsets
@@ -232,14 +232,68 @@ static func _circle(what: String, centre: Vector2, radius: float) -> Dictionary:
 # The `what` of the first keepout that holds `at`, or "".
 static func blocked(keep: Array, at: Vector2) -> String:
 	for k in keep:
+		var what := _holds(k, at)
+		if what != "":
+			return what
+	return ""
+
+
+# blocked() over only the keepouts whose reach touches at's cell, in keepout order, so it answers the same. The
+# plan asks it thousands of times a stage, and walking every keepout each time was a 660 ms stage entry frame
+# on the cloud (Brindle's stage 4). keep: {"keep": keepouts(), "cells": {Vector2i: [index]}}.
+const KEEP_CELL_M := 48.0
+
+
+static func _keep_grid(keep: Array) -> Dictionary:
+	var cells := {}
+	for i in keep.size():
+		var k: Dictionary = keep[i]
 		match k["shape"]:
 			"circle":
-				if at.distance_to(k["centre"]) < float(k["radius"]):
-					return String(k["what"])
-			"line":
-				if _line_distance(k["points"], at) < float(k["radius"]):
-					return String(k["what"])
+				_cover(cells, i, k["centre"], k["centre"], float(k["radius"]))
 			"rect":
-				if at.distance_to(k["centre"]) <= float(k["reach"]) and ParkMap.footprint_contains(k["row"], at, float(k["margin"])):
-					return String(k["what"])
+				_cover(cells, i, k["centre"], k["centre"], float(k["reach"]))
+			"line":
+				var points: PackedVector2Array = k["points"]
+				if points.size() == 1:
+					_cover(cells, i, points[0], points[0], float(k["radius"]))
+				for j in points.size() - 1:
+					_cover(cells, i, points[j], points[j + 1], float(k["radius"]))
+	return {"keep": keep, "cells": cells}
+
+
+# Adds index i to every cell the box round a and b, grown by r, touches (once a cell).
+static func _cover(cells: Dictionary, i: int, a: Vector2, b: Vector2, r: float) -> void:
+	var lo := Vector2i(floori((minf(a.x, b.x) - r) / KEEP_CELL_M), floori((minf(a.y, b.y) - r) / KEEP_CELL_M))
+	var hi := Vector2i(floori((maxf(a.x, b.x) + r) / KEEP_CELL_M), floori((maxf(a.y, b.y) + r) / KEEP_CELL_M))
+	for x in range(lo.x, hi.x + 1):
+		for y in range(lo.y, hi.y + 1):
+			var cell := Vector2i(x, y)
+			if not cells.has(cell):
+				cells[cell] = []
+			var list: Array = cells[cell]
+			if list.is_empty() or list.back() != i:
+				list.append(i)
+
+
+static func _blocked_near(near: Dictionary, at: Vector2) -> String:
+	var keep: Array = near["keep"]
+	for i in near["cells"].get(Vector2i(floori(at.x / KEEP_CELL_M), floori(at.y / KEEP_CELL_M)), []):
+		var what := _holds(keep[i], at)
+		if what != "":
+			return what
+	return ""
+
+
+static func _holds(k: Dictionary, at: Vector2) -> String:
+	match k["shape"]:
+		"circle":
+			if at.distance_to(k["centre"]) < float(k["radius"]):
+				return String(k["what"])
+		"line":
+			if _line_distance(k["points"], at) < float(k["radius"]):
+				return String(k["what"])
+		"rect":
+			if at.distance_to(k["centre"]) <= float(k["reach"]) and ParkMap.footprint_contains(k["row"], at, float(k["margin"])):
+				return String(k["what"])
 	return ""
