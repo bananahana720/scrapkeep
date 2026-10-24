@@ -25,6 +25,7 @@ godot ... -- --out=<abs ndjson> --pocket=half_pipe|rolling_wall|crevice|hazard_f
 - `--range=<m>` sets the spawn distance (default 18). `--idle=1` makes the pilot stand and never fight: the test's planted positive control that a duel can hurt the ball (an idle tarn 6 m from a plated brute or a lobber takes hits and loses hull). Neither is part of the table.
 - `--packs=<id,id,...|all>` puts the lab in pack mode (see Pack duels); `--table=park|alpha` picks the pack table (default `park`, the table the launched game plays). In pack mode `--kinds` is ignored. An unknown pack id or table is a usage error (exit 2). `--range` still overrides the pack default of 12.
 - `--perched=park,mast` puts the lab in perched mode (see Perched duel): `--kinds=dispatcher` is required, anything else (another kind, several kinds, `--packs`, an unknown mode) is a usage error (exit 2).
+- `--tune=<key>=<value>,...` is passed to every duel, so a game variant behind a `ChallengeDials` key (`src/core/challenge_dials.gd`) plays in all of them; compare against the same table without it.
 - `--bot-no-*` are the same fast flags `bot_run.gd` takes (audio mix, visuals, cosmetic pilot tracks).
 
 ## What a duel is

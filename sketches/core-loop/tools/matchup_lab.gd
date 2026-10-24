@@ -342,6 +342,14 @@ func _render_from() -> void:
 				rows.append(parsed)
 	var pocket_rows := rows.filter(func(r): return String(r.get("kind", "")).begins_with(POCKET_PREFIX))
 	if not pocket_rows.is_empty():
+		# A control shard pooled with a real shard would read as one cell: refuse a mix of plants.
+		var plants := {}
+		for r in pocket_rows:
+			plants[String(r.get("plant", ""))] = true
+		if plants.size() > 1:
+			printerr("matchup_lab: --from mixes pocket rows with different plants %s; merge each plant apart" % [plants.keys()])
+			quit(2)
+			return
 		_write_pocket(pocket_rows, [])
 		quit(0)
 		return
@@ -567,6 +575,9 @@ static func pocket_winner(row: Dictionary) -> String:
 	var outcome := String(row.get("outcome", "no_result"))
 	var cap_hull := float(row.get("real_max_hull", -1.0))
 	if outcome in NO_RESULT or cap_hull <= 0.0:
+		return "void"
+	# A pack that did not spawn whole measured a smaller fight than the cell's.
+	if row.has("spawned") and int(row["spawned"]) != POCKET_PACK:
 		return "void"
 	if outcome == "killed" and float(row.get("hull_lost", 0.0)) < cap_hull:
 		return "pilot"
@@ -864,6 +875,9 @@ static func child_args(job: Dictionary, cap: float, settings: Dictionary, table_
 		args.append("--range=%s" % settings["range"])
 	if settings.has("idle"):
 		args.append("--idle=%s" % settings["idle"])
+	# A game variant behind a ChallengeDials key (the pack pressure experiments): every duel plays it.
+	if settings.has("tune"):
+		args.append("--tune=%s" % settings["tune"])
 	if String(job["kind"]).begins_with(PACK_PREFIX):
 		args.append("--pack-table=" + table_id)
 	if String(job["kind"]).begins_with(POCKET_PREFIX):

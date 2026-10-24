@@ -123,6 +123,9 @@ func _pocket_rows(shape: String, enemy: String, wins: int, losses: int) -> Array
 
 func _pocket_pure() -> void:
 	# Winner: killed with the hull under the class's real max hull; every other end is the enemy's; no result is void.
+	var short_pack := _pocket_row("half_pipe", "chaser", "killed", 0.0)
+	short_pack["spawned"] = 2
+	_check("pocket winner: a pack that did not spawn whole is void", Lab.pocket_winner(short_pack) == "void")
 	_check("pocket winner: a kill under the real max hull is the pilot's", Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "killed", 99.9)) == "pilot")
 	_check("pocket winner: a kill with hull lost at the real max hull is the enemy's", Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "killed", 100.0)) == "enemy")
 	_check("pocket winner: hull_out, capped and died are the enemy's", Lab.pocket_winner(_pocket_row("half_pipe", "chaser", "hull_out", 100.0)) == "enemy"
@@ -213,6 +216,8 @@ func _pocket_pure() -> void:
 	var pocket_args := Lab.child_args(seed1[1], 40.0, {"plant": "pack_damage=4"}, "park", "/h", "/p")
 	_check("child args: a pocket child gets --base-seed, --run and --plant", "--base-seed=1" in pocket_args and "--run=1" in pocket_args and "--plant=pack_damage=4" in pocket_args
 		and "--run-seed=%d" % seed1[1]["seed"] in pocket_args)
+	var tuned := Lab.child_args(seed1[1], 40.0, {"tune": "mobs.damage_mult=2,mobs.pack_scale_mult=1.5"}, "park", "/h", "/p")
+	_check("child args: --tune reaches every duel with its whole payload", "--tune=mobs.damage_mult=2,mobs.pack_scale_mult=1.5" in tuned)
 	var kind_args := Lab.child_args({"pilot": "tarn", "kind": "lobber", "seed": 1, "give": "", "n": 0}, 40.0, {"plant": "pack_damage=4"}, "park", "/h", "/p")
 	var kind_flags := false
 	for a in kind_args:
