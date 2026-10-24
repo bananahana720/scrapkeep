@@ -59,6 +59,7 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import common
+import cycles_device
 import polish
 
 SKETCH = HERE.parents[2]
@@ -743,7 +744,7 @@ def previews(roots,snapshots,out):
     out.mkdir(parents=True,exist_ok=True)
     scene=bpy.context.scene
     scene.render.engine="CYCLES"
-    scene.cycles.device="CPU"
+    cycles_device.use(scene)
     scene.cycles.samples=12
     scene.cycles.use_denoising=True
     scene.cycles.seed=1979
@@ -821,7 +822,7 @@ def previews(roots,snapshots,out):
     for clip in ("lane_warn","split_lane_warn","rush_warn","plate_warn","pulse_warn","stagger_open"):
         for root in roots: pose(clip,1,root,snapshots[root.name])
         render("detail_"+clip,(18,13,-27),(0,5,0))
-    (out/"preview-manifest.json").write_text(json.dumps({"renderer":"Blender Cycles CPU",
+    (out/"preview-manifest.json").write_text(json.dumps({"renderer":"Blender Cycles "+bpy.context.scene.cycles.device,
         "samples":12,"resolution":[960,900],"arena_radius_m":36,"reference_ball_diameter_m":2,
         "views":"orthographic matched 38 m frame; detail inserts 14 m",
         "frames":rendered,"clip_key_seconds":{c:k for c,(d,k) in CLIPS.items()}},indent=2)+"\n")

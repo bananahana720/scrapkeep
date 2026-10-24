@@ -18,6 +18,7 @@ from mathutils import Vector
 HERE=Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
 import build_spil9 as spl
+import cycles_device
 
 OUT=spl.SKETCH.parents[1]/"artifacts/local/dress-preview/SPL"
 
@@ -50,7 +51,7 @@ def plain_material(name,color,rough=.8):
 def studio():
     scene=bpy.context.scene
     scene.render.engine="CYCLES"
-    scene.cycles.device="CPU"
+    cycles_device.use(scene)
     scene.cycles.samples=8
     scene.cycles.use_denoising=True
     scene.cycles.seed=9

@@ -8,6 +8,7 @@ import bpy
 from mathutils import Vector
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import common
+import cycles_device
 from common import Part
 common.reset()
 for slot, rough, metal in [("device_concrete", 0.95, 0.0), ("device_metal", 0.68, 0.28), ("device_marks", 0.85, 0.0)]:
@@ -37,7 +38,7 @@ def chamfer(w,h,c):
 def preview(outdir,stem,span,target,ball_at):
     scene=bpy.context.scene
     scene.render.engine="CYCLES"
-    scene.cycles.device="CPU"
+    cycles_device.use(scene)
     scene.cycles.samples=24
     scene.cycles.use_denoising=True
     scene.render.threads_mode="FIXED"

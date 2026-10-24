@@ -40,6 +40,7 @@ HERE = Path(__file__).resolve().parent
 BLENDER = HERE.parent.parent
 sys.path.insert(0, str(BLENDER))
 import common
+import cycles_device
 import polish
 
 SCHEMA = "scrapkeep-park-props-kit/1"
@@ -775,7 +776,7 @@ def render(paths, out, width, height, spread=False):
     hi = Vector((max(p[i] for p in pts) for i in range(3)))
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 16
     scene.cycles.use_denoising = True
     scene.render.threads_mode = "FIXED"

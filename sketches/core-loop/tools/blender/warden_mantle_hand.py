@@ -21,6 +21,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
+import cycles_device
 import polish
 from common import Part
 
@@ -265,7 +266,7 @@ def preview(path, outdir, name):
             )
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 12
     scene.cycles.use_denoising = True
     scene.render.threads_mode = "FIXED"
@@ -375,7 +376,7 @@ def preview(path, outdir, name):
     print(
         "MWB_PREVIEW",
         name,
-        "Cycles CPU 12 samples; 2m ball; 3 views per closed/charge state",
+        "Cycles " + bpy.context.scene.cycles.device + " 12 samples; 2m ball; 3 views per closed/charge state",
     )
 
 

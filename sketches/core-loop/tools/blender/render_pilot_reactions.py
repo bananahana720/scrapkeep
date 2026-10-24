@@ -11,6 +11,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import rig_pilot as rig
 import common
+import cycles_device
 from anim_pilot_reactions import KEYS
 
 OUT = rig.ROOT / 'artifacts/anim-reactions'
@@ -48,7 +49,7 @@ def render(pilot, clip, old=False):
     cam.data.angle = math.radians(65)
     scene.render.resolution_x, scene.render.resolution_y = 1920, 1080
     scene.render.fps = 30
-    scene.cycles.device = 'CPU'
+    cycles_device.use(scene)
     scene.cycles.samples = 6
     scene.render.threads = 4
     scene.render.film_transparent = True

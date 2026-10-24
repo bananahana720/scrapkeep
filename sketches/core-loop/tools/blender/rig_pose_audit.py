@@ -98,6 +98,8 @@ from mathutils.bvhtree import BVHTree
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKETCH = os.path.normpath(os.path.join(HERE, "..", ".."))
 MODELS = os.path.join(SKETCH, "assets", "models")
+sys.path.insert(0, HERE)
+import cycles_device  # noqa: E402
 
 WORLDS = {
     "one": ["world_one/enemy_foreman", "world_one/enemy_dispatcher", "world_one/enemy_splitter",
@@ -1426,7 +1428,7 @@ class Stage:
         self.size = size
         scene = bpy.context.scene
         scene.render.engine = "CYCLES"
-        scene.cycles.device = "CPU"
+        cycles_device.use(scene)
         scene.cycles.samples = samples
         scene.cycles.use_denoising = False
         scene.render.resolution_x = size

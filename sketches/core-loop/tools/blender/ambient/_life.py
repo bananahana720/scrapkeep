@@ -48,6 +48,7 @@ BLENDER = HERE.parent
 sys.path.insert(0, str(BLENDER))
 sys.path.insert(0, str(BLENDER / "world_one"))
 import common  # noqa: E402
+import cycles_device  # noqa: E402
 import polish  # noqa: E402
 import kill_first_rig as kfr  # noqa: E402
 
@@ -373,7 +374,7 @@ class Critter:
         the react clip; pose=(clip, seconds) shows another frame, labelled by the clip)."""
         scene = bpy.context.scene
         scene.render.engine = "CYCLES"
-        scene.cycles.device = "CPU"
+        cycles_device.use(scene)
         scene.cycles.samples = 32
         scene.cycles.use_denoising = False
         scene.render.threads_mode = "FIXED"
