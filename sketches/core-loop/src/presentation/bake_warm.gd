@@ -44,7 +44,8 @@ const WORLD_RIGS := {
 	],
 }
 
-# Stage 1's kinds (alpha_defs PACKS_DAM), by kind name: the ones the warm also builds once.
+# Stage 1's pack kinds (alpha_defs PACKS_DAM; its elite and set pieces are not here), by kind
+# name: the ones the warm also builds once.
 const SPAWN_WARM := ["chaser", "lobber", "mag_trapper", "jolt_layer", "hooker", "ramp_flipper", "boom_tender"]
 # Far under every stage, so the one frame a warm spawn stands there is never seen.
 const OUT_OF_SIGHT := Vector3(0.0, -10000.0, 0.0)
@@ -86,7 +87,9 @@ func _process(_delta: float) -> void:
 		var item = _queue.pop_front()
 		warm(item)
 		if item is Script and kind_of(item) in SPAWN_WARM:
-			_shown = spawn_view(item, self, ctx.player, ctx.spawner.get("ground") if ctx.spawner != null else null)
+			# Held before setup runs, so a setup that fails still leaves with the next frame.
+			_shown = spawn_holder(self)
+			spawn_into(item, _shown, ctx.player, ctx.spawner.get("ground") if ctx.spawner != null else null)
 
 
 # A kit as a spawn builds it, under `parent`: Combat.spawn_enemy's add then setup() (an empty spec
@@ -95,12 +98,22 @@ func _process(_delta: float) -> void:
 # layer, so nothing in play finds it; the holder is its world root, so nothing it builds lands
 # in the stage.
 static func spawn_view(kit: Script, parent: Node, target, ground) -> Node3D:
+	var holder := spawn_holder(parent)
+	spawn_into(kit, holder, target, ground)
+	return holder
+
+
+static func spawn_holder(parent: Node) -> Node3D:
 	var holder := Node3D.new()
 	holder.name = "SpawnWarm"
 	holder.set_meta("spawn_warm", true)
 	holder.process_mode = Node.PROCESS_MODE_DISABLED
 	holder.position = OUT_OF_SIGHT
 	parent.add_child(holder)
+	return holder
+
+
+static func spawn_into(kit: Script, holder: Node3D, target, ground) -> void:
 	var enemy: Node3D = kit.new()
 	holder.add_child(enemy)
 	enemy.setup(target, ground, holder, func() -> bool: return false, 1.0, {"kind": kind_of(kit)})
@@ -108,7 +121,6 @@ static func spawn_view(kit: Script, parent: Node, target, ground) -> Node3D:
 	if enemy is CollisionObject3D:
 		enemy.collision_layer = 0
 		enemy.collision_mask = 0
-	return holder
 
 
 # A kit's kind name: its script's file name (src/combat/mag_trapper.gd is "mag_trapper").

@@ -29,6 +29,8 @@ func _run() -> void:
 		var kind := BakeWarm.kind_of(kit)
 		var live: Node3D = kit.new()
 		stage.add_child(live)
+		# The spec keys Combat.spawn_enemy adds past the kind (fleet, holds, threat, pressure) change
+		# health and behaviour for these kits, not their meshes or materials.
 		live.setup(target, null, stage, func() -> bool: return false, 1.0, {"kind": kind})
 		var warm := BakeWarm.spawn_view(kit, stage, target, null)
 		await process_frame
@@ -48,9 +50,10 @@ func _run() -> void:
 	quit(t.verdict())
 
 
-# What a body draws, in tree order: each visual node's class and path, and for a mesh its mesh,
-# (a shared model mesh itself, a mesh made per spawn by its kind), skin and, per surface, its active material's shader-relevant state (class, every flag and mode,
-# which textures are set, the bake look) and whether the body owns that material (owned_materials).
+# What a body draws, in tree order: each visual node's class and path; for a mesh, the mesh (a
+# shared model mesh itself, one made per spawn by its kind), its skin, each surface's active
+# material's shader-relevant state (class, every flag and mode, which textures are set, the bake
+# look) and whether the body owns that material (owned_materials).
 func _draws(body: Node) -> Array:
 	var owned: Array = body.owned_materials() if body.has_method("owned_materials") else []
 	var out := []
