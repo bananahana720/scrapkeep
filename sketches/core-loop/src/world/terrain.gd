@@ -219,6 +219,11 @@ func is_ready(index: int) -> bool:
 	return _roots[i] != null and (not _is_park[i] or _grounds[i].is_ready())
 
 
+# True when this park stage was built on worker threads (a played game or a frame-capture bot run).
+func built_threaded(index: int) -> bool:
+	return _threaded[_index(index)]
+
+
 # The park ground node of a park stage (park_terrain.gd), or null.
 func park_ground(index: int) -> Node3D:
 	return _grounds[_index(index)]

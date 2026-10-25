@@ -53,6 +53,44 @@ var _cart_bodies: Array[Transform3D] = []
 # physics body creation order and so every seeded run (Rivet seed 1: 38208 -> 34066 ticks).
 static func hook(ctx) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
+	ctx.terrain.stage_built.connect(_on_stage_built.bind(ctx))
+
+
+# A Dig park stage built ahead on worker threads takes its park pass a step a frame from when
+# its ground is done (ParkBuild), parked out of sight; entry finishes whatever is left. A bot run
+# that builds stages whole, or a stage on show, keeps the entry build.
+static func _on_stage_built(stage: int, ctx) -> void:
+	if not ctx.terrain.built_threaded(stage):
+		return
+	for row in ctx.stages.DEFS:
+		if row["stage"] != stage:
+			continue
+		var root: Node3D = ctx.terrain.geometry_root(stage)
+		var map = ctx.terrain.map_for(stage)
+		if not ParkSites.is_park(map) or int(row.get("world", 0)) != 2 or root.visible or root.get_node_or_null("DigScenery") != null:
+			return
+		var builder := new()
+		var scenery: Node3D = builder._begin_park(root, map, ctx.terrain.ground_callable(stage), stage)
+		var step := ParkBuild.new()
+		step.name = "ParkBuild"
+		step.builder = builder
+		scenery.add_child(step)
+		return
+
+
+# Steps a park pass begun ahead, one step a frame, and leaves when it is done.
+class ParkBuild extends Node:
+	var builder
+
+	func _process(_delta: float) -> void:
+		if not builder._park_step():
+			finish()
+
+	func finish() -> void:
+		while builder._park_step():
+			pass
+		queue_free()
+		set_process(false)
 
 
 # A Dig park stage (park_pit, park_sinkhole) takes the park pass (build_park). A park stage's root
@@ -65,6 +103,9 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 		var park := ParkSites.is_park(map) and int(row.get("world", 0)) == 2
 		if row["map"] in ["dig", "dig_deep"] or park:
 			var root: Node3D = ctx.terrain.geometry_root(stage)
+			var ahead := root.get_node_or_null("DigScenery/ParkBuild")
+			if ahead != null and not ahead.is_queued_for_deletion():
+				ahead.finish()
 			if root.get_node_or_null("DigScenery") == null:
 				if park:
 					build_park(root, map, ctx.terrain.ground_callable(stage), stage)
@@ -107,29 +148,70 @@ func _build(scenery: Node3D, stage_root: Node3D, map: RefCounted, map_id: String
 # lava tubes (curved rails), where the world look's lamp pool lights them. A park's ground is its
 # own bake, so the stone beds stay on the old maps, and a park has no breach plates to skin.
 static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) -> Node3D:
-	var scenery := Node3D.new()
-	scenery.name = "DigScenery"
-	stage_root.add_child(scenery)
 	var builder := new()
-	builder._build_park(scenery, stage_root, map, ground, stage)
+	var scenery := builder._begin_park(stage_root, map, ground, stage)
+	while builder._park_step():
+		pass
 	return scenery
 
 
-func _build_park(scenery: Node3D, stage_root: Node3D, map, ground: Callable, stage: int) -> void:
+# The park pass as steps, so it can run whole (build_park) or a step a frame (ParkBuild): the
+# rim a row a step, the carts, the first flush, the lamps a tube a step, the last flush. Steps
+# run in the same order either way, so the seeded draws and the result are the same.
+var _scenery: Node3D
+var _sites: ParkSites
+var _rng: RandomNumberGenerator
+var _batches := {}
+var _rim_rows: Array = []
+var _faces := 0
+var _toes := 0
+var _tubes: Array = []
+var _tube := 0
+var _line := 0
+var _phase := 0
+
+
+func _begin_park(stage_root: Node3D, map, ground: Callable, stage: int) -> Node3D:
+	_scenery = Node3D.new()
+	_scenery.name = "DigScenery"
+	stage_root.add_child(_scenery)
 	_fx = DigFx.new()
 	_fx.name = "DigFx"
-	scenery.add_child(_fx)
+	_scenery.add_child(_fx)
 	_fx.prepare(stage_root, map)
-	var sites := ParkSites.new(map, ground, stage)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = ("dig_scenery_" + String(map.park["map"])).hash()
-	var batches := {}
-	_park_rim(batches, sites, rng)
-	_park_carts(batches, sites, rng)
-	_flush(scenery, batches)
-	_park_lamps(batches, sites)
-	_flush(scenery, batches)
-	_fx.finish_build()
+	_sites = ParkSites.new(map, ground, stage)
+	_rng = RandomNumberGenerator.new()
+	_rng.seed = ("dig_scenery_" + String(map.park["map"])).hash()
+	_rim_rows = _park_rim_rows(_sites, _rng)
+	_tubes = _park_lamp_rows(_sites)
+	return _scenery
+
+
+# One step of the park pass; false once the pass is done.
+func _park_step() -> bool:
+	match _phase:
+		0:
+			if _rim_rows.is_empty():
+				_phase = 1
+			else:
+				_park_rim_row(_batches, _sites, _rng, _rim_rows.pop_front())
+		1:
+			_park_carts(_batches, _sites, _rng)
+			_phase = 2
+		2:
+			_flush(_scenery, _batches)
+			_phase = 3
+		3:
+			if _tube >= _tubes.size() or _line >= PARK_LAMPS_MAX:
+				_phase = 4
+			else:
+				_park_lamp_row(_batches, _sites, _tube)
+				_tube += 1
+		4:
+			_flush(_scenery, _batches)
+			_fx.finish_build()
+			_phase = 5
+	return _phase < 5
 
 
 # Rows whose flanks wear the cut kit, and how many seats each row draws.
@@ -140,50 +222,53 @@ const PARK_FACES_MAX := 48
 const PARK_TOE_MAX := 72
 
 
-func _park_rim(batches: Dictionary, sites: ParkSites, rng: RandomNumberGenerator) -> void:
+func _park_rim_rows(sites: ParkSites, rng: RandomNumberGenerator) -> Array:
 	var rows := []
 	for element in PARK_RIM_ROWS:
 		rows.append_array(sites.rows([element], PARK_RIM_ROWS[element]))
 	_shuffle(rows, rng)
-	var kinds := {"long": "cut_face_long.glb", "scoop": "cut_face_scoop.glb"}
-	var halves := {"long": 4.0, "scoop": 3.0}
-	var faces := 0
-	var toes := 0
-	for row in rows:
-		for seat in sites.flank(row, PARK_RIM_SEATS, rng.randf_range(2.0, 6.0), rng):
-			var at: Vector2 = seat["at"]
-			var yaw := ParkSites.yaw_toward(seat["inward"])
-			var roll := rng.randf()
-			if roll < 0.4 and faces < PARK_FACES_MAX:
-				var kind := "long" if rng.randf() < 0.5 else "scoop"
-				var s := rng.randf_range(1.7, 2.5)
-				var foot := _park_seat(sites, at, seat["inward"], halves[kind] * s)
-				if foot.y <= 3.0:
-					var xf := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * s), Vector3(at.x, foot.x - BURY * s, at.y))
-					if _put(batches, _stone(kinds[kind]), xf):
-						_fx.faces.append(xf * Vector3(0, 3.0, -0.7))
-						faces += 1
-				continue
-			if toes >= PARK_TOE_MAX:
-				continue
-			var path := _stone("rubble_cluster.glb")
-			var s := rng.randf_range(2.2, 3.4)
-			var bury := 0.1
-			var any_yaw := true
-			if roll < 0.7:
-				path = _mech("strut_tall.glb" if rng.randf() < 0.55 else "strut_bent.glb")
-				s = rng.randf_range(2.0, 3.0)
-				any_yaw = false
-			elif roll < 0.85:
-				path = _mech("shell_crescent.glb" if rng.randf() < 0.5 else "shell_saddle.glb")
-				s = rng.randf_range(2.2, 3.2)
-				bury = 0.05
-			var foot := _park_seat(sites, at, seat["inward"], 1.5 * s)
-			if foot.y > 2.5:
-				continue
-			var turn := yaw + (rng.randf_range(0.0, TAU) if any_yaw else rng.randf_range(-0.25, 0.25))
-			_put(batches, path, Transform3D(Basis(Vector3.UP, turn).scaled(Vector3.ONE * s), Vector3(at.x, foot.x - bury * s, at.y)))
-			toes += 1
+	return rows
+
+
+const PARK_RIM_KINDS := {"long": "cut_face_long.glb", "scoop": "cut_face_scoop.glb"}
+const PARK_RIM_HALVES := {"long": 4.0, "scoop": 3.0}
+
+
+func _park_rim_row(batches: Dictionary, sites: ParkSites, rng: RandomNumberGenerator, row: Dictionary) -> void:
+	for seat in sites.flank(row, PARK_RIM_SEATS, rng.randf_range(2.0, 6.0), rng):
+		var at: Vector2 = seat["at"]
+		var yaw := ParkSites.yaw_toward(seat["inward"])
+		var roll := rng.randf()
+		if roll < 0.4 and _faces < PARK_FACES_MAX:
+			var kind := "long" if rng.randf() < 0.5 else "scoop"
+			var s := rng.randf_range(1.7, 2.5)
+			var foot := _park_seat(sites, at, seat["inward"], PARK_RIM_HALVES[kind] * s)
+			if foot.y <= 3.0:
+				var xf := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * s), Vector3(at.x, foot.x - BURY * s, at.y))
+				if _put(batches, _stone(PARK_RIM_KINDS[kind]), xf):
+					_fx.faces.append(xf * Vector3(0, 3.0, -0.7))
+					_faces += 1
+			continue
+		if _toes >= PARK_TOE_MAX:
+			continue
+		var path := _stone("rubble_cluster.glb")
+		var s := rng.randf_range(2.2, 3.4)
+		var bury := 0.1
+		var any_yaw := true
+		if roll < 0.7:
+			path = _mech("strut_tall.glb" if rng.randf() < 0.55 else "strut_bent.glb")
+			s = rng.randf_range(2.0, 3.0)
+			any_yaw = false
+		elif roll < 0.85:
+			path = _mech("shell_crescent.glb" if rng.randf() < 0.5 else "shell_saddle.glb")
+			s = rng.randf_range(2.2, 3.2)
+			bury = 0.05
+		var foot := _park_seat(sites, at, seat["inward"], 1.5 * s)
+		if foot.y > 2.5:
+			continue
+		var turn := yaw + (rng.randf_range(0.0, TAU) if any_yaw else rng.randf_range(-0.25, 0.25))
+		_put(batches, path, Transform3D(Basis(Vector3.UP, turn).scaled(Vector3.ONE * s), Vector3(at.x, foot.x - bury * s, at.y)))
+		_toes += 1
 
 
 # The haul roads: an ore cart parked beside a pit ramp or a tailings bench, now and then.
@@ -221,34 +306,34 @@ const LAMP_WALL_M := 3.0
 const PARK_LAMPS_MAX := 32
 
 
-func _park_lamps(batches: Dictionary, sites: ParkSites) -> void:
-	var line := 0
-	var tubes := sites.rows(["tunnel", "half_pipe"], ["lava_tube", "adit", "flooded_shaft"]) + sites.rows(["flow_line"], ["open_pit"])
-	for k in tubes.size():
-		if line >= PARK_LAMPS_MAX:
-			return
-		var row: Dictionary = tubes[k]
-		var curved := String(row["landform"]) == "lava_tube"
-		if curved and k % 2 == 1:
-			continue
-		var f := ParkSites.frame(row)
-		var centre: Vector2 = f["at"]
-		var floor_y := sites.height(centre)
-		var side := 1.0 if line % 2 == 0 else -1.0
-		var c := 0.5
-		var reach := float(f["half_width"]) + 8.0
-		while c < reach and sites.height(centre + f["cross"] * side * c) < floor_y + LAMP_WALL_M:
-			c += 0.5
-		if c >= reach:
-			continue
-		var p: Vector2 = centre + f["cross"] * side * (c - 0.4)
-		var xf := Transform3D(Basis(Vector3.UP, ParkSites.yaw_toward(-f["cross"] * side)), Vector3(p.x, floor_y + LAMP_WALL_M, p.y))
-		for m in (2 if curved else 3):
-			var file := "lamp_curve_module.glb" if curved else "lamp_straight_module.glb"
-			if not _put(batches, _mech(file), xf, line * 0.73, m == 1):
-				break
-			xf = xf * Transform3D(Basis.IDENTITY, Vector3(3.0, 0, -0.35) if curved else Vector3(2.667, 0, 0))
-		line += 1
+static func _park_lamp_rows(sites: ParkSites) -> Array:
+	return sites.rows(["tunnel", "half_pipe"], ["lava_tube", "adit", "flooded_shaft"]) + sites.rows(["flow_line"], ["open_pit"])
+
+
+# Tube k's lamp line, if it takes one; _line counts the lines hung so far.
+func _park_lamp_row(batches: Dictionary, sites: ParkSites, k: int) -> void:
+	var row: Dictionary = _tubes[k]
+	var curved := String(row["landform"]) == "lava_tube"
+	if curved and k % 2 == 1:
+		return
+	var f := ParkSites.frame(row)
+	var centre: Vector2 = f["at"]
+	var floor_y := sites.height(centre)
+	var side := 1.0 if _line % 2 == 0 else -1.0
+	var c := 0.5
+	var reach := float(f["half_width"]) + 8.0
+	while c < reach and sites.height(centre + f["cross"] * side * c) < floor_y + LAMP_WALL_M:
+		c += 0.5
+	if c >= reach:
+		return
+	var p: Vector2 = centre + f["cross"] * side * (c - 0.4)
+	var xf := Transform3D(Basis(Vector3.UP, ParkSites.yaw_toward(-f["cross"] * side)), Vector3(p.x, floor_y + LAMP_WALL_M, p.y))
+	for m in (2 if curved else 3):
+		var file := "lamp_curve_module.glb" if curved else "lamp_straight_module.glb"
+		if not _put(batches, _mech(file), xf, _line * 0.73, m == 1):
+			break
+		xf = xf * Transform3D(Basis.IDENTITY, Vector3(3.0, 0, -0.35) if curved else Vector3(2.667, 0, 0))
+	_line += 1
 
 
 # The lowest ground across a piece's width at a seat, and the spread: (low, high - low).
