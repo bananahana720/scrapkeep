@@ -263,6 +263,7 @@ func _ready() -> void:
 	preload("res://src/presentation/highdraft_scenery.gd").hook(ctx)
 	preload("res://src/presentation/world_look.gd").hook(ctx)
 	WorldFx.hook(ctx)
+	preload("res://src/presentation/bake_warm.gd").hook(ctx)
 	_boot("world_hooks")
 	combat = _module(Combat)
 	_boot("combat")
