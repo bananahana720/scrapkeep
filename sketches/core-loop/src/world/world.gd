@@ -247,7 +247,8 @@ func _on_stage_built(stage: int) -> void:
 
 
 func _process(_delta: float) -> void:
-	if ctx == null or ctx.flow == null or not ctx.flow.calm():
+	# Without a flow (a test) the steps run every frame, as ParkBuild's do.
+	if ctx == null or (ctx.flow != null and not ctx.flow.calm()):
 		return
 	for stage in _building:
 		var c = _building[stage]

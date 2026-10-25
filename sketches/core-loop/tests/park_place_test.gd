@@ -518,6 +518,9 @@ class StandInFlow extends Node:
 	func state_name() -> String:
 		return "title"
 
+	func calm() -> bool:
+		return false
+
 	func stage_def() -> Dictionary:
 		return {}
 
