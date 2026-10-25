@@ -57,8 +57,8 @@ static func hook(ctx) -> void:
 
 
 # A Dig park stage built ahead on worker threads takes its park pass a step a frame from when
-# its ground is done (ParkBuild); entry finishes whatever is left. A bot run that builds stages
-# whole keeps the entry build, so the run replays as before.
+# its ground is done (ParkBuild), parked out of sight; entry finishes whatever is left. A bot run
+# that builds stages whole, or a stage on show, keeps the entry build.
 static func _on_stage_built(stage: int, ctx) -> void:
 	if not ctx.terrain.built_threaded(stage):
 		return
@@ -67,7 +67,7 @@ static func _on_stage_built(stage: int, ctx) -> void:
 			continue
 		var root: Node3D = ctx.terrain.geometry_root(stage)
 		var map = ctx.terrain.map_for(stage)
-		if not ParkSites.is_park(map) or int(row.get("world", 0)) != 2 or root.get_node_or_null("DigScenery") != null:
+		if not ParkSites.is_park(map) or int(row.get("world", 0)) != 2 or root.visible or root.get_node_or_null("DigScenery") != null:
 			return
 		var builder := new()
 		var scenery: Node3D = builder._begin_park(root, map, ctx.terrain.ground_callable(stage), stage)

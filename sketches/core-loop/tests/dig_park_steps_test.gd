@@ -58,6 +58,20 @@ func _run() -> void:
 		same = same and b.has(key) and a[key] == b[key]
 	t.check("every stepped batch has the whole pass's placements", same and not a.is_empty())
 	t.check("the stepped pass has the effects node", stepped.get_node_or_null("DigFx") != null)
+	t.check("the stepped pass marks the whole pass's cut faces", whole.get_node("DigFx").faces == stepped.get_node("DigFx").faces)
+
+	# Entry finishes a pass still running: a few steps, then ParkBuild.finish().
+	var cut_root := Node3D.new()
+	holder.add_child(cut_root)
+	var cut_builder := DigScenery.new()
+	var cut: Node3D = cut_builder._begin_park(cut_root, map, ground, 1)
+	var cut_step := DigScenery.ParkBuild.new()
+	cut_step.builder = cut_builder
+	cut.add_child(cut_step)
+	for n in 5:
+		await process_frame
+	cut_step.finish()
+	t.check("entry's finish of a running pass builds the whole pass's batches", _views(cut) == a)
 
 	var once := Contraptions.new()
 	holder.add_child(once)

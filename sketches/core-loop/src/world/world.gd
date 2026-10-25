@@ -226,11 +226,14 @@ func _on_stage_freed(stage: int) -> void:
 
 
 # A park stage built ahead on worker threads adds its contraptions a device a frame from here
-# (_process), not all in its entry frame. A bot run that builds stages whole keeps the entry
-# build: when its static bodies join the physics world moves the solver, so a seed replays only
-# if they join on the same tick.
+# (_process), not all in its entry frame, while it is parked out of sight. A bot run that builds
+# stages whole keeps the entry build: when its static bodies join the physics world moves the
+# solver, so a seed replays only if they join on the same tick. A stage on show (stage 1 under the
+# title) keeps it too, so no device appears in view piece by piece.
 func _on_stage_built(stage: int) -> void:
 	if not terrain.built_threaded(stage) or contraptions.has(stage) or _building.has(stage):
+		return
+	if terrain.geometry_root(stage).visible:
 		return
 	var m = terrain.maps[stage - 1]
 	if not "contraptions" in m or m.contraptions.is_empty():
@@ -243,8 +246,10 @@ func _on_stage_built(stage: int) -> void:
 
 func _process(_delta: float) -> void:
 	for stage in _building:
-		var c: Contraptions = _building[stage]
-		if c.unbuilt():
+		var c = _building[stage]
+		if not is_instance_valid(c):
+			_building.erase(stage)
+		elif c.unbuilt():
 			c.build_next()
 		else:
 			_building.erase(stage)
