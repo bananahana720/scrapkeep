@@ -59,9 +59,15 @@ const WALL_S := 1100.0
 # clamp [17.3, 21.8, 14.3, 23.1, 27.6] median 21.8 (parent db275fb6 19 to 27), ratio 1.12, campers never
 # broke. The clamp's wait (grown median 27.4 s after engage) is most of the fight for both arms, so the
 # old 2x ratio cannot hold; its floor is re-read to 1x.
-const EXPECT_SMALL_S := 58.1
-const EXPECT_GROWN_S := 52.1
-const EXPECT_GROWN_OPEN_S := 21.8
+# 2026-10-25 (#478 on stage/alpha-w18 49bf68c7, ruling j and z): re-pinned after #478's bot wall-side
+# hold moved seeds 1-4 (seed 0 byte-identical). A control on a0b9d1fd (the stack without #478 and #479)
+# keeps the old pins, so the move is the bot, not the game. Two runs of this test agree: small [58.1,
+# 61.5, 70.4, 58.7, 23.0] median 58.7, grown [54.1, 44.2, 90.4, 40.3, 22.7] median 44.2, grown after
+# the clamp [17.3, 13.6, 15.4, 22.1, 16.9] median 16.9, inside the 15-35 band. Every small and grown
+# run breaks the Warden and campers never break.
+const EXPECT_SMALL_S := 58.7
+const EXPECT_GROWN_S := 44.2
+const EXPECT_GROWN_OPEN_S := 16.9
 const TOLERANCE := 0.10
 
 

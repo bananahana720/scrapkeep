@@ -226,7 +226,9 @@ func _on_stage_freed(stage: int) -> void:
 
 
 # A park stage built ahead on worker threads adds its contraptions a device a frame from here
-# (_process), not all in its entry frame, while it is parked out of sight. A bot run that builds
+# (_process), not all in its entry frame, while it is parked out of sight and only while the
+# current stage is calm (flow.calm()): the next build starts at the Warden's engage, and a device
+# a frame on top of the fight pushed its heavy frames further (4080 rows, cf07ff61). A bot run that builds
 # stages whole keeps the entry build: when its static bodies join the physics world moves the
 # solver, so a seed replays only if they join on the same tick. A stage on show (stage 1 under the
 # title) keeps it too, so no device appears in view piece by piece.
@@ -245,6 +247,9 @@ func _on_stage_built(stage: int) -> void:
 
 
 func _process(_delta: float) -> void:
+	# Without a flow (a test) the steps run every frame, as ParkBuild's do.
+	if ctx == null or (ctx.flow != null and not ctx.flow.calm()):
+		return
 	for stage in _building:
 		var c = _building[stage]
 		if not is_instance_valid(c):
@@ -663,6 +668,10 @@ func _step_director(delta: float) -> void:
 	for tier in director.take_threat_rises():
 		ctx.events.threat_rose.emit(tier)
 	view.show_arrivals(director.arrivals if not ctx.calm else [])
+	for arrival in director.arrivals:
+		if Director.KIND_NAMES[arrival["kind"]] == "dispatcher":
+			terrain.prepare_perches()
+			break
 	for spawn in due:
 		if ctx.calm or ctx.spawner == null:
 			continue

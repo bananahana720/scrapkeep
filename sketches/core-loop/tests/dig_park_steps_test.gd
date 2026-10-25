@@ -17,6 +17,13 @@ const TABLE := {"DEFS": [{"stage": 1, "world": 2, "map": "park_sinkhole"}]}
 var t := T.new("dig_park_steps_test")
 
 
+class QuietFlow extends RefCounted:
+	var quiet := false
+
+	func calm() -> bool:
+		return quiet
+
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -44,7 +51,14 @@ func _run() -> void:
 	var stepped: Node3D = builder._begin_park(stepped_root, map, ground, 1)
 	var step := DigScenery.ParkBuild.new()
 	step.builder = builder
+	var flow := QuietFlow.new()
+	step.flow = flow
 	stepped.add_child(step)
+	for n in 5:
+		await process_frame
+	t.check("the stepped pass waits while the stage is not calm", builder._phase == 0 and builder._batches.is_empty()
+		and stepped.find_children("*", "MultiMeshInstance3D", true, false).is_empty())
+	flow.quiet = true
 	var frames := 0
 	while is_instance_valid(step) and not step.is_queued_for_deletion() and frames < 2000:
 		await process_frame
