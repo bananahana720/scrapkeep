@@ -516,12 +516,14 @@ static func prepare_rest() -> void:
 	_prepare_wobble(Harmony.BRINDLE + Harmony.VICTORY, [0, 2], [Harmony.STEP], ["wub"])
 	# A boss fight plays its chords in its section's key (BOSS_SECTIONS, 0 to 2) plus the escalation's
 	# half-step lift, through the break's sinister chords and the dominant mask: every key to 3.
+	# Its pads too: a pad rendered on first use costs 120 to 215 ms in one frame on the cloud.
 	var boss_chords: Array = Harmony.BRINDLE + Harmony.BRINDLE_PHRYGIAN + Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE]
 	for shift in [0, 1, 2, 3]:
 		for chord in boss_chords:
 			if SfxBank.bake_cancel:
 				return
 			var voicing := _shift(chord["voicing"], shift)
+			Synth.pad_chord(voicing)
 			Synth.organ_chord(voicing)
 			Synth.stab_chord(voicing, false)
 			Synth.stab_chord(voicing, true)
