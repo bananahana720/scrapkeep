@@ -258,9 +258,15 @@ func _lock() -> void:
 		if w + 1 < waves.size():
 			_t.eq("wave %d down: the yard holds" % (w + 1), locks.lock_state, "locked")
 			_t.eq("wave %d down: the next whistles in" % (w + 1), _count("arena_wave"), w + 1)
-			var gap := int(ceil(float(row["wave_gap_s"]) * 90.0)) + 3
-			for i in gap:
+			# The gap runs on game time. The kill's hit stop can slow the rest of a frame that runs
+			# several ticks (game.gd hit_stop), so a loaded box lands the wave a few ticks late:
+			# wait for it, and check it never lands before the gap.
+			var gap := int(ceil(float(row["wave_gap_s"]) * Engine.physics_ticks_per_second))
+			var ticks := 3
+			while locks.crew_alive().is_empty() and ticks < gap * 2:
 				await physics_frame
+				ticks += 1
+			_t.check("wave %d waits out the gap" % (w + 2), ticks >= gap, "%d of %d ticks" % [ticks, gap])
 			crew = locks.crew_alive()
 			_t.eq("wave %d lands" % (w + 2), crew.size(), (waves[w + 1] as Array).size())
 	_t.eq("the last crew down opens the yard", locks.lock_state, "spent")
