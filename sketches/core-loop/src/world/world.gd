@@ -668,6 +668,10 @@ func _step_director(delta: float) -> void:
 	for tier in director.take_threat_rises():
 		ctx.events.threat_rose.emit(tier)
 	view.show_arrivals(director.arrivals if not ctx.calm else [])
+	for arrival in director.arrivals:
+		if Director.KIND_NAMES[arrival["kind"]] == "dispatcher":
+			terrain.prepare_perches()
+			break
 	for spawn in due:
 		if ctx.calm or ctx.spawner == null:
 			continue

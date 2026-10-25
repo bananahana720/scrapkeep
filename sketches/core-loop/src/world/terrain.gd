@@ -99,6 +99,9 @@ var _threaded: Array[bool] = []
 var _perches := {}
 # A park stage's perch lists read on a worker once its ground is built (_perch_read_ahead): {i: {task, out}}.
 var _perch_ahead := {}
+# The active park stage's perch lists read again with its overlays down, on a worker, once a Dispatcher is on
+# its way (prepare_perches): {i: {sig, task, out}}.
+var _perch_patch := {}
 
 # A park stage left memory (_free_stage), by stage number, so a module that hung nodes on its
 # root (world.gd's contraptions) drops them.
@@ -416,6 +419,7 @@ func _free_stage(i: int) -> void:
 	_cave_roofs.erase(i)
 	_perches.erase(i)
 	_take_perch_ahead(i)
+	_take_perch_patch(i)
 	_placement_holes.erase(i)
 	_heights[i] = PackedFloat32Array()
 	_holes[i] = PackedByteArray()
@@ -514,6 +518,9 @@ func perch_near(point: Vector3, salt := 0) -> Vector3:
 		# Built first, so a stage the ask builds queues its read and this takes it.
 		_ensure(stage)
 		var ahead := _take_perch_ahead(i)
+		# A worker read made for other overlays is left to settle as the stage leaves the tree.
+		var patch: Dictionary = _perch_patch.get(i, {})
+		_perch_patch.erase(i)
 		# The worker read the bare ground; height() matches it only while no overlay or cave roof stands on it.
 		# With overlays down (a landed slide or lip), only the ledges near them are read again: the whole read
 		# on the main thread was an 870 ms frame on the cloud at the Dig's first Dispatcher.
@@ -522,11 +529,80 @@ func perch_near(point: Vector3, salt := 0) -> Vector3:
 		if discs != null and (discs as Array).is_empty():
 			_perches[i] = ahead
 		elif discs != null:
-			_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": ahead.blockers,
-				"ledges": PerchPoints.patched_ledges(m.park, height, ahead.found, discs)}
+			if patch.get("sig") == _overlay_sig(m):
+				_settle_perch_read(patch)
+				_perches[i] = {"tops": patch.out.tops, "blockers": ahead.blockers, "ledges": patch.out.ledges}
+			else:
+				_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": ahead.blockers,
+					"ledges": PerchPoints.patched_ledges(m.park, height, ahead.found, discs)}
 		else:
 			_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park), "ledges": PerchPoints.ledges(m.park, height)}
 	return PerchPoints.pick(_perches[i]["tops"], point, height, _perches[i]["blockers"], salt, _perches[i]["ledges"])
+
+
+# A Dispatcher is on its way (an arrival a second out). With overlays down on the active park stage, its ledges
+# near them are read again on a worker now, over the bare read's floor with those overlays down, as height()
+# reads them; perch_near takes the result while the overlays and roofs are still the ones read. Read in the
+# spawn frame, it was about 100 ms on the cloud at the Spillway's first Dispatcher with two slides down.
+func prepare_perches() -> void:
+	var m = map()
+	if not (m is ParkMap) or not m.ok or overlays.is_empty():
+		return
+	var i := _index(stage)
+	if _perches.has(i) or not _perch_ahead.has(i) or not EventGround.pristine(self, i + 1):
+		return
+	var discs = _overlay_discs(m)
+	if discs == null:
+		return
+	# Nothing here waits: a read still running (the bare one, or a patch for overlays since changed, as a
+	# filling collapse changes its surface every step) is asked about again on a later step.
+	var ahead: Dictionary = _perch_ahead[i]
+	if not _read_done(ahead):
+		return
+	var sig := _overlay_sig(m)
+	if _perch_patch.has(i) and (_perch_patch[i].sig == sig or not _read_done(_perch_patch[i])):
+		return
+	_take_perch_patch(i)
+	_settle_perch_read(ahead)
+	if ahead.out.is_empty():
+		return
+	# The roofs are copied on the worker: one lowered meanwhile replaces its surface, so the copy reads the
+	# old one, and the pristine check at the take drops the result.
+	var snap := EventGround.snapshot(self, i + 1, false)
+	for id in overlays:
+		snap = snap.with_profile({"site": m.profiles[id].site, "surface": m.profiles[id].surface})
+	var out := {}
+	var patch := {"sig": sig, "out": out, "task": _queue_perch_patch(m.park, snap, ahead.out.found, discs, out)}
+	_perch_patch[i] = patch
+	_settle_on_exit(_roots[i], patch)
+
+
+# The overlays down and the surface each stands on: a patched read is good only for the same list.
+func _overlay_sig(m) -> Array:
+	return overlays.map(func(id: String) -> Array: return [id, m.profiles[id].surface] if m.profiles.has(id) else [id])
+
+
+static func _queue_perch_patch(park: Dictionary, snap: RefCounted, bare_found: Array, discs: Array, out: Dictionary) -> int:
+	var ground := func(x: float, z: float) -> float: return snap.terrain.height(x, z)
+	return WorkerThreadPool.add_task(func():
+		snap.copy_roofs()
+		out.merge({"tops": PerchPoints.derive(park, ground), "ledges": PerchPoints.patched_ledges(park, ground, bare_found, discs)}),
+		true, "perch patch")
+
+
+# Whether a worker perch read has finished (or was never queued), so settling it does not wait.
+static func _read_done(read: Dictionary) -> bool:
+	return not read.has("task") or WorkerThreadPool.is_task_completed(read.task)
+
+
+# Waits on a stage's patched perch read and drops it; the entry ({sig, out}), or {} when none was queued.
+func _take_perch_patch(i: int) -> Dictionary:
+	if not _perch_patch.has(i):
+		return {}
+	var patch: Dictionary = _perch_patch[i]
+	_perch_patch.erase(i)
+	_settle_perch_read(patch)
+	return patch
 
 
 # A disc (Vector3 x, z, radius) around each overlay down, for PerchPoints.patched_ledges; null when an
