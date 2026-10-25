@@ -65,6 +65,8 @@ var discoveries: Array = []
 # v2 W6: the gorge's contraptions per stage index, the terrain events' telegraphs,
 # Moss's bay, and the contraption ride the ball is held to (a RideRail), if any.
 var contraptions := {}
+# Stage number -> Contraptions still adding devices after its park ground was built ahead (_on_stage_built).
+var _building := {}
 var terrain_view
 var bay
 var ride
@@ -206,6 +208,7 @@ func _setup_gorge() -> void:
 # frees takes its contraptions with it, so the cache entry goes too and a rebuild adds new ones.
 func _wire_terrain() -> void:
 	terrain.stage_freed.connect(_on_stage_freed)
+	terrain.stage_built.connect(_on_stage_built)
 	ctx.events.warden_engaged.connect(_prepare_after)
 	ctx.events.flow_changed.connect(func(state: String):
 		if state == "gates":
@@ -219,6 +222,35 @@ func _prepare_after(stage: int) -> void:
 
 func _on_stage_freed(stage: int) -> void:
 	contraptions.erase(stage)
+	_building.erase(stage)
+
+
+# A park stage built ahead on worker threads adds its contraptions a device a frame from here
+# (_process), not all in its entry frame. A bot run that builds stages whole keeps the entry
+# build: when its static bodies join the physics world moves the solver, so a seed replays only
+# if they join on the same tick.
+func _on_stage_built(stage: int) -> void:
+	if not terrain.built_threaded(stage) or contraptions.has(stage) or _building.has(stage):
+		return
+	var m = terrain.maps[stage - 1]
+	if not "contraptions" in m or m.contraptions.is_empty():
+		return
+	var c := Contraptions.new()
+	terrain.geometry_root(stage).add_child(c)
+	c.begin(m, terrain.ground_callable(stage), ctx.tuning.f("cruise"), ctx.tuning.f("gravity"))
+	_building[stage] = c
+
+
+func _process(_delta: float) -> void:
+	for stage in _building:
+		var c: Contraptions = _building[stage]
+		if c.unbuilt():
+			c.build_next()
+		else:
+			_building.erase(stage)
+			c.finish()
+			contraptions[stage] = c
+		return
 
 
 # Contraptions for every stage whose ground is built and that has none yet. Setup covers
@@ -229,6 +261,10 @@ func _add_contraptions() -> void:
 	var cruise: float = ctx.tuning.f("cruise")
 	for i in terrain.maps.size():
 		var m = terrain.maps[i]
+		if _building.has(i + 1):
+			contraptions[i + 1] = _building[i + 1]
+			_building.erase(i + 1)
+			contraptions[i + 1].finish()
 		if contraptions.has(i + 1) or not terrain.is_built(i + 1):
 			continue
 		if not "contraptions" in m or m.contraptions.is_empty():
