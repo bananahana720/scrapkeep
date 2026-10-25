@@ -12,6 +12,7 @@ const BakeLook := preload("res://src/presentation/bake_look.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const Context := preload("res://src/core/context.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}, {"stage": 2, "world": 2, "map": "park_test"}]}
 
@@ -68,14 +69,32 @@ func _run() -> void:
 				bare.append("%s mesh" % kit.resource_path.get_file())
 	t.check("every kit's shared meshes carry their tangent-safe copy", bare.is_empty() and counted > kits.size(), "%d meshes; bare %s" % [counted, bare])
 
-	# dress on a spawn of a warmed kit uses the copy made ahead: no new copy, the same object.
+	# dress on a spawn of a warmed kit draws the copy made ahead: read before dress, not made by it.
 	var mesh: Mesh = BakeWarm.meshes(kits[0].call("_parts"))[0]
-	var ahead: Mesh = BakeLook.tangent_safe(mesh)
+	var ahead = mesh.get_meta("bake_safe") if mesh.has_meta("bake_safe") else (mesh if mesh.get_meta("bake_tangents_ok", false) else null)
 	var view := MeshInstance3D.new()
 	view.mesh = mesh
 	holder.add_child(view)
 	BakeLook.dress(view)
-	t.check("dress after the warm-up draws the copy made ahead", view.mesh == ahead)
+	t.check("dress after the warm-up draws the copy made ahead", ahead != null and view.mesh == ahead)
+
+	# On screen a rigged kit seats its GLB's own scene: those scenes are held and their meshes readied.
+	var rigs: Array = BakeWarm.WORLD_RIGS[1]
+	t.check("headless, no rig scene is queued (spawns copy _parts() meshes there)", node._queue.is_empty() and not BakeWarm._held.has(rigs[0]))
+	EnemyMotion.headless_idle = true
+	events.stage_entered.emit(1, false)
+	t.check("on screen, a world 1 entry queues the rig scenes", node._queue.size() == rigs.size(), "%d of %d" % [node._queue.size(), rigs.size()])
+	while not node._queue.is_empty():
+		await process_frame
+	var unready := []
+	for path in rigs:
+		var model := (load(path) as PackedScene).instantiate()
+		for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+			if mi.mesh is ArrayMesh and not (mi.mesh.has_meta("bake_safe") or mi.mesh.get_meta("bake_tangents_ok", false)):
+				unready.append("%s/%s" % [path.get_file(), mi.name])
+		model.free()
+	t.check("a spawn's own load of a rig scene finds its meshes readied", unready.is_empty() and BakeWarm._held.size() == rigs.size(), str(unready))
+	EnemyMotion.headless_idle = false
 
 	holder.queue_free()
 	events.queue_free()

@@ -5,13 +5,16 @@ extends Node
 # stage 1 run three first spawns spent 4.5-8 ms each in BakeLook.dress, almost all of it in
 # tangent_safe; gate/perf-dress-35d7d63c/). Each kit's static _parts() is the mesh set every one
 # of its spawns shares, so the copies tangent_safe hangs off those meshes are the ones dress
-# finds later. Materials are left to dress: a twin depends on how the spawn uses its surfaces.
+# finds later. On screen a rigged kit (SpecialRig.seat) draws its GLB's own scene instead, so
+# that scene is held, as hero_assets holds the Warden scenes, and its meshes readied the same way.
+# Materials are left to dress: a twin depends on how the spawn uses its surfaces.
 # A bot run that builds stages whole skips it, like fleet._warm_scripts, so frame costs stay as
 # they were where seeds must replay.
 
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 # The world's kits whose GLB bodies carry the bake (assets/models/world_one/enemy_*.glb).
 const WORLD_KITS := {
@@ -29,8 +32,17 @@ const WORLD_KITS := {
 		preload("res://src/combat/miniboss.gd"), preload("res://src/combat/vault.gd"),
 	],
 }
+# The GLB scenes the world's rigged kits seat on screen (foreman, dispatcher, splitter and its pieces).
+const WORLD_RIGS := {
+	1: [
+		"res://assets/models/world_one/enemy_foreman.glb", "res://assets/models/world_one/enemy_dispatcher.glb",
+		"res://assets/models/world_one/enemy_splitter.glb", "res://assets/models/world_one/enemy_splitter_piece.glb",
+	],
+}
 
 static var _warm := {}
+# Rig scenes held for the session, so every spawn's load() returns the scene whose meshes were readied.
+static var _held := {}
 
 var ctx
 var _queue: Array = []
@@ -49,9 +61,10 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 		return
 	for row in ctx.stages.DEFS:
 		if row["stage"] == stage:
-			for kit in WORLD_KITS.get(int(row.get("world", 0)), []):
-				if not _warm.has(kit) and not _queue.has(kit):
-					_queue.append(kit)
+			var world := int(row.get("world", 0))
+			for item in WORLD_KITS.get(world, []) + (WORLD_RIGS.get(world, []) if EnemyMotion.active() else []):
+				if not _warm.has(item) and not _queue.has(item):
+					_queue.append(item)
 			return
 
 
@@ -60,14 +73,24 @@ func _process(_delta: float) -> void:
 		warm(_queue.pop_front())
 
 
-# The ramp every shaded twin draws, then one kit's shared meshes with their tangent-safe copies.
-static func warm(kit: Script) -> void:
+# The ramp every shaded twin draws, then one kit's shared meshes (a script's _parts(), or a
+# rig scene's own meshes) with their tangent-safe copies.
+static func warm(item) -> void:
 	BakeLook.ramp()
-	if _warm.has(kit):
+	if _warm.has(item):
 		return
-	_warm[kit] = true
-	for mesh in meshes(kit.call("_parts")):
-		BakeLook.tangent_safe(mesh)
+	_warm[item] = true
+	if item is Script:
+		for mesh in meshes(item.call("_parts")):
+			BakeLook.tangent_safe(mesh)
+	elif ResourceLoader.exists(item):
+		var scene := load(item) as PackedScene
+		_held[item] = scene
+		var model := scene.instantiate()
+		for view: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+			if view.mesh != null:
+				BakeLook.tangent_safe(view.mesh)
+		model.free()
 
 
 # Every Mesh in a kit's parts, however the kit shapes them (a list of rows or a dictionary).
