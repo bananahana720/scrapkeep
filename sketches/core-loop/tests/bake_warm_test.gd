@@ -2,8 +2,9 @@ extends SceneTree
 
 # Rule (perf lane F): after a world 1 stage entry, bake_warm.gd readies each world 1 kit's shared
 # meshes one kit a frame, so a kind's first spawn finds BakeLook.tangent_safe's copy already made
-# instead of rebuilding tangents mid-fight. The copies are the ones dress uses later, and a bot run
-# that builds stages whole warms nothing. Fixture: the warm node on a bare event bus; it runs under
+# instead of rebuilding tangents mid-fight, and draws each kit dressed out of sight for one frame so
+# its surface pipelines compile then. The copies are the ones dress uses later, and a bot run that
+# builds stages whole warms nothing. Fixture: the warm node on a bare event bus; it runs under
 # the headless (dummy) renderer like every test here.
 
 const T := preload("res://tests/support/t.gd")
@@ -48,13 +49,29 @@ func _run() -> void:
 	events.stage_entered.emit(1, true)
 	t.check("a retry queues no kit twice", node._queue.size() == kits.size())
 	var sizes := []
+	var shown := []
 	while not node._queue.is_empty() and sizes.size() < 200:
 		await process_frame
 		sizes.append(node._queue.size())
+		shown.append(_shown(node))
 	var steady := true
 	for i in range(1, sizes.size()):
 		steady = steady and sizes[i - 1] - sizes[i] <= 1
 	t.check("one kit a frame at most, until all are warm", steady and sizes.size() >= kits.size() and node._queue.is_empty(), "%d frames for %d kits" % [sizes.size(), kits.size()])
+
+	# Each kit stands dressed, out of sight, for the frame after its warm, then leaves: its surface
+	# pipelines compile then instead of at the first spawn's first frame.
+	await process_frame
+	var lone := true
+	var dressed := 0
+	var painted := 0
+	for row in shown:
+		lone = lone and row.count <= 1
+		dressed += row.dressed
+		painted += row.painted
+	t.check("one warm view at a time, out of sight", lone and shown.all(func(row): return row.count == 0 or row.below), str(shown.slice(0, 3)))
+	t.check("the warm views are dressed as spawns dress them, paint shaded in place", dressed >= kits.size() and painted > 0, "%d dressed views, %d painted" % [dressed, painted])
+	t.check("no warm view stays once the queue is done", _shown(node).count == 0)
 
 	var bare := []
 	var counted := 0
@@ -100,3 +117,21 @@ func _run() -> void:
 	events.queue_free()
 	await process_frame
 	quit(t.verdict())
+
+
+# The warm views on the node now: how many, whether all sit far under the stage, how many of their
+# meshes carry a dressed surface, and how many carry a shaded paint override.
+func _shown(node: Node) -> Dictionary:
+	var views := node.get_children().filter(func(child): return child is Node3D and not child.is_queued_for_deletion())
+	var out := {"count": views.size(), "below": true, "dressed": 0, "painted": 0}
+	for view: Node3D in views:
+		out.below = out.below and view.global_position.y < -1000.0
+		for mi: MeshInstance3D in view.find_children("*", "MeshInstance3D", true, false):
+			for i in mi.mesh.get_surface_count():
+				var mat := mi.get_active_material(i)
+				if mat != null and (mat.get_meta("bake_look", false) or mat.get_meta("bake_smooth", false)):
+					out.dressed += 1
+					if mi.get_surface_override_material(i) == mat:
+						out.painted += 1
+					break
+	return out

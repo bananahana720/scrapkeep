@@ -7,7 +7,9 @@ extends Node
 # of its spawns shares, so the copies tangent_safe hangs off those meshes are the ones dress
 # finds later. On screen a rigged kit (SpecialRig.seat) draws its GLB's own scene instead, so
 # that scene is held, as hero_assets holds the Warden scenes, and its meshes readied the same way.
-# Materials are left to dress: a twin depends on how the spawn uses its surfaces.
+# Each kit is then drawn once, far under the stage, for one frame: its views dressed as a spawn
+# dresses them, so the render pipelines its surfaces need compile then, not at the first spawn's
+# first frame (six surface pipelines at f451 on the 4080; #241 comment 6399644476).
 # A bot run that builds stages whole skips it, like fleet._warm_scripts, so frame costs stay as
 # they were where seeds must replay.
 
@@ -15,6 +17,7 @@ const BakeLook := preload("res://src/presentation/bake_look.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # The world's kits whose GLB bodies carry the bake (assets/models/world_one/enemy_*.glb).
 const WORLD_KITS := {
@@ -44,8 +47,12 @@ static var _warm := {}
 # Rig scenes held for the session, so every spawn's load() returns the scene whose meshes were readied.
 static var _held := {}
 
+# Far under every stage, so the one frame a warmed kit stands there is never seen.
+const OUT_OF_SIGHT := Vector3(0.0, -10000.0, 0.0)
+
 var ctx
 var _queue: Array = []
+var _shown: Node3D
 
 
 static func hook(ctx_ref) -> void:
@@ -69,8 +76,17 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 
 
 func _process(_delta: float) -> void:
+	if _shown != null:
+		_shown.queue_free()
+		_shown = null
 	if not _queue.is_empty():
-		warm(_queue.pop_front())
+		var item = _queue.pop_front()
+		warm(item)
+		_shown = view(item)
+		if _shown != null:
+			_shown.position = OUT_OF_SIGHT
+			add_child(_shown)
+			BakeLook.dress(_shown, _shown.get_meta("owned", []))
 
 
 # The ramp every shaded twin draws, then one kit's shared meshes (a script's _parts(), or a
@@ -87,10 +103,48 @@ static func warm(item) -> void:
 		var scene := load(item) as PackedScene
 		_held[item] = scene
 		var model := scene.instantiate()
-		for view: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
-			if view.mesh != null:
-				BakeLook.tangent_safe(view.mesh)
+		for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+			if mi.mesh != null:
+				BakeLook.tangent_safe(mi.mesh)
 		model.free()
+
+
+# A kit as a spawn draws it, undressed: a script's parts as views, the part a spawn paints
+# (a row's "body" surface) overridden by a paint of its own that dress shades in place, or a
+# rig scene's own instance. The paint is listed in the "owned" meta, as owned_materials lists it.
+static func view(item) -> Node3D:
+	if item is Script:
+		var holder := Node3D.new()
+		var paint := Palette.solid(Palette.RUST)
+		for mesh in meshes(item.call("_parts")):
+			var mi := MeshInstance3D.new()
+			mi.mesh = mesh
+			holder.add_child(mi)
+		for row in _rows(item.call("_parts")):
+			if int(row.get("body", -1)) >= 0:
+				for mi: MeshInstance3D in holder.get_children():
+					if mi.mesh == row["mesh"] and int(row["body"]) < mi.mesh.get_surface_count():
+						mi.set_surface_override_material(int(row["body"]), paint)
+		holder.set_meta("owned", [paint])
+		return holder
+	if _held.has(item):
+		return _held[item].instantiate() as Node3D
+	return null
+
+
+# Every row of a kit's parts that names its mesh.
+static func _rows(parts) -> Array:
+	var out := []
+	if parts is Array:
+		for item in parts:
+			out.append_array(_rows(item))
+	elif parts is Dictionary:
+		if parts.get("mesh") is Mesh:
+			out.append(parts)
+		else:
+			for item in parts.values():
+				out.append_array(_rows(item))
+	return out
 
 
 # Every Mesh in a kit's parts, however the kit shapes them (a list of rows or a dictionary).
