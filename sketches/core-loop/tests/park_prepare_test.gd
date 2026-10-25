@@ -74,6 +74,16 @@ func _run() -> void:
 	t.check("a second engage starts no second build", terrain.park_ground(2) == second_ground)
 	await _wait_ready(terrain, 2)
 	t.check("stage 2 finished before the launch", terrain.is_ready(2))
+	# Built ahead on worker threads, its contraptions follow the ground a device a frame
+	# (world._process), so none of them lands in the entry frame.
+	t.check("stage 2's contraptions start once its ground is built", world._building.has(2) and not world.contraptions.has(2))
+	var ahead: Node = world._building.get(2)
+	var calls := 0
+	while world._building.has(2) and calls < 100:
+		world._process(0.0)
+		calls += 1
+	t.check("stage 2's contraptions add a device a frame, then join the cache",
+		ahead != null and world.contraptions.get(2) == ahead and calls == ahead.map.contraptions.size() + 1, "%d frames" % calls)
 
 	# The launch lands on stage 2: the ground already built is the one used, and no build of
 	# stage 3 starts on the landing.
@@ -98,9 +108,12 @@ func _run() -> void:
 	terrain.use(3)
 	t.check("landing on stage 3 uses the ground built before the launch", terrain.park_ground(3) == third_ground)
 	t.check("the freed stage 2's Contraptions node left the cache", not world.contraptions.has(2))
+	var pending: Node = world._building.get(3)
 	world._add_contraptions()
 	var third: Node = world.contraptions.get(3)
 	t.check("stage 3 has a fresh Contraptions node", third != null and is_instance_valid(third) and third != second and third != first)
+	t.check("landing finishes the contraptions still building ahead", pending != null and third == pending and not third.unbuilt()
+		and not world._building.has(3))
 	events.warden_engaged.emit(3)
 	t.check("engaging on the table's last stage asks for no stage past it", terrain.range_errors.is_empty(), str(terrain.range_errors.keys()))
 
@@ -136,6 +149,7 @@ func _check_tick_builds(holder: Node3D) -> void:
 	t.check("ticks: prepare(2) builds stage 2's ground on the spot", ground != null and ground.is_ready())
 	t.check("ticks: prepare(2) places stage 2's rows on the spot", rows != null and rows.is_ready(), str(rows))
 	t.check("ticks: prepare(2) attaches stage 2's scatter on the spot", scatter2 != null and scatter2.is_ready())
+	t.check("ticks: stage 2 is not built threaded, so its contraptions wait for the entry", not ticked.built_threaded(2))
 	SimClock.ticks = false
 	await process_frame
 	parent.queue_free()

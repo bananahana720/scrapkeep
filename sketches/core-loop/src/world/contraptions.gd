@@ -114,6 +114,8 @@ var _hook_mat: Material
 var _steam_mat: Material
 var _cache_rules
 var _puff_rng := RandomNumberGenerator.new()
+# Specs begin() took that are not built yet.
+var _unbuilt: Array = []
 
 
 func _init() -> void:
@@ -127,6 +129,14 @@ static func cable_hang(end_y: float, ground_y: float) -> float:
 
 
 func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void:
+	begin(map_ref, ground_ref, cruise_speed, g)
+	finish()
+
+
+# The same build a piece at a time, so a park stage built ahead adds its devices over frames
+# (world.gd): begin() takes the specs, build_next() builds one, finish() builds the rest in
+# order and resets. The result is setup()'s.
+func begin(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void:
 	map = map_ref
 	ground = ground_ref
 	cruise = cruise_speed
@@ -139,26 +149,41 @@ func setup(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void
 	_ring_mat = Palette.solid(Palette.AMBER, 0.8)
 	_hook_mat = Palette.solid(Palette.AMBER, 1.2)
 	_steam_mat = Palette.unshaded(Color(Palette.SAND, 0.55))
-	for spec in map.contraptions:
-		match spec["kind"]:
-			"barge":
-				barges.append(_build_barge(spec))
-			"lift":
-				lifts.append(_build_lift(spec))
-			"launcher":
-				launchers.append(_build_launcher(spec))
-			"cable":
-				cables.append(_build_cable(spec))
-			"valve":
-				valves.append(_build_valve(spec))
-			"cracked_wall":
-				walls.append(_build_wall(spec))
-			"thermal":
-				thermals.append(_build_thermal(spec))
-			"cinder":
-				cinders.append(_build_cinder(spec))
-			"glaze":
-				glazes.append(_build_glaze(spec))
+	_unbuilt = map.contraptions.duplicate()
+
+
+func unbuilt() -> bool:
+	return not _unbuilt.is_empty()
+
+
+func build_next() -> void:
+	if _unbuilt.is_empty():
+		return
+	var spec: Dictionary = _unbuilt.pop_front()
+	match spec["kind"]:
+		"barge":
+			barges.append(_build_barge(spec))
+		"lift":
+			lifts.append(_build_lift(spec))
+		"launcher":
+			launchers.append(_build_launcher(spec))
+		"cable":
+			cables.append(_build_cable(spec))
+		"valve":
+			valves.append(_build_valve(spec))
+		"cracked_wall":
+			walls.append(_build_wall(spec))
+		"thermal":
+			thermals.append(_build_thermal(spec))
+		"cinder":
+			cinders.append(_build_cinder(spec))
+		"glaze":
+			glazes.append(_build_glaze(spec))
+
+
+func finish() -> void:
+	while unbuilt():
+		build_next()
 	_setup_caches()
 	reset()
 

@@ -53,6 +53,13 @@ var returned := false
 var rim_cue_enabled := true
 var pings := 0
 
+# The shell's sphere, its glow and the rim's quad are the same for every shot and never written
+# after, so they are made once, not per shot inside the lobber's physics step. The rim's material
+# pulses per shot, so each shot keeps its own.
+static var _shell_mesh: SphereMesh
+static var _shell_material: StandardMaterial3D
+static var _rim_quad: QuadMesh
+
 var _age := 0.0
 var _rim: MeshInstance3D
 var _rim_material: StandardMaterial3D
@@ -80,12 +87,14 @@ func setup(target_ref, terrain_ref, root_ref: Node, live_ref: Callable, from: Ve
 	launch = lob_velocity(from, to, seconds)
 	add_to_group("enemy_shot")
 	position = from
+	if _shell_mesh == null:
+		_shell_mesh = SphereMesh.new()
+		_shell_mesh.radius = 0.75
+		_shell_mesh.height = 1.5
+		_shell_material = Palette.solid(Palette.HAZARD, 3.0)
 	var mesh := MeshInstance3D.new()
-	var sphere := SphereMesh.new()
-	sphere.radius = 0.75
-	sphere.height = 1.5
-	mesh.mesh = sphere
-	mesh.material_override = Palette.solid(Palette.HAZARD, 3.0)
+	mesh.mesh = _shell_mesh
+	mesh.material_override = _shell_material
 	add_child(mesh)
 	_build_rim()
 	ring = Telegraph.ring(root_ref, terrain_ref, Threat.Type.PROJECTILE, to, BLAST_RADIUS)
@@ -179,9 +188,10 @@ func _build_rim() -> void:
 	_rim_material.albedo_texture = Icons.shape("ring")
 	_rim = MeshInstance3D.new()
 	_rim.name = "BatRim"
-	var quad := QuadMesh.new()
-	quad.size = Vector2.ONE * RIM_SIZE
-	_rim.mesh = quad
+	if _rim_quad == null:
+		_rim_quad = QuadMesh.new()
+		_rim_quad.size = Vector2.ONE * RIM_SIZE
+	_rim.mesh = _rim_quad
 	_rim.material_override = _rim_material
 	_rim.visible = false
 	add_child(_rim)
