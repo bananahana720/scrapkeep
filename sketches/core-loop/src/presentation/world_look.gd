@@ -200,13 +200,16 @@ static func time_row(stage: int) -> Dictionary:
 
 
 # The fog {density, color} of a park map's standing weather row (the first with trigger "always" in
-# World's park json, read-only); the Spillway's fog when it has none.
-static func park_fog(map: String) -> Dictionary:
+# World's park json, read-only); the Spillway's fog when it has none. park_file is the stage's loaded park
+# file (ParkMap.park) when the caller has it; reading the file again took 33 ms of the sinkhole's entry.
+static func park_fog(map: String, park_file := {}) -> Dictionary:
 	if _park_fog.has(map):
 		return _park_fog[map]
 	var fog: Dictionary = ROWS[1].fog
-	var file := FileAccess.open(PARK_DIR + map + ".json", FileAccess.READ)
-	var data = JSON.parse_string(file.get_as_text()) if file != null else null
+	var data = park_file
+	if park_file.is_empty():
+		var file := FileAccess.open(PARK_DIR + map + ".json", FileAccess.READ)
+		data = JSON.parse_string(file.get_as_text()) if file != null else null
 	for weather in (data.get("weather_rows", []) if data is Dictionary else []):
 		if weather.get("trigger", {}).get("on") == "always" and weather.get("fog", {}).has("density"):
 			fog = {"density": float(weather.fog.density), "color": Color(String(weather.fog.color))}
@@ -218,13 +221,13 @@ static func park_fog(map: String) -> Dictionary:
 # The world row with the stage's time of day laid over it: sun, and the ambient colour and energy.
 # A dome world (underground) has no daylight to vary, so its energy and sun energy stay at the
 # world row; the time of day moves only the sun's direction and colour and the ambient colour there.
-static func stage_look(stage: int, world: int, map := "") -> Dictionary:
+static func stage_look(stage: int, world: int, map := "", park_file := {}) -> Dictionary:
 	var base := row(world)
 	var look := base.duplicate()
 	var park: Dictionary = PARK_ROWS.get(world, {}) if map.begins_with("park_") else {}
 	if not park.is_empty():
 		look.merge(park, true)
-		look["fog"] = park_fog(map)
+		look["fog"] = park_fog(map, park_file)
 		base = look.duplicate()
 	look.merge(time_row(stage), true)
 	if not time_id(stage).is_empty():
@@ -334,7 +337,8 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	var root: Node3D = terrain.geometry_root(stage)
 	var world: int = ctx.stages.world_of(stage)
 	var GraphicsPreset := load("res://src/presentation/graphics_preset.gd")
-	var look := stage_look(stage, world, String(ctx.stages.of(stage).get("map", "")))
+	var loaded = terrain.map_for(stage)
+	var look := stage_look(stage, world, String(ctx.stages.of(stage).get("map", "")), loaded.park if loaded != null and "park" in loaded else {})
 	GraphicsPreset.enter_world(root, terrain.environment, look)
 	var game = ctx.root
 	if game != null and game.get("world") != null and game.world.view != null:

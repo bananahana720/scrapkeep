@@ -26,6 +26,9 @@ class Terrain extends RefCounted:
 	func geometry_root(_stage: int) -> Node3D:
 		return root
 
+	func map_for(_stage: int) -> RefCounted:
+		return null
+
 
 class StageCtx extends RefCounted:
 	var terrain
