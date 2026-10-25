@@ -333,12 +333,38 @@ func _anchor_reads() -> void:
 	updater.free()
 
 
+# The cloud deck image is baked on a worker started by hook(); its bytes, mipmaps included,
+# match the main-thread loop it replaced.
+func _cloud_deck() -> void:
+	var noise := FastNoiseLite.new()
+	noise.seed = 7_310_032
+	noise.frequency = 0.012
+	noise.fractal_octaves = 3
+	var want := noise.get_seamless_image(256, 256)
+	want.convert(Image.FORMAT_RGB8)
+	var cream: Color = Scenery.LOOK["cloud"]
+	var shade := cream.lerp(Scenery.LOOK["fill"], 0.6)
+	for y in want.get_height():
+		for x in want.get_width():
+			want.set_pixel(x, y, shade.lerp(cream, smoothstep(0.3, 0.7, want.get_pixel(x, y).r)))
+	want.generate_mipmaps()
+	Scenery._cloud = null
+	Scenery.hook(FakeCtx.new())
+	_t.check("cloud: hook starts the deck bake on a worker", Scenery._cloud_task >= 0)
+	var got: Image = Scenery._cloud_material().albedo_texture.get_image()
+	_t.check("cloud: the worker image equals the old main-thread loop byte for byte",
+		got.get_format() == want.get_format() and got.has_mipmaps() and got.get_data() == want.get_data(),
+		"%d bytes" % got.get_data().size())
+	_t.check("cloud: the material is cached and the task claimed", Scenery._cloud_material() == Scenery._cloud and Scenery._cloud_task == -1)
+
+
 func _run() -> void:
 	_zone("highdraft", Highdraft)
 	_zone("crown", Crown)
 	_fallback()
 	_hook_and_environment()
 	_anchor_reads()
+	_cloud_deck()
 	await _game_integration()
 	var code := _t.verdict()
 	quit(code)
