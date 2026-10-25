@@ -4342,10 +4342,13 @@ func _around_walls(ball: Vector3, heading: Vector3) -> Vector3:
 			_wall_side = signf(turn)
 			_wall_dir = dir
 			return probe * heading.length()
-	# Every turn on the held side is walled: keep pressing the widest turn on that side, not back
-	# across (a corner there is left to the stuck detour, which drops the side).
+	# Every turn on the held side is walled: the side is dropped and the whole fan tried again, so a
+	# ball boxed in on that side steers the other way or straight on as before the side was held,
+	# not 1.5 rad off its goal (random seed 2869 on the park table stalled riding the pit Warden
+	# while that turn was pressed).
 	if _wall_side != 0.0:
-		return dir.rotated(Vector3.UP, WALL_TURNS[-2] * _wall_side) * heading.length()
+		_wall_side = 0.0
+		return _around_walls(ball, heading)
 	return heading
 
 
