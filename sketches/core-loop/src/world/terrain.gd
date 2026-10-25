@@ -554,11 +554,15 @@ func prepare_perches() -> void:
 	var discs = _overlay_discs(m)
 	if discs == null:
 		return
+	# Nothing here waits: a read still running (the bare one, or a patch for overlays since changed, as a
+	# filling collapse changes its surface every step) is asked about again on a later step.
+	var ahead: Dictionary = _perch_ahead[i]
+	if not _read_done(ahead):
+		return
 	var sig := _overlay_sig(m)
-	if _perch_patch.has(i) and _perch_patch[i].sig == sig:
+	if _perch_patch.has(i) and (_perch_patch[i].sig == sig or not _read_done(_perch_patch[i])):
 		return
 	_take_perch_patch(i)
-	var ahead: Dictionary = _perch_ahead[i]
 	_settle_perch_read(ahead)
 	if ahead.out.is_empty():
 		return
@@ -584,6 +588,11 @@ static func _queue_perch_patch(park: Dictionary, snap: RefCounted, bare_found: A
 		snap.copy_roofs()
 		out.merge({"tops": PerchPoints.derive(park, ground), "ledges": PerchPoints.patched_ledges(park, ground, bare_found, discs)}),
 		true, "perch patch")
+
+
+# Whether a worker perch read has finished (or was never queued), so settling it does not wait.
+static func _read_done(read: Dictionary) -> bool:
+	return not read.has("task") or WorkerThreadPool.is_task_completed(read.task)
 
 
 # Waits on a stage's patched perch read and drops it; the entry ({sig, out}), or {} when none was queued.

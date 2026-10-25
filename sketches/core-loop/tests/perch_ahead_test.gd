@@ -136,12 +136,39 @@ func _check_prepared(holder: Node3D) -> void:
 	var near := Vector3(mid.x, 0.0, mid.z)
 	var pick: Vector3 = terrain.perch_near(near, 3)
 	var taken: Dictionary = terrain._perches.get(1, {})
-	_t.check("perch_near took the worker's read", not terrain._perch_patch.has(1) and taken.has("ledges"))
+	_t.check("perch_near took the worker's read", not terrain._perch_patch.has(1) and is_same(taken.get("ledges"), queued.out.get("ledges")))
 	for key in ["tops", "ledges"]:
 		_t.check("the prepared %s are the main thread's with the overlay down" % key, str(taken.get(key)) == str(main[key]),
 			"%d / %d" % [(taken.get(key, []) as Array).size(), (main[key] as Array).size()])
 	_t.check("the overlay changed the ledges (the check bites)", str(main.ledges) != str(PerchPoints.thin(found)))
 	_t.eq("the pick is the main thread's pick", pick, PerchPoints.pick(main.tops, near, terrain.height, taken.blockers, 3, main.ledges))
+
+	# A filling collapse lays a new surface every step: no ask waits on the read still running, a finished read
+	# for the old surface gives way to one for the new, and one made for a surface since replaced is not used.
+	var fill = Terrain.new(TABLE)
+	fill.build(holder)
+	fill.stage = 2
+	fill.geometry_root(2)
+	var fm = _overlay_map(fill, 1)
+	fm.profiles["test_slab_after"] = {"site": site, "surface": EventGround.span_surface(site, 0.0)}
+	fill.overlays.append("test_slab_after")
+	Terrain._settle_perch_read(fill._perch_ahead[1])
+	fill.prepare_perches()
+	var first = fill._perch_patch.get(1)
+	fm.profiles["test_slab_after"] = {"site": site, "surface": EventGround.span_surface(site, 0.0)}
+	if not Terrain._read_done(first):
+		fill.prepare_perches()
+		_t.check("an ask while the old read runs keeps it and queues nothing", fill._perch_patch.get(1) == first and first.has("task"))
+	while not Terrain._read_done(first):
+		OS.delay_msec(5)
+	fill.prepare_perches()
+	var second = fill._perch_patch.get(1)
+	_t.check("a finished read for the old surface gives way to one for the new", second != null and second != first)
+	fm.profiles["test_slab_after"] = {"site": site, "surface": EventGround.span_surface(site, 0.0)}
+	fill.perch_near(near, 3)
+	var used: Dictionary = fill._perches.get(1, {})
+	_t.check("a read for a surface since replaced is not used, and the main thread's read is the same",
+		not is_same(used.get("ledges"), second.out.get("ledges")) and str(used.get("ledges")) == str(main.ledges))
 
 	# The overlays change between the ask and the spawn: the read made for the old list is dropped.
 	var later = Terrain.new(TABLE)
