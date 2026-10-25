@@ -122,6 +122,20 @@ func _lobber() -> void:
 	shell.setup(ball, _game.ctx.terrain, _game.ctx.root, Callable(_game.ctx.flow, "in_play"), from, to, 1.9)
 	shell.set_physics_process(false)
 	shell.rim_cue_enabled = _off != "lobber"
+	# A second shot shares the shell's sphere, glow and rim quad but keeps its own rim
+	# material, because the rim pulses per shot.
+	var twin := Projectile.new()
+	_game.ctx.root.add_child(twin)
+	twin.setup(ball, _game.ctx.terrain, _game.ctx.root, Callable(_game.ctx.flow, "in_play"), from, to, 1.9)
+	twin.set_physics_process(false)
+	var body_a: MeshInstance3D = shell.get_child(0)
+	var body_b: MeshInstance3D = twin.get_child(0)
+	_t.check("BC-2 lobber shots share one shell mesh, glow and rim quad",
+		body_a.mesh == body_b.mesh and body_a.material_override == body_b.material_override and shell._rim.mesh == twin._rim.mesh,
+		"mesh %s, glow %s, rim quad %s" % [body_a.mesh == body_b.mesh, body_a.material_override == body_b.material_override, shell._rim.mesh == twin._rim.mesh])
+	_t.check("BC-2 each lobber shot keeps its own rim material", shell._rim.material_override != twin._rim.material_override,
+		"rim materials %s / %s" % [shell._rim.material_override, twin._rim.material_override])
+	twin.free()
 	# Same shell, two balls: 10 m off the landing point at 10 m/s (1.0 s, inside the 1.9 s
 	# flight) and 40 m off at 10 m/s (4.0 s, too late).
 	ball.heading = Vector3(10.0, 0.0, 0.0)
