@@ -25,6 +25,14 @@ const BUILD_FRAMES_MAX := 6000
 var t := T.new("park_prepare_test")
 
 
+# The one flow answer world.gd's build-ahead reads: whether the current stage is calm.
+class QuietFlow extends Node:
+	var quiet := false
+
+	func calm() -> bool:
+		return quiet
+
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -42,6 +50,9 @@ func _run() -> void:
 	ctx.events = events
 	ctx.run = RunState.new(events)
 	ctx.tuning = Tuning.new()
+	var flow := QuietFlow.new()
+	holder.add_child(flow)
+	ctx.flow = flow
 	var terrain = Terrain.new(TABLE)
 	SimClock.ticks = false
 	terrain.build(holder)
@@ -78,6 +89,11 @@ func _run() -> void:
 	# (world._process), so none of them lands in the entry frame.
 	t.check("stage 2's contraptions start once its ground is built", world._building.has(2) and not world.contraptions.has(2))
 	var ahead: Node = world._building.get(2)
+	for n in 5:
+		world._process(0.0)
+	t.check("they wait while the stage is not calm (the Warden fight)", ahead != null
+		and ahead._unbuilt.size() == ahead.map.contraptions.size())
+	flow.quiet = true
 	var calls := 0
 	while world._building.has(2) and calls < 100:
 		world._process(0.0)

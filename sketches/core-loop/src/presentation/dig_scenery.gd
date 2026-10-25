@@ -57,7 +57,8 @@ static func hook(ctx) -> void:
 
 
 # A Dig park stage built ahead on worker threads takes its park pass a step a frame from when
-# its ground is done (ParkBuild), parked out of sight; entry finishes whatever is left. A bot run
+# its ground is done (ParkBuild), parked out of sight, while the current stage is calm (flow.calm(),
+# as world.gd's contraptions); entry finishes whatever is left. A bot run
 # that builds stages whole, or a stage on show, keeps the entry build.
 static func _on_stage_built(stage: int, ctx) -> void:
 	if not ctx.terrain.built_threaded(stage):
@@ -74,6 +75,7 @@ static func _on_stage_built(stage: int, ctx) -> void:
 		var step := ParkBuild.new()
 		step.name = "ParkBuild"
 		step.builder = builder
+		step.flow = ctx.flow
 		scenery.add_child(step)
 		return
 
@@ -81,8 +83,12 @@ static func _on_stage_built(stage: int, ctx) -> void:
 # Steps a park pass begun ahead, one step a frame, and leaves when it is done.
 class ParkBuild extends Node:
 	var builder
+	# Steps wait while this flow is not calm; without one (a test) they run every frame.
+	var flow
 
 	func _process(_delta: float) -> void:
+		if flow != null and not flow.calm():
+			return
 		if not builder._park_step():
 			finish()
 
