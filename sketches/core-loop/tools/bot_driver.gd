@@ -130,6 +130,10 @@ const DETOUR_SECONDS := 1.4
 const WALL_REACH := 4.0
 const WALL_TILT := 0.5
 const WALL_TURNS := [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5]
+# Once a wall turns the ball to one side it keeps that side until the straight way clears: picking
+# the first clear turn every tick flipped between +1.5 and -1.5 where the 1.0 ray grazed a long wall
+# square to the goal, and the ball dithered on the spot (random seed 2867 on the eye_fin_east foot
+# at (98, 103, 137) on the park table, 160 s to the stall cap).
 const BOOST_GAP := 1.6
 const CARD_PRESS_GAP := 0.5
 # Shift is the pilot's go verb, pressed as the keyboard presses it: Sable boosts on the press,
@@ -494,6 +498,7 @@ var _recover_climb := false
 var _slow_time := 0.0
 var _detour_time := 0.0
 var _detour := Vector3.ZERO
+var _wall_side := 0.0
 var _boost_clock := 0.0
 var _card_press_tick := -1000000
 var _shift_left := 0.0
@@ -997,6 +1002,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_recoveries = 0
 	_slow_time = 0.0
 	_detour_time = 0.0
+	_wall_side = 0.0
 	_waypoints = []
 	_find_route = []
 	_find_route_for = ""
@@ -4319,12 +4325,18 @@ func _around_walls(ball: Vector3, heading: Vector3) -> Vector3:
 	var dir := heading.normalized()
 	var from := ball + Vector3.UP * 0.2
 	for turn in WALL_TURNS:
+		if turn * _wall_side < 0.0:
+			continue
 		var probe := dir.rotated(Vector3.UP, turn)
 		var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + probe * WALL_REACH, 1))
 		if hit.is_empty() or absf((hit["normal"] as Vector3).y) >= WALL_TILT:
 			if turn != 0.0:
 				_count("wall_turns", 1.0 / Engine.physics_ticks_per_second)
+			_wall_side = signf(turn)
 			return probe * heading.length()
+	# Every turn on the held side is walled: go along the wall on that side, not back across.
+	if _wall_side != 0.0:
+		return dir.rotated(Vector3.UP, WALL_TURNS[-2] * _wall_side) * heading.length()
 	return heading
 
 
