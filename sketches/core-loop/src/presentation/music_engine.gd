@@ -108,6 +108,8 @@ const BAND_VOICE_CAP := 38
 const OPEN_GAINS := [1.0, 1.0, 0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # Brindle's phase 3 runs at 150.
 const PHASE3_STEP := 4410
+# The held dominant's voicings (_held_chord): A7sus4, and A7b9sus4 in the build's last beat.
+const HELD_VOICINGS := [[55, 57, 62, 64], [55, 57, 62, 64, 58]]
 # The sidechain pump: the pumped layers dip under each kick and breathe back.
 const PUMP_ATTACK := 400
 const PUMPED := [KEYS, SUB, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER]
@@ -516,12 +518,16 @@ static func prepare_rest() -> void:
 	_prepare_wobble(Harmony.BRINDLE + Harmony.VICTORY, [0, 2], [Harmony.STEP], ["wub"])
 	# A boss fight plays its chords in its section's key (BOSS_SECTIONS, 0 to 2) plus the escalation's
 	# half-step lift, through the break's sinister chords and the dominant mask: every key to 3.
+	# Its pads too: a pad rendered on first use costs 120 to 215 ms in one frame on the cloud.
 	var boss_chords: Array = Harmony.BRINDLE + Harmony.BRINDLE_PHRYGIAN + Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE]
 	for shift in [0, 1, 2, 3]:
+		for held in HELD_VOICINGS:
+			Synth.pad_chord(_shift(held, shift))
 		for chord in boss_chords:
 			if SfxBank.bake_cancel:
 				return
 			var voicing := _shift(chord["voicing"], shift)
+			Synth.pad_chord(voicing)
 			Synth.organ_chord(voicing)
 			Synth.stab_chord(voicing, false)
 			Synth.stab_chord(voicing, true)
@@ -2173,11 +2179,11 @@ func _dominant_mask_live() -> bool:
 func _held_chord() -> Dictionary:
 	var chord := Harmony.DOMINANT.duplicate(true)
 	chord["name"] = "A7sus4"
-	chord["voicing"] = [55, 57, 62, 64]
+	chord["voicing"] = HELD_VOICINGS[0].duplicate()
 	chord["tones"] = [57, 62, 64, 67]
 	if section == "open" or (_build_from >= 0 and clock >= _build_from + _build_len - beat_len()):
 		chord["name"] = "A7b9sus4"
-		chord["voicing"].append(58)
+		chord["voicing"] = HELD_VOICINGS[1].duplicate()
 		chord["tones"].append(58)
 	return chord
 
