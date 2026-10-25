@@ -200,7 +200,9 @@ func _on_door_hit(hit: Dictionary) -> void:
 	if not is_instance_valid(enemy) or result.is_empty():
 		return
 	var dealt := float(result.get("dealt", 0.0))
-	if dealt <= 0.0:
+	# A target no player hit hurts (a crew fitter) gets neither bonus. A plate that takes a hit whole is not one:
+	# Rounded Up's top-up still lands through it (coordinator ruling, 24 Oct: no nerf in a small lane).
+	if dealt <= 0.0 or (enemy.has_method("takes_no_damage") and enemy.takes_no_damage()):
 		return
 	if has("noticed") and String(hit.get("kind", "")) != "synergy" and _is_crit(enemy, result) \
 			and _splinter_budget >= 1.0:

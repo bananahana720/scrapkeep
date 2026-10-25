@@ -117,9 +117,9 @@ var parameters := {}
 var parameter_released := false
 var parameter_layer_log: Array = []
 var _parameter_danger_floor := 0.0
-# The band engine's boss floor (music_engine PRESSURE_FLOOR, brindle:1..3), set by audio.gd
-# while a boss track plays: the melody stem stays up through the fight, not only under threat.
-var boss_floor := 0.0
+# The band engine's fight floor (music_engine PRESSURE_FLOOR: warden, miniboss, brindle:1..3),
+# set by audio.gd while a fight plays: the melody stem stays up through it, not only under threat.
+var fight_floor := 0.0
 var threat := 0
 var in_bay := false
 var built := false
@@ -168,11 +168,10 @@ func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 	stems = manifest["stems"]
 	level = db_to_linear(float(manifest.get("level_db", 0.0)))
 	breath = String(manifest.get("breath_default", "hard"))
-	var dir := path.get_base_dir()
 	for id in clips:
 		var clip: Dictionary = clips[id]
 		for stem in stems:
-			var file := dir.path_join(String(clip["files"][stem]))
+			var file := MusicRows.stem_file(path, String(clip["files"][stem]))
 			if not FileAccess.file_exists(file):
 				missing = file
 				_report()
@@ -305,11 +304,11 @@ func commit_parameters(at: int, values: Dictionary, released: bool, lift: bool, 
 	_add({"at": maxi(at, clock), "type": "parameters", "values": values.duplicate(), "released": released, "lift": lift, "reason": reason, "timing": timing.duplicate()})
 
 
-# A change of boss floor reopens or settles the live melody stem over STOP_RAMP.
-func set_boss_floor(value: float) -> void:
-	if value == boss_floor:
+# A change of fight floor reopens or settles the live melody stem over STOP_RAMP.
+func set_fight_floor(value: float) -> void:
+	if value == fight_floor:
 		return
-	boss_floor = value
+	fight_floor = value
 	if section != "":
 		_retarget(STOP_RAMP)
 
@@ -341,7 +340,7 @@ func parameter_gain(stem: String) -> float:
 		return 1.0
 	if parameter_released or (parameters.has("armour") and float(parameters.armour) < 0.3):
 		return 0.0
-	var open := maxf(maxf(pressure + (ULTIMATE_STEP if ultimate_lift else 0.0), maxf(_parameter_danger_floor, boss_floor)), float(parameters.get("approach", 0.0)))
+	var open := maxf(maxf(pressure + (ULTIMATE_STEP if ultimate_lift else 0.0), maxf(_parameter_danger_floor, fight_floor)), float(parameters.get("approach", 0.0)))
 	return clampf(maxf(open, float(parameters.get("chain", 0.0))), 0.0, 1.0)
 
 

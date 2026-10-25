@@ -74,6 +74,7 @@ const POLICIES := ["skipper", "completionist", "random", "camper", "traversal", 
 const GATE_HUNT := 140.0
 const PROFILES := {"brawler": "completionist", "camper": "camper", "skipper": "skipper"}
 const CAMP_RANGE := 30.0
+const CAMP_NEAR := 12.0
 const TRAVERSE_REACTION := 0.15
 const TRAVERSE_PRESS_GAP := 0.4
 const TRAVERSE_REACHED := 12.0
@@ -512,6 +513,7 @@ var _committed := false
 var _planned := false
 var _note := {}
 var _goal := ""
+var _camp_backing := false
 var _activity := ""
 var _activity_time := {}
 var _activity_skip := {}
@@ -1516,7 +1518,9 @@ func _gate_presses() -> void:
 
 
 # Holds the gun on the Warden from CAMP_RANGE: rolls up until in range, then stops
-# steering and holds the brake on the ground.
+# steering and holds the brake on the ground. Thrown or dodged inside CAMP_NEAR (on stage 3 a
+# lift dropped camper seed 2 on the hive's roof, where it rode the hoist and stomped a chunk off),
+# it rolls back out to CAMP_RANGE first: the camper never fights from contact range.
 func _camper(target: Node3D, delta: float) -> void:
 	_welcome_ring_at = Vector3.INF
 	if target == null or not is_instance_valid(target):
@@ -1524,7 +1528,16 @@ func _camper(target: Node3D, delta: float) -> void:
 		_act(game.flow.beacon.global_position, _nearest_enemy(), delta)
 		return
 	var ball: Vector3 = game.player.ball_position()
-	var in_range: bool = _flat(ball, target.global_position) <= CAMP_RANGE
+	var flat: float = _flat(ball, target.global_position)
+	var in_range: bool = flat <= CAMP_RANGE
+	if in_range and (flat < CAMP_NEAR or (_camp_backing and flat < CAMP_RANGE * 0.8)):
+		_camp_backing = true
+		_goal = "camp back"
+		var out := Vector3(ball.x - target.global_position.x, 0.0, ball.z - target.global_position.z)
+		out = out.normalized() if out.length() > 0.1 else Vector3.RIGHT
+		_act(ball + out * CAMP_RANGE, target, delta, target)
+		return
+	_camp_backing = false
 	_goal = "camp"
 	_act(ball if in_range else target.global_position, target, delta, target)
 	if in_range and game.player.state.grounded:
@@ -3670,7 +3683,7 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 			if not _evaded.has(h.get_instance_id()):
 				_evaded[h.get_instance_id()] = true
 				_count("evasions")
-		var escape := _escape(threats, steer)
+		var escape := _escape(threats, steer, fight if policy == "camper" else null)
 		_plant_state = "idle" if _plant_state == "seek" else _plant_state
 		_specials(fight, true)
 		_drive(escape, aim, delta)
@@ -3762,11 +3775,18 @@ func _hazards() -> Array:
 
 
 # The nearest spot outside every threat, preferring the ball's line and the goal.
-func _escape(threats: Array, steer: Vector3) -> Vector3:
+# away: the camper's Warden. A camper holding its range steers at its own ball, so with no goal and no
+# line every direction scored 0 and the first (+z) won; on the stage 3 hive that heading ran the ball
+# under the collar, where its contacts cracked and shattered the core (camper seed 5 broke the hive at
+# fcddfe10). Inside CAMP_RANGE its escape scores only the heading away from the Warden, so a dodge never closes.
+func _escape(threats: Array, steer: Vector3, away: Node3D = null) -> Vector3:
 	var ball: Vector3 = game.player.ball_position()
 	var v: Vector3 = game.player.planar_velocity()
 	var line := Vector3(v.x, 0.0, v.z).normalized() if v.length() > 1.0 else Vector3.ZERO
 	var goal := Vector3(steer.x - ball.x, 0.0, steer.z - ball.z).normalized()
+	if away != null and is_instance_valid(away) and _flat(ball, away.global_position) <= CAMP_RANGE:
+		goal = Vector3(ball.x - away.global_position.x, 0.0, ball.z - away.global_position.z).normalized()
+		line = Vector3.ZERO
 	for reach in ESCAPE_REACH:
 		var best := Vector3.INF
 		var best_score := -INF

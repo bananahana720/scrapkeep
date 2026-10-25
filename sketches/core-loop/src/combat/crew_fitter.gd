@@ -106,6 +106,12 @@ func knock(direction: Vector3, force: float) -> void:
 	super(direction, force)
 
 
+# Every hit a fitter meets removes nothing (take_damage below), so combat marks it absorbed before the hit is
+# announced and no damage number rises for it.
+func absorbs_hit(_result: Dictionary) -> bool:
+	return true
+
+
 # The player never hurts a fitter: combat's strike and door pass still reach here (so enemy_struck fires and the boss
 # dislodges it), but the amount is ignored and the hit is only seen. Retire (or remove_for_test) is how one leaves.
 func take_damage(_amount: float) -> float:
@@ -118,6 +124,12 @@ func take_damage(_amount: float) -> float:
 # ball through a drone that never dies; the ball bounces and the contact still dislodges it.
 func crushable() -> bool:
 	return false
+
+
+# No player hit hurts a fitter (take_damage above), so build bonuses that answer a hit, such as Rounded Up and Noticed,
+# skip it (maker_bonuses.gd).
+func takes_no_damage() -> bool:
+	return true
 
 
 # Tests only: the swarm's ordinary death (died, then freed), for the uncount and refill cases.

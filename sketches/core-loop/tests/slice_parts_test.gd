@@ -8,6 +8,8 @@ const Synergies := preload("res://src/build/synergies.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
+const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
+const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 
 # The slice table names twelve parts (SliceDefs.PARTS) and every source offers only those:
 # the shop shelf and its reroll, a reward gate, a vault, a fabricator, a cracked cache and an
@@ -72,8 +74,15 @@ func _draw() -> Dictionary:
 	return out
 
 
+# Re-pinned 2026-10-24 (#445, actives on by default): the shelf also sells actives (active_offers.gd),
+# which are not parts, so an offer of a known active is not outside the twelve.
 func _outside(ids: Array) -> Array:
-	return ids.filter(func(id): return not id in SliceDefs.PARTS)
+	return ids.filter(func(id): return not id in SliceDefs.PARTS and not _is_active(id))
+
+
+func _is_active(id) -> bool:
+	var text := String(id)
+	return text.begins_with(ActiveOffers.PREFIX) and ActiveDefs.ROWS.has(text.trim_prefix(ActiveOffers.PREFIX))
 
 
 func _sources() -> void:

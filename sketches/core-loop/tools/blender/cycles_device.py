@@ -6,9 +6,9 @@ device exists and leaves it on the CPU otherwise (cloud containers have no GPU).
 any read_factory_settings or open_mainfile, since both reset the device choice.
 
 SCRAPKEEP_CYCLES picks the cards:
-  auto (default)  every OptiX card in tandem (4080 + 3060: 26.3 s against 32.5 s on the 4080
-                  alone) when the scene fits the smallest card's free memory, else the 4080 alone.
-  all             every OptiX card, without the fit check.
+  auto (default)  both cards when the render has adaptive sampling off and fits the smallest
+                  card's free memory; else the 4080 alone.
+  all             every OptiX card, without the size or fit check.
   <name>          the one card whose name holds it, e.g. 3060. Frame-time captures need an idle
                   4080, so bakes run with SCRAPKEEP_CYCLES=3060 while a capture is on.
   cpu             the CPU, whatever is installed.
@@ -16,9 +16,20 @@ While a 4080 frame-time capture runs, auto runs the 3060 alone (the CPU when the
 bakes keep GPU speed and the 4080 stays idle. A capture is on when SCRAPKEEP_CAPTURE_FILE exists
 or another process holds an exclusive flock on SCRAPKEEP_CAPTURE_LOCK (defaults: capture-active and
 timing.lock in SCRAPKEEP_CAPTURE_DIR, the PC capture lane's gates folder; move it with the wave).
-Any other SCRAPKEEP_CYCLES value overrides that. The check runs once, when use() is called.
+Any other SCRAPKEEP_CYCLES value overrides that.
+Adaptive sampling decides whether tandem pays, not size. PC medians of 3 on warden_swarm.glb, both
+cards against the 4080 alone. With adaptive sampling on (Blender's default), tandem lost at every
+size: by sample-pixels a view, 7.1e8 13.07 s vs 11.36 s (#447), 5.7e9 47.1 vs 43.2 s (#452),
+1.1e10 14.00 vs 12.46 s, 4.5e10 21.23 vs 18.93 s, 9.1e10 46.27 vs 46.68 s (#459), and render-only
+2.8e9 3.45 vs 3.18 s, 1.1e10 13.63 vs 11.87 s (#464). With it off, tandem won render-only: 2.8e9
+13.22 vs 17.19 s, 1.1e10 53.56 vs 67.06 s, and Andrew's bench scene (63 glass and metal monkeys,
+1920x1080, 1024 spp) 27.91 vs 34.95 s (#464). Adaptive on with the 4080 alone is still the fastest
+still (3.18 s against 17.19 s off). SCRAPKEEP_CYCLES_TANDEM_MIN sets a sample-pixel floor under
+tandem (none by default); SCRAPKEEP_CYCLES=all forces tandem.
 The fit check compares free VRAM (nvidia-smi; 12 GiB per card when it can't answer) with
-fit_bytes(): the scene as built when use() runs, plus HEADROOM for Cycles' kernels and buffers.
+fit_bytes(): the scene's triangles and images, plus HEADROOM for Cycles' kernels and buffers.
+use() decides once and arms a render_pre handler that decides again before every Cycles render
+in the process, from the scene as it is then (samples, size, imported meshes, capture state).
 Samples, materials and outputs are the recipe's own; only the device changes.
 """
 import fcntl
@@ -33,13 +44,19 @@ CAPTURE_FILE = os.environ.get("SCRAPKEEP_CAPTURE_FILE", os.path.join(CAPTURE_DIR
 CAPTURE_LOCK = os.environ.get("SCRAPKEEP_CAPTURE_LOCK", os.path.join(CAPTURE_DIR, "timing.lock"))
 CAPTURE_CARD = "3060"
 BIG = "4080"
+TANDEM_MIN = float(os.environ.get("SCRAPKEEP_CYCLES_TANDEM_MIN", "0"))
 GIB = 1 << 30
 HEADROOM = 2 * GIB
 CARD_BYTES = 12 * GIB
 
 
+_warned = set()
+
+
 def warn(text):
-    print("cycles_device: " + text, file=sys.stderr, flush=True)
+    if text not in _warned:
+        _warned.add(text)
+        print("cycles_device: " + text, file=sys.stderr, flush=True)
 
 
 def capture_on():
@@ -59,8 +76,9 @@ def capture_on():
 
 def optix_devices(prefs):
     try:
-        prefs.compute_device_type = "OPTIX"
-        prefs.refresh_devices()
+        if prefs.compute_device_type != "OPTIX" or not any(d.type == "OPTIX" for d in prefs.devices):
+            prefs.compute_device_type = "OPTIX"
+            prefs.refresh_devices()
     except (AttributeError, TypeError, ValueError):
         return []
     return [d for d in prefs.devices if d.type == "OPTIX"]
@@ -96,33 +114,64 @@ def fit_bytes(bpy, scene):
     return total
 
 
-def pick(devices, mode, need, free):
+def work(scene):
+    """Sample-pixels in one render: width x height at the render percentage, times samples."""
+    r = scene.render
+    return r.resolution_x * r.resolution_y * (r.resolution_percentage / 100.0) ** 2 * scene.cycles.samples
+
+
+def pick(devices, mode, scene, need, free_of):
     if mode == "all":
         return list(devices)
     if mode != "auto":
         return [d for d in devices if mode in d.name.lower()][:1]
+    big = ([d for d in devices if BIG in d.name] or list(devices))[:1]
+    if len(devices) < 2 or getattr(scene.cycles, "use_adaptive_sampling", True) or work(scene) < TANDEM_MIN:
+        return big
+    free = free_of()
     missing = [d.name for d in devices if free and d.name not in free]
     if missing:
         warn("nvidia-smi lists no %s; treating it as full" % ", ".join(missing))
-    if len(devices) > 1 and all(free.get(d.name, 0 if free else CARD_BYTES) >= need for d in devices):
+    if all(free.get(d.name, 0 if free else CARD_BYTES) >= need for d in devices):
         return list(devices)
-    return ([d for d in devices if BIG in d.name] or list(devices))[:1]
+    return big
+
+
+def mode_now():
+    return os.environ.get(MODE_ENV, "auto").strip().lower() or "auto"
 
 
 def use(scene):
-    """Set scene.cycles.device to GPU or CPU and return which one it got."""
-    mode = os.environ.get(MODE_ENV, "auto").strip().lower() or "auto"
+    """Set scene.cycles.device to GPU or CPU, arm the per-render check, and return the device."""
+    mode = mode_now()
     scene.cycles.device = "CPU"
     if mode == "cpu" or not os.path.exists(NVIDIA_DRIVER):
         return "CPU"
     import bpy
 
+    handlers = bpy.app.handlers.render_pre
+    if not any(getattr(h, "__name__", "") == "cycles_device_render_pre" for h in handlers):
+        handlers.append(bpy.app.handlers.persistent(cycles_device_render_pre))
+    return decide(bpy, scene, mode)
+
+
+def cycles_device_render_pre(scene, *_):
+    if scene.render.engine == "CYCLES":
+        import bpy
+
+        decide(bpy, scene, mode_now())
+
+
+def decide(bpy, scene, mode):
+    scene.cycles.device = "CPU"
+    if mode == "cpu":
+        return "CPU"
     prefs = bpy.context.preferences.addons["cycles"].preferences
     devices = optix_devices(prefs)
     if mode == "auto" and capture_on():
         mode = CAPTURE_CARD
         warn("4080 capture running; rendering on the %s alone" % CAPTURE_CARD)
-    chosen = pick(devices, mode, fit_bytes(bpy, scene), free_bytes() if mode == "auto" else {})
+    chosen = pick(devices, mode, scene, fit_bytes(bpy, scene), free_bytes)
     ids = {d.id for d in chosen}
     for d in prefs.devices:
         d.use = d.id in ids

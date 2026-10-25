@@ -510,32 +510,55 @@ func perch_near(point: Vector3, salt := 0) -> Vector3:
 		_ensure(stage)
 		var ahead := _take_perch_ahead(i)
 		# The worker read the bare ground; height() matches it only while no overlay or cave roof stands on it.
-		if not ahead.is_empty() and overlays.is_empty() and _cave_roofs.get(i, {}).is_empty():
+		# With overlays down (a landed slide or lip), only the ledges near them are read again: the whole read
+		# on the main thread was an 870 ms frame on the cloud at the Dig's first Dispatcher.
+		# A cave roof the worker read stands in its snapshot; one lowered since (a cave-in) changes the ground.
+		var discs = _overlay_discs(m) if not ahead.is_empty() and EventGround.pristine(self, i + 1) else null
+		if discs != null and (discs as Array).is_empty():
 			_perches[i] = ahead
+		elif discs != null:
+			_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": ahead.blockers,
+				"ledges": PerchPoints.patched_ledges(m.park, height, ahead.found, discs)}
 		else:
 			_perches[i] = {"tops": PerchPoints.derive(m.park, height), "blockers": PerchPoints.blockers(m.park), "ledges": PerchPoints.ledges(m.park, height)}
 	return PerchPoints.pick(_perches[i]["tops"], point, height, _perches[i]["blockers"], salt, _perches[i]["ledges"])
 
 
+# A disc (Vector3 x, z, radius) around each overlay down, for PerchPoints.patched_ledges; null when an
+# overlay's footprint is unknown (not an OverlayMap profile), and the whole read runs again.
+func _overlay_discs(m) -> Variant:
+	var discs: Array = []
+	for id in overlays:
+		if not (m is EventGround.OverlayMap) or not m.profiles.has(id):
+			return null
+		var site: Dictionary = m.profiles[id].site
+		discs.append(Vector3(float(site.at[0]), float(site.at[1]), ParkMap.footprint_half_extents(site).length()))
+	return discs
+
+
 # The first perch read of a stage walked every landform sample's rings through height(): 80 to 390 ms of one
 # frame by park (stage 6 about 300 ms in a played run, PR #372). Read them on a worker as soon as the ground
-# is built, over the same bare ground height() reads (_park_floor_at); perch_near takes them when nothing
-# stands on that ground yet.
+# is built, over the stage's floor as height() reads it with no overlay down (EventGround.snapshot: the ground
+# and its cave roofs); perch_near takes them while no roof has been lowered since, reading again only near overlays.
 func _perch_read_ahead(i: int) -> void:
 	var m = maps[i]
 	if not (m is ParkMap) or not m.ok or _perch_ahead.has(i) or _perches.has(i):
 		return
 	var out := {}
-	var ahead := {"out": out, "task": _queue_perch_read(m.park, _heights[i], _holes[i], _under[i], out)}
+	# The next stage is not active, so its roofs are copied on the worker (see EventGround.snapshot).
+	var ahead := {"out": out, "task": _queue_perch_read(m.park, EventGround.snapshot(self, i + 1, false), out)}
 	_perch_ahead[i] = ahead
 	_settle_on_exit(_roots[i], ahead)
 
 
-# Static, so the worker holds no reference to this terrain: it reads only the park and copies of the arrays.
-static func _queue_perch_read(park: Dictionary, heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array, out: Dictionary) -> int:
-	var ground := func(x: float, z: float) -> float: return _park_height(heights, holes, under, x, z)
+# Static, so the worker holds no reference to this terrain: it reads only the park and the floor snapshot (copies of the roofs).
+static func _queue_perch_read(park: Dictionary, floor_snapshot: RefCounted, out: Dictionary) -> int:
+	# A lambda holds the snapshot; a bound method would not keep it alive.
+	var ground := func(x: float, z: float) -> float: return floor_snapshot.terrain.height(x, z)
 	return WorkerThreadPool.add_task(func():
-		out.merge({"tops": PerchPoints.derive(park, ground), "blockers": PerchPoints.blockers(park), "ledges": PerchPoints.ledges(park, ground)}),
+		floor_snapshot.copy_roofs()
+		var found := PerchPoints.found(park, ground)
+		out.merge({"tops": PerchPoints.derive(park, ground), "blockers": PerchPoints.blockers(park), "found": found, "ledges": PerchPoints.thin(found)}),
 		true, "perch read")
 
 

@@ -43,6 +43,8 @@ func slots(game) -> Array:
 	if rack != null:
 		var record: Dictionary = rack.slot_record()
 		if not record.is_empty():
+			# The cap the active's verb shows now: F on the keyboard, D-pad down on the pad.
+			record["key"] = Glyphs.of("active")
 			out.append(record)
 	if valid(out):
 		return out

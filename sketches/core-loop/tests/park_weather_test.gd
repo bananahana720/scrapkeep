@@ -8,12 +8,14 @@ extends SceneTree
 # and a planted friction change in the hook is caught. The rows come from the six stage pages' park blocks.
 #
 # Checks: 10 time (six time rows, fields, sun peak, six stage ids, row count), 6 stage look, 6 stage entry,
-# 12 timing, 12 look (fog, sky, music, sound id), 12 handling, 1 planted control. The check count is fixed below.
+# 12 timing, 12 look (fog, sky, music, sound id), 12 handling, 1 planted control, 6 park fog (the stage's loaded park
+# file gives the fog the file read does). The check count is fixed below.
 const Weather := preload("res://src/world/events/weather.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const Director := preload("res://src/world/event_director.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
 const BallState := preload("res://src/movement/ball_state.gd")
 
@@ -25,7 +27,7 @@ const TICKS := 600
 const TOLERANCE := 0.08
 const FAR := Vector3(1000.0, 1.0, 1000.0)
 const FOG_BEFORE := 0.0123
-const EXPECTED_CHECKS := 59
+const EXPECTED_CHECKS := 65
 
 var _checks := 0
 var _failures := 0
@@ -49,6 +51,9 @@ class Terrain extends RefCounted:
 	func geometry_root(_stage: int) -> Node3D:
 		return root
 
+	func map_for(_stage: int) -> RefCounted:
+		return null
+
 
 class StageCtx extends RefCounted:
 	var terrain
@@ -66,6 +71,8 @@ func _initialize() -> void:
 		_stage_look(stage)
 	for stage in range(1, 7):
 		_stage_entry(stage)
+	for stage in range(1, 7):
+		_park_fog(stage)
 	var runs := []
 	for row in weather:
 		runs.append(_run(row, true, false))
@@ -188,6 +195,18 @@ func _stage_entry(stage: int) -> void:
 	var ok: bool = is_equal_approx(env.ambient_light_energy, float(look.energy)) and env.ambient_light_color == look.ambient
 	_check("stage %d entry writes its look to the environment" % stage, ok,
 		"ambient energy %.3f of %.3f" % [env.ambient_light_energy, float(look.energy)])
+
+
+# The fog from the stage's loaded park equals the fog read from its file, each from an empty cache.
+func _park_fog(stage: int) -> void:
+	var map := String(StageDefs.of(stage).get("map", ""))
+	WorldLook._park_fog.clear()
+	var read := WorldLook.park_fog(map)
+	WorldLook._park_fog.clear()
+	var loaded := WorldLook.park_fog(map, ParkMap.new(WorldLook.PARK_DIR + map + ".json").park)
+	WorldLook._park_fog.clear()
+	_check("stage %d (%s) fog from its loaded park matches the file's" % [stage, map], read == loaded and read.has("density"),
+		"%s vs %s" % [read, loaded])
 
 
 func _director(rows: Array):
