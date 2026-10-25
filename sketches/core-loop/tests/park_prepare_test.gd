@@ -25,6 +25,14 @@ const BUILD_FRAMES_MAX := 6000
 var t := T.new("park_prepare_test")
 
 
+# The one flow answer world.gd's build-ahead reads: whether the current stage is calm.
+class QuietFlow extends Node:
+	var quiet := false
+
+	func calm() -> bool:
+		return quiet
+
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -42,6 +50,9 @@ func _run() -> void:
 	ctx.events = events
 	ctx.run = RunState.new(events)
 	ctx.tuning = Tuning.new()
+	var flow := QuietFlow.new()
+	holder.add_child(flow)
+	ctx.flow = flow
 	var terrain = Terrain.new(TABLE)
 	SimClock.ticks = false
 	terrain.build(holder)
@@ -78,6 +89,11 @@ func _run() -> void:
 	# (world._process), so none of them lands in the entry frame.
 	t.check("stage 2's contraptions start once its ground is built", world._building.has(2) and not world.contraptions.has(2))
 	var ahead: Node = world._building.get(2)
+	for n in 5:
+		world._process(0.0)
+	t.check("they wait while the stage is not calm (the Warden fight)", ahead != null
+		and ahead._unbuilt.size() == ahead.map.contraptions.size())
+	flow.quiet = true
 	var calls := 0
 	while world._building.has(2) and calls < 100:
 		world._process(0.0)
@@ -103,16 +119,18 @@ func _run() -> void:
 	events.flow_changed.emit("gates")
 	var third_ground = terrain.park_ground(3)
 	t.check("the gates opening on stage 2 start stage 3's build", third_ground != null)
+	flow.quiet = false
 	await _wait_ready(terrain, 3)
 	ctx.run.stage = 3
 	terrain.use(3)
 	t.check("landing on stage 3 uses the ground built before the launch", terrain.park_ground(3) == third_ground)
 	t.check("the freed stage 2's Contraptions node left the cache", not world.contraptions.has(2))
 	var pending: Node = world._building.get(3)
+	var partial: bool = pending != null and pending.unbuilt()
 	world._add_contraptions()
 	var third: Node = world.contraptions.get(3)
 	t.check("stage 3 has a fresh Contraptions node", third != null and is_instance_valid(third) and third != second and third != first)
-	t.check("landing finishes the contraptions still building ahead", pending != null and third == pending and not third.unbuilt()
+	t.check("landing finishes the contraptions still building ahead", partial and third == pending and not third.unbuilt()
 		and not world._building.has(3))
 	events.warden_engaged.emit(3)
 	t.check("engaging on the table's last stage asks for no stage past it", terrain.range_errors.is_empty(), str(terrain.range_errors.keys()))

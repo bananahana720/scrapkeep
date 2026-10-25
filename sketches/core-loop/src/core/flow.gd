@@ -164,6 +164,12 @@ func in_play() -> bool:
 	return state == STAGE or state == BEACON or state == GATES or state == LAUNCH or state == BOSS or state == LAP
 
 
+# The stretch between a stage's Warden falling and the next landing: the gates stand open or the
+# ball is in flight. Work held for a quiet moment (a park stage built ahead) runs only then.
+func calm() -> bool:
+	return state == GATES or state == LAUNCH
+
+
 # Stage content (director, flood, events, scrap, fabricators, vaults, stage enemies)
 # runs only while this is true; it is false in the arena and after the win.
 func in_stage() -> bool:
