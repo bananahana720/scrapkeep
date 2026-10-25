@@ -1901,7 +1901,7 @@ func _route_to(s, ball: Vector3) -> Array[Vector3]:
 # skirt passed as a climbable step and held Tarn below the Warden's island for a whole stage.
 # A park kicker is a placed wedge the terrain's heights do not hold, so its ramp is laid over them
 # and its lip carries a one-way launch edge KICKER_LAUNCH past it: the Flume's warden exit rises
-# 14 m up drum_lip_kicker and flies its 3 m gap to the gate lip, a way the heights alone never had.
+# 14 m up drum_lip_kicker to its lip on the gate terrace's edge, a way the heights alone never had.
 func _climb_route(from: Vector3, to: Vector3, slope := CLIMB_SLOPE) -> Array[Vector3]:
 	var terrain = game.ctx.terrain
 	var lo := Vector2(minf(from.x, to.x), minf(from.z, to.z)) - Vector2.ONE * CLIMB_PAD

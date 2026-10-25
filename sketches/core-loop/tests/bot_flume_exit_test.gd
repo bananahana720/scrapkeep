@@ -17,8 +17,8 @@ const T := preload("res://tests/support/t.gd")
 # _climb_route reads do not hold the wedge (it is a placed collider), so on 540a55a4 the route came
 # back empty and runner_gunner seed 1 sat against the wall from t=120 to the stage limit.
 # Pins, from the ball's stall point on that run, (269, -13, 462):
-#   route   _climb_route to the gate's run-in point is not empty, climbs the kicker (a point on its ramp)
-#           and ends within LEVEL_BAND of the gate's height;
+#   route   _climb_route to the gate's run-in point is not empty, climbs the kicker (a point where the ramp
+#           stands at least RAMP_HIGH_M over the floor) and ends within LEVEL_BAND of the gate's height;
 #   exit    from each of STARTS, the bot's own climb steering (_fight_way_up, then _act) puts the
 #           ball on the ground east of the drum wall, within LEVEL_BAND of the gate's height,
 #           inside EXIT_S;
@@ -45,6 +45,7 @@ const EXIT_X := 272.5
 const EXIT_S := 40.0
 const SETTLE_TICKS := 30
 const KICKER := "drum_lip_kicker"
+const RAMP_HIGH_M := 7.0
 
 var _t := T.new("bot_flume_exit_test")
 var _game
@@ -111,15 +112,16 @@ func _physics_process(delta: float) -> bool:
 				lip = (node as Node3D).global_transform * Vector3(0.0, float(row["size"][1]), float(row["size"][0]) * 0.5)
 		_t.check("%s stands as a kicker" % KICKER, lip != Vector3.INF, str(lip))
 		var route: Array[Vector3] = _driver._climb_route(STALL, _target)
+		var kickers: Array = _driver._kickers_within(Vector2(STALL.x, STALL.z) - Vector2.ONE * 80.0, Vector2(STALL.x, STALL.z) + Vector2.ONE * 80.0)
 		var on_ramp := 0
 		for p in route:
-			if node is Node3D and _on_kicker(node, map, p):
+			if BotDriver._kicker_height(kickers, Vector2(p.x, p.z)) - _game.ctx.terrain.height(p.x, p.z) >= RAMP_HIGH_M:
 				on_ramp += 1
 		var end_y: float = _game.ctx.terrain.height(route.back().x, route.back().z) if not route.is_empty() else -INF
-		print("exit route from %s to %s: %d points, %d on the ramp, ends at ground %.1f (gate %.1f): %s" % [
+		print("exit route from %s to %s: %d points, %d high on the ramp, ends at ground %.1f (gate %.1f): %s" % [
 			STALL, _target, route.size(), on_ramp, end_y, _gate_y, route])
 		_t.check("a climb route to the gates exists", not route.is_empty(), "%d points" % route.size())
-		_t.check("the route climbs the kicker", on_ramp > 0, "%d points on the ramp" % on_ramp)
+		_t.check("the route climbs the kicker", on_ramp > 0, "%d points high on the ramp" % on_ramp)
 		_t.check("the route ends at the gates' level", _gate_y - end_y <= BotDriver.LEVEL_BAND, "ground %.1f, gate %.1f" % [end_y, _gate_y])
 		_start_leg()
 		return false
@@ -172,15 +174,6 @@ func _start_leg() -> void:
 		_game.player.reset_to(_start_of(_leg), HEAVY_STARTS[_leg - STARTS.size()][1])
 		return
 	_game.player.reset_to(STARTS[_leg])
-
-
-# Whether a route point stands over the kicker's footprint.
-func _on_kicker(node: Node3D, map, p: Vector3) -> bool:
-	for row in map.park["park_rows"]:
-		if row["id"] == KICKER:
-			var local: Vector3 = node.global_transform.affine_inverse() * Vector3(p.x, node.global_position.y, p.z)
-			return absf(local.x) <= float(row["size"][2]) * 0.5 and absf(local.z) <= float(row["size"][0]) * 0.5
-	return false
 
 
 func _start_of(leg: int) -> Vector3:

@@ -13,11 +13,12 @@ extends SceneTree
 # camera's frame each tick as a person's keys are.
 #   groove  downward rays across the old groove, x 270 to 274 at three z: the ground never dips below the ramp at x 270
 #           (on 49bf68c7 it fell from 0.42 to -10.5 at x 270.5).
-#   rest    the ball dropped where the groove was, no input: it is grounded inside REST_S, so jump is live.
-#   gate, east  from there, a stick held at gate 0's run-in point or due east rolls onto the terrace inside SHOT_S;
-#   jump    a jump pressed there leaves the ground.
-#   climb   from rest on the drum floor (BASIN), a person's line: to the kicker's foot, up its centre line holding shift,
-#           a jump near the lip, then east: on the terrace at the gate's level inside CLIMB_S.
+#   rest    the ball dropped where the groove was, no input: it lands grounded inside REST_S, within LANDED_NEAR_M of the
+#           drop, so jump is live there.
+#   east    from that landing, a stick held due east rolls onto the terrace inside SHOT_S;
+#   jump    a jump pressed on that landing leaves the ground.
+#   climb   from rest on the drum floor (BASIN), a person's line: to DRUM_WEST on the drum floor west of the kicker, up
+#           its centre line holding shift, a jump near the lip, then east: on the terrace at the gate's level inside CLIMB_S.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -25,6 +26,7 @@ const T := preload("res://tests/support/t.gd")
 
 const REST := Vector3(271.07, 1.4, 487.0)
 const BASIN := Vector3(245.0, -12.0, 465.0)
+const DRUM_WEST := Vector3(230.0, 0.0, 480.0)
 const KICKER := "drum_lip_kicker"
 const TERRACE_EDGE_X := 272.0
 const GROOVE_X := [270.0, 274.0]
@@ -34,6 +36,7 @@ const JUMP_FROM_X := 266.0
 const EXIT_X := 272.5
 const LEVEL_BAND := 2.5
 const REST_S := 1.0
+const LANDED_NEAR_M := 1.0
 const SHOT_S := 4.0
 const CLIMB_S := 20.0
 const JUMP_RISE_M := 1.0
@@ -77,34 +80,30 @@ func _run() -> void:
 		while x <= GROOVE_X[1]:
 			var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(x, 20.0, z), Vector3(x, -20.0, z), 1))
 			var y: float = hit["position"].y if not hit.is_empty() else -INF
-			if is_nan(start_y):
+			if hit.is_empty():
+				start_y = -INF
+			elif is_nan(start_y):
 				start_y = y
 			lowest = minf(lowest, y)
 			x += 0.25
 		print("  groove z %.0f: ground at x %.0f %.2f, lowest to x %.0f %.2f" % [z, GROOVE_X[0], start_y, GROOVE_X[1], lowest])
-		t.check("groove z %.0f: the ground never dips below the ramp" % z, lowest >= start_y - GROOVE_SLACK_M,
+		t.check("groove z %.0f: the ground never dips below the ramp" % z, start_y > -INF and lowest >= start_y - GROOVE_SLACK_M,
 				"x %.0f %.2f, lowest %.2f" % [GROOVE_X[0], start_y, lowest])
 	var slot: Dictionary = map.gate_slots[0]
 	var gate_ground: float = game.ctx.terrain.height(slot["at"].x, slot["at"].y)
 	var run_in: Vector3 = Vector3(slot["at"].x, gate_ground, slot["at"].y) - (slot["facing"] as Vector3) * 9.0
 	print("  gate 0 at %s, ground %.2f, run-in %s" % [slot["at"], gate_ground, run_in])
-	var player = game.player
-	player.reset_to(REST)
-	source.hold = {}
-	var grounded_at := -1.0
-	for tick in int(REST_S * Engine.physics_ticks_per_second):
-		await physics_frame
-		if player.state.grounded:
-			grounded_at = float(tick) / Engine.physics_ticks_per_second
-			break
-	print("  rest: grounded at %.2f s, at %s" % [grounded_at, player.ball_position()])
-	t.check("rest: a ball dropped where the groove was is grounded", grounded_at >= 0.0, "at %s" % player.ball_position())
+	var landed: Dictionary = await _land()
+	print("  rest: grounded at %.2f s, at %s" % [landed["s"], landed["at"]])
+	t.check("rest: a ball dropped where the groove was lands grounded there", landed["s"] >= 0.0
+			and Vector2(landed["at"].x - REST.x, landed["at"].z - REST.z).length() <= LANDED_NEAR_M, "at %s" % landed["at"])
 	var end: Vector3 = await _shot(Vector3(1.0, 0.0, 0.0))
 	print("  east: end=%s" % end)
 	t.check("east: rolls onto the terrace", end.x > EXIT_X and gate_ground - end.y <= LEVEL_BAND, "end %s, gate ground %.2f" % [end, gate_ground])
-	var rise: float = await _jump()
-	print("  jump: rise %.2f m" % rise)
-	t.check("jump: a jump there leaves the ground", rise >= JUMP_RISE_M, "rise %.2f m" % rise)
+	var jump: Dictionary = await _jump()
+	print("  jump: pressed at %s, rise %.2f m" % [jump["at"], jump["rise"]])
+	t.check("jump: a jump pressed on the landing leaves the ground", jump["rise"] >= JUMP_RISE_M
+			and Vector2(jump["at"].x - REST.x, jump["at"].z - REST.z).length() <= LANDED_NEAR_M, "at %s, rise %.2f m" % [jump["at"], jump["rise"]])
 	var climb: Dictionary = await _climb(run_in)
 	print("  climb: out at %.1f s, end=%s, peak y %.2f" % [climb["out_s"], climb["end"], climb["peak"]])
 	t.check("climb: a player rolls up the kicker from the drum floor and out to the gate's level", climb["out_s"] >= 0.0,
@@ -120,16 +119,19 @@ func _stick(want: Vector3) -> Vector2:
 	return Vector2(want.dot(right), want.dot(forward)).normalized()
 
 
-# The ball dropped where the groove was, left to settle with no input.
-func _settle() -> void:
+# The ball dropped where the groove was, with no input, until it lands: {"s" (-1 when it never does), "at"}.
+func _land() -> Dictionary:
 	game.player.reset_to(REST)
 	source.hold = {}
 	for tick in int(REST_S * Engine.physics_ticks_per_second):
 		await physics_frame
+		if game.player.state.grounded:
+			return {"s": float(tick) / Engine.physics_ticks_per_second, "at": game.player.ball_position()}
+	return {"s": -1.0, "at": game.player.ball_position()}
 
 
 func _shot(want: Vector3) -> Vector3:
-	await _settle()
+	await _land()
 	for tick in int(SHOT_S * Engine.physics_ticks_per_second):
 		source.hold = {"move": _stick(want)}
 		await physics_frame
@@ -137,15 +139,14 @@ func _shot(want: Vector3) -> Vector3:
 	return game.player.ball_position()
 
 
-func _jump() -> float:
-	await _settle()
-	var from: float = game.player.ball_position().y
+func _jump() -> Dictionary:
+	var landed: Dictionary = await _land()
 	var peak := -INF
 	source.press["jump_pressed"] = true
 	for tick in int(Engine.physics_ticks_per_second):
 		await physics_frame
 		peak = maxf(peak, game.player.ball_position().y)
-	return peak - from
+	return {"at": landed["at"], "rise": peak - (landed["at"] as Vector3).y}
 
 
 func _climb(run_in: Vector3) -> Dictionary:
@@ -153,7 +154,6 @@ func _climb(run_in: Vector3) -> Dictionary:
 	player.reset_to(BASIN)
 	source.hold = {}
 	await physics_frame
-	var foot := Vector3(230.0, 0.0, 480.0)
 	var leg := 0
 	var jumped := false
 	var peak := -INF
@@ -163,11 +163,11 @@ func _climb(run_in: Vector3) -> Dictionary:
 		if ball.x > EXIT_X and player.state.grounded and run_in.y - ball.y <= LEVEL_BAND:
 			source.hold = {}
 			return {"out_s": float(tick) / Engine.physics_ticks_per_second, "end": ball, "peak": peak}
-		if leg == 0 and Vector2(ball.x - foot.x, ball.z - foot.z).length() < 3.0:
+		if leg == 0 and Vector2(ball.x - DRUM_WEST.x, ball.z - DRUM_WEST.z).length() < 3.0:
 			leg = 1
-		var to: Vector3 = foot
+		var to: Vector3 = DRUM_WEST
 		if leg == 1:
-			to = Vector3(ball.x + CENTRE_LEAD_M, 0.0, foot.z) if ball.x < EXIT_X else run_in
+			to = Vector3(ball.x + CENTRE_LEAD_M, 0.0, DRUM_WEST.z) if ball.x < EXIT_X else run_in
 		source.hold = {"move": _stick(Vector3(to.x - ball.x, 0.0, to.z - ball.z).normalized())}
 		if leg == 1:
 			source.hold["shift_held"] = true
