@@ -159,8 +159,7 @@ func _check_prepared(holder: Node3D) -> void:
 	if not Terrain._read_done(first):
 		fill.prepare_perches()
 		_t.check("an ask while the old read runs keeps it and queues nothing", fill._perch_patch.get(1) == first and first.has("task"))
-	while not Terrain._read_done(first):
-		OS.delay_msec(5)
+	Terrain._settle_perch_read(first)
 	fill.prepare_perches()
 	var second = fill._perch_patch.get(1)
 	_t.check("a finished read for the old surface gives way to one for the new", second != null and second != first)
