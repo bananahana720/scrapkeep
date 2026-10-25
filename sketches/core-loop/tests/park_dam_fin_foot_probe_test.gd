@@ -12,13 +12,13 @@ extends SceneTree
 # stick heading for SHOT_S:
 #   square   due north, square into the face: the control. The ball meets the face and stays at its foot, so the probe
 #            really is at the wall.
-#   goal     straight at the sheet foot (the bot's goal, (5, 566)), 13 degrees off square: a player holding toward the
+#   goal     straight at the sheet foot (the bot's goal, (5, 566)), 12 degrees off square: a player holding toward the
 #            dam slides west along the foot toward the Eye's mouth.
 #   east     the goal turned 1.5 rad toward +x, the bot's held east side: rolls along the foot.
 #   west     the goal turned 1.5 rad toward -x, toward the Eye's mouth.
 #   back     straight away from the face.
-# Gate: every shot but square leaves the foot by at least LEAVE_M (planar), and square touches the face (its z reaches
-# FACE_Z less one radius) without passing it.
+# Gate: every shot but square leaves the foot by at least LEAVE_M (planar), and square touches the face (its centre
+# reaches FACE_Z less one radius and CONTACT_SLACK_M) without passing it (z under FACE_Z).
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -30,6 +30,7 @@ const GOAL := Vector3(5.0, 103.0, 566.0)
 const FACE_Z := 138.0
 const SHOT_S := 4.0
 const LEAVE_M := 20.0
+const CONTACT_SLACK_M := 0.1
 
 var t := T.new("park_dam_fin_foot_probe_test")
 var game
@@ -66,8 +67,9 @@ func _run() -> void:
 	for name: String in shots:
 		out[name] = await _shot(shots[name])
 		print("  %s: end=%s moved=%.1f m max_z=%.2f" % [name, out[name]["end"], out[name]["moved"], out[name]["max_z"]])
-	t.check("square: the ball meets the fin face", out["square"]["max_z"] >= FACE_Z - Tuning.RADIUS - 0.2,
+	t.check("square: the ball meets the fin face", out["square"]["max_z"] >= FACE_Z - Tuning.RADIUS - CONTACT_SLACK_M,
 			"max z %.2f" % out["square"]["max_z"])
+	t.check("square: the ball stays south of the face", out["square"]["max_z"] < FACE_Z, "max z %.2f" % out["square"]["max_z"])
 	t.check("square: the face holds it (control)", out["square"]["moved"] < LEAVE_M, "moved %.1f m" % out["square"]["moved"])
 	for name in ["goal", "east", "west", "back"]:
 		t.check("%s: rolls out of the foot" % name, out[name]["moved"] >= LEAVE_M, "moved %.1f m in %.0f s" % [out[name]["moved"], SHOT_S])

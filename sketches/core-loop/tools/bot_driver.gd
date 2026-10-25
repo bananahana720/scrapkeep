@@ -133,7 +133,9 @@ const WALL_TURNS := [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5]
 # Once a wall turns the ball to one side it keeps that side until the straight way clears: picking
 # the first clear turn every tick flipped between +1.5 and -1.5 where the 1.0 ray grazed a long wall
 # square to the goal, and the ball dithered on the spot (random seed 2867 on the eye_fin_east foot
-# at (98, 103, 137) on the park table, 160 s to the stall cap).
+# at (98, 103, 137) on the park table, 164 s to the stall cap). The side belongs to the bearing it
+# was taken on: a heading more than WALL_SIDE_KEEP_DEG off it, or a stuck detour, drops it.
+const WALL_SIDE_KEEP_DEG := 45.0
 const BOOST_GAP := 1.6
 const CARD_PRESS_GAP := 0.5
 # Shift is the pilot's go verb, pressed as the keyboard presses it: Sable boosts on the press,
@@ -499,6 +501,7 @@ var _slow_time := 0.0
 var _detour_time := 0.0
 var _detour := Vector3.ZERO
 var _wall_side := 0.0
+var _wall_dir := Vector3.ZERO
 var _boost_clock := 0.0
 var _card_press_tick := -1000000
 var _shift_left := 0.0
@@ -4167,6 +4170,7 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		_detour_time = DETOUR_SECONDS
 		var to := Vector3(steer.x - ball.x, 0.0, steer.z - ball.z).normalized()
 		_detour = to.rotated(Vector3.UP, PI * 0.5 * (1.0 if rng.randf() < 0.5 else -1.0))
+		_wall_side = 0.0
 		source.press["jump_pressed"] = true
 		_count("stuck_detours")
 	var heading := Vector3(steer.x - ball.x, 0.0, steer.z - ball.z)
@@ -4317,12 +4321,15 @@ func _tally_plate_hands() -> void:
 
 
 # A wall (a face steeper than WALL_TILT) within WALL_REACH on the way is rolled around:
-# the heading turns to the nearest free bearing, as a player steers round a post.
+# the heading turns to the nearest free bearing, as a player steers round a post, on the side
+# already held while the straight way stays walled.
 func _around_walls(ball: Vector3, heading: Vector3) -> Vector3:
 	if heading.length() < 0.3:
 		return heading
 	var space = game.get_world_3d().direct_space_state
 	var dir := heading.normalized()
+	if _wall_side != 0.0 and rad_to_deg(dir.angle_to(_wall_dir)) > WALL_SIDE_KEEP_DEG:
+		_wall_side = 0.0
 	var from := ball + Vector3.UP * 0.2
 	for turn in WALL_TURNS:
 		if turn * _wall_side < 0.0:
@@ -4333,8 +4340,10 @@ func _around_walls(ball: Vector3, heading: Vector3) -> Vector3:
 			if turn != 0.0:
 				_count("wall_turns", 1.0 / Engine.physics_ticks_per_second)
 			_wall_side = signf(turn)
+			_wall_dir = dir
 			return probe * heading.length()
-	# Every turn on the held side is walled: go along the wall on that side, not back across.
+	# Every turn on the held side is walled: keep pressing the widest turn on that side, not back
+	# across (a corner there is left to the stuck detour, which drops the side).
 	if _wall_side != 0.0:
 		return dir.rotated(Vector3.UP, WALL_TURNS[-2] * _wall_side) * heading.length()
 	return heading
