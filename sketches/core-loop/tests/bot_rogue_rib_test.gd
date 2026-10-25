@@ -155,12 +155,12 @@ func _ribs() -> void:
 	var pair := _driver(true)
 	var spy: SpyGame = pair[0]
 	var driver: Driver = pair[1]
-	spy.build.scrap.rows = [_cache(Vector3(150, 0, 0)), _cache(Vector3(0, 0, 90))]
+	spy.build.scrap.rows = [_cache(Vector3(400, 0, 0)), _cache(Vector3(0, 0, 200))]
 	_t.check("no cache within RIB_NEAR: the lit sites come first", not driver._rib_goal(0.1, BotDriver.RIB_NEAR))
-	_t.check("after them, the nearest cache at any distance", driver._rib_goal(0.1, INF) and driver.steered == Vector3(0, 0, 90))
-	var cap: float = BotDriver.RIB_SECONDS + 90.0 / BotDriver.ACTIVITY_TRAVEL_SPEED
+	_t.check("after them, the nearest cache at any distance", driver._rib_goal(0.1, INF) and driver.steered == Vector3(0, 0, 200))
+	var cap: float = BotDriver.RIB_SECONDS + 200.0 / BotDriver.ACTIVITY_TRAVEL_SPEED
 	driver._rib_goal(cap, INF)
-	_t.check("a cache past its cap is given up for the next", driver._rib_goal(0.1, INF) and driver.steered == Vector3(150, 0, 0))
+	_t.check("a cache past its cap is given up for the next", driver._rib_goal(0.1, INF) and driver.steered == Vector3(400, 0, 0))
 
 
 func _note_rows() -> void:

@@ -526,6 +526,7 @@ var _activity := ""
 # The stage's rib caches still on the ground, by instance id -> where they stand, and the rogue
 # once it has woken: what _content_scan reads for the stage note's rogue and rib cache rows.
 var _caches_seen := {}
+var _rib_spot := {}
 var _rogue_seen: Node3D = null
 var _rogue_clock := 0.0
 var _rib_clock := {}
@@ -1032,6 +1033,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_relay_clock = 0.0
 	_relay_closed = {}
 	_caches_seen = {}
+	_rib_spot = {}
 	_rogue_seen = null
 	_rogue_clock = 0.0
 	_rib_clock = {}
@@ -1260,7 +1262,8 @@ func _rogue_goal(delta: float) -> bool:
 
 
 # The nearest rib cache within `reach`: before the lit sites when it is a short detour (RIB_NEAR),
-# after them at any distance.
+# after them at any distance. A wider first reach (150 m, 25 Oct, seeds 1-4) took a flume cache on
+# 2 runs in 4 but cost the flume an activity and its rogue fight, so the lit sites keep the lead.
 func _rib_goal(delta: float, reach: float) -> bool:
 	if engage_by <= ENGAGE_BY or game.build == null or game.build.get("scrap") == null:
 		return false
@@ -1343,6 +1346,15 @@ func _content_scan() -> void:
 	for id in _caches_seen:
 		if not now.has(id) and _flat(ball, _caches_seen[id]) < RIB_TAKEN_M:
 			_note["rib_caches_taken"] = int(_note["rib_caches_taken"]) + 1
+	# How close the ball came to each cache still waiting, for reading a missed one.
+	# Keyed by where each was placed: a cache the magnet pulls moves.
+	var closest: Dictionary = _note.get("rib_closest_m", {})
+	for id in now:
+		if not _caches_seen.has(id):
+			_rib_spot[id] = "%.0f,%.0f" % [now[id].x, now[id].z]
+		var key: String = _rib_spot.get(id, "")
+		closest[key] = snappedf(minf(float(closest.get(key, INF)), _flat(ball, now[id])), 0.1)
+	_note["rib_closest_m"] = closest
 	_caches_seen = now
 
 
