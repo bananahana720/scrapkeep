@@ -105,6 +105,9 @@ const HERO_MARGIN_M := 8.0
 const PROP_MARGIN_M := 3.0
 const LOW_RANGE_SCALE := 0.5
 const BUILD_SLICE_USEC := 3000
+# The left stage's holders leave a few nodes a frame, hidden and stopped meanwhile: freeing them whole cost about 12 ms
+# of the entry frame (bot run, Spillway stage 2).
+const FREE_SLICE_USEC := 1500
 # Far props copied into a vignette's merged LOD2 mesh per build step (_merge_far).
 const MERGE_CHUNK := 4
 
@@ -141,6 +144,7 @@ var _jobs: Array = []
 var _reads: Array = []
 # The job _slice is building: its holder and the steps left.
 var _holder: Node3D
+var _dying: Array[Node] = []
 var _steps: Array = []
 var _kit := {}
 var _low := false
@@ -1643,6 +1647,8 @@ func setup(context_in) -> void:
 func _process(_delta: float) -> void:
 	var started := Time.get_ticks_usec()
 	last_steps = PackedStringArray()
+	if not _dying.is_empty():
+		_reap(FREE_SLICE_USEC)
 	if _pending and ctx.terrain.is_ready(ctx.terrain.stage):
 		_build_stage()
 	if _task >= 0 and WorkerThreadPool.is_task_completed(_task):
@@ -1655,6 +1661,18 @@ func _process(_delta: float) -> void:
 		_prepare_next()
 	last_process_usec = Time.get_ticks_usec() - started
 	last_process_frame = Engine.get_process_frames()
+
+
+# Frees the left stages' nodes deepest first until the budget runs out, each holder last.
+func _reap(budget_usec: int) -> void:
+	var deadline := Time.get_ticks_usec() + budget_usec
+	while not _dying.is_empty() and Time.get_ticks_usec() < deadline:
+		var node: Node = _dying.back()
+		while node.get_child_count() > 0:
+			node = node.get_child(node.get_child_count() - 1)
+		if node == _dying.back():
+			_dying.pop_back()
+		node.free()
 
 
 # True once the stage's nodes are all built (or it has none).
@@ -1702,7 +1720,12 @@ func _free_views() -> void:
 	_holder = null
 	_steps = []
 	for child in get_children():
-		child.free()
+		if _dying.has(child):
+			continue
+		child.name = "Freed%s" % child.name
+		child.visible = false
+		child.process_mode = Node.PROCESS_MODE_DISABLED
+		_dying.append(child)
 	views.clear()
 	instances = []
 	_built_for = []

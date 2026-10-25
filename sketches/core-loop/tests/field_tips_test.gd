@@ -67,6 +67,8 @@ func _physics_process(_delta: float) -> bool:
 		_game.ctx.calm = true
 		_game.player.source = Intent.Scripted.new()
 		_game.events.prompt_shown.connect(func(verb: String): _prompts.append(verb))
+		# Actives are on by default (24 Oct); the active tip is driven below by a stand-in rack.
+		_game.tuning.set_option("actives", "off")
 		_game.flow.press_start()
 		var tally := -1
 		for i in _game.flow.classes.size():

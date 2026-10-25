@@ -334,7 +334,7 @@ func _listen(warden) -> void:
 	SignalLifetime.listen(warden, warden.fleet.events().enemy_struck, func(enemy: Node3D, hit_kind: String, force: float):
 		if hit_kind != "ram" or enemy == null or enemy != _lamp or not is_instance_valid(warden) or warden.target == null:
 			return
-		if SpeedTier.of(force, warden.target.tuning.f("cruise")) >= SpeedTier.CRUISE:
+		if SpeedTier.of(force, warden.target.tuning.tier_cruise()) >= SpeedTier.CRUISE:
 			_lamp_ram_frame = Engine.get_physics_frames())
 
 

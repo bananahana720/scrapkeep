@@ -13,12 +13,13 @@ import bpy
 from mathutils import Vector
 
 import common
+import cycles_device
 
 
 def _scene(floor):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 16
     scene.cycles.use_denoising = True
     scene.render.threads_mode = "FIXED"

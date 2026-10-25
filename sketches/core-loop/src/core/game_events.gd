@@ -17,6 +17,9 @@ signal stage_cleared(stage: int)
 signal run_ended(won: bool)
 signal beacon_charge_changed(fraction: float)
 signal beacon_unsealed(stage: int)
+# The ball first came within SIGHT_SHARE of the beacon ring's radius of a sealed Warden it has not
+# engaged: the moment before the fight, when intro lines and reveal cards play (flow.gd).
+signal warden_sighted(stage: int)
 signal warden_engaged(stage: int)
 signal stage_content_cleared(reason: String)
 

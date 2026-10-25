@@ -34,9 +34,9 @@ const Weapons := preload("res://src/combat/weapons.gd")
 # id: one stamped plate. stat: what it moves. step: per panel. kind:
 #   pct    a tuning mod key; steps add into one sum, then multiply (sheet.mods)
 #   add    a flat amount in its unit, through tuning.add (metres for area_radius)
-#   punch  flat damage per hit (sheet.punch)
+#   punch  flat damage per weapon hit and ball contact (sheet.panel_punch, read by combat.gd)
 #   hp     flat max health (sheet.max_hp_bonus)
-# silhouette: the stand-in plate shape (panel_shell.gd) until its kit plate lands.
+# silhouette: the kit plate panel_shell.gd draws (assets/models/item_panels/panel_<silhouette>.glb).
 # sound: the pickup voice, ratchet for every grey (the ladder page: "grey is a short ratchet
 # tick"). answers: Nemesis axes the stat answers, for the drop lean. words: the build read's
 # plain-words stat and the pickup pop's noun.
@@ -66,11 +66,6 @@ const ROWS := {
 	"cell_bracket": {"name": "Cell Bracket", "stat": "active_recharge", "kind": "pct", "step": 0.04, "silhouette": "bracket",
 		"sound": "panel_ratchet", "answers": [], "words": "Active recharge", "noun": "bracket"},
 }
-
-# The stand-in plates the placeholder gate counts (scripts/placeholder-gate.mjs "pending").
-# A silhouette leaves this list when its kit plate lands from the reference sheet set
-# (docs/art/reference/item_panels/) and panel_shell.gd loads it.
-const PANEL_ART_PENDING := ["louvre", "rivet", "skirt", "sight", "fin", "drum", "collar", "spool", "tank", "bumper", "tile", "bracket"]
 
 # Mass-equivalent heft per panel: a panel weighs what PANEL_MASS scrap weighs, in both scrap
 # modes, and a hit never knocks it off. 6 makes 55 panels (the crown target) 0.73 heft, about
@@ -168,6 +163,7 @@ static func fold(sheet, effective_counts: Dictionary) -> void:
 				sheet.adds[r["stat"]] = sheet.adds.get(r["stat"], 0.0) + amount
 			"punch":
 				sheet.punch += amount
+				sheet.panel_punch += amount
 			"hp":
 				sheet.max_hp_bonus += amount
 
@@ -244,7 +240,7 @@ class Dropper:
 	# scaled by the rib and jackpot multipliers and the debug drawer's scale.
 	func chance(elite: bool, rib: float, jackpot: bool) -> float:
 		if elite:
-			return float(DROP["elite"])
+			return clampf(float(DROP["elite"]) * scale, 0.0, 1.0)
 		var row: Dictionary = DROP_BY_WORLD.get(world, DROP)
 		var p: float = (float(row["chance"]) + float(row["pity"]) * dry) * rib * (float(DROP["jackpot"]) if jackpot else 1.0)
 		return clampf(p * scale, 0.0, 1.0)

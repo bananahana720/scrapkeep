@@ -23,6 +23,13 @@ const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const StageModifier := preload("res://src/world/events/stage_modifier.gd")
+const SurgeCourse := preload("res://src/world/surge_course.gd")
+const EventDirector := preload("res://src/world/event_director.gd")
+
+# A surge course's ring was rolled into (its row id): the world opens the park's sluice row on it.
+signal sluice_opened(row_id: String)
+# The course was won or lost: the world ends the sluice row early.
+signal sluice_closed(row_id: String)
 
 # The standing activities (LEGIBILITY sections 7 and 9, wave R3): optional things on a map that
 # stand lit from the stage's first frame, finish on an action the player already knows and pay
@@ -111,6 +118,15 @@ const RULES := {
 		"post_out": 26.0, "retry_s": 12.0, "budget": {"start": 6, "per_class": 1, "per_world": 2, "cap": 12},
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_relay", "where": "relay"},
 	},
+	# The surge course in a park (surge_course.gd): rolling into the ring by the head of the activity row's `route`
+	# opens the sluice (the park's sluice_surge event row, triggered on this row), and when the gate lands the water
+	# chases the ball down the route's grind rows through the gates. A ring with no sluice heard opens anyway after
+	# `fallback_s`. Taking every gate before the front pays one part into the ball's path; a loss re-arms after
+	# `retry_s`. The front only ever pushes the ball on (EventDirector.never_brake) and never hurts it.
+	"surge_run": {
+		"starts": "ring", "ring": 7.0, "finishes": "surge", "fallback_s": 10.0, "retry_s": 12.0,
+		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_surge", "where": "ball"},
+	},
 	"hauler_bounty": {
 		"starts": "near_or_hit", "ring": 4.0, "wake": 30.0, "leash": 40.0, "return_speed": 9.0, "kind": "plated_brute",
 		"finishes": "brute_dead",
@@ -161,6 +177,8 @@ const CACHE_FIRED_GLOW := {"energy": 0.8}
 # A field find's tells: seep streaks on the cracked face (x, y, width in metres) and the radio aerial.
 const FIND_SEEP_STREAKS := [Vector3(-2.6, 0.4, 0.5), Vector3(-1.9, 0.1, 0.3), Vector3(2.2, 0.6, 0.4)]
 const FIND_AERIAL_M := 3.2
+# The timed door's punch clock plate, square, on the cracked face.
+const DOOR_CLOCK_M := 1.6
 # One wet material for every seep streak.
 static var _find_wet: StandardMaterial3D
 
@@ -207,6 +225,13 @@ const MARK_SPACING_M := 80.0
 const MARK_POOL_SIZE := 16
 # A charging relay reports its progress when it has moved this far (event_director's step).
 const RELAY_PROGRESS_STEP := 0.01
+# The head-gate crew's lines on the ring's word, in the crew-log voice (design-v3/TONE-BIBLE.md: deadpan words, no
+# jokes about the rider; the siren and the water carry the noise). Their post stands beside the ring (props flume_c01).
+const SURGE_WORDS := {
+	"open": "Head gate: wheel turning. Stay ahead of the water.",
+	"won": "Head gate log: wheel shut. One ball through, flume dry.",
+	"lost": "Head gate: winding the wheel back.",
+}
 
 
 # One standing activity: its rule, its look, its state and, once it has finished, its pay.
@@ -266,6 +291,11 @@ class Site extends Node3D:
 	var relay_cooldown := 0.0
 	var minibosses_sent := 0
 	var minibosses: Array = []
+	var course
+	var surge_row := ""
+	var surge_live := false
+	var surge_wait := 0.0
+	var surge_shown := -1.0
 
 	func _exit_tree() -> void:
 		for enemy in pack + minibosses:
@@ -280,6 +310,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered)
 	ctx.events.stage_content_cleared.connect(func(_reason: String): clear())
 	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
+	ctx.events.world_fact.connect(_on_world_fact)
 	# The trade devices' plate finish neutralises its texture pixel by pixel on first use (about
 	# 55 ms, SWAP-HITCH-2); Palette caches it, so it is made here rather than on a stage entry.
 	Palette.look_texture("rusted-salvaged-plate-worn", true)
@@ -438,6 +469,11 @@ func _enter_stage(retry: bool) -> void:
 			_dress_find(found, String(find_spec["find"]))
 			last_entry_steps.append("find %s %.1f" % [find_spec["find"], (Time.get_ticks_usec() - dressed) / 1000.0])
 			sites.append(found)
+		# A fast Brindle rout last run: the timed door stands open this run (secrets.gd DOOR).
+		for door_spec in Secrets.door_sites(_graph_map, ctx.get("profile")):
+			var door := _build("cracked_cache", door_spec["at"], door_spec)
+			_dress_door(door)
+			sites.append(door)
 	if _graph != null:
 		var pool: PackedInt32Array = entry_data.pool
 		var trade_spec := TradePockets.stage_site(_graph, map, ctx.run, ctx.rng.seed, pool)
@@ -553,6 +589,8 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	match id:
 		"hold_the_relay":
 			_build_relay(s)
+		"surge_run":
+			_build_surge(s, spec)
 		"ambush_altar":
 			_build_altar(s)
 		"cracked_cache":
@@ -714,6 +752,30 @@ func _seep_tell(s: Site) -> void:
 	glint.position = Vector3(0.0, WALL_HEIGHT * 0.6, 1.2)
 	s.wall.add_child(glint)
 	s.wall.add_child(_find_sound("find_drip", Secrets.DRIP_HEAR_M))
+
+
+# The timed door: the foreman's board inside and a brass punch clock on the face, stopped short of
+# the whistle. It keeps its beacon, since it was earned; its codex row is declared here.
+func _dress_door(s: Site) -> void:
+	_hang_board(s, "Door_clock", String(Secrets.DOOR["name"]), String(Secrets.DOOR["log"]))
+	s.set_meta("door", true)
+	if ctx.get("codex") != null:
+		ctx.codex.declare(Secrets.DOOR["codex"])
+	var clock := Node3D.new()
+	clock.name = "DoorClock"
+	clock.position = Vector3(0.0, 1.3, 0.52)
+	s.wall.add_child(clock)
+	_mesh_box(clock, Vector3(DOOR_CLOCK_M, DOOR_CLOCK_M, 0.1), Vector3.ZERO, Palette.solid(Palette.BRASS))
+	_mesh_box(clock, Vector3(DOOR_CLOCK_M - 0.3, DOOR_CLOCK_M - 0.3, 0.06), Vector3(0.0, 0.0, 0.06), Palette.solid(Palette.LEDGER))
+	var ink := Palette.solid(Palette.CHARCOAL)
+	# Hands at five to twelve: the hour hand straight up, the minute hand a little short of it.
+	var hour := _mesh_box(clock, Vector3(0.1, DOOR_CLOCK_M * 0.3, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.15, 0.1), ink)
+	hour.name = "HourHand"
+	var minute := Node3D.new()
+	minute.position = Vector3(0.0, 0.0, 0.12)
+	minute.rotation.z = deg_to_rad(30.0)
+	clock.add_child(minute)
+	_mesh_box(minute, Vector3(0.07, DOOR_CLOCK_M * 0.42, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.21, 0.0), ink)
 
 
 # The radio's tell: a short whip aerial over the roof line and the tune through the wall, heard from
@@ -886,6 +948,8 @@ func _physics_process(delta: float) -> void:
 			match String(s.rule["finishes"]):
 				"relay":
 					_watch_relay(s, delta, ball)
+				"surge":
+					_watch_surge(s, delta, ball)
 				"pack_dead":
 					_watch_ambush(s, ball)
 				"wall_broken":
@@ -1398,6 +1462,82 @@ func _watch_relay(s: Site, delta: float, ball: Vector3) -> void:
 		s.relay_cooldown = float(s.rule["retry_s"])
 
 
+func _build_surge(s: Site, spec: Dictionary) -> void:
+	var map = ctx.terrain.map()
+	if not "park" in map or map.park.is_empty() or String(spec.get("route", "")) == "":
+		return
+	var course := SurgeCourse.new()
+	s.add_child(course)
+	var ring := Vector2(s.global_position.x, s.global_position.z)
+	course.setup({"ring": ring, "route": spec.route}, ctx.tuning.f("cruise"), map.park, Callable(ctx.terrain, "height"))
+	if course.model.route.points.size() < 2:
+		course.queue_free()
+		return
+	s.course = course
+	s.surge_row = String(spec.get("row", s.id))
+
+
+# The sluice's gate landed on the bar (the park row's land fact): every course still waiting goes live.
+func _on_world_fact(kind: String, _at: Vector3) -> void:
+	if kind != "sluice_landed":
+		return
+	for s in sites:
+		if is_instance_valid(s) and s.course != null and s.started and not s.surge_live and not s.done:
+			_surge_begin(s)
+
+
+func _surge_begin(s: Site) -> void:
+	s.surge_live = true
+	s.surge_shown = -1.0
+	s.course.settle()
+	s.course.model.begin()
+	ctx.events.event_started.emit(s.id)
+
+
+func _watch_surge(s: Site, delta: float, ball: Vector3) -> void:
+	if s.course == null:
+		return
+	var model = s.course.model
+	if not s.started:
+		s.relay_cooldown -= delta
+		if s.relay_cooldown > 0.0 or _planar(ball, s.global_position) > float(s.rule["ring"]) or absf(ball.y - s.global_position.y) > RING_HEIGHT:
+			return
+		s.started = true
+		s.surge_wait = float(s.rule["fallback_s"])
+		s.view.word.text = SURGE_WORDS.open
+		sluice_opened.emit(s.surge_row)
+		return
+	if not s.surge_live:
+		s.surge_wait -= delta
+		if s.surge_wait <= 0.0:
+			_surge_begin(s)
+		return
+	var velocity: Vector3 = ctx.player.state.velocity
+	var outcome: String = model.step(delta, ball, velocity)
+	ctx.player.add_external_accel(EventDirector.never_brake(model.push(ball, velocity), velocity))
+	s.course.show_live(outcome == "", fmod(model.elapsed * 2.0, 1.0))
+	s.view.word.text = model.status()
+	if model.progress() - s.surge_shown >= RELAY_PROGRESS_STEP:
+		s.surge_shown = model.progress()
+		ctx.events.event_progress.emit(s.id, s.surge_shown)
+	if outcome == "won":
+		s.surge_live = false
+		ctx.events.event_ended.emit(s.id, "won")
+		sluice_closed.emit(s.surge_row)
+		_finish(s, ball)
+		s.view.word.text = SURGE_WORDS.won
+		# The course pays into the ball's path: the pickup sits where the ball is, so it is taken on the next frame.
+		s.inside_pickup = false
+	elif outcome == "lost":
+		s.surge_live = false
+		s.started = false
+		s.relay_cooldown = float(s.rule["retry_s"])
+		s.course.show_live(false, 0.0)
+		s.view.word.text = SURGE_WORDS.lost
+		ctx.events.event_ended.emit(s.id, "lost")
+		sluice_closed.emit(s.surge_row)
+
+
 func _relay_pack(s: Site, ball: Vector3) -> void:
 	var kinds: Array = s.rule["pack"]
 	var entry: Vector3 = ball - s.global_position
@@ -1463,6 +1603,8 @@ func _break_wall(s: Site) -> void:
 	ctx.events.world_fact.emit("wall_crumbled", s.global_position)
 	if s.has_meta("find"):
 		_found(s)
+	elif s.has_meta("door") and ctx.get("codex") != null:
+		ctx.codex.mark_discovered(String(Secrets.DOOR["codex"]["id"]), s.pedestal)
 	_finish(s, s.pedestal)
 
 
@@ -1605,13 +1747,15 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 		ctx.run.add_cogs(amount)
 
 
-# A field find or a first-win room rolls on its own stream, so it never pays the part the stage's
+# A field find, a first-win room or the timed door rolls on its own stream, so it never pays the part the stage's
 # ordinary cracked cache pays; every other site keeps its id, and so its rolls.
 func _luck_id(s: Site) -> String:
 	if s.has_meta("find"):
 		return "%s:%s" % [s.id, s.get_meta("find")]
 	if s.has_meta("room"):
 		return "%s:%s" % [s.id, s.get_meta("room")]
+	if s.has_meta("door"):
+		return "%s:timed_door" % s.id
 	return s.id
 
 

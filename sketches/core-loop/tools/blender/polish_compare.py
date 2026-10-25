@@ -20,6 +20,9 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import cycles_device  # noqa: E402
+
 # Slots whose runtime material shows vertex colour: common.SLOTS vc slots and the kit slots
 # (dig_mechanical enamel, elastomer and steel).
 VC = ("paint", "pilot", "ancient_enamel", "hydraulic", "enamel", "elastomer", "steel")
@@ -138,7 +141,7 @@ def render(glb, base, size):
     world.node_tree.nodes["Background"].inputs[0].default_value = (0.55, 0.6, 0.68, 1)
     world.node_tree.nodes["Background"].inputs[1].default_value = 0.8
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 16
     scene.cycles.use_denoising = False
     scene.render.resolution_x = scene.render.resolution_y = size

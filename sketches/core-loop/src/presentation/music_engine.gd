@@ -694,6 +694,13 @@ func parameters_stage_entered() -> void:
 	_parameter_danger_floor = 0.0
 
 
+# An arena has no landing phrase to wait for: the fight's band starts with the melody, so
+# the committed release clears now as well, and the ACE player (audio.gd) is told the same.
+func parameters_arena_entered() -> void:
+	parameters_stage_entered()
+	parameter_committed_released = false
+
+
 func _riser_into(bar: int) -> void:
 	if bar - beat_len() > clock and bar - _last_riser >= RISER_SPACING:
 		_last_riser = bar
@@ -765,7 +772,7 @@ func _warm_stinger(id: String, at: int) -> void:
 	if SfxBank.baked_at(id, step, shift, theme_now):
 		return
 	_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
-	_stinger_tasks.append(WorkerThreadPool.add_task(func(): SfxBank.samples_at(id, step, shift, theme_now), false, "stinger warm"))
+	_stinger_tasks.append(WorkerThreadPool.add_task(func(): SfxBank.samples_at(id, step, shift, theme_now), true, "stinger warm"))
 
 
 static func _settle_task(task: int) -> bool:
@@ -1391,11 +1398,12 @@ func park_cue_samples(action: Dictionary, live_key: int) -> PackedFloat32Array:
 	var signature := _park_signature(action, live_key, step_len)
 	if _park_pcm.has(signature):
 		return _park_pcm[signature]
-	# A cell still rendering on its worker is waited for: what is left of it costs less than a
-	# second render here.
+	# A cell its worker has finished is taken. One still queued or rendering is not waited for: behind
+	# the next stage's build at the Warden's engage it waited 1 s on the cloud (the 4080 receipt's
+	# stage 1 spikes), where rendering it here costs 25 to 80 ms. The task stays listed for teardown.
 	var task: int = _park_tasks.get(signature, -1)
 	_park_tasks.erase(signature)
-	if task >= 0 and _stinger_tasks.has(task):
+	if task >= 0 and _stinger_tasks.has(task) and WorkerThreadPool.is_task_completed(task):
 		_stinger_tasks.erase(task)
 		WorkerThreadPool.wait_for_task_completion(task)
 	_park_warm_lock.lock()
@@ -1564,6 +1572,11 @@ func _run_due() -> void:
 			if action["type"] in ["door_tick", "park_cue"] and _step_clock != clock and posmod(clock - grid_origin, step_len) == 0:
 				continue
 			if action.get("late", false) and _late_cell_waits(action):
+				continue
+			# A cell booked ahead whose worker is still on it at its beat waits the same way: rendering it here held
+			# the crown's spire telegraph frame 300 ms on the cloud (scrapkeep#241).
+			if action["type"] == "park_cue" and _late_cell_waits(action):
+				action["late"] = true
 				continue
 			due.append(action)
 	for action in due:

@@ -3,6 +3,7 @@ extends "res://src/combat/enemy.gd"
 const Roster := preload("res://src/combat/roster.gd")
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
+const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 
 # What every Fleet reinforcement shares (DESIGN-V2 section 10): an animal crew with its
@@ -187,6 +188,20 @@ func _pose() -> void:
 	pass
 
 
+# Pack pressure lead (pack_pressure.gd; identity without --pack-pressure): roam toward and size up the ball's
+# roll SEEK_LEAD_S ahead along its curve, scaled by the spec's lead. A kind that aims its warn from the offset
+# it is handed (the hooker, boom tender, deflector, anchor crew) lays it toward that roll; it is committed as ever.
+const SEEK_LEAD_S := 1.0
+
+
+func _seek(to_ball: Vector3) -> Vector3:
+	var lead := float(spec.get("pressure", {}).get("lead", 0.0))
+	if lead <= 0.0:
+		return to_ball
+	var at: Vector3 = PackPressure.predict(target, SEEK_LEAD_S * lead) - global_position
+	return Vector3(at.x, 0.0, at.z)
+
+
 func _roam(to_ball: Vector3) -> Vector3:
 	var distance := to_ball.length()
 	if distance < 0.1:
@@ -214,10 +229,11 @@ func _physics_process(delta: float) -> void:
 			_rest -= delta
 			var open := recovering()
 			recover_left = maxf(0.0, recover_left - delta)
-			_move(delta, Vector3.ZERO if stunned() or open else _roam(to_ball))
-			if not stunned() and not open and _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(to_ball):
+			var seek := _seek(to_ball)
+			_move(delta, Vector3.ZERO if stunned() or open else _roam(seek))
+			if not stunned() and not open and _rest <= 0.0 and _knocked_speed() < 1.0 and _wants_attack(seek):
 				if AttackBudget.ask(self):
-					_warn(to_ball)
+					_warn(seek)
 			else:
 				AttackBudget.withdraw(self)
 		Phase.WARN:
@@ -318,7 +334,7 @@ func _end() -> void:
 	AttackBudget.release(self)
 	phase = Phase.ROAM
 	_t = 0.0
-	_rest = rest_seconds * float(spec.get("rest_scale", 1.0))
+	_rest = rest_seconds * float(spec.get("rest_scale", 1.0)) * float(spec.get("pressure", {}).get("rest", 1.0))
 
 
 # --- Holds ----------------------------------------------------------------------------

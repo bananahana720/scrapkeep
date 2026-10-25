@@ -88,6 +88,7 @@ func _ready() -> void:
 	_install_exchange_input.call_deferred()
 	_game.events.run_started.connect(_on_run_started)
 	_game.events.stage_entered.connect(_on_stage_entered)
+	_game.events.warden_sighted.connect(_on_warden_sighted)
 	_game.events.warden_engaged.connect(_on_warden_engaged)
 	_game.events.boss_arena_entered.connect(_on_boss_arena_entered)
 	# Reading is optional and momentum is sacred: firing or hooking walks away from it.
@@ -143,16 +144,22 @@ func _begin_exchange(stage: int) -> void:
 
 
 # Intro rows are the Warden's line (subject "warden") and the world boss's line. The Warden
-# line plays when the Warden is engaged; the boss line when the arena opens, which only the
-# last zone of a world reaches, where the pilot's own threat line wins over the boss's general
-# one. Each plays once per run and zone, and waits out an exchange.
+# line plays when the Warden is sighted (flow.gd warden_sighted), before the fight, and clears
+# the moment the Warden is engaged: a fight's screen holds no intro (LEGIBILITY word budget).
+# The boss line plays when the arena opens, which only the last zone of a world reaches, where
+# the pilot's own threat line wins over the boss's general one. Each plays once per run and
+# zone once it has reached the screen, and waits out an exchange.
 func _zone_of(stage: int) -> String:
 	return "%d-%d" % [_game.ctx.stages.world_of(stage), _game.ctx.stages.local(stage)]
 
 
-func _on_warden_engaged(stage: int) -> void:
-	_end_exchange(false)
+func _on_warden_sighted(stage: int) -> void:
 	_queue_intro(_zone_of(stage), true)
+
+
+func _on_warden_engaged(_stage: int) -> void:
+	_end_exchange(false)
+	_end_intro()
 
 
 func _on_boss_arena_entered() -> void:
@@ -161,7 +168,7 @@ func _on_boss_arena_entered() -> void:
 
 func _queue_intro(zone: String, warden: bool) -> void:
 	var key := "%s/%s" % [zone, "warden" if warden else "boss"]
-	if _intros_played.has(key):
+	if _intros_played.has(key) or _intro_queue.any(func(queued): return queued["intro_key"] == key):
 		return
 	var pilot: String = _game.run.class_id()
 	var chosen := {}
@@ -173,8 +180,9 @@ func _queue_intro(zone: String, warden: bool) -> void:
 			if row.has("pilot"):
 				break
 	if not chosen.is_empty():
-		_intros_played[key] = true
-		_intro_queue.append(chosen)
+		var entry := chosen.duplicate()
+		entry["intro_key"] = key
+		_intro_queue.append(entry)
 	_flush_intro()
 
 
@@ -182,6 +190,7 @@ func _flush_intro() -> void:
 	if _intro_queue.is_empty() or not _exchange.is_empty() or get_tree().paused:
 		return
 	var row: Dictionary = _intro_queue.pop_front()
+	_intros_played[String(row["intro_key"])] = true
 	position = Vector2(0.0, get_viewport().get_visible_rect().size.y * 0.30)
 	_say(String(row["text"]), "moss_beat", "intro", 0.0, false, "")
 	_hold = INTRO_HOLD

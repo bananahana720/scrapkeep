@@ -9,10 +9,12 @@ const BotOptions := preload("res://tools/bot_options.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
+const StageLocks := preload("res://src/world/stage_locks.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
 const SignalTimer := preload("res://tools/signal_timer.gd")
 const PhysicsProbe := preload("res://tools/physics_probe.gd")
 const FrameSplit := preload("res://tools/frame_split.gd")
+const BotPlants := preload("res://tools/bot_plants.gd")
 
 # Headless bot runs for the design feedback loop (DEMO-SPEC). Each seed plays one full
 # demo run through a fresh Game.new() with one policy (tools/bot_driver.gd), in play
@@ -42,6 +44,8 @@ const FrameSplit := preload("res://tools/frame_split.gd")
 # --bot-no-pilot-tracks=1 skips pilot bone sampling, retaining playback and signals.
 # --bot-no-visuals=1 skips selected unread idle callbacks only
 # on the headless display. Camera, HUD, hit-stop and collision work remain active.
+# --plant=name=value[,name=value] (test only, the anti-kiting gates' controls): pack_damage=K, damage=K, packs_passive=1,
+# hide_pack_telegraphs=1 (tools/bot_plants.gd). Absent, the run is unchanged. --policy=orbit|terrain are the gates' arms (bot_kite.gd).
 # --gate=1 enables all three switches, unless individually overridden with =0.
 # --chain-hand=0 turns off the explorer's two-hook hand (bot_driver's control switch).
 # --late-offer=take|skip (SG8) turns the tree's late_offer on, has the bot take a random branch at
@@ -65,9 +69,10 @@ const FrameSplit := preload("res://tools/frame_split.gd")
 # passes --table=park, which a launched game plays):
 # --wall-clock=1 leaves SimClock on the wall clock, as in a played game: park stages build on
 # worker threads and hit-stop reads real time, so the seed no longer replays exactly.
-# --threaded-stages=1 builds park stages on worker threads as --wall-clock=1 does, but keeps the
-# hit-stop clock on physics ticks: for frame captures, where the next stage's one-frame build on
-# the engage frame is a bot artifact. The seed no longer replays exactly.
+# --threaded-stages=1 builds park stages on worker threads as --wall-clock=1 does, frees a left stage
+# over the next frames, and reads later-world enemy scripts on the loader thread at stage entry, as a
+# played game does, but keeps the hit-stop clock on physics ticks: for frame captures, where the next
+# stage's one-frame build on the engage frame is a bot artifact. The seed no longer replays exactly.
 # --warm-band=1 renders the band's other themes, keys and boss tracks (MusicEngine.prepare_rest) before
 # the run, as a played run does on a worker behind stage 1. Without it each chord, note and riser
 # renders on the main thread the first time a bar asks, 60 to 300 ms a frame that play never has.
@@ -96,6 +101,8 @@ const FrameSplit := preload("res://tools/frame_split.gd")
 # follows the tick count moves with it, one on a wall clock does not.
 # --inject-ms=N sleeps N ms every 6 s of wall time outside the driver's tick: a planted frame cost
 # for the net_ms read of a --frame-split frame log (the control that a game-side hitch still shows).
+# --locks=0 turns off the Spillway's Warden gate and arena lock (src/world/stage_locks.gd), so one
+# binary measures the pacing they add.
 # --unshaded=1 draws the root viewport unshaded, so a render cost can be told apart from the lights
 # and shadows (for frame captures: it changes the picture).
 # The game runs in test mode (no keyboard, no mouse capture) and its codex and run log
@@ -147,12 +154,15 @@ var _physics_probe
 var _frame_split
 var _inject_ms := 0
 var _inject_at := 0
+# The test-only plants of --plant= (tools/bot_plants.gd); null, and untouched, without the flag.
+var _plants
 
 
 func _initialize() -> void:
 	_settings = _parse(OS.get_cmdline_user_args())
 	SimClock.ticks = _settings.get("wall-clock", "0") != "1"
 	Terrain.threaded_in_bot_runs = _settings.get("threaded-stages", "0") == "1"
+	StageLocks.active = _settings.get("locks", "1") != "0"
 	_bot_options = BotOptions.new(_settings, self)
 	BotProfile.enabled = _settings.get("bot-profile", "0") == "1"
 	if BotProfile.enabled:
@@ -183,6 +193,10 @@ func _initialize() -> void:
 		return
 	if _settings.has("attempt") and int(_settings["attempt"]) < 1:
 		printerr("bot_run: --attempt must be 1 or more")
+		quit(2)
+		return
+	if _settings.has("plant") and BotPlants.parse(String(_settings["plant"])).has("error"):
+		printerr("bot_run: --plant: %s" % BotPlants.parse(String(_settings["plant"]))["error"])
 		quit(2)
 		return
 	_out = _absolute(_settings["out"])
@@ -335,6 +349,9 @@ func _physics_process(delta: float) -> bool:
 				return true
 			_driver.late_offer_policy = late
 			_driver.tree_policy = "random"
+		if _settings.has("plant"):
+			_plants = BotPlants.new()
+			_plants.attach(_game, _driver, BotPlants.parse(String(_settings["plant"])))
 		_game.presentation.audio.bake_opening_now()
 		if _settings.get("warm-band", "0") == "1":
 			MusicEngine.prepare_rest()
@@ -379,6 +396,8 @@ func _physics_process(delta: float) -> bool:
 	if _tick_trace != null:
 		_tick_trace.store_line(JSON.stringify(_snapshot(delta)))
 	_beats.step()
+	if _plants != null:
+		_plants.step()
 	var tick_start := Time.get_ticks_usec()
 	var over: bool = _driver.tick(delta)
 	if _frame_split != null:
@@ -415,6 +434,8 @@ func _physics_process(delta: float) -> bool:
 	if _settings.has("panel-log"):
 		record["panel_kills"] = _game.build.kill_log.duplicate()
 		record["panels"] = Array(_game.run.panels)
+	if _settings.has("plant"):
+		record["plant"] = String(_settings["plant"])
 	_results.append(record)
 	_game.codex.append_line(_out.path_join("bots.ndjson"), JSON.stringify(record))
 	_write_entries()
@@ -440,6 +461,7 @@ func _physics_process(delta: float) -> bool:
 	if _settings.get("bot-no-pilot-tracks", "0") == "1":
 		print("bot_run: %d cosmetic pilot tracks disabled; playback retained" % _bot_options.pilot_tracks_skipped)
 	_game = null
+	_plants = null
 	_tick_trace = null
 	_frame_log = null
 	# Match a fresh process: start the driver before the new camera's first render update.

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Worlds := preload("res://src/core/worlds.gd")
+const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 
 # The park table (`--table=park`, PARK.md section 10, unit KD0): the alpha rows with the six park map
 # ids (park_dam, park_flume, park_pit, park_sinkhole, park_islands, park_crown) in place of the old
@@ -23,20 +24,17 @@ const COUNT := 6
 # The named synergies this table keeps. Any other synergy and every unnamed tag rule is out.
 const SYNERGIES := ["wrecking_ball", "tesla_pylon", "pinwheel", "shrapnel_bloom", "lightning_rod"]
 
-# The eighteen parts every source on this table offers, and the only ones. The five shown
-# parts of the kept synergies, one carrier of each hidden tag they need (kinetic, speed, mass;
-# arc comes from arc_coil, and the class mods carry it for the pylon pilot), the two class
-# mods, and three heavy hitters so the shelf has a rare tier. Wave 11 GP2 adds one part per
-# verb the pool barely touched (roll, harpoon, boost, special, jump, haul); Live Line and Drop
-# Weight are the second ingredients of the Storm Mast and Grounding Spike evolutions. A
-# synergy completes from this list for every pilot. Generated recipes and milestone parts are out.
-const PARTS := [
-	"double_feed", "focus_lens", "spiral_wave", "cross_split", "arc_coil",
-	"hot_rivets", "loose_trigger", "rivet_plating",
-	"pylon_capacitor", "runner_overclock",
-	"sunforged_core", "gatling_heart",
-	"grip_tread", "live_line", "vent_baffle", "spare_cell", "spring_shims", "drop_weight",
-]
+# The parts every source on this table offers, and the only ones: the alpha table's 45 (its
+# SQ19b kit lean, the five maker sets complete from them, alpha_defs.gd says why each is
+# there) and its burden parts, which no pool offers but a pocket's pay can name. This was an
+# eighteen-part wave 11 list until 24 Oct (Codex world 1 review, design #2): on it 27 of the
+# 45 never dropped and three maker sets could not complete.
+const PARTS := AlphaDefs.PARTS
+const BURDEN_PARTS := AlphaDefs.BURDEN_PARTS
+# Earned parts this table offers beside the alpha list. Spare Frame is the earned save ("No
+# free retry", 22 Oct: "a rare earned item ... can save one death"); its rare_plus row is a
+# relic, so it drops where a relic does (a source's relic weight, an overcharged gate).
+const EARNED_PARTS := ["spare_frame"]
 
 # A rise to a heft class the run has not been rewarded for opens one upgrade tree pick.
 const PICK_ON_CLASS_UP := true
@@ -90,6 +88,11 @@ const ELITE_ARRIVAL := 3
 # stage from the Spillway to the crown; the default Breath plays them as written and gentle eases
 # them (director.gd BREATH).
 const POSTURE_CURVE := 2.0
+# The stage 3 hive (Andrew's option 1 on the swarm hive card, 23 Oct: grown builds hit it harder,
+# ordinary pilots stay at about 75 s): a heavy stagger. In one a ram opened at 0.7x the plating or more,
+# a smashing ram takes two chunks (boss_posture.gd heavy_ratio). 24 seeds a side on stage w18: small
+# 72.89 s, grown 33.95 s, 2.15x (was 75.69 / 40.67, 1.86x); posture_bands_swarm_test holds it.
+const HIVE_HEAVY_RATIO := 0.7
 const PRESSURE := [
 	{"pack_scale": 1.03, "interval_scale": 0.95, "elite_rate": 0.60, "posture_curve": 1.00, "boss_phase_scale": 1.00},
 	{"pack_scale": 1.04, "interval_scale": 0.92, "elite_rate": 0.80, "posture_curve": 1.00, "boss_phase_scale": 1.10},
@@ -116,7 +119,7 @@ const DEFS := [
 		"unlock_base": 2, "ancient": "swarm_remnant",
 		"event_mix": {}, "scrap_density": 1.0, "kill_scrap": 4.5, "beacon_seconds": 25.0, "beacon_radius": 30.0,
 		"warden_plating": 130.0, "warden_hp": 950.0, "warden_lesson": "",
-		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
+		"posture": {"curve": POSTURE_CURVE * PRESSURE[2]["posture_curve"], "ram_shatters": false, "contact_gain_scale": 150.0, "contact_gain_floor": 0.55, "heavy_ratio": HIVE_HEAVY_RATIO}, "pressure": PRESSURE[2], "warden_hint": "Bowl through its guard rack, then smash the core.",
 		"packs": [
 			{"id": "dig_shallow", "kinds": ["burrower", "burrower", "lamp_swarm"]},
 			{"id": "dig_bore", "kinds": ["drill_crew", "burrower", "prop_crew"]},
@@ -213,7 +216,7 @@ static func synergy_in_play(synergy_id: String) -> bool:
 
 
 static func part_in_play(part_id: String) -> bool:
-	return part_id in PARTS
+	return part_id in PARTS or part_id in BURDEN_PARTS or part_id in EARNED_PARTS
 
 
 # True when part_in_play restricts what sources offer (the pool, the generated share and

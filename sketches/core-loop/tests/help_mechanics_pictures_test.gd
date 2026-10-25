@@ -19,6 +19,9 @@ func _run() -> void:
 	var game := Game.new()
 	game.test_mode = true
 	root.add_child(game)
+	# Actives are on by default (24 Oct); this page's off checks run with --actives=off.
+	_t.check("actives on by default", game.tuning.option("actives") == "on")
+	game.tuning.set_option("actives", "off")
 	game.screens.toggle_help()
 	await process_frame
 	await process_frame
@@ -91,8 +94,7 @@ func _run() -> void:
 	_t.eq("rules cover grip, jam, cast, radio, stake and active", rules_in_order, ["grip", "jam", "cast", "radio", "stake", "active"])
 	for want in ["wall grip", "jam", "cast time", "radio", "stake", "slots 2, 3", "hold e"]:
 		_t.check("rules page shows \"" + want + "\"", shown.contains(want))
-	# Actives are off by default: no F line, and never the dev flag's name.
-	_t.check("actives off by default", game.tuning.option("actives") != "on")
+	# Actives off: no F line, and never the dev flag's name.
 	_t.check("actives off: no F line", not help.rules["active"].is_visible_in_tree() and not shown.contains("f:"), shown)
 	_t.check("rules page never names --actives", not shown.contains("--actives"), shown)
 	for id in help.rules:

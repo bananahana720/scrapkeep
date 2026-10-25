@@ -8,8 +8,8 @@ const Registry := preload("res://src/core/content_registry.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 
-# Intro lines: the Warden's row plays when warden_engaged fires, the boss's row when
-# boss_arena_entered fires. Each plays once per run and zone, waits out an exchange and a
+# Intro lines: the Warden's row plays when warden_sighted fires, before the fight, and clears
+# when warden_engaged fires; the boss's row plays when boss_arena_entered fires. Each plays once per run and zone, waits out an exchange and a
 # pause, and the registry keeps the rows on real zones with the boss their world owns. Every
 # boss has one threat line per pilot at its arena zone, and the pilot's line wins there.
 
@@ -22,6 +22,11 @@ var _bubble
 var _phase := "boot"
 var _frames := 0
 var _t := T.new("intro_lines_test")
+
+
+# The ball reaches the Warden's spot: flow's own sighting read, as its frame would run it.
+func _sight() -> void:
+	_game.flow._read_sighting(_game.flow._warden_at)
 
 
 func _initialize() -> void:
@@ -122,14 +127,16 @@ func _physics_process(_delta: float) -> bool:
 			_next("warden")
 		"warden":
 			_bubble.dismiss_exchange()
-			_game.flow._engage()
-			_t.check("Warden line shows at engagement", _showing(spillway_warden), _bubble.text)
+			_sight()
+			_t.check("Warden line shows at the sighting", _showing(spillway_warden), _bubble.text)
 			_t.near("intro holds about four seconds", _bubble._hold, 4.0, 0.01)
+			_game.flow._engage()
+			_t.check("engagement clears the Warden line", _silent(), _bubble.text)
 			_game.flow.enter_stage(1, Vector3.ZERO, true)
 			_next("again")
 		"again":
-			_game.flow._engage()
-			_t.check("a second engagement in the same run shows nothing", _silent(), _bubble.text)
+			_sight()
+			_t.check("a second sighting in the same run shows nothing", _silent(), _bubble.text)
 			_game.flow.enter_stage(2, Vector3.ZERO, false)
 			_next("exchange")
 		"exchange":
@@ -146,8 +153,10 @@ func _physics_process(_delta: float) -> bool:
 			_t.check("interact dismisses the intro", _silent(), _bubble.text)
 			_game.events.boss_arena_entered.emit()
 			_t.check("arena entry twice in a run shows nothing", _silent(), _bubble.text)
+			_sight()
+			_t.check("Reach Warden line shows at the sighting", _showing(reach_warden), _bubble.text)
 			_game.flow._engage()
-			_t.check("Reach Warden line shows at engagement", _showing(reach_warden), _bubble.text)
+			_t.check("Reach engagement clears it", _silent(), _bubble.text)
 			_game.flow.enter_stage(4, Vector3.ZERO, false)
 			_next("paused")
 		"paused":

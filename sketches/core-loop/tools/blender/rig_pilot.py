@@ -19,6 +19,7 @@ ROOT = HERE.parents[3]
 OUT = ROOT / "artifacts/anim-pilot"
 sys.path.insert(0, str(HERE))
 import common
+import cycles_device
 import polish
 import shell_base as sb
 
@@ -288,6 +289,7 @@ def build(pilot_name="rivet", out=None, polished=True):
 def studio():
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
+    cycles_device.use(scene)
     scene.cycles.samples = 16
     scene.cycles.use_denoising = True
     scene.render.threads_mode = "FIXED"

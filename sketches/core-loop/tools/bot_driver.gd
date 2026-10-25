@@ -12,6 +12,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
+const BotKite := preload("res://tools/bot_kite.gd")
 
 # One scripted player for the design feedback loop (DEMO-SPEC, "Bot runs"). It plays a
 # real Game through the same doors a person uses: an Intent.Scripted source for the
@@ -38,6 +39,9 @@ const Requisition := preload("res://src/boss/requisition.gd")
 #                  its whole stick and every press go out TRAVERSE_REACTION seconds after
 #                  they were decided, with at most one verb per TRAVERSE_PRESS_GAP seconds.
 #   camper         holds the gun on the Warden from CAMP_RANGE and never closes.
+#   orbit          the anti-kiting gates' circling arm (bot_kite.gd): circles the nearest live pack unit or Warden
+#                  at 14 m at cruise speed, never rams, never dodges.
+#   terrain        orbit with the default dodging that breaks the circle onto the nearest line (bot_kite.gd).
 # The fight profiles for the Warden bands, by name: brawler is the completionist (it
 # fights with every verb it has), skipper is the skipper, camper is the camper.
 # All of them fight the boss module's posture target or Brindle's parts (see _boss).
@@ -65,7 +69,9 @@ const Requisition := preload("res://src/boss/requisition.gd")
 # The sweep adds "fight_capped" (the fight ran past
 # fight_limit) and "broken" (the Warden broke; it ends the run there).
 
-const POLICIES := ["skipper", "completionist", "random", "camper", "traversal"]
+const POLICIES := ["skipper", "completionist", "random", "camper", "traversal", "orbit", "terrain"]
+# How far the bot looks for a crew to break when the Warden's clamp is shut (_gate_foe).
+const GATE_HUNT := 140.0
 const PROFILES := {"brawler": "completionist", "camper": "camper", "skipper": "skipper"}
 const CAMP_RANGE := 30.0
 const TRAVERSE_REACTION := 0.15
@@ -233,9 +239,20 @@ const GATE_SWITCH_FALLS := 2
 const GATE_SWITCH_SECONDS := 40.0
 # Level with a gate and within GATE_CALM_RANGE of it, the bot rolls in without boosting and brakes
 # above GATE_CALM_SPEED, as a player eases up near a rim: the crown's gates stand 5 m in from a
-# 25 m drop, and a heavy ball boosted at its run-in point overshoots it off the beacon top.
+# 25 m drop, and a heavy ball boosted at its run-in point overshoots it off the beacon top. Any
+# other gate still untaken after GATE_HOP_SECONDS gets the same easing: a heavy ball that comes up
+# beside a gate at speed (the Flume's gate lip from its drum lip) swings across its run-in point,
+# side to side, and never lines up to roll through.
 const GATE_CALM_RANGE := 25.0
 const GATE_CALM_SPEED := 12.0
+# Within GATE_LINE_SIDE of a gate's line, between GATE_LINE_BACK and GATE_LINE_NEAR behind it, the
+# bot steers for the line GATE_LINE_LEAD metres ahead of the ball instead of the run-in point. From
+# GATE_LINE_NEAR out, a ball 6 m off the line crosses the arch inside reward_gates' 5 m take
+# (WIDTH / 2 + 1), so it never takes a neighbour 10 m along (the Highdraft and crown gates).
+const GATE_LINE_SIDE := 6.0
+const GATE_LINE_BACK := 14.0
+const GATE_LINE_NEAR := 2.0
+const GATE_LINE_LEAD := 6.0
 const VAULT_SECONDS := 45.0
 const EVENT_PURSUIT_SECONDS := 40.0
 const EVENT_LATEST := 150.0
@@ -245,6 +262,11 @@ const WANDER_COMMIT_DISTANCE := 45.0
 const WANDER_COMMIT_TIME := 45.0
 # Telegraph reading.
 const REACTION := 0.25
+# The anti-kiting gates' contact rule (the same for every policy): a stage's first contact is the first tick a live enemy
+# stands within CONTACT_RADIUS of the ball; a hit taken with none that close (a shell, a lane) also opens it. The
+# gates read the hull lost, and the seconds alive, in the CONTACT_WINDOW_S after it.
+const CONTACT_RADIUS := 30.0
+const CONTACT_WINDOW_S := 120.0
 const PREDICT := 0.35
 const FIELD_RADIUS := 20.0
 const ESCAPE_DIRECTIONS := 16
@@ -308,6 +330,14 @@ const CAP_REACH := 2.6
 # from the first frame it is the target and including the roll onto its pay; past that it is
 # abandoned and the bot moves on. The cache's run-up point lies this far out from its face.
 const ACTIVITY_SECONDS := 40.0
+# The surge course is a ring, a siren and then a run down a whole line, so it gets longer than a standing site.
+const SURGE_SECONDS := 80.0
+# Down the line, it aims this far ahead of itself on the deck's centre.
+const SURGE_LEAD_M := 18.0
+# Inside this of the next gate it aims at the gate.
+const SURGE_GATE_AIM_M := 35.0
+# While the siren winds, it waits this far back from the head, on the line.
+const SURGE_RUNUP_M := 14.0
 # A field find's limit: the walk into its dead end comes on top of the ram.
 const FIND_SECONDS := 60.0
 const CACHE_RUNUP := 24.0
@@ -344,6 +374,7 @@ const SLOPE_SLACK := 0.001
 const KICKER_LAUNCH := 8.0
 const KICKER_JUMP_AT := 3.0
 const CLIMB_REACHED := 6.0
+const ROUTE_REACHED := 15.0
 # A cable takes a ball whose centre comes within its radius of the cable's high end (contraptions.gd) and rides it
 # down. A climb cell whose rolling centre is within CABLE_CLEAR more is closed: on the park's first stage the way up
 # to the domes camp passed under domes_zip's end, and each pass rode the explorer 58 m back down to the deck.
@@ -400,6 +431,20 @@ var relay_stake := 0
 # The pacing lab's switch (bot_run --explore-by=<s>, scripts/pacing-check.mjs): the stage second the
 # completionist stops its optional rolling for the Warden. Left at ENGAGE_BY unless the flag is given.
 var engage_by := ENGAGE_BY
+# Under --explore-by an activity's ACTIVITY_SECONDS run only while the ball is within ACTIVITY_NEAR of
+# the site; the roll there has its own ACTIVITY_TRAVEL_SECONDS. The default clock counts the roll too, and
+# on the park dam it ran out on the way to the altar and the camp (trace, seed 3, 24 Oct).
+const ACTIVITY_NEAR := 40.0
+const ACTIVITY_TRAVEL_SECONDS := 60.0
+# The roll gets ACTIVITY_TRAVEL_SECONDS plus a second for every ACTIVITY_TRAVEL_SPEED metres it starts away.
+const ACTIVITY_TRAVEL_SPEED := 8.0
+var _activity_travel := {}
+var _activity_travel_cap := {}
+# A site the roll could not reach in its cap is put off, not dropped, until the ball has moved
+# ACTIVITY_RETRY_MOVE from where it gave up, once: on the park dam the rim cache and the bench altar
+# lie past the crest, and the way down is the spillway sheet the explorer takes later anyway.
+const ACTIVITY_RETRY_MOVE := 150.0
+var _activity_deferred := {}
 const RELAY_ARM_SECONDS := 150.0
 var _relay_clock := 0.0
 var _relay_closed := {}
@@ -474,6 +519,8 @@ var _cache_phase := "runup"
 var _cache_clock := 0.0
 var _climb: Array[Vector3] = []
 var _climb_for := ""
+# Under --explore-by: the park route's row centres between the ball and a site's row, walked before the climb.
+var _route: Array[Vector3] = []
 var _fight_climb: Array[Vector3] = []
 var _fight_climb_clock := 0.0
 var _fight_climb_held := 0.0
@@ -491,6 +538,8 @@ var band = null
 # The lowest hull the run reached, for the record; it steers nothing.
 var _min_hp := INF
 var _evaded := {}
+# Telegraph ids already counted as a read (the gates' reads per hit), pruned with _seen.
+var _read := {}
 # Brindle charge lanes (hazard instance id) already counted as read, sidestepped, clash-tried, and the clash taken.
 var _charge_read := {}
 var _charge_stepped := {}
@@ -525,6 +574,11 @@ var _weak_roll := 0.0
 var _weak_go := false
 var _weak_warden: Node3D = null
 var _harpoon_commit := false
+# The anti-kiting gates (bot_kite.gd): the policy object, whether the stick coasts above cruise speed with boost off (orbit
+# and terrain circling), and the test-only plants (tools/bot_plants.gd; both false/empty without --plant=).
+var kite
+var _cruise_hold := false
+var hide_pack_telegraphs := false
 # Only the explorer changes hands: jump clear, bite, release at the apex, bite again, haul.
 # chain_hand_enabled = false keeps the one-bite hand, the control for the two-hook one.
 var chain_hand_enabled := true
@@ -661,7 +715,9 @@ func start(resume := false) -> void:
 	_connect_optional("ultimate_ready", func(_id: String): _on_ultimate_ready())
 	events.world_fact.connect(func(fact: String, _at: Vector3):
 		if fact == "thermal_ride" and game.flow.in_stage():
-			_count("thermal_rides"))
+			_count("thermal_rides")
+		if kite != null and game.flow.in_stage():
+			kite.on_ride_fact(fact))
 	events.slammed.connect(func(at: Vector3, _strength: float, _flatness: float):
 		if not _plate_hand.is_empty() and game.flow.in_stage() and _plate_contains(_plate_hand, at):
 			_count("plate_slams"))
@@ -780,6 +836,8 @@ func tick(delta: float) -> bool:
 	_ult_wait -= delta
 	_harpoon_held = false
 	_harpoon_commit = false
+	_cruise_hold = false
+	_contact_scan()
 	_plant_cool -= delta
 	_punch_seen = maxf(float(flow.punch_now()), _punch_seen - PUNCH_FADE * delta)
 	if trace and ticks % (Engine.physics_ticks_per_second * 2) == 0:
@@ -834,7 +892,8 @@ func _lap_roll() -> void:
 
 
 # The stall limit now. A sweep's own stage_limit is kept; the default one stretches for the
-# Mind's crown, for the gates after a break, and by however far --explore-by moved engage_by.
+# Mind's crown, for the gates after a break, by however far --explore-by moved engage_by, and by
+# the time the Spillway's locks held the run (ruling t).
 func _stage_cap() -> float:
 	if stage_limit != STAGE_LIMIT:
 		return stage_limit
@@ -844,7 +903,33 @@ func _stage_cap() -> float:
 	var broken = _note.get("warden_broken_s")
 	if broken != null:
 		cap = maxf(stage_limit, float(broken) + GATE_LIMIT)
-	return cap + maxf(0.0, engage_by - ENGAGE_BY)
+	return cap + maxf(0.0, engage_by - ENGAGE_BY) + _lock_held_s()
+
+
+# The seconds the Spillway's locks (#420, src/world/stage_locks.gd) held this stage on purpose:
+# the yard's lock from its slam to its bells, and the Warden's clamp from the first engage until
+# it opens, each still counting while it stands and each at most its row's max_s, so a lock the
+# bot never sees open cannot grow the cap with the clock (seed 16 ran 97 min on 97bcc2c0).
+# STAGE_LIMIT is a harness fit (ruling t), so a run the locks delay is not called stalled for it.
+# With --locks=0 there are no notes and nothing is added.
+func _lock_held_s() -> float:
+	var lock_at = _note.get("lock_s")
+	var engaged = _note.get("warden_engaged_s")
+	if lock_at == null and engaged == null:
+		return 0.0
+	var gate = game.flow.get("gate")
+	if gate == null:
+		return 0.0
+	var held := 0.0
+	if lock_at != null:
+		var unlock_at = _note.get("unlock_s")
+		var until := float(unlock_at) if unlock_at != null else float(game.run.stage_time)
+		held += clampf(until - float(lock_at), 0.0, float(gate.lock_row().get("max_s", 0.0)))
+	if engaged != null and gate.has_gate():
+		var open_at = _note.get("gate_open_s")
+		var until := float(open_at) if open_at != null else float(game.run.stage_time)
+		held += clampf(until - float(engaged), 0.0, float(gate.gate_row().get("max_s", 0.0)))
+	return held
 
 
 # A pending hot-wire offer is answered the tick it is seen, by one rule: the completionist
@@ -921,6 +1006,9 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_event_skip = {}
 	_activity = ""
 	_activity_time = {}
+	_activity_travel = {}
+	_activity_travel_cap = {}
+	_activity_deferred = {}
 	_activity_skip = {}
 	_relay_clock = 0.0
 	_relay_closed = {}
@@ -929,6 +1017,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_climb = []
 	_route_lips.clear()
 	_climb_for = ""
+	_route.clear()
 	_fight_climb = []
 	_fight_climb_clock = 0.0
 	_fight_climb_held = 0.0
@@ -946,7 +1035,9 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_note = {"stage": stage, "warden_engaged_s": null, "warden_fight_s": null, "warden_broken_s": null, "exit_s": null, "events_joined": [],
 		"cores": [], "parts": [], "vault_tried": false, "waypoints": 0, "stuck_detours": 0, "hp_lost": 0.0, "hits": 0,
 		"max_hp": game.run.max_hp, "evasions": 0, "cap_hits": 0, "magnet_stuns": 0, "plants": 0, "slingshots": 0,
-		"specials": 0, "punch_short_s": 0.0, "plate_slams": 0, "thermal_rides": 0}
+		"specials": 0, "punch_short_s": 0.0, "plate_slams": 0, "thermal_rides": 0,
+		"first_contact_s": null, "first_hit_s": null, "hull_lost_120s": 0.0, "alive_120s": null, "fight_s": 0.0, "circle_s": 0.0,
+		"circle_share": null, "line_rides": 0, "lines_in_reach": null, "line_misses": 0, "telegraph_reads": 0}
 
 
 func _note_set(key: String, value) -> void:
@@ -1024,6 +1115,7 @@ func _on_player_hit(amount: float, source_id: String) -> void:
 	_count("hp_lost", amount)
 	_count("hull_lost", hull)
 	_count("hits")
+	_note_contact_hit(hull)
 	if source_id == "brindle_charge":
 		_count("charge_hits")
 	var in_boss := _in_boss()
@@ -1088,6 +1180,7 @@ func _close_note() -> void:
 	_note["punch_short_s"] = snappedf(float(_note["punch_short_s"]), 0.01)
 	if not _note.has("secrets_found"):
 		_note["secrets_found"] = []
+	_close_contact()
 	stage_notes.append(_note)
 	_note = {}
 
@@ -1189,6 +1282,11 @@ func _roam(delta: float) -> void:
 		_settle_warden_damage(float(warden.get("hp")))
 	if warden != null:
 		_note["magnet_stuns"] = maxi(int(_note.get("magnet_stuns", 0)), int(warden.get("magnet_stuns") if warden.get("magnet_stuns") != null else 0))
+	var crew := _gate_foe()
+	if crew != null:
+		_goal = "gate crew"
+		_fight(crew, delta)
+		return
 	match policy:
 		"skipper":
 			if relay_stake > 0 and _relay_arm(delta):
@@ -1200,8 +1298,33 @@ func _roam(delta: float) -> void:
 			_camper(warden, delta)
 		"traversal":
 			_traverse(delta)
+		"orbit", "terrain":
+			if kite == null:
+				kite = BotKite.new(self)
+			kite.step(delta, policy == "terrain")
 		_:
 			_random(warden, delta)
+
+
+# The Spillway's locks (src/world/stage_locks.gd) read as a person reads them: a shut yard's
+# crew comes first, and once the Warden is awake behind a shut clamp, the nearest enemy inside
+# GATE_HUNT. The traversal pilot only rides.
+func _gate_foe() -> Node3D:
+	var gate = game.flow.get("gate")
+	if gate == null or policy == "traversal":
+		return null
+	if gate.lock_active() and _note.get("lock_s") == null:
+		_note_set("lock_s", snappedf(game.run.stage_time, 0.01))
+	if not gate.lock_active() and _note.get("lock_s") != null and _note.get("unlock_s") == null:
+		_note_set("unlock_s", snappedf(game.run.stage_time, 0.01))
+	if gate.has_gate() and not gate.locked() and _note.get("gate_open_s") == null:
+		_note_set("gate_open_s", snappedf(game.run.stage_time, 0.01))
+	var ball: Vector3 = game.player.ball_position()
+	if gate.lock_active():
+		return gate.foe_for(ball)
+	if gate.locked() and game.flow.engaged():
+		return gate.foe_for(ball, GATE_HUNT)
+	return null
 
 
 # --- the traversal pilot -----------------------------------------------------------------
@@ -1549,8 +1672,13 @@ func _activity_goal(delta: float) -> bool:
 			# on the reach its shelf pulled the explorer off the cache into a wall it cannot pass.
 			if _site_has_authored_pack(c):
 				level -= CAMP_LAST
-			# A field find (secrets.gd FINDS) is the last stop: the explorer has learned the tells and
-			# checks the dead ends once the lit sites are done, unless it rolls within earshot of one.
+			# A field find (secrets.gd FINDS) is the explorer's (--explore-by): the default completionist
+			# keeps its ENGAGE_BY clock and its stall limit, so a find run out at the rush left it across
+			# the dam from the sheet, wedged on the canyon rim (seed 6 on 0f56e5ce, Stack #413).
+			if c.has_meta("find") and engage_by <= ENGAGE_BY:
+				continue
+			# The last stop: the explorer has learned the tells and checks the dead ends once the lit
+			# sites are done, unless it rolls within earshot of one.
 			if c.has_meta("find") and _flat(ball, c.global_position) > FIND_NEAR_M:
 				level -= CAMP_LAST * 2.0
 			var d := _flat(ball, c.global_position)
@@ -1563,6 +1691,10 @@ func _activity_goal(delta: float) -> bool:
 		_cache_clock = 0.0
 	if s == null:
 		return false
+	# A deferred site picked again is retried to the end: the give-up point stops closing it, or the
+	# way back in, which passes near that point, dropped it again before it was reached.
+	if _activity_deferred.get(_site_key(s)) is Vector3:
+		_activity_deferred[_site_key(s)] = true
 	var finished: Array = []
 	var secrets: Array = []
 	for c in activities.sites:
@@ -1578,8 +1710,25 @@ func _activity_goal(delta: float) -> bool:
 		entered.append(s.id)
 		_note["activities_entered"] = entered
 	var key := _site_key(s)
-	_activity_time[key] = float(_activity_time.get(key, 0.0)) + delta
-	if float(_activity_time[key]) > (FIND_SECONDS if s.has_meta("find") else ACTIVITY_SECONDS):
+	# A cache's doubled run-up point stands past ACTIVITY_NEAR, so its ram cycle counts as near work.
+	var near: float = ACTIVITY_NEAR + (CACHE_RUNUP if s.id == "cracked_cache" else 0.0)
+	if engage_by > ENGAGE_BY and _flat(ball, s.global_position) > near:
+		if not _activity_travel_cap.has(key):
+			# A retried site gets the flat cap only: the dam's rim cache, which the explorer cannot break,
+			# spent a second distance-scaled cap and left the camp undone.
+			var leg: float = 0.0 if _activity_deferred.has(key) else _flat(ball, s.global_position) / ACTIVITY_TRAVEL_SPEED
+			_activity_travel_cap[key] = ACTIVITY_TRAVEL_SECONDS + leg
+		_activity_travel[key] = float(_activity_travel.get(key, 0.0)) + delta
+	else:
+		_activity_time[key] = float(_activity_time.get(key, 0.0)) + delta
+	if float(_activity_travel.get(key, 0.0)) > float(_activity_travel_cap.get(key, INF)) and not _activity_deferred.has(key):
+		_activity_deferred[key] = ball
+		_activity_travel.erase(key)
+		_activity_travel_cap.erase(key)
+		_activity = ""
+		return false
+	if float(_activity_time.get(key, 0.0)) > (FIND_SECONDS if s.has_meta("find") else (SURGE_SECONDS if s.id == "surge_run" else ACTIVITY_SECONDS)) \
+			or float(_activity_travel.get(key, 0.0)) > float(_activity_travel_cap.get(key, INF)):
 		_activity_skip[key] = true
 		_activity = ""
 		return false
@@ -1600,6 +1749,30 @@ func _activity_goal(delta: float) -> bool:
 	match s.id:
 		"cracked_cache":
 			_cache_ram(s, ball, delta)
+		"surge_run":
+			# Into the ring, up to the head while the siren winds, then gate to gate ahead of the water. A lost
+			# course is not chased round again, as a lost event is not.
+			var course = s.course
+			if course == null or (not s.started and s.relay_cooldown > 0.0):
+				_activity_skip[s.id] = true
+				_activity = ""
+				return false
+			if s.surge_live:
+				_goal = "activity surge_run gate %d" % course.model.next_gate
+				# Close to a gate it aims at the gate itself: past a bend, where the line drops off the weir deck onto
+				# the gap reach, a point down the line is round the corner from the gate it must take.
+				var gate: Vector3 = course.next_gate_point()
+				var close := Vector2(gate.x - ball.x, gate.z - ball.z).length() < SURGE_GATE_AIM_M
+				_act(gate if close else course.lead_point(ball, SURGE_LEAD_M), _nearest_enemy(), delta)
+			elif s.started:
+				# Back from the head on the line's centre, so the run starts straight down the deck (a deck as narrow as
+				# the flume's trough is not entered from the side).
+				_goal = "activity surge_run head"
+				var head: Vector2 = course.model.route.points[0] - course.model.route.tangent(0.0) * SURGE_RUNUP_M
+				_act(Vector3(head.x, ball.y, head.y), _nearest_enemy(), delta)
+			else:
+				_goal = "activity surge_run ring"
+				_act(_approach(s, ball), _nearest_enemy(), delta)
 		"hauler_bounty":
 			if s.brute != null and is_instance_valid(s.brute) and not s.brute.is_dead():
 				_goal = "activity %s fight" % s.id
@@ -1636,12 +1809,65 @@ func _approach(s, ball: Vector3) -> Vector3:
 	if _climb_for != s.id:
 		_climb_for = s.id
 		_climb.clear()
-		if at.y - ball.y > LEVEL_BAND:
+		_route = _route_to(s, ball) if engage_by > ENGAGE_BY else ([] as Array[Vector3])
+		if _route.is_empty() and at.y - ball.y > LEVEL_BAND:
+			_climb = _climb_route_any(ball, at)
+	while not _route.is_empty() and _flat(ball, _route[0]) < ROUTE_REACHED:
+		_route.pop_front()
+		if _route.is_empty() and at.y - ball.y > LEVEL_BAND:
 			_climb = _climb_route_any(ball, at)
 	while not _climb.is_empty() and _flat(ball, _climb[0]) < CLIMB_REACHED:
 		_climb.pop_front()
 	_kicker_jump(ball)
+	if not _route.is_empty():
+		return _route[0]
 	return at if _climb.is_empty() else _climb[0]
+
+
+# The park's authored way to a site: the first route through the site's row, from its start to
+# that row, entered at the point nearest the ball. The dam's rim cache stands on west_rim_bench,
+# which only the routes out of the_eye reach; rolled to straight, the explorer hung on the deck's
+# western edge above the pool. Empty for a field find, which walks the park graph (_find_leg), and when the map has no route through the row.
+func _route_to(s, ball: Vector3) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	var map = game.ctx.terrain.map()
+	if s.has_meta("find") or not "park" in map:
+		return out
+	# A live site carries its activity's name, so its row is the nearest row of that activity.
+	var site_row := ""
+	var site_d := INF
+	for spec in map.park.get("activity_rows", []):
+		var spot: Array = spec.get("at", [])
+		if String(spec.get("activity", "")) != s.id or spot.size() < 2:
+			continue
+		var d := Vector2(float(spot[0]), float(spot[1])).distance_to(Vector2(s.global_position.x, s.global_position.z))
+		if d < site_d:
+			site_d = d
+			site_row = String(spec.get("site", ""))
+	if site_row == "":
+		return out
+	var rows := {}
+	for r in map.park.get("park_rows", []):
+		rows[String(r.get("id", ""))] = r
+	for route in map.park.get("routes", []):
+		var ids: Array = [route.get("from", "")]
+		ids.append_array(route.get("via", []))
+		var end := ids.find(site_row)
+		if end < 0:
+			continue
+		for i in end + 1:
+			var r = rows.get(String(ids[i]))
+			if r == null or not r.has("at"):
+				continue
+			var p: Vector3 = _ground_point(float(r.at[0]), float(r.at[1]))
+			if out.is_empty() or _flat(out[-1], p) > ROUTE_REACHED:
+				out.append(p)
+		break
+	var nearest := 0
+	for i in out.size():
+		if _flat(ball, out[i]) < _flat(ball, out[nearest]):
+			nearest = i
+	return out.slice(nearest)
 
 
 # A grid path over the terrain's heights from the ball to the site that never climbs a step
@@ -1838,10 +2064,12 @@ func _activity_rushed() -> bool:
 	return game.run.stage_time > engage_by
 
 
-# A site's key for the bot's timers and skips: its id, or "find:<id>" for a field find, so the stage's
-# finds and its ordinary cracked cache are worked one by one.
+# A site's key for the bot's timers and skips: its id, "find:<id>" for a field find, or "door:<id>"
+# for the timed door, so the stage's finds, door and ordinary cracked cache are worked one by one.
 func _site_key(s) -> String:
-	return "find:%s" % s.get_meta("find") if s.has_meta("find") else String(s.id)
+	if s.has_meta("find"):
+		return "find:%s" % s.get_meta("find")
+	return "door:%s" % s.id if s.has_meta("door") else String(s.id)
 
 
 func _site_by_key(activities, key: String):
@@ -1854,6 +2082,9 @@ func _site_by_key(activities, key: String):
 # A site the bot may still work: not given up, and either unfinished or with its pay on the ground.
 func _activity_open(s) -> bool:
 	if _activity_skip.has(_site_key(s)):
+		return false
+	var put_off = _activity_deferred.get(_site_key(s))
+	if put_off is Vector3 and _flat(game.player.ball_position(), put_off) < ACTIVITY_RETRY_MOVE:
 		return false
 	return not s.done or (s.pickup != null and not s.pickup_taken)
 
@@ -1887,9 +2118,18 @@ func _cache_ram(s, ball: Vector3, delta: float) -> void:
 	var out: Vector3 = s.global_basis.z
 	out.y = 0.0
 	out = out.normalized()
+	# Under --explore-by a far cache is rolled to first: the run-up and ram cycle crept the explorer
+	# about 30 m a cycle toward the dam's rim cache, 1,075 m from the drop, and never reached it.
+	# A field find has its own graph leg (_find_leg) in the run-up.
+	if engage_by > ENGAGE_BY and not s.has_meta("find") and _flat(ball, s.global_position) > ACTIVITY_NEAR + CACHE_RUNUP:
+		_goal = "activity %s approach" % s.id
+		_act(_approach(s, ball), _nearest_enemy(), delta)
+		return
 	_cache_clock += delta
 	if _cache_phase == "runup":
-		var point: Vector3 = _ground_point(s.global_position.x + out.x * CACHE_RUNUP, s.global_position.z + out.z * CACHE_RUNUP)
+		# Under --explore-by the run-up is twice as long: from 24 m the rim cache's uphill ram met its wall at about 9 m/s.
+		var runup: float = CACHE_RUNUP * (2.0 if engage_by > ENGAGE_BY else 1.0)
+		var point: Vector3 = _ground_point(s.global_position.x + out.x * runup, s.global_position.z + out.z * runup)
 		_goal = "activity %s runup" % s.id
 		# A field find stands at the end of a dead end, so the line there is the park graph's path,
 		# not a straight heading across the slopes between.
@@ -1981,7 +2221,7 @@ func _event_goal(delta: float) -> Dictionary:
 		if phase == EventDirector.LIVE:
 			return {"goal": "live " + id, "steer": _live_target(id, model), "aim": _nearest_enemy()}
 		if phase == EventDirector.ANNOUNCED or phase == EventDirector.ARMED:
-			if game.run.stage_time > EVENT_LATEST:
+			if game.run.stage_time > EVENT_LATEST + maxf(0.0, engage_by - ENGAGE_BY):
 				continue
 			_event_time[id] = float(_event_time.get(id, 0.0)) + delta
 			if _event_time[id] > EVENT_PURSUIT_SECONDS:
@@ -3207,6 +3447,10 @@ func _to_gate(delta: float) -> void:
 	var target := at - facing * 9.0
 	if side < 2.5 and along < 1.0:
 		target = at + facing * 10.0
+	elif side < GATE_LINE_SIDE and along > -GATE_LINE_BACK and along < -GATE_LINE_NEAR:
+		# Near the run-in point but off the line: steer for the line GATE_LINE_LEAD ahead, so the ball
+		# merges onto it rolling forward; a point target here is orbited (the Flume's gate 1, seed 6).
+		target = at + facing * (along + GATE_LINE_LEAD)
 	# Off the gates' island (a Highdraft beacon top), the straight line meets its cliff: climb back.
 	# Off the islands, a straight line across a trough takes the same way round (_dips).
 	var ball_at: Vector3 = game.player.ball_position()
@@ -3254,7 +3498,8 @@ func _to_gate(delta: float) -> void:
 		print("    gate %d at=(%.1f, %.1f, %.1f) facing=(%.2f, %.2f, %.2f) ball=(%.1f, %.1f, %.1f) along=%.1f side=%.1f dy=%.1f ground=%.1f target=(%.1f, %.1f, %.1f)"
 			% [_gate_pick, at.x, at.y, at.z, facing.x, facing.y, facing.z, ball.x, ball.y, ball.z, along, side, rel.y,
 				game.ctx.terrain.height(ball.x, ball.z), target.x, target.y, target.z])
-	var calm: bool = _island_gates and _gate_on_top and _gate_run == "" and absf(rel.y) < 3.0 and rel.length() < GATE_CALM_RANGE
+	var calm: bool = (_island_gates or _gate_time > GATE_HOP_SECONDS) and _gate_on_top and _gate_run == "" \
+		and absf(rel.y) < 3.0 and rel.length() < GATE_CALM_RANGE
 	if not calm:
 		_act(target, null, delta)
 		return
@@ -3463,12 +3708,16 @@ func _threats() -> Array:
 			continue
 		if _welcome_ring_at != Vector3.INF and h.get("center") != null and _flat(h.center, _welcome_ring_at) < 1.0:
 			continue
+		if not _read.has(id):
+			_read[id] = true
+			_count("telegraph_reads")
 		if h.contains(ball) or h.contains(ahead):
 			out.append(h)
 	if _seen.size() > 64:
 		for id in _seen.keys():
 			if not live.has(id):
 				_seen.erase(id)
+				_read.erase(id)
 	if band != null:
 		band.forget(live)
 	return out
@@ -3493,12 +3742,15 @@ func _kit(verb: String) -> bool:
 # the player's own amber ones, not fields wider than FIELD_RADIUS) and the boss's hazards.
 func _hazards() -> Array:
 	var out: Array = []
+	var pack_telegraphs := _pack_telegraphs() if hide_pack_telegraphs else {}
 	for child in game.get_children():
 		if child.get_script() != TelegraphScript or child.is_queued_for_deletion():
 			continue
 		if child.color == Palette.AMBER:
 			continue
 		if child.shape == TelegraphScript.Shape.RING and child.radius > FIELD_RADIUS:
+			continue
+		if hide_pack_telegraphs and pack_telegraphs.has(child):
 			continue
 		out.append(child)
 	var boss = _boss() if game.flow.state_name() == "boss" else null
@@ -3873,7 +4125,14 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		steer = Vector3(centre.x, ball.y, centre.y)
 	var thermal := _inside_thermal(ball)
 	var speed: float = player.planar_velocity().length()
-	if speed < STUCK_SPEED and player.state.grounded:
+	# A ball wedged against a wall or a lip, off the ground and off any line, is as stuck as one
+	# on the ground (flume seed 1 sat 100 s at (271, 0, 473) after #442 with no detour).
+	# A thermal's hang and a hold (a boss grab, a counter's tether) are not wedges.
+	var fleet = game.ctx.spawner.get("fleet") if game.ctx.spawner != null else null
+	var held: bool = fleet != null and fleet.holds != null and fleet.holds.holding()
+	var wedged: bool = not player.state.grounded and not player.kit.hooked and not player.frozen() and not thermal \
+			and not held and absf(player.state.velocity.y) < STUCK_SPEED
+	if speed < STUCK_SPEED and (player.state.grounded or wedged):
 		_slow_time += delta
 	else:
 		_slow_time = 0.0
@@ -3906,12 +4165,19 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		var v: Vector3 = player.planar_velocity()
 		v.y = 0.0
 		var change := dir * maxf(v.length(), 12.0) - v
+		# The circling policies hold cruise speed: they aim the velocity at cruise along dir, so above cruise the stick
+		# turns and slows the ball (a released stick let a downhill ring roll the ball 600 m off it, crown seed 1).
+		if _cruise_hold:
+			change = dir * player.tuning.f("cruise") - v
 		var want := dir if change.length() < 0.5 else change.normalized()
 		hold["move"] = Vector2(want.dot(right), want.dot(forward)).normalized()
+		# At cruise the stick comes off, so the ball coasts at it instead of accelerating past.
+		if _cruise_hold and change.length() < 0.5:
+			hold["move"] = Vector2.ZERO
 		var lined: float = v.normalized().dot(dir) if v.length() > 0.5 else 1.0
 		# No brake-carving: brake is also the slam key, and a carve held over a bump
 		# becomes a slam that plants the ball (seen on the Slag Bowl's bank).
-		if _boost_clock <= 0.0 and lined > 0.9 and player.state.grounded and player.verb_ready("boost"):
+		if _boost_clock <= 0.0 and lined > 0.9 and player.state.grounded and player.verb_ready("boost") and not _cruise_hold:
 			_boost_clock = BOOST_GAP
 			_shift_left = SHIFT_HOLD
 			source.press["shift_pressed"] = true
@@ -4083,6 +4349,65 @@ func _aim_point(aim) -> Vector3:
 	return target.global_position + Vector3.UP * 1.2
 
 
+# --- the anti-kiting gates' contact record (every policy) ---------------------------------
+
+# Opens the stage's contact the first tick a live enemy is within CONTACT_RADIUS of the ball. Reads only; it moves nothing.
+func _contact_scan() -> void:
+	if _note.is_empty() or _note.get("first_contact_s") != null or not game.flow.in_stage():
+		return
+	var ball: Vector3 = game.player.ball_position()
+	for node in game.get_tree().get_nodes_in_group("enemy"):
+		if not node is Node3D or not is_instance_valid(node):
+			continue
+		if node.has_method("is_dead") and node.is_dead():
+			continue
+		if ball.distance_to(node.global_position) <= CONTACT_RADIUS:
+			_note["first_contact_s"] = snappedf(game.run.stage_time, 0.01)
+			return
+
+
+# A hit on the stage: its first, and the hull it cost inside the contact window.
+func _note_contact_hit(hull: float) -> void:
+	if _in_boss() or _note.is_empty():
+		return
+	var now := float(game.run.stage_time)
+	if _note.get("first_hit_s") == null:
+		_note["first_hit_s"] = snappedf(now, 0.01)
+	if _note.get("first_contact_s") == null:
+		_note["first_contact_s"] = snappedf(now, 0.01)
+	if now - float(_note["first_contact_s"]) <= CONTACT_WINDOW_S:
+		_note["hull_lost_120s"] = float(_note["hull_lost_120s"]) + hull
+
+
+func _close_contact() -> void:
+	_note["hull_lost_120s"] = snappedf(float(_note["hull_lost_120s"]), 0.1)
+	_note["fight_s"] = snappedf(float(_note["fight_s"]), 0.01)
+	_note["circle_s"] = snappedf(float(_note["circle_s"]), 0.01)
+	if _note["first_contact_s"] != null:
+		_note["alive_120s"] = snappedf(clampf(float(_note["exit_s"]) - float(_note["first_contact_s"]), 0.0, CONTACT_WINDOW_S), 0.01)
+	# circle_share: seconds on the ring over the window (first contact to its end or death), the anchor policies' measure.
+	if _note["alive_120s"] != null and float(_note["alive_120s"]) > 0.0:
+		_note["circle_share"] = snappedf(float(_note["circle_s"]) / float(_note["alive_120s"]), 0.001)
+
+
+# The test-only hide_pack_telegraphs plant: the committed telegraphs of every enemy but the Warden, and the shells a
+# lobber fired. The game still draws them; only this driver does not see them.
+func _pack_telegraphs() -> Dictionary:
+	var out := {}
+	for node in game.get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(node) or node == game.flow.warden:
+			continue
+		var t = node.get("_telegraph")
+		if t != null and is_instance_valid(t):
+			out[t] = true
+	for child in game.get_children():
+		if child.get_script() != null and String(child.get_script().resource_path).ends_with("projectile.gd"):
+			var ring = child.get("ring")
+			if ring != null and is_instance_valid(ring) and child.get("lobber") != game.flow.warden:
+				out[ring] = true
+	return out
+
+
 func _nearest_enemy() -> Node3D:
 	var ball: Vector3 = game.player.ball_position()
 	var best: Node3D = null
@@ -4137,4 +4462,11 @@ func record(wall_seconds: float) -> Dictionary:
 	var dials := ChallengeDials.describe()
 	if not dials.is_empty():
 		row["dials"] = dials
+	# The pack pressure counts (combat/pack_pressure.gd): when a pressure dial is moved, or the shipped
+	# silt boils fired.
+	var spawner = game.ctx.spawner
+	var pressure_dials := dials.keys().any(func(k: String) -> bool: return k.begins_with("pack.") or k.begins_with("ground.") or k.begins_with("hazard."))
+	if spawner != null and spawner.get("churn") != null and (pressure_dials or spawner.boils.boils > 0):
+		row["pressure"] = {"churn_drag_s": snappedf(spawner.churn.drag_s, 0.01), "churned_cells": spawner.churn.churned_cells,
+			"boils": spawner.boils.boils, "boil_hits": spawner.boils.ball_hits, "boil_tosses": spawner.boils.enemy_tosses}
 	return row

@@ -103,9 +103,12 @@ const FULL_VISIT_RATIO_MAX := Placement.FULL_VISIT_RATIO_MAX
 const ONLINE_KINDS := Placement.ONLINE_KINDS
 const REWARD_KINDS := Placement.REWARD_KINDS
 const RISK_KINDS := Placement.RISK_KINDS
-# Opt-in events a park stands beside its four pockets (W13 SR10): not counted as a pocket, but
-# their door keeps the sight and clear-ring rules.
-const EVENT_KINDS := ["hold_the_relay"]
+# Opt-in events a park stands beside its four pockets (W13 SR10; the flume's surge course, unit 11): not counted as a
+# pocket, but their door keeps the sight and clear-ring rules.
+const EVENT_KINDS := ["hold_the_relay", "surge_run"]
+# The completionist card's extra activity (card 2, default: two more activities a park) may add a second reward or
+# risk pocket; every distance rule still holds for it, and the pay ladder still ranks the first pair (PARK.md 2.12).
+const OFFLINE_MAX := 2
 const HIDDEN_KINDS := Placement.HIDDEN_KINDS
 const DESTRUCTIVE_EVENTS := Placement.DESTRUCTIVE_EVENTS
 const HAZARD_CONTRAPTIONS := Placement.HAZARD_CONTRAPTIONS
@@ -1252,9 +1255,12 @@ static func pockets(graph, park: Dictionary, rows_only := false) -> Dictionary:
 	var roles := []
 	for row in rows:
 		roles.append(row["role"])
-	for role in ["online", "reward", "risk", "hidden"]:
+	for role in ["online", "hidden"]:
 		if roles.count(role) != 1:
 			breaches.append(_breach("park", "count", "%d %s pockets, want 1" % [roles.count(role), role]))
+	for role in ["reward", "risk"]:
+		if roles.count(role) < 1 or roles.count(role) > OFFLINE_MAX:
+			breaches.append(_breach("park", "count", "%d %s pockets, want 1 to %d" % [roles.count(role), role, OFFLINE_MAX]))
 	for row in rows:
 		if row["role"] == "extra":
 			breaches.append(_breach(row["id"], "count", "a %s is none of on-line, reward or risk" % row["kind"]))

@@ -112,6 +112,11 @@ func _stepped_facts(park: Dictionary) -> void:
 		var phases: Array = ["engaged", "stagger", "chunk_1", "chunk_2", "chunk_3"] if i % 800 == 0 else []
 		if i % 2000 == 200:
 			phases.append("broken")
+		# A row that opens on an activity (the flume's sluice on its surge ring) is rung in as the ring would.
+		if i % 800 == 400:
+			for row in park.event_rows:
+				if row.trigger.get("on") == "activity":
+					d.notify_activity(row.trigger.value)
 		for f in d.call("advance", 0.1, Vector3(5000, 1, 5000), Vector3.ZERO, {"clock_tier": 4, "warden_phases": phases, "grounded": true}):
 			if f.kind == "announced":
 				announced[f.id] = true

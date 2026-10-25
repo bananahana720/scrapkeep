@@ -92,10 +92,12 @@ const TRIM_DB := {
 	"stinger_boss_defeated": -1.0,
 	"womp": -8.0, "build_riser": -4.0, "stage_fade": -12.0,
 	"vault_rise": -6.0, "vault_drop": -2.0, "synergy_hit": -10.0,
-	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0,
+	"threat_tick": -7.0, "threat_whoosh": -6.0, "threat_whistle": -8.0, "threat_hum": -7.0, "threat_tear": -7.0,
 	"warn_burrow": -7.0, "warn_bore": -7.0, "warn_lure": -7.0,
 	"warn_cut": -7.0, "warn_winch": -7.0, "warn_dive": -7.0,
 	"warn_tether": -7.0, "warn_flap": -7.0, "warn_reel": -7.0,
+	# Pack pressure cues (combat/pack_pressure.gd): the flanker's whistle and the silt boil's rumble.
+	"flank_call": -6.0, "boil_rumble": -5.0,
 	"breach_crack": -4.0,
 	# v2 W5: the leitmotifs, the crowd-control holds, the ancients and Moss's bench.
 	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0, "tarn_latch_tear": -3.0, "tally_balance_due": -3.0, "cannon_recall": -3.0,
@@ -131,6 +133,10 @@ const TRIM_DB := {
 	"pilot_unlocked_tarn": -9.0, "pilot_unlocked_tally": -9.0, "pilot_unlocked_cannon": -9.0,
 	"kill_chain_tier": -5.0, "drop_landing": -3.0, "door_tick": -9.0,
 	"return_launch_arpeggio": -4.0, "lift_hiss": -9.0, "crater_hold": -12.0,
+	# The Spillway's arena locks and Warden gates (src/world/stage_locks.gd): the yard slams shut,
+	# springs open, the Warden's clamp counts a crew, refuses a hit, and lets go.
+	"arena_lock_slam": -2.0, "arena_wave_whistle": -6.0, "arena_unlock_bells": -4.0, "warden_gate_pip": -7.0,
+	"warden_gate_clunk": -10.0, "warden_gate_release": -3.0,
 	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
 	"armor_deflect": -10.0,
@@ -940,6 +946,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _threat_whistle()
 		"threat_hum":
 			return _threat_hum()
+		"threat_tear":
+			return _threat_tear()
 		"warn_burrow":
 			return _warn_burrow()
 		"warn_bore":
@@ -958,6 +966,10 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _warn_flap()
 		"warn_reel":
 			return _warn_reel()
+		"flank_call":
+			return _flank_call()
+		"boil_rumble":
+			return _boil_rumble()
 		"breach_crack":
 			return _breach_crack()
 		"sable_arpeggio":
@@ -1072,6 +1084,18 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _lift_hiss()
 		"crater_hold":
 			return hold("crater", Synth.score_step * Harmony.STEPS_PER_BEAT * 2)
+		"arena_lock_slam":
+			return _arena_lock_slam()
+		"arena_wave_whistle":
+			return _arena_wave_whistle()
+		"arena_unlock_bells":
+			return _arena_unlock_bells()
+		"warden_gate_pip":
+			return _warden_gate_pip()
+		"warden_gate_clunk":
+			return _warden_gate_clunk()
+		"warden_gate_release":
+			return _warden_gate_release()
 	if id.begins_with(CAUSE_NOTE):
 		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
 	if _assist_parts(id).size() > 0:
@@ -1751,11 +1775,20 @@ static func _threat_whistle() -> PackedFloat32Array:
 		[_tone(0.65, _hz(82), _hz(75), "sine", 1.2), Synth.seconds(0.08), 0.8], [_noise(0.65, 2200.0, 1300.0, 2.5, 0.05), Synth.seconds(0.08), 0.15]])
 
 
-# Lane: a charge hum held on Ab, then the tearing buzz of the release.
+# Lane: a charge hum on Ab from the frame the lane is declared. It holds for
+# THREAT_HUM_HOLD, longer than any lane's warning, and audio.gd cuts it on the frame the
+# lane goes live, where the tear plays: the tear is its own one-shot because it means fire
+# (SOUND-STORY section 7) and a warning's length varies (1.4 s charge, 0.6 s hook turn).
+const THREAT_HUM_HOLD := 3.0
+
 static func _threat_hum() -> PackedFloat32Array:
-	var tear := Synth.seconds(0.42)
-	return _mix([[_tone(0.45, _hz(44), _hz(44), "saw_dark", 0.4), 0, 0.8], [_tone(0.45, _hz(56), _hz(56), "square_dark", 0.6), 0, 0.5],
-		[_noise(0.18, 1800.0, 5200.0, 10.0), tear, 0.9], [_tone(0.18, _hz(56), _hz(51), "saw", 12.0), tear, 0.6]], true)
+	return _mix([[_tone(THREAT_HUM_HOLD, _hz(44), _hz(44), "saw_dark", 0.15), 0, 0.8],
+		[_tone(THREAT_HUM_HOLD, _hz(56), _hz(56), "square_dark", 0.2), 0, 0.5]], true)
+
+
+# Lane release: the tearing buzz, sliding Ab down to F.
+static func _threat_tear() -> PackedFloat32Array:
+	return _mix([[_noise(0.18, 1800.0, 5200.0, 10.0), 0, 0.9], [_tone(0.18, _hz(56), _hz(51), "saw", 12.0), 0, 0.6]], true)
 
 
 # Burrow: a low Eb rumble with two muffled knocks under the floor.
@@ -1834,6 +1867,22 @@ static func _warn_reel() -> PackedFloat32Array:
 		parts.append([_noise(0.025, 1800.0 + 350.0 * i, 900.0, 90.0), Synth.seconds(0.11 * i), 0.55 + 0.05 * i])
 	parts.append([_fm(0.3, _hz(70), 2.0, 1.2, 4.0, 6.0), Synth.seconds(0.5), 0.45])
 	return _mix(parts)
+
+
+# Flank call: a crew hand's two-finger whistle, up a fifth and down a step (A to E, then D): someone is
+# cutting across your line.
+static func _flank_call() -> PackedFloat32Array:
+	return _mix([[_tone(0.16, _hz(81), _hz(88), "sine", 4.0), 0, 0.8],
+		[_tone(0.2, _hz(88), _hz(86), "sine", 7.0), Synth.seconds(0.15), 0.85],
+		[_noise(0.3, 5200.0, 4400.0, 9.0, 0.01), 0, 0.12]])
+
+
+# Boil rumble: the silt belching up from below, a low wobble rising under a wet gurgle.
+static func _boil_rumble() -> PackedFloat32Array:
+	return _mix([[_fm(0.9, _hz(31), 1.5, 2.5, 2.0, 3.0), 0, 0.9],
+		[_noise(0.8, 300.0, 900.0, 2.5, 0.08), Synth.seconds(0.1), 0.5],
+		[_noise(0.06, 1400.0, 700.0, 40.0), Synth.seconds(0.5), 0.35],
+		[_noise(0.06, 1700.0, 800.0, 40.0), Synth.seconds(0.72), 0.3]])
 
 
 # --- The leitmotifs (SOUND-STORY.md section 2) ------------------------------------------
@@ -2348,6 +2397,53 @@ static func _return_launch_arpeggio() -> PackedFloat32Array:
 
 # The bone gauge's pressure hiss, rising through the cycle: noise only, so it never
 # competes with a pitched cue for the ear.
+# --- Arena locks and Warden gates (src/world/stage_locks.gd) ---------------------------
+# The yard shuts: an iron gate drops on a sub boom, and a square falls a minor third, D to B,
+# so the room reads "closed" before the crew lands.
+static func _arena_lock_slam() -> PackedFloat32Array:
+	return _mix([[_noise(0.5, 180.0, 60.0, 7.0), 0, 1.0],
+		[_tone(0.7, _hz(38), _hz(31), "sine", 4.0), 0, 0.9],
+		[_tone(0.18, _hz(62), 0.0, "square_dark", 9.0), Synth.seconds(0.06), 0.45],
+		[_tone(0.36, _hz(59), 0.0, "square_dark", 6.0), Synth.seconds(0.22), 0.5],
+		[_noise(0.06, 3200.0, 1800.0, 60.0), Synth.seconds(0.02), 0.35]], true)
+
+
+# The next wave is coming: a pure whistle falls an octave over a low tick, the same fall the
+# hazard warnings use, so the 1.5 s before it lands reads as "incoming".
+static func _arena_wave_whistle() -> PackedFloat32Array:
+	return _mix([[_tone(0.9, _hz(86), _hz(74), "sine", 2.0), 0, 0.8],
+		[_noise(0.04, 1400.0, 900.0, 60.0), 0, 0.4], [_noise(0.04, 1400.0, 900.0, 60.0), Synth.seconds(0.45), 0.4]])
+
+
+# The yard opens: a latch clicks, then three bells climb the pentatonic to the home D, the
+# same walk up as the ceremony's, short.
+static func _arena_unlock_bells() -> PackedFloat32Array:
+	var score := [[0, 69, 1, "mallet", 0.6], [1, 72, 1, "mallet", 0.65], [2, 74, 4, "bell", 0.8], [2, 86, 4, "bell", 0.3]]
+	return _mix([[_noise(0.04, 2800.0, 1400.0, 80.0), 0, 0.5],
+		[Synth.render_score(score, 0.05), Synth.seconds(0.04), 1.0]])
+
+
+# One crew counted on the Warden's clamp: a single bright brass ping that climbs with the
+# count (the caller pitches it), small enough to stack in a fight.
+static func _warden_gate_pip() -> PackedFloat32Array:
+	return _mix([[_fm(0.32, _hz(74), 2.0, 1.4, 9.0), 0, 1.0], [_noise(0.03, 3600.0, 2400.0, 90.0), 0, 0.3]])
+
+
+# A hit on a gated Warden: a dull clank on the clamp, no ring, so it never sounds like progress.
+static func _warden_gate_clunk() -> PackedFloat32Array:
+	return _mix([[_noise(0.12, 420.0, 260.0, 30.0), 0, 1.0], [_tone(0.14, _hz(45), _hz(43), "square_dark", 22.0), 0, 0.6]])
+
+
+# The clamp lets go: a chain rattles off and a D major chord blooms, the fight is on.
+static func _warden_gate_release() -> PackedFloat32Array:
+	var parts := []
+	for i in 6:
+		parts.append([_noise(0.03, 2200.0 + 300.0 * i, 1200.0, 80.0), Synth.seconds(0.05 * i), 0.5])
+	var chord := [[0, 62, 6, "keys", 0.45], [0, 66, 6, "keys", 0.4], [0, 69, 6, "keys", 0.4], [0, 74, 6, "bell", 0.6], [0, 38, 6, "sub", 0.6]]
+	parts.append([Synth.render_score(chord, 0.05), Synth.seconds(0.3), 1.0])
+	return _mix(parts)
+
+
 static func _lift_hiss() -> PackedFloat32Array:
 	var hiss := _noise(1.2, 500.0, 3200.0, 0.0, 0.05)
 	var n := hiss.size()

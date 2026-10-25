@@ -21,6 +21,7 @@ HERE = Path(__file__).resolve().parent
 HELPERS = HERE if (HERE / "common.py").exists() else Path.cwd() / "sketches/core-loop/tools/blender"
 sys.path.insert(0, str(HELPERS))
 import common
+import cycles_device
 import polish
 
 # Cast mantle: 3 cm chamfers on real corners, doubled curves, baked AO (POLISH.md). No edge
@@ -228,7 +229,7 @@ def preview(path, outdir, family, label):
     ground.data.materials.append(common.material("rubber"))
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 12
     scene.cycles.use_denoising = True
     scene.cycles.denoising_use_gpu = False

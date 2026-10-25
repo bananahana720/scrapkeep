@@ -17,7 +17,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # availability in each run. Each return lasts at most FAIL_RETURN seconds of ticks on which
 # the verb is ready, then the prompt retires again. HOOK rides the harpoon prompt until the
 # first bite on the profile and SMASH the haul prompt on a body until the first smash. The
-# haul prompt waits for the line to stand LINE_STAND seconds without a Ctrl press and wears
+# haul prompt waits for the line to stand LINE_STAND seconds without a Ctrl press (ready or not) and wears
 # the reel glyph on a world line, the smash glyph on a body. Sable's E (mount) and Space
 # (slingshot, only while mounted) come through the same table. The brake has no prompt.
 # Tab's field notes keep the full key list. A deflector in its vault window (0.45 s after a
@@ -78,7 +78,7 @@ func setup(game_ref, profile_ref) -> void:
 	new_run()
 	game.events.run_started.connect(func(_class_id: String): new_run())
 	game.events.line_state_changed.connect(_on_line_state)
-	game.events.verb_failed.connect(func(verb: String, _reason: String, _at: Vector3): returned(verb))
+	game.events.verb_failed.connect(func(verb: String, reason: String, _at: Vector3): returned(verb, reason))
 	game.events.boosted.connect(func(_direction: Vector3): record_use("boost"))
 	game.events.sprint_started.connect(func(_direction: Vector3): record_use("boost"))
 	game.events.blink_used.connect(func(_from: Vector3, _to: Vector3): record_use("boost"))
@@ -135,11 +135,12 @@ func record_use(use: String) -> void:
 
 
 # A failed press brings its prompt back for FAIL_RETURN seconds of ready ticks; a failed Ctrl
-# also restarts the haul prompt's wait.
-func returned(verb: String) -> void:
+# also restarts the haul prompt's wait, except a press before a Warden's stagger: that line has
+# stood, and its SMASH shows the tick the stagger opens it.
+func returned(verb: String, reason := "") -> void:
 	if verb in PROMPT_VERBS:
 		_forced[verb] = FAIL_RETURN
-	if verb == "haul":
+	if verb == "haul" and reason != "unstaggered":
 		_stood = 0.0
 
 
@@ -232,9 +233,11 @@ func step(delta: float, view: Dictionary) -> void:
 	if view["winching"] and not _winch_held:
 		record_use("haul")
 	_winch_held = view["winching"]
+	# The wait counts while the line stands, ready or not, so a Warden line's SMASH shows the
+	# tick its stagger opens the haul.
 	if line == "" or view["winching"]:
 		_stood = 0.0
-	elif ready["haul"]:
+	else:
 		_stood += delta
 	_points = view["points"].duplicate()
 	if _vault != Vector3.INF:

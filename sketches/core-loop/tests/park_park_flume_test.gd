@@ -11,7 +11,9 @@ extends SceneTree
 #   waymarks   drop_in, butte_gap, siphon_camp, landmark, in that order.
 #   pockets    siphon_camp is the on-line camp (pays common), bend_cache the reward (rare),
 #              bench_bounty the risk (common or rare), weir_valve the hidden valve; the valve's
-#              codex id is flume_weir_cache (coordinator ruling R5).
+#              codex id is flume_weir_cache (coordinator ruling R5). Flume pass two (unit 11) adds
+#              weir_surge, the opt-in event beside them (the dam's relay's role), and canal_altar,
+#              the completionist card's extra risk (card 2; PARK.md 2.12 admits a second one).
 #   landmark   penstock_tower, beacon [230, 480]; the Warden row is the reactor kind on the flume
 #              mounting with harpoon_anchor true (reactor.md section 3); the pour channel's deck
 #              top is the anchor's height (the relic clamps onto the channel, reactor.md 3.2).
@@ -49,6 +51,8 @@ const POCKETS := {
 	"bend_cache": {"role": "reward", "rarities": ["rare"]},
 	"bench_bounty": {"role": "risk", "rarities": ["common", "rare"]},
 	"weir_valve": {"role": "hidden"},
+	"weir_surge": {"role": "event", "rarities": ["common", "rare"]},
+	"canal_altar": {"role": "risk", "rarities": ["common", "rare"]},
 }
 const VALVE_CODEX := "flume_weir_cache"
 const LANDMARK_ID := "penstock_tower"
@@ -255,7 +259,8 @@ static func pocket_rule_failures(pockets: Array) -> Array:
 			out.append("%s door not sight_ok" % id)
 		if not (p["clear_ring"] as Array).is_empty():
 			out.append("%s clear ring holds %s" % [id, p["clear_ring"]])
-		if role == "online":
+		# The on-line activity and an opt-in event keep only the sight and the clear ring (PARK.md 2.12).
+		if role == "online" or role == "event":
 			continue
 		if int(p["d_spawn"]) < 240:
 			out.append("%s door %d m from the spawn, want at least 240" % [id, int(p["d_spawn"])])
@@ -267,7 +272,9 @@ static func pocket_rule_failures(pockets: Array) -> Array:
 			out.append("%s door %d m from the beacon, want at least 320" % [id, int(p["d_landmark"])])
 		if int(p["detour_m"]) < 150 or int(p["detour_m"]) > 600:
 			out.append("%s detour %d m, want 150 to 600" % [id, int(p["detour_m"])])
-		detours[role] = int(p["detour_m"])
+		# The detour order ranks the first pair; a card 2 extra keeps the distance rules only.
+		if not detours.has(role):
+			detours[role] = int(p["detour_m"])
 	if detours.has("reward") and detours.has("risk") and detours["reward"] <= detours["risk"]:
 		out.append("reward detour %d m not over the risk's %d m" % [detours["reward"], detours["risk"]])
 	return out

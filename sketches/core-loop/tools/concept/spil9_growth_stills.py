@@ -8,6 +8,8 @@ FX is none, ring (class 1 assist) or big (class 5). Greybox only: the add-ons ar
 standing in for the rig and effects threads' art.
 """
 import bpy, sys, math, os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'blender'))
+import cycles_device
 args=sys.argv[sys.argv.index('--')+1:]
 out, files, rank, fx = args[0], args[1].split(','), int(args[2]), args[3]
 M='assets/models/companion/'
@@ -63,6 +65,6 @@ for loc,e in (((3,-3,5),400),((-4,2,3),150)):
     l=bpy.data.lights.new('l','AREA'); l.energy=e; l.size=3; lo=bpy.data.objects.new('l',l); lo.location=loc
     lo.rotation_euler=(mathutils.Vector((0,0,0))-mathutils.Vector(loc)).to_track_quat('-Z','Y').to_euler(); bpy.context.scene.collection.objects.link(lo)
 w=bpy.data.worlds.new('w'); w.use_nodes=True; w.node_tree.nodes['Background'].inputs[0].default_value=(0.03,0.035,0.05,1); bpy.context.scene.world=w
-sc=bpy.context.scene; sc.render.engine='CYCLES'; sc.cycles.device='CPU'; sc.cycles.samples=24; sc.cycles.use_denoising=True
+sc=bpy.context.scene; sc.render.engine='CYCLES'; cycles_device.use(sc); sc.cycles.samples=24; sc.cycles.use_denoising=True
 sc.render.resolution_x=560; sc.render.resolution_y=420; sc.render.filepath=out; sc.view_settings.view_transform='AgX'
 bpy.ops.render.render(write_still=True)

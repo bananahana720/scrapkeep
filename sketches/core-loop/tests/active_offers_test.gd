@@ -83,6 +83,9 @@ func _run() -> void:
 	_game.ctx.calm = true
 	_player = _game.player
 	_player.source = _source
+	# Actives are on by default (24 Oct); the off checks below run with --actives=off.
+	_t.eq("07 --actives defaults on", _game.tuning.option("actives"), "on")
+	_game.tuning.set_option("actives", "off")
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	var combat = _game.combat
@@ -119,7 +122,6 @@ func _run() -> void:
 		authored, str(shipping))
 
 	# --- Off: no draw, no rng, parts only -------------------------------------------------
-	_t.eq("07 --actives defaults off", _game.tuning.option("actives"), "off")
 	var off_rng := _seeded(11)
 	var off_state := off_rng.state
 	_t.check("08 off: build offers no active and spends no rng",

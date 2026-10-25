@@ -357,16 +357,19 @@ func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
 		at = enemy.global_position
 	var dealt := float(result.get("dealt", force))
 	var key := str(enemy.get_instance_id()) if is_instance_valid(enemy) else ""
+	# A hit a plate takes whole removes nothing: the plate's pop is its read, and no number rises.
+	var absorbed := bool(result.get("absorbed", false))
 	if kind == "synergy":
 		# A synergy's shockwave is the build's doing, not a landing: no stop, no burst, no
 		# weak-point read. Its figure still shows.
-		_raise_number(key, dealt, at, kind, false)
+		if not absorbed:
+			_raise_number(key, dealt, at, kind, false)
 		return
 	var body_plating := float(plating_of.call(enemy)) if plating_of.is_valid() and is_instance_valid(enemy) else -INF
 	var crit := DamageNumbers.is_crit(result, body_plating)
 	var impact := EventKinds.impact(_impact_key(enemy, kind))
 	_hits.append({"at": at + Vector3.UP * 0.6, "contact": _contact_point(enemy, at + Vector3.UP * 0.6), "damage": dealt, "crit": crit, "heavy": impact["stop"] == "heavy", "kind": kind,
-		"stop": impact["stop"] != "none", "shake": float(impact["shake"]), "key": key, "world": at, "throw": _throw_of(kind, force)})
+		"stop": impact["stop"] != "none", "shake": float(impact["shake"]), "key": key, "world": at, "throw": _throw_of(kind, force), "absorbed": absorbed})
 	_queue_flush()
 
 
@@ -477,7 +480,8 @@ func _flush_hits() -> void:
 			contact = hit["at"]
 		if vfx != null and i < MAX_BURSTS:
 			vfx.play_fx("enemy_struck", hit["contact"], DamageNumbers.effect_colour(DamageNumbers.type_of_kind(hit["kind"]), "player", hit["crit"]), "crit" if hit["crit"] else "")
-		_raise_number(hit["key"], hit["damage"], hit["world"], hit["kind"], hit["crit"])
+		if not hit.get("absorbed", false):
+			_raise_number(hit["key"], hit["damage"], hit["world"], hit["kind"], hit["crit"])
 	if stop > 0.0:
 		stop += EventKinds.STOP_PER_EXTRA_HIT_MS * mini(_hits.size() - 1, 5)
 	if crit and audio != null:

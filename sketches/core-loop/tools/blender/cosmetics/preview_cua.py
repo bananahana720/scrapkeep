@@ -17,6 +17,7 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
 import build_cua as cua
+import cycles_device
 
 ROOT = cua.SKETCH.parents[1]
 ASSETS = cua.SKETCH/"assets/cosmetics"
@@ -117,7 +118,7 @@ def paint_fixture(index):
 def studio():
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 8
     scene.cycles.use_denoising = True
     scene.cycles.seed = 71
@@ -214,7 +215,7 @@ def main():
                 render(cam,path,"front")
                 paths.append(path.name)
             records.append({"id":ident,"images":paths,"reference_ball_diameter_m":2,
-                "engine":"Cycles","device":"CPU","samples":8,
+                "engine":"Cycles","device":bpy.context.scene.cycles.device,"samples":8,
                 "fixture":"imported trail GLB" if kind=="trails" else "material-only shell fixture" if kind=="decals" else "dimensioned companion proxy; not companion GLB"})
             (OUT/("preview_"+kind+".json")).write_text(json.dumps(records,indent=2)+"\n")
             print("CUA_PREVIEW",ident,"PASS",flush=True)

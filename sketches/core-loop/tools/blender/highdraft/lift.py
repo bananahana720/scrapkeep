@@ -28,6 +28,7 @@ HERE = Path(__file__).resolve().parent
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(HERE.parent))
 import common
+import cycles_device
 import polish
 
 COLORS = dict(bone="d2c5a5", petrol="53686d", charcoal="242a28",
@@ -591,7 +592,7 @@ def preview_glb(path, outdir, pose=None):
     bpy.context.object.data.materials.append(common._flat("PreviewGround", "53686d"))
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 12
     scene.cycles.use_denoising = True
     scene.render.threads_mode = "FIXED"

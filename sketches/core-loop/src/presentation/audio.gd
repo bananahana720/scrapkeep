@@ -133,9 +133,11 @@ const HUM_STATES := ["latched_world", "latched_body", "smash_committed"]
 const HUM_FAR := 45.0
 const HUM_NEAR := 3.0
 const HUM_DB := 0.0
+# A threat kind whose warning has a release half, played when the threat goes live.
+const THREAT_RELEASE := {"threat_lane": "threat_tear"}
 # Danger sounds pull the bass down so the low end never masks a warning.
 const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
-	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
+	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
 # A launch whose landing never comes (a fall into the next stage's rail) still drops. Timed on
 # SimClock: the drop restarts the band and so the bar grid that park events land on.
 const LANDING_FALLBACK_MS := 2000
@@ -280,6 +282,8 @@ var _stinger_player: AudioStreamPlayer
 var _music_pb: AudioStreamGeneratorPlayback
 var _stinger_pb: AudioStreamGeneratorPlayback
 var _sfx: AudioStreamPlaybackPolyphonic
+# Lane threat instance id -> its held hum voice (-1 without live output), until the lane goes live or leaves.
+var lane_hums := {}
 var _ui: AudioStreamPlaybackPolyphonic
 var _sfx_player: AudioStreamPlayer
 var _ui_player: AudioStreamPlayer
@@ -665,6 +669,8 @@ func _pump(virtual_frames := -1) -> void:
 		_ace_arrival_stage = 0
 		_ace_arrival_at = -1
 		_ace_stage(stage, engine.next_bar())
+	if ace != null:
+		ace.set_boss_floor(_ace_boss_floor())
 	var ace_live := ace != null and ace.active()
 	_hand_over_band()
 	_release_grid()
@@ -864,7 +870,14 @@ func ace_ready() -> bool:
 	return true
 
 
+# The stems follow the band engine's boss layering: in a boss fight the melody is held at the
+# engine's section floor (brindle 0.8, 0.9, 1.0), whatever the threat feed says.
+func _ace_boss_floor() -> float:
+	return engine._floor() if engine.mode == MusicEngine.PLAY and engine.track in MusicEngine.BOSS_TRACKS else 0.0
+
+
 func _prime_band_parameters() -> void:
+	ace.set_boss_floor(_ace_boss_floor())
 	ace.parameter_enabled = engine.parameter_source.is_valid()
 	if ace.parameter_enabled:
 		ace.parameters = engine.parameter_committed_values.duplicate()
@@ -1439,12 +1452,39 @@ func _warn_threat(node: Node) -> void:
 	if row.is_empty():
 		return
 	var db: float = PRIORITY_DB[int(row["priority"])] - PRIORITY_DB[Rows.priority(kind)] - _threat_distance_db(node)
-	play(kind, db, 1.0, "SFX", row["sound"])
+	var sounded := play(kind, db, 1.0, "SFX", row["sound"])
 	for layer in [node.get("owner_voice"), node.get("mechanic_tag")]:
 		if layer is String and layer != "":
 			play(kind, db, 1.0, "SFX", layer)
 	if int(row["priority"]) >= 2:
 		engine.duck(0.55, 0.35)
+	if kind in THREAT_RELEASE and node.has_signal("went_live"):
+		if sounded:
+			var voices: Array = _voices.get(row["sound"], [])
+			lane_hums[node.get_instance_id()] = voices.back() if not voices.is_empty() else -1
+		node.went_live.connect(_release_threat.bind(node, kind), CONNECT_ONE_SHOT)
+		node.tree_exiting.connect(_end_hum.bind(node.get_instance_id()), CONNECT_ONE_SHOT)
+
+
+# The release half of a threat's grammar on the frame it goes live: the held hum stops and
+# the lane's tear plays, because the tear is fire time.
+func _release_threat(node: Node, kind: String) -> void:
+	_end_hum(node.get_instance_id())
+	if not is_instance_valid(node) or not node.is_inside_tree():
+		return
+	var row: Dictionary = EventKinds.THREAT_ROWS[kind]
+	play(kind, PRIORITY_DB[int(row["priority"])] - PRIORITY_DB[Rows.priority(kind)] - _threat_distance_db(node), 1.0, "SFX", THREAT_RELEASE[kind])
+
+
+# Stops a lane's held hum: at its tear, or when the lane leaves before it goes live.
+func _end_hum(node_id: int) -> void:
+	if not lane_hums.has(node_id):
+		return
+	var id: int = lane_hums[node_id]
+	lane_hums.erase(node_id)
+	if id >= 0 and _sfx != null and _sfx.is_stream_playing(id):
+		_sfx.stop_stream(id)
+	cue_log.append(["threat_lane", EventKinds.THREAT_ROWS["threat_lane"]["sound"], "stop", engine.clock, 1.0])
 
 
 # Cues here are not positional, so a far threat is only quieter: full within 20 m,
@@ -1661,6 +1701,12 @@ func wire_optional() -> void:
 		_disarm_launch()
 		_event_id = ""
 		_chase_lead0 = -1.0
+		# Arena entry and retry are the fight's stage entry: a flume Warden's break no longer
+		# strips the band, synth or ACE stems, and a Warden-break commit still queued is void.
+		if reason in ["arena", "arena_retry"]:
+			engine.parameters_arena_entered()
+			if ace != null:
+				ace.clear_release()
 		if reason == "arena_retry" and sound_ready:
 			# R in the arena: Brindle's music from phase 1, out of DEAD mode, with a pickup.
 			engine.cancel_pending()

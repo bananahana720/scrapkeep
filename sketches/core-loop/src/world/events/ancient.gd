@@ -7,11 +7,20 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 var world
 var _prepared := {}
 var _overlay_map: EventGround.OverlayMap
+# The stage's swap overlays, projected on a worker from setup (EventGround.plan_overlays).
+var _plan := {}
 
 
 func setup(world_ref) -> void:
 	world = world_ref
 	name = "AncientEvents"
+	var items := []
+	for row in world.terrain.map().park.event_rows:
+		if row.kind == "machine_eruption":
+			var site := _site(row)
+			if not site.is_empty():
+				items.append({"id": str(row.id), "kind": row.kind, "geometry": _geometry(site, Vector3(float(site.at[0]), 0.0, float(site.at[1])))})
+	_plan = EventGround.plan_overlays(world, items)
 
 
 func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
@@ -27,20 +36,24 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 
 
 func _prepare(row: Dictionary) -> void:
-	var site_row := {}
-	for site in world.terrain.map().park.park_rows:
-		if site.id == row.site:
-			site_row = site
-			break
-	var site := NaturalFootprint.resolve(row, site_row)
+	var site := _site(row)
 	var x := float(site.at[0])
 	var z := float(site.at[1])
 	var at := Vector3(x, world.terrain.height(x, z), z)
-	var record := {"site": site, "at": at, "overlay": null,
-		"geometry": {"site": site, "at": at, "half": ParkMap.footprint_half_extents(site),
-			"yaw": deg_to_rad(float(site.yaw_deg)), "strike_m": 0.0}}
-	_overlay_map = EventGround.prepare_overlay(world, self, row, record)
+	var record := {"site": site, "at": at, "overlay": null, "geometry": _geometry(site, at)}
+	_overlay_map = EventGround.prepare_overlay(world, self, row, record, Callable(), EventGround.planned_overlay(world, _plan, str(row.id)))
 	_prepared[row.id] = record
+
+
+func _site(row: Dictionary) -> Dictionary:
+	for site in world.terrain.map().park.park_rows:
+		if site.id == row.site:
+			return NaturalFootprint.resolve(row, site)
+	return NaturalFootprint.resolve(row, {})
+
+
+static func _geometry(site: Dictionary, at: Vector3) -> Dictionary:
+	return {"site": site, "at": at, "half": ParkMap.footprint_half_extents(site), "yaw": deg_to_rad(float(site.yaw_deg)), "strike_m": 0.0}
 
 
 func _land(row: Dictionary, ctx: Dictionary) -> void:
@@ -59,9 +72,15 @@ func _end(row: Dictionary) -> void:
 
 
 func release() -> void:
+	EventGround.settle_overlays(_plan)
+	_plan = {}
 	for id in _prepared:
 		_end({"id": id})
 	EventGround.restore_map(world, _overlay_map)
 	_prepared.clear()
 	_overlay_map = null
 	world = null
+
+
+func _exit_tree() -> void:
+	EventGround.settle_overlays(_plan)

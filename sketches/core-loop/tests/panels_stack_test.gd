@@ -155,5 +155,3 @@ func _words() -> void:
 	_t.eq("stat line", Panels.stat_line("vent_louvre", 5), "Fire rate +25%: 5 louvres")
 	_t.eq("stat line flat", Panels.stat_line("splash_skirt", 2), "Slam and burst radius +0.70 m: 2 skirts")
 	_t.eq("pop text", Panels.pop_text("hull_tile"), "TILE +5 MAX HULL")
-	var silhouettes := Panels.ROWS.values().map(func(r): return r["silhouette"])
-	_t.check("art pending names real silhouettes", Panels.PANEL_ART_PENDING.all(func(s): return s in silhouettes), str(Panels.PANEL_ART_PENDING))

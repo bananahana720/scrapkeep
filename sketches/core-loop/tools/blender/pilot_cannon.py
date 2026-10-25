@@ -21,6 +21,7 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import common
+import cycles_device
 import polish
 import rig_pilot as rig
 import anim_rivet_drop as shared
@@ -434,7 +435,7 @@ def previews(arm, mesh, acts, shell):
     target.mkdir(exist_ok=True)
     cam = rig.studio()
     scene = bpy.context.scene
-    scene.cycles.device = "CPU"
+    cycles_device.use(scene)
     scene.cycles.samples = 12
     scene.render.resolution_x = scene.render.resolution_y = 640
     # Cycles glass uses a transparent/Fresnel reflection mix; the exported game

@@ -160,7 +160,7 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 	var result := {"sites": [], "metrics": {"initial_credits": CREDITS, "remaining_credits": CREDITS, "failed_placements": 0, "refunded_credits": 0, "chance_opportunities": 0, "chance_hits": 0, "anchors": prepared.anchors.size()}}
 	if stage < 1 or stage > Park.COUNT or map.park.map != Park.of(stage).map:
 		return result
-	var slots := Modifier.slots(modifier, stage, map.activity_sites.size())
+	var slots := Modifier.slots(modifier, stage, Modifier.authored(map))
 	if slots == 0:
 		return result
 	var pool := entries(map)

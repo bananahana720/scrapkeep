@@ -420,10 +420,16 @@ static func hide_placeholder(mi: GeometryInstance3D) -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
-func _scene(path: String) -> Node:
+# A scene held for the presentation's life: nothing else keeps a GLB's PackedScene, so a bare load() reads it from disk
+# again every time (a Warden body, 8-25 ms, on every stage entry and retry).
+func _packed(path: String) -> PackedScene:
 	if not _scenes.has(path):
 		_scenes[path] = load(path) as PackedScene if ResourceLoader.exists(path) else null
-	var packed := _scenes[path] as PackedScene
+	return _scenes[path] as PackedScene
+
+
+func _scene(path: String) -> Node:
+	var packed := _packed(path)
 	if packed == null:
 		_warn_once("scene:" + path, "hero_assets: scene '%s' unavailable; keeping primitive fallback" % path)
 		return null
@@ -2084,9 +2090,7 @@ func warden_of(warden: Node) -> Dictionary:
 
 
 func _warden_scene(path: String) -> Node3D:
-	if not ResourceLoader.exists(path):
-		return null
-	var packed := load(path) as PackedScene
+	var packed := _packed(path)
 	if packed == null:
 		return null
 	var imported := packed.instantiate() as Node3D
@@ -2222,9 +2226,7 @@ func _wears_body(warden) -> bool:
 
 
 func _body_scene(path: String) -> Node3D:
-	if not ResourceLoader.exists(path):
-		return null
-	var packed := load(path) as PackedScene
+	var packed := _packed(path)
 	return packed.instantiate() as Node3D if packed != null else null
 
 

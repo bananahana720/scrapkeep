@@ -57,8 +57,12 @@ const DRIVER_PATH := "res://src/combat/warden_mind.gd"
 # Warden, class-gated like the hive: small stays under class III and grown's ratios do not pass 1.5 at plating 170),
 # which measures 111.2 / 58.5 s (small /
 # grown) at 102324cd, inside the small tolerance. The grown miss is stage drift, not #104.
-const EXPECT_SMALL_S := 101.5
-const EXPECT_GROWN_S := 42.7
+# 2026-10-24 (base-cruise ruling, #424): re-pinned 101.5 -> 103.8 s, grown 42.7 -> 47.5 s on the tier_cruise tree,
+# seeds 0-2 small [76.97, 133.16, 103.75], grown [47.52, 67.28, 33.57]. The pre-change stage measured 144.5 / 52.7 on
+# the same seeds. Over 24 seeds (child runs, two or three at a time) small 109.2 s, grown 45.7 s, ratio 2.39. Grown sits
+# 0.7 s over the 25 to 45 s band on 24 seeds and 2.5 s over on these three; that band check stays red for the coordinator.
+const EXPECT_SMALL_S := 103.8
+const EXPECT_GROWN_S := 47.5
 const TOLERANCE := 0.10
 
 var _settings := {}

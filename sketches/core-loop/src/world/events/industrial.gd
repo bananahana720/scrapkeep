@@ -24,6 +24,8 @@ var world
 var active := {}
 var _sites := {}
 var _overlay_map: EventGround.OverlayMap
+# The stage's swap overlays, projected on a worker from setup (EventGround.plan_overlays).
+var _plan := {}
 
 
 func setup(world_ref) -> void:
@@ -31,9 +33,18 @@ func setup(world_ref) -> void:
 	name = "IndustrialEvents"
 	for site in world.terrain.map().park.park_rows:
 		_sites[site.id] = site
+	var items := []
+	for row in world.terrain.map().park.event_rows:
+		var swap := String(row.get("effect", {}).get("swap", ""))
+		if row.family == "industrial" and swap != "" and _sites.has(row.site):
+			items.append({"id": str(row.id), "kind": row.kind, "geometry": _geometry(NaturalFootprint.resolve(row, _sites[row.site]))})
+	_plan = EventGround.plan_overlays(world, items)
 
 
 func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
+	# The sluice commits no hazard: its water is the surge course's front (activities.gd), which never hurts.
+	if row.kind == "sluice_surge":
+		return
 	match action:
 		"telegraph":
 			_telegraph(row)
@@ -107,13 +118,16 @@ func _end(row: Dictionary) -> void:
 
 func _swap(row: Dictionary, state: Dictionary, id: String) -> void:
 	var site: Dictionary = state.site
-	var record := {"site": site, "at": state.at, "overlay": null,
-		"geometry": {"site": site, "at": state.at, "half": ParkMap.footprint_half_extents(site),
-			"yaw": deg_to_rad(float(site.yaw_deg)), "strike_m": 0.0}}
-	_overlay_map = EventGround.prepare_overlay(world, self, row, record)
+	var record := {"site": site, "at": state.at, "overlay": null, "geometry": _geometry(site, state.at)}
+	_overlay_map = EventGround.prepare_overlay(world, self, row, record, Callable(), EventGround.planned_overlay(world, _plan, str(row.id)))
 	EventGround.set_overlay(world, row, record, true)
 	state.overlay_record = record
 	state.swap = id
+
+
+func _geometry(site: Dictionary, at := Vector3.INF) -> Dictionary:
+	return {"site": site, "at": _at(site) if at == Vector3.INF else at, "half": ParkMap.footprint_half_extents(site),
+		"yaw": deg_to_rad(float(site.yaw_deg)), "strike_m": 0.0}
 
 
 # The shared damage path (natural.gd's strike): lose_scrap for the row's damage, once per
@@ -141,6 +155,8 @@ func _at(site: Dictionary) -> Vector3:
 
 
 func release() -> void:
+	EventGround.settle_overlays(_plan)
+	_plan = {}
 	for id in active.keys():
 		_end({"id": id})
 	EventGround.restore_map(world, _overlay_map)
@@ -148,3 +164,7 @@ func release() -> void:
 	active.clear()
 	_sites.clear()
 	world = null
+
+
+func _exit_tree() -> void:
+	EventGround.settle_overlays(_plan)

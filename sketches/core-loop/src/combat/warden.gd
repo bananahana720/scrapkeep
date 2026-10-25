@@ -285,7 +285,7 @@ func _on_guard_struck(enemy: Node3D, hit_kind: String, force: float) -> void:
 	if enemy.get("swarm") != guard or not guard.following() \
 			or _guard_scatter_frame != Engine.get_physics_frames() or guard.scatters <= _guard_paid_scatters:
 		return
-	if SpeedTier.of(force, target.tuning.f("cruise")) < SpeedTier.CRUISE:
+	if SpeedTier.of(force, target.tuning.tier_cruise()) < SpeedTier.CRUISE:
 		return
 	_guard_paid_scatters = guard.scatters
 	_apply_posture(judge_hit("guard_rack", 0.0, false, 0))
@@ -940,6 +940,14 @@ func _apply_posture(result: Dictionary) -> void:
 		if float(result.get("gain", 0.0)) > 0.0:
 			_posture.idle = 0.0
 		result["gain"] = clampf(float(result.get("gain", 0.0)), 0.0, maxf(0.0, HOLD_CAP - _posture.posture))
+		result["crack"] = false
+		result["shatter"] = false
+	# A park Warden's clamp (world/stage_locks.gd): shut, a hit lands and gains nothing, so the bar
+	# stays where it is and no stagger opens the core until the clamp lets go.
+	var gate = spec.get("posture_gate")
+	if gate is Callable and gate.is_valid() and not _posture.staggered and gate.call():
+		result = result.duplicate()
+		result["gain"] = 0.0
 		result["crack"] = false
 		result["shatter"] = false
 	var before := _posture_signature()

@@ -131,6 +131,7 @@ Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds
 | `death_saved` | `hp: float` | `run_state` | the earned save caught a lethal hit; flow writes `death_save_spent` to the entrance doc (`_on_death_saved`) |
 | `beacon_charge_changed` | `fraction: float` | spine flow | beacon charge, 0 to 1; while sealed, the share of the Warden broken; exactly `1.0` once per stage when the gates open |
 | `beacon_unsealed` | `stage: int` | spine flow | the Warden broke; the gates open wherever the ball is |
+| `warden_sighted` | `stage: int` | spine flow | the ball first comes within `SIGHT_SHARE` (3.5) times the beacon ring's radius of the sealed Warden, before any engagement, once per stage attempt; intro lines and reveal cards play here and clear at `warden_engaged` |
 | `warden_engaged` | `stage: int` | spine flow | first sealed ring entry or first strike on the Warden, once per stage attempt |
 | `stage_content_cleared` | `reason: String` | spine flow | stage content must stand down now (reason `arena` on entering the boss arena, `arena_retry` on retrying it); quiet, priority 0 |
 | `scrap_collected` | `amount: int, at: Vector3, total: int` | `run.add_scrap` | scrap taken |
@@ -446,9 +447,11 @@ Every enemy threat is a committed telegraph (`src/combat/telegraph.gd`) or boss 
 | INSTANT | a sharp edge; a striped fill closing in from the edge over the warning; a solid flash on landing | the whole area, at once | `threat_instant`: `ring`, `threat_tick` |
 | WAVE | a faint dashed reach; a bright front at speed x elapsed, chevrons, a curtain as tall as its height band; 15% stripes on the swept ground | only the front band, `WAVE_EDGE` (1 m) either side | `threat_wave`: `wave`, `threat_whoosh` |
 | PROJECTILE | a dotted flight trace to the landing point; a reticle whose brackets close on the blast edge | the blast ring, when the shell lands | `threat_projectile`: `cross`, `threat_whistle` |
-| LANE | rails and a far cap; a striped fill running from the source | the strip, where the body or beam is | `threat_lane`: `bar`, `threat_hum` |
+| LANE | rails and a far cap; a striped fill running from the source | the strip, where the body or beam is | `threat_lane`: `bar`, `threat_hum` held from the draw, cut by `threat_tear` on the frame it goes live |
 
 Instant, projectile and lane also draw their height band as posts and a rail at `reach`.
+
+Every type's warning sound plays on the frame the threat is declared (`audio.gd` `_warn_threat`). A LANE also has a release half: both nodes emit `went_live` when the warning ends (`Hazard.step` reaching `warn_seconds`, `Telegraph.set_progress` reaching 1), and on that frame the held hum stops and `threat_tear` plays. The tear is fire time (SOUND-STORY section 7), so it lands on the tick the charge, lunge or beam starts, at any warning length.
 
 The type is a required argument everywhere; no factory defaults it, and a node committed without one pushes an error.
 

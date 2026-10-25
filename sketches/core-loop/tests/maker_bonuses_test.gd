@@ -74,6 +74,8 @@ func _run() -> void:
 	_game.ctx.calm = true
 	_player = _game.player
 	_player.source = _source
+	# Actives are on by default (24 Oct); this run racks its active itself, further down.
+	_game.tuning.set_option("actives", "off")
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	_combat = _game.combat

@@ -109,7 +109,8 @@ static func _cancel_attack(node: Node3D) -> void:
 	var phase = node.get("phase")
 	if phase != null and int(phase) != 0 and node.has_method("_stagger"):
 		node._stagger()
-	elif node.has_method("_end_attack") and node.get("state") != null and int(node.get("state")) in [1, 2]:
+	elif node.has_method("_end_attack") and node.get("state") != null and (int(node.get("state")) in [1, 2] \
+			or (node.has_method("state_name") and node.state_name() == "call")):
 		node._end_attack(0)
 	elif node.has_method("_clear_telegraph"):
 		node._clear_telegraph()
@@ -128,7 +129,7 @@ func _carry(delta: float, player) -> void:
 
 
 func _swing(player) -> void:
-	var scale := maxf(MIN_SPEED_SCALE, player.state.velocity.length() / player.tuning.f("cruise"))
+	var scale := maxf(MIN_SPEED_SCALE, player.state.velocity.length() / player.tuning.tier_cruise())
 	for other in get_tree().get_nodes_in_group("enemy"):
 		if other == body or not is_instance_valid(other) or (other.has_method("is_dead") and other.is_dead()):
 			continue
@@ -192,7 +193,7 @@ func _let_go(player) -> void:
 	thrown += 1
 	if v.length() <= 0.5:
 		return
-	_flying.append({"body": node, "left": THROW_FLIGHT, "hit": {}, "scale": maxf(MIN_SPEED_SCALE, v.length() / player.tuning.f("cruise"))})
+	_flying.append({"body": node, "left": THROW_FLIGHT, "hit": {}, "scale": maxf(MIN_SPEED_SCALE, v.length() / player.tuning.tier_cruise())})
 
 
 func _fly(delta: float) -> void:

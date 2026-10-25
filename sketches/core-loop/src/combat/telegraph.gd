@@ -25,6 +25,9 @@ const WarningBound := preload("res://src/combat/warning_bound.gd")
 const PRIORITY := Threat.PRIORITY
 const LIFT := 0.2
 
+# When the warning runs out (progress reaches 1, by step() or the owner): the lane's tear plays here.
+signal went_live
+
 enum Shape { RING, LANE, WEDGE }
 
 var type := Threat.UNSET
@@ -224,8 +227,11 @@ func set_flight(from: Vector3, arc_bump: float) -> void:
 
 
 func set_progress(value: float) -> void:
+	var armed := progress < 1.0
 	progress = clampf(value, 0.0, 1.0)
 	_repaint()
+	if armed and progress >= 1.0:
+		went_live.emit()
 	if type == Threat.Type.INSTANT and progress >= 1.0 and not _flashed and is_inside_tree() and is_hostile():
 		_flashed = true
 		Threat.flash(get_parent(), descriptor(), center.y, LIFT)
