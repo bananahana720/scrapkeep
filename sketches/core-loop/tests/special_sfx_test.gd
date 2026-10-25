@@ -27,6 +27,9 @@ func _initialize() -> void:
 		_t.check("%s_presence is two bars at 129 BPM" % name, absi(loop.size() - expect) <= 2, "%d samples, want %d" % [loop.size(), expect])
 		var wav := SfxBank.loop_stream(name + "_presence")
 		_t.check("%s_presence loops forward over the whole file" % name, wav.loop_mode == AudioStreamWAV.LOOP_FORWARD and wav.loop_begin == 0 and wav.loop_end == loop.size())
+		var plain := SfxBank.stream(name + "_presence")
+		_t.check("%s_presence loops the baked stream's own samples, leaving that stream one-shot" % name, wav != plain and wav.data == plain.data
+			and plain.loop_mode == AudioStreamWAV.LOOP_DISABLED and wav.data == Synth.to_wav(loop).data)
 		var step := 0.0
 		for i in range(1, loop.size()):
 			step = maxf(step, absf(loop[i] - loop[i - 1]))
