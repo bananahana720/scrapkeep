@@ -53,6 +53,7 @@ func _run() -> void:
 			PerchPoints.pick(main.tops, near, terrain.height, main.blockers, 7, main.ledges))
 		_t.check("%s: it found tops or ledges" % id, (main.tops as Array).size() + (main.ledges as Array).size() > 0)
 		_check_patched(id, park, terrain, taken)
+	_check_prepared(holder)
 	# A stage built with no perch ask: its read is pending until the stage is freed, which waits on it.
 	var fresh = Terrain.new(TABLE)
 	fresh.build(holder)
@@ -106,3 +107,66 @@ func _check_roof_floor(terrain, s: int, i: int) -> void:
 	_t.check("park_sinkhole: over its roofs the worker's floor is height() (%d points where a roof stands over the ground)" % over,
 		over > 0 and differ.is_empty(), str(differ.slice(0, 3)))
 
+
+
+# A Dispatcher on its way with an overlay down: prepare_perches reads the ledges near it again on a worker, and
+# perch_near takes that read, the lists the main thread reads through height() with the overlay down. A slab
+# 7 m over a found top stands in for a landed slide, as an OverlayMap profile like prepare_overlay makes.
+func _check_prepared(holder: Node3D) -> void:
+	var terrain = Terrain.new(TABLE)
+	terrain.build(holder)
+	terrain.stage = 2
+	terrain.geometry_root(2)
+	var m = _overlay_map(terrain, 1)
+	terrain.prepare_perches()
+	_t.check("with no overlay down, nothing is read again", not terrain._perch_patch.has(1))
+	Terrain._settle_perch_read(terrain._perch_ahead[1])
+	var found: Array = terrain._perch_ahead[1].out.get("found", [])
+	var mid: Vector4 = found[found.size() / 2]
+	var site := {"id": "test_slab", "at": [mid.x, mid.z], "size": [30.0, 0.0, 30.0], "yaw_deg": 0.0, "y": mid.y + 7.0}
+	m.profiles["test_slab_after"] = {"site": site, "surface": EventGround.span_surface(site, 0.0)}
+	terrain.overlays.append("test_slab_after")
+	var park: Dictionary = m.park
+	var main := {"tops": PerchPoints.derive(park, terrain.height), "ledges": PerchPoints.ledges(park, terrain.height)}
+	terrain.prepare_perches()
+	_t.check("an overlay down queues a worker read near it", terrain._perch_patch.has(1))
+	var queued = terrain._perch_patch.get(1)
+	terrain.prepare_perches()
+	_t.check("asking again with the same overlays queues nothing new", terrain._perch_patch.get(1) == queued)
+	var near := Vector3(mid.x, 0.0, mid.z)
+	var pick: Vector3 = terrain.perch_near(near, 3)
+	var taken: Dictionary = terrain._perches.get(1, {})
+	_t.check("perch_near took the worker's read", not terrain._perch_patch.has(1) and taken.has("ledges"))
+	for key in ["tops", "ledges"]:
+		_t.check("the prepared %s are the main thread's with the overlay down" % key, str(taken.get(key)) == str(main[key]),
+			"%d / %d" % [(taken.get(key, []) as Array).size(), (main[key] as Array).size()])
+	_t.check("the overlay changed the ledges (the check bites)", str(main.ledges) != str(PerchPoints.thin(found)))
+	_t.eq("the pick is the main thread's pick", pick, PerchPoints.pick(main.tops, near, terrain.height, taken.blockers, 3, main.ledges))
+
+	# The overlays change between the ask and the spawn: the read made for the old list is dropped.
+	var later = Terrain.new(TABLE)
+	later.build(holder)
+	later.stage = 2
+	later.geometry_root(2)
+	var lm = _overlay_map(later, 1)
+	lm.profiles["test_slab_after"] = m.profiles["test_slab_after"]
+	later.overlays.append("test_slab_after")
+	later.prepare_perches()
+	later.overlays.clear()
+	var bare := {"tops": PerchPoints.derive(park, later.height), "ledges": PerchPoints.ledges(park, later.height)}
+	later.perch_near(near, 3)
+	_t.check("a read made for overlays since lifted is dropped", not later._perch_patch.has(1)
+		and str(later._perches.get(1, {}).get("ledges")) == str(bare.ledges))
+
+
+# The stage's map as an OverlayMap, its loaded fields copied as EventGround.prepare_overlay copies them.
+func _overlay_map(terrain, i: int):
+	var current = terrain.maps[i]
+	var m = EventGround.OverlayMap.new("")
+	for property in current.get_property_list():
+		if int(property.usage) & (PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_SCRIPT_VARIABLE) and property.name != "script":
+			var value = current.get(property.name)
+			m.set(property.name, value.duplicate(true) if value is Dictionary or value is Array else value)
+	m.source = current
+	terrain.maps[i] = m
+	return m
