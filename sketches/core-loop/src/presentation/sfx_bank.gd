@@ -503,12 +503,14 @@ static func _pcm16(data: PackedByteArray, stereo: bool) -> PackedFloat32Array:
 	return out
 
 
-# A presence loop: the file as a forward-looping stream, whole file as the loop.
+# A presence loop: the file as a forward-looping stream, whole file as the loop. It copies the
+# stream the bake already encoded (bake_all), so a special's first spawn does not encode its
+# two-bar loop again on the main thread (12-14 ms at the Dispatcher's first spawn on the cloud).
 static func loop_stream(id: String) -> AudioStreamWAV:
 	var key := id + "@loop"
 	if _cache_has(_streams, key):
 		return _cache_get(_streams, key)
-	var wav := Synth.to_wav(samples(id))
+	var wav := stream(id).duplicate() as AudioStreamWAV
 	wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	wav.loop_begin = 0
 	wav.loop_end = wav.data.size() / 2
