@@ -10,13 +10,15 @@ const T := preload("res://tests/support/t.gd")
 #     the drop-in to landmark path and RIB_LANDMARK_CLEAR_M or more short of the landmark;
 # (c) no spot stands on a line or a grind line's deck, and on the flume none lands within NOTCH_CLEAR_M of
 #     the drum lip notch (#481);
-# (d) the same seed draws the same spots, and the dam's draws vary.
+# (d) the same seed draws the same spots, and the dam's draws vary;
+# (e) the later worlds' parks still draw RIB_CACHES distinct spots.
 
-const EXPECTED_CHECKS := 12
+const EXPECTED_CHECKS := 13
 const DRAWS := 40
 const COUNT := 3
 const NOTCH := Vector2(271, 488)
 const NOTCH_CLEAR_M := 60.0
+const OTHER_PARKS := ["park_pit", "park_sinkhole", "park_islands", "park_crown"]
 const PARKS := {"park_dam": Vector2(-150, -690), "park_flume": Vector2(-460, -650)}
 
 var _t := T.new("rib_cache_spots_test")
@@ -25,6 +27,7 @@ var _t := T.new("rib_cache_spots_test")
 func _initialize() -> void:
 	for map_id in PARKS:
 		_park(map_id, PARKS[map_id])
+	_other_parks()
 	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
 	quit(_t.verdict())
 
@@ -71,6 +74,23 @@ func _park(map_id: String, spawn: Vector2) -> void:
 			for p in Director.rib_spots(graph, spawn, COUNT, seed):
 				control = control or _on_deck(graph, p, grind)
 		_t.check("park_flume control: the siphon trough is drawn without the grind rule", control)
+
+
+# Every later world's park still gets its full set of caches from the same rule.
+func _other_parks() -> void:
+	var short := []
+	for map_id in OTHER_PARKS:
+		var park: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/%s.json" % map_id))
+		var graph = Activities.shared_graph("res://assets/park/%s/graph.bin" % map_id)
+		var spawn := Vector2(float(park.spawn.at[0]), float(park.spawn.at[1]))
+		for seed in 8:
+			var out: Array[Vector3] = Director.rib_spots(graph, spawn, COUNT, seed, Director.grind_rows(park))
+			var keys := {}
+			for p in out:
+				keys[p] = true
+			if keys.size() != COUNT:
+				short.append("%s seed %d: %d" % [map_id, seed, keys.size()])
+	_t.check("later parks: %d distinct spots a draw" % COUNT, short.is_empty(), ", ".join(short))
 
 
 # The graph node standing exactly at a drawn spot: a line or grind deck node there means the cache

@@ -1224,7 +1224,7 @@ var _leg_clock := 0.0
 
 # A woken rogue is fought wherever the explorer is: it woke because the ball came near its site.
 func _rogue_fight(delta: float) -> bool:
-	if engage_by <= ENGAGE_BY or _rogue_done or _rogue_seen == null:
+	if engage_by <= ENGAGE_BY or _rogue_done or _rogue_seen == null or game.run.stage_time > engage_by:
 		return false
 	if not is_instance_valid(_rogue_seen) or _rogue_seen.is_dead():
 		_rogue_done = true
@@ -1234,6 +1234,8 @@ func _rogue_fight(delta: float) -> bool:
 		_rogue_done = true
 		return false
 	_ignore_walls = false
+	# A cache leg the fight broke into is planned again from wherever the fight leaves the ball.
+	_leg_for = ""
 	_goal = "rogue fight"
 	_fight(_rogue_seen, delta)
 	return true
@@ -1241,7 +1243,7 @@ func _rogue_fight(delta: float) -> bool:
 
 # A rogue not yet woken is rolled to at its site, once the lit sites are done.
 func _rogue_goal(delta: float) -> bool:
-	if engage_by <= ENGAGE_BY or _rogue_done or _rogue_seen != null or game.world == null:
+	if engage_by <= ENGAGE_BY or _rogue_done or _rogue_seen != null or game.world == null or game.run.stage_time > engage_by:
 		return false
 	var plan: Dictionary = game.world.get("rogue_plan")
 	if plan.is_empty():
@@ -1265,7 +1267,7 @@ func _rogue_goal(delta: float) -> bool:
 # after them at any distance. A wider first reach (150 m, 25 Oct, seeds 1-4) took a flume cache on
 # 2 runs in 4 but cost the flume an activity and its rogue fight, so the lit sites keep the lead.
 func _rib_goal(delta: float, reach: float) -> bool:
-	if engage_by <= ENGAGE_BY or game.build == null or game.build.get("scrap") == null:
+	if engage_by <= ENGAGE_BY or game.build == null or game.build.get("scrap") == null or game.run.stage_time > engage_by:
 		return false
 	var ball: Vector3 = game.player.ball_position()
 	var best = null
