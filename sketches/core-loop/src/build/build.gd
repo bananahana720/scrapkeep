@@ -1141,7 +1141,8 @@ const CACHE_SLIDE_DOWN := 10.0
 const CACHE_SLIDE_BEARINGS := 8
 
 
-# The surface under a cache spot, or null when the ray finds none.
+# The surface a cache spot stands on (under it, or the nearest non-wall beside it), or null when
+# the ray under it finds none.
 func _cache_ground(at: Vector3):
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at + Vector3.UP * CACHE_RAY_UP, at + Vector3.DOWN * CACHE_RAY_DOWN, 1))
@@ -1155,7 +1156,9 @@ func _cache_ground(at: Vector3):
 		for k in CACHE_SLIDE_BEARINGS:
 			var a := TAU * k / CACHE_SLIDE_BEARINGS
 			var side := at + Vector3(cos(a), 0.0, sin(a)) * r
-			var low := space.intersect_ray(PhysicsRayQueryParameters3D.create(side + Vector3.UP * CACHE_RAY_UP, side + Vector3.DOWN * CACHE_SLIDE_DOWN, 1))
+			var query := PhysicsRayQueryParameters3D.create(side + Vector3.UP * CACHE_RAY_UP, side + Vector3.DOWN * CACHE_SLIDE_DOWN, 1)
+			query.hit_back_faces = false
+			var low := space.intersect_ray(query)
 			if not low.is_empty() and low["normal"].y >= CACHE_STAND_NORMAL and (best.is_empty() or low["normal"].y > best["normal"].y):
 				best = low
 		if not best.is_empty():
