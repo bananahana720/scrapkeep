@@ -28,12 +28,13 @@ const RING := 7.0
 const EDGE_STEP_MIN := 20.0
 const MIN_RAYS := 6
 # Planted control: two opaque unshaded grey plates inside each ring (clear of the fill band) whose
-# authored L* differ by about 50. The grade and the ring's faint area base bend that step, so the read
-# must land within CONTROL_TOLERANCE of it, in at least MIN_CONTROLS spots (a raised prop can cover
-# the plates at a spot).
+# authored L* differ by about 50. The grade and the ring's faint area base bend that step (it read
+# 40.9 on llvmpipe and 37.1 on the 3060's Forward+, #498 comment 6428905151), so the read must land
+# within CONTROL_TOLERANCE of it, in at least MIN_CONTROLS spots (a raised prop can cover the plates
+# at a spot).
 const CONTROL_DARK := Color(0.25, 0.25, 0.25)
 const CONTROL_LIGHT := Color(0.75, 0.75, 0.75)
-const CONTROL_TOLERANCE := 0.25
+const CONTROL_TOLERANCE := 0.3
 const MIN_CONTROLS := 4
 var out := ""
 var gate := false
