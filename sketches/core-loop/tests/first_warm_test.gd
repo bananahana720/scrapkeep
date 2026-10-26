@@ -43,9 +43,11 @@ func _run() -> void:
 
 	SimClock.ticks = false
 	events.stage_entered.emit(1, false)
-	t.check("the session's first entry queues every first moment once", node._first_queue == BakeWarm.FIRSTS, str(node._first_queue))
+	var queued: Array = BakeWarm.firsts()
+	t.check("the session's first entry queues every first moment and codex icon once",
+		node._first_queue == queued and queued.size() == BakeWarm.FIRSTS.size() + CodexStyle.CATEGORIES.size(), str(node._first_queue))
 	events.stage_entered.emit(1, true)
-	t.check("a retry queues none again", node._first_queue.size() == BakeWarm.FIRSTS.size())
+	t.check("a retry queues none again", node._first_queue.size() == queued.size())
 
 	var seen := []
 	var most := 0
@@ -64,9 +66,8 @@ func _run() -> void:
 				views[first] = warm.get_children().map(_read)
 				placed = placed and warm.position == BakeWarm.OUT_OF_SIGHT and warm.process_mode == Node.PROCESS_MODE_DISABLED
 	await process_frame
-	var drawn := BakeWarm.FIRSTS.filter(func(first): return first != "codex_icons")
 	t.check("each first moment with a view stands once, one at a time, and leaves",
-		seen == drawn and most == 1 and _first_warms(node).is_empty(), "%s, at most %d" % [seen, most])
+		seen == BakeWarm.FIRSTS and most == 1 and _first_warms(node).is_empty(), "%s, at most %d" % [seen, most])
 	t.check("the views stand out of sight in a holder that never processes", placed)
 
 	var armour: Array = views.get("armour_read", [])
@@ -80,11 +81,19 @@ func _run() -> void:
 	t.check("the synergy ring is add_ring's", ring.size() == 1 and ring[0]["name"] == "SynergyRing" and ring[0]["blend"] == BaseMaterial3D.BLEND_MODE_ADD)
 	var arc: Array = views.get("arc_mark", [])
 	t.check("the arc mark draws the shared ring every mark draws", arc.size() == 1 and arc[0]["mesh"] == Combat._arc_ring())
-	t.check("the materials the views drew are held", BakeWarm._kept.size() >= 2 and BakeWarm._kept.all(func(m): return is_instance_valid(m)))
+	t.check("the materials the views drew are held", BakeWarm._kept.size() == 2 and BakeWarm._kept.all(func(m): return is_instance_valid(m)))
 	t.check("the codex category icons are drawn ahead", CodexStyle.CATEGORIES.keys().all(func(id): return CodexStyle._icons.has(id)))
 
 	events.stage_entered.emit(1, false)
 	t.check("a later entry in the session queues none again", node._first_queue.is_empty())
+
+	# A warm node freed before its firsts are built (a quit to the menu at once) leaves them to the next.
+	BakeWarm._firsts_done = false
+	events.stage_entered.emit(1, false)
+	node.free()
+	BakeWarm.hook(ctx)
+	events.stage_entered.emit(1, false)
+	t.check("a warm node freed part way leaves its firsts to the next one", holder.get_node("BakeWarm")._first_queue == BakeWarm.firsts())
 
 	holder.queue_free()
 	events.queue_free()

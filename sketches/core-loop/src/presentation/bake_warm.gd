@@ -57,8 +57,9 @@ const WORLD_RIGS := {
 # Stage 1's pack kinds (alpha_defs PACKS_DAM; its elite and set pieces are not here), by kind
 # name: the ones the warm also builds once.
 const SPAWN_WARM := ["chaser", "lobber", "mag_trapper", "jolt_layer", "hooker", "ramp_flipper", "boom_tender"]
-# The first moments, in the order the warm builds them, one a frame.
-const FIRSTS := ["armour_read", "synergy_ring", "arc_mark", "codex_icons"]
+# The first moments with a view, in the order the warm builds them, one a frame; then each codex
+# category icon ("codex_icon:<category>"), one a frame.
+const FIRSTS := ["armour_read", "synergy_ring", "arc_mark"]
 # Far under every stage, so the one frame a warm spawn stands there is never seen.
 const OUT_OF_SIGHT := Vector3(0.0, -10000.0, 0.0)
 
@@ -92,9 +93,8 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 			for item in WORLD_KITS.get(world, []) + (WORLD_RIGS.get(world, []) if EnemyMotion.active() else []):
 				if not _warm.has(item) and not _queue.has(item):
 					_queue.append(item)
-			if not _firsts_done:
-				_firsts_done = true
-				_first_queue.append_array(FIRSTS)
+			if not _firsts_done and _first_queue.is_empty():
+				_first_queue = firsts()
 			return
 
 
@@ -111,10 +111,19 @@ func _process(_delta: float) -> void:
 			spawn_into(item, _shown, ctx.player, ctx.spawner.get("ground") if ctx.spawner != null else null)
 	elif not _first_queue.is_empty():
 		_shown = first_view(_first_queue.pop_front(), self)
+		# Done only once built, so a warm node freed part way leaves the rest to the next one.
+		_firsts_done = _first_queue.is_empty()
+
+
+static func firsts() -> Array:
+	var queue: Array = FIRSTS.duplicate()
+	for id in CodexStyle.CATEGORIES:
+		queue.append("codex_icon:" + String(id))
+	return queue
 
 
 # One first moment's views, as their owners build them, in an inert holder under `parent`
-# (null for a moment with nothing to draw). The codex icons are drawn into their cache.
+# (null for a codex icon, which is drawn into its cache instead).
 static func first_view(first: String, parent: Node) -> Node3D:
 	var views: Array[Node3D] = []
 	match first:
@@ -124,9 +133,8 @@ static func first_view(first: String, parent: Node) -> Node3D:
 			views = [Vfx.ring_view(0, Color.WHITE)]
 		"arc_mark":
 			views = [Combat.arc_mark_view()]
-		"codex_icons":
-			for id in CodexStyle.CATEGORIES:
-				CodexStyle.icon(id)
+		_ when first.begins_with("codex_icon:"):
+			CodexStyle.icon(first.trim_prefix("codex_icon:"))
 	if views.is_empty():
 		return null
 	var holder := spawn_holder(parent)
