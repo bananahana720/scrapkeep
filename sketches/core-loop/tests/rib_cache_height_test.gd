@@ -9,7 +9,8 @@ const T := preload("res://tests/support/t.gd")
 # CACHE_LIFT above the first surface a ray finds straight below it. Red team on f7af1604: the
 # flume's crew_ledges graph node is at y 76.5 under a deck at 77.5, so a lift from the node y
 # left the panel 0.2 m above the deck. Every spot the stage's pool can draw (POOL_DRAWS seeds)
-# has a surface in the placement ray's window, so none falls back to its node y.
+# has a surface in the placement ray's window, so none falls back to its node y, and that surface
+# is no wall: the dam's (64, -232) node sits on a dome's 72 degree flank, 6 m over the floor.
 # smoke: solo timeout=240s
 
 const WAIT_TICKS := 600
@@ -65,8 +66,15 @@ func _stage(stage: int) -> void:
 		for at in director.rib_cache_spots(Panels.RIB_CACHES, seed):
 			spots["%.0f,%.0f" % [at.x, at.z]] = at
 	var missed := []
+	var steep := []
 	for key in spots:
-		if _game.build._cache_ground(spots[key]) == null:
+		var ground = _game.build._cache_ground(spots[key])
+		if ground == null:
 			missed.append(key)
+			continue
+		var under := space.intersect_ray(PhysicsRayQueryParameters3D.create(ground + Vector3.UP * _game.build.CACHE_RAY_UP, ground + Vector3.DOWN * _game.build.CACHE_RAY_DOWN, 1))
+		if under.is_empty() or under["normal"].y < _game.build.CACHE_STAND_NORMAL:
+			steep.append(key)
 	_t.check("stage %d: every pool spot (%d) finds its surface" % [stage, spots.size()], missed.is_empty(), str(missed))
+	_t.check("stage %d: no pool spot stands on a wall (steeper than 60 degrees)" % stage, steep.is_empty(), str(steep))
 	print("stage %d placement waited %d ticks" % [stage, _game.build._caches_wait])
