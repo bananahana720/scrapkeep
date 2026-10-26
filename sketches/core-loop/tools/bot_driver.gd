@@ -528,6 +528,9 @@ var _activity := ""
 var _caches_seen := {}
 var _rib_spot := {}
 var _rogue_seen: Node3D = null
+# The woken rogue's instance id: a freed rogue compares equal to null, so the note's beaten
+# check keys on the id (instance_from_id is null once it is freed).
+var _rogue_id := 0
 var _rogue_clock := 0.0
 var _rib_clock := {}
 var _activity_time := {}
@@ -1035,6 +1038,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_caches_seen = {}
 	_rib_spot = {}
 	_rogue_seen = null
+	_rogue_id = 0
 	_rogue_clock = 0.0
 	_rib_clock = {}
 	_rogue_done = false
@@ -1327,14 +1331,16 @@ func _content_scan() -> void:
 		return
 	var world = game.world
 	var rogue = world.get("rogue") if world != null else null
-	if rogue != null and is_instance_valid(rogue) and rogue != _rogue_seen:
+	if rogue != null and is_instance_valid(rogue) and rogue.get_instance_id() != _rogue_id:
 		_rogue_seen = rogue
+		_rogue_id = rogue.get_instance_id()
 		_note["rogue_woke_s"] = snappedf(game.run.stage_time, 0.01)
 		_note["rogue_kind"] = String(rogue.get("kind"))
-	if _rogue_seen != null and _note["rogue_beaten_s"] == null \
-			and (not is_instance_valid(_rogue_seen) or _rogue_seen.is_dead()):
-		_note["rogue_beaten_s"] = snappedf(game.run.stage_time, 0.01)
-		_note["rogues_beaten"] = 1
+	if _rogue_id != 0 and _note["rogue_beaten_s"] == null:
+		var body = instance_from_id(_rogue_id)
+		if body == null or body.is_dead():
+			_note["rogue_beaten_s"] = snappedf(game.run.stage_time, 0.01)
+			_note["rogues_beaten"] = 1
 	var scrap = game.build.get("scrap") if game.build != null else null
 	if scrap == null or not scrap.has_method("caches"):
 		return
