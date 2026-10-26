@@ -90,7 +90,10 @@ func bind(warden: Node3D) -> void:
 	_crack_mark.material_override = _mark_material
 	_mark_material.render_priority = PRIORITY + 2
 	add_child(_crack_mark)
-	_sync()
+	# The first ground fit waits for this ring's first _process: a Warden spawns on its stage's entry
+	# tick, where reading the ground at its ~740 points cost 14 ms of the flume's entry on the cloud
+	# (scrapkeep#494). Until then the ring is hidden.
+	visible = false
 
 
 # The fight this ring reads is on the posture rule and still alive.
