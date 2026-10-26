@@ -10,9 +10,11 @@ const T := preload("res://tests/support/t.gd")
 #     beaten one is let go;
 # (c) a rib cache goes first only within RIB_NEAR, at any distance after, and is given up at its cap;
 # (d) the note counts a cache taken only when it leaves the ground near the ball, and a rogue
-#     beaten once.
+#     beaten once;
+# (e) a rogue killed and freed between two scans still counts beaten (red team, f7af1604: the
+#     note missed 3 of 7 flume and dam rogue kills the events log recorded).
 
-const EXPECTED_CHECKS := 15
+const EXPECTED_CHECKS := 18
 
 var _t := T.new("bot_rogue_rib_test")
 
@@ -91,6 +93,7 @@ class Driver extends BotDriver:
 func _initialize() -> void:
 	_default_driver()
 	_rogue()
+	_rogue_freed()
 	_ribs()
 	_note_rows()
 	_t.eq("expected check count", _t.checks + 1, EXPECTED_CHECKS)
@@ -149,6 +152,24 @@ func _rogue() -> void:
 	_t.eq("a beaten rogue counts once", driver._note["rogues_beaten"], 1)
 	_t.check("a beaten rogue is let go", not driver._rogue_fight(0.1))
 	rogue.queue_free()
+
+
+# The real kill path: _die marks the rogue dead and queue_free frees it at frame end, so a scan
+# on the next tick finds world.rogue already freed and never sees is_dead().
+func _rogue_freed() -> void:
+	var pair := _driver(true)
+	var spy: SpyGame = pair[0]
+	var driver: Driver = pair[1]
+	var rogue := SpyRogue.new()
+	root.add_child(rogue)
+	spy.world.rogue = rogue
+	driver._content_scan()
+	_t.eq("freed: the wake is noted", driver._note["rogue_woke_s"], 10.0)
+	rogue.free()
+	spy.run.stage_time = 25.0
+	driver._content_scan()
+	_t.eq("freed: a rogue freed between scans counts beaten", driver._note["rogues_beaten"], 1)
+	_t.eq("freed: at the scan that found it gone", driver._note["rogue_beaten_s"], 25.0)
 
 
 func _ribs() -> void:

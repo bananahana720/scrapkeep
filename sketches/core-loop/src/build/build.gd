@@ -129,6 +129,8 @@ var _no_cells_logged := {}
 # True from stage entry until the stage's rib caches are placed (the director's graph is read
 # by the first in-stage tick).
 var _caches_pending := false
+# Ticks the placement has waited for the stage's colliders (_cache_ground).
+var _caches_wait := 0
 # Every in-stage kill this run as the drop saw it, [stage, kind, elite, rib, jackpot, dropped],
 # for the drop simulation's recorded streams (tools/bot_run.gd --panel-log=1).
 var kill_log: Array = []
@@ -1004,6 +1006,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	panel_rng.seed = hash([ctx.run.run_seed, stage, ctx.run.retries, "panels"])
 	scrap.clear_caches()
 	_caches_pending = true
+	_caches_wait = 0
 	if retry:
 		dropper.dry = _stage_dry
 	else:
@@ -1095,18 +1098,44 @@ func _rib_mult(at: Vector3) -> float:
 # end. Their own stream (run seed and stage, not retries) puts a retry's caches back where
 # they were, with the same panels.
 func _place_rib_caches() -> void:
-	_caches_pending = false
 	if scrapless():
+		_caches_pending = false
 		return
 	var world = ctx.root.get_node_or_null("World")
 	var director = world.get("director") if world != null else null
 	if director == null or not director.has_method("rib_cache_spots"):
+		_caches_pending = false
 		return
 	var stage: int = ctx.flow.stage()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([ctx.run.run_seed, stage, "rib_caches"])
+	var spots: Array = []
 	for at in director.rib_cache_spots(Panels.RIB_CACHES, rng.randi()):
+		var ground = _cache_ground(at)
+		if ground == null and _caches_wait < CACHE_WAIT_TICKS:
+			_caches_wait += 1
+			return
+		spots.append(at if ground == null else ground)
+	_caches_pending = false
+	for at in spots:
 		scrap.drop_panel(at, Panels.draw(rng, _class_id()), false, true)
+
+
+# A graph node's y can sit under a deck laid over it (the flume's crew_ledges node is at 76.5
+# under a deck at 77.5), so a cache stands on the surface a ray finds from CACHE_RAY_UP over
+# its node to CACHE_RAY_DOWN under it. A stage entered from another stage can tick before its
+# colliders reach the physics space, so a miss waits a tick, up to CACHE_WAIT_TICKS, and then
+# falls back to the node.
+const CACHE_RAY_UP := 2.0
+const CACHE_RAY_DOWN := 1.0
+const CACHE_WAIT_TICKS := 30
+
+
+# The surface under a cache spot, or null when the ray finds none.
+func _cache_ground(at: Vector3):
+	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at + Vector3.UP * CACHE_RAY_UP, at + Vector3.DOWN * CACHE_RAY_DOWN, 1))
+	return null if hit.is_empty() else hit["position"]
 
 
 # Debug drawer (dev only): grant a panel at the ball.
