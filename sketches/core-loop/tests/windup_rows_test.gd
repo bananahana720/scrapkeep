@@ -30,7 +30,7 @@ func _expected(enemy, attack: String) -> float:
 		"vault", "linker", "foreman": return 0.0
 		"chaser": return enemy.WINDUP
 		"lobber": return enemy.TELEGRAPH
-		"miniboss": return enemy.SLAM_CROUCH + enemy.SLAM_LEAP if attack == "E03" else enemy.CHARGE_BRACE
+		"miniboss": return enemy.slam_crouch + enemy.SLAM_LEAP if attack == "E03" else enemy.charge_brace
 		"warden": return enemy.PULSE_TELEGRAPH
 		"swarm_remnant": return enemy.swarm.LOCK_WARN
 		"rogue_crane", "rogue_skip", "rogue_tender":
