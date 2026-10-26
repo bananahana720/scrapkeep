@@ -17,7 +17,7 @@ const AmbushAltar := preload("res://src/world/ambush_altar.gd")
 #   pickup where it fell; a ball 60 m away for 300 frames finds it back within 10 m;
 # - the ambush: rolling into the ring brings exactly its three; two dead pays nothing, all three
 #   leave one part at the altar, and touching it adds exactly one part;
-# - the cache: a ram below cruise leaves the wall, a ram at cruise breaks it and one part waits on
+# - the cache: a slow ram leaves the wall, a ram at a held roll's speed breaks it and one part waits on
 #   the pedestal; a slam of at least cruise's strength breaks it too and a weaker one does not;
 # - calm mode builds the cache alone;
 # - no activity changes the ball's planar speed beyond what the same line costs with none;
@@ -32,6 +32,9 @@ const LEASH_FRAMES := 300
 const SPEED_SLACK := 0.1
 const RAM_BELOW := 0.7
 const RAM_AT := 1.3
+# A held stick's speed into a face on a 10-22 m run-up (12.6-13.8 m/s at cruise 14): under cruise,
+# and it breaks the wall (Activities.RAM_MIN_PER_CRUISE).
+const RAM_HELD := 0.92
 const SIDE_CONTENT_PENDING := preload("res://src/core/pending_content.gd").SIDE_CONTENT_PENDING
 const LINE_FRAMES := 24
 const PICKUP_FRAMES := 40
@@ -362,8 +365,8 @@ func _cache() -> void:
 	var slow: Dictionary = await _ram(s, start, heading * cruise * RAM_BELOW, RAM_FRAMES)
 	_t.check("a ram below cruise leaves the wall standing", not s.done and s.wall.visible and _done.count("cracked_cache") == 0,
 		"ram at %.1f m/s of cruise %.1f: done %s, wall visible %s" % [cruise * RAM_BELOW, cruise, s.done, s.wall.visible])
-	var fast: Dictionary = await _ram(s, start, heading * cruise * RAM_AT, RAM_FRAMES)
-	_t.check("a ram at cruise breaks the wall", s.done and not s.wall.visible, "ram at %.1f m/s: done %s" % [cruise * RAM_AT, s.done])
+	var fast: Dictionary = await _ram(s, start, heading * cruise * RAM_HELD, RAM_FRAMES)
+	_t.check("a ram at a held roll's speed breaks the wall", s.done and not s.wall.visible, "ram at %.1f m/s: done %s" % [cruise * RAM_HELD, s.done])
 	_t.check("fired cache has its warm fill", s.fired_glow != null and s.fired_glow.emission_enabled and s.fired_glow.emission_energy_multiplier > 0.0,
 		"glow energy %.2f" % (s.fired_glow.emission_energy_multiplier if s.fired_glow != null else 0.0))
 	# A per-site light freed on a stage change segfaulted Godot 4.7.2 Forward+ at the next boss entry.
@@ -371,7 +374,7 @@ func _cache() -> void:
 	_t.eq("the cache finishes once", _done.count("cracked_cache"), 1)
 	_t.check("one pickup stands on the pedestal", s.pickup != null and _planar(s.pickup.global_position, s.pedestal) < 0.5,
 		"pickup %s, pedestal %s" % [s.pickup, s.pedestal])
-	var control: Dictionary = await _ram(s, start, heading * cruise * RAM_AT, RAM_FRAMES)
+	var control: Dictionary = await _ram(s, start, heading * cruise * RAM_HELD, RAM_FRAMES)
 	_t.check("the wall does not take the ball's speed", fast["after"] >= fast["before"] - (control["before"] - control["after"]) - SPEED_SLACK,
 		"ram %.2f to %.2f, same line with the wall gone %.2f to %.2f; slow ram stopped at %.2f" % [fast["before"], fast["after"], control["before"], control["after"], slow["after"]])
 	_put(_ground(s.pedestal + back * 3.0))

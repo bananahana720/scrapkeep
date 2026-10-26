@@ -153,6 +153,11 @@ const SLAM_REACH := 7.0
 # A slam breaks the wall at SLAM_MIN_PER_CRUISE times the strength of a flat landing at cruise speed,
 # so a landing as fast as the ram that breaks it breaks it too and a slower one does not.
 const SLAM_MIN_PER_CRUISE := 1.0
+# A ram breaks the wall at RAM_MIN_PER_CRUISE times cruise into the face. A held stick climbs toward
+# cruise and never quite reaches it on a run-up (12.6-13.8 m/s over 10-22 m, 14.0 only after 30 m),
+# so a bar at cruise itself let only the speed bank's roll start or a burst through: a player
+# already rolling at full speed bumped the face (cautious red team, 26 Oct). A nudge stays under it.
+const RAM_MIN_PER_CRUISE := 0.85
 const PEDESTAL_BACK := 4.0
 const CACHE_LANE_OFFSET := 6.0
 # The first-win room's log line on the back wall, on a dark crew board of its own: the fired wall
@@ -1576,7 +1581,7 @@ func _watch_wall(s: Site, ball: Vector3) -> void:
 	var ahead := local.z - 0.5
 	if ahead < -1.0 or ahead > WALL_REACH + maxf(0.0, toward) / 30.0 or absf(local.x) > WALL_HALF_W + 1.0 or local.y > WALL_HEIGHT + 2.0:
 		return
-	if toward >= ctx.tuning.f("cruise"):
+	if toward >= ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE:
 		_break_wall(s)
 
 
