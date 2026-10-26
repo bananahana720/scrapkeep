@@ -12,8 +12,12 @@ const ALLOWANCE_S := 53.7
 var checked_note: Dictionary = {}
 var checked_map := ""
 
-# A real skipper run, using the shipping park and hands. This seed reproduces the mounted
-# reactor's missing rolling approach; the four-seed median belongs to the writer's bot table.
+# A real skipper run, using the shipping park and hands. Seed 1 reproduced the mounted reactor's
+# missing rolling approach; the canyon walls (#488) moved its fight from 39.30 s to 104.75 s as
+# chaotic one-seed drift (24 seeds, 814a53ad vs main 43c86667: median 47.8 s vs 46.1 s, 7 of 24
+# over the allowance on each, gate/w18-814a53ad-bots-4.md). Seed 13 is the same runner_gunner
+# hand and moved least across that change (34.18 s vs 33.28 s). The seed median belongs to the
+# writer's bot table.
 # The run replays itself once in a child at a fixed 90 fps, one physics tick per frame, as
 # bot_run's children do. Paced by the clock, a loaded machine dropped ticks and the same seed
 # broke the Warden in 40.9 s or 97.3 s (2 fails in 8 solo runs, shard 6, 18 Oct); fixed, it is
@@ -41,7 +45,7 @@ func _initialize() -> void:
 	_settings["stages"] = "1"
 	_out = _absolute(String(_settings.get("out", OS.get_user_data_dir().path_join("park-reactor-fight"))))
 	DirAccess.make_dir_recursive_absolute(_out)
-	_seeds = [1]
+	_seeds = [13]
 	node_added.connect(_on_node_added)
 	_next()
 
