@@ -147,6 +147,16 @@ func take_damage(amount: float) -> float:
 	return removed
 
 
+# A hit in the turn removes nothing, so combat marks it absorbed and no damage number rises.
+func absorbs_hit(_result: Dictionary) -> bool:
+	return state == State.TURN
+
+
+# Nor can it die in the turn, so a crush there would pass the ball into a live body.
+func crushable() -> bool:
+	return state != State.TURN
+
+
 func is_weak() -> bool:
 	return state == State.WEAK
 

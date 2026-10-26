@@ -38,6 +38,11 @@ func _run() -> void:
 	var boss = game.ctx.spawner.spawn_enemy("miniboss", Vector3(0, 40, 0))
 	boss.set_physics_process(false)
 	boss.live = func(): return true
+	boss._begin_attack(Vector3(0, 0, -10))
+	boss._land_slam()
+	_check(boss.state == Miniboss.State.WEAK and cues.is_empty(), "in phase 1 the slam vents, with no cue")
+	boss._enter(Miniboss.State.STALK)
+	_check(not boss.absorbs_hit({}) and boss.crushable(), "outside the turn hits land and a crush is allowed")
 	_check(boss.phase == 1 and is_equal_approx(boss.slam_crouch, Miniboss.SLAM_CROUCH)
 		and is_equal_approx(boss.charge_brace, Miniboss.CHARGE_BRACE), "starts in phase 1 on the phase 1 wind-ups")
 	boss.take_damage(boss.hp - boss.max_hp * 0.55)
@@ -48,6 +53,7 @@ func _run() -> void:
 	_check(boss.phase == 2 and boss.state == Miniboss.State.TURN and boss.telegraph() == null,
 		"under half health it turns to phase 2, its committed slam dropped")
 	_check(phases == [["miniboss", 2, FightPhases.MINI_MAX]], "the turn publishes fight_phase_changed %s" % [phases])
+	_check(boss.absorbs_hit({}) and not boss.crushable(), "a hit in the turn is absorbed (no damage number) and never a crush")
 	var turning: float = boss.hp
 	_check(boss.take_damage(50.0) == 0.0 and boss.hp == turning, "it takes no damage while it turns")
 	boss._physics_process(FightPhases.TRANSITION_SECONDS * 0.5)
@@ -78,9 +84,24 @@ func _run() -> void:
 	boss._open_weak_window()
 	_check(boss.state == Miniboss.State.WEAK and boss.weak_windows == windows + 1, "the charge still vents")
 	_check(is_equal_approx(boss.charge_brace, Miniboss.CHARGE_BRACE * Miniboss.PHASE_TWO_WIND), "an uncued charge braces at the phase 2 wind-up again")
+	# A second miniboss turned mid-leap and mid-charge: the attack is dropped where it is, and
+	# after a turn that interrupted the slam the next attack is an uncued phase 2 charge.
+	var other = game.ctx.spawner.spawn_enemy("miniboss", Vector3(30, 40, 0))
+	other.set_physics_process(false)
+	other.live = func(): return true
+	other._begin_attack(Vector3(0, 0, -10))
+	other._enter(Miniboss.State.SLAM_LEAP)
+	other.take_damage(other.hp - other.max_hp * 0.45)
+	_check(other.state == Miniboss.State.TURN and other.telegraph() == null, "a turn mid-leap drops the slam")
+	other._physics_process(FightPhases.TRANSITION_SECONDS + 0.001)
+	other._begin_attack(Vector3(0, 0, -10))
+	_check(other.state == Miniboss.State.CHARGE_BRACE and is_equal_approx(other.charge_brace, Miniboss.CHARGE_BRACE * Miniboss.PHASE_TWO_WIND),
+		"after a turn that cut the slam, the next charge is uncued and braces %.2f s" % other.charge_brace)
+	other._clear_telegraph()
+	other.free()
 	boss.enter_phase(1)
 	boss.take_damage(1.0)
-	_check(boss.phase == 2 and phases.size() == 1, "it never turns twice or drops back a phase")
+	_check(boss.phase == 2 and phases.size() == 2, "it never turns twice or drops back a phase (one turn each for the two)")
 	for name in Miniboss.POSES:
 		_check(Miniboss.POSES[name].keys() == Miniboss.POSES.stalk.keys(), "pose row %s has every field" % name)
 	for st in [Miniboss.State.TURN, Miniboss.State.CUE]:
