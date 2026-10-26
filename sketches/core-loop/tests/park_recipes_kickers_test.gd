@@ -9,7 +9,8 @@ extends SceneTree
 # (b) Budgets after import: base and -col within the landform class (8,000 triangles, two draws), each shell one draw
 #     within the detail class.
 # (c) Coverage: every greybox kicker in the flume, pit, crown and islands and every greybox sinkhole half-pipe has a
-#     piece of its width and height (piece_for), and its seat fit is not refused.
+#     piece of its width and height (piece_for), and its seat fit is not refused. UNSEATED rows place their piece
+#     with no fit, for the reason given.
 # (d) Placed on a seat-fit row on flat ground, a piece's collider is the row's footprint: width W, its top at H (the
 #     shelf edge's coping 0.06 m; a stamp liner's open ends, y 0, its floor COL_DROP under the stamp's -H; the chained
 #     lava_channel's two end slabs, 6 m under its floor, so nothing in its lane collides), centred on the row's at.
@@ -31,6 +32,12 @@ const LANDFORM_TRIS := 8000
 const DETAIL_TRIS := 1500
 const PARKS := ["res://src/world/park/park_flume.json", "res://src/world/park/park_pit.json", "res://src/world/park/park_sinkhole.json",
 	"res://src/world/park/park_crown.json", "res://src/world/park/park_islands.json"]
+# Rows that place their piece unseated (no fit), and why.
+const UNSEATED := {
+	# Its lip lands on the terrace edge (x 272, y 0); seated, the exit would sit on the terrace and the ramp would rise
+	# 13 m over it (2-park_flume.md, drum lip kicker moved again 2026-10-25).
+	"drum_lip_kicker": "park_flume.json",
+}
 # Each piece: [L, H, W] as authored.
 const PIECES := {
 	"plate_kicker_12x2p5x14": [12, 2.5, 14], "plate_kicker_12x2p5x30": [12, 2.5, 30], "plate_kicker_12x2p5x40": [12, 2.5, 40],
@@ -162,6 +169,12 @@ func _check_coverage() -> void:
 			var id := piece_for(row)
 			if id == "":
 				missing.append("%s %s" % [row["id"], row["size"]])
+				continue
+			if UNSEATED.get(String(row["id"]), "") == path.get_file():
+				if row["recipe"] != id or row.has("fit"):
+					missing.append("%s takes %s with no fit, not %s %s" % [row["id"], id, row["recipe"], row.get("fit", "")])
+				else:
+					covered += 1
 				continue
 			if PIECES.has(String(row["recipe"])) and (row["recipe"] != id or row.get("fit", "") != ParkRecipes.FIT_SEAT):
 				missing.append("%s takes %s, seat fit, not %s %s" % [row["id"], id, row["recipe"], row.get("fit", "")])

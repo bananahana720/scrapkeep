@@ -1901,7 +1901,7 @@ func _route_to(s, ball: Vector3) -> Array[Vector3]:
 # skirt passed as a climbable step and held Tarn below the Warden's island for a whole stage.
 # A park kicker is a placed wedge the terrain's heights do not hold, so its ramp is laid over them
 # and its lip carries a one-way launch edge KICKER_LAUNCH past it: the Flume's warden exit rises
-# 14 m up drum_lip_kicker and flies its 3 m gap to the gate lip, a way the heights alone never had.
+# 14 m up drum_lip_kicker to its lip on the gate terrace's edge, a way the heights alone never had.
 func _climb_route(from: Vector3, to: Vector3, slope := CLIMB_SLOPE) -> Array[Vector3]:
 	var terrain = game.ctx.terrain
 	var lo := Vector2(minf(from.x, to.x), minf(from.z, to.z)) - Vector2.ONE * CLIMB_PAD
@@ -4342,10 +4342,13 @@ func _around_walls(ball: Vector3, heading: Vector3) -> Vector3:
 			_wall_side = signf(turn)
 			_wall_dir = dir
 			return probe * heading.length()
-	# Every turn on the held side is walled: keep pressing the widest turn on that side, not back
-	# across (a corner there is left to the stuck detour, which drops the side).
+	# Every turn on the held side is walled: the side is dropped and the whole fan tried again, so a
+	# ball boxed in on that side steers the other way or straight on as before the side was held,
+	# not 1.5 rad off its goal (random seed 2869 on the park table stalled riding the pit Warden
+	# while that turn was pressed).
 	if _wall_side != 0.0:
-		return dir.rotated(Vector3.UP, WALL_TURNS[-2] * _wall_side) * heading.length()
+		_wall_side = 0.0
+		return _around_walls(ball, heading)
 	return heading
 
 
