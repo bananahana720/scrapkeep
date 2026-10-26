@@ -66,27 +66,30 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-26 stage/alpha-w18 re-pin at 8d7ddd31 (fifteenth line: #480, #481, #483; ruling j integration commit): #481's
 # drum_lip_kicker move (x 256.07 -> 258.0, fit dropped) is park-row data in the schedule hash, so all 20 schedules moved;
 # #483 moves none (2afb6fb5, before #483, records the same 20). Whole-run hashes unchanged. Recorded with --record-base --section=runtime --seed=N.
+# 2026-10-26 stage/alpha-w18 re-pin for the eighteenth line (#488, #490; ruling j integration commit): #488's dam park edge
+# (canyon walls, trimmed outskirts post fields, rebake) is park-row data in the schedule hash, so all 20 schedules moved; #490 moves
+# none (a38446ee, before #490, records the same 20). Whole-run hashes unchanged. Recorded with --record-base --section=runtime --seed=N.
 const BASE_SCHEDULE := [
-	"5a16261c2359748bbf2bd9a7cbc36eae15fc686fb566f80b91b1a6d3b41a047f",
-	"eaa037214c2a3f68e42d9575688fd27cd61f4f99d0259d3aa269bfbab6fa1eae",
-	"fc30e52e20a658ae1ff35e0497bd499cb92c3e2dd7fa9de1813747ac8c011c8c",
-	"e5350230fb9766303506519ee74933d91503096d8ab77628113cc06f79f6f9d6",
-	"097a6764b165538c8f445cefd4b7c45ce473066571a22b781170104b5f8b3f58",
-	"3acda9652ea1ea0688488c1bc6f6c0413845930e7398fda1a456ef1f77eb27c2",
-	"faff77adc1df751087801f1b27cd311329b13f37be37789690538f6bc8beedf9",
-	"56323aa005797b2603427b75a12ee27055550a74f6399f8a5669e548899b88ee",
-	"cb960131774329e9f1e19ff521865524535601869f2b2543d2be1b80809d2fe2",
-	"3827366aa2d767f116b158e805b9fff82de2b4b30f448c2b7ca695ac352d97f0",
-	"4d5b430f5fb34970d8f1f453c898cda94f9d2f8b37d2943d3716ef458202135d",
-	"3351bd318c08521ce942497c9224e8a0ba1d612e2c3d54193ec52802a57b80ac",
-	"ce2583b69a4a8c4dfe5355aa97d32fcce3fd0123286bb8a4fdd2f0eb67400f42",
-	"278a3d53cf8b1e038b240fead0670c06bbf72f3c7928f286e348dacf702a68d4",
-	"baccd22f67752404efd4ca6df32ee7d597c01b0b07267a5c964f86edefb15d20",
-	"dcb19041cfa3c1604a645a11d4e30721801722707fb0aedb1a5bf2fb6b628f32",
-	"8f0bd678edd2244effcf29797186d92a24dec368c19205a06c44714d7599d002",
-	"34cb74b40a5590be86a14150a4a919bb38f52de5472ec2bd5a4e5fa95617bd46",
-	"7c6ac7d5081baf264900b727a37ee55386e4bf6ad72e6df2ee239e42964eb58c",
-	"44672dab40c1bb16f3ef515cc09f5cb8266cbf4c299a176cc621801971c81168",
+	"b1cf1d4549a0c670841aae681b27f664d1a147effeed19b266541023bb3afdb8",
+	"b08c03860781731e0ac6c17e277ae142bf2d552598e15a8c46d94f0c2c6f6cbf",
+	"96c97ea100aa4b1aa038af969035a40a15c40edde951262e55dc7c8d00241633",
+	"72adbc2220458a5ee81fba67f89b2ff1ea63e58bf7591d8810df10d66502a9d3",
+	"27fb7c79584e7bb04551556845754bfc347d3d4ee8b0d1b503cb81c25a389c20",
+	"ea55ac2d815deb4419ed74d27ed1837554233ad2b40f09f2447ef31ebb98e80d",
+	"55a4091c8e2dd9bd29b02a7e4527815aa7841e9b0be2c06dfa1c7ce14e4b04de",
+	"a637eb9624a91257905b33a8e98106bcbf31260f1439c066cf63622ab59f206e",
+	"911e2eb2c9aa1ac369b7d84e8407eec88ba782d7316bc57a979b2ae30b2db185",
+	"dee5cc7f74f00a40e6f1398319c62e16344c2fa638f84528a52e6ed0d451fd9c",
+	"0bf8ca032a97e2188fba0927ed1e7b1681296659b6c51f63bf846af4038350ed",
+	"845b96dbf6ed6230ef0e5f8c5865b633065f1e1a576110a4f4076d7b3b5635db",
+	"9c9324d27cadcdf44fd3a06b5966888ba61d18a3986f669979416579ea96be27",
+	"f386dcd0d44925d4b3a7740dcf4a0f31ef7cfdb3a9d4b2ecfc5940d1956d86e8",
+	"f5ef7a35a730a6d6b9b071118b26055641cb9523df66febf4f10d1ecfe85f626",
+	"f4adc7869cf7b56c5d681c59c229a7bdd139e4058f33de67431ad6f620878cb5",
+	"8c408572b8de4528dea466f3098d7a7da2cdedcb5c068e0a3d7b4fffb0fbc7dc",
+	"92ead431e8d504224b7f0c1abdcac249aa4494cc0d8806ba7644cfcabaa489f5",
+	"8dac064a22e5f2a65e41c9dd3b12185373c15fb0c74825174785597250e9fbe5",
+	"302c58ae923e520ad40bcdc34df5a4ef0f691a61e265cb128a2ecde4036b25ac",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
