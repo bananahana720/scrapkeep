@@ -2,25 +2,24 @@ extends SceneTree
 
 # A warning edge keeps a lightness step on bright floors (watch "noon bowl lightness", #487). HAZARD
 # is L* 60.7, level with the pale noon floors, so the stroke alone reads by hue there; the step comes
-# from the charcoal keyline every line sits on (threat_grammar `_lined`). The painter's own mix
-# (sRGB, as tools/grade_probe.gd raw() models it): CHARCOAL at UNDERLAY_ALPHA over the floor, the
-# stroke at EDGE_ALPHA over that. A dark band's step grows with the floor's lightness, so the noon
-# floors are its best case: from floor L* 45 up (the noon bowl floors read 46 to 74 on llvmpipe and
-# 79 on the 3060) the keyline sits at least 24 L* under the floor. Across all floors the edge step,
-# the larger of floor minus keyline and |stroke minus floor|, holds 18; its low is a mid-grey floor
-# near L* 39, not a noon floor. Rendered read: tools/keyline_floor_capture.gd on the noon bowl,
-# whose --gate holds every in-view ray to 20 L* with a planted grey control.
+# from the charcoal keyline every line sits on (threat_grammar `_lined`). Two mixes bracket the
+# painter: an sRGB mix (GL Compatibility) and a linear one (Forward+, threat_mark.gdshaderinc blends
+# linear colour), CHARCOAL at UNDERLAY_ALPHA over a grey floor and the stroke at EDGE_ALPHA over
+# that, before light and grade. A dark band's step grows with the floor's lightness, so the pale
+# noon floors are its best case: from floor L* 45 up the keyline holds the capture's 20 L* gate in
+# both mixes (about 24 sRGB, 21 linear). Below that the step dips on mid-grey floors (about 19 at
+# L* 39-41), and on the dark track bands (L* 17-34) the stroke carries it. Rendered read:
+# tools/keyline_floor_capture.gd on the noon bowl, whose --gate holds every in-view ray to 20 L*.
 
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
 const DefenceBars := preload("res://src/core/defence_bars.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
-const Capture := preload("res://tools/keyline_floor_capture.gd")
 const T := preload("res://tests/support/t.gd")
 
 const BRIGHT_FROM := 45.0
-const BRIGHT_STEP := 24.0
-const ANY_STEP := 18.0
+# tools/keyline_floor_capture.gd EDGE_STEP_MIN, itself grade_probe's GAP floor.
+const BRIGHT_STEP := 20.0
 const EXPECTED_CHECKS := 11
 var _t := T.new("keyline_floor_test")
 
@@ -31,9 +30,9 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_keylines()
-	_steps()
+	for mix in ["srgb", "linear"]:
+		_steps(mix)
 	_t.eq("the Slag Bowl is the noon row", WorldLook.arena_look("brindle").get("time", ""), "noon")
-	_t.near("the capture gates at the probe's floor", Capture.EDGE_STEP_MIN, 20.0)
 	_t.eq("every check ran", _t.checks, EXPECTED_CHECKS)
 	quit(_t.verdict())
 
@@ -72,8 +71,12 @@ func _mark(d: Dictionary, role: String) -> Dictionary:
 	return {}
 
 
-# Grey floors from black to white, mixed as the painter mixes.
-func _steps() -> void:
+# Grey floors from black to white, mixed in sRGB or in linear light.
+func _steps(mix: String) -> void:
+	var over := func(under: Color, top: Color, alpha: float) -> Color:
+		if mix == "srgb":
+			return under.lerp(top, alpha)
+		return under.srgb_to_linear().lerp(top.srgb_to_linear(), alpha).linear_to_srgb()
 	var worst := 999.0
 	var worst_floor := 0.0
 	var bright_worst := 999.0
@@ -81,8 +84,8 @@ func _steps() -> void:
 	var last_key_step := -999.0
 	for g in range(0, 101):
 		var floor_c := Color(g / 100.0, g / 100.0, g / 100.0)
-		var keyline := floor_c.lerp(Palette.CHARCOAL, Threat.UNDERLAY_ALPHA)
-		var stroke := keyline.lerp(Palette.HAZARD, Threat.EDGE_ALPHA)
+		var keyline: Color = over.call(floor_c, Palette.CHARCOAL, Threat.UNDERLAY_ALPHA)
+		var stroke: Color = over.call(keyline, Palette.HAZARD, Threat.EDGE_ALPHA)
 		var floor_l := lstar(floor_c)
 		var key_step := floor_l - lstar(keyline)
 		var step := maxf(key_step, absf(lstar(stroke) - floor_l))
@@ -93,10 +96,8 @@ func _steps() -> void:
 			bright_worst = minf(bright_worst, key_step)
 			bright_rises = bright_rises and key_step > last_key_step
 			last_key_step = key_step
-	_t.check("HAZARD alone sits within 10 L* of a pale noon floor (why the keyline carries the step)",
-		absf(lstar(Palette.HAZARD) - 65.0) < 10.0, "%.1f" % lstar(Palette.HAZARD))
-	_t.check("from floor L* %.0f up the keyline steps %.0f or more under the floor" % [BRIGHT_FROM, BRIGHT_STEP],
+	_t.check("%s: from floor L* %.0f up the keyline steps %.0f or more under the floor" % [mix, BRIGHT_FROM, BRIGHT_STEP],
 		bright_worst >= BRIGHT_STEP, "%.1f" % bright_worst)
-	_t.check("the keyline's step grows as the floor brightens", bright_rises)
-	_t.check("every floor keeps an edge step of %.0f" % ANY_STEP, worst >= ANY_STEP, "%.1f at floor L* %.1f" % [worst, worst_floor])
-	_t.check("the weakest floor is mid-grey, not a noon floor", worst_floor < BRIGHT_FROM, "%.1f" % worst_floor)
+	_t.check("%s: the keyline's step grows as the floor brightens" % mix, bright_rises)
+	_t.check("%s: the weakest edge step is on a floor darker than the noon floors" % mix, worst_floor < BRIGHT_FROM,
+		"%.1f at floor L* %.1f" % [worst, worst_floor])

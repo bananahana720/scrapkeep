@@ -1,16 +1,18 @@
 extends SceneTree
 # Ring edge lightness on the noon Slag Bowl floor (watch "noon bowl lightness", #487 owed read).
 # Boots the park table, enters Brindle's bowl as a run does, commits a hostile INSTANT ring at
-# spots across the bowl floor, and shoots each from above at the live chase camera's distance with
-# the HUD hidden. Along 16 radial rays it reads single pixels (L*) through the ring's cross-section:
-# the HAZARD stroke at the radius, the charcoal keyline band just outside it (threat_grammar
-# `_lined`, UNDERLAY each side) and the floor beyond. HAZARD (L* about 61) sits near the pale
-# floors, so the edge's lightness step is the keyline's: a ray's edge step is the larger of floor
-# minus keyline and |stroke minus floor| (on the dark track bands the stroke carries it).
-# A ray counts only where the stroke is in view (a HAZARD-hued pixel at the radius; name cards and
-# off-screen points are skipped). Planted control: a dark and a light grey plate inside each ring
-# must read their known lightness step (CONTROL_DL), which proves the sampler reads the pixels it
-# names and a step of that size survives the grade.
+# spots across the bowl floor, and shoots each straight down from the live chase camera's distance
+# with the HUD hidden. Along 16 radial rays it reads pixels (L*) through the ring's cross-section,
+# at the marks' own height (Telegraph.LIFT): the HAZARD stroke just inside the radius, the charcoal
+# keyline just outside it (threat_grammar `_lined`, UNDERLAY each side; its median) and the bare
+# floor just beyond (at ground height). HAZARD (L* about 61) sits near the pale floors, so the
+# edge's lightness step is the keyline's: a ray's edge step is the larger of floor minus keyline
+# and |stroke minus floor| (on the dark track bands the stroke carries it). A ray counts only
+# where the stroke is in view (a HAZARD-hued pixel; a name card drawn over the ring drops it).
+# Planted control: a dark and a light grey plate inside each ring must read their authored
+# lightness step within CONTROL_TOLERANCE, which proves the sampler reads the pixels it names.
+# Not measured here: a pitched chase view (straight down shows the keyline at its widest), a haze
+# fill of another telegraph lying over the keyline (fills draw above keylines), and the other types.
 #   xvfb-run -s "-screen 0 1280x720x24" godot --path sketches/core-loop --resolution 1280x720 --script res://tools/keyline_floor_capture.gd -- --out=<dir> [--gate]
 # Writes <out>/keyline_floor.json and <out>/keyline-<n>.png. --gate exits 1 when a spot's weakest
 # counted ray steps under EDGE_STEP_MIN, a spot counts fewer than MIN_RAYS rays, or a control fails.
@@ -26,13 +28,12 @@ const RING := 7.0
 const EDGE_STEP_MIN := 20.0
 const MIN_RAYS := 6
 # Planted control: two opaque unshaded grey plates inside each ring (clear of the fill band) whose
-# authored L* differ by CONTROL_DL. The grade (AgX contrast, exposure) bends that step, so the read
+# authored L* differ by about 50. The grade and the ring's faint area base bend that step, so the read
 # must land within CONTROL_TOLERANCE of it, in at least MIN_CONTROLS spots (a raised prop can cover
 # the plates at a spot).
 const CONTROL_DARK := Color(0.25, 0.25, 0.25)
 const CONTROL_LIGHT := Color(0.75, 0.75, 0.75)
-const CONTROL_DL := 50.4
-const CONTROL_TOLERANCE := 0.4
+const CONTROL_TOLERANCE := 0.25
 const MIN_CONTROLS := 4
 var out := ""
 var gate := false
@@ -100,7 +101,6 @@ func _run() -> void:
 	game.player.body().freeze = true
 	var arena = game.flow._boss_module().get("arena")
 	_ground = arena.ground_query()
-	var ground = _ground
 	var centre: Vector3 = arena.global_position
 	var env: Environment = game.ctx.terrain.environment
 	var game_cam: Camera3D = root.get_camera_3d()
@@ -117,14 +117,15 @@ func _run() -> void:
 	var spots := [Vector2(0, 0), Vector2(22, 0), Vector2(0, 30), Vector2(-38, 0), Vector2(0, -44), Vector2(30, 30)]
 	for k in spots.size():
 		var at := centre + Vector3(spots[k].x, 0, spots[k].y)
-		at.y = ground.height(at.x, at.z)
-		var ring = Telegraph.ring(game, ground, Threat.Type.INSTANT, at, RING, 4.0)
+		at.y = _ground.height(at.x, at.z)
+		var ring = Telegraph.ring(game, _ground, Threat.Type.INSTANT, at, RING, 4.0)
 		ring.set_progress(0.5)
 		var dark_at := _plant(at + Vector3(-2.0, 0, -0.7), CONTROL_DARK)
 		var light_at := _plant(at + Vector3(-2.0, 0, 0.7), CONTROL_LIGHT)
 		cam.global_position = at + Vector3(0.0, reach, 0.01)
 		cam.look_at(at, Vector3.FORWARD)
-		cam.fov = 70.0
+		# Wide enough that the floor beyond the ring stays in frame on every ray.
+		cam.fov = 85.0
 		cam.current = true
 		for i in 10:
 			await RenderingServer.frame_post_draw
@@ -134,15 +135,14 @@ func _run() -> void:
 		var keylines := []
 		var strokes := []
 		for a in 16:
-			# Half a step off the axes, so no ray runs down a height-band post.
 			var u := Vector3(cos(TAU * (a + 0.5) / 16.0), 0, sin(TAU * (a + 0.5) / 16.0))
-			var stroke := _band(img, at, u, RING - 0.15, RING + 0.15, true)
-			var keyline := _band(img, at, u, RING + 0.2, RING + 0.6, false)
-			var beyond := _band(img, at, u, RING + 1.4, RING + 1.9, false)
-			if stroke.is_empty() or keyline.is_empty() or beyond.size() < 5:
+			var stroke := _band(img, at, u, RING - 0.3, RING - 0.05, Telegraph.LIFT, true)
+			var keyline := _band(img, at, u, RING + 0.05, RING + Threat.UNDERLAY - 0.05, Telegraph.LIFT, false)
+			var beyond := _band(img, at, u, RING + Threat.UNDERLAY + 0.15, RING + Threat.UNDERLAY + 0.55, 0.02, false)
+			if stroke.is_empty() or keyline.size() < 3 or beyond.size() < 5:
 				continue
 			var floor_l := _median(beyond)
-			var key_l: float = keyline.min()
+			var key_l := _median(keyline)
 			var stroke_l: float = stroke.max()
 			keylines.append(key_l)
 			strokes.append(stroke_l)
@@ -151,7 +151,8 @@ func _run() -> void:
 		var dark_c := _px(img, dark_at)
 		var light_c := _px(img, light_at)
 		var control := lstar(light_c) - lstar(dark_c) if dark_c.r >= 0.0 and light_c.r >= 0.0 else -1.0
-		var control_ok := control >= CONTROL_DL * (1.0 - CONTROL_TOLERANCE) and control <= CONTROL_DL * (1.0 + CONTROL_TOLERANCE)
+		var control_dl := lstar(CONTROL_LIGHT) - lstar(CONTROL_DARK)
+		var control_ok := absf(control - control_dl) <= control_dl * CONTROL_TOLERANCE
 		if control_ok:
 			controls_ok += 1
 		var key_med := _median(keylines) if not keylines.is_empty() else -1.0
@@ -186,18 +187,18 @@ func _run() -> void:
 	quit(1 if gate and not red.is_empty() else 0)
 
 
-# The L* of every in-view pixel along a ray between two radii. hazard=true keeps HAZARD-hued
-# pixels only (the stroke), so a card or prop drawn over the ring drops the ray.
-func _band(img: Image, at: Vector3, u: Vector3, r0: float, r1: float, hazard: bool) -> Array:
+# The L* of every in-view pixel along a ray between two radii, `lift` above the ground. hazard=true
+# keeps HAZARD-hued pixels only (the stroke), so a card drawn over the ring drops the ray.
+func _band(img: Image, at: Vector3, u: Vector3, r0: float, r1: float, lift: float, hazard: bool) -> Array:
 	var result := []
 	var r := r0
 	while r <= r1 + 0.001:
 		var p := at + u * r
-		p.y = _ground.height(p.x, p.z) + 0.02
+		p.y = _ground.height(p.x, p.z) + lift
 		var c := _px(img, p)
 		if c.r >= 0.0 and (not hazard or (c.r - c.g > 0.25 and c.r > 0.75)):
 			result.append(lstar(c))
-		r += 0.05
+		r += 0.025
 	return result
 
 
