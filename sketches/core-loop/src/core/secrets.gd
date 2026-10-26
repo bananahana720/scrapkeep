@@ -90,12 +90,12 @@ const FINDS := {
 	},
 	"dam_shift_radio": {
 		"world": 1, "map": "park_dam", "kind": "radio",
-		"spots": [{"site": "shelf_sag_corner_3", "at": [-448, -12], "face": [0, -1]}, {"site": "shelf_sag_corner_4", "at": [448, -12], "face": [0, -1]}],
+		"spots": [{"site": "east_rim_bench", "at": [232, 184], "face": [0, -1]}, {"site": "service_ledge", "at": [-184, 488], "face": [0, -1]}],
 		"name": "Night Shift Radio",
 		"log": "Night shift: radio left on in the spare room so the dam has company. Station went off air years ago. Radio did not.",
 		"codex": {"id": "spillway_shift_radio", "category": "world", "name": "Still On Air",
 			"hint": "Music where nobody works any more. Roll toward it.",
-			"clue": "A tune through a cracked wall at the shelf's far corners + a ram at speed",
+			"clue": "A tune through a cracked wall on the east rim bench or the dam's service ledge + a ram at speed",
 			"text": "The pump crews walled their radios in with the spares. Some of them are still playing the lost tape."},
 	},
 	"flume_trestle_seep": {

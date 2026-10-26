@@ -36,8 +36,11 @@ const Intent := preload("res://src/movement/intent.gd")
 # 2026-10-24 flume pass two re-pin (#432, which carries #431): stage 2 park_flume 1448453723 -> 1001921675, because
 # the new activity rows (weir_surge, canal_altar), the spill-leap kicker and butte, and bend_cache's move to [42, -96]
 # move their keep-outs and the rebaked ground. The others unchanged.
+# 2026-10-26 dam canyon walls re-pin (unit 10): stage 1 park_dam 2427938025 -> 3700432063, because the four
+# canyon_wall rows rebake the ground at the square's edge (the scatter reads it) and eighteen outskirts anchor fields stop
+# 12 m short of the walls' feet. No dressing spot moves. The others unchanged.
 const PINS := {
-	1: ["park_dam", 13, 2427938025],
+	1: ["park_dam", 13, 3700432063],
 	2: ["park_flume", 13, 1001921675],
 	3: ["park_pit", 13, 2247843387],
 	4: ["park_sinkhole", 13, 2334293701],

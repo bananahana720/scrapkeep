@@ -15,7 +15,9 @@ const T := preload("res://tests/support/t.gd")
 const ISLANDS_POSTS := 1229
 # Re-pinned 2026-10-23 (#241 gate, comment 6357833993): sinkhole 1281 -> 1282 at B12 #350 (main_tube_upper_post_11i moved
 # to (-27.3, -120.2) and now keeps a post); crown 5618 -> 5620 at B11 #321 (sentinel_36 and sentinel_50 moved and each now keeps a post).
-const PINNED := {"dam": 6059, "flume": 20, "pit": 85, "sinkhole": 1282, "crown": 5620}
+# Re-pinned 2026-10-26 (unit 10, the dam's canyon walls): dam 6059 -> 5184, because eighteen outskirts fields now stop
+# 12 m short of the walls' feet (park_dam.json hoodoo_1 to saguaro_26), so no post stands on a face.
+const PINNED := {"dam": 5184, "flume": 20, "pit": 85, "sinkhole": 1282, "crown": 5620}
 
 var _t := T.new("park_anchor_span_test")
 

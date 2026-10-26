@@ -1129,13 +1129,42 @@ func _place_rib_caches() -> void:
 const CACHE_RAY_UP := 2.0
 const CACHE_RAY_DOWN := 1.0
 const CACHE_WAIT_TICKS := 30
+# A node can sit on a wall, a face steeper than 60 degrees: the dam's (64, -232) is on a dome's
+# flank 6 m over the floor, where a ball rolled in from 25 m on 0 of 8 headings and only the
+# magnet took the panel from below. Such a cache moves to the flattest surface on the nearest
+# ring that has one, rings CACHE_SLIDE_STEP apart out to CACHE_SLIDE_M, each ray reaching
+# CACHE_SLIDE_DOWN under the node.
+const CACHE_STAND_NORMAL := 0.5
+const CACHE_SLIDE_STEP := 3.0
+const CACHE_SLIDE_M := 12.0
+const CACHE_SLIDE_DOWN := 10.0
+const CACHE_SLIDE_BEARINGS := 8
 
 
-# The surface under a cache spot, or null when the ray finds none.
+# The surface a cache spot stands on (under it, or the nearest non-wall beside it), or null when
+# the ray under it finds none.
 func _cache_ground(at: Vector3):
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at + Vector3.UP * CACHE_RAY_UP, at + Vector3.DOWN * CACHE_RAY_DOWN, 1))
-	return null if hit.is_empty() else hit["position"]
+	if hit.is_empty():
+		return null
+	if hit["normal"].y >= CACHE_STAND_NORMAL:
+		return hit["position"]
+	var r := CACHE_SLIDE_STEP
+	while r <= CACHE_SLIDE_M:
+		var best := {}
+		for k in CACHE_SLIDE_BEARINGS:
+			var a := TAU * k / CACHE_SLIDE_BEARINGS
+			var side := at + Vector3(cos(a), 0.0, sin(a)) * r
+			var query := PhysicsRayQueryParameters3D.create(side + Vector3.UP * CACHE_RAY_UP, side + Vector3.DOWN * CACHE_SLIDE_DOWN, 1)
+			query.hit_back_faces = false
+			var low := space.intersect_ray(query)
+			if not low.is_empty() and low["normal"].y >= CACHE_STAND_NORMAL and (best.is_empty() or low["normal"].y > best["normal"].y):
+				best = low
+		if not best.is_empty():
+			return best["position"]
+		r += CACHE_SLIDE_STEP
+	return hit["position"]
 
 
 # Debug drawer (dev only): grant a panel at the ball.
