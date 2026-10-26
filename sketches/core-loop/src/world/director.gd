@@ -695,30 +695,78 @@ func off_spine(at: Vector3) -> int:
 # Grey panels' rib caches (IL-01, coordinator ruling 23 Oct: exploring pays): up to `count`
 # spots, one per off-route dead end with door ground (anchors() rank > 0), drawn without
 # repeats from a stream seeded by `seed`. Each spot is the zone's door node furthest from the
-# spawn: the end of the dead end. Empty where the map has no graph.
+# spawn: the end of the dead end. The draw takes dead ends a player hunting the park would roll
+# into first: at most RIB_DETOUR_MAX_M over the drop-in to landmark path, and at least
+# RIB_LANDMARK_CLEAR_M of path short of the landmark (a cache in the Warden's yard is met on the
+# way out of the fight, not found). On the flume half the dead ends are the outer washes,
+# 500 to 1,300 m off the line, where a 14 m column and a 45 m chime reach nobody: no bot or player
+# run took a cache there (25 Oct, seeds 1-4). A door node on a line or a grind line's deck (the
+# siphon span's trough, 40 m over the wash) is never the spot: the explorer stood under that cache. A map with too few
+# such ends tops up from the rest, least detour first. Empty where the map has no graph.
+const RIB_DETOUR_MAX_M := 300.0
+const RIB_LANDMARK_CLEAR_M := 120.0
+
+
 func rib_cache_spots(count: int, seed: int) -> Array[Vector3]:
-	var out: Array[Vector3] = []
 	var graph = _graph()
 	if graph == null or graph.zone_count() == 0:
-		return out
+		return [] as Array[Vector3]
+	var spawn := Vector2.INF
+	var park := {}
+	if _park_map != null:
+		park = _park_map.park
+		spawn = Vector2(float(park.spawn.at[0]), float(park.spawn.at[1]))
+	return rib_spots(graph, spawn, count, seed, grind_rows(park))
+
+
+# The park's grind lines by row id: their decks are ridden, not stood on.
+static func grind_rows(park: Dictionary) -> Dictionary:
+	var out := {}
+	for row in park.get("park_rows", []):
+		if String(row.get("element", "")) == "grind_line":
+			out[String(row.get("id", ""))] = true
+	return out
+
+
+# rib_cache_spots on a given park graph, the drop-in at `spawn` (INF: no detour rule), never on a
+# node of a line or of a deck in `grind` (grind_rows).
+static func rib_spots(graph, spawn: Vector2, count: int, seed: int, grind := {}) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	var direct: float = graph.d_landmark(spawn) if spawn != Vector2.INF else INF
 	var pool := []
+	var rest := []
 	for anchor in graph.anchors():
-		if int(anchor["rank"]) > 0:
-			pool.append(int(anchor["zone"]))
+		if int(anchor["rank"]) <= 0:
+			continue
+		var best := -1
+		var best_d := -1.0
+		for node in graph.zone_door_nodes(int(anchor["zone"])):
+			var d: float = graph.d_spawn_node(node)
+			if is_finite(d) and d > best_d and not off_ground(graph, node, grind):
+				best_d = d
+				best = node
+		if best < 0:
+			continue
+		var land: float = graph.d_landmark_node(best)
+		var detour: float = best_d + land - direct
+		if detour <= RIB_DETOUR_MAX_M and land >= RIB_LANDMARK_CLEAR_M:
+			pool.append(best)
+		else:
+			rest.append([detour, best])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	while out.size() < count and not pool.is_empty():
-		var zone: int = pool.pop_at(rng.randi_range(0, pool.size() - 1))
-		var best := -1
-		var best_d := -1.0
-		for node in graph.zone_door_nodes(zone):
-			var d: float = graph.d_spawn_node(node)
-			if is_finite(d) and d > best_d:
-				best_d = d
-				best = node
-		if best >= 0:
-			out.append(graph.position(best))
+		out.append(graph.position(pool.pop_at(rng.randi_range(0, pool.size() - 1))))
+	rest.sort_custom(func(a, b): return a[0] < b[0])
+	for r in rest:
+		if out.size() >= count:
+			break
+		out.append(graph.position(r[1]))
 	return out
+
+
+static func off_ground(graph, node: int, grind: Dictionary) -> bool:
+	return "line" in graph.flag_names(node) or grind.has(graph.node_row(node))
 
 
 func home_live(id: String) -> bool:

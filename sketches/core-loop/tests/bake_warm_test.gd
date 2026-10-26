@@ -48,9 +48,14 @@ func _run() -> void:
 	events.stage_entered.emit(1, true)
 	t.check("a retry queues no kit twice", node._queue.size() == kits.size())
 	var sizes := []
+	var spawns := []
 	while not node._queue.is_empty() and sizes.size() < 200:
 		await process_frame
 		sizes.append(node._queue.size())
+		spawns.append(_spawn_warms(node))
+	await process_frame
+	t.check("stage 1's kinds each stand once out of sight, one at a time, and leave",
+		spawns.count(1) == BakeWarm.SPAWN_WARM.size() and spawns.max() == 1 and _spawn_warms(node) == 0, str(spawns))
 	var steady := true
 	for i in range(1, sizes.size()):
 		steady = steady and sizes[i - 1] - sizes[i] <= 1
@@ -100,3 +105,8 @@ func _run() -> void:
 	events.queue_free()
 	await process_frame
 	quit(t.verdict())
+
+
+# The warm spawns standing under the node now (spawn_warm_test checks what they draw).
+func _spawn_warms(node: Node) -> int:
+	return node.get_children().filter(func(child): return child.has_meta("spawn_warm") and not child.is_queued_for_deletion()).size()

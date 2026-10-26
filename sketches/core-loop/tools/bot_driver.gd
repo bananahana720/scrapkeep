@@ -523,6 +523,13 @@ var _note := {}
 var _goal := ""
 var _camp_backing := false
 var _activity := ""
+# The stage's rib caches still on the ground, by instance id -> where they stand, and the rogue
+# once it has woken: what _content_scan reads for the stage note's rogue and rib cache rows.
+var _caches_seen := {}
+var _rib_spot := {}
+var _rogue_seen: Node3D = null
+var _rogue_clock := 0.0
+var _rib_clock := {}
 var _activity_time := {}
 var _activity_skip := {}
 var _cache_phase := "runup"
@@ -848,6 +855,8 @@ func tick(delta: float) -> bool:
 	_harpoon_commit = false
 	_cruise_hold = false
 	_contact_scan()
+	if flow.in_stage():
+		_content_scan()
 	_plant_cool -= delta
 	_punch_seen = maxf(float(flow.punch_now()), _punch_seen - PUNCH_FADE * delta)
 	if trace and ticks % (Engine.physics_ticks_per_second * 2) == 0:
@@ -1023,6 +1032,18 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_activity_skip = {}
 	_relay_clock = 0.0
 	_relay_closed = {}
+	_caches_seen = {}
+	_rib_spot = {}
+	_rogue_seen = null
+	_rogue_clock = 0.0
+	_rib_clock = {}
+	_rogue_done = false
+	_rogue_travel = 0.0
+	_rogue_travel_cap = -1.0
+	_rib_skip = {}
+	_rib_travel_cap = {}
+	_leg_route = []
+	_leg_for = ""
 	_cache_phase = "runup"
 	_cache_clock = 0.0
 	_climb = []
@@ -1048,7 +1069,8 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 		"max_hp": game.run.max_hp, "evasions": 0, "cap_hits": 0, "magnet_stuns": 0, "plants": 0, "slingshots": 0,
 		"specials": 0, "punch_short_s": 0.0, "plate_slams": 0, "thermal_rides": 0,
 		"first_contact_s": null, "first_hit_s": null, "hull_lost_120s": 0.0, "alive_120s": null, "fight_s": 0.0, "circle_s": 0.0,
-		"circle_share": null, "line_rides": 0, "lines_in_reach": null, "line_misses": 0, "telegraph_reads": 0}
+		"circle_share": null, "line_rides": 0, "lines_in_reach": null, "line_misses": 0, "telegraph_reads": 0,
+		"rogue_woke_s": null, "rogue_beaten_s": null, "rogues_beaten": 0, "rib_caches_placed": 0, "rib_caches_taken": 0}
 
 
 func _note_set(key: String, value) -> void:
@@ -1180,6 +1202,162 @@ func _settle_warden_damage(hp_now: float) -> void:
 			by[kind] = snappedf(float(by.get(kind, 0.0)) + dealt / _warden_kinds.size(), 0.1)
 	_warden_hp_at = -1.0
 	_warden_kinds = {}
+
+
+# Under --explore-by: the stage's rogue (rogue_director.gd) and rib caches (build.gd). A woken rogue
+# and a cache within RIB_NEAR come before the lit sites; once those and the event are done, the
+# rogue's site and the far caches are rolled to along the park graph. A player hunting the park
+# does both; the default bot never does, so its rows stay as they were. Each has a cap, as the
+# activities have.
+const ROGUE_SECONDS := 120.0
+const RIB_SECONDS := 20.0
+const RIB_NEAR := 60.0
+var _rogue_done := false
+var _rogue_travel := 0.0
+var _rogue_travel_cap := -1.0
+var _rib_skip := {}
+var _rib_travel_cap := {}
+var _leg_route: Array[Vector3] = []
+var _leg_for := ""
+var _leg_clock := 0.0
+
+
+# A woken rogue is fought wherever the explorer is: it woke because the ball came near its site.
+func _rogue_fight(delta: float) -> bool:
+	if engage_by <= ENGAGE_BY or _rogue_done or _rogue_seen == null or game.run.stage_time > engage_by:
+		return false
+	if not is_instance_valid(_rogue_seen) or _rogue_seen.is_dead():
+		_rogue_done = true
+		return false
+	_rogue_clock += delta
+	if _rogue_clock > ROGUE_SECONDS:
+		_rogue_done = true
+		return false
+	_ignore_walls = false
+	# A cache leg the fight broke into is planned again from wherever the fight leaves the ball.
+	_leg_for = ""
+	_goal = "rogue fight"
+	_fight(_rogue_seen, delta)
+	return true
+
+
+# A rogue not yet woken is rolled to at its site, once the lit sites are done.
+func _rogue_goal(delta: float) -> bool:
+	if engage_by <= ENGAGE_BY or _rogue_done or _rogue_seen != null or game.world == null or game.run.stage_time > engage_by:
+		return false
+	var plan: Dictionary = game.world.get("rogue_plan")
+	if plan.is_empty():
+		return false
+	var ball: Vector3 = game.player.ball_position()
+	var at: Vector3 = game.ctx.terrain.drop_point(float(plan.at.x), float(plan.at.y), 1.0)
+	if _rogue_travel_cap < 0.0:
+		_rogue_travel_cap = ACTIVITY_TRAVEL_SECONDS + _flat(ball, at) / ACTIVITY_TRAVEL_SPEED
+	_rogue_travel += delta
+	if _rogue_travel > _rogue_travel_cap:
+		_rogue_done = true
+		return false
+	_ignore_walls = false
+	_goal = "rogue site"
+	if not _leg_to("rogue", ball, at, delta):
+		_act(at, _nearest_enemy(), delta)
+	return true
+
+
+# The nearest rib cache within `reach`: before the lit sites when it is a short detour (RIB_NEAR),
+# after them at any distance. A wider first reach (150 m, 25 Oct, seeds 1-4) took a flume cache on
+# 2 runs in 4 but cost the flume an activity and its rogue fight, so the lit sites keep the lead.
+func _rib_goal(delta: float, reach: float) -> bool:
+	if engage_by <= ENGAGE_BY or game.build == null or game.build.get("scrap") == null or game.run.stage_time > engage_by:
+		return false
+	var ball: Vector3 = game.player.ball_position()
+	var best = null
+	var best_d := INF
+	for c in game.build.scrap.caches():
+		var key := "rib:%d" % (c["item"] as Object).get_instance_id()
+		var d := _flat(ball, c["at"])
+		if not _rib_skip.has(key) and d < best_d and d <= reach:
+			best_d = d
+			best = c
+	if best == null:
+		return false
+	var key := "rib:%d" % (best["item"] as Object).get_instance_id()
+	if not _rib_travel_cap.has(key):
+		_rib_travel_cap[key] = RIB_SECONDS + best_d / ACTIVITY_TRAVEL_SPEED
+	_rib_clock[key] = float(_rib_clock.get(key, 0.0)) + delta
+	if float(_rib_clock[key]) > float(_rib_travel_cap[key]):
+		_rib_skip[key] = true
+		return false
+	_ignore_walls = false
+	_goal = "rib cache"
+	var at: Vector3 = best["at"]
+	if best_d < WAYPOINT_REACHED or not _leg_to(key, ball, at, delta):
+		_act(at, _nearest_enemy(), delta)
+	return true
+
+
+# The park graph's path to `point`, a waypoint every FIND_LEG_M, as a field find walks it. True
+# while a waypoint is still ahead; false once there is none (the caller rolls straight on) or the
+# leg gains no waypoint in FIND_LEG_SECONDS.
+func _leg_to(key: String, ball: Vector3, point: Vector3, delta: float) -> bool:
+	if _leg_for != key:
+		_leg_for = key
+		_leg_route = _graph_path(ball, point)
+		_leg_clock = 0.0
+	while not _leg_route.is_empty() and _flat(ball, _leg_route[0]) < WAYPOINT_REACHED:
+		_leg_route.pop_front()
+		_leg_clock = 0.0
+	if _leg_route.is_empty():
+		return false
+	_leg_clock += delta
+	if _leg_clock > FIND_LEG_SECONDS:
+		_leg_route = []
+		return false
+	_act(_leg_route[0], _nearest_enemy(), delta)
+	return true
+
+
+# The world 1 pacing check's optional rows (design-v3/pacing/world1-pacing.json content): the
+# rogue's wake and break, and the rib caches the ball took. A cache that leaves the ground within
+# RIB_TAKEN_M of the ball was taken; one cleared by a stage change was not. Reads only; steers nothing.
+const RIB_TAKEN_M := 8.0
+
+
+func _content_scan() -> void:
+	if _note.is_empty():
+		return
+	var world = game.world
+	var rogue = world.get("rogue") if world != null else null
+	if rogue != null and is_instance_valid(rogue) and rogue != _rogue_seen:
+		_rogue_seen = rogue
+		_note["rogue_woke_s"] = snappedf(game.run.stage_time, 0.01)
+		_note["rogue_kind"] = String(rogue.get("kind"))
+	if _rogue_seen != null and _note["rogue_beaten_s"] == null \
+			and (not is_instance_valid(_rogue_seen) or _rogue_seen.is_dead()):
+		_note["rogue_beaten_s"] = snappedf(game.run.stage_time, 0.01)
+		_note["rogues_beaten"] = 1
+	var scrap = game.build.get("scrap") if game.build != null else null
+	if scrap == null or not scrap.has_method("caches"):
+		return
+	var ball: Vector3 = game.player.ball_position()
+	var now := {}
+	for c in scrap.caches():
+		now[(c["item"] as Object).get_instance_id()] = c["at"]
+	for id in now:
+		if not _caches_seen.has(id):
+			_note["rib_caches_placed"] = int(_note["rib_caches_placed"]) + 1
+	for id in _caches_seen:
+		if not now.has(id) and _flat(ball, _caches_seen[id]) < RIB_TAKEN_M:
+			_note["rib_caches_taken"] = int(_note["rib_caches_taken"]) + 1
+	# How close the ball came to each cache still waiting, for reading a missed one.
+	# Keyed by where each was placed: a cache the magnet pulls moves.
+	var closest: Dictionary = _note.get("rib_closest_m", {})
+	for id in now:
+		if not _caches_seen.has(id):
+			_rib_spot[id] = "%.0f,%.0f" % [now[id].x, now[id].z]
+		var key: String = _rib_spot.get(id, "")
+		closest[key] = snappedf(minf(float(closest.get(key, INF)), _flat(ball, now[id])), 0.1)
+	_note["rib_closest_m"] = closest
+	_caches_seen = now
 
 
 func _close_note() -> void:
@@ -1559,12 +1737,16 @@ func _completionist(warden: Node3D, delta: float) -> void:
 	if _activity_rushed():
 		_fight(warden, delta)
 		return
+	if _rogue_fight(delta) or _rib_goal(delta, RIB_NEAR):
+		return
 	if _activity_goal(delta):
 		return
 	var event := _event_goal(delta)
 	if not event.is_empty():
 		_goal = event["goal"]
 		_act(event["steer"], event.get("aim", null), delta)
+		return
+	if _rogue_goal(delta) or _rib_goal(delta, INF):
 		return
 	if not _waypoints.is_empty():
 		_waypoint_time += delta
@@ -1901,7 +2083,7 @@ func _route_to(s, ball: Vector3) -> Array[Vector3]:
 # skirt passed as a climbable step and held Tarn below the Warden's island for a whole stage.
 # A park kicker is a placed wedge the terrain's heights do not hold, so its ramp is laid over them
 # and its lip carries a one-way launch edge KICKER_LAUNCH past it: the Flume's warden exit rises
-# 14 m up drum_lip_kicker and flies its 3 m gap to the gate lip, a way the heights alone never had.
+# 14 m up drum_lip_kicker to its lip on the gate terrace's edge, a way the heights alone never had.
 func _climb_route(from: Vector3, to: Vector3, slope := CLIMB_SLOPE) -> Array[Vector3]:
 	var terrain = game.ctx.terrain
 	var lo := Vector2(minf(from.x, to.x), minf(from.z, to.z)) - Vector2.ONE * CLIMB_PAD
@@ -4342,10 +4524,13 @@ func _around_walls(ball: Vector3, heading: Vector3) -> Vector3:
 			_wall_side = signf(turn)
 			_wall_dir = dir
 			return probe * heading.length()
-	# Every turn on the held side is walled: keep pressing the widest turn on that side, not back
-	# across (a corner there is left to the stuck detour, which drops the side).
+	# Every turn on the held side is walled: the side is dropped and the whole fan tried again, so a
+	# ball boxed in on that side steers the other way or straight on as before the side was held,
+	# not 1.5 rad off its goal (random seed 2869 on the park table stalled riding the pit Warden
+	# while that turn was pressed).
 	if _wall_side != 0.0:
-		return dir.rotated(Vector3.UP, WALL_TURNS[-2] * _wall_side) * heading.length()
+		_wall_side = 0.0
+		return _around_walls(ball, heading)
 	return heading
 
 
