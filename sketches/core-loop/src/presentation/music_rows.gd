@@ -34,6 +34,7 @@ const CUES := {
 	"drop_flood_horn": {"danger": true, "family": "natural", "rise": false, "voice": "brass", "notes": [38, 45], "accent": "kick", "trim_sound": "slam_boom"},
 	"drop_spill_dropship": {"danger": true, "family": "fleet", "rise": false, "voice": "brass", "notes": [50, 57, 62], "accent": "anvil", "sound": "fleet_motif", "trim_sound": "fleet_motif"},
 	"drop_relic_wake": {"danger": true, "family": "ancient", "rise": false, "voice": "sub", "notes": [38], "sound": "reactor_erupt", "trim_sound": "reactor_erupt"},
+	"drop_spill_boiler": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50, 57], "sound": "boiler_burst", "trim_sound": "boiler_burst"},
 	"drop_cracked_wall": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [62, 57, 50, 38], "accent": "crash", "trim_sound": "smash_crack"},
 	"drop_reactor_blow": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [38, 44], "sound": "reactor_erupt", "trim_sound": "reactor_erupt"},
 	"drop_sluice_surge": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [45, 50, 57], "sound": "smash_crack", "trim_sound": "slam_boom"},

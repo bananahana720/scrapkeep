@@ -12,7 +12,7 @@ differ even where they share an id.
   drop_flash_flood       a rushing wash: a surge of noise sweeping down over a low D
   drop_spill_dropship    thrusters cut out, a thud, then a hard brass dyad on the landing
   drop_relic_wake        a buried machine turning over: sub D, beating partials, a stone bell
-  drop_boiler            the burner blows: hiss, pop, a whistle bending up a fifth
+  drop_spill_boiler            the burner blows: hiss, pop, a whistle bending up a fifth
   drop_cracked_wall      the trestle gives: three cracks, a long rock rumble, a falling thud
   drop_reactor_blow      a reactor going: a boom, a rising whine, a ragged sub sweep
   drop_sluice_surge      the head gate lifts: a metal grind, then a gush through the gap
@@ -42,11 +42,11 @@ from cut_stingers import PROJECT, RATE, finish, level, lufs, true_peak_db, write
 # zone -> semitones above D
 ZONES = {"1_1": 0, "1_2": 2}
 CUES = ("riser_dam_siren", "drop_flood_horn", "drop_flash_flood", "drop_spill_dropship", "drop_relic_wake",
-        "drop_boiler", "drop_cracked_wall", "drop_reactor_blow", "drop_sluice_surge")
+        "drop_spill_boiler", "drop_cracked_wall", "drop_reactor_blow", "drop_sluice_surge")
 STINGS = ("sting_cold_open", "sting_rivet_cage", "sting_warden_reveal", "sting_bowl_handoff", "sting_spillway_clear")
 # Which cues each zone gets: the dam has no cracked wall, reactor or sluice; the flume has no
 # flood horn, siren or boiler. Shared ids (flash flood, dropship, relic) play in both.
-DAM = ("riser_dam_siren", "drop_flood_horn", "drop_flash_flood", "drop_spill_dropship", "drop_relic_wake", "drop_boiler")
+DAM = ("riser_dam_siren", "drop_flood_horn", "drop_flash_flood", "drop_spill_dropship", "drop_relic_wake", "drop_spill_boiler")
 FLUME = ("drop_flash_flood", "drop_spill_dropship", "drop_relic_wake", "drop_cracked_wall", "drop_reactor_blow", "drop_sluice_surge")
 BY_ZONE = {"1_1": DAM + STINGS, "1_2": FLUME}
 rng = np.random.default_rng(1801)
@@ -166,7 +166,7 @@ def drop_relic_wake(s):
     return sub * 1.2 + grind + place(n, 0.1, rise) + place(n, 0.35, ring)
 
 
-def drop_boiler(s):
+def drop_spill_boiler(s):
     n = int(1.3 * RATE)
     t = t_of(1.3)
     d = 62 + s  # D4

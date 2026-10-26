@@ -1,47 +1,11 @@
 {
  "1_1": {
   "cues": {
-   "drop_ancient": {
-    "bar": 2,
-    "beat": 3,
-    "beats": 2,
-    "clip": "drop",
-    "dbtp": -4.84,
-    "kind": "drop",
-    "lufs": -16.0,
-    "samples": 41024
-   },
-   "drop_boiler": {
-    "dbtp": -2.15,
-    "kind": "designed",
-    "lufs": -16.0,
-    "samples": 57330
-   },
    "drop_flash_flood": {
     "dbtp": -2.54,
     "kind": "designed",
     "lufs": -16.0,
     "samples": 66150
-   },
-   "drop_fleet": {
-    "bar": 2,
-    "beat": 3,
-    "beats": 2,
-    "clip": "open",
-    "dbtp": -1.81,
-    "kind": "drop",
-    "lufs": -16.0,
-    "samples": 41024
-   },
-   "drop_flood": {
-    "bar": 4,
-    "beat": 3,
-    "beats": 2,
-    "clip": "drop",
-    "dbtp": -3.05,
-    "kind": "drop",
-    "lufs": -16.0,
-    "samples": 41024
    },
    "drop_flood_horn": {
     "dbtp": -3.83,
@@ -49,21 +13,17 @@
     "lufs": -16.0,
     "samples": 70560
    },
-   "drop_industrial": {
-    "bar": 1,
-    "beat": 1,
-    "beats": 2,
-    "clip": "drop",
-    "dbtp": -1.94,
-    "kind": "drop",
-    "lufs": -16.0,
-    "samples": 41024
-   },
    "drop_relic_wake": {
     "dbtp": -1.99,
     "kind": "designed",
     "lufs": -16.0,
     "samples": 83790
+   },
+   "drop_spill_boiler": {
+    "dbtp": -2.15,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 57330
    },
    "drop_spill_dropship": {
     "dbtp": -2.04,
@@ -159,26 +119,6 @@
  },
  "1_2": {
   "cues": {
-   "drop_ancient": {
-    "bar": 4,
-    "beat": 3,
-    "beats": 2,
-    "clip": "open",
-    "dbtp": -4.04,
-    "kind": "drop",
-    "lufs": -16.0,
-    "samples": 41024
-   },
-   "drop_collapse": {
-    "bar": 2,
-    "beat": 3,
-    "beats": 2,
-    "clip": "open",
-    "dbtp": -3.77,
-    "kind": "drop",
-    "lufs": -16.0,
-    "samples": 41024
-   },
    "drop_cracked_wall": {
     "dbtp": -1.0,
     "kind": "designed",
@@ -190,26 +130,6 @@
     "kind": "designed",
     "lufs": -16.0,
     "samples": 66150
-   },
-   "drop_fleet": {
-    "bar": 2,
-    "beat": 3,
-    "beats": 2,
-    "clip": "drop",
-    "dbtp": -2.07,
-    "kind": "drop",
-    "lufs": -16.0,
-    "samples": 41024
-   },
-   "drop_industrial": {
-    "bar": 3,
-    "beat": 1,
-    "beats": 2,
-    "clip": "open",
-    "dbtp": -1.62,
-    "kind": "drop",
-    "lufs": -16.0,
-    "samples": 41024
    },
    "drop_reactor_blow": {
     "dbtp": -4.9,

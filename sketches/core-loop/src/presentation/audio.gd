@@ -1368,7 +1368,7 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 # (the generic stage, world, rescue or unseal sound) is not dropped, because its beat also starts
 # the stage music; it is ducked STORY_DUCK_DB for STORY_HOLD_MS so the sting is the moment's voice.
 const STORY_KIND := "story_sting"
-const STORY_DUCKED := ["world_entered", "stage_entered", "rescue_completed", "beacon_unsealed"]
+const STORY_DUCKED := ["run_started", "world_entered", "stage_entered", "rescue_completed", "beacon_unsealed"]
 const STORY_DUCK_DB := -14.0
 const STORY_HOLD_MS := 2500
 var _story_until_ms := 0
@@ -1579,7 +1579,8 @@ func _connect_all(events) -> void:
 	events.scrap_collected.connect(_on_scrap)
 	events.cogs_collected.connect(_on_cogs)
 	events.achievement_earned.connect(func(_id: String): play("achievement_earned"))
-	events.rescue_completed.connect(func(_quest: String): play("rescue_completed"))
+	# Deferred a frame so a story sting (spillway_story, a later listener) opens its duck window first.
+	events.rescue_completed.connect(func(_quest: String): play.call_deferred("rescue_completed"))
 	events.part_gained.connect(func(_part: String, _source: String): play("part_gained"))
 	events.player_hit.connect(_on_player_hit)
 	events.player_died.connect(_on_died)
