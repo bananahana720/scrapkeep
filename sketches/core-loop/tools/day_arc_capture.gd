@@ -1,6 +1,6 @@
 extends SceneTree
 # One day per run: a still of every stage in run order, the boss arena that ends each world before
-# the last (the Brindle bowl keeps its stage's morning look; the Waking has its own pit look), then
+# the last (the Brindle bowl is the Spillway at noon, WorldLook.DAYLIT_ARENAS; the Waking has its own pit look), then
 # the Mind's crown, each at the time of day its stage enters at (world_look.gd STAGE_TIME). The
 # camera sits behind and above the ball (an arena's centre for an arena) and looks 40 degrees off
 # the day's sun, so the graded sky, its glow and the lit ground share a frame. Needs a display (Xvfb works; llvmpipe GL draws without volumetric air):
@@ -73,7 +73,7 @@ func _run() -> void:
 			game.flow.enter_boss(Vector3.ZERO)
 			await _frames(90)
 			game.player.body().freeze = true
-			var rot = WorldLook.ARENAS[boss_id].sun_rotation if WorldLook.ARENAS.has(boss_id) else null
+			var rot = WorldLook.arena_look(boss_id).get("sun_rotation")
 			n += 1
 			# Framed on the arena's centre from inside its mast ring (arena.gd MAST_R 27 m, MAST_HEIGHT 20 m):
 			# the stage frame's 34 m pull-back puts a bowl mast in front of the lens.
