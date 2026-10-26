@@ -569,8 +569,8 @@ func _perched_pure() -> void:
 	_check("--from lists kind, pack, then perched rows in first-seen order", code == 0 and lobber >= 0 and pack > lobber and mast > pack and park > mast)
 
 
-# Two real perched duels (1 pilot, seed 2 and a low cap). Seed 2 is the only park_dam seed of 1 to 4 whose standoff is both clear and under the top:
-# seeds 1 and 4 are clear but not under, seed 3 is under but not clear (those read not_perched). The park row stands the Dispatcher on a real
+# Two real perched duels (1 pilot, seed 4 and a low cap). Seed 4's standoff is both clear and under the top on park_dam with the canyon walls
+# (#488, read at 814a53ad: 15 m out, the Dispatcher 11.5 m over the ball); seed 2, pinned before them, now finds no standoff spot (not_perched). The park row stands the Dispatcher on a real
 # perch top with no mast; the mast row, planted as the negative, builds one.
 func _perched_duel() -> void:
 	var out := OS.get_user_data_dir().path_join("matchup_lab_test").path_join("perched.ndjson")
@@ -578,7 +578,7 @@ func _perched_duel() -> void:
 		DirAccess.remove_absolute(out)
 	var output := []
 	var args := ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"), "--script", "res://tools/matchup_lab.gd", "--",
-			"--out=" + out, "--procs=1", "--seeds=2", "--cap=10", "--pilots=tarn", "--kinds=dispatcher", "--perched=park,mast", "--answer=0",
+			"--out=" + out, "--procs=1", "--seeds=4", "--cap=10", "--pilots=tarn", "--kinds=dispatcher", "--perched=park,mast", "--answer=0",
 			"--bot-no-mix=1", "--bot-no-visuals=1", "--bot-no-pilot-tracks=1"]
 	var code := OS.execute(OS.get_executable_path(), args, output, true)
 	_check("the perched duels exit 0", code == 0)
@@ -603,12 +603,13 @@ func _perched_duel() -> void:
 	_check("park: the row records its perch fields", park.has("ball_to_perch_m") and park.has("drops") and park.has("landed_hits")
 		and park.has("escalation") and park.has("relocated") and park.has("dispatcher_down_s"))
 	_check("contrast row: the mast row builds its own mast, 8 m up", mast["mast_built"] == true and is_equal_approx(float(mast["perch_rise_m"]), 8.0))
-	# park_dam has no level, clear standoff near its tops, so the lab holds the ball there until the spawn.
+	# A relocated ball is held at its standoff until the spawn, level or not (seed 4's is level: standoff_ok true).
 	for row: Dictionary in [park, mast]:
 		_check("%s: a relocated ball was held and stood within 3 m of its standoff at the spawn" % row["kind"], row["relocated"] == true and row["held"] == true
 			and absf(float(row["ball_to_perch_m"]) - float(row["standoff_m"])) <= 3.0)
-	_check("both rows' standoff spots are clear of landform footprints", park["standoff_clear"] == true and mast["standoff_clear"] == true)
-	print("perched park perch_over_ball_m=%s standoff_m=%s standoff_ok=%s b2p=%s" % [park["perch_over_ball_m"], park["standoff_m"], park["standoff_ok"], park["ball_to_perch_m"]])
+	# A not_perched row that found no standoff spot carries no standoff fields: read them with .get so it fails as a check.
+	_check("both rows' standoff spots are clear of landform footprints", park.get("standoff_clear") == true and mast.get("standoff_clear") == true)
+	print("perched park perch_over_ball_m=%s standoff_m=%s standoff_ok=%s b2p=%s" % [park["perch_over_ball_m"], park.get("standoff_m"), park.get("standoff_ok"), park["ball_to_perch_m"]])
 	_check("both rows chose the same top", park["perch"] == mast["perch"])
 
 
