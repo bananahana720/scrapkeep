@@ -12,8 +12,6 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Field := preload("res://src/build/scrap_field.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
-const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
-const WorldLook := preload("res://src/presentation/world_look.gd")
 
 # Writer E's module: Admiral Brindle and the Requisition in the Slag Bowl (DEMO-SPEC
 # Brindle, BOSS-BRINDLE). Flow calls enter_arena(entry_velocity) after stage 3's
@@ -134,9 +132,6 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	arena = Arena.new()
 	arena.position = Arena.place(ctx.terrain, ctx.run.stage)
 	ctx.root.add_child(arena)
-	# The bowl's noon row covers the flume's morning on the arena slot and leaves with the arena.
-	if ctx.terrain != null and "environment" in ctx.terrain:
-		GraphicsPreset.enter_world(arena, ctx.terrain.environment, WorldLook.arena_look("bowl"), "arena")
 	ship = Requisition.new()
 	arena.add_child(ship)
 	ship.build(self)

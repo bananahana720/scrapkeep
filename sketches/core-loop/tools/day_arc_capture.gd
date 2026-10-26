@@ -73,7 +73,7 @@ func _run() -> void:
 			game.flow.enter_boss(Vector3.ZERO)
 			await _frames(90)
 			game.player.body().freeze = true
-			var rot = WorldLook.ARENAS[boss_id].sun_rotation if WorldLook.ARENAS.has(boss_id) else null
+			var rot = WorldLook.arena_look(boss_id).get("sun_rotation")
 			n += 1
 			# Framed on the arena's centre from inside its mast ring (arena.gd MAST_R 27 m, MAST_HEIGHT 20 m):
 			# the stage frame's 34 m pull-back puts a bowl mast in front of the lens.

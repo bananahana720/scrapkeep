@@ -80,7 +80,8 @@ const ARENAS := {
 # Arenas that stand in their world's daylight: the world row under a time-of-day row, as a stage
 # enters (arena_look). The Slag Bowl is the Spillway at noon (world 1 unit 12: dawn dam, morning
 # flume, noon bowl), so Brindle's fight is the day's high sun and the pit after it keeps noon.
-const DAYLIT_ARENAS := {"bowl": {"world": 1, "time": "noon"}}
+const BOWL_SCRIPT := "res://src/boss/arena.gd"
+const DAYLIT_ARENAS := {"brindle": {"world": 1, "time": "noon"}}
 # The camp walk (camp_hub.gd): the Spillway's daylight turned toward late afternoon, a warm low sun over the plaza, thin
 # haze and no volumetric air, so the lamps and marquees carry the evening. Entered on the "camp" slot over the stage row.
 const CAMP := {"name": "camp", "sky": "hdri", "background": Color("243b43"),
@@ -349,6 +350,20 @@ static func lights(look: Dictionary, sun: DirectionalLight3D) -> Array:
 # never freed; a park's root is freed when it leaves memory, and its next entry builds a new one.
 static func hook(ctx) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
+	ctx.events.boss_arena_entered.connect(_on_arena_entered.bind(ctx))
+
+
+# Brindle's Slag Bowl enters its daylit row on the arena slot, on the bowl's own WorldLook node, so
+# the row covers the stage's and leaves with the bowl (exit, retry, stage change). Other bosses'
+# arenas light themselves (arena_waking_dress, arena_mind_dress).
+static func _on_arena_entered(ctx) -> void:
+	var boss = ctx.get("boss") if "boss" in ctx else ctx.get_meta("boss", null)
+	var arena = boss.get("arena") if boss != null else null
+	if not is_instance_valid(arena) or arena.get_script() == null or arena.get_script().resource_path != BOWL_SCRIPT:
+		return
+	if ctx.terrain == null or ctx.terrain.environment == null:
+		return
+	load("res://src/presentation/graphics_preset.gd").enter_world(arena, ctx.terrain.environment, arena_look("brindle"), "arena")
 
 
 static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:

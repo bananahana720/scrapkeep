@@ -42,7 +42,7 @@ func _rows() -> void:
 		"camp": WorldLook.CAMP,
 		"dam": WorldLook.stage_look(dam, 1, String(StageDefs.of(dam).get("map", ""))),
 		"flume": WorldLook.stage_look(flume, 1, String(StageDefs.of(flume).get("map", ""))),
-		"bowl": WorldLook.arena_look("bowl"),
+		"bowl": WorldLook.arena_look("brindle"),
 	}
 	_t.check("the title has its own complete row", LIGHT_KEYS.all(func(key): return key == "fill_color" or WorldLook.TITLE.has(key))
 		and WorldLook.TITLE.fill_color is Color)
