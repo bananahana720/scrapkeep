@@ -27,6 +27,7 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
+const ParkStamps := preload("res://src/world/park/park_stamps.gd")
 
 # SHA-256 of every old-map scatter transform (kind, seed, instance buffer, maps sorted). A change
 # here moves an old map's scatter. Two builds of the same Godot 4.7.2 give two stable values:
@@ -489,6 +490,11 @@ func _plain_slopes() -> void:
 		# A plain slope with no scatter is one a built piece stands on (a half-pipe in a drop, an anchor field on a
 		# bank), so its centre is kept out by that piece.
 		for row: Dictionary in plain:
+			# The scatter dresses the play rect only, so a mesa edge standing wholly outside it (the dam's canyon walls
+			# east, west and south) carries none.
+			var box := ParkStamps.bounds(ParkStamps.frame(row))
+			if not Rect2(box[0], box[1], box[2] - box[0], box[3] - box[1]).intersects(map.play_rect):
+				continue
 			if not on_plain.has(row["id"]) and not Scatter._kept_out(map.scatter["keep_out"], ParkMap._v2(row["at"])):
 				problems.append("%s/%s has no scatter and nothing built on it" % [map_id, row["id"]])
 		if on_built > 0:
