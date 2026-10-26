@@ -1309,7 +1309,7 @@ func _physics_process(delta: float) -> bool:
 			_game.player.set_velocity_now(Vector3.ZERO, "matchup_lab")
 			_held = true
 		if _relocated:
-			# Perched duel: hold the relocated ball at its standoff (no level spot exists near the tops), zeroing
+			# Perched duel: hold the relocated ball at its standoff (it may not be level), zeroing
 			# its velocity every frame with the player's own set_velocity_now until the spawn.
 			_game.player.set_velocity_now(Vector3.ZERO, "matchup_lab")
 			_held = true

@@ -603,7 +603,7 @@ func _perched_duel() -> void:
 	_check("park: the row records its perch fields", park.has("ball_to_perch_m") and park.has("drops") and park.has("landed_hits")
 		and park.has("escalation") and park.has("relocated") and park.has("dispatcher_down_s"))
 	_check("contrast row: the mast row builds its own mast, 8 m up", mast["mast_built"] == true and is_equal_approx(float(mast["perch_rise_m"]), 8.0))
-	# park_dam has no level, clear standoff near its tops, so the lab holds the ball there until the spawn.
+	# A relocated ball is held at its standoff until the spawn, level or not (seed 4's is level: standoff_ok true).
 	for row: Dictionary in [park, mast]:
 		_check("%s: a relocated ball was held and stood within 3 m of its standoff at the spawn" % row["kind"], row["relocated"] == true and row["held"] == true
 			and absf(float(row["ball_to_perch_m"]) - float(row["standoff_m"])) <= 3.0)
