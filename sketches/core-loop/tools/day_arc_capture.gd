@@ -1,6 +1,6 @@
 extends SceneTree
 # One day per run: a still of every stage in run order, the boss arena that ends each world before
-# the last (the Brindle bowl keeps its stage's morning look; the Waking has its own pit look), then
+# the last (the Brindle bowl is the Spillway at noon, WorldLook.DAYLIT_ARENAS; the Waking has its own pit look), then
 # the Mind's crown, each at the time of day its stage enters at (world_look.gd STAGE_TIME). The
 # camera sits behind and above the ball (an arena's centre for an arena) and looks 40 degrees off
 # the day's sun, so the graded sky, its glow and the lit ground share a frame. Needs a display (Xvfb works; llvmpipe GL draws without volumetric air):

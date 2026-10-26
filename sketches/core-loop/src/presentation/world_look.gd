@@ -52,7 +52,6 @@ const PARK_ROWS := {
 }
 const PARK_DIR := "res://src/world/park/"
 static var _park_fog := {}
-# The bowl has no row: it keeps the stage it ends (stage 2, the Spillway row under the morning row).
 const ARENAS := {
 	# The Waking pit: no daylight, a black ceiling, cool walls under a cool core key, the amber
 	# accent on the floor pools.
@@ -78,13 +77,21 @@ const ARENAS := {
 		"grade": {"top": Color("6c6fae"), "horizon": Color("ffa07a"), "recolor": 0.45, "highlight": 2.0,
 			"glow": Color("b8502a"), "energy": 0.85}},
 }
+# Arenas that stand in their world's daylight: the world row under a time-of-day row, as a stage
+# enters (arena_look). The Slag Bowl is the Spillway at noon (world 1 unit 12: dawn dam, morning
+# flume, noon bowl), so Brindle's fight is the day's high sun and the pit after it keeps noon.
+const DAYLIT_ARENAS := {"bowl": {"world": 1, "time": "noon"}}
 # The camp walk (camp_hub.gd): the Spillway's daylight turned toward late afternoon, a warm low sun over the plaza, thin
 # haze and no volumetric air, so the lamps and marquees carry the evening. Entered on the "camp" slot over the stage row.
 const CAMP := {"name": "camp", "sky": "hdri", "background": Color("243b43"),
 	"ambient": Color("c9c0a8"), "energy": 0.3, "exposure": 1.08, "saturation": 1.15,
 	"fog": {"color": Color("d9c5a0"), "density": 0.0005},
 	"sun_color": Color("ffc88a"), "sun_energy": 2.2, "sun_rotation": Vector3(-30.0, -35.0, 0.0),
-	"sun_visible": true, "fill": 0.45, "fill_pitch": -45.0, "fill_color": Color("a9b6c0"), "air": {}}
+	"sun_visible": true, "fill": 0.45, "fill_pitch": -45.0, "fill_color": Color("a9b6c0"), "air": {},
+	# The afternoon sky (TIME_ROWS.afternoon's grade) under the camp's own sun, so the drawn sky warms
+	# with the plaza instead of keeping the plain panorama or the last stage's grade.
+	"time": "afternoon", "grade": {"top": Color("fbf6ee"), "horizon": Color("ffe6c4"), "recolor": 0.1, "highlight": 8.0,
+		"glow": Color("2c1e0e"), "energy": 1.0}}
 # The menu stages own their small worlds; they are never freed with a stage.
 const TITLE := {"energy": ROWS[1]["energy"], "sun_energy": ROWS[1]["sun_energy"], "sun_rotation": ROWS[1]["sun_rotation"],
 	"fill": ROWS[1]["fill"], "background": Color("243b43"), "ambient": Color("9db5cf"), "exposure": 1.1, "contrast": 1.25,
@@ -197,6 +204,20 @@ static func time_id(stage: int) -> String:
 
 static func time_row(stage: int) -> Dictionary:
 	return TIME_ROWS.get(time_id(stage), {})
+
+
+# An arena's row: its own (ARENAS) or its world's daylight at its time of day (DAYLIT_ARENAS).
+static func arena_look(id: String) -> Dictionary:
+	if ARENAS.has(id):
+		return ARENAS[id]
+	var spec: Dictionary = DAYLIT_ARENAS.get(id, {})
+	if spec.is_empty():
+		return {}
+	var look := row(spec.world).duplicate()
+	look.merge(TIME_ROWS[spec.time], true)
+	look["name"] = id
+	look["time"] = spec.time
+	return look
 
 
 # The fog {density, color} of a park map's standing weather row (the first with trigger "always" in
