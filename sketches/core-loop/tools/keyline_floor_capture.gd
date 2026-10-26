@@ -53,6 +53,12 @@ func _initialize() -> void:
 			out = a.trim_prefix("--out=")
 		elif a == "--gate":
 			gate = true
+	# Captures go outside the project, never into the Godot tree it imports.
+	var project := ProjectSettings.globalize_path("res://")
+	if out.is_empty() or out.is_relative_path() or out.simplify_path().path_join("").begins_with(project):
+		push_error("keyline_floor_capture: pass --out=<absolute dir outside %s>" % project)
+		quit(2)
+		return
 	root.size = SIZE
 	root.content_scale_size = SIZE
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
@@ -85,8 +91,14 @@ func _run() -> void:
 	game.test_mode = true
 	game.table = "park"
 	root.add_child(game)
-	while game.flow == null:
+	for i in 600:
+		if game.flow != null:
+			break
 		await physics_frame
+	if game.flow == null:
+		push_error("keyline_floor_capture: the game never built its flow")
+		quit(2)
+		return
 	game.ctx.calm = true
 	game.flow.press_start()
 	game.flow.choose_class(1)
@@ -180,6 +192,10 @@ func _run() -> void:
 		red.append("the planted control read in %d of %d spots" % [controls_ok, spots.size()])
 	report["red"] = red
 	var f := FileAccess.open(out.path_join("keyline_floor.json"), FileAccess.WRITE)
+	if f == null:
+		push_error("keyline_floor_capture: cannot write %s" % out)
+		quit(2)
+		return
 	f.store_string(JSON.stringify(report, "\t"))
 	f.close()
 	for line in red:

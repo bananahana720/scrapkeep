@@ -21,7 +21,10 @@ const BRIGHT_FROM := 44.0
 # tools/keyline_floor_capture.gd EDGE_STEP_MIN (grade_probe's GAP floor) plus the card's shortfall.
 const BRIGHT_STEP := 20.0
 const MARGIN := 5.0
-const EXPECTED_CHECKS := 11
+# The bowl's teal deck as the 3060 rendered it at noon beside the ring (floor L* 44.4, the median of
+# the floor annulus in keyline-0.png, #498 comment 6428905151): the weakest floor the gate met.
+const DECK_3060 := Color("5f6e5d")
+const EXPECTED_CHECKS := 13
 var _t := T.new("keyline_floor_test")
 
 
@@ -33,6 +36,7 @@ func _run() -> void:
 	_keylines()
 	for mix in ["srgb", "linear"]:
 		_steps(mix)
+	_deck()
 	_t.eq("the Slag Bowl is the noon row", WorldLook.arena_look("brindle").get("time", ""), "noon")
 	_t.eq("every check ran", _t.checks, EXPECTED_CHECKS)
 	quit(_t.verdict())
@@ -70,6 +74,17 @@ func _mark(d: Dictionary, role: String) -> Dictionary:
 		if m.role == role:
 			return m
 	return {}
+
+
+# The measured deck, mixed both ways. The deck is already graded, so this reads the keyline as if it
+# took the deck's light; the rendered gate is the capture.
+func _deck() -> void:
+	for mix in ["srgb", "linear"]:
+		var keyline := DECK_3060.lerp(Palette.CHARCOAL, Threat.UNDERLAY_ALPHA) if mix == "srgb" \
+			else DECK_3060.srgb_to_linear().lerp(Palette.CHARCOAL.srgb_to_linear(), Threat.UNDERLAY_ALPHA).linear_to_srgb()
+		var step := lstar(DECK_3060) - lstar(keyline)
+		_t.check("%s: the keyline steps %.0f or more under the 3060's noon deck" % [mix, BRIGHT_STEP + MARGIN],
+			step >= BRIGHT_STEP + MARGIN, "%.1f" % step)
 
 
 # Grey floors from black to white, mixed in sRGB or in linear light.
