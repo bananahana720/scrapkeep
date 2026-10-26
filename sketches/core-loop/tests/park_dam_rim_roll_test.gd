@@ -1,5 +1,5 @@
 extends SceneTree
-# smoke: timeout=420s
+# smoke: timeout=360s
 
 # The dam's canyon walls (park_dam.json canyon_wall_*, mesa_rim ground rows, unit 10 "park edge"). On 0e2bc2f0 the ground
 # ran flat to the play square's edge and a ball held outward was snapped 39 m back to the play rect at +-799 m
@@ -11,7 +11,7 @@ extends SceneTree
 # camera's frame each tick as a person's keys are. Two opposite corners (north-east, south-west) carry all four walls,
 # and a corner, two faces meeting, is where a ball could wedge. Each starts at a rest LEAD_M inside both feet and runs:
 #   press   the stick held diagonally into the corner for PRESS_S: the ball reaches both faces (a control that the walls
-#           are really there) and is held: its centre never passes a crest line and it is never snapped back.
+#           are really there) and is held: its centre never gets HOLD_M past a foot and it is never snapped back.
 #   escape  from where press left it, straight back and along each wall (away from the other) for ESCAPE_S: the ball
 #           leaves by LEAVE_M at least, so the corner holds no wedge.
 #   launch  from the rest, the ball sent square at each of the two walls at LAUNCH_MPS, past a cracked build's top speed:
@@ -29,6 +29,9 @@ const T := preload("res://tests/support/t.gd")
 const FOOT := {"east": 765.0, "west": -765.0, "north": -775.0, "south": 765.0}
 const RISE_M := 9.6
 const RISE_MIN_M := 25.0
+# How far past a foot a held ball's centre may reach: it rests in the crease within its radius (0.03 to 0.52 m in the
+# first runs). On the base, with no wall, the press carries it 3.6 m past in the north-east (the base fails 8 of 28).
+const HOLD_M := 2.0
 const CORNERS := [["north", "east"], ["south", "west"]]
 const LEAD_M := 12.0
 const PRESS_S := 2.0
@@ -92,7 +95,7 @@ func _corner(sides: Array) -> void:
 	print("  %s press: end=%s outmost=%.2f snaps=%d" % [name, press["end"], press["outmost"], press["snaps"]])
 	for side: String in sides:
 		t.check("%s: the ball reaches the %s face (control)" % [name, side], _beyond(side, press["end"]) > -FACE_SLACK_M, "end %s" % press["end"])
-	t.check("%s: the walls hold it below the crest" % name, press["outmost"] < RISE_M, "outmost %.2f m past a foot" % press["outmost"])
+	t.check("%s: the walls hold it at their feet" % name, press["outmost"] < HOLD_M, "outmost %.2f m past a foot" % press["outmost"])
 	t.check("%s: no snap back" % name, press["snaps"] == 0, "%d snaps" % press["snaps"])
 	var aways := {"back": -out}
 	for side: String in sides:
