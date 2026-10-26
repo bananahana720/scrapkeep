@@ -119,8 +119,8 @@ func _stings() -> void:
 		var hits: Array = audio.cue_log.filter(func(entry): return entry[0] == "story_sting")
 		_t.check("21 %s starts one sting on the cue log" % row_id, hits.size() == 1 and hits[0][1] == sound and hits[0][2] == "now", str(hits))
 	# The generic sound of the same moment is ducked as logged, not just in the helper afterwards.
-	# Rivet's cage: the bus fact reaches audio before the story node, so audio defers the generic
-	# play a frame and the sting opens the duck window first.
+	# Rivet's cage: the bus fact reaches audio before the story node, so audio opens the duck window
+	# itself for the quest before the generic fanfare plays.
 	player.stop_all()
 	audio._story_until_ms = 0
 	audio.cue_log.clear()
@@ -133,12 +133,12 @@ func _stings() -> void:
 	game.events.rescue_completed.emit("rivet")
 	await process_frame
 	await process_frame
-	var log: Array = audio.cue_log
-	var sting_at := log.find_custom(func(entry): return entry[0] == "story_sting")
-	var generic_at := log.find_custom(func(entry): return entry[0] == "rescue_completed" and entry[2] == "now")
-	_t.check("23 the sting and the generic rescue sound both log, sting first", sting_at >= 0 and generic_at > sting_at, str(log))
+	var entries: Array = audio.cue_log
+	var sting_at := entries.find_custom(func(entry): return entry[0] == "story_sting")
+	var generic_at := entries.find_custom(func(entry): return entry[0] == "rescue_completed" and entry[2] == "now")
+	_t.check("23 the sting and the generic rescue sound both log once", sting_at >= 0 and generic_at >= 0, str(entries))
 	if generic_at >= 0:
-		_t.near("24 the generic rescue sound is logged duck dB below its plain volume", float(log[generic_at][5]), plain_db + audio.STORY_DUCK_DB, 0.01)
+		_t.near("24 the generic rescue sound is logged duck dB below its plain volume", float(entries[generic_at][5]), plain_db + audio.STORY_DUCK_DB, 0.01)
 	_t.check("25 run_started and stage_entered are ducked too, an unrelated kind is not",
 		audio.story_duck_db("run_started") < 0.0 and audio.story_duck_db("stage_entered") < 0.0 and audio.story_duck_db("hit_thwack") == 0.0, "")
 	player.stop_all()

@@ -12,7 +12,7 @@ differ even where they share an id.
   drop_flash_flood       a rushing wash: a surge of noise sweeping down over a low D
   drop_spill_dropship    thrusters cut out, a thud, then a hard brass dyad on the landing
   drop_relic_wake        a buried machine turning over: sub D, beating partials, a stone bell
-  drop_spill_boiler            the burner blows: hiss, pop, a whistle bending up a fifth
+  drop_spill_boiler      the burner blows: hiss, pop, a whistle bending up a fifth
   drop_cracked_wall      the trestle gives: three cracks, a long rock rumble, a falling thud
   drop_reactor_blow      a reactor going: a boom, a rising whine, a ragged sub sweep
   drop_sluice_surge      the head gate lifts: a metal grind, then a gush through the gap
