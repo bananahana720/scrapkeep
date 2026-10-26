@@ -18,9 +18,11 @@ extends SceneTree
 #         so a roll at it fell in 0 of 6 times and only a jump broke it; the turbine seep's powerhouse
 #         face stood atop an 18 degree ramp, 5.3 m over 16 m, and a boosted roll up it reached the face
 #         under cruise and broke it 0 of 18 times. A flat run-up breaks it 9 of 9.
+#   back  as above, but also behind both side walls (the first-win rooms keep the centreline).
 #
 # Planted: the bend_cache back at its old spot fails both checks; the radio's old service_ledge spot
-# and the seep's old powerhouse spot fail the mouth check.
+# and the seep's old powerhouse spot fail the mouth check; the radio's first slot_fin_far draft, square
+# north beside the fin, fails the side-wall back check.
 
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
@@ -39,6 +41,8 @@ const OLD_BEND := Vector2(42.0, -136.0)
 const OLD_LEDGE := {"at": [-184, 488], "face": [0, -1]}
 # The turbine seep's old powerhouse spot (#413), facing north down the deck's ramp.
 const OLD_POWERHOUSE := {"at": [120, 488], "face": [0, -1]}
+# The radio's first slot_fin_far draft, its east wall under the fin's crest.
+const FIN_DRAFT := {"at": [44, -243], "face": [0, -1]}
 
 var _t := T.new("park_cache_faces_test")
 
@@ -86,6 +90,8 @@ func _run() -> void:
 			_t.check("planted: the radio's old service_ledge spot fails the mouth check", drop > CLIMB_M, "%.1f m" % drop)
 			var ramp := _drop(game, _front(OLD_POWERHOUSE), _face(OLD_POWERHOUSE))
 			_t.check("planted: the seep's old powerhouse spot fails the mouth check", ramp > CLIMB_M, "%.1f m" % ramp)
+			var fin := _back_rise(game, _front(FIN_DRAFT), _face(FIN_DRAFT), true)
+			_t.check("planted: the radio's slot_fin_far draft fails the side-wall back check", fin > RISE_M, "%.1f m" % fin)
 		if map_id == "park_flume":
 			var south := Vector2(0.0, 1.0)
 			var north := _rise(game, OLD_BEND - south * 12.0, -south)
@@ -109,14 +115,18 @@ func _rise(game, at: Vector2, face: Vector2) -> float:
 	return top
 
 
-# The rise behind the back wall, from the room's floor at its face.
-func _back_rise(game, at: Vector2, face: Vector2) -> float:
+# The rise behind the back wall, from the room's floor at its face: on the centreline, and with
+# `sides` behind both side walls too (a ridge running past one side drops a ball onto that wall as
+# surely as one behind; the radio's first slot_fin_far draft stood 6 m off the fin's 20 m crest).
+func _back_rise(game, at: Vector2, face: Vector2, sides := false) -> float:
 	var y0: float = game.ctx.terrain.height(at.x, at.y)
 	var wall := at - face * (Activities.WALL_DEPTH + 0.5)
+	var side := Vector2(-face.y, face.x)
 	var top := -INF
-	for d in [0.0, 4.0, 8.0, 12.0, 16.0, BACK_M]:
-		var p: Vector2 = wall - face * d
-		top = maxf(top, game.ctx.terrain.height(p.x, p.y) - y0)
+	for lane in ([-Activities.WALL_HALF_W, 0.0, Activities.WALL_HALF_W] if sides else [0.0]):
+		for d in [0.0, 4.0, 8.0, 12.0, 16.0, BACK_M]:
+			var p: Vector2 = wall - face * d + side * lane
+			top = maxf(top, game.ctx.terrain.height(p.x, p.y) - y0)
 	return top
 
 
@@ -132,16 +142,18 @@ func _secret_spots(game, map_id: String) -> int:
 	if Secrets.DOOR["map"] == map_id:
 		rows.append({"name": "timed door", "at": Secrets.DOOR["at"], "face": Secrets.DOOR["face"]})
 	var rule_face: Vector2 = Activities.RULES["cracked_cache"]["face"]
+	# The first-win rooms keep the centreline back check: the islands' highdraft_lookout has 5-9 m rock
+	# teeth beside its west wall (7.4 m on that lane, 26 Oct), a world 3 look owed after world 1.
 	for id in Secrets.ROOMS:
 		if Secrets.ROOMS[id]["map"] == map_id:
-			rows.append({"name": id, "at": Secrets.ROOMS[id]["at"], "face": [rule_face.x, rule_face.y]})
+			rows.append({"name": id, "at": Secrets.ROOMS[id]["at"], "face": [rule_face.x, rule_face.y], "room": true})
 	for row in rows:
 		var at := _front(row)
 		var face := _face(row)
 		var rise := _rise(game, at, face)
 		_t.check("%s %s opens onto reachable ground" % [map_id, row["name"]], rise <= RISE_M,
 			"ground rises %.1f m within %.0f m of its face %s" % [rise, NEAR_M, face])
-		var back := _back_rise(game, at, face)
+		var back := _back_rise(game, at, face, not row.get("room", false))
 		_t.check("%s %s stands clear of a ledge above" % [map_id, row["name"]], back <= RISE_M,
 			"ground rises %.1f m within %.0f m behind its back wall" % [back, BACK_M])
 		var drop := _drop(game, at, face)
