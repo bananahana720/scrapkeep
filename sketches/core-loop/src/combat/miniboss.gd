@@ -18,6 +18,15 @@ extends "res://src/combat/enemy.gd"
 #
 # Weight: WEIGHT divides every shove, so rams rock it and slams nudge it; it cannot be
 # knocked during a leap or a charge.
+#
+# Phase two (Andrew 19:02Z and 19:11Z 23 Oct; fight_phases.gd): the hit that takes it under
+# FightPhases.MINI_TURN of its health turns it. For the transition beat it rears and
+# shudders, takes no damage and commits nothing; any committed attack is dropped. Then its
+# wind-ups run at PHASE_TWO_WIND (never under the tell floor), and every slam chains into
+# a charge with no weak window between: the ratchet cue (attack_cued) sounds CUE_LEAD
+# before the lane is drawn, and the lane's brace is the cued tell, CUED_WARN. The charge
+# still vents. The turn publishes fight_phase_changed, which moves its anthem to
+# "miniboss-heavy" on the next downbeat.
 
 const HP := 600.0
 # Used only when the spawner passes no plating (1.25 x a stage-1 Warden's 30).
@@ -41,10 +50,17 @@ const CHARGE_TIME := 0.9
 const CHARGE_DAMAGE := 20.0
 const CHARGE_SHOVE := 10.0
 const WEAK_SECONDS := 2.4
+const PHASE_TWO_WIND := 0.75
+const TURN_SHAKE := 0.12
 
-enum State { STALK, SLAM_CROUCH, SLAM_LEAP, CHARGE_BRACE, CHARGE, WEAK }
+enum State { STALK, SLAM_CROUCH, SLAM_LEAP, CHARGE_BRACE, CHARGE, WEAK, TURN, CUE }
 
 var state := State.STALK
+var phase := 1
+# This phase's wind-ups, read by the miniboss WindupRows row (E03 slam, E04 charge). The
+# cued charge's brace is set when the cue ends.
+var slam_crouch := SLAM_CROUCH
+var charge_brace := CHARGE_BRACE
 var attacks := 0
 var weak_windows := 0
 var hits_landed := 0
@@ -77,6 +93,8 @@ const POSES := {
 	"charge_brace": {"body": -0.1, "lean": -0.22, "splay": 0.35, "tuck": 0.0, "shield_in": 0.0, "shield_drop": 0.7, "hazard": true},
 	"charge": {"body": -0.1, "lean": -0.22, "splay": 0.35, "tuck": 0.0, "shield_in": 0.0, "shield_drop": 0.7, "hazard": false},
 	"weak": {"body": -0.087, "lean": 0.0, "splay": 0.0, "tuck": 0.0, "shield_in": 0.0, "shield_drop": 0.0, "hazard": false},
+	"turn": {"body": 0.12, "lean": 0.3, "splay": 0.45, "tuck": 0.0, "shield_in": 0.7, "shield_drop": 0.0, "hazard": false},
+	"cue": {"body": -0.05, "lean": -0.12, "splay": 0.35, "tuck": 0.0, "shield_in": 0.3, "shield_drop": 0.35, "hazard": false},
 }
 const CORE_SOCKET := Vector3(0.0, 0.6, -RADIUS * 0.75)
 const MODEL_PATH := "res://assets/models/world_one/enemy_miniboss.glb"
@@ -102,7 +120,41 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 
 
 func state_name() -> String:
-	return ["stalk", "slam_crouch", "slam_leap", "charge_brace", "charge", "weak"][state]
+	return ["stalk", "slam_crouch", "slam_leap", "charge_brace", "charge", "weak", "turn", "cue"][state]
+
+
+# The phase hook. Entering a phase it is already in, or an earlier one, does nothing.
+func enter_phase(next: int) -> void:
+	if next <= phase:
+		return
+	phase = mini(next, FightPhases.MINI_MAX)
+	# The slam's tell is crouch plus leap (its ring fills over both), so the floor is on the sum.
+	slam_crouch = maxf(ChallengeDials.TELL_FLOOR - SLAM_LEAP, SLAM_CROUCH * PHASE_TWO_WIND)
+	charge_brace = maxf(ChallengeDials.TELL_FLOOR, CHARGE_BRACE * PHASE_TWO_WIND)
+	_clear_telegraph()
+	_enter(State.TURN)
+	if is_instance_valid(_reaction_bus) and _reaction_bus.has_signal("fight_phase_changed"):
+		_reaction_bus.fight_phase_changed.emit(kind, phase, FightPhases.MINI_MAX)
+
+
+# The turn takes no damage; the hit that crosses the turn share turns it.
+func take_damage(amount: float) -> float:
+	if state == State.TURN:
+		return 0.0
+	var removed := super.take_damage(amount)
+	if not _dead and phase == 1 and hp <= max_hp * FightPhases.MINI_TURN:
+		enter_phase(2)
+	return removed
+
+
+# A hit in the turn removes nothing, so combat marks it absorbed and no damage number rises.
+func absorbs_hit(_result: Dictionary) -> bool:
+	return state == State.TURN
+
+
+# Nor can it die in the turn, so a crush there would pass the ball into a live body.
+func crushable() -> bool:
+	return state != State.TURN
 
 
 func is_weak() -> bool:
@@ -135,12 +187,12 @@ func _physics_process(delta: float) -> void:
 				_begin_attack(to_ball)
 		State.SLAM_CROUCH:
 			_move(delta, Vector3.ZERO)
-			_fill(_clock / (SLAM_CROUCH + SLAM_LEAP))
-			if _clock >= SLAM_CROUCH:
+			_fill(_clock / (slam_crouch + SLAM_LEAP))
+			if _clock >= slam_crouch:
 				_enter(State.SLAM_LEAP)
 				_leap_from = global_position
 		State.SLAM_LEAP:
-			_fill((SLAM_CROUCH + _clock) / (SLAM_CROUCH + SLAM_LEAP))
+			_fill((slam_crouch + _clock) / (slam_crouch + SLAM_LEAP))
 			var t := clampf(_clock / SLAM_LEAP, 0.0, 1.0)
 			var arc := _leap_from.lerp(_leap_to, t) + Vector3.UP * SLAM_HEIGHT * 4.0 * t * (1.0 - t)
 			global_position = arc
@@ -149,8 +201,8 @@ func _physics_process(delta: float) -> void:
 				_land_slam()
 		State.CHARGE_BRACE:
 			_move(delta, Vector3.ZERO)
-			_fill(_clock / CHARGE_BRACE)
-			if _clock >= CHARGE_BRACE:
+			_fill(_clock / charge_brace)
+			if _clock >= charge_brace:
 				_enter(State.CHARGE)
 				_landed = false
 		State.CHARGE:
@@ -167,6 +219,15 @@ func _physics_process(delta: float) -> void:
 			_move(delta, Vector3.ZERO)
 			if _clock >= WEAK_SECONDS:
 				_enter(State.STALK)
+		State.TURN:
+			_move(delta, Vector3.ZERO)
+			if _clock >= FightPhases.TRANSITION_SECONDS:
+				_enter(State.STALK)
+		State.CUE:
+			_move(delta, Vector3.ZERO)
+			if _clock >= FightPhases.CUE_LEAD:
+				charge_brace = FightPhases.CUED_WARN
+				_begin_attack(to_ball)
 
 
 func _enter(next: int) -> void:
@@ -190,6 +251,18 @@ func _begin_attack(to_ball: Vector3) -> void:
 	_next_attack = 1 - _next_attack
 
 
+# After the slam lands: in phase two the charge follows at once behind the ratchet cue;
+# otherwise, and after every charge, it vents.
+func _after_slam() -> void:
+	if phase < 2:
+		_open_weak_window()
+		return
+	_clear_telegraph()
+	if is_instance_valid(_reaction_bus) and _reaction_bus.has_signal("attack_cued"):
+		_reaction_bus.attack_cued.emit(kind, "E04", FightPhases.CUED_TOTAL)
+	_enter(State.CUE)
+
+
 func _land_slam() -> void:
 	var ring := telegraph()
 	if ring != null and ring.contains(_ball()):
@@ -197,7 +270,7 @@ func _land_slam() -> void:
 		away = away.normalized() if away.length() > 0.1 else Vector3.ZERO
 		hits_landed += 1
 		hit_player.emit(SLAM_DAMAGE, away * SLAM_SHOVE + Vector3.UP * 5.0)
-	_open_weak_window()
+	_after_slam()
 
 
 func _check_charge(lane: Node3D) -> void:
@@ -214,6 +287,8 @@ func _check_charge(lane: Node3D) -> void:
 func _open_weak_window() -> void:
 	_clear_telegraph()
 	weak_windows += 1
+	if phase >= 2:
+		charge_brace = maxf(ChallengeDials.TELL_FLOOR, CHARGE_BRACE * PHASE_TWO_WIND)
 	_enter(State.WEAK)
 
 
@@ -354,7 +429,7 @@ func _model_pose(delta: float) -> void:
 	var foot_up := 0.0
 	match state:
 		State.SLAM_CROUCH:
-			t = clampf(_clock / SLAM_CROUCH, 0.0, 1.0)
+			t = clampf(_clock / slam_crouch, 0.0, 1.0)
 			fists = Vector3(0.0, 0.35, 0.5) * t
 			foot_angle = 0.2 * t
 		State.SLAM_LEAP:
@@ -367,11 +442,19 @@ func _model_pose(delta: float) -> void:
 			lift = maxf(0.0, float(row.body) * HALF_HEIGHT * raise * smoothstep(0.0, 0.15, leap) - _leap_clearance())
 			foot_up = lift + float(row.tuck) * raise
 		State.CHARGE_BRACE:
-			t = clampf(_clock / CHARGE_BRACE, 0.0, 1.0)
+			t = clampf(_clock / charge_brace, 0.0, 1.0)
 			fists = Vector3(0.0, 0.3, -0.85) * t
 		State.CHARGE:
 			fists = Vector3(0.0, 0.3, -0.85)
-	var drop: float = lift if state == State.SLAM_LEAP else float(row.body) * HALF_HEIGHT * t
+		State.TURN:
+			# Rears with fists up and shudders: the turn reads as a wind-up to something bigger.
+			t = clampf(_clock / 0.3, 0.0, 1.0)
+			fists = Vector3(0.0, 1.4, 0.2) * t
+			lift = TURN_SHAKE * sin(_clock * 60.0) * (1.0 - _clock / FightPhases.TRANSITION_SECONDS)
+		State.CUE:
+			t = clampf(_clock / FightPhases.CUE_LEAD, 0.0, 1.0)
+			fists = Vector3(0.0, 0.2, -0.5) * t
+	var drop: float = lift if state == State.SLAM_LEAP else float(row.body) * HALF_HEIGHT * t + (lift if state == State.TURN else 0.0)
 	var body_basis := Basis(Vector3.RIGHT, float(row.lean) * t)
 	var socket := body_basis * CORE_SOCKET + Vector3.UP * drop
 	for bone_name in MODEL_BONES:
@@ -481,7 +564,7 @@ func _pose(delta: float) -> void:
 	# freed target leaves the facing where it is (F008).
 	if not is_instance_valid(target):
 		return
-	if state == State.STALK or state == State.CHARGE_BRACE or state == State.WEAK or state == State.SLAM_CROUCH:
+	if state in [State.STALK, State.CHARGE_BRACE, State.WEAK, State.SLAM_CROUCH, State.TURN, State.CUE]:
 		var to := _flat_to_ball()
 		if state == State.CHARGE_BRACE and telegraph() != null:
 			to = telegraph().dir
