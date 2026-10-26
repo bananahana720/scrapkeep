@@ -11,15 +11,17 @@
     "lufs": -16.0,
     "samples": 41024
    },
-   "drop_flash_flood": {
-    "bar": 3,
-    "beat": 1,
-    "beats": 2,
-    "clip": "drop",
-    "dbtp": -1.74,
-    "kind": "drop",
+   "drop_boiler": {
+    "dbtp": -2.15,
+    "kind": "designed",
     "lufs": -16.0,
-    "samples": 41024
+    "samples": 57330
+   },
+   "drop_flash_flood": {
+    "dbtp": -2.54,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 66150
    },
    "drop_fleet": {
     "bar": 2,
@@ -41,6 +43,12 @@
     "lufs": -16.0,
     "samples": 41024
    },
+   "drop_flood_horn": {
+    "dbtp": -3.83,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 70560
+   },
    "drop_industrial": {
     "bar": 1,
     "beat": 1,
@@ -51,6 +59,18 @@
     "lufs": -16.0,
     "samples": 41024
    },
+   "drop_relic_wake": {
+    "dbtp": -1.99,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 83790
+   },
+   "drop_spill_dropship": {
+    "dbtp": -2.04,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 74970
+   },
    "riser_ancient": {
     "bar": 16,
     "beat": 1,
@@ -59,6 +79,12 @@
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
+   },
+   "riser_dam_siren": {
+    "dbtp": -8.74,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 82026
    },
    "riser_fleet": {
     "bar": 16,
@@ -86,6 +112,36 @@
     "kind": "riser",
     "lufs": -16.0,
     "samples": 82048
+   },
+   "sting_bowl_handoff": {
+    "dbtp": -4.28,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 88200
+   },
+   "sting_cold_open": {
+    "dbtp": -2.62,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 70560
+   },
+   "sting_rivet_cage": {
+    "dbtp": -1.42,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 70560
+   },
+   "sting_spillway_clear": {
+    "dbtp": -3.83,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 97020
+   },
+   "sting_warden_reveal": {
+    "dbtp": -3.27,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 88200
    },
    "stinger_lightning": {
     "bar": 3,
@@ -123,15 +179,17 @@
     "lufs": -16.0,
     "samples": 41024
    },
-   "drop_flash_flood": {
-    "bar": 4,
-    "beat": 1,
-    "beats": 2,
-    "clip": "drop",
-    "dbtp": -1.1,
-    "kind": "drop",
+   "drop_cracked_wall": {
+    "dbtp": -1.0,
+    "kind": "designed",
     "lufs": -16.0,
-    "samples": 41024
+    "samples": 74970
+   },
+   "drop_flash_flood": {
+    "dbtp": -2.76,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 66150
    },
    "drop_fleet": {
     "bar": 2,
@@ -152,6 +210,30 @@
     "kind": "drop",
     "lufs": -16.0,
     "samples": 41024
+   },
+   "drop_reactor_blow": {
+    "dbtp": -4.9,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 79380
+   },
+   "drop_relic_wake": {
+    "dbtp": -2.31,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 83790
+   },
+   "drop_sluice_surge": {
+    "dbtp": -2.67,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 74970
+   },
+   "drop_spill_dropship": {
+    "dbtp": -2.31,
+    "kind": "designed",
+    "lufs": -16.0,
+    "samples": 74970
    },
    "riser_ancient": {
     "bar": 16,

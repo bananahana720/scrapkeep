@@ -15,6 +15,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 
 const OWN := {"drop_fleet_anvil": "drop_fleet", "drop_boiler": "drop_industrial",
 	"riser_mind_quote": "riser_ancient", "drop_mind_wrong": "drop_ancient"}
+const ZONES := {"park_dam": "1-1", "park_flume": "1-2", "park_pit": "2-1", "park_sinkhole": "2-2", "park_crown": "3-1", "park_islands": "3-2"}
 const MOTIFS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
 const MIN_SAMPLES := Harmony.RATE / 20
 
@@ -78,5 +79,6 @@ func _park_sounds(park: String) -> Array:
 	var sounds := {}
 	for event in data.event_rows:
 		for phase in event.get("music_cue", {}):
-			sounds[_signature(MusicRows.cue(String(event.music_cue[phase]), {"ancient": "mind", "motif": "tarn", "theme": 2}))] = true
+			# The park's zone picks its designed file, so the Spillway's drop_boiler and the Highdraft's differ.
+			sounds[_signature(MusicRows.cue(String(event.music_cue[phase]), {"ancient": "mind", "motif": "tarn", "theme": 2, "stage": ZONES[park]}))] = true
 	return sounds.keys()
