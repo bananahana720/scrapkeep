@@ -363,7 +363,7 @@ func _cache() -> void:
 	var heading: Vector3 = -back
 	var start := _ground(s.global_position + back * 14.0)
 	var slow: Dictionary = await _ram(s, start, heading * cruise * RAM_BELOW, RAM_FRAMES)
-	_t.check("a ram below cruise leaves the wall standing", not s.done and s.wall.visible and _done.count("cracked_cache") == 0,
+	_t.check("a ram under the bar leaves the wall standing", not s.done and s.wall.visible and _done.count("cracked_cache") == 0,
 		"ram at %.1f m/s of cruise %.1f: done %s, wall visible %s" % [cruise * RAM_BELOW, cruise, s.done, s.wall.visible])
 	var fast: Dictionary = await _ram(s, start, heading * cruise * RAM_HELD, RAM_FRAMES)
 	_t.check("a ram at a held roll's speed breaks the wall", s.done and not s.wall.visible, "ram at %.1f m/s: done %s" % [cruise * RAM_HELD, s.done])

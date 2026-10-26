@@ -42,7 +42,7 @@ signal sluice_closed(row_id: String)
 # starts:   "ring" (the ball inside `ring` metres), "none" (nothing starts it) or
 #           "near_or_hit" (the ball inside `wake` metres, or the brute is hit).
 # finishes: "pack_dead" (every enemy the ring spawned is dead), "wall_broken" (the cache's wall
-#           goes to a ram at cruise or a slam of at least that strength) or "brute_dead".
+#           goes to a ram at RAM_MIN_PER_CRUISE x cruise or a slam of at least that strength) or "brute_dead".
 # pay:      `scrap` (180, so three activities lift the ball two heft classes), taken with one
 #           part from `rarities` or an authored `named` part id, as a pickup at `where`: the altar, the pedestal or the
 #           place the brute fell, or the relay's mast. A roll with no part pays the scrap when the activity finishes. part_gained carries `source`, which is not in
@@ -151,11 +151,12 @@ const WALL_REACH := 3.0
 const SLAM_REACH := 7.0
 # `slammed` carries the ball's own strength for the landing (player.slam_strength), not a speed.
 # A slam breaks the wall at SLAM_MIN_PER_CRUISE times the strength of a flat landing at cruise speed,
-# so a landing as fast as the ram that breaks it breaks it too and a slower one does not.
+# a landing at cruise. It stays at full cruise, over the ram's bar: slam_strength floors at 0.4, so a bar
+# at 0.85 x cruise (strength 0.397) would let any flat landing break the wall.
 const SLAM_MIN_PER_CRUISE := 1.0
 # A ram breaks the wall at RAM_MIN_PER_CRUISE times cruise into the face. A held stick climbs toward
 # cruise and never quite reaches it on a run-up (12.6-13.8 m/s over 10-22 m, 14.0 only after 30 m),
-# so a bar at cruise itself let only the speed bank's roll start or a burst through: a player
+# so with the bar at cruise itself only the speed bank's roll start or a burst broke the wall: a player
 # already rolling at full speed bumped the face (cautious red team, 26 Oct). A nudge stays under it.
 const RAM_MIN_PER_CRUISE := 0.85
 const PEDESTAL_BACK := 4.0

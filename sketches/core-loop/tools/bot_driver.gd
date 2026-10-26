@@ -2322,7 +2322,7 @@ func _pay_roll(s, ball: Vector3, delta: float) -> void:
 	_act(steer, _nearest_enemy(), delta)
 
 
-# The cache breaks to a ram at cruise square into its face: out to a run-up point on the open
+# The cache breaks to a ram at 0.85 x cruise square into its face: out to a run-up point on the open
 # side, then at the wall along its axis with the wall-avoiding turn off.
 func _cache_ram(s, ball: Vector3, delta: float) -> void:
 	var out: Vector3 = s.global_basis.z

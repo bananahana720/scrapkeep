@@ -17,7 +17,7 @@ extends SceneTree
 #         Two dam spots failed it (26 Oct): the radio's service_ledge face looked across a 24 m slot,
 #         so a roll at it fell in 0 of 6 times and only a jump broke it; the turbine seep's powerhouse
 #         face stood atop an 18 degree ramp, 5.3 m over 16 m, and a boosted roll up it reached the face
-#         under cruise and broke it 0 of 18 times. A flat run-up breaks it 9 of 9.
+#         under cruise and broke it 0 of 18 times. The seep now stands mid-deck (120, 530) facing north.
 #   back  as above, but also behind both side walls (the first-win rooms keep the centreline).
 #
 # Planted: the bend_cache back at its old spot fails both checks; the radio's old service_ledge spot

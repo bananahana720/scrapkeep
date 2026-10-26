@@ -959,7 +959,7 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 
 # Only Rivet's overdrive sprint crumbles it, the tick before contact, so the ball never
 # meets it as a wall. Anyone else meets a plain wall, which they can see. A wall whose
-# spec sets "break_at_cruise" crumbles for any ball at cruise speed or faster (the cracked face's
+# spec sets "break_at_cruise" crumbles for any ball at 0.85 x cruise or faster (the cracked face's
 # bar, Activities.RAM_MIN_PER_CRUISE, so a held roll at full speed counts).
 func _step_wall(w: Dictionary, ball: Vector3, velocity: Vector3, kit, facts: Array) -> void:
 	if w["broken"] or kit == null:
