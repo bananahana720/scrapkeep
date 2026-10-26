@@ -34,11 +34,8 @@ var _icon_material: StandardMaterial3D
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "ArmourMarks"
-	var box := BoxMesh.new()
-	box.size = Vector3.ONE * ICON_SIZE
-	_icon_mesh = box
-	_icon_material = Palette.solid(EventKinds.state_color("plated"), 0.6)
-	_icon_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_icon_mesh = icon_mesh()
+	_icon_material = icon_material()
 	ctx.events.enemy_spawned.connect(_on_spawned)
 	ctx.events.enemy_struck.connect(_on_struck)
 	ctx.events.run_started.connect(func(_class_id: String): _shown = {})
@@ -86,18 +83,9 @@ func _on_struck(enemy: Node3D, _kind: String, _force: float) -> void:
 
 func _stamp(at: Vector3, state: String) -> void:
 	var row := EventKinds.state_row(state)
-	var text := String(row.get("word", ""))
-	if text == "" or not is_inside_tree():
+	if String(row.get("word", "")) == "" or not is_inside_tree():
 		return
-	var label := Label3D.new()
-	label.text = text
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.no_depth_test = true
-	label.font_size = WORD_FONT
-	label.outline_size = 16
-	label.pixel_size = WORD_PIXEL
-	label.modulate = EventKinds.state_color(state)
-	label.outline_modulate = Color(0.05, 0.05, 0.05)
+	var label := word_label(state)
 	add_child(label)
 	var base := at + Vector3.UP * WORD_HEIGHT
 	label.position = base
@@ -112,11 +100,50 @@ func _badge(enemy: Node3D) -> void:
 	var armour := DamageFamilies.armour_of(enemy)
 	if armour == "" or not known(armour):
 		return
+	enemy.add_child(icon_view(_icon_mesh, _icon_material))
+
+
+static func icon_mesh() -> Mesh:
+	var box := BoxMesh.new()
+	box.size = Vector3.ONE * ICON_SIZE
+	return box
+
+
+static func icon_material() -> StandardMaterial3D:
+	var material := Palette.solid(EventKinds.state_color("plated"), 0.6)
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	return material
+
+
+static func icon_view(mesh: Mesh, material: Material) -> MeshInstance3D:
 	var icon := MeshInstance3D.new()
 	icon.name = "ArmourIcon"
-	icon.mesh = _icon_mesh
-	icon.material_override = _icon_material
+	icon.mesh = mesh
+	icon.material_override = material
 	icon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	icon.position = Vector3.UP * ICON_HEIGHT
 	icon.rotation = Vector3(0.0, PI * 0.25, PI * 0.25)
-	enemy.add_child(icon)
+	return icon
+
+
+# The comic word a first read stamps (DENT, ZZAP!), not yet placed.
+static func word_label(state: String) -> Label3D:
+	var label := Label3D.new()
+	label.text = String(EventKinds.state_row(state).get("word", ""))
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.font_size = WORD_FONT
+	label.outline_size = 16
+	label.pixel_size = WORD_PIXEL
+	label.modulate = EventKinds.state_color(state)
+	label.outline_modulate = Color(0.05, 0.05, 0.05)
+	return label
+
+
+# Every view a first armour read shows, as it shows them: the class icon and each stamp word
+# (BakeWarm builds them at stage entry, so the first read draws nothing new).
+static func warm_views() -> Array[Node3D]:
+	var views: Array[Node3D] = [icon_view(icon_mesh(), icon_material())]
+	for state in READ_STATES.values():
+		views.append(word_label(state))
+	return views

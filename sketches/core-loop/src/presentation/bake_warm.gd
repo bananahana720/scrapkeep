@@ -12,6 +12,12 @@ extends Node
 # setup(), dressed by its own deferred bake), in an inert holder far under the stage for one frame,
 # so the render pipelines their surfaces need compile then and not at the first spawn's first
 # frame (six surface pipelines at f451 on the 4080; #241 comment 6399644476).
+# After them come the run's first moments, once a session: the first armour read (its class icon
+# and stamp words), the first synergy ring and the first arc mark each draw a material nothing
+# else drew before, and on the 4080 a lock pack's first multi-kill paid for all of them in one
+# frame (stage 1 f3822, 47-61 ms, 22 pipelines the frame after; unit 23 receipt on #494). Each is
+# built by its owner's own builder in an inert holder for one frame, and the codex category icons
+# it paints on the CPU are drawn ahead. The materials are held, so their shaders stay compiled.
 # A bot run that builds stages whole skips it, like fleet._warm_scripts, so frame costs stay as
 # they were where seeds must replay.
 
@@ -19,6 +25,10 @@ const BakeLook := preload("res://src/presentation/bake_look.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const ArmourMarks := preload("res://src/presentation/armour_marks.gd")
+const Vfx := preload("res://src/presentation/vfx.gd")
+const CodexStyle := preload("res://src/presentation/codex_style.gd")
+const Combat := preload("res://src/combat/combat.gd")
 
 # The world's kits whose GLB bodies carry the bake (assets/models/world_one/enemy_*.glb).
 const WORLD_KITS := {
@@ -47,15 +57,21 @@ const WORLD_RIGS := {
 # Stage 1's pack kinds (alpha_defs PACKS_DAM; its elite and set pieces are not here), by kind
 # name: the ones the warm also builds once.
 const SPAWN_WARM := ["chaser", "lobber", "mag_trapper", "jolt_layer", "hooker", "ramp_flipper", "boom_tender"]
+# The first moments, in the order the warm builds them, one a frame.
+const FIRSTS := ["armour_read", "synergy_ring", "arc_mark", "codex_icons"]
 # Far under every stage, so the one frame a warm spawn stands there is never seen.
 const OUT_OF_SIGHT := Vector3(0.0, -10000.0, 0.0)
 
 static var _warm := {}
 # Rig scenes held for the session, so every spawn's load() returns the scene whose meshes were readied.
 static var _held := {}
+static var _firsts_done := false
+# The first moments' materials, held so the shaders their views compiled are never freed.
+static var _kept: Array[Material] = []
 
 var ctx
 var _queue: Array = []
+var _first_queue: Array = []
 var _shown: Node3D
 
 
@@ -76,6 +92,9 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 			for item in WORLD_KITS.get(world, []) + (WORLD_RIGS.get(world, []) if EnemyMotion.active() else []):
 				if not _warm.has(item) and not _queue.has(item):
 					_queue.append(item)
+			if not _firsts_done:
+				_firsts_done = true
+				_first_queue.append_array(FIRSTS)
 			return
 
 
@@ -90,6 +109,35 @@ func _process(_delta: float) -> void:
 			# Held before setup runs, so a setup that fails still leaves with the next frame.
 			_shown = spawn_holder(self)
 			spawn_into(item, _shown, ctx.player, ctx.spawner.get("ground") if ctx.spawner != null else null)
+	elif not _first_queue.is_empty():
+		_shown = first_view(_first_queue.pop_front(), self)
+
+
+# One first moment's views, as their owners build them, in an inert holder under `parent`
+# (null for a moment with nothing to draw). The codex icons are drawn into their cache.
+static func first_view(first: String, parent: Node) -> Node3D:
+	var views: Array[Node3D] = []
+	match first:
+		"armour_read":
+			views = ArmourMarks.warm_views()
+		"synergy_ring":
+			views = [Vfx.ring_view(0, Color.WHITE)]
+		"arc_mark":
+			views = [Combat.arc_mark_view()]
+		"codex_icons":
+			for id in CodexStyle.CATEGORIES:
+				CodexStyle.icon(id)
+	if views.is_empty():
+		return null
+	var holder := spawn_holder(parent)
+	holder.name = "FirstWarm"
+	holder.remove_meta("spawn_warm")
+	holder.set_meta("first_warm", first)
+	for view in views:
+		holder.add_child(view)
+		if view is GeometryInstance3D and view.material_override != null:
+			_kept.append(view.material_override)
+	return holder
 
 
 # A kit as a spawn builds it, under `parent`: Combat.spawn_enemy's add then setup() (an empty spec
