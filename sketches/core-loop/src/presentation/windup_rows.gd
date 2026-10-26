@@ -10,7 +10,7 @@ const ROWS := {
 		"idle": {"style": "bob", "amplitude": 0.06, "beats": 3.0}, "death": {"style": "scatter", "parts": 4, "seconds": 0.5}},
 	"lobber": {"color_role": "hazard", "shape": "cross", "sound": "threat_whistle", "attacks": {"E02": ["TELEGRAPH"]},
 		"idle": {"style": "breathe", "amplitude": 0.03, "beats": 2.5}, "death": {"style": "collapse", "parts": 6, "seconds": 0.6}},
-	"miniboss": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E03": ["SLAM_CROUCH", "SLAM_LEAP"], "E04": ["CHARGE_BRACE"]},
+	"miniboss": {"color_role": "hazard", "shape": "burst", "sound": "none", "attacks": {"E03": ["slam_crouch", "SLAM_LEAP"], "E04": ["charge_brace"]},
 		"idle": {"style": "breathe", "amplitude": 0.025, "beats": 2.5}, "death": {"style": "scatter", "parts": 8, "seconds": 0.7}},
 	"vault": {"color_role": "neutral", "shape": "none", "sound": "none", "attacks": {"none": []},
 		"idle": {"style": "tick", "amplitude": 0.02, "beats": 2.0}, "death": {"style": "collapse", "parts": 8, "seconds": 0.7}},
