@@ -179,6 +179,16 @@ func step(warden, delta: float) -> void:
 			_ride(warden, delta)
 
 
+# The dam's sheet ram breaks all four chunks at once (DamPosture.apply), so chunk_2 would land on the
+# break's frame, behind the break's park quiet. Its fight phases read the bar's quarters instead: chunk_N
+# when the bar first crosses N quarters (DECISIONS, mounted Wardens pulse chunk_N at posture quarters).
+func phase_chunks_left(warden) -> int:
+	if not warden._posture is DamPosture:
+		return warden.chunks_left()
+	var quarters := floori(warden._posture.posture / warden._posture.FULL * 4.0 + 1e-6)
+	return mini(warden.chunks_left(), maxi(0, 4 - quarters))
+
+
 func judge_sheet_ram(warden, posture, hit: Dictionary, result: Dictionary) -> void:
 	if not result.get("contact", false) or not sheet_live() \
 			or entered_sheet_cycle != gates_opened:
