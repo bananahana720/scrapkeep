@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
+const MusicRows := preload("res://src/presentation/music_rows.gd")
 const T := preload("res://tests/support/t.gd")
 const ParkRiser := preload("res://tests/support/park_riser.gd")
 # plunge_pool_flood has its own world 1 cues since #496; read them from the row.
@@ -33,7 +34,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	t.check("flood row names its cues", flood_riser.begins_with("riser_") and flood_drop.begins_with("drop_"), str([flood_riser, flood_drop]))
+	t.check("flood row names real cues", MusicRows.CUES.get(flood_riser, {}).get("rise", false) and MusicRows.CUES.has(flood_drop) and not MusicRows.CUES[flood_drop].get("rise", true), str([flood_riser, flood_drop]))
 	game = Game.new()
 	game.test_mode = true
 	game.table = "park"

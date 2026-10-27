@@ -27,7 +27,7 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
-	t.check("flood row names its cues", flood_riser.begins_with("riser_") and flood_drop.begins_with("drop_"), str([flood_riser, flood_drop]))
+	t.check("flood row names real cues", MusicRows.CUES.get(flood_riser, {}).get("rise", false) and MusicRows.CUES.has(flood_drop) and not MusicRows.CUES[flood_drop].get("rise", true), str([flood_riser, flood_drop]))
 	await _suspension(false)
 	await _suspension(true)
 	await _suspension(false, true)
