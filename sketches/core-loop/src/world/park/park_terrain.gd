@@ -913,6 +913,9 @@ func _build_tile(t: int) -> PackedVector3Array:
 
 # --- Main thread: add the finished pieces, inside a time budget (deadline -1 means no budget). ---
 
+var _probe_wait := 0
+
+
 func _attach_step(deadline: int) -> void:
 	if _tiles_root == null:
 		_tiles_root = Node3D.new()
@@ -933,6 +936,9 @@ func _attach_step(deadline: int) -> void:
 		var region: Object = _make_region(_regions[_next_region])
 		var _q1 := Time.get_ticks_usec()
 		region.sanitize_maps()
+		var _c: Image = region.get_color_map()
+		if _c != null:
+			print("PROBE color %s region %d format=%d mipmaps=%s size=%s bytes=%d" % [map_id, _next_region, _c.get_format(), _c.has_mipmaps(), _c.get_size(), _c.get_data_size()])
 		var _q2 := Time.get_ticks_usec()
 		if terrain3d.data.has_region(region.get_location()):
 			terrain3d.data.remove_regionl(region.get_location(), false)
@@ -945,9 +951,17 @@ func _attach_step(deadline: int) -> void:
 	if _next_region < _regions.size():
 		return
 	if _next_map < MAP_TYPES.size():
+		# Probe 2: PROBE_MAP_GAP=<frames> waits that long before each map step, colour first.
+		var gap := int(OS.get_environment("PROBE_MAP_GAP")) if OS.has_environment("PROBE_MAP_GAP") else 0
+		if gap > 0 and deadline >= 0:
+			_probe_wait += 1
+			if _probe_wait < gap:
+				return
+			_probe_wait = 0
+		var order: Array = [2, 0, 1] if gap > 0 else MAP_TYPES
 		var _q := Time.get_ticks_usec()
-		terrain3d.data.update_maps(MAP_TYPES[_next_map], true, false)
-		print("PROBE attach %s f=%d update_maps %d %d" % [map_id, Engine.get_process_frames(), MAP_TYPES[_next_map], Time.get_ticks_usec() - _q])
+		terrain3d.data.update_maps(order[_next_map], true, false)
+		print("PROBE attach %s f=%d update_maps %d %d" % [map_id, Engine.get_process_frames(), order[_next_map], Time.get_ticks_usec() - _q])
 		_next_map += 1
 		if deadline >= 0:
 			return
