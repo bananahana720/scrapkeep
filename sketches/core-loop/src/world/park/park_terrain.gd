@@ -955,8 +955,7 @@ func _attach_step(deadline: int) -> void:
 	if _next_map < MAP_TYPES.size():
 		return
 	var added := 0
-	if deadline >= 0:
-		deadline = mini(deadline, Time.get_ticks_usec() + COLLIDER_BUDGET_USEC)
+	deadline = collider_deadline(deadline, Time.get_ticks_usec())
 	while _next_tile < COLLIDER_COUNT:
 		var now := Time.get_ticks_usec()
 		if deadline >= 0 and not tile_fits(added, now, deadline, _tile_usec):
@@ -973,6 +972,11 @@ func _attach_step(deadline: int) -> void:
 
 # Whether one more collider piece fits this frame: up to TILES_PER_FRAME, inside the deadline, and,
 # after the first, only when the last piece's cost still fits.
+# The collider step's deadline: the frame's, cut to COLLIDER_BUDGET_USEC from now; -1 (no deadline) stays.
+static func collider_deadline(deadline: int, now: int) -> int:
+	return deadline if deadline < 0 else mini(deadline, now + COLLIDER_BUDGET_USEC)
+
+
 static func tile_fits(added: int, now: int, deadline: int, last_usec: int) -> bool:
 	return added < TILES_PER_FRAME and now <= deadline and (added == 0 or now + last_usec <= deadline)
 

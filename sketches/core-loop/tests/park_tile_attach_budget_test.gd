@@ -29,6 +29,11 @@ func _run() -> void:
 	t.check("never more than TILES_PER_FRAME a frame", not ParkTerrain.tile_fits(ParkTerrain.TILES_PER_FRAME, 0, budget, 0))
 
 	t.check("the collider pieces' frame budget is under the attach budget", ParkTerrain.COLLIDER_BUDGET_USEC < budget)
+	var cut := ParkTerrain.collider_deadline(1000 + budget, 1000)
+	t.check("the collider step cuts the frame's deadline to its own budget, keeps an earlier one and leaves the landing's -1",
+		cut == 1000 + ParkTerrain.COLLIDER_BUDGET_USEC and ParkTerrain.collider_deadline(1500, 1000) == 1500 and ParkTerrain.collider_deadline(-1, 1000) == -1)
+	t.check("so a costly piece ends the frame's pieces: the second does not fit after a piece that spent the budget",
+		ParkTerrain.tile_fits(0, 1000, cut, 0) and not ParkTerrain.tile_fits(1, 1000 + ParkTerrain.COLLIDER_BUDGET_USEC / 2, cut, ParkTerrain.COLLIDER_BUDGET_USEC))
 	ground._attach_step(1 << 62)
 	t.check("a frame adds at least one piece and measures it",
 		ground._next_tile >= 1 and ground._next_tile <= ParkTerrain.TILES_PER_FRAME and ground._tile_usec > 0, "%d pieces, last %d us" % [ground._next_tile, ground._tile_usec])
