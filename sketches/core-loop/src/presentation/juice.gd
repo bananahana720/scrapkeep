@@ -8,6 +8,7 @@ const NUMBER_LIFT := 1.6
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Parts := preload("res://src/build/parts.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
+const ItemGen := preload("res://src/build/item_gen.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Augments := preload("res://src/movement/augments.gd")
 
@@ -580,7 +581,8 @@ func _on_part(part_id: String, _source: String) -> void:
 	var row := EventKinds.juice("part_gained")
 	var def: Resource = Parts.def(part_id)
 	var tint := EventKinds.color("part_gained")
-	if def != null:
+	# A common part keeps the event's sandstone: mint flashes mean live (VISUAL-LANGUAGE).
+	if def != null and ItemGen.resolve_rarity(String(def.rarity)) not in ["", "common"]:
 		tint = RewardGates.rarity_color(String(def.rarity))
 		tint = row["element"].get(String(def.element), tint)
 	vfx.burst("fountain", player.ball_position() + Vector3.UP * 0.8, tint, int(row["fountain"]))

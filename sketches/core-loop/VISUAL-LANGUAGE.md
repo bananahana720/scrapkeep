@@ -32,7 +32,7 @@ After humans were lost, animals became the reigning intelligent species, and the
 
 ## 2. Palette roles
 
-The eight AD-02 colours carry every role. Three extensions already live in code and keep narrow jobs, and one more is proposed. AD-02 allows local colours, and each extension exists so one fact reads as nothing else.
+The eight AD-02 colours carry every role. Four extensions already live in code and keep narrow jobs, and one more is proposed. AD-02 allows local colours, and each extension exists so one fact reads as nothing else.
 
 | Colour | Hex | Role | Never |
 | --- | --- | --- | --- |

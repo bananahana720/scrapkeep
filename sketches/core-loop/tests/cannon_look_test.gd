@@ -193,7 +193,7 @@ func _check_icons() -> void:
 		var svg := FileAccess.get_file_as_string(path)
 		var kest := FileAccess.get_file_as_string("res://assets/icons/ab_kest_%s.svg" % slot)
 		_t.check(id + " drawn", svg != "" and svg != kest, "%s exists and differs from Kest's" % path)
-		_t.check(id + " palette", svg.contains("#3d8bff") and not svg.contains("#e5a044"), "ancient blue accent, no amber")
+		_t.check(id + " palette", svg.contains("#9dff3c") and not svg.contains("#e5a044"), "ancient green accent, no amber")
 		var tex := Icons.texture(id)
 		_t.check(id + " registered", Icons.EXTRA.has(id) and tex != null and tex.get_width() > 0 and Icons.from_file(id),
 			"in Icons.EXTRA, loads from its file")
