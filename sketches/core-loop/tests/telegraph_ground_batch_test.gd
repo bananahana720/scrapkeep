@@ -11,8 +11,9 @@ const EventGround := preload("res://src/world/events/event_ground.gd")
 # A telegraph reads the ground under all its marks in one ask (terrain.gd heights, Painter.ground_many):
 # a Warden pulse's two rings through height() one point at a time were 20 ms of a flume frame on the
 # cloud. The batch must answer what height() answers point by point, with an overlay down under the
-# ring and one far away (left out of the batch), and a ring painted through it must be the ring
-# painted point by point. In the arena the boss floor reads each point, so the batch stays out.
+# ring and one far away (left out of a batch whose bounds miss it, read once they reach it), and a
+# ring painted through it must be the ring painted point by point. In the arena the boss floor reads
+# each point, so the batch stays out.
 
 const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_flume"}]}
 
@@ -63,17 +64,15 @@ func _run() -> void:
 	for r in [0.0, 1.5, 3.0, 4.5, 6.0, 7.5, 9.0, 11.0]:
 		for k in 72:
 			points.append(Vector2(at.x, at.z) + Vector2.from_angle(TAU * k / 72.0) * r)
-	points.append(Vector2(at.x + 200.0, at.z + 200.0))
-	var batch: PackedFloat64Array = terrain.heights(points)
-	var worst := 0.0
-	var raised := 0
-	for k in points.size():
-		var one: float = terrain.height(points[k].x, points[k].y)
-		worst = maxf(worst, absf(batch[k] - one))
-		if one > terrain._floor(0, points[k].x, points[k].y) + 0.5:
-			raised += 1
-	_t.check("heights() answers height() at every point", worst == 0.0, "worst difference %.6f m over %d points" % [worst, points.size()])
-	_t.check("the near overlay stands under some ring points and the far one under its own", raised > 1, "%d raised" % raised)
+	# The ring alone leaves the far overlay out; with a point just inside the far footprint's corner the
+	# bounds reach it and it is read.
+	var corner := Vector2(at.x + 200.0, at.z + 200.0) + Vector2(4.9, 4.9)
+	var ring_raised := _compare(terrain, points, "the ring alone (far overlay left out)")
+	var with_far := points.duplicate()
+	with_far.append(corner)
+	_compare(terrain, with_far, "the ring and a point inside the far footprint's corner")
+	_t.check("the near overlay stands under some ring points", ring_raised > 0, "%d raised" % ring_raised)
+	_t.check("the far overlay stands under the corner point", terrain.height(corner.x, corner.y) > terrain._floor(0, corner.x, corner.y) + 0.5)
 	_t.check("an empty ask answers empty", terrain.heights(PackedVector2Array()).is_empty())
 
 	var ctx := Ctx.new()
@@ -93,6 +92,21 @@ func _run() -> void:
 	var arena_ring = Telegraph.ring(world, ground, Threat.Type.INSTANT, at, 9.0)
 	_same_paint(arena_ring, "arena")
 	quit(_t.verdict())
+
+
+# heights() against height() point by point; answers how many points an overlay raised.
+func _compare(terrain, points: PackedVector2Array, label: String) -> int:
+	var batch: PackedFloat64Array = terrain.heights(points)
+	var worst := 0.0
+	var raised := 0
+	for k in points.size():
+		var one: float = terrain.height(points[k].x, points[k].y)
+		worst = maxf(worst, absf(batch[k] - one))
+		if one > terrain._floor(0, points[k].x, points[k].y) + 0.5:
+			raised += 1
+	_t.check("%s: heights() answers height() at every point" % label, batch.size() == points.size() and worst == 0.0,
+		"worst difference %.6f m over %d points" % [worst, points.size()])
+	return raised
 
 
 # The ring's painter against one painted point by point from the same marks.
