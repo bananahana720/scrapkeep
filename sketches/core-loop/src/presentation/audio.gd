@@ -742,11 +742,12 @@ func _pump(virtual_frames := -1) -> void:
 		frames = mini(ace.frames_to_pump(_music_pb, _ring_capacity, target), _stinger_pb.get_frames_available())
 	var wanted := mini(frames, 8192)
 	frames = _park_render_limit(wanted)
-	_park_held = frames < wanted
 	if frames > 0:
 		_render_music(frames, ace_live)
 		_music_pb.push_buffer(out_music)
 		_stinger_pb.push_buffer(engine.out_stinger)
+	# A clamp that leaves most of the queue in the ring cannot be what empties it.
+	_park_held = frames < wanted and (_ring_capacity - _music_pb.get_frames_available()) * 2 < queue_target
 	if settle:
 		_skips_seen = _music_pb.get_skips()
 
