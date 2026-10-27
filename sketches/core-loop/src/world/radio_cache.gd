@@ -60,41 +60,53 @@ static func spawn_for(map_id: String, found: Callable, parent: Node, deck_ref, p
 
 func _ready() -> void:
 	add_to_group(GROUP)
+	if _parts.is_empty():
+		_parts = _make_parts()
 	var mast := MeshInstance3D.new()
+	mast.mesh = _parts.pole
+	mast.position.y = 1.2
+	mast.material_override = _parts.copper
+	add_child(mast)
+	var dish := MeshInstance3D.new()
+	dish.mesh = _parts.bowl
+	dish.position = Vector3(0.0, 2.2, 0.0)
+	dish.rotation_degrees = Vector3(-120.0, 0.0, 0.0)
+	dish.material_override = _parts.brass
+	add_child(dish)
+	_lamp = MeshInstance3D.new()
+	_lamp.mesh = _parts.bulb
+	_lamp.position.y = 2.55
+	_lamp.material_override = _parts.lamp
+	add_child(_lamp)
+	_ring = MeshInstance3D.new()
+	_ring.mesh = _parts.torus
+	_ring.position.y = 2.2
+	_ring.material_override = _parts.ring
+	add_child(_ring)
+
+
+# Every cache is the same mast, dish, lamp and ring, so the meshes and materials are made once
+# and shared: a primitive mesh builds its arrays and a material its shader on first use, which
+# was 1.5 ms a cache on the stage entry frame.
+static var _parts := {}
+
+static func _make_parts() -> Dictionary:
 	var pole := CylinderMesh.new()
 	pole.top_radius = 0.06
 	pole.bottom_radius = 0.1
 	pole.height = 2.4
-	mast.mesh = pole
-	mast.position.y = 1.2
-	mast.material_override = _metal(Palette.COPPER)
-	add_child(mast)
-	var dish := MeshInstance3D.new()
 	var bowl := SphereMesh.new()
 	bowl.radius = 0.55
 	bowl.height = 0.35
 	bowl.is_hemisphere = true
-	dish.mesh = bowl
-	dish.position = Vector3(0.0, 2.2, 0.0)
-	dish.rotation_degrees = Vector3(-120.0, 0.0, 0.0)
-	dish.material_override = _metal(Palette.BRASS)
-	add_child(dish)
-	_lamp = MeshInstance3D.new()
 	var bulb := SphereMesh.new()
 	bulb.radius = 0.12
 	bulb.height = 0.24
-	_lamp.mesh = bulb
-	_lamp.position.y = 2.55
-	_lamp.material_override = _glow(Palette.ARC)
-	add_child(_lamp)
-	_ring = MeshInstance3D.new()
 	var torus := TorusMesh.new()
 	torus.inner_radius = 0.9
 	torus.outer_radius = 1.0
-	_ring.mesh = torus
-	_ring.position.y = 2.2
-	_ring.material_override = _glow(Color(Palette.ARC, 0.5))
-	add_child(_ring)
+	return {"pole": pole, "bowl": bowl, "bulb": bulb, "torus": torus, "copper": _metal(Palette.COPPER),
+		"brass": _metal(Palette.BRASS), "lamp": _glow(Palette.ARC), "ring": _glow(Color(Palette.ARC, 0.5))}
 
 
 static func _metal(color: Color) -> StandardMaterial3D:

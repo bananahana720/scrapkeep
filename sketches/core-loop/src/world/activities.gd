@@ -667,7 +667,7 @@ func _build_interior(s: Site) -> void:
 		_mesh_box(root, size, at, _interior_block)
 	for entrance in s.interior.entrances:
 		for side in [-1.0, 1.0]:
-			_mesh_box(root, Vector3(0.3, 2.0, 0.3), Vector3(entrance.at[0] + side * entrance.width * 0.5, 1.0, entrance.at[1]), Palette.solid(EventKinds.activity_color(s.view.id)))
+			_mesh_box(root, Vector3(0.3, 2.0, 0.3), Vector3(entrance.at[0] + side * entrance.width * 0.5, 1.0, entrance.at[1]), _solid(EventKinds.activity_color(s.view.id)))
 	# The interior builds after the site's own dressing pass, so it dresses its own blocks (2026-10-14).
 	load("res://src/presentation/spillway_scenery.gd").dress_props(root)
 
@@ -701,9 +701,9 @@ func _activate_interior_collision(s: Site) -> void:
 
 
 func _build_altar(s: Site) -> void:
-	_mesh_cylinder(s, 0.45, 3.2, Vector3.UP * 1.6, Palette.solid(Palette.VERDIGRIS))
-	s.cap = _mesh_box(s, Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.solid(Palette.BRASS))
-	_mesh_box(s, Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, Palette.solid(Palette.SAND))
+	_mesh_cylinder(s, 0.45, 3.2, Vector3.UP * 1.6, _solid(Palette.VERDIGRIS))
+	s.cap = _mesh_box(s, Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, _solid(Palette.BRASS))
+	_mesh_box(s, Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, _solid(Palette.SAND))
 
 
 func _build_cache(s: Site) -> void:
@@ -719,7 +719,7 @@ func _build_cache(s: Site) -> void:
 		Palette.striped(Palette.SANDSTONE, Palette.VERDIGRIS), true)
 	for k in 3:
 		var crack := _mesh_box(s.wall, Vector3(WALL_HALF_W * 1.3, 0.2, 1.1), Vector3(0.0, -1.2 + k * 1.6, 0.0),
-			Palette.solid(Palette.CHARCOAL))
+			_solid(Palette.CHARCOAL))
 		crack.rotation.z = 0.5 - k * 0.45
 	for side in [-1.0, 1.0]:
 		_mesh_box(s, Vector3(1.0, tall, WALL_DEPTH), Vector3(side * (WALL_HALF_W + 0.5), mid, -WALL_DEPTH * 0.5), concrete, true)
@@ -727,7 +727,7 @@ func _build_cache(s: Site) -> void:
 	var local := Vector3(0.0, 0.0, -PEDESTAL_BACK)
 	s.pedestal = s.to_global(local)
 	s.pedestal.y = ctx.terrain.height(s.pedestal.x, s.pedestal.z)
-	_mesh_cylinder(s, 0.8, 0.6, s.to_local(s.pedestal) + Vector3.UP * 0.3, Palette.solid(Palette.CHARCOAL))
+	_mesh_cylinder(s, 0.8, 0.6, s.to_local(s.pedestal) + Vector3.UP * 0.3, _solid(Palette.CHARCOAL))
 	# Finish only: the same workshop materials the Spillway props wear; colliders stay as built.
 	load("res://src/presentation/spillway_scenery.gd").dress_props(s, s.view)
 	# The dressed finish shader carries no emission, so the glow is this site's own additive
@@ -759,7 +759,7 @@ func _dress_find(s: Site, find_id: String) -> void:
 # from Secrets.DRIP_HEAR_M. Both go with the face when it breaks.
 func _seep_tell(s: Site) -> void:
 	if _find_wet == null:
-		_find_wet = Palette.solid(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.35))
+		_find_wet = _solid(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.35))
 	var wet := _find_wet
 	for k in FIND_SEEP_STREAKS.size():
 		var streak: Vector3 = FIND_SEEP_STREAKS[k]
@@ -783,9 +783,9 @@ func _dress_door(s: Site) -> void:
 	clock.name = "DoorClock"
 	clock.position = Vector3(0.0, 1.3, 0.52)
 	s.wall.add_child(clock)
-	_mesh_box(clock, Vector3(DOOR_CLOCK_M, DOOR_CLOCK_M, 0.1), Vector3.ZERO, Palette.solid(Palette.BRASS))
-	_mesh_box(clock, Vector3(DOOR_CLOCK_M - 0.3, DOOR_CLOCK_M - 0.3, 0.06), Vector3(0.0, 0.0, 0.06), Palette.solid(Palette.LEDGER))
-	var ink := Palette.solid(Palette.CHARCOAL)
+	_mesh_box(clock, Vector3(DOOR_CLOCK_M, DOOR_CLOCK_M, 0.1), Vector3.ZERO, _solid(Palette.BRASS))
+	_mesh_box(clock, Vector3(DOOR_CLOCK_M - 0.3, DOOR_CLOCK_M - 0.3, 0.06), Vector3(0.0, 0.0, 0.06), _solid(Palette.LEDGER))
+	var ink := _solid(Palette.CHARCOAL)
 	# Hands at five to twelve: the hour hand straight up, the minute hand a little short of it.
 	var hour := _mesh_box(clock, Vector3(0.1, DOOR_CLOCK_M * 0.3, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.15, 0.1), ink)
 	hour.name = "HourHand"
@@ -800,7 +800,7 @@ func _dress_door(s: Site) -> void:
 # Secrets.RADIO_HEAR_M. The aerial stays; the sound goes with the face.
 func _radio_tell(s: Site) -> void:
 	var aerial := _mesh_box(s, Vector3(0.12, FIND_AERIAL_M, 0.12), Vector3(WALL_HALF_W - 1.0, WALL_HEIGHT + FIND_AERIAL_M * 0.5, -1.0),
-		Palette.solid(Palette.BRASS))
+		_solid(Palette.BRASS))
 	aerial.name = "FindAerial"
 	s.wall.add_child(_find_sound("find_radio", Secrets.RADIO_HEAR_M))
 
@@ -832,10 +832,10 @@ func _hang_board(s: Site, site_name: String, title: String, text: String) -> voi
 	s.name = site_name
 	var board_z := -WALL_DEPTH + 0.06
 	var frame := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x + 0.3, ROOM_BOARD_SIZE.y + 0.3, 0.08),
-		Vector3(0.0, ROOM_LOG_HEIGHT, board_z), Palette.solid(Palette.BRASS))
+		Vector3(0.0, ROOM_LOG_HEIGHT, board_z), _solid(Palette.BRASS))
 	frame.name = "RoomBoardFrame"
 	var board := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x, ROOM_BOARD_SIZE.y, 0.08),
-		Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.04), Palette.solid(Palette.CHARCOAL))
+		Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.04), _solid(Palette.CHARCOAL))
 	board.name = "RoomBoard"
 	var label := Label3D.new()
 	label.name = "RoomLog"
@@ -855,7 +855,7 @@ func _hang_board(s: Site, site_name: String, title: String, text: String) -> voi
 # Four strokes and the bar through them, chalked on the cracked face: the crew's count of a shift
 # that came back. It goes with the face when the wall breaks.
 func _chalk_tally(wall: Node3D) -> void:
-	var chalk := Palette.solid(Palette.LEDGER)
+	var chalk := _solid(Palette.LEDGER)
 	var tally := Node3D.new()
 	tally.name = "RoomTally"
 	tally.position = ROOM_TALLY_AT
@@ -877,7 +877,7 @@ func _hang_glove(s: Site) -> void:
 	# Hung fingers down, then slanted a little across the face.
 	glove.basis = (Basis(Vector3.BACK, 0.22) * Basis(Vector3.RIGHT, -PI * 0.5)).scaled(Vector3.ONE * ROOM_GLOVE_SCALE)
 	s.wall.add_child(glove)
-	var leather := Palette.solid(Palette.COPPER)
+	var leather := _solid(Palette.COPPER)
 	_mesh_box(glove, Vector3(0.62, 0.2, 0.66), Vector3.ZERO, leather)
 	for k in 4:
 		var finger := MeshInstance3D.new()
@@ -898,15 +898,31 @@ func _hang_glove(s: Site) -> void:
 	thumb.rotation = Vector3(PI * 0.5, 1.0, 0.0)
 	thumb.position = Vector3(-0.42, -0.02, -0.02)
 	glove.add_child(thumb)
-	_mesh_box(glove, Vector3(0.7, 0.24, 0.26), Vector3(0.0, 0.01, 0.42), Palette.solid(Palette.LEDGER))
-	_mesh_box(glove, Vector3(0.05, 0.45, 0.05), Vector3(0.0, 0.0, 0.5), Palette.solid(Palette.CHARCOAL))
+	_mesh_box(glove, Vector3(0.7, 0.24, 0.26), Vector3(0.0, 0.01, 0.42), _solid(Palette.LEDGER))
+	_mesh_box(glove, Vector3(0.05, 0.45, 0.05), Vector3(0.0, 0.0, 0.5), _solid(Palette.CHARCOAL))
+
+
+# A site's parts repeat from site to site and stage to stage, so their flat materials and meshes are
+# made once and shared by key (each new one built its shader or arrays on the stage entry frame).
+# Nothing writes to a shared one.
+static var _parts := {}
+
+
+static func _solid(color: Color) -> StandardMaterial3D:
+	var key := "solid:" + color.to_html()
+	if not _parts.has(key):
+		_parts[key] = Palette.solid(color)
+	return _parts[key]
 
 
 func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid := false) -> Node3D:
 	var mesh := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	mesh.mesh = bm
+	var key := "box:%s" % size
+	if not _parts.has(key):
+		var bm := BoxMesh.new()
+		bm.size = size
+		_parts[key] = bm
+	mesh.mesh = _parts[key]
 	mesh.material_override = mat
 	if not solid:
 		mesh.position = at
@@ -927,11 +943,14 @@ func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid 
 
 func _mesh_cylinder(parent: Node3D, radius: float, height: float, at: Vector3, mat: Material) -> void:
 	var mesh := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = radius
-	cm.bottom_radius = radius
-	cm.height = height
-	mesh.mesh = cm
+	var key := "cylinder:%s:%s" % [radius, height]
+	if not _parts.has(key):
+		var cm := CylinderMesh.new()
+		cm.top_radius = radius
+		cm.bottom_radius = radius
+		cm.height = height
+		_parts[key] = cm
+	mesh.mesh = _parts[key]
 	mesh.material_override = mat
 	mesh.position = at
 	parent.add_child(mesh)
