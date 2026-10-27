@@ -55,6 +55,8 @@ const MOMENTS := {
 	},
 }
 const WORDS := {"fleet_heavy": "KLANG", "ancient_heavy": "KRZZT", "stagger": "KRNK", "elite": "CLOCKED OUT"}
+# Every glyph the uppercase words draw (WORDS, SPECIALS, BOSSES and the fall words).
+const WARM_GLYPHS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?.,'+-"
 const WORD_TINT := {"fleet": Palette.BRASS, "ancient": Palette.ANCIENT}
 
 # The four kill-first specials (ENEMY-PRIORITY.md 4, 4a; SOUND-BIBLE specials). Each
@@ -305,6 +307,13 @@ func _note(moment: String, who: String, at: Vector3) -> void:
 # --- Words -----------------------------------------------------------------------------
 
 func _make_word() -> Dictionary:
+	var label := word_label()
+	label.visible = false
+	root.add_child(label)
+	return {"node": label, "t": INF, "life": WORD_LIFE, "at": Vector3.ZERO, "scale": 1.0}
+
+
+static func word_label() -> Label3D:
 	var label := Label3D.new()
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.font_size = 112
@@ -316,10 +325,17 @@ func _make_word() -> Dictionary:
 	label.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	label.render_priority = 20
 	label.outline_render_priority = 19
-	label.visible = false
 	label.name = "Word"
-	root.add_child(label)
-	return {"node": label, "t": INF, "life": WORD_LIFE, "at": Vector3.ZERO, "scale": 1.0}
+	return label
+
+
+# A word label showing every glyph a word can draw, for BakeWarm: the first word of a run (KLANG
+# on a heavy hit) otherwise rasterizes its glyphs at this size and outline in the frame's deferred
+# Label3D update (stage 1 f3822, 44 ms of a 106-121 ms frame on the cloud box).
+static func warm_views() -> Array[Node3D]:
+	var label := word_label()
+	label.text = WARM_GLYPHS
+	return [label]
 
 
 # Stamps a drawn sound word over `at`: three frames of overshoot, a hold, then it slides

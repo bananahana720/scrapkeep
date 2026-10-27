@@ -3,7 +3,8 @@ extends SceneTree
 # Rule (dam f3822, unit 23 receipt on #494): the run's first moments draw no material for the
 # first time mid-fight. After the first stage entry of a session, bake_warm.gd builds each first
 # moment's views with its owner's own builder (the first kill's scrap pickups, the armour read's
-# class icon and stamp words, the synergy ring, the arc mark) in an inert holder out of sight, one a frame, holds their
+# class icon and stamp words, the synergy ring, the arc mark, a machine word label with every glyph a
+# word draws) in an inert holder out of sight, one a frame, holds their
 # materials, and draws the codex category icons ahead. Fixture: the warm node on a bare event
 # bus; it runs under the headless (dummy) renderer like every test here.
 
@@ -14,6 +15,7 @@ const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const Combat := preload("res://src/combat/combat.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const MachineFx := preload("res://src/presentation/machine_fx.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const Context := preload("res://src/core/context.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
@@ -88,6 +90,17 @@ func _run() -> void:
 		pickups.size() == 2 * variants and pickups.all(func(v): return v["shader"] == ScrapField._pickup_material(Palette.ARC).shader), "%d views" % pickups.size())
 	var arc: Array = views.get("arc_mark", [])
 	t.check("the arc mark draws the shared ring every mark draws", arc.size() == 1 and arc[0]["mesh"] == Combat._arc_ring())
+	var machine: Array = views.get("machine_words", [])
+	t.check("the machine word stands at the size and outline a word draws, with every glyph a word can draw",
+		machine.size() == 1 and machine[0]["text"] == MachineFx.WARM_GLYPHS and machine[0]["font"] == [112, 30, true], str(machine))
+	var drawn := MachineFx.WORDS.values()
+	for table in [MachineFx.SPECIALS, MachineFx.BOSSES]:
+		for row in table.values():
+			for key in row:
+				if String(key).ends_with("_word"):
+					drawn.append(String(row[key]))
+	var missing := drawn.filter(func(w: String): return Array(w.to_upper().replace(" ", "").split("")).any(func(c): return c not in MachineFx.WARM_GLYPHS))
+	t.check("every machine word's glyphs are in the warm label", not drawn.is_empty() and missing.is_empty(), str(missing))
 	t.check("the materials the views drew are held", BakeWarm._kept.size() == 3 and BakeWarm._kept.all(func(m): return is_instance_valid(m)))
 	t.check("the kill chunks' glb is held, loaded on the main thread under the headless renderer, so a discovery burst reads the cache",
 		ResourceLoader.has_cached(HeroAssets.CHUNKS_PATH) and BakeWarm._held.get(HeroAssets.CHUNKS_PATH) == load(HeroAssets.CHUNKS_PATH) and BakeWarm._loading.is_empty())
@@ -124,6 +137,7 @@ func _read(view: Node) -> Dictionary:
 	var row := {"name": String(view.name)}
 	if view is Label3D:
 		row["text"] = view.text
+		row["font"] = [view.font_size, view.outline_size, view.uppercase]
 	elif view is MeshInstance3D:
 		var material: Material = view.material_override
 		row["mesh"] = view.mesh if view.mesh is ArrayMesh else (view.mesh as PrimitiveMesh).get_class()

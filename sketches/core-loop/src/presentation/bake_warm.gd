@@ -14,10 +14,12 @@ extends Node
 # frame (six surface pipelines at f451 on the 4080; #241 comment 6399644476).
 # After them come the run's first moments, once a session: the first kill's scrap pickups, the
 # first armour read (its class icon and stamp words), the first synergy ring and the first arc
-# mark each draw a material nothing else drew before, and on the 4080 a lock pack's first multi-kill paid for all of them in one
-# frame (stage 1 f3822, 47-61 ms, 22 pipelines the frame after; unit 23 receipt on #494). Each is
-# built by its owner's own builder in an inert holder for one frame, and the codex category icons
-# it paints on the CPU are drawn ahead. The materials are held, so their shaders stay compiled.
+# mark each draw a material nothing else drew before, and on the 4080 a lock pack's first multi-kill
+# paid for all of them in one frame (stage 1 f3822, 47-61 ms, 22 pipelines the frame after; unit 23
+# receipt on #494). The first machine word (KLANG on a heavy hit) rasterizes its glyphs in that
+# frame's deferred Label3D update (44 ms of it on the cloud box), so a word label with every glyph
+# a word draws stands first too. Each is built by its owner's own builder in an inert holder for
+# one frame, and the codex category icons it paints on the CPU are drawn ahead. The materials are held, so their shaders stay compiled.
 # A bot run that builds stages whole skips it, like fleet._warm_scripts, so frame costs stay as
 # they were where seeds must replay.
 
@@ -31,6 +33,7 @@ const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const Combat := preload("res://src/combat/combat.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const MachineFx := preload("res://src/presentation/machine_fx.gd")
 
 # The world's kits whose GLB bodies carry the bake (assets/models/world_one/enemy_*.glb).
 const WORLD_KITS := {
@@ -62,7 +65,7 @@ const SPAWN_WARM := ["chaser", "lobber", "mag_trapper", "jolt_layer", "hooker", 
 # The first moments with a view, in the order the warm builds them, one a frame; then each codex
 # category icon ("codex_icon:<category>"), one a frame. "hero_chunks" starts a threaded load of the kill
 # chunks' glb and holds it when done, so the first discovery burst reads it from the cache, not the disk.
-const FIRSTS := ["scrap_pickup", "armour_read", "synergy_ring", "arc_mark", "hero_chunks"]
+const FIRSTS := ["scrap_pickup", "armour_read", "synergy_ring", "arc_mark", "machine_words", "hero_chunks"]
 # Far under every stage, so the one frame a warm spawn stands there is never seen.
 const OUT_OF_SIGHT := Vector3(0.0, -10000.0, 0.0)
 
@@ -159,6 +162,8 @@ static func first_view(first: String, parent: Node) -> Node3D:
 			views = [Combat.arc_mark_view()]
 		"scrap_pickup":
 			views = ScrapField.warm_views()
+		"machine_words":
+			views = MachineFx.warm_views()
 		"hero_chunks":
 			# The headless renderer's mesh RIDs are not thread-safe (thread_guard.gd), so there the glb's
 			# ArrayMeshes load on the main thread, as park_props._uncached does.
