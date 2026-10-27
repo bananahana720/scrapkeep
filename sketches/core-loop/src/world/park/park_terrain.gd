@@ -933,11 +933,13 @@ func _attach_step(deadline: int) -> void:
 			return
 	if _next_region < _regions.size():
 		# A region a frame: making it with its maps, then the sanitize and the add.
+		var _q := Time.get_ticks_usec()
 		var region: Object = _make_region(_regions[_next_region])
 		region.sanitize_maps()
 		if terrain3d.data.has_region(region.get_location()):
 			terrain3d.data.remove_regionl(region.get_location(), false)
 		terrain3d.data.add_region(region, false)
+		print("PROBE3 %s f=%d region %d us=%d" % [map_id, Engine.get_process_frames(), _next_region, Time.get_ticks_usec() - _q])
 		_regions[_next_region] = null
 		_next_region += 1
 		if deadline >= 0:
@@ -949,7 +951,9 @@ func _attach_step(deadline: int) -> void:
 			_map_wait += 1
 			return
 		_map_wait = 0
+		var _q := Time.get_ticks_usec()
 		terrain3d.data.update_maps(MAP_TYPES[_next_map], true, false)
+		print("PROBE3 %s f=%d update_maps %d us=%d" % [map_id, Engine.get_process_frames(), MAP_TYPES[_next_map], Time.get_ticks_usec() - _q])
 		_next_map += 1
 		if deadline >= 0:
 			return
@@ -961,6 +965,8 @@ func _attach_step(deadline: int) -> void:
 		if deadline >= 0 and not tile_fits(added, now, deadline, _tile_usec):
 			return
 		_add_tile(_next_tile)
+		if _next_tile == 0 or _next_tile == TILE_COUNT - 1:
+			print("PROBE3 %s f=%d tile %d" % [map_id, Engine.get_process_frames(), _next_tile])
 		_tile_usec = Time.get_ticks_usec() - now
 		_faces[_next_tile] = null
 		_next_tile += 1
@@ -971,7 +977,9 @@ func _attach_step(deadline: int) -> void:
 		return
 	phase = Phase.READY
 	set_process(false)
+	var _q2 := Time.get_ticks_usec()
 	built.emit()
+	print("PROBE3 %s f=%d built us=%d" % [map_id, Engine.get_process_frames(), Time.get_ticks_usec() - _q2])
 
 
 # Whether one more collider tile fits this frame: up to TILES_PER_FRAME, inside the deadline, and,
