@@ -13,7 +13,7 @@ extends RefCounted
 #   retired  true on a verb no key fills any more (the old F special), kept for its readers
 # game.gd registers every action from here and holds no key table of its own.
 const VERBS := {
-	"roll": {"intent": "move", "fail": "none", "glyph": "key_w", "label": "W A S D", "icon": "",
+	"roll": {"intent": "move", "fail": "verb_fail_roll", "glyph": "key_w", "label": "W A S D", "icon": "",
 		"actions": {
 			"cl_forward": {"keys": [KEY_W, KEY_UP], "axis": [JOY_AXIS_LEFT_Y, -1]},
 			"cl_back": {"keys": [KEY_S, KEY_DOWN], "axis": [JOY_AXIS_LEFT_Y, 1]},

@@ -103,6 +103,10 @@ const RULES := {
 	"cracked_cache": {
 		"starts": "none", "ring": 5.0, "finishes": "wall_broken", "face": Vector2(0.0, -1.0),
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_cache", "where": "pedestal"},
+		# A bump under the ram's bar answers with the roll's refused cue (ruling p), so the face reads as
+		# "faster", not as solid: from `floor` x cruise up to the bar, in these worlds, once a face every
+		# `gap_s` of play. Under the floor (a ball resting on or easing into the face) it stays quiet.
+		"refused": {"worlds": [1], "floor": 0.4, "gap_s": 3.0},
 	},
 	# Hold the Relay in a park (W13 SR10): a stake post `post_out` metres outside the ring, past the
 	# miniboss zone, on the side facing the stage's drop-in, takes 0 to 4 stacks before the ball rolls into the ring; the
@@ -148,6 +152,8 @@ const WALL_DEPTH := 8.0
 const WALL_HEIGHT := 6.0
 const WALL_SINK := 3.0
 const WALL_REACH := 3.0
+# The ball touching the face: its centre one radius (Tuning.RADIUS 1.0) and a little more off it.
+const WALL_CONTACT := 1.2
 const SLAM_REACH := 7.0
 # `slammed` carries the ball's own strength for the landing (player.slam_strength), not a speed.
 # A slam breaks the wall at SLAM_MIN_PER_CRUISE times the strength of a flat landing at cruise speed,
@@ -272,6 +278,8 @@ class Site extends Node3D:
 	var heal_paid := false
 	var tier_label: Label3D
 	var difficulty := 1.0
+	# The physics frame of this face's last refused cue (RULES cracked_cache refused).
+	var refused_frame := -1
 	var round := 0
 	var round_elements: Array = []
 	var round_credits := 0.0
@@ -1586,8 +1594,25 @@ func _watch_wall(s: Site, ball: Vector3) -> void:
 	var ahead := local.z - 0.5
 	if ahead < -1.0 or ahead > WALL_REACH + maxf(0.0, toward) / 30.0 or absf(local.x) > WALL_HALF_W + 1.0 or local.y > WALL_HEIGHT + 2.0:
 		return
-	if toward >= ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE:
+	var bar: float = ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE
+	if toward >= bar:
 		_break_wall(s)
+	elif ahead <= WALL_CONTACT and local.y < WALL_HEIGHT:
+		_refuse_ram(s, toward)
+
+
+# A bump under the bar: the roll's refused cue, once a face per gap, in the worlds the rule names.
+func _refuse_ram(s: Site, toward: float) -> void:
+	var cue: Dictionary = s.rule.get("refused", {})
+	if cue.is_empty() or toward < ctx.tuning.f("cruise") * float(cue["floor"]):
+		return
+	if not int(ctx.stages.world_of(ctx.run.stage)) in cue["worlds"]:
+		return
+	var frame := Engine.get_physics_frames()
+	if s.refused_frame >= 0 and frame - s.refused_frame < int(float(cue["gap_s"]) * Engine.physics_ticks_per_second):
+		return
+	s.refused_frame = frame
+	ctx.events.verb_failed.emit("roll", "under_bar", ctx.player.ball_position())
 
 
 func _slammed(at: Vector3, strength: float) -> void:
