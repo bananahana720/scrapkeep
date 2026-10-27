@@ -24,6 +24,17 @@ func height(x: float, z: float) -> float:
 	return height_at(Vector3(x, 0.0, z))
 
 
+# The terrain's height at many (x, z) points, for a telegraph's paint. Empty in the arena (the boss
+# floor reads the whole point) or over a terrain without the batch: the caller asks height_at per point.
+func heights(points: PackedVector2Array) -> PackedFloat64Array:
+	var boss = ctx.get("boss")
+	if ctx.flow != null and ctx.flow.in_arena and is_instance_valid(boss) and boss.has_method("ground_height_at"):
+		return PackedFloat64Array()
+	if not ctx.terrain.has_method("heights"):
+		return PackedFloat64Array()
+	return ctx.terrain.heights(points)
+
+
 func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
 
