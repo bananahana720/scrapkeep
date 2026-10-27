@@ -394,6 +394,10 @@ static func prepare_data(path: String, map, layout: bool) -> Dictionary:
 	var graph = ParkGraph.read(path) if FileAccess.file_exists(path) else null
 	if graph == null:
 		return {"graph": null, "pool": PackedInt32Array(), "layout": {}}
+	# The zone member lists fill on their first read, the entry tick's rib cache spots (7 ms on the
+	# cloud at the flume, scrapkeep#494), so the worker fills them while the graph is still its own.
+	if graph.zone_count() > 0:
+		graph.zone_nodes(0)
 	return {"graph": graph, "pool": TradePockets.candidates(graph, map), "layout": PocketDraw.prepare(graph, map) if layout else {}}
 
 

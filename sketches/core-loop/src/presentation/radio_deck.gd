@@ -13,6 +13,7 @@ const RadioCache := preload("res://src/world/radio_cache.gd")
 # station. The dial on the HUD (radio_dial.gd) draws what this holds.
 
 const PLAN_EVERY := 0.25
+const PLACE_AFTER_FRAMES := 4
 const SILENT_STATES := ["stage", "beacon", "gates", "launch", "boss", "dead"]
 
 var game
@@ -24,6 +25,7 @@ var _counts := {}
 var _cut_in := ""
 var _plan_left := 0.0
 var _dirty := false
+var _entries := 0
 
 
 func setup(game_ref) -> void:
@@ -41,7 +43,7 @@ func setup(game_ref) -> void:
 		events.run_started.connect(func(_class_id: String): _counts.clear())
 		events.flow_changed.connect(_on_flow_changed)
 		events.stage_entered.connect(func(_stage: int, _retry: bool):
-			_place_caches.call_deferred()
+			_place_caches_soon()
 			_plan_now())
 		var bus_args := _signal_args(events)
 		for on in RadioTakes.by_signal():
@@ -118,6 +120,18 @@ func find(id: String) -> bool:
 	_save()
 	_plan_now()
 	return true
+
+
+# The caches go up a few frames after entry rather than in the entry tick, which already carries the
+# stage swap (5.9 ms of it on the cloud at the flume, scrapkeep#494); a newer entry meanwhile places its own.
+func _place_caches_soon() -> void:
+	_entries += 1
+	var entry := _entries
+	for n in PLACE_AFTER_FRAMES:
+		await get_tree().process_frame
+		if entry != _entries or not is_inside_tree():
+			return
+	_place_caches()
 
 
 # The stage's unfound Signal caches go up at their spots; the last stage's come down.

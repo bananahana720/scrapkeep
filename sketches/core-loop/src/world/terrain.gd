@@ -461,8 +461,9 @@ class Reaper extends Node:
 	const BUDGET_USEC := 3000
 
 	static func take(root: Node3D) -> void:
+		# Hidden and disabled is enough: its bodies leave the space, so it stays where it stood rather
+		# than moving every body and transform under it on the swap tick (scrapkeep#494).
 		root.visible = false
-		root.position = Vector3.DOWN * PARK_DEPTH
 		# One switch stops the whole stage (its bodies leave the space with it): two propagate_calls over a park
 		# stage's ~20k nodes cost 29 ms in the swap frame, this 9.5 (bot run, stage 1 to 2). The Reaper runs ALWAYS.
 		root.process_mode = Node.PROCESS_MODE_DISABLED
