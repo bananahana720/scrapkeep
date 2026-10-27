@@ -120,7 +120,7 @@ export function planCells(opts) {
     builds = {}, cells = ["boss", "warden", "park"], only = null, seeds = null, columns = COLUMNS.map((c) => c.id), persona = "brawler", wardenPersona = "skipper", parkPersona = "skipper",
   } = opts;
   const jobs = [];
-  const tuneArgs = [...(opts.tune ? ["--tune=" + opts.tune] : []), ...(opts.tuneUnruled ? ["--tune-unruled"] : [])];
+  const tuneArgs = [...(opts.tune ? ["--tune=" + opts.tune] : []), ...(opts.tuneUnruled ? ["--tune-unruled"] : []), ...(opts.tier ? ["--run-tier=" + opts.tier] : [])];
   const want = (id) => !only || only.includes(id);
   const defs = [];
   for (const b of BOSSES) if (cells.includes("boss") && want(b.id)) defs.push({ kind: "boss", ...b });
@@ -384,6 +384,7 @@ const fmt = (x, d = 1) => (x == null ? "-" : Number(x).toFixed(d));
 export function renderTable(table, meta = {}) {
   const lines = ["# Challenge band table", ""];
   if (meta.tune_unruled) lines.push("Unruled: --tune-unruled was set, so pilot.* dials applied. No ruling allows them; this table is information only.", "");
+  if (meta.run_tier) lines.push(`Run tier ${meta.run_tier} (HARD ladder rung ${meta.run_tier}, bot_run --run-tier): every run picks it on the start card. The ✓/✗ marks still judge the base-tier targets.`, "");
   if (meta.tune) lines.push(`Tuned: --tune=${meta.tune} requested (difficulty dials, src/core/challenge_dials.gd). The applied dials are on each run row as "dials", from describe(); a rejected entry is not applied.`, "");
   if (meta.label) lines.push(`Label ${meta.label}${meta.commit ? ", commit " + meta.commit.slice(0, 8) : ""}${meta.when ? ", " + meta.when : ""}.`, "");
   if (table.some((c) => c.kind !== "world")) lines.push(`Learner a1 at bosses and Wardens is information only (DECISIONS section 5, 19 Oct 19:00): no ✓/✗; the old reference range was ${pct(LEARNER1_FIGHT_REFERENCE.min)}-${pct(LEARNER1_FIGHT_REFERENCE.max)}. Parks still grade Learner a1 reach.`, "");
@@ -501,11 +502,16 @@ export function hashString(text) {
   return a.toString(16).padStart(8, "0") + b.toString(16).padStart(8, "0");
 }
 
-// What makes two table runs the same experiment: the library, the cells, seeds, columns, personas and tune string.
-// The shard is not in it: shards of one plan share a hash.
+// The highest run tier a run can pick: src/core/run_tier.gd TOP (lib.test.mjs checks they agree).
+export const MAX_RUN_TIER = 1;
+
+// What makes two table runs the same experiment: the library, the cells, seeds, columns, personas, tune string and
+// run tier. The shard is not in it: shards of one plan share a hash. Tier 0 adds nothing, so base-tier hashes stay put.
 export function planHash(o) {
   const keys = ["libraryLabel", "libraryDigest", "cells", "only", "seeds", "columns", "persona", "wardenPersona", "parkPersona", "tune"];
-  return hashString(JSON.stringify(keys.map((k) => o[k] ?? null)));
+  const parts = keys.map((k) => o[k] ?? null);
+  if (o.tier) parts.push({ tier: o.tier });
+  return hashString(JSON.stringify(parts));
 }
 
 export const jobKey = (job, { libraryLabel, plan, commit }) => `${libraryLabel ?? "-"}:${plan}:${(commit ?? "").slice(0, 8)}:${job.id}`;

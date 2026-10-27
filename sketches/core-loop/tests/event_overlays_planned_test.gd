@@ -6,7 +6,8 @@ extends SceneTree
 # mooring burner (scrapkeep#241). Each handler's setup now projects its stage's swaps on a worker from
 # the ground as entered. Checked on park stage 1 (the dam's toe vents and powerhouse boiler): each
 # swap is planned; each planned surface equals a live projection vertex for vertex; the handler's
-# swap body uses the planned mesh; with an overlay down, or a different stage, the plan is not handed out.
+# swap body uses the planned mesh; with an overlay down on its ground (one whose footprint meets its
+# rectangle, or one with no profile to tell), or a different stage, the plan is not handed out.
 
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
@@ -81,3 +82,15 @@ func _check_family(world, family: String) -> void:
 		var body: Node = record.overlay
 		_t.check("%s %s: the swap body uses the planned mesh" % [family, row.id],
 			body != null and body.get_child(0).mesh == plan.out[id].mesh)
+		# An overlay down counts only where its footprint (where overlay_height answers) meets the
+		# swap's rectangle: the dam's boiler lands with the toe vents' lip down across the dam.
+		var overlay_map = world.terrain.map()
+		overlay_map.profiles["far_after"] = {"site": {"at": [site.at[0] + 5000.0, site.at[1]], "size": [4.0, 2.0, 4.0], "yaw_deg": 0.0}}
+		terrain.overlays.append("far_after")
+		_t.check("%s %s: with an overlay down away from it the plan is still handed out" % [family, row.id],
+			EventGround.planned_overlay(world, plan, id).get("surface") == plan.out[id])
+		terrain.overlays.append(id + "_after")
+		_t.check("%s %s: with one down across its own ground it is not" % [family, row.id], EventGround.planned_overlay(world, plan, id).is_empty())
+		terrain.overlays.erase(id + "_after")
+		terrain.overlays.erase("far_after")
+		overlay_map.profiles.erase("far_after")

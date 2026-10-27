@@ -7,6 +7,8 @@ const DAMAGE_DIAL_CAP := 1.3
 const REST_DIAL_FLOOR := 0.75
 const BASE := 0
 const HARD := 1
+# The highest tier a run can pick (the HARD ladder's top rung). scripts/challenge/lib.mjs MAX_RUN_TIER mirrors it.
+const TOP := 1
 const UNLOCK := "first_win"
 # Small existing bonuses; the base id and all metadata remain the same.
 const ENHANCED := {

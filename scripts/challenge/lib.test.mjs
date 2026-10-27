@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, checkMerge, planHash, jobKey, dedupeBy, bucketInfo, fightStart, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson } from "./lib.mjs";
+import { readFileSync } from "node:fs";
+import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, checkMerge, planHash, jobKey, dedupeBy, bucketInfo, fightStart, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson, MAX_RUN_TIER } from "./lib.mjs";
 
 const docs = (n, stage = 2) => Array.from({ length: n }, (_, i) => ({ file: `s${stage}/d${i}.json`, stage, mass: 100 + i * 10, parts: i % 5, pilot: "tarn" }));
 const builds = () => Object.fromEntries([2, 3, 4, 5, 6].map((s) => [s, pickBuilds(docs(24, s))]));
@@ -333,4 +334,18 @@ test("the 45 s check covers Learner attempt 1 and attempt 5", () => {
   assert.equal(cellVerdict(c), "fail");
   const clean = buildTable([run("brindle", "boss", 2, "learner5", "loss", { diedS: 50 })])[0];
   assert.equal(clean.tell.ok, true);
+});
+
+test("--tier passes --run-tier to every job, joins the plan hash only when set, and titles the table", () => {
+  const jobs = planCells({ builds: {}, seeds: 2, cells: ["warden"], only: ["w1"], tier: 1 });
+  assert.ok(jobs.length > 0 && jobs.every((j) => j.args.includes("--run-tier=1") && !j.args.some((a) => a.startsWith("--from-stage="))));
+  assert.ok(planCells({ builds: {}, seeds: 1, cells: ["warden"], only: ["w1"] }).every((j) => !j.args.some((a) => a.startsWith("--run-tier"))));
+  const plan = { cells: ["warden"], only: ["w1"], seeds: 24, columns: ["expert"], tune: "" };
+  assert.equal(planHash({ ...plan, tier: 0 }), planHash(plan));
+  assert.notEqual(planHash({ ...plan, tier: 1 }), planHash(plan));
+  assert.notEqual(planHash({ ...plan, tier: 1 }), planHash({ ...plan, tier: 2 }));
+  assert.match(renderTable([], { run_tier: 1 }), /Run tier 1 \(HARD ladder rung 1/);
+  const gd = readFileSync(new URL("../../sketches/core-loop/src/core/run_tier.gd", import.meta.url), "utf8");
+  assert.equal(Number(/^const TOP := (\d+)$/m.exec(gd)?.[1]), MAX_RUN_TIER, "lib.mjs MAX_RUN_TIER mirrors run_tier.gd TOP");
+  assert.doesNotMatch(renderTable([], {}), /Run tier/);
 });

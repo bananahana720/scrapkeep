@@ -15,6 +15,12 @@ extends RefCounted
 # A frame's wall ms minus these is the engine's own work. --frame-split=2 also keeps an events list
 # of every bracket with the main thread's on-CPU microseconds (/proc/thread-self/schedstat) on frames
 # over 40 ms: a gap with wall time and CPU time alike was busy, one with little CPU was waiting.
+# After each phys_tail it marks the tick's own engine work in tick order: phys_deferred when the
+# deferred calls queued by then have run; phys_deleted when the nodes queued for deletion by then have
+# been freed (a sentinel queued last; nodes queued later in the flush go after it), so that span also
+# holds the tick's physics timers, tweens and transform notifications. The gap from phys_deleted on is
+# the physics server's step plus navigation, idle callbacks, the next tick's body callbacks and the bot
+# driver, or on a frame's last tick bot_run's own frame row.
 
 var _phys_start := 0
 var _phys_us := 0
@@ -57,6 +63,20 @@ class PhysTail:
 		split._event("phys_tail", now)
 		split._phys_us += span
 		split._tick_max_us = maxi(split._tick_max_us, span)
+		if split._record_events:
+			split._mark.call_deferred("phys_deferred")
+			var sentinel := Sentinel.new()
+			sentinel.split = split
+			sentinel.queue_free()
+
+
+class Sentinel:
+	extends Node
+	var split
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_PREDELETE:
+			split._mark("phys_deleted")
 
 
 class ProcHead:
@@ -122,6 +142,10 @@ func _event(name: String, at: int) -> void:
 	var f := FileAccess.open("/proc/thread-self/schedstat", FileAccess.READ)
 	var cpu_us := -1 if f == null else int(f.get_line().split(" ")[0]) / 1000
 	_events.append("%s %d %d" % [name, at, cpu_us])
+
+
+func _mark(name: String) -> void:
+	_event(name, Time.get_ticks_usec())
 
 
 func _on_pre_draw() -> void:
