@@ -298,10 +298,10 @@ static func _blink(kit, tuning, intent, aim: Basis, body_state) -> void:
 	kit.facts.append(["dashed", [dir]])
 
 
-# The blink passes through enemies but never lands inside a solid one: a body on the enemy
-# layer that physics cannot push aside (a boss part, an animatable hull) would depenetrate
-# the ball, through a thin floor under it (Brindle's bowl). The landing backs off along the
-# path in BLINK_BACKOFF steps until it overlaps none; rigid enemies still get shoved.
+# The blink passes through enemies but never lands inside a static one: a boss part on the
+# enemy layer (boss_target.gd, an AnimatableBody3D hull) would depenetrate the ball through a
+# thin floor under it (Brindle's bowl). The landing backs off along the path in BLINK_BACKOFF
+# steps until it overlaps none. Enemies proper (CharacterBody3D) are landed on as before.
 static func _blink_clear(space: PhysicsDirectSpaceState3D, query: PhysicsShapeQueryParameters3D, dir: Vector3, travel: float) -> float:
 	var start: Vector3 = query.transform.origin
 	query.motion = Vector3.ZERO
@@ -311,7 +311,7 @@ static func _blink_clear(space: PhysicsDirectSpaceState3D, query: PhysicsShapeQu
 		query.transform.origin = start + dir * at
 		var solid := false
 		for hit in space.intersect_shape(query, 8):
-			if not (hit["collider"] is RigidBody3D):
+			if hit["collider"] is StaticBody3D:
 				solid = true
 				break
 		if not solid:

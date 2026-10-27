@@ -13,7 +13,9 @@ const Augments := preload("res://src/movement/augments.gd")
 #   open     nothing in the way: the blink's full reach;
 #   through  a 1 m solid enemy-layer slab across the middle of the path: still the full reach;
 #   inside   a solid enemy-layer block over the landing: the ball lands short of its near face,
-#            overlapping nothing, and stays over the ground.
+#            clear of it;
+#   enemy    the same block as a CharacterBody3D, the body every enemy proper is (enemy.gd): the
+#            blink lands on it as before, its full reach.
 # The slabs are AnimatableBody3D on layer 3, the body Brindle's parts are (boss_target.gd).
 
 const SETTLE := 3
@@ -24,11 +26,11 @@ var _player
 var _source := Intent.Scripted.new()
 var _failures := 0
 var _booted := false
-var _cases := ["open", "through", "inside"]
+var _cases := ["open", "through", "inside", "enemy"]
 var _case := 0
 var _ticks := 0
 var _from := Vector3.ZERO
-var _block: AnimatableBody3D
+var _block: PhysicsBody3D
 var _moved := {}
 var _dir := Vector3.ZERO
 var _landed := Vector3.INF
@@ -99,12 +101,16 @@ func _begin(name: String) -> void:
 		_block = _slab(at, 4.0, 1.0)
 	elif name == "inside":
 		_block = _slab(at, 8.0, 6.0)
+	elif name == "enemy":
+		_block = _slab(at, 8.0, 6.0, CharacterBody3D.new())
 
 
-# A solid enemy-layer block across the aim, centred `ahead` metres along it and `depth` deep.
-func _slab(at: Vector3, ahead: float, depth: float) -> AnimatableBody3D:
-	var body := AnimatableBody3D.new()
-	body.sync_to_physics = false
+# A solid enemy-layer block across the aim, centred `ahead` metres along it and `depth` deep: a boss part's
+# AnimatableBody3D, or the CharacterBody3D every enemy proper is (enemy.gd).
+func _slab(at: Vector3, ahead: float, depth: float, body: PhysicsBody3D = null) -> PhysicsBody3D:
+	if body == null:
+		body = AnimatableBody3D.new()
+		body.sync_to_physics = false
 	body.collision_layer = 0
 	body.collision_mask = 0
 	body.set_collision_layer_value(3, true)
@@ -153,6 +159,8 @@ func _finish() -> void:
 	var inside: float = _moved.get("inside", 99.0)
 	_check("inside lands short of the block", inside < 5.0 - 0.8 and inside > 5.0 - 0.9 - 0.6,
 		"inside moved %.2f m (near face at 5.0 m)" % inside)
+	_check("an enemy body over the landing is landed on as before", absf(_moved.get("enemy", 0.0) - reach) < 0.05,
+		"enemy moved %.2f m, open %.2f m" % [_moved.get("enemy", 0.0), reach])
 	print("kest_blink_solid_enemy_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()
 	quit(0 if _failures == 0 else 1)
