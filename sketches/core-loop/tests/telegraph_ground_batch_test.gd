@@ -76,6 +76,10 @@ func _run() -> void:
 	var corner_ring := PackedVector2Array()
 	for k in 24:
 		corner_ring.append(corner + Vector2.from_angle(TAU * k / 24.0) * 1.0)
+	var corner_bounds := Rect2(corner_ring[0], Vector2.ZERO)
+	for p in corner_ring:
+		corner_bounds = corner_bounds.expand(p)
+	_t.check("the corner ring's bounds miss the far centre", not corner_bounds.has_point(Vector2(at.x + 200.0, at.z + 200.0)))
 	var corner_raised := _compare(terrain, corner_ring, "a ring over the far footprint's corner, its centre outside the bounds")
 	_t.check("the far overlay stands under some of the corner ring", corner_raised > 0, "%d raised" % corner_raised)
 	_t.check("the near overlay stands under some ring points", ring_raised > 0, "%d raised" % ring_raised)
