@@ -147,8 +147,11 @@ const BITE_G2 := 4.0 * STEP * STEP * (1.0 / (PylonBite.FACE * PylonBite.FACE) - 
 const COLLISION_DISABLED := 0
 const MESH_LODS := 7
 const MESH_SIZE := 48
-# Terrain3DRegion map types for update_maps: height, control, colour.
-const MAP_TYPES := [0, 1, 2]
+# Terrain3DRegion map types for update_maps: colour, height, control. Colour goes first,
+# MAP_GAP_FRAMES after the regions are added: rebuilt the frame after the last add, the flume's
+# colour array took 24.8 ms on the 4080 at the Warden prebuild, and 7.8 ms after a 30-frame gap.
+const MAP_TYPES := [2, 0, 1]
+const MAP_GAP_FRAMES := 10
 
 enum Phase { IDLE, LOADING, BUILDING, ATTACHING, READY }
 
@@ -191,6 +194,7 @@ var _group := -1
 var _lock := Mutex.new()
 var _next_region := 0
 var _next_map := 0
+var _map_wait := 0
 var _next_tile := 0
 var _tiles_root: Node3D
 
@@ -941,6 +945,10 @@ func _attach_step(deadline: int) -> void:
 	if _next_region < _regions.size():
 		return
 	if _next_map < MAP_TYPES.size():
+		if deadline >= 0 and _map_wait < MAP_GAP_FRAMES:
+			_map_wait += 1
+			return
+		_map_wait = 0
 		terrain3d.data.update_maps(MAP_TYPES[_next_map], true, false)
 		_next_map += 1
 		if deadline >= 0:
