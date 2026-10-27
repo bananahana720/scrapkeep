@@ -53,7 +53,16 @@ var _cart_bodies: Array[Transform3D] = []
 # physics body creation order and so every seeded run (Rivet seed 1: 38208 -> 34066 ticks).
 static func hook(ctx) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
-	ctx.terrain.stage_built.connect(_on_stage_built.bind(ctx))
+	# The context owns the terrain, a RefCounted, so a handler on its signal bound to the context would
+	# hold the context from the terrain: a cycle that outlives the game and keeps this script's statics
+	# with it (scrapkeep#494). The handler takes the context through a weak reference.
+	ctx.terrain.stage_built.connect(_on_stage_built_weak.bind(weakref(ctx)))
+
+
+static func _on_stage_built_weak(stage: int, ctx_ref: WeakRef) -> void:
+	var ctx = ctx_ref.get_ref()
+	if ctx != null:
+		_on_stage_built(stage, ctx)
 
 
 # A Dig park stage built ahead on worker threads takes its park pass a step a frame from when
