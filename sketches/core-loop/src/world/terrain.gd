@@ -117,8 +117,9 @@ var _threaded_first := false
 # walks only INHERIT nodes, 17 ms over the dam's ~16k row nodes on the swap tick, 0.1 ms after (cloud, stage
 # 1 to 2). By stage index: {"left": rows still to stop, nearest last, "done": rows stopped}.
 var _winding := {}
-# Rows this close to the ball keep their bodies through the flight; the swap stops them as before.
-const WIND_CLEAR := 30.0
+# Rows whose origin is this close to the ball, at the launch or as it flies, keep their bodies to the swap, which
+# stops them as before.
+const WIND_CLEAR := 40.0
 
 
 func _init(table = StageDefs) -> void:
@@ -530,13 +531,13 @@ func wind_down(index: int, ball: Vector3) -> void:
 
 
 # Stops rows until the budget is spent; at least one row a call.
-func wind_step(budget_usec: int) -> void:
+func wind_step(budget_usec: int, ball: Vector3) -> void:
 	var deadline := Time.get_ticks_usec() + budget_usec
 	for i in _winding:
 		var left: Array = _winding[i].left
 		while not left.is_empty():
 			var row = left.pop_back()
-			if is_instance_valid(row):
+			if is_instance_valid(row) and row.global_position.distance_to(ball) > WIND_CLEAR:
 				row.process_mode = Node.PROCESS_MODE_DISABLED
 				_winding[i].done.append(row)
 			if Time.get_ticks_usec() >= deadline:

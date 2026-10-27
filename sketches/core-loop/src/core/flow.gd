@@ -861,7 +861,7 @@ func physics_step(delta: float) -> void:
 				ctx.events.beacon_charge_changed.emit(1.0)
 		LAUNCH:
 			if _launched:
-				ctx.terrain.wind_step(WIND_BUDGET_USEC)
+				ctx.terrain.wind_step(WIND_BUDGET_USEC, ctx.player.ball_position())
 				_flight += delta
 				if _flight >= LAUNCH_FLIGHT:
 					_finish_stage()
@@ -1028,9 +1028,7 @@ func _on_launched(_velocity: Vector3) -> void:
 		_set_state(LAUNCH)
 		_launched = true
 		_flight = 0.0
-		var stage: int = ctx.run.stage
-		if not (ctx.stages.is_world_last(stage) and _world_boss(ctx.stages.world_of(stage)) != null):
-			ctx.terrain.wind_down(stage, ctx.player.ball_position())
+		ctx.terrain.wind_down(ctx.run.stage, ctx.player.ball_position())
 
 
 # Breaking the Warden opens the gates wherever the ball is: the stage's MUST is done

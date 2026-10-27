@@ -96,7 +96,7 @@ func _run() -> void:
 	for n in LAND_FRAMES_MAX:
 		await physics_frame
 		if not swapped:
-			terrain.wind_step(Flow.WIND_BUDGET_USEC)
+			terrain.wind_step(Flow.WIND_BUDGET_USEC, ball.global_position)
 		if not swapped and ball.linear_velocity.y < 0.0:
 			far_stopped = far_rows.all(func(row: Node) -> bool: return row.process_mode == Node.PROCESS_MODE_DISABLED)
 			near_live = near_rows.all(func(row: Node) -> bool: return row.process_mode == Node.PROCESS_MODE_INHERIT)
@@ -113,7 +113,7 @@ func _run() -> void:
 	print("park_swap_test: use(2) %.2f ms, worst frame over the %d physics frames after the swap %.2f ms" % [swap_ms, after_frames, after_worst])
 	t.check("the swap ran on the way down", swapped)
 	t.check("the flight stopped stage 1's rows away from the ball before the swap", not far_rows.is_empty() and far_stopped, "%d rows" % far_rows.size())
-	t.check("the rows by the ball kept running to the swap", near_live, "%d rows" % near_rows.size())
+	t.check("the rows by the ball kept running to the swap", not near_rows.is_empty() and near_live, "%d rows" % near_rows.size())
 	t.check("the swap itself is under 33 ms", swap_ms < FRAME_CAP_MS, "%.2f ms" % swap_ms)
 	t.check("the frames after the swap were timed", after_worst > 0.0 and after_frames > 60, "%d frames" % after_frames)
 	t.check("no main-thread frame over 33 ms after the swap", after_worst < FRAME_CAP_MS, "worst %.2f ms" % after_worst)
@@ -201,7 +201,7 @@ func _run() -> void:
 		placed += 1
 	terrain.wind_down(1, Vector3(1.0e6, 0.0, 1.0e6))
 	for n in 600:
-		terrain.wind_step(Flow.WIND_BUDGET_USEC)
+		terrain.wind_step(Flow.WIND_BUDGET_USEC, Vector3(1.0e6, 0.0, 1.0e6))
 	var stage1_rows: Array = terrain.park_rows(1).get_children()
 	t.check("the launch from the new run's stage 1 stopped its rows", not stage1_rows.is_empty()
 		and stage1_rows.all(func(row: Node) -> bool: return not row is Node3D or row.process_mode == Node.PROCESS_MODE_DISABLED))
