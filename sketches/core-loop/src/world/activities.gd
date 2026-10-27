@@ -1597,7 +1597,7 @@ func _watch_wall(s: Site, ball: Vector3) -> void:
 	var bar: float = ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE
 	if toward >= bar:
 		_break_wall(s)
-	elif ahead <= WALL_CONTACT:
+	elif ahead <= WALL_CONTACT and local.y < WALL_HEIGHT:
 		_refuse_ram(s, toward)
 
 
@@ -1606,7 +1606,7 @@ func _refuse_ram(s: Site, toward: float) -> void:
 	var cue: Dictionary = s.rule.get("refused", {})
 	if cue.is_empty() or toward < ctx.tuning.f("cruise") * float(cue["floor"]):
 		return
-	if not int(ctx.stages.world_of(ctx.terrain.stage)) in cue["worlds"]:
+	if not int(ctx.stages.world_of(ctx.run.stage)) in cue["worlds"]:
 		return
 	var frame := Engine.get_physics_frames()
 	if s.refused_frame >= 0 and frame - s.refused_frame < int(float(cue["gap_s"]) * Engine.physics_ticks_per_second):
