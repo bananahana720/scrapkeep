@@ -95,7 +95,7 @@ function mergeRuns() {
   const first = metas[0] ?? {};
   finish(runs, path.join(outRoot, opts.label ?? "merged-" + stamp), {
     label: opts.label ?? "merged", commit: first.commit, plan_hash: first.plan_hash, library: first.library, buckets: first.buckets,
-    shards: check.shards, warnings: check.warnings,
+    tune: first.tune, tune_unruled: first.tune_unruled, run_tier: first.run_tier, shards: check.shards, warnings: check.warnings,
   });
 }
 
@@ -285,7 +285,7 @@ async function runTable() {
     log(`rerun ${job.id} alone (first try: ${first.p.timedOut ? "timeout" : "exit " + first.p.exit})`);
     record(job, await play(job, 2), true);
   }
-  finish(dedupeBy(parseNdjson(read(runsFile)), "id"), outDir, { label, commit, plan_hash: plan, library: libraryLabel, buckets: meta.buckets, shards: opts.shard ? [opts.shard] : null });
+  finish(dedupeBy(parseNdjson(read(runsFile)), "id"), outDir, { label, commit, plan_hash: plan, library: libraryLabel, buckets: meta.buckets, tune: meta.tune, tune_unruled: meta.tune_unruled, run_tier: meta.run_tier, shards: opts.shard ? [opts.shard] : null });
 }
 
 function finish(runs, outDir, meta) {
