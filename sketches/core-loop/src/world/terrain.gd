@@ -112,6 +112,14 @@ signal stage_built(index: int)
 # A first stage built behind the menu (build threaded_first).
 var _threaded_first := false
 
+# A launched park stage stops its prop rows a few at a time across the flight (wind_down, wind_step), so the
+# swap's one DISABLED switch on its root (Reaper.take) finds them stopped already: process_mode propagation
+# walks only INHERIT nodes, 17 ms over the dam's ~16k row nodes on the swap tick, 0.1 ms after (cloud, stage
+# 1 to 2). By stage index: {"left": rows still to stop, nearest last, "done": rows stopped}.
+var _winding := {}
+# Rows this close to the ball keep their bodies through the flight; the swap stops them as before.
+const WIND_CLEAR := 30.0
+
 
 func _init(table = StageDefs) -> void:
 	var parks := _read_parks_together(table)
@@ -385,6 +393,7 @@ func use(index: int) -> void:
 	for i in _roots.size():
 		if _roots[i] != null and _is_park[i] and i != target and i != target + 1:
 			_free_stage(i)
+	_unwind(target)
 	stage = _ensure(target + 1) + 1
 	_arena = false
 	var m = map()
@@ -411,6 +420,7 @@ func _show_render() -> void:
 # A park stage leaves memory (neither active nor next); a later read builds it again. Its
 # Terrain3D node goes back to the pool, regions and all, until the next stage replaces them.
 func _free_stage(i: int) -> void:
+	_winding.erase(i)
 	var slot := _render_owner.find(i)
 	if slot >= 0:
 		_render_owner[slot] = -1
@@ -500,6 +510,47 @@ class Reaper extends Node:
 	static func yield_name(root: Node) -> void:
 		if not String(root.name).begins_with("Freed"):
 			root.name = "Freed%s" % root.name
+
+
+# Starts stopping a launched park stage's prop rows, farthest from the ball first (see _winding). Only a played
+# game (or a --threaded-stages capture) frees a stage through the Reaper; a bot run keeps its frees in tick order.
+func wind_down(index: int, ball: Vector3) -> void:
+	var i := _index(index)
+	if not _worker_builds() or not _is_park[i] or _roots[i] == null or _winding.has(i):
+		return
+	var rows := park_rows(index)
+	if rows == null:
+		return
+	var left := []
+	for row in rows.get_children():
+		if row is Node3D and row.process_mode == Node.PROCESS_MODE_INHERIT and row.global_position.distance_to(ball) > WIND_CLEAR:
+			left.append(row)
+	left.sort_custom(func(a: Node3D, b: Node3D) -> bool: return a.global_position.distance_squared_to(ball) < b.global_position.distance_squared_to(ball))
+	_winding[i] = {"left": left, "done": []}
+
+
+# Stops rows until the budget is spent; at least one row a call.
+func wind_step(budget_usec: int) -> void:
+	var deadline := Time.get_ticks_usec() + budget_usec
+	for i in _winding:
+		var left: Array = _winding[i].left
+		while not left.is_empty():
+			var row = left.pop_back()
+			if is_instance_valid(row):
+				row.process_mode = Node.PROCESS_MODE_DISABLED
+				_winding[i].done.append(row)
+			if Time.get_ticks_usec() >= deadline:
+				return
+
+
+# A wound-down stage played again (a retry, or a new run back on it) gets its rows back.
+func _unwind(i: int) -> void:
+	if not _winding.has(i):
+		return
+	for row in _winding[i].done:
+		if is_instance_valid(row):
+			row.process_mode = Node.PROCESS_MODE_INHERIT
+	_winding.erase(i)
 
 
 func geometry_root(index: int) -> Node3D:

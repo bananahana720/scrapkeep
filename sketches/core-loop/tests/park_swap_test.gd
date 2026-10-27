@@ -9,6 +9,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const Terrain := preload("res://src/world/terrain.gd")
+const Flow := preload("res://src/core/flow.gd")
 
 const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}, {"stage": 2, "world": 1, "map": "park_test"},
 	{"stage": 3, "world": 1, "map": "park_test"}]}
@@ -78,13 +79,27 @@ func _run() -> void:
 	holder.add_child(ball)
 	ball.global_position = spawn + Vector3.UP * 6.0
 	ball.linear_velocity = Vector3(0.0, 14.0, 0.0)
+	# The launch stops stage 1's prop rows a few a tick across the flight (terrain.gd wind_down, as flow.gd runs it), so
+	# the swap's one DISABLED switch on stage 1's root finds them stopped; rows near the ball keep theirs to the swap.
+	terrain.wind_down(1, spawn)
+	var far_rows := []
+	var near_rows := []
+	for row in terrain.park_rows(1).get_children():
+		if row is Node3D:
+			(far_rows if row.global_position.distance_to(spawn) > Terrain.WIND_CLEAR else near_rows).append(row)
+	var far_stopped := false
+	var near_live := false
 	var swapped := false
 	var swap_ms := 0.0
 	var landed_frames := 0
 	var after_frames := 0
 	for n in LAND_FRAMES_MAX:
 		await physics_frame
+		if not swapped:
+			terrain.wind_step(Flow.WIND_BUDGET_USEC)
 		if not swapped and ball.linear_velocity.y < 0.0:
+			far_stopped = far_rows.all(func(row: Node) -> bool: return row.process_mode == Node.PROCESS_MODE_DISABLED)
+			near_live = near_rows.all(func(row: Node) -> bool: return row.process_mode == Node.PROCESS_MODE_INHERIT)
 			terrain.use(2)
 			swap_ms = terrain.last_use_usec / 1000.0
 			swapped = true
@@ -97,6 +112,8 @@ func _run() -> void:
 	var after_worst: float = next.frame_usec_max / 1000.0
 	print("park_swap_test: use(2) %.2f ms, worst frame over the %d physics frames after the swap %.2f ms" % [swap_ms, after_frames, after_worst])
 	t.check("the swap ran on the way down", swapped)
+	t.check("the flight stopped stage 1's rows away from the ball before the swap", not far_rows.is_empty() and far_stopped, "%d rows" % far_rows.size())
+	t.check("the rows by the ball kept running to the swap", near_live, "%d rows" % near_rows.size())
 	t.check("the swap itself is under 33 ms", swap_ms < FRAME_CAP_MS, "%.2f ms" % swap_ms)
 	t.check("the frames after the swap were timed", after_worst > 0.0 and after_frames > 60, "%d frames" % after_frames)
 	t.check("no main-thread frame over 33 ms after the swap", after_worst < FRAME_CAP_MS, "worst %.2f ms" % after_worst)
@@ -177,6 +194,20 @@ func _run() -> void:
 			shown += 1
 			t.check("the shown render node is stage 1's", terrain._render_owner[terrain._render.find(node)] == 0)
 	t.eq("one render node shows on the new run", shown, 1)
+	# A launch that does not land (a retry in the flight, or a new run back on the stage) gives the stage its rows back.
+	var placed := 0
+	while not terrain.rows_ready(1) and placed < BUILD_FRAMES_MAX:
+		await process_frame
+		placed += 1
+	terrain.wind_down(1, Vector3(1.0e6, 0.0, 1.0e6))
+	for n in 600:
+		terrain.wind_step(Flow.WIND_BUDGET_USEC)
+	var stage1_rows: Array = terrain.park_rows(1).get_children()
+	t.check("the launch from the new run's stage 1 stopped its rows", not stage1_rows.is_empty()
+		and stage1_rows.all(func(row: Node) -> bool: return not row is Node3D or row.process_mode == Node.PROCESS_MODE_DISABLED))
+	terrain.use(1)
+	t.check("a retry on stage 1 gives every row its processing back",
+		stage1_rows.all(func(row: Node) -> bool: return row.process_mode == Node.PROCESS_MODE_INHERIT))
 
 	# The swap while a stage's rows are still placing (KB9): stage 3 builds, and use(3) lands the frame its ground is
 	# ready, before its rows have all attached; the swap stays under the cap and the rows finish on their own. use(3)

@@ -26,6 +26,8 @@ const VICTORY_SECONDS := 2.5
 # How long the ball flies after the launch before the next stage takes it; the
 # velocity at that moment is what the next stage receives.
 const LAUNCH_FLIGHT := 0.6
+# A tick's share of stopping the stage being left (terrain.gd wind_down): ~20 ms of rows over the 54 flight ticks.
+const WIND_BUDGET_USEC := 1500
 # The next stage is entered from above, so a launch lands rather than appears.
 const ENTRY_LIFT := 14.0
 # Stage 1 has no launch behind it; it drops you in rolling at this share of cruise.
@@ -859,6 +861,7 @@ func physics_step(delta: float) -> void:
 				ctx.events.beacon_charge_changed.emit(1.0)
 		LAUNCH:
 			if _launched:
+				ctx.terrain.wind_step(WIND_BUDGET_USEC)
 				_flight += delta
 				if _flight >= LAUNCH_FLIGHT:
 					_finish_stage()
@@ -1025,6 +1028,9 @@ func _on_launched(_velocity: Vector3) -> void:
 		_set_state(LAUNCH)
 		_launched = true
 		_flight = 0.0
+		var stage: int = ctx.run.stage
+		if not (ctx.stages.is_world_last(stage) and _world_boss(ctx.stages.world_of(stage)) != null):
+			ctx.terrain.wind_down(stage, ctx.player.ball_position())
 
 
 # Breaking the Warden opens the gates wherever the ball is: the stage's MUST is done
