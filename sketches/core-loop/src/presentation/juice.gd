@@ -9,6 +9,7 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 const Parts := preload("res://src/build/parts.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
+const Palette := preload("res://src/core/palette.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Augments := preload("res://src/movement/augments.gd")
 
@@ -579,14 +580,19 @@ func _on_part(part_id: String, _source: String) -> void:
 	if vfx == null:
 		return
 	var row := EventKinds.juice("part_gained")
-	var def: Resource = Parts.def(part_id)
-	var tint := EventKinds.color("part_gained")
-	# A common part keeps the event's sandstone: mint flashes mean live (VISUAL-LANGUAGE).
-	if def != null and ItemGen.resolve_rarity(String(def.rarity)) not in ["", "common"]:
-		tint = RewardGates.rarity_color(String(def.rarity))
-		tint = row["element"].get(String(def.element), tint)
-	vfx.burst("fountain", player.ball_position() + Vector3.UP * 0.8, tint, int(row["fountain"]))
+	vfx.burst("fountain", player.ball_position() + Vector3.UP * 0.8, part_tint(part_id), int(row["fountain"]))
 	pulse(0.12)
+
+
+# The pickup fountain's colour: the element's when the part has one, else the rung's, and a
+# common part flashes sandstone, not its mint rung colour, because mint flashes mean live.
+static func part_tint(part_id: String) -> Color:
+	var def: Resource = Parts.def(part_id)
+	if def == null:
+		return EventKinds.color("part_gained")
+	var rung := ItemGen.resolve_rarity(String(def.rarity))
+	var tint: Color = Palette.SANDSTONE if rung in ["", "common"] else RewardGates.rarity_color(rung)
+	return EventKinds.juice("part_gained")["element"].get(String(def.element), tint)
 
 
 func _on_core(_source: String, at: Vector3, _count: int) -> void:
