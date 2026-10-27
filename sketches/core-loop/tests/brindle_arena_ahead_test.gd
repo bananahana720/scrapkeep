@@ -3,9 +3,10 @@ extends SceneTree
 # Brindle's boss entry (park seed 1: 143 ms): enter_arena loaded and dressed the Requisition's GLB
 # (31 ms profiled), read the bowl's foundry and Spillway kits (10 ms) and drew its checkers. While
 # the world's last stage runs, flow now steps arena.gd's warm_ahead a tick at a time, as it does a
-# row module's warm_arena. Checked: the gates instance the fortress and the scooter, read both
-# kits and draw the checkers before the entry, one step a tick; the entry dresses the ship with
-# the fortress read ahead; the game's exit frees what is still held.
+# row module's warm_arena. Checked: the gates instance the fortress and the scooter, read every
+# kit, draw the checkers and build the bowl itself before the entry, one step a tick; the entry
+# takes that bowl and dresses the ship with the fortress read ahead; the game's exit frees what is
+# still held.
 
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
@@ -38,24 +39,31 @@ func _run() -> void:
 	flow._set_state(flow.GATES)
 	var counts := [_held()]
 	var waited := 0
-	while not Arena._looks_warm and waited < WAIT_TICKS_MAX:
+	while not (Arena._ahead_bowl != null and Arena._ahead_bowl.built()) and waited < WAIT_TICKS_MAX:
 		await physics_frame
 		counts.append(_held())
 		waited += 1
 	var steps := range(1, counts.size()).map(func(i): return counts[i] - counts[i - 1])
 	# 2026-10-24 (#416 Slag Bowl dressing): the yard is a third kit, so every kit in _kits() is read ahead.
-	_t.check("the gates instance both models and read every kit, at most one step a tick",
-		Requisition._ahead.size() == 2 and BowlDress._ahead.size() == BowlDress._kits().size() and steps.all(func(d): return d <= 1),
+	# 2026-10-27 (world 1 hitches): the bowl is built ahead from those kits, so they are taken by then.
+	var bowl: Node3D = Arena._ahead_bowl
+	_t.check("the gates instance both models and build the bowl from every kit, at most one step a tick",
+		Requisition._ahead.size() == 2 and bowl != null and bowl.built() and BowlDress._ahead.is_empty() and steps.all(func(d): return d <= 1),
 		"%d ticks, counts %s" % [waited, counts.slice(-8)])
-	_t.check("every model and kit read ahead is whole", not Requisition._ahead.values().has(null)
-		and BowlDress._ahead.values().all(func(parts): return not parts.is_empty()))
+	_t.check("every model read ahead is whole and the bowl is dressed", not Requisition._ahead.values().has(null)
+		and bowl.get_node_or_null("ArenaBowlDress") != null and not bowl.is_inside_tree())
 	_t.check("the gates draw the bowl's checkers", Arena._looks_warm)
+	_t.check("the bowl built ahead stays built on later ticks", Arena.warm_ahead() and BowlDress._ahead.is_empty())
 	var fortress: Node3D = Requisition._ahead.get(Requisition.model_path)
 	flow.enter_boss(Vector3.ZERO)
 	var boss = _game.ctx.boss
+	_t.check("the entry takes the bowl built ahead", boss.arena == bowl and bowl.is_inside_tree() and Arena._ahead_bowl == null)
+	var yard = bowl.get_node_or_null("ArenaBowlDress/FleetYard")
+	_t.check("the yard built ahead is on the game bus once the bowl enters", yard != null
+		and _game.events.fight_phase_changed.is_connected(yard._on_fight_phase) and _game.events.boss_defeated.is_connected(yard._on_rout))
 	_t.check("the entry dresses the ship with the fortress read ahead",
 		boss.ship != null and boss.ship.model == fortress and fortress.get_parent() == boss.ship)
-	_t.check("the entry took the fortress and both kits; the scooter waits for its phase",
+	_t.check("the entry took the fortress; the scooter waits for its phase",
 		not Requisition._ahead.has(Requisition.model_path) and Requisition._ahead.has(Requisition.scooter_path) and BowlDress._ahead.is_empty())
 	var scooter: Node3D = Requisition._ahead.get(Requisition.scooter_path)
 	_game.queue_free()

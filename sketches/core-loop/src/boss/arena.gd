@@ -5,7 +5,7 @@ const Rules := preload("res://src/boss/boss_rules.gd")
 const BowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 
-# The Slag Bowl: a foundry bowl about 124 m across, built above stage 3's beacon when
+# The Slag Bowl: a foundry bowl about 124 m across, built ahead during stage 3's beacon, placed when
 # the fight starts and freed when it ends. A flat inner floor with two slag channels,
 # a banked outer ring that is the fight's momentum lane, a rim wall a pylon plants on,
 # two deck ramps and two kickers for height, four crane masts to grapple, and four rim
@@ -92,24 +92,38 @@ static var _looks_warm := false
 
 
 # Flow calls this a physics tick at a time while Brindle's world's last stage runs: a step a call
-# of the Requisition's models, the bowl's kits and its checkers, off the boss-entry frame. True once done.
+# of the Requisition's models, the bowl's looks and kits, then the bowl itself, off the boss-entry frame.
+# True once done.
 static func warm_ahead() -> bool:
-	return Requisition.warm() and BowlDress.warm() and warm_looks()
+	if _ahead_bowl != null and _ahead_bowl.built():
+		return true
+	return Requisition.warm() and warm_looks() and BowlDress.warm() and warm_bowl()
 
 
 static func drop_ahead() -> void:
+	if _ahead_bowl != null:
+		_ahead_bowl.free()
+		_ahead_bowl = null
 	Requisition.drop_ahead()
 	BowlDress.drop_ahead()
 	Palette.drop_checkers()
 	_looks_warm = false
 
 
+# The checkers, then the neutral plate looks the dressing (arena_bowl_dress.gd) and the floor paint, a few rows a call.
 static func warm_looks() -> bool:
 	if not _looks_warm:
 		for pair in CHECKERS:
 			Palette.checker_texture(pair[0], pair[1], 4, 64)
 		_looks_warm = true
+		return false
+	for id in NEUTRAL_LOOKS:
+		if not Palette.warm_look(id):
+			return false
 	return true
+
+
+const NEUTRAL_LOOKS := ["rusted-salvaged-plate-worn", "riveted-gyro-metal"]
 
 
 static func surface_height(r: float) -> float:
@@ -242,30 +256,84 @@ func _show_crust(vent: int, on: bool) -> void:
 
 func _ready() -> void:
 	name = "SlagBowl"
-	var body := StaticBody3D.new()
-	body.name = "Bowl"
-	body.collision_layer = 1
-	body.collision_mask = 0
-	add_child(body)
-	_bowl(body)
-	for a in MAST_ANGLES:
-		_mast(body, deg_to_rad(a))
-	for a in RAMP_ANGLES:
-		var at := deg_to_rad(a)
-		_wedge(body, point_at(at, RAMP_FROM) - global_position, -dir(at), RAMP_FROM - RAMP_TO, RAMP_TOP, RAMP_HALF_WIDTH, "Ramp")
-	for a in KICKER_ANGLES:
-		var at := deg_to_rad(a)
-		_wedge(body, point_at(at, KICKER_R) - global_position - tangent(at) * KICKER_LENGTH * 0.5, tangent(at),
-			KICKER_LENGTH, KICKER_TOP, KICKER_HALF_WIDTH, "Kicker")
-	for a in VENT_ANGLES:
-		_vent(deg_to_rad(a))
-	BowlDress.build(self)
+	while not build_step():
+		pass
+	BowlDress.bind_yard(self)
 
 
-func _bowl(body: StaticBody3D) -> void:
+# The bowl a piece a call: its geometry is local, so it builds off the tree too; only the yard's bus
+# waits for the tree (_ready). Flow's warm builds one ahead a piece a physics tick (warm_ahead); the
+# fight's entry takes it whole (take_ahead) instead of building it on its entry frame. True once built.
+var _built := 0
+var _body: StaticBody3D
+
+
+func build_step() -> bool:
+	match _built:
+		0:
+			_body = StaticBody3D.new()
+			_body.name = "Bowl"
+			_body.collision_layer = 1
+			_body.collision_mask = 0
+			add_child(_body)
+			_bowl_floor(_body)
+		1:
+			_bowl_bank(_body)
+		2:
+			_bowl_wall(_body)
+		3:
+			_bowl_channels()
+			for a in MAST_ANGLES:
+				_mast(_body, deg_to_rad(a))
+		4:
+			for a in RAMP_ANGLES:
+				var at := deg_to_rad(a)
+				_wedge(_body, _local(at, RAMP_FROM), -dir(at), RAMP_FROM - RAMP_TO, RAMP_TOP, RAMP_HALF_WIDTH, "Ramp")
+			for a in KICKER_ANGLES:
+				var at := deg_to_rad(a)
+				_wedge(_body, _local(at, KICKER_R) - tangent(at) * KICKER_LENGTH * 0.5, tangent(at),
+					KICKER_LENGTH, KICKER_TOP, KICKER_HALF_WIDTH, "Kicker")
+			for a in VENT_ANGLES:
+				_vent(deg_to_rad(a))
+		5:
+			BowlDress.build(self)
+		_:
+			return true
+	_built += 1
+	return false
+
+
+func built() -> bool:
+	return _built > LAST_STEP
+
+
+const LAST_STEP := 5
+
+
+# The bowl warm_ahead built, or a new one built on its entry.
+static var _ahead_bowl: Node3D
+
+
+static func warm_bowl() -> bool:
+	if _ahead_bowl == null:
+		_ahead_bowl = new()
+	return _ahead_bowl.build_step()
+
+
+static func take_ahead() -> Node3D:
+	var bowl := _ahead_bowl if _ahead_bowl != null else new()
+	_ahead_bowl = null
+	return bowl
+
+
+func _bowl_floor(body: StaticBody3D) -> void:
 	var floor_st := SurfaceTool.new()
 	floor_st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	_add_band(floor_st, Vector2(0.0, FLOOR_R), 0.0, TAU, SEGMENTS, 0.0)
+	_solid_part(body, floor_st, 0, "Floor")
+
+
+func _bowl_bank(body: StaticBody3D) -> void:
 	var bank_st := SurfaceTool.new()
 	bank_st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for k in BANK_STEPS:
@@ -275,6 +343,10 @@ func _bowl(body: StaticBody3D) -> void:
 			var a0 := TAU * i / SEGMENTS
 			var a1 := TAU * (i + 1) / SEGMENTS
 			_quad(bank_st, _local(a0, r0), _local(a1, r0), _local(a1, r1), _local(a0, r1))
+	_solid_part(body, bank_st, 1, "Bank")
+
+
+func _bowl_wall(body: StaticBody3D) -> void:
 	var wall_st := SurfaceTool.new()
 	wall_st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var outer := BANK_R + WALL_THICK
@@ -286,18 +358,19 @@ func _bowl(body: StaticBody3D) -> void:
 		_quad(wall_st, _flat(a0, BANK_R, lo), _flat(a1, BANK_R, lo), _flat(a1, BANK_R, hi), _flat(a0, BANK_R, hi))
 		_quad(wall_st, _flat(a0, BANK_R, hi), _flat(a1, BANK_R, hi), _flat(a1, outer, hi), _flat(a0, outer, hi))
 		_quad(wall_st, _flat(a0, outer, hi), _flat(a1, outer, hi), _flat(a1, outer, lo - 2.0), _flat(a0, outer, lo - 2.0))
-	var parts := [
-		[floor_st, Palette.striped(CHECKERS[0][0], CHECKERS[0][1]), "Floor"],
-		[bank_st, Palette.striped(CHECKERS[1][0], CHECKERS[1][1]), "Bank"],
-		[wall_st, Palette.striped(CHECKERS[2][0], CHECKERS[2][1]), "RimWall"],
-	]
-	for part in parts:
-		var node := _mesh_node(part[0], part[1], part[2])
-		var shape := CollisionShape3D.new()
-		var trimesh: ConcavePolygonShape3D = node.mesh.create_trimesh_shape()
-		trimesh.backface_collision = true
-		shape.shape = trimesh
-		body.add_child(shape)
+	_solid_part(body, wall_st, 2, "RimWall")
+
+
+func _solid_part(body: StaticBody3D, st: SurfaceTool, checker: int, label: String) -> void:
+	var node := _mesh_node(st, Palette.striped(CHECKERS[checker][0], CHECKERS[checker][1]), label)
+	var shape := CollisionShape3D.new()
+	var trimesh: ConcavePolygonShape3D = node.mesh.create_trimesh_shape()
+	trimesh.backface_collision = true
+	shape.shape = trimesh
+	body.add_child(shape)
+
+
+func _bowl_channels() -> void:
 	for band in [RING_A, RING_B]:
 		var groove := SurfaceTool.new()
 		groove.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -306,7 +379,7 @@ func _bowl(body: StaticBody3D) -> void:
 
 
 func _mast(body: StaticBody3D, angle: float) -> void:
-	var base := point_at(angle, MAST_R) - global_position
+	var base := _local(angle, MAST_R)
 	var pole := CollisionShape3D.new()
 	var cylinder := CylinderShape3D.new()
 	cylinder.radius = 1.0
@@ -375,7 +448,7 @@ func _vent(angle: float) -> void:
 	disc.height = 0.1
 	pad.mesh = disc
 	pad.material_override = Palette.solid(Palette.ARC, 0.6)
-	pad.position = point_at(angle, VENT_R, 0.06) - global_position
+	pad.position = _local(angle, VENT_R, 0.06)
 	pad.name = "WaterVent"
 	add_child(pad)
 	var nozzle := MeshInstance3D.new()
@@ -385,7 +458,7 @@ func _vent(angle: float) -> void:
 	pipe.height = 3.0
 	nozzle.mesh = pipe
 	nozzle.material_override = Palette.solid(Palette.VERDIGRIS)
-	nozzle.position = point_at(angle, VENT_R + 3.5, 1.5) - global_position
+	nozzle.position = _local(angle, VENT_R + 3.5, 1.5)
 	add_child(nozzle)
 
 

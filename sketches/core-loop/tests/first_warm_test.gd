@@ -2,8 +2,8 @@ extends SceneTree
 
 # Rule (dam f3822, unit 23 receipt on #494): the run's first moments draw no material for the
 # first time mid-fight. After the first stage entry of a session, bake_warm.gd builds each first
-# moment's views with its owner's own builder (the armour read's class icon and stamp words, the
-# synergy ring, the arc mark) in an inert holder out of sight, one a frame, holds their
+# moment's views with its owner's own builder (the first kill's scrap pickups, the armour read's
+# class icon and stamp words, the synergy ring, the arc mark) in an inert holder out of sight, one a frame, holds their
 # materials, and draws the codex category icons ahead. Fixture: the warm node on a bare event
 # bus; it runs under the headless (dummy) renderer like every test here.
 
@@ -12,9 +12,12 @@ const BakeWarm := preload("res://src/presentation/bake_warm.gd")
 const ArmourMarks := preload("res://src/presentation/armour_marks.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const Combat := preload("res://src/combat/combat.gd")
+const ScrapField := preload("res://src/build/scrap_field.gd")
+const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const Context := preload("res://src/core/context.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}]}
 
@@ -67,7 +70,7 @@ func _run() -> void:
 				placed = placed and warm.position == BakeWarm.OUT_OF_SIGHT and warm.process_mode == Node.PROCESS_MODE_DISABLED
 	await process_frame
 	t.check("each first moment with a view stands once, one at a time, and leaves",
-		seen == BakeWarm.FIRSTS and most == 1 and _first_warms(node).is_empty(), "%s, at most %d" % [seen, most])
+		seen == BakeWarm.FIRSTS.filter(func(f): return f != "hero_chunks") and most == 1 and _first_warms(node).is_empty(), "%s, at most %d" % [seen, most])
 	t.check("the views stand out of sight in a holder that never processes", placed)
 
 	var armour: Array = views.get("armour_read", [])
@@ -79,9 +82,24 @@ func _run() -> void:
 	t.check("and every stamp word stands beside it", words.size() == want.size() and words.all(func(w): return w in want and w != ""), "%s vs %s" % [words, want])
 	var ring: Array = views.get("synergy_ring", [])
 	t.check("the synergy ring is add_ring's", ring.size() == 1 and ring[0]["name"] == "SynergyRing" and ring[0]["blend"] == BaseMaterial3D.BLEND_MODE_ADD)
+	var pickups: Array = views.get("scrap_pickup", [])
+	var variants := ScrapField.PICKUP_VARIANTS.size()
+	t.check("each scrap pickup and recovery cluster stands, in the pickup shader a field piece wears",
+		pickups.size() == 2 * variants and pickups.all(func(v): return v["shader"] == ScrapField._pickup_material(Palette.ARC).shader), "%d views" % pickups.size())
 	var arc: Array = views.get("arc_mark", [])
 	t.check("the arc mark draws the shared ring every mark draws", arc.size() == 1 and arc[0]["mesh"] == Combat._arc_ring())
-	t.check("the materials the views drew are held", BakeWarm._kept.size() == 2 and BakeWarm._kept.all(func(m): return is_instance_valid(m)))
+	t.check("the materials the views drew are held", BakeWarm._kept.size() == 3 and BakeWarm._kept.all(func(m): return is_instance_valid(m)))
+	t.check("the kill chunks' glb is held, loaded on the main thread under the headless renderer, so a discovery burst reads the cache",
+		ResourceLoader.has_cached(HeroAssets.CHUNKS_PATH) and BakeWarm._held.get(HeroAssets.CHUNKS_PATH) == load(HeroAssets.CHUNKS_PATH) and BakeWarm._loading.is_empty())
+	# A threaded load still in flight at teardown is collected (a quit before it lands, scrapkeep#322). A script
+	# stands in for the glb, whose meshes the headless renderer cannot load off the main thread.
+	var standin := "res://src/core/sim_clock.gd"
+	ResourceLoader.load_threaded_request(standin)
+	BakeWarm._loading.append(standin)
+	BakeWarm.settle()
+	t.check("settle collects a load still in flight", BakeWarm._loading.is_empty() and BakeWarm._held.has(standin)
+		and ResourceLoader.load_threaded_get_status(standin) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE)
+	BakeWarm._held.erase(standin)
 	t.check("the codex category icons are drawn ahead", CodexStyle.CATEGORIES.keys().all(func(id): return CodexStyle._icons.has(id)))
 
 	events.stage_entered.emit(1, false)
@@ -114,6 +132,7 @@ func _read(view: Node) -> Dictionary:
 		row["shading"] = material.shading_mode if material is BaseMaterial3D else -1
 		row["blend"] = material.blend_mode if material is BaseMaterial3D else -1
 		row["albedo"] = material.albedo_color if material is BaseMaterial3D else null
+		row["shader"] = material.shader if material is ShaderMaterial else null
 	if not view.is_inside_tree():
 		view.free()
 	return row
