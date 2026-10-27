@@ -45,8 +45,47 @@ func _run() -> void:
 	t.check("the landing's finish adds every tile at once, whatever the cost",
 		landing.phase == ParkTerrain.Phase.READY and landing.tiles.size() == ParkTerrain.TILE_COUNT)
 	landing.queue_free()
+
+	# Rule (flume Warden prebuild on the 4080, #512 probe rows): the region maps rebuild colour
+	# first, each after MAP_GAP_FRAMES of the play attach; the landing's finish waits for none.
+	var maps := _ground()
+	maps._next_map = 0
+	maps.terrain3d = FakeTerrain.new()
+	maps.add_child(maps.terrain3d)
+	var steps_at: Array[int] = []
+	for step in 4 * (ParkTerrain.MAP_GAP_FRAMES + 1):
+		var before: int = maps.terrain3d.data.calls.size()
+		maps._attach_step(1 << 62)
+		if maps.terrain3d.data.calls.size() > before:
+			steps_at.append(step)
+	t.check("the play attach rebuilds colour, height, control, one a step", maps.terrain3d.data.calls == [2, 0, 1], str(maps.terrain3d.data.calls))
+	var gap := ParkTerrain.MAP_GAP_FRAMES
+	t.check("each map waits MAP_GAP_FRAMES steps first", steps_at == [gap, 2 * gap + 1, 3 * gap + 2], str(steps_at))
+	maps.queue_free()
+	var finish := _ground()
+	finish._next_map = 0
+	finish.terrain3d = FakeTerrain.new()
+	finish.add_child(finish.terrain3d)
+	var calls := 0
+	while finish.phase == ParkTerrain.Phase.ATTACHING and calls < 8:
+		finish._attach_step(-1)
+		calls += 1
+	t.check("the landing's finish rebuilds every map without a wait", finish.terrain3d.data.calls == [2, 0, 1] and finish.phase == ParkTerrain.Phase.READY and calls == ParkTerrain.MAP_TYPES.size(), "%d calls" % calls)
+	finish.queue_free()
 	await process_frame
 	quit(t.verdict())
+
+
+class FakeMaps:
+	extends RefCounted
+	var calls: Array = []
+	func update_maps(type: int, _all_regions: bool, _generate_mips: bool) -> void:
+		calls.append(type)
+
+
+class FakeTerrain:
+	extends Node3D
+	var data := FakeMaps.new()
 
 
 func _ground() -> Node3D:
