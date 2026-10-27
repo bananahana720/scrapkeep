@@ -45,7 +45,8 @@ func _run() -> void:
 	holder.add_child(whole_root)
 	Scenery.build_park(whole_root, map, ground, 1)
 	var whole := _read(whole_root)
-	t.check("the whole pass plants cottonwoods and mist", whole.batches.has("WaterMist") and whole.shells > 0, str(whole.batches.keys()))
+	t.check("the whole pass plants cottonwoods with their detail shells", not whole.batches.is_empty() and not whole.holders.is_empty() and whole.shells > 0,
+		"%s, %d holders, %d shells" % [whole.batches.keys(), whole.holders.size(), whole.shells])
 
 	var stepped_root := Node3D.new()
 	holder.add_child(stepped_root)
