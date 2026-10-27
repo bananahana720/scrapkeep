@@ -12,6 +12,7 @@ const T := preload("res://tests/support/t.gd")
 #     and the panel never shows the cut, then sweeps off; the deck camera rushes in during the wind;
 #   - the camp gate fires the ball up and out of the gate, then the run starts on stage 1 with the gate's pilot;
 #   - a first run (prologue due) at the gate goes to pilot select instead;
+#   - a stage launch: the swipe starts from the cover near the flight's end and the next stage is entered under it;
 #   - reduced motion skips the wind and keeps the panel's lines still;
 #   - the whole take stays inside its budget once the dam is drawn.
 
@@ -170,7 +171,38 @@ func _run() -> void:
 		_t.check("the prologue was due for the fallback check", false, "seen already")
 	_game.screens.prologue_enabled = false
 
+	# A stage launch, live: the flight is the wind, the swipe crosses as it ends, the next stage is entered under it.
+	_take.force_live = false
+	flow.press_start()
+	await _frames(2)
+	_game._screen_key(KEY_1)
+	await _frames(3)
+	_t.check("a run on stage 1 for the stage launch", flow.in_stage() and _game.run.stage == 1, flow.state_name())
+	_take.force_live = true
+	at_cover.clear()
+	flow._set_state(flow.LAUNCH)
+	flow._on_launched(Vector3.ZERO)
+	for i in 120:
+		if _take.busy():
+			_take.set_process(false)
+			break
+		await physics_frame
+	_t.check("the swipe starts as the flight nears its end, from the cover", _take.phase == LaunchTake.COVER and flow.state_name() == "launch"
+		and flow._flight >= flow.LAUNCH_FLIGHT - flow.CUT_LEAD - 0.05, "%s %s %.2f" % [_take.phase, flow.state_name(), flow._flight])
+	await _physics(60)
+	_t.check("the flight waits for the cover", flow.state_name() == "launch" and _game.run.stage == 1 and at_cover.is_empty(), "%s stage %d cover %s phase %d flight %.2f" % [flow.state_name(), _game.run.stage, at_cover, _take.phase, flow._flight])
+	await _step_while(LaunchTake.COVER)
+	_t.check("the next stage is entered on the fully covered frame", at_cover.size() == 1 and at_cover[0][0] == 1.0
+		and flow.in_stage() and _game.run.stage == 2, "%s stage %d" % [at_cover, _game.run.stage])
+	await _step_while(LaunchTake.HOLD)
+	await _step_while(LaunchTake.REVEAL)
+	_t.check("the stage launch's take ends", not _take.busy(), "")
+	_take.force_live = false
+	flow.show_title()
+	await _frames(2)
+
 	# Reduced motion: no wind, still lines.
+	_take.force_live = true
 	HighdraftFx.preferred = true
 	flow.press_start()
 	await _frames(2)

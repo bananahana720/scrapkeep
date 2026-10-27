@@ -7,6 +7,9 @@ extends Node
 #   hold    on the first fully covered frame on_cover runs (the run starts, the ball is placed over the dam); the panel
 #           stays, speed lines turning and FWOOSH! stamped, until ready_check() says the dam is drawn, HOLD_MIN_S to HOLD_MAX_S
 #   reveal  the panel sweeps on out through the top right, REVEAL_S, over the ball already dropping in
+# A launch between stages, and the launch into Brindle's arena, end under the same swipe (game._cover_stage_cut): the
+# ball's flight is the wind, the swipe crosses as the flight ends, and the next stage's entry, the longest frame of a
+# world, runs under full cover; the hold lasts until that stage is drawn, so a fast machine sees the shortest swipe.
 # Reduced motion keeps the panel still (no lines turning, no camera move) and shortens the wind to nothing.
 #
 # Only a played game runs it: bots, tests and every headless run call on_cover at once (live is false), so run timing
@@ -91,7 +94,8 @@ func busy() -> bool:
 
 # Runs wind (once, at the start), then the swipe, calling on_cover under full cover. ready_check() is polled through the hold.
 # Not live, on_cover runs now and nothing shows. Returns true when the take plays.
-func play(on_cover: Callable, wind := Callable(), ready_check := Callable()) -> bool:
+# from_cover starts at the swipe itself, for a cut whose wind is already playing (a stage launch's flight).
+func play(on_cover: Callable, wind := Callable(), ready_check := Callable(), from_cover := false) -> bool:
 	if busy():
 		return false
 	if not live:
@@ -108,7 +112,7 @@ func play(on_cover: Callable, wind := Callable(), ready_check := Callable()) -> 
 	phase = WIND
 	if wind.is_valid():
 		wind.call()
-	if reduced_motion:
+	if reduced_motion or from_cover:
 		phase = COVER
 	set_process(true)
 	return true

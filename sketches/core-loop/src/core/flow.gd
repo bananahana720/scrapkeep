@@ -26,6 +26,8 @@ const VICTORY_SECONDS := 2.5
 # How long the ball flies after the launch before the next stage takes it; the
 # velocity at that moment is what the next stage receives.
 const LAUNCH_FLIGHT := 0.6
+# The swipe starts this far before the flight would end, so it is fully across (LaunchTake.COVER_S) when it does.
+const CUT_LEAD := 0.24
 # The next stage is entered from above, so a launch lands rather than appears.
 const ENTRY_LIFT := 14.0
 # Stage 1 has no launch behind it; it drops you in rolling at this share of cruise.
@@ -103,6 +105,11 @@ var _home_boss: Node = null
 var _world := 0
 var _launched := false
 var _flight := 0.0
+# A played game's launch ends under the launch take's swipe (game._cover_stage_cut): called with the stage's finish when
+# the swipe should start, it returns true when the swipe plays and will finish the stage itself under full cover. Unset,
+# or false (bots, tests, headless), the flight ends the stage at LAUNCH_FLIGHT as before.
+var cover_cut := Callable()
+var _cut_asked := false
 var _last_percent := -1
 
 # Run saves (RS3): game hands flow a RunStore in play. Every zone entrance is written to it,
@@ -860,13 +867,22 @@ func physics_step(delta: float) -> void:
 		LAUNCH:
 			if _launched:
 				_flight += delta
-				if _flight >= LAUNCH_FLIGHT:
+				if not _cut_asked and cover_cut.is_valid() and _flight >= LAUNCH_FLIGHT - CUT_LEAD:
+					_cut_asked = bool(cover_cut.call(_finish_launch))
+				if _flight >= LAUNCH_FLIGHT and not _cut_asked:
 					_finish_stage()
 		BOSS:
 			# The arena is the boss module's geometry, not the world's terrain.
 			_rescue_in_arena(ball)
 			return
 	_rescue_if_fallen(ball)
+
+
+# The swipe's full cover: the launch still in flight finishes its stage there (a restart or a death in the meantime
+# has already moved flow on).
+func _finish_launch() -> void:
+	if state == LAUNCH and _launched:
+		_finish_stage()
 
 
 func _finish_stage() -> void:
@@ -1025,6 +1041,7 @@ func _on_launched(_velocity: Vector3) -> void:
 		_set_state(LAUNCH)
 		_launched = true
 		_flight = 0.0
+		_cut_asked = false
 
 
 # Breaking the Warden opens the gates wherever the ball is: the stage's MUST is done
