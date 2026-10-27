@@ -10,9 +10,9 @@
     "pilots": ["pylon_engineer", "runner_gunner", "tarn"],
     "bot_args": ["--gate=1", "--warm-band=1"],
     "policy_args": {
-      "completionist": ["--explore-by=520"]
+      "completionist": ["--explore-by=900"]
     },
-    "about": "bot_args go to every run, policy_args to that policy's runs. --explore-by lets the completionist keep rolling optional content to stage second 520 (its stall cap then sits at 620 s, above the 600 s park band) (the default explorer leaves for the Warden at 140 s and stalls at 240 s, so it cannot show a park longer than about 4 minutes)."
+    "about": "bot_args go to every run, policy_args to that policy's runs. The completionist explores until it has nothing left it can do (every site, rogue and rib cache keeps its own caps; a roll that stops closing on its goal is given up), with --explore-by=900 only as a safety clock: a park that turns at 900 s reads explore_clock_hit true in its stage note. Until 27 Oct this was --explore-by=520, which every park reached with content still open, so the old 20.8 bot-min read was that clock, not content time (ruling ag)."
   },
   "human_per_bot": {
     "value": 1.75,
