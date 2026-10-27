@@ -716,9 +716,9 @@ func _pump(virtual_frames := -1) -> void:
 		var now := Time.get_ticks_usec()
 		var gap := now - _ace_pumped_usec
 		# The ring's skips before the band's first pump are the synth's (a bot's opening bake
-		# blocks the main thread for seconds after the rings start). A frame longer than the
-		# queue drains it at any depth: that is the frame's to fix, not the device's period,
-		# so the queue stays where it is.
+		# blocks the main thread for seconds after the rings start). A gap between pumps
+		# longer than the queue is a one-off long frame, not the device's period: it should
+		# not cost every later contact the latency of a deeper queue.
 		if _ace_pumped_usec == 0:
 			_skips_seen = _music_pb.get_skips()
 		elif gap * Harmony.RATE > queue_target * 1000000:
@@ -855,10 +855,11 @@ func _deepen_for(skips: int) -> void:
 		print("ACE music: the ring ran dry (%d skips); queue target now %d frames" % [skips, queue_target])
 
 
+# Skips a long gap between pumps took are logged as the frame's, and the queue stays put.
 func _note_stall(gap_usec: int) -> void:
 	var skips := _music_pb.get_skips()
 	if skips > _skips_seen:
-		print("ACE music: a %d ms frame outlasted the ring (%d skips)" % [gap_usec / 1000, skips - _skips_seen])
+		print("ACE music: a %d ms gap between pumps outlasted the queue (%d skips)" % [gap_usec / 1000, skips - _skips_seen])
 	_skips_seen = skips
 
 
