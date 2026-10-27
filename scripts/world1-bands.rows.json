@@ -1,7 +1,7 @@
 {
   "about": "World 1 acceptance bands: the rows the Gate reads for a finished Spillway (dam, flume, Brindle). scripts/world1-bands.mjs evaluates them. status gate: a miss or a missing input fails the read. status report: measured and printed but never fails, until the units in enforced_from land and the coordinator flips it to gate. status info: shown, no threshold. Run length lives in the pacing file (source pacing) and the panel band in #398's drop sim; neither is restated here. Thresholds are the integrator ledger's (/mnt/project-files/world1/BUDGETS.md); change a number there first.",
   "bots": {
-    "measure": "the pacing file's measure block (table, stages, seeds, pilots, bot_args, policy_args) is the run recipe; the completionist needs --explore-by=480 or it cannot reach its band",
+    "measure": "the pacing file's measure block (table, stages, seeds, pilots, bot_args, policy_args) is the run recipe; the completionist explores until done with --explore-by=900 as a safety clock (ruling ag)",
     "policies": [
       "skipper",
       "completionist"
@@ -9,7 +9,7 @@
     "seeds": 8,
     "args": "--table=park --stages=2 --gate=1 --warm-band=1 --seeds=1,2,3,4,5,6,7,8 --panel-log=1",
     "policy_args": {
-      "completionist": "--explore-by=480"
+      "completionist": "--explore-by=900"
     }
   },
   "pacing_file": "sketches/core-loop/design-v3/pacing/world1-pacing.json",

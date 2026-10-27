@@ -16,8 +16,8 @@ const T := preload("res://tests/support/t.gd")
 # Retune (when world 1's kill volume changes): re-record the streams with
 #   godot --headless --fixed-fps 90 --path . --script res://tools/bot_run.gd -- --out=<dir> \
 #     --policy=<completionist|skipper> --pilot=pylon_engineer --seeds=1,2,3,4,5,6,7,8 --stages=2 --table=park --gate=1 --warm-band=1 --panel-log=1
-# fold each bots.ndjson record's panel_kills (first five fields, plus true as a sixth on a yard
-# lock crew's kill: the seventh panel_kills field) and game_seconds into FIXTURE,
+# fold each bots.ndjson record's panel_kills (as recorded: a yard lock crew's kill carries true
+# as its seventh field, a cleared yard is a yard_clear row) and game_seconds into FIXTURE,
 # then move Panels.DROP_BY_WORLD[1] until RUN_BAND and EXPLORER_BAND hold. All three live here.
 # smoke: solo timeout=60s
 
@@ -49,7 +49,7 @@ static func replay(kills: Array, seed: int, world := 1) -> Dictionary:
 	dropper.world = world
 	var per := {}
 	for k in kills:
-		if String(k[1]) in Panels.NO_DROP_KINDS or (k.size() > 5 and bool(k[5])):
+		if String(k[1]) in Panels.NO_DROP_KINDS or (k.size() > 6 and bool(k[6])):
 			continue
 		# A cleared yard lock pays one panel without a roll (build.gd yard_cleared).
 		if String(k[1]) == "yard_clear":

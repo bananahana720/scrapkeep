@@ -1766,6 +1766,8 @@ func _completionist(warden: Node3D, delta: float) -> void:
 	# Give up before resuming a camp or bounty: on Tally 36428 stage 4 the
 	# activities ran past ENGAGE_BY and the Warden was never reached.
 	if _activity_rushed():
+		if engage_by > ENGAGE_BY and _note.get("warden_fight_s") == null:
+			_note["explore_clock_hit"] = true
 		_fight(warden, delta)
 		return
 	if _rogue_fight(delta) or _rib_goal(delta, RIB_NEAR):
@@ -2541,8 +2543,8 @@ func _fight(target: Node3D, delta: float) -> void:
 		_note["warden_fight_heft"] = snappedf(game.run.heft(), 0.001)
 		# The pacing check's tell: the explorer turned because --explore-by ran out, not because
 		# the park had nothing left it could do (a park read at the clock is the clock's length).
-		if engage_by > ENGAGE_BY:
-			_note["explore_clock_hit"] = game.run.stage_time > engage_by
+		if engage_by > ENGAGE_BY and not _note.has("explore_clock_hit"):
+			_note["explore_clock_hit"] = false
 	var short: bool = _punch_seen < _plating(target)
 	if short:
 		_count("punch_short_s", delta)

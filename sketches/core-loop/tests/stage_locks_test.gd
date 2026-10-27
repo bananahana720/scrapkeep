@@ -55,6 +55,7 @@ func _run() -> void:
 	await _gate()
 	await _riders()
 	await _lock()
+	await _timed_out()
 	await _skipped_when_engaged()
 	await _off()
 	quit(_t.verdict())
@@ -253,6 +254,8 @@ func _lock() -> void:
 	_t.check("objective names the yard", game.flow.objective_text().contains("Yard locked"), game.flow.objective_text())
 	_t.check("the bot hand goes for the crew", locks.foe_for(game.player.ball_position()) in crew)
 	var logged: int = game.build.kill_log.size()
+	var dry: int = game.build.dropper.dry
+	var panels: int = game.build.scrap.panel_count()
 	# A ball rolling out past the wall is turned back.
 	var r := float(row["radius_m"])
 	var c: Vector3 = locks.lock_centre
@@ -295,6 +298,39 @@ func _lock() -> void:
 	_t.eq("every crew kill is logged as the yard's", crew_kills.size(), crew_size)
 	_t.check("no crew kill drops a panel", crew_kills.all(func(k: Array): return not bool(k[5])))
 	_t.eq("the cleared yard pays one panel", since.filter(func(k: Array): return String(k[1]) == "yard_clear" and bool(k[5])).size(), 1)
+	_t.eq("the yard leaves pity alone", game.build.dropper.dry, dry)
+	_t.eq("its panel lies in the field", game.build.scrap.panel_count(), panels + 1)
+	game.free()
+	await process_frame
+
+
+# A yard that runs out its max_s lets its survivors out as plain enemies: no panel for the yard,
+# and a survivor killed on the open map rolls like any kill.
+func _timed_out() -> void:
+	var game = await _game()
+	var locks = game.flow.gate
+	var row: Dictionary = LockRows.row("park_dam")["lock"]
+	var beacon: Vector3 = game.flow.beacon.global_position
+	var spot := beacon + Vector3(0.0, 0.0, -float(row["within_m"]) + 20.0)
+	game.player.reset_to(game.ctx.terrain.drop_point(spot.x, spot.z, 1.0), Vector3.ZERO)
+	var waited := 0
+	while locks.lock_state == "armed" and waited < 240:
+		await physics_frame
+		waited += 1
+	var crew: Array = locks.crew_alive()
+	_t.check("the timed yard shuts with a crew", locks.lock_state == "locked" and not crew.is_empty())
+	var logged: int = game.build.kill_log.size()
+	locks.lock_left = 0.0
+	for i in 2:
+		await physics_frame
+	_t.eq("max_s opens the yard", locks.lock_state, "spent")
+	_t.check("a timed-out yard is not won", not locks.lock_won)
+	_t.check("its survivors leave the crew", crew.all(func(enemy): return not is_instance_valid(enemy) or not enemy.has_meta("yard_crew")))
+	_kill(crew[0])
+	await physics_frame
+	var since: Array = game.build.kill_log.slice(logged)
+	_t.check("a survivor's kill rolls like any kill", since.size() >= 1 and since.all(func(k: Array): return k.size() < 7 or not bool(k[6])), str(since))
+	_t.eq("a timed-out yard pays nothing", since.filter(func(k: Array): return String(k[1]) == "yard_clear").size(), 0)
 	game.free()
 	await process_frame
 
