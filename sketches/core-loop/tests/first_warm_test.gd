@@ -3,7 +3,8 @@ extends SceneTree
 # Rule (dam f3822, unit 23 receipt on #494): the run's first moments draw no material for the
 # first time mid-fight. After the first stage entry of a session, bake_warm.gd builds each first
 # moment's views with its owner's own builder (the first kill's scrap pickups, the armour read's
-# class icon and stamp words, the synergy ring, the arc mark) in an inert holder out of sight, one a frame, holds their
+# class icon and stamp words, the synergy ring, the arc mark, a machine word label with every glyph a
+# word draws) in an inert holder out of sight, one a frame, holds their
 # materials, and draws the codex category icons ahead. Fixture: the warm node on a bare event
 # bus; it runs under the headless (dummy) renderer like every test here.
 
@@ -14,6 +15,8 @@ const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const Combat := preload("res://src/combat/combat.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const MachineFx := preload("res://src/presentation/machine_fx.gd")
+const Panels := preload("res://src/build/panels.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const Context := preload("res://src/core/context.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
@@ -48,7 +51,7 @@ func _run() -> void:
 	events.stage_entered.emit(1, false)
 	var queued: Array = BakeWarm.firsts()
 	t.check("the session's first entry queues every first moment and codex icon once",
-		node._first_queue == queued and queued.size() == BakeWarm.FIRSTS.size() + CodexStyle.CATEGORIES.size(), str(node._first_queue))
+		node._first_queue == queued and queued.size() == BakeWarm.FIRSTS.size() - 1 + _word_frames() + CodexStyle.CATEGORIES.size(), str(node._first_queue))
 	events.stage_entered.emit(1, true)
 	t.check("a retry queues none again", node._first_queue.size() == queued.size())
 
@@ -70,7 +73,7 @@ func _run() -> void:
 				placed = placed and warm.position == BakeWarm.OUT_OF_SIGHT and warm.process_mode == Node.PROCESS_MODE_DISABLED
 	await process_frame
 	t.check("each first moment with a view stands once, one at a time, and leaves",
-		seen == BakeWarm.FIRSTS.filter(func(f): return f != "hero_chunks") and most == 1 and _first_warms(node).is_empty(), "%s, at most %d" % [seen, most])
+		seen == queued.filter(func(f): return f != "hero_chunks" and not f.begins_with("codex_icon:")) and most == 1 and _first_warms(node).is_empty(), "%s, at most %d" % [seen, most])
 	t.check("the views stand out of sight in a holder that never processes", placed)
 
 	var armour: Array = views.get("armour_read", [])
@@ -88,6 +91,22 @@ func _run() -> void:
 		pickups.size() == 2 * variants and pickups.all(func(v): return v["shader"] == ScrapField._pickup_material(Palette.ARC).shader), "%d views" % pickups.size())
 	var arc: Array = views.get("arc_mark", [])
 	t.check("the arc mark draws the shared ring every mark draws", arc.size() == 1 and arc[0]["mesh"] == Combat._arc_ring())
+	var machine := []
+	for i in _word_frames():
+		machine.append_array(views.get("machine_words:%d" % i, []))
+	t.check("the machine words stand at the size and outline a word draws, a few glyphs a frame, every glyph a word can draw in turn",
+		machine.size() == _word_frames() and "".join(machine.map(func(v): return v["text"])) == MachineFx.WARM_GLYPHS
+		and machine.all(func(v): return v["font"] == [112, 30, true] and v["text"].length() <= BakeWarm.GLYPHS_A_FRAME), str(machine))
+	var drawn := MachineFx.WORDS.values()
+	for table in [MachineFx.SPECIALS, MachineFx.BOSSES]:
+		for row in table.values():
+			for key in row:
+				if String(key).ends_with("_word"):
+					drawn.append(String(row[key]))
+	for id in Panels.ids():
+		drawn.append(Panels.pop_text(id))
+	var missing := drawn.filter(func(w: String): return Array(w.to_upper().replace(" ", "").split("")).any(func(c): return c not in MachineFx.WARM_GLYPHS))
+	t.check("every machine word's glyphs are in the warm label", not drawn.is_empty() and missing.is_empty(), str(missing))
 	t.check("the materials the views drew are held", BakeWarm._kept.size() == 3 and BakeWarm._kept.all(func(m): return is_instance_valid(m)))
 	t.check("the kill chunks' glb is held, loaded on the main thread under the headless renderer, so a discovery burst reads the cache",
 		ResourceLoader.has_cached(HeroAssets.CHUNKS_PATH) and BakeWarm._held.get(HeroAssets.CHUNKS_PATH) == load(HeroAssets.CHUNKS_PATH) and BakeWarm._loading.is_empty())
@@ -124,6 +143,7 @@ func _read(view: Node) -> Dictionary:
 	var row := {"name": String(view.name)}
 	if view is Label3D:
 		row["text"] = view.text
+		row["font"] = [view.font_size, view.outline_size, view.uppercase]
 	elif view is MeshInstance3D:
 		var material: Material = view.material_override
 		row["mesh"] = view.mesh if view.mesh is ArrayMesh else (view.mesh as PrimitiveMesh).get_class()
@@ -140,3 +160,7 @@ func _read(view: Node) -> Dictionary:
 
 func _first_warms(node: Node) -> Array:
 	return node.get_children().filter(func(child): return child.has_meta("first_warm") and not child.is_queued_for_deletion())
+
+
+func _word_frames() -> int:
+	return ceili(MachineFx.WARM_GLYPHS.length() / float(BakeWarm.GLYPHS_A_FRAME))
