@@ -2459,9 +2459,7 @@ func _arc_mark(enemy: Node3D) -> void:
 	var radius := _hull(enemy)
 	var mark: MeshInstance3D = enemy.get_node_or_null("ArcMark")
 	if mark == null or mark.is_queued_for_deletion():
-		mark = MeshInstance3D.new()
-		mark.name = "ArcMark"
-		mark.mesh = _arc_ring()
+		mark = arc_mark_view()
 		enemy.add_child(mark)
 	# Scale against the enemy's own, so the drawn radius is the committed one in world units.
 	var parent_scale: Vector3 = enemy.global_basis.get_scale()
@@ -2469,6 +2467,13 @@ func _arc_mark(enemy: Node3D) -> void:
 	mark.set_instance_shader_parameter("left", 1.0)
 	_exposed[_arc_key(id)] = {"kind": ARC_MARK_KIND, "id": id, "until": _clock + ARC_MARK_SECONDS,
 		"window": ARC_MARK_SECONDS, "radius": radius, "mark": mark}
+
+
+static func arc_mark_view() -> MeshInstance3D:
+	var mark := MeshInstance3D.new()
+	mark.name = "ArcMark"
+	mark.mesh = _arc_ring()
+	return mark
 
 
 # A unit-radius dashed ring (outer edge 1.0), tinted the arc colour and fading with "left".
