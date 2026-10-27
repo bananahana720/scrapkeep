@@ -36,26 +36,61 @@ const EDGE_M := 20.0
 # park file cannot judge, (at: Vector2, perch: String) -> bool: true rejects it (ambient_life.gd: too steep, or
 # under a structure).
 static func plan(park: Dictionary, kind_ids: Array, seed_number: int, veto := Callable()) -> Array:
+	var planner := Planner.new(park, kind_ids, seed_number, veto)
+	while planner.step():
+		pass
+	return planner.homes
+
+
+# plan() as steps, so a caller can spread it over frames: the keepout grid first, then a kind a step.
+# Each kind draws from its own seeded stream, so the homes are plan()'s whichever way it runs.
+class Planner extends RefCounted:
+	const Homes := preload("res://src/presentation/ambient_homes.gd")
 	var homes := []
-	var keep := _keep_grid(keepouts(park))
-	var rows: Array = park["park_rows"]
-	var rect := _rect(park)
-	var routes := _route_lines(park)
-	for kind_id in kind_ids:
+	var _park: Dictionary
+	var _kind_ids: Array
+	var _seed_number: int
+	var _veto: Callable
+	var _keep: Dictionary
+	var _rows: Array
+	var _rect: Rect2
+	var _routes: Array
+	var _next := -1
+
+	func _init(park: Dictionary, kind_ids: Array, seed_number: int, veto := Callable()) -> void:
+		_park = park
+		_kind_ids = kind_ids
+		_seed_number = seed_number
+		_veto = veto
+
+	# One step; false once every kind is planned.
+	func step() -> bool:
+		if _next < 0:
+			_keep = Homes._keep_grid(Homes.keepouts(_park))
+			_rows = _park["park_rows"]
+			_rect = Homes._rect(_park)
+			_routes = Homes._route_lines(_park)
+		else:
+			_plan_kind(_kind_ids[_next])
+		_next += 1
+		return _next < _kind_ids.size()
+
+	func _plan_kind(kind_id) -> void:
 		var kind: Dictionary = AmbientKinds.row(String(kind_id))
 		if kind.is_empty():
-			continue
+			return
 		var spec: Dictionary = kind["homes"]
 		var rng := RandomNumberGenerator.new()
-		rng.seed = hash([seed_number, String(kind_id), String(park["map"])])
+		rng.seed = hash([_seed_number, String(kind_id), String(_park["map"])])
 		# A ride or grapple row is wholly inside its own keepout, so it can never hold a home: skip it up front.
-		var matching := rows.filter(func(r): return _matches(r, spec) and not _own_keepout(r, rect))
+		var rect := _rect
+		var matching := _rows.filter(func(r): return Homes._matches(r, spec) and not Homes._own_keepout(r, rect))
 		if matching.is_empty():
-			continue
+			return
 		var want := rng.randi_range(int(spec["count"][0]), int(spec["count"][1]))
 		var placed: Array[Vector2] = []
 		for h in want:
-			var found := _find_home(rng, matching, keep, rect, routes, spec, kind, placed, veto)
+			var found := Homes._find_home(rng, matching, _keep, _rect, _routes, spec, kind, placed, _veto)
 			if found.is_empty():
 				continue
 			placed.append(found["at"])
@@ -63,7 +98,6 @@ static func plan(park: Dictionary, kind_ids: Array, seed_number: int, veto := Ca
 			found["perch"] = String(spec["perch"])
 			found["group"] = homes.size()
 			homes.append(found)
-	return homes
 
 
 static func _own_keepout(row: Dictionary, rect: Rect2) -> bool:

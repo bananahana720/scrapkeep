@@ -18,15 +18,13 @@ extends SceneTree
 # common, breaks the ladder on both rows, and a row with no pay.rarities and no named part breaks
 # it too. The full visit (spawn, all four doors in the best order, beacon) is reported and finite.
 #
-# SR15, reported and not gated (K-UNITS KB8): the report prints reward_ratio, the median
-# spawn-to-pocket path over the spawn-to-beacon path across the off-line pockets (start target at
-# least 1.5, comps/isaac/floor-generation.md), and full_visit_ratio (start target at most 3.0).
-# Both are structural facts here (present, finite); a target miss is printed as out of target and
-# is no test failure. The fixture as committed prints reward_ratio out of target (its pockets
-# lie on the way to a far beacon; a design gap for the KD stage units, which gate the ratio on
-# their own files). Planted fixtures: off-line doors next to the spawn print reward_ratio out of
-# target; two doors sent to the far corners print full_visit_ratio out of target; the in-target
-# side of reward_ratio is shown on hand-made rows, since no fixture door reaches 1.5.
+# SR15, reported and not gated (K-UNITS KB8): the report prints full_visit_ratio (start target at
+# most 3.0) as a target, and reward_ratio, the median spawn-to-pocket path over the
+# spawn-to-beacon path across the off-line pockets, as information with no target (ruling ac,
+# 26 Oct: the beacon is the park's far end, so no legal door reaches the old 1.5). Both are
+# structural facts here (present, finite); a target miss is printed as out of target and is no
+# test failure. Planted fixtures: off-line doors next to the spawn lower reward_ratio and print no
+# target miss for it; two doors sent to the far corners print full_visit_ratio out of target.
 
 const T := preload("res://tests/support/t.gd")
 
@@ -142,11 +140,12 @@ func _ratios(tool: GDScript, graph, park: Dictionary, ruling: Dictionary) -> voi
 		names.append(row["name"])
 		t.check("target %s carries a value, a target and a verdict" % row["name"],
 			row.has("value") and row.has("target") and row.has("ok") and is_finite(float(row["value"])), str(row))
-	t.eq("the report carries both targets", names, ["reward_ratio", "full_visit_ratio"])
-	print("[reward_ratio] %.3f (start target at least 1.5, reported)" % reward_ratio)
+	t.eq("the report's one target is full_visit_ratio (reward_ratio retired, ruling ac)", names, ["full_visit_ratio"])
+	print("[reward_ratio] %.3f (information only, ruling ac)" % reward_ratio)
 	for line in tool.target_lines(ruling):
 		print("[target] " + line)
-	t.check("the table text prints both targets", tool.pocket_table(ruling).contains("reward_ratio") and tool.pocket_table(ruling).contains("full_visit_ratio"))
+	var table: String = tool.pocket_table(ruling)
+	t.check("the table text prints full_visit_ratio and reward_ratio as information", table.contains("full_visit_ratio") and table.contains("reward_ratio") and table.contains("information only"))
 
 	# Planted: every off-line door next to the spawn, so the spawn-to-pocket median collapses.
 	var close := park.duplicate(true)
@@ -159,8 +158,11 @@ func _ratios(tool: GDScript, graph, park: Dictionary, ruling: Dictionary) -> voi
 			c["at"] = [-80, -540]
 	var near_ruling: Dictionary = tool.pockets(graph, close)
 	_print_targets("planted close doors", tool, near_ruling)
-	t.check("pockets planted near the spawn print reward_ratio out of target", _out_of_target(near_ruling, "reward_ratio"))
-	t.check("a missed target is no breach (reported, not gated)", not _breaks(near_ruling, "park", "reward_ratio"))
+	var near_names := []
+	for row in near_ruling.get("targets", []):
+		near_names.append(row["name"])
+	t.eq("pockets planted near the spawn still report only full_visit_ratio as a target", near_names, ["full_visit_ratio"])
+	t.check("the planted ruling still prints reward_ratio as information", tool.pocket_table(near_ruling).contains("reward_ratio %.3f (information only" % near_ruling["reward_ratio"]))
 
 	t.check("the fixture's full_visit_ratio prints in target", not _out_of_target(ruling, "full_visit_ratio"), str(targets))
 
@@ -182,19 +184,18 @@ func _ratios(tool: GDScript, graph, park: Dictionary, ruling: Dictionary) -> voi
 	t.check("far off-line doors raise reward_ratio over the fixture's", float(beyond_ruling["reward_ratio"]) > reward_ratio, "%.3f vs %.3f" % [beyond_ruling["reward_ratio"], reward_ratio])
 	t.check("two doors in the far corners print full_visit_ratio out of target", _out_of_target(beyond_ruling, "full_visit_ratio"))
 
-	# Positive control on the metric itself: on this fixture even the far corners reach only about
-	# 1.3 (the walk is capped by the stage's extent, a design gap for the KD units), so the
-	# in-target side is shown on hand-made rows: median 900 over a 600 m beacon walk is 1.5.
+	# The metric itself on hand-made rows: median 900 over a 600 m beacon walk is 1.5.
 	var rows := []
 	for d_spawn in [600.0, 1200.0, 900.0]:
 		rows.append({"role": "reward", "d_spawn": d_spawn})
 	rows.append({"role": "online", "d_spawn": 100.0})
 	t.near("the median of 600, 900 and 1200 over a 600 m beacon walk is 1.5", tool._reward_ratio(rows, 600.0), 1.5, 0.0001)
-	var made := {"targets": [{"name": "reward_ratio", "value": 1.5, "target": "at least 1.5", "ok": true},
-		{"name": "reward_ratio", "value": 1.49, "target": "at least 1.5", "ok": false}]}
+	var made := {"targets": [{"name": "full_visit_ratio", "value": 3.0, "target": "at most 3.0", "ok": true},
+		{"name": "full_visit_ratio", "value": 3.01, "target": "at most 3.0", "ok": false}]}
 	var lines: PackedStringArray = tool.target_lines(made)
-	t.check("a ratio at 1.5 prints in target and one at 1.49 prints out", lines[0].ends_with("in target") and lines[1].ends_with("OUT OF TARGET"), str(lines))
-	t.eq("an unreachable door gives an infinite ratio, out of target", tool._reward_ratio([{"role": "reward", "d_spawn": INF}], 600.0), INF)
+	t.check("a ratio at 3.0 prints in target and one at 3.01 prints out", lines[0].ends_with("in target") and lines[1].ends_with("OUT OF TARGET"), str(lines))
+	t.eq("an unreachable door gives an infinite reward_ratio", tool._reward_ratio([{"role": "reward", "d_spawn": INF}], 600.0), INF)
+	t.check("an unreachable reward_ratio prints as unreachable", tool.reward_line(INF).begins_with("reward_ratio unreachable"))
 
 func _role_id(ruling: Dictionary, role: String) -> String:
 	for row in ruling["rows"]:

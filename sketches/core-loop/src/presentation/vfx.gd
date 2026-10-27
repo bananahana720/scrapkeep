@@ -367,9 +367,16 @@ const MAX_RINGS := 4
 func add_ring(id: String, tint: Color) -> void:
 	if _rings.has(id) or _rings.size() >= MAX_RINGS:
 		return
+	var ring := ring_view(_rings.size(), tint)
+	player.juice_node().add_child(ring)
+	_rings[id] = {"node": ring, "tilt": 0.5 + 0.35 * _rings.size(), "speed": 1.4 + 0.5 * _rings.size()}
+
+
+# The index-th synergy ring as add_ring draws it (BakeWarm builds one at stage entry).
+static func ring_view(index: int, tint: Color) -> MeshInstance3D:
 	var ring := MeshInstance3D.new()
 	var torus := TorusMesh.new()
-	torus.inner_radius = 1.32 + 0.12 * _rings.size()
+	torus.inner_radius = 1.32 + 0.12 * index
 	torus.outer_radius = torus.inner_radius + 0.05
 	torus.rings = 48
 	torus.ring_segments = 4
@@ -382,8 +389,7 @@ func add_ring(id: String, tint: Color) -> void:
 	ring.material_override = mat
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ring.name = "SynergyRing"
-	player.juice_node().add_child(ring)
-	_rings[id] = {"node": ring, "tilt": 0.5 + 0.35 * _rings.size(), "speed": 1.4 + 0.5 * _rings.size()}
+	return ring
 
 
 func ring_count() -> int:

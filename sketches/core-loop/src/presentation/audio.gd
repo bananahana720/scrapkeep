@@ -1347,6 +1347,7 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	# before the live key moves that pitch.
 	# The cue log keeps the pitch the caller asked for, so the ladder stays readable there.
 	var tier := SfxBank.resolve(sound, pitch)
+	db += story_duck_db(kind)
 	var asked := pitch
 	pitch = float(tier["pitch"])
 	if sound in KEYED_SOUNDS or sound in KEST_SOUNDS:
@@ -1360,6 +1361,30 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	if sound in DANGER_SOUNDS:
 		engine.duck_bass(0.3, 0.45)
 	return true
+
+
+# World 1's story stings (spillway_story.gd): one designed one-shot per story row, played now
+# when the row starts, from assets/audio/stingers/1_1/<name>.wav. The bus fact of the same moment
+# (the generic stage, world, rescue or unseal sound) is not dropped, because its beat also starts
+# the stage music; it is ducked STORY_DUCK_DB for STORY_HOLD_MS so the sting is the moment's voice.
+const STORY_KIND := "story_sting"
+const STORY_DUCKED := ["run_started", "world_entered", "stage_entered", "rescue_completed", "beacon_unsealed"]
+const STORY_QUESTS := ["rivet"]
+const STORY_DUCK_DB := -14.0
+const STORY_HOLD_MS := 2500
+var _story_until_ms := 0
+
+
+func story_sting(name: String) -> bool:
+	_story_until_ms = Time.get_ticks_msec() + STORY_HOLD_MS
+	return play(STORY_KIND, 0.0, 1.0, "SFX", SfxBank.stinger_id("1_1", name))
+
+
+# The duck the generic sound of kind takes while a story sting holds its moment.
+func story_duck_db(kind: String) -> float:
+	if kind in STORY_DUCKED and Time.get_ticks_msec() < _story_until_ms:
+		return STORY_DUCK_DB
+	return 0.0
 
 
 # SPIL-9's chirp (SR7): it reads the cue the body shows from the same Companion.CUES row, so
@@ -1515,7 +1540,7 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 	if not sound_ready or sound == "":
 		cue_log.append([kind, sound, "skip", -1, 1.0])
 		return -1
-	var start := engine.schedule_stinger(sound, db, lane, repeats)
+	var start := engine.schedule_stinger(sound, db + story_duck_db(kind), lane, repeats)
 	var beats: int = SfxBank.STINGER_BEATS.get(sound, 1)
 	_duck(0.6, float(start - engine.clock + beats * Harmony.BEAT) / Harmony.RATE)
 	if sound in DANGER_SOUNDS:
@@ -1555,7 +1580,12 @@ func _connect_all(events) -> void:
 	events.scrap_collected.connect(_on_scrap)
 	events.cogs_collected.connect(_on_cogs)
 	events.achievement_earned.connect(func(_id: String): play("achievement_earned"))
-	events.rescue_completed.connect(func(_quest: String): play("rescue_completed"))
+	# Rivet's cage has a story sting (spillway_story, a later listener than this one), so its duck
+	# window opens here, before the generic fanfare plays, rather than when the sting starts.
+	events.rescue_completed.connect(func(quest: String):
+		if quest in STORY_QUESTS:
+			_story_until_ms = Time.get_ticks_msec() + STORY_HOLD_MS
+		play("rescue_completed"))
 	events.part_gained.connect(func(_part: String, _source: String): play("part_gained"))
 	events.player_hit.connect(_on_player_hit)
 	events.player_died.connect(_on_died)
@@ -3568,7 +3598,7 @@ func _flush_flow() -> void:
 					# The heaviest drop of the stage, on the next beat, with the unseal
 					# stinger on the same downbeat.
 					var at := engine.unseal_drop()
-					engine.schedule_stinger_at(Rows.sound("beacon_unsealed"), at)
+					engine.schedule_stinger_at(Rows.sound("beacon_unsealed"), at, story_duck_db("beacon_unsealed"))
 					cue_log.append(["beacon_unsealed", Rows.sound("beacon_unsealed"), "beat", at, 1.0])
 				else:
 					on_beat("beacon_unsealed", 0.0, true)

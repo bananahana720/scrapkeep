@@ -232,8 +232,9 @@ func _show_crust(vent: int, on: bool) -> void:
 		_add_band(st, band, mid - VENT_SPAN, mid + VENT_SPAN, 10, 0.12)
 	var mat := Palette.unshaded(Color(0.42, 0.4, 0.38, 0.95))
 	mat.no_depth_test = true
-	# Under every telegraph (40): the live slag leaves the quenched span undrawn instead.
-	mat.render_priority = 39
+	# Under every telegraph (40) and its keylines (39), which are opaque and would cover the safe span:
+	# the live slag leaves the quenched span undrawn instead.
+	mat.render_priority = 38
 	_crusts[vent] = _mesh_node(st, mat, "Crust_%d" % vent)
 
 

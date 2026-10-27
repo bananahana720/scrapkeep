@@ -24,6 +24,10 @@ const Worlds := preload("res://src/core/worlds.gd")
 const WORLD := 1
 const SHOWN_SECONDS := 0.5
 const STOP_SCREENS := ["title", "class_select", "dead", "summary"]
+# The sting each row plays when it starts: assets/audio/stingers/1_1/<name>.wav (tools/ace/
+# spillway_stingers.py), through audio.story_sting, which ducks the moment's generic bus sound.
+const STINGS := {"cold_open": "sting_cold_open", "rivet_freed": "sting_rivet_cage", "flume_warden_reveal": "sting_warden_reveal",
+	"bowl_handoff": "sting_bowl_handoff", "spillway_clear": "sting_spillway_clear"}
 const ROWS := ["cold_open", "rivet_freed", "flume_warden_reveal", "bowl_handoff", "spillway_clear"]
 
 var ctx
@@ -51,6 +55,7 @@ func setup(ctx_ref, flourish_player) -> void:
 	events.beacon_unsealed.connect(_on_beacon_unsealed)
 	events.world_entered.connect(_on_world_entered)
 	player.finished.connect(_on_finished)
+	player.started.connect(_on_started)
 	events.flow_changed.connect(func(state: String):
 		if state in STOP_SCREENS:
 			_after_fight.clear()
@@ -138,6 +143,14 @@ func _on_world_entered(world: int) -> void:
 	if world == WORLD + 1 and _brindle_beaten:
 		_brindle_beaten = false
 		player.play("spillway_clear")
+
+
+func _on_started(id: String) -> void:
+	# The story node is a child of the Presentation, which owns the audio director.
+	var host = get_parent()
+	var audio = host.get("audio") if host != null else null
+	if STINGS.has(id) and audio != null and audio.has_method("story_sting"):
+		audio.story_sting(STINGS[id])
 
 
 # A once-per-run row counts as played once it reached the screen; one that expired in the queue,

@@ -86,9 +86,12 @@
   "takes": [
    "anthem-brindle-p2-s4401.wav",
    "anthem-brindle-p2-s4402.wav",
-   "anthem-brindle-p2-s4403.wav"
+   "anthem-brindle-p2-s4403.wav",
+   "anthem-brindle-p2-s4404.wav",
+   "anthem-brindle-p2-s4405.wav",
+   "anthem-brindle-p2-s4406.wav"
   ],
-  "pick": null
+  "pick": "anthem-brindle-p2-s4404.wav"
  },
  {
   "id": "anthem-brindle-p3",
@@ -101,9 +104,12 @@
   "takes": [
    "anthem-brindle-p3-s4401.wav",
    "anthem-brindle-p3-s4402.wav",
-   "anthem-brindle-p3-s4403.wav"
+   "anthem-brindle-p3-s4403.wav",
+   "anthem-brindle-p3-s4404.wav",
+   "anthem-brindle-p3-s4405.wav",
+   "anthem-brindle-p3-s4406.wav"
   ],
-  "pick": null
+  "pick": "anthem-brindle-p3-s4402.wav"
  },
  {
   "id": "anthem-waking-p2",

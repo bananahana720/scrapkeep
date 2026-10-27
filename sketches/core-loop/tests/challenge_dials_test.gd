@@ -64,8 +64,8 @@ func _rules() -> void:
 	for key in ChallengeDials.DEFAULTS:
 		# The tuned lists, and the fight-phase follow-up counts (a count, not a multiplier; Andrew's
 		# 23 Oct phase ruling sets them, fight_phases.gd).
-		# The silt boils ship on world 1 (pack pressure E, 24 Oct).
-		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "brindle.follow_ups_by_phase", "hazard.boil_by_stage"]:
+		# The silt boils ship on world 1 (pack pressure E, 24 Oct); the dam's mob hits ship at x1.5 (w19 bands).
+		if key in ["brindle.period_by_phase", "brindle.damage_by_phase", "brindle.follow_ups_by_phase", "hazard.boil_by_stage", "mobs.damage_by_stage"]:
 			continue
 		var d: Variant = ChallengeDials.DEFAULTS[key]
 		var ident: bool = true
@@ -77,6 +77,7 @@ func _rules() -> void:
 			ident = float(d) == 1.0 or key == "brindle.combo" or key.ends_with(".combo") or key.ends_with(".weak_points")
 		if not ident:
 			_t.check("identity default " + key, false)
+	_t.eq("the dam's mob hits ship at x1.5, every other stage at identity", ChallengeDials.value("mobs.damage_by_stage"), [1.5, 1.0, 1.0, 1.0, 1.0, 1.0])
 	_t.eq("weak points ship off on both bosses for wave 18", [ChallengeDials.value("waking.weak_points"), ChallengeDials.value("mind.weak_points")], [0.0, 0.0])
 	_t.near("default tell is the base", ChallengeDials.tell("brindle", Rules.CRANE_WARN), Rules.CRANE_WARN, 0.0)
 
