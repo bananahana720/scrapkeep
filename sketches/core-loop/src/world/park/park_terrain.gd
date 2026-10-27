@@ -35,6 +35,9 @@ extends Node3D
 # start(threaded) loads the bake and builds every region image and tile face list on
 # WorkerThreadPool; the main thread only adds the finished pieces, one region or up to five
 # tiles a frame inside an 8 ms budget, then emits built. finish() completes any of it at once.
+# A tile's add is Jolt building its 12,800-triangle mesh shape (about 7 ms on the 4080), so a
+# second tile starts only when the last one's cost still fits: two a frame held the dam at
+# 18 ms of _process for 50 frames while the flume attached (f5773-5800, #499 rows).
 #
 # The Terrain3D node is not this node's child: a new Terrain3D spends about 135 ms of main
 # thread on its first frame (measured headless, any settings), which no launch can afford. So
@@ -172,6 +175,7 @@ var slowest_step := ""
 var frame_usec_max := 0
 var _last_frame_usec := 0
 var _meter_frames := 0
+var _tile_usec := 0
 
 var _map: RefCounted
 var _apron := PackedFloat32Array()
@@ -945,9 +949,11 @@ func _attach_step(deadline: int) -> void:
 		return
 	var added := 0
 	while _next_tile < TILE_COUNT:
-		if deadline >= 0 and (added >= TILES_PER_FRAME or Time.get_ticks_usec() > deadline):
+		var now := Time.get_ticks_usec()
+		if deadline >= 0 and (added >= TILES_PER_FRAME or now > deadline or (added > 0 and now + _tile_usec > deadline)):
 			return
 		_add_tile(_next_tile)
+		_tile_usec = Time.get_ticks_usec() - now
 		_faces[_next_tile] = null
 		_next_tile += 1
 		added += 1
