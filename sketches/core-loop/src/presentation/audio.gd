@@ -573,14 +573,27 @@ func _on_ready() -> void:
 	_ui_player.play()
 	_sfx = _sfx_player.get_stream_playback() as AudioStreamPlaybackPolyphonic
 	_ui = _ui_player.get_stream_playback() as AudioStreamPlaybackPolyphonic
+	_start_rings()
+	if ace_wanted():
+		print("ACE music: generator ring %d frames, queue target %d" % [_ring_capacity, queue_target])
+	_pump()
+
+
+# The rings start with their first block rendered: started empty, the driver's first pull
+# (8 mixes on PulseAudio) lands while that block renders, and the skips it takes read as an
+# ACE dry-run on the title's first pump. A pull that still beats the push is silence before
+# the first note, so the skip count starts after it. A generator's ring holds its buffer
+# length rounded up to a power of two, less one frame.
+func _start_rings() -> void:
+	_render_music(nearest_po2(int(Harmony.RATE * GEN_BUFFER)) - 1, ace != null and ace.active())
 	_music_player.play()
 	_stinger_player.play()
 	_music_pb = _music_player.get_stream_playback()
 	_stinger_pb = _stinger_player.get_stream_playback()
 	_ring_capacity = _music_pb.get_frames_available()
-	if ace_wanted():
-		print("ACE music: generator ring %d frames, queue target %d" % [_ring_capacity, queue_target])
-	_pump()
+	_music_pb.push_buffer(out_music)
+	_stinger_pb.push_buffer(engine.out_stinger)
+	_skips_seen = _music_pb.get_skips()
 
 
 # --- Buses and players --------------------------------------------------------------
