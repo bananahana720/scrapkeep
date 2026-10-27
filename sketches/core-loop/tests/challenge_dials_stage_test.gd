@@ -51,6 +51,10 @@ func _rules() -> void:
 	_t.eq("a six-entry list parses", parsed["mobs.damage_by_stage"], [2.0, 1.0, 1.5, 1.0, 1.0, 0.5])
 	_t.eq("a short list parses as given", parsed["warden.pulse_cycle_by_stage"], [3.0])
 	for key in KEYS:
+		# The dam's mob hits ship at x1.5 (w19 world 1 bands); its own checks are below.
+		if key == "mobs.damage_by_stage":
+			_t.eq("mobs.damage_by_stage ships x1.5 on the dam only", ChallengeDials.value(key), [1.5, 1.0, 1.0, 1.0, 1.0, 1.0])
+			continue
 		_t.eq("%s defaults to six 1.0" % key, ChallengeDials.value(key), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 		var all_one := true
 		for stage in [-1, 0, 1, 2, 3, 4, 5, 6, 7, 99]:
@@ -67,7 +71,7 @@ func _rules() -> void:
 	ChallengeDials.quiet = true
 	ChallengeDials.set_overrides({"mobs.damage_by_stage": [2, -1, 1, 1, 1, 1]})
 	_t.eq("a negative entry is refused", ChallengeDials.rejected.size(), 1)
-	_t.eq("a refused list leaves the default", ChallengeDials.value("mobs.damage_by_stage"), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+	_t.eq("a refused list leaves the default", ChallengeDials.value("mobs.damage_by_stage"), ChallengeDials.DEFAULTS["mobs.damage_by_stage"])
 	ChallengeDials.set_overrides({"warden.slag_damage_by_stage": ["x", 1]})
 	_t.eq("a non-numeric entry is refused", ChallengeDials.rejected.size(), 2)
 	ChallengeDials.set_overrides({"mobs.elite_rate_by_stage": []})
@@ -94,6 +98,14 @@ func _run() -> void:
 	_game.run.max_hp = 100000.0
 	_game.run.hp = 100000.0
 	_game.ctx.events.player_hit.connect(func(amount: float, source: String): _hits.append([source, amount]))
+	# Mobs at the defaults: the dam (stage 1) takes x1.5, stage 2 the base.
+	ChallengeDials.reset()
+	for stage in [1, 2]:
+		_game.run.stage = stage
+		_hits.clear()
+		_game.combat._on_player_hit(10.0, Vector3.ZERO, "chaser")
+		var got := float(_hits[-1][1]) if not _hits.is_empty() else -1.0
+		_t.near("default stage %d chaser hit" % stage, got, 15.0 if stage == 1 else 10.0)
 	# Mobs: stage 1 doubles, stage 3 does not.
 	ChallengeDials.set_overrides({"mobs.damage_by_stage": [2, 1, 1, 1, 1, 1]})
 	for stage in [1, 3]:

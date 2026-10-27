@@ -231,16 +231,16 @@ func _physics_process(_delta: float) -> bool:
 	_check("real Game park_dam", _game.ctx.terrain.map().title == "park_dam", _game.ctx.terrain.map().title)
 	var heard: Array = audio.engine.get("park_cue_log")
 	var queued: Array = audio.engine._actions.filter(func(a): return a.get("type") == "park_cue")
-	_check("real Game director telegraph reaches engine", _announcements.has("plunge_pool_flood") and _routed.get("plunge_pool_flood", []).any(func(a): return a.id == "riser_natural"), str([_announcements, heard.size(), queued.size()]))
-	_check("real Game director landing reaches engine", _starts.has("plunge_pool_flood") and (heard + queued).any(func(a): return a.id == "drop_flood"), str(_starts))
-	var drops: Array = _land_samples.get("plunge_pool_flood", []).filter(func(a): return a.id == "drop_flood")
+	_check("real Game director telegraph reaches engine", _announcements.has("plunge_pool_flood") and _routed.get("plunge_pool_flood", []).any(func(a): return a.id == "riser_dam_siren"), str([_announcements, heard.size(), queued.size()]))
+	_check("real Game director landing reaches engine", _starts.has("plunge_pool_flood") and (heard + queued).any(func(a): return a.id == "drop_flood_horn"), str(_starts))
+	var drops: Array = _land_samples.get("plunge_pool_flood", []).filter(func(a): return a.id == "drop_flood_horn")
 	_check("real Game mapped director downbeat", drops.size() == 1 and drops[0].at == _sample_due.get("plunge_pool_flood", -1)
 		and _sample_due.get("plunge_pool_flood", -1) == _grid_due.get("plunge_pool_flood", -2)
-		and heard.any(func(a): return a.id == "drop_flood" and a.at == _sample_due.get("plunge_pool_flood", -1)),
+		and heard.any(func(a): return a.id == "drop_flood_horn" and a.at == _sample_due.get("plunge_pool_flood", -1)),
 		str([drops.map(func(a): return a.at), _sample_due, _grid_due, audio.park_cue_late]))
 	_check("real Game shared transport grid", _sample_due.get("plunge_pool_flood", -1) == _grid_due.get("plunge_pool_flood", -2), str([_sample_due, _grid_due]))
-	_check("real Game drop actually rendered", heard.any(func(a): return a.id == "drop_flood" and a.at == _sample_due.get("plunge_pool_flood", -1)), str(heard.filter(func(a): return a.id == "drop_flood")))
-	_check("real Game drop prebooked", _routed.get("plunge_pool_flood", []).any(func(a): return a.id == "drop_flood" and a.at == _sample_due.get("plunge_pool_flood", -1)), str(_routed.get("plunge_pool_flood", [])))
+	_check("real Game drop actually rendered", heard.any(func(a): return a.id == "drop_flood_horn" and a.at == _sample_due.get("plunge_pool_flood", -1)), str(heard.filter(func(a): return a.id == "drop_flood_horn")))
+	_check("real Game drop prebooked", _routed.get("plunge_pool_flood", []).any(func(a): return a.id == "drop_flood_horn" and a.at == _sample_due.get("plunge_pool_flood", -1)), str(_routed.get("plunge_pool_flood", [])))
 	_check("real Game director lead", _starts.has("plunge_pool_flood") and _starts["plunge_pool_flood"] >= _director_times["plunge_pool_flood"] + _announcements["plunge_pool_flood"], str([_starts, _director_times]))
 	_game.queue_free()
 	_game = null

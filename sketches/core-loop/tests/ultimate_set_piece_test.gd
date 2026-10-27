@@ -277,10 +277,13 @@ func _run() -> void:
 	await _sim(0.1)
 	# Set right before the hit: the hull regenerates between ticks.
 	run.hp = 50.0
+	# The hit door at identity: the dam (stage 1) ships mob hits at x1.5 (ChallengeDials MOBS_DAMAGE_W1).
+	ChallengeDials.set_overrides({"mobs.damage_by_stage": ChallengeDials.ONES6})
 	_combat._on_player_hit(20.0, Vector3.ZERO, "test")
 	var after_small: float = run.hp
 	_combat._on_player_hit(500.0, Vector3.ZERO, "test")
 	_t.eq("27 damage taken is x0.2 and health floors at 1", [after_small, run.hp], [46.0, 1.0])
+	ChallengeDials.reset()
 	# A boss's direct hit (Brindle's slag, the Mind) calls run.damage itself; the defence runs
 	# there too, and no death goes out (fix round, 2026-10-11).
 	var died: Array = []

@@ -19,7 +19,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { median } from "./checkpoint.mjs";
-import { cellVerdict } from "./challenge/lib.mjs";
+import { cellVerdict, meets, targetFor } from "./challenge/lib.mjs";
 import { scan } from "./placeholder-gate.mjs";
 import { readRuns } from "./run-summary.mjs";
 
@@ -280,14 +280,37 @@ function frameRow(row, frames, scenes) {
   return { measured: parts.join("; "), pass: missing.length === 0 && scenes.every((s) => frames[s].pass === true) };
 }
 
+// A stored table carries the ✓/✗ of the targets it was rendered with. Each column that has a rate is graded
+// again here: against the row's own `targets` for that cell and column where it names one (a recorded band
+// such as the w1 Novice miss), else against today's harness target (so Learner attempt 1 at a fight is
+// information only even on an older table).
+function regrade(cell, overrides = {}) {
+  if (!cell.columns) return cell;
+  const columns = {};
+  for (const [id, col] of Object.entries(cell.columns)) {
+    if (typeof col?.rate !== "number") { columns[id] = col; continue; }
+    const target = overrides[id] ?? targetFor(cell.kind, id);
+    columns[id] = { ...col, target, ok: col.incomplete ? null : meets(target, col.rate) };
+  }
+  return { ...cell, columns };
+}
+
 function challengeRow(row, table, cells) {
   if (!table) return { measured: "no challenge table given", pass: false, noData: true };
-  const byCell = new Map((table.table ?? []).map((c) => [c.cell, c]));
+  const byCell = new Map((table.table ?? []).map((c) => [c.cell, regrade(c, row.targets?.[c.cell])]));
   const verdicts = cells.map((id) => [id, !byCell.has(id) ? "missing" : byCell.get(id).columns ? cellVerdict(byCell.get(id)) : "no columns"]);
   return {
     measured: verdicts.map(([id, v]) => `${id} ${v}`).join(", ") + (table.commit ? ` (table at ${String(table.commit).slice(0, 8)})` : ""),
     pass: verdicts.every(([, v]) => v === "pass"),
+    threshold: recordedBands(row.targets),
   };
+}
+
+// "harness targets" plus the row's recorded bands, e.g. "w1 novice <= 35%".
+function recordedBands(targets) {
+  const bands = Object.entries(targets ?? {}).flatMap(([cell, cols]) => Object.entries(cols).map(([col, t]) =>
+    `${cell} ${col} ${[t.min != null ? `>= ${Math.round(t.min * 100)}%` : "", t.max != null ? `<= ${Math.round(t.max * 100)}%` : ""].filter(Boolean).join(" ")}`));
+  return bands.length ? `harness targets; recorded: ${bands.join(", ")}` : "harness targets";
 }
 
 // --- Evaluate --------------------------------------------------------------------------------

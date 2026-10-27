@@ -240,3 +240,33 @@ test("review: pacing rows need every run of the policy to carry the measure", ()
   assert.ok(row(rows, "run-length-skipper").blocks);
   assert.equal(row(rows, "stage-length-skipper").verdict, "no data");
 });
+
+test("the difficulty row grades stored rates again: its own recorded bands, and Learner a1 as information at fights", () => {
+  const col = (rate, ok) => ({ rate, ok, n: 24, total: 24, excluded: {} });
+  const inputs = finished();
+  inputs.challenge.table = SPEC.challenge_cells.map((cell) => ({ cell, kind: cell.startsWith("park") ? "world" : cell === "brindle" ? "boss" : "warden", columns: { expert: col(1, true) } }));
+  const w1 = inputs.challenge.table.find((c) => c.cell === "w1");
+  // An older table stored Learner a1 at a Warden as a miss; today it is information only.
+  w1.columns.learner1 = col(0.71, false);
+  w1.columns.novice = col(0.33, false);
+  const spec = { ...SPEC, rows: SPEC.rows.map((r) => (r.id === "difficulty" ? { ...r, targets: undefined } : r)) };
+  assert.match(row(evaluate(spec, inputs), "difficulty").measured, /w1 fail/);
+  const banded = { ...SPEC, rows: SPEC.rows.map((r) => (r.id === "difficulty" ? { ...r, targets: { w1: { novice: { max: 0.35 } } } } : r)) };
+  assert.match(row(evaluate(banded, inputs), "difficulty").measured, /w1 pass/);
+  w1.columns.novice = col(0.375, true);
+  assert.match(row(evaluate(banded, inputs), "difficulty").measured, /w1 fail/);
+  // The shipped band is <= 40%: 9 of 24 (37.5%) passes it, 10 of 24 (41.7%) does not.
+  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 pass/);
+  w1.columns.novice = col(10 / 24, true);
+  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 fail/);
+  // Today's target applies to a stored pass: 33% was marked ✓ on an old table, and <= 15% fails it.
+  w1.columns.novice = col(0.33, true);
+  assert.match(row(evaluate(spec, inputs), "difficulty").measured, /w1 fail/);
+  // The shipped row: w1 Novice 33% passes its recorded <= 35% band, and the bands are printed.
+  const shipped = row(evaluate(SPEC, inputs), "difficulty");
+  assert.match(shipped.measured, /w1 pass/);
+  assert.match(shipped.threshold, /recorded: w1 novice <= 40%/);
+  // An incomplete column is never a pass.
+  w1.columns.novice = { ...col(0.1, true), incomplete: true };
+  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 incomplete/);
+});
