@@ -5,6 +5,9 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 const T := preload("res://tests/support/t.gd")
 const ParkRiser := preload("res://tests/support/park_riser.gd")
+# plunge_pool_flood has its own world 1 cues since #496; read them from the row.
+var flood_riser := ParkRiser.dam_cue("plunge_pool_flood", "telegraph")
+var flood_drop := ParkRiser.dam_cue("plunge_pool_flood", "land")
 var t := T.new("park_music_suspend_game_test")
 
 class TransportProbe extends Node:
@@ -24,6 +27,7 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
+	t.check("flood row names its cues", flood_riser.begins_with("riser_") and flood_drop.begins_with("drop_"), str([flood_riser, flood_drop]))
 	await _suspension(false)
 	await _suspension(true)
 	await _suspension(false, true)
@@ -97,9 +101,9 @@ func _suspension(in_bay: bool, aligned := false) -> void:
 	t.check(label + " music transport continues past deadline", audio.engine.clock > announcement[0].sample + 2 * audio.engine.bar_len(), str([audio.engine.clock, announcement[0].sample]))
 	t.check(label + " band remains audible", music_peak > 0.0001 and (audio.engine.lounge if in_bay else audio.engine.pause_gain == 0.45), str([music_peak, audio.engine.lounge, audio.engine.pause_gain]))
 	t.check(label + " predicted drop cancelled", not audio.engine._actions.any(func(a): return a.get("type") == "park_cue" and a.owner == "plunge_pool_flood" and not a.row.rise), str(audio.engine.pending_actions()))
-	t.check(label + " no predicted impact", starts.is_empty() and not audio.engine.park_cue_log.any(func(a): return a.owner == "plunge_pool_flood" and a.id == "drop_flood"), str(starts))
-	var expected_warning := ParkRiser.starts("riser_natural", ParkRiser.options(audio), announcement[0].lead, announcement[0].at)
-	var heard: Array = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == "riser_natural")
+	t.check(label + " no predicted impact", starts.is_empty() and not audio.engine.park_cue_log.any(func(a): return a.owner == "plunge_pool_flood" and a.id == flood_drop), str(starts))
+	var expected_warning := ParkRiser.starts(flood_riser, ParkRiser.options(audio), announcement[0].lead, announcement[0].at)
+	var heard: Array = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == flood_riser)
 	t.check(label + " original riser cells finish once", heard.map(func(a): return a.at) == expected_warning, str([heard.map(func(a): return a.at), expected_warning]))
 	if aligned:
 		var e = audio.engine
@@ -148,11 +152,11 @@ func _suspension(in_bay: bool, aligned := false) -> void:
 		if after_fact:
 			expected = starts[0].next
 		if audio.engine.clock > expected + audio.engine.beat_len(): break
-	var drops: Array = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == "drop_flood")
+	var drops: Array = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == flood_drop)
 	t.check(label + " unchanged director landing", float(flood.due_s) == float(announcement[0].stage), str([flood.due_s, announcement[0].stage]))
 	t.check(label + " exactly one resumed director drop", starts.size() == 1 and drops.size() == 1 and drops[0].at == expected
 		and (after_fact or posmod(expected - resume.get("origin", 0), resume.get("bar", 1)) == 0), str([starts, drops.map(func(a): return a.at), expected, resume]))
-	heard = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == "riser_natural")
+	heard = audio.engine.park_cue_log.filter(func(a): return a.owner == "plunge_pool_flood" and a.id == flood_riser)
 	t.check(label + " resume never replays riser", heard.map(func(a): return a.at) == expected_warning, str(heard.map(func(a): return a.at)))
 	probe.queue_free()
 	game.queue_free()
