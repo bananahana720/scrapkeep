@@ -16,7 +16,7 @@ const CUES := {
 	"drop_ancient": {"danger": true, "family": "ancient", "rise": false, "voice": "sub", "notes": [44], "sound": "reactor_erupt", "trim_sound": "reactor_erupt"},
 	"riser_industrial": {"family": "industrial", "rise": true, "voice": "steam_whistle", "notes": [62, 65, 67, 69, 74, 77, 81, 86], "trim_sound": "threat_whistle"},
 	"drop_industrial": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50], "sound": "smash_crack", "trim_sound": "smash_crack"},
-	"drop_flash_flood": {"alias": "drop_flood"},
+	"drop_flash_flood": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [57, 50, 43], "accent": "crash", "trim_sound": "slam_boom"},
 	# The Highdraft's own four (G home, Lydian lift; D-home notes, so G#/68 is the sharp eleven).
 	# The mooring crew's anvil answers twice and the Fleet brass lifts onto the eleven.
 	"drop_fleet_anvil": {"danger": true, "family": "fleet", "rise": false, "voice": "brass", "notes": [50, 57, 68], "accent": "anvil", "sound": "fleet_anvil", "trim_sound": "fleet_anvil"},
@@ -28,6 +28,16 @@ const CUES := {
 	"drop_boiler": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50, 56], "sound": "boiler_burst", "trim_sound": "boiler_burst"},
 	"stinger_lightning": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [74, 62, 50], "accent": "crash", "trim_sound": "slam_boom"},
 	"drop_collapse": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [57, 50, 45], "accent": "crash", "trim_sound": "smash_crack"},
+	# The Spillway's own (D Dorian, tools/ace/spillway_stingers.py; world 1 unit 18). The dam siren
+	# is still the natural family's telegraph; the shared family risers stay as they are.
+	"riser_dam_siren": {"family": "natural", "rise": true, "voice": "stage", "notes": [62, 64, 65, 67, 69, 71, 74, 76], "trim_sound": "build_riser"},
+	"drop_flood_horn": {"danger": true, "family": "natural", "rise": false, "voice": "brass", "notes": [38, 45], "accent": "kick", "trim_sound": "slam_boom"},
+	"drop_spill_dropship": {"danger": true, "family": "fleet", "rise": false, "voice": "brass", "notes": [50, 57, 62], "accent": "anvil", "sound": "fleet_motif", "trim_sound": "fleet_motif"},
+	"drop_relic_wake": {"danger": true, "family": "ancient", "rise": false, "voice": "sub", "notes": [38], "sound": "reactor_erupt", "trim_sound": "reactor_erupt"},
+	"drop_spill_boiler": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [50, 57], "sound": "boiler_burst", "trim_sound": "boiler_burst"},
+	"drop_cracked_wall": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [62, 57, 50, 38], "accent": "crash", "trim_sound": "smash_crack"},
+	"drop_reactor_blow": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [38, 44], "sound": "reactor_erupt", "trim_sound": "reactor_erupt"},
+	"drop_sluice_surge": {"danger": true, "family": "industrial", "rise": false, "voice": "steam_whistle", "notes": [45, 50, 57], "sound": "smash_crack", "trim_sound": "slam_boom"},
 	"drop_cave_in": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [50, 45, 38], "accent": "kick", "trim_sound": "land_thud"},
 	"drop_drain": {"family": "natural", "rise": false, "voice": "stage", "notes": [62, 57, 50, 45], "trim_sound": "stage_fade"},
 	"drop_impact": {"danger": true, "family": "natural", "rise": false, "voice": "stage", "notes": [38, 50], "accent": "kick", "trim_sound": "slam_boom"},
