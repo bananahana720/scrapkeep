@@ -221,9 +221,9 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 # record (audio.gd), and the glow clears on spend and on expiry because both clear the record.
 const DUNK_RADIUS := 1.06
 const DUNK_ARC := deg_to_rad(110.0)
-const DUNK_TUBE := 0.05
+const DUNK_TUBE := 0.07
 const DUNK_PIPS := 3
-const DUNK_PIP_RADIUS := 0.085
+const DUNK_PIP_RADIUS := 0.12
 # Below this planar speed the arc keeps its bearing, so it never spins at rest.
 const DUNK_HOLD_SPEED := 1.5
 
@@ -234,8 +234,8 @@ var _dunk_yaw := 0.0
 func _build_dunk_glow() -> void:
 	var coil := StandardMaterial3D.new()
 	coil.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	# Mixed, not added: an added coil washes to cream on sunlit sand and loses the class colour.
 	coil.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	coil.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	coil.cull_mode = BaseMaterial3D.CULL_DISABLED
 	coil.render_priority = RENDER_PRIORITY
 	_dunk_glow = MeshInstance3D.new()
@@ -259,7 +259,7 @@ func _build_dunk_glow() -> void:
 		lit.render_priority = RENDER_PRIORITY
 		pip.material_override = lit
 		pip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		pip.position = _dunk_arc_point(_dunk_pip_angle(i), DUNK_RADIUS + DUNK_TUBE)
+		pip.position = _dunk_arc_point(_dunk_pip_angle(i), DUNK_RADIUS + DUNK_TUBE + DUNK_PIP_RADIUS * 0.5)
 		_dunk_glow.add_child(pip)
 		_dunk_pips.append(pip)
 
@@ -322,14 +322,16 @@ func _draw_dunk_glow() -> void:
 	var share := clampf(dunk.left() / dunk.WINDOW, 0.0, 1.0)
 	var pulse := 0.5 + 0.5 * sin(_clock * TAU * FlashGuard.rate(1.0 + 1.5 * (1.0 - share)))
 	var colour: Color = record["color"]
-	var coil := colour
-	coil.a = FlashGuard.alpha(0.45 + 0.35 * pulse)
+	# A glow reads lighter than the hull it rides on (a copper coil on a copper cage), so the
+	# coil is the class colour run part way to white; the hue stays the pilot's.
+	var coil := colour.lerp(Color.WHITE, 0.3)
+	coil.a = FlashGuard.info(0.6 + 0.4 * pulse)
 	(_dunk_glow.mesh.surface_get_material(0) as StandardMaterial3D).albedo_color = coil
 	var lit := ceili(share * DUNK_PIPS)
 	for i in _dunk_pips.size():
 		var pip := _dunk_pips[i]
 		pip.visible = i < lit
-		(pip.material_override as StandardMaterial3D).albedo_color = colour.lerp(Color.WHITE, FlashGuard.whiten(0.35))
+		(pip.material_override as StandardMaterial3D).albedo_color = colour.lerp(Color.WHITE, 0.55)
 	var v: Vector3 = _velocity()
 	if Vector2(v.x, v.z).length() >= DUNK_HOLD_SPEED:
 		_dunk_yaw = atan2(-v.x, -v.z)

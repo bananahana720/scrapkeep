@@ -286,7 +286,7 @@ func _run() -> void:
 	dunk.store(30.0, "test", "test", cls)
 	await _frames(1)
 	var shown: Color = fx.dunk_glow_color()
-	t.check("a held charge shows the coil in the class colour", fx.dunk_glow_shown() and shown.is_equal_approx(Color(cls.r, cls.g, cls.b)),
+	t.check("a held charge shows the coil in the class colour's hue", fx.dunk_glow_shown() and absf(shown.h - cls.h) < 0.01 and shown.s > 0.2,
 		"%s vs %s" % [shown, cls])
 	t.eq("every pip lit at the store", fx.dunk_pips_lit(), PlayerFx.DUNK_PIPS)
 	var rear: Vector3 = fx._dunk_glow.global_basis.z
