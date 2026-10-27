@@ -595,8 +595,11 @@ static func plan_overlays(world, items: Array) -> Dictionary:
 	var work := func() -> void:
 		for item: Dictionary in items:
 			out[item.id] = overlay_surface(ground, item.kind, item.geometry, true)
+	var reach := {}
+	for item: Dictionary in items:
+		reach[item.id] = _rect_bounds(item.geometry.at, item.geometry.half, item.geometry.yaw)
 	return {"task": WorkerThreadPool.add_task(work, true, "event overlays"), "out": out, "stage": stage,
-		"roofs": terrain._cave_roofs.get(stage - 1, {}).values().map(func(roof): return roof.surface)}
+		"roofs": terrain._cave_roofs.get(stage - 1, {}).values().map(func(roof): return roof.surface), "reach": reach}
 
 
 # prepare_overlay's prepared for row id from plan: its surface while the ground is still the one it
@@ -604,7 +607,7 @@ static func plan_overlays(world, items: Array) -> Dictionary:
 # projects it live. Waits on the worker if it is still running.
 static func planned_overlay(world, plan: Dictionary, id: String) -> Dictionary:
 	var terrain = world.terrain
-	if plan.is_empty() or terrain.stage != plan.stage or not terrain.overlays.is_empty():
+	if plan.is_empty() or terrain.stage != plan.stage or not plan.get("reach", {}).has(id) or _overlay_under(world, plan.reach[id]):
 		return {}
 	if terrain._cave_roofs.get(plan.stage - 1, {}).values().map(func(roof): return roof.surface) != plan.roofs:
 		return {}
@@ -615,6 +618,33 @@ static func planned_overlay(world, plan: Dictionary, id: String) -> Dictionary:
 	if surface.mesh == null:
 		surface.finish()
 	return {"surface": surface}
+
+
+# Whether an overlay down now reaches ground the plan read: a plan projected over the ground as
+# entered still holds where no overlay's footprint (the only place overlay_height answers) meets
+# its rectangle. The dam's boiler lands with the toe vents' lip down across the dam, and before
+# this its swap projected on the main thread (53.7-55.5 ms frames on the 4080, #512).
+static func _overlay_under(world, reach: Rect2) -> bool:
+	var m = world.terrain.map()
+	for overlay: String in world.terrain.overlays:
+		var p: Dictionary = m.profiles.get(overlay, {}) if m is OverlayMap else {}
+		if p.is_empty():
+			return true
+		var site: Dictionary = p.site
+		var bounds := _rect_bounds(Vector3(float(site.at[0]), 0.0, float(site.at[1])), ParkMap.footprint_half_extents(site),
+			deg_to_rad(float(site.yaw_deg)))
+		if bounds.grow(ParkTerrain.STEP).intersects(reach):
+			return true
+	return false
+
+
+# The world XZ box around a rectangle of half extents `half` turned by `yaw` about `at`.
+static func _rect_bounds(at: Vector3, half: Vector2, yaw: float) -> Rect2:
+	var centre := Vector2(at.x, at.z)
+	var bounds := Rect2(centre, Vector2.ZERO)
+	for corner in [Vector2(-half.x, -half.y), Vector2(half.x, -half.y), Vector2(half.x, half.y), Vector2(-half.x, half.y)]:
+		bounds = bounds.expand(corner.rotated(-yaw) + centre)
+	return bounds
 
 
 static func settle_overlays(plan: Dictionary) -> void:
