@@ -255,4 +255,14 @@ test("the difficulty row grades stored rates again: its own recorded bands, and 
   assert.match(row(evaluate(banded, inputs), "difficulty").measured, /w1 pass/);
   w1.columns.novice = col(0.375, true);
   assert.match(row(evaluate(banded, inputs), "difficulty").measured, /w1 fail/);
+  // Today's target applies to a stored pass: 33% was marked ✓ on an old table, and <= 15% fails it.
+  w1.columns.novice = col(0.33, true);
+  assert.match(row(evaluate(spec, inputs), "difficulty").measured, /w1 fail/);
+  // The shipped row: w1 Novice 33% passes its recorded <= 35% band, and the bands are printed.
+  const shipped = row(evaluate(SPEC, inputs), "difficulty");
+  assert.match(shipped.measured, /w1 pass/);
+  assert.match(shipped.threshold, /recorded: w1 novice <= 35%/);
+  // An incomplete column is never a pass.
+  w1.columns.novice = { ...col(0.1, true), incomplete: true };
+  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 incomplete/);
 });

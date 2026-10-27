@@ -302,7 +302,15 @@ function challengeRow(row, table, cells) {
   return {
     measured: verdicts.map(([id, v]) => `${id} ${v}`).join(", ") + (table.commit ? ` (table at ${String(table.commit).slice(0, 8)})` : ""),
     pass: verdicts.every(([, v]) => v === "pass"),
+    threshold: recordedBands(row.targets),
   };
+}
+
+// "harness targets" plus the row's recorded bands, e.g. "w1 novice <= 35%".
+function recordedBands(targets) {
+  const bands = Object.entries(targets ?? {}).flatMap(([cell, cols]) => Object.entries(cols).map(([col, t]) =>
+    `${cell} ${col} ${[t.min != null ? `>= ${Math.round(t.min * 100)}%` : "", t.max != null ? `<= ${Math.round(t.max * 100)}%` : ""].filter(Boolean).join(" ")}`));
+  return bands.length ? `harness targets; recorded: ${bands.join(", ")}` : "harness targets";
 }
 
 // --- Evaluate --------------------------------------------------------------------------------
