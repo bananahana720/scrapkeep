@@ -5,8 +5,8 @@ extends RefCounted
 # A headless test steps a whole stage in a loop instead of in real seconds.
 #
 # Honesty rules (demo spec, Director honesty):
-# - Tier 0 enemy HP comes from stage threat only. The opt-in run tier adds capped
-#   per-world health, damage and rest dials; the clock never toughens an enemy.
+# - Enemy HP comes from stage threat only, at every run tier (ruling al). The opt-in run
+#   tier adds capped per-world damage and rest dials; the clock never toughens an enemy.
 # - The clock's tier is clamped at +2, and every rise, the beacon spike included, is
 #   recorded for the world to announce with threat_rose. Nothing rises silently.
 # - 60% of spawns land ahead of the ball, within 35 degrees of where it is rolling,
@@ -29,8 +29,7 @@ extends RefCounted
 #   strongly the build leans on the axis the pack tests, so the build's own axis comes
 #   up to twice as often and every other unlocked pack still comes: fair, never a hard
 #   counter. With no build read every pack weighs the same.
-# - HP reads stage threat and the opt-in world's health dial; the clock adds packs,
-#   never toughness.
+# - HP reads stage threat only; the clock adds packs, never toughness.
 #
 # Authored packs (slice table): with `authored` set, every arrival is one whole pack from
 # that list and nothing else spawns: no single draws, no unlock clock, no ancient share. Packs
@@ -227,10 +226,9 @@ func effective_tier() -> int:
 
 
 # The clock has no part in these dials. Tier 0 keeps the original values exactly.
+# Every run tier reads the stage threat alone: difficulty never raises enemy health (ruling al, the HARD ladder).
 func hp_scale() -> float:
-	if run_tier() < RunTier.HARD:
-		return threat
-	return threat * minf(RunTier.HEALTH_DIAL_CAP, 1.0 + world * float(dial_steps.health))
+	return threat
 
 
 func damage_scale() -> float:
