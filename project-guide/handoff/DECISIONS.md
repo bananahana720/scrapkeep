@@ -234,6 +234,7 @@ Last updated 2026-10-23 19:50Z by the library sweep thread (today's rulings: wor
 | Coordinator calls, 23 Oct (on the veto list): the crown gets "All hands" props (#369); the pit is densified to its siblings' parity; landing marks are parked; the export ships park_test (its other files already ship). | 23 Oct | coordinator | |
 | Flume dressing parity with the Dig is measured by vignette spots, not dressed park rows. The flume's 52 rock outcrops and 26 washes stay recipe-less on purpose (the terrain is the rock; the post fields they replaced dead-stopped Sable), so unit 11 brings the flume's props file from 96 spots to 166 against the pit's 167, adds its real rows, and reports the scorecard's dressed-row count as it is (115 to 116, not 200). Hard limits stay the tower's 0.85 sight share and the pilot lines. | 24 Oct 05:58Z | coordinator (engineering), unit 11 thread | "flume dressed rows 200 or more" |
 | Pocket rules for the card 2 extras (implements the open completionist card's default, two more activities a park): a `surge_run` takes the opt-in event role beside `hold_the_relay`, and the pocket count admits a second reward or risk pocket where a card 2 extra exists. Every distance rule still holds, and the pay ladder ranks the first pair (`tools/park_graph.gd`, PARK.md 2.12). | 24 Oct 06:00Z | coordinator (engineering), unit 11 thread | exactly one reward and one risk |
+| Ruling ac: `reward_ratio` (the median spawn-to-pocket walk over the spawn-to-beacon walk) is no longer a park target. `tools/park_graph.gd` still prints it, as information only and never as "out of target". The `detour_m` band (150-600 m, the reward deeper than the risk) carries "detour is the price". Reason: the spawn rule puts the beacon at the park's far end, so no legal pocket door reaches the old 1.5. On b9c07752 the best legal door is 0.99 on the dam and 0.92 on the flume, and no reachable dam node goes past 1.35 (#494 comment 6428694404). | 26 Oct 22:21Z | coordinator call (engineering threshold) | `reward_ratio` at least 1.5 (SR15, from comps/isaac/floor-generation.md:107) |
 
 ## 9. Pilots, cosmetics and progression
 
@@ -337,6 +338,7 @@ Watch-outs for live design work: the new "electrical field that interrupts" moti
 
 | Old ruling | Replaced by | When |
 | --- | --- | --- |
+| Park pockets: `reward_ratio` at least 1.5, reported (SR15, K-UNITS KB8) | Ruling ac: printed for information, no target; `detour_m` carries the detour price (section 8) | 26 Oct 22:21Z |
 | Wardens and earlier boss phases stay at 129 BPM; Eurodance at 140-150 is the final phase only (16-17 Oct, R-22 veto list) | Boss phases ratchet: phase covers at +10 BPM (phase 2) and +20 BPM (phase 3); the Eurodance final phase stays, and where 140-150 and the +20 cover differ, the cover wins | 23 Oct 19:02Z |
 | Codex (GPT) standing lane beside each Claude wave; "use GPT heavily" (2, 12, 14 Oct) | Retired: Claude cloud threads do all the work (tap "Retire it") | 17 Oct 20:02 |
 | Camp recreation cut (W18-R1) | Camp back in, hub ring | 16 Oct |
