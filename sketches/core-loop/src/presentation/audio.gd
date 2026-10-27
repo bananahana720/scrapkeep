@@ -242,6 +242,7 @@ var _ring_capacity := 0
 # (the headless Dummy driver pulls 4096).
 var queue_target := AceSequencer.QUEUE_TARGET
 var _skips_seen := 0
+var _ace_pumped_usec := 0
 # The synth band fades in over this many frames when it comes back from mute, so a voice
 # still sounding under the mute never steps to full level. _unmute_at is the transport
 # sample the ramp starts from, -1 when none runs.
@@ -710,9 +711,21 @@ func _pump(virtual_frames := -1) -> void:
 	if not ace_live:
 		# Skips the synth alone took are not an ACE dry-run.
 		_skips_seen = _music_pb.get_skips()
+		_ace_pumped_usec = 0
 	else:
-		_deepen_on_skip()
-		frames = mini(ace.frames_to_pump(_music_pb, _ring_capacity, queue_target), _stinger_pb.get_frames_available())
+		var now := Time.get_ticks_usec()
+		var gap := now - _ace_pumped_usec if _ace_pumped_usec > 0 else 0
+		_ace_pumped_usec = now
+		# A frame longer than the queue drains it at any depth: that is the frame's to fix,
+		# not the device's period, so the queue stays where it is.
+		if gap * Harmony.RATE > queue_target * 1000000:
+			_note_stall(gap)
+		else:
+			_deepen_on_skip()
+		# A launch's flight answers no contact and lands on the next stage's entry frame
+		# (about 120 ms on the 4080), so the ring fills whole until the landing.
+		var target := _ring_capacity if _launch_armed else queue_target
+		frames = mini(ace.frames_to_pump(_music_pb, _ring_capacity, target), _stinger_pb.get_frames_available())
 	frames = _park_render_limit(mini(frames, 8192))
 	if frames <= 0:
 		return
@@ -836,6 +849,13 @@ func _deepen_for(skips: int) -> void:
 	if queue_target + 1024 <= _ring_capacity - 1024:
 		queue_target += 1024
 		print("ACE music: the ring ran dry (%d skips); queue target now %d frames" % [skips, queue_target])
+
+
+func _note_stall(gap_usec: int) -> void:
+	var skips := _music_pb.get_skips()
+	if skips > _skips_seen:
+		print("ACE music: a %d ms frame outlasted the ring (%d skips)" % [gap_usec / 1000, skips - _skips_seen])
+	_skips_seen = skips
 
 
 # The ACE transport runs with the engine's even while silent, so both count the same samples.
