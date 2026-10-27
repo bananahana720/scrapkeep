@@ -263,6 +263,8 @@ static var answer_nudge_on := true
 # The other gate stays a free choice.
 const PATTERN_PARTS := ["spiral_wave", "cross_split", "chain_arc"]
 const PATTERN_GUARANTEE_STAGE := 2
+# The rung a Warden's gate pair and the shop's first shelf slot never fall below: rare (cobalt).
+const RUNG_FLOOR := 1
 
 # v2 W4 loot: how often an offer slot is a freshly generated recipe (item_gen.gd)
 # instead of an authored row. The rest of the pool is the catalogue above plus the
@@ -769,6 +771,31 @@ static func ingredient_of(part_id: String, held: Array) -> String:
 
 # Gate tiers by overcharge: 0 bonus cores offer common, 1 common or rare, 2 or more
 # rare or relic.
+# The cobalt rung's Warden floor (item ladder, wave 20): a gate pair always holds a rare or
+# better. When the roll brought none, its first pick that is not a pattern part (stage 2's
+# guarantee) becomes a rare drawn the same way; cores still lift the other. Callers outside
+# the Warden's gates (tests that read common shares, the tools) never pass through it.
+static func floor_gate(rng: RandomNumberGenerator, picks: Array, class_id: String, held: Array,
+		offered: Dictionary = {}) -> Array:
+	if picks.is_empty() or picks.any(func(key): return rung_of(key) >= RUNG_FLOOR):
+		return picks
+	var cobalt: Array = roll(rng, ["rare"], class_id, held, 1, picks, offered)
+	if cobalt.is_empty():
+		return picks
+	var out := picks.duplicate()
+	var slot := 0
+	while slot < out.size() - 1 and out[slot] in PATTERN_PARTS:
+		slot += 1
+	out[slot] = cobalt[0]
+	return out
+
+
+# A part's rung on the ladder: 0 common, 1 rare, 2 relic, 3 evolved (ItemGen.RARITIES order).
+static func rung_of(part_id: String) -> int:
+	var d: Resource = def(part_id)
+	return maxi(0, ItemGen.RARITIES.find(ItemGen.resolve_rarity(String(d.rarity)))) if d != null else 0
+
+
 static func gate_rarities(bonus_cores: int) -> Array:
 	if bonus_cores >= 2:
 		return ["rare", "relic"]

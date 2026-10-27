@@ -20,6 +20,7 @@ const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 const SHELF_SIZE := 3
 const SHELF_RARITIES := ["common", "rare"]
 const TOP_RARITIES := ["relic"]
+const FLOOR_RARITIES := ["rare"]
 # Prices are cogs, from Fabricators.COG_PRICES: the reroll costs reroll_base at the first
 # visit and rises by reroll_growth each visit after; a charge cell costs cell_base, rising
 # by cell_growth for each cell already in that slot; a sale pays sell_share of the price.
@@ -446,10 +447,16 @@ func _result(ok: bool, reason: String, line_id := "", part_id := "", cost := 0) 
 # gates get. It moves weight inside a part's offer bucket only, so the shelf's mix of buckets and its
 # rarities, and every price, stay as they were (answer_weights_test).
 func _stock() -> Array:
-	var picks: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, SHELF_SIZE)
+	# The cobalt rung (item ladder, wave 20): the first slot draws from FLOOR_RARITIES, so it is
+	# always a rare or better, and the other slots from the shelf's table.
+	var floor_pick: Array = Parts.roll(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1)
+	var picks: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts,
+		SHELF_SIZE - floor_pick.size(), floor_pick)
 	var out: Array = []
 	# Each record carries the odds of the table it was drawn from (SG13), read from the same
-	# SHELF_RARITIES and weight row the roll above reads.
+	# rarities and weight row its roll reads.
+	for part_id in floor_pick:
+		out.append({"part_id": part_id, "sold": false, "odds": OddsReadout.odds_for(FLOOR_RARITIES, ctx.run.class_id())})
 	var odds: Array = OddsReadout.odds_for(SHELF_RARITIES, ctx.run.class_id())
 	for part_id in picks:
 		out.append({"part_id": part_id, "sold": false, "odds": odds})
