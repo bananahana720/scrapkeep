@@ -5,7 +5,7 @@ const Rules := preload("res://src/boss/boss_rules.gd")
 const BowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 
-# The Slag Bowl: a foundry bowl about 124 m across, built above stage 3's beacon when
+# The Slag Bowl: a foundry bowl about 124 m across, built ahead during stage 3's beacon, placed when
 # the fight starts and freed when it ends. A flat inner floor with two slag channels,
 # a banked outer ring that is the fight's momentum lane, a rim wall a pylon plants on,
 # two deck ramps and two kickers for height, four crane masts to grapple, and four rim
@@ -92,7 +92,8 @@ static var _looks_warm := false
 
 
 # Flow calls this a physics tick at a time while Brindle's world's last stage runs: a step a call
-# of the Requisition's models, the bowl's kits and its checkers, off the boss-entry frame. True once done.
+# of the Requisition's models, the bowl's looks and kits, then the bowl itself, off the boss-entry frame.
+# True once done.
 static func warm_ahead() -> bool:
 	if _ahead_bowl != null and _ahead_bowl.built():
 		return true
@@ -257,11 +258,12 @@ func _ready() -> void:
 	name = "SlagBowl"
 	while not build_step():
 		pass
+	BowlDress.bind_yard(self)
 
 
-# The bowl a piece a call: its geometry is local, so it builds off the tree too. Flow's warm builds one
-# ahead a piece a physics tick (warm_ahead); the fight's entry takes it whole (take_ahead) instead of
-# building it on its entry frame (42 ms of a 165 ms arena entry on the cloud, a4c5b963). True once built.
+# The bowl a piece a call: its geometry is local, so it builds off the tree too; only the yard's bus
+# waits for the tree (_ready). Flow's warm builds one ahead a piece a physics tick (warm_ahead); the
+# fight's entry takes it whole (take_ahead) instead of building it on its entry frame. True once built.
 var _built := 0
 var _body: StaticBody3D
 

@@ -45,7 +45,7 @@ func _run() -> void:
 		waited += 1
 	var steps := range(1, counts.size()).map(func(i): return counts[i] - counts[i - 1])
 	# 2026-10-24 (#416 Slag Bowl dressing): the yard is a third kit, so every kit in _kits() is read ahead.
-	# 2026-10-27 (4080 rows a4c5b963): the bowl is built ahead from those kits, so they are taken by then.
+	# 2026-10-27 (world 1 hitches): the bowl is built ahead from those kits, so they are taken by then.
 	var bowl: Node3D = Arena._ahead_bowl
 	_t.check("the gates instance both models and build the bowl from every kit, at most one step a tick",
 		Requisition._ahead.size() == 2 and bowl != null and bowl.built() and BowlDress._ahead.is_empty() and steps.all(func(d): return d <= 1),
@@ -58,6 +58,9 @@ func _run() -> void:
 	flow.enter_boss(Vector3.ZERO)
 	var boss = _game.ctx.boss
 	_t.check("the entry takes the bowl built ahead", boss.arena == bowl and bowl.is_inside_tree() and Arena._ahead_bowl == null)
+	var yard = bowl.get_node_or_null("ArenaBowlDress/FleetYard")
+	_t.check("the yard built ahead is on the game bus once the bowl enters", yard != null
+		and _game.events.fight_phase_changed.is_connected(yard._on_fight_phase) and _game.events.boss_defeated.is_connected(yard._on_rout))
 	_t.check("the entry dresses the ship with the fortress read ahead",
 		boss.ship != null and boss.ship.model == fortress and fortress.get_parent() == boss.ship)
 	_t.check("the entry took the fortress; the scooter waits for its phase",

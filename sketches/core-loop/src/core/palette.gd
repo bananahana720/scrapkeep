@@ -123,7 +123,8 @@ static func warm_look(id: String) -> bool:
 		var source := load("res://assets/textures/%s.webp" % id) as Texture2D
 		var job := _neutral_job(source) if source != null else {}
 		if job.is_empty():
-			look_texture(id, true)
+			# Missing or unreadable: the fallback stands in, warned once, not re-read every warm tick.
+			_look_textures[key] = look_texture(id, true)
 			return true
 		_look_jobs[key] = job
 		return false

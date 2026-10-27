@@ -352,7 +352,7 @@ static func warm() -> bool:
 				_ahead_reads[path] = ResourceLoader.load_threaded_get(path) if status == ResourceLoader.THREAD_LOAD_LOADED else null
 			return false
 		# The instance, then its colour and the bake's look a view a call: the model dressed whole in
-		# one call was a 71-77 ms frame on the 4080 at the flume Warden's engage (a4c5b963 rows).
+		# one call was a 71-77 ms frame on the 4080 at the flume Warden's engage.
 		if not _dressing.has(path):
 			var scene := BossModel.load_scene(path, false)
 			_dressing[path] = [scene, scene.find_children("*", "MeshInstance3D", true, false) if scene != null else []]

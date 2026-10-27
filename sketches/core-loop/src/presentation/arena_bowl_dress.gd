@@ -46,7 +46,7 @@ const SLOTS := {
 	"slag_glow": Vector2(0.6, 0.0),
 }
 
-# Tests can redirect either folder. Nothing is loaded or built until the bowl enters.
+# Tests can redirect either folder. Nothing is loaded or built until the bowl is warmed or built.
 static var asset_dir := ASSET_DIR
 static var spillway_dir := SPILLWAY_DIR
 
@@ -61,7 +61,7 @@ static var _requested := {}
 # A step a call while the world's last stage runs (boss.gd's warm_arena): a kit's file, then one part's
 # mesh copy a call; true once every kit is read. A played game reads the file on a loader thread; headless
 # reads it here, since the dummy rasterizer's mesh RIDs are not thread-safe (as requisition.gd). Reading a
-# kit whole took 23-31 ms frames on the 4080 at the flume Warden's engage (a4c5b963 rows).
+# kit whole took 23-31 ms frames on the 4080 at the flume Warden's engage.
 static func warm() -> bool:
 	for kit in _kits():
 		if _ahead.has(kit[0]):
@@ -70,6 +70,7 @@ static func warm() -> bool:
 			var packed = _read(kit[0])
 			if packed is bool:
 				return false
+			_drop_reading()
 			_reading = _open(kit[0], packed, kit[1])
 			if _reading.is_empty():
 				_ahead[kit[0]] = {}
@@ -90,6 +91,10 @@ static func drop_ahead() -> void:
 		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 			ResourceLoader.load_threaded_get(path)
 	_requested.clear()
+	_drop_reading()
+
+
+static func _drop_reading() -> void:
 	if not _reading.is_empty() and is_instance_valid(_reading.scene):
 		_reading.scene.free()
 	_reading = {}
@@ -124,6 +129,7 @@ static func build(arena: Node3D) -> Node3D:
 	var stone: Dictionary = _ahead[kits[1][0]] if _ahead.has(kits[1][0]) else builder._parts(kits[1][0], kits[1][1])
 	var yard: Dictionary = _ahead[kits[2][0]] if _ahead.has(kits[2][0]) else builder._parts(kits[2][0], kits[2][1])
 	_ahead.clear()
+	_drop_reading()
 	if foundry.is_empty() or stone.is_empty():
 		push_warning("arena_bowl_dress: missing or malformed foundry/Spillway kit; Slag Bowl keeps its greybox")
 		return null
@@ -149,10 +155,17 @@ static func build(arena: Node3D) -> Node3D:
 		builder._yard(dressing, yard)
 	arena.add_child(dressing)
 	builder._surfaces(arena)
-	if not yard.is_empty():
-		var events = arena.get_parent().get("events") if arena.get_parent() != null else null
-		dressing.get_node("FleetYard").bind(events)
 	return dressing
+
+
+# The Fleet yard on the game bus, once the bowl is in the tree: a bowl built ahead has no parent
+# to read the bus from when its dressing is built.
+static func bind_yard(arena: Node3D) -> void:
+	var yard = arena.get_node_or_null("ArenaBowlDress/FleetYard")
+	if yard == null:
+		return
+	var events = arena.get_parent().get("events") if arena.get_parent() != null else null
+	yard.bind(events)
 
 
 func _yard(dressing: Node3D, parts: Dictionary) -> void:
