@@ -11,8 +11,9 @@ const T := preload("res://tests/support/t.gd")
 #   keys     every row carries phys_ms, proc_ms, bot_ms and net_ms;
 #   net      net_ms is the row's ms less bot_ms, on every row;
 #   bot      some row has bot_ms over zero (the driver's tick is timed);
-#   events   the first frame is over 40 ms and carries an events list of bracket stamps, each with
-#            a name, a time and an on-CPU time;
+#   events   a frame over 40 ms carries an events list of bracket stamps, each with a name, a time
+#            and an on-CPU time; --inject-ms plants that frame, since the load frame alone (once
+#            the pin) came in at 27-34 ms on a 4 vCPU cloud box by wave 20;
 #   marks    a tick's phys_tail, phys_deferred and phys_deleted come in that order.
 # Evidence limit: the identity and the plumbing, not a timing; the planted --inject-ms cost is read
 # from a windowed GATES frame log.
@@ -24,7 +25,7 @@ func _initialize() -> void:
 	var t := T.new("bot_frame_split_test")
 	var out := OS.get_user_data_dir().path_join("bot-frame-split-%d" % OS.get_process_id())
 	var results := ChildRuns.run([{"script": "res://tools/bot_run.gd", "args": ["--out=" + out, "--policy=skipper", "--seeds=1",
-		"--table=park", "--from-stage=2", "--ticks=450", "--frame-log=1", "--frame-split=2"]}], 110.0)
+		"--table=park", "--from-stage=2", "--ticks=450", "--frame-log=1", "--frame-split=2", "--inject-ms=60"]}], 110.0)
 	var result: Dictionary = results[0]
 	t.check("child ran clean", result["code"] == 0 and not result["timed_out"] and ChildRuns.summary(result)["errors"].is_empty(),
 		"exit %s, timed out %s" % [result["code"], result["timed_out"]])
@@ -34,13 +35,13 @@ func _initialize() -> void:
 	var missing := 0
 	var off := 0
 	var bot := false
-	var first = null
+	var slow = null
 	for line in lines:
 		var row = JSON.parse_string(line)
 		if not row is Dictionary:
 			continue
-		if first == null:
-			first = row
+		if slow == null and float(row.get("ms", 0.0)) > 40.0:
+			slow = row
 		for key in KEYS:
 			if not row.has(key):
 				missing += 1
@@ -50,9 +51,9 @@ func _initialize() -> void:
 	t.eq("rows missing a part", missing, 0)
 	t.eq("rows where net_ms is not ms less bot_ms", off, 0)
 	t.check("the driver's tick is timed", bot, "no row has bot_ms over zero")
-	var events = first.get("events") if first is Dictionary else null
-	t.check("the first frame carries stamps", events is Array and not events.is_empty() and float(first["ms"]) > 40.0,
-		"ms %s, events %s" % [first.get("ms") if first is Dictionary else null, events])
+	var events = slow.get("events") if slow is Dictionary else null
+	t.check("a frame over 40 ms carries stamps", events is Array and not events.is_empty(),
+		"ms %s, events %s" % [slow.get("ms") if slow is Dictionary else null, events])
 	if events is Array and not events.is_empty():
 		t.eq("a stamp is name, time, on-CPU time", String(events[0]).split(" ").size(), 3)
 		var names: Array = events.map(func(e): return String(e).split(" ")[0])
