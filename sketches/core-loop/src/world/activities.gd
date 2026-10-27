@@ -2,6 +2,7 @@ extends Node3D
 
 const ActivityView := preload("res://src/world/activity_view.gd")
 const Companion := preload("res://src/core/companion.gd")
+const Reap := preload("res://src/core/reap.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Cards := preload("res://src/world/director_cards.gd")
 const HoldRelay := preload("res://src/world/hold_relay.gd")
@@ -522,7 +523,9 @@ func clear() -> void:
 			for enemy in site.pack:
 				if is_instance_valid(enemy):
 					enemy.queue_free()
-			site.queue_free()
+			# The site's walls, props and views go a few a frame (Reap); its enemies still go at the
+			# frame's end, since a hidden enemy would still answer the bus (slams, jumps).
+			Reap.free_later(site)
 	sites.clear()
 	_pending_stage = false
 
