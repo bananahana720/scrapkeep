@@ -14,13 +14,16 @@ const TOP := 5
 # attack cadence and pilot regen, which only the top rungs cut. Difficulty never raises enemy health (ruling al).
 const LADDER := {
 	1: {},
-	2: {"mobs.damage_mult": 1.15, "warden.pulse_damage_mult": 1.15, "brindle.damage_mult": 1.1},
-	3: {"mobs.damage_mult": 1.25, "warden.pulse_damage_mult": 1.25, "brindle.damage_mult": 1.2, "brindle.period_mult": 0.9,
-		"mobs.elite_rate_mult": 1.25},
-	4: {"mobs.damage_mult": 1.35, "warden.pulse_damage_mult": 1.35, "brindle.damage_mult": 1.3, "brindle.period_mult": 0.85,
-		"mobs.elite_rate_mult": 1.5, "warden.pulse_cycle_mult": 0.9, "pilot.regen_delay_mult": 1.5},
-	5: {"mobs.damage_mult": 1.5, "warden.pulse_damage_mult": 1.5, "brindle.damage_mult": 1.4, "brindle.period_mult": 0.8,
-		"mobs.elite_rate_mult": 1.75, "warden.pulse_cycle_mult": 0.8, "pilot.regen_delay_mult": 2.0, "pilot.regen_rate_mult": 0.6},
+	2: {"mobs.damage_mult": 1.15, "warden.pulse_damage_mult": 1.3, "warden.pulse_cycle_mult": 0.85, "brindle.damage_mult": 1.1},
+	3: {"mobs.damage_mult": 1.25, "warden.pulse_damage_mult": 1.6, "warden.pulse_cycle_mult": 0.7, "brindle.damage_mult": 1.2,
+		"brindle.period_mult": 0.9, "mobs.elite_rate_mult": 1.25},
+	4: {"mobs.damage_mult": 1.35, "warden.pulse_damage_mult": 1.95, "warden.pulse_cycle_mult": 0.58, "brindle.damage_mult": 1.3,
+		"brindle.period_mult": 0.85, "mobs.elite_rate_mult": 1.5, "mobs.interval_scale_mult": 0.95, "pilot.regen_delay_mult": 1.5},
+	# Tuned on w1 (24 seeds, Expert ordinary 50%): the Warden's pulse, not mob hits, is what an Expert cannot
+	# dodge forever. Mob hits x3, crowd pressure or no regen at all left the Expert at 88-100% (8 seeds each).
+	5: {"mobs.damage_mult": 1.5, "warden.pulse_damage_mult": 2.25, "warden.pulse_cycle_mult": 0.48, "brindle.damage_mult": 1.4,
+		"brindle.period_mult": 0.8, "mobs.elite_rate_mult": 1.75, "mobs.interval_scale_mult": 0.9, "pilot.regen_delay_mult": 2.0,
+		"pilot.regen_rate_mult": 0.6},
 }
 const UNLOCK := "first_win"
 # Small existing bonuses; the base id and all metadata remain the same.

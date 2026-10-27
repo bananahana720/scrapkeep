@@ -213,7 +213,7 @@ export function gradeRun(kind, row, job = {}) {
     const boss = row.boss;
     const rep = fightReport(boss, row.max_hp);
     if (boss?.defeated_s != null) return { result: "win", fightS: boss.defeated_s, hpLost: boss.hp_lost ?? null, ...rep };
-    if (row.outcome === "died") return { result: "loss", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, diedS: boss?.died_s ?? boss?.seconds ?? null, ...rep };
+    if (row.outcome === "died" || row.outcome === "lost") return { result: "loss", fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, diedS: boss?.died_s ?? boss?.seconds ?? null, ...rep };
     // "boss" is the driver finding no boss module in the boss state: the harness's fault, not a fight.
     if (row.outcome === "boss") return { result: "error", why: "no boss module in the boss state" };
     if (row.outcome === "boss_stalled" || boss) return { result: "timeout", reason: row.outcome, fightS: boss?.seconds ?? null, hpLost: boss?.hp_lost ?? null, ...rep };
@@ -227,12 +227,12 @@ export function gradeRun(kind, row, job = {}) {
       const fightS = start != null ? round2(note.warden_broken_s - start) : null;
       return { result: "win", fightS, hpLost: note.hp_lost ?? null, ...rep };
     }
-    if (row.outcome === "died") return { result: "loss", fightS: null, hpLost: note?.hp_lost ?? null, ...rep };
+    if (row.outcome === "died" || row.outcome === "lost") return { result: "loss", fightS: null, hpLost: note?.hp_lost ?? null, ...rep };
     return { result: "timeout", reason: row.outcome, fightS: null, hpLost: note?.hp_lost ?? null, ...rep };
   }
   if (kind === "world") {
     if (row.outcome === "reached") return { result: "win", fightS: row.game_seconds ?? null, hpLost: null };
-    if (row.outcome === "died") return { result: "loss", fightS: row.game_seconds ?? null, hpLost: null };
+    if (row.outcome === "died" || row.outcome === "lost") return { result: "loss", fightS: row.game_seconds ?? null, hpLost: null };
     return { result: "timeout", reason: row.outcome, fightS: row.game_seconds ?? null, hpLost: null };
   }
   throw new Error("unknown kind " + kind);

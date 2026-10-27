@@ -15,7 +15,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 # Each lever and the way a harder rung moves it: up (hits, waits before regen) or down (cadence, regen rate).
 const HARDER_UP := ["mobs.damage_mult", "warden.pulse_damage_mult", "brindle.damage_mult", "mobs.elite_rate_mult",
 	"pilot.regen_delay_mult"]
-const HARDER_DOWN := ["brindle.period_mult", "warden.pulse_cycle_mult", "pilot.regen_rate_mult"]
+const HARDER_DOWN := ["brindle.period_mult", "warden.pulse_cycle_mult", "mobs.interval_scale_mult", "pilot.regen_rate_mult"]
 
 var t := T.new("hard_ladder_test")
 
