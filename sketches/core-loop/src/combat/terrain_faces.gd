@@ -318,8 +318,8 @@ var hits := 0
 var keep_one_placement := false
 
 
-# local_faces: the shape's faces in its own space, an Array of vertex Arrays, or a
-# PackedVector3Array of triangles (a trimesh).
+# local_faces: the shape's faces in its own space, an Array of vertex Arrays, a
+# PackedVector3Array of triangles (a trimesh), or a Callable the worker calls for that PackedVector3Array.
 func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
 	var id := shape.get_instance_id()
 	var entry := cached(shape, transform)
@@ -331,12 +331,15 @@ func request(shape: Shape3D, transform: Transform3D, local_faces) -> Dictionary:
 	var world
 	if local_faces is PackedVector3Array:
 		world = transform * (local_faces as PackedVector3Array)
-	else:
+	elif not local_faces is Callable:
 		world = (local_faces as Array).map(func(face): return (face as Array).map(func(v): return transform * v))
 	builds += 1
 	entry = {"shape": weakref(shape), "result": {}, "used": Engine.get_physics_frames()}
 	var result: Dictionary = entry["result"]
-	entry["task"] = WorkerThreadPool.add_task(func(): _build(world, result), false, "rivet terrain faces")
+	# A Callable makes the local faces on the worker (a park height-map tile), then moves them there too.
+	var make: Callable = local_faces if local_faces is Callable else Callable()
+	entry["task"] = WorkerThreadPool.add_task(func(): _build(transform * (make.call() as PackedVector3Array) if make.is_valid() else world, result),
+			false, "rivet terrain faces")
 	if keep_one_placement:
 		_forget(id)
 	if not _entries.has(id):

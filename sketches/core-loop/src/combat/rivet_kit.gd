@@ -858,8 +858,6 @@ func _collider_faces(shape: Shape3D) -> Array:
 		triangles = mesh.get_faces()
 	elif shape is ConcavePolygonShape3D:
 		triangles = shape.get_faces()
-	elif shape is HeightMapShape3D:
-		triangles = height_map_faces(shape)
 	else:
 		push_error("Rivet terrain commitment requires faces for %s" % shape.get_class())
 	var faces: Array = []
@@ -871,9 +869,11 @@ func _collider_faces(shape: Shape3D) -> Array:
 # A height map's cells as the two triangles Jolt collides on (the park terrain's winding: a, b, c and b, d, c,
 # split b to c), in the shape's local space, centred, one unit a sample.
 static func height_map_faces(shape: HeightMapShape3D) -> PackedVector3Array:
-	var w := shape.map_width
-	var d := shape.map_depth
-	var h := shape.map_data
+	return grid_faces(shape.map_width, shape.map_depth, shape.map_data)
+
+
+# height_map_faces over a w by d sample grid (safe on a worker thread).
+static func grid_faces(w: int, d: int, h: PackedFloat32Array) -> PackedVector3Array:
 	var x0 := -(w - 1) * 0.5
 	var z0 := -(d - 1) * 0.5
 	var faces := PackedVector3Array()
@@ -961,8 +961,14 @@ func _terrain_entry(shape: Shape3D, transform: Transform3D) -> Dictionary:
 	var entry := terrain.cached(shape, transform)
 	if not entry.is_empty():
 		return entry
-	var local_faces = (shape as ConcavePolygonShape3D).get_faces() if shape is ConcavePolygonShape3D \
-			else height_map_faces(shape) if shape is HeightMapShape3D else _collider_faces(shape)
+	var local_faces
+	if shape is ConcavePolygonShape3D:
+		local_faces = (shape as ConcavePolygonShape3D).get_faces()
+	elif shape is HeightMapShape3D:
+		# A park tile's 12,800 cells are 77k vertices of script: the worker builds them, not this frame.
+		local_faces = grid_faces.bind(shape.map_width, shape.map_depth, shape.map_data)
+	else:
+		local_faces = _collider_faces(shape)
 	if local_faces.is_empty():
 		return {}
 	return terrain.request(shape, transform, local_faces)
