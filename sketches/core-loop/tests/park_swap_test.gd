@@ -9,6 +9,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const Terrain := preload("res://src/world/terrain.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
 const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_test"}, {"stage": 2, "world": 1, "map": "park_test"},
 	{"stage": 3, "world": 1, "map": "park_test"}]}
@@ -58,7 +59,7 @@ func _run() -> void:
 		% [frames, use_ms, worst, next.slowest_usec / 1000.0 if next != null else -1.0, next.slowest_step if next != null else "", next.worker_pieces if next != null else -1])
 	t.check("stage 2 finished building", terrain.is_ready(2), "%d frames" % frames)
 	t.check("the build spanned frames (not one blocking call)", frames > 1, "%d frames" % frames)
-	t.check("regions and tiles were built off the main thread", next != null and next.worker_pieces == 104, "%d pieces" % (next.worker_pieces if next != null else -1))
+	t.check("regions and tiles were built off the main thread", next != null and next.worker_pieces == ParkTerrain.PIECES, "%d pieces" % (next.worker_pieces if next != null else -1))
 	t.check("the build's frames were timed", worst > 0.0, "%.2f ms" % worst)
 	t.check("no main-thread frame over 33 ms while stage 2 builds", worst < FRAME_CAP_MS and use_ms < FRAME_CAP_MS, "worst %.2f ms, use(1) %.2f ms" % [worst, use_ms])
 	# frame_usec_max never sees the frame of the last attach step (built, then the props, then

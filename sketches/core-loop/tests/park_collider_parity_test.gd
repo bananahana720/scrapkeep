@@ -2,7 +2,7 @@ extends SceneTree
 
 # Rule (K-UNITS KB4, PARK.md section 3): a park_* map id with a bake loads as Terrain3D render
 # regions (four regions of 1024 vertices at 1 m spacing, collision mode 0) and our own trimesh
-# collider in 160 m tiles (100 for the 1.6 km park), and the collider and Terrain.height() are
+# collider in 80 m pieces (400 for the 1.6 km park; ruling ae), and the collider and Terrain.height() are
 # one surface: at 10,000 seeded points off the hole cells a downward ray on the collider and
 # height() agree within 1 cm. The fixture is park_test (src/world/park/park_test.json, baked to
 # assets/park/park_test/).
@@ -44,23 +44,23 @@ func _run() -> void:
 	var grid: Dictionary = info["grid"]
 	var half := float(grid["half_m"])
 	var want_regions: int = (grid["regions"] as Array).size()
-	var want_tiles := int(pow(ceilf(2.0 * half / 160.0), 2.0))
-	print("park_collider_parity_test: bake implies %d regions of %d and %d tiles of 160 m; got %d regions and %d tiles"
+	var want_tiles := int(pow(ceilf(2.0 * half / 80.0), 2.0))
+	print("park_collider_parity_test: bake implies %d regions of %d and %d collider pieces of 80 m; got %d regions and %d pieces"
 		% [want_regions, int(grid["region_size"]), want_tiles, ground.terrain3d.data.get_region_count(), ground.tiles.size()])
 	t.eq("regions from the bake", ground.terrain3d.data.get_region_count(), want_regions)
 	t.eq("four regions", want_regions, 4)
 	t.eq("region size 1024", int(ground.terrain3d.region_size), 1024)
 	t.near("vertex spacing 1 m", float(ground.terrain3d.vertex_spacing), 1.0, 0.0001)
 	t.eq("Terrain3D collision stays off (mode 0)", int(ground.terrain3d.collision.mode), 0)
-	t.eq("100 collider tiles", ground.tiles.size(), want_tiles)
-	t.eq("the bake implies 100 tiles", want_tiles, 100)
+	t.eq("400 collider pieces", ground.tiles.size(), want_tiles)
+	t.eq("the bake implies 400 pieces", want_tiles, 400)
 	var sized := 0
 	for tile in ground.tiles:
 		var shape: Shape3D = tile.get_child(0).shape
 		var box: AABB = shape.get_debug_mesh().get_aabb()
-		if absf(box.size.x - 160.0) < 0.01 and absf(box.size.z - 160.0) < 0.01:
+		if absf(box.size.x - 80.0) < 0.01 and absf(box.size.z - 80.0) < 0.01:
 			sized += 1
-	t.eq("every tile spans 160 m by 160 m", sized, want_tiles)
+	t.eq("every piece spans 80 m by 80 m", sized, want_tiles)
 	t.check("contains the park corners", terrain.contains(Vector3(-790.0, 0.0, 790.0)) and terrain.contains(Vector3(790.0, 0.0, -790.0))
 		and not terrain.contains(Vector3(805.0, 0.0, 0.0)), "half 800")
 
