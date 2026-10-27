@@ -929,11 +929,15 @@ func _attach_step(deadline: int) -> void:
 			return
 	if _next_region < _regions.size():
 		# A region a frame: making it with its maps, then the sanitize and the add.
+		var _q := Time.get_ticks_usec()
 		var region: Object = _make_region(_regions[_next_region])
+		var _q1 := Time.get_ticks_usec()
 		region.sanitize_maps()
+		var _q2 := Time.get_ticks_usec()
 		if terrain3d.data.has_region(region.get_location()):
 			terrain3d.data.remove_regionl(region.get_location(), false)
 		terrain3d.data.add_region(region, false)
+		print("PROBE attach %s f=%d region %d make=%d sanitize=%d add=%d" % [map_id, Engine.get_process_frames(), _next_region, _q1 - _q, _q2 - _q1, Time.get_ticks_usec() - _q2])
 		_regions[_next_region] = null
 		_next_region += 1
 		if deadline >= 0:
@@ -941,7 +945,9 @@ func _attach_step(deadline: int) -> void:
 	if _next_region < _regions.size():
 		return
 	if _next_map < MAP_TYPES.size():
+		var _q := Time.get_ticks_usec()
 		terrain3d.data.update_maps(MAP_TYPES[_next_map], true, false)
+		print("PROBE attach %s f=%d update_maps %d %d" % [map_id, Engine.get_process_frames(), MAP_TYPES[_next_map], Time.get_ticks_usec() - _q])
 		_next_map += 1
 		if deadline >= 0:
 			return
