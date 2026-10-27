@@ -870,6 +870,14 @@ func chunks_left() -> int:
 	return _posture.chunks
 
 
+# The chunks the park's fight phases read as left (world.gd pulses chunk_N from them). A mount driver
+# whose rule breaks every chunk in one hit (the dam's sheet rams) reports posture quarters instead.
+func phase_chunks_left() -> int:
+	if mount_driver != null and mount_driver.has_method("phase_chunks_left"):
+		return mount_driver.phase_chunks_left(self)
+	return chunks_left()
+
+
 # Hits the rule counted as glances so far.
 func glances() -> int:
 	return _posture.glances
