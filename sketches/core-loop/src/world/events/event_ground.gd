@@ -621,9 +621,11 @@ static func planned_overlay(world, plan: Dictionary, id: String) -> Dictionary:
 
 
 # Whether an overlay down now reaches ground the plan read: a plan projected over the ground as
-# entered still holds where no overlay's footprint (the only place overlay_height answers) meets
-# its rectangle. The dam's boiler lands with the toe vents' lip down across the dam, and before
-# this its swap projected on the main thread (53.7-55.5 ms frames on the 4080, #512).
+# entered still holds where no overlay's footprint meets its rectangle. overlay_height answers only
+# inside the footprint, and project_surface reads a profile's surface, which every swap projects
+# over its site's own rectangle. The rectangle's corner reads reach a grid step past it, so the
+# footprint grows by two. The dam's boiler lands with the toe vents' lip down across the dam, and
+# before this its swap projected on the main thread (53.7-55.5 ms frames on the 4080, #522 rows).
 static func _overlay_under(world, reach: Rect2) -> bool:
 	var m = world.terrain.map()
 	for overlay: String in world.terrain.overlays:
@@ -633,7 +635,7 @@ static func _overlay_under(world, reach: Rect2) -> bool:
 		var site: Dictionary = p.site
 		var bounds := _rect_bounds(Vector3(float(site.at[0]), 0.0, float(site.at[1])), ParkMap.footprint_half_extents(site),
 			deg_to_rad(float(site.yaw_deg)))
-		if bounds.grow(ParkTerrain.STEP).intersects(reach):
+		if bounds.grow(2.0 * ParkTerrain.STEP).intersects(reach, true):
 			return true
 	return false
 
