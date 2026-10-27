@@ -1107,7 +1107,9 @@ func _rescue_if_fallen(ball: Vector3) -> void:
 			var radius: float = preload("res://src/movement/tuning.gd").RADIUS
 			ctx.player.reset_to(Vector3(ball.x, deck + radius, ball.z), Vector3(v.x, 0.0, v.z) * NET_DAMP)
 			return
-	if ctx.terrain.contains(ball) and ball.y > ctx.terrain.height(ball.x, ball.z) - RESCUE_DEPTH:
+	# Measured from the floor, not height(): an overlay is a sheet, not a fill, so a ball under
+	# one (the flume's trestle ramp) rolls on the floor beneath it and has not fallen.
+	if ctx.terrain.contains(ball) and ball.y > ctx.terrain.floor_height(ball.x, ball.z) - RESCUE_DEPTH:
 		return
 	ctx.player.reset_to(ctx.terrain.rescue_point(ball), Vector3(v.x, 0.0, v.z))
 
