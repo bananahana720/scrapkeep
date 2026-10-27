@@ -113,6 +113,18 @@ func _run() -> void:
 	await _frames(2)
 	await _shot("heft-up")
 
+	# 6. A held dunk charge: the coil on the collar's rear arc, rolling away from the camera,
+	# then late in the window with one pip left.
+	_reset()
+	fx.pose = {"velocity": -back * 20.0}
+	game.player.dunk.store(30.0, "still", game.player.class_def.id, game.player.class_color())
+	await _frames(4)
+	await _shot("dunk-charge")
+	game.player.dunk.clock = float(game.player.dunk.charge["until"]) - game.player.dunk.WINDOW * 0.2
+	await _frames(2)
+	await _shot("dunk-charge-late")
+	game.player.dunk.clear("reset")
+
 	var file := FileAccess.open(out.path_join("shots.json"), FileAccess.WRITE)
 	file.store_string(JSON.stringify({"pilot": pilot, "adapter": RenderingServer.get_video_adapter_name(), "shots": shots,
 		"spawned": fx.spawned, "limits": "Compatibility renderer on llvmpipe, clock at 0.15x, frozen ball posed through PlayerFx.pose."}, "\t"))
