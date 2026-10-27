@@ -270,6 +270,23 @@ func _run() -> void:
 		"reel on a stalking miniboss removed %.2f, charge held %s, spends %d" % [stalk_removed, _player.dunk.held(), _spent.size()])
 	turning.queue_free()
 	stalking.queue_free()
+	# A plate the plain reel would only chip, popped because the stored slam lifted the reel over
+	# the plating: the charge did the work, so it is spent. A plate the plain reel pops anyway
+	# keeps it.
+	_fresh()
+	_slam()
+	var lifted := _brute(90.0)
+	_reel_on(lifted)
+	_check("12c a plate the charge popped spends it", lifted.plates_popped == 1 and not _player.dunk.held() and _spent.size() == 1,
+		"plating 90: plates popped %d, charge held %s, spends %d" % [lifted.plates_popped, _player.dunk.held(), _spent.size()])
+	_fresh()
+	_slam()
+	var bare := _brute(0.0)
+	_reel_on(bare)
+	_check("12d a plate the plain reel pops keeps it", bare.plates_popped == 1 and _player.dunk.held() and _spent.is_empty(),
+		"plating 0: plates popped %d, charge held %s, spends %d" % [bare.plates_popped, _player.dunk.held(), _spent.size()])
+	lifted.queue_free()
+	bare.queue_free()
 
 	_fresh()
 	var enemy := _enemy()
@@ -303,6 +320,18 @@ func _miniboss(in_turn: bool) -> Node3D:
 	boss.max_hp = 100000.0
 	boss.state = boss.State.TURN if in_turn else boss.State.STALK
 	return boss
+
+
+# A plated brute on the shelf with its one plate, at the given plating; it never acts.
+func _brute(plating: float) -> Node3D:
+	var at: Vector3 = _game.ctx.terrain.drop_point(FLAT_SHELF.x - 12.0, FLAT_SHELF.z, 1.0)
+	var brute: Node3D = _combat.spawn_enemy("plated_brute", at)
+	brute.live = Callable(self, "_never")
+	brute.hp = 100000.0
+	brute.max_hp = 100000.0
+	brute.plating = plating
+	brute.plates = 1
+	return brute
 
 
 # A reel impact (a smash landing) on the given body; returns the HP it removed.

@@ -299,6 +299,8 @@ func dunk_glow_shown() -> bool:
 
 # How many of the pips are lit: all of them at the store, none at the window's end.
 func dunk_pips_lit() -> int:
+	if not dunk_glow_shown():
+		return 0
 	var lit := 0
 	for pip in _dunk_pips:
 		lit += 1 if pip.visible else 0

@@ -705,9 +705,11 @@ func _door_caps(hit: Dictionary) -> void:
 	if enemy.has_method("absorbs_hit") and enemy.absorbs_hit(result):
 		result["absorbed"] = true
 	# An absorbed hit (a miniboss turn, a popped plate, a crew fitter) bites nothing, so the
-	# charge stays held for the next reel.
+	# charge stays held for the next reel, unless the charge did the work: a plate the plain
+	# reel would only chip, popped because the stored slam lifted the reel over the plating.
 	if hit["dunk"] > 0.0:
-		if bool(result.get("absorbed", false)):
+		if bool(result.get("absorbed", false)) and enemy.absorbs_hit(
+				resolve(enemy, hit["kind"], hit["force"], hit["part"], 0.0, hit["bonus"])):
 			hit["dunk"] = 0.0
 		else:
 			ctx.player.dunk.spend(enemy)
