@@ -286,6 +286,50 @@ static func build(stage_root: Node3D) -> Node3D:
 # ground, again after a freed stage comes back. Visual only, nothing collides.
 static func hook(ctx) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
+	ctx.terrain.stage_built.connect(_on_stage_built.bind(ctx))
+
+
+# A Spillway park stage built ahead on worker threads (the flume, behind the dam) takes its park pass
+# a step a frame from when its ground is done (ParkBuild), parked out of sight, while the current
+# stage is calm, as dig_scenery.gd's does: the whole pass was 45 ms of the flume's entry tick on the
+# cloud (scrapkeep#494). Entry finishes whatever is left. A bot run that builds stages whole, or a
+# stage on show, keeps the entry build.
+static func _on_stage_built(stage: int, ctx) -> void:
+	if not ctx.terrain.built_threaded(stage):
+		return
+	for row in ctx.stages.DEFS:
+		if int(row["stage"]) != stage:
+			continue
+		var root: Node3D = ctx.terrain.geometry_root(stage)
+		var map = ctx.terrain.map_for(stage)
+		if not ParkSites.is_park(map) or int(row.get("world", 0)) != 1 or root.visible or root.get_node_or_null("SpillwayScenery") != null:
+			return
+		var pass_ := ParkPass.new(root, map, ctx.terrain.ground_callable(stage), stage)
+		var step := ParkBuild.new()
+		step.name = "ParkBuild"
+		step.pass_ = pass_
+		step.flow = ctx.flow
+		pass_.scenery.add_child(step)
+		return
+
+
+# Steps a park pass begun ahead, one step a frame, and leaves when it is done.
+class ParkBuild extends Node:
+	var pass_
+	# Steps wait while this flow is not calm; without one (a test) they run every frame.
+	var flow
+
+	func _process(_delta: float) -> void:
+		if flow != null and not flow.calm():
+			return
+		if not pass_.step():
+			finish()
+
+	func finish() -> void:
+		while pass_.step():
+			pass
+		queue_free()
+		set_process(false)
 
 
 static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
@@ -295,6 +339,9 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 		var map = ctx.terrain.map_for(stage)
 		if ParkSites.is_park(map) and int(row.get("world", 0)) == 1:
 			var root: Node3D = ctx.terrain.geometry_root(stage)
+			var ahead := root.get_node_or_null("SpillwayScenery/ParkBuild")
+			if ahead != null and not ahead.is_queued_for_deletion():
+				ahead.finish()
 			if root.get_node_or_null("SpillwayScenery") == null:
 				build_park(root, map, ctx.terrain.ground_callable(stage), stage)
 		return
@@ -311,13 +358,64 @@ const PARK_FACE_MIN_M := 20.0
 
 
 static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) -> Node3D:
-	var scenery := Node3D.new()
-	scenery.name = "SpillwayScenery"
-	stage_root.add_child(scenery)
-	var sites := ParkSites.new(map, ground, stage)
+	var pass_ := ParkPass.new(stage_root, map, ground, stage)
+	while pass_.step():
+		pass
+	return pass_.scenery
+
+
+# The park pass as steps, so it can run whole (build_park) or a step a frame (ParkBuild): the plan and
+# the mist, the cottonwoods' base batches, their detail shells PARK_TREES_PER_STEP trees a step, then the
+# spillway effects. Steps run in the same order either way, and only the plan draws from the seeded
+# stream, so the result is the same.
+const PARK_TREES_PER_STEP := 4
+
+
+class ParkPass extends RefCounted:
+	const Scenery := preload("res://src/presentation/spillway_scenery.gd")
+	var scenery: Node3D
+	var _stage_root: Node3D
+	var _map
+	var _sites
+	var _trees := []
+	var _group: Node3D
+	var _next_tree := 0
+	var _phase := 0
+
+	func _init(stage_root: Node3D, map, ground: Callable, stage: int) -> void:
+		_stage_root = stage_root
+		_map = map
+		scenery = Node3D.new()
+		scenery.name = "SpillwayScenery"
+		stage_root.add_child(scenery)
+		_sites = ParkSites.new(map, ground, stage)
+
+	# One step; false once the pass is done.
+	func step() -> bool:
+		match _phase:
+			0:
+				_trees = Scenery._plan(scenery, _sites, _map)
+				_phase = 1 if not _trees.is_empty() else 3
+			1:
+				_group = Scenery._cottonwood_group(_stage_root, _trees)
+				_phase = 2
+			2:
+				var to := mini(_next_tree + PARK_TREES_PER_STEP, _trees.size())
+				Scenery._cottonwood_shells(_group, _trees, _next_tree, to)
+				_next_tree = to
+				if _next_tree >= _trees.size():
+					_phase = 3
+			3:
+				preload("res://src/presentation/spillway_fx.gd").place(scenery, _stage_root, _map, _sites)
+				_phase = 4
+		return _phase < 4
+
+
+# The park's cottonwood seats and its mist batch (under scenery), from the map's own seeded stream.
+static func _plan(scenery: Node3D, sites, map) -> Array:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = ("spillway_scenery_" + String(map.park["map"])).hash()
-	var rows := sites.rows([], PARK_WET).filter(func(row): return row["element"] != "anchor_field")
+	var rows: Array = sites.rows([], PARK_WET).filter(func(row): return row["element"] != "anchor_field")
 	var trees := []
 	for row in rows:
 		for seat in sites.flank(row, 2, rng.randf_range(4.0, 12.0), rng):
@@ -327,19 +425,19 @@ static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) ->
 			var low := INF
 			var high := -INF
 			for probe in [Vector2.ZERO, Vector2(3, 0), Vector2(-3, 0), Vector2(0, 3), Vector2(0, -3)]:
-				var h := sites.height(at + probe)
+				var h: float = sites.height(at + probe)
 				low = minf(low, h)
 				high = maxf(high, h)
 			if high - low <= 1.5:
 				trees.append({"foot": Vector3(at.x, low, at.y), "size": rng.randf_range(0.6, 1.0)})
 	var mist: Array[Transform3D] = []
 	# Water falls off a drop, and down the dam's face (its tall bank row), not off the toe's ledges and ramps.
-	var drops := rows.filter(func(row): return row["element"] == "drop" \
+	var drops: Array = rows.filter(func(row): return row["element"] == "drop" \
 		or (row["landform"] == "dam_face" and row["element"] == "bank" and float(row["size"][1]) >= PARK_FACE_MIN_M))
 	for row in drops.slice(0, PARK_MIST_ROWS_MAX):
 		var f := ParkSites.frame(row)
 		var foot: Vector2 = f["at"] + f["run"] * float(f["half_length"])
-		var y := sites.height(foot)
+		var y: float = sites.height(foot)
 		var face := Basis(Vector3.UP, ParkSites.yaw_toward(-f["run"]))
 		var across := clampf(float(f["half_width"]), 12.0, 180.0)
 		for j in 9 * ceili(across / 60.0):
@@ -352,10 +450,7 @@ static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) ->
 		puff.size = Vector2(2, 2)
 		puff.flip_faces = true
 		_batch(scenery, "WaterMist", puff, mist, Color("bcd4da"))
-	if not trees.is_empty():
-		_cottonwoods(stage_root, trees)
-	preload("res://src/presentation/spillway_fx.gd").place(scenery, stage_root, map, sites)
-	return scenery
+	return trees
 
 
 # SWAP-WAVE 12-F: the shoulder cottonwoods are the cottonwood recipe, one tree per hull root under the stage root (not the
@@ -363,11 +458,18 @@ static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) ->
 # instance per tree, each surface in the loader's slot material; the detail shells hang per tree under a holder at the
 # tree's frame, so each fades by its own distance. A park passes its own trees.
 static func _cottonwoods(stage_root: Node3D, trees: Array = []) -> Node3D:
+	if trees.is_empty():
+		trees = cottonwood_trees()
+	var group := _cottonwood_group(stage_root, trees)
+	_cottonwood_shells(group, trees, 0, trees.size())
+	return group
+
+
+# The Cottonwoods group under the stage root with its base batches, one MultiMesh per base view.
+static func _cottonwood_group(stage_root: Node3D, trees: Array) -> Node3D:
 	var group := Node3D.new()
 	group.name = "Cottonwoods"
 	stage_root.add_child(group)
-	if trees.is_empty():
-		trees = cottonwood_trees()
 	var probe := Node3D.new()
 	for view: GeometryInstance3D in RecipeProps.base("cottonwood", probe, Transform3D.IDENTITY):
 		var source := view as MeshInstance3D
@@ -392,14 +494,18 @@ static func _cottonwoods(stage_root: Node3D, trees: Array = []) -> Node3D:
 		group.add_child(batch)
 		GraphicsPreset.register_scenery(batch)
 	probe.free()
-	for i in trees.size():
+	return group
+
+
+# Trees from..to-1's detail shells, each under a holder at the tree's frame.
+static func _cottonwood_shells(group: Node3D, trees: Array, from: int, to: int) -> void:
+	for i in range(from, to):
 		var holder := Node3D.new()
 		holder.name = "Cottonwood%02d" % i
 		group.add_child(holder)
 		holder.transform = cottonwood_frame(trees[i])
 		for shell in RecipeProps.shells("cottonwood", holder, Transform3D.IDENTITY):
 			GraphicsPreset.register_scenery(shell)
-	return group
 
 
 static func _water_edge_mesh(node_name: String, fallback: Mesh) -> Mesh:
