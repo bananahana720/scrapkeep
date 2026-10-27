@@ -773,10 +773,12 @@ static func ingredient_of(part_id: String, held: Array) -> String:
 # rare or relic.
 # The cobalt rung's Warden floor (item ladder, wave 20): a gate pair always holds a rare or
 # better. When the roll brought none, its first pick that is not a pattern part (stage 2's
-# guarantee) becomes a rare drawn the same way; cores still lift the other. Callers outside
-# the Warden's gates (tests that read common shares, the tools) never pass through it.
+# guarantee) becomes a rare drawn the same way; cores still lift the other. A pair short of
+# count (the pool ran dry) gains the rare instead, and a pair of patterns keeps its first.
+# Callers outside the Warden's gates (tests that read common shares, the tools) never pass
+# through it.
 static func floor_gate(rng: RandomNumberGenerator, picks: Array, class_id: String, held: Array,
-		offered: Dictionary = {}) -> Array:
+		offered: Dictionary = {}, count := 2) -> Array:
 	if picks.is_empty() or picks.any(func(key): return rung_of(key) >= RUNG_FLOOR):
 		return picks
 	var cobalt: Array = roll(rng, ["rare"], class_id, held, 1, picks, offered)
@@ -784,9 +786,14 @@ static func floor_gate(rng: RandomNumberGenerator, picks: Array, class_id: Strin
 		return picks
 	var out := picks.duplicate()
 	var slot := 0
-	while slot < out.size() - 1 and out[slot] in PATTERN_PARTS:
+	while slot < out.size() and out[slot] in PATTERN_PARTS:
 		slot += 1
-	out[slot] = cobalt[0]
+	if slot < out.size():
+		out[slot] = cobalt[0]
+	elif out.size() < count:
+		out.append(cobalt[0])
+	else:
+		out[-1] = cobalt[0]
 	return out
 
 

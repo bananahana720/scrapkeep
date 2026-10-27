@@ -60,3 +60,8 @@ func _planted() -> void:
 	var kept := ["focus_lens", "sunforged_core"]
 	_t.eq("a pair holding a cobalt stays as rolled", Parts.floor_gate(rng, kept, "tarn", []), kept)
 	_t.eq("an empty pair stays empty", Parts.floor_gate(rng, [], "tarn", []), [])
+	var short: Array = Parts.floor_gate(rng, ["spiral_wave"], "tarn", [])
+	_t.check("a lone pattern keeps its gate and gains a cobalt", short.size() == 2 and short[0] == "spiral_wave"
+		and Parts.rung_of(short[1]) >= Parts.RUNG_FLOOR, str(short))
+	var patterns: Array = Parts.floor_gate(rng, ["spiral_wave", "chain_arc"], "tarn", [])
+	_t.check("a pair of patterns keeps its first", patterns[0] == "spiral_wave" and Parts.rung_of(patterns[1]) >= Parts.RUNG_FLOOR, str(patterns))

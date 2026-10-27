@@ -1224,7 +1224,7 @@ func _on_flow_changed(state: String) -> void:
 		return
 	var rarities := Parts.gate_rarities(ctx.run.gate_tier_bonus())
 	var picks: Array = Parts.roll_gate(ctx.rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
-	picks = Parts.floor_gate(ctx.rng, picks, _class_id(), ctx.run.parts, _offered)
+	picks = Parts.floor_gate(ctx.rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	picks += _hotwire_gate_ids()
