@@ -859,7 +859,7 @@ func _deepen_for(skips: int) -> void:
 func _note_stall(gap_usec: int) -> void:
 	var skips := _music_pb.get_skips()
 	if skips > _skips_seen:
-		print("ACE music: a %d ms gap between pumps outlasted the queue (%d skips)" % [gap_usec / 1000, skips - _skips_seen])
+		print("ACE music: a %d ms gap between pumps outlasted the queue (%d skips) at frame %d, stage %d%s" % [gap_usec / 1000, skips - _skips_seen, Engine.get_process_frames(), _stage_now, ", launch armed" if _launch_armed else ""])
 	_skips_seen = skips
 
 
