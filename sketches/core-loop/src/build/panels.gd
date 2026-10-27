@@ -94,7 +94,8 @@ const DROP := {"chance": 0.07, "pity": 0.015, "elite": 1.0, "rib": 2.5, "jackpot
 # streams, tests/fixtures/panels_w1_kills.json), so the card's 7% left about two panels a
 # stage; tuned there by tests/panels_drop_sim_test.gd. Worlds 2 and 3 keep the row, untuned.
 # 2026-10-24 Spillway roster (more packs, more kills): 0.32 and 0.06 on sixteen runs at bba75851; was 0.4, 0.08.
-const DROP_BY_WORLD := {1: {"chance": 0.32, "pity": 0.06}}
+# 2026-10-27 pacing lock rows (four-pack clamps, yard waves, ruling af): 0.24 and 0.04 on sixteen runs at 70f9ce81; was 0.32, 0.06.
+const DROP_BY_WORLD := {1: {"chance": 0.24, "pity": 0.04}}
 # Rib caches (coordinator ruling 23 Oct, "exploring pays"): panels waiting at the end of this
 # many off-route dead ends a stage, each with a tall column and a chime heard from the route.
 const RIB_CACHES := 3
