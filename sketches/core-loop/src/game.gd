@@ -286,6 +286,7 @@ func _ready() -> void:
 		return ctx.spawner.would_crush(enemy, kind, force)
 
 	flow.setup(ctx, beacon)
+	flow.cover_cut = _cover_stage_cut
 	if not test_mode or run_store_path != "":
 		flow.store = RunStore.new(run_store_path if run_store_path != "" else storage_dir.path_join("run.json"))
 	events.flow_changed.connect(_on_flow_changed)
@@ -817,6 +818,17 @@ func launch_from_gate() -> void:
 			return
 		screens.stop_walk_for_launch()
 		flow.launch_from_title(def), _fire_gate, _dam_drawn)
+
+
+# A stage launch's end (flow.cover_cut): the swipe starts from the cover, the flight already being its wind, and the next
+# stage (or Brindle's arena) is entered under it. False when the take does not play, and flow ends the flight itself.
+func _cover_stage_cut(on_cover: Callable) -> bool:
+	launch_take.live = _take_live()
+	return launch_take.live and launch_take.play(on_cover, Callable(), _stage_drawn, true)
+
+
+func _stage_drawn() -> bool:
+	return flow.in_arena or _dam_drawn()
 
 
 # The wind of a gate launch: the walk's keys let go and the ball leaves the gate up and out, the chase camera after it.
