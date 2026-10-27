@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "89e4c3a5836b756ebfa3e5ef14857517a148c354d8403b2b16abd3de513566c2",
+  "bake_sha256": "29b8682559132d8f1f6ab74c4d2f78a30145075e3a7d5f8915dc7dba7721062b",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1104582,
-  "edges": 320240,
+  "bytes": 1092116,
+  "edges": 315493,
   "first_failed": "",
   "flags": {
     "deck": 796,
     "door_ok": 40322,
     "line": 322,
     "open": 40960,
-    "sight_ok": 10695,
+    "sight_ok": 10693,
     "under": 0
   },
   "full_visit_m": 2011,
   "full_visit_ratio": "1.437",
-  "graph_sha256": "0a70e4b0ca6061410eda6057180cbfd3a1b653856c59996fc8ad1793e10b702c",
+  "graph_sha256": "1bbb0e2048baf6daaa5fa3ee941e7b816871a8fb76b67267686688ffc2a0867d",
   "line_errors": [],
   "line_path_nodes": 125,
-  "longest_est_m": 2495,
+  "longest_est_m": 2954,
   "map": "park_flume",
   "nodes": 41197,
-  "park_sha256": "53d7aa5f3bf46bc3ec0eded990f9b15c5534794e0867616f48a35ae780e07f42",
+  "park_sha256": "b7d8caf07fdd5abf2a5b1344c816b27462ccfa01b581b89e6c100ef578fd6f02",
   "pockets": [
     {
       "clear_ring": [],
@@ -211,12 +211,12 @@
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
     "d_landmark": 1399,
-    "farther_share": "0.065",
+    "farther_share": "0.068",
     "ok": true,
     "run": true
   },
   "spawn_beacon_m": 1399,
-  "spawn_beacon_share": "0.561",
+  "spawn_beacon_share": "0.474",
   "stage_checked": [
     "beacon_ok",
     "spawn"
@@ -233,19 +233,11 @@
   "zones": {
     "anchors": [
       {
-        "cost": 1558.0,
-        "d_landmark": 232.1,
-        "name": "bluff_wash_3",
-        "on_route": false,
-        "rank": 1,
-        "viable": true
-      },
-      {
         "cost": 1451.0,
         "d_landmark": 64.6,
         "name": "head_house_trusses",
         "on_route": false,
-        "rank": 2,
+        "rank": 1,
         "viable": true
       },
       {
@@ -253,7 +245,7 @@
         "d_landmark": 387.6,
         "name": "bench_wash_7",
         "on_route": false,
-        "rank": 3,
+        "rank": 2,
         "viable": true
       },
       {
@@ -301,7 +293,7 @@
         "d_landmark": 993.5,
         "name": "bench_wash_4",
         "on_route": false,
-        "rank": 4,
+        "rank": 3,
         "viable": true
       },
       {
@@ -361,14 +353,6 @@
         "viable": false
       },
       {
-        "cost": 1128.1,
-        "d_landmark": 1337.6,
-        "name": "canal_wash_2",
-        "on_route": false,
-        "rank": 5,
-        "viable": true
-      },
-      {
         "cost": 1082.6,
         "d_landmark": 335.3,
         "name": "bluff_ride_pier_3",
@@ -405,7 +389,7 @@
         "d_landmark": 336.2,
         "name": "siphon_span",
         "on_route": false,
-        "rank": 6,
+        "rank": 4,
         "viable": true
       },
       {
@@ -537,22 +521,6 @@
         "viable": false
       },
       {
-        "cost": 556.8,
-        "d_landmark": 949.2,
-        "name": "canal_wash_6",
-        "on_route": false,
-        "rank": 7,
-        "viable": true
-      },
-      {
-        "cost": 523.7,
-        "d_landmark": 1029.4,
-        "name": "canal_wash_4",
-        "on_route": false,
-        "rank": 8,
-        "viable": true
-      },
-      {
         "cost": 471.6,
         "d_landmark": 974.4,
         "name": "flume_ride_pier_30",
@@ -601,14 +569,6 @@
         "viable": false
       },
       {
-        "cost": 420.8,
-        "d_landmark": 1149.5,
-        "name": "canal_wash_3",
-        "on_route": false,
-        "rank": 9,
-        "viable": true
-      },
-      {
         "cost": 411.7,
         "d_landmark": 1031.6,
         "name": "flume_ride_pier_27",
@@ -617,19 +577,11 @@
         "viable": false
       },
       {
-        "cost": 405.6,
-        "d_landmark": 1229.7,
-        "name": "canal_wash_1",
-        "on_route": false,
-        "rank": 10,
-        "viable": true
-      },
-      {
         "cost": 392.5,
         "d_landmark": 803.6,
         "name": "field_bank_4",
         "on_route": false,
-        "rank": 11,
+        "rank": 5,
         "viable": true
       },
       {
@@ -685,7 +637,7 @@
         "d_landmark": 1263.9,
         "name": "crew_ledges",
         "on_route": false,
-        "rank": 12,
+        "rank": 6,
         "viable": true
       },
       {
@@ -741,7 +693,7 @@
         "d_landmark": 1311.8,
         "name": "mesa_spill",
         "on_route": false,
-        "rank": 13,
+        "rank": 7,
         "viable": true
       },
       {
@@ -757,7 +709,7 @@
         "d_landmark": 1455.7,
         "name": "weir_pond",
         "on_route": false,
-        "rank": 14,
+        "rank": 8,
         "viable": true
       },
       {
@@ -785,11 +737,11 @@
         "viable": false
       }
     ],
-    "count": 162,
+    "count": 166,
     "crossings": {
-      "drop": 60,
+      "drop": 73,
       "ride": 77,
-      "walk": 237
+      "walk": 241
     },
     "hidden": [
       {
