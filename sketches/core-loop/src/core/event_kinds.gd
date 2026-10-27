@@ -1048,7 +1048,7 @@ const LOOT_ROWS := {
 		"tier": "rare", "pause": "never", "stop_ms": 45.0, "ring_m": 4.5, "flare_s": 0.5},
 	"reward_reveal": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "reveal_clank", "sound_snap": "synergy_hit", "hud": "", "objective": "", "priority": 2,
 		"tier": "reveal", "pause": "never", "heart": Palette.ARC, "in_s": 0.22, "hold_s": 2.4, "out_s": 0.25, "snap_s": 0.18, "words": 6,
-		"stamps": {"common": "COMMON", "rare": "RARE", "relic": "RELIC", "evolved": "EVOLVED", "evolution": "EVOLVED", "first": "NEW"}},
+		"stamps": {"common": "FIELD KIT", "rare": "FLEET GRADE", "relic": "RELIC", "evolved": "EVOLVED", "evolution": "EVOLVED", "first": "NEW"}},
 	"reward_ceremony": {"group": "economy", "color": Palette.AMBER, "shape": "star", "sound": "ceremony_build", "sound_burst": "ceremony_resolve", "hud": "", "objective": "", "priority": 3,
 		"tier": "ceremony", "pause": "calm", "burst_role": "class", "in_s": 0.25, "build_s": 1.4, "hold_s": 1.8, "out_s": 0.25,
 		"calm_hold_s": 0.4, "threat_m": 30.0, "enemy_m": 24.0, "fall_speed": 4.0, "hull_slots": 8},
