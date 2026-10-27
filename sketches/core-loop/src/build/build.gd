@@ -1139,6 +1139,12 @@ const CACHE_SLIDE_STEP := 3.0
 const CACHE_SLIDE_M := 12.0
 const CACHE_SLIDE_DOWN := 10.0
 const CACHE_SLIDE_BEARINGS := 8
+# A park node often sits on a grid vertex, where the ray's normal is whichever touching face the
+# physics engine reports first, and that changes with how the collider is cut into pieces (the
+# dam's (-64, -704) read 0.48 on 80 m tiles and 0.61 on 40x40 pieces, and the bots lost 5 s to
+# the unslid cache). So the node stands only if every face around it does: rays CACHE_FOOT_M out
+# on bearings 22.5 degrees off the grid's axes and diagonals land inside each face.
+const CACHE_FOOT_M := 0.3
 
 
 # The surface a cache spot stands on (under it, or the nearest non-wall beside it), or null when
@@ -1148,7 +1154,7 @@ func _cache_ground(at: Vector3):
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at + Vector3.UP * CACHE_RAY_UP, at + Vector3.DOWN * CACHE_RAY_DOWN, 1))
 	if hit.is_empty():
 		return null
-	if hit["normal"].y >= CACHE_STAND_NORMAL:
+	if _cache_stands(space, at, hit["normal"]):
 		return hit["position"]
 	var r := CACHE_SLIDE_STEP
 	while r <= CACHE_SLIDE_M:
@@ -1165,6 +1171,18 @@ func _cache_ground(at: Vector3):
 			return best["position"]
 		r += CACHE_SLIDE_STEP
 	return hit["position"]
+
+
+func _cache_stands(space: PhysicsDirectSpaceState3D, at: Vector3, normal: Vector3) -> bool:
+	if normal.y < CACHE_STAND_NORMAL:
+		return false
+	for k in 8:
+		var a := TAU * (2 * k + 1) / 16.0
+		var foot := at + Vector3(cos(a), 0.0, sin(a)) * CACHE_FOOT_M
+		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(foot + Vector3.UP * CACHE_RAY_UP, foot + Vector3.DOWN * CACHE_RAY_DOWN, 1))
+		if not hit.is_empty() and hit["normal"].y < CACHE_STAND_NORMAL:
+			return false
+	return true
 
 
 # Debug drawer (dev only): grant a panel at the ball.
