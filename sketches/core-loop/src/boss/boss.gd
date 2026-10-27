@@ -129,7 +129,7 @@ func active() -> bool:
 # arena retry does, tears the old fight down first.
 func enter_arena(entry_velocity: Vector3) -> void:
 	exit_arena()
-	arena = Arena.new()
+	arena = Arena.take_ahead()
 	arena.position = Arena.place(ctx.terrain, ctx.run.stage)
 	ctx.root.add_child(arena)
 	ship = Requisition.new()
