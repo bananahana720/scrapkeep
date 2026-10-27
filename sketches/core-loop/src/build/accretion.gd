@@ -37,11 +37,14 @@ const LATTICE_TWIST := 72.0 * PI / 180.0
 const LATTICE_HUB_RADIUS := 0.9575
 const LATTICE_SEAT := 0.99
 
+# The ladder's rung colours on the ball's part pieces, except common: a common piece stays
+# copper hardware, so mint (Sable's and the field's) never coats the shell. Rare pieces are
+# the cobalt parts that hang on the shell (fleet grade), relics amber.
 const RARITY_COLORS := {
 	"common": Palette.COPPER,
-	"rare": Palette.AMBER,
+	"rare": Palette.COBALT,
 	# Red is only for what hurts you (DESIGN-V2 section 11).
-	"relic": Palette.ARC,
+	"relic": Palette.AMBER,
 	"evolved": Palette.ANCIENT,
 }
 const ICE := Color("c8f0ff")

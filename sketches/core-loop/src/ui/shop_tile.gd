@@ -20,9 +20,9 @@ const GLYPH := 20.0
 const PRICE_FONT := 18
 const COG := 16.0
 const RARITY := {
-	"common": {"color": Palette.SAND, "width": 2.0, "double": false, "notches": false},
-	"rare": {"color": Palette.AMBER, "width": 3.0, "double": true, "notches": false},
-	"relic": {"color": Palette.ARC, "width": 3.0, "double": true, "notches": true},
+	"common": {"color": Palette.ARC, "width": 2.0, "double": false, "notches": false},
+	"rare": {"color": Palette.COBALT, "width": 3.0, "double": true, "notches": false},
+	"relic": {"color": Palette.AMBER, "width": 3.0, "double": true, "notches": true},
 	"evolved": {"color": Palette.ANCIENT, "width": 4.0, "double": true, "notches": true},
 }
 

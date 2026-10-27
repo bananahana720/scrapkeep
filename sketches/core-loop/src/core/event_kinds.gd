@@ -1044,7 +1044,7 @@ const LOOT_ROWS := {
 	# ceremonial part's effect fires, ringing the same rarity bell it arrived with.
 	"reward_common": {"group": "economy", "color": Palette.SANDSTONE, "shape": "diamond", "sound": "rarity_tick", "hud": "", "objective": "", "priority": 1,
 		"tier": "common", "pause": "never"},
-	"reward_rare": {"group": "economy", "color": Palette.AMBER, "shape": "ring", "sound": "rarity_bell", "hud": "", "objective": "", "priority": 1,
+	"reward_rare": {"group": "economy", "color": Palette.COBALT, "shape": "ring", "sound": "rarity_bell", "hud": "", "objective": "", "priority": 1,
 		"tier": "rare", "pause": "never", "stop_ms": 45.0, "ring_m": 4.5, "flare_s": 0.5},
 	"reward_reveal": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "reveal_clank", "sound_snap": "synergy_hit", "hud": "", "objective": "", "priority": 2,
 		"tier": "reveal", "pause": "never", "heart": Palette.ARC, "in_s": 0.22, "hold_s": 2.4, "out_s": 0.25, "snap_s": 0.18, "words": 6,
