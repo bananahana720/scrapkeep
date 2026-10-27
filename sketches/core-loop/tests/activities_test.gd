@@ -17,7 +17,8 @@ const AmbushAltar := preload("res://src/world/ambush_altar.gd")
 #   pickup where it fell; a ball 60 m away for 300 frames finds it back within 10 m;
 # - the ambush: rolling into the ring brings exactly its three; two dead pays nothing, all three
 #   leave one part at the altar, and touching it adds exactly one part;
-# - the cache: a slow ram leaves the wall, a ram at a held roll's speed breaks it and one part waits on
+# - the cache: a slow ram leaves the wall and answers with the roll's refused cue, once for two bumps
+#   inside the cue's gap; a ram at a held roll's speed breaks it with no cue and one part waits on
 #   the pedestal; a slam of at least cruise's strength breaks it too and a weaker one does not;
 # - calm mode builds the cache alone;
 # - no activity changes the ball's planar speed beyond what the same line costs with none;
@@ -46,6 +47,7 @@ var _t := preload("res://tests/support/t.gd").new("activities_test")
 var _source := Intent.Scripted.new()
 var _done: Array = []
 var _event_facts := 0
+var _refused := 0
 
 
 func _initialize() -> void:
@@ -69,6 +71,9 @@ func _boot(table: String) -> void:
 	_done.clear()
 	_event_facts = 0
 	_game.events.activity_done.connect(func(id: String, _at: Vector3): _done.append(id))
+	_game.events.verb_failed.connect(func(verb: String, _reason: String, _at: Vector3):
+		if verb == "roll":
+			_refused += 1)
 	_game.events.event_announced.connect(func(_id: String, _seconds: float): _event_facts += 1)
 	_game.events.event_started.connect(func(_id: String): _event_facts += 1)
 	_game.events.event_ended.connect(func(_id: String, _outcome: String): _event_facts += 1)
@@ -362,11 +367,19 @@ func _cache() -> void:
 	var back: Vector3 = s.global_basis.z
 	var heading: Vector3 = -back
 	var start := _ground(s.global_position + back * 14.0)
+	var refused_before := _refused
 	var slow: Dictionary = await _ram(s, start, heading * cruise * RAM_BELOW, RAM_FRAMES)
 	_t.check("a ram under the bar leaves the wall standing", not s.done and s.wall.visible and _done.count("cracked_cache") == 0,
 		"ram at %.1f m/s of cruise %.1f: done %s, wall visible %s" % [cruise * RAM_BELOW, cruise, s.done, s.wall.visible])
+	# The second bump starts 6 m out, so it reaches the face well inside its 60 frames, and both rams
+	# together are shorter than the cue's gap.
+	await _ram(s, _ground(s.global_position + back * 6.0), heading * cruise * RAM_BELOW, 60)
+	var gap_frames := int(float(Activities.RULES["cracked_cache"]["refused"]["gap_s"]) * Engine.physics_ticks_per_second)
+	_t.check("two bumps under the bar inside the cue's gap play the roll's refused cue once", _refused - refused_before == 1 and RAM_FRAMES + 60 < gap_frames,
+		"%d cues over %d frames, gap %d frames" % [_refused - refused_before, RAM_FRAMES + 60, gap_frames])
 	var fast: Dictionary = await _ram(s, start, heading * cruise * RAM_HELD, RAM_FRAMES)
 	_t.check("a ram at a held roll's speed breaks the wall", s.done and not s.wall.visible, "ram at %.1f m/s: done %s" % [cruise * RAM_HELD, s.done])
+	_t.check("the breaking ram plays no refused cue", _refused - refused_before == 1, "%d cues" % (_refused - refused_before))
 	_t.check("fired cache has its warm fill", s.fired_glow != null and s.fired_glow.emission_enabled and s.fired_glow.emission_energy_multiplier > 0.0,
 		"glow energy %.2f" % (s.fired_glow.emission_energy_multiplier if s.fired_glow != null else 0.0))
 	# A per-site light freed on a stage change segfaulted Godot 4.7.2 Forward+ at the next boss entry.
