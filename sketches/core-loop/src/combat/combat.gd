@@ -689,13 +689,9 @@ func _door_armour(hit: Dictionary) -> void:
 	hit["cls"] = _classify_source(hit["kind"], hit["source"] if hit["source"] != "" else _forced_source)
 	hit["bonus"] = panel_punch(hit["kind"], hit["cls"])
 	hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"], hit["dunk"], hit["bonus"])
-	if hit["dunk"] > 0.0:
-		if bool(hit["result"].get("guarded", false)):
-			hit["dunk"] = 0.0
-			hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"], 0.0, hit["bonus"])
-		else:
-			ctx.player.dunk.spend(hit["enemy"])
-			hit["result"]["dunk"] = hit["dunk"]
+	if hit["dunk"] > 0.0 and bool(hit["result"].get("guarded", false)):
+		hit["dunk"] = 0.0
+		hit["result"] = resolve(hit["enemy"], hit["kind"], hit["force"], hit["part"], 0.0, hit["bonus"])
 
 
 func _door_caps(hit: Dictionary) -> void:
@@ -708,6 +704,16 @@ func _door_caps(hit: Dictionary) -> void:
 	_read_armour(enemy, hit, result)
 	if enemy.has_method("absorbs_hit") and enemy.absorbs_hit(result):
 		result["absorbed"] = true
+	# An absorbed hit (a miniboss turn, a popped plate, a crew fitter) bites nothing, so the
+	# charge stays held for the next reel, unless the charge did the work: a plate the plain
+	# reel would only chip, popped because the stored slam lifted the reel over the plating.
+	if hit["dunk"] > 0.0:
+		if bool(result.get("absorbed", false)) and enemy.absorbs_hit(
+				resolve(enemy, hit["kind"], hit["force"], hit["part"], 0.0, hit["bonus"])):
+			hit["dunk"] = 0.0
+		else:
+			ctx.player.dunk.spend(enemy)
+			result["dunk"] = hit["dunk"]
 	if hit["kind"] in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()) \
 			and float(_exposed[enemy.get_instance_id()]["until"]) <= _clock:
 		_exposed.erase(enemy.get_instance_id())
@@ -719,8 +725,8 @@ func _door_caps(hit: Dictionary) -> void:
 
 # The dunk charge (dunk.gd) pays on a reel impact on the body the line bit: the stored slam
 # damage joins the hit's punch, so it meets the same plating, chip, weak point and armour
-# rules as the reel it rides on. Read here, spent in _door_armour once the hit is known not
-# to be guard-blocked; knockback and the struck force are untouched.
+# rules as the reel it rides on. Read here, spent in _door_caps once the hit is known to be
+# neither guard-blocked nor absorbed; knockback and the struck force are untouched.
 func _dunk_bonus(enemy: Node3D, kind: String) -> float:
 	if ctx == null or ctx.player == null or not ctx.player.get("dunk"):
 		return 0.0
