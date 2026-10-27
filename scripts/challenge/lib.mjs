@@ -502,6 +502,9 @@ export function hashString(text) {
   return a.toString(16).padStart(8, "0") + b.toString(16).padStart(8, "0");
 }
 
+// The highest run tier a run can pick: src/core/run_tier.gd TOP (lib.test.mjs checks they agree).
+export const MAX_RUN_TIER = 1;
+
 // What makes two table runs the same experiment: the library, the cells, seeds, columns, personas, tune string and
 // run tier. The shard is not in it: shards of one plan share a hash. Tier 0 adds nothing, so base-tier hashes stay put.
 export function planHash(o) {

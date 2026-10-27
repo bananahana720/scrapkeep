@@ -15,6 +15,7 @@ const SignalTimer := preload("res://tools/signal_timer.gd")
 const PhysicsProbe := preload("res://tools/physics_probe.gd")
 const FrameSplit := preload("res://tools/frame_split.gd")
 const BotPlants := preload("res://tools/bot_plants.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 
 # Headless bot runs for the design feedback loop (DEMO-SPEC). Each seed plays one full
 # demo run through a fresh Game.new() with one policy (tools/bot_driver.gd), in play
@@ -198,6 +199,15 @@ func _initialize() -> void:
 		printerr("bot_run: --attempt must be 1 or more")
 		quit(2)
 		return
+	if _settings.has("run-tier") and (not String(_settings["run-tier"]).is_valid_int() or int(_settings["run-tier"]) < RunTier.BASE
+			or int(_settings["run-tier"]) > RunTier.TOP):
+		printerr("bot_run: --run-tier=%s must be a whole number %d to %d" % [_settings["run-tier"], RunTier.BASE, RunTier.TOP])
+		quit(2)
+		return
+	if int(_settings.get("run-tier", "0")) != 0 and _settings.has("from-stage"):
+		printerr("bot_run: --run-tier does not combine with --from-stage (a resumed entrance keeps its own tier)")
+		quit(2)
+		return
 	if _settings.has("plant") and BotPlants.parse(String(_settings["plant"])).has("error"):
 		printerr("bot_run: --plant: %s" % BotPlants.parse(String(_settings["plant"]))["error"])
 		quit(2)
@@ -362,14 +372,11 @@ func _physics_process(delta: float) -> bool:
 		_game.run.run_seed_override = _seeds[_index]
 		var run_tier := int(_settings.get("run-tier", "0"))
 		if run_tier != 0:
-			if _settings.has("from-stage"):
-				printerr("bot_run: --run-tier does not combine with --from-stage")
-				quit(2)
-				return true
 			# Deferred: the flow is in its stage state only once stage_entered has returned.
 			var choose := func():
 				if not _game.flow.choose_run_tier(run_tier, false):
 					printerr("bot_run: run tier %d refused on stage 1" % run_tier)
+					quit(2)
 			var pick_tier := func(stage: int, retry: bool):
 				if stage == 1 and not retry:
 					choose.call_deferred()
