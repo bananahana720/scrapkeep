@@ -42,5 +42,7 @@ func _initialize() -> void:
 		var again: Array = enemy.owned_materials()
 		t.check("%s: the cached variable names find the materials a full scan finds" % script.resource_path.get_file(),
 			first == scanned and again == scanned and first.has(enemy._material), "%d materials" % first.size())
+		t.check("%s: its variable names are read once and kept for the script" % script.resource_path.get_file(),
+			Enemy._variables_by_script.has(script) and Enemy._variables_by_script[script].has("_material"))
 		enemy.free()
 	quit(t.verdict())

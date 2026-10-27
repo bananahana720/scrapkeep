@@ -122,9 +122,14 @@ func find(id: String) -> bool:
 	return true
 
 
-# The caches go up a few frames after entry rather than in the entry tick, which already carries the
-# stage swap (5.9 ms of it on the cloud at the flume, scrapkeep#494); a newer entry meanwhile places its own.
+# The last stage's caches come down in the entry tick, so none is collected in the new stage; the new
+# ones go up a few frames later, out of the tick that carries the stage swap (5.9 ms of it on the cloud
+# at the flume, scrapkeep#494). A newer entry meanwhile places its own.
 func _place_caches_soon() -> void:
+	for old in get_tree().get_nodes_in_group(RadioCache.GROUP):
+		old.remove_from_group(RadioCache.GROUP)
+		old.process_mode = Node.PROCESS_MODE_DISABLED
+		old.queue_free()
 	_entries += 1
 	var entry := _entries
 	for n in PLACE_AFTER_FRAMES:
@@ -134,10 +139,8 @@ func _place_caches_soon() -> void:
 	_place_caches()
 
 
-# The stage's unfound Signal caches go up at their spots; the last stage's come down.
+# The stage's unfound Signal caches go up at their spots.
 func _place_caches() -> void:
-	for old in get_tree().get_nodes_in_group(RadioCache.GROUP):
-		old.queue_free()
 	var terrain = game.ctx.get("terrain")
 	var root = game.ctx.get("root")
 	if terrain == null or root == null or not terrain.has_method("map") or terrain.map() == null:
