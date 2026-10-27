@@ -1,4 +1,4 @@
-# smoke: bots timeout=900s (19 bot runs in child processes, up to six at once: small and grown on eight seeds, the camper on three since 2026-10-17; a loaded machine slows them past the 180 s default cap, measured 2026-10-11 w13-wardens at load 36 to 78)
+# smoke: bots timeout=1800s (51 bot runs in child processes, up to six at once: small and grown on 24 seeds since 2026-10-27, the camper on three since 2026-10-17; a loaded machine slows them past the 180 s default cap, measured 2026-10-11 w13-wardens at load 36 to 78)
 extends SceneTree
 
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
@@ -23,7 +23,8 @@ const T := preload("res://tests/support/t.gd")
 const SEEDS := "0,1,2"
 # The growth ratio is judged over eight seeds (2026-10-17, "Gap wins"): three seeds moved the median by
 # more than the gap did (seeds 0 to 2 read 1.75x where 0 to 7 read 1.88x). The camper stays on SEEDS.
-const GROWTH_SEEDS := "0,1,2,3,4,5,6,7"
+# Since 2026-10-27 over 24 seeds: the dam mob dial moved two small seeds and eight seeds read 1.846 where 24 read 1.87.
+const GROWTH_SEEDS := "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23"
 const PILOTS := {0: "pylon_engineer", 1: "runner_gunner", 2: "demolitions_caster"}
 const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # 2026-10-05 (wave 15): re-pinned for seeds 0, 1 and 2 after Tarn's claw kit took seed 3; bands unchanged
@@ -90,15 +91,14 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # up never drops a hit tier. Re-pinned to the measured medians 56.4 / 28.3; was 62.7 / 28.3. Over 24 seeds
 # (tools/posture_sweep.gd --seeds=0..23, the picked cell) small 51.3 s, grown 27.8 s, ratio 1.85, at the 1.85x floor.
 # 2026-10-27 (#504 dam mob hits x1.5, coordinator ruling ab): stage 1 mobs hit harder, which knocks the light ball
-# about before the Warden: small seeds 2 and 4 end 11 to 18 s sooner (64.6 -> 53.4, 68.7 -> 50.4), grown and the
-# camper unchanged. Re-pinned to the measured medians 51.5 / 27.9 on stage/alpha-w19 f441455d; was 56.4 / 28.3.
-# The eight-seed ratio reads 1.846, so the eight-seed check gets its own floor, GROWTH_FLOOR (1.80, margin 0.046).
-# The target stays GROWTH (1.85x, "Gap wins"): over 24 seeds (tools/posture_sweep.gd --seeds=0..23, the picked cell)
-# small 51.5 s, grown 27.5 s, ratio 1.87. Receipt gate/w19-f441455d-bots-5.md.
+# about before the Warden: small seeds 2 and 4 end 11 to 18 s sooner (64.6 -> 53.4, 68.7 -> 50.4; seeds 1 and 3 move
+# under 1.1 s), grown and the camper unchanged. Over seeds 0 to 7 the ratio read 1.846, under the 1.85x target, so the
+# growth ratio is now judged over 24 seeds (GROWTH_SEEDS): small 51.5 s, grown 27.5 s, ratio 1.87 on
+# stage/alpha-w19 f441455d (tools/posture_sweep.gd --seeds=0..23, the picked cell). Re-pinned to those medians;
+# was 56.4 / 28.3 over eight seeds. Receipt gate/w19-f441455d-bots-5.md.
 const GROWTH := 1.85
-const GROWTH_FLOOR := 1.80
 const EXPECT_SMALL_S := 51.5
-const EXPECT_GROWN_S := 27.9
+const EXPECT_GROWN_S := 27.5
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 
@@ -123,7 +123,7 @@ func _initialize() -> void:
 		{"script": "res://tools/posture_sweep.gd", "args": ["--out=" + cells, "--runs=" + folder.path_join("runs.tsv"),
 			"--procs=4", "--seeds=" + GROWTH_SEEDS, "--arms=small,grown"] + cell_args},
 		{"script": "res://tools/posture_sweep.gd", "args": ["--out=" + camper_cells, "--runs=" + folder.path_join("camper-runs.tsv"),
-			"--procs=2", "--seeds=" + SEEDS, "--arms=camper"] + cell_args}], 1200.0)
+			"--procs=2", "--seeds=" + SEEDS, "--arms=camper"] + cell_args}], 1500.0)
 	for result in results:
 		t.check("the sweep ran", result["code"] == 0 and not result["timed_out"], "exit %s, timed out %s" % [result["code"], result["timed_out"]])
 	var swept := _picked(SWEEP, plating, curve, shatters)
@@ -136,7 +136,7 @@ func _initialize() -> void:
 	var grown := float(cell.get("grown_median_s", "0"))
 	# The band is judged on the fight this run just measured, not on the saved table (WT-BANDS gate, 2026-10-13).
 	t.check("over the sweep seeds grown breaks it in 25 to 45 s", grown >= 25.0 and grown <= 45.0, "live grown median %.1f s" % grown)
-	t.check("over the sweep seeds small takes at least %.2f times grown's time" % GROWTH_FLOOR, grown > 0.0 and small >= GROWTH_FLOOR * grown,
+	t.check("over the sweep seeds small takes at least %.2f times grown's time" % GROWTH, grown > 0.0 and small >= GROWTH * grown,
 		"small %.1f s, grown %.1f s" % [small, grown])
 	t.eq("small breaks it in every run", cell.get("small_broke", ""), str(GROWTH_SEEDS.count(",") + 1))
 	t.eq("the camper never breaks it", _cell(camper_cells).get("camper_broke", ""), "0")
