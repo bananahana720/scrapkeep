@@ -17,6 +17,16 @@ const TABLE := {"DEFS": [{"stage": 1, "world": 1, "map": "park_flume"}]}
 var t := T.new("spillway_park_steps_test")
 
 
+class Stages extends RefCounted:
+	var DEFS: Array = TABLE["DEFS"]
+
+
+class Ctx extends RefCounted:
+	var terrain
+	var stages
+	var flow
+
+
 class QuietFlow extends RefCounted:
 	var quiet := false
 
@@ -74,18 +84,27 @@ func _run() -> void:
 		"%d vs %d shells" % [stepped.shells, whole.shells])
 	t.check("the stepped pass places the whole pass's effects", stepped.fx == whole.fx and not whole.fx.is_empty(), "%s vs %s" % [stepped.fx, whole.fx])
 
-	# Entry finishes a pass still running: a few steps, then ParkBuild.finish().
-	var cut_root := Node3D.new()
-	holder.add_child(cut_root)
-	var cut_pass = Scenery.ParkPass.new(cut_root, map, ground, 1)
+	# The build-ahead hook leaves a stage built whole (a bot run) to its entry.
+	var ctx := Ctx.new()
+	ctx.terrain = terrain
+	ctx.stages = Stages.new()
+	var stage_root: Node3D = terrain.geometry_root(1)
+	Scenery._on_stage_built(1, ctx)
+	t.check("a stage built whole takes no pass ahead", stage_root.get_node_or_null("SpillwayScenery") == null)
+
+	# Entry finishes a pass still running on the stage's root: a few steps, then the entry hook.
+	var cut_pass = Scenery.ParkPass.new(stage_root, map, ground, 1)
 	var cut_step := Scenery.ParkBuild.new()
+	cut_step.name = "ParkBuild"
 	cut_step.pass_ = cut_pass
 	cut_pass.scenery.add_child(cut_step)
-	for n in 3:
+	for n in 2:
 		await process_frame
-	cut_step.finish()
+	t.check("the pass is still running when the stage is entered", is_instance_valid(cut_step) and not cut_step.is_queued_for_deletion())
+	Scenery._on_stage_entered(1, false, ctx)
+	t.check("entry finishes the running pass rather than building a second", stage_root.find_children("SpillwayScenery*", "", false, false).size() == 1)
 	await process_frame
-	var cut := _read(cut_root)
+	var cut := _read(stage_root)
 	t.check("entry's finish of a running pass builds the whole pass", cut.batches == whole.batches and cut.holders == whole.holders and cut.fx == whole.fx)
 
 	SimClock.ticks = false
@@ -94,11 +113,17 @@ func _run() -> void:
 	quit(t.verdict())
 
 
-# What a pass left under a stage root: each MultiMesh batch's placements by name, the cottonwood holders'
+# What a pass left under a stage root (its Cottonwoods and SpillwayScenery only, as a terrain stage root
+# holds other batches): each MultiMesh batch's placements by name, the cottonwood holders'
 # frames, the shell count and the scenery's other children (the effects) by name.
 func _read(stage_root: Node) -> Dictionary:
 	var batches := {}
-	for view in stage_root.find_children("*", "MultiMeshInstance3D", true, false):
+	var views := []
+	for part in ["Cottonwoods", "SpillwayScenery"]:
+		var node := stage_root.get_node_or_null(part)
+		if node != null:
+			views.append_array(node.find_children("*", "MultiMeshInstance3D", true, false))
+	for view in views:
 		var multi: MultiMesh = view.multimesh
 		var places := []
 		for i in multi.instance_count:

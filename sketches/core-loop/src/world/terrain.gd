@@ -474,8 +474,8 @@ class Reaper extends Node:
 
 	func _process(_delta: float) -> void:
 		var root := get_parent()
-		yield_name(root)
 		var deadline := Time.get_ticks_usec() + BUDGET_USEC
+		yield_name(root)
 		while Time.get_ticks_usec() < deadline:
 			if root.get_child_count() <= 1:
 				set_process(false)
