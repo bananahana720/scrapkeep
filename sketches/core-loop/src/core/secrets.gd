@@ -80,12 +80,12 @@ const FIND_PAY := {"rarities": ["rare"]}
 const FINDS := {
 	"dam_turbine_hall": {
 		"world": 1, "map": "park_dam", "kind": "crack",
-		"spots": [{"site": "west_rim_bench", "at": [-236, 192], "face": [-1, -1]}, {"site": "powerhouse", "at": [104, 496], "face": [1, 0]}],
+		"spots": [{"site": "west_rim_bench", "at": [-236, 192], "face": [-1, -1]}, {"site": "powerhouse", "at": [120, 530], "face": [0, -1]}],
 		"name": "Turbine Hall Seep",
 		"log": "Maintenance note: the old turbine hall was bricked up after the flood. The bricks were not asked. Water found the way first.",
 		"codex": {"id": "spillway_turbine_seep", "category": "world", "name": "Where the Water Got In",
 			"hint": "A wet streak on dry rock. Water knows where the walls are thin.",
-			"clue": "A seeping, dripping cracked face off the main lines + a ram at speed",
+			"clue": "A seeping, dripping cracked face on the west rim bench or the powerhouse deck + a ram at speed",
 			"text": "Follow the seep. Behind the dam's cracked faces the crew walled up rooms the flood had already found."},
 	},
 	"dam_shift_radio": {
