@@ -866,36 +866,6 @@ func _collider_faces(shape: Shape3D) -> Array:
 	return faces
 
 
-# A height map's cells as the two triangles Jolt collides on (the park terrain's winding: a, b, c and b, d, c,
-# split b to c), in the shape's local space, centred, one unit a sample.
-static func height_map_faces(shape: HeightMapShape3D) -> PackedVector3Array:
-	return grid_faces(shape.map_width, shape.map_depth, shape.map_data)
-
-
-# height_map_faces over a w by d sample grid (safe on a worker thread).
-static func grid_faces(w: int, d: int, h: PackedFloat32Array) -> PackedVector3Array:
-	var x0 := -(w - 1) * 0.5
-	var z0 := -(d - 1) * 0.5
-	var faces := PackedVector3Array()
-	faces.resize((w - 1) * (d - 1) * 6)
-	var k := 0
-	for j in d - 1:
-		for i in w - 1:
-			var a := j * w + i
-			var va := Vector3(x0 + i, h[a], z0 + j)
-			var vb := Vector3(x0 + i + 1, h[a + 1], z0 + j)
-			var vc := Vector3(x0 + i, h[a + w], z0 + j + 1)
-			var vd := Vector3(x0 + i + 1, h[a + w + 1], z0 + j + 1)
-			faces[k] = va
-			faces[k + 1] = vb
-			faces[k + 2] = vc
-			faces[k + 3] = vb
-			faces[k + 4] = vd
-			faces[k + 5] = vc
-			k += 6
-	return faces
-
-
 # Discover actual terrain faces across the whole volume, not sparse rays in each cell.
 # Include the hull margin in the query so forgiveness cannot reach uncommitted cover.
 func _commit_terrain(origin: Vector3, cells: Array, shadows: Array, hull: Array = []) -> Array:
@@ -961,14 +931,7 @@ func _terrain_entry(shape: Shape3D, transform: Transform3D) -> Dictionary:
 	var entry := terrain.cached(shape, transform)
 	if not entry.is_empty():
 		return entry
-	var local_faces
-	if shape is ConcavePolygonShape3D:
-		local_faces = (shape as ConcavePolygonShape3D).get_faces()
-	elif shape is HeightMapShape3D:
-		# A park tile's 12,800 cells are 77k vertices of script: the worker builds them, not this frame.
-		local_faces = grid_faces.bind(shape.map_width, shape.map_depth, shape.map_data)
-	else:
-		local_faces = _collider_faces(shape)
+	var local_faces = (shape as ConcavePolygonShape3D).get_faces() if shape is ConcavePolygonShape3D else _collider_faces(shape)
 	if local_faces.is_empty():
 		return {}
 	return terrain.request(shape, transform, local_faces)

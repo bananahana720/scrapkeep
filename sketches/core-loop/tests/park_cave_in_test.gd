@@ -4,7 +4,6 @@ const Terrain := preload("res://src/world/terrain.gd")
 const Natural := preload("res://src/world/events/natural.gd")
 const Director := preload("res://src/world/event_director.gd")
 const T := preload("res://tests/support/t.gd")
-const RivetKit := preload("res://src/combat/rivet_kit.gd")
 
 class Table:
 	const DEFS := [{"map": "park_sinkhole", "stage": 1, "world": 1}]
@@ -229,7 +228,7 @@ func _prepare_rim(site: Dictionary) -> void:
 		high = high.max(at)
 	for tile in w.terrain.park_ground(1).tiles:
 		var collider: CollisionShape3D = tile.get_child(0)
-		var vertices: PackedVector3Array = collider.shape.get_faces() if collider.shape is ConcavePolygonShape3D else RivetKit.height_map_faces(collider.shape)
+		var vertices: PackedVector3Array = collider.shape.get_faces()
 		for k in range(0, vertices.size(), 3):
 			var face := PackedVector3Array()
 			var face_low := Vector2.INF

@@ -24,9 +24,9 @@ extends Node3D
 #             instead of stepping; the texel grid is fixed, so a straight border fades over 8 to 16 m
 #             by where it falls, and a stamp narrower than about 16 m loses tint by its position.
 #             Terrain3D collision stays 0 (DISABLED): it never makes a second height source.
-#   collider  100 tiles of 160 m (80 by 80 cells of the 2 m grid): a HeightMapShape3D at scale STEP, or, for a
-#             tile with a hole cell, a ConcavePolygonShape3D with the two triangles and winding terrain.gd
-#             uses for the old maps (a hole cell has none). Both split a cell on the same diagonal.
+#   collider  400 pieces of 80 m (40 by 40 cells of the 2 m grid), each a ConcavePolygonShape3D with
+#             the two triangles and winding terrain.gd uses for the old maps; a hole cell has none. (The
+#             scatter still chunks by the 160 m TILE_M.)
 #   heights   the 801 by 801 grid terrain.gd's height() interpolates; under is the floor of each
 #             hole cell (under.bin), which height() reads there.
 #
@@ -34,11 +34,13 @@ extends Node3D
 # whole square, with no holes, so a park table still plays end to end.
 #
 # start(threaded) loads the bake and builds every region image and tile face list on
-# WorkerThreadPool; the main thread only adds the finished pieces, one region or up to five
-# tiles a frame inside an 8 ms budget, then emits built. finish() completes any of it at once.
-# A holed tile's add is Jolt building its 12,800-triangle mesh shape (about 7 ms on the 4080), so a
-# second tile starts only when the last one's cost still fits: two a frame held the dam at
-# 18 ms of _process for 50 frames while the flume attached (f5773-5800, #499 rows).
+# WorkerThreadPool; the main thread only adds the finished pieces, one region a frame inside an
+# 8 ms budget, or collider pieces inside COLLIDER_BUDGET_USEC, then emits built. finish()
+# completes any of it at once. A collider's add is Jolt building its mesh shape: an 80 by 80 cell
+# tile cost about 7 ms on the 4080 (13-14 ms cloud), held the dam at 18 ms of _process while the
+# flume attached (f5773-5800, #499 rows) and the flume at 36-42 ms (f14928-14982); a 40 by 40 piece
+# is about 3.1 ms cloud. A piece starts only when the last one's cost still fits (ruling ae; a
+# HeightMapShape3D collider was tried and slowed the bots' dam traversal, see #494).
 #
 # The Terrain3D node is not this node's child: a new Terrain3D spends about 135 ms of main
 # thread on its first frame (measured headless, any settings), which no launch can afford. So
@@ -71,9 +73,13 @@ const TILE_M := TILE_CELLS * STEP
 const TILES_PER_SIDE := CELLS / TILE_CELLS
 const TILE_COUNT := TILES_PER_SIDE * TILES_PER_SIDE
 const REGION_COUNT := 4
-const PIECES := REGION_COUNT + TILE_COUNT
+const PIECES := REGION_COUNT + COLLIDER_COUNT
+const COLLIDER_CELLS := 40
+const COLLIDERS_PER_SIDE := CELLS / COLLIDER_CELLS
+const COLLIDER_COUNT := COLLIDERS_PER_SIDE * COLLIDERS_PER_SIDE
 const TILES_PER_FRAME := 5
 const ATTACH_BUDGET_USEC := 8000
+const COLLIDER_BUDGET_USEC := 3000
 # Terrain3D's control map: bit 2 is the hole bit (Terrain3DUtil.enc_hole).
 const HOLE_BIT := 4
 # Bit 0 is the auto bit: the auto-shader picks the base or overlay texture by slope.
@@ -450,7 +456,7 @@ func start(id: String, map: RefCounted, threaded: bool, render: Node3D = null) -
 	baked = has_bake(id)
 	name = "Ground"
 	_regions.resize(REGION_COUNT)
-	_faces.resize(TILE_COUNT)
+	_faces.resize(COLLIDER_COUNT)
 	if threaded:
 		phase = Phase.LOADING
 		_task = WorkerThreadPool.add_task(_load, false, "park_terrain load %s" % id)
@@ -881,43 +887,17 @@ func _outside(x: int, z: int) -> float:
 	return _apron[start + ia] if ia < left else _apron[start + left + ia - (APRON_HALF + int(HALF) + 1)]
 
 
-# A tile's collider data: its heights over STEP (a HeightMapShape3D at scale STEP) when the tile has no hole
-# cell, else its face list. Jolt builds the 81 by 81 height map in about 0.5 ms and the 12,800-triangle mesh in
-# 13-14 ms (cloud bench, ruling ae); both split a cell on the same diagonal, so the surface is one.
-func _build_tile(t: int) -> Variant:
-	var i0 := (t % TILES_PER_SIDE) * TILE_CELLS
-	var j0 := (t / TILES_PER_SIDE) * TILE_CELLS
-	if not _tile_has_hole(i0, j0):
-		var data := PackedFloat32Array()
-		data.resize((TILE_CELLS + 1) * (TILE_CELLS + 1))
-		var k := 0
-		for j in range(j0, j0 + TILE_CELLS + 1):
-			for i in range(i0, i0 + TILE_CELLS + 1):
-				data[k] = heights[j * SIDE + i] / STEP
-				k += 1
-		return data
-	return _tile_faces(i0, j0)
-
-
-func _tile_has_hole(i0: int, j0: int) -> bool:
-	if holes.is_empty():
-		return false
-	for j in range(j0, j0 + TILE_CELLS):
-		for i in range(i0, i0 + TILE_CELLS):
-			if holes[j * CELLS + i] == 1:
-				return true
-	return false
-
-
-func _tile_faces(i0: int, j0: int) -> PackedVector3Array:
+func _build_tile(t: int) -> PackedVector3Array:
+	var i0 := (t % COLLIDERS_PER_SIDE) * COLLIDER_CELLS
+	var j0 := (t / COLLIDERS_PER_SIDE) * COLLIDER_CELLS
 	var h := heights
 	var faces := PackedVector3Array()
-	faces.resize(TILE_CELLS * TILE_CELLS * 6)
+	faces.resize(COLLIDER_CELLS * COLLIDER_CELLS * 6)
 	var w := 0
 	var has_holes := not holes.is_empty()
-	for j in range(j0, j0 + TILE_CELLS):
+	for j in range(j0, j0 + COLLIDER_CELLS):
 		var z := -HALF + j * STEP
-		for i in range(i0, i0 + TILE_CELLS):
+		for i in range(i0, i0 + COLLIDER_CELLS):
 			if has_holes and holes[j * CELLS + i] == 1:
 				continue
 			var x := -HALF + i * STEP
@@ -975,7 +955,9 @@ func _attach_step(deadline: int) -> void:
 	if _next_map < MAP_TYPES.size():
 		return
 	var added := 0
-	while _next_tile < TILE_COUNT:
+	if deadline >= 0:
+		deadline = mini(deadline, Time.get_ticks_usec() + COLLIDER_BUDGET_USEC)
+	while _next_tile < COLLIDER_COUNT:
 		var now := Time.get_ticks_usec()
 		if deadline >= 0 and not tile_fits(added, now, deadline, _tile_usec):
 			return
@@ -989,28 +971,19 @@ func _attach_step(deadline: int) -> void:
 	built.emit()
 
 
-# Whether one more collider tile fits this frame: up to TILES_PER_FRAME, inside the deadline, and,
-# after the first, only when the last tile's cost still fits (a holed tile's Jolt mesh is ~7 ms on the 4080).
+# Whether one more collider piece fits this frame: up to TILES_PER_FRAME, inside the deadline, and,
+# after the first, only when the last piece's cost still fits.
 static func tile_fits(added: int, now: int, deadline: int, last_usec: int) -> bool:
 	return added < TILES_PER_FRAME and now <= deadline and (added == 0 or now + last_usec <= deadline)
 
 
 func _add_tile(t: int) -> void:
+	var shape := ConcavePolygonShape3D.new()
+	shape.set_faces(_faces[t])
 	var holder := CollisionShape3D.new()
-	if _faces[t] is PackedFloat32Array:
-		var map := HeightMapShape3D.new()
-		map.map_width = TILE_CELLS + 1
-		map.map_depth = TILE_CELLS + 1
-		map.map_data = _faces[t]
-		holder.shape = map
-		holder.scale = Vector3.ONE * STEP
-		holder.position = Vector3(-HALF + (t % TILES_PER_SIDE + 0.5) * TILE_M, 0.0, -HALF + (t / TILES_PER_SIDE + 0.5) * TILE_M)
-	else:
-		var shape := ConcavePolygonShape3D.new()
-		shape.set_faces(_faces[t])
-		holder.shape = shape
+	holder.shape = shape
 	var body := StaticBody3D.new()
-	body.name = "Tile%d_%d" % [t % TILES_PER_SIDE, t / TILES_PER_SIDE]
+	body.name = "Tile%d_%d" % [t % COLLIDERS_PER_SIDE, t / COLLIDERS_PER_SIDE]
 	body.add_child(holder)
 	_tiles_root.add_child(body)
 	tiles.append(body)

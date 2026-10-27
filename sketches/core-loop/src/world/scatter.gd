@@ -153,8 +153,8 @@ static func _kept_out(footprints: Array, at: Vector2) -> bool:
 
 # --- Park scatter in chunks (PARK.md section 3, K-UNITS KB5). ---
 #
-# A park's scatter is cut into the collider's 160 m tiles (park_terrain.gd TILE_M), one chunk per
-# tile, named as the tile. A chunk holds one MultiMeshInstance3D per kind (every row of a kind
+# A park's scatter is cut into 160 m tiles (park_terrain.gd TILE_M; the collider's pieces are
+# 80 m since ruling ae), one chunk per tile, named by its tile. A chunk holds one MultiMeshInstance3D per kind (every row of a kind
 # merged: ScatterRows.kind_problems), each with its kind's visibility range and its own bounds, so
 # a far chunk stops drawing and the draws stay one per kind per near chunk. A chunk's pieces come
 # from a generator seeded by the row's seed and the chunk, so the chunks build on worker threads in
