@@ -280,8 +280,8 @@ func _deepen() -> void:
 	ok = ok and _audio.queue_target == Ace.QUEUE_TARGET
 	_check("ring deepens per skip", ok, "a 0.1 s generator at 44.1 kHz reports %d frames available when empty; a skip each deepens the target %s (capped at %d); a 4410-frame ring stays at %d" % [
 		capacity, steps, capacity - 1024, _audio.queue_target])
-	# A frame's gap counts as a stall from half the queue: 16 ms deepens, 40 ms and the bot's
-	# 70-115 ms planner ticks do not, and a deeper queue moves the line with it.
+	# A frame's gap counts as a stall from half the queue: 16 and 30 ms deepen, 40 ms and up do
+	# not, and a deeper queue moves the line with it.
 	_audio.queue_target = Ace.QUEUE_TARGET
 	var stalls := [_audio._gap_is_stall(16000), _audio._gap_is_stall(30000), _audio._gap_is_stall(40000), _audio._gap_is_stall(70000), _audio._gap_is_stall(115000)]
 	_audio.queue_target = Ace.QUEUE_TARGET + 2048

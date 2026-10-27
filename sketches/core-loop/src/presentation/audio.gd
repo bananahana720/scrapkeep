@@ -243,6 +243,9 @@ var _ring_capacity := 0
 var queue_target := AceSequencer.QUEUE_TARGET
 var _skips_seen := 0
 var _ace_pumped_usec := 0
+var _ace_gap_usec := 0
+# The last pump stopped short of the queue at a park cue's due, so the ring may run dry by design.
+var _park_held := false
 # The synth band fades in over this many frames when it comes back from mute, so a voice
 # still sounding under the mute never steps to full level. _unmute_at is the transport
 # sample the ramp starts from, -1 when none runs.
@@ -726,14 +729,20 @@ func _pump(virtual_frames := -1) -> void:
 		elif _gap_is_stall(gap):
 			_note_stall(gap)
 			settle = true
+		elif _park_held:
+			_note_park_hold(gap)
+			settle = true
 		else:
+			_ace_gap_usec = gap
 			_deepen_on_skip()
 		_ace_pumped_usec = now
 		# A launch's flight answers no contact and lands on the next stage's entry frame
 		# (about 120 ms on the 4080), so the ring fills whole until the landing.
 		var target := _ring_capacity if _launch_armed else queue_target
 		frames = mini(ace.frames_to_pump(_music_pb, _ring_capacity, target), _stinger_pb.get_frames_available())
-	frames = _park_render_limit(mini(frames, 8192))
+	var wanted := mini(frames, 8192)
+	frames = _park_render_limit(wanted)
+	_park_held = frames < wanted
 	if frames > 0:
 		_render_music(frames, ace_live)
 		_music_pb.push_buffer(out_music)
@@ -845,9 +854,9 @@ func _fade_in_band(from: int, frames: int, landmark := PackedVector2Array()) -> 
 	engine.out_music = band
 
 
-# The device reads ahead of the mix by up to a period, so a gap of half the queue can
-# already empty it (a bot's 70-115 ms planner ticks dried a 3072-frame queue). A period long
-# enough to empty the queue inside a gap shorter than that is the device's, and deepens it.
+# The device takes the ring a mix buffer at a time, so a gap short of the whole queue can
+# already empty it. Godot's buffer (512-1024 frames) is under half the queue: a skip after a
+# shorter gap is a period the queue does not cover, and deepens it; after a longer one, the frame's.
 func _gap_is_stall(gap_usec: int) -> bool:
 	return gap_usec * Harmony.RATE * 2 > queue_target * 1000000
 
@@ -864,7 +873,7 @@ func _deepen_for(skips: int) -> void:
 	_skips_seen = skips
 	if queue_target + 1024 <= _ring_capacity - 1024:
 		queue_target += 1024
-		print("ACE music: the ring ran dry (%d skips) at frame %d, stage %d; queue target now %d frames" % [took, Engine.get_process_frames(), _stage_now, queue_target])
+		print("ACE music: the ring ran dry (%d skips) at frame %d, stage %d, %d ms since the last pump; queue target now %d frames" % [took, Engine.get_process_frames(), _stage_now, _ace_gap_usec / 1000, queue_target])
 
 
 # Skips a long gap between pumps took are logged as the frame's, and the queue stays put.
@@ -872,6 +881,15 @@ func _note_stall(gap_usec: int) -> void:
 	var skips := _music_pb.get_skips()
 	if skips > _skips_seen:
 		print("ACE music: a %d ms gap between pumps outlasted the queue (%d skips) at frame %d, stage %d%s" % [gap_usec / 1000, skips - _skips_seen, Engine.get_process_frames(), _stage_now, ", launch armed" if _launch_armed else ""])
+	_skips_seen = skips
+
+
+# A park cue's hold leaves the booked sample unrendered until physics lands it, so a landing
+# later than the queue empties the ring: that is the hold's, not the device's, and logged as such.
+func _note_park_hold(gap_usec: int) -> void:
+	var skips := _music_pb.get_skips()
+	if skips > _skips_seen:
+		print("ACE music: a park cue's hold emptied the ring (%d skips) at frame %d, stage %d, %d ms since the last pump" % [skips - _skips_seen, Engine.get_process_frames(), _stage_now, gap_usec / 1000])
 	_skips_seen = skips
 
 
