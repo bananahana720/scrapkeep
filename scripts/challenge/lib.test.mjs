@@ -35,6 +35,10 @@ test("a Warden run wins when its stage note shows the break", () => {
   const won = gradeRun("warden", row("until", { stage: 4, warden_engaged_s: 20, warden_broken_s: 52.5, hp_lost: 12 }), { stage: 4 });
   assert.deepEqual(won, { result: "win", fightS: 32.5, hpLost: 12, largestShare: null, largestSource: null, hp45Share: null, largestHullShare: null, hull45Share: null });
   assert.equal(gradeRun("warden", row("died", { stage: 4, warden_engaged_s: 20, warden_broken_s: null, hp_lost: 90 }), { stage: 4 }).result, "loss");
+  // A death on a saved run ends it "lost": a loss, not a stall (it printed as "stalled" in the w1 receipts).
+  assert.equal(gradeRun("warden", row("lost", { stage: 1, warden_engaged_s: 20, warden_broken_s: null, hp_lost: 120 }), { stage: 1 }).result, "loss");
+  assert.equal(gradeRun("boss", { outcome: "lost", max_hp: 100, boss: { defeated_s: null, seconds: 40, hp_lost: 100 } }).result, "loss");
+  assert.equal(gradeRun("world", { outcome: "lost" }).result, "loss");
   for (const outcome of ["stalled", "fight_capped", "ticks_done"]) assert.equal(gradeRun("warden", row(outcome, { stage: 4, warden_broken_s: null }), { stage: 4 }).result, "timeout");
 });
 

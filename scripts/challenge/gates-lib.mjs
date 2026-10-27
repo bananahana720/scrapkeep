@@ -8,7 +8,7 @@
 //
 // Where the comment left a reading open, the choice made here is named at the choice.
 
-import { median } from "./lib.mjs";
+import { median, DEATHS } from "./lib.mjs";
 
 export const STAGES = [1, 2, 3, 4, 5, 6];
 export const SEEDS = [1, 2, 3, 4, 5];
@@ -87,9 +87,8 @@ export function gateBotArgs(job, out) {
 
 const num = (x) => (typeof x === "number" && Number.isFinite(x) ? x : null);
 
-// A death on a saved run ends the run lost before the driver hears player_died (flow.gd _on_player_died), so the
-// driver writes "lost"; "died" is a death with no save store. Stage 6 cleared with --until=6 is the run won.
-export const DEATHS = ["died", "lost"];
+// Deaths ("died", "lost") are lib.mjs's DEATHS. Stage 6 cleared with --until=6 is the run won.
+export { DEATHS };
 export const CLEARS = ["until", "won"];
 
 // row: the bots.ndjson line (null when the process left none). Reads the stage note of job.stage.
