@@ -284,6 +284,11 @@ func _run() -> void:
 	cache.take_id = cache_take
 	cache.deck = deck
 	_game.ctx.root.add_child(cache)
+	var twin = RadioCache.new()
+	_game.ctx.root.add_child(twin)
+	_t.check("caches share their meshes and materials (made once, not per cache on the entry frame)",
+		cache._ring.mesh == twin._ring.mesh and cache._ring.material_override == twin._ring.material_override and cache._lamp.mesh == twin._lamp.mesh)
+	twin.free()
 	_t.check("reaching a Signal cache files its take", cache.collect() and profile.has_tune(cache_take))
 	_t.eq("and a found one is no longer wanted", RadioCache.wanted("park_dam", func(id): return profile.has_tune(id), spots), [])
 
