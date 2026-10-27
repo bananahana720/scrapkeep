@@ -965,6 +965,10 @@ func _attach_step(deadline: int) -> void:
 		_faces[_next_tile] = null
 		_next_tile += 1
 		added += 1
+	# The built handlers (terrain._on_park_built: the park rows' Placer, perch zones, scenery) take a frame of
+	# their own: on the last tile's frame they made the flume's f5874, 26-28 ms on the 4080.
+	if added > 0 and deadline >= 0:
+		return
 	phase = Phase.READY
 	set_process(false)
 	built.emit()

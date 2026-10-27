@@ -35,8 +35,9 @@ func _run() -> void:
 	while ground.phase != ParkTerrain.Phase.READY and steps < 2 * ParkTerrain.TILE_COUNT:
 		ground._attach_step(1 << 62)
 		steps += 1
-	t.check("frame by frame, the step drains every tile and reports the ground built",
-		ground.phase == ParkTerrain.Phase.READY and ground.tiles.size() == ParkTerrain.TILE_COUNT and steps == ceili(float(ParkTerrain.TILE_COUNT) / ParkTerrain.TILES_PER_FRAME),
+	# One more step than the tile frames: the ground reports built on a frame that adds no tile.
+	t.check("frame by frame, the step drains every tile and reports the ground built a frame later",
+		ground.phase == ParkTerrain.Phase.READY and ground.tiles.size() == ParkTerrain.TILE_COUNT and steps == ceili(float(ParkTerrain.TILE_COUNT) / ParkTerrain.TILES_PER_FRAME) + 1,
 		"%d steps, %d tiles" % [steps, ground.tiles.size()])
 	ground.queue_free()
 
