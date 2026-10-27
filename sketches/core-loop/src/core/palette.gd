@@ -93,6 +93,7 @@ static func look_texture(id: String, neutral := false) -> Texture2D:
 	var key := id + (":neutral" if neutral else "")
 	if _look_textures.has(key):
 		return _look_textures[key]
+	_look_jobs.erase(key)
 	var source := load("res://assets/textures/%s.webp" % id) as Texture2D
 	if source == null:
 		push_warning("palette: missing look texture " + id)
@@ -100,24 +101,69 @@ static func look_texture(id: String, neutral := false) -> Texture2D:
 	if not neutral:
 		_look_textures[key] = source
 		return source
-	var image := source.get_image()
-	if image == null:
+	var job := _neutral_job(source)
+	if job.is_empty():
 		push_warning("palette: unreadable look texture " + id)
 		return painted_texture(128)
+	_neutral_rows(job, job.image.get_height())
+	return _neutral_done(key, job)
+
+
+# A neutral look texture a few rows a call, so a warm can make one off the frame that first draws it:
+# the whole 512 px map takes a 60-80 ms call on the cloud. True once look_texture(id, true) is ready.
+const LOOK_ROWS_PER_CALL := 32
+static var _look_jobs := {}
+
+
+static func warm_look(id: String) -> bool:
+	var key := id + ":neutral"
+	if _look_textures.has(key):
+		return true
+	if not _look_jobs.has(key):
+		var source := load("res://assets/textures/%s.webp" % id) as Texture2D
+		var job := _neutral_job(source) if source != null else {}
+		if job.is_empty():
+			look_texture(id, true)
+			return true
+		_look_jobs[key] = job
+		return false
+	var job: Dictionary = _look_jobs[key]
+	if job.row < job.image.get_height():
+		_neutral_rows(job, LOOK_ROWS_PER_CALL)
+		return false
+	_look_jobs.erase(key)
+	_neutral_done(key, job)
+	return true
+
+
+static func _neutral_job(source: Texture2D) -> Dictionary:
+	var image := source.get_image()
+	if image == null:
+		return {}
 	if image.is_compressed():
 		image.decompress()
-	if neutral:
-		image.convert(Image.FORMAT_RGB8)
-		var probe := image.duplicate() as Image
-		probe.resize(1, 1, Image.INTERPOLATE_BILINEAR)
-		var mean := probe.get_pixel(0, 0).get_luminance()
-		var gain := 0.85 / maxf(mean, 0.05)
-		for y in image.get_height():
-			for x in image.get_width():
-				var c := image.get_pixel(x, y)
-				var l := c.get_luminance()
-				var grey := Color(l, l, l).lerp(c, 0.35)
-				image.set_pixel(x, y, Color(minf(grey.r * gain, 1.0), minf(grey.g * gain, 1.0), minf(grey.b * gain, 1.0)))
+	image.convert(Image.FORMAT_RGB8)
+	var probe := image.duplicate() as Image
+	probe.resize(1, 1, Image.INTERPOLATE_BILINEAR)
+	var mean := probe.get_pixel(0, 0).get_luminance()
+	return {"image": image, "gain": 0.85 / maxf(mean, 0.05), "row": 0}
+
+
+static func _neutral_rows(job: Dictionary, rows: int) -> void:
+	var image: Image = job.image
+	var gain: float = job.gain
+	var end := mini(job.row + rows, image.get_height())
+	for y in range(job.row, end):
+		for x in image.get_width():
+			var c := image.get_pixel(x, y)
+			var l := c.get_luminance()
+			var grey := Color(l, l, l).lerp(c, 0.35)
+			image.set_pixel(x, y, Color(minf(grey.r * gain, 1.0), minf(grey.g * gain, 1.0), minf(grey.b * gain, 1.0)))
+	job.row = end
+
+
+static func _neutral_done(key: String, job: Dictionary) -> Texture2D:
+	var image: Image = job.image
 	image.generate_mipmaps()
 	var texture := ImageTexture.create_from_image(image)
 	_look_textures[key] = texture

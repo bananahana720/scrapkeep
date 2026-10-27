@@ -53,20 +53,63 @@ static var spillway_dir := SPILLWAY_DIR
 
 # Each kit's parts read ahead by warm(), by file path until build takes them.
 static var _ahead := {}
+# The kit warm() is part way through: its path, the loaded scene, the views still to copy and the parts so far.
+static var _reading := {}
+static var _requested := {}
 
 
-# Reads one kit's parts a call, on the main thread, while the world's last stage runs (boss.gd's
-# warm_arena); true once every kit is read. Reading them took 10 ms of the boss-entry frame.
+# A step a call while the world's last stage runs (boss.gd's warm_arena): a kit's file, then one part's
+# mesh copy a call; true once every kit is read. A played game reads the file on a loader thread; headless
+# reads it here, since the dummy rasterizer's mesh RIDs are not thread-safe (as requisition.gd). Reading a
+# kit whole took 23-31 ms frames on the 4080 at the flume Warden's engage (a4c5b963 rows).
 static func warm() -> bool:
 	for kit in _kits():
-		if not _ahead.has(kit[0]):
-			_ahead[kit[0]] = new()._parts(kit[0], kit[1])
+		if _ahead.has(kit[0]):
+			continue
+		if _reading.is_empty() or _reading.path != kit[0]:
+			var packed = _read(kit[0])
+			if packed is bool:
+				return false
+			_reading = _open(kit[0], packed, kit[1])
+			if _reading.is_empty():
+				_ahead[kit[0]] = {}
 			return false
+		if not _reading.views.is_empty():
+			_reading.ok = _reading.ok and new()._take(_reading.views.pop_back(), _reading.scene, _reading.result)
+			return false
+		_ahead[kit[0]] = _close(_reading, kit[1])
+		_reading = {}
+		return false
 	return true
 
 
 static func drop_ahead() -> void:
 	_ahead.clear()
+	# A loader thread still reading a kit is waited out, so no load is left in flight at a quit.
+	for path in _requested:
+		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			ResourceLoader.load_threaded_get(path)
+	_requested.clear()
+	if not _reading.is_empty() and is_instance_valid(_reading.scene):
+		_reading.scene.free()
+	_reading = {}
+
+
+# The kit's scene, false while a loader thread still reads it, or null when it cannot load.
+static func _read(path: String):
+	if not ResourceLoader.exists(path):
+		return null
+	if DisplayServer.get_name() == "headless":
+		return load(path) as PackedScene
+	var status := ResourceLoader.load_threaded_get_status(path)
+	if status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+		ResourceLoader.load_threaded_request(path)
+		_requested[path] = true
+		return false
+	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		return false
+	_requested.erase(path)
+	return ResourceLoader.load_threaded_get(path) as PackedScene if status == ResourceLoader.THREAD_LOAD_LOADED else null
 
 
 static func _kits() -> Array:
@@ -198,39 +241,49 @@ func _sign(parent: Node3D, font: Font, row: Dictionary) -> Label3D:
 
 
 func _parts(path: String, required: Array) -> Dictionary:
-	if not ResourceLoader.exists(path):
+	var reading := _open(path, load(path) as PackedScene if ResourceLoader.exists(path) else null, required)
+	if reading.is_empty():
 		return {}
-	var packed := load(path) as PackedScene
+	for view in reading.views:
+		reading.ok = reading.ok and _take(view, reading.scene, reading.result)
+	return _close(reading, required)
+
+
+# The kit's instance and its required views; empty when the file is missing or carries a collider.
+static func _open(path: String, packed: PackedScene, required: Array) -> Dictionary:
 	if packed == null:
 		return {}
 	var scene := packed.instantiate()
-	var result := {}
 	if not scene.find_children("*", "CollisionObject3D", true, false).is_empty():
 		scene.free()
 		return {}
+	var views := []
 	for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
-		if String(view.name) not in required:
-			continue
-		if view.mesh == null or view.mesh.get_surface_count() == 0:
-			continue
-		var mesh := view.mesh.duplicate() as ArrayMesh
-		if mesh == null:
-			continue
-		var valid := true
-		for surface in mesh.get_surface_count():
-			var source := view.mesh.surface_get_material(surface)
-			if source == null or not SLOTS.has(String(source.resource_name)):
-				valid = false
-				break
-			var arrays := mesh.surface_get_arrays(surface)
-			if arrays[Mesh.ARRAY_COLOR] == null or arrays[Mesh.ARRAY_COLOR].size() != arrays[Mesh.ARRAY_VERTEX].size():
-				valid = false
-				break
-			mesh.surface_set_material(surface, _slot_material(String(source.resource_name)))
-		if valid:
-			result[String(view.name)] = {"mesh": mesh, "local": _relative(view, scene)}
-	scene.free()
-	return result if result.size() == required.size() else {}
+		if String(view.name) in required and view.mesh != null and view.mesh.get_surface_count() > 0:
+			views.append(view)
+	return {"path": path, "scene": scene, "views": views, "result": {}, "ok": true}
+
+
+# Copies one part's mesh with the slot materials into result; false when the part is malformed.
+func _take(view: MeshInstance3D, scene: Node, result: Dictionary) -> bool:
+	var mesh := view.mesh.duplicate() as ArrayMesh
+	if mesh == null:
+		return true
+	for surface in mesh.get_surface_count():
+		var source := view.mesh.surface_get_material(surface)
+		if source == null or not SLOTS.has(String(source.resource_name)):
+			return false
+		var arrays := mesh.surface_get_arrays(surface)
+		if arrays[Mesh.ARRAY_COLOR] == null or arrays[Mesh.ARRAY_COLOR].size() != arrays[Mesh.ARRAY_VERTEX].size():
+			return false
+		mesh.surface_set_material(surface, _slot_material(String(source.resource_name)))
+	result[String(view.name)] = {"mesh": mesh, "local": _relative(view, scene)}
+	return true
+
+
+static func _close(reading: Dictionary, required: Array) -> Dictionary:
+	reading.scene.free()
+	return reading.result if reading.ok and reading.result.size() == required.size() else {}
 
 
 static func _relative(node: Node3D, top: Node) -> Transform3D:

@@ -8,25 +8,31 @@ const BakeLook := preload("res://src/presentation/bake_look.gd")
 # a clip is only ever cued from state the boss script already tracks.
 
 
-static func load_scene(path: String) -> Node3D:
+# dressed false leaves the colour and the bake's look to colour_view and BakeLook (a warm a view a frame).
+static func load_scene(path: String, dressed := true) -> Node3D:
 	if not ResourceLoader.exists(path):
 		return null
 	var packed := load(path) as PackedScene
 	if packed == null:
 		return null
 	var scene := packed.instantiate() as Node3D
-	if scene != null:
+	if scene != null and dressed:
 		for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
-			if view.mesh != null:
-				for i in view.mesh.get_surface_count():
-					var source := view.mesh.surface_get_material(i)
-					var drawn := _vertex_coloured(source)
-					if drawn != source:
-						view.set_surface_override_material(i, drawn)
+			colour_view(view)
 		# The polish bake's UV2 shade (tools/blender/POLISH.md); a caller that swaps in its own
 		# materials afterwards calls BakeLook.dress again with them as `owned`.
 		BakeLook.dress(scene)
 	return scene
+
+
+static func colour_view(view: MeshInstance3D) -> void:
+	if view.mesh == null:
+		return
+	for i in view.mesh.get_surface_count():
+		var source := view.mesh.surface_get_material(i)
+		var drawn := _vertex_coloured(source)
+		if drawn != source:
+			view.set_surface_override_material(i, drawn)
 
 
 # Boss GLBs keep colour in vertex colours and import with white materials that ignore them,

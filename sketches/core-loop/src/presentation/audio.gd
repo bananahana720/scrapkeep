@@ -25,6 +25,7 @@ const Rogue := preload("res://src/combat/rogue.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 const Companion := preload("res://src/core/companion.gd")
+const SpillwayStory := preload("res://src/presentation/spillway_story.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const TuneEar := preload("res://src/presentation/tune_ear.gd")
 # SR7: the shortest gap between two chirps of one companion cue (start value, comps
@@ -430,6 +431,10 @@ static func _sound_ids() -> Array:
 	for id in SfxBank.EVENT_CUES:
 		if not id in ids:
 			ids.append(id)
+	# The story stings: their first play decoded the file on the main thread (Warden sighted,
+	# gates and the bowl handoff, 20-40 ms frames on the 4080).
+	for sting in SpillwayStory.STINGS.values():
+		ids.append(SfxBank.stinger_id("1_1", sting))
 	for midi in SfxBank.break_midis(POSTURE_PHRASE):
 		ids.append(SfxBank.cause_note_id(midi))
 	for cause in EventKinds.CAUSE_ROWS:

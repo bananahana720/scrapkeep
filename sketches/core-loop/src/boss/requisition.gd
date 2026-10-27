@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Target := preload("res://src/boss/boss_target.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
+const BakeLook := preload("res://src/presentation/bake_look.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 # The Requisition: a rolling furnace-fortress several times the ball's height, with
@@ -325,6 +326,8 @@ static func dress_scooter(parent: Node3D) -> AnimationPlayer:
 # frame on the cloud. Each instance already owns its clips.
 static var _ahead := {}
 static var _ahead_reads := {}
+# A model warm() is dressing: path -> [its instance, the views still to colour and dress].
+static var _dressing := {}
 
 
 # A step of that work a call, while the world's last stage runs (boss.gd's warm_arena); true
@@ -348,7 +351,20 @@ static func warm() -> bool:
 					return false
 				_ahead_reads[path] = ResourceLoader.load_threaded_get(path) if status == ResourceLoader.THREAD_LOAD_LOADED else null
 			return false
-		_ahead[path] = _instance(path)
+		# The instance, then its colour and the bake's look a view a call: the model dressed whole in
+		# one call was a 71-77 ms frame on the 4080 at the flume Warden's engage (a4c5b963 rows).
+		if not _dressing.has(path):
+			var scene := BossModel.load_scene(path, false)
+			_dressing[path] = [scene, scene.find_children("*", "MeshInstance3D", true, false) if scene != null else []]
+			return false
+		var views: Array = _dressing[path][1]
+		if not views.is_empty():
+			var view: MeshInstance3D = views.pop_back()
+			BossModel.colour_view(view)
+			BakeLook.warm_view(view)
+			return false
+		_ahead[path] = _finish(_dressing[path][0])
+		_dressing.erase(path)
 		return false
 	return true
 
@@ -360,6 +376,10 @@ static func drop_ahead() -> void:
 			scene.free()
 	_ahead.clear()
 	_ahead_reads.clear()
+	for entry in _dressing.values():
+		if entry[0] != null:
+			entry[0].free()
+	_dressing.clear()
 
 
 static func _take_ahead(path: String) -> Node3D:
@@ -372,8 +392,17 @@ static func _take_ahead(path: String) -> Node3D:
 
 
 static func _instance(path: String) -> Node3D:
-	var scene := BossModel.load_scene(path)
+	var scene := BossModel.load_scene(path, false)
 	if scene != null:
+		for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+			BossModel.colour_view(view)
+	return _finish(scene)
+
+
+# A coloured scene dressed by the bake's look, with its own clips.
+static func _finish(scene: Node3D) -> Node3D:
+	if scene != null:
+		BakeLook.dress(scene)
 		var player := BossModel.player_of(scene)
 		if player != null:
 			BossModel.own_clips(player)
