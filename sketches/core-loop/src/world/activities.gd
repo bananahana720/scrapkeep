@@ -192,6 +192,11 @@ var ctx
 var sites: Array = []
 var _piece_paid := false
 var _pending_stage := false
+# A stage built ahead on worker threads (a real run) builds its sites one a physics tick after entry,
+# in entry order, instead of all in the entry tick (scrapkeep#494: 22-27 ms at the flume). Each job
+# builds one site and adds it to sites; the hauler's spawn waits for the last. A stage built whole
+# (bot runs, tests) keeps the entry build, so bots stay tick for tick what they were.
+var _site_jobs: Array[Callable] = []
 var _elite_arrivals := 0
 var _graph
 var _graph_map := ""
@@ -460,31 +465,34 @@ func _enter_stage(retry: bool) -> void:
 			if not spec.get("pack", []).is_empty():
 				built_spec.pack = spec.pack.duplicate()
 				built_spec.tell = spec.get("tell", {}).duplicate(true)
-		sites.append(_build(id, spec["at"], built_spec))
+		_add_site(func(): return _build(id, spec["at"], built_spec))
 	if _graph_map != "":
 		var tuning = ctx.get("tuning")
 		var sitting: bool = tuning != null and tuning.has_method("sitting") and tuning.sitting()
 		for room_spec in Secrets.room_sites(_graph_map, ctx.get("profile"), sitting):
-			var room := _build("cracked_cache", room_spec["at"], room_spec)
-			_hang_room_log(room, String(room_spec["secret"]))
-			sites.append(room)
+			_add_site(func():
+				var room := _build("cracked_cache", room_spec["at"], room_spec)
+				_hang_room_log(room, String(room_spec["secret"]))
+				return room)
 		# The run's own seed picks the spots, so the next run moves them and a replay keeps them.
 		for find_spec in Secrets.find_sites(_graph_map, hash([ctx.rng.seed, ctx.run.run_seed, "field_finds"])):
-			var found := _build("cracked_cache", find_spec["at"], find_spec)
-			var dressed := Time.get_ticks_usec()
-			_dress_find(found, String(find_spec["find"]))
-			last_entry_steps.append("find %s %.1f" % [find_spec["find"], (Time.get_ticks_usec() - dressed) / 1000.0])
-			sites.append(found)
+			_add_site(func():
+				var found := _build("cracked_cache", find_spec["at"], find_spec)
+				var dressed := Time.get_ticks_usec()
+				_dress_find(found, String(find_spec["find"]))
+				last_entry_steps.append("find %s %.1f" % [find_spec["find"], (Time.get_ticks_usec() - dressed) / 1000.0])
+				return found)
 		# A fast Brindle rout last run: the timed door stands open this run (secrets.gd DOOR).
 		for door_spec in Secrets.door_sites(_graph_map, ctx.get("profile")):
-			var door := _build("cracked_cache", door_spec["at"], door_spec)
-			_dress_door(door)
-			sites.append(door)
+			_add_site(func():
+				var door := _build("cracked_cache", door_spec["at"], door_spec)
+				_dress_door(door)
+				return door)
 	if _graph != null:
 		var pool: PackedInt32Array = entry_data.pool
 		var trade_spec := TradePockets.stage_site(_graph, map, ctx.run, ctx.rng.seed, pool)
 		if not trade_spec.is_empty():
-			sites.append(_build(trade_spec.id, trade_spec.at, trade_spec))
+			_add_site(func(): return _build(trade_spec.id, trade_spec.at, trade_spec))
 		if _draw_map != _graph_map:
 			_draw_layout = {}
 			_draw_map = _graph_map
@@ -495,12 +503,30 @@ func _enter_stage(retry: bool) -> void:
 		stage_modifier = StageModifier.for_stage(ctx.run, ctx.terrain, ctx.run.stage)
 		for drawn_spec in PocketDraw.stage_sites(_graph, map, ctx.run, ctx.rng.seed, trade_spec, _draw_layout, stage_modifier):
 			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
-				var drawn_site := _build(drawn_spec.id, drawn_spec.at, drawn_spec)
-				drawn_site.view.set_sight(float(stage_modifier.get("sight_scale", 1.0)))
-				StageModifier.mark_far(stage_modifier, drawn_site)
-				sites.append(drawn_site)
+				var modifier := stage_modifier
+				_add_site(func():
+					var drawn_site := _build(drawn_spec.id, drawn_spec.at, drawn_spec)
+					drawn_site.view.set_sight(float(modifier.get("sight_scale", 1.0)))
+					StageModifier.mark_far(modifier, drawn_site)
+					return drawn_site)
 	StageModifier.set_air(stage_modifier)
-	_pending_stage = true
+	_pending_stage = _site_jobs.is_empty()
+
+
+# A site now (a stage built whole), or as a job for the ticks after entry (_site_jobs).
+func _add_site(job: Callable) -> void:
+	var stage: int = ctx.terrain.stage if "stage" in ctx.terrain else 0
+	if ctx.terrain.has_method("built_threaded") and ctx.terrain.built_threaded(stage):
+		_site_jobs.append(job)
+	else:
+		sites.append(job.call())
+
+
+# The next site job; the last one lets the hauler spawn.
+func _build_next_site() -> void:
+	sites.append(_site_jobs.pop_front().call())
+	if _site_jobs.is_empty():
+		_pending_stage = true
 
 
 func clear() -> void:
@@ -520,6 +546,7 @@ func clear() -> void:
 					enemy.queue_free()
 			site.queue_free()
 	sites.clear()
+	_site_jobs.clear()
 	_pending_stage = false
 
 
@@ -928,6 +955,8 @@ func _mesh_cylinder(parent: Node3D, radius: float, height: float, at: Vector3, m
 func _physics_process(delta: float) -> void:
 	if ctx == null or not ctx.flow.in_stage():
 		return
+	if not _site_jobs.is_empty():
+		_build_next_site()
 	if _pending_stage and ctx.spawner != null and not ctx.calm:
 		_pending_stage = false
 		for s in sites:
