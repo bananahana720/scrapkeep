@@ -19,6 +19,8 @@ extends Node
 # the run's "flourishes" meta, which run_log.gd writes into the run record.
 
 signal finished(id: String, skipped: bool)
+# A row reached the screen (its first piece is about to draw); spillway_story hangs its sting here.
+signal started(id: String)
 
 const Rows := preload("res://src/presentation/flourish_rows.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -168,6 +170,7 @@ func _start(row_id: String, seed_value: int, anchors: Dictionary, form: String) 
 	clock = 0.0
 	playing = true
 	set_process(true)
+	started.emit(row_id)
 	advance(0.0)
 
 

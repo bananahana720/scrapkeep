@@ -1,5 +1,5 @@
 {
-  "bake_sha256": "c703458b19dad0955a565ca670d0ff2fa2239b7c1aa53058c64e564657ad8524",
+  "bake_sha256": "89e4c3a5836b756ebfa3e5ef14857517a148c354d8403b2b16abd3de513566c2",
   "beacon_ok": true,
   "breaches": [],
   "bytes": 1104582,
@@ -21,7 +21,7 @@
   "longest_est_m": 2495,
   "map": "park_flume",
   "nodes": 41197,
-  "park_sha256": "804c9fbcd0e59f5f061798031243814d3562eedc2ffe5c57fc0ba7ac475264f0",
+  "park_sha256": "53d7aa5f3bf46bc3ec0eded990f9b15c5534794e0867616f48a35ae780e07f42",
   "pockets": [
     {
       "clear_ring": [],
@@ -223,19 +223,13 @@
   ],
   "targets": [
     {
-      "name": "reward_ratio",
-      "ok": false,
-      "target": "at least 1.5",
-      "value": 0.482
-    },
-    {
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
       "value": 1.437
     }
   ],
-  "tool_sha256": "5531ab11cafa36c2cd29e84d5adfb06fa46179555463dbc5d4544c9a4c9f2225",
+  "tool_sha256": "9a2f796d09989bc9186733fec4ad82ba88afe13bd684cd17ca75792c703333c1",
   "zones": {
     "anchors": [
       {

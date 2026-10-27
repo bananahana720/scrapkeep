@@ -103,6 +103,19 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 			return
 
 
+# Teardown: a load still on the loader thread is collected, so a quit before it lands leaves no
+# loader thread running (the quit abort, exit 134, scrapkeep#322).
+func _exit_tree() -> void:
+	settle()
+
+
+static func settle() -> void:
+	for path: String in _loading:
+		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			_held[path] = ResourceLoader.load_threaded_get(path)
+	_loading.clear()
+
+
 func _process(_delta: float) -> void:
 	for path: String in _loading.duplicate():
 		var status := ResourceLoader.load_threaded_get_status(path)
@@ -147,9 +160,14 @@ static func first_view(first: String, parent: Node) -> Node3D:
 		"scrap_pickup":
 			views = ScrapField.warm_views()
 		"hero_chunks":
+			# The headless renderer's mesh RIDs are not thread-safe (thread_guard.gd), so there the glb's
+			# ArrayMeshes load on the main thread, as park_props._uncached does.
 			var path := HeroAssets.CHUNKS_PATH
-			if ResourceLoader.exists(path) and not _held.has(path) and ResourceLoader.load_threaded_request(path) == OK:
-				_loading.append(path)
+			if ResourceLoader.exists(path) and not _held.has(path) and not _loading.has(path):
+				if DisplayServer.get_name() == "headless":
+					_held[path] = load(path)
+				elif ResourceLoader.load_threaded_request(path) == OK:
+					_loading.append(path)
 		_ when first.begins_with("codex_icon:"):
 			CodexStyle.icon(first.trim_prefix("codex_icon:"))
 	if views.is_empty():

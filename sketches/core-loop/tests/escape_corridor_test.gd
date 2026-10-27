@@ -42,8 +42,11 @@ func _fresh_stage() -> void:
 	_game.ctx.spawner._on_stage_entered(_game.run.stage, false)
 
 
+# The hit door at identity: the dam (stage 1) ships mob hits at x1.5 (ChallengeDials MOBS_DAMAGE_W1).
 func _hit(amount: float) -> void:
+	ChallengeDials.set_overrides({"mobs.damage_by_stage": ChallengeDials.ONES6})
 	_game.ctx.spawner._on_player_hit(amount, Vector3(0.0, 0.0, 0.2), "test")
+	ChallengeDials.reset()
 
 
 func _run() -> void:

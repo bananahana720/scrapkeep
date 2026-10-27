@@ -404,7 +404,7 @@ Shipped 2026-10-11 as `src/world/park/park_dam.json` and re-cut the same day for
 | bench_altar | risk | [208, 248] | 251 | 251 | 1137 | 445 | True | ['common', 'rare'] |
 | gallery_valve | hidden | [-168, 544] | 250 | 268 | 1394 | 196 | True | [] |
 
-The graph has no breaches, `beacon_ok=true` and `spawn.run=true`. Spawn to beacon is 1352 m by path. All pocket clear rings are clear. The 2026-10-19 `rim_cache` move (section 15) puts its door at [-208, 400], 367 m from the beacon. Reported targets: reward_ratio 0.859, full_visit_ratio 1.805.
+The graph has no breaches, `beacon_ok=true` and `spawn.run=true`. Spawn to beacon is 1352 m by path. All pocket clear rings are clear. The 2026-10-19 `rim_cache` move (section 15) puts its door at [-208, 400], 367 m from the beacon. Reported targets: reward_ratio 0.859, full_visit_ratio 1.805. Since ruling ac (26 Oct) reward_ratio is information only, with no target (DECISIONS.md section 8).
 
 The shipped park file:
 

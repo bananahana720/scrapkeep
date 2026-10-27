@@ -13,10 +13,13 @@ export const PILOTS = ["pylon_engineer", "runner_gunner", "demolitions_caster", 
 // Learner in its first 45 s. Parks: Novice reaches the world's Warden in at most half its runs,
 // Learner in 80% or more."
 // "Beat Novice in 85%" is a Novice win rate of at most 15%. Rates are win fractions.
+// Learner attempt 1 is information only at bosses and Wardens (DECISIONS section 5, 19 Oct 19:00,
+// which replaced it as a graded band), so a fight cell has no learner1 target and no ✓/✗ there;
+// LEARNER1_FIGHT_REFERENCE is the old 15-35% range, printed beside the table for reading only.
+export const LEARNER1_FIGHT_REFERENCE = { min: 0.15, max: 0.35 };
 export const TARGETS = {
   fight: {
     novice: { max: 0.15 },
-    learner1: { min: 0.15, max: 0.35 },
     learner5: { min: 0.6 },
     expert: { min: 0.85 },
     expertTop: { min: 0.97 },
@@ -383,6 +386,7 @@ export function renderTable(table, meta = {}) {
   if (meta.tune_unruled) lines.push("Unruled: --tune-unruled was set, so pilot.* dials applied. No ruling allows them; this table is information only.", "");
   if (meta.tune) lines.push(`Tuned: --tune=${meta.tune} requested (difficulty dials, src/core/challenge_dials.gd). The applied dials are on each run row as "dials", from describe(); a rejected entry is not applied.`, "");
   if (meta.label) lines.push(`Label ${meta.label}${meta.commit ? ", commit " + meta.commit.slice(0, 8) : ""}${meta.when ? ", " + meta.when : ""}.`, "");
+  if (table.some((c) => c.kind !== "world")) lines.push(`Learner a1 at bosses and Wardens is information only (DECISIONS section 5, 19 Oct 19:00): no ✓/✗; the old reference range was ${pct(LEARNER1_FIGHT_REFERENCE.min)}-${pct(LEARNER1_FIGHT_REFERENCE.max)}. Parks still grade Learner a1 reach.`, "");
   lines.push("Win rate (runs) [Wilson 95%] ✓/✗ against the target; ✓/✗ judges the point estimate. Brackets after a cell count deaths, fight caps (fight_capped, boss_stalled) and stalls; none is a win. Runs with no record, an unresumed doc or a harness kill are excluded from n and the rate and noted as `excluded`; over 10% excluded makes the column incomplete. Fight s and HP lost are medians over the cell's runs; top/ord is the Expert top fight time over the Expert ordinary fight time.", "");
   const fights = table.filter((c) => c.kind !== "world");
   if (fights.length) {

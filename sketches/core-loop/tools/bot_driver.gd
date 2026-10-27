@@ -2013,13 +2013,19 @@ func _site_has_authored_pack(s) -> bool:
 
 
 # The next point on the way to a site: the site itself, or the climb route when it stands on a
-# shelf above the ball.
+# shelf above the ball. Under --explore-by the park graph's path comes first, then the authored
+# route: the route's straight leg from the_eye to west_rim_bench crossed the spillway chute and
+# held the explorer under the rim cache's 50 m cliff, where the graph keeps to the rim (422 m).
 func _approach(s, ball: Vector3) -> Vector3:
 	var at: Vector3 = s.global_position
 	if _climb_for != s.id:
 		_climb_for = s.id
 		_climb.clear()
-		_route = _route_to(s, ball) if engage_by > ENGAGE_BY else ([] as Array[Vector3])
+		_route.clear()
+		if engage_by > ENGAGE_BY:
+			_route = _graph_path(ball, at)
+			if _route.is_empty():
+				_route = _route_to(s, ball)
 		if _route.is_empty() and at.y - ball.y > LEVEL_BAND:
 			_climb = _climb_route_any(ball, at)
 	while not _route.is_empty() and _flat(ball, _route[0]) < ROUTE_REACHED:
@@ -2322,7 +2328,7 @@ func _pay_roll(s, ball: Vector3, delta: float) -> void:
 	_act(steer, _nearest_enemy(), delta)
 
 
-# The cache breaks to a ram at cruise square into its face: out to a run-up point on the open
+# The cache breaks to a ram at 0.85 x cruise square into its face: out to a run-up point on the open
 # side, then at the wall along its axis with the wall-avoiding turn off.
 func _cache_ram(s, ball: Vector3, delta: float) -> void:
 	var out: Vector3 = s.global_basis.z
@@ -2359,7 +2365,9 @@ func _cache_ram(s, ball: Vector3, delta: float) -> void:
 	_ignore_walls = true
 	var through: Vector3 = s.global_position - out * 4.0
 	_act(Vector3(through.x, ball.y, through.z), null, delta, null, false)
-	if _cache_clock > CACHE_RAM_SECONDS:
+	# The doubled run-up gets a doubled ram: 3 s from 48 m out stopped about 9 m short of the
+	# flume bend cache's wall, and the explorer cycled run-up and ram there for minutes.
+	if _cache_clock > CACHE_RAM_SECONDS * (2.0 if engage_by > ENGAGE_BY else 1.0):
 		_cache_phase = "runup"
 		_cache_clock = 0.0
 

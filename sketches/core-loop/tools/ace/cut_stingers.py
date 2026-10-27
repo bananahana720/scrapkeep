@@ -213,6 +213,9 @@ def cut_stage(zone, pack, park, packs_dir, out_dir):
         # play the engine's pilot-aware quote, so neither is cut from the pack.
         skip = set(highdraft_stingers.DESIGNED) | set(highdraft_stingers.UNCUT)
         drops, risers = drops - skip, risers - skip
+    import spillway_stingers  # likewise: the Spillway's drops, siren and stings are designed
+    designed = set(spillway_stingers.BY_ZONE.get(zone.replace("-", "_"), ()))
+    drops, risers = drops - designed, risers - designed
     pack_dir = packs_dir / pack
     manifest = json.loads((pack_dir / "manifest.json").read_text())
     clips = {}
@@ -282,6 +285,9 @@ def main():
         summary[zone.replace("-", "_")] = cut_stage(zone, pack, park, args.packs, args.out)
     import highdraft_stingers
     for zone, rows in highdraft_stingers.design(args.out).items():
+        summary[zone]["cues"].update(rows)
+    import spillway_stingers
+    for zone, rows in spillway_stingers.design(args.out).items():
         summary[zone]["cues"].update(rows)
     (args.out).mkdir(parents=True, exist_ok=True)
     (args.out / "manifest.json").write_text(json.dumps(summary, indent=1, sort_keys=True) + "\n")

@@ -42,7 +42,7 @@ signal sluice_closed(row_id: String)
 # starts:   "ring" (the ball inside `ring` metres), "none" (nothing starts it) or
 #           "near_or_hit" (the ball inside `wake` metres, or the brute is hit).
 # finishes: "pack_dead" (every enemy the ring spawned is dead), "wall_broken" (the cache's wall
-#           goes to a ram at cruise or a slam of at least that strength) or "brute_dead".
+#           goes to a ram at RAM_MIN_PER_CRUISE x cruise or a slam of at least that strength) or "brute_dead".
 # pay:      `scrap` (180, so three activities lift the ball two heft classes), taken with one
 #           part from `rarities` or an authored `named` part id, as a pickup at `where`: the altar, the pedestal or the
 #           place the brute fell, or the relay's mast. A roll with no part pays the scrap when the activity finishes. part_gained carries `source`, which is not in
@@ -151,8 +151,14 @@ const WALL_REACH := 3.0
 const SLAM_REACH := 7.0
 # `slammed` carries the ball's own strength for the landing (player.slam_strength), not a speed.
 # A slam breaks the wall at SLAM_MIN_PER_CRUISE times the strength of a flat landing at cruise speed,
-# so a landing as fast as the ram that breaks it breaks it too and a slower one does not.
+# a landing at cruise. It stays at full cruise, over the ram's bar: slam_strength floors at 0.4, so a bar
+# at 0.85 x cruise (strength 0.397) would let any flat landing break the wall.
 const SLAM_MIN_PER_CRUISE := 1.0
+# A ram breaks the wall at RAM_MIN_PER_CRUISE times cruise into the face. A held stick climbs toward
+# cruise and never quite reaches it on a run-up (12.6-13.8 m/s over 10-22 m, 14.0 only after 30 m),
+# so with the bar at cruise itself only the speed bank's roll start or a burst broke the wall: a player
+# already rolling at full speed bumped the face (cautious red team, 26 Oct). A nudge stays under it.
+const RAM_MIN_PER_CRUISE := 0.85
 const PEDESTAL_BACK := 4.0
 const CACHE_LANE_OFFSET := 6.0
 # The first-win room's log line on the back wall, on a dark crew board of its own: the fired wall
@@ -394,6 +400,10 @@ static func prepare_data(path: String, map, layout: bool) -> Dictionary:
 	var graph = ParkGraph.read(path) if FileAccess.file_exists(path) else null
 	if graph == null:
 		return {"graph": null, "pool": PackedInt32Array(), "layout": {}}
+	# The zone member lists fill on their first read, the entry tick's rib cache spots (7 ms on the
+	# cloud at the flume, scrapkeep#494), so the worker fills them while the graph is still its own.
+	if graph.zone_count() > 0:
+		graph.zone_nodes(0)
 	return {"graph": graph, "pool": TradePockets.candidates(graph, map), "layout": PocketDraw.prepare(graph, map) if layout else {}}
 
 
@@ -1576,7 +1586,7 @@ func _watch_wall(s: Site, ball: Vector3) -> void:
 	var ahead := local.z - 0.5
 	if ahead < -1.0 or ahead > WALL_REACH + maxf(0.0, toward) / 30.0 or absf(local.x) > WALL_HALF_W + 1.0 or local.y > WALL_HEIGHT + 2.0:
 		return
-	if toward >= ctx.tuning.f("cruise"):
+	if toward >= ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE:
 		_break_wall(s)
 
 

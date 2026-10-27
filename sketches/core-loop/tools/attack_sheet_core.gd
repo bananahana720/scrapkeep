@@ -58,6 +58,11 @@ const MOB_TYPE := {
 # Units that extend enemy.gd, not counter.gd, and set no owner_voice or mechanic_tag.
 const NO_VOICE := ["chaser", "lobber"]
 const DIRECTOR_SCALED := ["Mind hand", "Swarm", "Miniboss", "Elite affixes", "Mobs"]
+# The groups whose hits take the per-stage mob dial at combat's hit door (combat.gd _on_player_hit: every
+# source but the Wardens, the counter-pulse, vaults and the Mind's hand). The table shows the base hit; a stage
+# whose dial is not 1 (the dam's x1.5, ChallengeDials MOBS_DAMAGE_W1) gets its own numbers in stage_damage.
+const STAGE_DIALLED := ["Swarm", "Miniboss", "Elite affixes", "Mobs"]
+const STAGES := 6
 
 const LETHAL_FLAG := "LETHAL TELL < 0.6 s"
 const LETHAL_FLOOR := 0.6
@@ -482,6 +487,19 @@ func build() -> Dictionary:
 			"source": ", ".join(refs), "flags": flags, "note": r[8],
 		}
 		var notices: Array = []
+		if damage > 0.0 and STAGE_DIALLED.has(r[0]):
+			var by_stage := {}
+			for stage in range(1, STAGES + 1):
+				var mult := ChallengeDials.stage_mult("mobs.damage", stage)
+				if absf(mult - 1.0) <= EPS:
+					continue
+				var hit := damage * mult
+				by_stage[str(stage)] = {"mult": _num(mult), "damage": _num(hit), "pct_hull_max": _num(hit / head["hull_min"] * 100.0),
+					"hits_to_kill": int(ceil(head["hull_min"] / hit - EPS))}
+				notices.append("stage %d (mobs.damage x%s): %s damage, %s%% of the smallest hull, %d hits to kill" % [
+					stage, _fmt(mult, 2), _fmt(hit, 1), _fmt(hit / head["hull_min"] * 100.0, 1), int(ceil(head["hull_min"] / hit - EPS))])
+			if not by_stage.is_empty():
+				row["stage_damage"] = by_stage
 		if extra.has("cooldown"):
 			row["cooldown_s"] = _num(value(extra["cooldown"]))
 			_collect(extra["cooldown"], refs)
@@ -541,6 +559,7 @@ static func markdown(sheet: Dictionary) -> String:
 	lines.append("- Tell is the tightest reachable: phase tightening applied (minus step per phase, capped at the family's TIGHTEN_PHASES) and clamped to hazard.gd MIN_WARN and mind_attacks.gd WARN_FLOOR.")
 	lines.append("- Sound: `audio.gd` `_warn_threat` plays a threat's type sound (threat_tick instant, threat_whoosh wave, threat_whistle projectile, threat_hum lane) and the owner voice and mechanic tag on the game frame the threat is declared, not on the beat; a lane's hum holds until it goes live, where threat_tear plays; `boss_attack_telegraphed` is unquantized too. Sync says whether sound starts with the tell or later. The reserved `atk_*_warn` cues are %s." % (
 		"played" if h["audio"]["atk_cues_played"] else "not played by audio.gd yet, so they are not in the sound column"))
+	lines.append("- Stage dials: the tables show base hits. Swarm, Miniboss, Elite affixes and Mobs hits also take the mob dial (`mobs.damage_mult` x `mobs.damage_by_stage`, `challenge_dials.gd`); a stage whose dial is not 1 is listed under Notices with its own damage, share and hit count.")
 	lines.append("- Rule (DECISIONS section 5): every lethal attack has a readable tell of at least %s s, for sight and sound. Rows with damage above 0 and a tightest tell under it carry `%s`." % [_fmt(LETHAL_FLOOR, 1), LETHAL_FLAG])
 	var flagged: Array = []
 	for row in sheet["rows"]:

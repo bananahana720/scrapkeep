@@ -14,8 +14,8 @@ extends SceneTree
 #                each pocket's pay.rarities against the 2.12 pay ladder, and full_visit_ratio:
 #                spawn through all four doors in the best order to the beacon, over spawn to
 #                beacon (reported, start target at most 3.0), reward_ratio: the median
-#                spawn-to-pocket path over the spawn-to-beacon path (reported, start target at
-#                least 1.5), and the targets array that marks either one out of target
+#                spawn-to-pocket path over the spawn-to-beacon path (printed for information, no
+#                target since ruling ac), and the targets array that marks a target missed
 #
 # The park file stays the authored truth: the graph checks the spawn, the landmark and the
 # activities and never moves them. Two runs on one park and bake give identical bytes.
@@ -98,7 +98,6 @@ const BEACON_DISC_SHARE := Placement.BEACON_DISC_SHARE
 const BEACON_FLAT_M := Placement.BEACON_FLAT_M
 # A lattice node on a footprint's edge counts as on it (_in_footprint): yaw turns leave it a hair outside.
 const FOOTPRINT_EPS_M := 0.01
-const REWARD_RATIO_MIN := Placement.REWARD_RATIO_MIN
 const FULL_VISIT_RATIO_MAX := Placement.FULL_VISIT_RATIO_MAX
 const ONLINE_KINDS := Placement.ONLINE_KINDS
 const REWARD_KINDS := Placement.REWARD_KINDS
@@ -1358,7 +1357,6 @@ static func pockets(graph, park: Dictionary, rows_only := false) -> Dictionary:
 		ratio = full / beacon_d
 	var reward_ratio := _reward_ratio(rows, beacon_d)
 	var targets := [
-		{"name": "reward_ratio", "value": reward_ratio, "target": "at least %.1f" % REWARD_RATIO_MIN, "ok": reward_ratio < INF and reward_ratio >= REWARD_RATIO_MIN},
 		{"name": "full_visit_ratio", "value": ratio, "target": "at most %.1f" % FULL_VISIT_RATIO_MAX, "ok": ratio < INF and ratio <= FULL_VISIT_RATIO_MAX},
 	]
 	return {"rows": rows, "breaches": breaches, "beacon_d_spawn": beacon_d, "full_visit_m": full, "full_visit_ratio": ratio,
@@ -1391,7 +1389,7 @@ static func _reward_ratio(rows: Array, beacon_d: float) -> float:
 	return median / beacon_d
 
 
-# One printable line per target, out of target marked: "reward_ratio 1.712 (target at least 1.5): in target".
+# One printable line per target, out of target marked: "full_visit_ratio 1.712 (target at most 3.0): in target".
 static func target_lines(ruling_rows: Dictionary) -> PackedStringArray:
 	var out := PackedStringArray()
 	for row in ruling_rows.get("targets", []):
@@ -1627,7 +1625,15 @@ static func pocket_table(ruling_rows: Dictionary) -> String:
 	lines.append("Targets (reported, not gated):")
 	for line in target_lines(ruling_rows):
 		lines.append("- " + line)
+	if ruling_rows.has("reward_ratio"):
+		lines.append("- " + reward_line(ruling_rows["reward_ratio"]))
 	return "\n".join(lines)
+
+
+# reward_ratio as information only (ruling ac, 26 Oct; park_placement.gd).
+static func reward_line(value) -> String:
+	var text: String = value if value is String else ("unreachable" if (value == INF or value < 0.0) else "%.3f" % value)
+	return "reward_ratio %s (information only, no target: ruling ac, the beacon is the park's far end)" % text
 
 
 static func _cell(v) -> String:
@@ -1665,7 +1671,7 @@ static func report_text(info: Dictionary) -> String:
 		lines.append(zone_text(info["zones"]))
 	lines.append("")
 	lines.append("beacon_ok: %s" % ("yes" if info["beacon_ok"] else "NO: the beacon is not on an objective-fit node"))
-	lines.append(pocket_table({"rows": info["pockets"], "breaches": info["breaches"], "targets": info["targets"]}))
+	lines.append(pocket_table({"rows": info["pockets"], "breaches": info["breaches"], "targets": info["targets"], "reward_ratio": info["reward_ratio"]}))
 	return "\n".join(lines)
 
 

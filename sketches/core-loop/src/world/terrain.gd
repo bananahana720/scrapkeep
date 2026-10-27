@@ -261,7 +261,7 @@ func _build_stage(i: int) -> void:
 		return
 	var m = maps[i]
 	var holder := Node3D.new()
-	holder.name = "Stage%d" % (i + 1)
+	holder.name = _hold_name(i)
 	var heights := _build_ground(holder, m)
 	m.build_props(holder, _ground_at.bind(heights))
 	_build_scatter(holder, m, heights)
@@ -272,12 +272,21 @@ func _build_stage(i: int) -> void:
 	holder.process_mode = Node.PROCESS_MODE_DISABLED if _arena else Node.PROCESS_MODE_INHERIT
 
 
+# Stage i's root name, taken back from a freed root the Reaper has not renamed yet.
+func _hold_name(i: int) -> String:
+	var stage_name := "Stage%d" % (i + 1)
+	var old := _parent.get_node_or_null(NodePath(stage_name)) if _parent != null else null
+	if old != null and old.get_node_or_null("Reaper") != null:
+		Reaper.yield_name(old)
+	return stage_name
+
+
 # A park stage: the holder enters the tree parked, then its ground builds, at once (threaded
 # false) or on worker threads, and the props follow when the ground is done.
 func _build_park_stage(i: int, threaded: bool) -> void:
 	var m = maps[i]
 	var holder := Node3D.new()
-	holder.name = "Stage%d" % (i + 1)
+	holder.name = _hold_name(i)
 	_roots[i] = holder
 	_parent.add_child(holder)
 	_park(holder, _arena or i != stage - 1)
@@ -452,10 +461,9 @@ class Reaper extends Node:
 	const BUDGET_USEC := 3000
 
 	static func take(root: Node3D) -> void:
-		# A stage built again (a new run's stage 1) takes the name back while this one empties.
-		root.name = "Freed%s" % root.name
+		# Hidden and disabled is enough: its bodies leave the space, so it stays where it stood rather
+		# than moving every body and transform under it on the swap tick (scrapkeep#494).
 		root.visible = false
-		root.position = Vector3.DOWN * PARK_DEPTH
 		# One switch stops the whole stage (its bodies leave the space with it): two propagate_calls over a park
 		# stage's ~20k nodes cost 29 ms in the swap frame, this 9.5 (bot run, stage 1 to 2). The Reaper runs ALWAYS.
 		root.process_mode = Node.PROCESS_MODE_DISABLED
@@ -468,6 +476,7 @@ class Reaper extends Node:
 	func _process(_delta: float) -> void:
 		var root := get_parent()
 		var deadline := Time.get_ticks_usec() + BUDGET_USEC
+		yield_name(root)
 		while Time.get_ticks_usec() < deadline:
 			if root.get_child_count() <= 1:
 				set_process(false)
@@ -483,6 +492,14 @@ class Reaper extends Node:
 				node.queue_free()
 			else:
 				node.free()
+
+	# A stage built again (a new run's stage 1) takes the name back while this one empties. The rename
+	# tells every node under the root its path changed, 10 ms over a park stage's ~20k nodes on the swap
+	# tick on the cloud (scrapkeep#494), so it waits for the Reaper's first frame, or for a stage built
+	# under the same name before then (_hold_name).
+	static func yield_name(root: Node) -> void:
+		if not String(root.name).begins_with("Freed"):
+			root.name = "Freed%s" % root.name
 
 
 func geometry_root(index: int) -> Node3D:

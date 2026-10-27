@@ -19,27 +19,27 @@
  "silent_db": -80.0,
  "sources": {
   "main": {
-   "take": "anthem-brindle-p2-s4401.wav",
-   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/anthem-brindle-p2-s4401.wav",
-   "stretched": "/home/andrew/scratch/w18/anthem-pack3/stretched/anthem_brindle_heavy.wav",
+   "take": "anthem-brindle-p2-s4404.wav",
+   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/gapfill/anthem-brindle-p2-s4404.wav",
+   "stretched": "/home/andrew/scratch/w19/covers/pack/stretched/anthem_brindle_heavy.wav",
    "bpm_before": 150.0,
    "bpm_after": 150.0,
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w18/anthem-pack3/stems/htdemucs/anthem_brindle_heavy/drums.wav",
-     "sha256": "9251f89244c0da5775a3d25f6057e604ab157b00ccb24e6d189986f316dad32b"
+     "path": "/home/andrew/scratch/w19/covers/pack/stems/htdemucs/anthem_brindle_heavy/drums.wav",
+     "sha256": "42e0570616c8c9decbce097df58899ade4dcc635baa2bfa2cbb02bf1a88a85ca"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w18/anthem-pack3/stems/htdemucs/anthem_brindle_heavy/bass.wav",
-     "sha256": "93d50c587aa88828775d63684ae0243b9b3db933cbfa803fe35c24ee42698fd5"
+     "path": "/home/andrew/scratch/w19/covers/pack/stems/htdemucs/anthem_brindle_heavy/bass.wav",
+     "sha256": "3fad0ebdc7293bcb64b03f45c08cae25bb88c9756e2524b310648fb2654d76fb"
     },
     "other": {
-     "path": "/home/andrew/scratch/w18/anthem-pack3/stems/htdemucs/anthem_brindle_heavy/other.wav",
-     "sha256": "60f01338f88ad2b4290fe63285bc9ce5e95d2ec894c865f362b8ab6a5bfde60b"
+     "path": "/home/andrew/scratch/w19/covers/pack/stems/htdemucs/anthem_brindle_heavy/other.wav",
+     "sha256": "8cdc9070b816b923a36c677919285041d2a62514dc8e6d90087091cdb56a8b19"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w18/anthem-pack3/stems/htdemucs/anthem_brindle_heavy/vocals.wav",
-     "sha256": "613260aad7974867806dc2085546dcc66600083a5cdcce25947454210ab61c5d"
+     "path": "/home/andrew/scratch/w19/covers/pack/stems/htdemucs/anthem_brindle_heavy/vocals.wav",
+     "sha256": "ba49a17557f4cb8c462f5664be997a9ac644ed12e2918156ae73fec816add194"
     }
    },
    "note": "htdemucs; vocals summed into other"
@@ -49,8 +49,8 @@
   "main": {
    "parent": "single",
    "take": "anthem-brindle-heavy",
-   "source_start": 294336,
-   "take_start": 294336,
+   "source_start": 299776,
+   "take_start": 299776,
    "bpm": 150,
    "beat": 17640,
    "bar": 70560,
@@ -183,10 +183,10 @@
  "cuts": "measured-beat-phase",
  "whole": false,
  "timing_verified": false,
- "gain_db": 0.4,
+ "gain_db": 0.3,
  "measured": {
   "lufs": -16.0,
-  "true_peak": -1.6,
+  "true_peak": -1.2,
   "note": "summed stems before Ogg encode"
  }
 }

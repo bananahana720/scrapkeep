@@ -32,3 +32,13 @@ static func options(audio) -> Dictionary:
 
 static func starts(id: String, options: Dictionary, lead: int, start: int) -> Array:
 	return pieces(id, options, lead, start).map(func(p): return p[0])
+
+
+# The cue id a park_dam event row names for `key` ("telegraph" or "land"), so a test follows the
+# row's own sound rather than a family id it once shared.
+static func dam_cue(event_id: String, key: String) -> String:
+	var park = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/park_dam.json"))
+	for row in park.event_rows:
+		if row.id == event_id:
+			return row.music_cue[key]
+	return ""
