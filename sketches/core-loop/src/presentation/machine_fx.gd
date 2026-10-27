@@ -329,12 +329,12 @@ static func word_label() -> Label3D:
 	return label
 
 
-# A word label showing every glyph a word can draw, for BakeWarm: the first word of a run (KLANG
+# A word label showing `glyphs`, for BakeWarm, which shows every glyph a word can draw: the first word of a run (KLANG
 # on a heavy hit) otherwise rasterizes its glyphs at this size and outline in the frame's deferred
 # Label3D update (stage 1 f3822, 44 ms of a 106-121 ms frame on the cloud box).
-static func warm_views() -> Array[Node3D]:
+static func warm_views(glyphs: String) -> Array[Node3D]:
 	var label := word_label()
-	label.text = WARM_GLYPHS
+	label.text = glyphs
 	return [label]
 
 

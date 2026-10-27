@@ -51,7 +51,7 @@ func _run() -> void:
 	events.stage_entered.emit(1, false)
 	var queued: Array = BakeWarm.firsts()
 	t.check("the session's first entry queues every first moment and codex icon once",
-		node._first_queue == queued and queued.size() == BakeWarm.FIRSTS.size() + CodexStyle.CATEGORIES.size(), str(node._first_queue))
+		node._first_queue == queued and queued.size() == BakeWarm.FIRSTS.size() - 1 + _word_frames() + CodexStyle.CATEGORIES.size(), str(node._first_queue))
 	events.stage_entered.emit(1, true)
 	t.check("a retry queues none again", node._first_queue.size() == queued.size())
 
@@ -73,7 +73,7 @@ func _run() -> void:
 				placed = placed and warm.position == BakeWarm.OUT_OF_SIGHT and warm.process_mode == Node.PROCESS_MODE_DISABLED
 	await process_frame
 	t.check("each first moment with a view stands once, one at a time, and leaves",
-		seen == BakeWarm.FIRSTS.filter(func(f): return f != "hero_chunks") and most == 1 and _first_warms(node).is_empty(), "%s, at most %d" % [seen, most])
+		seen == queued.filter(func(f): return f != "hero_chunks" and not f.begins_with("codex_icon:")) and most == 1 and _first_warms(node).is_empty(), "%s, at most %d" % [seen, most])
 	t.check("the views stand out of sight in a holder that never processes", placed)
 
 	var armour: Array = views.get("armour_read", [])
@@ -91,9 +91,12 @@ func _run() -> void:
 		pickups.size() == 2 * variants and pickups.all(func(v): return v["shader"] == ScrapField._pickup_material(Palette.ARC).shader), "%d views" % pickups.size())
 	var arc: Array = views.get("arc_mark", [])
 	t.check("the arc mark draws the shared ring every mark draws", arc.size() == 1 and arc[0]["mesh"] == Combat._arc_ring())
-	var machine: Array = views.get("machine_words", [])
-	t.check("the machine word stands at the size and outline a word draws, with every glyph a word can draw",
-		machine.size() == 1 and machine[0]["text"] == MachineFx.WARM_GLYPHS and machine[0]["font"] == [112, 30, true], str(machine))
+	var machine := []
+	for i in _word_frames():
+		machine.append_array(views.get("machine_words:%d" % i, []))
+	t.check("the machine words stand at the size and outline a word draws, a few glyphs a frame, every glyph a word can draw in turn",
+		machine.size() == _word_frames() and "".join(machine.map(func(v): return v["text"])) == MachineFx.WARM_GLYPHS
+		and machine.all(func(v): return v["font"] == [112, 30, true] and v["text"].length() <= BakeWarm.GLYPHS_A_FRAME), str(machine))
 	var drawn := MachineFx.WORDS.values()
 	for table in [MachineFx.SPECIALS, MachineFx.BOSSES]:
 		for row in table.values():
@@ -157,3 +160,7 @@ func _read(view: Node) -> Dictionary:
 
 func _first_warms(node: Node) -> Array:
 	return node.get_children().filter(func(child): return child.has_meta("first_warm") and not child.is_queued_for_deletion())
+
+
+func _word_frames() -> int:
+	return ceili(MachineFx.WARM_GLYPHS.length() / float(BakeWarm.GLYPHS_A_FRAME))

@@ -17,8 +17,8 @@ extends Node
 # mark each draw a material nothing else drew before, and on the 4080 a lock pack's first multi-kill
 # paid for all of them in one frame (stage 1 f3822, 47-61 ms, 22 pipelines the frame after; unit 23
 # receipt on #494). The first machine word (KLANG on a heavy hit) rasterizes its glyphs in that
-# frame's deferred Label3D update (44 ms of it on the cloud box), so a word label with every glyph
-# a word draws stands first too. Each is built by its owner's own builder in an inert holder for
+# frame's deferred Label3D update (44 ms of it on the cloud box), so word labels with every glyph
+# a word draws stand first too, a few glyphs a frame (all of them in one frame was 51 ms on the 4080). Each is built by its owner's own builder in an inert holder for
 # one frame, and the codex category icons it paints on the CPU are drawn ahead. The materials are held, so their shaders stay compiled.
 # A bot run that builds stages whole skips it, like fleet._warm_scripts, so frame costs stay as
 # they were where seeds must replay.
@@ -66,6 +66,8 @@ const SPAWN_WARM := ["chaser", "lobber", "mag_trapper", "jolt_layer", "hooker", 
 # category icon ("codex_icon:<category>"), one a frame. "hero_chunks" starts a threaded load of the kill
 # chunks' glb and holds it when done, so the first discovery burst reads it from the cache, not the disk.
 const FIRSTS := ["scrap_pickup", "armour_read", "synergy_ring", "arc_mark", "machine_words", "hero_chunks"]
+# The machine word glyphs one warm frame rasterizes.
+const GLYPHS_A_FRAME := 4
 # Far under every stage, so the one frame a warm spawn stands there is never seen.
 const OUT_OF_SIGHT := Vector3(0.0, -10000.0, 0.0)
 
@@ -143,7 +145,13 @@ func _process(_delta: float) -> void:
 
 
 static func firsts() -> Array:
-	var queue: Array = FIRSTS.duplicate()
+	var queue: Array = []
+	for first: String in FIRSTS:
+		if first != "machine_words":
+			queue.append(first)
+			continue
+		for i in ceili(MachineFx.WARM_GLYPHS.length() / float(GLYPHS_A_FRAME)):
+			queue.append("machine_words:%d" % i)
 	for id in CodexStyle.CATEGORIES:
 		queue.append("codex_icon:" + String(id))
 	return queue
@@ -162,8 +170,6 @@ static func first_view(first: String, parent: Node) -> Node3D:
 			views = [Combat.arc_mark_view()]
 		"scrap_pickup":
 			views = ScrapField.warm_views()
-		"machine_words":
-			views = MachineFx.warm_views()
 		"hero_chunks":
 			# The headless renderer's mesh RIDs are not thread-safe (thread_guard.gd), so there the glb's
 			# ArrayMeshes load on the main thread, as park_props._uncached does.
@@ -173,6 +179,8 @@ static func first_view(first: String, parent: Node) -> Node3D:
 					_held[path] = load(path)
 				elif ResourceLoader.load_threaded_request(path) == OK:
 					_loading.append(path)
+		_ when first.begins_with("machine_words:"):
+			views = MachineFx.warm_views(MachineFx.WARM_GLYPHS.substr(int(first.get_slice(":", 1)) * GLYPHS_A_FRAME, GLYPHS_A_FRAME))
 		_ when first.begins_with("codex_icon:"):
 			CodexStyle.icon(first.trim_prefix("codex_icon:"))
 	if views.is_empty():
