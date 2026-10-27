@@ -334,3 +334,15 @@ test("the 45 s check covers Learner attempt 1 and attempt 5", () => {
   const clean = buildTable([run("brindle", "boss", 2, "learner5", "loss", { diedS: 50 })])[0];
   assert.equal(clean.tell.ok, true);
 });
+
+test("--tier passes --run-tier to every job, joins the plan hash only when set, and titles the table", () => {
+  const jobs = planCells({ builds: {}, seeds: 2, cells: ["warden"], only: ["w1"], tier: 2 });
+  assert.ok(jobs.length > 0 && jobs.every((j) => j.args.includes("--run-tier=2") && !j.args.some((a) => a.startsWith("--from-stage="))));
+  assert.ok(planCells({ builds: {}, seeds: 1, cells: ["warden"], only: ["w1"] }).every((j) => !j.args.some((a) => a.startsWith("--run-tier"))));
+  const plan = { cells: ["warden"], only: ["w1"], seeds: 24, columns: ["expert"], tune: "" };
+  assert.equal(planHash({ ...plan, tier: 0 }), planHash(plan));
+  assert.notEqual(planHash({ ...plan, tier: 1 }), planHash(plan));
+  assert.notEqual(planHash({ ...plan, tier: 1 }), planHash({ ...plan, tier: 2 }));
+  assert.match(renderTable([], { run_tier: 3 }), /Run tier 3 \(HARD ladder rung 3/);
+  assert.doesNotMatch(renderTable([], {}), /Run tier/);
+});

@@ -400,10 +400,12 @@ func selected_run_tier() -> int:
 	return run_tier
 
 
-func select_run_tier(value: int, profile) -> bool:
+# check_unlock false is the bots' --run-tier (tools/bot_run.gd): the tier without earning first_win,
+# which would also open the secrets.
+func select_run_tier(value: int, profile, check_unlock := true) -> bool:
 	if value not in [0, 1] or not _start_pick_open() or not _stage_entered:
 		return false
-	if value == 1 and not RunTier.unlocked(profile):
+	if value == 1 and check_unlock and not RunTier.unlocked(profile):
 		return false
 	run_tier = value
 	# A start-card choice survives retry, while the pick still rewinds as SG9 specifies.
