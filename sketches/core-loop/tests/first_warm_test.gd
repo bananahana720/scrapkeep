@@ -89,8 +89,13 @@ func _run() -> void:
 	var arc: Array = views.get("arc_mark", [])
 	t.check("the arc mark draws the shared ring every mark draws", arc.size() == 1 and arc[0]["mesh"] == Combat._arc_ring())
 	t.check("the materials the views drew are held", BakeWarm._kept.size() == 3 and BakeWarm._kept.all(func(m): return is_instance_valid(m)))
-	t.check("the kill chunks' glb is held, so a discovery burst reads the cache",
-		ResourceLoader.has_cached(HeroAssets.CHUNKS_PATH) and BakeWarm._held.get(HeroAssets.CHUNKS_PATH) == load(HeroAssets.CHUNKS_PATH))
+	var waited := 0
+	while not BakeWarm._held.has(HeroAssets.CHUNKS_PATH) and waited < 600:
+		await process_frame
+		waited += 1
+	t.check("the kill chunks' glb loads on a thread and is held, so a discovery burst reads the cache",
+		ResourceLoader.has_cached(HeroAssets.CHUNKS_PATH) and BakeWarm._held.get(HeroAssets.CHUNKS_PATH) == load(HeroAssets.CHUNKS_PATH) and BakeWarm._loading.is_empty(),
+		"%d frames" % waited)
 	t.check("the codex category icons are drawn ahead", CodexStyle.CATEGORIES.keys().all(func(id): return CodexStyle._icons.has(id)))
 
 	events.stage_entered.emit(1, false)

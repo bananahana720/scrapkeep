@@ -60,8 +60,8 @@ const WORLD_RIGS := {
 # name: the ones the warm also builds once.
 const SPAWN_WARM := ["chaser", "lobber", "mag_trapper", "jolt_layer", "hooker", "ramp_flipper", "boom_tender"]
 # The first moments with a view, in the order the warm builds them, one a frame; then each codex
-# category icon ("codex_icon:<category>"), one a frame. "hero_chunks" only holds the kill chunks'
-# glb, so the first discovery burst reads it from the cache, not the disk.
+# category icon ("codex_icon:<category>"), one a frame. "hero_chunks" starts a threaded load of the kill
+# chunks' glb and holds it when done, so the first discovery burst reads it from the cache, not the disk.
 const FIRSTS := ["scrap_pickup", "armour_read", "synergy_ring", "arc_mark", "hero_chunks"]
 # Far under every stage, so the one frame a warm spawn stands there is never seen.
 const OUT_OF_SIGHT := Vector3(0.0, -10000.0, 0.0)
@@ -69,6 +69,8 @@ const OUT_OF_SIGHT := Vector3(0.0, -10000.0, 0.0)
 static var _warm := {}
 # Rig scenes held for the session, so every spawn's load() returns the scene whose meshes were readied.
 static var _held := {}
+# Threaded loads a first started, held once done.
+static var _loading: Array[String] = []
 static var _firsts_done := false
 # The first moments' materials, held so the shaders their views compiled are never freed.
 static var _kept: Array[Material] = []
@@ -102,6 +104,12 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 
 
 func _process(_delta: float) -> void:
+	for path: String in _loading.duplicate():
+		var status := ResourceLoader.load_threaded_get_status(path)
+		if status == ResourceLoader.THREAD_LOAD_LOADED:
+			_held[path] = ResourceLoader.load_threaded_get(path)
+		if status != ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			_loading.erase(path)
 	if _shown != null:
 		_shown.queue_free()
 		_shown = null
@@ -139,8 +147,9 @@ static func first_view(first: String, parent: Node) -> Node3D:
 		"scrap_pickup":
 			views = ScrapField.warm_views()
 		"hero_chunks":
-			if ResourceLoader.exists(HeroAssets.CHUNKS_PATH):
-				_held[HeroAssets.CHUNKS_PATH] = load(HeroAssets.CHUNKS_PATH)
+			var path := HeroAssets.CHUNKS_PATH
+			if ResourceLoader.exists(path) and not _held.has(path) and ResourceLoader.load_threaded_request(path) == OK:
+				_loading.append(path)
 		_ when first.begins_with("codex_icon:"):
 			CodexStyle.icon(first.trim_prefix("codex_icon:"))
 	if views.is_empty():

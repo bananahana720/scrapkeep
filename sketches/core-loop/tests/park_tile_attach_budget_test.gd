@@ -19,15 +19,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var ground: Node3D = ParkTerrain.new()
-	root.add_child(ground)
-	ground._tiles_root = Node3D.new()
-	ground.add_child(ground._tiles_root)
-	ground._next_region = ground._regions.size()
-	ground._next_map = ParkTerrain.MAP_TYPES.size()
-	ground._faces.resize(ParkTerrain.TILE_COUNT)
-	for i in ParkTerrain.TILE_COUNT:
-		ground._faces[i] = _full_tile(i) if i < 2 else PackedVector3Array([Vector3(i, 0, 0), Vector3(i + 1, 0, 0), Vector3(i, 0, 1)])
+	var ground := _ground()
 
 	var budget := ParkTerrain.ATTACH_BUDGET_USEC
 	t.check("the first tile of a frame goes in while the deadline stands, however costly the last",
@@ -39,12 +31,36 @@ func _run() -> void:
 	ground._attach_step(1 << 62)
 	t.check("a roomy frame adds TILES_PER_FRAME and measures the tile it added",
 		ground._next_tile == ParkTerrain.TILES_PER_FRAME and ground._tile_usec > 0, "%d tiles, last %d us" % [ground._next_tile, ground._tile_usec])
-	ground._attach_step(-1)
-	t.check("the landing's finish adds every tile at once, whatever the cost", ground._next_tile == ParkTerrain.TILE_COUNT and ground.tiles.size() == ParkTerrain.TILE_COUNT)
-
+	var steps := 1
+	while ground.phase != ParkTerrain.Phase.READY and steps < 2 * ParkTerrain.TILE_COUNT:
+		ground._attach_step(1 << 62)
+		steps += 1
+	t.check("frame by frame, the step drains every tile and reports the ground built",
+		ground.phase == ParkTerrain.Phase.READY and ground.tiles.size() == ParkTerrain.TILE_COUNT and steps == ceili(float(ParkTerrain.TILE_COUNT) / ParkTerrain.TILES_PER_FRAME),
+		"%d steps, %d tiles" % [steps, ground.tiles.size()])
 	ground.queue_free()
+
+	var landing := _ground()
+	landing._attach_step(-1)
+	t.check("the landing's finish adds every tile at once, whatever the cost",
+		landing.phase == ParkTerrain.Phase.READY and landing.tiles.size() == ParkTerrain.TILE_COUNT)
+	landing.queue_free()
 	await process_frame
 	quit(t.verdict())
+
+
+func _ground() -> Node3D:
+	var ground: Node3D = ParkTerrain.new()
+	root.add_child(ground)
+	ground._tiles_root = Node3D.new()
+	ground.add_child(ground._tiles_root)
+	ground._next_region = ground._regions.size()
+	ground._next_map = ParkTerrain.MAP_TYPES.size()
+	ground.phase = ParkTerrain.Phase.ATTACHING
+	ground._faces.resize(ParkTerrain.TILE_COUNT)
+	for i in ParkTerrain.TILE_COUNT:
+		ground._faces[i] = _full_tile(i) if i < 2 else PackedVector3Array([Vector3(i, 0, 0), Vector3(i + 1, 0, 0), Vector3(i, 0, 1)])
+	return ground
 
 
 # A tile's worth of the grid's triangles (80 by 80 cells, two each), on a gentle wave.
