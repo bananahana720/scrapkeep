@@ -18,8 +18,10 @@ extends Node
 # paid for all of them in one frame (stage 1 f3822, 47-61 ms, 22 pipelines the frame after; unit 23
 # receipt on #494). The first machine word (KLANG on a heavy hit) rasterizes its glyphs in that
 # frame's deferred Label3D update (44 ms of it on the cloud box), so word labels with every glyph
-# a word draws stand first too, a few glyphs a frame (all of them in one frame was 51 ms on the 4080). Each is built by its owner's own builder in an inert holder for
-# one frame, and the codex category icons it paints on the CPU are drawn ahead. The materials are held, so their shaders stay compiled.
+# a word draws stand first too, a few glyphs a frame (all of them in one frame was 51 ms on the 4080),
+# then one label with all of them, its glyphs cached by then: with only the slices, the first heavy
+# hit still drew a 34-40 ms frame on the 4080 (f5730-5777), which the one-frame warm never did.
+# Each is built by its owner's own builder in an inert holder for one frame, and the codex category icons it paints on the CPU are drawn ahead. The materials are held, so their shaders stay compiled.
 # A bot run that builds stages whole skips it, like fleet._warm_scripts, so frame costs stay as
 # they were where seeds must replay.
 
@@ -152,6 +154,7 @@ static func firsts() -> Array:
 			continue
 		for i in ceili(MachineFx.WARM_GLYPHS.length() / float(GLYPHS_A_FRAME)):
 			queue.append("machine_words:%d" % i)
+		queue.append("machine_words:all")
 	for id in CodexStyle.CATEGORIES:
 		queue.append("codex_icon:" + String(id))
 	return queue
@@ -179,6 +182,8 @@ static func first_view(first: String, parent: Node) -> Node3D:
 					_held[path] = load(path)
 				elif ResourceLoader.load_threaded_request(path) == OK:
 					_loading.append(path)
+		"machine_words:all":
+			views = MachineFx.warm_views(MachineFx.WARM_GLYPHS)
 		_ when first.begins_with("machine_words:"):
 			views = MachineFx.warm_views(MachineFx.WARM_GLYPHS.substr(int(first.get_slice(":", 1)) * GLYPHS_A_FRAME, GLYPHS_A_FRAME))
 		_ when first.begins_with("codex_icon:"):

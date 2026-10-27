@@ -51,7 +51,7 @@ func _run() -> void:
 	events.stage_entered.emit(1, false)
 	var queued: Array = BakeWarm.firsts()
 	t.check("the session's first entry queues every first moment and codex icon once",
-		node._first_queue == queued and queued.size() == BakeWarm.FIRSTS.size() - 1 + _word_frames() + CodexStyle.CATEGORIES.size(), str(node._first_queue))
+		node._first_queue == queued and queued.size() == BakeWarm.FIRSTS.size() + _word_frames() + CodexStyle.CATEGORIES.size(), str(node._first_queue))
 	events.stage_entered.emit(1, true)
 	t.check("a retry queues none again", node._first_queue.size() == queued.size())
 
@@ -97,6 +97,9 @@ func _run() -> void:
 	t.check("the machine words stand at the size and outline a word draws, a few glyphs a frame, every glyph a word can draw in turn",
 		machine.size() == _word_frames() and "".join(machine.map(func(v): return v["text"])) == MachineFx.WARM_GLYPHS
 		and machine.all(func(v): return v["font"] == [112, 30, true] and v["text"].length() <= BakeWarm.GLYPHS_A_FRAME), str(machine))
+	var whole: Array = views.get("machine_words:all", [])
+	t.check("then one machine word label stands with every glyph, cached by the slices before it",
+		whole.size() == 1 and whole[0]["text"] == MachineFx.WARM_GLYPHS and whole[0]["font"] == [112, 30, true], str(whole))
 	var drawn := MachineFx.WORDS.values()
 	for table in [MachineFx.SPECIALS, MachineFx.BOSSES]:
 		for row in table.values():
