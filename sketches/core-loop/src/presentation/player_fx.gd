@@ -216,52 +216,94 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 # pilot's class colour from the charge record, never mint for all (DECISIONS pilot call d;
 # ROADMAP Effects row: a coil collar glow with a ring or pip shape, no chevron). The arc rides
 # level at the fairlead's radius, behind the line of travel so the chase camera sees it, and
-# holds its last bearing when the ball is near rest. DUNK_PIPS pips along it go dark one by one
-# as the window runs down, and the coil pulses faster near the end. The sound reads the same
-# record (audio.gd), and the glow clears on spend and on expiry because both clear the record.
+# holds its last bearing when the ball is near rest. DUNK_PIPS studs on top of it burn in the
+# class colour and go dark one by one as the window runs down, and the coil pulses faster near
+# the end. The sound reads the same record (audio.gd), and the coil clears on spend and on expiry
+# because both clear the record.
+# Sized for play distance (3060 still, #521: the ball is about 60 px tall there, so a 0.07 m
+# tube was 2 px and pips 3 and 1 looked the same): the tube is about 5 px, a dark ink rim
+# (an inverted hull) parts it from the cage, and it is emissive in the full class colour, so it
+# blooms under Forward+ glow instead of washing toward white.
 const DUNK_RADIUS := 1.06
-const DUNK_ARC := deg_to_rad(110.0)
-const DUNK_TUBE := 0.07
+const DUNK_ARC := deg_to_rad(140.0)
+const DUNK_TUBE := 0.16
+const DUNK_INK := 0.045
 const DUNK_PIPS := 3
-const DUNK_PIP_RADIUS := 0.12
+const DUNK_PIP_RADIUS := 0.21
+# Emission past about 1.5 clips every channel and burns the class colour to white; a dark
+# base keeps the hue at the top of the pulse.
+const DUNK_EMISSION := 1.1
+const DUNK_PIP_EMISSION := 1.5
+const DUNK_BASE := 0.35
 # Below this planar speed the arc keeps its bearing, so it never spins at rest.
 const DUNK_HOLD_SPEED := 1.5
 
-var _dunk_pips: Array[MeshInstance3D] = []
+var _dunk_coil: StandardMaterial3D
+var _dunk_pips: Array[StandardMaterial3D] = []
+var _dunk_pip_lit: Array[bool] = []
 var _dunk_yaw := 0.0
 
 
 func _build_dunk_glow() -> void:
-	var coil := StandardMaterial3D.new()
-	coil.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	# Mixed, not added: an added coil washes to cream on sunlit sand and loses the class colour.
-	coil.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	coil.cull_mode = BaseMaterial3D.CULL_DISABLED
-	coil.render_priority = RENDER_PRIORITY
+	_dunk_coil = _dunk_emissive()
 	_dunk_glow = MeshInstance3D.new()
 	_dunk_glow.name = "DunkGlow"
-	_dunk_glow.mesh = _dunk_arc_mesh(coil)
+	_dunk_glow.mesh = _dunk_arc_mesh(_dunk_coil, DUNK_TUBE)
 	_dunk_glow.top_level = true
 	_dunk_glow.visible = false
 	_dunk_glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(_dunk_glow)
+	var rim := MeshInstance3D.new()
+	rim.name = "Ink"
+	rim.mesh = _dunk_arc_mesh(_dunk_ink(), DUNK_TUBE + DUNK_INK)
+	rim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_dunk_glow.add_child(rim)
 	var pip_mesh := SphereMesh.new()
 	pip_mesh.radius = DUNK_PIP_RADIUS
 	pip_mesh.height = DUNK_PIP_RADIUS * 2.0
-	pip_mesh.radial_segments = 8
-	pip_mesh.rings = 4
+	pip_mesh.radial_segments = 10
+	pip_mesh.rings = 5
+	var pip_ink := SphereMesh.new()
+	pip_ink.radius = DUNK_PIP_RADIUS + DUNK_INK
+	pip_ink.height = pip_ink.radius * 2.0
+	pip_ink.radial_segments = 10
+	pip_ink.rings = 5
+	pip_ink.material = _dunk_ink()
 	for i in DUNK_PIPS:
 		var pip := MeshInstance3D.new()
 		pip.name = "Pip%d" % i
 		pip.mesh = pip_mesh
-		var lit := StandardMaterial3D.new()
-		lit.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		lit.render_priority = RENDER_PRIORITY
-		pip.material_override = lit
+		var mat := _dunk_emissive()
+		pip.material_override = mat
 		pip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		pip.position = _dunk_arc_point(_dunk_pip_angle(i), DUNK_RADIUS + DUNK_TUBE + DUNK_PIP_RADIUS * 0.5)
+		# Studs riding on top of the coil, so they stand clear of the cage behind them.
+		pip.position = _dunk_arc_point(_dunk_pip_angle(i), DUNK_RADIUS + DUNK_TUBE * 0.5) + Vector3.UP * (DUNK_TUBE + DUNK_PIP_RADIUS * 0.4)
+		var ink := MeshInstance3D.new()
+		ink.name = "Ink"
+		ink.mesh = pip_ink
+		ink.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		pip.add_child(ink)
 		_dunk_glow.add_child(pip)
-		_dunk_pips.append(pip)
+		_dunk_pips.append(mat)
+		_dunk_pip_lit.append(false)
+
+
+func _dunk_emissive() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.emission_enabled = true
+	mat.roughness = 0.4
+	mat.render_priority = RENDER_PRIORITY
+	return mat
+
+
+# The ink rim: the back faces of a slightly fatter shell, so only its outline shows.
+func _dunk_ink() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_FRONT
+	mat.albedo_color = INK
+	mat.render_priority = RENDER_PRIORITY
+	return mat
 
 
 # The pips sit evenly inside the arc.
@@ -274,21 +316,26 @@ static func _dunk_arc_point(angle: float, radius: float) -> Vector3:
 	return Vector3(sin(angle) * radius, 0.0, cos(angle) * radius)
 
 
-# A thin tube swept along the rear arc, built once.
-static func _dunk_arc_mesh(material: Material) -> ArrayMesh:
-	const SEGMENTS := 18
-	const SIDES := 6
+# A tube of radius `tube` swept along the rear arc (outward normals), built once.
+static func _dunk_arc_mesh(material: Material, tube: float) -> ArrayMesh:
+	const SEGMENTS := 24
+	const SIDES := 8
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for s in SEGMENTS:
 		for k in SIDES:
 			var quad: Array[Vector3] = []
-			for corner in [[s, k], [s + 1, k], [s + 1, k + 1], [s, k + 1]]:
+			var normals: Array[Vector3] = []
+			for corner in [[s, k], [s, k + 1], [s + 1, k + 1], [s + 1, k]]:
 				var a: float = DUNK_ARC * (float(corner[0]) / SEGMENTS - 0.5)
 				var b: float = TAU * float(corner[1]) / SIDES
-				quad.append(_dunk_arc_point(a, DUNK_RADIUS + DUNK_TUBE * cos(b)) + Vector3.UP * DUNK_TUBE * sin(b))
-			for v in [quad[0], quad[1], quad[2], quad[0], quad[2], quad[3]]:
-				st.add_vertex(v)
+				var centre := _dunk_arc_point(a, DUNK_RADIUS)
+				var out := _dunk_arc_point(a, 1.0) * cos(b) + Vector3.UP * sin(b)
+				quad.append(centre + out * tube)
+				normals.append(out)
+			for j in [0, 1, 2, 0, 2, 3]:
+				st.set_normal(normals[j])
+				st.add_vertex(quad[j])
 	st.set_material(material)
 	return st.commit()
 
@@ -297,20 +344,15 @@ func dunk_glow_shown() -> bool:
 	return _dunk_glow != null and _dunk_glow.visible
 
 
-# How many of the pips are lit: all of them at the store, none at the window's end.
+# How many of the pips burn: all of them at the store, none at the window's end.
 func dunk_pips_lit() -> int:
-	if not dunk_glow_shown():
-		return 0
-	var lit := 0
-	for pip in _dunk_pips:
-		lit += 1 if pip.visible else 0
-	return lit
+	return _dunk_pip_lit.count(true) if dunk_glow_shown() else 0
 
 
 func dunk_glow_color() -> Color:
-	if _dunk_glow == null:
+	if _dunk_coil == null:
 		return Color.BLACK
-	var c: Color = (_dunk_glow.mesh.surface_get_material(0) as StandardMaterial3D).albedo_color
+	var c: Color = _dunk_coil.emission
 	return Color(c.r, c.g, c.b)
 
 
@@ -324,16 +366,17 @@ func _draw_dunk_glow() -> void:
 	var share := clampf(dunk.left() / dunk.WINDOW, 0.0, 1.0)
 	var pulse := 0.5 + 0.5 * sin(_clock * TAU * FlashGuard.rate(1.0 + 1.5 * (1.0 - share)))
 	var colour: Color = record["color"]
-	# A glow reads lighter than the hull it rides on (a copper coil on a copper cage), so the
-	# coil is the class colour run part way to white; the hue stays the pilot's.
-	var coil := colour.lerp(Color.WHITE, 0.3)
-	coil.a = FlashGuard.info(0.6 + 0.4 * pulse)
-	(_dunk_glow.mesh.surface_get_material(0) as StandardMaterial3D).albedo_color = coil
+	_dunk_coil.albedo_color = colour * Color(DUNK_BASE, DUNK_BASE, DUNK_BASE)
+	_dunk_coil.emission = colour
+	_dunk_coil.emission_energy_multiplier = FlashGuard.spike(DUNK_EMISSION, DUNK_EMISSION * (1.0 + 0.6 * pulse))
+	# A spent pip goes to ink, so 3 against 1 is a count of lit studs, not of shapes.
 	var lit := ceili(share * DUNK_PIPS)
 	for i in _dunk_pips.size():
-		var pip := _dunk_pips[i]
-		pip.visible = i < lit
-		(pip.material_override as StandardMaterial3D).albedo_color = colour.lerp(Color.WHITE, 0.55)
+		var burning := i < lit
+		_dunk_pip_lit[i] = burning
+		_dunk_pips[i].albedo_color = colour * Color(DUNK_BASE, DUNK_BASE, DUNK_BASE) if burning else INK
+		_dunk_pips[i].emission = colour if burning else Color.BLACK
+		_dunk_pips[i].emission_energy_multiplier = DUNK_PIP_EMISSION if burning else 0.0
 	var v: Vector3 = _velocity()
 	if Vector2(v.x, v.z).length() >= DUNK_HOLD_SPEED:
 		_dunk_yaw = atan2(-v.x, -v.z)
