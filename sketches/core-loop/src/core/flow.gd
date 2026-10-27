@@ -386,8 +386,8 @@ func reroll_start_pick() -> bool:
 	return rerolled
 
 
-func choose_run_tier(value: int) -> bool:
-	if not in_stage() or not ctx.run.select_run_tier(value, ctx.profile):
+func choose_run_tier(value: int, check_unlock := true) -> bool:
+	if not in_stage() or not ctx.run.select_run_tier(value, ctx.profile, check_unlock):
 		return false
 	if ctx.build != null:
 		ctx.build.recompute()
