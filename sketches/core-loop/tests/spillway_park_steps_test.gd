@@ -71,7 +71,12 @@ func _run() -> void:
 	t.check("the stepped pass waits while the stage is not calm", pass_.scenery.get_children().size() == 1
 		and stepped_root.get_node_or_null("Cottonwoods") == null)
 	flow.quiet = true
-	var frames := 0
+	# The first calm frame is the Warden break's own (gates, drops, unseal), so the pass takes the next one.
+	var phase_before: int = pass_._phase
+	var tree_before: int = pass_._next_tree
+	await process_frame
+	t.check("the stepped pass sits out the first calm frame", pass_._phase == phase_before and pass_._next_tree == tree_before and step._calm_frames == 1)
+	var frames := 1
 	while is_instance_valid(step) and not step.is_queued_for_deletion() and frames < 2000:
 		await process_frame
 		frames += 1

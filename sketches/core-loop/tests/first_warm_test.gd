@@ -73,7 +73,7 @@ func _run() -> void:
 				placed = placed and warm.position == BakeWarm.OUT_OF_SIGHT and warm.process_mode == Node.PROCESS_MODE_DISABLED
 	await process_frame
 	t.check("each first moment with a view stands once, one at a time, and leaves",
-		seen == queued.filter(func(f): return f != "hero_chunks" and not f.begins_with("codex_icon:")) and most == 1 and _first_warms(node).is_empty(), "%s, at most %d" % [seen, most])
+		seen == queued.filter(func(f): return not BakeWarm.HELD_GLBS.has(f) and not f.begins_with("codex_icon:")) and most == 1 and _first_warms(node).is_empty(), "%s, at most %d" % [seen, most])
 	t.check("the views stand out of sight in a holder that never processes", placed)
 
 	var armour: Array = views.get("armour_read", [])
@@ -108,8 +108,9 @@ func _run() -> void:
 	var missing := drawn.filter(func(w: String): return Array(w.to_upper().replace(" ", "").split("")).any(func(c): return c not in MachineFx.WARM_GLYPHS))
 	t.check("every machine word's glyphs are in the warm label", not drawn.is_empty() and missing.is_empty(), str(missing))
 	t.check("the materials the views drew are held", BakeWarm._kept.size() == 3 and BakeWarm._kept.all(func(m): return is_instance_valid(m)))
-	t.check("the kill chunks' glb is held, loaded on the main thread under the headless renderer, so a discovery burst reads the cache",
-		ResourceLoader.has_cached(HeroAssets.CHUNKS_PATH) and BakeWarm._held.get(HeroAssets.CHUNKS_PATH) == load(HeroAssets.CHUNKS_PATH) and BakeWarm._loading.is_empty())
+	for path in [HeroAssets.CHUNKS_PATH, HeroAssets.GATE_PATH]:
+		t.check("%s is held, loaded on the main thread under the headless renderer, so its first moment reads the cache" % path.get_file(),
+			ResourceLoader.has_cached(path) and BakeWarm._held.get(path) == load(path) and BakeWarm._loading.is_empty())
 	# A threaded load still in flight at teardown is collected (a quit before it lands, scrapkeep#322). A script
 	# stands in for the glb, whose meshes the headless renderer cannot load off the main thread.
 	var standin := "res://src/core/sim_clock.gd"
