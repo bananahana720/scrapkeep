@@ -32,7 +32,7 @@ After humans were lost, animals became the reigning intelligent species, and the
 
 ## 2. Palette roles
 
-The eight AD-02 colours carry every role. Three extensions already live in code and keep narrow jobs, and one more is proposed. AD-02 allows local colours, and each extension exists so one fact reads as nothing else.
+The eight AD-02 colours carry every role. Four extensions already live in code and keep narrow jobs, and one more is proposed. AD-02 allows local colours, and each extension exists so one fact reads as nothing else.
 
 | Colour | Hex | Role | Never |
 | --- | --- | --- | --- |
@@ -40,10 +40,11 @@ The eight AD-02 colours carry every role. Three extensions already live in code 
 | Iron oxide | `#9b513a` | Rust, red rock, harm to you (player hit, scrap lost, heft down), Fleet body paint | Text on charcoal (2.5:1) |
 | Oil charcoal | `#242a28` | UI panels, tyres, keylines on every world indicator, icon strokes | Large world surfaces (it reads as a hole) |
 | Weathered petrol | `#365754` | Machinery bodies, recesses, the old enamel of ancient machines, cooldown wedge, inactive slot fill | Text of any kind |
-| Worn bone | `#d2c5a5` | HUD text, neutral glyphs, keycaps, common rarity, the kinetic element | Hostile marks |
+| Worn bone | `#d2c5a5` | HUD text, neutral glyphs, keycaps, grey panels, the kinetic element | Hostile marks |
 | Copper | `#b77843` | **Rivet**. Coils and windings on every mech | World rewards, enemy parts |
-| Safety amber | `#e5a044` | **Kest**. Rare rarity. Pressure gauges | Hostile fills |
-| Field mint | `#8bf0d3` | The shared collection field (scrap, beacon, core), **Sable**, the arc element, uncommon rarity | Enemy parts; ambient decoration away from a working device |
+| Safety amber | `#e5a044` | **Kest**. Relic rarity (gold rung, with a mint heart). Pressure gauges | Hostile fills |
+| Field mint | `#8bf0d3` | The shared collection field (scrap, beacon, core), **Sable**, the arc element, common rarity (the field-kit rung) on cards, gates and shop frames | Enemy parts; ambient decoration away from a working device |
+| Fleet cobalt (extension) | `#3d8bff` | Rare rarity: the fleet-grade rung, on cards, gates, shop frames and the ball's rare part pieces | Hostile marks, the ancients' light |
 | HAZARD (extension) | `#ff5a3c` | Hostile danger areas and nothing else | Any reward, any player effect |
 | BRASS (extension) | `#d9b44a` | Admiral Brindle and the Fleet's requisition tags | Player effects |
 | ICE (extension) | `#c8f0ff` | The frost element | Anything that is not frost |
@@ -68,7 +69,7 @@ Rejected violet `#a98cf0` measured ICE 61 / ICE 43 / ICE 49 / bone 22 for refere
 
 **Class colour means "yours".** Any effect the player's own action creates (indicator, trail, hit spark, kill pop, movement cue) takes the class colour from the class row. Rewards, the world and hostiles never do. The rule governs emissive light and effects, not materials. A copper pipe on a steam lift is plumbing, and a painted amber stripe on a valve is a safety marking.
 
-**Rarity ramp.** Common is worn bone, uncommon field mint, rare safety amber, and rare_plus two-tone amber with a mint heart, since I2 names every rare_plus item a Core or Heart (Andrew accepted this on 2026-09-27). HAZARD leaves the ramp. Each rarity also has a frame (§5), so colour never carries it alone.
+**Rarity ramp.** The item ladder (23 Oct 19:28Z): grey panels are worn bone, common (the field-kit rung) field mint, rare (the fleet-grade rung) cobalt, and relic (the gold rung) two-tone amber with a mint heart, since I2 names every rare_plus item a Core or Heart (Andrew accepted this on 2026-09-27). Two places keep an older read on purpose: a common part piece on the ball stays copper hardware, so mint never coats the shell, and the common pickup flash stays sandstone, because mint flashes mean "live" (an open weak point). HAZARD leaves the ramp. Each rarity also has a frame (§5), so colour never carries it alone.
 
 **Contrast rules.** These ratios were measured with the WCAG formula.
 
@@ -151,10 +152,9 @@ Every committed hostile attack draws the declared geometry damage will use, and 
 
 | Rarity | Frame | Colour |
 | --- | --- | --- |
-| Common | Thin 2 px outline | Bone |
-| Uncommon | Bold 5 px outline | Mint |
-| Rare | Double outline, two 3 px lines with a 3 px gap | Amber |
-| Rare_plus | Double outline with four bolt-head notches at 45°, like a gauge bezel | Amber outer, mint inner |
+| Common (field kit) | Thin 2 px outline | Mint |
+| Rare (fleet grade) | Double outline, two 3 px lines with a 3 px gap | Cobalt |
+| Relic (gold; was rare_plus) | Double outline with four bolt-head notches at 45°, like a gauge bezel | Amber outer, mint inner |
 
 **Category backplates.**
 

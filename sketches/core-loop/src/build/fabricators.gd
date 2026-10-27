@@ -1,6 +1,7 @@
 extends Node3D
 
 const Parts := preload("res://src/build/parts.gd")
+const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
@@ -194,14 +195,8 @@ func _refresh_glyph(fab: Dictionary) -> void:
 
 
 static func _rarity_color(rarity: String) -> Color:
-	match rarity:
-		"rare":
-			return Palette.AMBER
-		"relic":
-			return Palette.ARC
-		"evolved":
-			return Palette.ANCIENT
-	return Palette.SANDSTONE
+	var id := ItemGen.resolve_rarity(rarity)
+	return ItemGen.RARITY[id if id != "" else "common"]["color"]
 
 
 func _refresh_label(fab: Dictionary, cogs: int, held: Array) -> void:
