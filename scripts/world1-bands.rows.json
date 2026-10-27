@@ -353,7 +353,13 @@
       "label": "Novice, Learner, Expert on w1, w2, Brindle, park1, park2",
       "status": "gate",
       "cadence": "sitting",
-      "basis": "DECISIONS section 5, 19 Oct 01:58; 24 seeds"
+      "basis": "DECISIONS section 5, 19 Oct 01:58; 24 seeds",
+      "targets": {
+        "w1": { "novice": { "max": 0.35 } },
+        "park1": { "novice": { "max": 1.0 } },
+        "park2": { "novice": { "max": 1.0 } }
+      },
+      "targets_note": "Recorded bands (coordinator ruling ab, DECISIONS section 5, 26 Oct 20:58Z row, PR #504): w1 Novice <= 35% is the measured miss at dam mob hits x1.5 (33%, 24 seeds, receipt /mnt/project-files/world1/bands-w19/); park1 and park2 Novice reach is held at the measured 100% (24 seeds on 98f94561) until the w19 pacing lane's structural change moves it, then set back toward <= 50%. Every other cell and column grades against scripts/challenge/lib.mjs TARGETS."
     }
   ],
   "beat_rows_file": "sketches/core-loop/src/presentation/flourish_rows.gd",

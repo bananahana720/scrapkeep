@@ -240,3 +240,19 @@ test("review: pacing rows need every run of the policy to carry the measure", ()
   assert.ok(row(rows, "run-length-skipper").blocks);
   assert.equal(row(rows, "stage-length-skipper").verdict, "no data");
 });
+
+test("the difficulty row grades stored rates again: its own recorded bands, and Learner a1 as information at fights", () => {
+  const col = (rate, ok) => ({ rate, ok, n: 24, total: 24, excluded: {} });
+  const inputs = finished();
+  inputs.challenge.table = SPEC.challenge_cells.map((cell) => ({ cell, kind: cell.startsWith("park") ? "world" : cell === "brindle" ? "boss" : "warden", columns: { expert: col(1, true) } }));
+  const w1 = inputs.challenge.table.find((c) => c.cell === "w1");
+  // An older table stored Learner a1 at a Warden as a miss; today it is information only.
+  w1.columns.learner1 = col(0.71, false);
+  w1.columns.novice = col(0.33, false);
+  const spec = { ...SPEC, rows: SPEC.rows.map((r) => (r.id === "difficulty" ? { ...r, targets: undefined } : r)) };
+  assert.match(row(evaluate(spec, inputs), "difficulty").measured, /w1 fail/);
+  const banded = { ...SPEC, rows: SPEC.rows.map((r) => (r.id === "difficulty" ? { ...r, targets: { w1: { novice: { max: 0.35 } } } } : r)) };
+  assert.match(row(evaluate(banded, inputs), "difficulty").measured, /w1 pass/);
+  w1.columns.novice = col(0.375, true);
+  assert.match(row(evaluate(banded, inputs), "difficulty").measured, /w1 fail/);
+});
