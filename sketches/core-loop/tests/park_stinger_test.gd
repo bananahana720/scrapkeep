@@ -50,6 +50,7 @@ func _initialize() -> void:
 	_riser_landing_checks()
 	_unfinished_warm_checks()
 	_late_cell_checks()
+	_riser_warm_checks()
 	quit(_t.verdict())
 
 
@@ -199,3 +200,20 @@ func _late_cell_checks() -> void:
 	_t.check("once rendered it plays from where it would be by now, logged at its booked time",
 		_active(e).is_empty() and not log.is_empty() and int(log.at) == booked + waited and int(log.end) - int(log.at) == want.size() and int(log.scheduled) == booked,
 		str(log))
+
+
+# A stage's riser files are decoded on a worker at entry (audio._warm_park_risers): the dam's first
+# fleet call read its riser's length on the announcing frame, 27-30 ms frames on the 4080.
+func _riser_warm_checks() -> void:
+	var id := SfxBank.stinger_id("1-2", "riser_fleet")
+	_t.check("the flume's fleet riser is not decoded before the warm", not SfxBank._cache_has(SfxBank._samples, id))
+	var off = MusicEngine.new()
+	off.warm_samples([id] as Array[String])
+	MusicEngine.settle_stingers()
+	_t.check("an engine that does not warm stingers leaves it", not SfxBank._cache_has(SfxBank._samples, id))
+	var e = MusicEngine.new()
+	e.warm_stingers = true
+	e.warm_samples([id] as Array[String])
+	_t.check("the warm is listed for teardown", MusicEngine._stinger_tasks.size() == 1)
+	MusicEngine.settle_stingers()
+	_t.check("the warm decodes it into the bank", SfxBank._cache_has(SfxBank._samples, id) and SfxBank.samples(id).size() > 4000)

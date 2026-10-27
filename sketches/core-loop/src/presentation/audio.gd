@@ -2364,6 +2364,27 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	engine.set_fleet_ticks(0)
 	engine.set_reactor_pedal(false)
 	_flow_queue.append(["stage", stage, retry])
+	_warm_park_risers.call_deferred(stage)
+
+
+# A rendered event riser's length is read on the frame its event is announced (park_cue), so
+# the stage's riser files are decoded on a worker at entry: the dam's first fleet call baked
+# its riser there, 27-30 ms frames on the 4080. Deferred past the world's own handler, which
+# swaps in the stage's map.
+func _warm_park_risers(stage: int) -> void:
+	if ctx == null or ctx.get("terrain") == null:
+		return
+	var map = ctx.terrain.map()
+	if not "park" in map:
+		return
+	var zone := MusicRows.zone_id(stage, _music_stages())
+	var ids: Array[String] = []
+	for row in map.park.get("event_rows", []):
+		var cue := String(row.get("music_cue", {}).get("telegraph", ""))
+		var sound := SfxBank.stinger_id(zone, cue)
+		if cue != "" and not sound in ids and SfxBank.file_exists(sound):
+			ids.append(sound)
+	engine.warm_samples(ids)
 
 
 # The beacon climbs the reward ladder as it charges and lands on home, two octaves up.
