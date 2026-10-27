@@ -49,6 +49,9 @@ func _process(_delta: float) -> bool:
 			for pair in [["focus_lens", Palette.SANDSTONE], ["reserve_tank", Palette.SANDSTONE],
 					["sunforged_core", Palette.COBALT], ["warden_ward", Palette.AMBER]]:
 				_check("fountain tint " + pair[0], Juice.part_tint(pair[0]) == pair[1], "%s -> %s" % [pair[0], Juice.part_tint(pair[0])])
+			# An element still wins over the rung, as before the ladder: the fountain says what it does.
+			var arc: Color = EventKinds.juice("part_gained")["element"].get("arc", Color.BLACK)
+			_check("fountain tint arc_coil", Juice.part_tint("arc_coil") == arc, "common arc part -> %s" % Juice.part_tint("arc_coil"))
 			# Without combat's resolver a hit lands for its force.
 			_juice.plating_of = Callable()
 			_juice.resolve_of = Callable()
