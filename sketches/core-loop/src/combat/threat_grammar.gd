@@ -72,7 +72,10 @@ const EDGE_MIN := 0.35
 const EDGE_PER_METRE := 0.04
 const RAIL := 0.25
 const UNDERLAY := 0.35
-const UNDERLAY_ALPHA := 0.85
+# The keyline is opaque: HAZARD (L* 60.7) sits level with the pale floors, so the edge's lightness
+# step is the keyline's, and Forward+ blends in linear light, where 0.85 charcoal over the noon
+# Slag Bowl deck left only 18.8 to 21.0 L* (3060, #498 comment 6428905151; tools/keyline_floor_capture.gd).
+const UNDERLAY_ALPHA := 1.0
 # Half the width of a wave's front: the band drawn and the band contains() tests.
 const WAVE_EDGE := 1.0
 const DASH := 2.2
