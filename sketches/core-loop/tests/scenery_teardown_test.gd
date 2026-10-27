@@ -45,14 +45,20 @@ func _run() -> void:
 	_t.check("a restart and a return to the title keep the terrain's handlers", terrain.stage_built.get_connections().size() == handlers,
 		"%d then %d" % [handlers, terrain.stage_built.get_connections().size()])
 
-	# A pass begun ahead on a stage the Reaper then takes stops stepping.
+	# Two passes begun ahead step; the Reaper then takes one's stage, and only the other steps on.
 	var reaped := _begin_pass(game, terrain)
-	Terrain.Reaper.take(reaped.root)
+	var kept := _begin_pass(game, terrain)
+	for i in 2:
+		await process_frame
 	var phase: int = reaped.pass_._phase
+	var kept_phase: int = kept.pass_._phase
+	Terrain.Reaper.take(reaped.root)
 	for i in 3:
 		await process_frame
-	_t.check("a pass begun ahead stops when its stage is freed", reaped.pass_._phase == phase, "phase %d then %d" % [phase, reaped.pass_._phase])
+	_t.check("a pass begun ahead stops when its stage is freed", phase > 0 and reaped.pass_._phase == phase and kept.pass_._phase > kept_phase,
+		"taken: phase %d then %d; kept: phase %d then %d" % [phase, reaped.pass_._phase, kept_phase, kept.pass_._phase])
 	reaped.root.free()
+	kept.root.free()
 
 	var running := _begin_pass(game, terrain)
 	var pass_ref: WeakRef = weakref(running.pass_)
