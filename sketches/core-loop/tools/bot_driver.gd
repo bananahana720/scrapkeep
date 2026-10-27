@@ -452,6 +452,18 @@ var _activity_travel_cap := {}
 # lie past the crest, and the way down is the spillway sheet the explorer takes later anyway.
 const ACTIVITY_RETRY_MOVE := 150.0
 var _activity_deferred := {}
+# Under --explore-by a roll that has not come CLOSING_M nearer its site in CLOSING_SECONDS has run
+# out its travel cap: the explorer was spending 2-4 minutes a park rocking under a rim it cannot climb
+# (dam seed 2, rim_cache, 130 s at one spot on 5dc9b6cf with --explore-by=1200) before the
+# distance-scaled cap let it go. key -> [nearest metres so far, seconds since it last closed].
+const CLOSING_M := 10.0
+const CLOSING_SECONDS := 30.0
+var _closing := {}
+# Under --explore-by a cache the explorer has rammed RAM_TRIES times without a break is given up:
+# a run-up that meets the rise foot short of the face keeps failing the same way (dam east_rim_bench,
+# 5dc9b6cf), and the near clock let it try for FIND_SECONDS.
+const RAM_TRIES := 4
+var _ram_tries := {}
 const RELAY_ARM_SECONDS := 150.0
 var _relay_clock := 0.0
 var _relay_closed := {}
@@ -1033,6 +1045,8 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_activity_travel_cap = {}
 	_activity_deferred = {}
 	_activity_skip = {}
+	_closing = {}
+	_ram_tries = {}
 	_relay_clock = 0.0
 	_relay_closed = {}
 	_caches_seen = {}
@@ -1257,7 +1271,7 @@ func _rogue_goal(delta: float) -> bool:
 	if _rogue_travel_cap < 0.0:
 		_rogue_travel_cap = ACTIVITY_TRAVEL_SECONDS + _flat(ball, at) / ACTIVITY_TRAVEL_SPEED
 	_rogue_travel += delta
-	if _rogue_travel > _rogue_travel_cap:
+	if _rogue_travel > _rogue_travel_cap or _stalled("rogue", _flat(ball, at), delta):
 		_rogue_done = true
 		return false
 	_ignore_walls = false
@@ -1288,7 +1302,7 @@ func _rib_goal(delta: float, reach: float) -> bool:
 	if not _rib_travel_cap.has(key):
 		_rib_travel_cap[key] = RIB_SECONDS + best_d / ACTIVITY_TRAVEL_SPEED
 	_rib_clock[key] = float(_rib_clock.get(key, 0.0)) + delta
-	if float(_rib_clock[key]) > float(_rib_travel_cap[key]):
+	if float(_rib_clock[key]) > float(_rib_travel_cap[key]) or _stalled(key, best_d, delta):
 		_rib_skip[key] = true
 		return false
 	_ignore_walls = false
@@ -1297,6 +1311,17 @@ func _rib_goal(delta: float, reach: float) -> bool:
 	if best_d < WAYPOINT_REACHED or not _leg_to(key, ball, at, delta):
 		_act(at, _nearest_enemy(), delta)
 	return true
+
+
+# Whether the roll to `key` has stopped closing on it (CLOSING_M in CLOSING_SECONDS).
+func _stalled(key: String, d: float, delta: float) -> bool:
+	var c: Array = _closing.get(key, [d, 0.0])
+	if d < float(c[0]) - CLOSING_M:
+		c = [d, 0.0]
+	else:
+		c[1] = float(c[1]) + delta
+	_closing[key] = c
+	return float(c[1]) > CLOSING_SECONDS
 
 
 # The park graph's path to `point`, a waypoint every FIND_LEG_M, as a field find walks it. True
@@ -1865,8 +1890,10 @@ func _activity_goal(delta: float) -> bool:
 		s = null
 		_activity = ""
 	if _find_exit != Vector3.INF:
-		if _flat(ball, _find_exit) < WAYPOINT_REACHED or _activity_rushed():
+		if _flat(ball, _find_exit) < WAYPOINT_REACHED or _activity_rushed() \
+				or (engage_by > ENGAGE_BY and _stalled("find_exit", _flat(ball, _find_exit), delta)):
 			_find_exit = Vector3.INF
+			_closing.erase("find_exit")
 		else:
 			_goal = "activity find exit"
 			_act(_find_exit, _nearest_enemy(), delta)
@@ -1929,12 +1956,15 @@ func _activity_goal(delta: float) -> bool:
 			var leg: float = 0.0 if _activity_deferred.has(key) else _flat(ball, s.global_position) / ACTIVITY_TRAVEL_SPEED
 			_activity_travel_cap[key] = ACTIVITY_TRAVEL_SECONDS + leg
 		_activity_travel[key] = float(_activity_travel.get(key, 0.0)) + delta
+		if _stalled(key, _flat(ball, s.global_position), delta):
+			_activity_travel[key] = INF
 	else:
 		_activity_time[key] = float(_activity_time.get(key, 0.0)) + delta
 	if float(_activity_travel.get(key, 0.0)) > float(_activity_travel_cap.get(key, INF)) and not _activity_deferred.has(key):
 		_activity_deferred[key] = ball
 		_activity_travel.erase(key)
 		_activity_travel_cap.erase(key)
+		_closing.erase(key)
 		_activity = ""
 		return false
 	if float(_activity_time.get(key, 0.0)) > (FIND_SECONDS if s.has_meta("find") else (SURGE_SECONDS if s.id == "surge_run" else ACTIVITY_SECONDS)) \
@@ -2354,6 +2384,12 @@ func _cache_ram(s, ball: Vector3, delta: float) -> void:
 		if _flat(ball, point) < 5.0 or _cache_clock > CACHE_RUNUP_SECONDS:
 			_cache_phase = "ram"
 			_cache_clock = 0.0
+			if engage_by > ENGAGE_BY:
+				var key := _site_key(s)
+				_ram_tries[key] = int(_ram_tries.get(key, 0)) + 1
+				if int(_ram_tries[key]) > RAM_TRIES:
+					_activity_skip[key] = true
+					_activity = ""
 		return
 	_goal = "activity %s ram" % s.id
 	_ignore_walls = true
@@ -2495,6 +2531,10 @@ func _fight(target: Node3D, delta: float) -> void:
 	if target == game.flow.warden and _note.get("warden_fight_s") == null:
 		_note["warden_fight_s"] = snappedf(game.run.stage_time, 0.01)
 		_note["warden_fight_heft"] = snappedf(game.run.heft(), 0.001)
+		# The pacing check's tell: the explorer turned because --explore-by ran out, not because
+		# the park had nothing left it could do (a park read at the clock is the clock's length).
+		if engage_by > ENGAGE_BY:
+			_note["explore_clock_hit"] = game.run.stage_time > engage_by
 	var short: bool = _punch_seen < _plating(target)
 	if short:
 		_count("punch_short_s", delta)
