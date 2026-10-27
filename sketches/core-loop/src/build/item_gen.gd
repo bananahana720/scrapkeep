@@ -267,7 +267,7 @@ static func word_count(text: String) -> int:
 
 
 # Fills what an authored or generated row leaves out: name from the id, tier from the
-# rarity, family and icon from the base, a tag from the element or the base, and the
+# rarity (an authored tier wins, so a part promoted a rung keeps its price), family and icon from the base, a tag from the element or the base, and the
 # eight-word ceiling on the description.
 static func finish(part_id: String, spec: Dictionary) -> Dictionary:
 	var row := spec.duplicate(true)
@@ -279,7 +279,7 @@ static func finish(part_id: String, spec: Dictionary) -> Dictionary:
 		rarity = "common"
 	row["rarity"] = rarity
 	row["name"] = spec.get("name", part_id.replace("_", " ").capitalize())
-	row["tier"] = LEGACY_TIER.get(raw, RARITY[rarity]["tier"])
+	row["tier"] = int(spec.get("tier", LEGACY_TIER.get(raw, RARITY[rarity]["tier"])))
 	row["family"] = b["family"]
 	row["icon"] = b["icon"]
 	row["text"] = clip(spec.get("text", ""))
