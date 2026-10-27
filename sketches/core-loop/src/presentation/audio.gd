@@ -714,14 +714,18 @@ func _pump(virtual_frames := -1) -> void:
 		_ace_pumped_usec = 0
 	else:
 		var now := Time.get_ticks_usec()
-		var gap := now - _ace_pumped_usec if _ace_pumped_usec > 0 else 0
-		_ace_pumped_usec = now
-		# A frame longer than the queue drains it at any depth: that is the frame's to fix,
-		# not the device's period, so the queue stays where it is.
-		if gap * Harmony.RATE > queue_target * 1000000:
+		var gap := now - _ace_pumped_usec
+		# The ring's skips before the band's first pump are the synth's (a bot's opening bake
+		# blocks the main thread for seconds after the rings start). A frame longer than the
+		# queue drains it at any depth: that is the frame's to fix, not the device's period,
+		# so the queue stays where it is.
+		if _ace_pumped_usec == 0:
+			_skips_seen = _music_pb.get_skips()
+		elif gap * Harmony.RATE > queue_target * 1000000:
 			_note_stall(gap)
 		else:
 			_deepen_on_skip()
+		_ace_pumped_usec = now
 		# A launch's flight answers no contact and lands on the next stage's entry frame
 		# (about 120 ms on the 4080), so the ring fills whole until the landing.
 		var target := _ring_capacity if _launch_armed else queue_target
