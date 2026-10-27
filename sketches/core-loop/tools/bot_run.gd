@@ -58,7 +58,8 @@ const BotPlants := preload("res://tools/bot_plants.gd")
 # --explore-by=<s> (pacing lab, scripts/pacing-check.mjs) lets the completionist roll optional content
 # until stage second s instead of ENGAGE_BY (140), and stretches the stall cap by the same amount, so
 # a park can be measured longer than the default explorer stays. Absent, the bot is unchanged.
-# --panel-log=1 adds panel_kills (the build's kill_log: stage, kind, elite, rib, jackpot, dropped)
+# --panel-log=1 adds panel_kills (the build's kill_log: stage, kind, elite, rib, jackpot, dropped,
+# yard; a yard lock crew's kill has yard true, a cleared yard is a yard_clear row)
 # and panels (the run's pickups in order) to the bots.ndjson row.
 # --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
 # run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the

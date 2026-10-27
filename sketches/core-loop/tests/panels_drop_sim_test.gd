@@ -16,13 +16,18 @@ const T := preload("res://tests/support/t.gd")
 # Retune (when world 1's kill volume changes): re-record the streams with
 #   godot --headless --fixed-fps 90 --path . --script res://tools/bot_run.gd -- --out=<dir> \
 #     --policy=<completionist|skipper> --pilot=pylon_engineer --seeds=1,2,3,4,5,6,7,8 --stages=2 --table=park --gate=1 --warm-band=1 --panel-log=1
-# fold each bots.ndjson record's panel_kills (first five fields) and game_seconds into FIXTURE,
+# fold each bots.ndjson record's panel_kills (as recorded: a yard lock crew's kill carries true
+# as its seventh field, a cleared yard is a yard_clear row) and game_seconds into FIXTURE,
 # then move Panels.DROP_BY_WORLD[1] until RUN_BAND and EXPLORER_BAND hold. All three live here.
 # smoke: solo timeout=60s
 
 const FIXTURE := "res://tests/fixtures/panels_w1_kills.json"
 const SEEDS := 2000
-const RUN_BAND := [5.0, 14.0]
+# The band's top and the per-run cap track the measured yard-pays-once rate (DECISIONS, 27 Oct:
+# 15.2 skipper and 24.0 completionist kill panels a run on 24 seeds at e6dd4fdf); a skipper that
+# meets five or more elites (which always drop) lands 18-20 on the 27 Oct streams.
+const RUN_BAND := [5.0, 16.0]
+const RUN_CAP := 21.0
 const EXPLORER_BAND := [6.0, 10.0]
 
 var _t := T.new("panels_drop_sim_test")
@@ -45,7 +50,11 @@ static func replay(kills: Array, seed: int, world := 1) -> Dictionary:
 	dropper.world = world
 	var per := {}
 	for k in kills:
-		if String(k[1]) in Panels.NO_DROP_KINDS:
+		if String(k[1]) in Panels.NO_DROP_KINDS or (k.size() > 6 and bool(k[6])):
+			continue
+		# A cleared yard lock pays one panel without a roll (build.gd yard_cleared).
+		if String(k[1]) == "yard_clear":
+			per[int(k[0])] = int(per.get(int(k[0]), 0)) + 1
 			continue
 		if dropper.roll(rng, bool(k[2]), float(k[3]), bool(k[4])):
 			per[int(k[0])] = int(per.get(int(k[0]), 0)) + 1
@@ -82,7 +91,7 @@ func _paces(runs: Array) -> void:
 			name, kills.size(), float(run["game_seconds"]), got["run"], _per_text(got["per"]), explorer, card["run"]])
 		if String(run["policy"]) == "completionist":
 			explorers.append(explorer)
-		_t.check("world 1 run pays (%s)" % name, got["run"] >= RUN_BAND[0] - 2.0 and got["run"] <= RUN_BAND[1],
+		_t.check("world 1 run pays (%s)" % name, got["run"] >= RUN_BAND[0] - 2.0 and got["run"] <= RUN_CAP,
 			"%.1f panels by Brindle" % got["run"])
 		cards.append(card["run"] / maxf(card["stages"], 1))
 		by_policy.get_or_add(String(run["policy"]), []).append(got["run"])
@@ -94,10 +103,12 @@ func _paces(runs: Array) -> void:
 	var card_mean := _mean(cards)
 	_t.check("card row stays under three a stage", card_mean < 3.0, "%.1f a stage over %d runs" % [card_mean, cards.size()])
 	var comp := _mean(by_policy.get("completionist", []))
+	# A completionist's edge is the rib caches it takes (ruling ah): its kill panels plus every cache.
+	var comp_with_caches := comp + Panels.RIB_CACHES * _stages(runs, "completionist")
 	var skip := _mean(by_policy.get("skipper", []))
 	_t.check("mean run inside the band", (comp + skip) * 0.5 >= RUN_BAND[0] and (comp + skip) * 0.5 <= RUN_BAND[1],
 		"completionist %.1f, skipper %.1f, band %.0f to %.0f" % [comp, skip, RUN_BAND[0], RUN_BAND[1]])
-	_t.check("completionist out-earns skipper", comp > skip, "%.1f vs %.1f" % [comp, skip])
+	_t.check("completionist out-earns skipper", comp_with_caches > skip, "%.1f with its caches (%.1f from kills) vs %.1f" % [comp_with_caches, comp, skip])
 
 
 func _pity() -> void:
@@ -124,6 +135,19 @@ func _pity() -> void:
 
 func _determinism(kills: Array) -> void:
 	_t.eq("same seed, same drops", replay(kills, 11), replay(kills, 11))
+
+
+# The stages a policy's recorded runs crossed (the most any one run did).
+static func _stages(runs: Array, policy: String) -> int:
+	var most := 0
+	for run in runs:
+		if String(run["policy"]) != policy:
+			continue
+		var seen := {}
+		for k in run["kills"]:
+			seen[int(k[0])] = true
+		most = maxi(most, seen.size())
+	return most
 
 
 static func _mean(values: Array) -> float:
