@@ -158,8 +158,11 @@ func _ratios(tool: GDScript, graph, park: Dictionary, ruling: Dictionary) -> voi
 			c["at"] = [-80, -540]
 	var near_ruling: Dictionary = tool.pockets(graph, close)
 	_print_targets("planted close doors", tool, near_ruling)
-	t.check("pockets planted near the spawn carry no reward_ratio target", not _out_of_target(near_ruling, "reward_ratio"))
-	t.check("a low reward_ratio is no breach", not _breaks(near_ruling, "park", "reward_ratio"))
+	var near_names := []
+	for row in near_ruling.get("targets", []):
+		near_names.append(row["name"])
+	t.eq("pockets planted near the spawn still report only full_visit_ratio as a target", near_names, ["full_visit_ratio"])
+	t.check("the planted ruling still prints reward_ratio as information", tool.pocket_table(near_ruling).contains("reward_ratio %.3f (information only" % near_ruling["reward_ratio"]))
 
 	t.check("the fixture's full_visit_ratio prints in target", not _out_of_target(ruling, "full_visit_ratio"), str(targets))
 
