@@ -950,7 +950,7 @@ func _attach_step(deadline: int) -> void:
 	var added := 0
 	while _next_tile < TILE_COUNT:
 		var now := Time.get_ticks_usec()
-		if deadline >= 0 and (added >= TILES_PER_FRAME or now > deadline or (added > 0 and now + _tile_usec > deadline)):
+		if deadline >= 0 and not tile_fits(added, now, deadline, _tile_usec):
 			return
 		_add_tile(_next_tile)
 		_tile_usec = Time.get_ticks_usec() - now
@@ -960,6 +960,12 @@ func _attach_step(deadline: int) -> void:
 	phase = Phase.READY
 	set_process(false)
 	built.emit()
+
+
+# Whether one more collider tile fits this frame: up to TILES_PER_FRAME, inside the deadline, and,
+# after the first, only when the last tile's cost still fits (a full tile's Jolt shape is ~7 ms).
+static func tile_fits(added: int, now: int, deadline: int, last_usec: int) -> bool:
+	return added < TILES_PER_FRAME and now <= deadline and (added == 0 or now + last_usec <= deadline)
 
 
 func _add_tile(t: int) -> void:

@@ -3,7 +3,8 @@ extends SceneTree
 # Rule (dam f5773-5800 on the 4080, #499 rows): while a stage's terrain attaches during play, a
 # frame starts a second collider tile only when the last tile's cost still fits the attach budget.
 # A tile's add is Jolt building its mesh shape (about 7 ms on the 4080); two a frame held the dam at
-# 18 ms of _process for 50 frames. Fixture: a ParkTerrain at its tile step whose first two tiles
+# 18 ms of _process for 50 frames. The rule is checked on ParkTerrain.tile_fits with set numbers
+# (no wall clock). Fixture: a ParkTerrain at its tile step whose first two tiles
 # carry a real tile's 12,800 triangles and the rest one each; the landing's finish (deadline -1)
 # still adds every tile.
 
@@ -28,14 +29,16 @@ func _run() -> void:
 	for i in ParkTerrain.TILE_COUNT:
 		ground._faces[i] = _full_tile(i) if i < 2 else PackedVector3Array([Vector3(i, 0, 0), Vector3(i + 1, 0, 0), Vector3(i, 0, 1)])
 
-	ground._attach_step(Time.get_ticks_usec() + ParkTerrain.ATTACH_BUDGET_USEC)
-	var first_us: int = ground._tile_usec
-	t.check("a frame whose full tile leaves too little of the budget adds just that one", ground._next_tile == 1, "%d tiles, the tile %d us" % [ground._next_tile, first_us])
-	ground._attach_step(Time.get_ticks_usec() + ParkTerrain.ATTACH_BUDGET_USEC)
-	t.check("the next frame adds the next, never none", ground._next_tile == 2, "%d tiles" % ground._next_tile)
-	ground._attach_step(Time.get_ticks_usec() + ParkTerrain.ATTACH_BUDGET_USEC)
-	t.check("cheap tiles still go up to five a frame", ground._next_tile == 2 + ParkTerrain.TILES_PER_FRAME, "%d tiles" % ground._next_tile)
+	var budget := ParkTerrain.ATTACH_BUDGET_USEC
+	t.check("the first tile of a frame goes in while the deadline stands, however costly the last",
+		ParkTerrain.tile_fits(0, 1000, 1000 + budget, 2 * budget) and not ParkTerrain.tile_fits(0, 1001 + budget, 1000 + budget, 0))
+	t.check("a later tile goes in only when the last one's cost still fits",
+		ParkTerrain.tile_fits(1, 2000, 1000 + budget, 1000) and not ParkTerrain.tile_fits(1, 2000, 1000 + budget, budget))
+	t.check("never more than TILES_PER_FRAME a frame", not ParkTerrain.tile_fits(ParkTerrain.TILES_PER_FRAME, 0, budget, 0))
 
+	ground._attach_step(1 << 62)
+	t.check("a roomy frame adds TILES_PER_FRAME and measures the tile it added",
+		ground._next_tile == ParkTerrain.TILES_PER_FRAME and ground._tile_usec > 0, "%d tiles, last %d us" % [ground._next_tile, ground._tile_usec])
 	ground._attach_step(-1)
 	t.check("the landing's finish adds every tile at once, whatever the cost", ground._next_tile == ParkTerrain.TILE_COUNT and ground.tiles.size() == ParkTerrain.TILE_COUNT)
 
