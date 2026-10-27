@@ -25,6 +25,8 @@ func _run() -> void:
 	for row in rows:
 		dam._posture.posture = row[0]
 		t.eq("dam bar at %.1f reads %d chunks left" % [row[0], row[1]], dam.mount_driver.phase_chunks_left(dam), row[1])
+	dam._posture.posture = dam._posture.FULL
+	t.eq("a full bar that has not broken reads 1 chunk left", dam.mount_driver.phase_chunks_left(dam), 1)
 	dam._posture.posture = 0.0
 	dam._posture.chunks = 0
 	t.eq("the break reads 0 chunks left, whatever the bar", dam.mount_driver.phase_chunks_left(dam), 0)

@@ -186,7 +186,8 @@ func phase_chunks_left(warden) -> int:
 	if not warden._posture is DamPosture:
 		return warden.chunks_left()
 	var quarters := floori(warden._posture.posture / warden._posture.FULL * 4.0 + 1e-6)
-	return mini(warden.chunks_left(), maxi(0, 4 - quarters))
+	# A full bar that has not broken (a generic stagger) reads one chunk left; only the break reads none.
+	return mini(warden.chunks_left(), maxi(1, 4 - quarters))
 
 
 func judge_sheet_ram(warden, posture, hit: Dictionary, result: Dictionary) -> void:
