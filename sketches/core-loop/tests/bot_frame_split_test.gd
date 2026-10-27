@@ -12,7 +12,8 @@ const T := preload("res://tests/support/t.gd")
 #   net      net_ms is the row's ms less bot_ms, on every row;
 #   bot      some row has bot_ms over zero (the driver's tick is timed);
 #   events   the first frame is over 40 ms and carries an events list of bracket stamps, each with
-#            a name, a time and an on-CPU time.
+#            a name, a time and an on-CPU time;
+#   marks    a tick's phys_tail, phys_deferred and phys_deleted come in that order.
 # Evidence limit: the identity and the plumbing, not a timing; the planted --inject-ms cost is read
 # from a windowed GATES frame log.
 
@@ -54,4 +55,8 @@ func _initialize() -> void:
 		"ms %s, events %s" % [first.get("ms") if first is Dictionary else null, events])
 	if events is Array and not events.is_empty():
 		t.eq("a stamp is name, time, on-CPU time", String(events[0]).split(" ").size(), 3)
+		var names: Array = events.map(func(e): return String(e).split(" ")[0])
+		var tail := names.find("phys_tail")
+		t.check("a tick marks its deferred calls, then its deletes", tail >= 0 and names.find("phys_deferred", tail) > tail
+			and names.find("phys_deleted", tail) > names.find("phys_deferred", tail), str(names))
 	quit(t.verdict())

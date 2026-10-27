@@ -16,9 +16,11 @@ extends RefCounted
 # of every bracket with the main thread's on-CPU microseconds (/proc/thread-self/schedstat) on frames
 # over 40 ms: a gap with wall time and CPU time alike was busy, one with little CPU was waiting.
 # After each phys_tail it marks the tick's own engine work in tick order: phys_deferred when the
-# deferred calls queued by then have run, phys_deleted when the nodes queued for deletion by then
-# have been freed (a sentinel queued last; nodes queued later in the flush go after it); the gap from
-# there to the next frame is the physics server's step.
+# deferred calls queued by then have run; phys_deleted when the nodes queued for deletion by then have
+# been freed (a sentinel queued last; nodes queued later in the flush go after it), so that span also
+# holds the tick's physics timers, tweens and transform notifications. The gap from phys_deleted on is
+# the physics server's step plus navigation, idle callbacks, the next tick's body callbacks and the bot
+# driver, or on a frame's last tick bot_run's own frame row.
 
 var _phys_start := 0
 var _phys_us := 0
