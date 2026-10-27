@@ -777,6 +777,19 @@ func _warm_stinger(id: String, at: int) -> void:
 	_stinger_tasks.append(WorkerThreadPool.add_task(func(): SfxBank.samples_at(id, step, shift, theme_now), true, "stinger warm"))
 
 
+# Plain bank sounds a stage will ask for on a frame, decoded on a worker ahead of it.
+func warm_samples(ids: Array[String]) -> void:
+	if not warm_stingers or ids.is_empty():
+		return
+	_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
+	_stinger_tasks.append(WorkerThreadPool.add_task(_warm_samples.bind(ids), true, "riser warm"))
+
+
+static func _warm_samples(ids: Array[String]) -> void:
+	for id in ids:
+		SfxBank.samples(id)
+
+
 static func _settle_task(task: int) -> bool:
 	WorkerThreadPool.wait_for_task_completion(task)
 	return false
