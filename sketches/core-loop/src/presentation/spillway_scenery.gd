@@ -325,11 +325,17 @@ static func _on_stage_built(stage: int, ctx) -> void:
 # Steps a park pass begun ahead, one step a frame, and leaves when it is done.
 class ParkBuild extends Node:
 	var pass_
-	# Steps wait while this flow is not calm; without one (a test) they run every frame.
+	# Steps wait while this flow is not calm, and for the first calm frame, which is the Warden break's own
+	# (its gates, drops and unseal, 27-30 ms on the 4080); without a flow (a test) they run every frame.
 	var flow
+	var _calm_frames := 0
 
 	func _process(_delta: float) -> void:
 		if flow != null and not flow.calm():
+			_calm_frames = 0
+			return
+		_calm_frames += 1
+		if flow != null and _calm_frames < 2:
 			return
 		if not pass_.step():
 			finish()
