@@ -56,8 +56,8 @@ func _run() -> void:
 	t.eq("the bake implies 100 tiles", want_tiles, 100)
 	var sized := 0
 	for tile in ground.tiles:
-		var shape: Shape3D = tile.get_child(0).shape
-		var box: AABB = shape.get_debug_mesh().get_aabb()
+		var collider: CollisionShape3D = tile.get_child(0)
+		var box: AABB = collider.transform * collider.shape.get_debug_mesh().get_aabb()
 		if absf(box.size.x - 160.0) < 0.01 and absf(box.size.z - 160.0) < 0.01:
 			sized += 1
 	t.eq("every tile spans 160 m by 160 m", sized, want_tiles)
