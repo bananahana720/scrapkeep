@@ -78,6 +78,7 @@ const FACTS_UNMAPPED := {
 }
 # Instance ids are unique for the process; nothing reads their order.
 static var _attack_serial := 0
+static var _variables_by_script := {}
 
 var kind := "chaser"
 # The faction whose timbre and arrival cue this enemy carries (roster.gd): "fleet", or
@@ -833,10 +834,8 @@ func _dress_bake() -> void:
 # The materials this enemy's script holds in its own variables: the ones it mutates.
 func owned_materials() -> Array:
 	var out: Array = []
-	for prop in get_property_list():
-		if prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE == 0:
-			continue
-		var value = get(prop.name)
+	for prop_name in _script_variables():
+		var value = get(prop_name)
 		# A target or list entry freed before the deferred bake runs still sits in its variable.
 		if typeof(value) == TYPE_OBJECT and not is_instance_valid(value):
 			continue
@@ -849,6 +848,19 @@ func owned_materials() -> Array:
 				if item is StandardMaterial3D:
 					out.append(item)
 	return out
+
+
+# The script's own variables by name, read once per script: get_property_list walks every engine
+# property too, 0.4-0.6 ms a spawn headless (scrapkeep#494; two at the flume's entry).
+func _script_variables() -> PackedStringArray:
+	var script: Script = get_script()
+	if not _variables_by_script.has(script):
+		var names := PackedStringArray()
+		for prop in get_property_list():
+			if prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE != 0:
+				names.append(prop.name)
+		_variables_by_script[script] = names
+	return _variables_by_script[script]
 
 
 # The open attack as a fact, with the geometry and progress it has right now; {} when
