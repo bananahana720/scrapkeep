@@ -23,10 +23,11 @@ const T := preload("res://tests/support/t.gd")
 
 const FIXTURE := "res://tests/fixtures/panels_w1_kills.json"
 const SEEDS := 2000
-const RUN_BAND := [5.0, 14.0]
-# One run's kill panels may reach the ruled 11-18 by Brindle (ruling ah): a skipper that meets
-# three to seven elites (which always drop) lands 14-17 on the 27 Oct streams.
-const RUN_CAP := 18.0
+# The band's top and the per-run cap track the measured yard-pays-once rate (DECISIONS, 27 Oct:
+# 15.2 skipper and 24.0 completionist kill panels a run on 24 seeds at e6dd4fdf); a skipper that
+# meets five or more elites (which always drop) lands 18-20 on the 27 Oct streams.
+const RUN_BAND := [5.0, 16.0]
+const RUN_CAP := 21.0
 const EXPLORER_BAND := [6.0, 10.0]
 
 var _t := T.new("panels_drop_sim_test")
