@@ -13,7 +13,6 @@ const RadioCache := preload("res://src/world/radio_cache.gd")
 # station. The dial on the HUD (radio_dial.gd) draws what this holds.
 
 const PLAN_EVERY := 0.25
-const PLACE_AFTER_FRAMES := 4
 const SILENT_STATES := ["stage", "beacon", "gates", "launch", "boss", "dead"]
 
 var game
@@ -25,7 +24,6 @@ var _counts := {}
 var _cut_in := ""
 var _plan_left := 0.0
 var _dirty := false
-var _entries := 0
 
 
 func setup(game_ref) -> void:
@@ -43,7 +41,7 @@ func setup(game_ref) -> void:
 		events.run_started.connect(func(_class_id: String): _counts.clear())
 		events.flow_changed.connect(_on_flow_changed)
 		events.stage_entered.connect(func(_stage: int, _retry: bool):
-			_place_caches_soon()
+			_place_caches.call_deferred()
 			_plan_now())
 		var bus_args := _signal_args(events)
 		for on in RadioTakes.by_signal():
@@ -122,25 +120,10 @@ func find(id: String) -> bool:
 	return true
 
 
-# The last stage's caches come down in the entry tick, so none is collected in the new stage; the new
-# ones go up a few frames later, out of the tick that carries the stage swap (5.9 ms of it on the cloud
-# at the flume, scrapkeep#494). A newer entry meanwhile places its own.
-func _place_caches_soon() -> void:
-	for old in get_tree().get_nodes_in_group(RadioCache.GROUP):
-		old.remove_from_group(RadioCache.GROUP)
-		old.process_mode = Node.PROCESS_MODE_DISABLED
-		old.queue_free()
-	_entries += 1
-	var entry := _entries
-	for n in PLACE_AFTER_FRAMES:
-		await get_tree().process_frame
-		if entry != _entries or not is_inside_tree():
-			return
-	_place_caches()
-
-
-# The stage's unfound Signal caches go up at their spots.
+# The stage's unfound Signal caches go up at their spots; the last stage's come down.
 func _place_caches() -> void:
+	for old in get_tree().get_nodes_in_group(RadioCache.GROUP):
+		old.queue_free()
 	var terrain = game.ctx.get("terrain")
 	var root = game.ctx.get("root")
 	if terrain == null or root == null or not terrain.has_method("map") or terrain.map() == null:
