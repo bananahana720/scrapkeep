@@ -67,10 +67,17 @@ func _run() -> void:
 	# The ring alone leaves the far overlay out; with a point just inside the far footprint's corner the
 	# bounds reach it and it is read.
 	var corner := Vector2(at.x + 200.0, at.z + 200.0) + Vector2(4.9, 4.9)
-	var ring_raised := _compare(terrain, points, "the ring alone (far overlay left out)")
+	var ring_raised := _compare(terrain, points, "the ring alone (bounds miss the far overlay)")
 	var with_far := points.duplicate()
 	with_far.append(corner)
 	_compare(terrain, with_far, "the ring and a point inside the far footprint's corner")
+	# A small ring over the far footprint's corner: its bounds miss the far centre but reach the footprint,
+	# so the skip's disc, not the centre, must keep the overlay in.
+	var corner_ring := PackedVector2Array()
+	for k in 24:
+		corner_ring.append(corner + Vector2.from_angle(TAU * k / 24.0) * 1.0)
+	var corner_raised := _compare(terrain, corner_ring, "a ring over the far footprint's corner, its centre outside the bounds")
+	_t.check("the far overlay stands under some of the corner ring", corner_raised > 0, "%d raised" % corner_raised)
 	_t.check("the near overlay stands under some ring points", ring_raised > 0, "%d raised" % ring_raised)
 	_t.check("the far overlay stands under the corner point", terrain.height(corner.x, corner.y) > terrain._floor(0, corner.x, corner.y) + 0.5)
 	_t.check("an empty ask answers empty", terrain.heights(PackedVector2Array()).is_empty())
