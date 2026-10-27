@@ -7,7 +7,8 @@ const builds = () => Object.fromEntries([2, 3, 4, 5, 6].map((s) => [s, pickBuild
 
 test("the targets are the ruling's numbers", () => {
   assert.equal(TARGETS.fight.novice.max, 0.15);
-  assert.deepEqual(TARGETS.fight.learner1, { min: 0.15, max: 0.35 });
+  // Learner attempt 1 at bosses and Wardens is information only (DECISIONS section 5, 19 Oct 19:00).
+  assert.equal(TARGETS.fight.learner1, undefined);
   assert.equal(TARGETS.fight.learner5.min, 0.6);
   assert.equal(TARGETS.fight.expert.min, 0.85);
   assert.equal(TARGETS.fight.expertTop.min, 0.97);
@@ -179,7 +180,8 @@ test("the table marks each column ✓ or ✗ against its target and reports the 
   const table = buildTable(runs);
   const b = table.find((c) => c.cell === "brindle");
   assert.equal(b.columns.novice.ok, true);
-  assert.equal(b.columns.learner1.ok, true);
+  assert.equal(b.columns.learner1.ok, null);
+  assert.equal(b.columns.learner1.target, null);
   assert.equal(b.columns.expert.ok, true);
   assert.equal(b.columns.expertTop.ok, true);
   assert.equal(b.growthRatio, 0.5);
@@ -195,7 +197,9 @@ test("the table marks each column ✓ or ✗ against its target and reports the 
   assert.equal(table[0].cell, "brindle");
   const md = renderTable(table, { label: "t" });
   assert.match(md, /\| brindle \| 10% \(20\) \[\d+%-\d+%\] ✓ vs <= 15% \(18 died\) \|/);
-  assert.match(md, /35% \(20\) \[\d+%-\d+%\] ✓ vs 15%-35%/);
+  // Learner a1 at a fight cell prints its rate with no mark and no target.
+  assert.match(md, /\| 35% \(20\) \[\d+%-\d+%\] \(13 died\) \|/);
+  assert.match(md, /Learner a1 at bosses and Wardens is information only/);
   assert.match(md, /95% \(20\) \[\d+%-\d+%\] ✓ vs >= 85% \(1 capped\)/);
   assert.match(md, /80% \(10\) \[\d+%-\d+%\] ✗ vs <= 50%/);
   assert.match(md, /1 ✗ \(earliest 30\.0 s\)/);

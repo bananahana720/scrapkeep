@@ -25,9 +25,10 @@ const HIDDEN_ROUTES := 3
 # objective-fit test only; its constants are not copied, Scrapkeep derives its own).
 const BEACON_DISC_SHARE := 1.0
 const BEACON_FLAT_M := 2.5
-# comps/isaac/floor-generation.md:107: the median spawn-to-reward walk is at least 1.5 times the
-# median spawn-to-objective walk. Reported, not gated (K-UNITS.md:138).
-const REWARD_RATIO_MIN := 1.5
+# reward_ratio (the median spawn-to-pocket walk over the spawn-to-beacon walk) has no target
+# (ruling ac, 26 Oct; #494): the spawn rule puts the beacon at the park's far end, so no legal
+# door reaches the 1.5 of comps/isaac/floor-generation.md:107 (dam best 0.99, flume best 0.92).
+# park_graph prints it for information; detour_m carries "detour is the price".
 # comps/roboquest/stage-anatomy.md:125: the full-visit ratio is at most 3.0. Reported, not gated.
 const FULL_VISIT_RATIO_MAX := 3.0
 const ONLINE_KINDS := ["enemy_camp", "surge_run"]
