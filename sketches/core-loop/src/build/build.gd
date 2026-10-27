@@ -131,6 +131,10 @@ var _no_cells_logged := {}
 var _caches_pending := false
 # Ticks the placement has waited for the stage's colliders (_cache_ground).
 var _caches_wait := 0
+# The stage's rib cache spots, read from the director's graph on the first try and kept while the
+# placement waits for colliders: the read was 15 ms of the flume's entry tick and 5 ms of each wait
+# tick on the cloud (scrapkeep#494).
+var _cache_spots: Array = []
 # Every in-stage kill this run as the drop saw it, [stage, kind, elite, rib, jackpot, dropped],
 # for the drop simulation's recorded streams (tools/bot_run.gd --panel-log=1).
 var kill_log: Array = []
@@ -1007,6 +1011,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	scrap.clear_caches()
 	_caches_pending = true
 	_caches_wait = 0
+	_cache_spots = []
 	if retry:
 		dropper.dry = _stage_dry
 	else:
@@ -1124,8 +1129,11 @@ func _place_rib_caches() -> void:
 	var stage: int = ctx.flow.stage()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([ctx.run.run_seed, stage, "rib_caches"])
+	var spot_seed := rng.randi()
+	if _cache_spots.is_empty():
+		_cache_spots = director.rib_cache_spots(Panels.RIB_CACHES, spot_seed)
 	var spots: Array = []
-	for at in director.rib_cache_spots(Panels.RIB_CACHES, rng.randi()):
+	for at in _cache_spots:
 		var ground = _cache_ground(at)
 		if ground == null and _caches_wait < CACHE_WAIT_TICKS:
 			_caches_wait += 1

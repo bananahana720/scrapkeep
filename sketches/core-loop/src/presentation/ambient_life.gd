@@ -83,8 +83,18 @@ func _stage_entered(stage: int, _retry: bool) -> void:
 	var tree := get_tree()
 	for i in PLAN_AFTER_STEPS:
 		await tree.physics_frame
-	if serial == _entries and is_inside_tree():
-		_build_stage(stage)
+	if serial != _entries or not is_inside_tree():
+		return
+	# The plan a kind a physics step (AmbientHomes.Planner): planned whole it was 28 ms of one frame
+	# just after the flume's entry on the cloud (scrapkeep#494). A newer entry drops this one.
+	var planner = _begin_plan(stage)
+	if planner == null:
+		return
+	while planner.step():
+		await tree.physics_frame
+		if serial != _entries or not is_inside_tree():
+			return
+	_finish_plan(planner.homes)
 
 
 func _clear_stage(_reason: String) -> void:
@@ -98,6 +108,16 @@ func _build_stage(stage: int) -> void:
 		pool.reset()
 		_release_all()
 		return
+	var planner = _begin_plan(stage)
+	if planner == null:
+		return
+	while planner.step():
+		pass
+	_finish_plan(planner.homes)
+
+
+# The stage's home planner, or null for a stage with no ambient life (no park, no kind with a model).
+func _begin_plan(stage: int) -> AmbientHomes.Planner:
 	_release_all()
 	pool = null
 	_built_for = stage
@@ -105,17 +125,20 @@ func _build_stage(stage: int) -> void:
 	var map = ctx.terrain.map_for(stage)
 	var park = map.get("park") if map != null else null
 	if not park is Dictionary or park.is_empty():
-		return
+		return null
 	var kinds := []
 	for id in AmbientKinds.for_park(map_id):
 		if models.has(id) or ResourceLoader.exists(AmbientKinds.row(id)["model"]):
 			kinds.append(id)
 	if kinds.is_empty():
-		return
+		return null
 	_ground = ctx.terrain.ground_callable(stage)
 	var ground := _ground
 	var space := get_world_3d().direct_space_state if is_inside_tree() else null
-	var homes := AmbientHomes.plan(park, kinds, map_id.hash(), func(at: Vector2, perch: String) -> bool: return unfit(ground, space, at, perch))
+	return AmbientHomes.Planner.new(park, kinds, map_id.hash(), func(at: Vector2, perch: String) -> bool: return unfit(ground, space, at, perch))
+
+
+func _finish_plan(homes: Array) -> void:
 	for home in homes:
 		if home["perch"] == "ceiling":
 			home["roof"] = _roof_above(home["at"])

@@ -13,7 +13,7 @@ From the coordinator ruling, `project-guide/handoff/DECISIONS.md` section 5, 19 
 | Column | Cell | Target |
 | --- | --- | --- |
 | Novice | boss, Warden | win at most 15% |
-| Learner a1 | boss, Warden | win 15% to 35% on attempt 1 |
+| Learner a1 | boss, Warden | information only, no mark (DECISIONS section 5, 19 Oct 19:00, replaced the graded 15% to 35%); the old range is printed for reading |
 | Learner a5 | boss, Warden | win at least 60% on attempt 5 |
 | Expert ordinary | boss, Warden | win at least 85% |
 | Expert top | boss, Warden | win at least 97%; the fight-time ratio top/ordinary is shown for the growth-ratio check |

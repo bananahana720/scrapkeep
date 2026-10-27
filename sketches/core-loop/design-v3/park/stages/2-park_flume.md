@@ -794,7 +794,7 @@ The park file is `src/world/park/park_flume.json` (KD2 greybox continuation 2026
 | `bench_bounty` | risk | [-120, 336] | 171 | 171 | 1129 | 415 | True | common, rare |
 | `weir_valve` | hidden | [-152, -248] | 99 | 99 | 558 | 906 | True | the cache |
 
-The graph reports `reward_ratio` 0.532 against its starting target of at least 1.5. This reading is reported, not gated.
+The graph reports `reward_ratio` 0.532 against its starting target of at least 1.5. This reading is reported, not gated. Since ruling ac (26 Oct) `reward_ratio` has no target: the beacon is the park's far end, so no legal door reaches 1.5 (DECISIONS.md section 8).
 
 The authored gates at [300, 480] use `bay.gd`'s active `play_rect` boundary. The stage fixture checks the deck samples and at least one level cradle against that map, checks clearance at both allowed lifts, and rejects a control dock at [700, 480].
 

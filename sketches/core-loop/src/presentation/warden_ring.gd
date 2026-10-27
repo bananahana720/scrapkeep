@@ -37,6 +37,7 @@ const PRIORITY := -3
 # frame of crown play on the cloud, scrapkeep#241).
 const REBUILD_FRAMES := 6
 const REBUILD_M := 0.5
+const FIRST_FIT_FRAMES := 2
 
 var _warden: Node3D
 var _arc_meshes: Array[MeshInstance3D] = []
@@ -52,6 +53,7 @@ var _built_at := Vector3.INF
 var _crack_index := -1
 var _points := {}
 var _since_build := 0
+var _fit_wait := 0
 
 
 func bind(warden: Node3D) -> void:
@@ -90,7 +92,11 @@ func bind(warden: Node3D) -> void:
 	_crack_mark.material_override = _mark_material
 	_mark_material.render_priority = PRIORITY + 2
 	add_child(_crack_mark)
-	_sync()
+	# The first ground fit waits FIRST_FIT_FRAMES frames: a Warden spawns on its stage's entry tick, and
+	# the ring's first _process runs in that same frame, where reading the ground at its ~740 points cost
+	# 14 ms of the flume's entry on the cloud (scrapkeep#494). Until then the ring is hidden.
+	_fit_wait = FIRST_FIT_FRAMES
+	visible = false
 
 
 # The fight this ring reads is on the posture rule and still alive.
@@ -156,6 +162,9 @@ func crack_visible() -> bool:
 
 
 func _process(_delta: float) -> void:
+	if _fit_wait > 0:
+		_fit_wait -= 1
+		return
 	_sync()
 
 
