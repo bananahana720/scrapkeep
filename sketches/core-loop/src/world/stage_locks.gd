@@ -23,7 +23,8 @@ const Palette := preload("res://src/core/palette.gd")
 # ahead on the ring, and the wall springs a ball back that tries to leave. A wave down, the next
 # whistles in (arena_wave) from further round the ring; the last wave down, or the row's max_s,
 # opens it on climbing bells (arena_unlocked), and the whole crew counts as one of the gate's
-# packs. The Warden already awake skips it, so the lock never lands in its fight.
+# packs. Its crew rolls no panels; the yard broken to its last wave pays one at its
+# centre (build.gd yard_cleared), as an Isaac room pays on clear. The Warden already awake skips it, so the lock never lands in its fight.
 #
 # StageLocks.active = false (bot_run --locks=0) turns both off for a base measure on one binary.
 
@@ -230,6 +231,8 @@ func _on_flow_changed(state: String) -> void:
 	if state in ["gates", "launch", "summary", "title", "victory"]:
 		if lock_active():
 			lock_state = "spent"
+			for enemy in crew_alive():
+				enemy.remove_meta("yard_crew")
 			_drop_wall()
 		_drop_collar()
 
@@ -363,15 +366,22 @@ func _land_wave() -> void:
 		var enemy = ctx.spawner.spawn_enemy(String(kinds[i]), ctx.terrain.drop_point(spot.x, spot.z, 2.4))
 		if enemy is Node3D:
 			enemy.set_meta("pack_seq", seq)
+			enemy.set_meta("yard_crew", true)
 			_crew.append(weakref(enemy))
 
 
 func _unlock(won: bool) -> void:
 	lock_state = "spent"
 	lock_won = won
+	# A yard that ran out its max_s lets its survivors out as plain enemies: killed on the open
+	# map they roll a panel like any kill (ruling af covers kills inside the lock).
+	for enemy in crew_alive():
+		enemy.remove_meta("yard_crew")
 	ctx.events.world_fact.emit("arena_unlocked", lock_centre)
 	_drop_wall()
-	# The whole crew broken is one of the clamp's packs.
+	# The whole crew broken pays one panel (build.gd yard_cleared), and is one of the clamp's packs.
+	if won and ctx.get("build") != null and ctx.build.has_method("yard_cleared"):
+		ctx.build.yard_cleared(lock_centre)
 	if won and not gate_open:
 		cleared += 1
 		ctx.events.world_fact.emit("warden_gate_pip", ctx.player.ball_position())

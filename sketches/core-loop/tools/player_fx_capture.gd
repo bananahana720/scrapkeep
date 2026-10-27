@@ -8,6 +8,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
 
 var game
 var fx
@@ -112,6 +113,32 @@ func _run() -> void:
 	fx.word("heft_up", fx._beside_ball())
 	await _frames(2)
 	await _shot("heft-up")
+
+	# 6. A held dunk charge: the coil on the collar's rear arc, rolling away from the camera,
+	# then late in the window with one pip left.
+	# Live world telegraphs (a dam event wall) can fill the frame over the ball, so they are hidden
+	# for these shots. Then the same two states from the play chase camera, where it must read.
+	_reset()
+	for node in get_nodes_in_group("telegraph") + get_nodes_in_group(Threat.GROUP):
+		if node is Node3D:
+			node.visible = false
+	fx.pose = {"velocity": -back * 20.0}
+	game.player.dunk.store(30.0, "still", game.player.class_def.id, game.player.class_color())
+	await _frames(4)
+	await _shot("dunk-charge")
+	var until: float = game.player.dunk.charge["until"]
+	game.player.dunk.clock = until - game.player.dunk.WINDOW * 0.2
+	await _frames(2)
+	await _shot("dunk-charge-late")
+	chase.current = true
+	game.player.dunk.clock = until - game.player.dunk.WINDOW * 0.95
+	await _frames(4)
+	await _shot("dunk-charge-play")
+	game.player.dunk.clock = until - game.player.dunk.WINDOW * 0.2
+	await _frames(2)
+	await _shot("dunk-charge-play-late")
+	cam.current = true
+	game.player.dunk.clear("reset")
 
 	var file := FileAccess.open(out.path_join("shots.json"), FileAccess.WRITE)
 	file.store_string(JSON.stringify({"pilot": pilot, "adapter": RenderingServer.get_video_adapter_name(), "shots": shots,
