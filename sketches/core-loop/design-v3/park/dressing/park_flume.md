@@ -163,3 +163,13 @@ The plan check listed one yaw group: flume_m014, flume_m038 and flume_v104, all 
 - New template `shift_tally` (story "A shift board nailed to a milepost: names, a tally of days, and the last line left blank.").
 - Dressing parity with the Dig by vignette spots (coordinator ruling, 24 Oct 05:58Z; DECISIONS section 8): 70 generated spots flume_p001 to flume_p070, crew vignettes 22 to 46 m beside authored rows and small verge pieces 12 to 22 m off the pilot and floor lines, each validated alone with ParkProps.validate and kept 30 m from every other spot. The file now holds 166 spots (was 95; the Dig holds 167).
 - New pin 841567897 (was 633467776; re-pinned after the surge ring moved off the approach, and again after flume_n037 moved 8 m west, [30.4, -101.5] to [22.4, -101.5], out of the keepout of bend_cache at its #431 spot [42, -96]; 0 violations), an intended re-pin. park_props_test passes (305 checks); the pattern scan and label lint return none. The tower's sight share is 0.8849 against the 0.85 floor.
+
+## w20 canyon walls (the park edge, 27 Oct)
+
+Why: the line-rider red team (w20 e646632d, `/mnt/project-files/gate/w20-e646632d-redteam-line-rider.md`) found no wall on the flume's west, north and south: a ball held outward reached the map edge (+-799) and was snapped 19 m back to the play rect, several times a try. East, the play rect ends at x 520 but the ground ran on, and the ball rolled free to x 756 with no rescue.
+
+What changed:
+- Four `canyon_wall_*` rows as the dam's (mesa_rim ground, `greybox:ground`, `stamp` mesa, no `y`, 32 m, mesa edges by "Edges are ground"). West, north and south are 30 m deep at the square's edge, feet +-785, 5 m past the play rect. The east row runs 550 m in from the edge, foot x 525, 5 m past the play rect's x 520, its top flat out to the edge.
+- Five east-west washes (`canal_wash_1`, `_3`, `_4`, `_6`, `bluff_wash_3`) now end at x 513, 12 m short of the east foot, so their east ends stay dead ends and they stay graph anchors (the radio find's `canal_wash_1` spot, panel rib reads); their west ends are unchanged. `canal_wash_2` lies wholly under the east wall and leaves `anchors()`; it was outside the play rect.
+- Graph: zones 162 -> 166; no wall-top node (7,168) is reachable from the spawn. Rib cache spots are identical on stages 1 and 2 over seeds 1-24. Dressing re-pinned 1001921675 -> 3830422007 (the trimmed wash ends).
+- `park_flume_rim_roll_test`: the dam rim test's shots in the north-east and south-west corners, and the play rect meeting every foot within 10 m.

@@ -41,10 +41,12 @@ const Intent := preload("res://src/movement/intent.gd")
 # 12 m short of the walls' feet. No dressing spot moves. The others unchanged.
 # 2026-10-27 dam south play rect re-pin (w20 line-rider): stage 1 park_dam 3700432063 -> 3312363204, because the play
 # rect's south edge moves from z 700 to 760, the south wall's foot less 5 m as east and west, and the scatter now dresses
-# the 60 m of flat plateau between. The flume's canyon walls stand outside its play rect, so its pin holds.
+# the 60 m of flat plateau between. Stage 2 park_flume 1001921675 -> 3830422007 in the same PR, because five east-west
+# washes now end 12 m short of the new east canyon wall's foot and the scatter reads the rebaked ground. The others
+# unchanged.
 const PINS := {
 	1: ["park_dam", 13, 3312363204],
-	2: ["park_flume", 13, 1001921675],
+	2: ["park_flume", 13, 3830422007],
 	3: ["park_pit", 13, 2247843387],
 	4: ["park_sinkhole", 13, 2334293701],
 	5: ["park_islands", 13, 3681139656],
