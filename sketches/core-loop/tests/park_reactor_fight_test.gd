@@ -72,6 +72,11 @@ func _finish() -> void:
 	var broken=checked_note.get("warden_broken_s")
 	t.check("skipper engages and breaks the authored mounted reactor",engaged!=null and broken!=null,"engaged %s, broken %s" % [engaged,broken])
 	if engaged!=null and broken!=null:
-		var seconds:=float(broken)-float(engaged)
-		t.check("mounted reactor fight fits the arena allowance",seconds<=ALLOWANCE_S,"engage-to-break %.2fs, allowance %.2fs" % [seconds,ALLOWANCE_S])
+		# The fight starts when the Warden can be hurt: at the engage, or when the Spillway's clamp
+		# lets go after it (stage_locks.gd, ruling ai, 27 Oct). The clamp's hold is the pacing
+		# lock's own time, not the fight's.
+		var opened=checked_note.get("gate_open_s")
+		var start:=maxf(float(engaged),float(opened) if opened!=null else float(engaged))
+		var seconds:=float(broken)-start
+		t.check("mounted reactor fight fits the arena allowance",seconds<=ALLOWANCE_S,"open-to-break %.2fs (engaged %.2f, clamp open %s), allowance %.2fs" % [seconds,float(engaged),opened,ALLOWANCE_S])
 	quit(t.verdict())
