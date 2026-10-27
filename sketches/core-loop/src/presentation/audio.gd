@@ -717,13 +717,13 @@ func _pump(virtual_frames := -1) -> void:
 		var now := Time.get_ticks_usec()
 		var gap := now - _ace_pumped_usec
 		# The ring's skips before the band's first pump are the synth's (a bot's opening bake
-		# blocks the main thread for seconds after the rings start). A gap between pumps
-		# longer than the queue is a one-off long frame, not the device's period: it should
-		# not cost every later contact the latency of a deeper queue. Either way the emptied
-		# ring keeps skipping until this pump's block is pushed, so the count settles after it.
+		# blocks the main thread for seconds after the rings start). A skip after a long gap
+		# between pumps is a one-off long frame, not the device's period: it should not cost
+		# every later contact the latency of a deeper queue. Either way the emptied ring keeps
+		# skipping until this pump's block is pushed, so the count settles after it.
 		if _ace_pumped_usec == 0:
 			settle = true
-		elif gap * Harmony.RATE > queue_target * 1000000:
+		elif _gap_is_stall(gap):
 			_note_stall(gap)
 			settle = true
 		else:
@@ -843,6 +843,13 @@ func _fade_in_band(from: int, frames: int, landmark := PackedVector2Array()) -> 
 		var hum := Vector2.ZERO if landmark.is_empty() else landmark[i]
 		band[i] = (band[i] - hum) * g + hum
 	engine.out_music = band
+
+
+# The device reads ahead of the mix by up to a period, so a gap of half the queue can
+# already empty it (a bot's 70-115 ms planner ticks dried a 3072-frame queue). A period long
+# enough to empty the queue inside a gap shorter than that is the device's, and deepens it.
+func _gap_is_stall(gap_usec: int) -> bool:
+	return gap_usec * Harmony.RATE * 2 > queue_target * 1000000
 
 
 func _deepen_on_skip() -> void:
