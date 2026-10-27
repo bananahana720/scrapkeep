@@ -16,6 +16,7 @@ const Combat := preload("res://src/combat/combat.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const MachineFx := preload("res://src/presentation/machine_fx.gd")
+const Panels := preload("res://src/build/panels.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const Context := preload("res://src/core/context.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
@@ -99,6 +100,8 @@ func _run() -> void:
 			for key in row:
 				if String(key).ends_with("_word"):
 					drawn.append(String(row[key]))
+	for id in Panels.ids():
+		drawn.append(Panels.pop_text(id))
 	var missing := drawn.filter(func(w: String): return Array(w.to_upper().replace(" ", "").split("")).any(func(c): return c not in MachineFx.WARM_GLYPHS))
 	t.check("every machine word's glyphs are in the warm label", not drawn.is_empty() and missing.is_empty(), str(missing))
 	t.check("the materials the views drew are held", BakeWarm._kept.size() == 3 and BakeWarm._kept.all(func(m): return is_instance_valid(m)))

@@ -55,8 +55,8 @@ const MOMENTS := {
 	},
 }
 const WORDS := {"fleet_heavy": "KLANG", "ancient_heavy": "KRZZT", "stagger": "KRNK", "elite": "CLOCKED OUT"}
-# Every glyph the uppercase words draw (WORDS, SPECIALS, BOSSES and the fall words).
-const WARM_GLYPHS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?.,'+-"
+# Every glyph the uppercase words draw (WORDS, SPECIALS, BOSSES, the fall words and the panel pops).
+const WARM_GLYPHS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?.,'+-%"
 const WORD_TINT := {"fleet": Palette.BRASS, "ancient": Palette.ANCIENT}
 
 # The four kill-first specials (ENEMY-PRIORITY.md 4, 4a; SOUND-BIBLE specials). Each
