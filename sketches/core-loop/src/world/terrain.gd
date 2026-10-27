@@ -527,6 +527,10 @@ func wind_down(index: int, ball: Vector3) -> void:
 		if row is Node3D and row.process_mode == Node.PROCESS_MODE_INHERIT and row.global_position.distance_to(ball) > WIND_CLEAR:
 			left.append(row)
 	left.sort_custom(func(a: Node3D, b: Node3D) -> bool: return a.global_position.distance_squared_to(ball) < b.global_position.distance_squared_to(ball))
+	# A stage still winding from a launch that never landed (quit to title in the flight) stops there: its rows
+	# come back on its next use(), and the flight's budget goes to the stage being left.
+	for k in _winding:
+		_winding[k].left.clear()
 	_winding[i] = {"left": left, "done": []}
 
 
