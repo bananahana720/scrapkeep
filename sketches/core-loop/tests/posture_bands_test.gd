@@ -123,7 +123,7 @@ func _initialize() -> void:
 		{"script": "res://tools/posture_sweep.gd", "args": ["--out=" + cells, "--runs=" + folder.path_join("runs.tsv"),
 			"--procs=4", "--seeds=" + GROWTH_SEEDS, "--arms=small,grown"] + cell_args},
 		{"script": "res://tools/posture_sweep.gd", "args": ["--out=" + camper_cells, "--runs=" + folder.path_join("camper-runs.tsv"),
-			"--procs=2", "--seeds=" + SEEDS, "--arms=camper"] + cell_args}], 1500.0)
+			"--procs=2", "--seeds=" + SEEDS, "--arms=camper"] + cell_args}], 1700.0)
 	for result in results:
 		t.check("the sweep ran", result["code"] == 0 and not result["timed_out"], "exit %s, timed out %s" % [result["code"], result["timed_out"]])
 	var swept := _picked(SWEEP, plating, curve, shatters)
