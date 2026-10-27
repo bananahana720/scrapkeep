@@ -231,6 +231,8 @@ func _on_flow_changed(state: String) -> void:
 	if state in ["gates", "launch", "summary", "title", "victory"]:
 		if lock_active():
 			lock_state = "spent"
+			for enemy in crew_alive():
+				enemy.remove_meta("yard_crew")
 			_drop_wall()
 		_drop_collar()
 
