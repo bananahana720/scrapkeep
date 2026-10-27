@@ -559,7 +559,7 @@ static func markdown(sheet: Dictionary) -> String:
 	lines.append("- Tell is the tightest reachable: phase tightening applied (minus step per phase, capped at the family's TIGHTEN_PHASES) and clamped to hazard.gd MIN_WARN and mind_attacks.gd WARN_FLOOR.")
 	lines.append("- Sound: `audio.gd` `_warn_threat` plays a threat's type sound (threat_tick instant, threat_whoosh wave, threat_whistle projectile, threat_hum lane) and the owner voice and mechanic tag on the game frame the threat is declared, not on the beat; a lane's hum holds until it goes live, where threat_tear plays; `boss_attack_telegraphed` is unquantized too. Sync says whether sound starts with the tell or later. The reserved `atk_*_warn` cues are %s." % (
 		"played" if h["audio"]["atk_cues_played"] else "not played by audio.gd yet, so they are not in the sound column"))
-	lines.append("- Stage dials: the tables show base hits. Swarm, Miniboss, Elite affixes and Mobs hits also take `mobs.damage_by_stage` (`challenge_dials.gd`); a stage whose dial is not 1 is listed under Notices with its own damage, share and hit count.")
+	lines.append("- Stage dials: the tables show base hits. Swarm, Miniboss, Elite affixes and Mobs hits also take the mob dial (`mobs.damage_mult` x `mobs.damage_by_stage`, `challenge_dials.gd`); a stage whose dial is not 1 is listed under Notices with its own damage, share and hit count.")
 	lines.append("- Rule (DECISIONS section 5): every lethal attack has a readable tell of at least %s s, for sight and sound. Rows with damage above 0 and a tightest tell under it carry `%s`." % [_fmt(LETHAL_FLOOR, 1), LETHAL_FLAG])
 	var flagged: Array = []
 	for row in sheet["rows"]:

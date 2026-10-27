@@ -10,7 +10,8 @@ const Core := preload("res://tools/attack_sheet_core.gd")
 # - damage rows carry a hull share and a hit count;
 # - the sheet reads the effective dials (ChallengeDials), so Brindle's rows carry the tuned damage;
 # - HARD: no Brindle attack that deals damage (the sheet's lethal-class definition: damage above 0)
-#   has a tell under 0.6 s at the tuned values. Other groups' LETHAL TELL flags are still reported only.
+#   has a tell under 0.6 s at the tuned values. Other groups' LETHAL TELL flags are still reported only;
+# - the per-stage mob dial reaches exactly the groups the hit door scales, and nothing at identity.
 
 
 func _initialize() -> void:
@@ -66,22 +67,27 @@ func _initialize() -> void:
 		if row["group"] == "Brindle" and str(row["attack"]).begins_with("slag"):
 			slag_x2 = row["damage"]
 	t.near("the sheet reads the effective dials (damage_mult 2 doubles the slag row)", slag_x2, slag_now * 2.0, 1e-6)
-	# The stage dial: the dam (stage 1) ships mob hits at x1.5, so every damaging Mobs row carries its stage 1
-	# numbers, and a Warden row (excluded at the hit door) carries none.
-	var mob_rows := 0
-	var mob_dialled := 0
-	var warden_dialled := 0
-	for row in sheet["rows"]:
-		if row["group"] == "Mobs" and row["damage"] > 0.0:
-			mob_rows += 1
-			var at: Dictionary = row.get("stage_damage", {}).get("1", {})
-			if not at.is_empty() and absf(float(at["damage"]) - row["damage"] * ChallengeDials.stage_mult("mobs.damage", 1)) < 1e-3:
-				mob_dialled += 1
-		if row["group"] == "Wardens" and row.has("stage_damage"):
-			warden_dialled += 1
-	t.check("Mobs has damaging rows", mob_rows > 0, "%d" % mob_rows)
-	t.eq("every damaging Mobs row carries the dam's stage dial", mob_dialled, mob_rows)
-	t.eq("no Warden row takes the mob dial", warden_dialled, 0)
+	# The stage dial: hits in the groups combat's hit door scales (Swarm, Miniboss, Elite affixes, Mobs) carry
+	# each non-identity stage's numbers; Wardens, the Mind's hand and the bosses never do. Set explicitly, so a
+	# retune of the shipped dam value does not move this check.
+	ChallengeDials.set_overrides({"mobs.damage_by_stage": [2.0, 1.0, 1.0, 1.0, 1.0, 1.0]})
+	var dialled: Dictionary = Core.new().build()
+	ChallengeDials.reset()
+	var undialled_groups := {}
+	var wrongly_dialled := {}
+	var chaser_x2 := -1.0
+	for row in dialled["rows"]:
+		var has: bool = row.has("stage_damage")
+		if Core.STAGE_DIALLED.has(row["group"]) and row["damage"] > 0.0:
+			if not has or row["stage_damage"].keys() != ["1"]:
+				undialled_groups[row["group"]] = true
+		elif has:
+			wrongly_dialled[row["group"]] = true
+		if row["group"] == "Mobs" and str(row["attack"]).begins_with("chaser") and has:
+			chaser_x2 = float(row["stage_damage"]["1"]["damage"])
+	t.eq("every damaging row of a dialled group carries stage 1 only", undialled_groups.keys(), [])
+	t.eq("no Warden, Mind hand or boss row takes the mob dial", wrongly_dialled.keys(), [])
+	t.near("the chaser lunge at stage 1 x2 is 18 (base 9)", chaser_x2, 18.0, 1e-3)
 	t.check("the markdown explains the stage dials", md.contains("Stage dials"))
 	ChallengeDials.set_overrides({"mobs.damage_by_stage": ChallengeDials.ONES6})
 	var identity: Dictionary = Core.new().build()
