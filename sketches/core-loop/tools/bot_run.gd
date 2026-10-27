@@ -62,7 +62,8 @@ const RunTier := preload("res://src/core/run_tier.gd")
 # --run-tier=N (the HARD ladder lab, scripts/challenge/run.mjs --tier) picks run tier N on the start card as stage 1
 # opens, without the first_win unlock (which would also open the secrets). Not with --from-stage: a resumed
 # entrance keeps its own tier. Absent or 0, the run is unchanged; the row gains "run_tier".
-# --panel-log=1 adds panel_kills (the build's kill_log: stage, kind, elite, rib, jackpot, dropped)
+# --panel-log=1 adds panel_kills (the build's kill_log: stage, kind, elite, rib, jackpot, dropped,
+# yard; a yard lock crew's kill has yard true, a cleared yard is a yard_clear row)
 # and panels (the run's pickups in order) to the bots.ndjson row.
 # --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
 # run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the
