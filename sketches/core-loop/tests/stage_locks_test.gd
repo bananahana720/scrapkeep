@@ -23,7 +23,7 @@ const T := preload("res://tests/support/t.gd")
 #   crew's housed members, the crew nearest to a pip first;
 # - lock: on the ground inside within_m of the beacon the yard shuts round the ball with its crew,
 #   the wall turns an escaping ball back, the last crew member down opens it, and the crew counts
-#   toward the gate; the Warden already awake leaves it unfired;
+#   toward the gate; its kills roll no panel and the cleared yard pays one (ruling af); the Warden already awake leaves it unfired;
 # - StageLocks.active = false (bot_run --locks=0) leaves the stage with neither.
 
 # Kills inside the physics step, after every other node: a kill that lands after the locks' tick
@@ -162,7 +162,17 @@ func _gate() -> void:
 	for i in 3:
 		await physics_frame
 	late.queue_free()
-	_t.check("two packs open the clamp", not locks.locked(), "cleared %d" % locks.cleared)
+	_t.eq("a late kill still counts", locks.cleared, 2)
+	# The rest of the wanted crews (the dam asks for more than two since the w19 pacing rows).
+	var seq := 105
+	while locks.cleared < locks.packs_wanted() and seq < 112:
+		_t.check("the clamp holds at %d of %d" % [locks.cleared, locks.packs_wanted()], locks.locked())
+		for enemy in _spawn_pack(game, ["chaser", "lobber"], seq, at):
+			_kill(enemy)
+		seq += 1
+		for i in 2:
+			await physics_frame
+	_t.check("the wanted packs open the clamp", not locks.locked(), "cleared %d of %d" % [locks.cleared, locks.packs_wanted()])
 	_t.eq("the release plays once", _count("warden_gate_opened"), 1)
 	_t.check("the collar goes", locks._collar == null)
 	game.ctx.spawner.strike(warden, "ram", 400.0)
@@ -203,7 +213,7 @@ func _riders() -> void:
 	_kill(gone[0])
 	for i in 2:
 		await physics_frame
-	_t.check("a rider gone alive spoils nothing: the clamp opens", not locks.locked(), "cleared %d" % locks.cleared)
+	_t.eq("a rider gone alive spoils nothing: its crew counts", locks.cleared, 2)
 	game.free()
 	await process_frame
 	game = await _game()
@@ -242,6 +252,7 @@ func _lock() -> void:
 	_t.check("the wall stands", locks.get_node_or_null("ArenaLockWall") != null)
 	_t.check("objective names the yard", game.flow.objective_text().contains("Yard locked"), game.flow.objective_text())
 	_t.check("the bot hand goes for the crew", locks.foe_for(game.player.ball_position()) in crew)
+	var logged: int = game.build.kill_log.size()
 	# A ball rolling out past the wall is turned back.
 	var r := float(row["radius_m"])
 	var c: Vector3 = locks.lock_centre
@@ -275,6 +286,15 @@ func _lock() -> void:
 	_t.check("won", locks.lock_won)
 	_t.eq("the bells play", _count("arena_unlocked"), 1)
 	_t.eq("the crew counts toward the gate", locks.cleared, 1)
+	# Ruling af: the crew rolls no panels and the cleared yard pays one (build.gd yard_cleared).
+	var since: Array = game.build.kill_log.slice(logged)
+	var crew_kills := since.filter(func(k: Array): return k.size() > 6 and bool(k[6]))
+	var crew_size := 0
+	for wave in waves:
+		crew_size += (wave as Array).size()
+	_t.eq("every crew kill is logged as the yard's", crew_kills.size(), crew_size)
+	_t.check("no crew kill drops a panel", crew_kills.all(func(k: Array): return not bool(k[5])))
+	_t.eq("the cleared yard pays one panel", since.filter(func(k: Array): return String(k[1]) == "yard_clear" and bool(k[5])).size(), 1)
 	game.free()
 	await process_frame
 

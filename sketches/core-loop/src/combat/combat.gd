@@ -646,11 +646,13 @@ static func _reenter_space(body: CollisionObject3D) -> void:
 
 
 # What a kill was, for the panel drop (build.gd): an elite-pack member or an affixed elite,
-# and a jackpot when a reel impact or dunk struck it inside REEL_KILL_WINDOW.
+# a jackpot when a reel impact or dunk struck it inside REEL_KILL_WINDOW, and a yard lock's crew
+# (stage_locks.gd), which the cleared yard pays for instead.
 func _kill_tags(enemy: Node3D, affix_id: String) -> Dictionary:
 	var reel_at = enemy.get_meta(REEL_MARK) if enemy.has_meta(REEL_MARK) else null
 	return {"elite": bool(enemy.get_meta("elite_pack", false)) or affix_id != "",
-		"jackpot": reel_at != null and _clock - float(reel_at) <= REEL_KILL_WINDOW}
+		"jackpot": reel_at != null and _clock - float(reel_at) <= REEL_KILL_WINDOW,
+		"yard": bool(enemy.get_meta("yard_crew", false))}
 
 
 # What the director weights reinforcement packs against (fleet.gd build_read).
