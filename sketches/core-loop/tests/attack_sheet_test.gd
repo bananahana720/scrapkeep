@@ -66,6 +66,30 @@ func _initialize() -> void:
 		if row["group"] == "Brindle" and str(row["attack"]).begins_with("slag"):
 			slag_x2 = row["damage"]
 	t.near("the sheet reads the effective dials (damage_mult 2 doubles the slag row)", slag_x2, slag_now * 2.0, 1e-6)
+	# The stage dial: the dam (stage 1) ships mob hits at x1.5, so every damaging Mobs row carries its stage 1
+	# numbers, and a Warden row (excluded at the hit door) carries none.
+	var mob_rows := 0
+	var mob_dialled := 0
+	var warden_dialled := 0
+	for row in sheet["rows"]:
+		if row["group"] == "Mobs" and row["damage"] > 0.0:
+			mob_rows += 1
+			var at: Dictionary = row.get("stage_damage", {}).get("1", {})
+			if not at.is_empty() and absf(float(at["damage"]) - row["damage"] * ChallengeDials.stage_mult("mobs.damage", 1)) < 1e-3:
+				mob_dialled += 1
+		if row["group"] == "Wardens" and row.has("stage_damage"):
+			warden_dialled += 1
+	t.check("Mobs has damaging rows", mob_rows > 0, "%d" % mob_rows)
+	t.eq("every damaging Mobs row carries the dam's stage dial", mob_dialled, mob_rows)
+	t.eq("no Warden row takes the mob dial", warden_dialled, 0)
+	t.check("the markdown explains the stage dials", md.contains("Stage dials"))
+	ChallengeDials.set_overrides({"mobs.damage_by_stage": ChallengeDials.ONES6})
+	var identity: Dictionary = Core.new().build()
+	ChallengeDials.reset()
+	var any_stage := 0
+	for row in identity["rows"]:
+		any_stage += 1 if row.has("stage_damage") else 0
+	t.eq("at identity no row carries stage damage", any_stage, 0)
 	var flagged := 0
 	for row in sheet["rows"]:
 		if not row["flags"].is_empty():
