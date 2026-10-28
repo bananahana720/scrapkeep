@@ -17,6 +17,7 @@ const T := preload("res://tests/support/t.gd")
 
 class PointerGame extends "res://src/game.gd":
 	var captured := false
+	var grabs := 0
 	var quits := 0
 
 	func _quit() -> void:
@@ -24,6 +25,8 @@ class PointerGame extends "res://src/game.gd":
 
 	func _capture_mouse(capture: bool) -> void:
 		captured = capture
+		if capture:
+			grabs += 1
 
 	func _mouse_captured() -> bool:
 		return captured
@@ -155,22 +158,27 @@ func _counter() -> void:
 		await _send(leave[1])
 		t.check("counter: %s leaves it with the pick untaken" % leave[0], not ws.counter.is_open())
 		t.eq("counter: %s quits nothing" % leave[0], game.quits, 0)
-	# Moss's tree pick, opened from the counter's plate, covers the card: 3 and V take nothing.
+	# Moss's tree pick, opened from the counter's plate: the card keeps its keys over it, as it
+	# does over any tree pick (run_tier_test), so V rerolls and no tree pick is taken.
+	ws.open_counter()
+	await _frames(2)
 	var tree = ws.tree()
 	var nodes: Array = tree.offered(tree.class_id, 1) if tree != null else []
 	t.check("counter: the class tree offers a first pick", nodes.size() == 2)
 	if nodes.size() == 2:
 		var rerolls: int = card.rerolls_left()
+		var picks: Array = game.player.tree.picks.duplicate()
 		ws.pick.open(tree.class_id, 1, nodes, tree.path(), Color.WHITE)
 		await _frames(2)
-		await _send(_key(KEY_3))
 		await _send(_key(KEY_V))
-		t.check("counter: 3 and V under the tree pick take nothing", String(game.run.start_pick.get("taken", "")) == "" and card.rerolls_left() == rerolls and card.showing())
+		t.check("counter: V under the tree pick rerolls the start card", card.rerolls_left() == rerolls - 1 and card.showing())
+		var first: String = String(game.run.start_pick_options()[0])
+		await _send(_key(KEY_1))
+		t.eq("counter: 1 under the tree pick takes the first start pick", String(game.run.start_pick.get("taken", "")), first)
+		t.check("counter: 1 under the tree pick takes no tree pick", game.player.tree.picks == picks)
 		ws.close_pick()
+		ws.close_counter()
 		await _frames(2)
-	var first: String = String(game.run.start_pick_options()[0])
-	await _send(_key(KEY_1))
-	t.eq("counter: after leaving, 1 still takes the first pick", String(game.run.start_pick.get("taken", "")), first)
 	game.build.shop.leave()
 	ws.armed = false
 	await _frames(2)
@@ -193,9 +201,11 @@ func _rung() -> void:
 	await _frames(2)
 	ws.open_counter()
 	await _frames(2)
+	var grabs: int = game.grabs
 	await _send(_key(KEY_ESCAPE))
 	t.check("rung: Esc leaves the counter", not ws.counter.is_open())
 	t.check("rung: leaving the counter keeps the cursor free for the tier", not game.captured and game.get_meta("menu_held", false) and card.wants_pointer())
+	t.eq("rung: leaving the counter never grabs the cursor, even for a frame", game.grabs, grabs)
 	game.build.shop.leave()
 	ws.armed = false
 	await _frames(2)

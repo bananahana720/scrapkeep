@@ -377,14 +377,12 @@ func show_start_card() -> void:
 
 
 # The card holds no menu while it keeps mouse look (start_pick_card.gd wants_pointer), so the pause
-# menu, the hotwire offer or Moss's tree pick can open over it; while one is open it owns the keys
-# and the clicks.
+# menu or the hotwire offer can open over it; while one is open it owns the keys and the clicks.
 func _start_card_covered() -> bool:
 	var game = ctx.root
 	var menu = game.get_node_or_null("PauseMenu")
 	var offer = game.hud.hotwire_screen if game.get("hud") != null else null
-	var host = game.get_node_or_null("Workshop")
-	return (menu != null and menu.is_open()) or (offer != null and offer.is_open()) or (host != null and host.pick != null and host.pick.is_open())
+	return (menu != null and menu.is_open()) or (offer != null and offer.is_open())
 
 
 func take_start_pick(index: int) -> bool:
