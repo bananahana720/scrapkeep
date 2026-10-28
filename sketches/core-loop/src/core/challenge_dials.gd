@@ -91,11 +91,15 @@ const DEFAULTS := {
 	# flanker; churned-silt drag strength (churn_ground.gd); silt boil damage, 0 off (silt_boil.gd).
 	"pack.lead_by_stage": ZEROS6, "pack.crew_extra_by_stage": ZEROS6, "pack.rest_by_stage": ONES6,
 	"pack.flank_by_stage": ZEROS6, "ground.churn_by_stage": ZEROS6, "hazard.boil_by_stage": SILT_W1,
-	# NOT ALLOWED LEVERS YET. Plumbed only: a ruling is needed before any non-default value ships.
+	# Pilot regen: not allowed as defaults or tunes (--tune-unruled only). The HARD ladder's top rungs cut it
+	# (run_tier.gd LADDER, Andrew 27 Oct option 3).
 	"pilot.regen_delay_mult": 1.0, "pilot.regen_rate_mult": 1.0,
 }
 
 static var _overrides := {}
+# The HARD ladder rung's dials (run_tier.gd LADDER), set with the run tier (run_state.gd): each multiplies
+# its key's value on top of defaults, overrides and tunes. Empty at the base tier.
+static var _rung := {}
 static var _cli_loaded := false
 static var _cli := {}
 static var _warned := {}
@@ -115,7 +119,16 @@ static func value(key: String) -> Variant:
 
 
 static func f(key: String) -> float:
-	return float(value(key))
+	return float(value(key)) * float(_rung.get(key, 1.0))
+
+
+static func set_rung(d: Dictionary) -> void:
+	_rung = d
+
+
+# The rung dials in force (tests read them; a bot record carries run_tier instead).
+static func rung() -> Dictionary:
+	return _rung
 
 
 # Replaces the programmatic overrides (tests, the ladder later). Unknown keys, non-numeric or
@@ -145,6 +158,7 @@ static func set_overrides(d: Dictionary, allow_unruled := false) -> void:
 # Clears overrides and forgets the command line, so the next read parses it again.
 static func reset() -> void:
 	_overrides = {}
+	_rung = {}
 	_cli = {}
 	_cli_loaded = false
 	_warned = {}

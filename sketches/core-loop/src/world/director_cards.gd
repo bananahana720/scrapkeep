@@ -11,6 +11,15 @@ const RUN_TIERS := {
 	0: {"cap_weight": 1.0, "interval_weight": 1.0, "event_core_multiplier": 1.0, "rare_weight": 1.0},
 	1: {"cap_weight": 1.25, "interval_weight": 0.8, "event_core_multiplier": 1.25, "rare_weight": 1.25,
 		"elite_stats": {"plating": 30.0}},
+	# The HARD ladder's upper rungs (run_tier.gd LADDER): more crowd and pace, and pay stepping to PAY_GAIN_CAP.
+	2: {"cap_weight": 1.3, "interval_weight": 0.77, "event_core_multiplier": 1.3, "rare_weight": 1.3,
+		"elite_stats": {"plating": 30.0}},
+	3: {"cap_weight": 1.35, "interval_weight": 0.74, "event_core_multiplier": 1.35, "rare_weight": 1.35,
+		"elite_stats": {"plating": 30.0}},
+	4: {"cap_weight": 1.4, "interval_weight": 0.71, "event_core_multiplier": 1.4, "rare_weight": 1.4,
+		"elite_stats": {"plating": 30.0}},
+	5: {"cap_weight": 1.45, "interval_weight": 0.68, "event_core_multiplier": 1.5, "rare_weight": 1.5,
+		"elite_stats": {"plating": 30.0}},
 }
 # stage_cap bounds members of this kind in one purchase, separately from the shared alive cap.
 const CARDS := {

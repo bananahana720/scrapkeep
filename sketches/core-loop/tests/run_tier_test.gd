@@ -69,27 +69,30 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-26 stage/alpha-w18 re-pin for the eighteenth line (#488, #490; ruling j integration commit): #488's dam park edge
 # (canyon walls, trimmed outskirts post fields, rebake) is park-row data in the schedule hash, so all 20 schedules moved; #490 moves
 # none (a38446ee, before #490, records the same 20). Whole-run hashes unchanged. Recorded with --record-base --section=runtime --seed=N.
+# 2026-10-28 stage/alpha-w21 re-pin at b9880234 + #538 (ruling j integration commit): #529's cobalt pool (four catalogue rares join
+# AlphaDefs.PARTS) and #536's Warden-gate and shop cobalt floors move the schedule and the default run on 20 and 20 of 20 seeds.
+# Recorded with --record-base --section=runtime; the BASE lines equal this test's MEASURE lines (schedule0, tier0.hash) on all 20.
 const BASE_SCHEDULE := [
-	"b1cf1d4549a0c670841aae681b27f664d1a147effeed19b266541023bb3afdb8",
-	"b08c03860781731e0ac6c17e277ae142bf2d552598e15a8c46d94f0c2c6f6cbf",
-	"96c97ea100aa4b1aa038af969035a40a15c40edde951262e55dc7c8d00241633",
-	"72adbc2220458a5ee81fba67f89b2ff1ea63e58bf7591d8810df10d66502a9d3",
-	"27fb7c79584e7bb04551556845754bfc347d3d4ee8b0d1b503cb81c25a389c20",
-	"ea55ac2d815deb4419ed74d27ed1837554233ad2b40f09f2447ef31ebb98e80d",
-	"55a4091c8e2dd9bd29b02a7e4527815aa7841e9b0be2c06dfa1c7ce14e4b04de",
-	"a637eb9624a91257905b33a8e98106bcbf31260f1439c066cf63622ab59f206e",
-	"911e2eb2c9aa1ac369b7d84e8407eec88ba782d7316bc57a979b2ae30b2db185",
-	"dee5cc7f74f00a40e6f1398319c62e16344c2fa638f84528a52e6ed0d451fd9c",
-	"0bf8ca032a97e2188fba0927ed1e7b1681296659b6c51f63bf846af4038350ed",
-	"845b96dbf6ed6230ef0e5f8c5865b633065f1e1a576110a4f4076d7b3b5635db",
-	"9c9324d27cadcdf44fd3a06b5966888ba61d18a3986f669979416579ea96be27",
-	"f386dcd0d44925d4b3a7740dcf4a0f31ef7cfdb3a9d4b2ecfc5940d1956d86e8",
-	"f5ef7a35a730a6d6b9b071118b26055641cb9523df66febf4f10d1ecfe85f626",
-	"f4adc7869cf7b56c5d681c59c229a7bdd139e4058f33de67431ad6f620878cb5",
-	"8c408572b8de4528dea466f3098d7a7da2cdedcb5c068e0a3d7b4fffb0fbc7dc",
-	"92ead431e8d504224b7f0c1abdcac249aa4494cc0d8806ba7644cfcabaa489f5",
-	"8dac064a22e5f2a65e41c9dd3b12185373c15fb0c74825174785597250e9fbe5",
-	"302c58ae923e520ad40bcdc34df5a4ef0f691a61e265cb128a2ecde4036b25ac",
+	"ddacfaddbfee7dbc0f18376f90734372530c5374024318e52dbe0f2f22468743",
+	"dcaad0b1029f0944db67f12e8767368d7e54645784ef83a153573916844bc4b0",
+	"98cb3da9debd632b6f30ab07f9a8ab2d6f86fe24d27e2a238b31da6218b5d705",
+	"66a8c9cd473e608ebb11e86de42b040a5dd94437e1f7875df9a4a0de6e81acdc",
+	"0329131674cc83da315c4267a0ae4e5ad1f5f1044ce025719b7285e32f9bc073",
+	"083c3275f9bfceaea13ccd9066cbc62e8836fc2b44fdca11f1cab9c8424e7026",
+	"7151e063cecfb503adc41c16fd598a645f4dc80f6493aab98da8b9e748e7d253",
+	"9094941f5ba279f0470ca1c5a68920d119a64b67f9422ad5f54ed354df38d2ce",
+	"929f39474f6e8420aac37544ae7cca0774449f5749f516aea2737327865d0d47",
+	"8decbf012a3fd55290173d649f6c354fd09493c5b115561e5079cf1f51937201",
+	"252a68635046b890dab85d1aa048fd6ceea21506f88eff9ce1053dbb408bb354",
+	"a13b3f23cadde14ed85d219aceccf9059e700b22d672fd6ac2a040e96e6833e7",
+	"a9648bfefb836a70419e4d786ac8e1c04ae96eae2d79c1be845743edccbc544d",
+	"666cc27f4940dd501fd66334e0a421e0de22da3ca1bbe4cf855ab58d378a1db2",
+	"92eff64c46c42eb9dc1f43cdab861779080933a1157b0640a57344aa29ea00f2",
+	"a1ef0bdaa18cfa16412a1b22dc50e274ae2c42d23b5726ac2e66ea3d4adc7a6c",
+	"dbc089f2e4d6b22b540756c35741b76cdbdaad035ccbf39230f25e19cb12acbe",
+	"66e786f5d7e895f4106ad39c8e10672aaebb110f7db012bac2e315e930e803f5",
+	"5d95d1f4abcb27c80fb359853110f95ca1fb2ba3377803e1cd6e60466e1e4ea2",
+	"3876c2c7771fe96c08575e414028e823b82439e7a7fac8fc0788f64daacff3e8",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
@@ -100,27 +103,28 @@ const BASE_SCHEDULE := [
 # 2026-10-24 stage/alpha-w18 re-pin at 7eff47b0: whole runs moved on all 20 seeds with the schedules above; read from MEASURE (tier0.hash).
 # 2026-10-24 #445 (world 1 items: park table 45 parts + Spare Frame, actives on) merged with stage/alpha-w18 b3680e56 at d41cf373:
 # schedules and whole runs moved on all 20 seeds (ruling j integration re-pin); read from MEASURE (schedule0, tier0.hash).
+# 2026-10-28 stage/alpha-w21 re-pin at b9880234 + #538: the cobalt pool and floors (#529, #536); see the note above BASE_SCHEDULE.
 const BASE_RUN := [
-	"ac3b3220350552a36cb508b32d8671de025514f44946096c724aac379998e129",
-	"6fc5ab8572b2bf3fdeaedfe5c1929ee8fb73c1a63132ee13c9a66a33afb2d486",
-	"69a86a58929410edf146c2ead51c6de76917fa66f38f3fe1bf7218badb360caf",
-	"f17b89e16e10f91f715c1e5dce7d49a33eadfbade0364edb9edb97279687f8ec",
-	"379c223ed3798077927111f23ef9088813d74cbee3ac895630f74604675b4438",
-	"08e27884279f4cd71ab71f4a7806af216cb90b4b58781cf8dbfb1bb6ebad10c5",
-	"bc44ed212cf665d4ba9dda103981a2a9a7dfd6b2864395950929775e1c6d42ca",
-	"6e10cebbf8f9643a7a6077034af165372eb2ba65f82db4ad02329717f7afe247",
-	"80ea8823efc4b9d0d158ea740748730e5adca0676241babdec443ff0d9bec87b",
-	"230ee509a356e46a75beed514c4435d8953664c3f2da57b13460c3e318f66200",
-	"a8fccea0fb238b2d17b38c94b18f95bc267d77276b15a115e46ffccb83bd3f93",
-	"db128328c437f396070398ec0f6b4317216cbbe1bf71397e78304e2cdcb05a01",
-	"9ca7cecf12d7afa1f9229d8aa940aad82ec19eaf9bb4e55c50aefcb577ce043e",
-	"2d44473327c1819223f54ed0e17fc8133fb3b98dc098936038d928aa283e2e27",
-	"f6a39af844893d7b51cf54d0f23802fb506f0e6229d330727d17597337ed9d48",
-	"139dea182d2804e1c38b8de198b1ac86d572a18aee461efe49c6ecc123fe0b21",
-	"a10ffb4cfd57af9c03dbe59900489c09ead596c02ada785c7bde304e9f74ff83",
-	"bb729796a06375f934d15543db9985cc936d6691775d0674288c6137637f37cc",
-	"fe9f0cc9e8c5c150d19e3c31dfa4eec078bf78f2a5fd12be3b6263e743e7845a",
-	"485da54e6c4a2cf3390be299005b335cd1c0702daa7db716f43c7a63a0145f82",
+	"c4c14c1074145890d59aaa1debf7d2ed40ab5111f9cdb25e57a875aa7f413de8",
+	"8c46b7ffd67b3ac124c5e7682a9c8686b2c8520436129b659e318b239f1528da",
+	"c1c68016aa4e821f422cea936b0a3ed76ec63e923ddc8b856567a3c08d372955",
+	"f0621da425da115e6aa08f99f6f751df639994b042e3d36c149a7f3715c3439a",
+	"71d54aed568c153e2a861ff7555acac31f733b38eb366f1861ef85310904ee8a",
+	"a951a6fde92f43203d980b96d188741cf2de231584f6e2beeceed532aa7e0b3a",
+	"a4f579466d766f1718a413fc269c29f81443972b5bb1411b559b04aaa1d94ebc",
+	"30f3f26e44dd086991bbf1f7971d85483530ead1ef56cd5504776ae595b961fb",
+	"f8a70b8ece7b20d2157c395635a42916ee9e60cfd7100051763dac541e59365a",
+	"5a7c6c4647cfd111a7cc420e9797a49f260a4adac6aacf9fbcd227c07968b7df",
+	"89b437129b136ff6db70bf95399e230f98ce6238643cd5cb1e8227ae716ee374",
+	"0d8e1f13cfcfd62a55d34510be0365b5fa2e4a13df482583944371796afb23fa",
+	"27e2cd76647ad54c370c453e455a0fac6419f9845c4e581652f937be45f158d9",
+	"9b664a8e9503c8af295b8a8ecc3c227ac3d64504917350ce4adb0d5522bbb4ca",
+	"829bd36f66d5d217f1dcbefcfa6508042f062915f516169ad515400953bf3c88",
+	"e041a1280560389c123e80b85502e18e06d647a7617db6a5b195b5c333e02c63",
+	"bb21f737971dd5553d701546a336a23144821081c6fbc7058bdf7a4948822908",
+	"49fad6319f6c6672b618879bdd139f7ace39bb8b50072e6aa175bca295fa978d",
+	"6d224b6c186ef47ddd2741c5a193f96902f2d472f96cc5683a0318d0efbfbff5",
+	"f5f132a47bcf47bfa5be6bc90f59d052146f35694daaa48b63b6c8db0720b924",
 ]
 const SEEDS := 20
 const DRAWS := 400
@@ -249,13 +253,8 @@ func _component(seed_value: int, tier_value: int) -> Dictionary:
 			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * Director.MAX_TIME_TIERS) / row.threat * row.pressure.interval_scale * config.interval_weight)
 			t.eq("independent cap seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.cap, cap_expected)
 			t.near("independent interval seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.interval, interval_expected)
-			if tier_value == 0:
-				t.near("health untouched seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], d.hp_scale(), row.threat)
-			else:
-				var dial_steps: Dictionary = load("res://src/core/stage_defs.gd").get_script_constant_map().get("RUN_TIER_DIAL_STEPS", {"health": 0.2})
-				var health_cap: float = load("res://src/core/run_tier.gd").get_script_constant_map().get("HEALTH_DIAL_CAP", 1.6)
-				var health_expected: float = row.threat * minf(health_cap, 1.0 + int(row.world) * float(dial_steps.health))
-				t.near("independent tier-1 health seed %d stage %d" % [seed_value, row.stage], d.hp_scale(), health_expected)
+			# Ruling al: no tier raises enemy health.
+			t.near("health untouched seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], d.hp_scale(), row.threat)
 			t.eq("interval mode retained", d.mode, "interval")
 		var pay := {"kill_scrap": row.kill_scrap, "source_rarities": Parts.SOURCE_RARITIES,
 			"gate_rarities": [Parts.gate_rarities(0), Parts.gate_rarities(1), Parts.gate_rarities(2)],
@@ -517,7 +516,7 @@ func _persistence() -> void:
 			var invalid := doc.duplicate(true)
 			invalid[field] = bad
 			t.eq("reject %s %s" % [field, str(bad)], RunState.validate_entrance_doc(invalid), "invalid " + field)
-	for bad_tier in [-1, 2, -1.0, 2.0]:
+	for bad_tier in [-1, RunTier.TOP + 1, -1.0, float(RunTier.TOP + 1)]:
 		var invalid := doc.duplicate(true)
 		invalid.run_tier = bad_tier
 		t.eq("reject tier domain %s" % str(bad_tier), RunState.validate_entrance_doc(invalid), "invalid run_tier")

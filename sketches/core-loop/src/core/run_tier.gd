@@ -2,14 +2,33 @@ extends RefCounted
 
 const Cards := preload("res://src/world/director_cards.gd")
 const PAY_GAIN_CAP := 1.5
-const HEALTH_DIAL_CAP := 1.6
 const DAMAGE_DIAL_CAP := 1.3
 const REST_DIAL_FLOOR := 0.75
 const BASE := 0
 const HARD := 1
 # The highest tier a run can pick (the HARD ladder's top rung). scripts/challenge/lib.mjs MAX_RUN_TIER mirrors it.
-const TOP := 1
+const TOP := 5
+# The HARD ladder (Andrew 27 Oct, option 3; DECISIONS section 5): tiers 1 to TOP are its rungs. Rung 1 is the
+# old HARD. Each rung's pace and pay live in Cards.RUN_TIERS; these are its attack dials, which multiply on top
+# of ChallengeDials (ChallengeDials.set_rung), cumulative up the ladder. Only allowed levers: hit damage,
+# attack cadence, the elite repeat rate, the spawn interval and pilot regen, which only the top rungs cut. Difficulty never raises enemy health (ruling al).
+const LADDER := {
+	1: {},
+	2: {"mobs.damage_mult": 1.15, "warden.pulse_damage_mult": 1.3, "warden.pulse_cycle_mult": 0.85, "brindle.damage_mult": 1.1},
+	3: {"mobs.damage_mult": 1.25, "warden.pulse_damage_mult": 1.6, "warden.pulse_cycle_mult": 0.7, "brindle.damage_mult": 1.2,
+		"brindle.period_mult": 0.9, "mobs.elite_rate_mult": 1.25},
+	4: {"mobs.damage_mult": 1.35, "warden.pulse_damage_mult": 1.95, "warden.pulse_cycle_mult": 0.58, "brindle.damage_mult": 1.3,
+		"brindle.period_mult": 0.85, "mobs.elite_rate_mult": 1.5, "mobs.interval_scale_mult": 0.95, "pilot.regen_delay_mult": 1.5},
+	# Tuned on w1 against Expert ordinary ~50% (ruling aq): the Warden's pulse, not mob hits, is what an Expert
+	# cannot dodge forever; mob hits x3, crowd pressure or no regen left it at 88-100% (8 seeds each). It reads
+	# 79% on the w20 stage (24 seeds), a recorded miss: below it the losses are fight caps, not deaths.
+	5: {"mobs.damage_mult": 1.5, "warden.pulse_damage_mult": 2.25, "warden.pulse_cycle_mult": 0.48, "brindle.damage_mult": 1.4,
+		"brindle.period_mult": 0.8, "mobs.elite_rate_mult": 1.75, "mobs.interval_scale_mult": 0.9, "pilot.regen_delay_mult": 2.0,
+		"pilot.regen_rate_mult": 0.6},
+}
 const UNLOCK := "first_win"
+# The highest rung a won run has cleared (profile stat). Beating rung N opens N+1 (Andrew 27 Oct, option 3).
+const BEST_STAT := "hard_ladder_best"
 # Small existing bonuses; the base id and all metadata remain the same.
 const ENHANCED := {
 	"loose_trigger": {"mods": {"weapon_rate": 1.15}, "text": "+15% fire rate"},
@@ -29,18 +48,50 @@ static func effective_part(id: String, base: Dictionary, tier: int) -> Dictionar
 	return out
 
 
-static func unlocked(profile) -> bool:
-	return profile != null and profile.earned(UNLOCK)
+# Rung 1 opens on the first won run; rung N above it once a run on rung N-1 is won.
+static func unlocked(profile, tier := HARD) -> bool:
+	if profile == null or tier < HARD or tier > TOP or not profile.earned(UNLOCK):
+		return false
+	return tier == HARD or best_rung(profile) >= tier - 1
+
+
+static func best_rung(profile) -> int:
+	return int(profile.stat(BEST_STAT)) if profile != null else 0
+
+
+# The highest rung the profile may pick, 0 while HARD is locked.
+static func top_unlocked(profile) -> int:
+	var top := 0
+	while top < TOP and unlocked(profile, top + 1):
+		top += 1
+	return top
+
+
+# A won run on a rung above the profile's best raises it. True when it changed.
+static func note_win(profile, tier: int) -> bool:
+	if profile == null or tier < HARD or tier <= best_rung(profile):
+		return false
+	profile.set_stat(BEST_STAT, float(mini(tier, TOP)))
+	return true
 
 static func row(tier: int) -> Dictionary:
-	return Cards.RUN_TIERS[HARD if tier == HARD else BASE]
+	return Cards.RUN_TIERS[clampi(tier, BASE, TOP)]
 
-static func threat_text() -> String:
-	var hard := row(HARD)
-	return "Threat: %d%% more crowd, %d%% shorter intervals" % [roundi((hard.cap_weight - 1.0) * 100.0), roundi((1.0 - hard.interval_weight) * 100.0)]
+static func dials(tier: int) -> Dictionary:
+	return LADDER.get(tier, {})
 
-static func pay_text() -> String:
-	return "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi((row(HARD).event_core_multiplier - 1.0) * 100.0), PAY_GAIN_CAP]
+static func threat_text(tier := HARD) -> String:
+	var hard := row(tier)
+	var words := "Threat: %d%% more crowd, %d%% shorter intervals" % [roundi((hard.cap_weight - 1.0) * 100.0), roundi((1.0 - hard.interval_weight) * 100.0)]
+	var d := dials(tier)
+	if d.has("warden.pulse_damage_mult"):
+		words += ", harder hits and Warden pulse"
+	if d.has("pilot.regen_delay_mult") or d.has("pilot.regen_rate_mult"):
+		words += ", slower regen"
+	return words
+
+static func pay_text(tier := HARD) -> String:
+	return "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi((row(tier).event_core_multiplier - 1.0) * 100.0), PAY_GAIN_CAP]
 
 static func stage_row(stage: Dictionary, tier: int) -> Dictionary:
 	if tier == BASE:

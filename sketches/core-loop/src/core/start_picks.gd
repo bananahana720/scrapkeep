@@ -44,7 +44,7 @@ const LISTS := {
 
 
 static func offered_tiers(profile) -> Array:
-	return [0, 1] if RunTier.unlocked(profile) else [0]
+	return range(RunTier.top_unlocked(profile) + 1)
 
 
 # The pilot's rows, resolved: {"id", "do", "name", "icon"} plus "part" or "amount". The id is

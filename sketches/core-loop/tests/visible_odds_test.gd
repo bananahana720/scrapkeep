@@ -67,7 +67,7 @@ func _run() -> void:
 # Every table a part source draws from, named by its owner's own constant.
 func _tables() -> Dictionary:
 	return {
-		"shelf": Shop.SHELF_RARITIES, "top shelf": Shop.TOP_RARITIES, "pocket pay": Activities.PAY_RARITIES,
+		"shelf": Shop.SHELF_RARITIES, "shelf floor": Shop.FLOOR_RARITIES, "top shelf": Shop.TOP_RARITIES, "pocket pay": Activities.PAY_RARITIES,
 		"cache pick": CrackedCache.PICK_RARITIES, "fabricator": Parts.SOURCE_RARITIES["fabricator"],
 		"vault": Parts.SOURCE_RARITIES["vault"], "milestone": Parts.SOURCE_RARITIES["milestone"],
 		"gate 0 cores": Parts.gate_rarities(0), "gate 1 core": Parts.gate_rarities(1), "gate 2 cores": Parts.gate_rarities(2),
@@ -212,11 +212,16 @@ func _shelf() -> void:
 	_t.check("the shelf is stocked", shop.shelf.size() == Shop.SHELF_SIZE, str(shop.shelf.size()))
 	var live := _avail(Shop.SHELF_RARITIES)
 	_t.eq("the shelf table holds both its rarities", live, Shop.SHELF_RARITIES)
-	var want := ItemGen.odds(live)
-	for entry in shop.shelf:
-		_t.check("shelf record %s carries its odds" % entry["part_id"], entry.has("odds") and _matches_row(entry["odds"], live), var_to_str(entry.get("odds", "none")))
+	# The cobalt rung: slot 0 draws from the floor table and shows its odds; the rest the shelf's.
+	var floor_live := _avail(Shop.FLOOR_RARITIES)
+	var tables := func(i: int) -> Array: return floor_live if i == 0 else live
+	for i in shop.shelf.size():
+		var entry: Dictionary = shop.shelf[i]
+		_t.check("shelf record %s carries its odds" % entry["part_id"], entry.has("odds") and _matches_row(entry["odds"], tables.call(i)), var_to_str(entry.get("odds", "none")))
+	_t.check("shelf slot 0 is cobalt or better", Parts.rung_of(shop.shelf[0]["part_id"]) >= Parts.RUNG_FLOOR, shop.shelf[0]["part_id"])
 	for offer in shop.shelf_offers():
-		_t.eq("offer %d odds equal the shelf table's" % offer["index"], offer.get("odds", []), want)
+		var want := ItemGen.odds(tables.call(int(offer["index"])))
+		_t.eq("offer %d odds equal its table's" % offer["index"], offer.get("odds", []), want)
 		_t.eq("offer %d odds text is the readout's" % offer["index"], offer.get("odds_text", ""), OddsReadout.text(want))
 	var top: Dictionary = shop.top_shelf()
 	_t.check("the top shelf has a part", not top.is_empty(), var_to_str(top))
@@ -224,7 +229,8 @@ func _shelf() -> void:
 		var table: Array = Shop.TOP_RARITIES if Parts.rarity_of(top["part_id"]) in Shop.TOP_RARITIES else Shop.SHELF_RARITIES
 		_t.check("the top shelf carries the odds of the table it drew from", _matches_row(top.get("odds", []), _avail(table)), var_to_str(top.get("odds", "none")))
 	shop.reroll()
-	_t.check("a rerolled shelf carries odds too", shop.shelf.all(func(entry): return entry.has("odds") and _matches_row(entry["odds"], live)), "reroll")
+	var rerolled := range(shop.shelf.size()).all(func(i): return shop.shelf[i].has("odds") and _matches_row(shop.shelf[i]["odds"], tables.call(i)))
+	_t.check("a rerolled shelf carries odds too", rerolled and Parts.rung_of(shop.shelf[0]["part_id"]) >= Parts.RUNG_FLOOR, "reroll")
 
 
 func _paid(kind: String, pay: Dictionary, seed_value: int) -> Dictionary:
@@ -275,7 +281,7 @@ func _stands() -> void:
 func _readout() -> void:
 	var odds := ItemGen.odds(["common", "rare"])
 	var text := OddsReadout.text(odds)
-	_t.check("the readout names each rarity and its percent", "COMMON" in text and "RARE" in text and "%d%%" % roundi(float(odds[0]["share"]) * 100.0) in text, text)
+	_t.check("the readout names each rarity and its percent", "FIELD KIT" in text and "FLEET GRADE" in text and "%d%%" % roundi(float(odds[0]["share"]) * 100.0) in text, text)
 	_t.check("a zero-weight rarity is not listed", not "EVOLVED" in OddsReadout.text(ItemGen.odds(["common", "evolved"])), OddsReadout.text(ItemGen.odds(["common", "evolved"])))
 	_t.eq("an empty table reads empty", OddsReadout.text([]), "")
 	# A table whose rarity holds no part shows only the rarities that do (relic holds none here).

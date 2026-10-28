@@ -692,10 +692,10 @@ class AnchorContacts:
 				continue
 			var info := fit_info(by_id[String(node.name).substr(5)], bool(node.get_meta("anchor_kit", false)))
 			info["body"] = body.get_instance_id()
-			for shape: Node in body.get_children():
-				if shape is CollisionShape3D and shape.shape is BoxShape3D:
+			for shape: Dictionary in ParkRecipes.collider_shapes(body):
+				if shape.shape is BoxShape3D:
 					out.append(box_record(shape.global_transform, (shape.shape as BoxShape3D).size, info))
-				elif shape is CollisionShape3D and shape.shape is ConvexPolygonShape3D:
+				elif shape.shape is ConvexPolygonShape3D:
 					var hull := shape.shape as ConvexPolygonShape3D
 					if not outlines.has(hull):
 						outlines[hull] = hull_outline(hull.points)
