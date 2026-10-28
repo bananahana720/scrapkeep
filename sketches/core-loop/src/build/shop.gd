@@ -113,6 +113,10 @@ var history := {}
 var neglected := false
 var talks := {"beat": -1, "used": {}, "loops": 0, "relented": false}
 var leaves_this_visit: Array = []
+# The [world, stage] the shelf was stocked for. Re-entering the bay in the same stage finds the
+# same shelf, hook and reroll; only a new stage or the paid reroll restocks (speedrunner red
+# team, w21: a re-entry restock made the cobalt floor a fresh cobalt each lap).
+var stocked_for: Array = []
 
 var _rng := RandomNumberGenerator.new()
 var _left_empty := false
@@ -129,6 +133,7 @@ func reset_run() -> void:
 	inside = false
 	shelf = []
 	top = {}
+	stocked_for = []
 	neglected = false
 	_left_empty = false
 	talks = {"beat": -1, "used": {}, "loops": 0, "relented": false}
@@ -140,19 +145,22 @@ static func line(line_id: String) -> Dictionary:
 
 # ---- The bay's two calls (W6) ----
 
-# The ball rolled into the bay. Stocks the shelf and the hook for this visit and
+# The ball rolled into the bay. Stocks the shelf and the hook once per stage and
 # returns the greeting line. The difficulty clock pauses until leave().
 func enter() -> Dictionary:
 	inside = true
 	visit += 1
 	bought_this_visit = 0
-	rerolls_left = REROLLS_PER_VISIT
-	_rng.seed = SEED + visit * 131 + ctx.run.stage * 17
-	shelf = _stock()
-	# The next heft class up; at the top class the hook is already yours.
-	var lock_class: int = mini(TOP_CLASS_MAX, ctx.run.heft_class() + 1)
-	var top_id := _roll_one(TOP_RARITIES, shelf.map(func(entry): return entry["part_id"]))
-	top = {"part_id": top_id, "lock_class": lock_class, "sold": false} if top_id != "" else {}
+	var here := [ctx.run.world, ctx.run.stage]
+	if here != stocked_for:
+		stocked_for = here
+		rerolls_left = REROLLS_PER_VISIT
+		_rng.seed = SEED + visit * 131 + ctx.run.stage * 17
+		shelf = _stock()
+		# The next heft class up; at the top class the hook is already yours.
+		var lock_class: int = mini(TOP_CLASS_MAX, ctx.run.heft_class() + 1)
+		var top_id := _roll_one(TOP_RARITIES, shelf.map(func(entry): return entry["part_id"]))
+		top = {"part_id": top_id, "lock_class": lock_class, "sold": false} if top_id != "" else {}
 	talks = {"beat": -1, "used": {}, "loops": 0, "relented": false}
 	var greeting: Dictionary = greeting_line()
 	# Moss takes every carried ledger leaf on entry; the greeting says so.
