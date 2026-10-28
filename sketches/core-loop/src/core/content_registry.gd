@@ -91,7 +91,7 @@ const GOLDEN_HASHES := {
 	"event_kinds.IMPACT": "5f39c4fc927ce05d2cf1062d00aefbcfbd32bb1af840123562582a42bb673245",  # 2026-10-18 (actives follow-up): the Glass Lance's lance row, so its Chain Arc jumps stagger like its pierce; was fb100593, 2026-10-17 stage/alpha-w16 combined re-pin (flail row plus the actives' rocket row); was 8d4d95e0, 2026-10-17 (poles and flails PF3): flail row
 	"event_kinds.REACTIONS": "d69f61edda9075f25e0724226f87be0d35cb9688f1d840b76da4003371b92189",
 	"event_kinds.CODEX_CATEGORIES": "4a61092895a1a12b1981249a32217abfacddc1bdec293c03948ca9f245700016",
-	"objectives.ROWS": "0d4800f67f2ddff5d3586f055ede841f130edff315217ae9cc4dd41f79201f89",
+	"objectives.ROWS": "9da60bab87409e8fbc0e26ac0341a7a0f8eed16aa5d81fc930ea34bfc9e6ef5d",
 	"lore_rows.ROWS": "e783e2423cbf2e58914fa9f28510d17281d88baacc2fc63d7dbec52b7d4b4b71",  # 2026-10-23 world 1 unit 21: Brindle names the Cannon's shape (Andrew's silhouette ruling); was 54163c4a, 2026-10-18 All hands: six Mind crew-log notes (Andrew's pick); was 3c06c629, 2026-10-17 stage/alpha-w16 final combined re-pin (lore port plus the specials' rows); was 58031908, 2026-10-17 (wave 20 lore port, LORE-REPLACE): park rows lead each zone, 14+ notes each; was e19ddad3, 2026-10-08 (wave 10 ST6): Dig and Highdraft lore take the approved sample lines; was 2026-10-04 (wave 11): world 2 and 3 lore final
 	"music_rows.ROWS": "6ae91061fe62a58b8935f508c4b253ffc8c8bb1cbe2d9167eddbb7c3c3126329",  # 2026-10-23 default and phase anthem rows (#411); was cd1c5296, 2026-10-23 rogue and boss anthem rows (#389); was 6b11ddc4, 2026-10-17 stage/alpha-w16 combined re-pin (wave 17: dam, pit, sinkhole and crown layers; #105 picks wiring); was 605ef0ab, 2026-10-17 stage/alpha-w16 combined re-pin (all admitted PRs together); was f9e1cca7
 	"windup_rows.ROWS": "7a9baed454fb96c718f16c53477685e1e76125a1e26c2c8e514ceee4909739a3",  # 2026-10-26 miniboss phase two: E03/E04 read the live slam_crouch and charge_brace (phase-two leads); was 11509654. 2026-10-24 merge of #385 (rogue rows on E34-E39) onto the Spillway roster; was 6691834d (roster) and 34e4ef32 (#385). 2026-10-23 w19 Spillway roster: hooker warn_tether, ramp flipper warn_flap, jolt layer jolt_layer_tell, and the boom tender row (warn_reel); was 1850f9d8, 2026-10-17 stage/alpha-w16 final combined re-pin (specials plus ballast_heavy and gap_net); was bcedc4f9, 2026-10-17 stage/alpha-w16 combined re-pin (all admitted PRs together); was 10034808, 2026-10-17 (wave 18 Dispatcher): dispatcher row on E26 (attack-ids registry); was a38f788e, 2026-10-08 (wave 10 GP6 and AU2): idle, death and wind-up cue fields per kind
@@ -469,11 +469,12 @@ static func _objective_ids() -> Array:
 	var ids := []
 	for state in ["stage", "beacon", "gates", "launch", "boss"]:
 		for fight in ["plating", "posture"]:
-			for mask in 64:
+			for mask in 256:
 				for lesson in ["plate", "caps", "magnet", "unknown"]:
 					var id := Objectives.choose({"state": state, "fight": fight, "sealed": bool(mask & 1),
 						"engaged": bool(mask & 2), "staggered": bool(mask & 4), "struggling": bool(mask & 8),
-						"distance": 5.0 if mask & 16 else 90.0, "card": bool(mask & 32), "lesson": lesson, "activities_left": 1 if mask & 32 else 0})
+						"distance": 5.0 if mask & 16 else 90.0, "card": bool(mask & 32), "lesson": lesson, "activities_left": 1 if mask & 32 else 0,
+						"yard_locked": bool(mask & 64), "clamp_shut": bool(mask & 128)})
 					if id != "" and not ids.has(id):
 						ids.append(id)
 	return ids
