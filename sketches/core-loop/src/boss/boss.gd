@@ -574,6 +574,29 @@ func _spill_break() -> void:
 		_spawn_pickup(Vector3(p.x, arena.ground(p) + 0.9, p.z), value, "spill")
 
 
+# An armour hit in the bowl spills the way a stage hit does (ruling aw): the hit's spill
+# share lands as the ball's own returned scrap in a fan ahead of it, so a stripped ball can
+# roll its mass back up instead of stalling at heft 1.0. Returned scrap pays mass only and
+# lives PICKUP_LIFE. False when no fight is on, and the caller destroys the spill as before.
+func take_spill(from: Vector3, heading: Vector3, spill: int) -> bool:
+	if not active() or not is_instance_valid(arena) or spill <= 0:
+		return false
+	var flat := Vector3(heading.x, 0.0, heading.z).normalized()
+	if flat.length() < 0.1:
+		flat = Vector3.FORWARD
+	var side := flat.cross(Vector3.UP).normalized()
+	var centre: Vector3 = arena.global_position
+	var n := mini(Rules.SPILL_PILES, spill)
+	for k in n:
+		var t := (k + 0.5) / float(n)
+		var spot := from + flat * Rules.SPILL_AHEAD + side * (t * 2.0 - 1.0) * Rules.SPILL_SIDE
+		var out := Vector2(spot.x - centre.x, spot.z - centre.z).limit_length(Arena.FLOOR_R - 4.0)
+		spot = Vector3(centre.x + out.x, 0.0, centre.z + out.y)
+		var value := spill / n + (1 if k < spill % n else 0)
+		_spawn_pickup(Vector3(spot.x, arena.ground(spot) + 0.9, spot.z), value, "returned")
+	return true
+
+
 # The scrap field is stage content and idles in the arena, so a drone killed here drops
 # its scrap as a pickup where it died.
 func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
