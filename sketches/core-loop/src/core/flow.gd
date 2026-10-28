@@ -606,6 +606,8 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 		_body_probe_start(index)
 	if OS.get_environment("DELETE_PROBE") == "1":
 		_delete_probe_start(index)
+	if OS.get_environment("PROC_SPLIT") == "1" and index == 2:
+		_proc_split_start()
 	if OS.get_environment("HANDLER_PROBE") == "1":
 		# PROBE: each stage_entered handler called and timed alone, in connection order.
 		var parts := PackedStringArray()
@@ -1268,3 +1270,55 @@ func _delete_probe_start(index: int) -> void:
 	print("DELETE_PROBE stage %d: %d nodes left the tree in %.1f ms wall" % [index, total, (Time.get_ticks_usec() - t0) / 1000.0])
 	for r in rows.slice(0, 40):
 		print("DELETE_PROBE %5d  %s" % r)
+
+
+# PROBE (never stacks): PROC_SPLIT=1 brackets each subtree of the game root and of Presentation and World with marker
+# nodes that run first in their subtree (tree order at equal priority), and prints each subtree's _process span for
+# the entry frame and the four after it.
+class ProcMark:
+	extends Node
+	var label := ""
+	var marks: Array
+
+	func _process(_delta: float) -> void:
+		marks.append([label, Time.get_ticks_usec()])
+
+
+func _proc_split_start() -> void:
+	var marks: Array = []
+	var placed: Array = []
+	for parent in [ctx.root, ctx.root.get_node_or_null("Presentation"), ctx.root.get_node_or_null("World")]:
+		if parent == null:
+			continue
+		var kids: Array = parent.get_children()
+		for i in range(kids.size() - 1, -1, -1):
+			var kid: Node = kids[i]
+			if kid is ProcMark:
+				continue
+			var mark := ProcMark.new()
+			mark.label = "%s/%s" % [parent.name, kid.name]
+			mark.marks = marks
+			parent.add_child(mark)
+			parent.move_child(mark, kid.get_index())
+			placed.append(mark)
+	var tail := ProcMark.new()
+	tail.label = "END"
+	tail.marks = marks
+	tail.process_priority = 2147483647
+	ctx.root.add_child(tail)
+	placed.append(tail)
+	var tree := Engine.get_main_loop() as SceneTree
+	for frame in 6:
+		await tree.process_frame
+		var rows: Array = []
+		for i in marks.size() - 1:
+			var ms := (int(marks[i + 1][1]) - int(marks[i][1])) / 1000.0
+			if ms >= 0.3:
+				rows.append([ms, String(marks[i][0])])
+		rows.sort_custom(func(a, b): return a[0] > b[0])
+		var total := (int(marks[-1][1]) - int(marks[0][1])) / 1000.0 if marks.size() > 1 else 0.0
+		print("PROC_SPLIT frame %d total %.1f: %s" % [Engine.get_process_frames() - 1, total, ", ".join(rows.slice(0, 25).map(func(r): return "%s %.1f" % [r[1], r[0]]))])
+		marks.clear()
+	for mark in placed:
+		if is_instance_valid(mark):
+			mark.queue_free()
