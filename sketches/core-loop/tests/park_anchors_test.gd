@@ -64,9 +64,9 @@ func _place(recipe: String) -> void:
 	var node: Node3D = ParkRecipes.place_row(row, parent, flat)
 	var plain: Node3D = ParkRecipes.place_row(grey, parent, flat)
 	var posts := int(node.get_meta("anchor_posts", 0))
-	var shapes := node.find_children("*", "CollisionShape3D", true, false)
+	var shapes := ParkRecipes.collider_shapes(node)
 	_t.check("(e) %s keeps greybox's posts and colliders" % recipe, posts > 1 and posts == int(plain.get_meta("anchor_posts", -1))
-		and shapes.size() == posts * maxi(1, ParkRecipes.anchor_fit_boxes(row).size()) and plain.find_children("*", "CollisionShape3D", true, false).size() == posts, "posts %d shapes %d" % [posts, shapes.size()])
+		and shapes.size() == posts * maxi(1, ParkRecipes.anchor_fit_boxes(row).size()) and ParkRecipes.collider_shapes(plain).size() == posts, "posts %d shapes %d" % [posts, shapes.size()])
 	_t.check("(e) %s draws the kit, not grey posts" % recipe, node.get_meta("anchor_kit", false) and not plain.get_meta("anchor_kit", true))
 	var tall := 14.0 + ParkRecipes.ANCHOR_SINK_M
 	var bad := []
@@ -84,7 +84,7 @@ func _place(recipe: String) -> void:
 	if view != null and view.multimesh.instance_count != draws.size():
 		bad.append("Posts holds %d, want %d" % [view.multimesh.instance_count, draws.size()])
 	var shapes_at := {}
-	for shape: CollisionShape3D in shapes:
+	for shape: Dictionary in shapes:
 		shapes_at[Vector2(snappedf(shape.position.x, 0.01), snappedf(shape.position.z, 0.01))] = true
 	for k in draws.size():
 		var local: Transform3D = draws[k]
@@ -213,7 +213,7 @@ func _fitted() -> void:
 			var node: Node3D = ParkRecipes.place_row(row, parent, flat)
 			var boxes := ParkRecipes.anchor_fit_boxes(row)
 			var posts := ParkRecipes.anchor_posts(row)
-			var shapes := node.find_children("*", "CollisionShape3D", true, false)
+			var shapes := ParkRecipes.collider_shapes(node)
 			rows += 1
 			posts_fitted += posts.size()
 			_t.check("(g) %s size %s: posts %d x boxes %d shapes" % [recipe, entry_size, posts.size(), boxes.size()],
@@ -234,7 +234,7 @@ func _fitted() -> void:
 				var foot := inv * Vector3(posts[k].x, 3.0, posts[k].y)
 				for i in boxes.size():
 					var b: Dictionary = boxes[i]
-					var shape: CollisionShape3D = shapes[k * boxes.size() + i]
+					var shape: Dictionary = shapes[k * boxes.size() + i]
 					if shape.shape is ConvexPolygonShape3D:
 						var hull := shape.shape as ConvexPolygonShape3D
 						per_band[i][hull] = true
@@ -277,18 +277,18 @@ func _fitted() -> void:
 	var control := _fit_row("anchor_hoodoo", 13.0, false)
 	var parent2 := Node3D.new()
 	var kit_node: Node3D = ParkRecipes.place_row(control, parent2, flat)
-	var kit_shapes := kit_node.find_children("*", "CollisionShape3D", true, false)
+	var kit_shapes := ParkRecipes.collider_shapes(kit_node)
 	var kit_posts := int(kit_node.get_meta("anchor_posts", 0))
 	var one := kit_posts > 1 and kit_shapes.size() == kit_posts
-	for sh: CollisionShape3D in kit_shapes:
+	for sh: Dictionary in kit_shapes:
 		one = one and (sh.shape as BoxShape3D).size == Vector3(8.0, 14.0, 8.0)
 	_t.check("(i) an unlisted size keeps one 8 m box per post", one, "posts %d shapes %d" % [kit_posts, kit_shapes.size()])
 	var grey := control.duplicate()
 	grey["recipe"] = ParkRecipes.GREYBOX + "anchor_field"
 	var grey_node: Node3D = ParkRecipes.place_row(grey, parent2, flat)
-	var grey_shapes := grey_node.find_children("*", "CollisionShape3D", true, false)
+	var grey_shapes := ParkRecipes.collider_shapes(grey_node)
 	var grey_one := grey_shapes.size() == int(grey_node.get_meta("anchor_posts", -1)) and grey_shapes.size() > 1
-	for sh: CollisionShape3D in grey_shapes:
+	for sh: Dictionary in grey_shapes:
 		grey_one = grey_one and (sh.shape as BoxShape3D).size == Vector3(8.0, 14.0, 8.0)
 	_t.check("(i) a greybox row keeps one 8 m box per post", grey_one)
 	parent2.free()

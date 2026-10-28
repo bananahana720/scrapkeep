@@ -468,7 +468,7 @@ func _check_anchor_contacts() -> void:
 	root.add_child(parent)
 	var node: Node3D = ParkRecipes.place_row(row, parent, func(_x: float, _z: float) -> float: return 0.0)
 	var recorded: Array = AC.collect(root, [row])
-	var shapes := node.find_children("*", "CollisionShape3D", true, false)
+	var shapes := ParkRecipes.collider_shapes(node)
 	var all_fitted := recorded.all(func(b: Dictionary) -> bool: return b["fitted"] and b["row"] == "corner_t")
 	_t.check("anchor contacts: collect records every shape of a placed fitted row, hulls as prisms (%d of %d)" % [recorded.size(), shapes.size()], recorded.size() == shapes.size() and shapes.size() > 0 and all_fitted)
 	var prisms := recorded.filter(func(b: Dictionary) -> bool: return b.has("poly"))
