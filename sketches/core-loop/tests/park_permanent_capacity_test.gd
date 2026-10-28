@@ -1,3 +1,4 @@
+# smoke: solo timeout=360s (259 s alone uncapped on a 4-core cloud box at stage/alpha-w23 74f5cff5, 20 checks PASS; killed at the 180 s default cap in every gate chunk w20 to w23)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
