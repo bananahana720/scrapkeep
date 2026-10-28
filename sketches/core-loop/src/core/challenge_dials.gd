@@ -126,7 +126,7 @@ static func set_rung(d: Dictionary) -> void:
 	_rung = d
 
 
-# The rung dials in force, for run records.
+# The rung dials in force (tests read them; a bot record carries run_tier instead).
 static func rung() -> Dictionary:
 	return _rung
 

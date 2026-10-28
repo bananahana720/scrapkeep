@@ -11,7 +11,7 @@ const TOP := 5
 # The HARD ladder (Andrew 27 Oct, option 3; DECISIONS section 5): tiers 1 to TOP are its rungs. Rung 1 is the
 # old HARD. Each rung's pace and pay live in Cards.RUN_TIERS; these are its attack dials, which multiply on top
 # of ChallengeDials (ChallengeDials.set_rung), cumulative up the ladder. Only allowed levers: hit damage,
-# attack cadence and pilot regen, which only the top rungs cut. Difficulty never raises enemy health (ruling al).
+# attack cadence, the elite repeat rate, the spawn interval and pilot regen, which only the top rungs cut. Difficulty never raises enemy health (ruling al).
 const LADDER := {
 	1: {},
 	2: {"mobs.damage_mult": 1.15, "warden.pulse_damage_mult": 1.3, "warden.pulse_cycle_mult": 0.85, "brindle.damage_mult": 1.1},

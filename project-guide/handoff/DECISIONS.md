@@ -310,7 +310,7 @@ Rulings from 8 Sep to 16 Oct that nothing has replaced, found by the reconcile p
 | --- | --- | --- |
 | **Run shape.** Three worlds in a row; every run starts in world one; no free retry (section 9, earned retry item); 30-45 min; only unlocks carry over. Continue after a quit stays free. | 2 Oct, amended 22 Oct | interview; tsv 153, 176, 213 |
 | First win in three to five attempts. Normal difficulty tuned toward 3 of 5, hard steeper. | Sep, 8 Oct | Bible; interview; tsv 345 |
-| Difficulty never raises enemy health; no run tier raises it (ruling al, 27 Oct: the HARD health dial is retired). Run tier caps the world damage dial at 1.3x; Wardens excluded. | Oct | tsv 472, 805, 820 |
+| Difficulty never raises enemy health; no run tier raises it (ruling al, 27 Oct: the HARD health dial is retired). Run tier caps the world damage dial at 1.3x; Wardens excluded from it. The HARD ladder's rung dials scale hits beyond it (section 5). | Oct | tsv 472, 805, 820 |
 | Foreman and Linker take no attacker slot; Dispatcher chasers and Splitter pieces do. | 17 Oct 00:47 | tsv 992 |
 | A fall below a map's net deck lands on the deck, never death. | Oct | tsv 231 |
 | **Movement belongs to the pilot.** Shared parts change what a verb does, never how far or fast the ball moves. | Oct | tsv 727, 896, 903 |
