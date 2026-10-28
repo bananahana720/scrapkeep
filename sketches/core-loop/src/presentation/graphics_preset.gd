@@ -209,7 +209,7 @@ static func bind(environment: Environment, sun: DirectionalLight3D, viewport: Vi
 static func register_scenery(view: GeometryInstance3D) -> void:
 	_scenery.append(weakref(view))
 	_apply_scenery(view)
-	_bind_scenery_material.call_deferred(weakref(view))
+	preload("res://src/core/defer_probe.gd").run.call_deferred("graphics_preset.gd:212", _bind_scenery_material.bind(weakref(view)))
 
 static func _apply_scenery(view: GeometryInstance3D) -> void:
 	if view.has_meta(RecipeProps.META_FADE):

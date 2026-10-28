@@ -458,7 +458,7 @@ func _wire() -> void:
 		refresh_might())
 	events.heft_class_changed.connect(_on_heft_up)
 	_listen(events, "heft_class_dropped", func(_c: int, _h: float): refresh_might())
-	_listen(events, "synergy_discovered", func(_id: String, _cat: String, _first: bool): refresh_might.call_deferred())
+	_listen(events, "synergy_discovered", func(_id: String, _cat: String, _first: bool): preload("res://src/core/defer_probe.gd").run.call_deferred("player_fx.gd:461", refresh_might))
 	_listen(events, "evolution_fired", _on_evolution)
 	events.enemy_struck.connect(_on_struck)
 	events.harpoon_smashed.connect(_on_smashed)
@@ -569,7 +569,7 @@ func _on_pinned(victim: Node3D, _damage: float) -> void:
 # audio.gd's hit_on_beat. Deferred, so a word the same hit earns (WHAM, KLANG) stamps first
 # and grows instead of being refused by the gap.
 func on_beat_hit(enemy: Node3D, kind: String) -> void:
-	_on_beat_word.call_deferred(enemy, kind, _clock)
+	preload("res://src/core/defer_probe.gd").run.call_deferred("player_fx.gd:572", _on_beat_word.bind(enemy, kind, _clock))
 
 
 func _on_beat_word(enemy: Node3D, _kind: String, at_clock: float) -> void:

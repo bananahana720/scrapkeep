@@ -186,7 +186,7 @@ func on_spawned(enemy: Node3D, kind: String) -> void:
 	if not Roster.is_reinforcement(kind):
 		return
 	if _batch.is_empty():
-		_flush.call_deferred()
+		preload("res://src/core/defer_probe.gd").run.call_deferred("fleet.gd:189", _flush)
 	_batch.append({"kind": kind, "at": enemy.global_position})
 
 

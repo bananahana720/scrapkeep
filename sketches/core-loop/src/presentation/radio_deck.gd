@@ -41,7 +41,7 @@ func setup(game_ref) -> void:
 		events.run_started.connect(func(_class_id: String): _counts.clear())
 		events.flow_changed.connect(_on_flow_changed)
 		events.stage_entered.connect(func(_stage: int, _retry: bool):
-			_place_caches.call_deferred()
+			preload("res://src/core/defer_probe.gd").run.call_deferred("radio_deck.gd:44", _place_caches)
 			_plan_now())
 		var bus_args := _signal_args(events)
 		for on in RadioTakes.by_signal():
@@ -122,13 +122,19 @@ func find(id: String) -> bool:
 
 # The stage's unfound Signal caches go up at their spots; the last stage's come down.
 func _place_caches() -> void:
+	var _rq := Time.get_ticks_usec()
 	for old in get_tree().get_nodes_in_group(RadioCache.GROUP):
 		old.queue_free()
 	var terrain = game.ctx.get("terrain")
 	var root = game.ctx.get("root")
 	if terrain == null or root == null or not terrain.has_method("map") or terrain.map() == null:
 		return
+	var _rp := "RADIO_PROBE free %.2f" % ((Time.get_ticks_usec() - _rq) / 1000.0); _rq = Time.get_ticks_usec()
+	var _w := RadioCache.wanted(String(terrain.map().title), _found)
+	_rp += " wanted %.2f (%d) title %s" % [(Time.get_ticks_usec() - _rq) / 1000.0, _w.size(), terrain.map().title]; _rq = Time.get_ticks_usec()
 	RadioCache.spawn_for(String(terrain.map().title), _found, root, self, game.ctx.player)
+	_rp += " spawn %.2f" % ((Time.get_ticks_usec() - _rq) / 1000.0)
+	print(_rp)
 
 
 func _found(id: String) -> bool:

@@ -156,7 +156,7 @@ func setup(ctx_ref) -> void:
 	if not get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.connect(_on_node_added)
 	for enemy in get_tree().get_nodes_in_group("enemy"):
-		_ring_warden.call_deferred(enemy)
+		preload("res://src/core/defer_probe.gd").run.call_deferred("presentation.gd:159", _ring_warden.bind(enemy))
 		_read_windups(enemy)
 
 
@@ -167,9 +167,9 @@ func _exit_tree() -> void:
 
 func _on_node_added(node: Node) -> void:
 	if node.get_script() == WardenScript or (node.get("role") == "hull" and node.get("boss") != null):
-		_ring_warden.call_deferred(node)
+		preload("res://src/core/defer_probe.gd").run.call_deferred("presentation.gd:170", _ring_warden.bind(node))
 	if node.has_signal("attack_phase"):
-		_read_windups.call_deferred(node)
+		preload("res://src/core/defer_probe.gd").run.call_deferred("presentation.gd:172", _read_windups.bind(node))
 
 
 var _boils_wired := false

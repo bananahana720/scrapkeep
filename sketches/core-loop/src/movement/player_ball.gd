@@ -1250,7 +1250,7 @@ func _on_bow_entered(_body: Node3D) -> void:
 	# Batch the server's unordered notifications before assigning seeded kill payouts.
 	if not _bow_check_queued:
 		_bow_check_queued = true
-		_flush_bow.call_deferred()
+		preload("res://src/core/defer_probe.gd").run.call_deferred("player_ball.gd:1253", _flush_bow)
 
 
 func _flush_bow() -> void:

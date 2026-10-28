@@ -358,7 +358,7 @@ static func workshop_sky_later() -> PanoramaSkyMaterial:
 		# High priority: queued behind the band's renders it could land seconds into play (PR #386; the 4080 hitch is inferred).
 		_sky_task = WorkerThreadPool.add_task(func():
 			out["image"] = _paint_workshop_sky()
-			_fill_waiting_skies.call_deferred(), true, "workshop sky")
+			preload("res://src/core/defer_probe.gd").run.call_deferred("palette.gd:361", _fill_waiting_skies), true, "workshop sky")
 	return material
 
 

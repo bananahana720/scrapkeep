@@ -141,7 +141,7 @@ func show_flow(state: String) -> void:
 	_sync_dressing()
 	if state == "title" and intro_autoplay and not _intro_tried and not intro_hold:
 		_intro_tried = true
-		_autoplay_intro.call_deferred()
+		preload("res://src/core/defer_probe.gd").run.call_deferred("title_stage.gd:144", _autoplay_intro)
 
 
 # The deferred autoplay re-checks the hold: one set after this call was queued (boot.gd marking the
@@ -159,7 +159,7 @@ func release_intro() -> void:
 	intro_hold = false
 	if _flow_state == "title" and intro_autoplay and not _intro_tried and not intro_playing():
 		_intro_tried = true
-		_autoplay_intro.call_deferred()
+		preload("res://src/core/defer_probe.gd").run.call_deferred("title_stage.gd:162", _autoplay_intro)
 
 
 func intro_playing() -> bool:

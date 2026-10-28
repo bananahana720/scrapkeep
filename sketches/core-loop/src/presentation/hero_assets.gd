@@ -247,14 +247,14 @@ func setup(ctx_ref) -> void:
 	_connect_pilot_events()
 	_connect_shell_events()
 	_prewarm_strokes_in_time()
-	_dress_bay.call_deferred()
+	preload("res://src/core/defer_probe.gd").run.call_deferred("hero_assets.gd:250", _dress_bay)
 	if ctx != null and ctx.player != null:
 		attach_player(ctx.player)
 	if ctx != null and ctx.get("build") != null and ctx.build.has_signal("shell_air_changed"):
 		ctx.build.shell_air_changed.connect(air_cue)
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.has_node("WardenLook"):
-			_dress_warden.call_deferred(enemy)
+			preload("res://src/core/defer_probe.gd").run.call_deferred("hero_assets.gd:257", _dress_warden.bind(enemy))
 	if ctx != null:
 		var cosmetics := CosmeticPresentation.new()
 		add_child(cosmetics)
@@ -284,11 +284,11 @@ func _on_node_added(node: Node) -> void:
 	if parent == null:
 		return
 	if node.get_script() == WardenLook or node.get_script() == WardenKit:
-		_dress_warden.call_deferred(parent)
+		preload("res://src/core/defer_probe.gd").run.call_deferred("hero_assets.gd:287", _dress_warden.bind(parent))
 	elif node is MeshInstance3D and parent.get_script() == Accretion:
 		dress_chunk(node)
 	elif node is Node3D and parent.get_script() == RewardGates:
-		_dress_gate.call_deferred(node)
+		preload("res://src/core/defer_probe.gd").run.call_deferred("hero_assets.gd:291", _dress_gate.bind(node))
 
 
 # --- materials ---------------------------------------------------------------------
@@ -2218,7 +2218,7 @@ void fragment() {
 			bus.posture_changed.connect(_warden_posture_changed)
 		if not bus.stage_entered.is_connected(_warden_stage_entered):
 			bus.stage_entered.connect(_warden_stage_entered)
-	_dress_mast.call_deferred(warden)
+	preload("res://src/core/defer_probe.gd").run.call_deferred("hero_assets.gd:2210", _dress_mast.bind(warden))
 
 
 # --- Warden bodies (KF8a) -----------------------------------------------------------------
@@ -2244,7 +2244,9 @@ func _body_scene(path: String) -> Node3D:
 func _dress_warden_body(warden) -> void:
 	var kind: String = warden.family
 	var row: Dictionary = WARDEN_BODIES[kind]
+	var _wq := Time.get_ticks_usec()
 	var body := _body_scene(row.body)
+	var _wp := "WARDEN_PROBE %s body %.2f" % [kind, (Time.get_ticks_usec() - _wq) / 1000.0]; _wq = Time.get_ticks_usec()
 	var weak := body.find_child(row.point, true, false) as Node3D if body != null else null
 	var player := body.find_child("AnimationPlayer", true, false) as AnimationPlayer if body != null else null
 	if body == null or weak == null or player == null:
@@ -2259,6 +2261,7 @@ func _dress_warden_body(warden) -> void:
 			_warn_once("warden_body_kit:" + kit_path, "hero_assets: Warden body kit '%s' unavailable" % kit_path)
 			continue
 		body.add_child(kit_part)
+	_wp += " kits %.2f" % ((Time.get_ticks_usec() - _wq) / 1000.0); _wq = Time.get_ticks_usec()
 	var rec := {"warden": warden, "base": body, "body": body, "body_kind": kind, "weak": weak, "kit": null,
 		"hidden": [], "materials": {}, "seams": [], "cracks": [], "flights": [], "jaws": [], "mantle": null, "mantle_tool": null,
 		"players": body.find_children("*", "AnimationPlayer", true, false), "skeleton": null, "queue": [], "lost": [],
@@ -2266,7 +2269,9 @@ func _dress_warden_body(warden) -> void:
 		"seen": {"charging": false, "pulses": warden.pulses, "staggered": warden.staggered(),
 			"chunks": warden.chunks_left(), "rides": _driver_count(warden, "rides")}}
 	rec.skeleton = body.find_child("Skeleton3D", true, false) as Skeleton3D
+	_wp += " find %.2f" % ((Time.get_ticks_usec() - _wq) / 1000.0); _wq = Time.get_ticks_usec()
 	_paint_body(body, rec)
+	_wp += " paint %.2f" % ((Time.get_ticks_usec() - _wq) / 1000.0); _wq = Time.get_ticks_usec()
 	match kind:
 		"reactor":
 			for mount in row.mount_parts:
@@ -2283,7 +2288,9 @@ func _dress_warden_body(warden) -> void:
 			_hide_warden_mesh(child, rec)
 	_hide_warden_tree(warden._look._jaws, rec)
 	_hide_warden_tree(warden._kit, rec)
+	_wp += " rig %.2f" % ((Time.get_ticks_usec() - _wq) / 1000.0); _wq = Time.get_ticks_usec()
 	warden.add_child(body)
+	_wp += " add %.2f" % ((Time.get_ticks_usec() - _wq) / 1000.0); _wq = Time.get_ticks_usec()
 	var id: int = warden.get_instance_id()
 	for p in rec.players:
 		(p as AnimationPlayer).mixer_applied.connect(_hold_body.bind(id))
@@ -2295,6 +2302,8 @@ func _dress_warden_body(warden) -> void:
 	warden.tree_exiting.connect(_forget_warden.bind(id), CONNECT_ONE_SHOT)
 	_play_body(rec, ["idle"])
 	_update_warden(rec)
+	_wp += " play %.2f" % ((Time.get_ticks_usec() - _wq) / 1000.0)
+	print(_wp)
 	if warden.fight() == "posture" and warden.fleet != null:
 		var bus = warden.fleet.events()
 		if not bus.posture_changed.is_connected(_warden_posture_changed):

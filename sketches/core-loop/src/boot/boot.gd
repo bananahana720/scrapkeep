@@ -64,9 +64,9 @@ func _ready() -> void:
 		_unpace()
 		ResourceLoader.load_threaded_request(GAME_SCENE, "", false)
 		_loading = true
-		_announce_interactive.call_deferred()
+		preload("res://src/core/defer_probe.gd").run.call_deferred("boot.gd:67", _announce_interactive)
 	else:
-		_build_in_place.call_deferred()
+		preload("res://src/core/defer_probe.gd").run.call_deferred("boot.gd:69", _build_in_place)
 
 
 func _use_card() -> bool:
