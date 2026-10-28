@@ -224,7 +224,7 @@ var _scenes := {}
 var _meshes := {}
 var _players := {}
 var _wardens := {}
-# kind -> {"body", "materials", "todo": [[MeshInstance3D, surface]]}: a Warden body instanced and painted off the tree
+# kind -> {"body", "materials", "unpainted": [[MeshInstance3D, surface]]}: a Warden body instanced and painted off the tree
 # during a launch flight, taken whole by the next dress of its kind. Painting a reactor body is 12-15 ms on the 4080
 # (0.9-2 ms on the cloud), every dress; built ahead it leaves the stage entry frame (flume entry, scrapkeep#512).
 var _spares := {}
@@ -2363,9 +2363,9 @@ func _step_spares() -> void:
 				continue
 			_spares[kind] = spare
 			return
-		var todo: Array = _spares[kind].todo
-		while not todo.is_empty():
-			var surface: Array = todo.pop_back()
+		var unpainted: Array = _spares[kind].unpainted
+		while not unpainted.is_empty():
+			var surface: Array = unpainted.pop_back()
 			_paint_surface(surface[0], surface[1], _spares[kind].materials)
 			if Time.get_ticks_usec() >= deadline:
 				return
@@ -2381,17 +2381,17 @@ func _new_spare(kind: String) -> Dictionary:
 		return {}
 	for kit_path in row.kits:
 		body.add_child(_body_scene(kit_path))
-	var todo: Array = []
+	var unpainted: Array = []
 	for node in body.find_children("*", "MeshInstance3D", true, false):
 		for i in (node as MeshInstance3D).mesh.get_surface_count():
-			todo.push_front([node, i])
-	return {"body": body, "materials": {}, "todo": todo}
+			unpainted.push_front([node, i])
+	return {"body": body, "materials": {}, "unpainted": unpainted}
 
 
 # The finished spare of kind, removed from the pool; {} while it is still painting or none was readied.
 func _take_spare(kind: String) -> Dictionary:
 	var spare: Dictionary = _spares.get(kind, {})
-	if spare.is_empty() or not spare.todo.is_empty():
+	if spare.is_empty() or not spare.unpainted.is_empty():
 		return {}
 	_spares.erase(kind)
 	return spare

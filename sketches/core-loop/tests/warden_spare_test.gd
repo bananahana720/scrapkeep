@@ -59,11 +59,11 @@ func _run() -> void:
 
 	_launch()
 	var ticks := 0
-	while (not hero._spares.has("reactor") or not hero._spares.reactor.todo.is_empty()) and _game.flow.state_name() == "launch" and ticks < 200:
+	while (not hero._spares.has("reactor") or not hero._spares.reactor.unpainted.is_empty()) and _game.flow.state_name() == "launch" and ticks < 200:
 		await physics_frame
 		ticks += 1
 	var spare: Dictionary = hero._spares.get("reactor", {})
-	_t.check("the flight readies a painted reactor spare before the entry", not spare.is_empty() and spare.todo.is_empty()
+	_t.check("the flight readies a painted reactor spare before the entry", not spare.is_empty() and spare.unpainted.is_empty()
 		and _game.flow.state_name() == "launch", "%s after %d ticks" % [_game.flow.state_name(), ticks])
 	var spare_body: Node3D = spare.get("body")
 	_t.check("the spare is off the tree", spare_body != null and not spare_body.is_inside_tree(), "")
