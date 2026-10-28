@@ -5,6 +5,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Activities := preload("res://src/world/activities.gd")
+const ActivityView := preload("res://src/world/activity_view.gd")
 const Palette := preload("res://src/core/palette.gd")
 const BetCrate := preload("res://src/world/bet_crate.gd")
 const AmbushAltar := preload("res://src/world/ambush_altar.gd")
@@ -165,6 +166,21 @@ func _lit() -> void:
 	var cap = _site("ambush_altar").cap
 	_t.check("the altar cap is brass", cap != null and _rgb(cap.material_override.albedo_color) == _rgb(Palette.BRASS),
 		"cap %s" % [cap.material_override.albedo_color if cap != null else null])
+	# Views of one row share their meshes and materials (the stage entry frame built them per view); a
+	# stage modifier's sight scale stretches only its own column.
+	var view_a := ActivityView.new()
+	var view_b := ActivityView.new()
+	view_a.build("cracked_cache", 6.0)
+	view_b.build("cracked_cache", 6.0)
+	_t.check("two views of one row share the column's mesh and material", view_a.column.mesh == view_b.column.mesh
+		and view_a.column.material_override == view_b.column.material_override)
+	_t.check("and the ring's dash mesh", _first_mesh(view_a.ring).mesh == _first_mesh(view_b.ring).mesh)
+	view_a.set_sight(1.5)
+	_t.check("a sight scale stretches only its own column", view_a.column.mesh != view_b.column.mesh
+		and is_equal_approx((view_b.column.mesh as BoxMesh).size.y, ActivityView.COLUMN_HEIGHT)
+		and is_equal_approx((view_a.column.mesh as BoxMesh).size.y, ActivityView.COLUMN_HEIGHT * 1.5))
+	view_a.free()
+	view_b.free()
 	var altar := AmbushAltar.new()
 	altar._build_greybox()
 	_t.check("altar fallback has no hazard surface or ground ring", _no_hazard_surface(altar) and altar._ring == null)
