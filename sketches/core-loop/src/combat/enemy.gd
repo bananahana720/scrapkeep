@@ -812,7 +812,7 @@ func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_READY:
 		# Spawners add the enemy, then build its body in setup() the same frame.
-		_dress_bake.call_deferred()
+		preload("res://src/core/defer_probe.gd").run.call_deferred("enemy.gd:815", _dress_bake)
 	elif what == NOTIFICATION_PHYSICS_PROCESS:
 		if not _clips_tried:
 			_clips_tried = true

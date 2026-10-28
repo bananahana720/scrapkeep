@@ -65,7 +65,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	var m = ctx.terrain.map_for(stage)
 	if not "relic_spot" in m:
 		return
-	_place_relic_cache.call_deferred(stage)
+	preload("res://src/core/defer_probe.gd").run.call_deferred("interact.gd:68", _place_relic_cache.bind(stage))
 
 
 # Deferred from _on_stage_entered, so it can land after this node or its game is gone.

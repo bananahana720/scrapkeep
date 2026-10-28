@@ -435,7 +435,7 @@ static func stop_ms_for(damage: float, crit := false, heavy := false) -> float:
 func _queue_flush() -> void:
 	if not _flush_queued:
 		_flush_queued = true
-		flush.call_deferred()
+		preload("res://src/core/defer_probe.gd").run.call_deferred("juice.gd:438", flush)
 
 
 # Lands everything the frame collected. Deferred, so the streaks audio bumped this frame

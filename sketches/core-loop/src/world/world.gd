@@ -286,15 +286,21 @@ func _add_contraptions() -> void:
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
+	var _wp := Time.get_ticks_usec()
+	var _wps := PackedStringArray()
 	cinder_heat.reset()
 	if retry:
 		_class_picks_owed = 0
 	Threat.follow_row(ctx.tuning)
 	# Compile every threat mark pipeline before play (Threat.Painter.warm_up), once a look.
+	_wps.append("threat %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	Threat.Painter.warm_up(ctx.root)
+	_wps.append("threat %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	if events != null:
 		_publish(events.end_all())
+		_wps.append("publish %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	EventFamilies.release(events, event_families)
+	_wps.append("release %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	_park_warden_staggered = false
 	_park_warden_chunks = 4
 	launch.stop()
@@ -303,12 +309,15 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	bay.undock()
 	_bay_calm = false
 	terrain.use(stage)
+	_wps.append("use %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	_add_contraptions()
+	_wps.append("contraptions %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	var m = terrain.map()
 	if "swaps" in m:
 		for id in m.swaps:
 			m.apply_swap(id, false)
 	breach = Breach.new(m.breach_plates) if "breach_plates" in m else null
+	_wps.append("swaps %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	if contraptions.has(stage):
 		contraptions[stage].reset()
 	layer = ""
@@ -319,10 +328,13 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	var def: Dictionary = RunTier.stage_row(ctx.flow.stage_def(), ctx.run.selected_run_tier())
 	var map = terrain.map()
 	events = EventDirector.new(_stage_seed, def, map, ctx.tuning.f("cruise"), Callable(terrain, "height"))
+	_wps.append("director_events %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	event_families = EventFamilies.build(self, events)
+	_wps.append("families %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	director = Director.new(_stage_seed ^ 0x5eed)
 	var map_id := String(map.park.get("map", "")) if "park" in map else ""
 	rogue_plan = RogueDirector.plan(_stage_seed ^ 0x706e, ctx.stages.world_of(stage), RogueDirector.read_sites(map_id))
+	_wps.append("rogue %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	rogue = null
 	_author_director(def)
 	director.use_row(def, ctx.tuning.option(Director.Tuning.BREATH_KEY) if ctx.tuning != null else "", Callable(ctx.run, "selected_run_tier"))
@@ -338,8 +350,12 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	else:
 		flood.configure(basin, 0.0, Vector3.ZERO)
 	flood.render()
+	_wps.append("flood %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	view.rebuild(events)
+	_wps.append("view %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	terrain_view.rebuild(events)
+	_wps.append("view %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
+	_wps.append("terrain_view %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	last_miniboss_at = Vector3.INF
 	_pressure = -1.0
 	# Combat clears the stage's enemies in its own stage_entered handler, after this
@@ -347,8 +363,12 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	vault = null
 	_vault_pending = ctx.stages.has_vault()
 	codex_world = CodexWorld.new()
+	_wps.append("codex %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
 	view.set_vault(terrain.vault_point(stage), false)
 	_mark_landing(stage, retry)
+	_wps.append("landing %.1f" % ((Time.get_ticks_usec() - _wp) / 1000.0)); _wp = Time.get_ticks_usec()
+	if OS.get_environment("WORLD_PROBE") == "1":
+		print("WORLD_PROBE stage %d: %s" % [stage, ", ".join(_wps)])
 
 
 # The arena is not a stage (DESIGN-NOTES spine call 34). The live events close, the

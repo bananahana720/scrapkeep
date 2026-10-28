@@ -1525,7 +1525,7 @@ func stop(sound: String) -> void:
 # runs at the end of the frame, after the committing code has set the layers.
 func _on_node_added(node: Node) -> void:
 	if node.has_method("threat_kind"):
-		_warn_threat.call_deferred(node)
+		preload("res://src/core/defer_probe.gd").run.call_deferred("audio.gd:1528", _warn_threat.bind(node))
 
 
 func _warn_threat(node: Node) -> void:
@@ -2373,7 +2373,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_line_was = ""
 	# A retry restores the meter to its stage-entry value silently; the lift follows the meter
 	# once every stage_entered handler has run (SKILL-BAR section 4, one fact for every layer).
-	sync_ult_lift.call_deferred()
+	preload("res://src/core/defer_probe.gd").run.call_deferred("audio.gd:2376", sync_ult_lift)
 	engine.set_overcharge(0)
 	if retry:
 		_disarm_launch()
@@ -2394,7 +2394,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	engine.set_fleet_ticks(0)
 	engine.set_reactor_pedal(false)
 	_flow_queue.append(["stage", stage, retry])
-	_warm_park_risers.call_deferred(stage)
+	preload("res://src/core/defer_probe.gd").run.call_deferred("audio.gd:2397", _warm_park_risers.bind(stage))
 
 
 # A rendered event riser's length is read on the frame its event is announced (park_cue), so

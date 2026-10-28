@@ -594,7 +594,24 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 	# the same moment as the checkpoint and gets the same pose.
 	ctx.run.snapshot(Vector3.ZERO, Vector3.ZERO, ctx.camera.yaw)
 	var doc: Dictionary = ctx.run.to_entrance_doc(_tree()) if store != null else {}
-	ctx.events.stage_entered.emit(index, retry)
+	# PROBE (never stacks): BODY_PROBE=1 counts the nodes the entry adds, by kind and owner, through the next two frames.
+	if OS.get_environment("BODY_PROBE") == "1":
+		_body_probe_start(index)
+	if OS.get_environment("HANDLER_PROBE") == "1":
+		# PROBE: each stage_entered handler called and timed alone, in connection order.
+		var parts := PackedStringArray()
+		var all := Time.get_ticks_usec()
+		for c in ctx.events.stage_entered.get_connections():
+			var t0 := Time.get_ticks_usec()
+			(c.callable as Callable).call(index, retry)
+			var ms := (Time.get_ticks_usec() - t0) / 1000.0
+			if ms >= 0.3:
+				var obj = (c.callable as Callable).get_object()
+				var who: String = obj.get_script().resource_path.get_file() if obj != null and obj.get_script() != null else str(obj)
+				parts.append("%s.%s %.1f" % [who, (c.callable as Callable).get_method(), ms])
+		print("HANDLER_PROBE stage %d total %.1f: %s" % [index, (Time.get_ticks_usec() - all) / 1000.0, ", ".join(parts)])
+	else:
+		ctx.events.stage_entered.emit(index, retry)
 	var heading: Vector3 = ctx.terrain.entry_heading(index)
 	var flat := Vector2(carried.x, carried.z).length()
 	var velocity := heading * flat + Vector3.UP * carried.y
@@ -1154,3 +1171,36 @@ func _set_state(next: int) -> void:
 		_drop_lap()
 	state = next
 	ctx.events.flow_changed.emit(NAMES[next])
+
+
+var _probe_counts := {}
+
+
+func _body_probe_start(index: int) -> void:
+	_probe_counts = {}
+	var tree := Engine.get_main_loop() as SceneTree
+	var on_added := func(n: Node) -> void:
+		var kind := "other"
+		if n is CollisionObject3D:
+			kind = n.get_class()
+		elif n is CollisionShape3D:
+			kind = "CollisionShape3D"
+		elif n is VisualInstance3D:
+			kind = "Visual"
+		elif n is Node3D:
+			kind = "Node3D"
+		var path := String(n.get_path()).split("/")
+		var owner := "/".join(path.slice(2, 5)) if path.size() > 4 else String(n.get_path())
+		var key := "%s  %s" % [kind, owner]
+		_probe_counts[key] = int(_probe_counts.get(key, 0)) + 1
+	tree.node_added.connect(on_added)
+	await tree.process_frame
+	await tree.process_frame
+	tree.node_added.disconnect(on_added)
+	var rows := []
+	for k in _probe_counts:
+		rows.append([_probe_counts[k], k])
+	rows.sort_custom(func(a, b): return a[0] > b[0])
+	print("BODY_PROBE stage %d entry adds %d keys" % [index, rows.size()])
+	for r in rows.slice(0, 60):
+		print("BODY_PROBE %5d  %s" % r)
