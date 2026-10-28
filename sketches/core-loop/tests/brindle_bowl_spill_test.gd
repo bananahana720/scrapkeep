@@ -49,6 +49,7 @@ func _run() -> void:
 	var fresh_pre: float = run.metrics["fresh"]
 	var recovered_pre: float = run.metrics["recovered"]
 	var expired_pre: float = run.metrics["expired"]
+	var hit_pre: float = run.metrics["hit_loss"]
 	run.damage(10.0, "brindle_charge")
 	var lost: float = mass_pre - run.mass
 	var spill := int(round(lost * RunState.SPILL_SHARE))
@@ -56,7 +57,7 @@ func _run() -> void:
 	var total := 0
 	for p in landed:
 		total += int(p["value"])
-	_t.check("an arena hit spills its share as returned piles", lost > 0.0 and landed.size() == mini(Rules.SPILL_PILES, spill)
+	_t.check("an arena hit spills its share as shed piles", lost > 0.0 and landed.size() == mini(Rules.SPILL_PILES, spill)
 			and landed.all(func(p): return p["source"] == "shed") and total == spill,
 		"lost %.0f, spill %d, %d piles worth %d" % [lost, spill, landed.size(), total])
 	_t.eq("none of the spill share is destroyed", run.metrics["arena_destroyed"] - arena_pre, 0.0)
@@ -66,8 +67,11 @@ func _run() -> void:
 	_t.check("every pile lands on the floor", landed.all(func(p): return Vector2(p["at"].x - centre.x, p["at"].z - centre.z).length() <= Arena.FLOOR_R - 3.9),
 		str(landed.map(func(p): return p["at"])))
 	var mass_mid: float = run.mass
+	var chimed: Array = []
+	_game.ctx.build.scrap.recovered.connect(func(value: int): chimed.append(value))
 	for p in landed:
 		boss._step_trail(p["at"])
+	_t.eq("each shed pile rings the reclaim chime with its value", chimed, landed.map(func(p): return int(p["value"])))
 	_t.check("rolling the piles up pays the mass back", is_equal_approx(run.mass - mass_mid, float(total)) and boss._pickups.size() == held,
 		"mass +%.0f of %d" % [run.mass - mass_mid, total])
 	_t.eq("shed piles never mint cogs", run.cogs, cogs_pre)
@@ -80,6 +84,9 @@ func _run() -> void:
 		boss._step_trail(centre + Vector3(0.0, 200.0, 0.0))
 		waits += 1
 	_t.eq("an unreached shed pile expires into the ledger", run.metrics["expired"] - expired_pre, 5.0)
+	_t.check("hit loss balances into destroyed, recovered and expired",
+		is_equal_approx(run.metrics["hit_loss"] - hit_pre, (run.metrics["destroyed"] - destroyed_pre) + (run.metrics["recovered"] - recovered_pre) + (run.metrics["expired"] - expired_pre) - 5.0),
+		"hit loss +%.0f" % (run.metrics["hit_loss"] - hit_pre))
 	# Edge: a ball already at the wall throws its fan back inside the floor.
 	boss.take_spill(centre + Vector3(Arena.FLOOR_R - 1.0, 0.0, 0.0), Vector3.RIGHT, 6)
 	var walled: Array = boss._pickups.slice(held)

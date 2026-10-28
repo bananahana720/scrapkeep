@@ -544,7 +544,8 @@ func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 
 # The spill trail pays stolen mass back through add_scrap, the one way scrap is gained.
 # Spill and kill pickups also pay cogs one for one; a returned pickup is the ball's own
-# stolen mass, so it pays mass only and never mints cogs.
+# stolen mass, so it pays mass only and never mints cogs. A shed pile (take_spill) pays
+# through recover_mass and rings the stage spill's reclaim chime.
 func _step_trail(ball: Vector3) -> void:
 	var kept: Array = []
 	for p in _pickups:
@@ -555,6 +556,9 @@ func _step_trail(ball: Vector3) -> void:
 			# mass only, through recover_mass, with no wallet scrap, cogs or pickup event.
 			if p["source"] == "shed":
 				ctx.run.recover_mass(p["value"])
+				var field = ctx.build.get("scrap") if ctx.get("build") != null else null
+				if field != null and field.has_signal("recovered"):
+					field.recovered.emit(int(p["value"]))
 			else:
 				ctx.run.add_scrap(p["value"], p["at"])
 			if not p["source"] in ["returned", "shed"]:

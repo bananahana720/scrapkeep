@@ -19,7 +19,7 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # (Arena.take_ahead) instead of building it on the entry frame; pickup meshes unchanged. Was 3b589a48.
 # Re-pinned 2026-10-28 (ruling aw): take_spill lands an armour hit's spill in the bowl as shed piles
 # through _spawn_pickup, paid back by recover_mass; pickup meshes unchanged. Was e6d147b7.
-const BASE_LOGIC_SHA := "91d471a51b33dc9f4aeacb2c4a91bbb185e32fd062879f1a621584a4358250a3"
+const BASE_LOGIC_SHA := "36c7a9ba7efc21eb0cf776ce7b47475f0e1f4944e2c073390a8bf25a98c3e9d6"
 
 var failures := 0
 var game

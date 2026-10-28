@@ -62,7 +62,7 @@ const DRIP := 0.2
 const TRAIL_ARC := 1.2217305  # 70 degrees
 const PICKUP_REACH := 2.6
 const PICKUP_LIFE := 12.0
-# An armour hit's spill in the bowl (ruling aw): at most SPILL_PILES returned piles in a fan
+# An armour hit's spill in the bowl (ruling aw): at most SPILL_PILES shed piles in a fan
 # SPILL_AHEAD metres ahead of the ball, SPILL_SIDE either side, the stage spill's middle reach.
 const SPILL_PILES := 6
 const SPILL_AHEAD := 9.0
