@@ -387,6 +387,8 @@ func reroll_start_pick() -> bool:
 	return rerolled
 
 
+# Only before stage 1's Warden breaks: GATES and LAUNCH come after it (or after a vanished or skipped Warden),
+# so a rung taken there would count a win for a dam played below it.
 func choose_run_tier(value: int, check_unlock := true) -> bool:
 	if not (state == STAGE or state == BEACON) or not ctx.run.select_run_tier(value, ctx.profile, check_unlock):
 		return false
