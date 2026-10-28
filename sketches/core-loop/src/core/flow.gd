@@ -110,6 +110,8 @@ var _flight := 0.0
 # or false (bots, tests, headless), the flight ends the stage at LAUNCH_FLIGHT as before.
 var cover_cut := Callable()
 var _cut_asked := false
+# The ball's velocity as the flight reached LAUNCH_FLIGHT under the swipe: the next stage receives it, not a longer flight's.
+var _cut_velocity = null
 var _last_percent := -1
 
 # Run saves (RS3): game hands flow a RunStore in play. Every zone entrance is written to it,
@@ -871,6 +873,12 @@ func physics_step(delta: float) -> void:
 					_cut_asked = bool(cover_cut.call(_finish_launch))
 				if _flight >= LAUNCH_FLIGHT and not _cut_asked:
 					_finish_stage()
+				elif _flight >= LAUNCH_FLIGHT:
+					# A slow frame or a hitch keeps the swipe short of its cover: the flight is over, so no rescue moves
+					# the ball, and the next stage takes the velocity it had at LAUNCH_FLIGHT.
+					if _cut_velocity == null:
+						_cut_velocity = ctx.player.state.velocity
+					return
 		BOSS:
 			# The arena is the boss module's geometry, not the world's terrain.
 			_rescue_in_arena(ball)
@@ -882,6 +890,8 @@ func physics_step(delta: float) -> void:
 # has already moved flow on).
 func _finish_launch() -> void:
 	if state == LAUNCH and _launched:
+		if _cut_velocity != null:
+			ctx.player.state.velocity = _cut_velocity
 		_finish_stage()
 
 
@@ -1042,6 +1052,7 @@ func _on_launched(_velocity: Vector3) -> void:
 		_launched = true
 		_flight = 0.0
 		_cut_asked = false
+		_cut_velocity = null
 
 
 # Breaking the Warden opens the gates wherever the ball is: the stage's MUST is done

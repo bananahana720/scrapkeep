@@ -191,13 +191,24 @@ func _run() -> void:
 		and flow._flight >= flow.LAUNCH_FLIGHT - flow.CUT_LEAD - 0.05, "%s %s %.2f" % [_take.phase, flow.state_name(), flow._flight])
 	await _physics(60)
 	_t.check("the flight waits for the cover", flow.state_name() == "launch" and _game.run.stage == 1 and at_cover.is_empty(), "%s stage %d cover %s phase %d flight %.2f" % [flow.state_name(), _game.run.stage, at_cover, _take.phase, flow._flight])
+	_t.check("a flight past LAUNCH_FLIGHT keeps the velocity it had then", flow._cut_velocity != null, "%s" % [flow._cut_velocity])
 	await _step_while(LaunchTake.COVER)
 	_t.check("the next stage is entered on the fully covered frame", at_cover.size() == 1 and at_cover[0][0] == 1.0
 		and flow.in_stage() and _game.run.stage == 2, "%s stage %d" % [at_cover, _game.run.stage])
 	await _step_while(LaunchTake.HOLD)
 	await _step_while(LaunchTake.REVEAL)
 	_t.check("the stage launch's take ends", not _take.busy(), "")
+	# Not live (bots, tests, headless): the flight ends at LAUNCH_FLIGHT with cover_cut installed, as before.
 	_take.force_live = false
+	flow._set_state(flow.LAUNCH)
+	flow._on_launched(Vector3.ZERO)
+	var ticks := 0
+	while flow.state_name() == "launch" and ticks < 200:
+		await physics_frame
+		ticks += 1
+	var tick := 1.0 / Engine.physics_ticks_per_second
+	_t.check("a launch that is not live ends at LAUNCH_FLIGHT", flow.state_name() != "launch" and not _take.busy()
+		and absf(ticks * tick - flow.LAUNCH_FLIGHT) <= 2.0 * tick + 0.001, "stage %d ticks %d state %s" % [_game.run.stage, ticks, flow.state_name()])
 	flow.show_title()
 	await _frames(2)
 

@@ -197,7 +197,7 @@ func focused_id() -> String:
 func can_open() -> bool:
 	var offer = game.hud.hotwire_screen if game.hud != null else null
 	return game.flow.in_play() and not game.get_meta("menu_held", false) and not game.notes_held() \
-		and not (offer != null and offer.is_open())
+		and not (offer != null and offer.is_open()) and not (game.launch_take != null and game.launch_take.busy())
 
 
 func open() -> void:
