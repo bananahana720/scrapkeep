@@ -17,6 +17,10 @@ const T := preload("res://tests/support/t.gd")
 
 class PointerGame extends "res://src/game.gd":
 	var captured := false
+	var quits := 0
+
+	func _quit() -> void:
+		quits += 1
 
 	func _capture_mouse(capture: bool) -> void:
 		captured = capture
@@ -40,6 +44,7 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame
 	await _fresh()
+	await _counter()
 	await _rung()
 	game.free()
 	quit(t.verdict())
@@ -127,6 +132,35 @@ func _fresh() -> void:
 	await _send(_key(KEY_1))
 	t.eq("fresh: 1 takes the first pick", String(game.run.start_pick.get("taken", "")), first)
 	t.check("fresh: the card goes and look stays", not card.showing() and game.captured)
+
+
+func _pad(button: int) -> InputEventJoypadButton:
+	var press := InputEventJoypadButton.new()
+	press.pressed = true
+	press.button_index = button
+	return press
+
+
+func _counter() -> void:
+	await _begin(false)
+	var card = game.flow.start_card
+	var ws = game.get_node("Workshop")
+	ws.armed = true
+	game.build.shop.enter()
+	await _frames(2)
+	for leave in [["Esc", _key(KEY_ESCAPE)], ["pad B", _pad(JOY_BUTTON_B)]]:
+		ws.open_counter()
+		await _frames(2)
+		t.check("counter: it opens with the start card up (%s)" % leave[0], ws.counter.is_open() and card.showing())
+		await _send(leave[1])
+		t.check("counter: %s leaves it with the pick untaken" % leave[0], not ws.counter.is_open())
+		t.eq("counter: %s quits nothing" % leave[0], game.quits, 0)
+	var first: String = String(game.run.start_pick_options()[0])
+	await _send(_key(KEY_1))
+	t.eq("counter: after leaving, 1 still takes the first pick", String(game.run.start_pick.get("taken", "")), first)
+	game.build.shop.leave()
+	ws.armed = false
+	await _frames(2)
 
 
 func _rung() -> void:

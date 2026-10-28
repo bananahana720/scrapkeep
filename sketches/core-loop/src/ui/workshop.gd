@@ -459,7 +459,9 @@ func _update_talk(shown: bool) -> void:
 # ---- Keys and the pad ----
 
 func _input(event: InputEvent) -> void:
-	if _start_card_showing():
+	# The start card's keys (1-3, V) win while it shows, but an open counter keeps its own keys:
+	# its Leave shows Esc (w23 cautious red team: the counter could not be left before the pick).
+	if _start_card_showing() and not counter.is_open():
 		return
 	if not armed:
 		return
