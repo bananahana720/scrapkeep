@@ -580,12 +580,16 @@ func _save(doc: Dictionary) -> void:
 # carried is the velocity the ball arrives with: its horizontal speed is kept exactly
 # and turned onto the stage's entry heading, its vertical part is kept as it was.
 func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
+	if _fp_parts.is_empty():
+		_fp_reset()
 	ctx.run.enter_stage(index)
+	_fp("run.enter_stage")
 	var world: int = ctx.stages.world_of(index)
 	ctx.run.world = world
 	if not retry and world != _world:
 		_world = world
 		ctx.events.world_entered.emit(world)
+		_fp("world_entered")
 	_launched = false
 	_flight = 0.0
 	_last_percent = -1
@@ -594,7 +598,9 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 	# because world may swap the geometry inside that handler. The entrance doc is read at
 	# the same moment as the checkpoint and gets the same pose.
 	ctx.run.snapshot(Vector3.ZERO, Vector3.ZERO, ctx.camera.yaw)
+	_fp("snapshot")
 	var doc: Dictionary = ctx.run.to_entrance_doc(_tree()) if store != null else {}
+	_fp("entrance_doc")
 	# PROBE (never stacks): BODY_PROBE=1 counts the nodes the entry adds, by kind and owner, through the next two frames.
 	if OS.get_environment("BODY_PROBE") == "1":
 		_body_probe_start(index)
@@ -613,12 +619,15 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 		print("HANDLER_PROBE stage %d total %.1f: %s" % [index, (Time.get_ticks_usec() - all) / 1000.0, ", ".join(parts)])
 	else:
 		ctx.events.stage_entered.emit(index, retry)
+	_fp("stage_entered")
 	var heading: Vector3 = ctx.terrain.entry_heading(index)
 	var flat := Vector2(carried.x, carried.z).length()
 	var velocity := heading * flat + Vector3.UP * carried.y
 	var at: Vector3 = ctx.terrain.spawn_point(index) + Vector3.UP * ENTRY_LIFT
 	_place_ball(at, velocity, heading)
+	_fp("place_ball")
 	_place_beacon()
+	_fp("place_beacon")
 	ctx.run.set_snapshot_entry(at, velocity, ctx.camera.yaw)
 	if store != null:
 		doc["entry_position"] = [at.x, at.y, at.z]
@@ -626,7 +635,12 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 		doc["camera_yaw"] = ctx.camera.yaw
 		_entrance = doc
 		_save(doc)
+		_fp("save")
 	_set_state(STAGE)
+	_fp("set_state")
+	if OS.get_environment("FLOW_PROBE") == "1":
+		print("FLOW_PROBE stage %d: %s" % [index, ", ".join(_fp_parts)])
+	_fp_parts = PackedStringArray()
 
 
 # Back to the stage-start checkpoint: run state, ball position and entry speed. It is
@@ -889,7 +903,9 @@ func physics_step(delta: float) -> void:
 
 func _finish_stage() -> void:
 	var cleared: int = ctx.run.stage
+	_fp_reset()
 	ctx.events.stage_cleared.emit(cleared)
+	_fp("stage_cleared")
 	if ctx.stages.is_world_last(cleared) and _world_boss(ctx.stages.world_of(cleared)) != null:
 		enter_boss(ctx.player.state.velocity)
 		return
@@ -1209,3 +1225,19 @@ func _body_probe_start(index: int) -> void:
 	print("BODY_PROBE stage %d entry adds %d keys" % [index, rows.size()])
 	for r in rows.slice(0, 60):
 		print("BODY_PROBE %5d  %s" % r)
+
+
+# PROBE (never stacks): FLOW_PROBE=1 times the parts of a stage change's tick.
+var _fp_parts := PackedStringArray()
+var _fp_at := 0
+
+
+func _fp_reset() -> void:
+	_fp_parts = PackedStringArray(["start"])
+	_fp_at = Time.get_ticks_usec()
+
+
+func _fp(what: String) -> void:
+	var now := Time.get_ticks_usec()
+	_fp_parts.append("%s %.1f" % [what, (now - _fp_at) / 1000.0])
+	_fp_at = now
