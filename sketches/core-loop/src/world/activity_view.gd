@@ -32,6 +32,12 @@ var _tell_audio
 var word_reach := WORD_REACH
 var _tell_heard := false
 
+# Every view of one row looks the same, so its meshes and materials are made once and shared by
+# key (a primitive mesh builds its arrays and a material its shader on first use: ~0.6 ms a view
+# on the stage entry frame, ten views a stage). Nothing writes to a shared one; set_sight gives
+# its column its own mesh before it stretches it.
+static var _shared := {}
+
 
 func build(activity_id: String, ring_radius: float, tell := {}, tell_audio = null) -> void:
 	id = activity_id
@@ -44,10 +50,8 @@ func build(activity_id: String, ring_radius: float, tell := {}, tell_audio = nul
 	var color := EventKinds.role_color(String(row.color))
 	column = MeshInstance3D.new()
 	column.name = "Column"
-	var cm := BoxMesh.new()
-	cm.size = Vector3(COLUMN_WIDTH, COLUMN_HEIGHT, COLUMN_WIDTH)
-	column.mesh = cm
-	column.material_override = Palette.unshaded(_veil(color, COLUMN_ALPHA))
+	column.mesh = _box_mesh(Vector3(COLUMN_WIDTH, COLUMN_HEIGHT, COLUMN_WIDTH))
+	column.material_override = _unshaded(_veil(color, COLUMN_ALPHA))
 	column.position = Vector3.UP * COLUMN_HEIGHT * 0.5
 	add_child(column)
 	glyph = _glyph(String(row.get("shape", "none")), color)
@@ -76,7 +80,9 @@ func set_sight(scale: float) -> void:
 	if column == null or is_equal_approx(scale, 1.0):
 		return
 	var height := COLUMN_HEIGHT * scale
-	(column.mesh as BoxMesh).size.y = height
+	var own := column.mesh.duplicate() as BoxMesh
+	own.size.y = height
+	column.mesh = own
 	column.position = Vector3.UP * height * 0.5
 	glyph.position = Vector3.UP * (height + GLYPH_SIZE)
 	word_reach = WORD_REACH * scale
@@ -106,7 +112,7 @@ func lit() -> bool:
 # octahedron) or a cube.
 static func _glyph(shape: String, color: Color) -> Node3D:
 	var root := Node3D.new()
-	var mat := Palette.solid(color, GLYPH_ENERGY)
+	var mat := _solid(color, GLYPH_ENERGY)
 	match shape:
 		"cross":
 			for axis in 3:
@@ -115,12 +121,14 @@ static func _glyph(shape: String, color: Color) -> Node3D:
 				root.add_child(_box(size, mat))
 		"diamond":
 			var mesh := MeshInstance3D.new()
-			var sm := SphereMesh.new()
-			sm.radius = GLYPH_SIZE * 0.55
-			sm.height = GLYPH_SIZE * 1.1
-			sm.radial_segments = 4
-			sm.rings = 2
-			mesh.mesh = sm
+			if not _shared.has("diamond"):
+				var sm := SphereMesh.new()
+				sm.radius = GLYPH_SIZE * 0.55
+				sm.height = GLYPH_SIZE * 1.1
+				sm.radial_segments = 4
+				sm.rings = 2
+				_shared["diamond"] = sm
+			mesh.mesh = _shared["diamond"]
 			mesh.material_override = mat
 			root.add_child(mesh)
 		_:
@@ -136,19 +144,39 @@ static func _veil(color: Color, alpha: float) -> Color:
 
 static func _box(size: Vector3, mat: Material) -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	mesh.mesh = bm
+	mesh.mesh = _box_mesh(size)
 	mesh.material_override = mat
 	return mesh
 
 
+static func _box_mesh(size: Vector3) -> BoxMesh:
+	var key := "box:%s" % size
+	if not _shared.has(key):
+		var bm := BoxMesh.new()
+		bm.size = size
+		_shared[key] = bm
+	return _shared[key]
+
+
+static func _solid(color: Color, emit: float) -> StandardMaterial3D:
+	var key := "solid:%s:%s" % [color.to_html(), emit]
+	if not _shared.has(key):
+		_shared[key] = Palette.solid(color, emit)
+	return _shared[key]
+
+
+static func _unshaded(color: Color) -> StandardMaterial3D:
+	var key := "unshaded:%s" % color.to_html()
+	if not _shared.has(key):
+		_shared[key] = Palette.unshaded(color)
+	return _shared[key]
+
+
 static func _ring(radius: float, color: Color) -> Node3D:
 	var out := Node3D.new()
-	var mat := Palette.solid(color, COLUMN_ENERGY)
+	var mat := _solid(color, COLUMN_ENERGY)
 	# Every dash is the same box, so they share one mesh.
-	var dash_mesh := BoxMesh.new()
-	dash_mesh.size = Vector3(0.45, 0.1, radius * TAU / float(RING_DASHES * 2))
+	var dash_mesh := _box_mesh(Vector3(0.45, 0.1, radius * TAU / float(RING_DASHES * 2)))
 	for k in RING_DASHES:
 		var a := TAU * k / float(RING_DASHES)
 		var dash := MeshInstance3D.new()
@@ -170,10 +198,8 @@ static func gem(id_ref: String) -> Node3D:
 	stone.position = Vector3.UP * 1.4
 	root.add_child(stone)
 	var beam := MeshInstance3D.new()
-	var cm := BoxMesh.new()
-	cm.size = Vector3(0.35, 14.0, 0.35)
-	beam.mesh = cm
-	beam.material_override = Palette.unshaded(_veil(color, BEAM_ALPHA))
+	beam.mesh = _box_mesh(Vector3(0.35, 14.0, 0.35))
+	beam.material_override = _unshaded(_veil(color, BEAM_ALPHA))
 	beam.position = Vector3.UP * 7.0
 	root.add_child(beam)
 	return root

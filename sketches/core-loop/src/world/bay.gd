@@ -452,7 +452,7 @@ func _build_cabin() -> void:
 	_visual(Vector3(0.14, 1.3, 1.8), Vector3(front + 0.02, 1.2, 0.0), Palette.solid(Palette.CHARCOAL))
 	_visual(Vector3(1.0, 1.0, 6.0), Vector3(front + 0.8, 0.5, 0.0), Palette.solid(Palette.RUST.lerp(Palette.SANDSTONE, 0.3)))
 	_visual(Vector3(0.6, 0.12, 5.0), Vector3(front + 0.35, 5.2, 0.0), Palette.solid(Palette.COPPER))
-	var rarities := [Palette.SAND, Palette.ARC, Palette.AMBER]
+	var rarities := [Palette.ARC, Palette.COBALT, Palette.AMBER]
 	for k in 3:
 		var part := MeshInstance3D.new()
 		var pm := BoxMesh.new()

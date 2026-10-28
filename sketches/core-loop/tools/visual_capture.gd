@@ -1,5 +1,6 @@
 extends SceneTree
 
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
@@ -247,7 +248,7 @@ func _stage_geometry_counts() -> Dictionary:
 		if node == null:
 			continue
 		result.bodies += node.find_children("*", "CollisionObject3D", true, false).size()
-		result.shapes += node.find_children("*", "CollisionShape3D", true, false).size()
+		result.shapes += ParkRecipes.collider_shapes(node).size()
 		result.lights += node.find_children("*", "Light3D", true, false).size()
 		for mesh in node.find_children("*", "GeometryInstance3D", true, false):
 			result.meshes += 1

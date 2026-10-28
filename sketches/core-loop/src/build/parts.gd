@@ -603,7 +603,7 @@ static func def_at(part_id: String, level: int) -> Resource:
 
 static func def(part_id: String) -> Resource:
 	var tier := active_tier()
-	var key := "1:" + part_id if tier == 1 and RunTier.ENHANCED.has(part_id) else part_id
+	var key := "1:" + part_id if tier != RunTier.BASE and RunTier.ENHANCED.has(part_id) else part_id
 	if not _defs.has(key):
 		var r := row(part_id, tier)
 		if r.is_empty():

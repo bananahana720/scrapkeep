@@ -33,6 +33,7 @@ static func make(id: String, tint := Color.TRANSPARENT) -> Node3D:
 
 
 func _ready() -> void:
+	child_exiting_tree.connect(_on_child_exiting)
 	for id in Specs.SETS.get(set_id, []):
 		var p := Kit.build(id)
 		if has_meta("tint"):
@@ -60,6 +61,15 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	live = live.filter(func(r): return r.get_ref() != null and r.get_ref() != self)
+
+
+# The terrain's Reaper frees a stage a few nodes a frame, deepest first, so this anchor's emitters can
+# go before it does while WorldFx still reaches it through live.
+func _on_child_exiting(node: Node) -> void:
+	if node is GPUParticles3D:
+		emitters.erase(node)
+	elif node is MeshInstance3D:
+		impostors.erase(node)
 
 
 func lod_m() -> float:

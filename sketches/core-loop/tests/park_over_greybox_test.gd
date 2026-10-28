@@ -92,14 +92,14 @@ func _run() -> void:
 		if not PIECE_COLLIDER.has(id):
 			t.check("%s adds no collider of its own" % id, extra == null)
 			t.eq("%s adds no collision shape (no trimesh from the GLB)" % id,
-				piece.find_children("*", "CollisionShape3D", true, false).size(),
-				grey.find_children("*", "CollisionShape3D", true, false).size())
+				ParkRecipes.collider_shapes(piece).size(),
+				ParkRecipes.collider_shapes(grey).size())
 		elif t.check("%s's piece carries its uprights' collider" % id, extra != null and extra.get_child_count() > 0):
 			t.eq("%s's piece collider is on the world layer like the row's" % id, [extra.collision_layer, extra.collision_mask],
 				[1 << (ParkRecipes.WORLD_LAYER - 1), 0])
 			var inner := INF
 			var faces := 0
-			for shape: CollisionShape3D in extra.find_children("*", "CollisionShape3D", true, false):
+			for shape: Dictionary in ParkRecipes.collider_shapes(extra):
 				for v in (shape.shape as ConcavePolygonShape3D).get_faces():
 					inner = minf(inner, absf((extra.transform * shape.transform * v).x))
 					faces += 1
@@ -131,7 +131,7 @@ func _collider(node: Node3D) -> Array:
 	if body == null:
 		return []
 	var out := [{"layer": body.collision_layer, "mask": body.collision_mask, "at": body.transform}]
-	for shape: CollisionShape3D in body.find_children("*", "CollisionShape3D", true, false):
+	for shape: Dictionary in ParkRecipes.collider_shapes(body):
 		var rec := {"kind": shape.shape.get_class(), "at": body.transform * shape.transform}
 		if shape.shape is BoxShape3D:
 			rec["size"] = (shape.shape as BoxShape3D).size
