@@ -10,7 +10,7 @@ const COUNT := AlphaDefs.COUNT
 const DEFS := AlphaDefs.DEFS
 
 # Each opt-in world adds a step; Director clamps each quantity at its own limit.
-const RUN_TIER_DIAL_STEPS := {"health": 0.2, "damage": 0.1, "aggression": 0.1}
+const RUN_TIER_DIAL_STEPS := {"damage": 0.1, "aggression": 0.1}
 
 
 static func of(stage: int) -> Dictionary:

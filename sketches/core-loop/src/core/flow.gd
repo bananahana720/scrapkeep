@@ -8,6 +8,7 @@ const Secrets := preload("res://src/core/secrets.gd")
 const Companion := preload("res://src/core/companion.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const VictoryLap := preload("res://src/world/victory_lap.gd")
@@ -386,8 +387,8 @@ func reroll_start_pick() -> bool:
 	return rerolled
 
 
-func choose_run_tier(value: int) -> bool:
-	if not in_stage() or not ctx.run.select_run_tier(value, ctx.profile):
+func choose_run_tier(value: int, check_unlock := true) -> bool:
+	if not in_stage() or not ctx.run.select_run_tier(value, ctx.profile, check_unlock):
 		return false
 	if ctx.build != null:
 		ctx.build.recompute()
@@ -1004,6 +1005,10 @@ func _end_run(won: bool) -> void:
 func _record_end(won: bool) -> void:
 	ctx.run.over = true
 	run_won = won
+	# A won run on the HARD ladder's best rung so far opens the next one (run_tier.gd BEST_STAT). Every win
+	# ends here, the victory lap's (_begin_ending) included.
+	if won and RunTier.note_win(ctx.profile, ctx.run.run_tier):
+		_save_profile("profile_ladder_save")
 	ctx.player.set_frozen(true)
 	_entrance = {}
 	_persist_companion()
@@ -1107,7 +1112,9 @@ func _rescue_if_fallen(ball: Vector3) -> void:
 			var radius: float = preload("res://src/movement/tuning.gd").RADIUS
 			ctx.player.reset_to(Vector3(ball.x, deck + radius, ball.z), Vector3(v.x, 0.0, v.z) * NET_DAMP)
 			return
-	if ctx.terrain.contains(ball) and ball.y > ctx.terrain.height(ball.x, ball.z) - RESCUE_DEPTH:
+	# Measured from the floor, not height(): an overlay is a sheet, not a fill, so a ball under
+	# one (the flume's trestle ramp) rolls on the floor beneath it and has not fallen.
+	if ctx.terrain.contains(ball) and ball.y > ctx.terrain.floor_height(ball.x, ball.z) - RESCUE_DEPTH:
 		return
 	ctx.player.reset_to(ctx.terrain.rescue_point(ball), Vector3(v.x, 0.0, v.z))
 

@@ -9,6 +9,9 @@ const CHARCOAL := Color("242a28")
 const VERDIGRIS := Color("365754")
 const AMBER := Color("e5a044")
 const ARC := Color("8bf0d3")
+# Fleet-grade cobalt, the item ladder's blue rung (23 Oct 19:28Z): the Cherenkov blue measured on
+# 9 Oct at dE 31 or more from every palette colour in all vision types, free since ANCIENT moved.
+const COBALT := Color("3d8bff")
 # Uranium-glass green: the ancients' light (Andrew, 2026-10-09, over Cherenkov blue). Deuteranopes
 # read it as Brindle's BRASS, so every ancient seam also carries a pattern cue (material_slots.gd,
 # the `pattern` field).

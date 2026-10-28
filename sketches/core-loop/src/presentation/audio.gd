@@ -242,6 +242,10 @@ var _ring_capacity := 0
 # (the headless Dummy driver pulls 4096).
 var queue_target := AceSequencer.QUEUE_TARGET
 var _skips_seen := 0
+var _ace_pumped_usec := 0
+var _ace_gap_usec := 0
+# The last pump stopped short of the queue at a park cue's due, so the ring may run dry by design.
+var _park_held := false
 # The synth band fades in over this many frames when it comes back from mute, so a voice
 # still sounding under the mute never steps to full level. _unmute_at is the transport
 # sample the ramp starts from, -1 when none runs.
@@ -707,18 +711,45 @@ func _pump(virtual_frames := -1) -> void:
 	if _music_pb == null or _stinger_pb == null:
 		return
 	var frames := mini(_music_pb.get_frames_available(), _stinger_pb.get_frames_available())
+	var settle := false
 	if not ace_live:
 		# Skips the synth alone took are not an ACE dry-run.
 		_skips_seen = _music_pb.get_skips()
+		_ace_pumped_usec = 0
 	else:
-		_deepen_on_skip()
-		frames = mini(ace.frames_to_pump(_music_pb, _ring_capacity, queue_target), _stinger_pb.get_frames_available())
-	frames = _park_render_limit(mini(frames, 8192))
-	if frames <= 0:
-		return
-	_render_music(frames, ace_live)
-	_music_pb.push_buffer(out_music)
-	_stinger_pb.push_buffer(engine.out_stinger)
+		var now := Time.get_ticks_usec()
+		var gap := now - _ace_pumped_usec
+		# The ring's skips before the band's first pump are the synth's (a bot's opening bake
+		# blocks the main thread for seconds after the rings start). A skip after a long gap
+		# between pumps is a one-off long frame, not the device's period: it should not cost
+		# every later contact the latency of a deeper queue. Either way the emptied ring keeps
+		# skipping until this pump's block is pushed, so the count settles after it.
+		if _ace_pumped_usec == 0:
+			settle = true
+		elif _gap_is_stall(gap):
+			_note_stall(gap)
+			settle = true
+		elif _park_held:
+			_note_park_hold(gap)
+			settle = true
+		else:
+			_ace_gap_usec = gap
+			_deepen_on_skip()
+		_ace_pumped_usec = now
+		# A launch's flight answers no contact and lands on the next stage's entry frame
+		# (about 120 ms on the 4080), so the ring fills whole until the landing.
+		var target := _ring_capacity if _launch_armed else queue_target
+		frames = mini(ace.frames_to_pump(_music_pb, _ring_capacity, target), _stinger_pb.get_frames_available())
+	var wanted := mini(frames, 8192)
+	frames = _park_render_limit(wanted)
+	if frames > 0:
+		_render_music(frames, ace_live)
+		_music_pb.push_buffer(out_music)
+		_stinger_pb.push_buffer(engine.out_stinger)
+	# A clamp that leaves most of the queue in the ring cannot be what empties it.
+	_park_held = frames < wanted and (_ring_capacity - _music_pb.get_frames_available()) * 2 < queue_target
+	if settle:
+		_skips_seen = _music_pb.get_skips()
 
 
 func _transport_usec() -> int:
@@ -824,6 +855,13 @@ func _fade_in_band(from: int, frames: int, landmark := PackedVector2Array()) -> 
 	engine.out_music = band
 
 
+# The device takes the ring a mix buffer at a time, so a gap short of the whole queue can
+# already empty it. Godot's buffer (512-1024 frames) is under half the queue: a skip after a
+# shorter gap is a period the queue does not cover, and deepens it; after a longer one, the frame's.
+func _gap_is_stall(gap_usec: int) -> bool:
+	return gap_usec * Harmony.RATE * 2 > queue_target * 1000000
+
+
 func _deepen_on_skip() -> void:
 	_deepen_for(_music_pb.get_skips())
 
@@ -832,10 +870,28 @@ func _deepen_on_skip() -> void:
 func _deepen_for(skips: int) -> void:
 	if skips <= _skips_seen:
 		return
+	var took := skips - _skips_seen
 	_skips_seen = skips
 	if queue_target + 1024 <= _ring_capacity - 1024:
 		queue_target += 1024
-		print("ACE music: the ring ran dry (%d skips); queue target now %d frames" % [skips, queue_target])
+		print("ACE music: the ring ran dry (%d skips) at frame %d, stage %d, %d ms since the last pump; queue target now %d frames" % [took, Engine.get_process_frames(), _stage_now, _ace_gap_usec / 1000, queue_target])
+
+
+# Skips a long gap between pumps took are logged as the frame's, and the queue stays put.
+func _note_stall(gap_usec: int) -> void:
+	var skips := _music_pb.get_skips()
+	if skips > _skips_seen:
+		print("ACE music: a %d ms gap between pumps outlasted the queue (%d skips) at frame %d, stage %d%s" % [gap_usec / 1000, skips - _skips_seen, Engine.get_process_frames(), _stage_now, ", launch armed" if _launch_armed else ""])
+	_skips_seen = skips
+
+
+# A park cue's hold leaves the booked sample unrendered until physics lands it, so a landing
+# later than the queue empties the ring: that is the hold's, not the device's, and logged as such.
+func _note_park_hold(gap_usec: int) -> void:
+	var skips := _music_pb.get_skips()
+	if skips > _skips_seen:
+		print("ACE music: a park cue's hold emptied the ring (%d skips) at frame %d, stage %d, %d ms since the last pump" % [skips - _skips_seen, Engine.get_process_frames(), _stage_now, gap_usec / 1000])
+	_skips_seen = skips
 
 
 # The ACE transport runs with the engine's even while silent, so both count the same samples.
@@ -2364,6 +2420,27 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	engine.set_fleet_ticks(0)
 	engine.set_reactor_pedal(false)
 	_flow_queue.append(["stage", stage, retry])
+	_warm_park_risers.call_deferred(stage)
+
+
+# A rendered event riser's length is read on the frame its event is announced (park_cue), so
+# the stage's riser files are decoded on a worker at entry: the dam's first fleet call baked
+# its riser there, 27-30 ms frames on the 4080. Deferred past the world's own handler, which
+# swaps in the stage's map.
+func _warm_park_risers(stage: int) -> void:
+	if ctx == null or ctx.get("terrain") == null:
+		return
+	var map = ctx.terrain.map()
+	if not "park" in map:
+		return
+	var zone := MusicRows.zone_id(stage, _music_stages())
+	var ids: Array[String] = []
+	for row in map.park.get("event_rows", []):
+		var cue := String(row.get("music_cue", {}).get("telegraph", ""))
+		var sound := SfxBank.stinger_id(zone, cue)
+		if cue != "" and not sound in ids and SfxBank.file_exists(sound):
+			ids.append(sound)
+	engine.warm_samples(ids)
 
 
 # The beacon climbs the reward ladder as it charges and lands on home, two octaves up.

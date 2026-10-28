@@ -320,6 +320,8 @@ func _build() -> void:
 		_painter.ground = func(_point: Vector3) -> float: return flat_y
 	elif terrain != null:
 		_painter.ground = func(point: Vector3) -> float: return ground_under(terrain, point)
+		if terrain.has_method("heights"):
+			_painter.ground_many = terrain.heights
 	_painter.lift = LIFT
 	_painter.driven = _driven
 	_painter.centre = center

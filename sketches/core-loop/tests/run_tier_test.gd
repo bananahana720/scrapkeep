@@ -249,13 +249,8 @@ func _component(seed_value: int, tier_value: int) -> Dictionary:
 			var interval_expected := maxf(Director.MIN_INTERVAL, (Director.BASE_INTERVAL - 0.7 * Director.MAX_TIME_TIERS) / row.threat * row.pressure.interval_scale * config.interval_weight)
 			t.eq("independent cap seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.cap, cap_expected)
 			t.near("independent interval seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], measured.interval, interval_expected)
-			if tier_value == 0:
-				t.near("health untouched seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], d.hp_scale(), row.threat)
-			else:
-				var dial_steps: Dictionary = load("res://src/core/stage_defs.gd").get_script_constant_map().get("RUN_TIER_DIAL_STEPS", {"health": 0.2})
-				var health_cap: float = load("res://src/core/run_tier.gd").get_script_constant_map().get("HEALTH_DIAL_CAP", 1.6)
-				var health_expected: float = row.threat * minf(health_cap, 1.0 + int(row.world) * float(dial_steps.health))
-				t.near("independent tier-1 health seed %d stage %d" % [seed_value, row.stage], d.hp_scale(), health_expected)
+			# Ruling al: no tier raises enemy health.
+			t.near("health untouched seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], d.hp_scale(), row.threat)
 			t.eq("interval mode retained", d.mode, "interval")
 		var pay := {"kill_scrap": row.kill_scrap, "source_rarities": Parts.SOURCE_RARITIES,
 			"gate_rarities": [Parts.gate_rarities(0), Parts.gate_rarities(1), Parts.gate_rarities(2)],
@@ -517,7 +512,7 @@ func _persistence() -> void:
 			var invalid := doc.duplicate(true)
 			invalid[field] = bad
 			t.eq("reject %s %s" % [field, str(bad)], RunState.validate_entrance_doc(invalid), "invalid " + field)
-	for bad_tier in [-1, 2, -1.0, 2.0]:
+	for bad_tier in [-1, RunTier.TOP + 1, -1.0, float(RunTier.TOP + 1)]:
 		var invalid := doc.duplicate(true)
 		invalid.run_tier = bad_tier
 		t.eq("reject tier domain %s" % str(bad_tier), RunState.validate_entrance_doc(invalid), "invalid run_tier")

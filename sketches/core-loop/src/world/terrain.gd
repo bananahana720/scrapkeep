@@ -519,6 +519,45 @@ func height(x: float, z: float) -> float:
 	return h
 
 
+# height() at many (x, z) points at once, each answer equal to height()'s. A telegraph paints over about
+# 500 points a ring, and a Warden pulse's two rings through height() one point at a time were 20 ms of a
+# flume frame on the cloud. The stage and map are looked up once, and an overlay whose footprint disc
+# misses the points' bounds is left out, as its overlay_height answers -INF there.
+func heights(points: PackedVector2Array) -> PackedFloat64Array:
+	var out := PackedFloat64Array()
+	out.resize(points.size())
+	if points.is_empty():
+		return out
+	var i := _ensure(stage)
+	var m = map()
+	var ids: Array[String] = []
+	var bounds := Rect2(points[0], Vector2.ZERO)
+	for p in points:
+		bounds = bounds.expand(p)
+	for id in overlays:
+		if m is EventGround.OverlayMap and m.profiles.has(id):
+			var site: Dictionary = m.profiles[id].site
+			var centre := ParkMap._v2(site.at)
+			var nearest := centre.clamp(bounds.position, bounds.end)
+			if centre.distance_to(nearest) > ParkMap.footprint_half_extents(site).length() + 0.01:
+				continue
+		ids.append(id)
+	for k in points.size():
+		var p := points[k]
+		var ground := _floor(i, p.x, p.y)
+		var h := ground
+		for id in ids:
+			h = maxf(h, m.overlay_height(id, p.x, p.y, ground))
+		out[k] = h
+	return out
+
+
+# height() with no overlay: the ground a ball rolling under an overlay deck (a landed ramp
+# whose sheet spans a gap) stands on.
+func floor_height(x: float, z: float) -> float:
+	return _floor(_ensure(stage), x, z)
+
+
 func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
 
