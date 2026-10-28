@@ -149,11 +149,14 @@ func shown_rung() -> int:
 	return maxi(RunTier.HARD, top)
 
 
+# With a rung selected, Next rung selects the next one too, so the card always shows the run's tier.
 func step_rung() -> void:
 	var top := RunTier.top_unlocked(_profile)
 	if top < 2:
 		return
 	_shown_rung = shown_rung() % top + 1
+	if _run != null and _run.selected_run_tier() >= RunTier.HARD:
+		tier_requested.emit(_shown_rung)
 	_controls()
 
 

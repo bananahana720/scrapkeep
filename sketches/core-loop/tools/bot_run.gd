@@ -380,7 +380,7 @@ func _physics_process(delta: float) -> bool:
 				if retry:
 					return
 				if from_stage > 1 and stage == from_stage:
-					_game.run.run_tier = run_tier
+					_game.run.lab_run_tier(run_tier)
 					if _game.build != null:
 						_game.build.recompute()
 				elif from_stage <= 1 and stage == 1:

@@ -410,13 +410,23 @@ func select_run_tier(value: int, profile, check_unlock := true) -> bool:
 		return false
 	if value != RunTier.BASE and check_unlock and not RunTier.unlocked(profile, value):
 		return false
+	_keep_run_tier(value)
+	return true
+
+
+# The HARD ladder lab (bot_run --run-tier with --from-stage): the stage a resumed run opens on takes the tier,
+# over the entrance's, with no start card. Retries keep it. Not a player path.
+func lab_run_tier(value: int) -> void:
+	_keep_run_tier(clampi(value, RunTier.BASE, RunTier.TOP))
+
+
+# A start-card choice survives retry, while the pick still rewinds as SG9 specifies.
+func _keep_run_tier(value: int) -> void:
 	run_tier = value
-	# A start-card choice survives retry, while the pick still rewinds as SG9 specifies.
 	if not _snapshot.is_empty():
 		_snapshot["run_tier"] = value
 	if _stage_starts.has(stage):
 		_stage_starts[stage]["run_tier"] = value
-	return true
 
 
 func add_event_core(at: Vector3) -> void:

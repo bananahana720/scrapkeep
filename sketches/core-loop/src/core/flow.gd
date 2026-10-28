@@ -998,9 +998,6 @@ func _drop_lap() -> void:
 # can bring it back.
 func _end_run(won: bool) -> void:
 	_record_end(won)
-	# A won run on the HARD ladder's best rung so far opens the next one (run_tier.gd BEST_STAT).
-	if won and RunTier.note_win(ctx.profile, ctx.run.run_tier):
-		_save_profile("profile_ladder_save")
 	_set_state(SUMMARY)
 	ctx.events.run_ended.emit(won)
 
@@ -1008,6 +1005,10 @@ func _end_run(won: bool) -> void:
 func _record_end(won: bool) -> void:
 	ctx.run.over = true
 	run_won = won
+	# A won run on the HARD ladder's best rung so far opens the next one (run_tier.gd BEST_STAT). Every win
+	# ends here, the victory lap's (_begin_ending) included.
+	if won and RunTier.note_win(ctx.profile, ctx.run.run_tier):
+		_save_profile("profile_ladder_save")
 	ctx.player.set_frozen(true)
 	_entrance = {}
 	_persist_companion()
