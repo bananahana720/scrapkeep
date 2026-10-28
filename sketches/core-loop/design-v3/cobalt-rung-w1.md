@@ -28,7 +28,7 @@ The table keeps the four ids, so no save, digest or row key changes meaning. Eac
 | --- | --- | --- | --- | --- |
 | (panels) | grey | worn bone and steel | — | ratchet tick (as now) |
 | common | green, field kit | field mint | FIELD KIT | two-note chirp (`rarity_tick`, as now) |
-| rare | **cobalt, fleet grade** | `#3d8bff` | FLEET GRADE | `rarity_bell` (the rare reward row already rings it) |
+| rare | **cobalt, fleet grade** | `#3d8bff` | FLEET GRADE | `rarity_bell`, with `rung_coil` (a coil whine and click) under it on every cobalt find |
 | relic | gold | amber with a mint heart | RELIC | four-note horn sting |
 | evolved | (unchanged) | ancient | EVOLVED | as now |
 
@@ -71,4 +71,5 @@ The table keeps the four ids, so no save, digest or row key changes meaning. Eac
 - PR 1 rung colours: #525. PR 1b stamps (FIELD KIT, FLEET GRADE, RELIC) and this note: this PR.
 - PR 2 pool: #529, Andrew's revised card A option 1 (Impact Driver promoted at tier 2; Horizon Optic, Ram Plow, Rime Rounds, Galvanic Rounds listed; 4 to 9 cobalt rows). The first option, promoting six kit commons, failed the pattern guarantee, the evolution-ingredient pools and Kest's kit share.
 - PR 3 floors: #536 (every Warden pair and shop slot 1 hold a cobalt; cards B and C on their defaults).
+- Finish (wave 24): the find card wears the rung stamp, so a first cobalt find reads NEW FLEET GRADE instead of a bare NEW, and every cobalt find plays `rung_coil` under its bell (`EventKinds.REWARD_RUNG_CUES`). Test: `tests/cobalt_rung_voice_test.gd`. Still owed: the three colour copies reading the table, and the cobalt trim ring on the ball.
 - IL-01: #535. World 1 panels are ruled per run (DROP_BY_WORLD[1] stays 32% + 6%); the under-three-a-stage bar reads the later worlds' row.

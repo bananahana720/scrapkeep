@@ -152,7 +152,7 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "tarn_latch_tear", "tally_balance_due", "cannon_recall", "sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready", "cannon_ready",
 	"sable_break", "rivet_break", "kest_break", "tarn_break", "tally_break", "cannon_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
 	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally", "mind_cannon", "hold_pit", "hold_bola", "hold_tether", "hold_net",
-	"hold_riser", "callout_chime", "shop_bell", "rarity_tick", "rarity_bell", "reveal_clank", "ceremony_build",
+	"hold_riser", "callout_chime", "shop_bell", "rarity_tick", "rarity_bell", "rung_coil", "reveal_clank", "ceremony_build",
 	"ceremony_resolve", "line_bite", "smash_crack", "achievement_chime", "rescue_fanfare",
 	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",

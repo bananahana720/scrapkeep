@@ -118,6 +118,8 @@ const TRIM_DB := {
 	# v3 W13 reward ceremony: the rarity tick and bell, the card's plate, the crate's build
 	# and the burst's resolve.
 	"rarity_tick": -9.0, "rarity_bell": -5.0, "reveal_clank": -4.0, "ceremony_build": -3.0, "ceremony_resolve": -1.0,
+	# The cobalt rung's own voice under the bell (item ladder: blue is a coil whine and click).
+	"rung_coil": -9.0,
 	# IL-01 grey panels: the ratchet tick a panel bolts on with, the phrase note a pickup streak
 	# climbs (keyed, pitched by the caller), and the pinball jackpot over a reel or dunk drop.
 	"panel_ratchet": -9.0, "panel_note": -8.0, "panel_jackpot": -5.0, "panel_cache": -16.0,
@@ -1041,6 +1043,11 @@ static func _bake(id: String) -> PackedFloat32Array:
 			# rarer the part. The payoff rings the same bell, so the change sounds like the find.
 			return _mix([[_cut(_n("bell", 74), 0.3), 0, 0.7], [_cut(_n("bell", 81), 0.3), Synth.seconds(0.06), 0.8],
 				[_cut(_n("bell", 86), 0.5), Synth.seconds(0.12), 1.0], [_fm(0.5, _hz(98), 3.5, 1.0, 7.0), Synth.seconds(0.12), 0.25]])
+		"rung_coil":
+			# A cobalt find: a fleet coil charges from D up to the A above, then its latch clicks
+			# home on a high D. It sits under the rare bell, so the rung reads by ear as well.
+			return _mix([[_fm_sweep(0.22, _hz(62), _hz(81), 1.4, 5.0), 0, 0.5], [_tone(0.22, _hz(74), _hz(93), "saw_dark", 6.0), 0, 0.35],
+				[_noise(0.012, 5200.0, 5200.0, 280.0), Synth.seconds(0.22), 0.8], [_cut(_n("mallet", 86), 0.1), Synth.seconds(0.22), 0.6]])
 		"reveal_clank":
 			# The reveal card: a salvaged plate dropped on the bench, then its stamp rings a fifth.
 			return _mix([[_fm(0.25, 196.0, 1.41, 3.0, 14.0), 0, 0.6], [_tone(0.1, 140.0, 70.0, "sine", 30.0), 0, 0.8],

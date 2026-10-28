@@ -290,6 +290,9 @@ func present(find: Dictionary) -> void:
 	if find["tier"] in ["reveal", "ceremony"] and not _may_hold(find):
 		find["tier"] = "rare" if find["tier"] == "reveal" and flares(find["rarity"]) else "common"
 	presented.append([find["part"], find["tier"], find["source"], find["at"]])
+	var voice := String(EventKinds.REWARD_RUNG_CUES.get(find["rarity"], ""))
+	if voice != "":
+		audio.play("reward_rare", 0.0, 1.0, "SFX", voice)
 	match String(find["tier"]):
 		"common":
 			audio.play("reward_common", 0.0, rung_pitch(find["rarity"]))
@@ -374,7 +377,9 @@ func card_state(find: Dictionary, start: int, in_ceremony: bool) -> Dictionary:
 	var d: Resource = Parts.def(find["part"])
 	var rarity: String = find["rarity"]
 	var stamps: Dictionary = row["stamps"]
-	var stamp: String = stamps["first"] if find["first"] and rarity in ["common", "rare"] else stamps.get(rarity, "")
+	var stamp: String = stamps.get(rarity, "")
+	if find["first"] and rarity in ["common", "rare"]:
+		stamp = "%s %s" % [stamps["first"], stamp]
 	var element := String(d.element) if d != null else ""
 	var relic := relic_of(find["part"])
 	var title: String = Relics.name_of(relic) if relic != "" else Parts.display_name(find["part"])

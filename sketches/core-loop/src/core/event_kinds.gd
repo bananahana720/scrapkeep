@@ -1078,6 +1078,9 @@ const REWARD_TIER_BY_RARITY := {"common": "common", "rare": "rare", "relic": "re
 const CEREMONY_SOURCES := ["gate", "boss", "vault", "cache", "cage", "warden", "evolution"]
 # Each rarity's bell on the reward ladder (Harmony.pentatonic_step), so a rarer find rings higher.
 const REWARD_RUNGS := {"common": 0, "rare": 4, "relic": 5, "evolved": 7, "evolution": 7}
+# A rung's own voice, played under its bell on every find of that rung (the item ladder's
+# sound per rung). Cobalt is a coil whine and click; the other rungs keep their bell alone.
+const REWARD_RUNG_CUES := {"rare": "rung_coil"}
 
 
 static func reward_row(tier: String) -> Dictionary:
