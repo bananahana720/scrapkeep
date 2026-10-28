@@ -457,6 +457,13 @@ func _enter_stage(retry: bool) -> void:
 	if not "activity_sites" in map:
 		StageModifier.set_air({})
 		return
+	# PROBE (never stacks): SKIP_SITES=1 enters the flume (stage 2) with its entry data taken but no sites built,
+	# the upper bound of building them ahead.
+	if OS.get_environment("SKIP_SITES") == "1" and ctx.run.stage == 2:
+		print("SKIP_SITES probe: stage 2 entered with no sites")
+		StageModifier.set_air({})
+		_pending_stage = true
+		return
 	for spec in map.activity_sites:
 		var id := String(spec["id"])
 		if not RULES.has(id):
