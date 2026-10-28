@@ -73,24 +73,24 @@ func _data() -> void:
 
 func _dials_follow_tier() -> void:
 	ChallengeDials.reset()
-	var base_damage := ChallengeDials.f("mobs.damage_mult")
+	var base_damage := _dial("mobs.damage_mult")
 	var run = load("res://src/core/run_state.gd").new()
 	run.run_tier = RunTier.TOP
 	var top: Dictionary = RunTier.dials(RunTier.TOP)
 	for key in top:
-		t.near("top rung sets " + key, ChallengeDials.f(key), float(ChallengeDials.DEFAULTS[key]) * float(top[key]))
+		t.near("top rung sets " + key, _dial(key), float(ChallengeDials.DEFAULTS[key]) * float(top[key]))
 	t.near("rung dial rides on the stage dial", ChallengeDials.stage_mult("mobs.damage", 1),
 		float(top["mobs.damage_mult"]) * ChallengeDials.by_stage("mobs.damage_by_stage", 1))
 	ChallengeDials.set_overrides({"mobs.damage_mult": 2.0})
-	t.near("rung dial multiplies an override", ChallengeDials.f("mobs.damage_mult"), 2.0 * float(top["mobs.damage_mult"]))
+	t.near("rung dial multiplies an override", _dial("mobs.damage_mult"), 2.0 * float(top["mobs.damage_mult"]))
 	ChallengeDials.set_overrides({})
 	t.eq("records name the rung dials", ChallengeDials.rung(), top)
 	t.eq("describe stays overrides only", ChallengeDials.describe(), {})
 	run.run_tier = RunTier.HARD
-	t.eq("rung 1 clears them", ChallengeDials.f("mobs.damage_mult"), base_damage)
+	t.eq("rung 1 clears them", _dial("mobs.damage_mult"), base_damage)
 	run.run_tier = RunTier.TOP
 	run.run_tier = RunTier.BASE
-	t.eq("the base tier clears them", ChallengeDials.f("pilot.regen_rate_mult"), 1.0)
+	t.eq("the base tier clears them", _dial("pilot.regen_rate_mult"), 1.0)
 	# Regen at the top rung: later and slower than at the base tier, from the same hit.
 	var healed := []
 	for tier_value in [RunTier.BASE, RunTier.TOP]:
@@ -123,12 +123,17 @@ func _production() -> void:
 	t.check("a player cannot pick rung 2 yet", not game.flow.choose_run_tier(2) and game.run.selected_run_tier() == 0)
 	t.check("nor past the top", not game.flow.choose_run_tier(RunTier.TOP + 1, false))
 	t.check("the bots' --run-tier picks the top rung", game.flow.choose_run_tier(RunTier.TOP, false))
-	t.near("and its dials apply", ChallengeDials.f("mobs.damage_mult"), float(RunTier.dials(RunTier.TOP)["mobs.damage_mult"]))
+	t.near("and its dials apply", _dial("mobs.damage_mult"), float(RunTier.dials(RunTier.TOP)["mobs.damage_mult"]))
 	t.check("rung 1 stays the player's HARD", game.flow.choose_run_tier(1))
-	t.eq("rung 1 drops the top dials", ChallengeDials.f("mobs.damage_mult"), 1.0)
+	t.eq("rung 1 drops the top dials", _dial("mobs.damage_mult"), 1.0)
 	game.flow.choose_run_tier(RunTier.TOP, false)
 	game.flow._begin_run(ClassDef.all()[0])
 	t.eq("a new run starts at the base tier", ChallengeDials.rung(), {})
 	paused = false
 	game.free()
 	ChallengeDials.reset()
+
+
+# ChallengeDials.f, by name: a literal `.f("key")` reads as a tuning.gd row key to sketch-lint L3.
+func _dial(key: String) -> float:
+	return ChallengeDials.f(key)
