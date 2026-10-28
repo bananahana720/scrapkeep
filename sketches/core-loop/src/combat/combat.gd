@@ -545,6 +545,9 @@ func setup(ctx_ref) -> void:
 # chaser, with a warning, so a typo in an event table never leaves a stage empty. The
 # Warden and the vault sit on the ground under `at`; the others are placed at `at`.
 func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF) -> Node3D:
+	var _sp_on := kind == "warden" and OS.get_environment("SPAWN_PROBE") == "1"
+	var _sp := PackedStringArray()
+	var _st := Time.get_ticks_usec()
 	var enemy: Node3D
 	match kind:
 		"lobber":
@@ -570,7 +573,9 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 	# from the world origin to `at` shoved a ball rolling at the origin out at 500 m/s
 	# (item_fuzz seed 2751, 243.9 m/s against the 60 m/s ceiling).
 	enemy.position = ctx.root.global_transform.affine_inverse() * at
+	_sp.append("new %.1f" % ((Time.get_ticks_usec() - _st) / 1000.0)); _st = Time.get_ticks_usec()
 	ctx.root.add_child(enemy)
+	_sp.append("add_child %.1f" % ((Time.get_ticks_usec() - _st) / 1000.0)); _st = Time.get_ticks_usec()
 	# M0 (review fix round 1, finding 2): the only spawner call reachable while the boss
 	# arena is up is boss.gd's own drone drop, so a spawn landing here is a boss add, not
 	# an ordinary field enemy, whatever kind string it uses (currently always "lobber").
@@ -602,10 +607,13 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 				_pressure_chasers += 1
 				pressure["flanker"] = _pressure_chasers % 2 == 0
 			enemy_spec["pressure"] = pressure
+	_sp.append("spec %.1f" % ((Time.get_ticks_usec() - _st) / 1000.0)); _st = Time.get_ticks_usec()
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health_scale, enemy_spec)
+	_sp.append("setup %.1f" % ((Time.get_ticks_usec() - _st) / 1000.0)); _st = Time.get_ticks_usec()
 	# The vault and the Warden settle onto the ground or their landmark anchor in setup.
 	if enemy is CollisionObject3D and not enemy.global_position.is_equal_approx(at):
 		_reenter_space(enemy)
+	_sp.append("reenter %.1f" % ((Time.get_ticks_usec() - _st) / 1000.0)); _st = Time.get_ticks_usec()
 	# Poles and flails weigh a body by its stage threat, as the trap ratings do (movement/grip.gd).
 	if "threat_level" in enemy:
 		enemy.threat_level = _threat()
@@ -630,8 +638,23 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))
 	# A kill-first special gets its special_tell signal before its listeners hear it arrive.
 	SpecialCues.attach(enemy)
-	ctx.events.enemy_spawned.emit(enemy, kind)
+	_sp.append("connects %.1f" % ((Time.get_ticks_usec() - _st) / 1000.0)); _st = Time.get_ticks_usec()
+	if _sp_on:
+		for c in ctx.events.enemy_spawned.get_connections():
+			var t0 := Time.get_ticks_usec()
+			(c.callable as Callable).call(enemy, kind)
+			var ms := (Time.get_ticks_usec() - t0) / 1000.0
+			if ms >= 0.2:
+				var obj = (c.callable as Callable).get_object()
+				var who: String = obj.get_script().resource_path.get_file() if obj != null and obj.get_script() != null else str(obj)
+				_sp.append("spawned:%s.%s %.1f" % [who, (c.callable as Callable).get_method(), ms])
+		_st = Time.get_ticks_usec()
+	else:
+		ctx.events.enemy_spawned.emit(enemy, kind)
 	fleet.on_spawned(enemy, kind)
+	_sp.append("fleet %.1f" % ((Time.get_ticks_usec() - _st) / 1000.0))
+	if _sp_on:
+		print("SPAWN_PROBE stage %d warden: %s" % [int(ctx.run.stage), ", ".join(_sp)])
 	return enemy
 
 

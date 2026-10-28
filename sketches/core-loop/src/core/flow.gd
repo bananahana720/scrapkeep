@@ -798,6 +798,7 @@ func _place_beacon() -> void:
 		if map is ParkMap and map.ok:
 			radius = map.reach_m
 	beacon.place(ctx.terrain.beacon_point(ctx.run.stage), seconds, radius)
+	_fp("beacon.place")
 	if is_instance_valid(warden):
 		warden.queue_free()
 	_engaged = false
