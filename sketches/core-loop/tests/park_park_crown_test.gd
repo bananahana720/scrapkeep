@@ -205,7 +205,7 @@ func _run() -> void:
 	holder.free()
 	var effective := effective_density_rows(park)
 	var density_graph = GraphLoader.read(BAKE_DIR + "/graph.bin")
-	var density := Density.measure(density_graph, Density.counted_rows({"park_rows": effective}))
+	var density := Density.measure(density_graph, Density.counted_rows({"park_rows": effective}), Density.play_rect(park))
 	print("[effective_density] rows %d worst %.1f m over %d" % [effective.size(), density["worst"], density["over"]])
 	t.check("effective geometry meets the owner's density limit", density["open"] > 0 and density["worst"] <= Density.DENSITY_M, str(density))
 	var empty_coverage: Dictionary = park.duplicate(true)
@@ -213,7 +213,7 @@ func _run() -> void:
 		if row["id"] == "slickrock_field_1":
 			row["recipe"] = ""
 			row["stamp"] = ""
-	var empty_density := Density.measure(density_graph, Density.counted_rows({"park_rows": effective_density_rows(empty_coverage)}))
+	var empty_density := Density.measure(density_graph, Density.counted_rows({"park_rows": effective_density_rows(empty_coverage)}), Density.play_rect(park))
 	t.check("one emptied coverage row fails effective density", empty_density["worst"] > Density.DENSITY_M, str(empty_density))
 	var approach: Dictionary = by_row["sentinel_48"]
 	t.check("the centre approach builds anchor posts without raising the fight floor", String(approach["stamp"]) == "" and not ParkRecipes.anchor_posts(approach, clear_zones).is_empty())

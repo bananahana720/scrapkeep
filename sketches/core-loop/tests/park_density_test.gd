@@ -45,7 +45,7 @@ func _run() -> void:
 		if not t.check("%s graph.bin loads" % map_id, graph != null):
 			continue
 		var rows := counted_rows(park)
-		var r := measure(graph, rows, _rect(park))
+		var r := measure(graph, rows, play_rect(park))
 		print("[density] map %s open %d (outside the play rect and unreachable, left out: %d) rows %d worst %.1f m at node %d (%.0f, %.1f, %.0f) nearest %s; over %.0f m: %d" % [
 			map_id, r["open"], r["left_out"], rows.size(), r["worst"], r["node"], r["at"].x, r["at"].y, r["at"].z,
 			r["nearest"], DENSITY_M, r["over"]])
@@ -54,7 +54,7 @@ func _run() -> void:
 			"worst %.1f m, %d nodes over" % [r["worst"], r["over"]])
 		if map_id == FIXTURE:
 			var half := rows.slice(0, rows.size() / 2)
-			var p := measure(graph, half, _rect(park))
+			var p := measure(graph, half, play_rect(park))
 			print("[planted] %s with %d of %d rows: worst %.1f m at node %d, over %d" % [FIXTURE, half.size(), rows.size(), p["worst"], p["node"], p["over"]])
 			t.check("planted half-row park fails the density rule", p["worst"] > DENSITY_M, "%.1f m" % p["worst"])
 	quit(t.verdict())
@@ -83,7 +83,7 @@ static func counted_rows(park: Dictionary) -> Array:
 	return out
 
 
-static func _rect(park: Dictionary) -> Rect2:
+static func play_rect(park: Dictionary) -> Rect2:
 	var a: Array = park["play_rect"]
 	return Rect2(float(a[0]), float(a[1]), float(a[2]), float(a[3]))
 
