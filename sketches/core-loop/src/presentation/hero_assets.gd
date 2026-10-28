@@ -378,6 +378,11 @@ void fragment() {
 		mat.emission = color
 		mat.emission_energy_multiplier = spec["emit"]
 	_materials[key] = mat
+	# PROBE (never stacks): KEEP_SHADERS=1 has the shared per-body slots make their shader now and hold it.
+	if OS.get_environment("KEEP_SHADERS") == "1" and (slot.begins_with("ancient_light") or slot == "ancient_enamel"):
+		var _k0 := Time.get_ticks_usec()
+		mat.get_rid()
+		print("KEEP_PROBE f%d %s get_rid %.2f" % [Engine.get_physics_frames(), slot, (Time.get_ticks_usec() - _k0) / 1000.0])
 	return mat
 
 
@@ -2255,7 +2260,9 @@ func _dress_warden_body(warden) -> void:
 		"seen": {"charging": false, "pulses": warden.pulses, "staggered": warden.staggered(),
 			"chunks": warden.chunks_left(), "rides": _driver_count(warden, "rides")}}
 	rec.skeleton = body.find_child("Skeleton3D", true, false) as Skeleton3D
+	var _p0 := Time.get_ticks_usec()
 	_paint_body(body, rec)
+	print("KEEP_PROBE f%d dress %s paint %.2f" % [Engine.get_physics_frames(), kind, (Time.get_ticks_usec() - _p0) / 1000.0])
 	match kind:
 		"reactor":
 			for mount in row.mount_parts:
