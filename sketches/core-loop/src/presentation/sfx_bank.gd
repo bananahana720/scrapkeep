@@ -1044,7 +1044,7 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_cut(_n("bell", 74), 0.3), 0, 0.7], [_cut(_n("bell", 81), 0.3), Synth.seconds(0.06), 0.8],
 				[_cut(_n("bell", 86), 0.5), Synth.seconds(0.12), 1.0], [_fm(0.5, _hz(98), 3.5, 1.0, 7.0), Synth.seconds(0.12), 0.25]])
 		"rung_coil":
-			# A cobalt find: a fleet coil charges from D up to the A above, then its latch clicks
+			# A cobalt find: a fleet coil charges from low D up to the A an octave and a fifth above, then its latch clicks
 			# home on a high D. It sits under the rare bell, so the rung reads by ear as well.
 			return _mix([[_fm_sweep(0.22, _hz(62), _hz(81), 1.4, 5.0), 0, 0.5], [_tone(0.22, _hz(74), _hz(93), "saw_dark", 6.0), 0, 0.35],
 				[_noise(0.012, 5200.0, 5200.0, 280.0), Synth.seconds(0.22), 0.8], [_cut(_n("mallet", 86), 0.1), Synth.seconds(0.22), 0.6]])

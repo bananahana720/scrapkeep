@@ -12,7 +12,9 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # The cobalt rung finish (design-v3/cobalt-rung-w1.md): the find card wears its rung's stamp,
 # so a first cobalt find reads NEW FLEET GRADE rather than a bare NEW, and every cobalt find
 # plays the rung's own voice (the item ladder's blue: a coil whine and click) under its bell.
-# A common find stays on its tick alone, and the stamp fits the card's corner.
+# A find that waits for its crate plays the coil with the burst. A common find stays on its
+# tick alone, and the stamp fits the card's corner. The cue log records a requested cue even
+# when the headless bus skips it, so these checks read what the ceremony asks for.
 # smoke: timeout=120s
 
 var _t := preload("res://tests/support/t.gd").new("cobalt_rung_voice_test")
@@ -101,4 +103,22 @@ func _check_voice() -> void:
 	find["first"] = false
 	ceremony.present(find)
 	sounds = log.map(func(row): return row[1])
-	_t.check("a cobalt gate pick plays the coil too", "rung_coil" in sounds, "%s at tier %s" % [sounds, find["tier"]])
+	_t.check("a repeat cobalt gate pick (no crate) plays the coil with its tick", find["tier"] == "common" and "rung_coil" in sounds and "rarity_tick" in sounds,
+		"%s at tier %s" % [sounds, find["tier"]])
+	# In play a gate or boss find waits for its crate: the coil sounds with the burst, not the tick.
+	ceremony.pause_armed = true
+	log.clear()
+	find = ceremony.find_of(rare, "warden")
+	find["first"] = true
+	ceremony.present(find)
+	sounds = log.map(func(row): return row[1])
+	_t.check("a crated cobalt find holds the coil at pickup", find["tier"] == "ceremony" and not "rung_coil" in sounds, "%s at tier %s" % [sounds, find["tier"]])
+	log.clear()
+	ceremony._queue.erase(find)
+	ceremony._begin(find)
+	ceremony._burst(int(ceremony.now_ms.call()))
+	sounds = log.map(func(row): return row[1])
+	_t.check("the crate's burst plays the coil", "rung_coil" in sounds and "ceremony_resolve" in sounds, str(sounds))
+	ceremony._close(int(ceremony.now_ms.call()))
+	ceremony._hold(false)
+	ceremony.pause_armed = false
