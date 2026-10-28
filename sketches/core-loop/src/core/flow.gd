@@ -388,7 +388,7 @@ func reroll_start_pick() -> bool:
 
 
 func choose_run_tier(value: int, check_unlock := true) -> bool:
-	if not in_stage() or not ctx.run.select_run_tier(value, ctx.profile, check_unlock):
+	if not (state == STAGE or state == BEACON) or not ctx.run.select_run_tier(value, ctx.profile, check_unlock):
 		return false
 	if ctx.build != null:
 		ctx.build.recompute()
@@ -1086,6 +1086,9 @@ func _engage() -> void:
 		return
 	_engaged = true
 	_sighted = true
+	if ctx.run.run_tier_open():
+		ctx.run.close_run_tier()
+		show_start_card()
 	ctx.events.warden_engaged.emit(ctx.run.stage)
 
 
