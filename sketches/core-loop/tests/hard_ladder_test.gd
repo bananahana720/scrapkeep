@@ -131,6 +131,7 @@ func _production() -> void:
 	game.flow._begin_run(ClassDef.all()[0])
 	t.eq("a new run starts at the base tier", ChallengeDials.rung(), {})
 	await _unlock(game)
+	_late_choice(game)
 	paused = false
 	game.free()
 	ChallengeDials.reset()
@@ -206,6 +207,38 @@ func _unlock(game) -> void:
 	game.flow._begin_run(ClassDef.all()[0])
 	game.flow.show_start_card()
 	t.eq("a new run's card starts back on the highest rung", card.shown_rung(), RunTier.TOP)
+
+
+# The rung is chosen before stage 1's Warden fight (red team w21 speedrunner edge): engaging that Warden
+# closes the choice, GATES and LAUNCH never take one, and a retry reopens it with the Warden replayed.
+func _late_choice(game) -> void:
+	var card = game.flow.start_card
+	game.flow._begin_run(ClassDef.all()[0])
+	game.flow.show_start_card()
+	t.check("the choice is open before the Warden", game.run.run_tier_open() and game.flow.choose_run_tier(2))
+	game.flow._engage()
+	t.check("engaging stage 1's Warden closes it", not game.run.run_tier_open())
+	t.check("no rung after the engage", not game.flow.choose_run_tier(3) and game.run.selected_run_tier() == 2)
+	t.check("nor back to the base tier", not game.flow.choose_run_tier(0) and game.run.selected_run_tier() == 2)
+	t.check("the card names the held tier", "Tier 2 held for this run" in _labels(card))
+	t.check("and reports it to the word budget", "Tier 2 held for this run" in card.drawn_words()
+		and not RunTier.threat_text(2) in card.drawn_words())
+	t.check("and offers no tier buttons", card.tier_button(0) == null and card.tier_button(2) == null and card.rung_button == null)
+	t.check("the start pick itself stays open", card.reroll_button != null and game.flow.take_start_pick(0))
+	game.flow._unseal()
+	t.eq("the Warden broken, the stage opens its gates", game.flow.NAMES[game.flow.state], game.flow.NAMES[game.flow.GATES])
+	game.flow.retry_stage()
+	t.check("a retry reopens it, the Warden replayed", game.run.run_tier_open() and not game.flow._engaged and game.flow.choose_run_tier(3))
+	t.eq("the retry rewinds the pick", String(game.run.start_pick.get("taken", "")), "")
+	game.flow._begin_run(ClassDef.all()[0])
+	# A vanished Warden opens the gates with no engage (flow._warden_vanished).
+	game.flow._unseal()
+	t.check("no choice in gates", not game.flow.choose_run_tier(2) and game.run.selected_run_tier() == 0)
+	game.flow._set_state(game.flow.LAUNCH)
+	t.check("nor in launch", not game.flow.choose_run_tier(2) and game.run.selected_run_tier() == 0)
+	game.flow.retry_stage()
+	t.check("back in the stage it opens", game.flow.choose_run_tier(2))
+	game.flow.choose_run_tier(0)
 
 
 func _labels(card) -> Array:

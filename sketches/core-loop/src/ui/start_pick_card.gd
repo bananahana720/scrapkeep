@@ -132,10 +132,16 @@ func drawn_words() -> PackedStringArray:
 	if visible:
 		for tile in _tiles:
 			out.append(String(tile["name"]))
-		if _interactive:
+		if _interactive and not _run.run_tier_open():
+			out.append(_held_words())
+		elif _interactive:
 			out.append(RunTier.threat_text(shown_rung()))
 			out.append(RunTier.pay_text(shown_rung()))
 	return out
+
+
+func _held_words() -> String:
+	return "Tier %d held for this run" % _run.selected_run_tier()
 
 
 # The rung whose threat and pay the card discloses and whose button it offers: the one Next rung stepped
@@ -203,6 +209,12 @@ func _controls() -> void:
 		button.flat = true
 		button.tooltip_text = "Take " + String(_tiles[index].name)
 	var y := ICON + PAD * 2.0 + PIP * 3.0
+	if not _run.run_tier_open():
+		# Closed when stage 1's Warden engages (run_state.gd _tier_closed): the card names the tier the run holds.
+		_label(_held_words(), y)
+		reroll_button = _button(Vector2(size.x * 0.5 + 100.0, y + 60.0), Vector2(160.0, 38.0), "Reroll (V)", func(): reroll_requested.emit())
+		reroll_button.disabled = _rerolls <= 0
+		return
 	var rung := shown_rung()
 	_label(RunTier.threat_text(rung), y)
 	_label(RunTier.pay_text(rung), y + 28.0)
