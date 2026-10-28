@@ -1150,7 +1150,8 @@ func _input(event: InputEvent) -> void:
 		return
 	# Esc frees a captured cursor. With the cursor already free it quits only outside play: in play a
 	# free cursor belongs to a screen that holds the pause menu off (the start card's tier choice, a
-	# workshop screen), and Esc there quit the game mid-run (w22 first-timer red team).
+	# workshop screen), and Esc there quit the game mid-run (w22 first-timer red team). The summary's
+	# Esc never gets here: _screen_key sends it to the camp.
 	if event.physical_keycode == KEY_ESCAPE:
 		if _mouse_captured():
 			_capture_mouse(false)
@@ -1252,7 +1253,8 @@ func _screen_key(key: int) -> bool:
 		"summary":
 			if summary_shut():
 				return true
-			if key == KEY_K:
+			# Esc leaves the summary for the camp, as K does, never the desktop (w23 cautious red team).
+			if key == KEY_K or key == KEY_ESCAPE:
 				screens.open_camp_from_summary()
 				return true
 			if key == KEY_SPACE or key == KEY_ENTER:
