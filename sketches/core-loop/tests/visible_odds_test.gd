@@ -281,7 +281,7 @@ func _stands() -> void:
 func _readout() -> void:
 	var odds := ItemGen.odds(["common", "rare"])
 	var text := OddsReadout.text(odds)
-	_t.check("the readout names each rarity and its percent", "COMMON" in text and "RARE" in text and "%d%%" % roundi(float(odds[0]["share"]) * 100.0) in text, text)
+	_t.check("the readout names each rarity and its percent", "FIELD KIT" in text and "FLEET GRADE" in text and "%d%%" % roundi(float(odds[0]["share"]) * 100.0) in text, text)
 	_t.check("a zero-weight rarity is not listed", not "EVOLVED" in OddsReadout.text(ItemGen.odds(["common", "evolved"])), OddsReadout.text(ItemGen.odds(["common", "evolved"])))
 	_t.eq("an empty table reads empty", OddsReadout.text([]), "")
 	# A table whose rarity holds no part shows only the rarities that do (relic holds none here).

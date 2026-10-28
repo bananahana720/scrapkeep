@@ -32,12 +32,13 @@ const TIER_WEIGHTS := {"common": 87.0, "rare": 10.0, "relic": 3.0, "evolved": 0.
 # weight, stamp glyph, ladder rung 0..3, tier and the affix scale. The colours are the item
 # ladder's rungs (23 Oct 19:28Z; grey is the panels' own): common is the green field kit in
 # field mint, rare the blue fleet grade in cobalt, relic gold in amber (its mint heart is the
-# gate's and the frame's), so the ids keep their meaning and only the read changes. Uncommon folded into
+# gate's and the frame's), so the ids keep their meaning and only the read changes; the
+# stamps name the rungs (FIELD KIT, FLEET GRADE, RELIC). Uncommon folded into
 # common and rare_plus became relic; evolved is the top rung, reserved for the two
 # evolutions a later unit builds, so it carries weight 0 and nothing rolls it yet.
 const RARITY := {
-	"common": {"color": Palette.ARC, "weight": TIER_WEIGHTS["common"], "stamp": "COMMON", "rung": 0, "tier": 1, "affix": 1.12},
-	"rare": {"color": Palette.COBALT, "weight": TIER_WEIGHTS["rare"], "stamp": "RARE", "rung": 1, "tier": 3, "affix": 1.5},
+	"common": {"color": Palette.ARC, "weight": TIER_WEIGHTS["common"], "stamp": "FIELD KIT", "rung": 0, "tier": 1, "affix": 1.12},
+	"rare": {"color": Palette.COBALT, "weight": TIER_WEIGHTS["rare"], "stamp": "FLEET GRADE", "rung": 1, "tier": 3, "affix": 1.5},
 	"relic": {"color": Palette.AMBER, "weight": TIER_WEIGHTS["relic"], "stamp": "RELIC", "rung": 2, "tier": 3, "affix": 2.0},
 	"evolved": {"color": Palette.ANCIENT, "weight": TIER_WEIGHTS["evolved"], "stamp": "EVOLVED", "rung": 3, "tier": 3, "affix": 2.0},
 }
