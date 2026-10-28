@@ -990,6 +990,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_hotwire_restore(retry)
 	if retry:
 		_fired.clear()
+		shop.rewind_stage()
 	gates.close()
 	field.clear()
 	_trail = 0.0
