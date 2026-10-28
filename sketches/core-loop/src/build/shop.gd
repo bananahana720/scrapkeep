@@ -20,8 +20,9 @@ const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 const SHELF_SIZE := 3
 const SHELF_RARITIES := ["common", "rare"]
 const TOP_RARITIES := ["relic"]
+const FLOOR_RARITIES := ["rare"]
 # Prices are cogs, from Fabricators.COG_PRICES: the reroll costs reroll_base at the first
-# visit and rises by reroll_growth each visit after; a charge cell costs cell_base, rising
+# stage's shelf and rises by reroll_growth each stage's shelf after; a charge cell costs cell_base, rising
 # by cell_growth for each cell already in that slot; a sale pays sell_share of the price.
 const REROLLS_PER_VISIT := 1
 const TOP_CLASS_MAX := 5
@@ -112,6 +113,14 @@ var history := {}
 var neglected := false
 var talks := {"beat": -1, "used": {}, "loops": 0, "relented": false}
 var leaves_this_visit: Array = []
+# The [world, stage] the shelf was stocked for. Re-entering the bay in the same stage finds the
+# same shelf, hook and reroll; only a new stage or the paid reroll restocks (speedrunner red
+# team, w21: a re-entry restock made the cobalt floor a fresh cobalt each lap). A retry or replay
+# rewinds the run, so it rewinds the shop to that stage's first stock too (rewind_stage).
+var stocked_for: Array = []
+# Stages stocked this run, which prices the reroll.
+var stocks := 0
+var _stage_stocks := {}
 
 var _rng := RandomNumberGenerator.new()
 var _left_empty := false
@@ -128,6 +137,9 @@ func reset_run() -> void:
 	inside = false
 	shelf = []
 	top = {}
+	stocked_for = []
+	stocks = 0
+	_stage_stocks = {}
 	neglected = false
 	_left_empty = false
 	talks = {"beat": -1, "used": {}, "loops": 0, "relented": false}
@@ -139,19 +151,15 @@ static func line(line_id: String) -> Dictionary:
 
 # ---- The bay's two calls (W6) ----
 
-# The ball rolled into the bay. Stocks the shelf and the hook for this visit and
+# The ball rolled into the bay. Stocks the shelf and the hook once per stage and
 # returns the greeting line. The difficulty clock pauses until leave().
 func enter() -> Dictionary:
 	inside = true
 	visit += 1
 	bought_this_visit = 0
-	rerolls_left = REROLLS_PER_VISIT
-	_rng.seed = SEED + visit * 131 + ctx.run.stage * 17
-	shelf = _stock()
-	# The next heft class up; at the top class the hook is already yours.
-	var lock_class: int = mini(TOP_CLASS_MAX, ctx.run.heft_class() + 1)
-	var top_id := _roll_one(TOP_RARITIES, shelf.map(func(entry): return entry["part_id"]))
-	top = {"part_id": top_id, "lock_class": lock_class, "sold": false} if top_id != "" else {}
+	var here := [ctx.run.world, ctx.run.stage]
+	if here != stocked_for:
+		_stock_stage(here)
 	talks = {"beat": -1, "used": {}, "loops": 0, "relented": false}
 	var greeting: Dictionary = greeting_line()
 	# Moss takes every carried ledger leaf on entry; the greeting says so.
@@ -160,6 +168,39 @@ func enter() -> Dictionary:
 		greeting = line("moss.ledger.%d" % clampi(ctx.progress.leaves_returned(), 1, 3))
 	neglected = false
 	return greeting
+
+
+# The first stock of a stage: shelf, hook (locked one heft class up; at the top class the hook
+# is already yours) and the reroll, kept so a retry can put it back.
+func _stock_stage(here: Array) -> void:
+	stocked_for = here
+	stocks += 1
+	rerolls_left = REROLLS_PER_VISIT
+	# Seeded by the stocks so far, not bay entries, so hopping in and out of the bay never picks
+	# a later stage's shelf.
+	_rng.seed = SEED + stocks * 131 + ctx.run.stage * 17
+	shelf = _stock()
+	var lock_class: int = mini(TOP_CLASS_MAX, ctx.run.heft_class() + 1)
+	var top_id := _roll_one(TOP_RARITIES, shelf.map(func(entry): return entry["part_id"]))
+	top = {"part_id": top_id, "lock_class": lock_class, "sold": false} if top_id != "" else {}
+	_stage_stocks[str(here)] = {"shelf": shelf.duplicate(true), "top": top.duplicate(true), "rng": _rng.state}
+
+
+# A retry or replay (stage_entered with retry) put the run back to the stage's start: its cogs
+# and parts come back, so the shelf comes back unsold, with the hook and the reroll. A stage this
+# run never stocked is stocked fresh on the next entry.
+func rewind_stage() -> void:
+	var here := [ctx.run.world, ctx.run.stage]
+	var kept: Dictionary = _stage_stocks.get(str(here), {})
+	if kept.is_empty():
+		stocked_for = []
+		return
+	stocked_for = here
+	rerolls_left = REROLLS_PER_VISIT
+	shelf = kept["shelf"].duplicate(true)
+	top = kept["top"].duplicate(true)
+	# The draws after the stock come back too, so a retry's reroll is the first attempt's reroll.
+	_rng.state = kept["rng"]
 
 
 func leave() -> Dictionary:
@@ -231,7 +272,7 @@ func buy(index: int) -> Dictionary:
 
 
 func reroll_price() -> int:
-	return int(round(Fabricators.COG_PRICES["reroll_base"] * pow(Fabricators.COG_PRICES["reroll_growth"], maxi(0, visit - 1))))
+	return int(round(Fabricators.COG_PRICES["reroll_base"] * pow(Fabricators.COG_PRICES["reroll_growth"], maxi(0, stocks - 1))))
 
 
 func reroll() -> Dictionary:
@@ -393,7 +434,7 @@ func _talk_record(beat: int, line_id: String, root: String, grumble: bool, relen
 
 
 # A variation the visit has not used yet for this beat; once all are used, they all
-# come back. The pick is seeded by the visit, so a replay says the same thing.
+# come back. The pick draws from the stream the stage's stock seeded, so a replay says the same thing.
 func _variation(beat_id: String, ids: Array) -> String:
 	var used: Array = talks["used"].get(beat_id, [])
 	var fresh: Array = ids.filter(func(id): return not id in used)
@@ -446,10 +487,16 @@ func _result(ok: bool, reason: String, line_id := "", part_id := "", cost := 0) 
 # gates get. It moves weight inside a part's offer bucket only, so the shelf's mix of buckets and its
 # rarities, and every price, stay as they were (answer_weights_test).
 func _stock() -> Array:
-	var picks: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, SHELF_SIZE)
+	# The cobalt rung (item ladder, wave 20): the first slot draws from FLOOR_RARITIES, so it is
+	# always a rare or better, and the other slots from the shelf's table.
+	var floor_pick: Array = Parts.roll(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1)
+	var picks: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts,
+		SHELF_SIZE - floor_pick.size(), floor_pick)
 	var out: Array = []
 	# Each record carries the odds of the table it was drawn from (SG13), read from the same
-	# SHELF_RARITIES and weight row the roll above reads.
+	# rarities and weight row its roll reads.
+	for part_id in floor_pick:
+		out.append({"part_id": part_id, "sold": false, "odds": OddsReadout.odds_for(FLOOR_RARITIES, ctx.run.class_id())})
 	var odds: Array = OddsReadout.odds_for(SHELF_RARITIES, ctx.run.class_id())
 	for part_id in picks:
 		out.append({"part_id": part_id, "sold": false, "odds": odds})

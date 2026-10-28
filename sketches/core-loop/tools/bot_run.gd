@@ -15,6 +15,7 @@ const SignalTimer := preload("res://tools/signal_timer.gd")
 const PhysicsProbe := preload("res://tools/physics_probe.gd")
 const FrameSplit := preload("res://tools/frame_split.gd")
 const BotPlants := preload("res://tools/bot_plants.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 
 # Headless bot runs for the design feedback loop (DEMO-SPEC). Each seed plays one full
 # demo run through a fresh Game.new() with one policy (tools/bot_driver.gd), in play
@@ -58,7 +59,12 @@ const BotPlants := preload("res://tools/bot_plants.gd")
 # --explore-by=<s> (pacing lab, scripts/pacing-check.mjs) lets the completionist roll optional content
 # until stage second s instead of ENGAGE_BY (140), and stretches the stall cap by the same amount, so
 # a park can be measured longer than the default explorer stays. Absent, the bot is unchanged.
-# --panel-log=1 adds panel_kills (the build's kill_log: stage, kind, elite, rib, jackpot, dropped)
+# --run-tier=N (the HARD ladder lab, scripts/challenge/run.mjs --tier) picks run tier N on the start card as stage 1
+# opens, without the first_win unlock (which would also open the secrets). With --from-stage the run takes tier N
+# as that stage opens instead, over whatever tier the entrance kept (a lab override; the start card is past).
+# Absent or 0, the run is unchanged; the row gains "run_tier".
+# --panel-log=1 adds panel_kills (the build's kill_log: stage, kind, elite, rib, jackpot, dropped,
+# yard; a yard lock crew's kill has yard true, a cleared yard is a yard_clear row)
 # and panels (the run's pickups in order) to the bots.ndjson row.
 # --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
 # run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the
@@ -193,6 +199,11 @@ func _initialize() -> void:
 		return
 	if _settings.has("attempt") and int(_settings["attempt"]) < 1:
 		printerr("bot_run: --attempt must be 1 or more")
+		quit(2)
+		return
+	if _settings.has("run-tier") and (not String(_settings["run-tier"]).is_valid_int() or int(_settings["run-tier"]) < RunTier.BASE
+			or int(_settings["run-tier"]) > RunTier.TOP):
+		printerr("bot_run: --run-tier=%s must be a whole number %d to %d" % [_settings["run-tier"], RunTier.BASE, RunTier.TOP])
 		quit(2)
 		return
 	if _settings.has("plant") and BotPlants.parse(String(_settings["plant"])).has("error"):
@@ -357,6 +368,24 @@ func _physics_process(delta: float) -> bool:
 			MusicEngine.prepare_rest()
 			_game.presentation.audio.engine.warm_stingers = true
 		_game.run.run_seed_override = _seeds[_index]
+		var run_tier := int(_settings.get("run-tier", "0"))
+		if run_tier != 0:
+			# Deferred: the flow is in its stage state only once stage_entered has returned.
+			var choose := func():
+				if not _game.flow.choose_run_tier(run_tier, false):
+					printerr("bot_run: run tier %d refused on stage 1" % run_tier)
+					quit(2)
+			var from_stage := int(_settings.get("from-stage", "0"))
+			var pick_tier := func(stage: int, retry: bool):
+				if retry:
+					return
+				if from_stage > 1 and stage == from_stage:
+					_game.run.lab_run_tier(run_tier)
+					if _game.build != null:
+						_game.build.recompute()
+				elif from_stage <= 1 and stage == 1:
+					choose.call_deferred()
+			_game.events.stage_entered.connect(pick_tier)
 		_started_msec = Time.get_ticks_msec()
 		var resume := false
 		if _settings.has("from-stage"):
@@ -436,6 +465,8 @@ func _physics_process(delta: float) -> bool:
 		record["panels"] = Array(_game.run.panels)
 	if _settings.has("plant"):
 		record["plant"] = String(_settings["plant"])
+	if int(_settings.get("run-tier", "0")) != 0:
+		record["run_tier"] = _game.run.selected_run_tier()
 	_results.append(record)
 	_game.codex.append_line(_out.path_join("bots.ndjson"), JSON.stringify(record))
 	_write_entries()

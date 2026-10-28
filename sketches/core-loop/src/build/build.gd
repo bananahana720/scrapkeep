@@ -990,6 +990,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_hotwire_restore(retry)
 	if retry:
 		_fired.clear()
+		shop.rewind_stage()
 	gates.close()
 	field.clear()
 	_trail = 0.0
@@ -1068,11 +1069,16 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 # A kill may drop a grey panel (IL-01 card section 3): elite kills always, an ordinary kill
 # at the drop row's chance plus pity, raised in off-spine ribs and on reel or dunk kills. The
 # stat leans toward the pilot's nemesis answers. Draws only from panel_rng, so no other
-# stream moves.
+# stream moves. A yard lock's crew (stage_locks.gd) does not roll: the cleared yard pays one
+# panel (yard_cleared), so the lock's waves add fights, not a pile of panels, and pity waits.
 func _drop_panel(kind: String, at: Vector3) -> void:
 	if kind in Panels.NO_DROP_KINDS or scrapless():
 		return
 	var tags: Dictionary = ctx.run.kill_tags
+	if bool(tags.get("yard", false)):
+		if kill_log.size() < KILL_LOG_CAP:
+			kill_log.append([ctx.flow.stage(), kind, false, 1.0, false, false, true])
+		return
 	var jackpot := bool(tags.get("jackpot", false))
 	var elite := bool(tags.get("elite", false))
 	var rib := _rib_mult(at)
@@ -1082,6 +1088,16 @@ func _drop_panel(kind: String, at: Vector3) -> void:
 		kill_log.append([ctx.flow.stage(), kind, elite, rib, jackpot, dropped])
 	if dropped:
 		scrap.drop_panel(at, Panels.draw(panel_rng, _class_id()), jackpot)
+
+
+# A yard lock broken to its last wave (stage_locks.gd): one panel at the yard's centre, Isaac's
+# room-clear reward. It draws from panel_rng like a kill and leaves the pity count alone.
+func yard_cleared(at: Vector3) -> void:
+	if scrapless():
+		return
+	if kill_log.size() < KILL_LOG_CAP:
+		kill_log.append([ctx.flow.stage(), "yard_clear", false, 1.0, false, true, false])
+	scrap.drop_panel(at, Panels.draw(panel_rng, _class_id()))
 
 
 # The rib multiplier at a kill: DROP.rib in an off-spine dead end, else 1.0. A stage with no
@@ -1209,6 +1225,7 @@ func _on_flow_changed(state: String) -> void:
 		return
 	var rarities := Parts.gate_rarities(ctx.run.gate_tier_bonus())
 	var picks: Array = Parts.roll_gate(ctx.rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
+	picks = Parts.floor_gate(ctx.rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	picks += _hotwire_gate_ids()

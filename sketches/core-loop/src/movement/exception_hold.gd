@@ -85,8 +85,21 @@ func _end(id: int) -> void:
 		PhysicsServer3D.body_remove_collision_exception(_ball.get_rid(), entry["rid"])
 
 
+# The body's own enabled shapes, CollisionShape3D children and bare shape owners (anchor posts) alike.
 func _shapes(body: Node) -> Array:
-	return body.get_children().filter(func(child): return child is CollisionShape3D and not child.disabled and child.shape != null)
+	var out: Array = []
+	var body_3d := body as CollisionObject3D
+	if body_3d == null:
+		return out
+	for owner_id in body_3d.get_shape_owners():
+		if body_3d.is_shape_owner_disabled(owner_id):
+			continue
+		var at := body_3d.global_transform * body_3d.shape_owner_get_transform(owner_id)
+		for i in body_3d.shape_owner_get_shape_count(owner_id):
+			var shape := body_3d.shape_owner_get_shape(owner_id, i)
+			if shape != null:
+				out.append({"shape": shape, "global_transform": at, "owner": owner_id})
+	return out
 
 
 # Cylinders, capsules and spheres by centre distance; any other shape by an overlap query.
@@ -94,7 +107,7 @@ func clear_of(body: PhysicsBody3D) -> bool:
 	var at := _ball.global_position
 	for node in _shapes(body):
 		var shape = node.shape
-		var centre: Vector3 = node.global_position
+		var centre: Vector3 = node.global_transform.origin
 		if shape is CylinderShape3D or shape is CapsuleShape3D:
 			var flat: float = Vector2(at.x - centre.x, at.z - centre.z).length()
 			var above: float = absf(at.y - centre.y) - float(shape.get("height")) * 0.5
@@ -108,7 +121,7 @@ func clear_of(body: PhysicsBody3D) -> bool:
 	return true
 
 
-func _overlaps(body: PhysicsBody3D, node: CollisionShape3D) -> bool:
+func _overlaps(body: PhysicsBody3D, node: Dictionary) -> bool:
 	if not _ball.is_inside_tree():
 		return false
 	if _query == null:
@@ -120,7 +133,7 @@ func _overlaps(body: PhysicsBody3D, node: CollisionShape3D) -> bool:
 	_query.collision_mask = body.collision_layer
 	_query.exclude = [_ball.get_rid()]
 	for hit in _ball.get_world_3d().direct_space_state.intersect_shape(_query, 16):
-		if hit["collider"] == body and body.shape_owner_get_owner(body.shape_find_owner(int(hit["shape"]))) == node:
+		if hit["collider"] == body and body.shape_find_owner(int(hit["shape"])) == node.owner:
 			return true
 	return false
 
@@ -137,7 +150,7 @@ func _set_beside(body: PhysicsBody3D) -> void:
 		else:
 			var box: AABB = shape.get_debug_mesh().get_aabb()
 			reach = maxf(reach, Vector2(box.size.x, box.size.z).length() * 0.5)
-		centre = node.global_position
+		centre = node.global_transform.origin
 	var out := Vector3(at.x - centre.x, 0.0, at.z - centre.z)
 	if out.length() < 0.05:
 		var v := _ball.linear_velocity

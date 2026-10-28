@@ -8,6 +8,7 @@ const Secrets := preload("res://src/core/secrets.gd")
 const Companion := preload("res://src/core/companion.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const VictoryLap := preload("res://src/world/victory_lap.gd")
@@ -139,6 +140,7 @@ func setup(ctx_ref, beacon_ref) -> void:
 	start_card.pick_requested.connect(take_start_pick)
 	start_card.reroll_requested.connect(reroll_start_pick)
 	start_card.tier_requested.connect(choose_run_tier)
+	start_card.covered = _start_card_covered
 	ctx.events.player_died.connect(_on_player_died)
 	ctx.run.death_saved.connect(func(_hp: float): _on_death_saved())
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
@@ -374,20 +376,31 @@ func show_start_card() -> void:
 		host.sync_start_card_pointer()
 
 
+# The card holds no menu while it keeps mouse look (start_pick_card.gd wants_pointer), so the pause
+# menu or the hotwire offer can open over it; while one is open it owns the keys and the clicks.
+func _start_card_covered() -> bool:
+	var game = ctx.root
+	var menu = game.get_node_or_null("PauseMenu")
+	var offer = game.hud.hotwire_screen if game.get("hud") != null else null
+	return (menu != null and menu.is_open()) or (offer != null and offer.is_open())
+
+
 func take_start_pick(index: int) -> bool:
-	var taken: bool = in_stage() and ctx.run.take_start_pick(index)
+	var taken: bool = in_stage() and not _start_card_covered() and ctx.run.take_start_pick(index)
 	show_start_card()
 	return taken
 
 
 func reroll_start_pick() -> bool:
-	var rerolled: bool = in_stage() and ctx.run.reroll_start_pick()
+	var rerolled: bool = in_stage() and not _start_card_covered() and ctx.run.reroll_start_pick()
 	show_start_card()
 	return rerolled
 
 
-func choose_run_tier(value: int) -> bool:
-	if not in_stage() or not ctx.run.select_run_tier(value, ctx.profile):
+# Only before stage 1's Warden breaks: GATES and LAUNCH come after it (or after a vanished or skipped Warden),
+# so a rung taken there would count a win for a dam played below it.
+func choose_run_tier(value: int, check_unlock := true) -> bool:
+	if not (state == STAGE or state == BEACON) or not ctx.run.select_run_tier(value, ctx.profile, check_unlock):
 		return false
 	if ctx.build != null:
 		ctx.build.recompute()
@@ -1004,6 +1017,10 @@ func _end_run(won: bool) -> void:
 func _record_end(won: bool) -> void:
 	ctx.run.over = true
 	run_won = won
+	# A won run on the HARD ladder's best rung so far opens the next one (run_tier.gd BEST_STAT). Every win
+	# ends here, the victory lap's (_begin_ending) included.
+	if won and RunTier.note_win(ctx.profile, ctx.run.run_tier):
+		_save_profile("profile_ladder_save")
 	ctx.player.set_frozen(true)
 	_entrance = {}
 	_persist_companion()
@@ -1081,6 +1098,9 @@ func _engage() -> void:
 		return
 	_engaged = true
 	_sighted = true
+	if ctx.run.run_tier_open():
+		ctx.run.close_run_tier()
+		show_start_card()
 	ctx.events.warden_engaged.emit(ctx.run.stage)
 
 
@@ -1107,7 +1127,9 @@ func _rescue_if_fallen(ball: Vector3) -> void:
 			var radius: float = preload("res://src/movement/tuning.gd").RADIUS
 			ctx.player.reset_to(Vector3(ball.x, deck + radius, ball.z), Vector3(v.x, 0.0, v.z) * NET_DAMP)
 			return
-	if ctx.terrain.contains(ball) and ball.y > ctx.terrain.height(ball.x, ball.z) - RESCUE_DEPTH:
+	# Measured from the floor, not height(): an overlay is a sheet, not a fill, so a ball under
+	# one (the flume's trestle ramp) rolls on the floor beneath it and has not fallen.
+	if ctx.terrain.contains(ball) and ball.y > ctx.terrain.floor_height(ball.x, ball.z) - RESCUE_DEPTH:
 		return
 	ctx.player.reset_to(ctx.terrain.rescue_point(ball), Vector3(v.x, 0.0, v.z))
 

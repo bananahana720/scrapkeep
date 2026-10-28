@@ -103,6 +103,10 @@ const RULES := {
 	"cracked_cache": {
 		"starts": "none", "ring": 5.0, "finishes": "wall_broken", "face": Vector2(0.0, -1.0),
 		"pay": {"scrap": PAY_SCRAP, "rarities": PAY_RARITIES, "source": "activity_cache", "where": "pedestal"},
+		# A bump under the ram's bar answers with the roll's refused cue (ruling p), so the face reads as
+		# "faster", not as solid: from `floor` x cruise up to the bar, in these worlds, once a face every
+		# `gap_s` of play. Under the floor (a ball resting on or easing into the face) it stays quiet.
+		"refused": {"worlds": [1], "floor": 0.4, "gap_s": 3.0},
 	},
 	# Hold the Relay in a park (W13 SR10): a stake post `post_out` metres outside the ring, past the
 	# miniboss zone, on the side facing the stage's drop-in, takes 0 to 4 stacks before the ball rolls into the ring; the
@@ -148,6 +152,8 @@ const WALL_DEPTH := 8.0
 const WALL_HEIGHT := 6.0
 const WALL_SINK := 3.0
 const WALL_REACH := 3.0
+# The ball touching the face: its centre one radius (Tuning.RADIUS 1.0) and a little more off it.
+const WALL_CONTACT := 1.2
 const SLAM_REACH := 7.0
 # `slammed` carries the ball's own strength for the landing (player.slam_strength), not a speed.
 # A slam breaks the wall at SLAM_MIN_PER_CRUISE times the strength of a flat landing at cruise speed,
@@ -214,6 +220,22 @@ static var _shared_graphs := {}
 var last_entry_usec := 0
 # That handler's parts, each "part ms" (clear, then a site id per _build), so the test can name what a slow entry built.
 var last_entry_steps := PackedStringArray()
+# The next stage's sites, built during a launch's flight under a hidden, disabled holder (the flume entry's longest
+# part, 37 ms of 105 on the 4080): {"stage", "holder", "plan", "built", "grounds"}, {} when none. The entry takes each
+# one whose plan entry it would build again, and ground under it reads the same, and builds the rest as before.
+var _ahead := {}
+# Where _build_site puts a site: this node, or the ahead holder while it builds.
+var _site_parent: Node = null
+# The flight plans this many ticks after the launch, and builds from the tick after: the launch frame stays the kick's.
+const AHEAD_PLAN_TICKS := 2
+# The main-thread time of the flight's plan, for tests.
+var last_ahead_plan_usec := 0
+# The flight's builds, each "id ms", as last_entry_steps.
+var last_ahead_steps := PackedStringArray()
+# How many sites the entry took from the ahead build, for tests.
+var last_entry_adopted := 0
+# The holders whose sites this stage adopted.
+var _holders: Array = []
 # The trade interior's block material, built once instead of a checker texture a block;
 # dress_props reads its two colours and replaces it, so every block can share it.
 static var _interior_block: StandardMaterial3D
@@ -272,6 +294,8 @@ class Site extends Node3D:
 	var heal_paid := false
 	var tier_label: Label3D
 	var difficulty := 1.0
+	# The physics frame of this face's last refused cue (RULES cracked_cache refused).
+	var refused_frame := -1
 	var round := 0
 	var round_elements: Array = []
 	var round_credits := 0.0
@@ -314,7 +338,10 @@ func setup(ctx_ref) -> void:
 	_owns_shared = true
 	name = "Activities"
 	ctx.events.stage_entered.connect(_on_stage_entered)
-	ctx.events.stage_content_cleared.connect(func(_reason: String): clear())
+	ctx.events.stage_content_cleared.connect(func(_reason: String):
+		clear()
+		_drop_ahead())
+	ctx.events.launched.connect(_on_launched)
 	ctx.events.slammed.connect(func(at: Vector3, strength: float, _flatness: float): _slammed(at, strength))
 	ctx.events.world_fact.connect(_on_world_fact)
 	# The trade devices' plate finish neutralises its texture pixel by pixel on first use (about
@@ -431,24 +458,61 @@ func _enter_stage(retry: bool) -> void:
 	last_entry_steps.append("clear %.1f" % ((Time.get_ticks_usec() - cleared) / 1000.0))
 	_elite_arrivals = 0
 	stage_modifier = {}
+	last_entry_adopted = 0
+	_site_parent = null
 	# A retry does not re-arm the piece, so dying cannot farm one.
 	if not retry:
 		_piece_paid = false
 	var map = ctx.terrain.map()
-	_graph = null
-	_graph_map = ""
-	_mark_pools.clear()
-	var entry_data := {}
-	if "park" in map and not map.park.is_empty():
-		_graph_map = String(map.park.map)
-		entry_data = _entry_data(map)
-		_graph = shared_graph(graph_path(_graph_map))
+	var entry_data := _use_map(map)
 	# The next stage's worker starts now, so it has this whole stage to finish.
 	if "stage" in ctx.terrain:
 		_prepare_stage(int(ctx.terrain.stage) + 1)
 	if not "activity_sites" in map:
+		_drop_ahead()
 		StageModifier.set_air({})
 		return
+	var plan := _plan(map, entry_data)
+	stage_modifier = plan.modifier
+	var ahead := {}
+	if not retry and int(_ahead.get("stage", 0)) == ctx.run.stage and not _ahead.plan.is_empty():
+		ahead = _ahead
+		_ahead = {}
+	else:
+		_drop_ahead()
+	for i in plan.sites.size():
+		var entry: Dictionary = plan.sites[i]
+		var site: Site = _adopt(ahead, i, entry)
+		if site == null:
+			site = _build_entry(entry, stage_modifier)
+		else:
+			_arm(site)
+			last_entry_adopted += 1
+		sites.append(site)
+	if not ahead.is_empty():
+		_uncover(ahead)
+	StageModifier.set_air(stage_modifier)
+	_pending_stage = true
+
+
+# The map's graph and its worker's entry data become this stage's.
+func _use_map(map) -> Dictionary:
+	_graph = null
+	_graph_map = ""
+	_mark_pools.clear()
+	if "park" in map and not map.park.is_empty():
+		_graph_map = String(map.park.map)
+		var entry_data := _entry_data(map)
+		_graph = shared_graph(graph_path(_graph_map))
+		return entry_data
+	return {}
+
+
+# Every site a stage entry builds, in build order, with what the build does after it, and the stage's modifier.
+# The draws write the run's caches (trade offers, pocket draws) as they always have; nothing here makes a node.
+func _plan(map, entry_data: Dictionary) -> Dictionary:
+	var out := []
+	var modifier := {}
 	for spec in map.activity_sites:
 		var id := String(spec["id"])
 		if not RULES.has(id):
@@ -464,31 +528,23 @@ func _enter_stage(retry: bool) -> void:
 			if not spec.get("pack", []).is_empty():
 				built_spec.pack = spec.pack.duplicate()
 				built_spec.tell = spec.get("tell", {}).duplicate(true)
-		sites.append(_build(id, spec["at"], built_spec))
+		out.append({"kind": "row", "id": id, "at": spec["at"], "spec": built_spec})
 	if _graph_map != "":
 		var tuning = ctx.get("tuning")
 		var sitting: bool = tuning != null and tuning.has_method("sitting") and tuning.sitting()
 		for room_spec in Secrets.room_sites(_graph_map, ctx.get("profile"), sitting):
-			var room := _build("cracked_cache", room_spec["at"], room_spec)
-			_hang_room_log(room, String(room_spec["secret"]))
-			sites.append(room)
+			out.append({"kind": "room", "id": "cracked_cache", "at": room_spec["at"], "spec": room_spec, "secret": String(room_spec["secret"])})
 		# The run's own seed picks the spots, so the next run moves them and a replay keeps them.
 		for find_spec in Secrets.find_sites(_graph_map, hash([ctx.rng.seed, ctx.run.run_seed, "field_finds"])):
-			var found := _build("cracked_cache", find_spec["at"], find_spec)
-			var dressed := Time.get_ticks_usec()
-			_dress_find(found, String(find_spec["find"]))
-			last_entry_steps.append("find %s %.1f" % [find_spec["find"], (Time.get_ticks_usec() - dressed) / 1000.0])
-			sites.append(found)
+			out.append({"kind": "find", "id": "cracked_cache", "at": find_spec["at"], "spec": find_spec, "find": String(find_spec["find"])})
 		# A fast Brindle rout last run: the timed door stands open this run (secrets.gd DOOR).
 		for door_spec in Secrets.door_sites(_graph_map, ctx.get("profile")):
-			var door := _build("cracked_cache", door_spec["at"], door_spec)
-			_dress_door(door)
-			sites.append(door)
+			out.append({"kind": "door", "id": "cracked_cache", "at": door_spec["at"], "spec": door_spec})
 	if _graph != null:
 		var pool: PackedInt32Array = entry_data.pool
 		var trade_spec := TradePockets.stage_site(_graph, map, ctx.run, ctx.rng.seed, pool)
 		if not trade_spec.is_empty():
-			sites.append(_build(trade_spec.id, trade_spec.at, trade_spec))
+			out.append({"kind": "trade", "id": trade_spec.id, "at": trade_spec.at, "spec": trade_spec})
 		if _draw_map != _graph_map:
 			_draw_layout = {}
 			_draw_map = _graph_map
@@ -496,15 +552,184 @@ func _enter_stage(retry: bool) -> void:
 			if entry_data.layout.is_empty():
 				entry_data.layout = PocketDraw.prepare(_graph, map)
 			_draw_layout = entry_data.layout
-		stage_modifier = StageModifier.for_stage(ctx.run, ctx.terrain, ctx.run.stage)
-		for drawn_spec in PocketDraw.stage_sites(_graph, map, ctx.run, ctx.rng.seed, trade_spec, _draw_layout, stage_modifier):
+		modifier = StageModifier.for_stage(ctx.run, ctx.terrain, ctx.run.stage)
+		for drawn_spec in PocketDraw.stage_sites(_graph, map, ctx.run, ctx.rng.seed, trade_spec, _draw_layout, modifier):
 			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
-				var drawn_site := _build(drawn_spec.id, drawn_spec.at, drawn_spec)
-				drawn_site.view.set_sight(float(stage_modifier.get("sight_scale", 1.0)))
-				StageModifier.mark_far(stage_modifier, drawn_site)
-				sites.append(drawn_site)
-	StageModifier.set_air(stage_modifier)
-	_pending_stage = true
+				out.append({"kind": "drawn", "id": drawn_spec.id, "at": drawn_spec.at, "spec": drawn_spec})
+	return {"sites": out, "modifier": modifier}
+
+
+# One planned site, built and dressed as its kind asks. Interact does not know it yet (_arm).
+func _build_entry(entry: Dictionary, modifier: Dictionary) -> Site:
+	var site := _build(entry.id, entry.at, entry.spec)
+	match String(entry.kind):
+		"room":
+			_hang_room_log(site, entry.secret)
+		"find":
+			var dressed := Time.get_ticks_usec()
+			_dress_find(site, entry.find)
+			last_entry_steps.append("find %s %.1f" % [entry.find, (Time.get_ticks_usec() - dressed) / 1000.0])
+		"door":
+			_dress_door(site)
+		"drawn":
+			site.view.set_sight(float(modifier.get("sight_scale", 1.0)))
+			StageModifier.mark_far(modifier, site)
+	return site
+
+
+# An ahead site's devices and stake post join Interact as the entry takes it (an entry's own build registers them).
+func _arm(site: Site) -> void:
+	var interact: Node = ctx.root.get_node("Interact")
+	for device in site.trade_devices:
+		interact.register(device)
+	if site.stake_post != null:
+		interact.register(site.stake_post)
+
+
+# ---- Built during the launch's flight ----
+
+# A launch toward the next park stage (not a world's last, whose launch goes to its boss) starts that stage's sites,
+# where stages are built on workers (a played game, a frame-capture bot run). Bots and tests build at entry as before.
+func _on_launched(_velocity: Vector3) -> void:
+	_drop_ahead()
+	if ctx.terrain == null or not ctx.terrain.has_method("_worker_builds") or not ctx.terrain._worker_builds():
+		return
+	var flow = ctx.get("flow")
+	if flow == null or not flow.state_name() in ["gates", "launch"]:
+		return
+	var stage: int = ctx.run.stage + 1
+	if ctx.stages.is_world_last(ctx.run.stage) or not "maps" in ctx.terrain or stage > ctx.terrain.maps.size() \
+			or not ctx.terrain.is_ready(stage):
+		return
+	var map = ctx.terrain.map_for(stage)
+	if not "park" in map or map.park.is_empty() or not "activity_sites" in map:
+		return
+	var holder := Node3D.new()
+	holder.name = "AheadSites_%d" % stage
+	holder.visible = false
+	# Disabled: nothing under it processes, and its bodies stay out of the space until the entry takes them.
+	holder.process_mode = Node.PROCESS_MODE_DISABLED
+	add_child(holder)
+	_ahead = {"stage": stage, "holder": holder, "plan": {}, "built": [], "grounds": [], "run": _run_key(), "wait": AHEAD_PLAN_TICKS}
+
+
+# The flight's plan, AHEAD_PLAN_TICKS after the launch: the launch's own frame (the kick) carries nothing of it.
+func _plan_ahead() -> void:
+	var stage: int = _ahead.stage
+	var map = ctx.terrain.map_for(stage)
+	var started := Time.get_ticks_usec()
+	last_ahead_steps = PackedStringArray()
+	# The run's caches as the entry will find them: run_state.enter_stage refuses the offers left unanswered.
+	var memory: Dictionary = ctx.run.trade_memory
+	var draws: Dictionary = ctx.run.pocket_draw_cache
+	ctx.run.trade_memory = memory.duplicate(true)
+	ctx.run.pocket_draw_cache = draws.duplicate(true)
+	for offer in ctx.run.trade_memory.seen:
+		if int(offer.stage) == stage - 1 and not ctx.run.trade_memory.decisions.has(str(stage - 1)):
+			TradePockets.decide(ctx.run.trade_memory, offer, false)
+	_as_stage(stage, map, func(): _ahead.plan = _plan(map, _entry_data(map)))
+	ctx.run.trade_memory = memory
+	ctx.run.pocket_draw_cache = draws
+	last_ahead_plan_usec = Time.get_ticks_usec() - started
+	if _ahead.plan.is_empty():
+		_drop_ahead()
+
+
+# What a site's build reads of the run besides its plan: device prices and pocket rewards (parts, health, class).
+func _run_key() -> int:
+	return hash([ctx.run.parts, ctx.run.max_hp, ctx.run.class_id(), ctx.run.heft_class()])
+
+
+# One ahead site a physics tick, while the flight lasts.
+func _step_ahead() -> void:
+	var i: int = _ahead.built.size()
+	var entry: Dictionary = _ahead.plan.sites[i]
+	var map = ctx.terrain.map_for(int(_ahead.stage))
+	var steps := last_entry_steps
+	var started := Time.get_ticks_usec()
+	_site_parent = _ahead.holder
+	_as_stage(int(_ahead.stage), map, func():
+		_ahead.built.append(_build_entry(entry, _ahead.plan.modifier))
+		_ahead.grounds.append(ctx.terrain.height(float(entry.at.x), float(entry.at.y))))
+	_site_parent = null
+	last_entry_steps = steps
+	last_ahead_steps.append("%s %.1f" % [entry.id, (Time.get_ticks_usec() - started) / 1000.0])
+	# A build that failed appends nothing: the entry builds the rest.
+	if _ahead.built.size() <= i:
+		_ahead.plan.sites.resize(i)
+
+
+# Runs fn as though the stage were already `stage`: the run's and the terrain's stage, the terrain's overlays as the
+# stage starts them, and this stage's graph and draw layout; all put back after.
+func _as_stage(stage: int, map, fn: Callable) -> void:
+	var saved := [ctx.run.stage, ctx.terrain.stage, ctx.terrain.overlays.duplicate(), _graph, _graph_map, _draw_layout, _draw_map, _mark_pools]
+	ctx.run.stage = stage
+	ctx.terrain.stage = stage
+	ctx.terrain.overlays.clear()
+	if "start_overlays" in map:
+		ctx.terrain.overlays.append_array(map.start_overlays)
+	_mark_pools = {}
+	_graph_map = String(map.park.map)
+	# The worker's graph first: shared_graph alone would read the map's graph again on this tick (about 50 ms).
+	_settle(_graph_map)
+	_graph = shared_graph(graph_path(_graph_map))
+	fn.call()
+	ctx.run.stage = saved[0]
+	ctx.terrain.stage = saved[1]
+	ctx.terrain.overlays.assign(saved[2])
+	_graph = saved[3]
+	_graph_map = saved[4]
+	_draw_layout = saved[5]
+	_draw_map = saved[6]
+	_mark_pools = saved[7]
+
+
+# The ahead site for plan entry i when the flight built it from the same entry over the same ground. It stays under
+# its holder (moving it would take every node out of the tree and back); null to build it here.
+func _adopt(ahead: Dictionary, i: int, entry: Dictionary) -> Site:
+	if ahead.is_empty() or i >= ahead.built.size() or i >= ahead.plan.sites.size() or ahead.run != _run_key():
+		return null
+	var planned: Dictionary = ahead.plan.sites[i]
+	if not _same_entry(planned, entry) or (String(entry.kind) == "drawn" and hash(ahead.plan.modifier) != hash(stage_modifier)):
+		return null
+	if absf(float(ahead.grounds[i]) - ctx.terrain.height(float(entry.at.x), float(entry.at.y))) > 0.01:
+		return null
+	var site: Site = ahead.built[i]
+	ahead.built[i] = null
+	return site
+
+
+static func _same_entry(a: Dictionary, b: Dictionary) -> bool:
+	return a.kind == b.kind and a.id == b.id and a.at == b.at and hash(a.spec) == hash(b.spec) \
+		and a.get("secret", "") == b.get("secret", "") and a.get("find", "") == b.get("find", "")
+
+
+# The entry took what it could: the rest go, and the holder shows and runs, so its sites' bodies join the space now.
+# It stays this stage's, freed with its sites by clear().
+func _uncover(ahead: Dictionary) -> void:
+	var taken := sites.filter(func(site): return is_instance_valid(site) and site.get_parent() == ahead.holder)
+	if taken.is_empty():
+		_free_holder(ahead)
+		return
+	# Every other child goes, a failed build's part-made site too.
+	for child in ahead.holder.get_children():
+		if not child in taken:
+			ahead.holder.remove_child(child)
+			child.queue_free()
+	ahead.holder.visible = true
+	ahead.holder.process_mode = Node.PROCESS_MODE_INHERIT
+	_holders.append(ahead.holder)
+
+
+func _drop_ahead() -> void:
+	if not _ahead.is_empty():
+		_free_holder(_ahead)
+	_ahead = {}
+
+
+func _free_holder(ahead: Dictionary) -> void:
+	if is_instance_valid(ahead.holder):
+		ahead.holder.queue_free()
 
 
 func clear() -> void:
@@ -524,6 +749,10 @@ func clear() -> void:
 					enemy.queue_free()
 			site.queue_free()
 	sites.clear()
+	for holder in _holders:
+		if is_instance_valid(holder):
+			holder.queue_free()
+	_holders.clear()
 	_pending_stage = false
 
 
@@ -583,7 +812,7 @@ func _build_site(id: String, at: Vector2, spec: Dictionary) -> Site:
 	if spec.has("face"):
 		s.rule["face"] = spec["face"]
 	s.name = "Activity_" + id
-	add_child(s)
+	(_site_parent if _site_parent != null else self).add_child(s)
 	s.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
 	if s.drawn:
 		s.rotation.y = -spec.get("turn", 0) * PI * 0.5
@@ -621,7 +850,8 @@ func _build_trade(s: Site) -> void:
 		s.add_child(device)
 		device.position = Vector3(-4.0 if i == 0 else 4.0, 0.0, 0.0)
 		device.setup(ctx, ctx.root.get_node("Interact"), spec)
-		ctx.root.get_node("Interact").register(device)
+		if _site_parent == null:
+			ctx.root.get_node("Interact").register(device)
 		s.trade_devices.append(device)
 		words.append(device.words())
 	var door: Array = s.interior.entrances[0].at
@@ -659,7 +889,7 @@ func _build_interior(s: Site) -> void:
 		_mesh_box(root, size, at, _interior_block)
 	for entrance in s.interior.entrances:
 		for side in [-1.0, 1.0]:
-			_mesh_box(root, Vector3(0.3, 2.0, 0.3), Vector3(entrance.at[0] + side * entrance.width * 0.5, 1.0, entrance.at[1]), Palette.solid(EventKinds.activity_color(s.view.id)))
+			_mesh_box(root, Vector3(0.3, 2.0, 0.3), Vector3(entrance.at[0] + side * entrance.width * 0.5, 1.0, entrance.at[1]), _solid(EventKinds.activity_color(s.view.id)))
 	# The interior builds after the site's own dressing pass, so it dresses its own blocks (2026-10-14).
 	load("res://src/presentation/spillway_scenery.gd").dress_props(root)
 
@@ -693,9 +923,9 @@ func _activate_interior_collision(s: Site) -> void:
 
 
 func _build_altar(s: Site) -> void:
-	_mesh_cylinder(s, 0.45, 3.2, Vector3.UP * 1.6, Palette.solid(Palette.VERDIGRIS))
-	s.cap = _mesh_box(s, Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, Palette.solid(Palette.BRASS))
-	_mesh_box(s, Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, Palette.solid(Palette.SAND))
+	_mesh_cylinder(s, 0.45, 3.2, Vector3.UP * 1.6, _solid(Palette.VERDIGRIS))
+	s.cap = _mesh_box(s, Vector3(1.4, 0.6, 1.4), Vector3.UP * 3.5, _solid(Palette.BRASS))
+	_mesh_box(s, Vector3(1.42, 0.12, 1.42), Vector3.UP * 3.22, _solid(Palette.SAND))
 
 
 func _build_cache(s: Site) -> void:
@@ -711,7 +941,7 @@ func _build_cache(s: Site) -> void:
 		Palette.striped(Palette.SANDSTONE, Palette.VERDIGRIS), true)
 	for k in 3:
 		var crack := _mesh_box(s.wall, Vector3(WALL_HALF_W * 1.3, 0.2, 1.1), Vector3(0.0, -1.2 + k * 1.6, 0.0),
-			Palette.solid(Palette.CHARCOAL))
+			_solid(Palette.CHARCOAL))
 		crack.rotation.z = 0.5 - k * 0.45
 	for side in [-1.0, 1.0]:
 		_mesh_box(s, Vector3(1.0, tall, WALL_DEPTH), Vector3(side * (WALL_HALF_W + 0.5), mid, -WALL_DEPTH * 0.5), concrete, true)
@@ -719,7 +949,7 @@ func _build_cache(s: Site) -> void:
 	var local := Vector3(0.0, 0.0, -PEDESTAL_BACK)
 	s.pedestal = s.to_global(local)
 	s.pedestal.y = ctx.terrain.height(s.pedestal.x, s.pedestal.z)
-	_mesh_cylinder(s, 0.8, 0.6, s.to_local(s.pedestal) + Vector3.UP * 0.3, Palette.solid(Palette.CHARCOAL))
+	_mesh_cylinder(s, 0.8, 0.6, s.to_local(s.pedestal) + Vector3.UP * 0.3, _solid(Palette.CHARCOAL))
 	# Finish only: the same workshop materials the Spillway props wear; colliders stay as built.
 	load("res://src/presentation/spillway_scenery.gd").dress_props(s, s.view)
 	# The dressed finish shader carries no emission, so the glow is this site's own additive
@@ -751,7 +981,7 @@ func _dress_find(s: Site, find_id: String) -> void:
 # from Secrets.DRIP_HEAR_M. Both go with the face when it breaks.
 func _seep_tell(s: Site) -> void:
 	if _find_wet == null:
-		_find_wet = Palette.solid(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.35))
+		_find_wet = _solid(Palette.CHARCOAL.lerp(Palette.VERDIGRIS, 0.35))
 	var wet := _find_wet
 	for k in FIND_SEEP_STREAKS.size():
 		var streak: Vector3 = FIND_SEEP_STREAKS[k]
@@ -775,9 +1005,9 @@ func _dress_door(s: Site) -> void:
 	clock.name = "DoorClock"
 	clock.position = Vector3(0.0, 1.3, 0.52)
 	s.wall.add_child(clock)
-	_mesh_box(clock, Vector3(DOOR_CLOCK_M, DOOR_CLOCK_M, 0.1), Vector3.ZERO, Palette.solid(Palette.BRASS))
-	_mesh_box(clock, Vector3(DOOR_CLOCK_M - 0.3, DOOR_CLOCK_M - 0.3, 0.06), Vector3(0.0, 0.0, 0.06), Palette.solid(Palette.LEDGER))
-	var ink := Palette.solid(Palette.CHARCOAL)
+	_mesh_box(clock, Vector3(DOOR_CLOCK_M, DOOR_CLOCK_M, 0.1), Vector3.ZERO, _solid(Palette.BRASS))
+	_mesh_box(clock, Vector3(DOOR_CLOCK_M - 0.3, DOOR_CLOCK_M - 0.3, 0.06), Vector3(0.0, 0.0, 0.06), _solid(Palette.LEDGER))
+	var ink := _solid(Palette.CHARCOAL)
 	# Hands at five to twelve: the hour hand straight up, the minute hand a little short of it.
 	var hour := _mesh_box(clock, Vector3(0.1, DOOR_CLOCK_M * 0.3, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.15, 0.1), ink)
 	hour.name = "HourHand"
@@ -792,7 +1022,7 @@ func _dress_door(s: Site) -> void:
 # Secrets.RADIO_HEAR_M. The aerial stays; the sound goes with the face.
 func _radio_tell(s: Site) -> void:
 	var aerial := _mesh_box(s, Vector3(0.12, FIND_AERIAL_M, 0.12), Vector3(WALL_HALF_W - 1.0, WALL_HEIGHT + FIND_AERIAL_M * 0.5, -1.0),
-		Palette.solid(Palette.BRASS))
+		_solid(Palette.BRASS))
 	aerial.name = "FindAerial"
 	s.wall.add_child(_find_sound("find_radio", Secrets.RADIO_HEAR_M))
 
@@ -824,10 +1054,10 @@ func _hang_board(s: Site, site_name: String, title: String, text: String) -> voi
 	s.name = site_name
 	var board_z := -WALL_DEPTH + 0.06
 	var frame := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x + 0.3, ROOM_BOARD_SIZE.y + 0.3, 0.08),
-		Vector3(0.0, ROOM_LOG_HEIGHT, board_z), Palette.solid(Palette.BRASS))
+		Vector3(0.0, ROOM_LOG_HEIGHT, board_z), _solid(Palette.BRASS))
 	frame.name = "RoomBoardFrame"
 	var board := _mesh_box(s, Vector3(ROOM_BOARD_SIZE.x, ROOM_BOARD_SIZE.y, 0.08),
-		Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.04), Palette.solid(Palette.CHARCOAL))
+		Vector3(0.0, ROOM_LOG_HEIGHT, board_z + 0.04), _solid(Palette.CHARCOAL))
 	board.name = "RoomBoard"
 	var label := Label3D.new()
 	label.name = "RoomLog"
@@ -847,7 +1077,7 @@ func _hang_board(s: Site, site_name: String, title: String, text: String) -> voi
 # Four strokes and the bar through them, chalked on the cracked face: the crew's count of a shift
 # that came back. It goes with the face when the wall breaks.
 func _chalk_tally(wall: Node3D) -> void:
-	var chalk := Palette.solid(Palette.LEDGER)
+	var chalk := _solid(Palette.LEDGER)
 	var tally := Node3D.new()
 	tally.name = "RoomTally"
 	tally.position = ROOM_TALLY_AT
@@ -869,7 +1099,7 @@ func _hang_glove(s: Site) -> void:
 	# Hung fingers down, then slanted a little across the face.
 	glove.basis = (Basis(Vector3.BACK, 0.22) * Basis(Vector3.RIGHT, -PI * 0.5)).scaled(Vector3.ONE * ROOM_GLOVE_SCALE)
 	s.wall.add_child(glove)
-	var leather := Palette.solid(Palette.COPPER)
+	var leather := _solid(Palette.COPPER)
 	_mesh_box(glove, Vector3(0.62, 0.2, 0.66), Vector3.ZERO, leather)
 	for k in 4:
 		var finger := MeshInstance3D.new()
@@ -890,15 +1120,31 @@ func _hang_glove(s: Site) -> void:
 	thumb.rotation = Vector3(PI * 0.5, 1.0, 0.0)
 	thumb.position = Vector3(-0.42, -0.02, -0.02)
 	glove.add_child(thumb)
-	_mesh_box(glove, Vector3(0.7, 0.24, 0.26), Vector3(0.0, 0.01, 0.42), Palette.solid(Palette.LEDGER))
-	_mesh_box(glove, Vector3(0.05, 0.45, 0.05), Vector3(0.0, 0.0, 0.5), Palette.solid(Palette.CHARCOAL))
+	_mesh_box(glove, Vector3(0.7, 0.24, 0.26), Vector3(0.0, 0.01, 0.42), _solid(Palette.LEDGER))
+	_mesh_box(glove, Vector3(0.05, 0.45, 0.05), Vector3(0.0, 0.0, 0.5), _solid(Palette.CHARCOAL))
+
+
+# A site's parts repeat from site to site and stage to stage, so their flat materials and meshes are
+# made once and shared by key (each new one built its shader or arrays on the stage entry frame).
+# Nothing writes to a shared one.
+static var _parts := {}
+
+
+static func _solid(color: Color) -> StandardMaterial3D:
+	var key := "solid:" + color.to_html()
+	if not _parts.has(key):
+		_parts[key] = Palette.solid(color)
+	return _parts[key]
 
 
 func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid := false) -> Node3D:
 	var mesh := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	mesh.mesh = bm
+	var key := "box:%s" % size
+	if not _parts.has(key):
+		var bm := BoxMesh.new()
+		bm.size = size
+		_parts[key] = bm
+	mesh.mesh = _parts[key]
 	mesh.material_override = mat
 	if not solid:
 		mesh.position = at
@@ -919,17 +1165,27 @@ func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid 
 
 func _mesh_cylinder(parent: Node3D, radius: float, height: float, at: Vector3, mat: Material) -> void:
 	var mesh := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = radius
-	cm.bottom_radius = radius
-	cm.height = height
-	mesh.mesh = cm
+	var key := "cylinder:%s:%s" % [radius, height]
+	if not _parts.has(key):
+		var cm := CylinderMesh.new()
+		cm.top_radius = radius
+		cm.bottom_radius = radius
+		cm.height = height
+		_parts[key] = cm
+	mesh.mesh = _parts[key]
 	mesh.material_override = mat
 	mesh.position = at
 	parent.add_child(mesh)
 
 
 func _physics_process(delta: float) -> void:
+	if not _ahead.is_empty():
+		if _ahead.wait > 0:
+			_ahead.wait -= 1
+			if _ahead.wait == 0:
+				_plan_ahead()
+		elif _ahead.built.size() < _ahead.plan.sites.size():
+			_step_ahead()
 	if ctx == null or not ctx.flow.in_stage():
 		return
 	if _pending_stage and ctx.spawner != null and not ctx.calm:
@@ -1394,7 +1650,8 @@ func _build_relay(s: Site) -> void:
 	var post_at := at + toward * (float(s.rule["ring"]) + float(s.rule["post_out"]))
 	post.global_position = ctx.terrain.drop_point(post_at.x, post_at.y, 0.0)
 	post.setup(ctx, ctx.root.get_node("Interact"), {"id": "relay_stake_%d_%s" % [ctx.run.stage, s.name]})
-	ctx.root.get_node("Interact").register(post)
+	if _site_parent == null:
+		ctx.root.get_node("Interact").register(post)
 	s.stake_post = post
 	s.view.word.text = s.relay.stake_line()
 
@@ -1586,8 +1843,25 @@ func _watch_wall(s: Site, ball: Vector3) -> void:
 	var ahead := local.z - 0.5
 	if ahead < -1.0 or ahead > WALL_REACH + maxf(0.0, toward) / 30.0 or absf(local.x) > WALL_HALF_W + 1.0 or local.y > WALL_HEIGHT + 2.0:
 		return
-	if toward >= ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE:
+	var bar: float = ctx.tuning.f("cruise") * RAM_MIN_PER_CRUISE
+	if toward >= bar:
 		_break_wall(s)
+	elif ahead <= WALL_CONTACT and local.y < WALL_HEIGHT:
+		_refuse_ram(s, toward)
+
+
+# A bump under the bar: the roll's refused cue, once a face per gap, in the worlds the rule names.
+func _refuse_ram(s: Site, toward: float) -> void:
+	var cue: Dictionary = s.rule.get("refused", {})
+	if cue.is_empty() or toward < ctx.tuning.f("cruise") * float(cue["floor"]):
+		return
+	if not int(ctx.stages.world_of(ctx.run.stage)) in cue["worlds"]:
+		return
+	var frame := Engine.get_physics_frames()
+	if s.refused_frame >= 0 and frame - s.refused_frame < int(float(cue["gap_s"]) * Engine.physics_ticks_per_second):
+		return
+	s.refused_frame = frame
+	ctx.events.verb_failed.emit("roll", "under_bar", ctx.player.ball_position())
 
 
 func _slammed(at: Vector3, strength: float) -> void:

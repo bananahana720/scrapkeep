@@ -2,7 +2,7 @@
 // node scripts/challenge/run.mjs --library [--lib-seeds=4] [--lib-pilots=a,b] [--label=<name>]
 // node scripts/challenge/run.mjs --library=<dir> [--cells=boss,warden,park,world] [--only=brindle,w1,park1]
 //     [--seeds=<n>: 24 fights, 16 parks] [--bands=novice,learner1,learner5,expert] [--no-top] [--persona=brawler] [--warden-persona=skipper] [--park-persona=skipper]
-//     [--tune=<text passed whole to bot_run; the game's dials split key=value,key=value>] [--tune-unruled] [--jobs=4] [--label=<name>] [--shard=i/n] [--dry-run] [--strict]
+//     [--tune=<text passed whole to bot_run; the game's dials split key=value,key=value>] [--tune-unruled] [--tier=<n>] [--jobs=4] [--label=<name>] [--shard=i/n] [--dry-run] [--strict]
 // node scripts/challenge/run.mjs --library [--lib-shard=i/n]; --library-merge=<dir,dir> --label=<name>
 // node scripts/challenge/run.mjs --merge=<dir,dir>
 //
@@ -14,7 +14,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { COLUMNS, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, jobKey, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
+import { COLUMNS, MAX_RUN_TIER, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, jobKey, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = process.env.GODOT_BIN;
@@ -47,6 +47,7 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "merge") opts.merge = v.split(",");
   else if (k === "tune") opts.tune = arg.startsWith("--tune=") ? arg.slice(7) : "";  // passed to bot_run whole; the value keeps its own =
   else if (k === "tune-unruled") opts.tuneUnruled = true;  // lets bot_run apply pilot.* dials, for information only: no ruling allows them yet
+  else if (k === "tier") { opts.tierText = v ?? ""; opts.tier = Number(v); }  // the HARD ladder rung every run plays (bot_run --run-tier)
   else if (k === "resume") opts.resume = true;
   else if (k === "allow-mixed") opts.allowMixed = true;
   else if (k === "dry-run") opts.dryRun = true;
@@ -94,7 +95,7 @@ function mergeRuns() {
   const first = metas[0] ?? {};
   finish(runs, path.join(outRoot, opts.label ?? "merged-" + stamp), {
     label: opts.label ?? "merged", commit: first.commit, plan_hash: first.plan_hash, library: first.library, buckets: first.buckets,
-    shards: check.shards, warnings: check.warnings,
+    tune: first.tune, tune_unruled: first.tune_unruled, run_tier: first.run_tier, shards: check.shards, warnings: check.warnings,
   });
 }
 
@@ -217,7 +218,10 @@ function loadLibrary(dir) {
 
 async function runTable() {
   const builds = opts.library ? loadLibrary(opts.library) : {};
-  let jobs = planCells({ tune: opts.tune, tuneUnruled: opts.tuneUnruled, builds, cells: opts.cells, only: opts.only, seeds: opts.seeds, columns, persona: opts.persona, wardenPersona: opts.wardenPersona, parkPersona: opts.parkPersona });
+  if (opts.tier !== undefined && !(opts.tierText !== "" && Number.isInteger(opts.tier) && opts.tier >= 0 && opts.tier <= MAX_RUN_TIER)) die(`--tier must be a whole number 0 to ${MAX_RUN_TIER}`);
+  let jobs = planCells({ tune: opts.tune, tuneUnruled: opts.tuneUnruled, tier: opts.tier, builds, cells: opts.cells, only: opts.only, seeds: opts.seeds, columns, persona: opts.persona, wardenPersona: opts.wardenPersona, parkPersona: opts.parkPersona });
+  // The tier is picked on stage 1's start card; a cell resumed from a saved entrance takes it as its stage opens
+  // (bot_run --run-tier with --from-stage), so later cells and the Expert top build play the ladder too.
   jobs = shardJobs(jobs, opts.shard);
   const missing = jobs.filter((j) => j.missing);
   if (missing.length) {
@@ -235,8 +239,8 @@ async function runTable() {
   const commit = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
   const libraryLabel = opts.library ? path.basename(opts.library) : null;
   const libraryDigest = opts.library ? hashString(read(path.join(opts.library, "index.json"))) : null;
-  const plan = planHash({ libraryLabel, libraryDigest, cells: opts.cells, only: opts.only, seeds: opts.seeds, columns, persona: opts.persona, wardenPersona: opts.wardenPersona, parkPersona: opts.parkPersona, tune: opts.tuneUnruled ? opts.tune + " [unruled]" : opts.tune });
-  const meta = { label, shard: opts.shard, plan_hash: plan, commit, library: libraryLabel, tune: opts.tune, ...(opts.tuneUnruled ? { tune_unruled: true } : {}), buckets: bucketInfo(builds), jobs: jobs.length };
+  const plan = planHash({ libraryLabel, libraryDigest, cells: opts.cells, only: opts.only, seeds: opts.seeds, columns, persona: opts.persona, wardenPersona: opts.wardenPersona, parkPersona: opts.parkPersona, tune: opts.tuneUnruled ? opts.tune + " [unruled]" : opts.tune, tier: opts.tier });
+  const meta = { label, shard: opts.shard, plan_hash: plan, commit, library: libraryLabel, tune: opts.tune, ...(opts.tuneUnruled ? { tune_unruled: true } : {}), ...(opts.tier ? { run_tier: opts.tier } : {}), buckets: bucketInfo(builds), jobs: jobs.length };
   // A label is one experiment: an existing folder is refused, not appended to, unless --resume continues the same plan.
   if (existsSync(runsFile) || existsSync(path.join(outDir, "meta.json"))) {
     if (!opts.resume) die(`label ${label} already has results; pick a new --label or pass --resume to continue the same plan`);
@@ -281,7 +285,7 @@ async function runTable() {
     log(`rerun ${job.id} alone (first try: ${first.p.timedOut ? "timeout" : "exit " + first.p.exit})`);
     record(job, await play(job, 2), true);
   }
-  finish(dedupeBy(parseNdjson(read(runsFile)), "id"), outDir, { label, commit, plan_hash: plan, library: libraryLabel, buckets: meta.buckets, shards: opts.shard ? [opts.shard] : null });
+  finish(dedupeBy(parseNdjson(read(runsFile)), "id"), outDir, { label, commit, plan_hash: plan, library: libraryLabel, buckets: meta.buckets, tune: meta.tune, tune_unruled: meta.tune_unruled, run_tier: meta.run_tier, shards: opts.shard ? [opts.shard] : null });
 }
 
 function finish(runs, outDir, meta) {

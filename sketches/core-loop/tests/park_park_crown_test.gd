@@ -205,7 +205,7 @@ func _run() -> void:
 	holder.free()
 	var effective := effective_density_rows(park)
 	var density_graph = GraphLoader.read(BAKE_DIR + "/graph.bin")
-	var density := Density.measure(density_graph, Density.counted_rows({"park_rows": effective}))
+	var density := Density.measure(density_graph, Density.counted_rows({"park_rows": effective}), Density.play_rect(park))
 	print("[effective_density] rows %d worst %.1f m over %d" % [effective.size(), density["worst"], density["over"]])
 	t.check("effective geometry meets the owner's density limit", density["open"] > 0 and density["worst"] <= Density.DENSITY_M, str(density))
 	var empty_coverage: Dictionary = park.duplicate(true)
@@ -213,7 +213,7 @@ func _run() -> void:
 		if row["id"] == "slickrock_field_1":
 			row["recipe"] = ""
 			row["stamp"] = ""
-	var empty_density := Density.measure(density_graph, Density.counted_rows({"park_rows": effective_density_rows(empty_coverage)}))
+	var empty_density := Density.measure(density_graph, Density.counted_rows({"park_rows": effective_density_rows(empty_coverage)}), Density.play_rect(park))
 	t.check("one emptied coverage row fails effective density", empty_density["worst"] > Density.DENSITY_M, str(empty_density))
 	var approach: Dictionary = by_row["sentinel_48"]
 	t.check("the centre approach builds anchor posts without raising the fight floor", String(approach["stamp"]) == "" and not ParkRecipes.anchor_posts(approach, clear_zones).is_empty())
@@ -385,11 +385,11 @@ static func physical_perch_failures(park: Dictionary, parent: Node3D, ground: Ca
 		if row["at"] != PERCH_XZ[i] or row["stamp"] != "" or not ParkRecipes.is_anchor_field(row):
 			out.append("%s placement changed" % id)
 		var node := ParkRecipes.place_anchor_field(row, parent, ground, zones)
-		var shapes := node.find_children("*", "CollisionShape3D", true, false)
+		var shapes := ParkRecipes.collider_shapes(node)
 		if shapes.size() != 1:
 			out.append("%s has %d posts, want one" % [id, shapes.size()])
-		for shape: CollisionShape3D in shapes:
-			var centre := shape.global_position
+		for shape: Dictionary in shapes:
+			var centre: Vector3 = shape.global_transform.origin
 			var top := centre.y + (shape.shape as BoxShape3D).size.y * 0.5
 			print("[physical_perch] %s centre %s top %.6f" % [id, centre, top])
 			if Vector2(centre.x, centre.z).distance_to(Vector2(PERCH_XZ[i][0], PERCH_XZ[i][1])) > 0.01 or absf(top - PERCH_TOP_M) > 0.01:
@@ -411,8 +411,8 @@ static func sentinel_clearance_failures(park: Dictionary, parent: Node3D, ground
 	for spec: Dictionary in Tuning.SPECS:
 		if spec["key"] == "rope_range":
 			rope_range = float(spec["value"])
-	var shapes := node.find_children("*", "CollisionShape3D", true, false)
-	for shape: CollisionShape3D in shapes:
+	var shapes := ParkRecipes.collider_shapes(node)
+	for shape: Dictionary in shapes:
 		var span := surface_distance(shape, point)
 		if span.is_empty():
 			out.append("sentinel_40 has an unsupported collider")
@@ -423,7 +423,7 @@ static func sentinel_clearance_failures(park: Dictionary, parent: Node3D, ground
 	if collisions != 0:
 		out.append("%d posts touch the recorded ball sphere at %s" % [collisions, point])
 	var reach := INF
-	for shape: CollisionShape3D in shapes:
+	for shape: Dictionary in shapes:
 		var span := surface_distance(shape, point)
 		if not span.is_empty():
 			reach = minf(reach, span[1])
@@ -437,12 +437,13 @@ static func sentinel_clearance_failures(park: Dictionary, parent: Node3D, ground
 # a fitted anchor hull (ConvexPolygonShape3D, #289) is bounded below by its local bounding box (the hull lies inside it, so
 # "clear of the ball" holds if even the box is clear) and above by its nearest vertex (a hull point, so "in rope reach" holds if
 # even that is in reach). [] for any other shape.
-static func surface_distance(shape: CollisionShape3D, point: Vector3) -> Array:
-	var local := shape.to_local(point)
+static func surface_distance(shape: Dictionary, point: Vector3) -> Array:
+	var xf: Transform3D = shape.global_transform
+	var local := xf.affine_inverse() * point
 	if shape.shape is BoxShape3D:
 		var half := (shape.shape as BoxShape3D).size * 0.5
 		var closest := Vector3(clampf(local.x, -half.x, half.x), clampf(local.y, -half.y, half.y), clampf(local.z, -half.z, half.z))
-		var d := point.distance_to(shape.to_global(closest))
+		var d := point.distance_to(xf * closest)
 		return [d, d]
 	if shape.shape is ConvexPolygonShape3D:
 		var pts := (shape.shape as ConvexPolygonShape3D).points
@@ -452,9 +453,9 @@ static func surface_distance(shape: CollisionShape3D, point: Vector3) -> Array:
 		var vertex := INF
 		for p in pts:
 			box = box.expand(p)
-			vertex = minf(vertex, point.distance_to(shape.to_global(p)))
+			vertex = minf(vertex, point.distance_to(xf * p))
 		var closest := Vector3(clampf(local.x, box.position.x, box.end.x), clampf(local.y, box.position.y, box.end.y), clampf(local.z, box.position.z, box.end.z))
-		return [point.distance_to(shape.to_global(closest)), vertex]
+		return [point.distance_to(xf * closest), vertex]
 	return []
 
 
@@ -467,7 +468,7 @@ static func signal_clearance_failures(park: Dictionary, parent: Node3D, ground: 
 	if row["home"] != "mast_cutters" or row["stamp"] != "ridge":
 		out.append("signal mast home or ridge binding changed")
 	var node := ParkRecipes.place_row(row, parent, ground, Callable(), ParkRecipes.clear_zones(park))
-	var shapes := node.find_children("*", "CollisionShape3D", true, false)
+	var shapes := ParkRecipes.collider_shapes(node)
 	var approaches := [
 		Vector3(-232.57, 13.85, 263.71), Vector3(-236.27, 14.46, 267.66),
 		Vector3(-239.9, 14.34, 271.63), Vector3(-243.46, 13.5, 275.6),
@@ -485,7 +486,7 @@ static func signal_clearance_failures(park: Dictionary, parent: Node3D, ground: 
 	for point: Vector3 in approaches:
 		var nearest := INF
 		var reach := INF
-		for shape: CollisionShape3D in shapes:
+		for shape: Dictionary in shapes:
 			var span := surface_distance(shape, point)
 			if span.is_empty():
 				out.append("signal mast has an unsupported collider")

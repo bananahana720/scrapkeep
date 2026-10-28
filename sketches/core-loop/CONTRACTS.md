@@ -244,6 +244,7 @@ Every enemy is in group `enemy`, is on physics layer 3, and implements `knock(di
 Instance methods the spine and other modules may call:
 
 - `height(x, z) -> float`
+- `floor_height(x, z) -> float` (height with no overlay down: the ground a ball under an overlay's sheet stands on; the fall rescue reads it)
 - `drop_point(x, z, clearance) -> Vector3`
 - `spawn_point(stage) -> Vector3`
 - `entry_heading(stage) -> Vector3` (flat, unit length)

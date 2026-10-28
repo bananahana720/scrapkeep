@@ -120,6 +120,7 @@ const VAULT_FACE_COOLDOWN := 1.5
 const SPRINT_CRUISE := 1.25
 # Kest's blink: this far along the aim, stopping short of the world.
 const BLINK_DISTANCE := 8.0
+const BLINK_BACKOFF := 0.5
 # Tarn's claw pull: Shift plants a claw up to CLAW_PULL_REACH along the aim and pulls the
 # ball at CLAW_PULL_SCALE times the dash floor, always with a little lift, so it lands as a ram.
 const CLAW_PULL_REACH := 12.0
@@ -289,12 +290,34 @@ static func _blink(kit, tuning, intent, aim: Basis, body_state) -> void:
 	query.collision_mask = WORLD_MASK
 	var safe: PackedFloat32Array = body_state.get_space_state().cast_motion(query)
 	var travel := reach * (safe[0] if safe.size() > 0 else 1.0)
-	var to := from + lift + dir * travel
+	var to := from + lift + dir * _blink_clear(body_state.get_space_state(), query, dir, travel)
 	body_state.transform = Transform3D(body_state.transform.basis, to)
 	var speed := maxf(Vector2(v.x, v.z).length(), tuning.f("dash_impulse"))
 	body_state.linear_velocity = Vector3(dir.x * speed, maxf(v.y, 0.0), dir.z * speed)
 	kit.facts.append(["blink_used", [from, to]])
 	kit.facts.append(["dashed", [dir]])
+
+
+# The blink passes through enemies but never lands inside a static one: a boss part on the
+# enemy layer (boss_target.gd, an AnimatableBody3D hull) would depenetrate the ball through a
+# thin floor under it (Brindle's bowl). The landing backs off along the path in BLINK_BACKOFF
+# steps until it overlaps none. Enemies proper (CharacterBody3D) are landed on as before.
+static func _blink_clear(space: PhysicsDirectSpaceState3D, query: PhysicsShapeQueryParameters3D, dir: Vector3, travel: float) -> float:
+	var start: Vector3 = query.transform.origin
+	query.motion = Vector3.ZERO
+	query.collision_mask = ENEMY_MASK
+	var at := travel
+	while at > 0.0:
+		query.transform.origin = start + dir * at
+		var solid := false
+		for hit in space.intersect_shape(query, 8):
+			if hit["collider"] is StaticBody3D:
+				solid = true
+				break
+		if not solid:
+			return at
+		at -= BLINK_BACKOFF
+	return 0.0
 
 
 # Tarn's claw pull: Shift plants a claw where the aim meets the world within

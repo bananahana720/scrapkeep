@@ -35,7 +35,7 @@ static func rows(odds: Array) -> Array:
 	return out
 
 
-# "COMMON 90% / RARE 10%"; "" when nothing can come up.
+# "FIELD KIT 90% / FLEET GRADE 10%"; "" when nothing can come up.
 static func text(odds: Array) -> String:
 	var bits: Array = []
 	for row in rows(odds):

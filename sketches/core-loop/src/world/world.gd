@@ -465,7 +465,9 @@ func _on_park_warden_posture(enemy: Node3D, _posture: float, staggered: bool) ->
 	if staggered and not _park_warden_staggered:
 		events.notify_warden_phase("stagger")
 	_park_warden_staggered = staggered
-	var left: int = enemy.chunks_left()
+	# Never back up: a drained bar does not pulse the same chunk twice.
+	var phase_left: int = enemy.phase_chunks_left() if enemy.has_method("phase_chunks_left") else enemy.chunks_left()
+	var left: int = mini(_park_warden_chunks, phase_left)
 	for lost in range(4 - _park_warden_chunks + 1, 4 - left + 1):
 		if lost <= 3:
 			events.notify_warden_phase("chunk_%d" % lost)

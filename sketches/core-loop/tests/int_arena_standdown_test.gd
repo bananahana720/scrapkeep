@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const BossDouble := preload("res://tests/doubles/spine_boss_double.gd")
 const FloodCycle := preload("res://src/world/flood_cycle.gd")
+const Parts := preload("res://src/build/parts.gd")
 
 # Integration I1: nothing from the stages reaches the Brindle arena (DESIGN-NOTES
 # spine call 34). A real, non-calm run with the real combat, world and build modules
@@ -24,6 +25,11 @@ const APPROACH := 16.0
 const APPROACH_SPEED := 20.0
 const DUNK_EVERY := 45
 const DUNK_TICKS := 12
+# Item effects that push the ball themselves (item_effects.gd _surge and the dash). The run takes
+# a gate offer without one, so the no-push check reads the stages and not the player's own build:
+# since the cobalt floor (#536) the first offer can be Slipstream, whose surge on a speed tier up
+# is the build working as meant.
+const BALL_MOVERS := ["speed", "dash"]
 
 
 # Reads the push the ball has been handed this tick, after every other node's physics
@@ -151,6 +157,11 @@ func _on_offered(offers: Array) -> void:
 	if not _game.flow.in_stage() or offers.is_empty() or _phase == "gate":
 		return
 	_offer = offers[0]
+	for offer in offers:
+		var d: Resource = Parts.def(offer["part_id"])
+		if d == null or not String(d.effect.get("do", "")) in BALL_MOVERS:
+			_offer = offer
+			break
 	var facing: Vector3 = _offer["facing"]
 	var start: Vector3 = _offer["at"] - facing * APPROACH
 	var at: Vector3 = _game.ctx.terrain.drop_point(start.x, start.z, 1.05)

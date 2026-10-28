@@ -116,7 +116,9 @@ func _loot_parity() -> void:
 	# rare_plus, so it joins the relic and rare-plus pools and no seeded roll moves. Removing
 	# spare_frame from the id list and those two pools and setting both counts to 99 reproduces
 	# 4f7ed07d byte for byte. Was 4f7ed07d (SQ19b).
-	_check("loot parity", digest == "afb3d540d0f96e945174cb2d8e40662bae4acdac1d9c88ad3e3f0e9e9422fdef", "digest matches the W19 pin (2026-10-22: spare_frame id and row; SQ19b pin was 4f7ed07d, PC-POOL pin was 7bb9a5f9, SR9 pin was f45eadc3, GP5 pin was a443c521, RR1 pin was e65c5020)")
+	# 2026-10-27 W20 cobalt rung re-pin: impact_driver becomes rare (tier 2 kept) and four catalogue
+	# rares gain a touches verb; ids and row count stay 100 and 100.
+	_check("loot parity", digest == "a7edaf46de2b9dde92bdb2f9ea55341bb27870abde5ddc591dc0a8c10edfe1a6", "digest matches the W20 pin (2026-10-27: cobalt rung rows; W19 pin was afb3d540, SQ19b pin was 4f7ed07d, PC-POOL pin was 7bb9a5f9, SR9 pin was f45eadc3, GP5 pin was a443c521, RR1 pin was e65c5020)")
 
 
 func _preview() -> void:
