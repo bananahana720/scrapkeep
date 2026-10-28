@@ -552,6 +552,12 @@ func heights(points: PackedVector2Array) -> PackedFloat64Array:
 	return out
 
 
+# height() with no overlay: the ground a ball rolling under an overlay deck (a landed ramp
+# whose sheet spans a gap) stands on.
+func floor_height(x: float, z: float) -> float:
+	return _floor(_ensure(stage), x, z)
+
+
 func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
 	return Vector3(x, height(x, z) + clearance, z)
 
