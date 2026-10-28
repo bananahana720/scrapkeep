@@ -17,9 +17,16 @@ const T := preload("res://tests/support/t.gd")
 
 class PointerGame extends "res://src/game.gd":
 	var captured := false
+	var grabs := 0
+	var quits := 0
+
+	func _quit() -> void:
+		quits += 1
 
 	func _capture_mouse(capture: bool) -> void:
 		captured = capture
+		if capture:
+			grabs += 1
 
 	func _mouse_captured() -> bool:
 		return captured
@@ -40,6 +47,7 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame
 	await _fresh()
+	await _counter()
 	await _rung()
 	game.free()
 	quit(t.verdict())
@@ -129,6 +137,53 @@ func _fresh() -> void:
 	t.check("fresh: the card goes and look stays", not card.showing() and game.captured)
 
 
+func _pad(button: int) -> InputEventJoypadButton:
+	var press := InputEventJoypadButton.new()
+	press.pressed = true
+	press.button_index = button
+	return press
+
+
+func _counter() -> void:
+	await _begin(false)
+	var card = game.flow.start_card
+	var ws = game.get_node("Workshop")
+	ws.armed = true
+	game.build.shop.enter()
+	await _frames(2)
+	for leave in [["Esc", _key(KEY_ESCAPE)], ["pad B", _pad(JOY_BUTTON_B)]]:
+		ws.open_counter()
+		await _frames(2)
+		t.check("counter: it opens with the start card up (%s)" % leave[0], ws.counter.is_open() and card.showing())
+		await _send(leave[1])
+		t.check("counter: %s leaves it with the pick untaken" % leave[0], not ws.counter.is_open())
+		t.eq("counter: %s quits nothing" % leave[0], game.quits, 0)
+	# Moss's tree pick, opened from the counter's plate: the card keeps its keys over it, as it
+	# does over any tree pick (run_tier_test), so V rerolls and no tree pick is taken.
+	ws.open_counter()
+	await _frames(2)
+	var tree = ws.tree()
+	var nodes: Array = tree.offered(tree.class_id, 1) if tree != null else []
+	t.check("counter: the class tree offers a first pick", nodes.size() == 2)
+	if nodes.size() == 2:
+		var rerolls: int = card.rerolls_left()
+		var picks: Array = game.player.tree.picks.duplicate()
+		ws.pick.open(tree.class_id, 1, nodes, tree.path(), Color.WHITE)
+		await _frames(2)
+		await _send(_key(KEY_V))
+		t.check("counter: V under the tree pick rerolls the start card", card.rerolls_left() == rerolls - 1 and card.showing())
+		var first: String = String(game.run.start_pick_options()[0])
+		await _send(_key(KEY_1))
+		t.eq("counter: 1 under the tree pick takes the first start pick", String(game.run.start_pick.get("taken", "")), first)
+		t.check("counter: 1 under the tree pick takes no tree pick", game.player.tree.picks == picks)
+		ws.close_pick()
+		ws.close_counter()
+		await _frames(2)
+	game.build.shop.leave()
+	ws.armed = false
+	await _frames(2)
+
+
 func _rung() -> void:
 	game.test_mode = true
 	await _begin(true)
@@ -140,6 +195,20 @@ func _rung() -> void:
 	var yaw: float = game.camera.yaw
 	await _send(_motion())
 	t.check("rung: the free cursor does not turn the camera", is_equal_approx(game.camera.yaw, yaw))
+	var ws = game.get_node("Workshop")
+	ws.armed = true
+	game.build.shop.enter()
+	await _frames(2)
+	ws.open_counter()
+	await _frames(2)
+	var grabs: int = game.grabs
+	await _send(_key(KEY_ESCAPE))
+	t.check("rung: Esc leaves the counter", not ws.counter.is_open())
+	t.check("rung: leaving the counter keeps the cursor free for the tier", not game.captured and game.get_meta("menu_held", false) and card.wants_pointer())
+	t.eq("rung: leaving the counter never grabs the cursor, even for a frame", game.grabs, grabs)
+	game.build.shop.leave()
+	ws.armed = false
+	await _frames(2)
 	game.flow._engage()
 	await _frames(2)
 	t.check("rung: engaging stage 1's Warden closes the tier, the card stays", not game.run.run_tier_open() and card.showing() and not card.wants_pointer())
