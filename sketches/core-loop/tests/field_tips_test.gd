@@ -16,7 +16,9 @@ const Palette := preload("res://src/core/palette.gd")
 # drop and must reach the screen one after the other. The help page's rule lines name six of the
 # seven (field_notes.gd FIELD_RULES; SPIL-9 is the Pictures caption). The first-timer audit
 # reaches grip, radio and cast; the rest it cannot (a jammer, a relay, a seated companion and
-# actives are not on the bot's path), so this is their check.
+# actives are not on the bot's path), so this is their check. The dunk tip toasts on the first stored
+# charge. While stage 1's start-pick card is up, the radio and active tips wait (w22 first-timer
+# watch 5): checked on the rack here, and on the radio with a fresh profile at the end.
 
 # A relay's stake post stand-in: the tip reads terms(), relay and reach_point().
 class Post:
@@ -253,9 +255,19 @@ func _run() -> void:
 	_advance(3.0)
 	_report("a rack with actives off tells nothing", not tips.seen("active") and tips.pending.is_empty(), "prompts %s" % [_prompts])
 	rack.on = true
+	var card = _game.flow.start_card
+	var card_was: bool = card.visible
+	card.visible = true
+	rack.active_id = "torch"
+	var under_card := _advance(3.0)
+	_report("the start card holds the active tip", under_card.count("active") == 0 and not tips.pending.has("active")
+		and not tips.seen("active"), "frames %d, pending %s" % [under_card.count("active"), tips.pending])
+	card.visible = card_was
 	rack.active_id = ""
 	_tip("active", func(): rack.active_id = "torch")
 	_game.combat.actives = real_rack
+	_tip("dunk", func(): _game.player.dunk.store(10.0, "", "tally", Color.WHITE))
+	_game.player.dunk.clear()
 	# A new run on the same profile repeats none of them, every verb met again.
 	var count := _prompts.size()
 	_game.events.run_started.emit("pylon_engineer")
@@ -265,6 +277,7 @@ func _run() -> void:
 	_game.player.abilities.jam(0.5)
 	_game.player.abilities.casting = "special"
 	_game.combat.companion_assist_full.emit()
+	_game.player.dunk.store(10.0, "", "tally", Color.WHITE)
 	interact.devices.append(post)
 	post.global_position = _game.player.ball_position()
 	var again_run := _advance(3.0)
@@ -286,3 +299,25 @@ func _run() -> void:
 	for id in ["grip", "jam", "cast", "radio", "stake", "active"]:
 		covered = covered and id in named and FieldTips.TIPS.has(id)
 	_report("every help rule has a tip", covered, "rules %s" % [named])
+	_radio_waits_for_the_pick()
+
+
+# A fresh profile with the start-pick card up: the dial is drawn but its tip waits for the pick.
+func _radio_waits_for_the_pick() -> void:
+	var tips = _game.hud.field_tips
+	var old_profile = tips.profile
+	tips.profile = UiProfile.new("user://field_tips_test_fresh_%d" % OS.get_process_id())
+	_game.player.dunk.clear()
+	var card = _game.flow.start_card
+	var card_was: bool = card.visible
+	card.visible = true
+	var deck = _game.get("radio_deck")
+	var dial_up: bool = deck != null and deck.dial != null and deck.dial.is_visible_in_tree()
+	var held := _advance(3.0)
+	_report("the start card holds the radio tip", dial_up and held.count("radio") == 0 and not tips.pending.has("radio")
+		and not tips.seen("radio"), "dial %s, frames %d, pending %s" % [dial_up, held.count("radio"), tips.pending])
+	card.visible = false
+	var after := _advance(8.0)
+	_report("the radio tip follows the pick", after.count("radio") > 0 and tips.seen("radio"), "frames %d" % after.count("radio"))
+	card.visible = card_was
+	tips.profile = old_profile

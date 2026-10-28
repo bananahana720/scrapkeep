@@ -21,6 +21,7 @@ const TILE_GAP := 18.0
 const PAD := 10.0
 const PIP := 5.0
 const KEYS := ["key_1", "key_2", "key_3"]
+const UNLOCK_WORDS := "Win a run to unlock Tier 1"
 
 var _tiles: Array = []
 var _tile_rects: Array[Rect2] = []
@@ -142,12 +143,20 @@ func drawn_words() -> PackedStringArray:
 	if visible:
 		for tile in _tiles:
 			out.append(String(tile["name"]))
-		if _interactive and not _run.run_tier_open():
+		if _interactive and not ladder_open():
+			out.append(UNLOCK_WORDS)
+		elif _interactive and not _run.run_tier_open():
 			out.append(_held_words())
 		elif _interactive:
 			out.append(RunTier.threat_text(shown_rung()))
 			out.append(RunTier.pay_text(shown_rung()))
 	return out
+
+
+# A fresh profile has no rung to pick, so the card names only how to open one: HARD's threat, pay
+# and held tier wait for the first unlock (w22 first-timer red team watch 6).
+func ladder_open() -> bool:
+	return RunTier.top_unlocked(_profile) >= RunTier.HARD
 
 
 func _held_words() -> String:
@@ -204,6 +213,11 @@ func _label(words: String, y: float) -> void:
 	add_child(label)
 
 
+func _reroll(y: float) -> void:
+	reroll_button = _button(Vector2(size.x * 0.5 + 100.0, y + 60.0), Vector2(160.0, 38.0), "Reroll (V)", func(): reroll_requested.emit())
+	reroll_button.disabled = _rerolls <= 0
+
+
 func _controls() -> void:
 	for child in get_children():
 		remove_child(child)
@@ -219,11 +233,14 @@ func _controls() -> void:
 		button.flat = true
 		button.tooltip_text = "Take " + String(_tiles[index].name)
 	var y := ICON + PAD * 2.0 + PIP * 3.0
+	if not ladder_open():
+		_label(UNLOCK_WORDS, y)
+		_reroll(y)
+		return
 	if not _run.run_tier_open():
 		# Closed when stage 1's Warden engages (run_state.gd _tier_closed): the card names the tier the run holds.
 		_label(_held_words(), y)
-		reroll_button = _button(Vector2(size.x * 0.5 + 100.0, y + 60.0), Vector2(160.0, 38.0), "Reroll (V)", func(): reroll_requested.emit())
-		reroll_button.disabled = _rerolls <= 0
+		_reroll(y)
 		return
 	var rung := shown_rung()
 	_label(RunTier.threat_text(rung), y)
@@ -238,12 +255,9 @@ func _controls() -> void:
 		var words := "Tier %d%s" % [tier_value, " (selected)" if _run.selected_run_tier() == tier_value else ""]
 		_tier_buttons[tier_value] = _button(Vector2(x, y + 60.0), Vector2(160.0, 38.0), words, func(): tier_requested.emit(tier_value))
 		x += 170.0
-	if top < RunTier.HARD:
-		_label("Win a run to unlock Tier 1", y + 96.0)
-	elif top < RunTier.TOP:
+	if top < RunTier.TOP:
 		_label("Win a run on Tier %d to unlock Tier %d" % [top, top + 1], y + 96.0)
-	reroll_button = _button(Vector2(size.x * 0.5 + 100.0, y + 60.0), Vector2(160.0, 38.0), "Reroll (V)", func(): reroll_requested.emit())
-	reroll_button.disabled = _rerolls <= 0
+	_reroll(y)
 	if top >= 2:
 		rung_button = _button(Vector2(size.x * 0.5 + 270.0, y + 60.0), Vector2(110.0, 38.0), "Next rung", step_rung)
 
