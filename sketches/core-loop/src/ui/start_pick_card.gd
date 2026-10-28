@@ -89,6 +89,14 @@ func showing() -> bool:
 	return visible
 
 
+# Whether the card needs the cursor: only while it offers a choice the mouse alone can make, the
+# run tier before stage 1's Warden closes it on a profile with a rung unlocked. Picks and the
+# reroll have keys, so a fresh profile's card, or one holding its tier, leaves the mouse to aim
+# (w22 first-timer red team: a freed cursor had left mouse look dead until a pick).
+func wants_pointer() -> bool:
+	return _interactive and visible and _run != null and _run.run_tier_open() and offered_tiers().size() > 1
+
+
 func tiles() -> Array:
 	return _tiles.duplicate(true)
 

@@ -150,8 +150,13 @@ func _start_card_showing() -> bool:
 	return card != null and card.showing()
 
 
+func _start_card_wants_pointer() -> bool:
+	var card = game.flow.get("start_card") if game.flow != null else null
+	return card != null and card.wants_pointer()
+
+
 func sync_start_card_pointer() -> void:
-	if _start_card_showing():
+	if _start_card_wants_pointer():
 		_start_pointer_held = true
 		game.set_meta("menu_held", true)
 		game._capture_mouse(false)
