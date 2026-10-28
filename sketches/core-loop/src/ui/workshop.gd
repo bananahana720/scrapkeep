@@ -43,6 +43,7 @@ const OUTSIDE_RUN := ["title", "class_select"]
 var game
 var armed := true
 var _start_pointer_held := false
+var _start_pointer_free := false
 var pick
 var counter
 var bubble
@@ -155,11 +156,16 @@ func _start_card_wants_pointer() -> bool:
 	return card != null and card.wants_pointer()
 
 
+# While the card shows it holds the other screens off (menu_held), as a menu does, but it frees
+# the cursor only while it wants the pointer: on the change, so a screen of this layer keeps its own.
 func sync_start_card_pointer() -> void:
-	if _start_card_wants_pointer():
+	if _start_card_showing():
+		var free := _start_card_wants_pointer()
+		if not _start_pointer_held or free != _start_pointer_free:
+			game._capture_mouse(not free and not _held and game.flow.in_play())
 		_start_pointer_held = true
+		_start_pointer_free = free
 		game.set_meta("menu_held", true)
-		game._capture_mouse(false)
 	elif _start_pointer_held:
 		_start_pointer_held = false
 		game.set_meta("menu_held", _held)

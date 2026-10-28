@@ -404,9 +404,10 @@ func _card() -> void:
 	var card = game.flow.start_card
 	t.check("production start card appears", card.is_inside_tree() and card.showing() and card.is_processing_input())
 	# A fresh profile's card offers no mouse-only choice (picks are 1/2/3, the reroll V), so it keeps
-	# mouse look (w22 first-timer red team edge 3).
-	t.check("a fresh profile's start card keeps aim", not card.wants_pointer() and (game.capture_requests.is_empty() or game.capture_requests.back() == true)
-		and not game.get_meta("menu_held", false), "requests %s" % [game.capture_requests])
+	# mouse look (w22 first-timer red team edge 3), while still holding the other screens off.
+	t.check("a fresh profile's start card keeps aim", not card.wants_pointer() and not game.capture_requests.is_empty()
+		and game.capture_requests.back() == true, "requests %s" % [game.capture_requests])
+	t.check("and still holds the other screens off", game.get_meta("menu_held", false))
 	t.check("start card does not pause or hold movement", not paused and not game.player.frozen() and game.player.state.velocity.length() > 0.0)
 	t.check("locked tier not offered", card.offered_tiers() == [0])
 	t.check("locked tier rejected at boundary", not game.flow.choose_run_tier(1) and game.run.selected_run_tier() == 0)
