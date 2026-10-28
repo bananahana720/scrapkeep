@@ -2340,8 +2340,9 @@ func _paint_surface(mi: MeshInstance3D, i: int, materials: Dictionary) -> void:
 
 
 # A launch flight readies one spare body for each Warden kind this run has already loaded (a load in the flight would
-# block), from SPARE_WAIT_FRAMES after launch, SPARE_BUDGET_USEC of painting a frame. Played games and frame-capture
-# bots only, as the flight's site build: a ticking bot or test dresses every Warden as before.
+# block), from SPARE_WAIT_FRAMES after launch, SPARE_BUDGET_USEC of painting a frame. Wherever stages build on workers
+# (Terrain._worker_builds: played games, frame-capture bots, tests without SimClock.ticks): a ticking bot dresses every
+# Warden as before, so its ticks never depend on the wall clock.
 func _on_launched(_velocity: Vector3) -> void:
 	if ctx == null or ctx.terrain == null or not ctx.terrain.has_method("_worker_builds") or not ctx.terrain._worker_builds():
 		return
