@@ -228,6 +228,26 @@ func _rung() -> void:
 			not game.captured and game.get_meta("menu_held", false) and card.wants_pointer())
 		t.eq("rung: pause over the tier never grabs the cursor (%s)" % toggle[0], game.grabs, grabs)
 	t.eq("rung: pausing over the tier quits nothing", game.quits, 0)
+	# A click on a tier button with pause open: pause's root takes it, and the card's route refuses it too.
+	var tier_button: Button = card._tier_buttons.get(1)
+	t.check("rung: the card shows a Tier 1 button", tier_button != null)
+	if tier_button != null:
+		await _send(_key(KEY_P))
+		var at := tier_button.get_global_rect().get_center()
+		var down := InputEventMouseButton.new()
+		down.button_index = MOUSE_BUTTON_LEFT
+		down.pressed = true
+		down.position = at
+		down.global_position = at
+		var up := down.duplicate()
+		up.pressed = false
+		await _send(down)
+		await _send(up)
+		tier_button.pressed.emit()
+		await _frames(2)
+		t.eq("rung: a tier click under the pause menu changes nothing", game.run.selected_run_tier(), 0)
+		await _send(_key(KEY_P))
+		t.check("rung: pause closed again", not menu.is_open())
 	ws.armed = true
 	game.build.shop.enter()
 	await _frames(2)
