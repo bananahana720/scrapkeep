@@ -155,6 +155,19 @@ func _counter() -> void:
 		await _send(leave[1])
 		t.check("counter: %s leaves it with the pick untaken" % leave[0], not ws.counter.is_open())
 		t.eq("counter: %s quits nothing" % leave[0], game.quits, 0)
+	# Moss's tree pick, opened from the counter's plate, covers the card: 3 and V take nothing.
+	var tree = ws.tree()
+	var nodes: Array = tree.offered(tree.class_id, 1) if tree != null else []
+	t.check("counter: the class tree offers a first pick", nodes.size() == 2)
+	if nodes.size() == 2:
+		var rerolls: int = card.rerolls_left()
+		ws.pick.open(tree.class_id, 1, nodes, tree.path(), Color.WHITE)
+		await _frames(2)
+		await _send(_key(KEY_3))
+		await _send(_key(KEY_V))
+		t.check("counter: 3 and V under the tree pick take nothing", String(game.run.start_pick.get("taken", "")) == "" and card.rerolls_left() == rerolls and card.showing())
+		ws.close_pick()
+		await _frames(2)
 	var first: String = String(game.run.start_pick_options()[0])
 	await _send(_key(KEY_1))
 	t.eq("counter: after leaving, 1 still takes the first pick", String(game.run.start_pick.get("taken", "")), first)
@@ -174,6 +187,18 @@ func _rung() -> void:
 	var yaw: float = game.camera.yaw
 	await _send(_motion())
 	t.check("rung: the free cursor does not turn the camera", is_equal_approx(game.camera.yaw, yaw))
+	var ws = game.get_node("Workshop")
+	ws.armed = true
+	game.build.shop.enter()
+	await _frames(2)
+	ws.open_counter()
+	await _frames(2)
+	await _send(_key(KEY_ESCAPE))
+	t.check("rung: Esc leaves the counter", not ws.counter.is_open())
+	t.check("rung: leaving the counter keeps the cursor free for the tier", not game.captured and game.get_meta("menu_held", false) and card.wants_pointer())
+	game.build.shop.leave()
+	ws.armed = false
+	await _frames(2)
 	game.flow._engage()
 	await _frames(2)
 	t.check("rung: engaging stage 1's Warden closes the tier, the card stays", not game.run.run_tier_open() and card.showing() and not card.wants_pointer())

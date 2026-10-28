@@ -317,6 +317,9 @@ func _apply_hold() -> void:
 		return
 	if game.keyboard != null:
 		game.keyboard.enabled = game.flow.in_play()
+	if _start_card_wants_pointer():
+		sync_start_card_pointer()
+		return
 	game._capture_mouse(game.flow.in_play())
 
 
