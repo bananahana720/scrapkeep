@@ -1148,12 +1148,19 @@ func _input(event: InputEvent) -> void:
 	if _dev_key(event.physical_keycode):
 		get_viewport().set_input_as_handled()
 		return
+	# Esc frees a captured cursor. With the cursor already free it quits only outside play: in play a
+	# free cursor belongs to a screen that holds the pause menu off (the start card's tier choice, a
+	# workshop screen), and Esc there quit the game mid-run (w22 first-timer red team).
 	if event.physical_keycode == KEY_ESCAPE:
 		if _mouse_captured():
 			_capture_mouse(false)
-		else:
-			get_tree().quit()
+		elif not flow.in_play():
+			_quit()
 		get_viewport().set_input_as_handled()
+
+
+func _quit() -> void:
+	get_tree().quit()
 
 
 # F1, F3 and F4 are for whoever launched with --dev; without it they do nothing.

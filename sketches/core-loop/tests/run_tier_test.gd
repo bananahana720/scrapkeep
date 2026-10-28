@@ -132,6 +132,9 @@ class ChoiceGame extends "res://src/game.gd":
 	var capture_requests: Array[bool] = []
 	func _capture_mouse(capture: bool) -> void:
 		capture_requests.append(capture)
+	var quits := 0
+	func _quit() -> void:
+		quits += 1
 
 var t := T.new("run_tier_test")
 var game
@@ -444,6 +447,23 @@ func _card() -> void:
 	game.test_mode = true
 	game.bot_driven = false
 	t.check("start-card clicks do not recapture cursor", game.capture_requests.back() == false)
+	# Esc with the card's cursor free (the pause menu held off) never quits a run.
+	var esc := InputEventKey.new()
+	esc.pressed = true
+	esc.keycode = KEY_ESCAPE
+	esc.physical_keycode = KEY_ESCAPE
+	game.test_mode = false
+	game._input(esc)
+	var in_run: int = game.quits
+	# The same Esc on a dead run's screen still quits (the state is set bare and put back).
+	var was: int = game.flow.state
+	game.flow.state = game.flow.DEAD
+	game._input(esc)
+	game.flow.state = was
+	game.test_mode = true
+	game.bot_driven = false
+	t.check("Esc at the start card does not quit the run", in_run == 0 and game.flow.in_play(), "quits %d" % in_run)
+	t.eq("Esc outside play still quits", game.quits, 1)
 	# Click the actual tier button, then use viewport input for a pick.
 	card.tier_button(1).pressed.emit()
 	t.eq("scripted tier click reaches RunState", game.run.selected_run_tier(), 1)
