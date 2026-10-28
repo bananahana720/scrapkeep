@@ -1,4 +1,4 @@
-# smoke: solo timeout=180s
+# smoke: solo timeout=360s (162-163 s solo and 168.5 s in a w21 chunk on 4-core cloud boxes; killed at the 180 s cap in a loaded w22 chunk, gate/w22-81c42290)
 extends SceneTree
 const Game = preload("res://src/game.gd")
 const Intent = preload("res://src/movement/intent.gd")
