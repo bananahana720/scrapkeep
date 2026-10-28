@@ -2354,12 +2354,16 @@ func _step_spares() -> void:
 		_spare_wait -= 1
 		return
 	var deadline := Time.get_ticks_usec() + SPARE_BUDGET_USEC
+	var _sp0 := Time.get_ticks_usec()
+	var _spn := 0
+	var _spl := PackedStringArray()
 	for kind: String in WARDEN_BODIES:
 		var row: Dictionary = WARDEN_BODIES[kind]
 		if not _spares.has(kind):
 			if not ([row.body] + row.kits).all(func(path: String) -> bool: return _scenes.get(path) != null):
 				continue
 			var spare := _new_spare(kind)
+			print("SPARE_PROBE f%d new %s %.2f ms surfaces %d" % [Engine.get_physics_frames(), kind, (Time.get_ticks_usec() - _sp0) / 1000.0, spare.get("unpainted", []).size()])
 			if spare.is_empty():
 				continue
 			_spares[kind] = spare
@@ -2367,9 +2371,15 @@ func _step_spares() -> void:
 		var unpainted: Array = _spares[kind].unpainted
 		while not unpainted.is_empty():
 			var surface: Array = unpainted.pop_back()
+			var _st := Time.get_ticks_usec()
 			_paint_surface(surface[0], surface[1], _spares[kind].materials)
+			_spn += 1
+			_spl.append("%s:%d %s %.2f" % [surface[0].name, surface[1], slot_of(surface[0].mesh, surface[1]), (Time.get_ticks_usec() - _st) / 1000.0])
 			if Time.get_ticks_usec() >= deadline:
+				print("SPARE_PROBE f%d paint %s %d surfaces %.2f ms [%s]" % [Engine.get_physics_frames(), kind, _spn, (Time.get_ticks_usec() - _sp0) / 1000.0, ", ".join(_spl)])
 				return
+		if _spn > 0:
+			print("SPARE_PROBE f%d paint %s %d surfaces %.2f ms done [%s]" % [Engine.get_physics_frames(), kind, _spn, (Time.get_ticks_usec() - _sp0) / 1000.0, ", ".join(_spl)])
 	_spare_wait = -1
 
 
