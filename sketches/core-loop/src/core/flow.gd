@@ -140,6 +140,7 @@ func setup(ctx_ref, beacon_ref) -> void:
 	start_card.pick_requested.connect(take_start_pick)
 	start_card.reroll_requested.connect(reroll_start_pick)
 	start_card.tier_requested.connect(choose_run_tier)
+	start_card.covered = _start_card_covered
 	ctx.events.player_died.connect(_on_player_died)
 	ctx.run.death_saved.connect(func(_hp: float): _on_death_saved())
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
@@ -375,14 +376,23 @@ func show_start_card() -> void:
 		host.sync_start_card_pointer()
 
 
+# The card holds no menu while it keeps mouse look (start_pick_card.gd wants_pointer), so the pause
+# menu or the hotwire offer can open over it; while one is open it owns the keys and the clicks.
+func _start_card_covered() -> bool:
+	var game = ctx.root
+	var menu = game.get_node_or_null("PauseMenu")
+	var offer = game.hud.hotwire_screen if game.get("hud") != null else null
+	return (menu != null and menu.is_open()) or (offer != null and offer.is_open())
+
+
 func take_start_pick(index: int) -> bool:
-	var taken: bool = in_stage() and ctx.run.take_start_pick(index)
+	var taken: bool = in_stage() and not _start_card_covered() and ctx.run.take_start_pick(index)
 	show_start_card()
 	return taken
 
 
 func reroll_start_pick() -> bool:
-	var rerolled: bool = in_stage() and ctx.run.reroll_start_pick()
+	var rerolled: bool = in_stage() and not _start_card_covered() and ctx.run.reroll_start_pick()
 	show_start_card()
 	return rerolled
 

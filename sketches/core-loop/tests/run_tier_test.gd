@@ -132,6 +132,9 @@ class ChoiceGame extends "res://src/game.gd":
 	var capture_requests: Array[bool] = []
 	func _capture_mouse(capture: bool) -> void:
 		capture_requests.append(capture)
+	var quits := 0
+	func _quit() -> void:
+		quits += 1
 
 var t := T.new("run_tier_test")
 var game
@@ -403,7 +406,24 @@ func _card() -> void:
 	game.flow.show_start_card()
 	var card = game.flow.start_card
 	t.check("production start card appears", card.is_inside_tree() and card.showing() and card.is_processing_input())
-	t.check("start card releases cursor", not game.capture_requests.is_empty() and game.capture_requests.back() == false and game.get_meta("menu_held", false))
+	# A fresh profile's card offers no mouse-only choice (picks are 1/2/3, the reroll V), so it keeps
+	# mouse look (w22 first-timer red team edge 3).
+	t.check("a fresh profile's start card keeps aim", not card.wants_pointer() and (game.capture_requests.is_empty() or game.capture_requests.back() == true)
+		and not game.get_meta("menu_held", false), "requests %s" % [game.capture_requests])
+	# With no menu held the pause menu can open over the card; while it is open the card's keys and
+	# clicks take nothing.
+	var menu = game.get_node_or_null("PauseMenu")
+	if menu != null:
+		menu.open()
+		var pick_key := InputEventKey.new()
+		pick_key.pressed = true
+		pick_key.keycode = KEY_1
+		pick_key.physical_keycode = KEY_1
+		card._input(pick_key)
+		t.check("the pause menu opens over the card and the card takes nothing under it", menu.is_open()
+			and not game.flow.take_start_pick(0) and not game.flow.reroll_start_pick() and String(game.run.start_pick.get("taken", "")) == ""
+			and game.run.start_pick.rerolls_left > 0 and card.showing())
+		menu.close()
 	t.check("start card does not pause or hold movement", not paused and not game.player.frozen() and game.player.state.velocity.length() > 0.0)
 	t.check("locked tier not offered", card.offered_tiers() == [0])
 	t.check("locked tier rejected at boundary", not game.flow.choose_run_tier(1) and game.run.selected_run_tier() == 0)
@@ -424,6 +444,7 @@ func _card() -> void:
 	load("res://src/build/parts.gd").call("bind_run", game.run)
 	game.flow.show_start_card()
 	t.check("win offers tier 1", card.offered_tiers() == [0, 1])
+	t.check("a tier to choose releases the cursor", card.wants_pointer() and game.capture_requests.back() == false and game.get_meta("menu_held", false))
 	var labels := []
 	for node in card.get_children():
 		if node is Label and node.visible:
@@ -444,6 +465,23 @@ func _card() -> void:
 	game.test_mode = true
 	game.bot_driven = false
 	t.check("start-card clicks do not recapture cursor", game.capture_requests.back() == false)
+	# Esc with the card's cursor free (the pause menu held off) never quits a run.
+	var esc := InputEventKey.new()
+	esc.pressed = true
+	esc.keycode = KEY_ESCAPE
+	esc.physical_keycode = KEY_ESCAPE
+	game.test_mode = false
+	game._input(esc)
+	var in_run: int = game.quits
+	# The same Esc on a dead run's screen still quits (the state is set bare and put back).
+	var was: int = game.flow.state
+	game.flow.state = game.flow.DEAD
+	game._input(esc)
+	game.flow.state = was
+	game.test_mode = true
+	game.bot_driven = false
+	t.check("Esc at the start card does not quit the run", in_run == 0 and game.flow.in_play(), "quits %d" % in_run)
+	t.eq("Esc outside play still quits", game.quits, 1)
 	# Click the actual tier button, then use viewport input for a pick.
 	card.tier_button(1).pressed.emit()
 	t.eq("scripted tier click reaches RunState", game.run.selected_run_tier(), 1)

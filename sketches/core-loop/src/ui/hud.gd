@@ -124,7 +124,8 @@ const RETIRED_TOASTS := ["part_gained", "reward_chosen", "heft_class_changed", "
 # The event_kinds row whose colour each objective row wears.
 const ROW_COLOR := {"find_warden": "warden_engaged", "break_guard": "warden_engaged", "smash_core": "warden_engaged",
 	"grow_return": "warden_engaged", "break_warden": "warden_engaged", "charge_beacon": "beacon_charge_changed",
-	"find_activity": "activity_done", "roll_gate": "reward_offered", "hold_line": "launched", "break_brindle": "boss_arena_entered"}
+	"find_activity": "activity_done", "roll_gate": "reward_offered", "hold_line": "launched", "break_brindle": "boss_arena_entered",
+	"break_yard_crew": "pack_arrived", "break_clamp_crews": "pack_arrived"}
 # The rows whose glyph is ringed by how much of the Warden is broken.
 const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "charge_beacon"]
 # The gaps of the top slot when a plate is mounted: from the band's top to the plate, and
@@ -859,6 +860,9 @@ func wallet_cogs() -> int:
 static func row_color(id: String) -> Color:
 	if id == "charge_beacon":
 		return EventKinds.state_color("beacon_open")
+	# The locks' rows are "not yet" (LEGIBILITY colour law: slate, a locked thing), like a glancing hit.
+	if id in ["break_yard_crew", "break_clamp_crews"]:
+		return EventKinds.state_color("glancing")
 	return EventKinds.color(ROW_COLOR[id])
 
 
@@ -890,6 +894,7 @@ func objective_reading() -> Dictionary:
 	var flow = game.flow
 	var warden = flow.warden if is_instance_valid(flow.warden) else null
 	var distance: float = game.player.ball_position().distance_to(warden.global_position) if warden != null else INF
+	var gate = flow.gate
 	var id := Objectives.choose({
 		"state": flow.state_name(),
 		"sealed": flow.sealed,
@@ -900,12 +905,19 @@ func objective_reading() -> Dictionary:
 		"distance": distance,
 		"card": launch_card.showing(),
 		"activities_left": edge_markers.unfinished_sites().size(),
+		"yard_locked": gate != null and gate.lock_active(),
+		"clamp_shut": gate != null and gate.locked(),
 	})
 	if id == "":
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
 	return {"id": id, "icon": Objectives.glyph(id), "words": Objectives.words(id), "color": row_color(id),
-		"progress": game.beacon.fraction() if id in RING_ROWS else -1.0,
+		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else game.beacon.fraction() if id in RING_ROWS else -1.0,
 		"distance": int(distance) if id == "find_warden" and distance < INF else -1}
+
+
+# How many of the crews the Warden's clamp asks for are down, as the ring round the plate's glyph.
+static func _clamp_fraction(gate) -> float:
+	return clampf(float(gate.cleared) / float(gate.packs_wanted()), 0.0, 1.0) if gate.packs_wanted() > 0 else 0.0
 
 
 # Every world-attached prompt in front of the camera and within its reach goes in the
@@ -1006,6 +1018,7 @@ func _process(delta: float) -> void:
 	_objective.set_objective(reading["icon"], reading["words"], reading["color"], reading["progress"], reading["distance"])
 	edge_markers.objective_id = reading["id"]
 	edge_markers.engaged = _engaged
+	edge_markers.yard_locked = reading["id"] == "break_yard_crew"
 	var tbl = game.ctx.stages
 	var world: int = tbl.world_of(run.stage)
 	var world_stages: int = tbl.last_of(world) - tbl.first_of(world) + 1

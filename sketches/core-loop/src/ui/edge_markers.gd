@@ -36,6 +36,9 @@ var game
 var objective_id := ""
 # Whether the Warden fight is engaged, set by the HUD each frame; activity markers hide while it is.
 var engaged := false
+# Whether the yard lock holds the ball, set by the HUD each frame; every stage marker points past
+# its wall then, so none shows until it opens.
+var yard_locked := false
 var gate_points: Array[Vector3] = []
 # Pocket doors the player has had in view inside POCKET_RANGE (pocket_doors' key to true). A door
 # is discovered once and stays so for the run; an undiscovered door never gets a marker.
@@ -65,6 +68,8 @@ func targets() -> Array[Dictionary]:
 	var flow = game.flow
 	match flow.state_name():
 		"stage", "beacon":
+			if yard_locked:
+				return out
 			if flow.sealed and is_instance_valid(flow.warden):
 				out.append({"at": flow.warden.global_position, "kind": "warden_engaged", "icon": _glyph("obj_warden")})
 			elif game.beacon != null:

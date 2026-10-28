@@ -18,12 +18,15 @@ const ROWS := {
 	"roll_gate": {"glyph": "obj_gate", "words": "Roll through a gate"},
 	"hold_line": {"glyph": "obj_gate", "words": "Hold your line"},
 	"break_brindle": {"glyph": "fac_fleet", "words": "Break Brindle's Requisition"},
+	"break_yard_crew": {"glyph": "cat_damage", "words": "Yard locked: break the crew"},
+	"break_clamp_crews": {"glyph": "cat_defense", "words": "Clamp shut: break the crews"},
 }
 
 # What choose() reads. state is flow.state_name(); card is true while the stage card owns
-# the launch moment; distance is the ball's metres to the Warden.
+# the launch moment; distance is the ball's metres to the Warden; yard_locked and clamp_shut
+# are the stage locks' yard and Warden clamp holding (stage_locks.gd lock_active(), locked()).
 const EMPTY_READING := {"state": "", "sealed": false, "engaged": false, "fight": "plating", "staggered": false,
-	"struggling": false, "distance": INF, "card": false, "activities_left": 0}
+	"struggling": false, "distance": INF, "card": false, "activities_left": 0, "yard_locked": false, "clamp_shut": false}
 
 
 static func glyph(id: String) -> String:
@@ -40,6 +43,8 @@ static func choose(reading: Dictionary) -> String:
 	r.merge(reading, true)
 	match r["state"]:
 		"stage", "beacon":
+			if r["yard_locked"]:
+				return "break_yard_crew"
 			if not r["sealed"]:
 				return "charge_beacon"
 			if not r["engaged"] and int(r["activities_left"]) > 0:
@@ -47,6 +52,8 @@ static func choose(reading: Dictionary) -> String:
 			if r["fight"] == "posture":
 				if not r["engaged"]:
 					return "find_warden"
+				if r["clamp_shut"]:
+					return "break_clamp_crews"
 				if r["staggered"]:
 					return "smash_core"
 				return "grow_return" if r["struggling"] else "break_guard"
