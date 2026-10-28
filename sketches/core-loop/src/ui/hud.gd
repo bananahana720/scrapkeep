@@ -860,6 +860,9 @@ func wallet_cogs() -> int:
 static func row_color(id: String) -> Color:
 	if id == "charge_beacon":
 		return EventKinds.state_color("beacon_open")
+	# The locks' rows are "not yet" (LEGIBILITY colour law: slate, a locked thing), like a glancing hit.
+	if id in ["break_yard_crew", "break_clamp_crews"]:
+		return EventKinds.state_color("glancing")
 	return EventKinds.color(ROW_COLOR[id])
 
 
@@ -903,7 +906,7 @@ func objective_reading() -> Dictionary:
 		"card": launch_card.showing(),
 		"activities_left": edge_markers.unfinished_sites().size(),
 		"yard_locked": gate != null and gate.lock_active(),
-		"clamp_shut": gate != null and gate.has_gate() and gate.locked(),
+		"clamp_shut": gate != null and gate.locked(),
 	})
 	if id == "":
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}

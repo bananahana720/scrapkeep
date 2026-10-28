@@ -106,6 +106,7 @@ func _fights(t) -> void:
 	t.eq("the yard lock holds the plate over the beacon and the activities",
 		[Objectives.choose(CASES["charge_beacon"].merged({"yard_locked": true}, true)), Objectives.choose(CASES["find_activity"].merged({"yard_locked": true}, true))],
 		["break_yard_crew", "break_yard_crew"])
+	t.eq("a shut clamp leaves a plating Warden's row alone", Objectives.choose(CASES["break_warden"].merged({"clamp_shut": true, "engaged": true}, true)), "break_warden")
 	t.eq("a shut clamp never shows before the Warden is found", Objectives.choose(CASES["find_warden"].merged({"clamp_shut": true}, true)), "find_warden")
 	t.eq("the yard lock outside a stage shows nothing of it", Objectives.choose({"state": "gates", "yard_locked": true}), "roll_gate")
 

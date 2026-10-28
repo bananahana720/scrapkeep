@@ -10,6 +10,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const T := preload("res://tests/support/t.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # The Spillway's pacing locks (src/world/stage_locks.gd, lock_rows.gd) on the real park_dam:
 # - rows: the dam and the flume each have a gate and a lock whose kinds the director can spawn;
@@ -138,6 +139,7 @@ func _gate() -> void:
 	var plate: Dictionary = game.hud.objective_reading()
 	_t.eq("the plate says the clamp is shut while it holds", [plate["id"], plate["words"]], ["break_clamp_crews", "Clamp shut: break the crews"])
 	_t.eq("its ring starts empty", plate["progress"], 0.0)
+	_t.eq("in slate, a locked thing", plate["color"], Palette.SLATE)
 	var at: Vector3 = warden.global_position
 	# A lone arrival is no pack; a pack with a member gone alive is spoiled.
 	var lone := _spawn_pack(game, ["chaser"], 101, at)
