@@ -22,9 +22,9 @@ const ROWS := {
 			"waves": [["chaser", "chaser", "lobber"], ["lobber", "lobber", "chaser"], ["chaser", "chaser", "chaser", "lobber"], ["lobber", "chaser", "chaser"], ["chaser", "chaser", "lobber", "lobber"]]},
 	},
 	"park_flume": {
-		"gate": {"packs": 4, "also": ["enemy_camp"], "max_s": 75.0},
-		"lock": {"id": "forecourt_crew", "within_m": 210.0, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 60.0, "wave_gap_s": 3.5,
-			"waves": [["chaser", "chaser", "lobber"], ["chaser", "lobber", "lobber"], ["chaser", "chaser", "lobber", "lobber"], ["lobber", "chaser", "chaser"], ["chaser", "chaser", "chaser", "lobber"]]},
+		"gate": {"packs": 2, "also": ["enemy_camp"], "max_s": 75.0},
+		"lock": {"id": "forecourt_crew", "within_m": 210.0, "radius_m": 26.0, "ahead_m": 10.0, "max_s": 70.0, "wave_gap_s": 3.5,
+			"waves": [["chaser", "chaser", "lobber"], ["chaser", "lobber", "lobber"], ["chaser", "chaser", "lobber", "lobber"], ["lobber", "chaser", "chaser"], ["chaser", "lobber", "lobber"], ["chaser", "chaser", "lobber"], ["chaser", "chaser", "chaser", "lobber"]]},
 	},
 }
 
