@@ -124,7 +124,7 @@ func take(wall_ms: float) -> Dictionary:
 	var row := {"t_us": Time.get_ticks_usec(), "phys_ms": _phys_us / 1000.0, "tick_max_ms": _tick_max_us / 1000.0, "proc_ms": _proc_us / 1000.0,
 		"pre_proc_ms": _pre_proc_us / 1000.0, "post_proc_ms": _post_proc_us / 1000.0, "bot_ms": _bot_us / 1000.0,
 		"net_ms": wall_ms - _bot_us / 1000.0}
-	if _record_events and wall_ms > 40.0:
+	if _record_events and wall_ms > float(OS.get_environment("FRAME_SPLIT_MS") if OS.get_environment("FRAME_SPLIT_MS") != "" else "40"):
 		row["events"] = _events.duplicate()
 	_events.clear()
 	_phys_us = 0
