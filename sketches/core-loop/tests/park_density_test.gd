@@ -5,7 +5,10 @@ extends SceneTree
 #
 # Every baked park file runs: each src/world/park/<map_id>.json whose assets/park/<map_id>/
 # bake.json and graph.bin exist. The open play cells are the graph's open nodes (graph.bin, the
-# OPEN flag of src/world/park/park_graph.gd), decks included. For each, the planar distance to
+# OPEN flag of src/world/park/park_graph.gd), decks included. A node outside the park's play_rect
+# that the spawn cannot reach (no finite d_spawn) is no play cell and is left out, counted in the
+# print: the top of a canyon wall at the square's edge (the dam's, #488; the flume's, #545, whose
+# east wall runs 275 m from x 525 to the edge, past every row). For each, the planar distance to
 # the nearest park row footprint is taken: 0 inside, the rectangle or the inscribed ellipse of
 # src/world/park/park_stamps.gd frame(), turned by yaw. A `ground` element row is the stage's
 # canvas, not a park piece (PARK.md:82, "a plain ground row"); counting it would let the base
@@ -42,16 +45,16 @@ func _run() -> void:
 		if not t.check("%s graph.bin loads" % map_id, graph != null):
 			continue
 		var rows := counted_rows(park)
-		var r := measure(graph, rows)
-		print("[density] map %s open %d rows %d worst %.1f m at node %d (%.0f, %.1f, %.0f) nearest %s; over %.0f m: %d" % [
-			map_id, r["open"], rows.size(), r["worst"], r["node"], r["at"].x, r["at"].y, r["at"].z,
+		var r := measure(graph, rows, _rect(park))
+		print("[density] map %s open %d (outside the play rect and unreachable, left out: %d) rows %d worst %.1f m at node %d (%.0f, %.1f, %.0f) nearest %s; over %.0f m: %d" % [
+			map_id, r["open"], r["left_out"], rows.size(), r["worst"], r["node"], r["at"].x, r["at"].y, r["at"].z,
 			r["nearest"], DENSITY_M, r["over"]])
 		t.check("%s has open nodes" % map_id, r["open"] > 0, "%d" % r["open"])
 		t.check("%s every open node within %.0f m of a park row" % [map_id, DENSITY_M], r["worst"] <= DENSITY_M,
 			"worst %.1f m, %d nodes over" % [r["worst"], r["over"]])
 		if map_id == FIXTURE:
 			var half := rows.slice(0, rows.size() / 2)
-			var p := measure(graph, half)
+			var p := measure(graph, half, _rect(park))
 			print("[planted] %s with %d of %d rows: worst %.1f m at node %d, over %d" % [FIXTURE, half.size(), rows.size(), p["worst"], p["node"], p["over"]])
 			t.check("planted half-row park fails the density rule", p["worst"] > DENSITY_M, "%.1f m" % p["worst"])
 	quit(t.verdict())
@@ -80,14 +83,22 @@ static func counted_rows(park: Dictionary) -> Array:
 	return out
 
 
-# {open, worst, node, at, nearest, over} over the graph's open nodes.
-static func measure(graph, rows: Array) -> Dictionary:
-	var r := {"open": 0, "worst": 0.0, "node": -1, "at": Vector3.ZERO, "nearest": "", "over": 0}
+static func _rect(park: Dictionary) -> Rect2:
+	var a: Array = park["play_rect"]
+	return Rect2(float(a[0]), float(a[1]), float(a[2]), float(a[3]))
+
+
+# {open, left_out, worst, node, at, nearest, over} over the graph's open play cells.
+static func measure(graph, rows: Array, rect: Rect2) -> Dictionary:
+	var r := {"open": 0, "left_out": 0, "worst": 0.0, "node": -1, "at": Vector3.ZERO, "nearest": "", "over": 0}
 	for n in graph.node_count():
 		if graph.flags(n) & ParkGraph.OPEN == 0:
 			continue
-		r["open"] += 1
 		var p: Vector3 = graph.position(n)
+		if not rect.has_point(Vector2(p.x, p.z)) and not is_finite(graph.d_spawn_node(n)):
+			r["left_out"] += 1
+			continue
+		r["open"] += 1
 		var best := INF
 		var best_id := ""
 		for row in rows:
