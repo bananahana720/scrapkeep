@@ -134,7 +134,11 @@ var companion := {}
 # SG9's run-start offer: {"options": three ids, "rerolls_left": int, "taken": id or ""}. Drawn
 # from run_seed in begin(); {} on a run loaded from a doc saved before SG9, which offers nothing.
 var start_pick := {}
-var run_tier := 0
+# Setting it sets the HARD ladder rung's attack dials (run_tier.gd LADDER) for the whole game.
+var run_tier := 0:
+	set(value):
+		run_tier = value
+		ChallengeDials.set_rung(RunTier.dials(value))
 var event_core_grants := 0
 # True once enter_stage has run in this run. A pick opens only after flow's enter_stage(1),
 # because enter_stage zeroes bonus_cores and would wipe a Bonus Core taken before it.
@@ -290,8 +294,7 @@ func advance(delta: float) -> void:
 	stage_time += delta
 	escape_window_left = maxf(0.0, escape_window_left - maxf(0.0, delta))
 	since_damage += delta
-	# pilot.regen_* dials are plumbed but NOT allowed levers yet: a ruling is needed before any
-	# non-default value ships.
+	# pilot.regen_* move only on the HARD ladder's top rungs (run_tier.gd LADDER, Andrew 27 Oct option 3).
 	if since_damage > REGEN_DELAY * ChallengeDials.f("pilot.regen_delay_mult") and hp < max_hp:
 		hp = minf(max_hp, hp + REGEN_RATE * ChallengeDials.f("pilot.regen_rate_mult") * delta)
 
@@ -405,7 +408,7 @@ func selected_run_tier() -> int:
 func select_run_tier(value: int, profile, check_unlock := true) -> bool:
 	if value < RunTier.BASE or value > RunTier.TOP or not _start_pick_open() or not _stage_entered:
 		return false
-	if value == 1 and check_unlock and not RunTier.unlocked(profile):
+	if value != RunTier.BASE and check_unlock and not RunTier.unlocked(profile, value):
 		return false
 	run_tier = value
 	# A start-card choice survives retry, while the pick still rewinds as SG9 specifies.
@@ -1048,7 +1051,7 @@ static func validate_entrance_doc(doc) -> String:
 		return "schema %d is newer than known schema %d" % [int(doc["schema"]), ENTRANCE_SCHEMA]
 	if int(doc["schema"]) < 1:
 		return "schema %d is invalid" % int(doc["schema"])
-	if doc.has("run_tier") and (not _entrance_kind_ok(doc.run_tier, "int") or int(doc.run_tier) not in [0, 1]):
+	if doc.has("run_tier") and (not _entrance_kind_ok(doc.run_tier, "int") or (int(doc.run_tier) < RunTier.BASE or int(doc.run_tier) > RunTier.TOP)):
 		return "invalid run_tier"
 	if doc.has("event_core_grants") and (not _entrance_kind_ok(doc.event_core_grants, "int") or doc.event_core_grants < 0):
 		return "invalid event_core_grants"
