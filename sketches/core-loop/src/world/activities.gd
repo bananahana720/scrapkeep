@@ -688,13 +688,15 @@ static func _same_entry(a: Dictionary, b: Dictionary) -> bool:
 # The entry took what it could: the rest go, and the holder shows and runs, so its sites' bodies join the space now.
 # It stays this stage's, freed with its sites by clear().
 func _uncover(ahead: Dictionary) -> void:
-	for site in ahead.built:
-		if site != null and is_instance_valid(site):
-			ahead.holder.remove_child(site)
-			site.queue_free()
-	if ahead.built.all(func(site): return site != null):
+	var taken := sites.filter(func(site): return is_instance_valid(site) and site.get_parent() == ahead.holder)
+	if taken.is_empty():
 		_free_holder(ahead)
 		return
+	# Every other child goes, a failed build's part-made site too.
+	for child in ahead.holder.get_children():
+		if not child in taken:
+			ahead.holder.remove_child(child)
+			child.queue_free()
 	ahead.holder.visible = true
 	ahead.holder.process_mode = Node.PROCESS_MODE_INHERIT
 	_holders.append(ahead.holder)

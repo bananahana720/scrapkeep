@@ -79,7 +79,7 @@ func _run() -> void:
 	_t.check("the flight's sites are hidden and out of the physics space", is_instance_valid(holder) and not holder.visible
 		and holder.process_mode == Node.PROCESS_MODE_DISABLED and _bodies_in_space(holder) == 0, "%d bodies in space" % _bodies_in_space(holder))
 	# A run change in the flight (a part, a health step) moves prices and rewards: no site is taken then.
-	var max_hp: int = _game.run.max_hp
+	var max_hp: float = _game.run.max_hp
 	_game.run.max_hp += 10
 	var stale = activities._adopt(activities._ahead, 0, activities._ahead.plan.sites[0])
 	_game.run.max_hp = max_hp
