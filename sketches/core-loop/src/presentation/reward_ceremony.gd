@@ -293,6 +293,7 @@ func present(find: Dictionary) -> void:
 	match String(find["tier"]):
 		"common":
 			audio.play("reward_common", 0.0, rung_pitch(find["rarity"]))
+			_rung_voice(find)
 		"rare":
 			_flare(find)
 		"reveal":
@@ -327,9 +328,18 @@ func may_show_card() -> bool:
 	return WhyCallout.find_may_speak(_calm_left, get_tree() if is_inside_tree() else null, ctx.flow)
 
 
+# A rung's own voice (EventKinds.REWARD_RUNG_CUES: cobalt's coil whine and click), played
+# with the find's bell or tick, or with the crate's burst when the find waits for one.
+func _rung_voice(find: Dictionary) -> void:
+	var voice := String(EventKinds.REWARD_RUNG_CUES.get(find["rarity"], ""))
+	if voice != "":
+		audio.play("reward_rare", 0.0, 1.0, "SFX", voice)
+
+
 func _flare(find: Dictionary) -> void:
 	var row := EventKinds.reward_row("rare")
 	audio.play("reward_rare", 0.0, rung_pitch(find["rarity"]))
+	_rung_voice(find)
 	if juice != null:
 		if may_show_card():
 			juice.request_hit_stop(float(row["stop_ms"]) / 1000.0, "reward_rare")
@@ -374,7 +384,9 @@ func card_state(find: Dictionary, start: int, in_ceremony: bool) -> Dictionary:
 	var d: Resource = Parts.def(find["part"])
 	var rarity: String = find["rarity"]
 	var stamps: Dictionary = row["stamps"]
-	var stamp: String = stamps["first"] if find["first"] and rarity in ["common", "rare"] else stamps.get(rarity, "")
+	var stamp: String = stamps.get(rarity, "")
+	if find["first"] and rarity in ["common", "rare"]:
+		stamp = "%s %s" % [stamps["first"], stamp]
 	var element := String(d.element) if d != null else ""
 	var relic := relic_of(find["part"])
 	var title: String = Relics.name_of(relic) if relic != "" else Parts.display_name(find["part"])
@@ -524,6 +536,7 @@ func _burst(now: int) -> void:
 	view.card["start_ms"] = now - int(float(EventKinds.reward_row("reveal")["in_s"]) * 1000.0)
 	audio.stop(String(row["sound"]))
 	audio.play("reward_ceremony", 0.0, 1.0, "SFX", String(row["sound_burst"]))
+	_rung_voice(find)
 	if find["link"] == "lit":
 		audio.play("reward_reveal", -4.0, 1.0, "SFX", String(EventKinds.reward_row("reveal")["sound_snap"]))
 	revealed.emit(find["part"])
