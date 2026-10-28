@@ -8,6 +8,7 @@ const Secrets := preload("res://src/core/secrets.gd")
 const Companion := preload("res://src/core/companion.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const VictoryLap := preload("res://src/world/victory_lap.gd")
@@ -997,6 +998,9 @@ func _drop_lap() -> void:
 # can bring it back.
 func _end_run(won: bool) -> void:
 	_record_end(won)
+	# A won run on the HARD ladder's best rung so far opens the next one (run_tier.gd BEST_STAT).
+	if won and RunTier.note_win(ctx.profile, ctx.run.run_tier):
+		_save_profile("profile_ladder_save")
 	_set_state(SUMMARY)
 	ctx.events.run_ended.emit(won)
 

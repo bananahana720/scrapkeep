@@ -384,7 +384,7 @@ const fmt = (x, d = 1) => (x == null ? "-" : Number(x).toFixed(d));
 export function renderTable(table, meta = {}) {
   const lines = ["# Challenge band table", ""];
   if (meta.tune_unruled) lines.push("Unruled: --tune-unruled was set, so pilot.* dials applied. No ruling allows them; this table is information only.", "");
-  if (meta.run_tier) lines.push(`Run tier ${meta.run_tier} (HARD ladder rung ${meta.run_tier}, bot_run --run-tier): every run picks it on the start card. The ✓/✗ marks still judge the base-tier targets.`, "");
+  if (meta.run_tier) lines.push(`Run tier ${meta.run_tier} (HARD ladder rung ${meta.run_tier}, bot_run --run-tier): every run picks it on the start card, or takes it as a resumed stage opens. The ✓/✗ marks still judge the base-tier targets.`, "");
   if (meta.tune) lines.push(`Tuned: --tune=${meta.tune} requested (difficulty dials, src/core/challenge_dials.gd). The applied dials are on each run row as "dials", from describe(); a rejected entry is not applied.`, "");
   if (meta.label) lines.push(`Label ${meta.label}${meta.commit ? ", commit " + meta.commit.slice(0, 8) : ""}${meta.when ? ", " + meta.when : ""}.`, "");
   if (table.some((c) => c.kind !== "world")) lines.push(`Learner a1 at bosses and Wardens is information only (DECISIONS section 5, 19 Oct 19:00): no ✓/✗; the old reference range was ${pct(LEARNER1_FIGHT_REFERENCE.min)}-${pct(LEARNER1_FIGHT_REFERENCE.max)}. Parks still grade Learner a1 reach.`, "");

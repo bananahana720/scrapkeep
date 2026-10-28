@@ -30,7 +30,11 @@ var _interactive := false
 var _profile
 var _run
 var _tier_buttons := {}
+# The HARD ladder rung the card shows (0: the selected rung, else the highest unlocked); Next rung steps it.
+var _shown_rung := 0
+var _shown_for := ""
 var reroll_button: Button
+var rung_button: Button
 
 
 
@@ -51,6 +55,9 @@ func set_interactive(enabled: bool) -> void:
 
 
 func show_picks(run, profile = null) -> void:
+	if String(run.run_id) != _shown_for:
+		_shown_for = String(run.run_id)
+		_shown_rung = 0
 	_run = run
 	_profile = profile
 	_tiles = []
@@ -126,9 +133,28 @@ func drawn_words() -> PackedStringArray:
 		for tile in _tiles:
 			out.append(String(tile["name"]))
 		if _interactive:
-			out.append(RunTier.threat_text())
-			out.append(RunTier.pay_text())
+			out.append(RunTier.threat_text(shown_rung()))
+			out.append(RunTier.pay_text(shown_rung()))
 	return out
+
+
+# The rung whose threat and pay the card discloses and whose button it offers: the one Next rung stepped
+# to, else the run's selected rung, else the highest the profile has opened (rung 1 while HARD is locked).
+func shown_rung() -> int:
+	var top := RunTier.top_unlocked(_profile)
+	if _shown_rung >= RunTier.HARD and _shown_rung <= top:
+		return _shown_rung
+	if _run != null and _run.selected_run_tier() >= RunTier.HARD:
+		return _run.selected_run_tier()
+	return maxi(RunTier.HARD, top)
+
+
+func step_rung() -> void:
+	var top := RunTier.top_unlocked(_profile)
+	if top < 2:
+		return
+	_shown_rung = shown_rung() % top + 1
+	_controls()
 
 
 func offered_tiers() -> Array:
@@ -165,6 +191,7 @@ func _controls() -> void:
 		child.queue_free()
 	_tier_buttons.clear()
 	reroll_button = null
+	rung_button = null
 	if not _interactive or not visible:
 		return
 	for index in _tiles.size():
@@ -173,18 +200,27 @@ func _controls() -> void:
 		button.flat = true
 		button.tooltip_text = "Take " + String(_tiles[index].name)
 	var y := ICON + PAD * 2.0 + PIP * 3.0
-	_label(RunTier.threat_text(), y)
-	_label(RunTier.pay_text(), y + 28.0)
+	var rung := shown_rung()
+	_label(RunTier.threat_text(rung), y)
+	_label(RunTier.pay_text(rung), y + 28.0)
 	var tiers := offered_tiers()
+	var top := tiers.size() - 1
 	var x := size.x * 0.5 - 250.0
-	for tier_value in tiers:
+	# The base tier and one ladder rung; Next rung steps the rung through the ones the profile has opened.
+	for tier_value in [0, rung]:
+		if not tier_value in tiers:
+			continue
 		var words := "Tier %d%s" % [tier_value, " (selected)" if _run.selected_run_tier() == tier_value else ""]
 		_tier_buttons[tier_value] = _button(Vector2(x, y + 60.0), Vector2(160.0, 38.0), words, func(): tier_requested.emit(tier_value))
 		x += 170.0
-	if not 1 in tiers:
+	if top < RunTier.HARD:
 		_label("Win a run to unlock Tier 1", y + 96.0)
+	elif top < RunTier.TOP:
+		_label("Win a run on Tier %d to unlock Tier %d" % [top, top + 1], y + 96.0)
 	reroll_button = _button(Vector2(size.x * 0.5 + 100.0, y + 60.0), Vector2(160.0, 38.0), "Reroll (V)", func(): reroll_requested.emit())
 	reroll_button.disabled = _rerolls <= 0
+	if top >= 2:
+		rung_button = _button(Vector2(size.x * 0.5 + 270.0, y + 60.0), Vector2(110.0, 38.0), "Next rung", step_rung)
 
 
 func _input(event: InputEvent) -> void:

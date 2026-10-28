@@ -11,6 +11,7 @@ const Park := preload("res://src/core/park_defs.gd")
 const Game := preload("res://src/game.gd")
 const Profile := preload("res://src/core/profile.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const StartPicks := preload("res://src/core/start_picks.gd")
 
 # Each lever and the way a harder rung moves it: up (hits, waits before regen) or down (cadence, regen rate).
 const HARDER_UP := ["mobs.damage_mult", "warden.pulse_damage_mult", "brindle.damage_mult", "mobs.elite_rate_mult",
@@ -129,9 +130,71 @@ func _production() -> void:
 	game.flow.choose_run_tier(RunTier.TOP, false)
 	game.flow._begin_run(ClassDef.all()[0])
 	t.eq("a new run starts at the base tier", ChallengeDials.rung(), {})
+	await _unlock(game)
 	paused = false
 	game.free()
 	ChallengeDials.reset()
+
+
+# Beating rung N opens N+1 (run_tier.gd BEST_STAT); the start card offers the base tier and one rung, and
+# Next rung steps it through the opened rungs.
+func _unlock(game) -> void:
+	var profile = game.ctx.profile
+	# The card draws its buttons only for a player (flow.show_start_card).
+	game.bot_driven = false
+	t.eq("first_win opens rung 1 only", RunTier.top_unlocked(profile), 1)
+	t.eq("offered tiers", StartPicks.offered_tiers(profile), [0, 1])
+	t.check("no locked profile tier", RunTier.top_unlocked(null) == 0 and not RunTier.unlocked(null, 1))
+	game.flow.show_start_card()
+	var card = game.flow.start_card
+	t.eq("one opened rung shows rung 1", card.shown_rung(), 1)
+	t.check("one opened rung has no Next rung", card.rung_button == null)
+	t.check("the card names the next unlock", "Win a run on Tier 1 to unlock Tier 2" in _labels(card))
+	t.check("rung 1 threat text is the old HARD's", RunTier.threat_text(1) in _labels(card)
+		and not "slower regen" in RunTier.threat_text(1))
+	# A won run on rung 1, through flow's own run end.
+	game.flow.choose_run_tier(1)
+	game.flow._end_run(true)
+	t.eq("winning rung 1 records it", RunTier.best_rung(profile), 1)
+	t.eq("and opens rung 2", RunTier.top_unlocked(profile), 2)
+	t.check("a lower win never lowers the best", not RunTier.note_win(profile, 1) and RunTier.best_rung(profile) == 1)
+	t.check("a base-tier win records nothing", not RunTier.note_win(profile, 0))
+	game.flow._begin_run(ClassDef.all()[0])
+	t.check("a player picks rung 2 once opened", game.flow.choose_run_tier(2))
+	t.check("but not rung 3", not game.flow.choose_run_tier(3) and game.run.selected_run_tier() == 2)
+	game.flow.choose_run_tier(0)
+	RunTier.note_win(profile, 4)
+	t.eq("rung 4 won opens the top", RunTier.top_unlocked(profile), RunTier.TOP)
+	t.eq("all tiers offered", StartPicks.offered_tiers(profile), range(RunTier.TOP + 1))
+	game.flow.show_start_card()
+	t.eq("the card shows the highest opened rung", card.shown_rung(), RunTier.TOP)
+	t.check("top rung disclosed", RunTier.threat_text(RunTier.TOP) in _labels(card) and RunTier.pay_text(RunTier.TOP) in _labels(card)
+		and "slower regen" in RunTier.threat_text(RunTier.TOP))
+	t.check("no unlock line at the top", not _labels(card).any(func(w): return String(w).contains("to unlock")))
+	t.check("Next rung shows", card.rung_button != null)
+	var seen := []
+	for i in RunTier.TOP:
+		card.rung_button.pressed.emit()
+		seen.append(card.shown_rung())
+	t.eq("Next rung steps through every opened rung", seen, [1, 2, 3, 4, 5])
+	card.rung_button.pressed.emit()
+	card.rung_button.pressed.emit()
+	t.eq("stepped to rung 2", card.shown_rung(), 2)
+	card.tier_button(2).pressed.emit()
+	t.eq("its button picks it", game.run.selected_run_tier(), 2)
+	t.check("the redrawn card marks it", card.tier_button(2) != null and card.tier_button(2).text == "Tier 2 (selected)")
+	t.eq("a top-rung win caps at the top", [RunTier.note_win(profile, RunTier.TOP + 2), RunTier.best_rung(profile)], [true, RunTier.TOP])
+	game.flow._begin_run(ClassDef.all()[0])
+	game.flow.show_start_card()
+	t.eq("a new run's card starts back on the highest rung", card.shown_rung(), RunTier.TOP)
+
+
+func _labels(card) -> Array:
+	var out := []
+	for node in card.get_children():
+		if node is Label:
+			out.append(node.text)
+	return out
 
 
 # ChallengeDials.f, by name: a literal `.f("key")` reads as a tuning.gd row key to sketch-lint L3.

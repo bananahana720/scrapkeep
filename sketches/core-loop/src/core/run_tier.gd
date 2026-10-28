@@ -27,6 +27,8 @@ const LADDER := {
 		"pilot.regen_rate_mult": 0.6},
 }
 const UNLOCK := "first_win"
+# The highest rung a won run has cleared (profile stat). Beating rung N opens N+1 (Andrew 27 Oct, option 3).
+const BEST_STAT := "hard_ladder_best"
 # Small existing bonuses; the base id and all metadata remain the same.
 const ENHANCED := {
 	"loose_trigger": {"mods": {"weapon_rate": 1.15}, "text": "+15% fire rate"},
@@ -46,9 +48,31 @@ static func effective_part(id: String, base: Dictionary, tier: int) -> Dictionar
 	return out
 
 
-# Rungs above HARD have no unlock yet (the ladder's unlock is the next PR); the bots reach them with --run-tier.
+# Rung 1 opens on the first won run; rung N above it once a run on rung N-1 is won.
 static func unlocked(profile, tier := HARD) -> bool:
-	return tier == HARD and profile != null and profile.earned(UNLOCK)
+	if profile == null or tier < HARD or tier > TOP or not profile.earned(UNLOCK):
+		return false
+	return tier == HARD or best_rung(profile) >= tier - 1
+
+
+static func best_rung(profile) -> int:
+	return int(profile.stat(BEST_STAT)) if profile != null else 0
+
+
+# The highest rung the profile may pick, 0 while HARD is locked.
+static func top_unlocked(profile) -> int:
+	var top := 0
+	while top < TOP and unlocked(profile, top + 1):
+		top += 1
+	return top
+
+
+# A won run on a rung above the profile's best raises it. True when it changed.
+static func note_win(profile, tier: int) -> bool:
+	if profile == null or tier < HARD or tier <= best_rung(profile):
+		return false
+	profile.set_stat(BEST_STAT, float(mini(tier, TOP)))
+	return true
 
 static func row(tier: int) -> Dictionary:
 	return Cards.RUN_TIERS[clampi(tier, BASE, TOP)]
@@ -56,12 +80,18 @@ static func row(tier: int) -> Dictionary:
 static func dials(tier: int) -> Dictionary:
 	return LADDER.get(tier, {})
 
-static func threat_text() -> String:
-	var hard := row(HARD)
-	return "Threat: %d%% more crowd, %d%% shorter intervals" % [roundi((hard.cap_weight - 1.0) * 100.0), roundi((1.0 - hard.interval_weight) * 100.0)]
+static func threat_text(tier := HARD) -> String:
+	var hard := row(tier)
+	var words := "Threat: %d%% more crowd, %d%% shorter intervals" % [roundi((hard.cap_weight - 1.0) * 100.0), roundi((1.0 - hard.interval_weight) * 100.0)]
+	var d := dials(tier)
+	if d.has("warden.pulse_damage_mult"):
+		words += ", harder hits and Warden pulse"
+	if d.has("pilot.regen_delay_mult") or d.has("pilot.regen_rate_mult"):
+		words += ", slower regen"
+	return words
 
-static func pay_text() -> String:
-	return "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi((row(HARD).event_core_multiplier - 1.0) * 100.0), PAY_GAIN_CAP]
+static func pay_text(tier := HARD) -> String:
+	return "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi((row(tier).event_core_multiplier - 1.0) * 100.0), PAY_GAIN_CAP]
 
 static func stage_row(stage: Dictionary, tier: int) -> Dictionary:
 	if tier == BASE:
