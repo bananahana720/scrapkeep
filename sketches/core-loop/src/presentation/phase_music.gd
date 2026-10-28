@@ -46,9 +46,17 @@ static func manifest_of(id: String) -> String:
 	return "res://assets/music_ace/%s/manifest.json" % theme_of(id)
 
 
-# Whether the pack is on disk (source tree or export sidecar).
+# Whether the pack is on disk (source tree or export sidecar). A boss fight asks every frame
+# (audio._tend_champions) and its entry asks five times, and each answer reads and parses the
+# manifest and checks every stem, so it is kept per stem tree (tests point stem_dir at a stub).
+static var _on_disk := {}
+
+
 static func available(id: String) -> bool:
-	return MusicRows.pack_on_disk(manifest_of(id))
+	var key := MusicRows.stem_dir + "|" + id
+	if not _on_disk.has(key):
+		_on_disk[key] = MusicRows.pack_on_disk(manifest_of(id))
+	return _on_disk[key]
 
 
 static func is_final(phase: int) -> bool:

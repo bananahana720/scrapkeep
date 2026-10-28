@@ -138,7 +138,7 @@ const ROWS := {
 	"weak_point_opened": {"group": "combat", "color": Palette.ANCIENT, "shape": "core", "sound": "beacon_hum", "hud": "", "objective": "", "priority": 1},
 	# The upgrade tree (upgrade_tree.gd): a pick is offered at class select and after
 	# stages 1-3, and taken. A diamond, since a pick is growth you choose, in neutral bone
-	# because every pilot picks (amber is Kest's and the rare rarity); the pick UI tints it
+	# because every pilot picks (amber is Kest's and the relic rung); the pick UI tints it
 	# with the class row. motif_fork is the class motif's first note answered by two
 	# notes, one per branch; motif_pick resolves the chosen one onto the motif head. The
 	# shop bell stays purchases only. The pick UI (W1) and the bay (W6) own the words.
@@ -1044,7 +1044,7 @@ const LOOT_ROWS := {
 	# ceremonial part's effect fires, ringing the same rarity bell it arrived with.
 	"reward_common": {"group": "economy", "color": Palette.SANDSTONE, "shape": "diamond", "sound": "rarity_tick", "hud": "", "objective": "", "priority": 1,
 		"tier": "common", "pause": "never"},
-	"reward_rare": {"group": "economy", "color": Palette.AMBER, "shape": "ring", "sound": "rarity_bell", "hud": "", "objective": "", "priority": 1,
+	"reward_rare": {"group": "economy", "color": Palette.COBALT, "shape": "ring", "sound": "rarity_bell", "hud": "", "objective": "", "priority": 1,
 		"tier": "rare", "pause": "never", "stop_ms": 45.0, "ring_m": 4.5, "flare_s": 0.5},
 	"reward_reveal": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "reveal_clank", "sound_snap": "synergy_hit", "hud": "", "objective": "", "priority": 2,
 		"tier": "reveal", "pause": "never", "heart": Palette.ARC, "in_s": 0.22, "hold_s": 2.4, "out_s": 0.25, "snap_s": 0.18, "words": 6,

@@ -3,6 +3,8 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const Juice := preload("res://src/presentation/juice.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 # Juice through the real game: the camera hooks fire for dash, slam and launch; a
 # landing squashes the ball; the hits of one frame send one stop, never above the
@@ -42,6 +44,14 @@ func _process(_delta: float) -> bool:
 	match _step:
 		0:
 			_juice = _game.presentation.juice
+			# The pickup fountain wears the rung, but a common part (or an old uncommon id)
+			# flashes sandstone, since mint flashes mean live; rare_plus wears the relic rung.
+			for pair in [["focus_lens", Palette.SANDSTONE], ["reserve_tank", Palette.SANDSTONE],
+					["sunforged_core", Palette.COBALT], ["warden_ward", Palette.AMBER]]:
+				_check("fountain tint " + pair[0], Juice.part_tint(pair[0]) == pair[1], "%s -> %s" % [pair[0], Juice.part_tint(pair[0])])
+			# An element still wins over the rung, as before the ladder: the fountain says what it does.
+			var arc: Color = EventKinds.juice("part_gained")["element"].get("arc", Color.BLACK)
+			_check("fountain tint arc_coil", Juice.part_tint("arc_coil") == arc, "common arc part -> %s" % Juice.part_tint("arc_coil"))
 			# Without combat's resolver a hit lands for its force.
 			_juice.plating_of = Callable()
 			_juice.resolve_of = Callable()

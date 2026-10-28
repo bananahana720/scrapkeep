@@ -75,6 +75,13 @@ func _pure() -> void:
 	_t.check("champion third", PhaseMusic.champion_in_final_third(33.0, 100.0) and not PhaseMusic.champion_in_final_third(50.0, 100.0))
 	for id in PhaseMusic.TRACKS:
 		_t.check("%s has a music row" % id, MusicRows.ROWS.has(id) and String(MusicRows.ROWS[id]["ace_manifest"]).ends_with("/%s/manifest.json" % PhaseMusic.theme_of(id)))
+	# available() is kept per stem tree: the same answer as a fresh read, read again when stem_dir moves.
+	var stems := MusicRows.stem_dir
+	MusicRows.stem_dir = "user://no_stems_here"
+	_t.check("a pack with no stems under the stem tree is not available", not PhaseMusic.available("brindle-p1-requisition"))
+	MusicRows.stem_dir = stems
+	_t.eq("the kept answer is the fresh read", PhaseMusic.available("brindle-p1-requisition"), MusicRows.pack_on_disk(PhaseMusic.manifest_of("brindle-p1-requisition")))
+	_t.eq("and asking again gives it again", PhaseMusic.available("brindle-p1-requisition"), MusicRows.pack_on_disk(PhaseMusic.manifest_of("brindle-p1-requisition")))
 
 
 func _rig(avail: Callable) -> Rig:
