@@ -9,7 +9,8 @@ extends SceneTree
 # Plays the park table headless through the real flow with SimClock.ticks off, as a played game, and checks:
 #   - the flight builds the flume's sites, with no body in the physics space and nothing shown;
 #   - the entry takes all of them, shows them, and Interact knows their devices and posts;
-#   - the taken sites equal a stage 2 retry's own build node for node (class, name, place);
+#   - the taken sites equal a stage 2 retry's own build node for node (class, name, place) and read the same graph;
+#   - a run change in the flight (parts, health, class) leaves them untaken;
 #   - a retry of stage 1 during the flight drops the flight's sites and builds stage 1 as before;
 #   - a bot run (SimClock.ticks) builds nothing ahead.
 
@@ -77,6 +78,12 @@ func _run() -> void:
 		and _game.flow.state_name() == "launch", "%d of %d, %s after %d ticks" % [activities._ahead.get("built", []).size(), plan_size, _game.flow.state_name(), ticks])
 	_t.check("the flight's sites are hidden and out of the physics space", is_instance_valid(holder) and not holder.visible
 		and holder.process_mode == Node.PROCESS_MODE_DISABLED and _bodies_in_space(holder) == 0, "%d bodies in space" % _bodies_in_space(holder))
+	# A run change in the flight (a part, a health step) moves prices and rewards: no site is taken then.
+	var max_hp: int = _game.run.max_hp
+	_game.run.max_hp += 10
+	var stale = activities._adopt(activities._ahead, 0, activities._ahead.plan.sites[0])
+	_game.run.max_hp = max_hp
+	_t.check("a run change in the flight leaves the flight's sites untaken", stale == null, "%s" % [stale])
 	while _game.flow.state_name() == "launch" and ticks < WAIT_TICKS_MAX:
 		await physics_frame
 		ticks += 1
@@ -87,12 +94,15 @@ func _run() -> void:
 		and activities.sites.all(func(s): return s.is_visible_in_tree()), "")
 	var interact = _game.ctx.root.get_node("Interact")
 	var armed := true
+	var devices := 0
 	for s in activities.sites:
 		for device in s.trade_devices:
 			armed = armed and interact.devices.has(device)
+			devices += 1
 		if s.stake_post != null:
 			armed = armed and interact.devices.has(s.stake_post)
-	_t.check("Interact knows the taken sites' devices and posts", armed, "")
+			devices += 1
+	_t.check("Interact knows the taken sites' devices and posts", armed and devices > 0, "%d devices" % devices)
 	var taken := _signature(activities.sites)
 	await _ticks(2)
 	_t.check("the taken sites' bodies are in the physics space", _bodies_in_space(holder) > 0, "%d" % _bodies_in_space(holder))
@@ -137,6 +147,7 @@ func _bodies_in_space(node: Node) -> int:
 func _signature(sites: Array) -> PackedStringArray:
 	var out := PackedStringArray()
 	for s in sites:
+		out.append("graph %s" % [s.graph.get_instance_id() if s.graph != null else 0])
 		_walk(s, out)
 	return out
 

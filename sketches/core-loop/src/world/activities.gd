@@ -453,6 +453,7 @@ func _enter_stage(retry: bool) -> void:
 	_elite_arrivals = 0
 	stage_modifier = {}
 	last_entry_adopted = 0
+	_site_parent = null
 	# A retry does not re-arm the piece, so dying cannot farm one.
 	if not retry:
 		_piece_paid = false
@@ -479,8 +480,8 @@ func _enter_stage(retry: bool) -> void:
 		if site == null:
 			site = _build_entry(entry, stage_modifier)
 		else:
+			_arm(site)
 			last_entry_adopted += 1
-		_arm(site)
 		sites.append(site)
 	if not ahead.is_empty():
 		_uncover(ahead)
@@ -570,7 +571,7 @@ func _build_entry(entry: Dictionary, modifier: Dictionary) -> Site:
 	return site
 
 
-# A built site's devices and stake post join Interact: at once on an entry's own build, on adoption for an ahead one.
+# An ahead site's devices and stake post join Interact as the entry takes it (an entry's own build registers them).
 func _arm(site: Site) -> void:
 	var interact: Node = ctx.root.get_node("Interact")
 	for device in site.trade_devices:
@@ -603,19 +604,25 @@ func _on_launched(_velocity: Vector3) -> void:
 	# Disabled: nothing under it processes, and its bodies stay out of the space until the entry takes them.
 	holder.process_mode = Node.PROCESS_MODE_DISABLED
 	add_child(holder)
-	_ahead = {"stage": stage, "holder": holder, "plan": {}, "built": [], "grounds": []}
-	_as_stage(stage, map, func():
-		# The run's caches as the entry will find them: run_state.enter_stage refuses the offers left unanswered.
-		var memory: Dictionary = ctx.run.trade_memory
-		var draws: Dictionary = ctx.run.pocket_draw_cache
-		ctx.run.trade_memory = memory.duplicate(true)
-		ctx.run.pocket_draw_cache = draws.duplicate(true)
-		for offer in ctx.run.trade_memory.seen:
-			if int(offer.stage) == stage - 1 and not ctx.run.trade_memory.decisions.has(str(stage - 1)):
-				TradePockets.decide(ctx.run.trade_memory, offer, false)
-		_ahead.plan = _plan(map, _use_map(map))
-		ctx.run.trade_memory = memory
-		ctx.run.pocket_draw_cache = draws)
+	_ahead = {"stage": stage, "holder": holder, "plan": {}, "built": [], "grounds": [], "run": _run_key()}
+	# The run's caches as the entry will find them: run_state.enter_stage refuses the offers left unanswered.
+	var memory: Dictionary = ctx.run.trade_memory
+	var draws: Dictionary = ctx.run.pocket_draw_cache
+	ctx.run.trade_memory = memory.duplicate(true)
+	ctx.run.pocket_draw_cache = draws.duplicate(true)
+	for offer in ctx.run.trade_memory.seen:
+		if int(offer.stage) == stage - 1 and not ctx.run.trade_memory.decisions.has(str(stage - 1)):
+			TradePockets.decide(ctx.run.trade_memory, offer, false)
+	_as_stage(stage, map, func(): _ahead.plan = _plan(map, _entry_data(map)))
+	ctx.run.trade_memory = memory
+	ctx.run.pocket_draw_cache = draws
+	if _ahead.plan.is_empty():
+		_drop_ahead()
+
+
+# What a site's build reads of the run besides its plan: device prices and pocket rewards (parts, health, class).
+func _run_key() -> int:
+	return hash([ctx.run.parts, ctx.run.max_hp, ctx.run.class_id(), ctx.run.heft_class()])
 
 
 # One ahead site a physics tick, while the flight lasts.
@@ -623,11 +630,16 @@ func _step_ahead() -> void:
 	var i: int = _ahead.built.size()
 	var entry: Dictionary = _ahead.plan.sites[i]
 	var map = ctx.terrain.map_for(int(_ahead.stage))
+	var steps := last_entry_steps
+	_site_parent = _ahead.holder
 	_as_stage(int(_ahead.stage), map, func():
-		_site_parent = _ahead.holder
 		_ahead.built.append(_build_entry(entry, _ahead.plan.modifier))
-		_ahead.grounds.append(ctx.terrain.height(float(entry.at.x), float(entry.at.y)))
-		_site_parent = null)
+		_ahead.grounds.append(ctx.terrain.height(float(entry.at.x), float(entry.at.y))))
+	_site_parent = null
+	last_entry_steps = steps
+	# A build that failed appends nothing: the entry builds the rest.
+	if _ahead.built.size() <= i:
+		_ahead.plan.sites.resize(i)
 
 
 # Runs fn as though the stage were already `stage`: the run's and the terrain's stage, the terrain's overlays as the
@@ -640,10 +652,12 @@ func _as_stage(stage: int, map, fn: Callable) -> void:
 	if "start_overlays" in map:
 		ctx.terrain.overlays.append_array(map.start_overlays)
 	_mark_pools = {}
+	_graph_map = String(map.park.map)
+	_graph = shared_graph(graph_path(_graph_map))
 	fn.call()
 	ctx.run.stage = saved[0]
 	ctx.terrain.stage = saved[1]
-	ctx.terrain.overlays = saved[2]
+	ctx.terrain.overlays.assign(saved[2])
 	_graph = saved[3]
 	_graph_map = saved[4]
 	_draw_layout = saved[5]
@@ -654,7 +668,7 @@ func _as_stage(stage: int, map, fn: Callable) -> void:
 # The ahead site for plan entry i when the flight built it from the same entry over the same ground. It stays under
 # its holder (moving it would take every node out of the tree and back); null to build it here.
 func _adopt(ahead: Dictionary, i: int, entry: Dictionary) -> Site:
-	if ahead.is_empty() or i >= ahead.built.size() or i >= ahead.plan.sites.size():
+	if ahead.is_empty() or i >= ahead.built.size() or i >= ahead.plan.sites.size() or ahead.run != _run_key():
 		return null
 	var planned: Dictionary = ahead.plan.sites[i]
 	if not _same_entry(planned, entry) or (String(entry.kind) == "drawn" and hash(ahead.plan.modifier) != hash(stage_modifier)):
@@ -676,7 +690,7 @@ static func _same_entry(a: Dictionary, b: Dictionary) -> bool:
 func _uncover(ahead: Dictionary) -> void:
 	for site in ahead.built:
 		if site != null and is_instance_valid(site):
-			site.visible = false
+			ahead.holder.remove_child(site)
 			site.queue_free()
 	if ahead.built.all(func(site): return site != null):
 		_free_holder(ahead)
@@ -815,6 +829,8 @@ func _build_trade(s: Site) -> void:
 		s.add_child(device)
 		device.position = Vector3(-4.0 if i == 0 else 4.0, 0.0, 0.0)
 		device.setup(ctx, ctx.root.get_node("Interact"), spec)
+		if _site_parent == null:
+			ctx.root.get_node("Interact").register(device)
 		s.trade_devices.append(device)
 		words.append(device.words())
 	var door: Array = s.interior.entrances[0].at
@@ -1608,6 +1624,8 @@ func _build_relay(s: Site) -> void:
 	var post_at := at + toward * (float(s.rule["ring"]) + float(s.rule["post_out"]))
 	post.global_position = ctx.terrain.drop_point(post_at.x, post_at.y, 0.0)
 	post.setup(ctx, ctx.root.get_node("Interact"), {"id": "relay_stake_%d_%s" % [ctx.run.stage, s.name]})
+	if _site_parent == null:
+		ctx.root.get_node("Interact").register(post)
 	s.stake_post = post
 	s.view.word.text = s.relay.stake_line()
 
