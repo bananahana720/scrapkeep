@@ -11,7 +11,8 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 # The objective table (design-v3/LEGIBILITY.md, "A goal exists") and its chooser, walked on
 # bare readings with no scene: every row is reached by one reading, every row has a glyph
 # and one to five words, a posture Warden never shows a lesson and a plating Warden never
-# shows the posture rows. Then the struggle tally on fed gains and simulated seconds.
+# shows the posture rows; the yard lock and a shut clamp each hold their row. Then the struggle
+# tally on fed gains and simulated seconds.
 
 const DT := 0.1
 
@@ -27,6 +28,8 @@ const CASES := {
 	"roll_gate": {"state": "gates"},
 	"hold_line": {"state": "launch"},
 	"break_brindle": {"state": "boss"},
+	"break_yard_crew": {"state": "stage", "sealed": true, "yard_locked": true, "activities_left": 1, "fight": "posture"},
+	"break_clamp_crews": {"state": "stage", "sealed": true, "fight": "posture", "engaged": true, "clamp_shut": true, "struggling": true},
 }
 
 
@@ -67,10 +70,11 @@ func _reached_once(t) -> void:
 							for lesson in [""]:
 								for distance in [5.0, 39.9, 40.0, 200.0]:
 									for activities_left in [0, 1]:
-										var id := Objectives.choose({"state": state, "sealed": sealed, "fight": fight, "engaged": engaged,
-											"staggered": staggered, "struggling": struggling, "lesson": lesson, "distance": distance,
-											"activities_left": activities_left})
-										reached[id] = true
+										for locks in 4:
+											var id := Objectives.choose({"state": state, "sealed": sealed, "fight": fight, "engaged": engaged,
+												"staggered": staggered, "struggling": struggling, "lesson": lesson, "distance": distance,
+												"activities_left": activities_left, "yard_locked": bool(locks & 1), "clamp_shut": bool(locks & 2)})
+											reached[id] = true
 	var missing := Objectives.ROWS.keys().filter(func(id): return not reached.has(id))
 	var stray := reached.keys().filter(func(id): return id != "" and not Objectives.ROWS.has(id))
 	t.eq("the walk reaches every row", missing, [])
@@ -99,6 +103,11 @@ func _fights(t) -> void:
 	t.eq("a posture Warden never shows a lesson row", lesson_on_posture, [])
 	t.eq("a plating Warden never shows a posture row", posture_on_plating, [])
 	t.eq("a stagger beats the struggle", Objectives.choose(CASES["smash_core"].merged({"struggling": true}, true)), "smash_core")
+	t.eq("the yard lock holds the plate over the beacon and the activities",
+		[Objectives.choose(CASES["charge_beacon"].merged({"yard_locked": true}, true)), Objectives.choose(CASES["find_activity"].merged({"yard_locked": true}, true))],
+		["break_yard_crew", "break_yard_crew"])
+	t.eq("a shut clamp never shows before the Warden is found", Objectives.choose(CASES["find_warden"].merged({"clamp_shut": true}, true)), "find_warden")
+	t.eq("the yard lock outside a stage shows nothing of it", Objectives.choose({"state": "gates", "yard_locked": true}), "roll_gate")
 
 
 # One gain every `gap` seconds for `seconds`, in DT steps: posture drains to 10 between gains

@@ -24,6 +24,9 @@ const T := preload("res://tests/support/t.gd")
 # - lock: on the ground inside within_m of the beacon the yard shuts round the ball with its crew,
 #   the wall turns an escaping ball back, the last crew member down opens it, and the crew counts
 #   toward the gate; its kills roll no panel and the cleared yard pays one (ruling af); the Warden already awake leaves it unfired;
+# - plate (w22 first-timer red team): while the yard holds, the objective plate says so and no edge
+#   marker points past its wall; while the clamp is shut on an awake Warden, the plate says so and its
+#   ring fills with the pips, and the open clamp hands the plate back to the guard;
 # - StageLocks.active = false (bot_run --locks=0) leaves the stage with neither.
 
 # Kills inside the physics step, after every other node: a kill that lands after the locks' tick
@@ -132,6 +135,9 @@ func _gate() -> void:
 	_t.eq("shut clamp: a hit gains no posture", warden._posture.posture, before)
 	_t.eq("shut clamp answers a hit", _count("warden_gate_refused"), 1)
 	_t.check("objective names the clamp once it is awake", game.flow.objective_text().contains("clamp"), game.flow.objective_text())
+	var plate: Dictionary = game.hud.objective_reading()
+	_t.eq("the plate says the clamp is shut while it holds", [plate["id"], plate["words"]], ["break_clamp_crews", "Clamp shut: break the crews"])
+	_t.eq("its ring starts empty", plate["progress"], 0.0)
 	var at: Vector3 = warden.global_position
 	# A lone arrival is no pack; a pack with a member gone alive is spoiled.
 	var lone := _spawn_pack(game, ["chaser"], 101, at)
@@ -156,6 +162,7 @@ func _gate() -> void:
 	_t.check("the collar shows on the Warden", collar != null and collar.global_position.distance_to(warden.global_position) < 0.1)
 	_t.check("the collar holds one pip per wanted pack", locks._pips.size() == locks.packs_wanted())
 	_t.check("first pip lit, second dark", locks._pips[0].material_override == locks._pip_lit and locks._pips[1].material_override == locks._pip_dark)
+	_t.eq("the plate's ring fills with the pips", game.hud.objective_reading()["progress"], 1.0 / locks.packs_wanted())
 	var second := _spawn_pack(game, ["mag_trapper", "lobber"], 104, at)
 	var late := LateKiller.new()
 	root.add_child(late)
@@ -175,6 +182,7 @@ func _gate() -> void:
 			await physics_frame
 	_t.check("the wanted packs open the clamp", not locks.locked(), "cleared %d of %d" % [locks.cleared, locks.packs_wanted()])
 	_t.eq("the release plays once", _count("warden_gate_opened"), 1)
+	_t.eq("the open clamp hands the plate back to the guard", game.hud.objective_reading()["id"], "break_guard")
 	_t.check("the collar goes", locks._collar == null)
 	game.ctx.spawner.strike(warden, "ram", 400.0)
 	await physics_frame
@@ -252,6 +260,10 @@ func _lock() -> void:
 	_t.eq("the first wave lands", crew.size(), (waves[0] as Array).size())
 	_t.check("the wall stands", locks.get_node_or_null("ArenaLockWall") != null)
 	_t.check("objective names the yard", game.flow.objective_text().contains("Yard locked"), game.flow.objective_text())
+	game.hud._process(0.0)
+	_t.eq("the plate says the yard is locked", [game.hud.objective_reading()["id"], game.hud.objective_reading()["words"]],
+			["break_yard_crew", "Yard locked: break the crew"])
+	_t.eq("no edge marker points out past the wall", game.hud.edge_markers.targets(), [])
 	_t.check("the bot hand goes for the crew", locks.foe_for(game.player.ball_position()) in crew)
 	var logged: int = game.build.kill_log.size()
 	var dry: int = game.build.dropper.dry
@@ -288,6 +300,9 @@ func _lock() -> void:
 	_t.eq("the last crew down opens the yard", locks.lock_state, "spent")
 	_t.check("won", locks.lock_won)
 	_t.eq("the bells play", _count("arena_unlocked"), 1)
+	game.hud._process(0.0)
+	_t.check("the open yard hands the plate back", game.hud.objective_reading()["id"] != "break_yard_crew", game.hud.objective_reading()["id"])
+	_t.check("the open yard shows its markers again", not game.hud.edge_markers.targets().is_empty())
 	_t.eq("the crew counts toward the gate", locks.cleared, 1)
 	# Ruling af: the crew rolls no panels and the cleared yard pays one (build.gd yard_cleared).
 	var since: Array = game.build.kill_log.slice(logged)
