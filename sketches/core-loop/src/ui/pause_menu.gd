@@ -19,7 +19,9 @@ const BuildRead := preload("res://src/ui/build_read.gd")
 # the focused row. The field notes row pins the notes open until the next key or click.
 #
 # It pauses through game.toggle_pause() and never opens while the workshop holds the
-# player (the game's menu_held meta), so it cannot stack on the pick or the counter.
+# player (the game's menu_held meta), so it cannot stack on the pick or the counter. The
+# start card's tier choice also sets menu_held to keep the cursor free, but pause opens over
+# it, and closing leaves the cursor with the card.
 # Closing restores the tree pause the pick still holds. Volumes go to the mixer through
 # audio.set_volume() and are kept per viewer in settings.json (settings_store.gd). The
 # comfort rows (v3 W11) step the same way: Screen shake scales every camera shake, kick
@@ -196,8 +198,16 @@ func focused_id() -> String:
 
 func can_open() -> bool:
 	var offer = game.hud.hotwire_screen if game.hud != null else null
-	return game.flow.in_play() and not game.get_meta("menu_held", false) and not game.notes_held() \
+	return game.flow.in_play() and not _screen_holds() and not game.notes_held() \
 		and not (offer != null and offer.is_open())
+
+
+# menu_held, unless only the start card's tier choice holds it (workshop.gd card_holds_only).
+func _screen_holds() -> bool:
+	if not game.get_meta("menu_held", false):
+		return false
+	var workshop = game.get_node_or_null("Workshop")
+	return workshop == null or not workshop.has_method("card_holds_only") or not workshop.card_holds_only()
 
 
 func open() -> void:

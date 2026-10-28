@@ -175,9 +175,10 @@ func shown_rung() -> int:
 
 
 # With a rung selected, Next rung selects the next one too, so the card always shows the run's tier.
+# Under a covering screen it steps nothing, so the shown rung never leaves the run's.
 func step_rung() -> void:
 	var top := RunTier.top_unlocked(_profile)
-	if top < 2:
+	if top < 2 or (covered.is_valid() and covered.call()):
 		return
 	_shown_rung = shown_rung() % top + 1
 	if _run != null and _run.selected_run_tier() >= RunTier.HARD:
