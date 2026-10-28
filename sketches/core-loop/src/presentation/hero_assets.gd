@@ -2333,8 +2333,32 @@ func _paint_surface(mi: MeshInstance3D, i: int, materials: Dictionary) -> void:
 		return
 	if not materials.has(slot):
 		var own := slot.begins_with("ancient_light") or slot == "ancient_enamel"
+		var _d0 := Time.get_ticks_usec()
 		materials[slot] = material(slot).duplicate() if own else material(slot)
+		if own and slot == "ancient_enamel":
+			var _d1 := Time.get_ticks_usec()
+			var again: Material = material(slot).duplicate()
+			var _d2 := Time.get_ticks_usec()
+			var fresh := StandardMaterial3D.new()
+			var _d3 := Time.get_ticks_usec()
+			fresh.detail_enabled = true
+			var _d4 := Time.get_ticks_usec()
+			var base: StandardMaterial3D = material(slot)
+			fresh.detail_mask = base.detail_mask
+			fresh.detail_albedo = base.detail_albedo
+			var _d5 := Time.get_ticks_usec()
+			fresh.albedo_texture = base.albedo_texture
+			fresh.uv1_triplanar = true
+			fresh.vertex_color_use_as_albedo = true
+			var _d6 := Time.get_ticks_usec()
+			print("ENAMEL_PROBE f%d dup %.2f dup2 %.2f new %.2f detail_on %.2f detail_tex %.2f albedo_tri %.2f" % [Engine.get_physics_frames(),
+				(_d1 - _d0) / 1000.0, (_d2 - _d1) / 1000.0, (_d3 - _d2) / 1000.0, (_d4 - _d3) / 1000.0, (_d5 - _d4) / 1000.0, (_d6 - _d5) / 1000.0])
+			again = null
+			fresh = null
+	var _o0 := Time.get_ticks_usec()
 	_surface_material(mi, i, materials[slot])
+	if slot == "ancient_enamel" and Time.get_ticks_usec() - _o0 > 1000:
+		print("ENAMEL_PROBE f%d override %.2f" % [Engine.get_physics_frames(), (Time.get_ticks_usec() - _o0) / 1000.0])
 	if slot == "glass":
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
