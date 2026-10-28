@@ -33,6 +33,8 @@ var _tier_buttons := {}
 # The HARD ladder rung the card shows (0: the selected rung, else the highest unlocked); Next rung steps it.
 var _shown_rung := 0
 var _shown_for := ""
+# Whether a screen over the card owns the input now (flow.gd _start_card_covered); unset, nothing does.
+var covered := Callable()
 var reroll_button: Button
 var rung_button: Button
 
@@ -248,6 +250,8 @@ func _controls() -> void:
 
 func _input(event: InputEvent) -> void:
 	if not _interactive or not visible or not event is InputEventKey or not event.pressed or event.echo:
+		return
+	if covered.is_valid() and covered.call():
 		return
 	var key: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
 	if key >= KEY_1 and key <= KEY_3:

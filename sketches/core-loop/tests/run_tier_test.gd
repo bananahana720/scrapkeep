@@ -404,10 +404,23 @@ func _card() -> void:
 	var card = game.flow.start_card
 	t.check("production start card appears", card.is_inside_tree() and card.showing() and card.is_processing_input())
 	# A fresh profile's card offers no mouse-only choice (picks are 1/2/3, the reroll V), so it keeps
-	# mouse look (w22 first-timer red team edge 3), while still holding the other screens off.
-	t.check("a fresh profile's start card keeps aim", not card.wants_pointer() and not game.capture_requests.is_empty()
-		and game.capture_requests.back() == true, "requests %s" % [game.capture_requests])
-	t.check("and still holds the other screens off", game.get_meta("menu_held", false))
+	# mouse look (w22 first-timer red team edge 3).
+	t.check("a fresh profile's start card keeps aim", not card.wants_pointer() and (game.capture_requests.is_empty() or game.capture_requests.back() == true)
+		and not game.get_meta("menu_held", false), "requests %s" % [game.capture_requests])
+	# With no menu held the pause menu can open over the card; while it is open the card's keys and
+	# clicks take nothing.
+	var menu = game.get_node_or_null("PauseMenu")
+	if menu != null:
+		menu.open()
+		var pick_key := InputEventKey.new()
+		pick_key.pressed = true
+		pick_key.keycode = KEY_1
+		pick_key.physical_keycode = KEY_1
+		card._input(pick_key)
+		t.check("the pause menu opens over the card and the card takes nothing under it", menu.is_open()
+			and not game.flow.take_start_pick(0) and not game.flow.reroll_start_pick() and String(game.run.start_pick.get("taken", "")) == ""
+			and game.run.start_pick.rerolls_left > 0 and card.showing())
+		menu.close()
 	t.check("start card does not pause or hold movement", not paused and not game.player.frozen() and game.player.state.velocity.length() > 0.0)
 	t.check("locked tier not offered", card.offered_tiers() == [0])
 	t.check("locked tier rejected at boundary", not game.flow.choose_run_tier(1) and game.run.selected_run_tier() == 0)
