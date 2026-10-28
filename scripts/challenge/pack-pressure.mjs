@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// node scripts/challenge/pack-pressure.mjs --variants=base,A,B,C,D,E,A+D (a variant may also be one --tune key=value) [--seeds=1,2,3,4,5] [--bot-seeds=1,2,3,4] [--explore-by=520]
+// node scripts/challenge/pack-pressure.mjs --variants=base,A,B,C,D,E,A+D (a variant may also be one --tune key=value) [--seeds=1,2,3,4,5] [--bot-seeds=1,2,3,4] [--explore-by=900]
 //     [--jobs=4] [--label=<name>] [--shard=i/n] [--resume] [--dry-run]
 // node scripts/challenge/pack-pressure.mjs --report=<dir,dir> [--out=<file.md>]
 //
 // The world 1 pack pressure experiments (src/combat/pack_pressure.gd). For each variant, three measures on the same
 // seeds: the anti-kiting gate 1 arm (orbit, stages 1 and 2 entered fresh, the gate harness's own command line), and
-// the skipper and completionist over world 1 (park table, --stages=2, the pacing file's measure, --explore-by=520 for
+// the skipper and completionist over world 1 (park table, --stages=2, the pacing file's measure, --explore-by=900 for
 // the completionist). "base" runs with no flag. One run a seed: runs at --fixed-fps 90 replay frame for frame (the
 // 720-job G-A sweep's three repeats of every stage 1 and 2 orbit seed were identical), so a repeat adds no
 // information here. Output: artifacts/local/pack-pressure/<label>/{meta.json,runs.ndjson,jobs/<id>/}. --report
@@ -22,7 +22,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const outRoot = path.join(root, "artifacts/local/pack-pressure");
 const TIMEOUT_MS = 45 * 60_000;
 
-const opts = { variants: ["base"], seeds: [1, 2, 3, 4, 5], botSeeds: [1, 2, 3, 4], exploreBy: 520, jobs: 4, label: null, shard: null, resume: false, dryRun: false, report: null, out: null };
+const opts = { variants: ["base"], seeds: [1, 2, 3, 4, 5], botSeeds: [1, 2, 3, 4], exploreBy: 900, jobs: 4, label: null, shard: null, resume: false, dryRun: false, report: null, out: null };
 for (const arg of process.argv.slice(2)) {
   const [k, ...rest] = arg.replace(/^--/, "").split("=");
   const v = rest.join("=");
@@ -135,7 +135,7 @@ export function summarize(rows) {
       deaths: rs.filter((r) => ["died", "lost"].includes(r.row.outcome)).length,
       outcomes: rs.map((r) => r.row.outcome),
       hull: median(rs.map((r) => (stageNote(r, 1).hull_lost ?? 0) + (stageNote(r, 2).hull_lost ?? 0))),
-      kills: [1, 2].map((n) => median(rs.map((r) => (r.row.panel_kills ?? []).filter((k) => k[0] === n).length))),
+      kills: [1, 2].map((n) => median(rs.map((r) => (r.row.panel_kills ?? []).filter((k) => k[0] === n && k[1] !== "yard_clear").length))),
       reached2: rs.filter((r) => (r.row.stage_reached ?? 0) >= 2).length,
     };
   }

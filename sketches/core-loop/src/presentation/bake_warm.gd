@@ -12,12 +12,14 @@ extends Node
 # setup(), dressed by its own deferred bake), in an inert holder far under the stage for one frame,
 # so the render pipelines their surfaces need compile then and not at the first spawn's first
 # frame (six surface pipelines at f451 on the 4080; #241 comment 6399644476).
-# After them come the run's first moments, once a session: the first armour read (its class icon
-# and stamp words), the first synergy ring and the first arc mark each draw a material nothing
-# else drew before, and on the 4080 a lock pack's first multi-kill paid for all of them in one
-# frame (stage 1 f3822, 47-61 ms, 22 pipelines the frame after; unit 23 receipt on #494). Each is
-# built by its owner's own builder in an inert holder for one frame, and the codex category icons
-# it paints on the CPU are drawn ahead. The materials are held, so their shaders stay compiled.
+# After them come the run's first moments, once a session: the first kill's scrap pickups, the
+# first armour read (its class icon and stamp words), the first synergy ring and the first arc
+# mark each draw a material nothing else drew before, and on the 4080 a lock pack's first multi-kill
+# paid for all of them in one frame (stage 1 f3822, 47-61 ms, 22 pipelines the frame after; unit 23
+# receipt on #494). The first machine word (KLANG on a heavy hit) rasterizes its glyphs in that
+# frame's deferred Label3D update (44 ms of it on the cloud box), so word labels with every glyph
+# a word draws stand first too, a few glyphs a frame (all of them in one frame was 51 ms on the 4080). Each is built by its owner's own builder in an inert holder for
+# one frame, and the codex category icons it paints on the CPU are drawn ahead. The materials are held, so their shaders stay compiled.
 # A bot run that builds stages whole skips it, like fleet._warm_scripts, so frame costs stay as
 # they were where seeds must replay.
 
@@ -29,6 +31,9 @@ const ArmourMarks := preload("res://src/presentation/armour_marks.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const Combat := preload("res://src/combat/combat.gd")
+const ScrapField := preload("res://src/build/scrap_field.gd")
+const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const MachineFx := preload("res://src/presentation/machine_fx.gd")
 
 # The world's kits whose GLB bodies carry the bake (assets/models/world_one/enemy_*.glb).
 const WORLD_KITS := {
@@ -58,14 +63,19 @@ const WORLD_RIGS := {
 # name: the ones the warm also builds once.
 const SPAWN_WARM := ["chaser", "lobber", "mag_trapper", "jolt_layer", "hooker", "ramp_flipper", "boom_tender"]
 # The first moments with a view, in the order the warm builds them, one a frame; then each codex
-# category icon ("codex_icon:<category>"), one a frame.
-const FIRSTS := ["armour_read", "synergy_ring", "arc_mark"]
+# category icon ("codex_icon:<category>"), one a frame. "hero_chunks" starts a threaded load of the kill
+# chunks' glb and holds it when done, so the first discovery burst reads it from the cache, not the disk.
+const FIRSTS := ["scrap_pickup", "armour_read", "synergy_ring", "arc_mark", "machine_words", "hero_chunks"]
+# The machine word glyphs one warm frame rasterizes.
+const GLYPHS_A_FRAME := 4
 # Far under every stage, so the one frame a warm spawn stands there is never seen.
 const OUT_OF_SIGHT := Vector3(0.0, -10000.0, 0.0)
 
 static var _warm := {}
 # Rig scenes held for the session, so every spawn's load() returns the scene whose meshes were readied.
 static var _held := {}
+# Threaded loads a first started, held once done.
+static var _loading: Array[String] = []
 static var _firsts_done := false
 # The first moments' materials, held so the shaders their views compiled are never freed.
 static var _kept: Array[Material] = []
@@ -98,7 +108,26 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 			return
 
 
+# Teardown: a load still on the loader thread is collected, so a quit before it lands leaves no
+# loader thread running (the quit abort, exit 134, scrapkeep#322).
+func _exit_tree() -> void:
+	settle()
+
+
+static func settle() -> void:
+	for path: String in _loading:
+		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			_held[path] = ResourceLoader.load_threaded_get(path)
+	_loading.clear()
+
+
 func _process(_delta: float) -> void:
+	for path: String in _loading.duplicate():
+		var status := ResourceLoader.load_threaded_get_status(path)
+		if status == ResourceLoader.THREAD_LOAD_LOADED:
+			_held[path] = ResourceLoader.load_threaded_get(path)
+		if status != ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+			_loading.erase(path)
 	if _shown != null:
 		_shown.queue_free()
 		_shown = null
@@ -116,7 +145,13 @@ func _process(_delta: float) -> void:
 
 
 static func firsts() -> Array:
-	var queue: Array = FIRSTS.duplicate()
+	var queue: Array = []
+	for first: String in FIRSTS:
+		if first != "machine_words":
+			queue.append(first)
+			continue
+		for i in ceili(MachineFx.WARM_GLYPHS.length() / float(GLYPHS_A_FRAME)):
+			queue.append("machine_words:%d" % i)
 	for id in CodexStyle.CATEGORIES:
 		queue.append("codex_icon:" + String(id))
 	return queue
@@ -133,6 +168,19 @@ static func first_view(first: String, parent: Node) -> Node3D:
 			views = [Vfx.ring_view(0, Color.WHITE)]
 		"arc_mark":
 			views = [Combat.arc_mark_view()]
+		"scrap_pickup":
+			views = ScrapField.warm_views()
+		"hero_chunks":
+			# The headless renderer's mesh RIDs are not thread-safe (thread_guard.gd), so there the glb's
+			# ArrayMeshes load on the main thread, as park_props._uncached does.
+			var path := HeroAssets.CHUNKS_PATH
+			if ResourceLoader.exists(path) and not _held.has(path) and not _loading.has(path):
+				if DisplayServer.get_name() == "headless":
+					_held[path] = load(path)
+				elif ResourceLoader.load_threaded_request(path) == OK:
+					_loading.append(path)
+		_ when first.begins_with("machine_words:"):
+			views = MachineFx.warm_views(MachineFx.WARM_GLYPHS.substr(int(first.get_slice(":", 1)) * GLYPHS_A_FRAME, GLYPHS_A_FRAME))
 		_ when first.begins_with("codex_icon:"):
 			CodexStyle.icon(first.trim_prefix("codex_icon:"))
 	if views.is_empty():
@@ -143,7 +191,7 @@ static func first_view(first: String, parent: Node) -> Node3D:
 	holder.set_meta("first_warm", first)
 	for view in views:
 		holder.add_child(view)
-		if view is GeometryInstance3D and view.material_override != null:
+		if view is GeometryInstance3D and view.material_override != null and not _kept.has(view.material_override):
 			_kept.append(view.material_override)
 	return holder
 

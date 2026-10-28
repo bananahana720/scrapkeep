@@ -43,6 +43,9 @@ const SETTLE_S := 4.5
 const FACE_SLACK_M := Tuning.RADIUS + 0.5
 const SNAP_M := 8.0
 const FLOOR_SLACK_M := 3.0
+# The play rect stands within this of every foot, so a rescue lands at the wall and no ground runs on past it (the south
+# edge stood at z 700, 65 m short of the foot, until the w20 line-rider fix).
+const RECT_GAP_M := 10.0
 
 var t := T.new("park_dam_rim_roll_test")
 var game
@@ -68,6 +71,11 @@ func _run() -> void:
 	await physics_frame
 	var terrain = game.ctx.terrain
 	t.eq("real Game plays the dam on the park table", terrain.map().title, "park_dam")
+	var rect: Rect2 = terrain.map().play_rect
+	var edges := {"east": rect.end.x, "west": rect.position.x, "north": rect.position.y, "south": rect.end.y}
+	for side: String in FOOT:
+		t.check("the play rect meets the %s wall's foot" % side, absf(float(edges[side]) - float(FOOT[side])) <= RECT_GAP_M,
+				"rect %.0f, foot %.0f" % [edges[side], FOOT[side]])
 	var low := INF
 	var low_at := ""
 	for side: String in FOOT:

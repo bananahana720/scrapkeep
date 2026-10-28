@@ -35,6 +35,9 @@ extends Node3D
 # start(threaded) loads the bake and builds every region image and tile face list on
 # WorkerThreadPool; the main thread only adds the finished pieces, one region or up to five
 # tiles a frame inside an 8 ms budget, then emits built. finish() completes any of it at once.
+# A tile's add is Jolt building its 12,800-triangle mesh shape (about 7 ms on the 4080), so a
+# second tile starts only when the last one's cost still fits: two a frame held the dam at
+# 18 ms of _process for 50 frames while the flume attached (f5773-5800, #499 rows).
 #
 # The Terrain3D node is not this node's child: a new Terrain3D spends about 135 ms of main
 # thread on its first frame (measured headless, any settings), which no launch can afford. So
@@ -144,8 +147,11 @@ const BITE_G2 := 4.0 * STEP * STEP * (1.0 / (PylonBite.FACE * PylonBite.FACE) - 
 const COLLISION_DISABLED := 0
 const MESH_LODS := 7
 const MESH_SIZE := 48
-# Terrain3DRegion map types for update_maps: height, control, colour.
-const MAP_TYPES := [0, 1, 2]
+# Terrain3DRegion map types for update_maps: colour, height, control. Colour goes first,
+# MAP_GAP_FRAMES after the regions are added: rebuilt the frame after the last add, the flume's
+# colour array took 24.8 ms on the 4080 at the Warden prebuild, and 7.8 ms after a 30-frame gap.
+const MAP_TYPES := [2, 0, 1]
+const MAP_GAP_FRAMES := 10
 
 enum Phase { IDLE, LOADING, BUILDING, ATTACHING, READY }
 
@@ -172,6 +178,7 @@ var slowest_step := ""
 var frame_usec_max := 0
 var _last_frame_usec := 0
 var _meter_frames := 0
+var _tile_usec := 0
 
 var _map: RefCounted
 var _apron := PackedFloat32Array()
@@ -187,6 +194,7 @@ var _group := -1
 var _lock := Mutex.new()
 var _next_region := 0
 var _next_map := 0
+var _map_wait := 0
 var _next_tile := 0
 var _tiles_root: Node3D
 
@@ -937,6 +945,10 @@ func _attach_step(deadline: int) -> void:
 	if _next_region < _regions.size():
 		return
 	if _next_map < MAP_TYPES.size():
+		if deadline >= 0 and _map_wait < MAP_GAP_FRAMES:
+			_map_wait += 1
+			return
+		_map_wait = 0
 		terrain3d.data.update_maps(MAP_TYPES[_next_map], true, false)
 		_next_map += 1
 		if deadline >= 0:
@@ -945,15 +957,27 @@ func _attach_step(deadline: int) -> void:
 		return
 	var added := 0
 	while _next_tile < TILE_COUNT:
-		if deadline >= 0 and (added >= TILES_PER_FRAME or Time.get_ticks_usec() > deadline):
+		var now := Time.get_ticks_usec()
+		if deadline >= 0 and not tile_fits(added, now, deadline, _tile_usec):
 			return
 		_add_tile(_next_tile)
+		_tile_usec = Time.get_ticks_usec() - now
 		_faces[_next_tile] = null
 		_next_tile += 1
 		added += 1
+	# The built handlers (terrain._on_park_built: the park rows' Placer, perch zones, scenery) take a frame of
+	# their own: on the last tile's frame they made the flume's f5874, 26-28 ms on the 4080.
+	if added > 0 and deadline >= 0:
+		return
 	phase = Phase.READY
 	set_process(false)
 	built.emit()
+
+
+# Whether one more collider tile fits this frame: up to TILES_PER_FRAME, inside the deadline, and,
+# after the first, only when the last tile's cost still fits (a full tile's Jolt shape is ~7 ms).
+static func tile_fits(added: int, now: int, deadline: int, last_usec: int) -> bool:
+	return added < TILES_PER_FRAME and now <= deadline and (added == 0 or now + last_usec <= deadline)
 
 
 func _add_tile(t: int) -> void:

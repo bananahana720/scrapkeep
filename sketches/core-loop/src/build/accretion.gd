@@ -1,6 +1,7 @@
 extends Node3D
 
 const Parts := preload("res://src/build/parts.gd")
+const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 
@@ -37,11 +38,14 @@ const LATTICE_TWIST := 72.0 * PI / 180.0
 const LATTICE_HUB_RADIUS := 0.9575
 const LATTICE_SEAT := 0.99
 
+# The ladder's rung colours on the ball's part pieces, except common: a common piece stays
+# copper hardware, so mint (Sable's and the field's) never coats the shell. Rare pieces are
+# the cobalt parts that hang on the shell (fleet grade), relics amber.
 const RARITY_COLORS := {
 	"common": Palette.COPPER,
-	"rare": Palette.AMBER,
+	"rare": Palette.COBALT,
 	# Red is only for what hurts you (DESIGN-V2 section 11).
-	"relic": Palette.ARC,
+	"relic": Palette.AMBER,
 	"evolved": Palette.ANCIENT,
 }
 const ICE := Color("c8f0ff")
@@ -251,7 +255,10 @@ static func _facing(dir: Vector3) -> Basis:
 func _piece(part_id: String) -> Node3D:
 	var d: Resource = Parts.def(part_id)
 	var family: String = d.family if d != null else "stat"
-	var rarity: String = d.rarity if d != null else "common"
+	# An old id (uncommon, rare_plus) wears the rung it folds into.
+	var rarity: String = ItemGen.resolve_rarity(d.rarity) if d != null else ""
+	if rarity == "":
+		rarity = "common"
 	var color: Color = RARITY_COLORS.get(rarity, Palette.COPPER)
 	var mat := Palette.solid(color, 1.4 if rarity != "common" else 0.4)
 	var root := Node3D.new()

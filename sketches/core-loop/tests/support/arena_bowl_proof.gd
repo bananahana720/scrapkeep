@@ -1,8 +1,9 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
-# Captured from the supplied base arena.gd at the real default fight entry.
-const COLLIDER_HASH := "8a626de033a1cfd62dabbb598fbea7aacc0e8e9d65de57496c7703880a6f171d"
+# Captured at the real default fight entry. Re-pinned when the bowl began to build off the tree (local
+# positions, no add and subtract of its world position): the masts moved by at most 3 um, nothing else.
+const COLLIDER_HASH := "1b6c977ba899b6d62171c54f852504e396f4b60ae37a1193e07fa806d71b3d52"
 const ENTRY_POSITION := Vector3(-46, 64.44074, -12)
 
 class Errors extends Logger:

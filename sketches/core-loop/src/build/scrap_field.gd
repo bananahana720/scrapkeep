@@ -149,6 +149,22 @@ static func _pickup_material(color: Color) -> ShaderMaterial:
 	return material
 
 
+# A field piece and a recovery cluster as _add draws them, each pickup variant once (BakeWarm builds
+# them at stage entry, so the run's first kill draws no pickup surface for the first time).
+static func warm_views() -> Array[Node3D]:
+	var views: Array[Node3D] = []
+	var meshes: Array[Mesh] = _pickup_meshes()
+	if meshes.is_empty():
+		return views
+	var material := _pickup_material(Palette.ARC)
+	for mesh in meshes + _recovery_mesh_cache:
+		var view := MeshInstance3D.new()
+		view.mesh = mesh
+		view.material_override = material
+		views.append(view)
+	return views
+
+
 static func _pickup_meshes() -> Array[Mesh]:
 	if _pickup_assets.has(model_path):
 		_pickup_mesh_cache = _pickup_assets[model_path]["meshes"]

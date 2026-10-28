@@ -276,6 +276,37 @@ func _run() -> void:
 		t.check("the frame sends a boss hazard's rect to the shader", frame._rects.size() == 1 and int(frame.material.get_shader_parameter("rect_count")) == 1 and hz_uniform[0] == Vector4(hz[0].position.x, hz[0].position.y, hz[0].size.x, hz[0].size.y), str(hz_uniform[0]))
 		t.check("the shader test discards the hazard's centre", PlayerFx.ImpactFrame._yields(hz[0].get_center(), frame._rects, 1, margin))
 		hazard.queue_free()
+	# Dunk charge: the coil on the collar's rear arc shows the held record in the class colour,
+	# its pips go dark as the window runs down, and it clears on spend and on expiry.
+	var dunk = _game.player.dunk
+	dunk.clear("reset")
+	await _frames(1)
+	t.check("no dunk coil without a charge", not fx.dunk_glow_shown())
+	var cls: Color = _game.player.class_color()
+	dunk.store(30.0, "test", "test", cls)
+	await _frames(1)
+	var shown: Color = fx.dunk_glow_color()
+	t.check("a held charge shows the coil in the class colour's hue", fx.dunk_glow_shown() and absf(shown.h - cls.h) < 0.01 and shown.s > 0.2,
+		"%s vs %s" % [shown, cls])
+	t.eq("every pip lit at the store", fx.dunk_pips_lit(), PlayerFx.DUNK_PIPS)
+	var rear: Vector3 = fx._dunk_glow.global_basis.z
+	var travel: Vector3 = _game.player.state.velocity * Vector3(1, 0, 1)
+	t.check("the arc sits level behind the line of travel", absf(rear.y) < 0.001 and (travel.length() < PlayerFx.DUNK_HOLD_SPEED or rear.dot(-travel.normalized()) > 0.9),
+		"rear %s, travel %s" % [rear, travel])
+	dunk.clock = float(dunk.charge["until"]) - dunk.WINDOW * 0.5
+	await _frames(1)
+	t.eq("half the window left lights two pips", fx.dunk_pips_lit(), 2)
+	dunk.clock = float(dunk.charge["until"]) - dunk.WINDOW * 0.2
+	await _frames(1)
+	t.eq("a fifth of the window left lights one pip", fx.dunk_pips_lit(), 1)
+	dunk.spend(null)
+	await _frames(1)
+	t.check("a spent charge clears the coil", not fx.dunk_glow_shown())
+	dunk.store(30.0, "test", "test", cls)
+	await _frames(1)
+	dunk.tick(dunk.WINDOW + 0.1)
+	await _frames(1)
+	t.check("an expired charge clears the coil", not fx.dunk_glow_shown())
 	quit(t.verdict())
 
 

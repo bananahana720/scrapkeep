@@ -164,6 +164,19 @@ static func dress(root: Node, owned: Array = []) -> int:
 	return dressed
 
 
+# Makes what dress() would make for one view (its tangent-safe mesh and its materials' twins) without
+# changing the view, so a later dress() of its scene finds them made: a warm spreads a model's dress a view a frame.
+static func warm_view(view: MeshInstance3D) -> void:
+	if view.mesh == null:
+		return
+	var mesh := tangent_safe(view.mesh)
+	for i in mesh.get_surface_count():
+		var look := _look(mesh, i)
+		var mat := view.get_active_material(i)
+		if look != 0 and mat is StandardMaterial3D and not _warning(mat):
+			twin(mat, look == 1)
+
+
 # `mesh`, or once per mesh a copy whose shaded surfaces have tangents square to their normals:
 # every tangent where the surface's UV1 is a single point (the tangents mean nothing there), else
 # only the ones that are zero or run along their normal. The normal map those surfaces draw is
