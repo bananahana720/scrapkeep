@@ -176,12 +176,14 @@ func _stock_stage(here: Array) -> void:
 	stocked_for = here
 	stocks += 1
 	rerolls_left = REROLLS_PER_VISIT
-	_rng.seed = SEED + visit * 131 + ctx.run.stage * 17
+	# Seeded by the stocks so far, not bay entries, so hopping in and out of the bay never picks
+	# a later stage's shelf.
+	_rng.seed = SEED + stocks * 131 + ctx.run.stage * 17
 	shelf = _stock()
 	var lock_class: int = mini(TOP_CLASS_MAX, ctx.run.heft_class() + 1)
 	var top_id := _roll_one(TOP_RARITIES, shelf.map(func(entry): return entry["part_id"]))
 	top = {"part_id": top_id, "lock_class": lock_class, "sold": false} if top_id != "" else {}
-	_stage_stocks[str(here)] = {"shelf": shelf.duplicate(true), "top": top.duplicate(true)}
+	_stage_stocks[str(here)] = {"shelf": shelf.duplicate(true), "top": top.duplicate(true), "rng": _rng.state}
 
 
 # A retry or replay (stage_entered with retry) put the run back to the stage's start: its cogs
@@ -197,6 +199,8 @@ func rewind_stage() -> void:
 	rerolls_left = REROLLS_PER_VISIT
 	shelf = kept["shelf"].duplicate(true)
 	top = kept["top"].duplicate(true)
+	# The draws after the stock come back too, so a retry's reroll is the first attempt's reroll.
+	_rng.state = kept["rng"]
 
 
 func leave() -> Dictionary:

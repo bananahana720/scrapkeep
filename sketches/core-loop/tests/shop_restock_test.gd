@@ -71,7 +71,7 @@ func _check() -> void:
 	_t.eq("the reroll stays spent through a re-entry", shop.rerolls_left, 0)
 	_t.eq("re-entries do not raise the reroll price", shop.reroll_price(), price_before)
 	shop.leave()
-	_retry(first)
+	_retry(first, hook.get("part_id", ""))
 	run.stage += 1
 	shop.enter()
 	var next := _ids(shop)
@@ -82,7 +82,7 @@ func _check() -> void:
 
 
 # The stage retry restores cogs and parts from the stage-start checkpoint; the shop follows.
-func _retry(first: Array) -> void:
+func _retry(first: Array, hook_id: String) -> void:
 	var run = _game.ctx.run
 	var shop = _game.ctx.build.shop
 	var retried: bool = run.has_snapshot()
@@ -93,5 +93,18 @@ func _retry(first: Array) -> void:
 	shop.enter()
 	_t.eq("a retry puts the stage's first shelf back (%s)" % ("flow retry" if retried else "retry signal"), _ids(shop), first)
 	_t.check("a retry puts the bought part back on sale", shop.shelf.all(func(entry): return not entry.get("sold", false)), var_to_str(shop.shelf))
+	_t.eq("a retry puts the hook back", shop.top_shelf().get("part_id", ""), hook_id)
 	_t.eq("a retry hands the reroll back", shop.rerolls_left, Shop.REROLLS_PER_VISIT)
+	_game.ctx.run.cogs = 5000
+	shop.reroll()
+	var once := _ids(shop)
+	shop.leave()
+	if retried:
+		_game.flow.retry_stage()
+	else:
+		_game.ctx.events.stage_entered.emit(_game.ctx.run.stage, true)
+	shop.enter()
+	_game.ctx.run.cogs = 5000
+	shop.reroll()
+	_t.eq("every retry's reroll draws the same shelf (no fishing)", _ids(shop), once)
 	shop.leave()
