@@ -126,7 +126,7 @@ const TABLE := {
 		"effect": {"do": "burst", "radius": 6.0, "damage": 10.0}},
 	"tracer_round": {"maker": "fleet_surplus", "base": "weapon", "rarity": "common", "stack": "linear", "cap": 5, "tags": ["anchor"],
 		"verb": "Trace the long shot", "text": "+8% weapon range", "mods": {"weapon_range": 1.08}},
-	"impact_driver": {"maker": "redjaw", "touches": "fire", "base": "weapon", "rarity": "uncommon", "trigger": "on_rebound", "stack": "linear", "cap": 3,
+	"impact_driver": {"maker": "redjaw", "touches": "fire", "base": "weapon", "rarity": "rare", "tier": 2, "trigger": "on_rebound", "stack": "linear", "cap": 3,
 		"tags": ["kinetic", "speed"], "punch": 6.0, "verb": "Drive the impact", "text": "Rebounds deal a weapon hit",
 		"effect": {"do": "rebound_strike", "mult": 1.0}},
 	"last_word": {"maker": "redjaw", "base": "weapon", "rarity": "rare_plus", "trigger": "on_damage_taken", "stack": "capped", "cap": 1,

@@ -58,6 +58,10 @@ const PARTS := [
 	"barrage_spring", "deflect_plate", "ballast_drum", "scrap_armor", "winch_pawl",
 	# The Cannon: a mass hitter and mass-carrying skill parts.
 	"overpressure", "cache_key", "re_rack",
+	# The cobalt rung (item ladder, wave 20): authored rares no unlock pays, so world 1's
+	# guaranteed cobalt has rows to stay new. They roll only at rare and move no common share;
+	# the two water rounds read on the Spillway's channels.
+	"horizon_optic", "ram_plow", "rime_rounds", "galvanic_rounds",
 ]
 
 # SG4 burden parts: a second list beside PARTS, so the normal loot list (build_synergy_test pins
