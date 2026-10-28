@@ -19,8 +19,9 @@ const LADDER := {
 		"brindle.period_mult": 0.9, "mobs.elite_rate_mult": 1.25},
 	4: {"mobs.damage_mult": 1.35, "warden.pulse_damage_mult": 1.95, "warden.pulse_cycle_mult": 0.58, "brindle.damage_mult": 1.3,
 		"brindle.period_mult": 0.85, "mobs.elite_rate_mult": 1.5, "mobs.interval_scale_mult": 0.95, "pilot.regen_delay_mult": 1.5},
-	# Tuned on w1 (24 seeds, Expert ordinary 50%): the Warden's pulse, not mob hits, is what an Expert cannot
-	# dodge forever. Mob hits x3, crowd pressure or no regen at all left the Expert at 88-100% (8 seeds each).
+	# Tuned on w1 against Expert ordinary ~50% (ruling aq): the Warden's pulse, not mob hits, is what an Expert
+	# cannot dodge forever; mob hits x3, crowd pressure or no regen left it at 88-100% (8 seeds each). It reads
+	# 79% on the w20 stage (24 seeds), a recorded miss: below it the losses are fight caps, not deaths.
 	5: {"mobs.damage_mult": 1.5, "warden.pulse_damage_mult": 2.25, "warden.pulse_cycle_mult": 0.48, "brindle.damage_mult": 1.4,
 		"brindle.period_mult": 0.8, "mobs.elite_rate_mult": 1.75, "mobs.interval_scale_mult": 0.9, "pilot.regen_delay_mult": 2.0,
 		"pilot.regen_rate_mult": 0.6},
