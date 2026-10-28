@@ -604,6 +604,8 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 	# PROBE (never stacks): BODY_PROBE=1 counts the nodes the entry adds, by kind and owner, through the next two frames.
 	if OS.get_environment("BODY_PROBE") == "1":
 		_body_probe_start(index)
+	if OS.get_environment("DELETE_PROBE") == "1":
+		_delete_probe_start(index)
 	if OS.get_environment("HANDLER_PROBE") == "1":
 		# PROBE: each stage_entered handler called and timed alone, in connection order.
 		var parts := PackedStringArray()
@@ -1242,3 +1244,27 @@ func _fp(what: String) -> void:
 	var now := Time.get_ticks_usec()
 	_fp_parts.append("%s %.1f" % [what, (now - _fp_at) / 1000.0])
 	_fp_at = now
+
+
+# PROBE (never stacks): DELETE_PROBE=1 counts the nodes that leave the tree from the entry until the next frame,
+# by class and the first path parts, and the predelete count (actual frees) the same way.
+func _delete_probe_start(index: int) -> void:
+	var counts := {}
+	var tree := Engine.get_main_loop() as SceneTree
+	var on_removed := func(n: Node) -> void:
+		var path := String(n.get_path()).split("/")
+		var key := "%s  %s" % [n.get_class(), "/".join(path.slice(2, 5)) if path.size() > 4 else String(n.get_path())]
+		counts[key] = int(counts.get(key, 0)) + 1
+	tree.node_removed.connect(on_removed)
+	var t0 := Time.get_ticks_usec()
+	await tree.process_frame
+	tree.node_removed.disconnect(on_removed)
+	var rows := []
+	var total := 0
+	for k in counts:
+		rows.append([counts[k], k])
+		total += int(counts[k])
+	rows.sort_custom(func(a, b): return a[0] > b[0])
+	print("DELETE_PROBE stage %d: %d nodes left the tree in %.1f ms wall" % [index, total, (Time.get_ticks_usec() - t0) / 1000.0])
+	for r in rows.slice(0, 40):
+		print("DELETE_PROBE %5d  %s" % r)
