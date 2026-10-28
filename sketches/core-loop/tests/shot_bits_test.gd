@@ -1,3 +1,4 @@
+# smoke: timeout=360s (154-174 s alone on 4-core cloud boxes in w21 and w22; killed at the 180 s default cap in a w22 chunk and solo, gate/w22-81c42290)
 extends SceneTree
 
 const Parts := preload("res://src/build/parts.gd")
