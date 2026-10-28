@@ -283,12 +283,12 @@ func _collect_boxes(posted: Array) -> Array:
 	for entry: Dictionary in posted:
 		var row: Dictionary = entry["row"]
 		var info := {"row": String(row["id"]), "key": entry["entry"]["key"], "size_y": float(row["size"][1]), "fitted": _head, "over_limit": entry["entry"]["over_limit"]}
-		for shape: Node in (entry["body"] as StaticBody3D).get_children():
-			if shape is CollisionShape3D and shape.shape is BoxShape3D:
+		for shape: Dictionary in ParkRecipes.collider_shapes(entry["body"]):
+			if shape.shape is BoxShape3D:
 				var rec: Dictionary = _AC.box_record(shape.global_transform, (shape.shape as BoxShape3D).size, info)
 				rec["body"] = entry["body"].get_instance_id()
 				out.append(rec)
-			elif shape is CollisionShape3D and shape.shape is ConvexPolygonShape3D:
+			elif shape.shape is ConvexPolygonShape3D:
 				# A hull band (the drawn mesh's convex hull): its post-local bounding box stands in as the aim target (the
 				# old box's corners). The surface tests (contact normal, bounce rule) read the band as the recorder does, a
 				# vertical prism of its XZ hull ("surface"), so a glance off a hull face well inside the box still counts.

@@ -1274,6 +1274,31 @@ static func anchor_paths(recipe: String) -> Array:
 	return ANCHOR_VARIANTS.map(func(v: String) -> String: return GLB_DIR + recipe + "_" + v + ".glb")
 
 
+# An anchor field's post collider as a shape owner on its body, not a CollisionShape3D node: a park stage's ~15.7k
+# post shapes were 98% of its nodes, and retiring the stage at the flume entry walks every node (one process_mode
+# switch, 14-45 ms on the cloud; 5 ms without the post nodes). Read them back through the body's shape owners.
+static func _add_shape(body: CollisionObject3D, shape: Shape3D, at: Transform3D) -> void:
+	var owner_id := body.create_shape_owner(body)
+	body.shape_owner_add_shape(owner_id, shape)
+	body.shape_owner_set_transform(owner_id, at)
+
+
+# Every collider shape on root's bodies (root and every CollisionObject3D under it), node or shape owner, in owner
+# order: {"shape", "transform" and "position" in its body's space, "global_transform", "disabled", "owner", "body"}.
+static func collider_shapes(root: Node) -> Array:
+	var out: Array = []
+	var bodies: Array = [root] if root is CollisionObject3D else []
+	bodies.append_array(root.find_children("*", "CollisionObject3D", true, false))
+	for body: CollisionObject3D in bodies:
+		for owner_id in body.get_shape_owners():
+			var at := body.shape_owner_get_transform(owner_id)
+			var world := body.global_transform * at if body.is_inside_tree() else at
+			for i in body.shape_owner_get_shape_count(owner_id):
+				out.append({"shape": body.shape_owner_get_shape(owner_id, i), "transform": at, "position": at.origin,
+					"global_transform": world, "disabled": body.is_shape_owner_disabled(owner_id), "owner": owner_id, "body": body})
+	return out
+
+
 # Whether every variant GLB of an anchors kit recipe has landed.
 static func anchor_kit_ready(recipe: String) -> bool:
 	var p := anchor_paths(recipe)
@@ -1314,10 +1339,7 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 				var b: Dictionary = fit[i]
 				if i < hulls.size() and hulls[i] != null:
 					# The drawn mesh's hull in this band, in post-local space with h from the post foot; the turn is the basis.
-					var hull_part := CollisionShape3D.new()
-					hull_part.shape = hulls[i]
-					hull_part.transform = Transform3D(turn, origin)
-					body.add_child(hull_part)
+					_add_shape(body, hulls[i], Transform3D(turn, origin))
 					continue
 				var key := i * 2 + (1 if odd else 0)
 				if not fit_shapes.has(key):
@@ -1326,16 +1348,10 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 					var sz := float(b["z"][1]) - float(b["z"][0])
 					fitted.size = Vector3(sz, float(b["h"][1]) - float(b["h"][0]), sx) if odd else Vector3(sx, float(b["h"][1]) - float(b["h"][0]), sz)
 					fit_shapes[key] = fitted
-				var part := CollisionShape3D.new()
-				part.shape = fit_shapes[key]
-				part.position = origin + turn * Vector3((float(b["x"][0]) + float(b["x"][1])) * 0.5,
-					(float(b["h"][0]) + float(b["h"][1])) * 0.5, (float(b["z"][0]) + float(b["z"][1])) * 0.5)
-				body.add_child(part)
+				_add_shape(body, fit_shapes[key], Transform3D(Basis.IDENTITY, origin + turn * Vector3((float(b["x"][0]) + float(b["x"][1])) * 0.5,
+					(float(b["h"][0]) + float(b["h"][1])) * 0.5, (float(b["z"][0]) + float(b["z"][1])) * 0.5)))
 			continue
-		var shape := CollisionShape3D.new()
-		shape.shape = box
-		shape.position = inv * Vector3(p.x, base - ANCHOR_SINK_M + tall * 0.5, p.y)
-		body.add_child(shape)
+		_add_shape(body, box, Transform3D(Basis.IDENTITY, inv * Vector3(p.x, base - ANCHOR_SINK_M + tall * 0.5, p.y)))
 	var xfs := anchor_draws(row, posts, ground, node.transform, kit)
 	var multi := MultiMesh.new()
 	multi.transform_format = MultiMesh.TRANSFORM_3D

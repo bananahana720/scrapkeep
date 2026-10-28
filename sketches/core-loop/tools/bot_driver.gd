@@ -1,5 +1,6 @@
 extends RefCounted
 
+const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const TelegraphScript := preload("res://src/combat/telegraph.gd")
@@ -3822,6 +3823,13 @@ func _gate_probe(from: Vector3, heading: Vector3, length: float) -> Dictionary:
 	return hit
 
 
+# A body's own collider shapes, CollisionShape3D children and bare shape owners (anchor posts) alike.
+func _body_shapes(body: Node) -> Array:
+	if not body is CollisionObject3D:
+		return []
+	return ParkRecipes.collider_shapes(body).filter(func(rec: Dictionary) -> bool: return rec.body == body)
+
+
 # The prop's footprint on the ground plane: its parent's collision boxes when it is a small
 # device (a cache is four walls and a roof), else the body alone.
 func _prop_footprint(body: Node) -> Rect2:
@@ -3830,18 +3838,18 @@ func _prop_footprint(body: Node) -> Rect2:
 	if owner_node != null and owner_node.get_child_count() <= 12:
 		for child in owner_node.get_children():
 			if child is CollisionObject3D:
-				shapes.append_array(child.find_children("*", "CollisionShape3D", false, false))
+				shapes.append_array(_body_shapes(child))
 	if shapes.is_empty():
-		shapes = body.find_children("*", "CollisionShape3D", false, false)
+		shapes = _body_shapes(body)
 	var box := Rect2()
 	var first := true
 	for cs in shapes:
-		var bs := (cs as CollisionShape3D).shape as BoxShape3D
+		var bs := cs.shape as BoxShape3D
 		if bs == null:
 			continue
 		for sx in [-0.5, 0.5]:
 			for sz in [-0.5, 0.5]:
-				var corner: Vector3 = (cs as CollisionShape3D).global_transform * Vector3(bs.size.x * sx, 0.0, bs.size.z * sz)
+				var corner: Vector3 = cs.global_transform * Vector3(bs.size.x * sx, 0.0, bs.size.z * sz)
 				if first:
 					box = Rect2(Vector2(corner.x, corner.z), Vector2.ZERO)
 					first = false
