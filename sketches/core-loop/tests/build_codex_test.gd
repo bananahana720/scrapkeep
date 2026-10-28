@@ -208,6 +208,8 @@ func _check_gate_tier() -> void:
 	_game.events.flow_changed.emit("gates")
 	var low: Array = _offers.map(func(o): return o["rarity"])
 	_build.gates.close()
-	_report("gate tier follows cores", high.all(func(r): return r in ["rare", "relic"]) and low.all(func(r): return r in ["common"])
+	# The cobalt floor (item ladder, wave 20) lifts one gate of a 0-core pair to rare; the other stays common.
+	_report("gate tier follows cores", high.all(func(r): return r in ["rare", "relic"])
+			and low.count("common") == 1 and low.count("rare") == 1
 			and high.size() == 2 and low.size() == 2 and run.gate_tier_bonus() == 0,
 		"with 3 bonus cores the gates offered %s; after a retry to 0 cores, %s" % [high, low])

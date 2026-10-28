@@ -47,7 +47,7 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "merge") opts.merge = v.split(",");
   else if (k === "tune") opts.tune = arg.startsWith("--tune=") ? arg.slice(7) : "";  // passed to bot_run whole; the value keeps its own =
   else if (k === "tune-unruled") opts.tuneUnruled = true;  // lets bot_run apply pilot.* dials, for information only: no ruling allows them yet
-  else if (k === "tier") { opts.tierText = v ?? ""; opts.tier = Number(v); }  // the HARD ladder rung each run picks on the start card (bot_run --run-tier); stage-1 cells only
+  else if (k === "tier") { opts.tierText = v ?? ""; opts.tier = Number(v); }  // the HARD ladder rung every run plays (bot_run --run-tier)
   else if (k === "resume") opts.resume = true;
   else if (k === "allow-mixed") opts.allowMixed = true;
   else if (k === "dry-run") opts.dryRun = true;
@@ -220,8 +220,8 @@ async function runTable() {
   const builds = opts.library ? loadLibrary(opts.library) : {};
   if (opts.tier !== undefined && !(opts.tierText !== "" && Number.isInteger(opts.tier) && opts.tier >= 0 && opts.tier <= MAX_RUN_TIER)) die(`--tier must be a whole number 0 to ${MAX_RUN_TIER}`);
   let jobs = planCells({ tune: opts.tune, tuneUnruled: opts.tuneUnruled, tier: opts.tier, builds, cells: opts.cells, only: opts.only, seeds: opts.seeds, columns, persona: opts.persona, wardenPersona: opts.wardenPersona, parkPersona: opts.parkPersona });
-  // The tier is picked on stage 1's start card; a run resumed from a saved entrance keeps the entrance's tier.
-  if (opts.tier && jobs.some((j) => j.args.some((a) => a.startsWith("--from-stage=")))) die("--tier plays cells that start at stage 1 only (for example --only=w1)");
+  // The tier is picked on stage 1's start card; a cell resumed from a saved entrance takes it as its stage opens
+  // (bot_run --run-tier with --from-stage), so later cells and the Expert top build play the ladder too.
   jobs = shardJobs(jobs, opts.shard);
   const missing = jobs.filter((j) => j.missing);
   if (missing.length) {

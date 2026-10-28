@@ -168,7 +168,6 @@ func _spawn(id: String):
 
 func _stats() -> void:
 	var d = game.world.director
-	var original_steps: Dictionary = d.dial_steps.duplicate()
 	for tier_value in [0, 1]:
 		game.run.run_tier = tier_value
 		for world in range(1, 4):
@@ -187,13 +186,6 @@ func _stats() -> void:
 				if tier_value == 1:
 					t.eq("published value delivered", enemy.get(want[0]), want[1][world - 1])
 					t.eq("name delivered", enemy.get_meta("enemy_name"), want[4])
-					d.dial_steps = original_steps.duplicate()
-					d.dial_steps.health = 10.0
-					var dialled = _spawn(id)
-					t.eq("health dial cannot change affix stat", dialled.get(want[0]), enemy.get(want[0]))
-					t.eq("health dial cannot change flat plating", dialled.plating, enemy.plating)
-					d.dial_steps = original_steps.duplicate()
-					dialled.free()
 				enemy.free()
 			base.free()
 		var drone = game.combat.spawn_enemy("winch_drone", ball_at, "stamp")

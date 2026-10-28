@@ -12,7 +12,8 @@ const T := preload("res://tests/support/t.gd")
 # range), each a tools/bot_run.gd child on --table=park entering stage 2 directly (--from-stage=2,
 # --stages=2), seeds 0 to 4, the seed's own pilot. A fight is warden_broken_s less
 # warden_engaged_s (engage to break); a run that never breaks counts as the CAP. Since the Warden
-# clamp (#420, stage_locks.gd) the fight opens with the clamp's wait for two broken crews, which sets
+# clamp (#420, stage_locks.gd) the fight can open with the clamp's wait for its crews (one on the flume
+# since 28 Oct, usually the won yard, so mostly no wait), which sets
 # its floor for every arm alike (DECISIONS, 24 Oct, ruling w), so the grown band reads the fight after
 # the clamp opens (warden_broken_s less gate_open_s, or less engage when the clamp opened first).
 # Bands: grown post-clamp median 15 to 35 s, small median at least grown's, the camper never breaks it;
@@ -65,9 +66,16 @@ const WALL_S := 1100.0
 # 61.5, 70.4, 58.7, 23.0] median 58.7, grown [54.1, 44.2, 90.4, 40.3, 22.7] median 44.2, grown after
 # the clamp [17.3, 13.6, 15.4, 22.1, 16.9] median 16.9, inside the 15-35 band. Every small and grown
 # run breaks the Warden and campers never break.
-const EXPECT_SMALL_S := 58.7
-const EXPECT_GROWN_S := 44.2
-const EXPECT_GROWN_OPEN_S := 16.9
+# 2026-10-28 (pacing lane, stage/alpha-w20 04879485, ruling ai on #524): re-pinned after the flume's lock row
+# moved its time into the forecourt yard (seven waves, 3.5 s apart, max 70 s) and the won yard became
+# enough for the clamp (one pack), so the clamp is open by the engage on every run here. #524's four-pack clamp had held
+# the Warden 48 s after the engage (small 93.2 s, grown post-clamp 14.6 s, red). One run of this test:
+# small [25.03, 31.14, 32.15, 26.45, 11.95] median 26.5, grown [19.09, 20.08, 23.1, 16.93, 8.02] median
+# 19.1, grown after the clamp the same (median 19.1, inside 15-35), every small and grown run breaks the
+# Warden, campers never break. The fight is now the Warden's own, not the clamp's wait.
+const EXPECT_SMALL_S := 26.5
+const EXPECT_GROWN_S := 19.1
+const EXPECT_GROWN_OPEN_S := 19.1
 const TOLERANCE := 0.10
 
 

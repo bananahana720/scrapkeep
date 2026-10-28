@@ -3822,6 +3822,19 @@ func _gate_probe(from: Vector3, heading: Vector3, length: float) -> Dictionary:
 	return hit
 
 
+# A body's own collider shapes, CollisionShape3D children and bare shape owners (anchor posts) alike.
+func _body_shapes(body: Node) -> Array:
+	var out: Array = []
+	var body_3d := body as CollisionObject3D
+	if body_3d == null:
+		return out
+	for owner_id in body_3d.get_shape_owners():
+		var at := body_3d.global_transform * body_3d.shape_owner_get_transform(owner_id)
+		for i in body_3d.shape_owner_get_shape_count(owner_id):
+			out.append({"shape": body_3d.shape_owner_get_shape(owner_id, i), "global_transform": at})
+	return out
+
+
 # The prop's footprint on the ground plane: its parent's collision boxes when it is a small
 # device (a cache is four walls and a roof), else the body alone.
 func _prop_footprint(body: Node) -> Rect2:
@@ -3830,18 +3843,18 @@ func _prop_footprint(body: Node) -> Rect2:
 	if owner_node != null and owner_node.get_child_count() <= 12:
 		for child in owner_node.get_children():
 			if child is CollisionObject3D:
-				shapes.append_array(child.find_children("*", "CollisionShape3D", false, false))
+				shapes.append_array(_body_shapes(child))
 	if shapes.is_empty():
-		shapes = body.find_children("*", "CollisionShape3D", false, false)
+		shapes = _body_shapes(body)
 	var box := Rect2()
 	var first := true
 	for cs in shapes:
-		var bs := (cs as CollisionShape3D).shape as BoxShape3D
+		var bs := cs.shape as BoxShape3D
 		if bs == null:
 			continue
 		for sx in [-0.5, 0.5]:
 			for sz in [-0.5, 0.5]:
-				var corner: Vector3 = (cs as CollisionShape3D).global_transform * Vector3(bs.size.x * sx, 0.0, bs.size.z * sz)
+				var corner: Vector3 = cs.global_transform * Vector3(bs.size.x * sx, 0.0, bs.size.z * sz)
 				if first:
 					box = Rect2(Vector2(corner.x, corner.z), Vector2.ZERO)
 					first = false

@@ -67,6 +67,9 @@ test("a fight carries the comps report: largest hit share and first-45 s damage"
 test("a park run wins by reaching the Warden", () => {
   assert.equal(gradeRun("world", { outcome: "reached", game_seconds: 90 }).result, "win");
   assert.equal(gradeRun("world", { outcome: "died" }).result, "loss");
+  // run_ended(false) after a death the run cannot survive reads "lost" (bot_driver.gd): a loss, not a stall.
+  assert.equal(gradeRun("warden", { outcome: "lost", stage_reached: 1, stages: [{ stage: 1 }] }).result, "loss");
+  assert.equal(gradeRun("world", { outcome: "lost" }).result, "loss");
   assert.equal(gradeRun("world", { outcome: "stalled" }).result, "timeout");
 });
 

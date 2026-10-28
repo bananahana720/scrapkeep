@@ -165,16 +165,16 @@ const CATALOGUE := {
 	"gatling_heart": {"touches": "fire", "name": "Gatling Heart", "verb": "Spin up a gatling stream", "text": "+5 punch, +50% fire rate",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["spiral", "speed"], "punch": 5.0,
 		"mods": {"weapon_rate": 1.5}},
-	"horizon_optic": {"name": "Horizon Optic", "verb": "Snipe to the horizon", "text": "+12 punch, +50% range",
+	"horizon_optic": {"touches": "fire", "name": "Horizon Optic", "verb": "Snipe to the horizon", "text": "+12 punch, +50% range",
 		"rarity": "rare", "tier": 3, "family": "weapon", "tags": ["anchor", "kinetic"], "punch": 12.0,
 		"mods": {"weapon_range": 1.5, "weapon_damage": 1.15}},
-	"rime_rounds": {"name": "Rime Rounds", "verb": "Shots freeze what they hit", "text": "+6 punch; shots freeze water",
+	"rime_rounds": {"touches": "fire", "name": "Rime Rounds", "verb": "Shots freeze what they hit", "text": "+6 punch; shots freeze water",
 		"element": "frost", "rarity": "rare", "tier": 3, "family": "weapon", "tags": ["frost", "kinetic"], "punch": 6.0,
 		"elements": {"shot": "frost"}},
-	"galvanic_rounds": {"name": "Galvanic Rounds", "verb": "Shots carry a live arc", "text": "+6 punch; shots electrify water",
+	"galvanic_rounds": {"touches": "fire", "name": "Galvanic Rounds", "verb": "Shots carry a live arc", "text": "+6 punch; shots electrify water",
 		"element": "arc", "rarity": "rare", "tier": 3, "family": "weapon", "tags": ["arc", "chain"], "punch": 6.0,
 		"elements": {"shot": "arc"}},
-	"ram_plow": {"name": "Ram Plow", "verb": "Plough through the line", "text": "+18 punch, +15 max health",
+	"ram_plow": {"touches": "roll", "name": "Ram Plow", "verb": "Plough through the line", "text": "+18 punch, +15 max health",
 		"icon": "damage", "rarity": "rare", "tier": 3, "family": "stat", "tags": ["kinetic", "mass"], "punch": 18.0,
 		"max_hp_bonus": 15.0},
 	"spare_cell": {"name": "Spare Cell", "verb": "Stock one more special", "pitch": "One cell extra", "touches": "special",
@@ -263,6 +263,8 @@ static var answer_nudge_on := true
 # The other gate stays a free choice.
 const PATTERN_PARTS := ["spiral_wave", "cross_split", "chain_arc"]
 const PATTERN_GUARANTEE_STAGE := 2
+# The rung a Warden's gate pair and the shop's first shelf slot never fall below: rare (cobalt).
+const RUNG_FLOOR := 1
 
 # v2 W4 loot: how often an offer slot is a freshly generated recipe (item_gen.gd)
 # instead of an authored row. The rest of the pool is the catalogue above plus the
@@ -601,7 +603,7 @@ static func def_at(part_id: String, level: int) -> Resource:
 
 static func def(part_id: String) -> Resource:
 	var tier := active_tier()
-	var key := "1:" + part_id if tier == 1 and RunTier.ENHANCED.has(part_id) else part_id
+	var key := "1:" + part_id if tier != RunTier.BASE and RunTier.ENHANCED.has(part_id) else part_id
 	if not _defs.has(key):
 		var r := row(part_id, tier)
 		if r.is_empty():
@@ -769,6 +771,38 @@ static func ingredient_of(part_id: String, held: Array) -> String:
 
 # Gate tiers by overcharge: 0 bonus cores offer common, 1 common or rare, 2 or more
 # rare or relic.
+# The cobalt rung's Warden floor (item ladder, wave 20): a gate pair always holds a rare or
+# better. When the roll brought none, its first pick that is not a pattern part (stage 2's
+# guarantee) becomes a rare drawn the same way; cores still lift the other. A pair short of
+# count (the pool ran dry) gains the rare instead, and a pair of patterns keeps its first.
+# Callers outside the Warden's gates (tests that read common shares, the tools) never pass
+# through it.
+static func floor_gate(rng: RandomNumberGenerator, picks: Array, class_id: String, held: Array,
+		offered: Dictionary = {}, count := 2) -> Array:
+	if picks.is_empty() or picks.any(func(key): return rung_of(key) >= RUNG_FLOOR):
+		return picks
+	var cobalt: Array = roll(rng, ["rare"], class_id, held, 1, picks, offered)
+	if cobalt.is_empty():
+		return picks
+	var out := picks.duplicate()
+	var slot := 0
+	while slot < out.size() and out[slot] in PATTERN_PARTS:
+		slot += 1
+	if slot < out.size():
+		out[slot] = cobalt[0]
+	elif out.size() < count:
+		out.append(cobalt[0])
+	else:
+		out[-1] = cobalt[0]
+	return out
+
+
+# A part's rung on the ladder: 0 common, 1 rare, 2 relic, 3 evolved (ItemGen.RARITIES order).
+static func rung_of(part_id: String) -> int:
+	var d: Resource = def(part_id)
+	return maxi(0, ItemGen.RARITIES.find(ItemGen.resolve_rarity(String(d.rarity)))) if d != null else 0
+
+
 static func gate_rarities(bonus_cores: int) -> Array:
 	if bonus_cores >= 2:
 		return ["rare", "relic"]
