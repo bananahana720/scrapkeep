@@ -47,7 +47,7 @@ export const MECHANICS = [
     name: "Break the Warden at the beacon",
     needed: "required",
     need: "warden_engaged",
-    teach: ["objective:find_warden", "objective:break_guard", "objective:break_warden"],
+    teach: ["objective:find_warden", "objective:break_clamp_crews", "objective:break_guard", "objective:break_warden"],
   },
   {
     id: "slam",
