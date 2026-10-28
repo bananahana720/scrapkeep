@@ -143,6 +143,9 @@ var event_core_grants := 0
 # True once enter_stage has run in this run. A pick opens only after flow's enter_stage(1),
 # because enter_stage zeroes bonus_cores and would wipe a Bonus Core taken before it.
 var _stage_entered := false
+# The rung is chosen before stage 1's Warden fight: flow closes the choice when that Warden engages, so a
+# win never counts for a rung the dam was played below. A stage entry or a retry reopens it, since the stage replays its Warden.
+var _tier_closed := false
 # One-time grant ids already settled (RS4); the profile keeps the same set and Progress
 # unions the two. Optional in the entrance doc.
 var settled: Array[String] = []
@@ -406,12 +409,20 @@ func selected_run_tier() -> int:
 # check_unlock false is the bots' --run-tier (tools/bot_run.gd): the tier without earning first_win,
 # which would also open the secrets.
 func select_run_tier(value: int, profile, check_unlock := true) -> bool:
-	if value < RunTier.BASE or value > RunTier.TOP or not _start_pick_open() or not _stage_entered:
+	if value < RunTier.BASE or value > RunTier.TOP or not run_tier_open():
 		return false
 	if value != RunTier.BASE and check_unlock and not RunTier.unlocked(profile, value):
 		return false
 	_keep_run_tier(value)
 	return true
+
+
+func run_tier_open() -> bool:
+	return _start_pick_open() and _stage_entered and not _tier_closed
+
+
+func close_run_tier() -> void:
+	_tier_closed = true
 
 
 # The HARD ladder lab (bot_run --run-tier with --from-stage): the stage a resumed run opens on takes the tier,
@@ -784,6 +795,7 @@ func enter_stage(index: int) -> void:
 	bonus_cores = 0
 	event_core_grants = 0
 	_stage_entered = true
+	_tier_closed = false
 
 
 # The stage-start checkpoint: everything a retry puts back, including where and how
@@ -861,6 +873,7 @@ func snapshot_value(key: String):
 
 func restore() -> void:
 	escape_window_left = 0.0
+	_tier_closed = false
 	pocket_draw_cache = (_snapshot.get("pocket_draw_cache", pocket_draw_cache) as Dictionary).duplicate(true)
 	trade_memory = (_snapshot.get("trade_memory", preload("res://src/world/trade_pockets.gd").memory()) as Dictionary).duplicate(true)
 	stage = _snapshot["stage"]
