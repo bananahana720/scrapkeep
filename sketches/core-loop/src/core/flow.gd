@@ -1296,7 +1296,7 @@ func _proc_split_start() -> void:
 			if kid is ProcMark:
 				continue
 			var mark := ProcMark.new()
-			mark.label = "%s/%s" % [parent.name, kid.name]
+			mark.label = "%s/%s%s" % [parent.name, kid.name, "(%s)" % kid.get_script().resource_path.get_file() if kid.get_script() != null and String(kid.name).begins_with("@") else ""]
 			mark.marks = marks
 			parent.add_child(mark)
 			parent.move_child(mark, kid.get_index())
