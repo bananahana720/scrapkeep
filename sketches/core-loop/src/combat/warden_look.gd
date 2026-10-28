@@ -104,10 +104,15 @@ func build(owner_warden, half_height: float) -> void:
 	body_material.metallic = 0.5
 	body_material.roughness = 0.5
 	plate_material = warden._plate_material(Enemy.rim_frame_mask())
+	warden._sp("look_mats")
 	_build_collar()
+	warden._sp("collar")
 	_build_jaws()
+	warden._sp("jaws")
 	_build_core()
+	warden._sp("core")
 	_build_badge()
+	warden._sp("badge")
 
 
 # True when this Warden fights on the posture rule (the plate carries its health).

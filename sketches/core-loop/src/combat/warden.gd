@@ -178,7 +178,9 @@ var _bitten := -1
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float, spec_ref := {}) -> void:
+	_sp_reset()
 	_setup_common(target_ref, terrain_ref, root_ref, live_ref, spec_ref)
+	_sp("common")
 	kind = "warden"
 	stage = spec.get("stage", 1)
 	reach = spec.get("reach", DEFAULT_REACH)
@@ -189,9 +191,12 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	hardpoints = hardpoints_for(spec)
 	shrug_delay = float(spec.get("shrug_delay", SHRUG_DELAYS.get(mounting, 0.0)))
 	mount_driver = _driver_or_null(spec.get("mount_driver"))
+	_sp("rows")
 	set_harpoon_anchor(anchor_from(spec))
+	_sp("anchor")
 	if mount_driver == null and harpoon_anchor and not spec.has("mount_driver"):
 		mount_driver = _kind_driver()
+	_sp("driver")
 	var numbers: Dictionary = spec.get("posture", {})
 	if variant == "meltdown" and not numbers.has("stagger_seconds"):
 		numbers = numbers.duplicate()
@@ -213,7 +218,10 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, _threat: float
 	else:
 		global_position = Vector3(global_position.x, terrain.height(global_position.x, global_position.z) + HALF_HEIGHT, global_position.z)
 	home = global_position
+	_sp("rest")
 	_build_body()
+	if OS.get_environment("SETUP_PROBE") == "1":
+		print("SETUP_PROBE stage %d warden: %s" % [stage, ", ".join(_sp_parts)])
 
 
 func state_name() -> String:
@@ -815,14 +823,22 @@ func _build_body() -> void:
 	cylinder.height = HALF_HEIGHT * 2.0
 	shape.shape = cylinder
 	add_child(shape)
+	_sp("shape")
 	# Everything seen is in warden_look.gd and collides with nothing; this node keeps the
 	# collider above and every number the fight uses.
 	_look = WardenLook.new()
 	add_child(_look)
 	_look.build(self, HALF_HEIGHT)
+	_sp("look")
 	_kit = WardenKit.new()
 	add_child(_kit)
 	_kit.build(self, family)
+	_sp("kit")
+	if OS.get_environment("KEEP_LOOK") == "1":
+		for n in find_children("*", "MeshInstance3D", true, false):
+			if (n as MeshInstance3D).material_override != null:
+				_kept_looks.append((n as MeshInstance3D).material_override)
+		_sp("keep %d" % _kept_looks.size())
 	_base_color = Palette.CHARCOAL
 	_material = _look.body_material
 
@@ -1025,3 +1041,20 @@ func set_tint(_state: String) -> void:
 
 func integrity() -> float:
 	return clampf(hp / max_hp, 0.0, 1.0) if max_hp > 0.0 else 0.0
+
+
+# PROBE (never stacks): SETUP_PROBE=1 times setup's parts; KEEP_LOOK=1 holds every look and kit material for the run.
+static var _kept_looks: Array = []
+var _sp_parts := PackedStringArray()
+var _sp_at := 0
+
+
+func _sp_reset() -> void:
+	_sp_parts = PackedStringArray()
+	_sp_at = Time.get_ticks_usec()
+
+
+func _sp(what: String) -> void:
+	var now := Time.get_ticks_usec()
+	_sp_parts.append("%s %.1f" % [what, (now - _sp_at) / 1000.0])
+	_sp_at = now
