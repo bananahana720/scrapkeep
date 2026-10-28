@@ -13,6 +13,11 @@ const Palette := preload("res://src/core/palette.gd")
 #   stake      the ball comes within STAKE_REACH of a relay's stake post
 #   companion  SPIL-9's halo gauge fills (combat.companion_assist_full)
 #   active     the F slot first racks an active (actives are off unless the tuning turns them on)
+#   dunk       an air slam first stores a dunk charge (player.dunk.stored_count rises)
+# Radio and active (WAIT_FOR_PICK) wait while stage 1's start-pick card is up or the launch take
+# that reveals it still plays (both a player's only): the drop already carries the card, so neither
+# is met, and one already waiting leaves the queue, until the pick is taken (w22 first-timer red
+# team watch 5). Their verbs stay met, so they queue again on the next calm frame.
 # The HUD shows one toast at a time and a newer one replaces it, so a met tip joins `pending`
 # and goes up only when the toast slot is empty and no other tip is up: one tip per toast
 # lifetime. A tip met now goes ahead of the cast tip a slot only promises (has_cast_slot).
@@ -35,7 +40,9 @@ const TIPS := {
 	"stake": "Relay stake: hold E at the mast to raise the fight and the parts.",
 	"companion": "SPIL-9 is full: your next ram calls it in.",
 	"active": "F fires your active.",
+	"dunk": "Dunk: an air slam stores its hit; reel into a hooked body to cash it.",
 }
+const WAIT_FOR_PICK := ["radio", "active"]
 const STAKE_REACH := 30.0
 const SEEN_PREFIX := "tip_"
 # Seconds a tip's toast must stay on screen before it counts as told (the fade in is 0.12 s).
@@ -52,6 +59,7 @@ var _later := {}
 var _shown_for := 0.0
 var _told := false
 var _jams := 0
+var _dunks := 0
 var _wired := false
 
 
@@ -80,14 +88,23 @@ func _physics_process(delta: float) -> void:
 	if abilities.jams > _jams:
 		meet("jam")
 	_jams = abilities.jams
-	if not seen("radio"):
+	var dunk = player.get("dunk")
+	if dunk != null:
+		if dunk.stored_count > _dunks:
+			meet("dunk")
+		_dunks = dunk.stored_count
+	var picking := start_card_up(game)
+	if picking:
+		for id in WAIT_FOR_PICK:
+			pending.erase(id)
+	if not seen("radio") and not picking:
 		var deck = game.get("radio_deck")
 		if deck != null and deck.dial != null and deck.dial.is_visible_in_tree():
 			meet("radio")
 	if not seen("stake") and stake_near(player.ball_position()):
 		meet("stake")
 	var combat = game.get("combat")
-	if combat != null and not seen("active") and combat.get("actives") != null and combat.actives.enabled() \
+	if combat != null and not picking and not seen("active") and combat.get("actives") != null and combat.actives.enabled() \
 			and combat.actives.active_id != "":
 		meet("active")
 	if abilities.casting != AbilityState.UNSTARTED:
@@ -106,6 +123,12 @@ func _physics_process(delta: float) -> void:
 # unseals on the break) or while flow is in Brindle's arena (BOSS until the boss falls).
 static func fight_live(flow) -> bool:
 	return (flow.engaged() and flow.sealed) or flow.state_name() == "boss"
+
+
+static func start_card_up(game_ref) -> bool:
+	var card = game_ref.flow.get("start_card")
+	var take = game_ref.get("launch_take")
+	return (card != null and card.showing()) or (take != null and take.busy())
 
 
 # A pilot whose bar holds a slot with a cast time hears of it from the drop, before the first
