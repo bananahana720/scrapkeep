@@ -512,7 +512,7 @@ func _persistence() -> void:
 			var invalid := doc.duplicate(true)
 			invalid[field] = bad
 			t.eq("reject %s %s" % [field, str(bad)], RunState.validate_entrance_doc(invalid), "invalid " + field)
-	for bad_tier in [-1, 2, -1.0, 2.0]:
+	for bad_tier in [-1, RunTier.TOP + 1, -1.0, float(RunTier.TOP + 1)]:
 		var invalid := doc.duplicate(true)
 		invalid.run_tier = bad_tier
 		t.eq("reject tier domain %s" % str(bad_tier), RunState.validate_entrance_doc(invalid), "invalid run_tier")
