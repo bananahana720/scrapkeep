@@ -224,11 +224,6 @@ var _scenes := {}
 var _meshes := {}
 var _players := {}
 var _wardens := {}
-# kind -> {"body", "materials", "unpainted": [[MeshInstance3D, surface]]}: a Warden body instanced and painted off the tree
-# during a launch flight, taken whole by the next dress of its kind. Painting a reactor body is 12-15 ms on the 4080
-# (0.9-2 ms on the cloud), every dress; built ahead it leaves the stage entry frame (flume entry, scrapkeep#512).
-var _spares := {}
-var _spare_wait := -1
 var _warden_fragments: Array[MeshInstance3D] = []
 var _mast := {}
 var _tucked: Array[MeshInstance3D] = []
@@ -253,8 +248,6 @@ func setup(ctx_ref) -> void:
 	_connect_shell_events()
 	_prewarm_strokes_in_time()
 	_dress_bay.call_deferred()
-	if ctx != null and ctx.events != null and ctx.events.has_signal("launched"):
-		ctx.events.launched.connect(_on_launched)
 	if ctx != null and ctx.player != null:
 		attach_player(ctx.player)
 	if ctx != null and ctx.get("build") != null and ctx.build.has_signal("shell_air_changed"):
@@ -281,9 +274,6 @@ func _exit_tree() -> void:
 	for rec in _wardens.values():
 		_restore_warden(rec)
 	_wardens.clear()
-	for spare in _spares.values():
-		spare.body.free()
-	_spares.clear()
 	_restore_mast()
 	if get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.disconnect(_on_node_added)
@@ -388,6 +378,12 @@ void fragment() {
 		mat.emission = color
 		mat.emission_energy_multiplier = spec["emit"]
 	_materials[key] = mat
+	# A Warden body paints its own copies of these slots, and only the copies ever draw. The renderer frees a material
+	# shader with its last user, so the stage swap that freed the dam Warden's copies took the shader too, and the flume
+	# Warden's first copy built it again on its first surface: 12-15 ms of the flume entry frame on the 4080 (scrapkeep#512).
+	# The shared slot holds the shader for the run: built once here, at the first Warden material asked for.
+	if slot.begins_with("ancient_light") or slot == "ancient_enamel":
+		mat.get_rid()
 	return mat
 
 
@@ -567,8 +563,6 @@ func _fit(rec: Dictionary) -> void:
 func _process(delta: float) -> void:
 	if _prewarm_wait >= 0:
 		_step_prewarm()
-	if _spare_wait >= 0:
-		_step_spares()
 	_reaction_clock += delta
 	for key in _players.keys():
 		var rec: Dictionary = _players[key]
@@ -1046,8 +1040,6 @@ const HEFT_FLING_SECONDS := Accretion.FLING_SECONDS
 # A node named Replace_<name> (the importer turns "Replace.<name>" into this) hides <name>.
 const REPLACE_PREFIXES := ["Replace_", "Replace."]
 const READY_EMIT := 1.6
-const SPARE_WAIT_FRAMES := 6
-const SPARE_BUDGET_USEC := 3000
 const DECOR_SPOT := Vector3(-12.6, 1.2, 1.8)
 
 # Asset id -> path for variants and add-ons; a key equal to a pilot id overrides that pilot's
@@ -2247,8 +2239,7 @@ func _body_scene(path: String) -> Node3D:
 func _dress_warden_body(warden) -> void:
 	var kind: String = warden.family
 	var row: Dictionary = WARDEN_BODIES[kind]
-	var spare := _take_spare(kind)
-	var body: Node3D = spare.body if not spare.is_empty() else _body_scene(row.body)
+	var body := _body_scene(row.body)
 	var weak := body.find_child(row.point, true, false) as Node3D if body != null else null
 	var player := body.find_child("AnimationPlayer", true, false) as AnimationPlayer if body != null else null
 	if body == null or weak == null or player == null:
@@ -2257,7 +2248,7 @@ func _dress_warden_body(warden) -> void:
 		return
 	body.name = "HeroWarden"
 	body.position.y = -warden.HALF_HEIGHT
-	for kit_path in row.kits if spare.is_empty() else []:
+	for kit_path in row.kits:
 		var kit_part := _body_scene(kit_path)
 		if kit_part == null:
 			_warn_once("warden_body_kit:" + kit_path, "hero_assets: Warden body kit '%s' unavailable" % kit_path)
@@ -2270,10 +2261,7 @@ func _dress_warden_body(warden) -> void:
 		"seen": {"charging": false, "pulses": warden.pulses, "staggered": warden.staggered(),
 			"chunks": warden.chunks_left(), "rides": _driver_count(warden, "rides")}}
 	rec.skeleton = body.find_child("Skeleton3D", true, false) as Skeleton3D
-	if spare.is_empty():
-		_paint_body(body, rec)
-	else:
-		rec.materials = spare.materials
+	_paint_body(body, rec)
 	match kind:
 		"reactor":
 			for mount in row.mount_parts:
@@ -2323,79 +2311,16 @@ func _paint_body(root: Node, rec: Dictionary) -> void:
 	for node in root.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
 		for i in mi.mesh.get_surface_count():
-			_paint_surface(mi, i, rec.materials)
-
-
-func _paint_surface(mi: MeshInstance3D, i: int, materials: Dictionary) -> void:
-	var slot := slot_of(mi.mesh, i)
-	if slot != "glass" and not SLOTS.has(slot):
-		_warn_once(slot, "hero_assets: unknown material slot '%s'" % slot)
-		return
-	if not materials.has(slot):
-		var own := slot.begins_with("ancient_light") or slot == "ancient_enamel"
-		materials[slot] = material(slot).duplicate() if own else material(slot)
-	_surface_material(mi, i, materials[slot])
-	if slot == "glass":
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-
-
-# A launch flight readies one spare body for each Warden kind this run has already loaded (a load in the flight would
-# block), from SPARE_WAIT_FRAMES after launch, SPARE_BUDGET_USEC of painting a frame. Wherever stages build on workers
-# (Terrain._worker_builds: played games, frame-capture bots, tests without SimClock.ticks): a ticking bot dresses every
-# Warden as before, so its ticks never depend on the wall clock.
-func _on_launched(_velocity: Vector3) -> void:
-	if ctx == null or ctx.terrain == null or not ctx.terrain.has_method("_worker_builds") or not ctx.terrain._worker_builds():
-		return
-	_spare_wait = SPARE_WAIT_FRAMES
-
-
-func _step_spares() -> void:
-	if _spare_wait > 0:
-		_spare_wait -= 1
-		return
-	var deadline := Time.get_ticks_usec() + SPARE_BUDGET_USEC
-	for kind: String in WARDEN_BODIES:
-		var row: Dictionary = WARDEN_BODIES[kind]
-		if not _spares.has(kind):
-			if not ([row.body] + row.kits).all(func(path: String) -> bool: return _scenes.get(path) != null):
+			var slot := slot_of(mi.mesh, i)
+			if slot != "glass" and not SLOTS.has(slot):
+				_warn_once(slot, "hero_assets: unknown material slot '%s'" % slot)
 				continue
-			var spare := _new_spare(kind)
-			if spare.is_empty():
-				continue
-			_spares[kind] = spare
-			return
-		var unpainted: Array = _spares[kind].unpainted
-		while not unpainted.is_empty():
-			var surface: Array = unpainted.pop_back()
-			_paint_surface(surface[0], surface[1], _spares[kind].materials)
-			if Time.get_ticks_usec() >= deadline:
-				return
-	_spare_wait = -1
-
-
-func _new_spare(kind: String) -> Dictionary:
-	var row: Dictionary = WARDEN_BODIES[kind]
-	var body := _body_scene(row.body)
-	if body == null or body.find_child(row.point, true, false) == null or body.find_child("AnimationPlayer", true, false) == null:
-		if body != null:
-			body.free()
-		return {}
-	for kit_path in row.kits:
-		body.add_child(_body_scene(kit_path))
-	var unpainted: Array = []
-	for node in body.find_children("*", "MeshInstance3D", true, false):
-		for i in (node as MeshInstance3D).mesh.get_surface_count():
-			unpainted.push_front([node, i])
-	return {"body": body, "materials": {}, "unpainted": unpainted}
-
-
-# The finished spare of kind, removed from the pool; {} while it is still painting or none was readied.
-func _take_spare(kind: String) -> Dictionary:
-	var spare: Dictionary = _spares.get(kind, {})
-	if spare.is_empty() or not spare.unpainted.is_empty():
-		return {}
-	_spares.erase(kind)
-	return spare
+			if not rec.materials.has(slot):
+				var own := slot.begins_with("ancient_light") or slot == "ancient_enamel"
+				rec.materials[slot] = material(slot).duplicate() if own else material(slot)
+			_surface_material(mi, i, rec.materials[slot])
+			if slot == "glass":
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 # Gives this player its own copy of one clip, so a track filter on it touches no other body.
