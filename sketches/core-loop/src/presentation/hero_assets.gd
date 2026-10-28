@@ -378,12 +378,17 @@ void fragment() {
 		mat.emission = color
 		mat.emission_energy_multiplier = spec["emit"]
 	_materials[key] = mat
-	# A Warden body paints its own copies of these slots, and only the copies ever draw. The renderer frees a material
-	# shader with its last user, so the stage swap that freed the dam Warden's copies took the shader too, and the flume
+	# A Warden body paints its own copies of these slots, and only the copies ever draw. BaseMaterial3D frees a shader
+	# with its last material, so the stage swap that freed the dam Warden's copies took the shader too, and the flume
 	# Warden's first copy built it again on its first surface: 12-15 ms of the flume entry frame on the 4080 (scrapkeep#512).
-	# The shared slot holds the shader for the run: built once here, at the first Warden material asked for.
+	# The shared slot holds the shader for the run, and the enamel's lit twin holds the hit flash's (emission on).
 	if slot.begins_with("ancient_light") or slot == "ancient_enamel":
 		mat.get_rid()
+	if slot == "ancient_enamel" and not mat.emission_enabled:
+		var lit: StandardMaterial3D = mat.duplicate()
+		lit.emission_enabled = true
+		lit.get_rid()
+		_materials[key + ":lit"] = lit
 	return mat
 
 
