@@ -17,9 +17,9 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # beat (fight_phases.gd); pickup meshes unchanged. Was bdc7f158.
 # Re-pinned 2026-10-27 (world 1 hitches): enter_arena takes the bowl the beacon built ahead
 # (Arena.take_ahead) instead of building it on the entry frame; pickup meshes unchanged. Was 3b589a48.
-# Re-pinned 2026-10-28 (ruling aw): take_spill lands an armour hit's spill in the bowl as returned
-# pickups through _spawn_pickup; pickup meshes unchanged. Was e6d147b7.
-const BASE_LOGIC_SHA := "17c84f6f30e63bdbc1e7bab4b1bb0dcb0e0424c046cc6829a20afb23602b273b"
+# Re-pinned 2026-10-28 (ruling aw): take_spill lands an armour hit's spill in the bowl as shed piles
+# through _spawn_pickup, paid back by recover_mass; pickup meshes unchanged. Was e6d147b7.
+const BASE_LOGIC_SHA := "91d471a51b33dc9f4aeacb2c4a91bbb185e32fd062879f1a621584a4358250a3"
 
 var failures := 0
 var game

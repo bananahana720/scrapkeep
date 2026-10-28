@@ -551,13 +551,20 @@ func _step_trail(ball: Vector3) -> void:
 		p["age"] += _delta
 		var node: Node3D = p["node"]
 		if ball.distance_to(p["at"]) <= Rules.PICKUP_REACH:
-			ctx.run.add_scrap(p["value"], p["at"])
-			if p["source"] != "returned":
+			# A shed pile is the ball's own armour coming back, as a stage spill cluster pays:
+			# mass only, through recover_mass, with no wallet scrap, cogs or pickup event.
+			if p["source"] == "shed":
+				ctx.run.recover_mass(p["value"])
+			else:
+				ctx.run.add_scrap(p["value"], p["at"])
+			if not p["source"] in ["returned", "shed"]:
 				ctx.run.add_cogs(p["value"])
 				ctx.events.cogs_collected.emit(p["value"], ctx.run.cogs)
 			node.queue_free()
 			continue
 		if p["age"] >= Rules.PICKUP_LIFE:
+			if p["source"] == "shed":
+				ctx.run.note_spill_expired(p["value"])
 			node.queue_free()
 			continue
 		node.rotate_y(_delta * 2.5)
@@ -575,9 +582,10 @@ func _spill_break() -> void:
 
 
 # An armour hit in the bowl spills the way a stage hit does (ruling aw): the hit's spill
-# share lands as the ball's own returned scrap in a fan ahead of it, so a stripped ball can
-# roll its mass back up instead of stalling at heft 1.0. Returned scrap pays mass only and
-# lives PICKUP_LIFE. False when no fight is on, and the caller destroys the spill as before.
+# share lands as "shed" piles in a fan ahead of the ball, so a stripped ball can roll its
+# mass back up instead of stalling at heft 1.0. A shed pile pays back like a stage spill
+# cluster (recover_mass: mass only) and, unreached after PICKUP_LIFE, counts as expired.
+# False when no fight is on, and the caller destroys the spill as before.
 func take_spill(from: Vector3, heading: Vector3, spill: int) -> bool:
 	if not active() or not is_instance_valid(arena) or spill <= 0:
 		return false
@@ -593,7 +601,7 @@ func take_spill(from: Vector3, heading: Vector3, spill: int) -> bool:
 		var out := Vector2(spot.x - centre.x, spot.z - centre.z).limit_length(Arena.FLOOR_R - 4.0)
 		spot = Vector3(centre.x + out.x, 0.0, centre.z + out.y)
 		var value := spill / n + (1 if k < spill % n else 0)
-		_spawn_pickup(Vector3(spot.x, arena.ground(spot) + 0.9, spot.z), value, "returned")
+		_spawn_pickup(Vector3(spot.x, arena.ground(spot) + 0.9, spot.z), value, "shed")
 	return true
 
 

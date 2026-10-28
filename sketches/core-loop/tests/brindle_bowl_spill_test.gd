@@ -3,8 +3,10 @@ extends SceneTree
 # Ruling aw (Brindle stall tail, park seed 16 and cannon seed 1): in the bowl an armour hit's
 # spill was destroyed, cranes only steal in phase 1, and a stripped ball at heft 1.0 could
 # never rebuild mass for a break. An armour hit in the fight now spills the way a stage hit
-# does: the 75% spill share lands as returned pickups ahead of the ball, inside the floor,
-# paying mass back and never cogs. With no fight on, the spill is destroyed as before.
+# does: the 75% spill share lands as shed piles ahead of the ball, inside the floor, paying
+# back through recover_mass like a stage cluster (mass only: no wallet scrap, no cogs, no
+# fresh scrap), and an unreached pile counts as expired, so hit loss still balances into
+# destroyed + recovered + expired. With no fight on, the spill is destroyed as before.
 # smoke: timeout=150s
 
 const Game := preload("res://src/game.gd")
@@ -43,6 +45,10 @@ func _run() -> void:
 	var destroyed_pre: float = run.metrics["destroyed"]
 	var arena_pre: float = run.metrics["arena_destroyed"]
 	var cogs_pre: int = run.cogs
+	var wallet_pre: int = run.scrap
+	var fresh_pre: float = run.metrics["fresh"]
+	var recovered_pre: float = run.metrics["recovered"]
+	var expired_pre: float = run.metrics["expired"]
 	run.damage(10.0, "brindle_charge")
 	var lost: float = mass_pre - run.mass
 	var spill := int(round(lost * RunState.SPILL_SHARE))
@@ -51,7 +57,7 @@ func _run() -> void:
 	for p in landed:
 		total += int(p["value"])
 	_t.check("an arena hit spills its share as returned piles", lost > 0.0 and landed.size() == mini(Rules.SPILL_PILES, spill)
-			and landed.all(func(p): return p["source"] == "returned") and total == spill,
+			and landed.all(func(p): return p["source"] == "shed") and total == spill,
 		"lost %.0f, spill %d, %d piles worth %d" % [lost, spill, landed.size(), total])
 	_t.eq("none of the spill share is destroyed", run.metrics["arena_destroyed"] - arena_pre, 0.0)
 	_t.check("only the unspilled quarter is destroyed", is_equal_approx(run.metrics["destroyed"] - destroyed_pre, lost - spill),
@@ -64,7 +70,16 @@ func _run() -> void:
 		boss._step_trail(p["at"])
 	_t.check("rolling the piles up pays the mass back", is_equal_approx(run.mass - mass_mid, float(total)) and boss._pickups.size() == held,
 		"mass +%.0f of %d" % [run.mass - mass_mid, total])
-	_t.eq("returned piles never mint cogs", run.cogs, cogs_pre)
+	_t.eq("shed piles never mint cogs", run.cogs, cogs_pre)
+	_t.eq("shed piles never fill the wallet", run.scrap, wallet_pre)
+	_t.eq("shed piles count as recovered, not fresh", [run.metrics["recovered"] - recovered_pre, run.metrics["fresh"] - fresh_pre], [float(total), 0.0])
+	# A pile nobody reaches in PICKUP_LIFE is gone, and counts as expired.
+	boss.take_spill(centre, Vector3.FORWARD, 5)
+	var waits := 0
+	while boss._pickups.size() > held and waits < 4000:
+		boss._step_trail(centre + Vector3(0.0, 200.0, 0.0))
+		waits += 1
+	_t.eq("an unreached shed pile expires into the ledger", run.metrics["expired"] - expired_pre, 5.0)
 	# Edge: a ball already at the wall throws its fan back inside the floor.
 	boss.take_spill(centre + Vector3(Arena.FLOOR_R - 1.0, 0.0, 0.0), Vector3.RIGHT, 6)
 	var walled: Array = boss._pickups.slice(held)
