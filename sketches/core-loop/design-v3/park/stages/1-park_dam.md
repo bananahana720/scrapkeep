@@ -415,7 +415,7 @@ The shipped park file:
  "size_m": 1600,
  "time_of_day": "dawn",
  "spawn": {"at": [-150, -690], "heading_deg": 20},
- "play_rect": [-760, -780, 1520, 1480],
+ "play_rect": [-760, -780, 1520, 1540],
  "landmark": {"id": "spillway_dam", "kind": "dam", "at": [0, 620], "size": [120, 120, 320], "yaw_deg": 180, "recipe": "landmark_dam", "budget": "hero_landmark", "sight_top": [0, 141, 640], "sight_share": 0.85, "beacon": [0, 575], "reach_m": 30, "warden": {"family": "reactor", "mounting": "dam_face", "anchor": [0, 22, 590], "path": [], "hardpoints": 3, "harpoon_anchor": true}, "bay_dock": {"at": [0, 467], "facing_deg": 0}, "gate_slots": [{"at": [-16, 528], "facing_deg": 0}, {"at": [0, 528], "facing_deg": 0}, {"at": [16, 528], "facing_deg": 0}], "light": "ancient_beam", "music": "landmark_hum", "fragment": "dam_dedication_plaque"},
  "waymarks": ["drop_in", "domes_camp", "the_eye", "landmark"],
  "routes": [

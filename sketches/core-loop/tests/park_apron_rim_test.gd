@@ -5,7 +5,8 @@ extends SceneTree
 # (b) the lip wanders: where the rim first falls below half its edge height, sampled every 20 m round the square,
 #     spreads over at least LIP_SPREAD_M (standard deviation), so the edge is no straight line;
 # (c) the apron is back near the 0 m floor at the region's edge, where Terrain3D's flat background takes over;
-# (d) a park without a rim row bakes its apron byte for byte as before (the flume's, pinned at stage acb55972).
+# (d) a park without a rim row bakes its apron byte for byte as before (the flume's, pinned at stage acb55972;
+#     re-pinned for the w20 flume canyon walls, whose rows run on past the square into the apron).
 # Evidence limit: bake data only; the look is in the stills.
 
 const T := preload("res://tests/support/t.gd")
@@ -18,7 +19,7 @@ const SIDE := 801
 const SEAM_M := 3.0
 const LIP_SPREAD_M := 12.0
 const FLOOR_M := 12.0
-const FLUME_APRON_SHA := "fc34a864773de34858a3716431eb549959aa5e1b46c170b46fdc3849f745b94a"
+const FLUME_APRON_SHA := "5a905132593cfd14f9781f4b95c252a76492968f4377f5e73d8a0a7fbd6bcead"
 
 var _t := T.new("park_apron_rim_test")
 

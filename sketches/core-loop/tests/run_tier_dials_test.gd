@@ -24,11 +24,13 @@ func _initialize() -> void:
 func _run() -> void:
 	var constants: Dictionary = load("res://src/core/run_tier.gd").get_script_constant_map()
 	var stage_constants: Dictionary = load("res://src/core/stage_defs.gd").get_script_constant_map()
-	limits = {"health": constants.get("HEALTH_DIAL_CAP", 1.6),
+	# Ruling al (HARD ladder): no run tier raises enemy health, so health has no cap and no world step.
+	limits = {"health": 1.0,
 		"damage": constants.get("DAMAGE_DIAL_CAP", 1.3),
 		"aggression": constants.get("REST_DIAL_FLOOR", 0.75)}
-	steps = stage_constants.get("RUN_TIER_DIAL_STEPS", {"health": 0.2, "damage": 0.1, "aggression": 0.1})
-	t.eq("named health cap", constants.get("HEALTH_DIAL_CAP"), 1.6)
+	steps = stage_constants.get("RUN_TIER_DIAL_STEPS", {"damage": 0.1, "aggression": 0.1})
+	t.check("no health dial cap", not constants.has("HEALTH_DIAL_CAP"))
+	t.check("no health world step", not steps.has("health"))
 	t.eq("named damage cap", constants.get("DAMAGE_DIAL_CAP"), 1.3)
 	t.eq("named rest floor", constants.get("REST_DIAL_FLOOR"), 0.75)
 	t.check("world steps in stage_defs", stage_constants.has("RUN_TIER_DIAL_STEPS"))
@@ -47,7 +49,7 @@ func _same(label: String, got, want) -> void:
 func _expected(world: int, tier_value: int, dial_steps: Dictionary) -> Array:
 	if tier_value == 0:
 		return [1.0, 1.0, 1.0]
-	return [minf(1.0 + world * float(dial_steps.health), limits.health),
+	return [1.0,
 		minf(1.0 + world * float(dial_steps.damage), limits.damage),
 		maxf(1.0 - world * float(dial_steps.aggression), limits.aggression)]
 
@@ -73,10 +75,10 @@ func _sweeps() -> void:
 	if not "dial_steps" in baseline:
 		t.check("independent dial inputs exist", false)
 		return
-	baseline.dial_steps = {"health": 0.0, "damage": 0.0, "aggression": 0.0}
+	baseline.dial_steps = {"damage": 0.0, "aggression": 0.0}
 	var base := _measure(baseline)
 	_same("all zero inputs are baseline", base, [1.0, 1.0, 1.0])
-	for index in range(3):
+	for index in [1, 2]:
 		var key: String = ["health", "damage", "aggression"][index]
 		var saturation: float = (1.0 - float(limits[key])) if key == "aggression" else (float(limits[key]) - 1.0)
 		var values := [0.0, float(steps[key]), saturation, saturation * 2.0, saturation * 10.0]
@@ -108,7 +110,7 @@ func _boundaries_and_base() -> void:
 		for index in range(3):
 			t.near("world dial stage %d quantity %d" % [row.stage, index], got[index], want[index])
 		if not previous.is_empty() and int(row.world) > previous_world:
-			t.check("world boundary health dial", got[0] > previous[0])
+			t.eq("world boundary leaves health", got[0], 1.0)
 			t.check("world boundary damage dial", got[1] > previous[1])
 			t.check("world boundary aggression dial", got[2] < previous[2])
 			print("BOUNDARY stage %d->%d multipliers %s -> %s" % [int(row.stage) - 1, row.stage, previous, got])

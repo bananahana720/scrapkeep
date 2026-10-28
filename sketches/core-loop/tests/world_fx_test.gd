@@ -292,6 +292,19 @@ func _anchors() -> void:
 	stage.add_child(head)
 	head.set_quality(false, true)
 	t.check("reduced motion silences the sheave sparks", head.emitters[1].amount_ratio == 0.0)
+	# The terrain's Reaper empties a freed stage a few nodes a frame, deepest first, so an anchor can
+	# stand for a frame with some emitters gone; WorldFx still reaches it through Anchor.live.
+	var parts: int = dam.emitters.size() + dam.impostors.size()
+	dam.emitters[0].free()
+	dam.impostors[0].free()
+	dam.set_quality(true, false)
+	dam.set_grain(7)
+	dam.set_range(50.0, true)
+	dam.fit(Vector2(4.0, 4.0))
+	dam._process(0.1)
+	t.check("a half-reaped anchor drops the parts it lost", dam.emitters.size() + dam.impostors.size() == parts - 2
+		and dam.emitters.all(func(p): return is_instance_valid(p)) and dam.impostors.all(func(q): return is_instance_valid(q)))
+	t.check("a half-reaped anchor stays live", Anchor.live.any(func(r): return r.get_ref() == dam))
 	stage.free()
 
 

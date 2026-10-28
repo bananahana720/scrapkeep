@@ -971,6 +971,9 @@ class Painter:
 
 	# (Vector3) -> float, the ground under a point; unset draws flat at floor_y.
 	var ground := Callable()
+	# (PackedVector2Array) -> PackedFloat64Array, the ground under many (x, z) points in one ask;
+	# an empty answer leaves each point to ground.
+	var ground_many := Callable()
 	var floor_y := 0.0
 	var lift := 0.2
 	# A driven painter (a combat telegraph) draws DRIVEN_LAYERS with the shared
@@ -1095,7 +1098,7 @@ class Painter:
 		return _stripes
 
 	func paint(all: Array, layers: Array) -> void:
-		var heights := {}
+		var heights := _heights_under(all, layers)
 		for layer in layers:
 			var verts := PackedVector3Array()
 			var colors := PackedColorArray()
@@ -1120,6 +1123,27 @@ class Painter:
 					_append_custom(c0, m.get("c0"), m["tris"].size())
 					_append_custom(c1, m.get("c1"), m["tris"].size())
 			_set_layer(layer, verts, colors, c0, c1, custom and layer_governed(all, layer))
+
+	# The ground under every grounded vertex paint() will draw, read in one ask of ground_many.
+	func _heights_under(all: Array, layers: Array) -> Dictionary:
+		var heights := {}
+		if not ground_many.is_valid():
+			return heights
+		var keys := PackedVector2Array()
+		for m in all:
+			if m["abs"] or not layers.has(m["layer"]):
+				continue
+			for v in m["tris"]:
+				var key := Vector2(v.x, v.z)
+				if not heights.has(key):
+					heights[key] = keys.size()
+					keys.append(key)
+		var ys: PackedFloat64Array = ground_many.call(keys) if not keys.is_empty() else PackedFloat64Array()
+		if ys.size() != keys.size():
+			return {}
+		for key in keys:
+			heights[key] = ys[heights[key]]
+		return heights
 
 	# Whether the density governor fades a driven layer: every role on it is a governed
 	# class in Density.CLASS_OF_ROLE (P6 fills). P6 is hostile ground, so only the stripe
