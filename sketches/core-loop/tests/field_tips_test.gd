@@ -8,17 +8,18 @@ const UiProfile := preload("res://src/ui/ui_profile.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 # The first-meet tips (ui/field_tips.gd, HELP-REFRESH): each of grip, jam, cast, radio, stake,
-# companion and active toasts its words once on a fresh profile when first met, one tip per toast
+# companion, active and dunk toasts its words once on a fresh profile when first met, one tip per toast
 # lifetime, and counts as told (prompt_shown("tip_<id>") and the profile's seen list) only after
 # its toast has been on screen for MIN_SHOWN; a tip taken down sooner is told again later. A fight
 # (an engaged, unbroken Warden, or the boss arena) holds tips back. The pilot is Tally, whose bar
 # carries Gather Plate's cast time, so the cast tip and the radio dial's tip are both owed on the
 # drop and must reach the screen one after the other. The help page's rule lines name six of the
-# seven (field_notes.gd FIELD_RULES; SPIL-9 is the Pictures caption). The first-timer audit
+# eight (field_notes.gd FIELD_RULES; SPIL-9 is the Pictures caption, the dunk has no rule line). The first-timer audit
 # reaches grip, radio and cast; the rest it cannot (a jammer, a relay, a seated companion and
 # actives are not on the bot's path), so this is their check. The dunk tip toasts on the first stored
 # charge. While stage 1's start-pick card is up, the radio and active tips wait (w22 first-timer
-# watch 5): checked on the rack here, and on the radio with a fresh profile at the end.
+# watch 5), and a radio tip already waiting leaves the queue: checked on the rack here, and on the
+# radio with a fresh profile at the end.
 
 # A relay's stake post stand-in: the tip reads terms(), relay and reach_point().
 class Post:
@@ -306,7 +307,9 @@ func _run() -> void:
 func _radio_waits_for_the_pick() -> void:
 	var tips = _game.hud.field_tips
 	var old_profile = tips.profile
-	tips.profile = UiProfile.new("user://field_tips_test_fresh_%d" % OS.get_process_id())
+	var fresh_dir := "user://field_tips_test_fresh_%d" % OS.get_process_id()
+	tips.profile = UiProfile.new(fresh_dir)
+	tips.pending.append("radio")
 	_game.player.dunk.clear()
 	var card = _game.flow.start_card
 	var card_was: bool = card.visible
@@ -317,7 +320,16 @@ func _radio_waits_for_the_pick() -> void:
 	_report("the start card holds the radio tip", dial_up and held.count("radio") == 0 and not tips.pending.has("radio")
 		and not tips.seen("radio"), "dial %s, frames %d, pending %s" % [dial_up, held.count("radio"), tips.pending])
 	card.visible = false
+	# The launch take that reveals the card holds the tip too (its HOLD phase, set bare).
+	var take = _game.launch_take
+	take.phase = take.HOLD
+	var under_take := _advance(1.0)
+	_report("the launch take holds the radio tip", under_take.count("radio") == 0 and not tips.pending.has("radio"),
+		"frames %d, pending %s" % [under_take.count("radio"), tips.pending])
+	take.phase = take.IDLE
 	var after := _advance(8.0)
 	_report("the radio tip follows the pick", after.count("radio") > 0 and tips.seen("radio"), "frames %d" % after.count("radio"))
 	card.visible = card_was
 	tips.profile = old_profile
+	DirAccess.remove_absolute(fresh_dir.path_join(UiProfile.FILE))
+	DirAccess.remove_absolute(fresh_dir)
