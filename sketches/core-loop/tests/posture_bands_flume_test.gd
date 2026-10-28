@@ -65,9 +65,16 @@ const WALL_S := 1100.0
 # 61.5, 70.4, 58.7, 23.0] median 58.7, grown [54.1, 44.2, 90.4, 40.3, 22.7] median 44.2, grown after
 # the clamp [17.3, 13.6, 15.4, 22.1, 16.9] median 16.9, inside the 15-35 band. Every small and grown
 # run breaks the Warden and campers never break.
-const EXPECT_SMALL_S := 58.7
-const EXPECT_GROWN_S := 44.2
-const EXPECT_GROWN_OPEN_S := 16.9
+# 2026-10-28 (pacing lane, stage/alpha-w20 04879485, ruling ai on #524): re-pinned after the flume's lock row
+# moved its time into the forecourt yard (seven waves, 3.5 s apart, max 70 s) and the yard became the
+# clamp's one pack, so the clamp is open by the engage on every run here. #524's four-pack clamp had held
+# the Warden 48 s after the engage (small 93.2 s, grown post-clamp 14.6 s, red). One run of this test:
+# small [25.03, 31.14, 32.15, 26.45, 11.95] median 26.5, grown [19.09, 20.08, 23.1, 16.93, 8.02] median
+# 19.1, grown after the clamp the same (median 19.1, inside 15-35), every small and grown run breaks the
+# Warden, campers never break. The fight is now the Warden's own, not the clamp's wait.
+const EXPECT_SMALL_S := 26.5
+const EXPECT_GROWN_S := 19.1
+const EXPECT_GROWN_OPEN_S := 19.1
 const TOLERANCE := 0.10
 
 
