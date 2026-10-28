@@ -209,6 +209,35 @@ func _run() -> void:
 	var tick := 1.0 / Engine.physics_ticks_per_second
 	_t.check("a launch that is not live ends at LAUNCH_FLIGHT", flow.state_name() != "launch" and not _take.busy()
 		and absf(ticks * tick - flow.LAUNCH_FLIGHT) <= 2.0 * tick + 0.001, "stage %d ticks %d state %s" % [_game.run.stage, ticks, flow.state_name()])
+	# A boss's victory into the next world's first stage, live: the swipe crosses as the victory ends.
+	if flow.state_name() == "boss":
+		var run_last: bool = flow.ctx.stages.is_run_last(_game.run.stage)
+		var boss_stage: int = _game.run.stage
+		_take.force_live = true
+		at_cover.clear()
+		flow._on_boss_defeated()
+		flow._victory_left = 0.5
+		for i in 120:
+			if _take.busy() or flow.state_name() != "victory":
+				_take.set_process(false)
+				break
+			await physics_frame
+		if run_last:
+			_t.check("the run's last victory plays no swipe", not _take.busy(), "%s" % flow.state_name())
+		else:
+			_t.check("a victory's swipe starts from the cover before it ends", _take.phase == LaunchTake.COVER and flow.state_name() == "victory"
+				and flow._victory_left <= flow.CUT_LEAD + 0.05, "%s %s %.2f" % [_take.phase, flow.state_name(), flow._victory_left])
+			await _physics(60)
+			_t.check("the victory waits for the cover", flow.state_name() == "victory" and at_cover.is_empty() and flow._cut_velocity != null, "%s %s" % [flow.state_name(), at_cover])
+			await _step_while(LaunchTake.COVER)
+			_t.check("the next world is entered on the fully covered frame", at_cover.size() == 1 and flow.in_stage()
+				and _game.run.stage == boss_stage + 1, "%s stage %d" % [at_cover, _game.run.stage])
+			await _step_while(LaunchTake.HOLD)
+			await _step_while(LaunchTake.REVEAL)
+			_t.check("the victory's take ends", not _take.busy(), "")
+		_take.force_live = false
+	else:
+		_t.check("the not-live launch reached a boss for the victory case", false, flow.state_name())
 	flow.show_title()
 	await _frames(2)
 

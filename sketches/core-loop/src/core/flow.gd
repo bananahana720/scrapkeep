@@ -831,8 +831,13 @@ func warn_once(key: String, message: String) -> void:
 func physics_step(delta: float) -> void:
 	if state == VICTORY:
 		_victory_left -= delta
-		if _victory_left <= 0.0:
+		# A boss's victory into the next world's first stage is a stage cut too: it ends under the swipe as a launch does.
+		if not _cut_asked and cover_cut.is_valid() and _victory_left <= CUT_LEAD and not ctx.stages.is_run_last(ctx.run.stage):
+			_cut_asked = bool(cover_cut.call(_finish_victory))
+		if _victory_left <= 0.0 and not _cut_asked:
 			_advance_from(ctx.run.stage)
+		elif _victory_left <= 0.0 and _cut_velocity == null:
+			_cut_velocity = ctx.player.state.velocity
 		return
 	if state == LAP:
 		if not is_instance_valid(lap) or lap.step(delta):
@@ -895,6 +900,14 @@ func _finish_launch() -> void:
 		_finish_stage()
 
 
+# The swipe's full cover over a victory's end: the next world's first stage is entered there.
+func _finish_victory() -> void:
+	if state == VICTORY:
+		if _cut_velocity != null:
+			ctx.player.state.velocity = _cut_velocity
+		_advance_from(ctx.run.stage)
+
+
 func _finish_stage() -> void:
 	var cleared: int = ctx.run.stage
 	ctx.events.stage_cleared.emit(cleared)
@@ -920,6 +933,8 @@ func _on_boss_defeated() -> void:
 	in_arena = false
 	_victory_left = VICTORY_SECONDS
 	_victory_hold = 0.0
+	_cut_asked = false
+	_cut_velocity = null
 	victory_veil = 0.0
 	if victory_plan.is_valid():
 		var plan: Dictionary = victory_plan.call()
