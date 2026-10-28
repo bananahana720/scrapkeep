@@ -127,6 +127,10 @@ var _base_color := Palette.RUST
 var _telegraph: Node3D
 # Extra materials a plated enemy recolours with its tint (armour plates, shells).
 var _tint_materials: Array = []
+# The plating's shaders, rim dark and rim lit, held for the session. BaseMaterial3D frees a shader with its last
+# material, so the stage swap that freed the dam's plated bodies took the plating's too, and the flume Warden's jaws
+# built it again: 12-15 ms of the flume entry frame on the 4080 (scrapkeep#512).
+static var _plate_shaders: Array[Material] = []
 # Open-crack glyphs a plated enemy shows only while your punch breaks it now.
 var _cracks: Array = []
 var _rim_clock := 0.0
@@ -722,6 +726,12 @@ func _plate_material(rim_mask: Texture2D = null) -> StandardMaterial3D:
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	_paint_plate(mat, "")
 	_tint_materials.append(mat)
+	if _plate_shaders.is_empty():
+		for lit in [false, true]:
+			var held: StandardMaterial3D = mat.duplicate()
+			held.emission_enabled = lit
+			held.get_rid()
+			_plate_shaders.append(held)
 	return mat
 
 

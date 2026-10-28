@@ -28,7 +28,7 @@ The table keeps the four ids, so no save, digest or row key changes meaning. Eac
 | --- | --- | --- | --- | --- |
 | (panels) | grey | worn bone and steel | — | ratchet tick (as now) |
 | common | green, field kit | field mint | FIELD KIT | two-note chirp (`rarity_tick`, as now) |
-| rare | **cobalt, fleet grade** | `#3d8bff` | FLEET GRADE | coil whine and click (new `rarity_bell` rung) |
+| rare | **cobalt, fleet grade** | `#3d8bff` | FLEET GRADE | `rarity_bell` (the rare reward row already rings it) |
 | relic | gold | amber with a mint heart | RELIC | four-note horn sting |
 | evolved | (unchanged) | ancient | EVOLVED | as now |
 
@@ -42,7 +42,7 @@ The table keeps the four ids, so no save, digest or row key changes meaning. Eac
 - **The pool (card A).** The guarantees below pay about 4 to 5 cobalt in a world 1 run, and a picked item leaves the pool. Four cobalt rows would run dry by Brindle.
 - **The guarantees:**
   - **Wardens (card B):** one of the two reward gates is always cobalt or better; cores still lift the other.
-  - **Brindle:** the Crest stays, and a cobalt pick of two is added after the fight.
+  - **Brindle:** the Crest stays. The cobalt pick after the fight is **parked** (coordinator, 27 Oct 18:34Z): a world 1 sitting run ends at Brindle, so a pick there pays nothing. When world 2 joins the sitting it comes back as a flow beat after the Crest, not a gate pair, so the ending keeps its shape, and only for runs that continue (seed on #512).
   - **Shop:** shelf slot 1 has a cobalt floor; the Spare Frame top hook stays.
   - **Won events (card C):** the park has no timed events, so this row has nothing to guarantee in world 1 today.
 - **World cap.** Ordinary kills never drop cobalt in world 1, per row 190: world 1 is grey and green, and world 2 adds cobalt.
@@ -65,3 +65,10 @@ The table keeps the four ids, so no save, digest or row key changes meaning. Eac
 - **Cobalt from ordinary world 1 kills.** It breaks the world-tier reading in row 190.
 - **New projectile and rope restyles** (Mass-Driver Coil and the rest). These are after-alpha content with look hooks; wave 20 reuses today's items.
 - **A per-build adaptive floor** (a better pick when the build is weak). It breaks "your build never changes the schedule", and the matchup lean already covers weak builds.
+
+## Where it landed (27 Oct)
+
+- PR 1 rung colours: #525. PR 1b stamps (FIELD KIT, FLEET GRADE, RELIC) and this note: this PR.
+- PR 2 pool: #529, Andrew's revised card A option 1 (Impact Driver promoted at tier 2; Horizon Optic, Ram Plow, Rime Rounds, Galvanic Rounds listed; 4 to 9 cobalt rows). The first option, promoting six kit commons, failed the pattern guarantee, the evolution-ingredient pools and Kest's kit share.
+- PR 3 floors: #536 (every Warden pair and shop slot 1 hold a cobalt; cards B and C on their defaults).
+- IL-01: #535. World 1 panels are ruled per run (DROP_BY_WORLD[1] stays 32% + 6%); the under-three-a-stage bar reads the later worlds' row.

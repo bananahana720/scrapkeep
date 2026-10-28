@@ -75,6 +75,8 @@ const JAW_OPEN_RATE := 9.0
 const JAW_CLOSE_RATE := 4.0
 const OPEN_CORE_GLOW := 2.6
 
+# The seam strokes' shader, held for the session as enemy.gd holds the plating's.
+static var _seam_shader: Material
 var warden
 var body_material: StandardMaterial3D
 var plate_material: StandardMaterial3D
@@ -205,6 +207,9 @@ func _build_jaws() -> void:
 func _build_seams(jaw: Node3D) -> void:
 	if _seam_material == null:
 		_seam_material = _glow(EventKinds.role_color("neutral"), POSTURE_SEAM_GLOW_MIN)
+		if _seam_shader == null:
+			_seam_shader = _seam_material.duplicate()
+			_seam_shader.get_rid()
 		for i in SEAM_STROKES.size():
 			_seams.append([])
 	for level in SEAM_STROKES.size():
