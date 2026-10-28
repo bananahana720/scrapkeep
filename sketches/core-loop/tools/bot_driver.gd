@@ -1,6 +1,5 @@
 extends RefCounted
 
-const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const TelegraphScript := preload("res://src/combat/telegraph.gd")
@@ -3825,9 +3824,15 @@ func _gate_probe(from: Vector3, heading: Vector3, length: float) -> Dictionary:
 
 # A body's own collider shapes, CollisionShape3D children and bare shape owners (anchor posts) alike.
 func _body_shapes(body: Node) -> Array:
-	if not body is CollisionObject3D:
-		return []
-	return ParkRecipes.collider_shapes(body).filter(func(rec: Dictionary) -> bool: return rec.body == body)
+	var out: Array = []
+	var body_3d := body as CollisionObject3D
+	if body_3d == null:
+		return out
+	for owner_id in body_3d.get_shape_owners():
+		var at := body_3d.global_transform * body_3d.shape_owner_get_transform(owner_id)
+		for i in body_3d.shape_owner_get_shape_count(owner_id):
+			out.append({"shape": body_3d.shape_owner_get_shape(owner_id, i), "global_transform": at})
+	return out
 
 
 # The prop's footprint on the ground plane: its parent's collision boxes when it is a small

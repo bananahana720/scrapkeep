@@ -1292,10 +1292,19 @@ static func collider_shapes(root: Node) -> Array:
 	for body: CollisionObject3D in bodies:
 		for owner_id in body.get_shape_owners():
 			var at := body.shape_owner_get_transform(owner_id)
-			var world := body.global_transform * at if body.is_inside_tree() else at
+			var world := body.global_transform * at if body.is_inside_tree() else _chain(body) * at
 			for i in body.shape_owner_get_shape_count(owner_id):
 				out.append({"shape": body.shape_owner_get_shape(owner_id, i), "transform": at, "position": at.origin,
 					"global_transform": world, "disabled": body.is_shape_owner_disabled(owner_id), "owner": owner_id, "body": body})
+	return out
+
+
+# A node's transform through its Node3D parents, for a body not yet in the tree.
+static func _chain(node: Node) -> Transform3D:
+	var out := Transform3D.IDENTITY
+	while node is Node3D:
+		out = (node as Node3D).transform * out
+		node = node.get_parent()
 	return out
 
 
