@@ -7,7 +7,8 @@ extends SceneTree
 # probe on c3abb730 (scrapkeep#512) had the flume entry's sites at 37 ms of 105.
 #
 # Plays the park table headless through the real flow with SimClock.ticks off, as a played game, and checks:
-#   - the flight builds the flume's sites, with no body in the physics space and nothing shown;
+#   - the launch's own tick plans nothing; the flight plans, then builds the flume's sites, with no body in the physics
+#     space and nothing shown;
 #   - the entry takes all of them, shows them, and Interact knows their devices and posts;
 #   - the taken sites equal a stage 2 retry's own build node for node (class, name, place) and read the same graph;
 #   - a run change in the flight (parts, health, class) leaves them untaken;
@@ -68,12 +69,16 @@ func _run() -> void:
 
 	# The launch: stage 2's sites are built in the flight and taken whole at the entry.
 	_launch()
+	_t.check("the launch's own tick plans nothing (the kick's frame)", not activities._ahead.is_empty() and activities._ahead.plan.is_empty(), "")
+	await _ticks(activities.AHEAD_PLAN_TICKS + 1)
+	print("flight_sites_test: the flight's plan took %.1f ms" % (activities.last_ahead_plan_usec / 1000.0))
 	var plan_size: int = activities._ahead.plan.sites.size() if not activities._ahead.is_empty() else 0
 	var ticks := 0
 	while activities._ahead.get("built", []).size() < plan_size and _game.flow.state_name() == "launch" and ticks < 200:
 		await physics_frame
 		ticks += 1
 	holder = activities._ahead.get("holder")
+	print("flight_sites_test: the flight's builds [%s]" % ", ".join(activities.last_ahead_steps))
 	_t.check("the flight built every planned site before the entry", plan_size > 0 and activities._ahead.built.size() == plan_size
 		and _game.flow.state_name() == "launch", "%d of %d, %s after %d ticks" % [activities._ahead.get("built", []).size(), plan_size, _game.flow.state_name(), ticks])
 	_t.check("the flight's sites are hidden and out of the physics space", is_instance_valid(holder) and not holder.visible

@@ -226,6 +226,12 @@ var last_entry_steps := PackedStringArray()
 var _ahead := {}
 # Where _build_site puts a site: this node, or the ahead holder while it builds.
 var _site_parent: Node = null
+# The flight plans this many ticks after the launch, and builds from the tick after: the launch frame stays the kick's.
+const AHEAD_PLAN_TICKS := 2
+# The main-thread time of the flight's plan, for tests.
+var last_ahead_plan_usec := 0
+# The flight's builds, each "id ms", as last_entry_steps.
+var last_ahead_steps := PackedStringArray()
 # How many sites the entry took from the ahead build, for tests.
 var last_entry_adopted := 0
 # The holders whose sites this stage adopted.
@@ -469,7 +475,7 @@ func _enter_stage(retry: bool) -> void:
 	var plan := _plan(map, entry_data)
 	stage_modifier = plan.modifier
 	var ahead := {}
-	if not retry and int(_ahead.get("stage", 0)) == ctx.run.stage:
+	if not retry and int(_ahead.get("stage", 0)) == ctx.run.stage and not _ahead.plan.is_empty():
 		ahead = _ahead
 		_ahead = {}
 	else:
@@ -604,7 +610,15 @@ func _on_launched(_velocity: Vector3) -> void:
 	# Disabled: nothing under it processes, and its bodies stay out of the space until the entry takes them.
 	holder.process_mode = Node.PROCESS_MODE_DISABLED
 	add_child(holder)
-	_ahead = {"stage": stage, "holder": holder, "plan": {}, "built": [], "grounds": [], "run": _run_key()}
+	_ahead = {"stage": stage, "holder": holder, "plan": {}, "built": [], "grounds": [], "run": _run_key(), "wait": AHEAD_PLAN_TICKS}
+
+
+# The flight's plan, AHEAD_PLAN_TICKS after the launch: the launch's own frame (the kick) carries nothing of it.
+func _plan_ahead() -> void:
+	var stage: int = _ahead.stage
+	var map = ctx.terrain.map_for(stage)
+	var started := Time.get_ticks_usec()
+	last_ahead_steps = PackedStringArray()
 	# The run's caches as the entry will find them: run_state.enter_stage refuses the offers left unanswered.
 	var memory: Dictionary = ctx.run.trade_memory
 	var draws: Dictionary = ctx.run.pocket_draw_cache
@@ -616,6 +630,7 @@ func _on_launched(_velocity: Vector3) -> void:
 	_as_stage(stage, map, func(): _ahead.plan = _plan(map, _entry_data(map)))
 	ctx.run.trade_memory = memory
 	ctx.run.pocket_draw_cache = draws
+	last_ahead_plan_usec = Time.get_ticks_usec() - started
 	if _ahead.plan.is_empty():
 		_drop_ahead()
 
@@ -631,12 +646,14 @@ func _step_ahead() -> void:
 	var entry: Dictionary = _ahead.plan.sites[i]
 	var map = ctx.terrain.map_for(int(_ahead.stage))
 	var steps := last_entry_steps
+	var started := Time.get_ticks_usec()
 	_site_parent = _ahead.holder
 	_as_stage(int(_ahead.stage), map, func():
 		_ahead.built.append(_build_entry(entry, _ahead.plan.modifier))
 		_ahead.grounds.append(ctx.terrain.height(float(entry.at.x), float(entry.at.y))))
 	_site_parent = null
 	last_entry_steps = steps
+	last_ahead_steps.append("%s %.1f" % [entry.id, (Time.get_ticks_usec() - started) / 1000.0])
 	# A build that failed appends nothing: the entry builds the rest.
 	if _ahead.built.size() <= i:
 		_ahead.plan.sites.resize(i)
@@ -653,6 +670,8 @@ func _as_stage(stage: int, map, fn: Callable) -> void:
 		ctx.terrain.overlays.append_array(map.start_overlays)
 	_mark_pools = {}
 	_graph_map = String(map.park.map)
+	# The worker's graph first: shared_graph alone would read the map's graph again on this tick (about 50 ms).
+	_settle(_graph_map)
 	_graph = shared_graph(graph_path(_graph_map))
 	fn.call()
 	ctx.run.stage = saved[0]
@@ -1160,8 +1179,13 @@ func _mesh_cylinder(parent: Node3D, radius: float, height: float, at: Vector3, m
 
 
 func _physics_process(delta: float) -> void:
-	if not _ahead.is_empty() and _ahead.built.size() < _ahead.plan.sites.size():
-		_step_ahead()
+	if not _ahead.is_empty():
+		if _ahead.wait > 0:
+			_ahead.wait -= 1
+			if _ahead.wait == 0:
+				_plan_ahead()
+		elif _ahead.built.size() < _ahead.plan.sites.size():
+			_step_ahead()
 	if ctx == null or not ctx.flow.in_stage():
 		return
 	if _pending_stage and ctx.spawner != null and not ctx.calm:
