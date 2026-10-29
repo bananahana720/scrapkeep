@@ -670,10 +670,14 @@ func enter_boss(carried: Vector3) -> void:
 		ctx.boss = boss
 	in_arena = true
 	ctx.run.snapshot(Vector3.ZERO, Vector3.ZERO, ctx.camera.yaw)
+	var _zt := Time.get_ticks_usec()
 	_set_state(BOSS)
-	ctx.events.stage_content_cleared.emit("arena")
+	print("ZA f=%d set_state %.2f" % [Engine.get_process_frames(), (Time.get_ticks_usec() - _zt) / 1000.0])
+	_zz_timed(ctx.events.stage_content_cleared, ["arena"], "ZA")
 	ctx.player.set_frozen(false)
+	_zt = Time.get_ticks_usec()
 	boss.enter_arena(carried)
+	print("ZA f=%d enter_arena %.2f" % [Engine.get_process_frames(), (Time.get_ticks_usec() - _zt) / 1000.0])
 	ctx.run.set_snapshot_entry(ctx.player.ball_position(), ctx.player.state.velocity, ctx.camera.yaw)
 
 
@@ -1102,7 +1106,7 @@ func _engage() -> void:
 	if ctx.run.run_tier_open():
 		ctx.run.close_run_tier()
 		show_start_card()
-	ctx.events.warden_engaged.emit(ctx.run.stage)
+	_zz_timed(ctx.events.warden_engaged, [ctx.run.stage], "ZE")
 
 
 func _on_player_died() -> void:
@@ -1175,3 +1179,16 @@ func _set_state(next: int) -> void:
 		_drop_lap()
 	state = next
 	ctx.events.flow_changed.emit(NAMES[next])
+
+
+# PROBE (claude/project-thread-5uuwga-probe-engage, never stacks): emits a signal by calling each
+# connection in order, printing each handler's main-thread time over 0.3 ms and the total.
+func _zz_timed(sig: Signal, args: Array, tag: String) -> void:
+	var total := Time.get_ticks_usec()
+	for c in sig.get_connections():
+		var t0 := Time.get_ticks_usec()
+		c.callable.callv(args)
+		var ms := (Time.get_ticks_usec() - t0) / 1000.0
+		if ms > 0.3:
+			print("%s f=%d %s:%s %.2f" % [tag, Engine.get_process_frames(), c.callable.get_object().get_script().resource_path.get_file() if c.callable.get_object() and c.callable.get_object().get_script() else str(c.callable.get_object()), c.callable.get_method(), ms])
+	print("%s f=%d total %.2f" % [tag, Engine.get_process_frames(), (Time.get_ticks_usec() - total) / 1000.0])
