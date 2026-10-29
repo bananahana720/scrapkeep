@@ -49,6 +49,15 @@ func _lines() -> void:
 	_t.eq("a hazard", DeathCause.line("silt_boil"), "Scrapped by a silt boil.")
 	_t.eq("a phase only follows a boss's own hit", DeathCause.line("chaser", "", "phase 2"), "Scrapped by a chaser lunge (E01).")
 	_t.eq("no source, no line", DeathCause.line(""), "")
+	_t.eq("a body whose row is not every hit reads by name", DeathCause.line("plated_brute"), "Scrapped by a plated brute.")
+	var brindle := preload("res://src/boss/boss.gd").new()
+	brindle.phase = 2
+	_t.eq("Brindle's phase off the module", DeathCause.phase_note(brindle), "phase 2")
+	brindle.phase = brindle.CHASE_PHASE
+	_t.eq("Brindle's scooter", DeathCause.phase_note(brindle), "in the chase")
+	brindle.phase = 0
+	_t.eq("no phase before the fight", DeathCause.phase_note(brindle), "")
+	brindle.free()
 
 
 func _game_path() -> void:

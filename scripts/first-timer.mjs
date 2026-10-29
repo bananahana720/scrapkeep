@@ -245,6 +245,7 @@ export function parseArgs(argv) {
     if (!match || !(match[1] in args)) throw new Error(`first-timer: unknown argument ${arg}`);
     args[match[1]] = ["seed", "stages", "jobs", "scrap-at"].includes(match[1]) ? Number(match[2]) : match[2];
   }
+  if (args["scrap-at"] !== null && !(args["scrap-at"] > 0)) throw new Error("first-timer: --scrap-at takes seconds above zero");
   args.pilots = args.pilots === "all" ? PILOTS : args.pilots.split(",");
   for (const pilot of args.pilots) if (!PILOTS.includes(pilot)) throw new Error(`first-timer: unknown pilot ${pilot}`);
   return args;

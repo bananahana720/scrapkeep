@@ -16,6 +16,9 @@ const Rogue := preload("res://src/combat/rogue.gd")
 # Sources that are a boss's own damage call and name their row outright.
 const ROW_OF := {"brindle_charge": "B03", "brindle_slag": "B02"}
 # A boss's sources start with its prefix: brindle_charge, mind_hand, waking_<family>.
+# Bodies whose one row is not every hit they land (the brute's hurl and affix strike, the relic's
+# crater burn, the cutter's sting): they read by name, not by a row that may be the wrong one.
+const MIXED := ["plated_brute", "reactor_relic", "line_cutter"]
 const BOSSES := {"brindle_": "Brindle", "mind_": "the Mind", "waking_": "the Waking"}
 # Sources with no attack row of their own: the Warden's slag and pulse share "warden", and the
 # world's hazards are not bodies.
@@ -76,6 +79,8 @@ static func _row(source: String, attack: String) -> String:
 	if ROW_OF.has(source):
 		return String(ROW_OF[source])
 	# A body with one hostile row (a chaser's lunge) names it; a body with two needs the attack.
+	if source in MIXED:
+		return ""
 	var found := ""
 	for id in EventKinds.attack_ids():
 		var row := EventKinds.attack_row(id)

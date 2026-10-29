@@ -64,8 +64,11 @@ var charge_brace := CHARGE_BRACE
 var attacks := 0
 var weak_windows := 0
 var hits_landed := 0
-# The ATTACK_ROWS id of the hit hit_player is emitting, for the RUN OVER cause line.
-var landed_attack := ""
+# The ATTACK_ROWS id of the hit hit_player is emitting, for the RUN OVER cause line: the slam
+# lands at the end of the leap, the charge while its lane runs.
+var landed_attack: String:
+	get:
+		return "E04" if state == State.CHARGE else "E03"
 
 var _clock := 0.0
 var _next_attack := 0
@@ -271,7 +274,6 @@ func _land_slam() -> void:
 		var away := _flat_to_ball()
 		away = away.normalized() if away.length() > 0.1 else Vector3.ZERO
 		hits_landed += 1
-		landed_attack = "E03"
 		hit_player.emit(SLAM_DAMAGE, away * SLAM_SHOVE + Vector3.UP * 5.0)
 	_after_slam()
 
@@ -284,7 +286,6 @@ func _check_charge(lane: Node3D) -> void:
 		return
 	_landed = true
 	hits_landed += 1
-	landed_attack = "E04"
 	hit_player.emit(CHARGE_DAMAGE, lane.dir * CHARGE_SHOVE + Vector3.UP * 3.0)
 
 
