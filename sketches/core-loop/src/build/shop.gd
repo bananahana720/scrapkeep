@@ -308,7 +308,10 @@ func charge_offers() -> Array:
 
 
 func cell_price(slot: String) -> int:
-	var cells: int = ctx.run.parts.count(Items.CELLS_FOR.get(slot, ""))
+	return _cell_cost(ctx.run.parts.count(Items.CELLS_FOR.get(slot, "")))
+
+
+func _cell_cost(cells: int) -> int:
 	return int(round(Fabricators.COG_PRICES["cell_base"] * pow(Fabricators.COG_PRICES["cell_growth"], cells) * _price_scale()))
 
 
@@ -330,14 +333,20 @@ func buy_charge(slot: String) -> Dictionary:
 
 # ---- Sell-back ----
 
-# Half what the part would cost now, or -1 when it cannot be sold here.
+# Half what the part would cost now, or -1 when it cannot be sold here. A charge cell is quoted
+# off the cell price it was bought at, not the part curve: that curve rises with parts held while
+# the cell price does not, so from seven parts a bought cell sold back for more than it cost
+# (greedy red team, w24).
 func sell_quote(part_id: String) -> int:
 	if not part_id in ctx.run.parts:
 		return -1
 	if not _can_remove(part_id):
 		return -1
 	var held: int = ctx.run.parts.size() - 1
-	return int(floor(Fabricators.price(part_id, held) * _price_scale() * Fabricators.COG_PRICES["sell_share"]))
+	var now: float = Fabricators.price(part_id, held) * _price_scale()
+	if part_id in Items.CELLS_FOR.values():
+		now = _cell_cost(ctx.run.parts.count(part_id) - 1)
+	return int(floor(now * Fabricators.COG_PRICES["sell_share"]))
 
 
 # Every held part with its quote, for the UI: {part_id, name, quote, icon}.
