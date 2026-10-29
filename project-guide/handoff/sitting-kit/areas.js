@@ -366,6 +366,7 @@ window.SITTING = {
         "Play a run that does everything: activities, secrets, rogues, rib caches. Note your time.",
         "Fight a pack with many attackers and judge whether it is fair.",
         "Hold the yard through every wave of its lock crew.",
+        "Judge the flume's length by feel: does it feel short next to the dam, or right?",
         "Spend your one retry after a death.",
         "After a win, play a rung of the HARD ladder.",
       ],
@@ -374,6 +375,7 @@ window.SITTING = {
         "Whole world 1 run",
         "Any dam or flume pack",
         "Each park's beacon circle",
+        "Stage 2, the flume, drop to exit",
         "Whole run",
         "Start card, then the run",
       ],
@@ -392,7 +394,7 @@ window.SITTING = {
         { text: "HIVE-GRIND bar fill: option A, the queued card default.", src: "veto list, 18 Oct" },
       ],
       watch: [
-        "Your world 1 times against the bots: the skipper median is 434 bot-s (flume 154 s, under its 180 s band) and the completionist 1249 bot-s (wave 20 read). Your minutes over the bot median is the person-to-bot ratio that settles the 15 to 20 bot-min target (ruling ag).",
+        "Your world 1 times against the bots: the skipper median is 434 bot-s (flume 154 s, under its 180 s band, recorded as a miss by ruling ax) and the completionist 1249 bot-s (wave 20 read). Your minutes over the bot median is the person-to-bot ratio that settles the 15 to 20 bot-min target (ruling ag).",
       ],
     },
     {
