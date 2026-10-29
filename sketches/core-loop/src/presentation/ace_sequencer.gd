@@ -80,6 +80,15 @@ var clips := {}
 var sections := {}
 var streams := {}
 var stems: Array = []
+# The streams of the last packages read, by resolved manifest path, so a band going back to a
+# package it just left reads none of its Oggs again: when the Warden engages, the dam's landmark
+# tune ends and the stage pack comes back, and its 24 load_from_file calls were 13 ms of the 4080's
+# engage tick (#512 comment 6507862519). A stream is shared, not played: each voice instantiates
+# its own playback. audio.gd also builds a band on a worker, hence the lock.
+const KEPT_PACKAGES := 3
+static var _kept := {}
+static var _kept_order: Array[String] = []
+static var _kept_lock := Mutex.new()
 # The first file the package lacks, or "" when every file loaded.
 var missing := ""
 var rate_scale := 1.0
@@ -168,25 +177,41 @@ func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 	stems = manifest["stems"]
 	level = db_to_linear(float(manifest.get("level_db", 0.0)))
 	breath = String(manifest.get("breath_default", "hard"))
+	_kept_lock.lock()
+	var kept: Dictionary = _kept.get(path, {})
+	_kept_lock.unlock()
 	for id in clips:
 		var clip: Dictionary = clips[id]
 		for stem in stems:
 			var file := MusicRows.stem_file(path, String(clip["files"][stem]))
-			if not FileAccess.file_exists(file):
-				missing = file
-				_report()
-				return
-			var stream := AudioStreamOggVorbis.load_from_file(file)
+			var stream: AudioStreamOggVorbis = kept.get(file)
 			if stream == null:
-				missing = file + " (not Ogg Vorbis)"
-				_report()
-				return
-			stream.loop = bool(clip["loop"])
-			stream.loop_offset = float(clip["loop_offset"]) / RATE
+				if not FileAccess.file_exists(file):
+					missing = file
+					_report()
+					return
+				stream = AudioStreamOggVorbis.load_from_file(file)
+				if stream == null:
+					missing = file + " (not Ogg Vorbis)"
+					_report()
+					return
+				stream.loop = bool(clip["loop"])
+				stream.loop_offset = float(clip["loop_offset"]) / RATE
 			streams[file] = stream
 			clip["paths"] = clip.get("paths", {})
 			clip["paths"][stem] = file
+	_keep(path, streams)
 	_report()
+
+
+static func _keep(path: String, read: Dictionary) -> void:
+	_kept_lock.lock()
+	_kept[path] = read
+	_kept_order.erase(path)
+	_kept_order.append(path)
+	while _kept_order.size() > KEPT_PACKAGES:
+		_kept.erase(_kept_order.pop_front())
+	_kept_lock.unlock()
 
 
 # --ace-check: one line saying whether the band found its stems (the export proof reads it).
