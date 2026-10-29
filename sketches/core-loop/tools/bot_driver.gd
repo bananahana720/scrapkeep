@@ -331,6 +331,11 @@ const RAMP_PAST := 18.0
 const RAMP_JUMP := 26.0
 const RAMP_WINDOW := 0.5
 const PICKUP_CHASE := 30.0
+# Armour shed in the bowl (ruling aw) lands ahead of the ball after every hit. A skipper takes
+# the piles near its line and leaves the rest: chasing every fresh pile kept a light ball
+# circling the Furnace taking hits (park seed 0 from mass 0, 94 s to 196 s), and taking none
+# left a stripped ball unable to rebuild for a break (seed 16 stalled again).
+const SHED_CHASE := 8.0
 const CAP_ABOVE := 1.2
 const CAP_REACH := 2.6
 # The explorer's standing activities (slice table): game seconds each may hold the bot, counted
@@ -3608,6 +3613,8 @@ func _nearest_pickup(boss, ball: Vector3) -> Vector3:
 	for p in boss.pickups_left():
 		var at: Vector3 = p["at"]
 		var d := _flat(ball, at)
+		if String(p.get("source", "")) == "shed" and d > SHED_CHASE:
+			continue
 		if d < best_d:
 			best_d = d
 			best = at

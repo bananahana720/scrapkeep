@@ -618,7 +618,7 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 
 
 func pickups_left() -> Array:
-	return _pickups.map(func(p): return {"at": p["at"], "value": p["value"]})
+	return _pickups.map(func(p): return {"at": p["at"], "value": p["value"], "source": p["source"]})
 
 
 # --- Phase 2: the furnace --------------------------------------------------------------
