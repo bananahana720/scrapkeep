@@ -119,6 +119,7 @@ func _production() -> void:
 	game.ctx.profile = Profile.new("user://hard_ladder_test/unused.json")
 	game.ctx.profile.load_profile()
 	game.ctx.profile.can_save = false
+	_locked(game)
 	game.ctx.profile.earn("first_win", 1.0)
 	game.flow._begin_run(ClassDef.all()[0])
 	t.check("a player cannot pick rung 2 yet", not game.flow.choose_run_tier(2) and game.run.selected_run_tier() == 0)
@@ -135,6 +136,30 @@ func _production() -> void:
 	paused = false
 	game.free()
 	ChallengeDials.reset()
+
+
+# A fresh profile has no rung to pick: the card names how to open one and nothing of HARD's threat, pay or tiers
+# (w22 first-timer red team watch 6), before and after stage 1's Warden closes the choice.
+func _locked(game) -> void:
+	var was: bool = game.bot_driven
+	game.bot_driven = false
+	game.flow._begin_run(ClassDef.all()[0])
+	game.flow.show_start_card()
+	var card = game.flow.start_card
+	for closed in [false, true]:
+		var label := "locked card%s" % (" after the Warden" if closed else "")
+		var labels := _labels(card)
+		t.check(label + " shows", card.showing() and card.is_processing_input())
+		t.eq(label + " names only the unlock", labels, [card.UNLOCK_WORDS])
+		t.check(label + " has no tier buttons", card.tier_button(0) == null and card.tier_button(1) == null and card.rung_button == null)
+		t.check(label + " keeps the reroll", card.reroll_button != null)
+		t.check(label + " reports the same words", card.UNLOCK_WORDS in card.drawn_words()
+			and not Array(card.drawn_words()).any(func(w): return String(w).begins_with("Threat") or String(w).begins_with("Pay")),
+			"words %s" % [card.drawn_words()])
+		if not closed:
+			game.run._tier_closed = true
+			game.flow.show_start_card()
+	game.bot_driven = was
 
 
 # Beating rung N opens N+1 (run_tier.gd BEST_STAT); the start card offers the base tier and one rung, and

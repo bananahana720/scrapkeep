@@ -23,6 +23,14 @@ test("a lesson within the grace after the need still passes", () => {
   assert.equal(judge(mechanic("warden"), p).verdict, "ok");
 });
 
+test("the clamp plate teaches the Warden: it holds the plate from engage until the clamp opens", () => {
+  const p = probe(
+    { "objective:break_clamp_crews": { tick: 4362, stage: 1 }, "objective:break_guard": { tick: 6186, stage: 1 } },
+    { warden_engaged: { tick: 4362, stage: 1 } },
+  );
+  assert.equal(judge(mechanic("warden"), p).verdict, "ok");
+});
+
 test("a lesson after the grace fails a required mechanic", () => {
   const p = probe(
     { "objective:roll_gate": { tick: 200 + GRACE_TICKS + 1, stage: 1 } },

@@ -303,6 +303,12 @@ func held() -> bool:
 	return _held
 
 
+# True while menu_held is the start card's alone: its tier choice wants the cursor, no workshop
+# screen is open and nothing holds the tree. The pause menu opens over that (w23 cautious red team).
+func card_holds_only() -> bool:
+	return _start_pointer_held and not _held and not get_tree().paused
+
+
 func _apply_hold() -> void:
 	var held_now: bool = pick.is_open() or counter.is_open()
 	var pause: bool = pick.is_open()
@@ -317,6 +323,9 @@ func _apply_hold() -> void:
 		return
 	if game.keyboard != null:
 		game.keyboard.enabled = game.flow.in_play()
+	if _start_card_wants_pointer():
+		sync_start_card_pointer()
+		return
 	game._capture_mouse(game.flow.in_play())
 
 
@@ -459,7 +468,10 @@ func _update_talk(shown: bool) -> void:
 # ---- Keys and the pad ----
 
 func _input(event: InputEvent) -> void:
-	if _start_card_showing():
+	# The start card's keys (1-3, V) win while it shows, over the tree pick too, but the counter
+	# alone keeps its own keys: its Leave shows Esc (w23 cautious red team: the counter could not
+	# be left before the pick).
+	if _start_card_showing() and (pick.is_open() or not counter.is_open()):
 		return
 	if not armed:
 		return
