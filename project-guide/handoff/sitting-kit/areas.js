@@ -102,7 +102,7 @@ window.SITTING = {
       try: [
         "Collect parts through a run. Compare how your hits look and sound at the first dam pack and at Brindle.",
         "Take your start item from the start card with 1, 2 or 3.",
-        "Watch the item panels drop up the ladder: grey, mint, cobalt. Take a cobalt and read its FLEET GRADE stamp.",
+        "Watch the item panels climb the ladder: mint, then cobalt. Take a cobalt and read its FLEET GRADE stamp.",
         "Seat modules on the companion and watch SPIL-9 change.",
         "Open field notes with Tab and check what you hold.",
         "Shop at Moss's counter and open rib caches. Note which parts turn up.",
@@ -354,6 +354,7 @@ window.SITTING = {
         "Moss's counter opens only if you pull up under 4 m/s, and nothing says so or what cogs buy. Scrap's weight is never put into words. Did a first visit open the counter naturally?",
         "With a rung unlocked, pause does not open while the tier choice is up, and the world keeps running.",
         "Esc on the run summary quits the game in one press. The run is saved first.",
+        "The F chip on a pad: the active is fired with D-pad down, but the bar still shows a keyboard F. Readable, or does it need a D-pad cap?",
         "Reduce flashes: with the Display toggle on, does every flash still read, and does every active's flash obey it?",
       ],
     },
@@ -394,6 +395,7 @@ window.SITTING = {
         { text: "HIVE-GRIND bar fill: option A, the queued card default.", src: "veto list, 18 Oct" },
       ],
       watch: [
+        "Dispatcher left alone: is the climb to plated brutes fair? Unanswered drops climb chaser 8 s, hooker 4.5 s, brute 3 s.",
         "Your world 1 times against the bots: the skipper median is 434 bot-s (flume 154 s, under its 180 s band, recorded as a miss by ruling ax) and the completionist 1249 bot-s (wave 20 read). Your minutes over the bot median is the person-to-bot ratio that settles the 15 to 20 bot-min target (ruling ag).",
       ],
     },
