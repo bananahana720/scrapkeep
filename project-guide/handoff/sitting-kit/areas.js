@@ -53,7 +53,7 @@ window.SITTING = {
       ],
       vetos: [],
       watch: [
-        "The dunk is taught only by the coil glow, the pips and the jackpot sound, never in words. Did you learn that an air slam stores damage for your next reel hit? Bots store 13 to 25 a run and spend 0 to 5.",
+        "The dunk tip shows on your first stored charge (\"an air slam stores its hit; reel into a hooked body to cash it\"). With it, the coil glow and the jackpot, did you start cashing dunks?",
       ],
     },
     {
@@ -92,7 +92,7 @@ window.SITTING = {
         "Brindle's arrival in motion: does the Requisition's arc over the Slag Bowl rim land as an entrance? It plays inside the 3 s no-attack intro.",
         "Brindle's rout in motion: does the scooter's slow-motion flight read as a big comic beat, not a hitch?",
         "A Brindle fight that drags past about 2 minutes: note what the scooter and the ball are doing. Phase 3 has run 95 s on one bot seed.",
-        "The clamp plate says \"Clamp shut: break the crews\" but no marker points to the crews. The clamp holds 13 to 65 s a run. Did you find them?",
+        "While the clamp is shut, a marker with the plate's glyph points at the crew nearest to lighting a pip. The clamp holds 13 to 65 s a run. Did the marker lead you to the crews?",
       ],
     },
     {
@@ -164,7 +164,7 @@ window.SITTING = {
       ],
       vetos: [],
       watch: [
-        "On a fresh profile the start card shows HARD's threat and pay for a rung you cannot pick yet. Ladder text before you know what a tier is?",
+        "On a fresh profile the start card shows only the line that says how to unlock the first rung. After your first win, does the tier choice explain itself?",
       ],
     },
     {
@@ -320,12 +320,13 @@ window.SITTING = {
       name: "Clarity",
       question: "Accept: every mechanic is taught on screen before it is needed, warnings stay readable in a crowd, and no menu button is dead.",
       try: [
-        "Start a fresh run and read every message in the first 11 s, with the start card up.",
+        "Start a fresh run and read every message in the first 11 s, with the start card up. The radio and active tips should wait for your pick.",
         "With a real mouse and the start card up, move the mouse: the camera should look before you pick.",
         "With the start card up, press Esc: pause opens and the card takes nothing under it.",
-        "With a rung unlocked, press Esc at the tier card: nothing happens, the game does not quit.",
+        "With a rung unlocked, press Esc at the tier card: pause opens over it, and the game does not quit.",
         "Leave the start pick untaken, pull up slowly to Moss, then press Esc or pad B: the counter closes.",
-        "Read the plate while the yard is locked and while the Warden's clamp is shut.",
+        "Finish a run and press Esc on the summary: you land in the camp.",
+        "Read the plate while the yard is locked, and follow the crew marker while the Warden's clamp is shut.",
         "Press every main-menu item: Play, Camp, Settings, Help, Achievements, Quit. Note any dead button.",
         "Turn on the Reduce flashes toggle and fight a pack.",
       ],
@@ -335,6 +336,7 @@ window.SITTING = {
         "Stage 1, fresh profile",
         "Stage 1, after a win",
         "Moss's counter, after the dam Warden",
+        "The run summary",
         "Each park's beacon circle",
         "Main menu",
         "Main menu, Settings, then any fight",
@@ -350,10 +352,10 @@ window.SITTING = {
       ],
       vetos: [],
       watch: [
-        "Four messages in the first 11 s on top of the start card (event, radio tip, \"F fires your active\", wall grip). Too much at once?",
+        "The radio and active tips now wait until the start pick is taken. Does the drop still feel crowded with the card up?",
         "Moss's counter opens only if you pull up under 4 m/s, and nothing says so or what cogs buy. Scrap's weight is never put into words. Did a first visit open the counter naturally?",
-        "With a rung unlocked, pause does not open while the tier choice is up, and the world keeps running.",
-        "Esc on the run summary quits the game in one press. The run is saved first.",
+        "With a rung unlocked, Esc, P or pad Start open pause over the tier choice. Check with a real mouse that closing pause leaves the cursor free on the card.",
+        "Esc on the run summary now goes to the camp, as K does. Check it with a real keyboard after a win and after a loss.",
         "The F chip on a pad: the active is fired with D-pad down, but the bar still shows a keyboard F. Readable, or does it need a D-pad cap?",
         "Reduce flashes: with the Display toggle on, does every flash still read, and does every active's flash obey it?",
       ],
