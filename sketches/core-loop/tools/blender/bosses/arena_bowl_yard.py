@@ -280,7 +280,7 @@ def crew_yard(root):
 
 # Mojulo shell recipes beside this file (crew_shells.py mints them to shells/); hands in Blender metres, matching the recipes.
 CREW_SHELLS = {"CrewFan": "crew_fan", "CrewPennant": "crew_pennant"}
-CREW_HANDS = {"CrewFan": [(.20, .54, 1.56), (.20, -.54, 1.56)], "CrewPennant": [(.30, .44, 1.18), (.44, -.26, .34)]}
+CREW_HANDS = {"CrewFan": [(.20, .54, 1.56), (.20, -.54, 1.56)], "CrewPennant": [(.30, -.44, 1.18), (.44, .26, .34)]}
 CREW_TRIS = {"Body": 1100, "Hat": 220, "Teeth": 12}
 FUR, BELLY, HAT, BAND, MITT, TAIL, NOSE = "a99a84", "c4b8a2", "a48f55", "6e5734", "8f6b4c", "7d6450", "3b302a"
 
@@ -320,8 +320,8 @@ def crew(root, name, pennant):
     for side in (-1, 1):
         part.uv(PAINT, .035, 6, 4, loc=(.355, side * .105, 1.19), color="2a2420")
     if pennant:
-        rod(part, (.3, .15, -.44), (.3, 1.85, -.44), .025, "6c6a5e")
-        tri(part, (.3, 1.85, -.44), (.3, 1.45, -.44), (-.35, 1.65, -.5), "94503c")
+        rod(part, (.3, .15, .44), (.3, 1.85, .44), .025, "6c6a5e")
+        tri(part, (.3, 1.85, .44), (.3, 1.45, .44), (-.35, 1.65, .5), "94503c")
     part.to_object(parent=root)
 
 
