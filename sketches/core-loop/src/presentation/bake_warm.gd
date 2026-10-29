@@ -79,6 +79,8 @@ static var _loading: Array[String] = []
 static var _firsts_done := false
 # The first moments' materials, held so the shaders their views compiled are never freed.
 static var _kept: Array[Material] = []
+# death_warm's glowing twins, held so their shaders stay compiled (BakeLook holds the resting ones).
+static var _glows: Array[Material] = []
 
 var ctx
 var _queue: Array = []
@@ -248,7 +250,7 @@ static func death_warm(holder: Node3D) -> int:
 		twins[twin] = true
 		var glow := twin.duplicate() as StandardMaterial3D
 		glow.emission_enabled = not glow.emission_enabled
-		_kept.append(glow)
+		_glows.append(glow)
 		for look in [twin, glow]:
 			var box := MeshInstance3D.new()
 			box.mesh = BoxMesh.new()
