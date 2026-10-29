@@ -1,0 +1,117 @@
+extends RefCounted
+
+const EventKinds := preload("res://src/core/event_kinds.gd")
+const Rogue := preload("res://src/combat/rogue.gd")
+
+# The RUN OVER line that names what scrapped you (wave 27 first-timer red team, note 2):
+# one dry line from the killing hit's damage source, with its ATTACK_ROWS id when the source
+# or the landed attack names one. Isaac's death note draws the killer, Dead Cells' death screen
+# prints "Killed by", and Hades has Hypnos name it on the way back in: one line, read once.
+#
+#   Scrapped by Brindle's scuttle charge (B03), phase 2.
+#   Scrapped by Gate Crane No. 14's leaf drop (E35).
+#   Scrapped by a chaser lunge (E01).
+#   Scrapped by a silt boil.
+
+# Sources that are a boss's own damage call and name their row outright.
+const ROW_OF := {"brindle_charge": "B03", "brindle_slag": "B02"}
+# A boss's sources start with its prefix: brindle_charge, mind_hand, waking_<family>.
+const BOSSES := {"brindle_": "Brindle", "mind_": "the Mind", "waking_": "the Waking"}
+# Sources with no attack row of their own: the Warden's slag and pulse share "warden", and the
+# world's hazards are not bodies.
+const WORDS := {
+	"warden": "the Warden",
+	"warden_counter": "the Warden's counter-pulse",
+	"silt_boil": "a silt boil",
+	"cinder_floor": "the cinder floor",
+	"pocket_veil": "a pocket veil",
+}
+
+
+# The whole line; "" when the death has no source (a test's direct emit).
+static func line(source: String, attack := "", phase_note := "") -> String:
+	if source == "":
+		return ""
+	var id := _row(source, attack)
+	var text := "Scrapped by " + words(source, id)
+	if id != "":
+		text += " (%s)" % id
+	if phase_note != "" and _boss(source) != "":
+		text += ", " + phase_note
+	return text + "."
+
+
+# What scrapped you, in words: the attack row's label under its owner's name when there is
+# a row, else the source's own words.
+static func words(source: String, id := "") -> String:
+	var who := _who(source)
+	if id != "":
+		var what := EventKinds.attack_label(id).to_lower()
+		if who == "":
+			return _article(what)
+		return "%s's %s" % [who, _without_owner(what, who)]
+	if WORDS.has(source):
+		return String(WORDS[source])
+	var said := source.replace("_", " ")
+	var boss := _boss(source)
+	if boss != "":
+		return "%s's %s" % [BOSSES[boss], said.substr(boss.length())]
+	return who if who != "" else _article(said)
+
+
+# "phase 2" for a boss on its phases, "in the chase" for Brindle's scooter; "" off a boss.
+static func phase_note(boss) -> String:
+	if boss == null or not ("phase" in boss) or int(boss.phase) <= 0:
+		return ""
+	var script = boss.get_script()
+	var consts: Dictionary = script.get_script_constant_map() if script != null else {}
+	if consts.has("CHASE_PHASE") and int(boss.phase) == int(consts["CHASE_PHASE"]):
+		return "in the chase"
+	return "phase %d" % int(boss.phase)
+
+
+static func _row(source: String, attack: String) -> String:
+	if EventKinds.has_attack(attack) and String(EventKinds.attack_row(attack).get("owner", "")) == source:
+		return attack
+	if ROW_OF.has(source):
+		return String(ROW_OF[source])
+	# A body with one hostile row (a chaser's lunge) names it; a body with two needs the attack.
+	var found := ""
+	for id in EventKinds.attack_ids():
+		var row := EventKinds.attack_row(id)
+		if String(row.get("owner", "")) == source and String(row.get("allegiance", "")) == "hostile":
+			if found != "":
+				return ""
+			found = id
+	return found
+
+
+static func _boss(source: String) -> String:
+	for prefix in BOSSES:
+		if source.begins_with(prefix):
+			return prefix
+	return ""
+
+
+static func _who(source: String) -> String:
+	var boss := _boss(source)
+	if boss != "":
+		return String(BOSSES[boss])
+	if Rogue.ROWS.has(source):
+		return String(Rogue.ROWS[source]["name"])
+	return ""
+
+
+# "gate crane leaf drop" under "Gate Crane No. 14" reads "leaf drop": the label's leading words
+# that repeat the owner's name go.
+static func _without_owner(what: String, who: String) -> String:
+	var owner := who.to_lower().trim_prefix("the ").split(" ")
+	var words := what.split(" ")
+	var skip := 0
+	while skip < words.size() - 1 and skip < owner.size() and words[skip] == owner[skip]:
+		skip += 1
+	return " ".join(words.slice(skip))
+
+
+static func _article(what: String) -> String:
+	return ("an " if what.substr(0, 1) in ["a", "e", "i", "o", "u"] else "a ") + what
