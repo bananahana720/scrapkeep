@@ -5,12 +5,12 @@ const T := preload("res://tests/support/t.gd")
 
 # The bot's pickup choice in the bowl (bot_driver.gd _nearest_pickup) after ruling aw. Armour shed
 # by a hit lands about 9 m ahead of the ball: the bot takes a shed pile within SHED_CHASE of the
-# ball, or further off only inside the cone of its travel (SHED_AHEAD), and never turns round for
-# one. Other pickups keep the full chase radius.
+# ball, or further off only inside the cone of its travel (SHED_AHEAD), so past SHED_CHASE it never
+# turns round for one. Other pickups keep the full chase radius.
 #
 # Evidence limit: a fake boss lists the piles; the choice alone is checked, not a fight. The fight
-# outcomes (park seed 16 rebuilds for a break, park seed 0 from mass 0 stops circling the Furnace)
-# come from bot sweeps recorded on the PR.
+# outcomes (park seeds 16 and 3 rebuild for a break, park seed 0 from mass 0 stops circling the
+# Furnace, bot_brindle_short_test's bare ball is fed) come from bot sweeps recorded on the PR.
 # smoke: timeout=60s
 
 
@@ -67,8 +67,15 @@ func _process(_delta: float) -> bool:
 	t.eq("a far shed pile behind or abeam is left", bot._nearest_pickup(boss, ball), Vector3.INF)
 	boss.piles.append({"at": Vector3(far + 6.0, 0.0, 2.0), "value": 5, "source": "shed"})
 	t.eq("a far shed pile ahead of the roll is taken", bot._nearest_pickup(boss, ball), Vector3(far + 6.0, 0.0, 2.0))
-	game.player.vel = Vector3(0.5, 0.0, 0.0)
-	t.eq("a ball at rest takes no far shed pile", bot._nearest_pickup(boss, ball), Vector3.INF)
+	# The cone's edge: a pile a little inside SHED_AHEAD's angle is taken, one a little outside is left.
+	var edge := acos(BotDriver.SHED_AHEAD)
+	boss.piles = [{"at": Vector3(cos(edge - 0.1), 0.0, sin(edge - 0.1)) * far, "value": 5, "source": "shed"}]
+	t.eq("a far shed pile just inside the cone is taken", bot._nearest_pickup(boss, ball), boss.piles[0]["at"])
+	boss.piles = [{"at": Vector3(cos(edge + 0.1), 0.0, sin(edge + 0.1)) * far, "value": 5, "source": "shed"}]
+	t.eq("a far shed pile just outside the cone is left", bot._nearest_pickup(boss, ball), Vector3.INF)
+	boss.piles = [{"at": Vector3(far + 6.0, 0.0, 2.0), "value": 5, "source": "shed"}]
+	game.player.vel = Vector3(BotDriver.SHED_ROLLING * 0.5, 0.0, 0.0)
+	t.eq("a ball barely rolling takes no far shed pile", bot._nearest_pickup(boss, ball), Vector3.INF)
 	game.player.vel = Vector3.ZERO
 	boss.piles = [{"at": Vector3(BotDriver.PICKUP_CHASE + 1.0, 0.0, 0.0), "value": 5}]
 	t.eq("nothing past the chase radius", bot._nearest_pickup(boss, ball), Vector3.INF)

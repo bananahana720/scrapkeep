@@ -333,12 +333,14 @@ const RAMP_WINDOW := 0.5
 const PICKUP_CHASE := 30.0
 # Armour shed in the bowl (ruling aw) lands about 9 m ahead of the ball after a hit, closer at the
 # rim. The bot takes a shed pile within SHED_CHASE, or further off only while it lies inside the
-# cone of the ball's travel (SHED_AHEAD, the cosine), so it never turns round for one. Chasing every
-# pile kept a light ball circling the Furnace taking hits (park seed 0 from mass 0, 94 s to 196 s);
-# taking none left a stripped ball unable to rebuild for a break (seed 16 stalled again), and the
-# near piles alone starved a bare ball in phase 3 (bot_brindle_short_test).
+# cone of the ball's travel (SHED_AHEAD, the cosine, about 66 degrees either side), so past
+# SHED_CHASE it never turns round for one. Chasing every pile kept a light ball circling the
+# Furnace taking hits (park seed 0 from mass 0, 94 s to 196 s); taking none left a stripped ball
+# unable to rebuild for a break (seed 16 stalled again); the near piles alone starved a bare ball
+# in phase 3 (bot_brindle_short_test); and a 45 degree cone left park seed 3 short of mass (190 s).
 const SHED_CHASE := 8.0
-const SHED_AHEAD := 0.7
+const SHED_AHEAD := 0.4
+const SHED_ROLLING := 1.0
 const CAP_ABOVE := 1.2
 const CAP_REACH := 2.6
 # The explorer's standing activities (slice table): game seconds each may hold the bot, counted
@@ -3629,7 +3631,7 @@ func _shed_ahead(ball: Vector3, at: Vector3) -> bool:
 	v.y = 0.0
 	var to := at - ball
 	to.y = 0.0
-	if v.length() < 1.0 or to.length() < 0.01:
+	if v.length() < SHED_ROLLING or to.length() < 0.01:
 		return false
 	return v.normalized().dot(to.normalized()) > SHED_AHEAD
 
