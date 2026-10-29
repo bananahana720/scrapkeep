@@ -11,6 +11,10 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 # objective plate's own (objectives.gd, through objective_id) and the colour is the
 # target's event_kinds row.
 #
+# While the Warden's clamp is shut (the plate's "Clamp shut: break the crews" row), one more
+# chevron points at the crew nearest to lighting a pip, in the fleet's hazard colour with the
+# plate's glyph; the Warden's marker keeps the Warden's glyph then.
+#
 # One more kind (SQ16): a discovered hidden-pocket door (a valve's door or a cracked wall)
 # shows an amber chevron while the ball is inside POCKET_RANGE of it with a clear ray to it.
 # PARK.md:265 sets the range at 240 m (sight_ok), never the comps note's 60 m (memo 2, row 29a).
@@ -30,6 +34,7 @@ const POCKET_EYE_M := 2.0
 const POCKET_STEP_M := 4.0
 const POCKET_DOOR_LIFT := 1.5
 const POCKET_RANGE_SLACK := 0.01
+const CLAMP_ROW := "break_clamp_crews"
 
 var game
 # The objective row the plate shows now, set by the HUD each frame.
@@ -74,6 +79,9 @@ func targets() -> Array[Dictionary]:
 				out.append({"at": flow.warden.global_position, "kind": "warden_engaged", "icon": _glyph("obj_warden")})
 			elif game.beacon != null:
 				out.append({"at": game.beacon.global_position, "kind": "beacon_charge_changed", "state": game.beacon.state_id(), "icon": _glyph("obj_beacon")})
+			var crew = _clamp_crew()
+			if crew != null:
+				out.append({"at": crew.global_position, "kind": "pack_arrived", "icon": Objectives.glyph(CLAMP_ROW)})
 			if not engaged:
 				for site in unfinished_sites():
 					out.append({"at": site.global_position, "kind": site.id, "activity": String(site.rule.get("cue", {}).get("view", site.id)), "icon": Objectives.glyph("find_activity")})
@@ -194,8 +202,17 @@ static func _opened_ids(contraptions) -> Dictionary:
 
 # The plate's glyph for the Warden and beacon markers; the activity row's own glyph belongs
 # to the activity markers, so it never stands in for the Warden's.
+# While the clamp row shows, its glyph rides the crew marker and the Warden's keeps its own.
 func _glyph(fallback: String) -> String:
-	return Objectives.glyph(objective_id) if objective_id != "" and objective_id != "find_activity" else fallback
+	return Objectives.glyph(objective_id) if objective_id not in ["", "find_activity", CLAMP_ROW] else fallback
+
+
+# While the plate shows the clamp row, the crew nearest to lighting a pip (stage_locks.gd clamp_crew).
+func _clamp_crew() -> Node3D:
+	var gate = game.flow.get("gate")
+	if objective_id != CLAMP_ROW or gate == null or not gate.has_method("clamp_crew") or game.player == null:
+		return null
+	return gate.clamp_crew(game.player.ball_position())
 
 
 # The play view markers stay inside: clear of the top, toast and bottom bands.

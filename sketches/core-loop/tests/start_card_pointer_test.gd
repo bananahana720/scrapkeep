@@ -12,7 +12,11 @@ const T := preload("res://tests/support/t.gd")
 # - fresh profile (no rung to choose): a click captures with the card up, mouse motion turns the
 #   camera, Esc opens the pause menu and the card takes nothing under it, 1 takes the pick;
 # - a rung unlocked: the card frees the cursor while the tier is open (motion does not turn the
-#   camera, a click does not recapture), and engaging stage 1's Warden gives look back.
+#   camera, a click does not recapture), Esc, P and pad Start open the pause menu over the tier
+#   choice and close it again with the cursor left free for the tier (w23 cautious red team watch 3),
+#   and engaging stage 1's Warden gives look back;
+# - the run summary: Esc goes to the camp, as K does, and never quits (w23 cautious watch 4); under
+#   the summary's input latch it does nothing.
 # Real pointer capture on a desktop is a hands-on check (alpha-status/sitting-watch-list.md).
 
 class PointerGame extends "res://src/game.gd":
@@ -49,6 +53,7 @@ func _run() -> void:
 	await _fresh()
 	await _counter()
 	await _rung()
+	await _summary()
 	game.free()
 	quit(t.verdict())
 
@@ -209,6 +214,60 @@ func _rung() -> void:
 	game.build.shop.leave()
 	ws.armed = false
 	await _frames(2)
+	var menu = game.get_node("PauseMenu")
+	for toggle in [["Esc", _key(KEY_ESCAPE)], ["P", _key(KEY_P)], ["pad Start", _pad(JOY_BUTTON_START)]]:
+		grabs = game.grabs
+		await _send(toggle[1])
+		t.check("rung: %s opens the pause menu over the tier choice" % toggle[0], menu.is_open() and card.showing() and card.wants_pointer())
+		t.check("rung: the pause menu holds the tree (%s)" % toggle[0], paused and game.pause_toggled())
+		await _send(_key(KEY_1))
+		t.check("rung: 1 under the pause menu takes nothing (%s)" % toggle[0], String(game.run.start_pick.get("taken", "")) == "" and card.showing())
+		await _send(toggle[1])
+		t.check("rung: %s closes the pause menu" % toggle[0], not menu.is_open() and not paused)
+		t.check("rung: closing the pause menu leaves the cursor free for the tier (%s)" % toggle[0],
+			not game.captured and game.get_meta("menu_held", false) and card.wants_pointer())
+		t.eq("rung: pause over the tier never grabs the cursor (%s)" % toggle[0], game.grabs, grabs)
+	t.eq("rung: pausing over the tier quits nothing", game.quits, 0)
+	# A click on a tier button with pause open: pause's root takes it, and the card's route refuses a press
+	# that gets through anyway; Next rung steps nothing under it either.
+	var tier_button: Button = card._tier_buttons.get(1)
+	t.check("rung: the card shows a Tier 1 button", tier_button != null)
+	if tier_button != null:
+		await _send(_key(KEY_P))
+		t.check("rung: P opens the pause menu for the tier click", menu.is_open())
+		var at := tier_button.get_global_rect().get_center()
+		var down := InputEventMouseButton.new()
+		down.button_index = MOUSE_BUTTON_LEFT
+		down.pressed = true
+		down.position = at
+		down.global_position = at
+		var up := down.duplicate()
+		up.pressed = false
+		await _send(down)
+		await _send(up)
+		t.eq("rung: a real click on a tier under the pause menu reaches nothing", game.run.selected_run_tier(), 0)
+		tier_button.pressed.emit()
+		await _frames(2)
+		t.eq("rung: a tier click under the pause menu changes nothing", game.run.selected_run_tier(), 0)
+		# Rung 2 open, so Next rung has somewhere to step; it is set back before the pause closes.
+		game.ctx.profile.set_stat("hard_ladder_best", 1.0)
+		var shown: int = card.shown_rung()
+		card.step_rung()
+		t.eq("rung: Next rung under the pause menu steps nothing", card.shown_rung(), shown)
+		game.ctx.profile.set_stat("hard_ladder_best", 0.0)
+		await _send(_key(KEY_P))
+		t.check("rung: pause closed again", not menu.is_open())
+	ws.armed = true
+	game.build.shop.enter()
+	await _frames(2)
+	ws.open_counter()
+	await _frames(2)
+	await _send(_key(KEY_P))
+	t.check("rung: P at Moss's counter still opens no pause menu", not menu.is_open() and ws.counter.is_open())
+	ws.close_counter()
+	game.build.shop.leave()
+	ws.armed = false
+	await _frames(2)
 	game.flow._engage()
 	await _frames(2)
 	t.check("rung: engaging stage 1's Warden closes the tier, the card stays", not game.run.run_tier_open() and card.showing() and not card.wants_pointer())
@@ -216,4 +275,24 @@ func _rung() -> void:
 	yaw = game.camera.yaw
 	await _send(_motion())
 	t.check("rung: mouse motion turns the camera again", not is_equal_approx(game.camera.yaw, yaw))
+	game.test_mode = true
+
+
+func _summary() -> void:
+	await _begin(false)
+	var quits: int = game.quits
+	game.flow._end_run(false)
+	await _frames(3)
+	t.eq("summary: a lost run ends on the summary", game.flow.state_name(), "summary")
+	game.summary_latched = true
+	await _send(_key(KEY_ESCAPE))
+	t.eq("summary: Esc under the input latch stays on the summary", game.flow.state_name(), "summary")
+	game.summary_latched = false
+	await _send(_key(KEY_ESCAPE))
+	t.eq("summary: Esc quits nothing", game.quits, quits)
+	t.check("summary: Esc lands on the title with the camp open, as K does",
+		game.flow.state_name() == "title" and game.screens.camp_open(), game.flow.state_name())
+	await _send(_key(KEY_ESCAPE))
+	t.check("summary: a second Esc leaves the camp for the title", game.flow.state_name() == "title" and not game.screens.camp_open())
+	t.eq("summary: and still quits nothing", game.quits, quits)
 	game.test_mode = true

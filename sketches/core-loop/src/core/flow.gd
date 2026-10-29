@@ -139,7 +139,7 @@ func setup(ctx_ref, beacon_ref) -> void:
 	layer.add_child(start_card)
 	start_card.pick_requested.connect(take_start_pick)
 	start_card.reroll_requested.connect(reroll_start_pick)
-	start_card.tier_requested.connect(choose_run_tier)
+	start_card.tier_requested.connect(func(value: int): if not _start_card_covered(): choose_run_tier(value))
 	start_card.covered = _start_card_covered
 	ctx.events.player_died.connect(_on_player_died)
 	ctx.run.death_saved.connect(func(_hp: float): _on_death_saved())
@@ -377,7 +377,8 @@ func show_start_card() -> void:
 
 
 # The card holds no menu while it keeps mouse look (start_pick_card.gd wants_pointer), so the pause
-# menu or the hotwire offer can open over it; while one is open it owns the keys and the clicks.
+# menu or the hotwire offer can open over it; while one is open it owns the keys and the clicks, and
+# a tier button pressed under it changes nothing (the pause menu also opens over the tier choice).
 func _start_card_covered() -> bool:
 	var game = ctx.root
 	var menu = game.get_node_or_null("PauseMenu")

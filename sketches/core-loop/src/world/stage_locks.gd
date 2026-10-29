@@ -119,12 +119,25 @@ func crew_alive() -> Array:
 
 
 # What a hand that reads the tells goes for: the yard's crew while it is shut; while the clamp is
-# shut, the crew inside reach nearest to lighting a pip (each living member it still needs costs
-# CREW_MEMBER_M of distance), as a player reads the pips and finishes a crew rather than hitting
+# shut, its crew (clamp_crew), as a player reads the pips and finishes a crew rather than hitting
 # whatever is nearest; with no crew that can still count, the nearest enemy inside reach; else null.
 func foe_for(ball: Vector3, reach := INF) -> Node3D:
 	if lock_active():
 		return _nearest(crew_alive(), ball, reach)
+	if not locked():
+		return null
+	var best := clamp_crew(ball, reach)
+	if best != null:
+		return best
+	return _nearest(get_tree().get_nodes_in_group("enemy").filter(func(enemy): return enemy != ctx.flow.warden and _alive(enemy) \
+			and String(enemy.get("kind")) not in ["warden", "vault", ""]), ball, reach)
+
+
+# The member of the crew inside reach nearest to lighting a pip while the clamp is shut (each living
+# member it still needs costs CREW_MEMBER_M of distance), or null: the bot hand's target and the
+# clamp row's edge marker (w23 cautious red team: the row said "break the crews" with nothing
+# pointing at them).
+func clamp_crew(ball: Vector3, reach := INF) -> Node3D:
 	if not locked():
 		return null
 	var best: Node3D = null
@@ -134,10 +147,7 @@ func foe_for(ball: Vector3, reach := INF) -> Node3D:
 		if foe != null and _flat(foe.global_position, ball) + CREW_MEMBER_M * (living.size() - 1) < cost:
 			cost = _flat(foe.global_position, ball) + CREW_MEMBER_M * (living.size() - 1)
 			best = foe
-	if best != null:
-		return best
-	return _nearest(get_tree().get_nodes_in_group("enemy").filter(func(enemy): return enemy != ctx.flow.warden and _alive(enemy) \
-			and String(enemy.get("kind")) not in ["warden", "vault", ""]), ball, reach)
+	return best
 
 
 # The living housed members of every director pack that can still light a pip: not counted,

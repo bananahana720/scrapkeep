@@ -303,6 +303,12 @@ func held() -> bool:
 	return _held
 
 
+# True while menu_held is the start card's alone: its tier choice wants the cursor, no workshop
+# screen is open and nothing holds the tree. The pause menu opens over that (w23 cautious red team).
+func card_holds_only() -> bool:
+	return _start_pointer_held and not _held and not get_tree().paused
+
+
 func _apply_hold() -> void:
 	var held_now: bool = pick.is_open() or counter.is_open()
 	var pause: bool = pick.is_open()

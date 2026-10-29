@@ -22,7 +22,7 @@ const Interactables := preload("res://src/world/interactables.gd")
 #   prompt:<verb>     a key prompt drew (events.prompt_shown: ui/key_glyphs.gd, ui/first_steps.gd)
 #   objective:<id>    the objective plate's row (hud.objective_reading, core/objectives.gd)
 #   prompt:tip_<id>   a first-meet field tip told (ui/field_tips.gd: grip, jam, cast, radio, stake,
-#                     companion, active), emitted as prompt_shown once its toast has been on
+#                     companion, active, dunk), emitted as prompt_shown once its toast has been on
 #                     screen MIN_SHOWN
 #   screen:dead       the SCRAPPED screen and its Retry key
 #   card:<slot>       a key on the chosen pilot's class card (ui/class_kit.gd card_keys)

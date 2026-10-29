@@ -27,7 +27,9 @@ const Palette := preload("res://src/core/palette.gd")
 #   toward the gate; its kills roll no panel and the cleared yard pays one (ruling af); the Warden already awake leaves it unfired;
 # - plate (w22 first-timer red team): while the yard holds, the objective plate says so and no edge
 #   marker points past its wall; while the clamp is shut on an awake Warden, the plate says so and its
-#   ring fills with the pips, and the open clamp hands the plate back to the guard;
+#   ring fills with the pips, an edge marker with the plate's glyph points at the crew nearest a pip
+#   (w23 cautious red team watch 5) while the Warden's keeps its own, and the open clamp hands the
+#   plate back to the guard and drops the crew marker;
 # - StageLocks.active = false (bot_run --locks=0) leaves the stage with neither.
 
 # Kills inside the physics step, after every other node: a kill that lands after the locks' tick
@@ -79,6 +81,11 @@ func _game():
 	for i in 8:
 		await physics_frame
 	return game
+
+
+# The clamp row's crew markers (edge_markers.gd), as the HUD reads them this frame.
+func _crew_markers(game) -> Array:
+	return game.hud.edge_markers.targets().filter(func(m): return m["kind"] == "pack_arrived")
 
 
 func _count(kind: String) -> int:
@@ -150,11 +157,20 @@ func _gate() -> void:
 	for i in 3:
 		await physics_frame
 	_t.eq("lone and spoiled packs count nothing", locks.cleared, 0)
+	await process_frame
+	_t.eq("no crew that can count, no crew marker", _crew_markers(game), [])
 	var first := _spawn_pack(game, ["chaser", "chaser", "lobber"], 103, at)
 	_kill(first[0])
 	_kill(first[1])
 	await physics_frame
 	_t.eq("a pack with one standing counts nothing", locks.cleared, 0)
+	await process_frame
+	var crew_marks := _crew_markers(game)
+	_t.check("the clamp row's marker points at the crew still standing", crew_marks.size() == 1 and is_instance_valid(first[2])
+		and (crew_marks[0]["at"] as Vector3).distance_to(first[2].global_position) < 0.1, "%s" % [crew_marks])
+	_t.check("the crew marker carries the plate's glyph", crew_marks.size() == 1 and crew_marks[0]["icon"] == game.hud.objective_reading()["icon"])
+	var warden_marks: Array = game.hud.edge_markers.targets().filter(func(m): return m["kind"] == "warden_engaged")
+	_t.check("the Warden's marker keeps the Warden's glyph", warden_marks.size() == 1 and warden_marks[0]["icon"] == "obj_warden", "%s" % [warden_marks])
 	_kill(first[2])
 	for i in 2:
 		await physics_frame
@@ -185,6 +201,8 @@ func _gate() -> void:
 	_t.check("the wanted packs open the clamp", not locks.locked(), "cleared %d of %d" % [locks.cleared, locks.packs_wanted()])
 	_t.eq("the release plays once", _count("warden_gate_opened"), 1)
 	_t.eq("the open clamp hands the plate back to the guard", game.hud.objective_reading()["id"], "break_guard")
+	await process_frame
+	_t.eq("the open clamp shows no crew marker", _crew_markers(game), [])
 	_t.check("the collar goes", locks._collar == null)
 	game.ctx.spawner.strike(warden, "ram", 400.0)
 	await physics_frame
