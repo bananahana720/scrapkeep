@@ -1,32 +1,17 @@
-# Lanes and sessions (22 Oct 2026, local coordinator)
+# Threads and sessions (29 Oct 2026, project coordinator)
 
-This file lists the session behind each lane. [GRAPH.md](../coord/GRAPH.md) owns what each lane works on now, who owns which files and the test gates. Lane briefs follow [LANE-BRIEF.md](../coord/LANE-BRIEF.md). The live board is issue #241. Every ruling is posted there as a `COORDINATOR:` comment, and the lane that owns it also gets a direct message.
+Coordination runs from the claude.ai project "Scrapkeep". The coordinator talks to Andrew in the project chat and starts one thread per lane or unit; Remote Control sessions on his PC run GPU work. Thread ids change as lanes open and close, so the coordinator's project memory holds the current ids; this file names the standing roles. The 22 Oct PC-coordinator lane table is in git history.
 
-**Cloud lanes are one-way.** They take a direct message but can't reply to it, and they read the board only when they page it. A ruling can reach a lane late (Gate, World and Lighting each missed one on 22 Oct by 1 to 4 hours), so restate the head SHA in every message.
-
-## Sessions (cloud lanes as listed in GRAPH.md; cap 11, ROADMAP plan 21 Oct)
-
-| Role | Where | Session |
+| Role | Where | What it does |
 | --- | --- | --- |
-| Coordinator | Claude Code on the PC | "Wave 18-21 roadmap and PR closes" |
-| Gate + staging | cloud | "Scrapkeep w17: Gate + staging lane" |
-| Systems | cloud | "Scrapkeep w17: Systems lane" |
-| World | cloud | "Scrapkeep w17: World lane, restart" |
-| Perf | cloud | "Scrapkeep w17: Perf lane" |
-| Challenge | cloud | "Scrapkeep: Challenge lane, Souls-like difficulty" |
-| Dressing | cloud | "Scrapkeep: Dressing lane, lived-in parks" |
-| Lighting | cloud | "Scrapkeep w18: Lighting lane" |
-| Systems B | Claude Code on the PC | "Scrapkeep w18: Systems B lane (PC)" |
-| GPU bench | Claude Code on the PC | "Scrapkeep w18: GPU bench (4080 …)" |
-| Render bench | Claude Code on the PC | "Scrapkeep w18: Render bench (RTX 3060)" |
-| revive-228 | Claude Code on the PC | "Scrapkeep w18: revive #228 help and motion pack" |
+| Coordinator | project chat | Talks to Andrew, starts threads, admits and merges gate-passed PRs, promotes stages, writes the register |
+| Gate | cloud thread | Cuts each `stage/alpha-w<N>`, opens the wave board, stacks green PRs, runs the full gate once per promotion. Doesn't write fixes |
+| Unit and lane threads | cloud threads | One unit or lane each; branch from the current stage, open a draft PR, post a claim and receipts on the wave board |
+| Bands | cloud thread | Difficulty band reads per promotion |
+| PC work | Remote Control session on Andrew's PC | 4080 frame timing, 3060 renders, music, export proofs. Only the coordinator's `message_thread` reaches it |
+| Sitting prep | cloud thread | The sitting sheet (/mnt/project-files/world1/sitting-sheet.html) and the gap list |
+| Blender | cloud thread | Props on the Blender kit; code-side and Blender-side work stay in separate threads |
 
-The GPU bench pins to CCD0 (`taskset -c 0-7,16-23`). The render bench pins correctness jobs to CCD1 (`nice -n 10 taskset -c 8-15,24-31`).
+**Threads are one-way for rulings.** A thread reads the board only when it pages it, so restate the head SHA in every message that carries a ruling. Threads stopped by usage limits don't resume on their own; the coordinator re-messages each with its head SHA.
 
-## Paused until wave 19 (kept, not archived)
-
-Animation, Grading, Effects, Challenge B (stages 4 to 6 and the replay ladder), Modeling and Ambient life. These are cloud lanes, reused in wave 19 by direct message.
-
-## Finished, safe to archive (cloud, from the Claude Code session list)
-
-Challenge B band shards 1 to 8, every "Challenge worker: …" row (baselines, sweeps, libraries, fast lanes), "Challenge writer: #104 grown posture reds" (#104 closed), "Challenge full gate bt5 head", "Scrapkeep Gate shard runner: wave 17 rest shard" and "Scrapkeep cloud environment setup". The coordinator can't archive cloud sessions from the PC, so Andrew does it from the sidebar.
+**Gate shards.** A full gate runs about 13 shard threads from one project post (tests in three blocks, bots in blocks of five, bands A to C, one red team persona); the recipe is in the Gate thread's memory and /mnt/project-files/gate/BOT-SHARDS.md. Before relaunching a "missing" shard, check the thread list and the board.

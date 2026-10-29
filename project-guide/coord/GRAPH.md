@@ -1,5 +1,7 @@
 # Alpha workflow graph, waves 18 to 21
 
+> **History (29 Oct).** Frozen at wave 18. Since wave 19 the live board is each wave's board issue (#583 for wave 26) plus `/mnt/project-files/gate/w<N>-stack-queue.md`, and coordination runs from the claude.ai project. Current state is in [STATE.md](../handoff/STATE.md).
+
 The one board for who owns what, which unit waits on which, and which test gates each unit must pass. Owner: the local coordinator (a Claude Code session on Andrew's PC). Lanes propose changes on the wave's Wave board issue (#241); only the coordinator edits this file. Rulings live in [DECISIONS.md](../handoff/DECISIONS.md); newest wins. Session names are in [THREADS.md](../handoff/THREADS.md).
 
 Goal: a finished-feeling Linux alpha by the end of wave 21, judged by Andrew's one full playtest of the 11 areas. Last updated 2026-10-22 (wave 18 open; `main` promoted through #326, then #328 and #339; wave 19 leads with gameplay, map and music).

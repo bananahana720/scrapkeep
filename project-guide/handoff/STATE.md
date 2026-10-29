@@ -1,32 +1,33 @@
-# Wave state: heads, holds and base reds (23 Oct 2026, project coordinator)
+# Wave state: heads, holds and base reds (29 Oct 2026, project coordinator)
 
-Heads and open PRs change by the hour, so read them live (`git ls-remote origin`, the GitHub MCP tools for open PRs; cloud threads avoid `gh api`). The live board is [GRAPH.md](../coord/GRAPH.md) plus issue #241. This file keeps what a head listing cannot show. Updated 2026-10-23 19:50Z by the library sweep thread.
+Heads and open PRs change by the hour, so read them live (`git ls-remote origin`, the GitHub MCP tools for open PRs; cloud threads avoid `gh api`). The live board is the current wave's board issue (#583 for wave 26; the Gate thread opens the wave 27 board) and `/mnt/project-files/gate/w<N>-stack-queue.md`. This file keeps what a head listing cannot show. Rewritten 2026-10-29 by the housekeeping thread; the 23 Oct wave 18 version is in git history.
 
-**Priority (Andrew, 19:31Z).** World 1 first: a 100% finished world 1 and early progression, played at a world 1 sitting (10-15 min average run, about 30 min completionist; timing card open, recommended end of wave 19). Worlds 2 and 3 finish running work only.
+**Priority (Andrew, 23 Oct 19:31Z).** World 1 first: a finished Spillway (dam, flume, Brindle, with the camp and title lead-in) and early progression, played at a world 1 sitting (10-15 min average run, about 30 min completionist, repeatable). Worlds 2 and 3 start nothing new (rulings at and register section 1).
 
-**Wave 18.** Promoted 23 Oct 22:10Z: `main` = a08d7463 (#415: stage a14c658a, which is acb55972 plus #401's stage 6 quit-crash fix). The promotion receipt on #415 lists three reds new this wave and owed to a fix lane: `ui_build_readout`, `ending_sequence` and `bot_repeat`. `stage/alpha-w18` now carries B21 (eight PRs plus #383), B22, #393, B24 and main's docs; the queue is in /mnt/project-files/gate/w18-stack-queue.md. The known swarm hive band (owed by the hive tuning PR) and `bot_skill_bar` (cloud time cap) stay known reds. The cautious persona found 0 blockers. The 4080 release dry run on stage + #367 + #390 (15d7ac9b) is PASS+NOTES: export exit 0, 3 Vulkan boss smokes, 4 win proofs, AppImage 903 MiB.
+**Now (29 Oct).** `main` = 83f02396, the wave 26 promotion (#585), is the world 1 sitting build. Its full gate (f724a6e6) was clean 13 of 13, the speedrunner red team was clear, and no placeholders are left. Andrew was told to play it at 19:25Z; post-sitting work comes from his marks on the sitting sheet (/mnt/project-files/world1/sitting-sheet.html). The Gate thread is cutting `stage/alpha-w27` from main; its red team is the first-timer persona, compared against `gate/w26-f724a6e6/`.
 
-- **Post-promotion queue, in order:** #390 (export include fix, first), #380, #252, #379, #373, #375, #362, #341, #329, #334, #377, #385, #388, sinkhole flash flood, #376, #272, #228, #384, #386 (after #372). The PR that adds the boss weak-point tests must commit their five `.uid` files before it stacks.
-- **Held:** #351 (stalls the seed 6 skipper at stage 4; bare acb55972 wins; thread "Stage 4 stall on seed 6") and #374 (needs #351 fixed or another seed).
-- **Merges:** each batch needs Andrew's typed line naming the thread, the action and each PR number (LESSONS 47).
-- **New today:** draft PRs #391 (fight phases framework and Brindle, register section 7 row) and #392 (item ladder, register section 6 row).
-- **GPUs:** both run throughput work; 4080 timing only when it would otherwise idle (pause file on the PC). The timing chain: crown, islands, Reactor, Swarm, then the C16 rows, then #386 rows.
-- **Capture label (24 Oct, #446, SKL-37):** 4080 frame-time captures before 24 Oct 17:05Z ran with the live wallpaper on the GPU (about 1.3 GB VRAM), including the d561e6eb rows; compare them with newer captures only under the "wallpaper running" label. The wallpaper pauses only for a process named exactly `godot` (`pgrep -x`), so launch captures through a `godot` link (`~/scratch/w18/gpu4080/bin/godot`), never the versioned binary, and count `mpvpaper` as a foreign process.
+**Promotions since wave 18.** w19 a4c5b963 (#511), w20 46245f69 (#555), w21 421c8244 (#562), w22 1a0516d1 (#567), w23 462ca7ef (#570), w24 65d34cdb (#580), w25 dc1da31a (#582), w26 83f02396 (#585). Every stage up to w25 is merged into main.
 
-## Base reds
+**Sitting build on the PC.** AppImage in the app menu; cold launch to menu 6.4 s with 0 errors; frame rows for w25 and w26 equal within noise (#571 comment 6507342000). Audio gate PASS. What to watch while he plays is in /mnt/project-files/alpha-status/sitting-watch-list.md.
 
-A fail needs a solo rerun before it counts, and a "base" red must also be red on the bare head or on main (LESSONS 51-52).
+## Owed non-blocking reds
 
-- `alpha_posture_bands_w23`: time limit.
-- `bot_brindle_short`: passes on 2e247fc8 at heft 1.30, exactly at the 1.30 limit (20 Oct). #231 tips it to 1.36.
-- `park_reactor_fight`: 61.2 s against 53.7 s; one-seed chaotic, flaps solo, needs a repeat.
-- `bot_six_demolitions_caster`: Kest flake, 5 in 8.
-- `posture_bands_swarm`: green after the swarm hive option 1 tune (23 Oct): 24 seeds a side, small 72.89 s, grown 33.95 s, 2.15x; first stagger 50.32 s inside its restated 40-60 s band. The camper leg is `posture_bands_swarm_camper_test`. #104 is still gated on no swarm regression against `f9f58944`.
-- Cloud-only false fails: `item_fuzz_smoke`, `park_swap`, `tree_play`, `persistence_truncation`, `juice_budget` peak shake, `line_sound` HLs-3, and since 24 Oct `park_permanent_capacity`, `park_reactor_rhythm` (180 s solo cap) and `presentation_random_guard` (about 290 s, killed at its cap), and `bot_park_trace_repeat` (child timeout, red on main c0763e81 too). `scatter_rows` hash mismatch is unresolved. `alpha_bot_sweep` and `bot_run_end` pass in the bots tier since `ba10b7c7`.
-- `skill_band`: 1 of 51 on w18 `7eff47b0` (shard 6), passes on main `c0763e81`: skipper seed 1 novice hull lost 0.0 against expert 12.0 ("novice loses at least as much hull as expert"). One-seed flip, owed non-blocking with no bisect (coordinator, 24 Oct); re-read on a 24-seed median in the bands lane.
-- `bot_skill_bar`: the cloud time cap.
-- Stage 6 teardown SIGABRT: red on the stage base too; checked against main.
-- Oggs-present vs Oggs-absent base: the packed music Oggs are gitignored, so cloud boxes have none and the game plays the synth engine, while a PC with synced Oggs plays ACE. Music tests (`park_music_suspend_game_test`, `ace_tracks_test`, the phase music tests) can pass on one and fail on the other. Compare a head and its base with the same Ogg state, and name that state in the receipt (23 Oct, #411).
+Base-same reds the promotions carried, with no bisect (ruling d). A fail needs a solo rerun before it counts, and a "base" red must also be red on the bare head or on main (LESSONS 51-52).
+
+- run_tier freed-instance flake; audio_bake_cancel; hive swarm pins; posture_bands_mind 4/8 and reactor 3/15; presentation_random_guard cap; park_reactor_repeat; tree_play; trace_*; waking stagger and ambient_life; warden_counter_pulse; stage_entry_budget; bot_relay_stake; skill_band one-seed flip; terrain_lazy_world; stage3_break; marker tests; camp_sandbox; scatter_rows; park_swap flake; music_params; telegraph_timing_pack; boss_weak_parts and crown_warden_bot caps; bot_world_arrivals cave-in; stage_locks yard-wave.
+- Cloud-only false fails: `item_fuzz_smoke`, `park_swap`, `tree_play`, `persistence_truncation`, `juice_budget` peak shake, `line_sound` HLs-3, `park_permanent_capacity`, `park_reactor_rhythm` (180 s solo cap), `presentation_random_guard` (about 290 s, killed at its cap) and `bot_park_trace_repeat` (child timeout).
+- Oggs-present vs Oggs-absent base: the packed music Oggs are gitignored, so cloud boxes play the synth engine while a PC with synced Oggs plays ACE. Music tests can pass on one and fail on the other. Compare a head and its base with the same Ogg state, and name it in the receipt (23 Oct, #411).
+
+## Parked until after the sitting
+
+- Perf: sinkhole Dispatcher 265-277 ms; EventFamilies.build 69 ms at stage 5; Dig pit beacon bursts; Jolt shape build on the main thread (13-14 ms per tile). Dig and world 2 perf is out of scope (ruling at).
+- Brindle cobalt pick (ruling ap); flume length levers (ruling ax); HARD rung 5 re-read (ruling aq).
+
+## PC capture rules
+
+- Frame-time captures run only on an idle 4080 (device 0) through headless gamescope; the 3060 takes throughput work. A capture is void if Andrew plays or another process touches the card during it. Run the stems sync first.
+- The live wallpaper pauses only for a process named exactly `godot`, so launch captures through a `godot` link and count `mpvpaper` as foreign (#446).
+- Cloud perf numbers never count, and the cloud ratio differs by kind of work (LESSONS 55-58).
 
 ## Promote-fast flow
 
