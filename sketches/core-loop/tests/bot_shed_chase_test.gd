@@ -4,11 +4,12 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The bot's pickup choice in the bowl (bot_driver.gd _nearest_pickup) after ruling aw. Armour shed
-# by a hit lands ahead of the ball: a skipper takes the shed piles near its line and leaves the
-# far ones, so it rebuilds mass (park seed 16) without circling the Furnace after every fresh
-# pile (park seed 0 from mass 0). Other pickups keep the full chase radius.
+# by a hit lands 9 to 10 m ahead of the ball: the bot takes a shed pile only within SHED_CHASE of
+# the ball, and other pickups keep the full chase radius.
 #
-# Evidence limit: a fake boss lists the piles; the choice alone is checked, not a fight.
+# Evidence limit: a fake boss lists the piles; the choice alone is checked, not a fight. The fight
+# outcomes (park seed 16 rebuilds for a break, park seed 0 from mass 0 stops circling the Furnace)
+# come from bot sweeps recorded on the PR.
 # smoke: timeout=60s
 
 
@@ -41,7 +42,13 @@ func _process(_delta: float) -> bool:
 	boss.piles = [{"at": Vector3(far, 0.0, 0.0), "value": 5, "source": "shed"}]
 	t.eq("a far shed pile is left", bot._nearest_pickup(boss, ball), Vector3.INF)
 	boss.piles.append({"at": Vector3(0.0, 0.0, near), "value": 5, "source": "shed"})
-	t.eq("a shed pile near the line is taken", bot._nearest_pickup(boss, ball), Vector3(0.0, 0.0, near))
+	t.eq("a shed pile within the radius is taken", bot._nearest_pickup(boss, ball), Vector3(0.0, 0.0, near))
+	boss.piles = [{"at": Vector3(BotDriver.SHED_CHASE, 0.0, 0.0), "value": 5, "source": "shed"}]
+	t.eq("a shed pile on the radius is taken", bot._nearest_pickup(boss, ball), Vector3(BotDriver.SHED_CHASE, 0.0, 0.0))
+	boss.piles = [{"at": Vector3(BotDriver.SHED_CHASE + 0.1, 0.0, 0.0), "value": 5, "source": "shed"}]
+	t.eq("a shed pile just past the radius is left", bot._nearest_pickup(boss, ball), Vector3.INF)
+	boss.piles = [{"at": Vector3(0.0, 0.0, near), "value": 5, "source": "shed"}, {"at": Vector3(0.0, 0.0, -near + 1.0), "value": 5, "source": "returned"}]
+	t.eq("a nearer pickup still wins over a shed pile", bot._nearest_pickup(boss, ball), Vector3(0.0, 0.0, -near + 1.0))
 	boss.piles = [{"at": Vector3(far, 0.0, 0.0), "value": 5, "source": "shed"}, {"at": Vector3(0.0, 0.0, far + 6.0), "value": 5, "source": "returned"}]
 	t.eq("other pickups keep the full chase", bot._nearest_pickup(boss, ball), Vector3(0.0, 0.0, far + 6.0))
 	boss.piles = [{"at": Vector3(BotDriver.PICKUP_CHASE + 1.0, 0.0, 0.0), "value": 5}]

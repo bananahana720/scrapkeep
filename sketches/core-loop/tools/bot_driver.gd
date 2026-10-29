@@ -331,10 +331,11 @@ const RAMP_PAST := 18.0
 const RAMP_JUMP := 26.0
 const RAMP_WINDOW := 0.5
 const PICKUP_CHASE := 30.0
-# Armour shed in the bowl (ruling aw) lands ahead of the ball after every hit. A skipper takes
-# the piles near its line and leaves the rest: chasing every fresh pile kept a light ball
-# circling the Furnace taking hits (park seed 0 from mass 0, 94 s to 196 s), and taking none
-# left a stripped ball unable to rebuild for a break (seed 16 stalled again).
+# Armour shed in the bowl (ruling aw) lands 9 to 10 m ahead of the ball after every hit. The bot
+# takes a shed pile only within 8 m, so it collects the piles it rolls on towards and never turns
+# back for one: chasing every fresh pile kept a light ball circling the Furnace taking hits (park
+# seed 0 from mass 0, 94 s to 196 s), and taking none left a stripped ball unable to rebuild for a
+# break (seed 16 stalled again).
 const SHED_CHASE := 8.0
 const CAP_ABOVE := 1.2
 const CAP_REACH := 2.6
