@@ -63,6 +63,8 @@ func _run() -> void:
 	_t.eq("none of the spill share is destroyed", run.metrics["arena_destroyed"] - arena_pre, 0.0)
 	_t.check("only the unspilled quarter is destroyed", is_equal_approx(run.metrics["destroyed"] - destroyed_pre, lost - spill),
 		"destroyed +%.1f of %.1f lost" % [run.metrics["destroyed"] - destroyed_pre, lost])
+	_t.check("the piles show their source to the bot", boss.pickups_left().slice(held).all(func(p): return p["source"] == "shed"),
+		str(boss.pickups_left().slice(held)))
 	var centre: Vector3 = boss.arena.global_position
 	_t.check("every pile lands on the floor", landed.all(func(p): return Vector2(p["at"].x - centre.x, p["at"].z - centre.z).length() <= Arena.FLOOR_R - 3.9),
 		str(landed.map(func(p): return p["at"])))
