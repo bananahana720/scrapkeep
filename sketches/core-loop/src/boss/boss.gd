@@ -544,20 +544,31 @@ func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 
 # The spill trail pays stolen mass back through add_scrap, the one way scrap is gained.
 # Spill and kill pickups also pay cogs one for one; a returned pickup is the ball's own
-# stolen mass, so it pays mass only and never mints cogs.
+# stolen mass, so it pays mass only and never mints cogs. A shed pile (take_spill) pays
+# through recover_mass and rings the stage spill's reclaim chime.
 func _step_trail(ball: Vector3) -> void:
 	var kept: Array = []
 	for p in _pickups:
 		p["age"] += _delta
 		var node: Node3D = p["node"]
 		if ball.distance_to(p["at"]) <= Rules.PICKUP_REACH:
-			ctx.run.add_scrap(p["value"], p["at"])
-			if p["source"] != "returned":
+			# A shed pile is the ball's own armour coming back, as a stage spill cluster pays:
+			# mass only, through recover_mass, with no wallet scrap, cogs or pickup event.
+			if p["source"] == "shed":
+				ctx.run.recover_mass(p["value"])
+				var field = ctx.build.get("scrap") if ctx.get("build") != null else null
+				if field != null and field.has_signal("recovered"):
+					field.recovered.emit(int(p["value"]))
+			else:
+				ctx.run.add_scrap(p["value"], p["at"])
+			if not p["source"] in ["returned", "shed"]:
 				ctx.run.add_cogs(p["value"])
 				ctx.events.cogs_collected.emit(p["value"], ctx.run.cogs)
 			node.queue_free()
 			continue
 		if p["age"] >= Rules.PICKUP_LIFE:
+			if p["source"] == "shed":
+				ctx.run.note_spill_expired(p["value"])
 			node.queue_free()
 			continue
 		node.rotate_y(_delta * 2.5)
@@ -572,6 +583,30 @@ func _spill_break() -> void:
 		var p: Vector3 = at + Arena.dir(TAU * k / Rules.BREAK_PICKUPS) * Rules.BREAK_RADIUS
 		var value := Rules.BREAK_SPILL / Rules.BREAK_PICKUPS + (1 if k < Rules.BREAK_SPILL % Rules.BREAK_PICKUPS else 0)
 		_spawn_pickup(Vector3(p.x, arena.ground(p) + 0.9, p.z), value, "spill")
+
+
+# An armour hit in the bowl spills the way a stage hit does (ruling aw): the hit's spill
+# share lands as "shed" piles in a fan ahead of the ball, so a stripped ball can roll its
+# mass back up instead of stalling at heft 1.0. A shed pile pays back like a stage spill
+# cluster (recover_mass: mass only) and, unreached after PICKUP_LIFE, counts as expired.
+# False when no fight is on, and the caller destroys the spill as before.
+func take_spill(from: Vector3, heading: Vector3, spill: int) -> bool:
+	if not active() or not is_instance_valid(arena) or spill <= 0:
+		return false
+	var flat := Vector3(heading.x, 0.0, heading.z).normalized()
+	if flat.length() < 0.1:
+		flat = Vector3.FORWARD
+	var side := flat.cross(Vector3.UP).normalized()
+	var centre: Vector3 = arena.global_position
+	var n := mini(Rules.SPILL_PILES, spill)
+	for k in n:
+		var t := (k + 0.5) / float(n)
+		var spot := from + flat * Rules.SPILL_AHEAD + side * (t * 2.0 - 1.0) * Rules.SPILL_SIDE
+		var out := Vector2(spot.x - centre.x, spot.z - centre.z).limit_length(Arena.FLOOR_R - 4.0)
+		spot = Vector3(centre.x + out.x, 0.0, centre.z + out.y)
+		var value := spill / n + (1 if k < spill % n else 0)
+		_spawn_pickup(Vector3(spot.x, arena.ground(spot) + 0.9, spot.z), value, "shed")
+	return true
 
 
 # The scrap field is stage content and idles in the arena, so a drone killed here drops
