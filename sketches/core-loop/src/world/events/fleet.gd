@@ -1,4 +1,5 @@
 extends Node3D
+const ZZP := preload("res://tools/zz_probe.gd")
 
 # The Fleet's park arrivals, one per world (design-v3/WORLD-ROSTERS.md), each a different way
 # in, never a reskin of the others:
@@ -84,6 +85,13 @@ func handle(action: String, row: Dictionary, ctx: Dictionary) -> void:
 
 
 func _vessel(row: Dictionary) -> Node3D:
+	var _zt := Time.get_ticks_usec()
+	var _zr = _zz__vessel(row)
+	ZZP.add("vessel", Time.get_ticks_usec() - _zt)
+	return _zr
+
+
+func _zz__vessel(row: Dictionary) -> Node3D:
 	var site: Dictionary = _sites[row.site]
 	var at := Vector2(float(site.at[0]), float(site.at[1]))
 	var base: float = world.terrain.height(at.x, at.y)

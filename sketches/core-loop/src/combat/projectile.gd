@@ -1,4 +1,5 @@
 extends Node3D
+const ZZP := preload("res://tools/zz_probe.gd")
 
 const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
@@ -75,6 +76,13 @@ static func lob_velocity(from: Vector3, to: Vector3, seconds: float) -> Vector3:
 
 
 func setup(target_ref, terrain_ref, root_ref: Node, live_ref: Callable, from: Vector3, to: Vector3, seconds: float,
+		lobber_ref: Node3D = null) -> void:
+	var _zt := Time.get_ticks_usec()
+	_zz_setup(target_ref, terrain_ref, root_ref, live_ref, from, to, seconds, lobber_ref)
+	ZZP.add("shell_setup", Time.get_ticks_usec() - _zt)
+
+
+func _zz_setup(target_ref, terrain_ref, root_ref: Node, live_ref: Callable, from: Vector3, to: Vector3, seconds: float,
 		lobber_ref: Node3D = null) -> void:
 	target = target_ref
 	terrain = terrain_ref
@@ -180,6 +188,12 @@ func rim_color() -> Color:
 
 
 func _build_rim() -> void:
+	var _zt := Time.get_ticks_usec()
+	_zz__build_rim()
+	ZZP.add("shell_rim", Time.get_ticks_usec() - _zt)
+
+
+func _zz__build_rim() -> void:
 	_rim_material = Palette.solid(EventKinds.state_color("will_break"), 0.0, false)
 	_rim_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_rim_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA

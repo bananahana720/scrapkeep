@@ -1,4 +1,5 @@
 extends RefCounted
+const ZZP := preload("res://tools/zz_probe.gd")
 
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -1098,6 +1099,12 @@ class Painter:
 		return _stripes
 
 	func paint(all: Array, layers: Array) -> void:
+		var _zt := Time.get_ticks_usec()
+		_zz_paint(all, layers)
+		ZZP.add("paint", Time.get_ticks_usec() - _zt)
+
+
+	func _zz_paint(all: Array, layers: Array) -> void:
 		var heights := _heights_under(all, layers)
 		for layer in layers:
 			var verts := PackedVector3Array()
@@ -1203,6 +1210,13 @@ class Painter:
 
 	func _set_layer(layer: String, verts: PackedVector3Array, colors: PackedColorArray,
 			c0 := PackedFloat32Array(), c1 := PackedFloat32Array(), governed := false) -> void:
+		var _zt := Time.get_ticks_usec()
+		_zz__set_layer(layer, verts, colors, c0, c1, governed)
+		ZZP.add("set_layer", Time.get_ticks_usec() - _zt)
+
+
+	func _zz__set_layer(layer: String, verts: PackedVector3Array, colors: PackedColorArray,
+			c0 := PackedFloat32Array(), c1 := PackedFloat32Array(), governed := false) -> void:
 		var instance := _layer(layer)
 		if _is_driven(layer):
 			_governed[layer] = governed
@@ -1220,9 +1234,13 @@ class Painter:
 			arrays[Mesh.ARRAY_CUSTOM1] = c1
 			flags = (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) \
 				| (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
+		var _za := Time.get_ticks_usec()
 		var mesh := ArrayMesh.new()
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
+		var _zb := Time.get_ticks_usec()
+		ZZP.add("surface", _zb - _za)
 		instance.mesh = mesh
+		ZZP.add("mesh_set", Time.get_ticks_usec() - _zb)
 
 	# The stencil class a driven layer's fills union in, "" for a line layer.
 	func _fill_class(layer: String) -> String:
@@ -1247,6 +1265,13 @@ class Painter:
 		return PRIORITY
 
 	func _layer(layer: String) -> MeshInstance3D:
+		var _zt := Time.get_ticks_usec()
+		var _zr = _zz__layer(layer)
+		ZZP.add("layer", Time.get_ticks_usec() - _zt)
+		return _zr
+
+
+	func _zz__layer(layer: String) -> MeshInstance3D:
 		if _layers.has(layer):
 			return _layers[layer]
 		var instance := MeshInstance3D.new()
@@ -1274,7 +1299,9 @@ class Painter:
 			mat.uv1_world_triplanar = true
 			mat.uv1_scale = Vector3.ONE / (STRIPE_PITCH * sqrt(2.0))
 		instance.material_override = mat
+		var _zc := Time.get_ticks_usec()
 		add_child(instance)
+		ZZP.add("layer_add", Time.get_ticks_usec() - _zc)
 		_layers[layer] = instance
 		return instance
 

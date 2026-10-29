@@ -1,4 +1,5 @@
 extends Node
+const ZZP := preload("res://tools/zz_probe.gd")
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -1095,6 +1096,12 @@ func _read_sighting(ball: Vector3) -> void:
 
 
 func _engage() -> void:
+	var _zt := Time.get_ticks_usec()
+	_zz__engage()
+	ZZP.add("engage", Time.get_ticks_usec() - _zt)
+
+
+func _zz__engage() -> void:
 	if _engaged:
 		return
 	_engaged = true

@@ -1,4 +1,5 @@
 extends Node
+const ZZP := preload("res://tools/zz_probe.gd")
 
 const Terrain := preload("res://src/world/terrain.gd")
 const Flood := preload("res://src/world/flood.gd")
@@ -399,6 +400,12 @@ func _mark_landing(stage: int, retry: bool) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var _zt := Time.get_ticks_usec()
+	_zz__physics_process(delta)
+	ZZP.add("world_phys", Time.get_ticks_usec() - _zt)
+
+
+func _zz__physics_process(delta: float) -> void:
 	if ctx == null or events == null or not ctx.flow.in_stage():
 		return
 	var player = ctx.player

@@ -1,4 +1,5 @@
 extends Node3D
+const ZZP := preload("res://tools/zz_probe.gd")
 
 const GameEvents := preload("res://src/core/game_events.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
@@ -553,6 +554,12 @@ func _exit_tree() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var _zt := Time.get_ticks_usec()
+	_zz__physics_process(delta)
+	ZZP.add("game_phys", Time.get_ticks_usec() - _zt)
+
+
+func _zz__physics_process(delta: float) -> void:
 	# The listener joins the bus after the first frame, once the scene is built, so a test that
 	# builds its own Progress on this bus in its first frame hears each fact once.
 	if not _progress_ready:

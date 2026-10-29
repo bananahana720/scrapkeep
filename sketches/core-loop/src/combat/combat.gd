@@ -1,4 +1,5 @@
 extends Node
+const ZZP := preload("res://tools/zz_probe.gd")
 
 const Chaser := preload("res://src/combat/chaser.gd")
 const EnemyBase := preload("res://src/combat/enemy.gd")
@@ -1563,6 +1564,12 @@ func discharge_preview(speed: float) -> Dictionary:
 # --- The tick -----------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
+	var _zt := Time.get_ticks_usec()
+	_zz__physics_process(delta)
+	ZZP.add("combat_phys", Time.get_ticks_usec() - _zt)
+
+
+func _zz__physics_process(delta: float) -> void:
 	if ctx == null:
 		return
 	var playing: bool = ctx.flow.in_play()
@@ -4057,6 +4064,12 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 
 
 func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D) -> void:
+	var _zt := Time.get_ticks_usec()
+	_zz__on_lobber_fired(origin, landing, flight, lobber)
+	ZZP.add("lobber_fired", Time.get_ticks_usec() - _zt)
+
+
+func _zz__on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: Node3D) -> void:
 	var shell := Projectile.new()
 	ctx.root.add_child(shell)
 	shell.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber)

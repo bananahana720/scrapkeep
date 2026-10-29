@@ -1,4 +1,5 @@
 extends Node3D
+const ZZP := preload("res://tools/zz_probe.gd")
 
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
@@ -81,6 +82,14 @@ var bound_merges := 0
 
 
 static func ring(parent: Node, terrain_ref, threat_type: int, at: Vector3, ring_radius: float, reach := 3.5,
+		tint := Palette.HAZARD) -> Node3D:
+	var _zt := Time.get_ticks_usec()
+	var _zr = _zz_ring(parent, terrain_ref, threat_type, at, ring_radius, reach, tint)
+	ZZP.add("tg_ring", Time.get_ticks_usec() - _zt)
+	return _zr
+
+
+static func _zz_ring(parent: Node, terrain_ref, threat_type: int, at: Vector3, ring_radius: float, reach := 3.5,
 		tint := Palette.HAZARD) -> Node3D:
 	var node: Node3D = load("res://src/combat/telegraph.gd").new()
 	node.type = threat_type
@@ -218,6 +227,12 @@ func step(delta: float) -> void:
 
 # PROJECTILE: the flight the reticle waits for, drawn as a dotted trace.
 func set_flight(from: Vector3, arc_bump: float) -> void:
+	var _zt := Time.get_ticks_usec()
+	_zz_set_flight(from, arc_bump)
+	ZZP.add("tg_flight", Time.get_ticks_usec() - _zt)
+
+
+func _zz_set_flight(from: Vector3, arc_bump: float) -> void:
 	launch = from
 	bump = arc_bump
 	has_flight = true
@@ -304,6 +319,12 @@ func _cut_bound() -> void:
 
 
 func _build() -> void:
+	var _zt := Time.get_ticks_usec()
+	_zz__build()
+	ZZP.add("tg_build", Time.get_ticks_usec() - _zt)
+
+
+func _zz__build() -> void:
 	add_to_group("telegraph")
 	if is_hostile():
 		add_to_group(Threat.GROUP)

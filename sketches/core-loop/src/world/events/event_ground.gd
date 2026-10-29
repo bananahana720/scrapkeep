@@ -1,4 +1,5 @@
 extends RefCounted
+const ZZP := preload("res://tools/zz_probe.gd")
 
 const Palette := preload("res://src/core/palette.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
@@ -181,6 +182,13 @@ static func _rectangle(low: Vector2, high: Vector2) -> Array:
 
 # deferred leaves the mesh to Surface.finish, for a worker.
 static func project_surface(world, geometry: Dictionary, shapes: Array, offset := Callable(), water := false, baseline: Surface = null, overlay_map: OverlayMap = null, mesh: ArrayMesh = null, deferred := false) -> Surface:
+	var _zt := Time.get_ticks_usec()
+	var _zr = _zz_project_surface(world, geometry, shapes, offset, water, baseline, overlay_map, mesh, deferred)
+	ZZP.add("project_surface", Time.get_ticks_usec() - _zt)
+	return _zr
+
+
+static func _zz_project_surface(world, geometry: Dictionary, shapes: Array, offset := Callable(), water := false, baseline: Surface = null, overlay_map: OverlayMap = null, mesh: ArrayMesh = null, deferred := false) -> Surface:
 	if overlay_map == null and world.terrain.map() is OverlayMap:
 		overlay_map = world.terrain.map()
 	var surface := Surface.new()
