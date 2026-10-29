@@ -16,8 +16,7 @@ func _initialize() -> void:
 	_t.check("the cache starts cold", _wobbles() == 0, "%d wobbles before the bake" % _wobbles())
 	var task := WorkerThreadPool.add_task(MusicEngine.prepare_rest, true, "presentation band bake")
 	var held := false
-	var deadline := Time.get_ticks_msec() + 10000
-	while Time.get_ticks_msec() < deadline and not WorkerThreadPool.is_task_completed(task):
+	while not WorkerThreadPool.is_task_completed(task):
 		if not MusicEngine._rest_lock.try_lock():
 			held = true
 			break
