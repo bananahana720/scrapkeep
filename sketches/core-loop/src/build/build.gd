@@ -1348,8 +1348,12 @@ func _on_armor_hit(_removed: float, spill: int, _source: String) -> void:
 		_redraw()
 		return
 	if not ctx.flow.in_stage():
-		ctx.run.metrics["destroyed"] += spill
-		ctx.run.metrics["arena_destroyed"] += spill
+		# A boss that takes the spill puts it back on its floor (ruling aw); anywhere else
+		# it has nowhere to land and is destroyed.
+		var boss = ctx.boss if "boss" in ctx else null
+		if boss == null or not boss.has_method("take_spill") or not boss.take_spill(ctx.player.ball_position(), _heading(), spill):
+			ctx.run.metrics["destroyed"] += spill
+			ctx.run.metrics["arena_destroyed"] += spill
 		_redraw()
 		return
 	scrap.drop_recovery(ctx.terrain, ctx.player.ball_position(), _heading(), spill, RunState.SPILL_CLUSTERS, ctx.rng)
