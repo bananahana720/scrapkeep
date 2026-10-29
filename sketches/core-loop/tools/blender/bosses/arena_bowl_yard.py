@@ -17,6 +17,7 @@ from mathutils import Vector
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
+sys.path.insert(0, str(HERE.parent / "rogues"))
 import common
 
 SKETCH = HERE.parents[2]
@@ -277,32 +278,50 @@ def crew_yard(root):
     part.to_object(parent=root)
 
 
+# Mojulo shell recipes beside this file (crew_shells.py mints them to shells/); hands in Blender metres, matching the recipes.
+CREW_SHELLS = {"CrewFan": "crew_fan", "CrewPennant": "crew_pennant"}
+CREW_HANDS = {"CrewFan": [(.20, .54, 1.56), (.20, -.54, 1.56)], "CrewPennant": [(.30, -.44, 1.18), (.44, .26, .34)]}
+CREW_TRIS = {"Body": 1100, "Hat": 220, "Teeth": 12}
+FUR, BELLY, HAT, BAND, MITT, TAIL, NOSE = "a99a84", "c4b8a2", "a48f55", "6e5734", "8f6b4c", "7d6450", "3b302a"
+
+
+def crew_paint(name):
+    """Vertex colour by position on the shell: cream belly and muzzle, brown mittens, a darker paddle tail and nose,
+    a dark hat band. Blends stay on the one skin, so no colour seams."""
+    hands = [Vector(h) for h in CREW_HANDS[name]]
+
+    def paint(co, normal):
+        if any((co - h).length < .15 for h in hands):
+            return MITT
+        if co.x < -.24 and co.z < .2:
+            return TAIL
+        if co.x > .39 and co.z > 1.03:
+            return NOSE
+        if abs(co.y) < .26 and ((co.x > .2 and .14 < co.z < .9) or (co.x > .26 and .9 < co.z < 1.12)):
+            return BELLY
+        return FUR
+    return paint
+
+
 def crew(root, name, pennant):
-    """One plush crew member, seat at the origin, facing +X: round body, hard hat, mittens up."""
+    """One plush crew member from its mojulo smooth shell, seat at the origin, facing +X: pear body, wide work hat,
+    paddle tail, mittens up (docs/art/reference/bosses/crowd)."""
+    import kit
+    kit.SHELLS = str(HERE / "shells")
+    pieces, new = kit.import_shells(CREW_SHELLS[name])
     part = common.Part(name)
     part.bevel = 0
     part.subsurf = 0
-    fur, belly, hat, mitt = "a99a84", "c4b8a2", "a48f55", "8f6b4c"
-    part.uv(PAINT, .5, 8, 5, loc=xyz((0, .55, 0)), scale=(1.0, 1.1, 1.15), color=fur)
-    part.uv(PAINT, .3, 6, 4, loc=xyz((.22, .6, 0)), scale=(.6, 1.1, 1.2), color=belly)
-    part.uv(PAINT, .36, 8, 5, loc=xyz((.04, 1.22, 0)), color=fur)
-    part.uv(PAINT, .14, 6, 4, loc=xyz((.34, 1.16, 0)), color=belly)
+    paints = {"Body": crew_paint(name), "Hat": lambda co, n: BAND if 1.38 < co.z < 1.43 else HAT,
+              "Teeth": lambda co, n: "d2c5a5"}
+    for piece in ("Body", "Hat", "Teeth"):
+        kit.add_shell(part, kit.shell_mesh(pieces[piece], CREW_TRIS[piece], (0, 0, 0)), PAINT, paints[piece])
+    kit.drop(new)
     for side in (-1, 1):
-        part.uv(PAINT, .11, 6, 4, loc=xyz((-.02, 1.5, side * .26)), color=fur)
-        part.rod(PAINT, xyz((.05, .3, side * .2)), xyz((.5, .22, side * .22)), .13, 6, color=fur)
-    part.uv(PAINT, .37, 8, 4, loc=xyz((.02, 1.46, 0)), scale=(1.0, .62, 1.0), color=hat)
-    part.cyl(PAINT, .46, .46, .05, 10, loc=xyz((.06, 1.38, 0)), color=hat)
-    for side in (-1, 1):
-        if pennant and side > 0:
-            hand = (.3, 1.25, .5)
-            part.rod(PAINT, xyz((.05, .85, .4)), xyz(hand), .1, 5, color=fur)
-            part.uv(PAINT, .13, 6, 4, loc=xyz(hand), color=mitt)
-            part.rod(METAL, xyz((.3, .9, .5)), xyz((.3, 2.6, .55)), .025, 6, color="6c6a5e")
-            tri(part, (.3, 2.6, .55), (.3, 2.1, .55), (-.6, 2.35, .62), "94503c")
-        else:
-            hand = (.18, 1.72, side * .62)
-            part.rod(PAINT, xyz((.05, .85, side * .4)), xyz(hand), .1, 5, color=fur)
-            part.uv(PAINT, .13, 6, 4, loc=xyz(hand), color=mitt)
+        part.uv(PAINT, .035, 6, 4, loc=(.355, side * .105, 1.19), color="2a2420")
+    if pennant:
+        rod(part, (.3, .15, .44), (.3, 1.85, .44), .025, "6c6a5e")
+        tri(part, (.3, 1.85, .44), (.3, 1.45, .44), (-.35, 1.65, .5), "94503c")
     part.to_object(parent=root)
 
 
