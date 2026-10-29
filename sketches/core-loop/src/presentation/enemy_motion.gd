@@ -103,6 +103,13 @@ static func part_count(death: Dictionary) -> int:
 # the model's meshes and materials; with fewer than two meshes they are boxes in its
 # material. The spread is a hash of the death point, so seeded runs replay it.
 static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
+	var _zs := Time.get_ticks_usec()
+	var _zr = _zz_scatter(enemy, kind, direction)
+	print("ZS f=%d %s total %.2f" % [Engine.get_process_frames(), kind, (Time.get_ticks_usec() - _zs) / 1000.0])
+	return _zr
+
+
+static func _zz_scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 	var death: Dictionary = WindupRows.ROWS.get(kind, {}).get("death", {})
 	var parent := enemy.get_parent()
 	if death.is_empty() or parent == null:
@@ -126,7 +133,9 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 	throw = throw.normalized() if throw.length_squared() > 0.0001 else Vector3.ZERO
 	var count := part_count(death)
 	var seed_hash := absi(hash(Vector3i(at.round())))
+	var _zt := {"src": 0, "box": 0, "unbaked": 0, "set_box_mat": 0, "srcs": sources.size(), "count": count}
 	for i in count:
+		var _z0 := Time.get_ticks_usec()
 		var piece := MeshInstance3D.new()
 		var angle := TAU * (float(i) + float((seed_hash >> (i % 16)) % 7) / 14.0) / float(count)
 		var out := Vector3(cos(angle), 0.0, sin(angle))
@@ -138,13 +147,21 @@ static func scatter(enemy: Node3D, kind: String, direction: Vector3) -> Node3D:
 			for s in src.get_surface_override_material_count():
 				piece.set_surface_override_material(s, src.get_surface_override_material(s))
 			piece.global_transform = src.global_transform
+			_zt["src"] += Time.get_ticks_usec() - _z0
 		else:
 			var box := BoxMesh.new()
 			box.size = Vector3.ONE * (0.45 - 0.03 * float(i % 4))
 			piece.mesh = box
-			piece.material_override = BakeLook.unbaked(material)
+			var _z1 := Time.get_ticks_usec()
+			var twin := BakeLook.unbaked(material)
+			var _z2 := Time.get_ticks_usec()
+			piece.material_override = twin
+			_zt["unbaked"] += _z2 - _z1
+			_zt["set_box_mat"] += Time.get_ticks_usec() - _z2
 			piece.position = out * 0.4 + Vector3.UP * 0.6
+			_zt["box"] += Time.get_ticks_usec() - _z0
 		node._pieces.append({"node": piece, "velocity": _throw(node.style, out, throw), "spin": out.cross(Vector3.UP) * 6.0})
+	print("ZS f=%d %s src_mat=%s %s" % [Engine.get_process_frames(), kind, str(material.get_meta("bake_look", false)) if material else "null", str(_zt)])
 	return node
 
 
