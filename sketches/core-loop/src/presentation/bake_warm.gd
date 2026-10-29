@@ -234,7 +234,10 @@ static func spawn_into(kit: Script, holder: Node3D, target, ground) -> void:
 # frame: about 11 ms each for the first chaser and the first lobber at dam f3870 (#587 comment
 # 6509692838). Called on a spawn warm's holder the frame after its kit was built, so its own deferred
 # bake has dressed it: every dressed material there gets its twin, put to use on a box in the holder.
-# The twins stay in BakeLook's cache, so a later death of the kind finds its look compiled.
+# The twins stay in BakeLook's cache, so a later death of the kind finds its look compiled. A body
+# paint the kit owns is copied at the death, so its twin carries the paint's glow state then: a kill
+# mid hit-flash or wind-up cue has emission on (enemy.gd _update_flash, chaser.gd's cue), another
+# look, so each twin is also put to use with its emission switched the other way, and held.
 static func death_warm(holder: Node3D) -> int:
 	var twins := {}
 	for view: MeshInstance3D in holder.find_children("*", "MeshInstance3D", true, false):
@@ -243,10 +246,14 @@ static func death_warm(holder: Node3D) -> int:
 		if twin == null or twin == mat or twins.has(twin):
 			continue
 		twins[twin] = true
-		var box := MeshInstance3D.new()
-		box.mesh = BoxMesh.new()
-		box.material_override = twin
-		holder.add_child(box)
+		var glow := twin.duplicate() as StandardMaterial3D
+		glow.emission_enabled = not glow.emission_enabled
+		_kept.append(glow)
+		for look in [twin, glow]:
+			var box := MeshInstance3D.new()
+			box.mesh = BoxMesh.new()
+			box.material_override = look
+			holder.add_child(box)
 	return twins.size()
 
 
