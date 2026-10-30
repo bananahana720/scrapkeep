@@ -152,6 +152,8 @@ const MESH_SIZE := 48
 # colour array took 24.8 ms on the 4080 at the Warden prebuild, and 7.8 ms after a 30-frame gap.
 const MAP_TYPES := [2, 0, 1]
 const MAP_GAP_FRAMES := 10
+# The pool threads a threaded build takes, leaving the rest to the renderer and Jolt (see _pump).
+static var build_tasks := maxi(1, OS.get_processor_count() / 2)
 
 enum Phase { IDLE, LOADING, BUILDING, ATTACHING, READY }
 
@@ -529,10 +531,10 @@ func _pump() -> void:
 			if WorkerThreadPool.is_task_completed(_task):
 				WorkerThreadPool.wait_for_task_completion(_task)
 				_task = -1
-				# Low priority: at high priority the 104 pieces took every pool thread, and the renderer's own
-				# pool work waited behind them, 20 to 23 ms of render CPU on the 4080 the frame the flume's
-				# build started at the dam Warden's engage (#595 rows on 09b0a2d0). finish() waits, so it stays high.
-				_group = WorkerThreadPool.add_group_task(_build_piece, PIECES, -1, false, "park_terrain build %s" % map_id)
+				# On half the pool: on every thread the 104 pieces held off the renderer's own pool work, 20 to
+				# 23 ms of render CPU on the 4080 the frame the flume's build started at the dam Warden's engage;
+				# at low priority the build ran long enough to lift dam p99 (#595 rows on 09b0a2d0 and 084266bb).
+				_group = WorkerThreadPool.add_group_task(_build_piece, PIECES, build_tasks, true, "park_terrain build %s" % map_id)
 				phase = Phase.BUILDING
 		Phase.BUILDING:
 			if WorkerThreadPool.is_group_task_completed(_group):
