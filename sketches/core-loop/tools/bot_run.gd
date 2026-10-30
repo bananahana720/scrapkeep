@@ -303,6 +303,7 @@ func _next() -> void:
 		if not RenderingServer.frame_pre_draw.is_connected(_on_pre_draw):
 			RenderingServer.frame_pre_draw.connect(_on_pre_draw)
 			RenderingServer.frame_post_draw.connect(_on_post_draw)
+		RenderingServer.viewport_set_measure_render_time(root.get_viewport_rid(), true)
 	if _settings.has("trace-ticks"):
 		_tick_trace = FileAccess.open(_out.path_join("trace-%d.ndjson" % _seeds[_index]), FileAccess.WRITE)
 
@@ -589,7 +590,12 @@ func _process(_delta: float) -> bool:
 				"buffer_mb": Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED) / 1048576.0,
 				"pipelines": [Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_CANVAS), Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_MESH),
 					Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_SURFACE), Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_DRAW),
-					Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_SPECIALIZATION)]}
+					Performance.get_monitor(Performance.PIPELINE_COMPILATIONS_SPECIALIZATION)],
+				# PROBE (never stacks): the viewport's measured render CPU and GPU ms (GPU lags a few frames) and the frame setup CPU ms.
+				"zr_cpu": RenderingServer.viewport_get_measured_render_time_cpu(root.get_viewport_rid()),
+				"zr_gpu": RenderingServer.viewport_get_measured_render_time_gpu(root.get_viewport_rid()),
+				"zr_setup": RenderingServer.get_frame_setup_time_cpu(),
+				"zr_prims": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)}
 			if _frame_split != null:
 				row.merge(_frame_split.take(row["ms"]))
 				var ball = _game.player.body() if _game.player != null else null
