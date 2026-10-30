@@ -64,6 +64,11 @@ var charge_brace := CHARGE_BRACE
 var attacks := 0
 var weak_windows := 0
 var hits_landed := 0
+# The ATTACK_ROWS id of the hit hit_player is emitting, for the RUN OVER cause line: the slam
+# lands at the end of the leap, the charge while its lane runs.
+var landed_attack: String:
+	get:
+		return "E04" if state == State.CHARGE else "E03"
 
 var _clock := 0.0
 var _next_attack := 0

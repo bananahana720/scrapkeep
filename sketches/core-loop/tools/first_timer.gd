@@ -13,9 +13,11 @@ const Interactables := preload("res://src/world/interactables.gd")
 # table and fails a mechanic that is needed before it is taught.
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/first_timer.gd \
-#     -- --out=<file.json> [--seed=1] [--pilot=<class id>] [--stages=2]
+#     -- --out=<file.json> [--seed=1] [--pilot=<class id>] [--stages=2] [--scrap-at=<seconds>]
 #
-# --stages=2 ends the run as it leaves world 1 (both Spillway stages and Brindle). Test mode
+# --stages=2 ends the run as it leaves world 1 (both Spillway stages and Brindle). --scrap-at
+# scraps the ball (a chaser's hit, twice past the full-hull guard) that many stage seconds into
+# stage 1, so a run that would not die still reaches RUN OVER and the retry row. Test mode
 # gives every process its own data folder, so the key prompts start from an empty profile.
 #
 # Teach ids, with the tick they first show (tick -1 is before play):
@@ -24,7 +26,8 @@ const Interactables := preload("res://src/world/interactables.gd")
 #   prompt:tip_<id>   a first-meet field tip told (ui/field_tips.gd: grip, jam, cast, radio, stake,
 #                     companion, active, dunk), emitted as prompt_shown once its toast has been on
 #                     screen MIN_SHOWN
-#   screen:dead       the SCRAPPED screen and its Retry key
+#   screen:run_over   RUN OVER after a death, naming what scrapped you, with its Run again key
+#                     (no free retry: a death with no earned save ends the run)
 #   card:<slot>       a key on the chosen pilot's class card (ui/class_kit.gd card_keys)
 # Need ids: the first tick of the bus fact or flow state that names them (NEEDS below).
 
@@ -33,7 +36,7 @@ const NEEDS := {
 	"warden_engaged": "first Warden engaged",
 	"warden_staggered": "first Warden stagger (core open)",
 	"reward_offered": "first reward gates",
-	"dead": "first death",
+	"dead": "first death (player_died)",
 	"boss_arena_entered": "Brindle's arena",
 	"boss_staggered": "first boss stagger",
 	"harpoon_used": "first harpoon latch",
@@ -66,6 +69,7 @@ var _pilot := ""
 var _card: Array = []
 var _out := ""
 var _done := false
+var _scrapped := false
 
 
 func _initialize() -> void:
@@ -93,6 +97,7 @@ func _physics_process(delta: float) -> bool:
 		_start()
 		return false
 	_tick += 1
+	_scrap_if_due()
 	_watch()
 	var over: bool = _driver.tick(delta)
 	if not over and _game.run.stage > int(_settings.get("stages", "2")):
@@ -110,6 +115,7 @@ func _start() -> void:
 	events.stage_entered.connect(func(stage: int, _retry: bool):
 		_stage = stage
 		_need("stage_entered"))
+	events.player_died.connect(func(): _need("dead"))
 	events.warden_engaged.connect(func(_stage_n: int): _need("warden_engaged"))
 	events.posture_changed.connect(_on_posture)
 	events.reward_offered.connect(func(_offers: Array): _need("reward_offered"))
@@ -148,10 +154,24 @@ func _on_posture(_enemy, _posture: float, staggered: bool) -> void:
 	_need("boss_staggered" if _game.flow.state_name() == "boss" else "warden_staggered")
 
 
+# --scrap-at: the run's one death, in stage 1, from a chaser so RUN OVER has a cause to name.
+func _scrap_if_due() -> void:
+	if _scrapped or not _settings.has("scrap-at") or _game.run.stage != 1 or not _game.flow.in_play():
+		return
+	if _game.run.stage_time < float(_settings["scrap-at"]):
+		return
+	_scrapped = true
+	for i in 3:
+		if _game.run.alive():
+			_game.run.damage(1.0e6, "chaser")
+
+
 func _watch() -> void:
-	if _game.flow.state_name() == "dead":
-		_need("dead")
-		_teach("screen:dead")
+	# The lesson after a death is RUN OVER itself: the line naming what scrapped you and Run again.
+	var screens = _game.get("screens")
+	if _game.flow.state_name() == "summary" and not _game.flow.run_won and screens != null \
+			and _game.flow.death_cause != "" and screens.button_for("again") != null:
+		_teach("screen:run_over")
 	if _game.hud != null and _game.flow.in_play():
 		var id: String = _game.hud.objective_reading()["id"]
 		if id != "":

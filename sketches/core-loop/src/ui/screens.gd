@@ -356,6 +356,9 @@ func _on_flow_changed(state: String) -> void:
 				_stamp(_mark)
 		"summary":
 			var body := String(game.run.summary()["class"])
+			# What scrapped you, under the pilot (core/death_cause.gd): a won run has none.
+			if not game.flow.run_won and game.flow.death_cause != "":
+				body += "\n" + game.flow.death_cause
 			var trade_lines := ResultsOdds.text(game.run.summary().trade_pockets)
 			if trade_lines != "":
 				body += "\n" + trade_lines
