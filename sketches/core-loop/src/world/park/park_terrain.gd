@@ -157,6 +157,8 @@ enum Phase { IDLE, LOADING, BUILDING, ATTACHING, READY }
 
 # PROBE (never stacks): the attach steps taken since bot_run's last frame row, which reads and clears it.
 static var zp_steps: Array = []
+# PROBE: --zlow=1 runs the build group at low priority (bot_run sets it).
+static var zp_low := false
 
 var map_id := ""
 var baked := false
@@ -460,6 +462,7 @@ func start(id: String, map: RefCounted, threaded: bool, render: Node3D = null) -
 	if threaded:
 		phase = Phase.LOADING
 		_task = WorkerThreadPool.add_task(_load, false, "park_terrain load %s" % id)
+		zp_steps.append("%s:load_start" % id)
 		set_process(true)
 	else:
 		_load()
@@ -532,12 +535,14 @@ func _pump() -> void:
 			if WorkerThreadPool.is_task_completed(_task):
 				WorkerThreadPool.wait_for_task_completion(_task)
 				_task = -1
-				_group = WorkerThreadPool.add_group_task(_build_piece, PIECES, -1, true, "park_terrain build %s" % map_id)
+				_group = WorkerThreadPool.add_group_task(_build_piece, PIECES, -1, not zp_low, "park_terrain build %s" % map_id)
+				zp_steps.append("%s:build_start" % map_id)
 				phase = Phase.BUILDING
 		Phase.BUILDING:
 			if WorkerThreadPool.is_group_task_completed(_group):
 				WorkerThreadPool.wait_for_group_task_completion(_group)
 				_group = -1
+				zp_steps.append("%s:build_done" % map_id)
 				phase = Phase.ATTACHING
 		Phase.ATTACHING:
 			_attach_step(Time.get_ticks_usec() + ATTACH_BUDGET_USEC)

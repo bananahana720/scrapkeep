@@ -304,6 +304,7 @@ func _next() -> void:
 			RenderingServer.frame_pre_draw.connect(_on_pre_draw)
 			RenderingServer.frame_post_draw.connect(_on_post_draw)
 		RenderingServer.viewport_set_measure_render_time(root.get_viewport_rid(), true)
+		load("res://src/world/park/park_terrain.gd").zp_low = _settings.get("zlow", "0") == "1"
 	if _settings.has("trace-ticks"):
 		_tick_trace = FileAccess.open(_out.path_join("trace-%d.ndjson" % _seeds[_index]), FileAccess.WRITE)
 
