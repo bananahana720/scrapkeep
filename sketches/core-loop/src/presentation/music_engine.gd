@@ -459,7 +459,20 @@ static func _prepare_club(chords: Array, shift: int, reese_offsets: Array) -> vo
 
 # The other themes, keys and boss tracks: on a background worker behind stage 1.
 # Anything asked for before it lands renders on demand.
+# One thread bakes at a time; a second caller waits, then takes the cached pass. GDScript fills a
+# line's untyped operator on first run without a lock for readers, so two threads running this cold
+# in step can call a null evaluator: --warm-band=1 baked it on the main thread beside the game's own
+# worker and crashed a 4080 bot run (SIGSEGV in _prepare_wobble, scrapkeep#587 comment 6510789416).
+static var _rest_lock := Mutex.new()
+
+
 static func prepare_rest() -> void:
+	_rest_lock.lock()
+	_bake_rest()
+	_rest_lock.unlock()
+
+
+static func _bake_rest() -> void:
 	var chords: Array = []
 	for list in [Harmony.SLUICE, Harmony.WEIR, Harmony.BRINDLE, Harmony.VICTORY, Harmony.MINOR_OF.values(), Harmony.BRINDLE_PHRYGIAN]:
 		chords.append_array(list)
