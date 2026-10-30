@@ -13,7 +13,9 @@ extends SceneTree
 #
 #   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
 #     --script res://tools/qa/collision_sweep.gd -- \
-#     --area=camp|park_dam|park_flume|... --out=<abs dir> [--seed=1] [--step=0.75] [--tol=0.4] [--centre=x,z --radius=r]
+#     --area=camp|arena|park_dam|park_flume|... --out=<abs dir> [--seed=1] [--step=0.75] [--tol=0.4] [--centre=x,z --radius=r]
+#
+# --area=arena finishes stage 2 into Brindle's Slag Bowl and sweeps the bowl, its ground being the bowl's own surface.
 #
 # Writes <out>/<area>-s<seed>.json (every flagged shape with its bare points) and prints a summary table.
 
@@ -127,6 +129,31 @@ func _run() -> void:
 			centre = Vector2(o.x, o.z)
 			radius = game.camp_hub.GROUND_R + 5.0
 		ground_fn = func(_x: float, _z: float) -> float: return o.y
+	elif area == "arena":
+		game.flow.press_start()
+		game.flow.choose_class(0)
+		game.flow.enter_stage(2, Vector3.ZERO, false)
+		var terrain = game.ctx.terrain
+		var waited := 0
+		while waited < 3000 and not (terrain.rows_ready(2) and terrain.is_ready(2) and game.flow.state_name() == "stage"):
+			await process_frame
+			waited += 1
+		game.flow._finish_stage()
+		var bowl: Node3D = null
+		waited = 0
+		while waited < 1200 and (bowl == null or not bowl.built()):
+			await process_frame
+			waited += 1
+			bowl = game.find_child("SlagBowl", true, false) as Node3D
+		if bowl == null:
+			printerr("collision_sweep: no built SlagBowl after stage 2 finished (flow %s)" % game.flow.state_name())
+			quit(1)
+			return
+		await _frames(240)
+		if centre == Vector2.INF:
+			centre = Vector2(bowl.global_position.x, bowl.global_position.z)
+			radius = bowl.BANK_R + bowl.WALL_THICK + 4.0
+		ground_fn = func(x: float, z: float) -> float: return bowl.ground(Vector3(x, 0.0, z))
 	else:
 		for row in ParkDefs.DEFS:
 			if String(row.get("map", "")) == area:
