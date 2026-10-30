@@ -53,6 +53,8 @@ const SHELL_RANGES := [[150.0, 20.0], [60.0, 8.0]]
 const ZONE_RADIUS := 2.5
 const FALL_BELOW := -25.0
 const MAX_LIGHTS := 24
+# A solid prop collides up to here: a cottonwood's trunk and root flare, not its crown (boughs start at 4 m).
+const SOLID_TOP_M := 4.0
 # The pieces that have detail shells beside them.
 const SHELLED := ["camp_launch_gate", "camp_lockers", "camp_moss_stall", "camp_skee_lane"]
 # Lights: piece stem -> [socket names, kind]. The lamp posts and the fire pit light the plaza; the stall, the wall, the
@@ -430,8 +432,9 @@ func to_local_point(global_point: Vector3) -> Vector3:
 	return global_point - HUB_ORIGIN
 
 
-# A picture-driven recipe prop (recipe_props.gd) at xf under root: its base views and shells, and for a solid one a box
-# collider round the first base mesh (a cabinet, a trunk).
+# A picture-driven recipe prop (recipe_props.gd) at xf under root: its base views and shells, and for a solid one a hull
+# collider round the first base mesh (a cabinet, a trunk) up to SOLID_TOP_M. A box round the whole mesh took a tree's
+# boughs down to the ground: 8.4 by 6.6 m of invisible wall round a 1.2 m trunk (tools/qa/collision_sweep.gd, 30 Oct).
 func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 	var holder := Node3D.new()
 	holder.name = "Prop_" + key
@@ -440,16 +443,30 @@ func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 	var views := RecipeProps.base(key, holder, Transform3D.IDENTITY)
 	RecipeProps.shells(key, holder, Transform3D.IDENTITY)
 	if solid and not views.is_empty():
-		var first := views[0] as MeshInstance3D
-		var box: AABB = first.transform * first.mesh.get_aabb()
-		var body := Recipes._body(holder)
-		var shape := CollisionShape3D.new()
-		var cube := BoxShape3D.new()
-		cube.size = box.size
-		shape.shape = cube
-		shape.position = box.get_center()
-		body.add_child(shape)
+		var hull := solid_hull(views[0] as MeshInstance3D)
+		if hull.size() >= 4:
+			var body := Recipes._body(holder)
+			var shape := CollisionShape3D.new()
+			var convex := ConvexPolygonShape3D.new()
+			convex.points = hull
+			shape.shape = convex
+			body.add_child(shape)
 	_pieces[key] = holder
+
+
+# The first view's vertices at or under SOLID_TOP_M, in its holder's space, deduplicated to 5 cm.
+static func solid_hull(view: MeshInstance3D) -> PackedVector3Array:
+	var seen := {}
+	var out := PackedVector3Array()
+	for v in view.mesh.get_faces():
+		var p: Vector3 = view.transform * v
+		if p.y > SOLID_TOP_M:
+			continue
+		var key := Vector3i((p * 20.0).round())
+		if not seen.has(key):
+			seen[key] = true
+			out.append(p)
+	return out
 
 
 func _build_lights() -> void:

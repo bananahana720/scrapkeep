@@ -11,12 +11,14 @@ extends SceneTree
 # A sample with no drawn surface within --tol is "bare"; with none within NEAR_M either it is "invisible" (nothing at all
 # draws there). The report ranks shapes by invisible area in the ball's band (0.15-12 m above the ground).
 #
-#   $GODOT_BIN --headless --path sketches/core-loop --script res://tools/qa/collision_sweep.gd -- \
+#   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
+#     --script res://tools/qa/collision_sweep.gd -- \
 #     --area=camp|park_dam|park_flume|... --out=<abs dir> [--seed=1] [--step=0.75] [--tol=0.4] [--centre=x,z --radius=r]
 #
 # Writes <out>/<area>-s<seed>.json (every flagged shape with its bare points) and prints a summary table.
 
 const Game := preload("res://src/game.gd")
+const BotDriver := preload("res://tools/bot_driver.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 
@@ -25,9 +27,12 @@ const VISUAL_LAYER := 1 << 23
 const NEAR_M := 1.5
 const BAND_LOW := 0.15
 const BAND_HIGH := 12.0
-const MAX_SAMPLES := 4000
+# The rolling band: a grounded ball (radius 1 m) meets a wall at about its centre height, a ramp lower.
+const ROLL_HIGH := 2.5
+var max_samples := 4000
 const NEAR_BEGIN_M := 10.0
 const FLAG_AREA_M2 := 1.0
+const GAPS := [0.7, 1.0]
 
 var area := ""
 var out_dir := ""
@@ -41,6 +46,19 @@ var space: PhysicsDirectSpaceState3D
 var ground_fn: Callable
 var shapes: Array = []
 var visual_count := 0
+var identity_multimeshes := 0
+var report_owners := {}
+var owner_filter := ""
+# --bot=<policy>: a bot plays the stage and every ball contact is checked against what draws there.
+var bot_policy := ""
+var bot_seconds := 600.0
+var driver
+var watching := false
+var bot_over := false
+var contact_ticks := 0
+var contacts := {}
+var contact_total := 0
+var ball_body: RigidBody3D
 
 
 func _initialize() -> void:
@@ -58,6 +76,14 @@ func _initialize() -> void:
 		elif a.begins_with("--centre="):
 			var p := a.trim_prefix("--centre=").split(",")
 			centre = Vector2(float(p[0]), float(p[1]))
+		elif a.begins_with("--max-samples="):
+			max_samples = int(a.trim_prefix("--max-samples="))
+		elif a.begins_with("--bot="):
+			bot_policy = a.trim_prefix("--bot=")
+		elif a.begins_with("--seconds="):
+			bot_seconds = float(a.trim_prefix("--seconds="))
+		elif a.begins_with("--owner="):
+			owner_filter = a.trim_prefix("--owner=")
 		elif a.begins_with("--radius="):
 			radius = float(a.trim_prefix("--radius="))
 	if area == "" or out_dir == "":
@@ -86,6 +112,9 @@ func _run() -> void:
 	root.add_child(game)
 	while game.flow == null:
 		await process_frame
+	if bot_policy != "":
+		await _run_bot()
+		return
 	game.ctx.calm = true
 	game.player.source = Intent.Scripted.new()
 	game.run.run_seed_override = run_seed
@@ -120,6 +149,10 @@ func _run() -> void:
 			pp.finish()
 		await _frames(30)
 		ground_fn = func(x: float, z: float) -> float: return terrain.height(x, z)
+	if OS.get_cmdline_user_args().has("--terrain") and stage_index > 0:
+		_terrain_check(stage_index)
+		quit(0)
+		return
 	game.player.body().freeze = true
 	game.player.body().global_position = Vector3(0.0, -5000.0, 0.0)
 	await _physics(2)
@@ -140,7 +173,9 @@ func _run() -> void:
 	flagged.sort_custom(func(a, b): return float(a["invisible_band_m2"]) + 0.25 * float(a["bare_band_m2"]) > float(b["invisible_band_m2"]) + 0.25 * float(b["bare_band_m2"]))
 	for body in made:
 		body.queue_free()
-	var report := {"area": area, "seed": run_seed, "step": step, "tol": tol, "near_m": NEAR_M, "visual_meshes": visual_count,
+	if identity_multimeshes > 0:
+		printerr("collision_sweep: %d MultiMeshes read every instance at one transform (headless renderer?): run under xvfb-run --rendering-driver opengl3" % identity_multimeshes)
+	var report := {"area": area, "identity_multimeshes": identity_multimeshes, "seed": run_seed, "step": step, "tol": tol, "near_m": NEAR_M, "visual_meshes": visual_count,
 		"band": [BAND_LOW, BAND_HIGH], "totals": totals, "flagged": flagged}
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	var path := out_dir.path_join("%s-s%d.json" % [area, run_seed])
@@ -149,7 +184,23 @@ func _run() -> void:
 	f.close()
 	print("collision_sweep: %s seed %d: %d shapes, %d visual meshes, %d samples, %d bare, %d invisible; %d flagged -> %s" % [
 		area, run_seed, totals["shapes"], visual_count, totals["samples"], totals["bare"], totals["invisible"], flagged.size(), path])
+	var by_owner := {}
 	for r: Dictionary in flagged:
+		var o := String(r["owner"])
+		if not by_owner.has(o):
+			by_owner[o] = [0, 0.0, 0.0, 0.0, 0.0]
+		by_owner[o][0] += 1
+		by_owner[o][1] += float(r["invisible_band_m2"])
+		by_owner[o][2] += float(r["bare_band_m2"])
+		by_owner[o][3] += float(r["invisible_roll_m2"])
+		by_owner[o][4] += float(r["bare_roll_m2"])
+	report_owners = by_owner
+	for o in by_owner:
+		print("  owner %-44s shapes %3d  inv %8.1f m2  bare %8.1f m2  | rolling band inv %7.1f bare %7.1f" % [o.left(44), by_owner[o][0], by_owner[o][1], by_owner[o][2], by_owner[o][3], by_owner[o][4]])
+	var of := FileAccess.open(out_dir.path_join("%s-s%d-owners.json" % [area, run_seed]), FileAccess.WRITE)
+	of.store_string(JSON.stringify(by_owner, "  "))
+	of.close()
+	for r: Dictionary in flagged.slice(0, 40):
 		print("  %-58s inv %7.1f m2  bare %7.1f m2  at %s  (%s)" % [String(r["owner"]).left(58), r["invisible_band_m2"], r["bare_band_m2"], str(r["worst"]), r["shape"]])
 	quit(0)
 
@@ -161,36 +212,45 @@ func _in_area(p: Vector3) -> bool:
 # Every enabled CollisionShape3D on a static body the ball collides with, terrain tiles left out.
 func _blockers() -> Array:
 	var out: Array = []
+	var skipped := {}
 	var ball = game.player.body()
 	for node in game.find_children("*", "CollisionObject3D", true, false):
 		if node is Area3D or node == ball:
 			continue
-		if not (node is StaticBody3D or node is AnimatableBody3D):
+		if not (node is StaticBody3D or node is AnimatableBody3D or (node is RigidBody3D and (node as RigidBody3D).freeze)):
 			continue
 		var body := node as CollisionObject3D
 		if body.collision_layer & BALL_MASK == 0 or not body.is_inside_tree():
 			continue
 		if body.get_parent() != null and String(body.get_parent().name) == "Tiles":
 			continue
-		if body.process_mode == Node.PROCESS_MODE_DISABLED or not body.can_process():
-			if body.disable_mode == CollisionObject3D.DISABLE_MODE_REMOVE:
+		if not PhysicsServer3D.body_get_space(body.get_rid()).is_valid():
+			skipped["off_space"] = int(skipped.get("off_space", 0)) + 1
+			continue
+		for owner_id in body.get_shape_owners():
+			if body.is_shape_owner_disabled(owner_id):
 				continue
-		for child in body.get_children():
-			if not child is CollisionShape3D:
-				continue
-			var cs := child as CollisionShape3D
-			if cs.disabled or cs.shape == null or cs.shape is HeightMapShape3D or cs.shape is WorldBoundaryShape3D:
-				continue
-			var xf := cs.global_transform
-			var faces := _shape_faces(cs.shape)
-			if faces.is_empty():
-				continue
-			var aabb := AABB(xf * faces[0], Vector3.ZERO)
-			for v in faces:
-				aabb = aabb.expand(xf * v)
-			if not _in_area(aabb.get_center()) and not _in_area(aabb.position) and not _in_area(aabb.end):
-				continue
-			out.append({"cs": cs, "body": body, "xf": xf, "faces": faces, "aabb": aabb})
+			var at := body.global_transform * body.shape_owner_get_transform(owner_id)
+			var owner_obj := body.shape_owner_get_owner(owner_id)
+			for i in body.shape_owner_get_shape_count(owner_id):
+				var shape := body.shape_owner_get_shape(owner_id, i)
+				if shape == null or shape is HeightMapShape3D or shape is WorldBoundaryShape3D:
+					continue
+				var faces := _shape_faces(shape)
+				if faces.is_empty():
+					continue
+				var aabb := AABB(at * faces[0], Vector3.ZERO)
+				for v in faces:
+					aabb = aabb.expand(at * v)
+				if not _in_area(aabb.get_center()) and not _in_area(aabb.position) and not _in_area(aabb.end):
+					continue
+				if owner_filter != "" and not _owner_label(body).contains(owner_filter):
+					continue
+				var label := str(game.get_path_to(owner_obj)) if owner_obj is Node and owner_obj != body else "%s#%d.%d" % [game.get_path_to(body), owner_id, i]
+				out.append({"shape": shape, "label": label, "body": body, "xf": at, "faces": faces, "aabb": aabb})
+	print("collision_sweep: %d blocking shapes, skipped %s" % [out.size(), skipped])
+	if OS.get_cmdline_user_args().has("--census"):
+		_census(ball)
 	return out
 
 
@@ -238,9 +298,8 @@ func _visual_bodies(blockers: Array) -> Array:
 			var mm := (gi as MultiMeshInstance3D).multimesh
 			if mm.mesh == null or mm.transform_format != MultiMesh.TRANSFORM_3D:
 				continue
-			var count := mm.visible_instance_count if mm.visible_instance_count >= 0 else mm.instance_count
-			for i in count:
-				items.append([mm.mesh, gi.global_transform * mm.get_instance_transform(i)])
+			for x: Transform3D in _instances(gi as MultiMeshInstance3D):
+				items.append([mm.mesh, gi.global_transform * x])
 		for item: Array in items:
 			var mesh: Mesh = item[0]
 			var xf: Transform3D = item[1]
@@ -264,8 +323,34 @@ func _visual_bodies(blockers: Array) -> Array:
 	return made
 
 
+# A MultiMesh's instance transforms: from its buffer (or the builder's "instance_buffer" meta, as park_props_audit
+# reads them), else per instance. The headless dummy renderer keeps no instance data: run under xvfb-run with
+# --rendering-driver opengl3, or every instance reads as the identity and drawn posts look missing.
+func _instances(view: MultiMeshInstance3D) -> Array:
+	var mm := view.multimesh
+	var n := mm.instance_count if mm.visible_instance_count < 0 else mini(mm.visible_instance_count, mm.instance_count)
+	var out: Array = []
+	if n <= 0:
+		return out
+	var buf := mm.buffer
+	if buf.size() < n * 12 and view.has_meta("instance_buffer"):
+		buf = view.get_meta("instance_buffer")
+	if buf.size() >= n * 12:
+		var stride := buf.size() / mm.instance_count
+		for i in n:
+			var o := i * stride
+			out.append(Transform3D(Vector3(buf[o], buf[o + 4], buf[o + 8]), Vector3(buf[o + 1], buf[o + 5], buf[o + 9]),
+				Vector3(buf[o + 2], buf[o + 6], buf[o + 10]), Vector3(buf[o + 3], buf[o + 7], buf[o + 11])))
+	else:
+		for i in n:
+			out.append(mm.get_instance_transform(i))
+	if n > 1 and out.all(func(x): return x == out[0]):
+		identity_multimeshes += 1
+	return out
+
+
 func _sweep_shape(b: Dictionary) -> Dictionary:
-	var cs: CollisionShape3D = b["cs"]
+	var shape: Shape3D = b["shape"]
 	var body: CollisionObject3D = b["body"]
 	var xf: Transform3D = b["xf"]
 	var faces: PackedVector3Array = b["faces"]
@@ -279,10 +364,10 @@ func _sweep_shape(b: Dictionary) -> Dictionary:
 		areas[t] = (bb - a).cross(c - a).length() * 0.5
 		total_area += areas[t]
 	var s := step
-	if total_area / (s * s) > MAX_SAMPLES:
-		s = sqrt(total_area / MAX_SAMPLES)
+	if total_area / (s * s) > max_samples:
+		s = sqrt(total_area / max_samples)
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(str(cs.get_path()))
+	rng.seed = hash(String(b["label"]))
 	var probe := SphereShape3D.new()
 	var q := PhysicsShapeQueryParameters3D.new()
 	q.shape = probe
@@ -296,6 +381,10 @@ func _sweep_shape(b: Dictionary) -> Dictionary:
 	var invisible := 0
 	var bare_band := 0
 	var inv_band := 0
+	var bare_roll := 0
+	var gaps := {}
+	var roll_points := 0
+	var inv_roll := 0
 	var points: Array = []
 	var worst := Vector3.ZERO
 	var worst_h := -1.0
@@ -334,9 +423,23 @@ func _sweep_shape(b: Dictionary) -> Dictionary:
 			bare += 1
 			probe.radius = NEAR_M
 			var none_near := space.intersect_shape(q, 1).is_empty()
+			# The gap to the drawn surface: the first of GAPS that reaches it, NEAR_M when only NEAR_M does, "none" past it.
+			var gap: Variant = "none" if none_near else NEAR_M
+			if not none_near:
+				for g_m in GAPS:
+					probe.radius = g_m
+					if not space.intersect_shape(q, 1).is_empty():
+						gap = g_m
+						break
+			if h >= BAND_LOW and h <= ROLL_HIGH:
+				gaps[str(gap)] = int(gaps.get(str(gap), 0)) + 1
 			if none_near:
 				invisible += 1
 			var in_band := h >= BAND_LOW and h <= BAND_HIGH
+			if in_band and h <= ROLL_HIGH:
+				bare_roll += 1
+				if none_near:
+					inv_roll += 1
 			if in_band:
 				bare_band += 1
 				if none_near:
@@ -344,46 +447,66 @@ func _sweep_shape(b: Dictionary) -> Dictionary:
 					if h > worst_h:
 						worst_h = h
 						worst = p
-			if points.size() < 400 and in_band:
-				points.append([snappedf(p.x, 0.1), snappedf(p.y, 0.1), snappedf(p.z, 0.1), 1 if none_near else 0])
+			var rolling := in_band and h <= ROLL_HIGH
+			if in_band and ((rolling and roll_points < 600) or (not rolling and points.size() - roll_points < 200)):
+				roll_points += 1 if rolling else 0
+				points.append([snappedf(p.x, 0.1), snappedf(p.y, 0.1), snappedf(p.z, 0.1), 1 if none_near else 0, snappedf(h, 0.1)])
 	var owner := _owner_label(body)
 	var aabb: AABB = b["aabb"]
 	return {
 		"owner": owner,
 		"recipe": _meta_up(body, "park_recipe"),
-		"path": str(game.get_path_to(cs)),
-		"shape": cs.shape.get_class() + _shape_size(cs.shape),
+		"path": String(b["label"]),
+		"shape": shape.get_class() + _shape_size(shape),
 		"aabb": [snappedf(aabb.position.x, 0.1), snappedf(aabb.position.y, 0.1), snappedf(aabb.position.z, 0.1),
 			snappedf(aabb.size.x, 0.1), snappedf(aabb.size.y, 0.1), snappedf(aabb.size.z, 0.1)],
 		"area_m2": snappedf(total_area, 0.1),
 		"samples": samples, "bare": bare, "invisible": invisible,
 		"bare_band_m2": snappedf(bare_band * s * s, 0.1),
 		"invisible_band_m2": snappedf(inv_band * s * s, 0.1),
+		"bare_roll_m2": snappedf(bare_roll * s * s, 0.1),
+		"roll_gap_m2": _scaled(gaps, s * s),
+		"invisible_roll_m2": snappedf(inv_roll * s * s, 0.1),
 		"worst": [snappedf(worst.x, 0.1), snappedf(worst.y, 0.1), snappedf(worst.z, 0.1), snappedf(worst_h, 0.1)] if worst_h >= 0.0 else [],
 		"points": points,
 	}
 
 
-# Inside a drawn volume: at least four of six axis rays meet a back face first.
+# Inside a drawn volume: an odd number of drawn surfaces crossed along at least two of three axis rays (Jolt turns a
+# back face's normal toward the ray, so the side of the first hit cannot be read from it).
 func _enclosed(p: Vector3, _n: Vector3) -> bool:
 	var rq := PhysicsRayQueryParameters3D.new()
 	rq.collision_mask = VISUAL_LAYER
 	rq.hit_back_faces = true
-	rq.hit_from_inside = true
-	var inside := 0
-	var dirs := [Vector3.UP, Vector3.DOWN, Vector3.LEFT, Vector3.RIGHT, Vector3.FORWARD, Vector3.BACK]
+	rq.hit_from_inside = false
+	var odd := 0
+	var dirs := [Vector3.UP, Vector3.RIGHT, Vector3.BACK]
 	for i in dirs.size():
 		var d: Vector3 = dirs[i]
-		rq.from = p
-		rq.to = p + d * 40.0
-		var hit := space.intersect_ray(rq)
-		if not hit.is_empty() and (hit["normal"] as Vector3).dot(d) > 0.0:
-			inside += 1
-		if inside + (dirs.size() - 1 - i) < 4:
-			return false
-		if inside >= 4:
+		var from := p
+		var crossings := 0
+		for k in 24:
+			rq.from = from
+			rq.to = p + d * 60.0
+			var hit := space.intersect_ray(rq)
+			if hit.is_empty():
+				break
+			crossings += 1
+			from = (hit["position"] as Vector3) + d * 0.01
+		if crossings % 2 == 1:
+			odd += 1
+		if odd >= 2:
 			return true
+		if odd + (dirs.size() - 1 - i) < 2:
+			return false
 	return false
+
+
+func _scaled(counts: Dictionary, k: float) -> Dictionary:
+	var out := {}
+	for key in counts:
+		out[key] = snappedf(counts[key] * k, 0.1)
+	return out
 
 
 func _shape_size(shape: Shape3D) -> String:
@@ -423,3 +546,159 @@ func _owner_label(body: Node) -> String:
 			return "camp/" + nm
 		n = n.get_parent()
 	return str(game.get_path_to(body.get_parent()))
+
+
+# Every collision object by class, layer and owner (--census): what the ball can meet beyond the static sweep.
+func _census(ball: Node) -> void:
+	var rows := {}
+	for node in game.find_children("*", "CollisionObject3D", true, false):
+		var body := node as CollisionObject3D
+		if body == ball:
+			continue
+		var kinds := {}
+		for c in body.get_children():
+			var kk := c.get_class() + ("(" + (c as CollisionShape3D).shape.get_class() + ")" if c is CollisionShape3D and (c as CollisionShape3D).shape != null else "")
+			kinds[kk] = int(kinds.get(kk, 0)) + 1
+		var key := "%s layer=%d mask=%d owners=%d %s %s" % [body.get_class(), body.collision_layer, body.collision_mask, body.get_shape_owners().size(), _owner_label(body).get_slice("/", 0).left(40), kinds]
+		rows[key] = int(rows.get(key, 0)) + 1
+	var keys := rows.keys()
+	keys.sort()
+	for k in keys:
+		print("  census %4d  %s" % [rows[k], k])
+
+
+# --bot: the run plays stage 1 (the dam) under the bot; once the rows stand, the drawn meshes go on VISUAL_LAYER and
+# every tick each ball contact off the terrain tiles is checked: drawn geometry within tol (VISUAL_LAYER, the ground,
+# or a drawn mesh under the touched body's parent). A contact with none is an invisible-wall hit, kept by owner and 2 m cell.
+func _run_bot() -> void:
+	game.run.run_seed_override = run_seed
+	driver = BotDriver.new(game, bot_policy, run_seed)
+	driver.start(false)
+	var terrain = game.ctx.terrain
+	while not (game.flow.state_name() == "stage" and terrain.rows_ready(1) and terrain.is_ready(1)):
+		await process_frame
+	await _frames(10)
+	ground_fn = func(x: float, z: float) -> float: return terrain.height(x, z)
+	ball_body = game.player.body()
+	_visual_bodies(_blockers())
+	await _physics(3)
+	space = game.get_world_3d().direct_space_state
+	watching = true
+	var started := Time.get_ticks_msec()
+	var stage_time := 0.0
+	while not bot_over and game.flow.stage() <= 1 and float(game.run.stage_time) < bot_seconds:
+		await process_frame
+		stage_time = float(game.run.stage_time)
+	watching = false
+	var rows: Array = []
+	for key in contacts:
+		rows.append(contacts[key])
+	rows.sort_custom(func(a, b): return int(a["ticks"]) > int(b["ticks"]))
+	var report := {"area": "park_dam", "mode": "bot", "policy": bot_policy, "seed": run_seed, "stage_time_s": snappedf(stage_time, 0.1),
+		"wall_s": (Time.get_ticks_msec() - started) / 1000.0, "contact_ticks": contact_ticks, "contacts": contact_total,
+		"invisible_contacts": rows}
+	DirAccess.make_dir_recursive_absolute(out_dir)
+	var path := out_dir.path_join("bot-%s-s%d.json" % [bot_policy, run_seed])
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(JSON.stringify(report, "  "))
+	f.close()
+	print("collision_sweep: bot %s seed %d: stage time %.1f s, %d contact ticks, %d contacts, %d invisible-contact cells -> %s" % [
+		bot_policy, run_seed, stage_time, contact_ticks, contact_total, rows.size(), path])
+	for r: Dictionary in rows.slice(0, 30):
+		print("  %-40s ticks %4d  at %s  max speed %.1f  %s" % [String(r["owner"]).left(40), r["ticks"], str(r["at"]), r["speed"], r["body"]])
+	quit(0)
+
+
+func _physics_process(delta: float) -> bool:
+	if driver != null and not bot_over:
+		bot_over = driver.tick(delta)
+	if watching:
+		_watch_contacts()
+	return false
+
+
+func _watch_contacts() -> void:
+	var state := PhysicsServer3D.body_get_direct_state(ball_body.get_rid())
+	if state == null:
+		return
+	var n := state.get_contact_count()
+	if n > 0:
+		contact_ticks += 1
+	var probe := SphereShape3D.new()
+	probe.radius = tol + 0.1
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = probe
+	q.collision_mask = VISUAL_LAYER
+	for i in n:
+		var obj := state.get_contact_collider_object(i)
+		if not obj is CollisionObject3D:
+			continue
+		var body := obj as CollisionObject3D
+		if body.get_parent() != null and String(body.get_parent().name) == "Tiles":
+			continue
+		contact_total += 1
+		var p := state.get_contact_collider_position(i)
+		if absf(p.y - float(ground_fn.call(p.x, p.z))) <= tol + 0.1:
+			continue
+		q.transform = Transform3D(Basis.IDENTITY, p)
+		if not space.intersect_shape(q, 1).is_empty():
+			continue
+		if _drawn_near(body, p):
+			continue
+		var cell := Vector3i((p / 2.0).round())
+		var key := "%s|%s" % [body.get_instance_id(), cell]
+		if not contacts.has(key):
+			contacts[key] = {"owner": _owner_label(body), "body": str(game.get_path_to(body)), "class": body.get_class(),
+				"at": [snappedf(p.x, 0.1), snappedf(p.y, 0.1), snappedf(p.z, 0.1)], "ticks": 0, "speed": 0.0,
+				"h": snappedf(p.y - float(ground_fn.call(p.x, p.z)), 0.1)}
+		contacts[key]["ticks"] += 1
+		contacts[key]["speed"] = snappedf(maxf(float(contacts[key]["speed"]), ball_body.linear_velocity.length()), 0.1)
+
+
+# A drawn mesh under the touched body's parent whose box, grown by tol, holds p (enemies, moving pieces).
+func _drawn_near(body: Node, p: Vector3) -> bool:
+	var top: Node = body.get_parent() if body.get_parent() != null else body
+	for node in [body] + top.find_children("*", "GeometryInstance3D", true, false):
+		if node is GeometryInstance3D and (node as GeometryInstance3D).is_visible_in_tree():
+			var gi := node as GeometryInstance3D
+			if (gi.global_transform * gi.get_aabb()).grow(tol).has_point(p):
+				return true
+	return false
+
+
+# --terrain: the park's collider heights (ParkTerrain.heights, what the tiles are cut from) against the drawn
+# Terrain3D's heights at every grid vertex. A collider over the drawn ground is an invisible step; under it, a sink.
+func _terrain_check(stage_index: int) -> void:
+	var ground = game.ctx.terrain._grounds[stage_index - 1]
+	var t3d = ground.terrain3d
+	if t3d == null or t3d.data == null:
+		printerr("collision_sweep: no Terrain3D render for stage %d" % stage_index)
+		return
+	var h: PackedFloat32Array = ground.heights
+	var side: int = ground.SIDE
+	var step_m: float = ground.STEP
+	var half: float = ground.HALF
+	var buckets := {}
+	var worst: Array = []
+	var nan := 0
+	for j in side:
+		for i in side:
+			var x := -half + i * step_m
+			var z := -half + j * step_m
+			var drawn: float = t3d.data.get_height(Vector3(x, 0.0, z))
+			if is_nan(drawn):
+				nan += 1
+				continue
+			var d := h[j * side + i] - drawn
+			var b := "%.1f" % clampf(snappedf(d, 0.5), -5.0, 5.0)
+			buckets[b] = int(buckets.get(b, 0)) + 1
+			if absf(d) > 0.3:
+				worst.append([snappedf(d, 0.01), x, z, snappedf(drawn, 0.01)])
+	worst.sort_custom(func(a, c): return absf(a[0]) > absf(c[0]))
+	print("collision_sweep: terrain stage %d: %d vertices, %d drawn holes (NaN), off by >0.3 m: %d, buckets %s" % [stage_index, side * side, nan, worst.size(), buckets])
+	for w in worst.slice(0, 30):
+		print("  terrain collider - drawn %+.2f m at (%.0f, %.0f), drawn y %.2f" % w)
+	DirAccess.make_dir_recursive_absolute(out_dir)
+	var f := FileAccess.open(out_dir.path_join("%s-terrain.json" % area), FileAccess.WRITE)
+	f.store_string(JSON.stringify({"area": area, "buckets": buckets, "nan": nan, "off": worst.slice(0, 5000)}, " "))
+	f.close()
