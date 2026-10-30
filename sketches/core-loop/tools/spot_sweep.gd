@@ -10,7 +10,7 @@ const Intent := preload("res://src/movement/intent.gd")
 # stick for PROBE_S plus a second per 12 m of run-up. Calm (no enemies), so only the map answers.
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/spot_sweep.gd \
-#     -- --out=<file.ndjson> [--camp=1] [--stages=1,2] [--dirs=8] [--shard=0/4] [--only=<id,...>] [--grid=<m>]
+#     -- --out=<file.ndjson> [--camp=1] [--stages=1,2] [--dirs=8] [--shard=0/4] [--only=<id,...>] [--grid=<m>] [--at=x[,y],z;...] [--leave=1]
 #
 # One ndjson row per probe: stage, spot id and kind, the side, where it started, the outcome and,
 # for a stop, where, against which collider (node path) and whether any shown mesh covers the contact
@@ -91,6 +91,16 @@ func _run() -> void:
 		var map = terrain.map_for(stage)
 		_index_meshes(terrain.geometry_root(stage))
 		var spots := _grid(map.park, float(_settings["grid"])) if _settings.has("grid") else _spots(map.park)
+		# --at=x,z[;x,z...]: named points (a bot run's stuck spot) instead.
+		if _settings.has("at"):
+			spots = []
+			for pair in String(_settings["at"]).split(";", false):
+				var xz := pair.split(",")
+				# x,y,z: drop from just above y, under any deck or trestle overhead.
+				if xz.size() == 3:
+					spots.append({"id": "at%s" % pair, "kind": "point", "at": Vector2(float(xz[0]), float(xz[2])), "r": 0.0, "y": float(xz[1])})
+				else:
+					spots.append({"id": "at%s" % pair, "kind": "point", "at": Vector2(float(xz[0]), float(xz[1])), "r": 0.0})
 		print("spot_sweep: stage %d (%s) %d spots, %d mesh cells" % [stage, map.park["map"], spots.size(), _meshes.size()])
 		for n in spots.size():
 			if n % shard_n != shard_i:
@@ -150,8 +160,13 @@ func _probe(stage: int, spot: Dictionary, angle: float, source, from := Vector2.
 	var start2 := centre + side * (float(spot.r) + (CAMP_RUNUP_M if stage == 0 else RUNUP_M))
 	if from != Vector2.INF:
 		start2 = from
+	# --leave=1: from the spot outward instead, for a place a bot run sat stuck (can a ball get out?).
+	if _settings.get("leave", "0") == "1":
+		var out_to := start2
+		start2 = centre
+		centre = out_to
 	var row := {"stage": stage, "id": spot.id, "kind": spot.kind, "start": [snappedf(start2.x, 0.1), snappedf(start2.y, 0.1)]}
-	var top = _top(Vector3(start2.x, 0.0, start2.y))
+	var top = _top(Vector3(start2.x, 0.0, start2.y), float(spot.get("y", 400.0)) + 2.0)
 	if top == null or (stage != 0 and not terrain.contains(top)):
 		row["outcome"] = "bad_start"
 		return row
@@ -264,9 +279,9 @@ func _escape(source, ball: Vector3) -> bool:
 
 
 # The top collider surface under (x, z): props, overlays and the ground alike.
-func _top(at: Vector3):
+func _top(at: Vector3, from_y := 400.0):
 	var space: PhysicsDirectSpaceState3D = _game.player.body().get_world_3d().direct_space_state
-	var q := PhysicsRayQueryParameters3D.create(Vector3(at.x, 400.0, at.z), Vector3(at.x, -200.0, at.z))
+	var q := PhysicsRayQueryParameters3D.create(Vector3(at.x, from_y, at.z), Vector3(at.x, -200.0, at.z))
 	q.exclude = [_game.player.body().get_rid()]
 	var hit: Dictionary = space.intersect_ray(q)
 	return null if hit.is_empty() else hit.position
