@@ -3,13 +3,13 @@ extends RefCounted
 # bot_run --qa-log=1 (gameplay QA, 30 Oct): watches the ball each tick and writes qa-<seed>.ndjson,
 # one row per place it went wrong, with the stage, the stage second, where, the flow state and the
 # bot's goal. Reads only, so the seed replays exactly with or without it.
-#   stuck   within STUCK_M of one point for STUCK_S of play (not a boss, not frozen, not on a line)
+#   stuck   within STUCK_M of one point for STUCK_S of play, boss fights included (not frozen, not on a line)
 #   hung    at rest off the ground for HUNG_S (an ungrounded rest, ruling aa)
 #   wedged  at rest on the ground pressed into a wall-steep contact for HUNG_S
 #   fell    the fall rescue: the ball moved over TELEPORT_M in one tick from under the floor or off
 #           the map (a blink or a boss's carry is not a fall)
 #   objective  the HUD's objective plate changed (its id and words, with the gate's lock state)
-# Each kind re-arms once the ball has left REARM_M of where it fired.
+# A kind logs again only REARM_M or more from where it last fired.
 
 const STUCK_M := 3.0
 const STUCK_S := 8.0
@@ -75,7 +75,7 @@ func step(delta: float) -> void:
 		var terrain = _game.ctx.terrain
 		# A blink and a boss's scripted carry move the ball on purpose; only the fall rescue's
 		# move (from under the floor or off the map) counts.
-		if _blinked != _driver.ticks and (not terrain.contains(_last) or _last.y < terrain.floor_height(_last.x, _last.z) - 2.0):
+		if _driver.ticks - _blinked > 1 and (not terrain.contains(_last) or _last.y < terrain.floor_height(_last.x, _last.z) - 2.0):
 			_emit("fell", _last, state, {"to": _v(ball)})
 	_last = ball
 	var playing: bool = _game.flow.in_play() and not player.frozen() and not player.kit.hooked

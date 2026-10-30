@@ -58,6 +58,11 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_out = FileAccess.open(String(_settings["out"]), FileAccess.WRITE)
+	var shard := String(_settings.get("shard", "0/1")).split("/")
+	if _out == null or shard.size() != 2 or float(_settings.get("grid", "1")) <= 0.0:
+		printerr("spot_sweep: --out must be writable, --shard i/n, --grid above 0")
+		quit(2)
+		return
 	_game = Game.new()
 	_game.test_mode = true
 	_game.table = "park"
@@ -78,7 +83,6 @@ func _run() -> void:
 	var stages: Array = []
 	for part in String(_settings.get("stages", "1,2")).split(",", false):
 		stages.append(int(part))
-	var shard := String(_settings.get("shard", "0/1")).split("/")
 	var shard_i := int(shard[0])
 	var shard_n := maxi(1, int(shard[1]))
 	var only := String(_settings.get("only", "")).split(",", false)
@@ -172,6 +176,7 @@ func _probe(stage: int, spot: Dictionary, angle: float, source, from := Vector2.
 		return row
 	var aim := Vector3(centre.x - start2.x, 0.0, centre.y - start2.y).normalized()
 	var cruise: float = player.tuning.f("cruise")
+	source.hold = {}
 	player.reset_to(top + Vector3.UP * 1.3, aim * cruise * 0.8)
 	await physics_frame
 	var slow := 0.0
@@ -275,6 +280,7 @@ func _escape(source, ball: Vector3) -> bool:
 		source.hold = {"move": Vector2(0.0, -1.0), "jump_held": t < 0.3}
 		await physics_frame
 		t += 1.0 / float(Engine.physics_ticks_per_second)
+	source.hold = {}
 	return _game.player.ball_position().distance_to(ball) > 3.0
 
 
