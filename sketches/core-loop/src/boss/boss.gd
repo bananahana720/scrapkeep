@@ -1116,6 +1116,9 @@ func _step_hazards(delta: float, ball: Vector3) -> void:
 		if h.shape == Hazard.Shape.ANNULUS and h.is_live():
 			if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0):
 				_slag_hit(h, ball)
+				# A killing ring ended the run and exit_arena cleared the list: keep it cleared.
+				if not ctx.flow.in_play():
+					return
 			elif _on_crust(h, ball):
 				_discover(CodexEntries.QUENCH_RIDE, ball)
 		if h.is_done() and h.age >= h.warn_seconds + h.live_seconds + 0.5:

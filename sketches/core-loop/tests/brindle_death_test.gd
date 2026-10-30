@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
+const Arena := preload("res://src/boss/arena.gd")
 const T := preload("res://tests/support/t.gd")
 
 # A death to Brindle logs no script error (w28 cautious red team, edge 1). On the game's path (a run
@@ -13,6 +14,8 @@ const T := preload("res://tests/support/t.gd")
 #   slag:   _slag_hit (boss.gd), which went on to arena.radius_of
 #   charge: _charge_hit, which went on to ship.hull
 #   lane:   _run_charge running the committed lane into the ball, which went on to _charge["travelled"]
+#   ring:   _step_hazards with both slag rings live, the ball in ring A: the loop went on to ring B and
+#           put the torn-down hazards back on the list exit_arena had cleared
 
 const DIR := "user://brindle_death_test/"
 const PATH := DIR + "run.json"
@@ -39,7 +42,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	for how in ["slag", "charge", "lane"]:
+	for how in ["slag", "charge", "lane", "ring"]:
 		await _die_to(how)
 	DirAccess.remove_absolute(PATH)
 	quit(_t.verdict())
@@ -81,10 +84,15 @@ func _die_to(how: String) -> void:
 			Harness.put_ball(game, Vector3(at.x, boss.arena.ground(at) + 1.0, at.z))
 			boss._charge["state"] = "run"
 			boss._run_charge(1.0 / 90.0, game.player.ball_position())
+		"ring":
+			var warn: float = maxf(boss._commit_slag(0, false), boss._commit_slag(1, false))
+			var spot: Vector3 = Harness.ground_spot(boss, 0.0, (Arena.RING_A.x + Arena.RING_A.y) * 0.5, 0.5)
+			boss._step_hazards(warn + 0.01, spot)
 	await physics_frame
 	await physics_frame
 	_t.eq("%s: the run is over" % how, game.flow.state_name(), "summary")
 	_t.check("%s: RUN OVER names Brindle" % how, game.flow.death_cause.begins_with("Scrapped by Brindle's"), game.flow.death_cause)
 	_t.check("%s: no script error" % how, _log.errors.is_empty(), " | ".join(_log.errors))
+	_t.check("%s: no hazard outlives the arena" % how, boss.hazards.is_empty(), "%d left" % boss.hazards.size())
 	game.free()
 	await physics_frame

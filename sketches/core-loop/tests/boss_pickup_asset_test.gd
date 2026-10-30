@@ -21,9 +21,10 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # through _spawn_pickup, paid back by recover_mass; pickup meshes unchanged. Was e6d147b7.
 # Re-pinned 2026-10-29 (bowl tail): pickups_left names each pile's source so the bot can tell shed
 # armour from the rest; pickup meshes unchanged. Was 36c7a9ba.
-# Re-pinned 2026-10-30 (w28 cautious red team): the slag and charge hits return when their damage
-# ended the run, so a death to Brindle reads no torn-down arena; pickup meshes unchanged. Was e34f3fd2.
-const BASE_LOGIC_SHA := "689f3240919498487f8734c891486680200ea18be93bd99a4c56d527eedc7dcd"
+# Re-pinned 2026-10-30 (w28 cautious red team): the slag and charge hits, and the hazard step after a
+# killing slag ring, return when their damage ended the run, so a death to Brindle reads no torn-down
+# arena; pickup meshes unchanged. Was e34f3fd2.
+const BASE_LOGIC_SHA := "acf817b9939ea55912cf12372543818480182220a6aa2cad698e139927f0e398"
 
 var failures := 0
 var game
