@@ -6,7 +6,8 @@ extends RefCounted
 #   stuck   within STUCK_M of one point for STUCK_S of play (not a boss, not frozen, not on a line)
 #   hung    at rest off the ground for HUNG_S (an ungrounded rest, ruling aa)
 #   wedged  at rest on the ground pressed into a wall-steep contact for HUNG_S
-#   fell    the ball moved over TELEPORT_M in one tick inside one stage (the fall rescue)
+#   fell    the fall rescue: the ball moved over TELEPORT_M in one tick from under the floor or off
+#           the map (a blink or a boss's carry is not a fall)
 #   objective  the HUD's objective plate changed (its id and words, with the gate's lock state)
 # Each kind re-arms once the ball has left REARM_M of where it fired.
 
@@ -16,6 +17,7 @@ const HUNG_S := 1.0
 const REST_SPEED := 0.5
 const TELEPORT_M := 8.0
 const REARM_M := 10.0
+const DETAIL_M := 15.0
 
 var _game
 var _driver
@@ -28,6 +30,7 @@ var _hung := 0.0
 var _wedged := 0.0
 var _fired := {}
 var _objective := ""
+var _blinked := -1
 var counts := {}
 
 
@@ -35,6 +38,22 @@ func setup(game, driver, path: String) -> void:
 	_game = game
 	_driver = driver
 	_file = FileAccess.open(path, FileAccess.WRITE)
+	game.events.blink_used.connect(func(_from, _to): _blinked = driver.ticks)
+
+
+# What a stuck or hung row needs for reading: the ball's motion and contact, and in a boss fight
+# the pickups still on the ground within DETAIL_M.
+func _detail(ball: Vector3) -> Dictionary:
+	var player = _game.player
+	var out := {"v": _v(player.state.velocity), "grounded": player.state.grounded, "n": _v(player.state.contact_normal)}
+	var boss = _driver._boss() if _game.flow.state_name() == "boss" and _driver.has_method("_boss") else null
+	if boss != null and boss.has_method("pickups_left"):
+		var near := []
+		for p in boss.pickups_left():
+			if ball.distance_to(p["at"]) < DETAIL_M:
+				near.append({"at": _v(p["at"]), "source": p["source"], "d": snappedf(ball.distance_to(p["at"]), 0.1)})
+		out["pickups"] = near
+	return out
 
 
 func step(delta: float) -> void:
@@ -53,7 +72,11 @@ func step(delta: float) -> void:
 		return
 	var state: String = _game.flow.state_name()
 	if ball.distance_to(_last) > TELEPORT_M:
-		_emit("fell", _last, state, {"to": _v(ball)})
+		var terrain = _game.ctx.terrain
+		# A blink and a boss's scripted carry move the ball on purpose; only the fall rescue's
+		# move (from under the floor or off the map) counts.
+		if _blinked != _driver.ticks and (not terrain.contains(_last) or _last.y < terrain.floor_height(_last.x, _last.z) - 2.0):
+			_emit("fell", _last, state, {"to": _v(ball)})
 	_last = ball
 	var playing: bool = _game.flow.in_play() and not player.frozen() and not player.kit.hooked
 	if not playing:
@@ -68,11 +91,11 @@ func step(delta: float) -> void:
 	else:
 		_anchor_s += delta
 		if _anchor_s >= STUCK_S:
-			_emit("stuck", ball, state, {"s": snappedf(_anchor_s, 0.1)})
+			_emit("stuck", ball, state, _detail(ball))
 	var resting: bool = player.state.velocity.length() < REST_SPEED
 	_hung = _hung + delta if resting and not player.state.grounded else 0.0
 	if _hung >= HUNG_S:
-		_emit("hung", ball, state, {})
+		_emit("hung", ball, state, _detail(ball))
 	_wedged = _wedged + delta if resting and player.state.grounded and player.state.contact_normal.y < 0.45 else 0.0
 	if _wedged >= HUNG_S:
 		_emit("wedged", ball, state, {"n": _v(player.state.contact_normal)})

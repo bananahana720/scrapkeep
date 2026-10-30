@@ -10,7 +10,7 @@ const Intent := preload("res://src/movement/intent.gd")
 # stick for PROBE_S plus a second per 12 m of run-up. Calm (no enemies), so only the map answers.
 #
 #   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/spot_sweep.gd \
-#     -- --out=<file.ndjson> [--stages=1,2] [--dirs=8] [--shard=0/4] [--only=<id,...>] [--grid=<m>]
+#     -- --out=<file.ndjson> [--camp=1] [--stages=1,2] [--dirs=8] [--shard=0/4] [--only=<id,...>] [--grid=<m>]
 #
 # One ndjson row per probe: stage, spot id and kind, the side, where it started, the outcome and,
 # for a stop, where, against which collider (node path) and whether any shown mesh covers the contact
@@ -19,18 +19,21 @@ const Intent := preload("res://src/movement/intent.gd")
 #   blocked        held under STOP_SPEED for STOP_S short of the footprint, pressed into a collider
 #   slope          as blocked, against the ground's own tiles (too steep to climb, drawn)
 #   stuck          held under STOP_SPEED for STOP_S on the ground with no wall contact (a pit, a seam)
-#   hung           at rest, off the ground, for HUNG_S (an ungrounded rest, ruling aa)
+#   hung           at rest, off the ground, for HUNG_S (an ungrounded rest, ruling aa); escaped says
+#                  whether a jump and the stick held back then moved it 3 m
 #   fell           the game's fall rescue moved the ball (through the geometry)
 #   short          the probe ran out of time still rolling (slopes, a long way round)
 #   bad_start      no surface under the start, or the start lies off the map
 
 const BIG_M := 160.0
 const RUNUP_M := 14.0
+const CAMP_RUNUP_M := 8.0
 const REACH_PAD := 3.0
 const PROBE_S := 3.0
 const STOP_SPEED := 1.2
 const STOP_S := 0.8
 const HUNG_S := 0.8
+const ESCAPE_S := 1.5
 const TELEPORT_M := 8.0
 const COVER_PAD := 0.6
 const CELL := 16.0
@@ -64,6 +67,11 @@ func _run() -> void:
 	_game.ctx.calm = true
 	var source := Intent.Scripted.new()
 	_game.player.source = source
+	if _settings.get("camp", "0") == "1":
+		await _camp(source)
+		print("spot_sweep: %d probes written" % _rows)
+		quit(0)
+		return
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
 	await physics_frame
@@ -133,16 +141,18 @@ func _spots(park: Dictionary) -> Array:
 	return out
 
 
-func _probe(stage: int, spot: Dictionary, angle: float, source) -> Dictionary:
+func _probe(stage: int, spot: Dictionary, angle: float, source, from := Vector2.INF) -> Dictionary:
 	var terrain = _game.ctx.terrain
 	var player = _game.player
 	var centre: Vector2 = spot.at
 	var reach: float = REACH_PAD
 	var side := Vector2(cos(angle), sin(angle))
-	var start2 := centre + side * (float(spot.r) + RUNUP_M)
+	var start2 := centre + side * (float(spot.r) + (CAMP_RUNUP_M if stage == 0 else RUNUP_M))
+	if from != Vector2.INF:
+		start2 = from
 	var row := {"stage": stage, "id": spot.id, "kind": spot.kind, "start": [snappedf(start2.x, 0.1), snappedf(start2.y, 0.1)]}
 	var top = _top(Vector3(start2.x, 0.0, start2.y))
-	if top == null or not terrain.contains(top):
+	if top == null or (stage != 0 and not terrain.contains(top)):
 		row["outcome"] = "bad_start"
 		return row
 	var aim := Vector3(centre.x - start2.x, 0.0, centre.y - start2.y).normalized()
@@ -155,7 +165,7 @@ func _probe(stage: int, spot: Dictionary, angle: float, source) -> Dictionary:
 	var min_d := INF
 	var t := 0.0
 	var dt := 1.0 / float(Engine.physics_ticks_per_second)
-	var limit := PROBE_S + (float(spot.r) + RUNUP_M) / 12.0
+	var limit := PROBE_S + start2.distance_to(centre) / 12.0
 	while t < limit:
 		var ball: Vector3 = player.ball_position()
 		var flat := Vector3(centre.x - ball.x, 0.0, centre.y - ball.z)
@@ -186,6 +196,7 @@ func _probe(stage: int, spot: Dictionary, angle: float, source) -> Dictionary:
 		if hung >= HUNG_S:
 			row["outcome"] = "hung"
 			_contact(row, ball)
+			row["escaped"] = await _escape(source, ball)
 			return row
 		if slow >= STOP_S and t > 0.3:
 			row["outcome"] = "blocked" if _contact(row, ball) else "stuck"
@@ -197,6 +208,33 @@ func _probe(stage: int, spot: Dictionary, angle: float, source) -> Dictionary:
 	row["min_d"] = snappedf(min_d - float(spot.r), 0.1)
 	row["at"] = _v(player.ball_position())
 	return row
+
+
+# --camp=1: the camp walk instead of a park, from the title's Camp button. Its spots are the hub's
+# station zones, each rolled at from every side and once from the walk's spawn.
+func _camp(source) -> void:
+	for i in 5:
+		await process_frame
+	_game.screens.button_for("camp").pressed.emit()
+	for i in 3:
+		await process_frame
+	var hub = _game.camp_hub
+	_index_meshes(hub.root)
+	var dirs := int(_settings.get("dirs", "8"))
+	var spots := []
+	for id in hub.zone_ids():
+		var at: Vector3 = hub.zone_position(id)
+		spots.append({"id": id, "kind": "camp", "at": Vector2(at.x, at.z), "r": 1.5})
+	print("spot_sweep: camp %d zones, %d mesh cells" % [spots.size(), _meshes.size()])
+	var spawn: Vector3 = hub.spawn_position()
+	for spot in spots:
+		for d in dirs + 1:
+			var row := await _probe(0, spot, TAU * float(d) / float(dirs), source,
+				Vector2(spawn.x, spawn.z) if d == dirs else Vector2.INF)
+			row["dir"] = "spawn" if d == dirs else str(d)
+			_out.store_line(JSON.stringify(row))
+			_rows += 1
+		_out.flush()
 
 
 # --grid=<m>: a point every m metres over the play rect instead of the authored spots, for the
@@ -212,6 +250,17 @@ func _grid(park: Dictionary, step: float) -> Array:
 			z += step
 		x += step
 	return out
+
+
+# Whether a player could leave a hung rest: a jump, then the stick held away for ESCAPE_S.
+func _escape(source, ball: Vector3) -> bool:
+	source.press = {"jump_pressed": true}
+	var t := 0.0
+	while t < ESCAPE_S:
+		source.hold = {"move": Vector2(0.0, -1.0), "jump_held": t < 0.3}
+		await physics_frame
+		t += 1.0 / float(Engine.physics_ticks_per_second)
+	return _game.player.ball_position().distance_to(ball) > 3.0
 
 
 # The top collider surface under (x, z): props, overlays and the ground alike.
