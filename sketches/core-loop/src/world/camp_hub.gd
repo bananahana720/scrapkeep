@@ -49,13 +49,13 @@ const BERM_SEGMENTS := 72
 const BERM_HEIGHT := 6.0
 const BERM_DEPTH := 10.0
 const BERM_STAGGER_M := 0.06
-# The ball's diameter plus a margin: a prop's collider footprint is what the mesh holds within this height of its foot.
-const BALL_REACH_M := 2.2
 # The detail shells fade out by distance, like the park's (asset_budgets.json park_large shells).
 const SHELL_RANGES := [[150.0, 20.0], [60.0, 8.0]]
 const ZONE_RADIUS := 2.5
 const FALL_BELOW := -25.0
 const MAX_LIGHTS := 24
+# A solid prop collides up to here: a cottonwood's trunk and root flare, not its crown (boughs start at 4 m).
+const SOLID_TOP_M := 4.0
 # The pieces that have detail shells beside them.
 const SHELLED := ["camp_launch_gate", "camp_lockers", "camp_moss_stall", "camp_skee_lane"]
 # Pieces laid flat on the plaza or the sandstone disc: their floors share the plaza's plane where they overlap it, so their
@@ -473,11 +473,9 @@ func to_local_point(global_point: Vector3) -> Vector3:
 	return global_point - HUB_ORIGIN
 
 
-# A picture-driven recipe prop (recipe_props.gd) at xf under root: its base views and shells, and for a solid one a
-# convex column collider round the first base mesh (a cabinet, a trunk): the outline of what the mesh holds within the
-# ball's reach of its foot (reach_column), at its full height. A tree's limbs spread far past its trunk overhead, and a
-# box round the whole mesh stood as an invisible wall a canopy's width from the trunk; a box round the roots still met
-# the ball 1.9 m from a root between its corners (clip audit, 30 Oct).
+# A picture-driven recipe prop (recipe_props.gd) at xf under root: its base views and shells, and for a solid one a hull
+# collider round the first base mesh (a cabinet, a trunk) up to SOLID_TOP_M. A box round the whole mesh took a tree's
+# boughs down to the ground: 8.4 by 6.6 m of invisible wall round a 1.2 m trunk (tools/qa/collision_sweep.gd, 30 Oct).
 func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 	var holder := Node3D.new()
 	holder.name = "Prop_" + key
@@ -486,36 +484,21 @@ func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 	var views := RecipeProps.base(key, holder, Transform3D.IDENTITY)
 	RecipeProps.shells(key, holder, Transform3D.IDENTITY)
 	if solid and not views.is_empty():
-		var first := views[0] as MeshInstance3D
-		var body := Recipes._body(holder)
-		var shape := CollisionShape3D.new()
-		var column := ConvexPolygonShape3D.new()
-		column.points = reach_column(first.mesh, first.transform)
-		shape.shape = column
-		body.add_child(shape)
+		var hull := solid_hull(views[0] as MeshInstance3D)
+		if hull != null:
+			var body := Recipes._body(holder)
+			var shape := CollisionShape3D.new()
+			shape.shape = hull
+			body.add_child(shape)
 	_pieces[key] = holder
 
 
-# The corners of a prism over mesh (at xf): its outline is the convex hull, in x and z, of the vertices within
-# BALL_REACH_M of the mesh's lowest point, and it spans the whole mesh's height. The plain bounds' corners when fewer
-# than three vertices are that low.
-static func reach_column(mesh: Mesh, xf: Transform3D) -> PackedVector3Array:
-	var whole: AABB = xf * mesh.get_aabb()
-	var low := PackedVector2Array()
-	for p in mesh.get_faces():
-		var w := xf * p
-		if w.y <= whole.position.y + BALL_REACH_M:
-			low.append(Vector2(w.x, w.z))
-	var outline := Geometry2D.convex_hull(low) if low.size() >= 3 else PackedVector2Array()
-	if outline.size() < 4:
-		outline = PackedVector2Array([Vector2(whole.position.x, whole.position.z), Vector2(whole.end.x, whole.position.z),
-			Vector2(whole.end.x, whole.end.z), Vector2(whole.position.x, whole.end.z)])
-	var out := PackedVector3Array()
-	# convex_hull closes the loop with the first point again.
-	for k in outline.size() - (1 if outline[0] == outline[outline.size() - 1] else 0):
-		out.append(Vector3(outline[k].x, whole.position.y, outline[k].y))
-		out.append(Vector3(outline[k].x, whole.end.y, outline[k].y))
-	return out
+# The hull of the first view's triangles cut at SOLID_TOP_M, in its holder's space (park_recipes.gd _band_hull), or null.
+static func solid_hull(view: MeshInstance3D) -> ConvexPolygonShape3D:
+	var tris := PackedVector3Array()
+	for v in view.mesh.get_faces():
+		tris.append(view.transform * v)
+	return Recipes._band_hull(tris, -INF, SOLID_TOP_M)
 
 
 func _build_lights() -> void:

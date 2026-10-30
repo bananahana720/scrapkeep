@@ -1,9 +1,9 @@
 {
-  "bake_sha256": "cb20da621992906adee736e33619f2ce13f2db686e99db136d97b8c159feace9",
+  "bake_sha256": "d095d0d5e849f21a57d931d3f8c85a64ba2e12b88f61256fd466c56d27982994",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1093121,
-  "edges": 315493,
+  "bytes": 1092893,
+  "edges": 315494,
   "first_failed": "",
   "flags": {
     "deck": 796,
@@ -15,13 +15,13 @@
   },
   "full_visit_m": 2011,
   "full_visit_ratio": "1.437",
-  "graph_sha256": "a1d6052d54966e98c71b107d9b44515abc40c80db772d97e67df96c5cd7c577d",
+  "graph_sha256": "83d9545f96694a2ef06a9360ea9d9fc60c5e78d468f48577d13a769060514e3c",
   "line_errors": [],
   "line_path_nodes": 125,
   "longest_est_m": 2954,
   "map": "park_flume",
   "nodes": 41197,
-  "park_sha256": "5457d0303975f05219f5fb066d5f5375491e79c273ee136e11e1838ce1848e38",
+  "park_sha256": "919c8d0095deda36b546a45e020a914f4f9a99d6a7b2dbae326b1db9ed9a4ec0",
   "pockets": [
     {
       "clear_ring": [],
@@ -188,7 +188,7 @@
     }
   ],
   "reward_ratio": "0.482",
-  "ride_edges": 148,
+  "ride_edges": 149,
   "routes": {
     "annex_ramp_line": [],
     "bench_run": [],
@@ -460,14 +460,6 @@
         "cost": 721.5,
         "d_landmark": 737.9,
         "name": "bend_zip_pier_9",
-        "on_route": false,
-        "rank": 0,
-        "viable": false
-      },
-      {
-        "cost": 710.0,
-        "d_landmark": 751.1,
-        "name": "bend_zip_pier_7",
         "on_route": false,
         "rank": 0,
         "viable": false
@@ -777,11 +769,11 @@
         "viable": false
       }
     ],
-    "count": 166,
+    "count": 165,
     "crossings": {
       "drop": 73,
       "ride": 77,
-      "walk": 236
+      "walk": 235
     },
     "hidden": [
       {

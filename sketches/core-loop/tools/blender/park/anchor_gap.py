@@ -225,8 +225,9 @@ def sha256(path):
     return h.hexdigest()
 
 
-def shipped_sizes():
-    # {family: {size[1]: row count}} from every object with a kit recipe, at any depth, in park_*.json except park_test.json.
+def shipped_sizes(only=None):
+    # {family: {size[1]: row count}} from every object with a kit recipe, at any depth, in park_*.json except park_test.json
+    # (or only the park files named in `only`).
     found = {f: {} for f in FAMILIES}
 
     def walk(o):
@@ -241,7 +242,8 @@ def shipped_sizes():
             for v in o:
                 walk(v)
 
-    names = sorted(n for n in os.listdir(PARK_DIR) if n.startswith("park_") and n.endswith(".json") and n != "park_test.json")
+    names = sorted(n for n in os.listdir(PARK_DIR) if n.startswith("park_") and n.endswith(".json") and n != "park_test.json"
+                   and (only is None or n in only))
     for n in names:
         with open(os.path.join(PARK_DIR, n)) as f:
             walk(json.load(f))
