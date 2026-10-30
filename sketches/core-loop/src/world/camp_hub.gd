@@ -444,29 +444,20 @@ func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 	RecipeProps.shells(key, holder, Transform3D.IDENTITY)
 	if solid and not views.is_empty():
 		var hull := solid_hull(views[0] as MeshInstance3D)
-		if hull.size() >= 4:
+		if hull != null:
 			var body := Recipes._body(holder)
 			var shape := CollisionShape3D.new()
-			var convex := ConvexPolygonShape3D.new()
-			convex.points = hull
-			shape.shape = convex
+			shape.shape = hull
 			body.add_child(shape)
 	_pieces[key] = holder
 
 
-# The first view's vertices at or under SOLID_TOP_M, in its holder's space, deduplicated to 5 cm.
-static func solid_hull(view: MeshInstance3D) -> PackedVector3Array:
-	var seen := {}
-	var out := PackedVector3Array()
+# The hull of the first view's triangles cut at SOLID_TOP_M, in its holder's space (park_recipes.gd _band_hull), or null.
+static func solid_hull(view: MeshInstance3D) -> ConvexPolygonShape3D:
+	var tris := PackedVector3Array()
 	for v in view.mesh.get_faces():
-		var p: Vector3 = view.transform * v
-		if p.y > SOLID_TOP_M:
-			continue
-		var key := Vector3i((p * 20.0).round())
-		if not seen.has(key):
-			seen[key] = true
-			out.append(p)
-	return out
+		tris.append(view.transform * v)
+	return Recipes._band_hull(tris, -INF, SOLID_TOP_M)
 
 
 func _build_lights() -> void:

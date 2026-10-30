@@ -48,10 +48,18 @@ func _run() -> void:
 		var trunk_r := 0.0
 		for p in mid:
 			trunk_r = maxf(trunk_r, Vector2(p.x, p.z).distance_to(Vector2(0.24, 0.05)))
-		_t.check("%s: hull top at or under SOLID_TOP_M (%.2f m)" % [holder.name, hi.y], hi.y <= CampHub.SOLID_TOP_M + 0.001)
+		_t.check("%s: hull reaches SOLID_TOP_M and no higher (%.2f m)" % [holder.name, hi.y], absf(hi.y - CampHub.SOLID_TOP_M) < 0.01)
 		_t.check("%s: above the root flare the hull is the trunk (widest %.2f m from its axis, want < 1.2)" % [holder.name, trunk_r],
 			not mid.is_empty() and trunk_r < 1.2)
 	_t.eq("six cottonwoods checked", trees, 6)
+	var jukebox: Node = hub.piece("moss_jukebox")
+	var jb := jukebox.get_node_or_null("Collider") as StaticBody3D if jukebox != null else null
+	var jshape: Shape3D = (jb.get_child(0) as CollisionShape3D).shape if jb != null and jb.get_child_count() > 0 else null
+	var jtop := -INF
+	if jshape is ConvexPolygonShape3D:
+		for p: Vector3 in (jshape as ConvexPolygonShape3D).points:
+			jtop = maxf(jtop, p.y)
+	_t.check("the jukebox cabinet stays solid to its top (%.2f m, cabinet 2.6 m)" % jtop, jtop > 2.5)
 
 	var row := {"id": "hoodoo_1", "recipe": "anchor_hoodoo", "size": [283, 10, 273]}
 	var fit := ParkRecipes.anchor_fit_boxes(row)
