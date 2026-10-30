@@ -992,6 +992,11 @@ class Painter:
 	var _driven_values := {}
 
 	static var _stripes: ImageTexture
+	# The first material of each look a line layer draws with (plain or striped), held for the
+	# session. A mark's StandardMaterial3D is its own, since tint() writes it, and when the last
+	# material with a look is freed Godot frees that look's shader too: the next mark compiled it
+	# again, about 5 ms on the 4080, once a lobber volley came after the last ring had gone.
+	static var _held_looks := {}
 	static var _haze := -1  # -1 unread, 0 classic, 1 haze
 
 	static func haze_on() -> bool:
@@ -1273,6 +1278,9 @@ class Painter:
 			mat.uv1_triplanar = true
 			mat.uv1_world_triplanar = true
 			mat.uv1_scale = Vector3.ONE / (STRIPE_PITCH * sqrt(2.0))
+		var look := "striped" if mat.albedo_texture != null else "plain"
+		if not _held_looks.has(look):
+			_held_looks[look] = mat
 		instance.material_override = mat
 		add_child(instance)
 		_layers[layer] = instance

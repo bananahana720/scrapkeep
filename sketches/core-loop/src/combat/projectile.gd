@@ -55,10 +55,13 @@ var pings := 0
 
 # The shell's sphere, its glow and the rim's quad are the same for every shot and never written
 # after, so they are made once, not per shot inside the lobber's physics step. The rim's material
-# pulses per shot, so each shot keeps its own.
+# pulses per shot, so each shot keeps its own; the first one is held for the session, because
+# freeing the last rim material frees its shader and the next shot compiled it again (about 5 ms
+# on the 4080, in a lobber volley's physics tick).
 static var _shell_mesh: SphereMesh
 static var _shell_material: StandardMaterial3D
 static var _rim_quad: QuadMesh
+static var _held_rim: StandardMaterial3D
 
 var _age := 0.0
 var _rim: MeshInstance3D
@@ -186,6 +189,8 @@ func _build_rim() -> void:
 	_rim_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	_rim_material.no_depth_test = true
 	_rim_material.albedo_texture = Icons.shape("ring")
+	if _held_rim == null:
+		_held_rim = _rim_material
 	_rim = MeshInstance3D.new()
 	_rim.name = "BatRim"
 	if _rim_quad == null:

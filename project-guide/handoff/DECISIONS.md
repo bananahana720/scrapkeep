@@ -6,7 +6,7 @@ Owner: the project coordinator (claude.ai project, Andrew's main account, since 
 
 Sources: Andrew's typed lines and taps (project chat card taps until 18 Oct), board #241 comments and the local coordinator session. The machine's own register is docs/decisions.tsv in the repo (1,000 rows since Sept; 55 rows added at wave 15 close).
 
-Last updated 2026-10-23 19:50Z by the library sweep thread (today's rulings: world 1 first and a world 1 sitting, the Cannon wink, coordination back in the project, hive Warden, rogue fleet mini-bosses, the merge line, GPU placement, Mojulo bodies, reference sheets, anthem defaults, the item ladder cards, the mission statement and principles 18 to 21; earlier: map design veto pass, mojulo blockout base, test pace, CPU placement, earned retry item, wave 19 leads with gameplay, the game's theme).
+Last updated 2026-10-29 by the housekeeping thread: rows run through ruling ay (29 Oct 10:16Z), and the Open list below reflects the world 1 sitting on the wave 26 build. Earlier sweeps are in git history.
 
 ## Direction (standing principles, not single rulings)
 
@@ -410,7 +410,7 @@ Watch-outs for live design work: the new "electrical field that interrupts" moti
 
 ## Open (waiting on a call)
 
-- Waiting on Andrew: the world 1 sitting timing card (recommended: end of wave 19, in the place of the dropped feel check).
+- Settled by events, not a new ruling: the world 1 sitting runs on the wave 26 build (main 83f02396, #585); Andrew was asked to play it on 29 Oct 19:25Z. His marks on the sitting sheet drive post-sitting work.
 - Waiting on Andrew, no card: the anthem picks on the Anthem Jukebox (https://claude.ai/artifact/XxpvvCj5Gv5uvPFrfvawjF). The suggested takes are wired as defaults; he can swap any pick there, no card needed.
 - Still to settle: what risk-versus-reward lines pay out; whether the consumed purple holds at golden hour (on the sitting watch list).
 - Answered 23 Oct: the hive Warden and the mini-boss roster Q-P25 (16:02Z), who presses merge (one typed line per batch naming each PR), and the three item ladder cards (19:28Z).
