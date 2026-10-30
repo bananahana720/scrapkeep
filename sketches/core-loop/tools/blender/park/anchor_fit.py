@@ -30,7 +30,8 @@ Fit. For each (variant, shipped size) whose gap with today's 8 m box is over LIM
          slope the downhill side shows it, so it keeps a box as the 8 m box did.
   low    h 0 .. min(size, SPLIT_M), the whole height of a rolling ball, as 1 box, else 2, else 4 stacked boxes of equal
          height: the first count whose gap is at or under LIMIT_M, else the count with the smallest gap.
-  upper  when size > SPLIT_M, one box over h SPLIT_M .. size.
+  upper  when size > SPLIT_M, one box over h SPLIT_M .. size; or, when the post is waisted (a band of at most UPPER_BAND_M
+         whose footprint is under UPPER_NECK_SHARE of that box's), that span cut into equal bands of at most UPPER_BAND_M.
 Each box is the bounds of the mesh's clipped surface in its own heights, so by construction no drawn surface is outside
 its box. The render mesh is checked inside x, z [-4, 4], so no box is wider than today's 8 m box. Rows at or under LIMIT_M
 are not listed and keep the 8 m box. A fitted row still over LIMIT_M prints `ANCHOR_FIT OVER` and carries
@@ -67,6 +68,8 @@ SPLIT_M = 2.0 * gap.BALL_RADIUS
 SAMPLE_M = 0.1
 LINE_STEP_M = 0.25
 LOW_SPLITS = (1, 2, 4)
+UPPER_BAND_M = 3.0
+UPPER_NECK_SHARE = 0.5
 OUT_KEYS = ("+x", "-x", "+z", "-z")
 
 
@@ -219,8 +222,26 @@ def fit(tris, size):
     if size > SPLIT_M:
         up = box_of(tris, size, SPLIT_M, size, SPLIT_M)
         if up:
-            boxes.append(up)
+            boxes.extend(upper(tris, size, up))
     return boxes, low
+
+
+def footprint(b):
+    return (b["x"][1] - b["x"][0]) * (b["z"][1] - b["z"][0])
+
+
+def upper(tris, size, up):
+    # The upper box alone, or UPPER_BAND_M stacked bands when one of them has under UPPER_NECK_SHARE of the whole box's
+    # footprint: a waisted post (a hoodoo's neck under its cap) whose one hull held up to 1.7 m of air round the neck at
+    # h 5-7, where a jumping or launched ball meets it (tools/qa/collision_sweep.gd, 30 Oct).
+    n = int(math.ceil((size - SPLIT_M) / UPPER_BAND_M - 1e-9))
+    if n < 2:
+        return [up]
+    cuts = [SPLIT_M + (size - SPLIT_M) * k / n for k in range(n + 1)]
+    parts = [box_of(tris, size, cuts[k], cuts[k + 1], cuts[k]) for k in range(n)]
+    if any(b is None for b in parts) or min(footprint(b) for b in parts) >= UPPER_NECK_SHARE * footprint(up):
+        return [up]
+    return parts
 
 
 def col_check(name, col_tris):
