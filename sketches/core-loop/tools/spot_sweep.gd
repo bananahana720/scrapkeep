@@ -1,0 +1,294 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const Intent := preload("res://src/movement/intent.gd")
+
+# World 1 spot sweep (gameplay QA, 30 Oct): rolls the ball at every authored spot of a park stage
+# from several sides and logs what stops it. A spot is a park row smaller than BIG_M, the landmark,
+# the waymarks, the activity, rescue and contraption sites. Each probe drops the ball on the top
+# surface RUNUP_M outside the spot's footprint, aims it at the spot's centre at cruise and holds the
+# stick for PROBE_S plus a second per 12 m of run-up. Calm (no enemies), so only the map answers.
+#
+#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/spot_sweep.gd \
+#     -- --out=<file.ndjson> [--stages=1,2] [--dirs=8] [--shard=0/4] [--only=<id,...>] [--grid=<m>]
+#
+# One ndjson row per probe: stage, spot id and kind, the side, where it started, the outcome and,
+# for a stop, where, against which collider (node path) and whether any shown mesh covers the contact
+# (visible false is the invisible-wall read). Outcomes:
+#   reached        came within REACH_PAD of the spot's centre
+#   blocked        held under STOP_SPEED for STOP_S short of the footprint, pressed into a collider
+#   slope          as blocked, against the ground's own tiles (too steep to climb, drawn)
+#   stuck          held under STOP_SPEED for STOP_S on the ground with no wall contact (a pit, a seam)
+#   hung           at rest, off the ground, for HUNG_S (an ungrounded rest, ruling aa)
+#   fell           the game's fall rescue moved the ball (through the geometry)
+#   short          the probe ran out of time still rolling (slopes, a long way round)
+#   bad_start      no surface under the start, or the start lies off the map
+
+const BIG_M := 160.0
+const RUNUP_M := 14.0
+const REACH_PAD := 3.0
+const PROBE_S := 3.0
+const STOP_SPEED := 1.2
+const STOP_S := 0.8
+const HUNG_S := 0.8
+const TELEPORT_M := 8.0
+const COVER_PAD := 0.6
+const CELL := 16.0
+
+var _game
+var _out: FileAccess
+var _settings := {}
+var _meshes := {}
+var _rows := 0
+
+
+func _initialize() -> void:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--") and "=" in arg:
+			_settings[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
+	if not _settings.has("out"):
+		printerr("spot_sweep: --out=<file.ndjson> is required")
+		quit(2)
+		return
+	_run.call_deferred()
+
+
+func _run() -> void:
+	_out = FileAccess.open(String(_settings["out"]), FileAccess.WRITE)
+	_game = Game.new()
+	_game.test_mode = true
+	_game.table = "park"
+	root.add_child(_game)
+	await process_frame
+	await process_frame
+	_game.ctx.calm = true
+	var source := Intent.Scripted.new()
+	_game.player.source = source
+	_game.flow.press_start()
+	_game.flow.choose_class(0)
+	await physics_frame
+	var stages: Array = []
+	for part in String(_settings.get("stages", "1,2")).split(",", false):
+		stages.append(int(part))
+	var shard := String(_settings.get("shard", "0/1")).split("/")
+	var shard_i := int(shard[0])
+	var shard_n := maxi(1, int(shard[1]))
+	var only := String(_settings.get("only", "")).split(",", false)
+	var dirs := int(_settings.get("dirs", "8"))
+	for stage in stages:
+		_game.flow.enter_stage(stage, Vector3.ZERO, false)
+		for i in 30:
+			await physics_frame
+		var terrain = _game.ctx.terrain
+		var map = terrain.map_for(stage)
+		_index_meshes(terrain.geometry_root(stage))
+		var spots := _grid(map.park, float(_settings["grid"])) if _settings.has("grid") else _spots(map.park)
+		print("spot_sweep: stage %d (%s) %d spots, %d mesh cells" % [stage, map.park["map"], spots.size(), _meshes.size()])
+		for n in spots.size():
+			if n % shard_n != shard_i:
+				continue
+			var spot: Dictionary = spots[n]
+			if not only.is_empty() and String(spot.id) not in only:
+				continue
+			for d in dirs:
+				var angle := TAU * float(d) / float(dirs)
+				var row := await _probe(stage, spot, angle, source)
+				row["dir"] = d
+				_out.store_line(JSON.stringify(row))
+				_rows += 1
+			_out.flush()
+	print("spot_sweep: %d probes written" % _rows)
+	quit(0)
+
+
+# Every authored spot of the park that a ball can be rolled at, with a footprint radius.
+func _spots(park: Dictionary) -> Array:
+	var out := []
+	for row in park.get("park_rows", []):
+		var size: Array = row.get("size", [0, 0, 0])
+		var r := maxf(float(size[0]), float(size[2])) * 0.5
+		if r * 2.0 > BIG_M:
+			continue
+		out.append({"id": row.id, "kind": "row:%s" % row.get("landform", ""), "at": Vector2(row.at[0], row.at[1]), "r": r})
+	var lm: Dictionary = park.get("landmark", {})
+	if lm.has("beacon"):
+		out.append({"id": "%s_beacon" % lm.id, "kind": "beacon", "at": Vector2(lm.beacon[0], lm.beacon[1]), "r": 4.0})
+	for key in ["bay_dock"]:
+		if lm.has(key):
+			out.append({"id": "%s_%s" % [lm.id, key], "kind": key, "at": Vector2(lm[key].at[0], lm[key].at[1]), "r": 4.0})
+	for slot in lm.get("gate_slots", []):
+		out.append({"id": "gate_slot_%d" % int(slot.at[0]), "kind": "gate_slot", "at": Vector2(slot.at[0], slot.at[1]), "r": 3.0})
+	for w in park.get("waymarks", []):
+		if w is Dictionary and w.has("at"):
+			out.append({"id": w.id, "kind": "waymark", "at": Vector2(w.at[0], w.at[1]), "r": 4.0})
+	for a in park.get("activity_rows", []):
+		out.append({"id": a.id, "kind": "activity:%s" % a.activity, "at": Vector2(a.at[0], a.at[1]), "r": 5.0})
+	for a in park.get("rescue_rows", []):
+		out.append({"id": a.id, "kind": "rescue", "at": Vector2(a.at[0], a.at[1]), "r": 4.0})
+	for c in park.get("contraption_rows", []):
+		if c.has("at"):
+			out.append({"id": c.id, "kind": "contraption:%s" % c.kind, "at": Vector2(c.at[0], c.at[c.at.size() - 1]), "r": 4.0})
+		elif c.has("from"):
+			out.append({"id": c.id + "_from", "kind": "contraption:%s" % c.kind, "at": Vector2(c.from[0], c.from[2]), "r": float(c.get("radius", 4.0))})
+	return out
+
+
+func _probe(stage: int, spot: Dictionary, angle: float, source) -> Dictionary:
+	var terrain = _game.ctx.terrain
+	var player = _game.player
+	var centre: Vector2 = spot.at
+	var reach: float = REACH_PAD
+	var side := Vector2(cos(angle), sin(angle))
+	var start2 := centre + side * (float(spot.r) + RUNUP_M)
+	var row := {"stage": stage, "id": spot.id, "kind": spot.kind, "start": [snappedf(start2.x, 0.1), snappedf(start2.y, 0.1)]}
+	var top = _top(Vector3(start2.x, 0.0, start2.y))
+	if top == null or not terrain.contains(top):
+		row["outcome"] = "bad_start"
+		return row
+	var aim := Vector3(centre.x - start2.x, 0.0, centre.y - start2.y).normalized()
+	var cruise: float = player.tuning.f("cruise")
+	player.reset_to(top + Vector3.UP * 1.3, aim * cruise * 0.8)
+	await physics_frame
+	var slow := 0.0
+	var hung := 0.0
+	var last: Vector3 = player.ball_position()
+	var min_d := INF
+	var t := 0.0
+	var dt := 1.0 / float(Engine.physics_ticks_per_second)
+	var limit := PROBE_S + (float(spot.r) + RUNUP_M) / 12.0
+	while t < limit:
+		var ball: Vector3 = player.ball_position()
+		var flat := Vector3(centre.x - ball.x, 0.0, centre.y - ball.z)
+		_game.camera.yaw = atan2(-flat.x, -flat.z)
+		source.hold = {"move": Vector2(0.0, 1.0)}
+		player.grant_immunity(1.0)
+		await physics_frame
+		t += dt
+		ball = player.ball_position()
+		if ball.distance_to(last) > TELEPORT_M:
+			row["outcome"] = "fell"
+			row["at"] = _v(last)
+			return row
+		last = ball
+		var d := Vector2(ball.x - centre.x, ball.z - centre.y).length()
+		min_d = minf(min_d, d)
+		if d <= reach:
+			row["outcome"] = "reached"
+			row["t"] = snappedf(t, 0.01)
+			return row
+		var speed: float = player.planar_velocity().length()
+		var resting := speed < STOP_SPEED and absf(player.state.velocity.y) < STOP_SPEED
+		if resting and not player.state.grounded:
+			hung += dt
+		else:
+			hung = 0.0
+		slow = slow + dt if resting else 0.0
+		if hung >= HUNG_S:
+			row["outcome"] = "hung"
+			_contact(row, ball)
+			return row
+		if slow >= STOP_S and t > 0.3:
+			row["outcome"] = "blocked" if _contact(row, ball) else "stuck"
+			# The ground's own tiles: a slope too steep to climb, drawn by the terrain.
+			if row["outcome"] == "blocked" and "/Ground/" in String(row["collider"]):
+				row["outcome"] = "slope"
+			return row
+	row["outcome"] = "short"
+	row["min_d"] = snappedf(min_d - float(spot.r), 0.1)
+	row["at"] = _v(player.ball_position())
+	return row
+
+
+# --grid=<m>: a point every m metres over the play rect instead of the authored spots, for the
+# stretches between them.
+func _grid(park: Dictionary, step: float) -> Array:
+	var r: Array = park["play_rect"]
+	var out := []
+	var x := float(r[0]) + step * 0.5
+	while x < float(r[0]) + float(r[2]):
+		var z := float(r[1]) + step * 0.5
+		while z < float(r[1]) + float(r[3]):
+			out.append({"id": "g%d_%d" % [int(x), int(z)], "kind": "grid", "at": Vector2(x, z), "r": 0.0})
+			z += step
+		x += step
+	return out
+
+
+# The top collider surface under (x, z): props, overlays and the ground alike.
+func _top(at: Vector3):
+	var space: PhysicsDirectSpaceState3D = _game.player.body().get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(Vector3(at.x, 400.0, at.z), Vector3(at.x, -200.0, at.z))
+	q.exclude = [_game.player.body().get_rid()]
+	var hit: Dictionary = space.intersect_ray(q)
+	return null if hit.is_empty() else hit.position
+
+
+# Fills the row with where the ball sits and what it presses against. True when a side contact
+# (a wall, not the floor) holds it.
+func _contact(row: Dictionary, ball: Vector3) -> bool:
+	row["at"] = _v(ball)
+	var body: RigidBody3D = _game.player.body()
+	var state: PhysicsDirectBodyState3D = PhysicsServer3D.body_get_direct_state(body.get_rid())
+	var walls := []
+	for i in (state.get_contact_count() if state != null else 0):
+		var n: Vector3 = state.get_contact_local_normal(i)
+		var p: Vector3 = state.get_contact_local_position(i)
+		var other = state.get_contact_collider_object(i)
+		var path := ""
+		if other is Node:
+			path = String((other as Node).get_path()).replace(String(_game.get_path()), "")
+		var wall := absf(n.y) < 0.7
+		walls.append({"collider": path, "n": _v(n), "p": _v(p), "wall": wall, "shown": _shown(p)})
+	row["contacts"] = walls
+	row["grounded"] = _game.player.state.grounded
+	for c in walls:
+		if c.wall:
+			row["collider"] = c.collider
+			row["visible"] = c.shown
+			return true
+	return false
+
+
+# Whether any shown mesh's box covers `p` (COVER_PAD out).
+func _shown(p: Vector3) -> bool:
+	var key := Vector2i(floori(p.x / CELL), floori(p.z / CELL))
+	for box: AABB in _meshes.get(key, []):
+		if box.grow(COVER_PAD).has_point(p):
+			return true
+	return false
+
+
+func _index_meshes(stage_root: Node) -> void:
+	_meshes.clear()
+	var holders: Array = [stage_root]
+	for n in _game.get_children():
+		if n != stage_root and n is Node3D:
+			holders.append(n)
+	for holder in holders:
+		for g in holder.find_children("*", "GeometryInstance3D", true, false):
+			if not g.is_visible_in_tree() or g.visibility_range_begin > 0.0:
+				continue
+			if g is MultiMeshInstance3D:
+				var mm: MultiMesh = g.multimesh
+				if mm == null or mm.mesh == null:
+					continue
+				var local := mm.mesh.get_aabb()
+				for i in mm.visible_instance_count if mm.visible_instance_count >= 0 else mm.instance_count:
+					_add_box(g.global_transform * mm.get_instance_transform(i) * local)
+			else:
+				_add_box(g.global_transform * g.get_aabb())
+
+
+func _add_box(box: AABB) -> void:
+	if box.size.length() > 4000.0:
+		return
+	for x in range(floori(box.position.x / CELL), floori(box.end.x / CELL) + 1):
+		for z in range(floori(box.position.z / CELL), floori(box.end.z / CELL) + 1):
+			var key := Vector2i(x, z)
+			if not _meshes.has(key):
+				_meshes[key] = []
+			_meshes[key].append(box)
+
+
+static func _v(v: Vector3) -> Array:
+	return [snappedf(v.x, 0.1), snappedf(v.y, 0.1), snappedf(v.z, 0.1)]
