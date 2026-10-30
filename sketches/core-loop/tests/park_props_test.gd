@@ -90,6 +90,17 @@ func _check_park(id: String, path: String, min_kinds: int, min_variants: int, wo
 		"%d violations, first %s" % [violations.size(), str(violations.slice(0, 3))])
 	var again := ParkProps.expand(file, kit, world["map"], world["ground"])
 	_t.eq("%s: expansion is deterministic" % id, ParkProps.fingerprint(again), ParkProps.fingerprint(list))
+	# Litter keeps off the vignettes (park_props.gd _litter; clip audit, 30 Oct): no litter footprint meets a vignette prop's.
+	var meets := 0
+	for inst: Dictionary in list:
+		if not inst["litter"]:
+			continue
+		var at := Vector2(inst["pos"].x, inst["pos"].z)
+		for prop: Dictionary in vignette:
+			if Vector2(prop["pos"].x, prop["pos"].z).distance_to(at) < float(prop["radius"]) + float(inst["radius"]):
+				meets += 1
+				break
+	_t.eq("%s: no litter footprint meets a vignette prop's" % id, meets, 0)
 	var max_float := 0.0
 	for inst: Dictionary in list:
 		max_float = maxf(max_float, inst["float_m"])

@@ -48,6 +48,9 @@ const GROUND_THICK := 4.0
 const BERM_SEGMENTS := 72
 const BERM_HEIGHT := 6.0
 const BERM_DEPTH := 10.0
+const BERM_STAGGER_M := 0.06
+# The ball's diameter plus a margin: a prop's collider footprint is what the mesh holds within this height of its foot.
+const BALL_REACH_M := 2.2
 # The detail shells fade out by distance, like the park's (asset_budgets.json park_large shells).
 const SHELL_RANGES := [[150.0, 20.0], [60.0, 8.0]]
 const ZONE_RADIUS := 2.5
@@ -378,10 +381,12 @@ func _build_ground() -> void:
 	var chord := TAU * GROUND_R / BERM_SEGMENTS * 1.08
 	for i in BERM_SEGMENTS:
 		var angle := TAU * i / BERM_SEGMENTS
-		var at := Vector3(sin(angle) * (GROUND_R - BERM_DEPTH * 0.5), BERM_HEIGHT * 0.5, -cos(angle) * (GROUND_R - BERM_DEPTH * 0.5))
+		# Neighbours overlap by the chord's 8%, so odd segments stand BERM_STAGGER_M taller: two tops in one plane z-fight.
+		var tall := BERM_HEIGHT + BERM_STAGGER_M * float(i % 2)
+		var at := Vector3(sin(angle) * (GROUND_R - BERM_DEPTH * 0.5), tall * 0.5, -cos(angle) * (GROUND_R - BERM_DEPTH * 0.5))
 		var segment := Transform3D(Basis(Vector3.UP, -angle), at)
 		var box := BoxShape3D.new()
-		box.size = Vector3(chord, BERM_HEIGHT, BERM_DEPTH)
+		box.size = Vector3(chord, tall, BERM_DEPTH)
 		var collider := CollisionShape3D.new()
 		collider.shape = box
 		collider.transform = segment
@@ -431,7 +436,9 @@ func to_local_point(global_point: Vector3) -> Vector3:
 
 
 # A picture-driven recipe prop (recipe_props.gd) at xf under root: its base views and shells, and for a solid one a box
-# collider round the first base mesh (a cabinet, a trunk).
+# collider round the first base mesh (a cabinet, a trunk), as a column: the mesh's footprint within the ball's reach of
+# its foot (reach_box), its full height. A tree's limbs spread far past its trunk overhead, and a box round the whole
+# mesh stood as an invisible wall a canopy's width from the trunk (clip audit, 30 Oct).
 func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 	var holder := Node3D.new()
 	holder.name = "Prop_" + key
@@ -441,7 +448,7 @@ func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 	RecipeProps.shells(key, holder, Transform3D.IDENTITY)
 	if solid and not views.is_empty():
 		var first := views[0] as MeshInstance3D
-		var box: AABB = first.transform * first.mesh.get_aabb()
+		var box := reach_box(first.mesh, first.transform)
 		var body := Recipes._body(holder)
 		var shape := CollisionShape3D.new()
 		var cube := BoxShape3D.new()
@@ -450,6 +457,27 @@ func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 		shape.position = box.get_center()
 		body.add_child(shape)
 	_pieces[key] = holder
+
+
+# The box of mesh (at xf) whose x and z span the vertices within BALL_REACH_M of the mesh's lowest point and whose y
+# spans the whole mesh; the plain bounds when no vertex is that low (a mesh with no faces).
+static func reach_box(mesh: Mesh, xf: Transform3D) -> AABB:
+	var whole: AABB = xf * mesh.get_aabb()
+	var faces := mesh.get_faces()
+	var foot := AABB()
+	var first := true
+	for p in faces:
+		var w := xf * p
+		if w.y > whole.position.y + BALL_REACH_M:
+			continue
+		if first:
+			foot = AABB(w, Vector3.ZERO)
+			first = false
+		else:
+			foot = foot.expand(w)
+	if first:
+		return whole
+	return AABB(Vector3(foot.position.x, whole.position.y, foot.position.z), Vector3(foot.size.x, whole.size.y, foot.size.z))
 
 
 func _build_lights() -> void:

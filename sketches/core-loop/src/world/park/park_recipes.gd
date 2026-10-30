@@ -1217,7 +1217,14 @@ static func anchor_posts(row: Dictionary, zones: Array = [], pitch := ANCHOR_PIT
 		if stand:
 			var cell := Vector2i(floori(kept.x / ANCHOR_STAND_GAP_M), floori(kept.y / ANCHOR_STAND_GAP_M))
 			placed[cell] = (placed.get(cell, []) as Array) + [kept]
-	# The lane edges: a post every ANCHOR_EDGE_STEP_M just outside each lane, on both sides, where it lands in the field.
+	# The lane edges: a post every ANCHOR_EDGE_STEP_M just outside each lane, on both sides, where it lands in the field,
+	# unless it would stand within ANCHOR_POST_M of a post already kept: two lanes meeting at a joint put their edge posts
+	# in one spot, and an edge post can land on a lattice post (flume hollow_trestles drew two posts through each other at
+	# (-187, -147); clip audit, 30 Oct).
+	var room := {}
+	for p: Vector2 in out:
+		var cell := Vector2i(floori(p.x / ANCHOR_POST_M), floori(p.y / ANCHOR_POST_M))
+		room[cell] = (room.get(cell, []) as Array) + [p]
 	for lane: Dictionary in lanes:
 		var a: Vector2 = lane["a"]
 		var ab: Vector2 = (lane["b"] as Vector2) - a
@@ -1233,9 +1240,36 @@ static func anchor_posts(row: Dictionary, zones: Array = [], pitch := ANCHOR_PIT
 		var s_end := minf(length, t + reach)
 		while s <= s_end + 0.001:
 			for p: Vector2 in [a + dir * s + side, a + dir * s - side]:
-				if inside.call(p) and clear.call(p):
+				if inside.call(p) and clear.call(p) and _room(room, p, ANCHOR_POST_M):
 					out.append(p)
+					var cell := Vector2i(floori(p.x / ANCHOR_POST_M), floori(p.y / ANCHOR_POST_M))
+					room[cell] = (room.get(cell, []) as Array) + [p]
 			s += ANCHOR_EDGE_STEP_M
+	return out
+
+
+# Every anchor field's posts in rows (a park's placed rows, in order), keyed by row index, with the fields' overlaps
+# settled: a post closer than ANCHOR_POST_M (one post's footprint) to a post an earlier field kept is dropped, so two
+# fields authored over the same ground never plant two posts into each other (a saguaro grown through a hoodoo, both
+# colliders merged; clip audit, 30 Oct). The kept post stands within a footprint of the dropped one, so the ground it
+# covered stays covered. The
+# Placer and the perch tops read posts through here so the built posts and the perches agree.
+static func field_posts(rows: Array, zones: Array) -> Dictionary:
+	var out := {}
+	var kept := {}
+	for i in rows.size():
+		if not is_anchor_field(rows[i]):
+			continue
+		var mine := {}
+		var posts := PackedVector2Array()
+		for p: Vector2 in anchor_posts(rows[i], zones):
+			if _room(kept, p, ANCHOR_POST_M):
+				posts.append(p)
+				var cell := Vector2i(floori(p.x / ANCHOR_POST_M), floori(p.y / ANCHOR_POST_M))
+				mine[cell] = (mine.get(cell, []) as Array) + [p]
+		for cell: Vector2i in mine:
+			kept[cell] = (kept.get(cell, []) as Array) + mine[cell]
+		out[i] = posts
 	return out
 
 
@@ -1252,11 +1286,16 @@ static func _stand_neighbours(spots: Dictionary, key: Vector2i) -> bool:
 
 # Whether p stands at least ANCHOR_STAND_GAP_M from every post in placed (posts by ANCHOR_STAND_GAP_M cell).
 static func _stand_room(placed: Dictionary, p: Vector2) -> bool:
-	var cell := Vector2i(floori(p.x / ANCHOR_STAND_GAP_M), floori(p.y / ANCHOR_STAND_GAP_M))
+	return _room(placed, p, ANCHOR_STAND_GAP_M)
+
+
+# Whether p stands at least gap from every post in placed (posts by gap-sized cell).
+static func _room(placed: Dictionary, p: Vector2, gap: float) -> bool:
+	var cell := Vector2i(floori(p.x / gap), floori(p.y / gap))
 	for dj in range(-1, 2):
 		for di in range(-1, 2):
 			for q: Vector2 in placed.get(cell + Vector2i(di, dj), []):
-				if q.distance_to(p) < ANCHOR_STAND_GAP_M:
+				if q.distance_to(p) < gap:
 					return false
 	return true
 
@@ -1772,9 +1811,7 @@ class Placer extends Node3D:
 			finish()
 
 	func _work_posts() -> void:
-		for i in _rows.size():
-			if Self.is_anchor_field(_rows[i]):
-				_posts[i] = Self.anchor_posts(_rows[i], _zones)
+		_posts = Self.field_posts(_rows, _zones)
 
 	func _wait_posts() -> void:
 		if _task != -1:

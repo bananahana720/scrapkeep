@@ -75,6 +75,8 @@ const LITTER_CHUNK_M := 160.0
 const LITTER_SCALE_MIN := 0.9
 const LITTER_SCALE_MAX := 1.15
 const LITTER_GAP_RATIO := 0.5
+# The cell a litter item's search for a vignette prop's footprint is bucketed by (_feet).
+const LITTER_FOOT_CELL_M := 4.0
 const CAMP_ACTIVITIES := ["enemy_camp"]
 # Explicit surfaces: with a file "ground_rows" list, every instance stands inside a listed row's footprint, inset at least this far
 # (beyond its own radius) from the edge, so nothing sits on a drop lip or a bowl edge. Listed rows stop being footprint keepouts.
@@ -1036,7 +1038,7 @@ static func expand(file: Dictionary, kit: Dictionary, park_map, ground: Callable
 				spot_yaw + deg_to_rad(float(prop.get("yaw_deg", 0.0))), float(prop.get("scale", 1.0)), deg_to_rad(float(prop.get("tilt_deg", 0.0))), ground, false))
 	var litter = file.get("litter")
 	if litter is Dictionary:
-		out.append_array(_litter(litter, id, kit, c, ground))
+		out.append_array(_litter(litter, id, kit, c, ground, out))
 	return out
 
 
@@ -1088,8 +1090,9 @@ static func _normal(ground: Callable, at: Vector2, span: float) -> Vector3:
 # Litter: walk every line (pilots in name order, then the floor line); every spacing_m place one item at a seeded
 # lateral offset inside band_m on a seeded side, a weighted kind. Every draw is made before the item is judged, so a
 # drop never moves the next item. An item that fails validate() is dropped, as is one within spacing_m * 0.5 of a
-# litter item already placed (seven lines share most of their way).
-static func _litter(litter: Dictionary, id: String, kit: Dictionary, c: Context, ground: Callable) -> Array:
+# litter item already placed (seven lines share most of their way), and one whose footprint meets a vignette prop's
+# (props, the spots' instances: a litter pail was drawn through a vignette's pail; clip audit, 30 Oct).
+static func _litter(litter: Dictionary, id: String, kit: Dictionary, c: Context, ground: Callable, props: Array = []) -> Array:
 	var out := []
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash("%s|litter|%d" % [id, int(litter.get("seed", 0))])
@@ -1100,6 +1103,7 @@ static func _litter(litter: Dictionary, id: String, kit: Dictionary, c: Context,
 	for row: Dictionary in kinds:
 		total += float(row["weight"])
 	var placed: Array[Vector2] = []
+	var feet := _feet(props)
 	for key in c.lines:
 		var pts: PackedVector2Array = c.lines[key]
 		var carried := rng.randf_range(0.0, spacing)
@@ -1135,10 +1139,39 @@ static func _litter(litter: Dictionary, id: String, kit: Dictionary, c: Context,
 				var inst := _instance("litter", kind, String(names[vr % names.size()]), kit, at, yaw, scale, 0.0, ground, true)
 				if not check_one(inst, c).is_empty():
 					continue
+				if _meets(feet, at, float(inst["radius"])):
+					continue
 				placed.append(at)
 				out.append(inst)
 			carried = fmod(carried + length, spacing)
 	return out
+
+
+# The props' footprints {pos, radius} by LITTER_FOOT_CELL_M cell, and the largest radius, for _meets.
+static func _feet(props: Array) -> Dictionary:
+	var cells := {}
+	var widest := 0.0
+	for prop: Dictionary in props:
+		var at := Vector2(prop["pos"].x, prop["pos"].z)
+		var cell := Vector2i(floori(at.x / LITTER_FOOT_CELL_M), floori(at.y / LITTER_FOOT_CELL_M))
+		cells[cell] = (cells.get(cell, []) as Array) + [[at, float(prop["radius"])]]
+		widest = maxf(widest, float(prop["radius"]))
+	return {"cells": cells, "widest": widest}
+
+
+# Whether a footprint of radius at at meets one of feet's.
+static func _meets(feet: Dictionary, at: Vector2, radius: float) -> bool:
+	var cells: Dictionary = feet["cells"]
+	if cells.is_empty():
+		return false
+	var span := ceili((float(feet["widest"]) + radius) / LITTER_FOOT_CELL_M)
+	var home := Vector2i(floori(at.x / LITTER_FOOT_CELL_M), floori(at.y / LITTER_FOOT_CELL_M))
+	for dj in range(-span, span + 1):
+		for di in range(-span, span + 1):
+			for foot: Array in cells.get(home + Vector2i(di, dj), []):
+				if (foot[0] as Vector2).distance_to(at) < float(foot[1]) + radius:
+					return true
+	return false
 
 
 # --- Validate -------------------------------------------------------------------------------------
