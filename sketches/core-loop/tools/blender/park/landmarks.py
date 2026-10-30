@@ -350,12 +350,14 @@ def dam_arch_z(x):
     return -46.0 - 25.0 * (1.0 - (x / DAM_CHORD) ** 2)
 
 
-def arch_profile(x, z, thick):
-    """The upper arch's cross-section at x, as drawn: the front and back walls from 99 m, the crest deck at DAM_CREST and
-    the two parapets (0.6 m wide, 1.2 m tall) on its edges."""
+def arch_pieces(x, z, thick):
+    """The upper arch's cross-section at x as drawn, in convex pieces (a ring_solid winds each face away from its piece's
+    centre, so a concave ring turns faces inward): the body from 99 m to the crest deck at DAM_CREST, and the two
+    parapets (0.6 m wide, 1.2 m tall) on its edges."""
     top, cap = DAM_CREST, DAM_CREST + 1.2
-    return [(x, 99.0, z), (x, cap, z), (x, cap, z - 0.6), (x, top, z - 0.6), (x, top, z - thick + 0.6),
-            (x, cap, z - thick + 0.6), (x, cap, z - thick), (x, 99.0, z - thick)]
+    return [[(x, 99.0, z), (x, top, z), (x, top, z - thick), (x, 99.0, z - thick)],
+            [(x, top, z), (x, cap, z), (x, cap, z - 0.6), (x, top, z - 0.6)],
+            [(x, top, z - thick + 0.6), (x, cap, z - thick + 0.6), (x, cap, z - thick), (x, top, z - thick)]]
 
 
 def dam_course(row, colm):
@@ -448,8 +450,8 @@ def build_dam():
         # the collider follows the drawn arch segment by segment: its faces, the crest deck and the parapets. A box per
         # two segments met the ball inside the arch's drawn walls at every joint (clip audit, 30 Oct: 2,539 m2 felt,
         # up to 3.5 m from a drawn face) and floated it 1.2 m over the deck
-        colm.ring_solid(arch_profile(xa, za, thick), arch_profile(xb, zb, thick), col("concrete"),
-                        caps=(k == 0, k == n - 1), inside=ctr)
+        for ra, rb in zip(arch_pieces(xa, za, thick), arch_pieces(xb, zb, thick)):
+            colm.ring_solid(ra, rb, col("concrete"), caps=(k == 0, k == n - 1))
     for sx in (-1, 1):
         x = sx * DAM_CHORD
         z = dam_arch_z(x)

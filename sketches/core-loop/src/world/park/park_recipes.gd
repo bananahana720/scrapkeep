@@ -182,7 +182,7 @@ const WEDGES := {"kicker": 1.0, "drop": -1.0}
 # (tests/park_place_test.gd). An edge step of 12 m puts a post under one of the two spokes nearest square to the lane.
 const ANCHOR_PITCH_M := 20.0
 const ANCHOR_POST_M := 8.0
-# One surface layer's drawn lift (surface_lifts, a tile fit's odd copies) and the margin round a surface row's footprint.
+# One surface layer's drawn lift (surface_lifts) and the margin round a surface row's footprint.
 const SURFACE_LAYER_M := 0.015
 const SURFACE_MARGIN_M := 2.0
 const ANCHOR_SINK_M := 1.0
@@ -386,26 +386,36 @@ static func seat_fit(row: Dictionary, ends: Dictionary, ground := Callable()) ->
 	return {"ok": true, "reason": "", "stretch": stretch, "lip_y": lip_y, "exit_y": exit_y, "transform": xf}
 
 
-# Whether a row opts in to the drape fit (header): a stamped GLB row seated like its stamp's greybox.
 # A surface row: a wash liner (washes.py), drawn conformed to the ground, or a grind line, whose pieces meet end to end.
 # Two that overlap draw the same faces twice, and they z-fight (clip audit, 30 Oct: three flume canal liners at (-287,
 # -250), flume siphon_span into flume_hollow_reach); surface_lifts stacks them. Drape-fit rows settle their overlaps when
-# they are built instead (dam_dressing.py covered_by), so they keep their FLUSH contract.
+# they are built instead (dam_dressing.py covered_by), so they keep their FLUSH contract and are no surface rows, grind
+# lines among them (dam pipeline_bridge, canal_lips).
 static func is_surface(row: Dictionary) -> bool:
+	if fits_drape(row):
+		return false
 	return String(row.get("recipe", "")).begins_with("liner_") or String(row.get("element", "")) == "grind_line"
 
 
 # The drawn lift of each surface row in rows (a park's placed rows), keyed by row index: SURFACE_LAYER_M times the lowest
-# layer no earlier overlapping surface row holds, so an overlap draws the later row's faces a layer above the earlier's.
-# Footprints are the rows' [length (local z), width (local x)] rectangles grown by SURFACE_MARGIN_M. Rows on layer 0 are
-# left out. Only the drawn meshes lift (place_row); colliders stay where they were.
+# layer no overlapping row placed before it holds. Grind lines go first, larger footprint first, then liners the same
+# way, then park order, so a long ride (flume_hollow_reach) keeps its drawn deck on the collider the ball rides and a
+# liner, which only dresses the ground, stands up over it. Footprints are the rows' [length (local z), width (local x)]
+# rectangles grown by SURFACE_MARGIN_M. Rows on layer 0 are left out. Only the drawn meshes lift (place_row); colliders
+# stay where they were.
 static func surface_lifts(rows: Array) -> Dictionary:
 	var out := {}
 	var placed: Array = []
+	var order: Array[int] = []
 	for i in rows.size():
+		if is_surface(rows[i]) and rows[i].has("size"):
+			order.append(i)
+	var rank := func(i: int) -> float:
+		var liner := 0.0 if String(rows[i].get("element", "")) == "grind_line" else 1.0e9
+		return liner - float(rows[i]["size"][0]) * float(rows[i]["size"][2])
+	order.sort_custom(func(a: int, b: int) -> bool: return rank.call(a) < rank.call(b) or (rank.call(a) == rank.call(b) and a < b))
+	for i in order:
 		var row: Dictionary = rows[i]
-		if not is_surface(row) or not row.has("size"):
-			continue
 		var mine := _footprint(row, SURFACE_MARGIN_M)
 		var taken := {}
 		for other: Array in placed:
@@ -450,6 +460,7 @@ static func _lift_drawn(node: Node, lift: float) -> void:
 			_lift_drawn(child, lift)
 
 
+# Whether a row opts in to the drape fit (header): a stamped GLB row seated like its stamp's greybox.
 static func fits_drape(row: Dictionary) -> bool:
 	return String(row.get("fit", "")) == FIT_DRAPE and String(row.get("stamp", "")) != ""
 
@@ -753,8 +764,8 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 			node.set_meta("seat_fit", at_origin)
 			node.set_meta("seat_stretch", fit["stretch"])
 	# Each placement of the parts: [GLB-to-node transform, view name suffix, drawn lift]. One, except for a tile fit's
-	# copies; consecutive copies overlap at their joints, so odd copies draw SURFACE_LAYER_M higher than even ones and
-	# the shared faces do not z-fight (flume_hollow_reach; clip audit, 30 Oct). Colliders take no lift.
+	# copies. A tile copy draws on its collider: an odd copy lifted over its joints left the deck between them over the
+	# collider the ball rides (park_park_flume_test intact top).
 	var fits := [[at_origin, "", 0.0]]
 	if fits_tile(row) and not (parts.get("base", []) as Array).is_empty():
 		var lip := origin(String(row.get("recipe", ""))) == ORIGIN_ENTRY_LIP
@@ -765,7 +776,7 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 			var xfs := []
 			for k in (tile["copies"] as Array).size():
 				var xf: Transform3D = tile["copies"][k]["transform"]
-				fits.append([xf, "_tile%d" % k, SURFACE_LAYER_M * float(k % 2)])
+				fits.append([xf, "_tile%d" % k, 0.0])
 				xfs.append(xf)
 			node.set_meta("tile_fit", xfs)
 			node.set_meta("tile_count", tile["count"])
