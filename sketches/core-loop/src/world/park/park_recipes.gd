@@ -235,7 +235,7 @@ static var _tiles := {}
 # _anchor_mesh() of each anchors kit variant GLB, read once.
 static var _anchor_meshes := {}
 # anchors/anchor_fit.json (Modeling's per-variant, per-height collider boxes), read once under _anchor_fit_lock. place_row
-# runs on the main thread (Placer._build_step; only anchor_posts goes to the worker), but the guard keeps a worker caller safe.
+# runs on the main thread (Placer._build_step; only field_posts (anchor_posts) goes to the worker), but the guard keeps a worker caller safe.
 const ANCHOR_FIT_PATH := "res://src/world/park/anchors/anchor_fit.json"
 static var _anchor_fit := {}
 static var _anchor_fit_read := false
@@ -1248,21 +1248,32 @@ static func anchor_posts(row: Dictionary, zones: Array = [], pitch := ANCHOR_PIT
 	return out
 
 
-# Every anchor field's posts in rows (a park's placed rows, in order), keyed by row index, with the fields' overlaps
-# settled: a post closer than ANCHOR_POST_M (one post's footprint) to a post an earlier field kept is dropped, so two
-# fields authored over the same ground never plant two posts into each other (a saguaro grown through a hoodoo, both
-# colliders merged; clip audit, 30 Oct). The kept post stands within a footprint of the dropped one, so the ground it
-# covered stays covered. The
-# Placer and the perch tops read posts through here so the built posts and the perches agree.
+# Every anchor field's posts in rows (a park's placed rows), keyed by row index, with the fields' overlaps settled: a post
+# closer than ANCHOR_POST_M (one post's footprint) to a post already kept is dropped, so two fields authored over the
+# same ground never plant two posts into each other (a saguaro grown through a hoodoo, both colliders merged; clip
+# audit, 30 Oct). A one-post field (an authored anchor, such as crown tarn_west_gap_anchor) is settled first and always
+# keeps its post; the rest keep their posts in row order. A kept post stands within a footprint of each dropped one, so
+# the ground it covered stays covered. The Placer and the perch tops read posts through here, so the built posts and the
+# perches agree.
 static func field_posts(rows: Array, zones: Array) -> Dictionary:
-	var out := {}
-	var kept := {}
+	var all := {}
+	var order: Array[int] = []
+	var rest: Array[int] = []
 	for i in rows.size():
 		if not is_anchor_field(rows[i]):
 			continue
+		all[i] = anchor_posts(rows[i], zones)
+		if (all[i] as PackedVector2Array).size() == 1:
+			order.append(i)
+		else:
+			rest.append(i)
+	order.append_array(rest)
+	var out := {}
+	var kept := {}
+	for i in order:
 		var mine := {}
 		var posts := PackedVector2Array()
-		for p: Vector2 in anchor_posts(rows[i], zones):
+		for p: Vector2 in all[i]:
 			if _room(kept, p, ANCHOR_POST_M):
 				posts.append(p)
 				var cell := Vector2i(floori(p.x / ANCHOR_POST_M), floori(p.y / ANCHOR_POST_M))
@@ -1270,7 +1281,11 @@ static func field_posts(rows: Array, zones: Array) -> Dictionary:
 		for cell: Vector2i in mine:
 			kept[cell] = (kept.get(cell, []) as Array) + mine[cell]
 		out[i] = posts
-	return out
+	# Keyed in row order, as the callers walk it.
+	var by_row := {}
+	for i: int in all:
+		by_row[i] = out[i]
+	return by_row
 
 
 # Whether every lattice neighbour of spot key that lies in the field is clear: a post beside a gap a lane or footprint

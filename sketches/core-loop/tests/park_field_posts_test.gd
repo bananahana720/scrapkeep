@@ -6,7 +6,9 @@ extends SceneTree
 # (a) per park, no two kept posts stand closer than ANCHOR_POST_M, of different fields or of one (anchor_posts drops a
 #     lane-edge post on a kept post: flume hollow_trestles drew two at (-187, -147));
 # (b) every dropped post has a kept post within ANCHOR_POST_M, so the ground it covered stays covered;
-# (c) a field's own posts are untouched: its kept posts are anchor_posts' own, in order, and the first field keeps all;
+# (c) a field's own posts are untouched: its kept posts are anchor_posts' own, in order, and every one-post field (an
+#     authored anchor such as crown tarn_west_gap_anchor) keeps its post, but for sinkhole cannon_tube_fill_45, authored
+#     on the very spot of cannon_tube_post_2o;
 # (d) the dam drops posts (its pairs exist: the positive control), and the drops are pinned per park;
 # (e) the perch tops are the kept posts: every PerchPoints.derive top stands on one.
 # Evidence limit: placement data only; the look is the clip audit's stills.
@@ -17,7 +19,9 @@ const T := preload("res://tests/support/t.gd")
 
 const PARKS := ["dam", "flume", "pit", "sinkhole", "islands", "crown"]
 # Posts dropped per park at the head that added field_posts (counted by this test, printed below).
-const DROPPED := {"dam": 516, "flume": 0, "pit": 0, "sinkhole": 1, "islands": 33, "crown": 596}
+const DROPPED := {"dam": 516, "flume": 0, "pit": 0, "sinkhole": 1, "islands": 33, "crown": 598}
+# One-post fields that lose their post: sinkhole cannon_tube_fill_45 and cannon_tube_post_2o share (-24.5, -298.0).
+const LOST_SINGLE := {"sinkhole": 1}
 
 var _t := T.new("park_field_posts_test")
 
@@ -40,7 +44,7 @@ func _run() -> void:
 		var points := PackedVector2Array()
 		var dropped := PackedVector2Array()
 		var own_ok := true
-		var first := true
+		var lost_single := 0
 		for i in rows.size():
 			if not ParkRecipes.is_anchor_field(rows[i]):
 				continue
@@ -53,8 +57,8 @@ func _run() -> void:
 					k += 1
 				else:
 					dropped.append(p)
-			own_ok = own_ok and k == mine.size() and (not first or mine.size() == all.size())
-			first = false
+			own_ok = own_ok and k == mine.size()
+			lost_single += 1 if all.size() == 1 and mine.is_empty() else 0
 			for p in mine:
 				points.append(p)
 		var close := 0
@@ -72,7 +76,8 @@ func _run() -> void:
 					break
 			lonely += 0 if near else 1
 		_t.check("(b) %s: every dropped post has a kept post within %.0f m (%d dropped)" % [name, gap, dropped.size()], lonely == 0, "%d alone" % lonely)
-		_t.check("(c) %s: kept posts are each field's own, in order; the first field keeps all" % name, own_ok)
+		_t.check("(c) %s: kept posts are each field's own, in order" % name, own_ok)
+		_t.eq("(c) %s: one-post fields that lose their post (only to another one-post field on the same spot)" % name, lost_single, int(LOST_SINGLE.get(name, 0)))
 		print("park_field_posts_test: %s keeps %d posts, drops %d" % [name, points.size(), dropped.size()])
 		_t.eq("(d) %s posts dropped" % name, dropped.size(), int(DROPPED[name]))
 		if name == "dam":

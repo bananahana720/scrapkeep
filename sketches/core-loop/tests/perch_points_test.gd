@@ -121,10 +121,10 @@ func _initialize() -> void:
 	_t.check("park_islands loads", islands.ok)
 	if islands.ok:
 		# Was 0 while the full-width bands cleared every islands post (park_recipes.gd spans_park); the returned hoodoo
-		# posts in the perch band (rise 6 to 10 m) were 120 tops, and are 78 since a post within ANCHOR_POST_M of another is
+		# posts in the perch band (rise 6 to 10 m) were 120 tops, and are 81 since a post within ANCHOR_POST_M of another is
 		# dropped (field_posts across fields, anchor_posts for lane-edge posts; clip audit, 30 Oct): each dropped top had a
 		# kept post within a footprint.
-		_t.eq("park_islands: the returned posts in the perch band give perch tops", PerchPoints.derive(islands.park, _flat).size(), 78)
+		_t.eq("park_islands: the returned posts in the perch band give perch tops", PerchPoints.derive(islands.park, _flat).size(), 81)
 	_landform_tops()
 	_park_coverage()
 	quit(_t.verdict())
