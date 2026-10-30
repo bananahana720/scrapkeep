@@ -9,7 +9,8 @@ const T := preload("res://tests/support/t.gd")
 # the crane booms (size 40) and hollow trestles (size 16) kept the box because their low band fitted it, while the drawn
 # shaft above is about 4.5 m across, so a ball on the mesa rim beside a boom stopped in 1.75-2 m of visible air.
 # anchor_fit.py now fits world 1 timber posts by their upper air too. On the built stage, a point 3 m off each post's
-# axis at mid-shaft is clear of every collider on all four sides, and the axis itself still collides.
+# axis at mid-shaft is clear of every collider on all four sides, and the axis itself still collides. A point, not the
+# ball: the shaft's half-width is 1.95-2.25 m, so this proves the 8 m box (half-width 4) is gone, not a full ball's clearance.
 
 const ROWS := {"crane_booms": 40.0, "hollow_trestles": 16.0}
 const OFF_M := 3.0
@@ -83,7 +84,7 @@ func _run() -> void:
 					clear += 1
 		_t.eq("%s: every post's axis collides at mid-shaft" % id, axis_hits, posts.size())
 		_t.check("%s: %d points %.0f m off a post's axis at mid-shaft are clear (blocked: %s)" % [id, clear, OFF_M, str(blocked.slice(0, 4))],
-			blocked.is_empty())
+			blocked.is_empty() and clear >= posts.size())
 	game.free()
 	quit(_t.verdict())
 

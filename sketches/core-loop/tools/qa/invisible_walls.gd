@@ -138,7 +138,7 @@ func _run() -> void:
 		game.flow._finish_stage()
 		var bowl: Node3D = null
 		waited = 0
-		while waited < 1200 and bowl == null:
+		while waited < 1200 and (bowl == null or not bowl.built()):
 			await process_frame
 			waited += 1
 			bowl = _find_named(game, "SlagBowl")
