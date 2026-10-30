@@ -36,6 +36,7 @@ FELT_M = 0.3
 COARSE = 4.0
 ROLL_M = 1.6
 COPLANAR_MIN_CELLS = 6
+SEAM_MARGIN = 0.05           # a coplanar sample this far inside the other owner's face is an overlap, not a shared edge
 HANG_M = 0.35
 HANG_SHARE = 0.25
 CLIP_MIN_SHARE = 0.04
@@ -102,6 +103,36 @@ def short(path):
     parts = path.split("/")
     keep = [p for p in parts if p and not p.startswith("@") and p not in ("root",)]
     return "/".join(keep[-3:])
+
+
+def on_faces(p, n, t, margin=SEAM_MARGIN):
+    """Whether point p (with face normal n) is margin deep in faces of triangles t that face the same way: four points
+    margin away from p in its plane each lie on such a face, in its plane within 1 cm (so a point on an edge between two
+    of t's faces still counts, and one on an edge t only meets does not)."""
+    e1, e2 = t[:, 1] - t[:, 0], t[:, 2] - t[:, 0]
+    fn = np.cross(e1, e2)
+    ln = np.linalg.norm(fn, axis=1)
+    keep = ln > 1e-9
+    fn = fn[keep] / ln[keep, None]
+    t0, e1, e2 = t[keep, 0], e1[keep], e2[keep]
+    keep = (np.abs(np.einsum("ij,ij->i", p - t0, fn)) < 0.01) & (fn @ n > 0.995)
+    if not keep.any():
+        return False
+    t0, e1, e2 = t0[keep], e1[keep], e2[keep]
+    d11, d12, d22 = np.einsum("ij,ij->i", e1, e1), np.einsum("ij,ij->i", e1, e2), np.einsum("ij,ij->i", e2, e2)
+    den = d11 * d22 - d12 * d12
+    den = np.where(np.abs(den) < 1e-12, 1e-12, den)
+    a = np.cross(n, [1.0, 0.0, 0.0] if abs(n[0]) < 0.9 else [0.0, 1.0, 0.0])
+    a = a / np.linalg.norm(a)
+    b = np.cross(n, a)
+    for q in (p + margin * a, p - margin * a, p + margin * b, p - margin * b):
+        d = q - t0
+        dp1, dp2 = np.einsum("ij,ij->i", d, e1), np.einsum("ij,ij->i", d, e2)
+        v = (d22 * dp1 - d12 * dp2) / den
+        w = (d11 * dp2 - d12 * dp1) / den
+        if not np.any((v >= -1e-4) & (w >= -1e-4) & (v + w <= 1.0 + 1e-4)):
+            return False
+    return True
 
 
 def sample_tris(t, cell):
@@ -249,6 +280,7 @@ def run(dump, cell=CELL):
     pair_cells = defaultdict(int)
     pair_coplanar = defaultdict(int)
     pair_at = {}
+    pair_points = {}
     for d in range(1, 6):
         same = rc[d:] == rc[:-d]
         i = np.flatnonzero(same)
@@ -268,9 +300,18 @@ def run(dump, cell=CELL):
             pk = (k >> 32, k & 0xFFFFFFFF)
             pair_coplanar[pk] += c
             pair_at[pk] = pair_at.get(pk, np.zeros(3)) + xyz
+        for k, pa, pb in zip(key[cop].tolist(), ia[cop].tolist(), ib[cop].tolist()):
+            pair_points.setdefault((k >> 32, k & 0xFFFFFFFF), []).append((pa, pb))
     for (a, b), c in pair_coplanar.items():
-        if c >= COPLANAR_MIN_CELLS:
-            findings["coplanar"].append({"a": info[a], "b": info[b], "cells": c, "area_m2": round(c * cell * cell, 2),
+        if c < COPLANAR_MIN_CELLS:
+            continue
+        # A shared cell holds a coplanar overlap only where each owner's sample lies inside the other's faces; two faces
+        # that only meet at an edge (a tiled flume's walls continuing across a joint) share the cells along the edge.
+        inside = sum(1 for pa, pb in pair_points[(a, b)]
+                     if on_faces(P[pa], N[pa], otris[b]) and on_faces(P[pb], N[pb], otris[a]))
+        if inside >= COPLANAR_MIN_CELLS:
+            findings["coplanar"].append({"a": info[a], "b": info[b], "cells": inside, "seam_cells": c - inside,
+                                         "area_m2": round(inside * cell * cell, 2),
                                          "at": [round(float(v), 1) for v in pair_at[(a, b)] / c]})
 
     _tick("clip")
