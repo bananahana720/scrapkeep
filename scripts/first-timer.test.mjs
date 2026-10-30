@@ -66,7 +66,7 @@ test("a need the run never reaches is not a miss", () => {
 });
 
 test("one failing pilot fails the mechanic", () => {
-  const good = probe({ "screen:dead": { tick: 10, stage: 1 } }, { dead: { tick: 10, stage: 1 } }, "tally");
+  const good = probe({ "screen:run_over": { tick: 11, stage: 1 } }, { dead: { tick: 10, stage: 1 } }, "tally");
   const bad = probe({}, { dead: { tick: 10, stage: 1 } }, "tarn");
   assert.equal(audit([good, bad]).rows.find((r) => r.id === "retry").failed, true);
 });

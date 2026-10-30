@@ -4,8 +4,10 @@
 // judges each probe and exits 1 when a needed mechanic comes before its lesson.
 //
 //   node scripts/first-timer.mjs [--pilots=all|id,id] [--seed=1] [--stages=2] [--jobs=3]
-//     [--out=artifacts/local/first-timer] [--from=<dir of probe-*.json>]
+//     [--out=artifacts/local/first-timer] [--from=<dir of probe-*.json>] [--scrap-at=<seconds>]
 //
+// --scrap-at ends each run with a death that many seconds into stage 1, the only way the
+// skipper reaches the retry row; the rows after it read "not reached" in that pass.
 // --from re-judges saved probes without running Godot. Writes report.json and report.md to --out.
 
 import { spawn } from "node:child_process";
@@ -73,10 +75,11 @@ export const MECHANICS = [
   },
   {
     id: "retry",
-    name: "Retry after being scrapped",
+    name: "Run again after being scrapped",
     needed: "required",
     need: "dead",
-    teach: ["screen:dead"],
+    teach: ["screen:run_over"],
+    note: "A death with no earned save ends the run (no free retry), so the lesson is RUN OVER itself: its line naming what scrapped you and its Run again key. A run with no death reads \"not reached\"; --scrap-at=<s> scraps each pilot that many seconds into stage 1 to measure it.",
   },
   {
     id: "harpoon",
@@ -236,12 +239,13 @@ export function markdown(result, probes) {
 }
 
 export function parseArgs(argv) {
-  const args = { pilots: "all", seed: 1, stages: 2, jobs: 3, out: path.join(root, "artifacts", "local", "first-timer"), from: null };
+  const args = { pilots: "all", seed: 1, stages: 2, jobs: 3, out: path.join(root, "artifacts", "local", "first-timer"), from: null, "scrap-at": null };
   for (const arg of argv) {
-    const match = /^--([a-z]+)=(.*)$/.exec(arg);
+    const match = /^--([a-z-]+)=(.*)$/.exec(arg);
     if (!match || !(match[1] in args)) throw new Error(`first-timer: unknown argument ${arg}`);
-    args[match[1]] = ["seed", "stages", "jobs"].includes(match[1]) ? Number(match[2]) : match[2];
+    args[match[1]] = ["seed", "stages", "jobs", "scrap-at"].includes(match[1]) ? Number(match[2]) : match[2];
   }
+  if (args["scrap-at"] !== null && !(args["scrap-at"] > 0)) throw new Error("first-timer: --scrap-at takes seconds above zero");
   args.pilots = args.pilots === "all" ? PILOTS : args.pilots.split(",");
   for (const pilot of args.pilots) if (!PILOTS.includes(pilot)) throw new Error(`first-timer: unknown pilot ${pilot}`);
   return args;
@@ -251,6 +255,7 @@ function probe(pilot, args) {
   const out = path.join(args.out, `probe-${pilot}-${args.seed}.json`);
   const argv = ["--headless", "--fixed-fps", "90", "--path", sketch, "--script", "res://tools/first_timer.gd", "--",
     `--out=${out}`, `--seed=${args.seed}`, `--pilot=${pilot}`, `--stages=${args.stages}`];
+  if (args["scrap-at"] !== null) argv.push(`--scrap-at=${args["scrap-at"]}`);
   return new Promise((resolve, reject) => {
     const child = spawn(binary, argv, { stdio: ["ignore", "pipe", "pipe"] });
     let tail = "";
@@ -281,7 +286,7 @@ async function runProbes(args) {
 
 function readProbes(dir) {
   return readdirSync(dir)
-    .filter((name) => /^probe-.*\.json$/.test(name))
+    .filter((name) => /^probe-[^.]*\.json$/.test(name))
     .map((name) => JSON.parse(readFileSync(path.join(dir, name), "utf8")))
     .sort((a, b) => PILOTS.indexOf(a.pilot) - PILOTS.indexOf(b.pilot));
 }

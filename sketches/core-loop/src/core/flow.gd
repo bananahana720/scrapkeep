@@ -9,6 +9,7 @@ const Companion := preload("res://src/core/companion.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
+const DeathCause := preload("res://src/core/death_cause.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const VictoryLap := preload("res://src/world/victory_lap.gd")
@@ -62,6 +63,10 @@ var boss_plating := 120.0
 var in_arena := false
 # The plating that stood in the way when the ball died in the arena, for the gap line.
 var _death_plating := -1.0
+# RUN OVER's cause line for this run's death (death_cause.gd), "" before one; and the source of
+# the last hit taken, which player_hit publishes just before a killing hit's player_died.
+var death_cause := ""
+var _last_hit_source := ""
 var _victory_left := 0.0
 # The boss's flourishes (flourish_cues.gd) size the victory window: plan() returns {hold, veil},
 # the seconds added to VICTORY_SECONDS and how long the victory card waits over the world.
@@ -141,6 +146,7 @@ func setup(ctx_ref, beacon_ref) -> void:
 	start_card.reroll_requested.connect(reroll_start_pick)
 	start_card.tier_requested.connect(func(value: int): if not _start_card_covered(): choose_run_tier(value))
 	start_card.covered = _start_card_covered
+	ctx.events.player_hit.connect(func(_amount: float, source: String): _last_hit_source = source)
 	ctx.events.player_died.connect(_on_player_died)
 	ctx.run.death_saved.connect(func(_hp: float): _on_death_saved())
 	ctx.events.reward_chosen.connect(_on_reward_chosen)
@@ -422,6 +428,8 @@ func _begin_run(chosen: Resource) -> void:
 	boss_active = false
 	lap_stats = {}
 	_world = 0
+	death_cause = ""
+	_last_hit_source = ""
 	if ctx.run_log != null:
 		ctx.run_log.abandon_open_run()
 	if ctx.profile != null and ctx.profile.settle_previous_run_tallies() and ctx.profile.can_save and not ctx.profile.save():
@@ -1105,10 +1113,19 @@ func _engage() -> void:
 	ctx.events.warden_engaged.emit(ctx.run.stage)
 
 
+# The attack combat filed for this tick's hit from the same source (combat.gd last_player_hit).
+func _landed_attack() -> String:
+	var last = ctx.spawner.get("last_player_hit") if ctx.spawner != null else null
+	if not (last is Dictionary) or int(last.get("frame", -1)) != Engine.get_physics_frames() or String(last.get("source", "")) != _last_hit_source:
+		return ""
+	return String(last.get("attack", ""))
+
+
 func _on_player_died() -> void:
 	if not in_play() or state == LAP:
 		return
 	_death_plating = boss_plating_now() if state == BOSS else -1.0
+	death_cause = DeathCause.line(_last_hit_source, _landed_attack(), DeathCause.phase_note(_boss_module()) if state == BOSS else "")
 	ctx.player.set_frozen(true)
 	if store != null:
 		_end_run(false)

@@ -336,6 +336,7 @@ var ultimate
 # The active slot on F (src/combat/actives), behind --actives.
 var actives
 var last_player_hit := {}
+var _hit_attack := ""
 var last_impact := {}
 var _cloud := {}
 var _sentry := {}
@@ -609,6 +610,10 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 	# Poles and flails weigh a body by its stage threat, as the trap ratings do (movement/grip.gd).
 	if "threat_level" in enemy:
 		enemy.threat_level = _threat()
+	# A body with more than one attack says which one landed (miniboss.gd, rogue.gd); connected
+	# first, so _on_player_hit files it on last_player_hit for the RUN OVER cause line.
+	if "landed_attack" in enemy:
+		enemy.hit_player.connect(func(_amount: float, _shove: Vector3): _hit_attack = String(enemy.landed_attack))
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
 	if enemy.has_signal("counter_hit"):
 		enemy.counter_hit.connect(_on_player_hit.bind("warden_counter"))
@@ -4035,6 +4040,8 @@ static func _pinnable(enemy) -> bool:
 # An enemy's committed attack reached the ball. The run takes the damage; the shove is
 # the hit's weight (a hit taken is the player's performance, principle 1).
 func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
+	var attack := _hit_attack
+	_hit_attack = ""
 	if not ctx.flow.in_play():
 		return
 	if source not in ["warden", "warden_counter", "vault"]:
@@ -4042,7 +4049,7 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 		# The Mind's hand is a boss part: it takes the mind.* dials in mind_hand.gd, not the mobs dial.
 		if source != "mind_hand":
 			amount *= ChallengeDials.stage_mult("mobs.damage", ctx.run.stage)
-	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames()}
+	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames(), "attack": attack}
 	# The set piece's defence: no knockback here; damage x0.2 and the health floor of 1 run
 	# inside ctx.run.damage through its defend_hook (SKILL-BAR section 4).
 	var riding: bool = ultimate != null and ultimate.active()

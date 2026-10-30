@@ -109,6 +109,8 @@ var site_scale := 1.0
 var state := State.STALK
 var attack := ""
 var attacks := 0
+# The ATTACK_ROWS id of the hit hit_player is emitting, for the RUN OVER cause line.
+var landed_attack := ""
 var weak_windows := 0
 var hits_landed := 0
 
@@ -391,6 +393,7 @@ func _land(direction: Vector3) -> void:
 	if not attack in ["drop", "dump", "whip"]:
 		_hits_this_strike += 1
 	hits_landed += 1
+	landed_attack = String(ATTACK_IDS.get(attack, ""))
 	hit_player.emit(float(ATTACKS[attack].damage), direction * float(ATTACKS[attack].shove) + Vector3.UP * 4.0)
 
 
