@@ -79,6 +79,8 @@ static var _loading: Array[String] = []
 static var _firsts_done := false
 # The first moments' materials, held so the shaders their views compiled are never freed.
 static var _kept: Array[Material] = []
+# death_warm's glowing twins, held so their shaders stay compiled (BakeLook holds the resting ones).
+static var _glows: Array[Material] = []
 
 var ctx
 var _queue: Array = []
@@ -129,6 +131,8 @@ func _process(_delta: float) -> void:
 		if status != ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			_loading.erase(path)
 	if _shown != null:
+		if _shown.has_meta("spawn_warm"):
+			death_warm(_shown)
 		_shown.queue_free()
 		_shown = null
 	if not _queue.is_empty():
@@ -225,6 +229,34 @@ static func spawn_into(kit: Script, holder: Node3D, target, ground) -> void:
 	if enemy is CollisionObject3D:
 		enemy.collision_layer = 0
 		enemy.collision_mask = 0
+
+
+# A kind's death debris boxes draw with BakeLook.unbaked twins of its body's materials
+# (EnemyMotion.scatter), and on the 4080 a twin's first use compiled its look's shader in the death
+# frame: about 11 ms each for the first chaser and the first lobber at dam f3870 (#587 comment
+# 6509692838). Called on a spawn warm's holder the frame after its kit was built, so its own deferred
+# bake has dressed it: every dressed material there gets its twin, put to use on a box in the holder.
+# The twins stay in BakeLook's cache, so a later death of the kind finds its look compiled. A body
+# paint the kit owns is copied at the death, so its twin carries the paint's glow state then: a kill
+# mid hit-flash or wind-up cue has emission on (enemy.gd _update_flash, chaser.gd's cue), another
+# look, so each twin is also put to use with its emission switched the other way, and held.
+static func death_warm(holder: Node3D) -> int:
+	var twins := {}
+	for view: MeshInstance3D in holder.find_children("*", "MeshInstance3D", true, false):
+		var mat: Material = view.material_override if view.material_override != null else view.get_active_material(0)
+		var twin := BakeLook.unbaked(mat)
+		if twin == null or twin == mat or twins.has(twin):
+			continue
+		twins[twin] = true
+		var glow := twin.duplicate() as StandardMaterial3D
+		glow.emission_enabled = not glow.emission_enabled
+		_glows.append(glow)
+		for look in [twin, glow]:
+			var box := MeshInstance3D.new()
+			box.mesh = BoxMesh.new()
+			box.material_override = look
+			holder.add_child(box)
+	return twins.size()
 
 
 # A kit's kind name: its script's file name (src/combat/mag_trapper.gd is "mag_trapper").
