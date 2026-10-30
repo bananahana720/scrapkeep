@@ -1,11 +1,12 @@
 extends SceneTree
-# Surface layers (park_recipes.gd surface_lifts; clip audit, 30 Oct): a drape-fit row, a wash liner and a grind line's
-# pieces draw conformed to the ground or end to end, so two that overlap drew the same faces twice and z-fought (dam
-# spillway_tunnel under cliff_rooms_west, three flume canal liners at (-287, -250), flume siphon_span into
-# flume_hollow_reach). surface_lifts gives each overlapping surface row the lowest layer no earlier overlapping one holds.
-# (a) per park, no two overlapping surface rows share a layer, and every lift is a whole number of SURFACE_LAYER_M;
-# (b) the named overlaps: the flume's three canal liners stand on three layers, and the dam's cliff_rooms_west stands
-#     over spillway_tunnel (the positive controls);
+# Surface layers (park_recipes.gd surface_lifts; clip audit, 30 Oct): a wash liner and a grind line's pieces draw
+# conformed to the ground or end to end, so two that overlap drew the same faces twice and z-fought (three flume canal
+# liners at (-287, -250), flume siphon_span into flume_hollow_reach). surface_lifts gives each overlapping surface row
+# the lowest layer no earlier overlapping one holds. Drape-fit rows are no surface rows: dam_dressing.py settles theirs.
+# (a) per park, no two overlapping surface rows share a layer, every lift is a whole number of SURFACE_LAYER_M, and no
+#     row stands more than MAX_LAYERS layers up (a drawn rail that far over the rail the ball rides would show);
+# (b) the named overlap: the flume's three canal liners stand on three layers (the positive control), and no drape-fit
+#     row lifts;
 # (c) a lone surface row and a row that is no surface take no lift;
 # (d) a lifted row's drawn views stand the lift up and its collider faces stay where they were.
 # Evidence limit: placement data and one placed row; the look is the clip audit's stills.
@@ -14,6 +15,7 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const T := preload("res://tests/support/t.gd")
 
 const PARKS := ["dam", "flume", "pit", "sinkhole", "islands", "crown"]
+const MAX_LAYERS := 3
 
 var _t := T.new("park_surface_layers_test")
 
@@ -55,6 +57,13 @@ func _run() -> void:
 		print("park_surface_layers_test: %s %d surface rows, %d lifted" % [name, surfaces.size(), lifts.size()])
 		_t.check("(a) %s: no two overlapping surface rows share a layer" % name, shared == 0, "%d pairs" % shared)
 		_t.check("(a) %s: every lift is whole layers" % name, odd == 0, "%d off" % odd)
+		var top := 0.0
+		var draped := 0
+		for i: int in lifts:
+			top = maxf(top, float(lifts[i]))
+			draped += 1 if ParkRecipes.fits_drape(rows[i]) else 0
+		_t.check("(a) %s: the top layer is at most %d (%.3f m)" % [name, MAX_LAYERS, top], top <= MAX_LAYERS * step + 0.0001)
+		_t.check("(b) %s: no drape-fit row lifts" % name, draped == 0, "%d lift" % draped)
 		var plain := rows.filter(func(r: Dictionary) -> bool: return not ParkRecipes.is_surface(r))
 		var stray := 0
 		for i: int in lifts:
@@ -64,10 +73,6 @@ func _run() -> void:
 			var liners := ["main_canal", "butte_gap", "gap_wash"].map(func(id: String) -> float: return float(lifts.get(_index(rows, id), 0.0)))
 			_t.check("(b) the flume's three canal liners stand on three layers %s" % str(liners),
 				liners[0] != liners[1] and liners[1] != liners[2] and liners[0] != liners[2])
-		if name == "dam":
-			var tunnel := float(lifts.get(_index(rows, "spillway_tunnel"), 0.0))
-			var rooms := float(lifts.get(_index(rows, "cliff_rooms_west"), 0.0))
-			_t.check("(b) the dam's cliff_rooms_west stands over spillway_tunnel (%.3f over %.3f)" % [rooms, tunnel], rooms > tunnel)
 	var lone := [{"id": "lone", "element": "flow_line", "recipe": "liner_lone", "at": [0, 0], "size": [40, 3, 10], "yaw_deg": 0}]
 	_t.eq("(c) a lone surface row takes no lift", ParkRecipes.surface_lifts(lone), {})
 	# (d) One real grind line (it carries its own collider) placed with and without a lift.

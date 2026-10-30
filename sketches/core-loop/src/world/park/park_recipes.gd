@@ -238,7 +238,7 @@ static var _tiles := {}
 # _anchor_mesh() of each anchors kit variant GLB, read once.
 static var _anchor_meshes := {}
 # anchors/anchor_fit.json (Modeling's per-variant, per-height collider boxes), read once under _anchor_fit_lock. place_row
-# runs on the main thread (Placer._build_step; only field_posts (anchor_posts) goes to the worker), but the guard keeps a worker caller safe.
+# runs on the main thread (Placer._build_step; only field_posts and surface_lifts go to the worker), but the guard keeps a worker caller safe.
 const ANCHOR_FIT_PATH := "res://src/world/park/anchors/anchor_fit.json"
 static var _anchor_fit := {}
 static var _anchor_fit_read := false
@@ -387,12 +387,12 @@ static func seat_fit(row: Dictionary, ends: Dictionary, ground := Callable()) ->
 
 
 # Whether a row opts in to the drape fit (header): a stamped GLB row seated like its stamp's greybox.
-# A surface row: a drape-fit row or a wash liner (washes.py), drawn conformed to the ground, or a grind line, whose pieces
-# meet end to end. Two that overlap draw the same faces twice, and they z-fight (clip audit, 30 Oct: dam spillway_tunnel
-# under cliff_rooms_west, three flume canal liners at (-287, -250), flume siphon_span into flume_hollow_reach);
-# surface_lifts stacks them.
+# A surface row: a wash liner (washes.py), drawn conformed to the ground, or a grind line, whose pieces meet end to end.
+# Two that overlap draw the same faces twice, and they z-fight (clip audit, 30 Oct: three flume canal liners at (-287,
+# -250), flume siphon_span into flume_hollow_reach); surface_lifts stacks them. Drape-fit rows settle their overlaps when
+# they are built instead (dam_dressing.py covered_by), so they keep their FLUSH contract.
 static func is_surface(row: Dictionary) -> bool:
-	return fits_drape(row) or String(row.get("recipe", "")).begins_with("liner_") or String(row.get("element", "")) == "grind_line"
+	return String(row.get("recipe", "")).begins_with("liner_") or String(row.get("element", "")) == "grind_line"
 
 
 # The drawn lift of each surface row in rows (a park's placed rows), keyed by row index: SURFACE_LAYER_M times the lowest

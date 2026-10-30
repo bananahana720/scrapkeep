@@ -286,6 +286,41 @@ def convex_hps(pts):
     return out
 
 
+def footprint_of(row):
+    """A row's footprint in world (x, z), as Dress.footprint draws it: an ellipse for a round stamp, else the rectangle."""
+    fr = Frame(row["at"], row["yaw_deg"], 0.0)
+    hl, hw = float(row["size"][0]) / 2, float(row["size"][2]) / 2
+    if row["stamp"] in ("butte", "spire", "bowl", "crater", "sinkhole"):
+        return [fr.world(hw * math.cos(TAU * k / 40), hl * math.sin(TAU * k / 40)) for k in range(40)]
+    return [fr.world(x, z) for x, z in ((-hw, -hl), (hw, -hl), (hw, hl), (-hw, hl))]
+
+
+def footprint_area(pts):
+    return abs(sum(pts[k][0] * pts[(k + 1) % len(pts)][1] - pts[(k + 1) % len(pts)][0] * pts[k][1] for k in range(len(pts)))) / 2
+
+
+def covered_by(rid, rows, order):
+    """The footprints (half-planes) of the drape rows dressed here that overlap rid and are smaller than it (or as large
+    and earlier in the park file). Two skins over the same ground drew the same faces twice, steep walls included, and
+    they z-fought (clip audit, 30 Oct: spillway_tunnel and cliff_rooms_west 3,570 m2, training_wall_west and
+    tailwater_bar 813 m2), so the smaller, more particular row keeps the ground and the larger one leaves it out."""
+    mine = footprint_of(rows[rid])
+    size = footprint_area(mine)
+    mx0, mx1 = min(p[0] for p in mine), max(p[0] for p in mine)
+    mz0, mz1 = min(p[1] for p in mine), max(p[1] for p in mine)
+    out = []
+    for k, other in enumerate(order):
+        if other == rid:
+            continue
+        theirs = footprint_of(rows[other])
+        if max(p[0] for p in theirs) <= mx0 or min(p[0] for p in theirs) >= mx1 or max(p[1] for p in theirs) <= mz0 or min(p[1] for p in theirs) >= mz1:
+            continue
+        area = footprint_area(theirs)
+        if area < size or (area == size and k < order.index(rid)):
+            out.append(convex_hps(theirs))
+    return out
+
+
 def centroid(poly):
     n = len(poly)
     return (sum(p[0] for p in poly) / n, sum(p[1] for p in poly) / n, sum(p[2] for p in poly) / n)
@@ -419,7 +454,7 @@ def loft(out, slot, outline, zf, zb, color_of):
 class Dress:
     """One row: its frame, the ground triangles clipped to its footprint and the three outputs."""
 
-    def __init__(self, row, ground, base_cap, region=None):
+    def __init__(self, row, ground, base_cap, region=None, covered=()):
         self.row, self.g = row, ground
         self.id = row["id"]
         self.y0 = base_height(row, ground)
@@ -431,7 +466,10 @@ class Dress:
         if region is None:
             region = self.footprint()
         self.region = region
-        self.facets = self._facets(region)
+        # A ground facet whose centre lies in a covering row's footprint is that row's to draw (covered_by); whole
+        # facets go, not cut ones, so the skin keeps its triangle count.
+        self.facets = [(poly, sl) for poly, sl in self._facets(region)
+                       if not any(all(f((c[0], c[1], 0.0)) >= 0 for f in hps) for c in [centroid(poly)] for hps in covered)]
         self.bucket = {}
         for k, (poly, _) in enumerate(self.facets):
             c = centroid(poly)
@@ -1628,7 +1666,8 @@ def build_row(rid, rows, ground):
     cls = "park_large" if large else "landform"
     cap = BUDGETS[cls]["tris"]
     extra, lens, col = Out(cap), Out(cap), Out(cap)
-    d = Dress(row, ground, cap)
+    order = [r for r in rows if r in STYLES]
+    d = Dress(row, ground, cap, covered=covered_by(rid, rows, order))
     notes = {}
     d.base.cap = cap
     if rid == "the_eye":
