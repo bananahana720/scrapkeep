@@ -16,6 +16,7 @@ const PhysicsProbe := preload("res://tools/physics_probe.gd")
 const FrameSplit := preload("res://tools/frame_split.gd")
 const BotPlants := preload("res://tools/bot_plants.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
+const QaWatch := preload("res://tools/qa_watch.gd")
 
 # Headless bot runs for the design feedback loop (DEMO-SPEC). Each seed plays one full
 # demo run through a fresh Game.new() with one policy (tools/bot_driver.gd), in play
@@ -109,6 +110,8 @@ const RunTier := preload("res://src/core/run_tier.gd")
 # for the net_ms read of a --frame-split frame log (the control that a game-side hitch still shows).
 # --locks=0 turns off the Spillway's Warden gate and arena lock (src/world/stage_locks.gd), so one
 # binary measures the pacing they add.
+# --qa-log=1 writes qa-<seed>.ndjson (tools/qa_watch.gd): where the ball sat stuck, rested off the ground,
+# wedged on a wall or fell through, and each objective text once per stage; the row gains "qa" counts.
 # --unshaded=1 draws the root viewport unshaded, so a render cost can be told apart from the lights
 # and shadows (for frame captures: it changes the picture).
 # The game runs in test mode (no keyboard, no mouse capture) and its codex and run log
@@ -162,6 +165,7 @@ var _inject_ms := 0
 var _inject_at := 0
 # The test-only plants of --plant= (tools/bot_plants.gd); null, and untouched, without the flag.
 var _plants
+var _qa
 
 
 func _initialize() -> void:
@@ -418,6 +422,9 @@ func _physics_process(delta: float) -> bool:
 				if node != null:
 					parents.append(node)
 			_physics_probe.watch(self, parents)
+		if _settings.get("qa-log", "0") == "1":
+			_qa = QaWatch.new()
+			_qa.setup(_game, _driver, _out.path_join("qa-%d.ndjson" % _seeds[_index]))
 		_driver.start(resume)
 		if _settings.has("from-stage") and not resume and int(_settings["from-stage"]) != 1:
 			_game.flow.enter_stage(int(_settings["from-stage"]), Vector3.ZERO, false)
@@ -429,6 +436,10 @@ func _physics_process(delta: float) -> bool:
 		_plants.step()
 	var tick_start := Time.get_ticks_usec()
 	var over: bool = _driver.tick(delta)
+	if _qa != null:
+		_qa.step(delta)
+		if _driver.ticks % 90 == 0:
+			_qa.read_text()
 	if _frame_split != null:
 		_frame_split.add_bot(Time.get_ticks_usec() - tick_start)
 	if _inject_ms > 0 and Time.get_ticks_msec() - _inject_at >= 6000:
@@ -463,6 +474,9 @@ func _physics_process(delta: float) -> bool:
 	if _settings.has("panel-log"):
 		record["panel_kills"] = _game.build.kill_log.duplicate()
 		record["panels"] = Array(_game.run.panels)
+	if _qa != null:
+		record["qa"] = _qa.counts.duplicate()
+		_qa = null
 	if _settings.has("plant"):
 		record["plant"] = String(_settings["plant"])
 	if int(_settings.get("run-tier", "0")) != 0:
