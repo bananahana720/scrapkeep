@@ -529,7 +529,10 @@ func _pump() -> void:
 			if WorkerThreadPool.is_task_completed(_task):
 				WorkerThreadPool.wait_for_task_completion(_task)
 				_task = -1
-				_group = WorkerThreadPool.add_group_task(_build_piece, PIECES, -1, true, "park_terrain build %s" % map_id)
+				# Low priority: at high priority the 104 pieces took every pool thread, and the renderer's own
+				# pool work waited behind them, 20 to 23 ms of render CPU on the 4080 the frame the flume's
+				# build started at the dam Warden's engage (#595 rows on 09b0a2d0). finish() waits, so it stays high.
+				_group = WorkerThreadPool.add_group_task(_build_piece, PIECES, -1, false, "park_terrain build %s" % map_id)
 				phase = Phase.BUILDING
 		Phase.BUILDING:
 			if WorkerThreadPool.is_group_task_completed(_group):
