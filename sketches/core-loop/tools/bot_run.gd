@@ -308,6 +308,14 @@ func _next() -> void:
 		_tick_trace = FileAccess.open(_out.path_join("trace-%d.ndjson" % _seeds[_index]), FileAccess.WRITE)
 
 
+# PROBE: the park terrain attach steps since the last row.
+func _zp_take() -> Array:
+	var ParkTerrainScript = load("res://src/world/park/park_terrain.gd")
+	var out: Array = ParkTerrainScript.zp_steps.duplicate()
+	ParkTerrainScript.zp_steps.clear()
+	return out
+
+
 func _on_pre_draw() -> void:
 	_draw_began = Time.get_ticks_usec()
 
@@ -595,7 +603,8 @@ func _process(_delta: float) -> bool:
 				"zr_cpu": RenderingServer.viewport_get_measured_render_time_cpu(root.get_viewport_rid()),
 				"zr_gpu": RenderingServer.viewport_get_measured_render_time_gpu(root.get_viewport_rid()),
 				"zr_setup": RenderingServer.get_frame_setup_time_cpu(),
-				"zr_prims": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)}
+				"zr_prims": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
+				"zp": _zp_take()}
 			if _frame_split != null:
 				row.merge(_frame_split.take(row["ms"]))
 				var ball = _game.player.body() if _game.player != null else null

@@ -155,6 +155,9 @@ const MAP_GAP_FRAMES := 10
 
 enum Phase { IDLE, LOADING, BUILDING, ATTACHING, READY }
 
+# PROBE (never stacks): the attach steps taken since bot_run's last frame row, which reads and clears it.
+static var zp_steps: Array = []
+
 var map_id := ""
 var baked := false
 var heights := PackedFloat32Array()
@@ -938,6 +941,7 @@ func _attach_step(deadline: int) -> void:
 		if terrain3d.data.has_region(region.get_location()):
 			terrain3d.data.remove_regionl(region.get_location(), false)
 		terrain3d.data.add_region(region, false)
+		zp_steps.append("%s:region%d" % [map_id, _next_region])
 		_regions[_next_region] = null
 		_next_region += 1
 		if deadline >= 0:
@@ -950,6 +954,7 @@ func _attach_step(deadline: int) -> void:
 			return
 		_map_wait = 0
 		terrain3d.data.update_maps(MAP_TYPES[_next_map], true, false)
+		zp_steps.append("%s:map%d" % [map_id, MAP_TYPES[_next_map]])
 		_next_map += 1
 		if deadline >= 0:
 			return
@@ -961,6 +966,7 @@ func _attach_step(deadline: int) -> void:
 		if deadline >= 0 and not tile_fits(added, now, deadline, _tile_usec):
 			return
 		_add_tile(_next_tile)
+		zp_steps.append("%s:tile%d" % [map_id, _next_tile])
 		_tile_usec = Time.get_ticks_usec() - now
 		_faces[_next_tile] = null
 		_next_tile += 1
@@ -971,6 +977,7 @@ func _attach_step(deadline: int) -> void:
 		return
 	phase = Phase.READY
 	set_process(false)
+	zp_steps.append("%s:built" % map_id)
 	built.emit()
 
 
