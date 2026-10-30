@@ -182,6 +182,9 @@ const WEDGES := {"kicker": 1.0, "drop": -1.0}
 # (tests/park_place_test.gd). An edge step of 12 m puts a post under one of the two spokes nearest square to the lane.
 const ANCHOR_PITCH_M := 20.0
 const ANCHOR_POST_M := 8.0
+# One surface layer's drawn lift (surface_lifts) and the margin round a surface row's footprint.
+const SURFACE_LAYER_M := 0.015
+const SURFACE_MARGIN_M := 2.0
 const ANCHOR_SINK_M := 1.0
 const ANCHOR_RUNOUT_M := 10.0
 const ANCHOR_SIDE_M := 6.0
@@ -235,7 +238,7 @@ static var _tiles := {}
 # _anchor_mesh() of each anchors kit variant GLB, read once.
 static var _anchor_meshes := {}
 # anchors/anchor_fit.json (Modeling's per-variant, per-height collider boxes), read once under _anchor_fit_lock. place_row
-# runs on the main thread (Placer._build_step; only anchor_posts goes to the worker), but the guard keeps a worker caller safe.
+# runs on the main thread (Placer._build_step; only field_posts and surface_lifts go to the worker), but the guard keeps a worker caller safe.
 const ANCHOR_FIT_PATH := "res://src/world/park/anchors/anchor_fit.json"
 static var _anchor_fit := {}
 static var _anchor_fit_read := false
@@ -381,6 +384,80 @@ static func seat_fit(row: Dictionary, ends: Dictionary, ground := Callable()) ->
 	var basis := Basis(Vector3.RIGHT, Vector3.UP, Vector3(0, shear, stretch))
 	var xf := Transform3D(basis, Vector3(0, a - shear * e.z, -length * 0.5 - stretch * e.z))
 	return {"ok": true, "reason": "", "stretch": stretch, "lip_y": lip_y, "exit_y": exit_y, "transform": xf}
+
+
+# A surface row: a wash liner (washes.py), drawn conformed to the ground, or a grind line, whose pieces meet end to end.
+# Two that overlap draw the same faces twice, and they z-fight (clip audit, 30 Oct: three flume canal liners at (-287,
+# -250), flume siphon_span into flume_hollow_reach); surface_lifts stacks them. Drape-fit rows settle their overlaps when
+# they are built instead (dam_dressing.py covered_by), so they keep their FLUSH contract and are no surface rows, grind
+# lines among them (dam pipeline_bridge, canal_lips).
+static func is_surface(row: Dictionary) -> bool:
+	if fits_drape(row):
+		return false
+	return String(row.get("recipe", "")).begins_with("liner_") or String(row.get("element", "")) == "grind_line"
+
+
+# The drawn lift of each surface row in rows (a park's placed rows), keyed by row index: SURFACE_LAYER_M times the lowest
+# layer no overlapping row placed before it holds. Grind lines go first, larger footprint first, then liners the same
+# way, then park order, so a long ride (flume_hollow_reach) keeps its drawn deck on the collider the ball rides and a
+# liner, which only dresses the ground, stands up over it. Footprints are the rows' [length (local z), width (local x)]
+# rectangles grown by SURFACE_MARGIN_M. Rows on layer 0 are left out. Only the drawn meshes lift (place_row); colliders
+# stay where they were.
+static func surface_lifts(rows: Array) -> Dictionary:
+	var out := {}
+	var placed: Array = []
+	var order: Array[int] = []
+	for i in rows.size():
+		if is_surface(rows[i]) and rows[i].has("size"):
+			order.append(i)
+	var rank := func(i: int) -> float:
+		var liner := 0.0 if String(rows[i].get("element", "")) == "grind_line" else 1.0e9
+		return liner - float(rows[i]["size"][0]) * float(rows[i]["size"][2])
+	order.sort_custom(func(a: int, b: int) -> bool: return rank.call(a) < rank.call(b) or (rank.call(a) == rank.call(b) and a < b))
+	for i in order:
+		var row: Dictionary = rows[i]
+		var mine := _footprint(row, SURFACE_MARGIN_M)
+		var taken := {}
+		for other: Array in placed:
+			if _rects_meet(mine, other[0]):
+				taken[other[1]] = true
+		var layer := 0
+		while taken.has(layer):
+			layer += 1
+		placed.append([mine, layer])
+		if layer > 0:
+			out[i] = layer * SURFACE_LAYER_M
+	return out
+
+
+# A row's footprint rectangle grown by margin: [centre, half extents (across, along), across axis, along axis].
+static func _footprint(row: Dictionary, margin: float) -> Array:
+	var size: Array = row["size"]
+	var yaw := deg_to_rad(float(row.get("yaw_deg", 0.0)))
+	return [_v2(row["at"]), Vector2(float(size[2]) * 0.5 + margin, float(size[0]) * 0.5 + margin),
+		Vector2(cos(yaw), -sin(yaw)), Vector2(sin(yaw), cos(yaw))]
+
+
+# Whether two footprint rectangles overlap (separating axes).
+static func _rects_meet(a: Array, b: Array) -> bool:
+	var d: Vector2 = (b[0] as Vector2) - (a[0] as Vector2)
+	for axis: Vector2 in [a[2], a[3], b[2], b[3]]:
+		var ra := absf((a[2] as Vector2).dot(axis)) * (a[1] as Vector2).x + absf((a[3] as Vector2).dot(axis)) * (a[1] as Vector2).y
+		var rb := absf((b[2] as Vector2).dot(axis)) * (b[1] as Vector2).x + absf((b[3] as Vector2).dot(axis)) * (b[1] as Vector2).y
+		if absf(d.dot(axis)) > ra + rb:
+			return false
+	return true
+
+
+# Lifts every drawn mesh under node by lift, leaving collision bodies (and what they hold) in place.
+static func _lift_drawn(node: Node, lift: float) -> void:
+	for child: Node in node.get_children():
+		if child is CollisionObject3D:
+			continue
+		if child is GeometryInstance3D:
+			(child as Node3D).position.y += lift
+		else:
+			_lift_drawn(child, lift)
 
 
 # Whether a row opts in to the drape fit (header): a stamped GLB row seated like its stamp's greybox.
@@ -686,8 +763,10 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 			baked = true
 			node.set_meta("seat_fit", at_origin)
 			node.set_meta("seat_stretch", fit["stretch"])
-	# Each placement of the parts: [GLB-to-node transform, view name suffix]. One, except for a tile fit's copies.
-	var fits := [[at_origin, ""]]
+	# Each placement of the parts: [GLB-to-node transform, view name suffix, drawn lift]. One, except for a tile fit's
+	# copies. A tile copy draws on its collider: an odd copy lifted over its joints left the deck between them over the
+	# collider the ball rides (park_park_flume_test intact top).
+	var fits := [[at_origin, "", 0.0]]
 	if fits_tile(row) and not (parts.get("base", []) as Array).is_empty():
 		var lip := origin(String(row.get("recipe", ""))) == ORIGIN_ENTRY_LIP
 		var tile := tile_fit(row, authored_ends(parts["base"][0], lip), tile_ends(parts["base"][0], lip), ground)
@@ -697,7 +776,7 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 			var xfs := []
 			for k in (tile["copies"] as Array).size():
 				var xf: Transform3D = tile["copies"][k]["transform"]
-				fits.append([xf, "_tile%d" % k])
+				fits.append([xf, "_tile%d" % k, 0.0])
 				xfs.append(xf)
 			node.set_meta("tile_fit", xfs)
 			node.set_meta("tile_count", tile["count"])
@@ -708,6 +787,7 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 	for scene: Node in parts.get("base", []):
 		for f: Array in fits:
 			for view in _views(scene, node, body, f[0], baked, f[1]):
+				view.position.y += float(f[2])
 				_range(view, 0.0, base_end, float(r.get("base_margin", 0.0)))
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	var shell_ranges: Array = r.get("shells", [])
@@ -716,16 +796,19 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 		var sr: Array = shell_ranges[k] if k < shell_ranges.size() else [0.0, 0.0]
 		for f: Array in fits:
 			for view in _views(shells[k], node, body, f[0], baked, f[1]):
+				view.position.y += float(f[2])
 				_range(view, 0.0, float(sr[0]), float(sr[1]))
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for scene: Node in parts.get("mid", []):
 		for f: Array in fits:
 			for view in _views(scene, node, body, f[0], baked, f[1]):
+				view.position.y += float(f[2])
 				_range(view, base_end, mid_end, float(r.get("mid_margin", 0.0)))
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	for scene: Node in parts.get("far", []):
 		for f: Array in fits:
 			for view in _views(scene, node, body, f[0], baked, f[1]):
+				view.position.y += float(f[2])
 				_range(view, mid_end, 0.0, 0.0)
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	if baked and fits_seat(row) and DRAPED.has(String(row.get("recipe", ""))) and ground.is_valid():
@@ -1217,7 +1300,14 @@ static func anchor_posts(row: Dictionary, zones: Array = [], pitch := ANCHOR_PIT
 		if stand:
 			var cell := Vector2i(floori(kept.x / ANCHOR_STAND_GAP_M), floori(kept.y / ANCHOR_STAND_GAP_M))
 			placed[cell] = (placed.get(cell, []) as Array) + [kept]
-	# The lane edges: a post every ANCHOR_EDGE_STEP_M just outside each lane, on both sides, where it lands in the field.
+	# The lane edges: a post every ANCHOR_EDGE_STEP_M just outside each lane, on both sides, where it lands in the field,
+	# unless it would stand within ANCHOR_POST_M of a post already kept: two lanes meeting at a joint put their edge posts
+	# in one spot, and an edge post can land on a lattice post (flume hollow_trestles drew two posts through each other at
+	# (-187, -147); clip audit, 30 Oct).
+	var room := {}
+	for p: Vector2 in out:
+		var cell := Vector2i(floori(p.x / ANCHOR_POST_M), floori(p.y / ANCHOR_POST_M))
+		room[cell] = (room.get(cell, []) as Array) + [p]
 	for lane: Dictionary in lanes:
 		var a: Vector2 = lane["a"]
 		var ab: Vector2 = (lane["b"] as Vector2) - a
@@ -1233,10 +1323,52 @@ static func anchor_posts(row: Dictionary, zones: Array = [], pitch := ANCHOR_PIT
 		var s_end := minf(length, t + reach)
 		while s <= s_end + 0.001:
 			for p: Vector2 in [a + dir * s + side, a + dir * s - side]:
-				if inside.call(p) and clear.call(p):
+				if inside.call(p) and clear.call(p) and _room(room, p, ANCHOR_POST_M):
 					out.append(p)
+					var cell := Vector2i(floori(p.x / ANCHOR_POST_M), floori(p.y / ANCHOR_POST_M))
+					room[cell] = (room.get(cell, []) as Array) + [p]
 			s += ANCHOR_EDGE_STEP_M
 	return out
+
+
+# Every anchor field's posts in rows (a park's placed rows), keyed by row index, with the fields' overlaps settled: a post
+# closer than ANCHOR_POST_M (one post's footprint) to a post already kept is dropped, so two fields authored over the
+# same ground never plant two posts into each other (a saguaro grown through a hoodoo, both colliders merged; clip
+# audit, 30 Oct). A one-post field (an authored anchor, such as crown tarn_west_gap_anchor) is settled first and always
+# keeps its post; the rest keep their posts in row order. A kept post stands within a footprint of each dropped one, so
+# the ground it covered stays covered. The Placer and the perch tops read posts through here, so the built posts and the
+# perches agree.
+static func field_posts(rows: Array, zones: Array) -> Dictionary:
+	var all := {}
+	var order: Array[int] = []
+	var rest: Array[int] = []
+	for i in rows.size():
+		if not is_anchor_field(rows[i]):
+			continue
+		all[i] = anchor_posts(rows[i], zones)
+		if (all[i] as PackedVector2Array).size() == 1:
+			order.append(i)
+		else:
+			rest.append(i)
+	order.append_array(rest)
+	var out := {}
+	var kept := {}
+	for i in order:
+		var mine := {}
+		var posts := PackedVector2Array()
+		for p: Vector2 in all[i]:
+			if _room(kept, p, ANCHOR_POST_M):
+				posts.append(p)
+				var cell := Vector2i(floori(p.x / ANCHOR_POST_M), floori(p.y / ANCHOR_POST_M))
+				mine[cell] = (mine.get(cell, []) as Array) + [p]
+		for cell: Vector2i in mine:
+			kept[cell] = (kept.get(cell, []) as Array) + mine[cell]
+		out[i] = posts
+	# Keyed in row order, as the callers walk it.
+	var by_row := {}
+	for i: int in all:
+		by_row[i] = out[i]
+	return by_row
 
 
 # Whether every lattice neighbour of spot key that lies in the field is clear: a post beside a gap a lane or footprint
@@ -1252,11 +1384,16 @@ static func _stand_neighbours(spots: Dictionary, key: Vector2i) -> bool:
 
 # Whether p stands at least ANCHOR_STAND_GAP_M from every post in placed (posts by ANCHOR_STAND_GAP_M cell).
 static func _stand_room(placed: Dictionary, p: Vector2) -> bool:
-	var cell := Vector2i(floori(p.x / ANCHOR_STAND_GAP_M), floori(p.y / ANCHOR_STAND_GAP_M))
+	return _room(placed, p, ANCHOR_STAND_GAP_M)
+
+
+# Whether p stands at least gap from every post in placed (posts by gap-sized cell).
+static func _room(placed: Dictionary, p: Vector2, gap: float) -> bool:
+	var cell := Vector2i(floori(p.x / gap), floori(p.y / gap))
 	for dj in range(-1, 2):
 		for di in range(-1, 2):
 			for q: Vector2 in placed.get(cell + Vector2i(di, dj), []):
-				if q.distance_to(p) < ANCHOR_STAND_GAP_M:
+				if q.distance_to(p) < gap:
 					return false
 	return true
 
@@ -1584,11 +1721,13 @@ static func _anchor_mesh(path: String) -> Array:
 # sensor but drops its box and collider: the stamp is already its shape, and a box of the row's size on one height
 # cannot follow the stamped ground (a 300 m bank box stood 8 m over the fixture's pool). Its node stands on the plain
 # the stamp raised (seat), so the sensor spans the raise.
-static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), publish := Callable(), zones: Array = [], posts = null) -> Node3D:
+static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), publish := Callable(), zones: Array = [], posts = null, lift := 0.0) -> Node3D:
 	var recipe := String(row.get("recipe", ""))
 	if is_anchor_field(row):
 		return place_anchor_field(row, parent, ground, zones, ANCHOR_PITCH_M, posts)
 	var node := place(row, parent, seat(row, ground), publish)
+	if node != null and lift > 0.0:
+		_lift_drawn(node, lift)
 	if node != null and row.has("rider"):
 		place_rider(row, parent, ground)
 	if node != null and stamp_replaces(row):
@@ -1717,6 +1856,7 @@ class Placer extends Node3D:
 	var _threaded := false
 	# Anchor-field post centres by row index, worked out on a worker (pure arithmetic, no server resources).
 	var _posts := {}
+	var _lifts := {}
 	var _task := -1
 
 	func is_ready() -> bool:
@@ -1772,9 +1912,8 @@ class Placer extends Node3D:
 			finish()
 
 	func _work_posts() -> void:
-		for i in _rows.size():
-			if Self.is_anchor_field(_rows[i]):
-				_posts[i] = Self.anchor_posts(_rows[i], _zones)
+		_posts = Self.field_posts(_rows, _zones)
+		_lifts = Self.surface_lifts(_rows)
 
 	func _wait_posts() -> void:
 		if _task != -1:
@@ -1857,7 +1996,7 @@ class Placer extends Node3D:
 			var r0 := Time.get_ticks_usec()
 			# Built outside the tree, then added once.
 			var holder := Node3D.new()
-			Self.place_row(_rows[_next], holder, _ground, _publish, _zones, _posts.get(_next))
+			Self.place_row(_rows[_next], holder, _ground, _publish, _zones, _posts.get(_next), float(_lifts.get(_next, 0.0)))
 			# The row's node and its rider, if it has one.
 			for node: Node in holder.get_children():
 				holder.remove_child(node)

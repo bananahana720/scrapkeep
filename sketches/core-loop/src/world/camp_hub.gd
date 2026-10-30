@@ -48,6 +48,7 @@ const GROUND_THICK := 4.0
 const BERM_SEGMENTS := 72
 const BERM_HEIGHT := 6.0
 const BERM_DEPTH := 10.0
+const BERM_STAGGER_M := 0.06
 # The detail shells fade out by distance, like the park's (asset_budgets.json park_large shells).
 const SHELL_RANGES := [[150.0, 20.0], [60.0, 8.0]]
 const ZONE_RADIUS := 2.5
@@ -57,6 +58,9 @@ const MAX_LIGHTS := 24
 const SOLID_TOP_M := 4.0
 # The pieces that have detail shells beside them.
 const SHELLED := ["camp_launch_gate", "camp_lockers", "camp_moss_stall", "camp_skee_lane"]
+# Pieces laid flat on the plaza or the sandstone disc: their floors share the plaza's plane where they overlap it, so their
+# drawn views stand one surface layer up (park_recipes.gd SURFACE_LAYER_M) and do not z-fight (clip audit, 30 Oct).
+const ON_PLAZA := ["camp_shortcut", "camp_skee_lane", "camp_trial_track"]
 # Lights: piece stem -> [socket names, kind]. The lamp posts and the fire pit light the plaza; the stall, the wall, the
 # console, the gate and the lane keep two or three each; the rest of their bulbs stay emissive enamel.
 const LIGHTS := {
@@ -340,6 +344,8 @@ func _place(stem: String, xf: Transform3D, with_shells := false, key := "") -> N
 		markers.add_child(marker)
 		marker.transform = Recipes._relative(node, scene)
 	scene.free()
+	if ON_PLAZA.has(stem):
+		Recipes._lift_drawn(holder, Recipes.SURFACE_LAYER_M)
 	if not _pieces.has(stem):
 		_pieces[stem] = holder
 	return holder
@@ -380,10 +386,12 @@ func _build_ground() -> void:
 	var chord := TAU * GROUND_R / BERM_SEGMENTS * 1.08
 	for i in BERM_SEGMENTS:
 		var angle := TAU * i / BERM_SEGMENTS
-		var at := Vector3(sin(angle) * (GROUND_R - BERM_DEPTH * 0.5), BERM_HEIGHT * 0.5, -cos(angle) * (GROUND_R - BERM_DEPTH * 0.5))
+		# Neighbours overlap by the chord's 8%, so odd segments stand BERM_STAGGER_M taller: two tops in one plane z-fight.
+		var tall := BERM_HEIGHT + BERM_STAGGER_M * float(i % 2)
+		var at := Vector3(sin(angle) * (GROUND_R - BERM_DEPTH * 0.5), tall * 0.5, -cos(angle) * (GROUND_R - BERM_DEPTH * 0.5))
 		var segment := Transform3D(Basis(Vector3.UP, -angle), at)
 		var box := BoxShape3D.new()
-		box.size = Vector3(chord, BERM_HEIGHT, BERM_DEPTH)
+		box.size = Vector3(chord, tall, BERM_DEPTH)
 		var collider := CollisionShape3D.new()
 		collider.shape = box
 		collider.transform = segment
@@ -421,11 +429,44 @@ func _place_layout() -> void:
 	_pet = _place("camp_pet", Layout.place(_pet_home, pen.yaw + 0.6))
 	var toys := ["camp_toy_ball", "camp_toy_wrench", "camp_toy_tire"]
 	for k in toys.size():
-		var at: Vector3 = pen.at * 0.9 + Vector3(2.5 * cos(k * 2.1), 0.3, 2.5 * sin(k * 2.1))
-		_place(toys[k], Layout.place(at, k * 1.3))
+		var at: Vector3 = pen.at * 0.9 + Vector3(2.5 * cos(k * 2.1), 0.0, 2.5 * sin(k * 2.1))
+		_seat(_place(toys[k], Layout.place(at, k * 1.3)))
 	for row: Array in Layout.DRESSING:
 		var p: Vector3 = Layout.at(row[1], row[2])
 		_place(row[0], Layout.place(p, Layout.yaw_to_centre(p.x, p.z) + deg_to_rad(row[3])))
+
+
+# Stands a loose piece's lowest drawn point on the plaza's collider below it (the plaza's top, not y 0: a fixed 0.3 m left
+# the wrench floating 0.12 m and the tire in the plaza's lip; clip audit, 30 Oct). A piece with no plaza under it stays.
+func _seat(holder: Node3D) -> void:
+	if holder == null or not _pieces.has("camp_plaza"):
+		return
+	var foot := INF
+	for view: MeshInstance3D in holder.find_children("*", "MeshInstance3D", true, false):
+		foot = minf(foot, (holder.transform * view.transform * view.mesh.get_aabb()).position.y)
+	var top := plaza_top(Vector2(holder.position.x, holder.position.z))
+	if foot < INF and top > -INF:
+		holder.position.y += top - foot
+
+
+# The plaza collider's highest face over local point at (x, z), -INF where none is.
+func plaza_top(at: Vector2) -> float:
+	var top := -INF
+	var plaza: Node3D = _pieces["camp_plaza"]
+	for shape: CollisionShape3D in plaza.find_children("*", "CollisionShape3D", true, false):
+		var poly := shape.shape as ConcavePolygonShape3D
+		if poly == null:
+			continue
+		var xf := plaza.transform * (shape.get_parent() as Node3D).transform * shape.transform
+		var faces := poly.get_faces()
+		for i in range(0, faces.size(), 3):
+			var a := xf * faces[i]
+			var b := xf * faces[i + 1]
+			var c := xf * faces[i + 2]
+			var hit = Geometry3D.ray_intersects_triangle(Vector3(at.x, 100.0, at.y), Vector3.DOWN, a, b, c)
+			if hit != null:
+				top = maxf(top, (hit as Vector3).y)
+	return top
 
 
 func to_local_point(global_point: Vector3) -> Vector3:
