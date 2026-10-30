@@ -200,6 +200,9 @@ func _walk(n: Node, skip: Dictionary) -> void:
 		return
 	# Hidden branches are still walked: a collider under a hidden node is an invisible wall.
 	var drawn := not n is Node3D or (n as Node3D).is_visible_in_tree()
+	# A render-layer mask of 0 is a hidden stand-in (boss_model.gd hide_primitive), drawn by no camera.
+	if n is VisualInstance3D and (n as VisualInstance3D).layers == 0:
+		drawn = false
 	if n is MeshInstance3D and drawn:
 		_mesh_item(n)
 	elif n is MultiMeshInstance3D and drawn:

@@ -68,13 +68,15 @@ func _check_tile(parent: Node3D, ground: Callable, scene: Node) -> void:
 	var node := ParkRecipes.place(row, parent, ground)
 	if not _t.check("the tile row places a node", node != null and not node.has_meta("tile_refused"), str(node.get_meta("tile_refused", "")) if node != null else "null"):
 		return
-	# (a) The copies, from the views: each base mesh drawn once per copy, named <mesh>_tile<k>.
+	# (a) The copies, from the views: each base mesh drawn once per copy, named <mesh>_tile<k>. Odd copies draw
+	# SURFACE_LAYER_M up so the joints' shared faces do not z-fight (clip audit, 30 Oct); the fit is the view less it.
 	var copies := []
 	while true:
 		var fit = _view_fit(node, scene, "_tile%d" % copies.size())
 		if not fit is Transform3D:
 			break
-		copies.append(fit)
+		var lift := ParkRecipes.SURFACE_LAYER_M * float(copies.size() % 2)
+		copies.append((fit as Transform3D).translated(Vector3(0.0, -lift, 0.0)))
 	print("park_tile_test: row %.1f m of a %.1f m GLB on a rolling %.0f%% slope at yaw 20: %d copies" % [length, authored, absf(SLOPE_Z) * 100.0, copies.size()])
 	if not _t.eq("(a) the row draws round(row / GLB) copies", copies.size(), n):
 		return

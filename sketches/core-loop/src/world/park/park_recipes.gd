@@ -182,6 +182,9 @@ const WEDGES := {"kicker": 1.0, "drop": -1.0}
 # (tests/park_place_test.gd). An edge step of 12 m puts a post under one of the two spokes nearest square to the lane.
 const ANCHOR_PITCH_M := 20.0
 const ANCHOR_POST_M := 8.0
+# One surface layer's drawn lift (surface_lifts, a tile fit's odd copies) and the margin round a surface row's footprint.
+const SURFACE_LAYER_M := 0.015
+const SURFACE_MARGIN_M := 2.0
 const ANCHOR_SINK_M := 1.0
 const ANCHOR_RUNOUT_M := 10.0
 const ANCHOR_SIDE_M := 6.0
@@ -384,6 +387,69 @@ static func seat_fit(row: Dictionary, ends: Dictionary, ground := Callable()) ->
 
 
 # Whether a row opts in to the drape fit (header): a stamped GLB row seated like its stamp's greybox.
+# A surface row: a drape-fit row or a wash liner (washes.py), drawn conformed to the ground, or a grind line, whose pieces
+# meet end to end. Two that overlap draw the same faces twice, and they z-fight (clip audit, 30 Oct: dam spillway_tunnel
+# under cliff_rooms_west, three flume canal liners at (-287, -250), flume siphon_span into flume_hollow_reach);
+# surface_lifts stacks them.
+static func is_surface(row: Dictionary) -> bool:
+	return fits_drape(row) or String(row.get("recipe", "")).begins_with("liner_") or String(row.get("element", "")) == "grind_line"
+
+
+# The drawn lift of each surface row in rows (a park's placed rows), keyed by row index: SURFACE_LAYER_M times the lowest
+# layer no earlier overlapping surface row holds, so an overlap draws the later row's faces a layer above the earlier's.
+# Footprints are the rows' [length (local z), width (local x)] rectangles grown by SURFACE_MARGIN_M. Rows on layer 0 are
+# left out. Only the drawn meshes lift (place_row); colliders stay where they were.
+static func surface_lifts(rows: Array) -> Dictionary:
+	var out := {}
+	var placed: Array = []
+	for i in rows.size():
+		var row: Dictionary = rows[i]
+		if not is_surface(row) or not row.has("size"):
+			continue
+		var mine := _footprint(row, SURFACE_MARGIN_M)
+		var taken := {}
+		for other: Array in placed:
+			if _rects_meet(mine, other[0]):
+				taken[other[1]] = true
+		var layer := 0
+		while taken.has(layer):
+			layer += 1
+		placed.append([mine, layer])
+		if layer > 0:
+			out[i] = layer * SURFACE_LAYER_M
+	return out
+
+
+# A row's footprint rectangle grown by margin: [centre, half extents (across, along), across axis, along axis].
+static func _footprint(row: Dictionary, margin: float) -> Array:
+	var size: Array = row["size"]
+	var yaw := deg_to_rad(float(row.get("yaw_deg", 0.0)))
+	return [_v2(row["at"]), Vector2(float(size[2]) * 0.5 + margin, float(size[0]) * 0.5 + margin),
+		Vector2(cos(yaw), -sin(yaw)), Vector2(sin(yaw), cos(yaw))]
+
+
+# Whether two footprint rectangles overlap (separating axes).
+static func _rects_meet(a: Array, b: Array) -> bool:
+	var d: Vector2 = (b[0] as Vector2) - (a[0] as Vector2)
+	for axis: Vector2 in [a[2], a[3], b[2], b[3]]:
+		var ra := absf((a[2] as Vector2).dot(axis)) * (a[1] as Vector2).x + absf((a[3] as Vector2).dot(axis)) * (a[1] as Vector2).y
+		var rb := absf((b[2] as Vector2).dot(axis)) * (b[1] as Vector2).x + absf((b[3] as Vector2).dot(axis)) * (b[1] as Vector2).y
+		if absf(d.dot(axis)) > ra + rb:
+			return false
+	return true
+
+
+# Lifts every drawn mesh under node by lift, leaving collision bodies (and what they hold) in place.
+static func _lift_drawn(node: Node, lift: float) -> void:
+	for child: Node in node.get_children():
+		if child is CollisionObject3D:
+			continue
+		if child is GeometryInstance3D:
+			(child as Node3D).position.y += lift
+		else:
+			_lift_drawn(child, lift)
+
+
 static func fits_drape(row: Dictionary) -> bool:
 	return String(row.get("fit", "")) == FIT_DRAPE and String(row.get("stamp", "")) != ""
 
@@ -686,8 +752,10 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 			baked = true
 			node.set_meta("seat_fit", at_origin)
 			node.set_meta("seat_stretch", fit["stretch"])
-	# Each placement of the parts: [GLB-to-node transform, view name suffix]. One, except for a tile fit's copies.
-	var fits := [[at_origin, ""]]
+	# Each placement of the parts: [GLB-to-node transform, view name suffix, drawn lift]. One, except for a tile fit's
+	# copies; consecutive copies overlap at their joints, so odd copies draw SURFACE_LAYER_M higher than even ones and
+	# the shared faces do not z-fight (flume_hollow_reach; clip audit, 30 Oct). Colliders take no lift.
+	var fits := [[at_origin, "", 0.0]]
 	if fits_tile(row) and not (parts.get("base", []) as Array).is_empty():
 		var lip := origin(String(row.get("recipe", ""))) == ORIGIN_ENTRY_LIP
 		var tile := tile_fit(row, authored_ends(parts["base"][0], lip), tile_ends(parts["base"][0], lip), ground)
@@ -697,7 +765,7 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 			var xfs := []
 			for k in (tile["copies"] as Array).size():
 				var xf: Transform3D = tile["copies"][k]["transform"]
-				fits.append([xf, "_tile%d" % k])
+				fits.append([xf, "_tile%d" % k, SURFACE_LAYER_M * float(k % 2)])
 				xfs.append(xf)
 			node.set_meta("tile_fit", xfs)
 			node.set_meta("tile_count", tile["count"])
@@ -708,6 +776,7 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 	for scene: Node in parts.get("base", []):
 		for f: Array in fits:
 			for view in _views(scene, node, body, f[0], baked, f[1]):
+				view.position.y += float(f[2])
 				_range(view, 0.0, base_end, float(r.get("base_margin", 0.0)))
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	var shell_ranges: Array = r.get("shells", [])
@@ -716,16 +785,19 @@ static func place_parts(row: Dictionary, parts: Dictionary, parent: Node3D, grou
 		var sr: Array = shell_ranges[k] if k < shell_ranges.size() else [0.0, 0.0]
 		for f: Array in fits:
 			for view in _views(shells[k], node, body, f[0], baked, f[1]):
+				view.position.y += float(f[2])
 				_range(view, 0.0, float(sr[0]), float(sr[1]))
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for scene: Node in parts.get("mid", []):
 		for f: Array in fits:
 			for view in _views(scene, node, body, f[0], baked, f[1]):
+				view.position.y += float(f[2])
 				_range(view, base_end, mid_end, float(r.get("mid_margin", 0.0)))
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	for scene: Node in parts.get("far", []):
 		for f: Array in fits:
 			for view in _views(scene, node, body, f[0], baked, f[1]):
+				view.position.y += float(f[2])
 				_range(view, mid_end, 0.0, 0.0)
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	if baked and fits_seat(row) and DRAPED.has(String(row.get("recipe", ""))) and ground.is_valid():
@@ -1638,11 +1710,13 @@ static func _anchor_mesh(path: String) -> Array:
 # sensor but drops its box and collider: the stamp is already its shape, and a box of the row's size on one height
 # cannot follow the stamped ground (a 300 m bank box stood 8 m over the fixture's pool). Its node stands on the plain
 # the stamp raised (seat), so the sensor spans the raise.
-static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), publish := Callable(), zones: Array = [], posts = null) -> Node3D:
+static func place_row(row: Dictionary, parent: Node3D, ground := Callable(), publish := Callable(), zones: Array = [], posts = null, lift := 0.0) -> Node3D:
 	var recipe := String(row.get("recipe", ""))
 	if is_anchor_field(row):
 		return place_anchor_field(row, parent, ground, zones, ANCHOR_PITCH_M, posts)
 	var node := place(row, parent, seat(row, ground), publish)
+	if node != null and lift > 0.0:
+		_lift_drawn(node, lift)
 	if node != null and row.has("rider"):
 		place_rider(row, parent, ground)
 	if node != null and stamp_replaces(row):
@@ -1771,6 +1845,7 @@ class Placer extends Node3D:
 	var _threaded := false
 	# Anchor-field post centres by row index, worked out on a worker (pure arithmetic, no server resources).
 	var _posts := {}
+	var _lifts := {}
 	var _task := -1
 
 	func is_ready() -> bool:
@@ -1827,6 +1902,7 @@ class Placer extends Node3D:
 
 	func _work_posts() -> void:
 		_posts = Self.field_posts(_rows, _zones)
+		_lifts = Self.surface_lifts(_rows)
 
 	func _wait_posts() -> void:
 		if _task != -1:
@@ -1909,7 +1985,7 @@ class Placer extends Node3D:
 			var r0 := Time.get_ticks_usec()
 			# Built outside the tree, then added once.
 			var holder := Node3D.new()
-			Self.place_row(_rows[_next], holder, _ground, _publish, _zones, _posts.get(_next))
+			Self.place_row(_rows[_next], holder, _ground, _publish, _zones, _posts.get(_next), float(_lifts.get(_next, 0.0)))
 			# The row's node and its rider, if it has one.
 			for node: Node in holder.get_children():
 				holder.remove_child(node)

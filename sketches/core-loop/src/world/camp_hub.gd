@@ -58,6 +58,9 @@ const FALL_BELOW := -25.0
 const MAX_LIGHTS := 24
 # The pieces that have detail shells beside them.
 const SHELLED := ["camp_launch_gate", "camp_lockers", "camp_moss_stall", "camp_skee_lane"]
+# Pieces laid flat on the plaza or the sandstone disc: their floors share the plaza's plane where they overlap it, so their
+# drawn views stand one surface layer up (park_recipes.gd SURFACE_LAYER_M) and do not z-fight (clip audit, 30 Oct).
+const ON_PLAZA := ["camp_shortcut", "camp_skee_lane", "camp_trial_track"]
 # Lights: piece stem -> [socket names, kind]. The lamp posts and the fire pit light the plaza; the stall, the wall, the
 # console, the gate and the lane keep two or three each; the rest of their bulbs stay emissive enamel.
 const LIGHTS := {
@@ -341,6 +344,8 @@ func _place(stem: String, xf: Transform3D, with_shells := false, key := "") -> N
 		markers.add_child(marker)
 		marker.transform = Recipes._relative(node, scene)
 	scene.free()
+	if ON_PLAZA.has(stem):
+		Recipes._lift_drawn(holder, Recipes.SURFACE_LAYER_M)
 	if not _pieces.has(stem):
 		_pieces[stem] = holder
 	return holder
@@ -424,21 +429,55 @@ func _place_layout() -> void:
 	_pet = _place("camp_pet", Layout.place(_pet_home, pen.yaw + 0.6))
 	var toys := ["camp_toy_ball", "camp_toy_wrench", "camp_toy_tire"]
 	for k in toys.size():
-		var at: Vector3 = pen.at * 0.9 + Vector3(2.5 * cos(k * 2.1), 0.3, 2.5 * sin(k * 2.1))
-		_place(toys[k], Layout.place(at, k * 1.3))
+		var at: Vector3 = pen.at * 0.9 + Vector3(2.5 * cos(k * 2.1), 0.0, 2.5 * sin(k * 2.1))
+		_seat(_place(toys[k], Layout.place(at, k * 1.3)))
 	for row: Array in Layout.DRESSING:
 		var p: Vector3 = Layout.at(row[1], row[2])
 		_place(row[0], Layout.place(p, Layout.yaw_to_centre(p.x, p.z) + deg_to_rad(row[3])))
+
+
+# Stands a loose piece's lowest drawn point on the plaza's collider below it (the plaza's top, not y 0: a fixed 0.3 m left
+# the wrench floating 0.12 m and the tire in the plaza's lip; clip audit, 30 Oct). A piece with no plaza under it stays.
+func _seat(holder: Node3D) -> void:
+	if holder == null or not _pieces.has("camp_plaza"):
+		return
+	var foot := INF
+	for view: MeshInstance3D in holder.find_children("*", "MeshInstance3D", true, false):
+		foot = minf(foot, (holder.transform * view.transform * view.mesh.get_aabb()).position.y)
+	var top := plaza_top(Vector2(holder.position.x, holder.position.z))
+	if foot < INF and top > -INF:
+		holder.position.y += top - foot
+
+
+# The plaza collider's highest face over local point at (x, z), -INF where none is.
+func plaza_top(at: Vector2) -> float:
+	var top := -INF
+	var plaza: Node3D = _pieces["camp_plaza"]
+	for shape: CollisionShape3D in plaza.find_children("*", "CollisionShape3D", true, false):
+		var poly := shape.shape as ConcavePolygonShape3D
+		if poly == null:
+			continue
+		var xf := plaza.transform * (shape.get_parent() as Node3D).transform * shape.transform
+		var faces := poly.get_faces()
+		for i in range(0, faces.size(), 3):
+			var a := xf * faces[i]
+			var b := xf * faces[i + 1]
+			var c := xf * faces[i + 2]
+			var hit = Geometry3D.ray_intersects_triangle(Vector3(at.x, 100.0, at.y), Vector3.DOWN, a, b, c)
+			if hit != null:
+				top = maxf(top, (hit as Vector3).y)
+	return top
 
 
 func to_local_point(global_point: Vector3) -> Vector3:
 	return global_point - HUB_ORIGIN
 
 
-# A picture-driven recipe prop (recipe_props.gd) at xf under root: its base views and shells, and for a solid one a box
-# collider round the first base mesh (a cabinet, a trunk), as a column: the mesh's footprint within the ball's reach of
-# its foot (reach_box), its full height. A tree's limbs spread far past its trunk overhead, and a box round the whole
-# mesh stood as an invisible wall a canopy's width from the trunk (clip audit, 30 Oct).
+# A picture-driven recipe prop (recipe_props.gd) at xf under root: its base views and shells, and for a solid one a
+# convex column collider round the first base mesh (a cabinet, a trunk): the outline of what the mesh holds within the
+# ball's reach of its foot (reach_column), at its full height. A tree's limbs spread far past its trunk overhead, and a
+# box round the whole mesh stood as an invisible wall a canopy's width from the trunk; a box round the roots still met
+# the ball 1.9 m from a root between its corners (clip audit, 30 Oct).
 func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 	var holder := Node3D.new()
 	holder.name = "Prop_" + key
@@ -448,36 +487,35 @@ func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 	RecipeProps.shells(key, holder, Transform3D.IDENTITY)
 	if solid and not views.is_empty():
 		var first := views[0] as MeshInstance3D
-		var box := reach_box(first.mesh, first.transform)
 		var body := Recipes._body(holder)
 		var shape := CollisionShape3D.new()
-		var cube := BoxShape3D.new()
-		cube.size = box.size
-		shape.shape = cube
-		shape.position = box.get_center()
+		var column := ConvexPolygonShape3D.new()
+		column.points = reach_column(first.mesh, first.transform)
+		shape.shape = column
 		body.add_child(shape)
 	_pieces[key] = holder
 
 
-# The box of mesh (at xf) whose x and z span the vertices within BALL_REACH_M of the mesh's lowest point and whose y
-# spans the whole mesh; the plain bounds when no vertex is that low (a mesh with no faces).
-static func reach_box(mesh: Mesh, xf: Transform3D) -> AABB:
+# The corners of a prism over mesh (at xf): its outline is the convex hull, in x and z, of the vertices within
+# BALL_REACH_M of the mesh's lowest point, and it spans the whole mesh's height. The plain bounds' corners when fewer
+# than three vertices are that low.
+static func reach_column(mesh: Mesh, xf: Transform3D) -> PackedVector3Array:
 	var whole: AABB = xf * mesh.get_aabb()
-	var faces := mesh.get_faces()
-	var foot := AABB()
-	var first := true
-	for p in faces:
+	var low := PackedVector2Array()
+	for p in mesh.get_faces():
 		var w := xf * p
-		if w.y > whole.position.y + BALL_REACH_M:
-			continue
-		if first:
-			foot = AABB(w, Vector3.ZERO)
-			first = false
-		else:
-			foot = foot.expand(w)
-	if first:
-		return whole
-	return AABB(Vector3(foot.position.x, whole.position.y, foot.position.z), Vector3(foot.size.x, whole.size.y, foot.size.z))
+		if w.y <= whole.position.y + BALL_REACH_M:
+			low.append(Vector2(w.x, w.z))
+	var outline := Geometry2D.convex_hull(low) if low.size() >= 3 else PackedVector2Array()
+	if outline.size() < 4:
+		outline = PackedVector2Array([Vector2(whole.position.x, whole.position.z), Vector2(whole.end.x, whole.position.z),
+			Vector2(whole.end.x, whole.end.z), Vector2(whole.position.x, whole.end.z)])
+	var out := PackedVector3Array()
+	# convex_hull closes the loop with the first point again.
+	for k in outline.size() - (1 if outline[0] == outline[outline.size() - 1] else 0):
+		out.append(Vector3(outline[k].x, whole.position.y, outline[k].y))
+		out.append(Vector3(outline[k].x, whole.end.y, outline[k].y))
+	return out
 
 
 func _build_lights() -> void:

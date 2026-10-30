@@ -8,6 +8,11 @@ const ASSET_DIR := "res://assets/models/bosses"
 const SPILLWAY_DIR := "res://assets/models/world_one"
 const FOUNDRY_PARTS := ["RimRepairs", "CraneRails", "PourSpouts", "CooledSlagPools", "CastFloorSeams", "MastCollars", "BankCopperCourses"]
 const SPILLWAY_PARTS := ["rock_a", "rock_c", "slab_a", "slab_b"]
+# Foundry parts authored on the bowl's own faces (the repairs on the rim wall, the copper courses on the bank, the pools
+# and seams on the floor) stand SURFACE_STANDOFF_M in from and up off the bowl, so their faces do not z-fight the bowl's
+# (clip audit, 30 Oct: BankCopperCourses 161 m2 in the bank's plane, RimRepairs 46 m2 in the rim wall's).
+const ON_BOWL_PARTS := ["RimRepairs", "CooledSlagPools", "CastFloorSeams", "BankCopperCourses"]
+const SURFACE_STANDOFF_M := 0.02
 # The Fleet yard behind the rim (tools/blender/bosses/arena_bowl_yard.py): static parts, the two melt parts that glow
 # with the phase, and the two plush crew the stands seat by MultiMesh.
 const YARD_PARTS := ["YardDeck", "FleetStands", "CupolaFurnaces", "LadleCars", "LedgerBoard", "IngotStock", "CrewYard"]
@@ -135,8 +140,12 @@ static func build(arena: Node3D) -> Node3D:
 		return null
 	var dressing := Node3D.new()
 	dressing.name = "ArenaBowlDress"
+	# In by the standoff at the rim wall's radius (less further in, where the bank and floor need the lift instead), and up.
+	var inward := 1.0 - SURFACE_STANDOFF_M / Arena.BANK_R
+	var standoff := Transform3D(Basis.from_scale(Vector3(inward, 1.0, inward)), Vector3(0.0, SURFACE_STANDOFF_M, 0.0))
 	for part in FOUNDRY_PARTS:
-		builder._view(dressing, part, foundry[part].mesh, foundry[part].local)
+		var local: Transform3D = foundry[part].local
+		builder._view(dressing, part, foundry[part].mesh, standoff * local if ON_BOWL_PARTS.has(part) else local)
 	var rubble := Node3D.new()
 	rubble.name = "SpillwayRimStone"
 	dressing.add_child(rubble)
