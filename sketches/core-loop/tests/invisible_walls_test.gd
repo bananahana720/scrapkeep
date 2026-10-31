@@ -97,7 +97,8 @@ func _roll_out(spot: Array) -> void:
 	var outcomes := {}
 	var file := FileAccess.open(out, FileAccess.READ)
 	while file != null and not file.eof_reached():
-		var row = JSON.parse_string(file.get_line())
+		var line := file.get_line()
+		var row = JSON.parse_string(line) if not line.is_empty() else null
 		if row is Dictionary:
 			outcomes[row["outcome"]] = int(outcomes.get(row["outcome"], 0)) + 1
 	file = null
@@ -105,6 +106,9 @@ func _roll_out(spot: Array) -> void:
 	var probes := 0
 	for n in outcomes.values():
 		probes += n
-	_t.check("stage %d (%s): the sweep ran 8 roll-outs (exit %d, %d rows)" % [spot[0], at, code, probes], code == 0 and probes == 8, "\n".join(output))
+	var ran := code == 0 and probes == 8
+	if not ran:
+		print("\n".join(output))
+	_t.check("stage %d (%s): the sweep ran 8 roll-outs (exit %d, %d rows)" % [spot[0], at, code, probes], ran)
 	_t.check("stage %d (%s): no roll-out hangs or sticks, each drop lands %s" % [spot[0], at, outcomes],
 		not outcomes.has("hung") and not outcomes.has("stuck") and not outcomes.has("bad_start") and outcomes.has("reached"))
