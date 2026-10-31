@@ -11,8 +11,8 @@ const T := preload("res://tests/support/t.gd")
 #   - a waisted anchor post (hoodoo a, size 10) splits its upper column, so no one hull spans the narrow neck under the cap.
 # Ungrounded rests found by tools/spot_sweep.gd (ruling aa), each rolled out of from every side with --leave=1:
 #   - the dam's river-canyon crevice (red team greedy, w29): the lobber ledge stopped one 2 m grid step short of the
-#     west cliff, leaving a V slot the ball hung in (14 of 16 roll-outs, a jump did not free it). The ledge now meets
-#     the cliff.
+#     west cliff, leaving a V slot the ball hung in (14 of 16 roll-outs, a jump did not free it). A ground row
+#     (lobber_ledge_cliff_fill) now raises that step to the ledge's height.
 
 # [stage, x, y, z] of each spot, y above the surface to drop onto.
 const HUNG_SPOTS := [[1, -199.5, 30.0, 445.0]]
@@ -110,5 +110,5 @@ func _roll_out(spot: Array) -> void:
 	if not ran:
 		print("\n".join(output))
 	_t.check("stage %d (%s): the sweep ran 8 roll-outs (exit %d, %d rows)" % [spot[0], at, code, probes], ran)
-	_t.check("stage %d (%s): no roll-out hangs or sticks, each drop lands %s" % [spot[0], at, outcomes],
-		not outcomes.has("hung") and not outcomes.has("stuck") and not outcomes.has("bad_start") and outcomes.has("reached"))
+	_t.check("stage %d (%s): no roll-out hangs, sticks or falls through, and one gets clear %s" % [spot[0], at, outcomes],
+		not outcomes.has("hung") and not outcomes.has("stuck") and not outcomes.has("fell") and not outcomes.has("bad_start") and outcomes.has("reached"))
