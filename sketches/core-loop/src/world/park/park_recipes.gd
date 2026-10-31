@@ -1600,8 +1600,11 @@ static func anchor_hulls(row: Dictionary, fit: Array) -> Array:
 			for n in order.size():
 				var v := verts[order[n]]
 				tris.append(Vector3(v.x, (v.y + 1.0) * s - ANCHOR_SINK_M, v.z))
+		var lows := PackedFloat64Array()
+		var highs := PackedFloat64Array()
+		_tri_spans(tris, lows, highs)
 		for b: Dictionary in fit:
-			out.append(_band_hull(tris, float(b["h"][0]), float(b["h"][1])))
+			out.append(_band_hull(tris, float(b["h"][0]), float(b["h"][1]), lows, highs))
 	_anchor_hulls[key] = out
 	_anchor_hull_lock.unlock()
 	return out
@@ -1609,9 +1612,21 @@ static func anchor_hulls(row: Dictionary, fit: Array) -> Array:
 
 # The convex hull shape of triangles (a flat list of corners, y = h) inside h in [lo, hi], at most ANCHOR_HULL_CAP of its
 # vertices; null with under 4 distinct points or when the hull has under 4 vertices (a flat band).
-static func _band_hull(tris: PackedVector3Array, lo: float, hi: float) -> ConvexPolygonShape3D:
+# lows and highs: each triangle's lowest and highest h (_tri_spans; made here when empty). A triangle wholly below lo or above hi clips to nothing and one
+# wholly inside clips to itself, corners in order, so both skip the clip and the points come out as the clip gives them
+# (the clip was ~1 ms a band on the cloud, 14-15 bands a flume trestle row on the Placer's main-thread step; #512).
+static func _band_hull(tris: PackedVector3Array, lo: float, hi: float, lows := PackedFloat64Array(), highs := PackedFloat64Array()) -> ConvexPolygonShape3D:
+	if lows.is_empty():
+		_tri_spans(tris, lows, highs)
 	var pts := PackedVector3Array()
 	for t in tris.size() / 3:
+		if highs[t] < lo or lows[t] > hi:
+			continue
+		if lows[t] >= lo and highs[t] <= hi:
+			pts.append(tris[t * 3])
+			pts.append(tris[t * 3 + 1])
+			pts.append(tris[t * 3 + 2])
+			continue
 		var poly: Array = [tris[t * 3], tris[t * 3 + 1], tris[t * 3 + 2]]
 		for plane in 2:
 			var edge := lo if plane == 0 else hi
@@ -1648,6 +1663,15 @@ static func _band_hull(tris: PackedVector3Array, lo: float, hi: float) -> Convex
 	if hull.points.size() > ANCHOR_HULL_CAP:
 		hull.points = _farthest_points(hull.points, ANCHOR_HULL_CAP)
 	return hull
+
+
+# Each triangle's lowest and highest y, into lows and highs (filled in place).
+static func _tri_spans(tris: PackedVector3Array, lows: PackedFloat64Array, highs: PackedFloat64Array) -> void:
+	lows.resize(tris.size() / 3)
+	highs.resize(tris.size() / 3)
+	for t in lows.size():
+		lows[t] = minf(tris[t * 3].y, minf(tris[t * 3 + 1].y, tris[t * 3 + 2].y))
+		highs[t] = maxf(tris[t * 3].y, maxf(tris[t * 3 + 1].y, tris[t * 3 + 2].y))
 
 
 # count of points, chosen greedily: the first is the largest x (then z, then y), each next the one farthest from those

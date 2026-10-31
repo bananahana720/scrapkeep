@@ -57,7 +57,6 @@ BUDGETS = json.loads((SKETCH / "assets/asset_budgets.json").read_text())["classe
 
 FLUSH = 0.12                # the most a part with no collider may stand over a surface a ball rolls on
 OFF_BASE, OFF_PAINT, OFF_MARK, OFF_TOP = 0.04, 0.06, 0.08, 0.10
-UNDER_M = 0.02              # a facet straddling a covering row's edge draws this much lower, under that row's skin
 DETAIL_TRIS = 1000          # 3 unwelded vertices a triangle must stay inside the detail class's 3,000
 GATE_SINK = 0.15           # a survey gate stands this far under its dome's summit (see survey_gate)
 GATE_REACH = 1.9           # and keeps its scattered pebbles this close to the pole
@@ -322,6 +321,29 @@ def covered_by(rid, rows, order):
     return out
 
 
+def outside_of(poly, hps):
+    """The convex pieces of poly outside the convex footprint hps (half-planes, >= 0 inside): the part past each edge
+    and inside the edges before it. Poly whole when it misses the footprint, nothing when the footprint holds it."""
+    inside = poly
+    for f in hps:
+        inside = clip(inside, f)
+        if not inside:
+            return [poly]
+    if area3(inside) <= 1e-6:
+        return [poly]
+    if area3(inside) >= area3(poly) - 1e-6:
+        return []
+    out, rest = [], poly
+    for f in hps:
+        piece = clip(rest, lambda v, f=f: -f(v))
+        if piece and area3(piece) > 1e-6:
+            out.append(piece)
+        rest = clip(rest, f)
+        if not rest:
+            break
+    return out
+
+
 def centroid(poly):
     n = len(poly)
     return (sum(p[0] for p in poly) / n, sum(p[1] for p in poly) / n, sum(p[2] for p in poly) / n)
@@ -467,25 +489,16 @@ class Dress:
         if region is None:
             region = self.footprint()
         self.region = region
-        # A ground facet inside a covering row's footprint is that row's to draw (covered_by), so it goes. One that
-        # straddles the footprint's edge stays, so no ground is left bare, but UNDER_M lower, under the covering row's
-        # skin, and takes no decal (pieces); facets are not cut, so the skin keeps its triangle count.
-        self.facets, self.under = [], set()
+        # Ground inside a covering row's footprint is that row's to draw (covered_by): a facet wholly inside goes, and
+        # one straddling the footprint's edge is cut to the part outside it (outside_of), so no ground is drawn twice
+        # and none is left bare. Lowering a straddling facet instead did not part it from the covering skin on a steep
+        # wall (clip audit, 31 Oct: spillway_tunnel and cliff_rooms_west, 167 m2).
+        self.facets = []
         for poly, sl in self._facets(region):
-            cover = 0.0
+            parts = [poly]
             for hps in covered:
-                part = poly
-                for f in hps:
-                    part = clip(part, f)
-                    if not part:
-                        break
-                cover = max(cover, area3(part) if part else 0.0)
-            if cover >= area3(poly) - 1e-6:
-                continue
-            if cover > 1e-6:
-                self.under.add(len(self.facets))
-                poly = [(p[0], p[1], p[2] - UNDER_M) for p in poly]
-            self.facets.append((poly, sl))
+                parts = [q for part in parts for q in outside_of(part, hps)]
+            self.facets.extend((q, sl) for q in parts)
         self.bucket = {}
         for k, (poly, _) in enumerate(self.facets):
             c = centroid(poly)
@@ -554,8 +567,6 @@ class Dress:
                 found.extend(self.bucket.get((bi, bj), ()))
         out = []
         for k in sorted(set(found)):
-            if k in self.under:
-                continue
             poly, sl = self.facets[k]
             if minslope is not None and sl < minslope:
                 continue

@@ -10,6 +10,7 @@ const T := preload("res://tests/support/t.gd")
 # 2. Each carries its tell: the tall column and the chime loop.
 # 3. A retry puts back the same caches at the same spots, never a second set.
 # 4. Rolling onto one takes it as a panel.
+# 5. A park row tagged off_spine (the dam's lobber ledge, ruling bd) reads off the spine whatever the graph says.
 # smoke: solo timeout=240s
 
 const WAIT_TICKS := 600
@@ -40,6 +41,8 @@ func _run() -> void:
 	var caches: Array = scrap.caches()
 	_t.eq("three caches wait", caches.size(), Panels.RIB_CACHES)
 	var director = _game.ctx.root.get_node("World").director
+	# Ruling bd: the lobber ledge is tagged off-spine, so its kills keep the rib rate though the cliff fill opened a drop in.
+	_t.eq("the tagged lobber ledge reads off the spine", director.off_spine(Vector3(-185.0, _game.ctx.terrain.height(-185.0, 455.0), 455.0)), 1)
 	var spawn: Vector3 = _game.player.ball_position()
 	var apart := true
 	for c in caches:

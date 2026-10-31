@@ -2,9 +2,9 @@ extends SceneTree
 
 # Rule (dam f5773-5800 on the 4080, #499 rows): while a stage's terrain attaches during play, a
 # frame starts a second collider tile only when the last tile's cost still fits the attach budget.
-# A tile's add is Jolt building its mesh shape (about 7 ms on the 4080); two a frame held the dam at
+# A cold tile add is Jolt building its mesh shape (about 7 ms on the 4080); two a frame held the dam at
 # 18 ms of _process for 50 frames. The rule is checked on ParkTerrain.tile_fits with set numbers
-# (no wall clock). Fixture: a ParkTerrain at its tile step whose first two tiles
+# (no wall clock). A played attach builds the shapes on the pool first (rule below). Fixture: a ParkTerrain at its tile step whose first two tiles
 # carry a real tile's 12,800 triangles and the rest one each; the landing's finish (deadline -1)
 # still adds every tile.
 
@@ -28,18 +28,75 @@ func _run() -> void:
 		ParkTerrain.tile_fits(1, 2000, 1000 + budget, 1000) and not ParkTerrain.tile_fits(1, 2000, 1000 + budget, budget))
 	t.check("never more than TILES_PER_FRAME a frame", not ParkTerrain.tile_fits(ParkTerrain.TILES_PER_FRAME, 0, budget, 0))
 
-	ground._attach_step(1 << 62)
-	t.check("a roomy frame adds TILES_PER_FRAME and measures the tile it added",
-		ground._next_tile == ParkTerrain.TILES_PER_FRAME and ground._tile_usec > 0, "%d tiles, last %d us" % [ground._next_tile, ground._tile_usec])
-	var steps := 1
-	while ground.phase != ParkTerrain.Phase.READY and steps < 2 * ParkTerrain.TILE_COUNT:
+	# Rule (#512 4080 probe, w29 seed 3): a played attach adds no body until every tile's Jolt shape is built on the
+	# pool. It makes TILES_PER_FRAME holders a step, starts the build on the step that makes the last, then adds
+	# TILES_PER_FRAME bodies a step, which take the built shapes (no Jolt build on the main thread).
+	# The holder cap is wall-clock (SHAPE_BUDGET_USEC), so a loaded box may make fewer in a step; never more, never none.
+	var steps := 0
+	var odd_steps := 0
+	while ground._next_shape < ParkTerrain.TILE_COUNT and steps < 2 * ParkTerrain.TILE_COUNT:
+		var before: int = ground._next_shape
 		ground._attach_step(1 << 62)
 		steps += 1
+		var made: int = ground._next_shape - before
+		if made < 1 or made > ParkTerrain.TILES_PER_FRAME:
+			odd_steps += 1
+	t.check("a roomy step makes 1 to TILES_PER_FRAME holders and adds no body while shapes are made",
+		odd_steps == 0 and ground._next_shape == ParkTerrain.TILE_COUNT and ground._next_tile == 0 and ground._shape_group != -1,
+		"%d steps, %d outside 1-%d, %d tiles" % [steps, odd_steps, ParkTerrain.TILES_PER_FRAME, ground._next_tile])
+	var waits := 0
+	while ground._next_tile == 0 and waits < 10000:
+		ground._attach_step(1 << 62)
+		waits += 1
+		if ground._next_tile == 0:
+			await process_frame
+	t.check("once the pool has built the shapes, a step adds TILES_PER_FRAME bodies and frees the build space",
+		ground._next_tile == ParkTerrain.TILES_PER_FRAME and ground._shape_group == -1 and not ground._shape_space.is_valid(),
+		"%d tiles" % ground._next_tile)
+	var tile_steps := 1
+	while ground.phase != ParkTerrain.Phase.READY and tile_steps < 2 * ParkTerrain.TILE_COUNT:
+		ground._attach_step(1 << 62)
+		tile_steps += 1
 	# One more step than the tile frames: the ground reports built on a frame that adds no tile.
 	t.check("frame by frame, the step drains every tile and reports the ground built a frame later",
-		ground.phase == ParkTerrain.Phase.READY and ground.tiles.size() == ParkTerrain.TILE_COUNT and steps == ceili(float(ParkTerrain.TILE_COUNT) / ParkTerrain.TILES_PER_FRAME) + 1,
-		"%d steps, %d tiles" % [steps, ground.tiles.size()])
+		ground.phase == ParkTerrain.Phase.READY and ground.tiles.size() == ParkTerrain.TILE_COUNT and tile_steps == ceili(float(ParkTerrain.TILE_COUNT) / ParkTerrain.TILES_PER_FRAME) + 1,
+		"%d steps, %d tiles" % [tile_steps, ground.tiles.size()])
+	var first: CollisionShape3D = ground.tiles[0].get_child(0)
+	t.check("a prebuilt tile carries its faces as built", (first.shape as ConcavePolygonShape3D).get_faces() == _full_tile(0) and ground._holders.all(func(h): return h == null))
+
+	# The prebuilt tile collides as a cold one: rays down on the wave and across cell diagonals hit the same point and normal.
+	var cold_twin := _ground()
+	cold_twin._add_tile(0)
+	var space := root.get_world_3d().direct_space_state
+	var ray_misses := 0
+	for k in 40:
+		var at := Vector3(1.3 + k * 3.7, 20.0, 0.7 + k * 3.9)
+		var hits := []
+		for body: StaticBody3D in [ground.tiles[0], cold_twin.tiles[0]]:
+			var other: StaticBody3D = cold_twin.tiles[0] if body == ground.tiles[0] else ground.tiles[0]
+			var q := PhysicsRayQueryParameters3D.create(at, at + Vector3.DOWN * 40.0)
+			q.exclude = [other.get_rid()]
+			hits.append(space.intersect_ray(q))
+		if hits[0].is_empty() or hits[1].is_empty() or hits[0]["position"] != hits[1]["position"] or hits[0]["normal"] != hits[1]["normal"]:
+			ray_misses += 1
+	t.eq("a prebuilt tile's rays hit exactly where a cold tile's do (40 rays)", ray_misses, 0)
+	cold_twin.queue_free()
 	ground.queue_free()
+
+	# A swap that reads the stage mid-make (finish) adds every tile at once: made holders as they are, the rest cold.
+	var mid := _ground()
+	for i in 3:
+		mid._attach_step(1 << 62)
+	mid.finish()
+	t.check("finish mid-make adds every tile and leaves no build behind",
+		mid.phase == ParkTerrain.Phase.READY and mid.tiles.size() == ParkTerrain.TILE_COUNT and mid._shape_group == -1 and not mid._shape_space.is_valid())
+	mid.queue_free()
+
+	# A stage freed while the pool builds its shapes waits for the build and frees the space (no RID leak at exit).
+	var freed := _ground()
+	while freed._shape_group == -1:
+		freed._attach_step(1 << 62)
+	freed.free()
 
 	var landing := _ground()
 	landing._attach_step(-1)
