@@ -59,6 +59,7 @@ const IslandEdge := preload("res://src/combat/island_edge.gd")
 const BallastHeavy := preload("res://src/combat/ballast_heavy.gd")
 const DIG_WORLD := 2
 const StageDefs := preload("res://src/core/stage_defs.gd")
+const ParkGraph := preload("res://src/world/park/park_graph.gd")
 
 const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster",
 	"deflector", "winch_drone", "gyro_jammer", "swatter", "ramp_flipper", "catch_trap", "reactor_relic",
@@ -701,8 +702,12 @@ func off_spine(at: Vector3) -> int:
 # run took a cache there (25 Oct, seeds 1-4). A door node on a line or a grind line's deck (the
 # siphon span's trough, 40 m over the wash) is never the spot: the explorer stood under that cache. A map with too few
 # such ends tops up from the rest, least detour first. Empty where the map has no graph.
+# A dead end counts once it has RIB_MIN_DOORS door nodes, per park (ruling az, 30 Oct): the flume's
+# near ends are small benches and pockets of 3 to 15 door nodes, so at the graph's own 16 only three
+# far-west ends qualified and every seed drew the same three (the explorer took 2 of 51).
 const RIB_DETOUR_MAX_M := 300.0
 const RIB_LANDMARK_CLEAR_M := 120.0
+const RIB_MIN_DOORS := {"park_flume": 3}
 
 
 func rib_cache_spots(count: int, seed: int) -> Array[Vector3]:
@@ -714,7 +719,12 @@ func rib_cache_spots(count: int, seed: int) -> Array[Vector3]:
 	if _park_map != null:
 		park = _park_map.park
 		spawn = Vector2(float(park.spawn.at[0]), float(park.spawn.at[1]))
-	return rib_spots(graph, spawn, count, seed, grind_rows(park))
+	return rib_spots(graph, spawn, count, seed, grind_rows(park), rib_min_doors(String(park.get("map", ""))))
+
+
+# The door nodes a dead end needs to hold a rib cache on this park (RIB_MIN_DOORS, else the graph's own).
+static func rib_min_doors(map_id: String) -> int:
+	return int(RIB_MIN_DOORS.get(map_id, ParkGraph.ANCHOR_MIN_DOOR_NODES))
 
 
 # The park's grind lines by row id: their decks are ridden, not stood on.
@@ -727,14 +737,16 @@ static func grind_rows(park: Dictionary) -> Dictionary:
 
 
 # rib_cache_spots on a given park graph, the drop-in at `spawn` (INF: no detour rule), never on a
-# node of a line or of a deck in `grind` (grind_rows).
-static func rib_spots(graph, spawn: Vector2, count: int, seed: int, grind := {}) -> Array[Vector3]:
+# node of a line or of a deck in `grind` (grind_rows), on off-route dead ends of `min_doors` door nodes
+# or more.
+static func rib_spots(graph, spawn: Vector2, count: int, seed: int, grind := {},
+		min_doors := ParkGraph.ANCHOR_MIN_DOOR_NODES) -> Array[Vector3]:
 	var out: Array[Vector3] = []
 	var direct: float = graph.d_landmark(spawn) if spawn != Vector2.INF else INF
 	var pool := []
 	var rest := []
 	for anchor in graph.anchors():
-		if int(anchor["rank"]) <= 0:
+		if anchor["on_route"] or int(anchor["door_nodes"]) < min_doors:
 			continue
 		var best := -1
 		var best_d := -1.0

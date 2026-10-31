@@ -12,12 +12,16 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Posts per park at b12fd171 (clear_zones without the span rule; islands was 0), unchanged at 74682daf.
-const ISLANDS_POSTS := 1229
+# Re-pinned 2026-10-30 (clip audit): islands 1229 -> 1172, as anchor_posts drops a lane-edge post within ANCHOR_POST_M
+# of a post already kept (two lanes' edge posts at a joint, or an edge post on a lattice post, drew one post through another).
+const ISLANDS_POSTS := 1172
 # Re-pinned 2026-10-23 (#241 gate, comment 6357833993): sinkhole 1281 -> 1282 at B12 #350 (main_tube_upper_post_11i moved
 # to (-27.3, -120.2) and now keeps a post); crown 5618 -> 5620 at B11 #321 (sentinel_36 and sentinel_50 moved and each now keeps a post).
 # Re-pinned 2026-10-26 (unit 10, the dam's canyon walls): dam 6059 -> 5184, because eighteen outskirts fields now stop
 # 12 m short of the walls' feet (park_dam.json hoodoo_1 to saguaro_26), so no post stands on a face.
-const PINNED := {"dam": 5184, "flume": 20, "pit": 85, "sinkhole": 1282, "crown": 5620}
+# Re-pinned 2026-10-30 for the same edge-post rule: dam 5184 -> 5177, flume 20 -> 16, pit 85 -> 79, sinkhole 1282 -> 1260,
+# crown 5620 -> 5436.
+const PINNED := {"dam": 5177, "flume": 16, "pit": 79, "sinkhole": 1260, "crown": 5436}
 
 var _t := T.new("park_anchor_span_test")
 

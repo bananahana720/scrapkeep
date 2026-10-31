@@ -750,6 +750,9 @@ func _step_vents(ball: Vector3) -> void:
 
 func _slag_hit(h, ball: Vector3) -> void:
 	ctx.run.damage(ChallengeDials.damage("brindle", Rules.SLAG_DAMAGE, phase), "brindle_slag")
+	# A killing hit ends the run inside damage(), and flow tears the arena down before it returns.
+	if not ctx.flow.in_play():
+		return
 	_grace[h.get_instance_id()] = clock + Rules.SLAG_GRACE
 	if ctx.calm:
 		return
@@ -868,6 +871,8 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 		var along: float = h.lane_along(ball)
 		if along >= front_before - 1.0 and along <= front + 1.5:
 			_charge_hit(h, ball)
+			if not ctx.flow.in_play():
+				return
 	if _charge["travelled"] >= _charge["length"]:
 		h.finish()
 		if _charge["into_wall"]:
@@ -885,6 +890,8 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 # hull can never carry the ball into the wall.
 func _charge_hit(h, ball: Vector3) -> void:
 	ctx.run.damage(ChallengeDials.damage("brindle", Rules.CHARGE_DAMAGE, phase), "brindle_charge")
+	if not ctx.flow.in_play():
+		return
 	_grace[h.get_instance_id()] = clock + Rules.CHARGE_GRACE
 	if ctx.calm:
 		return
@@ -1109,6 +1116,9 @@ func _step_hazards(delta: float, ball: Vector3) -> void:
 		if h.shape == Hazard.Shape.ANNULUS and h.is_live():
 			if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0):
 				_slag_hit(h, ball)
+				# A killing ring ended the run and exit_arena cleared the list: keep it cleared.
+				if not ctx.flow.in_play():
+					return
 			elif _on_crust(h, ball):
 				_discover(CodexEntries.QUENCH_RIDE, ball)
 		if h.is_done() and h.age >= h.warn_seconds + h.live_seconds + 0.5:

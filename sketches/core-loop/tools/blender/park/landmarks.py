@@ -350,6 +350,16 @@ def dam_arch_z(x):
     return -46.0 - 25.0 * (1.0 - (x / DAM_CHORD) ** 2)
 
 
+def arch_pieces(x, z, thick):
+    """The upper arch's cross-section at x as drawn, in convex pieces (a ring_solid winds each face away from its piece's
+    centre, so a concave ring turns faces inward): the body from 99 m to the crest deck at DAM_CREST, and the two
+    parapets (0.6 m wide, 1.2 m tall) on its edges."""
+    top, cap = DAM_CREST, DAM_CREST + 1.2
+    return [[(x, 99.0, z), (x, top, z), (x, top, z - thick), (x, 99.0, z - thick)],
+            [(x, top, z), (x, cap, z), (x, cap, z - 0.6), (x, top, z - 0.6)],
+            [(x, top, z - thick + 0.6), (x, cap, z - thick + 0.6), (x, cap, z - thick), (x, top, z - thick)]]
+
+
 def dam_course(row, colm):
     """One cast lift: each 16 m monolith keeps its own tone, the lifts in it vary only slightly."""
     return shade("concrete_lt" if rnd(colm, 5) > 0.5 else "concrete", 1.0 + 0.04 * (rnd(colm, 6) - 0.5), (row, colm, 3), 0.025)
@@ -437,13 +447,11 @@ def build_dam():
                shade("concrete_lt", 1.0, (k, 33)), up=UP)
         for dz in (0.0, -thick + 0.6):
             beam(e, (xa, DAM_CREST + 0.6, za + dz - 0.3), (xb, DAM_CREST + 0.6, zb + dz - 0.3), 0.6, 1.2, col("concrete_lt"))
-        if k % 2 == 0:
-            xc, zc = xb, zb
-            if k + 2 <= n:
-                xc, zc = xs[k + 2], dam_arch_z(xs[k + 2])
-            obox(colm, ((xa + xc) / 2, 110.6, (za + zc) / 2 - thick / 2),
-                 (math.hypot(xc - xa, zc - za) / 2 + 0.2, 11.6, thick / 2),
-                 yawed(math.atan2(-(zc - za), xc - xa)), col("concrete"))
+        # the collider follows the drawn arch segment by segment: its faces, the crest deck and the parapets. A box per
+        # two segments met the ball inside the arch's drawn walls at every joint (clip audit, 30 Oct: 2,539 m2 felt,
+        # up to 3.5 m from a drawn face) and floated it 1.2 m over the deck
+        for ra, rb in zip(arch_pieces(xa, za, thick), arch_pieces(xb, zb, thick)):
+            colm.ring_solid(ra, rb, col("concrete"), caps=(k == 0, k == n - 1))
     for sx in (-1, 1):
         x = sx * DAM_CHORD
         z = dam_arch_z(x)

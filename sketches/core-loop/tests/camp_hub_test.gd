@@ -158,6 +158,15 @@ func _run() -> void:
 	_t.check("each solid piece has a world collider", _hub.piece("camp_plaza").get_node("Collider").get_child_count() > 0
 		and _hub.piece("camp_lockers").get_node("Collider").get_child_count() > 0, "")
 	_t.check("the lights stay inside the cap", _hub.light_count > 0 and _hub.light_count <= CampHub.MAX_LIGHTS, str(_hub.light_count))
+	# The pen's toys stand their lowest drawn point on the plaza's top (camp_hub.gd _seat; clip audit, 30 Oct: a fixed
+	# 0.3 m floated the wrench and sank the tire in the plaza's lip).
+	for toy: String in ["camp_toy_ball", "camp_toy_wrench", "camp_toy_tire"]:
+		var holder: Node3D = _hub.piece(toy)
+		var foot := INF
+		for view: MeshInstance3D in holder.find_children("*", "MeshInstance3D", true, false):
+			foot = minf(foot, (holder.transform * view.transform * view.mesh.get_aabb()).position.y)
+		var top: float = _hub.plaza_top(Vector2(holder.position.x, holder.position.z))
+		_t.near("%s stands on the plaza's top" % toy, foot, top, 0.01)
 	_t.check("the settings console has a socket", _hub.has_socket("camp_settings_console", "interact"), "")
 
 	# Station keys do nothing outside a zone.

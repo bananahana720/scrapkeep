@@ -26,14 +26,14 @@ const STAND_OFF := 12.0
 # Every perch top of a park: [Vector3], sorted by x then z. ground: Callable(x, z) -> float.
 static func derive(park: Dictionary, ground: Callable) -> Array:
 	var tops: Array = []
-	var zones := ParkRecipes.clear_zones(park)
-	for row: Dictionary in park.get("park_rows", []):
-		if not ParkRecipes.is_anchor_field(row):
-			continue
+	var rows: Array = ParkRecipes.placed_rows(park)
+	var posts := ParkRecipes.field_posts(rows, ParkRecipes.clear_zones(park))
+	for i: int in posts:
+		var row: Dictionary = rows[i]
 		var rise := float(row["size"][1])
 		if rise < PERCH_MIN or rise > PERCH_MAX:
 			continue
-		for post: Vector2 in ParkRecipes.anchor_posts(row, zones):
+		for post: Vector2 in posts[i]:
 			tops.append(Vector3(post.x, float(ground.call(post.x, post.y)) + rise, post.y))
 	tops.sort_custom(func(a: Vector3, b: Vector3) -> bool: return a.x < b.x or (a.x == b.x and a.z < b.z))
 	return tops

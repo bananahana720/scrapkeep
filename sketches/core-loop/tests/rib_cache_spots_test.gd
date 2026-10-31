@@ -10,14 +10,17 @@ const T := preload("res://tests/support/t.gd")
 #     the drop-in to landmark path and RIB_LANDMARK_CLEAR_M or more short of the landmark;
 # (c) no spot stands on a line or a grind line's deck, and on the flume none lands within NOTCH_CLEAR_M of
 #     the drum lip notch (#481);
-# (d) the same seed draws the same spots, and the dam's draws vary;
+# (d) the same seed draws the same spots, and both parks' draws vary: the flume's at its own door
+#     floor (Director.RIB_MIN_DOORS, ruling az) qualifies FLUME_SPOTS_MIN spots or more, and at the
+#     graph's own floor (the control) only the three far-west ends every seed drew before;
 # (e) the later worlds' parks still draw RIB_CACHES distinct spots.
 
-const EXPECTED_CHECKS := 13
+const EXPECTED_CHECKS := 15
 const DRAWS := 40
 const COUNT := 3
 const NOTCH := Vector2(271, 488)
 const NOTCH_CLEAR_M := 60.0
+const FLUME_SPOTS_MIN := 8
 const OTHER_PARKS := ["park_pit", "park_sinkhole", "park_islands", "park_crown"]
 const PARKS := {"park_dam": Vector2(-150, -690), "park_flume": Vector2(-460, -650)}
 
@@ -36,6 +39,7 @@ func _park(map_id: String, spawn: Vector2) -> void:
 	var graph = Activities.shared_graph("res://assets/park/%s/graph.bin" % map_id)
 	var grind: Dictionary = Director.grind_rows(JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/%s.json" % map_id)))
 	var direct: float = graph.d_landmark(spawn)
+	var min_doors: int = Director.rib_min_doors(map_id)
 	var sized := true
 	var fair := true
 	var worst := 0.0
@@ -43,7 +47,7 @@ func _park(map_id: String, spawn: Vector2) -> void:
 	var decked := false
 	var spots := {}
 	for seed in DRAWS:
-		var out: Array[Vector3] = Director.rib_spots(graph, spawn, COUNT, seed, grind)
+		var out: Array[Vector3] = Director.rib_spots(graph, spawn, COUNT, seed, grind, min_doors)
 		var keys := {}
 		for p in out:
 			keys[p] = true
@@ -63,15 +67,21 @@ func _park(map_id: String, spawn: Vector2) -> void:
 	_t.check("%s: %d distinct spots a draw" % [map_id, COUNT], sized)
 	_t.check("%s: every spot within the detour and clear of the landmark" % map_id, fair, "worst detour %.0f m" % worst)
 	_t.check("%s: no spot on a line or grind deck" % map_id, not decked)
-	_t.check("%s: same seed, same spots" % map_id, Director.rib_spots(graph, spawn, COUNT, 7, grind) == Director.rib_spots(graph, spawn, COUNT, 7, grind))
+	_t.check("%s: same seed, same spots" % map_id, Director.rib_spots(graph, spawn, COUNT, 7, grind, min_doors) == Director.rib_spots(graph, spawn, COUNT, 7, grind, min_doors))
 	if map_id == "park_dam":
 		_t.check("park_dam: more than one set of spots across draws", spots.size() > COUNT, "%d spots" % spots.size())
 	if map_id == "park_flume":
+		_t.check("park_flume: at least %d spots across draws" % FLUME_SPOTS_MIN, spots.size() >= FLUME_SPOTS_MIN, "%d spots" % spots.size())
+		var old := {}
+		for seed in DRAWS:
+			for p in Director.rib_spots(graph, spawn, COUNT, seed, grind):
+				old[Vector2(p.x, p.z)] = true
+		_t.check("park_flume control: the graph's own door floor draws only %d spots" % COUNT, old.size() == COUNT, "%d spots" % old.size())
 		_t.check("park_flume: no spot by the drum lip notch", not near_notch)
 		# Control: without the grind rows the flume's draws do take the siphon span's trough.
 		var control := false
 		for seed in DRAWS:
-			for p in Director.rib_spots(graph, spawn, COUNT, seed):
+			for p in Director.rib_spots(graph, spawn, COUNT, seed, {}, min_doors):
 				control = control or _on_deck(graph, p, grind)
 		_t.check("park_flume control: the siphon trough is drawn without the grind rule", control)
 

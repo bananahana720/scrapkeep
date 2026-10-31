@@ -30,10 +30,12 @@ Fit. For each (variant, shipped size) whose gap with today's 8 m box is over LIM
          slope the downhill side shows it, so it keeps a box as the 8 m box did.
   low    h 0 .. min(size, SPLIT_M), the whole height of a rolling ball, as 1 box, else 2, else 4 stacked boxes of equal
          height: the first count whose gap is at or under LIMIT_M, else the count with the smallest gap.
-  upper  when size > SPLIT_M, one box over h SPLIT_M .. size.
+  upper  when size > SPLIT_M, one box over h SPLIT_M .. size; or, when the post is waisted (a band of at most UPPER_BAND_M
+         whose footprint is under UPPER_NECK_SHARE of that box's), that span cut into equal bands of at most UPPER_BAND_M.
 Each box is the bounds of the mesh's clipped surface in its own heights, so by construction no drawn surface is outside
 its box. The render mesh is checked inside x, z [-4, 4], so no box is wider than today's 8 m box. Rows at or under LIMIT_M
-are not listed and keep the 8 m box. A fitted row still over LIMIT_M prints `ANCHOR_FIT OVER` and carries
+are not listed and keep the 8 m box, except FULL_HEIGHT_FAMILIES sizes shipped in FULL_HEIGHT_PARKS, which are also fitted
+when their upper bands hold over LIMIT_M of air inside the 8 m box (upper_air_before_m). A fitted row still over LIMIT_M prints `ANCHOR_FIT OVER` and carries
 "over_limit": true; an axis-aligned box cannot close air that comes from a lopsided silhouette (an arm or a leaning
 column off the centre line).
 
@@ -67,6 +69,15 @@ SPLIT_M = 2.0 * gap.BALL_RADIUS
 SAMPLE_M = 0.1
 LINE_STEP_M = 0.25
 LOW_SPLITS = (1, 2, 4)
+UPPER_BAND_M = 3.0
+# These families' sizes shipped in these parks are fitted also when the upper post alone holds over LIMIT_M of air inside
+# the 8 m box (upper_air): a timber post is a ~4.5 m shaft under a 7.4 m cap, so its low band fits the box (gap 0.2 m)
+# while the 8 m box stands 1.75-2 m off the shaft above it; on a rim or slope beside the post, or swinging into it, the
+# ball stopped in visible air (the flume's crane booms and hollow trestles, tools/qa/invisible_walls.gd, 30 Oct). Other
+# families and parks keep the low-band rule: fitting every hoodoo and basalt field adds shapes to parks with ~15.7k posts.
+FULL_HEIGHT_FAMILIES = ("timber",)
+FULL_HEIGHT_PARKS = ("park_dam.json", "park_flume.json")
+UPPER_NECK_SHARE = 0.5
 OUT_KEYS = ("+x", "-x", "+z", "-z")
 
 
@@ -219,8 +230,37 @@ def fit(tris, size):
     if size > SPLIT_M:
         up = box_of(tris, size, SPLIT_M, size, SPLIT_M)
         if up:
-            boxes.append(up)
+            boxes.extend(upper(tris, size, up))
     return boxes, low
+
+
+def footprint(b):
+    return (b["x"][1] - b["x"][0]) * (b["z"][1] - b["z"][0])
+
+
+def upper(tris, size, up):
+    # The upper box alone, or UPPER_BAND_M stacked bands when one of them has under UPPER_NECK_SHARE of the whole box's
+    # footprint: a waisted post (a hoodoo's neck under its cap) whose one hull held up to 1.7 m of air round the neck at
+    # h 5-7, where a jumping or launched ball meets it (tools/qa/collision_sweep.gd, 30 Oct).
+    n = int(math.ceil((size - SPLIT_M) / UPPER_BAND_M - 1e-9))
+    if n < 2:
+        return [up]
+    cuts = [SPLIT_M + (size - SPLIT_M) * k / n for k in range(n + 1)]
+    parts = [box_of(tris, size, cuts[k], cuts[k + 1], cuts[k]) for k in range(n)]
+    if any(b is None for b in parts) or min(footprint(b) for b in parts) >= UPPER_NECK_SHARE * footprint(up):
+        return [up]
+    return parts
+
+
+def upper_air(tris, size):
+    # Worst air between the 8 m box and the drawn post above SPLIT_M, on any face of any upper band (upper()).
+    if size <= SPLIT_M:
+        return 0.0
+    up = box_of(tris, size, SPLIT_M, size, SPLIT_M)
+    if up is None:
+        return 0.0
+    return max(max(b["x"][0] + gap.HALF, gap.HALF - b["x"][1], b["z"][0] + gap.HALF, gap.HALF - b["z"][1])
+               for b in upper(tris, size, up))
 
 
 def col_check(name, col_tris):
@@ -259,6 +299,7 @@ def main():
     if not gap.planted_mapping():
         fail("height mapping planted check failed")
     sizes, park_files = gap.shipped_sizes()
+    full_sizes, _ = gap.shipped_sizes(FULL_HEIGHT_PARKS)
     print("ANCHOR_FIT park files %s; limit %.1f m; split at h %.1f m; sample %.2f m" % (", ".join(park_files), LIMIT_M, SPLIT_M, SAMPLE_M))
     table, checked, over = {}, False, []
     print("%-18s %7s %7s %9s %9s %10s %10s %6s  %s" % ("glb", "size", "famrows", "before", "after", "face.bef", "face.aft",
@@ -278,7 +319,8 @@ def main():
                 if not low:
                     fail("%s: no mesh between h 0 and %g at size %g" % (name, min(s, SPLIT_M), s))
                 before = face_gaps(low, [{"h": [-gap.SINK_M, s], "x": [-gap.HALF, gap.HALF], "z": [-gap.HALF, gap.HALF]}])
-                if worst(before, 0) <= LIMIT_M:
+                air = upper_air(tris, s) if fam in FULL_HEIGHT_FAMILIES and size in full_sizes[fam] else None
+                if worst(before, 0) <= LIMIT_M and (air is None or air <= LIMIT_M):
                     continue
                 boxes, low = fit(tris, s)
                 after = face_gaps(low, boxes)
@@ -290,6 +332,7 @@ def main():
                     over.append("%s size %g: %.3f m with %d boxes" % (name, s, worst(after, 0), len(boxes)))
                 fits.append({"size": s, "gap_before_m": r3(worst(before, 0)), "gap_after_m": r3(worst(after, 0)),
                              "gap_face_worst_before_m": r3(worst(before, 1)), "gap_face_worst_after_m": r3(worst(after, 1)),
+                             **({} if air is None else {"upper_air_before_m": r3(air)}),
                              "over_limit": worst(after, 0) > LIMIT_M,
                              "boxes": [{"h": [r3(b["h"][0]), r3(b["h"][1])], "x": [r3(b["x"][0]), r3(b["x"][1])],
                                         "z": [r3(b["z"][0]), r3(b["z"][1])]} for b in boxes]})

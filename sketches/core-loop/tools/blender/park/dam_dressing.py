@@ -57,6 +57,7 @@ BUDGETS = json.loads((SKETCH / "assets/asset_budgets.json").read_text())["classe
 
 FLUSH = 0.12                # the most a part with no collider may stand over a surface a ball rolls on
 OFF_BASE, OFF_PAINT, OFF_MARK, OFF_TOP = 0.04, 0.06, 0.08, 0.10
+UNDER_M = 0.02              # a facet straddling a covering row's edge draws this much lower, under that row's skin
 DETAIL_TRIS = 1000          # 3 unwelded vertices a triangle must stay inside the detail class's 3,000
 GATE_SINK = 0.15           # a survey gate stands this far under its dome's summit (see survey_gate)
 GATE_REACH = 1.9           # and keeps its scattered pebbles this close to the pole
@@ -286,6 +287,41 @@ def convex_hps(pts):
     return out
 
 
+def footprint_of(row):
+    """A row's footprint in world (x, z), as Dress.footprint draws it: an ellipse for a round stamp, else the rectangle."""
+    fr = Frame(row["at"], row["yaw_deg"], 0.0)
+    hl, hw = float(row["size"][0]) / 2, float(row["size"][2]) / 2
+    if row["stamp"] in ("butte", "spire", "bowl", "crater", "sinkhole"):
+        return [fr.world(hw * math.cos(TAU * k / 40), hl * math.sin(TAU * k / 40)) for k in range(40)]
+    return [fr.world(x, z) for x, z in ((-hw, -hl), (hw, -hl), (hw, hl), (-hw, hl))]
+
+
+def footprint_area(pts):
+    return abs(sum(pts[k][0] * pts[(k + 1) % len(pts)][1] - pts[(k + 1) % len(pts)][0] * pts[k][1] for k in range(len(pts)))) / 2
+
+
+def covered_by(rid, rows, order):
+    """The footprints (half-planes) of the drape rows dressed here that overlap rid and are smaller than it (or as large
+    and earlier in the park file). Two skins over the same ground drew the same faces twice, steep walls included, and
+    they z-fought (clip audit, 30 Oct: spillway_tunnel and cliff_rooms_west 3,570 m2, training_wall_west and
+    tailwater_bar 813 m2), so the smaller, more particular row keeps the ground and the larger one leaves it out."""
+    mine = footprint_of(rows[rid])
+    size = round(footprint_area(mine), 2)       # rounded, so two rows of one size tie and file order decides
+    mx0, mx1 = min(p[0] for p in mine), max(p[0] for p in mine)
+    mz0, mz1 = min(p[1] for p in mine), max(p[1] for p in mine)
+    out = []
+    for k, other in enumerate(order):
+        if other == rid:
+            continue
+        theirs = footprint_of(rows[other])
+        if max(p[0] for p in theirs) <= mx0 or min(p[0] for p in theirs) >= mx1 or max(p[1] for p in theirs) <= mz0 or min(p[1] for p in theirs) >= mz1:
+            continue
+        area = round(footprint_area(theirs), 2)
+        if area < size or (area == size and k < order.index(rid)):
+            out.append(convex_hps(theirs))
+    return out
+
+
 def centroid(poly):
     n = len(poly)
     return (sum(p[0] for p in poly) / n, sum(p[1] for p in poly) / n, sum(p[2] for p in poly) / n)
@@ -419,7 +455,7 @@ def loft(out, slot, outline, zf, zb, color_of):
 class Dress:
     """One row: its frame, the ground triangles clipped to its footprint and the three outputs."""
 
-    def __init__(self, row, ground, base_cap, region=None):
+    def __init__(self, row, ground, base_cap, region=None, covered=()):
         self.row, self.g = row, ground
         self.id = row["id"]
         self.y0 = base_height(row, ground)
@@ -431,7 +467,25 @@ class Dress:
         if region is None:
             region = self.footprint()
         self.region = region
-        self.facets = self._facets(region)
+        # A ground facet inside a covering row's footprint is that row's to draw (covered_by), so it goes. One that
+        # straddles the footprint's edge stays, so no ground is left bare, but UNDER_M lower, under the covering row's
+        # skin, and takes no decal (pieces); facets are not cut, so the skin keeps its triangle count.
+        self.facets, self.under = [], set()
+        for poly, sl in self._facets(region):
+            cover = 0.0
+            for hps in covered:
+                part = poly
+                for f in hps:
+                    part = clip(part, f)
+                    if not part:
+                        break
+                cover = max(cover, area3(part) if part else 0.0)
+            if cover >= area3(poly) - 1e-6:
+                continue
+            if cover > 1e-6:
+                self.under.add(len(self.facets))
+                poly = [(p[0], p[1], p[2] - UNDER_M) for p in poly]
+            self.facets.append((poly, sl))
         self.bucket = {}
         for k, (poly, _) in enumerate(self.facets):
             c = centroid(poly)
@@ -500,6 +554,8 @@ class Dress:
                 found.extend(self.bucket.get((bi, bj), ()))
         out = []
         for k in sorted(set(found)):
+            if k in self.under:
+                continue
             poly, sl = self.facets[k]
             if minslope is not None and sl < minslope:
                 continue
@@ -1628,7 +1684,8 @@ def build_row(rid, rows, ground):
     cls = "park_large" if large else "landform"
     cap = BUDGETS[cls]["tris"]
     extra, lens, col = Out(cap), Out(cap), Out(cap)
-    d = Dress(row, ground, cap)
+    order = [r for r in rows if r in STYLES]
+    d = Dress(row, ground, cap, covered=covered_by(rid, rows, order))
     notes = {}
     d.base.cap = cap
     if rid == "the_eye":
