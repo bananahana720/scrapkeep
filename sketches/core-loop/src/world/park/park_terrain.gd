@@ -164,7 +164,7 @@ const MAP_GAP_FRAMES := 10
 static var build_tasks := maxi(1, OS.get_processor_count() / 2)
 # The pool threads the tile shape build takes (_shapes_ahead). On build_tasks the 100 Jolt builds (~7 ms each on the 4080)
 # finished in about four frames and those frames drew slow (draw 5.5-7.3 ms, net 17-21; #607 6540029016, #609's row): two
-# threads spread the same work over ~35 frames, still well before the bodies are wanted.
+# threads spread the same work over ~350 ms (20-30 frames), still well before the bodies are wanted.
 const SHAPE_TASKS := 2
 
 enum Phase { IDLE, LOADING, BUILDING, ATTACHING, READY }
@@ -1042,19 +1042,21 @@ func _shapes_ahead(deadline: int) -> bool:
 			made += 1
 		_shape_space = PhysicsServer3D.space_create()
 		_shape_state = PhysicsServer3D.space_get_direct_state(_shape_space)
-		_shape_group = WorkerThreadPool.add_group_task(_build_shape, TILE_COUNT, mini(SHAPE_TASKS, build_tasks), true, "park_terrain shapes %s" % map_id)
+		_shape_group = WorkerThreadPool.add_group_task(_build_shape.bind(_shape_state, _shape_rids), TILE_COUNT, mini(SHAPE_TASKS, build_tasks), true, "park_terrain shapes %s" % map_id)
 		return false
 	return _shape_group == -1 or WorkerThreadPool.is_group_task_completed(_shape_group)
 
 
 # Worker: Jolt builds tile i's mesh shape, caching it on the shape (JoltShape3D.try_build, under its own mutex). The
-# private space is never stepped and holds no body, so the query touches nothing the main thread uses.
-func _build_shape(i: int) -> void:
-	if not _shape_rids[i].is_valid():
+# private space is never stepped and holds no body, so the query touches nothing the main thread uses. Static, so a
+# worker inside it holds no call lock on this node: a debug build refuses free() on a node mid-call ("Attempted to free a
+# locked object"), which skipped the PREDELETE wait and hung a stage freed mid-build (2 of ~50 test runs).
+static func _build_shape(i: int, state: PhysicsDirectSpaceState3D, rids: Array[RID]) -> void:
+	if not rids[i].is_valid():
 		return
 	var query := PhysicsShapeQueryParameters3D.new()
-	query.shape_rid = _shape_rids[i]
-	_shape_state.intersect_shape(query, 1)
+	query.shape_rid = rids[i]
+	state.intersect_shape(query, 1)
 
 
 func _end_shape_build() -> void:
