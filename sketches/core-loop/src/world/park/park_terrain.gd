@@ -39,9 +39,9 @@ extends Node3D
 # built where it is first used. Added cold, that is the add_child on the main thread: one tile a
 # frame put the flume's attach over 7 ms of _process for ~100 frames (#512 4080 probe). So a
 # played build makes each tile's shape and holder on the main thread during the map gaps (a few
-# a frame, ~0.3 ms each), has Jolt build them on the pool through a shape query on a private,
-# never-stepped space (try_build caches the result on the shape), and only then adds the
-# bodies, which take the built shape as is. The holder takes its shape before the build: in a
+# a frame, ~0.3 ms each), has Jolt build them on SHAPE_TASKS pool threads through a shape query
+# on a private, never-stepped space (try_build caches the result on the shape), and only then
+# adds the bodies, which take the built shape as is. The holder takes its shape before the build: in a
 # debug build CollisionShape3D.set_shape sets the shape's debug colour, which re-sends the faces
 # and drops a built shape. A whole build (finish(), every bot run) adds cold, as before.
 #
@@ -162,6 +162,10 @@ const MAP_TYPES := [2, 0, 1]
 const MAP_GAP_FRAMES := 10
 # The pool threads a threaded build takes, leaving the rest to the renderer and Jolt (see _pump).
 static var build_tasks := maxi(1, OS.get_processor_count() / 2)
+# The pool threads the tile shape build takes (_shapes_ahead). On build_tasks the 100 Jolt builds (~7 ms each on the 4080)
+# finished in about four frames and those frames drew slow (draw 5.5-7.3 ms, net 17-21; #607 6540029016, #609's row): two
+# threads spread the same work over ~350 ms (20-30 frames), still well before the bodies are wanted.
+const SHAPE_TASKS := 2
 
 enum Phase { IDLE, LOADING, BUILDING, ATTACHING, READY }
 
@@ -1038,19 +1042,21 @@ func _shapes_ahead(deadline: int) -> bool:
 			made += 1
 		_shape_space = PhysicsServer3D.space_create()
 		_shape_state = PhysicsServer3D.space_get_direct_state(_shape_space)
-		_shape_group = WorkerThreadPool.add_group_task(_build_shape, TILE_COUNT, build_tasks, true, "park_terrain shapes %s" % map_id)
+		_shape_group = WorkerThreadPool.add_group_task(_build_shape.bind(_shape_state, _shape_rids), TILE_COUNT, mini(SHAPE_TASKS, build_tasks), true, "park_terrain shapes %s" % map_id)
 		return false
 	return _shape_group == -1 or WorkerThreadPool.is_group_task_completed(_shape_group)
 
 
 # Worker: Jolt builds tile i's mesh shape, caching it on the shape (JoltShape3D.try_build, under its own mutex). The
-# private space is never stepped and holds no body, so the query touches nothing the main thread uses.
-func _build_shape(i: int) -> void:
-	if not _shape_rids[i].is_valid():
+# private space is never stepped and holds no body, so the query touches nothing the main thread uses. Static, so a
+# worker inside it holds no call lock on this node: a debug build refuses free() on a node mid-call ("Attempted to free a
+# locked object"), which skipped the PREDELETE wait and hung a stage freed mid-build (2 of ~50 test runs).
+static func _build_shape(i: int, state: PhysicsDirectSpaceState3D, rids: Array[RID]) -> void:
+	if not rids[i].is_valid():
 		return
 	var query := PhysicsShapeQueryParameters3D.new()
-	query.shape_rid = _shape_rids[i]
-	_shape_state.intersect_shape(query, 1)
+	query.shape_rid = rids[i]
+	state.intersect_shape(query, 1)
 
 
 func _end_shape_build() -> void:

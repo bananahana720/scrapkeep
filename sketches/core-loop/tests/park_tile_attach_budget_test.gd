@@ -31,17 +31,19 @@ func _run() -> void:
 	# Rule (#512 4080 probe, w29 seed 3): a played attach adds no body until every tile's Jolt shape is built on the
 	# pool. It makes TILES_PER_FRAME holders a step, starts the build on the step that makes the last, then adds
 	# TILES_PER_FRAME bodies a step, which take the built shapes (no Jolt build on the main thread).
+	# The holder cap is wall-clock (SHAPE_BUDGET_USEC), so a loaded box may make fewer in a step; never more, never none.
 	var steps := 0
-	var made_steps := 0
+	var odd_steps := 0
 	while ground._next_shape < ParkTerrain.TILE_COUNT and steps < 2 * ParkTerrain.TILE_COUNT:
 		var before: int = ground._next_shape
 		ground._attach_step(1 << 62)
 		steps += 1
-		if ground._next_shape - before == ParkTerrain.TILES_PER_FRAME:
-			made_steps += 1
-	t.check("a roomy step makes TILES_PER_FRAME holders and adds no body while shapes are made",
-		made_steps == ParkTerrain.TILE_COUNT / ParkTerrain.TILES_PER_FRAME and ground._next_tile == 0 and ground._shape_group != -1,
-		"%d of %d steps made a full batch, %d tiles" % [made_steps, steps, ground._next_tile])
+		var made: int = ground._next_shape - before
+		if made < 1 or made > ParkTerrain.TILES_PER_FRAME:
+			odd_steps += 1
+	t.check("a roomy step makes 1 to TILES_PER_FRAME holders and adds no body while shapes are made",
+		odd_steps == 0 and ground._next_shape == ParkTerrain.TILE_COUNT and ground._next_tile == 0 and ground._shape_group != -1,
+		"%d steps, %d outside 1-%d, %d tiles" % [steps, odd_steps, ParkTerrain.TILES_PER_FRAME, ground._next_tile])
 	var waits := 0
 	while ground._next_tile == 0 and waits < 10000:
 		ground._attach_step(1 << 62)
