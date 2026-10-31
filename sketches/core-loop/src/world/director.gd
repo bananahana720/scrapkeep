@@ -676,8 +676,10 @@ func _graph():
 
 # Grey panels' rib read (IL-01, the map veto pass's ribs and pockets): 1 where `at` stands
 # in an off-spine dead end, a graph anchor zone (one way in) that holds no line or Warden
-# node; 0 elsewhere; -1 when the stage has no zone data (no graph, or a version 1 graph), so
-# the caller pays the plain rate and logs the case rather than guessing.
+# node, or in the zone of a park row tagged "off_spine": true; 0 elsewhere; -1 when the stage
+# has no zone data (no graph, or a version 1 graph), so the caller pays the plain rate and logs
+# the case rather than guessing. The tag holds whatever the graph reads (ruling bd): a terrain
+# fix that opens a way into a tagged row's zone does not change what its kills pay.
 func off_spine(at: Vector3) -> int:
 	var graph = _graph()
 	if graph == null or graph.zone_count() == 0:
@@ -688,7 +690,14 @@ func off_spine(at: Vector3) -> int:
 		for anchor in graph.anchors():
 			if not anchor["on_route"]:
 				_rib_zones[int(anchor["zone"])] = true
+		for row in tagged_off_spine(_park_map.park if _park_map != null else {}):
+			_rib_zones[graph.zone_of(graph.nearest(Vector2(float(row["at"][0]), float(row["at"][1]))))] = true
 	return 1 if _rib_zones.has(graph.zone_of(graph.nearest(at))) else 0
+
+
+# The park's rows tagged "off_spine": true.
+static func tagged_off_spine(park: Dictionary) -> Array:
+	return park.get("park_rows", []).filter(func(row): return row.get("off_spine", false) == true)
 
 
 # Grey panels' rib caches (IL-01, coordinator ruling 23 Oct: exploring pays): up to `count`
