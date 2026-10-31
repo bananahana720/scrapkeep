@@ -412,6 +412,10 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 			_add(out, id, "enum", "fit %s is not in its list" % str(row["fit"]))
 		elif String(row["recipe"]) == "" or String(row["recipe"]).begins_with("greybox:"):
 			_add(out, id, "fit", "fit %s needs a GLB recipe, not %s" % [row["fit"], str(row["recipe"])])
+	# Optional: "off_spine": true keeps the row's graph zone an off-spine dead end for the rib pay rate
+	# (director.off_spine), whatever the graph reads (ruling bc).
+	if row.has("off_spine") and not row["off_spine"] is bool:
+		_add(out, id, "type", "off_spine %s is no bool" % str(row["off_spine"]))
 	if row.has("music_layer"):
 		var layer = row["music_layer"]
 		if not layer is String or not String(layer).begins_with(MUSIC_LAYER_PREFIX) or not EventKinds.WORLD_ROWS.has(layer):
