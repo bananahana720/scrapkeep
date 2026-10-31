@@ -35,9 +35,15 @@ extends Node3D
 # start(threaded) loads the bake and builds every region image and tile face list on
 # WorkerThreadPool; the main thread only adds the finished pieces, one region or up to five
 # tiles a frame inside an 8 ms budget, then emits built. finish() completes any of it at once.
-# A tile's add is Jolt building its 12,800-triangle mesh shape (about 7 ms on the 4080), so a
-# second tile starts only when the last one's cost still fits: two a frame held the dam at
-# 18 ms of _process for 50 frames while the flume attached (f5773-5800, #499 rows).
+# A tile's Jolt mesh shape (12,800 triangles, about 7 ms on the 4080, 8.8 ms on the cloud) is
+# built where it is first used. Added cold, that is the add_child on the main thread: one tile a
+# frame put the flume's attach over 7 ms of _process for ~100 frames (#512 4080 probe). So a
+# played build makes each tile's shape and holder on the main thread during the map gaps (a few
+# a frame, ~0.3 ms each), has Jolt build them on the pool through a shape query on a private,
+# never-stepped space (try_build caches the result on the shape), and only then adds the
+# bodies, which take the built shape as is. The holder takes its shape before the build: in a
+# debug build CollisionShape3D.set_shape sets the shape's debug colour, which re-sends the faces
+# and drops a built shape. A whole build (finish(), every bot run) adds cold, as before.
 #
 # The Terrain3D node is not this node's child: a new Terrain3D spends about 135 ms of main
 # thread on its first frame (measured headless, any settings), which no launch can afford. So
@@ -73,6 +79,8 @@ const REGION_COUNT := 4
 const PIECES := REGION_COUNT + TILE_COUNT
 const TILES_PER_FRAME := 5
 const ATTACH_BUDGET_USEC := 8000
+# Main-thread time a frame may spend making tile shapes ahead (_shapes_ahead): about 0.3 ms each on the cloud.
+const SHAPE_BUDGET_USEC := 2000
 # Terrain3D's control map: bit 2 is the hole bit (Terrain3DUtil.enc_hole).
 const HOLE_BIT := 4
 # Bit 0 is the auto bit: the auto-shader picks the base or overlay texture by slope.
@@ -199,6 +207,13 @@ var _next_map := 0
 var _map_wait := 0
 var _next_tile := 0
 var _tiles_root: Node3D
+# The played build's tile holders (CollisionShape3D with its shape), made ahead and built on the pool; null until made.
+var _holders: Array = []
+var _next_shape := 0
+var _shape_group := -1
+var _shape_space := RID()
+var _shape_state: PhysicsDirectSpaceState3D
+var _shape_rids: Array[RID] = []
 
 
 # The colour a tinted surface slot's cell lands on: its multiplier times the floor texture's mean.
@@ -496,6 +511,17 @@ func _exit_tree() -> void:
 	if _group != -1:
 		WorkerThreadPool.wait_for_group_task_completion(_group)
 		_group = -1
+	_end_shape_build()
+
+
+func _notification(what: int) -> void:
+	# Holders made ahead but never added are off the tree: a stage freed mid-attach frees them here.
+	if what == NOTIFICATION_PREDELETE:
+		# Before _exit_tree on a free(): the pool may still be building these holders' shapes.
+		_end_shape_build()
+		for holder in _holders:
+			if holder != null:
+				(holder as Node).free()
 
 
 func _process(_delta: float) -> void:
@@ -952,6 +978,7 @@ func _attach_step(deadline: int) -> void:
 	if _next_map < MAP_TYPES.size():
 		if deadline >= 0 and _map_wait < MAP_GAP_FRAMES:
 			_map_wait += 1
+			_shapes_ahead(deadline)
 			return
 		_map_wait = 0
 		terrain3d.data.update_maps(MAP_TYPES[_next_map], true, false)
@@ -960,6 +987,9 @@ func _attach_step(deadline: int) -> void:
 			return
 	if _next_map < MAP_TYPES.size():
 		return
+	if deadline >= 0 and not _shapes_ahead(deadline):
+		return
+	_end_shape_build()
 	var added := 0
 	while _next_tile < TILE_COUNT:
 		var now := Time.get_ticks_usec()
@@ -985,11 +1015,66 @@ static func tile_fits(added: int, now: int, deadline: int, last_usec: int) -> bo
 	return added < TILES_PER_FRAME and now <= deadline and (added == 0 or now + last_usec <= deadline)
 
 
-func _add_tile(t: int) -> void:
+# The played build's shapes ahead of their bodies: makes up to TILES_PER_FRAME holders a step (tile_fits on
+# SHAPE_BUDGET_USEC), then builds them all on the pool. True once every shape is built and the bodies may go in.
+func _shapes_ahead(deadline: int) -> bool:
+	if _next_shape < TILE_COUNT:
+		if _holders.is_empty():
+			_holders.resize(TILE_COUNT)
+			_shape_rids.resize(TILE_COUNT)
+		var made := 0
+		var last := 0
+		var end := mini(deadline, Time.get_ticks_usec() + SHAPE_BUDGET_USEC)
+		while _next_shape < TILE_COUNT:
+			var now := Time.get_ticks_usec()
+			if not tile_fits(made, now, end, last):
+				return false
+			_holders[_next_shape] = _holder(_faces[_next_shape])
+			# A tile wholly in holes has no shape to build (Jolt's _build returns null and the query would error).
+			if not (_faces[_next_shape] as PackedVector3Array).is_empty():
+				_shape_rids[_next_shape] = (_holders[_next_shape] as CollisionShape3D).shape.get_rid()
+			last = Time.get_ticks_usec() - now
+			_next_shape += 1
+			made += 1
+		_shape_space = PhysicsServer3D.space_create()
+		_shape_state = PhysicsServer3D.space_get_direct_state(_shape_space)
+		_shape_group = WorkerThreadPool.add_group_task(_build_shape, TILE_COUNT, build_tasks, true, "park_terrain shapes %s" % map_id)
+		return false
+	return _shape_group == -1 or WorkerThreadPool.is_group_task_completed(_shape_group)
+
+
+# Worker: Jolt builds tile i's mesh shape, caching it on the shape (JoltShape3D.try_build, under its own mutex). The
+# private space is never stepped and holds no body, so the query touches nothing the main thread uses.
+func _build_shape(i: int) -> void:
+	if not _shape_rids[i].is_valid():
+		return
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape_rid = _shape_rids[i]
+	_shape_state.intersect_shape(query, 1)
+
+
+func _end_shape_build() -> void:
+	if _shape_group != -1:
+		WorkerThreadPool.wait_for_group_task_completion(_shape_group)
+		_shape_group = -1
+	if _shape_space.is_valid():
+		_shape_state = null
+		PhysicsServer3D.free_rid(_shape_space)
+		_shape_space = RID()
+
+
+static func _holder(faces: PackedVector3Array) -> CollisionShape3D:
 	var shape := ConcavePolygonShape3D.new()
-	shape.set_faces(_faces[t])
+	shape.set_faces(faces)
 	var holder := CollisionShape3D.new()
 	holder.shape = shape
+	return holder
+
+
+func _add_tile(t: int) -> void:
+	var holder: CollisionShape3D = _holders[t] if t < _holders.size() and _holders[t] != null else _holder(_faces[t])
+	if t < _holders.size():
+		_holders[t] = null
 	var body := StaticBody3D.new()
 	body.name = "Tile%d_%d" % [t % TILES_PER_SIDE, t / TILES_PER_SIDE]
 	body.add_child(holder)
