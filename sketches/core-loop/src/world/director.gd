@@ -678,7 +678,7 @@ func _graph():
 # in an off-spine dead end, a graph anchor zone (one way in) that holds no line or Warden
 # node, or in the zone of a park row tagged "off_spine": true; 0 elsewhere; -1 when the stage
 # has no zone data (no graph, or a version 1 graph), so the caller pays the plain rate and logs
-# the case rather than guessing. The tag holds whatever the graph reads (ruling bc): a terrain
+# the case rather than guessing. The tag holds whatever the graph reads (ruling bd): a terrain
 # fix that opens a way into a tagged row's zone does not change what its kills pay.
 func off_spine(at: Vector3) -> int:
 	var graph = _graph()
