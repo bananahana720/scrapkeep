@@ -36,7 +36,8 @@ FELT_M = 0.3
 COARSE = 4.0
 ROLL_M = 1.6
 COPLANAR_MIN_CELLS = 6
-SEAM_MARGIN = 0.05           # a coplanar sample this far inside the other owner's face is an overlap, not a shared edge
+SEAM_MARGIN = 0.05           # a coplanar sample this far inside the other owner's face is an overlap, not a shared edge;
+                             # an edge-to-edge overlap narrower than this is not flagged
 HANG_M = 0.35
 HANG_SHARE = 0.25
 CLIP_MIN_SHARE = 0.04
@@ -305,14 +306,17 @@ def run(dump, cell=CELL):
     for (a, b), c in pair_coplanar.items():
         if c < COPLANAR_MIN_CELLS:
             continue
-        # A shared cell holds a coplanar overlap only where each owner's sample lies inside the other's faces; two faces
-        # that only meet at an edge (a tiled flume's walls continuing across a joint) share the cells along the edge.
-        inside = sum(1 for pa, pb in pair_points[(a, b)]
-                     if on_faces(P[pa], N[pa], otris[b]) and on_faces(P[pb], N[pb], otris[a]))
-        if inside >= COPLANAR_MIN_CELLS:
-            findings["coplanar"].append({"a": info[a], "b": info[b], "cells": inside, "seam_cells": c - inside,
-                                         "area_m2": round(inside * cell * cell, 2),
-                                         "at": [round(float(v), 1) for v in pair_at[(a, b)] / c]})
+        # A shared cell holds a coplanar overlap where either owner's sample lies SEAM_MARGIN deep in the other's faces
+        # (either: a strip lying on a larger face has the strip's samples deep in the face, never the face's in the
+        # strip). Two faces that only meet at an edge (a tiled flume's walls continuing across a joint) share the cells
+        # along the edge with neither sample deep in the other: those are edge_cells.
+        deep = [(pa, pb) for pa, pb in pair_points[(a, b)]
+                if on_faces(P[pa], N[pa], otris[b]) or on_faces(P[pb], N[pb], otris[a])]
+        if len(deep) >= COPLANAR_MIN_CELLS:
+            at = np.mean([P[pa] for pa, _ in deep], axis=0)
+            findings["coplanar"].append({"a": info[a], "b": info[b], "cells": len(deep), "edge_cells": c - len(deep),
+                                         "area_m2": round(len(deep) * cell * cell, 2),
+                                         "at": [round(float(v), 1) for v in at]})
 
     _tick("clip")
     # Clip: for each candidate pair, points of one owner that sit behind the other's nearest surface sample (against its
