@@ -64,6 +64,24 @@ func _run() -> void:
 		"%d steps, %d tiles" % [tile_steps, ground.tiles.size()])
 	var first: CollisionShape3D = ground.tiles[0].get_child(0)
 	t.check("a prebuilt tile carries its faces as built", (first.shape as ConcavePolygonShape3D).get_faces() == _full_tile(0) and ground._holders.all(func(h): return h == null))
+
+	# The prebuilt tile collides as a cold one: rays down on the wave and across cell diagonals hit the same point and normal.
+	var cold_twin := _ground()
+	cold_twin._add_tile(0)
+	var space := root.get_world_3d().direct_space_state
+	var ray_misses := 0
+	for k in 40:
+		var at := Vector3(1.3 + k * 3.7, 20.0, 0.7 + k * 3.9)
+		var hits := []
+		for body: StaticBody3D in [ground.tiles[0], cold_twin.tiles[0]]:
+			var other: StaticBody3D = cold_twin.tiles[0] if body == ground.tiles[0] else ground.tiles[0]
+			var q := PhysicsRayQueryParameters3D.create(at, at + Vector3.DOWN * 40.0)
+			q.exclude = [other.get_rid()]
+			hits.append(space.intersect_ray(q))
+		if hits[0].is_empty() or hits[1].is_empty() or hits[0]["position"] != hits[1]["position"] or hits[0]["normal"] != hits[1]["normal"]:
+			ray_misses += 1
+	t.eq("a prebuilt tile's rays hit exactly where a cold tile's do (40 rays)", ray_misses, 0)
+	cold_twin.queue_free()
 	ground.queue_free()
 
 	# The cold add of the same full tile, as finish() and every bot run do it: Jolt builds the shape at add_child.
