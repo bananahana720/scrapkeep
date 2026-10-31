@@ -72,27 +72,31 @@ const Cards := preload("res://src/world/director_cards.gd")
 # 2026-10-28 stage/alpha-w21 re-pin at b9880234 + #538 (ruling j integration commit): #529's cobalt pool (four catalogue rares join
 # AlphaDefs.PARTS) and #536's Warden-gate and shop cobalt floors move the schedule and the default run on 20 and 20 of 20 seeds.
 # Recorded with --record-base --section=runtime; the BASE lines equal this test's MEASURE lines (schedule0, tier0.hash) on all 20.
+# 2026-10-31 stage/alpha-w29 re-pin at ff9984e0 (ruling ba; ruling j integration commit): #602's flume pier nudges
+# (bend_zip_pier_7 z -144.5 -> -142.0, bluff_ride_pier_15 (172.1, 349.8) -> (174.4, 351.7)) are park-row data in the schedule hash,
+# so all 20 schedules moved; #597 and #600 before it and #601 and #603 after it move none (one-seed record per stack commit,
+# gate/w29-ff9984e0/bots-6.md). Whole-run hashes unchanged. Pins read from this test's own MEASURE lines (schedule0) at ff9984e0.
 const BASE_SCHEDULE := [
-	"ddacfaddbfee7dbc0f18376f90734372530c5374024318e52dbe0f2f22468743",
-	"dcaad0b1029f0944db67f12e8767368d7e54645784ef83a153573916844bc4b0",
-	"98cb3da9debd632b6f30ab07f9a8ab2d6f86fe24d27e2a238b31da6218b5d705",
-	"66a8c9cd473e608ebb11e86de42b040a5dd94437e1f7875df9a4a0de6e81acdc",
-	"0329131674cc83da315c4267a0ae4e5ad1f5f1044ce025719b7285e32f9bc073",
-	"083c3275f9bfceaea13ccd9066cbc62e8836fc2b44fdca11f1cab9c8424e7026",
-	"7151e063cecfb503adc41c16fd598a645f4dc80f6493aab98da8b9e748e7d253",
-	"9094941f5ba279f0470ca1c5a68920d119a64b67f9422ad5f54ed354df38d2ce",
-	"929f39474f6e8420aac37544ae7cca0774449f5749f516aea2737327865d0d47",
-	"8decbf012a3fd55290173d649f6c354fd09493c5b115561e5079cf1f51937201",
-	"252a68635046b890dab85d1aa048fd6ceea21506f88eff9ce1053dbb408bb354",
-	"a13b3f23cadde14ed85d219aceccf9059e700b22d672fd6ac2a040e96e6833e7",
-	"a9648bfefb836a70419e4d786ac8e1c04ae96eae2d79c1be845743edccbc544d",
-	"666cc27f4940dd501fd66334e0a421e0de22da3ca1bbe4cf855ab58d378a1db2",
-	"92eff64c46c42eb9dc1f43cdab861779080933a1157b0640a57344aa29ea00f2",
-	"a1ef0bdaa18cfa16412a1b22dc50e274ae2c42d23b5726ac2e66ea3d4adc7a6c",
-	"dbc089f2e4d6b22b540756c35741b76cdbdaad035ccbf39230f25e19cb12acbe",
-	"66e786f5d7e895f4106ad39c8e10672aaebb110f7db012bac2e315e930e803f5",
-	"5d95d1f4abcb27c80fb359853110f95ca1fb2ba3377803e1cd6e60466e1e4ea2",
-	"3876c2c7771fe96c08575e414028e823b82439e7a7fac8fc0788f64daacff3e8",
+	"57bc025532a5d99dddbab9ca5c97eba2b944745e79d964996373a556d4614de2",
+	"957ddeb992edf78d5bdc320266c78f81df9d64c5ad8bbc6ffe00b8e5237c6cb9",
+	"74f1033ca414197d8c51a5f7984ddc0b2b74af31eb340c8e8f19b6bf41511681",
+	"58f463fdbb22d354d9d10d92da299edbb929d07423f0889991b371ba9ae78645",
+	"d3e8c61ae88c7407698438c5f8f9fac426b6f89a7c7e52b456aa9b1fb20fedc8",
+	"152e9dda30d240aa3322320d9b12055d0c3992571022672190364118e0e457d0",
+	"346568fd8b43f107170c6f664153deb39265d346f729c9b77ec970b1a7bddc24",
+	"c6ae35ef5a17a6f125d5ca56889ef8004418b94282f36c1bd3acc38518b48eb7",
+	"158633a30ae5c981da2b1bcbc9843191fd979d34c8faa9f490b2826a4277ea2c",
+	"7c03b8c43f9951bb8e647b5f7a8965de9651b8aef542dd11ecd54a72786925ac",
+	"db1c3099f07c832dd26fb464b480acef913f36fd1f77f021ac03977da604e61a",
+	"136e41b313ed15d53f888b74ca95e8064e10eb7d9b66454fa9a5f272de03d094",
+	"2de8c6606d282e24ceb1d0bac615d49d0eb2b5e83b132a097daacf60801cd533",
+	"86f63e83d9fc31a46c4355418d7b6ab8843160831c7782fceb1339b97142db62",
+	"b6e67cedf24b9289e80382eaf73a228133039d7050b3c2b287c63b634bf3f467",
+	"8aa8bb64b0197fae7bb7d1ae5e8565e13fd6496d40dab56ac19c7b6a7dc7c543",
+	"f5f6507bf04c5d25e066772f141d147e74067abad89c7b44aa16198b3faab068",
+	"05b723ebf798847ecbd4fbd2b4cba981a763710f333866162d04b73df8a8ab53",
+	"2a5087043d39621df943ffbf624a43fe78f6475d919c26a6b976b999726bad4f",
+	"9a042f54cba9922d7468fc6de3580b75111353fefae4bfac57cd05cc93b86091",
 ]
 # 2026-10-15 wave-14 re-pin at 8b507ffb (SQ9 speed bank, PC-POOL part rows, SQ19 offer weights and
 # the SQ9 free-rest fix move the default run; schedules unchanged): recorded with --record-base.
