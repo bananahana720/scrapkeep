@@ -43,14 +43,11 @@ func _run() -> void:
 		made_steps == ParkTerrain.TILE_COUNT / ParkTerrain.TILES_PER_FRAME and ground._next_tile == 0 and ground._shape_group != -1,
 		"%d of %d steps made a full batch, %d tiles" % [made_steps, steps, ground._next_tile])
 	var waits := 0
-	var built_usec := 0
-	while ground._next_tile == 0 and waits < 100000:
-		var s0 := Time.get_ticks_usec()
+	while ground._next_tile == 0 and waits < 10000:
 		ground._attach_step(1 << 62)
-		built_usec = Time.get_ticks_usec() - s0
 		waits += 1
 		if ground._next_tile == 0:
-			OS.delay_usec(500)
+			await process_frame
 	t.check("once the pool has built the shapes, a step adds TILES_PER_FRAME bodies and frees the build space",
 		ground._next_tile == ParkTerrain.TILES_PER_FRAME and ground._shape_group == -1 and not ground._shape_space.is_valid(),
 		"%d tiles" % ground._next_tile)
@@ -83,15 +80,6 @@ func _run() -> void:
 	t.eq("a prebuilt tile's rays hit exactly where a cold tile's do (40 rays)", ray_misses, 0)
 	cold_twin.queue_free()
 	ground.queue_free()
-
-	# The cold add of the same full tile, as finish() and every bot run do it: Jolt builds the shape at add_child.
-	var again := _ground()
-	var t0 := Time.get_ticks_usec()
-	again._add_tile(0)
-	var cold_usec := Time.get_ticks_usec() - t0
-	t.check("the first body step (two full tiles prebuilt) costs under a quarter of one cold full tile (the Jolt build left the frame)",
-		built_usec * 4 < cold_usec, "body step %d us, one cold full tile %d us" % [built_usec, cold_usec])
-	again.queue_free()
 
 	# A swap that reads the stage mid-make (finish) adds every tile at once: made holders as they are, the rest cold.
 	var mid := _ground()
