@@ -16,11 +16,10 @@ extends SceneTree
 # (e) The survey gates stand their cairn's foot at local y 15.85, GATE_SINK under a `dome_N` row's 16 m spire summit, which
 #     rides the shelf's fall: within the gate's 2.2 m reach the summit stays between the foot and GATE_SINK x 2 over it,
 #     so no stone floats and the uphill ones bed into the rock.
-# (f) Overlapping drapes draw each ground facet once (dam_dressing.py covered_by; clip audit, 30 Oct: spillway_tunnel and
-#     cliff_rooms_west drew the same 3,570 m2 twice and z-fought): a base-skin triangle of a row with its centre inside
-#     the footprint of a smaller dressed row it overlaps stands at most UNDER_TOP over the ground, under that row's skin
-#     (the builder keeps a facet straddling the edge UNDER_M low, so no ground is left bare), beyond FRINGE_M2 in all
-#     (the two footprints' outlines differ by a 40-gon), and the dam has such overlaps (the positive control).
+# (f) Overlapping drapes draw each piece of ground once (dam_dressing.py covered_by, outside_of; clip audit, 30-31 Oct:
+#     spillway_tunnel and cliff_rooms_west drew the same 3,570 m2 twice and z-fought): no base-skin triangle of a row has
+#     its centre inside the footprint of a smaller dressed row it overlaps, beyond FRINGE_M2 in all (rounding at the cut
+#     edges), and the dam has such overlaps (the positive control).
 # Planted: a row whose y moved 1 m and a row with every vertex lifted 0.5 m each turn the checks red.
 # Evidence limit: geometry against the baked ground and a headless scene; no look, feel or ride claim.
 
@@ -241,7 +240,7 @@ func row_misses(row: Dictionary, ground: Callable, lift: float) -> Dictionary:
 	return {"misses": misses, "lo": lo, "hi": hi, "samples": samples}
 
 
-# Whether world (x, z) lies in a row's footprint, as dam_dressing.py footprint_of draws it (an ellipse for a round stamp).
+# Whether world (x, z) lies in a row's footprint, as dam_dressing.py footprint_of draws it (a 40-gon for a round stamp).
 func _in_footprint(row: Dictionary, x: float, z: float) -> bool:
 	var yaw := deg_to_rad(float(row["yaw_deg"]))
 	var d := Vector2(x, z) - Vector2(float(row["at"][0]), float(row["at"][1]))
@@ -250,7 +249,10 @@ func _in_footprint(row: Dictionary, x: float, z: float) -> bool:
 	var hl := float(row["size"][0]) * 0.5
 	var hw := float(row["size"][2]) * 0.5
 	if ["butte", "spire", "bowl", "crater", "sinkhole"].has(String(row["stamp"])):
-		return (lx / hw) * (lx / hw) + (lz / hl) * (lz / hl) <= 1.0
+		var ring := PackedVector2Array()
+		for k in 40:
+			ring.append(Vector2(hw * cos(TAU * k / 40), hl * sin(TAU * k / 40)))
+		return Geometry2D.is_point_in_polygon(Vector2(lx, lz), ring)
 	return absf(lx) <= hw and absf(lz) <= hl
 
 
@@ -259,8 +261,7 @@ func _area(row: Dictionary) -> float:
 	return a * PI / 4.0 if ["butte", "spire", "bowl", "crater", "sinkhole"].has(String(row["stamp"])) else a
 
 
-const FRINGE_M2 := 1.0
-const UNDER_TOP := 0.03       # between the builder's UNDER_M-low skin (0.02 m over the ground) and OFF_BASE (0.04 m)
+const FRINGE_M2 := 0.1
 
 
 func _check_overlaps(dressed: Array, ground: Callable) -> void:
@@ -285,7 +286,7 @@ func _check_overlaps(dressed: Array, ground: Callable) -> void:
 			for k in range(0, faces.size(), 3):
 				var c: Vector3 = node.transform * view.transform * ((faces[k] + faces[k + 1] + faces[k + 2]) / 3.0)
 				for small: Dictionary in smaller:
-					if _in_footprint(small, c.x, c.z) and c.y - float(ground.call(c.x, c.z)) > UNDER_TOP:
+					if _in_footprint(small, c.x, c.z):
 						doubled += 1
 						area += 0.5 * (faces[k + 1] - faces[k]).cross(faces[k + 2] - faces[k]).length()
 						if not named.has(big["id"]):
