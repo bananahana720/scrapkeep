@@ -1,9 +1,9 @@
 {
-  "bake_sha256": "0023c541d6b08589809f58fe390787bceeb15e2d255d3f89697a0701e8a74c19",
+  "bake_sha256": "a23010eff13bd414887415f24d23aa35ebb104d4f69da81026472e97514b0a0e",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1312622,
-  "edges": 309891,
+  "bytes": 1312710,
+  "edges": 309899,
   "first_failed": "",
   "flags": {
     "deck": 0,
@@ -15,13 +15,13 @@
   },
   "full_visit_m": 2439,
   "full_visit_ratio": "1.805",
-  "graph_sha256": "336901977f1c10f0323c62b505bbe4326d4553e5c8c7c07ad3e73901bde8e743",
+  "graph_sha256": "2e2badcde590e2f8ba238dcb313f247172683d16626b93ca009ef152787d88a0",
   "line_errors": [],
   "line_path_nodes": 159,
   "longest_est_m": 3144,
   "map": "park_dam",
   "nodes": 40401,
-  "park_sha256": "0fe9ae46e4fbb33a0c03eeaa9844be1b89f5c5743c94478b3851e9e1c863ee0d",
+  "park_sha256": "eecf8006b48a0d9448a7a2ffd2f5149120cba1b91bef215cf870ce0c53f63ed1",
   "pockets": [
     {
       "clear_ring": [],
@@ -255,14 +255,6 @@
         "cost": 1273.7,
         "d_landmark": 77.5,
         "name": "training_wall_east",
-        "on_route": false,
-        "rank": 0,
-        "viable": false
-      },
-      {
-        "cost": 1249.4,
-        "d_landmark": 238.2,
-        "name": "lobber_ledge",
         "on_route": false,
         "rank": 0,
         "viable": false
@@ -542,7 +534,7 @@
     ],
     "count": 104,
     "crossings": {
-      "drop": 31,
+      "drop": 32,
       "ride": 11,
       "walk": 152
     },

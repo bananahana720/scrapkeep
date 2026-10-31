@@ -9,6 +9,13 @@ const T := preload("res://tests/support/t.gd")
 #   - a solid camp prop collides as a hull of its first mesh up to SOLID_TOP_M, not a box round the whole mesh: each
 #     cottonwood's box took its crown down to the ground, 8.4 x 6.6 m round a 1.2 m trunk;
 #   - a waisted anchor post (hoodoo a, size 10) splits its upper column, so no one hull spans the narrow neck under the cap.
+# Ungrounded rests found by tools/spot_sweep.gd (ruling aa), each rolled out of from every side with --leave=1:
+#   - the dam's river-canyon crevice (red team greedy, w29): the lobber ledge stopped one 2 m grid step short of the
+#     west cliff, leaving a V slot the ball hung in (14 of 16 roll-outs, a jump did not free it). The ledge now meets
+#     the cliff.
+
+# [stage, x, y, z] of each spot, y above the surface to drop onto.
+const HUNG_SPOTS := [[1, -199.5, 30.0, 445.0]]
 
 var _t := T.new("invisible_walls_test")
 
@@ -75,4 +82,29 @@ func _run() -> void:
 	var hulls := ParkRecipes.anchor_hulls(row, fit)
 	_t.eq("one hull per band", hulls.size(), fit.size())
 	game.free()
+	for spot: Array in HUNG_SPOTS:
+		_roll_out(spot)
 	quit(_t.verdict())
+
+
+# Rolls out of spot from 8 sides (tools/spot_sweep.gd --leave=1): no probe may hang or stick, and the drop must land.
+func _roll_out(spot: Array) -> void:
+	var out := OS.get_user_data_dir().path_join("invisible-walls-%d.ndjson" % OS.get_process_id())
+	var at := "%s,%s,%s" % [spot[1], spot[2], spot[3]]
+	var output := []
+	var code := OS.execute(OS.get_executable_path(), ["--headless", "--fixed-fps", "90", "--path", ProjectSettings.globalize_path("res://"),
+		"--script", "res://tools/spot_sweep.gd", "--", "--out=%s" % out, "--stages=%d" % spot[0], "--dirs=8", "--leave=1", "--at=%s" % at], output, true)
+	var outcomes := {}
+	var file := FileAccess.open(out, FileAccess.READ)
+	while file != null and not file.eof_reached():
+		var row = JSON.parse_string(file.get_line())
+		if row is Dictionary:
+			outcomes[row["outcome"]] = int(outcomes.get(row["outcome"], 0)) + 1
+	file = null
+	DirAccess.remove_absolute(out)
+	var probes := 0
+	for n in outcomes.values():
+		probes += n
+	_t.check("stage %d (%s): the sweep ran 8 roll-outs (exit %d, %d rows)" % [spot[0], at, code, probes], code == 0 and probes == 8, "\n".join(output))
+	_t.check("stage %d (%s): no roll-out hangs or sticks, each drop lands %s" % [spot[0], at, outcomes],
+		not outcomes.has("hung") and not outcomes.has("stuck") and not outcomes.has("bad_start") and outcomes.has("reached"))
