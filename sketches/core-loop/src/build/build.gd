@@ -1439,7 +1439,7 @@ func _physics_process(delta: float) -> void:
 	_shrapnel_budget = minf(SHRAPNEL_PER_SECOND, _shrapnel_budget + SHRAPNEL_PER_SECOND * delta)
 	scrap.magnet_scale = sheet.magnet * effects.magnet_boost()
 	clock.paused = shop.clock_paused()
-	clock.cursed = ctx.run.has_method("cursed") and ctx.run.cursed()
+	clock.cursed = ctx.run.cursed()
 	clock.advance(delta, ctx.run.run_time, ctx.flow.in_stage())
 	_own_strikes += 1
 	if ctx.flow.in_stage():
