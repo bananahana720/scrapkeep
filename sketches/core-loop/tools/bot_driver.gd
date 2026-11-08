@@ -2925,21 +2925,21 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			and game.player._brake_was_held)
 		return
 	_harpoon_held = false
-	if _bite_passes(target):
-		return
 	var swallowed: bool = game.player.frozen() or kit.slingshot.charging
 	var special = game.player.abilities.gauge(AbilityState.SPECIAL)
 	if special != null and special.charging:
 		swallowed = true
 	if not swallowed and kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
 			and (_off_line > DROP_MEMORY or (_weak_go and is_instance_valid(_weak_warden) and target == _weak_warden)) and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
+		# The two-hook takeoff jumps instead of biting, so only a bite waits out the pass range.
+		if _bite_passes(target) and not _chain_takeoff(target):
+			return
 		# A movement exit waits for the haul; other line skills load on the bite.
 		if not bank_shot:
 			_cast(3)
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
-		if chain_hand_enabled and _kit("chain") and policy == "completionist" and not _in_boss() \
-				and target != game.flow.warden and target.is_in_group("enemy") and game.player.verb_ready("jump"):
+		if _chain_takeoff(target):
 			var second := _chain_partner(target)
 			if second != null:
 				_chain_phase = "takeoff"
@@ -2952,6 +2952,13 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 				source.press["jump_pressed"] = true
 		if source.press.get("harpoon_pressed", false):
 			_count("harpoon_bites")
+
+
+# The explorer's two-hook hand would jump from this bite instead of pressing it.
+func _chain_takeoff(target: Node3D) -> bool:
+	return chain_hand_enabled and _kit("chain") and policy == "completionist" and not _in_boss() \
+			and target != game.flow.warden and target.is_in_group("enemy") and game.player.verb_ready("jump") \
+			and _chain_partner(target) != null
 
 
 # A bite on a body the ball already sits inside drops as "passed" on its next tick
