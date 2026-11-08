@@ -4,13 +4,13 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
 
 # The RUN OVER line that names what scrapped you (wave 27 first-timer red team, note 2):
-# one dry line from the killing hit's damage source, with its ATTACK_ROWS id when the source
-# or the landed attack names one. Isaac's death note draws the killer, Dead Cells' death screen
+# one dry line from the killing hit's damage source; the ATTACK_ROWS id picks the wording but is
+# never shown (the player reads words, not codes). Isaac's death note draws the killer, Dead Cells' death screen
 # prints "Killed by", and Hades has Hypnos name it on the way back in: one line, read once.
 #
-#   Scrapped by Brindle's scuttle charge (B03), phase 2.
-#   Scrapped by Gate Crane No. 14's leaf drop (E35).
-#   Scrapped by a chaser lunge (E01).
+#   Scrapped by Brindle's scuttle charge, phase 2.
+#   Scrapped by Gate Crane No. 14's leaf drop.
+#   Scrapped by a chaser lunge.
 #   Scrapped by a silt boil.
 
 # Sources that are a boss's own damage call and name their row outright.
@@ -37,8 +37,6 @@ static func line(source: String, attack := "", phase_note := "") -> String:
 		return ""
 	var id := _row(source, attack)
 	var text := "Scrapped by " + words(source, id)
-	if id != "":
-		text += " (%s)" % id
 	if phase_note != "" and _boss(source) != "":
 		text += ", " + phase_note
 	return text + "."
