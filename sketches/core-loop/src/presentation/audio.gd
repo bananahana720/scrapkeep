@@ -2337,6 +2337,8 @@ func _on_event_started(event_id: String) -> void:
 	if event_id in EVENT_SECONDS:
 		_event_id = event_id
 		_event_started_ms = Time.get_ticks_msec()
+		# Each event earns the progress feed again: one that never sends it keeps the timer.
+		_event_progress_live = false
 
 
 # A win drops back into the level with the milestone stinger on the drop beat; a pass
@@ -2347,7 +2349,9 @@ func _on_event_ended(event_id: String, outcome: String) -> void:
 		engine.cancel_park_cue(event_id)
 		_park_cues.erase(event_id)
 		return
-	var participatory := event_id == _event_id
+	# Only an event the band escalated on the level track steers it home: one that ends during
+	# a Warden or miniboss fight leaves that fight's track and build alone.
+	var participatory := event_id == _event_id and engine.track == "level"
 	_event_id = ""
 	if not participatory or not sound_ready:
 		on_beat("event_ended", -6.0 if outcome != "won" else 0.0)
@@ -2545,6 +2549,7 @@ func _on_enemy_spawned(enemy: Node3D, kind: String) -> void:
 	if boss and enemy != null:
 		var key := str(enemy.get_instance_id())
 		enemy.tree_exiting.connect(end_moment.bind("miniboss", key), CONNECT_ONE_SHOT)
+		enemy.tree_exiting.connect(_on_miniboss_gone.bind(enemy), CONNECT_ONE_SHOT)
 		begin_moment("miniboss", key, miniboss_tune(kind))
 
 
@@ -2923,6 +2928,23 @@ func _on_boss_defeated() -> void:
 
 
 # A live miniboss other than the one dying on this kill (enemy.gd marks it dead first).
+# A miniboss leaving with the band still owed to it: killed inside the bar before its track
+# landed (the switch is dropped), or gone without a kill (despawn, lap), so the miniboss
+# track drops home as a kill would. _on_kill already paid a landed kill (_miniboss is null).
+func _on_miniboss_gone(enemy: Node) -> void:
+	if enemy != _miniboss or engine == null:
+		return
+	var survivor := _miniboss_survivor()
+	if survivor != null and survivor != enemy:
+		_miniboss = survivor
+		return
+	_miniboss = null
+	if engine.track == "miniboss":
+		engine.miniboss_drop()
+	else:
+		engine.drop_pending_track("miniboss")
+
+
 func _miniboss_survivor() -> Node3D:
 	for enemy in get_tree().get_nodes_in_group("enemy") if is_inside_tree() else []:
 		if is_instance_valid(enemy) and is_miniboss(String(enemy.get("kind"))) and not enemy.is_dead():
@@ -2989,6 +3011,10 @@ func _on_launched(_velocity: Vector3) -> void:
 	# the unseal drop); never out of Brindle's arena.
 	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track == _boss_track():
 		return
+	# One flight owns the band at a time, and a launch outranks an ultimate still in the air:
+	# the ultimate's later cancel (its stage-entry abort) or landing must not end the launch's
+	# riser or ACE piece.
+	_ult_armed = false
 	# A launch out of the Warden's break is directed from A to B: the piece plays through
 	# the flight and the landing hands it to the synth on a beat (_land_drop). Any other
 	# ACE mode (an unsealed stage's gate) hands to the synth now, so its launch riser sounds.
@@ -3614,6 +3640,8 @@ func _flush_flow() -> void:
 			"stage":
 				var stage: int = item[1]
 				var retry: bool = item[2]
+				# An event torn down with its stage (no event_ended) must not escalate the next.
+				_event_id = ""
 				if not retry and "run" in kinds:
 					continue
 				if radio_hold != "":
@@ -3694,6 +3722,8 @@ func _flush_flow() -> void:
 					engine.schedule_stinger_at(Rows.sound("beacon_unsealed"), at, story_duck_db("beacon_unsealed"))
 					cue_log.append(["beacon_unsealed", Rows.sound("beacon_unsealed"), "beat", at, 1.0])
 				else:
+					# A Warden broken inside its pivot bar: the track switch is void.
+					engine.drop_pending_track("warden")
 					on_beat("beacon_unsealed", 0.0, true)
 			"gates":
 				# The unseal stinger already says the gates are open.
