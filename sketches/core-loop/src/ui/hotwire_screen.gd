@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 const Palette := preload("res://src/core/palette.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const HotwireChoice := preload("res://src/ui/hotwire_choice.gd")
 
@@ -67,10 +67,10 @@ func setup(game_ref) -> void:
 	column.add_theme_constant_override("separation", 14)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(column)
-	_title = _label(30, Palette.AMBER)
+	_title = UiDraw.label(30, Palette.AMBER)
 	_title.text = "HOT-WIRED"
 	column.add_child(_title)
-	_name = _label(52, Palette.SAND)
+	_name = UiDraw.label(52, Palette.SAND)
 	column.add_child(_name)
 	_slot = VBoxContainer.new()
 	_slot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -110,16 +110,6 @@ func part_id() -> String:
 
 func choice_button(id: String) -> Button:
 	return _fit if id == "fit" else _recycle
-
-
-func _label(font_size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_override("font", UiFonts.bold())
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
 
 
 func _pending() -> Dictionary:

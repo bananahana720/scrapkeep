@@ -2,6 +2,7 @@ extends VBoxContainer
 
 const Palette := preload("res://src/core/palette.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 
@@ -38,7 +39,7 @@ func _init() -> void:
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	add_theme_constant_override("separation", 18)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_count = _label(22, Palette.AMBER)
+	_count = UiDraw.label(22, Palette.AMBER)
 	add_child(_count)
 	var body := HBoxContainer.new()
 	body.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -65,14 +66,14 @@ func _init() -> void:
 		column.add_theme_constant_override("separation", 6)
 		column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_shelves.add_child(column)
-		column.add_child(_label(18, SHELF_COLORS[shelf], TuneRows.SHELVES[shelf].to_upper()))
+		column.add_child(UiDraw.label(18, SHELF_COLORS[shelf], TuneRows.SHELVES[shelf].to_upper()))
 		for row in TuneRows.on_shelf(shelf):
 			var sleeve := Sleeve.new(row, SHELF_COLORS[shelf])
 			sleeve.pressed.connect(_on_sleeve.bind(String(row["id"])))
 			sleeve.focus_entered.connect(_show_note.bind(String(row["id"])))
 			column.add_child(sleeve)
 			_sleeves[row["id"]] = sleeve
-	_note = _label(20, Palette.SAND)
+	_note = UiDraw.label(20, Palette.SAND)
 	_note.custom_minimum_size = Vector2(0.0, 30.0)
 	add_child(_note)
 	var buttons := HBoxContainer.new()
@@ -91,17 +92,6 @@ func _init() -> void:
 		_detents.append(detent)
 	back = ChoiceButton.new("back", "key_j", "Back")
 	buttons.add_child(back)
-
-
-func _label(font_size: int, color: Color, words := "") -> Label:
-	var label := Label.new()
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_override("font", UiFonts.bold())
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.text = words
-	return label
 
 
 # Found and blank sleeves, the count, the dial and what is on the deck, from the profile's

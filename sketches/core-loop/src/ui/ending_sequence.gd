@@ -5,7 +5,7 @@ signal finished
 const Worlds := preload("res://src/core/worlds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const CompanionBody := preload("res://src/presentation/companion_body.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
@@ -229,12 +229,7 @@ func credits_rect() -> Rect2:
 
 
 func _label(size_px: int, color: Color) -> Label:
-	var label := Label.new()
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_override("font", UiFonts.bold())
-	label.add_theme_font_size_override("font_size", size_px)
-	label.add_theme_color_override("font_color", color)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var label := UiDraw.label(size_px, color)
 	add_child(label)
 	return label
 

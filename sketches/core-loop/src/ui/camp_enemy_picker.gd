@@ -1,6 +1,7 @@
 extends VBoxContainer
 
 const Palette := preload("res://src/core/palette.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const Sandbox := preload("res://src/world/camp_sandbox.gd")
@@ -39,10 +40,10 @@ func _init() -> void:
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	add_theme_constant_override("separation", 14)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_label(26, Palette.AMBER, "Dispatch box"))
-	_count = _label(20, Palette.SAND)
+	add_child(UiDraw.label(26, Palette.AMBER, "Dispatch box"))
+	_count = UiDraw.label(20, Palette.SAND)
 	add_child(_count)
-	_live = _label(18, Palette.SLATE)
+	_live = UiDraw.label(18, Palette.SLATE)
 	add_child(_live)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -61,7 +62,7 @@ func _init() -> void:
 		row.focus_entered.connect(_show_note.bind(kind))
 		_grid.add_child(row)
 		_rows[kind] = row
-	_note = _label(19, Palette.SAND)
+	_note = UiDraw.label(19, Palette.SAND)
 	_note.custom_minimum_size = Vector2(760.0, 52.0)
 	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_note)
@@ -77,17 +78,6 @@ func _init() -> void:
 	back_button.pressed.connect(func(): closed.emit())
 	buttons.add_child(back_button)
 	refresh([], 0)
-
-
-func _label(font_size: int, color: Color, words := "") -> Label:
-	var label := Label.new()
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_override("font", UiFonts.bold())
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.text = words
-	return label
 
 
 # --- What the save holds -------------------------------------------------------------
