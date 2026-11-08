@@ -132,9 +132,13 @@ func setup(game_ref) -> void:
 	game.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _offer_later())
 	game.events.bay_entered.connect(func(_banked: float): _speak_world_bark("shop_entered"))
 	game.events.bay_left.connect(func(_v: Vector3): _on_bay_left())
+	# A new stage is never inside the bay: a restart from an open counter (hold R) undocks
+	# without a bay_left, so the counter closes here too.
 	game.events.stage_entered.connect(func(_i: int, retry: bool):
 		if retry:
-			close_all())
+			close_all()
+		else:
+			close_counter())
 	game.events.flow_changed.connect(func(_s: String):
 		if not game.flow.in_play():
 			close_all()
@@ -351,7 +355,7 @@ func open_companion() -> bool:
 	if game.summary_shut():
 		return false
 	if _outside_run() and game.ctx.profile != null:
-		game.run.companion = game.ctx.profile.companion()
+		game.run.companion = game.flow.profile_companion()
 	if game.flow.in_play():
 		if not counter.is_open():
 			return false

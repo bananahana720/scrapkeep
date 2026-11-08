@@ -50,7 +50,8 @@ func _bites(swallow: String) -> int:
 			player.kit.slingshot.charging = true
 		"frozen":
 			player.set_frozen(true)
-	_target.global_position = player.ball_position()
+	# Outside the passing radius: the hand waits on a body the ball already sits inside.
+	_target.global_position = player.ball_position() + Vector3.RIGHT * 10.0
 	player.kit.aim = {"body": _target}
 	player.kit.rewind_left = 0.0
 	player.state.grounded = true

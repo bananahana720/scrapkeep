@@ -18,6 +18,11 @@ const SCHEMA := 4
 const RUN_TALLY_KEYS := ["stages_cleared", "time", "kills", "deaths", "wardens_seen"]
 const RUN_TALLY_PREFIX := "run_tallies."
 const RUN_TALLY_BASE := "run_tally_base."
+# Runs whose tallies were folded into the base: a run brought back after that (run.json.prev
+# restored, then continued) would otherwise add its whole snapshot again, because compaction
+# erased the high-water marks that pay only deltas. The newest CLOSED_KEEP are kept, ordered.
+const RUN_TALLY_CLOSED := "run_tally_closed."
+const CLOSED_KEEP := 16
 
 # From-version to the method that returns the document one version up.
 const MIGRATIONS := {0: "_migrate_0", 1: "_migrate_1", 2: "_migrate_2", 3: "_migrate_3"}
@@ -280,7 +285,7 @@ func set_stat(stat_name: String, value: float) -> void:
 func record_run_tallies(run_id: String, totals: Dictionary) -> bool:
 	if run_id.is_empty() or totals.size() != RUN_TALLY_KEYS.size():
 		return false
-	if run_id == _last_closed_tally_run or _pending_tally_settlements.has(run_id):
+	if run_id == _last_closed_tally_run or _pending_tally_settlements.has(run_id) or tallies_closed(run_id):
 		return false
 	var prefix := RUN_TALLY_PREFIX + run_id + "."
 	for key in RUN_TALLY_KEYS:
@@ -308,7 +313,7 @@ func record_run_tallies(run_id: String, totals: Dictionary) -> bool:
 
 
 func settle_run_tallies(run_id: String) -> bool:
-	if run_id.is_empty() or run_id == _last_closed_tally_run or _pending_tally_settlements.has(run_id):
+	if run_id.is_empty() or run_id == _last_closed_tally_run or _pending_tally_settlements.has(run_id) or tallies_closed(run_id):
 		return false
 	_pending_tally_settlements[run_id] = true
 	return true
@@ -346,7 +351,13 @@ func _discard_compacted_tallies(stats: Dictionary, saved: Dictionary) -> void:
 func _compact_run_tallies(stats: Dictionary) -> void:
 	if _pending_tally_settlements.is_empty():
 		return
+	var order := 0.0
+	for stat_name in stats:
+		if String(stat_name).begins_with(RUN_TALLY_CLOSED):
+			order = maxf(order, float(stats[stat_name]))
 	for run_id in _pending_tally_settlements:
+		order += 1.0
+		stats[RUN_TALLY_CLOSED + run_id] = order
 		var prefix: String = RUN_TALLY_PREFIX + run_id + "."
 		for key in RUN_TALLY_KEYS:
 			var base: String = RUN_TALLY_BASE + key
@@ -357,6 +368,14 @@ func _compact_run_tallies(stats: Dictionary) -> void:
 	for key in RUN_TALLY_KEYS:
 		if stats.has(RUN_TALLY_BASE + key):
 			stats[key] = float(stats[RUN_TALLY_BASE + key]) + _run_contributions(stats, key)
+	var closed := stats.keys().filter(func(k): return String(k).begins_with(RUN_TALLY_CLOSED))
+	closed.sort_custom(func(a, b): return float(stats[a]) > float(stats[b]))
+	for stale in closed.slice(CLOSED_KEEP):
+		stats.erase(stale)
+
+
+func tallies_closed(run_id: String) -> bool:
+	return _doc["stats"].has(RUN_TALLY_CLOSED + run_id)
 
 
 static func _run_contributions(stats: Dictionary, key: String) -> float:
@@ -554,7 +573,29 @@ func _read() -> Dictionary:
 	for id in doc["achievements"]:
 		doc["achievements"][id] = int(floorf(doc["achievements"][id]))
 	_retire_cosmetics(doc)
+	_sanitize_records(doc)
 	return {"state": "ok", "doc": doc, "from_version": from_version, "bytes": bytes}
+
+
+# The camp record is only shape-checked as a dictionary above; the camp trial and skee lane cast
+# its nested values. A bad nested value is dropped here, with a warning, and the rest is kept.
+# (The companion is cleaned where it enters a run: flow._seed_companion, Companion.sanitize.)
+static func _sanitize_records(doc: Dictionary) -> void:
+	var camp: Dictionary = doc["camp"]
+	if camp.has("skee_best") and not _whole(camp["skee_best"]):
+		push_warning("profile: camp skee_best %s is not a number; dropped" % str(camp["skee_best"]))
+		camp.erase("skee_best")
+	if camp.has("trial"):
+		var trial = camp["trial"]
+		if not (trial is Dictionary) or not _whole(trial.get("best_ms")):
+			push_warning("profile: camp trial is malformed; dropped")
+			camp.erase("trial")
+		elif trial.has("ghost") and not (trial["ghost"] is Dictionary):
+			trial.erase("ghost")
+
+
+static func _whole(value) -> bool:
+	return typeof(value) in [TYPE_INT, TYPE_FLOAT] and is_finite(float(value))
 
 
 static func _retire_cosmetics(doc: Dictionary) -> void:

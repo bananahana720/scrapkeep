@@ -80,8 +80,8 @@ func setup(events, run, profile, now := Callable(), codex = null) -> void:
 		push_warning("progress: earned pilots opened but not saved: %s" % _profile.last_error)
 
 
-# Pays the reward of every row the profile already earned, once per reward (the settle-once
-# ledger keys it), so a reward changed after the earn still lands. Returns the number of grants made.
+# Pays the reward of every row the profile already earned, once per reward target (the
+# settle-once ledger keys it), so a reward changed after the earn still lands. Returns the number of grants made.
 func backfill_rewards() -> int:
 	if _profile == null:
 		return 0
@@ -91,9 +91,42 @@ func backfill_rewards() -> int:
 			continue
 		var reward: Dictionary = rows[id].get("reward", {})
 		for kind in reward:
-			if grant_once("reward:%s:%s" % [id, kind], String(kind), String(reward[kind])):
+			if _grant_reward(id, String(kind), String(reward[kind])):
 				granted += 1
 	return granted
+
+
+# The settle key names the reward's target, so a row whose reward target changes pays the new
+# target to profiles that earned the row before the change. A profile from before the target
+# joined the key holds only "reward:<row>:<kind>": with no targeted key for that row and kind yet,
+# the legacy key covers the current target (it is what that profile was paid), once. The legacy
+# key is still settled beside the targeted one, so older builds reading the profile pay nothing twice.
+func _grant_reward(id: String, kind: String, target: String) -> bool:
+	var legacy := "reward:%s:%s" % [id, kind]
+	var key := "%s:%s" % [legacy, target]
+	if _is_settled(legacy) and not _has_targeted(legacy):
+		settle(key, false)
+		return false
+	if _is_settled(key):
+		return false
+	# Settled first: grant_once saves once after its own settle, so both keys land in that save.
+	settle(legacy, false)
+	return grant_once(key, kind, target)
+
+
+func _is_settled(id: String) -> bool:
+	return (_profile != null and _profile.is_settled(id)) or (_run != null and _run.settled.has(id))
+
+
+func _has_targeted(legacy: String) -> bool:
+	var prefix := legacy + ":"
+	var ids: Array = _profile.settled_ids() if _profile != null else []
+	if _run != null:
+		ids = ids + Array(_run.settled)
+	for settled_id in ids:
+		if String(settled_id).begins_with(prefix):
+			return true
+	return false
 
 
 # Earns every row on synergy_discovered whose where names one synergy_id the codex already
@@ -268,6 +301,15 @@ func _connect(signal_name: String, names: Array) -> void:
 			push_warning("progress: %s has %d arguments; not listened to" % [signal_name, names.size()])
 
 
+# The last world_entered, or the run's own world when this listener joined after it fired: game.gd
+# sets Progress up on the first physics frame, so a run a launch flag or a bot starts in frame 0
+# enters world 1 before anyone here hears it, and Brindle's ledger leaf would never be found.
+func _world_now() -> int:
+	if _world >= 1:
+		return _world
+	return int(_run.world) if _run != null else 0
+
+
 func _fact(signal_name: String, names: Array, values: Array) -> void:
 	var fact := {}
 	for i in names.size():
@@ -280,8 +322,8 @@ func _fact(signal_name: String, names: Array, values: Array) -> void:
 		board_line = ""
 	elif signal_name == "run_ended":
 		_won = bool(fact.get("won", false))
-	elif signal_name == "boss_defeated" and _world >= 1 and _world <= LEDGER_WORLDS:
-		settle(LEDGER_FOUND % _world)
+	elif signal_name == "boss_defeated" and _world_now() >= 1 and _world_now() <= LEDGER_WORLDS:
+		settle(LEDGER_FOUND % _world_now())
 	for id in _rows_on.get(signal_name, []):
 		_evaluate(id, fact)
 	if signal_name == "run_ended":
@@ -342,7 +384,7 @@ func _need_met(row: Dictionary) -> bool:
 		"won":
 			value = _won
 		"world":
-			value = _world
+			value = _world_now()
 		_:
 			value = _run.summary().get(key)
 			if value is Array:
@@ -370,7 +412,7 @@ func _earn(id: String, row: Dictionary) -> void:
 		return
 	var reward: Dictionary = row.get("reward", {})
 	for kind in reward:
-		grant_once("reward:%s:%s" % [id, kind], String(kind), String(reward[kind]))
+		_grant_reward(id, String(kind), String(reward[kind]))
 	# A row that is a pilot's "or" rule carries no pilot reward (one row per pilot reward), so its earn opens
 	# the pilot here.
 	open_met_pilots()

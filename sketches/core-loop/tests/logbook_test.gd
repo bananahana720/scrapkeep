@@ -116,6 +116,10 @@ func _check_run(spawner, run, profile) -> void:
 	var open_profile := Profile.new(profile.path)
 	var open_entrance: Dictionary = run.to_entrance_doc()
 	open_entrance.erase("run_tallies")
+	# The game writes entrance docs only at a stage entrance, alive; validate_entrance_doc refuses
+	# hp 0 (a resumed ball that could never die). This case is about the tallies, so it resumes
+	# the doc the stage entrance would have written.
+	open_entrance["hp"] = open_entrance["max_hp"]
 	var resumed := RunState.new(null, 123)
 	var resumed_ok := open_profile.load_profile() and resumed.from_entrance_doc(open_entrance)
 	resumed.reconcile_tallies(open_profile.run_tallies(run.run_id))

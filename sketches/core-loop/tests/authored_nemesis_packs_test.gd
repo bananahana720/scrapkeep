@@ -119,12 +119,19 @@ func _kill_first() -> void:
 func _budget() -> void:
 	for stage in range(1, _table.COUNT + 1):
 		var row: Dictionary = _table.of(stage)
-		var d = Director.new(1)
-		d.use_row(row)
-		d.threat = row.get("threat", 1.0)
-		var crowd: int = d.cap()
+		# The smallest crowd the stage can reach: director.gd _authored_arrival keeps a drawn pack
+		# until the cap has room for all of it, so a pack (or the elite) over the lowest cap any
+		# Breath option gives stops that stage spawning for good.
+		var crowd := 1 << 30
+		for breath in Director.BREATH:
+			var d = Director.new(1)
+			d.use_row(row, breath)
+			d.threat = row.get("threat", 1.0)
+			crowd = mini(crowd, d.cap())
 		var attackers: int = AttackBudget.cap_at(1, int(row["world"]))
 		var elite_cost: float = Cards.cost(row["elite"]["kinds"], true)
+		_t.check(_name + "stage %d elite fits the lowest crowd cap" % stage, row["elite"]["kinds"].size() <= crowd,
+			"%s crowd=%d" % [row["elite"]["kinds"], crowd])
 		var ids := {}
 		for pack in row["packs"]:
 			var price: float = Cards.cost(pack["kinds"])

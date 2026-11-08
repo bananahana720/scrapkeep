@@ -256,6 +256,10 @@ func press(id: String) -> void:
 		"resume":
 			close()
 		"restart":
+			# Same rule as hold-R (game.step_restart_hold): with a store, a restart never
+			# abandons the victory lap's credits.
+			if game.flow.store != null and game.flow.state == game.flow.LAP:
+				return
 			close()
 			game.flow.new_run()
 		"notes":

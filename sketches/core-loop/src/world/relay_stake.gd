@@ -73,8 +73,9 @@ func reach_point() -> Vector3:
 	return global_position + Vector3.UP * 2.0
 
 
+# Open between charges; a won relay's post is spent (activities.gd) and takes no more stakes.
 func ready_now() -> bool:
-	return relay != null and not relay.charging()
+	return relay != null and not spent and not relay.charging()
 
 
 func terms() -> String:

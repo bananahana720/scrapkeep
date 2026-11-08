@@ -93,8 +93,23 @@ func _protected(enemy: Node3D) -> bool:
 	return enemy.has_method("_apply_posture") or combat._target_class(enemy) == "boss"
 
 
-func _movable(enemy: Node3D) -> bool:
+func _movable(enemy) -> bool:
 	return _alive(enemy) and not _protected(enemy) and enemy.get("weight") != null and float(enemy.weight) <= tow_limit(_class())
+
+
+# A held body (tow, hurl, drag target) leaves the claw the moment it leaves the tree, so a
+# freed enemy is never carried into the next physics step.
+func _hold(enemy: Node3D) -> void:
+	var drop := _release.bind(enemy)
+	if not enemy.tree_exiting.is_connected(drop):
+		enemy.tree_exiting.connect(drop, CONNECT_ONE_SHOT)
+
+
+func _release(enemy: Node3D) -> void:
+	tow.erase(enemy)
+	hurls = hurls.filter(func(h): return h["enemy"] != enemy)
+	if not drag.is_empty() and drag["target"] == enemy:
+		_stop_drag()
 
 
 func _enemies() -> Array:
@@ -148,6 +163,7 @@ func on_body(target: Node3D, _fraction: float, mult: float) -> void:
 		combat._reel_burst(target.global_position, 1.0, mult)
 		return
 	drag = {"target": target, "from": target.global_position, "mult": mult, "bite": BITE_SECONDS, "time": 0.0, "world": false}
+	_hold(target)
 	ctx.player.indicator.set_shape("tarn_drag", geometry(1.0))
 
 
@@ -301,6 +317,7 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 			if _movable(enemy):
 				if id == "redjaw_rend" and tow.size() < 2 + _class():
 					tow.append(enemy)
+					_hold(enemy)
 					if enemy.has_method("open_ring_out"):
 						enemy.open_ring_out()
 				elif id == "vice_leap":
@@ -309,6 +326,7 @@ func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> in
 					if enemy.has_method("open_ring_out"):
 						enemy.open_ring_out()
 					hurls.append({"enemy": enemy, "from": enemy.global_position, "to": ult._plan["legs"][ult._leg]["to"], "time": 0.0, "seconds": left})
+					_hold(enemy)
 		for enemy in tow.duplicate():
 			if _alive(enemy):
 				_hit_piece(enemy, CHEW_DAMAGE * heft, ball, false)

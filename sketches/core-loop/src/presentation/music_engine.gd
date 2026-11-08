@@ -1042,6 +1042,26 @@ func miniboss_drop() -> int:
 	return drop_now(4, 0.9, {"type": "cadence", "then": {"track": "level", "section": "", "step": Harmony.STEP}}, theme)
 
 
+# A fight that ends inside the bar before its track lands (begin_miniboss, begin_boss) takes
+# the queued switch with it, so the band never enters a track whose fight is already over.
+# True when a switch was dropped.
+func drop_pending_track(kind: String) -> bool:
+	var before := _actions.size()
+	_actions = _actions.filter(func(a): return a.get("type") != "track" or a.get("track", "") != kind)
+	if _actions.size() == before:
+		return false
+	events_log.append(["track_dropped", clock, kind])
+	return true
+
+
+# An event's escalation build (escalate's riser, with no start_build behind it) belongs to the
+# track it rose on: a track change or restart ends it, so the next track never inherits its
+# floor. A start_build or planned_drop build (launch, ultimate) carries on.
+func _end_escalation_build() -> void:
+	if _build_level >= 0.0 and _build_from < 0 and _pending_drop.is_empty():
+		cancel_build()
+
+
 func _reset_escalation(clear_esc := true) -> void:
 	_warden_lifted = false
 	_warden_broken = false
@@ -1323,6 +1343,9 @@ func cancel_pending() -> void:
 	_drop = {}
 	_bar_queue.clear()
 	_transition = {}
+	# A dropped lift or break may be queued again by the next escalate.
+	_warden_lifted = false
+	_warden_broken = false
 	cancel_build()
 	for voice in _voices:
 		if voice.layer < 0:
@@ -1766,6 +1789,7 @@ func _run(action: Dictionary) -> void:
 		"restart":
 			parameters_stage_entered()
 			_dominant_held = false
+			_end_escalation_build()
 			_reset_escalation()
 			_bar_queue.clear()
 			_transition = {}
@@ -1791,6 +1815,12 @@ func _run(action: Dictionary) -> void:
 			_retarget()
 		"cadence":
 			_dominant_held = false
+			# The cadence walks home in key 0: a lift or break still queued from the fight
+			# would re-key it a bar later. A heft or ultimate lift change is not the fight's
+			# and stays queued (the drop keeps the same hazard in mind for "ult").
+			_bar_queue = _bar_queue.filter(func(item): return not ((item["set"] as Dictionary).has("key") \
+					or (item["set"] as Dictionary).has("section") or (item["set"] as Dictionary).has("esc")))
+			_transition = {}
 			_reset_bar()
 			_cadence_bar = 0
 			_cadence_then = action.get("then", {})
@@ -1831,6 +1861,7 @@ func _run(action: Dictionary) -> void:
 			_lead_octave = 0
 			_bar_queue.clear()
 			_transition = {}
+			_end_escalation_build()
 			_reset_escalation()
 			_reset_bar()
 			_cadence_bar = -1

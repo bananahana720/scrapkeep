@@ -100,7 +100,15 @@ class Match:
 		return "SCORE %d   BALLS %d" % [score, balls_left]
 
 
+const CLASS_TAG := "camp_skee"
+
+
 static func attach(hub_ref) -> void:
+	# A missing GLB leaves the feature out, as camp_hub._place does for the piece itself.
+	for stem in [PIECE]:
+		if hub_ref.piece(stem) == null:
+			push_warning("%s: camp piece %s is missing; left out" % [CLASS_TAG, stem])
+			return
 	var lane := new()
 	lane.name = "CampSkee"
 	hub_ref.root.add_child(lane)

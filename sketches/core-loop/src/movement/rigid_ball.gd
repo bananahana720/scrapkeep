@@ -82,17 +82,28 @@ func set_active(active: bool) -> void:
 	sleeping = false
 
 
+# A shove divided by a zero physics delta, or any other NaN, must never reach the body: once
+# the ball's position is NaN no rescue can find it again. A non-finite velocity reads as rest.
+static func _finite(v: Vector3) -> Vector3:
+	return v if v.is_finite() else Vector3.ZERO
+
+
 func set_velocity_now(new_velocity: Vector3) -> void:
 	velocity_setting.emit()
+	new_velocity = _finite(new_velocity)
 	_pending_velocity = new_velocity
 	state.velocity = new_velocity
 
 
 func teleport(to: Vector3, new_velocity: Vector3) -> void:
 	teleporting.emit()
-	_pending_position = to
+	new_velocity = _finite(new_velocity)
 	_pending_velocity = new_velocity
 	state.velocity = new_velocity
+	if not to.is_finite():
+		push_warning("rigid_ball: teleport to a non-finite point refused")
+		return
+	_pending_position = to
 	if freeze:
 		global_position = to
 
@@ -110,6 +121,9 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 		body_state.transform = Transform3D(body_state.transform.basis, _pending_position)
 		_pending_position = null
 		_settle_interpolation = 2
+	if not body_state.linear_velocity.is_finite():
+		body_state.linear_velocity = Vector3.ZERO
+		body_state.angular_velocity = Vector3.ZERO
 	if _pending_velocity != null:
 		body_state.linear_velocity = _pending_velocity
 		var axis := Rules.roll_axis(_pending_velocity, Vector3.UP)
@@ -177,6 +191,10 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	# The augments run before jump and boost so a pylon jump or a vault kick can claim
 	# the same key without the base rule firing as well.
 	Augments.apply(kit, state, tuning, intent, drive_basis, body_state)
+	# The augments write the body's velocity directly; one that went non-finite reads as rest
+	# here, as the entry check above does, so the state never carries NaN for a tick.
+	if not body_state.linear_velocity.is_finite():
+		body_state.linear_velocity = Vector3.ZERO
 	_publish_kit(body_state)
 
 	if Augments.holding(kit):

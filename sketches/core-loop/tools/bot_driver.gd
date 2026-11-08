@@ -8,6 +8,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const Grip := preload("res://src/movement/grip.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
@@ -148,6 +149,8 @@ const CHARGE_CLOSE := 3.8
 const HARPOON_FLOOR := 30.0
 const LINE_REACH := 50.0
 const DROP_MEMORY := 6.0
+# A player's re-press on a body the ball already sits inside (see _pass_bite_blocked).
+const PASS_BITE_GAP_S := 0.25
 # The latch arm on a harpoon-anchor Warden (_anchor_fight): a bite within LATCH_REACH of the body
 # (inside the 45 m rope), the body reads hung when it stands more than HUNG_ABOVE over the ground
 # under it and rising or falling past ANCHOR_MOVING m/s; from the ground the ball waits for a hung
@@ -607,6 +610,7 @@ var _warden_hp_at := -1.0
 var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
 var _harpoon_held := false
+var _pass_bite_frame := -100000
 # Weak points (stub_boss.gd weak_open, #241): the point being read, how long it has been open, the
 # learner's one roll for it, whether a go is on, and the Warden it was read on: a go waives the harpoon hand's
 # wait between bites (_harpoon_hand) on that Warden only, so it bites again at once and the hand commits the haul.
@@ -2924,24 +2928,25 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			and game.player._brake_was_held)
 		return
 	_harpoon_held = false
-	if game.player.abilities.id_of(AbilityState.LINE) == "cable_charge" and target.get("role") == "hull" and not Augments.anchor_line(target):
-		var radius = target.get("radius")
-		var passing: float = Augments.MIN_ROPE + game.player.tuning.RADIUS + (float(radius) if radius != null else 0.0)
-		if game.player.ball_position().distance_to(target.global_position) <= passing:
-			return
 	var swallowed: bool = game.player.frozen() or kit.slingshot.charging
 	var special = game.player.abilities.gauge(AbilityState.SPECIAL)
 	if special != null and special.charging:
 		swallowed = true
 	if not swallowed and kit.aim.get("body") == target and kit.rewind_left <= 0.0 and game.player.state.grounded \
 			and (_off_line > DROP_MEMORY or (_weak_go and is_instance_valid(_weak_warden) and target == _weak_warden)) and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
+		# The two-hook takeoff jumps instead of biting, so only a bite waits out the pass range.
+		if _bite_passes(target) and not _chain_takeoff(target):
+			# Cable Charge on the hull never bites from inside (its old guard); any other bite
+			# there re-presses at a player's cadence, not every tick.
+			if _pass_bite_blocked(target):
+				return
+			_pass_bite_frame = Engine.get_physics_frames()
 		# A movement exit waits for the haul; other line skills load on the bite.
 		if not bank_shot:
 			_cast(3)
 		source.press["harpoon_pressed"] = true
 		_harpoon_held = true
-		if chain_hand_enabled and _kit("chain") and policy == "completionist" and not _in_boss() \
-				and target != game.flow.warden and target.is_in_group("enemy") and game.player.verb_ready("jump"):
+		if _chain_takeoff(target):
 			var second := _chain_partner(target)
 			if second != null:
 				_chain_phase = "takeoff"
@@ -2954,6 +2959,35 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 				source.press["jump_pressed"] = true
 		if source.press.get("harpoon_pressed", false):
 			_count("harpoon_bites")
+
+
+# The explorer's two-hook hand would jump from this bite instead of pressing it.
+func _chain_takeoff(target: Node3D) -> bool:
+	return chain_hand_enabled and _kit("chain") and policy == "completionist" and not _in_boss() \
+			and target != game.flow.warden and target.is_in_group("enemy") and game.player.verb_ready("jump") \
+			and _chain_partner(target) != null
+
+
+# A bite on a body the ball already sits inside drops as "passed" on its next tick
+# (augments.gd _follow), so a press every tick re-bites, links and drops forever: a 55-link
+# chain against a touching add, or a Brindle hull the ball never rams because each bite
+# clears its speed bank. A player cannot press at 90 Hz; the hand backs off instead.
+# Fully blocking those bites (#621) cost the small reactor arm its Warden pace (median
+# 50.9 -> 70.7 s) and slowed every bot Warden fight by up to 48 percent: the point-blank bite
+# itself is a play a player makes, only not at 90 Hz. The hand re-presses one every
+# PASS_BITE_GAP_S instead.
+func _pass_bite_blocked(target: Node3D) -> bool:
+	if game.player.abilities.id_of(AbilityState.LINE) == "cable_charge" and target.get("role") == "hull":
+		return true
+	return Engine.get_physics_frames() - _pass_bite_frame < roundi(PASS_BITE_GAP_S * Engine.physics_ticks_per_second)
+
+
+func _bite_passes(target: Node3D) -> bool:
+	if Augments.anchor_line(target) or Grip.of(target, game.player.heft(), game.player.tuning.pole_flail()) in ["pole", "flail"]:
+		return false
+	var radius = target.get("radius")
+	var passing: float = Augments.MIN_ROPE + Tuning.RADIUS + (float(radius) if radius != null else 0.0)
+	return game.player.ball_position().distance_to(target.global_position) <= passing
 
 
 func _smash_pending() -> bool:

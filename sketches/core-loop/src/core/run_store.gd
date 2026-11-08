@@ -309,7 +309,8 @@ func _read() -> Dictionary:
 		return {"state": "tombstone", "generation": int(parsed.get("generation", 0))}
 	if not (parsed.get("run") is Dictionary) or not (typeof(parsed.get("generation", 0)) in [TYPE_INT, TYPE_FLOAT]):
 		return {"state": "unreadable", "why": "%s has no run document" % path}
-	_whole_numbers(parsed["run"])
+	if not _whole_numbers(parsed["run"]):
+		return {"state": "unreadable", "why": "%s has a retries_spent or worlds_cleared value that is not a number" % path}
 	return {"state": "ok", "run": parsed["run"], "generation": int(parsed.get("generation", 0)), "from_version": from_version, "bytes": bytes}
 
 
@@ -321,17 +322,32 @@ func _migrate_0(doc: Dictionary) -> Dictionary:
 	if pairs is Array:
 		var spent := {}
 		for pair in pairs:
-			if pair is Array and pair.size() == 2:
+			if pair is Array and pair.size() == 2 and _is_number(pair[0]) and _is_number(pair[1]):
 				spent[str(int(pair[0]))] = int(pair[1])
 		run["retries_spent"] = spent
 	return {"schema": 1, "generation": int(doc.get("generation", 0)), "run": run}
 
 
-# JSON numbers come back as floats; the two fields the merge compares are whole numbers.
-static func _whole_numbers(run: Dictionary) -> void:
-	if run.get("retries_spent") is Dictionary:
+# JSON numbers come back as floats; the two fields the merge compares are whole numbers. False,
+# with the run unchanged past the bad value, when either holds something that is not a number
+# or is the wrong container, so the file is quarantined instead of erroring inside a cast.
+static func _whole_numbers(run: Dictionary) -> bool:
+	if run.has("retries_spent"):
+		if not (run["retries_spent"] is Dictionary):
+			return false
 		for w in run["retries_spent"]:
+			if not _is_number(run["retries_spent"][w]):
+				return false
 			run["retries_spent"][w] = int(run["retries_spent"][w])
-	if run.get("worlds_cleared") is Array:
+	if run.has("worlds_cleared"):
+		if not (run["worlds_cleared"] is Array):
+			return false
 		for i in run["worlds_cleared"].size():
+			if not _is_number(run["worlds_cleared"][i]):
+				return false
 			run["worlds_cleared"][i] = int(run["worlds_cleared"][i])
+	return true
+
+
+static func _is_number(value) -> bool:
+	return typeof(value) in [TYPE_INT, TYPE_FLOAT] and is_finite(float(value))

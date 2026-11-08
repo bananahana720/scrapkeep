@@ -122,7 +122,8 @@ static func reading(game) -> Dictionary:
 		pilots.append({"id": def.id, "name": def.display_name, "ready": is_ready,
 			"hint": ClassCard.unlock_hint(def, game.progress)})
 	var model = Companion.new()
-	var doc: Dictionary = profile.companion() if profile != null else {}
+	# Cleaned the way the run reads it, so a piece this build cut does not hide the rest.
+	var doc: Dictionary = game.flow.profile_companion() if profile != null and game.flow != null else {}
 	if not doc.is_empty() and not model.from_dict(doc):
 		model = Companion.new()
 	var seated: Array = []

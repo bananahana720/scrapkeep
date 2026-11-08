@@ -72,15 +72,19 @@ class Pool extends RefCounted:
 	var broken := false
 	var _since_hit := 0.0
 
+	# value stays in [0, max_value]: a negative maximum reads as an empty pool, and an empty pool
+	# of a breaking class starts broken, as one emptied by a hit would be.
 	func _init(id: String, maximum: float) -> void:
 		class_id = id
-		max_value = maximum
-		value = maximum
+		max_value = maxf(0.0, maximum)
+		value = max_value
+		broken = max_value == 0.0 and CLASSES[class_id]["breaks"]
 
 	# element is the hit's element id ("" for none); its multiplier is the class's row in
-	# Elements.LAYER_MULT (SG2), the one table every layer reads.
+	# Elements.LAYER_MULT (SG2), the one table every layer reads. A negative hit does not fill
+	# the pool past its maximum.
 	func hit(amount: float, element := "") -> void:
-		value = maxf(0.0, value - amount * Elements.layer_mult(class_id, element))
+		value = clampf(value - amount * Elements.layer_mult(class_id, element), 0.0, max_value)
 		_since_hit = 0.0
 		if value == 0.0 and CLASSES[class_id]["breaks"]:
 			broken = true

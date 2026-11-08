@@ -460,6 +460,34 @@ func to_dict() -> Dictionary:
 		"escape_ready": not _escape_spent, "escape_spent": _escape_spent}
 
 
+# A saved companion doc this build can load, or {} when nothing in it can be kept. Pieces this
+# build no longer has are dropped from owned and sockets, so a cut piece costs only itself, not
+# the whole companion (from_dict refuses the doc outright, which stops it growing and leaves its
+# escape un-armed for good). Lists of the wrong type read as no companion. The second value is
+# the warning, "" when the doc was already clean.
+static func sanitize(d: Dictionary) -> Array:
+	if d.is_empty():
+		return [{}, ""]
+	var out := d.duplicate(true)
+	var dropped := []
+	for key in ["owned", "sockets"]:
+		if not (out.get(key) is Array):
+			return [{}, "companion %s is not a list" % key]
+		var kept := []
+		for id in out[key]:
+			if id is String and not _row(id).is_empty() and not kept.has(id):
+				kept.append(id)
+			else:
+				dropped.append(str(id))
+		out[key] = kept
+	out["sockets"] = (out["sockets"] as Array).filter(func(id): return (out["owned"] as Array).has(id))
+	var probe = load("res://src/core/companion.gd").new()
+	if not probe.from_dict(out):
+		# Kept, not wiped: its lists are clean now, so readers are safe, and nothing is lost.
+		return [out, "companion doc does not load (chassis, escape or socket rule)"]
+	return [out, "" if dropped.is_empty() else "dropped companion pieces %s" % [dropped]]
+
+
 # Loads a saved dict. False, with nothing changed, when any field is the wrong type or
 # names a piece that does not exist, or the sockets break the assembly rule.
 func from_dict(d: Dictionary) -> bool:

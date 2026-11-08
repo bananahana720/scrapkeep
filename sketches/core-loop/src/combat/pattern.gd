@@ -18,6 +18,10 @@ extends Resource
 
 const MAX_VOLLEY := 16
 const MAX_RATE := 20.0
+# A rate of 0 makes the cooldown infinite (the gun dies for the run) and one below 0 fires
+# every tick, so no transformer or recipe takes a pattern under one shot in twenty seconds
+# (the slowest authored rate is 0.25).
+const MIN_RATE := 0.05
 const MAX_WAVE := 1.2
 const MAX_ARM_OFFSET := 14.0
 const MAX_ARMS := 8
@@ -133,7 +137,7 @@ func _apply(row: Dictionary) -> void:
 func _clamp() -> void:
 	arms = clampi(arms, 1, MAX_ARMS)
 	count = clampi(count, 1, MAX_VOLLEY)
-	rate = minf(rate, MAX_RATE)
+	rate = clampf(rate, MIN_RATE, MAX_RATE)
 	wave_amp = minf(wave_amp, MAX_WAVE)
 	arm_offset_deg = minf(arm_offset_deg, MAX_ARM_OFFSET)
 

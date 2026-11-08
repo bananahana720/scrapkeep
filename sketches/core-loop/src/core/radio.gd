@@ -252,20 +252,26 @@ func to_dict() -> Dictionary:
 	return {"station": station, "last_on": _last_on, "mixtape": mixtape, "mixtapes": mixtapes.duplicate(true)}
 
 
+# Runs during game start, so every value is type-checked before it is read: a field of the wrong
+# type falls back to its default instead of erroring in a cast.
 func from_dict(saved: Dictionary) -> void:
 	var known := RadioTakes.all_ids()
 	var lists: Array = []
-	for m in saved.get("mixtapes", []):
+	var saved_lists = saved.get("mixtapes", [])
+	for m in (saved_lists if saved_lists is Array else []):
 		if m is Dictionary and lists.size() < MAX_MIXTAPES:
 			var ids: Array = []
-			for id in m.get("ids", []):
-				if String(id) in known and not String(id) in ids and ids.size() < MAX_TRACKS:
-					ids.append(String(id))
-			lists.append({"name": String(m.get("name", MIXTAPE_NAMES[lists.size()])).left(24), "ids": ids})
+			var saved_ids = m.get("ids", [])
+			for id in (saved_ids if saved_ids is Array else []):
+				if id is String and id in known and not id in ids and ids.size() < MAX_TRACKS:
+					ids.append(id)
+			var name = m.get("name")
+			lists.append({"name": (name if name is String else MIXTAPE_NAMES[lists.size()]).left(24), "ids": ids})
 	if not lists.is_empty():
 		mixtapes = lists
-	mixtape = clampi(int(saved.get("mixtape", 0)), 0, mixtapes.size() - 1)
-	var on := String(saved.get("last_on", LIVE))
-	_last_on = on if on in dial() and on != OFF else LIVE
-	var at := String(saved.get("station", LIVE))
-	station = at if at in dial() else LIVE
+	var at_tape = saved.get("mixtape", 0)
+	mixtape = clampi(int(at_tape) if typeof(at_tape) in [TYPE_INT, TYPE_FLOAT] and is_finite(float(at_tape)) else 0, 0, mixtapes.size() - 1)
+	var on = saved.get("last_on", LIVE)
+	_last_on = on if on is String and on in dial() and on != OFF else LIVE
+	var at = saved.get("station", LIVE)
+	station = at if at is String and at in dial() else LIVE

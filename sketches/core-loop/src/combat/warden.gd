@@ -1,5 +1,7 @@
 extends "res://src/combat/enemy.gd"
 
+# The fastest the body may read as moving while mounted, m/s.
+const MOUNT_SPEED_MAX: float = preload("res://src/movement/contact.gd").SOFT_CAP_SPEED
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
@@ -54,7 +56,9 @@ const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 #   mount_offset(warden, clock) -> Vector3 and may answer step(warden, delta) every physics
 #   tick after the body moved, charge_allowed(warden) -> bool before a charge starts (false
 #   lets the pulse clock run and starts no charge), on_charge(warden, seconds), on_pulse(warden,
-#   lifted), on_stagger(warden, open) and on_chunk_lost(warden, left); each is called only
+#   lifted), on_stagger(warden, open), on_chunk_lost(warden, left) and on_exit(warden) as the
+#   Warden leaves the tree (a kill or a stage unload), so a driver frees what it drew outside
+#   the Warden; each is called only
 #   when the driver has it. A park Warden (spec "harpoon_anchor": true) that names no
 #   "mount_driver" loads res://src/combat/warden_<family>.gd when that file exists, so a
 #   kind's file attaches itself to every park Warden of its kind and to none of the authored
@@ -614,6 +618,9 @@ func _nearest_hardpoint(offset: Vector3) -> int:
 	return best
 
 
+var _mount_home := Vector3.INF
+
+
 # The mounting moves the body from home; the pulse rings committed this charge go with it.
 func _step_mounting(delta: float) -> void:
 	if mount_driver == null or delta <= 0.0:
@@ -627,7 +634,14 @@ func _step_mounting(delta: float) -> void:
 	var before := global_position
 	global_position = home + offset
 	var shift := global_position - before
-	mount_velocity = shift / delta
+	# The first tick of a mounting, or one after home moved, jumps the body from wherever it stood
+	# to the mount: that jump is a placement, not motion, and read as velocity it would fling a
+	# ball latched on the anchor line (augments.gd _ride) by offset x 90 m/s.
+	var placed := _mount_home != home or _mount_clock <= delta
+	_mount_home = home
+	# An authored offset that jumps mid-mounting is a placement too; no real mount moves faster
+	# than the contact soft cap, and a faster read would fling a latched ball the same way.
+	mount_velocity = Vector3.ZERO if placed else (shift / delta).limit_length(MOUNT_SPEED_MAX)
 	var flat := Vector3(shift.x, 0.0, shift.z)
 	if flat.length_squared() > 0.0:
 		_carry_ring(telegraph(), flat)
@@ -801,6 +815,7 @@ func _pulse() -> void:
 func _exit_tree() -> void:
 	super._exit_tree()
 	_cancel_counter()
+	_hook("on_exit", [self])
 	if is_instance_valid(_core_ring):
 		_core_ring.queue_free()
 	for lane in slag_lanes:

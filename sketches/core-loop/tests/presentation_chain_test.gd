@@ -103,8 +103,12 @@ func _physics_process(_delta: float) -> bool:
 			_plan.append([850 + window + 750 + i * 60, func():
 				_audio._last_start.clear()
 				var before: float = _juice._shell_velocity
+				var logged: int = _audio.cue_log.size()
 				events.scrap_collected.emit(1, _game.player.ball_position(), i + 1)
-				_marks["pitches"].append(_audio.cue_log.back()[4])
+				# A pickup can also pay off a held part (reward_payoff's bell, or the next card's
+				# reveal), logged after the tick, so read this pickup's own tick, not the last cue.
+				var ticks: Array = _audio.cue_log.slice(logged).filter(func(e: Array): return e[0] == "scrap_collected")
+				_marks["pitches"].append(ticks[0][4] if not ticks.is_empty() else 0.0)
 				_marks["shell_v"].append(_juice._shell_velocity - before)])
 		_plan.append([850 + window + 1200, func(): pass])
 		return false
@@ -128,7 +132,8 @@ func _physics_process(_delta: float) -> bool:
 	_check("multi-kill beat", multi.size() == 1 and multi[0][0] == 2,
 		"three kills in one frame: extra beats %s" % [multi])
 	var scrap: Array = _marks["pitches"]
-	var climbing := scrap.size() == 6
+	# A pickup that logged no tick of its own reads 0.0 and fails the climb.
+	var climbing := scrap.size() == 6 and scrap.all(func(p: float): return p > 0.0)
 	for i in range(1, scrap.size()):
 		climbing = climbing and scrap[i] > scrap[i - 1]
 	var steps: Array = []

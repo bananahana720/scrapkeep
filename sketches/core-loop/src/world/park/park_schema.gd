@@ -11,6 +11,7 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Director := preload("res://src/world/director.gd")
+const Rogue := preload("res://src/combat/rogue.gd")
 
 const SCHEMA := "scrapkeep-park/1"
 
@@ -300,6 +301,7 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 		_weather_row(out, id, weather[id], events)
 	for id in activities:
 		_site(out, id, activities[id], rows)
+		_activity_pack(out, id, activities[id])
 		# A surge course runs down a park route's rows (surge_course.gd path).
 		if activities[id]["activity"] == "surge_run" and not routes.has(activities[id].get("route")):
 			_add(out, id, "reference", "a surge_run names a park route, not %s" % str(activities[id].get("route")))
@@ -496,6 +498,22 @@ static func _lead_floor(row: Dictionary) -> float:
 	if GROUND_KINDS.has(row["kind"]) or str(row["effect"].get("swap", "")) != "":
 		return LEAD_GROUND_S
 	return LEAD_HAZARD_S
+
+
+# combat.gd spawn_enemy turns an unknown kind into a chaser with only a warning, and an enemy camp
+# with an empty pack never starts, so its pay is unreachable.
+const SET_PIECE_KINDS := ["miniboss", "warden", "vault"]
+
+
+static func _activity_pack(out: Array, id: String, row: Dictionary) -> void:
+	var pack = row.get("pack", [])
+	if not (pack is Array):
+		return
+	if row["activity"] == "enemy_camp" and row.has("pack") and pack.is_empty():
+		_add(out, id, "reference", "an enemy_camp pack is empty, so the camp never starts")
+	for kind in pack:
+		if not (kind is String and (Director.KIND_NAMES.has(kind) or SET_PIECE_KINDS.has(kind) or Rogue.ROWS.has(kind))):
+			_add(out, id, "reference", "pack kind %s is no roster kind" % str(kind))
 
 
 static func _home_row(out: Array, id: String, row: Dictionary, rows: Dictionary, ctx: Dictionary) -> void:

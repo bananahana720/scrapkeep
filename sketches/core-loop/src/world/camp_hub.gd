@@ -120,12 +120,21 @@ func piece(id: String) -> Node3D:
 	return _pieces.get(id)
 
 
+# Sockets already warned about, so a missing one warns once.
+var _missing_sockets := {}
+
 func socket(id: String, socket_name: String) -> Transform3D:
 	var holder: Node3D = _pieces.get(id)
 	if holder == null:
 		return Transform3D.IDENTITY
 	var marker := holder.get_node_or_null("Sockets/" + socket_name) as Node3D
-	return marker.global_transform if marker != null else Transform3D.IDENTITY
+	if marker == null:
+		# camp_hub_test checks every socket a feature reads; this is the release-build net.
+		if not _missing_sockets.has(id + "/" + socket_name):
+			_missing_sockets[id + "/" + socket_name] = true
+			push_warning("camp_hub: %s has no socket %s; placing at the origin" % [id, socket_name])
+		return Transform3D.IDENTITY
+	return marker.global_transform
 
 
 func has_socket(id: String, socket_name: String) -> bool:
@@ -443,7 +452,8 @@ func _seat(holder: Node3D) -> void:
 		return
 	var foot := INF
 	for view: MeshInstance3D in holder.find_children("*", "MeshInstance3D", true, false):
-		foot = minf(foot, (holder.transform * view.transform * view.mesh.get_aabb()).position.y)
+		if view.mesh != null:
+			foot = minf(foot, (holder.transform * view.transform * view.mesh.get_aabb()).position.y)
 	var top := plaza_top(Vector2(holder.position.x, holder.position.z))
 	if foot < INF and top > -INF:
 		holder.position.y += top - foot
@@ -495,6 +505,9 @@ func _prop(key: String, xf: Transform3D, solid: bool) -> void:
 
 # The hull of the first view's triangles cut at SOLID_TOP_M, in its holder's space (park_recipes.gd _band_hull), or null.
 static func solid_hull(view: MeshInstance3D) -> ConvexPolygonShape3D:
+	# A base view that is not a mesh, or carries none, has no hull: the piece stands without a solid.
+	if view == null or view.mesh == null:
+		return null
 	var tris := PackedVector3Array()
 	for v in view.mesh.get_faces():
 		tris.append(view.transform * v)

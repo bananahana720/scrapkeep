@@ -6,6 +6,9 @@ const Companion := preload("res://src/core/companion.gd")
 const CampHub := preload("res://src/world/camp_hub.gd")
 const CampLayout := preload("res://src/world/camp_layout.gd")
 const Push := preload("res://tests/workshop/push.gd")
+const CampSkee := preload("res://src/world/camp_skee.gd")
+const CampTrial := preload("res://src/world/camp_trial.gd")
+const CampSandbox := preload("res://src/world/camp_sandbox.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The walkable camp (camp_hub.gd) on the real title:
@@ -168,6 +171,23 @@ func _run() -> void:
 		var top: float = _hub.plaza_top(Vector2(holder.position.x, holder.position.z))
 		_t.near("%s stands on the plaza's top" % toy, foot, top, 0.01)
 	_t.check("the settings console has a socket", _hub.has_socket("camp_settings_console", "interact"), "")
+	# Every socket a camp feature reads: socket() answers IDENTITY for a missing one, which puts the
+	# station or sensor at the world origin, about 4 km from the camp, without an error.
+	var wanted := {"camp_skee_lane": ["interact", "score", "start", "return_exit"],
+		"camp_trial_track": ["start"], "camp_trial_arch": ["timer", "light_bronze", "light_silver", "light_gold"],
+		"camp_sandbox_yard": ["entry", "enemy_spawn_0"], "camp_call_box": ["interact"]}
+	for cup in CampSkee.CUPS:
+		wanted["camp_skee_lane"].append(cup)
+	for i in CampTrial.CHECKPOINTS:
+		wanted["camp_trial_track"].append("checkpoint_%d" % i)
+	for i in 32:
+		wanted["camp_trial_track"].append("ghost_%02d" % i)
+	for i in CampSandbox.CAP:
+		wanted["camp_sandbox_yard"].append("enemy_spawn_%d" % i)
+	for stem in wanted:
+		_t.check("camp piece %s is placed" % stem, _hub.piece(stem) != null)
+		for socket_name in wanted[stem]:
+			_t.check("camp piece %s has socket %s" % [stem, socket_name], _hub.has_socket(stem, socket_name))
 
 	# Station keys do nothing outside a zone.
 	_t.check("S outside a zone is not a station key", not _game._screen_key(KEY_S) and not _screens.settings_open(), "")

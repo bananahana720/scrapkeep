@@ -312,10 +312,12 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	if contraptions.has(stage):
 		contraptions[stage].reset()
 	layer = ""
-	# A retry replays the same stage: same event plan, same miniboss spots. A new
-	# entry draws a fresh plan from the run's stream.
+	# A retry replays the same stage: same event plan, same miniboss spots. The draw happens on
+	# every entry, so the stage's stream (Flow.seed_stage_stream) is at the same place for the
+	# fabricators and scrap that roll after it, retry or not.
+	var drawn: int = ctx.rng.randi()
 	if not retry or _stage_seed == 0:
-		_stage_seed = ctx.rng.randi()
+		_stage_seed = drawn
 	var def: Dictionary = RunTier.stage_row(ctx.flow.stage_def(), ctx.run.selected_run_tier())
 	var map = terrain.map()
 	events = EventDirector.new(_stage_seed, def, map, ctx.tuning.f("cruise"), Callable(terrain, "height"))
