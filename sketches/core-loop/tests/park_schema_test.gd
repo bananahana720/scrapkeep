@@ -86,6 +86,9 @@ func _planted_rows() -> void:
 	# An activity row's optional face is a nonzero [x, z].
 	_plant("zero activity face", "wash_camp", "type", func(p): p["activity_rows"][0]["face"] = [0, 0])
 	_plant("activity face not a pair", "wash_camp", "type", func(p): p["activity_rows"][0]["face"] = "south")
+	# An activity pack names a kind spawn_enemy cannot make, or an enemy camp has no pack.
+	_plant("unknown activity pack kind", "wash_camp", "reference", func(p): p["activity_rows"][0]["pack"] = ["chaser", "lobbr"])
+	_plant("empty enemy camp pack", "wash_camp", "reference", func(p): p["activity_rows"][0]["pack"] = [])
 	# The mounting is not one of the stage's Warden kind's two.
 	_plant("mounting of another kind", "test_dam", "mounting", func(p): p["landmark"]["warden"]["mounting"] = "headframe")
 	# A home's pack is not one of its world's packs.
