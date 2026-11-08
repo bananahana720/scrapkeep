@@ -24,7 +24,7 @@ Base-same reds the promotions carried, with no bisect (ruling d). A fail needs a
 
 ## Parked until after the sitting
 
-- Perf: sinkhole Dispatcher 265-277 ms; EventFamilies.build 69 ms at stage 5; Dig pit beacon bursts; Jolt shape build on the main thread. Dig and world 2 perf is out of scope (ruling at). Dam perf left: f4045 riser, Warden break and engage remainders, seed 3 f14k swing, the over-16 engage spike (watch on #512).
+- Perf: sinkhole Dispatcher 265-277 ms; EventFamilies.build 69 ms at stage 5; Dig pit beacon bursts; Jolt shape build on the main thread. Dig and world 2 perf is out of scope (ruling at). Dam perf left: f4045 riser, Warden break and engage remainders, seed 3 f14k swing, the over-16 engage spike (a real game spike; its old watch issue #512 is closed, so post perf receipts on the current board).
 - Brindle cobalt pick (ruling ap); flume length levers (ruling ax); HARD rung 5 re-read (rulings aq, bc, be); w1 Novice ceiling re-read (ruling bk).
 
 ## PC capture rules
