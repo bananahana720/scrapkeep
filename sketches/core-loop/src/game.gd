@@ -754,7 +754,7 @@ func _on_flow_changed(_state: String) -> void:
 	if keyboard != null:
 		keyboard.enabled = playing
 		keyboard.walk = false
-	_capture_mouse(playing)
+	capture_mouse(playing)
 	if playing:
 		# A is jump in play and ui_accept in a menu: nothing may keep focus into play.
 		var holder := get_viewport().gui_get_focus_owner()
@@ -768,14 +768,14 @@ func walk_input(live: bool) -> void:
 	if keyboard != null:
 		keyboard.enabled = live
 		keyboard.walk = live
-	_capture_mouse(live)
+	capture_mouse(live)
 
 
 # --- the launch take (launch_take.gd): pilot select or the camp gate into the dam as one take ---
 
 # Only a played game shows the take; bots, tests and headless runs start the run at once.
 func _take_live() -> bool:
-	return launch_take.force_live or (not test_mode and not bot_driven and DisplayServer.get_name() != "headless")
+	return launch_take.force_live or (not test_mode and not bot_driven and not AppShell.headless())
 
 
 # A pilot picked on pilot select: the deck camera lifts, the swipe covers, the run starts under it.
@@ -1115,29 +1115,43 @@ static func _fresh_action(action: String) -> void:
 
 
 func _windowed() -> bool:
-	return DisplayServer.get_name() != "headless"
+	return not AppShell.headless()
 
 
-func _capture_mouse(capture: bool) -> void:
+func capture_mouse(capture: bool) -> void:
 	if test_mode or not _windowed():
 		return
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if capture else Input.MOUSE_MODE_VISIBLE
 
 
-func _mouse_captured() -> bool:
+func mouse_captured() -> bool:
 	return _windowed() and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+
+
+# A menu that wants the cursor free holds it here; the flag is the "menu_held" meta.
+func menu_held() -> bool:
+	return get_meta("menu_held", false)
+
+
+func set_menu_held(held: bool) -> void:
+	set_meta("menu_held", held)
+
+
+# Gives the mouse back to play unless a menu holds it.
+func recapture_mouse() -> void:
+	capture_mouse(flow.in_play() and not menu_held())
 
 
 func _input(event: InputEvent) -> void:
 	note_device(event)
 	if test_mode:
 		return
-	if event is InputEventMouseMotion and _mouse_captured():
+	if event is InputEventMouseMotion and mouse_captured():
 		camera.look(event.relative)
 		return
 	if event is InputEventMouseButton:
-		if not _mouse_captured() and event.pressed and (flow.in_play() or screens.walk_live()) and not panel.visible and not get_meta("menu_held", false):
-			_capture_mouse(true)
+		if not mouse_captured() and event.pressed and (flow.in_play() or screens.walk_live()) and not panel.visible and not menu_held():
+			capture_mouse(true)
 		return
 	if event is InputEventJoypadButton:
 		var pad_key := pad_screen_key(event)
@@ -1157,8 +1171,8 @@ func _input(event: InputEvent) -> void:
 	# workshop screen), and Esc there quit the game mid-run (w22 first-timer red team). The summary's
 	# Esc never gets here: _screen_key sends it to the camp.
 	if event.physical_keycode == KEY_ESCAPE:
-		if _mouse_captured():
-			_capture_mouse(false)
+		if mouse_captured():
+			capture_mouse(false)
 		elif not flow.in_play():
 			_quit()
 		get_viewport().set_input_as_handled()
@@ -1182,7 +1196,7 @@ func _dev_key(key: int) -> bool:
 			return true
 		KEY_F1:
 			panel.visible = not panel.visible
-			_capture_mouse(not panel.visible and flow.in_play())
+			capture_mouse(not panel.visible and flow.in_play())
 			return true
 	return false
 

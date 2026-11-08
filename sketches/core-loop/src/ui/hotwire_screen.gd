@@ -143,7 +143,7 @@ func _on_flow_changed(state: String) -> void:
 
 func _can_open() -> bool:
 	var menu = game.get_node_or_null("PauseMenu")
-	return not game.bot_driven and game.flow.in_play() and not game.get_meta("menu_held", false) and not game.notes_held() \
+	return not game.bot_driven and game.flow.in_play() and not game.menu_held() and not game.notes_held() \
 		and not game.pause_toggled() and (menu == null or not menu.is_open())
 
 
@@ -167,7 +167,7 @@ func open() -> void:
 	_paused_here = not game.pause_toggled()
 	if _paused_here:
 		game.toggle_pause()
-	game._capture_mouse(false)
+	game.capture_mouse(false)
 	_set_live(true)
 	_root.visible = true
 	_fit.grab_focus()
@@ -190,7 +190,7 @@ func close() -> void:
 		focused.release_focus()
 	_set_live(false)
 	_root.visible = false
-	game._capture_mouse(game.flow.in_play() and not game.get_meta("menu_held", false))
+	game.recapture_mouse()
 	_cue(1.5)
 
 

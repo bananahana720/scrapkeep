@@ -27,12 +27,12 @@ class PointerGame extends "res://src/game.gd":
 	func _quit() -> void:
 		quits += 1
 
-	func _capture_mouse(capture: bool) -> void:
+	func capture_mouse(capture: bool) -> void:
 		captured = capture
 		if capture:
 			grabs += 1
 
-	func _mouse_captured() -> bool:
+	func mouse_captured() -> bool:
 		return captured
 
 
