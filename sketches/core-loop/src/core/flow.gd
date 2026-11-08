@@ -643,6 +643,7 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 	# the same moment as the checkpoint and gets the same pose.
 	ctx.run.snapshot(Vector3.ZERO, Vector3.ZERO, ctx.camera.yaw)
 	var doc: Dictionary = ctx.run.to_entrance_doc(_tree()) if store != null else {}
+	seed_stage_stream(index)
 	ctx.events.stage_entered.emit(index, retry)
 	var heading: Vector3 = ctx.terrain.entry_heading(index)
 	var flat := Vector2(carried.x, carried.z).length()
@@ -658,6 +659,19 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 		_entrance = doc
 		_save(doc)
 	_set_state(STAGE)
+
+
+# The run's shared stream starts each stage from (session seed, run seed, stage), so a stage's
+# layout, event plan and offers are the same on a retry, after quit and Continue, and however the
+# stage before it was played; the next run in a session does not continue this one's stream.
+# Only the state moves: ctx.rng.seed stays the session (or --route-seed) value that device luck
+# and the activity sites read.
+func seed_stage_stream(index: int, place: String = "stage") -> void:
+	if ctx.rng != null and ctx.run != null:
+		# Through a seeded generator: a raw 32-bit hash as the state would make the first draws tiny.
+		var mixed := RandomNumberGenerator.new()
+		mixed.seed = hash([ctx.rng.seed, ctx.run.run_seed, index, place])
+		ctx.rng.state = mixed.state
 
 
 # Back to the stage-start checkpoint: run state, ball position and entry speed. It is
@@ -708,6 +722,7 @@ func enter_boss(carried: Vector3) -> void:
 	_set_state(BOSS)
 	ctx.events.stage_content_cleared.emit("arena")
 	ctx.player.set_frozen(false)
+	seed_stage_stream(ctx.run.stage, "arena")
 	boss.enter_arena(carried)
 	ctx.run.set_snapshot_entry(ctx.player.ball_position(), ctx.player.state.velocity, ctx.camera.yaw)
 
@@ -730,6 +745,7 @@ func _retry_arena() -> void:
 		return
 	_set_state(BOSS)
 	ctx.events.stage_content_cleared.emit("arena_retry")
+	seed_stage_stream(ctx.run.stage, "arena")
 	boss.enter_arena(ctx.run.snapshot_value("entry_velocity"))
 
 

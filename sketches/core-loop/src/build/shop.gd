@@ -176,9 +176,10 @@ func _stock_stage(here: Array) -> void:
 	stocked_for = here
 	stocks += 1
 	rerolls_left = REROLLS_PER_VISIT
-	# Seeded by the stocks so far, not bay entries, so hopping in and out of the bay never picks
-	# a later stage's shelf.
-	_rng.seed = SEED + stocks * 131 + ctx.run.stage * 17
+	# Seeded by the run and the stage, not bay entries or stocks so far, so hopping in and out of
+	# the bay never picks a later stage's shelf, and a Continue (which starts the count again)
+	# stocks the shelf the first sitting saw.
+	_rng.seed = hash([SEED, ctx.run.run_seed, ctx.run.world, ctx.run.stage, "shelf"])
 	shelf = _stock()
 	var lock_class: int = mini(TOP_CLASS_MAX, ctx.run.heft_class() + 1)
 	var top_id := _roll_one(TOP_RARITIES, shelf.map(func(entry): return entry["part_id"]))
@@ -342,7 +343,10 @@ func sell_quote(part_id: String) -> int:
 		return -1
 	if not _can_remove(part_id):
 		return -1
-	var held: int = ctx.run.parts.size() - 1
+	# Priced at the parts held when this copy came in (its place in the run's list), never at
+	# the count held now: the curve rises 1.15x per part held, so a part kept while seven more
+	# arrived sold back for more than it cost (invariants pass, 2026-11-08).
+	var held: int = mini(ctx.run.parts.size() - 1, ctx.run.parts.find(part_id))
 	var now: float = Fabricators.price(part_id, held) * _price_scale()
 	if part_id in Items.CELLS_FOR.values():
 		now = _cell_cost(ctx.run.parts.count(part_id) - 1)
