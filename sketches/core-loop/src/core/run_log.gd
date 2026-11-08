@@ -549,6 +549,10 @@ func _write(outcome: String) -> void:
 	if _record.is_empty():
 		return
 	var line := _record.duplicate(true)
+	# Continue applies the saved run after run_started (flow.resume_run), so the id captured
+	# there is begin()'s fresh one; the live run's id is the one the codex log uses.
+	if run != null and String(run.run_id) != "":
+		line["run_id"] = run.run_id
 	line["outcome"] = outcome
 	line["flow_share"] = _traversal.flow_share() if _traversal != null else null
 	line["dead_stops"] = _traversal.dead_stops if _traversal != null else 0

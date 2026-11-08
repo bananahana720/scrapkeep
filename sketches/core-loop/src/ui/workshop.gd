@@ -351,7 +351,7 @@ func open_companion() -> bool:
 	if game.summary_shut():
 		return false
 	if _outside_run() and game.ctx.profile != null:
-		game.run.companion = game.ctx.profile.companion()
+		game.run.companion = game.flow.profile_companion()
 	if game.flow.in_play():
 		if not counter.is_open():
 			return false

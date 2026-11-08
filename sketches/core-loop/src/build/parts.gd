@@ -391,7 +391,13 @@ static var _defs := {}
 static var _run_ref: WeakRef
 
 
+# One run sets the tier every rarity roll reads. A bare RunState (no event bus: a tool's or a
+# test's, built beside the game's) never takes the binding from a live run on a bus, or the
+# game's rolls would read that stand-in's tier.
 static func bind_run(run) -> void:
+	var held = _run_ref.get_ref() if _run_ref != null else null
+	if held != null and held != run and held.get("events") != null and run.get("events") == null:
+		return
 	_run_ref = weakref(run)
 
 

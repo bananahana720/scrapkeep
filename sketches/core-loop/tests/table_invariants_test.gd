@@ -21,6 +21,7 @@ const Panels := preload("res://src/build/panels.gd")
 const Nemesis := preload("res://src/combat/nemesis.gd")
 const Relics := preload("res://src/build/relics.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
+const Achievements := preload("res://src/core/achievements.gd")
 const T := preload("res://tests/support/t.gd")
 
 const WORLD_ONE_PARKS := ["res://src/world/park/park_dam.json", "res://src/world/park/park_flume.json"]
@@ -44,6 +45,7 @@ func _initialize() -> void:
 	_park_scores()
 	_look_textures()
 	_panel_readers()
+	_no_rows_on_player_died()
 	quit(_t.verdict())
 
 
@@ -228,3 +230,12 @@ func _panel_readers() -> void:
 				reader = path.get_file()
 				break
 		_t.check("panel %s stat %s has a reader" % [id, row["stat"]], reader != "", reader)
+
+
+# Progress subscribes on the first physics frame, after flow, and flow ends the run inside its own
+# player_died handler: progress closes the shift's time card on run_ended before it hears
+# player_died. A row on player_died would stamp after the card closed; one needs progress to
+# subscribe ahead of flow first.
+func _no_rows_on_player_died() -> void:
+	for id in Achievements.ROWS:
+		_t.check("achievement %s does not listen on player_died" % id, Achievements.ROWS[id].get("on", "") != "player_died")

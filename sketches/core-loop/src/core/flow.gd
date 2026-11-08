@@ -455,6 +455,18 @@ func _begin_run(chosen: Resource) -> void:
 # run or an ended one, the store's refusal (newer_schema, quarantine_failed), "unreadable" for
 # a file moved aside as .bad, or "invalid_run" for a document this build cannot apply.
 # saved_run_why has the detail; continue_refusal() has the player's sentence.
+# Every stage table shares user://run.json. A stage past this table's end clamps to its last map,
+# and clearing that wins the run.
+func _stage_fit_error(doc: Dictionary) -> String:
+	if ctx == null or ctx.stages == null:
+		return ""
+	var stage := int(doc["stage"])
+	var count: int = ctx.stages.DEFS.size()
+	if stage > count:
+		return "stage %d is past this table's %d stages" % [stage, count]
+	return ""
+
+
 func saved_run() -> Dictionary:
 	continue_ready = false
 	saved_run_cause = ""
@@ -472,6 +484,8 @@ func saved_run() -> Dictionary:
 	var why := RunState.validate_entrance_doc(doc)
 	if why == "" and ClassDef.by_id(String(doc["class_id"])) == null:
 		why = "unknown pilot %s" % doc["class_id"]
+	if why == "":
+		why = _stage_fit_error(doc)
 	if why != "":
 		saved_run_cause = "invalid_run"
 		saved_run_why = why
@@ -562,7 +576,16 @@ func _on_death_saved() -> void:
 # Pieces found carry across runs: a run that starts with no companion takes the profile's.
 func _seed_companion() -> void:
 	if ctx.profile != null and ctx.run.companion.is_empty():
-		ctx.run.companion = ctx.profile.companion()
+		ctx.run.companion = profile_companion()
+
+
+# The profile's companion with pieces this build no longer has dropped (Companion.sanitize): the
+# profile only checks it is a dictionary, and a cut piece would stop the companion growing.
+func profile_companion() -> Dictionary:
+	var fixed: Array = Companion.sanitize(ctx.profile.companion())
+	if fixed[1] != "":
+		warn_once("profile_companion", "flow: %s" % fixed[1])
+	return fixed[0]
 
 
 # A Continue rolls the run back to its last zone entrance, whose companion can predate a piece
@@ -571,7 +594,7 @@ func _seed_companion() -> void:
 func _keep_found_pieces() -> void:
 	if ctx.profile == null:
 		return
-	for id in ctx.profile.companion().get("owned", []):
+	for id in profile_companion().get("owned", []):
 		if not ctx.run.companion.get("owned", []).has(id):
 			ctx.run.companion = Companion.with_piece(ctx.run.companion, String(id))
 
@@ -688,11 +711,20 @@ func enter_boss(carried: Vector3) -> void:
 # The retry's reason is its own, so anything that keeps per-attempt memory (the codex,
 # the music) can tell a fresh arena from a retried one.
 func _retry_arena() -> void:
+	# The module the fight began with (enter_boss names it ctx.boss); without one the fight
+	# cannot be rebuilt, so the run moves on the way a world with no boss does.
+	var boss := _boss_module()
+	if boss == null and "boss" in ctx and is_instance_valid(ctx.boss) and ctx.boss.has_method("enter_arena"):
+		boss = ctx.boss
 	ctx.run.restore()
 	ctx.player.set_frozen(false)
+	if boss == null:
+		warn_once("arena_retry", "flow: no boss module to retry the arena against; moving on")
+		_advance_from(ctx.run.stage)
+		return
 	_set_state(BOSS)
 	ctx.events.stage_content_cleared.emit("arena_retry")
-	_boss_module().enter_arena(ctx.run.snapshot_value("entry_velocity"))
+	boss.enter_arena(ctx.run.snapshot_value("entry_velocity"))
 
 
 # The boss's live read of the fight (CONTRACTS, Flow seams): the plating that stands in
@@ -721,14 +753,20 @@ const ARENA_FALL := 40.0
 
 
 func _rescue_in_arena(ball: Vector3) -> void:
+	if not ball.is_finite():
+		_rescue_lost_ball()
+		return
 	var boss := _boss_module()
-	var floor_y: float
+	var floor_y: float = boss.floor_y() if boss != null and boss.has_method("floor_y") and boss.has_method("rescue_point") else NAN
 	var landing: Vector3
-	if boss != null and boss.has_method("floor_y") and boss.has_method("rescue_point"):
-		floor_y = boss.floor_y()
+	# A module whose arena is gone answers -INF; that is "cannot say", not "no floor", or the
+	# ball would fall for good with nothing to catch it.
+	if is_finite(floor_y):
 		if ball.y >= floor_y:
 			return
 		landing = boss.rescue_point()
+		if not landing.is_finite():
+			landing = ctx.run.snapshot_value("entry_position")
 	else:
 		var entry: Vector3 = ctx.run.snapshot_value("entry_position")
 		if ball.y >= entry.y - ARENA_FALL:
@@ -1137,6 +1175,9 @@ func _on_player_died() -> void:
 # costs nothing and keeps the horizontal speed. A map with a net deck catches the fall
 # on the deck at damped speed instead, before the ground rule is asked.
 func _rescue_if_fallen(ball: Vector3) -> void:
+	if not ball.is_finite():
+		_rescue_lost_ball()
+		return
 	var v: Vector3 = ctx.player.state.velocity
 	var map = ctx.terrain.map()
 	if map.has_method("net_deck_height"):
@@ -1150,6 +1191,16 @@ func _rescue_if_fallen(ball: Vector3) -> void:
 	if ctx.terrain.contains(ball) and ball.y > ctx.terrain.floor_height(ball.x, ball.z) - RESCUE_DEPTH:
 		return
 	ctx.player.reset_to(ctx.terrain.rescue_point(ball), Vector3(v.x, 0.0, v.z))
+
+
+# A ball whose position went non-finite fails every bounds test (contains() and clampf() both
+# carry NaN through), so it goes back to the stage's entry checkpoint at rest.
+func _rescue_lost_ball() -> void:
+	var at = ctx.run.snapshot_value("entry_position") if ctx.run != null else null
+	if not (at is Vector3) or not (at as Vector3).is_finite():
+		at = ctx.terrain.spawn_point(ctx.run.stage) if ctx.terrain != null and ctx.run != null else Vector3.ZERO
+	push_warning("flow: the ball's position is not finite; returned to the stage entry")
+	ctx.player.reset_to(at, Vector3.ZERO)
 
 
 func objective_text() -> String:

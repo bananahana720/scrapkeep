@@ -1086,6 +1086,9 @@ static func validate_entrance_doc(doc) -> String:
 	for key in ENTRANCE_OPTIONAL:
 		if doc.has(key) and not _entrance_kind_ok(doc[key], ENTRANCE_OPTIONAL[key]):
 			return "wrong type for %s (expected %s)" % [key, ENTRANCE_OPTIONAL[key]]
+	var range_error := _entrance_range_error(doc)
+	if not range_error.is_empty():
+		return range_error
 	if doc.has("pocket_draw_cache"):
 		var draw_error := preload("res://src/world/pockets/pocket_draw.gd").validate_doc(doc.pocket_draw_cache, int(doc.stage))
 		if not draw_error.is_empty():
@@ -1124,6 +1127,29 @@ static func validate_entrance_doc(doc) -> String:
 		seen[id] = true
 	if doc.has("seen_wardens") and doc.has("run_tallies") and doc["run_tallies"]["wardens_seen"] != seen.size():
 		return "run tally Wardens differ from seen_wardens"
+	return ""
+
+
+# A resumed run is alive and its pools are not negative: hp 0 resumes a ball damage() never
+# reaches (alive() is false, so the run cannot die or finish), negative mass turns hits into
+# heals, negative cogs lock the shop. hp above max_hp is a hull the game never builds.
+static func _entrance_range_error(doc: Dictionary) -> String:
+	if float(doc["max_hp"]) <= 0.0:
+		return "max_hp %s is not above zero" % doc["max_hp"]
+	if float(doc["hp"]) <= 0.0 or float(doc["hp"]) > float(doc["max_hp"]) + 0.001:
+		return "hp %s is outside (0, max_hp %s]" % [doc["hp"], doc["max_hp"]]
+	if int(doc["stage"]) < 1:
+		return "stage %d is not a stage" % int(doc["stage"])
+	if int(doc["heft_class"]) < 1 or int(doc["heft_class"]) > HEFT_CLASS_AT.size():
+		return "heft_class %d is outside 1..%d" % [int(doc["heft_class"]), HEFT_CLASS_AT.size()]
+	for key in ["mass", "scrap", "kills", "retries", "bonus_cores", "class_rewarded", "tree_allowed", "run_time", "wear_accum"]:
+		if float(doc[key]) < 0.0:
+			return "%s %s is negative" % [key, doc[key]]
+	if doc.has("cogs") and int(doc["cogs"]) < 0:
+		return "cogs %d is negative" % int(doc["cogs"])
+	for w in doc["retries_spent"]:
+		if typeof(doc["retries_spent"][w]) in [TYPE_INT, TYPE_FLOAT] and int(doc["retries_spent"][w]) < 0:
+			return "retries_spent[%s] is negative" % str(w)
 	return ""
 
 
@@ -1169,7 +1195,7 @@ func from_entrance_doc(doc) -> bool:
 	for w in doc["retries_spent"]:
 		retries_spent[int(str(w))] = int(doc["retries_spent"][w])
 	cogs = int(doc.get("cogs", 0))
-	companion = (doc["companion"] as Dictionary).duplicate(true) if doc.has("companion") else {}
+	companion = preload("res://src/core/companion.gd").sanitize(doc["companion"])[0] if doc.has("companion") else {}
 	settled.assign(doc.get("settled", []))
 	start_pick = _start_pick_from(doc.get("start_pick", {}))
 	run_tier = int(doc.get("run_tier", 0))

@@ -438,6 +438,10 @@ func _park_on_title_ground(stage: int) -> void:
 	# A run started before the ground was built finishes it on entry and places the ball after.
 	if flow.in_play():
 		return
+	# Nor one walking the camp (K before the dam finished building): leaving the walk re-homes
+	# the ball itself. The step check keeps this read from building the menu modules.
+	if _menu_step >= MENU_STEPS and camp_hub != null and camp_hub.get("walking") == true:
+		return
 	player.reset_to(ctx.terrain.spawn_point(1))
 	player.body().global_position = ctx.terrain.spawn_point(1)
 	camera.snap(ctx.terrain.entry_heading(1))
