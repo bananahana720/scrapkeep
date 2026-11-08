@@ -65,6 +65,9 @@ var _pins: Array = []
 var _recent_pins: Array = []
 var _rebounds: Array[float] = []
 var _last_word_used := false
+# Last Word armed its hit and has not paid it yet: a stage change that drops the armed hit
+# gives the once back, so the item is never spent on a bonus that never landed.
+var _last_word_pending := false
 var _ward_used := false
 var _brace_until := 0.0
 var _brace_share := 0.0
@@ -199,6 +202,9 @@ func mass_health(mass: float) -> float:
 func reset_stage() -> void:
 	_ready_at = {}
 	_armed_hit = 0.0
+	if _last_word_pending:
+		_last_word_used = false
+		_last_word_pending = false
 	_pin_until = {}
 	_pins.clear()
 	_recent_pins.clear()
@@ -252,6 +258,7 @@ func resolve(c, draw: float) -> void:
 	if c.kind == Triggers.Kind.ON_HIT and _armed_hit > 0.0 and c.enemy != null and c.base_proc > 0.0:
 		var bonus: float = _armed_hit
 		_armed_hit = 0.0
+		_last_word_pending = false
 		build.item_hit(c.enemy, c.amount * bonus, "")
 		_count("armed_hit")
 	for entry in by_kind.get(c.kind, []):
@@ -318,6 +325,7 @@ func _apply(id: String, d: Resource, fx: Dictionary, c, power: float, draw: floa
 			if _last_word_used or ctx.run.hp > ctx.run.max_hp * fx.get("below", 0.25) or not ctx.run.alive():
 				return false
 			_last_word_used = true
+			_last_word_pending = true
 			_armed_hit = maxf(_armed_hit, power)
 			return true
 		"speed":
