@@ -8,6 +8,7 @@ const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
+const MixRows := preload("res://src/presentation/mix_rows.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const AceSequencer := preload("res://src/presentation/ace_sequencer.gd")
 const Worlds := preload("res://src/core/worlds.gd")
@@ -76,23 +77,16 @@ signal radio_yielded(reason: String)
 #   On the beat: announcements the world or the flow makes (a stage, the gates, the
 #   klaxon, a milestone, the stage clear). They go through the band so they land in
 #   time, and flow stingers queue in one lane so they never talk over each other.
-# It also owns the mixer: Music, SFX and UI buses, a limiter, ducking and volume keys.
+# It also owns the mixer: Music, SFX, UI and Ambient buses, the master chain, the state
+# snapshots, the telegraph focus, ducking and volume keys. Every mix number is a row in
+# mix_rows.gd.
 
-const BUSES := {"Music": -3.0, "SFX": 0.0, "UI": -4.0}
+const BUSES := MixRows.BUS_DB
 const GEN_BUFFER := 0.1
 const POLYPHONY := 32
-# Simultaneous voices per cue, and the shortest gap between two starts. A burst of
-# pickups or a held trigger stays crisp instead of turning into mush.
-# Moss says one line at a time: a new line cuts the last one off. The Mind's quote is
-# heard once per adaptation: mind_adapted and the hand's telegraph layers (its voice and
-# its tag are both the quote) land on one frame, and the first one sounds. The harpoon's
-# bite, release and smash are heard from line_state_changed alone, so each is heard once.
-const VOICE_LIMIT := {"weapon_zap": 4, "scrap_tick": 4, "cog_tick": 4, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
-	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1}
-const MIN_GAP_MS := {"weapon_zap": 45, "scrap_tick": 30, "cog_tick": 30, "enemy_arrive": 200, "hit_thwack": 30, "land_thud": 80, "kill_pop": 35,
-	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600, "grapple_clink": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
-	"grown_sub": 60, "grown_crack": 60, "grown_tail": 120, "grown_rattle": 120,
-	"achievement_chime": 400, "rescue_fanfare": 400}
+# Simultaneous voices per cue and the shortest gap between two starts (mix_rows.gd).
+const VOICE_LIMIT := MixRows.VOICE_LIMIT
+const MIN_GAP_MS := MixRows.MIN_GAP_MS
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Hitting on the beat pays in sound and look only (Andrew, Q10 "Sound only", 17 Oct 22:12Z):
 # a hit within ONBEAT_WINDOW_S of a beat the player hears adds the sax stab, rendered by the
@@ -615,15 +609,76 @@ func _make_buses() -> void:
 		AudioServer.set_bus_send(index, "Master")
 		AudioServer.set_bus_volume_db(index, BUSES[bus])
 		if bus == "SFX":
-			var limiter := AudioEffectHardLimiter.new()
-			limiter.ceiling_db = -1.0
-			AudioServer.add_bus_effect(index, limiter)
+			AudioServer.add_bus_effect(index, _compressor(MixRows.SFX_COMP))
+			AudioServer.add_bus_effect(index, _limiter(MixRows.SFX_CEILING_DB))
 	var master := AudioServer.get_bus_index("Master")
 	if AudioServer.get_bus_effect_count(master) == 0:
-		var limiter := AudioEffectHardLimiter.new()
-		limiter.ceiling_db = -0.5
-		AudioServer.add_bus_effect(master, limiter)
+		AudioServer.add_bus_effect(master, _compressor(MixRows.MASTER_COMP))
+		AudioServer.add_bus_effect(master, _limiter(MixRows.MASTER_CEILING_DB))
 	_apply_volumes()
+
+
+static func _compressor(row: Dictionary) -> AudioEffectCompressor:
+	var comp := AudioEffectCompressor.new()
+	comp.threshold = float(row["threshold_db"])
+	comp.ratio = float(row["ratio"])
+	comp.attack_us = float(row["attack_us"])
+	comp.release_ms = float(row["release_ms"])
+	comp.gain = float(row["gain_db"])
+	return comp
+
+
+static func _limiter(ceiling_db: float) -> AudioEffectHardLimiter:
+	var limiter := AudioEffectHardLimiter.new()
+	limiter.ceiling_db = ceiling_db
+	return limiter
+
+
+# The state snapshot and the telegraph focus, glided per bus (mix_rows.gd). _mix_db is each
+# bus's live offset; _live_sfx counts the effect voices sounding, for the crowd rule.
+var mix_db := {}
+var _focus_until := -1.0
+var _live_sfx := 0
+var _live_frame := -1
+
+
+func _tend_mix(delta: float) -> void:
+	var state := mix_state()
+	var focus := clock < _focus_until
+	var moved := false
+	for bus in BUSES:
+		var want := MixRows.state_db(state, bus) + (float(MixRows.FOCUS.get(bus, 0.0)) if focus else 0.0)
+		var now := float(mix_db.get(bus, want))
+		var next := MixRows.glide(now, want, delta) if mix_db.has(bus) else want
+		if not mix_db.has(bus) or absf(next - now) > 0.001:
+			moved = true
+		mix_db[bus] = next
+	if moved:
+		_apply_volumes()
+
+
+# The effect voices sounding, counted once a frame (plus the ones started since).
+func _live_sfx_voices() -> int:
+	var frame := Engine.get_process_frames()
+	if frame != _live_frame:
+		_live_frame = frame
+		_live_sfx = 0
+		if _sfx != null:
+			for sound in _voices:
+				for id in _voices[sound]:
+					if _sfx.is_stream_playing(id):
+						_live_sfx += 1
+	return _live_sfx
+
+
+# A warning the player must hear: a danger sound or a threat row. Rewards at priority 2 keep
+# the band's own duck but do not pull the bus down.
+func _is_telegraph(kind: String, sound: String) -> bool:
+	return sound in DANGER_SOUNDS or EventKinds.THREAT_ROWS.has(kind)
+
+
+func _focus() -> void:
+	_focus_until = clock + float(MixRows.FOCUS["hold_s"])
 
 
 func _generator_player(bus: String, node_name: String) -> AudioStreamPlayer:
@@ -664,6 +719,7 @@ func _process(delta: float) -> void:
 	engine.pause_gain = 0.45 if get_tree().paused else 1.0
 	if ace != null:
 		ace.pause_gain = engine.pause_gain
+	_tend_mix(delta)
 	_flush_flow()
 	_play_due_notes()
 	_tend_tally()
@@ -1420,15 +1476,22 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	# The cue log keeps the pitch the caller asked for, so the ladder stays readable there.
 	var tier := SfxBank.resolve(sound, pitch)
 	db += story_duck_db(kind)
+	var priority := Rows.priority(kind)
+	if _is_telegraph(kind, sound):
+		_focus()
+	elif priority < 2 and bus == "SFX" and sound in MixRows.CROWD_SOUNDS:
+		db += MixRows.crowd_db(_live_sfx_voices(), priority)
 	var asked := pitch
 	pitch = float(tier["pitch"])
 	if sound in KEYED_SOUNDS or sound in KEST_SOUNDS:
 		pitch *= Harmony.ratio(live_key())
 		asked *= Harmony.ratio(live_key())
 	_logged_pitch = asked if tier["id"] != sound else -1.0
-	_start(kind, sound, SfxBank.stream(tier["id"]), SfxBank.trim_db(tier["id"]) + PRIORITY_DB[Rows.priority(kind)] + db, pitch, bus)
+	_start(kind, sound, SfxBank.stream(tier["id"]), SfxBank.trim_db(tier["id"]) + PRIORITY_DB[priority] + db, pitch, bus)
 	_logged_pitch = -1.0
-	if Rows.priority(kind) >= 2:
+	if bus == "SFX":
+		_live_sfx += 1
+	if priority >= 2:
 		_duck(0.55, 0.35)
 	if sound in DANGER_SOUNDS:
 		engine.duck_bass(0.3, 0.45)
@@ -1524,7 +1587,7 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 	if playback != null:
 		var live: Array = _voices.get(sound, [])
 		live = live.filter(func(id: int): return playback.is_stream_playing(id))
-		if live.size() >= int(VOICE_LIMIT.get(sound, 3)):
+		if live.size() >= int(VOICE_LIMIT.get(sound, MixRows.VOICE_DEFAULT)):
 			playback.stop_stream(live.pop_front())
 		var id := playback.play_stream(stream, 0.0, volume, pitch, AudioServer.PLAYBACK_TYPE_DEFAULT, bus)
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
@@ -1617,6 +1680,8 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 	_duck(0.6, float(start - engine.clock + beats * Harmony.BEAT) / Harmony.RATE)
 	if sound in DANGER_SOUNDS:
 		engine.duck_bass(0.3, float(start - engine.clock + beats * Harmony.BEAT) / Harmony.RATE)
+	if _is_telegraph(kind, sound):
+		_focus_until = maxf(_focus_until, clock + float(start - engine.clock) / Harmony.RATE + float(MixRows.FOCUS["hold_s"]))
 	cue_log.append([kind, sound, "beat", start, 1.0])
 	return start
 
@@ -2376,6 +2441,7 @@ func _on_event_progress(event_id: String, fraction: float) -> void:
 
 
 func _on_flow_changed(state: String) -> void:
+	_flow_state = state
 	if state != "title" and radio_hold == "":
 		_release_spin()
 	if state in MENU_STATES:
@@ -2385,6 +2451,21 @@ func _on_flow_changed(state: String) -> void:
 	# Back in the arena (entry or retry) the band plays, whatever a death left it in.
 	if state == "boss" and sound_ready and engine.mode != MusicEngine.PLAY:
 		engine.schedule_mode(engine.next_beat(), MusicEngine.PLAY)
+
+
+# The mix state (mix_rows.gd STATES) from the flow, the band's track, the boss phase, the shop
+# moment and the systemic pressure, with hysteresis on the fight's edge.
+var _flow_state := ""
+var _combat := false
+
+
+func mix_state() -> String:
+	if _pressure >= MixRows.COMBAT_ON:
+		_combat = true
+	elif _pressure <= MixRows.COMBAT_OFF:
+		_combat = false
+	var shop := _moments.any(func(m): return m.kind == "shop")
+	return MixRows.resolve(_flow_state, camp_open, engine.track if engine != null else "level", _boss_phase, shop, _combat)
 
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
@@ -3745,12 +3826,14 @@ func nudge(bus: String, amount: float) -> void:
 	play("flow_changed", 0.0, Harmony.ratio(Harmony.pentatonic_step(int(volumes[bus] * 8.0))), "UI")
 
 
+# The player's slider times the bus row and the state's offset. Ambient follows the effects slider.
 func _apply_volumes() -> void:
-	for bus in volumes:
+	for bus in BUSES:
 		var index := AudioServer.get_bus_index(bus)
 		if index < 0:
 			continue
-		AudioServer.set_bus_volume_linear(index, volumes[bus] * db_to_linear(BUSES[bus]))
+		var level := float(volumes.get(bus, volumes["SFX"]))
+		AudioServer.set_bus_volume_linear(index, level * db_to_linear(BUSES[bus] + float(mix_db.get(bus, 0.0))))
 		AudioServer.set_bus_mute(index, muted or (radio_silenced and bus == "Music"))
 
 

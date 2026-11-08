@@ -23,6 +23,7 @@ var _started := -1
 var _seconds := 80.0
 var _facts: Array = []
 var _base_sample := 0
+var _mix_states: Array = []
 
 
 func _initialize() -> void:
@@ -74,9 +75,22 @@ func _physics_process(delta: float) -> bool:
 			if kind.begins_with("steam_lift") or kind.begins_with("ride_"):
 				_facts.append([_now(), "world_fact", kind]))
 		return false
+	if audio.has_method("mix_state"):
+		var state: String = audio.mix_state()
+		if _mix_states.is_empty() or _mix_states.back()[1] != state:
+			_mix_states.append([snappedf(_now(), 0.01), state])
 	if _driver.tick(delta) or _now() >= _seconds:
 		_finish()
 	return false
+
+
+# Cues started now, by sound, over the whole session (title included): what stacks into the mix.
+static func _cue_counts(rows: Array) -> Dictionary:
+	var counts := {}
+	for row in rows:
+		if row.size() > 2 and row[2] == "now":
+			counts[row[1]] = int(counts.get(row[1], 0)) + 1
+	return counts
 
 
 func _finish() -> void:
@@ -98,7 +112,7 @@ func _finish() -> void:
 		"ace_misses": ace.misses if ace != null else -1, "ace_short_reads": ace.short_reads if ace != null else -1,
 		"ace_render_ms_per_second": snappedf(ace.render_usec / 1000.0 / maxf(ace.rendered / 44100.0, 0.001), 0.01) if ace != null else -1.0,
 		"note": "section times are the render head in seconds from the recording's start; the ring and device add about 75 ms",
-		"facts": _facts, "ace_sections": sections}
+		"facts": _facts, "ace_sections": sections, "mix_states": _mix_states, "cue_counts": _cue_counts(audio.cue_log)}
 	var file := FileAccess.open(out.get_basename() + ".json", FileAccess.WRITE)
 	file.store_string(JSON.stringify(info, "  "))
 	file.close()
