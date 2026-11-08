@@ -63,8 +63,13 @@ const DRIVER_PATH := "res://src/combat/warden_reactor.gd"
 # section 5). The ratio band (small at least twice grown) reads 1.71 on both and stays a red check for the coordinator.
 # 2026-10-24 (base-cruise ruling, #424): pins hold, measured 51.0 / 31.2. Over 24 seeds small 71.1 s, grown 19.6 s
 # (ratio 3.63); grown is 5.4 s under the 25 to 45 s band there, and 20.6 s on the pre-change stage, so not this change.
-const EXPECT_SMALL_S := 53.27
-const EXPECT_GROWN_S := 31.23
+# 2026-11-08 (invariants thread, ruling bl, the bot's point-blank bite at a 0.25 s re-press, #624): small re-pin
+# 53.27 -> 60.23 s, grown 31.23 -> 31.80 s. One direct run on stage/alpha-w31 07fb5323, the same as the Gate lane's
+# bands A run and its solo rerun: small [52.62, 60.23, 90.12], grown [31.80, 51.40, 26.78], campers 120, rides per
+# run [3, 5, 6, 0, 2, 0, 2, 3, 1]. Small 60.2 s sits inside the 45-70 s ordinary-pilot ruling. The ratio band reads
+# 1.89 and stays the owed red check, as before.
+const EXPECT_SMALL_S := 60.23
+const EXPECT_GROWN_S := 31.80
 const TOLERANCE := 0.10
 const WALL_S := 330.0
 
