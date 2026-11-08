@@ -8,6 +8,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const Grip := preload("res://src/movement/grip.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const SkillBand := preload("res://tools/skill_band.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
@@ -2924,11 +2925,8 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			and game.player._brake_was_held)
 		return
 	_harpoon_held = false
-	if game.player.abilities.id_of(AbilityState.LINE) == "cable_charge" and target.get("role") == "hull" and not Augments.anchor_line(target):
-		var radius = target.get("radius")
-		var passing: float = Augments.MIN_ROPE + game.player.tuning.RADIUS + (float(radius) if radius != null else 0.0)
-		if game.player.ball_position().distance_to(target.global_position) <= passing:
-			return
+	if _bite_passes(target):
+		return
 	var swallowed: bool = game.player.frozen() or kit.slingshot.charging
 	var special = game.player.abilities.gauge(AbilityState.SPECIAL)
 	if special != null and special.charging:
@@ -2954,6 +2952,18 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 				source.press["jump_pressed"] = true
 		if source.press.get("harpoon_pressed", false):
 			_count("harpoon_bites")
+
+
+# A bite on a body the ball already sits inside drops as "passed" on its next tick
+# (augments.gd _follow), so a press every tick re-bites, links and drops forever: a 55-link
+# chain against a touching add, or a Brindle hull the ball never rams because each bite
+# clears its speed bank. A player cannot press at 90 Hz; the hand backs off instead.
+func _bite_passes(target: Node3D) -> bool:
+	if Augments.anchor_line(target) or Grip.of(target, game.player.heft(), game.player.tuning.pole_flail()) in ["pole", "flail"]:
+		return false
+	var radius = target.get("radius")
+	var passing: float = Augments.MIN_ROPE + Tuning.RADIUS + (float(radius) if radius != null else 0.0)
+	return game.player.ball_position().distance_to(target.global_position) <= passing
 
 
 func _smash_pending() -> bool:
