@@ -55,8 +55,12 @@ const GLIDE_UP_DB_S := 6.0
 # then they come back at GLIDE_UP_DB_S.
 const FOCUS := {"Music": -3.0, "Ambient": -8.0, "hold_s": 0.4}
 
-# The crowd rule: priority 0 and 1 cues get quieter as live effect voices pile up, by
-# DB_PER_DOUBLING for each doubling above CROWD_FREE, never below CROWD_FLOOR_DB.
+# The crowd rule: the high-rate cues in CROWD_SOUNDS (the ones a swarm or a streak stacks,
+# 12 a second each in a measured Warden fight) get quieter as live effect voices pile up, by
+# CROWD_DB_PER_DOUBLING for each doubling above CROWD_FREE, never below CROWD_FLOOR_DB.
+# Kit signatures, ultimates and big moments are not on the list: overpowered pays (direction 5).
+const CROWD_SOUNDS := ["weapon_zap", "hit_thwack", "clank", "scrap_tick", "cog_tick", "kill_pop", "crit_ping", "shatter",
+	"dash_whoosh", "near_whoosh", "kest_kick_thump", "rarity_tick", "panel_note", "shell_spring", "land_thud", "hop"]
 const CROWD_FREE := 6
 const CROWD_DB_PER_DOUBLING := 3.0
 const CROWD_FLOOR_DB := -9.0

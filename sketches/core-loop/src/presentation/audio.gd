@@ -639,6 +639,7 @@ static func _limiter(ceiling_db: float) -> AudioEffectHardLimiter:
 var mix_db := {}
 var _focus_until := -1.0
 var _live_sfx := 0
+var _live_frame := -1
 
 
 func _tend_mix(delta: float) -> void:
@@ -654,12 +655,20 @@ func _tend_mix(delta: float) -> void:
 		mix_db[bus] = next
 	if moved:
 		_apply_volumes()
-	_live_sfx = 0
-	if _sfx != null:
-		for sound in _voices:
-			for id in _voices[sound]:
-				if _sfx.is_stream_playing(id):
-					_live_sfx += 1
+
+
+# The effect voices sounding, counted once a frame (plus the ones started since).
+func _live_sfx_voices() -> int:
+	var frame := Engine.get_process_frames()
+	if frame != _live_frame:
+		_live_frame = frame
+		_live_sfx = 0
+		if _sfx != null:
+			for sound in _voices:
+				for id in _voices[sound]:
+					if _sfx.is_stream_playing(id):
+						_live_sfx += 1
+	return _live_sfx
 
 
 func _focus() -> void:
@@ -1465,8 +1474,8 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	var telegraph := priority >= 2 or sound in DANGER_SOUNDS
 	if telegraph:
 		_focus()
-	elif bus == "SFX":
-		db += MixRows.crowd_db(_live_sfx, priority)
+	elif bus == "SFX" and sound in MixRows.CROWD_SOUNDS:
+		db += MixRows.crowd_db(_live_sfx_voices(), priority)
 	var asked := pitch
 	pitch = float(tier["pitch"])
 	if sound in KEYED_SOUNDS or sound in KEST_SOUNDS:
