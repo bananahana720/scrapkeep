@@ -1,6 +1,6 @@
 # Scrapkeep swarm operating manual
 
-Revision 8 (2026-10-22: Claude project agents are the only workers; alpha waves 17 to 21 run from the board in `project-guide/coord/GRAPH.md` and issue #241; the tiered gate below is the single gate rule). The prepare stage and [Operational Sprint 0](docs/project/sprint-0/AUTHORIZATION.md) are complete historical records. For heavy-lane work, the current authorization is whatever the [TRACKING.md program authorization row](TRACKING.md#program-authorization) records; this manual grants none.
+Revision 9 (2026-11-08: the alpha runs from the claude.ai project with one board issue per wave, named in `project-guide/handoff/STATE.md`; revision 8, 2026-10-22: Claude project agents are the only workers; the tiered gate below is the single gate rule). The prepare stage and [Operational Sprint 0](docs/project/sprint-0/AUTHORIZATION.md) are complete historical records. For heavy-lane work, the current authorization is whatever the [TRACKING.md program authorization row](TRACKING.md#program-authorization) records; this manual grants none.
 
 ## Read first and preserve authority
 
@@ -115,7 +115,7 @@ Andrew chose this lane on 22 September 2026 (TRACKING EV-0479, EV-0480) for thro
 
 Loop: one writer on one `proto/<name>` branch in its own worktree, `npm run sketch:smoke`, Andrew plays, an entry with Andrew's verdict goes to [the playtest log](docs/playtests/PLAYTEST-LOG.md), the coordinator appends its line to `docs/playtests/verdicts.ndjson` (the verdict span copied verbatim; `node scripts/lab/verdicts.mjs` must pass, and `npm test` fails until it does), then the coordinator merges. No card, lease, packet revision or independent reviewer is required. Andrew's play is the review, and no automated result substitutes for it. TRACKING receives an event only when the lane is entered or left, a question changes state, or a sketch is promoted.
 
-The alpha program (waves 17 to 21) runs this lane as batched waves on `stage/alpha-w<N>` branches; [ALPHA-PLAN.md](sketches/core-loop/design-v3/ALPHA-PLAN.md) holds the plan and its testing method, and the board is GRAPH.md. Andrew plays once, at the end of wave 21, instead of per sketch.
+The alpha program runs this lane as batched waves on `stage/alpha-w<N>` branches; [ALPHA-PLAN.md](sketches/core-loop/design-v3/ALPHA-PLAN.md) holds the testing method, [ROADMAP.md](project-guide/handoff/ROADMAP.md) the order of what is left, and the board is the current wave's issue (STATE.md). Andrew plays a world 1 sitting, then one full-alpha sitting, instead of per sketch.
 
 Tiered gate (Andrew, 18 and 22 October 2026: move fast, fail fast, promote each wave promptly). This block is the single owner of the gate rule; [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) and GRAPH.md point here. Alpha units are built by up to five writers in coordinator-prepared worktrees at the stage head, each against a checkable definition of done and a file fence, with no two units in a wave sharing a file. Each unit gets one build and at most one fix round, then merges or parks with its notes. The gate runs in two tiers so a PR gets a verdict in minutes and the expensive checks run once per promotion.
 
@@ -124,7 +124,7 @@ Tiered gate (Andrew, 18 and 22 October 2026: move fast, fail fast, promote each 
 - Promotion: the stage promotes to main when the full gate shows no new red and the red team reports no new blocker. Promotion is a GitHub merge of the stage PR under the project coordinator's standing merge authority. The PC then runs GPU checks on each promoted head; a GPU red is a fix in the next wave, not a hold, unless it is a crash. CPU-only work runs in the cloud by default; the PC keeps 4080 timing, 3060 renders and local-state checks (DECISIONS section 10).
 - GPU evidence on the PC follows the scrapkeep-lab lessons ledger, SKL-37: frame times come from a gamescope headless run, never `godot --headless`; captures before 2026-10-24 carry the label "wallpaper running"; headless Blender bakes set OptiX themselves.
 - After each promotion, the deep-modules sweep runs on the promoted diff (Andrew, 8 November 2026): `node scripts/deep-sweep.mjs` on main, triaged with [DEEP-SWEEP.md](project-guide/handoff/DEEP-SWEEP.md). Its refactors are behaviour-preserving PRs on the next stage under the per-PR gate above; they never hold a promotion.
-- `scrapkeep-reviewer` (Fable) reads the consequential seams before each promotion. Andrew plays once, at the end of wave 21; the gate only decides what reaches him. A receipt with unexpected skips is not merge evidence.
+- `scrapkeep-reviewer` (Fable) reads the consequential seams before each promotion. Andrew plays at the sittings only; the gate only decides what reaches him. A receipt with unexpected skips is not merge evidence.
 - A flaky test is made deterministic (fixed seeds, multi-seed medians, sim-clock timing). It is never skipped, disabled or quarantined to get a green run.
 - `scripts/sketch-fast.timings.json` orders the lane. Refresh it from any full-smoke receipt with `node scripts/sketch-fast.mjs --fold-timings <receipt.json>`.
 
