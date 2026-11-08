@@ -380,6 +380,16 @@ func heft_progress() -> float:
 	return clampf((heft() - low) / (high - low), 0.0, 1.0)
 
 
+# Takes one copy of a part back out of the build (the last one held). False when none is held.
+func remove_part(part_id: String) -> bool:
+	var i: int = parts.rfind(part_id)
+	if i < 0:
+		return false
+	parts.remove_at(i)
+	_publish_heft_class()
+	return true
+
+
 # A rise and a drop are different facts with different sounds, so each has its own
 # signal: heft_class_changed only ever means the class went up.
 func _publish_heft_class() -> void:

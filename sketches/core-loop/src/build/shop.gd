@@ -554,27 +554,16 @@ func _cheapest_price() -> int:
 	return cheapest
 
 
-# Sell-back needs the run to take a part back. Until the spine's run_state grows
-# remove_part() (requested in the W4 handback), the shop removes it here the same way
-# that mutator would, and never sells a pattern part, since combat rebuilds its patterns
+# Sell-back never sells a pattern part, since combat rebuilds its patterns
 # only on part_gained and would keep shooting the sold pattern until the next stage.
 func _can_remove(part_id: String) -> bool:
-	if ctx.run.has_method("remove_part"):
-		return true
 	var d: Resource = Parts.def(part_id)
 	return d != null and d.patterns.is_empty()
 
 
 func _remove_part(part_id: String) -> void:
-	var run = ctx.run
-	if run.has_method("remove_part"):
-		run.remove_part(part_id, "sold")
+	if not ctx.run.remove_part(part_id):
 		return
-	var i: int = run.parts.rfind(part_id)
-	if i < 0:
-		return
-	run.parts.remove_at(i)
-	run._publish_heft_class()
 	if build != null:
 		build.recompute()
 
