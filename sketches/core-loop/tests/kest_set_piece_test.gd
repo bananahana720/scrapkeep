@@ -3,8 +3,10 @@ extends "res://tests/kest_kit_test.gd"
 # 2026-10-12 (PC-KEST round 4): the shared runner adds three Cable Charge bot-hand fixtures.
 
 # 2026-10-11 (PC-KEST): fixed-step carrier, payload and posture integration.
-# Expected 62 checks, including count guard. The bot suite separately runs real physics.
-const EXPECTED_SET_PIECE_CHECKS := 62
+# Expected 63 checks, including count guard. The bot suite separately runs real physics.
+# 2026-11-08 (w32 gate): 62 -> 63. #624 (ruling bl, d244fbb8) added the inherited "waits out the
+# re-press gap" bite-hand check to kest_kit_test; this count was not bumped with it.
+const EXPECTED_SET_PIECE_CHECKS := 63
 const Kest := preload("res://src/combat/kest_kit.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
