@@ -109,6 +109,9 @@ static func decode_ghost(doc) -> PackedVector3Array:
 	var p0 = doc["p0"]
 	if typeof(p0) != TYPE_ARRAY or p0.size() != 3 or typeof(doc["d"]) != TYPE_STRING:
 		return out
+	for v in p0:
+		if not (v is int or v is float):
+			return out
 	var d: PackedStringArray = String(doc["d"]).split(",", false)
 	if d.size() % 3 != 0:
 		return out

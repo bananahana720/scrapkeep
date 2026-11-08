@@ -75,6 +75,8 @@ func _run() -> void:
 	game.ctx.run.run_seed_override = 5
 	t.eq("a run seed set on purpose draws its own stages", game.flow.run_key(), game.ctx.run.run_seed)
 	game.ctx.run.run_seed_override = null
+	var vault_a: int = game.build._offer_rng("vault_1").randi()
+	t.check("a second vault in a stage rolls its own stream", vault_a != game.build._offer_rng("vault_2").randi())
 	_shop()
 	_sell()
 	_boost_floor()

@@ -119,6 +119,8 @@ var dropper = Panels.Dropper.new()
 var panel_rng := RandomNumberGenerator.new()
 # Scrap drops roll on their own stream, so how a fight spills scrap does not move the stage plan.
 var scrap_rng := RandomNumberGenerator.new()
+# Vaults paid this stage: each names its own offer stream.
+var _vaults_paid := 0
 # Louvres the last recompute converted into the pilot's signature stat (Panels.OVERFLOW), and
 # the counts it folded after that conversion (what the build read's stat lines say).
 var panel_overflow := 0
@@ -1012,6 +1014,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	clock.enter_stage(stage)
 	lanes.reset()
 	_offered = {}
+	_vaults_paid = 0
 	# A retry replays the same procs and panel drops: the seeds name the run and stage only.
 	loot_rng.seed = hash([LOOT_SEED, ctx.flow.run_key(), stage, "loot"])
 	panel_rng.seed = hash([ctx.run.run_seed, stage, "panels"])
@@ -1064,7 +1067,9 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 	_drop_panel(kind, at)
 	# A vault pays out a rare part and a bonus core (DEMO-SPEC engagement tiers).
 	if kind == "vault":
-		var vault_rng := _offer_rng("vault")
+		# Each vault in a stage rolls its own stream, so two vaults never pay the same part.
+		_vaults_paid += 1
+		var vault_rng := _offer_rng("vault_%d" % _vaults_paid)
 		var picks: Array = Parts.roll(vault_rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
 		if not picks.is_empty() and not scrapless():
 			ctx.run.add_part(picks[0], "vault")
