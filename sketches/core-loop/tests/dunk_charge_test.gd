@@ -63,6 +63,8 @@ func _enemy(plating := 0.0) -> Node3D:
 
 func _fresh() -> void:
 	_player.kit.drop_line("reset")
+	_player.kit.reel_body = null
+	_player.kit.reel_left = 0.0
 	_player.smash_landing = null
 	_player._landing_mult = 1.0
 	_player.dunk.clear("reset")
@@ -307,6 +309,31 @@ func _run() -> void:
 	_check("7 events", _stored.size() == 1 and _expired.size() == 1 and _spent.size() == 0,
 		"stored %d, spent %d, expired %d" % [_stored.size(), _spent.size(), _expired.size()])
 
+	# A right-mouse reel onto a body is a reel impact: the line lets go on contact, so the reel's
+	# short grace (kit.reel_body, Augments.REEL_GRACE) carries it, on that body only.
+	_fresh()
+	var reel_target := _enemy()
+	var reel_other := _enemy()
+	var plain_body_ram := _reel_grace_hit(reel_target, reel_target)
+	_slam()
+	var wrong_body := _reel_grace_hit(reel_target, reel_other)
+	var kept_on_wrong: bool = _player.dunk.held()
+	var on_body := _reel_grace_hit(reel_target, reel_target)
+	_slam()
+	_player.kit.reel_body = reel_target
+	_player.kit.reel_left = Augments.REEL_GRACE
+	_player.kit.tick_timers(Augments.REEL_GRACE + 0.05)
+	var late_before: float = reel_target.hp
+	_combat.strike(reel_target, "ram", FORCE)
+	var late: float = late_before - reel_target.hp
+	_check("13 body reel spends the dunk", absf(wrong_body - plain_body_ram) < 0.01 and kept_on_wrong \
+			and absf(on_body - (plain_body_ram + stored_expect)) < 0.01 \
+			and absf(late - plain_body_ram) < 0.01 and _player.dunk.held() and _player.kit.reel_body == null,
+		"reel ram on another body %.2f (plain %.2f, held %s); on the reeled body %.2f (plain+stored %.2f); past the grace %.2f, still held %s" \
+		% [wrong_body, plain_body_ram, kept_on_wrong, on_body, plain_body_ram + stored_expect, late, _player.dunk.held()])
+	reel_target.queue_free()
+	reel_other.queue_free()
+
 	print("dunk_charge_test: %s (%d checks)" % ["PASS" if _failures == 0 else "FAIL", _count])
 	quit(1 if _failures > 0 else 0)
 
@@ -332,6 +359,17 @@ func _brute(plating: float) -> Node3D:
 	brute.plating = plating
 	brute.plates = 1
 	return brute
+
+
+# A ram on `struck` just after a right-mouse reel onto `reeled` let go; returns the HP removed.
+func _reel_grace_hit(reeled: Node3D, struck: Node3D) -> float:
+	_player.kit.reel_body = reeled
+	_player.kit.reel_left = Augments.REEL_GRACE
+	var before: float = struck.hp
+	_combat.strike(struck, "ram", FORCE)
+	_player.kit.reel_body = null
+	_player.kit.reel_left = 0.0
+	return before - struck.hp
 
 
 # A reel impact (a smash landing) on the given body; returns the HP it removed.

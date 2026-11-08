@@ -738,7 +738,11 @@ func _dunk_bonus(enemy: Node3D, kind: String) -> float:
 	if ctx == null or ctx.player == null or not ctx.player.get("dunk"):
 		return 0.0
 	var smash: bool = ctx.player.smash_landing == enemy
-	if not is_reel_impact(kind, smash) or not (smash or ctx.player.kit.anchor_body == enemy):
+	var kit = ctx.player.kit
+	# A reel impact is a smash landing, or a stomp, ram or slam while (or just after) a
+	# right-mouse reel hauls the ball onto this body.
+	var reeled: bool = kind in ["stomp", "ram", "slam"] and kit.reel_body == enemy and kit.reel_left > 0.0
+	if not reeled and (not is_reel_impact(kind, smash) or not (smash or kit.anchor_body == enemy)):
 		return 0.0
 	return ctx.player.dunk.peek()
 

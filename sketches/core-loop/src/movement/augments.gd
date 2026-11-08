@@ -59,6 +59,8 @@ const ANCHOR_GROUP := "harpoon_anchor"
 # A moving world solid (the Hanging Isle's tip, isle_rig.gd): any hook ray or assist that lands on
 # it bites the body, so the line rides the moving point; it is no enemy and links no chain.
 const WORLD_ANCHOR_GROUP := "world_anchor"
+# How long a right-mouse reel onto a body still counts as a reel impact once the line lets go.
+const REEL_GRACE := 0.2
 # A harpoon line is idle, latched to a world point or a body, or committed to a smash
 # haul on a body. SMASH_MAX bounds a haul; a line stretched past BREAK_STRETCH times the
 # rope range lets go; ground under this normal.y is walkable and cannot be hooked.
@@ -896,6 +898,9 @@ static func _winch_body(kit, tuning, body_state, step: float, stop := 0.0) -> vo
 	var head := clampf(1.0 - v.dot(dir) / tuning.f("reel_speed"), 0.0, 1.0)
 	if dist > stop:
 		v += dir * tuning.f("reel_force") * head * step
+	if kit.anchor_body != null:
+		kit.reel_body = kit.anchor_body
+		kit.reel_left = REEL_GRACE
 	kit.rope = maxf(maxf(MIN_ROPE, stop), minf(kit.rope, dist))
 	body_state.linear_velocity = v
 
