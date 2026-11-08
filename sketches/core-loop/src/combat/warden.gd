@@ -1,5 +1,7 @@
 extends "res://src/combat/enemy.gd"
 
+# The fastest the body may read as moving while mounted (Contact.SOFT_CAP_SPEED, m/s).
+const MOUNT_SPEED_MAX := 60.0
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
@@ -637,7 +639,9 @@ func _step_mounting(delta: float) -> void:
 	# ball latched on the anchor line (augments.gd _ride) by offset x 90 m/s.
 	var placed := _mount_home != home or _mount_clock <= delta
 	_mount_home = home
-	mount_velocity = Vector3.ZERO if placed else shift / delta
+	# An authored offset that jumps mid-mounting is a placement too; no real mount moves faster
+	# than the contact soft cap, and a faster read would fling a latched ball the same way.
+	mount_velocity = Vector3.ZERO if placed else (shift / delta).limit_length(MOUNT_SPEED_MAX)
 	var flat := Vector3(shift.x, 0.0, shift.z)
 	if flat.length_squared() > 0.0:
 		_carry_ring(telegraph(), flat)

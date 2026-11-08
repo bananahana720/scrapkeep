@@ -193,9 +193,18 @@ func _park_scores() -> void:
 func _look_textures() -> void:
 	var re := RegEx.create_from_string(LOOK_CALL)
 	var ids := {}
+	# Ids passed through a variable: the hero shells pick a map by slot, and the arena warms its
+	# neutral looks from a list.
+	var held := RegEx.create_from_string("\\bmap = \"([A-Za-z0-9_.-]+)\"")
 	for path in _scripts("res://src"):
-		for m in re.search_all(FileAccess.get_file_as_string(path)):
+		var text := FileAccess.get_file_as_string(path)
+		for m in re.search_all(text):
 			ids[m.get_string(1)] = path
+		if text.contains("look_texture(map"):
+			for m in held.search_all(text):
+				ids[m.get_string(1)] = path
+	for id in preload("res://src/boss/arena.gd").NEUTRAL_LOOKS:
+		ids[id] = "arena.gd"
 	_t.check("source names some look textures", ids.size() >= 3, str(ids.keys()))
 	for id in ids:
 		_t.check("look texture %s exists (%s)" % [id, ids[id].get_file()],

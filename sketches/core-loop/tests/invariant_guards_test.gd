@@ -31,6 +31,7 @@ func _initialize() -> void:
 	_parts_binding()
 	_brindle_model_fit()
 	_fire_rate_floor()
+	_reward_targets()
 	quit(_t.verdict())
 
 
@@ -179,3 +180,26 @@ func _fire_rate_floor() -> void:
 	p.rate = -3.0
 	p._clamp()
 	_t.check("a pattern's rate never reaches zero", p.rate >= Pattern.MIN_RATE, str(p.rate))
+
+
+# A reward row pays each target once: the same target never twice, a changed target once more,
+# and a profile from before targeted keys (legacy key only) is not paid its current target again.
+func _reward_targets() -> void:
+	var path := DIR.path_join("rewards.json")
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(path)
+	var profile := Profile.new(path)
+	profile.load_profile()
+	var events = preload("res://src/core/game_events.gd").new()
+	var progress = preload("res://src/core/progress.gd").new()
+	progress.setup(events, null, profile)
+	_t.check("a row pays its target", progress._grant_reward("row_x", "cosmetic", "hat_a") and profile.has_cosmetic("hat_a"))
+	_t.check("the same target is not paid twice", not progress._grant_reward("row_x", "cosmetic", "hat_a"))
+	_t.check("a changed target pays once", progress._grant_reward("row_x", "cosmetic", "hat_b") and profile.has_cosmetic("hat_b"))
+	_t.check("the changed target is not paid twice", not progress._grant_reward("row_x", "cosmetic", "hat_b"))
+	profile.settle("reward:row_y:cosmetic")
+	_t.check("a legacy-settled row is not paid its current target again", not progress._grant_reward("row_y", "cosmetic", "hat_c")
+		and not profile.has_cosmetic("hat_c") and profile.is_settled("reward:row_y:cosmetic:hat_c"))
+	progress.free()
+	if events is Node:
+		events.free()
