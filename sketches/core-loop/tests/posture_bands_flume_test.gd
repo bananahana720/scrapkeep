@@ -73,9 +73,17 @@ const WALL_S := 1100.0
 # small [25.03, 31.14, 32.15, 26.45, 11.95] median 26.5, grown [19.09, 20.08, 23.1, 16.93, 8.02] median
 # 19.1, grown after the clamp the same (median 19.1, inside 15-35), every small and grown run breaks the
 # Warden, campers never break. The fight is now the Warden's own, not the clamp's wait.
-const EXPECT_SMALL_S := 26.5
-const EXPECT_GROWN_S := 19.1
-const EXPECT_GROWN_OPEN_S := 19.1
+# 2026-11-08 (invariants thread, ruling bj, #619 seed streams then #621 bot bite guard): re-pinned. Bisect:
+# 10eb5d5f (before #619) replays the pins above exactly; 938772a9 (#619) gives grown 15.1 s. #619 gave each
+# stage its own random stream, so each seed plays a different stage-2 fight: grown per seed moved -4.0, +3.3,
+# -8.0, +4.7 and -12.3 s (mixed signs, a reshuffle; three of five shorter). #621 then moved grown seeds 2 and 3
+# and small seed 4. One run on stage/alpha-w31 82683ffa: small [26.49, 27.17, 22.01, 23.86, 11.33] median 23.9,
+# grown [15.14, 19.54, 20.03, 15.26, 9.05] median 15.3, grown after the clamp the same (inside 15-35 by 0.3 s;
+# 0.1 s on 1013c7d1), every small and grown run breaks the Warden, campers never break. Grown seed 4's 9.05 s
+# matches the 8.02 s in the w20 pin. The 15 s floor now has almost no margin: a band check, not a pin, owns it.
+const EXPECT_SMALL_S := 23.9
+const EXPECT_GROWN_S := 15.3
+const EXPECT_GROWN_OPEN_S := 15.3
 const TOLERANCE := 0.10
 
 

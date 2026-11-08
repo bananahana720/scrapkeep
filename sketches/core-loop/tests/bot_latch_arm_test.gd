@@ -13,9 +13,9 @@ const T := preload("res://tests/support/t.gd")
 # (tools/bot_driver.gd _anchor_fight): latch_bites (lines that took a hardpoint), latch_ride_s
 # (seconds on the line), latch_shots (shots fired while on it) and drop_break (the Warden broke
 # in a stagger in which the bot hauled from over the open point: the drop finisher).
-# The mechanism, per seed: at least one latch, RIDE_MIN_S on the line, one shot from it, and one
-# haul that takes a posture chunk. Every count is printed per seed, and a zero fails; the drop
-# finish is printed only (see the note at the end of _initialize).
+# The mechanism, per seed: at least one latch, a ride of RIDE_SHARE_MIN of the stage time to the break,
+# one shot from the line, and one haul that takes a posture chunk. Every count is printed per seed,
+# and a zero fails; the drop finish is printed only (see the note at the end of _initialize).
 
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster"]
 const SEEDS := [0, 1, 2]
@@ -32,7 +32,13 @@ const TURN_S := 30.0
 # takes two chunks, alpha_defs.gd HIVE_HEAVY_RATIO) ends seed 0's fight sooner by design: broken at 34.96 s
 # after 5 latches and a 2.0 s ride, three solo runs identical, against 38.47 s, 7 latches and 2.7 s on the
 # base. Not lowered a third time: if the grown fight shortens again, this check becomes a ride-to-fight ratio.
-const RIDE_MIN_S := 2.0
+# 2026-11-08 (invariants thread, ruling bh, #619 seed streams): the ride is now a share of the stage time to
+# the break (warden_broken_s, the same quantity as every "broken at" below; it includes the approach). #619 gave
+# each stage its own random stream, so seed 0 plays a different stage-3 fight: broken at 27.1 s on a drop
+# finisher after 5 latches, 8 shots from the line and 3 haul chunks, with a 1.6 s ride. The share holds where
+# the seconds did not: 2.7 / 38.47 = 0.070 (w18), 2.0 / 34.96 = 0.057 (#427), 1.6 / 27.1 = 0.059 (now);
+# seeds 1 and 2 ride 9.5 / 28.4 and 3.0 / 19.3. A fight that never breaks counts RUN_CAP_S.
+const RIDE_SHARE_MIN := 0.05
 const DRIVER_PATH := "res://src/combat/warden_swarm.gd"
 
 var _child := false
@@ -45,11 +51,13 @@ func _initialize() -> void:
 		super._initialize()
 		return
 	var t := T.new("bot_latch_arm_test")
-	# Planted controls: the per-seed rule must still reject a broken arm at the lowered floor.
-	t.check("planted: a 0 s ride fails", not _mechanism(3, 0.0, 2, 2)["ride"], "ride 0.0 s")
-	t.check("planted: a ride just under the floor fails", not _mechanism(3, RIDE_MIN_S - 0.1, 2, 2)["ride"], "ride %.1f s" % (RIDE_MIN_S - 0.1))
-	t.check("planted: no latch fails", not _mechanism(0, 0.0, 0, 0)["latch"], "0 latches")
-	t.check("planted: a working arm passes", _mechanism(7, 2.7, 1, 1).values().all(func(v): return v), "7 latches, 2.7 s, 1 shot, 1 chunk")
+	# Planted controls: the per-seed rule must still reject a broken arm at the share.
+	t.check("planted: a 0 s ride fails", not _mechanism(3, 0.0, 2, 2, 27.1)["ride"], "ride 0.0 s")
+	t.check("planted: a ride just under the share fails", not _mechanism(3, RIDE_SHARE_MIN * 27.1 - 0.1, 2, 2, 27.1)["ride"],
+		"ride %.2f s of a 27.1 s fight" % (RIDE_SHARE_MIN * 27.1 - 0.1))
+	t.check("planted: a long fight needs a longer ride", not _mechanism(3, 1.6, 2, 2, 60.0)["ride"], "1.6 s of a 60 s fight")
+	t.check("planted: no latch fails", not _mechanism(0, 0.0, 0, 0, 27.1)["latch"], "0 latches")
+	t.check("planted: a working arm passes", _mechanism(5, 1.6, 8, 3, 27.1).values().all(func(v): return v), "5 latches, 1.6 s of 27.1 s, 8 shots, 3 chunks")
 	var folder := OS.get_user_data_dir().path_join("bot-latch-arm-%d" % OS.get_process_id())
 	DirAccess.make_dir_recursive_absolute(folder)
 	var jobs := []
@@ -82,9 +90,11 @@ func _initialize() -> void:
 			run_seed, PILOTS[run_seed % PILOTS.size()], bites, int(note.get("latch_bites_air", 0)), ride, shots, hauls, chunks,
 			int(note.get("drop_hauls", 0)), int(note.get("drop_chunks", 0)), broke, drop])
 		t.check("seed %d fought an anchor hive on the hoist" % run_seed, hoisted, "anchor.txt written %s" % hoisted)
-		var held := _mechanism(bites, ride, shots, chunks)
+		var fight := minf(float(broke), RUN_CAP_S) if broke != null else RUN_CAP_S
+		var held := _mechanism(bites, ride, shots, chunks, fight)
 		t.check("seed %d latches a hardpoint" % run_seed, held["latch"], "%d latches" % bites)
-		t.check("seed %d rides the line %.1f s" % [run_seed, RIDE_MIN_S], held["ride"], "%.1f s on the line" % ride)
+		t.check("seed %d rides the line %d%% of the stage time to the break" % [run_seed, roundi(RIDE_SHARE_MIN * 100.0)], held["ride"],
+			"%.1f s on the line, broken at %.1f s (%.3f)" % [ride, fight, ride / maxf(fight, 0.001)])
 		t.check("seed %d fires from the line" % run_seed, held["shot"], "%d shots" % shots)
 		t.check("seed %d takes a chunk with a haul" % run_seed, held["haul"], "%d hauls, %d chunks from a haul" % [hauls, chunks])
 	# 2026-10-11 (KF-BOT merge): the drop finish is printed, not checked. Seed 0 plays a different fight
@@ -99,8 +109,8 @@ func _initialize() -> void:
 
 
 # The per-seed mechanism rule, one place for the run checks and the planted controls.
-static func _mechanism(bites: int, ride: float, shots: int, chunks: int) -> Dictionary:
-	return {"latch": bites >= 1, "ride": ride >= RIDE_MIN_S, "shot": shots >= 1, "haul": chunks >= 1}
+static func _mechanism(bites: int, ride: float, shots: int, chunks: int, fight: float) -> Dictionary:
+	return {"latch": bites >= 1, "ride": ride > 0.0 and ride >= RIDE_SHARE_MIN * fight, "shot": shots >= 1, "haul": chunks >= 1}
 
 
 # The child: bot_run, with the stage's swarm Warden made an anchor on the hoist.

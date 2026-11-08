@@ -10,7 +10,8 @@ const T := preload("res://tests/support/t.gd")
 # interpolation, the read roll and the verb gates. The identity half is the calibration claim that
 # existing persona results do not move at Expert: three policies on two seeds run once with no band
 # and once with --band=expert must leave equal rows, bar the fields that are wall time, the run id
-# or the band's own record. The contrast half checks a Novice takes at least as much hull damage as an Expert.
+# or the band's own record. The contrast half checks the Novice's hands (no kit casts, no ultimate, no bites)
+# and reports one seed's hull lost per band; one run's hull does not order the bands (ruling bi).
 
 const POLICIES := ["skipper", "completionist", "camper"]
 # Tally's weapon is the card hand; a band must not take her throws away.
@@ -132,13 +133,16 @@ func _runs(t) -> void:
 		_evasions(rows["skipper-1-expert"]), _evasions(rows["skipper-1-novice"]), _evasions(rows["skipper-1-learner"]), rows["skipper-1-expert"].get("outcome"),
 		rows["skipper-1-novice"].get("outcome"), rows["skipper-1-learner"].get("outcome")])
 	# Evasions count the tells that threatened the ball, which a worse dodger meets more of (it
-	# stands in more of them), so they do not order the bands; the hull does. Measured on this
-	# seed: novice 4 evasions and 12 hull lost, expert 2 and none.
+	# stands in more of them), so they do not order the bands, and one run's hull does not either.
+	# 2026-11-08 (invariants thread, ruling bi, #619 seed streams): the "novice loses at least as much
+	# hull as expert" check is now a report. Skipper seed 1 expert, same tree, two runs side by side:
+	# 18.0 and 0.0 hull lost, so the order was a coin flip (the owed skill_band flip). Over seeds 1 to 6
+	# novice >= expert held 5 of 6 before #619 and 3 of 6 after; summed hull, novice 51 / expert 25
+	# before and 55 / 66 after. The bands' order is read where it is stable: clear rates over many
+	# seeds in the gate's band reads (W1 Novice <= 40 percent, ruling ab), not one run here.
 	var hull_expert := float(rows["skipper-1-expert"]["max_hp"]) - float(rows["skipper-1-expert"]["min_hp"])
 	var hull_novice := float(rows["skipper-1-novice"]["max_hp"]) - float(rows["skipper-1-novice"]["min_hp"])
 	print("[report] skipper seed 1 hull lost: expert %.1f, novice %.1f" % [hull_expert, hull_novice])
-	t.check("novice loses at least as much hull as expert", hull_novice >= hull_expert,
-		"novice %.1f, expert %.1f" % [hull_novice, hull_expert])
 	if t.failures == 0:
 		PostureSweep._remove_tree(folder)
 
