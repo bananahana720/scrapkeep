@@ -2,6 +2,7 @@ extends RefCounted
 
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
+const MixRows := preload("res://src/presentation/mix_rows.gd")
 
 # One baked sound per event_kinds `sound` id. Each recipe is built from the shared
 # rack in synth.gd and pitched from harmony.gd, so the families mean something:
@@ -70,6 +71,37 @@ const STINGER_BEATS := {
 # worlds 1 to 3: the Dig steps down a fourth, the Highdraft up a fourth.
 const WORLD_STINGER := "stinger_world"
 const WORLD_STEPS := [0, -5, 5]
+
+# Simultaneous voices per cue and the shortest gap between two starts (mix_rows.gd).
+const VOICE_LIMIT := MixRows.VOICE_LIMIT
+const MIN_GAP_MS := MixRows.MIN_GAP_MS
+# Danger sounds pull the bass down so the low end never masks a warning.
+const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
+	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
+# Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
+const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
+	"rivet_line_punch", "rivet_line_arrive",
+	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
+	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
+	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "tarn_latch_tear", "tally_balance_due", "cannon_recall", "sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready", "cannon_ready",
+	"sable_break", "rivet_break", "kest_break", "tarn_break", "tally_break", "cannon_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
+	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally", "mind_cannon", "hold_pit", "hold_bola", "hold_tether", "hold_net",
+	"hold_riser", "callout_chime", "shop_bell", "rarity_tick", "rarity_bell", "rung_coil", "reveal_clank", "ceremony_build",
+	"ceremony_resolve", "line_bite", "smash_crack", "achievement_chime", "rescue_fanfare",
+	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
+	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
+	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
+	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer",
+	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
+	"active_cutting_torch",
+	# --- P-C Tally keyed sounds ---
+	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
+	# --- end Tally ---
+]
+# --- P-C Kest sounds ---
+const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "raid_kest_tick",
+	"tick_kest_62", "tick_kest_57", "tick_kest_53", "raid_kest_stinger", "raid_kest_boom", "raid_kest_roll"]
+# --- end Kest ---
 
 # Per-cue trim in dB against the 0.9 peak every cue is normalized to. Rapid, small
 # facts sit low so a firefight never turns to mush; rare facts sit at the top.

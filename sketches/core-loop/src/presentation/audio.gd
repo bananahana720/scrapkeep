@@ -84,9 +84,9 @@ signal radio_yielded(reason: String)
 const BUSES := MixRows.BUS_DB
 const GEN_BUFFER := 0.1
 const POLYPHONY := 32
-# Simultaneous voices per cue and the shortest gap between two starts (mix_rows.gd).
-const VOICE_LIMIT := MixRows.VOICE_LIMIT
-const MIN_GAP_MS := MixRows.MIN_GAP_MS
+# Simultaneous voices per cue and the shortest gap between two starts (SfxBank, from mix_rows.gd).
+const VOICE_LIMIT := SfxBank.VOICE_LIMIT
+const MIN_GAP_MS := SfxBank.MIN_GAP_MS
 const PRIORITY_DB := [-6.0, -3.0, 0.0, 0.0]
 # Hitting on the beat pays in sound and look only (Andrew, Q10 "Sound only", 17 Oct 22:12Z):
 # a hit within ONBEAT_WINDOW_S of a beat the player hears adds the sax stab, rendered by the
@@ -130,38 +130,15 @@ const HUM_NEAR := 3.0
 const HUM_DB := 0.0
 # A threat kind whose warning has a release half, played when the threat goes live.
 const THREAT_RELEASE := {"threat_lane": "threat_tear"}
-# Danger sounds pull the bass down so the low end never masks a warning.
-const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
-	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net"]
+# Danger, keyed and Kest sound lists live in SfxBank next to TRIM_DB.
+const DANGER_SOUNDS := SfxBank.DANGER_SOUNDS
 # A launch whose landing never comes (a fall into the next stage's rail) still drops. Timed on
 # SimClock: the drop restarts the band and so the bar grid that park events land on.
 const LANDING_FALLBACK_MS := 2000
 # Expected launch-to-landing time, for the pace of the build's sweep.
 const LAUNCH_BUILD_SECONDS := 1.6
-# Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb).
-const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "kill_pop", "part_get", "core_socket", "found_chime", "gate_through",
-	"rivet_line_punch", "rivet_line_arrive",
-	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", "clank", "hit_thwack", "hurt",
-	"enemy_arrive", "boss_weak_hit", "ui_tick", "element_resolved", "ice_form", "vault_rise", "synergy_hit",
-	"sable_arpeggio", "rivet_hihat_roll", "kest_low_thump", "tarn_latch_tear", "tally_balance_due", "cannon_recall", "sable_ready", "rivet_ready", "kest_ready", "tarn_ready", "tally_ready", "cannon_ready",
-	"sable_break", "rivet_break", "kest_break", "tarn_break", "tally_break", "cannon_break", "fleet_motif", "reactor_erupt", "swarm_buzz", "swarm_lock",
-	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally", "mind_cannon", "hold_pit", "hold_bola", "hold_tether", "hold_net",
-	"hold_riser", "callout_chime", "shop_bell", "rarity_tick", "rarity_bell", "rung_coil", "reveal_clank", "ceremony_build",
-	"ceremony_resolve", "line_bite", "smash_crack", "achievement_chime", "rescue_fanfare",
-	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
-	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
-	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
-	"kill_chain_tier", "drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring", "hotwire_offer",
-	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
-	"active_cutting_torch",
-	# --- P-C Tally keyed sounds ---
-	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
-	# --- end Tally ---
-]
-# --- P-C Kest sounds ---
-const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "raid_kest_tick",
-	"tick_kest_62", "tick_kest_57", "tick_kest_53", "raid_kest_stinger", "raid_kest_boom", "raid_kest_roll"]
-# --- end Kest ---
+const KEYED_SOUNDS := SfxBank.KEYED_SOUNDS
+const KEST_SOUNDS := SfxBank.KEST_SOUNDS
 # The Warden's posture fight is heard as one phrase (SfxBank.BREAK_PHRASES, variant 0): a
 # hit plays the note of the guard's quarter, the stagger sounds all four with the open
 # row's sound, a shattered chunk plays its row's sound over a low hit.
