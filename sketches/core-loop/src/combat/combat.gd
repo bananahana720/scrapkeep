@@ -1927,7 +1927,14 @@ func _tap(slot: String, id: String, cast: Callable, commit := Callable()) -> voi
 # A cast that ran its time lands now as the tap it started from, with the same refusals.
 func _step_cast() -> void:
 	var done: String = ctx.player.abilities.take_cast_done()
+	var swapped: String = ctx.player.abilities.take_swap_dropped()
 	if _cast_pending.is_empty():
+		return
+	if swapped != "":
+		# A pick or relic swapped the casting slot: the cast ends as any cancel does.
+		ctx.player.indicator.collapse(String(_cast_pending["slot"]))
+		ctx.events.gauge_cancelled.emit(swapped, "swap")
+		_cast_pending = {}
 		return
 	if done == "":
 		if ctx.player.abilities.casting == "":

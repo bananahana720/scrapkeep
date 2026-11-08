@@ -2371,6 +2371,10 @@ func _on_event_progress(event_id: String, fraction: float) -> void:
 	if event_id != _event_id or not sound_ready:
 		return
 	_event_progress_live = true
+	# An event only escalates the level track; a fight track (a relay's own miniboss, a Warden)
+	# follows its fight, and two fractions would fight over one build.
+	if engine.track != "level":
+		return
 	engine.escalate(clampf(fraction, 0.0, 1.0), false)
 
 
