@@ -162,12 +162,12 @@ func _start_card_wants_pointer() -> bool:
 func sync_start_card_pointer() -> void:
 	if _start_card_wants_pointer():
 		_start_pointer_held = true
-		game.set_meta("menu_held", true)
-		game._capture_mouse(false)
+		game.set_menu_held(true)
+		game.capture_mouse(false)
 	elif _start_pointer_held:
 		_start_pointer_held = false
-		game.set_meta("menu_held", _held)
-		game._capture_mouse(game.flow.in_play() and not _held)
+		game.set_menu_held(_held)
+		game.recapture_mouse()
 
 
 func shop():
@@ -320,7 +320,7 @@ func _apply_hold() -> void:
 		return
 	_held = held_now
 	_paused = pause
-	game.set_meta("menu_held", held_now)
+	game.set_menu_held(held_now)
 	get_tree().paused = pause or game.pause_toggled() or game.notes_held()
 	if held_now:
 		_enforce_hold()
@@ -330,14 +330,14 @@ func _apply_hold() -> void:
 	if _start_card_wants_pointer():
 		sync_start_card_pointer()
 		return
-	game._capture_mouse(game.flow.in_play())
+	game.capture_mouse(game.flow.in_play())
 
 
 func _enforce_hold() -> void:
 	if game.keyboard != null:
 		game.keyboard.enabled = false
-	if game._mouse_captured():
-		game._capture_mouse(false)
+	if game.mouse_captured():
+		game.capture_mouse(false)
 	if _paused and not get_tree().paused:
 		get_tree().paused = true
 

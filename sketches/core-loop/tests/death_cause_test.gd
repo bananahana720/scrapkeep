@@ -33,21 +33,21 @@ func _run() -> void:
 
 
 func _lines() -> void:
-	_t.eq("a crew's one row", DeathCause.line("chaser"), "Scrapped by a chaser lunge (E01).")
-	_t.eq("an article before a vowel", DeathCause.line("anchor_crew"), "Scrapped by an anchor crew winch (E23).")
-	_t.eq("a boss row with its phase", DeathCause.line("brindle_charge", "", "phase 2"), "Scrapped by Brindle's scuttle charge (B03), phase 2.")
-	_t.eq("Brindle's slag", DeathCause.line("brindle_slag", "", "phase 3"), "Scrapped by Brindle's furnace slag (B02), phase 3.")
-	_t.eq("the Mind's hand", DeathCause.line("mind_hand"), "Scrapped by the Mind's hand strike (E18).")
+	_t.eq("a crew's one row", DeathCause.line("chaser"), "Scrapped by a chaser lunge.")
+	_t.eq("an article before a vowel", DeathCause.line("anchor_crew"), "Scrapped by an anchor crew winch.")
+	_t.eq("a boss row with its phase", DeathCause.line("brindle_charge", "", "phase 2"), "Scrapped by Brindle's scuttle charge, phase 2.")
+	_t.eq("Brindle's slag", DeathCause.line("brindle_slag", "", "phase 3"), "Scrapped by Brindle's furnace slag, phase 3.")
+	_t.eq("the Mind's hand", DeathCause.line("mind_hand"), "Scrapped by the Mind's hand strike.")
 	_t.eq("a boss family with no row", DeathCause.line("waking_slam", "", "phase 1"), "Scrapped by the Waking's slam, phase 1.")
-	_t.eq("a rogue's landed attack under its name", DeathCause.line("rogue_crane", "E35"), "Scrapped by Gate Crane No. 14's leaf drop (E35).")
+	_t.eq("a rogue's landed attack under its name", DeathCause.line("rogue_crane", "E35"), "Scrapped by Gate Crane No. 14's leaf drop.")
 	_t.eq("a rogue with no attack named", DeathCause.line("rogue_crane"), "Scrapped by Gate Crane No. 14.")
-	_t.eq("the miniboss names the attack that landed", DeathCause.line("miniboss", "E04"), "Scrapped by a miniboss charge (E04).")
+	_t.eq("the miniboss names the attack that landed", DeathCause.line("miniboss", "E04"), "Scrapped by a miniboss charge.")
 	_t.eq("two rows and no attack name none", DeathCause.line("miniboss"), "Scrapped by a miniboss.")
-	_t.eq("an attack from another body is ignored", DeathCause.line("chaser", "E35"), "Scrapped by a chaser lunge (E01).")
+	_t.eq("an attack from another body is ignored", DeathCause.line("chaser", "E35"), "Scrapped by a chaser lunge.")
 	_t.eq("the Warden", DeathCause.line("warden"), "Scrapped by the Warden.")
 	_t.eq("the Warden's counter", DeathCause.line("warden_counter"), "Scrapped by the Warden's counter-pulse.")
 	_t.eq("a hazard", DeathCause.line("silt_boil"), "Scrapped by a silt boil.")
-	_t.eq("a phase only follows a boss's own hit", DeathCause.line("chaser", "", "phase 2"), "Scrapped by a chaser lunge (E01).")
+	_t.eq("a phase only follows a boss's own hit", DeathCause.line("chaser", "", "phase 2"), "Scrapped by a chaser lunge.")
 	_t.eq("no source, no line", DeathCause.line(""), "")
 	_t.eq("a body whose row is not every hit reads by name", DeathCause.line("plated_brute"), "Scrapped by a plated brute.")
 	var brindle := preload("res://src/boss/boss.gd").new()
@@ -79,7 +79,7 @@ func _game_path() -> void:
 	_t.eq("combat files the landed attack", String(_game.combat.last_player_hit.get("attack", "")), "E35")
 	await _frames(2)
 	var screens = _game.screens
-	var line := "Scrapped by Gate Crane No. 14's leaf drop (E35)."
+	var line := "Scrapped by Gate Crane No. 14's leaf drop."
 	_t.eq("the run is over", _game.flow.state_name(), "summary")
 	_t.eq("flow keeps the line", _game.flow.death_cause, line)
 	_t.eq("RUN OVER", screens._title.text, "RUN OVER")

@@ -58,7 +58,7 @@ func setup(context) -> void:
 	for i in AmbientKinds.MAX_VOICES:
 		var voice := AudioStreamPlayer3D.new()
 		voice.name = "Voice%d" % i
-		voice.bus = "SFX" if AudioServer.get_bus_index("SFX") != -1 else "Master"
+		voice.bus = "Ambient" if AudioServer.get_bus_index("Ambient") != -1 else ("SFX" if AudioServer.get_bus_index("SFX") != -1 else "Master")
 		voice.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
 		voice.unit_size = 2.0
 		voice.max_distance = AmbientKinds.FALLOFF_M

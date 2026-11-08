@@ -8,12 +8,12 @@ A greasy junkyard adventure in a steam-cyberpunk universe. Pilots drive electrom
 
 - [AGENTS.md](AGENTS.md): project instructions for every agent session.
 - [Project desk](docs/project/README.md): the map of current and historical records.
-- [Alpha board](project-guide/coord/GRAPH.md) and [rulings](project-guide/handoff/DECISIONS.md): live coordination for waves 17 to 21.
+- [Roadmap](project-guide/handoff/ROADMAP.md), [wave state](project-guide/handoff/STATE.md) and [rulings](project-guide/handoff/DECISIONS.md): live coordination for the alpha.
 - [Art & Game Bible](BIBLE.md): approved product and visual reference.
 - [Engineering ADRs](adr/README.md): accepted production architecture.
 - [Backlog](BACKLOG.md), [Orchestrator](ORCHESTRATOR.md) and [Tracking](TRACKING.md): task definitions, operating rules and the heavy-lane board.
 
-The game is a Godot sketch with typed GDScript at `sketches/core-loop`: three worlds of two stages each. Andrew plays once, at the end of wave 21.
+The game is a Godot sketch with typed GDScript at `sketches/core-loop`: three worlds of two stages each. Andrew plays a world 1 sitting first, then one full-alpha sitting.
 
 ## Preserved browser proofs
 

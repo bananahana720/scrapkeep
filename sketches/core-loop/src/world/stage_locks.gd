@@ -368,7 +368,7 @@ func _land_wave() -> void:
 	var radius := float(lock_row().get("radius_m", 26.0))
 	var facing := _facing + WAVE_TURN * _wave
 	var seq := LOCK_SEQ + int(ctx.run.stage)
-	if ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+	if not ctx.can_spawn():
 		return
 	for i in kinds.size():
 		var a := facing + (float(i) - (kinds.size() - 1) * 0.5) * CREW_SPREAD / maxf(1.0, kinds.size() - 1) * 2.0

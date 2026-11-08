@@ -1594,7 +1594,7 @@ static func draw_marks(graph, seed_value: int, pool: Array = []) -> Array:
 
 func _watch_ambush(s: Site, ball: Vector3) -> void:
 	if not s.started:
-		if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+		if ctx.calm or not ctx.can_spawn():
 			return
 		if _planar(ball, s.global_position) > float(s.rule["ring"]) or absf(ball.y - s.global_position.y) > RING_HEIGHT:
 			return
@@ -1683,7 +1683,7 @@ func _watch_relay(s: Site, delta: float, ball: Vector3) -> void:
 		s.relay_cooldown -= delta
 		if s.relay_cooldown > 0.0:
 			return
-		if ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+		if not ctx.can_spawn():
 			return
 		if _planar(ball, s.global_position) > float(s.rule["ring"]) or absf(ball.y - s.global_position.y) > HoldRelay.REACH_UP:
 			return

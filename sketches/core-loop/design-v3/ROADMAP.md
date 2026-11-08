@@ -1,6 +1,6 @@
 # Roadmap to the exported alpha: historical milestone definitions
 
-> **Historical (3 Oct).** The live roadmap is [project-guide/coord/ROADMAP.md](../../../project-guide/coord/ROADMAP.md); rulings are in [project-guide/handoff/DECISIONS.md](../../../project-guide/handoff/DECISIONS.md).
+> **Historical (3 Oct).** The live roadmap is [project-guide/handoff/ROADMAP.md](../../../project-guide/handoff/ROADMAP.md); rulings are in [project-guide/handoff/DECISIONS.md](../../../project-guide/handoff/DECISIONS.md).
 
 Written 3 October 2026 from the approved refinement of [ALPHA-PLAN](ALPHA-PLAN.md), the [owner interview](OWNER-INTERVIEW-2026-10-02.md), [LEGIBILITY](LEGIBILITY.md) and playtest entry 11. The former world-one limit and alternative-loop queue below are preserved as historical direction, not assignments.
 

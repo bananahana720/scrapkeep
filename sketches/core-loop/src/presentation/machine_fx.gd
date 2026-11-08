@@ -177,18 +177,13 @@ func setup(ctx_ref) -> void:
 	view.material_override = mat
 	root.add_child(view)
 	var events = ctx.events
-	_listen(events, "enemy_spawned", _on_spawned)
-	_listen(events, "enemy_struck", _on_struck)
-	_listen(events, "posture_changed", _on_posture)
-	_listen(events, "boss_phase_changed", _on_boss_phase)
-	_listen(events, "boss_defeated", _on_boss_defeated)
-	_listen(events, "stage_entered", func(_stage: int, _retry: bool): clear())
-	_listen(events, "stage_content_cleared", func(_reason: String): clear())
-
-
-static func _listen(events: Object, signal_name: String, callable: Callable) -> void:
-	if events.has_signal(signal_name) and not events.is_connected(signal_name, callable):
-		events.connect(signal_name, callable)
+	SignalWire.listen(events, "enemy_spawned", _on_spawned)
+	SignalWire.listen(events, "enemy_struck", _on_struck)
+	SignalWire.listen(events, "posture_changed", _on_posture)
+	SignalWire.listen(events, "boss_phase_changed", _on_boss_phase)
+	SignalWire.listen(events, "boss_defeated", _on_boss_defeated)
+	SignalWire.listen(events, "stage_entered", func(_stage: int, _retry: bool): clear())
+	SignalWire.listen(events, "stage_content_cleared", func(_reason: String): clear())
 
 
 static func family_of(faction: String) -> String:

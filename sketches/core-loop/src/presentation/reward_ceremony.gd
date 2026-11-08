@@ -415,7 +415,7 @@ func calm() -> bool:
 	var state: String = ctx.flow.state_name()
 	if not (ctx.flow.in_play() or state == "victory") or state == "launch":
 		return false
-	if get_tree().paused or (game != null and game.get_meta("menu_held", false)) or ctx.player.frozen():
+	if get_tree().paused or (game != null and game.menu_held()) or ctx.player.frozen():
 		return false
 	var st = ctx.player.state
 	if not st.grounded and absf(st.velocity.y) > float(row["fall_speed"]):
@@ -587,7 +587,7 @@ func _hold(on: bool) -> void:
 		_held_state_velocity = ctx.player.state.velocity
 		get_tree().paused = true
 		if game != null:
-			game.set_meta("menu_held", true)
+			game.set_menu_held(true)
 			if game.get("keyboard") != null:
 				game.keyboard.enabled = false
 		return
@@ -595,7 +595,7 @@ func _hold(on: bool) -> void:
 		return
 	_holding = false
 	if game != null:
-		game.set_meta("menu_held", false)
+		game.set_menu_held(false)
 		get_tree().paused = game.pause_toggled() or game.notes_held() if game.has_method("pause_toggled") else false
 		if game.get("keyboard") != null:
 			game.keyboard.enabled = ctx.flow.in_play()

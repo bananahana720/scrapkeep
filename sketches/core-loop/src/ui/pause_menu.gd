@@ -204,7 +204,7 @@ func can_open() -> bool:
 
 # menu_held, unless only the start card's tier choice holds it (workshop.gd card_holds_only).
 func _screen_holds() -> bool:
-	if not game.get_meta("menu_held", false):
+	if not game.menu_held():
 		return false
 	var workshop = game.get_node_or_null("Workshop")
 	return workshop == null or not workshop.has_method("card_holds_only") or not workshop.card_holds_only()
@@ -216,7 +216,7 @@ func open() -> void:
 	_open = true
 	if not game.pause_toggled():
 		game.toggle_pause()
-	game._capture_mouse(false)
+	game.capture_mouse(false)
 	_sync_levels()
 	_show_build()
 	_show_ceremony()
@@ -245,7 +245,7 @@ func close() -> void:
 		focused.release_focus()
 	_set_live(false)
 	_fade(false)
-	game._capture_mouse(game.flow.in_play() and not game.get_meta("menu_held", false))
+	game.recapture_mouse()
 	_cue(Harmony.ratio(7.0))
 
 

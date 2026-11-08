@@ -457,9 +457,9 @@ func _wire() -> void:
 		_mote_arrive[min(ctx.run.parts.size() - 1, MOTES - 1) if ctx.run != null else 0] = 0.0
 		refresh_might())
 	events.heft_class_changed.connect(_on_heft_up)
-	_listen(events, "heft_class_dropped", func(_c: int, _h: float): refresh_might())
-	_listen(events, "synergy_discovered", func(_id: String, _cat: String, _first: bool): refresh_might.call_deferred())
-	_listen(events, "evolution_fired", _on_evolution)
+	SignalWire.listen(events, "heft_class_dropped", func(_c: int, _h: float): refresh_might())
+	SignalWire.listen(events, "synergy_discovered", func(_id: String, _cat: String, _first: bool): refresh_might.call_deferred())
+	SignalWire.listen(events, "evolution_fired", _on_evolution)
 	events.enemy_struck.connect(_on_struck)
 	events.harpoon_smashed.connect(_on_smashed)
 	events.slammed.connect(_on_slammed)
@@ -467,20 +467,15 @@ func _wire() -> void:
 		if impact >= 24.0:
 			word("landing", _beside_ball()))
 	events.launched.connect(func(_v: Vector3): word("launch", _beside_ball()))
-	_listen(events, "rocket_jumped", func(at: Vector3, _speed: float): word("rocket", at + Vector3.UP * 1.8))
-	_listen(events, "vault_kicked", func(at: Vector3, _speed: float): word("vault", at + Vector3.UP * 1.6))
-	_listen(events, "ultimate_landed", func(_id: String, at: Vector3, hits: int, _dmg: float):
+	SignalWire.listen(events, "rocket_jumped", func(at: Vector3, _speed: float): word("rocket", at + Vector3.UP * 1.8))
+	SignalWire.listen(events, "vault_kicked", func(at: Vector3, _speed: float): word("vault", at + Vector3.UP * 1.6))
+	SignalWire.listen(events, "ultimate_landed", func(_id: String, at: Vector3, hits: int, _dmg: float):
 		if hits > 0:
 			word("ultimate", at + Vector3.UP * 2.0)
 			impact_frame(at, 1.0))
 	events.enemy_killed.connect(_on_killed)
-	_listen(events, "enemy_pinned", _on_pinned)
+	SignalWire.listen(events, "enemy_pinned", _on_pinned)
 	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
-
-
-static func _listen(events: Object, signal_name: String, callable: Callable) -> void:
-	if events.has_signal(signal_name) and not events.is_connected(signal_name, callable):
-		events.connect(signal_name, callable)
 
 
 func _pilot_id() -> String:

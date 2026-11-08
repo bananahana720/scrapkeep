@@ -117,7 +117,7 @@ const CURSE := {"id": "curse", "word": "Cursed Run", "line": "The deal is on the
 
 static func card_line(run, terrain, stage: int) -> String:
 	var lines := []
-	if run != null and run.has_method("cursed") and run.cursed():
+	if run != null and run.cursed():
 		lines.append(caption(CURSE))
 	var own := caption(for_stage(run, terrain, stage))
 	if not own.is_empty():

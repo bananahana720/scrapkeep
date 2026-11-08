@@ -141,7 +141,7 @@ const SEEDS := 20
 const DRAWS := 400
 class ChoiceGame extends "res://src/game.gd":
 	var capture_requests: Array[bool] = []
-	func _capture_mouse(capture: bool) -> void:
+	func capture_mouse(capture: bool) -> void:
 		capture_requests.append(capture)
 	var quits := 0
 	func _quit() -> void:

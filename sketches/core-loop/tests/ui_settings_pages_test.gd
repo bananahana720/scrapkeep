@@ -81,7 +81,7 @@ func _run() -> void:
 	_t.check("S3-1 the title has a Settings button on S", button != null and button.key == "key_s", "button %s" % [button])
 	_game._screen_key(KEY_S)
 	_t.check("S3-1 S opens the page", screens.settings_open() and not screens.help_open(), "open %s" % screens.settings_open())
-	_t.check("S3-1 opening it neither pauses nor captures the mouse", not paused and not _game.pause_toggled() and not _game._mouse_captured(), "paused %s" % paused)
+	_t.check("S3-1 opening it neither pauses nor captures the mouse", not paused and not _game.pause_toggled() and not _game.mouse_captured(), "paused %s" % paused)
 	await _settle(0.5)
 	var title_words: int = WordBudget.count(screens)["hud"]
 	_t.check("S3-1 the page reads within %d words" % PAGE_BUDGET, title_words > 0 and title_words <= PAGE_BUDGET, "%d words" % title_words)

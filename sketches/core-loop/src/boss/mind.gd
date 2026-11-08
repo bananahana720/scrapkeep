@@ -434,7 +434,7 @@ func _free_hazards(attack: Dictionary) -> void:
 # From HAND_PHASE on, one hand per attack off the ball's side while fewer than HAND_CAP live.
 func _send_hand() -> void:
 	hands = hands.filter(func(hand): return is_instance_valid(hand) and not hand.is_dead())
-	if phase < HAND_PHASE or hands.size() >= _hand_cap() or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+	if phase < HAND_PHASE or hands.size() >= _hand_cap() or not ctx.can_spawn():
 		return
 	var center := pad.global_position if is_instance_valid(pad) else warden.global_position
 	var ball: Vector3 = ctx.player.ball_position()

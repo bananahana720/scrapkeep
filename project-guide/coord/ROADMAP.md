@@ -1,4 +1,6 @@
-# Roadmap, waves 18 to 21
+# Roadmap, waves 18 to 21 (history)
+
+> **Historical (20-24 Oct).** The live roadmap is [project-guide/handoff/ROADMAP.md](../handoff/ROADMAP.md). The fuel line below (weekly limit pacing) and the wave table describe waves 18 to 21 only.
 
 Written 20 Oct 2026 after the [baseline](BASELINE-2026-10-20.md), refreshed 22 Oct. It is linked from [GRAPH.md](GRAPH.md), which stays the live board. The goal and acceptance are in [DECISIONS.md](../handoff/DECISIONS.md) section 1. Andrew plays once at the end of wave 21. The sitting passes with 11 areas marked and none "Not yet", no open blocker, frame times in budget and zero placeholders.
 
