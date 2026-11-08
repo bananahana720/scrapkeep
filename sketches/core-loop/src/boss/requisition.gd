@@ -235,14 +235,29 @@ func set_readout(text: String, color: Color, anchor: Node3D = null, lift := PLAT
 
 # Loads the fortress GLB over the primitives. Any missing part drops the model, so a broken
 # or older GLB leaves the primitive fortress exactly as it was.
+# The dressing below casts parts without checking: every MODEL_PARTS node must exist, the
+# Armour and Cap parts the material arrays reach must be meshes, and CableSpans a Node3D. A
+# model that misses any keeps the primitive body instead of crashing on the boss-entry frame.
+static func model_fits(loaded: Node, plates: int, caps: int) -> bool:
+	for part in MODEL_PARTS:
+		if loaded.find_child(part, true, false) == null:
+			return false
+	if not (loaded.find_child("CableSpans", true, false) is Node3D):
+		return false
+	for pair in [["Armour", plates], ["Cap", caps]]:
+		for i in int(pair[1]):
+			if not (loaded.find_child("%s%d" % [pair[0], i], true, false) is MeshInstance3D):
+				return false
+	return true
+
+
 func _dress() -> void:
 	var loaded := _take_ahead(model_path)
 	if loaded == null:
 		return
-	for part in MODEL_PARTS:
-		if loaded.find_child(part, true, false) == null:
-			loaded.free()
-			return
+	if not model_fits(loaded, _plate_mats.size(), _cap_mats.size()):
+		loaded.free()
+		return
 	model = loaded
 	model.name = "BrindleModel"
 	add_child(model)

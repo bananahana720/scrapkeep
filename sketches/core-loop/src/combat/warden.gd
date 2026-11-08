@@ -616,6 +616,9 @@ func _nearest_hardpoint(offset: Vector3) -> int:
 	return best
 
 
+var _mount_home := Vector3.INF
+
+
 # The mounting moves the body from home; the pulse rings committed this charge go with it.
 func _step_mounting(delta: float) -> void:
 	if mount_driver == null or delta <= 0.0:
@@ -629,7 +632,12 @@ func _step_mounting(delta: float) -> void:
 	var before := global_position
 	global_position = home + offset
 	var shift := global_position - before
-	mount_velocity = shift / delta
+	# The first tick of a mounting, or one after home moved, jumps the body from wherever it stood
+	# to the mount: that jump is a placement, not motion, and read as velocity it would fling a
+	# ball latched on the anchor line (augments.gd _ride) by offset x 90 m/s.
+	var placed := _mount_home != home or _mount_clock <= delta
+	_mount_home = home
+	mount_velocity = Vector3.ZERO if placed else shift / delta
 	var flat := Vector3(shift.x, 0.0, shift.z)
 	if flat.length_squared() > 0.0:
 		_carry_ring(telegraph(), flat)

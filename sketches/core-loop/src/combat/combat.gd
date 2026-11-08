@@ -588,10 +588,11 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 	if kind == "dispatcher" and perch.is_finite():
 		enemy_spec["perch"] = perch
 	if kind not in ["warden", "vault"]:
-		var director = ctx.root.get_node("World").director
-		health_scale = director.hp_scale()
-		enemy_spec["rest_scale"] = director.rest_scale()
-		if director.run_tier() >= 1:
+		var director = _director()
+		if director != null:
+			health_scale = director.hp_scale()
+			enemy_spec["rest_scale"] = director.rest_scale()
+		if director != null and director.run_tier() >= 1:
 			enemy_spec["stage_threat"] = _threat()
 			if kind == "plated_brute" and director.run_tier() >= RunTier.HARD and not EliteAffixes.row(affix_id).is_empty():
 				enemy_spec.merge(RunTier.row(director.run_tier()).elite_stats, true)
@@ -1694,7 +1695,7 @@ func _bat(shell: Node3D) -> bool:
 
 
 func _rate(weapon: String) -> float:
-	var rate: float = minf(_patterns[weapon].rate * ctx.tuning.mod("weapon_rate"), Pattern.MAX_RATE)
+	var rate: float = clampf(_patterns[weapon].rate * ctx.tuning.mod("weapon_rate"), Pattern.MIN_RATE, Pattern.MAX_RATE)
 	if _overdrive > 0.0:
 		rate *= Weapons.OVERDRIVE_RATE
 	return rate
@@ -4048,6 +4049,25 @@ static func _pinnable(enemy) -> bool:
 
 # --- Enemy attacks ------------------------------------------------------------------
 
+# The stage director, which world.gd names "World" under the root. A harness or a scene
+# variant without it reads neutral scales, as build.gd _rib_mult and attack_budget.gd do.
+func _director():
+	var world = ctx.root.get_node_or_null("World") if ctx.root != null else null
+	var director = world.get("director") if world != null else null
+	if director == null:
+		_warn_no_director()
+	return director
+
+
+var _director_warned := false
+
+
+func _warn_no_director() -> void:
+	if not _director_warned:
+		_director_warned = true
+		push_warning("combat: no World director; enemy and hit scales read neutral")
+
+
 # An enemy's committed attack reached the ball. The run takes the damage; the shove is
 # the hit's weight (a hit taken is the player's performance, principle 1).
 func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
@@ -4056,7 +4076,9 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	if not ctx.flow.in_play():
 		return
 	if source not in ["warden", "warden_counter", "vault"]:
-		amount *= ctx.root.get_node("World").director.damage_scale()
+		var director = _director()
+		if director != null:
+			amount *= director.damage_scale()
 		# The Mind's hand is a boss part: it takes the mind.* dials in mind_hand.gd, not the mobs dial.
 		if source != "mind_hand":
 			amount *= ChallengeDials.stage_mult("mobs.damage", ctx.run.stage)

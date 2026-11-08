@@ -134,7 +134,15 @@ class Recorder:
 			points.append(at)
 
 
+const CLASS_TAG := "camp_trial"
+
+
 static func attach(hub_ref) -> void:
+	# A missing GLB leaves the feature out, as camp_hub._place does for the piece itself.
+	for stem in [TRACK, ARCH]:
+		if hub_ref.piece(stem) == null:
+			push_warning("%s: camp piece %s is missing; left out" % [CLASS_TAG, stem])
+			return
 	var trial := new()
 	trial.name = "CampTrial"
 	hub_ref.root.add_child(trial)

@@ -1,6 +1,7 @@
 extends SceneTree
 
 const RunState := preload("res://src/core/run_state.gd")
+const Companion := preload("res://src/core/companion.gd")
 
 # The entrance document (RS1): a pure, versioned Dictionary that round-trips through JSON.
 
@@ -37,14 +38,19 @@ func _populated() -> RunState:
 	r.tree_allowed = 3
 	r.retries_spent = {1: 2, 2: 1}
 	r.cogs = 14
-	r.companion = {"slots": ["x", "y"], "level": 2.5}
+	r.companion = _companion_doc()
 	r.snapshot(Vector3(1.5, -2.25, 3.125), Vector3(0.1, 0.2, -30.5), 1.75)
 	return r
 
 
+func _companion_doc() -> Dictionary:
+	var piece: String = Companion.PIECES[0]["id"]
+	return {"chassis": Companion.CHASSIS, "owned": [piece], "sockets": [piece], "escape_ready": true, "escape_spent": false}
+
+
 func _initialize() -> void:
-	# (a) JSON round trip. Companion is opaque here: its numbers return as floats, so the
-	# fixture uses a fractional one; the companion unit coerces its own fields.
+	# (a) JSON round trip. The companion is a real one: a restore sanitizes it (Companion.sanitize),
+	# so a made-up shape would come back empty.
 	var a := _populated()
 	var doc_a := a.to_entrance_doc()
 	_check(RunState.validate_entrance_doc(doc_a) == "", "fresh doc validates: " + RunState.validate_entrance_doc(doc_a))
@@ -59,7 +65,7 @@ func _initialize() -> void:
 	_check(typeof(b.retries_spent.keys()[0]) == TYPE_INT and b.retries_spent == {1: 2, 2: 1}, "retries_spent int keys and values")
 	_check(b.snapshot_value("entry_position") == Vector3(1.5, -2.25, 3.125), "entry position exact")
 	_check(b.snapshot_value("entry_velocity") == Vector3(0.1, 0.2, -30.5), "entry velocity exact")
-	_check(b.class_id() == "rivet" and b.cogs == 14 and b.companion == {"slots": ["x", "y"], "level": 2.5}, "class, cogs, companion")
+	_check(b.class_id() == "rivet" and b.cogs == 14 and b.companion == _companion_doc(), "class, cogs, companion")
 	_check(b.tree_picks == (["a1", "b2"] as Array[String]) and b.tree_allowed == 3, "tree picks")
 
 	# (b) a wrong-typed field is rejected and nothing changes.
