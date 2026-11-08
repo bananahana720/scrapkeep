@@ -4,7 +4,19 @@ Andrew, 8 Nov 2026: after every promotion to main, sweep the newly promoted code
 
 The sweep changes structure, never behaviour. No gameplay, tuning, timing, signal-order, RNG-draw-order or save-format change rides on it, and the bands must not move.
 
-## Steps
+## The Gate lane's promotion step
+
+The Gate lane runs this as the last step of every scripted promotion, right after the stage PR merges to main and before it cuts the next stage (coordinator, 8 Nov: a promotion step, no clock routine):
+
+```bash
+git fetch origin main && git checkout --detach origin/main
+node scripts/deep-sweep.mjs --out artifacts/local/deep-sweep-w<N>.md
+cp artifacts/local/deep-sweep-w<N>.md /mnt/project-files/gate/deep-sweep-w<N>.md
+```
+
+Then it posts the report's header and counts on the new wave's board issue with a link to the shared copy, and tells the coordinator, who opens one sweep thread per promotion that has leads. A report with zero leads closes the step. The step never holds a promotion or the next stage cut.
+
+## Steps for the sweep thread
 
 1. On the promoted main, run `node scripts/deep-sweep.mjs --out artifacts/local/deep-sweep-w<N>.md`. With no `--base` it compares the promotion merge against main before it. It lists leads, not defects:
    - D1 a new public function whose whole body forwards its own parameters to one other call;
