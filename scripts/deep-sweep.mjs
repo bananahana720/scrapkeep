@@ -13,6 +13,8 @@ const WIDE_BOOLS = 3;
 const GIANT_LINES = 1500;
 const GIANT_GROWTH = 100;
 const LEAK_FILES = 3;
+// Schema modules that own their keys: a key they spell is named, not leaked (event kinds are the bus contract).
+const KEY_OWNERS = [`${SRC}core/event_kinds.gd`];
 
 const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
 
@@ -146,7 +148,9 @@ export function sweep({ base, head, read, diff, listSrc, linesAt }) {
     const before = linesAt(base, file);
     if (now >= GIANT_LINES && now - before >= GIANT_GROWTH) add("D5", file, { line: 1, message: `${before} -> ${now} lines; look for a module to split out` });
   }
+  const owned = KEY_OWNERS.map((f) => read(f));
   for (const [key, origins] of leaks) {
+    if (owned.some((text) => text.includes(`"${key}"`))) continue;
     const users = allSrc.filter((f) => read(f).includes(`"${key}"`));
     if (users.length >= LEAK_FILES) add("D4", [...origins][0], { line: 0, message: `"${key}" is spelled in ${users.length} src files: ${users.map((u) => u.slice(SRC.length)).slice(0, 6).join(", ")}${users.length > 6 ? ", ..." : ""}` });
   }
