@@ -880,7 +880,7 @@ func _place_beacon() -> void:
 
 
 func _spawn_warden() -> Node3D:
-	if ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+	if not ctx.can_spawn():
 		return null
 	var spawned = ctx.spawner.spawn_enemy("warden", ctx.terrain.beacon_point(ctx.run.stage))
 	return spawned if spawned is Node3D else null

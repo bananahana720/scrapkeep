@@ -77,6 +77,12 @@ func aim_forward() -> Vector3:
 	return camera.aim_forward()
 
 
+# True when combat is present: the spawner exists and can spawn_enemy. Test stand-ins
+# for the spawner only need that method.
+func can_spawn() -> bool:
+	return spawner != null and spawner.has_method("spawn_enemy")
+
+
 # A short freeze on a big player-caused hit, for weight. The spine caps it at 60 ms
 # and never stacks two, so juice can never become an obstruction.
 func hit_stop(seconds: float) -> void:

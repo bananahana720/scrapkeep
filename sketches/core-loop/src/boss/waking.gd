@@ -740,7 +740,7 @@ func _crew_alive() -> int:
 
 # One wave for an opening: min(CREW_WAVE, CREW_CAP - alive) fitters, none past the phase's wave count.
 func _call_crew(id: String) -> void:
-	if not weak.active() or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+	if not weak.active() or not ctx.can_spawn():
 		return
 	if phase != _crew_phase:
 		_crew_phase = phase

@@ -519,7 +519,7 @@ func _spawn_miniboss(at: Vector2) -> void:
 	var x := clampf(at.x, rect.position.x, rect.end.x)
 	var z := clampf(at.y, rect.position.y, rect.end.y)
 	last_miniboss_at = terrain.drop_point(x, z, 2.4)
-	if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+	if ctx.calm or not ctx.can_spawn():
 		return
 	var enemy = ctx.spawner.spawn_enemy(MINIBOSS_KIND, last_miniboss_at)
 	if enemy == null:
@@ -533,7 +533,7 @@ func _watch_rogue(ball: Vector3) -> void:
 		return
 	var plan: Dictionary = rogue_plan
 	rogue_plan = {}
-	if ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+	if ctx.calm or not ctx.can_spawn():
 		return
 	var rect: Rect2 = terrain.map().play_rect
 	var x := clampf(float(plan.at.x), rect.position.x, rect.end.x)
@@ -635,7 +635,7 @@ func _discover(fired: Array) -> void:
 # The plated vault off the fall line. Never in calm, and a combat module without the
 # kind (a null return) simply leaves the spot empty.
 func _spawn_vault() -> void:
-	if not ctx.stages.has_vault() or ctx.calm or ctx.spawner == null or not ctx.spawner.has_method("spawn_enemy"):
+	if not ctx.stages.has_vault() or ctx.calm or not ctx.can_spawn():
 		return
 	var at: Vector3 = terrain.vault_point(ctx.flow.stage()) + Vector3.UP * 2.4
 	var node = ctx.spawner.spawn_enemy(VAULT_KIND, at)
