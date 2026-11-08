@@ -151,10 +151,7 @@ func setup(ctx_ref) -> void:
 	# Arena entry and the arena retry restore state without a stage_entered.
 	for signal_name in ["stage_content_cleared", "boss_arena_entered"]:
 		if events.has_signal(signal_name):
-			var argc := 0
-			for info in events.get_signal_list():
-				if info["name"] == signal_name:
-					argc = (info["args"] as Array).size()
+			var argc := SignalWire.arg_count(events, signal_name)
 			events.connect(signal_name, _reset.unbind(argc) if argc > 0 else _reset)
 	events.run_started.connect(func(_class_id: String): _heft_class = 1)
 	if ctx.spawner != null and ctx.spawner.has_method("resolve"):
@@ -169,27 +166,22 @@ func setup(ctx_ref) -> void:
 
 func wire_optional() -> void:
 	var events = ctx.events
-	_listen(events, "beacon_unsealed", _on_unsealed)
-	_listen(events, "heft_class_changed", _on_heft_class)
-	_listen(events, "heft_class_dropped", _on_heft_class)
-	_listen(events, "boss_weak_point_hit", _on_weak_point)
-	_listen(events, "enemy_rebounded", _on_rebounded)
-	_listen(events, "near_miss", _on_near_miss)
-	_listen(events, "scrap_lost", _on_scrap_lost)
-	_listen(events, "sticky_detonated", _on_detonated)
-	_listen(events, "rocket_jumped", _on_rocket_jumped)
-	_listen(events, "part_gained", _on_part)
-	_listen(events, "core_gained", _on_core)
-	_listen(events, "harpoon_bit", _on_harpoon_bit)
+	SignalWire.listen(events, "beacon_unsealed", _on_unsealed)
+	SignalWire.listen(events, "heft_class_changed", _on_heft_class)
+	SignalWire.listen(events, "heft_class_dropped", _on_heft_class)
+	SignalWire.listen(events, "boss_weak_point_hit", _on_weak_point)
+	SignalWire.listen(events, "enemy_rebounded", _on_rebounded)
+	SignalWire.listen(events, "near_miss", _on_near_miss)
+	SignalWire.listen(events, "scrap_lost", _on_scrap_lost)
+	SignalWire.listen(events, "sticky_detonated", _on_detonated)
+	SignalWire.listen(events, "rocket_jumped", _on_rocket_jumped)
+	SignalWire.listen(events, "part_gained", _on_part)
+	SignalWire.listen(events, "core_gained", _on_core)
+	SignalWire.listen(events, "harpoon_bit", _on_harpoon_bit)
 
 
 func _on_harpoon_bit(_enemy: Node3D, _at: Vector3) -> void:
 	request_hit_stop(BITE_STOP_MS / 1000.0, "harpoon_bit")
-
-
-static func _listen(events: Object, signal_name: String, callable: Callable) -> void:
-	if events.has_signal(signal_name) and not events.is_connected(signal_name, callable):
-		events.connect(signal_name, callable)
 
 
 func _reset() -> void:

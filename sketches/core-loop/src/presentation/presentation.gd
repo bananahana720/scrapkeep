@@ -282,7 +282,7 @@ func wire_optional() -> void:
 	for signal_name in ["stage_content_cleared", "player_died", "run_ended"]:
 		if events.has_signal(signal_name) and not _dismiss_wired.has(signal_name):
 			_dismiss_wired[signal_name] = true
-			var argc := _argc(events, signal_name)
+			var argc := SignalWire.arg_count(events, signal_name)
 			events.connect(signal_name, _dismiss_banner.unbind(argc) if argc > 0 else _dismiss_banner)
 	if not events.is_connected("flow_changed", _on_flow_changed):
 		events.connect("flow_changed", _on_flow_changed)
@@ -302,13 +302,6 @@ func _on_flow_changed(state: String) -> void:
 	banner.dismiss(state in BANNER_SCREENS)
 	if not state in BANNER_SCREENS:
 		banner._next()
-
-
-static func _argc(events: Object, signal_name: String) -> int:
-	for info in events.get_signal_list():
-		if info["name"] == signal_name:
-			return (info["args"] as Array).size()
-	return 0
 
 
 # Category colours, icons, the banner script and sizes, for the codex page and HUD.

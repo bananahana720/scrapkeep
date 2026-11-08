@@ -216,29 +216,26 @@ func setup(ctx_ref) -> void:
 
 func wire_optional() -> void:
 	var events = ctx.events
-	_listen(events, "beacon_unsealed", _on_unsealed)
-	_listen(events, "heft_class_changed", _on_heft_class)
-	_listen(events, "world_fact", _on_world_fact_fx)
-	_listen(events, "stage_entered", func(_stage: int, _retry: bool): stop_embers())
-	_listen(events, "stage_content_cleared", func(_reason: String): stop_embers())
-	_listen(events, "heft_class_dropped", _on_heft_class)
-	_listen(events, "scrap_lost", _on_scrap_lost)
-	_listen(events, "strike_deflected", _on_deflected)
-	_listen(events, "core_gained", _on_core)
-	_listen(events, "synergy_discovered", _on_synergy)
-	_listen(events, "cause_armed", _on_cause_armed)
-	_listen(events, "cause_fired", _on_cause_fired)
-	_listen(events, "element_resolved", _on_element)
-	_listen(events, "interact_armed", _on_interact_armed)
-	_listen(events, "interact_fired", _on_interact_fired)
-	_listen(events, "ambush_ended", _on_ambush_ended)
-	_listen(events, "bet_resolved", _on_bet_resolved)
+	SignalWire.listen(events, "beacon_unsealed", _on_unsealed)
+	SignalWire.listen(events, "heft_class_changed", _on_heft_class)
+	SignalWire.listen(events, "world_fact", _on_world_fact_fx)
+	SignalWire.listen(events, "stage_entered", func(_stage: int, _retry: bool): stop_embers())
+	SignalWire.listen(events, "stage_content_cleared", func(_reason: String): stop_embers())
+	SignalWire.listen(events, "heft_class_dropped", _on_heft_class)
+	SignalWire.listen(events, "scrap_lost", _on_scrap_lost)
+	SignalWire.listen(events, "strike_deflected", _on_deflected)
+	SignalWire.listen(events, "core_gained", _on_core)
+	SignalWire.listen(events, "synergy_discovered", _on_synergy)
+	SignalWire.listen(events, "cause_armed", _on_cause_armed)
+	SignalWire.listen(events, "cause_fired", _on_cause_fired)
+	SignalWire.listen(events, "element_resolved", _on_element)
+	SignalWire.listen(events, "interact_armed", _on_interact_armed)
+	SignalWire.listen(events, "interact_fired", _on_interact_fired)
+	SignalWire.listen(events, "ambush_ended", _on_ambush_ended)
+	SignalWire.listen(events, "bet_resolved", _on_bet_resolved)
 	if events.has_signal("interaction_found") and not _found_wired:
 		_found_wired = true
-		var argc := 0
-		for info in events.get_signal_list():
-			if info["name"] == "interaction_found":
-				argc = (info["args"] as Array).size()
+		var argc := SignalWire.arg_count(events, "interaction_found")
 		events.connect("interaction_found", _on_found.unbind(argc) if argc > 0 else _on_found)
 
 
@@ -260,11 +257,6 @@ func _on_ambush_ended(_id: String, won: bool, at: Vector3) -> void:
 
 func _on_bet_resolved(_id: String, won: bool, _stake: int, at: Vector3) -> void:
 	glyph("bet_resolved", at + Vector3.UP * 5.0, 0.6, 2.6 if won else 1.0, 0.5, Vector3.ZERO, "star" if won else "cross", Palette.ARC if won else Palette.RUST)
-
-
-static func _listen(events: Object, signal_name: String, callable: Callable) -> void:
-	if events.has_signal(signal_name) and not events.is_connected(signal_name, callable):
-		events.connect(signal_name, callable)
 
 
 # --- Demo-spec facts ----------------------------------------------------------------------

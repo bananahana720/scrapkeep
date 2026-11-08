@@ -534,7 +534,7 @@ func _connect_toasts(events) -> void:
 	for kind in toast_kinds():
 		if kind in ["boss_phase_changed", "event_ended"]:
 			continue
-		var argc: int = _arg_count(events, kind)
+		var argc: int = SignalWire.arg_count(events, kind)
 		if FIELD_ARGS.has(kind):
 			events.connect(kind, _drop_args(_on_field_fact.bind(kind), argc - 1))
 		else:
@@ -543,13 +543,6 @@ func _connect_toasts(events) -> void:
 
 static func _drop_args(callable: Callable, count: int) -> Callable:
 	return callable.unbind(count) if count > 0 else callable
-
-
-static func _arg_count(events, kind: String) -> int:
-	for info in events.get_signal_list():
-		if info["name"] == kind:
-			return (info["args"] as Array).size()
-	return 0
 
 
 func _on_field_fact(value, kind: String) -> void:

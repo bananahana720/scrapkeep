@@ -1881,10 +1881,7 @@ static func _listen(events: Object, signal_name: String, callable: Callable, loo
 		return false
 	var target := callable
 	if loose:
-		var argc := 0
-		for info in events.get_signal_list():
-			if info["name"] == signal_name:
-				argc = (info["args"] as Array).size()
+		var argc := SignalWire.arg_count(events, signal_name)
 		if argc > 0:
 			target = callable.unbind(argc)
 	# Signal identity also recognises the same lambda through an unbind wrapper.
@@ -2921,10 +2918,7 @@ func _tend_champions() -> void:
 
 
 static func _argc(events: Object, signal_name: String) -> int:
-	for info in events.get_signal_list():
-		if info["name"] == signal_name:
-			return (info["args"] as Array).size()
-	return -1
+	return SignalWire.arg_count(events, signal_name) if events.has_signal(signal_name) else -1
 
 
 func _on_boss_defeated() -> void:
