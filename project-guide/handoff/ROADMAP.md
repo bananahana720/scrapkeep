@@ -40,7 +40,7 @@ The rest of the 28 Oct gap list is closed: the dunk tip, the held radio and acti
 
 ### Andrew plays
 
-He launches the plain menu entry, plays world 1 as often as he likes and marks the world 1 areas on the [Sitting Kit](https://claude.ai/artifact/HxmWTSrJf1vifhjXXPW1qT). The sheet tells him what to try. A capture is void if he plays during it.
+He plays the wave 32 build once it passes its full gate and is promoted (ruling bm), launched from the plain menu entry. He plays world 1 as often as he likes and marks the world 1 areas on the [Sitting Kit](https://claude.ai/artifact/HxmWTSrJf1vifhjXXPW1qT). The sheet tells him what to try. A capture is void if he plays during it.
 
 ### Re-read after the sitting (already ruled to wait)
 
@@ -60,7 +60,7 @@ Starts when world 1's verdicts are in and his fixes are routed.
    - Dig (pit, sinkhole, the Waking) and Highdraft (islands, crown, the Mind): three-phase Waking and Mind fights with their anthem phases (+10 and +20 BPM covers), two-phase mini-bosses, rosters re-read against "unique per world, harder remixes".
    - Staged story beats outside world 1 (world 1 has the cold open, Rivet, the reveal and the clear card; the other worlds had none on 23 Oct).
    - Soft-toy polish and dressing to the dam's bar; refsheets before any new body.
-   - Item rungs per world: world 2 adds cobalt drops to its pools; Brindle's cobalt pick returns.
+   - Item rungs: cobalt is the top ordinary rung in every world for the alpha (ruling bn); Brindle's cobalt pick returns.
    - Perf parked from world 1: sinkhole Dispatcher 265-277 ms, EventFamilies.build 69 ms at stage 5, Dig pit beacon bursts, Jolt shape builds.
    - Difficulty bands in all six stages and the HARD replay ladder across worlds (not a cut candidate, 21 Oct).
 4. **Full-alpha sitting.** Title to the Mind's end through all six stages, the camp, pilot paint and 18 cosmetics, all six systems, the AppImage from the app menu. Accepted on 11 areas with no "Not yet", no blocker, frames in budget, zero placeholders.
@@ -70,7 +70,7 @@ The 11 areas: core feel; Wardens and bosses; in-run growth; progression across r
 ## Phase 3: after the alpha (parked until the full sitting)
 
 - Story, lore, characters, boss and system tweaks from his sitting notes.
-- Item rungs above cobalt (pearl prototypes, gold relics), brass boss trophies, hotwire kits, the Mind's offerings (purple), Work Orders as a camp menu.
+- Item rungs above cobalt (pearl prototypes, gold relics; ruling bn), brass boss trophies, hotwire kits, the Mind's offerings (purple), Work Orders as a camp menu.
 - New game plus as world mutations; challenges; monster origins, park societies, pilot personality; richer world transitions; alternate worlds or paths.
 - A fourth world, or a twist where the Mind you beat is not the real foreman (a seed, not a ruling).
 - Toward a beta or a low-cost public release, ordered by what to add.
