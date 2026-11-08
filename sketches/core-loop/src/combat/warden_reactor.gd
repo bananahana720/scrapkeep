@@ -140,15 +140,26 @@ func sheet_live() -> bool:
 
 # --- The hook ------------------------------------------------------------------------------
 
+static func _is_dam(warden) -> bool:
+	return warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face"
+
+
+static func _is_flume(warden) -> bool:
+	return warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "flume"
+
+
+# Lazily replaces the Warden's generic posture with the mounted one, carrying the script variables over.
+static func _swap_posture(warden, mounted) -> void:
+	for property in warden._posture.get_property_list():
+		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			mounted.set(property.name, warden._posture.get(property.name))
+	mounted.mounted_warden = weakref(warden)
+	warden._posture = mounted
+
 func step(warden, delta: float) -> void:
-	if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face":
+	if _is_dam(warden):
 		if not warden._posture is DamPosture:
-			var mounted := DamPosture.new(warden.spec.get("posture", {}))
-			for property in warden._posture.get_property_list():
-				if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
-					mounted.set(property.name, warden._posture.get(property.name))
-			mounted.mounted_warden = weakref(warden)
-			warden._posture = mounted
+			_swap_posture(warden, DamPosture.new(warden.spec.get("posture", {})))
 		var engaged: bool = warden.fleet != null and warden.fleet.ctx.flow.engaged() \
 				and warden._in_play() and warden.hp > 0.0
 		warden._posture.contact_drain_delay = delta if engaged else 0.0
@@ -159,14 +170,9 @@ func step(warden, delta: float) -> void:
 					core.radius = warden.FAMILY_POINT_RADIUS
 					child.shape = core
 				child.global_position = warden.family_point_at()
-	if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "flume":
+	if _is_flume(warden):
 		if not warden._posture is FlumePosture:
-			var flume := FlumePosture.new(warden.spec.get("posture", {}))
-			for property in warden._posture.get_property_list():
-				if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
-					flume.set(property.name, warden._posture.get(property.name))
-			flume.mounted_warden = weakref(warden)
-			warden._posture = flume
+			_swap_posture(warden, FlumePosture.new(warden.spec.get("posture", {})))
 		var held: bool = warden.fleet != null and warden.fleet.ctx.flow.engaged() \
 				and warden._in_play() and warden.hp > 0.0 and _line_on(warden)
 		warden._posture.line_held = held
@@ -234,7 +240,7 @@ func sheet_heft(warden, heft: float) -> float:
 
 
 func on_charge(warden, seconds: float) -> void:
-	if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face":
+	if _is_dam(warden):
 		warden._charge_time = maxf(0.0, warden._pulse_clock - (warden.pulse_cycle(warden.stage) - seconds))
 	if sheet_live():
 		sheet_left = 0.0
@@ -309,7 +315,7 @@ func in_sheet(warden, point: Vector3) -> bool:
 func _profile(warden, point: Vector3, along: float) -> float:
 	var ground: float = warden.terrain.height(point.x, point.z) + Tuning.RADIUS if warden.terrain != null else point.y
 	var core: float = warden.family_point_at().y
-	var top := 0.0 if warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face" else SHEET_TOP
+	var top := 0.0 if _is_dam(warden) else SHEET_TOP
 	var t := clampf((along - top) / (SHEET_RUN - top), 0.0, 1.0)
 	return ground + maxf(0.0, core - ground) * (1.0 - t) * (1.0 - t)
 
@@ -324,7 +330,7 @@ func _ride(warden, delta: float) -> void:
 	var planar := Vector3(v.x, 0.0, v.z)
 	var closing := -planar.dot(sheet_dir)
 	var core: float = warden.family_point_at().y
-	var mounted: bool = warden.spec.get("park_landmark", false) and warden.family == "reactor" and warden.mounting == "dam_face"
+	var mounted: bool = _is_dam(warden)
 	if mounted and in_sheet(warden, ball) and closing >= RIDE_MIN_SPEED and ball.y < core:
 		entered_sheet_cycle = gates_opened
 	if mounted:
