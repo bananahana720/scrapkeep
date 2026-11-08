@@ -1013,9 +1013,9 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	lanes.reset()
 	_offered = {}
 	# A retry replays the same procs and panel drops: the seeds name the run and stage only.
-	loot_rng.seed = hash([LOOT_SEED, ctx.run.run_seed, stage, "loot"])
+	loot_rng.seed = hash([LOOT_SEED, ctx.flow.run_key(), stage, "loot"])
 	panel_rng.seed = hash([ctx.run.run_seed, stage, "panels"])
-	scrap_rng.seed = hash([ctx.run.run_seed, stage, "scrap"])
+	scrap_rng.seed = hash([ctx.flow.run_key(), stage, "scrap"])
 	scrap.clear_caches()
 	_caches_pending = true
 	_caches_wait = 0
@@ -1248,7 +1248,7 @@ func _on_flow_changed(state: String) -> void:
 # roll do not move with how many kills or hits came before them in the stage.
 func _offer_rng(source: String) -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash([ctx.rng.seed, ctx.run.run_seed, ctx.flow.stage(), source])
+	rng.seed = hash([ctx.rng.seed, ctx.flow.run_key(), ctx.flow.stage(), source])
 	return rng
 
 

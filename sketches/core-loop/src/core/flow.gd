@@ -670,8 +670,21 @@ func seed_stage_stream(index: int, place: String = "stage") -> void:
 	if ctx.rng != null and ctx.run != null:
 		# Through a seeded generator: a raw 32-bit hash as the state would make the first draws tiny.
 		var mixed := RandomNumberGenerator.new()
-		mixed.seed = hash([ctx.rng.seed, ctx.run.run_seed, index, place])
+		mixed.seed = hash([ctx.rng.seed, run_key(), index, place])
 		ctx.rng.state = mixed.state
+
+
+# The run's part of every stage stream. A fixed route (--route-seed) and a headless test that
+# names no run seed of its own keep one route whatever the clock-made run id is; a run seed set
+# on purpose (bots, QA tools) and every real run draw their own stages.
+func run_key() -> int:
+	if ctx.run == null:
+		return 0
+	if ctx.run.run_seed_override == null:
+		var route: bool = ctx.tuning != null and int(ctx.tuning.base("route_seed")) > 0
+		if route or (ctx.root != null and bool(ctx.root.get("test_mode"))):
+			return 0
+	return ctx.run.run_seed
 
 
 # Back to the stage-start checkpoint: run state, ball position and entry speed. It is
@@ -686,6 +699,7 @@ func retry_stage() -> void:
 	_launched = false
 	_flight = 0.0
 	_last_percent = -1
+	seed_stage_stream(ctx.run.stage)
 	ctx.events.stage_entered.emit(ctx.run.stage, true)
 	var velocity: Vector3 = ctx.run.snapshot_value("entry_velocity")
 	_place_ball(ctx.run.snapshot_value("entry_position"), velocity, velocity)

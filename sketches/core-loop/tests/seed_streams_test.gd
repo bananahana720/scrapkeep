@@ -59,13 +59,22 @@ func _run() -> void:
 	t.check("stage 2's fabricators do not move with stage 1's draws", heavy["fabs"] == first["fabs"] and not first["fabs"].is_empty(),
 		"%s vs %s" % [heavy["fabs"], first["fabs"]])
 	t.eq("stage 2's gate stream does not move with stage 1's draws", heavy["gate"], first["gate"])
+	# A fabricator used mid-stage draws from the shared stream; the real retry (R, or T on the
+	# death screen) goes through Flow.retry_stage, not enter_stage.
 	for i in 13:
 		game.ctx.rng.randi()
-	var retried: Dictionary = await _enter(2, true)
+	game.flow.retry_stage()
+	for i in 4:
+		await physics_frame
+	var retried: Dictionary = _plan()
 	t.check("a retry replays the plan, fabricators and gates", retried["stage_seed"] == first["stage_seed"]
 		and retried["fabs"] == first["fabs"] and retried["gate"] == first["gate"], "%s vs %s" % [retried, first])
-	var session_seed: int = game.ctx.rng.seed
-	t.eq("the stage reseed keeps the session seed device luck reads", game.ctx.rng.seed, session_seed)
+	t.eq("the stage reseed keeps the session seed device luck reads", game.ctx.rng.seed, Game.SEED)
+	# A headless test names no run seed: its stages do not follow the clock-made run id.
+	t.eq("a test run with no run seed keeps one route", game.flow.run_key(), 0)
+	game.ctx.run.run_seed_override = 5
+	t.eq("a run seed set on purpose draws its own stages", game.flow.run_key(), game.ctx.run.run_seed)
+	game.ctx.run.run_seed_override = null
 	_shop()
 	_sell()
 	_boost_floor()

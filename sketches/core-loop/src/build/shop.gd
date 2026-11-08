@@ -179,7 +179,7 @@ func _stock_stage(here: Array) -> void:
 	# Seeded by the run and the stage, not bay entries or stocks so far, so hopping in and out of
 	# the bay never picks a later stage's shelf, and a Continue (which starts the count again)
 	# stocks the shelf the first sitting saw.
-	_rng.seed = hash([SEED, ctx.run.run_seed, ctx.run.world, ctx.run.stage, "shelf"])
+	_rng.seed = hash([SEED, ctx.flow.run_key() if ctx.flow != null else ctx.run.run_seed, ctx.run.world, ctx.run.stage, "shelf"])
 	shelf = _stock()
 	var lock_class: int = mini(TOP_CLASS_MAX, ctx.run.heft_class() + 1)
 	var top_id := _roll_one(TOP_RARITIES, shelf.map(func(entry): return entry["part_id"]))

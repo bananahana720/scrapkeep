@@ -26,6 +26,7 @@ const WhyCallout := preload("res://src/ui/why_callout.gd")
 const SETTLE := 300
 const HOLD_FRAMES := 300
 const OPEN_WITHIN := 60
+const CALM_WITHIN := 900
 const QUIET_FRAMES := 30
 const STEP_S := 1.0 / 60.0
 const SliceDefs := preload("res://src/core/slice_defs.gd")
@@ -151,10 +152,6 @@ func _physics_process(_delta: float) -> bool:
 		"boot":
 			var source := Intent.Scripted.new()
 			_game.player.source = source
-			# The stage plan follows the run's seed (Flow.seed_stage_stream). On 13 of seeds 7-30
-			# the calm clock is still held (no hit taken, so a passing telegraph) when the 60
-			# frames these checks allow run out; seed 1 passed 17 of 18 runs (2026-11-08).
-			_game.run.run_seed_override = 1
 			_game.flow.press_start()
 			_game.flow.choose_class(1)
 			_next("settle")
@@ -270,8 +267,17 @@ func _physics_process(_delta: float) -> bool:
 				for id in _held:
 					unseen = unseen and _unseen_both(id)
 				_report("a retry drops the held cards", dropped and unseen, "after a retry: ceremony holds %d, banner holds %d, every held part still unseen %s" % [_ceremony()._cards.size(), _banner().queued(), unseen])
+				_next("retried_calm")
+		# The retried stage replays its own opening, and a plan that telegraphs early holds the
+		# calm clock for a while; the next find is made once the stage is calm, so the check
+		# reads the card gate and not the stage plan.
+		"retried_calm":
+			if WhyCallout.find_may_speak(_ceremony().get("_calm_left"), self, _game.flow):
 				_game.run.add_part(_held[0], "pickup")
 				_next("again")
+			elif _wait == CALM_WITHIN:
+				_report("the retried stage turns calm", false, "still not calm %d frames after a retry" % CALM_WITHIN)
+				return _finish()
 		"again":
 			if _card_up():
 				_report("the next first find shows its card", _ceremony().view.card.get("part", "") == _held[0] and _seen_both(_held[0]) and not _fight_on(),
