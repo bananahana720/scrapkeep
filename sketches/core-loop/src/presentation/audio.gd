@@ -671,6 +671,12 @@ func _live_sfx_voices() -> int:
 	return _live_sfx
 
 
+# A warning the player must hear: a danger sound or a threat row. Rewards at priority 2 keep
+# the band's own duck but do not pull the bus down.
+func _is_telegraph(kind: String, sound: String) -> bool:
+	return sound in DANGER_SOUNDS or EventKinds.THREAT_ROWS.has(kind)
+
+
 func _focus() -> void:
 	_focus_until = clock + float(MixRows.FOCUS["hold_s"])
 
@@ -1471,10 +1477,9 @@ func play(kind: String, db := 0.0, pitch := 1.0, bus := "SFX", sound_override :=
 	var tier := SfxBank.resolve(sound, pitch)
 	db += story_duck_db(kind)
 	var priority := Rows.priority(kind)
-	var telegraph := priority >= 2 or sound in DANGER_SOUNDS
-	if telegraph:
+	if _is_telegraph(kind, sound):
 		_focus()
-	elif bus == "SFX" and sound in MixRows.CROWD_SOUNDS:
+	elif priority < 2 and bus == "SFX" and sound in MixRows.CROWD_SOUNDS:
 		db += MixRows.crowd_db(_live_sfx_voices(), priority)
 	var asked := pitch
 	pitch = float(tier["pitch"])
@@ -1675,6 +1680,8 @@ func on_beat(kind: String, db := 0.0, lane := false, repeats := 1, sound_overrid
 	_duck(0.6, float(start - engine.clock + beats * Harmony.BEAT) / Harmony.RATE)
 	if sound in DANGER_SOUNDS:
 		engine.duck_bass(0.3, float(start - engine.clock + beats * Harmony.BEAT) / Harmony.RATE)
+	if _is_telegraph(kind, sound):
+		_focus_until = maxf(_focus_until, clock + float(start - engine.clock) / Harmony.RATE + float(MixRows.FOCUS["hold_s"]))
 	cue_log.append([kind, sound, "beat", start, 1.0])
 	return start
 

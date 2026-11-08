@@ -6,6 +6,7 @@ extends SceneTree
 # never quieted by the crowd rule, and stacked low-priority voices step down per doubling.
 const Game := preload("res://src/game.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 
 var _game
 var _done := false
@@ -75,7 +76,9 @@ func _states() -> void:
 		[["stage", false, "warden", 1, false, false], "miniboss"],
 		[["stage", false, "miniboss", 1, true, false], "miniboss"],
 		[["boss", false, "level", 2, false, false], "boss_2"],
-		[["stage", false, "brindle", 3, false, false], "boss_3"],
+		[["stage", false, "brindle", 3, false, false], "roam"],
+		[["stage", false, "title", 1, false, true], "combat"],
+		[["lap", false, "level", 1, false, false], "roam"],
 		[["boss", false, "brindle", 9, false, false], "boss_3"],
 		[["summary", false, "level", 1, false, false], "run_over"],
 		[["dead", false, "brindle", 2, false, false], "run_over"],
@@ -113,9 +116,12 @@ func _glide_and_focus() -> void:
 	_check("the way back up is slow", is_equal_approx(audio.mix_db["Music"], deep + MixRows.GLIDE_UP_DB_S * 0.1), str(audio.mix_db["Music"]))
 	audio._flow_state = "summary"
 	audio._tend_mix(10.0)
-	var sfx := AudioServer.get_bus_index("SFX")
-	var want := db_to_linear(MixRows.BUS_DB["SFX"] + MixRows.STATES["run_over"]["SFX"]) * float(audio.volumes["SFX"])
-	_check("the snapshot reaches the bus", absf(AudioServer.get_bus_volume_linear(sfx) - want) < 0.001, "%f vs %f" % [AudioServer.get_bus_volume_linear(sfx), want])
+	var amb_bus := AudioServer.get_bus_index("Ambient")
+	var want := db_to_linear(MixRows.BUS_DB["Ambient"] + MixRows.STATES["run_over"]["Ambient"]) * float(audio.volumes["SFX"])
+	_check("the snapshot reaches the bus, ambience on the effects slider", absf(AudioServer.get_bus_volume_linear(amb_bus) - want) < 0.001, "%f vs %f" % [AudioServer.get_bus_volume_linear(amb_bus), want])
+	_check("no state moves the stinger lane's bus", MixRows.STATES.values().all(func(row: Dictionary): return not row.has("SFX")))
+	_check("a threat row is a telegraph", audio._is_telegraph(EventKinds.THREAT_ROWS.keys()[0], "x"))
+	_check("a reward is not", not audio._is_telegraph("shop_bought", "shop_bell"))
 	var amb := AudioServer.get_bus_index("Ambient")
 	audio.muted = true
 	audio._apply_volumes()

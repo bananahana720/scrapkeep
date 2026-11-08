@@ -84,10 +84,10 @@ func _physics_process(delta: float) -> bool:
 	return false
 
 
-# Cues started now, by sound, from the recording's start: what stacks into the mix.
-static func _cue_counts(log: Array) -> Dictionary:
+# Cues started now, by sound, over the whole session (title included): what stacks into the mix.
+static func _cue_counts(rows: Array) -> Dictionary:
 	var counts := {}
-	for row in log:
+	for row in rows:
 		if row.size() > 2 and row[2] == "now":
 			counts[row[1]] = int(counts.get(row[1], 0)) + 1
 	return counts

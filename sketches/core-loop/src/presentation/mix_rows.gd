@@ -30,17 +30,19 @@ const MASTER_CEILING_DB := -1.5
 #   miniboss  a Warden or a champion: its anthem leads at full level, the park's life goes quiet
 #   boss_1..3 Brindle's phases: the anthem ratchets with the phase, the life is gone
 #   run_over  summary, death and victory: the jazz-club summary carries the moment
+# No state moves the SFX bus: the stinger lane rides it, so a death, a victory or a run's first
+# stinger always lands at full level.
 const STATES := {
-	"menu": {"Music": -3.0, "SFX": -6.0, "Ambient": -14.0},
-	"camp": {"Music": -5.0, "SFX": -4.0, "Ambient": -6.0},
+	"menu": {"Music": -3.0, "Ambient": -14.0},
+	"camp": {"Music": -5.0, "Ambient": -6.0},
 	"roam": {"Music": -2.0},
 	"combat": {"Music": -1.5, "Ambient": -5.0},
-	"shop": {"Music": -5.0, "SFX": -1.0, "Ambient": -6.0},
+	"shop": {"Music": -5.0, "Ambient": -6.0},
 	"miniboss": {"Ambient": -10.0},
 	"boss_1": {"Music": -1.0, "Ambient": -14.0},
 	"boss_2": {"Music": -0.5, "Ambient": -14.0},
 	"boss_3": {"Ambient": -16.0},
-	"run_over": {"Music": -4.0, "SFX": -8.0, "Ambient": -16.0},
+	"run_over": {"Music": -4.0, "Ambient": -16.0},
 }
 # The systemic pressure (pressure_changed) at which a stage counts as a fight, and below which
 # it is roaming again (hysteresis, so a fight's edge does not flicker the mix).
@@ -51,7 +53,7 @@ const COMBAT_OFF := 0.25
 const GLIDE_DOWN_DB_S := 30.0
 const GLIDE_UP_DB_S := 6.0
 
-# The telegraph focus: a priority 2+ or danger cue drops the music and the ambience for hold_s,
+# The telegraph focus: a danger sound or a threat row (audio.gd _is_telegraph), now or on the beat, drops the music and the ambience for hold_s,
 # then they come back at GLIDE_UP_DB_S.
 const FOCUS := {"Music": -3.0, "Ambient": -8.0, "hold_s": 0.4}
 
@@ -73,7 +75,7 @@ const VOICE_DEFAULT := 3
 const VOICE_LIMIT := {"weapon_zap": 3, "scrap_tick": 3, "cog_tick": 3, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
 	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1, "rarity_tick": 2, "panel_note": 3, "clank": 2, "grapple_clink": 2,
 	"swarm_buzz": 2, "kill_chain_tier": 1, "achievement_chime": 1, "rescue_fanfare": 1}
-const MIN_GAP_MS := {"weapon_zap": 70, "scrap_tick": 40, "cog_tick": 40, "enemy_arrive": 200, "hit_thwack": 60, "land_thud": 80, "kill_pop": 45,
+const MIN_GAP_MS := {"weapon_zap": 55, "scrap_tick": 40, "cog_tick": 40, "enemy_arrive": 200, "hit_thwack": 35, "land_thud": 80, "kill_pop": 45,
 	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600,
 	"grapple_clink": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
 	"grown_sub": 60, "grown_crack": 60, "grown_tail": 120, "grown_rattle": 120,
@@ -81,18 +83,19 @@ const MIN_GAP_MS := {"weapon_zap": 70, "scrap_tick": 40, "cog_tick": 40, "enemy_
 
 const MENU_FLOWS := ["title", "class_select"]
 const OVER_FLOWS := ["summary", "dead", "victory"]
-const CALM_TRACKS := ["level"]
 const FIGHT_TRACKS := ["miniboss", "warden"]
 
 
 # The mix state from the game's facts. flow is Flow.NAMES' current name, track the band's
-# track ("level", "miniboss", "warden" or a boss's music), combat the hysteresis flag.
+# track ("level", "miniboss", "warden", a menu theme or a boss's music), combat the hysteresis
+# flag. A boss is the flow's boss state only: a radio record or a menu theme still on air in a
+# stage never reads as a boss.
 static func resolve(flow: String, camp_open: bool, track: String, boss_phase: int, shop: bool, combat: bool) -> String:
 	if flow in MENU_FLOWS or flow == "":
 		return "camp" if camp_open else "menu"
 	if flow in OVER_FLOWS:
 		return "run_over"
-	if flow == "boss" or not (track in CALM_TRACKS or track in FIGHT_TRACKS):
+	if flow == "boss":
 		return "boss_%d" % clampi(boss_phase, 1, 3)
 	if track in FIGHT_TRACKS:
 		return "miniboss"

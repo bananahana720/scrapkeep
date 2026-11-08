@@ -4,8 +4,9 @@ range, clipped share and per-state loudness when the bounce JSON carries a mix-s
 
     python3 -I tools/mix_meter.py <bounce.wav> [<bounce.wav> ...] [--json out.json]
 
-Needs numpy, scipy and pyloudnorm (pip). The WAV's JSON sibling (same basename) is read
-when present for the `mix_states` timeline ([seconds, state] rows) and the cue counts.
+Needs numpy, scipy and pyloudnorm (pip). Short-term windows are 3 s read with the BS.1770
+gate (pyloudnorm), so a quiet window reads slightly high next to an ungated EBU meter.
+The WAV's JSON sibling (same basename) is read when present for the `mix_states` timeline ([seconds, state] rows) and the cue counts.
 """
 import json
 import os
@@ -45,7 +46,10 @@ def read(path):
         x = x[:, None]
     meter = pyloudnorm.Meter(rate)
     sidecar = os.path.splitext(path)[0] + ".json"
-    info = json.load(open(sidecar)) if os.path.exists(sidecar) else {}
+    info = {}
+    if os.path.exists(sidecar):
+        with open(sidecar) as f:
+            info = json.load(f)
     over = resample_poly(x, 4, 1, axis=0)
     short = []
     step, win = rate, rate * 3
