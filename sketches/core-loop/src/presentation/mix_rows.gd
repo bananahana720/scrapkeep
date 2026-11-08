@@ -1,0 +1,115 @@
+extends RefCounted
+
+# The game's mix as rows (direction 21): bus levels, the master chain, a level snapshot per game
+# state, the telegraph focus, the crowd rule and the per-cue voice caps. audio.gd reads these
+# and owns no mix number of its own. Nothing here touches a node.
+#
+# Targets (offline bounce, tools/ace_bounce.gd + tools/mix_meter.py, Master bus):
+#   integrated about -20 LUFS over a world 1 run, true peak at or under -1 dBTP,
+#   short-term (3 s) peaks under about -13 LUFS, so a fight is loud by contrast, not by level.
+# Sound is the fairness channel (direction 18): a telegraph (priority 2 and up, or a danger
+# sound) is never quieted by the crowd rule and pulls the music and the ambience down instead.
+
+# Fixed bus levels in dB, under the player's volume sliders (settings_store volumes, 0 to 1).
+# Ambient carries the parks' life (ambient_life.gd) and sends to Master beside the effects.
+const BUS_DB := {"Music": -4.0, "SFX": -1.5, "UI": -8.0, "Ambient": -7.0}
+
+# Glue on the effects bus: catches a pile-up before the master has to.
+const SFX_COMP := {"threshold_db": -16.0, "ratio": 3.0, "attack_us": 3000.0, "release_ms": 120.0, "gain_db": 0.0}
+const SFX_CEILING_DB := -2.0
+# The master: a gentle compressor, then a hard ceiling with headroom for inter-sample peaks.
+const MASTER_COMP := {"threshold_db": -14.0, "ratio": 2.5, "attack_us": 8000.0, "release_ms": 200.0, "gain_db": 0.0}
+const MASTER_CEILING_DB := -1.5
+
+# Level offsets in dB per state and bus, on top of BUS_DB. A missing bus is 0.
+#   menu      title and class select: the theme leads, the effects step back
+#   camp      the camp page: lighter (Andrew, 17 Oct: camp and summary keep them lighter)
+#   roam      a stage with no fight on: the jazzy roam sits back so a fight is louder by contrast
+#   combat    a stage under pressure: the music leans back so the fight reads
+#   shop      Moss's bay: the shop tune is a backdrop to the bell and the rarity ticks
+#   miniboss  a Warden or a champion: its anthem leads at full level, the park's life goes quiet
+#   boss_1..3 Brindle's phases: the anthem ratchets with the phase, the life is gone
+#   run_over  summary, death and victory: the jazz-club summary carries the moment
+const STATES := {
+	"menu": {"Music": -3.0, "SFX": -6.0, "Ambient": -14.0},
+	"camp": {"Music": -5.0, "SFX": -4.0, "Ambient": -6.0},
+	"roam": {"Music": -2.0},
+	"combat": {"Music": -1.5, "Ambient": -5.0},
+	"shop": {"Music": -5.0, "SFX": -1.0, "Ambient": -6.0},
+	"miniboss": {"Ambient": -10.0},
+	"boss_1": {"Music": -1.0, "Ambient": -14.0},
+	"boss_2": {"Music": -0.5, "Ambient": -14.0},
+	"boss_3": {"Ambient": -16.0},
+	"run_over": {"Music": -4.0, "SFX": -8.0, "Ambient": -16.0},
+}
+# The systemic pressure (pressure_changed) at which a stage counts as a fight, and below which
+# it is roaming again (hysteresis, so a fight's edge does not flicker the mix).
+const COMBAT_ON := 0.4
+const COMBAT_OFF := 0.25
+# How fast a bus glides to its state's level, in dB per second: down fast, up slow, so the mix
+# never jumps up under the player.
+const GLIDE_DOWN_DB_S := 30.0
+const GLIDE_UP_DB_S := 6.0
+
+# The telegraph focus: a priority 2+ or danger cue drops the music and the ambience for hold_s,
+# then they come back at GLIDE_UP_DB_S.
+const FOCUS := {"Music": -3.0, "Ambient": -8.0, "hold_s": 0.4}
+
+# The crowd rule: priority 0 and 1 cues get quieter as live effect voices pile up, by
+# DB_PER_DOUBLING for each doubling above CROWD_FREE, never below CROWD_FLOOR_DB.
+const CROWD_FREE := 6
+const CROWD_DB_PER_DOUBLING := 3.0
+const CROWD_FLOOR_DB := -9.0
+
+# Simultaneous voices per cue (default VOICE_DEFAULT), and the shortest gap between two starts
+# in ms. A burst of pickups or a held trigger stays crisp instead of turning into mush.
+# Moss says one line at a time: a new line cuts the last one off. The Mind's quote is heard
+# once per adaptation.
+const VOICE_DEFAULT := 3
+const VOICE_LIMIT := {"weapon_zap": 3, "scrap_tick": 3, "cog_tick": 3, "hit_thwack": 3, "kill_pop": 3, "enemy_arrive": 2, "beacon_hum": 1,
+	"hop": 2, "land_thud": 2, "hurt": 2, "babble": 1, "rarity_tick": 2, "panel_note": 3, "clank": 2, "grapple_clink": 2,
+	"swarm_buzz": 2, "kill_chain_tier": 1, "achievement_chime": 1, "rescue_fanfare": 1}
+const MIN_GAP_MS := {"weapon_zap": 70, "scrap_tick": 40, "cog_tick": 40, "enemy_arrive": 200, "hit_thwack": 60, "land_thud": 80, "kill_pop": 45,
+	"hurt": 90, "hop": 40, "mind_sable": 600, "mind_rivet": 600, "mind_kest": 600, "mind_tarn": 600, "mind_tally": 600, "mind_cannon": 600,
+	"grapple_clink": 60, "line_bite": 60, "slam_boom": 60, "core_slam": 60,
+	"grown_sub": 60, "grown_crack": 60, "grown_tail": 120, "grown_rattle": 120,
+	"achievement_chime": 400, "rescue_fanfare": 400, "clank": 90, "rarity_tick": 45}
+
+const MENU_FLOWS := ["title", "class_select"]
+const OVER_FLOWS := ["summary", "dead", "victory"]
+const CALM_TRACKS := ["level"]
+const FIGHT_TRACKS := ["miniboss", "warden"]
+
+
+# The mix state from the game's facts. flow is Flow.NAMES' current name, track the band's
+# track ("level", "miniboss", "warden" or a boss's music), combat the hysteresis flag.
+static func resolve(flow: String, camp_open: bool, track: String, boss_phase: int, shop: bool, combat: bool) -> String:
+	if flow in MENU_FLOWS or flow == "":
+		return "camp" if camp_open else "menu"
+	if flow in OVER_FLOWS:
+		return "run_over"
+	if flow == "boss" or not (track in CALM_TRACKS or track in FIGHT_TRACKS):
+		return "boss_%d" % clampi(boss_phase, 1, 3)
+	if track in FIGHT_TRACKS:
+		return "miniboss"
+	if shop:
+		return "shop"
+	return "combat" if combat else "roam"
+
+
+static func state_db(state: String, bus: String) -> float:
+	return float(STATES.get(state, {}).get(bus, 0.0))
+
+
+# The crowd rule's offset for a cue of priority with live voices already sounding.
+static func crowd_db(live: int, priority: int) -> float:
+	if priority >= 2 or live <= CROWD_FREE:
+		return 0.0
+	return maxf(CROWD_FLOOR_DB, -CROWD_DB_PER_DOUBLING * log(float(live) / CROWD_FREE) / log(2.0))
+
+
+# One glide step from now toward want over delta seconds.
+static func glide(now: float, want: float, delta: float) -> float:
+	if want < now:
+		return maxf(want, now - GLIDE_DOWN_DB_S * delta)
+	return minf(want, now + GLIDE_UP_DB_S * delta)
