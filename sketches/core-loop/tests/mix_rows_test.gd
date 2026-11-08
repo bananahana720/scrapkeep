@@ -32,8 +32,9 @@ func _physics_process(_delta: float) -> bool:
 	_buses()
 	_states()
 	_glide_and_focus()
-	print("mix_rows_test: %d failure(s)" % _failures)
-	quit(1 if _failures > 0 else 0)
+	_game.free()
+	print("mix_rows_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+	quit(0 if _failures == 0 else 1)
 	return false
 
 
