@@ -59,6 +59,8 @@ const ANCHOR_GROUP := "harpoon_anchor"
 # A moving world solid (the Hanging Isle's tip, isle_rig.gd): any hook ray or assist that lands on
 # it bites the body, so the line rides the moving point; it is no enemy and links no chain.
 const WORLD_ANCHOR_GROUP := "world_anchor"
+# How long a right-mouse reel onto a body still counts as a reel impact once the line lets go.
+const REEL_GRACE := 0.2
 # A harpoon line is idle, latched to a world point or a body, or committed to a smash
 # haul on a body. SMASH_MAX bounds a haul; a line stretched past BREAK_STRETCH times the
 # rope range lets go; ground under this normal.y is walkable and cannot be hooked.
@@ -648,6 +650,10 @@ static func _mount(kit, state, tuning, intent, aim: Basis, body_state, step: flo
 		return true
 	if not kit.on(PYLON) or not intent.mount_pressed or kit.mount_block > 0.0:
 		return false
+	# A committed smash haul owns the ball until it lands: mounted, the haul would freeze
+	# (apply returns before _grapple) and then overwrite the slingshot's launch.
+	if kit.line_state == LINE_SMASH:
+		return false
 	var spot := _mount_spot(kit, body_state)
 	if spot.is_empty():
 		return false
@@ -741,6 +747,10 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 			_ride_pole(kit, tuning, intent, body_state, step)
 		elif intent.harpoon_held and kit.grip != "flail":
 			_winch_body(kit, tuning, body_state, step)
+			# Only this haul onto a bitten body is a reel for the dunk (ruling bf); an anchor or
+			# pole ride that reels to its floor rope is not.
+			kit.reel_body = kit.anchor_body
+			kit.reel_left = REEL_GRACE
 		return
 	var to_anchor: Vector3 = kit.anchor - origin
 	var dist := to_anchor.length()

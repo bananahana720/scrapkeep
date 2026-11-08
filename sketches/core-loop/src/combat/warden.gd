@@ -54,7 +54,9 @@ const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 #   mount_offset(warden, clock) -> Vector3 and may answer step(warden, delta) every physics
 #   tick after the body moved, charge_allowed(warden) -> bool before a charge starts (false
 #   lets the pulse clock run and starts no charge), on_charge(warden, seconds), on_pulse(warden,
-#   lifted), on_stagger(warden, open) and on_chunk_lost(warden, left); each is called only
+#   lifted), on_stagger(warden, open), on_chunk_lost(warden, left) and on_exit(warden) as the
+#   Warden leaves the tree (a kill or a stage unload), so a driver frees what it drew outside
+#   the Warden; each is called only
 #   when the driver has it. A park Warden (spec "harpoon_anchor": true) that names no
 #   "mount_driver" loads res://src/combat/warden_<family>.gd when that file exists, so a
 #   kind's file attaches itself to every park Warden of its kind and to none of the authored
@@ -809,6 +811,7 @@ func _pulse() -> void:
 func _exit_tree() -> void:
 	super._exit_tree()
 	_cancel_counter()
+	_hook("on_exit", [self])
 	if is_instance_valid(_core_ring):
 		_core_ring.queue_free()
 	for lane in slag_lanes:

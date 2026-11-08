@@ -37,6 +37,11 @@ var anchor_body: Node3D = null
 var anchor_offset := Vector3.ZERO
 var line_state := Augments.LINE_IDLE
 var winching := false
+# The body a right-mouse reel last hauled toward, and how long that reel still counts: the
+# ball's contact lets the line go before its strike resolves, so the dunk (combat._dunk_bonus)
+# reads this short grace instead of the live line. Survives drop_line on purpose.
+var reel_body: Node3D = null
+var reel_left := 0.0
 var line_end := ""
 var smash_left := 0.0
 var smash_floor := 0.0
@@ -135,6 +140,9 @@ func toggle(key: String) -> bool:
 
 func tick_timers(delta: float) -> void:
 	mount_block = maxf(0.0, mount_block - delta)
+	reel_left = maxf(0.0, reel_left - delta)
+	if reel_left <= 0.0:
+		reel_body = null
 	rewind_left = maxf(0.0, rewind_left - delta)
 	mass_gap = maxf(0.0, mass_gap - delta)
 	for key in vault_faces.keys():
@@ -184,6 +192,8 @@ func clear_runtime() -> void:
 	mount_block = 0.0
 	mount_banked = 0.0
 	vault_faces.clear()
+	reel_body = null
+	reel_left = 0.0
 	mass_gap = 0.0
 	last_vault_face = ""
 	vault_aim = {}

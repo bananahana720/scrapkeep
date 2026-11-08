@@ -1037,7 +1037,11 @@ func _read_ctrl() -> void:
 	var on_body: bool = kit.hooked and kit.on_body
 	kit.winching = kit.hooked and not on_body and intent.brake_held
 	if edge and not _frozen:
-		if on_body and kit.line_state == Augments.LINE_LATCHED and Augments.haul_open(kit):
+		# Mounted or planted, the ball is held: a smash committed now would freeze under the
+		# hold and then overwrite the slingshot's launch (verb_ready("haul") already says no).
+		if on_body and kit.line_state == Augments.LINE_LATCHED and Augments.holding(kit):
+			_fail("haul", "busy")
+		elif on_body and kit.line_state == Augments.LINE_LATCHED and Augments.haul_open(kit):
 			Augments.commit_smash(kit, tuning, _rigid.linear_velocity)
 		elif on_body and kit.line_state == Augments.LINE_LATCHED:
 			_fail("haul", _haul_refusal())

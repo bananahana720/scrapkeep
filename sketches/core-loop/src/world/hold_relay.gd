@@ -99,6 +99,8 @@ func step(delta: float, ball: Vector3, _velocity: Vector3) -> String:
 	if inside:
 		held += delta * pow(share, float(rule["s"]))
 		if held >= float(rule["T"]):
+			# A won relay stops charging: charging() lights the stake's coil.
+			_charging = false
 			return "won"
 	elif float(rule["discharge"]) > 0.0:
 		held = maxf(0.0, held - float(rule["discharge"]) * delta)

@@ -990,6 +990,9 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_hotwire_restore(retry)
 	if retry:
 		_fired.clear()
+		# A retry undocks the bay without a bay_left, so the shop visit ends here; left set,
+		# the run clock and wear would stay paused through the whole retried stage.
+		shop.inside = false
 		shop.rewind_stage()
 	gates.close()
 	field.clear()

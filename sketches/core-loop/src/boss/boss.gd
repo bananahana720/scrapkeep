@@ -75,6 +75,15 @@ var _pickups: Array = []
 var _slag_turn := 0
 var _next_lobber := 0.0
 var _lobbers: Array = []
+# The phase 3 charge's states, kept as strings because tests and the bot read them. Every
+# write goes through these names, and _step_charges sends an unknown one back to rest, so a
+# misspelt state can never strand the Scuttle mid-charge.
+const CHARGE_REST := "rest"
+const CHARGE_BRACE := "brace"
+const CHARGE_RUN := "run"
+const CHARGE_RECOVER := "recover"
+const CHARGE_STUN := "stun"
+const CHARGE_HOOK := "hook"
 var _charge := {}
 var _grace := {}
 var _eject := {}
@@ -290,7 +299,7 @@ func _enter_phase(next: int) -> void:
 			ship.shed_armour()
 			ship.cockpit_open(true, "enter_scuttle")
 			_combo_left = -1
-			_charge = {"state": "rest", "timer": ChallengeDials.period("brindle", Rules.CHARGE_REST, 3)}
+			_charge = {"state": CHARGE_REST, "timer": ChallengeDials.period("brindle", Rules.CHARGE_REST, 3)}
 	ship.cue_phase(next)
 	_publish("boss_phase_changed", [next, Rules.PHASE_NAMES[next - 1]])
 	if _phases != null:
@@ -802,23 +811,26 @@ func _clear_arc(from: Vector3, launch: Vector3) -> bool:
 # --- Phase 3: scuttle the flagship ------------------------------------------------------
 
 func _step_charges(delta: float, ball: Vector3) -> void:
-	match _charge.get("state", "rest"):
-		"rest", "recover", "stun", "hook":
+	match _charge.get("state", CHARGE_REST):
+		CHARGE_REST, CHARGE_RECOVER, CHARGE_STUN, CHARGE_HOOK:
 			_charge["timer"] -= delta
 			if _charge["timer"] <= 0.0:
-				if _charge["state"] == "rest":
+				if _charge["state"] == CHARGE_REST:
 					if _in_transition():
 						return
 					_commit_charge(ball)
-				elif _charge["state"] == "hook":
+				elif _charge["state"] == CHARGE_HOOK:
 					_commit_charge(ball, true)
 				else:
-					_charge = {"state": "rest", "timer": _rest_time()}
-		"brace":
+					_charge = {"state": CHARGE_REST, "timer": _rest_time()}
+		CHARGE_BRACE:
 			if _charge["hazard"].is_live():
-				_charge["state"] = "run"
-		"run":
+				_charge["state"] = CHARGE_RUN
+		CHARGE_RUN:
 			_run_charge(delta, ball)
+		_:
+			push_error("brindle charge in unknown state %s" % _charge.get("state"))
+			_charge = {"state": CHARGE_REST, "timer": _rest_time()}
 
 
 # A cued charge is the Scuttle's hook turn: its ratchet cue sounded CUE_LEAD ago, so it
@@ -844,7 +856,7 @@ func _commit_charge(ball: Vector3, cued := false) -> void:
 	_add_hazard(h)
 	ship.move_to(from, heading)
 	ship.cue("charge_warn", h.get_instance_id())
-	_charge = {"state": "brace", "hazard": h, "from": from, "heading": heading, "length": length,
+	_charge = {"state": CHARGE_BRACE, "hazard": h, "from": from, "heading": heading, "length": length,
 		"into_wall": into_wall, "travelled": 0.0, "cued": cued}
 	_publish("boss_attack_telegraphed", ["charge_wall" if into_wall else "charge", h.warn_seconds])
 
@@ -881,9 +893,9 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 		elif not _charge.get("cued", false) and _follow_ups() > 0:
 			# The hook turn: the cue sounds as the hull digs in, the lane draws CUE_LEAD later.
 			_phases.cue("charge")
-			_charge = {"state": "hook", "timer": FightPhases.CUE_LEAD}
+			_charge = {"state": CHARGE_HOOK, "timer": FightPhases.CUE_LEAD}
 		else:
-			_charge = {"state": "recover", "timer": Rules.CHARGE_RECOVER}
+			_charge = {"state": CHARGE_RECOVER, "timer": Rules.CHARGE_RECOVER}
 
 
 # A charge hit shoves the ball sideways out of the lane and up, never along it, so the
@@ -922,17 +934,17 @@ func _stun(seconds: float) -> void:
 	_combo_left = -1  # a punish window ends any combo
 	if _charge.has("hazard") and is_instance_valid(_charge["hazard"]):
 		_charge["hazard"].finish()
-	_charge = {"state": "stun", "timer": seconds}
+	_charge = {"state": CHARGE_STUN, "timer": seconds}
 	stuns += 1
 	ship.cue("wall_stun", stuns)
 
 
 func stunned() -> bool:
-	return state == FIGHT and phase == 3 and _charge.get("state", "") == "stun"
+	return state == FIGHT and phase == 3 and _charge.get("state", "") == CHARGE_STUN
 
 
 func charging() -> bool:
-	return state == FIGHT and phase == 3 and _charge.get("state", "") == "run"
+	return state == FIGHT and phase == 3 and _charge.get("state", "") == CHARGE_RUN
 
 
 # --- The eject and the chase -------------------------------------------------------
@@ -1095,6 +1107,12 @@ func _cancel_hazards() -> void:
 			h.queue_free()
 	hazards.clear()
 	_reprise = {}
+	# A drone pad is phase 2's attack: one still marked at the phase turn would drop its lobber
+	# into the next phase once the transition beat ends. Lobbers already down stay.
+	for d in _drones:
+		if is_instance_valid(d["marker"]):
+			d["marker"].queue_free()
+	_drones.clear()
 	for c in _cranes:
 		if c.has("hazard"):
 			c.erase("hazard")

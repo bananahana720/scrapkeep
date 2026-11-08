@@ -934,6 +934,9 @@ func _facts_end(cancel: bool) -> void:
 		return
 	if not cancel and not _dead:
 		_facts_poll()
+		# The poll can close the instance itself (a lobber's cancelled charge); it is then done.
+		if _atk.is_empty():
+			return
 	var closing := PHASE_CANCELLED if (cancel or _dead or _atk["phase"] == PHASE_WINDUP) else PHASE_RECOVER
 	_facts_refresh()
 	var facts := _facts_dict(closing)

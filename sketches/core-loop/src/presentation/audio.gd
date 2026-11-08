@@ -2337,6 +2337,8 @@ func _on_event_started(event_id: String) -> void:
 	if event_id in EVENT_SECONDS:
 		_event_id = event_id
 		_event_started_ms = Time.get_ticks_msec()
+		# Each event earns the progress feed again: one that never sends it keeps the timer.
+		_event_progress_live = false
 
 
 # A win drops back into the level with the milestone stinger on the drop beat; a pass
@@ -2347,7 +2349,9 @@ func _on_event_ended(event_id: String, outcome: String) -> void:
 		engine.cancel_park_cue(event_id)
 		_park_cues.erase(event_id)
 		return
-	var participatory := event_id == _event_id
+	# Only an event the band escalated on the level track steers it home: one that ends during
+	# a Warden or miniboss fight leaves that fight's track and build alone.
+	var participatory := event_id == _event_id and engine.track == "level"
 	_event_id = ""
 	if not participatory or not sound_ready:
 		on_beat("event_ended", -6.0 if outcome != "won" else 0.0)
@@ -2367,6 +2371,10 @@ func _on_event_progress(event_id: String, fraction: float) -> void:
 	if event_id != _event_id or not sound_ready:
 		return
 	_event_progress_live = true
+	# An event only escalates the level track; a fight track (a relay's own miniboss, a Warden)
+	# follows its fight, and two fractions would fight over one build.
+	if engine.track != "level":
+		return
 	engine.escalate(clampf(fraction, 0.0, 1.0), false)
 
 
@@ -2419,6 +2427,9 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	# Each stage starts its own difficulty clock and never carries a vent pedal over.
 	engine.set_fleet_ticks(0)
 	engine.set_reactor_pedal(false)
+	# An event torn down with its stage (no event_ended) must not escalate the next stage. Cleared
+	# here, at the entry itself, so an event the new stage starts this frame keeps its id.
+	_event_id = ""
 	_flow_queue.append(["stage", stage, retry])
 	_warm_park_risers.call_deferred(stage)
 
@@ -2545,6 +2556,7 @@ func _on_enemy_spawned(enemy: Node3D, kind: String) -> void:
 	if boss and enemy != null:
 		var key := str(enemy.get_instance_id())
 		enemy.tree_exiting.connect(end_moment.bind("miniboss", key), CONNECT_ONE_SHOT)
+		enemy.tree_exiting.connect(_on_miniboss_gone.bind(enemy), CONNECT_ONE_SHOT)
 		begin_moment("miniboss", key, miniboss_tune(kind))
 
 
@@ -2923,6 +2935,21 @@ func _on_boss_defeated() -> void:
 
 
 # A live miniboss other than the one dying on this kill (enemy.gd marks it dead first).
+# A miniboss that leaves (killed, or cleared with its stage) before its track has landed takes
+# the queued switch with it, so the band never enters a fight that is already over. A landed
+# track is left alone: a kill pays its own drop (_on_kill), and a stage teardown or launch
+# hands the band on through its own restart or landing drop.
+func _on_miniboss_gone(enemy: Node) -> void:
+	if enemy != _miniboss or engine == null or engine.track == "miniboss":
+		return
+	var survivor := _miniboss_survivor()
+	if survivor != null and survivor != enemy:
+		_miniboss = survivor
+		return
+	_miniboss = null
+	engine.drop_pending_track("miniboss")
+
+
 func _miniboss_survivor() -> Node3D:
 	for enemy in get_tree().get_nodes_in_group("enemy") if is_inside_tree() else []:
 		if is_instance_valid(enemy) and is_miniboss(String(enemy.get("kind"))) and not enemy.is_dead():
@@ -2989,6 +3016,10 @@ func _on_launched(_velocity: Vector3) -> void:
 	# the unseal drop); never out of Brindle's arena.
 	if not sound_ready or engine.mode != MusicEngine.PLAY or engine.track == _boss_track():
 		return
+	# One flight owns the band at a time, and a launch outranks an ultimate still in the air:
+	# the ultimate's later cancel (its stage-entry abort) or landing must not end the launch's
+	# riser or ACE piece.
+	_ult_armed = false
 	# A launch out of the Warden's break is directed from A to B: the piece plays through
 	# the flight and the landing hands it to the synth on a beat (_land_drop). Any other
 	# ACE mode (an unsealed stage's gate) hands to the synth now, so its launch riser sounds.
@@ -3694,6 +3725,8 @@ func _flush_flow() -> void:
 					engine.schedule_stinger_at(Rows.sound("beacon_unsealed"), at, story_duck_db("beacon_unsealed"))
 					cue_log.append(["beacon_unsealed", Rows.sound("beacon_unsealed"), "beat", at, 1.0])
 				else:
+					# A Warden broken inside its pivot bar: the track switch is void.
+					engine.drop_pending_track("warden")
 					on_beat("beacon_unsealed", 0.0, true)
 			"gates":
 				# The unseal stinger already says the gates are open.
