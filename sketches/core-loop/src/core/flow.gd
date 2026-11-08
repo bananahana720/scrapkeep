@@ -441,6 +441,11 @@ func _begin_run(chosen: Resource) -> void:
 	# A new run, never a Continue: the timed door opens for exactly the run after a fast rout.
 	Secrets.roll_door(ctx.profile)
 	_save_profile("profile_door_save")
+	# A fixed route names the run seed too, so every stream that reads the run (pockets, stage
+	# modifiers, panels, device luck) repeats with the route, not just the stage stream.
+	var route := int(ctx.tuning.base("route_seed")) if ctx.tuning != null else 0
+	if route > 0 and ctx.run.run_seed_override == null:
+		ctx.run.run_seed_override = route
 	ctx.run.begin(chosen)
 	_seed_companion()
 	ctx.events.run_started.emit(chosen.id)
@@ -643,6 +648,7 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 	# the same moment as the checkpoint and gets the same pose.
 	ctx.run.snapshot(Vector3.ZERO, Vector3.ZERO, ctx.camera.yaw)
 	var doc: Dictionary = ctx.run.to_entrance_doc(_tree()) if store != null else {}
+	seed_stage_stream(index)
 	ctx.events.stage_entered.emit(index, retry)
 	var heading: Vector3 = ctx.terrain.entry_heading(index)
 	var flat := Vector2(carried.x, carried.z).length()
@@ -660,6 +666,32 @@ func enter_stage(index: int, carried: Vector3, retry: bool) -> void:
 	_set_state(STAGE)
 
 
+# The run's shared stream starts each stage from (session seed, run seed, stage), so a stage's
+# layout, event plan and offers are the same on a retry, after quit and Continue, and however the
+# stage before it was played; the next run in a session does not continue this one's stream.
+# Only the state moves: ctx.rng.seed stays the session (or --route-seed) value that device luck
+# and the activity sites read.
+func seed_stage_stream(index: int, place: String = "stage") -> void:
+	if ctx.rng != null and ctx.run != null:
+		# Through a seeded generator: a raw 32-bit hash as the state would make the first draws tiny.
+		var mixed := RandomNumberGenerator.new()
+		mixed.seed = hash([ctx.rng.seed, run_key(), index, place])
+		ctx.rng.state = mixed.state
+
+
+# The run's part of the stage stream, loot, scrap, offers and the shelf. A headless test that
+# names no run seed of its own keeps one stage route whatever the clock-made run id is (the
+# streams that read run_seed directly, such as pockets, stage modifiers, panels and device luck,
+# still follow it); a run seed set on purpose (bots, QA tools, --route-seed) and every real run
+# draw their own stages.
+func run_key() -> int:
+	if ctx.run == null:
+		return 0
+	if ctx.run.run_seed_override == null and ctx.root != null and bool(ctx.root.get("test_mode")):
+		return 0
+	return ctx.run.run_seed
+
+
 # Back to the stage-start checkpoint: run state, ball position and entry speed. It is
 # one synchronous call, so it lands well inside a second.
 func retry_stage() -> void:
@@ -672,6 +704,7 @@ func retry_stage() -> void:
 	_launched = false
 	_flight = 0.0
 	_last_percent = -1
+	seed_stage_stream(ctx.run.stage)
 	ctx.events.stage_entered.emit(ctx.run.stage, true)
 	var velocity: Vector3 = ctx.run.snapshot_value("entry_velocity")
 	_place_ball(ctx.run.snapshot_value("entry_position"), velocity, velocity)
@@ -708,6 +741,7 @@ func enter_boss(carried: Vector3) -> void:
 	_set_state(BOSS)
 	ctx.events.stage_content_cleared.emit("arena")
 	ctx.player.set_frozen(false)
+	seed_stage_stream(ctx.run.stage, "arena")
 	boss.enter_arena(carried)
 	ctx.run.set_snapshot_entry(ctx.player.ball_position(), ctx.player.state.velocity, ctx.camera.yaw)
 
@@ -730,6 +764,7 @@ func _retry_arena() -> void:
 		return
 	_set_state(BOSS)
 	ctx.events.stage_content_cleared.emit("arena_retry")
+	seed_stage_stream(ctx.run.stage, "arena")
 	boss.enter_arena(ctx.run.snapshot_value("entry_velocity"))
 
 

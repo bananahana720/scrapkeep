@@ -77,7 +77,8 @@ func _run_store_shapes() -> void:
 
 
 func _camp_records() -> void:
-	for camp in [{"trial": null}, {"trial": 61240}, {"trial": {"best_ms": "fast"}}, {"skee_best": [340]}, {"trial": {"best_ms": 900, "ghost": 3}}]:
+	for camp in [{"trial": null}, {"trial": 61240}, {"trial": {"best_ms": "fast"}}, {"skee_best": [340]}, {"trial": {"best_ms": 900, "ghost": 3}},
+			{"trial": {"best_ms": 900, "ghost": {"p0": [null, 0, 0], "d": ""}}}]:
 		var path := DIR.path_join("profile.json")
 		for leftover in DirAccess.get_files_at(DIR):
 			if leftover.begins_with("profile.json"):

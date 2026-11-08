@@ -87,6 +87,12 @@ const BRAKE_RESISTANCE := 4.0
 const BRAKE_TURN_BOOST := 2.2
 const BOOST_IMPULSE := 11.0
 const BOOST_COOLDOWN := 1.1
+# Stacked cooldown parts stay uncapped as stats (overpowered pays), but the boost itself never
+# recharges faster than this. Measured 2026-11-08 on the park dam with boost held: 0.165 s peaks
+# at 122 m/s and 0.11 s at 165 m/s, against 180 m/s where one 90 Hz tick moves the ball its own
+# diameter; with no floor a held boost fired every tick and reached 483 m/s. At this floor
+# the held boost peaks at 124-134 m/s.
+const BOOST_COOLDOWN_FLOOR := 0.15
 const COYOTE_TIME := 0.10
 const JUMP_BUFFER := 0.14
 const MAX_SLOPE_DOT := 0.45
@@ -304,7 +310,7 @@ func harpoon_rewind() -> float:
 
 
 func boost_cooldown() -> float:
-	return BOOST_COOLDOWN * boost_cooldown_scale
+	return maxf(BOOST_COOLDOWN * boost_cooldown_scale, BOOST_COOLDOWN_FLOOR)
 
 
 func set_value(key: String, value: float) -> void:

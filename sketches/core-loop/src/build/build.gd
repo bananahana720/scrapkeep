@@ -117,6 +117,10 @@ var accretion
 var panel_shell
 var dropper = Panels.Dropper.new()
 var panel_rng := RandomNumberGenerator.new()
+# Scrap drops roll on their own stream, so how a fight spills scrap does not move the stage plan.
+var scrap_rng := RandomNumberGenerator.new()
+# Vaults paid this stage: each names its own offer stream.
+var _vaults_paid := 0
 # Louvres the last recompute converted into the pilot's signature stat (Panels.OVERFLOW), and
 # the counts it folded after that conversion (what the build read's stat lines say).
 var panel_overflow := 0
@@ -1010,8 +1014,11 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	clock.enter_stage(stage)
 	lanes.reset()
 	_offered = {}
-	loot_rng.seed = LOOT_SEED + stage * 7919 + ctx.run.retries
-	panel_rng.seed = hash([ctx.run.run_seed, stage, ctx.run.retries, "panels"])
+	_vaults_paid = 0
+	# A retry replays the same procs and panel drops: the seeds name the run and stage only.
+	loot_rng.seed = hash([LOOT_SEED, ctx.flow.run_key(), stage, "loot"])
+	panel_rng.seed = hash([ctx.run.run_seed, stage, "panels"])
+	scrap_rng.seed = hash([ctx.flow.run_key(), stage, "scrap"])
 	scrap.clear_caches()
 	_caches_pending = true
 	_caches_wait = 0
@@ -1052,19 +1059,22 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 	var amount := int(round(scrap_value * sheet.kill_scrap * stage_pay)) if not scrapless() else 0
 	# A kill pays mass as scrap and the wallet as an equal count of 1-cog gears (CG1).
 	if kind == "warden":
-		scrap.drop_line(at, _heading(), WARDEN_LINE, amount, ctx.rng)
+		scrap.drop_line(at, _heading(), WARDEN_LINE, amount, scrap_rng)
 		scrap.drop_cogs_line(at, _heading(), WARDEN_LINE, amount)
 	else:
-		scrap.drop(at, amount, ctx.rng)
+		scrap.drop(at, amount, scrap_rng)
 		scrap.drop_cogs(at, amount)
 	_drop_panel(kind, at)
 	# A vault pays out a rare part and a bonus core (DEMO-SPEC engagement tiers).
 	if kind == "vault":
-		var picks: Array = Parts.roll(ctx.rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
+		# Each vault in a stage rolls its own stream, so two vaults never pay the same part.
+		_vaults_paid += 1
+		var vault_rng := _offer_rng("vault_%d" % _vaults_paid)
+		var picks: Array = Parts.roll(vault_rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
 		if not picks.is_empty() and not scrapless():
 			ctx.run.add_part(picks[0], "vault")
 		ctx.run.add_core("vault", at)
-		var active := active_offer("vault", Parts.SOURCE_RARITIES["vault"], ctx.rng)
+		var active := active_offer("vault", Parts.SOURCE_RARITIES["vault"], vault_rng)
 		if active != "" and not scrapless():
 			active_rack().take(active, ctx.player.ball_position())
 
@@ -1227,15 +1237,24 @@ func _on_flow_changed(state: String) -> void:
 	if state != "gates" or gates.is_open():
 		return
 	var rarities := Parts.gate_rarities(ctx.run.gate_tier_bonus())
-	var picks: Array = Parts.roll_gate(ctx.rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
-	picks = Parts.floor_gate(ctx.rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)
+	var gate_rng := _offer_rng("gates")
+	var picks: Array = Parts.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
+	picks = Parts.floor_gate(gate_rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	picks += _hotwire_gate_ids()
-	var active := active_offer("gate", rarities, ctx.rng)
+	var active := active_offer("gate", rarities, gate_rng)
 	if active != "":
 		picks.append(active)
 	ctx.events.reward_offered.emit(gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts))
+
+
+# A reward's own stream, named by the run, the stage and the source: the gate pair and a vault's
+# roll do not move with how many kills or hits came before them in the stage.
+func _offer_rng(source: String) -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([ctx.rng.seed, ctx.flow.run_key(), ctx.flow.stage(), source])
+	return rng
 
 
 # Scrapless still rolls through a gate to launch (the handshake needs reward_chosen);
@@ -1359,7 +1378,7 @@ func _on_armor_hit(_removed: float, spill: int, _source: String) -> void:
 			ctx.run.metrics["arena_destroyed"] += spill
 		_redraw()
 		return
-	scrap.drop_recovery(ctx.terrain, ctx.player.ball_position(), _heading(), spill, RunState.SPILL_CLUSTERS, ctx.rng)
+	scrap.drop_recovery(ctx.terrain, ctx.player.ball_position(), _heading(), spill, RunState.SPILL_CLUSTERS, scrap_rng)
 	_redraw()
 
 
