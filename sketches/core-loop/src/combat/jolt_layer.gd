@@ -30,7 +30,6 @@ var _presence: AudioStreamPlayer3D
 var _told := -1
 var _spool: MeshInstance3D
 var _coil: MeshInstance3D
-static var _warned_asset := false
 static var _shared: Array = []
 
 
@@ -71,31 +70,8 @@ func _build_tool() -> void:
 # The model (tools/blender/world_one/enemy_jolt_layer.py), read once and shared: the body
 # flashes on its fleet_paint surface, the coil is its own mesh so it can swell.
 static func _parts() -> Array:
-	if not _shared.is_empty():
-		return _shared
-	var path := "res://assets/models/world_one/enemy_jolt_layer.glb"
-	if not ResourceLoader.exists(path):
-		return _shared
-	var packed := load(path) as PackedScene
-	if packed == null:
-		return _shared
-	var scene := packed.instantiate()
-	var painted := Palette.solid(Color.WHITE)
-	painted.vertex_color_use_as_albedo = true
-	for node in scene.find_children("*", "MeshInstance3D", true, false):
-		var mi := node as MeshInstance3D
-		var mesh: Mesh = mi.mesh.duplicate()
-		var flash := -1
-		for i in mesh.get_surface_count():
-			var surface_material := mesh.surface_get_material(i)
-			if surface_material == null and not _warned_asset:
-				_warned_asset = true
-				push_warning("jolt_layer: surface has no material; using default finish")
-			if surface_material != null and surface_material.resource_name == "fleet_paint":
-				flash = i
-			mesh.surface_set_material(i, painted)
-		_shared.append({"name": mi.name, "mesh": mesh, "xform": mi.transform, "flash": flash})
-	scene.free()
+	if _shared.is_empty():
+		_shared = EnemyCasting.parts("res://assets/models/world_one/enemy_jolt_layer.glb", "jolt_layer")
 	return _shared
 
 
