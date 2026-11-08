@@ -161,5 +161,5 @@ func power() -> float:
 	var chain := 1.0
 	for jump in mini(pattern.chain_jumps, POWER_CONTRACT["neighbours"]):
 		chain += pow(pattern.chain_falloff, jump + 1)
-	var rate: float = minf(pattern.rate * mod("weapon_rate"), Pattern.MAX_RATE) / base.rate
+	var rate: float = clampf(pattern.rate * mod("weapon_rate"), Pattern.MIN_RATE, Pattern.MAX_RATE) / base.rate
 	return pattern.damage / base.damage * mod("weapon_damage") * rate * pattern.volley_size() * chain

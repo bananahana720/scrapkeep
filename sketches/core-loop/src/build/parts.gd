@@ -396,7 +396,7 @@ static var _run_ref: WeakRef
 # game's rolls would read that stand-in's tier.
 static func bind_run(run) -> void:
 	var held = _run_ref.get_ref() if _run_ref != null else null
-	if held != null and held != run and held.get("events") != null and run.get("events") == null:
+	if held != null and held != run and held.get("events") != null and (run == null or run.get("events") == null):
 		return
 	_run_ref = weakref(run)
 

@@ -455,8 +455,9 @@ func _begin_run(chosen: Resource) -> void:
 # run or an ended one, the store's refusal (newer_schema, quarantine_failed), "unreadable" for
 # a file moved aside as .bad, or "invalid_run" for a document this build cannot apply.
 # saved_run_why has the detail; continue_refusal() has the player's sentence.
-# Every stage table shares user://run.json. A stage past this table's end clamps to its last map,
-# and clearing that wins the run.
+# Every stage table shares user://run.json. A run saved past this table's end (a park run opened
+# under the one-stage slice dev table) is refused rather than clamped onto the last map, where
+# clearing it would win a run that was never played; the file stays for the table that wrote it.
 func _stage_fit_error(doc: Dictionary) -> String:
 	if ctx == null or ctx.stages == null:
 		return ""
@@ -602,7 +603,10 @@ func _keep_found_pieces() -> void:
 # Writes the run's companion to the profile when it has one and the profile's differs.
 func _persist_companion() -> void:
 	_keep_found_pieces()
-	if ctx.profile == null or ctx.run.companion.is_empty() or ctx.profile.companion() == ctx.run.companion:
+	# Compared with the profile's companion as this build reads it: a piece this build does not
+	# know (a newer build's save) is not a reason to write, so it is never dropped from the file
+	# unless the run actually changed the companion.
+	if ctx.profile == null or ctx.run.companion.is_empty() or profile_companion() == ctx.run.companion:
 		return
 	ctx.profile.set_companion(ctx.run.companion)
 	if ctx.profile.can_save and not ctx.profile.save():
@@ -720,6 +724,8 @@ func _retry_arena() -> void:
 	ctx.player.set_frozen(false)
 	if boss == null:
 		warn_once("arena_retry", "flow: no boss module to retry the arena against; moving on")
+		in_arena = false
+		boss_active = false
 		_advance_from(ctx.run.stage)
 		return
 	_set_state(BOSS)
@@ -1199,7 +1205,7 @@ func _rescue_lost_ball() -> void:
 	var at = ctx.run.snapshot_value("entry_position") if ctx.run != null else null
 	if not (at is Vector3) or not (at as Vector3).is_finite():
 		at = ctx.terrain.spawn_point(ctx.run.stage) if ctx.terrain != null and ctx.run != null else Vector3.ZERO
-	push_warning("flow: the ball's position is not finite; returned to the stage entry")
+	warn_once("ball_not_finite", "flow: the ball's position is not finite; returned to the stage entry")
 	ctx.player.reset_to(at, Vector3.ZERO)
 
 

@@ -45,7 +45,7 @@ func _populated() -> RunState:
 
 func _companion_doc() -> Dictionary:
 	var piece: String = Companion.PIECES[0]["id"]
-	return {"chassis": Companion.CHASSIS, "owned": [piece], "sockets": [piece], "escape_ready": false, "escape_spent": false}
+	return {"chassis": Companion.CHASSIS, "owned": [piece], "sockets": [piece], "escape_ready": true, "escape_spent": false}
 
 
 func _initialize() -> void:
