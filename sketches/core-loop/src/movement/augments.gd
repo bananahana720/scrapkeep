@@ -648,6 +648,10 @@ static func _mount(kit, state, tuning, intent, aim: Basis, body_state, step: flo
 		return true
 	if not kit.on(PYLON) or not intent.mount_pressed or kit.mount_block > 0.0:
 		return false
+	# A committed smash haul owns the ball until it lands: mounted, the haul would freeze
+	# (apply returns before _grapple) and then overwrite the slingshot's launch.
+	if kit.line_state == LINE_SMASH:
+		return false
 	var spot := _mount_spot(kit, body_state)
 	if spot.is_empty():
 		return false

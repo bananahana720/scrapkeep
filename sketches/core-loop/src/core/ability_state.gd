@@ -344,6 +344,11 @@ func fit(def) -> void:
 func swap(name: String, id: String) -> void:
 	var row: Dictionary = ABILITIES.get(id, {})
 	var old: Slot = _slots[name]
+	# A cast belongs to the ability that began it: a new ability in the slot drops it rather
+	# than finishing on the new row's cast time.
+	if casting == name and old.id != id:
+		casting = UNSTARTED
+		cast_left = 0.0
 	var s := Slot.new()
 	s.max_charges = maxi(1, old.max_charges - old.pressure_bonus)
 	s.charges = s.max_charges
