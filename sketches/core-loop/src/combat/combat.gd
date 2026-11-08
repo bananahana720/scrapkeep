@@ -902,7 +902,7 @@ func _call_assist(at: Vector3, dealt: float) -> void:
 	var struck := _assist_targets(row["shape"], at, ball, dir, radius)
 	for enemy in struck:
 		_trail_deal(enemy, damage, "companion_assist", "item_proc")
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+		if DamageDoor.dead(enemy):
 			continue
 		if row["prime"]:
 			_primed[enemy.get_instance_id()] = _clock + Companion.PRIMER_SECONDS
@@ -933,7 +933,7 @@ func _assist_targets(shape: String, at: Vector3, ball: Vector3, dir: Vector3, ra
 	var nearest: Node3D = null
 	var best := INF
 	for enemy in get_tree().get_nodes_in_group("enemy"):
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()) or _fights_posture(enemy):
+		if DamageDoor.dead(enemy) or _fights_posture(enemy):
 			continue
 		var flat: Vector3 = enemy.global_position - at
 		flat.y = 0.0
@@ -1657,7 +1657,7 @@ func _add_shred(enemy: Node3D, punch: float) -> void:
 func _decay_shred(delta: float) -> void:
 	for id in _shred.keys():
 		var enemy := instance_from_id(id) as Node3D
-		if enemy == null or not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+		if DamageDoor.dead(enemy):
 			_shred.erase(id)
 			continue
 		var entry: Dictionary = _shred[id]
@@ -2198,7 +2198,7 @@ func _step_cannon(delta: float) -> void:
 
 func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 	for enemy in enemies:
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+		if DamageDoor.dead(enemy):
 			continue
 		var id: int = enemy.get_instance_id()
 		if entry["struck"].has(id) or (enemy != entry["options"].get("forced") and not h.contains(enemy.global_position)):
@@ -2676,7 +2676,7 @@ func _ult_volley(_beat: int, ball: Vector3, aim: Vector3, _heft_mult: float) -> 
 	var picks: Array = []
 	var bias := deg_to_rad(Ultimate.VOLLEY_BIAS_DEG)
 	for enemy in get_tree().get_nodes_in_group("enemy"):
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+		if DamageDoor.dead(enemy):
 			continue
 		var gap: float = enemy.global_position.distance_to(ball)
 		if gap > Ultimate.VOLLEY_RADIUS:
@@ -2708,7 +2708,7 @@ func _ult_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	var hits := 0
 	var dealt := 0.0
 	for enemy in get_tree().get_nodes_in_group("enemy"):
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+		if DamageDoor.dead(enemy):
 			continue
 		if enemy.global_position.distance_to(at) > radius:
 			continue
@@ -3102,7 +3102,7 @@ func _clear_tally_piece() -> void:
 
 
 func _tally_enemies() -> Array:
-	return get_tree().get_nodes_in_group("enemy").filter(func(e): return is_instance_valid(e) and not (e.has_method("is_dead") and e.is_dead()))
+	return get_tree().get_nodes_in_group("enemy").filter(func(e): return not DamageDoor.dead(e))
 
 
 static func _flat_gap(a: Vector3, b: Vector3) -> float:
@@ -3287,7 +3287,7 @@ func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		if struck.has(cid):
 			continue
 		var enemy = instance_from_id(cid)
-		if enemy == null or not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+		if DamageDoor.dead(enemy):
 			continue
 		effects.arc(at + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, ClassDef.TALLY_COLOR)
 		dealt += _piece_hit(enemy, amount * share, at, Weapons.LEDGER_KNOCK)

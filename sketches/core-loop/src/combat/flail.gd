@@ -2,6 +2,7 @@ extends Node
 
 const Grip := preload("res://src/movement/grip.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const DamageDoor := preload("res://src/combat/damage_door.gd")
 
 # Flails (design-v3/POLES-FLAILS.md section 5): an enemy at least Grip.BAND lighter than the
 # ball, bitten and held, flies to the ball and swings behind it on the line. While it hangs it
@@ -131,7 +132,7 @@ func _carry(delta: float, player) -> void:
 func _swing(player) -> void:
 	var scale := maxf(MIN_SPEED_SCALE, player.state.velocity.length() / player.tuning.tier_cruise())
 	for other in get_tree().get_nodes_in_group("enemy"):
-		if other == body or not is_instance_valid(other) or (other.has_method("is_dead") and other.is_dead()):
+		if other == body or DamageDoor.dead(other):
 			continue
 		if not _touching(body, other):
 			continue
@@ -201,7 +202,7 @@ func _fly(delta: float) -> void:
 	for f in _flying:
 		var node = f["body"]
 		f["left"] -= delta
-		if f["left"] <= 0.0 or not is_instance_valid(node) or (node.has_method("is_dead") and node.is_dead()):
+		if f["left"] <= 0.0 or DamageDoor.dead(node):
 			continue
 		for other in get_tree().get_nodes_in_group("enemy"):
 			if other == node or other == body or not is_instance_valid(other) or f["hit"].has(other.get_instance_id()):

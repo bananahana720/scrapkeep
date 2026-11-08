@@ -16,6 +16,7 @@ const Hitscan := preload("res://src/combat/hitscan.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
 const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
+const DamageDoor := preload("res://src/combat/damage_door.gd")
 
 const SET_PIECES := ["foundry_cutter", "prism_cutter", "juggernaut_drive"]
 const BEAM_PIECES := ["foundry_cutter", "prism_cutter"]
@@ -257,7 +258,7 @@ func _class() -> int:
 
 
 func _alive(enemy) -> bool:
-	return is_instance_valid(enemy) and not (enemy.has_method("is_dead") and enemy.is_dead())
+	return not DamageDoor.dead(enemy)
 
 
 func _warden(enemy: Node3D) -> bool:

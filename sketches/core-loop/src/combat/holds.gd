@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const DamageDoor := preload("res://src/combat/damage_door.gd")
 
 # Every hold an enemy puts on the ball, and the tenacity that bounds a chain of them
 # (DESIGN-V2 section 10.3). A counter never touches the ball itself: it asks here.
@@ -337,7 +338,7 @@ func _expire(delta: float) -> void:
 	for id in active.keys():
 		var hold: Dictionary = active[id]
 		var source = hold["source"].get_ref()
-		if source == null or not is_instance_valid(source) or (source.has_method("is_dead") and source.is_dead()):
+		if DamageDoor.dead(source):
 			_release_id(id, "source_gone")
 			continue
 		if float(hold["left"]) > 0.0:

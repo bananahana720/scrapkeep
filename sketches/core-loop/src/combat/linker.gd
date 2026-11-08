@@ -25,6 +25,7 @@ extends "res://src/combat/counter.gd"
 signal special_tell(moment: String)
 
 const MODEL := "res://assets/models/world_one/enemy_linker.glb"
+const DamageDoor := preload("res://src/combat/damage_door.gd")
 # The specials' cue layer (CONTRACTS.md "Special cues", stacked on PR #51): tell() on the
 # tell's first frame plays the linker_tell render; presence and death are its own. Read when
 # it is in the build.
@@ -293,7 +294,7 @@ func _slack() -> void:
 
 
 static func _alive(enemy) -> bool:
-	return enemy != null and is_instance_valid(enemy) and not (enemy.has_method("is_dead") and enemy.is_dead())
+	return not DamageDoor.dead(enemy)
 
 
 # --- The body ---------------------------------------------------------------------------
