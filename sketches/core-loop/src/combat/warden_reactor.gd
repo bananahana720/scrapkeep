@@ -257,6 +257,13 @@ func _open_sheet(warden) -> void:
 	_show_sheet(warden)
 
 
+# The killing ram always lands with the sheet open, and a freed Warden no longer steps the
+# sheet's timer, so the slab (drawn under the world root, not the Warden) closes here.
+func on_exit(_warden) -> void:
+	sheet_left = 0.0
+	_close_sheet()
+
+
 func _close_sheet() -> void:
 	riding = false
 	if is_instance_valid(_sheet_view):
