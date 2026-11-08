@@ -81,9 +81,12 @@ const WALL_S := 1100.0
 # grown [15.14, 19.54, 20.03, 15.26, 9.05] median 15.3, grown after the clamp the same (inside 15-35 by 0.3 s;
 # 0.1 s on 1013c7d1), every small and grown run breaks the Warden, campers never break. Grown seed 4's 9.05 s
 # matches the 8.02 s in the w20 pin. The 15 s floor now has almost no margin: a band check, not a pin, owns it.
+# Same day (ruling bl, the bot's point-blank bite at a 0.25 s re-press): Kest seeds moved again, small seed 4
+# 11.33 -> 19.49 and grown seed 2 20.03 -> 17.75. One run on d244fbb8: small median 23.9, grown [15.14, 19.54,
+# 17.75, 21.61, 9.05] median 17.8, after the clamp the same, 2.8 s over the 15 s floor.
 const EXPECT_SMALL_S := 23.9
-const EXPECT_GROWN_S := 15.3
-const EXPECT_GROWN_OPEN_S := 15.3
+const EXPECT_GROWN_S := 17.8
+const EXPECT_GROWN_OPEN_S := 17.8
 const TOLERANCE := 0.10
 
 
