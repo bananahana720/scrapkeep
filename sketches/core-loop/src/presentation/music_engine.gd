@@ -1816,8 +1816,10 @@ func _run(action: Dictionary) -> void:
 		"cadence":
 			_dominant_held = false
 			# The cadence walks home in key 0: a lift or break still queued from the fight
-			# would re-key it a bar later.
-			_bar_queue.clear()
+			# would re-key it a bar later. A heft or ultimate lift change is not the fight's
+			# and stays queued (the drop keeps the same hazard in mind for "ult").
+			_bar_queue = _bar_queue.filter(func(item): return not ((item["set"] as Dictionary).has("key") \
+					or (item["set"] as Dictionary).has("section") or (item["set"] as Dictionary).has("esc")))
 			_transition = {}
 			_reset_bar()
 			_cadence_bar = 0

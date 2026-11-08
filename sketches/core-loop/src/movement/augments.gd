@@ -747,6 +747,10 @@ static func _grapple(kit, tuning, intent, body_state, step: float) -> void:
 			_ride_pole(kit, tuning, intent, body_state, step)
 		elif intent.harpoon_held and kit.grip != "flail":
 			_winch_body(kit, tuning, body_state, step)
+			# Only this haul onto a bitten body is a reel for the dunk (ruling bf); an anchor or
+			# pole ride that reels to its floor rope is not.
+			kit.reel_body = kit.anchor_body
+			kit.reel_left = REEL_GRACE
 		return
 	var to_anchor: Vector3 = kit.anchor - origin
 	var dist := to_anchor.length()
@@ -898,9 +902,6 @@ static func _winch_body(kit, tuning, body_state, step: float, stop := 0.0) -> vo
 	var head := clampf(1.0 - v.dot(dir) / tuning.f("reel_speed"), 0.0, 1.0)
 	if dist > stop:
 		v += dir * tuning.f("reel_force") * head * step
-	if kit.anchor_body != null:
-		kit.reel_body = kit.anchor_body
-		kit.reel_left = REEL_GRACE
 	kit.rope = maxf(maxf(MIN_ROPE, stop), minf(kit.rope, dist))
 	body_state.linear_velocity = v
 

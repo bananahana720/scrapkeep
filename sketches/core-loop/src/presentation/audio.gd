@@ -2423,6 +2423,9 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	# Each stage starts its own difficulty clock and never carries a vent pedal over.
 	engine.set_fleet_ticks(0)
 	engine.set_reactor_pedal(false)
+	# An event torn down with its stage (no event_ended) must not escalate the next stage. Cleared
+	# here, at the entry itself, so an event the new stage starts this frame keeps its id.
+	_event_id = ""
 	_flow_queue.append(["stage", stage, retry])
 	_warm_park_risers.call_deferred(stage)
 
@@ -2928,21 +2931,19 @@ func _on_boss_defeated() -> void:
 
 
 # A live miniboss other than the one dying on this kill (enemy.gd marks it dead first).
-# A miniboss leaving with the band still owed to it: killed inside the bar before its track
-# landed (the switch is dropped), or gone without a kill (despawn, lap), so the miniboss
-# track drops home as a kill would. _on_kill already paid a landed kill (_miniboss is null).
+# A miniboss that leaves (killed, or cleared with its stage) before its track has landed takes
+# the queued switch with it, so the band never enters a fight that is already over. A landed
+# track is left alone: a kill pays its own drop (_on_kill), and a stage teardown or launch
+# hands the band on through its own restart or landing drop.
 func _on_miniboss_gone(enemy: Node) -> void:
-	if enemy != _miniboss or engine == null:
+	if enemy != _miniboss or engine == null or engine.track == "miniboss":
 		return
 	var survivor := _miniboss_survivor()
 	if survivor != null and survivor != enemy:
 		_miniboss = survivor
 		return
 	_miniboss = null
-	if engine.track == "miniboss":
-		engine.miniboss_drop()
-	else:
-		engine.drop_pending_track("miniboss")
+	engine.drop_pending_track("miniboss")
 
 
 func _miniboss_survivor() -> Node3D:
@@ -3640,8 +3641,6 @@ func _flush_flow() -> void:
 			"stage":
 				var stage: int = item[1]
 				var retry: bool = item[2]
-				# An event torn down with its stage (no event_ended) must not escalate the next.
-				_event_id = ""
 				if not retry and "run" in kinds:
 					continue
 				if radio_hold != "":
