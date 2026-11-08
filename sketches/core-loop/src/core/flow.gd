@@ -441,11 +441,10 @@ func _begin_run(chosen: Resource) -> void:
 	# A new run, never a Continue: the timed door opens for exactly the run after a fast rout.
 	Secrets.roll_door(ctx.profile)
 	_save_profile("profile_door_save")
-	# A fixed route names the run seed too, so every stream that reads the run (pockets, stage
-	# modifiers, panels, device luck) repeats with the route, not just the stage stream.
-	var route := int(ctx.tuning.base("route_seed")) if ctx.tuning != null else 0
-	if route > 0 and ctx.run.run_seed_override == null:
-		ctx.run.run_seed_override = route
+	# A fixed route names the run seed (not the run id, which the tally ledger keys on), so the
+	# streams that read the run (pockets, stage modifiers, panels) repeat with the route. Read
+	# every run, so turning the slider back to 0 gives the next run its own seed again.
+	ctx.run.route_seed = int(ctx.tuning.base("route_seed")) if ctx.tuning != null else 0
 	ctx.run.begin(chosen)
 	_seed_companion()
 	ctx.events.run_started.emit(chosen.id)
@@ -682,12 +681,12 @@ func seed_stage_stream(index: int, place: String = "stage") -> void:
 # The run's part of the stage stream, loot, scrap, offers and the shelf. A headless test that
 # names no run seed of its own keeps one stage route whatever the clock-made run id is (the
 # streams that read run_seed directly, such as pockets, stage modifiers, panels and device luck,
-# still follow it); a run seed set on purpose (bots, QA tools, --route-seed) and every real run
-# draw their own stages.
+# still follow it); a run seed set on purpose (bots, QA tools), a fixed route (--route-seed names
+# run_seed) and every real run draw their own stages.
 func run_key() -> int:
 	if ctx.run == null:
 		return 0
-	if ctx.run.run_seed_override == null and ctx.root != null and bool(ctx.root.get("test_mode")):
+	if ctx.run.run_seed_override == null and ctx.run.route_seed <= 0 and ctx.root != null and bool(ctx.root.get("test_mode")):
 		return 0
 	return ctx.run.run_seed
 

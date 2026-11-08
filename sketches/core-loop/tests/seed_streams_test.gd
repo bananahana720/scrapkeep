@@ -80,6 +80,7 @@ func _run() -> void:
 	_shop()
 	_sell()
 	_boost_floor()
+	_route()
 	quit(t.verdict())
 
 
@@ -118,3 +119,20 @@ func _boost_floor() -> void:
 	tuning.boost_cooldown_scale = 1.0
 	t.near("an unstacked boost keeps its cooldown", tuning.boost_cooldown(), Tuning.BOOST_COOLDOWN, 0.0001)
 	tuning.boost_cooldown_scale = kept
+
+
+# A fixed route names the run seed but leaves the clock-made run id the tally ledger keys on, and
+# a route of 0 gives the next run its own seed again.
+func _route() -> void:
+	var RunState := preload("res://src/core/run_state.gd")
+	var a := RunState.new(null, 1)
+	a.route_seed = 7
+	a.begin(null)
+	var b := RunState.new(null, 2)
+	b.route_seed = 7
+	b.begin(null)
+	t.check("two runs on one route share their run seed", a.run_seed == b.run_seed)
+	t.check("a route run keeps its own run id", a.run_id != b.run_id and not a.run_id.begins_with("bot-"), "%s / %s" % [a.run_id, b.run_id])
+	b.route_seed = 0
+	b.begin(null)
+	t.check("a route of 0 draws a fresh run seed", b.run_seed != a.run_seed)

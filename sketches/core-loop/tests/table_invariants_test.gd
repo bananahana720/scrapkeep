@@ -22,6 +22,7 @@ const Nemesis := preload("res://src/combat/nemesis.gd")
 const Relics := preload("res://src/build/relics.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 const Achievements := preload("res://src/core/achievements.gd")
+const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const T := preload("res://tests/support/t.gd")
 
 const WORLD_ONE_PARKS := ["res://src/world/park/park_dam.json", "res://src/world/park/park_flume.json"]
@@ -193,9 +194,21 @@ func _park_scores() -> void:
 func _look_textures() -> void:
 	var re := RegEx.create_from_string(LOOK_CALL)
 	var ids := {}
+	# Ids passed through a variable: the hero shells pick a map by slot, and the arena warms its
+	# neutral looks from a list.
+	var held := RegEx.create_from_string("\\bmap = \"([A-Za-z0-9_.-]+)\"")
 	for path in _scripts("res://src"):
-		for m in re.search_all(FileAccess.get_file_as_string(path)):
+		var text := FileAccess.get_file_as_string(path)
+		for m in re.search_all(text):
 			ids[m.get_string(1)] = path
+		if text.contains("look_texture(map"):
+			for m in held.search_all(text):
+				ids[m.get_string(1)] = path
+	for id in preload("res://src/boss/arena.gd").NEUTRAL_LOOKS:
+		ids[id] = "arena.gd"
+	for slot in MaterialSlots.SLOTS.values():
+		for id in (slot["textures"] as Dictionary).values():
+			ids[id] = "material_slots.gd"
 	_t.check("source names some look textures", ids.size() >= 3, str(ids.keys()))
 	for id in ids:
 		_t.check("look texture %s exists (%s)" % [id, ids[id].get_file()],

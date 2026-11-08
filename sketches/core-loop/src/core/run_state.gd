@@ -126,6 +126,8 @@ var metrics := {}
 var run_seed := 0
 # Bot runner only; normal play keeps the clock-based identity.
 var run_seed_override = null
+# The --route-seed value for this run, 0 for none (Flow sets it before begin).
+var route_seed := 0
 var world := 0
 # The spend wallet (CG1): shop, fabricator, sell and refund move cogs and nothing else.
 # Damage, theft, wear and mass recovery never touch it; only add_cogs and spend_cogs do.
@@ -230,8 +232,9 @@ func begin(chosen_class: Resource) -> void:
 		run_id = "bot-%d" % int(run_seed_override)
 	else:
 		run_id = "%d-%06d" % [int(_unix_time()), _id_rng.randi() % 1000000]
-	# Derived from the run id so it draws nothing from the global RNG.
-	run_seed = hash(run_id)
+	# Derived from the run id so it draws nothing from the global RNG; a fixed route (--route-seed,
+	# set by Flow before begin) names it instead, unless a run seed was set on purpose.
+	run_seed = hash(["route", route_seed]) if route_seed > 0 and run_seed_override == null else hash(run_id)
 	world = 0
 	cogs = 0
 	start_pick = {}

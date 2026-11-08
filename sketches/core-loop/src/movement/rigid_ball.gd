@@ -191,6 +191,10 @@ func _integrate_forces(body_state: PhysicsDirectBodyState3D) -> void:
 	# The augments run before jump and boost so a pylon jump or a vault kick can claim
 	# the same key without the base rule firing as well.
 	Augments.apply(kit, state, tuning, intent, drive_basis, body_state)
+	# The augments write the body's velocity directly; one that went non-finite reads as rest
+	# here, as the entry check above does, so the state never carries NaN for a tick.
+	if not body_state.linear_velocity.is_finite():
+		body_state.linear_velocity = Vector3.ZERO
 	_publish_kit(body_state)
 
 	if Augments.holding(kit):
