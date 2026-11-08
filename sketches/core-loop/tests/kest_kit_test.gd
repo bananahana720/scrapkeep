@@ -410,8 +410,10 @@ func _hand_snapshot(pilot: String, condition: String) -> Dictionary:
 func _bot_hand_cases() -> void:
 	var near := _hand_snapshot("demolitions_caster", "near")
 	_t.check("Cable Charge hand waits outside the body's passing radius", not near["press"].get("harpoon_pressed", false), str(near))
+	# Every line skill waits on an enemy the ball already passes: that bite drops as "passed" on
+	# its next tick, and a press every tick re-bit it forever (w31 gate: 55-link chains, a 2 hp Brindle).
 	var ordinary := _hand_snapshot("demolitions_caster", "near_enemy")
-	_t.check("Cable Charge keeps the ordinary enemy bite hand", ordinary["press"].get("harpoon_pressed", false), str(ordinary))
+	_t.check("Cable Charge hand waits outside an enemy's passing radius too", not ordinary["press"].get("harpoon_pressed", false), str(ordinary))
 	var far := _hand_snapshot("demolitions_caster", "far")
 	_t.check("Cable Charge hand still bites and casts on a valid runup", far["press"].get("harpoon_pressed", false)
 		and far["cast_slot"] == 3 and far["cast_phase"] == "click", str(far))
