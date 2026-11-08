@@ -149,6 +149,8 @@ const CHARGE_CLOSE := 3.8
 const HARPOON_FLOOR := 30.0
 const LINE_REACH := 50.0
 const DROP_MEMORY := 6.0
+# A player's re-press on a body the ball already sits inside (see _pass_bite_blocked).
+const PASS_BITE_GAP_S := 0.25
 # The latch arm on a harpoon-anchor Warden (_anchor_fight): a bite within LATCH_REACH of the body
 # (inside the 45 m rope), the body reads hung when it stands more than HUNG_ABOVE over the ground
 # under it and rising or falling past ANCHOR_MOVING m/s; from the ground the ball waits for a hung
@@ -608,6 +610,7 @@ var _warden_hp_at := -1.0
 var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
 var _harpoon_held := false
+var _pass_bite_frame := -100000
 # Weak points (stub_boss.gd weak_open, #241): the point being read, how long it has been open, the
 # learner's one roll for it, whether a go is on, and the Warden it was read on: a go waives the harpoon hand's
 # wait between bites (_harpoon_hand) on that Warden only, so it bites again at once and the hand commits the haul.
@@ -2933,7 +2936,11 @@ func _harpoon_hand(target: Node3D, delta: float) -> void:
 			and (_off_line > DROP_MEMORY or (_weak_go and is_instance_valid(_weak_warden) and target == _weak_warden)) and _flat(game.player.ball_position(), target.global_position) <= HARPOON_FLOOR:
 		# The two-hook takeoff jumps instead of biting, so only a bite waits out the pass range.
 		if _bite_passes(target) and not _chain_takeoff(target):
-			return
+			# Cable Charge on the hull never bites from inside (its old guard); any other bite
+			# there re-presses at a player's cadence, not every tick.
+			if _pass_bite_blocked(target):
+				return
+			_pass_bite_frame = Engine.get_physics_frames()
 		# A movement exit waits for the haul; other line skills load on the bite.
 		if not bank_shot:
 			_cast(3)
@@ -2965,6 +2972,16 @@ func _chain_takeoff(target: Node3D) -> bool:
 # (augments.gd _follow), so a press every tick re-bites, links and drops forever: a 55-link
 # chain against a touching add, or a Brindle hull the ball never rams because each bite
 # clears its speed bank. A player cannot press at 90 Hz; the hand backs off instead.
+# Fully blocking those bites (#621) cost the small reactor arm its Warden pace (median
+# 50.9 -> 70.7 s) and slowed every bot Warden fight by up to 48 percent: the point-blank bite
+# itself is a play a player makes, only not at 90 Hz. The hand re-presses one every
+# PASS_BITE_GAP_S instead.
+func _pass_bite_blocked(target: Node3D) -> bool:
+	if game.player.abilities.id_of(AbilityState.LINE) == "cable_charge" and target.get("role") == "hull":
+		return true
+	return Engine.get_physics_frames() - _pass_bite_frame < roundi(PASS_BITE_GAP_S * Engine.physics_ticks_per_second)
+
+
 func _bite_passes(target: Node3D) -> bool:
 	if Augments.anchor_line(target) or Grip.of(target, game.player.heft(), game.player.tuning.pole_flail()) in ["pole", "flail"]:
 		return false

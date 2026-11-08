@@ -22,7 +22,8 @@ const Augments := preload("res://src/movement/augments.gd")
 const DT := 1.0 / 60.0
 # 2026-10-11 (PC-KEST): quiet loads, bite events and the fourteen-second reload, including a twelve-second guard.
 # 2026-10-16 (pilot paint): the Rigger Harness is cut; one check added, 71 -> 72.
-const EXPECTED_CHECKS := 72
+# 2026-11-08 (ruling bl): the point-blank enemy bite splits into bite and re-press gap, 72 -> 73.
+const EXPECTED_CHECKS := 73
 
 class HandHull:
 	extends Node3D
@@ -368,9 +369,9 @@ func _hand_snapshot(pilot: String, condition: String) -> Dictionary:
 	var driver := BotDriver.new(_game, "skipper", 2)
 	driver._off_line = 99.0
 	driver._note = {"stage": 1}
-	var at: Vector3 = _player.ball_position() + Vector3.RIGHT * (2.0 if condition in ["near", "near_enemy"] else 20.0)
+	var at: Vector3 = _player.ball_position() + Vector3.RIGHT * (2.0 if condition in ["near", "near_enemy", "near_enemy_recent"] else 20.0)
 	var target: Node3D
-	if pilot == "demolitions_caster" and condition != "near_enemy":
+	if pilot == "demolitions_caster" and not condition.begins_with("near_enemy"):
 		target = HandHull.new()
 		root.add_child(target)
 		target.global_position = at
@@ -388,6 +389,8 @@ func _hand_snapshot(pilot: String, condition: String) -> Dictionary:
 		_player.kit.rewind_left = 1.0
 	if condition == "memory":
 		driver._off_line = 0.0
+	if condition == "near_enemy_recent":
+		driver._pass_bite_frame = Engine.get_physics_frames()
 	if condition == "world":
 		_player.grapple_to(target.global_position, Vector3.UP, null)
 	if condition in ["latched", "latched_brake", "smash"]:
@@ -410,10 +413,14 @@ func _hand_snapshot(pilot: String, condition: String) -> Dictionary:
 func _bot_hand_cases() -> void:
 	var near := _hand_snapshot("demolitions_caster", "near")
 	_t.check("Cable Charge hand waits outside the body's passing radius", not near["press"].get("harpoon_pressed", false), str(near))
-	# Every line skill waits on an enemy the ball already passes: that bite drops as "passed" on
-	# its next tick, and a press every tick re-bit it forever (w31 gate: 55-link chains, a 2 hp Brindle).
+	# A bite on an enemy the ball already passes drops as "passed" on its next tick. A press every
+	# tick re-bit it forever (w31 gate: 55-link chains, a 2 hp Brindle); a full block slowed every
+	# Warden fight (ruling bl). The hand bites there at a player's cadence: once, then not again
+	# inside PASS_BITE_GAP_S.
 	var ordinary := _hand_snapshot("demolitions_caster", "near_enemy")
-	_t.check("Cable Charge hand waits outside an enemy's passing radius too", not ordinary["press"].get("harpoon_pressed", false), str(ordinary))
+	_t.check("Cable Charge hand bites an enemy inside its passing radius", ordinary["press"].get("harpoon_pressed", false), str(ordinary))
+	var recent := _hand_snapshot("demolitions_caster", "near_enemy_recent")
+	_t.check("Cable Charge hand waits out the re-press gap on that enemy", not recent["press"].get("harpoon_pressed", false), str(recent))
 	var far := _hand_snapshot("demolitions_caster", "far")
 	_t.check("Cable Charge hand still bites and casts on a valid runup", far["press"].get("harpoon_pressed", false)
 		and far["cast_slot"] == 3 and far["cast_phase"] == "click", str(far))

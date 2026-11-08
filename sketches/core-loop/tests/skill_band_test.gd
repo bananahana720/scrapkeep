@@ -139,7 +139,7 @@ func _runs(t) -> void:
 	# 18.0 and 0.0 hull lost, so the order was a coin flip (the owed skill_band flip). Over seeds 1 to 6
 	# novice >= expert held 5 of 6 before #619 and 3 of 6 after; summed hull, novice 51 / expert 25
 	# before and 55 / 66 after. The bands' order is read where it is stable: clear rates over many
-	# seeds in the gate's band reads (W1 Novice <= 40 percent, ruling ab), not one run here.
+	# seeds in the gate's band reads (W1 Novice <= 42 percent, rulings ab and bk), not one run here.
 	var hull_expert := float(rows["skipper-1-expert"]["max_hp"]) - float(rows["skipper-1-expert"]["min_hp"])
 	var hull_novice := float(rows["skipper-1-novice"]["max_hp"]) - float(rows["skipper-1-novice"]["min_hp"])
 	print("[report] skipper seed 1 hull lost: expert %.1f, novice %.1f" % [hull_expert, hull_novice])

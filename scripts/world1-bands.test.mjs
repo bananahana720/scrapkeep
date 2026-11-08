@@ -255,9 +255,10 @@ test("the difficulty row grades stored rates again: its own recorded bands, and 
   assert.match(row(evaluate(banded, inputs), "difficulty").measured, /w1 pass/);
   w1.columns.novice = col(0.375, true);
   assert.match(row(evaluate(banded, inputs), "difficulty").measured, /w1 fail/);
-  // The shipped band is <= 40%: 9 of 24 (37.5%) passes it, 10 of 24 (41.7%) does not.
-  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 pass/);
+  // The shipped band is <= 42% (ruling bk, w31): 10 of 24 (41.7%) passes it, 11 of 24 (45.8%) does not.
   w1.columns.novice = col(10 / 24, true);
+  assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 pass/);
+  w1.columns.novice = col(11 / 24, true);
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 fail/);
   // Today's target applies to a stored pass: 33% was marked ✓ on an old table, and <= 15% fails it.
   w1.columns.novice = col(0.33, true);
@@ -265,7 +266,7 @@ test("the difficulty row grades stored rates again: its own recorded bands, and 
   // The shipped row: w1 Novice 33% passes its recorded <= 35% band, and the bands are printed.
   const shipped = row(evaluate(SPEC, inputs), "difficulty");
   assert.match(shipped.measured, /w1 pass/);
-  assert.match(shipped.threshold, /recorded: w1 novice <= 40%, w1 learner5 >= 58%/);
+  assert.match(shipped.threshold, /recorded: w1 novice <= 42%, w1 learner5 >= 58%/);
   // Ruling bb (w29): w1 Learner a5 is recorded at >= 58%; 14 of 24 (58.3%) passes it, 13 of 24 (54.2%) does not.
   w1.columns.learner5 = col(14 / 24, false);
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 pass/);

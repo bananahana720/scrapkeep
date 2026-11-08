@@ -96,9 +96,15 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # growth ratio is now judged over 24 seeds (GROWTH_SEEDS): small 51.5 s, grown 27.5 s, ratio 1.87 on
 # stage/alpha-w19 f441455d (tools/posture_sweep.gd --seeds=0..23, the picked cell). Re-pinned to those medians;
 # was 56.4 / 28.3 over eight seeds. Receipt gate/w19-f441455d-bots-5.md.
+# 2026-11-08 (invariants thread, ruling bl, #621 bot bite guard): before #621 the bot bit the Warden from point-blank
+# on every physics tick; each bite dropped as "passed" on the next and re-bit (seed 2, Kest: 874 bites in a 50.3 s
+# fight, unbroken runs of about 20 frames, each one setting and detonating a cable charge). #621 blocked those bites
+# outright (small 70.7 s on 82683ffa); the bot now re-presses one every 0.25 s (BotDriver.PASS_BITE_GAP_S), a
+# player's sustained mash. One run on stage/alpha-w31 0786c1a8 with that hand: small 66.7 s, grown 25.8 s over
+# 24 seeds (1013c7d1 read 50.9 / 27.5), ratio 2.59 over the 1.85x floor, grown inside 25 to 45 s.
 const GROWTH := 1.85
-const EXPECT_SMALL_S := 51.5
-const EXPECT_GROWN_S := 27.5
+const EXPECT_SMALL_S := 66.7
+const EXPECT_GROWN_S := 25.8
 const SWEEP := "res://tools/posture_sweep.tsv"
 const TOLERANCE := 0.10
 
