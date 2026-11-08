@@ -3252,7 +3252,6 @@ func _follow_brindle() -> void:
 	var boss = ctx.get("boss")
 	if boss == null or not is_instance_valid(boss):
 		return
-	var phase := int(_num(boss, "phase", 0.0))
 	if engine.section == "chase":
 		var scooter = boss.get("scooter")
 		if scooter is Node3D and is_instance_valid(scooter) and boss.has_method("scooter_landed") and boss.scooter_landed():
@@ -3271,36 +3270,12 @@ func _follow_brindle() -> void:
 				phase_music(_boss_phase)
 			engine.brindle_hp(float(state["in_phase"]), bool(state["held"]), float(state["phase_seconds"]))
 		return
-	var rules := _boss_rules(boss)
-	if rules.is_empty() or phase < 1 or phase > 3:
-		return
-	var floors: Array = rules["PHASE_FLOORS"]
-	var mins: Array = rules["PHASE_MIN_SECONDS"]
-	var hp := _num(boss, "hp", 1.0) / maxf(_num(boss, "max_hp", 1.0), 1.0)
-	var top := 1.0 if phase == 1 else float(floors[phase - 2])
-	var floor_hp := float(floors[phase - 1])
-	var in_phase := clampf((top - hp) / maxf(top - floor_hp, 0.01), 0.0, 1.0)
-	var held := hp <= floor_hp + 0.001
-	engine.brindle_hp(in_phase, held, _num(boss, "phase_clock", 0.0) / maxf(float(mins[phase - 1]), 1.0))
 
 
 # A number the boss module exposes, or the default when it (or a test double) has none.
 static func _num(object: Object, property: String, fallback: float) -> float:
 	var value = object.get(property)
 	return float(value) if value is int or value is float else fallback
-
-
-static func _boss_rules(boss: Object) -> Dictionary:
-	var script = boss.get_script()
-	if script == null:
-		return {}
-	var rules = (script as Script).get_script_constant_map().get("Rules")
-	if not rules is Script:
-		return {}
-	var map: Dictionary = (rules as Script).get_script_constant_map()
-	if not map.has("PHASE_FLOORS") or not map.has("PHASE_MIN_SECONDS"):
-		return {}
-	return map
 
 
 func _on_dismounted(velocity: Vector3) -> void:
