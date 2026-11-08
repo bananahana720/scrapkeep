@@ -1,7 +1,7 @@
 extends "res://src/combat/enemy.gd"
 
-# The fastest the body may read as moving while mounted (Contact.SOFT_CAP_SPEED, m/s).
-const MOUNT_SPEED_MAX := 60.0
+# The fastest the body may read as moving while mounted, m/s.
+const MOUNT_SPEED_MAX: float = preload("res://src/movement/contact.gd").SOFT_CAP_SPEED
 const WardenLook := preload("res://src/combat/warden_look.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")

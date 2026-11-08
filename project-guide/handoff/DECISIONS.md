@@ -6,7 +6,7 @@ Owner: the project coordinator (claude.ai project, Andrew's main account, since 
 
 Sources: Andrew's typed lines and taps (project chat card taps until 18 Oct), board #241 comments and the local coordinator session. The machine's own register is docs/decisions.tsv in the repo (1,000 rows since Sept; 55 rows added at wave 15 close).
 
-Last updated 2026-10-29 by the housekeeping thread: rows run through ruling ay (29 Oct 10:16Z), ruling az was added 30 Oct by the world 1 QA thread, rulings ba, bb and bc were added 31 Oct with the wave 29 re-pin (#604), bd with #605 and be at the wave 30 promotion; the Open list below reflects the world 1 sitting on the wave 26 build. Earlier sweeps are in git history.
+Last updated 2026-10-29 by the housekeeping thread: rows run through ruling ay (29 Oct 10:16Z), ruling az was added 30 Oct by the world 1 QA thread, rulings ba, bb and bc were added 31 Oct with the wave 29 re-pin (#604), bd with #605 and be at the wave 30 promotion, bf on 8 Nov from the state-machine audit and bg on 8 Nov from the invariants audit (#619); the Open list below reflects the world 1 sitting on the wave 26 build. Earlier sweeps are in git history.
 
 ## Direction (standing principles, not single rulings)
 

@@ -120,12 +120,21 @@ func piece(id: String) -> Node3D:
 	return _pieces.get(id)
 
 
+# Sockets already warned about, so a missing one warns once.
+var _missing_sockets := {}
+
 func socket(id: String, socket_name: String) -> Transform3D:
 	var holder: Node3D = _pieces.get(id)
 	if holder == null:
 		return Transform3D.IDENTITY
 	var marker := holder.get_node_or_null("Sockets/" + socket_name) as Node3D
-	return marker.global_transform if marker != null else Transform3D.IDENTITY
+	if marker == null:
+		# camp_hub_test checks every socket a feature reads; this is the release-build net.
+		if not _missing_sockets.has(id + "/" + socket_name):
+			_missing_sockets[id + "/" + socket_name] = true
+			push_warning("camp_hub: %s has no socket %s; placing at the origin" % [id, socket_name])
+		return Transform3D.IDENTITY
+	return marker.global_transform
 
 
 func has_socket(id: String, socket_name: String) -> bool:
