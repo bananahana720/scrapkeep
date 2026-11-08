@@ -242,8 +242,7 @@ func _process(_delta: float) -> void:
 
 # The pause menu's UI note, a fifth-and-a-bit up, on close. Opening is the audio's hotwire_offer cue.
 func _cue(pitch: float) -> void:
-	var presentation = game.presentation
-	var audio = presentation.get("audio") if presentation != null else null
+	var audio = game.audio()
 	if audio != null and audio.has_method("play"):
 		audio.play("flow_changed", 0.0, pitch, "UI")
 

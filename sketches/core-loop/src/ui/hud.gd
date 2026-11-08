@@ -865,7 +865,7 @@ func _step_companion(playing: bool) -> void:
 	if state != _companion_state and state != "none" and _companion_state != "none":
 		var kind := "companion_" + state
 		_companion_cues.append(kind)
-		var audio = game.presentation.audio if game.presentation != null else null
+		var audio = game.audio()
 		if audio != null and audio.has_method("play"):
 			audio.play(kind, 0.0, 1.0, "UI")
 	_companion_state = state

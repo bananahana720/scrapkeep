@@ -534,8 +534,7 @@ func _unpin_notes() -> void:
 
 
 func _audio():
-	var presentation = game.presentation if game != null else null
-	return presentation.get("audio") if presentation != null else null
+	return game.audio() if game != null else null
 
 
 func _set_bus(bus: String, level: float) -> void:

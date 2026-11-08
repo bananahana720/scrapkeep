@@ -714,7 +714,6 @@ func _pet_react() -> void:
 		var land := start + step * float(hop + 1) * 0.5
 		_pet_tween.tween_property(_pet, "position", Vector3(land.x, 0.55, land.z), 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		_pet_tween.tween_property(_pet, "position", Vector3(land.x, 0.0, land.z), 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	var presentation = game.get("presentation")
-	var audio = presentation.get("audio") if presentation != null else null
+	var audio = game.audio()
 	if audio != null:
 		audio.chirp("primer_set")

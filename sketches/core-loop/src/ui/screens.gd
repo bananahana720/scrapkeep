@@ -874,8 +874,7 @@ func _refresh_jukebox() -> void:
 
 
 func _audio():
-	var presentation = game.get("presentation")
-	return presentation.get("audio") if presentation != null else null
+	return game.audio()
 
 
 # R on the camp swaps it for the radio's mixtapes, and back. The radio keeps what was changed.

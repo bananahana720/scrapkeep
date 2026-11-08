@@ -467,12 +467,12 @@ func _start_self_play() -> void:
 # Moss's jukebox: a tune heard in play long enough is filed in the profile and announced on
 # the HUD's record plate. Tunes the profile holds are never announced again.
 func _listen_for_tunes() -> void:
-	var audio = presentation.get("audio") if presentation != null else null
-	if audio == null or not audio.has_signal("tune_heard"):
+	var sound = audio()
+	if sound == null or not sound.has_signal("tune_heard"):
 		return
 	for id in ctx.profile.tune_ids():
-		audio.knows_tune(id)
-	audio.tune_heard.connect(_on_tune_heard)
+		sound.knows_tune(id)
+	sound.tune_heard.connect(_on_tune_heard)
 
 
 func _on_tune_heard(id: String) -> void:
@@ -497,6 +497,11 @@ func _chosen_table():
 		push_warning("game: unknown stage table '%s'; using the default" % id)
 		return StageDefs
 	return TABLES[id]
+
+
+# The presentation's audio, or null before the presentation exists.
+func audio():
+	return presentation.get("audio") if presentation != null else null
 
 
 # The fixed order: world first (it sets ctx.terrain), then combat (ctx.spawner), then
@@ -733,9 +738,9 @@ func cycle_breath() -> String:
 	var options: Array = tuning.options_of(Tuning.BREATH_KEY)
 	var style: String = options[(options.find(tuning.option(Tuning.BREATH_KEY)) + 1) % options.size()]
 	tuning.set_option(Tuning.BREATH_KEY, style)
-	var audio = presentation.get("audio") if presentation != null else null
-	if audio != null and audio.has_method("set_breath"):
-		audio.set_breath(style)
+	var sound = audio()
+	if sound != null and sound.has_method("set_breath"):
+		sound.set_breath(style)
 	return style
 
 
@@ -836,9 +841,9 @@ func _fire_gate() -> void:
 
 
 func _launch_whoosh() -> void:
-	var audio = presentation.get("audio") if presentation != null else null
-	if audio != null:
-		audio.play("launched")
+	var sound = audio()
+	if sound != null:
+		sound.play("launched")
 
 
 # The swipe holds until the run's stage has its ground built (the title builds the dam's first, world.gd).

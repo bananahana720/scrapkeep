@@ -112,7 +112,7 @@ func start(game_ref, lap_stats := {}, prelude_only := false) -> void:
 	advance(0.0)
 	# run_ended already selects the summary music through the audio director. Calling
 	# its menu API also covers a sequence started from an already-settled summary.
-	var audio = game.presentation.audio
+	var audio = game.audio()
 	if audio != null:
 		audio._flush_flow()
 		audio.engine.menu_theme("summary", true)
@@ -532,7 +532,7 @@ func advance(delta: float) -> void:
 	if world_index == 2 and local >= 8.0 and not cannon_answered:
 		cannon_answered = true
 		cannon_answer_at = local
-		var audio = game.presentation.audio
+		var audio = game.audio()
 		if audio != null:
 			audio.cannon_motif("ending_cannon", true)
 	phase = "flyover" if local < ESTABLISH_SECONDS else "copy"

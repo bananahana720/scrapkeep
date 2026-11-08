@@ -28,8 +28,7 @@ var _dirty := false
 
 func setup(game_ref) -> void:
 	game = game_ref
-	var presentation = game.get("presentation")
-	_audio = presentation.get("audio") if presentation != null else null
+	_audio = game.audio()
 	radio.from_dict(game.ctx.profile.radio())
 	if game.hud != null:
 		dial = RadioDial.new()
