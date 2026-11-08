@@ -174,7 +174,7 @@ function main(argv) {
     if (!cache.has(file)) { try { cache.set(file, git("show", `${head}:${file}`)); } catch { cache.set(file, ""); } }
     return cache.get(file);
   };
-  const linesAt = (ref, file) => { try { return git("show", `${ref}:${file}`).split("\n").length; } catch { return 0; } };
+  const linesAt = (ref, file) => { try { return execFileSync("git", ["show", `${ref}:${file}`], { cwd: root, encoding: "utf8", maxBuffer: 256 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] }).split("\n").length; } catch { return 0; } };
   const listSrc = () => git("ls-tree", "-r", "--name-only", head, SRC).split("\n").filter((f) => f.endsWith(".gd"));
   const diff = git("diff", "--unified=0", "--no-color", base, head, "--", SRC);
   const text = report({ base, head, findings: sweep({ base, head, read, diff, listSrc, linesAt }) });

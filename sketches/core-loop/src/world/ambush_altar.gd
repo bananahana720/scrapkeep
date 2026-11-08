@@ -70,7 +70,7 @@ func reach_point() -> Vector3:
 
 
 func ready_now() -> bool:
-	return not spent and not running and ctx.can_spawn() and not ctx.calm
+	return not spent and not running and ctx.spawner != null and ctx.spawner.has_method("spawn_enemy") and not ctx.calm
 
 
 func gauge() -> float:
