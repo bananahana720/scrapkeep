@@ -24,7 +24,9 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # Re-pinned 2026-10-30 (w28 cautious red team): the slag and charge hits, and the hazard step after a
 # killing slag ring, return when their damage ended the run, so a death to Brindle reads no torn-down
 # arena; pickup meshes unchanged. Was e34f3fd2.
-const BASE_LOGIC_SHA := "acf817b9939ea55912cf12372543818480182220a6aa2cad698e139927f0e398"
+# Re-pinned 2026-11-08 (state-machine audit, #616): drone pads clear at a phase turn and the phase 3
+# charge states are named constants with an unknown-state fallback; pickup meshes unchanged. Was acf817b9.
+const BASE_LOGIC_SHA := "5121cd32007d5c41984439b0a7958c159e0e80188dcb7c948f371206321b4b29"
 
 var failures := 0
 var game

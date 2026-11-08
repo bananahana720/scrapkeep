@@ -465,7 +465,10 @@ func start(p: Dictionary) -> void:
 	_id = _ult_id()
 	if _sable():
 		stakes.begin()
+		# Breaking the mount also breaks a slingshot held on it: a gauge left charging would
+		# keep _charging() true and turn every harpoon press into a cancel.
 		ctx.player.kit.mounted = false
+		ctx.player.kit.slingshot.cancel()
 		_lightning_peaks = 0
 		_outpost_encore = false
 		_outpost_second = false
@@ -950,6 +953,12 @@ func _sable_release(at: Vector3, release: Vector3) -> Vector3:
 
 func _outpost_depart(velocity: Vector3) -> void:
 	if not _outpost_encore or _clock > _outpost_until or velocity.length() < 0.1:
+		return
+	# The encore is a second flight from rest only: never over a live wind-up or flight, and
+	# never out of play or with the ball frozen (the same doors can_start keeps).
+	if _phase != IDLE and _phase != RECOVER:
+		return
+	if ctx.flow == null or not ctx.flow.in_play() or ctx.player.frozen():
 		return
 	_outpost_encore = false
 	var target = _encore_target(_outpost_at)

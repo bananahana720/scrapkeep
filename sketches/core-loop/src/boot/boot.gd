@@ -47,7 +47,6 @@ var _loading := false
 var _game: Node
 var _start_wanted := false
 var _closing := false
-var _fading := false
 var _ground_wait := 0.0
 var _fade_started := false
 # The window's vsync mode and Engine.max_fps from before the load, put back at the hand-off.

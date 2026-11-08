@@ -738,7 +738,11 @@ func _dunk_bonus(enemy: Node3D, kind: String) -> float:
 	if ctx == null or ctx.player == null or not ctx.player.get("dunk"):
 		return 0.0
 	var smash: bool = ctx.player.smash_landing == enemy
-	if not is_reel_impact(kind, smash) or not (smash or ctx.player.kit.anchor_body == enemy):
+	var kit = ctx.player.kit
+	# A reel impact is a smash landing, or a stomp, ram or slam while (or just after) a
+	# right-mouse reel hauls the ball onto this body.
+	var reeled: bool = kind in ["stomp", "ram", "slam"] and kit.reel_body == enemy and kit.reel_left > 0.0
+	if not reeled and (not is_reel_impact(kind, smash) or not (smash or kit.anchor_body == enemy)):
 		return 0.0
 	return ctx.player.dunk.peek()
 
@@ -1923,7 +1927,14 @@ func _tap(slot: String, id: String, cast: Callable, commit := Callable()) -> voi
 # A cast that ran its time lands now as the tap it started from, with the same refusals.
 func _step_cast() -> void:
 	var done: String = ctx.player.abilities.take_cast_done()
+	var swapped: String = ctx.player.abilities.take_swap_dropped()
 	if _cast_pending.is_empty():
+		return
+	if swapped != "":
+		# A pick or relic swapped the casting slot: the cast ends as any cancel does.
+		ctx.player.indicator.collapse(String(_cast_pending["slot"]))
+		ctx.events.gauge_cancelled.emit(swapped, "swap")
+		_cast_pending = {}
 		return
 	if done == "":
 		if ctx.player.abilities.casting == "":

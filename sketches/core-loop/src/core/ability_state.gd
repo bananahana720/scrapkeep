@@ -313,6 +313,7 @@ var _sprint_cancel := false
 var casting := UNSTARTED
 var cast_left := 0.0
 var _cast_done := UNSTARTED
+var _swap_dropped := ""
 var jam_left := 0.0
 var jams := 0
 
@@ -340,10 +341,15 @@ func fit(def) -> void:
 
 # Puts ability `id` in a slot, full, with its row's cooldown, duration and gauge. The
 # slot's stockpile cap and cooldown scale stay: items and picks raise the slot, not the
-# ability in it, so an upgrade swap never drops a charge upgrade bought earlier.
+# ability in it, so an upgrade swap never drops a charge upgrade bought earlier. A cast the
+# swap drops is held for take_swap_dropped, so combat clears its tell.
 func swap(name: String, id: String) -> void:
 	var row: Dictionary = ABILITIES.get(id, {})
 	var old: Slot = _slots[name]
+	# A cast belongs to the ability that began it: a new ability in the slot drops it rather
+	# than finishing on the new row's cast time.
+	if casting == name and old.id != id:
+		_swap_dropped = cancel_cast()
 	var s := Slot.new()
 	s.max_charges = maxi(1, old.max_charges - old.pressure_bonus)
 	s.charges = s.max_charges
@@ -367,6 +373,13 @@ func swap(name: String, id: String) -> void:
 		s.pressure_bonus = s.max_charges - own
 		s.charges = s.max_charges
 	_slots[name] = s
+
+
+# The id of a cast the last swap dropped, once; "" when none.
+func take_swap_dropped() -> String:
+	var id := _swap_dropped
+	_swap_dropped = ""
+	return id
 
 
 # A capability of the ability in a slot (see ABILITIES), or `fallback`.
@@ -480,6 +493,7 @@ func refill() -> void:
 	casting = UNSTARTED
 	cast_left = 0.0
 	_cast_done = UNSTARTED
+	_swap_dropped = ""
 	jam_left = 0.0
 	running = ""
 	running_left = 0.0

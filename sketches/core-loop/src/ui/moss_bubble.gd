@@ -273,6 +273,8 @@ func beat(record: Dictionary) -> void:
 	if record.is_empty():
 		return
 	_end_exchange(false)
+	# A beat or bark replaces an intro line: the next press must not clear it as the intro.
+	_intro_showing = false
 	var mood_now := "beat"
 	if record.get("relent", false):
 		mood_now = "relent"
@@ -288,6 +290,7 @@ func bark(line: Dictionary, fact: String) -> void:
 	if line.is_empty():
 		return
 	_end_exchange(false)
+	_intro_showing = false
 	var refused := fact == "shop_refused"
 	_say(String(line.get("text", "")), fact, "refuse" if refused else "bark", 0.0, refused,
 		"refuse" if refused else ("give" if fact in ["shop_bought", "shop_charge", "shop_sold"] else ""))
