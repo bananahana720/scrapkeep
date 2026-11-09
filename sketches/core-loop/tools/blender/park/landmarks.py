@@ -428,6 +428,14 @@ def build_dam():
         e.poly([(x0, DAM_PLATEAU + 0.08, fz - 2.0), (x0, DAM_PLATEAU + 0.08, -44.0), (x1, DAM_PLATEAU + 0.08, -44.0),
                 (x1, DAM_PLATEAU + 0.08, fz - 2.0)], shade("concrete_dk", 1.05, (i, 9), 0.04), up=UP)
     box(colm, (-DAM_CANYON, 30.5, -30.0), (DAM_CANYON, DAM_PLATEAU, fz), col("concrete"))
+    # the face's returns into the rock: the block above ends on the canyon walls' line, and its end showed bare in the
+    # wedge where the wall's foot slope meets the cliff under the face, a strip up to 1.7 m deep beside the face at
+    # x +-200 with nothing drawn on it (red team w30, collision sweep: y 50 to 93). The ground reaches the plateau within
+    # 2 m of it, so no ball fits there; the return gives the collider a drawn face and the rock hides the rest
+    for sx in (-1, 1):
+        x = sx * DAM_CANYON
+        e.poly([(x, 29.9, fz), (x, DAM_PLATEAU, fz), (x, DAM_PLATEAU, fz - 2.5), (x, 29.9, fz - 2.5)],
+               lerp(col("concrete"), col("concrete_dk"), 0.45), inside=(0.0, 65.0, fz - 1.25))
     # the upper arch: bowed upstream, cast courses, an 8 m crest deck at 121 with parapets both sides
     n = 24
     xs = [-DAM_CHORD + 2 * DAM_CHORD * k / n for k in range(n + 1)]
