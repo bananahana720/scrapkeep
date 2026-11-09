@@ -54,6 +54,19 @@ func _run() -> void:
 		ok = ok and hit
 	_t.check("a_one_amber_target_per_site", ok, "%d targets for %d sites" % [targets.size(), sites.size()])
 
+	# The plate names the nearest site and gives the metres to it (Objectives.ACTIVITY_WORDS).
+	var ball: Vector3 = _game.player.ball_position()
+	var nearest = sites[0]
+	for site in sites:
+		if ball.distance_squared_to(site.global_position) < ball.distance_squared_to(nearest.global_position):
+			nearest = site
+	var plate: Dictionary = hud.objective_reading()
+	_t.eq("a2_plate_names_the_nearest_site", [plate["id"], plate["words"], plate["distance"]],
+		["find_activity", Objectives.activity_words(String(nearest.id)), int(ball.distance_to(nearest.global_position))])
+	_t.check("a2_named_site_has_its_own_words", Objectives.ACTIVITY_WORDS.has(String(nearest.id)) and plate["words"] != Objectives.words("find_activity"),
+		"%s reads \"%s\"" % [nearest.id, plate["words"]])
+	_t.eq("a2_plate_glyph_is_the_marker_glyph", plate["icon"], Objectives.glyph("find_activity"))
+
 	var finished = sites[0]
 	finished.done = true
 	hud._process(0.0)

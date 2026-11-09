@@ -10,6 +10,7 @@ const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const DeathCause := preload("res://src/core/death_cause.gd")
+const DeathTips := preload("res://src/core/death_tips.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const VictoryLap := preload("res://src/world/victory_lap.gd")
@@ -66,6 +67,12 @@ var _death_plating := -1.0
 # RUN OVER's cause line for this run's death (death_cause.gd), "" before one; and the source of
 # the last hit taken, which player_hit publishes just before a killing hit's player_died.
 var death_cause := ""
+# RUN OVER's "next shift" line for the same death (death_tips.gd), "" when there is none.
+var death_tip := ""
+# The fight in hand as the build met it: {"who", "punch", "plating"}, read when the Warden engages or
+# the boss arena opens. Scrap is armour (run_state.gd), so the killing hit lands on a stripped ball
+# whose punch is bare whatever it arrived with; the tip's gap rule reads the arrival, not the death.
+var _arrival := {}
 var _last_hit_source := ""
 var _victory_left := 0.0
 # The boss's flourishes (flourish_cues.gd) size the victory window: plan() returns {hold, veil},
@@ -429,6 +436,8 @@ func _begin_run(chosen: Resource) -> void:
 	lap_stats = {}
 	_world = 0
 	death_cause = ""
+	death_tip = ""
+	_arrival = {}
 	_last_hit_source = ""
 	if ctx.run_log != null:
 		ctx.run_log.abandon_open_run()
@@ -742,6 +751,7 @@ func enter_boss(carried: Vector3) -> void:
 	ctx.player.set_frozen(false)
 	seed_stage_stream(ctx.run.stage, "arena")
 	boss.enter_arena(carried)
+	_arrival = _met(_boss_called(), boss_plating_now())
 	ctx.run.set_snapshot_entry(ctx.player.ball_position(), ctx.player.state.velocity, ctx.camera.yaw)
 
 
@@ -765,6 +775,7 @@ func _retry_arena() -> void:
 	ctx.events.stage_content_cleared.emit("arena_retry")
 	seed_stage_stream(ctx.run.stage, "arena")
 	boss.enter_arena(ctx.run.snapshot_value("entry_velocity"))
+	_arrival = _met(_boss_called(), boss_plating_now())
 
 
 # The boss's live read of the fight (CONTRACTS, Flow seams): the plating that stands in
@@ -847,6 +858,32 @@ func gap_line() -> String:
 	return "Punch %d / plating %d · Heft %s" % [int(punch_now()), int(plating), ctx.run.roman(ctx.run.heft_class())]
 
 
+# The live fight's arrival numbers for the death tip: the engaged Warden's or the boss's; empty off one.
+func _fight_gap() -> Dictionary:
+	if state == BOSS or (state in [STAGE, BEACON] and sealed and _engaged and is_instance_valid(warden)):
+		return _arrival
+	return {}
+
+
+func _met(who: String, plating: float) -> Dictionary:
+	return {"who": who, "punch": build_punch(), "plating": plating}
+
+
+# The world's boss as a sentence names it: "Admiral Brindle", "the Waking".
+func _boss_called() -> String:
+	var called := String(boss_row(ctx.stages.world_of(ctx.run.stage)).get("name", "the boss"))
+	return "the " + called.substr(4) if called.begins_with("The ") else called
+
+
+# The punch the build carries whatever the ball was doing when it was read: punch_now(), or a ram
+# at base cruise when that is more, so a ball knocked to a stop does not read as a weak build.
+func build_punch() -> float:
+	var punch := punch_now()
+	if ctx.spawner != null and ctx.spawner.has_method("punch_of") and ctx.spawner.has_method("panel_punch"):
+		punch = maxf(punch, ctx.spawner.punch_of("ram", ctx.player.tuning.tier_cruise()) + ctx.spawner.panel_punch("ram", "ram_or_contact"))
+	return punch
+
+
 func _place_ball(at: Vector3, velocity: Vector3, heading: Vector3) -> void:
 	ctx.player.set_frozen(false)
 	ctx.player.reset_to(at, velocity)
@@ -869,6 +906,7 @@ func _place_beacon() -> void:
 	if is_instance_valid(warden):
 		warden.queue_free()
 	_engaged = false
+	_arrival = {}
 	_sighted = false
 	sealed = (not ctx.calm) or force_warden
 	warden = _spawn_warden() if sealed else null
@@ -1184,6 +1222,7 @@ func _engage() -> void:
 	if _engaged:
 		return
 	_engaged = true
+	_arrival = _met("the Warden", warden_plating()) if is_instance_valid(warden) else {}
 	_sighted = true
 	if ctx.run.run_tier_open():
 		ctx.run.close_run_tier()
@@ -1204,6 +1243,7 @@ func _on_player_died() -> void:
 		return
 	_death_plating = boss_plating_now() if state == BOSS else -1.0
 	death_cause = DeathCause.line(_last_hit_source, _landed_attack(), DeathCause.phase_note(_boss_module()) if state == BOSS else "")
+	death_tip = DeathTips.line(_last_hit_source, _landed_attack(), _fight_gap())
 	ctx.player.set_frozen(true)
 	if store != null:
 		_end_run(false)
