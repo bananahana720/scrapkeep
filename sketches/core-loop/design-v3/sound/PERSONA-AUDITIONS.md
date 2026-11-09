@@ -11,8 +11,9 @@ Three candidates, each a dated period of one band (the house band, working name 
 | roam | `spice/roam-spillway-current.wav` (the Spillway roaming pick, 172.0 read) | cover, strength 0.55 | 172 | 64 s |
 | fight | `spice/boss-brindle-spiced.wav` (Brindle's fight pick, 129.0 read) | cover, strength 0.55 | 129 | 64 s |
 | free | none | text to music | 129 | 64 s |
+| anthem | Brindle's phase 1 anthem pick, `anthem-brindle-s4202.wav` (the take the `anthem_brindle` pack names; this is what plays in his fight today) | cover, strength 0.55 | 140 | 64 s |
 
-Seeds 6101 and 6102 for every cell: 3 candidates x 3 cells x 2 seeds = 18 renders, draft mode, instrumental, key D minor (Dorian). If a cover at 0.55 still sounds like the parent's production, render that cell again at 0.45 with the same seeds and return both.
+The anthem cell was added after the first 18 were queued; it uses each candidate's fight caption with the tempo changed to 140 BPM. Seeds 6101 and 6102 for every cell: 3 candidates x 4 cells x 2 seeds = 24 renders, draft mode, instrumental, key D minor (Dorian). If a cover at 0.55 still sounds like the parent's production, render that cell again at 0.45 with the same seeds and return both.
 
 ## Captions
 
