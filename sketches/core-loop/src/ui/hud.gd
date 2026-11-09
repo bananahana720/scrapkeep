@@ -821,7 +821,7 @@ func _step_curse() -> void:
 	if now and not _cursed:
 		launch_card.show_card("obj_beacon", StageModifier.CURSE.word, EventKinds.color("stage_entered"), StageModifier.CURSE.line)
 		if game.player != null:
-			StageModifier.announce(game.player.active_body().global_position)
+			StageModifier.announce(game.player.shown_position())
 	_cursed = now
 
 
@@ -831,7 +831,7 @@ func _card_for_stage(stage: int) -> void:
 	var modifier := StageModifier.for_stage(game.run, game.ctx.terrain, stage)
 	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, stage))
 	if not modifier.is_empty() and game.player != null:
-		StageModifier.announce(game.player.active_body().global_position)
+		StageModifier.announce(game.player.shown_position())
 
 
 func _label(font_size: int) -> Label:
@@ -983,7 +983,7 @@ static func _rect_of(control: Control) -> Rect2:
 func objective_reading() -> Dictionary:
 	var flow = game.flow
 	var warden = flow.warden if is_instance_valid(flow.warden) else null
-	var distance: float = game.player.ball_position().distance_to(warden.global_position) if warden != null else INF
+	var distance: float = game.player.shown_position().distance_to(warden.global_position) if warden != null else INF
 	var gate = flow.gate
 	var sites: Array = edge_markers.unfinished_sites()
 	var reading := {
@@ -1012,7 +1012,7 @@ func objective_reading() -> Dictionary:
 	var words := Objectives.words(id)
 	if id == "find_activity":
 		# The nearest unfinished site, by name and metres, so the row is a place to go.
-		var ball: Vector3 = game.player.ball_position()
+		var ball: Vector3 = game.player.shown_position()
 		var nearest = null
 		for site in sites:
 			if nearest == null or ball.distance_squared_to(site.global_position) < ball.distance_squared_to(nearest.global_position):
@@ -1037,7 +1037,7 @@ static func _clamp_fraction(gate) -> float:
 func place_prompts(size: Vector2, playing: bool) -> void:
 	prompt_rects.clear()
 	var cam: Camera3D = game.camera.cam
-	var ball: Vector3 = game.player.ball_position()
+	var ball: Vector3 = game.player.shown_position()
 	var near: Array = []
 	for prompt in get_tree().get_nodes_in_group(ScreenRegions.PROMPT_GROUP):
 		prompt.visible = false

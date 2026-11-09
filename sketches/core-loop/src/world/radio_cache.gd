@@ -141,7 +141,10 @@ func _process(delta: float) -> void:
 func _physics_process(_delta: float) -> void:
 	if player == null or not is_instance_valid(player) or deck == null:
 		return
-	if player.global_position.distance_to(global_position + Vector3.UP) <= REACH:
+	# The game hands over its PlayerBall, a node that never leaves the origin (its body moves under
+	# it): the ball's place at the tick is ball_position().
+	var ball: Vector3 = player.ball_position() if player.has_method("ball_position") else player.global_position
+	if ball.distance_to(global_position + Vector3.UP) <= REACH:
 		collect()
 
 

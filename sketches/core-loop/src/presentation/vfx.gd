@@ -196,17 +196,17 @@ func setup(ctx_ref) -> void:
 	events.grapple_fired.connect(func(anchor: Vector3): glyph("grapple_fired", anchor, 0.25, 0.7, 0.25, Vector3.ZERO, "", player.class_color()))
 	events.harpoon_bit.connect(func(_enemy: Node3D, at: Vector3):
 		glyph("harpoon_bit", at, 0.3, 1.0, 0.3, Vector3.ZERO, "", player.class_color())
-		play_fx("harpoon_bit", at, player.class_color(), "", player.ball_position() - at))
+		play_fx("harpoon_bit", at, player.class_color(), "", player.shown_position() - at))
 	events.harpoon_smashed.connect(func(_enemy: Node3D, at: Vector3, speed: float):
 		glyph("harpoon_smashed", at, 0.6, 2.0 + speed * 0.05, 0.4, Vector3.ZERO, "", player.class_color()))
 	events.shot_fired.connect(_on_shot)
 	events.enemy_struck.connect(_on_struck)
 	events.scrap_collected.connect(_on_scrap)
-	events.part_gained.connect(func(_id: String, _source: String): glyph("part_gained", player.ball_position() + Vector3.UP * 2.2, 0.4, 1.1, 0.5))
-	events.milestone_won.connect(func(_id: String): glyph("milestone_won", player.ball_position() + Vector3.UP * 2.5, 0.5, 1.6, 0.7))
+	events.part_gained.connect(func(_id: String, _source: String): glyph("part_gained", player.shown_position() + Vector3.UP * 2.2, 0.4, 1.1, 0.5))
+	events.milestone_won.connect(func(_id: String): glyph("milestone_won", player.shown_position() + Vector3.UP * 2.5, 0.5, 1.6, 0.7))
 	events.launched.connect(func(v: Vector3):
 		_launch_boost = 1.2
-		glyph("launched", player.ball_position(), 1.0, 4.0, 0.35, v))
+		glyph("launched", player.shown_position(), 1.0, 4.0, 0.35, v))
 	events.stage_entered.connect(func(_stage: int, _retry: bool): clear())
 	if events.has_signal("stage_content_cleared"):
 		events.stage_content_cleared.connect(func(_reason: String): clear())
@@ -263,7 +263,7 @@ func _on_bet_resolved(_id: String, won: bool, _stake: int, at: Vector3) -> void:
 
 # The Warden breaks: a star flash over the beacon and a ring out to its edge.
 func _on_unsealed(stage: int) -> void:
-	var at := player.ball_position() as Vector3
+	var at := player.shown_position() as Vector3
 	var radius := 12.0
 	if ctx.terrain != null:
 		at = ctx.terrain.beacon_point(stage)
@@ -279,13 +279,13 @@ func _on_heft_class(heft_class: int, _heft: float) -> void:
 		# A class lost: the ring falls inward in the torn-scrap colour.
 		_heft_class = heft_class
 		var down: Vector3 = player.state.contact_normal if player.state.grounded else Vector3.UP
-		glyph("scrap_lost", player.ball_position() - down * 0.9, 5.0, 1.0, 0.4, down, "ring")
+		glyph("scrap_lost", player.shown_position() - down * 0.9, 5.0, 1.0, 0.4, down, "ring")
 		return
 	if heft_class == _heft_class:
 		return
 	_heft_class = heft_class
 	var normal: Vector3 = player.state.contact_normal if player.state.grounded else Vector3.UP
-	var at: Vector3 = player.ball_position() - normal * 0.9
+	var at: Vector3 = player.shown_position() - normal * 0.9
 	glyph("heft_class_changed", at, 1.2, 7.0, 0.5, normal, "ring")
 	glyph("heft_class_changed", at + normal * 0.05, 0.8, 4.5, 0.4, normal, "ring")
 
@@ -325,7 +325,7 @@ func _on_cause_armed(id: String) -> void:
 	var side := Vector3.RIGHT
 	if camera != null and camera.cam != null:
 		side = camera.cam.global_basis.x
-	var top: Vector3 = player.ball_position() + Vector3.UP * 2.4
+	var top: Vector3 = player.shown_position() + Vector3.UP * 2.4
 	glyph("cause_armed", top - side * 0.8, 0.7, 0.8, ARMED_SECONDS, Vector3.ZERO, shapes[0], tint, "P4")
 	glyph("cause_armed", top + side * 0.8, 0.7, 0.8, ARMED_SECONDS, Vector3.ZERO, shapes[1], tint, "P4")
 	glyph("cause_armed", top, 0.2, 1.2, ARMED_SECONDS, side, "bar", tint, "P4")
@@ -344,7 +344,7 @@ func _on_cause_fired(id: String, target: Node3D, at: Vector3) -> void:
 
 
 func _on_found() -> void:
-	glyph("interaction_found", player.ball_position() + Vector3.UP * 2.0, 0.3, 0.9, 0.4)
+	glyph("interaction_found", player.shown_position() + Vector3.UP * 2.0, 0.3, 0.9, 0.4)
 
 
 func _on_element(_element: String, _material: String, behaviour: String, at: Vector3) -> void:
@@ -557,7 +557,7 @@ func _draw_glyph(slot: Dictionary) -> void:
 func _on_landed(impact: float) -> void:
 	if impact < 10.0:
 		return
-	var at: Vector3 = player.ball_position() - player.state.contact_normal * 0.95
+	var at: Vector3 = player.shown_position() - player.state.contact_normal * 0.95
 	glyph("landed", at, 0.6, 1.2 + impact * 0.06, 0.25, player.state.contact_normal)
 
 
@@ -578,7 +578,7 @@ func _on_mounted(at: Vector3, _banked: float) -> void:
 
 func _on_dismounted(velocity: Vector3) -> void:
 	if velocity.length() > 1.0:
-		glyph("dismounted", player.ball_position(), 0.8, 1.6, 0.22, velocity)
+		glyph("dismounted", player.shown_position(), 0.8, 1.6, 0.22, velocity)
 
 
 func _on_shot(_weapon: String, from: Vector3, to: Vector3) -> void:
@@ -903,7 +903,7 @@ func _roll_dust() -> void:
 	var floor_speed: float = row["min_speed"]
 	var on: bool = player.state.grounded and speed >= floor_speed
 	if on:
-		_roll.global_position = player.ball_position() - player.state.contact_normal * 0.95
+		_roll.global_position = player.shown_position() - player.state.contact_normal * 0.95
 		var rate: float = float(row["fx"]["roll_dust"]) * clampf(speed / (floor_speed * 2.0), 0.4, 1.0)
 		_roll.amount_ratio = clampf(rate * _roll.lifetime / float(_roll.amount), 0.0, 1.0)
 	if _roll.emitting != on:

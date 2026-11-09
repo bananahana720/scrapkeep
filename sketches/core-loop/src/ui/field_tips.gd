@@ -102,7 +102,7 @@ func _physics_process(delta: float) -> void:
 		var deck = game.get("radio_deck")
 		if deck != null and deck.dial != null and deck.dial.is_visible_in_tree():
 			meet("radio")
-	if not seen("stake") and stake_near(player.ball_position()):
+	if not seen("stake") and stake_near(player.shown_position()):
 		meet("stake")
 	var combat = game.get("combat")
 	if combat != null and not picking and not seen("active") and combat.get("actives") != null and combat.actives.enabled() \

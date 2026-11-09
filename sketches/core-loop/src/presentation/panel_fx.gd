@@ -75,5 +75,5 @@ func _on_panel_gained(panel_id: String, _count: int, _at: Vector3, jackpot: bool
 			audio.play("panel_gained", 0.0, 1.0, "SFX", "panel_jackpot")
 	if machine_fx != null and ctx.player != null:
 		var reduced: bool = machine_fx.reduced_motion
-		machine_fx.word(Panels.pop_text(panel_id), ctx.player.ball_position() + Vector3.UP * POP_HEIGHT,
+		machine_fx.word(Panels.pop_text(panel_id), ctx.player.shown_position() + Vector3.UP * POP_HEIGHT,
 			Palette.AMBER if jackpot else Palette.SAND, true, POP_LIFE, POP_SIZE_REDUCED if reduced else POP_SIZE)

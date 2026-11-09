@@ -187,6 +187,53 @@ export function lintL6Owners(counts, relative, owners = LIGHT_OWNERS) {
     .map((rel) => finding("L6", `${relative}/${rel}`, 1, "LIGHT_OWNERS lists a file with no runtime Light3D: remove the entry"));
 }
 
+// L8: drawing code that asks where the ball is at the physics tick. Under src/presentation and src/ui
+// the ball's place is PlayerBall.shown_position(), where the ball is drawn this frame. ball_position()
+// moves once per tick, so anything placed from it in a drawn frame steps against the ball. At a tick
+// the two are the same place, so shown_position() is also right in a handler the sim calls.
+// SIM_READS lists the reads that are not a picture of the ball: the file, how many, and why. Three
+// are rules that decide or mirror what the sim does, so they read the tick's place; one asks a
+// Sight, not the ball. A count that drifts is a finding, and so is an entry with no read left.
+// Every mention of the name counts as a read (a call, a spaced or split call, a call by name);
+// only a has_method("ball_position") guard does not. Asking the ball's body for its place
+// (body().global_position) is the same read by another door and counts too.
+export const SIM_READS = {
+  "src/presentation/audio.gd": { sites: 1, why: "the landing-sound guard repeats the director's own clearance check, so it asks about the same ball the director does" },
+  "src/presentation/hero_assets.gd": { sites: 1, why: "the Warden's lens asks its Sight, which answers with the last seen place while the ball is cloaked and has no drawn place" },
+  "src/presentation/reward_ceremony.gd": { sites: 1, why: "calm() decides whether a ceremony may stop the world: a rule read against threats and enemies at the tick" },
+  "src/ui/workshop.gd": { sites: 1, why: "pulling up to Moss opens the counter: a rule about where the ball is, not a picture of it" },
+};
+
+const tickGuard = /has_method\(\s*["']ball_position["']\s*\)/g;
+const tickRead = /\bball_position\b|\b(?:active_)?body\(\)\s*\.\s*global_(?:position|transform)\b/g;
+
+// L8: rel is the path inside the sketch, file the repo path for the finding.
+export function lintL8(file, rel, text, allowed = SIM_READS) {
+  if (!/^src\/(?:presentation|ui)\//.test(rel)) return [];
+  const reads = codeLines(text).flatMap((line) => (line.raw.replace(tickGuard, "").match(tickRead) ?? []).map(() => line));
+  const listed = allowed[rel]?.sites ?? 0;
+  if (reads.length === listed) return [];
+  if (reads.length === 0) return [finding("L8", file, 1, "SIM_READS lists a file with no tick read of the ball left: remove the entry")];
+  const message = listed === 0
+    ? "drawing code reads the ball's place at the physics tick (ball_position(), or the body's global_position); read shown_position(), where the ball is drawn this frame"
+    : `${reads.length} tick reads of the ball, SIM_READS lists ${listed}; a new read takes shown_position()`;
+  return reads.map((line) => finding("L8", file, line.number, message));
+}
+
+// L9: game code that asks the player node for its own place. PlayerBall never leaves the origin (its
+// body and its visuals move under it), so player.global_position is the map's origin for the whole
+// run and nothing fails loudly: a rule measured from it never fires and a picture placed from it
+// sits at the origin. A rule asks ball_position(), a picture asks shown_position(). A line that
+// guards with has_method (a caller that may also be handed a plain Node3D) passes.
+const ownPlace = /(?<![\w.])(?:\w+\s*\.\s*)*_?player\s*\.\s*(?:global_position|global_transform|position)\b/;
+const placeGuard = /has_method\(\s*["'](?:ball_position|shown_position)["']\s*\)/;
+
+export function lintL9(file, text) {
+  return codeLines(text)
+    .filter((line) => ownPlace.test(line.raw) && !placeGuard.test(line.raw))
+    .map((line) => finding("L9", file, line.number, "the player node never leaves the origin: ask ball_position() for a rule or shown_position() for a picture, not the node's own place"));
+}
+
 // The baseline only shrinks: offenders it lists stay quiet, a listed path that no longer
 // offends or no longer exists is itself a finding. exists(path) answers for the disk.
 export function applyBaseline(findings, baseline, exists) {
@@ -259,6 +306,8 @@ export function lintSketch(sketch) {
     const rel = file.path.slice(relative.length + 1);
     if (codeLines(file.text).some((line) => lightNew.test(line.raw))) lit.add(rel);
     findings.push(...lintL6(file.path, rel, file.text));
+    findings.push(...lintL8(file.path, rel, file.text));
+    findings.push(...lintL9(file.path, file.text));
   }
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   const lintSelf = new Set(["scripts/sketch-lint.mjs", "scripts/sketch-lint.test.mjs"]);
