@@ -132,8 +132,9 @@ var ultimate_lift := false
 var parameter_enabled := false
 var parameters := {}
 var parameter_released := false
-# The kill cadence has brought the lead back from a Warden break's release (ruling bt): set as
-# the return section enters, cleared by the next break and by the release's own clearing.
+# The kill cadence has answered a Warden break (ruling bt): set as the break piece's return
+# section enters. The release stops stripping the lead from there, and audio.gd ends the release
+# itself on its next pump (_end_answered_release), which clears this with it.
 var lead_returned := false
 var parameter_layer_log: Array = []
 var _parameter_danger_floor := 0.0
@@ -378,7 +379,7 @@ func parameter_gain(stem: String, at := "") -> float:
 		return clampf(smoothstep(DRUMS_IN_SPEED, DRUMS_FULL_SPEED, float(parameters.speed)), 0.0, 1.0)
 	if stem != "other":
 		return 1.0
-	var cadence := (section if at == "" else at) in LEAD_RETURN
+	var cadence := mode == "piece" and (section if at == "" else at) in LEAD_RETURN
 	if _lead_stripped(cadence):
 		return 0.0
 	if cadence:
@@ -1034,7 +1035,7 @@ func _commit() -> void:
 	events_log.append(["enter", clock, name])
 	if name == "build":
 		built = true
-	if name == "return":
+	if name == "return" and mode == "piece":
 		lead_returned = true
 	hold_until = clock + int(row.get("hold_bars", 0)) * grid_bar if row.has("hold_bars") else -1
 	var length := -1

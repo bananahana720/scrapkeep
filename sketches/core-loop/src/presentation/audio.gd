@@ -726,6 +726,7 @@ func _pump(virtual_frames := -1) -> void:
 		_ace_stage(stage, engine.next_bar())
 	if ace != null:
 		ace.set_fight_floor(_ace_fight_floor())
+		_end_answered_release()
 	var ace_live := ace != null and ace.active()
 	_hand_over_band()
 	_release_grid()
@@ -1404,6 +1405,16 @@ func _ace_end(ramp := AceSequencer.STOP_RAMP) -> void:
 
 func ace_playing() -> bool:
 	return ace != null and ace.mode != "off"
+
+
+# The recorded band's kill cadence has entered: the Warden break's release ends for both bands,
+# as an arena entry ends it (ruling bt). A tune moment, a find or a pack swap that restarts the
+# band on the shelf afterwards then starts it with its lead.
+func _end_answered_release() -> void:
+	if not ace.lead_returned or not engine.parameters_released():
+		return
+	engine.parameters_cadence_returned()
+	ace.clear_release()
 
 
 # The synth takes the stage stingers back once the ACE band has stopped.
