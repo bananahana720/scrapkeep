@@ -4,6 +4,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
+import { checkLedger } from "./known-failing.mjs";
+import { checkWeekly } from "./gate/weekly.mjs";
+import { checkWaveState } from "./wave-state.mjs";
+
 const scriptRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -771,6 +775,37 @@ async function checkSkillsStage(docs) {
   return findings.length;
 }
 
+// The wave facts in STATE.md are checked against git history, so a promotion
+// that nobody recorded fails the next docs check instead of misleading a
+// fresh thread. scripts/wave-state.mjs owns the rules and the repair command.
+async function checkWaveStateStage(docs) {
+  const findings = await checkWaveState(docs.root);
+  for (const finding of findings) {
+    if (finding.level === "failure")
+      docs.fail("wave-state", finding.file, finding.line, finding.message);
+    else docs.info("wave-state", finding.file, finding.line, finding.message);
+  }
+  return findings.filter((finding) => finding.level === "failure").length;
+}
+
+// The known-failing ledger is checked for shape here. A row past its review
+// date is only a note in this check; it fails at the promotion gate
+// (scripts/known-failing.mjs --promotion).
+async function checkLedgerStage(docs) {
+  const findings = await checkLedger(docs.root);
+  for (const finding of findings) {
+    if (finding.level === "failure")
+      docs.fail("known-failing", finding.file, finding.line, finding.message);
+    else docs.info("known-failing", finding.file, finding.line, finding.message);
+  }
+  // The weekly list (ruling ca) sits beside the ledger and is checked with it.
+  for (const finding of checkWeekly(docs.root)) {
+    findings.push(finding);
+    docs.fail("weekly-list", finding.file, finding.line, finding.message);
+  }
+  return findings.filter((finding) => finding.level === "failure").length;
+}
+
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   const docs = new Documents(options.root);
@@ -782,6 +817,8 @@ async function main() {
   const sections = await checkSections(docs);
   await checkClosureContract(docs);
   const skillFindings = await checkSkillsStage(docs);
+  const waveFindings = await checkWaveStateStage(docs);
+  const ledgerFindings = await checkLedgerStage(docs);
   const manifest = {};
   for (const file of [...docs.cache.keys()].sort())
     manifest[file] = docs.cache.get(file).sha256;
@@ -800,6 +837,8 @@ async function main() {
       states: tracking.states,
       sections,
       skillFindings,
+      waveFindings,
+      ledgerFindings,
     },
     failures: failures.length,
     findings: docs.findings,
@@ -839,6 +878,10 @@ async function main() {
       " interim rows, " +
       skillFindings +
       " skill findings, " +
+      waveFindings +
+      " wave-state findings, " +
+      ledgerFindings +
+      " known-failing findings, " +
       failures.length +
       " failures. Report: " +
       options.report,

@@ -324,6 +324,10 @@ func _ready() -> void:
 	var drawer: CanvasLayer = load("res://src/ui/panel_drawer.gd").new()
 	add_child(drawer)
 	drawer.setup(self, panel)
+	# A window that loses focus or a pad that drops out pauses a played run (auto_pause.gd).
+	var auto_pause: Node = load("res://src/ui/auto_pause.gd").new()
+	add_child(auto_pause)
+	auto_pause.setup(self)
 	# Tests and bots build the menu modules here; a played game builds them behind the menu, and
 	# at once if a run or a camp visit starts first.
 	if test_mode:
