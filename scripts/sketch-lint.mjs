@@ -195,7 +195,8 @@ export function lintL6Owners(counts, relative, owners = LIGHT_OWNERS) {
 // are rules that decide or mirror what the sim does, so they read the tick's place; one asks a
 // Sight, not the ball. A count that drifts is a finding, and so is an entry with no read left.
 // Every mention of the name counts as a read (a call, a spaced or split call, a call by name);
-// only a has_method("ball_position") guard does not.
+// only a has_method("ball_position") guard does not. Asking the ball's body for its place
+// (body().global_position) is the same read by another door and counts too.
 export const SIM_READS = {
   "src/presentation/audio.gd": { sites: 1, why: "the landing-sound guard repeats the director's own clearance check, so it asks about the same ball the director does" },
   "src/presentation/hero_assets.gd": { sites: 1, why: "the Warden's lens asks its Sight, which answers with the last seen place while the ball is cloaked and has no drawn place" },
@@ -204,7 +205,7 @@ export const SIM_READS = {
 };
 
 const tickGuard = /has_method\(\s*["']ball_position["']\s*\)/g;
-const tickRead = /\bball_position\b/g;
+const tickRead = /\bball_position\b|\b(?:active_)?body\(\)\s*\.\s*global_(?:position|transform)\b/g;
 
 // L8: rel is the path inside the sketch, file the repo path for the finding.
 export function lintL8(file, rel, text, allowed = SIM_READS) {
@@ -212,10 +213,10 @@ export function lintL8(file, rel, text, allowed = SIM_READS) {
   const reads = codeLines(text).flatMap((line) => (line.raw.replace(tickGuard, "").match(tickRead) ?? []).map(() => line));
   const listed = allowed[rel]?.sites ?? 0;
   if (reads.length === listed) return [];
-  if (reads.length === 0) return [finding("L8", file, 1, "SIM_READS lists a file with no ball_position() read: remove the entry")];
+  if (reads.length === 0) return [finding("L8", file, 1, "SIM_READS lists a file with no tick read of the ball left: remove the entry")];
   const message = listed === 0
-    ? "drawing code reads ball_position(), the ball's place at the physics tick; read shown_position(), where the ball is drawn this frame"
-    : `${reads.length} ball_position() reads, SIM_READS lists ${listed}; a new read takes shown_position()`;
+    ? "drawing code reads the ball's place at the physics tick (ball_position(), or the body's global_position); read shown_position(), where the ball is drawn this frame"
+    : `${reads.length} tick reads of the ball, SIM_READS lists ${listed}; a new read takes shown_position()`;
   return reads.map((line) => finding("L8", file, line.number, message));
 }
 

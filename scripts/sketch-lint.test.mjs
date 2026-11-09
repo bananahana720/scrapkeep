@@ -53,6 +53,10 @@ test("L8 counts every mention as a read, however the call is spelled, and passes
   const twice = lintL8("x/vfx.gd", "src/presentation/vfx.gd", "var d = a.ball_position().distance_to(b.ball_position())\n", {});
   assert.deepEqual(twice.map((item) => item.line), [1, 1]);
   assert.deepEqual(lintL8("x/vfx.gd", "src/presentation/vfx.gd", 'if target.has_method("ball_position"):\n\tpass\n', {}), []);
+  for (const text of ["var at = ctx.player.body().global_position\n", "fx(game.player.active_body().global_position)\n", "var t = player.body().global_transform\n"]) {
+    assert.equal(lintL8("x/hud.gd", "src/ui/hud.gd", text, {}).length, 1, text);
+  }
+  assert.deepEqual(lintL8("x/vfx.gd", "src/presentation/vfx.gd", "var v = ctx.player.body().linear_velocity\nvar at = enemy.global_position\n", {}), []);
 });
 
 test("L8 passes a listed sim read, and flags a drifted count and a stale entry", () => {
