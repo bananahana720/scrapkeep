@@ -6,6 +6,8 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Ceremony := preload("res://src/presentation/reward_ceremony.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
+const BossRules := preload("res://src/boss/boss_rules.gd")
+const PartName := preload("res://src/ui/part_name.gd")
 const Push := preload("res://tests/workshop/push.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
@@ -98,6 +100,15 @@ func _check_tiers() -> void:
 		if WordBudget.words_in(Ceremony.card_words(id)) > int(EventKinds.reward_row("reveal")["words"]):
 			long.append(id)
 	_report("six words", long.is_empty(), "%d parts, each card line at most 6 words; over %s" % [Parts.ids().size(), long])
+	var tokens: Array = []
+	for id in Parts.TOKENS:
+		var row: Dictionary = Parts.token(id)
+		if Parts.def(id) != null or String(row.get("name", "")) == "" or String(row.get("stamp", "")) == "" \
+				or Ceremony.card_words(id) != String(row.get("verb", "")) or Ceremony.card_words(id) == "":
+			tokens.append(id)
+	_report("run tokens", tokens.is_empty() and not Parts.token(BossRules.CREST_PART).is_empty() and PartName.name_of(BossRules.CREST_PART) == "Admiral's Crest",
+		"%d run tokens, each with a name, a stamp and a card line inside six words, and no catalogue row; Brindle's crest is one; wrong %s"
+			% [Parts.TOKENS.size(), tokens])
 
 
 func _next(phase: String) -> void:
@@ -203,6 +214,9 @@ func _physics_process(_delta: float) -> bool:
 				_report("synergy snaps", wired["link"] == "lit" and wired["tier"] == "reveal" and card["partner_icon"] == Ceremony.icon_of("chain_arc"),
 					"cross_split after chain_arc completes %s: link %s, tier %s, partner glyph %s"
 						% [wired["synergy"], wired["link"], wired["tier"], card["partner_icon"]])
+				var crest: Dictionary = _ceremony.card_state(_ceremony.find_of(BossRules.CREST_PART, "boss"), int(_clock_ms), false)
+				_report("crest card", crest["name"] == "Admiral's Crest" and crest["stamp"] == "TROPHY" and crest["verb"] == "Fleet property. Yours now.",
+					"Brindle's crest reveals as %s · %s, \"%s\"" % [crest["stamp"], crest["name"], crest["verb"]])
 				_next("short")
 		"short":
 			if _elapsed() > 300:
