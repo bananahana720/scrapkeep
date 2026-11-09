@@ -81,7 +81,7 @@ ABILITIES row: `"claw_drag": {"icon": "ab_tarn_line", "cooldown": 8.0, "line": t
 | ground contact | none: the ball never leaves the air because of it, so it neither ends nor extends a chain |
 | line cut mid-drag | the drag stops that tick. The target keeps its momentum and gets no clamp mark: no cable, no pull. This gives the Dig's drill crew and the Highdraft's line cutter a real answer to Tarn (`design-v3/HOOK-CHAIN.md:36`). **Call.** |
 | Warden and boss | never moved (Warden weight 1000, `src/combat/warden.gd:123`). The claw bites and slips: slate sparks and the low clank, the glance read (`design-v3/LEGIBILITY.md:50`). The hit fills posture as a gun bolt does, base 1.5 (`LEGIBILITY.md:85`). No clamp mark. The ball gets the reel burst. On Brindle, the Waking and the Mind, the brace pose and the "nope" glyph (`SKILL-BAR.md:308`). |
-| sound | new row `line_claw_drag` in `KEYED_SOUNDS`: the drum ratchet (`clank`, the class sound, `class_def.gd:111`), then Tarn's motif across the drag: D3 on the bite, D3 as the drag starts, Eb3 in travel, the long A3 on arrival (`harmony.gd:135`). It rises one semitone per chain link, like `chain_link` (`HOOK-CHAIN.md:26`). |
+| sound | new row `line_claw_drag` in `KEYED_SOUNDS`: the drum ratchet (`clank`, the class sound, `class_def.gd:111`), then Tarn's motif across the drag: D3 on the bite, D3 as the drag starts, Eb3 in travel, the long A3 on arrival (`harmony.gd:135`). It rises one rung of the pentatonic per chain link, like `chain_link` (`HOOK-CHAIN.md:26`). |
 | card line | "Drag what you bite into claw reach." (7 words) |
 | codex | `tarn_claw_drag`, section 8 |
 | clip | `cast_line`, 0.8 s (section 6) |

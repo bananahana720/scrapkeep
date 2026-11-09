@@ -24,7 +24,7 @@ const Palette := preload("res://src/core/palette.gd")
 # (phase rows) and earned (sign-on rows). A row plays in full the first time a profile sees
 # it and in its short form after that (the player keeps the seen key). Any skip cuts the
 # hold it was paying for. A row's "world" {full, short} lists its world beats ("rise",
-# "eject"), which are this module's: the player only draws the overlay. The hold a beat paid
+# "eject", "glance"), which are this module's: the player only draws the overlay. The hold a beat paid
 # for is written into its entry in the run's "flourishes" meta, which the run log keeps.
 
 const HOLD_CAP := 2.0
@@ -230,6 +230,21 @@ func _world_beat(beat: Dictionary) -> void:
 			_rise(float(beat.get("at", 0.0)), float(beat.get("seconds", 1.0)))
 		"eject":
 			_eject(float(beat.get("at", 0.0)), float(beat.get("seconds", 1.6)))
+		"glance":
+			_glance(String(beat.get("anchor", "ship")), float(beat.get("seconds", 0.9)))
+
+
+# The camera turns to the beat's subject, so the entrance is on screen (chase_camera.glance_at;
+# the player's look ends it). A hand on the controls only: a bot's run keeps its own heading,
+# so its stream is the one the bands were measured on.
+func _glance(anchor: String, seconds: float) -> void:
+	if ctx.camera == null or not ctx.camera.has_method("glance_at"):
+		return
+	if ctx.root != null and bool(ctx.root.get("bot_driven")):
+		return
+	var subject = _anchors().get(anchor)
+	if subject is Node3D:
+		ctx.camera.glance_at(subject, seconds)
 
 
 # The Requisition crests the bowl rim: its model, never its hull, arcs in from outside and

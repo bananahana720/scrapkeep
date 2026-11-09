@@ -1,5 +1,5 @@
 extends SceneTree
-# smoke: timeout=240s
+# smoke: timeout=360s (215-218 s alone on the w29 and w31 gate boxes, 278-280 s on w30's, where 240 s killed it)
 
 # Forced-contact probe for the dam's eye_fin_east foot (red team on cf07ff61, random seed 2867 runner_gunner on the park
 # table: the bot sat at (98, 103, 137) on "roll to spillway sheet" from 76 s to the 240 s stall cap; #456 met the same

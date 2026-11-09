@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-reviewer-medium
-description: Independently review an exact Scrapkeep candidate on Opus 5.5 medium without edits or board writes. Use for bounded candidates whose acceptance criteria are mechanical.
+description: Independently review an exact Scrapkeep candidate on the mid tier at medium effort without edits or board writes. Use for bounded candidates whose acceptance criteria are mechanical.
 model: opus
 effort: medium
 tools: Read, Grep, Glob

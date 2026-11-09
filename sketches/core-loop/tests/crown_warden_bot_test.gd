@@ -1,4 +1,6 @@
-# smoke: solo (one isolated fixed-90-fps skipper child jumped to stage 6; 180 s wall budget)
+# smoke: solo timeout=330s (one isolated fixed-90-fps skipper child jumped to stage 6; 300 s wall budget: the cap
+# catches a hang, not a slow box. The child ran 96-116 s on the w31 and w32 gate boxes and 164-188 s on w30's, where
+# the old 180 s budget killed it after its checks had passed)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
@@ -20,7 +22,7 @@ const T := preload("res://tests/support/t.gd")
 const SEED := 1
 const JUMP_STAGE := 6
 const BUDGET_SECONDS := 200.0
-const WALL_BUDGET := 180.0
+const WALL_BUDGET := 300.0
 
 var _t := T.new("crown_warden_bot_test")
 var _child := false

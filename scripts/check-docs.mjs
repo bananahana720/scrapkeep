@@ -4,6 +4,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
+import { checkLedger } from "./known-failing.mjs";
+import { checkWeekly } from "./gate/weekly.mjs";
+import { checkWaveState } from "./wave-state.mjs";
+
 const scriptRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -771,6 +775,69 @@ async function checkSkillsStage(docs) {
   return findings.length;
 }
 
+// The wave facts in STATE.md are checked against git history, so a promotion
+// that nobody recorded fails the next docs check instead of misleading a
+// fresh thread. scripts/wave-state.mjs owns the rules and the repair command.
+async function checkWaveStateStage(docs) {
+  const findings = await checkWaveState(docs.root);
+  for (const finding of findings) {
+    if (finding.level === "failure")
+      docs.fail("wave-state", finding.file, finding.line, finding.message);
+    else docs.info("wave-state", finding.file, finding.line, finding.message);
+  }
+  return findings.filter((finding) => finding.level === "failure").length;
+}
+
+// Several threads hand out ruling letters at the same time. Two rows that open
+// with one letter mean two rulings answer to one name, so the later row fails.
+// Only rows written "| Ruling xx," or "| Ruling xx:" carry a letter to check.
+// The "Replaced rulings" section is skipped: its rows open with the old ruling,
+// which may still have a row of its own above.
+const RULINGS_FILE = "project-guide/handoff/DECISIONS.md";
+async function checkRulingLetters(docs) {
+  try {
+    await access(path.join(docs.root, RULINGS_FILE));
+  } catch {
+    return;
+  }
+  const { lines } = await docs.load(RULINGS_FILE);
+  const seen = new Map();
+  let replaced = false;
+  for (const [index, line] of lines.entries()) {
+    if (line.startsWith("## ")) replaced = /^## Replaced rulings\b/.test(line);
+    if (replaced) continue;
+    const match = /^\| Ruling ([a-z]{1,2})[,:]/.exec(line);
+    if (!match) continue;
+    const [, letter] = match;
+    if (seen.has(letter))
+      docs.fail(
+        "rulings",
+        RULINGS_FILE,
+        index + 1,
+        `ruling ${letter} already names the row on line ${seen.get(letter)}; give this ruling the next free letter`,
+      );
+    else seen.set(letter, index + 1);
+  }
+}
+
+// The known-failing ledger is checked for shape here. A row past its review
+// date is only a note in this check; it fails at the promotion gate
+// (scripts/known-failing.mjs --promotion).
+async function checkLedgerStage(docs) {
+  const findings = await checkLedger(docs.root);
+  for (const finding of findings) {
+    if (finding.level === "failure")
+      docs.fail("known-failing", finding.file, finding.line, finding.message);
+    else docs.info("known-failing", finding.file, finding.line, finding.message);
+  }
+  // The weekly list (ruling ca) sits beside the ledger and is checked with it.
+  for (const finding of checkWeekly(docs.root)) {
+    findings.push(finding);
+    docs.fail("weekly-list", finding.file, finding.line, finding.message);
+  }
+  return findings.filter((finding) => finding.level === "failure").length;
+}
+
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   const docs = new Documents(options.root);
@@ -782,6 +849,9 @@ async function main() {
   const sections = await checkSections(docs);
   await checkClosureContract(docs);
   const skillFindings = await checkSkillsStage(docs);
+  const waveFindings = await checkWaveStateStage(docs);
+  const ledgerFindings = await checkLedgerStage(docs);
+  await checkRulingLetters(docs);
   const manifest = {};
   for (const file of [...docs.cache.keys()].sort())
     manifest[file] = docs.cache.get(file).sha256;
@@ -800,6 +870,8 @@ async function main() {
       states: tracking.states,
       sections,
       skillFindings,
+      waveFindings,
+      ledgerFindings,
     },
     failures: failures.length,
     findings: docs.findings,
@@ -839,6 +911,10 @@ async function main() {
       " interim rows, " +
       skillFindings +
       " skill findings, " +
+      waveFindings +
+      " wave-state findings, " +
+      ledgerFindings +
+      " known-failing findings, " +
       failures.length +
       " failures. Report: " +
       options.report,

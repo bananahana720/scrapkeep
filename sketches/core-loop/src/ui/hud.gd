@@ -98,6 +98,8 @@ const ACH_LAYER := 8
 const ACH_TOTAL := 3.0
 const ACH_TOP := 14.0
 const ACH_WORD := "Achievement"
+const ACH_FONT := 21
+const ACH_DETAIL_FONT := 15
 # A jukebox record found in play shares the achievement plate, after any achievement waiting.
 const TUNE_WORD := "New record"
 # A radio take found in play: the same plate, its own word, louder for a legend.
@@ -106,6 +108,10 @@ const TAKE_WORDS := {"b-side": "New B-side", "take": "New take", "legend": "Lege
 const LORE_WORDS := "New field note"
 const LORE_TOTAL := 3.0
 const LORE_TOP := 66.0
+# The top-right corner is one column: the radio chip, the unlock plate, the field note pill.
+# Each sits under whichever of the others is showing, this far apart, so none covers another.
+const CORNER_GAP := 4.0
+const CORNER_SLIDE := 480.0
 const OBJECTIVE_WORDS := Objectives.MAX_WORDS
 const TOAST_ICON := 26.0
 # How long a world card stands alone before its first stage card replaces it.
@@ -125,9 +131,13 @@ const RETIRED_TOASTS := ["part_gained", "reward_chosen", "heft_class_changed", "
 const ROW_COLOR := {"find_warden": "warden_engaged", "break_guard": "warden_engaged", "smash_core": "warden_engaged",
 	"grow_return": "warden_engaged", "break_warden": "warden_engaged", "charge_beacon": "beacon_charge_changed",
 	"find_activity": "activity_done", "roll_gate": "reward_offered", "hold_line": "launched", "break_brindle": "boss_arena_entered",
-	"break_yard_crew": "pack_arrived", "break_clamp_crews": "pack_arrived"}
+	"break_yard_crew": "pack_arrived", "break_clamp_crews": "pack_arrived",
+	"ride_sheet": "warden_engaged", "latch_warden": "warden_engaged", "fire_from_line": "warden_engaged",
+	"shoot_magnets": "boss_arena_entered", "slam_caps": "boss_arena_entered", "bait_charge": "boss_arena_entered",
+	"hit_cockpit": "boss_arena_entered", "ram_scooter": "boss_arena_entered"}
 # The rows whose glyph is ringed by how much of the Warden is broken.
-const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "charge_beacon"]
+const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "charge_beacon",
+	"ride_sheet", "latch_warden", "fire_from_line"]
 # The gaps of the top slot when a plate is mounted: from the band's top to the plate, and
 # from the plate to the objective plate under it.
 const PLATE_TOP := 6.0
@@ -173,6 +183,7 @@ var _toast := {}
 var _held_toast := {}
 var _ach_panel: PanelContainer
 var _ach_name: Label
+var _ach_detail: Label
 var _ach_queue: Array[String] = []
 var _tune_queue: Array[String] = []
 var _take_words := {}
@@ -182,6 +193,7 @@ var _ach_entry := {}
 var _lore_panel: PanelContainer
 var _lore_left := 0.0
 var _lore_age := 0.0
+var _corner_chip: Control
 var _lower: Control
 var _restart: Control
 var _health: Control
@@ -366,8 +378,8 @@ func _build_ach_toast() -> void:
 	plate.set_corner_radius_all(8)
 	plate.content_margin_left = 16.0
 	plate.content_margin_right = 20.0
-	plate.content_margin_top = 8.0
-	plate.content_margin_bottom = 8.0
+	plate.content_margin_top = 5.0
+	plate.content_margin_bottom = 5.0
 	_ach_panel.add_theme_stylebox_override("panel", plate)
 	layer_node.add_child(_ach_panel)
 	var row := HBoxContainer.new()
@@ -389,9 +401,18 @@ func _build_ach_toast() -> void:
 	word.add_theme_color_override("font_color", Palette.AMBER)
 	row.add_child(word)
 	_ach_word = word
-	_ach_name = _label(TOAST_FONT[3])
+	# The name, then what it gives in smaller type: two lines that fit the top band under the chip.
+	var words := VBoxContainer.new()
+	words.add_theme_constant_override("separation", -3)
+	words.alignment = BoxContainer.ALIGNMENT_CENTER
+	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(words)
+	_ach_name = _label(ACH_FONT)
 	_ach_name.add_theme_color_override("font_color", Palette.SAND)
-	row.add_child(_ach_name)
+	words.add_child(_ach_name)
+	_ach_detail = _label(ACH_DETAIL_FONT)
+	_ach_detail.add_theme_color_override("font_color", Color(Palette.SAND, 0.78))
+	words.add_child(_ach_detail)
 
 
 func _build_lore_pulse() -> void:
@@ -439,9 +460,44 @@ func _step_lore(delta: float) -> void:
 	_lore_left -= delta
 	_lore_age += delta
 	_lore_panel.modulate.a = clampf(minf(_lore_age / TOAST_IN, _lore_left / TOAST_OUT), 0.0, 1.0)
-	_lore_panel.position = Vector2(_screen_size().x - _lore_panel.size.x - MARGIN, LORE_TOP)
+	# It slides, not jumps, when the plate above it leaves.
+	var want := _corner_under(_ach_panel, _corner_under(_corner_chip, LORE_TOP))
+	var y := want if _lore_age <= delta else move_toward(_lore_panel.position.y, want, delta * CORNER_SLIDE)
+	_lore_panel.position = Vector2(_screen_size().x - _lore_panel.size.x - MARGIN, y)
 	if _lore_left <= 0.0:
 		_lore_panel.visible = false
+
+
+# A chip that lives in the top-right corner (the pilot radio). The plate and the pill line up
+# under it while it shows.
+func mount_corner(chip: Control) -> void:
+	# Stepped before the HUD, so the plate under it reads this frame's size and not last frame's.
+	chip.process_priority = process_priority - 1
+	add_child(chip)
+	_corner_chip = chip
+
+
+# The chip is mid-swell (a station change, radio_dial.gd): for those seconds it is twice its
+# height, and a plate under it would hang below the top band. A new plate waits it out.
+func _corner_swollen() -> bool:
+	return _corner_chip != null and _corner_chip.visible and _corner_chip.has_method("swollen") and _corner_chip.swollen()
+
+
+# The y for a corner piece: under the piece above when that one is showing, else its own top.
+func _corner_under(above: Control, top: float) -> float:
+	if above == null or not above.visible:
+		return top
+	return above.position.y + above.size.y + CORNER_GAP
+
+
+# The corner's pieces now showing, top to bottom, each as its name and screen rect.
+func corner_rects() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for piece in [["chip", _corner_chip], ["plate", _ach_panel], ["pill", _lore_panel]]:
+		var control: Control = piece[1]
+		if control != null and control.visible:
+			out.append({"name": piece[0], "rect": Rect2(control.position, control.size)})
+	return out
 
 
 # The achievement toast on screen (its row's name), then the names still waiting.
@@ -496,19 +552,25 @@ func _step_ach(delta: float) -> void:
 	if game.screens != null and game.screens.ending_open():
 		clear_achievement_toasts()
 		return
-	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live():
+	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live() and not _corner_swollen():
 		var tune := _ach_queue.is_empty()
 		_ach_entry = {"text": _tune_queue.pop_front() if tune else _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
-		_ach_name.text = _ach_entry["text"]
+		# The first line is the name; whatever follows it is the detail.
+		var lines := String(_ach_entry["text"]).split("\n", true, 1)
+		_ach_name.text = lines[0]
+		_ach_detail.text = lines[1] if lines.size() > 1 else ""
+		_ach_detail.visible = _ach_detail.text != ""
 		_ach_word.text = (String(_take_words.get(_ach_entry["text"], TUNE_WORD)) if tune else ACH_WORD)
 		_ach_icon.texture = Icons.shape("wave" if tune else "star")
+		# A panel grows to its words by itself and never shrinks: a short entry after a long one resets it.
+		_ach_panel.reset_size()
 		_ach_panel.visible = true
 	if _ach_entry.is_empty():
 		return
 	_ach_entry["left"] -= delta
 	_ach_entry["age"] += delta
 	_ach_panel.modulate.a = clampf(minf(_ach_entry["age"] / TOAST_IN, _ach_entry["left"] / TOAST_OUT), 0.0, 1.0)
-	_ach_panel.position = Vector2(_screen_size().x - _ach_panel.size.x - MARGIN, ACH_TOP)
+	_ach_panel.position = Vector2(_screen_size().x - _ach_panel.size.x - MARGIN, _corner_under(_corner_chip, ACH_TOP))
 	if _ach_entry["left"] <= 0.0:
 		_ach_entry = {}
 		_ach_panel.visible = false
@@ -882,13 +944,14 @@ static func _rect_of(control: Control) -> Rect2:
 
 
 # The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
-# and, while the Warden is still to be found, the metres to it.
+# and, while the Warden or an activity is still to be found, the metres to it.
 func objective_reading() -> Dictionary:
 	var flow = game.flow
 	var warden = flow.warden if is_instance_valid(flow.warden) else null
 	var distance: float = game.player.ball_position().distance_to(warden.global_position) if warden != null else INF
 	var gate = flow.gate
-	var id := Objectives.choose({
+	var sites: Array = edge_markers.unfinished_sites()
+	var reading := {
 		"state": flow.state_name(),
 		"sealed": flow.sealed,
 		"engaged": _engaged,
@@ -897,15 +960,34 @@ func objective_reading() -> Dictionary:
 		"struggling": _struggle.struggling,
 		"distance": distance,
 		"card": launch_card.showing(),
-		"activities_left": edge_markers.unfinished_sites().size(),
+		"activities_left": sites.size(),
 		"yard_locked": gate != null and gate.lock_active(),
 		"clamp_shut": gate != null and gate.locked(),
-	})
+	}
+	# A mounted Warden and the arena's boss each say which verb their fight asks for now.
+	var driver = warden.get("mount_driver") if warden != null else null
+	if driver != null and driver.has_method("plate_reading"):
+		reading.merge(driver.plate_reading(warden), true)
+	var boss = game.ctx.boss
+	if is_instance_valid(boss) and boss.has_method("plate_reading"):
+		reading.merge(boss.plate_reading(), true)
+	var id := Objectives.choose(reading)
 	if id == "":
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
-	return {"id": id, "icon": Objectives.glyph(id), "words": Objectives.words(id), "color": row_color(id),
+	var words := Objectives.words(id)
+	if id == "find_activity":
+		# The nearest unfinished site, by name and metres, so the row is a place to go.
+		var ball: Vector3 = game.player.ball_position()
+		var nearest = null
+		for site in sites:
+			if nearest == null or ball.distance_squared_to(site.global_position) < ball.distance_squared_to(nearest.global_position):
+				nearest = site
+		if nearest != null:
+			words = Objectives.activity_words(String(nearest.id))
+			distance = ball.distance_to(nearest.global_position)
+	return {"id": id, "icon": Objectives.glyph(id), "words": words, "color": row_color(id),
 		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else game.beacon.fraction() if id in RING_ROWS else -1.0,
-		"distance": int(distance) if id == "find_warden" and distance < INF else -1}
+		"distance": int(distance) if id in ["find_warden", "find_activity"] and distance < INF else -1}
 
 
 # How many of the crews the Warden's clamp asks for are down, as the ring round the plate's glyph.

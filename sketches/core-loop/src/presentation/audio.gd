@@ -118,7 +118,7 @@ const VAULT_KILL_SOUND := "vault_drop"
 const LOCK_TICK_GAP := 0.25
 const FAIL_GAP := 0.25
 const DRY_TICK_GAP := 0.1
-# Semitones a chain link's bite can climb: link six is five above the root.
+# Rungs of the reward ladder a chain link's bite can climb: link six is the octave.
 const CHAIN_STEPS := 5
 const CHAIN_BITE_HOLD_S := 0.25
 const CAUSE_RESOLVE_GAP := 4.0
@@ -149,7 +149,7 @@ var _line_claw_stream: AudioStreamWAV
 # --- P-C Rivet audio ---
 # Line Drive (design-v3/pilots/rivet.md section 2.3, Sound). The punch: one clav stab on the
 # motif's hammered note as the pulse leaves, a snare flam when it lands (the kit's pulse delay),
-# one semitone up per chain link. The haul: a closed-hat roll for the haul's length, landing the
+# one rung of the reward ladder up per chain link. The haul: a closed-hat roll for the haul's length, landing the
 # motif's fourth on arrival. Both read the kit's last_cue, so the cue and the act share one record.
 const RIVET_LINE := {"punch": "rivet_line_punch", "arrive": "rivet_line_arrive", "motif": "rivet", "roll_step": 0.0625}
 # --- end Rivet ---
@@ -276,6 +276,35 @@ var hum_on := false
 var _line_was := ""
 var hum_pitch := 1.0
 var _chain_bite_ms := -100000.0
+# Melodic payoff on the grid (AUDIO-V3 section 5). The player's own contact sounds on its frame
+# (rule 1) and no climb leaves the reward ladder (rule 3). The tune a frame cannot carry lands on
+# the band's grid, a sixteenth later at most, as grid notes in the stinger lane, keyed to the band:
+# a kill chain's landing on a chord tone (rule 5), the near miss's two whip notes (rule 4), and the
+# dunk's banked fifth and paid home note.
+# A kill chain that reached STREAK_LAND_RUNG lands on the next beat when its window closes. One
+# that reached STREAK_BAR_RUNG restates its last note and lands on the next bar line under a crash.
+const STREAK_LAND_RUNG := 2
+const STREAK_BAR_RUNG := 5
+const STREAK_VOICE := "bell"
+const STREAK_BODY := "keys"
+const CHAIN_CRASH := "chain_crash"
+# The recorded band's chords are not in its manifest. Home's triad is in every key it plays.
+const HOME_TRIAD := [62, 65, 69]
+# The dunk banks on the fifth and pays on home.
+const DUNK_VOICE := "mallet"
+const DUNK_STORED_MIDI := 81
+const DUNK_SPENT_MIDI := 74
+# A death's fall: the death cue's dying tritone (Ab over D) collapses through F onto D, in
+# eighths from the beat the band stops on, on the cue's own brass and in the cue's key.
+const DEATH_FALL := [56, 53, 50]
+const DEATH_FALL_VOICE := "brass"
+# The last_ms of the kill chain whose end has been heard.
+var _streak_landed_ms := -100000
+# The beat a death holds the recorded band to; the lost summary's pack starts once it has passed
+# (the sequencer holds one pack at a time). -1 when none waits.
+var _summary_due := -1
+# The key and class the whip's and the dunk's grid notes were last made for (_warm_grid_key).
+var _grid_key := ""
 var _hum_voice := -1
 var _gates := {}
 var _fired_this_run := {}
@@ -420,6 +449,43 @@ static func _sound_ids() -> Array:
 			var id := SfxBank.cause_note_id(Harmony.note_midi(String(note)))
 			if not id in ids:
 				ids.append(id)
+	# The grid notes whose pitch is known ahead: every class's whip, the dunk's pair, the death's
+	# fall, and a kill chain's landings over the recorded band. A note costs 17 to 25 ms to make,
+	# a frame hitch if its beat has to make it. A landing over the synth band follows the chord
+	# and is made on a worker as the chain climbs (_warm_landing).
+	for id in _home_landing_ids():
+		ids.append(id)
+	for class_id in Harmony.CLASS_MOTIFS:
+		var whip := SfxBank.whip_notes(class_id)
+		for midi in [whip[1], whip[2]]:
+			if not SfxBank.grid_note_id(whip[0], midi) in ids:
+				ids.append(SfxBank.grid_note_id(whip[0], midi))
+	for midi in [DUNK_STORED_MIDI, DUNK_SPENT_MIDI]:
+		ids.append(SfxBank.grid_note_id(DUNK_VOICE, midi))
+	for midi in DEATH_FALL:
+		ids.append(SfxBank.grid_note_id(DEATH_FALL_VOICE, midi))
+	return ids
+
+
+# Every note a kill chain can land or hold on over the home triad, in D.
+static func _home_landing_ids() -> Array:
+	var ids: Array = []
+	var cap := int(EventKinds.juice("enemy_killed").get("chain_cap", 9))
+	for rung in range(STREAK_LAND_RUNG, cap + 1):
+		for id in _landing_ids(rung, HOME_TRIAD):
+			if not id in ids:
+				ids.append(id)
+	return ids
+
+
+# The notes of a chain's landing from rung over tones: the bell, the keys an octave below, and
+# a long chain's held last note.
+static func _landing_ids(rung: int, tones: Array) -> Array:
+	var last: int = SfxBank.KILL_POP_MIDI + Harmony.pentatonic_step(rung)
+	var land := Harmony.tone_below(last, tones)
+	var ids: Array = [SfxBank.grid_note_id(STREAK_VOICE, land), SfxBank.grid_note_id(STREAK_BODY, land - 12)]
+	if rung >= STREAK_BAR_RUNG:
+		ids.append(SfxBank.grid_note_id(STREAK_VOICE, last))
 	return ids
 
 
@@ -701,6 +767,8 @@ func _process(delta: float) -> void:
 		ace.pause_gain = engine.pause_gain
 	_tend_mix(delta)
 	_flush_flow()
+	_tend_kill_streak()
+	_warm_grid_key()
 	_play_due_notes()
 	_tend_tally()
 	_tend_hum()
@@ -733,6 +801,8 @@ func _pump(virtual_frames := -1) -> void:
 	var ace_live := ace != null and ace.active()
 	_hand_over_band()
 	_release_grid()
+	if _summary_due >= 0 and engine.clock >= _summary_due:
+		_ace_named(summary_row(false), engine.next_beat(), false, false)
 	if not live_output:
 		# No device: advance the band by the real time that passed, as a speaker would.
 		var now := _transport_usec()
@@ -1371,6 +1441,7 @@ func _menu_home(at: int) -> void:
 
 
 func _ace_named(id: String, at: int, boss := false, won := true) -> void:
+	_summary_due = -1
 	_on_title = false
 	_ace_arrival_stage = 0
 	_ace_arrival_at = -1
@@ -1404,6 +1475,19 @@ func _ace_end(ramp := AceSequencer.STOP_RAMP) -> void:
 		ace.stop(ramp)
 	_unmute_band()
 	_release_grid()
+
+
+# The recorded band plays to transport sample at and stops there, and the synth band comes back
+# on that sample: a death ends on the beat its boom lands on, not mid-beat.
+func _ace_end_at(at: int) -> void:
+	if not ace_playing():
+		_ace_end()
+		return
+	_ace_arrival_stage = 0
+	_ace_arrival_at = -1
+	_ace_flight = false
+	ace.stop_at(at, AceSequencer.STOP_RAMP)
+	_handover_at = at
 
 
 func ace_playing() -> bool:
@@ -1841,7 +1925,7 @@ func wire_optional() -> void:
 		if not Activities.RULES.get(id, {}).has("bundle"):
 			play("activity_done", 0.0, 1.0, "SFX", Rows.heard(EventKinds.activity_row(id), cue_context())))
 	_listen_optional(events, "core_gained", _on_core)
-	_listen_optional(events, "near_miss", func(_kind: String, _at: Vector3): play("near_miss"))
+	_listen_optional(events, "near_miss", _on_near_miss)
 	_listen_optional(events, "synergy_discovered", _on_synergy)
 	_listen_optional(events, "line_state_changed", _on_line_state)
 	_listen_optional(events, "grapple_released", _stop_hum, true)
@@ -1985,9 +2069,10 @@ func _grammar_cue(kind: String, sound: String, bus := "SFX", pitch := 1.0) -> bo
 	return play(kind, -PRIORITY_DB[Rows.priority(kind)], pitch, bus, sound)
 
 
-# The chain's link bite rises a semitone per link beyond the first, up to CHAIN_STEPS (six
-# links), and the smash that pays it lands at the root. Links 1 plays nothing here: the line's
-# own latched_body bite is the combo-1 sound, exactly as without a chain.
+# The chain's link bite climbs a rung of the reward ladder per link beyond the first (A, C, D, F,
+# G, then A an octave up at link six, CHAIN_STEPS), never a semitone (AUDIO-V3 section 5 rule 3),
+# and the smash that pays it lands at the root. Link 1 plays nothing here: the line's own
+# latched_body bite is the combo-1 sound, exactly as without a chain.
 func _on_chain_state(state: String, cause: String) -> void:
 	match state:
 		"chain_link":
@@ -1999,7 +2084,7 @@ func _on_chain_state(state: String, cause: String) -> void:
 			if sound == EventKinds.NONE or sound == "":
 				return
 			var steps := mini(links - 1, CHAIN_STEPS)
-			if _grammar_cue("line_state_changed", sound, "SFX", Harmony.ratio(float(steps))):
+			if _grammar_cue("line_state_changed", sound, "SFX", Harmony.ladder_ratio(SfxBank.BITE_MIDI, steps)):
 				_chain_bite_ms = clock
 		"chain_end":
 			if cause == "paid":
@@ -2498,6 +2583,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	scrap_streak.reset()
 	kill_streak.reset()
 	reclaim_streak.reset()
+	_streak_landed_ms = kill_streak.last_ms
 	# Each stage starts its own difficulty clock and never carries a vent pedal over.
 	engine.set_fleet_ticks(0)
 	engine.set_reactor_pedal(false)
@@ -3058,10 +3144,112 @@ func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
 		play("enemy_killed", 2.0, 1.0, "SFX", VAULT_KILL_SOUND)
 	var rung: int = kill_streak.bump(Time.get_ticks_msec())
 	play("enemy_killed", 0.0, Harmony.ratio(Harmony.pentatonic_step(rung)))
+	if rung >= STREAK_LAND_RUNG:
+		_warm_landing(rung)
 	# Each link past the first adds its tier's stab (INTEGRATION section 3), five rungs.
 	if rung >= 1:
 		var tiers: Array = SfxBank.TIER_CUES["kill_chain_tier"]
 		play("enemy_killed", 0.0, 1.0, "SFX", tiers[mini(rung, tiers.size()) - 1])
+
+
+# True while the recorded band's grid is the one the player hears.
+func _on_ace_grid() -> bool:
+	return ace != null and engine.grid == ace and ace.mode != "off" and ace.section != ""
+
+
+# One division of the sounding band's beat in samples: per_beat 4 is a sixteenth, 2 an eighth.
+func grid_unit(per_beat: int) -> int:
+	return maxi(1, (ace.grid_beat if _on_ace_grid() else engine.beat_len()) / per_beat)
+
+
+# The next point of the sounding band's grid at or after the play head.
+func next_grid(per_beat: int) -> int:
+	var unit := grid_unit(per_beat)
+	var origin: int = ace.origin if _on_ace_grid() else engine.grid_origin
+	return engine.clock + posmod(origin - engine.clock, unit)
+
+
+func _next_bar() -> int:
+	return ace.next_bar() if _on_ace_grid() else engine.next_bar()
+
+
+# One pitched note of kind's cue in the stinger lane at transport sample at, at the grid note's
+# trim and the kind's priority. home keeps it in D (schedule_stinger_at).
+func _note_at(kind: String, voice: String, midi: int, at: int, db := 0.0, home := false) -> void:
+	var id := SfxBank.grid_note_id(voice, midi)
+	engine.schedule_stinger_at(id, at, db + PRIORITY_DB[Rows.priority(kind)], home)
+	cue_log.append([kind, id, "grid", at, 1.0])
+
+
+# The chord tones a landing at transport sample at falls to. The recorded band names no chords,
+# so over it a chain lands on the home triad.
+func _landing_tones(at: int) -> Array:
+	return HOME_TRIAD if ace_playing() else engine.chord_at(at)["tones"]
+
+
+# A landing's notes are made on a worker while the chain is still live: the window that has to
+# close before it lands is the lead. The chord is read for the bar the window closes in and the
+# one after it, which a landing on the next beat or bar line falls in.
+func _warm_landing(rung: int) -> void:
+	var due: int = engine.clock + kill_streak.window_ms * Harmony.RATE / 1000
+	for at in [due, due + 4 * grid_unit(1)]:
+		for id in _landing_ids(rung, _landing_tones(at)):
+			engine.warm_stinger(id, at)
+
+
+# The whip and the dunk answer a sixteenth after their contact, too soon to make a note: theirs
+# are made as a new key arrives (or a new class in it).
+func _warm_grid_key() -> void:
+	var motif: String = _motif if _motif != "" else Harmony.CLASS_MOTIFS[0]
+	var now := "%d:%s" % [engine.stinger_key(engine.clock), motif]
+	if now == _grid_key:
+		return
+	_grid_key = now
+	var whip := SfxBank.whip_notes(motif)
+	for id in [SfxBank.grid_note_id(whip[0], whip[1]), SfxBank.grid_note_id(whip[0], whip[2]),
+			SfxBank.grid_note_id(DUNK_VOICE, DUNK_STORED_MIDI), SfxBank.grid_note_id(DUNK_VOICE, DUNK_SPENT_MIDI)]:
+		engine.warm_stinger(id, engine.clock)
+
+
+# The kill chain's window has closed: a chain worth hearing lands, once.
+func _tend_kill_streak() -> void:
+	if kill_streak.length == 0 or kill_streak.last_ms == _streak_landed_ms or kill_streak.live(Time.get_ticks_msec()):
+		return
+	_streak_landed_ms = kill_streak.last_ms
+	if kill_streak.rung >= STREAK_LAND_RUNG and sound_ready and engine.mode == MusicEngine.PLAY:
+		land_streak(kill_streak.rung)
+
+
+# The ladder was the question and this is the answer: the line falls from the chain's last note
+# to the chord tone under it, on the next beat, on the pop's bell with keys an octave below. A
+# long chain (STREAK_BAR_RUNG) restates its last note on the next sixteenth and lands on the bar
+# line under a crash. Returns the transport sample of the landing.
+func land_streak(rung: int) -> int:
+	var last: int = SfxBank.KILL_POP_MIDI + Harmony.pentatonic_step(rung)
+	var long := rung >= STREAK_BAR_RUNG
+	var at := _next_bar() if long else engine.next_beat()
+	if long:
+		var hold := next_grid(4)
+		if at - hold >= grid_unit(2):
+			_note_at("enemy_killed", STREAK_VOICE, last, hold, SfxBank.GRID_UNDER_DB)
+		# The crash has no pitch, so it stays the boot bake's whatever the key.
+		engine.schedule_stinger_at(CHAIN_CRASH, at, PRIORITY_DB[Rows.priority("enemy_killed")], true)
+		cue_log.append(["enemy_killed", CHAIN_CRASH, "bar", at, 1.0])
+	var land := Harmony.tone_below(last, _landing_tones(at))
+	_note_at("enemy_killed", STREAK_VOICE, land, at)
+	_note_at("enemy_killed", STREAK_BODY, land - 12, at, SfxBank.GRID_UNDER_DB)
+	return at
+
+
+# The near miss is a reward in the class's own voice and ducks nothing (AUDIO-V3 section 5 rule
+# 4): the air on its frame, then the class whip's two notes on the next two sixteenths.
+func _on_near_miss(_kind: String, _at: Vector3) -> void:
+	if not play("near_miss"):
+		return
+	var notes := SfxBank.whip_notes(_motif if _motif != "" else Harmony.CLASS_MOTIFS[0])
+	var at := next_grid(4)
+	_note_at("near_miss", notes[0], notes[1], at)
+	_note_at("near_miss", notes[0], notes[2], at + grid_unit(4))
 
 
 func _on_died() -> void:
@@ -3497,13 +3685,19 @@ func _integrity(enemy: Node3D) -> float:
 
 # The dunk charge (dunk.gd) cues: a held charge is a whistle up, its spend a crack. They read
 # the one record the glow reads and borrow the slammed row and existing sound ids, so the
-# event table stays as it is; Effects restyles them.
+# event table stays as it is; Effects restyles them. Each is answered by one note on the next
+# sixteenth: the charge banks on the fifth (A) and the spend pays on home (D), so the setup and
+# its payoff are a cadence.
 func _connect_dunk() -> void:
 	var dunk = ctx.player.get("dunk") if ctx != null and ctx.get("player") != null else null
 	if dunk == null:
 		return
-	dunk.stored.connect(func(_record: Dictionary): play("slammed", -4.0, Harmony.ratio(7.0), "SFX", "smash_whistle"))
-	dunk.spent.connect(func(_record: Dictionary, _enemy: Node3D): play("slammed", 0.0, 1.0, "SFX", "smash_crack"))
+	dunk.stored.connect(func(_record: Dictionary):
+		if play("slammed", -4.0, Harmony.ratio(7.0), "SFX", "smash_whistle"):
+			_note_at("slammed", DUNK_VOICE, DUNK_STORED_MIDI, next_grid(4)))
+	dunk.spent.connect(func(_record: Dictionary, _enemy: Node3D):
+		if play("slammed", 0.0, 1.0, "SFX", "smash_crack"):
+			_note_at("slammed", DUNK_VOICE, DUNK_SPENT_MIDI, next_grid(4)))
 
 
 # Each active sounds its own launch ("active_" + id) when the bank has it, else the row's.
@@ -3673,6 +3867,9 @@ func _flush_flow() -> void:
 	var burst := _flow_queue
 	_flow_queue = []
 	var kinds := burst.map(func(item: Array): return item[0])
+	# A new run, the menu or a stage takes the band from a lost summary still waiting on its beat.
+	if "run" in kinds or "idle" in kinds or "stage" in kinds:
+		_summary_due = -1
 	for item in burst:
 		match item[0]:
 			"run":
@@ -3730,8 +3927,15 @@ func _flush_flow() -> void:
 					engine.schedule_cadence(start)
 			"end":
 				_radio_drop("flow")
-				_ace_end()
 				var won: bool = item[1]
+				# A chain the run's end cut short never lands over the summary.
+				_streak_landed_ms = kill_streak.last_ms
+				# A death in this burst holds the recorded band to its beat (_ace_end_at). The
+				# lost summary's pack waits for that beat: starting it now would swap the packs
+				# and cut the band mid-beat.
+				var held := _handover_at if not won and "dead" in kinds and ace_playing() else -1
+				if held < 0:
+					_ace_end()
 				var start := on_beat("run_ended", 0.0, true) if won else -1
 				if start >= 0:
 					engine.schedule_cadence(start + Harmony.BAR)
@@ -3744,13 +3948,23 @@ func _flush_flow() -> void:
 					engine.schedule_mode(at, MusicEngine.IDLE)
 					if sound_ready:
 						engine.menu_theme("summary", won, at)
-						_ace_named(summary_row(won), at, false, won)
+						if held >= 0:
+							_summary_due = held
+						else:
+							_ace_named(summary_row(won), at, false, won)
 			"dead":
 				_radio_drop("flow")
-				_ace_end()
 				_disarm_launch()
 				engine.cancel_pending()
-				engine.death_break()
+				# A chain the death cut short never lands: the band reads PLAY until the boom's beat.
+				_streak_landed_ms = kill_streak.last_ms
+				# The band, recorded or synth, plays to the next beat and ends there under the
+				# boom. The death cue itself sounded on the death's frame (_on_died).
+				var at := engine.death_break()
+				_ace_end_at(at)
+				if sound_ready:
+					for i in DEATH_FALL.size():
+						_note_at("player_died", DEATH_FALL_VOICE, DEATH_FALL[i], at + i * grid_unit(2), SfxBank.DEATH_FALL_DB, true)
 			"idle":
 				_radio_drop("flow")
 				var at := engine.next_beat()
@@ -4029,7 +4243,8 @@ func _on_tarn_claw_drag(id: String, _target: Node3D, _at: Vector3, _on: String) 
 			var duration := Synth.seconds(0.45 if i == notes.size() - 1 else 0.1)
 			Synth.add_into(samples, Synth.declick(note.slice(0, duration)), Synth.seconds(step * (i + 1)), 0.65)
 		_line_claw_stream = Synth.to_wav(Synth.normalize(samples))
-	var pitch := Harmony.ratio(live_key()) * pow(2.0, maxf(0.0, float(ctx.player.chain.combo - 1)) / 12.0)
+	# A rung of the reward ladder per chain link, like the bite (never a semitone).
+	var pitch := Harmony.ratio(live_key() + Harmony.pentatonic_step(clampi(int(ctx.player.chain.combo) - 1, 0, CHAIN_STEPS)))
 	if _admit("line_skill_fired", "line_claw_drag", pitch):
 		_start("line_skill_fired", "line_claw_drag", _line_claw_stream, SfxBank.trim_db("line_claw_drag") + PRIORITY_DB[Rows.priority("line_skill_fired")], pitch, "SFX")
 # --- end Tarn ---
@@ -4058,10 +4273,11 @@ func _on_rivet_line_drive(id: String, _target: Node3D, _at: Vector3, on: String)
 	# Playback lasts 1 / pitch of the stored buffer time. Physical offsets divide by that ratio.
 	var duration_ratio := 1.0 / pitch
 	if on == "body":
-		var steps := maxi(0, int(ctx.player.chain.combo) - 1)
+		# The stab climbs the reward ladder from the hammered note, a rung per chain link.
+		var stab := Harmony.scale_shift(int(notes[0]), clampi(int(ctx.player.chain.combo) - 1, 0, CHAIN_STEPS), Harmony.PENTATONIC)
 		var samples := Synth.buffer(Synth.seconds(0.9 / duration_ratio))
-		Synth.add_into(samples, Synth.declick(Synth.note("clav", int(notes[0]) + steps)), 0, 0.7)
-		var snare := _rivet_snare(steps)
+		Synth.add_into(samples, Synth.declick(Synth.note("clav", stab)), 0, 0.7)
+		var snare := _rivet_snare(stab - int(notes[0]))
 		Synth.add_into(samples, snare, Synth.seconds(float(cue.get("delay", 0.0)) / duration_ratio), 0.5)
 		Synth.add_into(samples, snare, Synth.seconds((float(cue.get("delay", 0.0)) + 0.03) / duration_ratio), 0.35)
 		if _admit("line_skill_fired", RIVET_LINE["punch"], pitch):
@@ -4109,7 +4325,9 @@ func _wire_tally(events) -> void:
 			return
 		var combat = ctx.get("spawner") if ctx != null else null
 		var clips: int = int(combat.last_card.get("hits", 1)) if combat != null else 1
-		var lift := maxi(0, int(ctx.player.chain.combo) - 1)
+		# Her stepwise D, E, F climbs D dorian a step per chain link (never chromatically): every
+		# clip stays in the band's mode and off the tritone, which a moved phrase would reach.
+		var lift := clampi(int(ctx.player.chain.combo) - 1, 0, CHAIN_STEPS)
 		for i in clampi(clips, 1, TALLY_CUES["tally_clip"]["steps"].size()):
 			_tally_cue("tally_clip", i, lift, i))
 	events.ultimate_peak.connect(func(id: String, _at: Vector3):
@@ -4132,12 +4350,14 @@ func _tally_sixteenth() -> float:
 	return 60.0 / (bpm if bpm > 0.0 else TALLY_HOME_BPM) / TALLY_SIXTEENTHS
 
 
-# Queues one note of a TALLY_CUES row: step index `step`, lifted `lift` semitones, `slot`
+# Queues one note of a TALLY_CUES row: step index `step`, lifted `lift` steps of D dorian, `slot`
 # sixteenths from now.
 func _tally_cue(cue: String, step: int, lift := 0, slot := 0) -> void:
 	var row: Dictionary = TALLY_CUES[cue]
 	var steps: Array = row["steps"]
-	var semis: int = int(steps[step % steps.size()]) + lift
+	var semis: int = int(steps[step % steps.size()])
+	if lift != 0:
+		semis = Harmony.scale_shift(Harmony.HOME + semis, lift, Harmony.DORIAN) - Harmony.HOME
 	var note := [clock + slot * _tally_sixteenth(), row["kind"], row["sound"], 62 + semis, cue == "tally_total"]
 	if slot == 0:
 		_tally_play(note)

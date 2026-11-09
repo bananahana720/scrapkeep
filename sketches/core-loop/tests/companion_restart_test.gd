@@ -96,7 +96,7 @@ func _run() -> void:
 		await process_frame
 		menu = _game.get_node_or_null("PauseMenu")
 	menu.open()
-	menu.press("restart")
+	menu.confirm("restart")
 	await _frames(5)
 	_t.eq("the restarted run starts with the piece", _game.run.companion, earned)
 	_game.queue_free()
