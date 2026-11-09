@@ -60,6 +60,8 @@ var _zones_played := {}
 var _intros_played := {}
 var _intro_queue: Array = []
 var _intro_showing := false
+# The stage whose hello waits (see _waits); 0 when none.
+var _hello_due := 0
 
 
 class ExchangeInput extends Node:
@@ -111,6 +113,7 @@ func _install_exchange_input() -> void:
 func _on_run_started(_class_id: String) -> void:
 	_end_exchange(false)
 	_end_intro()
+	_hello_due = 0
 	_zones_played.clear()
 	_intros_played.clear()
 
@@ -118,12 +121,17 @@ func _on_run_started(_class_id: String) -> void:
 func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_end_exchange(false)
 	_end_intro()
+	_hello_due = 0
 	# Flow places the new Warden after this signal, clearing the previous engagement.
 	_begin_exchange.call_deferred(stage)
 
 
 func _begin_exchange(stage: int) -> void:
+	_hello_due = 0
 	if stage != _game.run.stage or not _game.flow.in_stage() or _game.flow.engaged():
+		return
+	if _waits():
+		_hello_due = stage
 		return
 	var zone := "%d-%d" % [_game.ctx.stages.world_of(stage), _game.ctx.stages.local(stage)]
 	if _zones_played.has(zone):
@@ -186,8 +194,17 @@ func _queue_intro(zone: String, warden: bool) -> void:
 	_flush_intro()
 
 
+# Moss holds his tongue: a screen has paused the drop (the briefing, a pick), or his turn in the
+# run's opening has not come (opening.gd: the shift card goes first). _process asks again.
+func _waits() -> bool:
+	if get_tree().paused:
+		return true
+	var opening = _game.get("opening")
+	return opening != null and opening.waits("moss")
+
+
 func _flush_intro() -> void:
-	if _intro_queue.is_empty() or not _exchange.is_empty() or get_tree().paused:
+	if _intro_queue.is_empty() or not _exchange.is_empty() or _waits():
 		return
 	var row: Dictionary = _intro_queue.pop_front()
 	_intros_played[String(row["intro_key"])] = true
@@ -353,6 +370,8 @@ func _say(line: String, fact: String, mood_now: String, level: float, grumbles: 
 
 
 func _process(delta: float) -> void:
+	if _hello_due > 0 and not _waits():
+		_begin_exchange(_hello_due)
 	if not _intro_queue.is_empty() and not visible:
 		_flush_intro()
 	if not visible:
