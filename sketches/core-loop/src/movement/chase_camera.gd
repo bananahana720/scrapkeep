@@ -27,8 +27,8 @@ const GLANCE_SECONDS := 0.9
 const GLANCE_PITCH := -0.16
 const GLANCE_BREAK_PX := 6.0
 const GLANCE_BREAK_STICK := 0.25
-# A subject this close to the middle of the view (radians of bearing) needs no glance.
-const GLANCE_NEAR := 0.3
+# A subject inside this share of the lens's half-width is in the picture and needs no glance.
+const GLANCE_IN_VIEW := 0.7
 # Situation rows. arm 0.0 means no opinion; pitch_bias tilts the arm without touching the
 # player's pitch; shake_cap is the most total shake allowed while the row is active.
 const PROFILES := {
@@ -174,15 +174,11 @@ func snap(heading: Vector3, pitch_value := -0.30) -> void:
 # A glance: the view turns to a subject over `seconds` and stays there (a boss's entrance, where
 # the bowl entry aims the camera down the track and the ship lands off to one side). It eases the
 # player's own yaw and pitch, so the aim and the drive frame turn with the picture. The player's
-# look always wins: a mouse move or a stick push ends it where it is. Comfort settings that
-# still the camera (reduced motion, motion scale 0) refuse it.
+# look always wins: a mouse move or a stick push ends it where it is, and a subject already in
+# the picture starts none. Comfort settings that still the camera (reduced motion, motion scale
+# 0) refuse it.
 func glance_at(subject: Node3D, seconds := GLANCE_SECONDS) -> void:
-	if subject == null or seconds <= 0.0 or _comfort_scale() <= 0.0:
-		return
-	# Already looking at it: the view is the player's, and nothing moves.
-	var to := subject.global_position - global_position
-	var forward := -yaw_basis().z
-	if absf(Vector2(forward.x, forward.z).angle_to(Vector2(to.x, to.z))) < GLANCE_NEAR:
+	if subject == null or seconds <= 0.0 or _comfort_scale() <= 0.0 or in_view(subject.global_position):
 		return
 	_glance_subject = subject
 	_glance_seconds = seconds
@@ -193,6 +189,16 @@ func glance_at(subject: Node3D, seconds := GLANCE_SECONDS) -> void:
 
 func glancing() -> bool:
 	return _glance_subject != null
+
+
+# Whether a point's bearing is inside the middle GLANCE_IN_VIEW of the lens's width, whatever its
+# height: on a wide monitor more of the bowl is already in the picture.
+func in_view(point: Vector3) -> bool:
+	var to := point - global_position
+	var forward := -yaw_basis().z
+	var view := get_viewport().get_visible_rect().size
+	var half := atan(tan(deg_to_rad(cam.fov) * 0.5) * view.x / maxf(view.y, 1.0))
+	return absf(Vector2(forward.x, forward.z).angle_to(Vector2(to.x, to.z))) < half * GLANCE_IN_VIEW
 
 
 func _step_glance(delta: float) -> void:

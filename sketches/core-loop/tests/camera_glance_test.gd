@@ -11,10 +11,10 @@ const T := preload("res://tests/support/t.gd")
 # Ruling bv: Brindle's entrance is on screen. The bowl entry aims the camera down the track and
 # the Requisition lands across the bowl, off to one side, so his card and HONK played with the
 # ship out of frame. The camera now glances at it (chase_camera.glance_at) and the player's look
-# always wins. G1-G8 on a stand-in rig, stepped with a fixed delta: the glance lands on its
+# always wins. G1-G10 on a stand-in rig, stepped with a fixed delta: the glance lands on its
 # subject, eases there, gives way to a mouse move or a stick push, shrugs off a bumped mouse,
 # and is refused under reduced motion, cut by a snap and ended by a freed subject; a subject
-# already in the middle of the view starts none. R1: the
+# already in the picture starts none and one out at its edge does. R1: the
 # arrival and both phase rows carry the beat in both forms. B1-B2 through the real flow: a bot's
 # run never glances (its stream is the one the bands were measured on), and a hand on the
 # controls gets the ship inside the middle of the view by the time the glance ends.
@@ -137,10 +137,15 @@ func _rig_checks() -> void:
 	cam.snap(Vector3.FORWARD)
 	_t.check("G7 a snap cuts it", not cam.glancing(), "")
 
-	cam.snap(Vector3.RIGHT)
+	# The subject bears along +x. 0.45 rad off it is in the picture; 0.75 rad off is out at the
+	# edge of a 16:9 lens (half-width 0.85 rad) and still worth the turn.
+	cam.snap(Vector3(cos(0.45), 0.0, sin(0.45)))
 	var pitch_then: float = cam.pitch
 	cam.glance_at(subject, 0.9)
-	_t.check("G9 a subject already in the middle of the view starts none", not cam.glancing() and is_equal_approx(cam.pitch, pitch_then), "off %.3f rad" % _off(cam, subject.global_position))
+	_t.check("G9 a subject already in the picture starts none", not cam.glancing() and is_equal_approx(cam.pitch, pitch_then), "off %.3f rad" % _off(cam, subject.global_position))
+	cam.snap(Vector3(cos(0.75), 0.0, sin(0.75)))
+	cam.glance_at(subject, 0.9)
+	_t.check("G10 a subject out at the edge of the picture starts one", cam.glancing(), "off %.3f rad" % _off(cam, subject.global_position))
 
 	cam.snap(Vector3.FORWARD)
 	cam.glance_at(subject, 0.9)
@@ -158,7 +163,8 @@ func _row_checks() -> void:
 			if not Cues.world_beats(id, short).any(func(b): return b.get("kind") == "glance" and b.get("anchor") == "ship"):
 				missing.append("%s %s" % [id, "short" if short else "full"])
 	_t.check("R1 the arrival and both phase rows glance at the ship, in both forms", missing.is_empty(), str(missing))
-	_t.check("R1 the arrival's glance ends inside the arrival", float(Rows.row("brindle_arrival")["world"]["full"][1]["seconds"]) < Rows.length("brindle_arrival", false), "")
+	var arrival: Array = Cues.world_beats("brindle_arrival", false).filter(func(b): return b.get("kind") == "glance")
+	_t.check("R1 the arrival's glance ends inside the arrival", arrival.size() == 1 and float(arrival[0]["seconds"]) < Rows.length("brindle_arrival", false), "")
 
 
 func _to_arena() -> void:
@@ -171,7 +177,9 @@ func _flow_checks() -> void:
 	Harness.start_run(_game)
 	_game.presentation.flourish.stop_all()
 	_to_arena()
-	_t.check("B1 a bot's arrival plays and never glances", _game.presentation.flourish.id == "brindle_arrival" and not camera.glancing(), "playing %s" % _game.presentation.flourish.id)
+	var out_of_view: bool = not camera.in_view(_game.boss.ship.global_position)
+	_t.check("B1 a bot's arrival plays with the ship out of the picture and never glances", _game.presentation.flourish.id == "brindle_arrival" and out_of_view and not camera.glancing(),
+		"playing %s, ship out of the picture %s" % [_game.presentation.flourish.id, out_of_view])
 
 	_game.flow.show_title()
 	_game.bot_driven = false
