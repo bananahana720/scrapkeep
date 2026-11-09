@@ -33,6 +33,8 @@ class SixZones extends RefCounted:
 
 var ZONES: Array = []
 const CAPS := {"exchange": 14, "field_note": 40, "intro": 12}
+const GameEvents := preload("res://src/core/game_events.gd")
+const PILOT_SPEAKERS := ["sable", "rivet", "kest", "tarn", "tally", "cannon"]
 
 var _failures := 0
 
@@ -120,5 +122,56 @@ func _initialize() -> void:
 			_report(exchange + " Moss and crew", speakers.has("Moss") and speakers.any(func(speaker): return speaker.ends_with("crew")), str(speakers))
 		for subject in intros[zone]:
 			_report(zone + " " + subject + " intro", intros[zone][subject] == 1, "%d intros; need one" % intros[zone][subject])
+	_calls()
 	print("lore_rows_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
+
+
+# Call-ins: unique ids, a known caller, a real bus signal with the argument its filter names,
+# twelve words at most, and a pilot's row only for a pilot. One caller per signal and filter is
+# reachable: an earlier row with the same cause and no pilot would shadow a later one.
+func _calls() -> void:
+	_report("call cap", LoreRows.CALL_LINE_WORD_CAP == 12, "12 words per call")
+	var bus := GameEvents.new()
+	var arity := {}
+	for sig in bus.get_signal_list():
+		arity[sig["name"]] = sig["args"].size()
+	var ids := {}
+	var causes := {}
+	for row in LoreRows.CALLS:
+		var id := String(row.get("id", ""))
+		_report("call id", id.begins_with("call.") and not ids.has(id), id)
+		ids[id] = true
+		var text := String(row.get("text", ""))
+		var words := WordBudget.words_in(text)
+		_report(id + " words", words > 0 and words <= LoreRows.CALL_LINE_WORD_CAP, "%d / %d words" % [words, LoreRows.CALL_LINE_WORD_CAP])
+		for marker in FORBIDDEN_TEXT:
+			_report(id + " final text", not text.to_lower().contains(marker), "no " + marker)
+		_report(id + " speaker", LoreRows.SPEAKERS.has(row.get("speaker", "")), String(row.get("speaker", "")))
+		_report(id + " world", int(row.get("world", 0)) == 1, "world 1 only until the sitting")
+		var on := String(row.get("on", ""))
+		_report(id + " signal", arity.has(on), on)
+		for key in ["arg", "at_least"]:
+			if row.has(key):
+				_report(id + " " + key, int(row[key][0]) < int(arity.get(on, 0)), "argument %d of %s" % [row[key][0], on])
+		_report(id + " when", String(row.get("when", "low_hull")) == "low_hull", String(row.get("when", "")))
+		_report(id + " pilot", row.has("pilot") == (String(row.get("speaker", "")) in PILOT_SPEAKERS), "a pilot's row names the class; nobody else's does")
+		var cause := "%s|%s|%s|%s" % [on, row.get("arg", ""), row.get("at_least", ""), row.get("when", "")]
+		_report(id + " reachable", not causes.has(cause) or (row.has("pilot") and causes[cause]), "cause %s" % cause)
+		causes[cause] = row.has("pilot")
+	bus.free()
+	var camp: Dictionary = LoreRows.CALLS[0]
+	_report("call matches its cause", LoreRows.call_matches(camp, "activity_done", ["enemy_camp", Vector3.ZERO])
+			and not LoreRows.call_matches(camp, "activity_done", ["hold_the_relay", Vector3.ZERO])
+			and not LoreRows.call_matches(camp, "stage_cleared", [1]) and not LoreRows.call_matches(camp, "activity_done", []),
+		"the camp call answers activity_done for a camp and nothing else")
+	var drop: Dictionary = {}
+	for row in LoreRows.CALLS:
+		if row["on"] == "drop_landed":
+			drop = row
+			break
+	_report("call floor", LoreRows.call_matches(drop, "drop_landed", [3]) and not LoreRows.call_matches(drop, "drop_landed", [2]),
+		"a drop call needs three hits")
+	var signals: Array = LoreRows.call_signals()
+	_report("call signals", signals.size() == 7 and signals.all(func(s): return signals.count(s) == 1 and LoreRows.CALLS.any(func(r): return r["on"] == s)),
+		str(signals))

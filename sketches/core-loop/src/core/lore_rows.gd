@@ -3,6 +3,92 @@ extends RefCounted
 const EXCHANGE_LINE_WORD_CAP := 14
 const FIELD_NOTE_WORD_CAP := 40
 const INTRO_LINE_WORD_CAP := 12
+const CALL_LINE_WORD_CAP := 12
+# A call is a reaction: one that cannot come up within CALL_FRESH_S of its cause is dropped, not
+# played late, and one caused within CALL_GAP_S of the last call is dropped too.
+const CALL_FRESH_S := 4.0
+const CALL_GAP_S := 20.0
+const CALL_LOW_HULL := 0.3
+# Who may call, by id (the voice and the card read the id), and the name the card shows.
+const SPEAKERS := {
+	"moss": "Moss", "pump_crew": "Pump crew", "flume_crew": "Flume crew", "signal_crew": "Signal crew",
+	"brindle": "Brindle", "mind": "The Foreman",
+	"sable": "Sable", "rivet": "Rivet", "kest": "Kest", "tarn": "Tarn", "tally": "Tally", "cannon": "Cannon",
+}
+
+# Call-ins (design-v3/STORY-MAP.md, "Call-ins"): one line from a named caller, said because of
+# what the player just did. Each plays once a run; rows are read in order and the first that
+# passes is the call. Row keys:
+#   on        the GameEvents signal that causes it
+#   arg       [index, value]: only when the signal's argument at index equals value
+#   at_least  [index, value]: only when that argument is value or more
+#   when      "low_hull": only with the hull under CALL_LOW_HULL
+#   world     the world it belongs to
+#   speaker   a SPEAKERS id. A pilot's row names their class under `pilot`: it is said only by a
+#             freed pilot who is not the one flying
+#   fresh     seconds it may wait for its turn, when not CALL_FRESH_S
+const CALLS := [
+	{"id": "call.spillway.camp", "on": "activity_done", "arg": [0, "enemy_camp"], "world": 1, "speaker": "pump_crew",
+		"text": "Camp's quiet. We logged it quiet last week too."},
+	{"id": "call.spillway.relay", "on": "activity_done", "arg": [0, "hold_the_relay"], "world": 1, "speaker": "signal_crew",
+		"text": "Relay's back. It never stopped sending. Nobody says to whom."},
+	{"id": "call.spillway.surge", "on": "activity_done", "arg": [0, "surge_run"], "world": 1, "speaker": "flume_crew",
+		"text": "Sluice shut behind you. We never opened it."},
+	{"id": "call.spillway.gamble", "on": "activity_done", "arg": [0, "trade_risk"], "world": 1, "speaker": "moss",
+		"text": "That keeper never loses. I packed for both outcomes."},
+	{"id": "call.spillway.kindness", "on": "activity_done", "arg": [0, "trade_safe"], "world": 1, "speaker": "mind",
+		"text": "A sensible choice. It has been added to your schedule."},
+	{"id": "call.spillway.dam_warden", "on": "stage_cleared", "arg": [0, 1], "world": 1, "speaker": "pump_crew",
+		"text": "Gates open on our count now. We count on fingers."},
+	{"id": "call.spillway.head_house", "on": "stage_cleared", "arg": [0, 2], "world": 1, "speaker": "brindle",
+		"text": "Head house lost. Rounded up, that is a win. Ours."},
+	{"id": "call.spillway.evolved", "on": "evolution_fired", "world": 1, "speaker": "moss",
+		"text": "I didn't pack it like that. Keep it like that."},
+	{"id": "call.spillway.heft", "on": "heft_class_changed", "world": 1, "speaker": "moss",
+		"text": "You're riding low. Good ballast, that scrap. Bad brakes."},
+	{"id": "call.spillway.low_hull", "on": "player_hit", "when": "low_hull", "world": 1, "speaker": "moss", "fresh": 10.0,
+		"text": "Spare seal, left pocket. Packed it for about now."},
+	{"id": "call.spillway.drop.sable", "on": "drop_landed", "at_least": [0, 3], "world": 1, "speaker": "sable", "pilot": "pylon_engineer",
+		"text": "Nice drop. I'd have gone from higher."},
+	{"id": "call.spillway.drop.rivet", "on": "drop_landed", "at_least": [0, 3], "world": 1, "speaker": "rivet", "pilot": "runner_gunner",
+		"text": "Nice drop. I'd be at the next one already."},
+	{"id": "call.spillway.drop.kest", "on": "drop_landed", "at_least": [0, 3], "world": 1, "speaker": "kest", "pilot": "demolitions_caster",
+		"text": "You dropped early. Worked anyway. Annoying."},
+	{"id": "call.spillway.drop.tarn", "on": "drop_landed", "at_least": [0, 3], "world": 1, "speaker": "tarn", "pilot": "tarn",
+		"text": "All of them at once. Tell them I said sorry."},
+	{"id": "call.spillway.drop.tally", "on": "drop_landed", "at_least": [0, 3], "world": 1, "speaker": "tally", "pilot": "tally",
+		"text": "One drop, several down. Logged as several. Honest work."},
+	{"id": "call.spillway.drop.cannon", "on": "drop_landed", "at_least": [0, 3], "world": 1, "speaker": "cannon", "pilot": "remembered_cannon",
+		"text": "Efficient. Sorry. Old habit."},
+	{"id": "call.spillway.brindle_down", "on": "boss_defeated", "world": 1, "speaker": "moss",
+		"text": "Heard a scooter. Kettle's on. Bring the crest."},
+]
+
+
+# Whether a call row answers this signal with these arguments.
+static func call_matches(row: Dictionary, event: String, args: Array) -> bool:
+	if row["on"] != event:
+		return false
+	for key in ["arg", "at_least"]:
+		if not row.has(key):
+			continue
+		var index := int(row[key][0])
+		if args.size() <= index:
+			return false
+		if key == "arg" and args[index] != row[key][1]:
+			return false
+		if key == "at_least" and float(args[index]) < float(row[key][1]):
+			return false
+	return true
+
+
+# The signals any call listens to, once each.
+static func call_signals() -> Array:
+	var out: Array = []
+	for row in CALLS:
+		if not out.has(row["on"]):
+			out.append(row["on"])
+	return out
 
 # One row per readable line. Exchange lines share an exchange id and follow array order.
 # Zone ids name the alpha route, independently of the sketch's current stage slots.
