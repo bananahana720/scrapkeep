@@ -100,3 +100,5 @@ The plan's tally is a table headed `| Shard | Verdict |`, one row per shard: `te
 ## After the promotion
 
 The steps are in STATE.md ("After each promotion"). The first one keeps the docs honest: on the new stage, `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>`. Until that commit lands, `npm run check:docs` fails on the new stage, on purpose.
+
+The fast lane orders and prices its tests from the gate's times, so refresh them in the same pull request: `node scripts/sketch-fast.mjs --fold-timings /mnt/project-files/gate/w<N>-<head>/*/shard.json`. Passing tests only; a test that did not pass keeps its old row.

@@ -33,7 +33,11 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SKETCH = "sketches/core-loop";
 const TIMINGS_FILE = path.join(root, "scripts", "sketch-fast.timings.json");
 const RECEIPT_SCHEMA = "scrapkeep-fast-receipt/1";
-const DEFAULT_ESTIMATE_MS = 30_000;
+// A test with no timings row is priced at 180 s. At 30 s the wave 18 lane ran 2289 s on a 600 s
+// budget: 14 of 86 picked tests had no row, and five of them were bot runs.
+export const DEFAULT_ESTIMATE_MS = 180_000;
+// A test with no row that is named like a bot run or a sweep is listed for the bot shards.
+export const UNKNOWN_BOT_NAME = /^(bot_.*|.*_sweep_.*)\.gd$/;
 // A file more tests than this reach directly is a hub (game.gd, tests/support/t.gd): its own
 // direct tests still run, but nothing is selected through it at the second step.
 export const HUB_TESTS = 25;
@@ -201,7 +205,8 @@ export function estimate(timings, test) {
 // Keep the highest tiers within the budget (changed tests always), then run cheapest first so
 // a failure shows as early as it can. Whatever the budget leaves out is named, never dropped
 // silently; the staging full gate runs it.
-export function plan({ picked, timings, budgetMs, width, solo = () => false, bots = () => false }) {
+export function plan({ picked, timings, budgetMs, width, solo = () => false, bots: knownBots = () => false }) {
+  const bots = (test) => knownBots(test) || (timings[test] === undefined && UNKNOWN_BOT_NAME.test(path.posix.basename(test)));
   const rows = [...picked].map(([test, row]) => ({ test, ...row, ms: estimate(timings, test) }));
   const botRows = rows.filter((row) => bots(row.test));
   const runnable = rows.filter((row) => !bots(row.test)).sort((a, b) => a.tier - b.tier || a.ms - b.ms || a.test.localeCompare(b.test));
@@ -326,12 +331,18 @@ function readTimings() {
   }
 }
 
-// Fold a smoke receipt's per-test wall times into the timings file the lane orders by.
+// Fold passing tests' wall times into the timings file the lane orders by. Three row shapes:
+// a smoke receipt's label ("... res://tests/a_test.gd", ms), a fast-lane row's test
+// ("tests/a_test.gd", ms) and a gate shard's test ("a_test", seconds; scripts/gate/shard.mjs).
 export function timingsFromReceipt(receipt) {
   const tests = {};
   for (const row of receipt.results ?? []) {
-    const match = /res:\/\/(tests\/[^ ]+\.gd)$/.exec(row.label);
-    if (match && row.ok) tests[match[1]] = Math.round(row.ms);
+    if (!row.ok) continue;
+    const text = String(row.test ?? row.label ?? "");
+    const match = /(?:^|res:\/\/)(tests\/[^ ]+\.gd)$/.exec(text);
+    const name = match ? match[1] : /^[a-z0-9_]+$/.test(text) ? `tests/${text}.gd` : null;
+    const ms = Number.isFinite(row.ms) ? row.ms : Number.isFinite(row.seconds) ? row.seconds * 1000 : 0;
+    if (name && ms > 0) tests[name] = Math.round(ms);
   }
   return tests;
 }
@@ -796,10 +807,12 @@ async function main() {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.argv[2] === "--fold-timings") {
-    const receipt = JSON.parse(readFileSync(process.argv[3], "utf8"));
-    const prior = readTimings();
-    const tests = { ...prior, ...timingsFromReceipt(receipt) };
-    writeFileSync(TIMINGS_FILE, JSON.stringify({ source: `${receipt.label} ${receipt.head ?? ""}`.trim(), tests: Object.fromEntries(Object.entries(tests).sort()) }, null, 2) + "\n");
-    console.log(`sketch:fast timings: ${Object.keys(tests).length} tests from ${process.argv[3]}`);
+    const files = process.argv.slice(3);
+    if (files.length === 0) throw new Error("--fold-timings takes one or more receipt files (smoke, fast lane or gate shard.json)");
+    const receipts = files.map((file) => JSON.parse(readFileSync(file, "utf8")));
+    const tests = Object.assign({}, readTimings(), ...receipts.map(timingsFromReceipt));
+    const source = receipts.length === 1 ? `${receipts[0].label ?? receipts[0].title ?? files[0]} ${receipts[0].head ?? ""}`.trim() : `${receipts.length} receipts on ${[...new Set(receipts.map((receipt) => String(receipt.head ?? "").slice(0, 8)))].join(", ")} (passing tests only; older rows kept)`;
+    writeFileSync(TIMINGS_FILE, JSON.stringify({ source, tests: Object.fromEntries(Object.entries(tests).sort()) }, null, 2) + "\n");
+    console.log(`sketch:fast timings: ${Object.keys(tests).length} tests after ${files.length} receipt${files.length === 1 ? "" : "s"}`);
   } else main();
 }
