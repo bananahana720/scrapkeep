@@ -108,11 +108,18 @@ func teleport(to: Vector3, new_velocity: Vector3) -> void:
 		push_warning("rigid_ball: teleport to a non-finite point refused")
 		return
 	_pending_position = to
-	if freeze:
+	# The body takes its new place and speed now, so whoever reads the ball back in the same breath
+	# (a lens snap, a rescue check, a ride that catches it) finds it there, moving as placed. A
+	# frozen ball is a static body, which would read a speed as a conveyor's, so it waits for the
+	# thaw. _integrate_forces sets the same point and speed again on the next tick, so the ball
+	# leaves the spot on the tick it always did. The deferred reset runs before the next draw, so
+	# no frame slides from the old spot.
+	if is_inside_tree():
 		global_position = to
-	# A caller that reads the ball back at once also sets the node's position itself (stage
-	# entry, a boss intro, a rescue), a tick before _integrate_forces moves the body. The
-	# deferred reset runs after that, so no frame is drawn sliding from the old spot.
+	else:
+		position = to
+	if not freeze:
+		linear_velocity = new_velocity
 	placing = true
 	_reset_placed.call_deferred()
 
@@ -122,8 +129,8 @@ func _reset_placed() -> void:
 	reset_physics_interpolation()
 
 
-# A teleport must not be drawn as a streak from the old spot. The node only receives the
-# new transform after this callback, so the reset is repeated on the following ticks.
+# A teleport must not be drawn as a streak from the old spot. _integrate_forces sets the point
+# again on the tick after the call, so the reset is repeated on the ticks that follow it.
 func _physics_process(_delta: float) -> void:
 	if _settle_interpolation > 0:
 		_settle_interpolation -= 1

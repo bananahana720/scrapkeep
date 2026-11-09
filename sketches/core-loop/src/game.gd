@@ -473,7 +473,6 @@ func _park_on_title_ground(stage: int) -> void:
 	if _menu_step >= MENU_STEPS and camp_hub != null and camp_hub.get("walking") == true:
 		return
 	player.reset_to(ctx.terrain.spawn_point(1))
-	player.body().global_position = ctx.terrain.spawn_point(1)
 	camera.snap(ctx.terrain.entry_heading(1))
 
 

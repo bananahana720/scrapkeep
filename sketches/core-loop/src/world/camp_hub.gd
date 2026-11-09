@@ -259,7 +259,6 @@ func leave_walk() -> void:
 	player.set_frozen(true)
 	var home: Vector3 = game.ctx.terrain.spawn_point(1)
 	player.reset_to(home)
-	player.body().global_position = home
 	game.camera.snap(game.ctx.terrain.entry_heading(1))
 	var stage = _title_stage()
 	if stage != null:
@@ -275,7 +274,6 @@ func _place_ball() -> void:
 	var player = game.player
 	player.set_frozen(false)
 	player.reset_to(_spawn)
-	player.body().global_position = _spawn
 	game.camera.snap(Vector3(0.0, 0.0, -1.0))
 
 

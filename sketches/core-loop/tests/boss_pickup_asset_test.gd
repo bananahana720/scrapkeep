@@ -32,7 +32,9 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # of snapping at the commit, and the Scuttle counts short tries for its hint; pickup meshes unchanged. Was 059a4a6d.
 # Re-pinned 2026-11-09 (ruling bs, held floor bank, #660): hits on a held hull bank toward the next phase's bar
 # (banking, bank_cap, _bank); pickup meshes unchanged. Was b8cc7630.
-const BASE_LOGIC_SHA := "894f3522ccb973142f0099dd550d5694265e6568695de5d788d5ef7596abd2d0"
+# Re-pinned 2026-11-09 (one call places the ball): the intro and the rescue place the ball with reset_to
+# alone, no write to its body after; pickup meshes unchanged. Was 894f3522.
+const BASE_LOGIC_SHA := "8cfc6e3b372aa26f260df2e8fb24e37f673d2f03c13229cb8f6de3861fe5f4bb"
 
 var failures := 0
 var game
