@@ -894,6 +894,7 @@ test("a failure lists its failed checks, engine errors and time-outs, and caps t
     "an ordinary line that mentions errors in passing",
   ].join("\n");
   assert.deepEqual(failingLines(output).map((line) => line.trim().slice(0, 14)), ["[small median]", "ERROR: res://s", "SCRIPT ERROR: ", "child class 5 "]);
+  assert.deepEqual(failingLines("SCRIPT ERROR: no 'run'\nok\nSCRIPT ERROR: no 'run'\n"), ["SCRIPT ERROR: no 'run' (x2)"]);
   const many = Array.from({ length: 70 }, (_, index) => `[check ${index}] -> FAIL`).join("\n");
   const capped = failingLines(many, 60);
   assert.equal(capped.length, 61);

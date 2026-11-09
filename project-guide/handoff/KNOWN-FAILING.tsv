@@ -4,7 +4,7 @@ posture_bands_reactor_test	red	small breaks in under twice the grown time (60.2/
 trace_readonly_test	red	the production actor wiring child process times out	testing lane	2026-11-09	2026-11-23
 tree_play_test	red	the class 5 child process times out on a cloud box, with no script error; not yet re-read on the PC	testing lane	2026-11-09	2026-11-23
 waking_fight_test	red	exits 0 but prints an ERROR line from ambient_life.gd line 85; world 2, out of scope until the world 1 sitting (ruling at)	coordinator	2026-11-09	2026-11-23
-warden_counter_pulse_test	red	two SCRIPT ERROR lines: the CtxDouble test double has no 'run'	testing lane	2026-11-09	2026-11-23
+warden_counter_pulse_test	red	every check passes, but warden.gd pilot_heft prints SCRIPT ERROR lines because the CtxDouble test double has no 'run'	testing lane	2026-11-09	2026-11-23
 tree_bot_test	flake	seed 0 takes a random branch and fails [tree picks]; passed alone in the wave 31 gate, failed alone in wave 32	testing lane	2026-11-09	2026-11-23
 audio_bake_cancel_test	flake	check FX-2 (re-entry restarts the bake) reads a bake that finished early; passes 2 runs in 3 alone, and fails on main too	testing lane	2026-11-09	2026-11-23
 kite_dive_stack_test	flake	every check passes, then an exit ERROR from player_fx.gd _on_beat_word under load; clean alone	testing lane	2026-11-09	2026-11-23

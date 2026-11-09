@@ -587,7 +587,9 @@ const FAILING_LINE = /-> FAIL\b|^\s*(?:SCRIPT ERROR|ERROR)\b|\btimed[ _]out\b/;
 const MAX_FAILING_LINES = 60;
 
 export function failingLines(output, limit = MAX_FAILING_LINES) {
-  const lines = output.split("\n").map((line) => line.replace(/\r$/, "")).filter((line) => FAILING_LINE.test(line));
+  const counts = new Map();
+  for (const line of output.split("\n").map((text) => text.replace(/\r$/, "")).filter((text) => FAILING_LINE.test(text))) counts.set(line, (counts.get(line) ?? 0) + 1);
+  const lines = [...counts].map(([line, count]) => (count > 1 ? `${line} (x${count})` : line));
   if (lines.length <= limit) return lines;
   return [...lines.slice(0, limit), `... ${lines.length - limit} more failing lines (set SMOKE_LOG_DIR for the full output)`];
 }
