@@ -8,7 +8,7 @@ const EventView := preload("res://src/world/event_view.gd")
 
 # The words Andrew reads in play (FIXWAVE spine, build and world minors), checked on
 # the real title screen, field notes, HUD and stage-1 world of a non-calm run:
-#   - the title and the notes teach the demo's objective: Wardens and plating, three
+#   - the title and the notes teach the demo's objective: Wardens and their guard, three
 #     stages, then Admiral Brindle; the notes cover the arena's R and T;
 #   - an undiscovered codex card prints its clue once;
 #   - a lost event toasts as a loss, a passed or won one adds no "over" toast;
@@ -70,7 +70,7 @@ func _check_words() -> void:
 	var notes := "\n".join(FieldNotes.TESTING)
 	var keys := FieldNotes.SCREEN_KEYS.map(func(k): return k["keys"])
 	_report("objective taught", title.contains(FieldNotes.OBJECTIVE) and FieldNotes.OBJECTIVE.contains("Warden")
-			and FieldNotes.OBJECTIVE.contains("plating") and FieldNotes.OBJECTIVE.contains("Brindle")
+			and FieldNotes.OBJECTIVE.contains("guard") and not FieldNotes.OBJECTIVE.contains("plating") and FieldNotes.OBJECTIVE.contains("Brindle")
 			and not title.contains("Charge each beacon") and notes.contains("Brindle") and not notes.contains("a summary after stage 3")
 			and "N" in keys and not ("T" in keys) and not notes.contains("T replays that world's last stage"),
 		"title reads \"%s\"; notes name Brindle %s and teach the arena's T %s; screen keys %s (N expected, T not)"

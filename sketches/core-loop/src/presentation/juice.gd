@@ -10,6 +10,8 @@ const Parts := preload("res://src/build/parts.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Harmony := preload("res://src/presentation/harmony.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Augments := preload("res://src/movement/augments.gd")
 
@@ -547,7 +549,8 @@ func _flush_kills() -> void:
 			request_hit_stop(float(row["multi_stop_ms"]) / 1000.0, "multi_kill")
 			_camera("punch_fov", "multi_kill", Vector3.ZERO, -2.0 - mark * 0.5, 0.3)
 			if audio != null:
-				audio.play("enemy_killed", 2.0, pow(2.0, 1.0 + float(mark) / 8.0), "SFX", "kill_pop")
+				# The pop an octave up and more, on the reward ladder: F at 2, G at 4, D at 8.
+				audio.play("enemy_killed", 2.0, Harmony.snapped_ratio(SfxBank.KILL_POP_MIDI, 12.0 + 1.5 * mark), "SFX", "kill_pop")
 			if vfx != null:
 				vfx.glyph("enemy_killed", player.ball_position(), 1.0, 3.0 + mark, 0.35, Vector3.UP, "ring")
 

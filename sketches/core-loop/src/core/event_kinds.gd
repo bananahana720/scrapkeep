@@ -994,6 +994,9 @@ const UI_ROWS := {
 	"callout_warden": {"group": "flow", "color": Palette.HAZARD, "shape": "cross", "sound": "callout_chime", "hud": "Break it", "objective": "", "priority": 2},
 	"callout_gates": {"group": "economy", "color": Palette.AMBER, "shape": "diamond", "sound": "callout_chime", "hud": "Roll through", "objective": "", "priority": 2},
 	"callout_notes": {"group": "flow", "color": Palette.SAND, "shape": "square", "sound": "callout_chime", "hud": "Hold {key_tab}: notes", "objective": "", "priority": 2},
+	# A fight's own hint, toasted whenever its boss module asks (hud.gd _step_fight_hint). Brindle's
+	# Scuttle asks while a build too light to hit its way in has not yet stunned him.
+	"hint_wall_bait": {"group": "flow", "color": Palette.BRASS, "shape": "chevron", "sound": "callout_chime", "hud": "Make him hit walls", "objective": "", "priority": 3},
 	# The SPIL-9 escape charge as the HUD pip reads it from run.companion: a lit diamond
 	# when armed, an empty ring when spent.
 	"companion_ready": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "diamond", "sound": "companion_chirp_ready", "hud": "", "objective": "", "priority": 1},

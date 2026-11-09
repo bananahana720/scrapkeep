@@ -84,14 +84,14 @@ const GOLDEN_HASHES := {
 	"event_kinds.CAUSE_ROWS": "9d20bee7f3e2a23dd09db3c08ab99e3fa0aab0f99d4373ef3398fff8601e0812",
 	"event_kinds.ACTIVITY_ROWS": "dfdeb0c80b6c19754fafca7f979a60bee5cf039679370dcb5178d6ec0fc004de",  # 2026-10-17 stage/alpha-w16 combined re-pin (all admitted PRs together); was 3b128af8
 	"event_kinds.LOOT_ROWS": "d4c8f52197ece082a337887a4d5358e6b611be8856bd10b61d534e43b53c76b3",  # 2026-10-27 (cobalt rung 1b): reveal stamps FIELD KIT and FLEET GRADE; was 41c5a573, 2026-10-27 (cobalt rung, item ladder): reward_rare wears cobalt; was 1d99aa49
-	"event_kinds.UI_ROWS": "80f4cdd77f869f3e71aa7a7a6b2890c6ec709a5ba32659399f31ec68cd6f76e2",  # 2026-10-12 (w13 WEIGHT-1 c4e428c): posture_break sub-fact row; was 75718127, 2026-10-11 (w13 SQ6 cooldown refunds): cooldown_refunded row; was f8c0f271, 2026-10-08 (alpha wave 11 GP4 escape corridor): escape_acted row; was c6a2047c (wave 13 companion cues)
+	"event_kinds.UI_ROWS": "dc5151ef659c0ab1f75d2e87be44bfb0fe17afb9b479a9db9c503278e812126a",  # 2026-11-09 (#639, the Scuttle hint): the hint_wall_bait row; existing rows unchanged; was 80f4cdd7. 2026-10-12 (w13 WEIGHT-1 c4e428c): posture_break sub-fact row; was 75718127, 2026-10-11 (w13 SQ6 cooldown refunds): cooldown_refunded row; was f8c0f271, 2026-10-08 (alpha wave 11 GP4 escape corridor): escape_acted row; was c6a2047c (wave 13 companion cues)
 	"event_kinds.WORLD_ROWS": "cb08395d7900183b4e5bd5019f305246ddce187eac3fb0fd1c1d63fc8f4ea1ad",  # 2026-10-24 merge of #432 (flume pass two: sluice_siren, sluice_landed) onto the stage's Warden gate rows; was 21e52862 (stage) and 9fda93d2 (#432). 2026-10-24 Spillway Warden gate and arena locks (stage_locks.gd): arena_locked, arena_wave, arena_unlocked, warden_gate_pip, warden_gate_refused, warden_gate_opened; was d90545ca, 2026-10-17 stage/alpha-w16 combined re-pin (wave 17: dam, pit, sinkhole and crown layers; #105 picks wiring); was b3ad3296, 2026-10-18 sinkhole authored pass: cinder_glow, cinder_burn, cinder_cooled (floor is lava, Andrew 2026-10-17 23:24Z) and glaze_skim (the glazed walls' tell); was e40206db, 2026-10-17 stage/alpha-w16 combined re-pin (crown pass, first-win secrets, maker sets); was b1348f81, 2026-10-17 prop-crew-events (claude/prop-crew-events-fzz0ti): the Dig's lift cage (cage_rising, cage_landed) and the Highdraft's zipline drop (zipline_inbound, zipline_landed) forms; was a751eb28, 2026-10-13 KE-FORMS merge: five pending stage forms (crust_crack, drain_gurgle, trestle_groan, lightning_mark, reactor_overload) and their landed rows; was e29675bf, 2026-10-12 KE2 merge: ground_slump and ground_slump_landed rows (amend-ground-slump.md); was 33ad97e5, 2026-10-12, PC-TALLY merge 80634ba: Tally's achievements, cosmetics, tree, world-one cards and codex rows; event_kinds.WORLD_ROWS moved at the KE1 merge 61eaef0 (12 event kinds added), re-pinned here; was 4422c95c, 2026-10-11 (w13 KF2 and KF3, re-pinned by the coordinator at the Warden mechanism merges): ride_sheet, hoist_ride, pool_swell rows; was f3da5b1a, 2026-10-10 (w13 KC0 park placement): ride_bowl, ride_drop, ride_ledge, ride_hop rows; was 7284c545, 2026-10-09 (wave 12 VX-SURF 5a9e1ef): ANCIENT moved from 3d8bff to 9dff3c (Andrew's pick), which changes the colour value only; restoring the old colour restores the old hash; was 686afd81, 2026-10-05 (alpha wave 14 tally-ledger-row): ledger_returned row
 	"event_kinds.THREAT_ROWS": "416e903fae944310bd492312f6fb7630c62b3f16f9f05f2789d7206019d431ad",
 	"event_kinds.ATTACK_ROWS": "4fcf80ed42ca0e3921c01c73c71cdcfba9da9ca9a8530c9fd615ea01b5e867c4",  # 2026-10-24 merge of #385 (rogue E34-E39) onto the Spillway roster (E40); was d51b8ff2 (roster) and 8ead5150 (#385). 2026-10-23 w19 Spillway roster: the E40 boom tender sweep row (all fields filled); existing rows unchanged; was 0dac05c4, 2026-10-17 stage/alpha-w16 final combined re-pin (E19-E33 with the Highdraft roster (#72)); was 5e2f8472, 2026-10-17 stage/alpha-w16 combined re-pin (all admitted PRs together); was e55948dd
 	"event_kinds.IMPACT": "5f39c4fc927ce05d2cf1062d00aefbcfbd32bb1af840123562582a42bb673245",  # 2026-10-18 (actives follow-up): the Glass Lance's lance row, so its Chain Arc jumps stagger like its pierce; was fb100593, 2026-10-17 stage/alpha-w16 combined re-pin (flail row plus the actives' rocket row); was 8d4d95e0, 2026-10-17 (poles and flails PF3): flail row
 	"event_kinds.REACTIONS": "d69f61edda9075f25e0724226f87be0d35cb9688f1d840b76da4003371b92189",
 	"event_kinds.CODEX_CATEGORIES": "4a61092895a1a12b1981249a32217abfacddc1bdec293c03948ca9f245700016",
-	"objectives.ROWS": "9da60bab87409e8fbc0e26ac0341a7a0f8eed16aa5d81fc930ea34bfc9e6ef5d",
+	"objectives.ROWS": "f85294db243ded7055adbf336de8613f2ca6d3a4df1dab81fd90d46b82ccc1e1",
 	"lore_rows.ROWS": "e783e2423cbf2e58914fa9f28510d17281d88baacc2fc63d7dbec52b7d4b4b71",  # 2026-10-23 world 1 unit 21: Brindle names the Cannon's shape (Andrew's silhouette ruling); was 54163c4a, 2026-10-18 All hands: six Mind crew-log notes (Andrew's pick); was 3c06c629, 2026-10-17 stage/alpha-w16 final combined re-pin (lore port plus the specials' rows); was 58031908, 2026-10-17 (wave 20 lore port, LORE-REPLACE): park rows lead each zone, 14+ notes each; was e19ddad3, 2026-10-08 (wave 10 ST6): Dig and Highdraft lore take the approved sample lines; was 2026-10-04 (wave 11): world 2 and 3 lore final
 	"music_rows.ROWS": "6ae91061fe62a58b8935f508c4b253ffc8c8bb1cbe2d9167eddbb7c3c3126329",  # 2026-10-23 default and phase anthem rows (#411); was cd1c5296, 2026-10-23 rogue and boss anthem rows (#389); was 6b11ddc4, 2026-10-17 stage/alpha-w16 combined re-pin (wave 17: dam, pit, sinkhole and crown layers; #105 picks wiring); was 605ef0ab, 2026-10-17 stage/alpha-w16 combined re-pin (all admitted PRs together); was f9e1cca7
 	"windup_rows.ROWS": "7a9baed454fb96c718f16c53477685e1e76125a1e26c2c8e514ceee4909739a3",  # 2026-10-26 miniboss phase two: E03/E04 read the live slam_crouch and charge_brace (phase-two leads); was 11509654. 2026-10-24 merge of #385 (rogue rows on E34-E39) onto the Spillway roster; was 6691834d (roster) and 34e4ef32 (#385). 2026-10-23 w19 Spillway roster: hooker warn_tether, ramp flipper warn_flap, jolt layer jolt_layer_tell, and the boom tender row (warn_reel); was 1850f9d8, 2026-10-17 stage/alpha-w16 final combined re-pin (specials plus ballast_heavy and gap_net); was bcedc4f9, 2026-10-17 stage/alpha-w16 combined re-pin (all admitted PRs together); was 10034808, 2026-10-17 (wave 18 Dispatcher): dispatcher row on E26 (attack-ids registry); was a38f788e, 2026-10-08 (wave 10 GP6 and AU2): idle, death and wind-up cue fields per kind
@@ -471,12 +471,18 @@ static func _objective_ids() -> Array:
 		for fight in ["plating", "posture"]:
 			for mask in 256:
 				for lesson in ["plate", "caps", "magnet", "unknown"]:
-					var id := Objectives.choose({"state": state, "fight": fight, "sealed": bool(mask & 1),
-						"engaged": bool(mask & 2), "staggered": bool(mask & 4), "struggling": bool(mask & 8),
-						"distance": 5.0 if mask & 16 else 90.0, "card": bool(mask & 32), "lesson": lesson, "activities_left": 1 if mask & 32 else 0,
-						"yard_locked": bool(mask & 64), "clamp_shut": bool(mask & 128)})
-					if id != "" and not ids.has(id):
-						ids.append(id)
+					# The mounted reactor's rows and Brindle's phase rows ride two more keys each;
+					# a row needs one reading that reaches it, so each pair walks as one axis.
+					for extra in [{}, {"mount": "dam_face"}, {"mount": "flume"}, {"mount": "flume", "latched": true},
+							{"phase": 1}, {"phase": 2}, {"phase": 3}, {"phase": 3, "open": true}, {"phase": 4}]:
+						var reading := {"state": state, "fight": fight, "sealed": bool(mask & 1),
+							"engaged": bool(mask & 2), "staggered": bool(mask & 4), "struggling": bool(mask & 8),
+							"distance": 5.0 if mask & 16 else 90.0, "card": bool(mask & 32), "lesson": lesson, "activities_left": 1 if mask & 32 else 0,
+							"yard_locked": bool(mask & 64), "clamp_shut": bool(mask & 128)}
+						reading.merge(extra, true)
+						var id := Objectives.choose(reading)
+						if id != "" and not ids.has(id):
+							ids.append(id)
 	return ids
 
 

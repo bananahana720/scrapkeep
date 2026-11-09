@@ -44,11 +44,22 @@ const PanelShell := preload("res://src/build/panel_shell.gd")
 # public API is the "Build API" block; SEAMS.md lists the ids.
 
 const GATE_CHOICES := 2
-# Hot-wired H1, Riveted Shell (--hotwire-shell=on): the armour costs this much less scrap per
-# absorbed HP, and airborne steering takes this factor. Read through shell_scrap_per_hp() and
+# The stock plating (--hotwire-shell=on, the default): the armour costs this much scrap per absorbed
+# HP (RunState.SCRAP_PER_HP with the flag off) and airborne steering takes this factor. The flag
+# shipped on, so every played build, band and pin since was fit on these two numbers; they are the
+# game's baseline, whatever the run holds. Read through shell_scrap_per_hp() and
 # shell_air_factor() only, so an inversion (S4, K5, R6) changes one return value later.
 const SHELL_SCRAP_PER_HP := 5.0
 const SHELL_AIR_FACTOR := 0.75
+# Hot-wired H1, Riveted Shell, the part a run holds after Fit (Parts.HOTWIRED). Until 9 Nov the
+# baseline above was all "the shell" did, so Fit changed nothing and Recycle's cogs always won.
+# Held, it now pays what its card says, measured from the baseline the player has been rolling
+# on: the armour goes RIVETED_ARMOUR times as far per scrap again, and airborne steering takes
+# RIVETED_AIR_FACTOR again. An inversion still lifts the factor to its own value, so the tree's
+# three shell nodes are worth more to a pilot who fits it.
+const RIVETED_SHELL := "riveted_shell"
+const RIVETED_ARMOUR := 2.0
+const RIVETED_AIR_FACTOR := 0.75
 # S4, Face Runner (--world-one-builds=on, node taken, shell fitted): for this many sim seconds
 # after a valid vault the shell's air factor is SHELL_AIR_FACTOR_VAULT instead.
 const SHELL_VAULT_WINDOW := 2.0
@@ -56,7 +67,7 @@ const SHELL_AIR_FACTOR_VAULT := 1.25
 # R6 Second Wind (world-one): while sprinting the shell's penalty cancels (factor 1.0).
 const SHELL_AIR_FACTOR_SPRINT := 1.0
 # K5 Smoke Trail (world-one): while gliding the shell's air factor is SHELL_AIR_FACTOR_VAULT.
-# The resolved shell factor moved between two fitted values: `rose` is true above the base
+# The resolved shell factor moved between two fitted values: `rose` is true above the resting
 # factor (an inversion is live), false on the return to it. Presentation reads only this.
 signal shell_air_changed(factor: float, rose: bool)
 # The hot-wired Fit / Recycle choice (BUILD-SYSTEMS.md, Two hot-wired parts): offered once per
@@ -64,6 +75,11 @@ signal shell_air_changed(factor: float, rose: bool)
 # the cogs paid). Build-local like shell_air_changed, not a bus fact.
 signal hotwire_offered(part_id: String, recycle: int)
 signal hotwire_resolved(part_id: String, choice: String, cogs: int)
+# A gained part completed a three-part set (part_sets.gd) for the first time this run. Build-local:
+# presentation raises the "Set complete" banner from it, with the set's name, its one line and
+# the colour of its studs on the ball. A resume or a retry that restores a held set recomputes
+# without a gain, so it never announces the set again.
+signal set_completed(set_id: String, title: String, text: String, color: Color)
 const PARTICIPANTS := ["player"]
 # SG15: an offer of a part already held shows the level it would reach, by its current level.
 # A part at its top level is never offered, so it has no entry.
@@ -147,6 +163,8 @@ const KILL_LOG_CAP := 4000
 # that breaks a set keeps it here and in the codex's Found list).
 var set_tell
 var set_ledger = PartSets.Ledger.new()
+# The sets the last recompute found complete for the first time this run.
+var _sets_fresh: Array = []
 var sheet
 # SI5: the derived sheet between part-list changes; recompute() reads it, so pickup,
 # respec, run start and stage entry refold only the categories the changed parts touch.
@@ -193,6 +211,7 @@ var _shell_window := 0.0
 # The last resolved factor seen while the shell was fitted; 0.0 while it is not (or before the
 # first read of a fit), so fitting, unfitting and the first recompute stay silent.
 var _air_seen := 0.0
+var _air_rest := 0.0
 # The last kit.sprinting Build saw, so a sprint start or end (any path) refreshes the air mod once.
 var _sprint_seen := false
 # Likewise for kit.gliding (K5).
@@ -606,7 +625,8 @@ func recompute() -> void:
 	_live = sheet.synergies.duplicate()
 	for synergy_id in sheet.consumed:
 		_live.append(synergy_id)
-	for set_id in set_ledger.note(sheet.sets):
+	_sets_fresh = set_ledger.note(sheet.sets)
+	for set_id in _sets_fresh:
 		_note_found("set:" + set_id, "%s: %s" % [PartSets.SETS[set_id]["name"], PartSets.SETS[set_id]["text"]])
 	_redraw()
 
@@ -630,14 +650,27 @@ func shell_fitted() -> bool:
 	return ctx != null and ctx.tuning != null and ctx.tuning.option("hotwire_shell") == "on"
 
 
-# The resolved air-control factor Riveted Shell contributes; 1.0 when not fitted. The one place
+# The run holds the hot-wired Riveted Shell (Fit, then rolled through its gate). Like the tread
+# (HotwireRules.fitted) it reads the held part; the flag off switches it off with the plating.
+func shell_held() -> bool:
+	return shell_fitted() and ctx.run != null and RIVETED_SHELL in ctx.run.parts
+
+
+# The air factor with no inversion live: the stock plating's, and the held shell's on top.
+func shell_rest_factor() -> float:
+	if not shell_fitted():
+		return 1.0
+	return SHELL_AIR_FACTOR * (RIVETED_AIR_FACTOR if shell_held() else 1.0)
+
+
+# The resolved air-control factor the shell contributes; 1.0 with the flag off. The one place
 # an inversion flips it.
 func shell_air_factor() -> float:
 	if not shell_fitted():
 		return 1.0
 	# Active inversions do not stack: the highest factor wins (an implementation choice, not a
 	# design ruling; BUILD-SYSTEMS.md lists S4, K5 and R6 without ranking them).
-	var factor := SHELL_AIR_FACTOR
+	var factor := shell_rest_factor()
 	if _shell_window > 0.0 and _face_runner_s4():
 		factor = maxf(factor, SHELL_AIR_FACTOR_VAULT)
 	if _sprinting() and _second_wind_r6():
@@ -697,16 +730,23 @@ func _refresh_air_mod() -> void:
 func _note_air_factor() -> void:
 	if not shell_fitted():
 		_air_seen = 0.0
+		_air_rest = 0.0
 		return
 	var factor := shell_air_factor()
+	var rest := shell_rest_factor()
 	var before := _air_seen
+	var rest_before := _air_rest
 	_air_seen = factor
-	if before > 0.0 and not is_equal_approx(before, factor):
-		shell_air_changed.emit(factor, factor > SHELL_AIR_FACTOR)
+	_air_rest = rest
+	# Fitting the held shell moves the resting factor itself: a new baseline, not an inversion.
+	if before > 0.0 and not is_equal_approx(before, factor) and is_equal_approx(rest_before, rest):
+		shell_air_changed.emit(factor, factor > rest)
 
 
 func shell_scrap_per_hp() -> float:
-	return SHELL_SCRAP_PER_HP if shell_fitted() else RunState.SCRAP_PER_HP
+	if not shell_fitted():
+		return RunState.SCRAP_PER_HP
+	return SHELL_SCRAP_PER_HP / (RIVETED_ARMOUR if shell_held() else 1.0)
 
 
 # ---- Hot-wired offer (unit V's Fit / Recycle) and Spark Tread (H2) ----
@@ -931,6 +971,10 @@ func _class_id() -> String:
 
 func _on_part_gained(part_id: String, _source: String) -> void:
 	recompute()
+	# A copy: a listener's own part gain recomputes and replaces the list.
+	for set_id in _sets_fresh.duplicate():
+		var row: Dictionary = PartSets.SETS[set_id]
+		set_completed.emit(set_id, row["name"], row["text"], row["color"])
 	_grant_evolutions()
 	var d: Resource = Parts.def(part_id)
 	if d != null and d.effect.get("do", "") == "ballast":
@@ -960,6 +1004,7 @@ func _on_run_started(_class_id_value: String) -> void:
 	_mass_hp = 0.0
 	_shell_window = 0.0
 	_air_seen = 0.0
+	_air_rest = 0.0
 	_hotwire_id = ""
 	_hotwire_state = ""
 	_hotwire_spent = false

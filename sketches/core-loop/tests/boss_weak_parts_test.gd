@@ -1,4 +1,6 @@
 extends SceneTree
+# smoke: timeout=300s (115-146 s in a gate chunk on the w31 and w32 boxes, 160 s alone on w30's, where the
+# default 180 s cap killed it in the chunk)
 
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
