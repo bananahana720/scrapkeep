@@ -278,7 +278,8 @@ export function buildStamp({
 
 // One boss boot: the GPU queue on card 1 with its own hidden display (waiting at most
 // BOSS_SMOKE_QUEUE_WAIT_S for the card), then timeout(1) around Godot on Vulkan with the card index
-// the queue exports. crash swaps in the positive-control entry script.
+// the queue exports, and no sound (an export on the PC must not play through its speakers).
+// crash swaps in the positive-control entry script.
 export function bossSmokeCommand({ queue, binary, project, boss, crash = false }) {
   return {
     command: queue,
@@ -287,7 +288,7 @@ export function bossSmokeCommand({ queue, binary, project, boss, crash = false }
       "--timeout", String(BOSS_SMOKE_QUEUE_WAIT_S), "--",
       "timeout", "-k", "10", String(BOSS_SMOKE_TIMEOUT_S),
       "sh", "-c", 'exec "$0" --gpu-index "$SCRAPKEEP_GPU_INDEX" "$@"', binary,
-      "--rendering-driver", "vulkan", "--display-driver", "x11", "--path", project,
+      "--rendering-driver", "vulkan", "--display-driver", "x11", "--audio-driver", "Dummy", "--path", project,
       "--resolution", "1280x720", "--script", crash ? BOSS_SMOKE_CRASH_SCRIPT : BOSS_SMOKE_SCRIPT,
       "--", "--boss=" + boss,
     ],
