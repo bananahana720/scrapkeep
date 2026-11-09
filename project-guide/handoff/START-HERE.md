@@ -12,3 +12,5 @@ Coordination runs from the claude.ai project "Scrapkeep" on Andrew's main accoun
 8. A lane then reads the wave's board issue (named in STATE.md's Wave facts table, nowhere else), the stack queue `/mnt/project-files/gate/w<N>-stack-queue.md` and its own brief, and posts a claim before building. [GRAPH.md](../coord/GRAPH.md) is the wave 18 board, kept as history.
 
 What matters most right now: world 1 first. Andrew has played the dam (30 Oct) and not yet marked any area. On 9 Nov he asked for a pre-sitting improvement pass first (ruling bo), so the build he plays is the promotion that carries that pass (STATE.md). Post-sitting work comes from his marks. Worlds 2 and 3 start nothing new (ruling at).
+
+How to build (Andrew, 9 Nov): deepen the game's modules and keep the interfaces between the pieces as simple as possible. New behaviour goes inside the module that owns the state; callers get one small call, not a reach into private members. [DEEP-SWEEP.md](DEEP-SWEEP.md) has the method, and it applies to every unit, not only the sweep after a promotion.
