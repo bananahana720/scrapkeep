@@ -98,9 +98,16 @@ static func row_key(set_id: String) -> String:
 	return ROW_PREFIX + set_id
 
 
+# The element set_id's rule adds, "frost" or "arc" (a set adds one, problems() checks), or "".
+static func element(set_id: String) -> String:
+	var elements: Dictionary = SETS.get(set_id, {}).get("elements", {})
+	return "" if elements.is_empty() else String(elements.values()[0])
+
+
 # Admission: every set has more than SIZE distinct members, at least SIZE of them
-# class-neutral, no member sits in two sets, every member is a row in_play accepts, and
-# every rule names a known action and element. Returns one line per problem; [] is clean.
+# class-neutral, no member sits in two sets, every member is a row in_play accepts, every
+# rule names a known action and element, and a set adds one element (element() names it).
+# Returns one line per problem; [] is clean.
 static func problems(row_of: Callable, in_play: Callable, sets: Dictionary = SETS) -> Array:
 	var out: Array = []
 	var seen := {}
@@ -129,9 +136,14 @@ static func problems(row_of: Callable, in_play: Callable, sets: Dictionary = SET
 				out.append("%s member %s is not in play" % [key, part_id])
 		if neutral < SIZE:
 			out.append("%s has %d class-neutral members; any pilot needs %d" % [key, neutral, SIZE])
+		var added: Array = []
 		for action in s["elements"]:
 			if not action in ACTIONS or not s["elements"][action] in ELEMENTS:
 				out.append("%s rule %s:%s is not a known trigger" % [key, action, s["elements"][action]])
+			if not s["elements"][action] in added:
+				added.append(s["elements"][action])
+		if added.size() != 1:
+			out.append("%s adds %d elements; a set adds one" % [key, added.size()])
 	return out
 
 

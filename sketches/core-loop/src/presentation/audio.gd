@@ -295,6 +295,14 @@ const DUNK_SPENT_MIDI := 74
 # eighths from the beat the band stops on, on the cue's own brass and in the cue's key.
 const DEATH_FALL := [56, 53, 50]
 const DEATH_FALL_VOICE := "brass"
+# A completed part set: three notes for its three parts climb the home chord (F A D) in eighths,
+# the first two in the voice of the set's element and under the third, which is the appliance
+# beep's "done" on high D. The first note waits SET_CHIME_LEAD_S, the time a worker needs to
+# make the three in the live key (a note is 17 to 25 ms).
+const SET_CHIME := [77, 81, 86]
+const SET_CHIME_VOICES := {"arc": "clav", "frost": "bell"}
+const SET_CHIME_DONE_VOICE := "beep"
+const SET_CHIME_LEAD_S := 0.12
 # The last_ms of the kill chain whose end has been heard.
 var _streak_landed_ms := -100000
 # The beat a death holds the recorded band to; the lost summary's pack starts once it has passed
@@ -3220,6 +3228,25 @@ func land_streak(rung: int) -> int:
 	_note_at("enemy_killed", STREAK_VOICE, land, at)
 	_note_at("enemy_killed", STREAK_BODY, land - 12, at, SfxBank.GRID_UNDER_DB)
 	return at
+
+
+# A part set's banner is up (presentation.gd): its chime, on the band's next eighths and in the
+# live key. element is the one the set adds: an arc set climbs on the clavinet and a frost set on
+# the bell. Returns the transport sample of the first note, or -1 when no band is playing to
+# time it.
+func set_complete(element: String) -> int:
+	if not sound_ready or engine.mode != MusicEngine.PLAY:
+		return -1
+	var voice: String = SET_CHIME_VOICES.get(element, SET_CHIME_VOICES["frost"])
+	var eighth := grid_unit(2)
+	var first := next_grid(2)
+	while first - engine.clock < int(SET_CHIME_LEAD_S * Harmony.RATE):
+		first += eighth
+	for i in SET_CHIME.size():
+		var done: bool = i == SET_CHIME.size() - 1
+		_note_at("synergy_discovered", SET_CHIME_DONE_VOICE if done else voice, SET_CHIME[i], first + i * eighth,
+			0.0 if done else SfxBank.GRID_UNDER_DB)
+	return first
 
 
 # The near miss is a reward in the class's own voice and ducks nothing (AUDIO-V3 section 5 rule
