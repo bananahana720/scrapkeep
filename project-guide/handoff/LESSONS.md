@@ -96,7 +96,7 @@ He said he won't dictate anything but direction (19:55Z 17 Oct), so the filing i
 43. **GitHub is the bus for cloud lanes.** Claude Code cloud sessions cannot message other sessions. A lane posts a receipt comment on each PR (verdict, head SHA, commands, nonzero test counts) and raises a hand on the wave's "Wave board" issue. The local coordinator reads both at every check-in, at least every 30 minutes. Local sessions message the coordinator directly.
 44. **Escalation goes one step at a time.** An agent asks its lane coordinator; a lane asks the local coordinator; only the coordinator goes to Andrew, with a stakeholder pitch (what's at stake, options with tradeoffs, a recommendation, the measured number, what would change it). Keep building on the recommendation while a pitch waits.
 45. **Sync the records before splitting into worktrees.** Lanes clone main, so the rulings, the ownership table and the graph land on main first; a lane that starts from stale docs re-decides settled calls.
-46. **Cap concurrent cloud lanes and let each fan out inside its sandbox.** The cap is 7 (19 Oct) and was raised to 11 on 21 Oct. Lanes that run their own agents and workflows replace a dozen flat sessions; the dozen used up the old account in a day.
+46. **Cap concurrent cloud lanes and let each fan out inside its sandbox.** The cap is 7 (19 Oct) and was raised to 11 on 21 Oct. Lanes that run their own agents and workflows replace a dozen flat sessions; the dozen used up the old account in a day. **Replaced 9 Nov (ruling by):** a thread writes its own changes and fans out only for search, research, noisy runs and the independent review; bigger work becomes more threads.
 
 ## Back in the project, 23 Oct
 

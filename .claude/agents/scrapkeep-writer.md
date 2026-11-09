@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-writer
-description: Implement one authorized Scrapkeep card on the fast tier at medium effort in the coordinator-created worktree named in its packet. Use for ordinary code or contract changes that need design judgement within the packet.
+description: Implement one authorized Scrapkeep card on the fast tier at medium effort in the coordinator-created worktree named in its packet. Use for ordinary code or contract changes that need design judgement within the packet. For a coordinator running writers in one local session; a claude.ai project thread writes its own changes and does not start this agent (ruling by).
 model: sonnet
 effort: medium
 tools: Read, Grep, Glob, Bash, Edit, Write
