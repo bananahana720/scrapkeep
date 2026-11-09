@@ -220,6 +220,20 @@ export function lintL8(file, rel, text, allowed = SIM_READS) {
   return reads.map((line) => finding("L8", file, line.number, message));
 }
 
+// L9: game code that asks the player node for its own place. PlayerBall never leaves the origin (its
+// body and its visuals move under it), so player.global_position is the map's origin for the whole
+// run and nothing fails loudly: a rule measured from it never fires and a picture placed from it
+// sits at the origin. A rule asks ball_position(), a picture asks shown_position(). A line that
+// guards with has_method (a caller that may also be handed a plain Node3D) passes.
+const ownPlace = /(?<![\w.])(?:\w+\s*\.\s*)*_?player\s*\.\s*(?:global_position|global_transform|position)\b/;
+const placeGuard = /has_method\(\s*["'](?:ball_position|shown_position)["']\s*\)/;
+
+export function lintL9(file, text) {
+  return codeLines(text)
+    .filter((line) => ownPlace.test(line.raw) && !placeGuard.test(line.raw))
+    .map((line) => finding("L9", file, line.number, "the player node never leaves the origin: ask ball_position() for a rule or shown_position() for a picture, not the node's own place"));
+}
+
 // The baseline only shrinks: offenders it lists stay quiet, a listed path that no longer
 // offends or no longer exists is itself a finding. exists(path) answers for the disk.
 export function applyBaseline(findings, baseline, exists) {
@@ -293,6 +307,7 @@ export function lintSketch(sketch) {
     if (codeLines(file.text).some((line) => lightNew.test(line.raw))) lit.add(rel);
     findings.push(...lintL6(file.path, rel, file.text));
     findings.push(...lintL8(file.path, rel, file.text));
+    findings.push(...lintL9(file.path, file.text));
   }
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   const lintSelf = new Set(["scripts/sketch-lint.mjs", "scripts/sketch-lint.test.mjs"]);

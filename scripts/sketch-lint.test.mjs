@@ -13,6 +13,7 @@ import {
   lintL6Owners,
   lintL7,
   lintL8,
+  lintL9,
   parseTuning,
 } from "./sketch-lint.mjs";
 
@@ -57,6 +58,28 @@ test("L8 counts every mention as a read, however the call is spelled, and passes
     assert.equal(lintL8("x/hud.gd", "src/ui/hud.gd", text, {}).length, 1, text);
   }
   assert.deepEqual(lintL8("x/vfx.gd", "src/presentation/vfx.gd", "var v = ctx.player.body().linear_velocity\nvar at = enemy.global_position\n", {}), []);
+});
+
+test("L9 flags the player node's own place and passes the ball's, a guarded fallback and other nodes", () => {
+  const asked = [
+    "if player.global_position.distance_to(at) <= REACH:\n",
+    "var feet := ctx.player.global_position\n",
+    "var at = game.ctx.player.global_transform.origin\n",
+    "var d = _player.position.distance_to(at)\n",
+    "var at = game.player . global_position\n",
+  ];
+  for (const text of asked) assert.deepEqual(lintL9("x/cache.gd", text).map((item) => `${item.rule} ${item.line}`), ["L9 1"], text);
+  const passes = [
+    "var at = player.ball_position()\n",
+    "var at = ctx.player.shown_position()\n",
+    'var ball: Vector3 = player.ball_position() if player.has_method("ball_position") else player.global_position\n',
+    'return _player.shown_position() if _player.has_method("shown_position") else _player.global_position\n',
+    "var at = ctx.player.body().global_position\n",
+    "var at = enemy.global_position\n",
+    "var at = multiplayer.global_position\n",
+    "# player.global_position is the origin\n",
+  ];
+  for (const text of passes) assert.deepEqual(lintL9("x/cache.gd", text), [], text);
 });
 
 test("L8 passes a listed sim read, and flags a drifted count and a stale entry", () => {
