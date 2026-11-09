@@ -21,7 +21,7 @@ World 1 is the title, the camp, the dam, the flume and Brindle in the Slag Bowl.
 | # | Item | Owner | State |
 | --- | --- | --- | --- |
 | 1 | Pre-sitting improvement pass (ruling bo, 9 Nov): workflows, world 1 polish, performance, deep modules, testing; then the wave 33 full gate, cautious red team and promotion | Five lanes, then Gate | Lanes claimed on the live board |
-| 2 | Dam Warden `sheet_dir` [0,0,-1] plus the bot sheet-foot return | Dam lane | Held: a 24-seed read of the change bettered no band (a5 79%, a1 63%, the ruling bb seed capped again). Learner a5 is back at the 60% target without it ([DECISIONS.md](DECISIONS.md) section 10); a heading-only read decides whether any of it ships |
+| 2 | Dam Warden `sheet_dir` [0,0,-1] plus the bot sheet-foot return | Dam lane | Not shipping for the sitting (ruling cm): two 24-seed reads bettered no band and the heading alone breaks the Novice ceiling. The sheet stays as it is; an axis heading with the lobbers or the foot moved is parked for after the sitting ([DECISIONS.md](DECISIONS.md) section 10) |
 | 3 | Dam east-end airborne invisible patch at (200, 94-98, 642), owed under ruling aa | Dam lane | PR #659: no ball can reach the strip; four drawn triangles close it so the sweep reads clean |
 | 4 | Clip-audit correction | Clipping lane | Done in wave 30 (#608); the queue line was a stale carry |
 | 5 | Sitting sheet refresh for the build he plays (Try lines from the watch list) | Sitting prep | Owed |
