@@ -165,7 +165,7 @@ const TRIM_DB := {
 	"pickup_fountain": -8.0, "synergy_fired": -6.0, "evolution_fired": -5.0, "lore_found": -10.0,
 	"pilot_unlocked": -9.0, "pilot_unlocked_sable": -9.0, "pilot_unlocked_rivet": -9.0, "pilot_unlocked_kest": -9.0,
 	"pilot_unlocked_tarn": -9.0, "pilot_unlocked_tally": -9.0, "pilot_unlocked_cannon": -9.0,
-	"kill_chain_tier": -5.0, "drop_landing": -3.0, "door_tick": -9.0,
+	"kill_chain_tier": -5.0, "chain_crash": -12.0, "drop_landing": -3.0, "door_tick": -9.0,
 	"return_launch_arpeggio": -4.0, "lift_hiss": -9.0, "crater_hold": -12.0,
 	# The Spillway's arena locks and Warden gates (src/world/stage_locks.gd): the yard slams shut,
 	# springs open, the Warden's clamp counts a crew, refuses a hit, and lets go.
@@ -258,6 +258,16 @@ const BREAK_PHRASES := [
 ]
 # A synergy's motif is three of these, one baked note per midi number (cause_note_<midi>).
 const CAUSE_NOTE := "cause_note_"
+# One note of a cue the audio director places on the band's grid (grid_note_<voice>_<midi>): a kill
+# streak's landing, the near miss's two notes, the dunk's pair, a death's fall. One baked note per
+# voice and midi number, like the cause notes, so the stinger lane keys each to the band.
+const GRID_NOTE := "grid_note_"
+const GRID_NOTE_DB := -8.0
+const GRID_NOTE_SECONDS := 0.5
+# The note each climbing cue rings on, where its ladder starts (Harmony.ladder_ratio): the kill
+# pop's bell is D6 and the line's bite A5, in the recipes here and in the event-set files.
+const KILL_POP_MIDI := 86
+const BITE_MIDI := 81
 # The motif cell a class's whip lands on, when it is not the second (Tarn's first two are one note).
 const WHIP_SECOND := {"tarn": 2}
 const CAUSE_NOTE_DB := -8.0
@@ -304,12 +314,14 @@ static func break_midis(variant := 0) -> Array:
 
 
 static func has_recipe(id: String) -> bool:
-	return TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE) or _assist_parts(id).size() > 0 or id in EVENT_CUES
+	return TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE) or id.begins_with(GRID_NOTE) or _assist_parts(id).size() > 0 or id in EVENT_CUES
 
 
 static func trim_db(id: String) -> float:
 	if id.begins_with(CAUSE_NOTE):
 		return CAUSE_NOTE_DB
+	if id.begins_with(GRID_NOTE):
+		return GRID_NOTE_DB
 	if id.begins_with(ASSIST_STING):
 		return ASSIST_STING_DB
 	return TRIM_DB.get(id, TRIM_DB.get(base_key(id), -8.0))
@@ -450,6 +462,18 @@ static func _assist_parts(id: String) -> Array:
 
 static func cause_note_id(midi: int) -> String:
 	return CAUSE_NOTE + str(midi)
+
+
+static func grid_note_id(voice: String, midi: int) -> String:
+	return "%s%s_%d" % [GRID_NOTE, voice, midi]
+
+
+# The class whip's voice and its two notes, the class motif's first interval an octave up:
+# [voice, first midi, second midi].
+static func whip_notes(class_id: String) -> Array:
+	var row := Harmony.motif_or_first(class_id)
+	var cells: Array = row["cells"]
+	return [String(row["voice"]), int(cells[0][1]) + 12, int(cells[WHIP_SECOND.get(class_id, 1)][1]) + 12]
 
 
 # Rendered sounds (design-v3/sound/specials.py and extras.py), 44.1 kHz mono 16-bit WAVs under
@@ -613,6 +637,12 @@ static func samples_at(id: String, step: int, shift := 0, theme := 0) -> PackedF
 # True when samples_at would return without a bake: the startup bank's own variant, or one already made.
 static func baked_at(id: String, step: int, shift := 0, theme := 0) -> bool:
 	return _plain(id, step, shift, theme) or _cache_has(_samples, _key_at(id, step, shift, theme))
+
+
+# True when this variant is in memory, the plain one included (baked_at takes the plain one on
+# trust: the boot bake makes every plain sound a row can name, but not a note named by its pitch).
+static func cached_at(id: String, step: int, shift := 0, theme := 0) -> bool:
+	return _cache_has(_samples, id if _plain(id, step, shift, theme) else _key_at(id, step, shift, theme))
 
 
 static func _plain(id: String, step: int, shift: int, theme: int) -> bool:
@@ -1121,6 +1151,9 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _pilot_unlocked(id.get_slice("_", 2))
 		"kill_chain_tier":
 			return _kill_chain_tier()
+		"chain_crash":
+			# The long kill chain's downbeat (AUDIO-V3 section 5 rule 5): the band's own crash.
+			return _mix([[Synth.drum("crash"), 0, 1.0]])
 		"drop_landing":
 			return _drop_landing()
 		"door_tick":
@@ -1145,6 +1178,9 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _warden_gate_release()
 	if id.begins_with(CAUSE_NOTE):
 		return _mix([[_cut(_n("mallet", int(id.trim_prefix(CAUSE_NOTE))), 0.6), 0, 1.0]])
+	if id.begins_with(GRID_NOTE):
+		var bits := id.trim_prefix(GRID_NOTE).rsplit("_", true, 1)
+		return _mix([[_cut(_n(bits[0], int(bits[1])), GRID_NOTE_SECONDS), 0, 1.0]])
 	if _assist_parts(id).size() > 0:
 		return _assist_sting(_assist_parts(id))
 	# A kind added after this bank still gets a sound: a small blip pitched from its
@@ -2351,13 +2387,9 @@ static func _fight_arm_stamp() -> PackedFloat32Array:
 # The class-colour whip: a rising sweep plus the class motif's first interval, an
 # octave up, on the class's own voice (SOUND-STORY section 5, "a reward, not a threat").
 static func _near_miss_whip(class_id: String) -> PackedFloat32Array:
-	var row := Harmony.motif_or_first(class_id)
-	var cells: Array = row["cells"]
-	var voice: String = row["voice"]
-	var a: int = int(cells[0][1]) + 12
-	var b: int = int(cells[WHIP_SECOND.get(class_id, 1)][1]) + 12
+	var notes := whip_notes(class_id)
 	return _mix([[_noise(0.22, 700.0, 4800.0, 9.0, 0.04), 0, 0.85],
-		[_cut(_n(voice, a), 0.16), 0, 0.8], [_cut(_n(voice, b), 0.22), Synth.seconds(0.09), 0.85]])
+		[_cut(_n(notes[0], notes[1]), 0.16), 0, 0.8], [_cut(_n(notes[0], notes[2]), 0.22), Synth.seconds(0.09), 0.85]])
 
 
 # Four bright notes up the home key's pentatonic, D F G A, a fountain of scrap: a rising
