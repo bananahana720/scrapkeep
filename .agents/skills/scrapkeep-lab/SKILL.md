@@ -102,6 +102,6 @@ Add a changelog row for each change, using one of the change types in the table 
 
 ## Host adapter
 
-- Claude Code: `/scrapkeep-lab`. Cards that run Godot or other real processes go to `scrapkeep-writer` (Opus), not `scrapkeep-writer-low` (EV-0502; design choice).
+- Claude Code: `/scrapkeep-lab`. A project thread runs its lab card itself (ruling by: one thread, one writer). In a local coordinator session, cards that run Godot or other real processes go to `scrapkeep-writer`, not `scrapkeep-writer-low` (EV-0502; design choice).
 - Codex: `$scrapkeep-lab`, with the configured Astra roles.
 - Both apps read this same body. Report the actual model and `CLAUDE_EFFORT` or its absence.

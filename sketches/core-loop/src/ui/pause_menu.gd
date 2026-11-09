@@ -33,6 +33,8 @@ const BuildRead := preload("res://src/ui/build_read.gd")
 # The Settings row (O) swaps the column for settings_pages.gd (Display, Controls and Look
 # pages, opening on the page last used) and Back, Esc or P returns to the column with
 # Settings focused.
+# A line under the title says why the game paused itself (auto_pause.gd: a dropped pad); it is
+# hidden while empty and cleared when the menu closes.
 
 const LAYER := 6
 const FADE_IN := 0.16
@@ -79,6 +81,7 @@ var store
 var _root: Control
 var _content: VBoxContainer
 var _title: Label
+var _note: Label
 var _page
 var _in_settings := false
 var _rows := {}
@@ -136,6 +139,14 @@ func setup(game_ref) -> void:
 	_title.add_theme_color_override("font_color", Palette.AMBER)
 	_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(_title)
+	_note = Label.new()
+	_note.visible = false
+	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_note.add_theme_font_override("font", UiFonts.bold())
+	_note.add_theme_font_size_override("font_size", 22)
+	_note.add_theme_color_override("font_color", Palette.SAND)
+	_note.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_content.add_child(_note)
 	for spec in ROWS:
 		var row: Control
 		if spec.has("bus"):
@@ -187,6 +198,16 @@ func is_open() -> bool:
 
 func notes_pinned() -> bool:
 	return _notes_pinned
+
+
+# The line under the title; "" takes it down.
+func note(text: String) -> void:
+	_note.text = text
+	_note.visible = text != ""
+
+
+func note_text() -> String:
+	return _note.text
 
 
 func row(id: String) -> Control:
@@ -245,6 +266,7 @@ func close() -> void:
 		return
 	_open = false
 	_disarm()
+	note("")
 	_leave_settings(false)
 	if _notes_pinned:
 		_unpin_notes()
