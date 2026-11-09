@@ -38,7 +38,7 @@ const ROWS := [
 		"lines": ["Spillway Works. Dawn. Probably a Tuesday.", "This is the sad part.", "Moss packed a spare."],
 		"sfx": ["VRRRM", "FWOOSH", "KLANG!"], "cameo": "brindle", "inset": "Someone out there remembers her. (Later.)"},
 	{"id": "spillway", "kind": "world", "world": 1, "theme": "A",
-		"card": ["SPILLWAY WORKS", "World one · the river canyon", "Runs", "perfectly, says the Foreman", "River", "keeps no promises", "Fish", "larger than permitted"],
+		"card": ["SPILLWAY WORKS", "World one · the river canyon", "Pumps", "rusty", "River", "keeps no promises", "Fish", "larger than the Foreman permits"],
 		"lines": ["World one. Wet, sunny, loud.", "The river took the spare seal.", "Moss packed another."],
 		"sfx": ["GLUG", "SPLOOSH", "CLANK!"]},
 	{"id": "brindle", "kind": "boss", "boss": "brindle", "world": 1, "theme": "B",

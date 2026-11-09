@@ -19,8 +19,8 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 # its rows with caps and a short word. The tester notes (TESTING, QUESTIONS, TRY_FIRST,
 # SCREEN_KEYS) and the legend are no longer drawn on Tab; README.md mirrors them.
 # What the run asks of you and why, in one line: the title screen shows it too. The why is the game's
-# one line (ruling cj, design-v3/STORY-MAP.md): a machine runs the world perfectly and the crew takes it back.
-const OBJECTIVE := "A machine runs your world perfectly. Take it back: grow, crack Warden guards, smash their cores. Rout Brindle, still the Waking, quiet the Mind."
+# one line (ruling cj, design-v3/STORY-MAP.md): a machine runs the world and calls it perfect (the quote marks are the crew's), and the crew takes it back.
+const OBJECTIVE := "A machine runs your world \"perfectly\". Take it back: grow, crack Warden guards, smash their cores. Rout Brindle, still the Waking, quiet the Mind."
 
 const TESTING := [
 	"One run: title, pilot, then two stages in each of three worlds, each sealed by a Warden at its beacon. Grow, crack its guard, smash its open core, then roll through a reward gate and launch into the next stage. Each world's last stage launches you into its boss arena: rout Admiral Brindle, still the Waking, quiet the Mind. Quieting the Mind ends the run.",

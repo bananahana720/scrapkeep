@@ -39,7 +39,7 @@ Everything in the game was made by one of four hands. Decide which before you dr
 | Words | Dry crew log, a quiet wrong thing underneath | Ledger arithmetic, rounds up, never threatens | Polite scheduling in the voice of an executive announcing good news: "Please leave the time blank." See the Foreman's voice below. | None. A number. |
 | How it plays | Improvised power and give and take: every gain trades against something, and mixed parts that work together beat any one perfect answer. Synergies, gambles, overpowered pays. | By the book: holds, queues, formations, job titles. Learnable drills. Its people are never targets. | Reads your habits and answers them. Loops you can ride. Offers that cost choice. | A one-off event with a trick tied to its old job |
 
-Two words are overloaded in older docs. On this page "the Fleet" is always Brindle's animal crews, and "the old works" is always the humans' machines (the Mind's own title card says "Ran the old works"). "The Mind" is what the crews called it and "the Foreman" is the job it holds; both name the same machine. A third, now closed: the common enemy that used to be called Foreman is the Shift Boss (R, 9 Nov, ruling ck), so "the Foreman" always means the Mind.
+Two words are overloaded in older docs. On this page "the Fleet" is always Brindle's animal crews, and "the old works" is always the humans' machines (the Mind's own title card says "The Foreman · ran the old works"). "The Mind" is what the crews called it and "the Foreman" is the job it holds; both name the same machine. A third, now closed: the common enemy that used to be called Foreman is the Shift Boss (R, 9 Nov, ruling ck), so "the Foreman" always means the Mind.
 
 ### The Foreman's voice (W, from Andrew's idea, 9 Nov)
 
