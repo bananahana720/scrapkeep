@@ -12,6 +12,8 @@ const ChildRuns := preload("res://tests/trees/child_runs.gd")
 #   - nothing a player would report: no script error or engine ERROR line, the ball never wedged
 #     against a wall at rest and never fell through the floor (tools/qa_watch.gd);
 #   - the objective plate is never empty in play for PLATE_BLANK_S or more;
+#   - the pilot's skill slots 2 and 3 are each cast at least once (the guard the old-map
+#     bot_six_<pilot> proofs carried, which now run weekly);
 #   - the run saved into its own folder.
 # Stuck and hung counts are printed, not judged: a camper's stall and a mounted special rest by design.
 # Evidence limit: one seed a pilot, the skipper, headless; real ticks, so a seed does not replay
@@ -57,12 +59,17 @@ func _initialize() -> void:
 			t.check("%s: %s" % [pilot, need[0]], _line(text, need[1]) != "", _line(text, need[1]))
 		var errors := _errors(text)
 		t.check("%s: no script error or ERROR line" % pilot, errors.is_empty(), "%d lines%s" % [errors.size(), "" if errors.is_empty() else ": " + errors[0]])
-		var watch := _watch(text)
+		var watch := _pairs(text, "self-play: watch ")
 		t.check("%s: the watch reported" % pilot, not watch.is_empty(), _line(text, "self-play: watch "))
 		t.check("%s: the ball never wedged at rest and never fell through" % pilot, int(watch.get("wedged", -1)) == 0 and int(watch.get("fell", -1)) == 0,
 			"wedged %s, fell %s (stuck %s, hung %s, not judged)" % [watch.get("wedged", "?"), watch.get("fell", "?"), watch.get("stuck", "?"), watch.get("hung", "?")])
 		t.check("%s: the objective plate is never empty for %d s of play" % [pilot, int(PLATE_BLANK_S)],
 			float(watch.get("blank_max", INF)) < PLATE_BLANK_S, "longest empty stretch %s s, %s plate changes" % [watch.get("blank_max", "?"), watch.get("objectives", "?")])
+		# The skill bar's hands (SKILL-BAR section 10, B4): the pilot's slot 2 and slot 3 are each cast
+		# at least once on the way. Set pieces fired are printed, not judged: world 1 may end first.
+		var skills := _pairs(text, "self-play: skills ")
+		t.check("%s: skill slots 2 and 3 are each cast" % pilot, int(skills.get("slot2", 0)) >= 1 and int(skills.get("slot3", 0)) >= 1,
+			"slot 2 %s casts, slot 3 %s casts, %s set pieces" % [skills.get("slot2", "?"), skills.get("slot3", "?"), skills.get("set_pieces", "?")])
 		t.check("%s: stages 1, 2 and 3 in order" % pilot, String(watch.get("stages", "")) == "1,2,3", "stages %s" % watch.get("stages", "?"))
 		t.check("%s: the run saved into its own folder" % pilot, _saved(run["data"]), run["data"].get_file())
 	var planted: Dictionary = runs[PILOTS.size()]
@@ -81,10 +88,10 @@ func _reached(run: Dictionary) -> bool:
 	return run["code"] == 0 and not run["timed_out"]
 
 
-# The watch line's name=value pairs.
-func _watch(text: String) -> Dictionary:
+# A line's name=value pairs.
+func _pairs(text: String, prefix: String) -> Dictionary:
 	var out := {}
-	for pair in _line(text, "self-play: watch ").trim_prefix("self-play: watch ").split(" ", false):
+	for pair in _line(text, prefix).trim_prefix(prefix).split(" ", false):
 		var at := pair.find("=")
 		if at > 0:
 			out[pair.substr(0, at)] = pair.substr(at + 1)
