@@ -17,10 +17,13 @@ const T := preload("res://tests/support/t.gd")
 #          then says his hello.
 #   U1-U2  an unlock plate waits for Moss and for PLATE_AFTER seconds of rolling.
 #   O1     the turns came in order, each once.
-#   X1     a paused tree (the briefing before the drop) holds every turn until it closes.
+#   X1     a screen that pauses the drop on the frame the take ends (the briefing) holds every
+#          turn until it closes.
 #   S1     the next run's cold open is the short form: Moss speaks as the panel clears.
 #   W1     a Warden fight ends the opening and every voice still waiting hears its turn.
-#   R1     a restart goes straight in, with no opening.
+#   R1     a restart while the opening still holds everything goes straight in: the opening
+#          ends without a word, and the new run's stage card, cold open and Moss start at once.
+#   V1     an opening begun for a run the flow refused ends on the next frame.
 
 const STEP := 1.0 / 30.0
 
@@ -145,7 +148,7 @@ func _run() -> void:
 	# The next run: a pause over the drop, the short cold open, a Warden fight.
 	_turns.clear()
 	await _take_run()
-	paused = true
+	take.finished.connect(func(): paused = true, CONNECT_ONE_SHOT)
 	await _end_take()
 	await _frames(4)
 	var holds: bool = not take.busy() and opening.live and opening.turn() == "" and not flourish.playing and not hud.launch_card.showing()
@@ -163,11 +166,27 @@ func _run() -> void:
 	_t.check("W1 a Warden fight ends the opening, and every voice has heard its turn", waiting and not opening.live and not opening.waits("plate")
 			and _turns == Opening.VOICES, "waiting %s, live %s, turns %s" % [waiting, opening.live, _turns])
 
+	# A restart under the take's panel, with the title, the cold open and Moss all held.
+	_turns.clear()
+	flourish.stop_all()
+	await _take_run()
+	await _frames(3)
+	var holding: bool = opening.live and opening.waits("title") and not flourish.playing and not _moss_up()
+	flow.new_run()
+	_game.player.source = Intent.Scripted.new()
+	_game.player.set_velocity_now(Vector3.ZERO)
+	await _frames(3)
+	_t.check("R1 a restart while the opening holds everything goes straight in", holding and not opening.live and _turns.is_empty()
+			and flourish.playing and flourish.id == "cold_open" and hud.launch_card.showing() and _moss_up(),
+		"holding %s, live %s, turns %s, flourish %s, stage card %s, Moss %s" % [holding, opening.live, _turns, flourish.id, hud.launch_card.showing(), _moss_up()])
+	await _end_take()
+
+	opening.begin()
+	var begun: bool = opening.live
+	await _frames(2)
+	_t.check("V1 an opening begun for a run the flow refused ends on the next frame", begun and not opening.live, "begun %s, live %s" % [begun, opening.live])
 	take.force_live = false
 	take.set_process(true)
-	flow.new_run()
-	await _frames(3)
-	_t.check("R1 a restart goes straight in, with no opening", not opening.live and not opening.waits("moss") and flow.in_stage(), "live %s" % opening.live)
 
 	_game.bot_driven = true
 	var code: int = _t.verdict()

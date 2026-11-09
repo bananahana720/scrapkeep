@@ -118,6 +118,7 @@ func _install_exchange_input() -> void:
 func _on_run_started(_class_id: String) -> void:
 	_end_exchange(false)
 	_end_intro()
+	_hello_due = 0
 	_zones_played.clear()
 	_intros_played.clear()
 

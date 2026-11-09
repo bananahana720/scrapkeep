@@ -351,6 +351,8 @@ func setup(game_ref) -> void:
 	game.events.boss_arena_entered.connect(func():
 		launch_card.show_card("fac_fleet", EventKinds.hud("boss_arena_entered"), EventKinds.color("boss_arena_entered")))
 	game.events.run_started.connect(func(_class_id: String):
+		_title_world = 0
+		_title_stage = 0
 		_threat = 0
 		_begin_engagement(false)
 		_armor_peak = ARMOR_PEAK_FLOOR)

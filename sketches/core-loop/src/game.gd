@@ -801,7 +801,8 @@ func _take_live() -> bool:
 func pick_pilot(index: int) -> void:
 	launch_take.live = _take_live()
 	launch_take.play(func():
-		_begin_opening()
+		if flow.state_name() == "class_select":
+			_begin_opening()
 		flow.choose_class(index), func():
 		screens.fade_for_launch()
 		_launch_whoosh()
