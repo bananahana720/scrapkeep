@@ -6,6 +6,7 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
+const BuildStamp := preload("res://src/core/build_stamp.gd")
 
 # The settings page both hosts show: the pause menu in place of its first page, the title
 # through its Settings button. Three pages behind a tab strip, switched by LB and RB, Q and E
@@ -17,7 +18,8 @@ const Glyphs := preload("res://src/ui/glyphs.gd")
 # cancels; a press another verb already holds is refused with "Taken".
 # A new binding goes to the store and to the InputMap at once (game.apply_binding, the same
 # call boot makes), so a later launch reads what play just used. The host feeds its input
-# events to handle(); the page never reads the keyboard itself.
+# events to handle(); the page never reads the keyboard itself. The build stamp (build_stamp.gd)
+# sits under Back in small type, so a sitting's notes can name the build.
 
 signal back_requested
 
@@ -54,6 +56,7 @@ const MOUSE_OK := [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE, M
 static var last_page := 0
 
 var back: Button
+var stamp: Label
 var rows := {}
 
 var _game
@@ -103,6 +106,13 @@ func setup(game_ref, back_key := "key_esc") -> void:
 	rows["back"] = back
 	add_child(back)
 	back.pressed.connect(press.bind("back"))
+	stamp = Label.new()
+	stamp.text = BuildStamp.label()
+	stamp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stamp.add_theme_font_size_override("font_size", 14)
+	stamp.add_theme_color_override("font_color", Color(Palette.SAND, 0.6))
+	stamp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(stamp)
 	refresh()
 
 
