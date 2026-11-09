@@ -398,7 +398,7 @@ These briefs are for headless Blender work. The style is chunky, bevelled and sm
 | `fleet_paint` | Iron oxide |
 | `requisition_tag` | Brass |
 | `ancient_enamel` | Petrol, cast and seamless, with sandstone dust on top faces. Capped at HSV value 45% and saturation 45%, and never emissive. |
-| `ancient_light` | ANCIENT (pending; A is the default), emissive in thin seams set in charcoal grooves |
+| `ancient_light` | ANCIENT (uranium-glass green `#9dff3c`, chosen 2026-10-09), emissive in thin seams set in charcoal grooves |
 | `rarity` | Set at runtime from the rarity ramp |
 
 | Asset | Silhouette | Tris | Slots | Must read at gameplay distance |
