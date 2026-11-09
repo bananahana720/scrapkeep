@@ -10,7 +10,6 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
-const ClassKit := preload("res://src/ui/class_kit.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
@@ -42,6 +41,8 @@ const CARD_GAP := 24.0
 const CARD_GAP_TIGHT := 12.0
 const CARD_MAX := 420.0
 const SIDE := 60.0
+# Frames the card row waits for its first layout before it levels.
+const LEVEL_TRIES := 6
 # The actions' gap, between buttons and between rows. A row that would pass the narrowest
 # supported width (int_screen_layout_test's 1280) less SIDE each way wraps onto a second
 # centred row; no button is dropped or shrunk.
@@ -329,9 +330,7 @@ func _on_flow_changed(state: String) -> void:
 				_choices.add_child(card)
 				card.bind_profile(game.ctx.profile)
 				card.set_locked(not game.pilot_unlocked(classes[i]), _unlock_hint(classes[i]))
-			# The cards' wrapped words measure true only once laid out, so the row levels next frame.
-			if not get_tree().process_frame.is_connected(_level_cards):
-				get_tree().process_frame.connect(_level_cards, CONNECT_ONE_SHOT)
+			_queue_level()
 			_footer.setup([{"cap": "key_1", "say": "1"}, {"say": "to"}, {"cap": "key_%d" % classes.size(), "say": str(classes.size())},
 				{"say": "choose"}, {"say": "·"}, {"cap": "key_enter", "say": "Enter"}, {"say": "start"}])
 			_footer.visible = true
@@ -496,8 +495,7 @@ func end_prologue() -> void:
 	_show("Choose your class", Palette.SAND, "")
 	_choices.visible = true
 	_footer.visible = true
-	if not get_tree().process_frame.is_connected(_level_cards):
-		get_tree().process_frame.connect(_level_cards, CONNECT_ONE_SHOT)
+	_queue_level()
 	_fade(true)
 
 
@@ -1449,7 +1447,7 @@ func class_cards() -> Array:
 # Every card's name, role and fantasy line take the row's tallest, so a line that wraps on one
 # card does not push that card's text rows below the others'.
 func _level_text(row: Array) -> void:
-	for pick in [func(c): return c.name_label(), func(c): return c.role_label(), _fantasy_label]:
+	for pick in [func(c): return c.name_label(), func(c): return c.role_label(), func(c): return c.fantasy_label()]:
 		var tallest := 0.0
 		for card in row:
 			tallest = maxf(tallest, pick.call(card).get_combined_minimum_size().y)
@@ -1457,18 +1455,24 @@ func _level_text(row: Array) -> void:
 			pick.call(card).custom_minimum_size.y = tallest
 
 
+# The cards' wrapped words measure true only once laid out, so the row levels on a later frame.
+func _queue_level() -> void:
+	if not get_tree().process_frame.is_connected(_level_cards):
+		get_tree().process_frame.connect(_level_cards, CONNECT_ONE_SHOT)
+
+
 # Every card in the row gives its preview the row's largest overflow, so every key row ends
-# inside its card on the same bottom edge.
-func _fantasy_label(card) -> Label:
-	var said: String = ClassKit.fantasy(card.def)
-	for label in card.find_children("*", "Label", true, false):
-		if label.text == said:
-			return label
-	return card.name_label()
-
-
+# inside its card on the same bottom edge. The containers sort after a physics tick or at the
+# end of the frame, so on a frame with no tick the next frame signal comes before the cards'
+# first sort: the row waits for it, and a row that never lays out keeps its built heights.
 func _level_cards() -> void:
+	for _try in LEVEL_TRIES:
+		if class_cards().all(func(c): return c.laid_out()):
+			break
+		await get_tree().process_frame
 	var row := class_cards()
+	if row.is_empty() or not row.all(func(c): return c.laid_out()):
+		return
 	_level_text(row)
 	var spill: float = row.reduce(func(m, c): return maxf(m, c.overflow()), 0.0)
 	for card in row:
