@@ -148,7 +148,10 @@ func _physics_process(_delta: float) -> void:
 		collect()
 
 
+# The cache goes once the deck has its take on file; while the deck refuses (the run is not in
+# play) it stays where it is.
 func collect() -> bool:
 	var ok: bool = deck != null and deck.cache_found(take_id)
-	queue_free()
+	if ok:
+		queue_free()
 	return ok
