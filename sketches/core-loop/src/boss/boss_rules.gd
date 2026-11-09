@@ -104,6 +104,18 @@ const CHARGE_SHOVE_SIDE := 12.0
 const CHARGE_SHOVE_UP := 9.0
 const CHARGE_GRACE := 1.0
 const CHARGE_STOP_R := 49.0
+# The hull turns to its lane through the tell instead of taking the heading in one tick. At
+# this rate (radians a second) no corner of the 9 m by 14 m hull outruns CHARGE_SPEED: a corner
+# is 8.32 m from the centre. It turns faster only when it must to be square in the lane
+# CHARGE_TURN_SETTLE seconds before the lane goes live; under CHARGE_TURN_SNAP radians owed it
+# takes the heading exactly.
+const CHARGE_TURN_RATE := 2.88
+const CHARGE_TURN_SETTLE := 0.15
+const CHARGE_TURN_SNAP := 0.002
+# The Scuttle's hint for a build that cannot hit its way in (boss.gd take_hint): the UI row
+# it shows and the seconds before it may show again while he has still not been stunned.
+const SCUTTLE_HINT := "hint_wall_bait"
+const SCUTTLE_HINT_GAP := 20.0
 
 # The eject: a 2.5 s arc to the banked ring, then a lap-running chase.
 const EJECT_FLIGHT := 2.5
