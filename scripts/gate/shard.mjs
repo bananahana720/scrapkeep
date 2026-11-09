@@ -20,6 +20,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { LEDGER_FILE, judgeFailures, parseLedger } from "../known-failing.mjs";
+import { WEEKLY_FILE, weeklyNames as readWeeklyNames } from "./weekly.mjs";
+
+export { WEEKLY_FILE, WEEKLY_HEADER, parseWeekly } from "./weekly.mjs";
 import { failingLines, isBot, testScripts, testTimeoutMs, timeScale } from "../sketch-smoke.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -30,32 +33,6 @@ const DEFAULT_CHUNK = 60;
 const DEFAULT_SOLO_RUNS = 2;
 const NEAR_LIMIT = 0.85;
 
-// Tests a promotion does not run (ruling ca): they run when a change touches their files
-// (the fast lane) and in a weekly sweep. One row per test, beside the known-failing ledger
-// (sketch-lint allows no list file under tests/).
-export const WEEKLY_FILE = "project-guide/handoff/WEEKLY.tsv";
-export const WEEKLY_HEADER = ["test", "group", "reason", "returns-when"];
-
-export function parseWeekly(text) {
-  const lines = (text || "").split("\n").map((line) => line.replace(/\r$/, ""));
-  const problems = [];
-  const rows = [];
-  if (lines[0] !== WEEKLY_HEADER.join("\t")) return { rows, problems: [`line 1: the header must be: ${WEEKLY_HEADER.join(" TAB ")}`] };
-  const seen = new Set();
-  lines.slice(1).forEach((line, index) => {
-    if (line.trim() === "") return;
-    const cells = line.split("\t").map((cell) => cell.trim());
-    if (cells.length !== WEEKLY_HEADER.length || cells.some((cell) => cell === "")) problems.push(`line ${index + 2}: a row needs ${WEEKLY_HEADER.join(", ")}, with no cell empty`);
-    else if (!/^[a-z0-9_]+$/.test(cells[0])) problems.push(`line ${index + 2}: "${cells[0]}" must be the test's base name, with no folder and no .gd`);
-    else if (seen.has(cells[0])) problems.push(`line ${index + 2}: ${cells[0]} is listed twice`);
-    else {
-      seen.add(cells[0]);
-      rows.push({ test: cells[0], group: cells[1], reason: cells[2], returnsWhen: cells[3] });
-    }
-  });
-  return { rows, problems };
-}
-
 // The two gate lists: every top-level test, sorted as `LC_ALL=C sort` sorts
 // the file names, split by the "# smoke: bots" marker. Names carry no .gd.
 // `tests` and `bots` are what a promotion runs; `weekly` holds the names
@@ -63,12 +40,7 @@ export function parseWeekly(text) {
 // test that does not exist, is an error: it never skips nothing, or everything,
 // silently.
 export function gateLists(sketchDir, weeklyFile = path.join(root, WEEKLY_FILE)) {
-  const weeklyNames = new Set();
-  if (existsSync(weeklyFile)) {
-    const { rows, problems } = parseWeekly(readFileSync(weeklyFile, "utf8"));
-    if (problems.length > 0) throw new Error(`${WEEKLY_FILE} does not parse: ${problems.join("; ")}`);
-    for (const row of rows) weeklyNames.add(row.test);
-  }
+  const weeklyNames = readWeeklyNames(root, weeklyFile);
   const lists = { tests: [], bots: [], weekly: { tests: [], bots: [] } };
   for (const script of testScripts(sketchDir)) {
     const name = path.posix.basename(script, ".gd");

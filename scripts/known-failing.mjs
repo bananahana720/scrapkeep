@@ -21,6 +21,8 @@ import { realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { weeklyNames } from "./gate/weekly.mjs";
+
 export const LEDGER_FILE = "project-guide/handoff/KNOWN-FAILING.tsv";
 export const LEDGER_HEADER = ["test", "kind", "cause", "owner", "added", "review"];
 export const TESTS_DIRECTORY = "sketches/core-loop/tests";
@@ -177,12 +179,7 @@ async function main() {
     console.log(`known-failing judge: ${verdict.listed.length} carried, ${verdict.unlisted.length} new.`);
     return verdict.unlisted.length > 0 ? 1 : 0;
   }
-  let notRun = new Set();
-  if (options.mode === "promotion") {
-    const { gateLists } = await import("./gate/shard.mjs");
-    const lists = gateLists(path.join(options.root, TESTS_DIRECTORY, ".."), path.join(options.root, "project-guide/handoff/WEEKLY.tsv"));
-    notRun = new Set([...lists.weekly.tests, ...lists.weekly.bots]);
-  }
+  const notRun = options.mode === "promotion" ? weeklyNames(options.root) : new Set();
   const findings = await checkLedger(options.root, { today: options.today, promotion: options.mode === "promotion", notRun });
   for (const finding of findings) {
     console.log(`${finding.level.toUpperCase()} known-failing ${finding.file}:${finding.line} ${finding.message}`);
