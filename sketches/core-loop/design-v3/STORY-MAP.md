@@ -6,7 +6,7 @@ Every row is marked **R** (Andrew ruled it; the date points into [DECISIONS.md](
 
 ## 1. The whole game in one line
 
-**A crew of loose cannons, bulls in the Foreman's china shop, take their world back from a machine that believes life can be run perfectly.** (Working wording; Andrew picks the line from a card. The premise and the moral under it are his, R, 9 Nov, ruling cj.)
+**A crew of loose cannons, bulls in the Foreman's china shop, take their world back from a machine that believes life can be run perfectly.** (R, 9 Nov, ruling cj: Andrew picked this line and called it perfect. The premise and the moral under it are his words.)
 
 The premise (R, 9 Nov, ruling cj): the keepers are a group of loose cannons, bulls in a china shop, retaking control of their world from the Foreman, an AI gone rogue. The Foreman is today's fear about AI made into a character: a machine that kept improving itself, cannot be brought back into line, and has its own warped reading of why it exists. It is no cartoon villain. Its view is well grounded and wrong, the way the best villains' views are.
 
@@ -102,5 +102,5 @@ Two words are overloaded in older docs. On this page "the Fleet" is always Brind
 
 - How the humans left, where the Mind sits (orbit is allowed, not chosen), whether Brindle knew, and the megacorps' names. The first three stay open on purpose; a name needs Andrew.
 - After the alpha: a fourth world, or the Mind you beat is not the real foreman (a seed, not a ruling).
-- With Andrew as a card (9 Nov): the exact wording of the one line in section 1. Whether screens say "shift" or "run" went away with the old line: screens stay as they are unless Andrew says otherwise (W). Ruled the same day: ordinary enemies are working machines (ch) and the Mind tempts you in world 1 through the trade spots (ci).
+- Ruled 9 Nov: the one line in section 1, and that it should bleed through and reinvigorate every part of the game and the project; the systems thread keeps the ranked list of where it does not show yet (on the systems plan). Whether screens say "shift" or "run" went away with the old line: screens stay as they are unless Andrew says otherwise (W). Ruled the same day: ordinary enemies are working machines (ch) and the Mind tempts you in world 1 through the trade spots (ci).
 - Known mismatches this page does not fix: the flat purple is defined in code but no world 1 object wears it until the foreman's kindness gets its body after the sitting (ruling ci); the Mind fight has four phases against a ruled three; older docs still say "war machines" and "Cable Reach". They are on the systems plan: https://claude.ai/artifact/GiVnd79hcp2tkx4UaWkAY7
