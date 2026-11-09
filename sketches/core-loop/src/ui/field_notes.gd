@@ -22,11 +22,11 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 const OBJECTIVE := "Grow, then break each stage's Warden: crack its guard, then smash the core. Three worlds: rout Brindle, still the Waking, quiet the Mind."
 
 const TESTING := [
-	"One run: title, class, then two stages in each of three worlds, each sealed by a Warden at its beacon. Grow, crack its guard, smash its open core, then roll through a reward gate and launch into the next stage. Each world's last stage launches you into its boss arena: rout Admiral Brindle, still the Waking, quiet the Mind. Quieting the Mind ends the run.",
+	"One run: title, pilot, then two stages in each of three worlds, each sealed by a Warden at its beacon. Grow, crack its guard, smash its open core, then roll through a reward gate and launch into the next stage. Each world's last stage launches you into its boss arena: rout Admiral Brindle, still the Waking, quiet the Mind. Quieting the Mind ends the run.",
 	"Growth is heft: scrap you roll up becomes mass, parts add more, and heft multiplies your punch. The plate at the top of the screen is the Warden's guard: hits fill its bar, a full bar staggers the Warden and opens its core, and a hit on the open core shatters one of its chunks. A light ball fills the bar slowly, so grow and come back.",
 	"Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores (the diamonds beside the objective) that raise the gate tiers.",
 	"Sable's pylon banks the speed you plant with. Space slingshots you off along the face with it plus a boost; E drops off where you are. The camera goes to the shoulder while mounted.",
-	"Death ends the run; the next one starts from world 1: N starts a new run as the same class. The one second chance is a part you earn, the Spare Frame, which leaves you at 20% health once a run. Hold R in play to abandon the run and start a new one.",
+	"Death ends the run; the next one starts from world 1: N starts a new run as the same pilot. The one second chance is a part you earn, the Spare Frame, which leaves you at 20% health once a run. Hold R in play to abandon the run and start a new one.",
 ]
 
 const QUESTIONS := [
@@ -95,10 +95,10 @@ const FIELD_RULES := [
 ]
 
 const SCREEN_KEYS := [
-	{"keys": "Space", "does": "title: start; summary: choose a class (pad B on the summary)"},
+	{"keys": "Space", "does": "title: start; summary: choose a pilot (pad B on the summary)"},
 	{"keys": "H", "does": "title: how to play, and back"},
-	{"keys": "1, 2, ...", "does": "class select: one number per class card, left to right"},
-	{"keys": "N", "does": "summary: new run, same class (pad A on the summary)"},
+	{"keys": "1, 2, ...", "does": "pilot select: one number per pilot card, left to right"},
+	{"keys": "N", "does": "summary: new run, same pilot (pad A on the summary)"},
 ]
 
 # The key list in display order: a row per verb with its table keys and caps, then the menu keys.
