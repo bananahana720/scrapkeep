@@ -172,6 +172,18 @@ func _calls() -> void:
 			break
 	_report("call floor", LoreRows.call_matches(drop, "drop_landed", [3]) and not LoreRows.call_matches(drop, "drop_landed", [2]),
 		"a drop call needs three hits")
+	# Who says the lines that are already in the game.
+	var voices := {}
+	for row in LoreRows.ROWS:
+		if row["kind"] != "field_note":
+			voices[row["id"]] = [LoreRows.voice_of(row), LoreRows.spoken(row)]
+	_report("hello voices", voices["lore.spillway.moss.spare"][0] == "moss" and voices["lore.spillway.crew.leak"] == ["pump_crew", "We fixed that leak yesterday."],
+		str(voices["lore.spillway.crew.leak"]))
+	_report("intro voices", voices["lore.park_dam.intro.warden"][0] == "pump_crew" and voices["lore.park_flume.intro.warden"][0] == "flume_crew"
+			and voices["lore.spillway.intro.brindle"] == ["brindle", "Your repair reserve is now Fleet inventory. Thank you."],
+		str(voices["lore.spillway.intro.brindle"]))
+	_report("an unlisted caller has no voice", LoreRows.voice_of({"kind": "exchange", "speaker": "Deck crew", "text": "x"}) == ""
+			and LoreRows.voice_of({"kind": "intro", "zone": "2-1", "subject": "warden", "text": "Pit Warden. x"}) == "", "Deck crew and the pit Warden's line stay silent")
 	var signals: Array = LoreRows.call_signals()
 	_report("call signals", signals.size() == 7 and signals.all(func(s): return signals.count(s) == 1 and LoreRows.CALLS.any(func(r): return r["on"] == s)),
 		str(signals))

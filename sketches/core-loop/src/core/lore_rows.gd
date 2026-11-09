@@ -16,6 +16,9 @@ const SPEAKERS := {
 	"sable": "Sable", "rivet": "Rivet", "kest": "Kest", "tarn": "Tarn", "tally": "Tally", "cannon": "Cannon",
 }
 
+# The site crew whose radio a zone's unsigned lines come over (a Warden's intro is theirs).
+const SITE_CREWS := {"1-1": "pump_crew", "1-2": "flume_crew"}
+
 # Call-ins (design-v3/STORY-MAP.md, "Call-ins"): one line from a named caller, said because of
 # what the player just did. Each plays once a run; rows are read in order and the first that
 # passes is the call. Row keys:
@@ -80,6 +83,23 @@ static func call_matches(row: Dictionary, event: String, args: Array) -> bool:
 		if key == "at_least" and float(args[index]) < float(row[key][1]):
 			return false
 	return true
+
+
+# Who says a row's line, as a SPEAKERS id: an exchange's speaker, the boss an intro quotes
+# ("Brindle: ..."), or the zone's site crew for a Warden's intro. "" when the line has no voice.
+static func voice_of(row: Dictionary) -> String:
+	var named := String(row.get("speaker", String(row.get("text", "")).get_slice(": ", 0)))
+	var id = SPEAKERS.find_key(named)
+	if id != null:
+		return id
+	return String(SITE_CREWS.get(row.get("zone", ""), "")) if row.get("subject", "") == "warden" else ""
+
+
+# The words of a row's line as said aloud: the text without the name it opens on.
+static func spoken(row: Dictionary) -> String:
+	var text := String(row.get("text", ""))
+	var named := text.get_slice(": ", 0)
+	return text.trim_prefix(named + ": ") if SPEAKERS.find_key(named) != null else text
 
 
 # The signals any call listens to, once each.
