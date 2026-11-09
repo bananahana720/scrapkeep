@@ -21,7 +21,7 @@ The three music stems the manifests already split (drums, bass, other) become th
 | --- | --- | --- |
 | Bass | always on in a stage | The world's identity; ducks under danger cues as today (`duck_bass`) |
 | Drums | rolling speed | Fades in from a quarter of top speed, full at half speed. Standing still leaves bass and keys: the world breathes. |
-| Other (sax lead, brass) | combo: kill chain and stomp chain | The sax hook enters at chain 2. Brass answers join at chain 4. A broken chain lets the lead finish its phrase, never cutting mid-note. |
+| Other (sax lead, brass) | a floor on the shelf, lifted by threat, the approach and the chain | The tune is always there while the ball rolls a level: the lead never falls below about half level (`LEAD_FLOOR`, -6 dB; ruling bt, 9 November 2026). Threat, the approach to the landmark (full once the landmark is in reach) and the chain lift it from there to full: a third of the way at chain 2 (the sax hook), full at chain 4. A broken chain lets the lead finish its phrase, never cutting mid-note. A Warden break strips it through the break's held breath only; the kill cadence brings it back whole and it stays back on the shelf after it. Low armour (under 30%) still strips it, and inside a fight its level is the fight floor's, not the shelf's. |
 
 This is `set_pressure` with a new parameter source (`set_parameter_source` already exists), so the three faders are one call fed by speed and chain. Smoothing: a fader rises over one beat and falls over two bars, so a single bump never makes the band stutter.
 
