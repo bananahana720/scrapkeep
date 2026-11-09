@@ -169,7 +169,7 @@ func _landing_ahead(game: Node, audio) -> void:
 	_kills(game, audio, 3)
 	var due: int = engine.clock + window * Harmony.RATE / 1000
 	var ahead: Array = audio._landing_ids(2, audio._landing_tones(due))
-	for id in audio._landing_ids(2, audio._landing_tones(due + Harmony.BAR)):
+	for id in audio._landing_ids(2, audio._landing_tones(due + 4 * audio.grid_unit(1))):
 		if not id in ahead:
 			ahead.append(id)
 	var frames := 0

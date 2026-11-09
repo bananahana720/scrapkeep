@@ -4305,7 +4305,7 @@ func _wire_tally(events) -> void:
 			return
 		var combat = ctx.get("spawner") if ctx != null else null
 		var clips: int = int(combat.last_card.get("hits", 1)) if combat != null else 1
-		# Her stepwise D, E, F climbs D dorian a step per chain link (never a semitone): every
+		# Her stepwise D, E, F climbs D dorian a step per chain link (never chromatically): every
 		# clip stays in the band's mode and off the tritone, which a moved phrase would reach.
 		var lift := clampi(int(ctx.player.chain.combo) - 1, 0, CHAIN_STEPS)
 		for i in clampi(clips, 1, TALLY_CUES["tally_clip"]["steps"].size()):
