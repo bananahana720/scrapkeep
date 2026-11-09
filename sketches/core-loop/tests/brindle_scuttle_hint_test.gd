@@ -132,9 +132,10 @@ func _check_glance() -> void:
 	await _fight(0.3)
 	_report("the hint waits for the transition beat to end", in_beat and not early["full"] and _hints() == 0,
 		"a turned hit %.1f s into the beat (in transition %s) raised %d hints" % [0.5, in_beat, _hints()])
-	await _fight(FightPhases.TRANSITION_SECONDS, func(): return _hints() > 0)
+	# The hint also waits for the HUD's toast row: the phase's own name is still up when the beat ends.
+	await _fight(FightPhases.TRANSITION_SECONDS + 3.0, func(): return _hints() > 0)
 	var after_beat: bool = not _boss._in_transition()
-	_report("a hit the plating turned brings the hint", _hints() == 1 and after_beat and _game.hud.toast_texts().has(_words()),
+	_report("a hit the plating turned brings the hint", _hints() == 1 and after_beat and _game.hud.toast_texts() == [_words()],
 		"punch %.0f against plating %.0f: %d hint, toast %s" % [early["punch"], early["plating"], _hints(), _game.hud.toast_texts()])
 	var told_at: float = _boss.clock
 	await _fight(Rules.SCUTTLE_HINT_GAP - 2.0)
@@ -169,11 +170,12 @@ func _check_missed_charge() -> void:
 		if _hints() > 0:
 			break
 	_report("a charge that runs out with no stun brings the hint to a ball that never hit", charged and before_charge == 0 and _hints() == 1
-			and _boss.stuns == 0 and _double.strikes.all(func(s): return s["enemy"] != _boss.ship.hull or true),
+			and _boss.stuns == 0,
 		"charged %s, hints before the first charge ran %d, hints after it ran out %d, stuns %d" % [charged, before_charge, _hints(), _boss.stuns])
 
 
-# A build whose punch meets the plating can hit its way in: it is never told to bait the wall.
+# A build whose punch meets the plating can hit its way in: it is never told to bait the wall,
+# not for a charge that runs out and not for a stray light hit the plating turns.
 func _check_heavy() -> void:
 	await _scuttle(HEAVY)
 	await _fight(FightPhases.TRANSITION_SECONDS + 0.5)
@@ -181,3 +183,15 @@ func _check_heavy() -> void:
 	await _fight(10.0)
 	_report("a build that meets the plating gets no hint", landed["full"] and _hints() == 0,
 		"punch %.0f against plating %.0f landed %s; %d hints over 12 s of charges" % [landed["punch"], landed["plating"], landed["full"], _hints()])
+	var stray := _ram_hull(LIGHT)
+	await _fight(3.0)
+	_report("its stray light hit is not a short try", not stray["full"] and _hints() == 0 and _boss.take_hint() == "",
+		"a punch %.0f hit turned by plating %.0f after the build showed punch %.0f: %d hints" % [stray["punch"], stray["plating"], HEAVY, _hints()])
+	# A light build that showed a heavy hit once is no longer told.
+	await _scuttle(LIGHT)
+	await _fight(FightPhases.TRANSITION_SECONDS + 0.5)
+	_ram_hull(HEAVY)
+	_ram_hull(LIGHT)
+	await _fight(3.0)
+	_report("a ball whose punch has met the plating once is not told", _hints() == 0,
+		"a punch %.0f hit, then a turned punch %.0f hit: %d hints" % [HEAVY, LIGHT, _hints()])

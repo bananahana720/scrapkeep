@@ -81,7 +81,7 @@ func _yaw_between(a: Vector3, b: Vector3) -> float:
 # hook turn's charge instead of the lead.
 func _watch(spot: Dictionary, cued: bool) -> Dictionary:
 	var out := {"committed": false, "turn": 0.0, "speed": 0.0, "kick": 0.0, "step": 0.0, "residual": -1.0,
-		"aimed": -1.0, "ticks": 0, "square_at": -1.0, "warn": 0.0, "inside": false}
+		"aimed": -1.0, "ticks": 0, "square_at": -1.0, "warn": 0.0, "inside": false, "cue_step": 0.0}
 	var lane = null
 	var last_v := Vector3.ZERO
 	var last_heading: Vector3 = _boss.ship.heading
@@ -109,8 +109,16 @@ func _watch(spot: Dictionary, cued: bool) -> Dictionary:
 				var ball: Vector3 = _game.player.ball_position()
 				var to_ball := Vector3(ball.x - lane.centre.x, 0.0, ball.z - lane.centre.z)
 				out["aimed"] = _yaw_between(to_ball, lane.heading)
-			else:
+			elif not placed or state != hold or not cued:
 				last_v = _game.player.state.velocity
+				continue
+			else:
+				# The hook's cue turns the hull under the ball before its lane commits: watched too.
+				var early: Vector3 = _game.player.state.velocity
+				out["speed"] = maxf(out["speed"], early.length())
+				out["kick"] = maxf(out["kick"], (early - last_v).length())
+				out["cue_step"] = maxf(out["cue_step"], _yaw_between(last_heading, _boss.ship.heading))
+				last_v = early
 				continue
 		var v: Vector3 = _game.player.state.velocity
 		out["speed"] = maxf(out["speed"], v.length())
@@ -159,7 +167,7 @@ func _run() -> void:
 	await _hook_check()
 	await _short_tell_check()
 	var corner := Vector2(Requisition.HULL.x, Requisition.HULL.z).length() * 0.5
-	_report("no corner of the turning hull outruns the charge", Rules.CHARGE_TURN_RATE * corner <= Rules.CHARGE_SPEED,
+	_report("no corner of the turning hull outruns the charge at the rule's rate", Rules.CHARGE_TURN_RATE * corner <= Rules.CHARGE_SPEED,
 		"%.2f rad/s at the %.2f m corner is %.1f m/s (charge %.0f m/s)" % [Rules.CHARGE_TURN_RATE, corner, Rules.CHARGE_TURN_RATE * corner, Rules.CHARGE_SPEED])
 	ChallengeDials.reset()
 	print("brindle_charge_turn_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
@@ -170,6 +178,27 @@ func _run() -> void:
 # short tell. The ball waits mid-bowl ahead of the hull so the lead overshoots it and stops
 # short, then leans on the stopped hull's flank through the cue.
 func _hook_check() -> void:
+	if not await _reach_hook():
+		return
+	var r: Dictionary = await _watch(SPOTS[0], true)
+	_judge("a ball %s through the hook turn's cue is not flung" % SPOTS[0]["name"], r, 0.0)
+	_report("the hook turn's tell is the short one", r["committed"] and is_equal_approx(r["warn"], FightPhases.CUED_WARN),
+		"cued tell %.2f s (CUED_WARN %.2f)" % [r["warn"], FightPhases.CUED_WARN])
+	var cap: float = Rules.CHARGE_TURN_RATE / 90.0
+	_report("the cue turns the hull toward the ball at no more than the rule's rate", r["cue_step"] > 0.0 and r["cue_step"] <= cap * 1.05,
+		"largest turn through the cue %.2f degrees a tick (rate cap %.2f)" % [rad_to_deg(r["cue_step"]), rad_to_deg(cap)])
+	# The most a hook turn can ask: the ball stays dead astern through the cue, so the whole
+	# reverse is still owed inside the short tell.
+	if not await _reach_hook():
+		return
+	var astern: Dictionary = SPOTS[SPOTS.size() - 1]
+	r = await _watch(astern, true)
+	var forced: float = PI / (FightPhases.CUED_WARN - Rules.CHARGE_TURN_SETTLE)
+	_judge("a ball %s through the cue forces the fastest hook turn and is still not flung" % astern["name"], r, PI - 0.2, forced)
+
+
+# Runs a lead charge that stops short of the rim, to the tick its hook turn is cued.
+func _reach_hook() -> bool:
 	_game.flow.retry_stage()
 	_game.run.heal(1000.0)
 	_boss.jump_to_phase(3)
@@ -192,14 +221,10 @@ func _hook_check() -> void:
 		elif state == _boss.CHARGE_HOOK:
 			break
 		await physics_frame
-	_report("the lead charge stopped short and cued its hook turn", lead and _boss._charge.get("state", "") == _boss.CHARGE_HOOK,
+	var hooked: bool = lead and _boss._charge.get("state", "") == _boss.CHARGE_HOOK
+	_report("the lead charge stopped short and cued its hook turn", hooked,
 		"lead committed %s, charge state %s" % [lead, _boss._charge.get("state", "")])
-	if _boss._charge.get("state", "") != _boss.CHARGE_HOOK:
-		return
-	var r: Dictionary = await _watch(SPOTS[0], true)
-	_judge("a ball %s through the hook turn's cue is not flung" % SPOTS[0]["name"], r, 0.0)
-	_report("the hook turn's tell is the short one", r["committed"] and is_equal_approx(r["warn"], FightPhases.CUED_WARN),
-		"cued tell %.2f s (CUED_WARN %.2f)" % [r["warn"], FightPhases.CUED_WARN])
+	return hooked
 
 
 # The shortest lead tell a dial can ask is Hazard.MIN_WARN. A full reverse does not fit in it

@@ -1165,6 +1165,9 @@ func _step_fight_hint() -> void:
 	var boss = game.get("boss")
 	if boss == null or not boss.has_method("take_hint") or game.flow == null or not game.flow.in_play():
 		return
+	# A toast replaces the one showing, and taking the hint starts its gap: ask only when the row is free.
+	if not _toast.is_empty() or not _held_toast.is_empty():
+		return
 	var kind := String(boss.take_hint())
 	var row: Dictionary = EventKinds.UI_ROWS.get(kind, {})
 	if row.is_empty():

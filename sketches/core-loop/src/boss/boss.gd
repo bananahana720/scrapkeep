@@ -856,7 +856,7 @@ func _aim_at(ball: Vector3) -> Vector3:
 
 # Swings the bow toward `heading` in place, by at most `rate` radians a second. The hull
 # never takes a heading in one tick: it is a 14 m kinematic box, and a ball leaning on its
-# flank took a one-tick turn as a 300 to 500 m/s kick (or, amidships, was swallowed by the
+# flank takes a one-tick turn as a 300 to 500 m/s kick (or, amidships, is swallowed by the
 # hull and held inside it).
 func _turn_ship(heading: Vector3, rate: float, delta: float) -> void:
 	var owed := Vector2(ship.heading.x, ship.heading.z).angle_to(Vector2(heading.x, heading.z))
@@ -899,7 +899,7 @@ func _commit_charge(ball: Vector3, cued := false) -> void:
 	h.commit_lane("charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
 		Requisition.HULL.y + 0.5, warn, length / Rules.CHARGE_SPEED + 0.2)
 	_add_hazard(h)
-	# No turn here: _brace_turn swings the hull onto this heading through the tell.
+	# The hull keeps its heading at the commit: _brace_turn owns the turn onto this one.
 	ship.cue("charge_warn", h.get_instance_id())
 	_charge = {"state": CHARGE_BRACE, "hazard": h, "from": from, "heading": heading, "length": length,
 		"into_wall": into_wall, "travelled": 0.0, "cued": cued}
@@ -999,23 +999,29 @@ func _note_missed_charge() -> void:
 		_short_tries += 1
 
 
-# A hit on the closed hull that its plating turned.
+# A hit on the closed hull that its plating turned. Like a missed charge, it is a short try
+# only while the ball's best punch of the phase is under the plating: a heavy build's stray
+# light hit is not one.
 func _note_glance(target, part: String, result: Dictionary) -> void:
 	if state != FIGHT or phase != 3 or target.role != "hull" or part.begins_with("cap_") or stunned() or _posture.staggered:
 		return
-	if float(result.get("punch", 0.0)) < float(result.get("plating", Rules.HULL_PLATING)):
+	var punch := float(result.get("punch", 0.0))
+	_scuttle_punch = maxf(_scuttle_punch, punch)
+	if punch < float(result.get("plating", Rules.HULL_PLATING)) and _scuttle_punch < Rules.HULL_PLATING:
 		_short_tries += 1
 
 
 # The hint the fight asks the HUD for right now, "" for none; taking it starts its gap (the
-# HUD polls this and shows the UI row as a toast). In the Scuttle a build whose punch is
-# short of the plating has one way in: a stun, and for a light build that is a charge baited
-# into the rim wall. Nothing on screen said so, and such a build stalled. The hint is owed
-# once a try has come up short (a hit the plating turned, or a charge that ran out with the
-# ball's punch never near the plating), repeats every SCUTTLE_HINT_GAP seconds, and stops
-# for the fight at the first stun, which is the lesson learned.
+# HUD polls this when its toast row is free and shows the UI row there). In the Scuttle a
+# build whose punch is short of the plating has one way in: a stun, and for a light build
+# that is a charge baited into the rim wall. The hint is owed once a try has come up short
+# (a hit the plating turned, or a charge that ran out), repeats every SCUTTLE_HINT_GAP
+# seconds, and stops for the fight at the first stun, which is the lesson learned, or once
+# the ball's punch has met the plating.
 func take_hint() -> String:
 	if state != FIGHT or phase != 3 or stuns > 0 or _short_tries <= 0 or clock < _hint_next:
+		return ""
+	if _scuttle_punch >= Rules.HULL_PLATING:
 		return ""
 	if _in_transition() or _held() or _posture.staggered:
 		return ""

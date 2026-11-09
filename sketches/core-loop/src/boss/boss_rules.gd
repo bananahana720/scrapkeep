@@ -106,9 +106,12 @@ const CHARGE_GRACE := 1.0
 const CHARGE_STOP_R := 49.0
 # The hull turns to its lane through the tell instead of taking the heading in one tick. At
 # this rate (radians a second) no corner of the 9 m by 14 m hull outruns CHARGE_SPEED: a corner
-# is 8.32 m from the centre. It turns faster only when it must to be square in the lane
-# CHARGE_TURN_SETTLE seconds before the lane goes live; under CHARGE_TURN_SNAP radians owed it
-# takes the heading exactly.
+# is 8.32 m from the centre. The rate is the rule, not a ceiling: the hull turns faster when
+# it must to be square in the lane CHARGE_TURN_SETTLE seconds before the lane goes live. The
+# most that asks is a full reverse inside the shortest tell: 3.7 rad/s (a 31 m/s corner) in
+# Hazard.MIN_WARN, and 7.0 rad/s (a 58 m/s corner) in the hook turn's cued tell, which only a
+# ball that stays dead astern through the hook's cue reaches. Under CHARGE_TURN_SNAP radians
+# owed the hull takes the heading exactly.
 const CHARGE_TURN_RATE := 2.88
 const CHARGE_TURN_SETTLE := 0.15
 const CHARGE_TURN_SNAP := 0.002
