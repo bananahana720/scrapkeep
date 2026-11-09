@@ -420,7 +420,8 @@ func calm() -> bool:
 	var st = ctx.player.state
 	if not st.grounded and absf(st.velocity.y) > float(row["fall_speed"]):
 		return false
-	var at: Vector3 = ctx.player.shown_position()
+	# The tick's place: this is a rule that stops the world, read against threats at the tick.
+	var at: Vector3 = ctx.player.ball_position()
 	for node in get_tree().get_nodes_in_group("threat"):
 		if not node.has_method("threat_at") and not node is Node3D:
 			continue

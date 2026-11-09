@@ -2409,7 +2409,8 @@ func _book_park_drop(event_id: String, cue: Dictionary) -> void:
 		PRIORITY_DB[Rows.priority("event_started")], event_id)
 
 
-# Check the director's exact guards before a block can render the predicted impact.
+# Check the director's exact guards before a block can render the predicted impact: the same
+# guards on the same ball, so the tick's place and the tick's velocity, never the drawn place.
 # Holding starts at the deadline; checking clearance during the lead protects the ring.
 func _guard_park_bookings() -> void:
 	var director = _park_director()
@@ -2435,7 +2436,7 @@ func _guard_park_bookings() -> void:
 			continue
 		var safe: bool = not state.holding and director.stage_time >= director._park_quiet_until \
 			and director._park_capacity(state) and director._park_route_safe(state) \
-			and director._park_clear(state, ctx.player.shown_position(), ctx.player.state.velocity, state.context)
+			and director._park_clear(state, ctx.player.ball_position(), ctx.player.state.velocity, state.context)
 		if not safe:
 			engine.cancel_park_drop(event_id)
 			cue.booked = false

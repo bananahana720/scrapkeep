@@ -39,6 +39,22 @@ test("L8 flags a tick-rate ball read in drawing code and passes the drawn read, 
   assert.deepEqual(lintL8("x/combat.gd", "src/combat/combat.gd", "var at = player.ball_position()\n", {}), []);
 });
 
+test("L8 counts every mention as a read, however the call is spelled, and passes a has_method guard", () => {
+  const spelled = [
+    "var at = player.ball_position ()\n",
+    "var at = player.ball_position( )\n",
+    'var at = player.call("ball_position")\n',
+    'var ask := Callable(player, "ball_position")\n',
+    "var at = player.ball_position.call()\n",
+    "var at = ball_position()\n",
+    "var at = player \\\n\t.ball_position()\n",
+  ];
+  for (const text of spelled) assert.equal(lintL8("x/vfx.gd", "src/presentation/vfx.gd", text, {}).length, 1, text);
+  const twice = lintL8("x/vfx.gd", "src/presentation/vfx.gd", "var d = a.ball_position().distance_to(b.ball_position())\n", {});
+  assert.deepEqual(twice.map((item) => item.line), [1, 1]);
+  assert.deepEqual(lintL8("x/vfx.gd", "src/presentation/vfx.gd", 'if target.has_method("ball_position"):\n\tpass\n', {}), []);
+});
+
 test("L8 passes a listed sim read, and flags a drifted count and a stale entry", () => {
   const allowed = { "src/presentation/hero_assets.gd": { sites: 1, why: "sight target" } };
   const lens = "var dir = target.ball_position() - origin\n";

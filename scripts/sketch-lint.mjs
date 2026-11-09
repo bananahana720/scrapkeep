@@ -191,19 +191,25 @@ export function lintL6Owners(counts, relative, owners = LIGHT_OWNERS) {
 // the ball's place is PlayerBall.shown_position(), where the ball is drawn this frame. ball_position()
 // moves once per tick, so anything placed from it in a drawn frame steps against the ball. At a tick
 // the two are the same place, so shown_position() is also right in a handler the sim calls.
-// SIM_READS lists the reads that mean the tick: the file, how many, and why. A count that drifts is
-// a finding, and so is an entry with no read left.
+// SIM_READS lists the reads that are not a picture of the ball: the file, how many, and why. Three
+// are rules that decide or mirror what the sim does, so they read the tick's place; one asks a
+// Sight, not the ball. A count that drifts is a finding, and so is an entry with no read left.
+// Every mention of the name counts as a read (a call, a spaced or split call, a call by name);
+// only a has_method("ball_position") guard does not.
 export const SIM_READS = {
-  "src/presentation/hero_assets.gd": { sites: 1, why: "the Warden's lens tracks its sight target, which is the last seen place while the ball is cloaked" },
+  "src/presentation/audio.gd": { sites: 1, why: "the landing-sound guard repeats the director's own clearance check, so it asks about the same ball the director does" },
+  "src/presentation/hero_assets.gd": { sites: 1, why: "the Warden's lens asks its Sight, which answers with the last seen place while the ball is cloaked and has no drawn place" },
+  "src/presentation/reward_ceremony.gd": { sites: 1, why: "calm() decides whether a ceremony may stop the world: a rule read against threats and enemies at the tick" },
   "src/ui/workshop.gd": { sites: 1, why: "pulling up to Moss opens the counter: a rule about where the ball is, not a picture of it" },
 };
 
-const tickRead = /\.ball_position\(\)/;
+const tickGuard = /has_method\(\s*["']ball_position["']\s*\)/g;
+const tickRead = /\bball_position\b/g;
 
 // L8: rel is the path inside the sketch, file the repo path for the finding.
 export function lintL8(file, rel, text, allowed = SIM_READS) {
   if (!/^src\/(?:presentation|ui)\//.test(rel)) return [];
-  const reads = codeLines(text).filter((line) => tickRead.test(line.raw));
+  const reads = codeLines(text).flatMap((line) => (line.raw.replace(tickGuard, "").match(tickRead) ?? []).map(() => line));
   const listed = allowed[rel]?.sites ?? 0;
   if (reads.length === listed) return [];
   if (reads.length === 0) return [finding("L8", file, 1, "SIM_READS lists a file with no ball_position() read: remove the entry")];
