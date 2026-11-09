@@ -11,6 +11,7 @@ const Rules := preload("res://tools/park_graph.gd")
 const Trade := preload("res://src/world/trade_pockets.gd")
 const Modifier := preload("res://src/world/events/stage_modifier.gd")
 const RogueDirector := preload("res://src/world/rogue_director.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 class MeasuredGraph extends "res://src/world/park/park_graph.gd":
 	var footprint_scans := {}
 	func box_nodes(lo: Vector2, hi: Vector2) -> PackedInt32Array:
@@ -189,6 +190,16 @@ func _audit(graph, map, specs: Array, trade: Dictionary, from_line: PackedFloat3
 			for site in RogueDirector.read_sites(map.park.map).get("miniboss_sites", []):
 				var rogue := Vector2(site.at[0], site.at[1])
 				t.check("world 1 pocket outside the rogue site's disc", Vector2(clampf(rogue.x, box.position.x, box.end.x), clampf(rogue.y, box.position.y, box.end.y)).distance_to(rogue) > float(site.radius_m))
+			# Read from the secrets' own rows, not the draw's list of them.
+			var hidden := []
+			for find in Secrets.FINDS.values():
+				hidden.append_array(find.spots.filter(func(_spot): return find.map == map.park.map))
+			for row in Secrets.ROOMS.values() + [Secrets.DOOR]:
+				if row.map == map.park.map:
+					hidden.append(row)
+			for row in hidden:
+				var secret := Vector2(row.at[0], row.at[1])
+				t.check("world 1 pocket clear of a secret's spot", Vector2(clampf(secret.x, box.position.x, box.end.x), clampf(secret.y, box.position.y, box.end.y)).distance_to(secret) > Rules.RING_M, "%s at %s, secret at %s" % [entry.id, spec.at, secret])
 		var pay: Dictionary = Rules._pay(spec.pay)
 		var allowed: Array = Rules.PAY_FAR if spec == sorted.back() else Rules.PAY_NEAR
 		t.check("drawn set pay ladder", not pay.rarities.is_empty() and pay.rarities.all(func(r): return r in allowed))
@@ -338,8 +349,10 @@ func _owned_rewards(acts, model) -> void:
 				t.eq("restored built pay preserves owner " + key, built.rule.pay.get(key), owner[key])
 		if entry.activity == "enemy_camp":
 			t.eq("built drawn camp pays the common roll", acts.pay_table(built), {"named": "", "rarities": ["common"]})
-			t.eq("a drawn camp rolls apart from the stage's authored camp", acts._luck_id(built), "enemy_camp:" + String(entry.id))
+		t.eq("a drawn pocket rolls apart from the stage's authored site of its kind", acts._luck_id(built), "%s:%s" % [entry.activity, entry.id])
 		built.free()
+	# A save from before the dam drew holds an empty stage 1 draw; a later stage's empty draw is kept.
+	t.eq("an old save's empty dam draw is dropped on load", model.from_doc({"1": {"sites": []}, "2": {"sites": []}}), {"2": {"sites": []}})
 
 func _turned(at: Vector2, turn: int) -> Vector2:
 	return [at, Vector2(-at.y, at.x), -at, Vector2(at.y, -at.x)][turn]

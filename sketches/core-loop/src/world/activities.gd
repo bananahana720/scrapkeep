@@ -2032,8 +2032,8 @@ func _pay_scrap(s: Site, at: Vector3) -> void:
 		ctx.run.add_cogs(amount)
 
 
-# A field find, a first-win room or the timed door rolls on its own stream, so it never pays the part the stage's
-# ordinary cracked cache pays; every other site keeps its id, and so its rolls.
+# A field find, a first-win room, the timed door or a drawn pocket rolls on its own stream, so it never pays the
+# part the stage's ordinary site of its kind pays; every other site keeps its id, and so its rolls.
 func _luck_id(s: Site) -> String:
 	if s.has_meta("find"):
 		return "%s:%s" % [s.id, s.get_meta("find")]
@@ -2041,8 +2041,9 @@ func _luck_id(s: Site) -> String:
 		return "%s:%s" % [s.id, s.get_meta("room")]
 	if s.has_meta("door"):
 		return "%s:timed_door" % s.id
-	# A drawn camp rolls apart from the stage's authored camp, or one stage's two camps paid the same part.
-	if s.drawn and s.id == "enemy_camp":
+	# A drawn pocket rolls apart from the stage's authored site of its kind, or the two paid the same part:
+	# a drawn vault and the stage's own cache did on 23 of 40 dam runs and 24 of 40 flume runs (2026-11-09).
+	if s.drawn:
 		return "%s:%s" % [s.id, s.interior.id]
 	return s.id
 

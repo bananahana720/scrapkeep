@@ -7,6 +7,7 @@ const Trade := preload("res://src/world/trade_pockets.gd")
 const Placement := preload("res://src/world/park/park_placement.gd")
 const Modifier := preload("res://src/world/events/stage_modifier.gd")
 const RogueDirector := preload("res://src/world/rogue_director.gd")
+const Secrets := preload("res://src/core/secrets.gd")
 const CREDITS := 150
 const CHANCE := 0.25
 # World 1's parks hold a drawn pocket to rules the door rules do not carry: level ground, and clear
@@ -96,12 +97,15 @@ static func prepare(graph, map) -> Dictionary:
 	var hazard_in: PackedFloat32Array = graph.search(hazards, true, Placement.RING_M)
 	var doors := Trade.doors(map)
 	var tidy: bool = String(map.park.map) in TIDY
-	# Clear of a rescue cage by the door ring, and outside every rogue site's disc: without these the
-	# dam's spot at (72, -584) stood 16 m from Rivet's cage and (144, 64) reached into the mid rogue site.
+	# Clear of a rescue cage and of every secret's spot by the door ring, and outside every rogue site's
+	# disc: without these the dam's spot at (72, -584) stood 16 m from Rivet's cage, (144, 64) reached
+	# into the mid rogue site and a pocket at (-248, 192) covered the west rim bench's cracked face.
 	var keep_out := []
 	if tidy:
 		for row in map.park.get("rescue_rows", []):
 			keep_out.append({"at": Vector2(row.at[0], row.at[1]), "radius": Placement.RING_M})
+		for at in secret_spots(String(map.park.map)):
+			keep_out.append({"at": at, "radius": Placement.RING_M})
 		for site in RogueDirector.read_sites(String(map.park.map)).get("miniboss_sites", []):
 			keep_out.append({"at": Vector2(site.at[0], site.at[1]), "radius": float(site.radius_m)})
 	for n in range(Graph.SIDE * Graph.SIDE):
@@ -148,6 +152,19 @@ static func prepare(graph, map) -> Dictionary:
 			out.anchors.append({"node": n, "at": at})
 			out.fits[n] = sizes
 	out.anchors.sort_custom(func(a, b): return out.from_line[a.node] < out.from_line[b.node])
+	return out
+
+# Every spot a secret can stand on in this park, whether or not this run or profile opens it: the
+# field finds' spots, the first-win room and the timed door.
+static func secret_spots(map_id: String) -> Array:
+	var out := []
+	for find in Secrets.FINDS.values():
+		if find.map == map_id:
+			for spot in find.spots:
+				out.append(Vector2(spot.at[0], spot.at[1]))
+	for row in Secrets.ROOMS.values() + [Secrets.DOOR]:
+		if row.map == map_id:
+			out.append(Vector2(row.at[0], row.at[1]))
 	return out
 
 static func _box_distance(box: Rect2, at: Vector2) -> float:
@@ -311,6 +328,10 @@ static func from_doc(doc: Dictionary) -> Dictionary:
 	for entry in Library.rows():
 		library[entry.id] = entry
 	for key in doc:
+		# A save from before the dam drew (2026-11-09, ruling bu) holds an empty stage 1 draw. It is dropped,
+		# so a Continue on the dam draws the pocket its stage modifier acts on.
+		if key == "1" and doc[key].sites.is_empty():
+			continue
 		var sites := []
 		for saved in doc[key].sites:
 			var entry: Dictionary = library[saved.interior]

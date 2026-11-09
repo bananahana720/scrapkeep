@@ -58,7 +58,7 @@ Dawn, `dawn_still`; the monsoon builds from tier 2 (`1-park_dam.md:184-186`). Ti
 - **You:** You pass within 12 m of the camp. Its ring starts only inside 8 m, so you choose the fight at speed (`1-park_dam.md:110`).
 - **You see:** Three chasers on the dome; past them the shelf drops away to the lip.
 - **Pull:** The lip, and the three run mouths behind it.
-- **Pressure:** `enemy_camp`, three chasers, named pay `hot_rivets` (`1-park_dam.md:376`).
+- **Pressure:** `enemy_camp`, three chasers, named pay `hot_rivets` (`1-park_dam.md:376`). Since 2026-11-09 (ruling bu) the camp pays a common part rolled from the pool, with no named part (PARK.md 2.12).
 - **Seconds:** waymark at 22 s for every line (`1-park_dam.md:196-202`).
 - **Music:** Calm layer; a fight lifts layers through `escalate` (`1-park_dam.md:225` names this for the runs; applying it here is inference).
 - **Panel:** NEW `j1-p01`, shared with beat 4. 1536x1024. Camera 3 m above slickrock domes 30 m north of a small camp, looking south at dawn, low sun on the left. Foreground: three small chaser crews idle on a pale dome. About 130 m on: a slickrock lip curling up into a kicker. Beyond it, three run mouths cut 25 m into pink plateau: a pale concrete-lined wash on the right, a dark meandering slot ahead, a tighter corkscrew slot on the left. On the skyline, centred, the dam crest as a pale bar with two gate towers and a thin green beam. References: park-dam vista-1.png for palette and the dam, vista-2.png for the rock. No text, no pilot ball, green ancient light only, copper never brass.
@@ -221,7 +221,7 @@ Morning, `morning_clear`; the dust squall from tier 2 (`2-park_flume.md:182-184`
 - **You:** You drop through the siphon, `ride_drop` (`2-park_flume.md:318`). Every middle way ends here (`2-park_flume.md:287-291`).
 - **You see:** The siphon's plate: "Inverted siphon: the water goes down, under, and up again. So will you." (`2-park_flume.md:243`); the camp's lobbers on its lip.
 - **Pull:** Three last ways in, each visible from the lip. The concrete wasteway opening on the far side (beat 9). Overhead, the flume's last reach running on to enter the head house's north wall (`2-park_flume.md:307`, `407`); Tarn claws up onto it here (`2-park_flume.md:211`). On the left, the squall lane's visible wind lane on the bluff rim, about 165 m south-east at [120, 260] (`2-park_flume.md:178`, `350`), the way onto the bluff (beat 10).
-- **Pressure:** `enemy_camp`, three lobbers, named pay `loose_trigger` (`2-park_flume.md:112`, `359`).
+- **Pressure:** `enemy_camp`, three lobbers, named pay `loose_trigger` (`2-park_flume.md:112`, `359`). Since 2026-11-09 (ruling bu) the camp pays a common part rolled from the pool, with no named part (PARK.md 2.12).
 - **Seconds:** waymark at about 60 to 75 s (segments 1 and 2, `2-park_flume.md:194-199`).
 - **Music:** A low-pass dip under the hollow, open on the far side (`2-park_flume.md:228`).
 - **Panel:** NEW `j2-p03`. 1536x1024. Camera at the lip of an inverted canal siphon in morning light, looking down-slope: a dam-era concrete mouth where a canal dives under, its far outlet visible 40 m on, rising out into a wide concrete wasteway chute. Three lobber crews stand on the near lip beside stencilled gauge plates. Overhead, timber trestles stride across the hollow behind. On the skyline ahead, the round head house on its bluff with the green-beamed tower beside it. References: park-flume vista-2.png for the trestles, vista-3.png for the head house. No text, no pilot ball, green ancient light only, copper never brass.

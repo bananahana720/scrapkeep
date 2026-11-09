@@ -105,6 +105,13 @@ func _stands_well(game, map, site, at: Vector2, s: int) -> void:
 		t.check("seed %d: %s stands clear of the rescue cage" % [s, site.interior.id], PocketDraw._box_distance(box, Vector2(row.at[0], row.at[1])) > Placement.RING_M)
 	for rogue in RogueDirector.read_sites(String(map.park.map)).get("miniboss_sites", []):
 		t.check("seed %d: %s stands outside rogue site %s" % [s, site.interior.id, rogue.id], PocketDraw._box_distance(box, Vector2(rogue.at[0], rogue.at[1])) > float(rogue.radius_m))
+	for secret in PocketDraw.secret_spots(String(map.park.map)):
+		t.check("seed %d: %s stands clear of the secret spot at %s" % [s, site.interior.id, secret], PocketDraw._box_distance(box, secret) > Placement.RING_M)
+	# The pocket's part is its own roll: a drawn vault paid what the dam's own cache paid on 23 of 40 runs.
+	var acts = game.world.activities
+	for other in acts.sites:
+		if other != site and other.id == site.id:
+			t.check("seed %d: %s rolls apart from the dam's other %s" % [s, site.interior.id, other.id], acts._luck_id(other) != acts._luck_id(site), acts._luck_id(site))
 
 
 # The stage's authored camp: no named part, a common roll, and a different part on different runs.

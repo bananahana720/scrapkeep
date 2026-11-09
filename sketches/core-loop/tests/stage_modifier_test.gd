@@ -39,7 +39,7 @@ const BallState := preload("res://src/movement/ball_state.gd")
 # drawn camps' pay: with the old pay ({named hot_rivets, common and rare}) put back on each drawn camp, the four
 # hashes were the pins they replace (6b2244ea..., e6afadaa..., d89a37e5..., 01459ce0...), so no site moved.
 const GOLDEN := {
-	1: "2ecbf3774aeb4fb573d89213cc92ec80a8829389227d7be9fcfdeebbedb16ef5",
+	1: "3f9897144c5611195011b596083ab0f197023035d6263eff4c15955bc6e410ba",
 	2: "36c277f74ea206f8fbfb5cd25b9cb10019670baa3ec52fcdf58770a23e1cd615",
 	3: "c428c12b727ad17b698969d3b045e2ed705edca615250ce2f81641cf6ce61439",
 	4: "de3a6b7c0ea318c71f155a2b4492568c7872402d1462e0a090d193abbf133a2c",
