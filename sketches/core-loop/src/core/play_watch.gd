@@ -40,6 +40,7 @@ var _objective := ""
 var _blank := 0.0
 var _blank_told := false
 var _blinked := -10
+var _was_in_play := false
 
 
 # sink takes each row (a Dictionary) as it is found.
@@ -77,14 +78,18 @@ func step(delta: float) -> void:
 		_objective = ""
 		return
 	var state: String = _game.flow.state_name()
-	if ball.distance_to(_last) > TELEPORT_M:
+	# Only a jump between two ticks of play: the game placing the ball as a run starts (from the
+	# title's spot, off the stage's ground) is not something a player falls through.
+	var in_play: bool = _game.flow.in_play()
+	if in_play and _was_in_play and ball.distance_to(_last) > TELEPORT_M:
 		var terrain = _game.ctx.terrain
 		# A blink and a boss's scripted carry move the ball on purpose; only the fall rescue's
 		# move (from under the floor or off the map) counts.
 		if _ticks - _blinked > 2 and (not terrain.contains(_last) or _last.y < terrain.floor_height(_last.x, _last.z) - 2.0):
 			_emit("fell", _last, state, {"to": _v(ball)})
 	_last = ball
-	var playing: bool = _game.flow.in_play() and not player.frozen() and not player.kit.hooked
+	_was_in_play = in_play
+	var playing: bool = in_play and not player.frozen() and not player.kit.hooked
 	if not playing:
 		_anchor = ball
 		_anchor_s = 0.0

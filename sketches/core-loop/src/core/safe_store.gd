@@ -27,6 +27,20 @@ static func write_atomic(path: String, text: String) -> Error:
 	return err
 
 
+# Adds one line to a log, making the file if it is missing. A log is the one store that is
+# not replaced whole: each line is closed onto disk as it is written, so a crash keeps every
+# line before it (the sitting notes, src/core/sitting_notes.gd).
+static func append_line(path: String, line: String) -> Error:
+	var file := FileAccess.open(path, FileAccess.READ_WRITE if FileAccess.file_exists(path) else FileAccess.WRITE)
+	if file == null:
+		return FileAccess.get_open_error()
+	file.seek_end()
+	var stored := file.store_line(line)
+	var err := file.get_error()
+	file.close()
+	return err if err != OK else (OK if stored else FAILED)
+
+
 # The parsed value when the text is JSON of the wanted type (TYPE_DICTIONARY or
 # TYPE_ARRAY), else null. A dictionary is also checked against `shape` (key -> SHAPE_*):
 # a listed key that is present with the wrong type makes the whole file unreadable, so a

@@ -15,9 +15,10 @@ extends Node
 #              here". Carries the place, the objective plate's words and the frame rate.
 #   end        the watch's counts and the marks, as the game closes
 # Cost: one clock read a frame, the watch's reads a physics tick, the plate read once a second.
-# It only reads the game, and rows are flushed as they are written, so a crash keeps them.
+# It only reads the game, and each row is closed onto disk as it is written, so a crash keeps them.
 
 const PlayWatch := preload("res://src/core/play_watch.gd")
+const SafeStore := preload("res://src/core/safe_store.gd")
 
 const FLAG := "--sitting-notes"
 const HITCH_FLAG := "--sitting-notes-hitch="
@@ -36,7 +37,7 @@ var path := ""
 var marks := 0
 var hitches := 0
 
-var _file: FileAccess
+var _open := false
 var _watch
 var _start_usec := 0
 var _last_usec := -1
@@ -59,21 +60,20 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(dir)
 	var started := Time.get_datetime_string_from_system(true)
 	path = dir.path_join("notes-%s.ndjson" % started.replace("-", "").replace(":", ""))
-	_file = FileAccess.open(path, FileAccess.WRITE)
-	if _file == null:
-		push_error("sitting notes: cannot write %s" % path)
-		set_process(false)
-		set_physics_process(false)
-		set_process_input(false)
-		return
 	_start_usec = Time.get_ticks_usec()
-	_watch = PlayWatch.new()
-	_watch.watch(game, _note)
+	_open = true
 	var window := get_window()
 	_note({"kind": "start", "exe": OS.get_executable_path().get_file(), "engine": Engine.get_version_info().get("string", ""),
 		"window": [window.size.x, window.size.y], "refresh_hz": snappedf(DisplayServer.screen_get_refresh_rate(window.current_screen), 0.1),
 		"physics_hz": Engine.physics_ticks_per_second, "interpolation": get_tree().physics_interpolation,
 		"hitch_ms": hitch_ms, "mark_key": OS.get_keycode_string(MARK_KEY)})
+	if not _open:
+		set_process(false)
+		set_physics_process(false)
+		set_process_input(false)
+		return
+	_watch = PlayWatch.new()
+	_watch.watch(game, _note)
 	print("SCRAPKEEP_SITTING_NOTES %s" % ProjectSettings.globalize_path(path))
 
 
@@ -160,18 +160,20 @@ func _where() -> Dictionary:
 
 # Every row goes through here: the watch's rows keep their own fields and gain the two clocks.
 func _note(row: Dictionary) -> void:
-	if _file == null:
+	if not _open:
 		return
 	var out := {"t": snappedf((Time.get_ticks_usec() - _start_usec) / 1000000.0, 0.01), "utc": Time.get_datetime_string_from_system(true)}
 	out.merge(row, true)
-	_file.store_line(JSON.stringify(out))
-	_file.flush()
+	var err := SafeStore.append_line(path, JSON.stringify(out))
+	if err != OK:
+		# One failed line ends the notes: a sitting must not fill the console with the same error.
+		_open = false
+		push_error("sitting notes: cannot write %s (%s)" % [path, error_string(err)])
 
 
 func _exit_tree() -> void:
-	if _file == null:
+	if not _open:
 		return
 	_close_burst()
 	_note({"kind": "end", "marks": marks, "hitches": hitches, "watch": _watch.counts, "plates": _watch.plates, "blank_max_s": snappedf(_watch.blank_max, 0.1)})
-	_file.close()
-	_file = null
+	_open = false

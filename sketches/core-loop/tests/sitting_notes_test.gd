@@ -9,6 +9,7 @@ const T := preload("res://tests/support/t.gd")
 # Here a test_mode game carries the notes node by hand (the launch flag is for a launched game):
 #   - a game made without the flag has no notes node;
 #   - the file opens with a start row;
+#   - the ball's move from the title to the run's start is not written as a fall;
 #   - a ball held in one place in play for STUCK_S is written as a stuck row, with its place;
 #   - frames at or over the hitch limit close into one row a burst; shorter frames write nothing;
 #   - F8 writes a mark with the place, and both stick clicks together write one mark, not two;
@@ -20,6 +21,8 @@ const SABLE := 0
 # The test map's slopes never let a free ball rest, so the test pins it where it is after
 # PIN_AFTER ticks; the stuck row is waited for, up to STUCK_WAIT_TICKS.
 const PIN_AFTER := 90
+const TITLE_TICKS := 30
+const OFF_MAP := Vector3(0.0, 60.0, 90000.0)
 const STUCK_WAIT_TICKS := 20 * 90
 
 var _t := T.new("sitting_notes_test")
@@ -74,11 +77,20 @@ func _physics_process(_delta: float) -> bool:
 			var start: Array = _of("start")
 			_t.check("the file opens with a start row", start.size() == 1 and _rows()[0]["kind"] == "start" and start[0]["mark_key"] == "F8" and float(start[0]["hitch_ms"]) == SittingNotes.HITCH_MS,
 				"%s: %s" % [_notes.path.get_file(), start])
+			_step = 1
+		1:
+			# The notes watch from the title, as in a launched game, so the run's start is seen.
+			# The launched game's title holds the ball off the stage's ground; the old maps here do not, so the test does.
+			_ticks += 1
+			_game.player.body().global_position = OFF_MAP
+			if _ticks < TITLE_TICKS:
+				return false
+			_ticks = 0
 			_game.ctx.calm = true
 			_game.flow.press_start()
 			_game.flow.choose_class(SABLE)
-			_step = 1
-		1:
+			_step = 2
+		2:
 			_ticks += 1
 			if _ticks >= PIN_AFTER:
 				var body: RigidBody3D = _game.player.body()
@@ -93,6 +105,7 @@ func _physics_process(_delta: float) -> bool:
 			var hitches_before: int = _notes.hitches
 			_t.check("a ball held in one place in play is written as stuck", stuck.size() == 1 and int(stuck[0]["stage"]) == 1 and stuck[0]["at"].size() == 3 and float(stuck[0]["s"]) >= PlayWatch.STUCK_S,
 				"%d rows%s" % [stuck.size(), "" if stuck.is_empty() else ": stage %s at %s after %s s, flow %s" % [stuck[0]["stage"], stuck[0]["at"], stuck[0]["s"], stuck[0]["flow"]]])
+			_t.check("the move from the title to the run's start is not a fall", int(_notes._watch.counts.get("fell", 0)) == 0, "%d fell rows" % _of("fell").size())
 			_hitches()
 			_marks()
 			var rows := _rows()
