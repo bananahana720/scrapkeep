@@ -66,6 +66,8 @@ If you are scrapped, a death ends the run as RUN OVER: there is no free stage re
 | F4         | launched with --dev only: save every tuning value to user://tuning-<time>.json                                                                                                                                                                                                                |
 | Esc        | outside play: quit                                                                                                                                                                                                                                                                            |
 
+In play the game pauses itself: the pause menu opens when the window loses focus or the pad in use disconnects, and it stays open until you resume.
+
 On the screens outside play, every choice is also a button: click it, or press the key on its cap.
 
 | Keys                             | Does                                                                                                                   |
