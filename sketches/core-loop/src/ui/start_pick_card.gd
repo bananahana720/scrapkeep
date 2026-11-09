@@ -252,9 +252,11 @@ func _label(words: String, y: float) -> void:
 
 # centred is for a card that offers no tier beside it (the briefing on a profile with no rung, or a held tier).
 func _reroll(y: float, centred := false) -> void:
-	var x := size.x * 0.5 - 80.0 if centred and _briefing else size.x * 0.5 + 100.0
-	# The V key is a drawn cap beside the button (_draw), as the tiles' keys are.
-	reroll_button = _button(Vector2(x, y + 60.0), Vector2(160.0, 38.0), "Reroll", func(): reroll_requested.emit())
+	# The V key is a drawn cap left of the button (_draw), as the tiles' keys are; beside the tier
+	# buttons the button is narrower, so the cap and Next rung both clear it.
+	var alone := centred and _briefing
+	var x := size.x * 0.5 - 80.0 if alone else size.x * 0.5 + 122.0
+	reroll_button = _button(Vector2(x, y + 60.0), Vector2(160.0 if alone else 138.0, 38.0), "Reroll", func(): reroll_requested.emit())
 	reroll_button.disabled = _rerolls <= 0
 
 
