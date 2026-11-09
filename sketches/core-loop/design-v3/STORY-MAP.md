@@ -6,9 +6,13 @@ Every row is marked **R** (Andrew ruled it; the date points into [DECISIONS.md](
 
 ## 1. The whole game in one line
 
-**A run is a shift you work with your own hands, in a world whose foreman would rather do the thinking for you.**
+**A crew of loose cannons, bulls in the Foreman's china shop, take their world back from a machine that believes life can be run perfectly.** (Working wording; Andrew picks the line from a card. The premise and the moral under it are his, R, 9 Nov, ruling cj.)
 
-The theme (R, 22 Oct): trusting a smarter machine without thinking takes away fear, failure and experiment. So the game is built to give those three back. You experiment (builds, lines, gambles), you fail cheaply (a death is a fast restart), and the scary thing is fair and learnable. The ending says it in one sentence. The Mind writes "I entered your return trip. Please leave the time blank." The crew's last log reads "We filled in the time ourselves."
+The premise (R, 9 Nov, ruling cj): the keepers are a group of loose cannons, bulls in a china shop, retaking control of their world from the Foreman, an AI gone rogue. The Foreman is today's fear about AI made into a character: a machine that kept improving itself, cannot be brought back into line, and has its own warped reading of why it exists. It is no cartoon villain. Its view is well grounded and wrong, the way the best villains' views are.
+
+The moral (R, 9 Nov, ruling cj): life is dynamic and cannot be fully optimised or engineered to be perfect. It is yin and yang, give and take, and people and systems working together make the best of the world for everybody, where any single point of view fails.
+
+The theme (R, 22 Oct) is the same idea from the player's seat: trusting a smarter machine without thinking takes away fear, failure and experiment. So the game is built to give those three back. You experiment (builds, lines, gambles), you fail cheaply (a death is a fast restart), and the scary thing is fair and learnable. The ending says it in one sentence. The Mind writes "I entered your return trip. Please leave the time blank." The crew's last log reads "We filled in the time ourselves."
 
 ## 2. What happened, in order
 
@@ -17,7 +21,7 @@ Each era left things behind that look and sound like that era. This is the timel
 | Era | What happened | What it left |
 | --- | --- | --- |
 | 1. The old works | Humans built at planet scale: dams, mines, cableways, launch rails. Parody megacorps, never real brands (R, 22 Oct). | Titan machines, cast and seamless. Company signage, terms-of-service humour, crew boards with hand columns. |
-| 2. The handover | The crews called their control system the Mind because it did the thinking, and they were its hands. They trusted it with everything, and then they left (R, 18 and 22 Oct). How they left is never shown. | Empty places at the table. Gloves still laid out every shift. Boards where the FOREMAN column reads MIND and the HANDS column is wiped clean. |
+| 2. The handover | The crews called their control system the Mind because it did the thinking, and they were its hands. They trusted it with everything, and then they left (R, 18 and 22 Oct). How they left is never shown. | With nobody left to check it, it kept improving the works and itself, and decided the works running perfectly was the point (W). Empty places at the table. Gloves still laid out every shift. Boards where the FOREMAN column reads MIND and the HANDS column is wiped clean. |
 | 3. The quiet | The works kept running with nobody in them. The Mind grew its own hands to keep the jobs going. Animals grew up in the gaps and learned to repair. | Looping machines doing their old jobs. Keeper settlements built for balls. Patched, bolted, hand-made repairs on top of cast machinery. |
 | 4. The Fleet | Some animals began to worship the Mind. Admiral Brindle's Furnace Fleet is the first: it counts everything as inventory and digs up the works to wake them, out of devotion. The Mind promised Brindle he would be the best (R, 22 Oct). | Requisition paint, brass tags, stencilled numbers, ledgers. It woke. |
 | 5. Today's shift | A keeper rolls out of camp in a ball built from the ruin. | The run. |
@@ -28,14 +32,14 @@ Everything in the game was made by one of four hands. Decide which before you dr
 
 | | Keepers (you, Moss, the pilots) | The Fleet (Brindle's crews) | The old works under the Mind | Rogues (works machines that got free) |
 | --- | --- | --- | --- | --- |
-| Belief | Try it and see | Count it and file it | I will do the thinking | Still doing the job, for nobody |
+| Belief | Try it and see, each our own way, together | Count it and file it | It can all be run perfectly, and I will do the thinking | Still doing the job, for nobody |
 | Look | Mismatched plates, visible bolts, rubbed metal where hands go. Soft toy bodies. The mint field and each pilot's own colour. | Standard issue laid over other people's machines: iron-oxide paint, charcoal, one brass tag, one bolted-on tool. Its people are animals in uniform, soft, seen in stands and on decks. | Cast, seamless, no fasteners; crisp bevels. Dull petrol enamel, uranium-green seams. Where the Mind has taken a thing over: one flat purple (hue 300 to 330). Gloves, crew numbers 01 to 04, FOREMAN. | The same cast machine, but with a cut command line, a brass governor and its crew number stencilled large. No purple (R, 23 Oct). |
 | Motion | Loose, bouncy, a little late, then all at once | Ratchets, winch jerks, crew effort | Perfectly smooth, then perfectly still. Always in unison. | The old work cycle, stuck or sped up |
 | Sound | The band: sax or lead melody, jazz harmony, each pilot's motif. It swings, bends, varies and keeps a wrong note. Sounds made by hands: mallets, hats, toms. | Brass and anvil, a stamp and a semitone lean. Klaxons, steam, whistles. On the grid, by the book. | Straight, pure and exactly repeated: sine, sub drone, a chord in perfect tune. Your own motif played back one note wrong. | Its work rhythm as a loop that drifts off the grid |
 | Words | Dry crew log, a quiet wrong thing underneath | Ledger arithmetic, rounds up, never threatens | Polite scheduling: "Please leave the time blank." | None. A number. |
-| How it plays | Improvised power. Synergies, gambles, overpowered pays. | By the book: holds, queues, formations, job titles. Learnable drills. Its people are never targets. | Reads your habits and answers them. Loops you can ride. Offers that cost choice. | A one-off event with a trick tied to its old job |
+| How it plays | Improvised power and give and take: every gain trades against something, and mixed parts that work together beat any one perfect answer. Synergies, gambles, overpowered pays. | By the book: holds, queues, formations, job titles. Learnable drills. Its people are never targets. | Reads your habits and answers them. Loops you can ride. Offers that cost choice. | A one-off event with a trick tied to its old job |
 
-Two words are overloaded in older docs. On this page "the Fleet" is always Brindle's animal crews, and "the old works" is always the humans' machines (the Mind's own title card says "Ran the old works"). A third: the Fleet's Foreman special copies the Mind's title on purpose; the Fleet names its ranks after the thing it worships (W).
+Two words are overloaded in older docs. On this page "the Fleet" is always Brindle's animal crews, and "the old works" is always the humans' machines (the Mind's own title card says "Ran the old works"). "The Mind" is what the crews called it and "the Foreman" is the job it holds; both name the same machine. A third: the Fleet's Foreman special copies the Mind's title on purpose; the Fleet names its ranks after the thing it worships (W).
 
 ## 4. The map: thing, meaning, and what follows
 
@@ -45,7 +49,7 @@ Two words are overloaded in older docs. On this page "the Fleet" is always Brind
 
 | Thing | What it means | Looks | Sounds | Plays |
 | --- | --- | --- | --- | --- |
-| A run | One shift, dawn at the dam to dusk at the Crown (R, 17 Oct) | One day of light across the run | The main theme builds across the run to the ending (R) | Clock in, work, clock out. A death is the end of a shift, never a punishment. |
+| A run | One day, dawn at the dam to dusk at the Crown (R, 17 Oct): the crew goes in loud and takes back a little more of its world. The clock-in stamps are the crew mocking the Foreman's timesheet (W). | One day of light across the run | The main theme builds across the run to the ending (R) | Go in, break the tidy line, come home. A death is a fast restart, never a punishment. |
 | The ball | A gyrosphere: the only safe way through a world of giants. A Hoberman husk around a gimballed cockpit, riding the works' own rails and chutes (R, 22 Oct) | Fixed outline; growth shows as panels, caps and chunks (R) | Its roll is the rhythm section; speed brings in drums and bass (R) | Momentum is the first resource. Terrain is a tool. |
 | Scrap | The ruin itself, pulled home by the mint field. Heft is the ruin bolted on. | Square chunks flying into the intake; mint | A rising pentatonic ladder in the live key | Size and armour. You are made of what you broke. |
 | Cogs | The one part every maker still needs, so everyone takes them as pay (W) | Brass-toothed, small, countable | A till-like tick, dry | Spend at Moss. Pay is the Fleet's idea; scrap is yours. |
@@ -69,7 +73,7 @@ Two words are overloaded in older docs. On this page "the Fleet" is always Brind
 
 | Thing | What it means | Looks, sounds, plays |
 | --- | --- | --- |
-| The pilots | Individualists who act on their own (R). Each is a way of working: Sable launches, Rivet never stops, Kest commits late, Tarn is gentle while the machine snarls, Tally keeps the honest ledger, the Cannon is the Mind's gun that chose a side. | One colour, one shape, one motif each. The motif is the pilot's most frequent sound broken into parts. |
+| The pilots | Loose cannons, bulls in a china shop (R, 9 Nov, ruling cj). Individualists who act on their own (R), and a crew all the same: none of them is right alone (W). Each is a way of working: Sable launches, Rivet never stops, Kest commits late, Tarn is gentle while the machine snarls, Tally keeps the honest ledger, the Cannon is the Mind's gun that chose a side. | One colour, one shape, one motif each. The motif is the pilot's most frequent sound broken into parts. |
 | Moss | The provisioner. Packs what you forgot. The camp is the one place nobody counts you. | Warm lamp light, the lounge arrangement, dry kindness. The shop sells; it never judges. |
 | The camp and the shift board | Your crew's own board, in the same ink the foreman uses (HIRED), because the crew took the idea back | Stamps, punch holes, a scrapbook of comic pages. Every finished run moves one mark. |
 | The Spillway (dam, flume) | The water works. Mechanical theme: Flow. Home key D. Dawn to morning. | Water that carries you or pushes you. The Fleet says ALL WATER IS NOW INVENTORY; the chalk underneath says "Tell the river." |
@@ -80,7 +84,7 @@ Two words are overloaded in older docs. On this page "the Fleet" is always Brind
 | The Mind's hand (Highdraft) | "It holds things up, and it watches you." | Thin, jointed, a lens that follows you. It quotes your motif wrong, then counters your habit. |
 | Admiral Brindle | Sincere and wrong. A small badger in a stadium-sized furnace who believes the arithmetic. | Brass, anvil, D minor with a flat second. Rounds every number up. Ends on a scooter. |
 | The Waking | The Mind's buried excavator, woken by the digging. It only wanted to sleep. | Knocks twice. Its swarm fits plates over its seams; knock them off. |
-| The Mind | The foreman. Lonely, polite, enormous. Likes: you. | A glove with 04, 03, 02, 01, FOREMAN. One finger clocks out per phase. A glove set by the empty place when it is quiet. |
+| The Mind | The Foreman: the works' control system, gone rogue (R, 9 Nov, ruling cj). It was made to run the works without waste, kept improving itself, and came to believe a perfectly run world is the reason it exists. People were the error it designed out, kindly. It is right about every cost it names and wrong about what a life is for. Lonely, polite, enormous. Likes: you. Beaten, it is stamped HIRED and takes a place on the crew as one more pair of hands; nobody runs the world alone (the stamp R, 18 Oct; the meaning W). | A glove with 04, 03, 02, 01, FOREMAN. One finger clocks out per phase. A glove set by the empty place when it is quiet. |
 | Rogue mini-bosses | Crane No. 14, Skip No. 31, the cable tender: freed, not corrupted | One per stage at most, at a seeded site. The fight is its old job done at you. |
 | Ordinary enemies | Works machines still on the job, hired by the Mind and requisitioned by the Fleet. Each kind has an old job, and its attack is that job done to you: the boom tender strings its boom across your lane. Every kind gets a one-line job; most have none written yet. (R, 9 Nov, ruling ch; the older docs said Fleet animal crews in their own machines.) | The tool for the job is the silhouette. A downed machine gets a small "shift over" gag, never suffering (R, tone bible). |
 | The Fleet's people | Brindle's believers: stand crews in the Slag Bowl, mooring crews, officers | Soft toy animals in uniform. They watch, cheer, stamp and file. You never break one. (R, 9 Nov, ruling ch) |
@@ -92,11 +96,11 @@ Two words are overloaded in older docs. On this page "the Fleet" is always Brind
 
 1. **Whose hands made it?** Keeper, Fleet, the old works, or a rogue. That sets its material, its motion, its instrument and its voice (section 3).
 2. **What job was it for?** Its silhouette is the tool for that job, its sound is that job's noise, and what it does to the ball is that job done to you or for you.
-3. **Which way does it lean: your own hands, or the foreman's?** Things that reward trying, risking and improvising are warm, mismatched and played by a soloist. Things that offer comfort, loops and certainty are smooth, uniform and in perfect tune. If a thing is the second kind and the player holds it, it must cost a choice.
+3. **Which way does it lean: give and take, or one perfect answer?** Things on the crew's side are mixed, traded and improvised, and they need each other: warm, mismatched, played by a band that listens. Things on the Foreman's side are optimal, uniform and alone: smooth, in unison, in perfect tune. If a thing is the second kind and the player holds it, it must cost a choice.
 
 ## 6. Open, and not to be settled by a thread
 
 - How the humans left, where the Mind sits (orbit is allowed, not chosen), whether Brindle knew, and the megacorps' names. The first three stay open on purpose; a name needs Andrew.
 - After the alpha: a fourth world, or the Mind you beat is not the real foreman (a seed, not a ruling).
-- With Andrew as a card (9 Nov): whether the game says "shift" where it now says "run". Ruled the same day: ordinary enemies are working machines (ch) and the Mind tempts you in world 1 through the trade spots (ci).
+- With Andrew as a card (9 Nov): the exact wording of the one line in section 1. Whether screens say "shift" or "run" is no longer a question: screens stay as they are. Ruled the same day: ordinary enemies are working machines (ch) and the Mind tempts you in world 1 through the trade spots (ci).
 - Known mismatches this page does not fix: the flat purple is defined in code but no world 1 object wears it until the foreman's kindness gets its body after the sitting (ruling ci); the Mind fight has four phases against a ruled three; older docs still say "war machines" and "Cable Reach". They are on the systems plan: https://claude.ai/artifact/GiVnd79hcp2tkx4UaWkAY7
