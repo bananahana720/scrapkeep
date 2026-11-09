@@ -22,6 +22,8 @@ const Worlds := preload("res://src/core/worlds.gd")
 const EndingSequence := preload("res://src/ui/ending_sequence.gd")
 const PrologueRows := preload("res://src/core/prologue_rows.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
+const DeathTips := preload("res://src/core/death_tips.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # The screens outside play: title (with its how-to-play page on H), class select,
 # death, victory and summary. Each is one glance and one key, and every choice is also
@@ -67,6 +69,21 @@ const PROLOGUE_TITLE := "FIRST SHIFT"
 const COMIC_PAGE_PATH := "res://src/ui/comic_page.gd"
 const COMIC_HEIGHT := 0.5
 const COMIC_MAX_HEIGHT := 540.0
+# RUN OVER's "next shift" note (core/death_tips.gd): an amber-edged plate taped up beside the comic page,
+# where the column has room; under the body it pushed the actions off a 900 px screen. Its words wrap at
+# TIP_WIDTH.
+const TIP_FONT := 20
+const TIP_HEAD_FONT := 16
+const TIP_WIDTH := 300.0
+const TIP_GAP := 28
+const TIP_SERIAL := 33
+# The summary's input latch (game.summary_latched) shuts every key while an input held at its opening is
+# still down. The cue names that input once the latch has held LATCH_CUE_AFTER seconds, or at once when a
+# press is turned away, and goes with the release. It is laid over the actions row, which it dims to
+# LATCH_DIM while it shows: the row takes nothing then, the column has no spare line, and laying it over
+# moves nothing.
+const LATCH_CUE_AFTER := 0.5
+const LATCH_DIM := 0.12
 const PRIMARY_FONT := 26
 const PRIMARY_HEIGHT := 60.0
 
@@ -80,6 +97,12 @@ var _title: Label
 # A beaten boss row's "stamp" (Worlds.BOSSES), inked under the victory title: the Mind's HIRED.
 var _mark: Label
 var _body: Label
+# The summary's "next shift" note, in the comic row; null when the screen has none.
+var _tip: Control
+var _tip_said := ""
+var _latch_cue
+var _latch_held := 0.0
+var _latch_glyph := ""
 var _stats: HBoxContainer
 var _choices: HBoxContainer
 var _comic_row: HBoxContainer
@@ -148,7 +171,7 @@ func setup(game_ref) -> void:
 	_content.add_child(_body)
 	_stats = _row(30)
 	_content.add_child(_stats)
-	_comic_row = _row(0)
+	_comic_row = _row(TIP_GAP)
 	_content.add_child(_comic_row)
 	_choices = _row(CARD_GAP)
 	_content.add_child(_choices)
@@ -232,6 +255,9 @@ func setup(game_ref) -> void:
 	_ending_body.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_ending.add_child(_ending_body)
 	_content.add_child(_ending)
+	_latch_cue = CreditsHint.new()
+	_latch_cue.visible = false
+	add_child(_latch_cue)
 	game.events.flow_changed.connect(_on_flow_changed)
 	game.events.run_started.connect(func(_class_id): _victory_boss = {})
 	if game.run_moments != null:
@@ -277,6 +303,9 @@ func _on_flow_changed(state: String) -> void:
 	_footer.visible = false
 	_breath_row.visible = false
 	_refusal.text = ""
+	_tip = null
+	_tip_said = ""
+	_latch_held = 0.0
 	_title.visible = true
 	_mark.visible = false
 	_unstamp()
@@ -372,6 +401,9 @@ func _on_flow_changed(state: String) -> void:
 			if board != "":
 				body += "\n" + board
 			_show("RUN COMPLETE" if game.flow.run_won else "RUN OVER", EventKinds.color("run_ended"), body)
+			# What to try next shift (core/death_tips.gd): only a lost run has one.
+			if not game.flow.run_won and game.flow.death_tip != "":
+				_show_tip(game.flow.death_tip)
 			_summary_stats()
 			_action("again", "key_n", "Run again")
 			_action("class", "key_space", "Choose pilot")
@@ -1259,11 +1291,45 @@ func _show_comic_page(page: Dictionary) -> void:
 	comic.custom_minimum_size = Vector2(height * 0.75, height)
 	comic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_comic_row.add_child(comic)
+	_comic_row.move_child(comic, 0)
 	comic.show_page(page)
 
 
 func comic_page() -> Control:
-	return _comic_row.get_child(0) if _comic_row.get_child_count() > 0 else null
+	for child in _comic_row.get_children():
+		if child != _tip:
+			return child
+	return null
+
+
+# The "next shift" note: its head in amber, the tip's words wrapped under it. It stands right of the
+# comic page once that arrives, and alone in the row until then.
+func _show_tip(tip: String) -> void:
+	var plate := ScrapFrame.plate(Color(Palette.AMBER, 0.7), TIP_SERIAL, Color(Palette.CHARCOAL, 0.94), 2.0, 0.5)
+	plate.content_margin_left = 16.0
+	plate.content_margin_right = 16.0
+	plate.content_margin_top = 16.0
+	plate.content_margin_bottom = 14.0
+	_tip = PanelContainer.new()
+	_tip.add_theme_stylebox_override("panel", plate)
+	_tip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tip.add_child(column)
+	var head := _label(TIP_HEAD_FONT)
+	head.text = DeathTips.HEAD.to_upper()
+	head.add_theme_color_override("font_color", Palette.AMBER)
+	column.add_child(head)
+	var words := _label(TIP_FONT)
+	words.text = tip
+	words.add_theme_color_override("font_color", Palette.SAND)
+	words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	words.custom_minimum_size.x = TIP_WIDTH
+	column.add_child(words)
+	_tip_said = DeathTips.shown(tip)
+	_comic_row.add_child(_tip)
 
 
 # What the run did to the shift board (progress.gd board_line). A lost run's summary is built before
@@ -1407,6 +1473,7 @@ func _process(delta: float) -> void:
 				ending_sequence.skip()
 			else:
 				_close_ending()
+	_step_latch_cue(delta)
 	_update_enabled()
 
 
@@ -1420,6 +1487,46 @@ func _update_enabled() -> void:
 		for child in row.get_children():
 			(child as BaseButton).disabled = not live
 	_refusal.visible = _state == "title" and _actions.visible and _refusal.text != ""
+
+
+# The latch cue's clock and words. A press the latch turned away (game._screen_key) shows it at once.
+func _step_latch_cue(delta: float) -> void:
+	var latched: bool = _state == "summary" and game.summary_latched and not ending_open()
+	_latch_held = _latch_held + delta if latched else 0.0
+	var glyph: String = game.held_glyph() if latched and _latch_held >= LATCH_CUE_AFTER else ""
+	if glyph != _latch_glyph:
+		_latch_glyph = glyph
+		_latch_cue.setup(latch_cue_parts(glyph))
+	_latch_cue.visible = glyph != ""
+	_actions.modulate.a = LATCH_DIM if _latch_cue.visible else 1.0
+	if _latch_cue.visible:
+		var cue_size: Vector2 = _latch_cue.custom_minimum_size
+		_latch_cue.size = cue_size
+		_latch_cue.position = _actions.global_position + (_actions.size - cue_size) * 0.5
+
+
+func latch_pressed() -> void:
+	_latch_held = maxf(_latch_held, LATCH_CUE_AFTER)
+
+
+# The cue's words for a held input's cap id: "Let go of [W] to continue", or without the cap when the
+# input has none to draw.
+static func latch_cue_parts(glyph: String) -> Array:
+	if glyph == "":
+		return []
+	if not (glyph.begins_with("key_") or glyph.begins_with("pad_")):
+		return [{"say": "Let go to continue"}]
+	return [{"say": "Let go of"}, {"cap": glyph, "say": Keycap.label(glyph)}, {"say": "to continue"}]
+
+
+# What the latch cue says now, "" while it is down.
+func latch_cue_text() -> String:
+	return _latch_cue.text() if _latch_cue.visible else ""
+
+
+# The note as it reads, "Next shift: ..."; "" when the screen has none.
+func tip_text() -> String:
+	return _tip_said if is_instance_valid(_tip) and _tip.visible else ""
 
 
 func button_for(action: String) -> Button:
@@ -1489,6 +1596,8 @@ func body_text() -> String:
 	var lines := PackedStringArray()
 	if _body.text != "":
 		lines.append(_body.text)
+		if tip_text() != "":
+			lines.append(tip_text())
 		lines.append("")
 	for card in _choices.get_children():
 		lines.append("%s   %s" % [Keycap.label(card.key), card.words().to_lower()])

@@ -21,6 +21,14 @@ const FOV_FAST := 80.0
 const FALL_SPEED := -8.0
 const BIAS_LIMIT := 0.21
 const PROFILE_EASE := 5.0
+# A glance (glance_at): its default length, the flatter pitch it settles on so a tall subject
+# fits, and the look input that ends it (mouse pixels moved since it began, stick deflection).
+const GLANCE_SECONDS := 0.9
+const GLANCE_PITCH := -0.16
+const GLANCE_BREAK_PX := 6.0
+const GLANCE_BREAK_STICK := 0.25
+# A subject inside this share of the lens's half-width is in the picture and needs no glance.
+const GLANCE_IN_VIEW := 0.7
 # Situation rows. arm 0.0 means no opinion; pitch_bias tilts the arm without touching the
 # player's pitch; shake_cap is the most total shake allowed while the row is active.
 const PROFILES := {
@@ -68,6 +76,11 @@ var _locked := false
 var _boss_reach := false
 var _pitch_bias := 0.0
 var _fov_add := 0.0
+var _glance_subject: Node3D
+var _glance_seconds := 0.0
+var _glance_age := 0.0
+var _glance_from := Vector2.ZERO
+var _glance_drift := 0.0
 
 
 func setup(target_ref, tuning_ref) -> void:
@@ -111,6 +124,11 @@ func apply_look_settings(store) -> void:
 
 
 func look(relative: Vector2) -> void:
+	if _glance_subject != null:
+		# A bumped mouse is not a look: the glance gives way once the hand has moved this far.
+		_glance_drift += relative.length()
+		if _glance_drift > GLANCE_BREAK_PX:
+			_glance_subject = null
 	yaw -= relative.x * mouse_sensitivity
 	pitch = clampf(pitch - relative.y * mouse_sensitivity, -1.25, 0.55)
 
@@ -121,6 +139,8 @@ func look(relative: Vector2) -> void:
 # the crosshair is on a hookable surface or enemy (the harpoon's aim record): the turn then
 # slows by aim_assist * AIM_ASSIST_SLOW. Mouse look is never slowed.
 func look_stick(stick: Vector2, delta: float, on_target := false) -> void:
+	if stick.length() > GLANCE_BREAK_STICK:
+		_glance_subject = null
 	var shaped := Vector2(pow(stick.x, 3.0), pow(stick.y, 3.0))
 	if on_target:
 		shaped *= 1.0 - assist_friction()
@@ -148,6 +168,54 @@ func snap(heading: Vector3, pitch_value := -0.30) -> void:
 	global_position = target.shown_position() + Vector3.UP * 0.8
 	_previous_velocity = target.state.velocity
 	_kick = Vector3.ZERO
+	_glance_subject = null
+
+
+# A glance: the view turns to a subject over `seconds` and stays there (a boss's entrance, where
+# the bowl entry aims the camera down the track and the ship lands off to one side). It eases the
+# player's own yaw and pitch, so the aim and the drive frame turn with the picture. The player's
+# look always wins: a mouse move or a stick push ends it where it is, and a subject already in
+# the picture starts none. Comfort settings that still the camera (reduced motion, motion scale
+# 0) refuse it.
+func glance_at(subject: Node3D, seconds := GLANCE_SECONDS) -> void:
+	if subject == null or seconds <= 0.0 or _comfort_scale() <= 0.0 or in_view(subject.global_position):
+		return
+	_glance_subject = subject
+	_glance_seconds = seconds
+	_glance_age = 0.0
+	_glance_drift = 0.0
+	_glance_from = Vector2(yaw, pitch)
+
+
+func glancing() -> bool:
+	return _glance_subject != null
+
+
+# Whether a point's bearing is inside the middle GLANCE_IN_VIEW of the lens's width, whatever its
+# height: on a wide monitor more of the bowl is already in the picture.
+func in_view(point: Vector3) -> bool:
+	var to := point - global_position
+	var forward := -yaw_basis().z
+	var view := get_viewport().get_visible_rect().size
+	var half := atan(tan(deg_to_rad(cam.fov) * 0.5) * view.x / maxf(view.y, 1.0))
+	return absf(Vector2(forward.x, forward.z).angle_to(Vector2(to.x, to.z))) < half * GLANCE_IN_VIEW
+
+
+func _step_glance(delta: float) -> void:
+	if _glance_subject == null:
+		return
+	if not is_instance_valid(_glance_subject) or not _glance_subject.is_inside_tree():
+		_glance_subject = null
+		return
+	_glance_age += delta
+	var f := smoothstep(0.0, 1.0, _glance_age / _glance_seconds)
+	var to := _glance_subject.global_position - global_position
+	# A subject overhead or underfoot has no bearing worth turning to.
+	if Vector2(to.x, to.z).length_squared() > 1.0:
+		yaw = lerp_angle(_glance_from.x, atan2(-to.x, -to.z), f)
+	pitch = lerpf(_glance_from.y, GLANCE_PITCH, f)
+	if _glance_age >= _glance_seconds:
+		_glance_subject = null
 
 
 # A harpoon lock point, or null to release. A lock changes the arm, pitch bias and lens
@@ -210,6 +278,7 @@ func shake(amount: float, time := 0.4) -> void:
 func _process(delta: float) -> void:
 	if target == null:
 		return
+	_step_glance(delta)
 	var velocity: Vector3 = target.state.velocity
 	var fraction := SpeedTier.fraction(velocity.length(), tuning.f("cruise"))
 	shoulder_blend = move_toward(shoulder_blend, clampf(shoulder_target, 0.0, 1.0), SHOULDER_RATE * delta)

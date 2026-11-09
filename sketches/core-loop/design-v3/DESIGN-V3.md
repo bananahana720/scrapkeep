@@ -83,7 +83,7 @@ The payout is damage, never Scrap.
 One player chain state feeds the counter, collar rings, sound, log and discovery.
 The counter appears from combo two, beside the ability bar.
 The collar gains one ring per link up to six.
-Bite pitch rises one semitone per link beyond the first and returns to the root on smash.
+Bite pitch rises one rung of the pentatonic per link beyond the first and returns to the root on smash.
 An ending chain sounds only if it reached combo two.
 The run log records chains, best combo and misses, including arena play.
 The first combo of three opens the Chain codex discovery.
