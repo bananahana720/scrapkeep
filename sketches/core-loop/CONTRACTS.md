@@ -250,6 +250,7 @@ Instance methods the spine and other modules may call:
 - `entry_heading(stage) -> Vector3` (flat, unit length)
 - `beacon_point(stage) -> Vector3` (on the ground; the Warden spawns here on every map)
 - `scrap_lines(stage) -> Array` (each entry is `[Vector2 from, Vector2 to]` on the ground plane)
+- `scrap_trail(stage) -> Dictionary` (`{points, spacing_m, phrase, rest, gaps}`: the line scrap is laid along to the beat, with no gears or hoops; empty for a stage with none)
 - `contains(point) -> bool`
 - `rescue_point(near) -> Vector3`
 - `material_at(point: Vector3) -> Dictionary`, which returns `{"material": "water" | "concrete" | "sand", "surface_y": float}` or `{}` where unknown. The Dictionary is the settled shape, because ice needs the surface height. D implements it. Until it does, build falls back to `build.register_material("water", provider)`.
