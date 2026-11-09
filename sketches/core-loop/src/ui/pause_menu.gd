@@ -57,13 +57,14 @@ const NOTES_KEYS := [KEY_Q, KEY_E, KEY_TAB]
 # Quit is X held QUIT_HOLD seconds, with a ring filling round its keycap like the retry hold
 # (design-v3/SKILL-BAR.md section 5). Q is the ultimate now, the most-pressed key in a fight,
 # and muscle memory pressing it on an open menu must never end a run. A click on the row, or
-# Enter on it focused, still quits at once.
+# Enter on it focused, asks first (ARM_WORDS); while it asks, a tap of X is the second press.
 const QUIT_KEY := KEY_X
 const QUIT_HOLD := 0.6
 # Restart run and Quit end the run in hand, so a press of either row (its key, a click, Enter or a pad's A)
 # only arms it: the row asks in ARM_WORDS, worded in the hazard colour, and the same press again inside
 # ARM_SECONDS does it. Any other row, a focus move, the menu closing or the time running out disarms it.
-# ARM_GUARD keeps a double click from being both presses. The X hold is already a confirm and asks nothing.
+# ARM_GUARD keeps a double click from being both presses. The X hold is already a confirm and asks nothing;
+# a tap of X answers a Quit row that is already asking.
 # Hades' Give Up and Slay the Spire's Abandon Run both ask before the pause menu ends a run; N is also
 # "New run" on the death and summary screens, so a tap from habit must not cost a live one.
 const ARM_WORDS := {"restart": "Scrap this run? Press again", "quit": "Quit to desktop? Press again"}
@@ -478,6 +479,11 @@ func _quit_key(event: InputEvent) -> bool:
 		return false
 	if event.echo:
 		return true
+	# The asking row says "press again" beside this keycap, so a tap of X answers it.
+	if event.pressed and _armed == "quit":
+		press("quit")
+		if _armed == "":
+			return true
 	_quit_down = event.pressed
 	if not event.pressed:
 		_quit_held = 0.0

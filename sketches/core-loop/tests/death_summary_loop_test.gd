@@ -9,23 +9,25 @@ const Screens := preload("res://src/ui/screens.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The death and summary loop (9 Nov pre-sitting pass, world 1 design findings).
-#   (a) the "next shift" line (core/death_tips.gd): the rule order (a short Warden build, the
-#       attack's row, the source's row, the threat type, a drawn-first body, nothing), every row's
-#       form, and world 1's damage sources all answered.
-#   (b) the game's path, a run store on so a death opens the summary: a Warden fight the build is
-#       short for shows the gap on the tag with the fight's numbers; a grown build in the same
-#       fight shows the Warden's own row; a new run clears it.
+#   (a) the "next shift" line (core/death_tips.gd): the rule order (a build that met the fight
+#       short, the attack's row, the source's row, the threat type, a drawn-first body, nothing),
+#       every row's form, and world 1's damage sources all answered.
+#   (b) the game's path, a run store on so a death opens the summary: a Warden fight the build
+#       arrived short for shows the gap on the note with the arrival's numbers, even when the
+#       ball grew before it died; a build that arrived grown and was stripped by the fight
+#       (scrap is armour) shows the Warden's own row; a short build entering the boss arena reads
+#       the gap against the hull; a new run clears it.
 #   (c) the latch cue: Space held through a death shuts the summary; the cue stays down for
 #       LATCH_CUE_AFTER, then names Space; a press the latch turns away shows it at once; it goes
 #       with the release and the screen takes keys.
 #   (d) the pause menu asks before Restart run and Quit: N arms the row and restarts nothing, N
 #       again inside ARM_GUARD is ignored, N after it restarts; the ask lapses after ARM_SECONDS
 #       and when the focus leaves; Quit asks on Enter and quits on the second; the X hold quits
-#       with no ask.
+#       with no ask, and a tap of X answers a Quit row that is asking.
 
 const DIR := "user://death_summary_loop_test/"
 const PATH := DIR + "run.json"
-const WORLD_ONE := [["chaser", ""], ["lobber", ""], ["miniboss", "E03"], ["miniboss", "E04"], ["plated_brute", "E09"],
+const WORLD_ONE := [["chaser", ""], ["lobber", ""], ["miniboss", "E03"], ["miniboss", "E04"],
 	["plated_brute", ""], ["dispatcher", ""], ["boom_tender", ""], ["rogue_crane", "E34"], ["rogue_crane", "E35"],
 	["warden", ""], ["warden_counter", ""], ["silt_boil", ""], ["brindle_charge", ""], ["brindle_slag", ""]]
 
@@ -71,14 +73,17 @@ func _rules() -> void:
 	_t.eq("a body whose row is not every hit is still drawn first", DeathTips.line("line_cutter"), DeathTips.DRAWN)
 	_t.eq("a hazard with no row says nothing", DeathTips.line("cinder_floor"), "")
 	_t.eq("no source, no line", DeathTips.line(""), "")
-	var short := {"punch": 37.0, "plating": 110.0}
+	var short := {"who": "the Warden", "punch": 37.0, "plating": 110.0}
 	_t.eq("a short build in a Warden fight reads the gap, whatever landed", DeathTips.line("chaser", "", short),
-		"Punch 37 against plating 110. Roll more scrap before the Warden: heft is punch.")
+		"Punch 37 met the Warden's plating 110. Roll more scrap first: heft is punch.")
+	_t.eq("the gap names the boss it met", DeathTips.line("brindle_slag", "", {"who": "Admiral Brindle", "punch": 60.0, "plating": 110.0}),
+		"Punch 60 met Admiral Brindle's plating 110. Roll more scrap first: heft is punch.")
+	_t.eq("the brute reads its own row, slam or hurl", DeathTips.line("plated_brute"), DeathTips.ROWS["plated_brute"])
 	_t.eq("a build at the ratio reads the killing hit", DeathTips.line("warden", "", {"punch": 77.0, "plating": 110.0}), DeathTips.ROWS["warden"])
 	_t.check("no plating is no gap", not DeathTips.short_build({"punch": 0.0, "plating": 0.0}) and not DeathTips.short_build({}))
 	_t.eq("the note as one line", DeathTips.shown(DeathTips.ROWS["E01"]), "Next shift: Ram a chaser while it crouches to lunge. The lunge never comes.")
 	_t.eq("nothing to say shows nothing", DeathTips.shown(""), "")
-	var lines: Array = DeathTips.ROWS.values() + DeathTips.BY_THREAT.values() + [DeathTips.DRAWN, DeathTips.GAP % [999, 999]]
+	var lines: Array = DeathTips.ROWS.values() + DeathTips.BY_THREAT.values() + [DeathTips.DRAWN, DeathTips.GAP % [999, "Admiral Brindle", 999]]
 	var bad := PackedStringArray()
 	for said in lines:
 		if said.length() > DeathTips.MAX_CHARS or not said.ends_with(".") or said.contains("!") or said.contains("\n"):
@@ -86,7 +91,7 @@ func _rules() -> void:
 	_t.check("every line fits one row, ends on a stop and never shouts", bad.is_empty(), " | ".join(bad))
 	var keyless := PackedStringArray()
 	for key in DeathTips.ROWS:
-		if not EventKinds.has_attack(key) and not (key in ["warden", "warden_counter", "silt_boil"]):
+		if not EventKinds.has_attack(key) and not (key in ["warden", "warden_counter", "silt_boil", "plated_brute"]):
 			keyless.append(key)
 	_t.check("every row keys an attack row or a named source", keyless.is_empty(), ", ".join(keyless))
 	var silent := PackedStringArray()
@@ -102,8 +107,9 @@ func _start_run() -> void:
 	await _frames(5)
 
 
-# Dies to the Warden with the fight engaged at this heft; returns the plating that stood.
-func _die_to_warden(heft: float) -> float:
+# Dies to the Warden having met the fight at `heft`, and at `dying` heft when the hit lands (the
+# same when not given); returns the plating that stood.
+func _die_to_warden(heft: float, dying := -1.0) -> float:
 	if _game.flow.state_name() == "summary":
 		_game.flow.new_run()
 	else:
@@ -112,6 +118,8 @@ func _die_to_warden(heft: float) -> float:
 	_game.combat.heft_override = heft
 	_game.flow._engage()
 	var plating: float = _game.flow.warden_plating()
+	if dying >= 0.0:
+		_game.combat.heft_override = dying
 	_game.run.damage(9999.0, "warden")
 	await _frames(3)
 	return plating
@@ -121,7 +129,7 @@ func _tag_on_summary() -> void:
 	var plating: float = await _die_to_warden(0.05)
 	var screens = _game.screens
 	_t.eq("the run is over", _game.flow.state_name(), "summary")
-	_t.check("a short build reads the gap", _game.flow.death_tip.begins_with("Punch ") and _game.flow.death_tip.contains("against plating %d." % int(plating)),
+	_t.check("a short build reads the gap", _game.flow.death_tip.begins_with("Punch ") and _game.flow.death_tip.contains("met the Warden's plating %d." % int(plating)),
 		_game.flow.death_tip)
 	_t.eq("the note says it", screens.tip_text(), "Next shift: " + _game.flow.death_tip)
 	var body: PackedStringArray = screens.body_text().split("\n")
@@ -140,10 +148,47 @@ func _tag_on_summary() -> void:
 		"%.0f px" % screens._comic_row.get_combined_minimum_size().x)
 	await _die_to_warden(400.0)
 	_t.eq("a grown build in the same fight reads the Warden's row", _game.flow.death_tip, DeathTips.ROWS["warden"])
+	await _die_to_warden(400.0, 0.05)
+	_t.eq("a grown build the fight stripped still reads the Warden's row", _game.flow.death_tip, DeathTips.ROWS["warden"])
+	await _die_to_warden(0.05, 400.0)
+	_t.check("a build that met the fight short reads the gap, whatever it weighed at the end", _game.flow.death_tip.begins_with("Punch "), _game.flow.death_tip)
+	await _stripped_by_the_fight()
+	await _die_to_the_boss()
 	_game.flow.new_run()
 	await _frames(3)
 	_t.check("a new run clears the tip and the tag", _game.flow.death_tip == "" and screens.tip_text() == "",
 		"tip '%s', tag '%s'" % [_game.flow.death_tip, screens.tip_text()])
+	_game.combat.heft_override = -1.0
+
+
+# The real armour path, no override: a ball heavy with scrap meets the Warden, one hit strips the
+# scrap and takes the hull, and the tip still reads the build that arrived.
+func _stripped_by_the_fight() -> void:
+	_game.flow.new_run()
+	await _frames(5)
+	_game.combat.heft_override = -1.0
+	_game.run.mass = 20000.0
+	_game.flow._engage()
+	var met: float = _game.flow._arrival["punch"]
+	_game.run.damage(99999.0, "warden")
+	await _frames(3)
+	_t.check("armour stripped by the killing hit does not read as a short build", _game.run.mass < 1.0 and _game.flow.death_tip == DeathTips.ROWS["warden"],
+		"met at punch %.0f, mass at death %.0f, tip '%s'" % [met, _game.run.mass, _game.flow.death_tip])
+
+
+# A short build enters the boss arena and dies there: the gap names the boss and its hull plating.
+func _die_to_the_boss() -> void:
+	_game.flow.new_run()
+	await _frames(5)
+	_game.combat.heft_override = 0.05
+	_game.flow.enter_boss(Vector3.ZERO)
+	await _frames(3)
+	var hull: float = _game.flow._arrival.get("plating", 0.0)
+	_game.combat.heft_override = 400.0
+	_game.run.damage(99999.0, "brindle_slag")
+	await _frames(3)
+	_t.check("a short build at the boss reads the gap against the hull", hull > 0.0
+			and _game.flow.death_tip.contains("met Admiral Brindle's plating %d." % int(hull)), "hull %.0f, tip '%s'" % [hull, _game.flow.death_tip])
 	_game.combat.heft_override = -1.0
 
 
@@ -237,6 +282,15 @@ func _pause_asks() -> void:
 	menu.step_quit(menu.QUIT_HOLD + 0.01)
 	_key(KEY_X, false)
 	_t.check("the X hold quits with no ask", _quits == 2 and menu.armed() == "", "quits %d, armed '%s'" % [_quits, menu.armed()])
+	menu.press("quit")
+	_key(KEY_X)
+	_key(KEY_X, false)
+	_t.check("a tap of X inside the guard is not the second press", _quits == 2 and menu.armed() == "quit", "quits %d, armed '%s'" % [_quits, menu.armed()])
+	menu.step_arm(menu.ARM_GUARD)
+	_key(KEY_X)
+	menu.step_quit(menu.QUIT_HOLD + 0.01)
+	_key(KEY_X, false)
+	_t.check("a tap of X on the asking Quit row quits, once", _quits == 3 and menu.armed() == "", "quits %d, armed '%s'" % [_quits, menu.armed()])
 	_key(KEY_N)
 	menu.step_arm(menu.ARM_GUARD)
 	_key(KEY_N)
