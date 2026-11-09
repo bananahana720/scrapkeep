@@ -306,6 +306,9 @@ const SET_CHIME := [77, 81, 86]
 const SET_CHIME_VOICES := {"arc": "clav", "frost": "bell"}
 const SET_CHIME_DONE_VOICE := "beep"
 const SET_CHIME_LEAD_S := 0.12
+# The band answers a long chain by name: the pilot's quote starts a beat after the chain lands, and
+# not again for PILOT_QUOTE_GAP seconds, so it stays a treat.
+const PILOT_QUOTE_GAP := 16.0
 # The last_ms of the kill chain whose end has been heard.
 var _streak_landed_ms := -100000
 # The beat a death holds the recorded band to; the lost summary's pack starts once it has passed
@@ -3221,6 +3224,9 @@ func _warm_landing(rung: int) -> void:
 	for at in [due, due + 4 * grid_unit(1)]:
 		for id in _landing_ids(rung, _landing_tones(at)):
 			engine.warm_stinger(id, at)
+		# The quote a long chain earns, unless the last one is too recent to earn another.
+		if rung >= STREAK_BAR_RUNG and clock >= float(_gates.get("pilot_quote", -1000.0)):
+			engine.warm_stinger(_pilot_quote_id(), at, false, grid_unit(4))
 
 
 # The whip and the dunk answer a sixteenth after their contact, too soon to make a note: theirs
@@ -3264,7 +3270,23 @@ func land_streak(rung: int) -> int:
 	var land := Harmony.tone_below(last, _landing_tones(at))
 	_note_at("enemy_killed", STREAK_VOICE, land, at)
 	_note_at("enemy_killed", STREAK_BODY, land - 12, at, SfxBank.GRID_UNDER_DB)
+	if long:
+		_quote_pilot(at + grid_unit(1))
 	return at
+
+
+# The band answers a long chain by name (SOUND-BIBLE, "Pilot quotes"): the pilot's own motif on
+# the sax from transport sample at, in the sounding band's eighths and key.
+func _quote_pilot(at: int) -> void:
+	if not _gate("pilot_quote", PILOT_QUOTE_GAP):
+		return
+	var id := _pilot_quote_id()
+	engine.schedule_stinger_at(id, at, PRIORITY_DB[Rows.priority("enemy_killed")], false, grid_unit(4))
+	cue_log.append(["enemy_killed", id, "quote", at, 1.0])
+
+
+func _pilot_quote_id() -> String:
+	return SfxBank.pilot_quote_id(_motif if _motif != "" else Harmony.CLASS_MOTIFS[0])
 
 
 # A part set's banner is up (presentation.gd): its chime, on the band's next eighths and in the

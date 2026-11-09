@@ -267,6 +267,13 @@ const GRID_NOTE_SECONDS := 0.5
 # Offsets on that trim: the voice under a landing and a long chain's restated last note, and a
 # death's fall, which sits under the recorded death cue.
 const GRID_UNDER_DB := -3.0
+# The band answers a long kill chain by name (SOUND-BIBLE, "Pilot quotes"): pilot_quote_<class>, the
+# pilot's motif on the sax with a brass and kick hit under its last note. It is made for the
+# sounding band's step and key when a chain earns it, never at boot.
+const PILOT_QUOTE := "pilot_quote_"
+const PILOT_QUOTE_DB := -6.0
+# A motif whose top note is under A4 (Kest's toms, Tarn's bass) goes up an octave so the sax sings it.
+const PILOT_QUOTE_FLOOR := 69
 const DEATH_FALL_DB := -6.0
 # The note each climbing cue rings on, where its ladder starts (Harmony.ladder_ratio): the kill
 # pop's bell is D6 and the line's bite A5, in the recipes here and in the event-set files.
@@ -318,7 +325,8 @@ static func break_midis(variant := 0) -> Array:
 
 
 static func has_recipe(id: String) -> bool:
-	return TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE) or id.begins_with(GRID_NOTE) or _assist_parts(id).size() > 0 or id in EVENT_CUES
+	return (TRIM_DB.has(id) or id.begins_with(CAUSE_NOTE) or id.begins_with(GRID_NOTE) or id.begins_with(PILOT_QUOTE)
+		or _assist_parts(id).size() > 0 or id in EVENT_CUES)
 
 
 static func trim_db(id: String) -> float:
@@ -326,6 +334,8 @@ static func trim_db(id: String) -> float:
 		return CAUSE_NOTE_DB
 	if id.begins_with(GRID_NOTE):
 		return GRID_NOTE_DB
+	if id.begins_with(PILOT_QUOTE):
+		return PILOT_QUOTE_DB
 	if id.begins_with(ASSIST_STING):
 		return ASSIST_STING_DB
 	return TRIM_DB.get(id, TRIM_DB.get(base_key(id), -8.0))
@@ -470,6 +480,28 @@ static func cause_note_id(midi: int) -> String:
 
 static func grid_note_id(voice: String, midi: int) -> String:
 	return "%s%s_%d" % [GRID_NOTE, voice, midi]
+
+
+static func pilot_quote_id(class_id: String) -> String:
+	return PILOT_QUOTE + class_id
+
+
+# The quote's score, rows of [step, midi, steps, voice, gain] in sixteenths: the class motif's
+# cells at half speed, so the sax sings in eighths what the cue sounds flick in sixteenths, then
+# the brass an octave under the last note and a kick with it.
+static func pilot_quote_score(class_id: String) -> Array:
+	var cells: Array = Harmony.motif_or_first(class_id)["cells"]
+	var top := 0
+	for cell in cells:
+		top = maxi(top, int(cell[1]))
+	var octave := 12 if top < PILOT_QUOTE_FLOOR else 0
+	var score: Array = []
+	for cell in cells:
+		score.append([2 * int(cell[0]), int(cell[1]) + octave, 2 * int(cell[2]), "lead", 0.8])
+	var last: Array = score.back()
+	score.append([last[0], int(last[1]) - 12, last[2], "brass", 0.45])
+	score.append([last[0], 0, 1, "kick", 0.6])
+	return score
 
 
 # The class whip's voice and its two notes, the class motif's first interval an octave up:
@@ -624,7 +656,7 @@ static func samples_at(id: String, step: int, shift := 0, theme := 0) -> PackedF
 		if _cache_has(_samples, shared):
 			_cache_put(_samples, key, _cache_get(_samples, shared))
 	if not _cache_has(_samples, key):
-		if STINGER_BEATS.has(id):
+		if _gridded(id):
 			Synth.score_step = step
 		Synth.score_transpose = shift
 		_shift = shift
@@ -650,11 +682,17 @@ static func cached_at(id: String, step: int, shift := 0, theme := 0) -> bool:
 
 
 static func _plain(id: String, step: int, shift: int, theme: int) -> bool:
-	return (step == Harmony.STEP or not STINGER_BEATS.has(id)) and shift == 0 and (not id in THEMED or theme == 0)
+	return (step == Harmony.STEP or not _gridded(id)) and shift == 0 and (not id in THEMED or theme == 0)
 
 
 static func _key_at(id: String, step: int, shift: int, theme: int) -> String:
-	return "%s@%d@%d@%d" % [id, step if STINGER_BEATS.has(id) else Harmony.STEP, shift, theme if id in THEMED else 0]
+	return "%s@%d@%d@%d" % [id, step if _gridded(id) else Harmony.STEP, shift, theme if id in THEMED else 0]
+
+
+# A sound written on the grid is made again for each step it sounds at: the listed stingers, and
+# a pilot's quote.
+static func _gridded(id: String) -> bool:
+	return STINGER_BEATS.has(id) or id.begins_with(PILOT_QUOTE)
 
 
 # Every tonal recipe reads pitches through these, so a keyed bake transposes it whole.
@@ -1185,6 +1223,8 @@ static func _bake(id: String) -> PackedFloat32Array:
 	if id.begins_with(GRID_NOTE):
 		var bits := id.trim_prefix(GRID_NOTE).rsplit("_", true, 1)
 		return _mix([[_cut(_n(bits[0], int(bits[1])), GRID_NOTE_SECONDS), 0, 1.0]])
+	if id.begins_with(PILOT_QUOTE):
+		return Synth.render_score(pilot_quote_score(id.trim_prefix(PILOT_QUOTE)), 0.5)
 	if _assist_parts(id).size() > 0:
 		return _assist_sting(_assist_parts(id))
 	# A kind added after this bank still gets a sound: a small blip pitched from its

@@ -17,7 +17,9 @@ const PartSets := preload("res://src/build/part_sets.gd")
 # band, synth or recorded, on the next beat with the fall in time. The contact itself still
 # sounds on its frame. A completed part set's chime plays as its banner comes up: three notes on
 # the band's eighths, an arc set on the clavinet and a frost set on the bell, both ending on the
-# appliance beep's high D; no other banner chimes, and no band means no chime.
+# appliance beep's high D; no other banner chimes, and no band means no chime. A long chain is
+# answered by name: the pilot's motif on the sax a beat after the landing, made for the sounding
+# band's step, and not again inside its gap.
 
 var t := T.new("audio_melodic_payoff_test")
 var _clock_ms := 0
@@ -48,6 +50,7 @@ func _run() -> void:
 	_multi_kill(game, audio)
 	_streaks(game, audio)
 	await _landing_ahead(game, audio)
+	_pilot_quote(game, audio)
 	_near_miss(game, audio)
 	_dunk(game, audio)
 	_set_chime(game, audio)
@@ -186,6 +189,59 @@ func _landing_ahead(game: Node, audio) -> void:
 		"%s in key 3 after %d frames, the chain still live" % [ahead, frames])
 	engine._set_key(0)
 	engine.warm_stingers = false
+	audio.kill_streak.reset()
+	audio._streak_landed_ms = audio.kill_streak.last_ms
+
+
+func _pilot_quote(game: Node, audio) -> void:
+	var engine: Music = audio.engine
+	var window: int = audio.kill_streak.window_ms
+	t.eq("sable's quote: D F A C E on the sax in eighths, brass and kick under the E", Bank.pilot_quote_score("sable"),
+		[[0, 62, 2, "lead", 0.8], [2, 65, 2, "lead", 0.8], [4, 69, 2, "lead", 0.8], [6, 72, 2, "lead", 0.8], [8, 76, 4, "lead", 0.8],
+			[8, 64, 4, "brass", 0.45], [8, 0, 1, "kick", 0.6]])
+	t.eq("tarn's quote goes up an octave so the sax sings it", Bank.pilot_quote_score("tarn").slice(0, 4).map(func(row: Array): return row[1]),
+		[62, 62, 63, 69])
+	var id: String = Bank.pilot_quote_id(audio._motif)
+	var slow: int = Bank.samples_at(id, Harmony.STEP * 4 / 3).size()
+	var fast: int = Bank.samples_at(id, Harmony.STEP).size()
+	t.check("the quote is made for the step it sounds at", Bank.has_recipe(id) and slow > fast and fast > Harmony.STEP * 8,
+		"%d samples at the roaming step, %d at a step a third longer" % [fast, slow])
+	# The last chain ended and the gap since any earlier quote has passed.
+	_clock_ms += window + 50
+	audio._tend_kill_streak()
+	audio.clock += audio.PILOT_QUOTE_GAP + 1.0
+	_kills(game, audio, 6)
+	audio.cue_log.clear()
+	_clock_ms += window + 50
+	_pump_to(audio, engine.next_bar() + engine.step_len + 7)
+	# Past the quote the streak checks above booked, so only this chain's can sound.
+	_pump_to(audio, engine.next_bar() + engine.beat_len() + engine.step_len + 7)
+	engine.stinger_starts.clear()
+	var bar := engine.next_bar()
+	audio._tend_kill_streak()
+	var quotes: Array = audio.cue_log.filter(func(e: Array): return e[2] == "quote")
+	var at: int = int(quotes[0][3]) if not quotes.is_empty() else -1
+	_pump_to(audio, bar + engine.beat_len() + 64)
+	var sounded: Array = engine.stinger_starts.filter(func(s: Array): return s[0] == id).map(func(s: Array): return int(s[1]))
+	t.check("a long chain is answered by name, a beat after it lands", quotes.size() == 1 and quotes[0][1] == id and at == bar + engine.beat_len()
+		and sounded == [at] and _grid(audio, "enemy_killed").size() == 3,
+		"%s at %d (bar %d, beat %d), sounded at %s, landing notes %d" % [quotes.map(func(e: Array): return e[1]), at, bar, engine.beat_len(), sounded,
+			_grid(audio, "enemy_killed").size()])
+	# A second long chain inside the gap lands as before and is not answered again.
+	_kills(game, audio, 6)
+	audio.cue_log.clear()
+	_clock_ms += window + 50
+	audio._tend_kill_streak()
+	t.check("no second quote inside the gap", audio.cue_log.filter(func(e: Array): return e[2] == "quote").is_empty()
+		and _grid(audio, "enemy_killed").size() >= 2, "cues %s" % [audio.cue_log.map(func(e: Array): return [e[1], e[2]])])
+	# A short chain is never answered, whatever the gap.
+	audio.clock += audio.PILOT_QUOTE_GAP + 1.0
+	_kills(game, audio, 3)
+	audio.cue_log.clear()
+	_clock_ms += window + 50
+	audio._tend_kill_streak()
+	t.check("a short chain is not answered", audio.cue_log.filter(func(e: Array): return e[2] == "quote").is_empty()
+		and _grid(audio, "enemy_killed").size() == 2, "cues %s" % [audio.cue_log.map(func(e: Array): return [e[1], e[2]])])
 	audio.kill_streak.reset()
 	audio._streak_landed_ms = audio.kill_streak.last_ms
 
