@@ -17,6 +17,9 @@ extends Node
 # it was reading. --boot-card forces the card there (the cloud boot measure); --boot-sync forces the
 # synchronous path anywhere. A test sets force_card / force_sync before adding this scene.
 
+# The one headless question (src/core/app_shell.gd). It reads engine classes only and preloads
+# nothing, so the card stays as light as the note above asks.
+const AppShell := preload("res://src/core/app_shell.gd")
 const GAME_SCENE := "res://main.tscn"
 const FONT_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
 # Palette.CHARCOAL and Palette.AMBER, copied: palette.gd pulls the material table with it.
@@ -73,7 +76,7 @@ func _use_card() -> bool:
 		return false
 	if force_card or _flag("--boot-card"):
 		return true
-	return DisplayServer.get_name() != "headless"
+	return not AppShell.headless()
 
 
 static func _flag(flag: String) -> bool:

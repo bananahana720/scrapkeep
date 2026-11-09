@@ -1,5 +1,6 @@
 extends Node
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 # The field crew's baked clips (tools/blender/world_one/field_motion.py): idle, move, windup,
@@ -82,7 +83,7 @@ var _holder: Node3D
 
 
 static func active() -> bool:
-	return headless or DisplayServer.get_name() != "headless"
+	return headless or not AppShell.headless()
 
 
 static func path_for(kind_name: String) -> String:

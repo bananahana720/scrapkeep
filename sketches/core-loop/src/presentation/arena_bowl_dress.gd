@@ -1,5 +1,6 @@
 extends RefCounted
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
@@ -109,7 +110,7 @@ static func _drop_reading() -> void:
 static func _read(path: String):
 	if not ResourceLoader.exists(path):
 		return null
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		return load(path) as PackedScene
 	var status := ResourceLoader.load_threaded_get_status(path)
 	if status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:

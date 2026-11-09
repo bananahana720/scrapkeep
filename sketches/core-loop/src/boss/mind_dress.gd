@@ -1,5 +1,6 @@
 extends Node3D
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Warden := preload("res://src/combat/warden.gd")
 
@@ -56,7 +57,7 @@ var _lens_placed := false
 # loading them took 18 to 31 ms of the boss-entry frame on the cloud (scrapkeep#241).
 static func prepare() -> void:
 	# Headless loads stay on the main thread: the dummy rasterizer's mesh RIDs are not thread-safe.
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		return
 	for path in [base_path, kit_path]:
 		if ResourceLoader.exists(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
