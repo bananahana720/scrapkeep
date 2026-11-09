@@ -18,7 +18,7 @@ const ChildRuns := preload("res://tests/trees/child_runs.gd")
 # Stuck and hung counts are printed, not judged: a camper's stall and a mounted special rest by design.
 # Evidence limit: one seed a pilot, the skipper, headless; real ticks, so a seed does not replay
 # exactly and a red here wants one rerun before it counts. Menus are not pressed: the run starts
-# by code (flow.press_start), as every bot's does; the title's own tests press them. Each pilot
+# by code (flow.press_start); session_test presses the title, the prologue and the pilot select as keys. Each pilot
 # has to beat Brindle in one go (a death ends its run), and the run stops a second into stage 3,
 # so stage 3's park has to build. What the watch's quiet rows are worth is play_watch_test's to
 # prove (each row made to fire); the control here proves the milestone and exit-code lines.

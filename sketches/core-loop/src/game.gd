@@ -242,8 +242,9 @@ func _ready() -> void:
 		DirAccess.make_dir_recursive_absolute(storage_dir)
 	elif _launch_flag("--self-play"):
 		# A bot's run never touches the player's saves: codex, profile, run log and the run save
-		# all follow storage_dir, so they land in a folder of their own.
-		storage_dir = "user://self-play-%d" % OS.get_process_id()
+		# all follow storage_dir, so they land in a folder of their own. --self-play-save=<name> names
+		# that folder, so a second launch finds the first one's save (quit, then Continue).
+		storage_dir = "user://self-play-%s" % _self_play_save()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
 	apply_saved_bindings()
 	camera.apply_look_settings(settings_store())
@@ -1294,6 +1295,16 @@ func _dev_key(key: int) -> bool:
 func _boot(step: String) -> void:
 	if _launch_flag("--boot-profile"):
 		print("SCRAPKEEP_BOOT %s ms=%d" % [step, Time.get_ticks_msec()])
+
+
+# The self-play folder's name: --self-play-save=<one plain folder name, no dot>, else this process's
+# id (tools/self_play.gd quits 2 on a name refused here, so the fallback is never played on).
+static func _self_play_save() -> String:
+	for arg in OS.get_cmdline_user_args():
+		var folder := arg.trim_prefix("--self-play-save=")
+		if arg.begins_with("--self-play-save=") and folder.is_valid_filename() and not folder.contains("."):
+			return folder
+	return str(OS.get_process_id())
 
 
 static func _launch_flag(flag: String) -> bool:

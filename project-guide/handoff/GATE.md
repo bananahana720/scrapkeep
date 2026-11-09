@@ -11,7 +11,7 @@ One promotion, one full gate, on the frozen stage head. The Gate thread writes a
 | Shard | What it runs | Usual wall time on a 4 vCPU cloud box |
 | --- | --- | --- |
 | tests, three windows | the non-bot list in thirds | 50 to 60 min each |
-| bots 1 to the last block | the bot list in blocks of 5 (22 tests, so 5 blocks, while the weekly list holds 9) | 35 to 60 min each |
+| bots 1 to the last block | the bot list in blocks of 5 (23 tests, so 5 blocks, while the weekly list holds 9) | 35 to 60 min each |
 | bands A | the posture-band tests, `skill_band`, `run_tier_dials`, the word budgets, less any test the weekly list names | 60 min |
 | bands B | the world 1 challenge, 24 seeds | 90 min |
 | bands C | swarm bands, `run_tier`, the HARD rungs | 3 h, one resume |
