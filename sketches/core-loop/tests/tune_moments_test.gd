@@ -228,6 +228,10 @@ func _process(_delta: float) -> bool:
 	a.end_moment("shop", "bay")
 	_t.eq("leaving the bay returns", _last(a), "")
 
+	n = a.staged.size()
+	a.fabricator_used()
+	_t.check("a one-pass tune does not begin inside the Warden's fight", a.staged.size() == n and a._moments.is_empty(), "%d moments" % a._moments.size())
+	events.beacon_unsealed.emit(4)
 	events.synergy_discovered.emit("flume_weir_cache", "world", true)
 	_t.eq("the Cable Reach cache finds the Lost Tape", _last(a), "secret-lost-tape")
 	a.engine.clock = int(a._moments[0].until)
@@ -245,6 +249,19 @@ func _process(_delta: float) -> bool:
 	a.engine.clock = int(a._moments[0].until)
 	a._tend_moments()
 	_t.eq("after one pass it hands back", _last(a), "")
+	a.fabricator_used()
+	events.synergy_discovered.emit("flume_weir_cache", "world", true)
+	var passes: int = a._moments.size()
+	events.warden_engaged.emit(4)
+	_t.check("a Warden engaging cuts a one-pass tune short", passes >= 1 and _last(a) == "" and a._moments.is_empty(),
+		"%d passes playing, then band '%s' with %d moments" % [passes, _last(a), a._moments.size()])
+	a.fabricator_used()
+	events.synergy_discovered.emit("thermal_ride", "world", true)
+	_t.check("and none begins until the arena opens", _last(a) == "" and a._moments.is_empty(), "%d moments" % a._moments.size())
+	events.beacon_unsealed.emit(4)
+	a.fabricator_used()
+	_t.eq("then the fabricator's tune plays again", _last(a), "fabricator")
+	a.end_moment("fabricator")
 
 	# Rare remixes, read where they play.
 	var zone31 := 0
