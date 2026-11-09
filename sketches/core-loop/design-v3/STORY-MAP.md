@@ -28,7 +28,7 @@ Each era left things behind that look and sound like that era. This is the timel
 
 ## 3. Four makers, and how to tell them apart
 
-Everything in the game was made by one of four hands. Decide which before you draw it, score it or give it a rule. A thing can carry two marks: an ordinary enemy is an old works machine (cast body, crew number, HIRED stamp) that the Fleet requisitioned (oxide paint, a brass tag, one bolted-on tool).
+Everything in the game was made by one of four hands. Decide which before you draw it, score it or give it a rule. A thing can carry two marks: an ordinary enemy is an old works machine (cast body, crew number, HIRED stamp) that the Fleet requisitioned (oxide paint, a brass tag, one bolted-on tool). On an enemy the bolted-on tool is the only hand-fitted part, so it is the silhouette and where the eye goes; the HIRED stamp and crew number are cast into the body, and the brass tag is riveted on (W, from the art thread).
 
 | | Keepers (you, Moss, the pilots) | The Fleet (Brindle's crews) | The old works under the Mind | Rogues (works machines that got free) |
 | --- | --- | --- | --- | --- |
