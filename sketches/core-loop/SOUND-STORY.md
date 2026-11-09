@@ -378,11 +378,11 @@ The rule is the story map's: whose hands the caller is sets the instrument. A pi
 | Caller | Voice | Notes | How they talk |
 | --- | --- | --- | --- |
 | Moss | His bench blip, after the bell on his counter rings twice | D3's Dorian triad | Level and unhurried |
-| Sable | Bell | Own motif, an octave up | Quick, scooping up into each word: Sable launches |
+| Sable | Bell (Sable's voice in the band; the motif's own mallet is the site crews') | Own motif, an octave up | Quick, scooping up into each word: Sable launches |
 | Rivet | Clavinet | Own motif, an octave up | Fast, with no gap between words: Rivet never stops |
 | Kest | Tom | Own motif, an octave up | Slow, falling away from each note, long rests after a sentence: Kest commits late |
-| Tarn | Round bass | Own motif, an octave up | Slowest and softest: gentle while the machine snarls |
-| Tally | Electric piano | Own motif, an octave up | Even, counted: the honest ledger |
+| Tarn | Round bass (Tarn's voice in the band) | Own motif, an octave up | The slowest pilot and the quietest voice: gentle while the machine snarls |
+| Tally | Electric piano | Own motif, an octave up | Every letter the same length, where the others stray: the honest ledger |
 | The Cannon | Chime | Own motif, an octave up | The Foreman's own clean tone, bent: the gun that chose a side |
 | Pump crew, flume crew, signal crew | Mallets | The triads on D, E and G | Two talkers trading words on one radio, the second a fourth lower and in before the first is done |
 | Brindle | Brass | The Fleet motif: D and E flat | Slow and grand; every sentence ends held on the flat second, because he rounds up |

@@ -1694,7 +1694,9 @@ func call_in(kind: String, speaker: String, text: String) -> float:
 	var at := engine.clock + int(CALL_LEAD_S * Harmony.RATE)
 	if SfxBank.caller_on_grid(speaker):
 		at += posmod(next_grid(4) - at, step)
-	engine.schedule_stinger_at(SfxBank.say_id(speaker, text), at, 0.0, false, step)
+	var id := SfxBank.say_id(speaker, text)
+	SfxBank.keep_said(id)
+	engine.schedule_stinger_at(id, at, 0.0, false, step)
 	var seconds := float(at - engine.clock) / Harmony.RATE + SfxBank.say_seconds(speaker, text, step)
 	_gates["call_in"] = clock + seconds
 	_duck(CALL_DUCK, seconds)

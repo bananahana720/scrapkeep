@@ -301,9 +301,10 @@ const VOWELS := ["a", "e", "i", "o", "u"]
 # motif is the Harmony row its letters are drawn from and whose voice it talks on, unless
 # voice names another; a caller with no motif talks on its root's Dorian triad. lift moves
 # the notes in semitones, pace scales a letter's length, bend scoops up into a letter by
-# that many semitones (a fall when negative), run closes the gaps between words, stop
-# stretches the rest after a sentence, lean ends a sentence held on the flat second, and
-# second has a second talker take every other word that many scale steps away. grid is the
+# that many semitones (a fall when negative), loose is how far a letter's length strays
+# (CALL_LOOSE unless the row says), run closes the gaps between words, stop stretches the
+# rest after a sentence, lean ends a sentence held on the flat second, and second has a
+# second talker take every other word that many scale steps away. grid is the
 # Foreman alone: one note, every letter half a sixteenth, no bend and nothing left to
 # chance. db levels a voice against Moss's, whose row is empty: his call is his bench voice
 # after his bell.
@@ -315,8 +316,8 @@ const CALLERS := {
 	"sable": {"motif": "sable", "voice": "bell", "lift": 12, "pace": 0.8, "bend": 2.0, "db": -1.0},
 	"rivet": {"motif": "rivet", "lift": 12, "pace": 0.7, "bend": 0.5, "run": true, "db": 2.0},
 	"kest": {"motif": "kest", "lift": 12, "pace": 1.15, "bend": -2.0, "stop": 1.6, "db": 1.5},
-	"tarn": {"motif": "tarn", "voice": "fbass", "lift": 12, "pace": 1.3, "bend": 0.7, "db": 3.0},
-	"tally": {"motif": "tally", "lift": 12, "bend": 0.5, "db": 1.5},
+	"tarn": {"motif": "tarn", "voice": "fbass", "lift": 12, "pace": 1.3, "bend": 0.7, "db": 2.0},
+	"tally": {"motif": "tally", "lift": 12, "bend": 0.5, "loose": 0.0, "db": 1.5},
 	"cannon": {"motif": "cannon", "lift": 12, "bend": 1.5},
 	"pump_crew": {"root": 62, "voice": "mallet", "bend": 1.0, "second": -3, "db": 5.0},
 	"flume_crew": {"root": 64, "voice": "mallet", "bend": 1.0, "second": -3, "db": 4.5},
@@ -329,7 +330,8 @@ const CHIRP_NOTE_S := 0.12
 const CALL_TALK_S := 0.36
 # A second talker comes in this long before the first has finished the word.
 const CALL_OVERLAP_S := 0.06
-# A caller id with no row, warned about once and given Moss's voice.
+const CALL_LOOSE := 0.15
+# A caller id with no row, warned about once (say_id) and given Moss's voice.
 static var unknown_callers := {}
 
 static var _samples := {}
@@ -373,7 +375,7 @@ static func trim_db(id: String) -> float:
 	if id.begins_with(PILOT_QUOTE):
 		return PILOT_QUOTE_DB
 	if id.begins_with(SAY):
-		return TRIM_DB["babble"] + float(caller(_said(id)[0]).get("db", 0.0))
+		return TRIM_DB["babble"] + float(_caller(_said(id)[0]).get("db", 0.0))
 	if id.begins_with(ASSIST_STING):
 		return ASSIST_STING_DB
 	return TRIM_DB.get(id, TRIM_DB.get(base_key(id), -8.0))
@@ -2716,32 +2718,44 @@ static func _grumble(midi: int) -> PackedFloat32Array:
 
 # --- Callers (SOUND-STORY.md section 8, "Who talks on what") -----------------------------
 
+# The bank id of a caller's line. A caller with no row is warned about here, once, on the
+# thread that asks for the line; the bake on a worker only reads the rows.
 static func say_id(speaker: String, text: String) -> String:
+	if not CALLERS.has(speaker) and not unknown_callers.has(speaker):
+		unknown_callers[speaker] = true
+		push_warning("sfx_bank: no caller row for '%s'; the line uses Moss's voice" % speaker)
 	return "%s%s|%s" % [SAY, speaker, text]
 
 
-static func _said(id: String) -> PackedStringArray:
-	return id.trim_prefix(SAY).split("|", true, 1)
+# The caller and the line of a say id.
+static func _said(id: String) -> Array:
+	var parts := id.trim_prefix(SAY).split("|", true, 1)
+	return [parts[0], parts[1] if parts.size() > 1 else ""]
 
 
-# The caller's row: its own, else Moss's, warned once per unknown id.
-static func caller(speaker: String) -> Dictionary:
-	if CALLERS.has(speaker):
-		return CALLERS[speaker]
-	if not unknown_callers.has(speaker):
-		unknown_callers[speaker] = true
-		push_warning("sfx_bank: no caller row for '%s'; the line uses Moss's voice" % speaker)
-	return CALLERS[MOSS]
+# Drops every caller's line but this one's: a line is said and done, and a run of calls would
+# otherwise keep each one for good.
+static func keep_said(id: String) -> void:
+	_cache_lock.lock()
+	for key in _samples.keys():
+		if key.begins_with(SAY) and key != id and not key.begins_with(id + "@"):
+			_samples.erase(key)
+	_cache_lock.unlock()
+
+
+# The caller's row: its own, else Moss's.
+static func _caller(speaker: String) -> Dictionary:
+	return CALLERS.get(speaker, CALLERS[MOSS])
 
 
 static func caller_on_grid(speaker: String) -> bool:
-	return caller(speaker).get("grid", false)
+	return _caller(speaker).get("grid", false)
 
 
 # The notes a caller's letters are drawn from, lowest first heard first: its motif's, lifted,
 # or its root's Dorian triad.
-static func caller_notes(speaker: String) -> Array:
-	var row := caller(speaker)
+static func _caller_notes(speaker: String) -> Array:
+	var row := _caller(speaker)
 	var notes: Array = []
 	for midi in Harmony.motif_notes(row.get("motif", "")):
 		if not (midi + int(row.get("lift", 0))) in notes:
@@ -2752,25 +2766,26 @@ static func caller_notes(speaker: String) -> Array:
 	return notes
 
 
-static func caller_voice(speaker: String) -> String:
-	var row := caller(speaker)
+static func _caller_voice(speaker: String) -> String:
+	var row := _caller(speaker)
 	return row.get("voice", Harmony.motif(row.get("motif", "")).get("voice", ""))
 
 
 # How long a caller's line lasts, chirp included, at the band's sixteenth.
 static func say_seconds(speaker: String, text: String, step := Harmony.STEP) -> float:
-	return float(say_plan(speaker, text, step)[1]) + 0.3
+	return float(_say_plan(speaker, text, step)[1]) + 0.3
 
 
 # A caller's line laid out as [seconds, midi, seconds long, gain, bend, voice] and where the
 # last one ends: the chirp, then one blip a letter. A line is laid out the same way every
 # time it is said. voice "" is Moss's own blip.
-static func say_plan(speaker: String, text: String, step := Harmony.STEP) -> Array:
-	var row := caller(speaker)
+static func _say_plan(speaker: String, text: String, step := Harmony.STEP) -> Array:
+	var row := _caller(speaker)
 	if row.is_empty():
 		return _moss_call(text)
-	var notes := caller_notes(speaker)
-	var voice := caller_voice(speaker)
+	var notes := _caller_notes(speaker)
+	var voice := _caller_voice(speaker)
+	var loose := float(row.get("loose", CALL_LOOSE))
 	var grid: bool = row.get("grid", false)
 	var unit := float(step) / Harmony.RATE
 	var pace := float(row.get("pace", 1.0))
@@ -2782,20 +2797,24 @@ static func say_plan(speaker: String, text: String, step := Harmony.STEP) -> Arr
 	for i in 2:
 		blips.append([i * (unit if grid else CHIRP_NOTE_S), chirp[i], unit * 0.7 if grid else CHIRP_NOTE_S, 1.0, 0.0, voice])
 	var at := 4.0 * unit if grid else CALL_TALK_S
-	var words := text.split(" ", false)
-	for w in words.size():
-		var word: String = words[w]
+	var said := 0
+	var joined := false
+	for word in text.split(" ", false):
 		var letters := _letters(word)
-		var other: bool = row.has("second") and w % 2 == 1
-		if other:
-			at = maxf(at - CALL_OVERLAP_S, 0.0)
+		if letters.is_empty():
+			continue
+		var other: bool = row.has("second") and said % 2 == 1
+		if other and joined:
+			at -= CALL_OVERLAP_S
+		said += 1
+		joined = not (word.ends_with(",") or _ends_sentence(word))
 		for l in letters.size():
 			var vowel: bool = letters[l] in VOWELS
 			if grid:
 				blips.append([at, notes[0], unit * 0.35, 1.0, 0.0, voice])
 				at += unit * 0.5
 				continue
-			var length := (0.08 if vowel else 0.04) * pace * rng.randf_range(0.85, 1.15)
+			var length := (0.08 if vowel else 0.04) * pace * rng.randf_range(1.0 - loose, 1.0 + loose)
 			var midi: int = notes[rng.randi() % notes.size()]
 			if other:
 				midi = Harmony.scale_shift(midi, int(row["second"]), Harmony.DORIAN)
@@ -2831,7 +2850,7 @@ static func _moss_call(text: String) -> Array:
 
 
 static func _say(speaker: String, text: String) -> PackedFloat32Array:
-	var plan := say_plan(speaker, text, Synth.score_step)
+	var plan := _say_plan(speaker, text, Synth.score_step)
 	var buf := Synth.buffer(roundi((float(plan[1]) + 0.3) * Harmony.RATE))
 	for blip in plan[0]:
 		var voice: String = blip[5]
