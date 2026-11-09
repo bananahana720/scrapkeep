@@ -1,5 +1,5 @@
 extends SceneTree
-# smoke: bots timeout=1500s
+# smoke: bots timeout=1800s
 # 2026-10-15 RT-CAP: a 20-seed whole-run replay (five batches of four child games) ran at 359.5 s
 # of the 360 s solo ceiling on a normal machine and timed out at load 55 to 59, so it moved to the
 # bot tier (npm run sketch:bots; sketch:gate runs both). Every check is unchanged.
