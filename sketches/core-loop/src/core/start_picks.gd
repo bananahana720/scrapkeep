@@ -18,6 +18,11 @@ const KINDS := ["part", "cogs", "core"]
 # Start value, not tuned: one and a half tier-1 fabricator parts (fabricators.gd part_base 10).
 const START_COGS := 15
 const SOURCE := "start_pick"
+# What a tile says its option does, under its name: a part's own verb (parts.gd), and these
+# for the two grants that are not parts. At most EFFECT_WORDS words.
+const EFFECT_WORDS := 6
+const COGS_EFFECT := "Buy a part sooner"
+const CORE_EFFECT := "Better gate this stage"
 
 # Pilot id to its list, in authored order. Each list holds OFFERED * (REROLLS + 1) rows, so
 # the first draw and the reroll never share an option. Parts lean on the pilot's kit.
@@ -47,7 +52,7 @@ static func offered_tiers(profile) -> Array:
 	return range(RunTier.top_unlocked(profile) + 1)
 
 
-# The pilot's rows, resolved: {"id", "do", "name", "icon"} plus "part" or "amount". The id is
+# The pilot's rows, resolved: {"id", "do", "name", "icon", "effect"} plus "part" or "amount". The id is
 # the part id for a part, else the kind, so one list never holds two rows with one id.
 static func list_for(pilot: String) -> Array:
 	var out := []
@@ -78,15 +83,18 @@ static func _resolve(spec: Dictionary) -> Dictionary:
 			r["id"] = spec["part"]
 			r["name"] = Parts.display_name(spec["part"])
 			r["icon"] = Parts.icon_of(spec["part"])
+			r["effect"] = String(Parts.row(spec["part"]).get("verb", ""))
 		"cogs":
 			r["id"] = "cogs"
 			r["amount"] = START_COGS
 			r["name"] = "%d Cogs" % START_COGS
 			r["icon"] = "res_scrap"
+			r["effect"] = COGS_EFFECT
 		"core":
 			r["id"] = "core"
 			r["name"] = "Bonus Core"
 			r["icon"] = "res_core"
+			r["effect"] = CORE_EFFECT
 	return r
 
 

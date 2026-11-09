@@ -690,7 +690,8 @@ func _tier_zero_format() -> void:
 func _mouse_tiles() -> void:
 	game.bot_driven = false
 	paused = true
-	var offers := [["cogs", "core", "long_barrel"], ["loose_trigger", "magnet_spool", "spiral_wave"]]
+	# The narrow offer's tiles must stay under the interactive card's 780 px floor, effect lines included.
+	var offers := [["cogs", "hot_rivets", "long_barrel"], ["loose_trigger", "magnet_spool", "spiral_wave"]]
 	for offer_index in offers.size():
 		for pick_index in 3:
 			_begin(706, 0)
@@ -704,7 +705,10 @@ func _mouse_tiles() -> void:
 			var widths := []
 			var total := StartCard.TILE_GAP * (tiles.size() - 1)
 			for tile in tiles:
-				var width := StartCard.PAD * 2.0 + StartCard.KEY + StartCard.GAP * 2.0 + StartCard.ICON + UiFonts.bold().get_string_size(tile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.FONT).x
+				# A tile is as wide as the wider of its name and the effect line under it.
+				var words := maxf(UiFonts.bold().get_string_size(tile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.FONT).x,
+					UiFonts.bold().get_string_size(tile.effect, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.EFFECT_FONT).x)
+				var width := StartCard.PAD * 2.0 + StartCard.KEY + StartCard.GAP * 2.0 + StartCard.ICON + words
 				widths.append(width)
 				total += width
 			var label := "narrow" if offer_index == 0 else "wide"
