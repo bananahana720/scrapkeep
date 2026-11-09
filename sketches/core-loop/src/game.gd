@@ -1018,7 +1018,7 @@ func apply_saved_display(args: Array = []) -> void:
 	var saved := SettingsStore.new(storage_dir)
 	if not launch.any(func(arg): return String(arg).begins_with("--preset=") and GraphicsPreset.PRESETS.has(String(arg).trim_prefix("--preset="))):
 		set_quality(saved.quality())
-	if launches_fullscreen(saved.fullscreen(), Array(OS.get_cmdline_args())):
+	if launches_fullscreen(saved.fullscreen(), Array(OS.get_cmdline_args() + OS.get_cmdline_user_args())):
 		set_fullscreen(true)
 	set_reduced_motion(saved.reduced_motion())
 	set_reduce_flashes(saved.reduce_flashes())
@@ -1101,14 +1101,18 @@ func set_fullscreen(on: bool) -> void:
 
 # Whether launch puts the window fullscreen. The player's Fullscreen setting decides, and it is
 # on until they turn it off (DECISIONS cb): a monitor's variable refresh only follows a
-# fullscreen window, and a tiled one is drawn on the compositor's clock. Godot's own --windowed
-# (-w) asks for a window this once and leaves the setting alone. A game with no player's save
-# folder (a test, a bot's run) has no wish to follow and keeps the window it was launched with,
-# so a capture or a timing run stays the size its command gave it.
-func launches_fullscreen(wanted: bool, engine_args: Array) -> bool:
+# fullscreen window, and a tiled one is drawn on the compositor's clock. A game with no
+# player's save folder (a test, a bot's run) has no wish to follow and keeps the window it was
+# launched with, so a capture or a timing run stays the size its command gave it.
+# --fullscreen=0 or --fullscreen=1 beats the setting and that rule this once and leaves the
+# setting alone, as --smoothing does. Godot's own --windowed cannot do it: the engine keeps the
+# flags it handles to itself, so the game never sees one.
+func launches_fullscreen(wanted: bool, args: Array) -> bool:
+	if "--fullscreen=0" in args or "--fullscreen=1" in args:
+		return args.rfind("--fullscreen=1") > args.rfind("--fullscreen=0")
 	if test_mode or _launch_flag("--self-play"):
 		return false
-	return wanted and not ("--windowed" in engine_args or "-w" in engine_args)
+	return wanted
 
 
 # The key a pad press stands for on the title, death and summary screens, or KEY_NONE: A is

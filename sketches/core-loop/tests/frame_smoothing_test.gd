@@ -43,6 +43,11 @@ func _process(_delta: float) -> bool:
 		_placed = _game.player.body().global_position + Vector3(0.0, 30.0, 300.0)
 		_game.player.reset_to(_placed)
 		_game.player.body().global_position = _placed
+		# This is a frame, not a physics tick (the camp walk places the ball from a key press):
+		# the lens snaps before the reset has run and must still land on the new spot.
+		_game.camera.snap(Vector3(0.0, 0.0, -1.0))
+		_t.check("FS-5 a placed ball reads as placed in the same breath", _game.player.shown_position().distance_to(_placed) < 0.01, "shown %.1f m away" % _game.player.shown_position().distance_to(_placed))
+		_t.check("FS-5 a lens snapped in that breath is on the new spot", _game.camera.global_position.distance_to(_placed) < 2.0, "lens %.1f m away" % _game.camera.global_position.distance_to(_placed))
 	elif _step >= 13 and _step <= 16:
 		_worst = maxf(_worst, _game.player.shown_position().distance_to(_game.player.body().global_position))
 		if _step == 16:

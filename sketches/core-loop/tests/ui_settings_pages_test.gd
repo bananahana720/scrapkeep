@@ -18,7 +18,7 @@ const T := preload("res://tests/support/t.gd")
 #     verb holds is refused as Taken; Esc cancels; Reset keys restores the defaults;
 #   - Low applies at once, is saved and boots again; a --preset= flag beats it; fullscreen
 #     is on for a fresh install, off is saved, the window mode is not touched headless, and
-#     launch follows the setting only for a player's game without Godot's --windowed.
+#     launch follows the setting only for a player's game, and --fullscreen=0|1 beats both.
 # Storage is the game's test folder; the settings file is removed at the start and the end.
 
 const PAGE_BUDGET := 70
@@ -198,13 +198,14 @@ func _run() -> void:
 	Push.click(root, page.row("fullscreen"))
 	_t.check("S3-6 fullscreen off is saved and headless never changes the window mode", not _saved().fullscreen() and page.row("fullscreen").text == "Fullscreen: off" and DisplayServer.window_get_mode() == mode_before, "saved %s" % _saved().fullscreen())
 	_t.check("S3-6 the old settings keep their keys", _saved().comfort.has("fullscreen") and _saved().comfort.has("quality"), "%s" % [_saved().comfort])
-	# The launch rule (DECISIONS cb): a player's game follows the setting, Godot's own --windowed
-	# asks for a window once, and a test or a bot's run keeps the window it was launched with.
+	# The launch rule (DECISIONS cb): a player's game follows the setting, a test or a bot's run
+	# keeps the window it was launched with, and --fullscreen=0 or =1 beats both for one launch.
 	_t.check("S3-6 a test's game keeps its window whatever the setting says", not _game.launches_fullscreen(true, []), "test")
 	_game.test_mode = false
 	_t.check("S3-6 a player's game launches fullscreen only while the setting is on", _game.launches_fullscreen(true, []) and not _game.launches_fullscreen(false, []), "player")
-	_t.check("S3-6 Godot's --windowed and -w ask for a window", not _game.launches_fullscreen(true, ["--windowed"]) and not _game.launches_fullscreen(true, ["--path", ".", "-w"]), "flags")
+	_t.check("S3-6 --fullscreen=0 asks for a window this once", not _game.launches_fullscreen(true, ["--fullscreen=0"]) and _game.launches_fullscreen(false, ["--dev", "--fullscreen=1"]), "flags")
 	_game.test_mode = true
+	_t.check("S3-6 --fullscreen=1 puts a capture fullscreen too, and the last one given wins", _game.launches_fullscreen(false, ["--fullscreen=1"]) and not _game.launches_fullscreen(true, ["--fullscreen=1", "--fullscreen=0"]), "capture")
 
 	# A new game in the same folder boots with G, Low and the flag's rule. Free this one first.
 	# A test game removes its storage folder when it leaves, so the file is carried over.
