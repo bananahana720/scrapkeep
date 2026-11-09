@@ -2,7 +2,6 @@ extends VBoxContainer
 
 const Parts := preload("res://src/build/parts.gd")
 const Build := preload("res://src/build/build.gd")
-const RunState := preload("res://src/core/run_state.gd")
 const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Icons := preload("res://src/ui/icons.gd")
@@ -11,7 +10,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 # The look-before-fitting preview for a hot-wired part (BUILD-SYSTEMS.md, Two hot-wired
 # parts): two rows, the upside then the downside, each one icon and a few words. The rows
 # are built by one function from one style, so neither can weigh more than the other. The
-# numbers come from Build and RunState, never from typed text, so a tuning change moves
+# numbers come from Build and HotwireRules, never from typed text, so a tuning change moves
 # the words. The Fit / Recycle transaction is build.gd's (hotwire_fit, hotwire_recycle); this
 # shows both consequences and the recycle price before the choice. No cue, no equip.
 
@@ -30,8 +29,9 @@ static func resolve(id: String) -> Dictionary:
 	var row := Parts.hotwired(id)
 	if row.is_empty():
 		return {}
-	var mult: float = RunState.SCRAP_PER_HP / Build.SHELL_SCRAP_PER_HP
-	var steer := int(round((1.0 - Build.SHELL_AIR_FACTOR) * 100.0))
+	# What fitting changes, from the baseline the player is rolling on (build.gd, RIVETED_*).
+	var mult: float = Build.RIVETED_ARMOUR
+	var steer := int(round((1.0 - Build.RIVETED_AIR_FACTOR) * 100.0))
 	var mult_text := _times(mult)
 	var wear_text := _times(HotwireRules.WEAR_SCALE)
 	var bonus := int(round(HotwireRules.BONUS * 100.0))
