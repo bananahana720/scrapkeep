@@ -17,7 +17,8 @@ const T := preload("res://tests/support/t.gd")
 #   - a rebind applies to the InputMap at once, is saved, and boots again; a key another
 #     verb holds is refused as Taken; Esc cancels; Reset keys restores the defaults;
 #   - Low applies at once, is saved and boots again; a --preset= flag beats it; fullscreen
-#     is saved and the window mode is not touched headless.
+#     is on for a fresh install, off is saved, the window mode is not touched headless, and
+#     launch follows the setting only for a player's game without Godot's --windowed.
 # Storage is the game's test folder; the settings file is removed at the start and the end.
 
 const PAGE_BUDGET := 70
@@ -130,7 +131,7 @@ func _run() -> void:
 	# Re-pinned 2026-10-10 (wave 13 unit B2, design-v3/SKILL-BAR.md section 6): the special's row
 	# retired; the pick's three keys and the ultimate each have a row.
 	_t.eq("S3-2 the page rows", page.rows.keys().filter(func(id): return not id.begins_with("pad_") and not id in ["stick_sensitivity", "invert_y", "stick_deadzone", "mouse_sensitivity", "aim_assist"]),
-		["fullscreen", "quality", "reduced_motion", "reduce_flashes", "jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "interact", "reset", "roll", "look", "back"])
+		["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing", "jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "interact", "reset", "roll", "look", "back"])
 	_t.check("S3-2 roll and look are fixed", page.row("roll").disabled and page.row("look").disabled, "fixed")
 	_t.check("S3-2 the page holds the pause", paused and _game.pause_toggled(), "paused %s" % paused)
 	Push.key(root, KEY_S)
@@ -193,9 +194,17 @@ func _run() -> void:
 	var mode_before := DisplayServer.window_get_mode()
 	Push.click(root, page.row("quality"))
 	_t.check("S3-6 Low applies at once and is saved", GraphicsPreset.current == "low" and _saved().quality() == 1 and page.row("quality").text == "Quality: Low", "preset %s" % GraphicsPreset.current)
+	_t.check("S3-6 a fresh install wants fullscreen and stores nothing for it", _saved().fullscreen() and not _saved().comfort.has("fullscreen") and page.row("fullscreen").text == "Fullscreen: on", "%s" % [_saved().comfort])
 	Push.click(root, page.row("fullscreen"))
-	_t.check("S3-6 fullscreen is saved and headless never changes the window mode", _saved().fullscreen() and DisplayServer.window_get_mode() == mode_before, "saved %s" % _saved().fullscreen())
+	_t.check("S3-6 fullscreen off is saved and headless never changes the window mode", not _saved().fullscreen() and page.row("fullscreen").text == "Fullscreen: off" and DisplayServer.window_get_mode() == mode_before, "saved %s" % _saved().fullscreen())
 	_t.check("S3-6 the old settings keep their keys", _saved().comfort.has("fullscreen") and _saved().comfort.has("quality"), "%s" % [_saved().comfort])
+	# The launch rule (DECISIONS cb): a player's game follows the setting, Godot's own --windowed
+	# asks for a window once, and a test or a bot's run keeps the window it was launched with.
+	_t.check("S3-6 a test's game keeps its window whatever the setting says", not _game.launches_fullscreen(true, []), "test")
+	_game.test_mode = false
+	_t.check("S3-6 a player's game launches fullscreen only while the setting is on", _game.launches_fullscreen(true, []) and not _game.launches_fullscreen(false, []), "player")
+	_t.check("S3-6 Godot's --windowed and -w ask for a window", not _game.launches_fullscreen(true, ["--windowed"]) and not _game.launches_fullscreen(true, ["--path", ".", "-w"]), "flags")
+	_game.test_mode = true
 
 	# A new game in the same folder boots with G, Low and the flag's rule. Free this one first.
 	# A test game removes its storage folder when it leaves, so the file is carried over.
@@ -231,7 +240,7 @@ func _run() -> void:
 	_game.reset_bindings()
 	_t.check("S3-5 Space is back at once", _has_key("cl_jump", KEY_SPACE) and not _has_key("cl_jump", KEY_G), "events %s" % [InputMap.action_get_events("cl_jump")])
 	_t.check("S3-5 the saved override is gone", _saved().binding("cl_jump") == "" and _saved().bindings.is_empty(), "bindings %s" % [_saved().bindings])
-	_t.check("S3-5 quality and fullscreen survive it", _saved().quality() == 1 and _saved().fullscreen(), "kept")
+	_t.check("S3-5 quality and fullscreen survive it", _saved().quality() == 1 and not _saved().fullscreen(), "kept")
 
 	# The page's own Reset row does the same through the click.
 	var game_menu = _game.get_node("PauseMenu")

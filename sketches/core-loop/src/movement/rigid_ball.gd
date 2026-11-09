@@ -106,6 +106,10 @@ func teleport(to: Vector3, new_velocity: Vector3) -> void:
 	_pending_position = to
 	if freeze:
 		global_position = to
+	# A caller that reads the ball back at once also sets the node's position itself (stage
+	# entry, a boss intro, a rescue), a tick before _integrate_forces moves the body. The
+	# deferred reset runs after that, so no frame is drawn sliding from the old spot.
+	reset_physics_interpolation.call_deferred()
 
 
 # A teleport must not be drawn as a streak from the old spot. The node only receives the

@@ -72,7 +72,7 @@ const MENU_ROWS := [
 	{"keys": "P / Esc", "does": "pause menu: resume, restart the run, field notes, music and effects volume; quit with X (hold)", "caps": ["key_p"], "short": "pause"},
 	{"keys": "R (hold)", "does": "restart the run: a new run as the same pilot, from world 1; release before holding again", "caps": ["key_r"], "short": "hold restart"},
 	{"keys": "F1", "does": "launched with --dev only: tuning panel (frees the mouse)"},
-	{"keys": "F3", "does": "launched with --dev only: physics interpolation on/off (off by default)"},
+	{"keys": "F3", "does": "launched with --dev only: frame smoothing on/off for this session (Settings, Display keeps it)"},
 	{"keys": "F4", "does": "launched with --dev only: save every tuning value to user://tuning-<time>.json"},
 	{"keys": "Esc", "does": "outside play: quit"},
 ]
