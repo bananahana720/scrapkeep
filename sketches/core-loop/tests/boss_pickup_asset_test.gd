@@ -28,7 +28,9 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # charge states are named constants with an unknown-state fallback; pickup meshes unchanged. Was acf817b9.
 # Re-pinned 2026-11-09 (charge fling, #639): the hull turns onto a charge's heading through the tell instead
 # of snapping at the commit, and the Scuttle counts short tries for its hint; pickup meshes unchanged. Was 5121cd32.
-const BASE_LOGIC_SHA := "25ba9341ab512d272a94bb4ce10f010fd72be9f05d2a1276d36eac3fc1ad1e43"
+# Re-pinned 2026-11-09 (ruling bs, held floor bank): hits on a held hull bank toward the next phase's bar
+# (banking, bank_cap, _bank); pickup meshes unchanged. Was 25ba9341.
+const BASE_LOGIC_SHA := "a577e9bfeb28945405fa4da0bb110b5e7eaf3bf4e27f784c427059a4fc1678b9"
 
 var failures := 0
 var game

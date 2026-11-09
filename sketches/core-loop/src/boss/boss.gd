@@ -282,6 +282,24 @@ func _held() -> bool:
 	return state == FIGHT and _chunks_lost() >= phase
 
 
+# The hold banks: its hits fill the bar the next phase opens with (Rules.HELD_BANK).
+func banking() -> bool:
+	return _held() and phase < 3 and not _in_transition()
+
+
+# How much of the bar a hold can bank, 0 to 1, for the plate's mark.
+func bank_cap() -> float:
+	return Rules.HELD_BANK / BossPosture.FULL
+
+
+# A hit on a held hull: it breaks nothing, and its gain stops at the bank's cap.
+func _bank(result: Dictionary) -> void:
+	result["gain"] = clampf(float(result.get("gain", 0.0)), 0.0, maxf(0.0, Rules.HELD_BANK - _posture.posture)) if banking() else 0.0
+	result["crack"] = false
+	result["shatter"] = false
+	result["dealt"] = 0.0
+
+
 func _enter_phase(next: int) -> void:
 	_cancel_hazards()
 	if next > 1:
@@ -1430,7 +1448,7 @@ func chunk_cracked() -> bool:
 
 # What the rule says a hit on the hull does, or {} for any other piece so combat's own
 # rule runs. Out of a stagger a slam on a vent cap meets the cap's plating; in one any
-# contact meets the open cockpit. A held phase answers with the hit and no effect.
+# contact meets the open cockpit. A held phase answers with the hit and what it banks.
 func judge_hit(target, kind: String, punch: float, smash: bool, tier: int) -> Dictionary:
 	if target.role != "hull" or state != FIGHT:
 		return {}
@@ -1442,20 +1460,20 @@ func judge_hit(target, kind: String, punch: float, smash: bool, tier: int) -> Di
 	if part != "":
 		result["part"] = part
 	if _held() or _in_transition():
-		result["gain"] = 0.0
-		result["crack"] = false
-		result["shatter"] = false
-		result["dealt"] = 0.0
+		_bank(result)
 	return result
 
 
 # A weak point's full hit adds to the hull's bar as the rule would weigh it on a body of
 # that plating. It never touches the open cockpit: only a contact on the hull does.
 func _pressure(kind: String, result: Dictionary) -> void:
-	if _posture.staggered or _held() or _in_transition() or not bool(result.get("full", false)):
+	if _posture.staggered or (_held() and not banking()) or _in_transition() or not bool(result.get("full", false)):
 		return
-	_apply_posture(_posture.judge({"kind": kind, "punch": float(result.get("punch", 0.0)),
-			"plating": float(result.get("plating", 0.0)), "charging": charging(), "frame": Engine.get_physics_frames()}))
+	var judged := _posture.judge({"kind": kind, "punch": float(result.get("punch", 0.0)),
+			"plating": float(result.get("plating", 0.0)), "charging": charging(), "frame": Engine.get_physics_frames()})
+	if banking():
+		_bank(judged)
+	_apply_posture(judged)
 
 
 func _apply_posture(result: Dictionary) -> void:
@@ -1469,6 +1487,9 @@ func _apply_posture(result: Dictionary) -> void:
 func _step_posture(delta: float) -> void:
 	var before := _posture_signature()
 	var was_staggered: bool = _posture.staggered
+	# A banked bar is kept: it does not drain through the hold or the beat after it.
+	if (_held() or _in_transition()) and not _posture.staggered:
+		_posture.idle = 0.0
 	_posture.step(delta)
 	_sync_stagger(was_staggered)
 	_publish_posture(before)

@@ -28,6 +28,7 @@ const NAME_WIDTH := 138.0
 const PIP := 16.0
 const PIP_GAP := 6.0
 const BAR_HEIGHT := 12.0
+const BANK_POST := 4.0
 const GLYPH := 26.0
 const GAP := 10.0
 const EMPTY_ALPHA := 0.35
@@ -138,8 +139,21 @@ func crack_color() -> Color:
 	return crack_color_for(active() and _warden.staggered())
 
 
+# A banked fill belongs to the next phase, so it wears the phase diamonds' colour.
 func bar_color() -> Color:
+	if banking():
+		return phase_color()
 	return bar_color_for(active() and _warden.staggered())
+
+
+# Whether the bar shows hits banked toward the next phase: a hull boss's held phase.
+func banking() -> bool:
+	return active() and _warden.has_method("banking") and _warden.banking()
+
+
+# Where the bank stops on the bar, 0 to 1; 0 when nothing banks.
+func bank_cap() -> float:
+	return clampf(_warden.bank_cap(), 0.0, 1.0) if banking() and _warden.has_method("bank_cap") else 0.0
 
 
 # The same colours for a given open state, read by every other drawing of the fight (the
@@ -264,6 +278,12 @@ func _draw() -> void:
 	for tick in TICKS:
 		var tx: float = bar.position.x + bar.size.x * tick
 		draw_line(Vector2(tx, bar.position.y), Vector2(tx, bar.end.y), UiDraw.OUTLINE, 2.0)
+	var cap := bank_cap()
+	if cap > 0.0:
+		# The bank's stop: a post in the phase colour, standing proud of the bar.
+		var cx: float = bar.position.x + bar.size.x * cap
+		draw_line(Vector2(cx, bar.position.y - BANK_POST), Vector2(cx, bar.end.y + BANK_POST), crack_backing(), 5.0)
+		draw_line(Vector2(cx, bar.position.y - BANK_POST), Vector2(cx, bar.end.y + BANK_POST), phase_color(), 2.0)
 	var row := EventKinds.state_row(glyph_id())
 	var rect := Rect2(Vector2(size.x - MARGIN - GLYPH, mid - GLYPH * 0.5), Vector2(GLYPH, GLYPH))
 	draw_texture_rect(Icons.shape(String(row.get("shape", "none"))), rect, false, glyph_color())
