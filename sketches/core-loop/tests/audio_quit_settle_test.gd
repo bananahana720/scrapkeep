@@ -40,9 +40,7 @@ func _process(_delta: float) -> bool:
 	if not _t.check("QS-0 the band bake is in flight", in_flight, "the bake must still be running when the game leaves, or the cancel is not tested"):
 		quit(1)
 		return false
-	var started := Time.get_ticks_msec()
 	root.remove_child(_game)
-	print("audio_quit_settle_test: leaving the tree took %d ms" % (Time.get_ticks_msec() - started))
 	_t.check("QS-1 leaving the tree lets go of every bake", Audio._bake_task == -1 and Audio._opening_task == -1 and Audio._rest_task == -1,
 		"bank %d, opening %d, rest %d" % [Audio._bake_task, Audio._opening_task, Audio._rest_task])
 	_t.check("QS-1 the cancel flag is down again", not SfxBank.bake_cancel, "a flag left up would stop the next bake")
