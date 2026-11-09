@@ -42,6 +42,10 @@ const NET_DAMP := 0.5
 
 var ctx
 var start_card
+# Where the start card sits: its top edge outside a briefing, and how far down the view its
+# free height is shared above it in a briefing (0.5 is the middle; lower keeps it clear of Moss's bubble).
+const START_CARD_TOP := 160.0
+const BRIEFING_CENTRE := 0.6
 var beacon
 var state := TITLE
 var classes: Array[Resource] = []
@@ -375,23 +379,36 @@ func new_run() -> void:
 	_begin_run(ctx.run.class_def)
 
 
+# The run's briefing (workshop.gd): in a played game the kit pick comes first, then this card on
+# the same paused screen, so the pick is made before the ball rolls and is never open in play.
+# The workshop holds the pause while the card shows; this function only says when it shows.
 func show_start_card() -> void:
 	# Under the launch take's panel the card stays hidden; game shows it when the panel has gone.
 	var take = ctx.root.get("launch_take")
-	var interactive: bool = not ctx.root.bot_driven and not (take != null and take.busy())
-	start_card.set_interactive(interactive)
-	start_card.show_picks(ctx.run, ctx.profile)
-	start_card.position = Vector2((get_viewport().get_visible_rect().size.x - start_card.size.x) * 0.5, 160.0)
-	if not interactive or not in_stage():
-		start_card.hide_card()
 	var host = ctx.root.get_node_or_null("Workshop")
+	var interactive: bool = not ctx.root.bot_driven and not (take != null and take.busy())
+	var briefing: bool = host != null and host.armed
+	start_card.set_interactive(interactive)
+	start_card.set_briefing(briefing)
+	start_card.show_picks(ctx.run, ctx.profile)
+	var view := get_viewport().get_visible_rect().size
+	start_card.position = Vector2((view.x - start_card.size.x) * 0.5,
+		maxf(START_CARD_TOP, (view.y - start_card.size.y) * BRIEFING_CENTRE) if briefing else START_CARD_TOP)
+	# The kit pick has the screen first; the workshop calls back here when it closes.
+	if not interactive or not in_stage() or (host != null and host.kit_pick_due()):
+		start_card.hide_card()
 	if host != null:
 		host.sync_start_card_pointer()
+		host.sync_briefing()
 
 
 # The card holds no menu while it keeps mouse look (start_pick_card.gd wants_pointer), so the pause
 # menu or the hotwire offer can open over it; while one is open it owns the keys and the clicks, and
 # a tier button pressed under it changes nothing (the pause menu also opens over the tier choice).
+func start_card_covered() -> bool:
+	return _start_card_covered()
+
+
 func _start_card_covered() -> bool:
 	var game = ctx.root
 	var menu = game.get_node_or_null("PauseMenu")
