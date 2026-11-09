@@ -1,5 +1,7 @@
 # Scrapkeep alpha design
 
+The game in one line (Andrew, 9 November 2026, ruling cj): A crew of loose cannons, bulls in the Foreman's china shop, take their world back from a machine that believes life can be run perfectly. The story facts and what each system means are in the [Story map](STORY-MAP.md); this page owns how the game plays.
+
 Current gameplay design after checkpoint 1, as of base `981214373fecdad3c53be83b242993b62a1aa5ef`.
 Refresh: written against base `981214373fecdad3c53be83b242993b62a1aa5ef` before wave 3 landed. Wave 3 added the boss contract, the alpha table, the entrance document, the rarity ladder, the companion model, the guard-rack burst, hero asset guards, wind-up rows, lore rows, Spillway zone 1-1 and the nightly runner.
 [Playtest entry 12](../../../docs/playtests/PLAYTEST-LOG.md#12-checkpoint-1-the-cable-reach-first-human-play) and EV-0624 record the verdict.

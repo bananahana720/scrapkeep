@@ -11,8 +11,8 @@ One promotion, one full gate, on the frozen stage head. The Gate thread writes a
 | Shard | What it runs | Usual wall time on a 4 vCPU cloud box |
 | --- | --- | --- |
 | tests, three windows | the non-bot list in thirds | 50 to 60 min each |
-| bots 1 to 6 | the bot list in blocks of 5 | 35 to 60 min each |
-| bands A | the posture-band tests, `bot_isle_stage5`, `skill_band`, `run_tier_dials`, the word budgets | 60 min |
+| bots 1 to the last block | the bot list in blocks of 5 (22 tests, so 5 blocks, while the weekly list holds 9) | 35 to 60 min each |
+| bands A | the posture-band tests, `skill_band`, `run_tier_dials`, the word budgets, less any test the weekly list names | 60 min |
 | bands B | the world 1 challenge, 24 seeds | 90 min |
 | bands C | swarm bands, `run_tier`, the HARD rungs | 3 h, one resume |
 | red team | one persona, rotating: greedy, line-rider, speedrunner, first-timer, cautious | 60 min |
@@ -58,8 +58,9 @@ Cloud boxes differ by about a third in speed. On a slow one, export `SMOKE_TIME_
 
 The band shards read numbers, not only pass or fail, so they keep their own lane scripts: copy the last wave's from the receipts folder (`bands-A-logs/`, `bands-B-logs/`, `bands-C-logs/`) and change the label.
 
-- **Bands A**: each test alone through the runner with `--sketch core-loop` (`--bots` only for the tests on the bot list). Sort the `->` lines (`LC_ALL=C sort`) and strip wall seconds before comparing with the last head; they print in completion order.
+- **Bands A**: each test alone through the runner with `--sketch core-loop` (`--bots` only for the tests on the bot list). The lane script is copied from the last wave, so first strike every name that `node scripts/gate/shard.mjs list --weekly` and `list --weekly --bots` print (on 9 Nov: `posture_bands_mind_test`, `alpha_posture_bands_w23_test`, `bot_isle_stage5_test`); those run in the weekly sweep. Sort the `->` lines (`LC_ALL=C sort`) and strip wall seconds before comparing with the last head; they print in completion order.
 - **Bands B**: `node scripts/challenge/run.mjs --only=w1 --seeds=24 --no-top --jobs=4 --label=w<N>-<head>-w1`. Every job is the stage 1 Warden, so Brindle changes never show here. Compare `runs.ndjson` seed for seed with the last head.
+- **Bands B and C, what a player would report**: every `scripts/challenge/run.mjs` job plays with the play watch on (`--qa-log=1`), and `table.md` ends with "What a player would report": wedged, fell, blank, stuck and hung rows gathered by place. It is information, not a verdict: copy the section into the shard receipt, and name any wedged, fell or blank place on the board for its owner. The watch only reads the game (8 of 8 sample runs were identical with it on and off, 9 Nov), but each run's line gains a `qa` field and each bot row a `qa` count, so the first comparison against a head without them compares `row` less `qa` and `wall_seconds`.
 - **Bands C**: `run_tier_dials_test`, `posture_bands_swarm_camper_test`, `posture_bands_swarm_test` and `run_tier_test`, each alone; then the HARD rungs, `node scripts/challenge/run.mjs --only=w1 --seeds=S --bands=expert --no-top --jobs=4 --tier=N --label=w<N>-<head>-C-tN`, with S 24 for rungs 1 to 4 and 48 for rung 5.
 - A band sweep starts many child runs. A child that reads 300 s, or goes missing, on a 4-core box is suspect: rerun it alone before calling a red. Wait on a process by its PID (`kill -0`), never with `pgrep -f` or `pkill -f`, which match the waiting shell itself.
 - A `bot_driver` change moves every bot stream: rerun all bot shards and bands, and put `posture_bands_test` and `posture_bands_reactor_test` in that pull request's focused set.
@@ -74,7 +75,10 @@ The band shards read numbers, not only pass or fail, so they keep their own lane
 - A file that does not parse, or a row that names a test that does not exist, stops the shard with an error. It never skips nothing, or everything, silently. `npm run check:docs` fails on the same two faults, so a pull request catches them first.
 - The tally prints how many tests the promotion did not run. With no file on the head, the lists hold every test.
 - A weekly test can also have a ledger row. Its review date does not hold a promotion, because the promotion does not run it; the weekly sweep judges it, and `--promotion` prints the row as a note.
-- Not built yet: nothing holds a promotion when the weekly sweep has not run, and the tally does not read a weekly receipt. Until the testing lane adds that, the sweep's receipt goes on the board, and a red on the weekly list is the testing lane's to chase.
+- The hold: while the list names any test, the tally needs a `weekly sweep` row in the plan. Its verdict opens with `PASS`, gives the day the sweep ran as `YYYY-MM-DD` and names its receipts; a sweep more than 7 days old, a row with no day, or no row at all refuses CLEAN. Days are counted in UTC from the day in the row to the day the tally runs: a sweep 7 days back still counts, 8 refuses. The newest row wins, as for every shard.
+- Running it: when the newest sweep would be more than 7 days old at the tally, the gate plan adds one more shard thread, `weekly sweep`, which runs `node scripts/gate/shard.mjs run --weekly --tests 1-N --out ~/gate/weekly-tests` and then `run --weekly --bots 1-N --out ~/gate/weekly-bots` on the frozen head (about an hour on one box). Otherwise the plan copies the last sweep's row and receipts path forward. Nothing is scheduled: a promotion asks for the sweep when it is due.
+- A red in the sweep is judged like any shard red (alone, then the ledger). The testing lane owns the fix; the row stays `RED` and holds the promotion until the test passes, is carried on the ledger, or comes off the list.
+- The first row: every test on the list last ran in the wave 32 full gate on 2026-11-08, before the list existed, so the first plan after the list landed may write `PASS 2026-11-08, in the wave 32 full gate. Receipts gate/w32-58a6de62/`. The first sweep proper is due by 2026-11-15.
 
 ## The known-failing ledger
 
@@ -122,7 +126,7 @@ Run it in a checkout of the new head. If any game file changed, nothing carries.
 node scripts/gate/tally.mjs --plan /mnt/project-files/gate/w<N>-<head>-gate-plan.md
 ```
 
-The plan's tally is a table headed `| Shard | Verdict |`, one row per shard: `tests FIRST-LAST`, `bots 1` to `bots 6`, `bands A`, `bands B`, `bands C`, `red team <persona>`. A verdict opens with `PASS` (`CLEAR` for the red team) or with `RED`; the shard receipt's verdict line is written that way, so copy it. The checker refuses CLEAN while a row is missing or empty, a verdict names no receipt, the test windows leave a gap in the list, the newest row for a shard does not open with PASS or CLEAR, the plan's file name gates a head other than the one checked out (the lists are counted in the checkout), or a ledger row is past its review date. When a shard is read again on a moved head, add a new row under a new table; the newest row for a name wins.
+The plan's tally is a table headed `| Shard | Verdict |`, one row per shard: `tests FIRST-LAST`, `bots 1` to the last block of five, `bands A`, `bands B`, `bands C`, `red team <persona>`, and `weekly sweep` while the weekly list names any test. A verdict opens with `PASS` (`CLEAR` for the red team) or with `RED`; the shard receipt's verdict line is written that way, so copy it. The checker refuses CLEAN while a row is missing or empty, a verdict names no receipt, the test windows leave a gap in the list, the newest row for a shard does not open with PASS or CLEAR, the plan's file name gates a head other than the one checked out (the lists are counted in the checkout), a ledger row is past its review date, or the weekly sweep is missing or more than 7 days old. When a shard is read again on a moved head, add a new row under a new table; the newest row for a name wins.
 
 ## After the promotion
 

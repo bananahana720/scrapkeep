@@ -129,7 +129,7 @@ const DOOR := {
 	"boss": "brindle", "under_s": 720.0, "world": 1, "map": "park_dam", "site": "top_shelf_deck",
 	"at": [-208, -720], "face": [2, 1],
 	"name": "Shift Clock Door",
-	"log": "Foreman's note: crews who clock Brindle out before the whistle get the side door. Do not tell the slow shift.",
+	"log": "Shift note: crews who clock Brindle out before the whistle get the side door. Do not tell the slow shift.",
 	"codex": {"id": "spillway_clock_door", "category": "world", "name": "Before the Whistle",
 		"hint": "Some doors only open for a fast shift.",
 		"clue": "Rout Brindle in under 12 minutes; the next run finds a clock door by the drop-in",
