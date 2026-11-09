@@ -69,6 +69,9 @@ var cards_shown := 0
 # The clock in milliseconds; tests swap it for a fake.
 var now_ms: Callable = Callable(Time, "get_ticks_msec")
 
+# An item is on screen now (key is its show_discovery id): the calm moment it waited for.
+signal came_up(key: String)
+
 var _queue: Array = []
 var _calm_left := 0.0
 var _events = null
@@ -322,6 +325,7 @@ func _next() -> void:
 	_started_ms = int(now_ms.call())
 	visible = true
 	_place(0.0)
+	came_up.emit(item[6])
 
 
 func _process(delta: float) -> void:
