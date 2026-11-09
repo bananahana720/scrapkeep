@@ -10,6 +10,7 @@ extends SceneTree
 #             the engage ring, a gap for each built kicker the line crosses; scrap_lines stays empty (fabricators stand on scrap
 #             lines, and the ruling is no hoops); the other parks and a floor line with no scrap row carry no trail.
 #   schema    park_schema.gd validate_lines takes the scrap row, and a planted bad row turns it red.
+#   fold      drops past the scrap cap fold into each other and leave the trail's pieces where they were laid.
 #   ladder    the real field's magnet and the real scrap streak, stepped at 90 ticks a second with the ball rolling a
 #             flat trail: at cruise (and at 10 m/s) each phrase climbs rungs 0 to 7 and the next starts at 0 again; at a
 #             7 m/s walk nothing climbs (the planted control: the window is what carries the run).
@@ -45,6 +46,7 @@ func _run() -> void:
 	_lay_out()
 	_maps()
 	_schema()
+	_fold()
 	_ladder()
 	quit(t.verdict())
 
@@ -120,7 +122,7 @@ func _schema() -> void:
 		var park: Dictionary = ParkSchema.read_file("res://src/world/park/%s.json" % id)["data"]
 		var lines: Dictionary = ParkSchema.read_file(ParkMap.LINES_PATH % id)["data"]
 		t.eq("%s lines pass the schema with their scrap row" % id, ParkSchema.validate_lines(lines, park), [])
-		for bad: Dictionary in [{"spacing_m": 0, "phrase": 8, "rest": 4}, {"spacing_m": 9.8, "phrase": 0, "rest": 4}, {"spacing_m": 9.8, "phrase": 8}]:
+		for bad: Dictionary in [{"spacing_m": 0, "phrase": 8, "rest": 4}, {"spacing_m": 9.8, "phrase": 0, "rest": 4}, {"spacing_m": 9.8, "phrase": 8.5, "rest": 4}, {"spacing_m": 9.8, "phrase": 8}]:
 			var planted := lines.duplicate(true)
 			planted["floor"]["scrap"] = bad
 			var errors: Array = ParkSchema.validate_lines(planted, park)
@@ -145,6 +147,25 @@ func _rungs(speed: float) -> Array:
 		seconds += TICK
 	field.free()
 	return rungs
+
+
+# A long fight's drops fold the oldest loose pieces (SCRAP-LEAK); the trail is laid first, so it is the oldest.
+func _fold() -> void:
+	var field = ScrapField.new()
+	root.add_child(field)
+	field.setup()
+	field.lay_trail(Flat.new(), _line(400.0))
+	var laid: Array[Vector3] = field.trail_points()
+	field.max_pieces = 30
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	field.drop(Vector3(300.0, 0.0, 300.0), 40, rng)
+	t.check("drops past the cap fold into each other", field.count() <= 30, str(field.count()))
+	t.check("and the 24 trail pieces all still stand where they were laid", laid.size() == 24 and field.trail_points() == laid,
+		"%d of %d" % [field.trail_points().size(), laid.size()])
+	field.clear()
+	t.eq("clear takes the trail too", field.trail_points().size(), 0)
+	field.free()
 
 
 func _ladder() -> void:

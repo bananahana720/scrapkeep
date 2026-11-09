@@ -350,8 +350,9 @@ static func validate_lines(lines: Dictionary, park: Dictionary) -> Array:
 		# Optional: the floor line's scrap, laid to the beat (park_map.gd scrap_trail).
 		if lines["floor"].has("scrap") and _fields(out, "floor.scrap", lines["floor"]["scrap"], {"spacing_m": "n", "phrase": "n", "rest": "n"}):
 			var scrap: Dictionary = lines["floor"]["scrap"]
-			if float(scrap["spacing_m"]) <= 0.0 or int(scrap["phrase"]) < 1 or int(scrap["rest"]) < 0:
-				_add(out, "floor.scrap", "range", "spacing_m and phrase must be over 0 and rest 0 or more")
+			var whole := float(scrap["phrase"]) == floorf(float(scrap["phrase"])) and float(scrap["rest"]) == floorf(float(scrap["rest"]))
+			if float(scrap["spacing_m"]) <= 0.0 or float(scrap["phrase"]) < 1.0 or float(scrap["rest"]) < 0.0 or not whole:
+				_add(out, "floor.scrap", "range", "spacing_m must be over 0, phrase a whole number from 1 and rest a whole number from 0")
 	return out
 
 
