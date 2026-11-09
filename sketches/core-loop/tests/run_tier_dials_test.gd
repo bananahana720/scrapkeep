@@ -1,4 +1,6 @@
 extends SceneTree
+# smoke: timeout=300s (92-129 s in a gate chunk on the w31 and w32 boxes, 158 s alone on w30's, where the
+# default 180 s cap killed it in the chunk)
 
 const T := preload("res://tests/support/t.gd")
 const Director := preload("res://src/world/director.gd")
