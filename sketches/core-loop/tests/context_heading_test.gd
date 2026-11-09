@@ -6,10 +6,12 @@ const T := preload("res://tests/support/t.gd")
 
 # Context.heading() is the one call simulation code makes for the level direction the player
 # faces. It returns the camera's own -yaw_basis().z bit for bit, so a caller moved onto it plays
-# the same run, and the scan keeps the camera's basis out of every module but the camera, the
-# spine and the context.
+# the same run, and the scan keeps yaw_basis() calls out of the simulation folders.
 
-const ALLOWED := ["res://src/movement/chase_camera.gd", "res://src/game.gd", "res://src/core/context.gd"]
+# The simulation folders, as profile_purity_test lists them, plus core. View code (presentation,
+# ui) and the spine (game.gd) may read the camera; these may not.
+const DIRS := ["src/movement", "src/combat", "src/build", "src/world", "src/boss", "src/core"]
+const ALLOWED := ["res://src/movement/chase_camera.gd", "res://src/core/context.gd"]
 const PATTERN := "\\byaw_basis\\s*\\("
 
 var _t := T.new("context_heading_test")
@@ -32,11 +34,16 @@ func _initialize() -> void:
 	var level := ctx.heading()
 	camera.pitch = -1.1
 	_t.eq("pitch leaves the heading alone", ctx.heading(), level)
-	# The read side of snap(heading): the yaw snap() computes for a direction reads back as it.
+	# The read side of snap(heading): face the camera down a direction and it reads back level.
+	# snap() also places the camera, which needs the tree: the root is in it from the first frame.
+	await process_frame
+	camera.target = _Ball.new()
+	get_root().add_child(camera)
 	for dir: Vector3 in [Vector3(0, 0, -1), Vector3(1, 0, 0), Vector3(-3, 5, 4)]:
 		var flat := Vector3(dir.x, 0.0, dir.z).normalized()
-		camera.yaw = atan2(-flat.x, -flat.z)
-		_t.check("the yaw snap() sets toward %s reads back" % dir, ctx.heading().distance_to(flat) < 0.00001, "got %s, want %s" % [ctx.heading(), flat])
+		camera.snap(dir)
+		_t.check("snap toward %s reads back" % dir, ctx.heading().distance_to(flat) < 0.00001, "got %s, want %s" % [ctx.heading(), flat])
+	get_root().remove_child(camera)
 	camera.free()
 
 	var re := RegEx.create_from_string(PATTERN)
@@ -44,16 +51,17 @@ func _initialize() -> void:
 	_t.check("scan self-check: ctx.heading() passes", re.search("var f := ctx.heading()\n") == null, "the call")
 	var files := 0
 	var reads: Array = []
-	for path in _gd_files("res://src"):
-		files += 1
-		if path in ALLOWED:
-			continue
-		var number := 0
-		for line in FileAccess.get_file_as_string(path).split("\n"):
-			number += 1
-			if not line.strip_edges().begins_with("#") and re.search(line) != null:
-				reads.append("%s:%d" % [path, number])
-	_t.check("no module reads the camera's basis; they ask ctx.heading()", reads.is_empty(), "reads %s" % [reads])
+	for dir in DIRS:
+		for path in _gd_files("res://" + dir):
+			files += 1
+			if path in ALLOWED:
+				continue
+			var number := 0
+			for line in FileAccess.get_file_as_string(path).split("\n"):
+				number += 1
+				if not line.strip_edges().begins_with("#") and re.search(line) != null:
+					reads.append("%s:%d" % [path, number])
+	_t.check("no simulation module calls yaw_basis(); they ask ctx.heading()", reads.is_empty(), "reads %s" % [reads])
 	_t.check("the scan saw files", files > 200, "%d files" % files)
 	quit(_t.verdict())
 
@@ -66,3 +74,12 @@ func _gd_files(dir: String) -> Array:
 	for sub in DirAccess.get_directories_at(dir):
 		out.append_array(_gd_files(dir.path_join(sub)))
 	return out
+
+
+# What snap() reads of the ball.
+class _Ball:
+	extends RefCounted
+	var state := {"velocity": Vector3.ZERO}
+
+	func shown_position() -> Vector3:
+		return Vector3.ZERO
