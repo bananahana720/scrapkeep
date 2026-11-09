@@ -89,7 +89,7 @@ Hype rule and extras (sound bible, "The hype rule" and "The four extras"). Decid
 | Low hull | The low-hull buff: low-pass 700 Hz, heartbeat one-shots on each beat of the current track, band ducked 55% under each thump | Read the beat length from the playing track, so the heartbeat follows phase tempo |
 | Survive low hull | `clutch_comeback` quantized to the next bar; the current track restarts pitched up a semitone (`pitch_scale` 1.0595) until the phase ends | Low-hull exit with hull above 1 |
 | Retry after death | `retry_kickin` on the first frame of the new run, then the combat or roam track on its downbeat | Restart flow |
-| Big hit (crit, gauge release, chain milestone) | `pilot_quote_<class motif>` on the next beat, at most once per 8 bars | `class_def.motif` already names the row |
+| Big hit (crit, gauge release, chain milestone) | `pilot_quote_<class motif>` on the next beat, at most once per 8 bars | `class_def.motif` already names the row. Built for the chain milestone (9 November 2026): a chain of six lands on the bar line and the quote starts on the beat after it (`audio._quote_pilot`). The crit and the gauge release are not wired yet |
 | Kill chain reaches 20, 35, 50 | `crowd_cheer_1`, `_2`, `_3` on the next beat | The existing chain ladder |
 | Smash misses | `whiff_honk` on the next beat | The smash resolver's miss branch |
 

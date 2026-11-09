@@ -307,8 +307,9 @@ const SET_CHIME_VOICES := {"arc": "clav", "frost": "bell"}
 const SET_CHIME_DONE_VOICE := "beep"
 const SET_CHIME_LEAD_S := 0.12
 # The band answers a long chain by name: the pilot's quote starts a beat after the chain lands, and
-# not again for PILOT_QUOTE_GAP seconds, so it stays a treat.
-const PILOT_QUOTE_GAP := 16.0
+# not again for PILOT_QUOTE_BARS bars of the sounding band (sound/INTEGRATION.md section 6), so it
+# stays a treat.
+const PILOT_QUOTE_BARS := 8
 # The last_ms of the kill chain whose end has been heard.
 var _streak_landed_ms := -100000
 # The beat a death holds the recorded band to; the lost summary's pack starts once it has passed
@@ -3278,11 +3279,16 @@ func land_streak(rung: int) -> int:
 # The band answers a long chain by name (SOUND-BIBLE, "Pilot quotes"): the pilot's own motif on
 # the sax from transport sample at, in the sounding band's eighths and key.
 func _quote_pilot(at: int) -> void:
-	if not _gate("pilot_quote", PILOT_QUOTE_GAP):
+	if not _gate("pilot_quote", pilot_quote_gap()):
 		return
 	var id := _pilot_quote_id()
 	engine.schedule_stinger_at(id, at, PRIORITY_DB[Rows.priority("enemy_killed")], false, grid_unit(4))
 	cue_log.append(["enemy_killed", id, "quote", at, 1.0])
+
+
+# The seconds between two quotes: PILOT_QUOTE_BARS bars of four beats at the sounding band's tempo.
+func pilot_quote_gap() -> float:
+	return float(PILOT_QUOTE_BARS * 4 * grid_unit(1)) / Harmony.RATE
 
 
 func _pilot_quote_id() -> String:

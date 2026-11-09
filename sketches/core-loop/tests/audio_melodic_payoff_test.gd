@@ -209,7 +209,7 @@ func _pilot_quote(game: Node, audio) -> void:
 	# The last chain ended and the gap since any earlier quote has passed.
 	_clock_ms += window + 50
 	audio._tend_kill_streak()
-	audio.clock += audio.PILOT_QUOTE_GAP + 1.0
+	audio.clock += audio.pilot_quote_gap() + 1.0
 	_kills(game, audio, 6)
 	audio.cue_log.clear()
 	_clock_ms += window + 50
@@ -232,10 +232,10 @@ func _pilot_quote(game: Node, audio) -> void:
 	audio.cue_log.clear()
 	_clock_ms += window + 50
 	audio._tend_kill_streak()
-	t.check("no second quote inside the gap", audio.cue_log.filter(func(e: Array): return e[2] == "quote").is_empty()
-		and _grid(audio, "enemy_killed").size() >= 2, "cues %s" % [audio.cue_log.map(func(e: Array): return [e[1], e[2]])])
+	t.check("no second quote inside eight bars", audio.cue_log.filter(func(e: Array): return e[2] == "quote").is_empty()
+		and _grid(audio, "enemy_killed").size() >= 2 and is_equal_approx(audio.pilot_quote_gap(), 32.0 * engine.beat_len() / Harmony.RATE), "cues %s" % [audio.cue_log.map(func(e: Array): return [e[1], e[2]])])
 	# A short chain is never answered, whatever the gap.
-	audio.clock += audio.PILOT_QUOTE_GAP + 1.0
+	audio.clock += audio.pilot_quote_gap() + 1.0
 	_kills(game, audio, 3)
 	audio.cue_log.clear()
 	_clock_ms += window + 50
@@ -384,6 +384,22 @@ func _death_recorded() -> void:
 		"notes at %s, play head %d, the pack's eighth %d (synth eighth %d), origin %d" % [times, head, eighth, engine.beat_len() / 2, level.origin])
 	# Whole beats of the pack, so the death below still falls where it did.
 	_pump_to(audio, head + 8 * audio.grid_unit(1))
+	# The quote over a recorded band is made for that band's sixteenth, not the muted synth band's:
+	# a pack half as slow again gets the slower phrase.
+	var quote: String = Bank.pilot_quote_id(audio._motif)
+	var pack_beat: int = level.grid_beat
+	level.grid_beat = pack_beat * 3 / 2
+	var slow: int = audio.grid_unit(4)
+	var due: int = engine.clock + 2000
+	audio.clock += audio.pilot_quote_gap() + 1.0
+	audio._quote_pilot(due)
+	level.grid_beat = pack_beat
+	var made_before: bool = Bank.cached_at(quote, slow, engine.stinger_key(due))
+	head = engine.clock
+	_pump_to(audio, head + 8 * audio.grid_unit(1))
+	t.check("pilot quote: over the recorded band it is made for that band's step", slow == pack_beat * 3 / 8 and slow != engine.step_len
+		and not made_before and Bank.cached_at(quote, slow, engine.stinger_key(due)) and engine.stinger_starts.any(func(s: Array): return s[0] == quote and int(s[1]) == due),
+		"step %d against the synth band's %d, made before %s, made after %s" % [slow, engine.step_len, made_before, Bank.cached_at(quote, slow, engine.stinger_key(due))])
 	var beat := engine.next_beat()
 	t.check("the death falls mid-beat", beat - engine.clock > 2000, "play head %d, next beat %d" % [engine.clock, beat])
 	audio.cue_log.clear()

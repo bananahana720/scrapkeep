@@ -498,6 +498,8 @@ static func pilot_quote_score(class_id: String) -> Array:
 	var score: Array = []
 	for cell in cells:
 		score.append([2 * int(cell[0]), int(cell[1]) + octave, 2 * int(cell[2]), "lead", 0.8])
+	if score.is_empty():
+		return score
 	var last: Array = score.back()
 	score.append([last[0], int(last[1]) - 12, last[2], "brass", 0.45])
 	score.append([last[0], 0, 1, "kick", 0.6])
