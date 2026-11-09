@@ -63,6 +63,9 @@ const STAMP_TILT := -6.0
 # it; after that Space, Enter, Esc or any pad button shows the summary beneath.
 const ENDING_HOLD := 1.0
 const PROLOGUE_TITLE := "FIRST SHIFT"
+# The one line under "Choose your pilot"; empty shows none. The screen has room for one line
+# (ui_class_card_level_test L4 pins it with the key row on screen).
+const PILOT_LINE := ""
 # Start is the one filled button on the title: the primary action reads first and biggest.
 # The run-end comic page (run_moments.gd) on the summary, drawn by the camp's comic_page.gd
 # when the build has it: 3:4, at most this share of the screen's height.
@@ -349,7 +352,11 @@ func _on_flow_changed(state: String) -> void:
 				_refusal.text = "Saved run not loaded (%s): %s" % [game.flow.saved_run_cause, continue_refusal()]
 				button_for("start").grab_focus()
 		"class_select":
-			_show("Choose your pilot", Palette.SAND, "")
+			_show("Choose your pilot", Palette.SAND, PILOT_LINE)
+			# Pilot select fills none of these rows; hidden, their gaps (26 px each) are room for
+			# the line under the title with the cards at full height and the key row on screen.
+			for row in [_stats, _comic_row, _actions]:
+				row.visible = false
 			var classes: Array = game.flow.classes
 			var gap := CARD_GAP if classes.size() <= 4 else CARD_GAP_TIGHT
 			_choices.add_theme_constant_override("separation", int(gap))
@@ -484,6 +491,7 @@ func _begin_prologue() -> void:
 	_prologue_line = 0
 	_choices.visible = false
 	_footer.visible = false
+	_actions.visible = true
 	_show_prologue_line()
 
 
@@ -527,7 +535,8 @@ func end_prologue() -> void:
 	for child in _actions.get_children():
 		_actions.remove_child(child)
 		child.queue_free()
-	_show("Choose your pilot", Palette.SAND, "")
+	_show("Choose your pilot", Palette.SAND, PILOT_LINE)
+	_actions.visible = false
 	_choices.visible = true
 	_footer.visible = true
 	_queue_level()
