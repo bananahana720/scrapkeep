@@ -16,7 +16,7 @@ Seeds 6101 and 6102 for every cell: 3 candidates x 3 cells x 2 seeds = 18 render
 
 ## Captions
 
-Never write "anime" in a caption, never a real artist's name, and never ask for vocals. Every caption ends with: `instrumental, D Dorian, melody-led, saxophone hook clearly on top, drums supporting`.
+Never write "anime" in a caption, never a real artist's name, and never ask for vocals. Every caption ends with: `instrumental, D Dorian, melody-led, saxophone hook clearly on top, drums supporting`. After that line every caption also carries the standing guard: `No pentatonic or East Asian melody or instruments`. ACE-Step's keyscale field is D minor; Dorian comes from the caption.
 
 ### A. The festival years (sounds like 2010)
 
@@ -33,7 +33,7 @@ Never write "anime" in a caption, never a real artist's name, and never ask for 
 ### C. The dance-band years (sounds like 1978)
 
 - roam: `1978 fast jazz-funk fusion, 172 BPM, live drummer on ride cymbal and tight snare, slap electric bass, clavinet riff, Fender Rhodes ninth chords, real horn section stabs, alto saxophone lead in call and response, talkbox answers, one room live recording, analog tape warmth, no synths on the drums`
-- fight: `1979 disco and hi-NRG anthem, 129 BPM, four on the floor live kick with open hi-hat, octave Moog bass line, string machine, big synth-brass lead melody answered by alto saxophone, timbale and anvil fills, hand claps, build to a key change, live band on analog tape`
+- fight: `1979 disco and hi-NRG anthem, 129 BPM, four on the floor live kick with open hi-hat, octave Moog bass line, string machine, big synth-brass lead melody answered by alto saxophone, timbale and anvil fills, hand claps, build to a bigger final chorus, live band on analog tape`
 - free: `1978 disco funk dance band, 129 BPM, four on the floor kick, open hi-hat on the offbeat, clavinet and wah guitar, Fender Rhodes, real horn section, alto saxophone lead melody, slap bass, gospel organ swells, steam whistle and wrench percussion played live, warm analog tape, one room`
 
 ## What to send back
