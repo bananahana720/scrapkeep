@@ -1,0 +1,201 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+import { indexFromFiles } from "../sketch-fast.mjs";
+import { parseLedger } from "../known-failing.mjs";
+import { place, sortChanges, testsToRerun } from "./carry.mjs";
+import { chunks, classifyFailure, errorCounts, gateLists, nearLimit, numbered, parseSmokeLog, parseWindow, renderReceipt, shardVerdict } from "./shard.mjs";
+import { checkTally, expectedShards, tallyRows } from "./tally.mjs";
+
+const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
+const ledger = parseLedger(
+  [
+    "test\tkind\tcause\towner\tadded\treview",
+    "red_test\tred\tpin off by 2 s\tcoordinator\t2026-11-09\t2026-11-23",
+    "wobble_test\tflake\ttimed in wall milliseconds\ttesting lane\t2026-11-09\t2026-11-23",
+  ].join("\n"),
+).rows;
+
+test("the gate lists split the sorted tests by the bot marker and number from 1", () => {
+  const lists = gateLists(path.join(repoRoot, "sketches", "core-loop"));
+  assert.ok(lists.tests.length > 1000);
+  assert.ok(lists.bots.length >= 30);
+  assert.deepEqual([...lists.tests].sort(), lists.tests);
+  assert.ok(lists.bots.includes("alpha_bot_sweep_test") && !lists.tests.includes("alpha_bot_sweep_test"));
+  assert.equal(numbered(["a_test", "b_test"]), "     1\ta_test.gd\n     2\tb_test.gd");
+});
+
+test("a window is counted from 1 with both ends included and must fit the list", () => {
+  assert.deepEqual(parseWindow("361-720", 1087), { first: 361, last: 720 });
+  assert.throws(() => parseWindow("0-5", 10), /does not fit/);
+  assert.throws(() => parseWindow("5-11", 10), /does not fit/);
+  assert.throws(() => parseWindow("first third", 10), /FIRST-LAST/);
+  assert.deepEqual(chunks(["a", "b", "c", "d", "e"], 2), [["a", "b"], ["c", "d"], ["e"]]);
+});
+
+test("a runner log yields one result per test and ignores import and summary lines", () => {
+  const log = [
+    "PASS sketches/core-loop import exit=0 3.9s",
+    "PASS sketches/core-loop res://tests/a_test.gd exit=0 12.0s",
+    "FAIL sketches/core-loop res://tests/b_test.gd exit=null 360.1s",
+    "  >> [small median] 119.1 s -> FAIL",
+    "slowest 2:",
+    "  360.1s sketches/core-loop res://tests/b_test.gd",
+  ].join("\n");
+  assert.deepEqual(parseSmokeLog(log), [
+    { test: "a_test", ok: true, exit: "0", seconds: 12 },
+    { test: "b_test", ok: false, exit: "null", seconds: 360.1 },
+  ]);
+});
+
+test("error lines are counted by kind", () => {
+  const text = "ERROR: a leak\nWARNING: 3 ObjectDB instances leaked at exit\n   SCRIPT ERROR: bad call\nResource still in use\nnot an ERROR line\n";
+  assert.deepEqual(errorCounts(text), { error: 1, script_error: 1, in_use: 1, freed: 0, leaked_warning: 1 });
+});
+
+test("a failure is carried only with a ledger row, and blocks when it fails alone without one", () => {
+  assert.equal(classifyFailure("red_test", [false, false], ledger).call, "carried");
+  assert.equal(classifyFailure("wobble_test", [true, true], ledger).call, "carried");
+  assert.match(classifyFailure("wobble_test", [false, false], ledger).note, /failed every solo run/);
+  const flake = classifyFailure("fresh_test", [true, true], ledger);
+  assert.equal(flake.call, "new-flake");
+  assert.equal(flake.alone, "2/2 pass alone");
+  assert.equal(classifyFailure("fresh_test", [true, false], ledger).call, "new-red");
+  assert.equal(classifyFailure("fresh_test", [false, false], ledger).call, "new-red");
+});
+
+test("a shard is red only for a new red, and its verdict names what it carried", () => {
+  const carried = classifyFailure("red_test", [false, false], ledger);
+  const flake = classifyFailure("fresh_test", [true, true], ledger);
+  const red = classifyFailure("broken_test", [false, false], ledger);
+  assert.deepEqual(shardVerdict([]), { ok: true, line: "PASS, no new red" });
+  assert.deepEqual(shardVerdict([carried, flake]), { ok: true, line: "PASS, no new red (1 carried on the ledger, 1 new load flake to list)" });
+  assert.deepEqual(shardVerdict([carried, red]), { ok: false, line: "RED: 1 new red (broken_test)" });
+});
+
+test("tests at or past 85% of their limit are listed, nearest first", () => {
+  const results = [
+    { test: "fast_test", seconds: 20 },
+    { test: "close_test", seconds: 325 },
+    { test: "closer_test", seconds: 175 },
+  ];
+  const limits = { fast_test: 180_000, close_test: 360_000, closer_test: 180_000 };
+  assert.deepEqual(nearLimit(results, (name) => limits[name]).map((result) => result.test), ["closer_test", "close_test"]);
+});
+
+test("the receipt leads with the verdict and lists steps, failures and error counts", () => {
+  const failures = [classifyFailure("red_test", [false, false], ledger)];
+  const text = renderReceipt({
+    title: "Gate shard: tests 1-2 on abcd1234",
+    head: "abcd1234",
+    box: "4 vCPU Xeon, 15 GB",
+    godot: "Godot_v4.7.2",
+    scale: 1.5,
+    window: "non-bot list 1 to 2 of 1087",
+    steps: { "import-1": { exit: 0, seconds: 90 }, chunk00: { exit: 1, seconds: 400 } },
+    results: [{ test: "a_test", ok: true, seconds: 12 }, { test: "red_test", ok: false, seconds: 30 }],
+    failures,
+    counts: errorCounts(""),
+    slow: [],
+    verdict: shardVerdict(failures),
+    startedAt: "2026-11-09T20:00:00Z",
+    finishedAt: "2026-11-09T20:40:00Z",
+  });
+  assert.match(text, /^# Gate shard: tests 1-2 on abcd1234\n\n\*\*Verdict: PASS, no new red \(1 carried on the ledger\)\.\*\* 1 of 2 passed on the first run\./);
+  assert.match(text, /Time limits scaled by 1\.5/);
+  assert.match(text, /\| chunk00 \| 1 \| 400 s \|/);
+  assert.match(text, /\| red_test \| 0\/2 pass alone \| carried \| red, owner coordinator, review 2026-11-23: pin off by 2 s \|/);
+});
+
+test("changed paths sort into game files, test files and the rest", () => {
+  assert.deepEqual(
+    sortChanges([
+      "sketches/core-loop/src/core/flow.gd",
+      "sketches/core-loop/tests/kest_kit_test.gd",
+      "sketches/core-loop/tests/support/probe.gd",
+      "sketches/core-loop/DESIGN-NOTES.md",
+      "scripts/sketch-smoke.mjs",
+    ]),
+    {
+      game: ["sketches/core-loop/src/core/flow.gd"],
+      tests: ["tests/kest_kit_test.gd", "tests/support/probe.gd"],
+      other: ["sketches/core-loop/DESIGN-NOTES.md", "scripts/sketch-smoke.mjs"],
+    },
+  );
+});
+
+test("a changed test file reruns every test that reaches it, however many steps away", () => {
+  const index = indexFromFiles(
+    new Map(
+      Object.entries({
+        "tests/kest_kit_test.gd": 'const Probe = preload("res://tests/support/probe.gd")\n',
+        "tests/kest_set_piece_test.gd": 'extends "res://tests/kest_kit_test.gd"\n',
+        "tests/kest_finale_test.gd": 'extends "res://tests/kest_set_piece_test.gd"\n',
+        "tests/support/probe.gd": "extends RefCounted\n",
+        "tests/other_test.gd": "extends SceneTree\n",
+        "src/uses_probe.gd": 'const Probe = preload("res://tests/support/probe.gd")\n',
+      }),
+    ),
+  );
+  const direct = testsToRerun(index, ["tests/kest_kit_test.gd"]);
+  assert.deepEqual([...direct.keys()].sort(), ["tests/kest_finale_test.gd", "tests/kest_kit_test.gd", "tests/kest_set_piece_test.gd"]);
+  assert.equal(direct.get("tests/kest_kit_test.gd"), "changed");
+  assert.equal(direct.get("tests/kest_set_piece_test.gd"), "reaches tests/kest_kit_test.gd");
+  const support = testsToRerun(index, ["tests/support/probe.gd"]);
+  assert.deepEqual([...support.keys()].sort(), ["tests/kest_finale_test.gd", "tests/kest_kit_test.gd", "tests/kest_set_piece_test.gd"]);
+  assert.equal(testsToRerun(index, ["tests/deleted_test.gd"]).size, 0);
+});
+
+test("a test is placed in the list its shard reads", () => {
+  const lists = { tests: ["a_test", "b_test"], bots: ["bot_a_test"] };
+  assert.equal(place("b_test", lists), "non-bot list 2");
+  assert.equal(place("bot_a_test", lists), "bot list 1");
+  assert.equal(place("gone_test", lists), "not in a gate list");
+});
+
+const plan = (rows) => ["## Gate-side", "| Check | Verdict |", "| --- | --- |", "| placeholders | PASS |", "", "## Tally", "| Shard | Verdict |", "| --- | --- |", ...rows, "", "## Verdict"].join("\n");
+const full = [
+  "| tests 1-5 | PASS. Receipt tests-1-5.md |",
+  "| tests 6-10 | PASS. Receipt tests-6-10.md |",
+  "| bots 1 | PASS 5/5. Receipt bots-1.md |",
+  "| bots 2 | PASS 5/5. Receipt bots-2.md |",
+  "| bands A | PASS. Receipt bands-A.md |",
+  "| bands B | PASS. Receipt bands-B.md |",
+  "| bands C | PASS. Receipt bands-C.md |",
+  "| red team cautious | CLEAR. Receipt red-team-cautious.md |",
+];
+const counts = { testCount: 10, botCount: 10 };
+
+test("only the shard tables of a plan are read", () => {
+  const rows = tallyRows(plan(full));
+  assert.equal(rows.length, 8);
+  assert.deepEqual(rows[0], { shard: "tests 1-5", verdict: "PASS. Receipt tests-1-5.md", line: 9 });
+  assert.deepEqual(expectedShards(10), ["bots 1", "bots 2", "bands A", "bands B", "bands C", "red team"]);
+});
+
+test("a full tally passes", () => {
+  assert.deepEqual(checkTally(tallyRows(plan(full)), counts), []);
+});
+
+test("an empty verdict, a missing shard, a gap in the tests and a missing receipt are each named", () => {
+  const rows = [...full];
+  rows[1] = "| tests 7-10 | PASS. Receipt tests-7-10.md |";
+  rows[2] = "| bots 1 | |";
+  rows[4] = "| bands A | PASS, identical to the last head |";
+  rows.pop();
+  const problems = checkTally(tallyRows(plan(rows)), counts).join("\n");
+  assert.match(problems, /"bots 1" has an empty verdict/);
+  assert.match(problems, /"bands A" names no receipt/);
+  assert.match(problems, /no row for "red team"/);
+  assert.match(problems, /non-bot tests 6 to 6 have no row/);
+});
+
+test("a red row blocks until a newer row for the same shard is not red", () => {
+  const red = [...full];
+  red[4] = "| bands A | RED, one new deterministic red. Receipt bands-A.md |";
+  assert.match(checkTally(tallyRows(plan(red)), counts).join("\n"), /"bands A" is red in its newest row/);
+  const reread = plan(red) + "\n\n## Head moved\n| Shard | Verdict |\n| --- | --- |\n| bands A | PASS after the re-pin. Receipt bands-A-2.md |\n";
+  assert.deepEqual(checkTally(tallyRows(reread), counts), []);
+});

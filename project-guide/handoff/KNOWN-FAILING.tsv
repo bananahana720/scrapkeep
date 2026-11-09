@@ -1,0 +1,18 @@
+test	kind	cause	owner	added	review
+posture_bands_mind_test	red	small Mind median 119.1 s against its 103.8 s pin; world 3, out of scope until the world 1 sitting (ruling at)	coordinator	2026-11-09	2026-11-23
+posture_bands_reactor_test	red	small breaks in under twice the grown time (60.2/31.8 = 1.89, the check wants 2.0); the ruling bl pins hold	coordinator	2026-11-09	2026-11-23
+trace_readonly_test	red	the production actor wiring child process times out	testing lane	2026-11-09	2026-11-23
+tree_play_test	red	the class 5 child process times out on a cloud box, with no script error; not yet re-read on the PC	testing lane	2026-11-09	2026-11-23
+waking_fight_test	red	exits 0 but prints an ERROR line from ambient_life.gd line 85; world 2, out of scope until the world 1 sitting (ruling at)	coordinator	2026-11-09	2026-11-23
+warden_counter_pulse_test	red	two SCRIPT ERROR lines: the CtxDouble test double has no 'run'	testing lane	2026-11-09	2026-11-23
+tree_bot_test	flake	seed 0 takes a random branch and fails [tree picks]; passed alone in the wave 31 gate, failed alone in wave 32	testing lane	2026-11-09	2026-11-23
+audio_bake_cancel_test	flake	check FX-2 (re-entry restarts the bake) reads a bake that finished early; passes 2 runs in 3 alone, and fails on main too	testing lane	2026-11-09	2026-11-23
+kite_dive_stack_test	flake	every check passes, then an exit ERROR from player_fx.gd _on_beat_word under load; clean alone	testing lane	2026-11-09	2026-11-23
+park_reactor_repeat_test	flake	small and grown fight times stretch under load (47.6 s and 19.7 s in the wave 32 chunk); passes alone	testing lane	2026-11-09	2026-11-23
+park_swap_test	flake	the row placement step is timed in wall milliseconds (14.9 ms against 8 ms under load); passes alone	testing lane	2026-11-09	2026-11-23
+telegraph_timing_swarm_test	flake	runs 325 to 330 s alone against a 360 s time limit, so load kills it at the limit	testing lane	2026-11-09	2026-11-23
+presentation_juice_test	flake	[real freeze] samples the time_scale dip per frame and reads 0 ms under load; first seen in the wave 32 gate	testing lane	2026-11-09	2026-11-23
+ui_workshop_shop_test	flake	[counter cut mid slide] is a wall-clock timing check on the slide-out; first seen in the wave 32 gate	testing lane	2026-11-09	2026-11-23
+warden_mind_test	flake	[under_island: the ball latches a knuckle] misses under load; first seen in the wave 32 gate	testing lane	2026-11-09	2026-11-23
+juice_budget_test	flake	[peak under the cap] peak shake 0.886 against 0.500 under load; passes 3 runs in 3 alone (wave 31 gate)	testing lane	2026-11-09	2026-11-23
+stage_entry_budget_test	flake	the stage 2 activities sample reads 34.9 ms against the 30 ms limit under load; its retry and a solo run pass (wave 31 gate)	testing lane	2026-11-09	2026-11-23
