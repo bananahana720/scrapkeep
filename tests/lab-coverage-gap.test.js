@@ -26,6 +26,7 @@ import {
 } from "../scripts/lab/coverage-gap.mjs";
 import { getMetric } from "../scripts/lab/metrics/index.mjs";
 import { STATUS, evaluate } from "../scripts/lab/metrics/status.mjs";
+import { shallowClone } from "./preconditions.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -378,7 +379,7 @@ test("an overlay snapshot adds files on top of a base", () => {
   assert.equal(snapshot.read("a.mjs"), "x");
 });
 
-test("a git snapshot reads a commit's tree, and the real repo's static scan sees triage's test", () => {
+test("a git snapshot reads a commit's tree, and the real repo's static scan sees triage's test", { skip: shallowClone }, () => {
   const snapshot = gitSnapshot(root, "d8e67d08d0c63584c62d929508cf02422ceb0361");
   assert.ok(snapshot.files.includes("scripts/lab/triage.mjs"));
   assert.match(snapshot.read("scripts/lab/triage.mjs"), /export async function triage/);
