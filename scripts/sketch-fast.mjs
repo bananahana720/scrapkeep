@@ -667,6 +667,7 @@ async function main() {
   if (!stage("quarantine", expired.length === 0, { note: expired.length ? `${expired.length} expired: ${expired.map((entry) => entry.test).join(", ")}` : `${quarantineEntries.length} rows, none expired` })) finish();
   if (!existsSync(binary)) {
     console.error(`Godot binary not found at ${binary}; set GODOT_BIN`);
+    stage("godot", false, { note: "no Godot binary, so no test ran" });
     finish(2);
   }
   await acquireMachine();
