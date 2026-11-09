@@ -63,10 +63,6 @@ var _plant_limit := 0.0
 var _watch_on := false
 var _watch
 var _read_at := 0.0
-var _blank := 0.0
-var _blank_max := 0.0
-var _plates := 0
-var _plate := ""
 var _stages: Array[int] = []
 var _watch_told := false
 
@@ -180,17 +176,7 @@ func _watch_step(delta: float) -> void:
 		return
 	var since := _now() - _read_at
 	_read_at = _now()
-	if not game.flow.in_play() or game.hud == null:
-		_blank = 0.0
-		return
-	_watch.read_text()
-	var reading: Dictionary = game.hud.objective_reading()
-	_blank = _blank + since if String(reading.get("words", "")).strip_edges() == "" else 0.0
-	_blank_max = maxf(_blank_max, _blank)
-	var id := String(reading.get("id", ""))
-	if id != _plate:
-		_plate = id
-		_plates += 1
+	_watch.read_text(since)
 
 
 func _tell_watch() -> void:
@@ -199,7 +185,7 @@ func _tell_watch() -> void:
 	_watch_told = true
 	var c: Dictionary = _watch.counts
 	print("self-play: watch stuck=%d hung=%d wedged=%d fell=%d objectives=%d blank_max=%.1f stages=%s" % [int(c.get("stuck", 0)),
-		int(c.get("hung", 0)), int(c.get("wedged", 0)), int(c.get("fell", 0)), _plates, _blank_max, ",".join(_stages.map(func(n): return str(n)))])
+		int(c.get("hung", 0)), int(c.get("wedged", 0)), int(c.get("fell", 0)), _watch.plates, _watch.blank_max, ",".join(_stages.map(func(n): return str(n)))])
 
 
 func _start() -> void:

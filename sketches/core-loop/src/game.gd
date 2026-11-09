@@ -5,6 +5,7 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Context := preload("res://src/core/context.gd")
 const Flow := preload("res://src/core/flow.gd")
+const SittingNotes := preload("res://src/core/sitting_notes.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 const Codex := preload("res://src/core/codex.gd")
@@ -347,6 +348,11 @@ func _ready() -> void:
 		_menu_wait = MENU_MODULES_FRAMES_APART
 	if _launch_flag("--self-play") and not test_mode:
 		_start_self_play()
+	# --sitting-notes: the build takes notes while a person plays (ruling cg). Never in a test_mode game.
+	if SittingNotes.wanted() and not test_mode:
+		var notes := SittingNotes.new()
+		notes.game = self
+		add_child(notes)
 	if _launch_flag("--boot-profile"):
 		for frame in 5:
 			await get_tree().process_frame
