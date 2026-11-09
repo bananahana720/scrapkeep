@@ -11,7 +11,7 @@ const BuildStamp := preload("res://src/core/build_stamp.gd")
 # The settings page both hosts show: the pause menu in place of its first page, the title
 # through its Settings button. Three pages behind a tab strip, switched by LB and RB, Q and E
 # or a click, the last one kept for the session: Display (fullscreen, quality, reduced motion,
-# reduce flashes), Controls (a key row and a pad row per verb, Reset keys, the two fixed
+# reduce flashes, frame smoothing), Controls (a key row and a pad row per verb, Reset keys, the two fixed
 # verbs) and Look (stick speed, invert Y, dead zone, mouse speed, aim assist, each stepped by
 # Enter, A or a click and by left and right). Back sits under every page. A key row waits for the next key or mouse
 # button, a pad row for the next pad button (and a trigger for fire and harpoon); Esc or B
@@ -117,7 +117,7 @@ func setup(game_ref, back_key := "key_esc") -> void:
 
 
 func _build_display() -> void:
-	for id in ["fullscreen", "quality", "reduced_motion", "reduce_flashes"]:
+	for id in ["fullscreen", "quality", "reduced_motion", "reduce_flashes", "frame_smoothing"]:
 		_add_plain(id, "display")
 
 
@@ -300,6 +300,7 @@ func refresh() -> void:
 	rows["quality"].text = "Quality: %s" % ("Low" if store.quality() == 1 else "High")
 	rows["reduced_motion"].text = "Reduced motion: %s" % ("on" if store.reduced_motion() else "off")
 	rows["reduce_flashes"].text = "Reduce flashes: %s" % ("on" if store.reduce_flashes() else "off")
+	rows["frame_smoothing"].text = "Frame smoothing: %s" % ("on" if store.frame_smoothing() else "off")
 	for verb in VERBS:
 		_rebuild(verb)
 		_rebuild("pad_" + verb)
@@ -427,6 +428,11 @@ func press(id: String) -> void:
 			_store().set_comfort(SettingsStore.REDUCE_FLASHES, 1.0 if dim else 0.0)
 			_game.set_reduce_flashes(dim)
 			rows["reduce_flashes"].text = "Reduce flashes: %s" % ("on" if dim else "off")
+		"frame_smoothing":
+			var smooth: bool = not _store().frame_smoothing()
+			_store().set_comfort(SettingsStore.FRAME_SMOOTHING, 1.0 if smooth else 0.0)
+			_game.set_frame_smoothing(smooth)
+			rows["frame_smoothing"].text = "Frame smoothing: %s" % ("on" if smooth else "off")
 		"reset":
 			_game.reset_bindings()
 			refresh()

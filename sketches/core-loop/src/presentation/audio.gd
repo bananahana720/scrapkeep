@@ -559,6 +559,16 @@ static func _finish_opening() -> void:
 		_opening_task = -1
 
 
+# The rest of stage 1's band bakes behind the title, and the other themes and the bosses
+# behind stage 1. Only a game with a sound device starts them (_on_ready): headless runs render
+# on demand instead, so a test never waits on the worker at quit; bots call bake_opening_now.
+static func _start_band_bakes() -> void:
+	if _opening_task < 0:
+		_opening_task = WorkerThreadPool.add_task(MusicEngine.prepare_opening, false, "presentation opening band bake")
+	if _rest_task < 0:
+		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, true, "presentation band bake")
+
+
 # Blocks until the bank is baked; the tests call it, the game never needs to.
 func bake_now() -> void:
 	if _bake_task >= 0:
@@ -579,21 +589,7 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	if get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.disconnect(_on_node_added)
-	if _bake_task >= 0:
-		# A game that quits early abandons the bake; the next Audio bakes what is missing.
-		SfxBank.bake_cancel = true
-		WorkerThreadPool.wait_for_task_completion(_bake_task)
-		SfxBank.bake_cancel = false
-		_bake_task = -1
-		_baked = _bake_done
-	if _ace_task >= 0:
-		WorkerThreadPool.wait_for_task_completion(_ace_task)
-		_ace_task = -1
-	if _rest_task >= 0:
-		WorkerThreadPool.wait_for_task_completion(_rest_task)
-		_rest_task = -1
-	MusicEngine.settle_stingers()
-	_finish_opening()
+	_settle_workers()
 	# Stop every player and drop the playbacks, or the polyphonic ones outlive the tree.
 	for child in get_children():
 		if child is AudioStreamPlayer:
@@ -604,17 +600,38 @@ func _exit_tree() -> void:
 	_stinger_pb = null
 
 
+# Leaving the tree lets go of every worker this node started, and abandons the bakes still
+# running instead of waiting them out: the band bake behind the title is about ten seconds of
+# work. The cancel flag is up across the bank, opening and band bakes. A bake checks it between
+# notes, and one still queued returns as it starts. The caches keep what landed, and a note
+# asked for later renders on demand.
+func _settle_workers() -> void:
+	var started := Time.get_ticks_msec()
+	SfxBank.bake_cancel = true
+	if _bake_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_bake_task)
+		_bake_task = -1
+		_baked = _bake_done
+	_finish_opening()
+	if _rest_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_rest_task)
+		_rest_task = -1
+	SfxBank.bake_cancel = false
+	# The stems and the warmed stingers are short and cannot be abandoned part way.
+	if _ace_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_ace_task)
+		_ace_task = -1
+	MusicEngine.settle_stingers()
+	if OS.is_stdout_verbose():
+		print("AUDIO_SETTLE ms=%d" % (Time.get_ticks_msec() - started))
+
+
 func _on_ready() -> void:
 	if sound_ready:
 		return
 	sound_ready = true
-	# The rest of stage 1's band bakes behind the title, and the other themes and the
-	# bosses behind stage 1. Headless runs render them on demand instead, so a test never
-	# waits on the worker at quit; bots call bake_opening_now.
-	if live_output and _opening_task < 0:
-		_opening_task = WorkerThreadPool.add_task(MusicEngine.prepare_opening, false, "presentation opening band bake")
-	if _rest_task < 0 and live_output:
-		_rest_task = WorkerThreadPool.add_task(MusicEngine.prepare_rest, true, "presentation band bake")
+	if live_output:
+		_start_band_bakes()
 	_virtual_usec = _transport_usec()
 	if not live_output:
 		return

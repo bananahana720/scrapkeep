@@ -300,7 +300,7 @@ func ball_position() -> Vector3:
 # body's interpolated transform, so the visuals and the camera move every frame
 # instead of stepping at the 90 Hz physics rate; with it off it is the raw position.
 func shown_transform() -> Transform3D:
-	if is_inside_tree() and get_tree().physics_interpolation:
+	if is_inside_tree() and get_tree().physics_interpolation and not _rigid.placing:
 		return _rigid.get_global_transform_interpolated()
 	return _rigid.global_transform
 

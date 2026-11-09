@@ -449,9 +449,13 @@ static func _prepare_club(chords: Array, shift: int, reese_offsets: Array) -> vo
 		Synth.stab_chord(voicing, true)
 		for offset in [0, 7, 10, 12]:
 			Synth.note("fbass", root + offset)
+		if SfxBank.bake_cancel:
+			return
 		for offset in reese_offsets:
 			Synth.note("reese", root + offset)
 		for midi in voicing:
+			if SfxBank.bake_cancel:
+				return
 			Synth.note("clav", midi)
 			Synth.note("clav", midi + 12)
 			Synth.note("clav", midi + 24)
@@ -481,6 +485,8 @@ static func _bake_rest() -> void:
 	_prepare_chords(Harmony.BRINDLE, ["brass"], 2)
 	for list in [Harmony.WEIR, Harmony.BRINDLE, Harmony.MINOR_OF.values(), Harmony.BRINDLE_PHRYGIAN]:
 		for chord in list:
+			if SfxBank.bake_cancel:
+				return
 			Synth.organ_chord(chord["voicing"])
 	# The boss phases that lift the key (BOSS_SECTIONS) hold an organ from phase 2 on.
 	for pair in [[Harmony.BRINDLE_PHRYGIAN, 1], [Harmony.BRINDLE, 1], [Harmony.BRINDLE, 2]]:
@@ -497,28 +503,38 @@ static func _bake_rest() -> void:
 	_prepare_chords(Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE], [], 0)
 	for shift in [0, 1]:
 		for chord in lifted:
+			if SfxBank.bake_cancel:
+				return
 			var voicing := _shift(chord["voicing"], shift)
 			Synth.stab_chord(voicing, false)
 			Synth.stab_chord(voicing, true)
 			for offset in [0, 7, 10, 12]:
 				Synth.note("fbass", int(chord["root"]) + shift + offset)
+			if SfxBank.bake_cancel:
+				return
 			for offset in [12, 18, 19, 22]:
 				Synth.note("reese", int(chord["root"]) + shift + offset)
 	# Stingers in the lifted keys (a Warden lift, Brindle's phases), and the synergy
 	# fanfare for each level, so a class-up after a lift never bakes on the audio thread.
 	for shift in [0, 1, 2, 3]:
 		for level in 3:
+			if SfxBank.bake_cancel:
+				return
 			SfxBank.samples_at("synergy_fanfare", Harmony.STEP, shift, level)
 			SfxBank.samples_at("synergy_fanfare", Harmony.BOSS_STEP, shift, level)
 		if shift == 0:
 			continue
 		for id in ["class_up", "class_down", "stinger_milestone", "threat_up", "boss_phase"]:
+			if SfxBank.bake_cancel:
+				return
 			SfxBank.samples_at(id, Harmony.STEP, shift)
 			SfxBank.samples_at(id, Harmony.BOSS_STEP, shift)
 	# Every recorded grid stinger on a boss grid, and the boss's defeat in each lifted key: a
 	# recorded cue's variants share the file's one resample, so the Mind's grid (PHASE3_STEP)
 	# and the fanfare's themes never resample it on the main thread mid-fight.
 	for id in SfxBank.STINGER_BEATS:
+		if SfxBank.bake_cancel:
+			return
 		if SfxBank.file_backed(id):
 			for shift in [0, 1, 2, 3] if id == "stinger_boss_defeated" else [0]:
 				SfxBank.samples_at(id, Harmony.BOSS_STEP, shift)
@@ -538,6 +554,8 @@ static func _bake_rest() -> void:
 			var voicing := _shift(chord["voicing"], shift)
 			Synth.pad_chord(voicing)
 			Synth.organ_chord(voicing)
+			if SfxBank.bake_cancel:
+				return
 			Synth.stab_chord(voicing, false)
 			Synth.stab_chord(voicing, true)
 			Synth.chord(voicing)
@@ -583,6 +601,8 @@ static func _prepare_chords(chords: Array, leads: Array, shift: int) -> void:
 		Synth.note("sub", chord["root"] + shift)
 		Synth.note("reese", chord["root"] + 12 + shift)
 		Synth.chord(voicing)
+		if SfxBank.bake_cancel:
+			return
 		Synth.pad_chord(voicing)
 		for midi in voicing:
 			Synth.note("bell", midi + 12)
@@ -604,6 +624,8 @@ static func _prepare_wobble(chords: Array, shifts: Array, steps: Array, vowels: 
 			for step in steps:
 				for rate in DROP_RATES.map(func(r: String): return RATES[r]):
 					for vowel in vowels:
+						if SfxBank.bake_cancel:
+							return
 						Synth.wob(root + shift, int(step) * Harmony.STEPS_PER_BEAT / int(rate), vowel)
 
 
