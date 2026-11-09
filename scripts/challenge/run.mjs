@@ -14,7 +14,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { COLUMNS, MAX_RUN_TIER, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, jobKey, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
+import { COLUMNS, MAX_RUN_TIER, PILOTS, botArgs, buildTable, cellVerdict, describeDoc, bucketInfo, checkMerge, dedupeBy, estimate, gradeRun, jobKey, playerReport, qaRows, renderPlayerReport, hashString, mergeLibraryIndexes, planHash, parseNdjson, pickBuilds, planCells, renderTable, shardJobs, wallStats } from "./lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = process.env.GODOT_BIN;
@@ -262,13 +262,15 @@ async function runTable() {
     mkdirSync(out, { recursive: true });
     const p = await runProcess(botArgs(job, out), { env: stateEnv(path.join(dir, "state")), timeout: KIND_TIMEOUT_MS, logFile: path.join(dir, "log.txt") });
     const row = parseNdjson(read(path.join(out, "bots.ndjson"))).at(-1) ?? null;
-    return { p, row, ok: !p.timedOut && p.exit === 0 && row !== null };
+    // The play watch's file is there whenever the run got as far as its first tick.
+    const qaFile = path.join(out, `qa-${job.seed}.ndjson`);
+    return { p, row, qa: existsSync(qaFile) ? qaRows(read(qaFile)) : null, ok: !p.timedOut && p.exit === 0 && row !== null };
   }
 
-  const record = (job, { p, row }, rerun) => {
+  const record = (job, { p, row, qa }, rerun) => {
     const grade = row ? gradeRun(job.kind, row, job) : { result: p.timedOut ? "killed" : "error", why: p.timedOut ? "killed at the wall timeout" : "exit " + p.exit + ", no record" };
     // The entrance is kept relative to the library, so run folders from other machines merge as they are.
-    const line = { ...job, key: keyOf(job), commit, plan_hash: plan, entrance: job.entrance && opts.library ? path.relative(opts.library, job.entrance) : job.entrance, row, grade, exit: p.exit, timedOut: p.timedOut, wallS: Math.round(p.wallS * 10) / 10, rerun };
+    const line = { ...job, key: keyOf(job), commit, plan_hash: plan, entrance: job.entrance && opts.library ? path.relative(opts.library, job.entrance) : job.entrance, row, grade, exit: p.exit, timedOut: p.timedOut, wallS: Math.round(p.wallS * 10) / 10, rerun, ...(qa ? { qa } : {}) };
     appendFileSync(runsFile, JSON.stringify(line) + "\n");
     log(`done  ${job.id}: ${grade.result}${row ? " (" + row.outcome + ", " + row.game_seconds + " s game)" : ""}, ${p.wallS.toFixed(0)} s wall`);
   };
@@ -294,9 +296,10 @@ function finish(runs, outDir, meta) {
   mkdirSync(outDir, { recursive: true });
   const table = buildTable(runs, meta.buckets ?? {});
   const timing = wallStats(runs);
-  const md = renderTable(table, { ...meta, when: new Date().toISOString().slice(0, 16) + "Z" });
+  const report = playerReport(runs);
+  const md = renderTable(table, { ...meta, when: new Date().toISOString().slice(0, 16) + "Z" }) + "\n" + renderPlayerReport(report);
   writeFileSync(path.join(outDir, "table.md"), md);
-  writeFileSync(path.join(outDir, "table.json"), JSON.stringify({ ...meta, runs: runs.length, timing, table }, null, 1) + "\n");
+  writeFileSync(path.join(outDir, "table.json"), JSON.stringify({ ...meta, runs: runs.length, timing, table, player_report: report }, null, 1) + "\n");
   console.log(md);
   console.log("Wall medians per job (re-estimate SECONDS_PER_JOB in lib.mjs from these):");
   for (const [k, t] of Object.entries(timing)) console.log(`  ${k}: ${t.jobs} jobs, median ${t.medianWallS?.toFixed(0)} s wall (max ${t.maxWallS.toFixed(0)}), median ${t.medianGameS?.toFixed(0)} s game`);

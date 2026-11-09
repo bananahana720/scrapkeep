@@ -1,0 +1,65 @@
+test	group	reason	returns-when
+alpha_posture_bands_w23_test	later-bots	bot run on stages 3 to 6 only, parked by ruling at	worlds 2 and 3 reopen
+arena_mind_dress_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+arena_waking_dress_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+bot_dig_breach_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+bot_highdraft_lift_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+bot_isle_stage5_test	later-bots	bot run on stages 3 to 6 only, parked by ruling at	worlds 2 and 3 reopen
+bot_park_stage3_break_test	later-bots	bot run that plays stages 1 and 2 only to reach its proof on stage 3, parked by ruling at	worlds 2 and 3 reopen
+bot_six_demolitions_caster_test	old-map-bots	whole-run proof on the legacy stage table the launched game does not play; world1_run_test covers world 1 on the park maps and bot_six_pilots_test stays as the six-stage smoke	world1_run_test is withdrawn
+bot_six_remembered_cannon_test	old-map-bots	whole-run proof on the legacy stage table the launched game does not play; world1_run_test covers world 1 on the park maps and bot_six_pilots_test stays as the six-stage smoke	world1_run_test is withdrawn
+bot_six_runner_gunner_test	old-map-bots	whole-run proof on the legacy stage table the launched game does not play; world1_run_test covers world 1 on the park maps and bot_six_pilots_test stays as the six-stage smoke	world1_run_test is withdrawn
+bot_six_tally_test	old-map-bots	whole-run proof on the legacy stage table the launched game does not play; world1_run_test covers world 1 on the park maps and bot_six_pilots_test stays as the six-stage smoke	world1_run_test is withdrawn
+bot_six_tarn_test	old-map-bots	whole-run proof on the legacy stage table the launched game does not play; world1_run_test covers world 1 on the park maps and bot_six_pilots_test stays as the six-stage smoke	world1_run_test is withdrawn
+bot_world_arrivals_test	later-bots	bot run on stages 3 to 6 only, parked by ruling at	worlds 2 and 3 reopen
+crown_warden_bot_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+dig_deep_zone_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+dig_fx_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+dig_highdraft_events_test	worlds23	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+dig_park_steps_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+dig_plated_elite_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+dig_rescue_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+dig_scenery_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+dig_zone_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+enemy_pit_jaw_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+fua_waking_shadow_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+fub_island_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+highdraft_crown_zone_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+highdraft_cues_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+highdraft_fx_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+highdraft_gate_bot_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+highdraft_lift_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+highdraft_light_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+highdraft_materials_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+highdraft_roster_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+highdraft_scenery_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+highdraft_tone_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+highdraft_warden_bot_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+highdraft_zone_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+islands_sky_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+isle_tip_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+isles_rescue_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+mind_arena_ahead_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+mind_arena_bound_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+mind_attack_families_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+mind_escape_guarantee_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+mind_fight_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+mind_hand_mask_cache_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+mind_hand_surface_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+park_park_crown_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+park_park_islands_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+park_park_pit_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+park_park_sinkhole_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+park_recipes_skyislands_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+posture_bands_mind_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+probe_dig_floor_drop_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+telegraph_timing_mind_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+waking_attack_fight_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+waking_attacks_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+waking_bot_fight_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+waking_core_key_shadow_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+waking_fight_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+waking_floors_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+warden_mind_asset_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+warden_mind_brace_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
+warden_mind_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
