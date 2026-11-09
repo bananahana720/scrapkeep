@@ -133,7 +133,7 @@ func _streaks(game: Node, audio) -> void:
 	_pump_to(audio, beat + 64)
 	var sounded: Array = engine.stinger_starts.slice(starts_before).filter(func(s: Array): return String(s[0]).begins_with(Bank.GRID_NOTE))
 	t.check("the landing sounds in the stinger lane on its sample", sounded.size() == 2 and sounded.all(func(s: Array): return int(s[1]) == beat), "%s" % [sounded])
-	# Six kills: the last note holds from the next sixteenth and the landing takes the bar line under a crash.
+	# Six kills: the last note sounds again on the next sixteenth and the landing takes the bar line under a crash.
 	_kills(game, audio, 6)
 	audio.cue_log.clear()
 	_clock_ms += window + 50
@@ -147,7 +147,7 @@ func _streaks(game: Node, audio) -> void:
 	var crash: Array = audio.cue_log.filter(func(e: Array): return e[1] == audio.CHAIN_CRASH)
 	var held: bool = long.size() == 3 and long[0][1] == Bank.grid_note_id("bell", top) and int(long[0][3]) == sixteenth and posmod(sixteenth - engine.grid_origin, engine.step_len) == 0
 	var resolved: bool = long.size() == 3 and int(long[1][3]) == bar and int(long[2][3]) == bar and crash.size() == 1 and int(crash[0][3]) == bar
-	t.check("a long chain holds its last note, then lands on the bar under a crash", held and resolved,
+	t.check("a long chain restates its last note, then lands on the bar under a crash", held and resolved,
 		"hold %s at %d (next sixteenth %d), landing at %d and crash at %d (next bar %d)" % [long[0][1] if not long.is_empty() else "", int(long[0][3]) if not long.is_empty() else -1, sixteenth,
 			int(long[1][3]) if long.size() > 1 else -1, int(crash[0][3]) if not crash.is_empty() else -1, bar])
 	# No landing is made on its beat. Over the home triad every one is in the boot bake.
@@ -167,13 +167,17 @@ func _landing_ahead(game: Node, audio) -> void:
 	engine.warm_stingers = true
 	engine._set_key(3)
 	_kills(game, audio, 3)
-	var ahead: Array = audio._landing_ids(2, audio._landing_tones(engine.clock + window * Harmony.RATE / 1000))
+	var due: int = engine.clock + window * Harmony.RATE / 1000
+	var ahead: Array = audio._landing_ids(2, audio._landing_tones(due))
+	for id in audio._landing_ids(2, audio._landing_tones(due + Harmony.BAR)):
+		if not id in ahead:
+			ahead.append(id)
 	var frames := 0
 	while frames < 600 and not ahead.all(func(id: String): return Bank.cached_at(id, engine.step_len, 3)):
 		await process_frame
 		frames += 1
-	t.check("a climbing chain makes its landing a window ahead", frames < 600 and _grid(audio, "enemy_killed").filter(func(e: Array): return e[1] in ahead).is_empty(),
-		"%s in key 3 after %d frames, before the landing is booked" % [ahead, frames])
+	t.check("a climbing chain makes its landing a window ahead", frames < 600 and audio.kill_streak.live(0),
+		"%s in key 3 after %d frames, the chain still live" % [ahead, frames])
 	engine._set_key(0)
 	engine.warm_stingers = false
 	audio.kill_streak.reset()
@@ -218,11 +222,18 @@ func _dunk(game: Node, audio) -> void:
 func _death_synth(game: Node, audio) -> void:
 	var engine: Music = audio.engine
 	_pump_to(audio, engine.clock + 2000)
+	# Three kills, then the death inside their window.
+	_kills(game, audio, 3)
 	audio.cue_log.clear()
 	var beat := engine.next_beat()
 	var eighth: int = engine.beat_len() / 2
 	game.events.player_died.emit()
 	audio._flush_flow()
+	# The window closes before the boom's beat, while the band still reads PLAY.
+	_clock_ms += audio.kill_streak.window_ms + 50
+	audio._tend_kill_streak()
+	t.check("a chain the death cut short never lands", engine.mode == Music.PLAY and audio.kill_streak.rung == 2 and _grid(audio, "enemy_killed").is_empty(),
+		"band mode %d before the boom, rung %d, landings %s" % [engine.mode, audio.kill_streak.rung, _grid(audio, "enemy_killed")])
 	var cue: Array = audio.cue_log.filter(func(e: Array): return e[0] == "player_died" and e[2] == "now")
 	var fall := _grid(audio, "player_died")
 	var want: Array = audio.DEATH_FALL.map(func(midi: int): return Bank.grid_note_id("brass", midi))

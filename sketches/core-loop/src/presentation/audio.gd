@@ -279,7 +279,7 @@ var _chain_bite_ms := -100000.0
 # a kill chain's landing on a chord tone (rule 5), the near miss's two whip notes (rule 4), and the
 # dunk's banked fifth and paid home note.
 # A kill chain that reached STREAK_LAND_RUNG lands on the next beat when its window closes. One
-# that reached STREAK_BAR_RUNG holds its last note to the next bar line and lands there under a crash.
+# that reached STREAK_BAR_RUNG restates its last note and lands on the next bar line under a crash.
 const STREAK_LAND_RUNG := 2
 const STREAK_BAR_RUNG := 5
 const STREAK_VOICE := "bell"
@@ -295,14 +295,13 @@ const DUNK_SPENT_MIDI := 74
 # eighths from the beat the band stops on, on the cue's own brass and in the cue's key.
 const DEATH_FALL := [56, 53, 50]
 const DEATH_FALL_VOICE := "brass"
-const DEATH_FALL_DB := -6.0
 # The last_ms of the kill chain whose end has been heard.
 var _streak_landed_ms := -100000
 # The beat a death holds the recorded band to; the lost summary's pack starts once it has passed
 # (the sequencer holds one pack at a time). -1 when none waits.
 var _summary_due := -1
-# The key the whip's and the dunk's grid notes were last made in (_warm_grid_key).
-var _grid_key := 0
+# The key and class the whip's and the dunk's grid notes were last made for (_warm_grid_key).
+var _grid_key := ""
 var _hum_voice := -1
 var _gates := {}
 var _fired_this_run := {}
@@ -3180,13 +3179,14 @@ func _warm_landing(rung: int) -> void:
 
 
 # The whip and the dunk answer a sixteenth after their contact, too soon to make a note: theirs
-# are made in a new key as the key arrives.
+# are made as a new key arrives (or a new class in it).
 func _warm_grid_key() -> void:
-	var now: int = engine.stinger_key(engine.clock)
+	var motif: String = _motif if _motif != "" else Harmony.CLASS_MOTIFS[0]
+	var now := "%d:%s" % [engine.stinger_key(engine.clock), motif]
 	if now == _grid_key:
 		return
 	_grid_key = now
-	var whip := SfxBank.whip_notes(_motif if _motif != "" else Harmony.CLASS_MOTIFS[0])
+	var whip := SfxBank.whip_notes(motif)
 	for id in [SfxBank.grid_note_id(whip[0], whip[1]), SfxBank.grid_note_id(whip[0], whip[2]),
 			SfxBank.grid_note_id(DUNK_VOICE, DUNK_STORED_MIDI), SfxBank.grid_note_id(DUNK_VOICE, DUNK_SPENT_MIDI)]:
 		engine.warm_stinger(id, engine.clock)
@@ -3203,7 +3203,7 @@ func _tend_kill_streak() -> void:
 
 # The ladder was the question and this is the answer: the line falls from the chain's last note
 # to the chord tone under it, on the next beat, on the pop's bell with keys an octave below. A
-# long chain (STREAK_BAR_RUNG) holds its last note from the next sixteenth and lands on the bar
+# long chain (STREAK_BAR_RUNG) restates its last note on the next sixteenth and lands on the bar
 # line under a crash. Returns the transport sample of the landing.
 func land_streak(rung: int) -> int:
 	var last: int = SfxBank.KILL_POP_MIDI + Harmony.pentatonic_step(rung)
@@ -3212,12 +3212,13 @@ func land_streak(rung: int) -> int:
 	if long:
 		var hold := next_grid(4)
 		if at - hold >= grid_unit(2):
-			_note_at("enemy_killed", STREAK_VOICE, last, hold, -3.0)
-		engine.schedule_stinger_at(CHAIN_CRASH, at, PRIORITY_DB[Rows.priority("enemy_killed")])
+			_note_at("enemy_killed", STREAK_VOICE, last, hold, SfxBank.GRID_UNDER_DB)
+		# The crash has no pitch, so it stays the boot bake's whatever the key.
+		engine.schedule_stinger_at(CHAIN_CRASH, at, PRIORITY_DB[Rows.priority("enemy_killed")], true)
 		cue_log.append(["enemy_killed", CHAIN_CRASH, "bar", at, 1.0])
 	var land := Harmony.tone_below(last, _landing_tones(at))
 	_note_at("enemy_killed", STREAK_VOICE, land, at)
-	_note_at("enemy_killed", STREAK_BODY, land - 12, at, -3.0)
+	_note_at("enemy_killed", STREAK_BODY, land - 12, at, SfxBank.GRID_UNDER_DB)
 	return at
 
 
@@ -3847,7 +3848,8 @@ func _flush_flow() -> void:
 	var burst := _flow_queue
 	_flow_queue = []
 	var kinds := burst.map(func(item: Array): return item[0])
-	if not "end" in kinds:
+	# A new run, the menu or a stage takes the band from a lost summary still waiting on its beat.
+	if "run" in kinds or "idle" in kinds or "stage" in kinds:
 		_summary_due = -1
 	for item in burst:
 		match item[0]:
@@ -3907,6 +3909,8 @@ func _flush_flow() -> void:
 			"end":
 				_radio_drop("flow")
 				var won: bool = item[1]
+				# A chain the run's end cut short never lands over the summary.
+				_streak_landed_ms = kill_streak.last_ms
 				# A death in this burst holds the recorded band to its beat (_ace_end_at). The
 				# lost summary's pack waits for that beat: starting it now would swap the packs
 				# and cut the band mid-beat.
@@ -3933,13 +3937,15 @@ func _flush_flow() -> void:
 				_radio_drop("flow")
 				_disarm_launch()
 				engine.cancel_pending()
+				# A chain the death cut short never lands: the band reads PLAY until the boom's beat.
+				_streak_landed_ms = kill_streak.last_ms
 				# The band, recorded or synth, plays to the next beat and ends there under the
 				# boom. The death cue itself sounded on the death's frame (_on_died).
 				var at := engine.death_break()
 				_ace_end_at(at)
 				if sound_ready:
 					for i in DEATH_FALL.size():
-						_note_at("player_died", DEATH_FALL_VOICE, DEATH_FALL[i], at + i * grid_unit(2), DEATH_FALL_DB, true)
+						_note_at("player_died", DEATH_FALL_VOICE, DEATH_FALL[i], at + i * grid_unit(2), SfxBank.DEATH_FALL_DB, true)
 			"idle":
 				_radio_drop("flow")
 				var at := engine.next_beat()
@@ -4299,8 +4305,9 @@ func _wire_tally(events) -> void:
 			return
 		var combat = ctx.get("spawner") if ctx != null else null
 		var clips: int = int(combat.last_card.get("hits", 1)) if combat != null else 1
-		# A rung of the reward ladder per chain link, like the bite (never a semitone).
-		var lift := Harmony.pentatonic_step(clampi(int(ctx.player.chain.combo) - 1, 0, CHAIN_STEPS))
+		# Her stepwise D, E, F climbs D dorian a step per chain link (never a semitone): every
+		# clip stays in the band's mode and off the tritone, which a moved phrase would reach.
+		var lift := clampi(int(ctx.player.chain.combo) - 1, 0, CHAIN_STEPS)
 		for i in clampi(clips, 1, TALLY_CUES["tally_clip"]["steps"].size()):
 			_tally_cue("tally_clip", i, lift, i))
 	events.ultimate_peak.connect(func(id: String, _at: Vector3):
@@ -4323,12 +4330,14 @@ func _tally_sixteenth() -> float:
 	return 60.0 / (bpm if bpm > 0.0 else TALLY_HOME_BPM) / TALLY_SIXTEENTHS
 
 
-# Queues one note of a TALLY_CUES row: step index `step`, lifted `lift` semitones, `slot`
+# Queues one note of a TALLY_CUES row: step index `step`, lifted `lift` steps of D dorian, `slot`
 # sixteenths from now.
 func _tally_cue(cue: String, step: int, lift := 0, slot := 0) -> void:
 	var row: Dictionary = TALLY_CUES[cue]
 	var steps: Array = row["steps"]
-	var semis: int = int(steps[step % steps.size()]) + lift
+	var semis: int = int(steps[step % steps.size()])
+	if lift != 0:
+		semis = Harmony.scale_shift(Harmony.HOME + semis, lift, Harmony.DORIAN) - Harmony.HOME
 	var note := [clock + slot * _tally_sixteenth(), row["kind"], row["sound"], 62 + semis, cue == "tally_total"]
 	if slot == 0:
 		_tally_play(note)

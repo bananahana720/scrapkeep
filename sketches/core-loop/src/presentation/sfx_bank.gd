@@ -264,6 +264,10 @@ const CAUSE_NOTE := "cause_note_"
 const GRID_NOTE := "grid_note_"
 const GRID_NOTE_DB := -8.0
 const GRID_NOTE_SECONDS := 0.5
+# Offsets on that trim: the voice under a landing and a long chain's restated last note, and a
+# death's fall, which sits under the recorded death cue.
+const GRID_UNDER_DB := -3.0
+const DEATH_FALL_DB := -6.0
 # The note each climbing cue rings on, where its ladder starts (Harmony.ladder_ratio): the kill
 # pop's bell is D6 and the line's bite A5, in the recipes here and in the event-set files.
 const KILL_POP_MIDI := 86
