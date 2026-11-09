@@ -251,6 +251,20 @@ func _set_chime(game: Node, audio) -> void:
 				and started == times,
 			"banner '%s' showing %s, notes %s at %s, sounded at %s, play head %d, eighth %d, lead %d" % [banner.last_title, banner.showing(),
 				ids, times, started, head, eighth, lead])
+	# A set finished in a fight: the banner is held, and the chime with it.
+	var held: Dictionary = PartSets.SETS["hair_trigger"]
+	banner.dismiss(true)
+	audio.cue_log.clear()
+	banner._calm_left = 5.0
+	game.presentation._on_set_completed("hair_trigger", held["name"], held["text"], held["color"])
+	var early: int = _grid(audio, "synergy_discovered").size()
+	var was_showing: bool = banner.showing()
+	banner._calm_left = 0.0
+	banner._next()
+	t.check("set chime: a banner held for a calm moment holds its chime", not was_showing and early == 0 and banner.showing()
+		and banner.last_title == held["name"] and _grid(audio, "synergy_discovered").size() == 3,
+		"held: showing %s, notes %d; released: showing %s '%s', notes %d" % [was_showing, early, banner.showing(), banner.last_title,
+			_grid(audio, "synergy_discovered").size()])
 	banner.dismiss(true)
 	audio.cue_log.clear()
 	banner.show_discovery("Arc Coil", "part", "", "Found", "part:arc_coil", "part_gained")
@@ -302,6 +316,18 @@ func _death_recorded() -> void:
 	var level = audio.ace
 	var pack: String = audio._ace_from
 	t.check("the level pack owns the grid and the synth band is muted", audio._on_ace_grid() and engine.band_muted)
+	# The chime over the recorded band rides its grid, not the muted synth band's.
+	var head := engine.clock
+	var eighth: int = audio.grid_unit(2)
+	audio.cue_log.clear()
+	var first: int = audio.set_complete("frost")
+	var times: Array = _grid(audio, "synergy_discovered").map(func(e: Array): return int(e[3]))
+	t.check("set chime: over the recorded band it lands on that band's eighths", eighth == level.grid_beat / 2
+		and times == [first, first + eighth, first + 2 * eighth] and posmod(first - level.origin, eighth) == 0
+		and first - head >= int(audio.SET_CHIME_LEAD_S * Harmony.RATE) and first - head < int(audio.SET_CHIME_LEAD_S * Harmony.RATE) + eighth,
+		"notes at %s, play head %d, the pack's eighth %d (synth eighth %d), origin %d" % [times, head, eighth, engine.beat_len() / 2, level.origin])
+	# Whole beats of the pack, so the death below still falls where it did.
+	_pump_to(audio, head + 8 * audio.grid_unit(1))
 	var beat := engine.next_beat()
 	t.check("the death falls mid-beat", beat - engine.clock > 2000, "play head %d, next beat %d" % [engine.clock, beat])
 	audio.cue_log.clear()
