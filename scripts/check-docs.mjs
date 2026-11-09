@@ -791,6 +791,8 @@ async function checkWaveStateStage(docs) {
 // Several threads hand out ruling letters at the same time. Two rows that open
 // with one letter mean two rulings answer to one name, so the later row fails.
 // Only rows written "| Ruling xx," or "| Ruling xx:" carry a letter to check.
+// The "Replaced rulings" section is skipped: its rows open with the old ruling,
+// which may still have a row of its own above.
 const RULINGS_FILE = "project-guide/handoff/DECISIONS.md";
 async function checkRulingLetters(docs) {
   try {
@@ -800,7 +802,10 @@ async function checkRulingLetters(docs) {
   }
   const { lines } = await docs.load(RULINGS_FILE);
   const seen = new Map();
+  let replaced = false;
   for (const [index, line] of lines.entries()) {
+    if (line.startsWith("## ")) replaced = /^## Replaced rulings\b/.test(line);
+    if (replaced) continue;
     const match = /^\| Ruling ([a-z]{1,2})[,:]/.exec(line);
     if (!match) continue;
     const [, letter] = match;
