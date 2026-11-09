@@ -12,7 +12,11 @@ const Push := preload("res://tests/workshop/push.gd")
 #   - a played run opens the pause menu on a focus loss, paused, with Resume focused and no note;
 #   - the focus coming back does not resume, and the click that brings it back is swallowed for
 #     the guard; a click after the guard resumes;
-#   - while the field notes hold the tree, a focus loss leaves the menu shut and the tree paused;
+#   - while the field notes hold the tree, a focus loss leaves the menu shut and the tree paused,
+#     and nothing is owed once the focus is back;
+#   - a held screen that lets go while the focus is still away (a reward ceremony ends on its own
+#     timer) gets the pause it was owed on the next frame, and a rebind waiting on the settings page
+#     does not take the click that brings the window back;
 #   - a spare pad dropping does not pause; the pad in use dropping pauses and says so; a pad
 #     connecting takes the line down and still does not resume; closing clears the line;
 #   - a pad dropping while the keyboard plays does not pause.
@@ -95,7 +99,34 @@ func _process(delta: float) -> bool:
 				"notes held: menu open %s, paused %s" % [_menu.is_open(), paused])
 			_focus(true)
 			_game.hold_notes(false)
-			_t.check("and gives the run back", not paused and not _menu.is_open(), "paused %s" % paused)
+			_t.check("and gives the run back", not paused and not _menu.is_open() and not _auto.owed(), "paused %s, owed %s" % [paused, _auto.owed()])
+			_next("owed")
+		"owed":
+			# The game's menu_held is what a reward ceremony, the upgrade pick and Moss's counter set.
+			_game.set_menu_held(true)
+			_focus(false)
+			var shut: bool = not _menu.is_open() and _auto.owed()
+			_game.set_menu_held(false)
+			_t.check("a held screen leaves the pause owed", shut, "menu open %s, owed %s" % [_menu.is_open(), _auto.owed()])
+			_next("owed_paid")
+		"owed_paid":
+			_t.check("and it is paid when the screen lets go", _menu.is_open() and paused and not _auto.owed(),
+				"focus still away: menu open %s, paused %s, owed %s" % [_menu.is_open(), paused, _auto.owed()])
+			_t.check("the node sits ahead of the pause menu for input", _auto.get_index() > _menu.get_index(),
+				"AutoPause at %d, PauseMenu at %d" % [_auto.get_index(), _menu.get_index()])
+			_menu.press("settings")
+			var page = _menu.settings_page()
+			page.show_page(1)
+			page.press("jump")
+			var waiting: bool = page.capturing()
+			_focus(true)
+			Push.click(root, _menu.row("resume"))
+			_t.check("a waiting rebind does not take the click that brings the window back", waiting and page.capturing(),
+				"capturing before %s, after the click %s" % [waiting, page.capturing()])
+			_auto.guard_until_ms = 0
+			Push.key(root, KEY_ESCAPE)
+			_menu.close()
+			_t.check("the run comes back", not _menu.is_open() and not paused, "menu open %s, paused %s" % [_menu.is_open(), paused])
 			_next("pad")
 		"pad":
 			Push.pad(root, JOY_BUTTON_X)
