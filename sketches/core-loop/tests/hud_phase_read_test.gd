@@ -20,6 +20,8 @@ const T := preload("res://tests/support/t.gd")
 #   P4  in the real Slag Bowl the HUD binds Brindle's own FightPhases: the plate follows
 #       jump_to_phase with a crack, and at 1280x720 and 1920x1080 it sits top-centre inside
 #       the top band, the diamonds clear of the objective plate under it;
+#   P5  the objective plate under it names each phase's verb: the crane magnets, the vent
+#       caps, the baited charge, the open cockpit on a stagger or a stun, and the scooter on the eject;
 #   R1  the pause build read with all twelve panels held (a long list) sits on screen, left of
 #       the pause column and clear of it, at 1280x720 and 1920x1080, and so does the empty read;
 #       on a short screen the turning view shrinks (to VIEW_MIN at least) and the read stays on screen.
@@ -80,6 +82,7 @@ func _physics_process(_delta: float) -> bool:
 func _run() -> void:
 	await _arena_checks()
 	await _pause_checks()
+	_late_phase_rows()
 	_game.free()
 	quit(_t.verdict())
 
@@ -143,7 +146,14 @@ func _arena_checks() -> void:
 	var boss = _game.boss
 	_t.check("P4 the plate reads Brindle's own phases", plate._phases == boss._phases and plate.phase_count() == 3, "%s" % plate.phase_count())
 	_t.eq("P4 phase one lit, no crack", [plate.phase_pips(), plate.turn_age() < 0.0], [["live", "ahead", "ahead"], true])
+	_t.eq("P5 phase one: the plate names the crane magnets", _plate_row(), ["shoot_magnets", "Shoot the crane magnets"])
 	boss.jump_to_phase(2)
+	_t.eq("P5 phase two: the vent caps", _plate_row(), ["slam_caps", "Slam the vent caps"])
+	# A stagger opens the cockpit in any phase, and the weak points pay nothing through it.
+	boss._posture.staggered = true
+	_t.eq("P5 a stagger in phase two names the open cockpit", [boss.staggered(), _plate_row()], [true, ["hit_cockpit", "Hit the open cockpit"]])
+	boss._posture.staggered = false
+	_t.eq("P5 and the caps come back when it ends", _plate_row(), ["slam_caps", "Slam the vent caps"])
 	plate.advance(0.016)
 	_t.eq("P4 jump_to_phase(2) turns the diamonds", plate.phase_pips(), ["spent", "live", "ahead"])
 	_t.check("P4 and cracks the spent one", plate.turn_age() >= 0.0)
@@ -155,6 +165,24 @@ func _arena_checks() -> void:
 		_t.check("P4 %s plate top-centre, inside the screen" % tag, absf(rect.get_center().x - size.x * 0.5) < 2.0 and rect.position.y >= 0.0 and rect.end.y < size.y * 0.5, str(rect))
 		_t.check("P4 %s diamonds clear of the objective plate" % tag, not rect.intersects(objective), "plate %s objective %s" % [rect, objective])
 	hud.layout(hud._screen_size())
+
+
+func _plate_row() -> Array:
+	var reading: Dictionary = _game.hud.objective_reading()
+	return [reading["id"], reading["words"]]
+
+
+# Last, since the stun and the eject leave the fight where no other check wants it.
+func _late_phase_rows() -> void:
+	var boss = _game.boss
+	if not _t.check("P5 the fight is still live", boss.active(), "state %s" % boss.state):
+		return
+	boss.jump_to_phase(3)
+	_t.eq("P5 phase three: bait the charge", _plate_row(), ["bait_charge", "Bait his charge into walls"])
+	boss._stun(2.0)
+	_t.eq("P5 a stun opens the cockpit on the plate", _plate_row(), ["hit_cockpit", "Hit the open cockpit"])
+	boss._begin_eject()
+	_t.eq("P5 the eject names the scooter", _plate_row(), ["ram_scooter", "Ram the Admiral's scooter"])
 
 
 func _pause_checks() -> void:

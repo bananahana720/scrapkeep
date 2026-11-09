@@ -16,10 +16,14 @@ extends Node
 # game in place, since a quit in the middle of a threaded load logs script errors for every script
 # it was reading. --boot-card forces the card there (the cloud boot measure); --boot-sync forces the
 # synchronous path anywhere. A test sets force_card / force_sync before adding this scene.
+#
+# Every launch prints the build stamp once (build_stamp.gd, SCRAPKEEP_BUILD), and the card shows it
+# in its bottom right corner. The stamp script preloads nothing, so it costs the card no load.
 
 # The one headless question (src/core/app_shell.gd). It reads engine classes only and preloads
 # nothing, so the card stays as light as the note above asks.
 const AppShell := preload("res://src/core/app_shell.gd")
+const BuildStamp := preload("res://src/core/build_stamp.gd")
 const GAME_SCENE := "res://main.tscn"
 const FONT_PATH := "res://assets/fonts/NotoSans-Bold.ttf"
 # Palette.CHARCOAL and Palette.AMBER, copied: palette.gd pulls the material table with it.
@@ -58,6 +62,7 @@ var _paced := {}
 
 func _ready() -> void:
 	name = "Boot"
+	print(BuildStamp.line())
 	if _use_card():
 		# A close request in the middle of the load waits for it (_notification, _poll).
 		get_tree().auto_accept_quit = false
@@ -306,6 +311,15 @@ func _build_card() -> void:
 		_status.add_theme_font_override("font", font)
 	for node in [title, _play, _status]:
 		box.add_child(node)
+	var stamp := Label.new()
+	stamp.name = "BuildStamp"
+	stamp.text = BuildStamp.label()
+	stamp.add_theme_font_size_override("font_size", 14)
+	stamp.add_theme_color_override("font_color", Color(AMBER, 0.6))
+	stamp.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 16)
+	stamp.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	stamp.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_card.add_child(stamp)
 	_play.pressed.connect(_on_play)
 
 

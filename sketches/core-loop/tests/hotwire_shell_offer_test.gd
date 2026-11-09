@@ -14,7 +14,7 @@ const WordBudget := preload("res://src/ui/word_budget.gd")
 # and the two-row preview. Not built: Fit or Recycle, cues, wiring into a live gate.
 #   - The entry: name, tag mass, an upside and a downside each with a known icon and at
 #     most three words.
-#   - The words derive from Build and RunState constants (2x armour, 25% steering).
+#   - The words derive from Build's fitted-shell constants (2x armour, 25% steering).
 #   - The offer leaves the part out with armour mode off (200 seeded calls with random held
 #     lists) and includes it with armour mode on; nothing is offered once one is held.
 #   - It never enters ids(), rows(), offer_pool() or roll() (seeds 1000-1049 digest below).
@@ -54,8 +54,8 @@ func _entry() -> void:
 			"icon %s, \"%s\" is %d words" % [icon, copy[side]["words"], words])
 	_check("label", copy["label"] == "Double armour. Air steering −25%.", "label \"%s\"" % copy["label"])
 	# The numbers come from the constants.
-	var mult := RunState.SCRAP_PER_HP / Build.SHELL_SCRAP_PER_HP
-	var steer := int(round((1.0 - Build.SHELL_AIR_FACTOR) * 100.0))
+	var mult: float = Build.RIVETED_ARMOUR
+	var steer := int(round((1.0 - Build.RIVETED_AIR_FACTOR) * 100.0))
 	# The stored words carry placeholders, so a typed "25" or "2x" cannot pass as derived.
 	var raw := Parts.hotwired("riveted_shell")
 	var templated: bool = "{steer}" in raw["downside"]["words"] and "{armor" in raw["upside"]["words"] \
@@ -63,8 +63,8 @@ func _entry() -> void:
 	_check("templated", templated, "upside \"%s\", downside \"%s\", label \"%s\"" % [raw["upside"]["words"], raw["downside"]["words"], raw["label"]])
 	_check("derived", is_equal_approx(mult, 2.0) and steer == 25
 		and ("Double" in copy["label"] or "2" in copy["upside"]["words"]) and str(steer) in copy["downside"]["words"],
-		"multiplier %.1f from %.0f/%.0f, steering %d; upside \"%s\", downside \"%s\"" % [mult,
-			RunState.SCRAP_PER_HP, Build.SHELL_SCRAP_PER_HP, steer, copy["upside"]["words"], copy["downside"]["words"]])
+		"multiplier %.1f (Build.RIVETED_ARMOUR), steering %d; upside \"%s\", downside \"%s\"" % [mult,
+			steer, copy["upside"]["words"], copy["downside"]["words"]])
 	_check("unknown", HotwireChoice.resolve("hot_rivets").is_empty(), "a non-hot-wired id resolves to nothing")
 
 
