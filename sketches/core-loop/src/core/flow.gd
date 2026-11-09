@@ -10,6 +10,7 @@ const RunState := preload("res://src/core/run_state.gd")
 const RunStore := preload("res://src/core/run_store.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const DeathCause := preload("res://src/core/death_cause.gd")
+const DeathTips := preload("res://src/core/death_tips.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const VictoryLap := preload("res://src/world/victory_lap.gd")
@@ -66,6 +67,8 @@ var _death_plating := -1.0
 # RUN OVER's cause line for this run's death (death_cause.gd), "" before one; and the source of
 # the last hit taken, which player_hit publishes just before a killing hit's player_died.
 var death_cause := ""
+# RUN OVER's "next shift" line for the same death (death_tips.gd), "" when there is none.
+var death_tip := ""
 var _last_hit_source := ""
 var _victory_left := 0.0
 # The boss's flourishes (flourish_cues.gd) size the victory window: plan() returns {hold, veil},
@@ -429,6 +432,7 @@ func _begin_run(chosen: Resource) -> void:
 	lap_stats = {}
 	_world = 0
 	death_cause = ""
+	death_tip = ""
 	_last_hit_source = ""
 	if ctx.run_log != null:
 		ctx.run_log.abandon_open_run()
@@ -847,6 +851,22 @@ func gap_line() -> String:
 	return "Punch %d / plating %d · Heft %s" % [int(punch_now()), int(plating), ctx.run.roman(ctx.run.heft_class())]
 
 
+# The engaged Warden fight's punch against plating, for the death tip; empty off one.
+func _warden_gap() -> Dictionary:
+	if not (state in [STAGE, BEACON] and sealed and _engaged and is_instance_valid(warden)):
+		return {}
+	return {"punch": build_punch(), "plating": warden_plating()}
+
+
+# The punch the build carries whatever the ball was doing when it was read: punch_now(), or a ram
+# at base cruise when that is more, so a ball knocked to a stop does not read as a weak build.
+func build_punch() -> float:
+	var punch := punch_now()
+	if ctx.spawner != null and ctx.spawner.has_method("punch_of") and ctx.spawner.has_method("panel_punch"):
+		punch = maxf(punch, ctx.spawner.punch_of("ram", ctx.player.tuning.tier_cruise()) + ctx.spawner.panel_punch("ram", "ram_or_contact"))
+	return punch
+
+
 func _place_ball(at: Vector3, velocity: Vector3, heading: Vector3) -> void:
 	ctx.player.set_frozen(false)
 	ctx.player.reset_to(at, velocity)
@@ -1204,6 +1224,7 @@ func _on_player_died() -> void:
 		return
 	_death_plating = boss_plating_now() if state == BOSS else -1.0
 	death_cause = DeathCause.line(_last_hit_source, _landed_attack(), DeathCause.phase_note(_boss_module()) if state == BOSS else "")
+	death_tip = DeathTips.line(_last_hit_source, _landed_attack(), _warden_gap())
 	ctx.player.set_frozen(true)
 	if store != null:
 		_end_run(false)
