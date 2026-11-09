@@ -33,7 +33,7 @@ const ROWS := {
 	"ram_scooter": {"glyph": "fac_fleet", "words": "Ram the Admiral's scooter"},
 }
 
-# What "find_activity" says when the plate knows which site is nearest: the site's kind
+# What "find_activity" says for the site the plate names (pick_site): the site's kind
 # (EventKinds.ACTIVITY_ROWS) and the verb that finishes it (activities.gd RULES `finishes`).
 const ACTIVITY_WORDS := {
 	"enemy_camp": "Clear the camp",

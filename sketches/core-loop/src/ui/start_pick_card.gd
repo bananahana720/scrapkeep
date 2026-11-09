@@ -75,10 +75,6 @@ func set_briefing(on: bool) -> void:
 	_briefing = on
 
 
-func in_briefing() -> bool:
-	return _briefing
-
-
 # The tile metrics' scale: 1 for the in-play strip, BRIEFING_SCALE in the briefing.
 func _k() -> float:
 	return BRIEFING_SCALE if _briefing else 1.0
@@ -306,16 +302,28 @@ func _controls() -> void:
 		rung_button = _button(Vector2(size.x * 0.5 + 270.0, y + 60.0), Vector2(110.0, 38.0), "Next rung", step_rung)
 
 
-# The briefing's focus moves (workshop.gd): left and right step between the tiles; with none
-# focused the first step lands on the first tile (or the last, stepping left).
+# The buttons the focus walks, left to right as they read: the tiles, then the tier buttons,
+# Reroll and Next rung, leaving out any that cannot be pressed.
+func _focus_ring() -> Array:
+	var ring: Array = _tile_buttons.duplicate()
+	var tiers: Array = _tier_buttons.keys()
+	tiers.sort()
+	ring.append_array(tiers.map(func(tier): return _tier_buttons[tier]))
+	ring.append_array([reroll_button, rung_button])
+	return ring.filter(func(button): return button != null and is_instance_valid(button) and not button.disabled)
+
+
+# The briefing's focus moves: left and right step along the ring; with nothing focused the first
+# step lands on the first tile (or the ring's last button, stepping left).
 func step_focus(direction: int) -> void:
-	if _tile_buttons.is_empty() or not visible:
+	var ring := _focus_ring()
+	if ring.is_empty() or not visible:
 		return
-	var at := focused_tile()
-	var next := clampi(at + direction, 0, _tile_buttons.size() - 1)
+	var at := ring.find(get_viewport().gui_get_focus_owner())
+	var next := clampi(at + direction, 0, ring.size() - 1)
 	if at < 0:
-		next = 0 if direction >= 0 else _tile_buttons.size() - 1
-	_tile_buttons[next].grab_focus()
+		next = 0 if direction >= 0 else ring.size() - 1
+	ring[next].grab_focus()
 
 
 func focused_tile() -> int:
@@ -326,7 +334,8 @@ func focused_tile() -> int:
 
 
 # Confirm presses whichever of the card's buttons holds the focus (a tile, the reroll, a tier).
-# With none focused a key does nothing, and the pad's press only lands the focus on the first tile.
+# With none focused a key does nothing, and the pad's press only lands the focus on the first tile,
+# so a confirm held from the page before takes nothing.
 func confirm(pad := false) -> void:
 	if not visible or not is_inside_tree():
 		return
@@ -337,10 +346,38 @@ func confirm(pad := false) -> void:
 		step_focus(1)
 
 
+# The briefing's focus keys, for the keyboard and the pad: A and D or left and right step the
+# focus, confirm presses what it holds.
+func _focus_key(event: InputEvent) -> bool:
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.physical_keycode:
+			KEY_A:
+				step_focus(-1)
+				return true
+			KEY_D:
+				step_focus(1)
+				return true
+	if event.is_action_pressed("ui_left"):
+		step_focus(-1)
+		return true
+	if event.is_action_pressed("ui_right"):
+		step_focus(1)
+		return true
+	if event.is_action_pressed("ui_accept"):
+		confirm(event is InputEventJoypadButton)
+		return true
+	return false
+
+
 func _input(event: InputEvent) -> void:
-	if not _interactive or not visible or not event is InputEventKey or not event.pressed or event.echo:
+	if not _interactive or not visible:
 		return
 	if covered.is_valid() and covered.call():
+		return
+	if _briefing and _focus_key(event):
+		get_viewport().set_input_as_handled()
+		return
+	if not event is InputEventKey or not event.pressed or event.echo:
 		return
 	var key: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
 	if key >= KEY_1 and key <= KEY_3:

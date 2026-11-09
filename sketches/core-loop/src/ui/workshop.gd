@@ -235,6 +235,9 @@ func _sync_pick() -> void:
 	if pick.is_open() and pick.depth == t.path().size() + 1:
 		return
 	open_pick()
+	if not pick.is_open():
+		# An owed pick that cannot open (no pair to offer) must not keep the start card back.
+		_resync_start_card()
 
 
 # The start card waits while a kit pick is due (kit_pick_due); once the offer has settled, into an
@@ -552,11 +555,11 @@ func _update_talk(shown: bool) -> void:
 # ---- Keys and the pad ----
 
 func _input(event: InputEvent) -> void:
-	# In the briefing the card keeps its own keys (1-3, V); this layer adds the focus moves and the
-	# confirm, for the keyboard and the pad, unless a screen over the card owns the input. The kit
-	# pick and the counter never share the screen with the card (kit_pick_due, open_pick).
+	# In the briefing the card takes its own keys (start_pick_card.gd); this layer only keeps the
+	# notes shut, as the kit page does: the notes let go of the tree's pause when they close. The
+	# kit pick and the counter never share the screen with the card (kit_pick_due, open_pick).
 	if briefing():
-		if not game.flow.start_card_covered() and _brief_key(event):
+		if _notes_key(event):
 			get_viewport().set_input_as_handled()
 		return
 	if not armed:
@@ -610,8 +613,10 @@ func _pick_key(event: InputEvent) -> bool:
 			KEY_D:
 				pick.step_focus(1)
 				return true
-			KEY_TAB, KEY_P:
+			KEY_P:
 				return true
+	if _notes_key(event):
+		return true
 	if event.is_action_pressed("ui_cancel"):
 		close_pick()
 		return true
@@ -630,29 +635,12 @@ func _pick_key(event: InputEvent) -> bool:
 	return false
 
 
-# The briefing's start pick: A and D or left and right move between the tiles, confirm takes the
-# focused one. Nothing is focused when the card appears, so a key held from the screen before
-# takes nothing; the pad's first confirm only lands the focus.
-func _brief_key(event: InputEvent) -> bool:
-	var card = game.flow.start_card
-	if event is InputEventKey and event.pressed and not event.echo:
-		match event.physical_keycode:
-			KEY_A:
-				card.step_focus(-1)
-				return true
-			KEY_D:
-				card.step_focus(1)
-				return true
-	if event.is_action_pressed("ui_left"):
-		card.step_focus(-1)
-		return true
-	if event.is_action_pressed("ui_right"):
-		card.step_focus(1)
-		return true
-	if event.is_action_pressed("ui_accept"):
-		card.confirm(event is InputEventJoypadButton)
-		return true
-	return false
+# The keys that open the field notes (Tab, the pad's Back), press or release: the briefing's two
+# pages swallow them, so the notes never open over a held screen.
+func _notes_key(event: InputEvent) -> bool:
+	if event is InputEventKey:
+		return event.physical_keycode == KEY_TAB
+	return event is InputEventJoypadButton and event.button_index == JOY_BUTTON_BACK
 
 
 func _counter_key(event: InputEvent) -> bool:

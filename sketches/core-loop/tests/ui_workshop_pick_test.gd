@@ -85,8 +85,8 @@ func _process(_delta: float) -> bool:
 				_report("mouse pick", lit and path == [_offered[1]] and not _ws.pick.is_open(),
 					"hover focused the second card %s; after the click the path is %s, open %s" % [lit, path, _ws.pick.is_open()])
 				_report("briefing turns to the start pick", _briefed(),
-					"briefing %s, card showing %s in briefing %s, veil %s, paused %s, held %s, mouse captured %s"
-						% [_ws.briefing(), _card().showing(), _card().in_briefing(), _ws.brief.visible, paused, _game.get_meta("menu_held", false), _game.mouse_captured()])
+					"briefing %s, card showing %s, veil %s, paused %s, held %s, mouse captured %s"
+						% [_ws.briefing(), _card().showing(), _ws.brief.visible, paused, _game.get_meta("menu_held", false), _game.mouse_captured()])
 				_next("brief")
 		"brief":
 			if _wait == SETTLE:
@@ -129,8 +129,20 @@ func _process(_delta: float) -> bool:
 				Push.key(root, KEY_D)
 				var second: int = card.focused_tile()
 				Push.key(root, KEY_A)
-				_report("D and A move between the tiles", first == 0 and second == 1 and card.focused_tile() == 0 and _taken() == "",
-					"D %d, D %d, A %d" % [first, second, card.focused_tile()])
+				var back: int = card.focused_tile()
+				Push.key(root, KEY_RIGHT)
+				Push.key(root, KEY_RIGHT)
+				var third: int = card.focused_tile()
+				# Past the last tile the focus walks on to Reroll, so the pad reaches it too.
+				Push.key(root, KEY_RIGHT)
+				var on_reroll: bool = card.reroll_button.has_focus()
+				Push.key(root, KEY_LEFT)
+				_report("D, A and the arrows move the focus", first == 0 and second == 1 and back == 0 and third == 2 and on_reroll and card.focused_tile() == 2 and _taken() == "",
+					"D %d, D %d, A %d, right twice %d, right again on Reroll %s, left %d" % [first, second, back, third, on_reroll, card.focused_tile()])
+				# Tab and the pad's Back open no notes over the page: the notes would let go of the pause.
+				Push.key(root, KEY_TAB)
+				Push.pad(root, JOY_BUTTON_BACK)
+				_report("the notes stay shut over the briefing", not _game.notes_held() and _briefed(), "notes held %s, briefed %s" % [_game.notes_held(), _briefed()])
 				var rerolls: int = card.rerolls_left()
 				Push.key(root, KEY_V)
 				_report("V rerolls in the briefing", _card().rerolls_left() == rerolls - 1 and _briefed(),
@@ -278,7 +290,7 @@ func _taken() -> String:
 
 # The briefing's start pick page is up and holds the game: paused, the mouse free, the veil drawn.
 func _briefed() -> bool:
-	return _ws.briefing() and _card().showing() and _card().in_briefing() and _ws.brief.visible and paused \
+	return _ws.briefing() and _card().showing() and _ws.brief.visible and paused \
 		and _game.get_meta("menu_held", false) and not _game.mouse_captured()
 
 

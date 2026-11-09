@@ -402,13 +402,9 @@ func show_start_card() -> void:
 		host.sync_briefing()
 
 
-# The card holds no menu while it keeps mouse look (start_pick_card.gd wants_pointer), so the pause
-# menu or the hotwire offer can open over it; while one is open it owns the keys and the clicks, and
-# a tier button pressed under it changes nothing (the pause menu also opens over the tier choice).
-func start_card_covered() -> bool:
-	return _start_card_covered()
-
-
+# A screen open over the card (the pause menu or the hotwire offer) owns the keys and the clicks:
+# the card takes nothing under it and a tier button pressed under it changes nothing. The briefing
+# holds both shut; a test game's card, shown without the hold, can still be covered.
 func _start_card_covered() -> bool:
 	var game = ctx.root
 	var menu = game.get_node_or_null("PauseMenu")
