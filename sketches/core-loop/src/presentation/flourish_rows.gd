@@ -44,7 +44,7 @@ const ROWS := {
 				"text": ["Spillway Works. Dawn. Probably a Tuesday.", "Spillway Works. Dawn. Definitely a Wednesday.", "Spillway Works. Dawn. The kettle is on."]},
 			{"kind": "caption", "at": 2.0, "for": 2.0, "slot": "left_low",
 				"text": ["Moss's shift note: bring the runner back up.", "Moss's shift note: seals first. Then the runner.",
-					"Moss's shift note: nothing's out of place. Yet.", "Moss's shift note: very tidy out there. Go on."]},
+					"Moss's shift note: nothing's out of place. Yet.", "Moss's shift note: very tidy out there. Boots on."]},
 			{"kind": "card", "at": 0.6, "for": 4.4, "slot": "left_top",
 				"card": ["PUMP CREW", "Card 0417 · Spillway shift", "Clocked in", "06:00", "Hands on shift", "all", "Runner", "not back yet"]},
 			{"kind": "stamp", "at": 1.4, "for": 2.0, "text": "CLOCKED IN", "colour": "HAZARD"},
