@@ -39,6 +39,8 @@ export const BOOT_FAILED = "SCRAPKEEP_BOOT_FAILED";
 // The 3D title has no written budget; this only ends a launch that never shows it.
 export const MENU_WAIT_S = 60;
 export const LAUNCH_BUDGET_S = 5;
+// After the launched process exits, how long its last lines get to arrive before the launch is judged.
+export const EXIT_DRAIN_MS = 250;
 // The full smoke tier takes about 2 h on a 4-core cloud box; a hang still ends, four hours in.
 const STEP_TIMEOUT_MS = 4 * 60 * 60_000;
 const KILL_GRACE_MS = 3000;
@@ -279,12 +281,15 @@ export function launchAppImage(appimage, { seconds = LAUNCH_BUDGET_S, menuWaitSe
     let settled = false;
     let titleMs = null;
     let menuMs = null;
+    let exited = null;
+    let drainTimer = null;
     const child = spawn(appimage, [], { env: launchEnv(env, profile.env), stdio: ["ignore", "pipe", "pipe"], detached: true });
     const finish = async (result) => {
       if (settled) return;
       settled = true;
       clearTimeout(titleTimer);
       clearTimeout(menuTimer);
+      clearTimeout(drainTimer);
       const ms = Date.now() - started;
       if (child.pid) await stopGroup(child);
       child.stdout?.destroy();
@@ -297,6 +302,7 @@ export function launchAppImage(appimage, { seconds = LAUNCH_BUDGET_S, menuWaitSe
     const seen = (line) => (output.includes(line) ? Date.now() - started : null);
     const onData = (chunk) => {
       output += chunk;
+      if (exited !== null) return; // the exit judges; this only gathers its last lines
       const broken = bootFailure(output);
       if (broken !== null) return finish({ status: "fail", note: `the build said it did not load (${BOOT_FAILED}): ${broken}` });
       titleMs ??= seen(TITLE_INTERACTIVE);
@@ -309,10 +315,20 @@ export function launchAppImage(appimage, { seconds = LAUNCH_BUDGET_S, menuWaitSe
     child.stdout.on("data", onData);
     child.stderr.on("data", onData);
     child.on("error", (error) => finish({ status: "fail", note: `could not start: ${error.message}` }));
-    child.on("exit", (code, signal) => {
+    // An exit can come before the process's last lines do, so it waits for the pipes to close, or
+    // EXIT_DRAIN_MS when a child of the process still holds them, and then reads why (a last line
+    // may be cut off, hence the added newline).
+    const afterExit = () => {
       const broken = bootFailure(output + "\n");
-      finish({ status: "fail", note: `exited (${code ?? signal}) before the main menu${broken === null ? "" : `; the build said it did not load (${BOOT_FAILED}): ${broken}`}` });
+      finish({ status: "fail", note: `exited (${exited}) before the main menu${broken === null ? "" : `; the build said it did not load (${BOOT_FAILED}): ${broken}`}` });
+    };
+    child.on("exit", (code, signal) => {
+      exited = code ?? signal;
+      clearTimeout(titleTimer);
+      clearTimeout(menuTimer);
+      drainTimer = setTimeout(afterExit, EXIT_DRAIN_MS);
     });
+    child.on("close", () => exited !== null && afterExit());
     const titleTimer = setTimeout(() => {
       if (titleMs === null) finish({ status: "fail", note: `no ${TITLE_INTERACTIVE} line within ${seconds} s (slow boot, or a build without the title card)` });
     }, seconds * 1000);

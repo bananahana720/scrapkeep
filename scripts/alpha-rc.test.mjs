@@ -283,10 +283,15 @@ test("cold launch: a build that says it did not load fails at once, with the boo
   assert.equal(card.note, "the build said it did not load (SCRAPKEEP_BOOT_FAILED): the game scene's script did not load");
   assert.ok(card.ms < 5000, `failed in ${card.ms} ms, not at the 20 s menu wait`);
   assert.equal(card.menuMs, null);
-  // No card (headless): the boot prints the line and exits 1. Either event may come first; both name the reason.
+  // No card (headless): the boot prints the line and exits 1. The exit waits for the last lines, so it names the reason.
   const headless = await launchAppImage(fake(dir, "headless.sh", `echo "${BOOT_FAILED} res://scenes/main.tscn did not load"; exit 1`), { seconds: 5 });
   assert.equal(headless.status, "fail");
   assert.match(headless.note, /the build said it did not load \(SCRAPKEEP_BOOT_FAILED\): res:\/\/scenes\/main\.tscn did not load$/);
+  // A child of the exited process still holds the pipes: the exit is judged after a short wait, not at the title budget.
+  const held = await launchAppImage(fake(dir, "held.sh", "sleep 30 & echo last words; exit 3"), { seconds: 20 });
+  assert.match(held.note, /^exited \(3\) before the main menu$/);
+  assert.match(held.output, /last words/);
+  assert.ok(held.ms < 10000, `judged in ${held.ms} ms`);
   // A healthy build that only mentions the marker inside another line still passes.
   const quoted = await launchAppImage(fake(dir, "quoted.sh", `echo "note: ${BOOT_FAILED} is the failure marker"; echo "${TITLE_INTERACTIVE} ms=300"; echo "${MENU_READY} ms=400"; exec sleep 30`), { seconds: 5 });
   assert.equal(quoted.status, "pass");
