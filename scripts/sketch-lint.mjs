@@ -187,6 +187,32 @@ export function lintL6Owners(counts, relative, owners = LIGHT_OWNERS) {
     .map((rel) => finding("L6", `${relative}/${rel}`, 1, "LIGHT_OWNERS lists a file with no runtime Light3D: remove the entry"));
 }
 
+// L8: drawing code that asks where the ball is at the physics tick. Under src/presentation and src/ui
+// the ball's place is PlayerBall.shown_position(), where the ball is drawn this frame. ball_position()
+// moves once per tick, so anything placed from it in a drawn frame steps against the ball. At a tick
+// the two are the same place, so shown_position() is also right in a handler the sim calls.
+// SIM_READS lists the reads that mean the tick: the file, how many, and why. A count that drifts is
+// a finding, and so is an entry with no read left.
+export const SIM_READS = {
+  "src/presentation/hero_assets.gd": { sites: 1, why: "the Warden's lens tracks its sight target, which is the last seen place while the ball is cloaked" },
+  "src/ui/workshop.gd": { sites: 1, why: "pulling up to Moss opens the counter: a rule about where the ball is, not a picture of it" },
+};
+
+const tickRead = /\.ball_position\(\)/;
+
+// L8: rel is the path inside the sketch, file the repo path for the finding.
+export function lintL8(file, rel, text, allowed = SIM_READS) {
+  if (!/^src\/(?:presentation|ui)\//.test(rel)) return [];
+  const reads = codeLines(text).filter((line) => tickRead.test(line.raw));
+  const listed = allowed[rel]?.sites ?? 0;
+  if (reads.length === listed) return [];
+  if (reads.length === 0) return [finding("L8", file, 1, "SIM_READS lists a file with no ball_position() read: remove the entry")];
+  const message = listed === 0
+    ? "drawing code reads ball_position(), the ball's place at the physics tick; read shown_position(), where the ball is drawn this frame"
+    : `${reads.length} ball_position() reads, SIM_READS lists ${listed}; a new read takes shown_position()`;
+  return reads.map((line) => finding("L8", file, line.number, message));
+}
+
 // The baseline only shrinks: offenders it lists stay quiet, a listed path that no longer
 // offends or no longer exists is itself a finding. exists(path) answers for the disk.
 export function applyBaseline(findings, baseline, exists) {
@@ -259,6 +285,7 @@ export function lintSketch(sketch) {
     const rel = file.path.slice(relative.length + 1);
     if (codeLines(file.text).some((line) => lightNew.test(line.raw))) lit.add(rel);
     findings.push(...lintL6(file.path, rel, file.text));
+    findings.push(...lintL8(file.path, rel, file.text));
   }
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   const lintSelf = new Set(["scripts/sketch-lint.mjs", "scripts/sketch-lint.test.mjs"]);

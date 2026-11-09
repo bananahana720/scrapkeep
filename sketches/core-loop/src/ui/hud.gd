@@ -948,7 +948,7 @@ static func _rect_of(control: Control) -> Rect2:
 func objective_reading() -> Dictionary:
 	var flow = game.flow
 	var warden = flow.warden if is_instance_valid(flow.warden) else null
-	var distance: float = game.player.ball_position().distance_to(warden.global_position) if warden != null else INF
+	var distance: float = game.player.shown_position().distance_to(warden.global_position) if warden != null else INF
 	var gate = flow.gate
 	var sites: Array = edge_markers.unfinished_sites()
 	var reading := {
@@ -1002,7 +1002,7 @@ static func _clamp_fraction(gate) -> float:
 func place_prompts(size: Vector2, playing: bool) -> void:
 	prompt_rects.clear()
 	var cam: Camera3D = game.camera.cam
-	var ball: Vector3 = game.player.ball_position()
+	var ball: Vector3 = game.player.shown_position()
 	var near: Array = []
 	for prompt in get_tree().get_nodes_in_group(ScreenRegions.PROMPT_GROUP):
 		prompt.visible = false

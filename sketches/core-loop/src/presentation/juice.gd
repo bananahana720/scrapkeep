@@ -348,7 +348,7 @@ func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
 		result = resolve_of.call(enemy, kind, force)
 	if not bool(result.get("full", true)):
 		return
-	var at: Vector3 = player.ball_position()
+	var at: Vector3 = player.shown_position()
 	if is_instance_valid(enemy) and enemy.is_inside_tree():
 		at = enemy.global_position
 	var dealt := float(result.get("dealt", force))
@@ -376,7 +376,7 @@ func _raise_number(key: String, dealt: float, at: Vector3, kind: String, crit: b
 
 # Where the hit met the body: on its skin along the line to the ball, not at its middle.
 func _contact_point(enemy: Node3D, centre: Vector3) -> Vector3:
-	var to_ball: Vector3 = player.ball_position() - centre
+	var to_ball: Vector3 = player.shown_position() - centre
 	var reach := minf(float(enemy.get("radius")) if is_instance_valid(enemy) and enemy.get("radius") != null else 0.0, to_ball.length() * 0.5)
 	return centre + to_ball.normalized() * reach
 
@@ -495,7 +495,7 @@ func _flush_hits() -> void:
 # the shell squashed into the hit. Camera and shell only; the ball keeps its speed.
 func _thump(at: Vector3, kick: float, dust: int, fact: String) -> void:
 	var travel: Vector3 = player.planar_velocity()
-	var along: Vector3 = travel.normalized() if travel.length() > 0.5 else (at - player.ball_position()).normalized()
+	var along: Vector3 = travel.normalized() if travel.length() > 0.5 else (at - player.shown_position()).normalized()
 	_camera("kick", fact, along, kick)
 	squash(0.28, along)
 	if vfx != null:
@@ -505,7 +505,7 @@ func _thump(at: Vector3, kick: float, dust: int, fact: String) -> void:
 # The bowling-ball rebound: the heavy thump, whatever the strike did.
 func _on_rebounded(enemy: Node3D, _speed: float) -> void:
 	var row := EventKinds.juice("enemy_rebounded")
-	var at: Vector3 = enemy.global_position if is_instance_valid(enemy) and enemy.is_inside_tree() else player.ball_position()
+	var at: Vector3 = enemy.global_position if is_instance_valid(enemy) and enemy.is_inside_tree() else player.shown_position()
 	_thump(at, float(row["kick"]), int(row["dust"]), "enemy_rebounded")
 	if camera != null:
 		request_shake(float(row["shake"]), 0.2, "enemy_rebounded")
@@ -552,7 +552,7 @@ func _flush_kills() -> void:
 				# The pop an octave up and more, on the reward ladder: F at 2, G at 4, D at 8.
 				audio.play("enemy_killed", 2.0, Harmony.snapped_ratio(SfxBank.KILL_POP_MIDI, 12.0 + 1.5 * mark), "SFX", "kill_pop")
 			if vfx != null:
-				vfx.glyph("enemy_killed", player.ball_position(), 1.0, 3.0 + mark, 0.35, Vector3.UP, "ring")
+				vfx.glyph("enemy_killed", player.shown_position(), 1.0, 3.0 + mark, 0.35, Vector3.UP, "ring")
 
 
 # --- Pickups ------------------------------------------------------------------------
@@ -575,7 +575,7 @@ func _on_part(part_id: String, _source: String) -> void:
 	if vfx == null:
 		return
 	var row := EventKinds.juice("part_gained")
-	vfx.burst("fountain", player.ball_position() + Vector3.UP * 0.8, part_tint(part_id), int(row["fountain"]))
+	vfx.burst("fountain", player.shown_position() + Vector3.UP * 0.8, part_tint(part_id), int(row["fountain"]))
 	pulse(0.12)
 
 
@@ -616,7 +616,7 @@ func _on_player_hit(amount: float, source: String) -> void:
 	# The number and the flash keep the player_hit juice row's HAZARD for either source.
 	var team := DamageNumbers.team_of_source(source)
 	if number_sink.is_valid():
-		number_sink.call("player", amount, player.ball_position() + Vector3.UP * 1.4, "kinetic", team, false)
+		number_sink.call("player", amount, player.shown_position() + Vector3.UP * 1.4, "kinetic", team, false)
 	if vfx == null:
 		return
 	var from = null
@@ -677,7 +677,7 @@ func _on_detonated(at: Vector3, crit: bool) -> void:
 		vfx.burst("dust", at, EventKinds.color("landed"), int(row["dust"]))
 	# A blast beside you rocks the camera and the shell away from it; the ball's velocity
 	# is the rocket jump's business alone.
-	var away: Vector3 = player.ball_position() - at
+	var away: Vector3 = player.shown_position() - at
 	if away.length() < float(row["near_m"]):
 		var dir := away.normalized() if away.length() > 0.1 else Vector3.UP
 		_camera("kick", "sticky_detonated", dir, float(row["near_kick"]))

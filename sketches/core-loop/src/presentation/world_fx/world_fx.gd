@@ -397,7 +397,7 @@ func _step_wake(delta: float) -> void:
 	if resting or not is_instance_valid(_ball) or _ctx == null or _ctx.get("terrain") == null or not _ctx.terrain.has_method("material_at"):
 		_last_ball = Vector3.INF
 		return
-	var ball: Vector3 = _ball.ball_position() if _ball.has_method("ball_position") else _ball.global_position
+	var ball: Vector3 = _ball.shown_position() if _ball.has_method("shown_position") else _ball.global_position
 	var under: Dictionary = _ctx.terrain.material_at(ball)
 	var water := float(under["surface_y"]) if under.get("material", "") == "water" else NAN
 	var velocity := Vector3.ZERO

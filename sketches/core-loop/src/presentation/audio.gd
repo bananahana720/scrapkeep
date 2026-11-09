@@ -1743,7 +1743,7 @@ func _end_hum(node_id: int) -> void:
 func _threat_distance_db(node: Node) -> float:
 	if ctx == null or ctx.player == null or not node.has_method("threat_at"):
 		return 0.0
-	var gap: float = (node.threat_at() as Vector3).distance_to(ctx.player.ball_position())
+	var gap: float = (node.threat_at() as Vector3).distance_to(ctx.player.shown_position())
 	return 9.0 * clampf((gap - 20.0) / 40.0, 0.0, 1.0)
 
 
@@ -2239,7 +2239,7 @@ func _tend_hum() -> void:
 	if not standing:
 		_stop_hum()
 		return
-	hum_pitch = hum_ratio(player.ball_position().distance_to(kit.anchor)) if kit.on_body else 1.0
+	hum_pitch = hum_ratio(player.shown_position().distance_to(kit.anchor)) if kit.on_body else 1.0
 	if _sfx != null and _hum_voice != AudioStreamPlaybackPolyphonic.INVALID_ID:
 		_sfx.set_stream_pitch_scale(_hum_voice, hum_pitch)
 
@@ -2435,7 +2435,7 @@ func _guard_park_bookings() -> void:
 			continue
 		var safe: bool = not state.holding and director.stage_time >= director._park_quiet_until \
 			and director._park_capacity(state) and director._park_route_safe(state) \
-			and director._park_clear(state, ctx.player.ball_position(), ctx.player.state.velocity, state.context)
+			and director._park_clear(state, ctx.player.shown_position(), ctx.player.state.velocity, state.context)
 		if not safe:
 			engine.cancel_park_drop(event_id)
 			cue.booked = false
@@ -2785,8 +2785,8 @@ func _tend_specials() -> void:
 		return
 	var from := Vector3.ZERO
 	var player = ctx.get("player") if ctx != null else null
-	if player != null and player.has_method("ball_position"):
-		from = player.ball_position()
+	if player != null and player.has_method("shown_position"):
+		from = player.shown_position()
 	var distances := {}
 	for id in _specials.keys():
 		var row: Dictionary = _specials[id]
@@ -3512,7 +3512,7 @@ func _follow_brindle() -> void:
 	if engine.section == "chase":
 		var scooter = boss.get("scooter")
 		if scooter is Node3D and is_instance_valid(scooter) and boss.has_method("scooter_landed") and boss.scooter_landed():
-			var lead: float = (scooter as Node3D).global_position.distance_to(ctx.player.ball_position())
+			var lead: float = (scooter as Node3D).global_position.distance_to(ctx.player.shown_position())
 			if _chase_lead0 < 0.0:
 				_chase_lead0 = maxf(lead, 1.0)
 			engine.chase(clampf(1.0 - lead / _chase_lead0, 0.0, 1.0))
@@ -3799,7 +3799,7 @@ func _on_synergy(_id: String, _category: String, first_time: bool) -> void:
 func sample_run_parameters() -> Dictionary:
 	if ctx.run == null or ctx.player == null or ctx.flow == null or not ctx.flow.in_play():
 		return {}
-	var at: Vector3 = ctx.player.ball_position()
+	var at: Vector3 = ctx.player.shown_position()
 	var forward: Vector3 = ctx.aim_forward()
 	var enemies: Array = get_tree().get_nodes_in_group("enemy") if is_inside_tree() else []
 	var values := {"threat": run_threat(at, forward, enemies, parameter_threat_weights, parameter_threat_range)}

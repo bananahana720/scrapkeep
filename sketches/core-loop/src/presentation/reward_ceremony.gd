@@ -344,7 +344,7 @@ func _flare(find: Dictionary) -> void:
 		if may_show_card():
 			juice.request_hit_stop(float(row["stop_ms"]) / 1000.0, "reward_rare")
 	if vfx != null and ctx.player != null:
-		var ball: Vector3 = ctx.player.ball_position()
+		var ball: Vector3 = ctx.player.shown_position()
 		var tint := RewardGates.rarity_color(find["rarity"])
 		vfx.glyph("reward_rare", ball + Vector3.UP * 0.3, 1.0, float(row["ring_m"]), float(row["flare_s"]), Vector3.ZERO, "ring", tint)
 		vfx.glyph("reward_rare", ball + Vector3.UP * 2.4, 0.4, 1.8, float(row["flare_s"]), Vector3.ZERO, "star", tint)
@@ -420,7 +420,7 @@ func calm() -> bool:
 	var st = ctx.player.state
 	if not st.grounded and absf(st.velocity.y) > float(row["fall_speed"]):
 		return false
-	var at: Vector3 = ctx.player.ball_position()
+	var at: Vector3 = ctx.player.shown_position()
 	for node in get_tree().get_nodes_in_group("threat"):
 		if not node.has_method("threat_at") and not node is Node3D:
 			continue
@@ -665,7 +665,7 @@ func _pay(armed: Dictionary, fact: String) -> void:
 	var row := EventKinds.reward_row("payoff")
 	audio.play("reward_payoff", 0.0, rung_pitch(armed["rarity"]))
 	var tint := RewardGates.rarity_color(armed["rarity"])
-	var ball: Vector3 = ctx.player.ball_position()
+	var ball: Vector3 = ctx.player.shown_position()
 	if vfx != null:
 		vfx.glyph("reward_payoff", ball + Vector3.UP * 0.3, 1.0, 3.5, float(row["flash_s"]), Vector3.ZERO, "ring", _class_color())
 	var cam = ctx.camera.cam if ctx.camera != null else null

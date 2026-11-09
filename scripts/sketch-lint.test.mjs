@@ -12,6 +12,7 @@ import {
   lintL6,
   lintL6Owners,
   lintL7,
+  lintL8,
   parseTuning,
 } from "./sketch-lint.mjs";
 
@@ -28,6 +29,25 @@ test("L7 allows only the guarded --self-play load in src/game.gd", () => {
   assert.equal(lintL7("sketches/core-loop/src/other.gd", line + guard).length, 1);
   assert.equal(lintL7("sketches/core-loop/src/game.gd", line + guard + 'var x = load("res://tools/bot_driver.gd")\n').length, 1);
   assert.equal(lintL7("sketches/core-loop/src/game.gd", 'const SELF_PLAY := "res://tools/other.gd"\n' + guard).length, 1);
+});
+
+test("L8 flags a tick-rate ball read in drawing code and passes the drawn read, the sim and comments", () => {
+  const bad = lintL8("x/vfx.gd", "src/presentation/vfx.gd", "func _process(_d):\n\t_roll.global_position = player.ball_position()\n\tvar at = ctx.player.shown_position()\n", {});
+  assert.deepEqual(bad.map((item) => `${item.rule} ${item.line}`), ["L8 2"]);
+  assert.equal(lintL8("x/hud.gd", "src/ui/hud.gd", "var d = game.player.ball_position().distance_to(at)\n", {}).length, 1);
+  assert.deepEqual(lintL8("x/vfx.gd", "src/presentation/vfx.gd", "var at = player.shown_position()\n# ball_position() is the tick's\n", {}), []);
+  assert.deepEqual(lintL8("x/combat.gd", "src/combat/combat.gd", "var at = player.ball_position()\n", {}), []);
+});
+
+test("L8 passes a listed sim read, and flags a drifted count and a stale entry", () => {
+  const allowed = { "src/presentation/hero_assets.gd": { sites: 1, why: "sight target" } };
+  const lens = "var dir = target.ball_position() - origin\n";
+  assert.deepEqual(lintL8("x/hero_assets.gd", "src/presentation/hero_assets.gd", lens, allowed), []);
+  const drift = lintL8("x/hero_assets.gd", "src/presentation/hero_assets.gd", lens + "var at = player.ball_position()\n", allowed);
+  assert.deepEqual(drift.map((item) => item.line), [1, 2]);
+  assert.equal(drift[0].message.includes("SIM_READS lists 1"), true);
+  const stale = lintL8("x/hero_assets.gd", "src/presentation/hero_assets.gd", "var at = player.shown_position()\n", allowed);
+  assert.deepEqual(stale.map((item) => `${item.rule} ${item.line}`), ["L8 1"]);
 });
 
 const tuningText = `
