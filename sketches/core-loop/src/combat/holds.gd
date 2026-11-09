@@ -301,7 +301,7 @@ func _refund(kick: float, line := Vector3.ZERO) -> void:
 	if dir.length() < 0.1:
 		dir = player.planar_velocity()
 	if dir.length() < 0.5:
-		dir = -ctx.camera.yaw_basis().z if ctx.camera != null else Vector3.FORWARD
+		dir = ctx.heading()
 		dir.y = 0.0
 	var step := get_physics_process_delta_time()
 	if step > 0.0 and dir.length() > 0.01:

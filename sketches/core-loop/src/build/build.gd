@@ -1317,12 +1317,12 @@ func _on_shot_fired(_weapon_id: String, _from: Vector3, to: Vector3) -> void:
 			_note_found("rule:" + rule_id, Synergies.TAG_RULES[rule_id]["found"])
 
 
-# The ball's own line when it is moving, else where the camera looks.
+# The ball's own line when it is moving, else where the player faces.
 func _heading() -> Vector3:
 	var flat: Vector3 = ctx.player.planar_velocity()
 	if flat.length() > 3.0:
 		return flat.normalized()
-	return -ctx.camera.yaw_basis().z
+	return ctx.heading()
 
 
 # ---- Scrap as armour (the durability prototype; every branch is behind tuning flags) ----

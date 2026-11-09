@@ -70,6 +70,7 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 | `rng` | `RandomNumberGenerator` | the run's one seeded stream (seed 20260926) |
 | `calm` | `bool` | tests set it; no own-schedule spawns, no world pushes |
 | `aim_origin()`, `aim_forward()` | `Vector3` | the camera's centre ray |
+| `heading()` | `Vector3` | the level direction the player faces (the view's yaw, no pitch, unit length); the read side of `camera.snap(heading)`. Simulation code calls this, never the camera's basis |
 | `hit_stop(seconds)` | method | a short freeze for weight; capped at 60 ms, never stacks, only in play |
 
 Flow states, as `state_name()` returns them: `title`, `class_select`, `stage`, `beacon`, `gates`, `launch`, `boss`, `victory`, `summary` and `dead`. `in_play()` is true for `stage`, `beacon`, `gates`, `launch` and `boss`.
@@ -263,7 +264,7 @@ Flow calls `spawn_point`, `entry_heading` and `beacon_point` right after `stage_
 - `kick(direction: Vector3, amount)` knocks the camera along a world direction, and it springs back.
 - `shake(amount, time = 0.4)` shakes the camera; the strongest shake wins.
 - `motion_scale: float` (0 to 1) is the viewer's Screen shake comfort. Juice sets it; the camera multiplies every punch, kick and shake by it, its own landing shake included.
-- `aim_origin()`, `aim_forward()`, `yaw_basis()` and `yaw` are read-only for modules.
+- `aim_origin()`, `aim_forward()`, `yaw_basis()` and `yaw` are read-only for modules. A module that wants the facing direction calls `ctx.heading()`, not `yaw_basis()`.
 
 Juice follows the player's actions and must never hide the next threat. Keep punches and shakes short.
 
