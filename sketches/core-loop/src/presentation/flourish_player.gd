@@ -35,6 +35,8 @@ const QUEUE_WAIT := 6.0
 const PLAY_ACTIONS := ["cl_forward", "cl_back", "cl_left", "cl_right", "cl_jump", "cl_boost", "cl_haul", "cl_fire", "cl_harpoon"]
 const AVOID_GROUP := "flourish_avoid"
 const AVOID_GAP := 12.0
+# The pieces that are read: a stamp and a sound word are looked at.
+const WRITTEN := ["card", "caption", "panels"]
 const INK := Color("17141a")
 const PAPER := Color("f3ecdc")
 const CAPTION_FILL := Color("fff6c9")
@@ -142,6 +144,16 @@ func stop_all() -> void:
 
 func queued() -> Array:
 	return _queue.map(func(entry): return entry[0])
+
+
+# Whether the row still has reading matter to show: it waits in the queue, or it plays with a
+# card, a caption or a panel not yet off the screen (the run's opening holds Moss for it).
+func reading(row_id: String) -> bool:
+	if row_id in queued():
+		return true
+	if not playing or id != row_id:
+		return false
+	return _pieces.any(func(piece): return String(piece.kind) in WRITTEN and clock < float(piece.at) + float(piece["for"]))
 
 
 # Pieces on screen now, by kind, for tests and stills.
@@ -518,7 +530,7 @@ func _stamp_at(label: Control) -> Vector2:
 	var screen := _screen()
 	var top: Control = null
 	for entry in _live:
-		if String(entry.piece.kind) in ["card", "caption", "panels"] and is_instance_valid(entry.node):
+		if String(entry.piece.kind) in WRITTEN and is_instance_valid(entry.node):
 			if top == null or entry.node.position.y < top.position.y:
 				top = entry.node
 	if top == null:

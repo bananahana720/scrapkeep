@@ -1,6 +1,6 @@
 ---
 name: scrapkeep-explorer
-description: Inspect scoped Scrapkeep sources and return evidence without edits, on Sonnet 5.5 medium.
+description: Inspect scoped Scrapkeep sources and return evidence without edits, on the fast tier at medium effort.
 model: sonnet
 effort: medium
 tools: Read, Grep, Glob

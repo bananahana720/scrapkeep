@@ -1,4 +1,4 @@
-# smoke: bots timeout=900s (six real-tick played game children: four boot-only quits, one planted-limit run, one from the title through stage 1 into stage 2; about 250 s for the last on the loaded cloud box, 2026-10-18)
+# smoke: bots timeout=900s (seven real-tick played game children: four boot-only quits, two planted stalls, one planted-limit run, one from the title through stage 1 into stage 2; about 250 s for the last on the loaded cloud box, 2026-10-18)
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
@@ -6,8 +6,8 @@ const T := preload("res://tests/support/t.gd")
 # --self-play (src/game.gd, tools/self_play.gd): the launched main scene is played by a bot with
 # real ticks (a played game, not test_mode or SimClock) and quits by code: 0 the goal was reached,
 # 2 a bad flag or a missing script (--self-play-script= stands in for a pack without tools/),
-# 3 a stall (planted: --self-play-plant-stall for the detector, --self-play-plant-limit for the
-# driver's limit). Evidence limit: one seed, skipper, headless; the gates trigger of the detector
+# 3 a stall (planted: --self-play-plant-stall for the exit detector, --self-play-plant-after-exit
+# for an exit that opens no next stage, --self-play-plant-limit for the driver's limit). Evidence limit: one seed, skipper, headless; the gates trigger of the detector
 # is not exercised, only its timing, line and exit code.
 
 func _initialize() -> void:
@@ -25,6 +25,10 @@ func _initialize() -> void:
 	t.eq("a planted stall quits 3", planted["code"], 3)
 	var stall_line := _line(planted["text"], "self-play: stalled at stage ")
 	t.check("the stall line names stage 1, the exit and a position", stall_line.contains("stage 1 exit at ") and stall_line.contains(" pos "))
+	var after := _launch(["--self-play-plant-after-exit", "--self-play-stall=2"])
+	t.eq("an exit taken that opens no next stage quits 3", after["code"], 3)
+	t.check("that stall line names stage 1, after the exit, and a position", _line(after["text"], "self-play: stalled at stage ").contains("stage 1 after-exit at ") and _line(after["text"], "self-play: stalled at stage ").contains(" pos "),
+		_line(after["text"], "self-play: stalled at stage "))
 	var limited := _launch(["--self-play-plant-limit=4"])
 	t.eq("the driver's own stage limit quits 3", limited["code"], 3)
 	t.check("the driver-limit stall line has a position", _line(limited["text"], "self-play: stalled at stage 1 ").contains(" pos "))

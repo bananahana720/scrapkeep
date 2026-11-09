@@ -449,9 +449,13 @@ static func _prepare_club(chords: Array, shift: int, reese_offsets: Array) -> vo
 		Synth.stab_chord(voicing, true)
 		for offset in [0, 7, 10, 12]:
 			Synth.note("fbass", root + offset)
+		if SfxBank.bake_cancel:
+			return
 		for offset in reese_offsets:
 			Synth.note("reese", root + offset)
 		for midi in voicing:
+			if SfxBank.bake_cancel:
+				return
 			Synth.note("clav", midi)
 			Synth.note("clav", midi + 12)
 			Synth.note("clav", midi + 24)
@@ -481,6 +485,8 @@ static func _bake_rest() -> void:
 	_prepare_chords(Harmony.BRINDLE, ["brass"], 2)
 	for list in [Harmony.WEIR, Harmony.BRINDLE, Harmony.MINOR_OF.values(), Harmony.BRINDLE_PHRYGIAN]:
 		for chord in list:
+			if SfxBank.bake_cancel:
+				return
 			Synth.organ_chord(chord["voicing"])
 	# The boss phases that lift the key (BOSS_SECTIONS) hold an organ from phase 2 on.
 	for pair in [[Harmony.BRINDLE_PHRYGIAN, 1], [Harmony.BRINDLE, 1], [Harmony.BRINDLE, 2]]:
@@ -497,28 +503,38 @@ static func _bake_rest() -> void:
 	_prepare_chords(Harmony.SINISTER + [Harmony.DOMINANT, Harmony.TRITONE], [], 0)
 	for shift in [0, 1]:
 		for chord in lifted:
+			if SfxBank.bake_cancel:
+				return
 			var voicing := _shift(chord["voicing"], shift)
 			Synth.stab_chord(voicing, false)
 			Synth.stab_chord(voicing, true)
 			for offset in [0, 7, 10, 12]:
 				Synth.note("fbass", int(chord["root"]) + shift + offset)
+			if SfxBank.bake_cancel:
+				return
 			for offset in [12, 18, 19, 22]:
 				Synth.note("reese", int(chord["root"]) + shift + offset)
 	# Stingers in the lifted keys (a Warden lift, Brindle's phases), and the synergy
 	# fanfare for each level, so a class-up after a lift never bakes on the audio thread.
 	for shift in [0, 1, 2, 3]:
 		for level in 3:
+			if SfxBank.bake_cancel:
+				return
 			SfxBank.samples_at("synergy_fanfare", Harmony.STEP, shift, level)
 			SfxBank.samples_at("synergy_fanfare", Harmony.BOSS_STEP, shift, level)
 		if shift == 0:
 			continue
 		for id in ["class_up", "class_down", "stinger_milestone", "threat_up", "boss_phase"]:
+			if SfxBank.bake_cancel:
+				return
 			SfxBank.samples_at(id, Harmony.STEP, shift)
 			SfxBank.samples_at(id, Harmony.BOSS_STEP, shift)
 	# Every recorded grid stinger on a boss grid, and the boss's defeat in each lifted key: a
 	# recorded cue's variants share the file's one resample, so the Mind's grid (PHASE3_STEP)
 	# and the fanfare's themes never resample it on the main thread mid-fight.
 	for id in SfxBank.STINGER_BEATS:
+		if SfxBank.bake_cancel:
+			return
 		if SfxBank.file_backed(id):
 			for shift in [0, 1, 2, 3] if id == "stinger_boss_defeated" else [0]:
 				SfxBank.samples_at(id, Harmony.BOSS_STEP, shift)
@@ -538,6 +554,8 @@ static func _bake_rest() -> void:
 			var voicing := _shift(chord["voicing"], shift)
 			Synth.pad_chord(voicing)
 			Synth.organ_chord(voicing)
+			if SfxBank.bake_cancel:
+				return
 			Synth.stab_chord(voicing, false)
 			Synth.stab_chord(voicing, true)
 			Synth.chord(voicing)
@@ -583,6 +601,8 @@ static func _prepare_chords(chords: Array, leads: Array, shift: int) -> void:
 		Synth.note("sub", chord["root"] + shift)
 		Synth.note("reese", chord["root"] + 12 + shift)
 		Synth.chord(voicing)
+		if SfxBank.bake_cancel:
+			return
 		Synth.pad_chord(voicing)
 		for midi in voicing:
 			Synth.note("bell", midi + 12)
@@ -604,6 +624,8 @@ static func _prepare_wobble(chords: Array, shifts: Array, steps: Array, vowels: 
 			for step in steps:
 				for rate in DROP_RATES.map(func(r: String): return RATES[r]):
 					for vowel in vowels:
+						if SfxBank.bake_cancel:
+							return
 						Synth.wob(root + shift, int(step) * Harmony.STEPS_PER_BEAT / int(rate), vowel)
 
 
@@ -704,6 +726,11 @@ func parameters_warden_broken() -> void:
 	_parameter_released = true
 
 
+# True while a Warden break's release is set, committed or still waiting for its phrase.
+func parameters_released() -> bool:
+	return _parameter_released or parameter_committed_released
+
+
 func parameters_stage_entered() -> void:
 	_parameter_released = false
 	_parameter_danger_floor = 0.0
@@ -772,19 +799,32 @@ func schedule_stinger(id: String, db := 0.0, lane := false, repeats := 1) -> int
 	return start
 
 
-func schedule_stinger_at(id: String, at: int, db := 0.0) -> void:
-	_add_action(at, {"type": "stinger", "id": id, "db": db, "music": false})
-	_warm_stinger(id, at)
+# home keeps the cue in D whatever key the band is in (a death's fall sits under the death cue,
+# which is not keyed).
+func schedule_stinger_at(id: String, at: int, db := 0.0, home := false) -> void:
+	_add_action(at, {"type": "stinger", "id": id, "db": db, "music": false, "home": home})
+	_warm_stinger(id, at, home)
+
+
+# The key a stinger booked at transport sample at will sound in.
+func stinger_key(at: int) -> int:
+	return key if grid == null else grid.key_at(at)
+
+
+# A stinger made ahead of its booking: a kill chain's landing is known a chain window before it
+# is booked, and a note a sixteenth from its contact is made when its key arrives.
+func warm_stinger(id: String, at: int, home := false) -> void:
+	_warm_stinger(id, at, home)
 
 
 # The variant _run's "stinger" will ask for at `at`, on a worker, unless it is made already.
-func _warm_stinger(id: String, at: int) -> void:
+func _warm_stinger(id: String, at: int, home := false) -> void:
 	if not warm_stingers:
 		return
-	var shift: int = key if grid == null else grid.key_at(at)
+	var shift: int = 0 if home else stinger_key(at)
 	var step := step_len
 	var theme_now := theme
-	if SfxBank.baked_at(id, step, shift, theme_now):
+	if SfxBank.cached_at(id, step, shift, theme_now):
 		return
 	_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
 	_stinger_tasks.append(WorkerThreadPool.add_task(func(): SfxBank.samples_at(id, step, shift, theme_now), true, "stinger warm"))
@@ -1782,7 +1822,7 @@ func _run(action: Dictionary) -> void:
 			# Pitched stingers sound in the live key, and a themed one in this level's motif.
 			var music: bool = action.get("music", false)
 			var live_key: int = key if grid == null else grid.key_at(clock)
-			var buf := SfxBank.samples_at(action["id"], step_len, 0 if music else live_key, theme)
+			var buf := SfxBank.samples_at(action["id"], step_len, 0 if music or action.get("home", false) else live_key, theme)
 			var gain := db_to_linear(SfxBank.trim_db(action["id"]) + float(action["db"]))
 			_start(buf, buf.size(), -1, gain, 0.0, not action["music"])
 			stinger_starts.append([action["id"], clock])
@@ -2210,6 +2250,13 @@ func _chord(bar: int) -> Dictionary:
 	if track in BOSS_TRACKS and section == "victory" and _drop.is_empty():
 		return progression[mini(bar, progression.size() - 1)]
 	return progression[bar % progression.size()]
+
+
+# The chord the band will be on at transport sample at, as the bar that sample falls in reads now.
+func chord_at(at: int) -> Dictionary:
+	var base := _next_step()
+	var ahead := maxi(0, floori(float(at - int(base[0])) / step_len))
+	return _chord((int(base[1]) + ahead) / Harmony.STEPS_PER_BAR)
 
 
 func _next_chord(bar: int) -> Dictionary:

@@ -51,6 +51,7 @@ const CARD_HEIGHT := 250.0
 const CARD_LINES := 4
 const GLYPH_PERIOD := 1.2
 const DEFAULT_KIND := "synergy_discovered"
+const TINT_KICKER_LIFT := 0.35
 const CALM_SECONDS := WhyCallout.CALM_SECONDS
 
 var shown := 0
@@ -67,6 +68,9 @@ var last_style := ""
 var cards_shown := 0
 # The clock in milliseconds; tests swap it for a fake.
 var now_ms: Callable = Callable(Time, "get_ticks_msec")
+
+# An item is on screen now (key is its show_discovery id): the calm moment it waited for.
+signal came_up(key: String)
 
 var _queue: Array = []
 var _calm_left := 0.0
@@ -181,19 +185,29 @@ func held() -> bool:
 # waits its turn.
 # id names the discovery for the first-time test in cards mode (default: category and
 # title); kind is the EventKinds row whose shape and colour the glyph wears.
-func show_discovery(title: String, category: String, detail := "", kicker := "New synergy", id := "", kind := DEFAULT_KIND) -> void:
+# tint, when set, replaces the category colour on the edge, the kicker and the glyph, so a
+# banner can wear the colour of the thing it names (a part set's studs on the ball).
+# every_time is for a moment of the run, not a codex first (a completed set): in cards mode its
+# first showing ever is still the card, and each later one is the small banner instead of
+# nothing. It is never dropped for a full queue.
+func show_discovery(title: String, category: String, detail := "", kicker := "New synergy", id := "", kind := DEFAULT_KIND,
+		tint = null, every_time := false) -> void:
 	var style := "banner"
 	var key := id if id != "" else "%s:%s" % [category, title]
 	if cards:
 		style = "auto"
 		if profile == null and storage_dir != "":
 			profile = UiProfile.new(storage_dir)
+		if _queue.any(func(item: Array): return item[6] == key):
+			return
+		if every_time:
+			style = "banner" if _was_seen(key) else "auto"
 		# Seen means shown: the record is written when the card comes up (_next), so a
 		# discovery that is queued and then dropped stays unseen. A repeat, one already
 		# held, or one past MAX_HELD shows nothing.
-		if _was_seen(key) or _queue.size() >= MAX_HELD or _queue.any(func(item: Array): return item[6] == key):
+		elif _was_seen(key) or _queue.size() >= MAX_HELD:
 			return
-	_queue.append([title, category, detail, kicker, style, kind, key])
+	_queue.append([title, category, detail, kicker, style, kind, key, tint])
 	if not showing():
 		_next()
 
@@ -252,6 +266,8 @@ func _apply_style(style: String, entry: Dictionary, kind: String) -> void:
 	_panel.custom_minimum_size = Vector2(WIDTH, 0.0)
 	_body.custom_minimum_size = Vector2(WIDTH - 90.0, 0.0)
 	_body.max_lines_visible = -1
+	# A card trims its line; a banner after a card must not keep the trim (it hid the whole line).
+	_body.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	_title.add_theme_font_size_override("font_size", 24)
 	_body.add_theme_font_size_override("font_size", 15)
 	if card:
@@ -283,15 +299,19 @@ func _next() -> void:
 		return
 	var item: Array = _queue.pop_front()
 	var entry := CodexStyle.category(item[1])
-	var color: Color = entry["color"]
+	var color: Color = item[7] if item[7] is Color else entry["color"]
 	var style: String = item[4]
 	if style == "auto":
 		style = "card"
 		_mark_seen(item[6])
 	_apply_style(style, entry, item[5])
-	_icon.texture = entry["icon"]
+	if item[7] is Color:
+		_glyph_color = color
+	_icon.texture = CodexStyle.icon(item[1], item[7])
 	_kicker.text = "%s  ·  %s" % [String(item[3]).to_upper(), String(entry["label"]).to_upper()]
-	_kicker.add_theme_color_override("font_color", color)
+	# The edge, icon and glyph wear a tint as given; the small kicker text is lifted so a dark
+	# tint (rust, slate) still reads on the panel.
+	_kicker.add_theme_color_override("font_color", color.lightened(TINT_KICKER_LIFT) if item[7] is Color else color)
 	_title.text = item[0]
 	_body.text = item[2]
 	_body.visible = item[2] != ""
@@ -305,6 +325,7 @@ func _next() -> void:
 	_started_ms = int(now_ms.call())
 	visible = true
 	_place(0.0)
+	came_up.emit(item[6])
 
 
 func _process(delta: float) -> void:

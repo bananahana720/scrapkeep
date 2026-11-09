@@ -18,6 +18,7 @@ import {
   readQuarantineEntries,
   testTimeoutMs,
 } from "./sketch-smoke.mjs";
+import { readLedger } from "./known-failing.mjs";
 
 // npm run sketch:fast: the fast PR lane of the tiered gate (ORCHESTRATOR, "Tiered gate").
 // It judges one PR head in about 15 minutes, cheapest and most-often-failing checks first, and
@@ -33,7 +34,11 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SKETCH = "sketches/core-loop";
 const TIMINGS_FILE = path.join(root, "scripts", "sketch-fast.timings.json");
 const RECEIPT_SCHEMA = "scrapkeep-fast-receipt/1";
-const DEFAULT_ESTIMATE_MS = 30_000;
+// A test with no timings row is priced at 180 s. At 30 s the wave 18 lane ran 2289 s on a 600 s
+// budget: 14 of 86 picked tests had no row, and five of them were bot runs.
+export const DEFAULT_ESTIMATE_MS = 180_000;
+// A test with no row that is named like a bot run or a sweep is listed for the bot shards.
+export const UNKNOWN_BOT_NAME = /^(bot_.*|.*_sweep_.*)\.gd$/;
 // A file more tests than this reach directly is a hub (game.gd, tests/support/t.gd): its own
 // direct tests still run, but nothing is selected through it at the second step.
 export const HUB_TESTS = 25;
@@ -159,6 +164,20 @@ export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
     for (const rule of SHARD_RULES) if (rule.match.test(rel)) for (const test of expand(index, rule.tests)) if (!shards.has(test)) shards.set(test, `${rule.name}: ${rel}`);
     if (isTopLevelTest(rel)) {
       if (index.files.has(rel)) add(rel, 0, "changed");
+      // A test that extends a changed test runs its parent's checks: kest_set_piece_test
+      // went red on main in wave 31 because only its parent, kest_kit_test, was picked.
+      // The walk follows the whole chain, as scripts/gate/carry.mjs does: dress_wog_fallback_test
+      // extends dress_wog_test, which extends dress_material_test.
+      const reached = new Set([rel]);
+      const queue = [rel];
+      while (queue.length > 0) {
+        for (const test of referrers(index, queue.shift()).filter(isTopLevelTest)) {
+          if (reached.has(test)) continue;
+          reached.add(test);
+          queue.push(test);
+          add(test, 1, `reaches the changed test ${rel}`);
+        }
+      }
       continue;
     }
     const first = referrers(index, rel);
@@ -198,7 +217,8 @@ export function estimate(timings, test) {
 // Keep the highest tiers within the budget (changed tests always), then run cheapest first so
 // a failure shows as early as it can. Whatever the budget leaves out is named, never dropped
 // silently; the staging full gate runs it.
-export function plan({ picked, timings, budgetMs, width, solo = () => false, bots = () => false }) {
+export function plan({ picked, timings, budgetMs, width, solo = () => false, bots: knownBots = () => false }) {
+  const bots = (test) => knownBots(test) || (timings[test] === undefined && UNKNOWN_BOT_NAME.test(path.posix.basename(test)));
   const rows = [...picked].map(([test, row]) => ({ test, ...row, ms: estimate(timings, test) }));
   const botRows = rows.filter((row) => bots(row.test));
   const runnable = rows.filter((row) => !bots(row.test)).sort((a, b) => a.tier - b.tier || a.ms - b.ms || a.test.localeCompare(b.test));
@@ -237,6 +257,24 @@ export function classifyFailure({ rerunOk, baseOk, headChecks = [], baseChecks =
     return newChecks.length > 0 ? { kind: "pr-red", newChecks } : { kind: "base-red", newChecks: [] };
   }
   return { kind: "pr-red", newChecks: [] };
+}
+
+// A test the known-failing ledger lists as a flake can fail twice in a row with the base green
+// (audio_bake_cancel_test fails between 1 run in 5 and 1 in 3), and that pair alone would read as the PR's
+// red. So before such a test is the PR's red it gets up to LEDGER_FLAKE_RUNS more head runs:
+// one green makes it flaky, and red on every run makes it the PR's red after all. The row
+// buys more evidence; it never excuses a test the PR really broke.
+export const LEDGER_FLAKE_RUNS = 3;
+
+export function ledgerFlakes(rows) {
+  return new Set(rows.filter((row) => row.kind === "flake").map((row) => row.test));
+}
+
+// `verdict` is classifyFailure's "pr-red"; `runs` are the extra head runs, in order.
+export function settleLedgerFlake(verdict, runs) {
+  if (runs.some((run) => run.killed)) return { kind: "stopped", newChecks: [] };
+  if (runs.some((run) => run.ok)) return { kind: "flaky", newChecks: [], ledger: true };
+  return { ...verdict, ledgerRuns: runs.length };
 }
 
 // A check's name is its bracketed label ("[Spillway skipper breaks it in 50 to 90 s] median ..."),
@@ -323,12 +361,18 @@ function readTimings() {
   }
 }
 
-// Fold a smoke receipt's per-test wall times into the timings file the lane orders by.
+// Fold passing tests' wall times into the timings file the lane orders by. Three row shapes:
+// a smoke receipt's label ("... res://tests/a_test.gd", ms), a fast-lane row's test
+// ("tests/a_test.gd", ms) and a gate shard's test ("a_test", seconds; scripts/gate/shard.mjs).
 export function timingsFromReceipt(receipt) {
   const tests = {};
   for (const row of receipt.results ?? []) {
-    const match = /res:\/\/(tests\/[^ ]+\.gd)$/.exec(row.label);
-    if (match && row.ok) tests[match[1]] = Math.round(row.ms);
+    if (!row.ok) continue;
+    const text = String(row.test ?? row.label ?? "");
+    const match = /(?:^|res:\/\/)(tests\/[^ ]+\.gd)$/.exec(text);
+    const name = match ? match[1] : /^[a-z0-9_]+$/.test(text) ? `tests/${text}.gd` : null;
+    const ms = Number.isFinite(row.ms) ? row.ms : Number.isFinite(row.seconds) ? row.seconds * 1000 : 0;
+    if (name && ms > 0) tests[name] = Math.round(ms);
   }
   return tests;
 }
@@ -623,6 +667,7 @@ async function main() {
   if (!stage("quarantine", expired.length === 0, { note: expired.length ? `${expired.length} expired: ${expired.map((entry) => entry.test).join(", ")}` : `${quarantineEntries.length} rows, none expired` })) finish();
   if (!existsSync(binary)) {
     console.error(`Godot binary not found at ${binary}; set GODOT_BIN`);
+    stage("godot", false, { note: "no Godot binary, so no test ran" });
     finish(2);
   }
   await acquireMachine();
@@ -639,6 +684,8 @@ async function main() {
 
   const results = [];
   const flaky = [];
+  const ledgerFlaky = [];
+  const flakeRows = ledgerFlakes((await readLedger(root))?.rows ?? []);
   const baseRed = [];
   let prRed = null;
   const inLane = lanePool(width);
@@ -738,7 +785,14 @@ async function main() {
     baseRun = usableBaseRun(rerun, baseRun);
     const baseOk = rerun.ok || !baseRun ? null : baseRun.ok;
     const baseChecks = rerun.ok || !baseRun ? [] : baseRun.checks;
-    return { ...classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks, baseCached: Boolean(baseRun?.cached) }), rerun };
+    const verdict = classifyFailure({ rerunOk: rerun.ok, baseOk, headChecks: rerun.checks, baseChecks, baseCached: Boolean(baseRun?.cached) });
+    if (verdict.kind !== "pr-red" || !flakeRows.has(path.posix.basename(first.test, ".gd"))) return { ...verdict, rerun };
+    const more = [];
+    while (more.length < LEDGER_FLAKE_RUNS && !more.some((run) => run.ok || run.killed)) {
+      log(`  ${first.test} has a flake row in the known-failing ledger: head run ${more.length + 1} of up to ${LEDGER_FLAKE_RUNS} more`);
+      more.push(await godot(sketchDir, first.test, timeoutMs));
+    }
+    return { ...settleLedgerFlake(verdict, more), rerun };
   }
 
   async function handle(result) {
@@ -750,13 +804,16 @@ async function main() {
       log(`  ${quarantineNote(entry)}`);
     }
     if (result.ok || quarantined || result.killed) return;
-    const { kind, newChecks } = await confirm(result);
-    log(`  ${result.test}: ${kind}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`);
+    const { kind, newChecks, ledger, ledgerRuns } = await confirm(result);
+    log(`  ${result.test}: ${kind}${ledger ? " (a known-failing ledger flake: green on a later head run)" : ""}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`);
     if (kind === "stopped") return;
-    if (kind === "flaky") flaky.push(result.test);
-    else if (kind === "base-red") baseRed.push(result.test);
+    if (kind === "flaky") {
+      flaky.push(result.test);
+      if (ledger) ledgerFlaky.push(result.test);
+    } else if (kind === "base-red") baseRed.push(result.test);
     else if (!prRed) {
-      prRed = { test: result.test, reason: newChecks.length ? `fails checks the base passes: ${newChecks.join("; ")}` : result.reason, tail: result.tail };
+      const reason = newChecks.length ? `fails checks the base passes: ${newChecks.join("; ")}` : result.reason;
+      prRed = { test: result.test, reason: ledgerRuns ? `${reason}; listed as a flake in the known-failing ledger, but red on all ${ledgerRuns + 2} head runs` : reason, tail: result.tail };
       stopRunning();
     }
   }
@@ -777,6 +834,7 @@ async function main() {
   receipt.results = results;
   receipt.quarantined = results.filter((row) => row.quarantined).map((row) => quarantineRecord(quarantineEntries.find((entry) => entry.test === path.posix.basename(row.test, ".gd")), { ok: row.ok, exit: row.exit, signal: row.signal, failing: row.failing }));
   receipt.flaky = flaky;
+  receipt.ledger_flaky = ledgerFlaky;
   receipt.base_red = baseRed;
   if (prRed) {
     log(prRed.tail);
@@ -793,10 +851,12 @@ async function main() {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.argv[2] === "--fold-timings") {
-    const receipt = JSON.parse(readFileSync(process.argv[3], "utf8"));
-    const prior = readTimings();
-    const tests = { ...prior, ...timingsFromReceipt(receipt) };
-    writeFileSync(TIMINGS_FILE, JSON.stringify({ source: `${receipt.label} ${receipt.head ?? ""}`.trim(), tests: Object.fromEntries(Object.entries(tests).sort()) }, null, 2) + "\n");
-    console.log(`sketch:fast timings: ${Object.keys(tests).length} tests from ${process.argv[3]}`);
+    const files = process.argv.slice(3);
+    if (files.length === 0) throw new Error("--fold-timings takes one or more receipt files (smoke, fast lane or gate shard.json)");
+    const receipts = files.map((file) => JSON.parse(readFileSync(file, "utf8")));
+    const tests = Object.assign({}, readTimings(), ...receipts.map(timingsFromReceipt));
+    const source = receipts.length === 1 ? `${receipts[0].label ?? receipts[0].title ?? files[0]} ${receipts[0].head ?? ""}`.trim() : `${receipts.length} receipts on ${[...new Set(receipts.map((receipt) => String(receipt.head ?? "").slice(0, 8)))].join(", ")} (passing tests only; older rows kept)`;
+    writeFileSync(TIMINGS_FILE, JSON.stringify({ source, tests: Object.fromEntries(Object.entries(tests).sort()) }, null, 2) + "\n");
+    console.log(`sketch:fast timings: ${Object.keys(tests).length} tests after ${files.length} receipt${files.length === 1 ? "" : "s"}`);
   } else main();
 }

@@ -225,7 +225,7 @@ func _gather() -> Dictionary:
 			threats.append(at)
 	var ground := _ground
 	return {
-		"player": ctx.player.body().global_position, "threats": threats, "telegraphs": telegraphs,
+		"player": ctx.player.shown_position(), "threats": threats, "telegraphs": telegraphs,
 		"boss": _latched or ctx.flow.boss_active or not _active, "reduced": EnemyMotion.motion_scale == 0.0,
 		"ground": func(x: float, z: float) -> float: return (ground.call(x, z, 0.0) as Vector3).y,
 	}

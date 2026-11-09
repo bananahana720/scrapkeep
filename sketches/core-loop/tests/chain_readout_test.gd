@@ -2,13 +2,14 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
+const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The hook chain is seen and heard (design-v3/HOOK-CHAIN.md, "One source, every layer"):
 #   a  the HUD counter is hidden at combo 0 and 1, shown at 2 and up, its text the combo
 #   b  the counter falls and hides after the chain ends
 #   c  the collar carries min(links, 6) rings, none at one link, cleared on chain_end
-#   d  chain_link plays line_bite a semitone higher per link, none at one link, capped at six links
+#   d  chain_link plays line_bite a rung of the pentatonic higher per link, none at one link, capped at six links
 #   e  chain_end plays one line_zip only for a combo of 2 or more, none when the smash paid
 #   f  a dry_fire and a chain_miss together make one dry_tick
 #   g  no chain id changes the line view's state or stops the hum
@@ -105,9 +106,9 @@ func _run() -> void:
 			_t.check("d no chain_link cue at one link", bites.is_empty(), "cues %s" % [audio.cue_log])
 		else:
 			var steps := mini(links - 1, 5)
-			var expect := pow(2.0, float(steps) / 12.0) * key
+			var expect := Harmony.ladder_ratio(SfxBank.BITE_MIDI, steps) * key
 			var got: float = bites[0][4] if bites.size() == 1 else -1.0
-			_t.check("d link %d pitches %d semitones" % [links, steps], absf(got - expect) < 0.001, "got %.4f, expected %.4f, cues %s" % [got, expect, audio.cue_log])
+			_t.check("d link %d pitches %d rungs up" % [links, steps], absf(got - expect) < 0.001, "got %.4f, expected %.4f, cues %s" % [got, expect, audio.cue_log])
 	# the real bite that follows a chained link is not doubled
 	_fresh(audio)
 	_set_chain(3)

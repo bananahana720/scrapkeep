@@ -40,6 +40,10 @@ var _pending_velocity = null
 var _active := false
 var _last_fall_speed := 0.0
 var _settle_interpolation := 0
+# True from a teleport until its interpolation reset has run. In that gap the interpolated
+# transform still points at the old spot, so whoever draws from the ball reads the raw one
+# (PlayerBall.shown_transform): a lens snapped in the same breath lands on the new spot.
+var placing := false
 
 
 func setup(tuning_ref, state_ref) -> void:
@@ -106,6 +110,16 @@ func teleport(to: Vector3, new_velocity: Vector3) -> void:
 	_pending_position = to
 	if freeze:
 		global_position = to
+	# A caller that reads the ball back at once also sets the node's position itself (stage
+	# entry, a boss intro, a rescue), a tick before _integrate_forces moves the body. The
+	# deferred reset runs after that, so no frame is drawn sliding from the old spot.
+	placing = true
+	_reset_placed.call_deferred()
+
+
+func _reset_placed() -> void:
+	placing = false
+	reset_physics_interpolation()
 
 
 # A teleport must not be drawn as a streak from the old spot. The node only receives the

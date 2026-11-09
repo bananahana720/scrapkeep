@@ -131,9 +131,13 @@ const RETIRED_TOASTS := ["part_gained", "reward_chosen", "heft_class_changed", "
 const ROW_COLOR := {"find_warden": "warden_engaged", "break_guard": "warden_engaged", "smash_core": "warden_engaged",
 	"grow_return": "warden_engaged", "break_warden": "warden_engaged", "charge_beacon": "beacon_charge_changed",
 	"find_activity": "activity_done", "roll_gate": "reward_offered", "hold_line": "launched", "break_brindle": "boss_arena_entered",
-	"break_yard_crew": "pack_arrived", "break_clamp_crews": "pack_arrived"}
+	"break_yard_crew": "pack_arrived", "break_clamp_crews": "pack_arrived",
+	"ride_sheet": "warden_engaged", "latch_warden": "warden_engaged", "fire_from_line": "warden_engaged",
+	"shoot_magnets": "boss_arena_entered", "slam_caps": "boss_arena_entered", "bait_charge": "boss_arena_entered",
+	"hit_cockpit": "boss_arena_entered", "ram_scooter": "boss_arena_entered"}
 # The rows whose glyph is ringed by how much of the Warden is broken.
-const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "charge_beacon"]
+const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "charge_beacon",
+	"ride_sheet", "latch_warden", "fire_from_line"]
 # The gaps of the top slot when a plate is mounted: from the band's top to the plate, and
 # from the plate to the objective plate under it.
 const PLATE_TOP := 6.0
@@ -162,6 +166,9 @@ var edge_markers
 var part_name
 var launch_card
 var _world_card_at := -1
+# The world and stage whose cards wait for the title's turn in a run's opening; 0 when none.
+var _title_world := 0
+var _title_stage := 0
 var _cursed := false
 var why_callout
 var hotwire_screen
@@ -327,6 +334,7 @@ func setup(game_ref) -> void:
 	_build_lore_pulse()
 	game.codex.lore_found.connect(func(_id: String): _show_lore())
 	game.events.achievement_earned.connect(func(id: String): _ach_queue.append(Achievements.toast_text(id)))
+	game.opening.turned.connect(_on_turned)
 	_connect_toasts(game.events)
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
 		toast_kind("boss_phase_changed", {"name": phase_name.capitalize()}))
@@ -343,6 +351,8 @@ func setup(game_ref) -> void:
 	game.events.boss_arena_entered.connect(func():
 		launch_card.show_card("fac_fleet", EventKinds.hud("boss_arena_entered"), EventKinds.color("boss_arena_entered")))
 	game.events.run_started.connect(func(_class_id: String):
+		_title_world = 0
+		_title_stage = 0
 		_threat = 0
 		_begin_engagement(false)
 		_armor_peak = ARMOR_PEAK_FLOOR)
@@ -548,7 +558,8 @@ func _step_ach(delta: float) -> void:
 	if game.screens != null and game.screens.ending_open():
 		clear_achievement_toasts()
 		return
-	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live() and not _corner_swollen():
+	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live() and not _corner_swollen() \
+			and not game.opening.waits("plate"):
 		var tune := _ach_queue.is_empty()
 		_ach_entry = {"text": _tune_queue.pop_front() if tune else _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
 		# The first line is the name; whatever follows it is the detail.
@@ -750,6 +761,9 @@ func _on_launched(_velocity: Vector3) -> void:
 # stage's card, which follows after the world card has been up for a beat. A one-world
 # table shows no world card.
 func _on_world_entered(world: int) -> void:
+	if game.opening.waits("title"):
+		_title_world = world
+		return
 	if game.ctx.stages.worlds().size() <= 1:
 		return
 	var row := Worlds.row(world)
@@ -765,10 +779,35 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_begin_engagement(false)
 	if retry:
 		return
+	if game.opening.waits("title"):
+		_title_stage = stage
+		return
+	_title_for(stage)
+
+
+# The title's turn in a run's opening (opening.gd): the world and stage cards held under the
+# launch take's panel go up now, where they can be read.
+func _on_turned(voice: String) -> void:
+	if voice != "title":
+		return
+	var world := _title_world
+	var stage := _title_stage
+	_title_world = 0
+	_title_stage = 0
+	if game.run == null or stage != game.run.stage or not game.flow.in_stage():
+		return
+	if world > 0:
+		_on_world_entered(world)
+	_title_for(stage)
+
+
+func _title_for(stage: int) -> void:
 	if _world_card_at >= 0:
 		_world_card_at = -1
+		# This run's card only: a restart inside the beat has its own on the way.
+		var run_id := String(game.run.run_id)
 		get_tree().create_timer(WORLD_CARD_BEAT).timeout.connect(func():
-			if game != null and game.run != null and game.run.stage == stage:
+			if game != null and game.run != null and game.run.stage == stage and String(game.run.run_id) == run_id:
 				_card_for_stage(stage))
 	elif launch_card.showing():
 		launch_card.extend()
@@ -782,7 +821,7 @@ func _step_curse() -> void:
 	if now and not _cursed:
 		launch_card.show_card("obj_beacon", StageModifier.CURSE.word, EventKinds.color("stage_entered"), StageModifier.CURSE.line)
 		if game.player != null:
-			StageModifier.announce(game.player.active_body().global_position)
+			StageModifier.announce(game.player.shown_position())
 	_cursed = now
 
 
@@ -792,7 +831,7 @@ func _card_for_stage(stage: int) -> void:
 	var modifier := StageModifier.for_stage(game.run, game.ctx.terrain, stage)
 	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, stage))
 	if not modifier.is_empty() and game.player != null:
-		StageModifier.announce(game.player.active_body().global_position)
+		StageModifier.announce(game.player.shown_position())
 
 
 func _label(font_size: int) -> Label:
@@ -940,13 +979,14 @@ static func _rect_of(control: Control) -> Rect2:
 
 
 # The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
-# and, while the Warden is still to be found, the metres to it.
+# and, while the Warden or an activity is still to be found, the metres to it.
 func objective_reading() -> Dictionary:
 	var flow = game.flow
 	var warden = flow.warden if is_instance_valid(flow.warden) else null
-	var distance: float = game.player.ball_position().distance_to(warden.global_position) if warden != null else INF
+	var distance: float = game.player.shown_position().distance_to(warden.global_position) if warden != null else INF
 	var gate = flow.gate
-	var id := Objectives.choose({
+	var sites: Array = edge_markers.unfinished_sites()
+	var reading := {
 		"state": flow.state_name(),
 		"sealed": flow.sealed,
 		"engaged": _engaged,
@@ -955,15 +995,34 @@ func objective_reading() -> Dictionary:
 		"struggling": _struggle.struggling,
 		"distance": distance,
 		"card": launch_card.showing(),
-		"activities_left": edge_markers.unfinished_sites().size(),
+		"activities_left": sites.size(),
 		"yard_locked": gate != null and gate.lock_active(),
 		"clamp_shut": gate != null and gate.locked(),
-	})
+	}
+	# A mounted Warden and the arena's boss each say which verb their fight asks for now.
+	var driver = warden.get("mount_driver") if warden != null else null
+	if driver != null and driver.has_method("plate_reading"):
+		reading.merge(driver.plate_reading(warden), true)
+	var boss = game.ctx.boss
+	if is_instance_valid(boss) and boss.has_method("plate_reading"):
+		reading.merge(boss.plate_reading(), true)
+	var id := Objectives.choose(reading)
 	if id == "":
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
-	return {"id": id, "icon": Objectives.glyph(id), "words": Objectives.words(id), "color": row_color(id),
+	var words := Objectives.words(id)
+	if id == "find_activity":
+		# The nearest unfinished site, by name and metres, so the row is a place to go.
+		var ball: Vector3 = game.player.shown_position()
+		var nearest = null
+		for site in sites:
+			if nearest == null or ball.distance_squared_to(site.global_position) < ball.distance_squared_to(nearest.global_position):
+				nearest = site
+		if nearest != null:
+			words = Objectives.activity_words(String(nearest.id))
+			distance = ball.distance_to(nearest.global_position)
+	return {"id": id, "icon": Objectives.glyph(id), "words": words, "color": row_color(id),
 		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else game.beacon.fraction() if id in RING_ROWS else -1.0,
-		"distance": int(distance) if id == "find_warden" and distance < INF else -1}
+		"distance": int(distance) if id in ["find_warden", "find_activity"] and distance < INF else -1}
 
 
 # How many of the crews the Warden's clamp asks for are down, as the ring round the plate's glyph.
@@ -978,7 +1037,7 @@ static func _clamp_fraction(gate) -> float:
 func place_prompts(size: Vector2, playing: bool) -> void:
 	prompt_rects.clear()
 	var cam: Camera3D = game.camera.cam
-	var ball: Vector3 = game.player.ball_position()
+	var ball: Vector3 = game.player.shown_position()
 	var near: Array = []
 	for prompt in get_tree().get_nodes_in_group(ScreenRegions.PROMPT_GROUP):
 		prompt.visible = false
@@ -1155,6 +1214,28 @@ func _physics_process(delta: float) -> void:
 	if _engaged:
 		_struggle.step(delta)
 	part_name.step(delta)
+	_step_fight_hint()
+
+
+# A boss fight's own hint (the boss module's take_hint: Brindle's Scuttle gives one to a build
+# too light to hit its way in). The fight owns when and how often; the HUD toasts the hint's UI
+# row with that row's chime and records it as a prompt, as every other lesson is.
+func _step_fight_hint() -> void:
+	var boss = game.get("boss")
+	if boss == null or not boss.has_method("take_hint") or game.flow == null or not game.flow.in_play():
+		return
+	# A toast replaces the one showing, and taking the hint starts its gap: ask only when the row is free.
+	if not _toast.is_empty() or not _held_toast.is_empty():
+		return
+	var kind := String(boss.take_hint())
+	var row: Dictionary = EventKinds.UI_ROWS.get(kind, {})
+	if row.is_empty():
+		return
+	toast(String(row["hud"]), row["color"], row["shape"], mini(int(row["priority"]), 3))
+	var audio = game.audio() if game.has_method("audio") else null
+	if audio != null and audio.has_method("play"):
+		audio.play(kind, 0.0, 1.0, "UI")
+	game.events.prompt_shown.emit(kind)
 
 
 # The words the toast row draws now: "" with no toast, or while the stage card covers it
