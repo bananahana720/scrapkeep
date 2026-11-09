@@ -69,6 +69,23 @@ func _run() -> void:
 	t.check("a second hit on the same beat adds no second stab", _stabs(audio) == 0)
 	enemy.queue_free()
 
+	# A foe freed on the tick of its on-beat hit: the deferred word still runs and finds no one to
+	# stamp, where a typed parameter had Godot refuse the call with an ERROR line (kite_dive_stack's
+	# exit error under load).
+	audio._onbeat_at = -(1 << 40)
+	fx._last_word = -1.0e9
+	fx._word_seen.clear()
+	for w in fx._words:
+		w["t"] = 1.0
+	var beats_before: int = fx.spawned.get("on_beat", 0)
+	var words_before: int = fx.spawned.get("word_beat", 0)
+	var gone := _target()
+	_game.combat.strike(gone, "ram", 20.0)
+	gone.free()
+	await _frames(1)
+	t.eq("a foe freed on the hit's tick: the beat fact still arrives", fx.spawned.get("on_beat", 0) - beats_before, 1)
+	t.eq("a foe freed on the hit's tick: no word is stamped on it", fx.spawned.get("word_beat", 0) - words_before, 0)
+
 	# No music, no window: the beat never pays.
 	audio.beat_offset_hook = Callable()
 	t.check("with no band playing there is no beat", audio.beat_offset_s() == INF or audio.engine.mode == audio.MusicEngine.PLAY)
