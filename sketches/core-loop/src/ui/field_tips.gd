@@ -27,7 +27,7 @@ const Palette := preload("res://src/core/palette.gd")
 # toast replaced it, or a fight took it down) goes back to the front of `pending`.
 # A fight keeps its word budget (ui_word_budget_test): while fight_live() no tip goes up and a
 # tip still on screen is taken down. Words come from the game's own: the Warden's slots are
-# numbers, the dial's keys are . , /.
+# numbers, the dial's keys are . , / (bracketed, so they read as keys and not as stray marks).
 # A new run (events.run_started) clears the queue and takes down the tip on screen: each was
 # met in the old run's moment (its pilot's cast slot, a stake post, a rack, a halo), so it waits
 # to be met again rather than show out of context; nothing untold is marked seen.
@@ -36,7 +36,7 @@ const TIPS := {
 	"grip": "Wall grip: stay fast and walls hold you.",
 	"jam": "Jammed: slots 2 and 3 shut. A fast ball slips the pulse.",
 	"cast": "Cast time: a knock or a second press drops it unspent.",
-	"radio": "Radio: . next station, , back, / skip the track.",
+	"radio": "Radio: [.] next station, [,] back, [/] skip the track.",
 	"stake": "Relay stake: hold E at the mast to raise the fight and the parts.",
 	"companion": "SPIL-9 is full: your next ram calls it in.",
 	"active": "F fires your active.",

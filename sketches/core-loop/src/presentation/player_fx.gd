@@ -567,7 +567,10 @@ func on_beat_hit(enemy: Node3D, kind: String) -> void:
 	_on_beat_word.call_deferred(enemy, kind, _clock)
 
 
-func _on_beat_word(enemy: Node3D, _kind: String, at_clock: float) -> void:
+# `enemy` is untyped on purpose: the foe can be freed before this deferred call runs, and Godot
+# refuses a freed instance for a typed parameter ("Cannot convert argument 1 from Object to
+# Object") before the validity check below can run.
+func _on_beat_word(enemy, _kind: String, at_clock: float) -> void:
 	spawned["on_beat"] = spawned.get("on_beat", 0) + 1
 	for w in _words:
 		if w["t"] < 1.0 and float(w.get("born", -1.0)) >= at_clock:
