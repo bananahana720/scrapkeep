@@ -7,8 +7,11 @@ extends RefCounted
 # read, or keeps the draw to the farthest few anchors. It is a stage-start parameter, never a
 # durable field (TADR-010:47), and nothing here reads or writes ball tuning, physics or input.
 
-# Stage 1 draws no pockets (pocket_draw.gd stage_sites), so it never has a modifier.
-const FIRST_STAGE := 2
+# Every park stage draws at least this many pockets, so every stage has a draw for a row to act
+# on. Only the dam needs it: its four authored sites already pass stage 1's count of three, so it
+# drew nothing and never had a modifier. It now draws the flume's one pocket and joins the same
+# roll (ruling bu, 2026-11-09). Stages 2 to 6 already draw more and are unchanged.
+const MIN_DRAWN := 1
 const CHANCE := 0.4
 # The drawn-plus-authored pocket cap (comps/isaac/floor-generation.md, cap 8).
 const CAP := 8
@@ -44,9 +47,11 @@ static func authored(map) -> int:
 	return map.activity_sites.filter(func(s: Dictionary) -> bool: return s.get("extra", "") != "card_2").size()
 
 
-# The drawn slots a stage has before any modifier (pocket_draw.gd draw: 3 to 5 rising one a stage).
+# The drawn slots a stage has before any modifier (pocket_draw.gd draw: 3 to 5 rising one a stage),
+# never under MIN_DRAWN while the cap has room.
 static func base_slots(stage: int, authored: int) -> int:
-	return maxi(0, mini(CAP, stage + 2) - authored)
+	var room := maxi(0, CAP - authored)
+	return clampi(mini(CAP, stage + 2) - authored, mini(MIN_DRAWN, room), room)
 
 
 # The drawn slots with the row applied: scaled, at least one, and never past the cap.
@@ -74,7 +79,7 @@ static func _eligible(row: Dictionary, stage: int, authored: int) -> bool:
 
 # The stage's modifier, or {} for none, from its own stream (no shared RNG is touched).
 static func pick(run_seed: int, stage: int, authored: int) -> Dictionary:
-	if stage < FIRST_STAGE:
+	if stage < 1:
 		return {}
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([run_seed, stage, "stage_modifier"])

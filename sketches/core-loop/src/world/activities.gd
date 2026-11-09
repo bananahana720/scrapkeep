@@ -94,7 +94,9 @@ const RULES := {
 	},
 	"enemy_camp": {
 		"starts": "ring", "ring": 8.0, "pack": ["chaser", "chaser", "chaser"], "finishes": "pack_dead",
-		"pay": {"scrap": PAY_SCRAP, "named": "hot_rivets", "rarities": PAY_RARITIES, "source": "activity_camp", "where": "camp"},
+		# The on-line pocket's common roll (PARK.md 2.12; ruling bu, 2026-11-09: a camp pays from the pool,
+		# where it always paid Hot Rivets). A park row may still author a named part.
+		"pay": {"scrap": PAY_SCRAP, "rarities": ["common"], "source": "activity_camp", "where": "camp"},
 	},
 	"ambush_altar": {
 		"starts": "ring", "ring": 8.0, "pack": ["chaser", "chaser", "lobber"], "finishes": "pack_dead",
@@ -383,7 +385,7 @@ func _prepare_stage(stage_number: int) -> void:
 	if terrain == null or not "maps" in terrain or not terrain.has_method("map_for"):
 		return
 	if stage_number >= 1 and stage_number <= terrain.maps.size():
-		_prepare_map(terrain.map_for(stage_number), stage_number)
+		_prepare_map(terrain.map_for(stage_number))
 
 
 static func graph_path(map_id: String) -> String:
@@ -404,10 +406,10 @@ static func _adopt_graph(path: String, graph) -> void:
 		_shared_graphs[path] = graph
 
 
-# Starts the worker for a park map's entry data. stage_number says whether the pocket-draw
-# layout is wanted (only past stage 1, as _on_stage_entered asks for it). The worker reads its
-# own graph and a deep copy of the rows, so no live object is shared with it.
-func _prepare_map(map, stage_number: int) -> void:
+# Starts the worker for a park map's entry data, the pocket-draw layout included (every stage
+# draws, the dam too). The worker reads its own graph and a deep copy of the rows, so no live
+# object is shared with it.
+func _prepare_map(map) -> void:
 	if map == null or not "park" in map or map.park.is_empty():
 		return
 	var id := String(map.park.map)
@@ -416,8 +418,7 @@ func _prepare_map(map, stage_number: int) -> void:
 	var rows := {"park": map.park.duplicate(true), "activity_sites": map.activity_sites.duplicate(true), "play_rect": map.play_rect}
 	var out := {}
 	var path := graph_path(id)
-	var layout := stage_number > 1
-	_prep[id] = {"task": WorkerThreadPool.add_task(func(): out.merge(prepare_data(path, rows, layout)), false, "activities prep " + id), "out": out}
+	_prep[id] = {"task": WorkerThreadPool.add_task(func(): out.merge(prepare_data(path, rows, true)), false, "activities prep " + id), "out": out}
 	# The director's read of the same map (its rows and corridor reader) goes on a worker too.
 	load("res://src/world/director.gd").prepare_park(id)
 
@@ -548,7 +549,7 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 		if _draw_map != _graph_map:
 			_draw_layout = {}
 			_draw_map = _graph_map
-		if _draw_layout.is_empty() and ctx.run.stage > 1:
+		if _draw_layout.is_empty():
 			if entry_data.layout.is_empty():
 				entry_data.layout = PocketDraw.prepare(_graph, map)
 			_draw_layout = entry_data.layout
@@ -2040,6 +2041,9 @@ func _luck_id(s: Site) -> String:
 		return "%s:%s" % [s.id, s.get_meta("room")]
 	if s.has_meta("door"):
 		return "%s:timed_door" % s.id
+	# A drawn camp rolls apart from the stage's authored camp, or one stage's two camps paid the same part.
+	if s.drawn and s.id == "enemy_camp":
+		return "%s:%s" % [s.id, s.interior.id]
 	return s.id
 
 

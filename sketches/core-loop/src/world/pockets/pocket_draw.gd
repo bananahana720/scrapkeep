@@ -6,8 +6,19 @@ const Park := preload("res://src/core/park_defs.gd")
 const Trade := preload("res://src/world/trade_pockets.gd")
 const Placement := preload("res://src/world/park/park_placement.gd")
 const Modifier := preload("res://src/world/events/stage_modifier.gd")
+const RogueDirector := preload("res://src/world/rogue_director.gd")
 const CREDITS := 150
 const CHANCE := 0.25
+# World 1's parks hold a drawn pocket to rules the door rules do not carry: level ground, and clear
+# of the rescue cage and the rogue sites (2026-11-09, with the dam's first draw, ruling bu). Worlds 2 and 3 are not listed: the level rule alone would cut the
+# islands' pockets from 1,116 to 487 over 400 run seeds, which is a call for their own pass (ruling at).
+const TIDY := ["park_dam", "park_flume"]
+# Level ground: the graph nodes under the footprint, and one step round it, rise no more than this.
+# An open node says only that nothing roofs it, so an anchor can sit on a dome's flank or a canyon
+# wall. Measured over 400 run seeds a park with no such rule: 190 of the dam's 438 pockets and 244 of
+# the flume's 435 stood across more than 5 m of rise (the flume's worst 111 m, down a canyon wall),
+# while every spot on a floor or bench rose 4.5 m or less.
+const LEVEL_M := 5.0
 
 static func cost(entry: Dictionary) -> int:
 	var side: float = Library.FOOTPRINTS[entry.footprint]
@@ -84,6 +95,15 @@ static func prepare(graph, map) -> Dictionary:
 	var hazard_out: PackedFloat32Array = graph.search(hazards, false, Placement.RING_M)
 	var hazard_in: PackedFloat32Array = graph.search(hazards, true, Placement.RING_M)
 	var doors := Trade.doors(map)
+	var tidy: bool = String(map.park.map) in TIDY
+	# Clear of a rescue cage by the door ring, and outside every rogue site's disc: without these the
+	# dam's spot at (72, -584) stood 16 m from Rivet's cage and (144, 64) reached into the mid rogue site.
+	var keep_out := []
+	if tidy:
+		for row in map.park.get("rescue_rows", []):
+			keep_out.append({"at": Vector2(row.at[0], row.at[1]), "radius": Placement.RING_M})
+		for site in RogueDirector.read_sites(String(map.park.map)).get("miniboss_sites", []):
+			keep_out.append({"at": Vector2(site.at[0], site.at[1]), "radius": float(site.radius_m)})
 	for n in range(Graph.SIDE * Graph.SIDE):
 		var f: int = graph.flags(n)
 		if f & Graph.DOOR_OK == 0 or f & (Graph.LINE | Graph.WARDEN | Graph.GUARDED | Graph.UNDER | Graph.DECK) != 0:
@@ -111,10 +131,16 @@ static func prepare(graph, map) -> Dictionary:
 					continue
 				if not footprint_ok.has(size):
 					var fits: bool = map.play_rect.encloses(box)
+					var low := INF
+					var high := -INF
 					for k in graph.box_nodes(box.position - Vector2.ONE * Graph.STEP_M, box.end + Vector2.ONE * Graph.STEP_M):
 						if routes[k] == 1 or graph.flags(k) & Graph.OPEN == 0 or graph.flags(k) & (Graph.UNDER | Graph.DECK | Graph.GUARDED | Graph.WARDEN) != 0:
 							fits = false
 							break
+						low = minf(low, graph.py[k])
+						high = maxf(high, graph.py[k])
+					if tidy:
+						fits = fits and high - low <= LEVEL_M and not keep_out.any(func(k): return _box_distance(box, k.at) <= k.radius)
 					footprint_ok[size] = fits
 				if footprint_ok[size]:
 					sizes.get_or_add(size, []).append(turn)
@@ -145,13 +171,17 @@ static func _fits(prepared: Dictionary, entry: Dictionary, spot: Dictionary, pla
 			return false
 	return true
 
+# A drawn pocket pays what its activity's rule pays, kept to the far ladder (rare). A rule that pays
+# the on-line common roll (the camp, PARK.md 2.12) keeps it: the far filter would leave it nothing.
 static func _owned_pay(entry: Dictionary) -> Dictionary:
 	var pay: Dictionary = load("res://src/world/activities.gd").RULES[entry.activity].pay.duplicate(true)
-	if not pay.has("named"):
+	if not pay.has("named") and not Placement._within(pay.rarities, Placement.PAY_ONLINE):
 		pay.rarities = pay.rarities.filter(func(r): return r in Placement.PAY_FAR)
 	return pay
 
-static func _named_common(entry: Dictionary) -> bool:
+# A pocket whose pay is common only (the camp): never the only pocket drawn, the first picked, or
+# the owner of the greatest detour.
+static func _common_pay(entry: Dictionary) -> bool:
 	var pay := _owned_pay(entry)
 	return not Placement._within(Placement._pay(pay).rarities, Placement.PAY_FAR)
 
@@ -167,7 +197,7 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 	var picked := []
 	var available := CREDITS
 	while picked.size() < slots:
-		var affordable: Array = pool.filter(func(entry): return cost(entry) <= available and (slots > 1 or not _named_common(entry)) and (not picked.is_empty() or not _named_common(entry)))
+		var affordable: Array = pool.filter(func(entry): return cost(entry) <= available and (slots > 1 or not _common_pay(entry)) and (not picked.is_empty() or not _common_pay(entry)))
 		if affordable.is_empty():
 			break
 		var total := 0.0
@@ -221,13 +251,13 @@ static func draw(prepared: Dictionary, map, stage: int, rng: RandomNumberGenerat
 		result.sites.append(spec)
 		picked.pop_front()
 		pending = false
-	# A named common reward cannot own the greatest detour, even when rolls allow rare.
+	# A common reward cannot own the greatest detour, even when rolls allow rare.
 	var far := -INF
 	for spec in result.sites:
-		if not _named_common(spec.interior):
+		if not _common_pay(spec.interior):
 			far = maxf(far, prepared.from_line[spec.node])
 	for spec in result.sites.duplicate():
-		if _named_common(spec.interior) and prepared.from_line[spec.node] >= far:
+		if _common_pay(spec.interior) and prepared.from_line[spec.node] >= far:
 			result.sites.erase(spec)
 			result.metrics.failed_placements += 1
 			result.metrics.remaining_credits += cost(spec.interior)
@@ -261,7 +291,7 @@ static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared
 	rng.seed = hash([layout_seed, run.run_seed, run.stage, "pocket_draw"])
 	var layout: Dictionary = prepared
 	if layout.is_empty():
-		layout = prepare(graph, map) if run.stage > 1 else {"anchors": [], "fits": {}}
+		layout = prepare(graph, map)
 	var result := draw(layout, map, run.stage, rng, trade, [], modifier)
 	run.pocket_draw_cache[key] = {"sites": result.sites.duplicate(true)}
 	return result.sites

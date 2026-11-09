@@ -1,11 +1,13 @@
 extends SceneTree
-# smoke: solo timeout=420s (six park graphs prepared, then a park game entering stages 2 to 6)
+# smoke: solo timeout=420s (six park graphs prepared, then a park game entering stages 1 to 6)
 
 # Rule (SI3, W13-INTEGRATION-3.md SI3): at most one stage modifier per stage, picked from the run seed
 # and stage alone, shown on the stage card before the stage starts and equal to the one the pocket
 # draw applies. A count row keeps the drawn count within the cap, Far Haul keeps every drawn pocket on
 # the farthest few anchors, a sight row only scales the beacon, no row touches handling over 600
 # stepped ticks, and a draw with no modifier is byte-identical to the draw before SI3.
+# The dam (stage 1) rolls like every other stage since ruling bu (2026-11-09): it draws one pocket,
+# as the flume does, so a row has a draw to act on.
 
 const T := preload("res://tests/support/t.gd")
 const Modifier := preload("res://src/world/events/stage_modifier.gd")
@@ -32,12 +34,17 @@ const BallState := preload("res://src/movement/ball_state.gd")
 # shortened) and the park_sinkhole rebake (4b43cd95... -> e6afadaa...; every other check line unchanged).
 # 2026-10-24, flume pass two: stage 2 re-captured after #432's flume rows and rebake, with its card 2 extras standing
 # beside the draw (209b49bf... -> 2422257f...; every other check line unchanged).
+# 2026-11-09, ruling bu (the dam joins the roll, camps pay from the pool): every stage re-captured. Stage 1 is
+# new. Stage 2 moved with world 1's level-ground rule (pocket_draw.gd TIDY). Stages 3 to 6 moved only in the
+# drawn camps' pay: with the old pay ({named hot_rivets, common and rare}) put back on each drawn camp, the four
+# hashes were the pins they replace (6b2244ea..., e6afadaa..., d89a37e5..., 01459ce0...), so no site moved.
 const GOLDEN := {
-	2: "2422257f1d81c241dd0e68b931d25752ebe89497753d694e93cf44fc41f318cb",
-	3: "6b2244ea5e2df73b4330ccec611c17a05b250afc9cf711233641ac960dcc9f02",
-	4: "e6afadaa02d60bb800fb1033b0d9e84c141838f91f4108088c7abaaceb1f951d",
-	5: "d89a37e5291457fa67873501141f4c03c635f6bfb93d2c17a527dcfe70b02589",
-	6: "01459ce08dba749e56913f45ceed8f45dc24e6977891e1f81ed222f0313479d1",
+	1: "2ecbf3774aeb4fb573d89213cc92ec80a8829389227d7be9fcfdeebbedb16ef5",
+	2: "36c277f74ea206f8fbfb5cd25b9cb10019670baa3ec52fcdf58770a23e1cd615",
+	3: "c428c12b727ad17b698969d3b045e2ed705edca615250ce2f81641cf6ce61439",
+	4: "de3a6b7c0ea318c71f155a2b4492568c7872402d1462e0a090d193abbf133a2c",
+	5: "5b1da6fc4de1e662ef853ee0665d6db9cb0e7dacddc87bd9dcf01acf37c03acd",
+	6: "178252450f7dbc311e73ccca98c4d618545aebd92fd5a2e77c3f15e619e7bfff",
 }
 const PICK_SEEDS := 2000
 const DRAW_SEEDS := 16
@@ -63,7 +70,7 @@ func _run() -> void:
 		return
 	_rows()
 	_picks()
-	for stage in range(2, Park.COUNT + 1):
+	for stage in range(1, Park.COUNT + 1):
 		_draws(stage)
 	_handling()
 	await _runtime()
@@ -89,14 +96,14 @@ func _picks() -> void:
 	var rolls := 0
 	var deterministic := true
 	var in_cap := true
-	var stage_one_clear := true
+	var dam_hits := 0
 	for stage in range(1, Park.COUNT + 1):
 		for s in PICK_SEEDS:
 			var row := Modifier.pick(s, stage, 3)
 			deterministic = deterministic and row == Modifier.pick(s, stage, 3)
-			if stage == 1:
-				stage_one_clear = stage_one_clear and row.is_empty()
-				continue
+			# The dam has four authored sites, one over stage 1's count: it rolls all the same.
+			if stage == 1 and not Modifier.pick(s, stage, 4).is_empty():
+				dam_hits += 1
 			rolls += 1
 			if row.is_empty():
 				continue
@@ -106,11 +113,13 @@ func _picks() -> void:
 			in_cap = in_cap and n >= 1 and n + 3 <= Modifier.CAP and n <= Modifier.max_slots(stage, 3)
 			if row.has("count_scale"):
 				in_cap = in_cap and n != Modifier.base_slots(stage, 3)
-	t.check("stage 1 never has a modifier", stage_one_clear)
+	t.eq("the dam's four authored sites still leave it one drawn pocket", Modifier.base_slots(1, 4), Modifier.MIN_DRAWN)
+	t.check("the dam rolls a modifier at the same rate", absf(float(dam_hits) / PICK_SEEDS - Modifier.CHANCE) <= 0.04, "%d of %d" % [dam_hits, PICK_SEEDS])
+	t.check("stages 2 to 6 keep their drawn counts", range(2, Park.COUNT + 1).all(func(stage): return Modifier.base_slots(stage, 3) == mini(Modifier.CAP, stage + 2) - 3))
 	t.check("same seed and stage pick the same row", deterministic)
 	t.check("drawn count stays inside the cap of 8 with every row", in_cap)
 	var rate := float(hits) / rolls
-	t.check("modifier rate near %.2f on stages 2 to 6" % Modifier.CHANCE, absf(rate - Modifier.CHANCE) <= 0.04, "rate %.3f over %d" % [rate, rolls])
+	t.check("modifier rate near %.2f on stages 1 to 6" % Modifier.CHANCE, absf(rate - Modifier.CHANCE) <= 0.04, "rate %.3f over %d" % [rate, rolls])
 	t.eq("every row is picked somewhere", seen.size(), Modifier.ROWS.size())
 
 
@@ -245,7 +254,7 @@ func _step(row: Dictionary, map, prepared: Dictionary) -> Dictionary:
 	return {"trace": trace, "tuning_same": _snapshot(tuning) == before}
 
 
-# A park game enters stages 2 to 6 for three run seeds. On every entry the activities' applied row
+# A park game enters stages 1 to 6 for three run seeds. On every entry the activities' applied row
 # equals the pick, the stage card shows its caption (no line when there is none), and the card
 # shown at launch for the next stage in the world carries the same caption. A retry keeps the row.
 func _runtime() -> void:
@@ -280,7 +289,7 @@ func _runtime() -> void:
 	for s in RUN_SEEDS:
 		game.run.run_seed = s
 		game.run.pocket_draw_cache = {}
-		for stage in range(2, Park.COUNT + 1):
+		for stage in range(1, Park.COUNT + 1):
 			var expected := Modifier.pick(s, stage, 3)
 			hud.launch_card.visible = false
 			hud._world_card_at = -1
