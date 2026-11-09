@@ -33,7 +33,7 @@ A locked pilot's card names what unlocks it, and a pilot you earn is selectable 
 1. **Title.** Continue appears first when a saved run is valid. Start (Space; the button reads New run when a saved run exists) begins a run, and the menu also offers Help (H), Achievements (A) and Settings (S); with the recorded music on, B cycles the breath.
 2. **Class.** Press 1 to 6, or click a card: Sable, Rivet, Kest, Tarn, Tally or the remembered cannon. A locked pilot's card names what unlocks it. Every pilot has its own weapon, movement, special and smash on the same keys.
 3. **Upgrade pick.** The run opens with an upgrade pick; Esc is "Later" and keeps the pick waiting.
-4. **Stage.** You drop in already rolling, with the beacon in sight. The objective at the top says what to do next; under it, your punch bar races the Warden's plating.
+4. **Stage.** You drop in already rolling, with the beacon in sight. The objective at the top says what to do next, and names the nearest activity with the metres to it.
 5. **Warden.** One Warden clamps each beacon. Breaking it is the stage's one must, and the gates open wherever you are when it breaks.
 6. **Reward gates and Moss's bay.** Roll through one of two arches to take its part. A hover barge, Moss's workshop bay, docks behind the gate row when it finds room: an opt-in pit stop with a shop and a practice yard.
 7. **Launch.** Taking a gate launches you into the next stage at the speed you were going.

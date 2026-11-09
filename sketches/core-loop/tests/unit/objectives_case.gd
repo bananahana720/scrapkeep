@@ -44,7 +44,7 @@ const CASES := {
 
 # The mounted reactor's road and Brindle's phase, each as one axis of the walk.
 const MOUNTS := [{}, {"mount": "dam_face"}, {"mount": "flume"}, {"mount": "flume", "latched": true}, {"mount": "plain"}]
-const PHASES := [{}, {"phase": 1}, {"phase": 2}, {"phase": 3}, {"phase": 3, "open": true}, {"phase": 4}, {"phase": 9}, {"open": true}]
+const PHASES := [{}, {"phase": 1}, {"phase": 2}, {"phase": 3}, {"phase": 1, "open": true}, {"phase": 3, "open": true}, {"phase": 4}, {"phase": 9}, {"open": true}]
 const MOUNT_ROWS := ["ride_sheet", "latch_warden", "fire_from_line"]
 const PHASE_ROWS := ["shoot_magnets", "slam_caps", "bait_charge", "hit_cockpit", "ram_scooter"]
 
@@ -217,7 +217,10 @@ func _phases(t) -> void:
 	t.eq("a phase row never shows outside the arena", outside, [])
 	t.eq("an arena with no phase keeps the standing row", [Objectives.choose({"state": "boss", "phase": 0}), Objectives.choose({"state": "boss", "phase": 9})],
 		["break_brindle", "break_brindle"])
-	t.eq("an open cockpit outside phase 3 changes nothing", Objectives.choose(CASES["slam_caps"].merged({"open": true}, true)), "slam_caps")
+	t.eq("an open cockpit takes the plate in every fight phase",
+		[1, 2, 3].map(func(phase): return Objectives.choose({"state": "boss", "phase": phase, "open": true})), ["hit_cockpit", "hit_cockpit", "hit_cockpit"])
+	t.eq("the scooter and a fight with no phase have no cockpit row",
+		[Objectives.choose(CASES["ram_scooter"].merged({"open": true}, true)), Objectives.choose({"state": "boss", "open": true})], ["ram_scooter", "break_brindle"])
 
 
 # One gain every `gap` seconds for `seconds`, in DT steps: posture drains to 10 between gains

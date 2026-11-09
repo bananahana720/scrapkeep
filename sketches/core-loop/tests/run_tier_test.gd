@@ -690,7 +690,8 @@ func _tier_zero_format() -> void:
 func _mouse_tiles() -> void:
 	game.bot_driven = false
 	paused = true
-	var offers := [["cogs", "core", "long_barrel"], ["loose_trigger", "magnet_spool", "spiral_wave"]]
+	# The narrow offer's tiles must stay under the interactive card's 780 px floor, effect lines included.
+	var offers := [["cogs", "hot_rivets", "long_barrel"], ["loose_trigger", "magnet_spool", "spiral_wave"]]
 	for offer_index in offers.size():
 		for pick_index in 3:
 			_begin(706, 0)

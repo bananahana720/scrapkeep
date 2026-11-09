@@ -98,13 +98,16 @@ static func choose(reading: Dictionary) -> String:
 		"launch":
 			return "" if r["card"] else "hold_line"
 		"boss":
-			match int(r["phase"]):
+			var phase := int(r["phase"])
+			if r["open"] and phase >= 1 and phase <= 3:
+				return "hit_cockpit"
+			match phase:
 				1:
 					return "shoot_magnets"
 				2:
 					return "slam_caps"
 				3:
-					return "hit_cockpit" if r["open"] else "bait_charge"
+					return "bait_charge"
 				4:
 					return "ram_scooter"
 			return "break_brindle"

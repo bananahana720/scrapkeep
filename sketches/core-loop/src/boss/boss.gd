@@ -1438,14 +1438,16 @@ func _update_readout() -> void:
 
 # --- Live state for the HUD (flow's objective and gap lines read these) --------------
 
+# The objective plate's reading of the fight (ui/hud.gd, core/objectives.gd): the phase whose
+# verb the plate names (CHASE_PHASE is the scooter) and whether a hit meets the open cockpit
+# now: a stagger in any phase (the weak points pay nothing through it, _pressure), or a
+# stun in Scuttle.
+func plate_reading() -> Dictionary:
+	return {"phase": phase if active() else 0, "open": stunned() or staggered()}
+
+
 # What the player should do right now, in the objective line's voice. Flow shows it as
 # the whole objective line, so fight states end with punch against the live plating.
-# The objective plate's reading of the fight (ui/hud.gd, core/objectives.gd): the phase whose
-# verb the plate names (CHASE_PHASE is the scooter) and whether the cockpit stands open on a stun.
-func plate_reading() -> Dictionary:
-	return {"phase": phase if active() else 0, "open": stunned()}
-
-
 func objective_text() -> String:
 	match state:
 		EJECT:

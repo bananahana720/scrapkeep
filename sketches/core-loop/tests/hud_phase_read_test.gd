@@ -21,7 +21,7 @@ const T := preload("res://tests/support/t.gd")
 #       jump_to_phase with a crack, and at 1280x720 and 1920x1080 it sits top-centre inside
 #       the top band, the diamonds clear of the objective plate under it;
 #   P5  the objective plate under it names each phase's verb: the crane magnets, the vent
-#       caps, the baited charge, the open cockpit on a stun, and the scooter on the eject;
+#       caps, the baited charge, the open cockpit on a stagger or a stun, and the scooter on the eject;
 #   R1  the pause build read with all twelve panels held (a long list) sits on screen, left of
 #       the pause column and clear of it, at 1280x720 and 1920x1080, and so does the empty read;
 #       on a short screen the turning view shrinks (to VIEW_MIN at least) and the read stays on screen.
@@ -149,6 +149,11 @@ func _arena_checks() -> void:
 	_t.eq("P5 phase one: the plate names the crane magnets", _plate_row(), ["shoot_magnets", "Shoot the crane magnets"])
 	boss.jump_to_phase(2)
 	_t.eq("P5 phase two: the vent caps", _plate_row(), ["slam_caps", "Slam the vent caps"])
+	# A stagger opens the cockpit in any phase, and the weak points pay nothing through it.
+	boss._posture.staggered = true
+	_t.eq("P5 a stagger in phase two names the open cockpit", [boss.staggered(), _plate_row()], [true, ["hit_cockpit", "Hit the open cockpit"]])
+	boss._posture.staggered = false
+	_t.eq("P5 and the caps come back when it ends", _plate_row(), ["slam_caps", "Slam the vent caps"])
 	plate.advance(0.016)
 	_t.eq("P4 jump_to_phase(2) turns the diamonds", plate.phase_pips(), ["spent", "live", "ahead"])
 	_t.check("P4 and cracks the spent one", plate.turn_age() >= 0.0)
