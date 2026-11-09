@@ -35,6 +35,9 @@ import {
   noMatchMessage,
   parseArgs,
   expiredLine,
+  failingLines,
+  logFileName,
+  timeScale,
   expiredQuarantine,
   parseQuarantine,
   quarantineLines,
@@ -860,4 +863,44 @@ test("a script error inside an awaited part of a test cannot pass", { skip: !exi
   } finally {
     rmSync(project, { recursive: true, force: true });
   }
+});
+
+test("the time scale stretches a limit past the ceilings and refuses a value out of range", () => {
+  assert.equal(timeScale({}), 1);
+  assert.equal(timeScale({ SMOKE_TIME_SCALE: "1.5" }), 1.5);
+  assert.throws(() => timeScale({ SMOKE_TIME_SCALE: "0.5" }), /from 1 to 4/);
+  assert.throws(() => timeScale({ SMOKE_TIME_SCALE: "9" }), /from 1 to 4/);
+  assert.throws(() => timeScale({ SMOKE_TIME_SCALE: "fast" }), /from 1 to 4/);
+  assert.equal(testTimeoutMs("# smoke: solo timeout=360s\n"), 360_000);
+  assert.equal(testTimeoutMs("# smoke: solo timeout=360s\n", 1.5), 540_000);
+  assert.equal(testTimeoutMs("# smoke: solo timeout=900s\n", 1.5), 540_000, "the marker still stops at its ceiling before the scale");
+  assert.equal(testTimeoutMs("# smoke: bots timeout=1800s\n", 1.5), 2_700_000);
+  assert.equal(testTimeoutMs("extends SceneTree\n", 2), 360_000);
+});
+
+test("a receipt names the time scale only when one was used", () => {
+  const base = { label: "t", argv: [], root: "/r", git: null, godot: "g", sketches: [], flags: [], width: 1, lockWaitMs: 0, startedAt: "x", wallMs: 1, stems: {}, results: [] };
+  assert.equal("time_scale" in buildReceipt(base), false);
+  assert.equal(buildReceipt({ ...base, timeScale: 1.5 }).time_scale, 1.5);
+});
+
+test("a failure lists its failed checks, engine errors and time-outs, and caps the list", () => {
+  const output = [
+    "  [a check] 3 -> PASS",
+    "  [small median] 119.1 s against 103.8 s -> FAIL",
+    "ERROR: res://src/world/ambient_life.gd:85 - Invalid call",
+    "SCRIPT ERROR: Invalid call. Nonexistent function 'run' in base 'CtxDouble'.",
+    "child class 5 timed out after 100 s",
+    "an ordinary line that mentions errors in passing",
+  ].join("\n");
+  assert.deepEqual(failingLines(output).map((line) => line.trim().slice(0, 14)), ["[small median]", "ERROR: res://s", "SCRIPT ERROR: ", "child class 5 "]);
+  const many = Array.from({ length: 70 }, (_, index) => `[check ${index}] -> FAIL`).join("\n");
+  const capped = failingLines(many, 60);
+  assert.equal(capped.length, 61);
+  assert.match(capped[60], /10 more failing lines/);
+});
+
+test("a test's kept log is named after the test, whatever its sketch", () => {
+  assert.equal(logFileName("sketches/core-loop res://tests/kest_set_piece_test.gd"), "kest_set_piece_test.log");
+  assert.equal(logFileName("sketches/core-loop import"), "sketches_core-loop_import.log");
 });

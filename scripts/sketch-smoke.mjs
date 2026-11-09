@@ -70,15 +70,33 @@ export function isBot(source) {
     .some((line) => BOT_MARKER.test(line.replace(/\r$/, "")));
 }
 
-export function testTimeoutMs(source) {
+// SMOKE_TIME_SCALE stretches every test's time limit on a slow machine. It applies after
+// the marker and the ceiling, so it is the one way past 360 s (1800 s for bots), and it
+// never touches a limit a test sets for its own child processes. A run that used it says
+// so in its output and its receipt, so two runs are compared with the same scale in mind.
+const MAX_TIME_SCALE = 4;
+
+export function timeScale(env = process.env) {
+  const text = env.SMOKE_TIME_SCALE;
+  if (text === undefined || text === "") return 1;
+  const scale = Number(text);
+  if (!Number.isFinite(scale) || scale < 1 || scale > MAX_TIME_SCALE) {
+    throw new Error(`SMOKE_TIME_SCALE must be a number from 1 to ${MAX_TIME_SCALE}`);
+  }
+  return scale;
+}
+
+export function testTimeoutMs(source, scale = 1) {
   const bots = isBot(source);
+  let limit = bots ? BOT_TIMEOUT_MS : TIMEOUT_MS;
   for (const line of source.split("\n", MARKER_LINES)) {
     const match = TIMEOUT_MARKER.exec(line.replace(/\r$/, ""));
     if (match) {
-      return Math.min(bots ? MAX_BOT_TIMEOUT_MS : MAX_TIMEOUT_MS, Math.max(TIMEOUT_MS, Number(match[1]) * 1000));
+      limit = Math.min(bots ? MAX_BOT_TIMEOUT_MS : MAX_TIMEOUT_MS, Math.max(TIMEOUT_MS, Number(match[1]) * 1000));
+      break;
     }
   }
-  return bots ? BOT_TIMEOUT_MS : TIMEOUT_MS;
+  return Math.round(limit * scale);
 }
 
 export function isSolo(source) {
@@ -486,7 +504,7 @@ export function emitReceipt(receipt, write = writeReceipt, log = console.log) {
   }
 }
 
-export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot, sketches, flags, width, lockWaitMs, startedAt, wallMs, stems, results, botTierNotRun = [], expired = [] }) {
+export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot, sketches, flags, width, lockWaitMs, startedAt, wallMs, stems, results, botTierNotRun = [], expired = [], timeScale: scale = 1 }) {
   const rows = results.map((result) => ({
     label: result.label,
     ok: result.ok,
@@ -520,6 +538,7 @@ export function buildReceipt({ label, argv, root: repoRoot, git: gitInfo, godot,
     godot,
     sketches,
     flags,
+    ...(scale !== 1 ? { time_scale: scale } : {}),
     width,
     lock_wait_ms: lockWaitMs,
     started_at: startedAt,
@@ -561,12 +580,44 @@ export function judge({ test, status, output }) {
   return { ok, verdict, skips, missing, reason };
 }
 
+// The lines of a test's output that say why it failed: failed checks, engine errors and
+// time-outs. A long test prints them far above its last 40 lines, so a failure lists them
+// first and nobody has to patch the runner to find them.
+const FAILING_LINE = /-> FAIL\b|^\s*(?:SCRIPT ERROR|ERROR)\b|\btimed[ _]out\b/;
+const MAX_FAILING_LINES = 60;
+
+export function failingLines(output, limit = MAX_FAILING_LINES) {
+  const lines = output.split("\n").map((line) => line.replace(/\r$/, "")).filter((line) => FAILING_LINE.test(line));
+  if (lines.length <= limit) return lines;
+  return [...lines.slice(0, limit), `... ${lines.length - limit} more failing lines (set SMOKE_LOG_DIR for the full output)`];
+}
+
+// SMOKE_LOG_DIR keeps every test's whole output, pass or fail, one file per test, so a
+// gate shard can compare check lines with the last promoted head. SMOKE_FULL=1 prints the
+// same output to the terminal instead.
+export function logFileName(label) {
+  return label.replace(/^.* res:\/\/tests\//, "").replace(/\.gd$/, "").replace(/[^\w.-]+/g, "_") + ".log";
+}
+
+function keepOutput(job, output, env = process.env) {
+  if (env.SMOKE_LOG_DIR) {
+    mkdirSync(env.SMOKE_LOG_DIR, { recursive: true });
+    writeFileSync(path.join(env.SMOKE_LOG_DIR, logFileName(job.label)), output);
+  }
+  if (env.SMOKE_FULL) console.log(output);
+}
+
 function report(job, status, output, ms, signal = null) {
   const { ok, verdict, skips, missing, reason } = judge({ test: job.test, status, output });
   const quarantined = Boolean(job.quarantined);
   const { passes, fails } = countChecks(output);
   console.log(`${ok ? "PASS" : "FAIL"} ${job.label} exit=${status} ${(ms / 1000).toFixed(1)}s`);
-  if (!ok) console.log(output.split("\n").slice(-40).join("\n"));
+  if (!ok) {
+    const failing = failingLines(output);
+    if (failing.length > 0) console.log(`failing lines (${passes} checks passed, ${fails} failed):\n${failing.map((line) => "  >> " + line).join("\n")}`);
+    if (!process.env.SMOKE_FULL) console.log(output.split("\n").slice(-40).join("\n"));
+  }
+  keepOutput(job, output);
   if (reason) console.log(reason);
   if (process.env.SMOKE_DEBUG_ARGS) console.log(`  args: ${job.args.join(" ")}`);
   return { label: job.label, ok, exit: status, ms, solo: Boolean(job.solo), passes, fails, verdict_line: verdict, skips, test: Boolean(job.test), quarantined, signal: signal ?? null, ...(quarantined && job.quarantine ? { quarantine: job.quarantine } : {}) };
@@ -674,6 +725,14 @@ async function main() {
     console.error("sketch:smoke found no bot-tier tests in the selected sketches");
     process.exit(2);
   }
+  let scale;
+  try {
+    scale = timeScale();
+  } catch (problem) {
+    console.error(`sketch:smoke: ${problem.message}`);
+    process.exit(2);
+  }
+  if (scale !== 1) console.log(`sketch:smoke: time limits scaled by ${scale} (SMOKE_TIME_SCALE)`);
   const waited = await acquireMachine();
   if (waited > 0) console.log(`sketch:smoke waited ${(waited / 1000).toFixed(0)}s for the machine`);
   const width = options.bots ? 1 : named ? Math.min(NAMED_WIDTH, jobCount()) : jobCount();
@@ -699,7 +758,7 @@ async function main() {
     if (!named && !options.bots) jobs.push({ label: `${name} boot`, args: [...base, "--quit-after", "300"] });
     for (const script of scripts) {
       const isSoloJob = isSoloScript(directory, script);
-      const timeoutMs = testTimeoutMs(readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"));
+      const timeoutMs = testTimeoutMs(readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"), scale);
       const job = { label: `${name} ${script}`, args: [...base, "--script", script, ...userArgs], test: script, solo: isSoloJob, timeoutMs, quarantined: quarantine.has(path.posix.basename(script, ".gd")), quarantine: quarantineRows.find((row) => row.test === path.posix.basename(script, ".gd")) };
       (isSoloJob ? solo : jobs).push(job);
     }
@@ -748,6 +807,7 @@ async function main() {
     results,
     botTierNotRun,
     expired,
+    timeScale: scale,
   });
   const receiptFailure = emitReceipt(receipt);
   process.exit(receiptFailure ?? (ok ? 0 : 1));
