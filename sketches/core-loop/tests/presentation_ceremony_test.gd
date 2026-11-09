@@ -8,6 +8,7 @@ const Ceremony := preload("res://src/presentation/reward_ceremony.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
 const PartName := preload("res://src/ui/part_name.gd")
+const Presentation := preload("res://src/presentation/presentation.gd")
 const Push := preload("res://tests/workshop/push.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
@@ -106,9 +107,11 @@ func _check_tiers() -> void:
 		if Parts.def(id) != null or String(row.get("name", "")) == "" or String(row.get("stamp", "")) == "" \
 				or Ceremony.card_words(id) != String(row.get("verb", "")) or Ceremony.card_words(id) == "":
 			tokens.append(id)
-	_report("run tokens", tokens.is_empty() and not Parts.token(BossRules.CREST_PART).is_empty() and PartName.name_of(BossRules.CREST_PART) == "Admiral's Crest",
-		"%d run tokens, each with a name, a stamp and a card line inside six words, and no catalogue row; Brindle's crest is one; wrong %s"
-			% [Parts.TOKENS.size(), tokens])
+	var found: Dictionary = Presentation.part_card(BossRules.CREST_PART)
+	_report("run tokens", tokens.is_empty() and not Parts.token(BossRules.CREST_PART).is_empty() and PartName.name_of(BossRules.CREST_PART) == "Admiral's Crest"
+			and found == {"title": "Admiral's Crest", "detail": "Fleet property. Yours now."} and Presentation.part_card("hot_rivets")["title"] == Parts.display_name("hot_rivets"),
+		"%d run tokens, each with a name, a stamp and a card line inside six words, and no catalogue row; Brindle's crest is one and its found card reads %s; wrong %s"
+			% [Parts.TOKENS.size(), found, tokens])
 
 
 func _next(phase: String) -> void:

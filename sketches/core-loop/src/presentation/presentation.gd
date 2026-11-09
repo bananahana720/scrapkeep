@@ -331,9 +331,15 @@ func _on_synergy(id: String, category: String, first_time: bool) -> void:
 func _on_part(part_id: String, _source: String) -> void:
 	if not auto_banner or not banner.cards:
 		return
+	var words := part_card(part_id)
+	banner.show_discovery(words["title"], "part", words["detail"], "Found", "part:" + part_id, "part_gained")
+
+
+# A part's banner card in words: its row's name and text, or a run token's (Parts.TOKENS).
+static func part_card(part_id: String) -> Dictionary:
 	var row := Parts.row(part_id)
-	var title: String = row.get("name", part_id.capitalize())
-	banner.show_discovery(title, "part", String(row.get("text", "")), "Found", "part:" + part_id, "part_gained")
+	return {"title": String(row.get("name", Parts.display_name(part_id))),
+		"detail": String(row.get("text", Parts.token(part_id).get("verb", "")))}
 
 
 # The third part of a set landed: the set's name and what it changes, in the set's own colour (the
