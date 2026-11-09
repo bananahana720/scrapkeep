@@ -241,6 +241,27 @@ static func pentatonic_step(rung: int) -> int:
 	return octave * 12 + PENTATONIC[index]
 
 
+# The pitch ratio that lifts a cue baked on midi by `steps` rungs of the reward ladder, counted
+# from its own note: a climb that starts on any rung (the bite's A) stays on D F G A C, where a
+# climb by semitones passes through Bb and C#.
+static func ladder_ratio(midi: int, steps: int) -> float:
+	return ratio(scale_shift(midi, steps, PENTATONIC) - midi)
+
+
+# The pitch ratio for a cue baked on midi that asks for a free climb in semitones: the climb is
+# moved to the nearest rung of the reward ladder, so a curve never lands between the notes.
+static func snapped_ratio(midi: int, semitones: float) -> float:
+	return ratio(snap(midi + roundi(semitones), PENTATONIC) - midi)
+
+
+# The chord tone a falling line lands on: the nearest one under midi, never midi itself.
+static func tone_below(midi: int, tones: Array) -> int:
+	var best := midi - 12
+	for tone in tones:
+		best = maxi(best, int(tone) + 12 * floori(float(midi - 1 - int(tone)) / 12.0))
+	return best
+
+
 # The nearest note of a scale (relative to home) to a midi note.
 static func snap(midi: int, scale: Array) -> int:
 	var best := midi

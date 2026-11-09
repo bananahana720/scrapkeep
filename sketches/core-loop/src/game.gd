@@ -32,6 +32,7 @@ const Combat := preload("res://src/combat/combat.gd")
 const Build := preload("res://src/build/build.gd")
 const Presentation := preload("res://src/presentation/presentation.gd")
 const Bindings := preload("res://src/core/bindings.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
@@ -172,6 +173,8 @@ var _scale_before_stop := 1.0
 var last_device := "kbm"
 # Loaded at run time only when the pack carries tools/, never preloaded (lint L7 allows this line).
 const SELF_PLAY := "res://tools/self_play.gd"
+# held_glyph()'s answer for a held input that has no keycap to draw.
+const HELD_UNNAMED := "held"
 
 
 func _ready() -> void:
@@ -896,28 +899,34 @@ func step_summary_latch() -> void:
 # True while a key, mouse button, pad button or trigger bound to any action is down. Sticks and
 # mouse motion do not count: a drifting stick must not lock a menu.
 func input_held() -> bool:
+	return held_glyph() != ""
+
+
+# The cap id (keycap.gd) of the first such input that is down, "" when none is: the summary's latch cue
+# draws it. An input with no cap of its own (a side mouse button, a pad's Back) answers HELD_UNNAMED.
+func held_glyph() -> String:
 	var pads := Input.get_connected_joypads()
 	var table := Bindings.actions()
 	for action in table:
 		var record: Dictionary = table[action]
 		for key in record.get("keys", []):
 			if Input.is_physical_key_pressed(key):
-				return true
+				return "key_" + OS.get_keycode_string(key).to_lower().replace(" ", "_")
 		if record.has("button") and Input.is_mouse_button_pressed(record["button"]):
-			return true
+			return {MOUSE_BUTTON_LEFT: "key_lmb", MOUSE_BUTTON_RIGHT: "key_rmb"}.get(record["button"], HELD_UNNAMED)
 		if record.has("pad"):
 			for device in pads:
 				if Input.is_joy_button_pressed(device, record["pad"]):
-					return true
+					return Glyphs.PAD_BUTTONS.get(record["pad"], HELD_UNNAMED)
 		if record.has("axis") and record["axis"][0] in [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]:
 			for device in pads:
 				if Input.get_joy_axis(device, record["axis"][0]) > 0.5:
-					return true
+					return Glyphs.PAD_TRIGGERS[record["axis"][0]]
 	for ui_action in Bindings.UI_PAD:
 		for device in pads:
 			if Input.is_joy_button_pressed(device, Bindings.UI_PAD[ui_action]):
-				return true
-	return false
+				return Glyphs.PAD_BUTTONS.get(Bindings.UI_PAD[ui_action], HELD_UNNAMED)
+	return ""
 
 
 func _register_actions() -> void:
@@ -1120,7 +1129,7 @@ func note_device(event: InputEvent) -> void:
 		last_device = "kbm"
 	elif event is InputEventJoypadButton or (event is InputEventJoypadMotion and absf(event.axis_value) > 0.2):
 		last_device = "pad"
-	preload("res://src/ui/glyphs.gd").device = last_device
+	Glyphs.device = last_device
 
 
 static func _fresh_action(action: String) -> void:
@@ -1285,6 +1294,9 @@ func _screen_key(key: int) -> bool:
 				return true
 		"summary":
 			if summary_shut():
+				# The latch turned a press away: its cue says which held input it waits on.
+				if summary_latched:
+					screens.latch_pressed()
 				return true
 			# Esc leaves the summary for the camp, as K does, never the desktop (w23 cautious red team).
 			if key == KEY_K or key == KEY_ESCAPE:

@@ -50,7 +50,7 @@ func _run() -> void:
 	var menu = _game.get_node("PauseMenu")
 	menu.open()
 	_t.check("END-2 quit menu is open", menu._open)
-	menu.press("quit")
+	menu.confirm("quit")
 	_t.eq("END-2 quit emits no run end", ended[0], 0)
 	_t.check("END-2 quit has no ending", not _game.screens.ending_open())
 	_game.free()

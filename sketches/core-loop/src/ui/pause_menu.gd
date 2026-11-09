@@ -59,9 +59,19 @@ const NOTES_KEYS := [KEY_Q, KEY_E, KEY_TAB]
 # Quit is X held QUIT_HOLD seconds, with a ring filling round its keycap like the retry hold
 # (design-v3/SKILL-BAR.md section 5). Q is the ultimate now, the most-pressed key in a fight,
 # and muscle memory pressing it on an open menu must never end a run. A click on the row, or
-# Enter on it focused, still quits at once.
+# Enter on it focused, asks first (ARM_WORDS); while it asks, a tap of X is the second press.
 const QUIT_KEY := KEY_X
 const QUIT_HOLD := 0.6
+# Restart run and Quit end the run in hand, so a press of either row (its key, a click, Enter or a pad's A)
+# only arms it: the row asks in ARM_WORDS, worded in the hazard colour, and the same press again inside
+# ARM_SECONDS does it. Any other row, a focus move, the menu closing or the time running out disarms it.
+# ARM_GUARD keeps a double click from being both presses. The X hold is already a confirm and asks nothing;
+# a tap of X answers a Quit row that is already asking.
+# Hades' Give Up and Slay the Spire's Abandon Run both ask before the pause menu ends a run; N is also
+# "New run" on the death and summary screens, so a tap from habit must not cost a live one.
+const ARM_WORDS := {"restart": "Scrap this run? Press again", "quit": "Quit to desktop? Press again"}
+const ARM_SECONDS := 3.0
+const ARM_GUARD := 0.35
 
 signal quit_chosen
 
@@ -82,6 +92,8 @@ var _tween: Tween
 var _quit_down := false
 var _quit_held := 0.0
 var _quit_ring: Control
+var _armed := ""
+var _armed_for := 0.0
 var build_read
 
 
@@ -253,6 +265,7 @@ func close() -> void:
 	if not _open:
 		return
 	_open = false
+	_disarm()
 	note("")
 	_leave_settings(false)
 	if _notes_pinned:
@@ -274,13 +287,25 @@ func close() -> void:
 func press(id: String) -> void:
 	if not _open:
 		return
+	if ARM_WORDS.has(id):
+		if not _confirms(id):
+			return
+	else:
+		_disarm()
+	confirm(id)
+
+
+# The row's own action with no ask: press() calls it once a row that asks is confirmed, and the X hold
+# calls it for Quit.
+func confirm(id: String) -> void:
+	if not _open:
+		return
+	_disarm()
 	match id:
 		"resume":
 			close()
 		"restart":
-			# Same rule as hold-R (game.step_restart_hold): with a store, a restart never
-			# abandons the victory lap's credits.
-			if game.flow.store != null and game.flow.state == game.flow.LAP:
+			if _restart_shut():
 				return
 			close()
 			game.flow.new_run()
@@ -308,6 +333,58 @@ func press(id: String) -> void:
 				_rows["breath"].grab_focus()
 		_:
 			_rows[id].grab_focus()
+
+
+# Same rule as hold-R (game.step_restart_hold): with a store, a restart never abandons the victory
+# lap's credits.
+func _restart_shut() -> bool:
+	return game.flow.store != null and game.flow.state == game.flow.LAP
+
+
+# True on the press that confirms an armed row. The first press arms it and answers false, and so does a
+# press inside ARM_GUARD of the arming.
+func _confirms(id: String) -> bool:
+	if _armed == id:
+		return _armed_for >= ARM_GUARD
+	if id == "restart" and _restart_shut():
+		return false
+	_disarm()
+	_armed = id
+	_armed_for = 0.0
+	var row: ChoiceButton = _rows[id]
+	row.text = ARM_WORDS[id]
+	row.set_asking(true)
+	row.grab_focus()
+	_cue(Harmony.ratio(-5.0))
+	return false
+
+
+func _disarm() -> void:
+	if _armed == "":
+		return
+	var row: ChoiceButton = _rows[_armed]
+	row.text = _row_words(_armed)
+	row.set_asking(false)
+	_armed = ""
+	_armed_for = 0.0
+
+
+func _row_words(id: String) -> String:
+	return String(ROWS[_order.find(id)]["words"])
+
+
+# The row that is asking, "" when none is.
+func armed() -> String:
+	return _armed
+
+
+# One tick of the ask: it lapses after ARM_SECONDS, or when the focus leaves its row.
+func step_arm(delta: float) -> void:
+	if _armed == "":
+		return
+	_armed_for += delta
+	if _armed_for >= ARM_SECONDS or not _rows[_armed].has_focus():
+		_disarm()
 
 
 # The settings page takes the column's place; the first page's rows stay built, only hidden.
@@ -424,6 +501,11 @@ func _quit_key(event: InputEvent) -> bool:
 		return false
 	if event.echo:
 		return true
+	# The asking row says "press again" beside this keycap, so a tap of X answers it.
+	if event.pressed and _armed == "quit":
+		press("quit")
+		if _armed == "":
+			return true
 	_quit_down = event.pressed
 	if not event.pressed:
 		_quit_held = 0.0
@@ -440,7 +522,7 @@ func step_quit(delta: float) -> void:
 	if _quit_held >= QUIT_HOLD:
 		_quit_down = false
 		_quit_held = 0.0
-		press("quit")
+		confirm("quit")
 
 
 # The hold's share, 0 to 1, for the ring and the tests.
@@ -647,6 +729,7 @@ func _process(delta: float) -> void:
 		_quit_held = 0.0
 		return
 	step_quit(delta)
+	step_arm(delta)
 	if _notes_pinned and not game.notes_held():
 		_notes_pinned = false
 	_root.visible = not game.notes_held()

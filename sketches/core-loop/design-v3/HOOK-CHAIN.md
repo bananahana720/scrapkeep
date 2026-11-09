@@ -24,7 +24,7 @@ One `ChainState` on the player (`src/combat/chain.gd`, new) owns `combo`, `links
 | --- | --- | --- |
 | HUD | `combo` | a counter beside the ability bar, only while `combo >= 2`; digits scale with the beat on each link (`SOUND-STORY` section 7's hit-stop clock) and fall when the chain ends |
 | body | `combo` | the line's bite collar (`latched_body`) gains one ring per link up to 6 |
-| sound | link event | `line_bite` rises a semitone per link (`chain_link` row), falls to the root on the smash; the chain end is a short `line_zip`; the miss is `dry_tick` with the cooldown's length |
+| sound | link event | `line_bite` rises a rung of the pentatonic per link (`chain_link` row; C, D, F, G, then A an octave up, AUDIO-V3 section 5 rule 3), falls to the root on the smash; the chain end is a short `line_zip`; the miss is `dry_tick` with the cooldown's length |
 | impact | `combo` | `IMPACT["harpoon_smash"]` knock and shake scale with the same multiplier, so a combo-5 smash looks like a combo-5 smash |
 | run log | chain end | `chains: [{links, pivots, combo, paid}]`, plus `best_combo` and `misses` |
 | codex | first combo ≥ 3 | discovery card "Chain" opens, with the two causes and the effect drawn (WY callout grammar) |

@@ -117,7 +117,8 @@ const ROWS := {
 	# inside BossRules.INTRO_SECONDS (3.0 s, no attack lands); phase panels inside the 2.0 s
 	# transition beat (fight_phases.gd); rout and sign-on share the victory window.
 	"brindle_arrival": {"priority": 3, "on": "arrival", "boss": "brindle",
-		"world": {"full": [{"kind": "rise", "at": 0.0, "seconds": 1.4}]},
+		"world": {"full": [{"kind": "rise", "at": 0.0, "seconds": 1.4}, {"kind": "glance", "anchor": "ship", "seconds": 0.9}],
+			"short": [{"kind": "glance", "anchor": "ship", "seconds": 0.7}]},
 		"full": [
 			{"kind": "speed_lines", "at": 0.0, "for": 0.9},
 			{"kind": "sfx_word", "at": 0.1, "for": 1.0, "text": "HONK", "anchor": "ship"},
@@ -135,6 +136,7 @@ const ROWS := {
 	# stamp goes centre, clear of a taunt bubble up the column: the transition beat (#391) commits
 	# no attack while it shows.
 	"brindle_phase_2": {"priority": 3, "on": "phase", "boss": "brindle", "phases": [2],
+		"world": {"full": [{"kind": "glance", "anchor": "ship", "seconds": 0.7}], "short": [{"kind": "glance", "anchor": "ship", "seconds": 0.6}]},
 		"full": [
 			{"kind": "caption", "at": 0.0, "for": 1.5, "slot": "left_low",
 				"text": ["Brindle revises the arithmetic.", "Brindle carries the one.", "The figures were optimistic."]},
@@ -145,6 +147,7 @@ const ROWS := {
 			{"kind": "stamp", "at": 0.1, "for": 1.1, "text": "FURNACE LIT", "colour": "AMBER", "slot": "centre"},
 		]},
 	"brindle_phase_3": {"priority": 3, "on": "phase", "boss": "brindle", "phases": [3],
+		"world": {"full": [{"kind": "glance", "anchor": "ship", "seconds": 0.7}], "short": [{"kind": "glance", "anchor": "ship", "seconds": 0.6}]},
 		"full": [
 			{"kind": "caption", "at": 0.0, "for": 1.5, "slot": "left_low",
 				"text": ["Dignity: optional.", "Brindle rounds down. Once.", "Plan C. There was no plan B."]},
