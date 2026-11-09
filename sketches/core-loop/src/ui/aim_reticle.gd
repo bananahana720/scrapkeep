@@ -152,7 +152,7 @@ func _out_of_range(aim: Dictionary) -> bool:
 	var query := PhysicsRayQueryParameters3D.create(from, from - camera.global_basis.z * Augments.AIM_CAST,
 		Augments.WORLD_MASK | Augments.ENEMY_MASK)
 	var hit: Dictionary = camera.get_world_3d().direct_space_state.intersect_ray(query)
-	return not hit.is_empty() and (hit["position"] as Vector3).distance_to(player.ball_position()) > player.grapple_range()
+	return not hit.is_empty() and (hit["position"] as Vector3).distance_to(player.shown_position()) > player.grapple_range()
 
 
 # What the reticle draws for an aim style. While a line stands it is a dot: the latch is shown

@@ -36,7 +36,7 @@ func _fader_table() -> void:
 	seq.parameters = {"threat": 0.0, "armour": 1.0, "speed": 0.0, "chain": 0.0}
 	t.eq("standing still silences the drums", seq.parameter_gain("drums"), 0.0)
 	t.eq("standing still leaves the bass", seq.parameter_gain("bass"), 1.0)
-	t.eq("no chain leaves the lead shut at rest", seq.parameter_gain("other"), 0.0)
+	t.eq("no chain leaves the lead at its shelf floor", seq.parameter_gain("other"), Ace.LEAD_FLOOR)
 	seq.parameters.speed = Ace.DRUMS_IN_SPEED
 	t.eq("drums stay out at a quarter of top speed", seq.parameter_gain("drums"), 0.0)
 	seq.parameters.speed = 0.375
@@ -44,11 +44,11 @@ func _fader_table() -> void:
 	seq.parameters.speed = Ace.DRUMS_FULL_SPEED
 	t.eq("drums are full at half top speed", seq.parameter_gain("drums"), 1.0)
 	seq.parameters.chain = Audio.chain_fader(2)
-	t.near("the sax hook enters at chain 2", seq.parameter_gain("other"), 1.0 / 3.0, 0.001)
+	t.near("the sax hook lifts a third of the way at chain 2", seq.parameter_gain("other"), lerpf(Ace.LEAD_FLOOR, 1.0, 1.0 / 3.0), 0.001)
 	seq.parameters.chain = Audio.chain_fader(4)
 	t.eq("the lead is full at chain 4", seq.parameter_gain("other"), 1.0)
 	seq.parameters.chain = Audio.chain_fader(1)
-	t.eq("a chain of one is no chain", seq.parameter_gain("other"), 0.0)
+	t.eq("a chain of one is no chain", seq.parameter_gain("other"), Ace.LEAD_FLOOR)
 	seq.parameters.erase("speed")
 	t.eq("a feed without speed leaves the drums alone", seq.parameter_gain("drums"), 1.0)
 	seq.parameters.speed = 0.0

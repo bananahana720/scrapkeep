@@ -4,7 +4,9 @@ extends Node
 # rows and their words are flourish_rows.gd; the player draws them. This file reads the bus and
 # the flow and applies nothing.
 #
-#   cold_open            stage 1 entered fresh (not a retry) as a run's first stage
+#   cold_open            stage 1 entered fresh (not a retry) as a run's first stage; in a played
+#                        game it waits for the title's turn in the run's opening (opening.gd),
+#                        so it starts when the launch take's panel has gone and not under it
 #   rivet_freed          rescue_completed("rivet"), anchored on the cage
 #   flume_warden_reveal  warden_sighted on a world 1 stage whose Warden is the meltdown variant,
 #                        once per run (before the fight, as Moss's Warden line)
@@ -39,6 +41,8 @@ var _brindle_beaten := false
 var _asked := {}
 # Beats held while a Warden fight holds the screen: [row id, anchors], played on the unseal.
 var _after_fight: Array = []
+# The cold open is due and waits for the title's turn.
+var _open_due := false
 
 
 func setup(ctx_ref, flourish_player) -> void:
@@ -56,6 +60,9 @@ func setup(ctx_ref, flourish_player) -> void:
 	events.world_entered.connect(_on_world_entered)
 	player.finished.connect(_on_finished)
 	player.started.connect(_on_started)
+	var opening = _opening()
+	if opening != null:
+		opening.turned.connect(_on_turned)
 	events.flow_changed.connect(func(state: String):
 		if state in STOP_SCREENS:
 			_after_fight.clear()
@@ -68,6 +75,7 @@ func _on_run_started(_class_id: String) -> void:
 	_brindle_beaten = false
 	_asked.clear()
 	_after_fight.clear()
+	_open_due = false
 
 
 func _on_boss_defeated() -> void:
@@ -85,10 +93,26 @@ func _in_world_one(stage: int) -> bool:
 
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_after_fight.clear()
+	_open_due = false
 	if retry:
 		player.stop_all()
 	elif stage == 1 and _in_world_one(stage):
-		player.play("cold_open")
+		var opening = _opening()
+		if opening != null and opening.waits("title"):
+			_open_due = true
+		else:
+			player.play("cold_open")
+
+
+func _opening():
+	return ctx.root.get("opening") if ctx.root != null else null
+
+
+func _on_turned(voice: String) -> void:
+	if voice == "title" and _open_due:
+		_open_due = false
+		if ctx.flow != null and ctx.flow.in_stage() and not _fight_live():
+			player.play("cold_open")
 
 
 func _on_rescue_completed(quest: String) -> void:

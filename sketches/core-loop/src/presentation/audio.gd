@@ -226,6 +226,9 @@ var _unmute_at := -1
 # landing hands it to the synth on a beat. _handover_at is that beat while it is coming.
 var _ace_flight := false
 var _handover_at := -1
+# The recorded band's kill cadence has answered the Warden break whose release the engine still
+# carries (_answer_release): that release no longer reaches the recorded band.
+var _release_answered := false
 var _ace_arrival_stage := 0
 var _ace_arrival_at := -1
 # The transport sample the synth band starts fading out under the ACE band, -1 when the
@@ -819,6 +822,7 @@ func _pump(virtual_frames := -1) -> void:
 		_ace_stage(stage, engine.next_bar())
 	if ace != null:
 		ace.set_fight_floor(_ace_fight_floor())
+		_answer_release()
 	var ace_live := ace != null and ace.active()
 	_hand_over_band()
 	_release_grid()
@@ -907,7 +911,7 @@ func _render_music(frames: int, ace_live: bool) -> void:
 
 func _commit_band_parameters(at: int, values: Dictionary, released: bool, lift: bool, reason: String) -> void:
 	if ace != null:
-		ace.commit_parameters(at, values, released, lift, reason, {"phrase_step": engine._bar_step, "phrase": engine._parameter_phrase_due})
+		ace.commit_parameters(at, values, released and not _release_answered, lift, reason, {"phrase_step": engine._bar_step, "phrase": engine._parameter_phrase_due})
 	# The committed approach is the landmark's reach (sample_run_parameters): its tune in and out.
 	if values.has("approach"):
 		landmark_moment(_landmark_id(), float(values["approach"]))
@@ -1094,7 +1098,7 @@ func _prime_band_parameters() -> void:
 	ace.parameter_enabled = engine.parameter_source.is_valid()
 	if ace.parameter_enabled:
 		ace.parameters = engine.parameter_committed_values.duplicate()
-		ace.parameter_released = engine.parameter_committed_released
+		ace.parameter_released = engine.parameter_committed_released and not _release_answered
 		ace._parameter_danger_floor = engine.parameter_committed_danger_floor
 		ace.pressure = float(ace.parameters.get("threat", 0.0))
 		ace.ultimate_lift = engine.ultimate_lift
@@ -1515,6 +1519,21 @@ func ace_playing() -> bool:
 	return ace != null and ace.mode != "off"
 
 
+# The recorded band's kill cadence has entered: it answers the Warden break, so the release
+# stops reaching the recorded band (ruling bt), and a tune moment, a find or a pack swap that
+# restarts that band on the shelf afterwards starts it with its lead. The engine keeps its own
+# release to the next stage: the landmark hum and the synth band stay stripped as before. A
+# band that plays no cadence (a flat pack) keeps the release to the next stage too.
+func _answer_release() -> void:
+	if _release_answered and not engine.parameters_released():
+		_release_answered = false
+	if not ace.lead_returned:
+		return
+	_release_answered = engine.parameters_released()
+	ace.clear_release()
+	ace.lead_returned = false
+
+
 # The synth takes the stage stingers back once the ACE band has stopped.
 func _release_grid() -> void:
 	if engine.grid != null and not ace_playing():
@@ -1751,7 +1770,7 @@ func _end_hum(node_id: int) -> void:
 func _threat_distance_db(node: Node) -> float:
 	if ctx == null or ctx.player == null or not node.has_method("threat_at"):
 		return 0.0
-	var gap: float = (node.threat_at() as Vector3).distance_to(ctx.player.ball_position())
+	var gap: float = (node.threat_at() as Vector3).distance_to(ctx.player.shown_position())
 	return 9.0 * clampf((gap - 20.0) / 40.0, 0.0, 1.0)
 
 
@@ -2247,7 +2266,7 @@ func _tend_hum() -> void:
 	if not standing:
 		_stop_hum()
 		return
-	hum_pitch = hum_ratio(player.ball_position().distance_to(kit.anchor)) if kit.on_body else 1.0
+	hum_pitch = hum_ratio(player.shown_position().distance_to(kit.anchor)) if kit.on_body else 1.0
 	if _sfx != null and _hum_voice != AudioStreamPlaybackPolyphonic.INVALID_ID:
 		_sfx.set_stream_pitch_scale(_hum_voice, hum_pitch)
 
@@ -2417,7 +2436,8 @@ func _book_park_drop(event_id: String, cue: Dictionary) -> void:
 		PRIORITY_DB[Rows.priority("event_started")], event_id)
 
 
-# Check the director's exact guards before a block can render the predicted impact.
+# Check the director's exact guards before a block can render the predicted impact: the same
+# guards on the same ball, so the tick's place and the tick's velocity, never the drawn place.
 # Holding starts at the deadline; checking clearance during the lead protects the ring.
 func _guard_park_bookings() -> void:
 	var director = _park_director()
@@ -2793,8 +2813,8 @@ func _tend_specials() -> void:
 		return
 	var from := Vector3.ZERO
 	var player = ctx.get("player") if ctx != null else null
-	if player != null and player.has_method("ball_position"):
-		from = player.ball_position()
+	if player != null and player.has_method("shown_position"):
+		from = player.shown_position()
 	var distances := {}
 	for id in _specials.keys():
 		var row: Dictionary = _specials[id]
@@ -3539,7 +3559,7 @@ func _follow_brindle() -> void:
 	if engine.section == "chase":
 		var scooter = boss.get("scooter")
 		if scooter is Node3D and is_instance_valid(scooter) and boss.has_method("scooter_landed") and boss.scooter_landed():
-			var lead: float = (scooter as Node3D).global_position.distance_to(ctx.player.ball_position())
+			var lead: float = (scooter as Node3D).global_position.distance_to(ctx.player.shown_position())
 			if _chase_lead0 < 0.0:
 				_chase_lead0 = maxf(lead, 1.0)
 			engine.chase(clampf(1.0 - lead / _chase_lead0, 0.0, 1.0))
@@ -3826,7 +3846,7 @@ func _on_synergy(_id: String, _category: String, first_time: bool) -> void:
 func sample_run_parameters() -> Dictionary:
 	if ctx.run == null or ctx.player == null or ctx.flow == null or not ctx.flow.in_play():
 		return {}
-	var at: Vector3 = ctx.player.ball_position()
+	var at: Vector3 = ctx.player.shown_position()
 	var forward: Vector3 = ctx.aim_forward()
 	var enemies: Array = get_tree().get_nodes_in_group("enemy") if is_inside_tree() else []
 	var values := {"threat": run_threat(at, forward, enemies, parameter_threat_weights, parameter_threat_range)}
@@ -3999,6 +4019,7 @@ func _flush_flow() -> void:
 					engine.menu_theme("title", true, at)
 					_menu_home(at)
 			"unseal":
+				_release_answered = false
 				engine.parameters_warden_broken()
 				_unseal_ms = Time.get_ticks_msec()
 				if ace_playing():

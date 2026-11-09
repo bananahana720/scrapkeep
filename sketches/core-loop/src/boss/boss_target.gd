@@ -147,6 +147,15 @@ func chunk_cracked() -> bool:
 	return boss != null and boss.chunk_cracked()
 
 
+# A hull boss's held phase banks hits toward its next bar (boss.gd banking); nothing else does.
+func banking() -> bool:
+	return boss != null and boss.has_method("banking") and boss.banking()
+
+
+func bank_cap() -> float:
+	return boss.bank_cap() if boss != null and boss.has_method("bank_cap") else 0.0
+
+
 func judge_hit(strike_kind: String, punch: float, smash: bool, tier: int) -> Dictionary:
 	return boss.judge_hit(self, strike_kind, punch, smash, tier) if boss != null else {}
 

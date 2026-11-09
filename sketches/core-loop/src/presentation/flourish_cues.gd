@@ -280,7 +280,7 @@ func _eject(at: float, seconds: float) -> void:
 	var scooter = boss.get("scooter") if boss != null else null
 	if not (arena is Node3D) or not is_instance_valid(arena):
 		return
-	var from: Vector3 = scooter.global_position if scooter is Node3D and is_instance_valid(scooter) else ctx.player.ball_position()
+	var from: Vector3 = scooter.global_position if scooter is Node3D and is_instance_valid(scooter) else ctx.player.shown_position()
 	var prop := Node3D.new()
 	prop.name = "RoutScooter"
 	arena.add_child(prop)

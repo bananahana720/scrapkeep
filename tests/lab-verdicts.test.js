@@ -7,6 +7,7 @@ import os from "node:os";
 import { fileURLToPath } from "node:url";
 
 import { validateVerdicts } from "../scripts/lab/verdicts.mjs";
+import { shallowClone } from "./preconditions.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REAL_FILE = path.join(root, "docs/playtests/verdicts.ndjson");
@@ -52,7 +53,7 @@ async function fixtureFile(temporary, record) {
   return file;
 }
 
-test("the real verdicts file validates against the real log", async () => {
+test("the real verdicts file validates against the real log", { skip: shallowClone }, async () => {
   const { ok, problems } = validateVerdicts({ file: REAL_FILE, log: REAL_LOG, git: root });
   assert.deepEqual(problems, []);
   assert.equal(ok, true);
@@ -117,7 +118,7 @@ test("a fake commit sha fails validation", async (t) => {
   assert.ok(problems.some((problem) => problem.includes("not a commit")));
 });
 
-test("a real commit the entry does not name fails validation", async (t) => {
+test("a real commit the entry does not name fails validation", { skip: shallowClone }, async (t) => {
   const { temporary, log } = await fixtureLog(t);
   const file = await fixtureFile(temporary, {
     entry: 1,
@@ -181,7 +182,7 @@ test("tags must be an array", async (t) => {
   assert.ok(problems.some((problem) => problem.includes('"tags"')));
 });
 
-test("a valid line for entry 2's heading and build resolves independently of entry 1", async (t) => {
+test("a valid line for entry 2's heading and build resolves independently of entry 1", { skip: shallowClone }, async (t) => {
   const { temporary, log } = await fixtureLog(t);
   const file = await fixtureFile(temporary, { entry: 2, ...ENTRY_2, tags: [] });
   const { ok, problems } = validateVerdicts({ file, log, git: root });
@@ -189,13 +190,13 @@ test("a valid line for entry 2's heading and build resolves independently of ent
   assert.equal(ok, true);
 });
 
-test("the CLI exits 0 for the real file", async () => {
+test("the CLI exits 0 for the real file", { skip: shallowClone }, async () => {
   const real = spawnSync(process.execPath, [CLI], { cwd: root, encoding: "utf8" });
   assert.equal(real.status, 0);
   assert.equal(real.stderr, "");
 });
 
-test("the CLI exits 0 for a valid --file/--log pair pointing at temp copies", async (t) => {
+test("the CLI exits 0 for a valid --file/--log pair pointing at temp copies", { skip: shallowClone }, async (t) => {
   const { temporary, log } = await fixtureLog(t);
   const file = await fixtureFile(temporary, { entry: 1, ...ENTRY_1, tags: [] });
   const result = spawnSync(process.execPath, [CLI, "--file", file, "--log", log], {

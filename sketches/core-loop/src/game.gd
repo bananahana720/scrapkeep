@@ -50,6 +50,7 @@ const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
+const Opening := preload("res://src/presentation/opening.gd")
 # The camp, the workshop, the pause menu and the met-enemy watch are not on the title's path, so they
 # are loaded when first needed (menu_modules); a played game builds them a few frames after the menu.
 const MENU_PATHS := [
@@ -128,6 +129,8 @@ var screens
 var radio_deck
 # The comic swipe that hides the cut from pilot select or the camp gate into the dam (launch_take.gd).
 var launch_take
+# A run's opening, one voice at a time (opening.gd): the speakers ask it, and it reads the rest.
+var opening
 var _first_control_said := false
 # The walkable camp (camp_hub.gd). Reading it builds the menu modules if they are not up yet.
 var camp_hub:
@@ -229,6 +232,10 @@ func _ready() -> void:
 	flow.name = "Flow"
 	add_child(flow)
 	ctx.flow = flow
+	# Before every speaker, so each can hear its turn from its own setup.
+	opening = Opening.new()
+	add_child(opening)
+	opening.setup(self)
 	if test_mode:
 		storage_dir = "user://test-%d" % OS.get_process_id()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
@@ -798,7 +805,10 @@ func _take_live() -> bool:
 # A pilot picked on pilot select: the deck camera lifts, the swipe covers, the run starts under it.
 func pick_pilot(index: int) -> void:
 	launch_take.live = _take_live()
-	launch_take.play(func(): flow.choose_class(index), func():
+	launch_take.play(func():
+		if flow.state_name() == "class_select":
+			_begin_opening()
+		flow.choose_class(index), func():
 		screens.fade_for_launch()
 		_launch_whoosh()
 		var title_stage = presentation.get("title_stage") if presentation != null else null
@@ -837,6 +847,7 @@ func launch_from_gate() -> void:
 		if flow.state_name() != "title":
 			return
 		screens.stop_walk_for_launch()
+		_begin_opening()
 		flow.launch_from_title(def), _fire_gate, _dam_drawn)
 
 
@@ -870,6 +881,12 @@ func _say_first_control() -> void:
 		return
 	_first_control_said = true
 	print("SCRAPKEEP_FIRST_CONTROL ms=%d" % Time.get_ticks_msec())
+
+
+# A run the take starts in a played game has an opening (opening.gd). A bot's take is not live.
+func _begin_opening() -> void:
+	if launch_take.live:
+		opening.begin()
 
 
 # The take is gone: the start-pick card it kept hidden shows, and first control is said.
