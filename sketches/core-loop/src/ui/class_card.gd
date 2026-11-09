@@ -110,6 +110,7 @@ var _fade_rect: TextureRect
 var _preview_h := PREVIEW_H
 var _name_label: Label
 var _role_label: Label
+var _line: Label
 var _tradeoff: Label
 var _serial := 0
 var locked := false
@@ -171,6 +172,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	# Two lines tall on every card, so the key rows line up across the three.
 	line.custom_minimum_size = Vector2(0.0, 58.0)
 	line.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_line = line
 	box.add_child(line)
 	var tradeoff_slot := Control.new()
 	tradeoff_slot.custom_minimum_size.y = TRADEOFF_H
@@ -243,6 +245,16 @@ func name_label() -> Label:
 
 func role_label() -> Label:
 	return _role_label
+
+
+func fantasy_label() -> Label:
+	return _line
+
+
+# True once the containers have given the column its width. Before that first sort a wrapped
+# line measures one letter wide, so its height is no height to level a row by.
+func laid_out() -> bool:
+	return _box == null or (_box.size.x > 1.0 and _line.size.x > 1.0)
 
 
 func tradeoff_text() -> String:

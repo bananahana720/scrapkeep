@@ -8,7 +8,9 @@ Live coordination material for the alpha. The project coordinator (claude.ai pro
 | [DECISIONS.md](DECISIONS.md) | Every ruling by Andrew. Newest wins |
 | [LESSONS.md](LESSONS.md) | Ways of working that still apply |
 | [ROADMAP.md](ROADMAP.md) | The one roadmap: world 1 sitting, full alpha, after the alpha |
-| [STATE.md](STATE.md) | Wave state, base reds and cloud false fails |
+| [STATE.md](STATE.md) | Wave state: the Wave facts table (the one place that names the live board), holds and carried reds |
+| [GATE.md](GATE.md) | The promotion gate recipe: shards, bands, the tally check |
+| [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) | The ledger of red tests a promotion may carry, each with a cause, an owner and a review date |
 | [WEEKLY.tsv](WEEKLY.tsv) | Tests the promotion gate leaves to the weekly sweep (ruling ca): parked worlds and old-map bot proofs, each with why and when it returns |
 | [DEEP-SWEEP.md](DEEP-SWEEP.md) | The deep-modules sweep run after every promotion |
 | [THREADS.md](THREADS.md) | Threads and sessions, and who owns what |
@@ -17,4 +19,4 @@ Live coordination material for the alpha. The project coordinator (claude.ai pro
 | [shared/](shared/INDEX.md) | Reference files lanes rely on |
 | [sitting-kit/](sitting-kit/README.md) | The playtest sitting page and its server |
 
-The live board is the current wave's board issue (#627 for wave 32; STATE.md names the current one) plus `/mnt/project-files/gate/w<N>-stack-queue.md`. [project-guide/coord/GRAPH.md](../coord/GRAPH.md) is the wave 18 board, kept as history.
+The live board is the current wave's board issue (STATE.md's Wave facts table names it, and is the only page that does) plus `/mnt/project-files/gate/w<N>-stack-queue.md`. [project-guide/coord/GRAPH.md](../coord/GRAPH.md) is the wave 18 board, kept as history.
