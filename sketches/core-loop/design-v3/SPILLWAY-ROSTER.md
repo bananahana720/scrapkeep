@@ -26,7 +26,7 @@ Rejected: the bola thrower (tests the air, the Highdraft's verb), the gyro jamme
 
 ## Old jobs (ruling ch, 9 Nov 2026)
 
-Andrew ruled that ordinary enemies are the old works' machines still on the job, requisitioned by the Fleet, and that each attack is the old job done to you ([Story map](STORY-MAP.md), ruling ch). The Spillway is a water works, and to its machines the ball is something in the water that should not be there. The jobs below are working calls from the game systems thread, written to fit each kind's rule as built; Andrew can strike any of them. The art thread draws from this table (the tool is the silhouette and the only hand-fitted part), the sound thread takes the job's noise from it, and each kind's line in `src/combat/roster.gd` gains the job in one clause in a later unit.
+Andrew ruled that ordinary enemies are the old works' machines still on the job, requisitioned by the Fleet, and that each attack is the old job done to you ([Story map](STORY-MAP.md), ruling ch). The Spillway is a water works, and to its machines the ball is something in the water that should not be there. The jobs below are working calls from the game systems thread, written to fit each kind's rule as built; Andrew can strike any of them. The art thread draws from this table (the tool is the silhouette and the only hand-fitted part), the sound thread takes the job's noise from it, and each kind's row in `src/combat/roster.gd` and `roster_specials.gd` carries the job as its `job` line, which the camp's enemy list shows ahead of the kind's own line.
 
 | Kind | Old job | The tool | To it, you are |
 | --- | --- | --- | --- |
