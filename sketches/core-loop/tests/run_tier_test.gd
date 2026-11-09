@@ -704,7 +704,10 @@ func _mouse_tiles() -> void:
 			var widths := []
 			var total := StartCard.TILE_GAP * (tiles.size() - 1)
 			for tile in tiles:
-				var width := StartCard.PAD * 2.0 + StartCard.KEY + StartCard.GAP * 2.0 + StartCard.ICON + UiFonts.bold().get_string_size(tile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.FONT).x
+				# A tile is as wide as the wider of its name and the effect line under it.
+				var words := maxf(UiFonts.bold().get_string_size(tile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.FONT).x,
+					UiFonts.bold().get_string_size(tile.effect, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.EFFECT_FONT).x)
+				var width := StartCard.PAD * 2.0 + StartCard.KEY + StartCard.GAP * 2.0 + StartCard.ICON + words
 				widths.append(width)
 				total += width
 			var label := "narrow" if offer_index == 0 else "wide"

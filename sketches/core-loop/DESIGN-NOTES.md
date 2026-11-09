@@ -2861,7 +2861,7 @@ The engine's `ui_accept` held Enter, Kp Enter and Space and `ui_cancel` held Esc
 
 ## Activity signposting (alpha full-send wave 1, AS)
 
-- **Call.** One amber edge marker per unfinished activity site from drop-in, coloured by the site's own activity row, hidden while the Warden fight is engaged; the plate says "Find an activity" (glyph `obj_event`) while the beacon is sealed, the fight is not engaged and a site is left, then the Warden rows as before. The plate and the markers read one count, `edge_markers.unfinished_sites()`. Principle: readability first, one meaning per layer.
+- **Call.** One amber edge marker per unfinished activity site from drop-in, coloured by the site's own activity row, hidden while the Warden fight is engaged; the plate says "Find an activity" (glyph `obj_event`) while the beacon is sealed, the fight is not engaged and a site is left, then the Warden rows as before (since 9 Nov 2026 the same row names the nearest site by its verb, with the metres to it: `Objectives.ACTIVITY_WORDS`). The plate and the markers read one count, `edge_markers.unfinished_sites()`. Principle: readability first, one meaning per layer.
 - **Debt.** The marker is chevron-only; the site row's shape is not drawn. On Andrew's veto list: the plate pointing at activities before the Warden.
 - **Test.** `tests/activity_signpost_test.gd` (done-filter mutant red).
 

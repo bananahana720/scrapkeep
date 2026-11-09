@@ -85,8 +85,8 @@ These mirror `src/ui/field_notes.gd`. The Tab overlay no longer prints them.
 
 ### Testing in this build
 
-- One run: title, class, then the stages of each world. A Warden clamps each stage's beacon. Break it, roll through a reward gate, and launch into the next stage. A boss victory launches the next world; the summary follows the last world's boss.
-- Growth is heft. Scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.
+- One run: title, class, then the stages of each world. A Warden clamps each stage's beacon. Grow, crack its guard, smash its open core, then roll through a reward gate, and launch into the next stage. A boss victory launches the next world; the summary follows the last world's boss.
+- Growth is heft. Scrap you roll up becomes mass, parts add more, and heft multiplies your punch. The plate at the top of the screen is the Warden's guard: hits fill its bar, a full bar staggers the Warden and opens its core, and a hit on the open core shatters one of its chunks. A light ball fills the bar slowly, so grow and come back.
 - Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores, the diamonds beside the objective, which raise the gate tiers.
 - Sable's pylon banks the speed you plant with. Space slingshots you off along the face with that speed plus a boost, and E drops off where you are. The camera goes to the shoulder while you are mounted.
 - Death takes one key. A death ends the run; N starts a new run as the same class, and a fresh press of N rolls it at once (a key held through the death waits for its release). Hold R in play to restart the run.
@@ -103,7 +103,7 @@ These mirror `src/ui/field_notes.gd`. The Tab overlay no longer prints them.
 
 1. Pick a class with its number key or a click. You drop in already rolling. The Warden is at the beacon you can see from the drop, and a chevron at the screen edge points to it when it is out of view.
 2. Roll the scrap lines on the way down. Scrap is your armour and your weight, and a heavier ball hits harder.
-3. Break the Warden. The line at the top of the screen says what it wants next. Its gates open when it breaks; roll through one to take its part.
+3. Break the Warden. The line at the top of the screen says what it wants next. At the dam, ride the water sheet up the face into its core; at the flume, latch your line onto it and fire. Its gates open when it breaks; roll through one to take its part.
 4. As Sable, hit a steep face at speed and press E. Fire with left mouse, then hold and release Space to slingshot off.
 5. Get scrapped on purpose, then hold R. You are in a new run as the same pilot, back at world 1.
 
