@@ -116,6 +116,17 @@ test("the stale rule compares a row that points into an archive against board ev
   );
 });
 
+test("two rulings that take the same letter fail on the later row", async () => {
+  const { status, stdout, report } = await runFixture("ruling-letter-twice");
+  assert.equal(status, 1, stdout);
+  const failures = report.findings.filter((entry) => entry.level === "failure");
+  assert.equal(failures.length, 1, stdout);
+  assert.equal(failures[0].check, "rulings");
+  assert.equal(failures[0].file, "project-guide/handoff/DECISIONS.md");
+  assert.equal(failures[0].line, 7);
+  assert.match(failures[0].message, /^ruling cb already names the row on line 6; give this ruling the next free letter$/);
+});
+
 test("the historical IN_REVIEW token fails the state vocabulary rule", async () => {
   const { status, stdout, report } = await runFixture("state-in-review");
   assert.equal(status, 1, stdout);
