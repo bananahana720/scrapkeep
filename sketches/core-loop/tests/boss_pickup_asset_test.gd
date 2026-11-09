@@ -26,7 +26,9 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # arena; pickup meshes unchanged. Was e34f3fd2.
 # Re-pinned 2026-11-08 (state-machine audit, #616): drone pads clear at a phase turn and the phase 3
 # charge states are named constants with an unknown-state fallback; pickup meshes unchanged. Was acf817b9.
-const BASE_LOGIC_SHA := "5121cd32007d5c41984439b0a7958c159e0e80188dcb7c948f371206321b4b29"
+# Re-pinned 2026-11-09 (charge fling, #639): the hull turns onto a charge's heading through the tell instead
+# of snapping at the commit, and the Scuttle counts short tries for its hint; pickup meshes unchanged. Was 5121cd32.
+const BASE_LOGIC_SHA := "e26cc56770f899467dec721976572ed70002e3c82a828857a5c5f25646629557"
 
 var failures := 0
 var game
