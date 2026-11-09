@@ -306,6 +306,10 @@ const SET_CHIME := [77, 81, 86]
 const SET_CHIME_VOICES := {"arc": "clav", "frost": "bell"}
 const SET_CHIME_DONE_VOICE := "beep"
 const SET_CHIME_LEAD_S := 0.12
+# The band sits at this gain under the chime. Its notes are the home chord's, which the band is
+# playing too: over the recorded band the last note stood only 2 to 5 dB over the band's own D
+# (PC listen, 9 November 2026).
+const SET_CHIME_DUCK := 0.6
 # The band answers a long chain by name: the pilot's quote starts a beat after the chain lands, and
 # not again for PILOT_QUOTE_BARS bars of the sounding band (sound/INTEGRATION.md section 6), so it
 # stays a treat.
@@ -3336,6 +3340,7 @@ func set_complete(element: String) -> int:
 		var done: bool = i == SET_CHIME.size() - 1
 		_note_at("synergy_discovered", SET_CHIME_DONE_VOICE if done else voice, SET_CHIME[i], first + i * eighth,
 			0.0 if done else SfxBank.GRID_UNDER_DB)
+	_duck(SET_CHIME_DUCK, float(first + SET_CHIME.size() * eighth - engine.clock) / Harmony.RATE)
 	return first
 
 
