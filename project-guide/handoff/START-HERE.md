@@ -24,7 +24,7 @@ One home for every fact (ruling bz, Andrew, 9 Nov): update the page, doc or reco
 | Handing over | Nothing new | A draft pull request on the open stage, then one READY comment on the board with the receipts |
 | Running a gate shard | [GATE.md](GATE.md), [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv), the gate plan under `/mnt/project-files/gate/` | The receipt under `/mnt/project-files/gate/w<N>-<head>/`, the verdict on the board, a reply to the Gate thread |
 | Needing Andrew | [DECISIONS.md](DECISIONS.md) first: a ruled question is not asked again | A card to the coordinator (question, options, a recommendation); never a question inside a thread |
-| Holding a new ruling | The row it replaces | [DECISIONS.md](DECISIONS.md) on the open stage, then its two copies in the same turn (step 2 above) |
+| Holding a new ruling | The row it replaces, and the last letter taken | [DECISIONS.md](DECISIONS.md) on the open stage, then its two copies in the same turn (step 2 above). `npm run check:docs` fails a letter used twice |
 | Holding a lesson | [LESSONS.md](LESSONS.md), to see it is new | One numbered line in LESSONS.md; an art mistake goes in ART-MISTAKES.md |
 | Showing Andrew something | The library (`/mnt/project-files/INDEX.md`), to find the page that already covers it | That page, updated. A new page gets a line in INDEX.md and on the Library page in the same turn |
 | Keeping evidence | `/mnt/project-files/INDEX.md`, for the folder that owns the area | The area's folder under `/mnt/project-files/`. Disposable output stays in `artifacts/local/` |
