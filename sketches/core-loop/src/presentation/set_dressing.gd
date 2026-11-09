@@ -65,6 +65,12 @@ class Plan:
 	var rng := RandomNumberGenerator.new()
 	var ground: Callable
 	var spacing := 0.0
+	# One flag the owner raises when nobody will take the plan (the game is quitting); the loops
+	# read it and return early. Empty for a plan drawn on the caller's own thread.
+	var stop: Array = []
+
+	func stopped() -> bool:
+		return not stop.is_empty() and stop[0]
 
 func setup(context) -> void:
 	ctx = context
@@ -182,11 +188,15 @@ func _prepare_next() -> void:
 	var seed_next: int = String(ctx.stages.of(next).map).hash()
 	var flags := _flags()
 	var out := {}
-	_prep = {"key": key, "out": out,
-		"task": WorkerThreadPool.add_task(func(): out.merge(plan(rows, keep, ground, seed_next, flags)), false, "set dressing plan")}
+	var stop := [false]
+	_prep = {"key": key, "out": out, "stop": stop,
+		"task": WorkerThreadPool.add_task(func(): out.merge(plan(rows, keep, ground, seed_next, flags, stop)), false, "set dressing plan")}
 
 func _exit_tree() -> void:
 	if not _prep.is_empty():
+		# Nobody takes this plan: tell its worker to stop, so quitting waits for one loop step and
+		# not for the whole draw (2.9 s of a 14 s headless test on a 4-core box, 2026-11-09).
+		_prep.stop[0] = true
 		WorkerThreadPool.wait_for_task_completion(_prep.task)
 		_prep = {}
 
@@ -197,11 +207,15 @@ static func release_shared() -> void:
 # Every batch's instance buffer, drawn from the map's seeded stream in the order the batches are
 # built (SWAP-HITCH-2: 250 to 430 ms of a new stage's entry). Pure: map is map_rows(), rows the
 # stage's keepouts and ground the stage's ground callable, so a worker can draw it.
-static func plan(map: Dictionary, rows: Array, ground: Callable, seed_number: int, flags: Dictionary) -> Dictionary:
+# stop is the owner's one-element flag (Plan.stop); a stopped plan returns what it has, to be dropped.
+static func plan(map: Dictionary, rows: Array, ground: Callable, seed_number: int, flags: Dictionary, stop: Array = []) -> Dictionary:
 	var p := Plan.new()
 	p.rng.seed = seed_number
 	p.ground = ground
+	p.stop = stop
 	var out := {}
+	if p.stopped():
+		return out
 	if flags.props:
 		var rect: Rect2 = map.play_rect
 		var clusters := _cluster_centres(p, map, rect, rows)
@@ -209,12 +223,16 @@ static func plan(map: Dictionary, rows: Array, ground: Callable, seed_number: in
 		for kit_name in KIT_ORDER:
 			lists[kit_name] = []
 		for centre: Vector2 in clusters:
+			if p.stopped():
+				return out
 			_place_cluster(p, centre, rect, rows, lists)
 		out.clutter = {}
 		for kit_name in KIT_ORDER:
 			out.clutter[kit_name] = _instance_buffer(p, lists[kit_name], "")
 		var rocks := []
 		for i in 700:
+			if p.stopped():
+				return out
 			var x := p.rng.randf_range(-192.0, 192.0)
 			var z := p.rng.randf_range(-192.0, 192.0)
 			var at := Vector2(x, z)
@@ -235,6 +253,8 @@ static func plan(map: Dictionary, rows: Array, ground: Callable, seed_number: in
 		var rect: Rect2 = map.play_rect
 		var wind_angle := atan2(-WIND.y, WIND.x)
 		for i in 800:
+			if p.stopped():
+				return out
 			var x := p.rng.randf_range(rect.position.x, rect.end.x)
 			var z := p.rng.randf_range(rect.position.y, rect.end.y)
 			# Both ends of the 3 m drift remain on open, almost level ground.
@@ -320,7 +340,7 @@ static func _cluster_centres(p: Plan, map: Dictionary, rect: Rect2, rows: Array)
 				_try_centre(p, centres, at, rect, rows, 4.0)
 	var limit := centres.size() + int(map.scatter["clusters"])
 	for i in 40000:
-		if centres.size() >= limit:
+		if centres.size() >= limit or p.stopped():
 			break
 		var at := Vector2(p.rng.randf_range(rect.position.x, rect.end.x), p.rng.randf_range(rect.position.y, rect.end.y))
 		if _at_cliff_foot(p, at):

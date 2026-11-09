@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, checkMerge, planHash, jobKey, dedupeBy, bucketInfo, fightStart, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson, MAX_RUN_TIER } from "./lib.mjs";
+import { BOSSES, COLUMNS, TARGETS, aggregate, buildTable, cellVerdict, describeDoc, estimate, gradeRun, mergeLibraryIndexes, wallStats, checkMerge, planHash, jobKey, dedupeBy, bucketInfo, fightStart, median, meets, pickBuilds, planCells, renderTable, shardJobs, wilson, MAX_RUN_TIER, botArgs, qaRows, playerReport, renderPlayerReport, QA_KINDS } from "./lib.mjs";
 
 const docs = (n, stage = 2) => Array.from({ length: n }, (_, i) => ({ file: `s${stage}/d${i}.json`, stage, mass: 100 + i * 10, parts: i % 5, pilot: "tarn" }));
 const builds = () => Object.fromEntries([2, 3, 4, 5, 6].map((s) => [s, pickBuilds(docs(24, s))]));
@@ -351,4 +351,43 @@ test("--tier passes --run-tier to every job, joins the plan hash only when set, 
   const gd = readFileSync(new URL("../../sketches/core-loop/src/core/run_tier.gd", import.meta.url), "utf8");
   assert.equal(Number(/^const TOP := (\d+)$/m.exec(gd)?.[1]), MAX_RUN_TIER, "lib.mjs MAX_RUN_TIER mirrors run_tier.gd TOP");
   assert.doesNotMatch(renderTable([], {}), /Run tier/);
+});
+
+test("every band run plays with the play watch on", () => {
+  const args = botArgs({ policy: "skipper", seed: 7, args: ["--band=novice"] }, "/tmp/out");
+  assert.ok(args.includes("--qa-log=1") && args.includes("--table=park"));
+  assert.equal(args.at(-1), "--band=novice");
+});
+
+test("the player report gathers the watch's rows by kind and place, worst kind first", () => {
+  const file = [
+    { kind: "objective", stage: 1, s: 1, at: [0, 0, 0], flow: "stage", goal: "roll", id: "find_activity" },
+    { kind: "stuck", stage: 1, s: 40.5, at: [101.2, 8, -44.9], flow: "beacon", goal: "camp", v: [0, 0, 0] },
+    { kind: "wedged", stage: 1, s: 90, at: [12.4, 3.1, 407.7], flow: "stage", goal: "fight chaser", n: [1, 0.2, 0] },
+  ].map((row) => JSON.stringify(row)).join("\n") + "\n{cut short";
+  const rows = qaRows(file);
+  assert.deepEqual(rows.map((row) => row.kind), ["stuck", "wedged"], "objective rows and a torn line are left out");
+  assert.deepEqual(Object.keys(rows[0]), ["kind", "stage", "s", "at", "flow", "goal"]);
+  const runs = [
+    { id: "w1-novice-1", cell: "w1", qa: rows },
+    { id: "w1-expert-1", cell: "w1", qa: [{ kind: "wedged", stage: 1, s: 12, at: [9.6, 2.9, 411.0], flow: "stage", goal: "roll to spillway sheet" }] },
+    { id: "park1-novice-1", cell: "park1", qa: [] },
+    { id: "w1-novice-2", cell: "w1" },
+  ];
+  const report = playerReport(runs);
+  assert.equal(report.runs, 4);
+  assert.equal(report.watched, 3, "a run recorded without the watch is not counted as clean");
+  assert.deepEqual(report.kinds.wedged, { rows: 2, runs: 2 });
+  assert.deepEqual(report.kinds.stuck, { rows: 1, runs: 1 });
+  assert.deepEqual(report.kinds.fell, { rows: 0, runs: 0 });
+  assert.deepEqual(report.places.map((place) => [place.kind, place.near.join(","), place.runs]), [["wedged", "10,0,410", 2], ["stuck", "100,10,-40", 1]], "two runs at one spot are one place");
+  assert.deepEqual(report.places[0].goals, ["fight chaser", "roll to spillway sheet"]);
+  const md = renderPlayerReport(report);
+  assert.match(md, /read 3 of 4 runs/);
+  assert.match(md, /\| wedged \| 2 \| 2 \|/);
+  assert.match(md, /\| wedged \| 1 \| 10, 0, 410 \| 2 \| 2 \| w1 \|/);
+  assert.ok(md.indexOf("| wedged | 1 | 10, 0, 410") < md.indexOf("| stuck | 1 | 100, 10, -40"));
+  assert.match(renderPlayerReport(playerReport([{ id: "a", cell: "w1" }])), /No run carried the play watch's rows/);
+  assert.match(renderPlayerReport(playerReport([{ id: "a", cell: "w1", qa: [] }])), /No place was reported/);
+  assert.deepEqual(QA_KINDS.slice(0, 3), ["wedged", "fell", "blank"]);
 });
