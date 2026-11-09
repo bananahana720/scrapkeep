@@ -272,7 +272,7 @@ test("the difficulty row grades stored rates again: its own recorded bands, and 
   // 15 of 24 (62.5%) passes it; 14 of 24 (58.3%), the waiver's pass, does not, whatever mark its table stored.
   w1.columns.learner5 = col(15 / 24, true);
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 pass/);
-  w1.columns.learner5 = col(14 / 24, false);
+  w1.columns.learner5 = col(14 / 24, true);
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 fail/);
   w1.columns.learner5 = col(15 / 24, true);
   // An incomplete column is never a pass.
