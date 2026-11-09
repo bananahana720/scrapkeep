@@ -25,6 +25,10 @@ const HOME_SPEED := 16.0
 const HOME_OVER_BALL := 1.4
 const SPACING := 8.0
 const MAX_PER_LINE := 14
+# A trail piece floats this far over the ground, as a line's does; the trail is walked in steps this long.
+const TRAIL_OVER_GROUND := 1.4
+const TRAIL_STEP_M := 1.0
+const TRAIL_DROP := 1.0
 # A caught piece swings in on a curve (v3 W11): sideways and up at this share of its
 # homing speed while far, straight in as it closes, so the pull reads as a greedy
 # swirl. The homing term is unchanged, so the pull takes as long as it did.
@@ -242,6 +246,62 @@ func lay_out(terrain, lines: Array, density: float, rng: RandomNumberGenerator) 
 				var across := (to - from).orthogonal().normalized() * COG_LINE_SIDE
 				var gear := spot + across
 				_add_cog(terrain.drop_point(gear.x, gear.y, 1.4), COG_LINE_VALUE)
+
+
+# Scrap along a map's trail, laid to the beat (ruling cd): one piece every spacing_m of ground rolled, in phrases of
+# `phrase` pieces with `rest` empty beats between, so a ball holding its speed takes them in time and the pickup ladder
+# climbs once a phrase. Adds to what lay_out laid. It draws no rng and lays no gears: the same stage always has the same
+# trail, and a piece is 1 mass, so the trail is something to follow and hear, not power or income.
+func lay_trail(terrain, trail: Dictionary) -> void:
+	for spot in trail_spots(trail, func(x: float, z: float) -> float: return terrain.height(x, z)):
+		_add(spot + Vector3.UP * TRAIL_OVER_GROUND)
+
+
+# Where a trail's pieces stand on the ground, in line order. The line is walked in TRAIL_STEP_M steps and measured over
+# the ground it crosses (ground: Callable (x, z) -> height), so a slope keeps the same rolled distance between pieces.
+# The beats keep counting where no piece can stand, and that beat stays empty:
+#   a ledge   a step steeper than TRAIL_DROP is flown, not rolled: only its run counts, and a piece due on its face
+#             stands a step past its foot instead (the beat slips by that much);
+#   a gap     trail["gaps"], [from, to] in metres of plan distance along the line: a built ramp over the ground.
+# Beat 0 is the line's start and stays empty (the drop-in); a phrase the line ends inside is left out whole.
+static func trail_spots(trail: Dictionary, ground: Callable) -> Array[Vector3]:
+	var spots: Array[Vector3] = []
+	var points: PackedVector2Array = trail.get("points", PackedVector2Array())
+	var spacing := float(trail.get("spacing_m", 0.0))
+	var phrase := int(trail.get("phrase", 0))
+	var period := phrase + int(trail.get("rest", 0))
+	var gaps: Array = trail.get("gaps", [])
+	if points.size() < 2 or spacing <= 0.0 or phrase <= 0:
+		return spots
+	var last := Vector3(points[0].x, ground.call(points[0].x, points[0].y), points[0].y)
+	var rolled := 0.0
+	var plan := 0.0
+	var beat := 1
+	var whole := 0
+	for i in range(1, points.size()):
+		var leg := points[i] - points[i - 1]
+		var steps := maxi(1, ceili(leg.length() / TRAIL_STEP_M))
+		for s in range(1, steps + 1):
+			var p := points[i - 1] + leg * (float(s) / steps)
+			var here := Vector3(p.x, ground.call(p.x, p.y), p.y)
+			var run := Vector2(here.x - last.x, here.z - last.z).length()
+			if absf(here.y - last.y) > run * TRAIL_DROP:
+				rolled = minf(rolled + run, spacing * beat - TRAIL_STEP_M)
+			else:
+				var stride := last.distance_to(here)
+				while stride > 0.0 and rolled + stride >= spacing * beat:
+					var t := (spacing * beat - rolled) / stride
+					var at := plan + run * t
+					if (beat - 1) % period < phrase and not gaps.any(func(g: Array) -> bool: return at >= g[0] and at <= g[1]):
+						spots.append(last.lerp(here, t))
+					if (beat - 1) % period == phrase - 1:
+						whole = spots.size()
+					beat += 1
+				rolled += stride
+			plan += run
+			last = here
+	spots.resize(whole)
+	return spots
 
 
 func clear() -> void:

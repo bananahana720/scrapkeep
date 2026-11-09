@@ -347,6 +347,11 @@ static func validate_lines(lines: Dictionary, park: Dictionary) -> Array:
 			_add(out, pilot, "line", "bar.band is %s, expected %s" % [bar["band"], LINE_BAND])
 	if _fields(out, "floor", lines["floor"], {"waypoints": "a"}):
 		_line_path(out, "floor", lines["floor"]["waypoints"], waymarks)
+		# Optional: the floor line's scrap, laid to the beat (park_map.gd scrap_trail).
+		if lines["floor"].has("scrap") and _fields(out, "floor.scrap", lines["floor"]["scrap"], {"spacing_m": "n", "phrase": "n", "rest": "n"}):
+			var scrap: Dictionary = lines["floor"]["scrap"]
+			if float(scrap["spacing_m"]) <= 0.0 or int(scrap["phrase"]) < 1 or int(scrap["rest"]) < 0:
+				_add(out, "floor.scrap", "range", "spacing_m and phrase must be over 0 and rest 0 or more")
 	return out
 
 
