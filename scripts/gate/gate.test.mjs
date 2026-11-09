@@ -6,8 +6,10 @@ import path from "node:path";
 import { indexFromFiles } from "../sketch-fast.mjs";
 import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
-import { chunks, classifyFailure, errorCounts, gateLists, nearLimit, numbered, parseSmokeLog, parseWindow, renderReceipt, shardVerdict } from "./shard.mjs";
-import { checkTally, expectedShards, tallyRows } from "./tally.mjs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, shardVerdict } from "./shard.mjs";
+import { checkTally, expectedShards, isPass, planHead, tallyRows } from "./tally.mjs";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const ledger = parseLedger(
@@ -58,7 +60,11 @@ test("error lines are counted by kind", () => {
 test("a failure is carried only with a ledger row, and blocks when it fails alone without one", () => {
   assert.equal(classifyFailure("red_test", [false, false], ledger).call, "carried");
   assert.equal(classifyFailure("wobble_test", [true, true], ledger).call, "carried");
-  assert.match(classifyFailure("wobble_test", [false, false], ledger).note, /failed every solo run/);
+  assert.equal(classifyFailure("wobble_test", [true, false], ledger).call, "carried");
+  const mismatch = classifyFailure("wobble_test", [false, false, false, false], ledger);
+  assert.equal(mismatch.call, "mismatch");
+  assert.match(mismatch.note, /failed every solo run/);
+  assert.deepEqual(shardVerdict([mismatch]), { ok: false, line: "RED: 1 listed as a flake but red alone (wobble_test)" });
   const flake = classifyFailure("fresh_test", [true, true], ledger);
   assert.equal(flake.call, "new-flake");
   assert.equal(flake.alone, "2/2 pass alone");
@@ -195,7 +201,66 @@ test("an empty verdict, a missing shard, a gap in the tests and a missing receip
 test("a red row blocks until a newer row for the same shard is not red", () => {
   const red = [...full];
   red[4] = "| bands A | RED, one new deterministic red. Receipt bands-A.md |";
-  assert.match(checkTally(tallyRows(plan(red)), counts).join("\n"), /"bands A" is red in its newest row/);
+  assert.match(checkTally(tallyRows(plan(red)), counts).join("\n"), /"bands A" does not open with PASS/);
   const reread = plan(red) + "\n\n## Head moved\n| Shard | Verdict |\n| --- | --- |\n| bands A | PASS after the re-pin. Receipt bands-A-2.md |\n";
   assert.deepEqual(checkTally(tallyRows(reread), counts), []);
+});
+
+test("a verdict passes only when it opens with PASS or CLEAR, however a red is worded", () => {
+  for (const verdict of ["PASS, no new red. Receipt a.md", "**PASS** 5/5", "Verdict: PASS, no new red", "**Verdict: PASS, no new red (1 carried on the ledger).**", "CLEAR. 0 blockers"]) assert.equal(isPass(verdict), true, verdict);
+  for (const verdict of ["RED 4/5", "NEW RED posture_bands_test", "Verdict: RED: 1 new red (foo_test). receipt gate/x", "red: foo_test failed alone, receipt gate/y", "1 new red", "FAIL", "passed mostly", "see the receipt"]) assert.equal(isPass(verdict), false, verdict);
+  const worded = [...full];
+  worded[0] = "| tests 1-5 | red: foo_test failed alone, receipt gate/y |";
+  assert.match(checkTally(tallyRows(plan(worded)), counts).join("\n"), /"tests 1-5" does not open with PASS/);
+});
+
+test("\"receipts\" counts as naming a receipt", () => {
+  const rows = [...full];
+  rows[4] = "| bands A | PASS. receipts in gate/z |";
+  assert.deepEqual(checkTally(tallyRows(plan(rows)), counts), []);
+});
+
+test("the tally refuses a plan that gates another head", () => {
+  assert.equal(planHead("/mnt/project-files/gate/w32-58a6de62-gate-plan.md"), "58a6de62");
+  assert.equal(planHead("notes.md"), null);
+  const rows = tallyRows(plan(full));
+  assert.deepEqual(checkTally(rows, { ...counts, planHead: "58a6de62", head: "58a6de6200f5d9e63434d3bfe5435606968ecf94" }), []);
+  assert.match(checkTally(rows, { ...counts, planHead: "58a6de62", head: "8180ec6cc0000000000000000000000000000000" }).join("\n"), /the plan gates 58a6de62 and this checkout is at 8180ec6c/);
+});
+
+// A sketch folder with these test files, and the weekly list beside it when one is given.
+function listsOf(files) {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "gate-weekly-"));
+  mkdirSync(path.join(dir, "tests"));
+  for (const [name, text] of Object.entries(files)) writeFileSync(path.join(dir, name === "WEEKLY.tsv" ? "." : "tests", name), text);
+  return gateLists(dir, path.join(dir, "WEEKLY.tsv"));
+}
+const weeklyHead = WEEKLY_HEADER.join("\t") + "\n";
+const plainTest = "extends SceneTree\n";
+const botTest = "# smoke: bots\nextends SceneTree\n";
+
+test("the weekly list takes its tests out of the promotion lists and keeps them in their own", () => {
+  const lists = listsOf({
+    "a_test.gd": plainTest,
+    "b_test.gd": plainTest,
+    "bot_c_test.gd": botTest,
+    "bot_d_test.gd": botTest,
+    "WEEKLY.tsv": weeklyHead + "b_test\tworld2\tparked by ruling at\tworlds 2 and 3 reopen\nbot_d_test\told-map-bots\tthe launched game does not use the map\tnever\n",
+  });
+  assert.deepEqual(lists, { tests: ["a_test"], bots: ["bot_c_test"], weekly: { tests: ["b_test"], bots: ["bot_d_test"] } });
+});
+
+test("with no weekly list the promotion lists hold every test", () => {
+  assert.deepEqual(listsOf({ "a_test.gd": plainTest, "bot_c_test.gd": botTest }), { tests: ["a_test"], bots: ["bot_c_test"], weekly: { tests: [], bots: [] } });
+});
+
+test("a weekly list that does not parse, or names a missing test, is an error and never a silent skip", () => {
+  assert.throws(() => listsOf({ "a_test.gd": plainTest, "WEEKLY.tsv": "test\tgroup\n" }), /does not parse: line 1/);
+  assert.throws(() => listsOf({ "a_test.gd": plainTest, "WEEKLY.tsv": "" }), /does not parse: line 1/);
+  assert.throws(() => listsOf({ "a_test.gd": plainTest, "WEEKLY.tsv": weeklyHead + "gone_test\tworld2\twhy\twhen\n" }), /names tests that do not exist: gone_test/);
+  const { problems } = parseWeekly(weeklyHead + "a_test\tworld2\t\twhen\ntests/b_test.gd\tworld2\twhy\twhen\na_ok\tg\tr\tw\na_ok\tg\tr\tw\n");
+  assert.equal(problems.length, 3);
+  assert.match(problems.join("\n"), /line 2: a row needs/);
+  assert.match(problems.join("\n"), /line 3: "tests\/b_test.gd" must be the test's base name/);
+  assert.match(problems.join("\n"), /line 5: a_ok is listed twice/);
 });

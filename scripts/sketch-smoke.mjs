@@ -583,12 +583,14 @@ export function judge({ test, status, output }) {
 // The lines of a test's output that say why it failed: failed checks, engine errors and
 // time-outs. A long test prints them far above its last 40 lines, so a failure lists them
 // first and nobody has to patch the runner to find them.
-const FAILING_LINE = /-> FAIL\b|^\s*(?:SCRIPT ERROR|ERROR)\b|\btimed[ _]out\b/;
+const FAILING_LINE = /-> FAIL\b|^\s*(?:SCRIPT ERROR|ERROR|FAIL)\b|\btimed[ _]out\b/;
+// A passing check can carry the words ("exit 0, timed out false -> PASS").
+const PASSING_LINE = /-> PASS\b/;
 const MAX_FAILING_LINES = 60;
 
 export function failingLines(output, limit = MAX_FAILING_LINES) {
   const counts = new Map();
-  for (const line of output.split("\n").map((text) => text.replace(/\r$/, "")).filter((text) => FAILING_LINE.test(text))) counts.set(line, (counts.get(line) ?? 0) + 1);
+  for (const line of output.split("\n").map((text) => text.replace(/\r$/, "")).filter((text) => FAILING_LINE.test(text) && !PASSING_LINE.test(text))) counts.set(line, (counts.get(line) ?? 0) + 1);
   const lines = [...counts].map(([line, count]) => (count > 1 ? `${line} (x${count})` : line));
   if (lines.length <= limit) return lines;
   return [...lines.slice(0, limit), `... ${lines.length - limit} more failing lines (set SMOKE_LOG_DIR for the full output)`];
@@ -615,7 +617,8 @@ function report(job, status, output, ms, signal = null) {
   const { passes, fails } = countChecks(output);
   console.log(`${ok ? "PASS" : "FAIL"} ${job.label} exit=${status} ${(ms / 1000).toFixed(1)}s`);
   if (!ok) {
-    const failing = failingLines(output);
+    // The runner's own reason leads: a test killed at its limit prints nothing that says so.
+    const failing = [...(reason ? [reason] : []), ...failingLines(output)];
     if (failing.length > 0) console.log(`failing lines (${passes} checks passed, ${fails} failed):\n${failing.map((line) => "  >> " + line).join("\n")}`);
     if (!process.env.SMOKE_FULL) console.log(output.split("\n").slice(-40).join("\n"));
   }

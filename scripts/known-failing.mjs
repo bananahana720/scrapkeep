@@ -124,7 +124,9 @@ export async function readLedger(root) {
 
 // Findings in the shape check-docs prints: { level, file, line, message }.
 // With `promotion`, a row past its review date is a failure; without it, a note.
-export async function checkLedger(root, { today = new Date().toISOString().slice(0, 10), promotion = false } = {}) {
+// `notRun` names the tests a promotion does not run (the weekly list, ruling ca):
+// their rows are judged by the weekly sweep, so a late one is a note here.
+export async function checkLedger(root, { today = new Date().toISOString().slice(0, 10), promotion = false, notRun = new Set() } = {}) {
   const ledger = await readLedger(root);
   if (ledger === null) return [];
   const findings = ledger.problems.map((problem) => ({ level: "failure", file: LEDGER_FILE, line: problem.line, message: problem.message }));
@@ -137,7 +139,8 @@ export async function checkLedger(root, { today = new Date().toISOString().slice
     }
   }
   for (const row of pastReview(ledger.rows, today)) {
-    findings.push({ level: promotion ? "failure" : "info", file: LEDGER_FILE, line: row.line, message: pastReviewLine(row, today) });
+    const weekly = notRun.has(row.test);
+    findings.push({ level: promotion && !weekly ? "failure" : "info", file: LEDGER_FILE, line: row.line, message: weekly ? `${row.test} is past its review date (${row.review}) and is on the weekly list, so it does not hold the promotion; the weekly sweep judges it` : pastReviewLine(row, today) });
   }
   return findings;
 }
@@ -174,7 +177,13 @@ async function main() {
     console.log(`known-failing judge: ${verdict.listed.length} carried, ${verdict.unlisted.length} new.`);
     return verdict.unlisted.length > 0 ? 1 : 0;
   }
-  const findings = await checkLedger(options.root, { today: options.today, promotion: options.mode === "promotion" });
+  let notRun = new Set();
+  if (options.mode === "promotion") {
+    const { gateLists } = await import("./gate/shard.mjs");
+    const lists = gateLists(path.join(options.root, TESTS_DIRECTORY, ".."), path.join(options.root, "project-guide/handoff/WEEKLY.tsv"));
+    notRun = new Set([...lists.weekly.tests, ...lists.weekly.bots]);
+  }
+  const findings = await checkLedger(options.root, { today: options.today, promotion: options.mode === "promotion", notRun });
   for (const finding of findings) {
     console.log(`${finding.level.toUpperCase()} known-failing ${finding.file}:${finding.line} ${finding.message}`);
   }

@@ -282,7 +282,7 @@ export function readGit(root) {
     "--extended-regexp",
     "--grep=^Promote alpha wave [0-9]+ ",
     "-n",
-    "5",
+    "200",
     "--format=%H%x09%s",
     "HEAD",
   ]);

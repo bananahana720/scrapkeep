@@ -89,6 +89,9 @@ test("a row past its date is a note in the docs check and a failure at a promoti
     const hold = await checkLedger(root, { today: "2026-11-24", promotion: true });
     assert.deepEqual(hold.map((finding) => finding.level), ["failure"]);
     assert.match(hold[0].message, /a_test is past its review date .* holds the promotion/);
+    const weekly = await checkLedger(root, { today: "2026-11-24", promotion: true, notRun: new Set(["a_test"]) });
+    assert.deepEqual(weekly.map((finding) => finding.level), ["info"]);
+    assert.match(weekly[0].message, /on the weekly list, so it does not hold the promotion/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

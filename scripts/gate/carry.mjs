@@ -62,7 +62,9 @@ export function place(name, lists) {
   const bot = lists.bots.indexOf(name);
   if (bot >= 0) return `bot list ${bot + 1}`;
   const test = lists.tests.indexOf(name);
-  return test >= 0 ? `non-bot list ${test + 1}` : "not in a gate list";
+  if (test >= 0) return `non-bot list ${test + 1}`;
+  if (lists.weekly?.tests.includes(name) || lists.weekly?.bots.includes(name)) return "weekly list, not in this promotion";
+  return "not in a gate list";
 }
 
 function git(...args) {

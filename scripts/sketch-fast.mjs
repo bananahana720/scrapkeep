@@ -165,7 +165,18 @@ export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
       if (index.files.has(rel)) add(rel, 0, "changed");
       // A test that extends a changed test runs its parent's checks: kest_set_piece_test
       // went red on main in wave 31 because only its parent, kest_kit_test, was picked.
-      for (const test of referrers(index, rel).filter(isTopLevelTest)) add(test, 1, `names the changed test ${rel}`);
+      // The walk follows the whole chain, as scripts/gate/carry.mjs does: dress_wog_fallback_test
+      // extends dress_wog_test, which extends dress_material_test.
+      const reached = new Set([rel]);
+      const queue = [rel];
+      while (queue.length > 0) {
+        for (const test of referrers(index, queue.shift()).filter(isTopLevelTest)) {
+          if (reached.has(test)) continue;
+          reached.add(test);
+          queue.push(test);
+          add(test, 1, `reaches the changed test ${rel}`);
+        }
+      }
       continue;
     }
     const first = referrers(index, rel);

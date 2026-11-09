@@ -5,16 +5,17 @@
 // The wave 30 promotion was called CLEAN with an empty tally row. This reads
 // every "| Shard | Verdict |" table in the plan and refuses unless: each
 // expected shard has a row, no verdict is empty, each names its receipt, the
-// test windows cover the whole non-bot list, the newest row for each shard is
-// not red, and no known-failing row is past its review date. When a head moves
+// test windows cover the whole non-bot list, the newest row for each shard
+// opens with PASS (CLEAR for the red team), the plan gates the checked-out head, and no known-failing row is past its review date. When a head moves
 // and a shard is read again, add a new row; the newest row for a name wins.
 
+import { spawnSync } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { checkLedger } from "../known-failing.mjs";
-import { gateLists } from "./shard.mjs";
+import { WEEKLY_FILE, gateLists } from "./shard.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const BOT_BLOCK = 5;
@@ -45,11 +46,20 @@ export function expectedShards(botCount) {
   return [...names, "bands A", "bands B", "bands C", "red team"];
 }
 
-const isRed = (verdict) => /^(?:NEW )?(?:RED|FAIL)\b/.test(verdict.replace(/^\*+/, ""));
-const hasReceipt = (verdict) => /\breceipt\b|\blogs?\b/i.test(verdict);
+// A verdict passes only when it says so first: PASS, or CLEAR for the red team. Any other
+// opening word (RED, FAIL, "red:", "1 new red", a sentence) is not a pass, so a red shard
+// worded another way cannot slip under CLEAN.
+export const isPass = (verdict) => /^(?:PASS|CLEAR)\b/.test(verdict.replace(/^[\s*_]+/, "").replace(/^verdict:\s*/i, "").replace(/^[\s*_]+/, ""));
+const hasReceipt = (verdict) => /\breceipts?\b|\blogs?\b/i.test(verdict);
 
-export function checkTally(rows, { testCount, botCount }) {
+// "w33-1a2b3c4d-gate-plan.md" names the head the plan gates.
+export function planHead(file) {
+  return /(?:^|[/-])w\d+-([0-9a-f]{7,40})-gate-plan\.md$/.exec(file)?.[1] ?? null;
+}
+
+export function checkTally(rows, { testCount, botCount, planHead: gated = null, head = null }) {
   const problems = [];
+  if (gated && head && !head.startsWith(gated) && !gated.startsWith(head)) problems.push(`the plan gates ${gated} and this checkout is at ${head.slice(0, 8)}; the test and bot lists are counted here, so check out the gated head first`);
   const latest = new Map();
   for (const row of rows) latest.set(row.shard.toLowerCase(), row);
   for (const row of rows) {
@@ -58,7 +68,7 @@ export function checkTally(rows, { testCount, botCount }) {
   for (const row of latest.values()) {
     if (row.verdict === "") continue;
     if (!hasReceipt(row.verdict)) problems.push(`line ${row.line}: "${row.shard}" names no receipt`);
-    if (isRed(row.verdict)) problems.push(`line ${row.line}: "${row.shard}" is red in its newest row; fix it or carry it on the ledger, then add a new row`);
+    if (!isPass(row.verdict)) problems.push(`line ${row.line}: "${row.shard}" does not open with PASS (CLEAR for the red team) in its newest row; fix the red or carry it on the ledger, then add a new row`);
   }
   for (const name of expectedShards(botCount)) {
     if (![...latest.keys()].some((key) => key === name.toLowerCase() || key.startsWith(name.toLowerCase() + " "))) problems.push(`no row for "${name}"`);
@@ -83,10 +93,16 @@ async function main() {
   if (planAt < 0 || !argv[planAt + 1]) throw new Error("usage: node scripts/gate/tally.mjs --plan <gate plan.md>");
   const lists = gateLists(path.join(root, "sketches", "core-loop"));
   const rows = tallyRows(readFileSync(argv[planAt + 1], "utf8"));
-  const problems = checkTally(rows, { testCount: lists.tests.length, botCount: lists.bots.length });
-  const ledger = (await checkLedger(root, { promotion: true })).filter((finding) => finding.level === "failure");
+  const gated = planHead(argv[planAt + 1]);
+  const head = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim() || null;
+  if (!gated) console.log("NOTE the plan's file name is not w<N>-<head>-gate-plan.md, so the head it gates was not checked against this checkout");
+  const problems = checkTally(rows, { testCount: lists.tests.length, botCount: lists.bots.length, planHead: gated, head });
+  const notRun = new Set([...lists.weekly.tests, ...lists.weekly.bots]);
+  const ledger = (await checkLedger(root, { promotion: true, notRun })).filter((finding) => finding.level === "failure");
   for (const finding of ledger) problems.push(`ledger line ${finding.line}: ${finding.message}`);
   for (const problem of problems) console.log("PROBLEM " + problem);
+  const weekly = lists.weekly.tests.length + lists.weekly.bots.length;
+  if (weekly > 0) console.log(`weekly: ${weekly} tests not run this promotion (${WEEKLY_FILE}, ruling ca); they run on a change to their files and in the weekly sweep`);
   console.log(`gate tally: ${rows.length} rows, ${lists.tests.length} non-bot tests, ${lists.bots.length} bot tests. ${problems.length === 0 ? "Every row is filled; CLEAN may be written" : `Not clean: ${problems.length} problem${problems.length === 1 ? "" : "s"}`}.`);
   return problems.length === 0 ? 0 : 1;
 }
