@@ -18,7 +18,8 @@
 //                 name), cold launched with a fresh HOME and XDG profile and no Godot on PATH; passes when
 //                 it prints SCRAPKEEP_TITLE_INTERACTIVE within 5 s (Andrew, 18 Oct, launch screen option A:
 //                 an interactive 2D title card while the 3D park title loads) and then SCRAPKEEP_MENU_READY
-//                 (the 3D title shows; reported, within MENU_WAIT_S, no budget of its own)
+//                 (the 3D title shows; reported, within MENU_WAIT_S, no budget of its own); fails at
+//                 once on SCRAPKEEP_BOOT_FAILED, the boot's word that the build did not load
 // Each step ends pass, fail or not run. A missing or mismatched input, or a --skip=<id,...>, reads
 // "not run", never pass. The verdict is GO only when every step passed; --cloud makes it a
 // rehearsal at best, because cloud perf and the cloud export do not count.
@@ -34,6 +35,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const node = process.execPath;
 export const MENU_READY = "SCRAPKEEP_MENU_READY";
 export const TITLE_INTERACTIVE = "SCRAPKEEP_TITLE_INTERACTIVE";
+export const BOOT_FAILED = "SCRAPKEEP_BOOT_FAILED";
 // The 3D title has no written budget; this only ends a launch that never shows it.
 export const MENU_WAIT_S = 60;
 export const LAUNCH_BUDGET_S = 5;
@@ -261,6 +263,14 @@ function stopGroup(child) {
 // card's SCRAPKEEP_TITLE_INTERACTIVE line must come inside the budget, and the 3D title's
 // SCRAPKEEP_MENU_READY must follow (its time is reported; the budget is the card's). Its own process
 // group, so the stop reaches the game the AppImage runtime starts.
+// The boot's own word that the build did not load (src/boot/boot.gd prints the marker and why on
+// one line): the reason, or null when no whole such line has come yet. With its card up a broken
+// build stays open on a Quit button, so without this the launch would wait out the menu timeout.
+export function bootFailure(output) {
+  const line = new RegExp(`^${BOOT_FAILED}\\b[ \\t]*([^\\r\\n]*)\\r?\\n`, "m").exec(output);
+  return line ? line[1].trim() || "no reason given" : null;
+}
+
 export function launchAppImage(appimage, { seconds = LAUNCH_BUDGET_S, menuWaitSeconds = MENU_WAIT_S, env = process.env } = {}) {
   const profile = freshProfile();
   return new Promise((resolve) => {
@@ -287,6 +297,8 @@ export function launchAppImage(appimage, { seconds = LAUNCH_BUDGET_S, menuWaitSe
     const seen = (line) => (output.includes(line) ? Date.now() - started : null);
     const onData = (chunk) => {
       output += chunk;
+      const broken = bootFailure(output);
+      if (broken !== null) return finish({ status: "fail", note: `the build said it did not load (${BOOT_FAILED}): ${broken}` });
       titleMs ??= seen(TITLE_INTERACTIVE);
       menuMs ??= seen(MENU_READY);
       if (titleMs === null || menuMs === null) return;
@@ -297,7 +309,10 @@ export function launchAppImage(appimage, { seconds = LAUNCH_BUDGET_S, menuWaitSe
     child.stdout.on("data", onData);
     child.stderr.on("data", onData);
     child.on("error", (error) => finish({ status: "fail", note: `could not start: ${error.message}` }));
-    child.on("exit", (code, signal) => finish({ status: "fail", note: `exited (${code ?? signal}) before the main menu` }));
+    child.on("exit", (code, signal) => {
+      const broken = bootFailure(output + "\n");
+      finish({ status: "fail", note: `exited (${code ?? signal}) before the main menu${broken === null ? "" : `; the build said it did not load (${BOOT_FAILED}): ${broken}`}` });
+    });
     const titleTimer = setTimeout(() => {
       if (titleMs === null) finish({ status: "fail", note: `no ${TITLE_INTERACTIVE} line within ${seconds} s (slow boot, or a build without the title card)` });
     }, seconds * 1000);
