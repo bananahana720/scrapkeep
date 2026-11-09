@@ -67,6 +67,9 @@ func _lists() -> void:
 			seen[id] = true
 			t.check("%s %s name at most %d words" % [def.id, id, NAME_WORDS],
 				WordBudget.words_in(String(row.get("name", ""))) <= NAME_WORDS, String(row.get("name", "")))
+			var effect_words := WordBudget.words_in(String(row.get("effect", "")))
+			t.check("%s %s says what it does in at most %d words" % [def.id, id, StartPicks.EFFECT_WORDS],
+				effect_words >= 1 and effect_words <= StartPicks.EFFECT_WORDS and String(row["effect"]) != String(row["name"]), String(row.get("effect", "")))
 			var kind := String(row.get("do", ""))
 			t.check("%s %s kind known" % [def.id, id], kind in StartPicks.KINDS, kind)
 			if kind == "part":
@@ -359,10 +362,11 @@ func _card() -> void:
 	var words := 0
 	for w in card.drawn_words():
 		words += WordBudget.words_in(w)
-	t.check("card at most %d words" % (NAME_WORDS * StartPicks.OFFERED), words > 0
-		and words <= NAME_WORDS * StartPicks.OFFERED, str(words))
+	var card_words := (NAME_WORDS + StartPicks.EFFECT_WORDS) * StartPicks.OFFERED
+	t.check("card at most %d words: a name and an effect line a tile" % card_words, words > 0 and words <= card_words, str(words))
 	for tile in card.tiles():
 		t.check("tile %s has icon and key" % [tile], String(tile.get("icon", "")) != "" and String(tile.get("key", "")) != "")
+		t.check("tile %s says what it does" % [tile.get("id", "")], String(tile.get("effect", "")) != "" and String(tile["effect"]) in card.drawn_words(), String(tile.get("effect", "")))
 	t.eq("card shows the reroll left", card.rerolls_left(), 1)
 	run.take_start_pick(0)
 	card.show_picks(run)

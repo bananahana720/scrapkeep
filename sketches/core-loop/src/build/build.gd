@@ -969,6 +969,11 @@ func _class_id() -> String:
 
 
 
+# The element a part set's rule adds, "frost" or "arc": what its chime rings in.
+func set_element(set_id: String) -> String:
+	return PartSets.element(set_id)
+
+
 func _on_part_gained(part_id: String, _source: String) -> void:
 	recompute()
 	# A copy: a listener's own part gain recomputes and replaces the list.

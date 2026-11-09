@@ -433,6 +433,16 @@ static func base_dps(weapon: String) -> float:
 	return float(row["damage"]) * float(row["rate"])
 
 
+# The objective plate's reading of this mounting (ui/hud.gd, core/objectives.gd): which road
+# leads to the core, and on the flume whether the ball's line is bitten in.
+func plate_reading(warden) -> Dictionary:
+	if _is_dam(warden):
+		return {"mount": "dam_face"}
+	if _is_flume(warden):
+		return {"mount": "flume", "latched": _line_on(warden)}
+	return {}
+
+
 # Whether the ball's line is bitten into this Warden.
 func _line_on(warden) -> bool:
 	var target = warden.target

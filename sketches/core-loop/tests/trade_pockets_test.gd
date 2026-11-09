@@ -305,6 +305,11 @@ func _summary(game, model, interiors: Array) -> void:
 	t.eq("transition settles a refusal before checkpoint", game.run.trade_memory.last_refused, 1)
 	game.screens._on_flow_changed("summary")
 	await process_frame
+	var played: String = game.screens.body_text()
+	t.check("a played run's summary keeps the odds readout off", not played.contains("recency x") and not played.contains("refusal x") and not played.contains("pool floor"), played)
+	game.dev = true
+	game.screens._on_flow_changed("summary")
+	await process_frame
 	var shown: String = game.screens.body_text()
 	for offer in all_seen:
 		t.check(offer.interior_id + " summary lists family and recency", shown.contains(String(offer.interior_id).replace("_", " ") + " | " + offer.family + " | recency x%.2f" % offer.recency))

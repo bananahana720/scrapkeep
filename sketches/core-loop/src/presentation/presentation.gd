@@ -84,6 +84,8 @@ var _dismiss_wired := {}
 var _windup_states := {}
 # Screens a queued discovery never plays over.
 const BANNER_SCREENS := ["title", "class_select", "summary", "dead", "victory"]
+# A completed part set's banner id is this and the set's id.
+const SET_KEY := "set:"
 
 
 func setup(ctx_ref) -> void:
@@ -132,6 +134,7 @@ func setup(ctx_ref) -> void:
 	add_child(layer)
 	banner = CodexBanner.new()
 	layer.add_child(banner)
+	banner.came_up.connect(_on_banner_up)
 	var codex = ctx.get("codex")
 	if ctx.tuning != null and ctx.tuning.option(Tuning.DISCOVERY_KEY) == "cards" and codex != null:
 		banner.cards = true
@@ -338,7 +341,14 @@ func _on_part(part_id: String, _source: String) -> void:
 # moment, so a set finished in a fight is told when the fight lets go.
 func _on_set_completed(set_id: String, title: String, text: String, color: Color) -> void:
 	if auto_banner:
-		banner.show_discovery(title, "build", text, "Set complete", "set:" + set_id, "synergy_discovered", color, true)
+		banner.show_discovery(title, "build", text, "Set complete", SET_KEY + set_id, "synergy_discovered", color, true)
+
+
+# The set's chime plays as its banner comes up, so it waits for the same calm moment.
+func _on_banner_up(key: String) -> void:
+	var build = ctx.get("build")
+	if key.begins_with(SET_KEY) and build != null:
+		audio.set_complete(build.set_element(key.trim_prefix(SET_KEY)))
 
 
 # The registry entry for an id, if the spine's codex offers one.

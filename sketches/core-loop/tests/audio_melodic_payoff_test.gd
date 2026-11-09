@@ -8,13 +8,16 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const T := preload("res://tests/support/t.gd")
 const AceStub := preload("res://tests/support/ace_stub.gd")
+const PartSets := preload("res://src/build/part_sets.gd")
 
 # The melodic payoff (AUDIO-V3 section 5), through the real game. A climb never leaves the reward
 # ladder: the chain bite and the multi-kill pop. The tune lands on the band's grid: a kill chain
 # resolves on a chord tone on the next beat (a long one on the bar line under a crash), the near
 # miss's whip notes and the dunk's banked and paid notes land on sixteenths, and a death ends the
 # band, synth or recorded, on the next beat with the fall in time. The contact itself still
-# sounds on its frame.
+# sounds on its frame. A completed part set's chime plays as its banner comes up: three notes on
+# the band's eighths, an arc set on the clavinet and a frost set on the bell, both ending on the
+# appliance beep's high D; no other banner chimes, and no band means no chime.
 
 var t := T.new("audio_melodic_payoff_test")
 var _clock_ms := 0
@@ -47,7 +50,10 @@ func _run() -> void:
 	await _landing_ahead(game, audio)
 	_near_miss(game, audio)
 	_dunk(game, audio)
+	_set_chime(game, audio)
 	_death_synth(game, audio)
+	t.check("set chime: no band, no chime", audio.engine.mode != Music.PLAY and audio.set_complete("arc") == -1,
+		"band mode %d" % audio.engine.mode)
 	game.queue_free()
 	await process_frame
 	Rows.stem_dir = ""
@@ -219,6 +225,54 @@ func _dunk(game: Node, audio) -> void:
 		"now %s, notes %s at %s (next sixteenth %d)" % [now, notes.map(func(e: Array): return e[1]), notes.map(func(e: Array): return int(e[3])), sixteenth])
 
 
+func _set_chime(game: Node, audio) -> void:
+	var engine: Music = audio.engine
+	var banner = game.presentation.banner
+	var eighth: int = engine.beat_len() / 2
+	var lead := int(audio.SET_CHIME_LEAD_S * Harmony.RATE)
+	for case in [["live_wire", "clav"], ["storm_front", "bell"]]:
+		var row: Dictionary = PartSets.SETS[case[0]]
+		_pump_to(audio, engine.clock + 3000)
+		banner.dismiss(true)
+		audio.cue_log.clear()
+		engine.stinger_starts.clear()
+		var head := engine.clock
+		game.presentation._on_set_completed(case[0], row["name"], row["text"], row["color"])
+		var notes := _grid(audio, "synergy_discovered")
+		var ids: Array = notes.map(func(e: Array): return e[1])
+		var times: Array = notes.map(func(e: Array): return int(e[3]))
+		var first: int = times[0] if not times.is_empty() else -1
+		var want := [Bank.grid_note_id(case[1], 77), Bank.grid_note_id(case[1], 81), Bank.grid_note_id("beep", 86)]
+		_pump_to(audio, head + lead + 4 * eighth)
+		var started: Array = engine.stinger_starts.filter(func(e: Array): return e[0] in want).map(func(e: Array): return int(e[1]))
+		t.check("set chime: %s climbs F A on the %s to the beep's D, on eighths, as its banner comes up" % [row["name"], case[1]],
+			banner.showing() and banner.last_title == row["name"] and ids == want and times == [first, first + eighth, first + 2 * eighth]
+				and first - head >= lead and first - head < lead + eighth and posmod(first - engine.grid_origin, eighth) == 0
+				and started == times,
+			"banner '%s' showing %s, notes %s at %s, sounded at %s, play head %d, eighth %d, lead %d" % [banner.last_title, banner.showing(),
+				ids, times, started, head, eighth, lead])
+	# A set finished in a fight: the banner is held, and the chime with it.
+	var held: Dictionary = PartSets.SETS["hair_trigger"]
+	banner.dismiss(true)
+	audio.cue_log.clear()
+	banner._calm_left = 5.0
+	game.presentation._on_set_completed("hair_trigger", held["name"], held["text"], held["color"])
+	var early: int = _grid(audio, "synergy_discovered").size()
+	var was_showing: bool = banner.showing()
+	banner._calm_left = 0.0
+	banner._next()
+	t.check("set chime: a banner held for a calm moment holds its chime", not was_showing and early == 0 and banner.showing()
+		and banner.last_title == held["name"] and _grid(audio, "synergy_discovered").size() == 3,
+		"held: showing %s, notes %d; released: showing %s '%s', notes %d" % [was_showing, early, banner.showing(), banner.last_title,
+			_grid(audio, "synergy_discovered").size()])
+	banner.dismiss(true)
+	audio.cue_log.clear()
+	banner.show_discovery("Arc Coil", "part", "", "Found", "part:arc_coil", "part_gained")
+	t.check("set chime: a banner that is no set's stays silent", banner.showing() and _grid(audio, "synergy_discovered").is_empty(),
+		"showing %s, notes %s" % [banner.showing(), _grid(audio, "synergy_discovered")])
+	banner.dismiss(true)
+
+
 func _death_synth(game: Node, audio) -> void:
 	var engine: Music = audio.engine
 	_pump_to(audio, engine.clock + 2000)
@@ -262,6 +316,18 @@ func _death_recorded() -> void:
 	var level = audio.ace
 	var pack: String = audio._ace_from
 	t.check("the level pack owns the grid and the synth band is muted", audio._on_ace_grid() and engine.band_muted)
+	# The chime over the recorded band rides its grid, not the muted synth band's.
+	var head := engine.clock
+	var eighth: int = audio.grid_unit(2)
+	audio.cue_log.clear()
+	var first: int = audio.set_complete("frost")
+	var times: Array = _grid(audio, "synergy_discovered").map(func(e: Array): return int(e[3]))
+	t.check("set chime: over the recorded band it lands on that band's eighths", eighth == level.grid_beat / 2
+		and times == [first, first + eighth, first + 2 * eighth] and posmod(first - level.origin, eighth) == 0
+		and first - head >= int(audio.SET_CHIME_LEAD_S * Harmony.RATE) and first - head < int(audio.SET_CHIME_LEAD_S * Harmony.RATE) + eighth,
+		"notes at %s, play head %d, the pack's eighth %d (synth eighth %d), origin %d" % [times, head, eighth, engine.beat_len() / 2, level.origin])
+	# Whole beats of the pack, so the death below still falls where it did.
+	_pump_to(audio, head + 8 * audio.grid_unit(1))
 	var beat := engine.next_beat()
 	t.check("the death falls mid-beat", beat - engine.clock > 2000, "play head %d, next beat %d" % [engine.clock, beat])
 	audio.cue_log.clear()

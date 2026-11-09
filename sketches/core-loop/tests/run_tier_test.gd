@@ -1,5 +1,5 @@
 extends SceneTree
-# smoke: bots timeout=1200s
+# smoke: bots timeout=1800s
 # 2026-10-15 RT-CAP: a 20-seed whole-run replay (five batches of four child games) ran at 359.5 s
 # of the 360 s solo ceiling on a normal machine and timed out at load 55 to 59, so it moved to the
 # bot tier (npm run sketch:bots; sketch:gate runs both). Every check is unchanged.
@@ -185,8 +185,9 @@ func _parallel_runtime() -> void:
 			if record:
 				args.append("--record-base")
 			jobs.append({"script": "res://tests/run_tier_test.gd", "args": args})
-		# 150 s per batch of four (70 s before RT-CAP): the cap catches a hang, not a slow machine.
-		var results := ChildRuns.run(jobs, 150.0)
+		# 300 s per batch of four (70 s before RT-CAP, then 150 s): the cap catches a hang, not a slow machine. A child
+		# runs 83 s alone and 158-164 s four at a time on the w30 gate box, where 150 s killed all 20.
+		var results := ChildRuns.run(jobs, 300.0)
 		for i in results.size():
 			var result: Dictionary = results[i]
 			var summary := ChildRuns.summary(result)
@@ -690,7 +691,8 @@ func _tier_zero_format() -> void:
 func _mouse_tiles() -> void:
 	game.bot_driven = false
 	paused = true
-	var offers := [["cogs", "core", "long_barrel"], ["loose_trigger", "magnet_spool", "spiral_wave"]]
+	# The narrow offer's tiles must stay under the interactive card's 780 px floor, effect lines included.
+	var offers := [["cogs", "hot_rivets", "long_barrel"], ["loose_trigger", "magnet_spool", "spiral_wave"]]
 	for offer_index in offers.size():
 		for pick_index in 3:
 			_begin(706, 0)
@@ -704,7 +706,10 @@ func _mouse_tiles() -> void:
 			var widths := []
 			var total := StartCard.TILE_GAP * (tiles.size() - 1)
 			for tile in tiles:
-				var width := StartCard.PAD * 2.0 + StartCard.KEY + StartCard.GAP * 2.0 + StartCard.ICON + UiFonts.bold().get_string_size(tile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.FONT).x
+				# A tile is as wide as the wider of its name and the effect line under it.
+				var words := maxf(UiFonts.bold().get_string_size(tile.name, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.FONT).x,
+					UiFonts.bold().get_string_size(tile.effect, HORIZONTAL_ALIGNMENT_LEFT, -1, StartCard.EFFECT_FONT).x)
+				var width := StartCard.PAD * 2.0 + StartCard.KEY + StartCard.GAP * 2.0 + StartCard.ICON + words
 				widths.append(width)
 				total += width
 			var label := "narrow" if offer_index == 0 else "wide"
