@@ -166,6 +166,9 @@ var edge_markers
 var part_name
 var launch_card
 var _world_card_at := -1
+# The world and stage whose cards wait for the title's turn in a run's opening; 0 when none.
+var _title_world := 0
+var _title_stage := 0
 var _cursed := false
 var why_callout
 var hotwire_screen
@@ -331,6 +334,7 @@ func setup(game_ref) -> void:
 	_build_lore_pulse()
 	game.codex.lore_found.connect(func(_id: String): _show_lore())
 	game.events.achievement_earned.connect(func(id: String): _ach_queue.append(Achievements.toast_text(id)))
+	game.opening.turned.connect(_on_turned)
 	_connect_toasts(game.events)
 	game.events.boss_phase_changed.connect(func(_phase: int, phase_name: String):
 		toast_kind("boss_phase_changed", {"name": phase_name.capitalize()}))
@@ -552,7 +556,8 @@ func _step_ach(delta: float) -> void:
 	if game.screens != null and game.screens.ending_open():
 		clear_achievement_toasts()
 		return
-	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live() and not _corner_swollen():
+	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live() and not _corner_swollen() \
+			and not game.opening.waits("plate"):
 		var tune := _ach_queue.is_empty()
 		_ach_entry = {"text": _tune_queue.pop_front() if tune else _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
 		# The first line is the name; whatever follows it is the detail.
@@ -754,6 +759,9 @@ func _on_launched(_velocity: Vector3) -> void:
 # stage's card, which follows after the world card has been up for a beat. A one-world
 # table shows no world card.
 func _on_world_entered(world: int) -> void:
+	if game.opening.waits("title"):
+		_title_world = world
+		return
 	if game.ctx.stages.worlds().size() <= 1:
 		return
 	var row := Worlds.row(world)
@@ -769,6 +777,29 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_begin_engagement(false)
 	if retry:
 		return
+	if game.opening.waits("title"):
+		_title_stage = stage
+		return
+	_title_for(stage)
+
+
+# The title's turn in a run's opening (opening.gd): the world and stage cards held under the
+# launch take's panel go up now, where they can be read.
+func _on_turned(voice: String) -> void:
+	if voice != "title":
+		return
+	var world := _title_world
+	var stage := _title_stage
+	_title_world = 0
+	_title_stage = 0
+	if game.run == null or stage != game.run.stage or not game.flow.in_stage():
+		return
+	if world > 0:
+		_on_world_entered(world)
+	_title_for(stage)
+
+
+func _title_for(stage: int) -> void:
 	if _world_card_at >= 0:
 		_world_card_at = -1
 		get_tree().create_timer(WORLD_CARD_BEAT).timeout.connect(func():

@@ -60,6 +60,8 @@ var _zones_played := {}
 var _intros_played := {}
 var _intro_queue: Array = []
 var _intro_showing := false
+# The stage whose hello waits for Moss's turn in the run's opening (opening.gd); 0 when none.
+var _hello_due := 0
 
 
 class ExchangeInput extends Node:
@@ -97,6 +99,11 @@ func _ready() -> void:
 	_game.events.flow_changed.connect(func(_state: String):
 		if not _game.flow.in_stage():
 			_end_exchange())
+	var opening = _game.get("opening")
+	if opening != null:
+		opening.turned.connect(func(voice: String):
+			if voice == "moss" and _hello_due > 0:
+				_begin_exchange(_hello_due))
 
 
 func _install_exchange_input() -> void:
@@ -118,12 +125,17 @@ func _on_run_started(_class_id: String) -> void:
 func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_end_exchange(false)
 	_end_intro()
+	_hello_due = 0
 	# Flow places the new Warden after this signal, clearing the previous engagement.
 	_begin_exchange.call_deferred(stage)
 
 
 func _begin_exchange(stage: int) -> void:
+	_hello_due = 0
 	if stage != _game.run.stage or not _game.flow.in_stage() or _game.flow.engaged():
+		return
+	if _waits():
+		_hello_due = stage
 		return
 	var zone := "%d-%d" % [_game.ctx.stages.world_of(stage), _game.ctx.stages.local(stage)]
 	if _zones_played.has(zone):
@@ -186,8 +198,14 @@ func _queue_intro(zone: String, warden: bool) -> void:
 	_flush_intro()
 
 
+# Moss's turn in a run's opening has not come: the shift card goes first.
+func _waits() -> bool:
+	var opening = _game.get("opening")
+	return opening != null and opening.waits("moss")
+
+
 func _flush_intro() -> void:
-	if _intro_queue.is_empty() or not _exchange.is_empty() or get_tree().paused:
+	if _intro_queue.is_empty() or not _exchange.is_empty() or get_tree().paused or _waits():
 		return
 	var row: Dictionary = _intro_queue.pop_front()
 	_intros_played[String(row["intro_key"])] = true
