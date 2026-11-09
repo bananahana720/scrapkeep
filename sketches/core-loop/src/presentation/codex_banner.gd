@@ -189,7 +189,7 @@ func held() -> bool:
 # banner can wear the colour of the thing it names (a part set's studs on the ball).
 # every_time is for a moment of the run, not a codex first (a completed set): in cards mode its
 # first showing ever is still the card, and each later one is the small banner instead of
-# nothing. It is never dropped for a full queue.
+# nothing. It is never dropped for a full queue, and it does not wait behind first-find cards.
 func show_discovery(title: String, category: String, detail := "", kicker := "New synergy", id := "", kind := DEFAULT_KIND,
 		tint = null, every_time := false) -> void:
 	var style := "banner"
@@ -207,7 +207,15 @@ func show_discovery(title: String, category: String, detail := "", kicker := "Ne
 		# held, or one past MAX_HELD shows nothing.
 		elif _was_seen(key) or _queue.size() >= MAX_HELD:
 			return
-	_queue.append([title, category, detail, kicker, style, kind, key, tint])
+	var item := [title, category, detail, kicker, style, kind, key, tint, every_time]
+	# A moment of the run goes ahead of the first-find cards still waiting (and behind an earlier
+	# moment), so it lands in the next calm moment after the pickup that earned it.
+	var at := _queue.size()
+	if every_time:
+		at = 0
+		while at < _queue.size() and _queue[at][8]:
+			at += 1
+	_queue.insert(at, item)
 	if not showing():
 		_next()
 
