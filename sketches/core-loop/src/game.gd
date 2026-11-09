@@ -5,6 +5,7 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Context := preload("res://src/core/context.gd")
 const Flow := preload("res://src/core/flow.gd")
+const SittingNotes := preload("res://src/core/sitting_notes.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 const Codex := preload("res://src/core/codex.gd")
@@ -31,6 +32,7 @@ const Combat := preload("res://src/combat/combat.gd")
 const Build := preload("res://src/build/build.gd")
 const Presentation := preload("res://src/presentation/presentation.gd")
 const Bindings := preload("res://src/core/bindings.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
@@ -49,6 +51,7 @@ const RunStore := preload("res://src/core/run_store.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
+const Opening := preload("res://src/presentation/opening.gd")
 # The camp, the workshop, the pause menu and the met-enemy watch are not on the title's path, so they
 # are loaded when first needed (menu_modules); a played game builds them a few frames after the menu.
 const MENU_PATHS := [
@@ -127,6 +130,8 @@ var screens
 var radio_deck
 # The comic swipe that hides the cut from pilot select or the camp gate into the dam (launch_take.gd).
 var launch_take
+# A run's opening, one voice at a time (opening.gd): the speakers ask it, and it reads the rest.
+var opening
 var _first_control_said := false
 # The walkable camp (camp_hub.gd). Reading it builds the menu modules if they are not up yet.
 var camp_hub:
@@ -169,12 +174,20 @@ var _stop_ticks_left := -1
 var _scale_before_stop := 1.0
 # The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
 var last_device := "kbm"
+# The saved Frame smoothing wish (settings, Display). interpolating() is what the tree does.
+var frame_smoothing := true
 # Loaded at run time only when the pack carries tools/, never preloaded (lint L7 allows this line).
 const SELF_PLAY := "res://tools/self_play.gd"
+# held_glyph()'s answer for a held input that has no keycap to draw.
+const HELD_UNNAMED := "held"
 
 
 func _ready() -> void:
 	_boot("ready")
+	# Physics interpolation is opt-in per body: a node that says nothing is drawn where it is,
+	# as it is with the tree's interpolation off. Only the ball asks (player_ball.gd), and what
+	# follows the ball reads its shown position. set_frame_smoothing turns the tree's on.
+	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	if not test_mode:
 		AppShell.apply()
 	dev = dev or _launch_flag("--dev")
@@ -220,6 +233,10 @@ func _ready() -> void:
 	flow.name = "Flow"
 	add_child(flow)
 	ctx.flow = flow
+	# Before every speaker, so each can hear its turn from its own setup.
+	opening = Opening.new()
+	add_child(opening)
+	opening.setup(self)
 	if test_mode:
 		storage_dir = "user://test-%d" % OS.get_process_id()
 		DirAccess.make_dir_recursive_absolute(storage_dir)
@@ -318,6 +335,10 @@ func _ready() -> void:
 	var drawer: CanvasLayer = load("res://src/ui/panel_drawer.gd").new()
 	add_child(drawer)
 	drawer.setup(self, panel)
+	# A window that loses focus or a pad that drops out pauses a played run (auto_pause.gd).
+	var auto_pause: Node = load("res://src/ui/auto_pause.gd").new()
+	add_child(auto_pause)
+	auto_pause.setup(self)
 	# Tests and bots build the menu modules here; a played game builds them behind the menu, and
 	# at once if a run or a camp visit starts first.
 	if test_mode:
@@ -347,6 +368,11 @@ func _ready() -> void:
 		_menu_wait = MENU_MODULES_FRAMES_APART
 	if _launch_flag("--self-play") and not test_mode:
 		_start_self_play()
+	# --sitting-notes: the build takes notes while a person plays (ruling cg). Never in a test_mode game.
+	if SittingNotes.wanted() and not test_mode:
+		var sitting_notes := SittingNotes.new()
+		sitting_notes.game = self
+		add_child(sitting_notes)
 	if _launch_flag("--boot-profile"):
 		for frame in 5:
 			await get_tree().process_frame
@@ -679,9 +705,8 @@ func _end_hit_stop() -> void:
 
 
 func toggle_interpolation() -> bool:
-	get_tree().physics_interpolation = not get_tree().physics_interpolation
-	reset_physics_interpolation()
-	return get_tree().physics_interpolation
+	_smooth(not interpolating())
+	return interpolating()
 
 
 func interpolating() -> bool:
@@ -786,7 +811,10 @@ func _take_live() -> bool:
 # A pilot picked on pilot select: the deck camera lifts, the swipe covers, the run starts under it.
 func pick_pilot(index: int) -> void:
 	launch_take.live = _take_live()
-	launch_take.play(func(): flow.choose_class(index), func():
+	launch_take.play(func():
+		if flow.state_name() == "class_select":
+			_begin_opening()
+		flow.choose_class(index), func():
 		screens.fade_for_launch()
 		_launch_whoosh()
 		var title_stage = presentation.get("title_stage") if presentation != null else null
@@ -825,6 +853,7 @@ func launch_from_gate() -> void:
 		if flow.state_name() != "title":
 			return
 		screens.stop_walk_for_launch()
+		_begin_opening()
 		flow.launch_from_title(def), _fire_gate, _dam_drawn)
 
 
@@ -860,6 +889,12 @@ func _say_first_control() -> void:
 	print("SCRAPKEEP_FIRST_CONTROL ms=%d" % Time.get_ticks_msec())
 
 
+# A run the take starts in a played game has an opening (opening.gd). A bot's take is not live.
+func _begin_opening() -> void:
+	if launch_take.live:
+		opening.begin()
+
+
 # The take is gone: the start-pick card it kept hidden shows, and first control is said.
 func _on_take_finished() -> void:
 	if flow.in_stage():
@@ -886,28 +921,34 @@ func step_summary_latch() -> void:
 # True while a key, mouse button, pad button or trigger bound to any action is down. Sticks and
 # mouse motion do not count: a drifting stick must not lock a menu.
 func input_held() -> bool:
+	return held_glyph() != ""
+
+
+# The cap id (keycap.gd) of the first such input that is down, "" when none is: the summary's latch cue
+# draws it. An input with no cap of its own (a side mouse button, a pad's Back) answers HELD_UNNAMED.
+func held_glyph() -> String:
 	var pads := Input.get_connected_joypads()
 	var table := Bindings.actions()
 	for action in table:
 		var record: Dictionary = table[action]
 		for key in record.get("keys", []):
 			if Input.is_physical_key_pressed(key):
-				return true
+				return "key_" + OS.get_keycode_string(key).to_lower().replace(" ", "_")
 		if record.has("button") and Input.is_mouse_button_pressed(record["button"]):
-			return true
+			return {MOUSE_BUTTON_LEFT: "key_lmb", MOUSE_BUTTON_RIGHT: "key_rmb"}.get(record["button"], HELD_UNNAMED)
 		if record.has("pad"):
 			for device in pads:
 				if Input.is_joy_button_pressed(device, record["pad"]):
-					return true
+					return Glyphs.PAD_BUTTONS.get(record["pad"], HELD_UNNAMED)
 		if record.has("axis") and record["axis"][0] in [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]:
 			for device in pads:
 				if Input.get_joy_axis(device, record["axis"][0]) > 0.5:
-					return true
+					return Glyphs.PAD_TRIGGERS[record["axis"][0]]
 	for ui_action in Bindings.UI_PAD:
 		for device in pads:
 			if Input.is_joy_button_pressed(device, Bindings.UI_PAD[ui_action]):
-				return true
-	return false
+				return Glyphs.PAD_BUTTONS.get(Bindings.UI_PAD[ui_action], HELD_UNNAMED)
+	return ""
 
 
 func _register_actions() -> void:
@@ -1013,10 +1054,11 @@ func apply_saved_display(args: Array = []) -> void:
 	var saved := SettingsStore.new(storage_dir)
 	if not launch.any(func(arg): return String(arg).begins_with("--preset=") and GraphicsPreset.PRESETS.has(String(arg).trim_prefix("--preset="))):
 		set_quality(saved.quality())
-	if saved.fullscreen():
+	if launches_fullscreen(saved.fullscreen(), Array(OS.get_cmdline_args() + OS.get_cmdline_user_args())):
 		set_fullscreen(true)
 	set_reduced_motion(saved.reduced_motion())
 	set_reduce_flashes(saved.reduce_flashes())
+	set_frame_smoothing(saved.frame_smoothing())
 
 
 # 0 High, 1 Low.
@@ -1062,10 +1104,51 @@ func set_reduce_flashes(on: bool) -> void:
 			FxLibrary.set_heat(p)
 
 
+# Frame smoothing: the ball is drawn between its last two physics ticks, so a display faster
+# or slower than the 90 ticks shows it moving every frame, at most one tick late. Only a game
+# on a window takes the setting. The sim reads the lens (the aim origin) and the lens follows
+# the drawn ball, so a headless bot or a test with smoothing on would not play the run the gate
+# measures. --smoothing=0 or --smoothing=1 beats the setting and that rule, for a capture or a
+# comparison; F3 under --dev flips it for the session.
+func set_frame_smoothing(on: bool) -> void:
+	frame_smoothing = on
+	var smooth := on and not test_mode and _windowed()
+	for arg in OS.get_cmdline_args() + OS.get_cmdline_user_args():
+		if arg == "--smoothing=0" or arg == "--smoothing=1":
+			smooth = arg == "--smoothing=1"
+	_smooth(smooth)
+
+
+func _smooth(on: bool) -> void:
+	if not is_inside_tree() or get_tree().physics_interpolation == on:
+		return
+	get_tree().physics_interpolation = on
+	# The engine's jitter fix evens out tick counts for a picture drawn on the ticks; under
+	# interpolation it only adds error, so it rests while smoothing is on.
+	Engine.physics_jitter_fix = 0.0 if on else float(ProjectSettings.get_setting("physics/common/physics_jitter_fix", 0.5))
+	reset_physics_interpolation()
+
+
 func set_fullscreen(on: bool) -> void:
 	if not _windowed():
 		return
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if on else DisplayServer.WINDOW_MODE_WINDOWED)
+
+
+# Whether launch puts the window fullscreen. The player's Fullscreen setting decides, and it is
+# on until they turn it off (DECISIONS cb): a monitor's variable refresh only follows a
+# fullscreen window, and a tiled one is drawn on the compositor's clock. A game with no
+# player's save folder (a test, a bot's run) has no wish to follow and keeps the window it was
+# launched with, so a capture or a timing run stays the size its command gave it.
+# --fullscreen=0 or --fullscreen=1 beats the setting and that rule this once and leaves the
+# setting alone, as --smoothing does. Godot's own --windowed cannot do it: the engine keeps the
+# flags it handles to itself, so the game never sees one.
+func launches_fullscreen(wanted: bool, args: Array) -> bool:
+	if "--fullscreen=0" in args or "--fullscreen=1" in args:
+		return args.rfind("--fullscreen=1") > args.rfind("--fullscreen=0")
+	if test_mode or _launch_flag("--self-play"):
+		return false
+	return wanted
 
 
 # The key a pad press stands for on the title, death and summary screens, or KEY_NONE: A is
@@ -1110,7 +1193,7 @@ func note_device(event: InputEvent) -> void:
 		last_device = "kbm"
 	elif event is InputEventJoypadButton or (event is InputEventJoypadMotion and absf(event.axis_value) > 0.2):
 		last_device = "pad"
-	preload("res://src/ui/glyphs.gd").device = last_device
+	Glyphs.device = last_device
 
 
 static func _fresh_action(action: String) -> void:
@@ -1275,6 +1358,9 @@ func _screen_key(key: int) -> bool:
 				return true
 		"summary":
 			if summary_shut():
+				# The latch turned a press away: its cue says which held input it waits on.
+				if summary_latched:
+					screens.latch_pressed()
 				return true
 			# Esc leaves the summary for the camp, as K does, never the desktop (w23 cautious red team).
 			if key == KEY_K or key == KEY_ESCAPE:

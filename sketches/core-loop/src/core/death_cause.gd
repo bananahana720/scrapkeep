@@ -35,7 +35,7 @@ const WORDS := {
 static func line(source: String, attack := "", phase_note := "") -> String:
 	if source == "":
 		return ""
-	var id := _row(source, attack)
+	var id := row_id(source, attack)
 	var text := "Scrapped by " + words(source, id)
 	if phase_note != "" and _boss(source) != "":
 		text += ", " + phase_note
@@ -71,7 +71,8 @@ static func phase_note(boss) -> String:
 	return "phase %d" % int(boss.phase)
 
 
-static func _row(source: String, attack: String) -> String:
+# The ATTACK_ROWS id the hit reads by, "" when the source has no one row (death_tips.gd keys its rows on it too).
+static func row_id(source: String, attack: String) -> String:
 	if EventKinds.has_attack(attack) and String(EventKinds.attack_row(attack).get("owner", "")) == source:
 		return attack
 	if ROW_OF.has(source):

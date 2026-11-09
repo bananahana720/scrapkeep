@@ -1,5 +1,7 @@
 # Story threads, core-loop v2
 
+An older telling. The current story facts are in [design-v3/STORY-MAP.md](../design-v3/STORY-MAP.md) (9 Nov 2026); where the two differ, that page is the current one.
+
 The story-thread board. It sits beside `DESIGN-V2.md` (what the game does), `VISUAL-LANGUAGE.md` (how it looks), `SOUND-STORY.md` (how it sounds and what it means) and `PROGRESSION.md` (what carries across runs, written in parallel; this board leaves it hooks and designs no progression). The vision keeper owns it under `PROTOCOL.md`.
 
 Four rules govern every thread:

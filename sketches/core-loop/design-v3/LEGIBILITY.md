@@ -139,7 +139,7 @@ The slice Warden is the posture chassis and nothing else. In one line: hit it un
 - **On the body.** Cracks spread across the jaw plates at 25, 50 and 75 posture and seal as it drains. No amber anywhere on the Warden. The live colour appears on it only while it is open.
 - **The plate** sits top-centre, about 420 by 44 px at 1080p, from `warden_engaged`: a name of two words or fewer, four chunks, a posture bar, one state glyph. The 24-segment ring goes. The overhead diamond stays as a landmark.
 - **Sound.** Each posture quarter raises the hit's note one step of a four-note phrase. The stagger lands the chord. A chunk shatters on a bass hit.
-- **The objective line** is the fight's state: "Find the Warden", "Break its guard", "Smash the core", "Roll through a gate". "Grow, then return" appears only when posture has failed to reach 50 across 10 s of trying, never on a hit count. A matched build must never see it.
+- **The objective line** is the fight's state: "Find the Warden", "Break its guard", "Smash the core", "Roll through a gate". Since 9 Nov 2026 a mounted reactor Warden names its own road in place of "Break its guard" ("Ride the water sheet up" at the dam; "Latch onto the Warden", then "Fire from the line" at the flume), Brindle's arena names each phase's verb, and the activity row names the nearest site with its metres (`src/core/objectives.gd`). "Grow, then return" appears only when posture has failed to reach 50 across 10 s of trying, never on a hit count. A matched build must never see it.
 
 **Bands** (bots decide only whether the build is worth his time):
 
@@ -292,7 +292,7 @@ Each is worded so he can veto it.
 29. Enemies arrive as three whole packs drawn without repeats, with no hidden unlock clock. The plated brute and a winch drone arrive once per stage as the third arrival.
 30. A hold can bend the ball's path by at most 60 degrees a second and can never slow it. The winch drone's cable snaps past 19 m/s and kicks the ball forward.
 31. The slice has no timed events and no vault. Standing activities replace them in the wave after.
-32. The objective line reads "Find the Warden", "Break its guard", "Smash the core" or "Roll through a gate". "Grow, then return" shows only after ten seconds of trying leave the guard under half.
+32. The objective line reads "Find the Warden", "Break its guard" (or the mounted Warden's own road: the dam's sheet, the flume's line), "Smash the core" or "Roll through a gate". "Grow, then return" shows only after ten seconds of trying leave the guard under half.
 33. The scrap number shows only where it is spent. The core pips and first-run sentence callouts are gone with the dial, bars and clock.
 34. The map retrofit is a new map file used by the slice only. The three-stage game keeps today's Reach until he has played the new one.
 35. Devices belong to a map. The Reach has none until the standing-activities unit places its own.

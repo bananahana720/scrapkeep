@@ -1,16 +1,16 @@
 # Scrapkeep roadmap
 
-The one roadmap. Written 8 Nov 2026 on stage/alpha-w32 24ebf5e8 (main 645893f3, the wave 31 promotion). Phone copy: https://claude.ai/artifact/55bppMdvsEXW52ZVFyhNna (source /mnt/project-files/roadmap/roadmap.html). Live wave state is in [STATE.md](STATE.md); rulings are in [DECISIONS.md](DECISIONS.md) (newest wins). The waves 18 to 21 plan in [../coord/ROADMAP.md](../coord/ROADMAP.md) is history.
+The one roadmap. Written 8 Nov 2026; facts refreshed 9 Nov after the wave 32 promotion (main 8180ec6c). Phone copy: https://claude.ai/artifact/55bppMdvsEXW52ZVFyhNna (source /mnt/project-files/roadmap/roadmap.html). Live wave state is in [STATE.md](STATE.md); rulings are in [DECISIONS.md](DECISIONS.md) (newest wins). The waves 18 to 21 plan in [../coord/ROADMAP.md](../coord/ROADMAP.md) is history.
 
-The roadmap is ordered by what has to be true, not by dates. Wave numbers keep counting (32 now); "wave 21" in older records means the full-alpha sitting, not a wave number still ahead.
+The roadmap is ordered by what has to be true, not by dates. Wave numbers keep counting (STATE.md names the open one); "wave 21" in older records means the full-alpha sitting, not a wave number still ahead.
 
 ## Where we are
 
 - **Goal (16 Oct, unchanged):** a finished-feeling Linux alpha, accepted at one sitting: 11 areas marked with no "Not yet", no open blocker, frame times in budget, zero placeholders.
 - **Priority (23 Oct, ruling at):** world 1 first. Worlds 2 and 3 start nothing new until the world 1 sitting is done.
 - **World 1 sitting:** started, not finished. Andrew played the dam on the wave 26 build on 30 Oct ("fun"; many invisible walls; models clipping). Every fix shipped in wave 29 (#600, #601, #602 and the clipping lane). No area verdicts are recorded yet (Sitting Kit store empty, read 8 Nov).
-- **Build on the PC:** stage/alpha-w32 24ebf5e8 (#628, #629), installed 8 Nov 19:07Z at Andrew's request as a pre-gate build with the new mix. Rollback: the w31 AppImage.
-- **Measured on w31 (gate CLEAN on 80af241e):** W1 Novice 42%, Learner a1 79%, a5 83%, Expert 100%; HARD rungs 100/100/96/88/56%. 4080 p99 medians: dam 14.8 ms, flume 15.2 ms, Brindle 12.2 ms. 0 placeholders.
+- **Build on the PC:** the promoted wave 32 build (main 8180ec6c), installed 9 Nov. Rollbacks: the wave 32 pre-gate and wave 31 AppImages.
+- **Measured on w32 (gate CLEAN on 8f12596a, bands identical to w31):** W1 Novice 42%, Learner a1 79%, a5 83%, Expert 100%; HARD rungs 100/100/96/88/56%. 4080 p99 medians: dam 14.8 ms, flume 15.2 ms, Brindle 12.2 ms. 0 placeholders.
 
 ## Phase 1: the world 1 sitting
 
@@ -20,10 +20,10 @@ World 1 is the title, the camp, the dam, the flume and Brindle in the Slag Bowl.
 
 | # | Item | Owner | State |
 | --- | --- | --- | --- |
-| 1 | Wave 32 full gate, first-timer red team, promotion | Gate | Stage open; #628 and #629 stacked |
-| 2 | Dam Warden `sheet_dir` [0,0,-1] plus the bot sheet-foot return, then re-read Learner a5 | Dam lane | Queued on board #627 |
-| 3 | Dam east-end airborne invisible patch at (200, 94-98, 642), owed under ruling aa | Needs an owner | Queued |
-| 4 | Clip-audit correction | Clipping lane | Queued |
+| 1 | Pre-sitting improvement pass (ruling bo, 9 Nov): workflows, world 1 polish, performance, deep modules, testing; then the wave 33 full gate, cautious red team and promotion | Five lanes, then Gate | Lanes claimed on the live board |
+| 2 | Dam Warden `sheet_dir` [0,0,-1] plus the bot sheet-foot return | Dam lane | Not shipping for the sitting (ruling cm): two 24-seed reads bettered no band and the heading alone breaks the Novice ceiling. The sheet stays as it is; an axis heading with the lobbers or the foot moved is parked for after the sitting ([DECISIONS.md](DECISIONS.md) section 10) |
+| 3 | Dam east-end airborne invisible patch at (200, 94-98, 642), owed under ruling aa | Dam lane | PR #659: no ball can reach the strip; four drawn triangles close it so the sweep reads clean |
+| 4 | Clip-audit correction | Clipping lane | Done in wave 30 (#608); the queue line was a stale carry |
 | 5 | Sitting sheet refresh for the build he plays (Try lines from the watch list) | Sitting prep | Owed |
 | 6 | Esc on the run summary quits in one press (SITTING-GAPS 11) | Cloud | Not re-checked since 28 Oct |
 | 7 | Slag Bowl stand crew bodies (163 recipe shapes): refsheets and one Mojulo shell, then a mesh swap | PC, then cloud | A Look note if it misses, not a gate fail |
@@ -32,15 +32,13 @@ The rest of the 28 Oct gap list is closed: the dunk tip, the held radio and acti
 
 ### Engineering hygiene that rides along (never holds a promotion)
 
-- Slow-box time caps (boss_weak_parts, crown_warden_bot, run_tier children, bot_skill_bar): needs an owner.
-- `--audio-driver Dummy` in `bossSmokeCommand` in `scripts/sketch-export.mjs`.
+- Slow-box time caps (boss_weak_parts, crown_warden_bot, run_tier children, bot_skill_bar): the dam leftovers lane raises the tests' own caps; the runner gains a time scale for slow boxes ([GATE.md](GATE.md)).
 - Deep-modules batch 2 from the queued list ([DEEP-SWEEP.md](DEEP-SWEEP.md)).
-- Stale band waiver: `scripts/world1-bands.rows.json` still grades w1 Learner a5 at >= 58% (ruling bb, a w29 waiver); w31 measured 83%. Return it to the >= 60% target once the dam sheet_dir PR lands and a5 is re-read.
-- Watches on #627 and the owed base-same reds in STATE.md.
+- Watches on the live board, and the carried reds in [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) (ruling bq).
 
 ### Andrew plays
 
-He plays the wave 32 build once it passes its full gate and is promoted (ruling bm), launched from the plain menu entry. He plays world 1 as often as he likes and marks the world 1 areas on the [Sitting Kit](https://claude.ai/artifact/HxmWTSrJf1vifhjXXPW1qT). The sheet tells him what to try. A capture is void if he plays during it.
+Ruling bm named the wave 32 build; ruling bo (9 Nov) moved the sitting behind the pre-sitting improvement pass, so he plays the promotion that carries it, launched from the plain menu entry. He plays world 1 as often as he likes and marks the world 1 areas on the [Sitting Kit](https://claude.ai/artifact/HxmWTSrJf1vifhjXXPW1qT). The sheet tells him what to try. A capture is void if he plays during it.
 
 ### Re-read after the sitting (already ruled to wait)
 

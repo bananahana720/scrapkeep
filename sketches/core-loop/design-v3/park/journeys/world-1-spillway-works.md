@@ -281,7 +281,7 @@ Latch and ride are met on the line before the dam, but only on harpoon lines; fi
 
 **D1. Into the ring**
 - **Where:** `toe_apron`; the engage ring at [0, 575], `reach_m` 30 (`1-park_dam.md:32`).
-- **You:** You roll into the ring. The plate says "Break its guard" (`DESIGN-V3.md:136`).
+- **You:** You roll into the ring. The plate says "Ride the water sheet up" (`src/core/objectives.gd` `ride_sheet`; "Break its guard" before 9 Nov 2026).
 - **You see:** While you are inside the ring it charges 2 s every 6 s, showing the reach ring and a 6 m core ring (`reactor.md:40`); the gates glow and the stacks rise 0.6 m (`reactor.md:60`, `95`).
 - **Pull:** The charge: the next pulse opens the road.
 - **Pressure:** the pulse adds 10 damage inside the 6 m core ring (`reactor.md:41`).

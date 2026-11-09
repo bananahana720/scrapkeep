@@ -119,7 +119,7 @@ func step(delta: float) -> void:
 		_fall_time = minf(FALL_SECONDS, _fall_time + delta)
 		plug.position.z = -0.85 - minf(1.0, _fall_time / 0.3) * 0.6
 		plug.visible = _fall_time < 0.3
-		var toward: Vector3 = module.ctx.player.ball_position() - barrel.global_position
+		var toward: Vector3 = module.ctx.player.shown_position() - barrel.global_position
 		if Vector2(toward.x, toward.z).length() > 0.01:
 			var basis := Basis.looking_at(Vector3(toward.x, 0.0, toward.z).normalized(), Vector3.UP)
 			barrel.basis = _rest_basis.slerp(basis, smoothstep(0.0, 1.0, _fall_time / FALL_SECONDS))

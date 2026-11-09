@@ -314,6 +314,10 @@ func _shots() -> void:
 	cam.far = 900.0
 	game.add_child(cam)
 	cam.make_current()
+	# The terrain's detail rings follow the camera it was given, the game's, which stays with the ball: without this a shot far
+	# from the ball draws coarse ground that pokes through the liners (the false "ground shows through" patches of the w33 audit).
+	for terrain in game.find_children("*", "Terrain3D", true, false):
+		terrain.set_camera(cam)
 	game.player.body().global_position = Vector3(0, -500, 0)
 	for shot in list:
 		var at := Vector3(shot["at"][0], shot["at"][1], shot["at"][2])

@@ -10,7 +10,9 @@ const SafeStore := preload("res://src/core/safe_store.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 
 const FILE := "settings.json"
-# Comfort numbers the settings page keeps: fullscreen 0 off, 1 on; quality 0 High, 1 Low.
+# Comfort numbers the settings page keeps: fullscreen 0 off, 1 on (the default, so a fresh
+# install starts fullscreen and the monitor's variable refresh can follow the game); quality 0
+# High, 1 Low.
 const FULLSCREEN := "fullscreen"
 const QUALITY := "quality"
 # Reduced motion, 0 off and 1 on: damps camera shake, FOV kicks, hit-edge flashes and decorative
@@ -21,6 +23,9 @@ const REDUCED_FLASH := 0.25
 # Reduce flashes, 0 off and 1 on: cuts the brightness of flashes, white pops and strobes
 # (FlashGuard holds the shares). Separate from reduced motion: a player may want either alone.
 const REDUCE_FLASHES := "reduce_flashes"
+# Frame smoothing, 1 on (the default) and 0 off: the ball is drawn between physics ticks, so it
+# moves every frame on a display that is not 90 Hz, about one tick (11 ms) behind the sim.
+const FRAME_SMOOTHING := "frame_smoothing"
 const STICK_SENSITIVITY := "stick_sensitivity"
 const INVERT_Y := "invert_y"
 const STICK_DEADZONE := "stick_deadzone"
@@ -129,7 +134,7 @@ func _look_value(id: String, value: float) -> float:
 
 
 func fullscreen() -> bool:
-	return float(comfort.get(FULLSCREEN, 0.0)) >= 0.5
+	return float(comfort.get(FULLSCREEN, 1.0)) >= 0.5
 
 
 func reduced_motion() -> bool:
@@ -138,6 +143,10 @@ func reduced_motion() -> bool:
 
 func reduce_flashes() -> bool:
 	return float(comfort.get(REDUCE_FLASHES, 0.0)) >= 0.5
+
+
+func frame_smoothing() -> bool:
+	return float(comfort.get(FRAME_SMOOTHING, 1.0)) >= 0.5
 
 
 # 0 for High, 1 for Low.

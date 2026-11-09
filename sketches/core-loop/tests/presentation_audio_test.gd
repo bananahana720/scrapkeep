@@ -109,7 +109,10 @@ func _process(_delta: float) -> bool:
 			for frames in 20:
 				engine.render(Harmony.BEAT / 4)
 				dead_mode = dead_mode or engine.mode == MusicEngine.DEAD
-			_check("death", died.size() == 1 and died[0][2] == "now" and dead_mode, "the death cue plays at once and the band drops to the keys on the next beat")
+			# The cue on the death's frame, then the fall's three notes booked on the grid from the boom's beat.
+			var cues_now: Array = died.filter(func(c: Array): return c[2] == "now")
+			var fall: Array = died.filter(func(c: Array): return c[2] == "grid")
+			_check("death", cues_now.size() == 1 and fall.size() == died.size() - 1 and fall.size() == 3 and dead_mode, "the death cue plays at once (%d), the fall is booked on the grid (%d notes) and the band drops to the keys on the next beat" % [cues_now.size(), fall.size()])
 			_check("band clock", engine.clock > 0, "the band ran %d samples on the %s driver (live output %s)" % [engine.clock, AudioServer.get_driver_name(), _audio.live_output])
 			# The output path the game uses on a real device: render into a generator.
 			var generator := AudioStreamGenerator.new()

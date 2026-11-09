@@ -14,6 +14,8 @@ This is the audio identity and the narrative through-line for the v2 round (TRAC
 
 ## 1. The through-line
 
+An older telling. The current story facts are in [design-v3/STORY-MAP.md](design-v3/STORY-MAP.md) (9 Nov 2026); where the two differ, that page is the current one. Sections 2 to 8 here still own the sound grammar.
+
 Humans built machines that could end them, and did. Animals inherited the quiet that followed, grew up among the buried hulls and learned to repair what they found, so a fox winches, a mole cuts and a bird lifts. Salvagers like Sable, Rivet and Kest repurpose the tech that ended us into rolling workshops that hum with the mint field that pulls scrap home. The Furnace Fleet digs up what should have stayed buried, because Admiral Brindle counts ancient housings as inventory, and inventory does not wake. It woke, and the collapse has a second act.
 
 Every run tells a small piece of this without a cutscene, because stopping to read defeats the game (playtest entry 7). Three channels carry it:

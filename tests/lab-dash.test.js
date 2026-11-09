@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
@@ -533,17 +533,26 @@ test("every EV row cited by the admitted results exists in TRACKING, and the pag
     existsSync(tracking),
     "TRACKING.md must exist; this check fails closed",
   );
-  const rows = new Set(
-    [...(await readFile(tracking, "utf8")).matchAll(/^\| (EV-\d{4}) \|/gm)].map(
-      (m) => m[1],
-    ),
-  );
+  // An event may have moved from the board into a declared archive: the rows
+  // under a "## Event archive" heading, up to the next "## " heading, in a file
+  // under docs/project/tracking/. scripts/check-docs.mjs owns that rule and
+  // walks every doc; this test reads the one folder the coordinator uses.
+  const eventRows = (text) => [...text.matchAll(/^\| (EV-\d{4}) \|/gm)].map((match) => match[1]);
+  const rows = new Set(eventRows(await readFile(tracking, "utf8")));
+  const archives = path.join(root, "docs/project/tracking");
+  for (const name of existsSync(archives) ? await readdir(archives) : []) {
+    if (!name.endsWith(".md")) continue;
+    const sections = (await readFile(path.join(archives, name), "utf8")).split(/^(?=## )/m);
+    for (const section of sections) {
+      if (/^## Event archive\n/.test(section)) for (const id of eventRows(section)) rows.add(id);
+    }
+  }
   const cited = [
     ...new Set(JSON.stringify(dashModule.ADMITTED).match(/EV-\d{4}/g)),
   ].toSorted();
   assert.ok(cited.length > 0);
   for (const id of cited)
-    assert.ok(rows.has(id), `${id} is not a TRACKING event row`);
+    assert.ok(rows.has(id), `${id} is not an event row in TRACKING or a declared event archive`);
   const { dash } = await fixture(t);
   const html = await dash().html;
   assert.match(html, new RegExp(`admitted results as of ${cited.at(-1)}`));

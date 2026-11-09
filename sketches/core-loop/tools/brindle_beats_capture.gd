@@ -9,7 +9,10 @@ const Intent := preload("res://src/movement/intent.gd")
 # seconds below are game seconds whatever the renderer's speed:
 #
 #   xvfb-run -s "-screen 0 1920x1080x24" <godot> --path sketches/core-loop --fixed-fps 30 \
-#     --script res://tools/brindle_beats_capture.gd -- --out=<absolute dir>
+#     --script res://tools/brindle_beats_capture.gd -- --out=<absolute dir> [--human=1]
+#
+# --human=1 plays the beats as a hand on the controls sees them: the camera glances at the ship
+# (ruling bv), which a bot's run never does.
 
 const FPS := 30.0
 # [seconds after the arena opens, still name, action to run first or ""].
@@ -28,6 +31,7 @@ const PLAN := [
 ]
 
 var _out := ""
+var _human := false
 var _game
 var _frames := 0
 var _arena_frame := -1
@@ -39,6 +43,8 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			_out = arg.substr(6)
+		elif arg.begins_with("--human="):
+			_human = arg.trim_prefix("--human=") == "1"
 	if DisplayServer.get_name() == "headless" or _out == "":
 		printerr("brindle_beats_capture: needs a rendered display and -- --out=<absolute dir>")
 		quit(2)
@@ -59,6 +65,7 @@ func _process(_delta: float) -> bool:
 		_started = true
 		_game.ctx.calm = true
 		_game.player.source = Intent.Scripted.new()
+		_game.bot_driven = not _human
 		_game.flow.press_start()
 		_game.flow.choose_class(0)
 		var last: int = _game.ctx.stages.STAGES.size() if "STAGES" in _game.ctx.stages else 2

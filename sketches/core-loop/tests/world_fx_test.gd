@@ -203,6 +203,14 @@ class FakeTerrain:
 		return 5.0
 
 
+# The game's ball: the node itself never leaves the origin, and shown_position() is where the ball
+# is drawn this frame.
+class FakeBall extends Node3D:
+	var at := Vector3(40, 6, -25)
+	func shown_position() -> Vector3:
+		return at
+
+
 class FakeGame extends Node3D:
 	var world := {"events": FakeDirector.new()}
 
@@ -223,11 +231,22 @@ func _wiring() -> void:
 	game.add_child(events)
 	var cam := Camera3D.new()
 	game.add_child(cam)
-	var ball := Node3D.new()
+	var ball := FakeBall.new()
 	game.add_child(ball)
 	var ctx := {"root": game, "events": events, "stages": FakeStages, "camera": cam, "player": ball, "terrain": FakeTerrain.new()}
 	var fx := WorldFx.hook(ctx)
 	t.check("hook installs one WorldFx under the game", fx.get_parent() == game and WorldFx.current == fx)
+	# The air around the ball goes where the ball is drawn, not to the PlayerBall node's own origin.
+	events.stage_entered.emit(1, false)
+	var midges: GPUParticles3D = fx.ambient[Specs.SETS["spillway"].find("spill_midges")]
+	var lift: Vector3 = Specs.SPECS["spill_midges"]["offset"]
+	t.check("the Spillway's midges sit on the game's ball", midges.global_position.is_equal_approx(ball.at + lift), "midges at %s" % midges.global_position)
+	t.check("the clear zone is centred on the game's ball", Kit.ambient_materials().all(
+		func(m): return m.get_shader_parameter("clear_center") == ball.at))
+	ball.at = Vector3(-62, 54, -155)
+	await process_frame
+	t.check("and both follow it each frame", midges.global_position.is_equal_approx(ball.at + lift)
+		and Kit.ambient_materials().all(func(m): return m.get_shader_parameter("clear_center") == ball.at), "midges at %s" % midges.global_position)
 	events.stage_entered.emit(3, false)
 	t.eq("stage 3 breathes the Dig's air", fx.ambient.map(func(p): return p.get_meta("world_fx")), Specs.SETS["dig"])
 	var first: GPUParticles3D = fx.ambient[0]

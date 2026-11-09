@@ -434,7 +434,7 @@ class LampPool extends Node3D:
 						_lamps.append(view.global_transform * at)
 		if _lamps.is_empty() or _player == null:
 			return
-		var ball: Vector3 = _player.ball_position()
+		var ball: Vector3 = _player.shown_position()
 		var order := Array(_lamps)
 		order.sort_custom(func(a: Vector3, b: Vector3) -> bool: return a.distance_squared_to(ball) < b.distance_squared_to(ball))
 		for i in _lights.size():

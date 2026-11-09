@@ -9,6 +9,10 @@ Resolve this skill directory through symlinks, then run `git -C <resolved-skill-
 
 ORCHESTRATOR owns the assignment packet, concurrency, leases, review and acceptance; do not substitute an older pstack board or planning protocol. The coordinator is the sole canonical record writer. Each step below links the record that owns its rule instead of restating it.
 
+## In a claude.ai project thread
+
+The thread is the writer (ruling by; [ORCHESTRATOR.md#roles-and-concurrency](../../../ORCHESTRATOR.md#roles-and-concurrency)). Its branch and its claim on the wave board are its isolation and its lease, so steps 3 to 6 do not apply: no writer worktree, packet, lease record or dispatch. The thread reads the sources, writes the change, runs the checks in step 7 itself, and starts one fresh read-only reviewer for step 8. The Gate thread stacks the pull request; steps 9 and 10 are the coordinator's. The procedure below is the heavy lane, for a coordinator that runs writers inside one local session.
+
 ## Procedure
 
 1. Authorization check. Confirm the current program authorization covers this card and action type, per [TRACKING.md#program-authorization](../../../TRACKING.md#program-authorization). Read the exact `BACKLOG.md` card and its source sections. Missing authorization or a missing prerequisite output blocks the card even if its status says ready. Capture a direct new scope request in the existing board before dispatch.
@@ -28,7 +32,7 @@ When the selected sprint has no remaining active work, invoke [the sprint-close 
 
 ## Host adapter and base identity
 
-- Claude Code: use `scrapkeep-writer` or `scrapkeep-writer-low` for writes, `scrapkeep-explorer` for source inspection and `scrapkeep-reviewer` or `scrapkeep-reviewer-medium` for independent review. Pick the definition by importance and difficulty; each pins its model at effort high, and a prompt cannot change it. Avoid built-in Explore/Plan or advisor defaults unless actual model and effort are verified to match policy.
+- Claude Code: in a project thread, write the change yourself and use sub-agents only for search and for the independent review (ruling by). In a local coordinator session, use `scrapkeep-writer` or `scrapkeep-writer-low` for writes, `scrapkeep-explorer` for source inspection and `scrapkeep-reviewer` or `scrapkeep-reviewer-medium` for independent review. Pick the definition by importance and difficulty; each pins its model at effort high, and a prompt cannot change it. Avoid built-in Explore/Plan or advisor defaults unless actual model and effort are verified to match policy.
 - Codex: create distinct worktrees explicitly at the accepted revision and use the available collaboration tool with the configured Astra model and effort. A task name alone provides no filesystem isolation.
 - For either app, compare the requested model/effort with the host map and actual runtime metadata. In Claude Code the `CLAUDE_EFFORT` environment variable is the runtime evidence; ask each agent to report it. A mismatch or rejected required model/effort blocks the lane. Verify the actual worktree base and write scope before admission. Follow the existing prose-staging exception when applicable. The coordinator runs executable checks and supplies the exact artifact and evidence to review.
 

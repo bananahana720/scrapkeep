@@ -84,6 +84,8 @@ var _dismiss_wired := {}
 var _windup_states := {}
 # Screens a queued discovery never plays over.
 const BANNER_SCREENS := ["title", "class_select", "summary", "dead", "victory"]
+# A completed part set's banner id is this and the set's id.
+const SET_KEY := "set:"
 
 
 func setup(ctx_ref) -> void:
@@ -132,6 +134,7 @@ func setup(ctx_ref) -> void:
 	add_child(layer)
 	banner = CodexBanner.new()
 	layer.add_child(banner)
+	banner.came_up.connect(_on_banner_up)
 	var codex = ctx.get("codex")
 	if ctx.tuning != null and ctx.tuning.option(Tuning.DISCOVERY_KEY) == "cards" and codex != null:
 		banner.cards = true
@@ -277,6 +280,10 @@ func wire_optional() -> void:
 		events.connect("synergy_discovered", _on_synergy)
 	if events.has_signal("part_gained") and not events.is_connected("part_gained", _on_part):
 		events.connect("part_gained", _on_part)
+	# A completed part set is build-local (no bus signal): build.gd's set_completed.
+	var build = ctx.get("build")
+	if build != null and build.has_signal("set_completed") and not build.set_completed.is_connected(_on_set_completed):
+		build.set_completed.connect(_on_set_completed)
 	# The banner never outlives the moment: a flow change, arena entry, death or the
 	# run's end clears it at once.
 	for signal_name in ["stage_content_cleared", "player_died", "run_ended"]:
@@ -327,6 +334,21 @@ func _on_part(part_id: String, _source: String) -> void:
 	var row := Parts.row(part_id)
 	var title: String = row.get("name", part_id.capitalize())
 	banner.show_discovery(title, "part", String(row.get("text", "")), "Found", "part:" + part_id, "part_gained")
+
+
+# The third part of a set landed: the set's name and what it changes, in the set's own colour (the
+# band of studs set_tell.gd draws on the ball), once per run. Like every find it waits for a calm
+# moment, so a set finished in a fight is told when the fight lets go.
+func _on_set_completed(set_id: String, title: String, text: String, color: Color) -> void:
+	if auto_banner:
+		banner.show_discovery(title, "build", text, "Set complete", SET_KEY + set_id, "synergy_discovered", color, true)
+
+
+# The set's chime plays as its banner comes up, so it waits for the same calm moment.
+func _on_banner_up(key: String) -> void:
+	var build = ctx.get("build")
+	if key.begins_with(SET_KEY) and build != null:
+		audio.set_complete(build.set_element(key.trim_prefix(SET_KEY)))
 
 
 # The registry entry for an id, if the spine's codex offers one.

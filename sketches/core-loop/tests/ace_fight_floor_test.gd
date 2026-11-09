@@ -101,6 +101,9 @@ func _run() -> void:
 		if row[2]:
 			t.check("%s: melody stem at the band floor" % label, gain >= engine_floor - 1e-6 and gain > 0.0,
 				"other_gain=%.2f band floor=%.2f" % [gain, engine_floor])
+		elif track == "level":
+			# The shelf is the one place the stem does not follow the synth band down (ruling bt).
+			t.check("%s: melody stem holds the shelf floor" % label, absf(gain - Ace.LEAD_FLOOR) < 0.001, "other_gain=%.2f" % gain)
 		else:
 			t.check("%s: melody stem follows the band down" % label, gain == 0.0, "other_gain=%.2f" % gain)
 	game.queue_free()
