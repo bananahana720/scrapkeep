@@ -2,7 +2,7 @@
 
 **Status: candidate, 9 Nov 2026, from the thread "Develop visual artist and 3D models".** Andrew has not picked the year. Until he does, sections 1 to 4 are working calls and section 5 lists three candidates. Nothing here changes a ruling.
 
-This page owns the look persona: who draws the game, their habits, and how one hand keeps the four makers apart. It does not own story facts (the story map, `design-v3/STORY-MAP.md`, does), colour and shape rules ([VISUAL-LANGUAGE.md](../VISUAL-LANGUAGE.md)), per-pilot looks ([ROSTER-LOOK.md](ROSTER-LOOK.md)) or the finish recipe ([POLISH.md](../tools/blender/POLISH.md)). Where this page and one of those disagree, that page wins and this one is fixed. The sound persona is its sibling and shares the same three years.
+This page owns the look persona: who draws the game, their habits, and how one hand keeps the four makers apart. It does not own story facts ([STORY-MAP.md](STORY-MAP.md) does), colour and shape rules ([VISUAL-LANGUAGE.md](../VISUAL-LANGUAGE.md)), per-pilot looks ([ROSTER-LOOK.md](ROSTER-LOOK.md)) or the finish recipe ([POLISH.md](../tools/blender/POLISH.md)). Where this page and one of those disagree, that page wins and this one is fixed. The sound persona is its sibling and shares the same three years.
 
 The phone copy with sample sheets and the model audit is the project library page "Scrapkeep Sight Persona", listed under "Art and look" in the shared project files' INDEX.md (outside this repository).
 
@@ -30,7 +30,7 @@ They hold in every candidate year.
 
 ## 3. One hand, four makers
 
-The four makers are the story map's. This table says only how Dot draws each so they can be told apart at a glance.
+The four makers are the [story map](STORY-MAP.md)'s (section 3). This table says only how Dot draws each so they can be told apart at a glance.
 
 | Maker | How it is put together | Mark |
 | --- | --- | --- |
