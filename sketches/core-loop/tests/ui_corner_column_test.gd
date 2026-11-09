@@ -12,6 +12,7 @@ const T := preload("res://tests/support/t.gd")
 # the screen's right edge. C3: on a menu, where the chip is away, the plate takes the top slot.
 # C4: the plate, two lines tall, still ends inside the top band (screen_regions.gd), so no toast
 # can meet it. C5: the pill, which hangs below that band, is right of the toast column.
+# C6: a chip swollen by a station change is twice its height; a new plate waits for it to settle.
 
 var _t := T.new("ui_corner_column_test")
 
@@ -69,4 +70,13 @@ func _run() -> void:
 	var toasts: Rect2 = hud._toasts.get_global_rect()
 	var pill: Rect2 = rects[2]["rect"] if rects.size() == 3 else Rect2()
 	_t.check("C5 the pill sits right of the toast column", pill.position.x >= toasts.end.x, "pill starts %.1f, toasts end %.1f" % [pill.position.x, toasts.end.x])
+
+	hud.clear_achievement_toasts()
+	await _frames(2)
+	game.radio_deck.dial.swell()
+	hud.take_found("Cable Reach", "Moss's Back Room")
+	await _frames(6)
+	var swollen: Array = hud.corner_rects().map(func(r): return r["name"])
+	_t.check("C6 while the chip is swollen from a station change, a new plate waits", not swollen.has("plate") and hud.tune_waiting().size() == 1,
+		"%s, %d waiting" % [swollen, hud.tune_waiting().size()])
 	quit(_t.verdict())

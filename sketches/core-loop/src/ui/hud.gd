@@ -467,8 +467,18 @@ func _step_lore(delta: float) -> void:
 # A chip that lives in the top-right corner (the pilot radio). The plate and the pill line up
 # under it while it shows.
 func mount_corner(chip: Control) -> void:
+	# Hidden until its own first frame places it, and stepped before the HUD, so the plate
+	# under it reads this frame's size and not last frame's.
+	chip.visible = false
+	chip.process_priority = process_priority - 1
 	add_child(chip)
 	_corner_chip = chip
+
+
+# The chip is mid-swell (a station change, radio_dial.gd): for those seconds it is twice its
+# height, and a plate under it would hang below the top band. A new plate waits it out.
+func _corner_swollen() -> bool:
+	return _corner_chip != null and _corner_chip.visible and _corner_chip.has_method("swollen") and _corner_chip.swollen()
 
 
 # The y for a corner piece: under the piece above when that one is showing, else its own top.
@@ -540,15 +550,18 @@ func _step_ach(delta: float) -> void:
 	if game.screens != null and game.screens.ending_open():
 		clear_achievement_toasts()
 		return
-	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live():
+	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live() and not _corner_swollen():
 		var tune := _ach_queue.is_empty()
 		_ach_entry = {"text": _tune_queue.pop_front() if tune else _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
-		_ach_name.text = String(_ach_entry["text"]).get_slice("\n", 0)
-		_ach_detail.text = String(_ach_entry["text"]).get_slice("\n", 1) if String(_ach_entry["text"]).contains("\n") else ""
+		# The first line is the name; whatever follows it is the detail.
+		var lines := String(_ach_entry["text"]).split("\n", true, 1)
+		_ach_name.text = lines[0]
+		_ach_detail.text = lines[1] if lines.size() > 1 else ""
 		_ach_detail.visible = _ach_detail.text != ""
-		_ach_panel.reset_size()
 		_ach_word.text = (String(_take_words.get(_ach_entry["text"], TUNE_WORD)) if tune else ACH_WORD)
 		_ach_icon.texture = Icons.shape("wave" if tune else "star")
+		# A panel grows to its words by itself and never shrinks: a short entry after a long one resets it.
+		_ach_panel.reset_size()
 		_ach_panel.visible = true
 	if _ach_entry.is_empty():
 		return
