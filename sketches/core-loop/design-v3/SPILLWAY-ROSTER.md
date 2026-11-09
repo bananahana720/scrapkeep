@@ -42,7 +42,7 @@ Andrew ruled that ordinary enemies are the old works' machines still on the job,
 | Plated brute | Stoplog setter: dropped steel logs into a bay to shut it | A stack of stoplogs carried as its plate | An open bay |
 | Splitter (special) | Jam breaker: set charges on log jams and ice | A rack of fused charges | A jam |
 | Linker (special) | Shield tender: held the weather screen over a weld until it cooled | A dish on an arm | Weather |
-| Foreman (special; a new name is with Andrew as a card, working name Charge Hand) | Shift horn: called the patch crews, and every machine in earshot re-sealed | A horn on a mast | The reason for the horn |
+| Shift Boss (special; code name `foreman`; Andrew named it on 9 Nov, ruling ck) | Shift horn: called the patch crews, and every machine in earshot re-sealed | A horn on a mast | The reason for the horn |
 
 Two things follow for play, both after the sitting. The pig launcher and the pipe pig are one job in two bodies, so a Dispatcher's chasers can wear its number. And a kind's counter is the way that job fails: a pig jams on a harder plug (ram it in the wind-up), a bung comes back (bat the shell home), a magnet drops what is over its rating.
 
