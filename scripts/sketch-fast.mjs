@@ -159,6 +159,9 @@ export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
     for (const rule of SHARD_RULES) if (rule.match.test(rel)) for (const test of expand(index, rule.tests)) if (!shards.has(test)) shards.set(test, `${rule.name}: ${rel}`);
     if (isTopLevelTest(rel)) {
       if (index.files.has(rel)) add(rel, 0, "changed");
+      // A test that extends a changed test runs its parent's checks: kest_set_piece_test
+      // went red on main in wave 31 because only its parent, kest_kit_test, was picked.
+      for (const test of referrers(index, rel).filter(isTopLevelTest)) add(test, 1, `names the changed test ${rel}`);
       continue;
     }
     const first = referrers(index, rel);

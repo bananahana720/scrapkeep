@@ -368,3 +368,15 @@ test("a fast-lane quarantine receipt entry carries owner, reason, deadline and t
     test: "a_test", owner: "Systems", reason: "why", deadline: "2026-10-29", result: "red", exit: null, signal: "SIGABRT", failing_checks: 0,
   });
 });
+
+test("a changed test also picks the tests that extend it", () => {
+  const index = files({
+    "tests/kest_kit_test.gd": "extends SceneTree\n",
+    "tests/kest_set_piece_test.gd": 'extends "res://tests/kest_kit_test.gd"\n',
+    "tests/other_test.gd": "extends SceneTree\n",
+  });
+  const { picked } = selectTests(index, ["tests/kest_kit_test.gd"]);
+  assert.equal(picked.get("tests/kest_kit_test.gd").why, "changed");
+  assert.equal(picked.get("tests/kest_set_piece_test.gd").why, "names the changed test tests/kest_kit_test.gd");
+  assert.equal(picked.has("tests/other_test.gd"), false);
+});
