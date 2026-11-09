@@ -1,10 +1,10 @@
 // The known-failing ledger: project-guide/handoff/KNOWN-FAILING.tsv.
 //
 // A promotion may carry a red test only while that test has a row here with a
-// cause, an owner and a review date (ruling bq, Andrew, 9 Nov 2026). The row
-// never changes how a test runs or whether a run fails; it changes what a
-// failure means at the promotion gate. In the fast lane a flake row buys more
-// head runs before the test is the pull request's red (scripts/sketch-fast.mjs).
+// cause, an owner and a review date (ruling bq, Andrew, 9 Nov 2026). At a
+// promotion the row never changes how a test runs or whether a run fails; it
+// changes what a failure means. In the fast lane a flake row buys more head
+// runs before the test is the pull request's red (scripts/sketch-fast.mjs).
 //
 //   node scripts/known-failing.mjs --check            structure only
 //   node scripts/known-failing.mjs --promotion        structure, and no row past its review date

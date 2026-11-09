@@ -86,7 +86,7 @@ node scripts/known-failing.mjs --judge a_test b_test   # carried or new, for a l
 node scripts/known-failing.mjs --promotion          # fails if any row is past its review date
 ```
 
-- A row never changes how a test runs or whether a run fails. The shard still reruns the test alone and still reads which check failed. One thing a `flake` row does buy, in the fast lane: up to three more head runs before the test fails a pull request, because a flake can fail twice running (ORCHESTRATOR, "Tiered gate"). Red on every run still fails the pull request.
+- At a promotion a row never changes how a test runs or whether a run fails. The shard still reruns the test alone and still reads which check failed. In the fast lane a `flake` row buys more head runs before the test fails a pull request; ORCHESTRATOR, "Tiered gate", has the rule.
 - The cost of a row: while a test is listed, a second fault in the same test is easy to miss. That is why the cause names the failing check and the receipt asks the thread to read the solo log.
 - A test that has passed in two full gates in a row comes off the ledger. If it fails again it is judged fresh.
 - A row past its review date holds the next promotion. Either the owner fixed it (remove the row) or the coordinator gives it a new date and says why in the pull request.

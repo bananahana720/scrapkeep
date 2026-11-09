@@ -260,7 +260,7 @@ export function classifyFailure({ rerunOk, baseOk, headChecks = [], baseChecks =
 }
 
 // A test the known-failing ledger lists as a flake can fail twice in a row with the base green
-// (audio_bake_cancel_test fails about 1 run in 3), and that pair alone would read as the PR's
+// (audio_bake_cancel_test fails between 1 run in 5 and 1 in 3), and that pair alone would read as the PR's
 // red. So before such a test is the PR's red it gets up to LEDGER_FLAKE_RUNS more head runs:
 // one green makes it flaky, and red on every run makes it the PR's red after all. The row
 // buys more evidence; it never excuses a test the PR really broke.
