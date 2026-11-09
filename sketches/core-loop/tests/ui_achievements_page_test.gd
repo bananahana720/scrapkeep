@@ -119,6 +119,8 @@ func _run() -> void:
 	_game.flow.force_warden = true
 	_game.flow.press_start()
 	_game.flow.choose_class(0)
+	# The cold open has the floor first (plates wait for a flourish's reading matter); this is about the plates.
+	_game.presentation.flourish.stop_all()
 	await _settle(0.5)
 	var hud = _game.hud
 	_game.events.achievement_earned.emit("first_win")

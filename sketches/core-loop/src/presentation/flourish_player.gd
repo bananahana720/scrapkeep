@@ -1,7 +1,7 @@
 extends Node
 
-# Plays one row of flourish_rows.gd over play: name cards, inked stamps, captions, comic panels
-# and drawn sound words on a canvas layer, in the title openings' comic look
+# Plays one row of flourish_rows.gd over play: name cards, inked stamps, captions, comic panels,
+# a live close-up panel and drawn sound words on a canvas layer, in the title openings' comic look
 # (title_intro_player.gd). It never stops time, never moves the camera and never eats input:
 # a fresh press after SKIP_GRACE that is not steering or a core verb (PLAY_ACTIONS) and not the
 # mouse wheel ends the row, and still reaches the ball. While the tree is paused (a reward ceremony, the pause menu) the row hides and waits.
@@ -26,6 +26,7 @@ const Rows := preload("res://src/presentation/flourish_rows.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const Inset := preload("res://src/presentation/flourish_inset.gd")
 
 const LAYER := 39
 const SKIP_GRACE := 1.5
@@ -52,6 +53,9 @@ const STAMP_MIN_SHARE := 0.4
 const STAMP_CENTRE_Y := 0.40
 # Sound words stay inside the play view, between the toast band and the prompts.
 const PLAY_VIEW := Rect2(0.34, 0.30, 0.60, 0.28)
+# A close-up panel sits on the right of the play view, between the toast band and the prompts.
+const INSET_VIEW := Rect2(0.715, 0.295, 0.25, 0.32)
+const INSET_TILT := 2.0
 const BASE_HEIGHT := 1080.0
 
 static var reduced_motion := false
@@ -146,14 +150,26 @@ func queued() -> Array:
 	return _queue.map(func(entry): return entry[0])
 
 
-# Whether the row still has reading matter to show: it waits in the queue, or it plays with a
-# card, a caption or a panel not yet off the screen (the run's opening holds Moss for it).
-func reading(row_id: String) -> bool:
-	if row_id in queued():
+# Whether the row (or, with no name, whatever plays) still has reading matter to show: it waits
+# in the queue, or it plays with a card, a caption or a panel not yet off the screen. The run's
+# opening holds Moss for it and the HUD holds its plates and its boss title for it.
+func reading(row_id := "") -> bool:
+	if row_id != "" and row_id in queued():
 		return true
-	if not playing or id != row_id:
+	if not playing or (row_id != "" and id != row_id):
 		return false
 	return _pieces.any(func(piece): return String(piece.kind) in WRITTEN and clock < float(piece.at) + float(piece["for"]))
+
+
+# Whether the playing row has a close-up panel up or still to come: the speech bubble that
+# shares its moment waits for the picture. A panel with no subject to show is never coming.
+func close_up() -> bool:
+	if not playing:
+		return false
+	for piece in _pieces:
+		if String(piece.kind) == "inset" and clock < float(piece.at) + float(piece["for"]) and _subject_of(piece) != null:
+			return true
+	return false
 
 
 # Pieces on screen now, by kind, for tests and stills.
@@ -353,6 +369,8 @@ func _build(piece: Dictionary) -> Node:
 			_place_word(label, piece)
 			_pop(label, 1.5)
 			return label
+		"inset":
+			return _inset(piece)
 		"speed_lines":
 			if reduced_motion:
 				return null
@@ -464,6 +482,33 @@ func _panels(texts: Array) -> Control:
 
 
 # A column piece at its slot, lifted if it would reach the prompts band, never above the toasts.
+func _subject_of(piece: Dictionary) -> Node3D:
+	var subject = _anchors.get(String(piece.get("anchor", "")))
+	return subject if subject is Node3D and is_instance_valid(subject) and subject.is_inside_tree() else null
+
+
+# A live close-up of the piece's anchor in an inked panel (flourish_inset.gd). No anchor, no panel.
+func _inset(piece: Dictionary) -> Control:
+	var subject := _subject_of(piece)
+	if subject == null:
+		return null
+	var home = _anchors.get(String(piece.get("home", "")))
+	var toward = _anchors.get(String(piece.get("toward", "")))
+	var rests: Vector3 = home.global_position if home is Node3D and is_instance_valid(home) else subject.global_position
+	var screen := _screen()
+	var inset := Inset.new()
+	inset.name = "FlourishInset"
+	inset.add_to_group(AVOID_GROUP)
+	_overlay.add_child(inset)
+	inset.frame(subject, rests, toward.global_position if toward is Node3D and is_instance_valid(toward) else rests + Vector3.BACK,
+		INSET_VIEW.size * screen, maxi(3, int(6 * _scale())))
+	inset.position = INSET_VIEW.position * screen
+	inset.rotation_degrees = INSET_TILT
+	inset.still = reduced_motion
+	_pop(inset, 1.2)
+	return inset
+
+
 func _seat(node: Control, at: Vector2) -> void:
 	node.reset_size()
 	var screen := _screen()
@@ -565,6 +610,9 @@ func _place_word(label: Control, piece: Dictionary) -> void:
 	for rect in _avoid_rects():
 		if Rect2(placed, label.size).intersects(rect):
 			placed.y = minf(rect.end.y + AVOID_GAP * _scale(), view.end.y - label.size.y)
+		# No room under it inside the play view (a close-up panel is as tall as the view): beside it.
+		if Rect2(placed, label.size).intersects(rect):
+			placed.x = maxf(view.position.x, rect.position.x - AVOID_GAP * _scale() - label.size.x)
 	label.position = placed
 
 

@@ -278,7 +278,8 @@ func shake(amount: float, time := 0.4) -> void:
 func _process(delta: float) -> void:
 	if target == null:
 		return
-	_step_glance(delta)
+	# The glance is the player's own look, so it keeps wall time when the world is slowed.
+	_step_glance(delta / maxf(Engine.time_scale, 0.01))
 	var velocity: Vector3 = target.state.velocity
 	var fraction := SpeedTier.fraction(velocity.length(), tuning.f("cruise"))
 	shoulder_blend = move_toward(shoulder_blend, clampf(shoulder_target, 0.0, 1.0), SHOULDER_RATE * delta)

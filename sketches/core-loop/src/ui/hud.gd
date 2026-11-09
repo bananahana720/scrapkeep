@@ -195,6 +195,8 @@ var _ach_icon: TextureRect
 var _ach_entry := {}
 var _lore_panel: PanelContainer
 var _lore_left := 0.0
+# A field note was found while a flourish had reading matter up: the pill goes up after it.
+var _lore_due := false
 var _lore_age := 0.0
 var _corner_chip: Control
 var _lower: Control
@@ -348,8 +350,11 @@ func setup(game_ref) -> void:
 	game.events.world_entered.connect(_on_world_entered)
 	game.events.stage_entered.connect(_on_stage_entered)
 	game.events.threat_rose.connect(func(tier: int): _threat = maxi(_threat, tier))
+	# The boss's title, unless its arrival row is saying the name on a card of its own. The row
+	# starts on this signal too, and first: the presentation is set up before the HUD.
 	game.events.boss_arena_entered.connect(func():
-		launch_card.show_card("fac_fleet", EventKinds.hud("boss_arena_entered"), EventKinds.color("boss_arena_entered")))
+		if not _reading():
+			launch_card.show_card("fac_fleet", EventKinds.hud("boss_arena_entered"), EventKinds.color("boss_arena_entered")))
 	game.events.run_started.connect(func(_class_id: String):
 		_title_world = 0
 		_title_stage = 0
@@ -451,9 +456,16 @@ func _build_lore_pulse() -> void:
 
 
 func _show_lore() -> void:
-	_lore_left = LORE_TOTAL
-	_lore_age = 0.0
-	_lore_panel.visible = true
+	_lore_due = true
+	_step_lore(0.0)
+
+
+# A flourish has a card, a caption or a comic panel up or on the way (flourish_player.reading):
+# one voice at a time, so the corner's plates and pill and the boss's title wait for it.
+func _reading() -> bool:
+	var presentation = game.get("presentation")
+	var flourish = presentation.get("flourish") if presentation != null else null
+	return flourish != null and flourish.reading()
 
 
 func lore_pulse_visible() -> bool:
@@ -461,6 +473,11 @@ func lore_pulse_visible() -> bool:
 
 
 func _step_lore(delta: float) -> void:
+	if _lore_due and not _reading():
+		_lore_due = false
+		_lore_left = LORE_TOTAL
+		_lore_age = 0.0
+		_lore_panel.visible = true
 	if _lore_left <= 0.0:
 		return
 	_lore_left -= delta
@@ -559,7 +576,7 @@ func _step_ach(delta: float) -> void:
 		clear_achievement_toasts()
 		return
 	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live() and not _corner_swollen() \
-			and not game.opening.waits("plate"):
+			and not game.opening.waits("plate") and not _reading():
 		var tune := _ach_queue.is_empty()
 		_ach_entry = {"text": _tune_queue.pop_front() if tune else _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
 		# The first line is the name; whatever follows it is the detail.

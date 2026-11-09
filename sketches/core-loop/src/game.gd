@@ -72,6 +72,7 @@ const GATE_OUT := 9.0
 const GATE_UP := 15.0
 const HIT_STOP_MAX := 0.06
 const HIT_STOP_SCALE := 0.05
+const SLOW_MOTION_FLOOR := 0.1
 const SEED := 20260926
 const SimClock := preload("res://src/core/sim_clock.gd")
 const BOSS_PATH := "res://src/boss/boss.gd"
@@ -171,6 +172,9 @@ var _hit_stopped := false
 # A headless test's stop counts physics ticks, not wall time; -1 is a wall-time stop.
 var _stop_ticks_left := -1
 var _scale_before_stop := 1.0
+# The world's speed under slow_motion (1.0: none), and whether it borrowed physics interpolation.
+var _slow := 1.0
+var _slow_lent := false
 # The device the player touched last, "kbm" or "pad": the later glyph unit reads this.
 var last_device := "kbm"
 # The saved Frame smoothing wish (settings, Display). interpolating() is what the tree does.
@@ -564,6 +568,7 @@ func pilot_unlocked(def) -> bool:
 
 
 func _exit_tree() -> void:
+	slow_motion(1.0)
 	_end_hit_stop()
 	if not test_mode:
 		return
@@ -696,6 +701,31 @@ func _end_hit_stop() -> void:
 	Engine.time_scale = _scale_before_stop
 	_stop_ticks_left = -1
 	_hit_stopped = false
+
+
+# Slow motion: the world runs at `scale` of its speed until asked back to 1.0. The caller owns
+# when (flourish_cues.gd, the close-up at Brindle's entrance, ruling cf) and keeps it to a hand
+# on the controls, so no bot's run or band sees it. It multiplies whatever scale a tool set, and
+# a hit stop inside it lifts back to the slowed speed. Music runs on its own sample clock and
+# does not slow.
+# Physics ticks slow with the world (90 a second is 27 at 0.3), so while it lasts the tree's
+# physics interpolation is borrowed if the player has it off: without it the ball and every
+# body would be drawn at 27 pictures a second.
+func slow_motion(scale: float) -> void:
+	scale = clampf(scale, SLOW_MOTION_FLOOR, 1.0)
+	if is_equal_approx(scale, _slow):
+		return
+	var base := (_scale_before_stop if _hit_stopped else Engine.time_scale) / _slow
+	_slow = scale
+	if _hit_stopped:
+		_scale_before_stop = base * scale
+	else:
+		Engine.time_scale = base * scale
+	var borrow := scale < 1.0 and (_slow_lent or not get_tree().physics_interpolation)
+	if borrow != _slow_lent:
+		_slow_lent = borrow
+		get_tree().physics_interpolation = borrow
+		reset_physics_interpolation()
 
 
 func toggle_interpolation() -> bool:
