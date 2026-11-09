@@ -298,6 +298,17 @@ func _run() -> void:
 	cache._physics_process(0.0)
 	_t.check("a cache out of the ball's reach stays", not cache.is_queued_for_deletion() and not profile.has_tune(cache_take))
 	cache.global_position = ball - Vector3.UP
+	# A find is made in play. Under the summary or after a death the ball can still roll into a
+	# cache: nothing is filed, announced or premiered, and the cache stands for the next run.
+	var flow = _game.flow
+	var in_play_state: int = flow.state
+	var station_before: String = deck.radio.station
+	for off_air in [flow.SUMMARY, flow.DEAD]:
+		flow.state = off_air
+		cache._physics_process(0.0)
+		_t.check("a ball in reach of a cache finds nothing in %s" % flow.state_name(),
+			not cache.is_queued_for_deletion() and not profile.has_tune(cache_take) and deck.radio.station == station_before)
+	flow.state = in_play_state
 	cache._physics_process(0.0)
 	_t.check("rolling up to a Signal cache files its take", cache.is_queued_for_deletion() and profile.has_tune(cache_take))
 	_t.eq("and a found one is no longer wanted", RadioCache.wanted("park_dam", func(id): return profile.has_tune(id), spots), [])
