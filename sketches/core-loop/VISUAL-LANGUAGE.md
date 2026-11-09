@@ -478,9 +478,9 @@ Tenacity immunity (DESIGN-V2 §10) shows as the broken-bracket flicker from Rive
 
 **Wardens.** Each stage's Warden is one family on a shared clamp base (§9): stage 1 a reactor relic, stage 2 a swarm-remnant hive, stage 3 one of the Mind's hands.
 
-**Enamel cap.** Ancient enamel stays dull petrol. In HSV its value is at most 45% and its saturation at most 45% (petrol itself is value 34%, saturation 38%, and mint is value 94%). The brightest colour the cap allows at petrol's hue, `#3f736e`, measures CIELAB L* 45 against mint's 88 and sits at ΔE 43 or more from mint in normal, deuteranopic, protanopic and tritanopic simulation. The enamel never glows. Only the Cherenkov blue seams emit light. The primer board's s4 and f03 showed bright turquoise enamel reading close to mint, which this cap forbids.
+**Enamel cap.** Ancient enamel stays dull petrol. In HSV its value is at most 45% and its saturation at most 45% (petrol itself is value 34%, saturation 38%, and mint is value 94%). The brightest colour the cap allows at petrol's hue, `#3f736e`, measures CIELAB L* 45 against mint's 88 and sits at ΔE 43 or more from mint in normal, deuteranopic, protanopic and tritanopic simulation. The enamel never glows. Only the ANCIENT green seams emit light. The primer board's s4 and f03 showed bright turquoise enamel reading close to mint, which this cap forbids.
 
-Ancient light is the ANCIENT colour (pending, Cherenkov blue by default), never mint, because mint belongs to the living salvage field. The thin seams show where the cast shells part. They are the mechanism, not decoration (AD-11).
+Ancient light is the ANCIENT colour (uranium-glass green `#9dff3c`, chosen 2026-10-09), never mint, because mint belongs to the living salvage field. The thin seams show where the cast shells part. They are the mechanism, not decoration (AD-11).
 
 **The world.**
 
