@@ -6,10 +6,11 @@ import path from "node:path";
 import { indexFromFiles } from "../sketch-fast.mjs";
 import { parseLedger } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import { WEEKLY_HEADER, chunks, classifyFailure, errorCounts, gateLists, nearLimit, numbered, parseSmokeLog, parseWeekly, parseWindow, renderReceipt, shardVerdict } from "./shard.mjs";
 import { checkTally, expectedShards, isPass, planHead, tallyRows } from "./tally.mjs";
+import { WEEKLY_FILE, checkWeekly } from "./weekly.mjs";
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const ledger = parseLedger(
@@ -263,4 +264,22 @@ test("a weekly list that does not parse, or names a missing test, is an error an
   assert.match(problems.join("\n"), /line 2: a row needs/);
   assert.match(problems.join("\n"), /line 3: "tests\/b_test.gd" must be the test's base name/);
   assert.match(problems.join("\n"), /line 5: a_ok is listed twice/);
+});
+
+test("the docs check fails a weekly list that does not parse or names a test with no file", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "weekly-check-"));
+  try {
+    assert.deepEqual(checkWeekly(root), []);
+    mkdirSync(path.join(root, "project-guide/handoff"), { recursive: true });
+    mkdirSync(path.join(root, "sketches/core-loop/tests"), { recursive: true });
+    writeFileSync(path.join(root, "sketches/core-loop/tests/a_test.gd"), plainTest);
+    writeFileSync(path.join(root, WEEKLY_FILE), weeklyHead + "a_test\tworld2\twhy\twhen\n");
+    assert.deepEqual(checkWeekly(root), []);
+    writeFileSync(path.join(root, WEEKLY_FILE), weeklyHead + "a_test\tworld2\twhy\twhen\ngone_test\tworld2\twhy\twhen\nb_test\tworld2\t\twhen\n");
+    const findings = checkWeekly(root);
+    assert.deepEqual(findings.map((finding) => [finding.level, finding.line]), [["failure", 4], ["failure", 3]]);
+    assert.match(findings[1].message, /gone_test has no file/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

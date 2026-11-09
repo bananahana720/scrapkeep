@@ -71,9 +71,10 @@ The band shards read numbers, not only pass or fail, so they keep their own lane
 - `list`, `list --bots` and both `run` windows leave the weekly names out, so the windows in a gate plan count the shortened lists.
 - `--weekly` with `list` or `run` selects the weekly names instead: the weekly sweep is the same command with one flag, and its receipt says "weekly" in its title.
 - The fast lane does not read the file: a weekly test still runs on any pull request whose diff reaches it. `npm run sketch:smoke` still runs everything.
-- A file that does not parse, or a row that names a test that does not exist, stops the shard with an error. It never skips nothing, or everything, silently.
+- A file that does not parse, or a row that names a test that does not exist, stops the shard with an error. It never skips nothing, or everything, silently. `npm run check:docs` fails on the same two faults, so a pull request catches them first.
 - The tally prints how many tests the promotion did not run. With no file on the head, the lists hold every test.
 - A weekly test can also have a ledger row. Its review date does not hold a promotion, because the promotion does not run it; the weekly sweep judges it, and `--promotion` prints the row as a note.
+- Not built yet: nothing holds a promotion when the weekly sweep has not run, and the tally does not read a weekly receipt. Until the testing lane adds that, the sweep's receipt goes on the board, and a red on the weekly list is the testing lane's to chase.
 
 ## The known-failing ledger
 

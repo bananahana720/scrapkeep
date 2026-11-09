@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
 import { checkLedger } from "./known-failing.mjs";
+import { checkWeekly } from "./gate/weekly.mjs";
 import { checkWaveState } from "./wave-state.mjs";
 
 const scriptRoot = path.resolve(
@@ -796,6 +797,11 @@ async function checkLedgerStage(docs) {
     if (finding.level === "failure")
       docs.fail("known-failing", finding.file, finding.line, finding.message);
     else docs.info("known-failing", finding.file, finding.line, finding.message);
+  }
+  // The weekly list (ruling ca) sits beside the ledger and is checked with it.
+  for (const finding of checkWeekly(docs.root)) {
+    findings.push(finding);
+    docs.fail("weekly-list", finding.file, finding.line, finding.message);
   }
   return findings.filter((finding) => finding.level === "failure").length;
 }
