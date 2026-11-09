@@ -98,6 +98,11 @@ var _posture := BossPosture.new(Rules.POSTURE)
 var _phases: FightPhases
 # The Furnace's owed reprise ring: {at, cue_at, cued, turn}; empty when none is owed.
 var _reprise := {}
+# The Scuttle's hint (take_hint): tries that came up short this phase, the best punch the
+# ball has shown in it, and the fight clock the hint may next show at.
+var _short_tries := 0
+var _scuttle_punch := 0.0
+var _hint_next := 0.0
 
 
 func setup(ctx_ref) -> void:
@@ -299,6 +304,9 @@ func _enter_phase(next: int) -> void:
 			ship.shed_armour()
 			ship.cockpit_open(true, "enter_scuttle")
 			_combo_left = -1
+			_short_tries = 0
+			_scuttle_punch = 0.0
+			_hint_next = 0.0
 			_charge = {"state": CHARGE_REST, "timer": ChallengeDials.period("brindle", Rules.CHARGE_REST, 3)}
 	ship.cue_phase(next)
 	_publish("boss_phase_changed", [next, Rules.PHASE_NAMES[next - 1]])
@@ -811,8 +819,13 @@ func _clear_arc(from: Vector3, launch: Vector3) -> bool:
 # --- Phase 3: scuttle the flagship ------------------------------------------------------
 
 func _step_charges(delta: float, ball: Vector3) -> void:
+	_scuttle_punch = maxf(_scuttle_punch, ctx.flow.punch_now())
 	match _charge.get("state", CHARGE_REST):
 		CHARGE_REST, CHARGE_RECOVER, CHARGE_STUN, CHARGE_HOOK:
+			if _charge["state"] == CHARGE_HOOK:
+				# The hook turn starts on its cue: the hull digs in and swings its bow round after
+				# the ball, so the short tell that follows has only the last of the turn left.
+				_turn_ship(_aim_at(ball), Rules.CHARGE_TURN_RATE, delta)
 			_charge["timer"] -= delta
 			if _charge["timer"] <= 0.0:
 				if _charge["state"] == CHARGE_REST:
@@ -824,6 +837,7 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 				else:
 					_charge = {"state": CHARGE_REST, "timer": _rest_time()}
 		CHARGE_BRACE:
+			_brace_turn(delta)
 			if _charge["hazard"].is_live():
 				_charge["state"] = CHARGE_RUN
 		CHARGE_RUN:
@@ -833,6 +847,37 @@ func _step_charges(delta: float, ball: Vector3) -> void:
 			_charge = {"state": CHARGE_REST, "timer": _rest_time()}
 
 
+# Where a charge committed now would point: at the ball, or straight on when the ball is
+# too close to the ship's centre to give a bearing.
+func _aim_at(ball: Vector3) -> Vector3:
+	var to_ball := Vector3(ball.x - ship.global_position.x, 0.0, ball.z - ship.global_position.z)
+	return to_ball.normalized() if to_ball.length() > 2.0 else ship.heading
+
+
+# Swings the bow toward `heading` in place, by at most `rate` radians a second. The hull
+# never takes a heading in one tick: it is a 14 m kinematic box, and a ball leaning on its
+# flank takes a one-tick turn as a 300 to 500 m/s kick (or, amidships, is swallowed by the
+# hull and held inside it).
+func _turn_ship(heading: Vector3, rate: float, delta: float) -> void:
+	var owed := Vector2(ship.heading.x, ship.heading.z).angle_to(Vector2(heading.x, heading.z))
+	var step := clampf(owed, -rate * delta, rate * delta)
+	var arrives := absf(owed - step) < Rules.CHARGE_TURN_SNAP
+	ship.move_to(ship.global_position, heading if arrives else (ship.heading as Vector3).rotated(Vector3.UP, -step))
+
+
+# The wind-up: the hull turns to its committed lane inside the tell, at CHARGE_TURN_RATE or
+# as much faster as it takes to be square in the lane CHARGE_TURN_SETTLE before the lane can
+# hurt. The lane itself was laid at the commit and never moves.
+func _brace_turn(delta: float) -> void:
+	var h = _charge["hazard"]
+	var heading: Vector3 = _charge["heading"]
+	var owed := absf(Vector2(ship.heading.x, ship.heading.z).angle_to(Vector2(heading.x, heading.z)))
+	if owed <= 0.0:
+		return
+	var time_left := maxf(delta, h.warn_seconds - h.age - Rules.CHARGE_TURN_SETTLE)
+	_turn_ship(heading, maxf(Rules.CHARGE_TURN_RATE, owed / time_left), delta)
+
+
 # A cued charge is the Scuttle's hook turn: its ratchet cue sounded CUE_LEAD ago, so it
 # draws the short tell, and it never leads a combo or a second hook turn.
 func _commit_charge(ball: Vector3, cued := false) -> void:
@@ -840,7 +885,7 @@ func _commit_charge(ball: Vector3, cued := false) -> void:
 		_combo_left = ChallengeDials.combo_step("brindle", _combo_left)
 	var from: Vector3 = ship.global_position
 	var to_ball := Vector3(ball.x - from.x, 0.0, ball.z - from.z)
-	var heading: Vector3 = to_ball.normalized() if to_ball.length() > 2.0 else ship.heading
+	var heading := _aim_at(ball)
 	var to_wall := _travel_to_rim(from, heading)
 	var wanted := to_ball.length() + Rules.CHARGE_OVERSHOOT
 	var into_wall := wanted >= to_wall
@@ -854,7 +899,7 @@ func _commit_charge(ball: Vector3, cued := false) -> void:
 	h.commit_lane("charge", Hazard.Threat.Type.LANE, from, heading, half, length + half, Requisition.HULL.x * 0.5 + 1.0,
 		Requisition.HULL.y + 0.5, warn, length / Rules.CHARGE_SPEED + 0.2)
 	_add_hazard(h)
-	ship.move_to(from, heading)
+	# The hull keeps its heading at the commit: _brace_turn owns the turn onto this one.
 	ship.cue("charge_warn", h.get_instance_id())
 	_charge = {"state": CHARGE_BRACE, "hazard": h, "from": from, "heading": heading, "length": length,
 		"into_wall": into_wall, "travelled": 0.0, "cued": cued}
@@ -891,10 +936,12 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 			_stun(ChallengeDials.punish("brindle", Rules.WALL_STUN))
 			_discover(CodexEntries.WALL_BAIT, ship.global_position)
 		elif not _charge.get("cued", false) and _follow_ups() > 0:
+			_note_missed_charge()
 			# The hook turn: the cue sounds as the hull digs in, the lane draws CUE_LEAD later.
 			_phases.cue("charge")
 			_charge = {"state": CHARGE_HOOK, "timer": FightPhases.CUE_LEAD}
 		else:
+			_note_missed_charge()
 			_charge = {"state": CHARGE_RECOVER, "timer": Rules.CHARGE_RECOVER}
 
 
@@ -941,6 +988,45 @@ func _stun(seconds: float) -> void:
 
 func stunned() -> bool:
 	return state == FIGHT and phase == 3 and _charge.get("state", "") == CHARGE_STUN
+
+
+# --- The Scuttle's hint ---------------------------------------------------------------
+
+# A charge ran out with no stun. It counts as a try that came up short only for a ball whose
+# punch has stayed under the hull's plating all phase: that build cannot hit its way in.
+func _note_missed_charge() -> void:
+	if _scuttle_punch < Rules.HULL_PLATING:
+		_short_tries += 1
+
+
+# A hit on the closed hull that its plating turned. Like a missed charge, it is a short try
+# only while the ball's best punch of the phase is under the plating: a heavy build's stray
+# light hit is not one.
+func _note_glance(target, part: String, result: Dictionary) -> void:
+	if state != FIGHT or phase != 3 or target.role != "hull" or part.begins_with("cap_") or stunned() or _posture.staggered:
+		return
+	var punch := float(result.get("punch", 0.0))
+	_scuttle_punch = maxf(_scuttle_punch, punch)
+	if punch < float(result.get("plating", Rules.HULL_PLATING)) and _scuttle_punch < Rules.HULL_PLATING:
+		_short_tries += 1
+
+
+# The hint the fight asks the HUD for right now, "" for none; taking it starts its gap (the
+# HUD polls this when its toast row is free and shows the UI row there). In the Scuttle a
+# build whose punch is short of the plating has one way in: a stun, and for a light build
+# that is a charge baited into the rim wall. The hint is owed once a try has come up short
+# (a hit the plating turned, or a charge that ran out), repeats every SCUTTLE_HINT_GAP
+# seconds, and stops for the fight at the first stun, which is the lesson learned, or once
+# the ball's punch has met the plating.
+func take_hint() -> String:
+	if state != FIGHT or phase != 3 or stuns > 0 or _short_tries <= 0 or clock < _hint_next:
+		return ""
+	if _scuttle_punch >= Rules.HULL_PLATING:
+		return ""
+	if _in_transition() or _held() or _posture.staggered:
+		return ""
+	_hint_next = clock + Rules.SCUTTLE_HINT_GAP
+	return Rules.SCUTTLE_HINT
 
 
 func charging() -> bool:
@@ -1276,6 +1362,7 @@ func on_struck(target, kind: String, part: String, result: Dictionary) -> void:
 		_stun(ChallengeDials.punish("brindle", Rules.CLASH_STUN))
 	if state != FIGHT:
 		return
+	_note_glance(target, part, result)
 	if target.role == "hull" and result.has("gain"):
 		_apply_posture(result)
 	elif target.role == "hull" and not part.begins_with("cap_"):

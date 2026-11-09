@@ -1179,6 +1179,28 @@ func _physics_process(delta: float) -> void:
 	if _engaged:
 		_struggle.step(delta)
 	part_name.step(delta)
+	_step_fight_hint()
+
+
+# A boss fight's own hint (the boss module's take_hint: Brindle's Scuttle gives one to a build
+# too light to hit its way in). The fight owns when and how often; the HUD toasts the hint's UI
+# row with that row's chime and records it as a prompt, as every other lesson is.
+func _step_fight_hint() -> void:
+	var boss = game.get("boss")
+	if boss == null or not boss.has_method("take_hint") or game.flow == null or not game.flow.in_play():
+		return
+	# A toast replaces the one showing, and taking the hint starts its gap: ask only when the row is free.
+	if not _toast.is_empty() or not _held_toast.is_empty():
+		return
+	var kind := String(boss.take_hint())
+	var row: Dictionary = EventKinds.UI_ROWS.get(kind, {})
+	if row.is_empty():
+		return
+	toast(String(row["hud"]), row["color"], row["shape"], mini(int(row["priority"]), 3))
+	var audio = game.audio() if game.has_method("audio") else null
+	if audio != null and audio.has_method("play"):
+		audio.play(kind, 0.0, 1.0, "UI")
+	game.events.prompt_shown.emit(kind)
 
 
 # The words the toast row draws now: "" with no toast, or while the stage card covers it

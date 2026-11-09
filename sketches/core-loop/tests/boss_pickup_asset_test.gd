@@ -28,7 +28,9 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # charge states are named constants with an unknown-state fallback; pickup meshes unchanged. Was acf817b9.
 # Re-pinned 2026-11-09 (objective plate): plate_reading hands the HUD the phase and whether the cockpit
 # is open, read-only; pickup meshes unchanged. Was 5121cd32.
-const BASE_LOGIC_SHA := "059a4a6d3534693a8e3d34a9886bc8e82ff325373039c74f2b91096de87cd1e1"
+# Re-pinned 2026-11-09 (charge fling, #639): the hull turns onto a charge's heading through the tell instead
+# of snapping at the commit, and the Scuttle counts short tries for its hint; pickup meshes unchanged. Was 059a4a6d.
+const BASE_LOGIC_SHA := "b8cc7630729246024cd8138f404143655ca84ad7bc9315906606b9780a538e7b"
 
 var failures := 0
 var game
