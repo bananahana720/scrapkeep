@@ -20,6 +20,7 @@ import {
   referrers,
   selectTests,
   timingsFromReceipt,
+  DEFAULT_ESTIMATE_MS,
   usableBaseRun,
 } from "./sketch-fast.mjs";
 import { importWithRetry, quarantineRecord } from "./sketch-smoke.mjs";
@@ -235,6 +236,38 @@ test("timings fold only passing test rows from a smoke receipt", () => {
   assert.deepEqual(timingsFromReceipt(receipt), { "tests/a_test.gd": 1234 });
 });
 
+test("timings fold reads fast-lane rows and gate shard rows as well as smoke labels", () => {
+  const receipt = {
+    results: [
+      { test: "tests/c_test.gd", ok: true, ms: 700 },
+      { test: "d_test", ok: true, seconds: 63.7 },
+      { test: "e_test", ok: false, seconds: 360 },
+      { test: "tests/stopped_test.gd", ok: true, ms: 0 },
+    ],
+  };
+  assert.deepEqual(timingsFromReceipt(receipt), { "tests/c_test.gd": 700, "tests/d_test.gd": 63700 });
+});
+
+test("a bot-named test with no timings row goes to the bot shards; a test with a row stays in the lane", () => {
+  const picked = new Map([
+    ["tests/bot_planted_unknown_test.gd", { tier: 1, why: "names" }],
+    ["tests/planted_sweep_unknown_test.gd", { tier: 1, why: "names" }],
+    ["tests/bot_known_test.gd", { tier: 1, why: "names" }],
+    ["tests/known_fast_test.gd", { tier: 1, why: "names" }],
+  ]);
+  const out = plan({ picked, timings: { "tests/known_fast_test.gd": 2_000, "tests/bot_known_test.gd": 5_000 }, budgetMs: 600_000, width: 2 });
+  assert.deepEqual(out.bots, ["tests/bot_planted_unknown_test.gd", "tests/planted_sweep_unknown_test.gd"]);
+  assert.deepEqual(out.parallel.map((row) => row.test), ["tests/known_fast_test.gd", "tests/bot_known_test.gd"]);
+});
+
+test("a test with no timings row is priced at 180 s", () => {
+  assert.equal(DEFAULT_ESTIMATE_MS, 180_000);
+  const picked = new Map([["tests/air_planted_unknown_test.gd", { tier: 1, why: "names" }]]);
+  const out = plan({ picked, timings: {}, budgetMs: 600_000, width: 2 });
+  assert.equal(out.parallel[0].ms, 180_000);
+  assert.equal(out.estimateMs, 90_000);
+});
+
 test("parseArgs defaults to origin/main and a 15 minute budget", () => {
   assert.deepEqual(parseArgs([]), { base: "origin/main", budgetS: 900, dryRun: false, receipt: "fast", width: null, baseCheck: true, pre: [] });
   assert.deepEqual(parseArgs(["--pre", "#91", "--pre", "67"]).pre, ["91", "67"]);
@@ -367,4 +400,29 @@ test("a fast-lane quarantine receipt entry carries owner, reason, deadline and t
   assert.deepEqual(quarantineRecord(entry, { ok: false, exit: null, signal: "SIGABRT", failing: 0 }), {
     test: "a_test", owner: "Systems", reason: "why", deadline: "2026-10-29", result: "red", exit: null, signal: "SIGABRT", failing_checks: 0,
   });
+});
+
+test("a changed test also picks the tests that extend it", () => {
+  const index = files({
+    "tests/kest_kit_test.gd": "extends SceneTree\n",
+    "tests/kest_set_piece_test.gd": 'extends "res://tests/kest_kit_test.gd"\n',
+    "tests/other_test.gd": "extends SceneTree\n",
+  });
+  const { picked } = selectTests(index, ["tests/kest_kit_test.gd"]);
+  assert.equal(picked.get("tests/kest_kit_test.gd").why, "changed");
+  assert.equal(picked.get("tests/kest_set_piece_test.gd").why, "reaches the changed test tests/kest_kit_test.gd");
+  assert.equal(picked.has("tests/other_test.gd"), false);
+});
+
+test("a changed test picks a test two steps away, and a loop of references ends", () => {
+  const index = files({
+    "tests/dress_material_test.gd": 'extends SceneTree\nconst LOOP := preload("res://tests/dress_wog_fallback_test.gd")\n',
+    "tests/dress_wog_test.gd": 'extends "res://tests/dress_material_test.gd"\n',
+    "tests/dress_wog_fallback_test.gd": 'extends "res://tests/dress_wog_test.gd"\n',
+    "tests/other_test.gd": "extends SceneTree\n",
+  });
+  const { picked } = selectTests(index, ["tests/dress_material_test.gd"]);
+  assert.deepEqual([...picked.keys()].filter((test) => test.includes("dress")).sort(), ["tests/dress_material_test.gd", "tests/dress_wog_fallback_test.gd", "tests/dress_wog_test.gd"]);
+  assert.equal(picked.get("tests/dress_material_test.gd").why, "changed");
+  assert.equal(picked.has("tests/other_test.gd"), false);
 });

@@ -54,15 +54,16 @@ static func style() -> Dictionary:
 	}
 
 
-# A 64 px icon drawn from the category's silhouette, white on clear, so a page can
-# tint it with modulate or use it as is.
-static func icon(id: String) -> ImageTexture:
-	if _icons.has(id):
-		return _icons[id]
+# A 64 px icon drawn from the category's silhouette, in the category's colour on clear, or in
+# tint when one is given (a banner that wears the colour of the thing it names).
+static func icon(id: String, tint = null) -> ImageTexture:
+	var key := id if not tint is Color else "%s:%s" % [id, (tint as Color).to_html()]
+	if _icons.has(key):
+		return _icons[key]
 	var entry: Dictionary = CATEGORIES.get(id, CATEGORIES["build"])
 	var spine: Dictionary = _spine_table().get(id, {})
 	var shape: String = spine.get("shape", entry["shape"])
-	var color: Color = spine.get("color", entry["color"])
+	var color: Color = tint if tint is Color else spine.get("color", entry["color"])
 	var image := Image.create_empty(ICON_SIZE, ICON_SIZE, false, Image.FORMAT_RGBA8)
 	var half := ICON_SIZE * 0.5
 	for y in ICON_SIZE:
@@ -72,7 +73,7 @@ static func icon(id: String) -> ImageTexture:
 			var alpha := clampf(0.5 - d * half * 0.5, 0.0, 1.0)
 			image.set_pixel(x, y, Color(color.r, color.g, color.b, alpha))
 	var texture := ImageTexture.create_from_image(image)
-	_icons[id] = texture
+	_icons[key] = texture
 	return texture
 
 

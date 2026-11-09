@@ -31,16 +31,16 @@ A locked pilot's card names what unlocks it, and a pilot you earn is selectable 
 ## The loop
 
 1. **Title.** Continue appears first when a saved run is valid. Start (Space; the button reads New run when a saved run exists) begins a run, and the menu also offers Help (H), Achievements (A) and Settings (S); with the recorded music on, B cycles the breath.
-2. **Class.** Press 1 to 6, or click a card: Sable, Rivet, Kest, Tarn, Tally or the remembered cannon. A locked pilot's card names what unlocks it. Every pilot has its own weapon, movement, special and smash on the same keys.
+2. **Pilot.** Press 1 to 6, or click a card: Sable, Rivet, Kest, Tarn, Tally or the remembered cannon. A locked pilot's card names what unlocks it. Every pilot has its own weapon, movement, special and smash on the same keys.
 3. **Upgrade pick.** The run opens with an upgrade pick; Esc is "Later" and keeps the pick waiting.
-4. **Stage.** You drop in already rolling, with the beacon in sight. The objective at the top says what to do next; under it, your punch bar races the Warden's plating.
+4. **Stage.** You drop in already rolling, with the beacon in sight. The objective at the top says what to do next, and names the nearest activity with the metres to it.
 5. **Warden.** One Warden clamps each beacon. Breaking it is the stage's one must, and the gates open wherever you are when it breaks.
 6. **Reward gates and Moss's bay.** Roll through one of two arches to take its part. A hover barge, Moss's workshop bay, docks behind the gate row when it finds room: an opt-in pit stop with a shop and a practice yard.
 7. **Launch.** Taking a gate launches you into the next stage at the speed you were going.
 8. **Boss.** The last stage of a world launches you into that world's boss arena. Beat the boss to rout it. A victory screen naming the rout (BRINDLE ROUTED, for one) follows, and the run continues into the next world's first stage; the last world's boss ends the run.
-9. **Summary.** The summary reads RUN COMPLETE or RUN OVER, with time, stages, scrap, parts, kills, events won and whether the earned save was used. N runs again as the same class. Anything you were holding when the summary opened (Space, the fire button, a pad button) is ignored until you let go; the next fresh press works at once, with no wait.
+9. **Summary.** The summary reads RUN COMPLETE or RUN OVER, with time, stages, scrap, parts, kills, events won and whether the earned save was used. N runs again as the same pilot. Anything you were holding when the summary opened (Space, the fire button, a pad button) is ignored until you let go; the next fresh press works at once, with no wait.
 
-If you are scrapped, a death ends the run as RUN OVER: there is no free stage retry. Press N for a new run as the same class, or Space to choose a class. An earned save (an item, once a run, if you carry it) catches one lethal hit instead; once spent it stays spent for the run. M opens the companion panel from the summary when the run holds pieces.
+If you are scrapped, a death ends the run as RUN OVER: there is no free stage retry. Press N for a new run as the same pilot, or Space to choose a pilot. An earned save (an item, once a run, if you carry it) catches one lethal hit instead; once spent it stays spent for the run. M opens the companion panel from the summary when the run holds pieces.
 
 ## Controls
 
@@ -49,31 +49,33 @@ If you are scrapped, a death ends the run as RUN OVER: there is no free stage re
 | W A S D    | drive, relative to where the camera looks                                                                                                                                                                                                                                                     |
 | mouse      | look                                                                                                                                                                                                                                                                                          |
 | Space      | jump and double jump. Sable: vault kick at a steep face in the air; mounted, hold and release to slingshot. Kest: hold falling to glide; hold in your own blast to rocket jump                                                                                                                |
-| LMB        | the class weapon. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw                                                                                                                                                                                       |
+| LMB        | the pilot's weapon. Sable and Rivet fire while held; Kest holds to aim a sticky charge, releases to throw                                                                                                                                                                                       |
 | RMB        | the harpoon: press bites the aim point, hold keeps the line, release flings. During a charge it cancels                                                                                                                                                                                       |
 | Ctrl       | haul the line in: a smash on a body, a winch on the world. With no line: the brake on the ground, the slam in the air                                                                                                                                                                         |
 | Shift      | your go verb: Sable's boost, Rivet's sprint (hold), Kest's smoke blink                                                                                                                                                                                                                        |
-| F          | the class special: hold to fill the gauge, release to fire. Planting a pylon fires Sable's for free                                                                                                                                                                                           |
+| F          | the pilot's special: hold to fill the gauge, release to fire. Planting a pylon fires Sable's for free                                                                                                                                                                                           |
 | E          | interact with the device you face within 18 m (the lock holds after you pass it): hold it for anything with a cost or a bet, press it for a cache; inside an amber lane it arms the ride. Sable, with nothing in reach: plant a pylon on a steep face or a close wall hook; again to drop off |
 | Tab (hold) | field notes and the codex; the game pauses while held; Q / E switch pages                                                                                                                                                                                                                     |
 | - / =      | music volume down / up (also in the pause menu)                                                                                                                                                                                                                                               |
 | [ / ]      | effects volume down / up (also in the pause menu)                                                                                                                                                                                                                                             |
 | M          | mute or unmute                                                                                                                                                                                                                                                                                |
-| P / Esc    | pause menu: resume, restart the run, field notes, music and effects volume, quit                                                                                                                                                                                                              |
+| P / Esc    | pause menu: resume, restart the run, field notes, music and effects volume, quit; restart and quit ask first (press again)                                                                                                                                                                    |
 | R (hold)   | restart the run: a new run as the same pilot, from world 1 (not during the victory lap); release before holding again                                                                                                                                                                                                        |
 | F1         | launched with --dev only: tuning panel (frees the mouse)                                                                                                                                                                                                                                      |
 | F3         | launched with --dev only: physics interpolation on/off (off by default)                                                                                                                                                                                                                       |
 | F4         | launched with --dev only: save every tuning value to user://tuning-<time>.json                                                                                                                                                                                                                |
 | Esc        | outside play: quit                                                                                                                                                                                                                                                                            |
 
+In play the game pauses itself: the pause menu opens when the window loses focus or the pad in use disconnects, and it stays open until you resume.
+
 On the screens outside play, every choice is also a button: click it, or press the key on its cap.
 
 | Keys                             | Does                                                                                                                   |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Space                            | title: start; summary: choose a class (pad B on the summary)                                                           |
+| Space                            | title: start; summary: choose a pilot (pad B on the summary)                                                           |
 | H                                | title: the how-to-play page; H or Esc closes it                                                                        |
-| 1, 2, ...                        | class select: one number per class card, left to right                                                                 |
-| N                                | summary: new run as the same class (pad A on the summary)                                                              |
+| 1, 2, ...                        | pilot select: one number per pilot card, left to right                                                                 |
+| N                                | summary: new run as the same pilot (pad A on the summary)                                                              |
 | 1 or 2, A/D then Enter, or click | upgrade pick (run start, Moss's bay, or stage clear if you skipped the bay); Esc is "Later" and keeps the pick waiting |
 | roll up slowly to Moss's counter | opens the shop: click a plate or move focus with the keys; T talks to Moss                                             |
 
@@ -83,11 +85,11 @@ These mirror `src/ui/field_notes.gd`. The Tab overlay no longer prints them.
 
 ### Testing in this build
 
-- One run: title, class, then the stages of each world. A Warden clamps each stage's beacon. Break it, roll through a reward gate, and launch into the next stage. A boss victory launches the next world; the summary follows the last world's boss.
-- Growth is heft. Scrap you roll up becomes mass, parts add more, and heft multiplies your punch. Under the objective, the top bar is your punch and the hatched bar the Warden's plating; get the punch past the white notch.
+- One run: title, pilot, then the stages of each world. A Warden clamps each stage's beacon. Grow, crack its guard, smash its open core, then roll through a reward gate, and launch into the next stage. A boss victory launches the next world; the summary follows the last world's boss.
+- Growth is heft. Scrap you roll up becomes mass, parts add more, and heft multiplies your punch. The plate at the top of the screen is the Warden's guard: hits fill its bar, a full bar staggers the Warden and opens its core, and a hit on the open core shatters one of its chunks. A light ball fills the bar slowly, so grow and come back.
 - Outweigh fodder and you roll straight through it with no speed lost. Events and vaults drop bonus cores, the diamonds beside the objective, which raise the gate tiers.
 - Sable's pylon banks the speed you plant with. Space slingshots you off along the face with that speed plus a boost, and E drops off where you are. The camera goes to the shoulder while you are mounted.
-- Death takes one key. A death ends the run; N starts a new run as the same class, and a fresh press of N rolls it at once (a key held through the death waits for its release). Hold R in play to restart the run.
+- Death takes one key. A death ends the run; N starts a new run as the same pilot, and a fresh press of N rolls it at once (a key held through the death waits for its release). Hold R in play to restart the run.
 
 ### Questions for you
 
@@ -99,9 +101,9 @@ These mirror `src/ui/field_notes.gd`. The Tab overlay no longer prints them.
 
 ### What to try first
 
-1. Pick a class with its number key or a click. You drop in already rolling. The Warden is at the beacon you can see from the drop, and a chevron at the screen edge points to it when it is out of view.
+1. Pick a pilot with its number key or a click. You drop in already rolling. The Warden is at the beacon you can see from the drop, and a chevron at the screen edge points to it when it is out of view.
 2. Roll the scrap lines on the way down. Scrap is your armour and your weight, and a heavier ball hits harder.
-3. Break the Warden. The line at the top of the screen says what it wants next. Its gates open when it breaks; roll through one to take its part.
+3. Break the Warden. The line at the top of the screen says what it wants next. At the dam, ride the water sheet up the face into its core; at the flume, latch your line onto it and fire. Its gates open when it breaks; roll through one to take its part.
 4. As Sable, hit a steep face at speed and press E. Fire with left mouse, then hold and release Space to slingshot off.
 5. Get scrapped on purpose, then hold R. You are in a new run as the same pilot, back at world 1.
 
@@ -117,7 +119,7 @@ A built package is a `scrapkeep-core-loop-<sha7>.tar.gz`, where `<sha7>` is the 
 
 ## Build the package
 
-`npm run sketch:export` builds a Linux x86_64 release of this sketch and boots it headless for 300 frames. It writes `artifacts/local/core-loop-export/<stamp>/` with `core-loop.x86_64`, `music_ace/`, `BUILD.txt` and `HOW-TO-RUN.txt`, and the `scrapkeep-core-loop-<sha7>.tar.gz` beside that folder.
+`npm run sketch:export` builds a Linux x86_64 release of this sketch and boots it headless for 300 frames. It writes `artifacts/local/core-loop-export/<stamp>/` with `core-loop.x86_64`, `music_ace/`, `BUILD.txt` and `HOW-TO-RUN.txt`, and the `scrapkeep-core-loop-<sha7>.tar.gz` beside that folder. The game reads `BUILD.txt` from beside its executable (`src/core/build_stamp.gd`): every launch prints one `SCRAPKEEP_BUILD commit=<sha> dirty=<bool> built=<stamp> source=<export|checkout|none>` line, and the boot card's corner and the foot of the settings page read "Build <sha7> · <day>". A run from the project reads the checkout's HEAD and says "Dev build <sha7>".
 
 - `npm run sketch:export -- --stems-from=<music_ace folder>` names where the recorded stems are copied from. The default is the main checkout's `sketches/core-loop/assets/music_ace`. The stems are gitignored and cannot be regenerated, so the export fails if the folder lacks any stem the manifest names; point the flag at a folder that holds `spillway/*.ogg`.
 - `npm run sketch:export -- --win-proof` (flags go after `--`) also exports the "Linux x64 proof" pack into a sibling `<stamp>-win-proof/` folder and plays one skipper-bot run on it from a fresh `user://`. It fails unless the bot wins the run, so a passing line proves the exported pack finishes a run, not that the release template's runtime does.

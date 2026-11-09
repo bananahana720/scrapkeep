@@ -83,7 +83,7 @@ The payout is damage, never Scrap.
 One player chain state feeds the counter, collar rings, sound, log and discovery.
 The counter appears from combo two, beside the ability bar.
 The collar gains one ring per link up to six.
-Bite pitch rises one semitone per link beyond the first and returns to the root on smash.
+Bite pitch rises one rung of the pentatonic per link beyond the first and returns to the root on smash.
 An ending chain sounds only if it reached combo two.
 The run log records chains, best combo and misses, including arena play.
 The first combo of three opens the Chain codex discovery.
@@ -131,8 +131,8 @@ Each pays a part at the completion site and 180 Scrap.
 Decision row 181 requires visible direction from drop-in after the sitting exposed their invisibility.
 [Objectives](../src/core/objectives.gd) supplies the plate's glyph and words, capped at five words.
 [Edge markers](../src/ui/edge_markers.gd) points at offscreen goals and unfinished activity sites.
-The current plate says "Find an activity" before the Warden engagement while a site remains.
-During the fight it says "Break its guard" or "Smash the core".
+Before the Warden engagement, while a site remains, the plate names the nearest unfinished site by its verb and gives the metres to it: "Clear the camp", "Spring the ambush", "Crack open the cache", "Hold the relay", "Outrun the surge" or "Break the bounty hauler" (9 Nov 2026; it said "Find an activity" for every site before, and still does for a drawn pocket or trade site, which has no words of its own). The order is unchanged: an activity stands before the Warden rows while a site remains.
+During the fight it says "Break its guard" or "Smash the core". A mounted reactor Warden names its own road where "Break its guard" would stand: "Ride the water sheet up" at the dam, and "Latch onto the Warden" then "Fire from the line" at the flume. In Brindle's arena the plate names each phase's verb: "Shoot the crane magnets", "Slam the vent caps", "Bait his charge into walls", "Hit the open cockpit" on a stagger or a stun and "Ram the Admiral's scooter" on the eject.
 "Grow, then return" requires ten seconds of sustained trying without reaching half posture.
 After the break it says "Roll through a gate".
 Activity markers hide during engagement and disappear when their site is done.

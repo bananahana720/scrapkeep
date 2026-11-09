@@ -15,4 +15,4 @@ Coordination runs from the claude.ai project "Scrapkeep". The coordinator talks 
 
 **Threads are one-way for rulings.** A thread reads the board only when it pages it, so restate the head SHA in every message that carries a ruling. Threads stopped by usage limits don't resume on their own; the coordinator re-messages each with its head SHA.
 
-**Gate shards.** A full gate runs about 13 shard threads from one project post (tests in three blocks, bots in blocks of five, bands A to C, one red team persona); the recipe is in the Gate thread's memory and /mnt/project-files/gate/BOT-SHARDS.md. Before relaunching a "missing" shard, check the thread list and the board.
+**Gate shards.** A full gate runs about 13 shard threads from one project post (tests in three blocks, bots in blocks of five, bands A to C, one red team persona); the recipe is [GATE.md](GATE.md), with the shard scripts under `scripts/gate/`. Before relaunching a "missing" shard, check the thread list and the board.
