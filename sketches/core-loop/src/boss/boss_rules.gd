@@ -14,9 +14,13 @@ const POSTURE := {"curve": 2.0, "ram_shatters": false, "mult_max": 1.5}
 # the catch. hp reads the chunks left, so MAX_HP is the chunk count.
 const MAX_HP := 4.0
 # A phase ends when its chunk is shattered and its set piece has played for its minimum
-# time; a chunk lost earlier holds the phase, and the hull takes no posture, until then.
+# time; a chunk lost earlier holds the phase until then. Hits on a held hull bank toward the
+# next phase's bar, up to HELD_BANK of it (ruling bs): the bar they fill is kept through the
+# hold and the beat that follows, and no stagger starts from it. The Scuttle's hold banks
+# nothing, because no bar follows it.
 const PHASE_NAMES := ["Requisition", "Furnace", "Scuttle"]
 const PHASE_MIN_SECONDS := [28.0, 24.0, 22.0]
+const HELD_BANK := 50.0
 # No attack lands before this, so the entry and the hull readout are free to read.
 const INTRO_SECONDS := 3.0
 
