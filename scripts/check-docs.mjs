@@ -788,6 +788,38 @@ async function checkWaveStateStage(docs) {
   return findings.filter((finding) => finding.level === "failure").length;
 }
 
+// Several threads hand out ruling letters at the same time. Two rows that open
+// with one letter mean two rulings answer to one name, so the later row fails.
+// Only rows written "| Ruling xx," or "| Ruling xx:" carry a letter to check.
+// The "Replaced rulings" section is skipped: its rows open with the old ruling,
+// which may still have a row of its own above.
+const RULINGS_FILE = "project-guide/handoff/DECISIONS.md";
+async function checkRulingLetters(docs) {
+  try {
+    await access(path.join(docs.root, RULINGS_FILE));
+  } catch {
+    return;
+  }
+  const { lines } = await docs.load(RULINGS_FILE);
+  const seen = new Map();
+  let replaced = false;
+  for (const [index, line] of lines.entries()) {
+    if (line.startsWith("## ")) replaced = /^## Replaced rulings\b/.test(line);
+    if (replaced) continue;
+    const match = /^\| Ruling ([a-z]{1,2})[,:]/.exec(line);
+    if (!match) continue;
+    const [, letter] = match;
+    if (seen.has(letter))
+      docs.fail(
+        "rulings",
+        RULINGS_FILE,
+        index + 1,
+        `ruling ${letter} already names the row on line ${seen.get(letter)}; give this ruling the next free letter`,
+      );
+    else seen.set(letter, index + 1);
+  }
+}
+
 // The known-failing ledger is checked for shape here. A row past its review
 // date is only a note in this check; it fails at the promotion gate
 // (scripts/known-failing.mjs --promotion).
@@ -819,6 +851,7 @@ async function main() {
   const skillFindings = await checkSkillsStage(docs);
   const waveFindings = await checkWaveStateStage(docs);
   const ledgerFindings = await checkLedgerStage(docs);
+  await checkRulingLetters(docs);
   const manifest = {};
   for (const file of [...docs.cache.keys()].sort())
     manifest[file] = docs.cache.get(file).sha256;
