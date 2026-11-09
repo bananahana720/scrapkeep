@@ -98,6 +98,8 @@ const ACH_LAYER := 8
 const ACH_TOTAL := 3.0
 const ACH_TOP := 14.0
 const ACH_WORD := "Achievement"
+const ACH_FONT := 21
+const ACH_DETAIL_FONT := 15
 # A jukebox record found in play shares the achievement plate, after any achievement waiting.
 const TUNE_WORD := "New record"
 # A radio take found in play: the same plate, its own word, louder for a legend.
@@ -106,6 +108,10 @@ const TAKE_WORDS := {"b-side": "New B-side", "take": "New take", "legend": "Lege
 const LORE_WORDS := "New field note"
 const LORE_TOTAL := 3.0
 const LORE_TOP := 66.0
+# The top-right corner is one column: the radio chip, the unlock plate, the field note pill.
+# Each sits under whichever of the others is showing, this far apart, so none covers another.
+const CORNER_GAP := 4.0
+const CORNER_SLIDE := 480.0
 const OBJECTIVE_WORDS := Objectives.MAX_WORDS
 const TOAST_ICON := 26.0
 # How long a world card stands alone before its first stage card replaces it.
@@ -173,6 +179,7 @@ var _toast := {}
 var _held_toast := {}
 var _ach_panel: PanelContainer
 var _ach_name: Label
+var _ach_detail: Label
 var _ach_queue: Array[String] = []
 var _tune_queue: Array[String] = []
 var _take_words := {}
@@ -182,6 +189,7 @@ var _ach_entry := {}
 var _lore_panel: PanelContainer
 var _lore_left := 0.0
 var _lore_age := 0.0
+var _corner_chip: Control
 var _lower: Control
 var _restart: Control
 var _health: Control
@@ -366,8 +374,8 @@ func _build_ach_toast() -> void:
 	plate.set_corner_radius_all(8)
 	plate.content_margin_left = 16.0
 	plate.content_margin_right = 20.0
-	plate.content_margin_top = 8.0
-	plate.content_margin_bottom = 8.0
+	plate.content_margin_top = 5.0
+	plate.content_margin_bottom = 5.0
 	_ach_panel.add_theme_stylebox_override("panel", plate)
 	layer_node.add_child(_ach_panel)
 	var row := HBoxContainer.new()
@@ -389,9 +397,18 @@ func _build_ach_toast() -> void:
 	word.add_theme_color_override("font_color", Palette.AMBER)
 	row.add_child(word)
 	_ach_word = word
-	_ach_name = _label(TOAST_FONT[3])
+	# The name, then what it gives in smaller type: two lines that fit the top band under the chip.
+	var words := VBoxContainer.new()
+	words.add_theme_constant_override("separation", -3)
+	words.alignment = BoxContainer.ALIGNMENT_CENTER
+	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(words)
+	_ach_name = _label(ACH_FONT)
 	_ach_name.add_theme_color_override("font_color", Palette.SAND)
-	row.add_child(_ach_name)
+	words.add_child(_ach_name)
+	_ach_detail = _label(ACH_DETAIL_FONT)
+	_ach_detail.add_theme_color_override("font_color", Color(Palette.SAND, 0.78))
+	words.add_child(_ach_detail)
 
 
 func _build_lore_pulse() -> void:
@@ -439,9 +456,36 @@ func _step_lore(delta: float) -> void:
 	_lore_left -= delta
 	_lore_age += delta
 	_lore_panel.modulate.a = clampf(minf(_lore_age / TOAST_IN, _lore_left / TOAST_OUT), 0.0, 1.0)
-	_lore_panel.position = Vector2(_screen_size().x - _lore_panel.size.x - MARGIN, LORE_TOP)
+	# It slides, not jumps, when the plate above it leaves.
+	var want := _corner_under(_ach_panel, _corner_under(_corner_chip, LORE_TOP))
+	var y := want if _lore_age <= delta else move_toward(_lore_panel.position.y, want, delta * CORNER_SLIDE)
+	_lore_panel.position = Vector2(_screen_size().x - _lore_panel.size.x - MARGIN, y)
 	if _lore_left <= 0.0:
 		_lore_panel.visible = false
+
+
+# A chip that lives in the top-right corner (the pilot radio). The plate and the pill line up
+# under it while it shows.
+func mount_corner(chip: Control) -> void:
+	add_child(chip)
+	_corner_chip = chip
+
+
+# The y for a corner piece: under the piece above when that one is showing, else its own top.
+func _corner_under(above: Control, top: float) -> float:
+	if above == null or not above.visible:
+		return top
+	return above.position.y + above.size.y + CORNER_GAP
+
+
+# The corner's pieces now showing, top to bottom, each as its name and screen rect.
+func corner_rects() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for piece in [["chip", _corner_chip], ["plate", _ach_panel], ["pill", _lore_panel]]:
+		var control: Control = piece[1]
+		if control != null and control.visible:
+			out.append({"name": piece[0], "rect": Rect2(control.position, control.size)})
+	return out
 
 
 # The achievement toast on screen (its row's name), then the names still waiting.
@@ -499,7 +543,10 @@ func _step_ach(delta: float) -> void:
 	if _ach_entry.is_empty() and not (_ach_queue.is_empty() and _tune_queue.is_empty()) and not _fight_live():
 		var tune := _ach_queue.is_empty()
 		_ach_entry = {"text": _tune_queue.pop_front() if tune else _ach_queue.pop_front(), "left": ACH_TOTAL, "age": 0.0}
-		_ach_name.text = _ach_entry["text"]
+		_ach_name.text = String(_ach_entry["text"]).get_slice("\n", 0)
+		_ach_detail.text = String(_ach_entry["text"]).get_slice("\n", 1) if String(_ach_entry["text"]).contains("\n") else ""
+		_ach_detail.visible = _ach_detail.text != ""
+		_ach_panel.reset_size()
 		_ach_word.text = (String(_take_words.get(_ach_entry["text"], TUNE_WORD)) if tune else ACH_WORD)
 		_ach_icon.texture = Icons.shape("wave" if tune else "star")
 		_ach_panel.visible = true
@@ -508,7 +555,7 @@ func _step_ach(delta: float) -> void:
 	_ach_entry["left"] -= delta
 	_ach_entry["age"] += delta
 	_ach_panel.modulate.a = clampf(minf(_ach_entry["age"] / TOAST_IN, _ach_entry["left"] / TOAST_OUT), 0.0, 1.0)
-	_ach_panel.position = Vector2(_screen_size().x - _ach_panel.size.x - MARGIN, ACH_TOP)
+	_ach_panel.position = Vector2(_screen_size().x - _ach_panel.size.x - MARGIN, _corner_under(_corner_chip, ACH_TOP))
 	if _ach_entry["left"] <= 0.0:
 		_ach_entry = {}
 		_ach_panel.visible = false

@@ -34,7 +34,7 @@ func setup(game_ref) -> void:
 		dial = RadioDial.new()
 		dial.name = "RadioDial"
 		dial.deck = self
-		game.hud.add_child(dial)
+		game.hud.mount_corner(dial)
 	var events = game.events
 	if events != null:
 		events.run_started.connect(func(_class_id: String): _counts.clear())
