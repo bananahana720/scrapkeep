@@ -39,11 +39,13 @@ The four makers are the [story map](STORY-MAP.md)'s (section 3). This table says
 | The old works | Cast in one piece. No fastener anywhere. Where a join would be, a notched seam of ANCIENT light. Every unit matches its neighbour. Where the Mind has taken a thing over, the seams fill with one flat purple. | A cast crew number |
 | Rogues | An old-works casting with one rough cut where the command line was, and a brass governor. | Its number stencilled large |
 
-Three consequences:
+Five consequences:
 
 - **An ordinary enemy carries two marks** (ruling ch). Underneath it is a sealed casting with a crew number and a HIRED stamp cast in. On top the Fleet laid oxide paint, riveted one brass tag and bolted on one tool. The tool is the only hand-fitted part, so it is the silhouette and where the eye goes.
 - **What a hand made comes apart; what the foreman made can only break.** A boss's weak point is a crew-built service part ([DECISIONS.md](../../../project-guide/handoff/DECISIONS.md) section 6, 21 Oct): the only bolted, hand-sized, glove-worn part on the giant. A Warden is old works with no crew fitting, so its weak point is an exposed core where a cast shell has cracked away, with no bolt, weld or brass ([VISUAL-LANGUAGE.md](../VISUAL-LANGUAGE.md) section 9 owns that).
 - **The china shop and the bulls** (ruling cj). The Foreman's works are tidy, level, evenly spaced and matched, and beautiful in a cold way. The keepers are the mess. Both are drawn with the same care, so that breaking the tidy line is the best picture in the game.
+- **The Shift Boss is not the Foreman** (ruling ck, [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md)). The common enemy that sounds a horn is the Shift Boss on every screen, label and plate. "The Foreman" always means the Mind. The model file keeps its old name, `enemy_foreman.glb`; nothing a player reads does.
+- **The Foreman's signs are typeset; the crew's are written by hand** (working call, from the story map's [Foreman's voice](STORY-MAP.md#the-foremans-voice-w-from-andrews-idea-9-nov)). An old-works sign reads as a cheerful announcement in one clean, even, aligned type, cast or enamelled, with nothing crossed out. A crew sign is chalk, paint or a stamped plate, a little off level. The joke is the genre of talk: never a real person, company or logo.
 
 ## 4. What she never does
 
