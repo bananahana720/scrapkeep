@@ -467,9 +467,7 @@ func _step_lore(delta: float) -> void:
 # A chip that lives in the top-right corner (the pilot radio). The plate and the pill line up
 # under it while it shows.
 func mount_corner(chip: Control) -> void:
-	# Hidden until its own first frame places it, and stepped before the HUD, so the plate
-	# under it reads this frame's size and not last frame's.
-	chip.visible = false
+	# Stepped before the HUD, so the plate under it reads this frame's size and not last frame's.
 	chip.process_priority = process_priority - 1
 	add_child(chip)
 	_corner_chip = chip
