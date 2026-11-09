@@ -310,6 +310,10 @@ const SET_CHIME_LEAD_S := 0.12
 # not again for PILOT_QUOTE_BARS bars of the sounding band (sound/INTEGRATION.md section 6), so it
 # stays a treat.
 const PILOT_QUOTE_BARS := 8
+# A call-in is booked this far ahead, the time a worker has to make the line, and the band
+# sits at this gain under it.
+const CALL_LEAD_S := 0.3
+const CALL_DUCK := 0.6
 # The last_ms of the kill chain whose end has been heard.
 var _streak_landed_ms := -100000
 # The beat a death holds the recorded band to; the lost summary's pack starts once it has passed
@@ -1671,6 +1675,27 @@ func speak(kind: String, text: String, beat: int) -> bool:
 		_babble[key] = Synth.to_wav(SfxBank.babble(text, beat, live))
 	_start(kind, "babble", _babble[key], SfxBank.trim_db("babble"), 1.0, "SFX")
 	return true
+
+
+# A caller's line on the call card (SOUND-STORY section 8, "Who talks on what"): the caller's
+# chirp, then babble in their own voice. It is made on a worker and sounded CALL_LEAD_S
+# later, so no frame waits for it, and a caller on the grid starts on the band's sixteenth.
+# The band dips under the voice by about what the lounge gives Moss at his bench. Returns
+# how long the voice lasts from now, for the card's hold; 0.0 when it stays silent, as it
+# does while an earlier caller is still talking.
+func call_in(kind: String, speaker: String, text: String) -> float:
+	if text == "" or clock < float(_gates.get("call_in", -1000.0)) or not _admit(kind, "babble", 1.0):
+		return 0.0
+	var step := grid_unit(4)
+	var at := engine.clock + int(CALL_LEAD_S * Harmony.RATE)
+	if SfxBank.caller_on_grid(speaker):
+		at += posmod(next_grid(4) - at, step)
+	engine.schedule_stinger_at(SfxBank.say_id(speaker, text), at, 0.0, false, step)
+	var seconds := float(at - engine.clock) / Harmony.RATE + SfxBank.say_seconds(speaker, text, step)
+	_gates["call_in"] = clock + seconds
+	_duck(CALL_DUCK, seconds)
+	cue_log.append([kind, "babble", "call", at, 1.0])
+	return seconds
 
 
 # What the run's rows resolve by: the player's class motif.

@@ -369,6 +369,27 @@ Moss's voice is synthesized babble, one blip per letter, in the live key, rising
 | Shop barks | D3 | level |
 | Remembers-you lines | D3, filtered triangle | slow and warm |
 
+### Who talks on what
+
+Working (W), 9 November 2026, from Andrew's ask that the people in the game call in on a card and talk in cute babble, one voice each. Moss's bench voice above is unchanged. A call-in is one call, `audio.call_in(kind, speaker, text)`: a two-note chirp in the caller's instrument so the ear knows who it is before the eye finds the card, then the line, one blip a letter, in the live key. It returns how long the voice lasts so the card can hold for it. The line is made on a worker and sounds a third of a second later, the band dips under it by about what the lounge gives Moss at his bench, and one caller talks at a time.
+
+The rule is the story map's: whose hands the caller is sets the instrument. A pilot talks in the notes of their own motif, on their own instrument, so their speech is their tune shuffled. Everyone on the crew's side bends into their notes and strays a little in time. The Foreman alone is on the grid: one pure note, every letter a thirty-second of the band's tempo, nothing bent and nothing left to chance, and it does not rise on a question. A line is laid out the same way every time it is said. The rows live in `sfx_bank.gd` (`CALLERS`).
+
+| Caller | Voice | Notes | How they talk |
+| --- | --- | --- | --- |
+| Moss | His bench blip, after the bell on his counter rings twice | D3's Dorian triad | Level and unhurried |
+| Sable | Bell | Own motif, an octave up | Quick, scooping up into each word: Sable launches |
+| Rivet | Clavinet | Own motif, an octave up | Fast, with no gap between words: Rivet never stops |
+| Kest | Tom | Own motif, an octave up | Slow, falling away from each note, long rests after a sentence: Kest commits late |
+| Tarn | Round bass | Own motif, an octave up | Slowest and softest: gentle while the machine snarls |
+| Tally | Electric piano | Own motif, an octave up | Even, counted: the honest ledger |
+| The Cannon | Chime | Own motif, an octave up | The Foreman's own clean tone, bent: the gun that chose a side |
+| Pump crew, flume crew, signal crew | Mallets | The triads on D, E and G | Two talkers trading words on one radio, the second a fourth lower and in before the first is done |
+| Brindle | Brass | The Fleet motif: D and E flat | Slow and grand; every sentence ends held on the flat second, because he rounds up |
+| The Foreman (the Mind) | A pure tone | One note, D; its chirp is a perfect fifth | On the grid, as above. The memo is read by a metronome. |
+
+A caller id with no row gets Moss's voice and one warning. Open, for Andrew's ear: whether the crew's letters stay instrument blips, as here and as R1 has kept every voice so far, or go through small vowel mouths the way Animal Crossing's do (clips of both are on the sound page). The Foreman has no mouth either way.
+
 ### The conversation loop
 
 The player presses the key glyph by Moss; each press plays one beat. The pilot's side is a nod and the class motif's first note, never words, so the 12-word budget is Moss's alone. After beat 6 the next press restarts at beat 1 with a new variation; a beat picks a variation the visit has not used, and the class-tagged lines are extra choices for that class. None of these lines is from the Potion Seller sketch. The structure is borrowed (ask, refuse, insist, double down, plead, send off); every word is Moss's.
