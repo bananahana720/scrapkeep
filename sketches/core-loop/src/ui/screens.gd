@@ -349,7 +349,7 @@ func _on_flow_changed(state: String) -> void:
 				_refusal.text = "Saved run not loaded (%s): %s" % [game.flow.saved_run_cause, continue_refusal()]
 				button_for("start").grab_focus()
 		"class_select":
-			_show("Choose your class", Palette.SAND, "")
+			_show("Choose your pilot", Palette.SAND, "")
 			var classes: Array = game.flow.classes
 			var gap := CARD_GAP if classes.size() <= 4 else CARD_GAP_TIGHT
 			_choices.add_theme_constant_override("separation", int(gap))
@@ -369,7 +369,7 @@ func _on_flow_changed(state: String) -> void:
 		"dead":
 			_show("SCRAPPED", EventKinds.color("player_died"), game.flow.gap_line())
 			_action("new", "key_n", "New run")
-			_action("class", "key_c", "Choose class")
+			_action("class", "key_c", "Choose pilot")
 			if not game.run.companion.is_empty():
 				_companion_action()
 			if game.flow.can_replay_final_stage():
@@ -406,7 +406,7 @@ func _on_flow_changed(state: String) -> void:
 				_show_tip(game.flow.death_tip)
 			_summary_stats()
 			_action("again", "key_n", "Run again")
-			_action("class", "key_space", "Choose class")
+			_action("class", "key_space", "Choose pilot")
 			if not game.run.companion.is_empty():
 				_companion_action()
 			_action("camp", "key_k", "Camp")
@@ -525,7 +525,7 @@ func end_prologue() -> void:
 	for child in _actions.get_children():
 		_actions.remove_child(child)
 		child.queue_free()
-	_show("Choose your class", Palette.SAND, "")
+	_show("Choose your pilot", Palette.SAND, "")
 	_choices.visible = true
 	_footer.visible = true
 	_queue_level()
