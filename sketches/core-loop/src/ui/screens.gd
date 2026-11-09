@@ -116,6 +116,7 @@ var _state := ""
 # (the headless tests) skips it unless it opts in, so its Start lands on the cards as before.
 var prologue_enabled := true
 var _prologue_line := -1
+var _level_tries := 0
 
 
 func setup(game_ref) -> void:
@@ -1456,22 +1457,26 @@ func _level_text(row: Array) -> void:
 
 
 # The cards' wrapped words measure true only once laid out, so the row levels on a later frame.
+# A fresh request restarts the count, so a row rebuilt mid-wait gets its full wait.
 func _queue_level() -> void:
+	_level_tries = LEVEL_TRIES
 	if not get_tree().process_frame.is_connected(_level_cards):
-		get_tree().process_frame.connect(_level_cards, CONNECT_ONE_SHOT)
+		get_tree().process_frame.connect(_level_cards)
 
 
 # Every card in the row gives its preview the row's largest overflow, so every key row ends
 # inside its card on the same bottom edge. The containers sort after a physics tick or at the
 # end of the frame, so on a frame with no tick the next frame signal comes before the cards'
-# first sort: the row waits for it, and a row that never lays out keeps its built heights.
+# first sort: the row waits for it frame by frame, and a row that never lays out (hidden under
+# the prologue) keeps its built heights until the next request.
 func _level_cards() -> void:
-	for _try in LEVEL_TRIES:
-		if class_cards().all(func(c): return c.laid_out()):
-			break
-		await get_tree().process_frame
 	var row := class_cards()
-	if row.is_empty() or not row.all(func(c): return c.laid_out()):
+	var ready: bool = not row.is_empty() and row.all(func(c): return c.laid_out())
+	_level_tries -= 1
+	if not ready and _level_tries > 0:
+		return
+	get_tree().process_frame.disconnect(_level_cards)
+	if not ready:
 		return
 	_level_text(row)
 	var spill: float = row.reduce(func(m, c): return maxf(m, c.overflow()), 0.0)
