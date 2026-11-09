@@ -3,7 +3,7 @@ extends Node
 # Plays one row of flourish_rows.gd over play: name cards, inked stamps, captions, comic panels,
 # a live close-up panel and drawn sound words on a canvas layer, in the title openings' comic look
 # (title_intro_player.gd). It never stops time, never moves the camera and never eats input:
-# a fresh press after SKIP_GRACE that is not steering or a core verb (PLAY_ACTIONS) and not the
+# a fresh press after SKIP_GRACE (wall seconds) that is not steering or a core verb (PLAY_ACTIONS) and not the
 # mouse wheel ends the row, and still reaches the ball. While the tree is paused (a reward ceremony, the pause menu) the row hides and waits.
 #
 # Layout keeps to ScreenRegions: cards, captions, panels and stamps in the left column of the
@@ -65,6 +65,9 @@ var playing := false
 var id := ""
 var short := false
 var clock := 0.0
+# Wall seconds the row has played: its clock runs on game time, which slow motion stretches,
+# and the skip grace is the player's own second and a half.
+var _wall := 0.0
 var run_seed := 0
 # Every row finished since setup: {id, s, full, skipped, held, cut}. cut is "" when it showed
 # out, else "skipped" (a press), "preempted" (a higher row), "stopped" (stop_all) or "expired"
@@ -161,6 +164,16 @@ func reading(row_id := "") -> bool:
 	return _pieces.any(func(piece): return String(piece.kind) in WRITTEN and clock < float(piece.at) + float(piece["for"]))
 
 
+# Whether the row plays or waits its turn in the queue.
+func has(row_id: String) -> bool:
+	return (playing and id == row_id) or row_id in queued()
+
+
+# Whether the row is playing with its clock in [from, to): the cues time a world beat off it.
+func in_window(row_id: String, from: float, to: float) -> bool:
+	return playing and id == row_id and clock >= from and clock < to
+
+
 # Whether the playing row has a close-up panel up or still to come: the speech bubble that
 # shares its moment waits for the picture. A panel with no subject to show is never coming.
 func close_up() -> bool:
@@ -196,6 +209,7 @@ func _start(row_id: String, seed_value: int, anchors: Dictionary, form: String) 
 	_started.fill(false)
 	_anchors = anchors
 	clock = 0.0
+	_wall = 0.0
 	playing = true
 	set_process(true)
 	started.emit(row_id)
@@ -220,8 +234,13 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if playing and clock >= SKIP_GRACE and not get_tree().paused and skips(event) and not _play_verb(event):
+	if skippable() and not get_tree().paused and skips(event) and not _play_verb(event):
 		skip()
+
+
+# Whether a press may end the row yet.
+func skippable() -> bool:
+	return playing and _wall >= SKIP_GRACE
 
 
 # Steering and the verbs a player presses all through play never skip a row: only a press with
@@ -248,6 +267,7 @@ func advance(delta: float) -> void:
 	if not playing:
 		return
 	clock += delta
+	_wall += delta / maxf(Engine.time_scale, 0.01)
 	for entry in _queue:
 		entry[4] = float(entry[4]) + delta
 	if clock >= length():
@@ -481,10 +501,14 @@ func _panels(texts: Array) -> Control:
 	return strip
 
 
-# A column piece at its slot, lifted if it would reach the prompts band, never above the toasts.
+# The node a row's anchor names, while it is alive and in the world; null otherwise.
+func _anchor(name: String) -> Node3D:
+	var node = _anchors.get(name)
+	return node if is_instance_valid(node) and node is Node3D and node.is_inside_tree() else null
+
+
 func _subject_of(piece: Dictionary) -> Node3D:
-	var subject = _anchors.get(String(piece.get("anchor", "")))
-	return subject if subject is Node3D and is_instance_valid(subject) and subject.is_inside_tree() else null
+	return _anchor(String(piece.get("anchor", "")))
 
 
 # A live close-up of the piece's anchor in an inked panel (flourish_inset.gd). No anchor, no panel.
@@ -492,15 +516,15 @@ func _inset(piece: Dictionary) -> Control:
 	var subject := _subject_of(piece)
 	if subject == null:
 		return null
-	var home = _anchors.get(String(piece.get("home", "")))
-	var toward = _anchors.get(String(piece.get("toward", "")))
-	var rests: Vector3 = home.global_position if home is Node3D and is_instance_valid(home) else subject.global_position
+	var home := _anchor(String(piece.get("home", "")))
+	var toward := _anchor(String(piece.get("toward", "")))
+	var rests: Vector3 = home.global_position if home != null else subject.global_position
 	var screen := _screen()
 	var inset := Inset.new()
 	inset.name = "FlourishInset"
 	inset.add_to_group(AVOID_GROUP)
 	_overlay.add_child(inset)
-	inset.frame(subject, rests, toward.global_position if toward is Node3D and is_instance_valid(toward) else rests + Vector3.BACK,
+	inset.frame(subject, rests, toward.global_position if toward != null else rests + Vector3.BACK,
 		INSET_VIEW.size * screen, maxi(3, int(6 * _scale())))
 	inset.position = INSET_VIEW.position * screen
 	inset.rotation_degrees = INSET_TILT
@@ -509,6 +533,7 @@ func _inset(piece: Dictionary) -> Control:
 	return inset
 
 
+# A column piece at its slot, lifted if it would reach the prompts band, never above the toasts.
 func _seat(node: Control, at: Vector2) -> void:
 	node.reset_size()
 	var screen := _screen()

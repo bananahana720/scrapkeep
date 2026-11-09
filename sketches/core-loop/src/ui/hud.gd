@@ -353,7 +353,8 @@ func setup(game_ref) -> void:
 	# The boss's title, unless its arrival row is saying the name on a card of its own. The row
 	# starts on this signal too, and first: the presentation is set up before the HUD.
 	game.events.boss_arena_entered.connect(func():
-		if not _reading():
+		var presentation = game.get("presentation")
+		if presentation == null or not presentation.names_boss():
 			launch_card.show_card("fac_fleet", EventKinds.hud("boss_arena_entered"), EventKinds.color("boss_arena_entered")))
 	game.events.run_started.connect(func(_class_id: String):
 		_title_world = 0
@@ -460,12 +461,11 @@ func _show_lore() -> void:
 	_step_lore(0.0)
 
 
-# A flourish has a card, a caption or a comic panel up or on the way (flourish_player.reading):
-# one voice at a time, so the corner's plates and pill and the boss's title wait for it.
+# A flourish has a card, a caption or a comic panel up or on the way (presentation.reading):
+# one voice at a time, so the corner's plates and pill wait for it.
 func _reading() -> bool:
 	var presentation = game.get("presentation")
-	var flourish = presentation.get("flourish") if presentation != null else null
-	return flourish != null and flourish.reading()
+	return presentation != null and presentation.reading()
 
 
 func lore_pulse_visible() -> bool:

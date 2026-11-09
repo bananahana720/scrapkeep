@@ -98,7 +98,10 @@ func _ready() -> void:
 	_game.events.grapple_fired.connect(func(_anchor: Vector3): _end_exchange())
 	_game.events.flow_changed.connect(func(_state: String):
 		if not _game.flow.in_stage():
-			_end_exchange())
+			_end_exchange()
+		# A boss's line held for the close-up never follows the player off the fight's screen.
+		if not _game.flow.in_play():
+			_end_intro())
 
 
 func _install_exchange_input() -> void:
@@ -206,8 +209,7 @@ func _waits() -> bool:
 
 func _close_up() -> bool:
 	var presentation = _game.get("presentation")
-	var flourish = presentation.get("flourish") if presentation != null else null
-	return flourish != null and flourish.close_up()
+	return presentation != null and presentation.close_up()
 
 
 func _flush_intro() -> void:

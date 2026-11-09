@@ -18,6 +18,8 @@ const STAND := 10.5
 const EYE := 0.9
 const LIFT := 2.5
 const LENS := 64.0
+# How far the panel's camera draws when there is no play camera to copy (chase_camera's far).
+const REACH := 700.0
 const FOCUS_LINES := 30
 const FOCUS_BOIL_MS := 90
 
@@ -52,12 +54,17 @@ func frame(subject: Node3D, home: Vector3, toward: Vector3, extent: Vector2, bor
 	var view := SubViewport.new()
 	view.name = "InsetView"
 	view.size = Vector2i(extent)
-	view.world_3d = get_viewport().find_world_3d()
+	var screen := get_viewport()
+	view.world_3d = screen.find_world_3d()
+	view.msaa_3d = screen.msaa_3d
+	view.mesh_lod_threshold = screen.mesh_lod_threshold
 	view.physics_object_picking = false
 	view.handle_input_locally = false
 	holder.add_child(view)
 	_camera = Camera3D.new()
 	_camera.fov = LENS
+	var play := screen.get_camera_3d()
+	_camera.far = play.far if play != null else REACH
 	# The play camera moves per frame off the ball's shown position; this one stands still.
 	_camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	view.add_child(_camera)

@@ -32,7 +32,8 @@ const Palette := preload("res://src/core/palette.gd")
 # scale between its at and at + for on the row's own clock (game.slow_motion). The row's clock
 # slows with the world, so the pieces drawn inside the window stay up for the whole of it.
 # Music keeps its own sample clock and does not slow. A pause lifts the slow motion and gives
-# it back; the row's end, a skip or a screen away from play ends it.
+# it back; the row's end, a skip (the player's skip grace counts wall seconds, so a press can
+# land inside the window) or a screen away from play ends it.
 
 const HOLD_CAP := 2.0
 # The Requisition's arc over the bowl rim: it starts this far out and up from where it stands.
@@ -92,6 +93,12 @@ func _on_arena_entered() -> void:
 			continue
 		_played_this_run[id] = true
 		_play(id)
+
+
+# Whether the fight's arrival row is saying the boss's name on a card of its own, now or when
+# its turn comes: the HUD's boss title stays down for it.
+func names_boss() -> bool:
+	return matching("arrival", _boss_id()).any(func(id): return player != null and player.reading(id))
 
 
 func _on_phase(phase: int, _name: String) -> void:
@@ -282,11 +289,10 @@ func _slow_for(id: String, at: float, seconds: float, scale: float) -> void:
 
 func _process(_delta: float) -> void:
 	# The row is neither playing nor waiting its turn: its window is over, however it ended.
-	if not (player.playing and player.id == String(_slow.id)) and not String(_slow.id) in player.queued():
+	if not player.has(String(_slow.id)):
 		_end_slow()
 		return
-	var on: bool = player.playing and player.id == String(_slow.get("id", "")) and not get_tree().paused \
-		and player.clock >= float(_slow.from) and player.clock < float(_slow.to)
+	var on: bool = not get_tree().paused and player.in_window(String(_slow.id), float(_slow.from), float(_slow.to))
 	ctx.root.slow_motion(float(_slow.scale) if on else 1.0)
 
 
