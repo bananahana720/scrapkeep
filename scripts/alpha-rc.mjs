@@ -323,6 +323,7 @@ export function launchAppImage(appimage, { seconds = LAUNCH_BUDGET_S, menuWaitSe
       finish({ status: "fail", note: `exited (${exited}) before the main menu${broken === null ? "" : `; the build said it did not load (${BOOT_FAILED}): ${broken}`}` });
     };
     child.on("exit", (code, signal) => {
+      if (settled) return;
       exited = code ?? signal;
       clearTimeout(titleTimer);
       clearTimeout(menuTimer);
