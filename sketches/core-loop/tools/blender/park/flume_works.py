@@ -1891,6 +1891,7 @@ def emit_flush(row, V, cells):
             out.append(f if poly_area(f) > 0 else f[::-1])
         return out
 
+    cuts = flush_cuts(row)
     out = []
     for ci, c in enumerate(cells):
         if mode[ci] == "plain":
@@ -1900,7 +1901,8 @@ def emit_flush(row, V, cells):
             for f in fragments(ci):
                 tris += _fan([c.point(x, z) for x, z in f])
         for t in tris:
-            out.append(([(row.local(p[0], p[1])[0], p[2], row.local(p[0], p[1])[1]) for p in t], c.colour))
+            for q in (flush_cut(row, t, cuts) if cuts else (t,)):
+                out.append(([(row.local(p[0], p[1])[0], p[2], row.local(p[0], p[1])[1]) for p in q], c.colour))
     return {"tris": out, "overlay": sum(1 for m in mode if m == "overlay")}
 
 
@@ -2080,6 +2082,104 @@ def flush_covered(row, lx, lz):
         if theirs > mine or (theirs == mine and theirs and earlier):
             return True
     return False
+
+
+SEAM_CUT_PARKS = ("park_flume",)
+SEAM_MAX = 0.01                # m2 of a sheet that may lie where another sheet draws (slivers under SLIVER are dropped, not cut)
+
+
+def rect_lines(spec, grow=0.0):
+    """The four edge lines (nx, nz, c) of a row's lane rectangle in the world, grown by `grow` on every side."""
+    yaw = math.radians(spec["yaw"])
+    c, s = math.cos(yaw), math.sin(yaw)
+    u, v = c * spec["at"][0] - s * spec["at"][1], s * spec["at"][0] + c * spec["at"][1]
+    hw, hl = spec["size"][2] / 2.0 + grow, spec["size"][0] / 2.0 + grow
+    return [(c, -s, u - hw), (c, -s, u + hw), (s, c, v - hl), (s, c, v + hl)]
+
+
+def flush_cuts(row, any_park=False):
+    """What flush_cut needs for a row that shares ground with other flush sheets: per peer the world bounds of its sheet and the
+    edge lines of its lane and sheet, and the row's own lane lines. flush_covered's answer is constant between those lines.
+    None when the row has no peer; a pond is kept clear of every other sheet by assert_pond_clear. Only the flume's rows are cut
+    for now (SEAM_CUT_PARKS): the pit's three overlapping liners would change too, and world 2 is not rebuilt before the sitting."""
+    if not row.peers or row.style == "pond" or (row.park not in SEAM_CUT_PARKS and not any_park):
+        return None
+    peers = []
+    for _, oid in row.peers:
+        o = LINERS[oid]
+        if o["style"] == "pond":
+            continue
+        yaw = math.radians(o["yaw"])
+        c, s = math.cos(yaw), math.sin(yaw)
+        ex, ez = o["size"][2] / 2.0 + MARGIN, o["size"][0] / 2.0 + MARGIN
+        corners = [(o["at"][0] + x * c + z * s, o["at"][1] - x * s + z * c) for x, z in ((-ex, -ez), (ex, -ez), (ex, ez), (-ex, ez))]
+        bounds = (min(q[0] for q in corners), max(q[0] for q in corners), min(q[1] for q in corners), max(q[1] for q in corners))
+        peers.append((bounds, rect_lines(o) + rect_lines(o, MARGIN)))
+    return {"peers": peers, "own": rect_lines(LINERS[row.rid])}
+
+
+def flush_cut(row, t, cuts):
+    """The parts of a drawn triangle (three (world x, world z, y)) that no other flush sheet takes. flush_cell_covered leaves out a
+    cell another sheet takes whole; a cell that straddles the other sheet's edge was drawn whole, so both sheets drew the strip
+    along the seam and their steep bank faces z-fought (clip audit, 9 Nov: the canal junction at (-295, -255), 22 m2). The
+    triangle is cut along the lines where the answer changes and the taken pieces go, so each point of the ground is drawn by one
+    sheet. Every new vertex lies on the triangle's own plane, so a neighbour that is not cut still meets it."""
+    x0, x1 = min(q[0] for q in t), max(q[0] for q in t)
+    z0, z1 = min(q[1] for q in t), max(q[1] for q in t)
+    lines = [ln for (bx0, bx1, bz0, bz1), ls in cuts["peers"] if x1 >= bx0 and x0 <= bx1 and z1 >= bz0 and z0 <= bz1 for ln in ls]
+    if not lines:
+        return [t]
+    frags = [[(q[0], q[1]) for q in t]]
+    for line in lines + cuts["own"]:
+        frags = [q for f in frags for q in split_poly(f, line)]
+
+    def taken(f):
+        return flush_covered(row, *row.local(sum(q[0] for q in f) / len(f), sum(q[1] for q in f) / len(f)))
+    gone = [taken(f) for f in frags]
+    if not any(gone):       # crossed by a line but taken nowhere: the triangle stays whole, so a row with no seam rebuilds unchanged
+        return [t]
+    if all(gone):
+        return []
+    (ax, az, ay), (bx, bz, by), (cx, cz, cy) = t
+    d = (bx - ax) * (cz - az) - (cx - ax) * (bz - az)
+    if abs(d) < 1e-12:
+        return [t]
+
+    def lifted_to(x, z):
+        for q in t:
+            if q[0] == x and q[1] == z:
+                return q
+        u = ((x - ax) * (cz - az) - (cx - ax) * (z - az)) / d
+        v = ((bx - ax) * (z - az) - (x - ax) * (bz - az)) / d
+        return (x, z, ay + u * (by - ay) + v * (cy - ay))
+    out = []
+    for f, g in zip(frags, gone):
+        if not g and abs(poly_area(f)) >= SLIVER:
+            out += _fan([lifted_to(x, z) for x, z in f])
+    return out
+
+
+def seam_overlap(row, pts, tris):
+    """Square metres (plan area) of a flush row's drawn triangles that lie where another flush sheet draws: what flush_cut removes,
+    measured on the exported mesh. pts are liner-local (x, y, z)."""
+    cuts = flush_cuts(row, any_park=True)
+    if not cuts:
+        return 0.0
+    area = 0.0
+    for t in tris:
+        w = [row.world(pts[i][0], pts[i][2]) for i in t]
+        x0, x1 = min(q[0] for q in w), max(q[0] for q in w)
+        z0, z1 = min(q[1] for q in w), max(q[1] for q in w)
+        lines = [ln for (bx0, bx1, bz0, bz1), ls in cuts["peers"] if x1 >= bx0 and x0 <= bx1 and z1 >= bz0 and z0 <= bz1 for ln in ls]
+        if not lines:
+            continue
+        frags = [w]
+        for line in lines + cuts["own"]:
+            frags = [q for f in frags for q in split_poly(f, line)]
+        for f in frags:
+            if flush_covered(row, *row.local(sum(q[0] for q in f) / len(f), sum(q[1] for q in f) / len(f))):
+                area += abs(poly_area(f))
+    return area
 
 
 def flush_cell_covered(row, x0, x1, z0, z1):
@@ -2752,6 +2852,12 @@ def liner_check(rid, out_dir):
                 missing, total, missing / max(total, 1), "PASS" if missing == 0 else "FAIL"))
             if missing:
                 fails.append("%s: %d of %d lane grid points are not covered by a drawn triangle" % (name, missing, total))
+            twice = seam_overlap(row, pts, tris)
+            enforced = row.park in SEAM_CUT_PARKS
+            print("FLUME_WORKS_FLUSH", name, "seam overlap: %.2f m2 drawn where another sheet draws (limit %.2f%s)  %s" % (
+                twice, SEAM_MAX, "" if enforced else ", not enforced in " + row.park, "PASS" if twice <= SEAM_MAX or not enforced else "FAIL"))
+            if enforced and twice > SEAM_MAX:
+                fails.append("%s: %.2f m2 of its surface lies where another flush sheet draws (limit %.2f)" % (name, twice, SEAM_MAX))
             if name == rid + "_detail1":
                 near = min([abs(x) for x, y, z in pts] or [0.0])
                 if near < row.hw + FLUSH_RIM_GAP - 1e-3:

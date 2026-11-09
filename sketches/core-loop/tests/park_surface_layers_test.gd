@@ -9,7 +9,10 @@ extends SceneTree
 #     row lifts;
 # (c) a lone surface row and a row that is no surface take no lift;
 # (d) a lifted row's drawn views stand the lift up and its collider faces stay where they were.
-# Evidence limit: placement data and one placed row; the look is the clip audit's stills.
+# (e) the three canal liners of the flume junction draw each piece of ground once (flume_works.py flush_cut; clip audit,
+#     9 Nov: their steep bank faces shared planes over 22 m2 whatever the layer, because each sheet drew the whole of a
+#     cell that straddled the other's edge). Their near views are placed and sampled on a 0.25 m plan grid.
+# Evidence limit: placement data and placed rows; the look is the clip audit's stills.
 
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const T := preload("res://tests/support/t.gd")
@@ -102,4 +105,53 @@ func _run() -> void:
 	_t.check("(d) the collider stays (%d shapes)" % shapes, shapes > 0 and moved == 0, "%d moved" % moved)
 	base.free()
 	lifted.free()
+	_check_junction(rows, flat)
 	quit(_t.verdict())
+
+
+# (e) Plan grid points under the drawn near view of more than one of the junction's liners.
+func _check_junction(rows: Array, ground: Callable) -> void:
+	const GRID := 0.25
+	const DOUBLED_MAX_M2 := 0.5
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var seen := {}
+	var ids := ["main_canal", "butte_gap", "gap_wash"]
+	for k in ids.size():
+		var placed := ParkRecipes.place_row(rows[_index(rows, ids[k])], holder, ground)
+		for view: MeshInstance3D in placed.find_children("*", "MeshInstance3D", true, false):
+			if view.visibility_range_begin > 0.0 or view.mesh == null:
+				continue
+			for surface in view.mesh.get_surface_count():
+				var arrays := view.mesh.surface_get_arrays(surface)
+				var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+				var index = arrays[Mesh.ARRAY_INDEX]
+				var count: int = index.size() if index != null and index.size() > 0 else verts.size()
+				for t in range(0, count, 3):
+					var p: Array[Vector2] = []
+					for c in 3:
+						var w := view.global_transform * verts[index[t + c] if index != null and index.size() > 0 else t + c]
+						p.append(Vector2(w.x, w.z))
+					var d := (p[1].y - p[2].y) * (p[0].x - p[2].x) + (p[2].x - p[1].x) * (p[0].y - p[2].y)
+					if absf(d) < 1.0e-9:
+						continue
+					for gx in range(ceili(minf(p[0].x, minf(p[1].x, p[2].x)) / GRID), floori(maxf(p[0].x, maxf(p[1].x, p[2].x)) / GRID) + 1):
+						for gz in range(ceili(minf(p[0].y, minf(p[1].y, p[2].y)) / GRID), floori(maxf(p[0].y, maxf(p[1].y, p[2].y)) / GRID) + 1):
+							var q := Vector2(gx * GRID, gz * GRID)
+							var u := ((p[1].y - p[2].y) * (q.x - p[2].x) + (p[2].x - p[1].x) * (q.y - p[2].y)) / d
+							var v := ((p[2].y - p[0].y) * (q.x - p[2].x) + (p[0].x - p[2].x) * (q.y - p[2].y)) / d
+							if minf(u, minf(v, 1.0 - u - v)) > 1.0e-4:
+								var key := Vector2i(gx, gz)
+								seen[key] = int(seen.get(key, 0)) | (1 << k)
+	var drawn := [0, 0, 0]
+	var doubled := 0
+	for key: Vector2i in seen:
+		var mask: int = seen[key]
+		for k in 3:
+			drawn[k] += 1 if mask & (1 << k) else 0
+		doubled += 1 if mask & (mask - 1) else 0
+	var area := doubled * GRID * GRID
+	print("park_surface_layers_test: junction liners drawn %s grid points, %d under two (%.2f m2)" % [str(drawn), doubled, area])
+	_t.check("(e) each junction liner draws a near view", drawn.min() > 1000, str(drawn))
+	_t.check("(e) the junction's liners draw each piece of ground once (at most %.1f m2 doubled)" % DOUBLED_MAX_M2, area <= DOUBLED_MAX_M2, "%.2f m2" % area)
+	holder.free()
