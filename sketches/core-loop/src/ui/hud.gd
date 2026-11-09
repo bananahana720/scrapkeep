@@ -977,7 +977,7 @@ func objective_reading() -> Dictionary:
 	var words := Objectives.words(id)
 	if id == "find_activity":
 		# The nearest unfinished site, by name and metres, so the row is a place to go.
-		var ball: Vector3 = game.player.ball_position()
+		var ball: Vector3 = game.player.shown_position()
 		var nearest = null
 		for site in sites:
 			if nearest == null or ball.distance_squared_to(site.global_position) < ball.distance_squared_to(nearest.global_position):
