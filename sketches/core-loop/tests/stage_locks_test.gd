@@ -200,7 +200,7 @@ func _gate() -> void:
 			await physics_frame
 	_t.check("the wanted packs open the clamp", not locks.locked(), "cleared %d of %d" % [locks.cleared, locks.packs_wanted()])
 	_t.eq("the release plays once", _count("warden_gate_opened"), 1)
-	_t.eq("the open clamp hands the plate back to the guard", game.hud.objective_reading()["id"], "break_guard")
+	_t.eq("the open clamp hands the plate back to the dam Warden's own row", game.hud.objective_reading()["id"], "ride_sheet")
 	await process_frame
 	_t.eq("the open clamp shows no crew marker", _crew_markers(game), [])
 	_t.check("the collar goes", locks._collar == null)
