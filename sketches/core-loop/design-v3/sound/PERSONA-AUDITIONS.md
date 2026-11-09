@@ -39,9 +39,13 @@ Never write "anime" in a caption, never a real artist's name, and never ask for 
 
 ## What to send back
 
-1. For each of the 18 renders: a 30 s MP3 (128 kbps stereo) cut from the strongest half, named `<candidate>-<cell>-s<seed>.mp3` (for example `a-roam-s6101.mp3`), loudness-matched to -16 LUFS so no candidate wins by being louder.
+1. For each of the 24 renders: a 30 s MP3 (128 kbps stereo) cut from the strongest half, named `<candidate>-<cell>-s<seed>.mp3` (for example `a-roam-s6101.mp3`), loudness-matched to -16 LUFS so no candidate wins by being louder.
 2. One table: file, tempo read, `measure_variants.py` chroma match against the parent and against a different-parent control (covers only), integrated LUFS before matching.
 3. Which seed you would pick per cell and one line why (melody on top, clean seam, tempo on the grid).
+
+## Tempo check before a take is returned
+
+A cover can come back at a different tempo from the one asked: in the first batch (9 November) five of the six roam takes came back at 150 BPM, bar length 1.60 s, against the 172 asked, and a beat detector misread them as 180 and 187.5. Check every take by bar length instead: the strongest repeat of its onsets inside 0.25 to 2.2 s should be one bar of the asked tempo, within 1% (1.395 s at 172, 1.860 s at 129, 1.714 s at 140). A take that fails is rendered again (check the tempo field of the job first, then try seeds 6103 and 6104); it is not returned as an audition, because the roaming tempo is a ruling and the three years must be compared at the same tempo.
 
 Put the MP3s where the cloud thread can read them (`/mnt/project-files/music/persona/auditions/`, or whatever route audio last took from the PC to the library) and say where. Run on the 3060 if the 4080 is timing frames or Andrew is using it.
 
