@@ -533,20 +533,19 @@ test("every EV row cited by the admitted results exists in TRACKING, and the pag
     existsSync(tracking),
     "TRACKING.md must exist; this check fails closed",
   );
-  // An event may have moved from the board into a declared archive
-  // (docs/project/tracking/, each under a "## Event archive" heading);
-  // scripts/check-docs.mjs owns that rule. A cited id must be a row in one of them.
+  // An event may have moved from the board into a declared archive: the rows
+  // under a "## Event archive" heading, up to the next "## " heading, in a file
+  // under docs/project/tracking/. scripts/check-docs.mjs owns that rule and
+  // walks every doc; this test reads the one folder the coordinator uses.
+  const eventRows = (text) => [...text.matchAll(/^\| (EV-\d{4}) \|/gm)].map((match) => match[1]);
+  const rows = new Set(eventRows(await readFile(tracking, "utf8")));
   const archives = path.join(root, "docs/project/tracking");
-  const sources = [tracking];
   for (const name of existsSync(archives) ? await readdir(archives) : []) {
-    const file = path.join(archives, name);
     if (!name.endsWith(".md")) continue;
-    if (/^## Event archive$/m.test(await readFile(file, "utf8"))) sources.push(file);
-  }
-  const rows = new Set();
-  for (const file of sources) {
-    for (const match of (await readFile(file, "utf8")).matchAll(/^\| (EV-\d{4}) \|/gm))
-      rows.add(match[1]);
+    const sections = (await readFile(path.join(archives, name), "utf8")).split(/^(?=## )/m);
+    for (const section of sections) {
+      if (/^## Event archive\n/.test(section)) for (const id of eventRows(section)) rows.add(id);
+    }
   }
   const cited = [
     ...new Set(JSON.stringify(dashModule.ADMITTED).match(/EV-\d{4}/g)),

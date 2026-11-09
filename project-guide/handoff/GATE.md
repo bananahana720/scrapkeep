@@ -92,6 +92,20 @@ node scripts/known-failing.mjs --promotion          # fails if any row is past i
 - A row past its review date holds the next promotion. Either the owner fixed it (remove the row) or the coordinator gives it a new date and says why in the pull request.
 - `sketches/core-loop/tests/QUARANTINE.tsv` is a different tool with a different job: at most three rows, a listed test stops failing runs, and a release candidate carries none. Nothing is in it today.
 
+## The node tests, once per promotion
+
+The fast lane runs only the node tests a diff selects, and the shards run Godot tests. So once per promotion the whole node suite runs on the PC, where no test is skipped for the box: a full clone, an ordinary user, installed packages. The coordinator queues it on the PC lane when the Gate calls the promotion.
+
+```
+git fetch origin && git checkout --detach <stage head>
+npm ci
+SCRAPKEEP_WHOLE_TESTS=1 npm test
+```
+
+Pass means the last command exits 0 and its summary reads `# fail 0`. `SCRAPKEEP_WHOLE_TESTS=1` turns the box skips in `tests/preconditions.mjs` (as root, two tests; in a shallow clone, seven) into errors, so a pass cannot come from a box that skipped them. Skips that remain are tests with their own stated need (a Godot binary, for one) and do not fail the run. The PC lane posts the summary lines (`# tests`, `# pass`, `# fail`, `# skipped`) on the board. A failure is a new red and blocks like any other (ruling ai); there is no ledger for node tests.
+
+In a cloud thread, plain `npm test` should also read `# fail 0`, with up to 9 more skipped than on the PC. It is a useful check before a pull request that touches `scripts/` or `tests/`, and it does not replace the PC run.
+
 ## When the head moves after the shards ran
 
 A small fix can land on a frozen stage (a re-pin, a text fix). Rows carry only for tests the change cannot reach:
