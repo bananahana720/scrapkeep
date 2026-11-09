@@ -10,7 +10,10 @@ import {
   cacheableBaseRun,
   settleBaseEntry,
   trustedBaseEntry,
+  LEDGER_FLAKE_RUNS,
   classifyFailure,
+  ledgerFlakes,
+  settleLedgerFlake,
   indexFromFiles,
   lanePool,
   nodeTestsFor,
@@ -150,6 +153,24 @@ test("plan keeps tiers within the budget, keeps changed tests, runs cheapest fir
   assert.deepEqual(out.solo.map((row) => row.test), ["tests/solo_test.gd"]);
   assert.deepEqual(out.deferred.map((row) => row.test), ["tests/second_test.gd"]);
   assert.deepEqual(out.bots, ["tests/bot_x_test.gd"]);
+});
+
+test("a ledger flake that is red twice gets more head runs: one green is flaky, red every time is still the PR's", () => {
+  const rows = [
+    { test: "audio_bake_cancel_test", kind: "flake" },
+    { test: "warden_counter_pulse_test", kind: "red" },
+  ];
+  assert.deepEqual([...ledgerFlakes(rows)], ["audio_bake_cancel_test"]);
+  const prRed = classifyFailure({ rerunOk: false, baseOk: true });
+  const red = { ok: false, killed: false };
+  const green = { ok: true, killed: false };
+  assert.deepEqual(settleLedgerFlake(prRed, [red, green]), { kind: "flaky", newChecks: [], ledger: true });
+  assert.deepEqual(settleLedgerFlake(prRed, Array(LEDGER_FLAKE_RUNS).fill(red)), { kind: "pr-red", newChecks: [], ledgerRuns: LEDGER_FLAKE_RUNS });
+  // A run the lane stopped is not a verdict, whatever came before it.
+  assert.equal(settleLedgerFlake(prRed, [red, { ok: false, killed: true }]).kind, "stopped");
+  // New failing checks stay named when every extra run is red.
+  const grew = classifyFailure({ rerunOk: false, baseOk: false, headChecks: ["a", "b"], baseChecks: ["a"] });
+  assert.deepEqual(settleLedgerFlake(grew, [red, red, red]).newChecks, ["b"]);
 });
 
 test("a failure is flaky when the rerun passes, base-red when the base fails the same checks, else the PR's", () => {
