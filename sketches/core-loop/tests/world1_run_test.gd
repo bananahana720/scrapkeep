@@ -88,12 +88,13 @@ func _line(text: String, prefix: String) -> String:
 	return ""
 
 
+# The run's last three self-play lines: how it ended (a stall names the stage, the fight and the spot).
 func _last_line(text: String) -> String:
-	var last := ""
+	var lines := []
 	for line in text.split("\n"):
 		if line.begins_with("self-play: "):
-			last = line.strip_edges()
-	return last
+			lines.append(line.strip_edges().trim_prefix("self-play: "))
+	return " | ".join(lines.slice(-3))
 
 
 func _errors(text: String) -> Array:

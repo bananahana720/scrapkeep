@@ -50,6 +50,9 @@ var _from := 0
 var _until := "2"
 var _stall := 120.0
 var _fight_end := -1.0
+# The stage's exit is taken: the exit stall has nothing left to time until the next stage opens
+# (a boss fight after the exit is the driver's own limit to end, not this one's).
+var _exit_taken := false
 var _stage := 0
 var _beat := 0.0
 var _beat_at := 0.0
@@ -145,7 +148,7 @@ func _physics_process(delta: float) -> void:
 	if over:
 		_finish()
 		return
-	if _fight_end < 0.0 and state == "gates":
+	if _fight_end < 0.0 and state == "gates" and not _exit_taken:
 		_fight_end = _now()
 	if _fight_end >= 0.0 and _goal_at < 0.0 and _now() - _fight_end > _stall:
 		_stalled("exit")
@@ -250,6 +253,7 @@ func _stalled(what: String) -> void:
 func _on_stage_entered(stage: int, retry := false) -> void:
 	_stage = stage
 	_fight_end = -1.0
+	_exit_taken = false
 	if not retry:
 		_stages.append(stage)
 	print("self-play: stage %d entered%s at %.2f s" % [stage, " (retry)" if retry else "", _now()])
@@ -259,6 +263,8 @@ func _on_stage_entered(stage: int, retry := false) -> void:
 
 func _on_stage_cleared(stage: int) -> void:
 	print("self-play: stage %d exit taken at %.2f s" % [stage, _now()])
+	_fight_end = -1.0
+	_exit_taken = true
 	if _until == "exit%d" % stage and _goal_at < 0.0:
 		_goal_at = _now()
 
