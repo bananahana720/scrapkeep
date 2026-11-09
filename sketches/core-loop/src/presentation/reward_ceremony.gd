@@ -177,7 +177,7 @@ static func rung_pitch(rarity: String) -> float:
 # The six words of what changes: the part's verb, cut to the reveal row's word limit.
 static func card_words(part_id: String) -> String:
 	var d: Resource = Parts.def(part_id)
-	var line: String = d.verb if d != null and d.verb != "" else (d.text if d != null else "")
+	var line: String = d.verb if d != null and d.verb != "" else (d.text if d != null else String(Parts.token(part_id).get("verb", "")))
 	var words := line.split(" ", false)
 	var limit := int(EventKinds.reward_row("reveal").get("words", 6))
 	return " ".join(words.slice(0, mini(words.size(), limit)))
@@ -387,6 +387,8 @@ func card_state(find: Dictionary, start: int, in_ceremony: bool) -> Dictionary:
 	var stamp: String = stamps.get(rarity, "")
 	if find["first"] and rarity in ["common", "rare"]:
 		stamp = "%s %s" % [stamps["first"], stamp]
+	# A run token (Parts.TOKENS) is no rung of the item ladder: it wears its own stamp.
+	stamp = String(Parts.token(find["part"]).get("stamp", stamp))
 	var element := String(d.element) if d != null else ""
 	var relic := relic_of(find["part"])
 	var title: String = Relics.name_of(relic) if relic != "" else Parts.display_name(find["part"])

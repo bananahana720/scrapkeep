@@ -33,7 +33,7 @@ const ROWS := {
 	"ram_scooter": {"glyph": "fac_fleet", "words": "Ram the Admiral's scooter"},
 }
 
-# What "find_activity" says when the plate knows which site is nearest: the site's kind
+# What "find_activity" says for the site the plate names (pick_site): the site's kind
 # (EventKinds.ACTIVITY_ROWS) and the verb that finishes it (activities.gd RULES `finishes`).
 const ACTIVITY_WORDS := {
 	"enemy_camp": "Clear the camp",
@@ -42,6 +42,12 @@ const ACTIVITY_WORDS := {
 	"hold_the_relay": "Hold the relay",
 	"surge_run": "Outrun the surge",
 	"hauler_bounty": "Break the bounty hauler",
+	# The trade spots by their ruled names (ruling ci): the risky ones are the keeper's gamble, the
+	# safe one the foreman's kindness. The site's own label says the same.
+	"trade_risk": "Find the keeper's gamble",
+	"curse": "Find the keeper's gamble",
+	"sacrifice": "Find the keeper's gamble",
+	"trade_safe": "Find the foreman's kindness",
 }
 
 # What choose() reads. state is flow.state_name(); card is true while the stage card owns
@@ -60,9 +66,48 @@ static func words(id: String) -> String:
 	return ROWS[id]["words"] if ROWS.has(id) else ""
 
 
-# The "find_activity" row's words for a site of this kind; the row's own for a kind with none.
-static func activity_words(kind: String) -> String:
-	return String(ACTIVITY_WORDS.get(kind, ROWS["find_activity"]["words"]))
+# The "find_activity" row's words for a site of this kind. A kind with no words here is named by
+# what its own marker calls it (called: a drawn pocket's cue word, "Arena" reads "Find the arena");
+# with neither, the row's own words.
+static func activity_words(kind: String, called := "") -> String:
+	if ACTIVITY_WORDS.has(kind):
+		return String(ACTIVITY_WORDS[kind])
+	return "Find the " + called.to_lower() if called != "" else String(ROWS["find_activity"]["words"])
+
+
+# Which site the activity row names: the one in front of the view, not merely the nearest. A site's
+# score is its distance, stretched by how far it lies off the view (straight ahead x1, abeam x2,
+# behind x3), and the lowest score is named. The row keeps the site it names until another scores
+# under SITE_KEEP of it, so two sites at like range never trade the row back and forth.
+# At the dam's drop this names the camp the drop faces (310 m, 1 degree off) and not the relay
+# beside it (305 m, 21 degrees off).
+const SITE_OFF_VIEW := 1.0
+const SITE_KEEP := 0.8
+
+
+# offset is the site's place less the ball's; forward is the view's heading. Height counts in the
+# distance and not in the angle.
+static func site_score(offset: Vector3, forward: Vector3) -> float:
+	var flat := Vector3(offset.x, 0.0, offset.z)
+	var ahead := Vector3(forward.x, 0.0, forward.z)
+	if flat.length_squared() < 0.0001 or ahead.length_squared() < 0.0001:
+		return offset.length()
+	return offset.length() * (1.0 + SITE_OFF_VIEW * (1.0 - flat.normalized().dot(ahead.normalized())))
+
+
+# The index of the offset the row names, or -1 for none. held is the index the row names now (-1
+# when it names none, or its site has gone).
+static func pick_site(offsets: Array, forward: Vector3, held := -1) -> int:
+	var best := -1
+	var best_score := INF
+	for i in offsets.size():
+		var score := site_score(offsets[i], forward)
+		if score < best_score:
+			best_score = score
+			best = i
+	if held >= 0 and held < offsets.size() and best != held and best_score >= site_score(offsets[held], forward) * SITE_KEEP:
+		return held
+	return best
 
 
 # The row id the plate shows for this reading, or "" when it shows nothing.
