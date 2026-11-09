@@ -772,19 +772,32 @@ func schedule_stinger(id: String, db := 0.0, lane := false, repeats := 1) -> int
 	return start
 
 
-func schedule_stinger_at(id: String, at: int, db := 0.0) -> void:
-	_add_action(at, {"type": "stinger", "id": id, "db": db, "music": false})
-	_warm_stinger(id, at)
+# home keeps the cue in D whatever key the band is in (a death's fall sits under the death cue,
+# which is not keyed).
+func schedule_stinger_at(id: String, at: int, db := 0.0, home := false) -> void:
+	_add_action(at, {"type": "stinger", "id": id, "db": db, "music": false, "home": home})
+	_warm_stinger(id, at, home)
+
+
+# The key a stinger booked at transport sample at will sound in.
+func stinger_key(at: int) -> int:
+	return key if grid == null else grid.key_at(at)
+
+
+# A stinger made ahead of its booking: a kill chain's landing is known a chain window before it
+# is booked, and a note a sixteenth from its contact is made when its key arrives.
+func warm_stinger(id: String, at: int, home := false) -> void:
+	_warm_stinger(id, at, home)
 
 
 # The variant _run's "stinger" will ask for at `at`, on a worker, unless it is made already.
-func _warm_stinger(id: String, at: int) -> void:
+func _warm_stinger(id: String, at: int, home := false) -> void:
 	if not warm_stingers:
 		return
-	var shift: int = key if grid == null else grid.key_at(at)
+	var shift: int = 0 if home else stinger_key(at)
 	var step := step_len
 	var theme_now := theme
-	if SfxBank.baked_at(id, step, shift, theme_now):
+	if SfxBank.cached_at(id, step, shift, theme_now):
 		return
 	_stinger_tasks = _stinger_tasks.filter(func(task): return not WorkerThreadPool.is_task_completed(task) or _settle_task(task))
 	_stinger_tasks.append(WorkerThreadPool.add_task(func(): SfxBank.samples_at(id, step, shift, theme_now), true, "stinger warm"))
@@ -1782,7 +1795,7 @@ func _run(action: Dictionary) -> void:
 			# Pitched stingers sound in the live key, and a themed one in this level's motif.
 			var music: bool = action.get("music", false)
 			var live_key: int = key if grid == null else grid.key_at(clock)
-			var buf := SfxBank.samples_at(action["id"], step_len, 0 if music else live_key, theme)
+			var buf := SfxBank.samples_at(action["id"], step_len, 0 if music or action.get("home", false) else live_key, theme)
 			var gain := db_to_linear(SfxBank.trim_db(action["id"]) + float(action["db"]))
 			_start(buf, buf.size(), -1, gain, 0.0, not action["music"])
 			stinger_starts.append([action["id"], clock])
@@ -2210,6 +2223,13 @@ func _chord(bar: int) -> Dictionary:
 	if track in BOSS_TRACKS and section == "victory" and _drop.is_empty():
 		return progression[mini(bar, progression.size() - 1)]
 	return progression[bar % progression.size()]
+
+
+# The chord the band will be on at transport sample at, as the bar that sample falls in reads now.
+func chord_at(at: int) -> Dictionary:
+	var base := _next_step()
+	var ahead := maxi(0, floori(float(at - int(base[0])) / step_len))
+	return _chord((int(base[1]) + ahead) / Harmony.STEPS_PER_BAR)
 
 
 func _next_chord(bar: int) -> Dictionary:

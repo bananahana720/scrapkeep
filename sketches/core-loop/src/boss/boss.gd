@@ -1479,6 +1479,11 @@ func _pressure(kind: String, result: Dictionary) -> void:
 func _apply_posture(result: Dictionary) -> void:
 	var before := _posture_signature()
 	var was_staggered: bool = _posture.staggered
+	# A hit is judged before its strike is published and applied after: the bank's stop is
+	# measured again here, against the bar as it stands now.
+	if _held() or _in_transition():
+		result = result.duplicate()
+		_bank(result)
 	_posture.apply(result, Engine.get_physics_frames())
 	_sync_stagger(was_staggered)
 	_publish_posture(before)
@@ -1545,6 +1550,14 @@ func _update_readout() -> void:
 
 
 # --- Live state for the HUD (flow's objective and gap lines read these) --------------
+
+# The objective plate's reading of the fight (ui/hud.gd, core/objectives.gd): the phase whose
+# verb the plate names (CHASE_PHASE is the scooter) and whether a hit meets the open cockpit
+# now: a stagger in any phase (the weak points pay nothing through it, _pressure), or a
+# stun in Scuttle.
+func plate_reading() -> Dictionary:
+	return {"phase": phase if active() else 0, "open": stunned() or staggered()}
+
 
 # What the player should do right now, in the objective line's voice. Flow shows it as
 # the whole objective line, so fight states end with punch against the live plating.

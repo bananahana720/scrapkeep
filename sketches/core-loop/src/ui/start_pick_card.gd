@@ -16,6 +16,11 @@ const Palette := preload("res://src/core/palette.gd")
 const ICON := 40.0
 const KEY := 26.0
 const FONT := 24
+# The effect line under a tile's name (StartPicks row "effect"), and how far each line sits
+# from the tile's middle.
+const EFFECT_FONT := 15
+const NAME_RISE := 10.0
+const EFFECT_DROP := 15.0
 const GAP := 10.0
 const TILE_GAP := 18.0
 const PAD := 10.0
@@ -72,7 +77,7 @@ func show_picks(run, profile = null) -> void:
 			var row := StartPicks.row(pilot, String(options[i]))
 			if row.is_empty():
 				continue
-			_tiles.append({"key": KEYS[i], "icon": row["icon"], "name": row["name"], "id": row["id"]})
+			_tiles.append({"key": KEYS[i], "icon": row["icon"], "name": row["name"], "id": row["id"], "effect": String(row.get("effect", ""))})
 	_rerolls = int(run.start_pick.get("rerolls_left", 0))
 	if run.class_def != null:
 		_color = run.class_def.color
@@ -127,7 +132,8 @@ func rerolls_left() -> int:
 
 
 func _tile_width(tile: Dictionary) -> float:
-	return PAD + KEY + GAP + ICON + GAP + UiDraw.width(String(tile["name"]), FONT) + PAD
+	var words := maxf(UiDraw.width(String(tile["name"]), FONT), UiDraw.width(String(tile.get("effect", "")), EFFECT_FONT))
+	return PAD + KEY + GAP + ICON + GAP + words + PAD
 
 
 func extent() -> Vector2:
@@ -143,6 +149,8 @@ func drawn_words() -> PackedStringArray:
 	if visible:
 		for tile in _tiles:
 			out.append(String(tile["name"]))
+			if String(tile.get("effect", "")) != "":
+				out.append(String(tile["effect"]))
 		if _interactive and not ladder_open():
 			out.append(UNLOCK_WORDS)
 		elif _interactive and not _run.run_tier_open():
@@ -291,7 +299,12 @@ func _draw() -> void:
 		draw_texture_rect(Icons.texture(tile["icon"]), Rect2(Vector2(cx, mid - ICON * 0.5), Vector2(ICON, ICON)), false,
 			Icons.tint(tile["icon"], _color))
 		cx += ICON + GAP
-		UiDraw.text(self, cx, mid, String(tile["name"]), FONT, _color)
+		var effect := String(tile.get("effect", ""))
+		if effect == "":
+			UiDraw.text(self, cx, mid, String(tile["name"]), FONT, _color)
+		else:
+			UiDraw.text(self, cx, mid - NAME_RISE, String(tile["name"]), FONT, _color)
+			UiDraw.text(self, cx, mid + EFFECT_DROP, effect, EFFECT_FONT, Palette.SAND)
 	# One pip per reroll left, centred under the tiles: a spent reroll leaves an outline.
 	for i in StartPicks.REROLLS:
 		var at := Vector2(size.x * 0.5 + (i - (StartPicks.REROLLS - 1) * 0.5) * PIP * 3.0, h + PIP * 1.5)

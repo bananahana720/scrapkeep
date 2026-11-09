@@ -131,9 +131,13 @@ const RETIRED_TOASTS := ["part_gained", "reward_chosen", "heft_class_changed", "
 const ROW_COLOR := {"find_warden": "warden_engaged", "break_guard": "warden_engaged", "smash_core": "warden_engaged",
 	"grow_return": "warden_engaged", "break_warden": "warden_engaged", "charge_beacon": "beacon_charge_changed",
 	"find_activity": "activity_done", "roll_gate": "reward_offered", "hold_line": "launched", "break_brindle": "boss_arena_entered",
-	"break_yard_crew": "pack_arrived", "break_clamp_crews": "pack_arrived"}
+	"break_yard_crew": "pack_arrived", "break_clamp_crews": "pack_arrived",
+	"ride_sheet": "warden_engaged", "latch_warden": "warden_engaged", "fire_from_line": "warden_engaged",
+	"shoot_magnets": "boss_arena_entered", "slam_caps": "boss_arena_entered", "bait_charge": "boss_arena_entered",
+	"hit_cockpit": "boss_arena_entered", "ram_scooter": "boss_arena_entered"}
 # The rows whose glyph is ringed by how much of the Warden is broken.
-const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "charge_beacon"]
+const RING_ROWS := ["find_warden", "break_guard", "smash_core", "grow_return", "break_warden", "charge_beacon",
+	"ride_sheet", "latch_warden", "fire_from_line"]
 # The gaps of the top slot when a plate is mounted: from the band's top to the plate, and
 # from the plate to the objective plate under it.
 const PLATE_TOP := 6.0
@@ -940,13 +944,14 @@ static func _rect_of(control: Control) -> Rect2:
 
 
 # The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
-# and, while the Warden is still to be found, the metres to it.
+# and, while the Warden or an activity is still to be found, the metres to it.
 func objective_reading() -> Dictionary:
 	var flow = game.flow
 	var warden = flow.warden if is_instance_valid(flow.warden) else null
 	var distance: float = game.player.ball_position().distance_to(warden.global_position) if warden != null else INF
 	var gate = flow.gate
-	var id := Objectives.choose({
+	var sites: Array = edge_markers.unfinished_sites()
+	var reading := {
 		"state": flow.state_name(),
 		"sealed": flow.sealed,
 		"engaged": _engaged,
@@ -955,15 +960,34 @@ func objective_reading() -> Dictionary:
 		"struggling": _struggle.struggling,
 		"distance": distance,
 		"card": launch_card.showing(),
-		"activities_left": edge_markers.unfinished_sites().size(),
+		"activities_left": sites.size(),
 		"yard_locked": gate != null and gate.lock_active(),
 		"clamp_shut": gate != null and gate.locked(),
-	})
+	}
+	# A mounted Warden and the arena's boss each say which verb their fight asks for now.
+	var driver = warden.get("mount_driver") if warden != null else null
+	if driver != null and driver.has_method("plate_reading"):
+		reading.merge(driver.plate_reading(warden), true)
+	var boss = game.ctx.boss
+	if is_instance_valid(boss) and boss.has_method("plate_reading"):
+		reading.merge(boss.plate_reading(), true)
+	var id := Objectives.choose(reading)
 	if id == "":
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1}
-	return {"id": id, "icon": Objectives.glyph(id), "words": Objectives.words(id), "color": row_color(id),
+	var words := Objectives.words(id)
+	if id == "find_activity":
+		# The nearest unfinished site, by name and metres, so the row is a place to go.
+		var ball: Vector3 = game.player.ball_position()
+		var nearest = null
+		for site in sites:
+			if nearest == null or ball.distance_squared_to(site.global_position) < ball.distance_squared_to(nearest.global_position):
+				nearest = site
+		if nearest != null:
+			words = Objectives.activity_words(String(nearest.id))
+			distance = ball.distance_to(nearest.global_position)
+	return {"id": id, "icon": Objectives.glyph(id), "words": words, "color": row_color(id),
 		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else game.beacon.fraction() if id in RING_ROWS else -1.0,
-		"distance": int(distance) if id == "find_warden" and distance < INF else -1}
+		"distance": int(distance) if id in ["find_warden", "find_activity"] and distance < INF else -1}
 
 
 # How many of the crews the Warden's clamp asks for are down, as the ring round the plate's glyph.

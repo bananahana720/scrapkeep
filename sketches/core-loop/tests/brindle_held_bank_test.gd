@@ -8,12 +8,12 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 
 # Hits on a held phase bank (ruling bs). A chunk broken before its phase's minimum time holds
-# the phase; until now the hull then took nothing, so a fast build's hits for the rest of the
-# floor were dead. Now they fill the bar the next phase opens with, up to Rules.HELD_BANK of
-# it: no stagger starts from a banked bar, it does not drain through the hold or the beat
-# after it, and the plate shows it in the phase diamonds' colour with a post at the stop.
-# The floors themselves (Rules.PHASE_MIN_SECONDS) are unchanged, and the Scuttle's hold banks
-# nothing because no bar follows it.
+# the phase, and hits on the held hull fill the bar the next phase opens with, up to
+# Rules.HELD_BANK of it: no stagger starts from a banked bar, it does not drain through the
+# hold or the beat after it, and the plate shows it in the phase diamonds' colour with a post
+# at the stop. A hold with no hits banks nothing. The floors themselves
+# (Rules.PHASE_MIN_SECONDS) are fixed, and the Scuttle's hold banks nothing because no bar
+# follows it.
 #
 # The fight runs through the game's own combat module, as boss_posture_test does: strikes are
 # a physics frame apart and time is stepped with advance(DT).
@@ -129,6 +129,10 @@ func _run() -> void:
 	_report("a banked bar does not drain through the hold", is_equal_approx(_boss.posture(), cap) and _boss.phase == 1,
 		"%.1f after %.0f idle seconds (an open bar drains after %.0f)" % [_boss.posture(), BossPosture.DRAIN_DELAY + 3.0, BossPosture.DRAIN_DELAY])
 
+	# The beat is shorter than the rule's drain delay, so the delay is cut to a tenth of it here:
+	# a bar that the beat did not hold would be drained before the beat ended.
+	var delay: float = _boss._posture.drain_delay
+	_boss._posture.drain_delay = FightPhases.TRANSITION_SECONDS * 0.1
 	_advance(Rules.PHASE_MIN_SECONDS[0] - _boss.phase_clock - 0.5)
 	var still_one: bool = _boss.phase == 1
 	_advance(1.0)
@@ -138,23 +142,53 @@ func _run() -> void:
 	await _hit(hull, "ram", RAM_FORCE)
 	var in_beat: bool = _boss._in_transition()
 	var beat: float = _boss.posture()
-	_advance(FightPhases.TRANSITION_SECONDS + 0.05)
-	_report("the next phase opens on the banked bar", in_beat and is_equal_approx(beat, cap) and is_equal_approx(_boss.posture(), cap)
+	_advance(FightPhases.TRANSITION_SECONDS - 0.5 - 2.0 * DT)
+	var late_beat: bool = _boss._in_transition()
+	var kept: float = _boss.posture()
+	_report("the next phase opens on the banked bar", in_beat and late_beat and is_equal_approx(beat, cap) and is_equal_approx(kept, cap)
 			and not _boss.banking() and not _plate.banking() and _plate.bar_color() == BossPlate.bar_color_for(false),
-		"a ram in the beat left the bar at %.1f, and it read %.1f when the beat ended; banking %s" % [beat, _boss.posture(), _boss.banking()])
+		"a ram in the beat left the bar at %.1f, and it read %.1f at the beat's last tick with the drain delay cut to %.1f s; banking %s"
+			% [beat, kept, _boss._posture.drain_delay, _boss.banking()])
 
-	var banked_rams: int = await _stagger_by_rams(hull)
-	_report("the bank shortens the next stagger", _boss.staggered() and banked_rams >= 1 and banked_rams < fresh_rams,
-		"%d rams from the banked bar against %d from an empty one" % [banked_rams, fresh_rams])
+	# Past the beat the bar is the phase's own: left alone, it drains.
+	_boss._posture.drain_delay = delay
+	_advance(0.2)
+	var opened: float = _boss.posture()
+	_advance(BossPosture.DRAIN_DELAY + 1.0)
+	var drained: float = _boss.posture()
+	_report("an open bar still drains", not _boss._in_transition() and is_equal_approx(opened, cap) and drained < opened and _boss.phase == 2,
+		"%.1f as the beat ended, %.1f after %.0f idle seconds" % [opened, drained, BossPosture.DRAIN_DELAY + 1.0])
+
+	# The Furnace's hold banks the same way, from a bar that a hold without hits leaves empty.
+	_advance(100.0 / BossPosture.DRAIN_RATE)
+	var empty_rams: int = await _stagger_by_rams(hull)
+	await _hit(hull, "ram", RAM_FORCE)
 	_advance(BossPosture.STAGGER_SECONDS + 0.1)
-	_advance(BossPosture.DRAIN_DELAY + 100.0 / BossPosture.DRAIN_RATE)
-	_report("an open bar still drains", _boss.posture() == 0.0 and _boss.phase == 2,
-		"%.1f after the stagger and a full idle drain" % _boss.posture())
+	await _stagger_by_rams(hull)
+	await _hit(hull, "ram", RAM_FORCE)
+	var furnace_held: bool = _boss.phase == 2 and _boss.chunks_left() == 2 and _boss.banking()
+	_advance(BossPosture.DRAIN_DELAY + 1.0)
+	var unhit: float = _boss.posture()
+	await _hit(hull, "ram", RAM_FORCE)
+	await _hit(hull, "ram", RAM_FORCE)
+	_report("the Furnace's hold banks, and a hold without hits banks nothing", furnace_held and unhit == 0.0
+			and is_equal_approx(_boss.posture(), cap) and not _boss.staggered() and _boss.chunks_left() == 2,
+		"held %s; %.1f after %.0f s with no hit; two rams left the bar at %.1f; staggered %s, %d chunks"
+			% [furnace_held, unhit, BossPosture.DRAIN_DELAY + 1.0, _boss.posture(), _boss.staggered(), _boss.chunks_left()])
+
+	_advance(Rules.PHASE_MIN_SECONDS[1] - _boss.phase_clock + 0.5)
+	_advance(FightPhases.TRANSITION_SECONDS + 0.05)
+	var scuttle_open: float = _boss.posture()
+	var banked_rams: int = await _stagger_by_rams(hull)
+	_report("the bank shortens the next stagger", _boss.phase == 3 and is_equal_approx(scuttle_open, cap) and _boss.staggered()
+			and banked_rams >= 1 and banked_rams < empty_rams,
+		"the Scuttle opened on %.1f: %d rams to stagger against %d from an empty bar in the Furnace" % [scuttle_open, banked_rams, empty_rams])
 
 	# The Scuttle's hold: its chunk is gone, the eject waits for the floor, and no bar follows.
-	_boss.jump_to_phase(3)
-	_advance(FightPhases.TRANSITION_SECONDS + 0.05)
-	await _break_chunk(hull)
+	await _hit(hull, "ram", RAM_FORCE)
+	_advance(BossPosture.STAGGER_SECONDS + 0.1)
+	await _stagger_by_rams(hull)
+	await _hit(hull, "ram", RAM_FORCE)
 	var scuttle_held: bool = _boss.phase == 3 and _boss.chunks_left() == 1 and _boss.music_state()["held"]
 	await _hit(hull, "ram", RAM_FORCE)
 	_report("the Scuttle's hold banks nothing", scuttle_held and not _boss.banking() and not _plate.banking() and _boss.posture() == 0.0,
