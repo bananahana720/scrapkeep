@@ -2099,7 +2099,8 @@ def rect_lines(spec, grow=0.0):
 
 def flush_cuts(row, any_park=False):
     """What flush_cut needs for a row that shares ground with other flush sheets: per peer the world bounds of its sheet and the
-    edge lines of its lane and sheet, and the row's own lane lines. flush_covered's answer is constant between those lines.
+    edge lines of its lane and sheet, and the row's own lane lines. flush_covered's answer is constant between those lines for the
+    flume's rows; a peer with a "gap" rule (the pit's canal_lip) also yields along its gap outline, which is no cut line yet.
     None when the row has no peer; a pond is kept clear of every other sheet by assert_pond_clear. Only the flume's rows are cut
     for now (SEAM_CUT_PARKS): the pit's three overlapping liners would change too, and world 2 is not rebuilt before the sitting."""
     if not row.peers or row.style == "pond" or (row.park not in SEAM_CUT_PARKS and not any_park):

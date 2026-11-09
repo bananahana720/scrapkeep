@@ -11,7 +11,8 @@ extends SceneTree
 # (d) a lifted row's drawn views stand the lift up and its collider faces stay where they were.
 # (e) the three canal liners of the flume junction draw each piece of ground once (flume_works.py flush_cut; clip audit,
 #     9 Nov: their steep bank faces shared planes over 22 m2 whatever the layer, because each sheet drew the whole of a
-#     cell that straddled the other's edge). Their near views are placed and sampled on a 0.25 m plan grid.
+#     cell that straddled the other's edge). Their near views are placed and sampled on a 0.25 m plan grid; the cut
+#     must open no slit either: inside a sheet no grid point is bare between two drawn ones 0.25 m to each side.
 # Evidence limit: placement data and placed rows; the look is the clip audit's stills.
 
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
@@ -109,16 +110,28 @@ func _run() -> void:
 	quit(_t.verdict())
 
 
-# (e) Plan grid points under the drawn near view of more than one of the junction's liners.
+# (e) Plan grid points under the drawn near view of more than one of the junction's liners, and bare points between
+# two drawn ones inside a liner's sheet (a slit a cut left open; outside every sheet the ground between two outlines is
+# meant to show). `seen` takes a point inside a triangle, `covered` also one on its edge.
 func _check_junction(rows: Array, ground: Callable) -> void:
 	const GRID := 0.25
-	const DOUBLED_MAX_M2 := 0.5
+	const DOUBLED_MAX_M2 := 0.125
+	const SHEET_MARGIN := 3.0          # flume_works.py MARGIN: a flush sheet reaches this far past its lane
 	var holder := Node3D.new()
 	root.add_child(holder)
 	var seen := {}
+	var covered := {}
+	var sheets: Array = []            # per liner [world to row, half width, half length] of its sheet, a grid step in
 	var ids := ["main_canal", "butte_gap", "gap_wash"]
+	var found := ids.map(func(id): return _index(rows, id))
+	_t.check("(e) the flume has its three junction liners", found.min() >= 0, str(found))
+	if found.min() < 0:
+		holder.free()
+		return
 	for k in ids.size():
-		var placed := ParkRecipes.place_row(rows[_index(rows, ids[k])], holder, ground)
+		var placed := ParkRecipes.place_row(rows[found[k]], holder, ground)
+		var size: Array = rows[found[k]]["size"]
+		sheets.append([placed.global_transform.affine_inverse(), float(size[2]) * 0.5 + SHEET_MARGIN - GRID, float(size[0]) * 0.5 + SHEET_MARGIN - GRID])
 		for view: MeshInstance3D in placed.find_children("*", "MeshInstance3D", true, false):
 			if view.visibility_range_begin > 0.0 or view.mesh == null:
 				continue
@@ -140,9 +153,12 @@ func _check_junction(rows: Array, ground: Callable) -> void:
 							var q := Vector2(gx * GRID, gz * GRID)
 							var u := ((p[1].y - p[2].y) * (q.x - p[2].x) + (p[2].x - p[1].x) * (q.y - p[2].y)) / d
 							var v := ((p[2].y - p[0].y) * (q.x - p[2].x) + (p[0].x - p[2].x) * (q.y - p[2].y)) / d
-							if minf(u, minf(v, 1.0 - u - v)) > 1.0e-4:
-								var key := Vector2i(gx, gz)
+							var least := minf(u, minf(v, 1.0 - u - v))
+							var key := Vector2i(gx, gz)
+							if least > 1.0e-4:
 								seen[key] = int(seen.get(key, 0)) | (1 << k)
+							if least > -1.0e-4:
+								covered[key] = true
 	var drawn := [0, 0, 0]
 	var doubled := 0
 	for key: Vector2i in seen:
@@ -151,7 +167,19 @@ func _check_junction(rows: Array, ground: Callable) -> void:
 			drawn[k] += 1 if mask & (1 << k) else 0
 		doubled += 1 if mask & (mask - 1) else 0
 	var area := doubled * GRID * GRID
-	print("park_surface_layers_test: junction liners drawn %s grid points, %d under two (%.2f m2)" % [str(drawn), doubled, area])
+	var slits := 0
+	for key: Vector2i in covered:
+		for step: Vector2i in [Vector2i(1, 0), Vector2i(0, 1)]:
+			if covered.has(key + step) or not covered.has(key + step * 2):
+				continue
+			var bare := Vector2(key + step) * GRID
+			for sheet in sheets:
+				var local: Vector3 = sheet[0] * Vector3(bare.x, 0.0, bare.y)
+				if absf(local.x) < sheet[1] and absf(local.z) < sheet[2]:
+					slits += 1
+					break
+	print("park_surface_layers_test: junction liners drawn %s grid points, %d under two (%.2f m2), %d bare between two drawn" % [str(drawn), doubled, area, slits])
 	_t.check("(e) each junction liner draws a near view", drawn.min() > 1000, str(drawn))
-	_t.check("(e) the junction's liners draw each piece of ground once (at most %.1f m2 doubled)" % DOUBLED_MAX_M2, area <= DOUBLED_MAX_M2, "%.2f m2" % area)
+	_t.check("(e) the junction's liners draw each piece of ground once (at most %.3f m2 doubled)" % DOUBLED_MAX_M2, area <= DOUBLED_MAX_M2, "%.2f m2" % area)
+	_t.check("(e) the cut opens no slit between the junction's liners", slits == 0, "%d grid points" % slits)
 	holder.free()
