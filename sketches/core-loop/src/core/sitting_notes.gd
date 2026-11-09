@@ -7,9 +7,12 @@ extends Node
 # One file a launch, user://sitting-notes/notes-<UTC start>.ndjson, one JSON row a line. Every row
 # has "t" (seconds since the notes started), "utc" and "kind":
 #   start      the build's facts: executable, window, refresh rate, physics rate, the hitch limit
-#   stuck, hung, wedged, fell, objective, blank   the play watch's rows (src/core/play_watch.gd)
+#   stuck, hung, wedged, fell, objective, blank   the play watch's rows (src/core/play_watch.gd).
+#              A stuck row is also what a person standing still for 8 s in play writes: read it
+#              with the place.
 #   hitch      frames that each took hitch_ms or longer, one row a burst (frames within BURST_GAP_S
-#              of each other): how many, the worst and the total, where and in which flow state.
+#              of each other, cut every BURST_MAX_S): how many, the worst and the total, where and
+#              in which flow state.
 #              A frame while the window is not focused is not counted.
 #   mark       the player pressed MARK_KEY (F8), or clicked both sticks together on a pad: "look
 #              here". Carries the place, the objective plate's words and the frame rate.
@@ -28,6 +31,8 @@ const MARK_PAD := [JOY_BUTTON_LEFT_STICK, JOY_BUTTON_RIGHT_STICK]
 # A frame this long or longer is a hitch: three frames lost at 144 Hz, one and a half at 60.
 const HITCH_MS := 25.0
 const BURST_GAP_S := 0.5
+# Slow frames that never let up are written this often, so the row does not wait for them to end.
+const BURST_MAX_S := 5.0
 const READ_S := 1.0
 
 var game
@@ -109,6 +114,8 @@ func frame(ms: float, at_s: float) -> void:
 	_burst["worst_ms"] = maxf(float(_burst["worst_ms"]), snappedf(ms, 0.1))
 	_burst["total_ms"] = snappedf(float(_burst["total_ms"]) + ms, 0.1)
 	_burst["last"] = at_s
+	if at_s - float(_burst["t"]) >= BURST_MAX_S:
+		_close_burst()
 
 
 func _close_burst() -> void:

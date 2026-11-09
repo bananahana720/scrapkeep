@@ -5,7 +5,7 @@ arena_waking_dress_test	world2	tests world 2 or 3 content, parked by ruling at	w
 bot_dig_breach_test	world2	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
 bot_highdraft_lift_test	world3	tests world 2 or 3 content, parked by ruling at	worlds 2 and 3 reopen
 bot_isle_stage5_test	later-bots	bot run on stages 3 to 6 only, parked by ruling at	worlds 2 and 3 reopen
-bot_park_stage3_break_test	later-bots	bot run on stages 3 to 6 only, parked by ruling at	worlds 2 and 3 reopen
+bot_park_stage3_break_test	later-bots	bot run that plays stages 1 and 2 only to reach its proof on stage 3, parked by ruling at	worlds 2 and 3 reopen
 bot_six_demolitions_caster_test	old-map-bots	whole-run proof on the legacy stage table the launched game does not play; world1_run_test covers world 1 on the park maps and bot_six_pilots_test stays as the six-stage smoke	world1_run_test is withdrawn
 bot_six_remembered_cannon_test	old-map-bots	whole-run proof on the legacy stage table the launched game does not play; world1_run_test covers world 1 on the park maps and bot_six_pilots_test stays as the six-stage smoke	world1_run_test is withdrawn
 bot_six_runner_gunner_test	old-map-bots	whole-run proof on the legacy stage table the launched game does not play; world1_run_test covers world 1 on the park maps and bot_six_pilots_test stays as the six-stage smoke	world1_run_test is withdrawn

@@ -357,9 +357,9 @@ func _ready() -> void:
 		_start_self_play()
 	# --sitting-notes: the build takes notes while a person plays (ruling cg). Never in a test_mode game.
 	if SittingNotes.wanted() and not test_mode:
-		var notes := SittingNotes.new()
-		notes.game = self
-		add_child(notes)
+		var sitting_notes := SittingNotes.new()
+		sitting_notes.game = self
+		add_child(sitting_notes)
 	if _launch_flag("--boot-profile"):
 		for frame in 5:
 			await get_tree().process_frame

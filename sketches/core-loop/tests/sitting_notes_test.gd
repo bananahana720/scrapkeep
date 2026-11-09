@@ -14,8 +14,11 @@ const T := preload("res://tests/support/t.gd")
 #   - frames at or over the hitch limit close into one row a burst; shorter frames write nothing;
 #   - F8 writes a mark with the place, and both stick clicks together write one mark, not two;
 #   - every row carries both clocks, and closing the game writes the end row.
+#   - slow frames that never let up are written every BURST_MAX_S, not held until they end.
 # Evidence limit: frame lengths are fed in, so the real frame clock and the cost on a GPU are
 # not measured here.
+# A game-booting file of its own (ruling ca): the notes hang off a whole game (its flow, HUD, run
+# and save folder) stepped from the title into play, which no family test builds.
 
 const SABLE := 0
 # The test map's slopes never let a free ball rest, so the test pins it where it is after
@@ -102,6 +105,10 @@ func _physics_process(_delta: float) -> bool:
 			if int(_notes._watch.counts.get("stuck", 0)) == 0 and _ticks < STUCK_WAIT_TICKS:
 				return false
 			var stuck: Array = _of("stuck")
+			# The frames below are fed by hand: stop the node's own frame clock and close any burst a
+			# real slow frame left open, so the counts that follow are the test's alone.
+			_notes.set_process(false)
+			_notes.frame(0.0, 1.0e9)
 			var hitches_before: int = _notes.hitches
 			_t.check("a ball held in one place in play is written as stuck", stuck.size() == 1 and int(stuck[0]["stage"]) == 1 and stuck[0]["at"].size() == 3 and float(stuck[0]["s"]) >= PlayWatch.STUCK_S,
 				"%d rows%s" % [stuck.size(), "" if stuck.is_empty() else ": stage %s at %s after %s s, flow %s" % [stuck[0]["stage"], stuck[0]["at"], stuck[0]["s"], stuck[0]["flow"]]])
@@ -114,7 +121,9 @@ func _physics_process(_delta: float) -> bool:
 			_game.remove_child(_notes)
 			_notes.free()
 			var last: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path).split("\n", false)[-1])
-			_t.check("closing writes the end row", last["kind"] == "end" and int(last["marks"]) == 2 and int(last["hitches"]) == hitches_before + 2 and int(last["watch"].get("stuck", 0)) == 1,
+			DirAccess.remove_absolute(path)
+			DirAccess.remove_absolute(path.get_base_dir())
+			_t.check("closing writes the end row", last["kind"] == "end" and int(last["marks"]) == 2 and int(last["hitches"]) == hitches_before + 4 and int(last["watch"].get("stuck", 0)) == 1,
 				"marks %s, hitches %s, watch %s" % [last.get("marks"), last.get("hitches"), last.get("watch")])
 			quit(_t.verdict())
 	return false
@@ -138,6 +147,16 @@ func _hitches() -> void:
 	_notes.frame(7.0, 102.10)
 	var two: Array = _of("hitch")
 	_t.check("a frame at the limit a second later is its own row; shorter frames write none", two.size() == before + 2 and int(two[-1]["frames"]) == 1, "%d rows" % two.size())
+	# Slow frames with no let-up (a 40 ms frame every 40 ms for 6 s): a row every BURST_MAX_S, so a
+	# crash in the middle keeps what came before.
+	var at := 110.0
+	while at < 116.0:
+		_notes.frame(40.0, at)
+		at += 0.04
+	var held: Array = _of("hitch")
+	_t.check("slow frames that never let up are written every %d s" % int(SittingNotes.BURST_MAX_S), held.size() == before + 3 and float(held[-1]["total_ms"]) >= SittingNotes.BURST_MAX_S * 1000.0,
+		"%d rows, last %s" % [held.size() - before, held[-1] if held.size() > before else "none"])
+	_notes.frame(7.0, 117.0)
 
 
 func _marks() -> void:

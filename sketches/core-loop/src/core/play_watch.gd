@@ -10,7 +10,8 @@ extends RefCounted
 #   fell    the fall rescue: the ball moved over TELEPORT_M in one tick from under the floor or off
 #           the map (a blink or a boss's carry is not a fall)
 #   objective  the HUD's objective plate changed (its id and words, with the gate's lock state)
-#   blank   the objective plate showed no words for BLANK_S of play (once a stretch)
+#   blank   the objective plate showed no words for BLANK_S of play, the victory lap aside (once a stretch).
+#           It reads the row the HUD chose (hud.objective_reading), not the pixels drawn.
 # stuck, hung, wedged and fell log again only REARM_M or more from where they last fired.
 
 const STUCK_M := 3.0
@@ -47,7 +48,11 @@ var _was_in_play := false
 func watch(game, sink: Callable) -> void:
 	_game = game
 	_sink = sink
-	game.events.blink_used.connect(func(_from, _to): _blinked = _ticks)
+	game.events.blink_used.connect(_on_blink)
+
+
+func _on_blink(_from: Vector3, _to: Vector3) -> void:
+	_blinked = _ticks
 
 
 # What a stuck or hung row needs for reading: the ball's motion and contact.
@@ -122,7 +127,8 @@ func read_text(since := 1.0) -> void:
 		return
 	var reading: Dictionary = _game.hud.objective_reading()
 	var state: String = _game.flow.state_name()
-	if String(reading.get("words", "")).strip_edges() == "":
+	# The victory lap has no objective by design (objectives.gd), so its empty plate is not a fault.
+	if String(reading.get("words", "")).strip_edges() == "" and state != "lap":
 		_blank += since
 		blank_max = maxf(blank_max, _blank)
 		if _blank >= BLANK_S and not _blank_told:

@@ -15,9 +15,13 @@ extends Node
 #                             stage n's exit is taken; win: once the run is won
 #   --self-play-hold=<s>      keep playing this long after the goal (default 30)
 #   --self-play-min=<s>       and until this many seconds since launch (default 0)
-#   --self-play-stall=<s>     seconds the exit may stay untaken after the fight ends (default 120)
+#   --self-play-stall=<s>     seconds the exit may stay untaken after the fight ends, and seconds the
+#                             next stage may stay unopened after an exit is taken, a boss fight
+#                             aside (default 120)
 #   --self-play-plant-stall   TEST PLANT: freeze the bot after its first tick and count the fight as
 #                             ended then, so the stall detector fires after --self-play-stall
+#   --self-play-plant-after-exit  TEST PLANT: freeze the bot after its first tick and count the
+#                             stage's exit as taken then, so the after-exit stall fires
 #   --self-play-plant-end     TEST PLANT: end the run at once (outcome planted_end), so it quits 1
 #   --self-play-plant-limit=<s>  TEST PLANT: give the driver this stage limit (sim seconds), so its
 #                             own stall limit ends the run (the driver-limit branch)
@@ -31,9 +35,11 @@ extends Node
 # Lines: "self-play: stage <n> entered at <s> s" (one per stage entered, retries marked),
 # "self-play: stage <n> exit taken at <s> s", "self-play: done at <s> s". With --self-play-watch=1 also
 # "self-play: boss arena entered at <s> s", "self-play: boss defeated at <s> s" and
-# "self-play: watch stuck=<n> hung=<n> wedged=<n> fell=<n> objectives=<n> blank_max=<s> stages=<list>".
+# "self-play: watch stuck=<n> hung=<n> wedged=<n> fell=<n> objectives=<n> blank_max=<s> stages=<list>"
+# and "self-play: skills slot2=<n> slot3=<n> set_pieces=<n>" (casts of the skill bar's slots 2 and 3, set pieces fired).
 # Quit codes: 0 goal reached, 1 the run ended first, 2 bad flag or no tools/ in the pack
-# (game.gd), 3 stalled (every code waits for --self-play-min first, so a frame log stays whole): "self-play: stalled at stage <n> exit at <s> s pos <x,y,z>".
+# (game.gd), 3 stalled (every code waits for --self-play-min first, so a frame log stays whole): "self-play: stalled at stage <n> exit at <s> s pos <x,y,z>"
+# (the exit never taken), or "... stalled at stage <n> after-exit at ..." (the exit taken, the next stage never opened).
 
 const BotDriver := preload("res://tools/bot_driver.gd")
 const QaWatch := preload("res://tools/qa_watch.gd")
@@ -53,11 +59,15 @@ var _fight_end := -1.0
 # The stage's exit is taken: the exit stall has nothing left to time until the next stage opens
 # (a boss fight after the exit is the driver's own limit to end, not this one's).
 var _exit_taken := false
+# Since when the taken exit has led nowhere (seconds; -1 while there is nothing to time): the wait
+# for the next stage outside a boss fight, a victory beat or a paused tree nobody answers included.
+var _after_exit := -1.0
 var _stage := 0
 var _beat := 0.0
 var _beat_at := 0.0
 var _quit_code := -1
 var _plant_stall := false
+var _plant_after_exit := false
 var _plant_end := false
 var _plant_limit := 0.0
 var _watch_on := false
@@ -95,6 +105,8 @@ func _ready() -> void:
 			_plant_end = true
 		elif arg == "--self-play-plant-stall":
 			_plant_stall = true
+		elif arg == "--self-play-plant-after-exit":
+			_plant_after_exit = true
 		elif arg.begins_with("--self-play-plant-limit="):
 			_plant_limit = float(arg.trim_prefix("--self-play-plant-limit="))
 		elif arg.begins_with("--self-play-beat="):
@@ -138,16 +150,31 @@ func _physics_process(delta: float) -> void:
 		if _now() - _fight_end > _stall:
 			_stalled("exit")
 		return
-	var over: bool = _driver.tick(delta)
-	if _watch != null and not get_tree().paused:
-		_watch_step(delta)
-	if over:
+	if _plant_after_exit:
+		# Planted: the bot stands still and the exit counts as taken from now.
+		_driver.source.hold = {}
+		_exit_taken = true
+	elif _driver.tick(delta):
+		if _watch != null and not get_tree().paused:
+			_watch_step(delta)
 		_finish()
 		return
+	if _watch != null and not get_tree().paused:
+		_watch_step(delta)
 	if _fight_end < 0.0 and state == "gates" and not _exit_taken:
 		_fight_end = _now()
 	if _fight_end >= 0.0 and _goal_at < 0.0 and _now() - _fight_end > _stall:
 		_stalled("exit")
+		return
+	# The exit is taken: the next stage has to open. A boss fight on the way, and the victory lap
+	# after the last one, are the driver's own limits to end; everything else (the flight, the
+	# victory beat, a pause nobody answers) is timed here.
+	if not _exit_taken or state == "boss" or state == "lap":
+		_after_exit = -1.0
+	elif _after_exit < 0.0:
+		_after_exit = _now()
+	elif _goal_at < 0.0 and _now() - _after_exit > _stall:
+		_stalled("after-exit")
 		return
 	if _goal_at >= 0.0 and _now() >= maxf(_goal_at + _hold, _min):
 		print("self-play: done at %.2f s" % _now())
@@ -186,6 +213,10 @@ func _tell_watch() -> void:
 	var c: Dictionary = _watch.counts
 	print("self-play: watch stuck=%d hung=%d wedged=%d fell=%d objectives=%d blank_max=%.1f stages=%s" % [int(c.get("stuck", 0)),
 		int(c.get("hung", 0)), int(c.get("wedged", 0)), int(c.get("fell", 0)), _watch.plates, _watch.blank_max, ",".join(_stages.map(func(n): return str(n)))])
+	# The skill bar's hands, as the driver's record counts them: casts of slots 2 and 3 and set pieces fired.
+	var record: Dictionary = _driver.record(_now())
+	var casts: Dictionary = record.get("slot_casts", {})
+	print("self-play: skills slot2=%d slot3=%d set_pieces=%d" % [int(casts.get("special", 0)), int(casts.get("line", 0)), int(record.get("ultimates", 0))])
 
 
 func _start() -> void:
@@ -240,6 +271,7 @@ func _on_stage_entered(stage: int, retry := false) -> void:
 	_stage = stage
 	_fight_end = -1.0
 	_exit_taken = false
+	_after_exit = -1.0
 	if not retry:
 		_stages.append(stage)
 	print("self-play: stage %d entered%s at %.2f s" % [stage, " (retry)" if retry else "", _now()])

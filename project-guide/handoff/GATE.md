@@ -12,7 +12,7 @@ One promotion, one full gate, on the frozen stage head. The Gate thread writes a
 | --- | --- | --- |
 | tests, three windows | the non-bot list in thirds | 50 to 60 min each |
 | bots 1 to the last block | the bot list in blocks of 5 (22 tests, so 5 blocks, while the weekly list holds 9) | 35 to 60 min each |
-| bands A | the posture-band tests, `bot_isle_stage5`, `skill_band`, `run_tier_dials`, the word budgets | 60 min |
+| bands A | the posture-band tests, `skill_band`, `run_tier_dials`, the word budgets, less any test the weekly list names | 60 min |
 | bands B | the world 1 challenge, 24 seeds | 90 min |
 | bands C | swarm bands, `run_tier`, the HARD rungs | 3 h, one resume |
 | red team | one persona, rotating: greedy, line-rider, speedrunner, first-timer, cautious | 60 min |
@@ -58,7 +58,7 @@ Cloud boxes differ by about a third in speed. On a slow one, export `SMOKE_TIME_
 
 The band shards read numbers, not only pass or fail, so they keep their own lane scripts: copy the last wave's from the receipts folder (`bands-A-logs/`, `bands-B-logs/`, `bands-C-logs/`) and change the label.
 
-- **Bands A**: each test alone through the runner with `--sketch core-loop` (`--bots` only for the tests on the bot list). Sort the `->` lines (`LC_ALL=C sort`) and strip wall seconds before comparing with the last head; they print in completion order.
+- **Bands A**: each test alone through the runner with `--sketch core-loop` (`--bots` only for the tests on the bot list). The lane script is copied from the last wave, so first strike every name that `node scripts/gate/shard.mjs list --weekly` and `list --weekly --bots` print (on 9 Nov: `posture_bands_mind_test`, `alpha_posture_bands_w23_test`, `bot_isle_stage5_test`); those run in the weekly sweep. Sort the `->` lines (`LC_ALL=C sort`) and strip wall seconds before comparing with the last head; they print in completion order.
 - **Bands B**: `node scripts/challenge/run.mjs --only=w1 --seeds=24 --no-top --jobs=4 --label=w<N>-<head>-w1`. Every job is the stage 1 Warden, so Brindle changes never show here. Compare `runs.ndjson` seed for seed with the last head.
 - **Bands C**: `run_tier_dials_test`, `posture_bands_swarm_camper_test`, `posture_bands_swarm_test` and `run_tier_test`, each alone; then the HARD rungs, `node scripts/challenge/run.mjs --only=w1 --seeds=S --bands=expert --no-top --jobs=4 --tier=N --label=w<N>-<head>-C-tN`, with S 24 for rungs 1 to 4 and 48 for rung 5.
 - A band sweep starts many child runs. A child that reads 300 s, or goes missing, on a 4-core box is suspect: rerun it alone before calling a red. Wait on a process by its PID (`kill -0`), never with `pgrep -f` or `pkill -f`, which match the waiting shell itself.

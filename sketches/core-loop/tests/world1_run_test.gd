@@ -16,11 +16,17 @@ const ChildRuns := preload("res://tests/trees/child_runs.gd")
 # Stuck and hung counts are printed, not judged: a camper's stall and a mounted special rest by design.
 # Evidence limit: one seed a pilot, the skipper, headless; real ticks, so a seed does not replay
 # exactly and a red here wants one rerun before it counts. Menus are not pressed: the run starts
-# by code (flow.press_start), as every bot's does; the title's own tests press them.
+# by code (flow.press_start), as every bot's does; the title's own tests press them. Each pilot
+# has to beat Brindle in one go (a death ends its run), and the run stops a second into stage 3,
+# so stage 3's park has to build. What the watch's quiet rows are worth is play_watch_test's to
+# prove (each row made to fire); the control here proves the milestone and exit-code lines.
 
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
 const PARALLEL := 3
 const CHILD_S := 1500.0
+# All seven children share this wall, under the marker's 1800 s: a pilot that hangs in the second
+# three is killed here and named in its own row, not left running when the runner kills this test.
+const BUDGET_S := 1650.0
 const PLATE_BLANK_S := 10.0
 const NEEDS := [
 	["the dam's exit is taken", "self-play: stage 1 exit taken at "],
@@ -40,13 +46,13 @@ func _initialize() -> void:
 	# The control: a run planted to end at once must read red on the same lines a pilot is judged by.
 	jobs.append({"name": "planted_end", "args": ["--self-play", "--self-play-until=3", "--self-play-watch=1", "--self-play-plant-end"]})
 	var base := ProjectSettings.globalize_path("user://").path_join("world1-run-%d" % OS.get_process_id())
-	var runs := ChildRuns.run_launched(jobs, base, CHILD_S, PARALLEL)
+	var runs := ChildRuns.run_launched(jobs, base, CHILD_S, PARALLEL, BUDGET_S)
 	for i in PILOTS.size():
 		var pilot: String = PILOTS[i]
 		var run: Dictionary = runs[i]
 		var text: String = run["text"]
 		t.check("%s: the run reaches stage 3 and quits 0" % pilot, _reached(run),
-			"exit %d%s, %.0f s wall; %s" % [run["code"], " (killed at %d s)" % int(CHILD_S) if run["timed_out"] else "", run["seconds"], _last_line(text)])
+			"exit %d%s, %.0f s wall; %s" % [run["code"], " (killed: %d s a child, %d s in all)" % [int(CHILD_S), int(BUDGET_S)] if run["timed_out"] else "", run["seconds"], _last_line(text)])
 		for need in NEEDS:
 			t.check("%s: %s" % [pilot, need[0]], _line(text, need[1]) != "", _line(text, need[1]))
 		var errors := _errors(text)
@@ -64,7 +70,11 @@ func _initialize() -> void:
 		"exit %d; %s" % [planted["code"], _last_line(planted["text"])])
 	t.check("control: and shows none of the run's milestones", NEEDS.all(func(need): return _line(planted["text"], need[1]) == ""),
 		"%d of %d lines present" % [NEEDS.filter(func(need): return _line(planted["text"], need[1]) != "").size(), NEEDS.size()])
-	quit(t.verdict())
+	var code := t.verdict()
+	# A green run leaves nothing behind; a red one keeps each child's log and save for reading.
+	if code == 0:
+		OS.execute("rm", ["-rf", base])
+	quit(code)
 
 
 func _reached(run: Dictionary) -> bool:
