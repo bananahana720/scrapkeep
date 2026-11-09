@@ -11,6 +11,8 @@ const T := preload("res://tests/support/t.gd")
 # and an unlock plate up together, some of it under the launch take's panel.
 #   B1     a run that does not come through a live launch take (a bot's, a test's) has no
 #          opening: the cold open and Moss's hello start with the stage.
+#   P1     without the take too, Moss holds his hello while a screen pauses the drop (the
+#          briefing on a restart), and says it when the screen closes.
 #   T1-T2  through the take, nothing of the title shows under its panel; the stage card and
 #          the cold open start when the panel has gone.
 #   M1-M2  Moss waits for a first run's cold open (the shift card sits where his bubble goes),
@@ -110,6 +112,20 @@ func _run() -> void:
 			and not opening.waits("title") and not opening.waits("plate"),
 		"live %s, flourish %s, Moss %s, turns %s" % [opening.live, flourish.id, _moss_up(), _turns])
 
+	flow.show_title()
+	await _frames(2)
+	flow.press_start()
+	await _frames(2)
+	flow.choose_class(0)
+	paused = true
+	_game.player.source = Intent.Scripted.new()
+	await _frames(3)
+	var hushed: bool = flow.in_stage() and not opening.live and not _moss_up()
+	paused = false
+	_game.player.set_velocity_now(Vector3.ZERO)
+	await _frames(3)
+	_t.check("P1 without the take, Moss holds his hello while a screen pauses the drop", hushed and _moss_up(), "held %s, then Moss %s" % [hushed, _moss_up()])
+
 	# A hand on the controls, through the launch take.
 	_game.bot_driven = false
 	var take = _game.launch_take
@@ -151,7 +167,7 @@ func _run() -> void:
 	take.finished.connect(func(): paused = true, CONNECT_ONE_SHOT)
 	await _end_take()
 	await _frames(4)
-	var holds: bool = not take.busy() and opening.live and opening.turn() == "" and not flourish.playing and not hud.launch_card.showing()
+	var holds: bool = not take.busy() and opening.live and opening.turn() == "" and not flourish.playing and not hud.launch_card.showing() and not _moss_up()
 	paused = false
 	_game.player.set_velocity_now(Vector3.ZERO)
 	await _frames(4)

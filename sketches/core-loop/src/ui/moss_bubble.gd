@@ -60,7 +60,7 @@ var _zones_played := {}
 var _intros_played := {}
 var _intro_queue: Array = []
 var _intro_showing := false
-# The stage whose hello waits for Moss's turn in the run's opening (opening.gd); 0 when none.
+# The stage whose hello waits (see _waits); 0 when none.
 var _hello_due := 0
 
 
@@ -99,11 +99,6 @@ func _ready() -> void:
 	_game.events.flow_changed.connect(func(_state: String):
 		if not _game.flow.in_stage():
 			_end_exchange())
-	var opening = _game.get("opening")
-	if opening != null:
-		opening.turned.connect(func(voice: String):
-			if voice == "moss" and _hello_due > 0:
-				_begin_exchange(_hello_due))
 
 
 func _install_exchange_input() -> void:
@@ -199,14 +194,17 @@ func _queue_intro(zone: String, warden: bool) -> void:
 	_flush_intro()
 
 
-# Moss's turn in a run's opening has not come: the shift card goes first.
+# Moss holds his tongue: a screen has paused the drop (the briefing, a pick), or his turn in the
+# run's opening has not come (opening.gd: the shift card goes first). _process asks again.
 func _waits() -> bool:
+	if get_tree().paused:
+		return true
 	var opening = _game.get("opening")
 	return opening != null and opening.waits("moss")
 
 
 func _flush_intro() -> void:
-	if _intro_queue.is_empty() or not _exchange.is_empty() or get_tree().paused or _waits():
+	if _intro_queue.is_empty() or not _exchange.is_empty() or _waits():
 		return
 	var row: Dictionary = _intro_queue.pop_front()
 	_intros_played[String(row["intro_key"])] = true
@@ -372,6 +370,8 @@ func _say(line: String, fact: String, mood_now: String, level: float, grumbles: 
 
 
 func _process(delta: float) -> void:
+	if _hello_due > 0 and not _waits():
+		_begin_exchange(_hello_due)
 	if not _intro_queue.is_empty() and not visible:
 		_flush_intro()
 	if not visible:

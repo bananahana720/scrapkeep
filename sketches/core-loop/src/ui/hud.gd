@@ -804,8 +804,10 @@ func _on_turned(voice: String) -> void:
 func _title_for(stage: int) -> void:
 	if _world_card_at >= 0:
 		_world_card_at = -1
+		# This run's card only: a restart inside the beat has its own on the way.
+		var run_id := String(game.run.run_id)
 		get_tree().create_timer(WORLD_CARD_BEAT).timeout.connect(func():
-			if game != null and game.run != null and game.run.stage == stage:
+			if game != null and game.run != null and game.run.stage == stage and String(game.run.run_id) == run_id:
 				_card_for_stage(stage))
 	elif launch_card.showing():
 		launch_card.extend()
