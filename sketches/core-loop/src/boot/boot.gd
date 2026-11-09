@@ -166,14 +166,15 @@ func _add_game(scene: PackedScene) -> void:
 
 # A build that cannot start. With no card (a headless launch, a test, a bot) it exits at once with
 # code 1. With the card up the player is told, Play becomes Quit, and the exit code is 1 however
-# they leave (the card still owns the window's close, _notification). SCRAPKEEP_BOOT_FAILED is the
-# line a launch script reads in place of MENU_READY.
+# they leave (the card still owns the window's close, _notification). SCRAPKEEP_BOOT_FAILED marks
+# the failure in the log. The exit with no card does not pass through close_handler: there is no
+# close to watch, and a broken build must never stay up.
 func _broken(why: String) -> void:
 	_failed = true
 	push_error("boot: %s" % why)
 	print("SCRAPKEEP_BOOT_FAILED %s" % why)
 	if _card == null:
-		_quit()
+		get_tree().quit(1)
 		return
 	_status.text = "This build did not load. Quit, then install it again."
 	_play.text = "Quit"
