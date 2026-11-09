@@ -559,6 +559,11 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 	return {"sites": out, "modifier": modifier}
 
 
+# What a site kind's marker calls it ("Arena", "Pickup course"), "" for a kind whose cue has no word.
+static func called(id: String) -> String:
+	return String(RULES.get(id, {}).get("cue", {}).get("word", ""))
+
+
 # One planned site, built and dressed as its kind asks. Interact does not know it yet (_arm).
 func _build_entry(entry: Dictionary, modifier: Dictionary) -> Site:
 	var site := _build(entry.id, entry.at, entry.spec)
