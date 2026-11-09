@@ -9,6 +9,7 @@ Live coordination material for the alpha. The project coordinator (claude.ai pro
 | [LESSONS.md](LESSONS.md) | Ways of working that still apply |
 | [ROADMAP.md](ROADMAP.md) | The one roadmap: world 1 sitting, full alpha, after the alpha |
 | [STATE.md](STATE.md) | Wave state, base reds and cloud false fails |
+| [WEEKLY.tsv](WEEKLY.tsv) | Tests the promotion gate leaves to the weekly sweep (ruling ca): parked worlds and old-map bot proofs, each with why and when it returns |
 | [DEEP-SWEEP.md](DEEP-SWEEP.md) | The deep-modules sweep run after every promotion |
 | [THREADS.md](THREADS.md) | Threads and sessions, and who owns what |
 | [DEVICES.md](DEVICES.md) | The PC's GPUs, its rules, and what the cloud box can't do |
