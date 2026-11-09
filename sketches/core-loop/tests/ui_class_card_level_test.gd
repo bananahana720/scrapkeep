@@ -1,0 +1,90 @@
+extends SceneTree
+
+const Game := preload("res://src/game.gd")
+const T := preload("res://tests/support/t.gd")
+
+# The pilot cards level their wrapped text one frame after they are built. Opened from this
+# script's _process, the frame signal that levels them comes before the containers' first sort,
+# the order a key press takes in the game on a frame with no physics tick. A wrapped line then
+# measured one letter wide, the row pinned that height, and every card's fantasy line and key
+# rows fell off the card's floor. Two ways in: a first Start, whose prologue hides the row until
+# it ends, and a plain open. For each, L1: every card's column fits its card. L2: the fantasy
+# line keeps a two-line height. L3: every key cell ends inside its card.
+
+const LINE_MAX := 90.0
+const SETTLE := 30
+const WAYS := ["prologue", "open"]
+
+var _t := T.new("ui_class_card_level_test")
+var _game
+var _way := -1
+var _frame := 0
+var _step := 0
+var _mark := 0
+
+
+func _initialize() -> void:
+	_next_way()
+
+
+func _next_way() -> void:
+	if _game != null:
+		_game.free()
+		_game = null
+	_way += 1
+	if _way >= WAYS.size():
+		quit(_t.verdict())
+		return
+	_game = Game.new()
+	_game.test_mode = true
+	root.add_child(_game)
+	_frame = 0
+	_step = 0
+
+
+func _process(_delta: float) -> bool:
+	if _game == null or _game.flow == null:
+		return false
+	_frame += 1
+	match _step:
+		0:
+			if _frame > 8:
+				_game.screens.prologue_enabled = WAYS[_way] == "prologue"
+				if WAYS[_way] == "prologue":
+					_game.flow.press_start()
+				else:
+					_game.flow.open_class_select()
+				_mark = _frame
+				_step = 1
+		1:
+			if _frame - _mark == 4:
+				if WAYS[_way] == "prologue":
+					_t.check("prologue: a first Start shows it over the cards", _game.screens.prologue_showing(), "")
+					_game.screens.end_prologue()
+				_mark = _frame
+				_step = 2
+		2:
+			if _frame - _mark == SETTLE:
+				_check(WAYS[_way])
+				_next_way()
+	return false
+
+
+func _check(way: String) -> void:
+	var cards: Array = _game.screens.class_cards()
+	_t.check("%s: the pilot cards are built" % way, cards.size() >= 3, "%d cards" % cards.size())
+	var spill := 0.0
+	var tallest := 0.0
+	var inside := true
+	var worst := ""
+	for card in cards:
+		spill = maxf(spill, card.overflow())
+		tallest = maxf(tallest, card.fantasy_label().size.y)
+		var floor_y: float = card.get_global_rect().end.y + 0.5
+		for cell in card.key_cells():
+			if cell.get_global_rect().end.y > floor_y:
+				inside = false
+				worst = "%s cell ends at %.1f, card floor %.1f" % [card.def.id, cell.get_global_rect().end.y, floor_y]
+	_t.check("%s: L1 every card's column fits its card" % way, is_zero_approx(spill), "overflow %.1f px" % spill)
+	_t.check("%s: L2 the fantasy line keeps a two-line height" % way, tallest > 0.0 and tallest <= LINE_MAX, "tallest %.1f px" % tallest)
+	_t.check("%s: L3 every key cell ends inside its card" % way, inside and not cards.is_empty(), worst)

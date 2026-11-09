@@ -134,7 +134,7 @@ func _start_run() -> void:
 	var events = _game.events
 	events.tree_offered.connect(func(_c: String, depth: int, _choices: Array):
 		_pending.append({"at": _clock + 0.7, "name": "pick-depth%d" % depth, "then": func(): _press(KEY_1)}))
-	events.stage_entered.connect(func(stage: int):
+	events.stage_entered.connect(func(stage: int, _retry: bool):
 		_pending.append({"at": _clock + 3.0, "name": "stage%d-entry" % stage}))
 	events.pack_arrived.connect(func(faction: String, _at: Vector3, _kinds: Array):
 		_pending.append({"at": _clock + 1.2, "name": "pack-%s" % faction}))
