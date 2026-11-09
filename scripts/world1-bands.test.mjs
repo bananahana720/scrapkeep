@@ -266,13 +266,15 @@ test("the difficulty row grades stored rates again: its own recorded bands, and 
   // The shipped row: w1 Novice 33% passes its recorded <= 35% band, and the bands are printed.
   const shipped = row(evaluate(SPEC, inputs), "difficulty");
   assert.match(shipped.measured, /w1 pass/);
-  assert.match(shipped.threshold, /recorded: w1 novice <= 42%, w1 learner5 >= 58%/);
-  // Ruling bb (w29): w1 Learner a5 is recorded at >= 58%; 14 of 24 (58.3%) passes it, 13 of 24 (54.2%) does not.
-  w1.columns.learner5 = col(14 / 24, false);
+  assert.match(shipped.threshold, /recorded: w1 novice <= 42%, park1/);
+  assert.doesNotMatch(shipped.threshold, /learner5/);
+  // Ruling bb's w29 waiver (>= 58%) is retired (w33): w1 Learner a5 grades against the >= 60% harness target.
+  // 15 of 24 (62.5%) passes it; 14 of 24 (58.3%), the waiver's pass, does not, whatever mark its table stored.
+  w1.columns.learner5 = col(15 / 24, true);
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 pass/);
-  w1.columns.learner5 = col(13 / 24, true);
+  w1.columns.learner5 = col(14 / 24, false);
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 fail/);
-  w1.columns.learner5 = col(14 / 24, true);
+  w1.columns.learner5 = col(15 / 24, true);
   // An incomplete column is never a pass.
   w1.columns.novice = { ...col(0.1, true), incomplete: true };
   assert.match(row(evaluate(SPEC, inputs), "difficulty").measured, /w1 incomplete/);

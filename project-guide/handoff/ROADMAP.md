@@ -35,7 +35,6 @@ The rest of the 28 Oct gap list is closed: the dunk tip, the held radio and acti
 - Slow-box time caps (boss_weak_parts, crown_warden_bot, run_tier children, bot_skill_bar): the dam leftovers lane raises the tests' own caps; the runner gains a time scale for slow boxes ([GATE.md](GATE.md)).
 - `--audio-driver Dummy` in `bossSmokeCommand` in `scripts/sketch-export.mjs`.
 - Deep-modules batch 2 from the queued list ([DEEP-SWEEP.md](DEEP-SWEEP.md)).
-- Stale band waiver: `scripts/world1-bands.rows.json` still grades w1 Learner a5 at >= 58% (ruling bb, a w29 waiver); w31 measured 83%. Return it to the >= 60% target once the dam sheet_dir PR lands and a5 is re-read.
 - Watches on the live board, and the carried reds in [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv) (ruling bq).
 
 ### Andrew plays
