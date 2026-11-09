@@ -226,6 +226,9 @@ var _unmute_at := -1
 # landing hands it to the synth on a beat. _handover_at is that beat while it is coming.
 var _ace_flight := false
 var _handover_at := -1
+# The recorded band's kill cadence has answered the Warden break whose release the engine still
+# carries (_answer_release): that release no longer reaches the recorded band.
+var _release_answered := false
 var _ace_arrival_stage := 0
 var _ace_arrival_at := -1
 # The transport sample the synth band starts fading out under the ACE band, -1 when the
@@ -726,7 +729,7 @@ func _pump(virtual_frames := -1) -> void:
 		_ace_stage(stage, engine.next_bar())
 	if ace != null:
 		ace.set_fight_floor(_ace_fight_floor())
-		_end_answered_release()
+		_answer_release()
 	var ace_live := ace != null and ace.active()
 	_hand_over_band()
 	_release_grid()
@@ -813,7 +816,7 @@ func _render_music(frames: int, ace_live: bool) -> void:
 
 func _commit_band_parameters(at: int, values: Dictionary, released: bool, lift: bool, reason: String) -> void:
 	if ace != null:
-		ace.commit_parameters(at, values, released, lift, reason, {"phrase_step": engine._bar_step, "phrase": engine._parameter_phrase_due})
+		ace.commit_parameters(at, values, released and not _release_answered, lift, reason, {"phrase_step": engine._bar_step, "phrase": engine._parameter_phrase_due})
 	# The committed approach is the landmark's reach (sample_run_parameters): its tune in and out.
 	if values.has("approach"):
 		landmark_moment(_landmark_id(), float(values["approach"]))
@@ -1000,7 +1003,7 @@ func _prime_band_parameters() -> void:
 	ace.parameter_enabled = engine.parameter_source.is_valid()
 	if ace.parameter_enabled:
 		ace.parameters = engine.parameter_committed_values.duplicate()
-		ace.parameter_released = engine.parameter_committed_released
+		ace.parameter_released = engine.parameter_committed_released and not _release_answered
 		ace._parameter_danger_floor = engine.parameter_committed_danger_floor
 		ace.pressure = float(ace.parameters.get("threat", 0.0))
 		ace.ultimate_lift = engine.ultimate_lift
@@ -1407,14 +1410,19 @@ func ace_playing() -> bool:
 	return ace != null and ace.mode != "off"
 
 
-# The recorded band's kill cadence has entered: the Warden break's release ends for both bands,
-# as an arena entry ends it (ruling bt). A tune moment, a find or a pack swap that restarts the
-# band on the shelf afterwards then starts it with its lead.
-func _end_answered_release() -> void:
-	if not ace.lead_returned or not engine.parameters_released():
+# The recorded band's kill cadence has entered: it answers the Warden break, so the release
+# stops reaching the recorded band (ruling bt), and a tune moment, a find or a pack swap that
+# restarts that band on the shelf afterwards starts it with its lead. The engine keeps its own
+# release to the next stage: the landmark hum and the synth band stay stripped as before. A
+# band that plays no cadence (a flat pack) keeps the release to the next stage too.
+func _answer_release() -> void:
+	if _release_answered and not engine.parameters_released():
+		_release_answered = false
+	if not ace.lead_returned:
 		return
-	engine.parameters_cadence_returned()
+	_release_answered = engine.parameters_released()
 	ace.clear_release()
+	ace.lead_returned = false
 
 
 # The synth takes the stage stingers back once the ACE band has stopped.
@@ -3752,6 +3760,7 @@ func _flush_flow() -> void:
 					engine.menu_theme("title", true, at)
 					_menu_home(at)
 			"unseal":
+				_release_answered = false
 				engine.parameters_warden_broken()
 				_unseal_ms = Time.get_ticks_msec()
 				if ace_playing():

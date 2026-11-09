@@ -709,13 +709,6 @@ func parameters_released() -> bool:
 	return _parameter_released or parameter_committed_released
 
 
-# The recorded band's kill cadence answers a Warden break (ruling bt): the release ends there,
-# not at the next stage, so nothing that restarts the band on the shelf strips the lead again.
-func parameters_cadence_returned() -> void:
-	_parameter_released = false
-	parameter_committed_released = false
-
-
 func parameters_stage_entered() -> void:
 	_parameter_released = false
 	_parameter_danger_floor = 0.0

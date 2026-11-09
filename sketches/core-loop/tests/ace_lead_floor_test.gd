@@ -12,7 +12,7 @@ const TuneMoments := preload("res://src/presentation/tune_moments.gd")
 # The lead melody stays present (ruling bt). On a level's shelf the recorded band's lead stem
 # never falls below about half level; threat, the approach to a landmark and the chain lift it
 # from there to full. A Warden break's release strips it through the break's held breath only:
-# the kill cadence (the return section) brings it back whole and ends the release, so it stays
+# the kill cadence (the return section) brings it back whole and takes the release off this band, so it stays
 # back on the shelf after it, whatever restarts the band there. Low armour still strips it, and a fight's lead is still the fight floor's.
 #
 # The Oggs are gitignored, so a cloud checkout plays the stub tone tree (tests/support/ace_stub.gd):
@@ -116,21 +116,24 @@ func _through_the_break() -> void:
 	var entered_return := _pump_until(audio, func() -> bool: return ace.section == "return", phrase * 4)
 	t.check("the kill cadence brings the lead back whole", entered_return and ace.parameter_released and ace.lead_returned and ace.parameter_gain("other") == 1.0 and _lead(ace) > shelf,
 		"section %s, released %s, returned %s, lead gain %.2f, live lead target %.3f (shelf %.3f)" % [ace.section, ace.parameter_released, ace.lead_returned, ace.parameter_gain("other"), _lead(ace), shelf])
-	# The cadence answers the break: the release itself ends there, for both bands.
+	# The cadence answers the break: the release stops reaching the recorded band. The engine keeps
+	# its own, which still strips the landmark hum and the synth band to the next stage.
 	_pump(audio, 2048)
-	t.check("the cadence ends the release", not engine.parameters_released() and not ace.parameter_released and ace.parameter_gain("other") == 1.0,
-		"engine released %s, band released %s, lead gain %.2f" % [engine.parameters_released(), ace.parameter_released, ace.parameter_gain("other")])
+	t.check("the cadence takes the release off the recorded band only", engine.parameters_released() and audio._release_answered and not ace.parameter_released and not ace.lead_returned and ace.parameter_gain("other") == 1.0,
+		"engine released %s, answered %s, band released %s, lead gain %.2f" % [engine.parameters_released(), audio._release_answered, ace.parameter_released, ace.parameter_gain("other")])
 	var entered_home := _pump_until(audio, func() -> bool: return ace.section == "home", phrase * 4)
 	t.check("the walk home keeps it whole", entered_home and ace.parameter_gain("other") == 1.0 and _lead(ace) > shelf,
 		"section %s, lead gain %.2f, live lead target %.3f" % [ace.section, ace.parameter_gain("other"), _lead(ace)])
 	var back := _pump_until(audio, func() -> bool: return ace.mode == "level" and ace.section in ["calm", "travel"], phrase * 6)
-	t.check("back on the shelf the lead stays", back and ace.parameter_gain("other") >= Ace.LEAD_FLOOR - 0.001 and _lead(ace) > 0.0,
+	# Two phrases on the shelf: the engine's commits still carry the release and must not land.
+	_pump(audio, phrase * 2 + 1)
+	t.check("back on the shelf the lead stays", back and engine.parameter_committed_released and not ace.parameter_released and ace.parameter_gain("other") >= Ace.LEAD_FLOOR - 0.001 and _lead(ace) > 0.0,
 		"mode %s, section %s, released %s, lead gain %.2f, live lead target %.3f" % [ace.mode, ace.section, ace.parameter_released, ace.parameter_gain("other"), _lead(ace)])
 	# A tune moment, a find or a shop restarts the level's band from the engine's committed state.
 	audio._prime_band_parameters()
 	ace.start_level(engine.clock)
 	_pump(audio, phrase + 1)
-	t.check("a band restarted on the shelf after the break still has its lead", ace.mode == "level" and not ace.parameter_released and ace.parameter_gain("other") >= Ace.LEAD_FLOOR - 0.001 and _lead(ace) > 0.0,
+	t.check("a band restarted on the shelf after the break still has its lead", ace.mode == "level" and engine.parameter_committed_released and not ace.parameter_released and ace.parameter_gain("other") >= Ace.LEAD_FLOOR - 0.001 and _lead(ace) > 0.0,
 		"mode %s, section %s, released %s, lead gain %.2f, live lead target %.3f" % [ace.mode, ace.section, ace.parameter_released, ace.parameter_gain("other"), _lead(ace)])
 	game.queue_free()
 	await process_frame

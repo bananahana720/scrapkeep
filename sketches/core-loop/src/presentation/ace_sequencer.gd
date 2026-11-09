@@ -133,8 +133,8 @@ var parameter_enabled := false
 var parameters := {}
 var parameter_released := false
 # The kill cadence has answered a Warden break (ruling bt): set as the break piece's return
-# section enters. The release stops stripping the lead from there, and audio.gd ends the release
-# itself on its next pump (_end_answered_release), which clears this with it.
+# section enters. The release stops stripping the lead from there, and audio.gd takes the mark on
+# its next pump (_answer_release): from then on the release no longer reaches this band.
 var lead_returned := false
 var parameter_layer_log: Array = []
 var _parameter_danger_floor := 0.0
