@@ -55,6 +55,22 @@ Sample lines to react to (none is in the game yet):
 - From a crew log it left behind: "People were a legacy dependency. We have retired them, with gratitude."
 - When it is beaten and stamped HIRED: "I am humbled to announce that I have accepted a position on the crew."
 
+### Call-ins: who speaks to you, when, and how
+
+Andrew's direction (R, 9 Nov 23:09Z): character moments and lore reach the player the way Metal Gear's codec or Borderlands' call-ins do, with a face popping up in the HUD and talking, and the voice is cute babble in the manner of Animal Crossing or the Sims. "Make it cute, basically." So lore is never a page to read: it is somebody calling you, a line at a time, while you roll.
+
+This is how the one line gets said out loud. The crew talks over itself, late and warm; the Foreman sends a memo, on time and alone. Hearing the two side by side is the moral (W). The rows below are this page's working calls on who calls, when and in what register. The interaction rules (how long, how often, what a call may cover) belong to the game design thread, the babble voices to the sound thread and the HUD element to the look and feel thread. Words land before the sitting; the pop-up, the faces and the voices after it.
+
+| Who | Calls in when | Register | Voice, as a meaning for the sound thread | Never |
+| --- | --- | --- | --- | --- |
+| Moss | The start of a shift, after a Warden breaks, when you come back scrapped, at the camp | Dry, practical, kind through logistics. Says what was packed, never how you feel. "Moss packed a spare." | Low, warm, unhurried. Lands a little after the beat. | Scolds, hurries you, or explains the plot |
+| The crew (the pilots you are not flying, once freed) | When you do something loud: a long chain, a break, a find, a rescue. Rarely, and never all in one run. | Short, teasing, each with one fixed opinion. They interrupt and finish each other's lines. No two agree, and they are all a bit right. | Each pilot's own pitch and instrument, loose and bouncy, overlapping at the edges | Agrees with the Foreman, or gives an order |
+| Brindle | His entrance, a phase turn, a rounding error in his favour | Ledger arithmetic. Rounds up. Never threatens, never raises his voice. | Low and level, close to a hum; a honk is the ship, not him | Shouts, gloats, or speaks for the Foreman |
+| The Foreman (the Mind) | In world 1 only as memos: a stage condition, a foreman's kindness, your loss being logged. Its face waits for the Highdraft (W, so the reveal keeps its order). | The Foreman's voice above: a quarterly update, grateful and sure. It never interrupts; it schedules. | The one voice exactly on the grid: even, smooth, the same every time. Cute because it is so pleased. A soft notification chime, then the memo. | Sounds sinister, jokes, or talks over anyone |
+| The works' machines and the rogues | They do not call in. A machine makes its job's noise; a Shift Boss's horn is the nearest thing to a word. | None | Tool noise only | Speaks |
+
+Three rules follow from the meaning (W). One voice at a time, as a run's opening already does (R, ruling bw): the crew may talk over each other inside one call, but two calls never stack. A call never stops the ball: the game is the conversation's other half, and a call that needs a pause is too long. And the last word of a run belongs to the crew or to Moss, never to the Foreman, until the run the Foreman is hired.
+
 ## 4. The map: thing, meaning, and what follows
 
 "Plays" is the rule the meaning demands. Where a row is W it is this page's proposal for a gap no doc filled.
