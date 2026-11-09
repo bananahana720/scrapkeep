@@ -549,17 +549,21 @@ func _roll_one(rarities: Array, exclude: Array = []) -> String:
 	return ItemGen.roll_id(_rng, rarities[0])
 
 
-# The hook's part and the table it came from: {"part_id", "table"}. On a table that lists its
-# parts the top rarities come first; once its relics are all held the hook draws a cobalt
-# (TOP_FALLBACK), and only a pool with no cobalt left reaches the shelf's rarities.
+# The hook's part and the table it came from: {"part_id", "table"}. A table that lists a relic
+# for this pilot (the park's Spare Frame) draws the top rarities first; once those relics are all
+# held the hook draws a cobalt (TOP_FALLBACK), and only a pool with no cobalt left reaches the
+# shelf's rarities. A table with no relic to list (alpha, slice, the default) and a table that
+# generates its parts draw exactly as before, so their runs replay.
 func _roll_hook(exclude: Array = []) -> Dictionary:
-	if not Parts.listed_only():
-		return {"part_id": _roll_one(TOP_RARITIES, exclude), "table": TOP_RARITIES}
-	for table in [TOP_RARITIES, TOP_FALLBACK]:
-		var picks: Array = Parts.roll(_rng, table, ctx.run.class_id(), ctx.run.parts, 1, exclude)
-		if not picks.is_empty():
-			return {"part_id": picks[0], "table": table}
-	return {"part_id": _roll_one(SHELF_RARITIES, exclude), "table": SHELF_RARITIES}
+	if Parts.listed_only() and not Parts.offer_pool(ctx.run.class_id(), TOP_RARITIES).is_empty():
+		for table in [TOP_RARITIES, TOP_FALLBACK]:
+			var picks: Array = Parts.roll(_rng, table, ctx.run.class_id(), ctx.run.parts, 1, exclude)
+			if not picks.is_empty():
+				return {"part_id": picks[0], "table": table}
+		return {"part_id": _roll_one(SHELF_RARITIES, exclude), "table": SHELF_RARITIES}
+	var part_id := _roll_one(TOP_RARITIES, exclude)
+	var top_rung: bool = part_id != "" and Parts.rarity_of(part_id) in TOP_RARITIES
+	return {"part_id": part_id, "table": TOP_RARITIES if top_rung else SHELF_RARITIES}
 
 
 func _cheapest_price() -> int:

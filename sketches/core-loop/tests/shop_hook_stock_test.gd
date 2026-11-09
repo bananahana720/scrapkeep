@@ -12,7 +12,8 @@ const OddsReadout := preload("res://src/ui/odds_readout.gd")
 # (probe on stage/alpha-w33 c5425bf9: Arc Coil for 18 cogs at stage 2, three pilots of three).
 # Now a held Spare Frame leaves a cobalt on the hook, the top ordinary rung of the alpha (ruling
 # bn), never a part on the shelf, with the odds of the table it was drawn from; the heft lock,
-# the once-per-stage stock (ruling as) and a retry's rewind are as before.
+# the once-per-stage stock (ruling as) and a retry's rewind are as before. A table that lists no
+# relic (alpha, slice, the default) has nothing to run out of: its hook draws as it always did.
 # smoke: timeout=240s
 
 const PILOTS := 6
@@ -43,7 +44,36 @@ func _run() -> void:
 		_check(pilot == 0)
 		_game.free()
 		await physics_frame
+	await _no_relic_table()
 	quit(_t.verdict())
+
+
+# The alpha table lists no relic, so the cobalt fallback never applies: the hook is the old draw
+# (the shelf's rarities after an empty relic roll) and shows the shelf's odds.
+func _no_relic_table() -> void:
+	_game = Game.new()
+	_game.test_mode = true
+	_game.table = "alpha"
+	root.add_child(_game)
+	while _game.flow == null:
+		await physics_frame
+	_game.player.source = Intent.Scripted.new()
+	_game.world.set_physics_process(false)
+	_game.world.activities.set_physics_process(false)
+	_game.flow.press_start()
+	_game.flow.choose_class(0)
+	await physics_frame
+	var run = _game.ctx.run
+	var shop = _game.ctx.build.shop
+	var who: String = run.class_id()
+	shop.enter()
+	var hook: Dictionary = shop.top_shelf()
+	_t.check("a table with no relic keeps the old hook draw and the shelf's odds", Parts.offer_pool(who, Shop.TOP_RARITIES).is_empty()
+		and not hook.is_empty() and shop.top["table"] == Shop.SHELF_RARITIES and hook["odds"] == OddsReadout.odds_for(Shop.SHELF_RARITIES, who),
+		"hook %s, table %s" % [hook.get("part_id"), shop.top.get("table")])
+	shop.leave()
+	_game.free()
+	await physics_frame
 
 
 func _check(deep: bool) -> void:
