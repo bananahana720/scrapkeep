@@ -4,6 +4,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 
 # The two lessons no verb prompt carries (FIRST-TIMER audit, scripts/first-timer.mjs): the drive
 # keys at the ball on a new save's first drops, and the slam on a Warden's open core. Each wears
@@ -177,7 +178,6 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	var cap_color: Color = EventKinds.UI_ROWS["key_glyph"]["color"]
 	var live := EventKinds.role_color("live")
-	var font := UiFonts.bold()
 	for lesson in _placed:
 		var x: float = lesson["at"].x
 		var y: float = lesson["at"].y
@@ -188,6 +188,5 @@ func _draw() -> void:
 				x += size.x + GAP
 			else:
 				var word: String = part["word"]
-				draw_string(font, Vector2(x, y + (font.get_ascent(WORD_SIZE) - font.get_descent(WORD_SIZE)) * 0.5), word,
-					HORIZONTAL_ALIGNMENT_LEFT, -1, WORD_SIZE, live)
+				UiDraw.text(self, x, y, word, WORD_SIZE, live)
 				x += UiFonts.width(word, WORD_SIZE) + GAP * 2.0
