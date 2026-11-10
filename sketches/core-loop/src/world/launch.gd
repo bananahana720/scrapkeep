@@ -21,6 +21,8 @@ const RING_STEP := 0.075
 const LANDING_RINGS := 6
 const LANDING_STEP := 0.02
 const LANDING_LIMIT := 4.0
+# A ring goes this long after the ball's flight time through it (the rail's and the landing's).
+const THREADED := 0.05
 
 var gravity := 26.0
 # Where the last landing mark says the ball will come down.
@@ -33,6 +35,10 @@ var _flying := false
 var _time := 0.0
 var _rings: Array[MeshInstance3D] = []
 var _landing: Array[MeshInstance3D] = []
+# Each landing ring's flight time from the entry, and the fall's clock: a ring retires once the ball
+# has threaded it, as the rail's rings do, so none is left standing across the view down the run.
+var _landing_due: Array[float] = []
+var _fall := 0.0
 var _pad: MeshInstance3D
 var _pad_time := 0.0
 
@@ -105,7 +111,7 @@ func rail(delta: float):
 		return null
 	_time += delta
 	for i in RINGS:
-		if _rings[i].visible and RING_FIRST + i * RING_STEP < _time - 0.05:
+		if _rings[i].visible and RING_FIRST + i * RING_STEP < _time - THREADED:
 			_rings[i].visible = false
 	var flat := Vector3(_from.x, 0.0, _from.z).lerp(Vector3(_velocity.x, 0.0, _velocity.z), smoothstep(0.0, FLOOR_RAMP, _time))
 	return flat + Vector3.UP * (_velocity.y - gravity * _time)
@@ -132,8 +138,11 @@ func mark_landing(entry: Vector3, velocity: Vector3, height: Callable) -> Vector
 		if at.y <= float(height.call(at.x, at.z)) + 1.0:
 			break
 	var flight := t
+	_fall = 0.0
+	_landing_due.clear()
 	for i in LANDING_RINGS:
 		var s := flight * float(i + 1) / float(LANDING_RINGS + 1)
+		_landing_due.append(s)
 		_place_ring(_landing[i], arc_point(entry, velocity, gravity, s), velocity + Vector3.DOWN * gravity * s)
 	_pad.position = Vector3(at.x, float(height.call(at.x, at.z)) + 0.15, at.z)
 	_pad.visible = true
@@ -150,9 +159,18 @@ func clear_landing() -> void:
 
 func _process(delta: float) -> void:
 	if _pad.visible:
+		_fall += delta
+		for i in _landing_due.size():
+			if _landing[i].visible and _landing_due[i] < _fall - THREADED:
+				_landing[i].visible = false
 		_pad_time -= delta
 		if _pad_time <= 0.0:
 			clear_landing()
+
+
+# How many landing rings still stand, for tests and captures.
+func landing_rings() -> int:
+	return _landing.filter(func(ring: MeshInstance3D): return ring.visible).size()
 
 
 static func _place_ring(ring: MeshInstance3D, at: Vector3, along: Vector3) -> void:

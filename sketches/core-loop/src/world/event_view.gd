@@ -12,7 +12,7 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # "roll in" on a sign; nothing here has a collider, so no event can block a line.
 # The sky holds at most three pillars: the beacon's (spine), one event's and the
 # vault's. Only the first open offer shows its beam, and a beam fades out as the
-# ball closes within 20 m, so a pillar points the way and never hides the fight.
+# ball or the lens closes within 20 m, so a pillar points the way and never hides the fight.
 
 const BEAM_HEIGHT := 70.0
 const GATE_RADIUS := 6.0
@@ -287,10 +287,18 @@ func _process(_delta: float) -> void:
 func _fade(beam: MeshInstance3D) -> void:
 	if not beam.visible or player == null:
 		return
-	var ball: Vector3 = player.ball_position()
-	var d := Vector2(ball.x - beam.global_position.x, ball.z - beam.global_position.z).length()
+	var d := _flat_to(beam, player.ball_position())
+	# The lens trails the ball by the camera's arm, so a pillar the ball has passed stands in front of the lens
+	# again: measured from the ball alone, it faded back in and the lens flew through it (an amber wash).
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if cam != null:
+		d = minf(d, _flat_to(beam, cam.global_position))
 	var mat: StandardMaterial3D = beam.material_override
 	mat.albedo_color.a = PILLAR_ALPHA * smoothstep(PILLAR_FADE.x, PILLAR_FADE.y, d)
+
+
+static func _flat_to(beam: Node3D, point: Vector3) -> float:
+	return Vector2(point.x - beam.global_position.x, point.z - beam.global_position.z).length()
 
 
 func _update_offer(entry: Dictionary, pulse: float) -> void:

@@ -110,6 +110,7 @@ func _step() -> void:
 			if player.state.grounded:
 				_record["touchdown"] = _planar()
 				_record["touchdown_at"] = player.ball_position()
+				_record["rings_down"] = _game.world.launch.landing_rings()
 				_phase = "rolling"
 				_wait = 0
 		"rolling":
@@ -136,6 +137,7 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_record["stage"] = stage
 	_record["entry"] = Vector2(_game.player.state.velocity.x, _game.player.state.velocity.z).length()
 	_record["pad"] = _game.world.launch.landing_point
+	_record["rings_up"] = _game.world.launch.landing_rings()
 	_phase = "falling"
 
 
@@ -186,6 +188,9 @@ func _finish() -> bool:
 		var miss := Vector2(pad.x - down.x, pad.z - down.z).length()
 		_report("landing mark in stage %d" % stage, miss <= PAD_TOLERANCE,
 			"the pad marked (%.0f, %.0f); the ball touched down %.1f m from it" % [pad.x, pad.z, miss])
+		_report("landing rings in stage %d" % stage, int(r.get("rings_up", -1)) == Launch.LANDING_RINGS and int(r.get("rings_down", -1)) == 0,
+			"%d rings marked the fall at the entry, %d still stood across the view at touchdown (each goes as the ball threads it)"
+				% [r.get("rings_up", -1), r.get("rings_down", -1)])
 	_report("launches measured", _records.size() == _launches_wanted(), "%d of %d same-world stage-to-stage launches measured (world one rows minus one)" % [_records.size(), _launches_wanted()])
 	print("world_launch_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	_game.free()

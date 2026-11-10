@@ -15,6 +15,11 @@ const POP_LIFE := 1.2
 const POP_HEIGHT := 2.6
 const POP_SIZE := 1.1
 const POP_SIZE_REDUCED := 0.8
+# A pop that lands while the last one is still up takes the other of POP_ROWS lines, POP_LINE higher,
+# so two pickups in a row never print on top of each other. Two lines only: at the play camera a third
+# would stand across the objective plate.
+const POP_LINE := 1.5
+const POP_ROWS := 2
 const STREAK_MS := 2000
 const PHRASE_LENGTH := 8
 # The phrase walks the reward pentatonic (Harmony.PENTATONIC rungs) from the tonic, a step
@@ -30,6 +35,8 @@ var _last_ms := -100000
 var _phrase_seed := -1
 # [id, rung, jackpot] per pickup, for tests and captures.
 var played: Array = []
+var _pop_row := -1
+var _pop_left := 0.0
 
 
 func setup(ctx_ref, audio_ref, machine_fx_ref) -> void:
@@ -75,5 +82,17 @@ func _on_panel_gained(panel_id: String, _count: int, _at: Vector3, jackpot: bool
 			audio.play("panel_gained", 0.0, 1.0, "SFX", "panel_jackpot")
 	if machine_fx != null and ctx.player != null:
 		var reduced: bool = machine_fx.reduced_motion
-		machine_fx.word(Panels.pop_text(panel_id), ctx.player.shown_position() + Vector3.UP * POP_HEIGHT,
+		machine_fx.word(Panels.pop_text(panel_id), ctx.player.shown_position() + Vector3.UP * (POP_HEIGHT + next_pop_lift()),
 			Palette.AMBER if jackpot else Palette.SAND, true, POP_LIFE, POP_SIZE_REDUCED if reduced else POP_SIZE)
+
+
+# How far above POP_HEIGHT the next pop stands: nothing when no pop is up, else the line after the
+# last one's, back to the bottom line after POP_ROWS (the bottom pop is the oldest by then).
+func next_pop_lift() -> float:
+	_pop_row = (_pop_row + 1) % POP_ROWS if _pop_left > 0.0 else 0
+	_pop_left = POP_LIFE
+	return _pop_row * POP_LINE
+
+
+func _process(delta: float) -> void:
+	_pop_left = maxf(_pop_left - delta, 0.0)
