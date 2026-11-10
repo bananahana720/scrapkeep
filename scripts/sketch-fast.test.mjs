@@ -26,7 +26,7 @@ import {
   DEFAULT_ESTIMATE_MS,
   usableBaseRun,
 } from "./sketch-fast.mjs";
-import { importWithRetry, quarantineRecord } from "./sketch-smoke.mjs";
+import { IMPORT_TRIES, importTry, importWithRetry, quarantineRecord, scriptErrorCount } from "./sketch-smoke.mjs";
 
 const files = (entries) => indexFromFiles(new Map(Object.entries(entries)));
 
@@ -297,22 +297,40 @@ test("parseArgs defaults to origin/main and a 15 minute budget", () => {
   assert.throws(() => parseArgs(["--budget", "0"]));
 });
 
-test("import retries once after a crashed import and stops after two", () => {
-  const exits = [null, 0];
-  const calls = [];
-  const run = (job) => {
-    calls.push(job.label);
-    const exit = exits.shift();
-    return { label: job.label, exit, ok: exit === 0 };
+test("import: an engine crash or a script error is tried again, up to three tries, and only the last try decides", () => {
+  assert.equal(IMPORT_TRIES, 3);
+  const runner = (rows) => {
+    const calls = [];
+    const left = [...rows];
+    return { calls, run: (job) => (calls.push(job.label), { label: job.label, ok: false, ...left.shift() }) };
   };
-  const once = importWithRetry("core-loop", ["--headless"], run, () => {});
-  assert.equal(once.ok, true);
-  assert.deepEqual(calls, ["core-loop import", "core-loop import (retry)"]);
-  const twice = importWithRetry("core-loop", ["--headless"], () => ({ exit: null, ok: false }), () => {});
-  assert.equal(twice.ok, false);
-  assert.equal(twice.results.length, 2);
+  const said = [];
+  // Node reports a crash as a signal; a shell reports 128 + the signal.
+  const crashed = runner([{ exit: null, signal: "SIGSEGV" }, { exit: 134 }, { exit: 0 }]);
+  const third = importWithRetry("core-loop", ["--headless"], crashed.run, (line) => said.push(line));
+  assert.equal(third.ok, true);
+  assert.deepEqual(crashed.calls, ["core-loop import", "core-loop import (try 2)", "core-loop import (try 3)"]);
+  assert.deepEqual(third.tries.map((row) => row.outcome), ["engine crash", "engine crash", "ok"]);
+  assert.equal(third.results.length, 1, "a crash that a retry cleared is not a failed row of the run");
+  assert.equal(third.results[0].exit, 0);
+  assert.deepEqual(said, ["core-loop import try 1 of 3: engine crash (exit=SIGSEGV); trying again", "core-loop import try 2 of 3: engine crash (exit=134); trying again"]);
+  // Three crashes stop the run, and every try is a row.
+  const dead = importWithRetry("core-loop", ["--headless"], () => ({ exit: 139, ok: false }), () => {});
+  assert.equal(dead.ok, false);
+  assert.equal(dead.results.length, 3);
+  // A clean exit that still prints SCRIPT ERROR is not a pass: tried again, and it fails when the last try still prints one.
+  const healed = runner([{ exit: 0, scriptErrors: 12 }, { exit: 0, scriptErrors: 0 }]);
+  assert.equal(importWithRetry("core-loop", ["--headless"], healed.run, () => {}).ok, true);
+  assert.equal(healed.calls.length, 2);
+  const broken = importWithRetry("core-loop", ["--headless"], () => ({ exit: 0, scriptErrors: 1, ok: false }), () => {});
+  assert.equal(broken.ok, false);
+  assert.deepEqual(broken.tries.map((row) => row.outcome), ["script errors", "script errors", "script errors"]);
+  // Any other failure (a time limit, an exit code) is tried again too, and a first clean try is the only one.
+  assert.equal(importTry({ exit: null, signal: "SIGTERM" }), "failed");
+  assert.equal(importTry({ exit: 1 }), "failed");
   const clean = importWithRetry("core-loop", ["--headless"], () => ({ exit: 0, ok: false }), () => {});
-  assert.equal(clean.results.length, 1, "an import that exits 0 with error lines is not retried");
+  assert.equal(clean.results.length, 1, "other error lines on a clean exit do not ask for another import");
+  assert.equal(scriptErrorCount("ok\nSCRIPT ERROR: Parse Error\n   at: x\nnote: SCRIPT ERROR mid-line\nSCRIPT ERROR: again\n"), 2);
 });
 
 test("the lane pool never runs more tasks than its width, and queued tasks still run", async () => {

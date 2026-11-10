@@ -8,6 +8,7 @@ import {
   acquireMachine,
   binary,
   importWithRetry,
+  scriptErrorCount,
   isBot,
   isSolo,
   judge,
@@ -675,9 +676,9 @@ async function main() {
   const imported = importWithRetry(SKETCH, base, (job) => {
     const t = Date.now();
     const result = spawnSync(binary, job.args, { encoding: "utf8", timeout: 180_000 });
-    return { label: job.label, exit: result.status, ok: result.status === 0, ms: Date.now() - t };
-  });
-  if (!stage("import", imported.ok, { note: imported.results.map((row) => `exit=${row.exit}`).join(", ") })) finish();
+    return { label: job.label, exit: result.status, signal: result.signal ?? null, scriptErrors: scriptErrorCount((result.stdout || "") + (result.stderr || "")), ok: result.status === 0, ms: Date.now() - t };
+  }, log);
+  if (!stage("import", imported.ok, { note: imported.tries.map((row) => `${row.outcome} exit=${row.exit ?? row.signal}`).join(", ") })) finish();
   const boot = spawnSync(binary, [...base, "--quit-after", "300"], { encoding: "utf8", timeout: 180_000, env: { ...process.env, XDG_DATA_HOME: mkdtempSync(path.join(os.tmpdir(), "sketch-fast-")) } });
   const bootVerdict = judge({ status: boot.status, output: (boot.stdout || "") + (boot.stderr || "") });
   if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
