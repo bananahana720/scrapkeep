@@ -203,6 +203,7 @@ func _runtime(model) -> void:
 		var safe := 0
 		var price_ok := true
 		var beam_words := {}
+		var door_heads := {}
 		var trials := 1 if "--render-summary" in OS.get_cmdline_user_args() else 20
 		for trial in trials:
 			acts.clear()
@@ -219,6 +220,7 @@ func _runtime(model) -> void:
 			acts.sites.append(s)
 			var label: Label3D = s.get_node("TradePrices")
 			price_ok = price_ok and label.visible and label.position.z > entry.entrances[0].at[1]
+			door_heads[label.text.get_slice("\n", 0) + " / " + label.text.get_slice("\n", 1)] = true
 			beam_words[s.view.word.text] = true
 			for device in s.trade_devices:
 				price_ok = price_ok and label.text.contains(device.words()) and device.offer.cost_kind != "scrap" and device in game.world.interact.devices
@@ -260,6 +262,10 @@ func _runtime(model) -> void:
 		t.check(entry.id + " every price shown before entry", price_ok)
 		# The beam's word is the counter's name alone (the view's own tell); the prices are the door label's.
 		t.check(entry.id + " the beam word is the counter's name", beam_words.keys() == [String(entry.tell.word)], str(beam_words.keys()))
+		# Ruling ci: the door says whose offer it is, in that owner's voice, and never the family's code word.
+		var risky: bool = entry.id in model.FAMILIES.risk
+		var head: String = ("Keeper's gamble: %s / Nobody makes you." if risky else "Foreman's kindness: %s / A small efficiency fee. You're welcome.") % entry.tell.word
+		t.check(entry.id + " the door names whose offer it is", door_heads.keys() == [head], str(door_heads.keys()))
 		t.check(entry.id + " idle first 2s safe at least 95 percent", float(safe) / trials >= 0.95)
 		print("trade_entry_rate: " + JSON.stringify({"interior": entry.id, "idle_entries": trials, "idle_safe": safe, "simulated_seconds": ceili(2.0 * Engine.physics_ticks_per_second / Engine.time_scale) * Engine.time_scale / Engine.physics_ticks_per_second, "time_scale": Engine.time_scale, "price_before_entry": price_ok}))
 	acts.clear()

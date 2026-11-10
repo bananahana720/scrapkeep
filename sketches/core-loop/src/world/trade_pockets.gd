@@ -12,6 +12,13 @@ const POOL_FLOOR := 0.2
 const CURSE_CHANCE := 1.0 / 7.0
 const SACRIFICE_CHANCE := 1.0 / 7.0
 const FULL_HEALTH_BUMP := 0.25
+# What a trade spot is called at its door (ruling ci): the risky family is the keeper's gamble and
+# the safe one the foreman's kindness, each with one line in its owner's voice. The rules and
+# odds are as built, so neither line promises a better or a worse price.
+const DOOR_WORDS := {
+	"risk": {"name": "Keeper's gamble", "line": "Nobody makes you."},
+	"safe": {"name": "Foreman's kindness", "line": "A small efficiency fee. You're welcome."},
+}
 
 static func memory() -> Dictionary:
 	return {"risk_taken": false, "last_appeared": -100, "last_seen": -100, "last_refused": -100, "seen": [], "offers": {}, "decisions": {}}
@@ -66,6 +73,11 @@ static func decide(mem: Dictionary, offer: Dictionary, took: bool) -> void:
 		mem.risk_taken = true
 	elif not took:
 		mem.last_refused = offer.stage
+
+# The head of the door label: whose offer this is, the counter's name, then the owner's line.
+static func door_words(offer: Dictionary, counter: String) -> String:
+	var row: Dictionary = DOOR_WORDS[String(offer.family)]
+	return "%s: %s\n%s" % [row.name, counter, row.line]
 
 static func devices(offer: Dictionary) -> Array:
 	var risk: bool = offer.family == "risk"
