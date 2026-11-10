@@ -54,9 +54,15 @@ func _process(_delta: float) -> bool:
 		_game.flow.choose_class(0)
 		_stage_one = _game.flow.objective_text()
 		return false
+	# Half the hull is taken two frames before the HUD is read, so its bar has had a frame to follow.
+	# The regen clock is set back with it (a fresh run's hull regenerates at once), so the half holds.
+	if _frames == 2:
+		_game.run.hp = _game.run.max_hp * 0.5
+		_game.run.since_damage = 0.0
 	if _frames < 4:
 		return false
 	var hud = _game.hud
+	_report("hull bar", absf(hud.hull_shown() - 0.5) < 0.01, "half the hull is gone and the bar stands at %.2f" % hud.hull_shown())
 	_report("stage 1 objective", _stage_one.contains("Warden") and _stage_one.contains("plating %d" % int(StageDefs.of(1)["warden_plating"])) and _stage_one.contains("Break its guard, then smash the core.") and not _stage_one.to_lower().contains("optional"),
 		"\"%s\"" % _stage_one)
 	var reading: Dictionary = hud.objective_reading()

@@ -12,6 +12,10 @@ const MusicEngine := preload("res://src/presentation/music_engine.gd")
 # danger ducks the bass. Engine state and cue decisions on the dummy driver.
 
 const PRESSURES := [0.0, 0.25, 0.5, 0.75, 1.0]
+# The lead alone against the whole mix at full pressure. Measured 10 to 16 dB under on 10 Nov 2026;
+# the floor leaves 6 dB for tuning and is well above a lead nobody can hear (a planted 20 dB cut
+# reads 30 to 36 under). A tripwire for a silent tune, not a statement of the right level.
+const LEAD_UNDER_DB := 22.0
 
 var _game
 var _audio
@@ -23,6 +27,7 @@ var _wait_frames := 0
 func _initialize() -> void:
 	MusicEngine.prepare()
 	_bass_everywhere()
+	_lead_heard()
 	_wubs_reined_in()
 	_layers_rise()
 	_revoiced()
@@ -54,6 +59,46 @@ func _bass_everywhere() -> void:
 			if rms < 0.03 or notes < 6:
 				failing.append("%s p%.2f" % [Harmony.THEMES[theme], p])
 	_check("bass never leaves", failing.is_empty(), "3 themes x 5 pressures: the bass bus (sub, figure, wobble) is audible and the figure plays at least 3 notes a bar; failing %s" % [failing])
+	for line in lines:
+		print("  %s" % line)
+
+
+# Melody first: at full pressure the lead plays notes and can be heard over the mix in every theme.
+# The synth engine only; the PC's recorded stems go through ace_sequencer.gd (ruling bt) and are
+# judged on a PC listen.
+# The engine's groove pick is not seeded, so the whole-mix figure moves between runs: over five
+# runs on 10 Nov 2026 the three themes read 11.4 to 11.7, 10.4 and 15.8 dB under, a 0.3 dB spread
+# against 6 dB of room to the line, and the planted cut (the lead 20 dB down) read 30 to 36.
+func _lead_heard() -> void:
+	var failing: Array = []
+	var lines: Array = []
+	for theme in 3:
+		var alone := 0.0
+		var whole := 0.0
+		var notes := 0
+		for solo in [[MusicEngine.LEAD], []]:
+			var engine := MusicEngine.new()
+			engine.schedule_restart(0, MusicEngine.PLAY, theme)
+			engine.set_pressure(1.0)
+			engine.render(1)
+			engine.render(Harmony.BAR * 8)
+			engine.solo = solo
+			var before := engine.layer_starts[MusicEngine.LEAD]
+			engine.render(Harmony.BAR * 8)
+			var sum := 0.0
+			for frame in engine.out_music:
+				sum += frame.x * frame.x + frame.y * frame.y
+			var rms := sqrt(sum / (2.0 * engine.out_music.size()))
+			if solo.is_empty():
+				whole = rms
+			else:
+				alone = rms
+				notes = engine.layer_starts[MusicEngine.LEAD] - before
+		var under := -linear_to_db(alone / maxf(whole, 0.000001))
+		lines.append("%s lead %.1f dB under the mix (rms %.3f of %.3f), %d notes in 8 bars" % [Harmony.THEMES[theme], under, alone, whole, notes])
+		if under > LEAD_UNDER_DB or notes < 8:
+			failing.append(Harmony.THEMES[theme])
+	_check("the lead is heard", failing.is_empty(), "3 themes at full pressure: the lead alone is within %d dB of the whole mix and plays at least a note a bar; failing %s" % [int(LEAD_UNDER_DB), failing])
 	for line in lines:
 		print("  %s" % line)
 

@@ -1020,6 +1020,12 @@ static func _rect_of(control: Control) -> Rect2:
 	return Rect2(control.position, Vector2(maxf(s.x, control.size.x), maxf(s.y, control.size.y)))
 
 
+# The share of the hull bar that stands full, 0 to 1 (-1 before the HUD's first frame): what a player
+# reads as the hull. The play watch holds it against the hull itself.
+func hull_shown() -> float:
+	return _health.fraction
+
+
 # The objective for the flow's state: the row objectives.gd picks, with its glyph, its colour
 # and, while the Warden or an activity is still to be found, the metres to it.
 func objective_reading() -> Dictionary:
