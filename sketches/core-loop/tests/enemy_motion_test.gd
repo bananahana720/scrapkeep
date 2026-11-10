@@ -225,8 +225,10 @@ func _death(kind: String, index: int, label: String) -> void:
 	var shrinks := sizes.size() >= 4
 	for i in range(1, sizes.size()):
 		shrinks = shrinks and sizes[i] <= sizes[i - 1] + 0.0001
-	_t.check(label + " pieces shrink away " + kind, shrinks and sizes[0] > 0.99 and sizes[sizes.size() - 1] < 0.2 and faded == 0,
-		"first %.2f, last %.2f of full size over %d ticks; %d faded piece samples" % [sizes[0] if not sizes.is_empty() else -1.0, sizes[sizes.size() - 1] if not sizes.is_empty() else -1.0, sizes.size(), faded])
+	# Full size through the first third of its life (SHRINK starts at the half), nearly gone at the end.
+	var third: float = sizes[sizes.size() / 3] if shrinks else -1.0
+	_t.check(label + " pieces shrink away " + kind, shrinks and sizes[0] > 0.99 and third > 0.99 and sizes[sizes.size() - 1] < 0.2 and faded == 0,
+		"first %.2f, a third in %.2f, last %.2f of full size over %d ticks; %d faded piece samples" % [sizes[0] if not sizes.is_empty() else -1.0, third, sizes[sizes.size() - 1] if not sizes.is_empty() else -1.0, sizes.size(), faded])
 
 
 func _reduced() -> void:

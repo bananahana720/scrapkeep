@@ -88,8 +88,6 @@ var ctx
 var _queue: Array = []
 var _first_queue: Array = []
 var _shown: Node3D
-# The spawn warm now standing has had its debris boxes added, and they have not been drawn yet.
-var _twinned := false
 
 
 static func hook(ctx_ref) -> void:
@@ -135,20 +133,19 @@ func _process(_delta: float) -> void:
 		if status != ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			_loading.erase(path)
 	if _shown != null:
-		if _shown.has_meta("spawn_warm") and not _twinned:
-			# The debris boxes join the holder now, and a node that leaves before a frame is drawn
-			# never reaches the renderer: the holder stands this frame too, then goes.
+		if _shown.has_meta("spawn_warm") and not _shown.has_meta("debris_warm"):
+			# The debris joins the holder now, and a node that leaves before a frame is drawn never
+			# reaches the renderer: the holder stands this frame too, then goes.
+			_shown.set_meta("debris_warm", true)
 			death_warm(_shown)
-			_twinned = true
 			return
-		_twinned = false
 		_shown.queue_free()
 		_shown = null
 	if not _queue.is_empty():
 		var item = _queue.pop_front()
 		warm(item)
 		if item is Script and kind_of(item) in SPAWN_WARM:
-			# Held before setup runs, so a setup that fails still leaves with the next frame.
+			# Held before setup runs, so a setup that fails still leaves, two frames on.
 			_shown = spawn_holder(self)
 			spawn_into(item, _shown, ctx.player, ctx.spawner.get("ground") if ctx.spawner != null else null)
 	elif not _first_queue.is_empty():

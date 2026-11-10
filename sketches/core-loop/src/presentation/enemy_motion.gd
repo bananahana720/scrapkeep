@@ -27,7 +27,9 @@ const GRAVITY := 18.0
 # never by fading: a fade through the instance's transparency moves an opaque surface to the
 # blended pass, and the first piece of each look to go there made the renderer build that
 # pass's pipelines while the frame waited (43 to 48 ms on the 4080 the frame after the dam's
-# first kill, 10 November 2026). A shrinking piece keeps the pipelines the living machine drew with.
+# first kill, 10 November 2026). A shrinking piece of the model keeps the pipelines the living
+# machine drew with; a box piece keeps the ones its look was first drawn with (BakeWarm.death_warm
+# draws the dam pack kinds' box looks at stage entry).
 const SHRINK := 0.5
 # The smallest a piece is drawn, so its last frame still has a basis that can be inverted.
 const SPECK := 0.01

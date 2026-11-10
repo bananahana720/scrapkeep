@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Rule (perf lane, #241): after a world 1 entry, bake_warm.gd builds each of stage 1's kinds once
-# as a spawn builds it, out of sight for one frame, so the render pipelines its surfaces need
+# as a spawn builds it, out of sight for two frames (the second with its death debris, bake_warm_test), so the render pipelines its surfaces need
 # compile then and not at the first spawn's first frame. The warm is only worth its frame if it
 # draws what the spawn draws: for each kind, the warm view's meshes, the shader-relevant state of
 # every surface's active material (the paint a spawn owns, its extras' materials) and its other
