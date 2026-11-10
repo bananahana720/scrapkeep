@@ -59,15 +59,13 @@ var warden: Node3D = null
 # The park Warden's gate and the yard's arena lock (world/stage_locks.gd), when the world has one.
 var gate = null
 # Seam for wave 4: the boss flow sets boss_active when it enters its "boss" state and
-# boss_plating to the hull's plating. The death screen then shows the boss gap line and
-# offers T, which replays stage 3 from the start the run kept.
+# boss_plating to the hull's plating. The store-less death screen then offers T, which replays
+# stage 3 from the start the run kept.
 var boss_active := false
 var boss_plating := 120.0
 # True from arena entry until the run leaves the fight, so a death there retries the
 # arena, not stage 3.
 var in_arena := false
-# The plating that stood in the way when the ball died in the arena, for the gap line.
-var _death_plating := -1.0
 # RUN OVER's cause line for this run's death (death_cause.gd), "" before one; and the source of
 # the last hit taken, which player_hit publishes just before a killing hit's player_died.
 var death_cause := ""
@@ -858,19 +856,6 @@ func can_replay_final_stage() -> bool:
 	return boss_active and ctx.run.has_stage_start(final_stage())
 
 
-# What the death screen says about the fight that killed you: your punch against the
-# plating that stood in the way, and your heft. Empty when no plated lock was live.
-func gap_line() -> String:
-	var plating := -1.0
-	if boss_active:
-		plating = _death_plating if state == DEAD and _death_plating >= 0.0 else boss_plating_now()
-	elif sealed and is_instance_valid(warden):
-		plating = warden_plating()
-	if plating < 0.0:
-		return ""
-	return "Punch %d / plating %d · Heft %s" % [int(punch_now()), int(plating), ctx.run.roman(ctx.run.heft_class())]
-
-
 # The live fight's arrival numbers for the death tip: the engaged Warden's or the boss's; empty off one.
 func _fight_gap() -> Dictionary:
 	if state == BOSS or (state in [STAGE, BEACON] and sealed and _engaged and is_instance_valid(warden)):
@@ -1254,7 +1239,6 @@ func _landed_attack() -> String:
 func _on_player_died() -> void:
 	if not in_play() or state == LAP:
 		return
-	_death_plating = boss_plating_now() if state == BOSS else -1.0
 	death_cause = DeathCause.line(_last_hit_source, _landed_attack(), DeathCause.phase_note(_boss_module()) if state == BOSS else "")
 	death_tip = DeathTips.line(_last_hit_source, _landed_attack(), _fight_gap())
 	ctx.player.set_frozen(true)
