@@ -53,9 +53,9 @@ func _init() -> void:
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(body)
 	# Each column's header is a number beside what it counts: the crate's tracks found, the tape's length.
-	_crate = _column(body, true)
+	_crate = _column(body)
 	_count = _crate.get_parent().get_parent().get_child(0)
-	_tape = _column(body, true)
+	_tape = _column(body)
 	_tape_name = _tape.get_parent().get_parent().get_child(0)
 	_note = UiDraw.label(19, Palette.SAND)
 	_note.custom_minimum_size = Vector2(0.0, 28.0)
@@ -74,14 +74,13 @@ func _init() -> void:
 		buttons.add_child(b)
 
 
-# A scrolling column, with a header label above it when asked; returns the list inside it.
-func _column(parent: Control, header := false) -> VBoxContainer:
+# A scrolling column under a header label (a number beside what it counts); returns the list inside it.
+func _column(parent: Control) -> VBoxContainer:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(column)
-	if header:
-		column.add_child(UiDraw.label(18, Palette.COPPER))
+	column.add_child(UiDraw.label(18, Palette.COPPER))
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true

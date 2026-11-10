@@ -90,13 +90,13 @@ func _typed(said: PackedStringArray) -> String:
 	return ""
 
 
-func _back_ok(back: Button) -> bool:
-	return back != null and back.text == "Back" and back.key == "key_esc"
-
-
-func _back_is_esc(label: String, back: Button) -> void:
-	_t.check("%s Back is a button" % label, back != null and back.text == "Back")
-	_t.eq("%s Back wears the Esc keycap" % label, back.key if back != null else "", "key_esc")
+# The one Back check every page runs; `report` false runs it on a planted copy and only answers.
+func _back_is_esc(label: String, back: Button, report := true) -> bool:
+	var ok: bool = back != null and back.text == "Back" and back.key == "key_esc"
+	if report:
+		_t.check("%s Back is a button" % label, back != null and back.text == "Back")
+		_t.eq("%s Back wears the Esc keycap" % label, back.key if back != null else "", "key_esc")
+	return ok
 
 
 func _run() -> void:
@@ -131,10 +131,10 @@ func _run() -> void:
 	_t.check("PLANTED a removed string is reported", broken_hits >= 1, str(broken_hits))
 	broken.free()
 	var wrong_back := ChoiceButton.new("back", "key_h", "Back")
-	_t.check("PLANTED a Back on H is reported", not _back_ok(wrong_back))
+	_t.check("PLANTED a Back on H is reported", not _back_is_esc("planted", wrong_back, false))
 	wrong_back.free()
 	var right_back := ChoiceButton.new("back", "key_esc", "Back")
-	_t.check("a Back on Esc passes", _back_ok(right_back))
+	_t.check("a Back on Esc passes", _back_is_esc("planted", right_back, false))
 	right_back.free()
 	planted.free()
 	planted_hold.free()

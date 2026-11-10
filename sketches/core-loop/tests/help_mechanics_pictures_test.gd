@@ -59,8 +59,14 @@ func _run() -> void:
 				continue
 			var picture: Control = help.pictures[id].picture
 			var caption: Label = help.pictures[id].caption
+			var named_by_drawing: bool = not MechanicsDiagram.CAPTIONS.has(id)
+			if named_by_drawing:
+				_t.check(id + " has no caption slot", caption == null)
 			_t.check(id + " draws its diagram", picture.get_script() == MechanicsDiagram and picture.mechanic == id
 				and picture.is_visible_in_tree() and picture.size.x >= MechanicsDiagram.PICTURE_SIZE.x)
+			if named_by_drawing:
+				_t.eq(id + " leaves mouse to menu", picture.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+				continue
 			_t.eq(id + " caption", caption.text, MechanicsDiagram.CAPTIONS[id])
 			_t.check(id + " caption is a visible single line", caption.is_visible_in_tree() and not caption.text.contains("\n")
 				and caption.get_theme_font("font").get_string_size(caption.text, HORIZONTAL_ALIGNMENT_LEFT, -1, caption.get_theme_font_size("font_size")).x <= picture.size.x)
@@ -76,7 +82,7 @@ func _run() -> void:
 	radio_picture.free()
 	_t.eq("the radio picture shows its four keys", radio_words, PackedStringArray([",", ".", "/", ";"]))
 	_t.check("Back fits screen", root.get_visible_rect().encloses(help.back.get_global_rect()))
-	_t.check("SPIL-9 caption says the next ram calls it in", MechanicsDiagram.CAPTIONS["halo"].contains("next ram calls SPIL-9 in"))
+	_t.check("SPIL-9 caption says the next ram calls it in", MechanicsDiagram.CAPTIONS["halo"].contains("next ram calls in SPIL-9"))
 	help.page_button.pressed.emit()
 	await process_frame
 	game.screens._content.modulate.a = 1.0
@@ -93,7 +99,7 @@ func _run() -> void:
 		rules_in_order.append(rule.id)
 	# Jam and cast are the picture pages' captions now (ruling cx); the rules keep what a picture cannot say.
 	_t.eq("rules cover grip, radio, mast and active", rules_in_order, ["grip", "radio", "stake", "active"])
-	for want in ["wall", "radio", "relay mast", "hold e"]:
+	for want in ["stay fast against a wall and you climb it", "radio", "relay mast", "hold e"]:
 		_t.check("rules page shows \"" + want + "\"", shown.contains(want))
 	# Actives off: no F line, and never the dev flag's name.
 	_t.check("actives off: no F line", not help.rules["active"].is_visible_in_tree() and not shown.contains("fire your active"), shown)

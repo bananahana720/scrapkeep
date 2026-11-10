@@ -140,7 +140,7 @@ static func title_text(p: Dictionary) -> String:
 	if title != "":
 		return title.to_upper()
 	var who := String(p.get("pilot_name", ""))
-	return ("SCRAPKEEP: %s" % who).to_upper() if who != "" else "SCRAPKEEP"
+	return "SCRAPKEEP"
 
 
 static func subtitle_text(p: Dictionary) -> String:

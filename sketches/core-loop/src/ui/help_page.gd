@@ -20,9 +20,9 @@ const CreditsHint := preload("res://src/ui/credits_hint.gd")
 
 const GOAL := [
 	{"icon": "res_heft", "kind": "heft_class_changed", "words": "Get heavy"},
-	{"icon": "obj_warden", "kind": "warden_engaged", "words": "Break the Warden"},
+	{"icon": "obj_warden", "kind": "warden_engaged", "words": "Break Wardens"},
 	{"icon": "res_scrap", "kind": "bay_entered", "words": "Visit Moss"},
-	{"icon": "obj_launch", "kind": "world_entered", "words": "Launch"},
+	{"icon": "obj_launch", "kind": "world_entered", "words": "Next world"},
 ]
 
 var back: Button
@@ -137,10 +137,13 @@ func _mechanics_row(ids: Array) -> HBoxContainer:
 		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var picture := MechanicsDiagram.new(id)
 		card.add_child(picture)
-		var caption := _label(MechanicsDiagram.CAPTIONS[id], 16, Palette.SAND)
-		caption.name = "Caption"
-		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		card.add_child(caption)
+		# A picture the drawing already names (SPIL-9's sockets) has no caption slot.
+		var caption: Label = null
+		if MechanicsDiagram.CAPTIONS.has(id):
+			caption = _label(MechanicsDiagram.CAPTIONS[id], 16, Palette.SAND)
+			caption.name = "Caption"
+			caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			card.add_child(caption)
 		row.add_child(card)
 		pictures[id] = {"picture": picture, "caption": caption}
 	return row

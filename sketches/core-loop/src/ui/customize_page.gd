@@ -199,8 +199,7 @@ func _init() -> void:
 	_heft_strip = HBoxContainer.new()
 	_heft_strip.add_theme_constant_override("separation", 10)
 	_heft_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# The preview shows the plates of the heft picked here; the label says both once.
-	var heft_word := _label("HEFT PLATES", 18)
+	var heft_word := _label("HEFT", 18)
 	_heft_strip.add_child(heft_word)
 	for i in HEFT_WORDS.size():
 		var pip := Button.new()
