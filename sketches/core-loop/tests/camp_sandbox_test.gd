@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Sandbox := preload("res://src/world/camp_sandbox.gd")
 const Picker := preload("res://src/ui/camp_enemy_picker.gd")
+const Scrapbook := preload("res://src/ui/camp_scrapbook.gd")
 const Profile := preload("res://src/core/profile.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
@@ -91,6 +92,23 @@ func _picker_page() -> void:
 	page.refresh(["chaser", "hooker"], 4)
 	page.row("chaser").pressed.emit()
 	_t.check("a full yard blocks the pick and says so", chosen == ["hooker"] and page.note_text().contains("full"), page.note_text())
+	# The note keeps to the list's width and never changes the page's height under a focus.
+	await process_frame
+	var note: Label = page._note
+	var heights := {}
+	var widest := 0.0
+	for kind in page.kinds():
+		for state in [[[], 0], [[kind], 0], [[kind], 4]]:
+			page.refresh(state[0], state[1])
+			page.row(kind).pressed.emit()
+			await process_frame
+			heights[note.size.y] = true
+			widest = maxf(widest, note.size.x)
+			if note.get_line_count() * note.get_line_height() + (note.get_line_count() - 1) * note.get_theme_constant("line_spacing") > note.size.y + 0.5:
+				heights[-1.0] = true
+	_t.check("every note fits the note's box at the list's width, and the box never changes height", heights.size() == 1 and not heights.has(-1.0)
+			and widest <= Picker.NOTE_W + 0.5 and widest <= page._grid.size.x + 0.5, "heights %s, widest %.0f of grid %.0f" % [heights.keys(), widest, page._grid.size.x])
+	page.refresh(["chaser", "hooker"], 4)
 	_t.check("Clear yard is live when something is there", not page.clear_button.disabled, "enabled")
 	page.clear_button.pressed.emit()
 	page.back_button.pressed.emit()
@@ -230,6 +248,9 @@ func _yard() -> void:
 	_t.check("E at the call box opens the picker", hub.press_key(KEY_E) and sandbox.page_open and is_instance_valid(sandbox._page), "page")
 	await process_frame
 	_t.check("the walk hands the page over its veil", game.screens.walk_page() == sandbox._page and not game.screens.walk_live(), "walk page")
+	var caption: Control = Scrapbook.show_line(game.screens, "Fire pit lit.")
+	game.screens._sync_walk()
+	var under_page: bool = caption.visible
 	sandbox._page.row("chaser").pressed.emit()
 	_t.eq("a pick on the page calls the enemy", sandbox.live_count(), 1)
 	_t.check("the enemies wait while the page is up", not sandbox._is_live(), "paused")
@@ -238,6 +259,8 @@ func _yard() -> void:
 	sandbox._page.back_button.pressed.emit()
 	await process_frame
 	_t.check("Back closes the page and returns to the walk", not sandbox.page_open and game.screens.walk_page() == null and game.screens.walk_live(), "closed")
+	_t.check("the camp's caption card is down while the page is read and back with the walk", not under_page and caption.visible, "under the page %s, after %s" % [under_page, caption.visible])
+	caption.queue_free()
 
 	# Leaving the yard despawns.
 	sandbox.spawn("lobber")

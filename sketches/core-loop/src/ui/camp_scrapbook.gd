@@ -24,6 +24,7 @@ const STATION_RADIUS := 4.0
 const FIRE_PIT := "camp_fire_pit"
 const EMPTY_LINE := "Nothing pasted in yet. The paste pot is full and has been waiting."
 const LINE_SECONDS := 5.0
+const LINE_GROUP := "camp_line"
 const LINE_FADE := 1.2
 const PAGE_H := 560.0
 
@@ -181,11 +182,13 @@ static func attach(hub) -> void:
 			card.queue_free())
 
 
-# A small caption card at the bottom left that fades out after LINE_SECONDS. It ignores the
+# A small caption card at the bottom left that fades out after LINE_SECONDS. It is in LINE_GROUP,
+# so a page that opens over the walk can take it down while the page is read (screens._sync_walk). It ignores the
 # mouse and holds no focus, so it never blocks input. Returns the card.
 static func show_line(layer: Node, text: String) -> Control:
 	var card := PanelContainer.new()
 	card.name = "CampLine"
+	card.add_to_group(LINE_GROUP)
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.focus_mode = Control.FOCUS_NONE
 	var style := StyleBoxFlat.new()
